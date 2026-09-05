@@ -43,7 +43,7 @@ class TaigiKeyboardApplication : Application() {
         RustEngineBridge.install(compositionRoot.logger)
 
         // Deferred boot work — kept off the Application.onCreate main thread
-        // per `android-state-audit.md` §A7 (keep Application.onCreate cheap).
+        // per the 2026-04 Android state audit §A7 (keep Application.onCreate cheap).
         // Services are idempotent, so a duplicate call from a legacy caller
         // would be harmless during the A7 migration window.
         applicationScope.launch {

@@ -7,14 +7,12 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
-import androidx.lifecycle.coroutineScope
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
-import kotlinx.coroutines.CoroutineScope
 
 /**
  * InputMethodService 的 Lifecycle 支援基類
@@ -30,12 +28,6 @@ open class LifecycleInputMethodService :
     private val lifecycleRegistry by lazy { LifecycleRegistry(this) }
     private val store by lazy { ViewModelStore() }
     private val savedStateRegistryController by lazy { SavedStateRegistryController.create(this) }
-
-    /**
-     * UI 範圍的 CoroutineScope，與 Lifecycle 綁定
-     */
-    val uiScope: CoroutineScope
-        get() = lifecycle.coroutineScope
 
     final override val savedStateRegistry: SavedStateRegistry
         get() = savedStateRegistryController.savedStateRegistry

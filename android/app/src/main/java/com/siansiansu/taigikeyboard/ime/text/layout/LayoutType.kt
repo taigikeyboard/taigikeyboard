@@ -1,4 +1,4 @@
-// Layout JSON 的型別列舉 — 對應 assets/layouts/ 下檔名(characters / numeric / phone / symbols ...);
+// Layout JSON 的型別列舉 — 對應 assets/ime/text/ 下的子目錄名(characters / numeric / phone / symbols ...);
 // 透過 LayoutTypeAdapter 在 Moshi 解析時做 enum ↔ 字串雙向轉換,字串中的 "/" 對應底線。
 
 package com.siansiansu.taigikeyboard.ime.text.layout

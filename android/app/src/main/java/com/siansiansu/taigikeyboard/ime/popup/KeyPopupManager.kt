@@ -28,7 +28,6 @@ import com.siansiansu.taigikeyboard.typeface.TypefaceLoader
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Drives the preview + extended popup [PopupWindow]s for the Compose keyboard
@@ -51,8 +50,6 @@ class KeyPopupManager(
 
     private val _previewState = MutableStateFlow<PreviewState>(PreviewState.Hidden)
     private val _extendedState = MutableStateFlow<ExtendedState>(ExtendedState.Hidden)
-    val previewState: StateFlow<PreviewState> = _previewState.asStateFlow()
-    val extendedState: StateFlow<ExtendedState> = _extendedState.asStateFlow()
 
     private var ownersInstalled = false
 

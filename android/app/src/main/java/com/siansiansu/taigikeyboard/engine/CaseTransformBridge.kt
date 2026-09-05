@@ -22,10 +22,6 @@ import com.siansiansu.taigikeyboard.engine.proto.LetterCase as ProtoLetterCase
  * via envelope `AppConfig.input_mode`; case-transform is independent of POJ
  * doubletap preprocessing so the toggles fields are left at default.
  *
- * Replaces the algorithm body of:
- * - `dictionary/ToneUtilities.kt` (uppercase/lowercase tone letter, nasal adjust)
- * - `dictionary/SuggestionCaseTransformer.kt` (per-word transform)
- *
  * Suggestion skip rules (`id < 0 && id != -2` and `id == 0`) stay platform-side
  * — only transform-eligible items reach `transformSuggestion(...)`.
  *

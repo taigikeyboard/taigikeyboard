@@ -254,13 +254,6 @@ class SmartbarManager(
 
     fun getLastSelectedWord(): String? = nextWordHandler.getLastSelectedWord()
 
-    /**
-     * Envelope generation owned by [NextWordHandler]. Accessor retained
-     * for NextWord bridge-state sharing; its prior consumer (the platform
-     * autocomplete context-boost path) was retired in v3.5.8 Item 13.
-     */
-    fun getNextwordEnvelopeGeneration(): Long = nextWordHandler.nextwordEnvelopeGeneration()
-
     fun collapseToolbarIfOpen() = toolbarManager.collapseToolbarIfOpen()
 
     val preferredContainer: SmartbarContainer get() = toolbarManager.preferredContainer

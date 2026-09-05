@@ -10,7 +10,6 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.database.sqlite.SQLiteStatement
 import com.siansiansu.taigikeyboard.BuildConfig
-import com.siansiansu.taigikeyboard.ime.core.db.vacuumBestEffort
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.dictionary.FrequencyData
@@ -443,22 +442,6 @@ class UserFrequencyService(
         val db = dbHelper?.writableDatabase ?: return@withContext
         db.delete(Table.NAME, "${Table.WORD} = ? AND ${Table.TL} = ?", arrayOf(word, tl))
     }
-
-    /** Clear all frequency rows (debug / reset). */
-    suspend fun clearAllFrequencies() =
-        withContext(Dispatchers.IO) {
-            try {
-                ensureInitialized()
-                val db = dbHelper?.writableDatabase ?: return@withContext
-
-                db.execSQL("DELETE FROM ${Table.NAME}")
-
-                logger.i(TAG, "[CLEAR] All frequencies cleared")
-                vacuumBestEffort(db, logger, TAG)
-            } catch (e: Exception) {
-                logger.e(TAG, "[CLEAR] Failed to clear frequencies", e)
-            }
-        }
 
     /** Close handle and delete database file (debug / reset). */
     suspend fun deleteDatabase() =

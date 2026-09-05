@@ -16,21 +16,7 @@ package com.siansiansu.taigikeyboard.ime.dictionary
  * `.claude/rules/android-guidelines.md` §10.
  */
 sealed class DictionaryError {
-    object DatabaseNotFound : DictionaryError()
-
-    object DatabaseNotAvailable : DictionaryError()
-
-    data class DatabaseConnectionFailed(
-        val reason: String,
-    ) : DictionaryError()
-
     data class QueryExecutionFailed(
         val reason: String,
     ) : DictionaryError()
-
-    data class QueryPreparationFailed(
-        val reason: String,
-    ) : DictionaryError()
-
-    object TrieNotLoaded : DictionaryError()
 }

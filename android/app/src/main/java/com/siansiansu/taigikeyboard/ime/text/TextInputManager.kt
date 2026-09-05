@@ -371,8 +371,6 @@ class TextInputManager(
         themeSurface?.apply(appearanceResolver.resolvedColors())
     }
 
-    fun getActiveKeyboardMode(): KeyboardMode = uiCoordinator.activeKeyboardMode
-
     fun invalidateAllKeys() {
         pushAppearance()
     }

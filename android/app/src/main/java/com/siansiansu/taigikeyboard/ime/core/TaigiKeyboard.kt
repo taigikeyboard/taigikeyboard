@@ -35,7 +35,6 @@ import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarManager
 import com.siansiansu.taigikeyboard.settings.SettingsMainActivity
-import com.squareup.moshi.Json
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
@@ -212,7 +211,7 @@ class TaigiKeyboard : LifecycleInputMethodService() {
 
         compositionRoot.logger.i(TAG, "onCreate()")
 
-        subtypeManager = SubtypeManager(this, prefs)
+        subtypeManager = SubtypeManager(prefs)
         activeSubtype = subtypeManager.getActiveSubtype() ?: Subtype.DEFAULT
 
         // Construct the IME manager graph directly (A7: no more `getInstance()`
@@ -486,16 +485,6 @@ class TaigiKeyboard : LifecycleInputMethodService() {
     }
 
     /**
-     * @return If the language switch should be shown.
-     */
-    fun shouldShowLanguageSwitch(): Boolean = subtypeManager.subtypes.size > 1
-
-    fun switchToNextSubtype() {
-        activeSubtype = subtypeManager.switchToNextSubtype() ?: Subtype.DEFAULT
-        onSubtypeChanged(activeSubtype)
-    }
-
-    /**
      * 切換到系統的下一個輸入法
      */
     fun switchToNextInputMethod() {
@@ -577,22 +566,4 @@ class TaigiKeyboard : LifecycleInputMethodService() {
 
         fun onKeyboardLayoutTypeChanged(newLayoutType: String) {}
     }
-
-    /**
-     * Data class which holds the base information for this IME. Matches the structure of
-     * ime/config.json so it can be parsed. Used by [SubtypeManager] and by the prefs.
-     * NOTE: this class and its corresponding json file is subject to change in future versions.
-     * @property packageName The package name of this IME.
-     * @property characterLayouts A map of valid layout names to use from. Each value defined
-     *  should have a <layout_name>.json file in ime/text/characters/ to avoid empty layouts.
-     *  The key is the layout name, the value is the layout label (string shown in UI).
-     * @property defaultSubtypes A list of predefined default subtypes. This subtypes are used to
-     *  define which locales are supported and which layout is preferred for that locale.
-     */
-    data class ImeConfig(
-        @param:Json(name = "package")
-        val packageName: String,
-        val characterLayouts: Map<String, String> = mapOf(),
-        val defaultSubtypes: List<DefaultSubtype> = listOf(),
-    )
 }

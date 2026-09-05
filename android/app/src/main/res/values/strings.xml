@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">TaigiKeyboard</string>
 
-    <!-- Key labels (referenced by KeyView and layout XML) -->
+    <!-- Key labels (referenced by KeyContent and layout XML) -->
     <string name="key__phone_pause">Pause</string>
     <string name="key__phone_wait">Wait</string>
     <string name="key__view_characters">ABC</string>
@@ -13,9 +13,6 @@
 
     <!-- Settings (referenced by AndroidManifest and menu XML) -->
     <string name="settings__title">設定</string>
-    <string name="settings__menu">More options</string>
-    <string name="settings__menu_about">About</string>
-    <string name="settings__menu_help">Help &amp; feedback</string>
 
     <!-- AndroidManifest activity label -->
     <string name="copyright__title">版權聲明</string>

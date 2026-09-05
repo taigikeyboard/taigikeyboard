@@ -111,7 +111,7 @@ Direct dependencies of note:
 
 Google/JetBrains first-party libraries, all **Apache-2.0**: `androidx.*`
 (appcompat, core-ktx, preference-ktx, activity, lifecycle, compose, datastore),
-`com.google.android.material:material`, `com.google.android.flexbox:flexbox`,
+`com.google.android.material:material`,
 `org.jetbrains.kotlinx:kotlinx-coroutines-*`, `com.squareup.moshi:moshi-kotlin`.
 
 `com.google.protobuf:protobuf-javalite` is **BSD-3-Clause**.

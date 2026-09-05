@@ -33,14 +33,9 @@
 
         <item name="keyboard_bgColor">#D4D5DD</item>
 
-        <item name="emoji_key_bgColor">?keyboard_bgColor</item>
-        <item name="emoji_key_bgColorPressed">?key_popup_extended_bgColorActive</item>
-        <item name="emoji_key_fgColor">#757575</item>
 
         <item name="smartbar_bgColor">?keyboard_bgColor</item>
         <item name="smartbar_fgColor">?android:textColor</item>
-        <item name="smartbar_button_bgColor">?key_bgColor</item>
-        <item name="smartbar_button_bgColorPressed">?key_bgColorPressed</item>
         <item name="smartbar_button_fgColor">?key_fgColor</item>
         <item name="smartbar_candidate_fgColor">?android:textColor</item>
         <item name="smartbar_accentColor">#007AFF</item><!-- iOS blue, for toolbar selection -->

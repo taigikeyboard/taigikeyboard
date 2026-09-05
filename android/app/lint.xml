@@ -3,7 +3,7 @@
     <!-- Keyboard targets phone-shaped Android devices; ChromeOS x86_64 split is out of scope -->
     <issue id="ChromeOsAbiSupport" severity="ignore" />
 
-    <!-- mipmap-anydpi-v26 holds adaptive launcher icons; folder retained for clarity even though minSdk=28 -->
+    <!-- mipmap-anydpi-v26 holds adaptive launcher icons; folder retained for clarity even though minSdk=30 -->
     <issue id="ObsoleteSdkInt" severity="ignore" />
 
     <!-- App ships a single appearance_preview asset; per-night-config variant intentionally identical -->

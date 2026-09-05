@@ -2,15 +2,6 @@ package com.siansiansu.taigikeyboard.ui.components
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.ui.graphics.vector.ImageVector
-import com.siansiansu.taigikeyboard.ui.components.Abc
-import com.siansiansu.taigikeyboard.ui.components.FormatSize
-import com.siansiansu.taigikeyboard.ui.components.Language
-import com.siansiansu.taigikeyboard.ui.components.ShortText
-import com.siansiansu.taigikeyboard.ui.components.SpaceBar
-import com.siansiansu.taigikeyboard.ui.components.Translate
-import com.siansiansu.taigikeyboard.ui.components.Vibration
-import com.siansiansu.taigikeyboard.ui.components.ViewStream
-import com.siansiansu.taigikeyboard.ui.components.VolumeUp
 
 /**
  * Shared icon definitions for settings screens.
