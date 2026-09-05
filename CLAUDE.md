@@ -72,6 +72,8 @@ The **user runs all builds/tests manually mid-round** — never invoke these or 
 | iOS | Xcode → keyboard extension | `xcodebuild -project ios/TaigiKeyboard.xcodeproj -scheme TaigiKeyboardTests -destination 'platform=iOS Simulator,id=81ADB050-5242-460C-90DA-F3FAF3F6AAA5' test` (iPhone 17 / iOS 26.1, UDID-pinned for cache reuse; project `IPHONEOS_DEPLOYMENT_TARGET = 26.1`) |
 | Android | `cd android && ./gradlew :app:assembleDebug` | `cd android && ./gradlew :app:testDebugUnitTest` |
 | engine | `cargo build --workspace` | `cargo test --workspace` |
+| macOS | `make -C macos build` (`make -C macos install` before a dogfood pass) | `make -C macos test` |
+| Windows | `make windows-check` (host-side gate: pure-crate tests + clippy against the Windows targets; the TSF DLL itself only builds on the Windows box, see `docs/architecture/windows-release.md`) | included in `windows-check` |
 | taigi-converter | — | `npm test` from `taigi-converter/` (bare `node --test tests/` fails on Node 26 with `MODULE_NOT_FOUND`) |
 
 **Stale-binary gate (mandatory before every iOS/Android build+test)** — iOS and Android link pre-built artifacts (`ios/RustEngine/RustTaigi.xcframework`, `android/app/src/main/jniLibs/`, `dictionary/output/dictionary.bin`, `dictionary/output/syllables.fst`). Building against stale artifacts gives **false-green tests**. Check `git diff --stat` against this table first:

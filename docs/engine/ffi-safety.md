@@ -2,14 +2,13 @@
 
 > **Type**: Reference
 > **Keywords**: `FFI`, `panic`, `Drop`, `Mutex`, `EngineHandle`, `ErrorCode`, `logging-bridge`, `catch_unwind`, `shutdown`
-> **Related**: `rust-core-proto.md`, `../architecture/behavioral-invariants.md`, `../../rules/rust-best-practices.md`, `../../rules/rust-ffi-safety.md`
-> **Audience**: anyone authoring Rust core code or platform FFI glue (Phase III onward).
+> **Related**: `rust-core-proto.md`, `../architecture/behavioral-invariants.md`, `../../.claude/rules/rust-best-practices.md`, `../../.claude/rules/rust-ffi-safety.md`
+> **Audience**: anyone authoring Rust core code or platform FFI glue.
 
 ---
 
 ## 1. Scope and audience
 
-- Active from **Phase III D9 POC** onward; pre-authored in **Phase II.5** so the POC has a written safety contract to build against.
 - Applies to every Rust function exposed via `jni` (Android) or `swift-bridge` (iOS / macOS).
 - **Does NOT apply** to internal Rust code that never crosses the FFI boundary. Pure-engine and phonetics crates (`engine`, `phonetics`) follow the broader Rust idioms in `.claude/rules/rust-best-practices.md`; this spec only governs the FFI seam.
 - **Authoritative companion**: `.claude/rules/rust-ffi-safety.md` §1 (FFI boundary discipline) and §4 (opaque handle pattern). Any deviation from this spec or that rules file requires inline `// JUSTIFICATION:` prose at the deviation site, per `.claude/rules/rust-ffi-safety.md` §5.

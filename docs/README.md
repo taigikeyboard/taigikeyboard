@@ -48,7 +48,9 @@
 | `architecture/nextword-engine-boundary.md` | NextWord engine ↔ platform binding contract (generation, decay, timer) | Active |
 | `architecture/keyboard-body-invariants-android.md` | Android Compose keyboard-body geometry / touch-target invariants (refactor-freeze contract) | Active |
 | `architecture/data-artifacts-portability.md` | Binary artifacts + SQLite portability contract | Active |
-| `architecture/i18n-multilang-plan.md` | App-UI multi-language plan — `i18n/` JSON → codegen resources, multi-PR (in-flight) | Active |
+| `architecture/i18n-multilang-plan.md` | App-UI multi-language plan — `i18n/` JSON → codegen resources; shipped, kept as the design record | Reference |
+| `architecture/macos-roadmap.md` | macOS desktop IME (InputMethodKit over the shared engine) — design, PR table, dogfood run-book | Active |
+| `architecture/macos-candidate-window-port.md` | macOS candidate window port (MacishType-style layouts) — design + not-adopted list | Reference |
 | `architecture/manual-release-notes.md` | Canonical English What's New, in-app history sync, validation, and manual store paste workflow | Active |
 | `architecture/macos-release.md` | macOS Developer ID signing, notarization, and web-distributed `.pkg` workflow | Active |
 | `architecture/windows-roadmap.md` | Windows desktop IME (TSF in Rust over the shared engine, macOS UX parity) — design W1–W16, PR table, reference alignment, dogfood run-book | Active |
@@ -56,7 +58,7 @@
 | `architecture/ios-exemplar.md` | iOS architectural pattern (alignment target for Android) | Reference |
 | `architecture/android-exemplar.md` | Android-specific deviations from iOS exemplar | Reference |
 
-### `ui/` — Presentation & Layout (10)
+### `ui/` — Presentation & Layout (9)
 
 | File | Description | Status |
 |------|-------------|--------|
@@ -68,7 +70,6 @@
 | `ui/theme.md` | Theme & styling (colors, fonts, user customization) | Active |
 | `ui/emoji.md` | Emoji keyboard (ISEmojiView iOS / Compose Android, taigi-emojis data) | Active |
 | `ui/callouts.md` | Long-press callouts + tone-variation menus (engine map + platform popups) | Active |
-| `ui/android-theme-port.md` | Android theme-picker port spec (v3.6.2, multi-PR) | Reference |
 | `ui/theme-presets-brainstorm.md` | Theme presets / custom-theme brainstorm (v3.6.2, evolving) | Brainstorm |
 
 ### `references/` — External IME Research (7)
@@ -118,6 +119,7 @@ One-off snapshots ordered chronologically. Specs cited by engine code (`v358-ref
 |------|-------------|--------|
 | `go-public-checklist.md` | What has to be true before the repository is made public — history audit results, dictionary redistribution blockers, anonymous-clone check, release-chain review, and the settings to turn on afterwards | Active |
 | `roadmap.md` | Forward-looking work items not yet scheduled into a release slice | Active |
+| `CODE_SIGNING_POLICY.md` | Code-signing policy for released binaries (SignPath Foundation requirement) | Active |
 
 ---
 

@@ -3,7 +3,7 @@
 > **Type**: Reference (Phonetics slice = AS-IMPLEMENTED post PR #186/#187; Composing slice = AS-IMPLEMENTED in v3.5.4)
 > **Keywords**: `protobuf`, `Command`, `Request`, `Response`, `request-id`, `generation`, `AppConfig`, `Phonetics`, `Composing`
 > **Related**: `ffi-safety.md`, `../architecture/behavioral-invariants.md`, `../architecture/composing-state-boundary.md`, `../architecture/nextword-engine-boundary.md`
-> **Audience**: Phase III implementers continuing from the merged D9.4 Phonetics slice.
+> **Audience**: anyone extending the engine proto contract.
 > **Authoritative source**: `engine/protos/proto/envelope.proto` + `engine/protos/proto/phonetics.proto` (the .proto files are canonical when they diverge from this doc).
 
 ---
@@ -11,7 +11,7 @@
 ## 1. Scope of THIS document
 
 - **Phonetics slice (D9.4 — MERGED)** + **Composing slice (D9.3 — MERGED in v3.5.4).**
-- Lexicon, NextWord (including prediction queries / results), SQLite, custom-dictionary, candidate-scoring all DEFERRED to Phase III post-Composing.
+- Lexicon, NextWord (including prediction queries / results), SQLite, custom-dictionary, candidate-scoring are outside this document — see their own crates and `../architecture/nextword-engine-boundary.md`.
 - §7 reflects the merged Phonetics wire (PR #186 D9.4-Phonetics + PR #187 D9.4-cleanup). §8 reflects the merged Composing wire (v3.5.4); naming was changed from `oneof intent` to `oneof method` per the Phonetics convention adopted in PR #186.
 - **Authoritative companion**: `.claude/rules/rust-best-practices.md` §3 (crate choices — `prost` for protobuf), §8 (non-goals); `.claude/rules/rust-ffi-safety.md` §4 (opaque handle pattern).
 
@@ -22,7 +22,7 @@
 - khiin-rs validates protobuf on iOS + macOS + Android + Windows TSF (single entry point shape — see `references/khiin-rs/README.md:140-152`).
 - Cross-platform binding via `prost` (Rust) + `SwiftProtobuf` (iOS) + `protobuf-kotlin` (Android).
 - ABI-stable: schema evolves without breaking the existing handle table.
-- **UniFFI considered only if D9 measurements prove protobuf overhead unacceptable** on this app's specific shape. The decision lives in Phase III; Phase II.5 commits to protobuf as the default.
+- **UniFFI was considered and not adopted**; protobuf is the contract.
 
 ---
 
@@ -98,7 +98,7 @@ enum CommandType {
 
 - **`id`** prevents ordering races when the platform fires intent N+1 before N's response arrives. khiin-rs uses the same pattern (`references/khiin-rs/README.md:149-152` — "Clients should tag each Request with an id").
 - **`generation`** — see §5.
-- **`oneof payload`** — each slice gets its own message; new slices added in Phase III extend without breaking change.
+- **`oneof payload`** — each slice gets its own message; new slices extend without breaking change.
 
 ---
 
@@ -106,14 +106,14 @@ enum CommandType {
 
 Authoritative ownership of `currentGeneration` lives in the **platform engine executor**, not in Rust. The contract is already specified at `docs/architecture/nextword-engine-boundary.md:50-65` (executor owns the counter, supplies it per intent) and `:194-204` (only state transitions that invalidate pending prediction queries bump it).
 
-For the Phase II.5 first-slice proto, `generation` is purely an **FFI correlation / stale-response field**:
+For the first-slice proto, `generation` is purely an **FFI correlation / stale-response field**:
 
 - Platform supplies the current generation in `Request.generation`.
 - Rust echoes it back in `Response.generation` without mutation.
 - **Phonetics slice** does not consult or mutate `generation` — it is stateless.
-- **Composing slice** carries it through transitions but does not bump it. Bumping is a NextWord concern, deferred to Phase III.
+- **Composing slice** carries it through transitions but does not bump it. Bumping is a NextWord concern (platform side).
 
-Phase II.5 just lifts the existing platform-side mechanism (iOS G5-impl + Android A5-impl, see `docs/architecture/nextword-engine-boundary.md:120,194`) onto the wire so platform and Rust agree on the protocol shape. Whether NextWord generation ownership eventually migrates into Rust is a Phase III decision, not Phase II.5.
+This lifts the existing platform-side mechanism (iOS G5-impl + Android A5-impl, see `docs/architecture/nextword-engine-boundary.md:120,194`) onto the wire so platform and Rust agree on the protocol shape. Whether NextWord generation ownership migrates into Rust is a separate decision.
 
 ---
 
@@ -249,9 +249,9 @@ message ResetAutocompleteContext {}
 - `Effect` is **neutral** — no `InputConnection` / `UITextDocumentProxy` / `KeyboardKit` / `Compose` references.
 - The platform interpreter maps document-mutation effects (`CommitTextReplacingPreedit` / `UpdatePreedit` / `ClearPreeditWithoutCommit` / `DeleteBackwardFromDocument`) to `setComposingText` / `commitText` / `deleteSurroundingText` / equivalent, and routes autocomplete-control effects (`ResetAutocomplete` / `PerformAutocomplete` / `ResetAutocompleteContext`) to the platform autocomplete subsystem.
 - `DeleteBackwardFromDocument` is required to preserve the delete-to-empty path: when the user backspaces a 1-char raw buffer, the composing state emits `clearPreeditWithoutCommit` + `resetAutocomplete` + `deleteBackwardFromDocument` (`ComposingState.swift:144-149`, Android `ComposingState.kt:211-215`) so the host editor's last grapheme is removed atomically with the preedit clear.
-- The 3 autocomplete-control effects MUST be on the wire. Composing emits them as part of normal transitions (typing, commit, reset — see `ComposingTransition.swift:33-43`, `ComposingTransition.kt:55-64`); without them on the wire, a Rust composing slice cannot tell the platform autocomplete subsystem when to clear suggestions, run a fresh query, or reset the bigram history. Candidate queries / context resets would drift even when text effects are correct. The autocomplete subsystem itself stays platform-side in Phase II.5; only the cross-subsystem signals cross the FFI.
+- The 3 autocomplete-control effects MUST be on the wire. Composing emits them as part of normal transitions (typing, commit, reset — see `ComposingTransition.swift:33-43`, `ComposingTransition.kt:55-64`); without them on the wire, a Rust composing slice cannot tell the platform autocomplete subsystem when to clear suggestions, run a fresh query, or reset the bigram history. Candidate queries / context resets would drift even when text effects are correct. The autocomplete subsystem itself stays platform-side; only the cross-subsystem signals cross the FFI.
 - `selected_candidate_index` on `ComposingResponse` mirrors `ComposingTransition.newSelectedIndex` (`ComposingTransition.swift:48`, `ComposingTransition.kt:28`). Semantics: `-1` in idle, `0` on fresh composition, **preserved on `ReplaceLast`** (`ComposingState.swift:126-132`). Platform commit paths (e.g. iOS `ComposingManager.confirmSelectedCandidate` → `availableTexts[selectedCandidateIndex]`) depend on this field — without it, append/delete/reset/replaceLast cannot synchronize the index and a stale index could commit the wrong suggestion.
-- **Prediction-related effects** (`QueryPredictions`, candidate-list updates) are NOT in this slice — they belong to NextWord, which is Phase III.
+- **Prediction-related effects** (`QueryPredictions`, candidate-list updates) are NOT in this slice — they belong to NextWord.
 
 ---
 
@@ -299,18 +299,18 @@ message CaseResponse {
   - No layout, styling, KeyboardKit, FlorisBoard types.
   - No platform text-region types (`NSRange`, `ExtractedText`, `TextPosition`).
 - **No candidate ids in the Composing slice.** `SelectSuggestion` carries text the platform already resolved.
-- **No Lexicon / NextWord proto** — Phase III deliverable. This includes prediction queries, prediction results, and candidate-list updates.
+- **No Lexicon / NextWord proto** in this document. This includes prediction queries, prediction results, and candidate-list updates.
 - **No SQLite I/O proto.** User-data DB stays platform-side permanently per `.claude/rules/rust-migration-policy.md` § User-data SQLite stays platform-native and the criteria in `.claude/rules/ios-shared-core-candidates.md` §1 (no DB / App Group / FileManager / file-system access in candidates). Excluded files appear with `status=wont_migrate` in `migration-inventory.csv` (`Lexicon/Database/*Repository.swift`, `SQLiteConnectionManager.swift`, `NextWord/Repository/*`, etc.).
 - **No UniFFI signature.** Protobuf-first per the roadmap revision.
 
 ---
 
-## 10. Open questions for Phase III
+## 10. Open questions
 
 - Bytes vs string vs repeated for candidate lists (perf measurement needed).
 - Streaming responses for incremental candidate updates (vs full snapshot).
 - Whether NextWord generation ownership migrates from platform to Rust.
-- UI-driven candidate selection (e.g. candidate-bar tap, arrow-key navigation) currently mutates `selectedCandidateIndex` directly via the platform-side `setSelectedCandidateIndex` mutator (`ComposingState.swift:69-77`), bypassing `apply(Intent, ...)`. A wire intent (`SetSelectedCandidateIndex { index }`) lands when navigation-bar interaction is integrated into the Rust composing slice — Phase III decision based on D9 measurements.
+- UI-driven candidate selection (e.g. candidate-bar tap, arrow-key navigation) currently mutates `selectedCandidateIndex` directly via the platform-side `setSelectedCandidateIndex` mutator (`ComposingState.swift:69-77`), bypassing `apply(Intent, ...)`. A wire intent (`SetSelectedCandidateIndex { index }`) lands when navigation-bar interaction is integrated into the Rust composing slice — decided when navigation-bar interaction moves into the Rust composing slice.
 
 ---
 

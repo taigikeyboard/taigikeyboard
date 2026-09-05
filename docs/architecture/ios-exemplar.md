@@ -2,7 +2,7 @@
 
 **Status**: authored 2026-04-19 as Phase I G8 deliverable (ahead of G1–G7 / G9 implementation, so the pattern guides that work). Revised same day after Codex + Gemini review cycle; the Android-side sections (§1 mapping, §3 live-read, §5.2 marker, §5.3 constants, §6 ViewModel pattern) are now concrete enough to port from directly. This is the doc Android Phase II copies from — "look at iOS and copy it" is not a plan; this is.
 
-**Audience**: whoever is doing Android Phase II alignment (and later, the Rust Phase IV-A author who needs to know what behavioral surface survives).
+**Audience**: anyone aligning Android structure to iOS, or deciding what behavioral surface the Rust engine must preserve.
 
 **Scope**: architectural pattern only. Behavioral contracts live in `behavioral-invariants.md`; the live Rust / native ownership inventory lives in `../engine/migration-inventory.csv`; data-artifact portability (`dictionary.fst` / `dictionary.bin` / SQLite) lives in `data-artifacts-portability.md` — all three are referenced but not duplicated here.
 
