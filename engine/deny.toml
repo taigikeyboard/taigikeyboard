@@ -23,6 +23,10 @@ confidence-threshold = 0.92
 [bans]
 multiple-versions = "warn"
 wildcards = "deny"
+# Workspace crates depend on each other by `path` with no `version`; cargo-deny
+# counts those as wildcards and has failed security.yml since 2026-09-04. Paths
+# inside the workspace are not a supply-chain surface, so exempt them.
+allow-wildcard-paths = true
 deny = []
 
 [sources]

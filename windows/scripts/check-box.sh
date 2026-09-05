@@ -47,8 +47,11 @@ remote+="; cargo clippy -p taigi-windows-settings -p taigi-windows-platform --al
 remote+="; cargo test -p taigi-windows-settings -p taigi-windows-platform; if (\$LASTEXITCODE -ne 0) { exit 1 }"
 # The settings exe only links here: its UI is WinUI 3, and the setup crate
 # refuses every target but MSVC. This replaces the gnu `check-exe` that
-# went with eframe at the W17-C cutover.
-remote+="; cargo build --release -p taigi-windows-settings; exit \$LASTEXITCODE"
+# went with eframe at the W17-C cutover. Dev profile: the gate proves the
+# MSVC link, and a fresh checkout would rebuild the whole windows-rs graph in
+# release (5.5 min measured 2026-09-06 vs ~10 s dev); release-app.sh builds
+# the shipped profile.
+remote+="; cargo build -p taigi-windows-settings; exit \$LASTEXITCODE"
 
 echo "==> check-box: $BOX ($BOX_REPO) @ $sha"
 ssh -o BatchMode=yes -o ConnectTimeout=15 "$BOX" "$remote" ||

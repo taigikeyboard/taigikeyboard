@@ -60,7 +60,10 @@ final class ShortcutKeyRecorderTests: XCTestCase {
         field.beginRecording()
 
         XCTAssertEqual(field.stringValue, "", "a placeholder only shows while the text is empty")
-        XCTAssertEqual(field.placeholderString, "撳一个鍵…")
+        // Resolved through the same store the field uses, so an i18n wording change
+        // cannot fail this test (#678 renamed 撳 → 揤 and it did).
+        XCTAssertEqual(field.placeholderString, field.language?.string(.desktopShortcutRecording))
+        XCTAssertFalse(field.placeholderString?.isEmpty ?? true, "the prompt must be non-empty")
     }
 
     func testLeavingWithoutRecording_putsTheChordBack() throws {
