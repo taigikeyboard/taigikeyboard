@@ -73,7 +73,7 @@
     },
     "outputBothScripts": {
       "comment": "Toggle label: annotate committed text with the other script in brackets.",
-      "scope": { "platforms": ["android", "ios", "macos", "windows"], "surfaces": ["host", "extension"] },
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "括號標註", "tailo": "kuat-hō phiau-tsù", "poj": "koat-hō phiau-chù", "en": "Annotate in Brackets", "ja": "括弧で併記" }
     },
     "literalRomanCandidate": {

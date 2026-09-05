@@ -141,9 +141,7 @@
       "scope": {
         "platforms": [
           "android",
-          "ios",
-          "macos",
-          "windows"
+          "ios"
         ],
         "surfaces": [
           "host"

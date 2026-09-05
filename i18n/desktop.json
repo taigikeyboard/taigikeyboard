@@ -100,8 +100,7 @@
       "comment": "Menu-bar File menu title. An LSUIElement process builds its own menu bar so the settings window keeps the standard editing shortcuts.",
       "scope": {
         "platforms": [
-          "macos",
-          "windows"
+          "macos"
         ],
         "surfaces": [
           "host"
@@ -119,8 +118,7 @@
       "comment": "File menu item: close the front window (⌘W).",
       "scope": {
         "platforms": [
-          "macos",
-          "windows"
+          "macos"
         ],
         "surfaces": [
           "host"
@@ -138,8 +136,7 @@
       "comment": "Menu-bar Edit menu title.",
       "scope": {
         "platforms": [
-          "macos",
-          "windows"
+          "macos"
         ],
         "surfaces": [
           "host"
@@ -157,8 +154,7 @@
       "comment": "Edit menu item (⌘Z).",
       "scope": {
         "platforms": [
-          "macos",
-          "windows"
+          "macos"
         ],
         "surfaces": [
           "host"
@@ -176,8 +172,7 @@
       "comment": "Edit menu item (⇧⌘Z).",
       "scope": {
         "platforms": [
-          "macos",
-          "windows"
+          "macos"
         ],
         "surfaces": [
           "host"
@@ -195,8 +190,7 @@
       "comment": "Edit menu item (⌘X).",
       "scope": {
         "platforms": [
-          "macos",
-          "windows"
+          "macos"
         ],
         "surfaces": [
           "host"
@@ -214,8 +208,7 @@
       "comment": "Edit menu item (⌘C).",
       "scope": {
         "platforms": [
-          "macos",
-          "windows"
+          "macos"
         ],
         "surfaces": [
           "host"
@@ -233,8 +226,7 @@
       "comment": "Edit menu item (⌘V).",
       "scope": {
         "platforms": [
-          "macos",
-          "windows"
+          "macos"
         ],
         "surfaces": [
           "host"
@@ -252,8 +244,7 @@
       "comment": "Edit menu item (⌘A).",
       "scope": {
         "platforms": [
-          "macos",
-          "windows"
+          "macos"
         ],
         "surfaces": [
           "host"
@@ -347,7 +338,6 @@
       "comment": "Banner title in the settings window when settings.json could not be written (the control snaps back).",
       "scope": {
         "platforms": [
-          "macos",
           "windows"
         ],
         "surfaces": [
@@ -1132,8 +1122,7 @@
       "comment": "Title of the one-time offer, shown the first time the settings window opens: may we notify about new versions?",
       "scope": {
         "platforms": [
-          "macos",
-          "windows"
+          "macos"
         ],
         "surfaces": [
           "host"
@@ -1151,8 +1140,7 @@
       "comment": "Default button of the one-time notification offer; accepting it is what triggers the system permission prompt.",
       "scope": {
         "platforms": [
-          "macos",
-          "windows"
+          "macos"
         ],
         "surfaces": [
           "host"
@@ -1192,8 +1180,7 @@
       "comment": "Settings 一般 pane row shown when notifications are refused. Says what turning them on gets you rather than what is currently lost (USER 2026-08-24: 「改為比較正面」), and leads out to where it is changed. The key name still describes when the row appears, not what it says.",
       "scope": {
         "platforms": [
-          "macos",
-          "windows"
+          "macos"
         ],
         "surfaces": [
           "host"
@@ -1211,8 +1198,7 @@
       "comment": "Settings 一般 pane link out to the System Settings notifications pane, beside the notifications-off note.",
       "scope": {
         "platforms": [
-          "macos",
-          "windows"
+          "macos"
         ],
         "surfaces": [
           "host"
