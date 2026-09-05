@@ -1,7 +1,7 @@
 //! INVARIANT_composing_* parity oracles.
 //!
-//! Sourced from iOS `ios/TaigiKeyboardTests/ComposingStateTests.swift` and
-//! Android `android/.../ime/text/composing/ComposingStateTest.kt`. These pin
+//! Sourced from the pre-Rust iOS `ComposingStateTests.swift` and Android
+//! `ComposingStateTest.kt` (both deleted with the migration). These pin
 //! the behavior the platform state machines deliver pre-deletion (commit 9/10).
 
 // 對齊 iOS / Android 平台原本狀態機行為的不變式測試 (parity oracle)。

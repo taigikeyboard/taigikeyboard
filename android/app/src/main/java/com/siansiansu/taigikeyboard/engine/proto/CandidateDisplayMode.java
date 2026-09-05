@@ -40,7 +40,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * commits) has NO engine reader — a combined cell is still distinct by
  * (hanji, roman); the platforms send `is_translate_swapped = true` for it.
  * 候選詞顯示 picker 的 wire 值;引擎只在兩個顯示層去重讀它,0/未知 = 漢羅並排;
- *   COMBINED 引擎不讀(平台送 swapped=true)。
+ * COMBINED 引擎不讀(平台送 swapped=true)。
  * </pre>
  *
  * Protobuf enum {@code taigi.engine.CandidateDisplayMode}

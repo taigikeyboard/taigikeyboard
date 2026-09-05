@@ -1,7 +1,7 @@
 //! Cross-source fixture suite. Cases are merged from:
 //! - `taigi-converter/tests/{phonetics,tl,poj,zhuyin,converter}.test.js` (canonical)
-//! - `ios/TaigiKeyboardTests/TaigiPhoneticsTests.swift` (production iOS)
-//! - `android/.../TaigiPhoneticsTest.kt` (production Android)
+//! - the pre-Rust iOS `TaigiPhoneticsTests.swift` / Android `TaigiPhoneticsTest.kt`
+//!   (both deleted with the migration)
 //!
 //! Each case is annotated with `// SOURCE:` so a future drift triage can find
 //! provenance fast. Per the §4 cross-validation plan, failures here must trigger

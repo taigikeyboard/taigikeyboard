@@ -17,8 +17,8 @@
 //! `RECENCY_WINDOW_MS=3_600_000`, `RECENCY_BONUS=200`, `EXACT_BONUS=100`,
 //! `COMPLETION_PENALTY=-1000`, `CLOSENESS_WEIGHT=500`,
 //! `BASE_FREQ_DIVISOR=10`, `SOURCE_TIERS`, `TIER_DENOMINATOR=10`) are
-//! pinned by `docs/engine/ranking-slice-audit.md` § 1.3 and verified
-//! byte-identical across platforms at audit time.
+//! pinned here and were verified byte-identical across platforms at the
+//! v3.5.2 ranking-slice audit (`docs/engine/sort.md` documents the behaviour).
 
 // 候選詞排序 crate:去重、評分、排序、後處理。純 CPU 無 I/O,iOS/Android 共用同一套常數與公式。
 

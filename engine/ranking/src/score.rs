@@ -3,8 +3,8 @@
 //! Pure-CPU formula; the v3.5.2 ranking slice collapsed
 //! `CandidateProcessor.calculateScore` from both platforms into this
 //! crate (Android mirror deleted PR #192). Constants verified
-//! byte-identical at audit time (`docs/engine/ranking-slice-audit.md`
-//! § 1.3) and are pinned here as the single source of truth.
+//! byte-identical across platforms at the v3.5.2 ranking-slice audit and pinned
+//! here as the single source of truth.
 //!
 //! ```text
 //! total = userFreqScore
@@ -34,7 +34,7 @@ use phonetics::taigi_unicode_base_form;
 // ---------------------------------------------------------------------------
 // Cross-platform invariant constants — single source of truth for both
 // platforms (Android mirror deleted PR #192; iOS residual unrelated).
-// Pinned by `docs/engine/ranking-slice-audit.md` § 1.3.
+// Verified byte-identical across platforms at the v3.5.2 ranking-slice audit.
 // ---------------------------------------------------------------------------
 
 // 使用者頻率次數上限。

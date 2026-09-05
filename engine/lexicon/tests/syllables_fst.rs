@@ -293,21 +293,6 @@ fn production_syllables_fst_carries_both_tl_and_poj_families() {
     );
 }
 
-#[test]
-fn deprecated_contains_alias_routes_to_tl_family() {
-    // v3.5.9 B-1 grace-period contract — `.contains(x)` is an alias of
-    // `.contains_in(InputMode::Tl, x)`. Migrated callers should use
-    // `contains_in` directly; this test pins the bridge until B-7
-    // retires the deprecated method.
-    let inv = build_inventory_from_pairs(&[canonicalize_syllable("ka1").unwrap()]);
-    #[allow(deprecated)]
-    {
-        assert!(inv.contains("ka"));
-        assert!(inv.contains("ka1"));
-        assert!(!inv.contains("ka2"));
-    }
-}
-
 /// Build a `SyllableInventory` from canonical `(toneless, tone)` pairs by
 /// emitting numeric + toneless keys, sort+dedup, then fst::SetBuilder →
 /// temp file → `SyllableInventory::open`. Exercises the loader + mmap

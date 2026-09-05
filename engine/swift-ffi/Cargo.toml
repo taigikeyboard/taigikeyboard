@@ -28,7 +28,6 @@ panic-injector = []
 [dependencies]
 dispatch = { workspace = true }
 protos = { workspace = true }
-prost = { workspace = true }
 log = { workspace = true }
 swift-bridge = { workspace = true }
 

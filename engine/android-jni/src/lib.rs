@@ -13,14 +13,13 @@
 // Android JNI 入口,包覆 dispatch 並把 log 回呼透過快取的 JavaVM 反彈回 JVM。
 // 所有 extern "system" 導出函式皆以 EnvUnowned::with_env 包覆,先做長度檢查再複製 jbyteArray。
 
-use dispatch::MAX_REQUEST_BYTES;
+use dispatch::{encode_error, log_level_to_byte, MAX_REQUEST_BYTES};
 use jni::objects::{Global, JByteArray, JClass, JObject, JStaticMethodID, JValue};
 use jni::signature::{MethodSignature, Primitive, ReturnType};
 use jni::strings::JNIStr;
 use jni::sys::{jbyteArray, jint};
 use jni::{jni_sig, jni_str, Env, EnvUnowned, JavaVM, Outcome};
-use prost::Message;
-use protos::engine::{ErrorCode, Response};
+use protos::engine::ErrorCode;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::{Once, OnceLock};
 
@@ -221,7 +220,7 @@ impl log::Log for PlatformLogger {
             let _ = dispatch
                 .vm
                 .attach_current_thread(|env| -> jni::errors::Result<()> {
-                    let level = level_to_jint(record.level());
+                    let level = jint::from(log_level_to_byte(record.level()));
                     let tag = env.new_string(record.target())?;
                     let msg = env.new_string(format!("{}", record.args()))?;
                     // SAFETY: `dispatch.method_id` was looked up at registration
@@ -253,33 +252,7 @@ impl log::Log for PlatformLogger {
     fn flush(&self) {}
 }
 
-fn level_to_jint(level: log::Level) -> jint {
-    match level {
-        log::Level::Error => 0,
-        log::Level::Warn => 1,
-        log::Level::Info => 2,
-        log::Level::Debug => 3,
-        log::Level::Trace => 4,
-    }
-}
-
 // MARK: - Error encoding helpers
-
-fn encode_error(id: u32, code: ErrorCode, generation: u64) -> Vec<u8> {
-    let response = Response {
-        id,
-        error: code as i32,
-        generation,
-        payload: None,
-    };
-    let mut buf = Vec::with_capacity(response.encoded_len());
-    // JUSTIFICATION: encode into Vec<u8> never fails — prost::EncodeError
-    // fires only when the target buffer is too small; Vec grows.
-    response
-        .encode(&mut buf)
-        .expect("prost encode into Vec<u8> never fails");
-    buf
-}
 
 /// Encode `code` as a `Response`, allocate a `JByteArray`, and return the raw
 /// `jbyteArray`. Used inside `with_env` closures.

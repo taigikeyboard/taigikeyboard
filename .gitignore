@@ -76,6 +76,8 @@ ENV/
 # === Dictionary pipeline ===
 # Build/run logs from dictionary/ Python pipeline (build.sh, run.sh).
 dictionary/**/logs/
+# Write-only audit artifact: common/stages/cleanup.py writes it when a source drops rows; nothing reads it.
+dictionary/**/data/cleaned/drop.csv
 
 # === Rust ===
 /engine/target/

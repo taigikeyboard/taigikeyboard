@@ -202,6 +202,28 @@ fn lexicon_error_code(err: &lexicon::LexiconError) -> ErrorCode {
     }
 }
 
+/// Encode an error-only `Response` for the FFI seams (`swift-ffi`, `android-jni`)
+/// so both crates share one definition of the empty-payload error envelope.
+// FFI 兩端共用的錯誤回應編碼,避免各自複製一份。
+#[must_use]
+pub fn encode_error(id: u32, code: ErrorCode, generation: u64) -> Vec<u8> {
+    encode(&error_response(id, code, generation))
+}
+
+/// Wire byte for a `log::Level` as delivered to the platform logger sinks
+/// (`SwiftLoggerSink` / `RustLogger`): Error=0 … Trace=4. One table for both seams.
+// log level → 平台 logger sink 的 wire byte,兩端共用同一張表。
+#[must_use]
+pub fn log_level_to_byte(level: log::Level) -> u8 {
+    match level {
+        log::Level::Error => 0,
+        log::Level::Warn => 1,
+        log::Level::Info => 2,
+        log::Level::Debug => 3,
+        log::Level::Trace => 4,
+    }
+}
+
 fn error_response(id: u32, code: ErrorCode, generation: u64) -> Response {
     Response {
         id,

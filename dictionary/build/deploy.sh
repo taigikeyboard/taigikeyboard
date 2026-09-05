@@ -62,9 +62,6 @@ echo "  - syllables.fst   ($(du -h "$SYLLABLES_FST" | cut -f1))"
 cp "$ASSOC_BIN" "$ANDROID_DEST/"
 echo "  - association.bin ($(du -h "$ASSOC_BIN" | cut -f1))"
 
-# Remove stale marisa trie if present (v3.5.6 swap)
-rm -f "$ANDROID_DEST/dictionary.trie"
-
 echo ""
 
 # --- iOS ---
@@ -86,9 +83,5 @@ echo "  - syllables.fst   ($(du -h "$SYLLABLES_FST" | cut -f1))"
 cp "$ASSOC_BIN" "$IOS_DEST/"
 echo "  - association.bin ($(du -h "$ASSOC_BIN" | cut -f1))"
 
-# Remove stale marisa trie if present (v3.5.6 swap)
-rm -f "$IOS_DEST/dictionary.trie"
-
 echo ""
 echo "[INFO] Done!"
-echo "[NOTE] v3.5.6+: prefix index is dictionary.fst (was dictionary.trie / MARISA pre-v3.5.6)"
