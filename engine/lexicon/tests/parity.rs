@@ -5,9 +5,7 @@
 //! `dictionary/build.sh` pipeline. Real-fixture parity gets covered
 //! by the platform XCTest / JUnit tests that load shipped assets.
 //!
-//! Tests pin the invariants from
-//! `docs/engine/lexicon-slice-plan.md` §7 +
-//! `docs/architecture/behavioral-invariants.md`.
+//! Tests pin the invariants from `docs/architecture/behavioral-invariants.md`.
 
 // lexicon crate 的 INVARIANT_LEX_* 整合測試;以合成的 in-memory fixture 取代實際 dictionary.fst/.bin,以免依賴完整 build pipeline。
 

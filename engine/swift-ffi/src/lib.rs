@@ -9,9 +9,8 @@
 // iOS / macOS swift-bridge 入口,負責包覆 dispatch 並註冊 Swift 端的 logger sink。
 // 所有跨 FFI 邊界的呼叫皆以 catch_unwind 包覆,並對請求大小設限避免無上限配置。
 
-use dispatch::MAX_REQUEST_BYTES;
-use prost::Message;
-use protos::engine::{ErrorCode, Response};
+use dispatch::{encode_error, log_level_to_byte, MAX_REQUEST_BYTES};
+use protos::engine::ErrorCode;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::{Mutex, Once, OnceLock};
 
@@ -98,7 +97,7 @@ fn install_logger_sink(sink: ffi::SwiftLoggerSink) {
 /// Anything outside the range is treated as `Off` (defensive — keeps an
 /// integer typo from accidentally enabling trace).
 ///
-/// NOT the same as `SwiftLoggerSink`'s callback bytes (`level_to_byte` /
+/// NOT the same as `SwiftLoggerSink`'s callback bytes (`dispatch::log_level_to_byte` /
 /// Swift constants `levelError=0..levelTrace=4`). Off is reserved here
 /// because callers can disable; the callback never receives Off.
 // 執行期調整 log::max_level,讓 DEBUG 版可開更詳細,釋出版不付格式化成本。
@@ -172,7 +171,7 @@ impl log::Log for PlatformLogger {
         let Some(cell) = guard.as_ref() else {
             return;
         };
-        let level = level_to_byte(record.level());
+        let level = log_level_to_byte(record.level());
         cell.0.log(
             level,
             record.target().to_string(),
@@ -183,28 +182,3 @@ impl log::Log for PlatformLogger {
     fn flush(&self) {}
 }
 
-fn level_to_byte(level: log::Level) -> u8 {
-    match level {
-        log::Level::Error => 0,
-        log::Level::Warn => 1,
-        log::Level::Info => 2,
-        log::Level::Debug => 3,
-        log::Level::Trace => 4,
-    }
-}
-
-fn encode_error(id: u32, code: ErrorCode, generation: u64) -> Vec<u8> {
-    let response = Response {
-        id,
-        error: code as i32,
-        generation,
-        payload: None,
-    };
-    let mut buf = Vec::with_capacity(response.encoded_len());
-    // JUSTIFICATION: encode into Vec<u8> never fails — prost::EncodeError
-    // fires only when the target buffer is too small; Vec grows.
-    response
-        .encode(&mut buf)
-        .expect("prost encode into Vec<u8> never fails");
-    buf
-}

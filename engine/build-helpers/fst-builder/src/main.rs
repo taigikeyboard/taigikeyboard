@@ -1,7 +1,7 @@
 //! `fst-builder` — build / query helper for the dictionary fst prefix index.
 //!
 //! Replaces the prior `marisa_trie` Python C-binding pipeline. Stdin protocol
-//! defined in `docs/engine/lexicon-slice-plan.md` §2.3.
+//! documented per subcommand below.
 //!
 //! Subcommands:
 //!   build <output.fst>

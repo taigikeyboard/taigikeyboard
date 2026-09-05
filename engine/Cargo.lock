@@ -18,7 +18,6 @@ dependencies = [
  "dispatch",
  "jni",
  "log",
- "prost",
  "protos",
 ]
 
@@ -703,7 +702,6 @@ version = "0.1.0"
 dependencies = [
  "dispatch",
  "log",
- "prost",
  "protos",
  "swift-bridge",
  "swift-bridge-build",

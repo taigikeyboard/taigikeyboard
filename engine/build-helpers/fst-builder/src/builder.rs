@@ -1,6 +1,6 @@
 //! Build subcommand: read stdin TL\tkey\trowid lines, emit byte-sorted fst.
 //!
-//! Wire format (mirrors `docs/engine/lexicon-slice-plan.md` §2.2):
+//! Wire format (mirrors `docs/engine/binary-format.md` § dictionary.fst):
 //!   key_bytes (UTF-8) || 0xFF || rowid_le_4
 //!
 //! `0xFF` separates key from rowid because UTF-8 byte classes never produce

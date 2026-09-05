@@ -7,7 +7,7 @@
 //! through `dispatch::handle`; the engine itself is held inside a singleton
 //! `Mutex<Engine>` at the FFI boundary (see `nextword::handle::EngineHandle`).
 //!
-//! Plan ref: `docs/engine/nextword-slice-plan.md`.
+//! Spec: `docs/engine/nextword.md`.
 
 // NextWord 切片 — 下一個詞預測引擎的 Intent → Effect 狀態機。
 // 對外透過 `dispatch::handle` 呼叫,引擎本體由 FFI 邊界的 `EngineHandle` 單例持有。

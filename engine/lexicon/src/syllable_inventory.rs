@@ -137,20 +137,6 @@ impl SyllableInventory {
         self.set.search(&pattern).into_stream().next().is_some()
     }
 
-    /// Deprecated single-family membership test, kept as an alias of
-    /// `contains_in(InputMode::Tl, …)` for the v3.5.9 B-1 grace period.
-    /// All in-tree callers should migrate to `contains_in`; once those
-    /// migrations land (B-1c plumbs `mode` through the syllabifier),
-    /// this alias retires in B-7.
-    // B-1 grace-period 兼容入口 — 等同 contains_in(Tl, syllable);B-7 退役。
-    #[deprecated(
-        since = "0.1.0",
-        note = "use contains_in(InputMode::Tl, syllable) — v3.5.9 B-1 mode-aware inventory"
-    )]
-    pub fn contains(&self, syllable: &str) -> bool {
-        self.contains_prefixed("tl:", syllable)
-    }
-
     /// Internal helper: probe the underlying fst::Set for `<prefix><syllable>`
     /// without allocating a new String when the syllable is short enough
     /// to land on the stack. We currently always allocate; callers stay

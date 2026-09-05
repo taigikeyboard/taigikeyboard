@@ -1,6 +1,6 @@
 //! Search orchestration.
 //!
-//! Pipeline (per `docs/engine/lexicon-slice-plan.md` §5.4):
+//! Pipeline:
 //! 1. **D-8 hard guard** — `input_type == Hanzi` short-circuits to `[]`
 //!    BEFORE any reader is touched. Pinned by INVARIANT_LEX_HANZI_GUARD
 //!    (Rust + iOS + Android per Codex Mod 1).

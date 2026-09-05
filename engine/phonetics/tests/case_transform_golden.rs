@@ -1,10 +1,9 @@
 //! Golden-case integration tests for `phonetics::case_transform`.
 //!
 //! Ports the comprehensive table-driven cases from
-//! `ios/TaigiKeyboardTests/CaseTransformerTests.swift` and
-//! `android/app/src/test/.../SuggestionCaseTransformerTest.kt` into
-//! Rust so the per-platform algorithm tests can be deleted in the
-//! platform rewiring commits (Path G — see slice plan).
+//! the pre-Rust iOS `CaseTransformerTests.swift` and Android
+//! `SuggestionCaseTransformerTest.kt` into Rust; the per-platform
+//! algorithm tests were deleted in the Path G platform rewiring commits.
 //!
 //! The platform-side tests post-rewire become thin bridge round-trip
 //! tests verifying FFI plumbing, NOT algorithm correctness — that

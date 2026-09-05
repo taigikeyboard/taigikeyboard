@@ -1,7 +1,7 @@
 //! `mmap-host` — read-only mmap helper crate.
 //!
 //! Owns the only NEW `unsafe_code = "allow"` carve-out introduced by the
-//! v3.5.6 lexicon slice (`docs/engine/lexicon-slice-plan.md` G4). The
+//! v3.5.6 lexicon slice. The
 //! `unsafe` block lives in `MmapHandle::open_readonly` and is gated by
 //! a single SAFETY comment per `.claude/rules/rust-best-practices.md` §4.
 //!

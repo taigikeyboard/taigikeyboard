@@ -36,8 +36,6 @@ const RECORD_FIXED_PREFIX: usize = 11;
 pub const KAUTIAN_BIT: u16 = 1 << 0;
 // khiin 來源位元 (bit 9)。
 pub const KHIIN_BIT: u16 = 1 << 9;
-// dev 來源位元 (bit 10),受詞庫增補檔案開關控制 (預設開,經 enabled_mask 過濾)。
-pub const DEV_BIT: u16 = 1 << 10;
 // 異體字標記位元 (bit 12),由 variant 過濾邏輯使用。
 pub const VARIANT_BIT: u16 = 1 << 12;
 
