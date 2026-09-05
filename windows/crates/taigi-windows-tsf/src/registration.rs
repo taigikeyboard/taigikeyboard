@@ -10,6 +10,7 @@
 use crate::com_out_buffer;
 use crate::guids::{CLSID_TEXT_SERVICE, GUID_PROFILE, LANGID_ZH_TW};
 use crate::module::module_path;
+use crate::product_name;
 use crate::registry::{delete_tree, Key};
 use crate::wide::to_wide_nul;
 use windows::core::{Error, Interface, Result, GUID, HRESULT};
@@ -19,33 +20,11 @@ use windows::Win32::System::Registry::HKEY_CLASSES_ROOT;
 use windows::Win32::UI::Input::KeyboardAndMouse::HKL;
 use windows::Win32::UI::TextServices::{
     CLSID_TF_CategoryMgr, CLSID_TF_InputProcessorProfiles, ITfCategoryMgr,
-    ITfInputProcessorProfileMgr, ITfInputProcessorProfiles, GUID_TFCAT_DISPLAYATTRIBUTEPROVIDER,
-    GUID_TFCAT_TIPCAP_IMMERSIVESUPPORT, GUID_TFCAT_TIPCAP_INPUTMODECOMPARTMENT,
-    GUID_TFCAT_TIPCAP_SYSTRAYSUPPORT, GUID_TFCAT_TIPCAP_UIELEMENTENABLED, GUID_TFCAT_TIP_KEYBOARD,
-    TF_INPUTPROCESSORPROFILE,
+    ITfInputProcessorProfileMgr, ITfInputProcessorProfiles, ITfInputProcessorProfilesEx,
+    GUID_TFCAT_DISPLAYATTRIBUTEPROVIDER, GUID_TFCAT_TIPCAP_IMMERSIVESUPPORT,
+    GUID_TFCAT_TIPCAP_INPUTMODECOMPARTMENT, GUID_TFCAT_TIPCAP_SYSTRAYSUPPORT,
+    GUID_TFCAT_TIPCAP_UIELEMENTENABLED, GUID_TFCAT_TIP_KEYBOARD, TF_INPUTPROCESSORPROFILE,
 };
-
-/// What the CLSID key is named, and what the language bar falls back to when
-/// the DLL carries no string resources (a build without a resource
-/// compiler). Untranslated on purpose — the Mac's `CFBundleName` — because the
-/// OS-visible name is localized: see [`profile_description`].
-pub const SERVICE_DESCRIPTION: &str = "TaigiKeyboard";
-
-/// The STRINGTABLE id the build script stores the localized product name
-/// under, in every language `product_name_strings.rs` carries
-/// (`build-support/resource.rs`, exported as this env var so the two cannot
-/// drift).
-pub const PRODUCT_NAME_STRING_ID: &str = env!("TAIGI_PRODUCT_NAME_STRING_ID");
-
-/// The profile description Windows Settings and the language bar show —
-/// an indirect string, `@<dll>,-<id>`, which the shell resolves against the
-/// user's UI language every time it is displayed (Microsoft's own IMEs
-/// register theirs this way). The twin of the Mac's `.lproj/InfoPlist.strings`
-/// (#613): the name follows the SYSTEM language, not the app's display-language
-/// picker.
-pub fn profile_description(dll_path: &str) -> String {
-    format!("@{dll_path},-{PRODUCT_NAME_STRING_ID}")
-}
 
 /// STACKED-PR NOTE: the display-attribute provider lands with PR5b and the
 /// UI-less candidate list with PR6; this DLL is only installed as the
@@ -265,18 +244,17 @@ fn enumeration_continues(status: HRESULT, fetched: usize) -> Result<bool> {
 /// `ThreadingModel` = `Apartment` (TSF is STA).
 fn register_clsid(dll_path: &str) -> Result<()> {
     let clsid_path = format!("CLSID\\{}", guid_key(&CLSID_TEXT_SERVICE));
-    Key::create(HKEY_CLASSES_ROOT, &clsid_path)?.set_string("", SERVICE_DESCRIPTION)?;
+    Key::create(HKEY_CLASSES_ROOT, &clsid_path)?.set_string("", product_name::UNTRANSLATED)?;
     let inproc = Key::create(HKEY_CLASSES_ROOT, &format!("{clsid_path}\\InProcServer32"))?;
     inproc.set_string("", dll_path)?;
     inproc.set_string("ThreadingModel", "Apartment")
 }
 
 /// `Register` first (the CLSID must be known to TSF), then `RegisterProfile`
-/// on the manager interface (rakukan `registration.rs:80-115`). The icon is
-/// the DLL's own resource, index 0 — added with the installer (PR10); until
-/// then Windows shows its generic keyboard glyph.
+/// on the manager interface (rakukan `registration.rs:80-115`), then the
+/// localized name on top of it. The icon is the DLL's own resource, index 0.
 fn register_profile(dll_path: &str) -> Result<()> {
-    let description = to_wide_nul(&profile_description(dll_path));
+    let description = to_wide_nul(product_name::UNTRANSLATED);
     let icon_file = to_wide_nul(dll_path);
     // SAFETY: TSF's own registration objects, created and used on the
     // regsvr32 thread inside the apartment `with_apartment` opened; every
@@ -297,6 +275,50 @@ fn register_profile(dll_path: &str) -> Result<()> {
             0,
             true,
             0,
+        )?;
+        // The name is cosmetic and the profile is already usable without it:
+        // Windows falls back to the literal `UNTRANSLATED` name above, so a
+        // failure here must not take the registration — and, through the
+        // installer's `FailStep`, the whole install — down with it. Same tier
+        // as the installer's own update task.
+        if let Err(error) = set_profile_display_name(&profiles, dll_path) {
+            log::error!("tsf.register.display_name_failed error={error}");
+        }
+        Ok(())
+    }
+}
+
+/// The name Windows Settings' keyboard list shows, as a resource reference the
+/// system resolves against the user's UI language — the twin of the Mac's
+/// `.lproj/InfoPlist.strings` (#613): the name follows the SYSTEM language,
+/// not the app's display-language picker.
+///
+/// It has to be a separate call. `RegisterProfile`'s own description is a
+/// literal ("The description of the profile", MSDN) and TSF stores it verbatim
+/// in the profile's `Description` value, which Settings then shows verbatim —
+/// an `@<dll>,-<id>` string put there reaches the user as the DLL's path.
+/// Only `SetLanguageProfileDisplayName` writes the profile's `Display
+/// Description`, the value the shell resolves. Measured on Windows 11: our own
+/// key had `Description = @C:\…\TaigiKeyboard.dll,-100` and no `Display
+/// Description` while 微軟倉頡 next to it had `Description = "Microsoft
+/// Changjie"` and `Display Description = @%SystemRoot%\SYSTEM32\input.dll,
+/// -5067`. khiin-rs registers the same pair (`reg/registrar.rs:100-107`).
+fn set_profile_display_name(profiles: &ITfInputProcessorProfiles, dll_path: &str) -> Result<()> {
+    // NUL-terminated so the buffer is a valid C string either way, but the
+    // COUNT excludes it: `cchFile` is a character count (mozc's
+    // `tsf_registrar.cc` passes `path.length()`), and a NUL inside the counted
+    // range would land in the middle of the `@<file>,-<id>` string TSF builds.
+    let file = to_wide_nul(dll_path);
+    let profiles_ex: ITfInputProcessorProfilesEx = profiles.cast()?;
+    // SAFETY: as `register_profile`; `file` is a live local read for exactly
+    // the length passed.
+    unsafe {
+        profiles_ex.SetLanguageProfileDisplayName(
+            &CLSID_TEXT_SERVICE,
+            LANGID_ZH_TW,
+            &GUID_PROFILE,
+            &file[..file.len() - 1],
+            product_name::string_id(),
         )
     }
 }
@@ -356,6 +378,18 @@ mod tests {
             "{32C28A51-8939-4C8F-8F29-037F9FD3CF0A}"
         );
         assert_eq!(CATEGORIES.len(), 6, "only the true categories (Codex W6)");
+    }
+
+    #[test]
+    fn the_profile_description_is_a_name_not_a_resource_reference() {
+        // Half of what the original bug needed, and the half a host without
+        // TSF can check: the value TSF stores in the profile's `Description`
+        // is a NAME, never an `@<file>,-<id>` reference — Windows Settings
+        // shows that value verbatim, which is how the DLL's path reached the
+        // keyboard list. That `SetLanguageProfileDisplayName` is the call
+        // carrying the resource id can only be checked against a live
+        // registration: dogfood S29 reads the two registry values back.
+        assert!(!product_name::UNTRANSLATED.starts_with('@'));
     }
 
     #[test]

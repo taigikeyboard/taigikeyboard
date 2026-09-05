@@ -35,11 +35,12 @@ fn rc_string_escapes_quotes_and_backslashes() {
 
 #[test]
 fn the_generated_names_render_under_the_exported_id() {
-    // `product_name_strings.rs` is `make i18n` output; every entry must reach
-    // the table under the id `registration::profile_description` points at.
+    // `product_name_strings.rs` is `make i18n` output; every entry must land
+    // under the id both `SetLanguageProfileDisplayName` and `LoadStringW` ask
+    // for, which the installer reads back out of this same constant.
     let rendered = resource::product_name_string_tables();
     let id = resource::PRODUCT_NAME_STRING_ID;
-    assert_eq!(id, 100, "registration.rs documents `@<dll>,-100`");
+    assert_eq!(id, 100, "the id product_name::string_id() resolves to");
     for (langid, name) in resource::PRODUCT_NAMES {
         assert!(rendered.contains(&format!("0x{:02X}, 0x{:02X}", langid & 0x3FF, langid >> 10)));
         assert!(rendered.contains(&format!("    {id} \"{name}\"")));

@@ -20,6 +20,7 @@ use crate::display_attribute::{self, DisplayAttributeEnumerator};
 use crate::key_translation;
 use crate::lang_bar::{self, LANG_BAR_SINK_COOKIE, MENU_CHECK_FOR_UPDATES, MENU_OPEN_SETTINGS};
 use crate::preserved_keys::{self, PreservedKeys};
+use crate::product_name;
 use crate::runtime::Runtime;
 use crate::session::KeyPhase;
 use crate::settings_launcher;
@@ -828,7 +829,7 @@ impl ITfLangBarItem_Impl for TextService_Impl {
 
     fn GetTooltipString(&self) -> Result<BSTR> {
         guarded("ITfLangBarItem::GetTooltipString", || {
-            Ok(BSTR::from(lang_bar::product_name().as_str()))
+            Ok(BSTR::from(product_name::localized().as_str()))
         })
     }
 }

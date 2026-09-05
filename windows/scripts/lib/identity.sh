@@ -28,6 +28,18 @@ SHORT_VERSION="$(awk '
     inside && /^version = "/ { gsub(/^version = "|"$/, ""); print; exit }
 ' "$WINDOWS_DIR/Cargo.toml")"
 
+# The STRINGTABLE id every binary stores the localized product name under —
+# the one the installer hands the shell for the Start-menu shortcut and the
+# "Installed apps" entry. Read from the build script that WRITES the tables so
+# the installer cannot drift from the binaries it ships.
+PRODUCT_NAME_STRING_ID="$(awk '
+    /^pub const PRODUCT_NAME_STRING_ID: u16 = / {
+        gsub(/^pub const PRODUCT_NAME_STRING_ID: u16 = |;$/, ""); print; exit
+    }
+' "$WINDOWS_DIR/build-support/resource.rs")"
+[[ "$PRODUCT_NAME_STRING_ID" =~ ^[0-9]+$ ]] ||
+    fail "could not read PRODUCT_NAME_STRING_ID from windows/build-support/resource.rs"
+
 DISTRIBUTION_DIR="$WINDOWS_DIR/.build/distribution"
 STAGING_DIR="$WINDOWS_DIR/.build/staging"
 TARGET_DIR="$WINDOWS_DIR/target/$RELEASE_TARGET/release"

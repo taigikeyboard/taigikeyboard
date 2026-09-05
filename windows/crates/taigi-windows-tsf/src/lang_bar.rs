@@ -20,22 +20,22 @@
 
 use crate::guids::CLSID_TEXT_SERVICE;
 use crate::module::instance;
-use crate::registration::{PRODUCT_NAME_STRING_ID, SERVICE_DESCRIPTION};
+use crate::product_name;
 use crate::ui::window;
 use crate::wide::{fill_fixed, to_wide_nul};
 use taigi_windows_core::keys::{LanguageMode, ShortcutAction};
 use taigi_windows_core::settings::SettingsDocument;
 use taigi_windows_core::strings::{StringKey, StringResolver};
-use windows::core::{Result, PCWSTR, PWSTR};
+use windows::core::{Result, PCWSTR};
 use windows::Win32::Foundation::{HWND, POINT};
 use windows::Win32::UI::Input::KeyboardAndMouse::{GetActiveWindow, GetFocus};
 use windows::Win32::UI::TextServices::{
     GUID_LBI_INPUTMODE, TF_LANGBARITEMINFO, TF_LBI_STYLE_BTN_BUTTON, TF_LBI_STYLE_SHOWNINTRAY,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
-    AppendMenuW, CopyIcon, CreatePopupMenu, DestroyMenu, LoadIconW, LoadImageW, LoadStringW,
-    TrackPopupMenuEx, HICON, HMENU, IDI_APPLICATION, IMAGE_ICON, LR_DEFAULTSIZE, MF_SEPARATOR,
-    MF_STRING, TPM_NONOTIFY, TPM_RETURNCMD,
+    AppendMenuW, CopyIcon, CreatePopupMenu, DestroyMenu, LoadIconW, LoadImageW, TrackPopupMenuEx,
+    HICON, HMENU, IDI_APPLICATION, IMAGE_ICON, LR_DEFAULTSIZE, MF_SEPARATOR, MF_STRING,
+    TPM_NONOTIFY, TPM_RETURNCMD,
 };
 
 /// Menu command ids `show_popup` answers with. `TPM_RETURNCMD` spells a
@@ -59,32 +59,6 @@ pub fn tray_text(mode: LanguageMode) -> &'static str {
     }
 }
 
-/// The product name in the user's UI language — the DLL's own STRINGTABLE
-/// (`build-support/resource.rs`), resolved by `LoadString` with Windows'
-/// language fallback. The same string Windows Settings shows through the
-/// indirect profile description, so the tray, its tooltip and Settings agree.
-/// A DLL built without string resources answers the untranslated name.
-pub fn product_name() -> String {
-    let id: u32 = PRODUCT_NAME_STRING_ID
-        .parse()
-        .expect("TAIGI_PRODUCT_NAME_STRING_ID is a build-script integer");
-    let mut buffer = [0u16; 128];
-    // SAFETY: `buffer` is a writable UTF-16 buffer of the passed length; the
-    // instance is this DLL's own (set in DllMain).
-    let length = unsafe {
-        LoadStringW(
-            Some(instance()),
-            id,
-            PWSTR(buffer.as_mut_ptr()),
-            buffer.len() as i32,
-        )
-    };
-    if length <= 0 {
-        return SERVICE_DESCRIPTION.to_owned();
-    }
-    String::from_utf16_lossy(&buffer[..length as usize])
-}
-
 pub fn item_info() -> TF_LANGBARITEMINFO {
     let mut info = TF_LANGBARITEMINFO {
         clsidService: CLSID_TEXT_SERVICE,
@@ -96,7 +70,7 @@ pub fn item_info() -> TF_LANGBARITEMINFO {
         ulSort: 0,
         szDescription: [0; 32],
     };
-    fill_fixed(&mut info.szDescription, &product_name());
+    fill_fixed(&mut info.szDescription, &product_name::localized());
     info
 }
 

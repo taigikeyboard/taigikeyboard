@@ -30,6 +30,9 @@
 #ifndef Dist
   #error Pass /DDist=<staging dir> (windows/scripts/release-app.sh does)
 #endif
+#ifndef ProductNameStringId
+  #error Pass /DProductNameStringId=<id> (windows/scripts/release-app.sh reads it from build-support/resource.rs)
+#endif
 
 #define AppName "TaigiKeyboard"
 #define AppPublisher "Soo Bîn-hiân 蘇民弦"
@@ -39,6 +42,9 @@
 #define TaskName "TaigiKeyboard Update Check"
 #define SettingsExe "TaigiKeyboardSettings.exe"
 #define ServiceDll "TaigiKeyboard.dll"
+; The one Start-menu entry, spelled once for [Icons] and for the two [Code]
+; sites that localize and un-localize its display name.
+#define ShortcutName "{autoprograms}\" + AppName
 
 [Setup]
 ; Stable across versions: what makes a later installer an UPGRADE.
@@ -143,8 +149,22 @@ Type: files; Name: "{autoprograms}\Taigi Keyboard.lnk"
 
 [Icons]
 ; The AUMID is what lets an unpackaged desktop app post toasts (W9); the
-; updater's toast is silently dropped without this shortcut.
-Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#SettingsExe}"; AppUserModelID: "{#AppUserModelID}"
+; updater's toast is silently dropped without this shortcut. The shortcut's
+; FILE name stays untranslated; its display name is localized afterwards, in
+; [Code] — see LocalizeShortcutName.
+Name: "{#ShortcutName}"; Filename: "{app}\{#SettingsExe}"; AppUserModelID: "{#AppUserModelID}"
+
+[Registry]
+; The name Windows' "Installed apps" list shows, as a resource reference the
+; system resolves against the user's UI language (Microsoft, "Using registry
+; string redirection"). `UninstallDisplayName`
+; above stays the plain name for any reader that does not understand the
+; `_Localized` value — the same pair Windows' own Remote Desktop entry carries
+; (measured on Windows 11: `DisplayName_Localized =
+; @C:\Windows\System32\mstsc.exe,-4000`, REG_EXPAND_SZ). The subkey is Inno's
+; own uninstall key, spelled from the AppId so the two cannot drift, and it is
+; removed with that key on uninstall.
+Root: HKLM; Subkey: "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{#SetupSetting('AppId')}_is1"; ValueType: expandsz; ValueName: "DisplayName_Localized"; ValueData: "@{app}\{#SettingsExe},-{#ProductNameStringId}"
 
 ; Registration and the scheduled task are NOT [Run] entries: Inno ignores a
 ; [Run] entry's exit code, and a DLL that failed to register must be an
@@ -171,6 +191,24 @@ Type: filesandordirs; Name: "{app}\x86"
 ; user's and is deliberately NOT listed here.
 
 [Code]
+// The Start-menu shortcut's DISPLAY name, in the user's UI language. The shell
+// keeps a file's localized name in its folder's desktop.ini, under
+// [LocalizedFileNames], as an `@<file>,-<id>` reference it resolves against the
+// user's UI language (Microsoft, "Locating redirected strings"); Windows names
+// its own Start-menu entries exactly this way. SHSetLocalizedName writes that
+// line and SHRemoveLocalizedName takes it back out — neither touches the .lnk
+// itself, so its file name, its target and its AUMID are unaffected. The Mac
+// gets the same thing from CFBundleDisplayName in the bundle's .lproj (#613).
+function SHSetLocalizedName(pszPath: String; pszResModule: String; idsRes: Integer): Integer;
+  external 'SHSetLocalizedName@shell32.dll stdcall';
+function SHRemoveLocalizedName(pszPath: String): Integer;
+  external 'SHRemoveLocalizedName@shell32.dll stdcall';
+
+function ShortcutPath: String;
+begin
+  Result := ExpandConstant('{#ShortcutName}.lnk');
+end;
+
 // Windows cannot delete a file whose image section a live process still has
 // mapped — DeleteFile answers ERROR_ACCESS_DENIED (5) — but it CAN rename one,
 // because a rename touches the directory entry and not the section. Every file
@@ -609,10 +647,25 @@ begin
   UpdateTaskFailed := not RegisterUpdateTask;
 end;
 
+// The shortcut exists by ssPostInstall ([Icons] runs during the install step).
+// Not a failure tier: a shortcut under its untranslated name still starts the
+// settings window, so this is logged and carried no further.
+procedure LocalizeShortcutName;
+var
+  Failure: Integer;
+begin
+  Failure := SHSetLocalizedName(
+    ShortcutPath, ExpandConstant('{app}\{#SettingsExe}'), {#ProductNameStringId});
+  if Failure <> 0 then
+    Log('shortcut: could not localize ' + ShortcutPath + ' -> ' + IntToStr(Failure));
+end;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
-  if CurStep = ssPostInstall then
+  if CurStep = ssPostInstall then begin
     RegisterEverything;
+    LocalizeShortcutName;
+  end;
   // ssDone is reached only when the whole install succeeded, so the previous
   // version's files are not needed any more. Discarding them also empties
   // MovedFiles, which is what tells DeinitializeSetup there is nothing to undo.
@@ -645,6 +698,12 @@ procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
   AppDir: String;
 begin
+  // Before the shortcut goes: the localized name lives in the SHARED Start-menu
+  // folder's desktop.ini, which the uninstaller does not own and which would
+  // otherwise keep a line naming a .lnk that no longer exists.
+  if CurUninstallStep = usUninstall then
+    if SHRemoveLocalizedName(ShortcutPath) <> 0 then
+      Log('shortcut: could not remove the localized name for ' + ShortcutPath);
   if CurUninstallStep <> usPostUninstall then Exit;
   AppDir := ExpandConstant('{app}');
   DiscardStaleTree(AppDir);

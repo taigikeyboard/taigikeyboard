@@ -212,7 +212,9 @@ sign_file "$STAGING_DIR/$SETTINGS_EXE"
 echo "==> Compiling the installer"
 STAGING_WIN="$(windows_path "$STAGING_DIR")"
 OUTPUT_WIN="$(windows_path "$DISTRIBUTION_DIR")"
-"$ISCC_BIN" -Q "-DAppVersion=$SHORT_VERSION" "-DDist=$STAGING_WIN" "-O$OUTPUT_WIN" "$(windows_path "$INSTALLER_SCRIPT")" ||
+"$ISCC_BIN" -Q "-DAppVersion=$SHORT_VERSION" "-DDist=$STAGING_WIN" \
+    "-DProductNameStringId=$PRODUCT_NAME_STRING_ID" "-O$OUTPUT_WIN" \
+    "$(windows_path "$INSTALLER_SCRIPT")" ||
     fail "iscc failed"
 BUILT_EXE="$DISTRIBUTION_DIR/$APP_NAME-$SHORT_VERSION.exe"
 [[ -f "$BUILT_EXE" ]] || fail "iscc produced no $BUILT_EXE"

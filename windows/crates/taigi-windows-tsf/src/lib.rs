@@ -26,6 +26,7 @@ mod key_translation;
 mod lang_bar;
 mod module;
 mod preserved_keys;
+mod product_name;
 mod registration;
 mod registry;
 mod runtime;
