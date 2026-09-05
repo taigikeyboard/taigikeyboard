@@ -53,6 +53,7 @@ Cross-project process rules auto-load from `~/.claude/rules/` (don't duplicate t
 | modifying Android Compose / IME-specific code, testing, or a refactor-round PR | `.claude/rules/android-ime-patterns.md` |
 | modifying app UI | `.claude/rules/ui-style-guide.md` |
 | adding logging / SQL / network / storage | `.claude/rules/security-rules.md` |
+| adding, renaming, or deleting an `i18n/*.json` key | `.claude/rules/i18n.md` — keys are cross-platform; deleting one can break another platform's build on `main` |
 | Rust engine code (general hygiene, workspace, errors, crates, tests) | `.claude/rules/rust-best-practices.md` |
 | Rust FFI / proto boundary code, `unsafe` blocks, opaque handles, enforcement | `.claude/rules/rust-ffi-safety.md` |
 | starting a Rust slice migration / platform→engine swap / `.proto` addition / mirror-source delete | `.claude/rules/rust-migration-policy.md` |
