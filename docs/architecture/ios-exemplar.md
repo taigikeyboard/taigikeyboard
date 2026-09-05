@@ -79,7 +79,7 @@
 | Pure engine (Foundation-only) | Pure Kotlin (stdlib only — no Android SDK, no Compose, no coroutines Dispatchers). | Enforced by dependency inspection in CI. |
 | `ComposingDelegate` (UITextDocumentProxy wrapper) | `InputConnection` wrapper implementing the same neutral `ComposingTransition.Effect` enum | See §4.1 and `composing-state-boundary.md` §2.2 for the Effect → InputConnection mapping table (including the `finishComposingText` commits-by-default caveat). |
 | `NextWordController` (Timer + @MainActor executor) | IME-service-scoped executor with `android.os.Handler` or coroutine `delay()` on `Dispatchers.Main` | Holds a single `Job` for the context timeout; cancel-before-reschedule. |
-| `OSSignposter` | `Trace.beginSection` / `Trace.endSection` for performance baselining | See `../perf/keyboard-baseline-2026-04.md`. |
+| `OSSignposter` | `Trace.beginSection` / `Trace.endSection` for performance baselining | |
 
 **Key rule**: Pure-engine files must compile with **Foundation only on iOS** and **Kotlin stdlib only on Android**. If an Android port drags in `android.util.Log`, `android.os.SystemClock`, `kotlinx.coroutines.*`, or anything from `android.content`, that is a shared-core failure — route through `LoggerBackend` / injected `nowMs`.
 
@@ -430,7 +430,5 @@ Phase II delivers an Android target in the same shape:
 - Phase I G0–G10 plan: closed and removed; see git history for the historical task list.
 - Behavioral invariants: `behavioral-invariants.md`.
 - Engine/platform split exemplars: `composing-state-boundary.md`, `nextword-engine-boundary.md`.
-- Latency + memory gates that protect this architecture: `../perf/keyboard-baseline-2026-04.md`, `../perf/extension-memory-2026-04.md`.
 - Data-artifact portability (G10, pending): `data-artifacts-portability.md`.
-- Codex strategic review motivating Phase 0 / G0 / G8 / G10: `codex-review-2026-04-19.md`.
 - Docs-review cycle (2026-04-19) that reshaped the Effect enum, added RawNextWordPrediction, mandated generation-based race elimination, and concretized the Android mapping: findings incorporated throughout.

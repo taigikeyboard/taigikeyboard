@@ -311,7 +311,6 @@ Already decided (moved out of "deferred" after review cycle):
 - G5-design counterpart (same pattern for Timer-driven decay): `nextword-engine-boundary.md`.
 - Behavioral invariant pin: `behavioral-invariants.md` §13 (composing-buffer reset semantics).
 - Behavioral invariants this doc must not regress: `behavioral-invariants.md` §§1–3, 9, 11.
-- Codex review (roadmap-level, 2026-04-19): `codex-review-2026-04-19.md`.
 - Docs-review cycle (2026-04-19, same day): findings incorporated above.
 
 ---

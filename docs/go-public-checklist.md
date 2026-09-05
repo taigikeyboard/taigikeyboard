@@ -26,7 +26,7 @@ make scan-secrets
 | --- | --- |
 | `StringKey.swift` ×3 — the `i18n_macos_shortcutRejected*Key` cases | Localization key constants; the rule fires on the shape of a variable named "key" being assigned a string. |
 | `Tab1Fragment.kt` ×3 — a `titleKey` argument holding `faq_1_question` | Same shape, FAQ key. |
-| `臺灣方音符號.html` ×2 — `wgConfirmEditHCaptchaSiteKey` | A third party's hCaptcha **site** key inside a saved copy of a public web page. Site keys are published in page source by design. |
+| `臺灣方音符號.html` ×2 — `wgConfirmEditHCaptchaSiteKey` | A third party's hCaptcha **site** key inside a saved copy of a public web page (file removed 2026-09-05; the fingerprints stay so history scans keep passing). Site keys are published in page source by design. |
 
 The first six stop matching once `.gitleaks.toml` applies; the last two are
 recorded in `.gitleaksignore` by fingerprint. A clean run is now the expected

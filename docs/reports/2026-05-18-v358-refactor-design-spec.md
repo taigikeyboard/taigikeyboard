@@ -153,7 +153,7 @@ re-spot; still re-grep any symbol not listed here before coding.
 ---
 
 > **Type**: Implementation design spec (first-hand, structural). Companion to
-> `docs/reports/2026-05-18-v3.5.9-refactor-plan-draft.md` (the *what/why*); this is the
+> the v3.5.9 refactor plan draft (removed 2026-09-05, in git history) — the *what/why*; this is the
 > *how*, for the three highest-leverage slices.
 > **Created**: 2026-05-18 against `main` `87489fd1` (NOT the plan draft's `f828c89e`).
 > **Status — DESIGN ONLY, DO NOT EXECUTE YET**: produced during the v3.5.8 dogfood

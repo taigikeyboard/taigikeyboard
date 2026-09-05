@@ -2,13 +2,13 @@
 
 > **Type**: Reference
 > **Keywords**: `architecture`, `diagram`, `engine`, `FFI`, `build-pipeline`, `data-flow`
-> **Related**: file-structure.md, data-artifacts-portability.md, ../engine/rust-core-proto.md
+> **Related**: data-artifacts-portability.md, ../engine/rust-core-proto.md
 
 ---
 
 ## Summary
 
-- Visual architecture map of the cross-platform Taigi Keyboard. Diagrams are the canonical picture; per-file correspondence lives in [`file-structure.md`](file-structure.md), artifact byte layout in [`data-artifacts-portability.md`](data-artifacts-portability.md).
+- Visual architecture map of the cross-platform Taigi Keyboard. Diagrams are the canonical picture; artifact byte layout in [`data-artifacts-portability.md`](data-artifacts-portability.md).
 - iOS (Swift + KeyboardKit) and Android (Kotlin + FlorisBoard) are thin platform shells over one shared Rust engine (`engine/` Cargo workspace) reached through a proto bytes-in / bytes-out FFI.
 - Diagrams are generated from actual code (crate manifests, `Makefile`, build scripts) — keep them in sync when those change.
 

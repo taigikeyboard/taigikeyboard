@@ -54,8 +54,6 @@
 | `architecture/windows-release.md` | Windows installer (Inno Setup), Authenticode signing, and web-distributed installer workflow | Active |
 | `architecture/ios-exemplar.md` | iOS architectural pattern (alignment target for Android) | Reference |
 | `architecture/android-exemplar.md` | Android-specific deviations from iOS exemplar | Reference |
-| `architecture/codex-review-2026-04-19.md` | Strategic Codex review of shared-core roadmap | Historical |
-| `architecture/file-structure.md` | File index, directory structure, naming conventions | Reference |
 
 ### `ui/` — Presentation & Layout (10)
 
@@ -86,40 +84,25 @@
 
 ### `reports/` — Audit & Analysis Reports (historical)
 
-Dated reports are one-off snapshots ordered chronologically. Undated entries are evergreen references / live backlogs.
+One-off snapshots ordered chronologically. Specs cited by engine code (`v358-refactor-design-spec`, `v359-b-plan`) stay here as source-of-truth.
 
 | File | Description | Status |
 |------|-------------|--------|
-| `reports/2026-03-11-audit-report.md` | Combined audit report (docs, health, research) | Historical |
-| `reports/2026-03-11-codebase-health.md` | Pre-migration health snapshot | Historical |
-| `reports/2026-03-11-segmentation-tie-bug.md` | CVC+V segmentation tie-breaking analysis — obsolete, segmenter removed v3.4.6 | Historical |
-| `reports/2026-03-21-simplify-pass.md` | Simplify-pass review log (24 batches, all resolved) | Historical |
-| `reports/2026-04-03-architecture-review.md` | Cross-platform architecture review (B+ baseline) | Historical |
 | `reports/2026-04-18-dynamic-font-download-plan.md` | Forward-looking feature plan | Plan |
-| `reports/2026-05-04-migration-residue.md` | Rust migration residue audit (P1/P2/P3 dimensions) | Historical |
-| `reports/2026-05-11-moe-segmentation-audit.md` | MOE Tâi-gí segmentation architecture/flow audit (read-only) | Historical |
-| `reports/2026-05-18-v3.5.9-refactor-plan-draft.md` | v3.5.9 refactor / maintainability plan (DRAFT, not approved) | Plan |
 | `reports/2026-05-18-v358-refactor-design-spec.md` | v3.5.9 refactor implementation design spec (S0/A2/A1) | Historical |
 | `reports/2026-05-20-triple-index-eval.md` | 三索引 (POJ+TL+TPS first-class lattice) feasibility eval | Historical |
 | `reports/2026-05-20-v359-b-plan.md` | v3.5.9-B dual-index (POJ first-class lattice) plan (Codex-converged v3) | Historical |
 | `reports/2026-06-03-user-data-cross-mode-audit.md` | User-data cross-input-mode + single→triple-index compatibility audit (v3.6.1 fix candidates) | Historical |
-| `reports/2026-06-19-i18n-string-inventory.md` | i18n Tier-1 string inventory + scope classification + divergence audit (frozen) | Historical |
 | `reports/2026-06-22-i18n-content-draft-review.md` | i18n content.json 5-lang draft proofread sheet | Historical |
 | `reports/2026-06-22-i18n-poj-draft-review.md` | i18n POJ draft proofread sheet | Historical |
 | `reports/2026-06-22-i18n-symbol-draft-review.md` | i18n symbol draft proofread sheet | Historical |
 | `reports/2026-06-22-i18n-tl-draft-review.md` | i18n TL draft proofread sheet | Historical |
-| `reports/2026-06-24-i18n-migration-audit.md` | i18n remaining-migration coverage audit (G1-G6 scope) | Historical |
 | `reports/2026-08-30-hanlo-together-mode-research.md` | 候選詞顯示 picker research: 漢羅並排 (default, title/subtitle) / 漢羅濫 (one-label hanji+roman, formerly 漢羅齊出; Part I) / 羅馬字 (roman-only cells in today's candidate UI, all 4 platforms; Part II — 3-column + 台語拼音校正 considered and dropped, kept as future 校正 reference) — research only, not implemented | Plan |
-| `reports/refactor-backlog.md` | Pruned refactor backlog (live items only) | Active |
-| `reports/khiin-lattice-research.md` | Word-lattice architecture research | Reference |
 
-### `perf/` — Performance Methodology (4)
+### `perf/` — Performance Methodology (1)
 
 | File | Description | Status |
 |------|-------------|--------|
-| `perf/keyboard-baseline-2026-04.md` | iOS keystroke latency methodology | Reference |
-| `perf/extension-memory-2026-04.md` | iOS keyboard-extension memory methodology | Reference |
-| `perf/android-keyboard-baseline-2026-04.md` | Android keystroke latency methodology | Reference |
 | `perf/android-compose-stability.md` | Android Compose stability report generation + decision rule | Reference |
 
 ### `releases/` — Per-Release Archives (1)
