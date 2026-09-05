@@ -18,9 +18,6 @@ struct CandidateTheme: Equatable {
     static let basePrimaryFontSize: CGFloat = 20
     static let baseSecondaryFontSize: CGFloat = 15
 
-    /// TPS scale (方音符號視覺上較大，縮小 15%)
-    static let tpsScale: CGFloat = 0.85
-
     // MARK: - Resolved values
 
     let height: CGFloat
@@ -42,16 +39,6 @@ struct CandidateTheme: Equatable {
     /// KeyboardKit fallback (white keycap / dark pressed).
     let firstCandidateHighlightColor: Color?
     let pressedCandidateColor: Color?
-
-    /// TPS 主標題字體大小
-    var tpsPrimaryFontSize: CGFloat {
-        primaryFontSize * Self.tpsScale
-    }
-
-    /// TPS 副標題字體大小
-    var tpsSecondaryFontSize: CGFloat {
-        secondaryFontSize * Self.tpsScale
-    }
 
     // MARK: - Factory
 

@@ -13,8 +13,6 @@ public final class SwiftLoggerSink {
     static let levelError: UInt8 = 0
     static let levelWarn: UInt8 = 1
     static let levelInfo: UInt8 = 2
-    static let levelDebug: UInt8 = 3
-    static let levelTrace: UInt8 = 4
 
     public init() {}
 

@@ -111,8 +111,8 @@ public extension RustEngineBridge {
         }
     }
 
-    /// Engine-state read for `SelectionContextProvider` / executor lookup.
-    // 讀取 NextWord engine 當前狀態 — 給 SelectionContextProvider 與 executor 用。
+    /// Engine-state read for the NextWord executor.
+    // 讀取 NextWord engine 當前狀態 — 給 NextWord executor 用。
     struct NextWordStateSnapshot: Equatable {
         public let lastSelectedWord: String?
         public let isShowing: Bool
