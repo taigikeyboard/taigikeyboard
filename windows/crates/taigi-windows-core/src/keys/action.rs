@@ -1,7 +1,7 @@
 //! The composing actions a user can put on a key of their own choosing.
 //! Port of `ComposingAction.swift`.
 
-// 中文: 使用者可自訂按鍵的組字動作;預設鍵跟隨系統注音輸入法。
+// 使用者可自訂按鍵的組字動作;預設鍵跟隨系統注音輸入法。
 
 use super::chord::ComposingKeyChord;
 use super::intent::{CandidateNavigation, ComposingKeyIntent};

@@ -4,7 +4,7 @@
 //! not re-check every launch), the pending manifest, the once-per-version
 //! announcement gate.
 
-// 中文: 更新檢查的純決策 — 何時該查、查到什麼、settings.json 記什麼。
+// 更新檢查的純決策 — 何時該查、查到什麼、settings.json 記什麼。
 
 use crate::manifest::{DottedVersion, UpdateManifest};
 use crate::transport::ManifestFetcher;

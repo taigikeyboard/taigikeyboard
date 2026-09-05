@@ -1,5 +1,5 @@
-// 中文: 候選詞 cell 的純函式工具 — 顯示文字 / commit 文字 / 寬度量測都集中在這裡。
-// 中文: TPS 模式、isTranslateSwapped 與 candidateDisplayMode 由呼叫端傳入,不直接讀 SharedSettings,方便測試。
+// 候選詞 cell 的純函式工具 — 顯示文字 / commit 文字 / 寬度量測都集中在這裡。
+// TPS 模式、isTranslateSwapped 與 candidateDisplayMode 由呼叫端傳入,不直接讀 SharedSettings,方便測試。
 
 import KeyboardKit
 import SwiftUI
@@ -99,7 +99,7 @@ enum CandidateCellHelper {
         // cell already carries exactly the script it commits, so the swap / TPS
         // rewrites below must not touch it (a swapped rewrite would replace a
         // marked cell's text; the TPS fallback would re-render its roman).
-        // 中文: 帶 cellScript 標記的 split cell 原樣送出,不做 swap / TPS 改寫。
+        // 帶 cellScript 標記的 split cell 原樣送出,不做 swap / TPS 改寫。
         if CandidateCellScript.marker(for: suggestion) != nil {
             return suggestion
         }
@@ -189,8 +189,8 @@ enum CandidateCellHelper {
     /// subtitle line only when `displaySubtitle` is non-empty and differs from
     /// its `displayTitle` (a swapped hanji-less row's subtitle would repeat
     /// the title).
-    // 中文: cell 實際會畫出的副標題 — render 條件的唯一出處,view 與
-    // 中文: contentHasSubtitles 皆從這裡取。
+    // cell 實際會畫出的副標題 — render 條件的唯一出處,view 與
+    // contentHasSubtitles 皆從這裡取。
     static func renderedSubtitle(
         for suggestion: AutocompleteSuggestion,
         isTranslateSwapped: Bool,
@@ -227,7 +227,7 @@ enum CandidateCellHelper {
     /// rows line up, while an all-single-line list (羅馬字 / 漢羅濫 / TPS)
     /// reserves nothing. Reads the cells' own render source
     /// (`renderedSubtitle`) so the two predicates cannot drift.
-    // 中文: 整份候選內容是否有任何 cell 會畫副標題 — 決定單行 cell 是否保留隱形副標空間。
+    // 整份候選內容是否有任何 cell 會畫副標題 — 決定單行 cell 是否保留隱形副標空間。
     static func contentHasSubtitles(
         _ suggestions: [AutocompleteSuggestion],
         isTranslateSwapped: Bool,
@@ -280,7 +280,7 @@ enum CandidateCellHelper {
 /// surrounding content has a subtitle somewhere (§42: one-script content is
 /// one line tall). Shared by `CandidateButtonView` and
 /// `ExpandedCandidateGridCell`.
-// 中文: 隱形副標 spacer — 單行 cell 與雙行鄰居對齊用,兩個候選 view 共用。
+// 隱形副標 spacer — 單行 cell 與雙行鄰居對齊用,兩個候選 view 共用。
 struct SubtitleSpacer: View {
     let fontSize: CGFloat
 

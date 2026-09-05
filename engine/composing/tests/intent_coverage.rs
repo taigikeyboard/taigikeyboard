@@ -1,7 +1,7 @@
 //! One test per intent — round-trip through `dispatch::handle` to exercise
 //! the proto decode path alongside the transition table.
 
-// 中文: 每個 Intent 一條測試,透過 dispatch::handle 同時驗證 proto 解碼與狀態轉移。
+// 每個 Intent 一條測試,透過 dispatch::handle 同時驗證 proto 解碼與狀態轉移。
 
 use composing::{dispatch, Engine};
 use protos::engine::composing_request::Method;

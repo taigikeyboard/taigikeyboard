@@ -22,11 +22,11 @@
 //! the same shadow → lattice path TL/POJ already walk; the legacy
 //! `build_keys_tps` `tl:`-folded path is retired).
 
-// 中文: 將 protobuf ComposingRequest 解碼成 Intent,套用到 Engine 後產出回應。
-// 中文: 純函式分派層,不處理 generation 同步 (那由 EngineHandle 負責)。
-// 中文: Phase 6 — FetchAtPos 在 dispatch 短路處理 (需要 lexicon state + 模式相關 key 構造);
-// 中文:   v3.5.9 A2 後候選組裝的 6-step seam 已移到 composing::continuous,
-// 中文:   dispatch 只剩 phase/hanzi/position guard + proto→domain hoist + wire encode。
+// 將 protobuf ComposingRequest 解碼成 Intent,套用到 Engine 後產出回應。
+// 純函式分派層,不處理 generation 同步 (那由 EngineHandle 負責)。
+// Phase 6 — FetchAtPos 在 dispatch 短路處理 (需要 lexicon state + 模式相關 key 構造);
+//   v3.5.9 A2 後候選組裝的 6-step seam 已移到 composing::continuous,
+//   dispatch 只剩 phase/hanzi/position guard + proto→domain hoist + wire encode。
 
 use crate::api::{ComposingError, Engine, Intent, Phase};
 use crate::continuous::{assemble_candidates, retain_first_by_key};
@@ -44,7 +44,7 @@ use ranking::build_frequency_map;
 
 /// Decode the proto request into a typed `Intent`. Returns `MissingMethod`
 /// when `oneof method` is empty.
-// 中文: 把 proto 請求解碼為型別化 Intent,oneof method 缺漏時回傳 MissingMethod。
+// 把 proto 請求解碼為型別化 Intent,oneof method 缺漏時回傳 MissingMethod。
 pub(crate) fn decode_intent(req: &ComposingRequest) -> Result<Intent, ComposingError> {
     use composing_request::Method;
     let Some(method) = req.method.clone() else {
@@ -96,8 +96,8 @@ pub(crate) fn decode_intent(req: &ComposingRequest) -> Result<Intent, ComposingE
 ///
 /// `FetchAtPos` is short-circuited here (not via `engine.apply`) so the
 /// pure transition table stays free of lexicon access. See module docs.
-// 中文: 純分派入口:解碼後套用到 engine。generation 同步由上層 EngineHandle 處理。
-// 中文: FetchAtPos 在此短路處理,讓 transition.rs 維持 pure (不接觸 lexicon)。
+// 純分派入口:解碼後套用到 engine。generation 同步由上層 EngineHandle 處理。
+// FetchAtPos 在此短路處理,讓 transition.rs 維持 pure (不接觸 lexicon)。
 pub fn handle(
     req: &ComposingRequest,
     engine: &mut Engine,
@@ -145,10 +145,10 @@ pub fn handle(
 /// [`crate::continuous::assemble_candidates`]; this fn does the
 /// phase/hanzi/position guards, the proto→domain hoists, and the wire
 /// encoding around it.
-// 中文: Phase 6 — 連續輸入候選讀取入口;短路處理,不經過 transition.rs。
-// 中文: Phase 9.3a — 帶平台 FrequencyEntry[] + now_ms;dispatch 端建立 FrequencyMap 後送進 lexicon。
-// 中文: Phase 9 Item 12 — 加帶平台 CustomDictEntry[];dispatch hoist 成 CustomEntry domain 後送進 lexicon 合成 + 去重。
-// 中文: v3.5.9 A2 — 候選組裝 6-step seam 已移到 composing::continuous;此處只剩 guard + hoist + wire encode。
+// Phase 6 — 連續輸入候選讀取入口;短路處理,不經過 transition.rs。
+// Phase 9.3a — 帶平台 FrequencyEntry[] + now_ms;dispatch 端建立 FrequencyMap 後送進 lexicon。
+// Phase 9 Item 12 — 加帶平台 CustomDictEntry[];dispatch hoist 成 CustomEntry domain 後送進 lexicon 合成 + 去重。
+// v3.5.9 A2 — 候選組裝 6-step seam 已移到 composing::continuous;此處只剩 guard + hoist + wire encode。
 fn handle_fetch_at_pos(
     engine: &Engine,
     position: u32,
@@ -173,8 +173,8 @@ fn handle_fetch_at_pos(
     // so the behavior survives the Item 13 platform-fallback retire.
     // Runs ahead of the reserved-position check because contaminated
     // `raw` is dead regardless of `position`.
-    // 中文: Item 11 — 漢字誤入 composing buffer 時短路回空候選(carrier present),
-    // 中文:   把平台 D-8 兜底搬進 engine,Item 13 retire 平台 fallback 後行為不流失。
+    // Item 11 — 漢字誤入 composing buffer 時短路回空候選(carrier present),
+    //   把平台 D-8 兜底搬進 engine,Item 13 retire 平台 fallback 後行為不流失。
     if is_hanzi(raw) {
         return with_continuous(snapshot, ContinuousResponse::default());
     }
@@ -205,11 +205,11 @@ fn handle_fetch_at_pos(
     // The POJ-vs-TL/English branch in the seam is unaffected: platform
     // builders DO map POJ → `"poj"` so config is reliable for that
     // axis; only TPS needs the `contains_tps` override.
-    // 中文: D / C-3b — mode 升級:有 Bopomofo 字元時 raw 凌駕 config。
-    // 中文:   現平台 AppConfig 把 TPS 折成 "tl"/"poj" + is_translate_swapped 旗標,
-    // 中文:   config 字串無法判 TPS,故以 contains_tps(raw) 為唯一真相升級到 InputMode::Tps。
-    // 中文:   單一 mode 直流入 assemble_candidates,刪掉 is_tps 雙軸 split-brain。
-    // 中文:   POJ vs TL 不受影響(config 字串可靠),只有 TPS 需要 raw 偵測覆寫。
+    // D / C-3b — mode 升級:有 Bopomofo 字元時 raw 凌駕 config。
+    //   現平台 AppConfig 把 TPS 折成 "tl"/"poj" + is_translate_swapped 旗標,
+    //   config 字串無法判 TPS,故以 contains_tps(raw) 為唯一真相升級到 InputMode::Tps。
+    //   單一 mode 直流入 assemble_candidates,刪掉 is_tps 雙軸 split-brain。
+    //   POJ vs TL 不受影響(config 字串可靠),只有 TPS 需要 raw 偵測覆寫。
     let mode = if contains_tps(raw) {
         phonetics::InputMode::Tps
     } else {
@@ -229,7 +229,7 @@ fn handle_fetch_at_pos(
     // custom matches / feature disabled → zero synthesized candidates
     // and the `(roman, hanji)` dedupe is a no-op (backward-compatible
     // with builds that never set `FetchAtPos.custom_entries`).
-    // 中文: Item 12 — proto CustomDictEntry[] → domain CustomEntry,空 list = 無 custom,合成 0 筆、去重 no-op。
+    // Item 12 — proto CustomDictEntry[] → domain CustomEntry,空 list = 無 custom,合成 0 筆、去重 no-op。
     let custom = build_custom_entries(custom_entries);
     // PR-9.6 — normalise the source-toggle bitmask at the proto→domain
     // boundary: proto3 default `0` means "platform did not wire this"
@@ -241,9 +241,9 @@ fn handle_fetch_at_pos(
     // `build_frequency_map` / `build_custom_entries` hoists) keeps
     // `assemble_candidates` taking an already-resolved enabled bitmask —
     // no domain code has to know about the wire sentinel.
-    // 中文: PR-9.6 — 在 proto→domain 邊界正規化 source-toggle bitmask;
-    // 中文:   0 (proto3 預設,平台未接線) → u32::MAX (legacy 全開),重現 PR-9.6 前忽略 toggle 的行為。
-    // 中文:   真實 bitmask 因 dev bit 必設故絕不為 0,0 為明確 absence sentinel;在此正規化讓 assemble_candidates 只收已解析值。
+    // PR-9.6 — 在 proto→domain 邊界正規化 source-toggle bitmask;
+    //   0 (proto3 預設,平台未接線) → u32::MAX (legacy 全開),重現 PR-9.6 前忽略 toggle 的行為。
+    //   真實 bitmask 因 dev bit 必設故絕不為 0,0 為明確 absence sentinel;在此正規化讓 assemble_candidates 只收已解析值。
     let enabled_sources_bitmask = if enabled_sources_bitmask == 0 {
         u32::MAX
     } else {
@@ -272,9 +272,9 @@ fn handle_fetch_at_pos(
     // the segmentation / cost primitive (`assemble_candidates`) is never
     // touched (incidents S5/§18/S9). NOT re-run through Step 5's POJ recase:
     // `derived_display` is already the mode-correct POJ/TL literal.
-    // 中文: §34 — TL/POJ 組字時(不論有無標調)把目前組字結果(= preedit WYSIWYG)當
-    // 中文:   roman-only 候選放 index 0,漢羅一鍵上屏免切 文/A,加調時候選列不跳動。
-    // 中文:   display 層 prepend,不碰 assemble_candidates 切詞/cost primitive;不跑 Step 5 POJ recase。
+    // §34 — TL/POJ 組字時(不論有無標調)把目前組字結果(= preedit WYSIWYG)當
+    //   roman-only 候選放 index 0,漢羅一鍵上屏免切 文/A,加調時候選列不跳動。
+    //   display 層 prepend,不碰 assemble_candidates 切詞/cost primitive;不跑 Step 5 POJ recase。
     //
     // §34 / S22 toggle (顯示當咧拍的字): when the user turns the setting OFF
     // the platform sends `literal_roman_candidate_disabled = true` and the
@@ -283,21 +283,21 @@ fn handle_fetch_at_pos(
     // prepend; any roman-only / OOV-synth candidate `assemble_candidates`
     // produced on its own stays. Inverted sentinel: proto3 default `false`
     // = show (legacy always-on), so un-wired builds are unaffected.
-    // 中文: §34/S22 開關 — 使用者關閉時平台送 disabled=true,跳過 prepend(含內層去重);
-    // 中文:   只關 §34 強制 prepend,assemble_candidates 自然產生的 roman 候選保留。
+    // §34/S22 開關 — 使用者關閉時平台送 disabled=true,跳過 prepend(含內層去重);
+    //   只關 §34 強制 prepend,assemble_candidates 自然產生的 roman 候選保留。
     if !literal_roman_candidate_disabled {
         if let Some(literal) = literal_roman_candidate(raw, config, mode) {
             // Drop a pre-existing IDENTICAL bare-roman (hanji-absent Tailo)
             // so the literal is not duplicated; dict rows with hanji stay (a
             // `tâi`/台 dict candidate and a bare `tâi` commit differ — Codex
-            // pre-impl F5). 中文: 去重同 roman 的純羅馬字 Tailo;帶漢字的字典候選保留。
+            // pre-impl F5). 去重同 roman 的純羅馬字 Tailo;帶漢字的字典候選保留。
             candidates.retain(|c| !(c.hanji.is_none() && c.roman == literal.roman));
             candidates.insert(0, literal);
         }
     }
     // §44 羅馬字 display dedupe — must run AFTER the literal prepend (a pass
     // inside `assemble_candidates` never sees the literal → two `tâi` cells).
-    // 中文: §44 羅馬字顯示去重,必須在 §34 prepend 之後。
+    // §44 羅馬字顯示去重,必須在 §34 prepend 之後。
     if config.is_roman_only_display()
         && matches!(mode, phonetics::InputMode::Tl | phonetics::InputMode::Poj)
     {
@@ -323,8 +323,8 @@ fn handle_fetch_at_pos(
 /// string, so the user has no way to tell which cell commits which slice and
 /// the second cell reads as a defect (USER: 「相同的漢字 or 羅馬字不能重複出現」).
 /// A cell that reads exactly like an earlier one is never listed.
-// 中文: 以「畫面上的 roman」為唯一鍵去重;2026-09-03 拿掉 span —— 單腳本顯示時
-// 中文:   同字串的兩格使用者分不出差別,重複格即缺陷。
+// 以「畫面上的 roman」為唯一鍵去重;2026-09-03 拿掉 span —— 單腳本顯示時
+//   同字串的兩格使用者分不出差別,重複格即缺陷。
 fn dedupe_display_roman(candidates: &mut Vec<RawCandidate>) {
     retain_first_by_key(candidates, |c| Some(c.roman.clone()));
 }
@@ -354,10 +354,10 @@ fn dedupe_display_roman(candidates: &mut Vec<RawCandidate>) {
 /// (`tai1`, `goa2ai3li2` — the engine does not auto-syllabify, §10.2). It
 /// carries `canonical_tl` via `canonical_tl_form` so 詞頻 / 詞關聯 learn the
 /// canonical `(∅, TL)` identity on commit (Core Principle #7; §24/§28).
-// 中文: §34/S22 — 漢羅快速輸入的字面 roman 候選;TL/POJ 組字時「一律」顯示目前組字
-// 中文:   結果(= preedit derived_display),不論有無標調(USER「邏輯 should consist」),
-// 中文:   候選恆鏡 preedit → 加調時候選列不跳動。roman-only(hanji=None→Tailo),
-// 中文:   恆等 preedit(§30 字面);canonical_tl 走 canonical_tl_form 保 #7 身分。
+// §34/S22 — 漢羅快速輸入的字面 roman 候選;TL/POJ 組字時「一律」顯示目前組字
+//   結果(= preedit derived_display),不論有無標調(USER「邏輯 should consist」),
+//   候選恆鏡 preedit → 加調時候選列不跳動。roman-only(hanji=None→Tailo),
+//   恆等 preedit(§30 字面);canonical_tl 走 canonical_tl_form 保 #7 身分。
 fn literal_roman_candidate(
     raw: &str,
     config: &AppConfig,
@@ -417,13 +417,13 @@ fn literal_roman_candidate(
 /// 6. The left-anchored projection (`start == 0`) emits a fused
 ///    toneless `{mode_prefix}:<key>` per ending (`tl:` in TL/English
 ///    mode, `poj:` in POJ mode).
-// 中文: build_keys_tl 的可注入測試版 — 直接吃 SyllableInventory,跑「lowercase →
-// 中文:   canonicalize_poj_shadow (Item 9) → hyphen-shadow (Item 8) → 音節切分 →
-// 中文:   fused toneless key + raw byte offset」。
-// 中文: 兩條 offset map (canonical→raw, shadow→canonical) 在此 compose 成單一 shadow→raw,
-// 中文:   供 consumed_span_end 使用。
-// 中文: v3.5.9 A2 後 production 走 composing::continuous::assemble_candidates(D1 fold:
-// 中文:   build_shadow_lattice 單建);此 wrapper 只剩 integration test 用。
+// build_keys_tl 的可注入測試版 — 直接吃 SyllableInventory,跑「lowercase →
+//   canonicalize_poj_shadow (Item 9) → hyphen-shadow (Item 8) → 音節切分 →
+//   fused toneless key + raw byte offset」。
+// 兩條 offset map (canonical→raw, shadow→canonical) 在此 compose 成單一 shadow→raw,
+//   供 consumed_span_end 使用。
+// v3.5.9 A2 後 production 走 composing::continuous::assemble_candidates(D1 fold:
+//   build_shadow_lattice 單建);此 wrapper 只剩 integration test 用。
 /// Injectable test seam for the FULL continuous-input key set — the base
 /// reading's keys PLUS every alternate reading's
 /// (`INVARIANT_TPS_DEFOLD_ENUMERATE` §35, TPS-only). Same shared
@@ -433,9 +433,9 @@ fn literal_roman_candidate(
 ///
 /// [`build_keys_tl_with_inventory`] stays the BASE-only seam: the pre-§35
 /// tests that pin exact base key sets must keep seeing exactly those.
-// 中文: 完整連續輸入鍵集的可注入測試接縫 = base 讀法 + 各替代讀法(§35,TPS-only),
-// 中文:   與 production 共用 build_continuous_keys,故 integration test 可用 hermetic inventory 釘替代讀法。
-// 中文: build_keys_tl_with_inventory 維持「只有 base」的接縫,§35 之前釘死鍵集的測試不受影響。
+// 完整連續輸入鍵集的可注入測試接縫 = base 讀法 + 各替代讀法(§35,TPS-only),
+//   與 production 共用 build_continuous_keys,故 integration test 可用 hermetic inventory 釘替代讀法。
+// build_keys_tl_with_inventory 維持「只有 base」的接縫,§35 之前釘死鍵集的測試不受影響。
 #[doc(hidden)]
 pub fn build_continuous_keys_with_inventory(
     raw: &str,
@@ -480,10 +480,10 @@ pub fn build_keys_tl_with_inventory(
 /// inventory introduced by B-1 / B-2; rewriting `roman` at this seam
 /// would break that alignment for POJ-mode custom entries
 /// (Codex pre-impl BLOCK #1, 2026-05-21).
-// 中文: Item 12 — proto CustomDictEntry[] → domain CustomEntry;roman/hanji 是 custom_dictionary.db 原始欄位,
-// 中文:   不是 legacy 顯示大寫化形式,確保 (roman,hanji) 去重鍵能與 dict.bin 正確碰撞。
-// 中文: B-4 — roman 在此保留原 form(用戶 native),canonical TL fold 只發生在 display_text 合成端
-// 中文:   (custom_entry_to_candidate → canonical_tl_form)。在此 rewrite roman 會破 B-2 POJ-family lattice 對齊。
+// Item 12 — proto CustomDictEntry[] → domain CustomEntry;roman/hanji 是 custom_dictionary.db 原始欄位,
+//   不是 legacy 顯示大寫化形式,確保 (roman,hanji) 去重鍵能與 dict.bin 正確碰撞。
+// B-4 — roman 在此保留原 form(用戶 native),canonical TL fold 只發生在 display_text 合成端
+//   (custom_entry_to_candidate → canonical_tl_form)。在此 rewrite roman 會破 B-2 POJ-family lattice 對齊。
 fn build_custom_entries(entries: &[CustomDictEntry]) -> Vec<CustomEntry> {
     entries
         .iter()
@@ -510,16 +510,16 @@ fn raw_to_proto_candidate(c: RawCandidate) -> CandidateMessage {
         // `optional string` so prost serializes `None` as wire-absent
         // (distinguishes TAILO from defective empty-string emission).
         // See `docs/engine/continuous-candidate-display.md` §4.2.
-        // 中文: Item 5 — roman 永有值,為當前 input mode 的顯示羅馬字(TL,或經 POJ pass 後的 POJ);
-        // 中文:   hanji 為 proto optional,TAILO 候選送 None,wire 上是「absent」而非空字串。
+        // Item 5 — roman 永有值,為當前 input mode 的顯示羅馬字(TL,或經 POJ pass 後的 POJ);
+        //   hanji 為 proto optional,TAILO 候選送 None,wire 上是「absent」而非空字串。
         roman: c.roman,
         hanji: c.hanji,
         // v3.6.1 R2 — identity sidechannel: canonical TL (NOT the
         // POJ-rendered display `roman`). The platform round-trips it back
         // into `CommitContinuous.association_tl` on tap. Empty only for
         // TPS-OOV hanji-absent candidates with no recoverable dict TL.
-        // 中文: R2 — canonical TL 身分 sidechannel(非 POJ render 後的顯示 roman);
-        // 中文:   平台 tap 時 round-trip 回 CommitContinuous.association_tl。
+        // R2 — canonical TL 身分 sidechannel(非 POJ render 後的顯示 roman);
+        //   平台 tap 時 round-trip 回 CommitContinuous.association_tl。
         canonical_tl: c.canonical_tl,
     }
 }
@@ -540,7 +540,7 @@ fn with_continuous(
 /// field is u32 so callers could in principle send larger values.
 /// Saturate to `u8::MAX` so Continuous transition.rs sees a typed
 /// value matching `NailedSegment.syllable_count: u8`.
-// 中文: 把 wire 上的 u32 壓回 u8,避免錯誤值 panic。
+// 把 wire 上的 u32 壓回 u8,避免錯誤值 panic。
 fn clamp_syllable_count(value: u32) -> u8 {
     value.min(u8::MAX as u32) as u8
 }
@@ -571,8 +571,8 @@ mod tests {
     /// `roman` and `hanji` onto the wire. HANT records carry both;
     /// TAILO records emit `roman` only and leave proto `hanji` as
     /// `None` (proto3 `optional string` wire-absent, NOT `Some("")`).
-    // 中文: Item 5 — raw_to_proto_candidate 把 roman + hanji 寫到 wire 的 hermetic 測試。
-    // 中文:   HANT 帶兩者;TAILO 的 hanji 為 None,proto 上 wire-absent。
+    // Item 5 — raw_to_proto_candidate 把 roman + hanji 寫到 wire 的 hermetic 測試。
+    //   HANT 帶兩者;TAILO 的 hanji 為 None,proto 上 wire-absent。
     #[test]
     fn raw_to_proto_candidate_propagates_roman_and_some_hanji() {
         let raw = RawCandidate {
@@ -628,7 +628,7 @@ mod tests {
     /// buffer, because a single-script cell shows the user nothing that tells
     /// the two apart (USER 2026-09-03). First-seen — the top-ranked row, or
     /// the §34 literal — wins; a different roman is never touched.
-    // 中文: 同 roman 不同 span 也要收成一格;先到先贏,不同 roman 不動。
+    // 同 roman 不同 span 也要收成一格;先到先贏,不同 roman 不動。
     #[test]
     fn dedupe_display_roman_collapses_same_roman_across_spans() {
         fn row(roman: &str, hanji: Option<&str>, span: (u32, u32)) -> RawCandidate {

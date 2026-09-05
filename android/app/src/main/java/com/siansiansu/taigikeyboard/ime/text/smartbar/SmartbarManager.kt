@@ -1,5 +1,5 @@
-// 中文: Smartbar(候選列)管理器 — 候選詞 StateFlow 來源、英文建議、numeric row、Toolbar 容器、
-// 中文: NextWord 顯示協調等狀態的 owner;TextInputManager 只往這裡推狀態,不直接寫 UI。
+// Smartbar(候選列)管理器 — 候選詞 StateFlow 來源、英文建議、numeric row、Toolbar 容器、
+// NextWord 顯示協調等狀態的 owner;TextInputManager 只往這裡推狀態,不直接寫 UI。
 
 package com.siansiansu.taigikeyboard.ime.text.smartbar
 

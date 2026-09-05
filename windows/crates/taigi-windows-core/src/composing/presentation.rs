@@ -5,7 +5,7 @@
 //! list directly. Port of macOS `ComposingManager.presentation(for:)`
 //! (invariants §42).
 
-// 中文: 候選窗格子清單 — 合用一個候選拆兩格(漢字、羅馬字),視窗索引是格子索引,送出經此對回候選。
+// 候選窗格子清單 — 合用一個候選拆兩格(漢字、羅馬字),視窗索引是格子索引,送出經此對回候選。
 
 use std::collections::HashSet;
 

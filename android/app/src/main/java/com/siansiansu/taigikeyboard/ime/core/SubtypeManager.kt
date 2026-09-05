@@ -1,5 +1,5 @@
-// 中文: Subtype 管理器 — 從 PrefHelper.subtypes 字串解析出 List<Subtype>、寫回設定、
-// 中文: 載入 ime/config.json 取 ImeConfig 預設清單。
+// Subtype 管理器 — 從 PrefHelper.subtypes 字串解析出 List<Subtype>、寫回設定、
+// 載入 ime/config.json 取 ImeConfig 預設清單。
 
 package com.siansiansu.taigikeyboard.ime.core
 

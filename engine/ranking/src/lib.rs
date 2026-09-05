@@ -20,7 +20,7 @@
 //! pinned by `docs/engine/ranking-slice-audit.md` § 1.3 and verified
 //! byte-identical across platforms at audit time.
 
-// 中文: 候選詞排序 crate:去重、評分、排序、後處理。純 CPU 無 I/O,iOS/Android 共用同一套常數與公式。
+// 候選詞排序 crate:去重、評分、排序、後處理。純 CPU 無 I/O,iOS/Android 共用同一套常數與公式。
 
 mod dedup;
 mod process;

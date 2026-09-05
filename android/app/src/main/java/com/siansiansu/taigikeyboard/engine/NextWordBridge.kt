@@ -1,6 +1,6 @@
-// 中文: NextWord 橋 — 9 ops(6 decide intents + filter + boost + queryState)。
-// 中文: 對應 iOS RustEngineBridge+NextWord.swift。共用 RustEngineBridge.sendRawBytes 做 JNI roundtrip。
-// 中文: 巢狀型別(NextWordDecideResult / NextWordRawRow / NextWordStateSnapshot 等)留在 RustEngineBridge。
+// NextWord 橋 — 9 ops(6 decide intents + filter + boost + queryState)。
+// 對應 iOS RustEngineBridge+NextWord.swift。共用 RustEngineBridge.sendRawBytes 做 JNI roundtrip。
+// 巢狀型別(NextWordDecideResult / NextWordRawRow / NextWordStateSnapshot 等)留在 RustEngineBridge。
 
 package com.siansiansu.taigikeyboard.engine
 

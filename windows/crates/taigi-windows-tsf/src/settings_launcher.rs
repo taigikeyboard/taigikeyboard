@@ -3,7 +3,7 @@
 //! the TIP is loaded into (roadmap W1; rakukan `settings_launcher.rs`).
 //! The command line is the contract PR7 implements.
 
-// 中文: 設定視窗是另一個程序;這裡只負責用約定的命令列啟動它。
+// 設定視窗是另一個程序;這裡只負責用約定的命令列啟動它。
 
 use crate::module::install_directory;
 use std::path::PathBuf;

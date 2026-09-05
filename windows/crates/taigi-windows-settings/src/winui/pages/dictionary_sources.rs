@@ -4,7 +4,7 @@
 //! `DictionaryTogglesView.swift`. Every toggle is read live by the engine
 //! bridge on the next fetch.
 
-// 中文: 詞庫來源頁 — 三個區段的開關;教典子集恆展開在教典下方,教典關閉時停用;恢復預設。
+// 詞庫來源頁 — 三個區段的開關;教典子集恆展開在教典下方,教典關閉時停用;恢復預設。
 
 use crate::winui::cards;
 use crate::winui::window::{Message, ResetScope, SettingsWindow};

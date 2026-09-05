@@ -9,7 +9,7 @@
 //! BEFORE taking the state borrow, and drops what `forget` / `into_tokens`
 //! hand back AFTER releasing it (roadmap W3).
 
-// 中文: 每個活著的 ITfContext 對應一個 token;COM 呼叫都在借用之外,這裡只做 map 操作。
+// 每個活著的 ITfContext 對應一個 token;COM 呼叫都在借用之外,這裡只做 map 操作。
 
 use std::collections::HashMap;
 use std::rc::Rc;

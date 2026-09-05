@@ -1,6 +1,6 @@
-// 中文: 主題選擇器 — 主題 tab 的 root。Custom Themes shelf(自訂主題 CRUD + Create New)+
-// 中文: 內建主題依 family(經典/框線/簡潔)各一條橫向 shelf。三 family 同 6 色,差在按鍵風格。
-// 中文: 排版對齊齒盤佈局頁(240pt 卡 + 截圖預覽);尚未補截圖的內建卡顯示佔位圖而非色塊。
+// 主題選擇器 — 主題 tab 的 root。Custom Themes shelf(自訂主題 CRUD + Create New)+
+// 內建主題依 family(經典/框線/簡潔)各一條橫向 shelf。三 family 同 6 色,差在按鍵風格。
+// 排版對齊齒盤佈局頁(240pt 卡 + 截圖預覽);尚未補截圖的內建卡顯示佔位圖而非色塊。
 
 import SwiftUI
 
@@ -19,12 +19,12 @@ import SwiftUI
 /// `selectedThemeId` / `themeRevision` are read via `@AppStorage` on the App
 /// Group store so selection + the user-theme list refresh reactively when the
 /// editor (or the keyboard) writes them — no `SharedSettings` publishing needed.
-// 中文: 選定主題 / themeRevision 走 @AppStorage(App Group),選取與清單變更即時反映;免讓 SharedSettings 變 @Published。
+// 選定主題 / themeRevision 走 @AppStorage(App Group),選取與清單變更即時反映;免讓 SharedSettings 變 @Published。
 struct ThemePickerView: View {
     @AppStorage("selectedThemeId", store: UserDefaults(suiteName: SharedSettings.appGroupId))
     private var selectedThemeId = ThemeId.default
 
-    // 中文: 每次主題檔變更(新增/編輯/刪除)bump,驅動 userThemes 重新載入。
+    // 每次主題檔變更(新增/編輯/刪除)bump,驅動 userThemes 重新載入。
     @AppStorage("themeRevision", store: UserDefaults(suiteName: SharedSettings.appGroupId))
     private var themeRevision = 0
 
@@ -78,10 +78,10 @@ struct ThemePickerView: View {
             .padding(.vertical, AppStyle.horizontalPadding)
         }
         .navigationTitle(lang.string(TabType.theme.titleKey))
-        // 中文: themeRevision(任何 CRUD bump)變更即重載清單;新增/編輯/刪除皆涵蓋,pop 回此頁亦 onAppear 重載。
+        // themeRevision(任何 CRUD bump)變更即重載清單;新增/編輯/刪除皆涵蓋,pop 回此頁亦 onAppear 重載。
         .onAppear(perform: reloadUserThemes)
         .onChange(of: themeRevision) { _, _ in reloadUserThemes() }
-        // 中文: 編輯器改為子頁面 push(非彈出 sheet),用 ThemeTab 的 NavigationStack。route id 穩定(create="create"、edit=theme.id)。
+        // 編輯器改為子頁面 push(非彈出 sheet),用 ThemeTab 的 NavigationStack。route id 穩定(create="create"、edit=theme.id)。
         .navigationDestination(item: $editorRoute) { route in
             switch route {
             case .create:
@@ -92,12 +92,12 @@ struct ThemePickerView: View {
         }
     }
 
-    // 中文: 套用主題:寫入 selectedThemeId(@AppStorage → App Group → keyboard 下次 render 重新解析)。
+    // 套用主題:寫入 selectedThemeId(@AppStorage → App Group → keyboard 下次 render 重新解析)。
     private func apply(_ id: String) {
         selectedThemeId = id
     }
 
-    // 中文: 刪除自訂主題;若刪掉的是當前選取,退回預設主題,避免渲染孤兒 id。
+    // 刪除自訂主題;若刪掉的是當前選取,退回預設主題,避免渲染孤兒 id。
     private func delete(_ theme: UserTheme) {
         SharedSettings.shared.deleteUserTheme(id: theme.id)
         if selectedThemeId == theme.id.uuidString {
@@ -117,8 +117,8 @@ struct ThemePickerView: View {
 ///
 /// `Hashable` is required by `navigationDestination(item:)`; both `==` and
 /// `hash(into:)` key on route `id` only, so `UserTheme` need not be `Hashable`.
-// 中文: 編輯器 navigation 路由(push 子頁面)— 新增或編輯既有主題。
-// 中文: navigationDestination(item:) 要求 Hashable;==/hash 只看 route id,故 UserTheme 不必 Hashable。
+// 編輯器 navigation 路由(push 子頁面)— 新增或編輯既有主題。
+// navigationDestination(item:) 要求 Hashable;==/hash 只看 route id,故 UserTheme 不必 Hashable。
 enum ThemeEditorRoute: Hashable {
     case create
     case edit(UserTheme)
@@ -145,7 +145,7 @@ enum ThemeEditorRoute: Hashable {
 /// page. `width` matches `LayoutOptionCard.cardWidth`; `previewAspectRatio`
 /// matches the `layout_*_preview` assets (585×369) so theme screenshots render
 /// at the identical size.
-// 中文: 卡片共用尺寸 — 對齊齒盤佈局頁。width 同 LayoutOptionCard(200);aspect 同 layout 預覽圖(585×369)。
+// 卡片共用尺寸 — 對齊齒盤佈局頁。width 同 LayoutOptionCard(200);aspect 同 layout 預覽圖(585×369)。
 private enum ThemeCardMetrics {
     static let width: CGFloat = 240
     static let previewAspectRatio: CGFloat = 585.0 / 369.0
@@ -156,7 +156,7 @@ private enum ThemeCardMetrics {
 
 /// One shelf: a gray section header above a horizontally scrolling row of cards
 /// (mirrors the 齒盤佈局 page's `layoutSection`).
-// 中文: 單一 shelf — 灰色標題 + 橫向捲動卡列(對齊齒盤佈局頁排版)。
+// 單一 shelf — 灰色標題 + 橫向捲動卡列(對齊齒盤佈局頁排版)。
 private struct ThemeShelf<Content: View>: View {
     let title: String
     @ViewBuilder let content: Content
@@ -182,7 +182,7 @@ private struct ThemeShelf<Content: View>: View {
 
 /// The leading card on the Custom Themes shelf: a gray panel with a centered
 /// white "+" tile. Tapping opens the theme editor for a new theme.
-// 中文: Custom Themes 第一格 — 灰底卡 + 中央白色「+」磚;點選開新主題編輯器。
+// Custom Themes 第一格 — 灰底卡 + 中央白色「+」磚;點選開新主題編輯器。
 private struct CreateNewThemeCard: View {
     let onTap: () -> Void
 
@@ -195,7 +195,7 @@ private struct CreateNewThemeCard: View {
         Button(action: onTap) {
             VStack(alignment: .leading, spacing: 6) {
                 // Color.clear sets the aspect-ratio box; the panel is overlaid to fill it.
-                // 中文: Color.clear 定 aspect-ratio 外框,面板 overlay 填滿。
+                // Color.clear 定 aspect-ratio 外框,面板 overlay 填滿。
                 Color.clear
                     .aspectRatio(ThemeCardMetrics.previewAspectRatio, contentMode: .fit)
                     .overlay(
@@ -232,7 +232,7 @@ private struct CreateNewThemeCard: View {
 // MARK: - Theme gallery card
 
 /// A trailing-menu action for a theme card (apply / edit / delete).
-// 中文: 主題卡「…」選單的單一動作。
+// 主題卡「…」選單的單一動作。
 private struct ThemeCardAction: Identifiable {
     let id = UUID()
     let title: String
@@ -243,7 +243,7 @@ private struct ThemeCardAction: Identifiable {
 /// A theme cell: a preview (screenshot when `previewImageName` is set, else a
 /// live custom-theme button preview) + a title with a selection checkmark + an
 /// optional `…` action menu (user themes only). Tapping the preview applies the theme.
-// 中文: 主題卡 — 預覽(有 previewImageName 用截圖,否則用自訂主題大按鈕預覽)+ 標題/打勾 + 「…」選單。點預覽即套用。
+// 主題卡 — 預覽(有 previewImageName 用截圖,否則用自訂主題大按鈕預覽)+ 標題/打勾 + 「…」選單。點預覽即套用。
 private struct ThemeGalleryCard: View {
     let title: String
     /// Full appearance for the live custom-theme preview; `nil` for built-in cards
@@ -262,8 +262,8 @@ private struct ThemeGalleryCard: View {
                 // assets); the preview is overlaid to fill it. Selection marker mirrors
                 // LayoutOptionCard: a dimming mask + a blue circle checkmark over the
                 // preview, plus a blue stroke when selected (no border otherwise).
-                // 中文: Color.clear 定 aspect-ratio 外框(同齒盤佈局比例),預覽 overlay 填滿。
-                // 中文: 選取標記對齊 LayoutOptionCard — 遮罩 + 藍圈白勾 + 選中時藍框(未選無框)。
+                // Color.clear 定 aspect-ratio 外框(同齒盤佈局比例),預覽 overlay 填滿。
+                // 選取標記對齊 LayoutOptionCard — 遮罩 + 藍圈白勾 + 選中時藍框(未選無框)。
                 Color.clear
                     .aspectRatio(ThemeCardMetrics.previewAspectRatio, contentMode: .fit)
                     .overlay(preview)
@@ -320,7 +320,7 @@ private struct ThemeGalleryCard: View {
     /// `previewImageName` is set and the asset exists; a neutral placeholder when
     /// the asset is missing (scaffold stage); otherwise the live custom-theme
     /// button preview (background + one styled centered key).
-    // 中文: 預覽內容 — 有截圖 asset 用截圖;asset 缺(scaffold)用佔位圖;無 previewImageName 用自訂主題大按鈕預覽。
+    // 預覽內容 — 有截圖 asset 用截圖;asset 缺(scaffold)用佔位圖;無 previewImageName 用自訂主題大按鈕預覽。
     @ViewBuilder
     private var preview: some View {
         if let previewImageName {
@@ -341,7 +341,7 @@ private struct ThemeGalleryCard: View {
 
 /// Neutral fallback for a built-in card whose screenshot asset is not yet added
 /// (scaffold stage) — mirrors the 齒盤佈局 page's missing-image fallback.
-// 中文: 內建卡截圖尚未加入時的佔位圖(scaffold 階段),對齊齒盤佈局頁缺圖樣式。
+// 內建卡截圖尚未加入時的佔位圖(scaffold 階段),對齊齒盤佈局頁缺圖樣式。
 private struct ThemeScreenshotPlaceholder: View {
     let title: String
 
@@ -371,7 +371,7 @@ private struct ThemeScreenshotPlaceholder: View {
 /// shadow mirror the real keyboard (`TaigiKeyboardView`): a black stroke and a
 /// soft drop shadow sized by `keyShadowIntensity`. nil color roles fall back to
 /// the same adaptive defaults the keyboard uses.
-// 中文: 自訂主題卡預覽 — 背景 + 正中一顆大鍵,套完整 button style(填色/字/圓角/邊框/陰影),一眼看出該主題的鍵長相。
+// 自訂主題卡預覽 — 背景 + 正中一顆大鍵,套完整 button style(填色/字/圓角/邊框/陰影),一眼看出該主題的鍵長相。
 private struct CustomThemeButtonPreview: View {
     let appearance: ThemeAppearance
 

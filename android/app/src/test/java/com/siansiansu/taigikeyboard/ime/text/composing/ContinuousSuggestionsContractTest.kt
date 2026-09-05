@@ -46,7 +46,7 @@ class ContinuousSuggestionsContractTest {
      * and `hanji = null` keeps their intent intact while letting new Item 5
      * tests override either field explicitly.
      */
-    // 中文: Item 5 — 測試用 helper,roman 預設等於 displayText、hanji 預設 null;新 Item 5 測試可覆寫。
+    // Item 5 — 測試用 helper,roman 預設等於 displayText、hanji 預設 null;新 Item 5 測試可覆寫。
     private fun cand(
         consumedSpanStart: Int = 0,
         consumedSpanEnd: Int,
@@ -410,7 +410,7 @@ class ContinuousSuggestionsContractTest {
      * the bridge decode path `roman = msg.roman` produces the same
      * String the engine emitted.
      */
-    // 中文: Item 5 — roman 為非 optional;protobuf-javalite wire round-trip 必須保留原值。
+    // Item 5 — roman 為非 optional;protobuf-javalite wire round-trip 必須保留原值。
     @Test
     fun `CandidateMessage roman field round-trips through wire`() {
         val msg = CandidateMessage.newBuilder()
@@ -433,7 +433,7 @@ class ContinuousSuggestionsContractTest {
      * render rule from `docs/engine/continuous-candidate-display.md`
      * §5 would break.
      */
-    // 中文: Item 5 — hanji 為 proto3 optional;wire absent vs Some("") 必須由 hasHanji() 區分。
+    // Item 5 — hanji 為 proto3 optional;wire absent vs Some("") 必須由 hasHanji() 區分。
     @Test
     fun `CandidateMessage hanji optional absent vs present-empty`() {
         // Default-constructed message has hanji absent.

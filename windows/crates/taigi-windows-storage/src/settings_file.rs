@@ -3,7 +3,7 @@
 //! settings window (two processes) see one document. Roadmap W10; the
 //! reload-by-mtime pattern follows rakukan `engine/config.rs:330-443`.
 
-// 中文: settings.json 落地 — tmp+rename 原子寫入、讀壞保留舊值、mtime/size 偵測變更後才採用新 revision。
+// settings.json 落地 — tmp+rename 原子寫入、讀壞保留舊值、mtime/size 偵測變更後才採用新 revision。
 
 use std::fs;
 use std::path::{Path, PathBuf};

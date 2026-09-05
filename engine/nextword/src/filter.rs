@@ -9,8 +9,8 @@
 //! `FailInvariant`. Empty `hanzi` rows dropped silently (cannot become
 //! UI-meaningful).
 
-// 中文: 過濾 + 合併 + 評分 + 排序 + 截斷的後處理管線;同時負責顯示模式的轉換與整形。
-// 中文: 世代不符回傳 was_stale=true;Source::Unspecified 視為錯誤;空 hanzi 條目靜默丟棄。
+// 過濾 + 合併 + 評分 + 排序 + 截斷的後處理管線;同時負責顯示模式的轉換與整形。
+// 世代不符回傳 was_stale=true;Source::Unspecified 視為錯誤;空 hanzi 條目靜默丟棄。
 
 use crate::api::{NextWordError, PersistedState};
 use crate::scorer;
@@ -28,7 +28,7 @@ struct MergedRow {
     has_user_score: bool,
 }
 
-// 中文: 主後處理入口;依世代決定 stale,接著評分、合併、整形、排序、截斷。
+// 主後處理入口;依世代決定 stale,接著評分、合併、整形、排序、截斷。
 pub(crate) fn filter(
     state: &PersistedState,
     raw: Vec<RawNextWordPrediction>,
@@ -134,7 +134,7 @@ pub(crate) fn filter(
     //     dropped roman-empty rows and `text` is always the romanization.
     //     After the score sort so first-seen = best-scored; before the
     //     truncation so the limit is filled with distinct cells.
-    // 中文: 羅馬字模式的 prediction 顯示去重 — 以 text(= roman)為鍵,排序後、截斷前。
+    // 羅馬字模式的 prediction 顯示去重 — 以 text(= roman)為鍵,排序後、截斷前。
     if config.is_roman_only_display() {
         let mut seen = std::collections::HashSet::with_capacity(shaped.len());
         shaped.retain(|p| seen.insert(p.text.clone()));
@@ -149,10 +149,10 @@ pub(crate) fn filter(
     })
 }
 
-// 中文: 折疊「同一個 next word、只差分隔符/聲調的羅馬字寫法」成單筆預測。
-// 中文:   連續輸入存 raw next_tl(taigi)、一般 commit 存 canonical(tâi-gí),
-// 中文:   UNIQUE 含 next_tl → 兩列;(hanzi,tl) merge 不收斂 → 同詞顯示兩次。
-// 中文:   讀層把 raw 變體的分數折進唯一 canonical 列。canonical 判定見下。
+// 折疊「同一個 next word、只差分隔符/聲調的羅馬字寫法」成單筆預測。
+//   連續輸入存 raw next_tl(taigi)、一般 commit 存 canonical(tâi-gí),
+//   UNIQUE 含 next_tl → 兩列;(hanzi,tl) merge 不收斂 → 同詞顯示兩次。
+//   讀層把 raw 變體的分數折進唯一 canonical 列。canonical 判定見下。
 /// Collapse separator/tone-only romanization variants of the SAME next
 /// word into one prediction. The continuous-input commit path stores a
 /// raw next_tl (`taigi`) while a normal candidate commit stores the
@@ -221,9 +221,9 @@ fn collapse_reading_variants(rows: Vec<MergedRow>) -> Vec<MergedRow> {
         .collect()
 }
 
-// 中文: 在同讀音 group 內挑 canonical 列 = 唯一帶分隔符的(多音節)寫法;
-// 中文:   無分隔符列只能是 fused raw。全無分隔符 → 回 None(不折,守 #7 單音節
-// 中文:   tone-1 與 raw 無法區分);多個帶分隔符卻不同讀音 → 回 None(歧義)。
+// 在同讀音 group 內挑 canonical 列 = 唯一帶分隔符的(多音節)寫法;
+//   無分隔符列只能是 fused raw。全無分隔符 → 回 None(不折,守 #7 單音節
+//   tone-1 與 raw 無法區分);多個帶分隔符卻不同讀音 → 回 None(歧義)。
 fn select_canonical_row(rows: &[MergedRow], indices: &[usize]) -> Option<usize> {
     let mut separator_rows = indices
         .iter()
@@ -246,8 +246,8 @@ fn has_separator(tl: &str) -> bool {
     tl.contains('-') || tl.contains(' ')
 }
 
-// 中文: 去分隔符(保留聲調)的讀音形;比對兩個帶分隔符列是否同一讀音。
-// 中文:   等同 composing::roman_reading_eq 的正規化(分隔符不敏感、聲調保留)。
+// 去分隔符(保留聲調)的讀音形;比對兩個帶分隔符列是否同一讀音。
+//   等同 composing::roman_reading_eq 的正規化(分隔符不敏感、聲調保留)。
 fn separatorless_form(tl: &str) -> String {
     tl.chars().filter(|&c| c != '-' && c != ' ').collect()
 }

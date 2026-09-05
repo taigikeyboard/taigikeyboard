@@ -1,7 +1,7 @@
 //! Reading and writing the hand-editable CSV of the user's own dictionary.
 //! Port of `Storage/UserDataCSV.swift` + `CustomDictionaryCSV.swift`.
 
-// 中文: 自訂詞庫 CSV — 三平台共用的引號規則(單行記錄方言),roman,hanzi 兩欄。
+// 自訂詞庫 CSV — 三平台共用的引號規則(單行記錄方言),roman,hanzi 兩欄。
 
 use crate::custom_dictionary::CustomDictionaryRow;
 use std::path::Path;

@@ -32,10 +32,10 @@
 //! cannot reach via a `tps:<bopomofo>` lookup key anyway and are
 //! skipped.
 
-// 中文: D / C-3b — runtime TPS-notone derive 與 build pipeline 平行性測試。
-// 中文:   matches_continuous_tps_toneless_key 採 phonetics::tps_notone_from_tl(record.tl)
-// 中文:   推導,須與 dictionary.csv 內 build pipeline 預算的 tps_notone 一致。
-// 中文:   非純 Bopomofo `tps_notone` 為 build pipeline 上游異常,連續輸入觸不到,跳過。
+// D / C-3b — runtime TPS-notone derive 與 build pipeline 平行性測試。
+//   matches_continuous_tps_toneless_key 採 phonetics::tps_notone_from_tl(record.tl)
+//   推導,須與 dictionary.csv 內 build pipeline 預算的 tps_notone 一致。
+//   非純 Bopomofo `tps_notone` 為 build pipeline 上游異常,連續輸入觸不到,跳過。
 
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -215,9 +215,9 @@ fn tps_notone_or_variant_substitutes_er_to_or_glyph() {
 /// Drift here means the C-3a build-pipeline `apply_or_dialect_variant`
 /// and the Rust runtime mirror diverged — the continuous toneless-key
 /// guard would silently reject the ㄛ variant for divergent rows.
-// 中文: D / C-5 — tps_notone_var 全 CSV 平行性測試;
-// 中文:   build pipeline `apply_or_dialect_variant` 與 runtime `tps_notone_or_variant`
-// 中文:   逐行 byte-match,捕捉未來任一端 drift。
+// D / C-5 — tps_notone_var 全 CSV 平行性測試;
+//   build pipeline `apply_or_dialect_variant` 與 runtime `tps_notone_or_variant`
+//   逐行 byte-match,捕捉未來任一端 drift。
 #[test]
 fn runtime_tps_notone_var_matches_build_pipeline_for_every_row() {
     let path = dictionary_csv_path();
@@ -236,8 +236,8 @@ fn runtime_tps_notone_var_matches_build_pipeline_for_every_row() {
     // empty-var rows would mask a regression where the build pipeline
     // stops populating `tps_notone_var` entirely. Codex post-impl
     // BLOCK 2026-05-26.
-    // 中文: 不能略過空 var 行,否則 pipeline 停發變體時測試會無聲通過;
-    // 中文:   逐行比對 derived (含空) vs CSV var,並追蹤含 ㄜ 行最少筆數。
+    // 不能略過空 var 行,否則 pipeline 停發變體時測試會無聲通過;
+    //   逐行比對 derived (含空) vs CSV var,並追蹤含 ㄜ 行最少筆數。
     let mut compared = 0usize;
     let mut anomalies = 0usize;
     let mut nonempty_vars = 0usize;
@@ -289,9 +289,9 @@ fn runtime_tps_notone_var_matches_build_pipeline_for_every_row() {
     // inventory); accept any non-zero count as a regression alarm
     // boundary rather than pinning the exact number (which would force
     // a parity-test re-pin on every dictionary refresh).
-    // 中文: 覆蓋率守門 — pipeline 完全停發變體時上面 drift loop 仍會 0/0 過關,
-    // 中文:   故強制 nonempty_vars > 0(C-3a 後 CSV 應有 ~1107 筆);不寫死筆數
-    // 中文:   是為了讓 dictionary 更新不需要 re-pin 此 assertion。
+    // 覆蓋率守門 — pipeline 完全停發變體時上面 drift loop 仍會 0/0 過關,
+    //   故強制 nonempty_vars > 0(C-3a 後 CSV 應有 ~1107 筆);不寫死筆數
+    //   是為了讓 dictionary 更新不需要 re-pin 此 assertion。
     assert!(
         nonempty_vars > 0,
         "expected the shipped CSV to contain at least one non-empty \

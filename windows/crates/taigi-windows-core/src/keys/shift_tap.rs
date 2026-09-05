@@ -17,7 +17,7 @@
 //! is a chord, not a tap. The two Shift keys share `VK_SHIFT` and are told
 //! apart by scan code.
 
-// 中文: 判斷「單獨短按 Shift」——按下到放開之間無別的鍵、且短於 0.5 秒。純狀態,無 Win32。
+// 判斷「單獨短按 Shift」——按下到放開之間無別的鍵、且短於 0.5 秒。純狀態,無 Win32。
 // 加一條咱家己的:別粒 modifier 咧壓的時陣按 Shift 無算(Ctrl+Shift 是系統換鍵盤配置;
 // 另外彼粒 Shift 嘛算)。兩粒 Shift 用 scan code 分。
 

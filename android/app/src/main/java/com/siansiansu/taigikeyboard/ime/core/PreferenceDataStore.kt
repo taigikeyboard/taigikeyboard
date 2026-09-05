@@ -1,5 +1,5 @@
-// 中文: DataStore 實例 + PreferenceKeys 集中定義 — DataStore 為延伸屬性 singleton(taigi_keyboard_prefs)。
-// 中文: 所有 typed key 都集中於此,避免字串散落各檔。
+// DataStore 實例 + PreferenceKeys 集中定義 — DataStore 為延伸屬性 singleton(taigi_keyboard_prefs)。
+// 所有 typed key 都集中於此,避免字串散落各檔。
 
 package com.siansiansu.taigikeyboard.ime.core
 

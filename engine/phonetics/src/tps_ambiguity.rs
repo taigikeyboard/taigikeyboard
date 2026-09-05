@@ -31,18 +31,18 @@
 //! stay valid, the same property `INVARIANT_TPS_DEFOLD_ENUMERATE` (§35)
 //! has always relied on.
 
-// 中文: TPS 查詢歧義家族 — 同一顆實體鍵可能代表的 glyph 集合,解歧延後到查詢時。
-// 中文: 只收 per-keystroke auto-correct 真正會改寫的雙形(塞音+鼻音);顎化規則音韻上恆真(0 個字受害)、
-// 中文:   同鍵母音 callout 是不同音位(跨音位模糊比對是另一個產品決策)→ 皆不收。
-// 中文: 全部成員為 3-byte 注音 glyph → 替換不改 byte 長度,lattice span / offset map 不變(§35 同性質)。
+// TPS 查詢歧義家族 — 同一顆實體鍵可能代表的 glyph 集合,解歧延後到查詢時。
+// 只收 per-keystroke auto-correct 真正會改寫的雙形(塞音+鼻音);顎化規則音韻上恆真(0 個字受害)、
+//   同鍵母音 callout 是不同音位(跨音位模糊比對是另一個產品決策)→ 皆不收。
+// 全部成員為 3-byte 注音 glyph → 替換不改 byte 長度,lattice span / offset map 不變(§35 同性質)。
 
 /// Where a family member may legally sit inside a syllable. Drives the
 /// positional restriction: a slot immediately before a hard syllable
 /// close (separator / tone mark) may only take `Final`-role members —
 /// an `Initial` reading there would need a following nucleus the user
 /// has explicitly said is not coming.
-// 中文: 成員的音節內合法位置。分隔符/調號前一格只許 Final 形 — Initial 讀法需要後接韻核,
-// 中文:   而使用者已明示音節在此收掉。
+// 成員的音節內合法位置。分隔符/調號前一格只許 Final 形 — Initial 讀法需要後接韻核,
+//   而使用者已明示音節在此收掉。
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum TpsGlyphRole {
     /// Syllable onset form (`ㄍ`, `ㄇ`, …) — must be followed by a nucleus.
@@ -53,7 +53,7 @@ pub enum TpsGlyphRole {
 }
 
 /// One reading of an ambiguous key: the glyph plus its positional role.
-// 中文: 歧義鍵的一個讀法 = glyph + 位置角色。
+// 歧義鍵的一個讀法 = glyph + 位置角色。
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct TpsFamilyMember {
     pub glyph: char,
@@ -76,8 +76,8 @@ use TpsGlyphRole::{Final, Initial};
 /// (`ㄥ` = the `-ing` coda after `ㄧ`, `ㆭ` = syllabic / `-ng` coda
 /// elsewhere); the pattern layer offers both and lets the FST decide,
 /// so no context look-back is re-implemented here.
-// 中文: 七個歧義家族(= 七顆雙形鍵的完整讀法集合);以任一成員查得整個家族。
-// 中文: ㄫ 的兩個 Final 形對應 tps_adjust 的前文規則(ㄧ 後 ㄥ,否則 ㆭ)— 此層兩者都給,由 FST 裁決。
+// 七個歧義家族(= 七顆雙形鍵的完整讀法集合);以任一成員查得整個家族。
+// ㄫ 的兩個 Final 形對應 tps_adjust 的前文規則(ㄧ 後 ㄥ,否則 ㆭ)— 此層兩者都給,由 FST 裁決。
 const FAMILIES: &[&[TpsFamilyMember]] = &[
     &[member('ㄅ', Initial), member('ㆴ', Final)],
     &[member('ㄉ', Initial), member('ㆵ', Final)],
@@ -95,7 +95,7 @@ const FAMILIES: &[&[TpsFamilyMember]] = &[
 /// The ambiguity family containing `glyph`, or `None` when the glyph is
 /// unambiguous (vowels, tone marks, palatalized initials, separators —
 /// everything a lookup pattern treats as fixed bytes).
-// 中文: 回傳含 glyph 的歧義家族;無歧義字元(母音/調號/顎化聲母/分隔符)回 None → pattern 視為固定 bytes。
+// 回傳含 glyph 的歧義家族;無歧義字元(母音/調號/顎化聲母/分隔符)回 None → pattern 視為固定 bytes。
 pub fn tps_ambiguity_family(glyph: char) -> Option<&'static [TpsFamilyMember]> {
     FAMILIES
         .iter()

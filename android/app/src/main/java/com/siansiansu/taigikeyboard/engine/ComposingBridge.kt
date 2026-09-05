@@ -1,6 +1,6 @@
-// 中文: Composing + Continuous-input 橋 — 12 composing ops + 4 continuous ops。
-// 中文: 對應 iOS RustEngineBridge+Composing.swift。共用 RustEngineBridge.sendRawBytes 做 JNI roundtrip。
-// 中文: 巢狀型別(ComposingTransition / ContinuousCandidate / CandidateMode 等)留在 RustEngineBridge,public API 不破。
+// Composing + Continuous-input 橋 — 12 composing ops + 4 continuous ops。
+// 對應 iOS RustEngineBridge+Composing.swift。共用 RustEngineBridge.sendRawBytes 做 JNI roundtrip。
+// 巢狀型別(ComposingTransition / ContinuousCandidate / CandidateMode 等)留在 RustEngineBridge,public API 不破。
 
 package com.siansiansu.taigikeyboard.engine
 
@@ -330,7 +330,7 @@ internal object ComposingBridge {
      * generation bumping is owned by `ComposingManager.bumpGeneration()`,
      * not this layer.
      *
-     * 中文: composing slice 的 FFI roundtrip,回傳原始 proto 供需要 continuous 載體的 caller(FetchAtPos)使用。
+     * composing slice 的 FFI roundtrip,回傳原始 proto 供需要 continuous 載體的 caller(FetchAtPos)使用。
      */
     private inline fun composingProtoRoundtrip(
         methodSetter: (ComposingRequest.Builder) -> Unit,
@@ -389,8 +389,8 @@ internal object ComposingBridge {
      * and the [RustEngineBridge.ContinuousFetchResult.candidates] tri-state
      * read off `ComposingResponse.continuous`.
      *
-     * 中文: Phase 6 FetchAtPos 專用分派 — 同時產生 ComposingTransition 與
-     * 中文: ContinuousFetchResult.candidates(從 proto.continuous 三態解碼)。
+     * Phase 6 FetchAtPos 專用分派 — 同時產生 ComposingTransition 與
+     * ContinuousFetchResult.candidates(從 proto.continuous 三態解碼)。
      */
     private inline fun composingFetchDispatch(
         methodSetter: (ComposingRequest.Builder) -> Unit,
@@ -416,8 +416,8 @@ internal object ComposingBridge {
                 // regen skipped), fall back to `displayText` so the
                 // Item 6 dual-line render does not show a blank title
                 // row. Bundled releases never hit this branch.
-                // 中文: Item 5 — hanji 為 proto3 optional;wire absent → Kotlin null。
-                // 中文: roman 防禦性 fallback — wire skew 時 displayText 兜底,避免空 title。
+                // Item 5 — hanji 為 proto3 optional;wire absent → Kotlin null。
+                // roman 防禦性 fallback — wire skew 時 displayText 兜底,避免空 title。
                 val roman = if (msg.roman.isEmpty()) msg.displayText else msg.roman
                 RustEngineBridge.ContinuousCandidate(
                     consumedSpanStart = msg.consumedSpanStart,

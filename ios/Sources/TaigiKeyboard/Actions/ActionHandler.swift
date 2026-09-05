@@ -1,5 +1,5 @@
-// 中文: 鍵盤手勢入口 — 把 KeyboardKit gesture 派送到各 action 處理器。
-// 中文: 主檔負責 dispatch + KeyboardKit 覆寫;細部邏輯在 ActionHandler+*.swift 各擴充檔。
+// 鍵盤手勢入口 — 把 KeyboardKit gesture 派送到各 action 處理器。
+// 主檔負責 dispatch + KeyboardKit 覆寫;細部邏輯在 ActionHandler+*.swift 各擴充檔。
 
 import Foundation
 import KeyboardKit
@@ -16,8 +16,8 @@ import KeyboardKit
 ///    - `handleBackspaceAction` → delete / re-predict NextWord  (KeyActions)
 ///    - `handleSuggestionSelection` → commit + frequency + NextWord  (Suggestions)
 /// 4. `nextWordController.process()` — record association → update state → predict  (NextWordController)
-// 中文: 台語鍵盤的 ActionHandler。手勢入口走 handle(_:on:),收 release / repeatPress 後派送。
-// 中文: 跨檔協作:KeyActions / Suggestions / CustomActions / Utilities 各掌一塊,主檔只做 dispatch。
+// 台語鍵盤的 ActionHandler。手勢入口走 handle(_:on:),收 release / repeatPress 後派送。
+// 跨檔協作:KeyActions / Suggestions / CustomActions / Utilities 各掌一塊,主檔只做 dispatch。
 public class ActionHandler: StandardKeyboardActionHandler {
     // MARK: - Properties
 
@@ -76,7 +76,7 @@ public class ActionHandler: StandardKeyboardActionHandler {
     // MARK: - Action Dispatch
 
     /// - Returns: true if handled (skip KeyboardKit default)
-    // 中文: 把 KeyboardAction 派送到對應的 handler。回 true 代表已處理,跳過 KeyboardKit 預設行為。
+    // 把 KeyboardAction 派送到對應的 handler。回 true 代表已處理,跳過 KeyboardKit 預設行為。
     private func handleTaigiSpecificAction(_ action: KeyboardAction) -> Bool {
         switch action {
         case .settings:
@@ -106,8 +106,8 @@ public class ActionHandler: StandardKeyboardActionHandler {
 
     // MARK: - KeyboardKit Override
 
-    // 中文: KeyboardKit 手勢覆寫入口。先處理 spacebar 拖曳手勢結束 → 過濾 release / repeatPress → 派送給 Taigi handler,
-    // 中文: 未處理者最後落到 super 的預設行為。
+    // KeyboardKit 手勢覆寫入口。先處理 spacebar 拖曳手勢結束 → 過濾 release / repeatPress → 派送給 Taigi handler,
+    // 未處理者最後落到 super 的預設行為。
     override public func handle(_ gesture: Keyboard.Gesture, on action: KeyboardAction) {
         if action == .space, isSpacebarDragGestureEnding(gesture) {
             // A spacebar long-press moves the cursor instead of typing, so this gesture
@@ -118,9 +118,9 @@ public class ActionHandler: StandardKeyboardActionHandler {
             // the spacebar). Whether KK still keeps equivalent private state is unknowable
             // (binary-only); drag-end behavior must be re-verified on device after any KK
             // upgrade.
-            // 中文: KeyboardKit 10.9 重寫拖曳手勢,#545 歸零 workaround 所依賴的 public offset
-            // 中文: 已移除、workaround 被迫退役;KK 內部是否仍有等價私有狀態不可知,拖曳後
-            // 中文: 空白鍵行為仍需實機 dogfood 驗證。
+            // KeyboardKit 10.9 重寫拖曳手勢,#545 歸零 workaround 所依賴的 public offset
+            // 已移除、workaround 被迫退役;KK 內部是否仍有等價私有狀態不可知,拖曳後
+            // 空白鍵行為仍需實機 dogfood 驗證。
             super.handle(gesture, on: action)
             return
         }
@@ -170,9 +170,9 @@ public class ActionHandler: StandardKeyboardActionHandler {
     /// binary-only since 10.9 — the timing is an observation to re-verify on device, not
     /// a documented contract. `.end` is checked as well because a cancelled gesture
     /// delivers `.end` without a preceding `.release`.
-    // 中文: 判定此手勢是否結束一個進行中的 spacebar 拖曳手勢(長按移游標,不論手指有無真的移動)。
-    // 中文: 用 KeyboardKit 自己的 drag 狀態當唯一來源;「super 會把它清掉」是 ≤10.4 的觀察,
-    // 中文: 10.9 起閉源無法查證,升級後靠實機驗證。
+    // 判定此手勢是否結束一個進行中的 spacebar 拖曳手勢(長按移游標,不論手指有無真的移動)。
+    // 用 KeyboardKit 自己的 drag 狀態當唯一來源;「super 會把它清掉」是 ≤10.4 的觀察,
+    // 10.9 起閉源無法查證,升級後靠實機驗證。
     private func isSpacebarDragGestureEnding(_ gesture: Keyboard.Gesture) -> Bool {
         switch gesture {
         case .release, .end:
@@ -184,7 +184,7 @@ public class ActionHandler: StandardKeyboardActionHandler {
 
     /// Align with Android: skip autocomplete to preserve NextWord suggestions
     /// when not composing and pressing space or "-" during NextWord
-    // 中文: 在 NextWord 顯示中按空白或 "-" 時跳過 autocomplete,避免清掉 NextWord 候選。與 Android 對齊。
+    // 在 NextWord 顯示中按空白或 "-" 時跳過 autocomplete,避免清掉 NextWord 候選。與 Android 對齊。
     private func shouldSkipAutocomplete(for action: KeyboardAction) -> Bool {
         guard !composingManager.isComposing else { return false }
         if action == .space { return true }
@@ -192,7 +192,7 @@ public class ActionHandler: StandardKeyboardActionHandler {
         return false
     }
 
-    // 中文: 候選詞點選的 KeyboardKit 入口。English 模式走 KK 預設,Taigi 模式走自家路徑。
+    // 候選詞點選的 KeyboardKit 入口。English 模式走 KK 預設,Taigi 模式走自家路徑。
     override public func handle(_ suggestion: AutocompleteSuggestion) {
         // A tap is an event like any key: consume the arm first, so a commit
         // that writes no auto space leaves none for the next punctuation key.
@@ -250,14 +250,14 @@ public class ActionHandler: StandardKeyboardActionHandler {
 
 // MARK: - AutocompleteContextUpdater
 
-// 中文: 把 NextWord 引擎結果寫進 KeyboardKit autocomplete context 的單一通道。
-// 中文: 這是引擎端 prediction 唯一接觸 KeyboardKit 型別的地方。
+// 把 NextWord 引擎結果寫進 KeyboardKit autocomplete context 的單一通道。
+// 這是引擎端 prediction 唯一接觸 KeyboardKit 型別的地方。
 extension ActionHandler: AutocompleteContextUpdater {
     /// Engine-side predictions arrive here and are mapped to KeyboardKit
     /// `AutocompleteSuggestion` values. This is the only place the
     /// engine's `RustEngineBridge.NextWordEnginePrediction` touches
     /// KeyboardKit types.
-    // 中文: 把引擎回傳的 NextWord 預測映射為 KeyboardKit 的 AutocompleteSuggestion。
+    // 把引擎回傳的 NextWord 預測映射為 KeyboardKit 的 AutocompleteSuggestion。
     func setNextWordPredictions(_ predictions: [RustEngineBridge.NextWordEnginePrediction]) {
         let suggestions = predictions.map { prediction in
             AutocompleteSuggestion(
@@ -287,7 +287,7 @@ extension ActionHandler: AutocompleteContextUpdater {
         keyboardController?.state.autocompleteContext.suggestionsFromService = suggestions
     }
 
-    // 中文: 清空 NextWord 顯示 — 走 KeyboardKit autocomplete reset。
+    // 清空 NextWord 顯示 — 走 KeyboardKit autocomplete reset。
     func resetNextWordSuggestions() {
         keyboardController?.state.autocompleteContext.reset()
     }

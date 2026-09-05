@@ -11,7 +11,7 @@
 //! the truth. Every mutation bumps it, so a writer cannot save new content
 //! under an old revision by forgetting a call.
 
-// 中文: settings.json 的形狀與型別化讀寫;缺 key = 未設定 = 預設值;reset 是移除 key 不是寫入預設值。
+// settings.json 的形狀與型別化讀寫;缺 key = 未設定 = 預設值;reset 是移除 key 不是寫入預設值。
 
 use std::collections::BTreeMap;
 

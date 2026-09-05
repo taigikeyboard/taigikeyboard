@@ -12,7 +12,7 @@
 //! NAMED SIMPLIFICATION: the unfold is a window-size ease over the same
 //! 183 ms rather than per-cell slides.
 
-// 中文: 候選窗內容 — 三種版面套 core 模型,Direct2D 繪製;選取以視窗為準;展開動畫簡化為視窗尺寸過渡。
+// 候選窗內容 — 三種版面套 core 模型,Direct2D 繪製;選取以視窗為準;展開動畫簡化為視窗尺寸過渡。
 
 use super::render::{DWriteMeasurer, RenderFactory, Surface};
 use super::theme::{SystemTheme, Theme};

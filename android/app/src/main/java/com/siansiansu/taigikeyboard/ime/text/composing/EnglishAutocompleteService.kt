@@ -1,7 +1,7 @@
-// 中文: 英文輸入模式的拼字建議服務 — 使用自帶英文頻率詞表 (EnglishWordMatcher)。
-// 中文: 對應 iOS UITextChecker,但 iOS 留用系統 UITextChecker (deliberate cross-platform
-// 中文: divergence) — Android 改自帶詞表,擺脫裝置系統 SpellCheckerSession 的相依性。
-// 中文: 僅 English InputMode 使用,Taigi 路徑走 TaigiAutocompleteService + Rust lexicon。
+// 英文輸入模式的拼字建議服務 — 使用自帶英文頻率詞表 (EnglishWordMatcher)。
+// 對應 iOS UITextChecker,但 iOS 留用系統 UITextChecker (deliberate cross-platform
+// divergence) — Android 改自帶詞表,擺脫裝置系統 SpellCheckerSession 的相依性。
+// 僅 English InputMode 使用,Taigi 路徑走 TaigiAutocompleteService + Rust lexicon。
 
 package com.siansiansu.taigikeyboard.ime.text.composing
 

@@ -1,12 +1,12 @@
-// 中文: Layout Tab — 鍵盤排版選擇主頁面。提供 PhahTaigi / QWERTY / MOE / TPS
-// 中文: 4 種版面卡片橫向選單。外觀設定已移至「主題」tab(第 2 位)。
+// Layout Tab — 鍵盤排版選擇主頁面。提供 PhahTaigi / QWERTY / MOE / TPS
+// 4 種版面卡片橫向選單。外觀設定已移至「主題」tab(第 2 位)。
 
 import SwiftUI
 
 /// Layout tab.
 ///
 /// Keyboard layout selection (PhahTaigi, QWERTY, MOE, TPS) with horizontal swipe cards.
-// 中文: Layout Tab View — 兩段橫向卡片(羅馬字鍵盤 / 台語注音)。
+// Layout Tab View — 兩段橫向卡片(羅馬字鍵盤 / 台語注音)。
 struct LayoutTab: View {
     @Environment(DisplayLanguageStore.self) private var lang
     @State private var selectedLayout: KeyboardLayoutType
@@ -83,7 +83,7 @@ struct LayoutTab: View {
         }
     }
 
-    // 中文: 切換選定排版,同步更新本地 state 與 SharedSettings 持久化欄位。
+    // 切換選定排版,同步更新本地 state 與 SharedSettings 持久化欄位。
     private func selectLayout(_ layout: KeyboardLayoutType) {
         withAnimation(.easeInOut(duration: 0.15)) {
             selectedLayout = layout
@@ -94,7 +94,7 @@ struct LayoutTab: View {
 
 // MARK: - Layout option card for horizontal swipe shelf
 
-// 中文: 單張鍵盤版面卡片(橫向卷軸用)。包含預覽圖、選中標記、停用遮罩、標題與副標。
+// 單張鍵盤版面卡片(橫向卷軸用)。包含預覽圖、選中標記、停用遮罩、標題與副標。
 private struct LayoutOptionCard: View {
     let title: String
     var subtitle: String?

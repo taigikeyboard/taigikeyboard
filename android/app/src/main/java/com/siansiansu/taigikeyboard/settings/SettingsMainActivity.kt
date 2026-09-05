@@ -1,5 +1,5 @@
-// 中文: Settings App 主 Activity — 安裝 EdgeToEdge、套主題、setContent 掛載 MainSettingsScreen。
-// 中文: 也是 dictionary / diagnostic / settings-reset 等 ViewModel 的 owner。
+// Settings App 主 Activity — 安裝 EdgeToEdge、套主題、setContent 掛載 MainSettingsScreen。
+// 也是 dictionary / diagnostic / settings-reset 等 ViewModel 的 owner。
 
 package com.siansiansu.taigikeyboard.settings
 

@@ -1,6 +1,6 @@
 //! The parts of a key event a composing decision is made from.
 
-// 中文: 一個按鍵事件中,分類器需要的欄位快照。
+// 一個按鍵事件中,分類器需要的欄位快照。
 
 /// The four chording modifiers. Caps Lock, Num Lock and the extended-key
 /// flag are deliberately not represented: they say how a key was reached,

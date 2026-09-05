@@ -1,5 +1,5 @@
-// 中文: 主題外觀預設值常數(6 角色 adaptive 色 / 5 個尺寸 / 全域預設字型)。
-// 中文: 原 AppearanceSettingsViewModel.Defaults 抽出 — 供自訂主題卡按鈕預覽與 ThemeEditorView reset 共用。
+// 主題外觀預設值常數(6 角色 adaptive 色 / 5 個尺寸 / 全域預設字型)。
+// 原 AppearanceSettingsViewModel.Defaults 抽出 — 供自訂主題卡按鈕預覽與 ThemeEditorView reset 共用。
 
 import Foundation
 import SwiftUI
@@ -16,13 +16,13 @@ enum ThemeDefaults {
     static let candidateText = Color(.label)
     static let candidateBackground = Color.keyboardBackground
 
-    // 中文: 尺寸預設的單一來源 = ThemeAppearance.default(factory 外觀)。
+    // 尺寸預設的單一來源 = ThemeAppearance.default(factory 外觀)。
     static let keyHeightScale = ThemeAppearance.default.keyHeightScale
     static let keyFontSizeScale = ThemeAppearance.default.keyFontSizeScale
     static let candidateTextSizeScale = ThemeAppearance.default.candidateTextSizeScale
     static let keyCornerRadius = ThemeAppearance.default.keyCornerRadius
     static let keyBorderWidth = ThemeAppearance.default.keyBorderWidth
 
-    // 中文: 字型為全域設定(非主題),預設值取 FontType 單一來源。
+    // 字型為全域設定(非主題),預設值取 FontType 單一來源。
     static let fontType = FontType.keyboardDefault
 }

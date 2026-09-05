@@ -2,8 +2,8 @@
 // Pure logic, Kotlin stdlib only. Eligible for cross-platform extraction.
 // endregion
 
-// 中文: 字典來源 enum — 標示候選/搜尋結果的來源歸屬(教典/iTaigi/...)。
-// 中文: bit 位置由 dictionary/common/source_bits.py 釘住,engine/lexicon/src/dictionary_reader.rs 讀取。
+// 字典來源 enum — 標示候選/搜尋結果的來源歸屬(教典/iTaigi/...)。
+// bit 位置由 dictionary/common/source_bits.py 釘住,engine/lexicon/src/dictionary_reader.rs 讀取。
 
 package com.siansiansu.taigikeyboard.ime.dictionary
 

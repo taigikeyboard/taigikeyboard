@@ -6,7 +6,7 @@
 //! dictionaries' first load — runs off the UI thread; the newest query
 //! wins by generation.
 
-// 中文: 辭典搜尋頁(未上架,只能用 `--pane dictionarySearch` 開)— 查詢在背景執行緒,最新一次才算數。
+// 辭典搜尋頁(未上架,只能用 `--pane dictionarySearch` 開)— 查詢在背景執行緒,最新一次才算數。
 
 use crate::presentation::PageMessage;
 use crate::search::{search, DictionarySearchResult};

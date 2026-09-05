@@ -1,5 +1,5 @@
-// 中文: 主 App UI 樣式常數的集中定義(字級、顏色、間距、圓角等)。
-// 中文: 所有 Tab / Settings 共用,改這裡即可全 App 套用。詳見 .claude/rules/ui-style-guide.md。
+// 主 App UI 樣式常數的集中定義(字級、顏色、間距、圓角等)。
+// 所有 Tab / Settings 共用,改這裡即可全 App 套用。詳見 .claude/rules/ui-style-guide.md。
 
 import SwiftUI
 
@@ -9,7 +9,7 @@ import SwiftUI
 /// are defined here. Change a value here → applies everywhere.
 ///
 /// See .claude/rules/ui-style-guide.md for the cross-platform spec.
-// 中文: App UI 樣式常數的命名空間 enum。
+// App UI 樣式常數的命名空間 enum。
 enum AppStyle {
     // MARK: - Font Sizes
 
@@ -35,7 +35,7 @@ enum AppStyle {
 
     /// Returns Open Huninn font at an explicit point size.
     /// All app UI fonts should go through this or the semantic properties below.
-    // 中文: 取指定點數的 Open Huninn 字型。所有 App UI 字型都該走這個或下方語意屬性。
+    // 取指定點數的 Open Huninn 字型。所有 App UI 字型都該走這個或下方語意屬性。
     static func appFont(size: CGFloat) -> Font {
         .custom(appFontName, size: size)
     }
@@ -87,13 +87,13 @@ enum AppStyle {
     // MARK: - Colors
 
     /// Interactive blue for icons, links, info buttons. Android equivalent: primary.
-    // 中文: icon / link / info 按鈕用的互動藍。對應 Android 的 primary。
+    // icon / link / info 按鈕用的互動藍。對應 Android 的 primary。
     static var accentBlue: Color {
         .accentColor
     }
 
     /// Accent orange for warning and feature icons. Android equivalent: accentOrange.
-    // 中文: 警告與 feature icon 用的橘色。對應 Android 的 accentOrange。
+    // 警告與 feature icon 用的橘色。對應 Android 的 accentOrange。
     static var warningOrange: Color {
         .orange
     }

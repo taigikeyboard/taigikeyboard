@@ -2,7 +2,7 @@
 //! engine's dictionaries under the user's source toggles, in the page's
 //! order. Port of `DictionarySearchService.swift`.
 
-// 中文: 辭典搜尋 — 先自訂詞庫,再引擎辭典(依來源開關),照頁面順序排。
+// 辭典搜尋 — 先自訂詞庫,再引擎辭典(依來源開關),照頁面順序排。
 
 use std::sync::Arc;
 use taigi_windows_core::engine::{

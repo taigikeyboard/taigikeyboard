@@ -1,5 +1,5 @@
-// 中文: Smartbar 平台 View 殼 — 候選 strip 內含為 ComposeView(LazyRow + English Row),
-// 中文: 外層仍為 LinearLayout 以維持 IME inflate / Activity 預覽穩定性。
+// Smartbar 平台 View 殼 — 候選 strip 內含為 ComposeView(LazyRow + English Row),
+// 外層仍為 LinearLayout 以維持 IME inflate / Activity 預覽穩定性。
 
 package com.siansiansu.taigikeyboard.ime.text.smartbar
 

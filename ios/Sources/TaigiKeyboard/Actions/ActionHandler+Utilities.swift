@@ -1,5 +1,5 @@
 // ActionHandler extension: input classification utilities (composing character detection).
-// 中文: ActionHandler 的輸入分類小工具 — 用來判斷一個字元要進組字模式還是直接輸出。
+// ActionHandler 的輸入分類小工具 — 用來判斷一個字元要進組字模式還是直接輸出。
 
 import Foundation
 
@@ -7,8 +7,8 @@ extension ActionHandler {
     /// Whether a character enters composing mode (allowlist).
     /// Letters, TPS bopomofo/tone symbols, hyphen, ˙ → composing.
     /// Everything else (punctuation, emoji, etc.) → direct output.
-    // 中文: 判斷字元是否屬於 "進入組字模式" 的 allowlist。
-    // 中文: 字母 / TPS 注音與調符 / 連字號 / ˙ 進組字;其餘標點與 emoji 直接送出。
+    // 判斷字元是否屬於 "進入組字模式" 的 allowlist。
+    // 字母 / TPS 注音與調符 / 連字號 / ˙ 進組字;其餘標點與 emoji 直接送出。
     func isComposingCharacter(_ char: String) -> Bool {
         guard let first = char.first else { return false }
         // isLetter covers: a-z, A-Z (Lu/Ll), TPS bopomofo ㄅ-ㆷ (Lo),

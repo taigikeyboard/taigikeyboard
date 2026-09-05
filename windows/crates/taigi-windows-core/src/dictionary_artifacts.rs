@@ -2,7 +2,7 @@
 //! the engine is asked to load them. Port of
 //! `macos/Sources/TaigiInputMethodCore/Engine/DictionaryArtifacts.swift`.
 
-// 中文: 引擎要 mmap 的四個辭典檔;找到並驗證存在且非空,再交給引擎。
+// 引擎要 mmap 的四個辭典檔;找到並驗證存在且非空,再交給引擎。
 
 use std::path::{Path, PathBuf};
 

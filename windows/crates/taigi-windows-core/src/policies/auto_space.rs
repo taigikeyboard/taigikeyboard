@@ -2,7 +2,7 @@
 //! decisions. Port of `AutoSpacePolicy.swift` + `AutoSpacePunctuation.swift`
 //! (behavioural invariant §23, `INVARIANT_AUTO_SPACE_PUNCTUATION_SWAP`).
 
-// 中文: 自動空白規則 — 閘門、連字號、附著標點交換、一次寫入的插入增補。
+// 自動空白規則 — 閘門、連字號、附著標點交換、一次寫入的插入增補。
 
 use crate::settings::InputMode;
 

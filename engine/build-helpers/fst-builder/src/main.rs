@@ -16,7 +16,7 @@
 //!   query <input.fst> <prefix>
 //!     list keys + rowids whose key has prefix
 
-// 中文: 字典 fst 前綴索引的建置 / 查詢命令列工具,取代舊版 marisa_trie Python 綁定。
+// 字典 fst 前綴索引的建置 / 查詢命令列工具,取代舊版 marisa_trie Python 綁定。
 
 mod builder;
 mod query;
@@ -103,8 +103,8 @@ fn main() -> ExitCode {
 /// three. Order-insensitive across the four pieces (`output`,
 /// `--tl-input`, `--poj-input`, `--tps-input`); rejects duplicates,
 /// unknown flags, and missing values.
-// 中文: 解析 build-syllables 的 <output.fst> + 三個必填 input flag。四段順序自由,
-// 中文:   重複、未知 flag、缺值都會回錯。
+// 解析 build-syllables 的 <output.fst> + 三個必填 input flag。四段順序自由,
+//   重複、未知 flag、缺值都會回錯。
 fn parse_build_syllables(tail: &[String]) -> Result<(&str, &str, &str, &str), String> {
     let mut output: Option<&str> = None;
     let mut tl_input: Option<&str> = None;

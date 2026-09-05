@@ -1,5 +1,5 @@
-// 中文: 使用者自訂主題的持久化儲存 — App Group 容器內的 JSON 檔,排除 OS 備份(F-Exclude)。
-// 中文: 每次變更 bump revision,讓 keyboard extension 下次 render 重新解析。CRUD 上限 5(USER 2026-06-07)。
+// 使用者自訂主題的持久化儲存 — App Group 容器內的 JSON 檔,排除 OS 備份(F-Exclude)。
+// 每次變更 bump revision,讓 keyboard extension 下次 render 重新解析。CRUD 上限 5(USER 2026-06-07)。
 
 import Foundation
 
@@ -17,7 +17,7 @@ import Foundation
 /// Reads go straight to disk (`load()`) — callers are infrequent (resolver on
 /// init + `didChangeNotification`), so no in-memory cache is needed and the
 /// host-app writer / extension reader stay consistent without invalidation.
-// 中文: 讀取每次走磁碟(呼叫點不頻繁),寫入端(host app)與讀取端(extension)免快取失效即一致。
+// 讀取每次走磁碟(呼叫點不頻繁),寫入端(host app)與讀取端(extension)免快取失效即一致。
 final class UserThemeStore {
     /// Maximum number of user themes (USER 2026-06-07). At cap, `add` no-ops.
     static let maxUserThemes = 5

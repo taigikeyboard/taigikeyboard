@@ -1,9 +1,9 @@
-// 中文: 版本歷史頁,顯示 App 更新 changelog。資料來自 VersionHistory.entries。
+// 版本歷史頁,顯示 App 更新 changelog。資料來自 VersionHistory.entries。
 
 import SwiftUI
 
 /// Version history page showing app update changelog.
-// 中文: 版本歷史頁。每筆 entry 為一段 Section:版本號 / 日期 / 變更條列。
+// 版本歷史頁。每筆 entry 為一段 Section:版本號 / 日期 / 變更條列。
 struct VersionHistoryDetailView: View {
     @Environment(DisplayLanguageStore.self) private var lang
 

@@ -4,7 +4,7 @@
 //! composition state: it draws what the models say and reports clicks and
 //! scrolls back to them.
 
-// 中文: 候選窗與模式提示 — Win32 popup + Direct2D/DirectWrite,幾何全由 core 的模型決定。
+// 候選窗與模式提示 — Win32 popup + Direct2D/DirectWrite,幾何全由 core 的模型決定。
 
 pub mod candidate_list_element;
 pub mod candidate_window;

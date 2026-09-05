@@ -1,7 +1,7 @@
 //! How a learning table stops growing without bound. Port of
 //! `Storage/LearningCapacity.swift`.
 
-// 中文: 學習表的列數上限與檢查節流;刪最沒用的列(次數低、久未用)。
+// 學習表的列數上限與檢查節流;刪最沒用的列(次數低、久未用)。
 
 use rusqlite::{params, Connection};
 use std::sync::Mutex;

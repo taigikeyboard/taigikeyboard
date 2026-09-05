@@ -1,8 +1,8 @@
-// 中文: 台語 autocomplete 服務:把連續輸入引擎的 span-local 候選轉成排序後的候選清單。
-// 中文: v3.5.8 Item 13 後 engine 為唯一候選來源 — 不再有 platform lexicon fallback;
-// 中文: 切音節 / 前綴 / 自訂詞 / hanzi guard 全在 engine 內處理(對齊 MOE tutgInputLine
-// 中文: 單向資料流)。Continuous path(§10.1.2 supersedes)沒有 composing-text cell,
-// 中文: slot 0 = candidate[0];inline pre-edit 才是 composing-text surface。
+// 台語 autocomplete 服務:把連續輸入引擎的 span-local 候選轉成排序後的候選清單。
+// v3.5.8 Item 13 後 engine 為唯一候選來源 — 不再有 platform lexicon fallback;
+// 切音節 / 前綴 / 自訂詞 / hanzi guard 全在 engine 內處理(對齊 MOE tutgInputLine
+// 單向資料流)。Continuous path(§10.1.2 supersedes)沒有 composing-text cell,
+// slot 0 = candidate[0];inline pre-edit 才是 composing-text surface。
 
 package com.siansiansu.taigikeyboard.ime.text.composing
 
@@ -148,12 +148,12 @@ internal fun shouldSplitCombinedCells(
  * mode ([splitCombinedCells] `false`, the default) emits exactly the
  * pre-split shape — 並排's subtitle tells 重/tîng from 重/tāng.
  */
-// 中文: Item 6 — roman 用 c.roman、hanzi 用 c.hanji,候選列 dual-line render;
-// 中文: Bug 1 後 DISPLAY_TEXT sidechannel = canonical key,走 canonicalText
-// 中文: (freq/NextWord);文件 commit 字串由 roman/hanzi 經 legacy formatter 產生。
-// 中文: §42 漢羅濫 — 有漢字的候選拆成相鄰的 漢字 cell + 羅馬字 cell(各帶
-// 中文: CELL_SCRIPT 標記,sidechannel 原樣複製兩份);兩種 script 各自以
-// 中文: 「格子上顯示的文字」去重、先到先贏。
+// Item 6 — roman 用 c.roman、hanzi 用 c.hanji,候選列 dual-line render;
+// Bug 1 後 DISPLAY_TEXT sidechannel = canonical key,走 canonicalText
+// (freq/NextWord);文件 commit 字串由 roman/hanzi 經 legacy formatter 產生。
+// §42 漢羅濫 — 有漢字的候選拆成相鄰的 漢字 cell + 羅馬字 cell(各帶
+// CELL_SCRIPT 標記,sidechannel 原樣複製兩份);兩種 script 各自以
+// 「格子上顯示的文字」去重、先到先贏。
 // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Autocomplete/Services/TaigiAutocompleteService.swift buildContinuousSuggestions
 // and the desktop PresentedCandidate split. Drift causes silent divergence (one platform still renders the superseded one-label 濫 cell).
 internal fun buildContinuousSuggestionsForCandidates(

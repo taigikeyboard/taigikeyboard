@@ -162,7 +162,7 @@ class DictionarySearchViewModel(
             // the ACTUAL current input mode (`prefs.inputMode` incl. "tps", not
             // the non-POJ→TL collapse the rest of `performSearch` uses). `null`
             // key (residue-only input) → no custom matches.
-            // 中文: R3 — 用實際當前 input mode(prefs.inputMode 含 "tps")產出家族查詢鍵,不折非 POJ→TL。
+            // R3 — 用實際當前 input mode(prefs.inputMode 含 "tps")產出家族查詢鍵,不折非 POJ→TL。
             val queryKey =
                 CustomDictionaryDerivation.deriveCustomQueryKey(
                     query,

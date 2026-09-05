@@ -1,5 +1,5 @@
-// 中文: 從工具列叫出的「符號選擇」overlay — 五個分類 tab 的符號網格,
-// 中文: 點選後即從插入點送出符號。
+// 從工具列叫出的「符號選擇」overlay — 五個分類 tab 的符號網格,
+// 點選後即從插入點送出符號。
 
 import SwiftUI
 
@@ -8,7 +8,7 @@ import SwiftUI
 /// Displays symbol grids across 5 category tabs in a scrollable tab bar,
 /// allowing the user to insert symbols directly from the keyboard toolbar.
 /// Follows the same overlay pattern as `LayoutSelectionOverlay`.
-// 中文: 符號選擇面板 — 與 LayoutSelectionOverlay 採用相同的 overlay 樣式。
+// 符號選擇面板 — 與 LayoutSelectionOverlay 採用相同的 overlay 樣式。
 struct SymbolSelectionOverlay: View {
     let isExpanded: Bool
     let onSymbolInsert: (String) -> Void
@@ -19,13 +19,13 @@ struct SymbolSelectionOverlay: View {
     @Environment(DisplayLanguageStore.self) private var lang
 
     /// Grid columns based on selected tab's column count.
-    // 中文: 依當前分類的 columnCount 動態建立 GridItem。
+    // 依當前分類的 columnCount 動態建立 GridItem。
     private var columns: [GridItem] {
         Array(repeating: GridItem(.flexible(), spacing: 4), count: selectedTab.columnCount)
     }
 
     /// Flat symbol list with unique IDs for LazyVGrid rendering.
-    // 中文: 把 [[String]] 攤平成附 ID 的 SymbolItem,供 LazyVGrid 渲染。
+    // 把 [[String]] 攤平成附 ID 的 SymbolItem,供 LazyVGrid 渲染。
     private var flatSymbols: [SymbolItem] {
         SymbolData.rows(for: selectedTab).enumerated().flatMap { rowIndex, row in
             row.enumerated().map { colIndex, symbol in

@@ -1,4 +1,4 @@
-// 中文: 排序管線用的單字頻率快照 — 會被 RustEngineBridge.processCandidates 編成 proto 送進 Rust ranker。
+// 排序管線用的單字頻率快照 — 會被 RustEngineBridge.processCandidates 編成 proto 送進 Rust ranker。
 
 import Foundation
 
@@ -13,8 +13,8 @@ import Foundation
 /// Hoisted out of `UserFrequencyRepository` so the bridge marshalling code
 /// depends on this Foundation-only value type rather than an iOS-only
 /// SQLite repository.
-// 中文: 單字頻率快照 — count + 上次使用毫秒時戳。從 SQLite repository 抽出來,
-// 中文: 讓 bridge marshalling 只依賴 Foundation,不綁 iOS 的儲存層。
+// 單字頻率快照 — count + 上次使用毫秒時戳。從 SQLite repository 抽出來,
+// 讓 bridge marshalling 只依賴 Foundation,不綁 iOS 的儲存層。
 public struct FrequencyData {
     public let count: Int
     public let lastUsedMillis: Int64 // Unix timestamp in milliseconds
@@ -32,7 +32,7 @@ public struct FrequencyData {
 /// by `UserFrequencyRepository.frequencyDataBatch` so the engine can build
 /// a `(display_text, canonical_tl)`-keyed `FrequencyMap` (Core Principle
 /// #7). `tl == ""` is the legacy fallback bucket.
-// 中文: R5 (word, tl) pair-key 的一列 — 顯示鍵 + canonical TL 讀音 + 快照;tl='' 為 legacy fallback 桶。
+// R5 (word, tl) pair-key 的一列 — 顯示鍵 + canonical TL 讀音 + 快照;tl='' 為 legacy fallback 桶。
 public struct FrequencyRow {
     public let word: String
     public let tl: String

@@ -4,7 +4,7 @@
 //! (roadmap W1 / W10 / W17). The chrome is WinUI's; the information
 //! architecture is `SettingsSplitView.swift`'s.
 
-// 中文: 設定視窗主程式 — 讀命令列、開 settings.json、開 WinUI 視窗。
+// 設定視窗主程式 — 讀命令列、開 settings.json、開 WinUI 視窗。
 
 #![cfg_attr(windows, windows_subsystem = "windows")]
 

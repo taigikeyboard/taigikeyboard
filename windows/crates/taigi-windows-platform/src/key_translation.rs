@@ -19,7 +19,7 @@
 //! chord the recorder stores is a chord the classifier matches — the
 //! recorder is NOT allowed a weaker copy (roadmap W17).
 
-// 中文: 一個按鍵按下轉成分類器要的快照(以及錄製欄要的 RecordedPress);修飾鍵只取樣一次,字元用 ToUnicodeEx(0x4)。DLL 與設定視窗共用同一份規則。
+// 一個按鍵按下轉成分類器要的快照(以及錄製欄要的 RecordedPress);修飾鍵只取樣一次,字元用 ToUnicodeEx(0x4)。DLL 與設定視窗共用同一份規則。
 
 use crate::os_out_buffer;
 use taigi_windows_core::keys::{

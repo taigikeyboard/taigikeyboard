@@ -1,5 +1,5 @@
-// 中文: iOS 端組字管理器 — Rust 組字引擎與 KeyboardKit / SwiftUI 之間的薄包裝。
-// 中文: 引擎狀態(phase / rawInput / selectedCandidateIndex)由 Rust 端持有,這裡只做 mirror + effect dispatch。
+// iOS 端組字管理器 — Rust 組字引擎與 KeyboardKit / SwiftUI 之間的薄包裝。
+// 引擎狀態(phase / rawInput / selectedCandidateIndex)由 Rust 端持有,這裡只做 mirror + effect dispatch。
 
 import Foundation
 import Observation
@@ -9,8 +9,8 @@ import SwiftProtobuf
 /// extension needs updated when composing starts/stops. KeyboardKit's
 /// `KeyboardContext` conforms via `KeyboardContext+Composing` so this
 /// wrapper stays Foundation-only.
-// 中文: 組字 context 的最小可寫 protocol — 只暴露 isComposingText 一個欄位。
-// 中文: KeyboardContext 透過 KeyboardContext+Composing 來符合此 protocol。
+// 組字 context 的最小可寫 protocol — 只暴露 isComposingText 一個欄位。
+// KeyboardContext 透過 KeyboardContext+Composing 來符合此 protocol。
 protocol ComposingContextSink: AnyObject {
     var isComposingText: Bool { get set }
 }
@@ -30,11 +30,11 @@ protocol ComposingContextSink: AnyObject {
 /// change (per plan §4.2 + Codex P1.4). The bridge passes it on every call;
 /// the engine compares against last-seen and silently drops state on
 /// mismatch.
-// 中文: iOS 端的組字管理器(@Observable)。負責三件事:
-// 中文:   1) 把引擎回傳鏡射到 Observation-tracked 屬性給 SwiftUI;
-// 中文:   2) 依 proto 順序派送 Effect 給 ComposingDelegate;
-// 中文:   3) 結束後通知 ComposingContextSink。
-// 中文: currentGeneration 每次 input-context 切換 +1,引擎會丟掉舊 generation 的 stale 請求。
+// iOS 端的組字管理器(@Observable)。負責三件事:
+//   1) 把引擎回傳鏡射到 Observation-tracked 屬性給 SwiftUI;
+//   2) 依 proto 順序派送 Effect 給 ComposingDelegate;
+//   3) 結束後通知 ComposingContextSink。
+// currentGeneration 每次 input-context 切換 +1,引擎會丟掉舊 generation 的 stale 請求。
 @Observable
 public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetcher {
     // MARK: - Observable Mirror
@@ -49,8 +49,8 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
     /// Bumped by `KeyboardViewController` lifecycle hooks (commit 11) when
     /// a real input-context change is detected. Engine-side generation
     /// mismatch then drops state silently before applying the next request.
-    // 中文: input-context 切換時由 KeyboardViewController 生命週期 +1。
-    // 中文: 引擎收到舊 generation 的請求會直接丟棄,避免 stale state 滲入。
+    // input-context 切換時由 KeyboardViewController 生命週期 +1。
+    // 引擎收到舊 generation 的請求會直接丟棄,避免 stale state 滲入。
     @ObservationIgnored
     private var currentGeneration: UInt64 = 1
 
@@ -58,8 +58,8 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
     /// commit. Suppresses redundant generation bumps from `textWillChange`
     /// firing on candidate taps / self-commits. Platform suppression flag —
     /// not view state — so excluded from the observation graph.
-    // 中文: 自我送出 commit 期間設為 true,壓掉 textWillChange 觸發的多餘 generation bump。
-    // 中文: 此為平台抑制旗標(非 view state),刻意排除於 observation graph 外。
+    // 自我送出 commit 期間設為 true,壓掉 textWillChange 觸發的多餘 generation bump。
+    // 此為平台抑制旗標(非 view state),刻意排除於 observation graph 外。
     @ObservationIgnored
     public internal(set) var selfCommitInProgress: Bool = false
 
@@ -80,8 +80,8 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
     // (returns `[]` until the DB is open) so the existing synchronous
     // `fetchContinuousCandidates` contract is unchanged. DB stays
     // native (`feedback_user_data_sqlite_stays_native`).
-    // 中文: Item 12 — Continuous 路徑查 custom_dictionary.db,與 legacy lexicon path 共用同一 repository;
-    // 中文: searchSync 為 eager-empty 同步查詢,DB 未開回 [],不破既有同步 fetch 契約。
+    // Item 12 — Continuous 路徑查 custom_dictionary.db,與 legacy lexicon path 共用同一 repository;
+    // searchSync 為 eager-empty 同步查詢,DB 未開回 [],不破既有同步 fetch 契約。
     private let customDictionaryRepository: CustomDictionaryRepository
     private let logger = DebugLogger(category: "ComposingManager")
 
@@ -105,14 +105,14 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
     /// Called by `KeyboardViewController` lifecycle hooks (per plan §4.2)
     /// when a NEW input context is detected. Subsequent bridge calls carry
     /// the bumped generation; engine drops stale state silently.
-    // 中文: 當偵測到新的 input context 時,由 KeyboardViewController 生命週期呼叫,把 generation +1。
+    // 當偵測到新的 input context 時,由 KeyboardViewController 生命週期呼叫,把 generation +1。
     public func bumpGeneration() {
         currentGeneration &+= 1
     }
 
     // MARK: - Composing Operations
 
-    // 中文: 從外部給定的 text 啟動一段組字。
+    // 從外部給定的 text 啟動一段組字。
     public func startComposing(with text: String) {
         logger.debug("[COMPOSE] fn=startComposing text='\(text)'")
         let settings = settingsProvider.current
@@ -125,7 +125,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         promoteToContinuousIfEligible(settings: settings)
     }
 
-    // 中文: 把單一字元追加到 raw input。
+    // 把單一字元追加到 raw input。
     public func appendCharacter(_ char: String) {
         logger.debug("[COMPOSE] fn=appendCharacter char='\(char)'")
         let settings = settingsProvider.current
@@ -138,7 +138,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         promoteToContinuousIfEligible(settings: settings)
     }
 
-    // 中文: 追加連字號 — POJ / TL 的音節分隔符。
+    // 追加連字號 — POJ / TL 的音節分隔符。
     public func appendHyphen() {
         logger.debug("[COMPOSE] fn=appendHyphen")
         let settings = settingsProvider.current
@@ -151,7 +151,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
     }
 
     /// TPS auto-correct — preserves `selectedCandidateIndex`.
-    // 中文: TPS 自動更正用 — 用 replacement 取代 raw 最後一個字元;保留 selectedCandidateIndex。
+    // TPS 自動更正用 — 用 replacement 取代 raw 最後一個字元;保留 selectedCandidateIndex。
     public func replaceLastCharacter(with replacement: String) {
         logger.debug("[COMPOSE] fn=replaceLastCharacter replacement='\(replacement)'")
         let settings = settingsProvider.current
@@ -174,8 +174,8 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
     /// the swap signal because the engine receives TPS as `"tl"`/`"poj"`
     /// `input_mode` (its own `input_mode == "tps"` branch never fires
     /// from the platform).
-    // 中文: §10.2 字界空格旗標的唯一來源 — effectiveSwapped = 翻譯反轉 OR TPS。
-    // 中文: TPS 在引擎端是 "tl"/"poj" input_mode,故 TPS 必須在平台端折進 swap 訊號。
+    // §10.2 字界空格旗標的唯一來源 — effectiveSwapped = 翻譯反轉 OR TPS。
+    // TPS 在引擎端是 "tl"/"poj" input_mode,故 TPS 必須在平台端折進 swap 訊號。
     // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/text/composing/ComposingManager.kt continuousSpacingFlags.
     // Drift causes silent divergence (hanji-first spurious word-boundary spaces).
     private static func continuousSpacingFlags(
@@ -199,9 +199,9 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
     /// when already in `Phase::Continuous` (`engine/composing/src/transition.rs:496-502`),
     /// so unconditional issuance is safe and avoids platform-side eligibility
     /// heuristics.
-    // 中文: 同步 Continuous 推進。同一執行緒 frame 內 fire,共享 caller generation
-    // 中文: 快照,避免 stale 引擎重置抹掉新狀態。引擎在空 raw / 已是 Continuous 時 no-op,
-    // 中文: 所以可無條件呼叫,不需要平台端啟發式判斷。
+    // 同步 Continuous 推進。同一執行緒 frame 內 fire,共享 caller generation
+    // 快照,避免 stale 引擎重置抹掉新狀態。引擎在空 raw / 已是 Continuous 時 no-op,
+    // 所以可無條件呼叫,不需要平台端啟發式判斷。
     private func promoteToContinuousIfEligible(settings: EngineSettings) {
         let transition = RustEngineBridge.composingEnterContinuous(
             mode: settings.inputMode,
@@ -266,10 +266,10 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
     /// everywhere — same observable outcome as the cold-start branch but
     /// via one extra phase-2 fetch. Documented degrade, not a bug.
     /// Codex PR #265 r3216760651 (P6).
-    // 中文: 同步擷取 Continuous 候選詞。只讀,non-Continuous / 無 inventory / 無命中
-    // 中文: 都回傳空 []。呼叫端無需區分,fall-through 到既有 lexicon path 即可。
-    // 中文: Phase 9.3b two-phase fetch — 中性查 → SQLite 查 freq → 帶 freq 重查 + 重排。
-    // 中文: generation 一次取樣,中途 bump 會讓 phase 2 回空,等同無 candidate 這 frame。
+    // 同步擷取 Continuous 候選詞。只讀,non-Continuous / 無 inventory / 無命中
+    // 都回傳空 []。呼叫端無需區分,fall-through 到既有 lexicon path 即可。
+    // Phase 9.3b two-phase fetch — 中性查 → SQLite 查 freq → 帶 freq 重查 + 重排。
+    // generation 一次取樣,中途 bump 會讓 phase 2 回空,等同無 candidate 這 frame。
     public func fetchContinuousCandidates() -> [RustEngineBridge.ContinuousCandidate] {
         let settings = settingsProvider.current
         let generation = currentGeneration
@@ -280,7 +280,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         // which is stable for this synchronous fetch). The engine
         // synthesizes a full-buffer candidate per entry and dedupes
         // `(roman, hanji)` against the FST hits.
-        // 中文: Item 12 — 用當前 rawInput 查 custom_dictionary.db 一次,兩個 phase 共用同一 customEntries。
+        // Item 12 — 用當前 rawInput 查 custom_dictionary.db 一次,兩個 phase 共用同一 customEntries。
         let customEntries = buildCustomEntries(rawInput: rawInput, settings: settings)
         let spacing = Self.continuousSpacingFlags(settings)
 
@@ -383,8 +383,8 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
     /// score.rs::build_frequency_map`). Only entries present in the DB are
     /// marshalled — missing rows mean "no user usage yet" and the engine
     /// applies `user_freq_boost(0) = 1.0` neutral. Codex pre-impl Q4 / Q8.
-    // 中文: 把候選詞的 user_frequency.db 快照打包成 proto FrequencyEntry。
-    // 中文: 以 displayText 去重壓 SQL placeholder;DB 沒有的 row 不送 → 引擎自動 neutral。
+    // 把候選詞的 user_frequency.db 快照打包成 proto FrequencyEntry。
+    // 以 displayText 去重壓 SQL placeholder;DB 沒有的 row 不送 → 引擎自動 neutral。
     private static func buildFrequencyEntries(
         for candidates: [RustEngineBridge.ContinuousCandidate],
         via service: UserFrequencyService,
@@ -437,10 +437,10 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
     /// `fetchContinuousCandidates` contract is preserved with no extra
     /// await — same cold-start tolerance as
     /// `userFrequencyService.isConnected()`.
-    // 中文: Item 12 — 查 custom_dictionary.db 並 marshal 成 proto CustomDictEntry[];
-    // 中文: 與 legacy lexicon path 共用同一 derivation+query,但送「原始儲存的 (roman,hanzi)」,
-    // 中文: 不送大寫化後的形式,讓引擎 (roman,hanji) 去重鍵能與 dict.bin 正確碰撞。
-    // 中文: 空 hanzi → proto-absent hanji (純羅馬字 → 引擎判 TAILO);searchSync eager-empty 保同步契約。
+    // Item 12 — 查 custom_dictionary.db 並 marshal 成 proto CustomDictEntry[];
+    // 與 legacy lexicon path 共用同一 derivation+query,但送「原始儲存的 (roman,hanzi)」,
+    // 不送大寫化後的形式,讓引擎 (roman,hanji) 去重鍵能與 dict.bin 正確碰撞。
+    // 空 hanzi → proto-absent hanji (純羅馬字 → 引擎判 TAILO);searchSync eager-empty 保同步契約。
     private func buildCustomEntries(
         rawInput: String,
         settings: EngineSettings,
@@ -500,9 +500,9 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
     /// emits `[CommitTextReplacingPreedit(whole composition),
     /// ResetAutocomplete, ResetAutocompleteContext, NextWordWordSelected]`
     /// and exits Continuous.
-    // 中文: 送出一個 Continuous 候選詞段;回傳 effect-backed (didCommit, didFinalCommit) 旗標,
-    // 中文: 讓 caller 用真實 commit signal 過濾 frequency / auto-space side-effects,
-    // 中文: 而不是 isComposing mirror — 後者在 generation 不對齊 silent reset 時會誤報。
+    // 送出一個 Continuous 候選詞段;回傳 effect-backed (didCommit, didFinalCommit) 旗標,
+    // 讓 caller 用真實 commit signal 過濾 frequency / auto-space side-effects,
+    // 而不是 isComposing mirror — 後者在 generation 不對齊 silent reset 時會誤報。
     // v3.5.8 Phase 9 Bug 1 (Option A): `displayText` is the swap/TPS/both-
     // scripts-formatted DOCUMENT string (caller mirrors the legacy lexicon
     // formatter); `canonicalText` is the canonical key (`hanji ?? roman`)
@@ -566,14 +566,14 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
     /// write, no `DeleteBackwardFromDocument`).
     /// Used by `KeyboardViewController+Setup.syncSettings` on input-mode swap
     /// (TL ↔ POJ ↔ TPS) so stale Continuous state can't leak across modes.
-    // 中文: 中止 Continuous;committed segments 不回退(已在 document)。Settings inputMode
-    // 中文: 切換時呼叫,確保跨模式無殘留狀態。
+    // 中止 Continuous;committed segments 不回退(已在 document)。Settings inputMode
+    // 切換時呼叫,確保跨模式無殘留狀態。
     public func resetContinuous() {
         logger.debug("[COMPOSE] fn=resetContinuous")
         applyAsSelfCommit(RustEngineBridge.composingResetContinuous(generation: currentGeneration))
     }
 
-    // 中文: 退格 — 刪掉 raw input 最後一個字元。
+    // 退格 — 刪掉 raw input 最後一個字元。
     public func deleteBackward() {
         logger.debug("[COMPOSE] fn=deleteBackward")
         let settings = settingsProvider.current
@@ -584,7 +584,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         ))
     }
 
-    // 中文: 把目前 derived 顯示文字送出(commit derived) — 結束組字。
+    // 把目前 derived 顯示文字送出(commit derived) — 結束組字。
     public func commitComposition() {
         logger.debug("[COMPOSE] fn=commitComposition")
         // Model B (§10.3 + v3.5.8 Phase 9 Finding 2): finalize the WHOLE
@@ -602,8 +602,8 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         // Phase 7B invariant (every active composition is auto-promoted to
         // Continuous first); we deliberately do NOT branch on phase — the
         // binding has no safe phase signal (Codex pre-impl point 3).
-        // 中文: Model B — commitComposition 走 CommitRaw 提交整段組字,無前綴重複;
-        // 中文: 空 preedit 走 CommitDerived(Idle noop);不在 binding branch phase。
+        // Model B — commitComposition 走 CommitRaw 提交整段組字,無前綴重複;
+        // 空 preedit 走 CommitDerived(Idle noop);不在 binding branch phase。
         let settings = settingsProvider.current
         guard !composingText.isEmpty else {
             applyAsSelfCommit(RustEngineBridge.composingCommitDerived(
@@ -624,8 +624,8 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         ))
     }
 
-    // 中文: 把 raw input 直接送出。Composing 階段送字面 keystrokes;Continuous 階段送
-    // 中文: 整段組字 (Σ nailed.display_text + derived(pending)),由引擎依 phase 自動分派。
+    // 把 raw input 直接送出。Composing 階段送字面 keystrokes;Continuous 階段送
+    // 整段組字 (Σ nailed.display_text + derived(pending)),由引擎依 phase 自動分派。
     public func commitRawInput() {
         logger.debug("[COMPOSE] fn=commitRawInput")
         // v3.5.8 Phase 9 Item 3 + Model B (§10.3):
@@ -636,8 +636,8 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         // `engine/composing/tests/continuous_phase.rs::commit_raw_under_continuous_*`).
         // The Phase 7B SelectSuggestion bypass is no longer needed; the
         // engine owns the per-phase routing.
-        // 中文: Phase 9 Item 3 + Model B — engine 在 Continuous 下提交整段組字 + 終端 NextWord;
-        // 中文: 平台不再 SelectSuggestion 繞路,直接送 CommitRaw 由引擎決定行為。
+        // Phase 9 Item 3 + Model B — engine 在 Continuous 下提交整段組字 + 終端 NextWord;
+        // 平台不再 SelectSuggestion 繞路,直接送 CommitRaw 由引擎決定行為。
         let settings = settingsProvider.current
         let spacing = Self.continuousSpacingFlags(settings)
         applyAsSelfCommit(RustEngineBridge.composingCommitRaw(
@@ -650,7 +650,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         ))
     }
 
-    // 中文: 使用者點選候選詞時呼叫,送出 text 並結束組字。
+    // 使用者點選候選詞時呼叫,送出 text 並結束組字。
     public func selectSuggestion(text: String) {
         logger.debug("[COMPOSE] fn=selectSuggestion len=\(text.count)")
         // §10.2 platform pass: under Continuous this routes to
@@ -669,7 +669,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         ))
     }
 
-    // 中文: 先把 preedit 送出再插入外部 text — 例如剪貼或 NextWord 觸發時用。
+    // 先把 preedit 送出再插入外部 text — 例如剪貼或 NextWord 觸發時用。
     public func commitPreeditThenInsertExternal(_ text: String) {
         logger.debug("[COMPOSE] fn=commitPreeditThenInsertExternal len=\(text.count)")
         let settings = settingsProvider.current
@@ -687,7 +687,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
 
     /// Commit the currently-selected candidate, given the visible candidate
     /// strings. KK-side callers pass `suggestions.map(\.text)`.
-    // 中文: 把目前選中的候選詞送出。呼叫端傳入目前可見候選文字列表(KK 是 suggestions.map(\.text))。
+    // 把目前選中的候選詞送出。呼叫端傳入目前可見候選文字列表(KK 是 suggestions.map(\.text))。
     public func confirmSelectedCandidate(availableTexts: [String]) -> Bool {
         logger.debug("[COMPOSE] fn=confirmSelectedCandidate index=\(selectedCandidateIndex) count=\(availableTexts.count)")
         guard isComposing,
@@ -698,13 +698,13 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         return true
     }
 
-    // 中文: 重置組字狀態 — 不送出,僅清空。
+    // 重置組字狀態 — 不送出,僅清空。
     public func reset() {
         logger.debug("[COMPOSE] fn=reset")
         applyAsSelfCommit(RustEngineBridge.composingReset(generation: currentGeneration))
     }
 
-    // 中文: 更新目前選中的候選詞 index,給鍵盤方向鍵 / 候選列點擊使用。
+    // 更新目前選中的候選詞 index,給鍵盤方向鍵 / 候選列點擊使用。
     public func setSelectedCandidateIndex(_ index: Int) {
         logger.debug("[COMPOSE] fn=setSelectedCandidateIndex index=\(index)")
         apply(RustEngineBridge.composingSetSelectedCandidateIndex(index, generation: currentGeneration))
@@ -712,14 +712,14 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
 
     // MARK: - Apply Transition (three-phase, see boundary doc §2.4)
 
-    // 中文: apply 的自我送出版本 — 設好 selfCommitInProgress 旗標壓掉多餘 generation bump。
+    // apply 的自我送出版本 — 設好 selfCommitInProgress 旗標壓掉多餘 generation bump。
     private func applyAsSelfCommit(_ transition: RustEngineBridge.ComposingTransition) {
         selfCommitInProgress = true
         defer { selfCommitInProgress = false }
         apply(transition)
     }
 
-    // 中文: 套用一次 ComposingTransition,三階段:鏡射 → 派送 effect → 通知 sink。
+    // 套用一次 ComposingTransition,三階段:鏡射 → 派送 effect → 通知 sink。
     private func apply(_ transition: RustEngineBridge.ComposingTransition) {
         // Phase 1 — mutate observable mirror (guarded-inequality writes keep
         // idle→idle silent and avoid redundant SwiftUI invalidation).

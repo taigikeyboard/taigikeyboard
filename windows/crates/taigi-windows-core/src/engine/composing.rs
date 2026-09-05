@@ -13,7 +13,7 @@
 //! Every op answers `None` when the round-trip itself failed, which is a
 //! different thing from the engine answering that it is idle.
 
-// 中文: 組字切片 — 桌面版使用的 8 個引擎意圖;None 只代表往返失敗。
+// 組字切片 — 桌面版使用的 8 個引擎意圖;None 只代表往返失敗。
 
 use protos::engine::{
     composing_request, request, response, Append, CommitContinuous,

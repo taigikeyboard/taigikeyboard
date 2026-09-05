@@ -3,7 +3,7 @@
 //! dictionary-search page's two lookups. Port of
 //! `RustEngineBridge+Lexicon.swift` + `Engine/DictionarySource.swift`.
 
-// 中文: 辭典切片 — 安裝四個辭典檔、把使用者的來源開關解析成引擎位元遮罩。
+// 辭典切片 — 安裝四個辭典檔、把使用者的來源開關解析成引擎位元遮罩。
 
 use std::collections::BTreeSet;
 

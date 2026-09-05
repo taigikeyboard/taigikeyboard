@@ -1,4 +1,4 @@
-// 中文: 使用者詞頻 DB 的 DDL — 主表 + 索引 + metadata 補種子 + pair-key 遷移,純結構。
+// 使用者詞頻 DB 的 DDL — 主表 + 索引 + metadata 補種子 + pair-key 遷移,純結構。
 
 import Foundation
 import SQLite3
@@ -16,7 +16,7 @@ import SQLite3
 /// (重/tîng vs 重/tāng) keep separate counts. Pre-R5 rows carry `tl = ''`
 /// (the migration backfill); the engine treats `tl == ''` as a tolerant
 /// fallback bucket all readings consult until each is re-learned.
-// 中文: 使用者詞頻 schema — DDL + (word, tl) pair-key 遷移 (#7);pruning / capacity / scoring 不在這裡。
+// 使用者詞頻 schema — DDL + (word, tl) pair-key 遷移 (#7);pruning / capacity / scoring 不在這裡。
 enum UserFrequencySchema {
     static let tableName = "user_frequency"
     static let metadataTableName = "metadata"
@@ -25,12 +25,12 @@ enum UserFrequencySchema {
     /// implicit 0/1 single-`word`-UNIQUE shape to 2 by R5. Used as the
     /// migration gate (integer PRAGMA over the string metadata row — Codex
     /// pre-impl Q3: robust, atomic with the rebuild transaction).
-    // 中文: pair-key schema 的 user_version = 2;遷移閘門用整數 PRAGMA 不依賴字串 metadata。
+    // pair-key schema 的 user_version = 2;遷移閘門用整數 PRAGMA 不依賴字串 metadata。
     static let pairKeySchemaVersion = 2
 
     /// Create all tables + indexes, migrate to pair-key if needed, and seed
     /// metadata. Idempotent.
-    // 中文: 建立全部表 + 索引、必要時遷移到 pair-key、補 metadata 種子。冪等。
+    // 建立全部表 + 索引、必要時遷移到 pair-key、補 metadata 種子。冪等。
     static func ensureTables(db: OpaquePointer) throws {
         try migrateToPairKeyIfNeeded(db: db)
         try createFrequencyTable(db: db)
@@ -50,9 +50,9 @@ enum UserFrequencySchema {
     /// `tl = ''` (the legacy fallback bucket); `id` / `count` / `last_used`
     /// / `created_at` are preserved exactly. Fresh installs (no table) skip
     /// this entirely — `createFrequencyTable` builds the new shape directly.
-    // 中文: 把舊 user_frequency(inline word UNIQUE、無 tl)重建成 (word, tl) pair-key。
-    // 中文: inline UNIQUE 無法 ALTER 掉 → create-new/copy/drop/rename,BEGIN IMMEDIATE 包,crash 回滾。
-    // 中文: 舊列 tl='' 回填(fallback 桶);id/count/last_used/created_at 原樣保留。全新安裝跳過。
+    // 把舊 user_frequency(inline word UNIQUE、無 tl)重建成 (word, tl) pair-key。
+    // inline UNIQUE 無法 ALTER 掉 → create-new/copy/drop/rename,BEGIN IMMEDIATE 包,crash 回滾。
+    // 舊列 tl='' 回填(fallback 桶);id/count/last_used/created_at 原樣保留。全新安裝跳過。
     private static func migrateToPairKeyIfNeeded(db: OpaquePointer) throws {
         if sqliteReadUserVersion(db: db) >= pairKeySchemaVersion { return }
         // version < 2: fresh install (no table) OR pre-R5 v1 (table without

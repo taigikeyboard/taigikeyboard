@@ -1,10 +1,10 @@
-// 中文: 鍵盤擴充的最外層 SwiftUI View — 拼起候選列、KeyboardKit 鍵盤本體、四個 overlay 與背景。
-// 中文: 變動的設定值(顏色 / 字型大小 / 邊框)透過 UserDefaults didChange 即時 sync 進 @State。
+// 鍵盤擴充的最外層 SwiftUI View — 拼起候選列、KeyboardKit 鍵盤本體、四個 overlay 與背景。
+// 變動的設定值(顏色 / 字型大小 / 邊框)透過 UserDefaults didChange 即時 sync 進 @State。
 
 import KeyboardKit
 import SwiftUI
 
-// 中文: 主鍵盤 View,組裝 CandidateView + KeyboardView + Overlay + 背景。
+// 主鍵盤 View,組裝 CandidateView + KeyboardView + Overlay + 背景。
 struct TaigiKeyboardView: View {
     let settings: any KeyboardEnvironment
     let services: KeyboardServices
@@ -24,11 +24,11 @@ struct TaigiKeyboardView: View {
     @StateObject private var expandState = CandidateExpandState()
     @State private var currentInputMode: InputMode
     @State private var panels = OverlayPanelState()
-    // 中文: 設定編輯軸的 re-render 觸發器。colorScheme 變動由 keyboardContext(@ObservedObject)
-    // 中文: 自動觸發;但 host app 改顏色/主題時 keyboardContext 不變,靠 didChange bump 此值強制重繪。
+    // 設定編輯軸的 re-render 觸發器。colorScheme 變動由 keyboardContext(@ObservedObject)
+    // 自動觸發;但 host app 改顏色/主題時 keyboardContext 不變,靠 didChange bump 此值強制重繪。
     @State private var settingsRevision = 0
-    // 中文: extension 程序自己的 i18n 顯示語言 store(host 是另一程序)。view-owned @State 讓直接建構
-    // 中文: TaigiKeyboardView 的路徑(如 KeyboardPreviewPanel)自帶 store;注入 environment 供 overlay 讀取。
+    // extension 程序自己的 i18n 顯示語言 store(host 是另一程序)。view-owned @State 讓直接建構
+    // TaigiKeyboardView 的路徑(如 KeyboardPreviewPanel)自帶 store;注入 environment 供 overlay 讀取。
     @State private var displayLanguageStore = DisplayLanguageStore()
 
     init(
@@ -62,7 +62,7 @@ struct TaigiKeyboardView: View {
 
     /// Per-render-cycle cached settings and providers.
     /// Created once per body evaluation to avoid repeated UserDefaults reads.
-    // 中文: 一次 render 內共用的 settings snapshot 與 button content 各 provider,避免重複讀 UserDefaults。
+    // 一次 render 內共用的 settings snapshot 與 button content 各 provider,避免重複讀 UserDefaults。
     private struct RenderProviders {
         let settings: SettingsSnapshot
         let keyTextColor: Color
@@ -80,13 +80,13 @@ struct TaigiKeyboardView: View {
     }
 
     var body: some View {
-        // 中文: 建立 settingsRevision → body 的失效邊。body 每次重算顏色(無快取),colorScheme 軸由
-        // 中文: keyboardContext(@ObservedObject)自動觸發;設定編輯軸則靠 didChange bump 此值。必須在 body
-        // 中文: 讀取它,re-render 才保證觸發(避免依賴「@State 寫入即失效」此一未明確保證的行為)。
-        // 中文: 必須用 `let _ =` 宣告形式 — ViewBuilder body 不接受裸 `_ =` 運算式(會被當成 View)。
+        // 建立 settingsRevision → body 的失效邊。body 每次重算顏色(無快取),colorScheme 軸由
+        // keyboardContext(@ObservedObject)自動觸發;設定編輯軸則靠 didChange bump 此值。必須在 body
+        // 讀取它,re-render 才保證觸發(避免依賴「@State 寫入即失效」此一未明確保證的行為)。
+        // 必須用 `let _ =` 宣告形式 — ViewBuilder body 不接受裸 `_ =` 運算式(會被當成 View)。
         let _ = settingsRevision
-        // 中文: 單次解析,colorScheme 取自 keyboardContext(KK 已隨系統 trait 同步)。
-        // 中文: 六個顏色 sink 全讀這份 p.settings.colorSettings,避免重複解析或來源分裂。
+        // 單次解析,colorScheme 取自 keyboardContext(KK 已隨系統 trait 同步)。
+        // 六個顏色 sink 全讀這份 p.settings.colorSettings,避免重複解析或來源分裂。
         let p = RenderProviders(
             keyboardContext: keyboardContext,
             settings: settings.snapshot(for: keyboardContext.colorScheme),
@@ -172,11 +172,11 @@ struct TaigiKeyboardView: View {
                 colors.backgroundColor?.color ?? Color.keyboardBackground
             }
         }
-        // 中文: 把主題解析所用的 colorScheme 灌進 environment,讓仍讀 @Environment(\.colorScheme)
-        // 中文: 的子 view(CandidateView / CandidateButtonView)與 resolver 同源,避免淺/深色混色。
+        // 把主題解析所用的 colorScheme 灌進 environment,讓仍讀 @Environment(\.colorScheme)
+        // 的子 view(CandidateView / CandidateButtonView)與 resolver 同源,避免淺/深色混色。
         .environment(\.colorScheme, keyboardContext.colorScheme)
-        // 中文: 把 extension 的顯示語言 store 灌進 environment;overlay 以 @Environment(DisplayLanguageStore.self)
-        // 中文: 讀取並 live-switch。套在 overlay 已掛載之後仍會傳入(與上面 colorScheme 同路徑)。
+        // 把 extension 的顯示語言 store 灌進 environment;overlay 以 @Environment(DisplayLanguageStore.self)
+        // 讀取並 live-switch。套在 overlay 已掛載之後仍會傳入(與上面 colorScheme 同路徑)。
         .environment(displayLanguageStore)
         .onAppear {
             if let mode = initialInputMode {
@@ -188,13 +188,13 @@ struct TaigiKeyboardView: View {
                 .publisher(for: UserDefaults.didChangeNotification)
                 .receive(on: DispatchQueue.main),
         ) { _ in
-            // 中文: host app 改設定 → bump settingsRevision 強制重繪;body 以 live keyboardContext.colorScheme
-            // 中文: 重新解析主題外觀(selectedThemeId / colorSettings / 各尺寸 / themeRevision 任一變更皆觸發)。
-            // 中文: 尺寸/邊框/陰影走 settings.snapshot(per-theme resolved);字型為全域設定亦由 snapshot 帶入。不再各自 @State 鏡像。
+            // host app 改設定 → bump settingsRevision 強制重繪;body 以 live keyboardContext.colorScheme
+            // 重新解析主題外觀(selectedThemeId / colorSettings / 各尺寸 / themeRevision 任一變更皆觸發)。
+            // 尺寸/邊框/陰影走 settings.snapshot(per-theme resolved);字型為全域設定亦由 snapshot 帶入。不再各自 @State 鏡像。
             settingsRevision &+= 1
-            // 中文: 同程序內盡力同步顯示語言。跨程序(host 改語言)的可靠重讀點在 overlay .onAppear,因
-            // 中文: UserDefaults.didChangeNotification 依 Apple 契約只在本程序寫入時送出,外部程序寫入不保證觸發
-            // 中文: (Codex pre-impl F1c)。此處冪等:語言未變則 store didSet 不動作。
+            // 同程序內盡力同步顯示語言。跨程序(host 改語言)的可靠重讀點在 overlay .onAppear,因
+            // UserDefaults.didChangeNotification 依 Apple 契約只在本程序寫入時送出,外部程序寫入不保證觸發
+            // (Codex pre-impl F1c)。此處冪等:語言未變則 store didSet 不動作。
             displayLanguageStore.syncFromSettings()
         }
     }
@@ -203,7 +203,7 @@ struct TaigiKeyboardView: View {
 
     /// Core keyboard + overlay panels + state change handlers.
     /// Extracted from body to reduce type-checker complexity.
-    // 中文: 把核心鍵盤 + 四個 overlay + 狀態 onChange 串在一起,從 body 抽出來壓低 type-checker 複雜度。
+    // 把核心鍵盤 + 四個 overlay + 狀態 onChange 串在一起,從 body 抽出來壓低 type-checker 複雜度。
     private func keyboardWithOverlays(
         p: RenderProviders,
         suggestions: [AutocompleteSuggestion],
@@ -263,7 +263,7 @@ struct TaigiKeyboardView: View {
 
     /// Builds the KeyboardView with button content, style, and toolbar.
     /// Extracted from body to reduce type-checker complexity.
-    // 中文: 組出 KeyboardKit KeyboardView 主體 — 按鍵內容 / 樣式 / candidate toolbar / callout。
+    // 組出 KeyboardKit KeyboardView 主體 — 按鍵內容 / 樣式 / candidate toolbar / callout。
     private func coreKeyboard(
         p: RenderProviders,
         suggestions: [AutocompleteSuggestion],
@@ -433,7 +433,7 @@ struct TaigiKeyboardView: View {
         return keyText.isDark ? .light : .dark
     }
 
-    // 中文: 依當前 keyboardContext 與顏色設定組合出 CandidateView 樣式,套用使用者選的高度與背景。
+    // 依當前 keyboardContext 與顏色設定組合出 CandidateView 樣式,套用使用者選的高度與背景。
     private static func candidateStyle(
         for context: KeyboardContext,
         colorSettings: KeyboardColorSettings,

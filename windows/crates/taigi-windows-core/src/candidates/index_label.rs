@@ -1,7 +1,7 @@
 //! Which key picks which candidate, and how that key is written in the
 //! window. Port of `CandidateIndexLabel.swift`.
 
-// 中文: 畫在候選旁的選字鍵 — 與分類器同一份 slot 規則。
+// 畫在候選旁的選字鍵 — 與分類器同一份 slot 規則。
 
 use super::horizontal::HorizontalPageLayout;
 use crate::keys::CandidateSlotKeySet;

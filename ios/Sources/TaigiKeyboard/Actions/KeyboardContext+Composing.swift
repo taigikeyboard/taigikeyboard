@@ -1,4 +1,4 @@
-// 中文: 為 KeyboardKit KeyboardContext 加上組字狀態屬性的擴充,透過 Associated Object 暫存。
+// 為 KeyboardKit KeyboardContext 加上組字狀態屬性的擴充,透過 Associated Object 暫存。
 
 import Combine
 import Foundation

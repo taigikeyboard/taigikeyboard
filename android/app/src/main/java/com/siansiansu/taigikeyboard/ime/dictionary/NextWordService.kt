@@ -1,6 +1,6 @@
-// 中文: NextWord 平台服務 — 管理 user_association.db SQLite(read+write)+ bundled association.bin 共用查詢。
-// 中文: bigram lookup 已走 Rust lexicon::assoc_lookup;此處只剩 SQLite 寫路徑與啟動 prep 等平台粘合。
-// 中文: 對應 iOS NextWord/Services/NextWordService.swift。
+// NextWord 平台服務 — 管理 user_association.db SQLite(read+write)+ bundled association.bin 共用查詢。
+// bigram lookup 已走 Rust lexicon::assoc_lookup;此處只剩 SQLite 寫路徑與啟動 prep 等平台粘合。
+// 對應 iOS NextWord/Services/NextWordService.swift。
 
 package com.siansiansu.taigikeyboard.ime.dictionary
 

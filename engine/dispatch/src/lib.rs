@@ -13,8 +13,8 @@
 //! Empty / missing payload is reported as `FailInvariant` so the platform
 //! side can distinguish "you forgot to fill `payload`" from "we crashed".
 
-// 中文: 引擎頂層 FFI 分派器 — 單一 bytes 進、bytes 出的入口點。
-// 中文: 解析 Request、依 payload oneof 路由到對應子 crate,並用 catch_unwind 圍住整條 pipeline,確保 panic 不會跨越 FFI 邊界。
+// 引擎頂層 FFI 分派器 — 單一 bytes 進、bytes 出的入口點。
+// 解析 Request、依 payload oneof 路由到對應子 crate,並用 catch_unwind 圍住整條 pipeline,確保 panic 不會跨越 FFI 邊界。
 
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
@@ -28,13 +28,13 @@ mod case;
 /// envelope overhead. Single source of truth — `swift-ffi` and
 /// `android-jni` import this constant for their pre-allocation early
 /// rejection so the cap stays in lock-step across both FFI seams.
-// 中文: FFI 請求 byte buffer 的最大上限,iOS/Android 兩端共用此常數做早期拒絕,確保兩個 FFI 邊界門檻一致。
+// FFI 請求 byte buffer 的最大上限,iOS/Android 兩端共用此常數做早期拒絕,確保兩個 FFI 邊界門檻一致。
 pub const MAX_REQUEST_BYTES: usize = 2 * 1024 * 1024;
 
 /// Decode `bytes` as a `Request`, dispatch by payload variant, encode the
 /// resulting `Response`. Always returns a valid encoded `Response` —
 /// never panics across the seam.
-// 中文: FFI 主入口 — 解析 Request、依 payload 分派、回傳序列化後的 Response,絕不會讓 panic 穿越邊界。
+// FFI 主入口 — 解析 Request、依 payload 分派、回傳序列化後的 Response,絕不會讓 panic 穿越邊界。
 #[must_use]
 pub fn process_request(bytes: &[u8]) -> Vec<u8> {
     let result = catch_unwind(AssertUnwindSafe(|| encode(&run(bytes))));
@@ -48,7 +48,7 @@ pub fn process_request(bytes: &[u8]) -> Vec<u8> {
 /// a closure that always panics so the catch-unwind boundary is
 /// exercised against a known panic. Production code never references
 /// this; it is compiled out of release builds.
-// 中文: 僅供測試的 panic 注入接縫,讓單元測試能直接驗證 catch_unwind 邊界,正式版本會被編譯掉。
+// 僅供測試的 panic 注入接縫,讓單元測試能直接驗證 catch_unwind 邊界,正式版本會被編譯掉。
 #[cfg(test)]
 fn process_request_with<F>(bytes: &[u8], dispatcher: F) -> Vec<u8>
 where

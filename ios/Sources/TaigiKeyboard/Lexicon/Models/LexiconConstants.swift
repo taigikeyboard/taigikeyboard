@@ -1,4 +1,4 @@
-// 中文: 詞典模組的常數設定 — log subsystem、搜尋上限、Trie 前綴字串。
+// 詞典模組的常數設定 — log subsystem、搜尋上限、Trie 前綴字串。
 
 import Foundation
 

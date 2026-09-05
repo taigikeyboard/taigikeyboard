@@ -11,7 +11,7 @@
 //! identity and every conflict rule is a pure function over one settings
 //! document.
 
-// 中文: 全域快捷鍵動作 — 名冊、預設、全域列額外拒絕規則、兩個登錄簿的衝突解析(純函式)。
+// 全域快捷鍵動作 — 名冊、預設、全域列額外拒絕規則、兩個登錄簿的衝突解析(純函式)。
 
 use super::action::ComposingAction;
 use super::bindings::ComposingKeyBindings;

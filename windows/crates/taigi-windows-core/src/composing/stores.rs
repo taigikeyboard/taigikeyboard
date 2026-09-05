@@ -3,7 +3,7 @@
 //! because the one manager per process lives behind a mutex a TSF host may
 //! reach from several thread managers (roadmap W3).
 
-// 中文: 組字流程用到的儲存/時鐘介面;storage crate 以 SQLite 實作,測試以記憶體實作。
+// 組字流程用到的儲存/時鐘介面;storage crate 以 SQLite 實作,測試以記憶體實作。
 
 use crate::engine::{AssociationPair, CustomEntry, FrequencyRow};
 

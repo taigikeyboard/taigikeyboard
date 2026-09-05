@@ -1,5 +1,5 @@
-// 中文: 外觀預覽專用的 KeyboardEnvironment。讓 KeyboardPreviewPanel 用一份固定/草稿 ThemeAppearance
-// 中文: 渲染真實 TaigiKeyboardView;外觀不讀寫全域 SharedSettings(draft-and-save),非外觀項(含全域字型)仍讀全域。
+// 外觀預覽專用的 KeyboardEnvironment。讓 KeyboardPreviewPanel 用一份固定/草稿 ThemeAppearance
+// 渲染真實 TaigiKeyboardView;外觀不讀寫全域 SharedSettings(draft-and-save),非外觀項(含全域字型)仍讀全域。
 
 import Foundation
 import SwiftUI
@@ -17,7 +17,7 @@ import SwiftUI
 /// real `CandidateView` whose input-mode toggle would otherwise mutate the
 /// user's global `inputMode`. Keeping `inputMode` / `isFullAccessEnabled` local
 /// makes the preview inert.
-// 中文: 唯讀預覽環境。外觀讀草稿,其餘讀全域;可寫 setter 全留在本地(避免預覽內的模式切換污染真實設定)。
+// 唯讀預覽環境。外觀讀草稿,其餘讀全域;可寫 setter 全留在本地(避免預覽內的模式切換污染真實設定)。
 final class ThemePreviewEnvironment: KeyboardEnvironment {
     private let appearance: ThemeAppearance
     private let appliesThemeShadow: Bool
@@ -44,7 +44,7 @@ final class ThemePreviewEnvironment: KeyboardEnvironment {
     var keyFontSizeScale: CGFloat { CGFloat(appearance.keyFontSizeScale) }
     var keyBorderWidth: CGFloat { CGFloat(appearance.keyBorderWidth) }
     var candidateTextSizeScale: CGFloat { CGFloat(appearance.candidateTextSizeScale) }
-    // 中文: 字型為全域設定(非草稿主題的一部分),預覽用全域字型。
+    // 字型為全域設定(非草稿主題的一部分),預覽用全域字型。
     var fontType: FontType { base.fontType }
     var keyboardLayoutType: KeyboardLayoutType { base.keyboardLayoutType }
     var settingsUserDefaults: UserDefaults { base.settingsUserDefaults }

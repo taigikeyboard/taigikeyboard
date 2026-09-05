@@ -2,8 +2,8 @@
 // Pure logic, Kotlin stdlib only. Eligible for cross-platform extraction.
 // endregion
 
-// 中文: 共用 logging 介面 — engine 層只依賴此介面,平台 adapter(Android / iOS / 測試)決定輸出去處。
-// 中文: hot path 上應使用 inline `d { ... }` 擴充,讓 release build 直接 dead-code-eliminate string interpolation。
+// 共用 logging 介面 — engine 層只依賴此介面,平台 adapter(Android / iOS / 測試)決定輸出去處。
+// hot path 上應使用 inline `d { ... }` 擴充,讓 release build 直接 dead-code-eliminate string interpolation。
 
 package com.siansiansu.taigikeyboard.ime.core.logging
 

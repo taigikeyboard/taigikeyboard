@@ -2,10 +2,10 @@
 // calls to android.util.Log. The LoggerBackend interface itself (in
 // LoggerBackend.kt) is the shared-core contract.
 
-// 中文: Android 平台 logger adapter — 將 LoggerBackend 介面接到 android.util.Log。
-// 中文: d/i/w/e 全部受 BuildConfig.DEBUG 控制 — release build 一律無 logcat 輸出
-// 中文: (security-rules.md「Release builds must have zero logs」隱私契約;
-// 中文:  ProGuard -assumenosideeffects 僅為 secondary 防線)。
+// Android 平台 logger adapter — 將 LoggerBackend 介面接到 android.util.Log。
+// d/i/w/e 全部受 BuildConfig.DEBUG 控制 — release build 一律無 logcat 輸出
+// (security-rules.md「Release builds must have zero logs」隱私契約;
+//  ProGuard -assumenosideeffects 僅為 secondary 防線)。
 
 package com.siansiansu.taigikeyboard.ime.core.logging
 

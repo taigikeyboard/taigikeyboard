@@ -5,7 +5,7 @@
 //! them next to their primary consumer keeps `tables.rs` focused on
 //! cross-module shared data (TL / tone diacritics).
 
-// 中文: TPS / 注音雙向轉換 (TL ↔ TPS) 與表音符號偵測;六張查找表都收在此檔,因為只有 TPS 領域使用。
+// TPS / 注音雙向轉換 (TL ↔ TPS) 與表音符號偵測;六張查找表都收在此檔,因為只有 TPS 領域使用。
 
 use once_cell::sync::Lazy;
 use regex::Regex;
@@ -84,9 +84,9 @@ pub(crate) const ZHUYIN_VOWELS: &[(&str, &str)] = &[
 /// char is vowel material — i.e. the coda is positioned where a real
 /// onset could begin the next syllable (`ㄍㆤㆷ|ㄧㄥ`), never before a tone
 /// mark, separator, or another coda.
-// 中文: 判斷 c 是否為「可接在聲母後起始音節主體」的 TPS 韻核 glyph(母音/介音/鼻化母音/
-// 中文:   precomposed 鼻韻尾 am/an/ang/om/ong)。源自 ZHUYIN_VOWELS 扣掉三個自鳴/韻尾鼻音
-// 中文:   ㆬ(m)/ㄣ(n)/ㆭ(ng)。供 de-fold predicate:韻尾後接韻核才反摺,絕不在聲調符/分隔符/韻尾前反摺。
+// 判斷 c 是否為「可接在聲母後起始音節主體」的 TPS 韻核 glyph(母音/介音/鼻化母音/
+//   precomposed 鼻韻尾 am/an/ang/om/ong)。源自 ZHUYIN_VOWELS 扣掉三個自鳴/韻尾鼻音
+//   ㆬ(m)/ㄣ(n)/ㆭ(ng)。供 de-fold predicate:韻尾後接韻核才反摺,絕不在聲調符/分隔符/韻尾前反摺。
 pub fn is_tps_vowel_material(c: char) -> bool {
     // The syllabic / coda nasal forms are codas, not nuclei — exclude them
     // even though they live in `ZHUYIN_VOWELS`.
@@ -203,7 +203,7 @@ pub(crate) fn is_zhuyin(text: &str) -> bool {
 /// Single-`char` companion to [`is_zhuyin`] for callers that walk a
 /// stream char-by-char (the composing TPS syllabifier) and must not
 /// allocate a `&str` per code point.
-// 中文: 判斷單一字元是否落在注音 / 注音擴充區塊 (與 ZHUYIN_RE 同範圍);供逐字掃描的呼叫端用,免每字配置字串。
+// 判斷單一字元是否落在注音 / 注音擴充區塊 (與 ZHUYIN_RE 同範圍);供逐字掃描的呼叫端用,免每字配置字串。
 pub fn is_tps_char(ch: char) -> bool {
     matches!(ch, '\u{3100}'..='\u{312f}' | '\u{31a0}'..='\u{31bf}')
 }
@@ -218,8 +218,8 @@ pub fn is_tps_char(ch: char) -> bool {
 /// Used by the composing TPS syllabifier's "next initial seen" rule to
 /// infer a tone-1 syllable boundary: an initial appearing after a
 /// nucleus has been consumed starts a new syllable.
-// 中文: 判斷字元是否為 TPS 聲母的首字;由 ZHUYIN_INITIALS 推導 (取每筆注音值首字),無平行常數表需同步維護。
-// 中文: REV_INITIALS 的四個額外項 (ㄐㄑㄒㆢ) 本就是 tsi/tshi/si/ji 兩符聲母的首字,故只走 ZHUYIN_INITIALS 即涵蓋全集。
+// 判斷字元是否為 TPS 聲母的首字;由 ZHUYIN_INITIALS 推導 (取每筆注音值首字),無平行常數表需同步維護。
+// REV_INITIALS 的四個額外項 (ㄐㄑㄒㆢ) 本就是 tsi/tshi/si/ji 兩符聲母的首字,故只走 ZHUYIN_INITIALS 即涵蓋全集。
 pub fn is_tps_initial(ch: char) -> bool {
     ZHUYIN_INITIALS.iter().any(|(_, tps)| tps.starts_with(ch))
 }
@@ -246,12 +246,12 @@ pub fn is_tps_initial(ch: char) -> bool {
 /// engine-only fix). The record-level guard
 /// `lexicon::continuous::matches_continuous_tps_toneless_prefix_key`
 /// still validates every surviving rowid.
-// 中文: body 非空且每個字皆 TPS 聲母字 = tps_abbrev 縮寫形狀 (每音節留首字聲母,
-// 中文:   顎化 tsi→ㄐ 也是聲母)。完整讀音必帶母音/介音或自鳴/韻尾鼻音字 (非聲母),
-// 中文:   故不誤判。供連續 partial-prefix 在 hydrate cap 之前剔除縮寫 key surface
-// 中文:   (注音子音 byte 序在母音前,縮寫 key 會把完整讀音單字擠出預算)。
-// 中文: 刻意保守:母音開頭詞的縮寫 (如 ㄚㄅ) 不在此剔除;完整分離 tps_abbrev 家族需
-// 中文:   FST family tag (本 engine-only 修法範圍外)。record 層 guard 仍逐一驗證存活 rowid。
+// body 非空且每個字皆 TPS 聲母字 = tps_abbrev 縮寫形狀 (每音節留首字聲母,
+//   顎化 tsi→ㄐ 也是聲母)。完整讀音必帶母音/介音或自鳴/韻尾鼻音字 (非聲母),
+//   故不誤判。供連續 partial-prefix 在 hydrate cap 之前剔除縮寫 key surface
+//   (注音子音 byte 序在母音前,縮寫 key 會把完整讀音單字擠出預算)。
+// 刻意保守:母音開頭詞的縮寫 (如 ㄚㄅ) 不在此剔除;完整分離 tps_abbrev 家族需
+//   FST family tag (本 engine-only 修法範圍外)。record 層 guard 仍逐一驗證存活 rowid。
 pub fn is_tps_initial_only(body: &str) -> bool {
     !body.is_empty() && body.chars().all(is_tps_initial)
 }
@@ -268,9 +268,9 @@ pub fn is_tps_initial_only(body: &str) -> bool {
 /// reuse the single canonical set. Pre-C-3b this was private with an
 /// `is_tps_tone_mark_pub` thunk re-export; simplifier-flagged
 /// triple-naming collapsed to one public symbol.
-// 中文: TPS 聲調符號集合;入聲韻尾本身屬音節主體,聲調 4 無尾標,聲調 8 在韻尾後加點。
-// 中文: D / C-3b — 改 pub,讓 composing::shadow / lexicon::continuous 共用單一真相;
-// 中文:   砍掉之前 thunk 三重命名(simplifier 提醒)。
+// TPS 聲調符號集合;入聲韻尾本身屬音節主體,聲調 4 無尾標,聲調 8 在韻尾後加點。
+// D / C-3b — 改 pub,讓 composing::shadow / lexicon::continuous 共用單一真相;
+//   砍掉之前 thunk 三重命名(simplifier 提醒)。
 pub fn is_tps_tone_mark(ch: char) -> bool {
     matches!(
         ch,
@@ -300,10 +300,10 @@ pub fn is_tps_tone_mark(ch: char) -> bool {
 /// substitution inline at the string level (allocating only when the buffer
 /// contains `U+02D9`) — same mapping, kept separate for that hot-path's
 /// allocation tuning.
-// 中文: TPS tone-8 調號正規化 — 鍵盤打獨立點 U+02D9,build pipeline 的 tps:<tps_num> 鍵用組合點 U+0307;
-// 中文:   把 U+02D9 換成 U+0307 讓原始 buffer 對齊已存 toned key,其餘字元原樣通過。
-// 中文:   char 級共用源:三個由 raw buffer 組 tps: 鍵的點 (key_normalizer / custom_search / shadow);
-// 中文:   syllabifier probe 為熱路徑配置調校,以字串級 inline 做同一替換 (僅含 U+02D9 才配置)。
+// TPS tone-8 調號正規化 — 鍵盤打獨立點 U+02D9,build pipeline 的 tps:<tps_num> 鍵用組合點 U+0307;
+//   把 U+02D9 換成 U+0307 讓原始 buffer 對齊已存 toned key,其餘字元原樣通過。
+//   char 級共用源:三個由 raw buffer 組 tps: 鍵的點 (key_normalizer / custom_search / shadow);
+//   syllabifier probe 為熱路徑配置調校,以字串級 inline 做同一替換 (僅含 U+02D9 才配置)。
 pub fn normalize_tps_tone8_scalar(ch: char) -> char {
     if ch == '\u{02d9}' {
         '\u{0307}'
@@ -330,10 +330,10 @@ pub fn normalize_tps_tone8_scalar(ch: char) -> char {
 ///    tone-1).
 ///
 /// Returns `None` on any of the above rejection conditions.
-// 中文: 為 syllables.fst 的 TPS 家族切出 (toneless, tone);輸入由 Python 端透過
-// 中文:   `convert(_, "tl", "zhuyin")` 預先產生,音韻有效性上游已保證,此處
-// 中文:   再做 (1) 注音範圍守門 (2) 內部不准混入 ASCII 等非注音 (3) 聲調符號
-// 中文:   僅允許出現於末位 — 防呼叫端誤餵其他形態 token。
+// 為 syllables.fst 的 TPS 家族切出 (toneless, tone);輸入由 Python 端透過
+//   `convert(_, "tl", "zhuyin")` 預先產生,音韻有效性上游已保證,此處
+//   再做 (1) 注音範圍守門 (2) 內部不准混入 ASCII 等非注音 (3) 聲調符號
+//   僅允許出現於末位 — 防呼叫端誤餵其他形態 token。
 pub fn canonicalize_tps_syllable(token: &str) -> Option<(String, String)> {
     if token.is_empty() {
         return None;
@@ -402,12 +402,12 @@ pub fn canonicalize_tps_syllable(token: &str) -> Option<(String, String)> {
 /// `engine/lexicon/tests/tps_notone_parity.rs` pins runtime derivation
 /// against `dictionary/output/dictionary.csv` row-for-row (C-5 scope) so
 /// drift is caught loud.
-// 中文: D / C-3b — `tps_notone` 的 runtime mirror。對應 build pipeline
-// 中文:   merge_csv.py 既有鏈:逐音節 TL → numeric tone → to_zhuyin → 去 tone marks → concat。
-// 中文:   給 lexicon::continuous::matches_continuous_tps_toneless_key 使用,
-// 中文:   濾掉 tps_abbrev 碰撞 (與 B-2 為 tl:/poj: 加上的 guard 同 shape)。
-// 中文: encoding-only 不做 phonotactic gate(姿態與 derive_poj_notone_for_match 一致),
-// 中文:   建置端不 gate,runtime gate 會誤殺合法 dict 行。
+// D / C-3b — `tps_notone` 的 runtime mirror。對應 build pipeline
+//   merge_csv.py 既有鏈:逐音節 TL → numeric tone → to_zhuyin → 去 tone marks → concat。
+//   給 lexicon::continuous::matches_continuous_tps_toneless_key 使用,
+//   濾掉 tps_abbrev 碰撞 (與 B-2 為 tl:/poj: 加上的 guard 同 shape)。
+// encoding-only 不做 phonotactic gate(姿態與 derive_poj_notone_for_match 一致),
+//   建置端不 gate,runtime gate 會誤殺合法 dict 行。
 pub fn tps_notone_from_tl(record_tl: &str) -> String {
     tps_notone_collecting(record_tl, None)
 }
@@ -416,8 +416,8 @@ pub fn tps_notone_from_tl(record_tl: &str) -> String {
 /// returned string. Sibling of [`crate::tl_num_syllable_ends_from_tl`]; a
 /// caller measuring how far a typed prefix reaches into a reading needs the
 /// boundaries, not the syllables themselves.
-// 中文: tps_notone_from_tl + 每個音節的結束位移;量測輸入前綴走多遠的呼叫端
-// 中文:   需要的是邊界而不是音節本身。
+// tps_notone_from_tl + 每個音節的結束位移;量測輸入前綴走多遠的呼叫端
+//   需要的是邊界而不是音節本身。
 pub fn tps_notone_syllable_ends_from_tl(record_tl: &str) -> (String, Vec<u32>) {
     let mut ends = Vec::new();
     let notone = tps_notone_collecting(record_tl, Some(&mut ends));
@@ -437,9 +437,9 @@ fn tps_notone_collecting(record_tl: &str, mut ends: Option<&mut Vec<u32>>) -> St
         // `apply_or_dialect_variant`) carries the ㄛ alternate; this
         // runtime helper produces only the primary `tps_notone` form
         // because the guard compares against that column.
-        // 中文: or_maps_to_er=true 對齊 build pipeline 預設 — Node bridge 預設將 TL er/or 都映射為 ㄜ;
-        // 中文:   `tps_notone` 欄一律 ㄜ-glyph,ㄛ 變體在 `tps_notone_var` (C-3a),
-        // 中文:   此 runtime helper 只需產出主欄即可比對 guard。
+        // or_maps_to_er=true 對齊 build pipeline 預設 — Node bridge 預設將 TL er/or 都映射為 ㄜ;
+        //   `tps_notone` 欄一律 ㄜ-glyph,ㄛ 變體在 `tps_notone_var` (C-3a),
+        //   此 runtime helper 只需產出主欄即可比對 guard。
         let before = out.len();
         out.push_str(&tps_notone_from_numeric_token(&numeric));
         if out.len() != before {
@@ -455,8 +455,8 @@ fn tps_notone_collecting(record_tl: &str, mut ends: Option<&mut Vec<u32>>) -> St
 /// separators the build pipeline treats as syllable boundaries (ASCII
 /// hyphen, space, tab) and drops the empty runs a 輕聲 `--` produces.
 /// Single source for every per-token TPS derivation below.
-// 中文: record reading 的 TL 音節 token — 依 build pipeline 的三種分隔符 (連字號/空白/tab) 切,
-// 中文:   丟掉輕聲 `--` 產生的空 token。以下逐音節 TPS 衍生皆共用此來源。
+// record reading 的 TL 音節 token — 依 build pipeline 的三種分隔符 (連字號/空白/tab) 切,
+//   丟掉輕聲 `--` 產生的空 token。以下逐音節 TPS 衍生皆共用此來源。
 pub(crate) fn tl_syllable_tokens(record_tl: &str) -> impl Iterator<Item = &str> {
     record_tl.split(['-', ' ', '\t']).filter(|t| !t.is_empty())
 }
@@ -469,8 +469,8 @@ pub(crate) fn tl_syllable_tokens(record_tl: &str) -> impl Iterator<Item = &str> 
 /// the whitespace strip the runtime derivation gains a stray ` `
 /// (U+0020) that the build pipeline's `tps_notone` column does not have.
 /// Match the regex exactly to keep runtime ↔ build pipeline byte-identical.
-// 中文: 單一 numeric TL token → fused TPS 去調面。notone.py 的 _TPS_TONE_AND_SEP_RE 同時剝
-// 中文:   聲調符號 + ASCII 連字號 + 空白;to_zhuyin 對第 1 聲會帶尾空白,須一併剝除。
+// 單一 numeric TL token → fused TPS 去調面。notone.py 的 _TPS_TONE_AND_SEP_RE 同時剝
+//   聲調符號 + ASCII 連字號 + 空白;to_zhuyin 對第 1 聲會帶尾空白,須一併剝除。
 fn tps_notone_from_numeric_token(numeric_token: &str) -> String {
     to_zhuyin(numeric_token, false, true)
         .chars()
@@ -495,10 +495,10 @@ fn tps_notone_from_numeric_token(numeric_token: &str) -> String {
 /// the same reason [`matches_continuous_tps_toneless_key`] does: a user
 /// typing the ㄛ form reaches the row through `tps_notone_var`, so a
 /// primary-only comparison would reject a legitimate hit.
-// 中文: A3 (§41) — 回傳「fused TPS 去調前綴剛好在 notone_prefix 收尾」的那個 TL 音節的數字聲調;
-// 中文:   無音節邊界落在該處回 None。TPS 空白關閉剛打完的音節,故候選必須在同一點有音節邊界,
-// 中文:   且該音節的聲調等於空白所代表的無調號調(開音節 1、入聲尾 4)。聲調判斷留給呼叫端。
-// 中文:   同 matches_continuous_tps_toneless_key,接受 C-3a or→er 變體形(使用者打 ㄛ 形經 var 鍵命中)。
+// A3 (§41) — 回傳「fused TPS 去調前綴剛好在 notone_prefix 收尾」的那個 TL 音節的數字聲調;
+//   無音節邊界落在該處回 None。TPS 空白關閉剛打完的音節,故候選必須在同一點有音節邊界,
+//   且該音節的聲調等於空白所代表的無調號調(開音節 1、入聲尾 4)。聲調判斷留給呼叫端。
+//   同 matches_continuous_tps_toneless_key,接受 C-3a or→er 變體形(使用者打 ㄛ 形經 var 鍵命中)。
 pub fn tps_notone_prefix_boundary_tone(record_tl: &str, notone_prefix: &str) -> Option<char> {
     if notone_prefix.is_empty() {
         return None;
@@ -534,9 +534,9 @@ pub fn tps_notone_prefix_boundary_tone(record_tl: &str, notone_prefix: &str) -> 
 /// `ㄉㄛ` for TL `tor`/`tór`) hits the FST via `tps_notone_var` but
 /// the guard's primary-only derivation rejects it as an
 /// abbrev-collision. Codex post-impl BLOCK 2026-05-25.
-// 中文: D / C-3b — `apply_or_dialect_variant` 的 Rust runtime 鏡像。
-// 中文:   C-3a build pipeline 對含 ㄜ 的 row dual-emit `tps_notone` + `tps_notone_var`
-// 中文:   (ㄜ→ㄛ);連續輸入 guard 必須同時接受兩形,否則用戶打 ㄛ 形會被誤殺。
+// D / C-3b — `apply_or_dialect_variant` 的 Rust runtime 鏡像。
+//   C-3a build pipeline 對含 ㄜ 的 row dual-emit `tps_notone` + `tps_notone_var`
+//   (ㄜ→ㄛ);連續輸入 guard 必須同時接受兩形,否則用戶打 ㄛ 形會被誤殺。
 pub fn tps_notone_or_variant(notone: &str) -> String {
     if !notone.contains('\u{311c}') {
         return String::new();
@@ -548,15 +548,15 @@ pub fn tps_notone_or_variant(notone: &str) -> String {
 /// Per-token TL → numeric → [`to_zhuyin`], KEEPING the tone marks and dropping
 /// only hyphen + whitespace so the fused form matches a TPS continuous input
 /// that carries tone marks. Used as the `tps:num` custom-dictionary search key.
-// 中文: R3 — tps_notone_from_tl 的「保留聲調符號」版本,供自訂詞 tps:num 搜尋鍵;
-// 中文:   逐音節 TL → numeric → to_zhuyin,只剝連字號 / 空白,聲調符號保留。
+// R3 — tps_notone_from_tl 的「保留聲調符號」版本,供自訂詞 tps:num 搜尋鍵;
+//   逐音節 TL → numeric → to_zhuyin,只剝連字號 / 空白,聲調符號保留。
 pub fn tps_num_from_tl(record_tl: &str) -> String {
     tps_num_collecting(record_tl, None)
 }
 
 /// [`tps_num_from_tl`] plus per-syllable end offsets — the tone-marked sibling
 /// of [`tps_notone_syllable_ends_from_tl`], same contract.
-// 中文: tps_num_from_tl + 每個音節的結束位移,契約同 tps_notone_syllable_ends_from_tl。
+// tps_num_from_tl + 每個音節的結束位移,契約同 tps_notone_syllable_ends_from_tl。
 pub fn tps_num_syllable_ends_from_tl(record_tl: &str) -> (String, Vec<u32>) {
     let mut ends = Vec::new();
     let num = tps_num_collecting(record_tl, Some(&mut ends));
@@ -588,8 +588,8 @@ fn tps_num_collecting(record_tl: &str, mut ends: Option<&mut Vec<u32>>) -> Strin
 /// `dictionary/common/abbrev.py::extract_tps_abbrev`. First Bopomofo glyph
 /// (leading initial / vowel) per TL syllable; "" for fewer than 2 syllables.
 /// Used as the `tps:abbrev` custom-dictionary search key.
-// 中文: R3 — extract_tps_abbrev 的 runtime 鏡像;每個 TL 音節取首個注音字母 (聲母/韻母),
-// 中文:   少於兩音節回空字串。供自訂詞 tps:abbrev 搜尋鍵。
+// R3 — extract_tps_abbrev 的 runtime 鏡像;每個 TL 音節取首個注音字母 (聲母/韻母),
+//   少於兩音節回空字串。供自訂詞 tps:abbrev 搜尋鍵。
 pub fn tps_abbrev_from_tl(record_tl: &str) -> String {
     let syllables: Vec<&str> = record_tl
         .split(['-', ' ', '\t'])
@@ -626,9 +626,9 @@ pub fn tps_abbrev_from_tl(record_tl: &str) -> String {
 /// C-5 widened to `pub` so lexicon parity tests + composing golden
 /// fixtures can emit per-syllable tone-marked TPS samples without
 /// rebuilding the `Method::TlNumericToTps` proto plumbing.
-// 中文: 把單一 TL token (含聲調數字) 轉成 TPS;`encode_safe` 用獨立空白點符號讓 TPS 能通過會剝組合符號的系統,`or_maps_to_er` 切換母音 `or` 的渲染。
-// 中文: D / C-5 — 為 lexicon parity 測試 + composing golden fixture 之需,放寬至 pub;
-// 中文:   呼叫端負責先用 `[-\s]+` 拆 token 再逐 token 呼叫。
+// 把單一 TL token (含聲調數字) 轉成 TPS;`encode_safe` 用獨立空白點符號讓 TPS 能通過會剝組合符號的系統,`or_maps_to_er` 切換母音 `or` 的渲染。
+// D / C-5 — 為 lexicon parity 測試 + composing golden fixture 之需,放寬至 pub;
+//   呼叫端負責先用 `[-\s]+` 拆 token 再逐 token 呼叫。
 pub fn to_zhuyin(text: &str, encode_safe: bool, or_maps_to_er: bool) -> String {
     let mut remaining: String = text.to_lowercase();
     let mut pre_punct = String::new();
@@ -757,7 +757,7 @@ pub fn to_zhuyin(text: &str, encode_safe: bool, or_maps_to_er: bool) -> String {
 /// Convert a TPS string to a TL tone-numbered string. Mirrors `fromZhuyin` in
 /// `zhuyin.js`. Word segmentation is **not** performed here — that is the
 /// segmenter's job, which belongs with the Lexicon slice.
-// 中文: 把 TPS 字串轉回 TL 聲調數字形;此處不做斷詞,斷詞屬於 Lexicon 的職責。
+// 把 TPS 字串轉回 TL 聲調數字形;此處不做斷詞,斷詞屬於 Lexicon 的職責。
 pub fn from_zhuyin(text: &str) -> String {
     let rev_punct = [
         ("\u{3002}", "."),
@@ -883,7 +883,7 @@ mod tests {
     //   "sī"    → to_tone_number "si7"    → notone ㄒㄧ,   tone 7 (marked)
     //   "tsit"  → to_tone_number "tsit4"  → notone ㄐㄧㆵ, tone 4 (stop coda, unmarked)
     //   "tsi̍t"  → to_tone_number "tsit8"  → notone ㄐㄧㆵ, tone 8 (same coda + dot)
-    // 中文: A3 (§41) — tps_notone_prefix_boundary_tone 單元釘定(上方為逐步推導)。
+    // A3 (§41) — tps_notone_prefix_boundary_tone 單元釘定(上方為逐步推導)。
     #[test]
     fn boundary_tone_reports_unmarked_open_rime_as_tone_one() {
         assert_eq!(tps_notone_prefix_boundary_tone("si", "ㄒㄧ"), Some('1'));

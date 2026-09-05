@@ -1,7 +1,7 @@
-// 中文: 鍵盤擴充與主 App 共用的字型工具集中地。
-// 中文: 兩條字型解析路徑 — 鍵面字 (ButtonFontProvider,走 per-render snapshot.fontType) 與
-// 中文: 工具列/候選 UI (globalFont / globalUIFont,走 SharedSettings.shared.fontType)。
-// 中文: 字型是全域設定(非每主題),兩條路徑皆讀同一個全域 fontType。
+// 鍵盤擴充與主 App 共用的字型工具集中地。
+// 兩條字型解析路徑 — 鍵面字 (ButtonFontProvider,走 per-render snapshot.fontType) 與
+// 工具列/候選 UI (globalFont / globalUIFont,走 SharedSettings.shared.fontType)。
+// 字型是全域設定(非每主題),兩條路徑皆讀同一個全域 fontType。
 
 import SwiftUI
 import UIKit
@@ -19,7 +19,7 @@ import UIKit
 /// Callers: `CandidateView`, `CandidateCellHelper`, `ExpandedCandidateOverlay`,
 /// `SymbolSelectionOverlay`, `SettingsSelectionOverlay`, `TaigiButtonContent` (space label),
 /// `AppStyle`, `TaigiKeyboardApp`, `KeyboardPreviewPanel`
-// 中文: 字型工具命名空間 — 自訂字型的 PostScript 名稱常數 + 全域字型解析。
+// 字型工具命名空間 — 自訂字型的 PostScript 名稱常數 + 全域字型解析。
 enum KeyboardFonts {
     /// PostScript font name for jf-openhuninn (粉圓)
     static let openHuninnFontName = "jf-openhuninn-2.1"
@@ -32,7 +32,7 @@ enum KeyboardFonts {
 
     /// SwiftUI Font based on the user's font setting.
     /// Used by toolbar buttons and candidate views (not keyboard keys).
-    // 中文: 工具列按鈕、候選詞 view 的 SwiftUI 字型;鍵面字走 ButtonFontProvider,不走這裡。
+    // 工具列按鈕、候選詞 view 的 SwiftUI 字型;鍵面字走 ButtonFontProvider,不走這裡。
     static func globalFont(size: CGFloat) -> Font {
         if let name = SharedSettings.shared.fontType.customFontName {
             return Font.custom(name, size: size)
@@ -42,7 +42,7 @@ enum KeyboardFonts {
 
     /// UIKit UIFont based on the user's font setting.
     /// Used where UIKit measurement is needed (e.g. candidate cell width calculation).
-    // 中文: 候選詞 cell 寬度量測等需要 UIKit UIFont 的場合使用。
+    // 候選詞 cell 寬度量測等需要 UIKit UIFont 的場合使用。
     static func globalUIFont(size: CGFloat) -> UIFont {
         if let name = SharedSettings.shared.fontType.customFontName {
             return UIFont(name: name, size: size) ?? UIFont.systemFont(ofSize: size)

@@ -2,7 +2,7 @@
 //! typed-text candidate, the update row, and the attribution footer. Port of
 //! `GeneralSettingsView.swift`.
 
-// 中文: 一般 pane — 輸入模式、介面語言、自動空白、顯示當咧拍的字、更新列、頁尾。
+// 一般 pane — 輸入模式、介面語言、自動空白、顯示當咧拍的字、更新列、頁尾。
 
 use super::choice_row;
 use crate::presentation::{display_language_label, SPONSOR_URL};

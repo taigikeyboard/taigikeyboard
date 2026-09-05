@@ -15,7 +15,7 @@
 //! the other replaces every standalone `\u{0358}` codepoint with `o`
 //! for ranking comparison bases.
 
-// 中文: 輸入正規化 + 聲調復原 + 查找用 NFD 預處理;統一處理 NFD 拆解、組合符號 → 聲調數字的對應邏輯。
+// 輸入正規化 + 聲調復原 + 查找用 NFD 預處理;統一處理 NFD 拆解、組合符號 → 聲調數字的對應邏輯。
 
 use crate::tables::COMBINING_TO_TONE_NUM;
 use crate::tps;
@@ -35,7 +35,7 @@ use unicode_normalization::UnicodeNormalization;
 ///    + checked-ending heuristic.
 ///
 /// Replaces both platforms' `InputNormalizer.normalize`.
-// 中文: 輸入正規化主流程,把組字字串轉成 trie 查詢用的純 ASCII + 聲調數字格式。
+// 輸入正規化主流程,把組字字串轉成 trie 查詢用的純 ASCII + 聲調數字格式。
 pub fn normalize_input(input: &str) -> String {
     if input.is_empty() {
         return String::new();
@@ -57,7 +57,7 @@ pub fn normalize_input(input: &str) -> String {
 /// True if `text` (after NFD) contains any combining tone mark recognised by
 /// `COMBINING_TO_TONE_NUM`. Used by `normalize_input` (default-tone heuristic)
 /// and `lexicon::classification::classify_input` (input-class precedence).
-// 中文: 判斷字串是否含有任何已知的組合聲調符號 (NFD 拆解後比對)。
+// 判斷字串是否含有任何已知的組合聲調符號 (NFD 拆解後比對)。
 pub fn has_tone_marks(text: &str) -> bool {
     text.nfd().any(|c| COMBINING_TO_TONE_NUM.contains_key(&c))
 }
@@ -127,7 +127,7 @@ fn trie_key_unicode_form(text: &str) -> String {
 /// - `Method::NfdPreprocessForLookup` (URL builder phonetic prep)
 ///
 /// Distinct from [`trie_key_unicode_form`] — see module-level docs.
-// 中文: 排序/查表用的比對基底形式:鼻化符號改 nn、NFD 拆解、單獨的 U+0358 改成 o。與 `trie_key_unicode_form` 是不同演算法。
+// 排序/查表用的比對基底形式:鼻化符號改 nn、NFD 拆解、單獨的 U+0358 改成 o。與 `trie_key_unicode_form` 是不同演算法。
 pub fn taigi_unicode_base_form(input: &str) -> String {
     let with_nasal = input.replace(['\u{207f}', '\u{1d3a}'], "nn");
     let decomposed: String = with_nasal.nfd().collect();
@@ -141,7 +141,7 @@ pub fn taigi_unicode_base_form(input: &str) -> String {
 /// `Method::RestoreTone` — find the LAST combining tone mark in NFD-decomposed
 /// `text`, remove it, and NFC-recompose. Returns `None` if no tone mark
 /// found. Replaces both platforms' `ToneRestoration.restore`.
-// 中文: 聲調復原:NFD 拆解後找最後一個組合聲調符號並移除,再 NFC 組回;沒有聲調符號則回 None。
+// 聲調復原:NFD 拆解後找最後一個組合聲調符號並移除,再 NFC 組回;沒有聲調符號則回 None。
 pub(crate) fn restore_tone(text: &str) -> Option<String> {
     if text.is_empty() {
         return None;

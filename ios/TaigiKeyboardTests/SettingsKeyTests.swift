@@ -180,7 +180,7 @@ final class SettingsKeyTests: XCTestCase {
     }
 
     func test_isGlobeKeyEnabled_writeProducesOnDiskBoolFormat() {
-        // 中文: 確保 descriptor 寫盤的 Bool 表示與 pre-wrapper 完全一致 — 舊版升上來不會讀到亂掉的格子。
+        // 確保 descriptor 寫盤的 Bool 表示與 pre-wrapper 完全一致 — 舊版升上來不會讀到亂掉的格子。
         let settings = SharedSettings(userDefaults: defaults)
         settings.isGlobeKeyEnabled = true
         XCTAssertEqual(defaults.object(forKey: "isGlobeKeyEnabled") as? Bool, true)
@@ -195,7 +195,7 @@ final class SettingsKeyTests: XCTestCase {
     /// `resetToDefaults()`. Every descriptor-backed field is touched with
     /// a non-default value, then `resetToDefaults()` must restore the
     /// descriptor default for every one.
-    // 中文: 防呆 — 將每個欄位設為非預設值,呼叫 resetToDefaults() 後逐欄位驗證已還原。
+    // 防呆 — 將每個欄位設為非預設值,呼叫 resetToDefaults() 後逐欄位驗證已還原。
     func test_resetToDefaults_restoresEveryDescriptorBackedProperty() {
         let settings = SharedSettings(userDefaults: defaults)
 
@@ -346,7 +346,7 @@ final class SettingsKeyTests: XCTestCase {
     /// users' stored values would be silently abandoned — this test
     /// catches that by writing through the legacy raw key and reading
     /// back through the facade.
-    // 中文: 拿舊版 raw key 寫盤,再用 facade 讀回 — 若哪個 descriptor key 被改名,測試就會炸。
+    // 拿舊版 raw key 寫盤,再用 facade 讀回 — 若哪個 descriptor key 被改名,測試就會炸。
     func test_legacyRawKeys_roundTripThroughFacade() {
         let settings = SharedSettings(userDefaults: defaults)
 

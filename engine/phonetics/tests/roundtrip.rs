@@ -1,7 +1,7 @@
 //! Property-based round-trip tests. Generates well-formed TL syllables and
 //! confirms TL→POJ→TL is lossless.
 
-// 中文: 屬性測試:亂數產出合法 TL 音節,驗證 TL→POJ→TL 來回轉換不會掉資訊。
+// 屬性測試:亂數產出合法 TL 音節,驗證 TL→POJ→TL 來回轉換不會掉資訊。
 
 use phonetics::api::{poj_display_to_tl_display, tl_display_to_poj_display};
 use proptest::prelude::*;

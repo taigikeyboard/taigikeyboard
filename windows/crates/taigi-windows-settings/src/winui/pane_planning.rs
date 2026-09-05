@@ -13,7 +13,7 @@
 //! covered; so is everything below planning (the Windows App SDK ABI, COM
 //! apartments, real layout, theme, focus). Those stay device dogfood.
 
-// 中文: 每個 pane 的 view 都要能被 reactor 規劃(planning);規劃失敗 = 視窗一開就 fail-fast。只涵蓋剛開啟的狀態。
+// 每個 pane 的 view 都要能被 reactor 規劃(planning);規劃失敗 = 視窗一開就 fail-fast。只涵蓋剛開啟的狀態。
 
 use super::window::{SettingsWindow, SettingsWindowInput};
 use taigi_windows_core::settings::{keys, SettingChoice, SettingsPane};

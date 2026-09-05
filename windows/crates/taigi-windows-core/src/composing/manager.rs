@@ -6,7 +6,7 @@
 //! owns only a mirror of the last answer, which the controller reads to
 //! decide whether a key belongs to the composition or to the host.
 
-// 中文: 組字管理者 — 意圖 → 引擎往返 → 鏡像 → 依序執行效果;候選兩段式提取;送出結果從效果讀。
+// 組字管理者 — 意圖 → 引擎往返 → 鏡像 → 依序執行效果;候選兩段式提取;送出結果從效果讀。
 
 use std::collections::HashSet;
 use std::sync::Arc;

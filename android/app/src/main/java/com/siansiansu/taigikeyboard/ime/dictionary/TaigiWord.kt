@@ -2,8 +2,8 @@
 // Pure logic, Kotlin stdlib only. Eligible for cross-platform extraction.
 // endregion
 
-// 中文: 一筆候選詞值型別 —(id, roman, hanzi?, lengthScore?, sourceBitmask?)。
-// 中文: displayText 漢字優先,其次羅馬字。對應 Rust protos::TaigiWord(平台 DTO 仍保留以避免每次橋接重建)。
+// 一筆候選詞值型別 —(id, roman, hanzi?, lengthScore?, sourceBitmask?)。
+// displayText 漢字優先,其次羅馬字。對應 Rust protos::TaigiWord(平台 DTO 仍保留以避免每次橋接重建)。
 
 package com.siansiansu.taigikeyboard.ime.dictionary
 

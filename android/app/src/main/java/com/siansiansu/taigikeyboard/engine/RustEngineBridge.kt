@@ -1,7 +1,7 @@
-// 中文: Rust shared-core 的 Kotlin 薄殼 facade — JNI binding、共用 dispatch 通道、診斷、type DTO。
-// 中文: 各 slice 實作放在同 package sibling object(PhoneticsBridge / ComposingBridge / NextWordBridge / LexiconBridge / CaseTransformBridge);
-// 中文: 此 facade 只負責(1)轉發 public API,(2)持有 JNI binding 與 logger backend,(3)集中診斷,(4)宣告巢狀 DTO type 維持 caller import 路徑。
-// 中文: 對應 iOS RustEngineBridge.swift core。
+// Rust shared-core 的 Kotlin 薄殼 facade — JNI binding、共用 dispatch 通道、診斷、type DTO。
+// 各 slice 實作放在同 package sibling object(PhoneticsBridge / ComposingBridge / NextWordBridge / LexiconBridge / CaseTransformBridge);
+// 此 facade 只負責(1)轉發 public API,(2)持有 JNI binding 與 logger backend,(3)集中診斷,(4)宣告巢狀 DTO type 維持 caller import 路徑。
+// 對應 iOS RustEngineBridge.swift core。
 
 package com.siansiansu.taigikeyboard.engine
 
@@ -60,7 +60,7 @@ import com.siansiansu.taigikeyboard.engine.proto.CandidateDisplayMode as ProtoCa
  * failure via `installedBackend.e` for logcat traceability — NEVER throws
  * (would kill IME mid-keystroke).
  *
- * 中文: 失敗一律不丟例外(否則會中斷打字),改記入 32-entry diagnostics 環狀佇列;
+ * 失敗一律不丟例外(否則會中斷打字),改記入 32-entry diagnostics 環狀佇列;
  *       DEBUG 同時透過 facade .e 打 logcat 方便追蹤。
  */
 object RustEngineBridge {
@@ -91,7 +91,7 @@ object RustEngineBridge {
      * so `log::debug!` / `log::info!` short-circuit before format — no JNI
      * cost for the no-op render path.
      *
-     * 中文: 冪等安裝 JNI logger 橋。DEBUG 模式 Rust log level 拉到 Debug,release 保持 Warn 走 zero-cost。
+     * 冪等安裝 JNI logger 橋。DEBUG 模式 Rust log level 拉到 Debug,release 保持 Warn 走 zero-cost。
      */
     @JvmStatic
     fun install(backend: LoggerBackend) {
@@ -114,7 +114,7 @@ object RustEngineBridge {
      * tone-marked string. `mode` and `toggles` are mandatory (no default)
      * to enforce the live-read invariant per Codex v2 §7.
      *
-     * 中文: 把數字調 ASCII 輸入轉為帶調符字串;mode 與 toggles 必填以強制 live-read 不快照。
+     * 把數字調 ASCII 輸入轉為帶調符字串;mode 與 toggles 必填以強制 live-read 不快照。
      */
     fun normalizeTone(
         input: String,
@@ -122,19 +122,19 @@ object RustEngineBridge {
         toggles: ToneTogglesCarrier,
     ): String = PhoneticsBridge.normalizeTone(input, mode, toggles)
 
-    // 中文: 把音節聲調 combining mark 剝離,回傳 (bare, tone) 對;無聲調時 tone 為空字串。
+    // 把音節聲調 combining mark 剝離,回傳 (bare, tone) 對;無聲調時 tone 為空字串。
     fun stripTone(input: String): StripToneOutcome = PhoneticsBridge.stripTone(input)
 
-    // 中文: POJ 顯示字串 → TL 顯示字串轉換,逐音節重排版,保留聲調記號。
+    // POJ 顯示字串 → TL 顯示字串轉換,逐音節重排版,保留聲調記號。
     fun pojToTl(input: String): String = PhoneticsBridge.pojToTl(input)
 
-    // 中文: TL 顯示字串 → POJ 顯示字串轉換,逐音節重排版,保留聲調記號。
+    // TL 顯示字串 → POJ 顯示字串轉換,逐音節重排版,保留聲調記號。
     fun tlToPoj(input: String): String = PhoneticsBridge.tlToPoj(input)
 
-    // 中文: 將輸入規範化為 TL 拼寫形式(POJ 拼法→TL 拼法)以便後續解析。
+    // 將輸入規範化為 TL 拼寫形式(POJ 拼法→TL 拼法)以便後續解析。
     fun normalizeToTl(input: String): String = PhoneticsBridge.normalizeToTl(input)
 
-    // 中文: NormalizeInput 完整管線:TPS preprocess → 小寫 → 切音節 → 鼻音/o͘ 預處理 + checked-ending 推論,產 trie-query key。
+    // NormalizeInput 完整管線:TPS preprocess → 小寫 → 切音節 → 鼻音/o͘ 預處理 + checked-ending 推論,產 trie-query key。
     fun normalizeInput(input: String): String = PhoneticsBridge.normalizeInput(input)
 
     /**
@@ -144,28 +144,28 @@ object RustEngineBridge {
      * diacritics; only nasal markers (ⁿ / ᴺ → "nn") and standalone
      * `\u{0358}` → `o` are rewritten.
      *
-     * 中文: 外部查詢 URL 用的 NFD 預處理 — 保留聲調符號,只把鼻音(ⁿ/ᴺ)→"nn" 與 ͘ → o。
+     * 外部查詢 URL 用的 NFD 預處理 — 保留聲調符號,只把鼻音(ⁿ/ᴺ)→"nn" 與 ͘ → o。
      */
     fun nfdPreprocessForLookup(input: String): String = PhoneticsBridge.nfdPreprocessForLookup(input)
 
-    // 中文: Backspace 路徑用 — 找到最後一個 NFD 聲調 mark 拔掉、NFC 重組;無 mark 回 null。
+    // Backspace 路徑用 — 找到最後一個 NFD 聲調 mark 拔掉、NFC 重組;無 mark 回 null。
     fun restoreTone(text: String): String? = PhoneticsBridge.restoreTone(text)
 
     /** Lazy-init cache for `Method::GetToneVariations`. See [PhoneticsBridge.toneVariations]. */
     val toneVariations: ToneVariationsCache
         get() = PhoneticsBridge.toneVariations
 
-    // 中文: 自訂字典 search-key 衍生 — 去聲調的 toneless 形式,給 toneless prefix search 用。
+    // 自訂字典 search-key 衍生 — 去聲調的 toneless 形式,給 toneless prefix search 用。
     fun deriveNotone(roman: String): String = PhoneticsBridge.deriveNotone(roman)
 
-    // 中文: 自訂字典 search-key 衍生 — 取每音節首字母縮寫(連字號/空白切),單音節回空字串。
+    // 自訂字典 search-key 衍生 — 取每音節首字母縮寫(連字號/空白切),單音節回空字串。
     fun deriveAbbrev(roman: String): String = PhoneticsBridge.deriveAbbrev(roman)
 
-    // 中文: 自訂詞跨模式搜尋鍵寫入端 — 把 roman 展成 {tl,poj,tps}×{num,notone,abbrev} bundle。
+    // 自訂詞跨模式搜尋鍵寫入端 — 把 roman 展成 {tl,poj,tps}×{num,notone,abbrev} bundle。
     fun deriveCustomSearchKeys(roman: String): List<CustomSearchKey> = PhoneticsBridge.deriveCustomSearchKeys(roman)
 
-    // 中文: 自訂詞跨模式搜尋鍵查詢端 — 依 input + mode 產生單一家族鍵;raw 含注音時引擎自動升 tps 家族。
-    // 中文: TPS 經 InputMode → "tl",引擎再以 contains_tps(raw) 升家族(NormalizeMode 無 TPS,故由 raw 決定)。
+    // 自訂詞跨模式搜尋鍵查詢端 — 依 input + mode 產生單一家族鍵;raw 含注音時引擎自動升 tps 家族。
+    // TPS 經 InputMode → "tl",引擎再以 contains_tps(raw) 升家族(NormalizeMode 無 TPS,故由 raw 決定)。
     fun deriveCustomQueryKey(
         input: String,
         mode: com.siansiansu.taigikeyboard.ime.core.settings.InputMode,
@@ -178,7 +178,7 @@ object RustEngineBridge {
      * engine upgrades to the TPS family via `contains_tps` on the raw input.
      * Mirrors iOS `RustEngineBridge+Phonetics.swift` `customSearchInputMode`.
      */
-    // 中文: InputMode → 引擎 input_mode 字串。Android enum 無 TPS(上游 "tps"→TL),引擎以 contains_tps(raw) 升家族。
+    // InputMode → 引擎 input_mode 字串。Android enum 無 TPS(上游 "tps"→TL),引擎以 contains_tps(raw) 升家族。
     private fun customSearchInputMode(
         mode: com.siansiansu.taigikeyboard.ime.core.settings.InputMode,
     ): String =
@@ -188,26 +188,26 @@ object RustEngineBridge {
             com.siansiansu.taigikeyboard.ime.core.settings.InputMode.TL -> "tl"
         }
 
-    // 中文: 判斷字串是否含 TPS(注音符號)— Composing 衍生顯示用來略過 POJ/TL 聲調轉換。
+    // 判斷字串是否含 TPS(注音符號)— Composing 衍生顯示用來略過 POJ/TL 聲調轉換。
     fun containsTps(text: String): Boolean = PhoneticsBridge.containsTps(text)
 
-    // 中文: TL 數字調 → TPS(注音);orMapsToER 控制 er↔or 變體對應。
+    // TL 數字調 → TPS(注音);orMapsToER 控制 er↔or 變體對應。
     fun tlNumericToTps(
         text: String,
         orMapsToER: Boolean,
     ): String = PhoneticsBridge.tlNumericToTps(text, orMapsToER)
 
-    // 中文: TL 顯示字串 → TPS(注音);orMapsToER 同 tlNumericToTps。
+    // TL 顯示字串 → TPS(注音);orMapsToER 同 tlNumericToTps。
     fun tlDisplayToTps(
         text: String,
         orMapsToER: Boolean,
     ): String = PhoneticsBridge.tlDisplayToTps(text, orMapsToER)
 
-    // 中文: 判斷字元是否為 TPS 聲調記號(用於鍵盤觸發後處理 + composing 預編輯顯示判斷)。
+    // 判斷字元是否為 TPS 聲調記號(用於鍵盤觸發後處理 + composing 預編輯顯示判斷)。
     fun isTpsToneMark(char: Char): Boolean = PhoneticsBridge.isTpsToneMark(char)
 
-    // 中文: TPS 鍵級輸入調整 — 依 incoming 字元與當前 rawInput 決定 (adjusted, replaceLast?);
-    // 中文: replaceLast 非空時呼叫端應把上一字以 replaceLast 取代。
+    // TPS 鍵級輸入調整 — 依 incoming 字元與當前 rawInput 決定 (adjusted, replaceLast?);
+    // replaceLast 非空時呼叫端應把上一字以 replaceLast 取代。
     fun tpsInputAdjust(
         incoming: String,
         rawInput: String,
@@ -404,8 +404,8 @@ object RustEngineBridge {
      * Platforms must treat `UNSPECIFIED` as "ignore mode" rather than
      * falling back to any local classification.
      *
-     * 中文: Phase 9.2 候選類型軸;Rust 端 derive_mode 推導,平台僅讀不算(禁 display_text sniff)。
-     * 中文:   metadata-only,不入 SortKey。UNSPECIFIED = wire 上 mode 缺漏 → 視為「無 mode 資訊」。
+     * Phase 9.2 候選類型軸;Rust 端 derive_mode 推導,平台僅讀不算(禁 display_text sniff)。
+     *   metadata-only,不入 SortKey。UNSPECIFIED = wire 上 mode 缺漏 → 視為「無 mode 資訊」。
      */
     enum class CandidateMode {
         UNSPECIFIED,
@@ -421,7 +421,7 @@ object RustEngineBridge {
              * (forward-compat from a newer engine) collapse to `UNSPECIFIED`
              * so the platform never crashes on a binding mismatch.
              *
-             * 中文: 由 proto wire 整數解碼;未知值 fall back UNSPECIFIED,避免 binding mismatch crash。
+             * 由 proto wire 整數解碼;未知值 fall back UNSPECIFIED,避免 binding mismatch crash。
              */
             fun decode(wire: Int): CandidateMode =
                 when (wire) {
@@ -444,8 +444,8 @@ object RustEngineBridge {
      * always 1 (FORM_NOTONE). `mode` is the Phase 9.2 carrier;
      * metadata-only.
      *
-     * 中文: 連續輸入候選詞,對應 proto CandidateMessage。consumed span 是 raw
-     * 中文: 緩衝區的 byte offset(TL/POJ = ASCII;TPS = Bopomofo)。form 目前固定 1;mode 為 Phase 9.2 metadata-only。
+     * 連續輸入候選詞,對應 proto CandidateMessage。consumed span 是 raw
+     * 緩衝區的 byte offset(TL/POJ = ASCII;TPS = Bopomofo)。form 目前固定 1;mode 為 Phase 9.2 metadata-only。
      */
     data class ContinuousCandidate(
         val consumedSpanStart: Int,
@@ -463,7 +463,7 @@ object RustEngineBridge {
          * `displayText` for commit / `user_frequency.db` writes and
          * `roman` only for cell-title display.
          *
-         * 中文: Item 5 — 顯示羅馬字 sidechannel(引擎依 input mode 渲染:TL 或 POJ),dual-line 候選列 render 用。
+         * Item 5 — 顯示羅馬字 sidechannel(引擎依 input mode 渲染:TL 或 POJ),dual-line 候選列 render 用。
          */
         val roman: String,
         /**
@@ -472,7 +472,7 @@ object RustEngineBridge {
          * wire (TAILO candidate). Present-empty is treated as
          * present (engine never emits `Some("")` today; defensive).
          *
-         * 中文: Item 5 — 漢字 sidechannel;TAILO 候選 wire 上 absent → Kotlin null。
+         * Item 5 — 漢字 sidechannel;TAILO 候選 wire 上 absent → Kotlin null。
          */
         val hanji: String?,
         /**
@@ -485,7 +485,7 @@ object RustEngineBridge {
          * commit records. Empty only for TPS-OOV hanji-absent candidates
          * with no dict TL.
          *
-         * 中文: R2 — canonical TL 身分 sidechannel;tap 時 round-trip 回 associationTl。
+         * R2 — canonical TL 身分 sidechannel;tap 時 round-trip 回 associationTl。
          */
         val canonicalTl: String,
     )
@@ -514,10 +514,10 @@ object RustEngineBridge {
      * dropping suggestions and resetting state. Mirrors iOS PR #265
      * r3216857164 — `ios/Sources/TaigiKeyboard/Engine/RustEngineBridge.swift`.
      *
-     * 中文: composingFetchAtPos 的查詢結果。candidates 三態只在 isBridgeFailure == false 時有意義。
-     * 中文:   null = 不在 Continuous phase;emptyList = 在但無候選;non-empty = 有候選。
-     * 中文: transition 帶 engine 狀態(FetchAtPos 只讀,effects 必為空)。
-     * 中文: isBridgeFailure 區分「引擎回 Idle」與「FFI 失敗」— 後者套用 transition 會清掉鏡射狀態。
+     * composingFetchAtPos 的查詢結果。candidates 三態只在 isBridgeFailure == false 時有意義。
+     *   null = 不在 Continuous phase;emptyList = 在但無候選;non-empty = 有候選。
+     * transition 帶 engine 狀態(FetchAtPos 只讀,effects 必為空)。
+     * isBridgeFailure 區分「引擎回 Idle」與「FFI 失敗」— 後者套用 transition 會清掉鏡射狀態。
      */
     data class ContinuousFetchResult(
         val transition: ComposingTransition,
@@ -556,7 +556,7 @@ object RustEngineBridge {
         }
     }
 
-    // 中文: 開始 composing — Idle → Composing { raw=text };發出對應 UpdatePreedit Effect。
+    // 開始 composing — Idle → Composing { raw=text };發出對應 UpdatePreedit Effect。
     @JvmStatic
     fun composingStart(
         text: String,
@@ -565,7 +565,7 @@ object RustEngineBridge {
         generation: Long,
     ): ComposingTransition = ComposingBridge.composingStart(text, mode, toggles, generation)
 
-    // 中文: 追加一個字元到 composing buffer 末端;raw += ch,Engine 重算 displayText。
+    // 追加一個字元到 composing buffer 末端;raw += ch,Engine 重算 displayText。
     @JvmStatic
     fun composingAppend(
         ch: String,
@@ -574,7 +574,7 @@ object RustEngineBridge {
         generation: Long,
     ): ComposingTransition = ComposingBridge.composingAppend(ch, mode, toggles, generation)
 
-    // 中文: 追加音節分隔連字號 — 區分 raw "tai-uan" 與 "taiuan",影響候選 trie key。
+    // 追加音節分隔連字號 — 區分 raw "tai-uan" 與 "taiuan",影響候選 trie key。
     @JvmStatic
     fun composingAppendHyphen(
         mode: NormalizeMode,
@@ -582,7 +582,7 @@ object RustEngineBridge {
         generation: Long,
     ): ComposingTransition = ComposingBridge.composingAppendHyphen(mode, toggles, generation)
 
-    // 中文: 取代 raw 最後一個字元(用於 TPS 鍵級調整、聲調覆蓋等場景)。
+    // 取代 raw 最後一個字元(用於 TPS 鍵級調整、聲調覆蓋等場景)。
     @JvmStatic
     fun composingReplaceLast(
         replacement: String,
@@ -591,7 +591,7 @@ object RustEngineBridge {
         generation: Long,
     ): ComposingTransition = ComposingBridge.composingReplaceLast(replacement, mode, toggles, generation)
 
-    // 中文: composing buffer 退一格;Engine 處理「刪到空就回 Idle」與 1-char delete 的特殊路徑(避免誤刪文件字)。
+    // composing buffer 退一格;Engine 處理「刪到空就回 Idle」與 1-char delete 的特殊路徑(避免誤刪文件字)。
     @JvmStatic
     fun composingDeleteBackward(
         mode: NormalizeMode,
@@ -599,7 +599,7 @@ object RustEngineBridge {
         generation: Long,
     ): ComposingTransition = ComposingBridge.composingDeleteBackward(mode, toggles, generation)
 
-    // 中文: 提交 derived(顯示用)字串到文件 — 例如 "ho2" 顯示為 "hó",commit "hó"。
+    // 提交 derived(顯示用)字串到文件 — 例如 "ho2" 顯示為 "hó",commit "hó"。
     @JvmStatic
     fun composingCommitDerived(
         mode: NormalizeMode,
@@ -607,10 +607,10 @@ object RustEngineBridge {
         generation: Long,
     ): ComposingTransition = ComposingBridge.composingCommitDerived(mode, toggles, generation)
 
-    // 中文: 提交 raw 字串。Composing 階段送字面 keystrokes (e.g. commit "ho2"),
-    // 中文: Continuous 階段送 derived_display(pending) (e.g. "hó")。引擎依 phase 自動分派,
-    // 中文: 故 Continuous 端需要 AppConfig (input mode + tone toggles) 才能正確 render derived。
-    // 中文: Phase 9 Item 3 (2026-05-13) 起加入 mode/toggles 參數。
+    // 提交 raw 字串。Composing 階段送字面 keystrokes (e.g. commit "ho2"),
+    // Continuous 階段送 derived_display(pending) (e.g. "hó")。引擎依 phase 自動分派,
+    // 故 Continuous 端需要 AppConfig (input mode + tone toggles) 才能正確 render derived。
+    // Phase 9 Item 3 (2026-05-13) 起加入 mode/toggles 參數。
     // v3.5.8 §10.2 platform pass: under `Phase::Continuous`, `CommitRaw`
     // routes to `commit_raw_continuous` which renders the whole
     // composition via `combined_display(nailed, raw, config)` — so the
@@ -638,7 +638,7 @@ object RustEngineBridge {
             candidateDisplayMode,
         )
 
-    // 中文: 從候選列表選定一筆 suggestion — commit 該 suggestion 並重置 composing。
+    // 從候選列表選定一筆 suggestion — commit 該 suggestion 並重置 composing。
     // v3.5.8 §10.2 platform pass: under `Phase::Continuous`,
     // `SelectSuggestion` routes to `select_suggestion_under_continuous`
     // which prepends `nailed_prefix(nailed, config)` — so the continuous
@@ -668,7 +668,7 @@ object RustEngineBridge {
             candidateDisplayMode,
         )
 
-    // 中文: 先 commit 當前 preedit、再插入外部字串(空白 / Enter / 標點等),原子操作避免閃爍。
+    // 先 commit 當前 preedit、再插入外部字串(空白 / Enter / 標點等),原子操作避免閃爍。
     // v3.5.8 §10.2 platform pass: under `Phase::Continuous` (e.g. emoji
     // tap mid-continuous) this routes to
     // `commit_preedit_then_insert_external_under_continuous` which
@@ -699,18 +699,18 @@ object RustEngineBridge {
             candidateDisplayMode,
         )
 
-    // 中文: 清空 composing buffer 不 commit — 用於切 input mode、切焦點欄位、退出 composing 等狀況。
+    // 清空 composing buffer 不 commit — 用於切 input mode、切焦點欄位、退出 composing 等狀況。
     @JvmStatic
     fun composingReset(generation: Long): ComposingTransition = ComposingBridge.composingReset(generation)
 
-    // 中文: UI 端通知當前選中候選 index — 給 NextWord/Booster 取 contextword 用,不 commit。
+    // UI 端通知當前選中候選 index — 給 NextWord/Booster 取 contextword 用,不 commit。
     @JvmStatic
     fun composingSetSelectedCandidateIndex(
         index: Int,
         generation: Long,
     ): ComposingTransition = ComposingBridge.composingSetSelectedCandidateIndex(index, generation)
 
-    // 中文: 純讀 — 取當前 composing 狀態快照,不變更 Engine。1-char delete 路徑用此查 buffer 長度。
+    // 純讀 — 取當前 composing 狀態快照,不變更 Engine。1-char delete 路徑用此查 buffer 長度。
     @JvmStatic
     fun composingQueryState(generation: Long): ComposingTransition = ComposingBridge.composingQueryState(generation)
 
@@ -721,8 +721,8 @@ object RustEngineBridge {
      * `Composing.raw`. AppConfig is required because the snapshot's preedit
      * display goes through `derived_display(raw, config)`.
      *
-     * 中文: 把 Composing 轉到 Continuous。Phase 6 規約 — 無 payload,raw 來自先前的
-     * 中文: Start / Append。空 raw / 非 Composing 一律 noop。
+     * 把 Composing 轉到 Continuous。Phase 6 規約 — 無 payload,raw 來自先前的
+     * Start / Append。空 raw / 非 Composing 一律 noop。
      */
     @JvmStatic
     fun composingEnterContinuous(
@@ -762,11 +762,11 @@ object RustEngineBridge {
      * commit-time rendering. Defaults = v3.5.7 roman-first; production
      * callers pass explicit live values via continuousSpacingFlags.
      *
-     * 中文: 連續輸入候選查詢。position 固定為 0(Phase 6 dispatch 驗證)。
-     * 中文: generation 必須沿用當前 composing session — 不可 bump,否則會在 fetch 前重置狀態。
-     * 中文: frequencyEntries + nowMs 為 Phase 9.3a/9.3c 的 user_freq_boost / recency_rank 來源,
-     * 中文: 預設空陣列 + 0 維持中性 boost,實際填充由 ComposingManager two-phase fetch 負責。
-     * 中文: Item 12 — customEntries 帶平台 custom_dictionary.db 原始 (roman,hanji);預設空 = no-op。
+     * 連續輸入候選查詢。position 固定為 0(Phase 6 dispatch 驗證)。
+     * generation 必須沿用當前 composing session — 不可 bump,否則會在 fetch 前重置狀態。
+     * frequencyEntries + nowMs 為 Phase 9.3a/9.3c 的 user_freq_boost / recency_rank 來源,
+     * 預設空陣列 + 0 維持中性 boost,實際填充由 ComposingManager two-phase fetch 負責。
+     * Item 12 — customEntries 帶平台 custom_dictionary.db 原始 (roman,hanji);預設空 = no-op。
      */
     @JvmStatic
     fun composingFetchAtPos(
@@ -811,8 +811,8 @@ object RustEngineBridge {
      * `consumedBytes >= pending.utf8.size` triggers a final commit (exit
      * to Idle). Programmer-error inputs collapse to noop on the engine side.
      *
-     * 中文: 連續輸入提交候選段。displayText / consumedBytes / syllableCount 必須與
-     * 中文: 上一個 composingFetchAtPos 回傳的 ContinuousCandidate 對齊。
+     * 連續輸入提交候選段。displayText / consumedBytes / syllableCount 必須與
+     * 上一個 composingFetchAtPos 回傳的 ContinuousCandidate 對齊。
      *
      * v3.5.8 §10.2 platform pass: the repro path. Mid-commit renders
      * `combined_display(nailed, pending, config)`; final-commit renders
@@ -857,7 +857,7 @@ object RustEngineBridge {
      * document — earlier `CommitTextReplacingPreedit` effects already wrote
      * them.
      *
-     * 中文: 連續輸入中止。pending 與 committed 一起丟,Phase 退回 Idle,發 abort 三 effects。
+     * 連續輸入中止。pending 與 committed 一起丟,Phase 退回 Idle,發 abort 三 effects。
      */
     @JvmStatic
     fun composingResetContinuous(generation: Long): ComposingTransition = ComposingBridge.composingResetContinuous(generation)
@@ -989,7 +989,7 @@ object RustEngineBridge {
     // mid-commit handshake. iOS bridge wraps it in
     // RustEngineBridge+NextWord.swift::nextwordUpdateLastSelectedWord.
 
-    // 中文: 使用者選定一個候選詞 — 觸發 association 紀錄、context 計時、可選的下個詞預測查詢。
+    // 使用者選定一個候選詞 — 觸發 association 紀錄、context 計時、可選的下個詞預測查詢。
     @JvmStatic
     fun nextwordWordSelected(
         text: String,
@@ -1014,7 +1014,7 @@ object RustEngineBridge {
             generation,
         )
 
-    // 中文: 退格通知 — 視 lastChar 是否邊界字符決定是否清 NextWord 顯示與重排 timer。
+    // 退格通知 — 視 lastChar 是否邊界字符決定是否清 NextWord 顯示與重排 timer。
     @JvmStatic
     fun nextwordBackspace(
         lastChar: String,
@@ -1033,7 +1033,7 @@ object RustEngineBridge {
             generation,
         )
 
-    // 中文: context timeout 觸發 — 平台 timer 到時呼叫,Engine 視當下狀態決定是否清 NextWord UI。
+    // context timeout 觸發 — 平台 timer 到時呼叫,Engine 視當下狀態決定是否清 NextWord UI。
     @JvmStatic
     fun nextwordContextTimeoutFired(
         nowMs: Long,
@@ -1050,7 +1050,7 @@ object RustEngineBridge {
             generation,
         )
 
-    // 中文: 開始新 composing 時清掉 NextWord 顯示但保留 lastSelectedWord(下次選詞時仍能用)。
+    // 開始新 composing 時清掉 NextWord 顯示但保留 lastSelectedWord(下次選詞時仍能用)。
     @JvmStatic
     fun nextwordClearForNewComposing(
         nowMs: Long,
@@ -1067,7 +1067,7 @@ object RustEngineBridge {
             generation,
         )
 
-    // 中文: 完整重置 — 清 lastSelectedWord/lastSelectionTimeMs/isShowing,適用切焦點欄位 / 切 input mode 等情境。
+    // 完整重置 — 清 lastSelectedWord/lastSelectionTimeMs/isShowing,適用切焦點欄位 / 切 input mode 等情境。
     @JvmStatic
     fun nextwordResetFull(
         nowMs: Long,
@@ -1092,7 +1092,7 @@ object RustEngineBridge {
      * `nextwordResetFull` paths gate `ClearPredictionsUI` emission on it.
      * No effects, no `current_generation` bump.
      *
-     * 中文: 平台 → engine 同步 NextWord UI 是否顯示中;讓 engine 後續 clear 路徑正確 gate ClearPredictionsUI Effect。
+     * 平台 → engine 同步 NextWord UI 是否顯示中;讓 engine 後續 clear 路徑正確 gate ClearPredictionsUI Effect。
      */
     @JvmStatic
     fun nextwordSetIsShowing(
@@ -1116,7 +1116,7 @@ object RustEngineBridge {
      * semantics of the legacy `NextWordHandler.updateLastSelectedWord`.
      * The iOS bridge intentionally omits this intent.
      *
-     * 中文: Android 限定意圖(Space 路徑)— 只更新 lastSelectedWord、不重排 timer、不 bump generation;iOS 故意不做此 op。
+     * Android 限定意圖(Space 路徑)— 只更新 lastSelectedWord、不重排 timer、不 bump generation;iOS 故意不做此 op。
      */
     @JvmStatic
     fun nextwordUpdateLastSelectedWord(
@@ -1140,8 +1140,8 @@ object RustEngineBridge {
 
     // -- Filter / Boost / QueryState --
 
-    // 中文: 把平台 SQL 撈到的原始 raw 預測列(dict + user)送進 Rust 做 score+merge+sort+limit;
-    // 中文: queryGeneration 對不上 currentGeneration 時回 wasStale=true,呼叫端應丟棄。
+    // 把平台 SQL 撈到的原始 raw 預測列(dict + user)送進 Rust 做 score+merge+sort+limit;
+    // queryGeneration 對不上 currentGeneration 時回 wasStale=true,呼叫端應丟棄。
     @JvmStatic
     fun nextwordFilter(
         raw: List<NextWordRawRow>,
@@ -1166,7 +1166,7 @@ object RustEngineBridge {
             candidateDisplayMode,
         )
 
-    // 中文: 用 NextWord 預測首字集合對 autocomplete 候選做重排 — 首字命中者上浮(autocomplete context booster)。
+    // 用 NextWord 預測首字集合對 autocomplete 候選做重排 — 首字命中者上浮(autocomplete context booster)。
     @JvmStatic
     fun nextwordBoostCandidates(
         words: List<String>,
@@ -1185,7 +1185,7 @@ object RustEngineBridge {
             generation,
         )
 
-    // 中文: 純讀 — 取 NextWord 當前狀態(lastSelectedWord/isShowing/currentGeneration),不 mutate。
+    // 純讀 — 取 NextWord 當前狀態(lastSelectedWord/isShowing/currentGeneration),不 mutate。
     @JvmStatic
     fun nextwordQueryState(
         mode: InputMode,
@@ -1210,7 +1210,7 @@ object RustEngineBridge {
      * (encode error, dispatch returned non-OK, missing result variant).
      * Recent entries capped at 32 to bound memory. NEVER throws.
      *
-     * 中文: 取目前累計的 FFI 失敗統計(總次數 + 最近 32 筆 entry);供 debug menu 與測試檢視。永不丟例外。
+     * 取目前累計的 FFI 失敗統計(總次數 + 最近 32 筆 entry);供 debug menu 與測試檢視。永不丟例外。
      */
     @JvmStatic
     fun diagnostics(): DiagnosticsSnapshot {
@@ -1386,10 +1386,10 @@ object RustEngineBridge {
      * 2026-05-18). All other composing methods keep the flag-free base
      * [appConfig].
      *
-     * 中文: 連續輸入渲染用 AppConfig — base appConfig + §10.2 字界空格兩旗標。
-     * 中文: effectiveSwapped(翻譯反轉 OR TPS,平台端合併,因 NormalizeMode 無 TPS 且 TPS→"tl"
-     * 中文: 故引擎 input_mode=="tps" 永不觸發)走 is_translate_swapped;outputBothScripts
-     * 中文: 區分漢字優先(無空格)vs 雙腳本(要空格)。只用在會渲染 nailed prefix 的進入點。
+     * 連續輸入渲染用 AppConfig — base appConfig + §10.2 字界空格兩旗標。
+     * effectiveSwapped(翻譯反轉 OR TPS,平台端合併,因 NormalizeMode 無 TPS 且 TPS→"tl"
+     * 故引擎 input_mode=="tps" 永不觸發)走 is_translate_swapped;outputBothScripts
+     * 區分漢字優先(無空格)vs 雙腳本(要空格)。只用在會渲染 nailed prefix 的進入點。
      *
      * CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Engine/RustEngineBridge.swift continuousAppConfig.
      * Drift causes silent divergence (hanji-first spurious word-boundary spaces).

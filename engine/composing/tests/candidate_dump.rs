@@ -34,10 +34,10 @@
 //! gate in `CLAUDE.md`). Prints `consumed_span`, `syllable_count`, `roman`,
 //! and `hanji` per candidate.
 
-// 中文: 開發用候選詞傾印工具 — 以 production 字典 artifacts 跑真實 FetchAtPos,
-// 中文:   印出任意輸入的完整候選清單。引擎是 (artifacts, input) 的純函數,
-// 中文:   故任何回報的候選列皆可在此精確重現,無需在裝置端記錄使用者輸入
-// 中文:   (security-rules 禁止記錄完整使用者輸入)。預設 #[ignore],按需 --ignored 執行。
+// 開發用候選詞傾印工具 — 以 production 字典 artifacts 跑真實 FetchAtPos,
+//   印出任意輸入的完整候選清單。引擎是 (artifacts, input) 的純函數,
+//   故任何回報的候選列皆可在此精確重現,無需在裝置端記錄使用者輸入
+//   (security-rules 禁止記錄完整使用者輸入)。預設 #[ignore],按需 --ignored 執行。
 
 use std::path::PathBuf;
 

@@ -4,7 +4,7 @@
 //! `.claude/rules/rust-best-practices.md §3a`; this module never decodes a
 //! top-level `taigi.engine.Request` or owns a panic boundary.
 
-// 中文: Phonetics 高階 Rust API,給 cli/測試/dispatch 直接呼叫;不負責解碼最外層 Request 或 panic 邊界。
+// Phonetics 高階 Rust API,給 cli/測試/dispatch 直接呼叫;不負責解碼最外層 Request 或 panic 邊界。
 
 use crate::case_transform::adjust_nasal_marker_case;
 use crate::poj::to_poj;
@@ -18,11 +18,11 @@ use protos::engine::AppConfig;
 use thiserror::Error;
 use unicode_normalization::UnicodeNormalization;
 
-// 中文: 鍵盤輸入模式,對應 `AppConfig.input_mode` 字串。
-// 中文: v3.5.9 D / C-3b — Tps 變體加入,作為連續輸入 first-class mode-axis。
-// 中文:   平台 AppConfig.input_mode 字串仍送 "tl"/"poj" 並用 is_translate_swapped 旗標
-// 中文:   表示 TPS;composing::dispatch 端以 contains_tps(raw) 偵測 TPS 字元後升級為
-// 中文:   InputMode::Tps,所以本 enum 的 Tps 變體主要在 engine 內部 mode-axis 流通。
+// 鍵盤輸入模式,對應 `AppConfig.input_mode` 字串。
+// v3.5.9 D / C-3b — Tps 變體加入,作為連續輸入 first-class mode-axis。
+//   平台 AppConfig.input_mode 字串仍送 "tl"/"poj" 並用 is_translate_swapped 旗標
+//   表示 TPS;composing::dispatch 端以 contains_tps(raw) 偵測 TPS 字元後升級為
+//   InputMode::Tps,所以本 enum 的 Tps 變體主要在 engine 內部 mode-axis 流通。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InputMode {
     Tl,
@@ -31,7 +31,7 @@ pub enum InputMode {
     English,
 }
 
-// 中文: 表音系統 enum,用於選擇要轉換成的目標羅馬字 (TL/POJ) 或注音 (TPS)。
+// 表音系統 enum,用於選擇要轉換成的目標羅馬字 (TL/POJ) 或注音 (TPS)。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum System {
     Tl,
@@ -39,7 +39,7 @@ pub enum System {
     Tps,
 }
 
-// 中文: Phonetics 對外錯誤型別。目前只有「不支援的 op」,通常代表 proto schema 跟平台不一致。
+// Phonetics 對外錯誤型別。目前只有「不支援的 op」,通常代表 proto schema 跟平台不一致。
 #[derive(Debug, Error)]
 pub enum PhoneticsError {
     #[error(
@@ -58,7 +58,7 @@ fn capitalize_first(text: &str) -> String {
 
 /// Translate the proto `AppConfig.input_mode` string into the typed enum.
 /// Unknown / empty / "tl" → `Tl`. Mirrors `phonetics::dispatch::parse_input_mode`.
-// 中文: 把 `AppConfig.input_mode` 字串轉成型別化 enum;未知/空字串/"tl" 一律當作 TL。
+// 把 `AppConfig.input_mode` 字串轉成型別化 enum;未知/空字串/"tl" 一律當作 TL。
 pub fn parse_input_mode(mode: &str) -> InputMode {
     match mode {
         "poj" | "POJ" => InputMode::Poj,
@@ -84,12 +84,12 @@ pub fn parse_input_mode(mode: &str) -> InputMode {
 /// `POJ_FINAL_SUBS` has ordered `nn`→`ⁿ` ahead of `oo`→`o͘` all along
 /// (`taigi-converter/src/tables.js`, mirrored at `tables.rs`
 /// `POJ_FINAL_SUBSTITUTIONS`).
-// 中文: POJ 雙擊預處理 —— `nn` 折疊必須先跑。它只在 `nn` 前一個字元是 ASCII 母音時
-// 中文:   才觸發,而 `oo` 折疊正好會在那個位置插入結合符 U+0358:舊順序下 hoonn 變成
-// 中文:   ho͘nn,`nn` 被卡住,而 honn(沒有 oo 可折)卻正常。兩個 affordance 各自獨立,
-// 中文:   都該生效:hoonn → hooⁿ → ho͘ⁿ。
-// 中文: 反過來排是安全的:`nn` 折疊只會把 nn 縮成 ⁿ,造不出新的 oo 讓第二輪誤讀。
-// 中文:   這也與 canonical converter 一致 —— POJ_FINAL_SUBS 一直都是 nn→ⁿ 排在 oo→o͘ 前面。
+// POJ 雙擊預處理 —— `nn` 折疊必須先跑。它只在 `nn` 前一個字元是 ASCII 母音時
+//   才觸發,而 `oo` 折疊正好會在那個位置插入結合符 U+0358:舊順序下 hoonn 變成
+//   ho͘nn,`nn` 被卡住,而 honn(沒有 oo 可折)卻正常。兩個 affordance 各自獨立,
+//   都該生效:hoonn → hooⁿ → ho͘ⁿ。
+// 反過來排是安全的:`nn` 折疊只會把 nn 縮成 ⁿ,造不出新的 oo 讓第二輪誤讀。
+//   這也與 canonical converter 一致 —— POJ_FINAL_SUBS 一直都是 nn→ⁿ 排在 oo→o͘ 前面。
 pub(crate) fn preprocess_for_normalize_tone(
     input: &str,
     mode: InputMode,
@@ -124,13 +124,13 @@ pub(crate) fn preprocess_for_normalize_tone(
 ///
 /// Scanning once cannot re-read what it just wrote, so both are structural
 /// rather than patched case by case.
-// 中文: 雙擊 o → o͘,兩下都不分大小寫,由「第一下」決定字母大小寫
-// 中文:   (Oo/OO → O͘,oo/oO → o͘)。單次左到右掃描、非貪婪配對,與 convert_nasal_double_n 同形狀。
-// 中文: 取代原本三次依序的 String::replace(oo / Oo / OO),那組有兩個缺陷:
-// 中文:   (1) oO 三個 pass 都不match,兩次點擊間按了 shift 就完全沒反應;
-// 中文:   (2) 各 pass 會吃掉前一個 pass 的輸出 —— OOoo 第一趟折成 O͘o͘,
-// 中文:       第二趟又match到接縫的 Oo、第三趟再match到 OO,同一個字母上疊出三個結合點。
-// 中文: 掃描一次就讀不到自己剛寫下的內容,兩個缺陷都是結構性解掉,不是逐case補丁。
+// 雙擊 o → o͘,兩下都不分大小寫,由「第一下」決定字母大小寫
+//   (Oo/OO → O͘,oo/oO → o͘)。單次左到右掃描、非貪婪配對,與 convert_nasal_double_n 同形狀。
+// 取代原本三次依序的 String::replace(oo / Oo / OO),那組有兩個缺陷:
+//   (1) oO 三個 pass 都不match,兩次點擊間按了 shift 就完全沒反應;
+//   (2) 各 pass 會吃掉前一個 pass 的輸出 —— OOoo 第一趟折成 O͘o͘,
+//       第二趟又match到接縫的 Oo、第三趟再match到 OO,同一個字母上疊出三個結合點。
+// 掃描一次就讀不到自己剛寫下的內容,兩個缺陷都是結構性解掉,不是逐case補丁。
 fn fold_double_o(input: &str) -> String {
     let chars: Vec<char> = input.chars().collect();
     let mut result = String::with_capacity(input.len());
@@ -175,7 +175,7 @@ fn convert_nasal_double_n(input: &str) -> String {
 /// Full normalize-tone chain: parse mode → POJ doubletap preprocessing →
 /// tone-mark application → nasal-marker case adjustment. The `Method::NormalizeTone`
 /// dispatch arm and `composing::derived` both call this directly. Plan §3.2a.
-// 中文: 聲調正規化主流程:判斷模式 → POJ 雙擊預處理 → 套用聲調符號 → 鼻化符號大小寫對齊。
+// 聲調正規化主流程:判斷模式 → POJ 雙擊預處理 → 套用聲調符號 → 鼻化符號大小寫對齊。
 pub fn normalize_tone(input: &str, config: &AppConfig) -> String {
     let mode = parse_input_mode(&config.input_mode);
     let preprocessed = preprocess_for_normalize_tone(input, mode, config);
@@ -186,7 +186,7 @@ pub fn normalize_tone(input: &str, config: &AppConfig) -> String {
 /// `true` if the text contains TPS (Taiwanese Phonetic Symbols / Zhuyin)
 /// codepoints. Used by composing-derived display to skip POJ/TL tone-mark
 /// conversion (TPS strings are already display-ready).
-// 中文: 判斷字串是否含有 TPS (台羅注音/Zhuyin) 字元;有的話組字區的 derived 顯示就直接跳過聲調轉換。
+// 判斷字串是否含有 TPS (台羅注音/Zhuyin) 字元;有的話組字區的 derived 顯示就直接跳過聲調轉換。
 pub fn contains_tps(text: &str) -> bool {
     is_zhuyin(text)
 }
@@ -194,7 +194,7 @@ pub fn contains_tps(text: &str) -> bool {
 /// Convert hyphen-separated syllables to tone marks. Tone digits 1 and 4 are
 /// kept as-is — matches the keyboard convention in iOS `convertSyllable` and
 /// Android `convertSyllable`.
-// 中文: 把 hyphen 分隔的數字聲調音節串轉成聲調符號形式;聲調 1、4 留著當數字 (跟兩平台鍵盤一致)。
+// 把 hyphen 分隔的數字聲調音節串轉成聲調符號形式;聲調 1、4 留著當數字 (跟兩平台鍵盤一致)。
 pub fn to_tone_marks(input: &str, mode: InputMode) -> String {
     if input.is_empty() {
         return String::new();
@@ -225,7 +225,7 @@ fn convert_syllable(syllable: &str, mode: InputMode) -> String {
         return syllable.to_string();
     }
     // v3.5.9 D / C-3b — English and TPS both bypass TL/POJ syllable assembly.
-    // 中文: TPS 走自家 zhuyin path,不經 to_tl / to_poj 組裝;與 English 同走 identity 提前返回。
+    // TPS 走自家 zhuyin path,不經 to_tl / to_poj 組裝;與 English 同走 identity 提前返回。
     if matches!(mode, InputMode::English | InputMode::Tps) {
         return syllable.to_string();
     }
@@ -270,7 +270,7 @@ fn convert_syllable(syllable: &str, mode: InputMode) -> String {
 
 /// Convert tone-marked text to numeric-tone form. Mirrors `toToneNumber` in
 /// `converter.js`, including the NFD / per-syllable boundary scan.
-// 中文: 反向轉換,把聲調符號形式換成聲調數字形式 (NFD 拆解後逐音節掃描)。
+// 反向轉換,把聲調符號形式換成聲調數字形式 (NFD 拆解後逐音節掃描)。
 pub fn to_tone_number(text: &str) -> String {
     let decomposed: Vec<char> = text.nfd().collect();
     let mut result = String::new();
@@ -320,7 +320,7 @@ fn is_letter_like(c: char) -> bool {
 }
 
 /// True when `c` is the POJ nasal marker in either case (`ⁿ` / `ᴺ`).
-// 中文: 判斷字元是否為 POJ 鼻化符號 (大小寫兩式)。
+// 判斷字元是否為 POJ 鼻化符號 (大小寫兩式)。
 pub fn is_nasal_marker(c: char) -> bool {
     c == crate::case_transform::NASAL_LOWER || c == crate::case_transform::NASAL_UPPER
 }
@@ -343,8 +343,8 @@ pub fn is_nasal_marker(c: char) -> bool {
 /// Distinct from [`is_letter_like`], which asks whether a character *carries*
 /// case or a diacritic and so counts a bare nasal in; this asks whether a
 /// character could stand in a word, and a bare nasal cannot.
-// 中文: 判斷字元是否可構成台語詞。alphabetic 涵蓋 TL/POJ 拉丁字母、漢字、TPS 注音;
-// 中文: 排除單獨出現不成詞的 TPS 聲調符號 (Lm 類) 與 POJ 鼻化符號。
+// 判斷字元是否可構成台語詞。alphabetic 涵蓋 TL/POJ 拉丁字母、漢字、TPS 注音;
+// 排除單獨出現不成詞的 TPS 聲調符號 (Lm 類) 與 POJ 鼻化符號。
 pub fn is_word_material(c: char) -> bool {
     c.is_alphabetic() && !crate::tps::is_tps_tone_mark(c) && !is_nasal_marker(c)
 }
@@ -356,12 +356,12 @@ fn is_combining(c: char) -> bool {
 // MARK: - Display-level helpers (iOS / Android `pojDisplayToTLDisplay` / `tlDisplayToPOJDisplay`).
 //        Exposed so the iOS+Android fixture suite can exercise them.
 
-// 中文: 顯示層 POJ → TL 轉換 (給跨平台 fixture 測試使用)。
+// 顯示層 POJ → TL 轉換 (給跨平台 fixture 測試使用)。
 pub fn poj_display_to_tl_display(text: &str) -> String {
     rewrite_display(text, System::Tl, false)
 }
 
-// 中文: 顯示層 TL → POJ 轉換 (給跨平台 fixture 測試使用)。
+// 顯示層 TL → POJ 轉換 (給跨平台 fixture 測試使用)。
 pub fn tl_display_to_poj_display(text: &str) -> String {
     rewrite_display(text, System::Poj, false)
 }
@@ -398,10 +398,10 @@ pub fn tl_display_to_poj_display(text: &str) -> String {
 /// extremely rare user pattern. `English` mode preserves CapsLock
 /// identically via the identity branch. Pinned by
 /// `engine/phonetics/tests/canonical_tl_form.rs::capslock_taigi_is_known_non_idempotent`.
-// 中文: B-4 — display_text (user_frequency.db commit key) 的 mode-aware canonicalizer;
-// 中文:   Tl/Poj 兩 mode 都走 poj_display_to_tl_display(idempotent on TL form,fold POJ form);
-// 中文:   English mode identity(`hello` 不該被當 Taigi 重解)。CapsLock 邊角現在對 Tl/Poj
-// 中文:   兩 mode 都非冪等(全大寫純羅馬 hanji-absent custom entry,production 觸發面極小)。
+// B-4 — display_text (user_frequency.db commit key) 的 mode-aware canonicalizer;
+//   Tl/Poj 兩 mode 都走 poj_display_to_tl_display(idempotent on TL form,fold POJ form);
+//   English mode identity(`hello` 不該被當 Taigi 重解)。CapsLock 邊角現在對 Tl/Poj
+//   兩 mode 都非冪等(全大寫純羅馬 hanji-absent custom entry,production 觸發面極小)。
 pub fn canonical_tl_form(text: &str, mode: InputMode) -> String {
     match mode {
         // TL mode: still fold POJ-shaped spellings onto canonical TL for the
@@ -417,9 +417,9 @@ pub fn canonical_tl_form(text: &str, mode: InputMode) -> String {
         // patterns to substitute), but routing through identity makes the
         // contract explicit and avoids an unnecessary string scan per
         // user_frequency.db commit key derivation.
-        // 中文: D / C-3b — TPS 漢羅 user-history key 改走 identity;TPS 字形為 Bopomofo,
-        // 中文:   poj_display_to_tl_display 對 Bopomofo 為 no-op,改 identity 顯式
-        // 中文:   表達契約且省一輪掃描。
+        // D / C-3b — TPS 漢羅 user-history key 改走 identity;TPS 字形為 Bopomofo,
+        //   poj_display_to_tl_display 對 Bopomofo 為 no-op,改 identity 顯式
+        //   表達契約且省一輪掃描。
         InputMode::Tps | InputMode::English => text.to_string(),
     }
 }
@@ -451,12 +451,12 @@ pub fn canonical_tl_form(text: &str, mode: InputMode) -> String {
 /// will not collapse onto its TL canonical here; the write-side R2 fix
 /// (continuous commit carries canonical TL) closes that gap. R1 only needs
 /// the common same-family case.
-// 中文: 分隔符 + 聲調皆不敏感的「讀音鍵」,把同一音節序列的不同羅馬字寫法收斂到同一鍵
-// 中文:   (taigi / tai5gi2 / tâi-gí → 全部 taigi)。復用 derive_notone(自訂詞 notone 衍生)
-// 中文:   避免兩處邏輯漂移。供 nextword::filter 辨識連續輸入 raw next_tl 與一般 commit
-// 中文:   canonical next_tl 為同讀音,避免同一詞出現兩筆預測。聲調不敏感(tāng/tàng 同鍵 tang),
-// 中文:   故呼叫端須在唯一 canonical 目標存在時才折疊以守 #7。殘留:不折拼寫家族(ch↔ts),
-// 中文:   POJ-spelled raw 不會在此收斂到 TL canonical,留待 R2 寫層修正。
+// 分隔符 + 聲調皆不敏感的「讀音鍵」,把同一音節序列的不同羅馬字寫法收斂到同一鍵
+//   (taigi / tai5gi2 / tâi-gí → 全部 taigi)。復用 derive_notone(自訂詞 notone 衍生)
+//   避免兩處邏輯漂移。供 nextword::filter 辨識連續輸入 raw next_tl 與一般 commit
+//   canonical next_tl 為同讀音,避免同一詞出現兩筆預測。聲調不敏感(tāng/tàng 同鍵 tang),
+//   故呼叫端須在唯一 canonical 目標存在時才折疊以守 #7。殘留:不折拼寫家族(ch↔ts),
+//   POJ-spelled raw 不會在此收斂到 TL canonical,留待 R2 寫層修正。
 pub fn toneless_reading_key(roman: &str) -> String {
     crate::derivation::derive_notone(roman)
 }

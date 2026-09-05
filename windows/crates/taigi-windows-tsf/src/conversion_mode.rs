@@ -16,7 +16,7 @@
 //! host drive the mode from outside; nothing we ship does that, and the sink
 //! is a second source of truth to keep in step (Codex F7, 2026-09-04).
 
-// 中文: 把 中/英 模式寫進 TSF 的 conversion-mode compartment,予系統其他部分讀會著。
+// 把 中/英 模式寫進 TSF 的 conversion-mode compartment,予系統其他部分讀會著。
 // 只動 NATIVE 這个 bit,別人設的旗標原封不動。單向寫入,無監聽外部變更(具名簡化)。
 
 use taigi_windows_core::keys::LanguageMode;

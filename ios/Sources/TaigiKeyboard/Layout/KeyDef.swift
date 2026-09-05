@@ -1,8 +1,8 @@
-// 中文: 鍵盤按鍵的抽象定義 — TaigiLayouts 用 [[KeyDef]] 描述每張版面,
-// 中文: 再由 LayoutConverter 轉成 KeyboardKit 的 KeyboardLayout。
+// 鍵盤按鍵的抽象定義 — TaigiLayouts 用 [[KeyDef]] 描述每張版面,
+// 再由 LayoutConverter 轉成 KeyboardKit 的 KeyboardLayout。
 
 /// Keyboard key definition for layout composition
-// 中文: 鍵盤按鍵的抽象 enum — 用於 TaigiLayouts 描述各種佈局。
+// 鍵盤按鍵的抽象 enum — 用於 TaigiLayouts 描述各種佈局。
 enum KeyDef {
     // MARK: - 字符按鍵
 
@@ -18,7 +18,7 @@ enum KeyDef {
     case backspace
     case space
     case `return`
-    // 中文: 漢字 ↔ 羅馬字切換鍵(translate),候選詞顯示語系切換用。
+    // 漢字 ↔ 羅馬字切換鍵(translate),候選詞顯示語系切換用。
     case translate
 
     // MARK: - 鍵盤切換

@@ -20,8 +20,8 @@
 //! topological order) is unit-tested in-crate in
 //! `composing/src/lattice/builder.rs`.
 
-// 中文: S1 — 行為中性契約測試:lattice 已建,但對外只發左錨投影 (start==0),
-// 中文:   逐 byte 等同 S1 前;內段留 S2 (commit 僅帶 consumed_bytes、dedupe 非 span-aware)。
+// S1 — 行為中性契約測試:lattice 已建,但對外只發左錨投影 (start==0),
+//   逐 byte 等同 S1 前;內段留 S2 (commit 僅帶 consumed_bytes、dedupe 非 span-aware)。
 
 use std::path::PathBuf;
 
@@ -154,8 +154,8 @@ fn tl_space_stays_hard_boundary_not_collapsed() {
 // a non-TPS mode would show up as an extra key, and USER constraint for the
 // round was that TL / POJ must not change at all.
 
-// 中文: §35 替代讀法產生器僅限 TPS,故 TL/POJ/English 的完整鍵接縫必須與 base 接縫「完全相等」。
-// 中文:   用 exact equality 而非 contains:替代讀法若洩漏到非 TPS 模式會多出鍵。
+// §35 替代讀法產生器僅限 TPS,故 TL/POJ/English 的完整鍵接縫必須與 base 接縫「完全相等」。
+//   用 exact equality 而非 contains:替代讀法若洩漏到非 TPS 模式會多出鍵。
 
 #[test]
 fn full_key_seam_equals_base_key_seam_for_non_tps_modes() {

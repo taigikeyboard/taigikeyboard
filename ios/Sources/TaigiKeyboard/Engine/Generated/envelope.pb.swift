@@ -206,8 +206,8 @@ public nonisolated enum Taigi_Engine_Platform: SwiftProtobuf.Enum, Swift.CaseIte
 /// i32 at a call site. COMBINED (漢羅合用: one label `漢字 羅馬字`, hanji
 /// commits) has NO engine reader — a combined cell is still distinct by
 /// (hanji, roman); the platforms send `is_translate_swapped = true` for it.
-/// 中文: 候選詞顯示 picker 的 wire 值;引擎只在兩個顯示層去重讀它,0/未知 = 漢羅並排;
-/// 中文:   COMBINED 引擎不讀(平台送 swapped=true)。
+/// 候選詞顯示 picker 的 wire 值;引擎只在兩個顯示層去重讀它,0/未知 = 漢羅並排;
+///   COMBINED 引擎不讀(平台送 swapped=true)。
 public nonisolated enum Taigi_Engine_CandidateDisplayMode: SwiftProtobuf.Enum, Swift.CaseIterable {
   public typealias RawValue = Int
   case unspecified // = 0

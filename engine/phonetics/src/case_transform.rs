@@ -16,7 +16,7 @@
 //! `Method::NormalizeTone` in-band). The function keeps its existing
 //! contract; `case_adjust.rs` is removed in this slice.
 
-// 中文: 大小寫轉換模組 — POJ/TL 聲調字母大小寫對應、候選詞首字母大寫、逐建議大小寫轉換、鼻化符號大小寫對齊;為兩平台對應功能的跨平台正源。
+// 大小寫轉換模組 — POJ/TL 聲調字母大小寫對應、候選詞首字母大寫、逐建議大小寫轉換、鼻化符號大小寫對齊;為兩平台對應功能的跨平台正源。
 
 use crate::api::InputMode;
 use crate::case_tables::{lower_to_upper, upper_to_lower};
@@ -24,7 +24,7 @@ use crate::case_tables::{lower_to_upper, upper_to_lower};
 /// Three-state shift / case indicator. Mirrors iOS `LetterCase` enum and
 /// adapts Android's `(caps: Bool, capsLock: Bool)` pair at the bridge call
 /// site (CapsLock=true → CapsLocked; caps=true → Uppercased; else Lowercased).
-// 中文: 三態 shift/大小寫指示;對應 iOS `LetterCase` enum 與 Android caps/capsLock 兩布林組合。
+// 三態 shift/大小寫指示;對應 iOS `LetterCase` enum 與 Android caps/capsLock 兩布林組合。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LetterCase {
     Lowercased,
@@ -43,7 +43,7 @@ pub(crate) const NASAL_UPPER: char = '\u{1D3A}'; // ᴺ
 /// multi-character inputs (e.g. "tsh") only the first letter is uppercased.
 /// Matches Android `ToneUtilities.uppercaseToneLetter` (`replaceFirstChar`)
 /// semantics.
-// 中文: 把單一字元/grapheme 透過聲調表轉成大寫;多字元輸入只大寫第一個字母。
+// 把單一字元/grapheme 透過聲調表轉成大寫;多字元輸入只大寫第一個字母。
 pub fn uppercase_tone_char(input: &str, mode: InputMode) -> String {
     uppercase_internal(input, mode, /* all_chars */ false)
 }
@@ -51,7 +51,7 @@ pub fn uppercase_tone_char(input: &str, mode: InputMode) -> String {
 /// Uppercase ALL characters in `input` using mode-aware tone tables.
 /// Matches Android `ToneUtilities.fullUppercaseToneLetter` semantics.
 /// Used by Caps Lock paths.
-// 中文: 整串字元都透過聲調表轉成大寫,給 Caps Lock 路徑使用。
+// 整串字元都透過聲調表轉成大寫,給 Caps Lock 路徑使用。
 pub fn full_uppercase_tone_string(input: &str, mode: InputMode) -> String {
     uppercase_internal(input, mode, /* all_chars */ true)
 }
@@ -96,7 +96,7 @@ fn uppercase_internal(input: &str, mode: InputMode, all_chars: bool) -> String {
 
 /// Lowercase a single char/grapheme using mode-aware tone tables. Matches
 /// Android `ToneUtilities.lowercaseToneLetter`.
-// 中文: 把單一字元/grapheme 透過聲調表轉成小寫。
+// 把單一字元/grapheme 透過聲調表轉成小寫。
 pub fn lowercase_tone_char(input: &str, mode: InputMode) -> String {
     // Nasal marker shortcut (mode-independent).
     if input == "\u{1D3A}" {
@@ -122,7 +122,7 @@ pub fn lowercase_tone_char(input: &str, mode: InputMode) -> String {
 /// - `Lowercased`: lowercase via `lowercase_tone_char`
 /// - `Uppercased`: first letter upper (via `uppercase_tone_char`), rest lower
 /// - `CapsLocked`: full upper via `full_uppercase_tone_string`
-// 中文: 依 `letter_case` 對輸入字串套用大小寫;Uppercased 是首字大寫其餘小寫,CapsLocked 是整串大寫。
+// 依 `letter_case` 對輸入字串套用大小寫;Uppercased 是首字大寫其餘小寫,CapsLocked 是整串大寫。
 pub fn transform_input_case(text: &str, letter_case: LetterCase, mode: InputMode) -> String {
     match letter_case {
         LetterCase::CapsLocked => full_uppercase_tone_string(text, mode),
@@ -134,7 +134,7 @@ pub fn transform_input_case(text: &str, letter_case: LetterCase, mode: InputMode
 /// Gate on `auto_cap_enabled` + `input` first char's case. If both true and
 /// `text` starts with a letter, uppercase the first letter via tone tables;
 /// otherwise return `text` as-is. Matches `CaseTransformer.capitalizeCandidate`.
-// 中文: 候選詞自動首字大寫:當 `auto_cap_enabled` 開且 `input` 首字大寫時,把候選詞首字母透過聲調表轉大寫。
+// 候選詞自動首字大寫:當 `auto_cap_enabled` 開且 `input` 首字大寫時,把候選詞首字母透過聲調表轉大寫。
 pub fn capitalize_candidate(
     text: &str,
     input: &str,
@@ -175,7 +175,7 @@ pub fn capitalize_candidate(
 /// returns the final-form string ready for display. Suggestion skip rules
 /// (iOS `additionalInfo` flags, Android `id` markers) stay platform-side
 /// — only transform-eligible items reach this op.
-// 中文: 候選建議的大小寫轉換主入口;切成「已輸入段 (matchCase 對齊組字區)」與「剩餘段」並各自轉換,最後再做鼻化符號大小寫對齊。
+// 候選建議的大小寫轉換主入口;切成「已輸入段 (matchCase 對齊組字區)」與「剩餘段」並各自轉換,最後再做鼻化符號大小寫對齊。
 pub fn transform_suggestion(
     original_text: &str,
     composing_text: &str,
@@ -235,7 +235,7 @@ fn transform_suggestion_inner(
 /// Re-homed from the former `case_adjust.rs::adjust_nasal_marker_case`.
 /// Called in-band by `Method::NormalizeTone` (engine remains source-of-truth)
 /// AND by `transform_suggestion` (post-process).
-// 中文: 調整鼻化符號 (ⁿ/ᴺ) 大小寫,使其與前一個字母大小寫一致;數字/標點不會重置大小寫狀態。
+// 調整鼻化符號 (ⁿ/ᴺ) 大小寫,使其與前一個字母大小寫一致;數字/標點不會重置大小寫狀態。
 pub fn adjust_nasal_marker_case(text: &str) -> String {
     if !text.contains(NASAL_LOWER) && !text.contains(NASAL_UPPER) {
         return text.to_string();

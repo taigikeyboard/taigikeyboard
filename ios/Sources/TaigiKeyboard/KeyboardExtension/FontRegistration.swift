@@ -1,4 +1,4 @@
-// 中文: 鍵盤擴充字型註冊器 — 從主 App bundle 載入自訂字型,避免同一份字型檔重複打包到 extension 內。
+// 鍵盤擴充字型註冊器 — 從主 App bundle 載入自訂字型,避免同一份字型檔重複打包到 extension 內。
 
 import CoreText
 import Foundation
@@ -7,7 +7,7 @@ import Foundation
 ///
 /// Used by the keyboard extension to load fonts from the containing app bundle,
 /// avoiding the need to duplicate font files in both targets.
-// 中文: 在 extension 啟動時動態註冊主 App bundle 內的字型。
+// 在 extension 啟動時動態註冊主 App bundle 內的字型。
 enum FontRegistration {
     private static let logger = DebugLogger(category: "FontRegistration")
 
@@ -23,8 +23,8 @@ enum FontRegistration {
     /// Call this early in the extension lifecycle (viewDidLoad)
     /// before any UI that uses custom fonts is rendered.
     /// No-op when running inside the main app (UIAppFonts handles it).
-    // 中文: 把主 App bundle 的字型註冊到 process 內。在 extension viewDidLoad 早期呼叫;
-    // 中文: 在主 App 執行時為 no-op(由 UIAppFonts 處理)。
+    // 把主 App bundle 的字型註冊到 process 內。在 extension viewDidLoad 早期呼叫;
+    // 在主 App 執行時為 no-op(由 UIAppFonts 處理)。
     static func registerFontsIfNeeded() {
         guard Bundle.main.bundlePath.hasSuffix(".appex") else {
             return

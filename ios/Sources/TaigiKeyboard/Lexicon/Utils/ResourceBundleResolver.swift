@@ -1,5 +1,5 @@
-// 中文: 解析詞典資源所在的 Bundle。Keyboard extension 與主 app 進程都需要存取
-// 中文: dictionary.bin / association.bin / dictionary.fst,且檔案只放在 .appex 裡。
+// 解析詞典資源所在的 Bundle。Keyboard extension 與主 app 進程都需要存取
+// dictionary.bin / association.bin / dictionary.fst,且檔案只放在 .appex 裡。
 
 import Foundation
 
@@ -9,7 +9,7 @@ import Foundation
 /// keyboard extension bundle to avoid duplication. When running inside
 /// the main app, this resolver locates the embedded .appex bundle.
 /// When running inside the extension, it returns the extension's own bundle.
-// 中文: 詞典資源 Bundle 解析器 — 解決 extension / 主 app / 測試 三種執行情境的路徑差異。
+// 詞典資源 Bundle 解析器 — 解決 extension / 主 app / 測試 三種執行情境的路徑差異。
 enum ResourceBundleResolver {
     private static let logger = DebugLogger(category: "ResourceBundleResolver")
 
@@ -19,7 +19,7 @@ enum ResourceBundleResolver {
     /// 1. Extension's own bundle (when running as keyboard extension)
     /// 2. Embedded .appex inside the main app bundle
     /// 3. Falls back to Bundle(for:) for test targets
-    // 中文: 詞典資源 Bundle — 依序嘗試 extension 自身 → 主 app 內嵌 .appex → Bundle(for:) 測試 fallback。
+    // 詞典資源 Bundle — 依序嘗試 extension 自身 → 主 app 內嵌 .appex → Bundle(for:) 測試 fallback。
     static var dictionaryBundle: Bundle {
         // Fast path: extension has the files in its own bundle
         if Bundle.main.bundlePath.hasSuffix(".appex") {

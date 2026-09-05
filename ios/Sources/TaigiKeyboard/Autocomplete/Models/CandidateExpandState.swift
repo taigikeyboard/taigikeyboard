@@ -1,4 +1,4 @@
-// 中文: 候選詞列展開狀態的 ObservableObject — 由 CandidateView 與 ExpandedCandidateOverlay 共用。
+// 候選詞列展開狀態的 ObservableObject — 由 CandidateView 與 ExpandedCandidateOverlay 共用。
 
 import Combine
 import SwiftUI

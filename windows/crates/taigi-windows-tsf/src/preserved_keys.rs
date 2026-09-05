@@ -8,7 +8,7 @@
 //! be taken from every application for as long as this input method is
 //! selected. It is matched in the key sink instead.
 
-// 中文: 全域快捷鍵 = TSF preserved key,從設定的 chord 註冊;裸鍵 ` 不註冊,由 key sink 比對。
+// 全域快捷鍵 = TSF preserved key,從設定的 chord 註冊;裸鍵 ` 不註冊,由 key sink 比對。
 
 use crate::guids::{
     GUID_PRESERVED_KEY_CYCLE_CANDIDATE_DISPLAY_MODE, GUID_PRESERVED_KEY_ROMANIZATION,

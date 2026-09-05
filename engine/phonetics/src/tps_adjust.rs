@@ -14,7 +14,7 @@
 //! (`{ㄗ, ㄘ, ㄙ, ㆡ}`) are disjoint by `lastChar`, so the `?:` short-circuit
 //! is observationally equivalent to running both checks unconditionally.
 
-// 中文: TPS 鍵入即時調整,把 4 個調整函式收成單一入口;處理音節初聲鍵的初/終形切換、自動更正、鼻化音節、ㄗ/ㄘ/ㄙ/ㆡ 顎化等規則。平台端必須先用 TPS 配置才呼叫。
+// TPS 鍵入即時調整,把 4 個調整函式收成單一入口;處理音節初聲鍵的初/終形切換、自動更正、鼻化音節、ㄗ/ㄘ/ㄙ/ㆡ 顎化等規則。平台端必須先用 TPS 配置才呼叫。
 
 use crate::tps::{ZHUYIN_TONES, ZHUYIN_TONES_ENCODE_SAFE};
 use once_cell::sync::Lazy;
@@ -28,7 +28,7 @@ use std::collections::HashSet;
 ///
 /// Excludes entering-tone finals (`ㆴ ㆵ ㆻ ㆷ`) which are CONSONANTS not
 /// tone marks. Excludes the literal " " mapped from tone "1" (no-op).
-// 中文: TPS 非入聲的聲調符號集合;排除入聲韻尾 (那些是子音不是聲調) 與 1 聲的空白佔位。
+// TPS 非入聲的聲調符號集合;排除入聲韻尾 (那些是子音不是聲調) 與 1 聲的空白佔位。
 static TONE_MARK_CHARS: Lazy<HashSet<char>> = Lazy::new(|| {
     let mut set = HashSet::new();
     let mut collect = |table: &[(&str, &str)]| {
@@ -61,7 +61,7 @@ fn is_tps_tone_mark(c: char) -> bool {
 
 /// String-overload for the `Method::IsTpsToneMark` op which takes a string
 /// (single grapheme expected). Returns false on empty / multi-grapheme.
-// 中文: 字串版聲調符號判定 (給 op 用);空字串或多字元一律回 false。
+// 字串版聲調符號判定 (給 op 用);空字串或多字元一律回 false。
 pub(crate) fn is_tps_tone_mark_str(s: &str) -> bool {
     let mut chars = s.chars();
     let Some(c) = chars.next() else { return false };
@@ -93,7 +93,7 @@ pub(crate) fn is_tps_tone_mark_str(s: &str) -> bool {
 // Continuous-input correctness wins — `-nnh` checked syllables are rare
 // and the dictionary stores them in precomposed `ㆷ` form, so users reach
 // them via dictionary lookup rather than auto-correct.
-// 中文: 音節邊界字元;聲調符號、空白、入聲韻尾、自鳴鼻音、precomposed 鼻音韻尾與鼻化母音。純母音故意排除以保留入聲輸入。鼻化母音 + ㄏ 雖也是合法 `-nnh`,但局部無法分辨跨音節 (歡喜 `ㄏㄨㆩㄏㄧ`),取連續輸入正確性。
+// 音節邊界字元;聲調符號、空白、入聲韻尾、自鳴鼻音、precomposed 鼻音韻尾與鼻化母音。純母音故意排除以保留入聲輸入。鼻化母音 + ㄏ 雖也是合法 `-nnh`,但局部無法分辨跨音節 (歡喜 `ㄏㄨㆩㄏㄧ`),取連續輸入正確性。
 static SYLLABLE_BOUNDARY_CHARS: Lazy<HashSet<char>> = Lazy::new(|| {
     let mut set: HashSet<char> = TONE_MARK_CHARS.iter().copied().collect();
     // Checked-tone finals (entering-tone consonants — end syllable).
@@ -126,7 +126,7 @@ static SYLLABLE_BOUNDARY_CHARS: Lazy<HashSet<char>> = Lazy::new(|| {
 /// Returns context-adjusted TPS character for keys with dual initial/final
 /// forms. At syllable start → keep initial form. Not at syllable start →
 /// final form (with ㄫ context-aware: after ㄧ → ㄥ, otherwise → ㆭ).
-// 中文: 處理同時兼具初聲/終聲形的注音鍵;音節起始保留初聲形,否則改成終聲形 (ㄫ 視前文決定 ㄥ 或 ㆭ)。
+// 處理同時兼具初聲/終聲形的注音鍵;音節起始保留初聲形,否則改成終聲形 (ㄫ 視前文決定 ㄥ 或 ㆭ)。
 fn adjust_initial_key(char_str: &str, raw_input: &str) -> String {
     let Some(first) = char_str.chars().next() else {
         return char_str.to_string();
@@ -178,12 +178,12 @@ fn adjust_initial_key(char_str: &str, raw_input: &str) -> String {
     // improvement is the `<vowel><nasal><vowel>` next-syllable case (龜毛).
     // (`dual_final_form` is the single glyph source for both the gate test
     // and the conversion below — see its doc comment.)
-    // 中文: 音韻 gate(雙形尾 — 塞音 ㄅㄉㄍㄏ + 鼻音 ㄇㄋㄫ):雙形尾只接特定韻
-    // 中文:   (入聲韻 §3.2.4 + 鼻音韻 §3.2.3 / TL_FINALS);`au` 不接塞音/鼻音尾、`u` 不接 -m
-    // 中文:   → `ㄍㄠ`+`ㄉ`=kaut、`ㄍㄨ`+`ㄇ`=kum 皆非音節,保持聲母為下一字起始(交代/龜毛)。
-    // 中文:   僅當 boundary-suffix 為單一合法開音節且 suffix+final 非法時保持聲母;多音節串照舊轉(零回歸)。
-    // 中文:   Rule 2b 互動:gate 保留的 ㄇ/ㄫ 後接聲調會被折回 ㆬ/ㆭ;ㄇ 與舊行為 byte-identical,
-    // 中文:   ㄋ/ㄫ glyph 不同但仍 invalid TL(無 working-word 回歸)。改善 = <母音><鼻音><母音>(龜毛)。
+    // 音韻 gate(雙形尾 — 塞音 ㄅㄉㄍㄏ + 鼻音 ㄇㄋㄫ):雙形尾只接特定韻
+    //   (入聲韻 §3.2.4 + 鼻音韻 §3.2.3 / TL_FINALS);`au` 不接塞音/鼻音尾、`u` 不接 -m
+    //   → `ㄍㄠ`+`ㄉ`=kaut、`ㄍㄨ`+`ㄇ`=kum 皆非音節,保持聲母為下一字起始(交代/龜毛)。
+    //   僅當 boundary-suffix 為單一合法開音節且 suffix+final 非法時保持聲母;多音節串照舊轉(零回歸)。
+    //   Rule 2b 互動:gate 保留的 ㄇ/ㄫ 後接聲調會被折回 ㆬ/ㆭ;ㄇ 與舊行為 byte-identical,
+    //   ㄋ/ㄫ glyph 不同但仍 invalid TL(無 working-word 回歸)。改善 = <母音><鼻音><母音>(龜毛)。
     let Some(coda) = dual_final_form(first, last) else {
         return char_str.to_string();
     };
@@ -203,8 +203,8 @@ fn adjust_initial_key(char_str: &str, raw_input: &str) -> String {
 /// the phonotactic gate in [`adjust_initial_key`] tests validity against
 /// the EXACT glyph that will be emitted — one glyph source for both the
 /// gate test and the conversion, no gate/conversion drift.
-// 中文: 雙形聲母(塞音+鼻音)對應的韻尾/終形字元;ㄫ 依前字決定 ㄥ(ing)/ㆭ 故帶 last;
-// 中文:   gate 與轉換共用同一份 glyph(避免漂移),非雙形回 None。
+// 雙形聲母(塞音+鼻音)對應的韻尾/終形字元;ㄫ 依前字決定 ㄥ(ing)/ㆭ 故帶 last;
+//   gate 與轉換共用同一份 glyph(避免漂移),非雙形回 None。
 fn dual_final_form(initial: char, last: char) -> Option<char> {
     match initial {
         'ㄅ' => Some('ㆴ'),
@@ -231,9 +231,9 @@ fn dual_final_form(initial: char, last: char) -> Option<char> {
 /// it back to the onset glyph lets the segmenter surface the alternate
 /// reading. Every pair is a 3-byte Bopomofo↔3-byte Bopomofo glyph, so the
 /// substitution is byte-length preserving (offset maps stay valid).
-// 中文: dual_final_form 的反向 — TPS 韻尾/終形 glyph → 對應聲母 glyph(ㆭ 與 ㄥ 皆回 ㄫ);
-// 中文:   供連續輸入 de-fold 讀法用:被 auto-correct 摺成韻尾、實為下字聲母者(雞胸 ㄍㆤ|ㄏㄧㄥ)
-// 中文:   反摺回聲母讓切分器列出替代讀法。每對皆 3-byte↔3-byte,byte 長度不變(offset map 不動)。
+// dual_final_form 的反向 — TPS 韻尾/終形 glyph → 對應聲母 glyph(ㆭ 與 ㄥ 皆回 ㄫ);
+//   供連續輸入 de-fold 讀法用:被 auto-correct 摺成韻尾、實為下字聲母者(雞胸 ㄍㆤ|ㄏㄧㄥ)
+//   反摺回聲母讓切分器列出替代讀法。每對皆 3-byte↔3-byte,byte 長度不變(offset map 不動)。
 pub fn defold_coda_to_initial(coda: char) -> Option<char> {
     match coda {
         'ㆴ' => Some('ㄅ'),
@@ -256,7 +256,7 @@ pub fn defold_coda_to_initial(coda: char) -> Option<char> {
 /// checks whether it is exactly ONE valid open syllable before using it as
 /// the coda-attachment target (a multi-syllable run like `ㄍㄠㄉㄚ` is not
 /// one open syllable, so the gate falls through to the legacy convert).
-// 中文: 目前正在輸入的開音節串 = 最後一個邊界字元(聲調符/入聲尾/鼻韻尾/空白)之後的子字串。
+// 目前正在輸入的開音節串 = 最後一個邊界字元(聲調符/入聲尾/鼻韻尾/空白)之後的子字串。
 fn pending_open_syllable(raw_input: &str) -> &str {
     let mut start = 0;
     for (idx, ch) in raw_input.char_indices() {
@@ -269,7 +269,7 @@ fn pending_open_syllable(raw_input: &str) -> &str {
 
 /// Auto-correct `ㆮ` → `ㆯ` when preceded by `ㄧ`. "iainn" is invalid;
 /// only "iaunn" exists.
-// 中文: ㄧ 之後的 ㆮ 自動更正成 ㆯ ("iainn" 不存在,只有 "iaunn")。
+// ㄧ 之後的 ㆮ 自動更正成 ㆯ ("iainn" 不存在,只有 "iaunn")。
 fn adjust_nasalized_vowel_key(char_str: &str, raw_input: &str) -> String {
     if char_str != "ㆮ" {
         return char_str.to_string();
@@ -304,11 +304,11 @@ fn adjust_nasalized_vowel_key(char_str: &str, raw_input: &str) -> String {
 /// keys; tone-9 alone must be reconstructed from the digit. Runs first in
 /// [`adjust`] so the produced `ˆ` feeds [`syllabic_nasal_replacement`]
 /// identically to a directly-typed mark (Rule 2b parity).
-// 中文: 把 TPS 數字鍵 9 在有可標調音節時轉成第九調符號 ˆ(U+02C6)。第九調是唯一沒有
-// 中文:   專屬 TPS 調號鍵的聲調(兩平台佈局皆無 ˆ),只能靠數字 9 popup 輸入;不轉換則
-// 中文:   字面 9 落單,第九調詞(昨昏 ㄗㄤˆ / 才 ㄘㄞˆ / 日語借詞)永遠查不到。
-// 中文:   僅在 raw_input 結尾為可承載非入聲調的注音音節主體(韻核/鼻韻尾/鼻化母音)時觸發;
-// 中文:   空輸入、已帶調、入聲塞音尾 ㆴㆵㆻㆷ、空白/非注音 → 保留字面 9。
+// 把 TPS 數字鍵 9 在有可標調音節時轉成第九調符號 ˆ(U+02C6)。第九調是唯一沒有
+//   專屬 TPS 調號鍵的聲調(兩平台佈局皆無 ˆ),只能靠數字 9 popup 輸入;不轉換則
+//   字面 9 落單,第九調詞(昨昏 ㄗㄤˆ / 才 ㄘㄞˆ / 日語借詞)永遠查不到。
+//   僅在 raw_input 結尾為可承載非入聲調的注音音節主體(韻核/鼻韻尾/鼻化母音)時觸發;
+//   空輸入、已帶調、入聲塞音尾 ㆴㆵㆻㆷ、空白/非注音 → 保留字面 9。
 fn adjust_tone_nine_digit(char_str: &str, raw_input: &str) -> String {
     if char_str != "9" {
         return char_str.to_string();
@@ -326,7 +326,7 @@ fn adjust_tone_nine_digit(char_str: &str, raw_input: &str) -> String {
 }
 
 /// Returns syllabic replacement for `lastRawChar`, or None.
-// 中文: 鼻化抽象音節觸發:在聲調符號接續下,把前一個 ㄇ/ㄫ 改成 ㆬ/ㆭ。
+// 鼻化抽象音節觸發:在聲調符號接續下,把前一個 ㄇ/ㄫ 改成 ㆬ/ㆭ。
 fn syllabic_nasal_replacement(incoming: &str, last_raw_char: Option<char>) -> Option<String> {
     let last = last_raw_char?;
     let first = incoming.chars().next()?;
@@ -341,7 +341,7 @@ fn syllabic_nasal_replacement(incoming: &str, last_raw_char: Option<char>) -> Op
 }
 
 /// Returns palatalized replacement for `lastRawChar`, or None.
-// 中文: 顎化觸發:在 ㄧ/ㆪ 接續下,把前一個 ㄗ/ㄘ/ㄙ/ㆡ 改成顎化版本 ㄐ/ㄑ/ㄒ/ㆢ。
+// 顎化觸發:在 ㄧ/ㆪ 接續下,把前一個 ㄗ/ㄘ/ㄙ/ㆡ 改成顎化版本 ㄐ/ㄑ/ㄒ/ㆢ。
 fn palatalization_replacement(incoming: &str, last_raw_char: Option<char>) -> Option<String> {
     let last = last_raw_char?;
     let first = incoming.chars().next()?;
@@ -363,7 +363,7 @@ fn palatalization_replacement(incoming: &str, last_raw_char: Option<char>) -> Op
 
 /// Collapse-equivalent of iOS `CharacterInputPipeline.adjust(_, .tps, raw)`.
 /// Returns `(adjusted, replace_last?)`. Caller MUST gate by TPS layout.
-// 中文: TPS 鍵入即時調整單一入口,回傳 (調整後字元, 是否要替換最後一字)。呼叫端必須先確認是 TPS 配置。
+// TPS 鍵入即時調整單一入口,回傳 (調整後字元, 是否要替換最後一字)。呼叫端必須先確認是 TPS 配置。
 pub(crate) fn adjust(incoming: &str, raw_input: &str) -> (String, Option<String>) {
     let mut adjusted = adjust_tone_nine_digit(incoming, raw_input);
     adjusted = adjust_initial_key(&adjusted, raw_input);

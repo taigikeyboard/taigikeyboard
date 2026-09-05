@@ -19,7 +19,7 @@
 //! old one, so the first release under a new certificate is admitted on its
 //! digest alone. Windows has no equivalent of Apple's team id to pin instead.
 
-// 中文: 安裝檔驗證 — SHA-256 必驗;執行中程式有簽章身分時,再加 WinVerifyTrust + 指紋 + VERSIONINFO。
+// 安裝檔驗證 — SHA-256 必驗;執行中程式有簽章身分時,再加 WinVerifyTrust + 指紋 + VERSIONINFO。
 
 use sha2::{Digest, Sha256};
 use std::path::Path;

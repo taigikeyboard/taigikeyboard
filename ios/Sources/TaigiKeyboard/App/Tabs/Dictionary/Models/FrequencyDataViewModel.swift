@@ -1,12 +1,12 @@
-// 中文: FrequencyDataView 的 ViewModel — 詞頻資料 CRUD + CSV 匯入匯出 + 錄製開關。
-// 中文: 直接走 UserFrequencyRepository(SQLite-backed),沒走 Service 層。
+// FrequencyDataView 的 ViewModel — 詞頻資料 CRUD + CSV 匯入匯出 + 錄製開關。
+// 直接走 UserFrequencyRepository(SQLite-backed),沒走 Service 層。
 
 import Foundation
 
 /// One displayed frequency row: a `(word, tl)` reading + its count. R5
 /// (#7): identity is the pair, so 一字多音 (重/tāng vs 重/tîng) are distinct
 /// rows. `id` is the composite key — `word` alone is not unique.
-// 中文: 詞頻列表一列 = (word, tl) 讀音 + 次數;id 用 (word,tl) 複合鍵(word 不唯一)。
+// 詞頻列表一列 = (word, tl) 讀音 + 次數;id 用 (word,tl) 複合鍵(word 不唯一)。
 struct FrequencyListItem: Identifiable {
     let word: String
     let tl: String
@@ -19,14 +19,14 @@ struct FrequencyListItem: Identifiable {
 /// Owns frequency data loading, CSV import/export, deletion, and the
 /// recording toggle. The view binds to `@Published` state and calls the
 /// async actions.
-// 中文: 詞頻管理畫面的 ViewModel,封裝 UserFrequencyRepository 操作。
+// 詞頻管理畫面的 ViewModel,封裝 UserFrequencyRepository 操作。
 @MainActor
 final class FrequencyDataViewModel: ObservableObject {
-    // 中文: 全部詞頻資料 (word, tl, count) 逐讀音排序後清單。
+    // 全部詞頻資料 (word, tl, count) 逐讀音排序後清單。
     @Published var allData: [FrequencyListItem] = []
-    // 中文: 載入中旗標,首次 load() 完成後切回 false。
+    // 載入中旗標,首次 load() 完成後切回 false。
     @Published var isLoading = true
-    // 中文: 詞頻錄製開關;切換時同步寫回 SharedSettings。
+    // 詞頻錄製開關;切換時同步寫回 SharedSettings。
     @Published var isFrequencyRecordingEnabled: Bool
 
     private let repository: UserFrequencyRepository
@@ -42,26 +42,26 @@ final class FrequencyDataViewModel: ObservableObject {
         isFrequencyRecordingEnabled = settings.isFrequencyRecordingEnabled
     }
 
-    // 中文: 切換詞頻錄製開關,同步更新本地與 SharedSettings。
+    // 切換詞頻錄製開關,同步更新本地與 SharedSettings。
     func setRecordingEnabled(_ enabled: Bool) {
         isFrequencyRecordingEnabled = enabled
         settings.isFrequencyRecordingEnabled = enabled
     }
 
-    // 中文: 從 repository 載入全部詞頻資料(逐 (word, tl) 讀音,無上限)。
+    // 從 repository 載入全部詞頻資料(逐 (word, tl) 讀音,無上限)。
     func load() async {
         let rows = await repository.allFrequencyRowsAsync()
         allData = rows.map { FrequencyListItem(word: $0.word, tl: $0.tl, count: $0.count) }
         isLoading = false
     }
 
-    // 中文: 刪除單一 (word, tl) 讀音的詞頻紀錄並從 in-memory 清單移除 (#7)。
+    // 刪除單一 (word, tl) 讀音的詞頻紀錄並從 in-memory 清單移除 (#7)。
     func deleteWord(_ word: String, tl: String) async {
         try? await repository.deleteWord(word, tl: tl)
         allData.removeAll { $0.word == word && $0.tl == tl }
     }
 
-    // 中文: 清除全部詞頻資料 — 直接刪除底層 SQLite 檔。
+    // 清除全部詞頻資料 — 直接刪除底層 SQLite 檔。
     func clearAll() {
         do {
             try repository.deleteDatabase()
@@ -71,13 +71,13 @@ final class FrequencyDataViewModel: ObservableObject {
         }
     }
 
-    // 中文: 匯出全部詞頻資料為 CSV 字串(逐 (word, tl) 讀音,保留羅馬字 #7)。
+    // 匯出全部詞頻資料為 CSV 字串(逐 (word, tl) 讀音,保留羅馬字 #7)。
     func exportCSV() async throws -> String {
         let data = await repository.allFrequencyRowsAsync()
         return CSVDocument.encodeFrequencyCSV(data)
     }
 
-    // 中文: 從 URL 讀取 CSV,解碼後 batchImportMerge;回傳匯入/略過筆數。
+    // 從 URL 讀取 CSV,解碼後 batchImportMerge;回傳匯入/略過筆數。
     func importCSV(url: URL) async throws -> (imported: Int, skipped: Int) {
         let data = try await Self.readFileData(from: url)
         guard let csvString = String(data: data, encoding: .utf8) else {

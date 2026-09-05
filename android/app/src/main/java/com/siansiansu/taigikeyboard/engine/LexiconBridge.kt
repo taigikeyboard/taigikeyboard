@@ -1,6 +1,6 @@
-// 中文: Lexicon 讀路徑橋:將 install / search / searchByHanzi / assocLookup /
-// 中文: classifyInput / isHanzi / dictionaryFilters 等 op 包成 Kotlin API,
-// 中文: 共用 RustEngineBridge.dispatchRaw 做 JNI roundtrip。對應 iOS RustEngineBridge+Lexicon.swift。
+// Lexicon 讀路徑橋:將 install / search / searchByHanzi / assocLookup /
+// classifyInput / isHanzi / dictionaryFilters 等 op 包成 Kotlin API,
+// 共用 RustEngineBridge.dispatchRaw 做 JNI roundtrip。對應 iOS RustEngineBridge+Lexicon.swift。
 
 package com.siansiansu.taigikeyboard.engine
 
@@ -46,7 +46,7 @@ import com.siansiansu.taigikeyboard.ime.dictionary.InputType as DictInputType
  * NextWord persistence is out of scope for this bridge; only the
  * bundled `association.bin` read-only half goes through here.
  *
- * 中文: 唯讀路徑 — `user_association.db` 由 Android 平台 SQLite 處理(設計如此),
+ * 唯讀路徑 — `user_association.db` 由 Android 平台 SQLite 處理(設計如此),
  *       此橋只走 `association.bin` 唯讀資料(bundle 字典+ngram)。
  */
 object LexiconBridge {
@@ -193,7 +193,7 @@ object LexiconBridge {
      * from `AppInitializer` after `copyAssetsIfNeeded` finishes; idempotent.
      * Returns `null` on failure (logged via `RustEngineBridge.diagnostics()`).
      *
-     * 中文: 安裝/重灌 lexicon 引擎(冪等)— 驗 trie/dictionary/association 三檔路徑後 mmap;
+     * 安裝/重灌 lexicon 引擎(冪等)— 驗 trie/dictionary/association 三檔路徑後 mmap;
      *       失敗回 null,診斷打到 RustEngineBridge.diagnostics()。
      *
      * @param syllableInventoryPath Absolute path to v3.5.8 Phase 2
@@ -235,7 +235,7 @@ object LexiconBridge {
      * guard (pinned by INVARIANT_LEX_HANZI_GUARD; commit 12 adds the
      * platform parity test).
      *
-     * 中文: IME autocomplete 進入點;inputType==Hanzi 直接回 []。Engine 內部走 phonetics::normalize_input + trie 查詢。
+     * IME autocomplete 進入點;inputType==Hanzi 直接回 []。Engine 內部走 phonetics::normalize_input + trie 查詢。
      */
     fun search(
         input: String,
@@ -262,7 +262,7 @@ object LexiconBridge {
     /**
      * Dictionary tab multi-source lookup.
      *
-     * 中文: Tab3 多來源查詢 — input 可為羅馬字或漢字,engine 內自行分類;sources bitmask 由平台端 toggle 結果決定。
+     * Tab3 多來源查詢 — input 可為羅馬字或漢字,engine 內自行分類;sources bitmask 由平台端 toggle 結果決定。
      */
     fun searchWithSources(
         input: String,
@@ -285,7 +285,7 @@ object LexiconBridge {
     /**
      * Dictionary tab hanzi-prefix lookup.
      *
-     * 中文: Tab3 漢字前綴查詢 — query 必為漢字。供 Tab3 漢字 short-circuit 路徑使用。
+     * Tab3 漢字前綴查詢 — query 必為漢字。供 Tab3 漢字 short-circuit 路徑使用。
      */
     fun searchByHanzi(
         query: String,
@@ -308,7 +308,7 @@ object LexiconBridge {
     /**
      * Bundled-bigram lookup. Called by `NextWordService.predict` for dict rows.
      *
-     * 中文: 內建 bigram 查詢(association.bin)— previousWord → 後續候選清單。NextWordService.predict 用來補 dict 來源預測。
+     * 內建 bigram 查詢(association.bin)— previousWord → 後續候選清單。NextWordService.predict 用來補 dict 來源預測。
      */
     fun assocLookup(
         previousWord: String,
@@ -353,7 +353,7 @@ object LexiconBridge {
      * chained multiple phonetics ops per keypress. See
      * `INVARIANT_LEX_INPUT_CLASSIFICATION_PRECEDENCE`.
      *
-     * 中文: 把 raw 分類成 (InputType, searchKey) 二元組;v3.5.7 後改成單次 FFI,取代過去每按鍵都串多個 phonetics op 的階梯邏輯。
+     * 把 raw 分類成 (InputType, searchKey) 二元組;v3.5.7 後改成單次 FFI,取代過去每按鍵都串多個 phonetics op 的階梯邏輯。
      */
     fun classifyInput(raw: String): ClassificationResult {
         val payload = ClassifyInputRequest.newBuilder().setRaw(raw).build()
@@ -377,7 +377,7 @@ object LexiconBridge {
      * Call ONCE per query and pass the result down the search pipeline;
      * resolving again inside the Dictionary tab's badge filter would split the snapshot.
      *
-     * 中文: 把使用者 12 個字典 toggle 解析成 (dictionaryFilterBitmask, assocLookupBitmask, enabledSources)。
+     * 把使用者 12 個字典 toggle 解析成 (dictionaryFilterBitmask, assocLookupBitmask, enabledSources)。
      *       每次查詢「呼叫一次」,結果傳遞到整個 search 管線;Tab3 badge filter 不可重新解析(會把 snapshot 切兩份)。
      *       FFI 失敗時 fallback 跑平台側對齊版 compute_filters,避免 dev 環境 Rust .so 未重 build 時誤失能。
      */
@@ -446,7 +446,7 @@ object LexiconBridge {
      * codepoint (Unified + Extensions A-E). See
      * `INVARIANT_LEX_INPUT_CLASSIFICATION_HANZI_RANGE`.
      *
-     * 中文: Tab3 漢字短路徑判斷 — text 含 CJK Unified + Ext A-E 任一字即 true;
+     * Tab3 漢字短路徑判斷 — text 含 CJK Unified + Ext A-E 任一字即 true;
      *       修正 v3.5.7 前 Kotlin Char.code(16-bit)漏判 Ext B/C/D/E 的舊 bug。
      */
     fun isHanzi(text: String): Boolean {
@@ -655,7 +655,7 @@ object LexiconBridge {
      * `ScoreBreakdown` so dogfood traces include the score arithmetic.
      * Release builds skip the breakdown (zero serialization overhead).
      *
-     * 中文: 排序生產入口 — 單次 FFI 跑完 dedup→score→sort→(TPS 模式)display-dedup;
+     * 排序生產入口 — 單次 FFI 跑完 dedup→score→sort→(TPS 模式)display-dedup;
      *       tpsDedupEnabled 由平台端決定(讀 settings.inputMode == "tps"),Engine 不自行推。
      */
     fun processCandidates(
@@ -700,7 +700,7 @@ object LexiconBridge {
      * parity is verified by the Rust workspace tests + iOS XCTest
      * (links the xcframework) + Android instrumented dogfood.
      *
-     * 中文: 測試用入口,可取出每筆候選的 ScoreBreakdown(六項分數);production 走 processCandidates 即可。
+     * 測試用入口,可取出每筆候選的 ScoreBreakdown(六項分數);production 走 processCandidates 即可。
      */
     fun processCandidatesDetailed(
         raw: List<TaigiWord>,

@@ -1,5 +1,5 @@
-// 中文: 自訂主題編輯器。全外觀(6 配色 + 5 尺寸 + 陰影)+ 頂端即時草稿預覽 + 底部恢復預設。字型為全域設定,不在編輯器內。
-// 中文: 以子頁面 push 呈現(用父層 NavigationStack)。名稱於 Save 時用 alert 輸入(編輯器內無文字輸入 → 系統鍵盤永不擠壓預覽)。Save 後自動套用,返回(back)即丟棄草稿。
+// 自訂主題編輯器。全外觀(6 配色 + 5 尺寸 + 陰影)+ 頂端即時草稿預覽 + 底部恢復預設。字型為全域設定,不在編輯器內。
+// 以子頁面 push 呈現(用父層 NavigationStack)。名稱於 Save 時用 alert 輸入(編輯器內無文字輸入 → 系統鍵盤永不擠壓預覽)。Save 後自動套用,返回(back)即丟棄草稿。
 
 import SwiftUI
 
@@ -13,7 +13,7 @@ import SwiftUI
 /// editor has no inline text input and the software keyboard never appears to
 /// squeeze the pinned preview. Rename later via the card's Edit action.
 /// Save persists via the view model and auto-applies; back/pop discards.
-// 中文: 名稱改於 Save 時 alert 輸入(非內嵌),編輯器無文字輸入故無鍵盤擠壓;事後可經卡片 Edit 改名。
+// 名稱改於 Save 時 alert 輸入(非內嵌),編輯器無文字輸入故無鍵盤擠壓;事後可經卡片 Edit 改名。
 struct ThemeEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme

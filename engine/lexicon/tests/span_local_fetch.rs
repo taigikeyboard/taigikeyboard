@@ -25,7 +25,7 @@
 //! `tests/syllables_fst.rs:186-207`; dict.bin v2 builder is shared
 //! `tests/common/mod.rs::build_tkdb_v3`.
 
-// 中文: Phase 5 fetch_candidates_for_endings 契約測試 — 鎖 roadmap §Phase 5 三條 case (tsua / taigikhipuann / taixyz)。
+// Phase 5 fetch_candidates_for_endings 契約測試 — 鎖 roadmap §Phase 5 三條 case (tsua / taigikhipuann / taixyz)。
 
 use std::path::PathBuf;
 
@@ -48,7 +48,7 @@ use ranking::FrequencyMap;
 /// file — filter-narrowing cases live alongside their own ctx
 /// construction). Use [`ctx_neutral`] for the cold-start
 /// no-custom shorthand most cases need.
-// 中文: D7 — 把 ContinuousFetchCtx 收進 helper,call site 由 8 個位置參數縮到 3 個 + 1 個 ctx 引用。
+// D7 — 把 ContinuousFetchCtx 收進 helper,call site 由 8 個位置參數縮到 3 個 + 1 個 ctx 引用。
 fn ctx<'a>(
     freq_map: &'a FrequencyMap,
     now_ms: i64,
@@ -62,8 +62,8 @@ fn ctx<'a>(
     // `engine/lexicon/src/continuous.rs::item12_custom_dedupe_tests`
     // and the cross-mode parity tests in
     // `engine/phonetics/tests/canonical_tl_form.rs`.
-    // 中文: B-4 — 此 test 套件全 TL fixture,mode 預設 Tl;POJ 行為由
-    // 中文:   item12_custom_dedupe_tests + canonical_tl_form 跨 mode parity 測試覆蓋。
+    // B-4 — 此 test 套件全 TL fixture,mode 預設 Tl;POJ 行為由
+    //   item12_custom_dedupe_tests + canonical_tl_form 跨 mode parity 測試覆蓋。
     ContinuousFetchCtx {
         enabled_sources_bitmask: u32::MAX,
         freq_map,
@@ -79,7 +79,7 @@ fn ctx<'a>(
 /// Cold-start shorthand: empty `freq_map`, `now_ms = 0`, `custom = &[]`.
 /// Most Phase 5/9.1 regression cases need exactly this — the
 /// frequency / recency / custom axes are pinned by dedicated tests.
-// 中文: cold-start 簡寫 — 空 freq_map / now_ms=0 / 無 custom;絕大多數回歸測試用這個。
+// cold-start 簡寫 — 空 freq_map / now_ms=0 / 無 custom;絕大多數回歸測試用這個。
 fn ctx_neutral<'a>(
     freq_map: &'a FrequencyMap,
     prefix_index: &'a PrefixIndex,
@@ -589,7 +589,7 @@ fn hyphen_in_input_is_not_stripped_at_lexicon_layer() {
 // phrase in slot #1 regardless of that disparity.
 // ---------------------------------------------------------------------------
 
-// 中文: Phase 9.1 回歸守護矩陣 — hermetic 重現 `taiuantaigi` 排序失敗場景,鎖死 Tier 1 政策。
+// Phase 9.1 回歸守護矩陣 — hermetic 重現 `taiuantaigi` 排序失敗場景,鎖死 Tier 1 政策。
 
 #[test]
 fn taiuantaigi_full_buffer_phrase_outranks_high_freq_short_match() {
@@ -885,7 +885,7 @@ fn mode_carrier_propagates_through_fetch_for_hant_tailo_mixed() {
     //
     // Empty `hanzi` ("") drives the v2 dict.bin header's `hanzi_len = 0`,
     // which `DictionaryReader::record` decodes as `hanzi: None` → TAILO.
-    // 中文: Phase 9.2 mode 端對端契約;HANT / TAILO (hanzi=None via len=0) / MIXED 三種來源全跑過 record_to_candidate。
+    // Phase 9.2 mode 端對端契約;HANT / TAILO (hanzi=None via len=0) / MIXED 三種來源全跑過 record_to_candidate。
     let (prefix_index, dict) = build_fixture(
         "mode-plumb",
         &[
@@ -964,7 +964,7 @@ fn roman_and_hanji_propagate_through_fetch_for_hant_tailo_mixed() {
     // the integration boundary too. Empty `hanzi` ("") drives the v2
     // dict.bin header's `hanzi_len = 0`, which `DictionaryReader::record`
     // decodes as `hanzi: None` — the only TAILO path.
-    // 中文: Item 5 — 端對端契約;roman 永等於 record.tl,hanji 與 record.hanzi 雙向同步(None ⇔ TAILO)。
+    // Item 5 — 端對端契約;roman 永等於 record.tl,hanji 與 record.hanzi 雙向同步(None ⇔ TAILO)。
     let (prefix_index, dict) = build_fixture(
         "item5-carrier",
         &[
@@ -1046,8 +1046,8 @@ fn roman_and_hanji_propagate_through_fetch_for_hant_tailo_mixed() {
 /// composing crate (cyclic test seam), so we mirror the contract
 /// inline; the composing side's unit tests pin the canonicalize +
 /// hyphen-shadow + tone-digit-strip chain separately.
-// 中文: ASCII 限定的 partial-prefix key helper;lexicon 測試不能反 import composing,
-// 中文:   故在這裡 inline 一條同等的最小 pipeline (lower + 去 hyphen + 去 ASCII 數字)。
+// ASCII 限定的 partial-prefix key helper;lexicon 測試不能反 import composing,
+//   故在這裡 inline 一條同等的最小 pipeline (lower + 去 hyphen + 去 ASCII 數字)。
 fn partial_prefix_key_for(raw: &str) -> (ConsumedSpan, String) {
     let toneless: String = raw
         .to_ascii_lowercase()

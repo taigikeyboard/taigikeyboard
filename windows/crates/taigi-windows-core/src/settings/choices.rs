@@ -1,7 +1,7 @@
 //! String-backed settings choices. Each raw value is what `settings.json`
 //! stores; each roster order is the order the settings window lists them in.
 
-// 中文: 以字串儲存的設定選項;raw 值即 settings.json 內容,順序即設定視窗的排列。
+// 以字串儲存的設定選項;raw 值即 settings.json 內容,順序即設定視窗的排列。
 
 /// A setting whose stored form is one of a fixed set of strings.
 ///

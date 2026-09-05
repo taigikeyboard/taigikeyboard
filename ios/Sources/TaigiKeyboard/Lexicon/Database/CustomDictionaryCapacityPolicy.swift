@@ -1,5 +1,5 @@
-// 中文: 自訂詞庫容量上限策略 — 在 SQLiteConnectionManager 序列化區段內檢查 row count
-// 中文: 與 row 是否已存在,提供 TOCTOU 安全的 insert guard。
+// 自訂詞庫容量上限策略 — 在 SQLiteConnectionManager 序列化區段內檢查 row count
+// 與 row 是否已存在,提供 TOCTOU 安全的 insert guard。
 
 import Foundation
 import SQLite3
@@ -10,7 +10,7 @@ import SQLite3
 /// `MAX_ENTRY_COUNT`, and the helpers needed to enforce it inside a
 /// serialized `SQLiteConnectionManager.execute { db in ... }` block.
 /// Stateless — all methods operate on a caller-provided `OpaquePointer`.
-// 中文: 自訂詞庫的容量限制策略 — stateless,所有方法吃外部傳入的 OpaquePointer。
+// 自訂詞庫的容量限制策略 — stateless,所有方法吃外部傳入的 OpaquePointer。
 enum CustomDictionaryCapacityPolicy {
     /// Maximum number of rows.
     // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/dictionary/CustomDictionaryCapacityPolicy.kt (MAX_ENTRIES).
@@ -18,7 +18,7 @@ enum CustomDictionaryCapacityPolicy {
     static let maxEntries = 30000
 
     /// True when a row with the given `id` already exists.
-    // 中文: 指定 id 的 row 是否已存在。
+    // 指定 id 的 row 是否已存在。
     static func entryExists(db: OpaquePointer, id: String) -> Bool {
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
@@ -36,8 +36,8 @@ enum CustomDictionaryCapacityPolicy {
     /// Current row count. Returns 0 on prepare failure so the caller can
     /// treat connection problems as "not full" — subsequent writes will
     /// surface the underlying error.
-    // 中文: 目前 row 數。prepare 失敗回 0,讓 caller 把連線問題當成 "not full",
-    // 中文: 真正的錯誤交給後續寫入呼叫去暴露。
+    // 目前 row 數。prepare 失敗回 0,讓 caller 把連線問題當成 "not full",
+    // 真正的錯誤交給後續寫入呼叫去暴露。
     static func currentEntryCount(db: OpaquePointer) -> Int {
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
@@ -54,8 +54,8 @@ enum CustomDictionaryCapacityPolicy {
     /// Throw if inserting would exceed `maxEntries`. Updating an existing
     /// row (same `id`) is not an insert and bypasses the check.
     /// Must run inside the same transaction as the write to avoid TOCTOU.
-    // 中文: 插入前的容量 guard — 必須與寫入在同一個 transaction,避免 TOCTOU。
-    // 中文: 更新既存 row(id 已存在)不算 insert,直接跳過檢查。
+    // 插入前的容量 guard — 必須與寫入在同一個 transaction,避免 TOCTOU。
+    // 更新既存 row(id 已存在)不算 insert,直接跳過檢查。
     static func guardInsertCapacity(db: OpaquePointer, id: String) throws {
         if entryExists(db: db, id: id) { return }
         guard currentEntryCount(db: db) < maxEntries else {
@@ -66,7 +66,7 @@ enum CustomDictionaryCapacityPolicy {
     }
 
     /// Remaining capacity headroom. Negative values clamp to 0.
-    // 中文: 剩餘容量,負值 clamp 為 0。
+    // 剩餘容量,負值 clamp 為 0。
     static func remainingCapacity(db: OpaquePointer) -> Int {
         max(0, maxEntries - currentEntryCount(db: db))
     }

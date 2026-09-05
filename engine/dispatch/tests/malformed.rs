@@ -1,7 +1,7 @@
 //! `engine/dispatch::process_request` — malformed protobuf bytes must
 //! surface as `FailParse` without crashing the seam.
 
-// 中文: 驗證格式錯誤的 protobuf 輸入會回傳 FailParse,且不會擊穿 FFI 邊界。
+// 驗證格式錯誤的 protobuf 輸入會回傳 FailParse,且不會擊穿 FFI 邊界。
 
 use prost::Message;
 use protos::engine::{ErrorCode, Response};

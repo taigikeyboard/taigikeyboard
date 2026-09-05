@@ -1,5 +1,5 @@
-// 中文: KeyboardViewController 的 ComposingDelegate 實作擴充。
-// 中文: 把跨平台中性的 ComposingTransition.Effect 翻譯成 UITextDocumentProxy 動作。
+// KeyboardViewController 的 ComposingDelegate 實作擴充。
+// 把跨平台中性的 ComposingTransition.Effect 翻譯成 UITextDocumentProxy 動作。
 
 import Foundation
 import KeyboardKit
@@ -11,7 +11,7 @@ extension KeyboardViewController {
     /// Translate a platform-neutral `RustEngineBridge.ComposingTransition.Effect`
     /// to the iOS `UITextDocumentProxy` surface. Binding contract (iOS +
     /// Android) is documented in `composing-state-boundary.md` §2.2.
-    // 中文: 把 ComposingTransition.Effect 派送到 UITextDocumentProxy 對應動作。
+    // 把 ComposingTransition.Effect 派送到 UITextDocumentProxy 對應動作。
     func execute(_ effect: RustEngineBridge.ComposingTransition.Effect) {
         logger.debug({
             let kind = switch effect {
@@ -83,7 +83,7 @@ extension KeyboardViewController {
     /// composition (`Σ nailed.display_text` + derived pending tail); the
     /// host renders it as one marked region until a hard finalize. The
     /// caret sits at the end of the combined string.
-    // 中文: 設定組字中的 marked text(Model B:整段組字),游標放在尾端。
+    // 設定組字中的 marked text(Model B:整段組字),游標放在尾端。
     func setMarkedText(_ text: String) {
         textDocumentProxy.setMarkedText(text, selectedRange: NSRange(location: text.utf16.count, length: 0))
     }
@@ -92,7 +92,7 @@ extension KeyboardViewController {
     /// Used by `.clearPreeditWithoutCommit` and `.commitTextReplacingPreedit`.
     /// **Model B**: this clears the **whole** composition region (nailed +
     /// pending) — nailed segments were never literal document text.
-    // 中文: 清掉 marked text 並 unmark(Model B:清掉整段組字,nailed 從未在文件)。
+    // 清掉 marked text 並 unmark(Model B:清掉整段組字,nailed 從未在文件)。
     func clearMarkedText() {
         textDocumentProxy.setMarkedText("", selectedRange: NSRange(location: 0, length: 0))
         textDocumentProxy.unmarkText()

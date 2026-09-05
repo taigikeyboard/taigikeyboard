@@ -1,4 +1,4 @@
-// 中文: Setup guide ViewModel。檢查鍵盤啟用狀態並驅動 setup guide 顯示邏輯。
+// Setup guide ViewModel。檢查鍵盤啟用狀態並驅動 setup guide 顯示邏輯。
 
 import Combine
 import Foundation
@@ -11,14 +11,14 @@ import SwiftUI
 /// Setup guide view model.
 ///
 /// Checks keyboard activation status and controls setup guide flow.
-// 中文: Setup guide 的 ObservableObject ViewModel。@MainActor 確保所有狀態更新走主執行緒。
+// Setup guide 的 ObservableObject ViewModel。@MainActor 確保所有狀態更新走主執行緒。
 @MainActor
 class SetupGuideViewModel: ObservableObject {
-    // 中文: 鍵盤是否已在系統設定加入。
+    // 鍵盤是否已在系統設定加入。
     @Published var isKeyboardEnabled = false
-    // 中文: 是否已啟用「允許完整存取」(Full Access)。
+    // 是否已啟用「允許完整存取」(Full Access)。
     @Published var isFullAccessEnabled = false
-    // 中文: 是否要顯示 setup guide 全螢幕引導。
+    // 是否要顯示 setup guide 全螢幕引導。
     @Published var shouldShowSetupGuide = false
 
     private let keyboardBundleId: String
@@ -42,13 +42,13 @@ class SetupGuideViewModel: ObservableObject {
             .assign(to: &$isKeyboardEnabled)
     }
 
-    // 中文: 兩個前置條件都成立才視為設定完成。
+    // 兩個前置條件都成立才視為設定完成。
     var isSetupComplete: Bool {
         isKeyboardEnabled && isFullAccessEnabled
     }
 
     /// Re-check keyboard activation status.
-    // 中文: 重新檢查鍵盤啟用狀態(從系統設定回到 App 時會呼叫)。
+    // 重新檢查鍵盤啟用狀態(從系統設定回到 App 時會呼叫)。
     func refresh() {
         #if os(iOS)
             Task { @MainActor in
@@ -60,7 +60,7 @@ class SetupGuideViewModel: ObservableObject {
     }
 
     /// System Settings URL.
-    // 中文: 系統設定頁的開啟 URL(非 iOS 平台回傳 nil)。
+    // 系統設定頁的開啟 URL(非 iOS 平台回傳 nil)。
     var settingsURL: URL? {
         #if os(iOS)
             return URL(string: UIApplication.openSettingsURLString)
@@ -70,7 +70,7 @@ class SetupGuideViewModel: ObservableObject {
     }
 
     /// Check keyboard status; show setup guide if not complete.
-    // 中文: 啟動時呼叫 — 檢查鍵盤狀態,未完成時觸發 shouldShowSetupGuide=true。
+    // 啟動時呼叫 — 檢查鍵盤狀態,未完成時觸發 shouldShowSetupGuide=true。
     func checkKeyboardStatus() {
         Task { @MainActor in
             statusContext.refresh()
@@ -82,7 +82,7 @@ class SetupGuideViewModel: ObservableObject {
         }
     }
 
-    // 中文: 使用者主動關閉 setup guide(目前 UI 未實作該入口,保留 API)。
+    // 使用者主動關閉 setup guide(目前 UI 未實作該入口,保留 API)。
     func dismissSetupGuide() {
         Task { @MainActor in
             shouldShowSetupGuide = false

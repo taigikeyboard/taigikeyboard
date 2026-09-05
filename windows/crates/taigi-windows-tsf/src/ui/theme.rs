@@ -15,7 +15,7 @@
 //! the caller until Windows says they changed (`WM_SETTINGCHANGE` /
 //! `WM_THEMECHANGED` / `WM_DWMCOLORIZATIONCOLORCHANGED`) — not per keystroke.
 
-// 中文: 顏色主題 — 亮/暗、系統強調色、高對比全用系統色;色值取自 WinUI common theme resources(不是 Mac 的灰);不套 Sequoia 修正;Windows 無毛玻璃,改用不透明面 + flyout 邊框(具名差異)。
+// 顏色主題 — 亮/暗、系統強調色、高對比全用系統色;色值取自 WinUI common theme resources(不是 Mac 的灰);不套 Sequoia 修正;Windows 無毛玻璃,改用不透明面 + flyout 邊框(具名差異)。
 
 use taigi_windows_core::settings::AppearanceMode;
 use taigi_windows_platform::{HighContrastColors, Rgb};

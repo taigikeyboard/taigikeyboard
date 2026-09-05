@@ -1,12 +1,12 @@
 //! TL (Tâi-lô) assembly — ported from `taigi-converter/src/tl.js`.
 
-// 中文: TL (台羅) 音節組裝,從 (聲母, 韻母, 聲調) 組出 TL 顯示形式並決定聲調符號標哪個母音。
+// TL (台羅) 音節組裝,從 (聲母, 韻母, 聲調) 組出 TL 顯示形式並決定聲調符號標哪個母音。
 
 use crate::tables::tl_tone_mark;
 use unicode_normalization::UnicodeNormalization;
 
 /// Assemble a TL syllable from `initial + final + tone`. Output is NFC.
-// 中文: 從 (聲母, 韻母, 聲調) 組出 TL 音節,輸出為 NFC。
+// 從 (聲母, 韻母, 聲調) 組出 TL 音節,輸出為 NFC。
 pub fn to_tl(initial: &str, final_str: &str, tone: &str) -> String {
     let mark = tl_tone_mark(tone);
     let marked = place_tl_tone_mark(final_str, mark);
@@ -23,7 +23,7 @@ pub fn to_tl(initial: &str, final_str: &str, tone: &str) -> String {
 /// vowel per [`place_tl_tone_mark`]; leading consonants carry no vowel so they
 /// are untouched, and syllabic nasals (`ng`/`m`) get the mark on `n`/`m`.
 /// Output is NFC. Tone 1/4 (and toneless) have no mark → returns `syllable`.
-// 中文: 直接在字面音節上放 TL 聲調符號,不做任何拼寫正規化(goa→goá、teng→téng)。
+// 直接在字面音節上放 TL 聲調符號,不做任何拼寫正規化(goa→goá、teng→téng)。
 pub fn apply_tl_tone_literal(syllable: &str, tone: &str) -> String {
     let mark = tl_tone_mark(tone);
     place_tl_tone_mark(syllable, mark).nfc().collect()

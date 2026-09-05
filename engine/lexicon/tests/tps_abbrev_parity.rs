@@ -36,9 +36,9 @@
 //! notone form). The csv has 28 non-empty `tps_abbrev_var` rows; pin
 //! all of them.
 
-// 中文: D / C-5 — runtime TPS-abbrev derive 與 build pipeline 平行性測試。
-// 中文:   逐行 dictionary.csv 取 (tl, tps_abbrev) → 跑 runtime derivation → 對位 byte-match。
-// 中文:   再對 tps_abbrev_var 欄(28 行)跑 tps_notone_or_variant 同等變體規則檢查。
+// D / C-5 — runtime TPS-abbrev derive 與 build pipeline 平行性測試。
+//   逐行 dictionary.csv 取 (tl, tps_abbrev) → 跑 runtime derivation → 對位 byte-match。
+//   再對 tps_abbrev_var 欄(28 行)跑 tps_notone_or_variant 同等變體規則檢查。
 
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -48,7 +48,7 @@ use std::path::PathBuf;
 /// Returns the concatenated first-Bopomofo-char-per-syllable abbrev, or
 /// `""` when (a) TL has <2 tokens, or (b) any token's per-syllable TPS
 /// is empty (Node bridge rejection in production).
-// 中文: extract_tps_abbrev 的 runtime 鏡像;<2 音節或任一音節 TPS 空 ⇒ "".
+// extract_tps_abbrev 的 runtime 鏡像;<2 音節或任一音節 TPS 空 ⇒ "".
 fn derive_tps_abbrev_runtime(tl: &str) -> String {
     let tokens: Vec<&str> = tl
         .split(['-', ' ', '\t'])
@@ -212,8 +212,8 @@ fn runtime_tps_abbrev_var_matches_build_pipeline_for_every_row() {
     // empty-var rows would mask a regression where the build pipeline
     // stops populating `tps_abbrev_var` entirely. Codex post-impl
     // BLOCK 2026-05-26.
-    // 中文: 不能略過空 var 行,否則 pipeline 停發變體時測試會無聲通過;
-    // 中文:   逐行比對 derived (含空) vs CSV var,並追蹤含 ㄜ 行最少筆數。
+    // 不能略過空 var 行,否則 pipeline 停發變體時測試會無聲通過;
+    //   逐行比對 derived (含空) vs CSV var,並追蹤含 ㄜ 行最少筆數。
     let mut compared = 0usize;
     let mut anomalies = 0usize;
     let mut nonempty_vars = 0usize;
@@ -262,8 +262,8 @@ fn runtime_tps_abbrev_var_matches_build_pipeline_for_every_row() {
     // multi-syllable rows whose first-Bopomofo abbrev char is ㄜ, e.g.
     // er/or-initial nuclei). Asserting > 0 catches a build-pipeline
     // regression that silently zeros out the column.
-    // 中文: 覆蓋率守門 — pipeline 完全停發變體時上面 drift loop 仍會 0/0 過關,
-    // 中文:   故強制 nonempty_vars > 0(C-3a 後 CSV 應有 ~28 筆,只有首音節縮寫為 ㄜ 之列)。
+    // 覆蓋率守門 — pipeline 完全停發變體時上面 drift loop 仍會 0/0 過關,
+    //   故強制 nonempty_vars > 0(C-3a 後 CSV 應有 ~28 筆,只有首音節縮寫為 ㄜ 之列)。
     assert!(
         nonempty_vars > 0,
         "expected the shipped CSV to contain at least one non-empty \

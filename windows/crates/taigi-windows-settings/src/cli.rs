@@ -2,7 +2,7 @@
 //! one contract for both sides): which pane to open on, whether to run an
 //! update check with the window up, or headless.
 
-// 中文: 解析 DLL 傳來的命令列 — 開哪個 pane、要不要檢查更新。
+// 解析 DLL 傳來的命令列 — 開哪個 pane、要不要檢查更新。
 
 use taigi_windows_core::settings::launch::{
     CHECK_NOW_FLAG, CHECK_UPDATES_FLAG, PANE_FLAG, PREWARM_FLAG,

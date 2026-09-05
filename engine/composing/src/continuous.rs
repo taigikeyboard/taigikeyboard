@@ -77,11 +77,11 @@
 //! Spec source-of-truth: `docs/reports/2026-05-18-v358-refactor-design-spec.md`
 //! § 2 + ⭐ B1 / B2 / S7 amendment block.
 
-// 中文: A2 — composing::continuous seam。assemble_candidates 統一 6-step 契約 +
-// 中文:   D1 fold (build_shadow_lattice 單建) + D3 honest type (WalkerSlot0)。
-// 中文: with_state 單一,B1 step 順序載重,B2 lifecycle invariant = install 只在
-// 中文:   mobile-IME startup,FetchAtPos 不可達。POJ render/dedupe 在 walker prepend 後。
-// 中文: spec docs/reports/2026-05-18-v358-refactor-design-spec.md §2 + ⭐ B1/B2/S7。
+// A2 — composing::continuous seam。assemble_candidates 統一 6-step 契約 +
+//   D1 fold (build_shadow_lattice 單建) + D3 honest type (WalkerSlot0)。
+// with_state 單一,B1 step 順序載重,B2 lifecycle invariant = install 只在
+//   mobile-IME startup,FetchAtPos 不可達。POJ render/dedupe 在 walker prepend 後。
+// spec docs/reports/2026-05-18-v358-refactor-design-spec.md §2 + ⭐ B1/B2/S7。
 
 use crate::shadow::{
     build_continuous_keys, build_partial_prefix_key, custom_toneless_key,
@@ -110,9 +110,9 @@ use ranking::{decayed_user_weight_delta, recency_rank, FrequencyMap};
 /// `0` at the seam — slot 0 is an explicit prepend, never sort-compared,
 /// so they are informational only. `form` is stamped `FORM_NOTONE` at the
 /// seam (walker always emits the toneless representation).
-// 中文: D3 honest type — walker 原生結果。cost 是 min-cost 目標 (低-best);
-// 中文:   seam 轉 wire 時 score = -(cost as f32) (CandidateMessage.score field 5 契約)。
-// 中文:   frequency/bitmask/form 由 seam 戳定 (walker 無關),slot 0 explicit prepend 不參與排序。
+// D3 honest type — walker 原生結果。cost 是 min-cost 目標 (低-best);
+//   seam 轉 wire 時 score = -(cost as f32) (CandidateMessage.score field 5 契約)。
+//   frequency/bitmask/form 由 seam 戳定 (walker 無關),slot 0 explicit prepend 不參與排序。
 pub(crate) struct WalkerSlot0 {
     pub cost: f64,
     pub consumed_span: ConsumedSpan,
@@ -149,9 +149,9 @@ pub(crate) struct WalkerSlot0 {
 /// span-local list untouched (pre-S2 behavior). Leading / internal
 /// hyphens fold INTO the consumed prefix
 /// (`shadow_to_raw_end[shadow_len] == raw_len`) and still synth.
-// 中文: S2 (Codex post-impl P1) — walker 跨 shadow,slot-0 在 raw 空間 commit。
-// 中文:   尾端 `-` 被 shadow 剝掉且 S1 契約留在 pending → shadow_to_raw_end[len] < raw_len;
-// 中文:   此時發 (0,raw_len) 會誤吃 pending `-`,故抑制 synth(維持 pre-S2)。leading/internal `-` 已併入前綴仍 synth。
+// S2 (Codex post-impl P1) — walker 跨 shadow,slot-0 在 raw 空間 commit。
+//   尾端 `-` 被 shadow 剝掉且 S1 契約留在 pending → shadow_to_raw_end[len] < raw_len;
+//   此時發 (0,raw_len) 會誤吃 pending `-`,故抑制 synth(維持 pre-S2)。leading/internal `-` 已併入前綴仍 synth。
 fn synth_consumed_span(
     shadow_to_raw_end: &[usize],
     shadow_len: usize,
@@ -171,9 +171,9 @@ fn synth_consumed_span(
 /// the engine-owned continuous casing of Codex pre-impl 2A locus =
 /// candidate construction; the legacy platform `SuggestionCaseTransformer`
 /// is bypassed for continuous candidates so this is the single source.
-// 中文: 由使用者該段 raw 推導 LetterCase,讓連續候選 roman 跟著使用者實際打的大小寫
-// 中文:   (Hittui → Hit 大寫、tui 小寫)。只看英文字母;無字母 → Lowercased。
-// 中文:   2A locus = 候選構造;平台 SuggestionCaseTransformer 對連續候選 bypass,此為唯一源。
+// 由使用者該段 raw 推導 LetterCase,讓連續候選 roman 跟著使用者實際打的大小寫
+//   (Hittui → Hit 大寫、tui 小寫)。只看英文字母;無字母 → Lowercased。
+//   2A locus = 候選構造;平台 SuggestionCaseTransformer 對連續候選 bypass,此為唯一源。
 fn raw_segment_letter_case(raw_seg: &str) -> phonetics::case_transform::LetterCase {
     use phonetics::case_transform::LetterCase;
     let mut alphas = raw_seg.chars().filter(|c| c.is_alphabetic());
@@ -196,8 +196,8 @@ fn raw_segment_letter_case(raw_seg: &str) -> phonetics::case_transform::LetterCa
 /// derive the case intent, never sliced against the roman, so a
 /// toneless-ASCII raw vs tone-diacritic roman length mismatch is a
 /// non-issue — Codex pre-impl 2026-05-18).
-// 中文: 用 raw_seg 推得的 case 經 transform_input_case(tone-aware)套到 roman;
-// 中文:   raw 只用來決定 case 意圖,不與 roman 對齊切片,故長度不一致無妨。
+// 用 raw_seg 推得的 case 經 transform_input_case(tone-aware)套到 roman;
+//   raw 只用來決定 case 意圖,不與 roman 對齊切片,故長度不一致無妨。
 fn recase_roman(roman: &str, raw_seg: &str, mode: phonetics::InputMode) -> String {
     phonetics::case_transform::transform_input_case(roman, raw_segment_letter_case(raw_seg), mode)
 }
@@ -226,14 +226,14 @@ fn recase_roman(roman: &str, raw_seg: &str, mode: phonetics::InputMode) -> Strin
 /// all-caps — a bounded POJ-only edge far outside normal use, not the
 /// reported `oo`/`nn` defect. Presentation only — never feed `display_text`
 /// (the canonical commit / `user_frequency.db` key) here.
-// 中文: C-4 — POJ display 重寫(TL→POJ-display:oo→o͘、nn→ⁿ、ua→oa…)加上 POJ-aware case 還原。
-// 中文:   非 mode 路由,非 TL↔POJ canonical 管線(canonical commit key 走 canonical_tl_form)。
-// 中文:   assemble_candidates step 5;只在 POJ mode 由 caller 呼叫,簽章 POJ-only 不接受 mode 漂移。
-// 中文: TL→POJ rewriter 只 title-case,CapsLock(HOO)會塌成 Ho͘,此處還原成 HO͘
-// 中文:   (Codex pre-impl 2026-05-19 BLOCK)。span-local 單段 case 均勻故精確;
-// 中文:   walker 多段異質大小寫依整串首字母塌成單一桶(首小寫⇒全小寫;
-// 中文:   首大寫但其餘非全大寫⇒僅首字大寫;全大寫⇒全大寫)— POJ-only 邊角,非回報 bug。
-// 中文:   只處理呈現 roman,勿傳 display_text。
+// C-4 — POJ display 重寫(TL→POJ-display:oo→o͘、nn→ⁿ、ua→oa…)加上 POJ-aware case 還原。
+//   非 mode 路由,非 TL↔POJ canonical 管線(canonical commit key 走 canonical_tl_form)。
+//   assemble_candidates step 5;只在 POJ mode 由 caller 呼叫,簽章 POJ-only 不接受 mode 漂移。
+// TL→POJ rewriter 只 title-case,CapsLock(HOO)會塌成 Ho͘,此處還原成 HO͘
+//   (Codex pre-impl 2026-05-19 BLOCK)。span-local 單段 case 均勻故精確;
+//   walker 多段異質大小寫依整串首字母塌成單一桶(首小寫⇒全小寫;
+//   首大寫但其餘非全大寫⇒僅首字大寫;全大寫⇒全大寫)— POJ-only 邊角,非回報 bug。
+//   只處理呈現 roman,勿傳 display_text。
 fn recase_tl_as_poj_display(roman: &str) -> String {
     let case = raw_segment_letter_case(roman);
     let poj = phonetics::api::tl_display_to_poj_display(roman);
@@ -280,17 +280,17 @@ fn recase_tl_as_poj_display(roman: &str) -> String {
 /// so two `dict.bin` rows differing only on `roman` (e.g. `灣 / uan`
 /// vs `灣 / uân` at the same TPS-toneless key `ㄨㄢ`) survive the
 /// pre-render `(roman, hanji, span)` dedupe yet render identically.
-// 中文: POJ render 後才相等的候選去重(custom 存 POJ `gô͘` vs dict TL `gôo`,
-// 中文:   同 hanji+span 過不了 raw `roman` 的 pre-render 去重,render 後皆 `gô͘`)。
-// 中文:   first-wins 取「執行時當下候選向量」中較前者(post-sort、post 整句 prepend),
-// 中文:   故 index 0 整句最佳候選不被丟。hanji 存在時行為中性。
-// 中文:   B-4 已關掉 romanization-only(hanji==None)子情境的 freq-key 不一致:
-// 中文:   lexicon::custom_entry_to_candidate 走 canonical_tl_form。但 B-4 刻意保留 entry.roman
-// 中文:   原樣(walker / custom_toneless_key 需 user 原形對齊 POJ-family lattice 鍵),
-// 中文:   故 hanji-bearing 的 custom-vs-dict-POJ-form 視覺重複仍需此 post-render dedupe 兜底。
-// 中文:   穩態 load-bearing,非過渡兜底。只在 POJ 分支呼叫。
-// 中文:   TPS 走 dedupe_display_hanji_for_tps,因 TPS UI 只顯示漢字,純羅馬字差異(灣/uan vs 灣/uân
-// 中文:   同 tps:ㄨㄢ)無法被 pre-render (roman,hanji,span) 去重攔下。
+// POJ render 後才相等的候選去重(custom 存 POJ `gô͘` vs dict TL `gôo`,
+//   同 hanji+span 過不了 raw `roman` 的 pre-render 去重,render 後皆 `gô͘`)。
+//   first-wins 取「執行時當下候選向量」中較前者(post-sort、post 整句 prepend),
+//   故 index 0 整句最佳候選不被丟。hanji 存在時行為中性。
+//   B-4 已關掉 romanization-only(hanji==None)子情境的 freq-key 不一致:
+//   lexicon::custom_entry_to_candidate 走 canonical_tl_form。但 B-4 刻意保留 entry.roman
+//   原樣(walker / custom_toneless_key 需 user 原形對齊 POJ-family lattice 鍵),
+//   故 hanji-bearing 的 custom-vs-dict-POJ-form 視覺重複仍需此 post-render dedupe 兜底。
+//   穩態 load-bearing,非過渡兜底。只在 POJ 分支呼叫。
+//   TPS 走 dedupe_display_hanji_for_tps,因 TPS UI 只顯示漢字,純羅馬字差異(灣/uan vs 灣/uân
+//   同 tps:ㄨㄢ)無法被 pre-render (roman,hanji,span) 去重攔下。
 fn dedupe_rendered_continuous(candidates: &mut Vec<RawCandidate>) {
     retain_first_by_key(candidates, |c| {
         Some((c.roman.clone(), c.hanji.clone(), c.consumed_span))
@@ -301,7 +301,7 @@ fn dedupe_rendered_continuous(candidates: &mut Vec<RawCandidate>) {
 /// is always kept. The one body behind every post-sort "first-seen wins"
 /// pass (rendered / TPS-hanji / 羅馬字-roman), so their survivor rule cannot
 /// drift.
-// 中文: 排序後「first-seen 留下」的共用本體;key 為 None 者一律保留。
+// 排序後「first-seen 留下」的共用本體;key 為 None 者一律保留。
 pub(crate) fn retain_first_by_key<K: std::hash::Hash + Eq>(
     candidates: &mut Vec<RawCandidate>,
     key: impl Fn(&RawCandidate) -> Option<K>,
@@ -325,10 +325,10 @@ pub(crate) fn retain_first_by_key<K: std::hash::Hash + Eq>(
 /// recognize when the walker's space-joined synth is a malformed
 /// rendering of an existing full-span dict word, so the dict word's
 /// canonical separator form can take slot 0 instead.
-// 中文: 兩個羅馬字「同讀音」= 僅差音節分隔符(空格 / `-` 連字 / `--` 輕聲);
-// 中文:   聲調符號在音節字母內,不剝除 → 保聲調。hōo guá == hōo--guá(予我),
-// 中文:   但 != hōo-guā(戶外,七聲≠二聲)。供 slot-0 promote 辨識 synth 是否為
-// 中文:   既有全 span 字典詞的錯誤(空格)呈現。
+// 兩個羅馬字「同讀音」= 僅差音節分隔符(空格 / `-` 連字 / `--` 輕聲);
+//   聲調符號在音節字母內,不剝除 → 保聲調。hōo guá == hōo--guá(予我),
+//   但 != hōo-guā(戶外,七聲≠二聲)。供 slot-0 promote 辨識 synth 是否為
+//   既有全 span 字典詞的錯誤(空格)呈現。
 fn roman_reading_eq(a: &str, b: &str) -> bool {
     fn is_kept(c: &char) -> bool {
         *c != ' ' && *c != '-'
@@ -364,11 +364,11 @@ fn roman_reading_eq(a: &str, b: &str) -> bool {
 /// `lexicon::dedupe_by_roman_hanji_span` already collapses exact
 /// `(roman, hanji, span)` duplicates so this branch never reaches a
 /// truly identical pair.
-// 中文: TPS 顯示去重 — (hanji, consumed_span) 為鍵;TPS UI 只顯示漢字,純羅馬字差異
-// 中文:   (灣/uan vs 灣/uân 皆掛 tps:ㄨㄢ) 在 TPS 是視覺重複,在 TL/POJ 是合法獨立列。
-// 中文:   排序+walker slot-0 prepend+(TPS no-op) POJ render 之後跑,first-seen = 最高排名。
-// 中文:   保留 span 讓「同 hanji 不同 span」(partial vs full-buffer)合法候選不被誤併;
-// 中文:   hanji 為 None 或空字串者一律保留(顯示為 TPS/羅馬字,以 roman 區隔)。
+// TPS 顯示去重 — (hanji, consumed_span) 為鍵;TPS UI 只顯示漢字,純羅馬字差異
+//   (灣/uan vs 灣/uân 皆掛 tps:ㄨㄢ) 在 TPS 是視覺重複,在 TL/POJ 是合法獨立列。
+//   排序+walker slot-0 prepend+(TPS no-op) POJ render 之後跑,first-seen = 最高排名。
+//   保留 span 讓「同 hanji 不同 span」(partial vs full-buffer)合法候選不被誤併;
+//   hanji 為 None 或空字串者一律保留(顯示為 TPS/羅馬字,以 roman 區隔)。
 fn dedupe_display_hanji_for_tps(candidates: &mut Vec<RawCandidate>) {
     retain_first_by_key(candidates, |c| {
         c.hanji
@@ -385,9 +385,9 @@ fn dedupe_display_hanji_for_tps(candidates: &mut Vec<RawCandidate>) {
 // TL / POJ do; the legacy per-syllable `phonetics::tps_to_tl` fold into
 // `tl:` keys was the one place TPS diverged from the shared seam and is
 // no longer needed.
-// 中文: D / C-3b — build_keys_tps 與 strip_trailing_tone_digit 退役。
-// 中文:   TPS 改走與 TL/POJ 共用的 shadow → lattice 路徑(mode-aware tone strip
-// 中文:   + tps: 家族),不再經 phonetics::tps_to_tl 折成 tl: 家族鍵。
+// D / C-3b — build_keys_tps 與 strip_trailing_tone_digit 退役。
+//   TPS 改走與 TL/POJ 共用的 shadow → lattice 路徑(mode-aware tone strip
+//   + tps: 家族),不再經 phonetics::tps_to_tl 折成 tl: 家族鍵。
 
 // ============================================================================
 // Inner fetchers — take pre-resolved lexicon state (no with_state inside).
@@ -403,9 +403,9 @@ fn dedupe_display_hanji_for_tps(candidates: &mut Vec<RawCandidate>) {
 /// args. PR-9.6 — `enabled_sources_bitmask` is the platform's source-toggle
 /// state (sentinel-normalised in `dispatch::handle_fetch_at_pos`), built
 /// into the ctx at the seam (`assemble_candidates`), not here.
-// 中文: A2 — fetch_via_lexicon 純內層;D1 fold 後 prefix/dict 由 seam 提取。
-// 中文: D7 改:六個共用 arg 收進 ContinuousFetchCtx,seam 端建一次傳兩個 inner。
-// 中文: PR-9.6 — bitmask 為平台 source-toggle 值(dispatch 端正規化),在 seam 建入 ctx,非此處。
+// A2 — fetch_via_lexicon 純內層;D1 fold 後 prefix/dict 由 seam 提取。
+// D7 改:六個共用 arg 收進 ContinuousFetchCtx,seam 端建一次傳兩個 inner。
+// PR-9.6 — bitmask 為平台 source-toggle 值(dispatch 端正規化),在 seam 建入 ctx,非此處。
 fn fetch_via_lexicon_inner(
     keys: &[(ConsumedSpan, String)],
     keys_final_only: &[Vec<usize>],
@@ -432,10 +432,10 @@ fn fetch_via_lexicon_inner(
 /// keeping the seam's single-source-of-truth invariant. v3.5.9 B-2
 /// makes the emitter mode-aware so POJ partial-prefix keys land in the
 /// `poj:` family rather than folding through the TL chain.
-// 中文: A2 — fetch_via_lexicon_partial 純內層;build_partial_prefix_key 純函式先跑,prefix/dict 由 seam 提取。
-// 中文: D7 改:六個共用 arg 收進 ContinuousFetchCtx;mode 為 shadow key 構造輸入,留 separate arg。
-// 中文: B-0c 改:`mode: phonetics::InputMode` 取代 `is_poj: bool`,語意對齊(POJ 等價 mode == Poj)。
-// 中文: B-2 改:build_partial_prefix_key (脫 `_tl` 後綴) emitter 改 mode-aware,POJ 走 `poj:` 家族。
+// A2 — fetch_via_lexicon_partial 純內層;build_partial_prefix_key 純函式先跑,prefix/dict 由 seam 提取。
+// D7 改:六個共用 arg 收進 ContinuousFetchCtx;mode 為 shadow key 構造輸入,留 separate arg。
+// B-0c 改:`mode: phonetics::InputMode` 取代 `is_poj: bool`,語意對齊(POJ 等價 mode == Poj)。
+// B-2 改:build_partial_prefix_key (脫 `_tl` 後綴) emitter 改 mode-aware,POJ 走 `poj:` 家族。
 fn fetch_via_lexicon_partial_inner(
     raw: &str,
     raw_len: u32,
@@ -456,9 +456,9 @@ fn fetch_via_lexicon_partial_inner(
 /// The empty-keys branch keeps using
 /// [`fetch_via_lexicon_partial_inner`] (bounded wrapper) because it has
 /// no FULL block to exclude against.
-// 中文: Step 4b 專用 — 不裁尾的 partial-prefix fetcher;Codex PR #351 r3321758666 反應的
-// 中文:   bug:exact 同音字 ≥30 時,bounded 版會把 OUTPUT_CAP 全消耗在被 dedupe 剔除的 row。
-// 中文:   un-bounded 版讓 Step 4b 在 caller 端套 exclude → 自己裁,確保延伸候選能浮現。
+// Step 4b 專用 — 不裁尾的 partial-prefix fetcher;Codex PR #351 r3321758666 反應的
+//   bug:exact 同音字 ≥30 時,bounded 版會把 OUTPUT_CAP 全消耗在被 dedupe 剔除的 row。
+//   un-bounded 版讓 Step 4b 在 caller 端套 exclude → 自己裁,確保延伸候選能浮現。
 fn fetch_via_lexicon_partial_inner_unbounded(
     raw: &str,
     raw_len: u32,
@@ -491,9 +491,9 @@ fn fetch_via_lexicon_partial_inner_impl(
     // of a partial-prefix hit flips between branches as the user crosses the
     // first syllable boundary (e.g. typing `T` → keys.is_empty() arm,
     // unrecased; then `Ta` → else-arm + Step 4b, recased).
-    // 中文: partial-prefix 候選 consumed_span 由 build_partial_prefix_key 釘成 (0,raw_len);
-    // 中文:   集中在此 recase 讓 empty-keys 與 Step 4b 兩條路徑共用同一大小寫規則,
-    // 中文:   避免使用者跨第一個音節邊界時同一字典 row 的大小寫忽然翻轉。
+    // partial-prefix 候選 consumed_span 由 build_partial_prefix_key 釘成 (0,raw_len);
+    //   集中在此 recase 讓 empty-keys 與 Step 4b 兩條路徑共用同一大小寫規則,
+    //   避免使用者跨第一個音節邊界時同一字典 row 的大小寫忽然翻轉。
     if raw_len as usize <= raw.len() {
         let seg = &raw[..raw_len as usize];
         for cand in &mut out {
@@ -520,11 +520,11 @@ fn fetch_via_lexicon_partial_inner_impl(
 /// Returns `None` when the synth must be suppressed (trailing-hyphen
 /// shadow short of raw, or the walker cannot span the buffer) — caller
 /// leaves the span-local list untouched (pre-S2 behavior preserved).
-// 中文: A2 — fetch_walker_slot0 純內層;D1 fold 後 (shadow, shadow_to_raw_end, lattice, inv,
-// 中文:   prefix, dict) 由 seam 預建傳入,內層只走 walker + tail。
-// 中文: B-0c — mode 由 seam 顯式傳入(取代 is_poj bool);確保 build_shadow_lattice 與
-// 中文:   custom_toneless_key 同一 mode,不可未來 refactor 漂移。
-// 中文: 回傳 WalkerSlot0 (D3),seam 轉 wire 時 score = -(cost as f32);trailing-hyphen 抑制仍 None。
+// A2 — fetch_walker_slot0 純內層;D1 fold 後 (shadow, shadow_to_raw_end, lattice, inv,
+//   prefix, dict) 由 seam 預建傳入,內層只走 walker + tail。
+// B-0c — mode 由 seam 顯式傳入(取代 is_poj bool);確保 build_shadow_lattice 與
+//   custom_toneless_key 同一 mode,不可未來 refactor 漂移。
+// 回傳 WalkerSlot0 (D3),seam 轉 wire 時 score = -(cost as f32);trailing-hyphen 抑制仍 None。
 #[allow(clippy::too_many_arguments)]
 fn fetch_walker_slot0_inner(
     raw: &str,
@@ -558,11 +558,11 @@ fn fetch_walker_slot0_inner(
     // makes the contract local — a split-brain (POJ-aware edges,
     // mode-blind custom keys) would silently drop custom matches in
     // POJ mode.
-    // 中文: S6 — per-fetch「custom toneless key → entry」表;custom_toneless_key 重用同一 shadow pipeline
-    // 中文:   → 命中與 lattice edge key byte-identical(Q2 BLOCK:POJ/diacritic 須先 canonicalize);
-    // 中文:   同 key 重複 = or_insert first-wins(Codex Q6,非 HashMap 覆寫)。
-    // 中文: S6 byte-identity — 同一 mode 餵 build_shadow_lattice 與 custom_toneless_key;
-    // 中文:   參數傳入(B-0c enum sweep)而非 from-mode 內部推導,split-brain 不可能。
+    // S6 — per-fetch「custom toneless key → entry」表;custom_toneless_key 重用同一 shadow pipeline
+    //   → 命中與 lattice edge key byte-identical(Q2 BLOCK:POJ/diacritic 須先 canonicalize);
+    //   同 key 重複 = or_insert first-wins(Codex Q6,非 HashMap 覆寫)。
+    // S6 byte-identity — 同一 mode 餵 build_shadow_lattice 與 custom_toneless_key;
+    //   參數傳入(B-0c enum sweep)而非 from-mode 內部推導,split-brain 不可能。
     let mut custom_map: std::collections::HashMap<String, &CustomEntry> =
         std::collections::HashMap::with_capacity(custom.len());
     for entry in custom {
@@ -575,10 +575,10 @@ fn fetch_walker_slot0_inner(
             // stored canonically. Safe on a fused body because an alias key is
             // disjoint from every canonical key — see
             // `phonetics::nasal_oo_alias_spelling`.
-            // 中文: 鼻化 oo 別名 —— 字典建置期會在正規 onn 旁索引 o͘ⁿ 寫法,但碰不到
-            // 中文:   custom_dictionary.db(使用者資料),所以自訂詞在這裡補同一件事:
-            // 中文:   以 ho͘nnhian 打 好玄 產生的 edge key 是 tl:hoonnhian,必須查得到
-            // 中文:   以正規拼法存的自訂詞。融合鍵上安全的理由見 nasal_oo_alias_spelling。
+            // 鼻化 oo 別名 —— 字典建置期會在正規 onn 旁索引 o͘ⁿ 寫法,但碰不到
+            //   custom_dictionary.db(使用者資料),所以自訂詞在這裡補同一件事:
+            //   以 ho͘nnhian 打 好玄 產生的 edge key 是 tl:hoonnhian,必須查得到
+            //   以正規拼法存的自訂詞。融合鍵上安全的理由見 nasal_oo_alias_spelling。
             if let Some(alias) = phonetics::nasal_oo_alias_spelling(&k) {
                 custom_map.entry(alias).or_insert(entry);
             }
@@ -607,7 +607,7 @@ fn fetch_walker_slot0_inner(
         // ASCII digits (byte-identical to legacy `strip_ascii_tone_digits`),
         // TPS drops the 8 Bopomofo tone marks so the body matches the
         // `tps:<tps_notone>` family from C-0.
-        // 中文: D / C-3b — mode-aware tone 剝除;TPS 改剝注音聲調,對齊 tps_notone 家族。
+        // D / C-3b — mode-aware tone 剝除;TPS 改剝注音聲調,對齊 tps_notone 家族。
         let toneless = strip_tones_for_mode(&shadow[start..end], mode);
         if toneless.is_empty() {
             return None;
@@ -620,22 +620,22 @@ fn fetch_walker_slot0_inner(
         // feeding the shadow + lattice (`build_shadow_lattice`) above
         // also feeds the key prefix here, so the lookup family is
         // consistent with the inventory family that produced the edge.
-        // 中文: B-2 — walker edge key mode-aware,單一 mode 同時驅動 shadow / lattice / key 前綴,
-        // 中文:   不同家族 (tl/poj/tps) 不會由不同來源分歧。
+        // B-2 — walker edge key mode-aware,單一 mode 同時驅動 shadow / lattice / key 前綴,
+        //   不同家族 (tl/poj/tps) 不會由不同來源分歧。
         let key_prefix = crate::shadow::mode_key_prefix(mode);
         // Explicit-tone fix — the DICT lookup is tone-aware: a fully-toned
         // edge (`tai5`) looks up the verbatim `tl:tai5` key so slot 0 can
         // only be synthesized from the typed tone, matching the span-local
         // list (a split — span-local toned, walker toneless — would let a
         // wrong-tone word reappear at slot 0). See [`crate::shadow::fst_body_for_span`].
-        // 中文: 明確聲調修正 — dict 查詢 tone-aware:全含調 edge(tai5)查 verbatim `tl:tai5`,
-        // 中文:   slot 0 只會從使用者輸入的聲調合成,與 span-local 列一致(否則錯調字會在 slot 0 復活)。
+        // 明確聲調修正 — dict 查詢 tone-aware:全含調 edge(tai5)查 verbatim `tl:tai5`,
+        //   slot 0 只會從使用者輸入的聲調合成,與 span-local 列一致(否則錯調字會在 slot 0 復活)。
         let edge_body = crate::shadow::fst_body_for_span(&shadow[start..end], mode);
         // §35 — this edge may span a stripped separator (multi-syllable
         // chain); compute the same Final-only restriction the span-local
         // keys carry. Barrier offsets are whole-shadow; shift into edge
         // coordinates.
-        // 中文: §35 — edge 可能跨 stripped 分隔符;以 edge 座標算與 span-local 相同的 Final-only 限制。
+        // §35 — edge 可能跨 stripped 分隔符;以 edge 座標算與 span-local 相同的 Final-only 限制。
         let edge_barriers: Vec<usize> = barriers
             .iter()
             .filter(|&&b| b > start && b <= end)
@@ -656,10 +656,10 @@ fn fetch_walker_slot0_inner(
         // edge sources answer to the same pin — a custom entry synthesized
         // past the guard would land at slot 0, where no downstream lexicon
         // filter can reach it (Codex post-impl BLOCK, 2026-08-20).
-        // 中文: A3 (§41) — 看的是 edge 自己的結尾:停在被剝空白上才釘定;跨過 barrier 的不釘
-        // 中文:   (§31 台機首音 tai5、§35 毋是首音 m7)。在下方 custom override 之前算,
-        // 中文:   讓兩種 edge 來源套同一個釘定 — 漏過去的 custom 會直接成為 slot 0,
-        // 中文:   下游 lexicon 過濾撈不到 (Codex post-impl BLOCK 2026-08-20)。
+        // A3 (§41) — 看的是 edge 自己的結尾:停在被剝空白上才釘定;跨過 barrier 的不釘
+        //   (§31 台機首音 tai5、§35 毋是首音 m7)。在下方 custom override 之前算,
+        //   讓兩種 edge 來源套同一個釘定 — 漏過去的 custom 會直接成為 slot 0,
+        //   下游 lexicon 過濾撈不到 (Codex post-impl BLOCK 2026-08-20)。
         let edge_tone_pinned =
             crate::shadow::span_end_pins_unmarked_tone(&shadow[start..end], end, mode, barriers);
         // Custom override matching stays tone-INSENSITIVE: `custom_map` is
@@ -682,15 +682,15 @@ fn fetch_walker_slot0_inner(
         // the pin becomes slot 0, where no downstream lexicon filter can
         // reach it. Raised by Codex post-impl 2026-08-20; the "already
         // fires today" part of that finding did not survive verification.
-        // 中文: custom override 的比對維持 tone-insensitive(以 custom_toneless_key 去調鍵查詢);
-        // 中文:   A3 (§41) 加的不是另一組比對鍵,而是對「詞條自身讀法」的資格判斷 —
-        // 中文:   edge 已被空白關閉時,該邊界音節帶調號的詞條不是使用者要的。
-        // 中文: **TPS 目前走不到這裡,保留是為架構一致**:custom_toneless_key 對 TPS 要求純注音 body,
-        // 中文:   而 custom_dictionary.db 存的是 TL/POJ 羅馬字 → TPS 模式下 custom_map 為空,
-        // 中文:   下方測試咬到的是 lexicon 合併而非此分支。留下 gate 是為了等 custom 鍵有 TPS 形時
-        // 中文:   (§35 follow-up 4 平台預查架構)兩種 edge 來源仍套同一釘定 —
-        // 中文:   漏過去的 custom 會直接成為 slot 0,下游 lexicon 過濾撈不到。
-        // 中文:   由 Codex post-impl 2026-08-20 提出;其「今天就會發生」的部分經驗證不成立。
+        // custom override 的比對維持 tone-insensitive(以 custom_toneless_key 去調鍵查詢);
+        //   A3 (§41) 加的不是另一組比對鍵,而是對「詞條自身讀法」的資格判斷 —
+        //   edge 已被空白關閉時,該邊界音節帶調號的詞條不是使用者要的。
+        // **TPS 目前走不到這裡,保留是為架構一致**:custom_toneless_key 對 TPS 要求純注音 body,
+        //   而 custom_dictionary.db 存的是 TL/POJ 羅馬字 → TPS 模式下 custom_map 為空,
+        //   下方測試咬到的是 lexicon 合併而非此分支。留下 gate 是為了等 custom 鍵有 TPS 形時
+        //   (§35 follow-up 4 平台預查架構)兩種 edge 來源仍套同一釘定 —
+        //   漏過去的 custom 會直接成為 slot 0,下游 lexicon 過濾撈不到。
+        //   由 Codex post-impl 2026-08-20 提出;其「今天就會發生」的部分經驗證不成立。
         let custom_key = format!("{key_prefix}:{toneless}");
         // v3.5.8 S6 (Codex pre-impl S6 Q3, 2026-05-17) — a
         // `custom_dictionary.db` entry whose normalized toneless
@@ -702,9 +702,9 @@ fn fetch_walker_slot0_inner(
         // cost competition (segmentation safety comes from the
         // `CUSTOM_EFFECTIVE_FREQ` proxy + existing single-syllable
         // user-delta damping, not from out-scoring dict here).
-        // 中文: S6 — custom 命中該 edge key → 覆寫 dict.bin 最佳候選(在 best_candidate_for_key 之前查);
-        // 中文:   = span-local source-rank-0 同語意,無條件 override 非 cost 競爭
-        // 中文:   (切分安全靠 CUSTOM_EFFECTIVE_FREQ proxy + 既有單音節阻尼,不靠在此贏分)。
+        // S6 — custom 命中該 edge key → 覆寫 dict.bin 最佳候選(在 best_candidate_for_key 之前查);
+        //   = span-local source-rank-0 同語意,無條件 override 非 cost 競爭
+        //   (切分安全靠 CUSTOM_EFFECTIVE_FREQ proxy + 既有單音節阻尼,不靠在此贏分)。
         if let Some(entry) = custom_map.get(custom_key.as_str()).filter(|entry| {
             !edge_tone_pinned || lexicon::reading_passes_space_pin(&toneless, &entry.roman)
         }) {
@@ -720,8 +720,8 @@ fn fetch_walker_slot0_inner(
             // syllable custom is damped by
             // `WALKER_SINGLE_SYLLABLE_USER_DELTA_SCALE` in
             // `edge_cost`, same as dict.
-            // 中文: B-4 — display_text fold canonical TL,跨 mode freq key 合一;
-            // 中文:   `entry.roman` 保留原樣(lattice key 比對需要)。
+            // B-4 — display_text fold canonical TL,跨 mode freq key 合一;
+            //   `entry.roman` 保留原樣(lattice key 比對需要)。
             // R5 pair-key (#7): fold the custom roman to canonical TL once,
             // reuse for both the hanji-absent display_text fallback AND the
             // `(display_text, canonical_tl)` freq pair key.
@@ -765,8 +765,8 @@ fn fetch_walker_slot0_inner(
         // cannot re-surface (at slot 0) a word whose only source the user
         // toggled off. Custom edges above are unconditional (custom is not
         // a toggleable source); dict edges honour `enabled_sources_bitmask`.
-        // 中文: PR-9.6 — walker edge dict 查詢套用與 span-local 相同的來源過濾,
-        // 中文:   避免全句切分在 slot 0 重新帶回被關閉來源的字(custom edge 不受限,dict edge 受 bitmask 限制)。
+        // PR-9.6 — walker edge dict 查詢套用與 span-local 相同的來源過濾,
+        //   避免全句切分在 slot 0 重新帶回被關閉來源的字(custom edge 不受限,dict edge 受 bitmask 限制)。
         match best_candidate_for_key_with_barriers(
             &dict_key,
             &edge_final_only,
@@ -795,10 +795,10 @@ fn fetch_walker_slot0_inner(
                 // this answers "which segmentation path wins".
                 // Same user signal, two orthogonal decision
                 // levels, no double counting.
-                // 中文: S3 — 把本 edge 的時間衰減 user-freq 權重接進 walker 路徑目標
-                // 中文:   (收斂 Gap B → G2)。display_text = 平台 commit 寫 user_frequency.db
-                // 中文:   的同一 key;best_candidate_for_key/record_to_candidate 不動
-                // 中文:   (其 boost 管 edge 內選 record,此管選哪條切分路徑,正交不重複計)。
+                // S3 — 把本 edge 的時間衰減 user-freq 權重接進 walker 路徑目標
+                //   (收斂 Gap B → G2)。display_text = 平台 commit 寫 user_frequency.db
+                //   的同一 key;best_candidate_for_key/record_to_candidate 不動
+                //   (其 boost 管 edge 內選 record,此管選哪條切分路徑,正交不重複計)。
                 // R5 pair-key (#7): (c.display_text, c.canonical_tl) —
                 // c.canonical_tl is the record's TL, the same reading the
                 // platform commits to user_frequency.db. Tolerant fallback
@@ -908,10 +908,10 @@ fn fetch_walker_slot0_inner(
     // space. The all-OOV carve-out stays unrecased — it is a
     // synthesized reading, not an edge the user typed a case intent
     // for; greedy-longest segments are independent of `path.edges`.
-    // 中文: S5 no-dict carve-out — 用 dict_hit 旗標判定(非 hanji/freq,Codex BLOCK)。
-    // 中文:   全 OOV 在 min-cost 會塌成最少段 blob → 改 greedy-longest 音節切分羅馬字
-    // 中文:   (canonical 讀法,對齊文件 taiuantai→tai uan tai;literal max-segment 會重現過度切分)。
-    // 中文: #288 逐 edge case-from-raw 與 dict-hit 分支組合;OOV carve-out 為合成讀法,不還原大小寫。
+    // S5 no-dict carve-out — 用 dict_hit 旗標判定(非 hanji/freq,Codex BLOCK)。
+    //   全 OOV 在 min-cost 會塌成最少段 blob → 改 greedy-longest 音節切分羅馬字
+    //   (canonical 讀法,對齊文件 taiuantai→tai uan tai;literal max-segment 會重現過度切分)。
+    // #288 逐 edge case-from-raw 與 dict-hit 分支組合;OOV carve-out 為合成讀法,不還原大小寫。
     let any_dict = path.choices.iter().any(|c| c.dict_hit);
     let (roman, syllable_count) = if any_dict {
         let r = path
@@ -939,8 +939,8 @@ fn fetch_walker_slot0_inner(
                 // v3.5.9 D / C-3b — mode-aware tone strip. TPS no-dict
                 // synth strips Bopomofo tone marks per syllable; TL/POJ
                 // keep the byte-identical ASCII-digit drop.
-                // 中文: D / C-3b — TPS no-dict synth 改剝注音聲調符號;
-                // 中文:   TL/POJ 保 byte-identical ASCII 數字剝除。
+                // D / C-3b — TPS no-dict synth 改剝注音聲調符號;
+                //   TL/POJ 保 byte-identical ASCII 數字剝除。
                 let r = segs
                     .iter()
                     .map(|&(s, e)| strip_tones_for_mode(&shadow[s..e], mode))
@@ -981,9 +981,9 @@ fn fetch_walker_slot0_inner(
     // `dict.bin` (record.tl is canonical TL), custom dict (this
     // change to `custom_entry_to_candidate`), and walker synth
     // (this site).
-    // 中文: B-4 — walker OOV synth roman 在 POJ mode 是 POJ ASCII;
-    // 中文:   freq key 折成 canonical TL 跨 mode 合一,roman 自身留原 form
-    // 中文:   讓 recase_tl_as_poj_display roundtrip 正確。§9 #2 三 path 全合規。
+    // B-4 — walker OOV synth roman 在 POJ mode 是 POJ ASCII;
+    //   freq key 折成 canonical TL 跨 mode 合一,roman 自身留原 form
+    //   讓 recase_tl_as_poj_display roundtrip 正確。§9 #2 三 path 全合規。
     // R2: fold the synth roman to canonical TL ONCE here — this is the
     // single point that knows the synth's fold rule. Reused for the
     // hanji-absent `display_text` fallback AND carried on `WalkerSlot0`
@@ -1002,8 +1002,8 @@ fn fetch_walker_slot0_inner(
     // Codex PR #285 P2: the earlier `hanji.is_some()` binary
     // mis-emitted HANT for mixed-script full-buffer paths, breaking
     // platform dual-line render parity with regular candidates.
-    // 中文: 用 lexicon 單一真相 derive_mode 分類,synth mode 與 span-local/custom 一致
-    // 中文:   (hanji 內含 Latin → MIXED);Codex PR #285 P2 修正 binary 漏 MIXED。
+    // 用 lexicon 單一真相 derive_mode 分類,synth mode 與 span-local/custom 一致
+    //   (hanji 內含 Latin → MIXED);Codex PR #285 P2 修正 binary 漏 MIXED。
     let candidate_mode = derive_mode(hanji.as_deref());
     Some(WalkerSlot0 {
         // S5: `path.cost` is a min-cost (lower = better) total.
@@ -1061,13 +1061,13 @@ fn fetch_walker_slot0_inner(
 /// browse path (12 sources + variant + khiin + kautian subcollection).
 /// Output is the unwrapped `Vec<RawCandidate>` the caller maps to
 /// `CandidateMessage` via `raw_to_proto_candidate`.
-// 中文: A2 seam — 6-step assemble_candidates。取代 A2 前 handle_fetch_at_pos 內 inline 區塊。
-// 中文: 入參皆為 dispatch hoist 過的 domain 型別,出參為 wire 前 RawCandidate vector。
-// 中文: B-0c — `mode: InputMode` 取代 `is_poj: bool` 內部 derive。
-// 中文: D / C-3b — `is_tps: bool` 退役;所有 TPS 分支由 mode == InputMode::Tps 推導,
-// 中文:   平台 contains_tps(raw) 升級在 dispatch 端完成,seam 只看 mode。
-// 中文: 單一 LexiconHandle::with_state 範圍包住 step 1–4;D1 fold = build_shadow_lattice 單建;
-// 中文:   POJ render/dedupe (step 5) 在 walker prepend 之後。
+// A2 seam — 6-step assemble_candidates。取代 A2 前 handle_fetch_at_pos 內 inline 區塊。
+// 入參皆為 dispatch hoist 過的 domain 型別,出參為 wire 前 RawCandidate vector。
+// B-0c — `mode: InputMode` 取代 `is_poj: bool` 內部 derive。
+// D / C-3b — `is_tps: bool` 退役;所有 TPS 分支由 mode == InputMode::Tps 推導,
+//   平台 contains_tps(raw) 升級在 dispatch 端完成,seam 只看 mode。
+// 單一 LexiconHandle::with_state 範圍包住 step 1–4;D1 fold = build_shadow_lattice 單建;
+//   POJ render/dedupe (step 5) 在 walker prepend 之後。
 pub(crate) fn assemble_candidates(
     raw: &str,
     freq_map: &FrequencyMap,
@@ -1081,8 +1081,8 @@ pub(crate) fn assemble_candidates(
     // (owned here so `ContinuousFetchCtx` can borrow it for the whole
     // fetch). `None` for every non-TPS mode and for a TPS buffer whose
     // tail is not a space-closed unmarked syllable.
-    // 中文: A3 (§41) — 整段空白釘定,每次 seam 只算一次(擁有權放這層,ctx 借用整段 fetch)。
-    // 中文:   非 TPS、或尾端不是被空白關閉的無調號音節 → None。
+    // A3 (§41) — 整段空白釘定,每次 seam 只算一次(擁有權放這層,ctx 借用整段 fetch)。
+    //   非 TPS、或尾端不是被空白關閉的無調號音節 → None。
     let tps_space_pinned_body = crate::shadow::tps_space_pinned_body(raw, mode);
     LexiconHandle::with_state(|state| {
         let inv = state.syllable_inventory.as_ref();
@@ -1099,9 +1099,9 @@ pub(crate) fn assemble_candidates(
         // the span-local + partial-prefix fetchers apply the SAME
         // `Filter` (sources + variant + khiin + kautian subcollection)
         // the Tab3 browse path applies. `u32::MAX` keeps every source on.
-        // 中文: D7 — 此次 seam 共用的 lexicon-fetch ctx 只建一次;只有 prefix+dict 兩個都解到時才 Some (兩個內層 fetcher 都需要)。
-        // 中文: PR-9.6 — enabled_sources_bitmask 改為平台 source-toggle 狀態 (0/未接線在 handle_fetch_at_pos 正規化為 u32::MAX),
-        // 中文:   讓 span-local + partial-prefix 兩條 fetch 套用與 Tab3 browse 相同的 Filter (來源+variant+khiin+kautian subcollection)。
+        // D7 — 此次 seam 共用的 lexicon-fetch ctx 只建一次;只有 prefix+dict 兩個都解到時才 Some (兩個內層 fetcher 都需要)。
+        // PR-9.6 — enabled_sources_bitmask 改為平台 source-toggle 狀態 (0/未接線在 handle_fetch_at_pos 正規化為 u32::MAX),
+        //   讓 span-local + partial-prefix 兩條 fetch 套用與 Tab3 browse 相同的 Filter (來源+variant+khiin+kautian subcollection)。
         let lex_ctx = prefix
             .zip(dict)
             .map(|(prefix_index, dict)| ContinuousFetchCtx {
@@ -1118,15 +1118,15 @@ pub(crate) fn assemble_candidates(
                 // keeping the freq key mode-invariant. Lattice / FST
                 // key prefix is decided above and embedded in `keys`,
                 // so this is purely a freq-key axis.
-                // 中文: B-4 — mode 透到 lexicon 端 canonicalize hanji-absent display_text。
-                // 中文: D / C-3b — TPS 改走 InputMode::Tps,canonical_tl_form 對 Tps 走 identity。
+                // B-4 — mode 透到 lexicon 端 canonicalize hanji-absent display_text。
+                // D / C-3b — TPS 改走 InputMode::Tps,canonical_tl_form 對 Tps 走 identity。
                 mode,
                 // A3 (§41) — whole-buffer space pin for the sources that
                 // carry no span key of their own (custom entries,
                 // partial-prefix extensions). Computed from `raw` by the
                 // same rule the per-key flags use.
-                // 中文: A3 (§41) — 給沒有自身 span key 的來源(custom 詞條、partial-prefix 延伸)
-                // 中文:   的整段空白釘定,規則與逐 key 旗標相同,由 raw 直接算。
+                // A3 (§41) — 給沒有自身 span key 的來源(custom 詞條、partial-prefix 延伸)
+                //   的整段空白釘定,規則與逐 key 旗標相同,由 raw 直接算。
                 tps_space_pinned_body: tps_space_pinned_body.as_deref(),
             });
 
@@ -1142,8 +1142,8 @@ pub(crate) fn assemble_candidates(
         // [`crate::syllabifier::valid_span_endings_lowered`].
         // Inv absent → empty keys and walker skipped (graceful
         // degradation; matches pre-A2 / pre-C-3b behavior).
-        // 中文: D / C-3b — 所有模式共用 shadow-pipeline 單路徑;舊 build_keys_tps 短路退役。
-        // 中文:   inv 缺席時退化為空鍵 + walker 跳過(優雅退化,與 A2 前同)。
+        // D / C-3b — 所有模式共用 shadow-pipeline 單路徑;舊 build_keys_tps 短路退役。
+        //   inv 缺席時退化為空鍵 + walker 跳過(優雅退化,與 A2 前同)。
         let (keys, keys_final_only, keys_tone_pinned, barriers, shadow_lattice) = match inv {
             Some(inv) => {
                 // Literal left-anchored keys + §35 barrier metadata. A word
@@ -1152,8 +1152,8 @@ pub(crate) fn assemble_candidates(
                 // readings (考卷 / 毋是 / 雞胸); the recovery is the
                 // ambiguity-aware LOOKUP (`lookup_exact_tps_readings`) fed by
                 // this metadata — the key text stays the user's letters.
-                // 中文: 字面左錨鍵 + §35 barrier 資訊;解歧在查詢層(lookup_exact_tps_readings),
-                // 中文:   key 維持使用者字面。
+                // 字面左錨鍵 + §35 barrier 資訊;解歧在查詢層(lookup_exact_tps_readings),
+                //   key 維持使用者字面。
                 let continuous_keys = build_continuous_keys(raw, inv, mode);
                 let crate::shadow::ContinuousKeys {
                     keys,
@@ -1194,9 +1194,9 @@ pub(crate) fn assemble_candidates(
             // behavior). [`crate::shadow::build_partial_prefix_key`]
             // returns `None` for empty-after-tone-strip input (bare tone
             // mark / hyphen-only / digit-only), so no unbounded scan.
-            // 中文: Item 10 — syllabifier 切不出邊界時走 partial-prefix。
-            // 中文: 全模式 mode-aware:TPS 由 build_partial_prefix_key 發 `tps:` 家族鍵,
-            // 中文:   leading 單注音字 (ㄉ) 走 tps:ㄉ byte-range scan,對齊主流 IME。
+            // Item 10 — syllabifier 切不出邊界時走 partial-prefix。
+            // 全模式 mode-aware:TPS 由 build_partial_prefix_key 發 `tps:` 家族鍵,
+            //   leading 單注音字 (ㄉ) 走 tps:ㄉ byte-range scan,對齊主流 IME。
             if let Some(ctx) = lex_ctx.as_ref() {
                 fetch_via_lexicon_partial_inner(raw, raw_len, mode, ctx)
             } else {
@@ -1216,8 +1216,8 @@ pub(crate) fn assemble_candidates(
             // to reach — the user is mid-word at least as often as done.
             // Run BOTH and let the (roman, hanji, span) dedupe collapse
             // overlaps; span results stay first.
-            // 中文: §35 裸鼻音合併 — 單 glyph buffer 的 span 鍵若全來自展開(裸 ㄇ → ㆬ),
-            // 中文:   不可關掉字面原本會走的 partial-prefix 分支;兩者都跑,dedupe 收斂,span 在前。
+            // §35 裸鼻音合併 — 單 glyph buffer 的 span 鍵若全來自展開(裸 ㄇ → ㆬ),
+            //   不可關掉字面原本會走的 partial-prefix 分支;兩者都跑,dedupe 收斂,span 在前。
             if let Some(ctx) = lex_ctx.as_ref() {
                 let literal_glyph_in_inventory =
                     shadow_lattice.as_ref().is_some_and(|(_, _, _, inv)| {
@@ -1242,9 +1242,9 @@ pub(crate) fn assemble_candidates(
             // source. Only the presentation `roman` is touched —
             // `display_text` (canonical freq/NextWord key) and
             // `hanji` are deliberately left intact.
-            // 中文: 連續候選 roman 依該段 raw 還原大小寫(display==commit);
-            // 中文:   平台 SuggestionCaseTransformer 對連續 bypass,此為唯一源;
-            // 中文:   只改呈現 roman,canonical display_text / hanji 不動。
+            // 連續候選 roman 依該段 raw 還原大小寫(display==commit);
+            //   平台 SuggestionCaseTransformer 對連續 bypass,此為唯一源;
+            //   只改呈現 roman,canonical display_text / hanji 不動。
             for cand in &mut c {
                 let (cs, ce) = cand.consumed_span;
                 if let Some(seg) = raw.get(cs as usize..ce as usize) {
@@ -1278,14 +1278,14 @@ pub(crate) fn assemble_candidates(
             // A2 D3 honest type: the walker returns
             // [`WalkerSlot0`] (cost-named); convert to wire
             // `RawCandidate` with `score = -(cost as f32)` here.
-            // 中文: S2 — 全句 walker。合成全 buffer 最佳路徑 explicit prepend slot 0
-            // 中文:   (Codex S2 Q1);與 synth 同 (roman,hanji,span) 的 span-local 候選去掉,
-            // 中文:   保 slot 0 唯一 (Codex S2 Q1d)。
-            // 中文: D / C-3b — TPS 加入 walker(舊 build_keys_tps 短路造就 TPS 不接 walker;
-            // 中文:   現透過統一 valid_span_endings_lowered + 共用 build_shadow_lattice 路徑,
-            // 中文:   TPS 也能合成全句最佳路徑)。
-            // 中文: A2 D1 fold — walker 收 seam 預建 shadow/lattice;A2 D3 honest type —
-            // 中文:   walker 回 WalkerSlot0,score = -(cost as f32) 在此戳上 wire。
+            // S2 — 全句 walker。合成全 buffer 最佳路徑 explicit prepend slot 0
+            //   (Codex S2 Q1);與 synth 同 (roman,hanji,span) 的 span-local 候選去掉,
+            //   保 slot 0 唯一 (Codex S2 Q1d)。
+            // D / C-3b — TPS 加入 walker(舊 build_keys_tps 短路造就 TPS 不接 walker;
+            //   現透過統一 valid_span_endings_lowered + 共用 build_shadow_lattice 路徑,
+            //   TPS 也能合成全句最佳路徑)。
+            // A2 D1 fold — walker 收 seam 預建 shadow/lattice;A2 D3 honest type —
+            //   walker 回 WalkerSlot0,score = -(cost as f32) 在此戳上 wire。
             {
                 if let (Some((shadow, shadow_to_raw_end, lattice, inv)), Some(prefix), Some(dict)) =
                     (&shadow_lattice, prefix, dict)
@@ -1368,15 +1368,15 @@ pub(crate) fn assemble_candidates(
                         //   custom-influenced walker path with a non-custom
                         //   dict row (would drop the user's custom-dict
                         //   effect; Codex pre-impl regression #3).
-                        // 中文: hoogua bug — walker synth 以空格 join 逐音節羅馬字;
-                        // 中文:   真多詞句(台語齒盤)空格正確,但合成 (hanji,span) 撞上
-                        // 中文:   單一字典詞(存 `-`/`--`)時,空格版是該詞的錯誤呈現,
-                        // 中文:   而 (roman,hanji,span) 去重因 roman 僅差分隔符無法收斂。
-                        // 中文: 修法在 display 層(非 cost/segmentation primitive,§S5/§18 教訓):
-                        // 中文:   既有 FULL 全 span 同 hanji 且 reading 相容(分隔符無關、保聲調)
-                        // 中文:   的字典候選 → 提其 canonical roman 到 slot 0、丟 synth。
-                        // 中文:   x.roman != synth roman 門檻只動分隔符不符的 bug case;
-                        // 中文:   !is_custom 不以非 custom dict row 取代 custom walker path。
+                        // hoogua bug — walker synth 以空格 join 逐音節羅馬字;
+                        //   真多詞句(台語齒盤)空格正確,但合成 (hanji,span) 撞上
+                        //   單一字典詞(存 `-`/`--`)時,空格版是該詞的錯誤呈現,
+                        //   而 (roman,hanji,span) 去重因 roman 僅差分隔符無法收斂。
+                        // 修法在 display 層(非 cost/segmentation primitive,§S5/§18 教訓):
+                        //   既有 FULL 全 span 同 hanji 且 reading 相容(分隔符無關、保聲調)
+                        //   的字典候選 → 提其 canonical roman 到 slot 0、丟 synth。
+                        //   x.roman != synth roman 門檻只動分隔符不符的 bug case;
+                        //   !is_custom 不以非 custom dict row 取代 custom walker path。
                         let promote_idx = if slot0_cand.is_custom {
                             None
                         } else {
@@ -1471,19 +1471,19 @@ pub(crate) fn assemble_candidates(
             // recases here at Step 3) normalizes to the same `(roman,
             // hanji, consumed_span)` triple and collapses.
             //
-            // 中文: Step 4b — 主流 IME 對齊的 whole-buffer 前綴延伸掃描。
-            // 中文:   librime predictive=true / khiin-rs candidates_for_splittable /
-            // 中文:   本專案 lexicon::search 的 exact++prefix。沒這步,長於 buffer
-            // 中文:   的字典詞(`tl:taigir` 對應輸入 `taigi`)永遠進不來。
-            // 中文:   COVERAGE_KIND_PARTIAL_PREFIX + SortKey 首維讓延伸候選
-            // 中文:   嚴格排在 FULL 之後;不需 re-sort。
-            // 中文: 尾端 `-` 門檻 — synth_consumed_span None 時跳過,避免合成
-            // 中文:   (0,raw_len) span 誤吃 pending `-`(對齊 walker slot-0 抑制)。
-            // 中文: Recase — partial-prefix 的 consumed_span 一律 (0,raw_len),
-            // 中文:   對整段 raw 還原大小寫,與 Step 3 span-local recase 一致。
-            // 中文: 跨 batch 去重 — fetcher 內部去重不跨 batch;新增 FULL/PARTIAL
-            // 中文:   交叉 (roman,hanji,consumed_span) 去重,把 walker slot-0 /
-            // 中文:   span-local 已有的行從 partial 中剔除。
+            // Step 4b — 主流 IME 對齊的 whole-buffer 前綴延伸掃描。
+            //   librime predictive=true / khiin-rs candidates_for_splittable /
+            //   本專案 lexicon::search 的 exact++prefix。沒這步,長於 buffer
+            //   的字典詞(`tl:taigir` 對應輸入 `taigi`)永遠進不來。
+            //   COVERAGE_KIND_PARTIAL_PREFIX + SortKey 首維讓延伸候選
+            //   嚴格排在 FULL 之後;不需 re-sort。
+            // 尾端 `-` 門檻 — synth_consumed_span None 時跳過,避免合成
+            //   (0,raw_len) span 誤吃 pending `-`(對齊 walker slot-0 抑制)。
+            // Recase — partial-prefix 的 consumed_span 一律 (0,raw_len),
+            //   對整段 raw 還原大小寫,與 Step 3 span-local recase 一致。
+            // 跨 batch 去重 — fetcher 內部去重不跨 batch;新增 FULL/PARTIAL
+            //   交叉 (roman,hanji,consumed_span) 去重,把 walker slot-0 /
+            //   span-local 已有的行從 partial 中剔除。
             if let (Some((shadow, shadow_to_raw_end, _, _)), Some(ctx)) =
                 (&shadow_lattice, lex_ctx.as_ref())
             {
@@ -1501,10 +1501,10 @@ pub(crate) fn assemble_candidates(
                     // sorted pool (≤ `PARTIAL_PREFIX_HYDRATE_CAP` after
                     // dedupe); composing-side filters out FULL duplicates,
                     // then applies `PARTIAL_PREFIX_OUTPUT_CAP` itself.
-                    // 中文: Codex PR #351 r3321758666 — 走 un-truncated pool。
-                    // 中文:   bounded 版會在 dedupe 之前先裁到 30,exact 同音字
-                    // 中文:   ≥30 時 30 個名額全在 FULL 也有 → dedupe 全掉 → 0 個延伸。
-                    // 中文:   composing 端先 exclude,再裁 OUTPUT_CAP。
+                    // Codex PR #351 r3321758666 — 走 un-truncated pool。
+                    //   bounded 版會在 dedupe 之前先裁到 30,exact 同音字
+                    //   ≥30 時 30 個名額全在 FULL 也有 → dedupe 全掉 → 0 個延伸。
+                    //   composing 端先 exclude,再裁 OUTPUT_CAP。
                     let mut ext =
                         fetch_via_lexicon_partial_inner_unbounded(raw, raw_len, mode, ctx);
                     if !ext.is_empty() {
@@ -1529,11 +1529,11 @@ pub(crate) fn assemble_candidates(
                         // is mixed-case per-syllable, so deferred to a
                         // follow-up. The normal lowercase path (the v3.5.9
                         // continuous dogfood baseline) is unaffected.
-                        // 中文: borrow 形式 HashSet key — `c` 在 ext.retain 期間不變;
-                        // 中文:   span-local 單 edge FULL + walker slot-0 全 buffer 單 edge 都與 ext
-                        // 中文:   recase 對齊。已知例外(Codex post-impl):walker 多 edge 用空格 join
-                        // 中文:   而 ext 整段 recase,`TaIGi`-類 mixed-case 多音節輸入會分歧;
-                        // 中文:   現實觸發條件 = ≥30 同音字 AND 逐音節 mixed-case,延後處理。
+                        // borrow 形式 HashSet key — `c` 在 ext.retain 期間不變;
+                        //   span-local 單 edge FULL + walker slot-0 全 buffer 單 edge 都與 ext
+                        //   recase 對齊。已知例外(Codex post-impl):walker 多 edge 用空格 join
+                        //   而 ext 整段 recase,`TaIGi`-類 mixed-case 多音節輸入會分歧;
+                        //   現實觸發條件 = ≥30 同音字 AND 逐音節 mixed-case,延後處理。
                         let existing: std::collections::HashSet<(
                             &str,
                             Option<&str>,
@@ -1555,8 +1555,8 @@ pub(crate) fn assemble_candidates(
                         // pool. The lexicon-side sort is preserved (the
                         // un-truncated pool was already sorted by SortKey),
                         // so `truncate` keeps the global score order.
-                        // 中文: 先 exclude 再裁,確保 UI top-N 是去 dup 後的最佳子集;
-                        // 中文:   pool 已由 lexicon 端依 SortKey 排好,truncate 保排序。
+                        // 先 exclude 再裁,確保 UI top-N 是去 dup 後的最佳子集;
+                        //   pool 已由 lexicon 端依 SortKey 排好,truncate 保排序。
                         ext.truncate(PARTIAL_PREFIX_OUTPUT_CAP);
                         c.extend(ext);
                     }
@@ -1578,11 +1578,11 @@ pub(crate) fn assemble_candidates(
         // canonical commit + `user_frequency.db` key) are
         // deliberately untouched. No-op for TL / English /
         // (legacy-mapped) TPS.
-        // 中文: POJ 顯示渲染。平台 Continuous builder 刻意 mode-agnostic(Item 13:engine 管 input mode);
-        // 中文:   對齊引擎端 NextWord POJ render。對「每一筆」候選(span-local / walker slot-0 最佳候選 /
-        // 中文:   partial-prefix)把呈現 roman TL→POJ,讓顯示與平台 commit(皆源自 roman)一致為 POJ;
-        // 中文:   canonical display_text / hanji 不動。TL/English/(legacy 映射)TPS 為 no-op。
-        // 中文:   render 可能讓 custom POJ 與 dict TL 兩筆變相同 → dedupe_rendered_continuous 收尾去重。
+        // POJ 顯示渲染。平台 Continuous builder 刻意 mode-agnostic(Item 13:engine 管 input mode);
+        //   對齊引擎端 NextWord POJ render。對「每一筆」候選(span-local / walker slot-0 最佳候選 /
+        //   partial-prefix)把呈現 roman TL→POJ,讓顯示與平台 commit(皆源自 roman)一致為 POJ;
+        //   canonical display_text / hanji 不動。TL/English/(legacy 映射)TPS 為 no-op。
+        //   render 可能讓 custom POJ 與 dict TL 兩筆變相同 → dedupe_rendered_continuous 收尾去重。
         if mode == phonetics::InputMode::Poj {
             for cand in &mut candidates {
                 cand.roman = recase_tl_as_poj_display(&cand.roman);
@@ -1595,8 +1595,8 @@ pub(crate) fn assemble_candidates(
         // POJ render (POJ render is a no-op for TPS so order with the
         // POJ branch above is irrelevant). See `dedupe_display_hanji_for_tps`
         // for the full rationale.
-        // 中文: TPS 視覺去重 — TPS UI 隱藏羅馬字,同 (hanji, span) 不同 roman 為視覺重複。
-        // 中文:   在 sort + walker slot-0 prepend + POJ render (TPS no-op) 之後跑。
+        // TPS 視覺去重 — TPS UI 隱藏羅馬字,同 (hanji, span) 不同 roman 為視覺重複。
+        //   在 sort + walker slot-0 prepend + POJ render (TPS no-op) 之後跑。
         if mode == phonetics::InputMode::Tps {
             dedupe_display_hanji_for_tps(&mut candidates);
         }

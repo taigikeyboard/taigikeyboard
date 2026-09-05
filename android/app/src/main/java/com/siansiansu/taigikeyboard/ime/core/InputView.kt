@@ -1,6 +1,6 @@
-// 中文: IME 根 View — 由 TaigiKeyboard.onCreateInputView() inflate;
-// 中文: 內含 ViewFlipper 切換文字輸入(Compose 鍵盤)與媒體輸入(舊式 emoji 面板)。
-// 中文: navbar inset 只負責「媒體輸入」;文字輸入 inset 走 KeyboardImeRoot 的 Compose WindowInsets。
+// IME 根 View — 由 TaigiKeyboard.onCreateInputView() inflate;
+// 內含 ViewFlipper 切換文字輸入(Compose 鍵盤)與媒體輸入(舊式 emoji 面板)。
+// navbar inset 只負責「媒體輸入」;文字輸入 inset 走 KeyboardImeRoot 的 Compose WindowInsets。
 
 package com.siansiansu.taigikeyboard.ime.core
 

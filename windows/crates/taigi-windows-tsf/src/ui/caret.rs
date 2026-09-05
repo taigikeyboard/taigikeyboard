@@ -7,7 +7,7 @@
 //! answers in its own virtualised coordinates; they are mapped to physical
 //! pixels through the host window's awareness before use.
 
-// 中文: 游標矩形(實體螢幕像素)— 組字尾→組字頭→選取;clipped/空/失敗 = 沒有錨點就不顯示;宿主非 DPI-aware 時做座標對映。
+// 游標矩形(實體螢幕像素)— 組字尾→組字頭→選取;clipped/空/失敗 = 沒有錨點就不顯示;宿主非 DPI-aware 時做座標對映。
 
 use crate::com_out_buffer;
 use crate::edit_session::EditCookie;

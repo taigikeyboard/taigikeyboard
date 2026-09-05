@@ -19,11 +19,11 @@ use crate::syllabifier::valid_span_endings_lowered;
 /// walker now emits `tps:<bopomofo_toneless>` keys against the C-0 emit
 /// of `dictionary.fst`; the legacy `build_keys_tps` path (which folded
 /// TPS into `tl:` keys via `phonetics::tps_to_tl`) is retired.
-// 中文: B-2 — 將 mode 映射到 FST key 家族前綴。`syllables.fst` / `dictionary.fst` 為
-// 中文:   tagged-single-FST,共存 `tl:` / `poj:` / `tps:` 三家族。English 沿用 `tl:` 家族
-// 中文:   (英文 buffer 不會走音節切分)。
-// 中文: D / C-3b — TPS first-class,連續 walker 改發 tps:<bopomofo_toneless>;
-// 中文:   舊 build_keys_tps(經 tps_to_tl 折成 tl: 鍵)退役。
+// B-2 — 將 mode 映射到 FST key 家族前綴。`syllables.fst` / `dictionary.fst` 為
+//   tagged-single-FST,共存 `tl:` / `poj:` / `tps:` 三家族。English 沿用 `tl:` 家族
+//   (英文 buffer 不會走音節切分)。
+// D / C-3b — TPS first-class,連續 walker 改發 tps:<bopomofo_toneless>;
+//   舊 build_keys_tps(經 tps_to_tl 折成 tl: 鍵)退役。
 pub(crate) fn mode_key_prefix(mode: InputMode) -> &'static str {
     match mode {
         InputMode::Poj => "poj",
@@ -50,11 +50,11 @@ pub(crate) fn mode_key_prefix(mode: InputMode) -> &'static str {
 /// [`build_hyphen_shadow`] already drops ASCII `-` upstream and the TPS
 /// buffer rarely contains them; matches `_TPS_TONE_AND_SEP_RE`'s tone
 /// half (build pipeline `dictionary/common/notone.py::remove_tps_tone`).
-// 中文: D / C-3b — mode-aware tone-mark 剝除。對 TL/POJ/English 與舊
-// 中文:   strip_ascii_tone_digits byte-identical (ASCII 數字),對 TPS 剝除
-// 中文:   phonetics::tps::is_tps_tone_mark 列的 8 個 Bopomofo 聲調符號。
-// 中文:   不剝連字號/空白 — shadow 早已剝、TPS buffer 罕見;對應
-// 中文:   _TPS_TONE_AND_SEP_RE 的聲調半邊。
+// D / C-3b — mode-aware tone-mark 剝除。對 TL/POJ/English 與舊
+//   strip_ascii_tone_digits byte-identical (ASCII 數字),對 TPS 剝除
+//   phonetics::tps::is_tps_tone_mark 列的 8 個 Bopomofo 聲調符號。
+//   不剝連字號/空白 — shadow 早已剝、TPS buffer 罕見;對應
+//   _TPS_TONE_AND_SEP_RE 的聲調半邊。
 pub(crate) fn strip_tones_for_mode(s: &str, mode: InputMode) -> String {
     match mode {
         InputMode::Tps => s
@@ -88,12 +88,12 @@ pub(crate) fn strip_tones_for_mode(s: &str, mode: InputMode) -> String {
 /// span (`tai5bak`, `taigi2`, `tai5g`) ends in a letter → returns false,
 /// so the caller keeps it on the toneless key, preserving the
 /// toneless-input "show all tones" behavior with no regression.
-// 中文: 判斷 span 是否為「全含調」TL/POJ 讀法 = `([字母]+[數字])+`(每音節皆帶 ASCII 聲調數字,尾端為數字,無孤兒數字)。
-// 中文:   此形 verbatim 對齊 tl_num/poj_num FST 家族 → exact lookup 即按聲調過濾。
-// 中文:   純文字判定:span-local/walker 來自已切音節的 lattice edge;partial-prefix 傳整個 raw shadow(可能非完整音節),
-// 中文:   但純文字只答「是否全含調」、不宣稱是真詞,故不需 inventory、不重切音節(避開 greedy dead-end)。
-// 中文:   未驗證 partial 之安全性:全含調但不存在的 body(abc1)只會 verbatim key miss FST 回空,不會錯調命中。
-// 中文:   混合/部分含調(tai5bak / taigi2 / tai5g 尾為字母)回 false → caller 留在去調鍵,無回歸。
+// 判斷 span 是否為「全含調」TL/POJ 讀法 = `([字母]+[數字])+`(每音節皆帶 ASCII 聲調數字,尾端為數字,無孤兒數字)。
+//   此形 verbatim 對齊 tl_num/poj_num FST 家族 → exact lookup 即按聲調過濾。
+//   純文字判定:span-local/walker 來自已切音節的 lattice edge;partial-prefix 傳整個 raw shadow(可能非完整音節),
+//   但純文字只答「是否全含調」、不宣稱是真詞,故不需 inventory、不重切音節(避開 greedy dead-end)。
+//   未驗證 partial 之安全性:全含調但不存在的 body(abc1)只會 verbatim key miss FST 回空,不會錯調命中。
+//   混合/部分含調(tai5bak / taigi2 / tai5g 尾為字母)回 false → caller 留在去調鍵,無回歸。
 fn span_is_fully_toned_ascii(span: &str) -> bool {
     if span.is_empty() {
         return false;
@@ -153,17 +153,17 @@ fn span_is_fully_toned_ascii(span: &str) -> bool {
 ///
 /// The span reaching here is already hyphen- and separator-stripped, so it is
 /// pure Bopomofo + tone marks; any other char is a leak and returns false.
-// 中文: span_is_fully_toned_ascii 的 TPS 版 — 比對 (注音主體+「有調號」TPS 聲調)+ 文法:每段主體由
-// 中文:   標準調號 (2/3/5/6/7/8/9,含 U+02D9/U+0307 tone-8) 收尾、無孤兒/前導調號、且尾端為調號。
-// 中文:   經 tone-8 正規化後 verbatim 對齊 tps:<tps_num>,exact lookup 按聲調過濾。
-// 中文: 第 1/4 調無調號 → 末音節為 1/4 者回 false 走去調全聲調 (tone-1 space 已上游剝除;tone-4 是入聲
-// 中文:   韻尾 glyph 屬主體,不在 is_tps_tone_mark;兩者 tps_num==tps_notone 無可區分鍵)。
-// 中文: 與 span_is_fully_toned_ascii 同的 text-only 限制:無 inventory 無法切分融合多音節,故「前導/中間」
-// 中文:   的 1/4 調音節 (後面接有調號音節) 偵測不到 — ㄍㄠㄉㄞˊ (kau1+tai5,即 §18 ㄍㄠ ␣ ㄉㄞˊ 去分隔符後)
-// 中文:   會被當全含調並 key verbatim tps:ㄍㄠㄉㄞˊ。此為精確非錯調:1/4 調對 tps_num 同樣不貢獻調號,
-// 中文:   verbatim 即等於該詞真正 toned key (kau1-tai5),前導未標音節解析為其無調號調,與 TL/POJ 對
-// 中文:   taigi5 key tl:taigi5 同理。未標音節的全聲調可由較短單音節 span (tps:ㄍㄠ 去調,§18 保留) 取得,
-// 中文:   只有多音節「詞」候選被釘調。看似全含調但不存在的 body 只會 miss FST 回空。
+// span_is_fully_toned_ascii 的 TPS 版 — 比對 (注音主體+「有調號」TPS 聲調)+ 文法:每段主體由
+//   標準調號 (2/3/5/6/7/8/9,含 U+02D9/U+0307 tone-8) 收尾、無孤兒/前導調號、且尾端為調號。
+//   經 tone-8 正規化後 verbatim 對齊 tps:<tps_num>,exact lookup 按聲調過濾。
+// 第 1/4 調無調號 → 末音節為 1/4 者回 false 走去調全聲調 (tone-1 space 已上游剝除;tone-4 是入聲
+//   韻尾 glyph 屬主體,不在 is_tps_tone_mark;兩者 tps_num==tps_notone 無可區分鍵)。
+// 與 span_is_fully_toned_ascii 同的 text-only 限制:無 inventory 無法切分融合多音節,故「前導/中間」
+//   的 1/4 調音節 (後面接有調號音節) 偵測不到 — ㄍㄠㄉㄞˊ (kau1+tai5,即 §18 ㄍㄠ ␣ ㄉㄞˊ 去分隔符後)
+//   會被當全含調並 key verbatim tps:ㄍㄠㄉㄞˊ。此為精確非錯調:1/4 調對 tps_num 同樣不貢獻調號,
+//   verbatim 即等於該詞真正 toned key (kau1-tai5),前導未標音節解析為其無調號調,與 TL/POJ 對
+//   taigi5 key tl:taigi5 同理。未標音節的全聲調可由較短單音節 span (tps:ㄍㄠ 去調,§18 保留) 取得,
+//   只有多音節「詞」候選被釘調。看似全含調但不存在的 body 只會 miss FST 回空。
 fn span_is_fully_toned_tps(span: &str) -> bool {
     if span.is_empty() {
         return false;
@@ -206,10 +206,10 @@ fn span_is_fully_toned_tps(span: &str) -> bool {
 ///
 /// `English` mode has no tone semantics (a trailing digit in an English
 /// buffer is not a tone), so it keeps the legacy digit-strip.
-// 中文: 連續輸入 span 的 FST 查詢主體:全含調 → verbatim toned key 讓 lookup 按聲調過濾。
-// 中文:   TL/POJ 保留數字對齊 tl:/poj:<num>;TPS 保留注音+調號,tone-8 點正規化 U+02D9→U+0307
-// 中文:   對齊 tps:<tps_num>(第 1/4 調無調號 → 落去調分支)。否則回去調形(全聲調)。
-// 中文:   為「鍵選擇規則」非 runtime fallback;English 無聲調語意維持去調。
+// 連續輸入 span 的 FST 查詢主體:全含調 → verbatim toned key 讓 lookup 按聲調過濾。
+//   TL/POJ 保留數字對齊 tl:/poj:<num>;TPS 保留注音+調號,tone-8 點正規化 U+02D9→U+0307
+//   對齊 tps:<tps_num>(第 1/4 調無調號 → 落去調分支)。否則回去調形(全聲調)。
+//   為「鍵選擇規則」非 runtime fallback;English 無聲調語意維持去調。
 pub(crate) fn fst_body_for_span(span: &str, mode: InputMode) -> String {
     match mode {
         InputMode::Tl | InputMode::Poj if span_is_fully_toned_ascii(span) => span.to_string(),
@@ -228,9 +228,9 @@ pub(crate) fn fst_body_for_span(span: &str, mode: InputMode) -> String {
 /// the legacy per-mode `continuous::build_keys_tps` is retired and all
 /// four modes (TL/POJ/English/TPS) share the unified shadow → lattice
 /// path through this single cap.
-// 中文: syllabifier BFS 深度上限,對應 roadmap §Phase 3 的 8 syllable 估算。
-// 中文: build_shadow_lattice 共用此 cap;v3.5.9 D / C-3b 退役 build_keys_tps 後,
-// 中文:   四模式共用同一 shadow → lattice 路徑,FST 查詢複雜度仍由此值有界。
+// syllabifier BFS 深度上限,對應 roadmap §Phase 3 的 8 syllable 估算。
+// build_shadow_lattice 共用此 cap;v3.5.9 D / C-3b 退役 build_keys_tps 後,
+//   四模式共用同一 shadow → lattice 路徑,FST 查詢複雜度仍由此值有界。
 pub(crate) const MAX_SYLLABLES: usize = 8;
 
 /// Run the canonicalize → hyphen-shadow → (TPS-only) space-strip
@@ -245,8 +245,8 @@ pub(crate) const MAX_SYLLABLES: usize = 8;
 /// this) and `continuous::fetch_walker_slot0_inner` (S2 whole-sentence walker)
 /// so the shadow + offset map + DAG are constructed exactly once per
 /// fetch and the two consumers cannot drift.
-// 中文: 跑 canonicalize → hyphen-shadow → (TPS-only) space-strip 並建 lattice;回 (shadow, shadow→raw map, lattice)。
-// 中文: build_keys (左錨投影,byte-identical 於 pre-S1) 與 fetch_walker_slot0 (S2 walker) 共用。
+// 跑 canonicalize → hyphen-shadow → (TPS-only) space-strip 並建 lattice;回 (shadow, shadow→raw map, lattice)。
+// build_keys (左錨投影,byte-identical 於 pre-S1) 與 fetch_walker_slot0 (S2 walker) 共用。
 pub(crate) fn build_shadow_lattice(
     raw: &str,
     inv: &SyllableInventory,
@@ -261,7 +261,7 @@ pub(crate) fn build_shadow_lattice(
 /// set in shadow coordinates (§35). Production callers use this so the
 /// barrier metadata survives to the lookup layer; the 3-tuple wrapper
 /// keeps the historical test seams byte-compatible.
-// 中文: build_shadow_lattice + barrier 集(shadow 座標,§35);production 走此,3-tuple 版留給測試接縫。
+// build_shadow_lattice + barrier 集(shadow 座標,§35);production 走此,3-tuple 版留給測試接縫。
 pub(crate) fn build_shadow_lattice_with_barriers(
     raw: &str,
     inv: &SyllableInventory,
@@ -278,8 +278,8 @@ pub(crate) fn build_shadow_lattice_with_barriers(
 /// syllable may not cross one, and the glyph before one is Final-only —
 /// and the TPS syllabifier receives them so an expanded probe cannot
 /// fuse across the user's explicit boundary.
-// 中文: lattice_from_canonical + 合併 barrier 集(空白/連字剝除點的 shadow 座標)。
-// 中文:   §35 展開受其約束:單音節不可跨越、其前一格只許 Final 形;TPS 切分器同樣收到。
+// lattice_from_canonical + 合併 barrier 集(空白/連字剝除點的 shadow 座標)。
+//   §35 展開受其約束:單音節不可跨越、其前一格只許 Final 形;TPS 切分器同樣收到。
 fn lattice_from_canonical_with_barriers(
     canonical: &str,
     canonical_to_raw_end: &[usize],
@@ -296,8 +296,8 @@ fn lattice_from_canonical_with_barriers(
     // dead-ending at the space; the offset map keeps the separator byte
     // in the full-span commit. No-op for TL/POJ/English (space is a real
     // word boundary). See `build_separator_shadow`.
-    // 中文: TPS-only — space 是鍵盤的第一調/音節分隔符,非字面空白;切分前剝除,
-    // 中文:   讓第一調詞 `ㄍㄠ ㄉㄞ` 產生跨 space 整詞 edge(交代);offset map 保 commit。
+    // TPS-only — space 是鍵盤的第一調/音節分隔符,非字面空白;切分前剝除,
+    //   讓第一調詞 `ㄍㄠ ㄉㄞ` 產生跨 space 整詞 edge(交代);offset map 保 commit。
     let (shadow, shadow_to_hyphenless, space_barriers) =
         build_separator_shadow_with_barriers(&hyphenless, mode);
     // Compose the three offset maps: shadow → hyphenless → canonical → raw.
@@ -310,8 +310,8 @@ fn lattice_from_canonical_with_barriers(
     // strip (count the shadow bytes whose hyphenless source is below the
     // barrier — equivalently, find the shadow offset whose map value first
     // reaches the barrier).
-    // 中文: 兩層 barrier 合併到最終 shadow 座標;hyphen barrier(hyphenless 座標)經
-    // 中文:   separator strip 投影(找 map 值首次達到該 barrier 的 shadow 偏移)。
+    // 兩層 barrier 合併到最終 shadow 座標;hyphen barrier(hyphenless 座標)經
+    //   separator strip 投影(找 map 值首次達到該 barrier 的 shadow 偏移)。
     let mut barriers: Vec<usize> = space_barriers;
     for hyphen_barrier in hyphen_barriers {
         // The projected shadow offset is the LAST map index whose consumed
@@ -322,10 +322,10 @@ fn lattice_from_canonical_with_barriers(
         // hyphenless byte without producing a shadow byte, and ≥ would land
         // the barrier after B's first glyph — a phantom barrier inside the
         // next syllable (Codex post-impl 2026-08-19 BLOCK 3).
-        // 中文: 投影 = 最後一個「已消耗 hyphenless 前綴 ≤ barrier」的 map index
-        // 中文:   (= barrier 前存活到 shadow 的 byte 數)。用「第一個 ≥」在 `A␠-B`
-        // 中文:   會差一格 — 被剝的空白消耗 hyphenless byte 卻不產 shadow byte,
-        // 中文:   barrier 會落到 B 首 glyph 之後(假 barrier)。
+        // 投影 = 最後一個「已消耗 hyphenless 前綴 ≤ barrier」的 map index
+        //   (= barrier 前存活到 shadow 的 byte 數)。用「第一個 ≥」在 `A␠-B`
+        //   會差一格 — 被剝的空白消耗 hyphenless byte 卻不產 shadow byte,
+        //   barrier 會落到 B 首 glyph 之後(假 barrier)。
         let projected = shadow_to_hyphenless
             .iter()
             .rposition(|&hyphenless_idx| hyphenless_idx <= hyphen_barrier)
@@ -355,14 +355,14 @@ fn lattice_from_canonical_with_barriers(
     // endpoint earlier would shift the hyphen-barrier `rposition` projection
     // above. Barrier offsets, lattice edges and `key_final_only_offsets` are
     // all untouched — only the full-span shadow→raw endpoint moves.
-    // 中文: §41 — 把尾端的分隔記號併進整段 span 的終點。strip 原語只為保留字元記 map,
-    // 中文:   中間空白由下一個 glyph 的 entry 帶過(既有測試釘住),尾端空白卻落在最後一個
-    // 中文:   entry 之外(ㄒㄧ␣ 整段只對到 7 bytes 中的 6)。commit 於是留下一個 " " —
-    // 中文:   顯示層看不到,卻讓引擎停在幽靈組字(下次退格刪隱形記號、final-commit 判斷失準、
-    // 中文:   NextWord 末段可能拿到空 display)。
-    // 中文:   修在 barrier 合併之後而非共用 strip 原語內:該原語也服務連字層,尾端連字
-    // 中文:   必須留 pending,且提前改終點會位移上面 hyphen barrier 的 rposition 投影。
-    // 中文:   barrier 座標、lattice edge、key_final_only_offsets 全不變,只動整段終點。
+    // §41 — 把尾端的分隔記號併進整段 span 的終點。strip 原語只為保留字元記 map,
+    //   中間空白由下一個 glyph 的 entry 帶過(既有測試釘住),尾端空白卻落在最後一個
+    //   entry 之外(ㄒㄧ␣ 整段只對到 7 bytes 中的 6)。commit 於是留下一個 " " —
+    //   顯示層看不到,卻讓引擎停在幽靈組字(下次退格刪隱形記號、final-commit 判斷失準、
+    //   NextWord 末段可能拿到空 display)。
+    //   修在 barrier 合併之後而非共用 strip 原語內:該原語也服務連字層,尾端連字
+    //   必須留 pending,且提前改終點會位移上面 hyphen barrier 的 rposition 投影。
+    //   barrier 座標、lattice edge、key_final_only_offsets 全不變,只動整段終點。
     let mut shadow_to_raw_end = shadow_to_raw_end;
     if matches!(mode, InputMode::Tps) {
         let kept_end = hyphenless_to_canonical[shadow_to_hyphenless[shadow.len()]];
@@ -377,8 +377,8 @@ fn lattice_from_canonical_with_barriers(
     // shadow now resolves against the `poj:` family of `syllables.fst` and
     // emits POJ-shaped syllable boundaries (`chiah`, `goa`, …) rather than
     // collapsing onto the TL forms.
-    // 中文: B-2 — mode 透傳至 lattice builder;inventory 為 mode-aware,
-    // 中文:   POJ 模式下走 `poj:` 家族,辨識 POJ 拼寫的音節邊界而非塌成 TL 形。
+    // B-2 — mode 透傳至 lattice builder;inventory 為 mode-aware,
+    //   POJ 模式下走 `poj:` 家族,辨識 POJ 拼寫的音節邊界而非塌成 TL 形。
     let lattice = build_lattice_with_barriers(&shadow, inv, mode, MAX_SYLLABLES, &barriers);
     (shadow, shadow_to_raw_end, lattice, barriers)
 }
@@ -406,9 +406,9 @@ fn lattice_from_canonical_with_barriers(
 /// `dispatch::build_continuous_keys_with_inventory` test seam, so the
 /// two cannot drift. Empty `final_only` / `barriers` for TL / POJ /
 /// English — their pipeline strips nothing.
-// 中文: 連續輸入查詢鍵 + §35 歧義查詢所需的 barrier 資訊。key 維持使用者字面(解歧在查詢層),
-// 中文:   final_only[i] = keys[i] 中 barrier 前一格的偏移(含家族前綴);base 三元組供 walker,
-// 中文:   barriers 供 walker 對內部 edge 計算相同限制。TL/POJ/English 恆為空。
+// 連續輸入查詢鍵 + §35 歧義查詢所需的 barrier 資訊。key 維持使用者字面(解歧在查詢層),
+//   final_only[i] = keys[i] 中 barrier 前一格的偏移(含家族前綴);base 三元組供 walker,
+//   barriers 供 walker 對內部 edge 計算相同限制。TL/POJ/English 恆為空。
 pub(crate) struct ContinuousKeys {
     pub keys: Vec<(ConsumedSpan, String)>,
     pub final_only: Vec<Vec<usize>>,
@@ -417,8 +417,8 @@ pub(crate) struct ContinuousKeys {
     /// the space, which in TPS means its unmarked tone (1 for an open
     /// rime, 4 for a stop coda). The lookup layer keeps only candidates
     /// whose reading carries that tone at the same syllable boundary.
-    // 中文: A3 (§41) — span 結尾落在被剝除的 TPS 空白上,即使用者以空白關閉該音節
-    // 中文:   (TPS 語意 = 無調號調:開音節 1、入聲尾 4);查詢層據此只留同聲調候選。
+    // A3 (§41) — span 結尾落在被剝除的 TPS 空白上,即使用者以空白關閉該音節
+    //   (TPS 語意 = 無調號調:開音節 1、入聲尾 4);查詢層據此只留同聲調候選。
     pub tone_pinned: Vec<bool>,
     pub shadow: String,
     pub shadow_to_raw_end: Vec<usize>,
@@ -429,7 +429,7 @@ pub(crate) struct ContinuousKeys {
 /// The three parallel per-key vectors [`left_anchored_keys_and_restrictions`]
 /// emits, kept together so the indices cannot drift apart at a call site.
 /// [`ContinuousKeys`] carries the same three plus the shadow/lattice base.
-// 中文: 鍵建構器的三組平行向量(索引必須一致,故打包回傳);ContinuousKeys 另含 shadow/lattice 基底。
+// 鍵建構器的三組平行向量(索引必須一致,故打包回傳);ContinuousKeys 另含 shadow/lattice 基底。
 pub(crate) struct LeftAnchoredKeys {
     pub keys: Vec<(ConsumedSpan, String)>,
     pub final_only: Vec<Vec<usize>>,
@@ -486,10 +486,10 @@ pub(crate) fn build_continuous_keys(
 /// `(0, end)`. Interior `台語`-style words remain reachable as the
 /// next path-step after the prefix is nailed (Codex pre-impl S2
 /// Q1c = option ii, 2026-05-16; `docs/releases/v3.5.8/plan.md` §整句 lattice + walker).
-// 中文: A1 抽出 — 只發左錨投影 (start==0) 為 key,與 S1 前逐 byte 相同 → span-local 不變。
-// 中文: 內段 (start>0) 不發為可點 key:Model B forward-only commit 無對應語意;
-// 中文:   S2 walker 內部吃內段邊、合成單一全 buffer 最佳路徑由 handle_fetch_at_pos
-// 中文:   explicit prepend 到 slot 0,commit span 維持 (0,end)。
+// A1 抽出 — 只發左錨投影 (start==0) 為 key,與 S1 前逐 byte 相同 → span-local 不變。
+// 內段 (start>0) 不發為可點 key:Model B forward-only commit 無對應語意;
+//   S2 walker 內部吃內段邊、合成單一全 buffer 最佳路徑由 handle_fetch_at_pos
+//   explicit prepend 到 slot 0,commit span 維持 (0,end)。
 pub(crate) fn left_anchored_keys_from_lattice(
     shadow: &str,
     shadow_to_raw_end: &[usize],
@@ -505,7 +505,7 @@ pub(crate) fn left_anchored_keys_from_lattice(
 /// prefix included) of glyphs immediately before a stripped separator /
 /// 連字 barrier. `barriers` are shadow coordinates from
 /// [`build_shadow_lattice_with_barriers`]; empty for TL/POJ/English.
-// 中文: left_anchored_keys + 每 key 的 §35 barrier 限制(key 字串偏移,含家族前綴)。
+// left_anchored_keys + 每 key 的 §35 barrier 限制(key 字串偏移,含家族前綴)。
 pub(crate) fn left_anchored_keys_and_restrictions(
     shadow: &str,
     shadow_to_raw_end: &[usize],
@@ -519,8 +519,8 @@ pub(crate) fn left_anchored_keys_and_restrictions(
     // matching `SyllableInventory` family ([`build_shadow_lattice`] →
     // [`build_lattice`]), so the syllabification and the key namespace
     // come from a single mode parameter — they cannot drift.
-    // 中文: B-2 — mode 同時決定 lattice 走的 inventory 家族與此處 key 命名空間,單一參數
-    // 中文:   貫穿,音節切分與 key 前綴不會由不同來源分歧。
+    // B-2 — mode 同時決定 lattice 走的 inventory 家族與此處 key 命名空間,單一參數
+    //   貫穿,音節切分與 key 前綴不會由不同來源分歧。
     let prefix = mode_key_prefix(mode);
 
     // Longest-match prefix suppression (`INVARIANT_CONTINUOUS_LONGEST_MATCH_PREFIX`,
@@ -551,11 +551,11 @@ pub(crate) fn left_anchored_keys_and_restrictions(
     // (`fetch_walker_slot0_inner`) + min-hop `span_min_syllable_count` still
     // see every split (non-greedy `ta`+`nia` recovery, Codex PR #290 P1,
     // unaffected).
-    // 中文: longest-match 前綴壓制 — 只壓「單音節且非最長且無多音節 phrase 讀法」的較短端;
-    // 中文:   (ta⊂tai⊂tai5、tsu⊂tsua);含調免調皆壓 (USER 2026-05-31「免調也壓制」)。
-    // 中文: (c) phrase 守門 — 同 end 另有 phrase 讀法 (內段 edge (m,end), m>0 可達) 即合法異詞候選,保留;
-    // 中文:   保證絕不誤刪 phrase。lattice.edges() 攤平深度,故以 max_syllables=1 重走辨識單音節端。
-    // 中文: 純顯示層 — lattice edge 不動,walker / span_min_syllable_count 仍見全部切法 (不退化 #290)。
+    // longest-match 前綴壓制 — 只壓「單音節且非最長且無多音節 phrase 讀法」的較短端;
+    //   (ta⊂tai⊂tai5、tsu⊂tsua);含調免調皆壓 (USER 2026-05-31「免調也壓制」)。
+    // (c) phrase 守門 — 同 end 另有 phrase 讀法 (內段 edge (m,end), m>0 可達) 即合法異詞候選,保留;
+    //   保證絕不誤刪 phrase。lattice.edges() 攤平深度,故以 max_syllables=1 重走辨識單音節端。
+    // 純顯示層 — lattice edge 不動,walker / span_min_syllable_count 仍見全部切法 (不退化 #290)。
     let lowered = shadow.to_ascii_lowercase();
     // §18 recompute is barrier-aware (Codex post-impl 2026-08-19 BLOCK 2):
     // the lattice above was built with barriers, so re-deriving the
@@ -563,8 +563,8 @@ pub(crate) fn left_anchored_keys_and_restrictions(
     // "single syllable" that fuses across the user's separator (`ㄍㄚ`␣`ㄉ`
     // mid-typing: a barrier-blind recompute reads ㄍㄚㆵ as the longest
     // single and wrongly suppresses the legitimate ㄍㄚ).
-    // 中文: §18 重算必須帶 barrier — lattice 是 barrier-aware 建的,重算不帶會
-    // 中文:   捏造跨分隔符的更長「單音節」(ㄍㄚ␣ㄉ 中間態壓掉合法 ㄍㄚ)。
+    // §18 重算必須帶 barrier — lattice 是 barrier-aware 建的,重算不帶會
+    //   捏造跨分隔符的更長「單音節」(ㄍㄚ␣ㄉ 中間態壓掉合法 ㄍㄚ)。
     let single_ends = crate::syllabifier::valid_span_endings_lowered_with_barriers(
         &lowered, 0, inv, mode, 1, barriers,
     );
@@ -586,7 +586,7 @@ pub(crate) fn left_anchored_keys_and_restrictions(
         // Drop a strictly-shorter single-syllable-only prefix span (see the
         // (a)/(b)/(c) rule above). Longest single, phrase ends, and
         // phrase-reachable shorter spans are all kept.
-        // 中文: 丟掉「較短且僅單音節且無 phrase 讀法」的前綴;最長單音節、phrase 端、可作 phrase 的較短端皆保留。
+        // 丟掉「較短且僅單音節且無 phrase 讀法」的前綴;最長單音節、phrase 端、可作 phrase 的較短端皆保留。
         if single_ends.contains(&end) && Some(end) != max_single_end && !has_phrase_reading(end) {
             continue;
         }
@@ -598,8 +598,8 @@ pub(crate) fn left_anchored_keys_and_restrictions(
         // v3.5.9 D / C-3b — the underlying strip is mode-aware: TL/POJ
         // drop ASCII digits, TPS drops Bopomofo tone marks (matches the
         // `tps:<tps_notone>` FST family from C-0; TPS always toneless here).
-        // 中文: 明確聲調修正 — tone-aware 查詢主體。全含調 span 保留數字 → lookup_exact 按聲調過濾;
-        // 中文:   去調/混合 span 走去調 fused key(全聲調),維持去調輸入行為。見 fst_body_for_span。
+        // 明確聲調修正 — tone-aware 查詢主體。全含調 span 保留數字 → lookup_exact 按聲調過濾;
+        //   去調/混合 span 走去調 fused key(全聲調),維持去調輸入行為。見 fst_body_for_span。
         let body = fst_body_for_span(&shadow[..end], mode);
         if body.is_empty() {
             continue;
@@ -639,9 +639,9 @@ pub(crate) fn left_anchored_keys_and_restrictions(
 /// verbatim toned key). The body itself is the buffer with every space
 /// and tone mark removed — byte-identical in shape to the `tps:<notone>`
 /// FST family the readings reconstruct into.
-// 中文: A3 (§41) — 尾端音節被鍵盤空白關閉時,回傳整個 buffer 的 fused TPS 去調 body,否則 None。
-// 中文:   為 span_end_pins_unmarked_tone 的 whole-buffer 對應:custom 詞條 / partial-prefix 延伸
-// 中文:   沒有自己的 span key,查詢層以此 body 對齊其讀法。尾端已帶調號則不釘(走 verbatim toned key)。
+// A3 (§41) — 尾端音節被鍵盤空白關閉時,回傳整個 buffer 的 fused TPS 去調 body,否則 None。
+//   為 span_end_pins_unmarked_tone 的 whole-buffer 對應:custom 詞條 / partial-prefix 延伸
+//   沒有自己的 span key,查詢層以此 body 對齊其讀法。尾端已帶調號則不釘(走 verbatim toned key)。
 pub(crate) fn tps_space_pinned_body(raw: &str, mode: InputMode) -> Option<String> {
     if !matches!(mode, InputMode::Tps) {
         return None;
@@ -662,9 +662,9 @@ pub(crate) fn tps_space_pinned_body(raw: &str, mode: InputMode) -> Option<String
     // `tps:<notone>` form a span-local key would carry for the same buffer.
     // Rolling a bespoke char filter here would be a second, drifting
     // definition of "fused toneless surface".
-    // 中文: 與 span key 相同的兩道 shadow 處理(先剝分隔符、再依 mode 剝調號),
-    // 中文:   故此 body 與同一 buffer 的 tps:<notone> 逐 byte 相同;自己寫 char filter
-    // 中文:   等於多一份會漂移的「fused 去調面」定義。
+    // 與 span key 相同的兩道 shadow 處理(先剝分隔符、再依 mode 剝調號),
+    //   故此 body 與同一 buffer 的 tps:<notone> 逐 byte 相同;自己寫 char filter
+    //   等於多一份會漂移的「fused 去調面」定義。
     let (separatorless, _) = build_separator_shadow(trimmed, mode);
     let body = strip_tones_for_mode(&separatorless, mode);
     (!body.is_empty()).then_some(body)
@@ -688,10 +688,10 @@ pub(crate) fn tps_space_pinned_body(raw: &str, mode: InputMode) -> Option<String
 /// tones are ASCII digits, which the fully-toned path already pins. A
 /// span whose last char IS a tone mark needs no pinning either — it took
 /// the verbatim toned key in [`fst_body_for_span`].
-// 中文: A3 (§41) — span 結尾落在 TPS 分隔符剝除留下的 barrier,且自身無調號 → 釘無調號調
-// 中文:   (開音節 1 / 入聲尾 4)。**只認 span 結尾**:span 內部的 barrier 仍是單純音節邊界,
-// 中文:   否則 S18 台機 (tai5) 與 S23 毋是 (m7) 會被當第一調指令刪掉。
-// 中文:   TPS-only;TL/POJ 空白是字面詞界(無 space barrier)、聲調為 ASCII 數字已由全含調路徑釘。
+// A3 (§41) — span 結尾落在 TPS 分隔符剝除留下的 barrier,且自身無調號 → 釘無調號調
+//   (開音節 1 / 入聲尾 4)。**只認 span 結尾**:span 內部的 barrier 仍是單純音節邊界,
+//   否則 S18 台機 (tai5) 與 S23 毋是 (m7) 會被當第一調指令刪掉。
+//   TPS-only;TL/POJ 空白是字面詞界(無 space barrier)、聲調為 ASCII 數字已由全含調路徑釘。
 pub(crate) fn span_end_pins_unmarked_tone(
     span: &str,
     span_end: usize,
@@ -715,9 +715,9 @@ pub(crate) fn span_end_pins_unmarked_tone(
 /// `"tps:"` family prefix. A trailing barrier (separator at shadow end)
 /// counts — the user closed that syllable, unlike a plain buffer end
 /// which stays unrestricted.
-// 中文: §35 契約 (b) — 每個 span 內(或 span 尾)的 barrier,回其前一格在 key 字串中的偏移
-// 中文:   (body 已剝調號者按剝後座標;prefix_len 平移過家族前綴)。尾端 barrier 也算(使用者已收音節);
-// 中文:   普通 buffer 尾端不設限。
+// §35 契約 (b) — 每個 span 內(或 span 尾)的 barrier,回其前一格在 key 字串中的偏移
+//   (body 已剝調號者按剝後座標;prefix_len 平移過家族前綴)。尾端 barrier 也算(使用者已收音節);
+//   普通 buffer 尾端不設限。
 pub(crate) fn key_final_only_offsets(
     span_shadow: &str,
     body: &str,
@@ -770,8 +770,8 @@ pub(crate) fn key_final_only_offsets(
 /// `shadow` is ASCII-lowercased here; lowercasing is byte-length and
 /// char-boundary preserving, so the returned offsets index `shadow`
 /// identically.
-// 中文: S5 — greedy 最長音節切分,no-dict carve-out 的羅馬字讀法。
-// 中文:   每步取最長合法單音節 → taiuantai=[tai,uan,tai]。
+// S5 — greedy 最長音節切分,no-dict carve-out 的羅馬字讀法。
+//   每步取最長合法單音節 → taiuantai=[tai,uan,tai]。
 pub(crate) fn greedy_longest_syllabification(
     shadow: &str,
     inv: &SyllableInventory,
@@ -789,8 +789,8 @@ pub(crate) fn greedy_longest_syllabification(
         // walks the `poj:` family — both produce shadow-aligned offsets
         // because the inventory family's syllable boundaries match the
         // shadow form.
-        // 中文: B-2 — mode 決定走哪一家族;shadow 已是該家族的 canonical ASCII
-        // 中文:   形式 (canonicalize_poj_shadow POJ 模式保 POJ),家族與切點對齊。
+        // B-2 — mode 決定走哪一家族;shadow 已是該家族的 canonical ASCII
+        //   形式 (canonicalize_poj_shadow POJ 模式保 POJ),家族與切點對齊。
         let end = valid_span_endings_lowered(&lowered, pos, inv, mode, 1)
             .into_iter()
             .max()?;
@@ -836,7 +836,7 @@ pub(crate) fn greedy_longest_syllabification(
 /// `None` as a broken edge/provider invariant and fail-closed **drops
 /// the edge** rather than mispricing it (the buffer is still spanned
 /// via finer edges).
-// 中文: shadow_span 的「保證」音節數 = 覆蓋它所需的最少單音節 hop 數。
+// shadow_span 的「保證」音節數 = 覆蓋它所需的最少單音節 hop 數。
 pub(crate) fn span_min_syllable_count(
     shadow_span: &str,
     inv: &SyllableInventory,
@@ -856,8 +856,8 @@ pub(crate) fn span_min_syllable_count(
     // by [`build_lattice`] to produce the edge in the first place; the
     // hop-count invariant (`build_lattice` emits `(start, end)` only by
     // chaining single hops) holds per-family.
-    // 中文: B-2 — mode 同步透傳;POJ shadow 走 `poj:` 家族的單音節 hop,
-    // 中文:   與 build_lattice 同家族,保持「edge 必由 single-hop 鏈組成」不變式。
+    // B-2 — mode 同步透傳;POJ shadow 走 `poj:` 家族的單音節 hop,
+    //   與 build_lattice 同家族,保持「edge 必由 single-hop 鏈組成」不變式。
     use std::collections::{BTreeMap, VecDeque};
     let mut dist: BTreeMap<usize, usize> = BTreeMap::new();
     dist.insert(0, 0);
@@ -905,8 +905,8 @@ pub(crate) fn span_min_syllable_count(
 /// - `"tai-"`    → shadow `"tai"`,    map `[0, 1, 2, 3]`
 /// - `"goa--si"` → shadow `"goasi"`,  map `[0, 1, 2, 3, 6, 7]`
 /// - `"---"`     → shadow `""`,       map `[0]`
-// 中文: 把 raw 內所有 ASCII `-` 拿掉成 shadow,並建立 shadow byte → raw byte 的對照表。
-// 中文: leading `-` 算進前綴消耗;trailing `-` 留在 pending buffer 不被吃掉。
+// 把 raw 內所有 ASCII `-` 拿掉成 shadow,並建立 shadow byte → raw byte 的對照表。
+// leading `-` 算進前綴消耗;trailing `-` 留在 pending buffer 不被吃掉。
 pub(crate) fn build_hyphen_shadow(raw: &str) -> (String, Vec<usize>) {
     strip_char_shadow(raw, '-')
 }
@@ -918,8 +918,8 @@ pub(crate) fn build_hyphen_shadow(raw: &str) -> (String, Vec<usize>) {
 /// the `k`-th output byte. `map[0] = 0`; `map.len() == output.len() + 1`.
 /// The two callers differ only in which char they strip (`-` vs ` `) and
 /// in their mode gating; the loop body is identical, so it lives here.
-// 中文: build_hyphen_shadow 與 build_separator_shadow 共用的剝除 + offset-map 機制;
-// 中文:   兩者只差剝除的字元(`-` vs ` `)與 mode gating,迴圈本體相同故抽出。
+// build_hyphen_shadow 與 build_separator_shadow 共用的剝除 + offset-map 機制;
+//   兩者只差剝除的字元(`-` vs ` `)與 mode gating,迴圈本體相同故抽出。
 fn strip_char_shadow(input: &str, skip: char) -> (String, Vec<usize>) {
     let (shadow, map, _) = strip_char_shadow_with_barriers(input, skip);
     (shadow, map)
@@ -932,8 +932,8 @@ fn strip_char_shadow(input: &str, skip: char) -> (String, Vec<usize>) {
 /// before it may only read as a Final form. Offsets are in shadow
 /// coordinates (`0 ≤ b ≤ shadow.len()`); consecutive stripped chars
 /// dedupe to one barrier.
-// 中文: strip_char_shadow + 被剝除字元的 shadow 座標(= barrier):單音節探測不可跨越、
-// 中文:   其前一格只許 Final 形。連續剝除去重為一個 barrier。
+// strip_char_shadow + 被剝除字元的 shadow 座標(= barrier):單音節探測不可跨越、
+//   其前一格只許 Final 形。連續剝除去重為一個 barrier。
 fn strip_char_shadow_with_barriers(input: &str, skip: char) -> (String, Vec<usize>, Vec<usize>) {
     let mut shadow = String::with_capacity(input.len());
     let mut map: Vec<usize> = Vec::with_capacity(input.len() + 1);
@@ -980,12 +980,12 @@ fn strip_char_shadow_with_barriers(input: &str, skip: char) -> (String, Vec<usiz
 /// Contract mirrors [`build_hyphen_shadow`]: `map` has length
 /// `shadow.len() + 1`; index `k` is the input byte offset right after the
 /// last input char that contributed the `k`-th shadow byte; `map[0] = 0`.
-// 中文: mode-aware 音節分隔符剝除 + offset map(形狀同 build_hyphen_shadow)。
-// 中文: TPS 的 ASCII space 是鍵盤的第一調/音節邊界標記(組字中按 space 附加,
-// 中文:   使下一個雙形聲母保持初聲形);第一調無調號故 space 是唯一分界 →
-// 中文:   連續切分需當零寬分隔符剝除,讓 lattice 產生跨 space 整詞 edge
-// 中文:   (ㄍㄠ ㄉㄞ → 交代);offset map 保 raw 對映故 commit 仍吃掉 space byte。
-// 中文: TL/POJ/English 維持 identity(space 為真詞界/字面空白,不可動)。
+// mode-aware 音節分隔符剝除 + offset map(形狀同 build_hyphen_shadow)。
+// TPS 的 ASCII space 是鍵盤的第一調/音節邊界標記(組字中按 space 附加,
+//   使下一個雙形聲母保持初聲形);第一調無調號故 space 是唯一分界 →
+//   連續切分需當零寬分隔符剝除,讓 lattice 產生跨 space 整詞 edge
+//   (ㄍㄠ ㄉㄞ → 交代);offset map 保 raw 對映故 commit 仍吃掉 space byte。
+// TL/POJ/English 維持 identity(space 為真詞界/字面空白,不可動)。
 fn build_separator_shadow(input: &str, mode: InputMode) -> (String, Vec<usize>) {
     let (shadow, map, _) = build_separator_shadow_with_barriers(input, mode);
     (shadow, map)
@@ -994,7 +994,7 @@ fn build_separator_shadow(input: &str, mode: InputMode) -> (String, Vec<usize>) 
 /// [`build_separator_shadow`] plus the stripped-space barrier offsets
 /// (shadow coordinates). Non-TPS returns the identity shadow and no
 /// barriers.
-// 中文: build_separator_shadow + 剝除空白的 barrier 座標;非 TPS 為 identity + 無 barrier。
+// build_separator_shadow + 剝除空白的 barrier 座標;非 TPS 為 identity + 無 barrier。
 fn build_separator_shadow_with_barriers(
     input: &str,
     mode: InputMode,
@@ -1012,7 +1012,7 @@ fn build_separator_shadow_with_barriers(
 /// ASCII `0..=9`, so `is_ascii_digit()` is sound here. Hyphens are
 /// stripped one layer up by [`build_hyphen_shadow`] (Phase 9 Item 8),
 /// so callers feed this fn a hyphenless shadow slice already.
-// 中文: 對應 notone.py [\d\-] 中的 \d (ASCII contract 等價);hyphen 半邊由 build_hyphen_shadow 上一層處理 (Phase 9 Item 8)。
+// 對應 notone.py [\d\-] 中的 \d (ASCII contract 等價);hyphen 半邊由 build_hyphen_shadow 上一層處理 (Phase 9 Item 8)。
 pub(crate) fn strip_ascii_tone_digits(s: &str) -> String {
     s.chars().filter(|c| !c.is_ascii_digit()).collect()
 }
@@ -1056,9 +1056,9 @@ pub(crate) fn strip_ascii_tone_digits(s: &str) -> String {
 /// and emits `poj:`. A mismatch would make a custom roman key
 /// `poj:chiah` while the lattice edge keys `tl:tsiah` (or the
 /// converse), silently breaking the S6 byte-identity match.
-// 中文: 由 custom_dictionary.db entry 的羅馬字推導 walker lattice-edge 比對 key(canonicalize 後不落 [a-z]+ → None)。
-// 中文: 必須與 edge provider 的 <prefix>:{toneless} byte-identical(B-2 後 prefix ∈ {tl, poj})→
-// 中文:   重用同一組 shadow helper 同順序、共用同一 mode。
+// 由 custom_dictionary.db entry 的羅馬字推導 walker lattice-edge 比對 key(canonicalize 後不落 [a-z]+ → None)。
+// 必須與 edge provider 的 <prefix>:{toneless} byte-identical(B-2 後 prefix ∈ {tl, poj})→
+//   重用同一組 shadow helper 同順序、共用同一 mode。
 pub(crate) fn custom_toneless_key(roman: &str, mode: InputMode) -> Option<String> {
     let lower = roman.to_ascii_lowercase();
     let (canonical, _) = canonicalize_poj_shadow(&lower, mode);
@@ -1080,9 +1080,9 @@ pub(crate) fn custom_toneless_key(roman: &str, mode: InputMode) -> Option<String
     //   TPS tone mark (strip should have caught them; the guard is
     //   defensive — non-Bopomofo residue cannot equal a `tps:<tps_notone>`
     //   edge key built from the same shadow pipeline).
-    // 中文: D / C-3b — 依 mode 守 body 形狀。TL/POJ/English 仍要求純 ASCII 小寫 a..=z;
-    // 中文:   TPS 要求純 Bopomofo 且無殘留聲調符號 — strip 已處理,守門為防呆;
-    // 中文:   非 Bopomofo 殘留無法等於 tps:<tps_notone> edge 鍵。
+    // D / C-3b — 依 mode 守 body 形狀。TL/POJ/English 仍要求純 ASCII 小寫 a..=z;
+    //   TPS 要求純 Bopomofo 且無殘留聲調符號 — strip 已處理,守門為防呆;
+    //   非 Bopomofo 殘留無法等於 tps:<tps_notone> edge 鍵。
     let body_ok = match mode {
         InputMode::Tps => toneless
             .chars()
@@ -1098,8 +1098,8 @@ pub(crate) fn custom_toneless_key(roman: &str, mode: InputMode) -> Option<String
     // byte-identity with the edge provider's emitted key (the S6
     // invariant), so this MUST consume the same `mode` and the same
     // shadow pipeline — both are now mode-aware in lockstep.
-    // 中文: B-2 — mode-aware 前綴。S6 byte-identity 不變:walker edge 與此處共用同一 mode
-    // 中文:   + 同一 shadow pipeline,前綴一致。
+    // B-2 — mode-aware 前綴。S6 byte-identity 不變:walker edge 與此處共用同一 mode
+    //   + 同一 shadow pipeline,前綴一致。
     let prefix = mode_key_prefix(mode);
     Some(format!("{prefix}:{toneless}"))
 }
@@ -1177,8 +1177,8 @@ pub(crate) fn custom_toneless_key(roman: &str, mode: InputMode) -> Option<String
 ///   legitimately consumes only `pe` raw bytes and leaves `\u{207f}`
 ///   pending; the user's deliberate tap on the shorter candidate
 ///   opted into that.
-// 中文: POJ-display 輸入 → 該模式 FST 家族對應的 ASCII 拼寫(POJ 模式→POJ ASCII,TL 模式→TL ASCII;v3.5.9 B-2 PR #309),
-// 中文:   並建立 canonical byte → raw byte 對照表。
+// POJ-display 輸入 → 該模式 FST 家族對應的 ASCII 拼寫(POJ 模式→POJ ASCII,TL 模式→TL ASCII;v3.5.9 B-2 PR #309),
+//   並建立 canonical byte → raw byte 對照表。
 pub(crate) fn canonicalize_poj_shadow(input: &str, mode: InputMode) -> (String, Vec<usize>) {
     if input.is_ascii() {
         // Identity offset map: Phase 1's NFD walk is a no-op for ASCII,
@@ -1196,9 +1196,9 @@ pub(crate) fn canonicalize_poj_shadow(input: &str, mode: InputMode) -> (String, 
             // POJ `tó-uī`). Dirty-row `ou` protection moves to the
             // per-syllable build pipeline where it is structurally
             // safe (one syllable per application).
-            // 中文: B-2 PR #309 — POJ 模式 ASCII 改走 identity (glyph-only 規則對 ASCII 為 no-op)。
-            // 中文:   `toui` 保持 `toui`,讓 lattice 切出 `poj:to` + `poj:ui` 對齊 `tó-uī` 索引;
-            // 中文:   `ou→oo` 髒資料防護下放到逐音節 build pipeline,單音節下不會誤觸發。
+            // B-2 PR #309 — POJ 模式 ASCII 改走 identity (glyph-only 規則對 ASCII 為 no-op)。
+            //   `toui` 保持 `toui`,讓 lattice 切出 `poj:to` + `poj:ui` 對齊 `tó-uī` 索引;
+            //   `ou→oo` 髒資料防護下放到逐音節 build pipeline,單音節下不會誤觸發。
             return apply_normalize_with_offsets(
                 input.to_owned(),
                 map,
@@ -1262,9 +1262,9 @@ pub(crate) fn canonicalize_poj_shadow(input: &str, mode: InputMode) -> (String, 
     // typed without a hyphen would have folded `toui → tooi`). TL /
     // TPS / English keep the pre-B-2 chain so dictionary hits routed
     // through the TL family stay byte-identical.
-    // 中文: B-2 PR #309 — mode 決定 Phase 2 rule list。POJ 模式跑 glyph-only POJ 子集
-    // 中文:   (無 `ou→oo` alias、無 ch→ts 鏈),避免跨音節邊界誤觸發 (同 ASCII 分支理由)。
-    // 中文:   非-ASCII POJ 輸入仍落到 POJ ASCII 而非 TL ASCII。
+    // B-2 PR #309 — mode 決定 Phase 2 rule list。POJ 模式跑 glyph-only POJ 子集
+    //   (無 `ou→oo` alias、無 ch→ts 鏈),避免跨音節邊界誤觸發 (同 ASCII 分支理由)。
+    //   非-ASCII POJ 輸入仍落到 POJ ASCII 而非 TL ASCII。
     // POJ keeps POJ shape (glyph-only); TL / English / TPS take input
     // literally — encoding-only normalization, NO POJ→TL spelling fold — so a
     // valid TL special final `eng` [ɛŋ] is not collapsed to `ing` [iŋ] and a
@@ -1272,7 +1272,7 @@ pub(crate) fn canonicalize_poj_shadow(input: &str, mode: InputMode) -> (String, 
     // auto-corrected into a `tl:` family hit. English non-ASCII stays literal
     // (`hello` not reinterpreted as Taigi); TPS Bopomofo never matches these
     // Latin rules.
-    // 中文: POJ 保 POJ 形 (glyph-only);TL/English/TPS 字面化 — 純編碼,無 POJ→TL 拼寫摺疊。
+    // POJ 保 POJ 形 (glyph-only);TL/English/TPS 字面化 — 純編碼,無 POJ→TL 拼寫摺疊。
     let rules = if matches!(mode, InputMode::Poj) {
         phonetics::NORMALIZE_TO_POJ_GLYPH_RULES
     } else {
@@ -1286,7 +1286,7 @@ pub(crate) fn canonicalize_poj_shadow(input: &str, mode: InputMode) -> (String, 
 /// pre-impl flagged that `\u{0358}` (combining dot above right, part of
 /// POJ `o\u{0358}` for `oo`) must NOT be dropped here — it has to
 /// survive Phase 1 so the Phase 2 `o\u{0358}→oo` substitution can fire.
-// 中文: 只認 phonetics tables.rs 的 8 個聲調 combining 符號;`\u{0358}` 留給 Phase 2 處理。
+// 只認 phonetics tables.rs 的 8 個聲調 combining 符號;`\u{0358}` 留給 Phase 2 處理。
 fn is_tone_combining_mark(c: char) -> bool {
     matches!(
         c,
@@ -1316,10 +1316,10 @@ fn is_tone_combining_mark(c: char) -> bool {
 /// as the rule lists in `phonetics::syllable`; non-shrinking rules
 /// leave the offset map invariant, shrinking rules drain the dropped
 /// trailing byte's map entry instead of producing a new `String`.
-// 中文: B-2 — 將代換鏈 + offset-map 維護泛化,呼叫端傳 rule list;
-// 中文:   TL/English/TPS 用 NORMALIZE_TO_TL_RULES,POJ 模式用 NORMALIZE_TO_POJ_GLYPH_RULES
-// 中文:   (glyph-only,不含 ou→oo 別名,whole-buffer 跨音節安全);
-// 中文:   shrinking 規則由 offset_aware_replace 處理 map 收縮,其餘規則 map invariant。
+// B-2 — 將代換鏈 + offset-map 維護泛化,呼叫端傳 rule list;
+//   TL/English/TPS 用 NORMALIZE_TO_TL_RULES,POJ 模式用 NORMALIZE_TO_POJ_GLYPH_RULES
+//   (glyph-only,不含 ou→oo 別名,whole-buffer 跨音節安全);
+//   shrinking 規則由 offset_aware_replace 處理 map 收縮,其餘規則 map invariant。
 pub(crate) fn apply_normalize_with_offsets(
     s: String,
     map: Vec<usize>,
@@ -1422,9 +1422,9 @@ fn offset_aware_replace(s: &mut String, map: &mut Vec<usize>, find: &str, repl: 
 /// candidates always final-commit per Q15.4 (the offset maps from
 /// Items 8 + 9 are intentionally discarded here because there is no
 /// per-syllable mid-commit semantics to preserve).
-// 中文: Item 10 / B-2 — partial-prefix mode-aware key 構造,沿用 Item 8/9 chain;不走 syllabifier。
-// 中文:   consumed_span 固定 (0, raw.len()),配合 Q15.4 partial-prefix 一律 final-commit。
-// 中文: B-2 rename:`_tl` 後綴脫去,emit 改為 mode-aware (POJ 走 `poj:` 家族)。
+// Item 10 / B-2 — partial-prefix mode-aware key 構造,沿用 Item 8/9 chain;不走 syllabifier。
+//   consumed_span 固定 (0, raw.len()),配合 Q15.4 partial-prefix 一律 final-commit。
+// B-2 rename:`_tl` 後綴脫去,emit 改為 mode-aware (POJ 走 `poj:` 家族)。
 pub(crate) fn build_partial_prefix_key(
     raw: &str,
     mode: InputMode,
@@ -1452,9 +1452,9 @@ pub(crate) fn build_partial_prefix_key(
     // unified `assemble_candidates` empty-keys fallthrough and always
     // takes the toneless branch (`is_tps_tone_mark` strip), so a raw
     // `ㄉㄧˊ` shadow still yields the `tps:ㄉㄧ` toneless key.
-    // 中文: 明確聲調修正 — tone-aware 主體,與 left_anchored_keys_from_lattice / walker edge 同規則。
-    // 中文:   全含調 buffer(tai5)→ verbatim `tl:tai5` 前綴,Step 4b lookup_prefix 只撈 tone-5 開頭鍵;
-    // 中文:   去調/混合 buffer 維持去調前綴。TPS 恆走去調分支(is_tps_tone_mark 剝除)。
+    // 明確聲調修正 — tone-aware 主體,與 left_anchored_keys_from_lattice / walker edge 同規則。
+    //   全含調 buffer(tai5)→ verbatim `tl:tai5` 前綴,Step 4b lookup_prefix 只撈 tone-5 開頭鍵;
+    //   去調/混合 buffer 維持去調前綴。TPS 恆走去調分支(is_tps_tone_mark 剝除)。
     let body = fst_body_for_span(&shadow, mode);
     if body.is_empty() {
         return None;
@@ -1474,8 +1474,8 @@ mod tests {
     // scalars, so its shadow end is `"ㄒㄧ".len()`; the barrier the TPS
     // separator strip leaves for a trailing space sits at exactly that
     // offset.
-    // 中文: A3 (§41) — 空白釘定判斷。ㄒㄧ 為兩個 3-byte 注音字元,shadow 結尾即其 len();
-    // 中文:   尾端空白被剝除後留下的 barrier 正落在該偏移。
+    // A3 (§41) — 空白釘定判斷。ㄒㄧ 為兩個 3-byte 注音字元,shadow 結尾即其 len();
+    //   尾端空白被剝除後留下的 barrier 正落在該偏移。
     #[test]
     fn span_end_pins_when_barrier_lands_on_an_unmarked_tail() {
         let span = "ㄒㄧ";
@@ -1608,8 +1608,8 @@ mod tests {
     // whole-buffer commit leaves nothing pending. Interior separators were
     // already consumed via the next glyph's map entry; this pins the tail
     // case the reported bug exposed.
-    // 中文: §41 — 尾端分隔記號被整段 span 吃掉,整段 commit 不留 pending;
-    // 中文:   中間分隔符本來就由下一個 glyph 的 entry 帶過,這裡釘的是尾端案例。
+    // §41 — 尾端分隔記號被整段 span 吃掉,整段 commit 不留 pending;
+    //   中間分隔符本來就由下一個 glyph 的 entry 帶過,這裡釘的是尾端案例。
     #[test]
     fn trailing_separator_is_consumed_by_the_full_span() {
         let inv = test_inventory(&["tps:ㄒㄧ"]);
@@ -1655,8 +1655,8 @@ mod tests {
     // separators came in. Codex post-impl 2026-08-21 asked for these
     // explicitly — the comment claimed the `␠-` / `-␠` shapes were covered
     // when only the bare trailing hyphen was.
-    // 中文: 端點規則不可吃掉的混合尾巴:尾端只要出現連字,連字契約優先(不論兩個分隔符的先後)。
-    // 中文:   Codex post-impl 2026-08-21 指名要補 — 註解說涵蓋 ␠- / -␠,實際只測了單獨尾端連字。
+    // 端點規則不可吃掉的混合尾巴:尾端只要出現連字,連字契約優先(不論兩個分隔符的先後)。
+    //   Codex post-impl 2026-08-21 指名要補 — 註解說涵蓋 ␠- / -␠,實際只測了單獨尾端連字。
     #[test]
     fn mixed_separator_tails_keep_the_hyphen_contract() {
         let inv = test_inventory(&["tps:ㄒㄧ"]);
@@ -1677,8 +1677,8 @@ mod tests {
         // Degenerate shapes must not panic or invent coverage: an empty
         // buffer keeps the baseline map, an all-separator buffer produces an
         // empty shadow (no lattice edge, so no candidate can claim the span).
-        // 中文: 退化形狀不可 panic 也不可憑空製造覆蓋:空 buffer 保 baseline map,
-        // 中文:   全分隔符 buffer 產生空 shadow(無 lattice edge,不會有候選宣稱該 span)。
+        // 退化形狀不可 panic 也不可憑空製造覆蓋:空 buffer 保 baseline map,
+        //   全分隔符 buffer 產生空 shadow(無 lattice edge,不會有候選宣稱該 span)。
         let inv = test_inventory(&["tps:ㄒㄧ"]);
         let (shadow, shadow_to_raw_end, _, _) =
             build_shadow_lattice_with_barriers("", &inv, InputMode::Tps);
@@ -2095,8 +2095,8 @@ mod tests {
         // `o͘ⁿ` spelling is served by the alias keys the dictionary build
         // emits (`phonetics::nasal_oo_alias_spelling`), so this shadow can
         // stay literal.
-        // 中文: 兩條字形規則都會縮短,offset drain 仍被覆蓋;結果保持 oonn ——
-        // 中文:   鼻化折疊不在整段 scope 做(會跨接縫毀掉 滷卵),改由建置期別名鍵服務。
+        // 兩條字形規則都會縮短,offset drain 仍被覆蓋;結果保持 oonn ——
+        //   鼻化折疊不在整段 scope 做(會跨接縫毀掉 滷卵),改由建置期別名鍵服務。
         let (out, map) = canonicalize_poj_shadow("o\u{0358}\u{207f}", InputMode::Tl);
         assert_eq!(out, "oonn", "{out:?}");
         assert_eq!(*map.last().unwrap(), 6, "{map:?}");
@@ -2587,8 +2587,8 @@ mod tests {
     /// POJ ASCII shape, distinct from `canonicalize_syllable`'s TL fold).
     /// Used by the B-2 mode-aware unit tests to prove POJ shadow helpers
     /// route to the `poj:` family of the tagged-single-FST.
-    // 中文: B-2 — POJ-only inventory builder。emit `poj:` 前綴 + POJ ASCII canonical,
-    // 中文:   驗證 mode-aware shadow helpers 路由到 `poj:` 家族。
+    // B-2 — POJ-only inventory builder。emit `poj:` 前綴 + POJ ASCII canonical,
+    //   驗證 mode-aware shadow helpers 路由到 `poj:` 家族。
     fn build_poj_inventory(samples: &[&str]) -> SyllableInventory {
         use std::path::PathBuf;
 

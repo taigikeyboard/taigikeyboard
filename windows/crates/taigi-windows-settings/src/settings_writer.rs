@@ -2,7 +2,7 @@
 //! Both windows own one — the egui window today, the WinUI one from
 //! roadmap W17 — so the atomic-write-and-report rule is written once.
 
-// 中文: 視窗持有的 settings.json 副本與唯一寫入路徑 — 原子更新、失敗回報、跟隨檔案。
+// 視窗持有的 settings.json 副本與唯一寫入路徑 — 原子更新、失敗回報、跟隨檔案。
 
 use std::rc::Rc;
 use std::sync::Arc;

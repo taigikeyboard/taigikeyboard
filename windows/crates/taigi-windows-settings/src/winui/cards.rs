@@ -8,7 +8,7 @@
 //! Every colour is a `ThemeBrush`, never a literal: light, dark and high
 //! contrast are WinUI's to resolve.
 
-// 中文: 設定卡片 — 單列卡片;命令也是同一個形狀(左標題、右按鈕);顏色一律用 ThemeBrush,不寫死色值。
+// 設定卡片 — 單列卡片;命令也是同一個形狀(左標題、右按鈕);顏色一律用 ThemeBrush,不寫死色值。
 
 use windows_reactor::*;
 
