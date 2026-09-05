@@ -95,7 +95,6 @@
     <string name="i18n_dictionary_exportBackup">Export All at Once</string>
     <string name="i18n_dictionary_importBackup">Import All at Once</string>
     <string name="i18n_dictionary_exportBackupSuccess">Backup exported successfully</string>
-    <string name="i18n_dictionary_importBackupResult">Imported %1$d custom entries, %2$d frequency records, %3$d association records</string>
     <string name="i18n_dictionary_backupPrivacyWarning">A backup contains your custom words, frequency records, and association records. You can import it on iOS or Android. Store the file securely because it may contain private content.</string>
     <string name="i18n_dictionary_moeDescription">Search Taiwanese Taigi and Mandarin, with audio for headwords and example sentences for easy learning. Includes category and radical-stroke indexes plus appendices.</string>
     <string name="i18n_dictionary_newwordDescription">Taigi TV invites experts and scholars to meet regularly, settle fitting Taigi terms for emerging words, and build a public lookup glossary.</string>

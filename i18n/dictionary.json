@@ -107,9 +107,7 @@
       "scope": {
         "platforms": [
           "android",
-          "ios",
-          "macos",
-          "windows"
+          "ios"
         ],
         "surfaces": [
           "host"
@@ -354,7 +352,6 @@
         "platforms": [
           "android",
           "ios",
-          "macos",
           "windows"
         ],
         "surfaces": [
@@ -1430,7 +1427,6 @@
       "comment": "Backup-import result message: counts of custom-dictionary, frequency, and association records imported.",
       "scope": {
         "platforms": [
-          "android",
           "ios"
         ],
         "surfaces": [

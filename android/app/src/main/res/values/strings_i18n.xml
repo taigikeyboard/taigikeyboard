@@ -95,7 +95,6 @@
     <string name="i18n_dictionary_exportBackup">一擺全出</string>
     <string name="i18n_dictionary_importBackup">一擺全入</string>
     <string name="i18n_dictionary_exportBackupSuccess">備份順利匯出</string>
-    <string name="i18n_dictionary_importBackupResult">匯入 %1$d 項自訂詞、%2$d 項詞頻、%3$d 項詞關聯</string>
     <string name="i18n_dictionary_backupPrivacyWarning">備份檔案包含自訂詞、詞頻佮詞關聯紀錄，會當佇 iOS 佮 Android 匯入。檔案可能包含私人內容，請妥當保管。</string>
     <string name="i18n_dictionary_moeDescription">台語、華語攏會當揣，詞目佮例句有發音通聽，學習較利便。閣有分類、部首筆劃索引佮附錄。</string>
     <string name="i18n_dictionary_newwordDescription">台語台招專家學者，定期開會，討論新詞愛按怎用台語講較好，建立詞庫予逐家查、予逐家用。</string>
