@@ -20,7 +20,7 @@
 //! offsets. In production these endings flow into
 //! `composing::continuous::assemble_candidates`, which builds the
 //! mode-aware `<prefix>:<toneless>` keys and calls
-//! `lexicon::fetch_candidates_for_keys` directly. The scanners never
+//! `lexicon::fetch_candidates_for_keys_with_barriers` directly. The scanners never
 //! panic on partial UTF-8 or out-of-range `pos`; see each entry's
 //! `pos` validation contract.
 //!

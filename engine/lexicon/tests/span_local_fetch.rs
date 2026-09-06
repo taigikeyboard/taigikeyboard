@@ -1118,7 +1118,7 @@ fn partial_prefix_engine_path_surfaces_lookup_prefix_hits() {
 fn partial_prefix_filters_abbrev_collisions() {
     // Codex PR #351 r3319500948 — `fetch_partial_prefix_candidates` must
     // mirror the span-local + walker guard at
-    // `fetch_candidates_for_keys`:640 / `best_candidate_for_key`:922 and
+    // `fetch_candidates_for_keys_with_barriers` / `best_candidate_for_key_with_barriers` and
     // reject rowids whose FST entry is an `tl_abbrev` / `poj_abbrev` /
     // `tps_abbrev` collision sharing the input prefix. The prefix-aware
     // variant `matches_continuous_toneless_prefix_key` reconstructs the

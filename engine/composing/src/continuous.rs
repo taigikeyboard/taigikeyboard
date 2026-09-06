@@ -12,14 +12,15 @@
 //!    retired the legacy TPS-specific `build_keys_tps` short-circuit (which
 //!    folded TPS into `tl:` keys via `phonetics::tps_to_tl`); TPS now walks
 //!    the same shadow → lattice path as TL/POJ with the only difference
-//!    being the family family the syllabifier + key emitter resolve through
+//!    being the family the syllabifier + key emitter resolve through
 //!    `mode` (`tps:` against the C-0 emit of `dictionary.fst`).
 //! 2. `keys.is_empty()` → [`fetch_via_lexicon_partial_inner`] (Item 10
 //!    fallthrough) for ALL modes (TL/POJ/English/TPS). Each mode emits its
 //!    own family prefix via [`crate::shadow::mode_key_prefix`], so a TPS
 //!    leading initial like `ㄉ` scans `tps:ㄉ` byte-range exactly as TL's
 //!    `g` scans `tl:g`.
-//!    Else → [`fetch_via_lexicon_inner`] (span-local fetch).
+//!    Else → `lexicon::fetch_candidates_for_keys_with_barriers` (span-local
+//!    fetch).
 //! 3. Per-candidate recase loop (`recase_roman` over each
 //!    `consumed_span`; presentation `roman` only —`display_text` / `hanji`
 //!    untouched).
@@ -318,8 +319,8 @@ fn roman_reading_eq(a: &str, b: &str) -> bool {
 /// `(0, raw_len)` are distinct commit surfaces; the rationale matches
 /// `lexicon::dedupe_by_roman_hanji_span`. `hanji = None` or empty
 /// hanji passes through to mirror
-/// `engine/ranking/src/dedup.rs::remove_display_duplicates` (legacy
-/// `processCandidates` path, dead in production today); upstream
+/// `engine/ranking/src/dedup.rs::remove_display_duplicates` (the
+/// normal-mode path, called from `ranking::process`); upstream
 /// `lexicon::dedupe_by_roman_hanji_span` already collapses exact
 /// `(roman, hanji, span)` duplicates so this branch never reaches a
 /// truly identical pair.
@@ -343,26 +344,6 @@ fn dedupe_display_hanji_for_tps(candidates: &mut Vec<RawCandidate>) {
 // ============================================================================
 // Inner fetchers — take pre-resolved lexicon state (no with_state inside).
 // ============================================================================
-
-/// v3.5.9 A2 — span-local fetch inner. Pre-A2 `fetch_via_lexicon`'s body
-/// minus the `LexiconHandle::with_state` opener and the `prefix_index` /
-/// `dictionary` `as_ref()?` guards (those moved into [`assemble_candidates`]
-/// under the **D1 fold**). Caller is responsible for the empty
-/// `Vec::new()` return when state is unavailable.
-///
-/// v3.5.9 D7 — takes [`ContinuousFetchCtx`] for the six shared lexicon
-/// args. PR-9.6 — `enabled_sources_bitmask` is the platform's source-toggle
-/// state (sentinel-normalised in `dispatch::handle_fetch_at_pos`), built
-/// into the ctx at the seam (`assemble_candidates`), not here.
-fn fetch_via_lexicon_inner(
-    keys: &[(ConsumedSpan, String)],
-    keys_final_only: &[Vec<usize>],
-    keys_tone_pinned: &[bool],
-    raw_len: u32,
-    ctx: &ContinuousFetchCtx<'_>,
-) -> Vec<RawCandidate> {
-    fetch_candidates_for_keys_with_barriers(keys, keys_final_only, keys_tone_pinned, raw_len, ctx)
-}
 
 /// v3.5.9 A2 — partial-prefix fetch inner. Pre-A2 `fetch_via_lexicon_partial`'s
 /// body minus the `LexiconHandle::with_state` opener.
@@ -1065,7 +1046,13 @@ pub(crate) fn assemble_candidates(
         } else {
             // ---- Step 2b: span-local fetch.
             let mut c = if let Some(ctx) = lex_ctx.as_ref() {
-                fetch_via_lexicon_inner(&keys, &keys_final_only, &keys_tone_pinned, raw_len, ctx)
+                fetch_candidates_for_keys_with_barriers(
+                    &keys,
+                    &keys_final_only,
+                    &keys_tone_pinned,
+                    raw_len,
+                    ctx,
+                )
             } else {
                 Vec::new()
             };
@@ -1249,9 +1236,9 @@ pub(crate) fn assemble_candidates(
             // `raw` as a strict prefix (key extends BEYOND raw, e.g.
             // `tl:taigir` for input `taigi` → `tâi-gír`/`台語`) are not
             // reachable from the span-local + walker pair:
-            // * `fetch_via_lexicon_inner` calls `lookup_exact` per
-            //   left-anchored lattice edge, so it only matches keys EQUAL
-            //   to a `(0, end)` toneless prefix.
+            // * The span-local fetch (`fetch_candidates_for_keys_with_barriers`)
+            //   calls `lookup_exact` per left-anchored lattice edge, so it
+            //   only matches keys EQUAL to a `(0, end)` toneless prefix.
             // * Walker spans `0..raw_len` only, so it cannot extend past
             //   the buffer length to surface a longer key.
             // * The `keys.is_empty()` partial-prefix branch only fires
@@ -1276,7 +1263,7 @@ pub(crate) fn assemble_candidates(
             //   `candidates_for_splittable` keeps `elem.raw_text().len()
             //   >= query.len()` via `select_conversions_for_multiple` on
             //   prefix-trie hits.
-            // - Our own `engine/lexicon/src/search.rs:124-129` normal-
+            // - Our own `engine/lexicon/src/search.rs::search` normal-
             //   mode autocomplete already does `lookup_exact ++
             //   lookup_prefix` via `IndexSet` order-preserving merge.
             //   The continuous path is the outlier.

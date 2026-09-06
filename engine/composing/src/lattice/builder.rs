@@ -34,7 +34,7 @@ use crate::syllabifier::valid_span_endings_lowered_with_barriers;
 /// `(0, multi-syllable)` keys, so the flattened output would no longer
 /// be a superset of today's (Codex pre-impl 2026-05-16 Q2). `composing`
 /// stays lexicon-agnostic here: it emits syllabifier-valid spans and
-/// lets `fetch_candidates_for_keys` filter against the dictionary
+/// lets `fetch_candidates_for_keys_with_barriers` filter against the dictionary
 /// exactly as before (no crate-ownership inversion — Codex Q2 boundary
 /// note).
 ///

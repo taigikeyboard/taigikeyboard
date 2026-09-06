@@ -32,7 +32,9 @@ pub use api::{
     contains_tps, is_nasal_marker, is_word_material, to_tone_marks, to_tone_number,
     toneless_reading_key, InputMode, PhoneticsError, System,
 };
-pub use normalization::{has_tone_marks, normalize_input, taigi_unicode_base_form};
+pub use normalization::{
+    has_tone_marks, is_combining_tone_mark, normalize_input, taigi_unicode_base_form,
+};
 pub use poj::to_poj;
 pub use syllable::{
     canonicalize_poj_syllable, canonicalize_syllable, is_roman_acronym_key, is_valid_syllable,

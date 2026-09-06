@@ -119,9 +119,13 @@ fn drop_last_char(s: &str) -> String {
     it.as_str().to_string()
 }
 
-/// Build a `composing` step response (typing / replace-last / delete-backward
-/// non-empty branches). All three update the preedit + request a fresh
-/// autocomplete query against the new buffer.
+/// Build a mid-composition step response (typing / replace-last /
+/// delete-backward non-empty branches, in both `Phase::Composing` and
+/// `Phase::Continuous`): update the preedit + request a fresh autocomplete
+/// query against the new buffer. Under Continuous, `display` is the **whole
+/// composition** (`Σ nailed.display_text` + pending-tail derived form —
+/// callers build it via [`combined_display`], Model B) while `raw` stays the
+/// still-editable pending tail.
 fn step_response(raw: String, display: String, selected_index: i32) -> ComposingResponse {
     ComposingResponse {
         preedit: Some(Preedit {
@@ -220,14 +224,7 @@ fn replace_last(
             // Empty pending + empty nailed = degenerate Continuous state
             // (Codex post-impl finding #2). Exit to Idle and clear nextword.
             if new_pending.is_empty() && nailed.is_empty() {
-                return exit_to_idle(
-                    state,
-                    vec![
-                        clear_preedit_without_commit(),
-                        reset_autocomplete(),
-                        next_word_clear_for_new_composing(),
-                    ],
-                );
+                return exit_to_idle(state, abort_continuous_effects());
             }
             let combined = combined_display(nailed, &new_pending, config);
             let preserved_index = state.selected_candidate_index;
@@ -235,7 +232,7 @@ fn replace_last(
                 raw: new_pending.clone(),
                 nailed: nailed.clone(),
             };
-            continuous_step_response(new_pending, combined, preserved_index)
+            step_response(new_pending, combined, preserved_index)
         }
         Phase::Idle => noop(state, config),
     }
@@ -297,14 +294,7 @@ fn delete_backward_continuous(
     if !pending.is_empty() {
         let new_pending = drop_last_char(&pending);
         if new_pending.is_empty() && nailed.is_empty() {
-            return exit_to_idle(
-                state,
-                vec![
-                    clear_preedit_without_commit(),
-                    reset_autocomplete(),
-                    next_word_clear_for_new_composing(),
-                ],
-            );
+            return exit_to_idle(state, abort_continuous_effects());
         }
         let combined = combined_display(&nailed, &new_pending, config);
         state.phase = Phase::Continuous {
@@ -312,19 +302,12 @@ fn delete_backward_continuous(
             nailed,
         };
         state.selected_candidate_index = 0;
-        return continuous_step_response(new_pending, combined, 0);
+        return step_response(new_pending, combined, 0);
     }
 
     // pending empty branches
     if nailed.is_empty() {
-        return exit_to_idle(
-            state,
-            vec![
-                clear_preedit_without_commit(),
-                reset_autocomplete(),
-                next_word_clear_for_new_composing(),
-            ],
-        );
+        return exit_to_idle(state, abort_continuous_effects());
     }
 
     let mut new_nailed = nailed;
@@ -384,14 +367,7 @@ fn commit_derived(state: &mut EngineState, config: &AppConfig) -> ComposingRespo
     if display.is_empty() {
         return noop(state, config);
     }
-    exit_to_idle(
-        state,
-        vec![
-            commit_text_replacing_preedit(display),
-            reset_autocomplete(),
-            reset_autocomplete_context(),
-        ],
-    )
+    exit_to_idle(state, finalize_effects(display))
 }
 
 fn commit_raw(state: &mut EngineState, config: &AppConfig) -> ComposingResponse {
@@ -420,14 +396,7 @@ fn commit_raw_composing(
     // would hold only for the phase the platforms happen to be in (both
     // promote to Continuous after every mutation, but the engine cannot
     // depend on that — Codex post-impl BLOCK 2026-08-21).
-    exit_to_idle(
-        state,
-        vec![
-            commit_text_replacing_preedit(strip_tps_separator_markers(&raw)),
-            reset_autocomplete(),
-            reset_autocomplete_context(),
-        ],
-    )
+    exit_to_idle(state, finalize_effects(strip_tps_separator_markers(&raw)))
 }
 
 /// `Intent::CommitRaw` under `Phase::Continuous` (Enter) — v3.5.8 Phase 9
@@ -489,15 +458,9 @@ fn commit_raw_continuous(
             None => next_word_clear_for_new_composing(),
         }
     };
-    exit_to_idle(
-        state,
-        vec![
-            commit_text_replacing_preedit(combined),
-            reset_autocomplete(),
-            reset_autocomplete_context(),
-            terminal_nextword,
-        ],
-    )
+    let mut effects = finalize_effects(combined);
+    effects.push(terminal_nextword);
+    exit_to_idle(state, effects)
 }
 
 fn select_suggestion(
@@ -508,14 +471,7 @@ fn select_suggestion(
     if !matches!(state.phase, Phase::Composing { .. }) {
         return noop(state, config);
     }
-    exit_to_idle(
-        state,
-        vec![
-            commit_text_replacing_preedit(text),
-            reset_autocomplete(),
-            reset_autocomplete_context(),
-        ],
-    )
+    exit_to_idle(state, finalize_effects(text))
 }
 
 fn commit_preedit_then_insert_external(
@@ -529,14 +485,7 @@ fn commit_preedit_then_insert_external(
     if let Phase::Composing { raw } = &state.phase {
         let mut combined = derived_display(raw, config);
         combined.push_str(&external);
-        return exit_to_idle(
-            state,
-            vec![
-                commit_text_replacing_preedit(combined),
-                reset_autocomplete(),
-                reset_autocomplete_context(),
-            ],
-        );
+        return exit_to_idle(state, finalize_effects(combined));
     }
     // Idle → plain insert. `CommitTextReplacingPreedit` is no-op-on-empty-preedit
     // safe on both platforms.
@@ -553,14 +502,7 @@ fn reset(state: &mut EngineState, config: &AppConfig) -> ComposingResponse {
             state,
             vec![clear_preedit_without_commit(), reset_autocomplete()],
         ),
-        Phase::Continuous { .. } => exit_to_idle(
-            state,
-            vec![
-                clear_preedit_without_commit(),
-                reset_autocomplete(),
-                next_word_clear_for_new_composing(),
-            ],
-        ),
+        Phase::Continuous { .. } => exit_to_idle(state, abort_continuous_effects()),
     }
 }
 
@@ -614,28 +556,6 @@ fn noop(state: &EngineState, config: &AppConfig) -> ComposingResponse {
 
 // ---- Continuous-phase helpers --------------------------------------
 
-/// Step response for `Phase::Continuous` mid-composition mutations (typing,
-/// TPS replace-last, unnail/pop). **Model B**: `display` is the **whole
-/// composition** (`Σ nailed.display_text` + pending-tail derived form) —
-/// callers build it via [`combined_display`]. `raw_input` stays the
-/// still-editable pending tail.
-fn continuous_step_response(
-    pending: String,
-    display: String,
-    selected_index: i32,
-) -> ComposingResponse {
-    ComposingResponse {
-        preedit: Some(Preedit {
-            raw_input: pending,
-            display_text: display.clone(),
-        }),
-        effect: vec![update_preedit(display), perform_autocomplete()],
-        selected_candidate_index: selected_index,
-        is_composing: true,
-        continuous: None,
-    }
-}
-
 /// `Phase::Composing { raw }` → `Phase::Continuous { raw, nailed: [] }`.
 /// Marked text was already derived from the same `raw` and with no nailed
 /// segments the Model B composing surface equals that derived form, so no
@@ -683,11 +603,7 @@ fn start_under_continuous(
     // Drop continuous state to Idle first.
     state.phase = Phase::Idle;
     state.selected_candidate_index = -1;
-    let mut effects = vec![
-        clear_preedit_without_commit(),
-        reset_autocomplete(),
-        next_word_clear_for_new_composing(),
-    ];
+    let mut effects = abort_continuous_effects();
     let resp = enter_composing(state, text, config);
     effects.extend(resp.effect);
     ComposingResponse {
@@ -719,15 +635,9 @@ fn select_suggestion_under_continuous(
     };
     let mut combined = nailed_prefix(nailed, config);
     combined.push_str(&text);
-    exit_to_idle(
-        state,
-        vec![
-            commit_text_replacing_preedit(combined),
-            reset_autocomplete(),
-            reset_autocomplete_context(),
-            next_word_clear_for_new_composing(),
-        ],
-    )
+    let mut effects = finalize_effects(combined);
+    effects.push(next_word_clear_for_new_composing());
+    exit_to_idle(state, effects)
 }
 
 /// `Intent::CommitPreeditThenInsertExternal { text }` under Continuous.
@@ -749,15 +659,9 @@ fn commit_preedit_then_insert_external_under_continuous(
     };
     let mut combined = combined_display(nailed, raw, config);
     combined.push_str(&external);
-    exit_to_idle(
-        state,
-        vec![
-            commit_text_replacing_preedit(combined),
-            reset_autocomplete(),
-            reset_autocomplete_context(),
-            next_word_clear_for_new_composing(),
-        ],
-    )
+    let mut effects = finalize_effects(combined);
+    effects.push(next_word_clear_for_new_composing());
+    exit_to_idle(state, effects)
 }
 
 /// `Phase::Continuous` segment commit. `consumed_bytes >= pending.len()` is
@@ -828,15 +732,9 @@ fn commit_continuous(
         // Pending is empty here, so the whole composition is just the
         // nailed prefix (combined_display would append derived("") = "").
         let combined = nailed_prefix(&new_nailed, config);
-        return exit_to_idle(
-            state,
-            vec![
-                commit_text_replacing_preedit(combined),
-                reset_autocomplete(),
-                reset_autocomplete_context(),
-                next_word_word_selected(canonical, next_word_roman, true),
-            ],
-        );
+        let mut effects = finalize_effects(combined);
+        effects.push(next_word_word_selected(canonical, next_word_roman, true));
+        return exit_to_idle(state, effects);
     }
 
     // Mid-commit (Model B): stay in Continuous, NO document write — just
@@ -873,14 +771,7 @@ fn reset_continuous(state: &mut EngineState, config: &AppConfig) -> ComposingRes
     if !matches!(state.phase, Phase::Continuous { .. }) {
         return noop(state, config);
     }
-    exit_to_idle(
-        state,
-        vec![
-            clear_preedit_without_commit(),
-            reset_autocomplete(),
-            next_word_clear_for_new_composing(),
-        ],
-    )
+    exit_to_idle(state, abort_continuous_effects())
 }
 
 /// `Append { ch }` under `Phase::Continuous`. Appends to the pending tail;
@@ -903,7 +794,7 @@ fn append_continuous(state: &mut EngineState, ch: String, config: &AppConfig) ->
         nailed: nailed.clone(),
     };
     state.selected_candidate_index = 0;
-    continuous_step_response(new_pending, combined, 0)
+    step_response(new_pending, combined, 0)
 }
 
 // ---- Effect constructors ------------------------------------------
@@ -956,6 +847,31 @@ fn reset_autocomplete_context() -> Effect {
             ResetAutocompleteContext {},
         )),
     }
+}
+
+/// The abort trio every "drop Continuous state without writing to the
+/// document" branch emits, in this order: clear the whole marked region,
+/// reset autocomplete, tear down NextWord's continuous strip. A caller that
+/// emits more (`start_under_continuous`) appends after the trio.
+fn abort_continuous_effects() -> Vec<Effect> {
+    vec![
+        clear_preedit_without_commit(),
+        reset_autocomplete(),
+        next_word_clear_for_new_composing(),
+    ]
+}
+
+/// The finalize trio every branch that commits text out of Composing /
+/// Continuous emits, in this order:
+/// commit `text` replacing the preedit, reset autocomplete, reset the
+/// autocomplete context. A caller that also fires a NextWord effect pushes
+/// it after the trio.
+fn finalize_effects(text: String) -> Vec<Effect> {
+    vec![
+        commit_text_replacing_preedit(text),
+        reset_autocomplete(),
+        reset_autocomplete_context(),
+    ]
 }
 
 /// v3.6.1 R2 — resolve the NextWord `roman` arg for a committed

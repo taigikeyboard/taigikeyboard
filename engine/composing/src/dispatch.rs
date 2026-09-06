@@ -481,8 +481,9 @@ fn with_continuous(
     snapshot
 }
 
-/// Clamp Phase-4-pinned syllable count range. The Phase 5 builder
-/// caps at 4 (`engine/lexicon/src/continuous.rs:91-93`); the proto
+/// Clamp the syllable count into `u8`. FST romanization keys are only
+/// emitted for readings of at most 4 syllables
+/// (`dictionary/build/create_fst.py::MAX_SYLLABLES_TL_NUM`); the proto
 /// field is u32 so callers could in principle send larger values.
 /// Saturate to `u8::MAX` so Continuous transition.rs sees a typed
 /// value matching `NailedSegment.syllable_count: u8`.

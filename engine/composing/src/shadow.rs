@@ -60,7 +60,7 @@ pub(crate) fn strip_tones_for_mode(s: &str, mode: InputMode) -> String {
 /// digit (e.g. `tai5`, `tai5gi2`, `kak4`) — with no orphan/leading digit
 /// and a trailing tone digit. Such a span maps verbatim onto the
 /// digit-separated, hyphenless `tl_num` / `poj_num` FST key family
-/// (`dictionary/build/create_fst.py:127-130` emits `tl:<tl_num>` for
+/// (`dictionary/build/create_fst.py::collect_pairs` emits `tl:<tl_num>` for
 /// every record), so an exact lookup on the verbatim span filters
 /// candidates to exactly the typed tone(s).
 ///
@@ -899,7 +899,7 @@ fn build_separator_shadow_with_barriers(
 /// ASCII `0..=9`, so `is_ascii_digit()` is sound here. Hyphens are
 /// stripped one layer up by [`build_hyphen_shadow`] (Phase 9 Item 8),
 /// so callers feed this fn a hyphenless shadow slice already.
-pub(crate) fn strip_ascii_tone_digits(s: &str) -> String {
+fn strip_ascii_tone_digits(s: &str) -> String {
     s.chars().filter(|c| !c.is_ascii_digit()).collect()
 }
 
@@ -1011,8 +1011,7 @@ pub(crate) fn custom_toneless_key(roman: &str, mode: InputMode) -> Option<String
 ///   ASCII, ASCII identity and `TL_ENCODING_RULES` agree on ASCII input.
 ///
 /// Phase 1 — char-level NFD walk over the original input. Each NFD
-/// scalar that is one of the 8 tone-mark combining codepoints in
-/// `engine/phonetics/src/tables.rs::COMBINING_TO_TONE_NUM`
+/// scalar that is a tone mark per `phonetics::is_combining_tone_mark`
 /// (`U+0300, U+0301, U+0302, U+0304, U+0306, U+030B, U+030C, U+030D`) is
 /// dropped, with its UTF-8 byte width absorbed into the preceding base
 /// char's `raw_end` so the offset map stays anchored at the right of
@@ -1092,7 +1091,9 @@ pub(crate) fn canonicalize_poj_shadow(input: &str, mode: InputMode) -> (String, 
     for (raw_idx, ch) in input.char_indices() {
         let raw_end_after = raw_idx + ch.len_utf8();
         for nfd_ch in ch.nfd() {
-            if is_tone_combining_mark(nfd_ch) {
+            // `\u{0358}` (POJ `o\u{0358}` dot) is not a tone mark and must
+            // survive Phase 1 so the Phase 2 `o\u{0358}→oo` rule can fire.
+            if phonetics::is_combining_tone_mark(nfd_ch) {
                 // Drop: absorb the dropped scalar's raw bytes into the
                 // preceding emitted byte's raw_end so platform commit
                 // does not leave a dangling combining mark in the
@@ -1150,25 +1151,6 @@ pub(crate) fn canonicalize_poj_shadow(input: &str, mode: InputMode) -> (String, 
     apply_normalize_with_offsets(intermediate_lower, map, rules)
 }
 
-/// True for the 8 combining tone-mark scalars listed in
-/// `engine/phonetics/src/tables.rs::COMBINING_TO_TONE_NUM`. Codex
-/// pre-impl flagged that `\u{0358}` (combining dot above right, part of
-/// POJ `o\u{0358}` for `oo`) must NOT be dropped here — it has to
-/// survive Phase 1 so the Phase 2 `o\u{0358}→oo` substitution can fire.
-fn is_tone_combining_mark(c: char) -> bool {
-    matches!(
-        c,
-        '\u{0300}'  // grave (tone 3)
-            | '\u{0301}'  // acute (tone 2)
-            | '\u{0302}'  // circumflex (tone 5)
-            | '\u{0304}'  // macron (tone 7)
-            | '\u{0306}'  // breve (POJ tone 9)
-            | '\u{030b}'  // double acute (TL tone 9)
-            | '\u{030c}'  // caron (tone 6)
-            | '\u{030d}' // vertical line above (tone 8)
-    )
-}
-
 /// Apply an ordered list of `(find, replace)` rules with offset-map
 /// maintenance, returning the mutated string + updated map. v3.5.9 B-2
 /// generalization of the pre-B-2 `apply_normalize_to_tl_with_offsets`:
@@ -1184,7 +1166,7 @@ fn is_tone_combining_mark(c: char) -> bool {
 /// as the rule lists in `phonetics::syllable`; non-shrinking rules
 /// leave the offset map invariant, shrinking rules drain the dropped
 /// trailing byte's map entry instead of producing a new `String`.
-pub(crate) fn apply_normalize_with_offsets(
+fn apply_normalize_with_offsets(
     s: String,
     map: Vec<usize>,
     rules: &[(&str, &str)],
@@ -1876,7 +1858,7 @@ mod tests {
     #[test]
     fn canonicalize_poj_shadow_o_with_dot_above_right_emits_oo() {
         // `so\u{0358}` (POJ `so͘` for 嫂): combining dot-above-right is
-        // NOT a tone mark per is_tone_combining_mark; it survives
+        // NOT a tone mark per `phonetics::is_combining_tone_mark`; it survives
         // Phase 1 and Phase 2 collapses `o\u{0358}` → `oo`.
         let (canonical, map) = canonicalize_poj_shadow("so\u{0358}", InputMode::Tl);
         assert_eq!(canonical, "soo");
@@ -2088,29 +2070,18 @@ mod tests {
     }
 
     #[test]
-    fn is_tone_combining_mark_covers_all_eight_tones() {
-        // Pins parity with `engine/phonetics/src/tables.rs::COMBINING_TO_TONE_NUM`.
-        // If a new tone mark is added there, this assertion must be
-        // updated in lockstep — the comment list above guards the
-        // mapping.
-        for c in [
-            '\u{0300}', '\u{0301}', '\u{0302}', '\u{0304}', '\u{0306}', '\u{030b}', '\u{030c}',
-            '\u{030d}',
-        ] {
-            assert!(is_tone_combining_mark(c), "{c:?} should be a tone mark");
-        }
-    }
-
-    #[test]
-    fn is_tone_combining_mark_excludes_non_tone_combiners() {
+    fn combining_tone_mark_predicate_excludes_non_tone_combiners() {
         // `\u{0358}` (combining dot above right) is in the
         // U+0300-U+036F combining block but is NOT a tone mark; it has
         // to survive Phase 1 so Phase 2 `o\u{0358}→oo` can fire.
-        assert!(!is_tone_combining_mark('\u{0358}'));
+        assert!(!phonetics::is_combining_tone_mark('\u{0358}'));
         // ASCII letters / digits / hyphens / common Latin diacritics
         // must obviously not be flagged either.
         for c in ['a', '0', '-', '\u{00e2}', '\u{014d}'] {
-            assert!(!is_tone_combining_mark(c), "{c:?} must not be a tone mark");
+            assert!(
+                !phonetics::is_combining_tone_mark(c),
+                "{c:?} must not be a tone mark"
+            );
         }
     }
 

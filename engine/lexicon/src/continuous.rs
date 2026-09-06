@@ -1,48 +1,32 @@
-//! v3.5.8 Continuous Input Phase 5 — span-local candidate fetch.
+//! Span-local candidate fetch for continuous input.
 //!
-//! Given a **mode-canonical ASCII** input (TL ASCII for TL/English, POJ
-//! ASCII for POJ — both upstream-canonicalized via
-//! `composing::shadow::canonicalize_poj_shadow`; v3.5.9 B-2 PR #309
-//! promoted POJ to a first-class FST key family so the POJ-mode shadow
-//! preserves POJ ASCII instead of folding to TL), a starting byte
-//! position, and a list of valid syllable-end byte offsets (produced
-//! by `composing::syllabifier::tl::valid_span_endings`), return all
-//! dictionary candidates whose toneless key (`<prefix>:<toneless>` with
-//! `prefix ∈ {tl, poj}`) equals `input[pos..end]` for some `end` in
-//! `endings`. Each candidate is scored via
+//! Given a **mode-canonical** input (TL ASCII for TL/English, POJ ASCII
+//! for POJ, Bopomofo for TPS — all canonicalized upstream by
+//! `composing::shadow::canonicalize_poj_shadow`), a starting byte
+//! position, and the valid syllable-end byte offsets produced by
+//! `composing::syllabifier`, return every dictionary candidate whose
+//! toneless key (`<prefix>:<toneless>`, `prefix ∈ {tl, poj, tps}`) equals
+//! `input[pos..end]` for some `end`. Each candidate is scored via
 //! [`ranking::calculate_continuous_score`] and tagged with the consumed
 //! byte span and syllable count so the UI can decide what to commit.
 //!
 //! # Why span-local lookup
 //!
-//! Pure longest-match (khiin-rs `khiin/src/data/segmenter.rs:122`) would
-//! commit `tsua` to span 4 and lose the `珠 (tsu, span=3)` candidate.
-//! Global lattice (librime `src/rime/algo/syllabifier.cc`) is over-built
-//! for our scope. Multi-cut span-local fetch is the canonical middle
-//! ground per `docs/releases/v3.5.8/plan.md` § Phase 3 — pure-function syllabifier (TL + TPS).
+//! Pure longest-match (khiin-rs `khiin/src/data/segmenter.rs`) would
+//! commit `tsua` to span 4 and lose the `珠 (tsu, span=3)` candidate. A
+//! global lattice (librime `src/rime/algo/syllabifier.cc`) is over-built
+//! for our scope. Multi-cut span-local fetch is the middle ground.
 //!
 //! Multi-syllable candidates (e.g. `珠仔`) and single-syllable candidates
 //! (e.g. `紙`) under the same toneless key (`tl:tsua`) are distinguished
-//! by `DictionaryRecord::syllable_count`, which the v2 dict.bin layout
-//! carries since Phase 1 (`engine/lexicon/src/dictionary_reader.rs:38-51`).
+//! by `DictionaryRecord::syllable_count`.
 //!
 //! # Contracts
 //!
-//! - **`input` MUST be mode-canonical ASCII** (lowercase or mixed-case):
-//!   TL ASCII under TL/English mode, POJ ASCII under POJ mode. Both
-//!   forms reach this module after upstream canonicalization in
-//!   `composing::shadow::canonicalize_poj_shadow` — that helper is now
-//!   mode-aware (v3.5.9 B-2 PR #309) and per-syllable
-//!   `phonetics::canonicalize_syllable` / `canonicalize_poj_syllable`
-//!   handle build-pipeline and helper-level normalization. **v3.5.9 D /
-//!   C-3b promoted TPS to a first-class family**: TPS continuous input
-//!   now walks the same shared shadow → lattice path TL/POJ already
-//!   walk and the engine emits `tps:<bopomofo_toneless>` keys against
-//!   the C-0 emit of `dictionary.fst`. The legacy `tl:`-folded path
-//!   (`composing::continuous::build_keys_tps` + `phonetics::tps_to_tl`)
-//!   is retired; `tps::valid_span_endings_lowered` is the unified
-//!   syllabifier entry the lattice builder dispatches to under
-//!   `InputMode::Tps`.
+//! - **`input` MUST be mode-canonical** (lowercase or mixed-case): TL
+//!   ASCII under TL/English, POJ ASCII under POJ, Bopomofo under TPS. All
+//!   modes walk the same shadow → lattice path in `composing` and emit
+//!   keys in their own FST family (`composing::shadow::mode_key_prefix`).
 //! - `endings` SHOULD be ascending UTF-8 char boundaries within
 //!   `input[pos..]`. Out-of-range or non-boundary endings are silently
 //!   skipped (matches the syllabifier's safe contract).
@@ -50,44 +34,30 @@
 //!   `lexicon::search()` — bit 12 = variant gate, bit 9 = khiin gate,
 //!   bits 0..=11 = per-source enables, `u32::MAX` = all sources on.
 //! - User-frequency input is plumbed through [`ContinuousFetchCtx`] —
-//!   `freq_map` (R5: `FrequencyData` keyed by the `(display_text,
-//!   canonical_tl)` PAIR identity, #7) plus `now_ms` (platform epoch-ms).
-//!   The engine derives
-//!   `user_freq_boost(count)` per candidate inside the (private)
-//!   `record_to_candidate` / `custom_entry_to_candidate` helpers using
-//!   `BOOST_ALPHA`/`MAX_BOOST` from `ranking::score` (v3.5.8 Phase 9.3a);
-//!   platform-side `user_frequency.db` stays native per
-//!   `feedback_user_data_sqlite_stays_native`. Cold-start safe defaults
-//!   = `&FrequencyMap::new()` + `now_ms = 0` (boost = 1.0, recency_rank
-//!   = 1 everywhere).
+//!   `freq_map` (`FrequencyData` keyed by the `(display_text,
+//!   canonical_tl)` PAIR identity, Core Principle #7) plus `now_ms`
+//!   (platform epoch-ms). The engine derives `user_freq_boost(count)` per
+//!   candidate inside `record_to_candidate` / `custom_entry_to_candidate`
+//!   using `BOOST_ALPHA` / `MAX_BOOST` from `ranking::score`; the
+//!   platform's `user_frequency.db` stays native. Cold-start safe
+//!   defaults = `&FrequencyMap::new()` + `now_ms = 0` (boost = 1.0,
+//!   recency_rank = 1 everywhere).
 //!
 //! # Ordering
 //!
-//! Returned candidates are sorted by the 8-dimensional
-//! `SortKey` (v3.5.8 Phase 9.1 + S8 dim-3→6 coverage demote)
-//! documented at [`fetch_candidates_for_keys_with_barriers`]; `calculate_continuous_score`
-//! provides only one of those dimensions. Within-tier ties keep
-//! insertion order (`endings` order, then `prefix_index` rowid order —
-//! `lookup_exact` is deterministic per build). The comparator coerces
-//! `NaN` scores to `f32::MIN` so even a contract-violating boost cannot
-//! break the ordering invariant.
+//! Returned candidates are sorted by the 8-dimensional `SortKey`
+//! documented at [`fetch_candidates_for_keys_with_barriers`];
+//! `calculate_continuous_score` provides only one of those dimensions.
+//! Within-tier ties keep insertion order (`endings` order, then
+//! `prefix_index` rowid order — `lookup_exact` is deterministic per
+//! build). The comparator coerces `NaN` scores to `f32::MIN` so even a
+//! contract-violating boost cannot break the ordering invariant.
 //!
-//! # Phase 6 boundary
-//!
-//! Phase 6 added the proto request / response carriers
-//! (`ContinuousResponse` / `CandidateMessage` in `composing.proto`) and
-//! the dispatch wiring (`composing/src/dispatch.rs::handle_fetch_at_pos`).
-//! v3.5.9 D7+D8 (#306) made `fetch_candidates_for_keys` the sole
-//! production entry. v3.5.9 D / C-3b promoted TPS to a first-class FST
-//! family, so ALL modes (TL / POJ / TPS / English) now compose span-local
-//! lookup uniformly in `composing::continuous::fetch_via_lexicon_inner`
-//! via mode-aware `<prefix>:<toneless>` keys (`composing::shadow::mode_key_prefix`
-//! yields `tl:` / `poj:` / `tps:`); the pre-C-3b `build_keys_tps` →
-//! `tl:`-fold short-circuit is retired. The test-only
-//! `fetch_candidates_for_endings` wrapper (pre-computed syllabifier
-//! endings → `(span, key)` pairs) lives in
-//! `engine/lexicon/tests/common/mod.rs`, outside this crate's public
-//! surface.
+//! The production entry is [`fetch_candidates_for_keys_with_barriers`],
+//! called from `composing::continuous::assemble_candidates`; the
+//! test-only `fetch_candidates_for_endings` wrapper (pre-computed
+//! syllabifier endings → `(span, key)` pairs) lives in
+//! `engine/lexicon/tests/common/mod.rs`.
 
 use std::cmp::Reverse;
 
@@ -99,17 +69,17 @@ use ranking::{
     calculate_continuous_score, recency_rank, source_tier_rank, user_freq_boost, FrequencyMap,
 };
 
-/// `RawCandidate.form` discriminator. Phase 5 only emits notone candidates
-/// because span-local lookup is always over `<prefix>:<toneless>` keys
-/// (`prefix ∈ {tl, poj}` after v3.5.9 B-2 PR #309 promoted POJ to a
-/// first-class FST family; `docs/releases/v3.5.8/plan.md` § Phase 5 — Span-local candidate fetch); Phase 6+ may extend
-/// with hanzi (0) / numeric (2) / abbrev (3) when proto-side carriers
-/// exist (Codex pre-impl review 2026-05-10 Fork 5 ACCEPT).
+/// `RawCandidate.form` discriminator. Every candidate this module emits
+/// carries the notone form: span-local keys are `<prefix>:<toneless>`
+/// bodies, and the tone-pinned (`tl_num` / `poj_num`) keys the same
+/// guards accept resolve to the same records. The other form ordinals
+/// (hanzi 0 / numeric 2 / abbrev 3) are reserved for carriers the proto
+/// side does not have.
 pub const FORM_NOTONE: u8 = 1;
 
 /// v3.5.8 Phase 9 Item 10 — `RawCandidate.coverage_kind` ordinal for
 /// full-syllable hits (the pre-Item-10 path: `valid_span_endings`
-/// returned at least one ending and `fetch_candidates_for_keys`
+/// returned at least one ending and `fetch_candidates_for_keys_with_barriers`
 /// produced the candidate via `prefix_index.lookup_exact`).
 pub const COVERAGE_KIND_FULL: u8 = 0;
 
@@ -273,7 +243,7 @@ pub struct RawCandidate {
     /// `SortKey` can use raw freq as an explicit tie-break dimension
     /// distinct from `adjusted_score`. Always equals
     /// `DictionaryRecord::frequency` for candidates produced by
-    /// `fetch_candidates_for_keys`.
+    /// `fetch_candidates_for_keys_with_barriers`.
     pub frequency: u32,
     /// Dictionary source bitmask copied verbatim from
     /// [`DictionaryRecord::bitmask`]. Used by the v3.5.8 Phase 9.1
@@ -298,7 +268,7 @@ pub struct RawCandidate {
     pub recency_rank: u8,
     /// v3.5.8 Phase 9 Item 10 — coverage kind for the new partial-prefix
     /// path. [`COVERAGE_KIND_FULL`] for the existing
-    /// `fetch_candidates_for_keys` lookup-exact path;
+    /// `fetch_candidates_for_keys_with_barriers` lookup-exact path;
     /// [`COVERAGE_KIND_PARTIAL_PREFIX`] for
     /// [`fetch_partial_prefix_candidates`] hits.
     ///
@@ -341,18 +311,12 @@ pub struct CustomEntry {
     pub hanji: Option<String>,
 }
 
-/// v3.5.9 D7 — shared context for the continuous-input fetch entry
-/// points ([`fetch_candidates_for_keys_with_barriers`],
-/// [`fetch_partial_prefix_candidates`]). Each one previously took
-/// eight positional arguments and tripped
-/// `clippy::too_many_arguments`; bundling the six shared concerns
-/// (filter / freq-map / clock / custom / readers) into one borrowed
-/// struct collapses every call site to three or four args without
-/// changing any behavior.
-///
-/// Field order matches the legacy `fetch_candidates_for_keys` arg
-/// order so a reader scanning a git blame can map old positional args
-/// onto the new fields without renaming work.
+/// Shared context for the continuous-input fetch entry points
+/// ([`fetch_candidates_for_keys_with_barriers`],
+/// [`fetch_partial_prefix_candidates`]): the concerns every fetch needs
+/// (filter / freq-map / clock / custom / readers / mode / space pin)
+/// bundled into one borrowed struct so call sites pass three or four
+/// args instead of eight.
 ///
 /// All fields are `pub` — construction is always a stack-local struct
 /// literal at the call site (production builds it inside the composing
@@ -365,15 +329,15 @@ pub struct ContinuousFetchCtx<'a> {
     /// absent already became `u32::MAX` all-on); tests narrow it to verify
     /// filter behaviour.
     pub enabled_sources_bitmask: u32,
-    /// Per-`display_text` user-selection snapshot. Empty map +
-    /// `now_ms = 0` is the cold-start neutral.
+    /// User-selection snapshot keyed by the `(display_text, canonical_tl)`
+    /// pair (Core Principle #7). Empty map + `now_ms = 0` is the
+    /// cold-start neutral.
     pub freq_map: &'a FrequencyMap,
     /// Platform epoch-ms wall clock at fetch time.
     pub now_ms: i64,
     /// `custom_dictionary.db` hits to merge into the candidate list.
     /// Empty slice = no custom merge (the production wiring's
-    /// cold-start default; also the hard-coded value inside the
-    /// hidden test-only legacy endings wrapper).
+    /// cold-start default).
     pub custom: &'a [CustomEntry],
     /// FST prefix index reader.
     pub prefix_index: &'a PrefixIndex,
@@ -410,58 +374,6 @@ pub struct ContinuousFetchCtx<'a> {
 /// returned `RawCandidate.consumed_span`; FST lookup uses the paired key.
 pub type ConsumedSpan = (u32, u32);
 
-/// Mode-agnostic span-local fetch entry. Each input pair is
-/// `(consumed_span, fst_key)`: `consumed_span` is the user-facing
-/// byte range that committing this candidate will eat, and `fst_key`
-/// is the already-prefixed FST lookup key (e.g. `"tl:tsua"` for TL/English,
-/// `"poj:chiah"` for POJ, `"tps:ㄉㄞ"` for TPS — v3.5.9 B-2 PR #309
-/// promoted POJ and v3.5.9 D / C-3b promoted TPS to first-class FST
-/// families). The production caller
-/// (`composing::continuous::fetch_via_lexicon_inner`) selects the
-/// prefix via `composing::shadow::mode_key_prefix(mode)` and feeds
-/// pairs in directly for all modes; the test-only
-/// `fetch_candidates_for_endings` wrapper in
-/// `engine/lexicon/tests/common/mod.rs` builds the same pairs from
-/// pre-computed syllabifier endings.
-///
-/// # v3.5.8 Phase 9.1 — lexicographic SortKey
-///
-/// `raw_len` is the byte length of the original pending buffer
-/// (`Phase::Continuous { raw }.len()`); it is the predicate input
-/// for Tier 1 (`consumed_span_end == raw_len`). Sorting follows
-/// `docs/releases/v3.5.8/plan.md` § Phase 9 sort_key formula:
-///
-/// ```text
-/// (coverage_kind, tier, recency_rank, -adjusted_score,
-///  -freq, -coverage_bytes, source_tier_rank, stable_idx)
-/// ```
-///
-/// v3.5.8 whole-sentence lattice + walker S8: `-coverage_bytes` was relocated
-/// from dim 3 to dim 6 (below `-adjusted_score` / `-freq`). With the
-/// slot-0 whole-sentence walker owning phrase priority, a graded
-/// longest-coverage-first rule inside a tier only buried the short
-/// single-syllable first-segment candidate the user wants for
-/// segment-by-segment selection. Coverage is now a weak tiebreak that
-/// fires only when score AND freq are equal — matching librime's
-/// per-segment menu, which keeps multi-length candidates but never lets
-/// a longer code-length bury a shorter strict match
-/// (`script_translator.cc` `kNumExactMatchOnTop`).
-///
-/// # v3.5.8 Phase 9.3a — user-frequency plumb
-///
-/// `freq_map` is the per-`display_text` selection snapshot built once
-/// per fetch by `composing/src/dispatch.rs::handle_fetch_at_pos` from
-/// `FetchAtPos.frequency_entries`. `now_ms` is the platform's
-/// epoch-ms wall clock at fetch time. [`record_to_candidate`] looks
-/// up each candidate by `display_text`, computes
-/// [`ranking::user_freq_boost`] (saturated at
-/// [`ranking::MAX_BOOST`]), and derives
-/// [`SortKey.recency_rank`](SortKey) via [`ranking::recency_rank`]
-/// (which guards against `now_ms <= 0`, `last_used_ms <= 0`, and
-/// clock skew). NaN scores (only reachable if the boost helper
-/// produces a non-finite value — which it cannot under the
-/// public contract) are coerced to `f32::MIN` at `SortKey`
-/// construction so the descending-order invariant holds.
 /// Resolve a continuous lookup key to its stored readings.
 ///
 /// TPS keys go through the ambiguity-aware automaton
@@ -542,7 +454,58 @@ pub fn reading_passes_space_pin(tps_body: &str, reading: &str) -> bool {
     phonetics::tps_notone_prefix_boundary_tone(reading, body).is_some_and(is_unmarked_tps_tone)
 }
 
-/// Span-local exact fetch for pre-built keys, carrying per-key barrier metadata.
+/// Mode-agnostic span-local fetch entry. Each input pair is
+/// `(consumed_span, fst_key)`: `consumed_span` is the user-facing
+/// byte range that committing this candidate will eat, and `fst_key`
+/// is the already-prefixed FST lookup key (e.g. `"tl:tsua"` for TL/English,
+/// `"poj:chiah"` for POJ, `"tps:ㄉㄞ"` for TPS — v3.5.9 B-2 PR #309
+/// promoted POJ and v3.5.9 D / C-3b promoted TPS to first-class FST
+/// families). The production caller
+/// (`composing::continuous::assemble_candidates`) selects the
+/// prefix via `composing::shadow::mode_key_prefix(mode)` and feeds
+/// pairs in directly for all modes.
+///
+/// # v3.5.8 Phase 9.1 — lexicographic SortKey
+///
+/// `raw_len` is the byte length of the original pending buffer
+/// (`Phase::Continuous { raw }.len()`); it is the predicate input
+/// for Tier 1 (`consumed_span_end == raw_len`). Sorting follows
+/// `docs/releases/v3.5.8/plan.md` § Phase 9 sort_key formula:
+///
+/// ```text
+/// (coverage_kind, tier, recency_rank, -adjusted_score,
+///  -freq, -coverage_bytes, source_tier_rank, stable_idx)
+/// ```
+///
+/// v3.5.8 whole-sentence lattice + walker S8: `-coverage_bytes` was relocated
+/// from dim 3 to dim 6 (below `-adjusted_score` / `-freq`). With the
+/// slot-0 whole-sentence walker owning phrase priority, a graded
+/// longest-coverage-first rule inside a tier only buried the short
+/// single-syllable first-segment candidate the user wants for
+/// segment-by-segment selection. Coverage is now a weak tiebreak that
+/// fires only when score AND freq are equal — matching librime's
+/// per-segment menu, which keeps multi-length candidates but never lets
+/// a longer code-length bury a shorter strict match
+/// (`script_translator.cc` `kNumExactMatchOnTop`).
+///
+/// # v3.5.8 Phase 9.3a — user-frequency plumb
+///
+/// `freq_map` is the user-selection snapshot keyed by the
+/// `(display_text, canonical_tl)` pair (Core Principle #7), built once
+/// per fetch by `composing/src/dispatch.rs::handle_fetch_at_pos` from
+/// `FetchAtPos.frequency_entries`. `now_ms` is the platform's
+/// epoch-ms wall clock at fetch time. `record_to_candidate` looks
+/// up each candidate by that pair, computes
+/// [`ranking::user_freq_boost`] (saturated at
+/// [`ranking::MAX_BOOST`]), and derives
+/// `SortKey.recency_rank` via [`ranking::recency_rank`]
+/// (which guards against `now_ms <= 0`, `last_used_ms <= 0`, and
+/// clock skew). NaN scores (only reachable if the boost helper
+/// produces a non-finite value — which it cannot under the
+/// public contract) are coerced to `f32::MIN` at `SortKey`
+/// construction so the descending-order invariant holds.
+///
+/// # Barriers
 ///
 /// `tps_final_only[i]` = byte offsets into `keys[i].1` of glyphs
 /// immediately before a stripped separator / 連字 barrier — those pattern
@@ -884,7 +847,8 @@ pub fn fetch_partial_prefix_candidates_unbounded(
             // Codex PR #351 r3319500948 — drop `tl_abbrev` / `poj_abbrev` /
             // `tps_abbrev` collisions whose FST key happens to share the
             // input prefix. Mirrors the span-local + walker guard at
-            // `fetch_candidates_for_keys`:640 / `best_candidate_for_key`:922
+            // `fetch_candidates_for_keys_with_barriers` /
+            // `best_candidate_for_key_with_barriers` (`matches_continuous_toneless_key`)
             // but uses the prefix-aware `*_prefix_key` variant — the
             // partial-prefix path's key body is a STRICT PREFIX of the
             // toneless, so equality would reject every legitimate
@@ -952,7 +916,7 @@ pub fn fetch_partial_prefix_candidates_unbounded(
     // `COVERAGE_KIND_PARTIAL_PREFIX` — NOT `COVERAGE_KIND_FULL` — so
     // §15.5's "partial-prefix ranks strictly below full-syllable" rule
     // is preserved (Codex pre-impl D6). The span-aware dedupe then runs
-    // before the sort, identical to `fetch_candidates_for_keys`.
+    // before the sort, identical to `fetch_candidates_for_keys_with_barriers`.
     for entry in ctx.custom {
         // A3 (§41) — same pin as the full-syllable path (see there). The
         // typed body is a strict prefix of a partial-prefix entry's
@@ -975,7 +939,7 @@ pub fn fetch_partial_prefix_candidates_unbounded(
     dedupe_by_roman_hanji_span(&mut out);
 
     // Same `enumerate()`-pre-sort-stamping pattern as
-    // `fetch_candidates_for_keys` to keep `stable_idx` deterministic
+    // `fetch_candidates_for_keys_with_barriers` to keep `stable_idx` deterministic
     // and independent of `slice::sort_by_cached_key` internals (PR-9.1
     // PR-bot R1 fix `be86f5f7`).
     let mut indexed: Vec<(SortKey, RawCandidate)> = out
@@ -999,7 +963,7 @@ pub fn fetch_partial_prefix_candidates_unbounded(
 /// [`NonNanF32`]; ties keep the first FST rowid for determinism), or
 /// `None` when the key has no dict hit. PR-9.6 — `enabled_sources_bitmask`
 /// gives the walker the SAME source filter the span-local path applies
-/// (`composing::continuous::fetch_via_lexicon_inner` via
+/// (`composing::continuous::assemble_candidates` via
 /// `ContinuousFetchCtx`), so a whole-sentence parse never re-surfaces a
 /// word whose only source the user toggled off. `u32::MAX` = all sources.
 ///
@@ -1292,7 +1256,7 @@ fn derive_poj_notone_for_match(poj_display: &str) -> String {
         }
         let mut token_buf = String::with_capacity(token.len());
         for ch in token.nfd() {
-            if is_combining_tone_mark(ch) {
+            if phonetics::is_combining_tone_mark(ch) {
                 continue;
             }
             for lower_ch in ch.to_lowercase() {
@@ -1306,24 +1270,6 @@ fn derive_poj_notone_for_match(poj_display: &str) -> String {
         }
     }
     out
-}
-
-/// The 8 combining tone-mark codepoints `phonetics::tables::COMBINING_TO_TONE_NUM`
-/// enumerates. Inlined here (not exported from phonetics) so the
-/// matching guard stays self-contained; the same 8 codepoints are
-/// pinned in `engine/composing/src/shadow.rs::is_tone_combining_mark`.
-fn is_combining_tone_mark(c: char) -> bool {
-    matches!(
-        c,
-        '\u{0300}'  // grave (tone 3)
-            | '\u{0301}'  // acute (tone 2)
-            | '\u{0302}'  // circumflex (tone 5)
-            | '\u{0304}'  // macron (tone 7)
-            | '\u{0306}'  // breve (POJ tone 9)
-            | '\u{030b}'  // double acute (TL tone 9)
-            | '\u{030c}'  // caron (tone 6)
-            | '\u{030d}' // vertical line above (tone 8)
-    )
 }
 
 /// v3.5.9 D / C-3b — TPS analog of [`matches_continuous_tl_toneless_key`] /
@@ -1368,16 +1314,6 @@ fn matches_continuous_tps_toneless_key(key: &str, record_tl: &str) -> bool {
     !variant.is_empty() && variant == body
 }
 
-/// v3.5.9 B-2 — dispatcher that selects the right toneless-key guard by
-/// FST key family. Production span-local and walker paths both route
-/// through here so a `poj:` key cannot accidentally hit the TL guard
-/// (which would always reject a POJ body) or vice versa. `hanzi:` and
-/// any unknown prefix pass through (`matches_continuous_tl_toneless_key`
-/// returns `true` for keys lacking the `tl:` prefix).
-///
-/// v3.5.9 D / C-3b — `tps:` added; routes to
-/// [`matches_continuous_tps_toneless_key`] now that the TPS continuous
-/// walker emits `tps:` family keys against `dictionary.fst`.
 /// §35 abbrev-face guard for the TPS partial-prefix path: true when
 /// `matched_body` is one of the record's ACRONYM faces (primary
 /// `tps_abbrev`, or its C-3a or→er dialect variant — both are in the
@@ -1404,6 +1340,12 @@ fn is_tps_acronym_face_hit(matched_body: &str, record_tl: &str) -> bool {
     !matched_is_a_toneless_face
 }
 
+/// Select the toneless-key guard by FST key family. Production span-local
+/// and walker paths both route through here so a `poj:` key cannot hit the
+/// TL guard (which would always reject a POJ body) or vice versa; `tps:`
+/// routes to [`matches_continuous_tps_toneless_key`]. `hanzi:` and any
+/// unknown prefix pass through (`matches_continuous_tl_toneless_key`
+/// returns `true` for keys lacking the `tl:` prefix).
 fn matches_continuous_toneless_key(key: &str, record_tl: &str) -> bool {
     if key.starts_with("poj:") {
         matches_continuous_poj_toneless_key(key, record_tl)
@@ -1967,7 +1909,7 @@ fn dedupe_by_roman_hanji_span(out: &mut Vec<RawCandidate>) {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 struct SortKey {
     /// v3.5.8 Phase 9 Item 10 — leading dim. `0` for full-syllable
-    /// (the pre-Item-10 `fetch_candidates_for_keys` path) and `1`
+    /// (the pre-Item-10 `fetch_candidates_for_keys_with_barriers` path) and `1`
     /// for partial-prefix ([`fetch_partial_prefix_candidates`]).
     /// Sits ahead of [`tier`](Self::tier) because partial-prefix
     /// candidates have `consumed_span_end == raw_len`
@@ -2793,7 +2735,7 @@ mod item12_custom_dedupe_tests {
         // Regression guard for Codex Q1d: the Item-12 custom-vs-`dict.bin`
         // collapse must NOT regress under the span-augmented key. Both
         // are emitted at the SAME full-buffer span `(0, raw_len)` in
-        // production (`fetch_candidates_for_keys`), so the triple key
+        // production (`fetch_candidates_for_keys_with_barriers`), so the triple key
         // still collides and custom (rank 0) still wins.
         let mut dict = dict_cand("tâi-gí", Some("台語"), 1 << 0);
         dict.consumed_span = (0, 6);

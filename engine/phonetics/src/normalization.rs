@@ -55,7 +55,17 @@ pub fn normalize_input(input: &str) -> String {
 /// `COMBINING_TO_TONE_NUM`. Used by `normalize_input` (default-tone heuristic)
 /// and `lexicon::classification::classify_input` (input-class precedence).
 pub fn has_tone_marks(text: &str) -> bool {
-    text.nfd().any(|c| COMBINING_TO_TONE_NUM.contains_key(&c))
+    text.nfd().any(is_combining_tone_mark)
+}
+
+/// True for the 8 combining tone-mark scalars in `COMBINING_TO_TONE_NUM`
+/// (U+0300 grave, U+0301 acute, U+0302 circumflex, U+0304 macron, U+0306
+/// breve, U+030B double acute, U+030C caron, U+030D vertical line above).
+/// Callers that strip tone marks from an NFD stream use this so the set
+/// has one owner; `\u{0358}` (POJ `o͘` dot) is deliberately NOT a tone mark
+/// and must survive such a strip.
+pub fn is_combining_tone_mark(c: char) -> bool {
+    COMBINING_TO_TONE_NUM.contains_key(&c)
 }
 
 fn normalize_syllable(syllable: &str, add_default_tone: bool) -> String {
@@ -142,7 +152,7 @@ pub(crate) fn restore_tone(text: &str) -> Option<String> {
     }
     let decomposed: Vec<char> = text.nfd().collect();
     for i in (0..decomposed.len()).rev() {
-        if COMBINING_TO_TONE_NUM.contains_key(&decomposed[i]) {
+        if is_combining_tone_mark(decomposed[i]) {
             let restored: String = decomposed
                 .iter()
                 .enumerate()

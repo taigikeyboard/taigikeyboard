@@ -136,7 +136,7 @@ pub fn write_temp(name: &str, bytes: &[u8]) -> PathBuf {
 
 /// Test-only span-local fetch: every dictionary candidate whose toneless
 /// key matches `input[pos..end]` for some `end` in `endings`. Production
-/// never uses this shape — `composing::continuous::fetch_via_lexicon_inner`
+/// never uses this shape — `composing::continuous::assemble_candidates`
 /// builds its `(consumed_span, "<prefix>:<toneless>")` pairs itself and
 /// calls `lexicon::fetch_candidates_for_keys_with_barriers` directly. This
 /// wrapper lets the tests here hand over pre-computed syllabifier endings
