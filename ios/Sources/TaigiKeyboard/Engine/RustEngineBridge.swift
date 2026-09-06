@@ -85,6 +85,42 @@ public enum RustEngineBridge {
         recentErrorBuffer.removeAll()
     }
 
+    // MARK: FFI dispatch
+
+    /// Encode `request`, cross the FFI seam, and decode the reply. Returns
+    /// `nil` (recording the failure under `op`) when the encode or the decode
+    /// fails; callers still check `response.error` and the payload variant.
+    static func send(_ request: Taigi_Engine_Request, op: String) -> Taigi_Engine_Response? {
+        guard let bytes = encodeRequest(request, op: op) else { return nil }
+        return dispatch(bytes, op: op)
+    }
+
+    /// Serialize `request`; `nil` (recorded under `op`) when encoding fails.
+    /// Split from `send` so a caller can log between encode and dispatch.
+    static func encodeRequest(_ request: Taigi_Engine_Request, op: String) -> [UInt8]? {
+        do {
+            return try Array(request.serializedData())
+        } catch {
+            recordFailure(op: op, message: "encode failed: \(error)")
+            return nil
+        }
+    }
+
+    /// Cross the FFI seam with already-encoded `bytes` and decode the reply;
+    /// `nil` (recorded under `op`) when the reply does not decode.
+    static func dispatch(_ bytes: [UInt8], op: String) -> Taigi_Engine_Response? {
+        let responseBytes = bytes.withUnsafeBufferPointer { buf in
+            process_request_bytes(buf).toArray()
+        }
+        guard let response = try? Taigi_Engine_Response(
+            serializedBytes: Data(responseBytes),
+        ) else {
+            recordFailure(op: op, message: "response decode failed")
+            return nil
+        }
+        return response
+    }
+
     // MARK: Test-only seam
 
     /// Sends arbitrary bytes through the FFI seam. Tests use this for T4

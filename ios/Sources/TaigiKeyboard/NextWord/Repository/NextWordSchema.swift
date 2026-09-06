@@ -112,7 +112,7 @@ enum NextWordSchema {
     private static func migrate(db: OpaquePointer, from currentVersion: Int) throws {
         if currentVersion < 3 {
             try sqliteExecChecked(db: db, "DROP TABLE IF EXISTS \(tableName);")
-        } else if try tableExists(db: db, tableName) {
+        } else if try sqliteTableExistsChecked(db: db, table: tableName) {
             try rebuildToV6(db: db)
         }
         // The v4 single-column index: dropped with its table on either branch
@@ -144,8 +144,8 @@ enum NextWordSchema {
         // rather than assuming — and let an introspection FAILURE throw, since
         // mistaking it for "the column is absent" would blank every stored
         // romanization.
-        let prevTl = try columnExists(db: db, "prev_tl") ? "COALESCE(prev_tl, '')" : "''"
-        let nextTl = try columnExists(db: db, "next_tl") ? "COALESCE(next_tl, '')" : "''"
+        let prevTl = try sqliteColumnExistsChecked(db: db, table: tableName, column: "prev_tl") ? "COALESCE(prev_tl, '')" : "''"
+        let nextTl = try sqliteColumnExistsChecked(db: db, table: tableName, column: "next_tl") ? "COALESCE(next_tl, '')" : "''"
 
         try sqliteExecChecked(db: db, tableDDL(named: "\(tableName)_new"))
         try sqliteExecChecked(db: db, """
@@ -156,19 +156,5 @@ enum NextWordSchema {
         """)
         try sqliteExecChecked(db: db, "DROP TABLE \(tableName);")
         try sqliteExecChecked(db: db, "ALTER TABLE \(tableName)_new RENAME TO \(tableName);")
-    }
-
-    private static func tableExists(db: OpaquePointer, _ name: String) throws -> Bool {
-        try sqliteQueryScalarInt(
-            db: db,
-            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='\(name)'",
-        ) > 0
-    }
-
-    private static func columnExists(db: OpaquePointer, _ column: String) throws -> Bool {
-        try sqliteQueryScalarInt(
-            db: db,
-            "SELECT COUNT(*) FROM pragma_table_info('\(tableName)') WHERE name = '\(column)'",
-        ) > 0
     }
 }

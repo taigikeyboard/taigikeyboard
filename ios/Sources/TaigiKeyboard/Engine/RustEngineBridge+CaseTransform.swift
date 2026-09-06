@@ -142,23 +142,7 @@ public extension RustEngineBridge {
             toggles: ToneToggles(isDoubleTapOOEnabled: false, isDoubleTapNNEnabled: false),
         )
 
-        let bytes: [UInt8]
-        do {
-            bytes = try Array(request.serializedData())
-        } catch {
-            recordFailure(op: op, message: "encode failed: \(error)")
-            return nil
-        }
-
-        let responseBytes = bytes.withUnsafeBufferPointer { buf in
-            process_request_bytes(buf).toArray()
-        }
-        guard let response = try? Taigi_Engine_Response(
-            serializedBytes: Data(responseBytes),
-        ) else {
-            recordFailure(op: op, message: "response decode failed")
-            return nil
-        }
+        guard let response = send(request, op: op) else { return nil }
         guard response.error == .ok else {
             recordFailure(op: op, message: "engine returned \(response.error)", code: Int32(response.error.rawValue))
             return nil

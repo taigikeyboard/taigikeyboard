@@ -32,16 +32,7 @@ enum CustomDictionaryCapacityPolicy {
     /// treat connection problems as "not full" — subsequent writes will
     /// surface the underlying error.
     static func currentEntryCount(db: OpaquePointer) -> Int {
-        var stmt: OpaquePointer?
-        defer { sqlite3_finalize(stmt) }
-        guard sqlite3_prepare_v2(
-            db,
-            "SELECT COUNT(*) FROM \(CustomDictionarySchema.tableName);",
-            -1, &stmt, nil,
-        ) == SQLITE_OK else {
-            return 0
-        }
-        return sqlite3_step(stmt) == SQLITE_ROW ? Int(sqlite3_column_int(stmt, 0)) : 0
+        (try? sqliteQueryScalarInt(db: db, "SELECT COUNT(*) FROM \(CustomDictionarySchema.tableName);")) ?? 0
     }
 
     /// Throw if inserting would exceed `maxEntries`. Updating an existing

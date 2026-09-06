@@ -72,24 +72,46 @@ func sqliteSetUserVersion(db: OpaquePointer, version: Int) {
     sqliteExecSimple(db: db, "PRAGMA user_version = \(version)")
 }
 
-/// `true` when a table named `table` exists.
-func sqliteTableExists(db: OpaquePointer, table: String) -> Bool {
+/// `true` when a table named `table` exists; throws when the query itself
+/// fails.
+func sqliteTableExistsChecked(db: OpaquePointer, table: String) throws -> Bool {
     var stmt: OpaquePointer?
     defer { sqlite3_finalize(stmt) }
-    let sql = "SELECT 1 FROM sqlite_master WHERE type='table' AND name=? LIMIT 1;"
-    guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return false }
+    let sql = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name = ?;"
+    guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+        throw LexiconError.queryPreparationFailed(String(cString: sqlite3_errmsg(db)))
+    }
     stmt.bindText(1, table)
-    return sqlite3_step(stmt) == SQLITE_ROW
+    guard sqlite3_step(stmt) == SQLITE_ROW else {
+        throw LexiconError.queryExecutionFailed(String(cString: sqlite3_errmsg(db)))
+    }
+    return sqlite3_column_int(stmt, 0) > 0
 }
 
-/// `true` when `table` has a column named `column`. `table` is a hardcoded
-/// schema constant (not user input) — `pragma_table_info` cannot bind an
-/// identifier.
-func sqliteColumnExists(db: OpaquePointer, table: String, column: String) -> Bool {
-    let sql = "SELECT COUNT(*) FROM pragma_table_info('\(table)') WHERE name = ?;"
+/// `true` when `table` has a column named `column`; throws when the query
+/// itself fails. `table` is a hardcoded schema constant (not user input) —
+/// `pragma_table_info` cannot bind an identifier.
+func sqliteColumnExistsChecked(db: OpaquePointer, table: String, column: String) throws -> Bool {
     var stmt: OpaquePointer?
     defer { sqlite3_finalize(stmt) }
-    guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return false }
+    let sql = "SELECT COUNT(*) FROM pragma_table_info('\(table)') WHERE name = ?;"
+    guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+        throw LexiconError.queryPreparationFailed(String(cString: sqlite3_errmsg(db)))
+    }
     stmt.bindText(1, column)
-    return sqlite3_step(stmt) == SQLITE_ROW && sqlite3_column_int(stmt, 0) > 0
+    guard sqlite3_step(stmt) == SQLITE_ROW else {
+        throw LexiconError.queryExecutionFailed(String(cString: sqlite3_errmsg(db)))
+    }
+    return sqlite3_column_int(stmt, 0) > 0
+}
+
+/// `true` when a table named `table` exists; `false` on any query failure.
+func sqliteTableExists(db: OpaquePointer, table: String) -> Bool {
+    (try? sqliteTableExistsChecked(db: db, table: table)) ?? false
+}
+
+/// `true` when `table` has a column named `column`; `false` on any query
+/// failure.
+func sqliteColumnExists(db: OpaquePointer, table: String, column: String) -> Bool {
+    (try? sqliteColumnExistsChecked(db: db, table: table, column: column)) ?? false
 }
