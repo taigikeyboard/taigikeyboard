@@ -1,6 +1,7 @@
 package com.siansiansu.taigikeyboard.ime.dictionary
 
 import android.content.Context
+import com.siansiansu.taigikeyboard.engine.pojToTl
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService

@@ -2,8 +2,10 @@ package com.siansiansu.taigikeyboard.ime.dictionary
 
 import android.content.Context
 import com.siansiansu.taigikeyboard.BuildConfig
-import com.siansiansu.taigikeyboard.engine.LexiconBridge
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.engine.searchByHanzi
+import com.siansiansu.taigikeyboard.engine.searchWithSources
+import com.siansiansu.taigikeyboard.engine.tlToPoj
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.Outcome
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
@@ -23,7 +25,7 @@ import kotlinx.coroutines.withContext
  * candidate source (`docs/engine/continuous-candidate-display.md` §15.4).
  *
  * Owned by `CompositionRoot`; collaborators injected through the ctor.
- * Engine state is installed at app startup via `LexiconBridge.install(...)`
+ * Engine state is installed at app startup via `RustEngineBridge.lexiconInstall(...)`
  * from `AppInitializer`.
  */
 class LexiconService(
@@ -40,7 +42,7 @@ class LexiconService(
      * Search with source metadata (Dictionary tab exploration).
      *
      * `filterBitmask` is resolved by the caller (Dictionary tab VM) once per query
-     * via `LexiconBridge.dictionaryFilters(...)` and reused for retag —
+     * via `RustEngineBridge.dictionaryFilters(...)` and reused for retag —
      * keeping mask and badge filter on the same snapshot per Codex
      * pre-impl BLOCK 6.
      */
@@ -104,25 +106,25 @@ class LexiconService(
         limit: Int,
         filterBitmask: UInt,
         isCJK: Boolean,
-    ): List<LexiconBridge.Row> {
+    ): List<RustEngineBridge.LexiconRow> {
         // Android `InputMode` has no TPS case (only POJ / TL / ENGLISH);
         // ENGLISH falls back to TL because the lexicon engine never receives
         // English-mode queries on the autocomplete path. Aligning the
         // InputMode enum across iOS / Android is a separate scope.
         val bridgeMode = when (inputMode) {
-            InputMode.POJ -> LexiconBridge.LexiconInputMode.POJ
-            InputMode.TL -> LexiconBridge.LexiconInputMode.TL
-            InputMode.ENGLISH -> LexiconBridge.LexiconInputMode.TL
+            InputMode.POJ -> RustEngineBridge.LexiconInputMode.POJ
+            InputMode.TL -> RustEngineBridge.LexiconInputMode.TL
+            InputMode.ENGLISH -> RustEngineBridge.LexiconInputMode.TL
         }
         return if (isCJK) {
-            LexiconBridge.searchByHanzi(
+            RustEngineBridge.searchByHanzi(
                 query = input,
                 inputMode = bridgeMode,
                 limit = limit.toUInt(),
                 enabledSourcesBitmask = filterBitmask,
             )
         } else {
-            LexiconBridge.searchWithSources(
+            RustEngineBridge.searchWithSources(
                 input = input,
                 inputMode = bridgeMode,
                 limit = limit.toUInt(),
@@ -132,7 +134,7 @@ class LexiconService(
     }
 
     private fun rowsToSearchResults(
-        rows: List<LexiconBridge.Row>,
+        rows: List<RustEngineBridge.LexiconRow>,
         inputMode: InputMode,
         limit: Int,
     ): List<DictionarySearchResult> =

@@ -116,7 +116,7 @@
 
 # ---- protobuf-java runtime ----
 # Heavily reflective; required by every proto Builder.build() call from
-# RustEngineBridge / LexiconBridge / CaseTransformBridge dispatchers.
+# `RustEngineBridge.dispatch` (the single engine request path).
 -keep class com.google.protobuf.** { *; }
 -keepclassmembers class com.google.protobuf.** { *; }
 -dontwarn com.google.protobuf.**

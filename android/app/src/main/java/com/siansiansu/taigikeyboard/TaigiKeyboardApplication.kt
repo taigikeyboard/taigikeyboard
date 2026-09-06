@@ -1,7 +1,7 @@
 package com.siansiansu.taigikeyboard
 
 import android.app.Application
-import com.siansiansu.taigikeyboard.engine.LexiconBridge
+import com.siansiansu.taigikeyboard.engine.lexiconInstall
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
@@ -77,7 +77,7 @@ class TaigiKeyboardApplication : Application() {
      * Copy bundled `dictionary.fst`, `dictionary.bin`, `association.bin`
      * and (v3.5.8 Phase 2) `syllables.fst` from `assets/` to `filesDir/`
      * (mmap requires a real file handle — APK-internal asset entries are
-     * not directly mmap-able), then call `LexiconBridge.install(...)` once
+     * not directly mmap-able), then call `RustEngineBridge.lexiconInstall(...)` once
      * with absolute paths.
      *
      * Reinstall on app version bump: re-copies the assets and triggers
@@ -119,7 +119,7 @@ class TaigiKeyboardApplication : Application() {
             versionFile.writeText(currentVersion.toString())
         }
 
-        val stats = LexiconBridge.install(
+        val stats = RustEngineBridge.lexiconInstall(
             triePath = File(filesDir, "dictionary.fst").absolutePath,
             dictionaryBinPath = File(filesDir, DictionaryConstants.DICT_BIN_NAME).absolutePath,
             associationBinPath = File(filesDir, DictionaryConstants.ASSOC_BIN_NAME).absolutePath,
@@ -135,7 +135,7 @@ class TaigiKeyboardApplication : Application() {
         } else {
             compositionRoot.logger.w("LexiconInstall", "[INSTALL] returned null")
             compositionRoot.lexiconReady.completeExceptionally(
-                IllegalStateException("LexiconBridge.install returned null"),
+                IllegalStateException("RustEngineBridge.lexiconInstall returned null"),
             )
         }
     }

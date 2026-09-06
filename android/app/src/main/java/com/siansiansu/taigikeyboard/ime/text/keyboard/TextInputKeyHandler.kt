@@ -13,8 +13,9 @@ import android.view.KeyEvent
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import android.view.inputmethod.InputMethodManager
+import com.siansiansu.taigikeyboard.engine.isTpsToneMark
+import com.siansiansu.taigikeyboard.engine.transformInputCase
 import com.siansiansu.taigikeyboard.R
-import com.siansiansu.taigikeyboard.engine.CaseTransformBridge
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
@@ -498,9 +499,9 @@ internal class TextInputKeyHandler(
 
         val inputMode = InputMode.fromPrefString(prefs.inputMode)
         // Per-keystroke (not per-frame) — no cache needed; direct bridge call.
-        var char = CaseTransformBridge.transformInputCase(
+        var char = RustEngineBridge.transformInputCase(
             text = baseText,
-            letterCase = CaseTransformBridge.LetterCase.from(caps = caps, capsLock = capsLock),
+            letterCase = RustEngineBridge.LetterCase.from(caps = caps, capsLock = capsLock),
             mode = inputMode,
         )
 

@@ -6,6 +6,7 @@
 package com.siansiansu.taigikeyboard.ime.text
 
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.engine.tpsInputAdjust
 
 /**
  * Pure-function pipeline for TPS key-level character preprocessing.

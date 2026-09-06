@@ -1,6 +1,6 @@
 package com.siansiansu.taigikeyboard.engine
 
-import com.siansiansu.taigikeyboard.engine.LexiconBridge.DictionaryToggles
+import com.siansiansu.taigikeyboard.engine.RustEngineBridge.DictionaryToggles
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
@@ -8,7 +8,7 @@ import org.junit.Test
 
 /**
  * Pins the Android kautian-subcollection wire ENCODE
- * ([LexiconBridge.encodeKautianSubcollWire]) against the same expectations as
+ * ([encodeKautianSubcollWire]) against the same expectations as
  * the Rust golden tests in `engine/lexicon/src/dictionary_filters.rs`
  * (`subcoll_*`). This is the binary-skew fallback path; if it drifts from the
  * engine, a Kotlin-newer-than-`.so` session would silently mis-gate the
@@ -71,14 +71,14 @@ class KautianSubcollWireEncodeTest {
     /** master off ⇒ no high bits (kautian rows drop via the source-OR anyway). */
     @Test
     fun masterOff_emitsZero() {
-        val wire = LexiconBridge.encodeKautianSubcollWire(toggles(kautian = false, sub = allSubcollOn()))
+        val wire = encodeKautianSubcollWire(toggles(kautian = false, sub = allSubcollOn()))
         assertEquals(0u, wire)
     }
 
     /** master on + everything on ⇒ active bit + full 12-bit mask, no low bits. */
     @Test
     fun allOn_setsActiveAndFullMask() {
-        val wire = LexiconBridge.encodeKautianSubcollWire(toggles(kautian = true, sub = allSubcollOn()))
+        val wire = encodeKautianSubcollWire(toggles(kautian = true, sub = allSubcollOn()))
         assertTrue("active sentinel set", wire and activeBit != 0u)
         assertEquals("full 12-bit mask", 0xFFFu, maskRegion(wire))
         assertEquals("no source/variant low bits", 0u, wire and lowSourceRegion)
@@ -89,7 +89,7 @@ class KautianSubcollWireEncodeTest {
     /** master on + all nested off ⇒ main bit only (主條目 is not a user toggle). */
     @Test
     fun allNestedOff_keepsMainBitOnly() {
-        val wire = LexiconBridge.encodeKautianSubcollWire(toggles(kautian = true, sub = subcoll()))
+        val wire = encodeKautianSubcollWire(toggles(kautian = true, sub = subcoll()))
         assertTrue("active sentinel set", wire and activeBit != 0u)
         assertEquals("main bit only", 0x1u, maskRegion(wire))
     }
@@ -114,7 +114,7 @@ class KautianSubcollWireEncodeTest {
             subcoll(nameAppendix = true) to 11,
         )
         for ((sub, bit) in cases) {
-            val wire = LexiconBridge.encodeKautianSubcollWire(toggles(kautian = true, sub = sub))
+            val wire = encodeKautianSubcollWire(toggles(kautian = true, sub = sub))
             val expectedMask = 0x1u or (1u shl bit) // main + the one toggled bit
             assertEquals("subtag bit $bit", expectedMask, maskRegion(wire))
         }

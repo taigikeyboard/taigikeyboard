@@ -5,6 +5,11 @@
 package com.siansiansu.taigikeyboard.ime.dictionary
 
 import com.siansiansu.taigikeyboard.engine.CustomSearchKey
+import com.siansiansu.taigikeyboard.engine.deriveAbbrev
+import com.siansiansu.taigikeyboard.engine.deriveCustomQueryKey
+import com.siansiansu.taigikeyboard.engine.deriveCustomSearchKeys
+import com.siansiansu.taigikeyboard.engine.deriveNotone
+import com.siansiansu.taigikeyboard.engine.normalizeInput
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 

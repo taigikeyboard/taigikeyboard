@@ -1,6 +1,9 @@
 package com.siansiansu.taigikeyboard.ime.text.key
 
-import com.siansiansu.taigikeyboard.engine.CaseTransformBridge
+import com.siansiansu.taigikeyboard.engine.fullUppercaseToneString
+import com.siansiansu.taigikeyboard.engine.lowercaseToneChar
+import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.engine.uppercaseToneChar
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 
 /**
@@ -44,7 +47,7 @@ internal object KeyLabelCaseCache {
         }
 
     /**
-     * Look up (or compute via CaseTransformBridge) the case-transformed
+     * Look up (or compute via RustEngineBridge) the case-transformed
      * label for `baseLabel` under the given state. Idempotent and free
      * of side effects beyond the cache update.
      */
@@ -58,9 +61,9 @@ internal object KeyLabelCaseCache {
         cache[key]?.let { return it }
 
         val computed = when {
-            capsLock -> CaseTransformBridge.fullUppercaseToneString(baseLabel, mode)
-            caps -> CaseTransformBridge.uppercaseToneChar(baseLabel, mode)
-            else -> CaseTransformBridge.lowercaseToneChar(baseLabel, mode)
+            capsLock -> RustEngineBridge.fullUppercaseToneString(baseLabel, mode)
+            caps -> RustEngineBridge.uppercaseToneChar(baseLabel, mode)
+            else -> RustEngineBridge.lowercaseToneChar(baseLabel, mode)
         }
         cache[key] = computed
         return computed

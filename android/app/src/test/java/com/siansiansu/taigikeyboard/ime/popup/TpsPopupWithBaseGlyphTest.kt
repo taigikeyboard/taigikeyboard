@@ -78,7 +78,7 @@ class TpsPopupWithBaseGlyphTest {
 
     // Seam alignment (anchor.data.popup vs anchor.popupCells index parity)
     // is NOT JVM-testable: buildPopupCells → computeKeyLetter →
-    // CaseTransformBridge loads the Rust .so, unavailable off-device
+    // RustEngineBridge loads the Rust .so, unavailable off-device
     // (project-known limitation). Pinned by device dogfood instead: long-press
     // ㄗ → slide to each cell → index 0 commits ㄗ, index 1 commits ㄐ.
 }

@@ -4,6 +4,7 @@
 package com.siansiansu.taigikeyboard.ime.text.smartbar
 
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.engine.tlDisplayToTps
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.core.logging.TraceContext

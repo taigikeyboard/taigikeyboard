@@ -6,7 +6,9 @@
 
 package com.siansiansu.taigikeyboard.ime.dictionary
 
+import com.siansiansu.taigikeyboard.engine.nfdPreprocessForLookup
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.engine.stripTone
 import java.net.URLEncoder
 
 /**

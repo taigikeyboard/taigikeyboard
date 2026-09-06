@@ -7,7 +7,21 @@
 package com.siansiansu.taigikeyboard.ime.text.composing
 
 import android.view.inputmethod.InputConnection
-import com.siansiansu.taigikeyboard.engine.LexiconBridge
+import com.siansiansu.taigikeyboard.engine.composingAppend
+import com.siansiansu.taigikeyboard.engine.composingAppendHyphen
+import com.siansiansu.taigikeyboard.engine.composingCommitContinuous
+import com.siansiansu.taigikeyboard.engine.composingCommitDerived
+import com.siansiansu.taigikeyboard.engine.composingCommitPreeditThenInsertExternal
+import com.siansiansu.taigikeyboard.engine.composingCommitRaw
+import com.siansiansu.taigikeyboard.engine.composingDeleteBackward
+import com.siansiansu.taigikeyboard.engine.composingEnterContinuous
+import com.siansiansu.taigikeyboard.engine.composingFetchAtPos
+import com.siansiansu.taigikeyboard.engine.composingReplaceLast
+import com.siansiansu.taigikeyboard.engine.composingReset
+import com.siansiansu.taigikeyboard.engine.composingResetContinuous
+import com.siansiansu.taigikeyboard.engine.composingSelectSuggestion
+import com.siansiansu.taigikeyboard.engine.composingStart
+import com.siansiansu.taigikeyboard.engine.dictionaryFilters
 import com.siansiansu.taigikeyboard.engine.NormalizeMode
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.engine.ToneTogglesCarrier
@@ -504,8 +518,8 @@ class ComposingManager(
         // subcollection (腔調/姓名) toggles. Computed once and shared by
         // both fetch phases (depends only on `settings`, stable across the
         // two FFI calls — mirrors `customEntries`).
-        val enabledSourcesBitmask = LexiconBridge.dictionaryFilters(
-            LexiconBridge.DictionaryToggles.from(settings),
+        val enabledSourcesBitmask = RustEngineBridge.dictionaryFilters(
+            RustEngineBridge.DictionaryToggles.from(settings),
         ).dictionaryFilterBitmask
 
         // §34/S22 — invert the 顯示當咧拍的字 setting into the engine's

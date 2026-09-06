@@ -2,13 +2,15 @@ package com.siansiansu.taigikeyboard.engine
 
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.engine.proto.AppConfig
-import com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry
+import com.siansiansu.taigikeyboard.engine.proto.ErrorCode
 import com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry
+import com.siansiansu.taigikeyboard.engine.proto.Request
 import com.siansiansu.taigikeyboard.engine.proto.Response
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.NullLoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode
-import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
+import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
+import com.siansiansu.taigikeyboard.ime.dictionary.DictionarySource
 import com.siansiansu.taigikeyboard.ime.dictionary.FrequencyData
 import com.siansiansu.taigikeyboard.ime.dictionary.FrequencyRow
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
@@ -20,31 +22,22 @@ import com.siansiansu.taigikeyboard.engine.proto.CandidateDisplayMode as ProtoCa
  * Thin Kotlin wrapper around the Rust shared-core FFI exposed by
  * `engine/android-jni/src/lib.rs`.
  *
- * Facade only. Per-slice implementation lives in sibling impl objects in
- * the same package:
- * - [PhoneticsBridge] — phonetics core (8) + derivation (2) + TPS (5) + tone-variations cache
- * - [ComposingBridge] — composing slice (12) + continuous-input (4)
- * - [NextWordBridge] — NextWord slice (9)
- * - [LexiconBridge] — lexicon read path + ranking pipeline
- * - [CaseTransformBridge] — per-char/per-word case operations
+ * This object owns the JNI seam, [dispatch], the logger / diagnostics
+ * state, the [AppConfig] factories and every nested DTO type. The per-slice
+ * ops are extension functions on it, one file per slice (mirrors iOS
+ * `RustEngineBridge+<Slice>.swift`):
+ * - `PhoneticsBridge.kt` — phonetics core (8) + derivation (2) + TPS (5) + tone-variations cache
+ * - `ComposingBridge.kt` — composing slice (12) + continuous-input (4)
+ * - `NextWordBridge.kt` — NextWord slice (9)
+ * - `LexiconBridge.kt` — lexicon read path + ranking pipeline
+ * - `CaseTransformBridge.kt` — per-char/per-word case operations
+ * Callers outside this package import each extension by name
+ * (`import com.siansiansu.taigikeyboard.engine.normalizeTone`).
  *
- * Each sibling re-uses [nextRequestIdInternal] for unique request IDs
- * and [recordFailure] for centralised diagnostics. JNI hop choice differs
- * by slice and is load-bearing — do NOT "clean up" into a uniform helper
- * without re-running the byte-for-byte parity audit:
- * - [PhoneticsBridge] / [ComposingBridge] / [NextWordBridge] +
- *   [LexiconBridge.rankingDispatch] use [sendRawBytes] (catches
- *   `Response.parseFrom` failure as `null`, lets `processRequestBytes`
- *   JNI exceptions propagate — mirrors pre-split facade dispatchers).
- * - Legacy [LexiconBridge.dispatch] + [CaseTransformBridge] use
- *   [dispatchRaw] (catches both JNI throw + parse failure via
- *   try/Throwable, emits `backend.w` only, no op-name `recordFailure`).
- *   Pre-existing; swap would lose `backend.w` log scope.
- *
- * Nested DTO types (e.g. [ComposingTransition], [NextWordDecideResult],
- * [ScoreBreakdown]) stay declared here so existing call-site import paths
- * (`RustEngineBridge.ComposingTransition`, etc.) keep working — facade
- * methods on this object delegate to the siblings.
+ * Every slice sends through [dispatch] — one request-id allocator, one
+ * JNI hop, one `try/Throwable` boundary (a JNI throw or a parse failure
+ * never escapes into the IME keystroke path), one [recordFailure] sink.
+ * Slices keep only their own payload check.
  *
  * Per Codex v2 §7: `normalizeTone` requires `ToneToggles` mandatory
  * parameter — no `ToneToggles(true, true)` silent default.
@@ -63,9 +56,9 @@ object RustEngineBridge {
     @Volatile
     private var installedBackend: LoggerBackend = NullLoggerBackend
 
-    /** Sibling-bridge accessor for `LexiconBridge` / `CaseTransformBridge` —
-     *  same backend the JNI layer routes through. Read-only; mutation goes
-     *  through [install]. */
+    /** Sibling-bridge accessor for slice-level debug logging — same backend
+     *  the JNI layer routes through. Read-only; mutation goes through
+     *  [install]. */
     internal val backend: LoggerBackend
         get() = installedBackend
 
@@ -97,104 +90,140 @@ object RustEngineBridge {
         }
     }
 
-    // region Phonetics facade — delegates to [PhoneticsBridge]
-
-    /**
-     * `Method::NormalizeTone` — input + AppConfig.input_mode + ToneToggles →
-     * tone-marked string. `mode` and `toggles` are mandatory (no default)
-     * to enforce the live-read invariant per Codex v2 §7.
-     */
-    fun normalizeTone(
-        input: String,
-        mode: NormalizeMode,
-        toggles: ToneTogglesCarrier,
-    ): String = PhoneticsBridge.normalizeTone(input, mode, toggles)
-
-    // Strips the syllable's tone combining mark; tone is "" when the syllable has none.
-    fun stripTone(input: String): StripToneOutcome = PhoneticsBridge.stripTone(input)
-
-    fun pojToTl(input: String): String = PhoneticsBridge.pojToTl(input)
-
-    fun tlToPoj(input: String): String = PhoneticsBridge.tlToPoj(input)
-
-    fun normalizeToTl(input: String): String = PhoneticsBridge.normalizeToTl(input)
-
-    // Full NormalizeInput pipeline down to a trie-query key: TPS preprocess, lowercase, syllable split,
-    // nasal / o͘ prep, checked-ending inference.
-    fun normalizeInput(input: String): String = PhoneticsBridge.normalizeInput(input)
-
-    /**
-     * Replaces platform `TaigiUnicode.nfdPreprocessed(...)`. Lookup-side
-     * NFD prep used by `ExternalLookupURLBuilder` before tone stripping.
-     * Distinct semantics from [normalizeInput] — this preserves tone
-     * diacritics; only nasal markers (ⁿ / ᴺ → "nn") and standalone
-     * `\u{0358}` → `o` are rewritten.
-     */
-    fun nfdPreprocessForLookup(input: String): String = PhoneticsBridge.nfdPreprocessForLookup(input)
-
-    // Backspace path: drops the last NFD tone mark and recomposes; null when there is no mark.
-    fun restoreTone(text: String): String? = PhoneticsBridge.restoreTone(text)
+    // region Phonetics — ops are extensions in PhoneticsBridge.kt
 
     /** Lazy-init cache for `Method::GetToneVariations`. See [PhoneticsBridge.toneVariations]. */
     val toneVariations: ToneVariationsCache
         get() = PhoneticsBridge.toneVariations
 
-    // Custom-dictionary search key: toneless form used for toneless prefix search.
-    fun deriveNotone(roman: String): String = PhoneticsBridge.deriveNotone(roman)
+    // endregion
+    // region Lexicon DTOs — ops are extensions in LexiconBridge.kt
 
-    // Custom-dictionary search key: per-syllable initials (split on hyphen/space); "" for a single syllable.
-    fun deriveAbbrev(roman: String): String = PhoneticsBridge.deriveAbbrev(roman)
+    /** Bridge-synthesized companion to proto `TaigiWord` (lexicon search row). */
+    data class LexiconRow(
+        val id: Long,
+        val roman: String,
+        val hanzi: String?,
+        val lengthScore: Int?,
+        val sourceBitmask: UInt?,
+    )
 
-    // Write side: expands roman into the {tl,poj,tps} x {num,notone,abbrev} key bundle.
-    fun deriveCustomSearchKeys(roman: String): List<CustomSearchKey> = PhoneticsBridge.deriveCustomSearchKeys(roman)
+    /** Bridge-synthesized companion to proto `LexiconAssocEntry`. */
+    data class LexiconAssocEntry(
+        val previousWord: String,
+        val candidateWord: String,
+        val candidateTl: String,
+        val count: UInt,
+    )
 
-    // Query side: one family key from input + mode. TPS collapses to "tl" through InputMode, so the engine
-    // upgrades to the tps family via contains_tps(raw) instead.
-    fun deriveCustomQueryKey(
-        input: String,
-        mode: com.siansiansu.taigikeyboard.ime.core.settings.InputMode,
-    ): CustomSearchKey? = PhoneticsBridge.deriveCustomQueryKey(input, customSearchInputMode(mode))
+    /** Engine install diagnostic counts (for dogfood logging). */
+    data class LexiconInstallStats(
+        val dictionaryRecordCount: ULong,
+        val prefixIndexEntryCount: ULong,
+    )
+
+    /** Lexicon engine `inputMode` enum (mirrors proto `InputMode`). */
+    enum class LexiconInputMode(
+        val protoValue: Int,
+    ) {
+        UNSPECIFIED(0),
+        TL(1),
+        POJ(2),
+        TPS(3),
+    }
 
     /**
-     * Map the platform [com.siansiansu.taigikeyboard.ime.core.settings.InputMode]
-     * to the engine `input_mode` string. Android's enum has no TPS case (`"tps"`
-     * settings collapses to `TL` upstream via `InputMode.fromPrefString`); the
-     * engine upgrades to the TPS family via `contains_tps` on the raw input.
-     * Mirrors iOS `RustEngineBridge+Phonetics.swift` `customSearchInputMode`.
+     * Snapshot of the user's dictionary preference state. Field order mirrors
+     * `engine/protos/proto/lexicon.proto::DictionaryToggles` (12 source toggles
+     * + nested [KautianSubcoll]). Build via `from(settings)`; never construct
+     * piecemeal at search call sites — that splits the snapshot.
      */
-    private fun customSearchInputMode(
-        mode: com.siansiansu.taigikeyboard.ime.core.settings.InputMode,
-    ): String =
-        when (mode) {
-            com.siansiansu.taigikeyboard.ime.core.settings.InputMode.POJ -> "poj"
-            com.siansiansu.taigikeyboard.ime.core.settings.InputMode.ENGLISH -> "english"
-            com.siansiansu.taigikeyboard.ime.core.settings.InputMode.TL -> "tl"
+    data class DictionaryToggles(
+        val kautian: Boolean,
+        val taigitv: Boolean,
+        val itaigi: Boolean,
+        val sitbut: Boolean,
+        val taihoa: Boolean,
+        val taijit: Boolean,
+        val kungge: Boolean,
+        val stti: Boolean,
+        val khpoo: Boolean,
+        val variant: Boolean,
+        val khiin: Boolean,
+        val lkk: Boolean,
+        val dev: Boolean,
+        val kautianSubcoll: KautianSubcoll,
+    ) {
+        /**
+         * kautian subcollection enable state (10 accents + name appendix).
+         * Android always populates this (the app ships the toggles), so the
+         * `kautian_subcoll` proto message is always present and the engine
+         * always runs the subcollection gate. Field order mirrors config.yaml
+         * `dialect_columns` / proto `KautianSubcollToggles`.
+         * Mirrors iOS `RustEngineBridge.DictionaryToggles.KautianSubcoll`.
+         */
+        data class KautianSubcoll(
+            val lukang: Boolean,
+            val sansia: Boolean,
+            val taipak: Boolean,
+            val gilan: Boolean,
+            val tainan: Boolean,
+            val kaohsiung: Boolean,
+            val kinmen: Boolean,
+            val makung: Boolean,
+            val sintik: Boolean,
+            val taichung: Boolean,
+            val nameAppendix: Boolean,
+        )
+
+        companion object {
+            fun from(settings: EngineSettings): DictionaryToggles =
+                DictionaryToggles(
+                    kautian = settings.isMoeDictEnabled,
+                    taigitv = settings.isNewwordDictEnabled,
+                    itaigi = settings.isITaigiDictEnabled,
+                    sitbut = settings.isTaiwanPlantDictEnabled,
+                    taihoa = settings.isTaiHuaDictEnabled,
+                    taijit = settings.isTaiwanJapanDictEnabled,
+                    kungge = settings.isKunggeDictEnabled,
+                    stti = settings.isSttiDictEnabled,
+                    khpoo = settings.isKhpooDictEnabled,
+                    variant = settings.isVariantEnabled,
+                    khiin = settings.isKhiinEnabled,
+                    lkk = settings.isLkkDictEnabled,
+                    dev = settings.isDevDictEnabled,
+                    kautianSubcoll = KautianSubcoll(
+                        lukang = settings.isKautianAccentLukangEnabled,
+                        sansia = settings.isKautianAccentSansiaEnabled,
+                        taipak = settings.isKautianAccentTaipakEnabled,
+                        gilan = settings.isKautianAccentGilanEnabled,
+                        tainan = settings.isKautianAccentTainanEnabled,
+                        kaohsiung = settings.isKautianAccentKaohsiungEnabled,
+                        kinmen = settings.isKautianAccentKinmenEnabled,
+                        makung = settings.isKautianAccentMakungEnabled,
+                        sintik = settings.isKautianAccentSintikEnabled,
+                        taichung = settings.isKautianAccentTaichungEnabled,
+                        nameAppendix = settings.isKautianNameAppendixEnabled,
+                    ),
+                )
         }
+    }
 
-    // Composing's derived display uses this to skip POJ/TL tone conversion.
-    fun containsTps(text: String): Boolean = PhoneticsBridge.containsTps(text)
-
-    // orMapsToER selects the er/or variant mapping.
-    fun tlNumericToTps(
-        text: String,
-        orMapsToER: Boolean,
-    ): String = PhoneticsBridge.tlNumericToTps(text, orMapsToER)
-
-    fun tlDisplayToTps(
-        text: String,
-        orMapsToER: Boolean,
-    ): String = PhoneticsBridge.tlDisplayToTps(text, orMapsToER)
-
-    fun isTpsToneMark(char: Char): Boolean = PhoneticsBridge.isTpsToneMark(char)
-
-    // Key-level TPS adjust: when replaceLast is non-empty the caller must replace the previous char with it.
-    fun tpsInputAdjust(
-        incoming: String,
-        rawInput: String,
-    ): TpsAdjustOutcome = PhoneticsBridge.tpsInputAdjust(incoming, rawInput)
-
-    // endregion
-    // region Lexicon ranking facade — delegates to [LexiconBridge]
+    /**
+     * Output of `dictionaryFilters` — ready-to-send bitmasks plus the
+     * decoded enabled-source set for Dictionary tab retag. Replaces verbatim
+     * platform `EnabledDictionaries` bit math (deleted in v3.5.8 slice).
+     *
+     * `assocLookupBitmask` carries the `UInt.MAX_VALUE` sentinel when all 9
+     * association sources are on — preserves the documented
+     * `lexicon.proto:166-173` shortcut. Caller forwards directly to
+     * `assocLookup(enabledSourcesBitmask = ...)`.
+     */
+    data class DictionaryFilters(
+        val dictionaryFilterBitmask: UInt,
+        val assocLookupBitmask: UInt,
+        val enabledSources: Set<DictionarySource>,
+    )
 
     /**
      * Per-candidate score breakdown returned alongside the ranked list when
@@ -223,33 +252,6 @@ object RustEngineBridge {
         val ranked: List<TaigiWord>,
         val breakdowns: List<ScoreBreakdown>,
     )
-
-    /** See [LexiconBridge.processCandidates]. */
-    fun processCandidates(
-        raw: List<TaigiWord>,
-        normalizedInput: String,
-        tpsDedupEnabled: Boolean,
-        frequencyData: Map<String, FrequencyData>,
-        nowMs: Long,
-    ): List<TaigiWord> = LexiconBridge.processCandidates(raw, normalizedInput, tpsDedupEnabled, frequencyData, nowMs)
-
-    /** See [LexiconBridge.processCandidatesDetailed]. */
-    fun processCandidatesDetailed(
-        raw: List<TaigiWord>,
-        normalizedInput: String,
-        tpsDedupEnabled: Boolean,
-        frequencyData: Map<String, FrequencyData>,
-        nowMs: Long,
-        includeBreakdown: Boolean,
-    ): CandidateRanking =
-        LexiconBridge.processCandidatesDetailed(
-            raw,
-            normalizedInput,
-            tpsDedupEnabled,
-            frequencyData,
-            nowMs,
-            includeBreakdown,
-        )
 
     /**
      * Marshal a `Map<String, FrequencyData>` snapshot into the proto
@@ -292,7 +294,40 @@ object RustEngineBridge {
         }
 
     // endregion
-    // region Composing facade — delegates to [ComposingBridge]
+    // region Case-transform DTO — ops are extensions in CaseTransformBridge.kt
+
+    /**
+     * Three-state shift / case indicator. Bridge-side mirror of the proto
+     * `LetterCase` enum + the iOS `CaseTransformLetterCase`. Adapts
+     * Android's existing `(caps: Boolean, capsLock: Boolean)` pair at the
+     * call site (CapsLock=true → CapsLocked; caps=true → Uppercased;
+     * else Lowercased) — see `from()` factory.
+     */
+    enum class LetterCase(
+        val protoValue: Int,
+    ) {
+        LOWERCASED(1),
+        UPPERCASED(2),
+        CAPS_LOCKED(3),
+        ;
+
+        companion object {
+            /** Adapter from Android's existing caps + capsLock boolean pair. */
+            @JvmStatic
+            fun from(
+                caps: Boolean,
+                capsLock: Boolean,
+            ): LetterCase =
+                when {
+                    capsLock -> CAPS_LOCKED
+                    caps -> UPPERCASED
+                    else -> LOWERCASED
+                }
+        }
+    }
+
+    // endregion
+    // region Composing DTOs — ops are extensions in ComposingBridge.kt
 
     /**
      * Bridge-synthesized companion to the proto `ComposingResponse`.
@@ -517,292 +552,8 @@ object RustEngineBridge {
         }
     }
 
-    @JvmStatic
-    fun composingStart(
-        text: String,
-        mode: NormalizeMode,
-        toggles: ToneTogglesCarrier,
-        generation: Long,
-    ): ComposingTransition = ComposingBridge.composingStart(text, mode, toggles, generation)
-
-    @JvmStatic
-    fun composingAppend(
-        ch: String,
-        mode: NormalizeMode,
-        toggles: ToneTogglesCarrier,
-        generation: Long,
-    ): ComposingTransition = ComposingBridge.composingAppend(ch, mode, toggles, generation)
-
-    // Separator hyphen distinguishes raw "tai-uan" from "taiuan", which changes the candidate trie key.
-    @JvmStatic
-    fun composingAppendHyphen(
-        mode: NormalizeMode,
-        toggles: ToneTogglesCarrier,
-        generation: Long,
-    ): ComposingTransition = ComposingBridge.composingAppendHyphen(mode, toggles, generation)
-
-    @JvmStatic
-    fun composingReplaceLast(
-        replacement: String,
-        mode: NormalizeMode,
-        toggles: ToneTogglesCarrier,
-        generation: Long,
-    ): ComposingTransition = ComposingBridge.composingReplaceLast(replacement, mode, toggles, generation)
-
-    // Engine owns the delete-to-empty → Idle transition and the 1-char delete path that must not eat document text.
-    @JvmStatic
-    fun composingDeleteBackward(
-        mode: NormalizeMode,
-        toggles: ToneTogglesCarrier,
-        generation: Long,
-    ): ComposingTransition = ComposingBridge.composingDeleteBackward(mode, toggles, generation)
-
-    // Commits the derived display string, e.g. raw "ho2" commits as "hó".
-    @JvmStatic
-    fun composingCommitDerived(
-        mode: NormalizeMode,
-        toggles: ToneTogglesCarrier,
-        generation: Long,
-    ): ComposingTransition = ComposingBridge.composingCommitDerived(mode, toggles, generation)
-
-    // Dispatched by phase: the Composing arm commits literal keystrokes ("ho2"), the Continuous arm commits
-    // derived_display(pending) ("hó") — which is why the Continuous side needs mode + toggles.
-    // v3.5.8 §10.2 platform pass: under `Phase::Continuous`, `CommitRaw`
-    // routes to `commit_raw_continuous` which renders the whole
-    // composition via `combined_display(nailed, raw, config)` — so the
-    // continuous spacing flags ride here. Composing-arm `CommitRaw`
-    // ignores them. Defaults = v3.5.7 roman-first so contract tests stay
-    // behavior-identical; EVERY production Continuous call site MUST pass
-    // explicit live values via `ComposingManager.continuousSpacingFlags`
-    // (the sole production caller does — verified) or hanji-first
-    // silently regresses.
-    @JvmStatic
-    fun composingCommitRaw(
-        mode: NormalizeMode,
-        toggles: ToneTogglesCarrier,
-        generation: Long,
-        effectiveSwapped: Boolean = false,
-        outputBothScripts: Boolean = false,
-        candidateDisplayMode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
-    ): ComposingTransition =
-        ComposingBridge.composingCommitRaw(
-            mode,
-            toggles,
-            generation,
-            effectiveSwapped,
-            outputBothScripts,
-            candidateDisplayMode,
-        )
-
-    // v3.5.8 §10.2 platform pass: under `Phase::Continuous`,
-    // `SelectSuggestion` routes to `select_suggestion_under_continuous`
-    // which prepends `nailed_prefix(nailed, config)` — so the continuous
-    // spacing flags must ride here (previously `config = null` →
-    // `AppConfig::default()` → spacing always ON → hanji-first spurious
-    // spaces). The composing-arm `select_suggestion` ignores `config`
-    // entirely (commits `text` verbatim), so this is a no-op there.
-    // Defaults = v3.5.7 roman-first; the sole production caller
-    // (`ComposingManager.selectSuggestion`) passes explicit live values.
-    @JvmStatic
-    fun composingSelectSuggestion(
-        text: String,
-        mode: NormalizeMode,
-        toggles: ToneTogglesCarrier,
-        generation: Long,
-        effectiveSwapped: Boolean = false,
-        outputBothScripts: Boolean = false,
-        candidateDisplayMode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
-    ): ComposingTransition =
-        ComposingBridge.composingSelectSuggestion(
-            text,
-            mode,
-            toggles,
-            generation,
-            effectiveSwapped,
-            outputBothScripts,
-            candidateDisplayMode,
-        )
-
-    // Commits the preedit and inserts the external string (space / Enter / punctuation) atomically, to avoid flicker.
-    // v3.5.8 §10.2 platform pass: under `Phase::Continuous` (e.g. emoji
-    // tap mid-continuous) this routes to
-    // `commit_preedit_then_insert_external_under_continuous` which
-    // renders the nailed prefix via `combined_display(nailed, raw,
-    // config)` — so the continuous spacing flags ride here too. (Not in
-    // the 2026-05-18 enumerated 4 ops, but the same class of Continuous
-    // nailed-rendering path: excluding it would re-create the exact
-    // hanji-first spurious-space regression the narrowed plumb
-    // minimizes — see continuous-input-ranking.md §10.2.) Defaults =
-    // v3.5.7 roman-first; production callers pass explicit live values.
-    @JvmStatic
-    fun composingCommitPreeditThenInsertExternal(
-        text: String,
-        mode: NormalizeMode,
-        toggles: ToneTogglesCarrier,
-        generation: Long,
-        effectiveSwapped: Boolean = false,
-        outputBothScripts: Boolean = false,
-        candidateDisplayMode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
-    ): ComposingTransition =
-        ComposingBridge.composingCommitPreeditThenInsertExternal(
-            text,
-            mode,
-            toggles,
-            generation,
-            effectiveSwapped,
-            outputBothScripts,
-            candidateDisplayMode,
-        )
-
-    @JvmStatic
-    fun composingReset(generation: Long): ComposingTransition = ComposingBridge.composingReset(generation)
-
-    // Reports the selected index so NextWord / Booster can read the context word. Does not commit.
-    @JvmStatic
-    fun composingSetSelectedCandidateIndex(
-        index: Int,
-        generation: Long,
-    ): ComposingTransition = ComposingBridge.composingSetSelectedCandidateIndex(index, generation)
-
-    @JvmStatic
-    fun composingQueryState(generation: Long): ComposingTransition = ComposingBridge.composingQueryState(generation)
-
-    /**
-     * `Phase::Composing { raw }` → `Phase::Continuous { raw, committed: [] }`.
-     * Phase 6 contract: no payload — buffer is whatever earlier `Start` /
-     * `Append` populated. Engine no-ops on Idle / already-Continuous / empty
-     * `Composing.raw`. AppConfig is required because the snapshot's preedit
-     * display goes through `derived_display(raw, config)`.
-     */
-    @JvmStatic
-    fun composingEnterContinuous(
-        mode: NormalizeMode,
-        toggles: ToneTogglesCarrier,
-        generation: Long,
-    ): ComposingTransition = ComposingBridge.composingEnterContinuous(mode, toggles, generation)
-
-    /**
-     * Read-only candidate query for the current `Phase::Continuous { raw }`.
-     * `position` is reserved as `0` in v3.5.8 (Phase 6 dispatch validates).
-     * Caller MUST share the active composing-session generation — FetchAtPos
-     * is read-only and bumping generation would reset engine state before
-     * the fetch (`engine/composing/src/dispatch.rs:103-160`).
-     *
-     * `frequencyEntries` + `nowMs` are the v3.5.8 Phase 9.3a/9.3c plumb for
-     * `user_freq_boost` + `SortKey.recency_rank`. Caller pre-filters entries
-     * to candidate-relevant `displayTextKey`s (`hanji ?? roman`) — see
-     * `engine/protos/proto/composing.proto:144-148`. Defaults `emptyList()`
-     * + `0L` reproduce the PR-9.2 neutral-boost behaviour (`user_freq_boost
-     * = 1.0`, `recency_rank = 1` everywhere); the platform plumb is
-     * responsible for populating real values via a two-phase fetch
-     * (`ComposingManager.fetchContinuousCandidates`). Mirrors iOS
-     * `RustEngineBridge.composingFetchAtPos` PR-9.3b.
-     *
-     * v3.5.8 Phase 9 Item 12 — `customEntries` carries the platform's
-     * `custom_dictionary.db` matches (raw stored `(roman, hanji)`
-     * columns; DB stays native). Default `emptyList()` = no custom
-     * matches / feature off — backward-compatible no-op. The engine
-     * synthesizes a full-buffer candidate per entry and dedupes
-     * `(roman, hanji)` against the FST hits (custom wins the
-     * collision). Mirrors iOS `RustEngineBridge.composingFetchAtPos`.
-     *
-     * v3.5.8 §10.2 platform pass: the FetchAtPos snapshot renders the
-     * combined marked region (`combined_display`) and per-segment recased
-     * candidates, so it needs the continuous spacing flags to match the
-     * commit-time rendering. Defaults = v3.5.7 roman-first; production
-     * callers pass explicit live values via continuousSpacingFlags.
-     */
-    @JvmStatic
-    fun composingFetchAtPos(
-        mode: NormalizeMode,
-        toggles: ToneTogglesCarrier,
-        generation: Long,
-        frequencyEntries: List<FrequencyEntry> = emptyList(),
-        nowMs: Long = 0L,
-        customEntries: List<CustomDictEntry> = emptyList(),
-        effectiveSwapped: Boolean = false,
-        outputBothScripts: Boolean = false,
-        // PR-9.6 — dictionary source-toggle bitmask (same one Tab3 browse
-        // sends). Default `0u` = proto3-absent sentinel → engine all-on,
-        // preserving pre-PR-9.6 behaviour for callers (incl. tests).
-        enabledSourcesBitmask: UInt = 0u,
-        // §34/S22 — invert of the 顯示當咧拍的字 setting. Default `false` = show
-        // (proto3-absent sentinel → engine prepends the literal-roman
-        // candidate, the pre-toggle always-on behaviour for callers/tests).
-        literalRomanCandidateDisabled: Boolean = false,
-        // 候選詞顯示 — ROMAN_ONLY makes the engine collapse same-roman rows.
-        candidateDisplayMode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
-    ): ContinuousFetchResult =
-        ComposingBridge.composingFetchAtPos(
-            mode,
-            toggles,
-            generation,
-            frequencyEntries,
-            nowMs,
-            customEntries,
-            effectiveSwapped,
-            outputBothScripts,
-            enabledSourcesBitmask,
-            literalRomanCandidateDisabled,
-            candidateDisplayMode,
-        )
-
-    /**
-     * Commit a candidate segment in `Phase::Continuous`. `displayText` /
-     * `consumedBytes` / `syllableCount` MUST come from a [ContinuousCandidate]
-     * returned by an immediately preceding [composingFetchAtPos] call —
-     * sending mismatched values mis-aligns the committed segment.
-     * `consumedBytes >= pending.utf8.size` triggers a final commit (exit
-     * to Idle). Programmer-error inputs collapse to noop on the engine side.
-     *
-     * v3.5.8 §10.2 platform pass: the repro path. Mid-commit renders
-     * `combined_display(nailed, pending, config)`; final-commit renders
-     * `nailed_prefix(nailed, config)` — both need the spacing flags so
-     * segments join with the right (roman: space / hanji-first: none /
-     * both-scripts: space) word boundary. Defaults = v3.5.7 roman-first;
-     * production callers pass explicit live values.
-     */
-    @JvmStatic
-    fun composingCommitContinuous(
-        displayText: String,
-        canonicalText: String,
-        associationTl: String,
-        consumedBytes: Int,
-        syllableCount: Int,
-        mode: NormalizeMode,
-        toggles: ToneTogglesCarrier,
-        generation: Long,
-        effectiveSwapped: Boolean = false,
-        outputBothScripts: Boolean = false,
-        candidateDisplayMode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
-    ): ComposingTransition =
-        ComposingBridge.composingCommitContinuous(
-            displayText,
-            canonicalText,
-            associationTl,
-            consumedBytes,
-            syllableCount,
-            mode,
-            toggles,
-            generation,
-            effectiveSwapped,
-            outputBothScripts,
-            candidateDisplayMode,
-        )
-
-    /**
-     * Abort continuous-input. Drops `Phase::Continuous` committed list +
-     * pending raw, exits to Idle, emits the standard abort effect trio
-     * (`ClearPreeditWithoutCommit` + `ResetAutocomplete` +
-     * `NextWordClearForNewComposing`). Committed segments stay in the
-     * document — earlier `CommitTextReplacingPreedit` effects already wrote
-     * them.
-     */
-    @JvmStatic
-    fun composingResetContinuous(generation: Long): ComposingTransition = ComposingBridge.composingResetContinuous(generation)
-
     // endregion
-    // region NextWord facade — delegates to [NextWordBridge]
+    // region NextWord DTOs — ops are extensions in NextWordBridge.kt
 
     /**
      * Bridge-synthesized companion to the proto `DecideResult`. Consumed
@@ -922,211 +673,6 @@ object RustEngineBridge {
         val currentGeneration: Long,
     )
 
-    // -- Decide intents (6) --
-    // UpdateLastSelectedWord was originally Android-only (Space-path); v3.5.8
-    // Phase 4 brought iOS into the call site through a continuous-input
-    // mid-commit handshake. iOS bridge wraps it in
-    // RustEngineBridge+NextWord.swift::nextwordUpdateLastSelectedWord.
-
-    // Records the association, starts the context timer, and optionally queries the next-word prediction.
-    @JvmStatic
-    fun nextwordWordSelected(
-        text: String,
-        roman: String,
-        requireRomanMode: Boolean,
-        triggerPrediction: Boolean,
-        nowMs: Long,
-        mode: InputMode,
-        translateSwapped: Boolean,
-        associationRecordingEnabled: Boolean,
-        generation: Long,
-    ): NextWordDecideResult =
-        NextWordBridge.wordSelected(
-            text,
-            roman,
-            requireRomanMode,
-            triggerPrediction,
-            nowMs,
-            mode,
-            translateSwapped,
-            associationRecordingEnabled,
-            generation,
-        )
-
-    // Whether lastChar is a boundary character decides if the NextWord display clears and the timer reschedules.
-    @JvmStatic
-    fun nextwordBackspace(
-        lastChar: String,
-        nowMs: Long,
-        mode: InputMode,
-        translateSwapped: Boolean,
-        associationRecordingEnabled: Boolean,
-        generation: Long,
-    ): NextWordDecideResult =
-        NextWordBridge.backspace(
-            lastChar,
-            nowMs,
-            mode,
-            translateSwapped,
-            associationRecordingEnabled,
-            generation,
-        )
-
-    @JvmStatic
-    fun nextwordContextTimeoutFired(
-        nowMs: Long,
-        mode: InputMode,
-        translateSwapped: Boolean,
-        associationRecordingEnabled: Boolean,
-        generation: Long,
-    ): NextWordDecideResult =
-        NextWordBridge.contextTimeoutFired(
-            nowMs,
-            mode,
-            translateSwapped,
-            associationRecordingEnabled,
-            generation,
-        )
-
-    // Clears the NextWord display but keeps lastSelectedWord for the next selection.
-    @JvmStatic
-    fun nextwordClearForNewComposing(
-        nowMs: Long,
-        mode: InputMode,
-        translateSwapped: Boolean,
-        associationRecordingEnabled: Boolean,
-        generation: Long,
-    ): NextWordDecideResult =
-        NextWordBridge.clearForNewComposing(
-            nowMs,
-            mode,
-            translateSwapped,
-            associationRecordingEnabled,
-            generation,
-        )
-
-    // Full reset of lastSelectedWord / lastSelectionTimeMs / isShowing (focus change, input-mode switch).
-    @JvmStatic
-    fun nextwordResetFull(
-        nowMs: Long,
-        mode: InputMode,
-        translateSwapped: Boolean,
-        associationRecordingEnabled: Boolean,
-        generation: Long,
-    ): NextWordDecideResult =
-        NextWordBridge.resetFull(
-            nowMs,
-            mode,
-            translateSwapped,
-            associationRecordingEnabled,
-            generation,
-        )
-
-    /**
-     * Platform → engine UI visibility sync. Call after rendering an async
-     * predict() result (or clearing it on empty result) so the engine's
-     * `state.is_showing` stays accurate. Downstream
-     * `nextwordClearForNewComposing` / sentence-end / context timeout /
-     * `nextwordResetFull` paths gate `ClearPredictionsUI` emission on it.
-     * No effects, no `current_generation` bump.
-     */
-    @JvmStatic
-    fun nextwordSetIsShowing(
-        isShowing: Boolean,
-        mode: InputMode,
-        translateSwapped: Boolean,
-        associationRecordingEnabled: Boolean,
-        generation: Long,
-    ): NextWordDecideResult =
-        NextWordBridge.setIsShowing(
-            isShowing,
-            mode,
-            translateSwapped,
-            associationRecordingEnabled,
-            generation,
-        )
-
-    /**
-     * Android-only Space-path intent. Codex v1 P1: preserves the
-     * "compound-only / no timer reschedule / no generation bump"
-     * semantics of the legacy `NextWordHandler.updateLastSelectedWord`.
-     * The iOS bridge intentionally omits this intent.
-     */
-    @JvmStatic
-    fun nextwordUpdateLastSelectedWord(
-        text: String,
-        roman: String,
-        nowMs: Long,
-        mode: InputMode,
-        translateSwapped: Boolean,
-        associationRecordingEnabled: Boolean,
-        generation: Long,
-    ): NextWordDecideResult =
-        NextWordBridge.updateLastSelectedWord(
-            text,
-            roman,
-            nowMs,
-            mode,
-            translateSwapped,
-            associationRecordingEnabled,
-            generation,
-        )
-
-    // -- Filter / Boost / QueryState --
-
-    // Platform SQL supplies the raw dict + user prediction rows; Rust does score+merge+sort+limit.
-    // A queryGeneration that no longer matches currentGeneration returns wasStale=true — caller drops the result.
-    @JvmStatic
-    fun nextwordFilter(
-        raw: List<NextWordRawRow>,
-        queryGeneration: Long,
-        nowMs: Long,
-        limit: Int,
-        mode: InputMode,
-        translateSwapped: Boolean,
-        associationRecordingEnabled: Boolean,
-        generation: Long,
-        candidateDisplayMode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
-    ): NextWordFilterResult =
-        NextWordBridge.filter(
-            raw,
-            queryGeneration,
-            nowMs,
-            limit,
-            mode,
-            translateSwapped,
-            associationRecordingEnabled,
-            generation,
-            candidateDisplayMode,
-        )
-
-    // Autocomplete context booster: candidates whose first char is in the predicted set float up.
-    @JvmStatic
-    fun nextwordBoostCandidates(
-        words: List<String>,
-        predictedFirstChars: Set<String>,
-        mode: InputMode,
-        translateSwapped: Boolean,
-        associationRecordingEnabled: Boolean,
-        generation: Long,
-    ): List<String> =
-        NextWordBridge.boostCandidates(
-            words,
-            predictedFirstChars,
-            mode,
-            translateSwapped,
-            associationRecordingEnabled,
-            generation,
-        )
-
-    @JvmStatic
-    fun nextwordQueryState(
-        mode: InputMode,
-        translateSwapped: Boolean,
-        associationRecordingEnabled: Boolean,
-        generation: Long,
-    ): NextWordStateSnapshot = NextWordBridge.queryState(mode, translateSwapped, associationRecordingEnabled, generation)
-
     // endregion
     // region Diagnostics (Codex v2 §8 / v3 §7 / v4 §5)
 
@@ -1189,20 +735,42 @@ object RustEngineBridge {
     private external fun processRequestBytes(bytes: ByteArray): ByteArray
 
     /**
-     * Internal dispatch seam for sibling bridges that live outside this
-     * object but share the same JNI plumbing. Same package only —
-     * `internal` Kotlin visibility plus `engine` package. Wraps
-     * `processRequestBytes` so the JNI symbol stays bound to
-     * `RustEngineBridge`.
+     * Single request → JNI → parse → error-check hop for every sibling
+     * bridge. `build` fills the slice payload (and any generation /
+     * config snapshot) on a [Request.Builder] whose id is already
+     * allocated from the process-wide counter. Both the JNI call and
+     * `Response.parseFrom` sit inside a `try/Throwable` so no failure
+     * escapes into the keystroke path; every failure mode goes through
+     * [recordFailure] under `op`. Returns `null` on any failure, else the
+     * envelope — callers check their own slice payload.
      */
-    internal fun dispatchRaw(bytes: ByteArray): ByteArray = processRequestBytes(bytes)
-
-    /**
-     * Internal request-id allocator for sibling bridges. Increments the
-     * shared atomic so request IDs are unique across all bridges in the
-     * process.
-     */
-    internal fun nextRequestIdInternal(): Int = nextId.incrementAndGet()
+    internal fun dispatch(
+        op: String,
+        build: Request.Builder.() -> Unit,
+    ): Response? {
+        val request = Request
+            .newBuilder()
+            .setId(nextId.incrementAndGet())
+            .apply(build)
+            .build()
+        val responseBytes = try {
+            processRequestBytes(request.toByteArray())
+        } catch (t: Throwable) {
+            recordFailure(op, "dispatch failed: $t")
+            return null
+        }
+        val response = try {
+            Response.parseFrom(responseBytes)
+        } catch (t: Throwable) {
+            recordFailure(op, "response decode failed")
+            return null
+        }
+        if (response.error != ErrorCode.OK) {
+            recordFailure(op, "engine returned ${response.error}", response.error.number)
+            return null
+        }
+        return response
+    }
 
     @JvmStatic
     private external fun registerLogger()

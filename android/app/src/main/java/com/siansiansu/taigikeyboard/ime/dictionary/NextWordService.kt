@@ -7,6 +7,8 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteStatement
 import com.siansiansu.taigikeyboard.BuildConfig
+import com.siansiansu.taigikeyboard.engine.assocLookup
+import com.siansiansu.taigikeyboard.engine.dictionaryFilters
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.ime.core.db.vacuumBestEffort
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
@@ -151,7 +153,7 @@ class NextWordService(
     /**
      * Ensure user database is initialized. Bundled-bigram readers live in
      * the Rust shared-core engine (installed once at app startup via
-     * `LexiconBridge.install` in `AppInitializer`), so this method only
+     * `RustEngineBridge.lexiconInstall` in `AppInitializer`), so this method only
      * gates the SQLite user_association.db.
      */
     private suspend fun ensureInitialized() {
@@ -261,13 +263,13 @@ class NextWordService(
                     // (`UInt.MAX_VALUE` sentinel when all 9 sources on, else
                     // exact mask) — pre-v3.5.8 the platform branched on
                     // `allAssociationSourcesEnabled`.
-                    val toggles = com.siansiansu.taigikeyboard.engine.LexiconBridge
+                    val toggles = RustEngineBridge
                         .DictionaryToggles
                         .from(settings)
-                    val bitmask = com.siansiansu.taigikeyboard.engine.LexiconBridge
+                    val bitmask = RustEngineBridge
                         .dictionaryFilters(toggles)
                         .assocLookupBitmask
-                    val entries = com.siansiansu.taigikeyboard.engine.LexiconBridge.assocLookup(
+                    val entries = RustEngineBridge.assocLookup(
                         previousWord = lastChar,
                         limit = (limit * 2).toUInt(),
                         enabledSourcesBitmask = bitmask,

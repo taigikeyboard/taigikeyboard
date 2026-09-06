@@ -4,6 +4,14 @@
 
 package com.siansiansu.taigikeyboard.ime.text.smartbar
 
+import com.siansiansu.taigikeyboard.engine.nextwordBackspace
+import com.siansiansu.taigikeyboard.engine.nextwordClearForNewComposing
+import com.siansiansu.taigikeyboard.engine.nextwordContextTimeoutFired
+import com.siansiansu.taigikeyboard.engine.nextwordFilter
+import com.siansiansu.taigikeyboard.engine.nextwordResetFull
+import com.siansiansu.taigikeyboard.engine.nextwordSetIsShowing
+import com.siansiansu.taigikeyboard.engine.nextwordUpdateLastSelectedWord
+import com.siansiansu.taigikeyboard.engine.nextwordWordSelected
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.debug

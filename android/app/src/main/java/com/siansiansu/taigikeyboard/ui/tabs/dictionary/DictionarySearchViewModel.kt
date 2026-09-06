@@ -3,7 +3,9 @@ package com.siansiansu.taigikeyboard.ui.tabs.dictionary
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.siansiansu.taigikeyboard.engine.LexiconBridge
+import com.siansiansu.taigikeyboard.engine.dictionaryFilters
+import com.siansiansu.taigikeyboard.engine.isHanzi
+import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.Outcome
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
@@ -82,7 +84,7 @@ class DictionarySearchViewModel(
             // CJK range check fails to match supplementary-plane codepoints.
             // Route through Rust for the canonical 6-range coverage. See
             // INVARIANT_LEX_INPUT_CLASSIFICATION_HANZI_RANGE.
-            val isCJK = LexiconBridge.isHanzi(query)
+            val isCJK = RustEngineBridge.isHanzi(query)
 
             logger.debug(TAG) { "[SEARCH] query='$query' isCJK=$isCJK inputMode=$inputMode" }
 
@@ -91,8 +93,8 @@ class DictionarySearchViewModel(
             // into retag). Splitting the snapshot would let toggle changes
             // mid-search produce a mask/badge mismatch (Codex pre-impl
             // BLOCK 6).
-            val toggles = LexiconBridge.DictionaryToggles.from(prefs)
-            val filters = LexiconBridge.dictionaryFilters(toggles)
+            val toggles = RustEngineBridge.DictionaryToggles.from(prefs)
+            val filters = RustEngineBridge.dictionaryFilters(toggles)
 
             val outcome =
                 if (isCJK) {
