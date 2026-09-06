@@ -49,6 +49,21 @@ Both platforms link against pre-built binaries, so a stale artifact gives
 passing tests against the *old* engine. That is the single most common source
 of "tests passed but the keyboard misbehaves on device".
 
+## Secrets
+
+Run `make hooks` once per clone. It points `core.hooksPath` at `.githooks`, whose
+`pre-commit` scans staged changes with gitleaks and refuses a commit that carries
+a credential. A clone that never ran it has no local gate at all, and
+`git commit --no-verify` skips it in one that did — which is why the same scan
+also runs in CI on every pull request.
+
+Note that `core.hooksPath` is repository-level and shared by every worktree, so
+do not run `make hooks` while another checkout of this repository is mid-task.
+
+`make scan-secrets` scans everything since the last recorded clean full-history
+pass; `.gitleaks-scanned` explains when that recording stops being valid and has
+to be redone with `make scan-secrets-full`.
+
 ## Phonetics
 
 Never infer a TL / POJ / TPS rule. Read

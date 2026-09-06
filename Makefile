@@ -7,7 +7,7 @@ DICT := dictionary
 export PATH := $(HOME)/.cargo/bin:$(PATH)
 
 .PHONY: build test test-crate doc dict dogfood help \
-        fmt lint hooks scan-secrets \
+        fmt lint hooks scan-secrets scan-secrets-full \
         i18n i18n-test \
         macos-release version-mobile version-desktop \
         windows-check windows-release \
@@ -168,10 +168,21 @@ hooks:
 	@echo "✓ core.hooksPath = .githooks — staged changes are now scanned before every commit"
 	@command -v gitleaks >/dev/null 2>&1 || echo "⚠ gitleaks not installed; the hook will pass through until you run: brew install gitleaks"
 
-# Scan the whole history for credentials. Config and dismissals come from
-# .gitleaks.toml and .gitleaksignore; a clean run is the expected result.
+# Scan for credentials. Both targets are scripts/gitleaks-scan.sh, which is also
+# what CI runs — the coverage rules, the baseline checks and the exit-code
+# handling live there so the local gate and the CI gate cannot drift apart.
+#
+# scan-secrets covers everything .gitleaks-scanned's watermark does not already
+# vouch for; on an 845 MB history that is ~2 s against ~72 s, and rescanning
+# immutable commits under the same rules can only find what the recorded run
+# already did. scan-secrets-full rescans everything and prints the new baseline
+# to write into .gitleaks-scanned — needed after a gitleaks upgrade, a
+# .gitleaks.toml or .gitleaksignore change, or a history rewrite.
 scan-secrets:
-	gitleaks git --no-banner --redact -v --exit-code 2
+	./scripts/gitleaks-scan.sh
+
+scan-secrets-full:
+	./scripts/gitleaks-scan.sh --full
 
 # Pull the latest remote-default-branch commit for the taigi-converter submodule
 # into the working tree. Submodules always record a pinned SHA, so review + commit
@@ -200,7 +211,8 @@ help:
 	@echo "  make update-submodules  Pull latest for all submodules (review + commit gitlink bumps)"
 	@echo ""
 	@echo "  make hooks              Activate the repo's git hooks in this clone (secret scan on commit)"
-	@echo "  make scan-secrets       Scan the full git history for credentials"
+	@echo "  make scan-secrets       Scan for credentials since the last clean full scan"
+	@echo "  make scan-secrets-full  Rescan the whole history and re-baseline .gitleaks-scanned"
 	@echo ""
 	@echo "  make fmt                Apply formatting across Rust + Swift + Kotlin"
 	@echo "  make lint               cargo clippy + spotlessCheck (Android Lint disabled)"

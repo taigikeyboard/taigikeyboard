@@ -1,0 +1,31 @@
+# The last commit whose ENTIRE history was scanned for credentials and came back
+# clean. History is immutable, so everything reachable from this commit never
+# needs scanning again — only what has been added since.
+#
+# Read by scripts/gitleaks-scan.sh, which `make scan-secrets`, the pre-commit hook
+# and .github/workflows/secrets.yml all go through. An incremental scan is
+# `--all --not <commit>`: every commit on every ref that this one does not already
+# cover. That is also the net for anything a per-pull-request range scan could not
+# reach — within the limit that it can only read refs that still exist.
+#
+# Re-baseline — run `make scan-secrets-full`, then move `commit` to the scanned
+# HEAD and update the other fields — when any of these change, because each of
+# them can surface something the recorded run could not:
+#
+#   - the gitleaks version (new or corrected detection rules)
+#   - .gitleaks.toml (a rule added, or an allowlist narrowed)
+#   - .gitleaksignore (a fingerprint removed or changed — the finding it used to
+#     dismiss sits behind the watermark, so no incremental scan will raise it again)
+#   - the git log options the scan uses (the merge-commit gap fixed on 2026-09-07
+#     is exactly this case: every scan before it read no merge patches at all)
+#
+# The version is enforced: an incremental scan refuses to run when the installed
+# gitleaks is not the one recorded here. The other three are on the maintainer.
+#
+# Rewriting history (git filter-repo) invalidates this file outright: every SHA
+# after the rewrite point is new, so the recorded commit no longer exists.
+
+commit=e787406dd768c85625221f217f73435b86dcf45d
+date=2026-09-07
+gitleaks=8.30.1
+log_opts=--full-history --all --diff-filter=tuxdb --diff-merges=first-parent

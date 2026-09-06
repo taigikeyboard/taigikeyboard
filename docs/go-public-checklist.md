@@ -13,11 +13,12 @@ stale it is.
 
 ## 1. No credential found in history
 
-**No findings** — gitleaks 8.30.1 over the full history, 2026-09-05, `main` at
-`ee07e2f4`. One scanner under one configuration; that is evidence, not proof.
+**No findings** — gitleaks 8.30.1 over the full history, 2026-09-07, `main` at
+`e787406d`, which is the watermark `.gitleaks-scanned` now records. One scanner
+under one configuration; that is evidence, not proof.
 
 ```sh
-make scan-secrets
+make scan-secrets-full
 ```
 
 1092 commits and 851 MB scanned. Eight findings, all read and dismissed:
@@ -29,7 +30,28 @@ make scan-secrets
 | `臺灣方音符號.html` ×2 — `wgConfirmEditHCaptchaSiteKey` | A third party's hCaptcha **site** key inside a saved copy of a public web page (file removed 2026-09-05; the fingerprints stay so history scans keep passing). Site keys are published in page source by design. |
 
 The first six stop matching once `.gitleaks.toml` applies; the last two are
-recorded in `.gitleaksignore` by fingerprint. A clean run is now the expected
+recorded in `.gitleaksignore` by fingerprint.
+
+That result was re-established on 2026-09-07 under `--diff-merges=first-parent`.
+`git log -p` prints no patch for a merge commit, so a credential added while
+resolving a conflict — a line present in neither parent — had been outside every
+scan this project ever ran, local or CI. Re-running the whole history under the
+fixed options found nothing new, at 72 s against the previous 62 s.
+
+The commit that pass covered is recorded in `.gitleaks-scanned`, and later scans
+are scoped against it: history is immutable, so what is reachable from that
+commit cannot change, and rescanning it under the same rules can only find what
+the recorded run already found. `make scan-secrets` and the workflow both scan
+`--all --not <that commit>` — 2.3 s instead of 72 s.
+
+That is a claim about the rules, not about the commits, so it expires when the
+rules do. `.gitleaks-scanned` lists what invalidates it: a gitleaks upgrade, a
+`.gitleaks.toml` change, a `.gitleaksignore` fingerprint removed or changed, a
+change to the scan's git log options, or a history rewrite. Any of those means
+another `make scan-secrets-full` and a new watermark, which is why the file
+records the version and the options the recorded pass ran under, and why the
+scan refuses to run incrementally against a gitleaks it does not recognise.
+A clean run is now the expected
 result, so a finding means something changed — either new content, or a config or
 rule-version change that surfaces something the old suppressions hid. Both are
 worth reading.
@@ -151,7 +173,8 @@ operation and should happen in one coordinated pass:
 3. Take a mirror bundle, and export patches for any unmerged branch.
 4. Rewrite in a disposable mirror clone with `git filter-repo`.
 5. Verify every branch and tag, the submodule gitlink, the build inputs, a clean
-   `make scan-secrets`, and the resulting size.
+   `make scan-secrets-full` — a rewrite invalidates `.gitleaks-scanned`, so the
+   watermark has to be re-recorded against the rewritten HEAD — and the size.
 6. Force-push the refs that survive.
 7. Archive the old clones read-only; re-clone every worktree. Do not try to
    `reset` existing worktrees onto the rewritten history.
@@ -179,12 +202,15 @@ Before the flip, confirm:
 - No workflow reachable from an untrusted pull request holds a write token or a
   signing credential. There is currently no `pull_request_target` anywhere,
   which is the main hazard; keep it that way.
-- Third-party actions pinned to an immutable SHA. Today `security.yml` and
-  `secrets.yml` use floating tags (`actions/checkout@v7`, `arduino/setup-protoc@v3`,
-  `dtolnay/rust-toolchain@stable`, `Swatinem/rust-cache@v2`). Both workflows are
-  `permissions: contents: read`, which bounds the damage but does not remove it.
-  The gitleaks binary `secrets.yml` downloads is already pinned by SHA-256, not
-  only by version number; the actions are the remaining floating link.
+- Third-party actions pinned to an immutable SHA. **Done** 2026-09-07: both
+  workflows pin `actions/checkout` and `taiki-e/install-action` by commit, with the
+  tag kept in a trailing comment so Dependabot's `github-actions` ecosystem can
+  still bump them. `permissions: contents: read` bounds what a moved tag could
+  reach but does not remove it, since a malicious action still runs with read
+  access to a private tree and can shape the gate's own verdict. The gitleaks
+  binary `secrets.yml` downloads was already pinned by SHA-256. Note that pinning
+  `taiki-e/install-action` does not pin the `cargo-audit` / `cargo-deny` builds it
+  fetches — that is a second layer, still floating.
 - The certificate rollover story. The Windows updater pins a leaf thumbprint.
 
 ## 8. What else becomes public
@@ -251,17 +277,38 @@ None of this depends on the repository being public.
   It is **available, not automatic**: each clone activates it with `make hooks`,
   which sets `core.hooksPath`. A clone that never ran it has no local gate, and
   `git commit --no-verify` skips it in one that did.
-- `make scan-secrets` scans the full history on demand.
-- `.github/workflows/secrets.yml` exists but its automatic triggers are
-  **commented out**, so nothing runs on a pull request or a push today. The run
-  that opened PR #693 took 50 s, of which 42 s was `actions/checkout` dragging in
-  dead `dictionary.db` blobs and 139 ms was the scan. Restoring the triggers is
-  gated on making that checkout cheap; until then it runs only from the Actions
-  tab.
+- `make scan-secrets` scans everything `.gitleaks-scanned`'s watermark does not
+  already cover. `make scan-secrets-full` rescans the whole history and prints
+  the new baseline values to write into that file — it does not edit the file
+  itself, so a re-baseline is always a reviewed commit.
+- `.github/workflows/secrets.yml` runs on every pull request, every push to
+  `main`, and Monday's schedule. Its triggers were commented out between
+  2026-09-05 and 2026-09-07 because the run that opened PR #693 took 50 s, of
+  which 42 s was `actions/checkout` with `fetch-depth: 0` dragging in dead
+  `dictionary.db` blobs and 139 ms was the scan itself.
 
-That leaves the local hook as the only gate that fires on its own, and it is
-opt-in and skippable. Anyone relying on this repo having a gate should know that.
+  They are back on because no scan in that workflow reads the whole history any
+  more. A pull request and a push are scanned over their own commits; the weekly
+  run and every fallback scan `--all --not <watermark>`. All of them cover a
+  bounded set of commits, so the checkout can use `filter: blob:none` on every
+  event: the commits and trees still arrive in full, so ranges and the watermark
+  resolve, and the scan pulls only the blobs its own commits touch. (The checkout
+  still materialises the working tree, so those blobs are fetched regardless.)
 
-All three read `.gitleaks.toml` and `.gitleaksignore` from the repository root.
+  What none of this reaches is a commit that no longer has a ref. A branch
+  force-pushed away or deleted before Monday, with no pull request open, is
+  unreachable from every surviving ref. A weekly full-history pass had the same
+  hole; it too could only read what still existed.
+
+  The workflow fails loudly rather than scanning less than it claims — if
+  `.gitleaks-scanned` names a commit the repository does not have, or records a
+  gitleaks version other than the one the run installed.
+
+Two gates therefore fire on their own — the workflow, which no clone can skip,
+and the local hook, which is opt-in per clone and skippable with `--no-verify`.
+
+All three go through `scripts/gitleaks-scan.sh`, which is what keeps their
+coverage rules and exit-code handling identical, and all three read
+`.gitleaks.toml` and `.gitleaksignore` from the repository root.
 When a finding is a false positive, add its fingerprint to `.gitleaksignore` with a
 comment saying what the value actually is — never silence one you have not read.

@@ -3,7 +3,8 @@
 # which sets core.hooksPath; a clone that never runs it commits with no gate, and
 # `--no-verify` skips it. That is why the same scan also runs in CI.
 #
-# Not `set -e`: the scan's exit status is the whole point and is read explicitly.
+# The scan itself is scripts/gitleaks-scan.sh, shared with `make scan-secrets` and
+# with .github/workflows/secrets.yml, so the three cannot drift apart.
 set -uo pipefail
 
 if ! command -v gitleaks >/dev/null 2>&1; then
@@ -12,31 +13,15 @@ if ! command -v gitleaks >/dev/null 2>&1; then
   exit 0
 fi
 
-# --exit-code 2 is what separates the two failure modes: gitleaks reports both a
-# finding and its own errors as 1 by default, so a broken config would otherwise
-# be indistinguishable from a leaked credential.
-status=0
-gitleaks git --staged --no-banner --redact -v --exit-code 2 --log-level warn || status=$?
+if ! "$(git rev-parse --show-toplevel)/scripts/gitleaks-scan.sh" --staged; then
+  cat >&2 <<'MSG'
 
-case "$status" in
-  0)
-    ;;
-  2)
-    cat >&2 <<'MSG'
-
-pre-commit: staged changes contain what looks like a credential (shown redacted above).
+pre-commit: if that was a finding, it is shown redacted above.
 
   false positive -> add its fingerprint to .gitleaksignore, with a comment saying
                     what the value actually is
   real secret    -> unstage it, rotate the credential, and keep it out of the tree
 
 MSG
-    exit 1
-    ;;
-  *)
-    echo "" >&2
-    echo "pre-commit: gitleaks failed to run (exit $status) — staged changes were NOT scanned." >&2
-    echo "  check .gitleaks.toml, or re-run: gitleaks git --staged -v" >&2
-    exit 1
-    ;;
-esac
+  exit 1
+fi
