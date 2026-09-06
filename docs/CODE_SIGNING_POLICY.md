@@ -17,23 +17,52 @@ is and is not worth in the meantime.
 
 ## Roles
 
-Taigi Keyboard is maintained by one person, who therefore holds every role:
+SignPath separates three roles: the **Author** who writes the code and requests
+a signing operation, the **Reviewer** who reviews what goes into the source
+tree and the artifact built from it, and the **Approver** who approves the
+signing request itself.
+
+Taigi Keyboard is maintained by one person, who therefore holds all three:
 
 | Role | Who |
 | --- | --- |
-| Author (requests a signing operation) | Soo Bîn-hiân 蘇民弦 — <https://github.com/siansiansu> |
-| Reviewer (reviews the artifact and its provenance) | Soo Bîn-hiân 蘇民弦 |
-| Approver (approves the signing request) | Soo Bîn-hiân 蘇民弦 |
+| Author — commits source and build scripts, requests signing | Soo Bîn-hiân 蘇民弦 — <https://github.com/siansiansu> |
+| Reviewer — reviews changes into `main` and the release artifact's provenance | Soo Bîn-hiân 蘇民弦 |
+| Approver — approves each signing request | Soo Bîn-hiân 蘇民弦 |
 
-The team that develops and maintains this software is the same team that
-requests signing, and owns <https://github.com/taigikeyboard/taigikeyboard>.
-Only artifacts built from that repository are ever submitted for signing.
+Every maintainer of a source file or a build script in this repository is
+listed above. There are no other committers, and no contributor's change
+reaches a signed binary without passing through the review below.
 
-Multi-factor authentication is required on the GitHub account and on any code
-signing service account used for this project.
+One person cannot separate these roles, and this policy does not claim
+otherwise. What stands in for that separation is that every step is recorded
+where a third party can read it:
+
+- Every change lands on `main` through a pull request from a branch, so the
+  diff that entered a release is public and dated.
+- The release script refuses to run on a dirty working tree, and the engine and
+  dictionary it links are pre-built artifacts committed to the repository, so a
+  release ships exactly what the released commit contains.
+- Each release's artifact digest is published in the update manifest and read
+  back from the served file, so it attests what the download URL actually
+  serves rather than what was built locally.
+
+Stated plainly because it bears on provenance: Windows releases are built on
+the maintainer's own Windows machine by `make windows-release`, not on a hosted
+build server. `docs/architecture/windows-release.md` owns that procedure.
 
 If a second maintainer joins, this table is updated in the same commit that
 grants them access.
+
+## Approval
+
+Every signing request is approved by hand by the Approver above, per release.
+No signing is triggered automatically — not by a push, not by a tag, not by a
+scheduled job, and not by a successful build. A build that completes produces
+an unsigned artifact and waits.
+
+Multi-factor authentication is required on the GitHub account and on any code
+signing service account used for this project.
 
 ## What is signed
 
@@ -61,14 +90,30 @@ Taiwanese text, entirely on-device.
 - No account, and no network permission on the mobile builds.
 - The desktop builds make one kind of network request: fetching a static JSON
   update manifest from `taigikeyboard.tw`, and, only when the user asks,
-  downloading the package it names. Neither request carries an identifier.
+  downloading the package it names. Neither request carries an identifier, a
+  cookie, or any content derived from what the user typed. Both are ordinary
+  HTTPS requests, so the server necessarily sees the client's IP address and
+  user agent, as it would for any web page; nothing in the application adds to
+  that or correlates it across requests.
 - Learned data — word frequency, word association, custom dictionary — stays
   in app-private storage and is excluded from OS automatic backup.
 
 It contains no vulnerability scanning, no exploitation capability, and no
-remote administration feature. It changes no system configuration beyond
-registering itself as a keyboard or text service, which is what the user
-installed it to do.
+remote administration feature.
+
+What the Windows installer changes on the system, all of it required for an
+input method to work or to be updated, and all of it reversed on uninstall:
+
+| Change | Why |
+| --- | --- |
+| Registers `taigi_windows_tsf.dll` as a TSF text service (`regsvr32`, x64 and x86) | This is what makes the keyboard selectable at all. |
+| Creates the scheduled task `TaigiKeyboard Update Check` | Fetches the update manifest so the user is told a new version exists. Deleted by the uninstaller. |
+| Writes a Start-menu shortcut and the usual uninstall registry entry | Standard for an installed application. |
+
+The installer requires administrator rights because `regsvr32` writes to
+`HKLM`, and because the text service must load into every user's process. It
+installs no driver, no service, and no browser extension, and changes no
+system-wide setting outside its own registration.
 
 `SECURITY.md` carries the full privacy statement and the vulnerability
 reporting address.
