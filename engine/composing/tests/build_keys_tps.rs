@@ -2,8 +2,8 @@
 //!
 //! Mirror of `build_keys_tl_lattice.rs` for the TPS family. Confirms
 //! `build_keys_tl_with_inventory` (despite its legacy name, the
-//! production seam test wrapper for the shared `build_shadow_lattice`
-//! and `left_anchored_keys_from_lattice` path) emits
+//! production seam test wrapper for the shared `build_shadow_lattice_with_barriers`
+//! and `left_anchored_keys_and_restrictions` path) emits
 //! `tps:<bopomofo_toneless>` keys against a `tps:`-tagged hermetic
 //! inventory when called with `InputMode::Tps`.
 //!

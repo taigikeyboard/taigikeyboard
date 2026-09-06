@@ -24,7 +24,7 @@
 
 use crate::api::{ComposingError, Engine, Intent, Phase};
 use crate::continuous::{assemble_candidates, retain_first_by_key};
-use crate::shadow::{build_shadow_lattice, left_anchored_keys_from_lattice};
+use crate::shadow::{build_shadow_lattice_with_barriers, left_anchored_keys_and_restrictions};
 use lexicon::{
     classification::is_hanzi, derive_mode, ConsumedSpan, CustomEntry, RawCandidate,
     SyllableInventory, COVERAGE_KIND_FULL, FORM_NOTONE,
@@ -364,8 +364,9 @@ fn literal_roman_candidate(
 /// the test crate boundary; production callers must NOT reach for it
 /// (use the seam).
 ///
-/// Pipeline (mirrors A1 [`crate::shadow::build_shadow_lattice`] +
-/// [`crate::shadow::left_anchored_keys_from_lattice`]):
+/// Pipeline (A1 [`crate::shadow::build_shadow_lattice_with_barriers`] +
+/// [`crate::shadow::left_anchored_keys_and_restrictions`], barriers
+/// dropped):
 ///
 /// 1. Lowercase `raw` (ASCII only).
 /// 2. `shadow::canonicalize_poj_shadow` (Phase 9 Item 9; v3.5.9 B-2
@@ -405,12 +406,14 @@ pub fn build_keys_tl_with_inventory(
     inv: &SyllableInventory,
     mode: phonetics::InputMode,
 ) -> Vec<(ConsumedSpan, String)> {
-    let (shadow, shadow_to_raw_end, lattice) = build_shadow_lattice(raw, inv, mode);
-    // v3.5.9 B-2 — `left_anchored_keys_from_lattice` takes `mode` so the
-    // emitted key prefix matches the inventory family the shadow lattice
-    // was built against. It also takes `inv` for longest-match prefix
-    // suppression (`INVARIANT_CONTINUOUS_LONGEST_MATCH_PREFIX`).
-    left_anchored_keys_from_lattice(&shadow, &shadow_to_raw_end, &lattice, inv, mode)
+    // Barriers are discarded so the pre-§35 base key sets stay
+    // byte-identical (the §35 alternates are the other seam's job).
+    let (shadow, shadow_to_raw_end, lattice, _barriers) =
+        build_shadow_lattice_with_barriers(raw, inv, mode);
+    // v3.5.9 B-2 — `mode` makes the emitted key prefix match the inventory
+    // family the shadow lattice was built against; `inv` drives longest-match
+    // prefix suppression (`INVARIANT_CONTINUOUS_LONGEST_MATCH_PREFIX`).
+    left_anchored_keys_and_restrictions(&shadow, &shadow_to_raw_end, &lattice, inv, mode, &[]).keys
 }
 
 /// v3.5.8 Phase 9 Item 12 — hoist proto-shaped `CustomDictEntry[]`

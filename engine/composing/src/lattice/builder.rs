@@ -40,7 +40,7 @@ use crate::syllabifier::valid_span_endings_lowered_with_barriers;
 ///
 /// v3.5.9 B-2 — `mode` selects the inventory family (`tl:` vs `poj:`)
 /// the syllabifier walks. Callers must pass the SAME `mode` they passed
-/// to `build_shadow_lattice` (and through to the downstream key
+/// to `build_shadow_lattice_with_barriers` (and through to the downstream key
 /// emitters in `composing::shadow`) so the syllabification and the
 /// emitted key prefixes come from one mode parameter and cannot drift.
 ///

@@ -32,7 +32,7 @@ pub(crate) fn mode_key_prefix(mode: InputMode) -> &'static str {
 /// its 8 Bopomofo tone scalars (per `phonetics::tps::is_tps_tone_mark`)
 /// instead of (no-op) ASCII digits, producing a key body that matches the
 /// `tps:<tps_notone>` family. Used by every shadow-derived key / roman
-/// emit site: `left_anchored_keys_from_lattice`, the walker edge key in
+/// emit site: `left_anchored_keys_and_restrictions`, the walker edge key in
 /// `composing::continuous::fetch_walker_slot0_inner`, the walker's
 /// no-dict roman synth, `custom_toneless_key`, and `build_partial_prefix_key`.
 ///
@@ -193,7 +193,7 @@ pub(crate) fn fst_body_for_span(span: &str, mode: InputMode) -> String {
 /// Cap on syllabifier BFS depth for Phase 6 fetches. Matches the
 /// `max_syllables=8` budget called out in `docs/releases/v3.5.8/plan.md` § Phase 3 — Performance and
 /// keeps the worst-case lookup at O(n × 3 × 8) FST hits. Owned by
-/// [`build_shadow_lattice`] (lattice BFS budget); since v3.5.9 D / C-3b
+/// [`build_shadow_lattice_with_barriers`] (lattice BFS budget); since v3.5.9 D / C-3b
 /// the legacy per-mode `continuous::build_keys_tps` is retired and all
 /// four modes (TL/POJ/English/TPS) share the unified shadow → lattice
 /// path through this single cap.
@@ -205,26 +205,14 @@ pub(crate) const MAX_SYLLABLES: usize = 8;
 /// keyboard's tone-1 / syllable-separator space out of the shadow so a
 /// first-tone phrase (`ㄍㄠ ㄉㄞ`) yields a cross-space edge; it is a
 /// no-op for TL/POJ/English.
-/// Returns `(shadow, shadow_to_raw_end, lattice)`. Shared by
-/// `dispatch::build_keys_tl_with_inventory` (left-anchored projection —
-/// its output is byte-identical to pre-S1, the S1 pinning tests guard
-/// this) and `continuous::fetch_walker_slot0_inner` (S2 whole-sentence walker)
-/// so the shadow + offset map + DAG are constructed exactly once per
-/// fetch and the two consumers cannot drift.
-pub(crate) fn build_shadow_lattice(
-    raw: &str,
-    inv: &SyllableInventory,
-    mode: InputMode,
-) -> (String, Vec<usize>, Lattice) {
-    let (shadow, shadow_to_raw_end, lattice, _) =
-        build_shadow_lattice_with_barriers(raw, inv, mode);
-    (shadow, shadow_to_raw_end, lattice)
-}
-
-/// [`build_shadow_lattice`] plus the stripped-separator / 連字 barrier
-/// set in shadow coordinates (§35). Production callers use this so the
-/// barrier metadata survives to the lookup layer; the 3-tuple wrapper
-/// keeps the historical test seams byte-compatible.
+/// Returns `(shadow, shadow_to_raw_end, lattice, barriers)` — the last
+/// being the stripped-separator / 連字 barrier set in shadow coordinates
+/// (§35). Shared by [`build_continuous_keys`] (left-anchored projection —
+/// byte-identical to pre-S1, the S1 pinning tests guard this),
+/// `continuous::fetch_walker_slot0_inner` (S2 whole-sentence walker) and
+/// the `dispatch::build_keys_tl_with_inventory` test seam, so the
+/// shadow + offset map + DAG are constructed exactly once per fetch and
+/// the consumers cannot drift.
 pub(crate) fn build_shadow_lattice_with_barriers(
     raw: &str,
     inv: &SyllableInventory,
@@ -416,27 +404,19 @@ pub(crate) fn build_continuous_keys(
 /// §10.3/§10.4) commit is forward-only `pending[..consumed_bytes]`,
 /// so an independently tappable interior candidate has no
 /// Model-B-consistent commit. S2's whole-sentence walker consumes
-/// the interior edges INTERNALLY (via [`build_shadow_lattice`] +
-/// `crate::lattice::walk_best` in `fetch_walker_slot0`) and emits one
+/// the interior edges INTERNALLY (via
+/// [`build_shadow_lattice_with_barriers`] + `crate::lattice::walk_best`
+/// in `fetch_walker_slot0`) and emits one
 /// synthesized full-buffer best path explicitly prepended at slot 0
 /// by `handle_fetch_at_pos`; the user-facing commit span stays
 /// `(0, end)`. Interior `台語`-style words remain reachable as the
 /// next path-step after the prefix is nailed (Codex pre-impl S2
 /// Q1c = option ii, 2026-05-16; `docs/releases/v3.5.8/plan.md` §整句 lattice + walker).
-pub(crate) fn left_anchored_keys_from_lattice(
-    shadow: &str,
-    shadow_to_raw_end: &[usize],
-    lattice: &Lattice,
-    inv: &SyllableInventory,
-    mode: InputMode,
-) -> Vec<(ConsumedSpan, String)> {
-    left_anchored_keys_and_restrictions(shadow, shadow_to_raw_end, lattice, inv, mode, &[]).keys
-}
-
-/// [`left_anchored_keys_from_lattice`] plus each key's §35 barrier
-/// restriction — byte offsets (into the emitted key string, family
-/// prefix included) of glyphs immediately before a stripped separator /
-/// 連字 barrier. `barriers` are shadow coordinates from
+///
+/// Each key also carries its §35 barrier restriction — byte offsets
+/// (into the emitted key string, family prefix included) of glyphs
+/// immediately before a stripped separator / 連字 barrier — and its §41
+/// tone pin. `barriers` are shadow coordinates from
 /// [`build_shadow_lattice_with_barriers`]; empty for TL/POJ/English.
 pub(crate) fn left_anchored_keys_and_restrictions(
     shadow: &str,
@@ -447,11 +427,11 @@ pub(crate) fn left_anchored_keys_and_restrictions(
     barriers: &[usize],
 ) -> LeftAnchoredKeys {
     // v3.5.9 B-2 — `mode` selects the FST key family the emitted keys are
-    // namespaced into. The lattice itself was already built against the
-    // matching `SyllableInventory` family ([`build_shadow_lattice`] →
-    // [`build_lattice`]), so the syllabification and the key namespace
-    // come from a single mode parameter — they cannot drift.
-    let prefix = mode_key_prefix(mode);
+    // namespaced into ([`span_key`]). The lattice itself was already built
+    // against the matching `SyllableInventory` family
+    // ([`build_shadow_lattice_with_barriers`] → [`build_lattice`]), so the
+    // syllabification and the key namespace come from a single mode
+    // parameter — they cannot drift.
 
     // Longest-match prefix suppression (`INVARIANT_CONTINUOUS_LONGEST_MATCH_PREFIX`,
     // USER 2026-05-31「免調也壓制」): among the SINGLE-syllable spans anchored at
@@ -512,39 +492,81 @@ pub(crate) fn left_anchored_keys_and_restrictions(
         if single_ends.contains(&end) && Some(end) != max_single_end && !has_phrase_reading(end) {
             continue;
         }
-        // Explicit-tone fix — tone-aware lookup body. A fully-toned span
-        // (`tai5`, `tai5gi2`) keeps its digits so `lookup_exact` filters
-        // to the typed tone; a toneless / mixed span strips to the fused
-        // toneless key (all-tone surface), preserving the toneless-input
-        // behavior. See [`fst_body_for_span`].
-        // v3.5.9 D / C-3b — the underlying strip is mode-aware: TL/POJ
-        // drop ASCII digits, TPS drops Bopomofo tone marks (matches the
-        // `tps:<tps_notone>` FST family from C-0; TPS always toneless here).
-        let body = fst_body_for_span(&shadow[..end], mode);
-        if body.is_empty() {
+        // Tone-aware lookup body + §35 / §41 barrier metadata, same
+        // derivation as the walker edge ([`span_key`]); a digit-only /
+        // bare-tone-mark span has no key.
+        let Some(SpanKey {
+            key,
+            final_only,
+            tone_pinned: pinned,
+        }) = span_key(shadow, 0, end, mode, barriers)
+        else {
             continue;
-        }
+        };
         let raw_end = shadow_to_raw_end[end];
-        restrictions.push(key_final_only_offsets(
-            &shadow[..end],
-            &body,
-            mode,
-            barriers,
-            prefix.len() + 1,
-        ));
-        tone_pinned.push(span_end_pins_unmarked_tone(
-            &shadow[..end],
-            end,
-            mode,
-            barriers,
-        ));
-        out.push(((0u32, raw_end as u32), format!("{prefix}:{body}")));
+        restrictions.push(final_only);
+        tone_pinned.push(pinned);
+        out.push(((0u32, raw_end as u32), key));
     }
     LeftAnchoredKeys {
         keys: out,
         final_only: restrictions,
         tone_pinned,
     }
+}
+
+/// One span's FST lookup key plus its §35 / §41 barrier metadata, as
+/// [`span_key`] derives it for both the left-anchored keys and the walker
+/// edges.
+pub(crate) struct SpanKey {
+    /// `"{prefix}:{body}"` — [`mode_key_prefix`] + [`fst_body_for_span`].
+    pub key: String,
+    /// [`key_final_only_offsets`] — KEY byte offsets of the glyph before
+    /// each barrier inside / at the end of the span.
+    pub final_only: Vec<usize>,
+    /// [`span_end_pins_unmarked_tone`] — the span closes on a stripped TPS
+    /// space without a tone mark of its own.
+    pub tone_pinned: bool,
+}
+
+/// Derive the lookup key triple for `shadow[start..end]`. `None` when the
+/// tone-ruled body is empty (digit-only / bare-tone-mark span).
+///
+/// Two barrier coordinate conventions meet here — keep them straight:
+/// - **Final-only offsets are span-local.** `barriers` (whole-shadow byte
+///   offsets) are narrowed to `start < b <= end` and shifted by `-start`
+///   before [`key_final_only_offsets`] maps them into the emitted key. A
+///   barrier exactly at `start` is a boundary the span opens on, not one
+///   it contains, so it is excluded; one at `end` is included (the user
+///   closed that syllable).
+/// - **The tone pin is global.** [`span_end_pins_unmarked_tone`] compares
+///   the whole-shadow `end` against the unshifted `barriers`.
+///
+/// The left-anchored path passes `start = 0`, where the two conventions
+/// coincide.
+pub(crate) fn span_key(
+    shadow: &str,
+    start: usize,
+    end: usize,
+    mode: InputMode,
+    barriers: &[usize],
+) -> Option<SpanKey> {
+    let span = &shadow[start..end];
+    let body = fst_body_for_span(span, mode);
+    if body.is_empty() {
+        return None;
+    }
+    let prefix = mode_key_prefix(mode);
+    let span_barriers: Vec<usize> = barriers
+        .iter()
+        .filter(|&&b| b > start && b <= end)
+        .map(|&b| b - start)
+        .collect();
+    Some(SpanKey {
+        key: format!("{prefix}:{body}"),
+        final_only: key_final_only_offsets(span, &body, mode, &span_barriers, prefix.len() + 1),
+        tone_pinned: span_end_pins_unmarked_tone(span, end, mode, barriers),
+    })
 }
 
 /// A3 (§41) — the typed buffer's fused TPS notone body when its TAIL
@@ -903,6 +925,24 @@ fn strip_ascii_tone_digits(s: &str) -> String {
     s.chars().filter(|c| !c.is_ascii_digit()).collect()
 }
 
+/// The whole-buffer fused shadow — `lowercase → canonicalize_poj_shadow
+/// → build_hyphen_shadow → build_separator_shadow` — with no tone rule
+/// applied and every offset map discarded. This is the same pipeline
+/// [`build_shadow_lattice_with_barriers`] runs (there with the maps kept
+/// for span slicing), so a key built from it is byte-identical to the
+/// walker / left-anchored edge keys built from the same buffer. Callers
+/// apply their own tone rule: [`custom_toneless_key`] always strips
+/// ([`strip_tones_for_mode`]), [`build_partial_prefix_key`] keeps a fully
+/// toned buffer verbatim ([`fst_body_for_span`]).
+fn fused_shadow(raw: &str, mode: InputMode) -> String {
+    let lower = raw.to_ascii_lowercase();
+    let (canonical, _) = canonicalize_poj_shadow(&lower, mode);
+    let (hyphenless, _) = build_hyphen_shadow(&canonical);
+    // TPS-only space strip; no-op for TL/POJ/English and space-free input.
+    let (shadow, _) = build_separator_shadow(&hyphenless, mode);
+    shadow
+}
+
 /// v3.5.8 S6 (Codex pre-impl S6 Q2, 2026-05-17, BLOCK condition) —
 /// derive the walker lattice-edge match key for a
 /// `custom_dictionary.db` entry's romanization, or `None` when the
@@ -914,17 +954,12 @@ fn strip_ascii_tone_digits(s: &str) -> String {
 /// `mode_key_prefix(mode)`; v3.5.9 B-2 PR #309 promoted POJ to a
 /// first-class FST key family, pre-B-2 every key prefixed `tl:`).
 /// `toneless` is the hyphen-stripped, mode-canonicalized,
-/// (TPS-only) space-stripped, tone-stripped shadow slice. This helper
-/// therefore reuses the **same shadow helpers in the same order** —
-/// [`canonicalize_poj_shadow`] → [`build_hyphen_shadow`] →
-/// [`build_separator_shadow`] → [`strip_tones_for_mode`] — as the
+/// (TPS-only) space-stripped, tone-stripped shadow slice — the shared
+/// [`fused_shadow`] pipeline followed by [`strip_tones_for_mode`], the
 /// single normalization source the walker edge keys use.
 /// Codex pre-impl S6 Q2 **BLOCK**ed a plain `strip_ascii_tone_digits`:
 /// it cannot fold a POJ/diacritic custom roman (`tâi-uân`, `tâi-gí`)
-/// into `taiuan` / `taigi`; the canonicalize pass is load-bearing. The
-/// offset maps the helpers also return are irrelevant here (the custom
-/// roman is keyed whole, never sliced against raw), so they are
-/// discarded.
+/// into `taiuan` / `taigi`; the canonicalize pass is load-bearing.
 ///
 /// **Roman-only** (Codex pre-impl S6 Q2): `hanji` is edge *payload*
 /// resolved after the edge is chosen, never an edge key — the lattice
@@ -936,22 +971,14 @@ fn strip_ascii_tone_digits(s: &str) -> String {
 /// enters the walker.
 ///
 /// `mode` MUST be the same value `continuous::fetch_walker_slot0_inner`
-/// passes to [`build_shadow_lattice`] for this fetch: the canonicalize
+/// passes to [`build_shadow_lattice_with_barriers`] for this fetch: the canonicalize
 /// step is mode-gated — TL/English mode folds POJ→TL (`ch→ts`,
 /// `oa→ua`, ...) and emits `tl:`, POJ mode keeps POJ ASCII (no fold)
 /// and emits `poj:`. A mismatch would make a custom roman key
 /// `poj:chiah` while the lattice edge keys `tl:tsiah` (or the
 /// converse), silently breaking the S6 byte-identity match.
 pub(crate) fn custom_toneless_key(roman: &str, mode: InputMode) -> Option<String> {
-    let lower = roman.to_ascii_lowercase();
-    let (canonical, _) = canonicalize_poj_shadow(&lower, mode);
-    let (hyphenless, _) = build_hyphen_shadow(&canonical);
-    // TPS-only space strip — keep this key byte-identical to the walker
-    // edge keys (S6 byte-identity invariant) now that the TPS shadow
-    // strips the syllable-separator space (`build_shadow_lattice`). No-op
-    // for TL/POJ/English and for space-free custom roman.
-    let (shadow, _) = build_separator_shadow(&hyphenless, mode);
-    let toneless = strip_tones_for_mode(&shadow, mode);
+    let toneless = strip_tones_for_mode(&fused_shadow(roman, mode), mode);
     if toneless.is_empty() {
         return None;
     }
@@ -1248,12 +1275,11 @@ fn offset_aware_replace(s: &mut String, map: &mut Vec<usize>, find: &str, repl: 
 }
 
 /// v3.5.8 Phase 9 Item 10 / v3.5.9 B-2 + D Fork 7b — partial-prefix
-/// mode-aware key builder. Runs the
-/// `lowercase → canonicalize_poj_shadow → build_hyphen_shadow →
-/// strip_tones_for_mode` chain (mode-aware tone strip since v3.5.9 D / C-3b:
+/// mode-aware key builder. Runs the same [`fused_shadow`] →
+/// [`fst_body_for_span`] chain (mode-aware tone strip since v3.5.9 D / C-3b:
 /// TL/POJ/English drop ASCII tone digits, TPS drops the 8 Bopomofo tone
 /// scalars per `phonetics::is_tps_tone_mark`) as the production
-/// [`left_anchored_keys_from_lattice`] / walker edge providers but
+/// [`left_anchored_keys_and_restrictions`] / walker edge providers but
 /// **skips the syllabifier** (the partial-prefix path is reached
 /// precisely because the syllabifier returned no valid ending — TL `g`,
 /// TPS `ㄉ`, etc.). Emits the `tl:` / `poj:` / `tps:` family prefix
@@ -1275,17 +1301,11 @@ pub(crate) fn build_partial_prefix_key(
     if raw.is_empty() {
         return None;
     }
-    let lower = raw.to_ascii_lowercase();
-    let (canonical, _canonical_to_raw_end) = canonicalize_poj_shadow(&lower, mode);
-    let (hyphenless, _shadow_to_canonical_end) = build_hyphen_shadow(&canonical);
-    // TPS-only space strip — keep the partial-prefix key family
-    // byte-identical to the walker / left-anchored edge keys, which now
-    // strip the TPS syllable-separator space (see `build_shadow_lattice`).
-    // No-op for TL/POJ/English. consumed_span stays (0, raw.len()) below,
-    // so the discarded offset map is irrelevant here.
-    let (shadow, _) = build_separator_shadow(&hyphenless, mode);
-    // Explicit-tone fix — tone-aware body, same rule as
-    // `left_anchored_keys_from_lattice` / the walker edge: a fully-toned
+    // consumed_span stays (0, raw.len()) below, so the offset maps
+    // `fused_shadow` discards are irrelevant here.
+    let shadow = fused_shadow(raw, mode);
+    // Explicit-tone fix — tone-aware body, same [`span_key`] rule as
+    // `left_anchored_keys_and_restrictions` / the walker edge: a fully-toned
     // whole buffer (`tai5`) yields the verbatim `tl:tai5` prefix so the
     // Step 4b `lookup_prefix` extension scan only surfaces tone-5-initial
     // keys, never the all-tone `tl:tai` range. Toneless / mixed buffers
@@ -1294,13 +1314,11 @@ pub(crate) fn build_partial_prefix_key(
     // v3.5.9 D / C-3b + D Fork 7b — TPS reaches this builder via the
     // unified `assemble_candidates` empty-keys fallthrough and always
     // takes the toneless branch (`is_tps_tone_mark` strip), so a raw
-    // `ㄉㄧˊ` shadow still yields the `tps:ㄉㄧ` toneless key.
-    let body = fst_body_for_span(&shadow, mode);
-    if body.is_empty() {
-        return None;
-    }
-    let prefix = mode_key_prefix(mode);
-    Some(((0u32, raw.len() as u32), format!("{prefix}:{body}")))
+    // `ㄉㄧˊ` shadow still yields the `tps:ㄉㄧ` toneless key. No
+    // barriers: the whole buffer is one span, so the §35 / §41 metadata
+    // is discarded.
+    let key = span_key(&shadow, 0, shadow.len(), mode, &[])?.key;
+    Some(((0u32, raw.len() as u32), key))
 }
 
 #[cfg(test)]
@@ -1309,6 +1327,56 @@ mod tests {
     //! (decode round-trip, degraded paths) lives in
     //! `engine/composing/tests/dispatch_continuous.rs`; the byte-exact
     //! cross-slice golden lives in `engine/composing/tests/golden_fetch_at_pos.rs`.
+
+    // `span_key` barrier conventions (E4.2). Shadow `ㄎㄛㆻㄫㄉㄞ` is six
+    // 3-byte Bopomofo scalars (char starts 0/3/6/9/12/15, len 18); the
+    // `tps` family prefix shifts key offsets by `"tps".len() + 1 = 4`.
+    //
+    // trace (non-zero start): span 6..18 = `ㆻㄫㄉㄞ`, global barrier 12 →
+    // local 6 → body[..6] = `ㆻㄫ`, last glyph starts at 3 → key offset
+    // 4 + 3 = 7; end 18 is not a barrier → not pinned.
+    #[test]
+    fn span_key_shifts_barriers_into_span_coordinates() {
+        let k = span_key("ㄎㄛㆻㄫㄉㄞ", 6, 18, InputMode::Tps, &[12]).expect("body");
+        assert_eq!(k.key, "tps:ㆻㄫㄉㄞ");
+        assert_eq!(k.final_only, vec![7]);
+        assert!(!k.tone_pinned);
+    }
+
+    // trace (barrier at start): span 12..18 = `ㄉㄞ`; barrier 12 is the
+    // boundary the span opens on → excluded from final-only; barrier 18
+    // → local 6 → body[..6] = `ㄉㄞ`, last glyph at 3 → offset 7, and
+    // the span closes on it with no tone mark → pinned.
+    #[test]
+    fn span_key_excludes_barrier_at_start_and_pins_barrier_at_end() {
+        let k = span_key("ㄎㄛㆻㄫㄉㄞ", 12, 18, InputMode::Tps, &[12, 18]).expect("body");
+        assert_eq!(k.key, "tps:ㄉㄞ");
+        assert_eq!(k.final_only, vec![7]);
+        assert!(k.tone_pinned);
+
+        let opens_on_barrier =
+            span_key("ㄎㄛㆻㄫㄉㄞ", 12, 18, InputMode::Tps, &[12]).expect("body");
+        assert!(opens_on_barrier.final_only.is_empty());
+        assert!(!opens_on_barrier.tone_pinned);
+    }
+
+    // trace (cross-barrier): span 0..18 runs THROUGH barrier 9 → the
+    // glyph before it (`ㆻ`, starts at 6) is Final-only at key offset
+    // 4 + 6 = 10, but the span does not END on the barrier → not pinned.
+    // The span that stops exactly at 9 carries the same offset and IS
+    // pinned (global `end` vs global barrier).
+    #[test]
+    fn span_key_cross_barrier_restricts_but_does_not_pin() {
+        let through = span_key("ㄎㄛㆻㄫㄉㄞ", 0, 18, InputMode::Tps, &[9]).expect("body");
+        assert_eq!(through.key, "tps:ㄎㄛㆻㄫㄉㄞ");
+        assert_eq!(through.final_only, vec![10]);
+        assert!(!through.tone_pinned);
+
+        let stops = span_key("ㄎㄛㆻㄫㄉㄞ", 0, 9, InputMode::Tps, &[9]).expect("body");
+        assert_eq!(stops.key, "tps:ㄎㄛㆻ");
+        assert_eq!(stops.final_only, vec![10]);
+        assert!(stops.tone_pinned);
+    }
 
     // A3 (§41) — space-pin predicates. `ㄒㄧ` is two 3-byte Bopomofo
     // scalars, so its shadow end is `"ㄒㄧ".len()`; the barrier the TPS

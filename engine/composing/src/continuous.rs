@@ -6,8 +6,8 @@
 //! the seam extract — re-grep before relying on numbers):
 //!
 //! 1. Build the FST keys for this fetch: ALL modes (Tl / Poj / Tps / English)
-//!    run `shadow::build_shadow_lattice` ONCE + `shadow::
-//!    left_anchored_keys_from_lattice` projection (single `LexiconHandle::
+//!    run `shadow::build_shadow_lattice_with_barriers` ONCE + `shadow::
+//!    left_anchored_keys_and_restrictions` projection (single `LexiconHandle::
 //!    with_state` scope around steps 1–4, **D1 fold**). v3.5.9 D / C-3b
 //!    retired the legacy TPS-specific `build_keys_tps` short-circuit (which
 //!    folded TPS into `tl:` keys via `phonetics::tps_to_tl`); TPS now walks
@@ -63,7 +63,7 @@
 //! built twice per non-TPS `FetchAtPos` — once in `build_keys_tl_with_inventory`,
 //! once at the head of `fetch_walker_slot0`. A2 hoists ONE `LexiconHandle::
 //! with_state` scope into [`assemble_candidates`] and calls
-//! `build_shadow_lattice(raw, inv, mode)` exactly once. Byte-identical
+//! `build_shadow_lattice_with_barriers(raw, inv, mode)` exactly once. Byte-identical
 //! under the mobile-IME lifecycle invariant — `EngineHandle::install` is
 //! reachable only from `lexicon::api::install_engine` (mobile bridge
 //! startup) plus the two test fixtures (`lexicon/tests/parity.rs`,
@@ -332,8 +332,8 @@ fn dedupe_display_hanji_for_tps(candidates: &mut Vec<RawCandidate>) {
 }
 
 // v3.5.9 D / C-3b — `build_keys_tps` + `strip_trailing_tone_digit`
-// retired. TPS now walks the shared `build_shadow_lattice` +
-// `left_anchored_keys_from_lattice` path (with mode-aware tone strip via
+// retired. TPS now walks the shared `build_shadow_lattice_with_barriers` +
+// `left_anchored_keys_and_restrictions` path (with mode-aware tone strip via
 // `shadow::strip_tones_for_mode` and `tps:` family routing) the same way
 // TL / POJ do; the legacy per-syllable `phonetics::tps_to_tl` fold into
 // `tl:` keys was the one place TPS diverged from the shared seam and is
@@ -422,7 +422,7 @@ fn fetch_via_lexicon_partial_inner_impl(
 
 /// v3.5.9 A2 — slot-0 whole-sentence walker inner. Pre-A2
 /// `fetch_walker_slot0`'s body minus the `LexiconHandle::with_state`
-/// opener, the state `as_ref()?` guards, AND the `build_shadow_lattice`
+/// opener, the state `as_ref()?` guards, AND the `build_shadow_lattice_with_barriers`
 /// call (now built ONCE in the seam under **D1 fold** and passed in).
 /// Returns [`WalkerSlot0`] (D3 honest type): `cost` named explicitly;
 /// the seam converts to wire via `score = -(cost as f32)`.
@@ -431,7 +431,7 @@ fn fetch_via_lexicon_partial_inner_impl(
 /// `is_poj: bool` (Codex pre-impl SHOULD 2026-05-21 + 2026-05-20 enum
 /// sweep). `mode` is taken as a parameter rather than re-derived
 /// here so the single-source-of-truth invariant — same `mode` feeds
-/// `build_shadow_lattice` (seam) and `custom_toneless_key` (here) —
+/// `build_shadow_lattice_with_barriers` (seam) and `custom_toneless_key` (here) —
 /// cannot be silently broken by a future seam refactor.
 ///
 /// Returns `None` when the synth must be suppressed (trailing-hyphen
@@ -443,6 +443,22 @@ fn fetch_via_lexicon_partial_inner_impl(
 /// fetch's, unused here); `ctx` is the same [`ContinuousFetchCtx`] the
 /// span-local fetch reads (`mode` / `custom` / `freq_map` / `now_ms` /
 /// `enabled_sources_bitmask` + the dictionary readers).
+/// A walker edge's time-decayed user-frequency weight for the
+/// `(display_text, canonical_tl)` pair the platform commits to
+/// `user_frequency.db` (Core Principle #7). `FrequencyData.count` is i32
+/// (legacy cap domain); re-widened to u32 the same way
+/// `lexicon::record_to_candidate` does (negative → 0).
+fn edge_user_weight_delta(
+    freq_map: &FrequencyMap,
+    now_ms: i64,
+    display_text: &str,
+    canonical_tl: &str,
+) -> f64 {
+    let fd = freq_map.get(display_text, canonical_tl);
+    let count = u32::try_from(fd.count).unwrap_or(0);
+    decayed_user_weight_delta(count, now_ms, fd.last_used_ms)
+}
+
 fn fetch_walker_slot0_inner(
     raw: &str,
     raw_len: u32,
@@ -474,7 +490,7 @@ fn fetch_walker_slot0_inner(
     // key (Codex Q6: explicit, not `HashMap` overwrite/iteration).
     //
     // S6 byte-identity invariant: the SAME `mode` feeds
-    // `build_shadow_lattice` (caller) and `custom_toneless_key` (here);
+    // `build_shadow_lattice_with_barriers` (caller) and `custom_toneless_key` (here);
     // taking it as a parameter (B-0c: enum sweep — replaces the
     // pre-B-0c `is_poj: bool` from Codex pre-impl SHOULD 2026-05-21)
     // makes the contract local — a split-brain (POJ-aware edges,
@@ -529,7 +545,7 @@ fn fetch_walker_slot0_inner(
             shadow_to_raw_end[end] as u32,
         );
         // v3.5.9 B-2 — walker edge key is mode-aware: the same `mode`
-        // feeding the shadow + lattice (`build_shadow_lattice`) above
+        // feeding the shadow + lattice (`build_shadow_lattice_with_barriers`) above
         // also feeds the key prefix here, so the lookup family is
         // consistent with the inventory family that produced the edge.
         let key_prefix = crate::shadow::mode_key_prefix(mode);
@@ -537,34 +553,19 @@ fn fetch_walker_slot0_inner(
         // edge (`tai5`) looks up the verbatim `tl:tai5` key so slot 0 can
         // only be synthesized from the typed tone, matching the span-local
         // list (a split — span-local toned, walker toneless — would let a
-        // wrong-tone word reappear at slot 0). See [`crate::shadow::fst_body_for_span`].
-        let edge_body = crate::shadow::fst_body_for_span(&shadow[start..end], mode);
-        // §35 — this edge may span a stripped separator (multi-syllable
-        // chain); compute the same Final-only restriction the span-local
-        // keys carry. Barrier offsets are whole-shadow; shift into edge
-        // coordinates.
-        let edge_barriers: Vec<usize> = barriers
-            .iter()
-            .filter(|&&b| b > start && b <= end)
-            .map(|&b| b - start)
-            .collect();
-        let edge_final_only = crate::shadow::key_final_only_offsets(
-            &shadow[start..end],
-            &edge_body,
-            mode,
-            &edge_barriers,
-            key_prefix.len() + 1,
-        );
-        let dict_key = format!("{key_prefix}:{edge_body}");
-        // A3 (§41) — this edge's own end is what matters: an edge that stops
-        // on a stripped TPS space is tone-pinned to its unmarked tone, one
-        // that runs THROUGH a barrier is not (§31 台機 opens on tai5, §35
-        // 毋是 on m7). Computed BEFORE the custom override below so both
-        // edge sources answer to the same pin — a custom entry synthesized
-        // past the guard would land at slot 0, where no downstream lexicon
-        // filter can reach it (Codex post-impl BLOCK, 2026-08-20).
-        let edge_tone_pinned =
-            crate::shadow::span_end_pins_unmarked_tone(&shadow[start..end], end, mode, barriers);
+        // wrong-tone word reappear at slot 0). The §35 Final-only
+        // restriction and the §41 tone pin come from the same
+        // [`crate::shadow::span_key`] derivation the span-local keys use.
+        // A3 (§41) — the tone pin is computed BEFORE the custom override
+        // below so both edge sources answer to the same pin: a custom
+        // entry synthesized past the guard would land at slot 0, where no
+        // downstream lexicon filter can reach it (Codex post-impl BLOCK,
+        // 2026-08-20).
+        let crate::shadow::SpanKey {
+            key: dict_key,
+            final_only: edge_final_only,
+            tone_pinned: edge_tone_pinned,
+        } = crate::shadow::span_key(shadow, start, end, mode, barriers)?;
         // Custom override matching stays tone-INSENSITIVE: `custom_map` is
         // keyed by `custom_toneless_key` (toneless), so it is queried with
         // the toneless key — a custom word is a specific user entry, matched
@@ -616,9 +617,8 @@ fn fetch_walker_slot0_inner(
             // `(display_text, canonical_tl)` freq pair key.
             let canonical_tl = phonetics::api::canonical_tl_form(&entry.roman, mode);
             let display_text = entry.hanji.clone().unwrap_or_else(|| canonical_tl.clone());
-            let fd = freq_map.get(&display_text, &canonical_tl);
-            let count = u32::try_from(fd.count).unwrap_or(0);
-            let user_weight_delta = decayed_user_weight_delta(count, now_ms, fd.last_used_ms);
+            let user_weight_delta =
+                edge_user_weight_delta(freq_map, now_ms, &display_text, &canonical_tl);
             // Syllable count = greedy-longest segment count of the
             // edge's shadow span (the edge came from the
             // syllabifier-built lattice so it segments cleanly;
@@ -683,12 +683,8 @@ fn fetch_walker_slot0_inner(
                 // c.canonical_tl is the record's TL, the same reading the
                 // platform commits to user_frequency.db. Tolerant fallback
                 // to the legacy tl == "" bucket on an exact miss.
-                let fd = freq_map.get(&c.display_text, &c.canonical_tl);
-                // `FrequencyData.count` is i32 (legacy cap domain);
-                // re-widen to u32 the same way
-                // `record_to_candidate` does (negative → 0).
-                let count = u32::try_from(fd.count).unwrap_or(0);
-                let user_weight_delta = decayed_user_weight_delta(count, now_ms, fd.last_used_ms);
+                let user_weight_delta =
+                    edge_user_weight_delta(freq_map, now_ms, &c.display_text, &c.canonical_tl);
                 Some(crate::lattice::EdgeChoice {
                     roman: c.roman,
                     hanji: c.hanji,
@@ -1095,14 +1091,14 @@ pub(crate) fn assemble_candidates(
             // TL/POJ-only and `build_keys_tps` short-circuited the
             // shadow path). The unified `valid_span_endings_lowered`
             // dispatcher routes TPS through its own inventory-gated
-            // scanner inside the same `build_shadow_lattice` /
+            // scanner inside the same `build_shadow_lattice_with_barriers` /
             // `build_lattice` call, so the walker sees a real DAG and
             // can emit a slot-0 whole-sentence best path for TPS too.
             //
             // A2 D1 fold: the walker receives the pre-built
             // `(shadow, shadow_to_raw_end, lattice, inv)` plus
             // `prefix`/`dict` from the single seam `with_state`
-            // scope — no second `build_shadow_lattice` per fetch.
+            // scope — no second `build_shadow_lattice_with_barriers` per fetch.
             // A2 D3 honest type: the walker returns
             // [`WalkerSlot0`] (cost-named); convert to wire
             // `RawCandidate` with `score = -(cost as f32)` here.
@@ -1391,7 +1387,7 @@ mod tests {
 
     // v3.5.9 D / C-3b — `build_keys_tps` + `strip_trailing_tone_digit`
     // tests retired; TPS now exercises the shared
-    // `build_shadow_lattice` + `left_anchored_keys_from_lattice` path
+    // `build_shadow_lattice_with_barriers` + `left_anchored_keys_and_restrictions` path
     // (with `tps:` family prefix and Bopomofo tone-mark strip) tested
     // by `composing::shadow`'s tests plus the integration suite
     // (`engine/composing/tests/build_keys_tps.rs` covers the new
