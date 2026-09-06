@@ -8,6 +8,11 @@
 
 use std::path::PathBuf;
 
+use lexicon::{
+    fetch_candidates_for_keys_with_barriers, ConsumedSpan, ContinuousFetchCtx, RawCandidate,
+};
+use phonetics::InputMode;
+
 const HEADER_SIZE: usize = 16;
 
 /// Single TKDB record fixture. The optional fields drive the on-disk record
@@ -127,4 +132,72 @@ pub fn write_temp(name: &str, bytes: &[u8]) -> PathBuf {
     let path = std::env::temp_dir().join(format!("lexicon-test-{name}-{pid}-{n}"));
     std::fs::write(&path, bytes).expect("write temp");
     path
+}
+
+/// Test-only span-local fetch: every dictionary candidate whose toneless
+/// key matches `input[pos..end]` for some `end` in `endings`. Production
+/// never uses this shape — `composing::continuous::fetch_via_lexicon_inner`
+/// builds its `(consumed_span, "<prefix>:<toneless>")` pairs itself and
+/// calls `lexicon::fetch_candidates_for_keys_with_barriers` directly. This
+/// wrapper lets the tests here hand over pre-computed syllabifier endings
+/// without rebuilding the pairs inline.
+///
+/// `prefix ∈ {tl, poj, tps}` follows `mode` (English shares `tl:`). ASCII
+/// digits are stripped from the span — the digit half of the upstream
+/// `dictionary/common/notone.py::remove_tone` regex `[\d\-]` — so numeric-
+/// tone input (`tai1bak4`) still hits the fused toneless FST key
+/// (`tl:taipak`). Hyphens are NOT stripped: production folds them upstream
+/// (`composing::shadow::build_hyphen_shadow`), so a hyphen reaching this fn
+/// is an upstream contract violation and the FST lookup correctly misses.
+///
+/// Always forces `custom = &[]` (the lexicon integration tests never carry
+/// custom-dict matches; the Item 12 tests in `span_local_fetch.rs` call the
+/// production entry directly for that). Pass `&FrequencyMap::new()` +
+/// `now_ms = 0` for cold-start neutral ranking (boost = 1.0,
+/// recency_rank = 1 everywhere).
+pub fn fetch_candidates_for_endings(
+    input: &str,
+    pos: usize,
+    endings: &[usize],
+    mode: InputMode,
+    ctx: &ContinuousFetchCtx<'_>,
+) -> Vec<RawCandidate> {
+    if endings.is_empty() || pos >= input.len() || !input.is_char_boundary(pos) {
+        return Vec::new();
+    }
+
+    let lower = input.to_ascii_lowercase();
+    let mut keys: Vec<(ConsumedSpan, String)> = Vec::with_capacity(endings.len());
+    let prefix = match mode {
+        InputMode::Poj => "poj",
+        InputMode::Tps => "tps",
+        InputMode::Tl | InputMode::English => "tl",
+    };
+    for &end in endings {
+        if end <= pos || end > lower.len() || !lower.is_char_boundary(end) {
+            continue;
+        }
+        let segment = &lower[pos..end];
+        let toneless: String = segment.chars().filter(|c| !c.is_ascii_digit()).collect();
+        if toneless.is_empty() {
+            continue;
+        }
+        keys.push(((pos as u32, end as u32), format!("{prefix}:{toneless}")));
+    }
+
+    // `raw_len` is the full `input.len()` even when `pos != 0`: Tier 1 is
+    // full-buffer coverage, not `input.len() - pos`. Every ctx field is
+    // listed explicitly (not `..*ctx`) so the forced-empty-custom contract
+    // stays loud if a non-`Copy` field is ever added.
+    let inner = ContinuousFetchCtx {
+        enabled_sources_bitmask: ctx.enabled_sources_bitmask,
+        freq_map: ctx.freq_map,
+        now_ms: ctx.now_ms,
+        custom: &[],
+        prefix_index: ctx.prefix_index,
+        dict: ctx.dict,
+        mode: ctx.mode,
+        tps_space_pinned_body: ctx.tps_space_pinned_body,
+    };
+    fetch_candidates_for_keys_with_barriers(&keys, &[], &[], input.len() as u32, &inner)
 }

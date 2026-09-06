@@ -28,7 +28,7 @@ use std::path::PathBuf;
 use fst::SetBuilder;
 use lexicon::dictionary_reader::DictionaryReader;
 use lexicon::prefix_index::PrefixIndex;
-use lexicon::{fetch_candidates_for_endings, ContinuousFetchCtx};
+use lexicon::ContinuousFetchCtx;
 use phonetics::InputMode;
 use protos::engine::FrequencyEntry;
 use ranking::{build_frequency_map, FrequencyMap, MAX_BOOST, RECENCY_WINDOW_MS};
@@ -62,7 +62,7 @@ fn ctx<'a>(
 }
 
 mod common;
-use common::{build_tkdb_v3, write_temp};
+use common::{build_tkdb_v3, fetch_candidates_for_endings, write_temp};
 
 struct Row<'a> {
     toneless_key: &'a str,

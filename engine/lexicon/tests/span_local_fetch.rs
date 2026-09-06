@@ -31,7 +31,7 @@ use fst::SetBuilder;
 use lexicon::dictionary_reader::DictionaryReader;
 use lexicon::prefix_index::PrefixIndex;
 use lexicon::{
-    best_candidate_for_key, fetch_candidates_for_endings, fetch_candidates_for_keys,
+    best_candidate_for_key, fetch_candidates_for_keys_with_barriers,
     fetch_partial_prefix_candidates, fetch_partial_prefix_candidates_unbounded, CandidateMode,
     ConsumedSpan, ContinuousFetchCtx, CustomEntry, RawCandidate, COVERAGE_KIND_FULL,
     COVERAGE_KIND_PARTIAL_PREFIX, FORM_NOTONE, PARTIAL_PREFIX_HYDRATE_CAP,
@@ -83,7 +83,7 @@ fn ctx_neutral<'a>(
 }
 
 mod common;
-use common::{build_tkdb_v3, write_temp};
+use common::{build_tkdb_v3, fetch_candidates_for_endings, write_temp};
 
 /// Single dictionary fixture row: `(toneless_tl_key, hanzi, tl, syllable_count, frequency)`.
 /// `bitmask` is fixed to `1 << 11` (the `lkk` source per
@@ -1596,7 +1596,7 @@ fn partial_prefix_coverage_kind_zero_unchanged_on_full_syllable_path() {
 
 // ---------------------------------------------------------------------------
 // v3.5.8 Phase 9 Item 12 — custom_dictionary.db merge + (roman, hanji)
-// dedupe end-to-end through `fetch_candidates_for_keys`. Spec
+// dedupe end-to-end through `fetch_candidates_for_keys_with_barriers`. Spec
 // `docs/engine/continuous-input-ranking.md` §10.10 +
 // `docs/engine/continuous-candidate-display.md` §15.
 // ---------------------------------------------------------------------------
@@ -1620,8 +1620,10 @@ fn item12_custom_only_entry_surfaces_full_buffer() {
         roman: "tâi-gí".to_owned(),
         hanji: Some("台語".to_owned()),
     }];
-    let out = fetch_candidates_for_keys(
+    let out = fetch_candidates_for_keys_with_barriers(
         &keys,
+        &[],
+        &[],
         6,
         &ctx(&FrequencyMap::new(), 0, &custom, &prefix_index, &dict),
     );
@@ -1653,8 +1655,10 @@ fn item12_custom_dedupes_and_wins_dict_collision() {
         roman: "tâi-gí".to_owned(),
         hanji: Some("台語".to_owned()),
     }];
-    let out = fetch_candidates_for_keys(
+    let out = fetch_candidates_for_keys_with_barriers(
         &keys,
+        &[],
+        &[],
         6,
         &ctx(&FrequencyMap::new(), 0, &custom, &prefix_index, &dict),
     );
@@ -1689,8 +1693,10 @@ fn item12_custom_roman_variant_not_deduped() {
         roman: "tai5-gi2".to_owned(), // numeric-tone variant of same hanji
         hanji: Some("台語".to_owned()),
     }];
-    let out = fetch_candidates_for_keys(
+    let out = fetch_candidates_for_keys_with_barriers(
         &keys,
+        &[],
+        &[],
         6,
         &ctx(&FrequencyMap::new(), 0, &custom, &prefix_index, &dict),
     );
@@ -1752,8 +1758,10 @@ fn item12_empty_custom_is_noop() {
         }],
     );
     let keys: Vec<(ConsumedSpan, String)> = vec![((0, 6), "tl:taigi".to_owned())];
-    let out = fetch_candidates_for_keys(
+    let out = fetch_candidates_for_keys_with_barriers(
         &keys,
+        &[],
+        &[],
         6,
         &ctx(&FrequencyMap::new(), 0, &[], &prefix_index, &dict),
     );

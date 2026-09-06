@@ -65,7 +65,7 @@
 //!
 //! Returned candidates are sorted by the 8-dimensional
 //! `SortKey` (v3.5.8 Phase 9.1 + S8 dim-3→6 coverage demote)
-//! documented at [`fetch_candidates_for_keys`]; `calculate_continuous_score`
+//! documented at [`fetch_candidates_for_keys_with_barriers`]; `calculate_continuous_score`
 //! provides only one of those dimensions. Within-tier ties keep
 //! insertion order (`endings` order, then `prefix_index` rowid order —
 //! `lookup_exact` is deterministic per build). The comparator coerces
@@ -83,10 +83,11 @@
 //! lookup uniformly in `composing::continuous::fetch_via_lexicon_inner`
 //! via mode-aware `<prefix>:<toneless>` keys (`composing::shadow::mode_key_prefix`
 //! yields `tl:` / `poj:` / `tps:`); the pre-C-3b `build_keys_tps` →
-//! `tl:`-fold short-circuit is retired. The legacy
-//! `fetch_candidates_for_endings` wrapper is `#[doc(hidden)]` and now
-//! exists only so the integration tests under `engine/lexicon/tests/`
-//! keep working without rebuilding `(span, key)` pairs inline.
+//! `tl:`-fold short-circuit is retired. The test-only
+//! `fetch_candidates_for_endings` wrapper (pre-computed syllabifier
+//! endings → `(span, key)` pairs) lives in
+//! `engine/lexicon/tests/common/mod.rs`, outside this crate's public
+//! surface.
 
 use std::cmp::Reverse;
 
@@ -215,9 +216,10 @@ pub fn derive_mode(hanzi: Option<&str>) -> CandidateMode {
 pub struct RawCandidate {
     /// Byte span `(start, end)` in the original input that this candidate
     /// consumes on commit. `start` always equals the `pos` plumbed
-    /// through [`fetch_candidates_for_keys`] (the production entry; the
-    /// test-only [`fetch_candidates_for_endings`] wrapper preserves the
-    /// same contract); `end` is one of the offsets in `endings`.
+    /// through [`fetch_candidates_for_keys_with_barriers`] (the production
+    /// entry; the test-only `fetch_candidates_for_endings` wrapper in
+    /// `engine/lexicon/tests/common/mod.rs` preserves the same contract);
+    /// `end` is one of the offsets in `endings`.
     pub consumed_span: (u32, u32),
     /// Number of TL syllables in the matched dictionary entry, copied
     /// from `DictionaryRecord::syllable_count` (1..=4 by builder cap).
@@ -340,7 +342,7 @@ pub struct CustomEntry {
 }
 
 /// v3.5.9 D7 — shared context for the continuous-input fetch entry
-/// points ([`fetch_candidates_for_keys`],
+/// points ([`fetch_candidates_for_keys_with_barriers`],
 /// [`fetch_partial_prefix_candidates`]). Each one previously took
 /// eight positional arguments and tripped
 /// `clippy::too_many_arguments`; bundling the six shared concerns
@@ -402,120 +404,7 @@ pub struct ContinuousFetchCtx<'a> {
     pub tps_space_pinned_body: Option<&'a str>,
 }
 
-/// v3.5.9 D8 — test-only entry: fetch every dictionary candidate
-/// whose toneless TL key matches `input[pos..end]` for some `end` in
-/// `endings`. Production code path goes through
-/// `composing::continuous::fetch_via_lexicon_inner` →
-/// [`fetch_candidates_for_keys`] directly with the platform's
-/// `custom_entries`; the only callers reaching this entry are the
-/// `engine/lexicon/tests/` integration tests, which explicitly never
-/// carry custom-dict matches (the ctx wrapper below forces
-/// `custom = &[]` before delegating). Marked `#[doc(hidden)]` so the
-/// rustdoc public surface no longer advertises it.
-///
-/// Internally a thin wrapper around [`fetch_candidates_for_keys`]: it
-/// maps each `end` to a `(consumed_span, "<prefix>:<lowered>")` pair
-/// with `prefix ∈ {tl, poj, tps}` selected per `mode` (v3.5.9 B-2 PR
-/// #309 promoted POJ, v3.5.9 D / C-3b promoted TPS). Production callers
-/// no longer reach this wrapper after D7+D8 (#306) — they compose the
-/// span-local lookup directly through
-/// `composing::continuous::fetch_via_lexicon_inner`; this entry remains
-/// only for the integration tests under `engine/lexicon/tests/`.
-///
-/// **v3.5.8 Phase 9.3a**: `ctx.freq_map` carries the per-display-text
-/// user selection snapshot keyed by `RawCandidate::display_text`
-/// (= `hanji ?? tl`); `ctx.now_ms` is the platform's epoch-ms wall
-/// clock. Pass `&FrequencyMap::new()` + `now_ms = 0` for cold-start
-/// neutral behaviour (boost = 1.0, recency_rank = 1 everywhere) —
-/// `recency_rank()`'s guards (`now_ms <= 0`, `last_used_ms <= 0`,
-/// clock skew) make this a safe default.
-#[doc(hidden)]
-pub fn fetch_candidates_for_endings(
-    input: &str,
-    pos: usize,
-    endings: &[usize],
-    mode: phonetics::InputMode,
-    ctx: &ContinuousFetchCtx<'_>,
-) -> Vec<RawCandidate> {
-    if endings.is_empty() || pos >= input.len() || !input.is_char_boundary(pos) {
-        return Vec::new();
-    }
-
-    let lower = input.to_ascii_lowercase();
-    let mut keys: Vec<(ConsumedSpan, String)> = Vec::with_capacity(endings.len());
-    // v3.5.9 B-2 — emit the matching family prefix for `mode`. The
-    // dispatcher [`matches_continuous_toneless_key`] then routes each
-    // key to its mode-specific acronym-collision guard.
-    let prefix = match mode {
-        phonetics::InputMode::Poj => "poj",
-        // v3.5.9 D / C-3b — TPS first-class family.
-        phonetics::InputMode::Tps => "tps",
-        phonetics::InputMode::Tl | phonetics::InputMode::English => "tl",
-    };
-    for &end in endings {
-        if end <= pos || end > lower.len() || !lower.is_char_boundary(end) {
-            continue;
-        }
-        // The toneless key is `{prefix}:` + the lowered span with every
-        // ASCII digit dropped — the digit half of the upstream
-        // `notone.py::remove_tone` regex `[\d\-]`
-        // (`dictionary/common/notone.py`). Phase 1b guarantees
-        // fused-toneless storage (e.g. `珠仔 → tl:tsua` / `poj:choa`,
-        // `台北 → tl:taipak` / `poj:taipak`), and the syllabifier hands
-        // us endings for both numeric (`tai1bak4`) and toneless
-        // (`taibak`) input forms; stripping here lets numeric-tone
-        // input still hit the fused toneless FST key. The hyphen half
-        // of the regex is NOT applied at this layer because hyphenated
-        // input is folded upstream by `composing::shadow::build_hyphen_shadow`
-        // (Phase 9 Item 8): callers feed already-hyphenless segments
-        // here. Preserving the no-strip invariant at this layer
-        // protects the separation of concerns — if hyphens ever appear
-        // in a segment reaching this fn it indicates an upstream
-        // contract violation and the FST lookup correctly returns no
-        // match. Python `\d` is Unicode-decimal but canonical input
-        // only uses ASCII `0..=9`, so `is_ascii_digit()` is sound
-        // under the module input contract above.
-        let segment = &lower[pos..end];
-        let toneless: String = segment.chars().filter(|c| !c.is_ascii_digit()).collect();
-        if toneless.is_empty() {
-            continue;
-        }
-        keys.push(((pos as u32, end as u32), format!("{prefix}:{toneless}")));
-    }
-
-    // Phase 9.1: pass full `input.len()` for the Tier 1 predicate.
-    // Even when `pos != 0`, candidates whose `consumed_span_end`
-    // reaches the full input length still qualify for Tier 0 — Tier 1
-    // is full-buffer coverage, not `input.len() - pos`.
-    // Item 12 + D7: this legacy test-only entry never carries custom-
-    // dict matches. Rebuild an inner ctx with every field listed
-    // explicitly (not `..*ctx`) so the forced-empty-custom contract
-    // stays loud and survives any future ctx field that is not
-    // `Copy` (Codex pre-impl SHOULD #2). Production dispatch goes
-    // through `composing::continuous::fetch_via_lexicon_inner` →
-    // `fetch_candidates_for_keys` directly with the platform's
-    // `custom_entries`.
-    let inner = ContinuousFetchCtx {
-        enabled_sources_bitmask: ctx.enabled_sources_bitmask,
-        freq_map: ctx.freq_map,
-        now_ms: ctx.now_ms,
-        custom: &[],
-        prefix_index: ctx.prefix_index,
-        dict: ctx.dict,
-        // v3.5.9 B-4 — `mode` carries through for symmetry with
-        // production ctx construction; this entry never carries
-        // custom dict so `custom_entry_to_candidate` is never reached,
-        // but the field is non-`Option` and must be set.
-        mode: ctx.mode,
-        // A3 (§41) — carried through for symmetry. This legacy entry
-        // takes pre-computed `endings` rather than a shadow pipeline, so
-        // it has no space-pin signal of its own to derive.
-        tps_space_pinned_body: ctx.tps_space_pinned_body,
-    };
-    fetch_candidates_for_keys(&keys, input.len() as u32, &inner)
-}
-
-/// Span aliases for [`fetch_candidates_for_keys`]: `(start_byte, end_byte)`
+/// Span aliases for [`fetch_candidates_for_keys_with_barriers`]: `(start_byte, end_byte)`
 /// in the user-facing input buffer (TL ASCII or TPS Bopomofo bytes,
 /// depending on caller). The engine only stores these verbatim in the
 /// returned `RawCandidate.consumed_span`; FST lookup uses the paired key.
@@ -530,10 +419,10 @@ pub type ConsumedSpan = (u32, u32);
 /// families). The production caller
 /// (`composing::continuous::fetch_via_lexicon_inner`) selects the
 /// prefix via `composing::shadow::mode_key_prefix(mode)` and feeds
-/// pairs in directly for all modes. The legacy
-/// [`fetch_candidates_for_endings`] wrapper is `#[doc(hidden)]`
-/// (v3.5.9 D7+D8 #306) and exists only for the integration tests under
-/// `engine/lexicon/tests/`.
+/// pairs in directly for all modes; the test-only
+/// `fetch_candidates_for_endings` wrapper in
+/// `engine/lexicon/tests/common/mod.rs` builds the same pairs from
+/// pre-computed syllabifier endings.
 ///
 /// # v3.5.8 Phase 9.1 — lexicographic SortKey
 ///
@@ -653,15 +542,7 @@ pub fn reading_passes_space_pin(tps_body: &str, reading: &str) -> bool {
     phonetics::tps_notone_prefix_boundary_tone(reading, body).is_some_and(is_unmarked_tps_tone)
 }
 
-pub fn fetch_candidates_for_keys(
-    keys: &[(ConsumedSpan, String)],
-    raw_len: u32,
-    ctx: &ContinuousFetchCtx<'_>,
-) -> Vec<RawCandidate> {
-    fetch_candidates_for_keys_with_barriers(keys, &[], &[], raw_len, ctx)
-}
-
-/// [`fetch_candidates_for_keys`] plus per-key barrier metadata.
+/// Span-local exact fetch for pre-built keys, carrying per-key barrier metadata.
 ///
 /// `tps_final_only[i]` = byte offsets into `keys[i].1` of glyphs
 /// immediately before a stripped separator / 連字 barrier — those pattern
@@ -816,7 +697,7 @@ pub fn fetch_candidates_for_keys_with_barriers(
 /// v3.5.8 Phase 9 Item 10 — partial-prefix candidate fetch for the
 /// continuous-input path. Called when the syllabifier failed to find a
 /// single valid syllable ending inside `raw` (so
-/// [`fetch_candidates_for_keys`] would return empty) and we want the
+/// [`fetch_candidates_for_keys_with_barriers`] would return empty) and we want the
 /// candidate strip to surface engine prefix-match hits below any
 /// future full-syllable matches. See
 /// `docs/engine/continuous-candidate-display.md` §15.3.D + §15.5.
@@ -831,7 +712,7 @@ pub fn fetch_candidates_for_keys_with_barriers(
 ///    legacy byte-sort first 30 still reach the sort.
 /// 3. Hydrate via `dict.record(rowid)`; drop rows that fail the
 ///    `enabled_sources_bitmask` filter (D-12 invariant parity with
-///    [`fetch_candidates_for_keys`]).
+///    [`fetch_candidates_for_keys_with_barriers`]).
 /// 4. Build candidates with `coverage_kind = COVERAGE_KIND_PARTIAL_PREFIX`
 ///    and `consumed_span = key.0` (caller pins `(0, raw.len())` per
 ///    Q15.4 — partial-prefix candidates always final-commit).
@@ -849,7 +730,7 @@ pub fn fetch_candidates_for_keys_with_barriers(
 /// (`consumed_span_end == raw_len`) downstream dim even though every
 /// partial-prefix candidate has `consumed_span_end == raw_len` today,
 /// so its `tier` is always 0 within `coverage_kind == 1`. This keeps
-/// the entry signature symmetric with [`fetch_candidates_for_keys`].
+/// the `raw_len` / ctx contract shared with [`fetch_candidates_for_keys_with_barriers`].
 ///
 /// `freq_map` + `now_ms` propagate user-frequency boost and recency
 /// rank to partial-prefix hits identically to the full-syllable

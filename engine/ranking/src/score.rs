@@ -446,9 +446,10 @@ pub(crate) fn total(breakdown: &ScoreBreakdown) -> i32 {
 /// tier components — those live in the additive [`calculate_score`]
 /// pipeline and apply only to the legacy single-segment IME path. The
 /// Continuous slice ranks span-local candidates emitted by
-/// `lexicon::continuous::fetch_candidates_for_keys` (the production
-/// span-local entry; `fetch_candidates_for_endings` is the test-only
-/// wrapper after v3.5.9 D7+D8 #306), where the per-syllable bias
+/// `lexicon::continuous::fetch_candidates_for_keys_with_barriers` (the
+/// production span-local entry; the test-only `fetch_candidates_for_endings`
+/// wrapper lives in `engine/lexicon/tests/common/mod.rs`), where the
+/// per-syllable bias
 /// rewards multi-syllable words like `珠仔(syll=2)` over `紙/珠(syll=1)`
 /// when the user's input spans a multi-syllable reach.
 ///
@@ -458,7 +459,7 @@ pub(crate) fn total(breakdown: &ScoreBreakdown) -> i32 {
 /// `feedback_user_data_sqlite_stays_native`). `1.0` = no boost. Caller
 /// MUST pass a finite, non-negative `f32` — this fn does no clamping
 /// (it is a pure pricing formula). The downstream sort comparator in
-/// `lexicon::continuous::fetch_candidates_for_keys` defends against
+/// `lexicon::continuous::fetch_candidates_for_keys_with_barriers` defends against
 /// `NaN` leakage by coercing it to `f32::MIN`, but negative or `+∞`
 /// boosts will produce semantically nonsensical rankings.
 ///

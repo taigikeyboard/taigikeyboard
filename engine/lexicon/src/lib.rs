@@ -33,18 +33,12 @@ const _: fn() = || {
 
 pub use continuous::{
     best_candidate_for_key, best_candidate_for_key_with_barriers, compound_hanji_exists,
-    derive_mode, fetch_candidates_for_keys, fetch_candidates_for_keys_with_barriers,
-    fetch_partial_prefix_candidates, fetch_partial_prefix_candidates_unbounded,
-    reading_passes_space_pin, CandidateMode, ConsumedSpan, ContinuousFetchCtx, CustomEntry,
-    RawCandidate, COVERAGE_KIND_FULL, COVERAGE_KIND_PARTIAL_PREFIX, FORM_NOTONE,
-    PARTIAL_PREFIX_HYDRATE_CAP, PARTIAL_PREFIX_OUTPUT_CAP,
+    derive_mode, fetch_candidates_for_keys_with_barriers, fetch_partial_prefix_candidates,
+    fetch_partial_prefix_candidates_unbounded, reading_passes_space_pin, CandidateMode,
+    ConsumedSpan, ContinuousFetchCtx, CustomEntry, RawCandidate, COVERAGE_KIND_FULL,
+    COVERAGE_KIND_PARTIAL_PREFIX, FORM_NOTONE, PARTIAL_PREFIX_HYDRATE_CAP,
+    PARTIAL_PREFIX_OUTPUT_CAP,
 };
-// v3.5.9 D8 — `fetch_candidates_for_endings` is test-only; production
-// goes through `composing::continuous::fetch_via_lexicon_inner` →
-// `fetch_candidates_for_keys` directly. Hide the re-export from
-// rustdoc so the crate's public API surface no longer advertises it.
-#[doc(hidden)]
-pub use continuous::fetch_candidates_for_endings;
 pub use error::LexiconError;
 pub use handle::EngineHandle;
 pub use paths::LexiconPaths;
