@@ -454,6 +454,156 @@ pub fn reading_passes_space_pin(tps_body: &str, reading: &str) -> bool {
     phonetics::tps_notone_prefix_boundary_tone(reading, body).is_some_and(is_unmarked_tps_tone)
 }
 
+/// Every dictionary candidate for one exact continuous key, in FST rowid
+/// order, handed to `sink` one at a time. The single visitor the span-local
+/// fetch ([`fetch_candidates_for_keys_with_barriers`], collects all) and the
+/// walker edge provider ([`best_candidate_for_key_with_barriers`], keeps
+/// the max) share, so the two layers cannot drift on which rows qualify —
+/// §35: an edge the expanded segmenter admitted must find its dictionary
+/// payload, or the layers split authority (Codex pre-impl BLOCK 3).
+///
+/// Per row, validated against the MATCHED key (a substituted TPS reading
+/// reconstructs to the matched key, never the query key — see
+/// [`for_each_exact_reading`]): the source `filter`, the `tl_abbrev` /
+/// `poj_abbrev` / `tps_abbrev` acronym-collision guard
+/// ([`matches_continuous_toneless_key`] — continuous input is
+/// phonetic-syllable, not acronym; normal-mode `lexicon::search` keeps
+/// acronym matching), and the A3 (§41) space pin when `tone_pinned`
+/// (`ㄒㄧ`␣ keeps si1, drops si2/5/7; `ㄐㄧㆵ`␣ keeps tsit4, drops tsit8).
+/// Without the pin on the walker side the span-local list and the
+/// whole-sentence slot 0 would disagree and a wrong-tone word would
+/// reappear at index 0 — the same split the explicit-tone fix (§17) closed
+/// for TL/POJ digits.
+///
+/// Exact hits are always `COVERAGE_KIND_FULL`: the key came from a valid
+/// syllable ending. Partial-prefix hits go through
+/// [`fetch_partial_prefix_candidates_unbounded`] instead. `filter` is
+/// built by the caller.
+fn exact_candidates_for_key(
+    key: &str,
+    tps_final_only: &[usize],
+    tone_pinned: bool,
+    consumed_span: ConsumedSpan,
+    filter: &Filter,
+    ctx: &ContinuousFetchCtx<'_>,
+    mut sink: impl FnMut(RawCandidate),
+) {
+    for_each_exact_reading(
+        ctx.prefix_index,
+        key,
+        tps_final_only,
+        |matched_key, rowid| {
+            let Some(record) = ctx.dict.record(rowid) else {
+                return;
+            };
+            if !DictionaryReader::passes_filter(record.bitmask, record.kautian_subtag, filter) {
+                return;
+            }
+            if !matches_continuous_toneless_key(matched_key, &record.tl) {
+                return;
+            }
+            if tone_pinned && !reading_passes_space_pin(matched_key, &record.tl) {
+                return;
+            }
+            let effective = DictionaryReader::effective_source_bitmask(
+                record.bitmask,
+                record.kautian_subtag,
+                filter,
+            );
+            sink(record_to_candidate(
+                record,
+                effective,
+                consumed_span,
+                ctx.freq_map,
+                ctx.now_ms,
+                COVERAGE_KIND_FULL,
+            ));
+        },
+    );
+}
+
+/// Shared tail of every continuous fetch: merge `custom_dictionary.db`
+/// hits into the dictionary candidates `out`, collapse `(roman, hanji,
+/// span)` duplicates, then apply the eight-dimension [`SortKey`] sort.
+/// `coverage_kind` is stamped on the custom synths — `COVERAGE_KIND_FULL`
+/// on the exact path, `COVERAGE_KIND_PARTIAL_PREFIX` on the partial-prefix
+/// path so §15.5's "partial-prefix ranks strictly below full-syllable" rule
+/// is preserved there (Codex pre-impl D6).
+///
+/// **Custom merge** (v3.5.8 Phase 9 Item 12): each custom entry is
+/// synthesized as a full-buffer candidate (`consumed_span = (0, raw_len)`,
+/// `is_custom = true` → `source_tier_rank` rank 0) and appended AFTER the
+/// FST hits so a `(roman, hanji)` duplicate keeps the earlier-inserted
+/// `dict.bin` candidate only when source ranks tie (they never do — custom
+/// rank 0 < every `dict.bin` rank ≥ 1, so the custom entry always wins its
+/// collision). The legacy custom dict is prefix-visible, so the
+/// partial-prefix path merges too — Continuous must not hide the user's
+/// custom word while they are still typing toward the first syllable
+/// boundary. See `docs/engine/continuous-input-ranking.md` §10.10.
+///
+/// A3 (§41) — a custom entry is synthesized whole-buffer, so the space pin
+/// applies to it exactly as to a dictionary hit: with the tail syllable
+/// space-closed, an entry whose reading carries a marked tone there is not
+/// what the user asked for. Skipping this would let the "only tone 1/4"
+/// promise leak through the custom source, which is appended AFTER
+/// dictionary filtering. On the partial-prefix path the typed body is a
+/// strict prefix of the entry's reading, so the check lands on the
+/// syllable the space closed, not on the entry's own tail.
+///
+/// **Dedupe** (Item 12): `dict.bin` is already collapsed by
+/// `dictionary/build/merge_csv.py:107`'s `groupby(["hanzi", "_tl_key"])`,
+/// so the only realistic duplicate is custom-vs-`dict.bin` sharing a
+/// `(roman, hanji)` pair. MUST run BEFORE the `SortKey` sort: the winner is
+/// the lowest `source_tier_rank` survivor (custom rank 0 beats any
+/// `dict.bin` tier), which is NOT what the full 8-dim sort would pick (it
+/// weighs `score`/`freq` ahead of `source_rank`, so a high-freq `dict.bin`
+/// duplicate could otherwise mask the user's custom entry). `(roman,
+/// hanji)` is the dual key (Codex pre-impl D1) so romanization variants of
+/// the same hanji are preserved; S2 extends it with `consumed_span` (Codex
+/// pre-impl S2 Q1d) — both the custom synth and its `dict.bin` duplicate
+/// are emitted at the same `(0, raw_len)` span so the collapse still fires.
+///
+/// **Sort** (Phase 9.1): `stable_idx` is stamped from pre-sort element
+/// position via `enumerate()` BEFORE any sorting machinery runs, so the
+/// index reflects insertion order (caller-provided `keys` order × FST
+/// byte-sort) and is independent of how the sort algorithm invokes the key
+/// extractor — `slice::sort_by_cached_key` does NOT contractually pin that
+/// order; earlier revisions incrementing a counter inside the closure were
+/// silently relying on stdlib internals (Codex PR #262 r3216153007; PR-9.1
+/// PR-bot R1 fix `be86f5f7`). No truncate here: the partial-prefix bounded
+/// wrapper applies `PARTIAL_PREFIX_OUTPUT_CAP` itself, and Step 4b in
+/// `composing::continuous` takes the un-truncated pool.
+fn merge_custom_dedupe_sort(
+    mut out: Vec<RawCandidate>,
+    ctx: &ContinuousFetchCtx<'_>,
+    raw_len: u32,
+    coverage_kind: u8,
+) -> Vec<RawCandidate> {
+    for entry in ctx.custom {
+        if let Some(pinned_body) = ctx.tps_space_pinned_body {
+            if !reading_passes_space_pin(pinned_body, &entry.roman) {
+                continue;
+            }
+        }
+        out.push(custom_entry_to_candidate(
+            entry,
+            raw_len,
+            ctx.freq_map,
+            ctx.now_ms,
+            coverage_kind,
+            ctx.mode,
+        ));
+    }
+    dedupe_by_roman_hanji_span(&mut out);
+    let mut indexed: Vec<(SortKey, RawCandidate)> = out
+        .into_iter()
+        .enumerate()
+        .map(|(i, c)| (SortKey::new(&c, raw_len, i as u32), c))
+        .collect();
+    indexed.sort_by_key(|(key, _)| *key);
+    indexed.into_iter().map(|(_, c)| c).collect()
+}
+
 /// Mode-agnostic span-local fetch entry. Each input pair is
 /// `(consumed_span, fst_key)`: `consumed_span` is the user-facing
 /// byte range that committing this candidate will eat, and `fst_key`
@@ -543,118 +693,11 @@ pub fn fetch_candidates_for_keys_with_barriers(
         // stripped, so only its unmarked tone may surface. A short or
         // empty slice means "no pin", the legacy all-tones shape.
         let tone_pinned = tps_tone_pinned.get(key_index).copied().unwrap_or(false);
-        for_each_exact_reading(ctx.prefix_index, key, final_only, |matched_key, rowid| {
-            let Some(record) = ctx.dict.record(rowid) else {
-                return;
-            };
-            if !DictionaryReader::passes_filter(record.bitmask, record.kautian_subtag, &filter) {
-                return;
-            }
-            // v3.5.8 — drop `tl_abbrev` acronym collisions: continuous
-            // input is phonetic-syllable, not acronym (normal-mode
-            // `lexicon::search` keeps acronym matching). v3.5.9 B-2 —
-            // routes through `matches_continuous_toneless_key` so the
-            // matching `poj_abbrev` filter fires on `poj:` keys.
-            // §35 — validated against the MATCHED key: a substituted
-            // reading reconstructs to the matched key, not the query key.
-            if !matches_continuous_toneless_key(matched_key, &record.tl) {
-                return;
-            }
-            // A3 (§41) — space-pinned span: drop a reading whose syllable
-            // at the pinned boundary is not the space's unmarked tone
-            // (`ㄒㄧ`␣ keeps si1, drops si2/5/7; `ㄐㄧㆵ`␣ keeps tsit4,
-            // drops tsit8). Validated against the MATCHED key so §35
-            // substitution hits reconstruct correctly.
-            if tone_pinned && !reading_passes_space_pin(matched_key, &record.tl) {
-                return;
-            }
-            // Full-syllable path always emits `COVERAGE_KIND_FULL` — by
-            // definition `valid_span_endings` produced an ending that
-            // led to this `lookup_exact`. Partial-prefix hits flow
-            // through `fetch_partial_prefix_candidates` instead and
-            // carry `COVERAGE_KIND_PARTIAL_PREFIX`.
-            let effective = DictionaryReader::effective_source_bitmask(
-                record.bitmask,
-                record.kautian_subtag,
-                &filter,
-            );
-            out.push(record_to_candidate(
-                record,
-                effective,
-                *span,
-                ctx.freq_map,
-                ctx.now_ms,
-                COVERAGE_KIND_FULL,
-            ));
+        exact_candidates_for_key(key, final_only, tone_pinned, *span, &filter, ctx, |cand| {
+            out.push(cand)
         });
     }
-
-    // v3.5.8 Phase 9 Item 12 — merge `custom_dictionary.db` hits.
-    // Each custom entry is synthesized as a full-buffer candidate
-    // (`consumed_span = (0, raw_len)`, `coverage_kind =
-    // COVERAGE_KIND_FULL`, `is_custom = true` → `source_tier_rank`
-    // rank 0) and appended AFTER the FST hits so a `(roman, hanji)`
-    // duplicate keeps the earlier-inserted `dict.bin` candidate only
-    // when source ranks tie (they never do — custom rank 0 < every
-    // `dict.bin` rank ≥ 1, so the custom entry always wins its
-    // collision). Mirrors the legacy lexicon path's whole-input-block
-    // treatment of custom dict. See
-    // `docs/engine/continuous-input-ranking.md` §10.10.
-    for entry in ctx.custom {
-        // A3 (§41) — a custom entry is synthesized whole-buffer, so the
-        // space pin applies to it exactly as to a dictionary hit: with the
-        // tail syllable space-closed, an entry whose reading carries a
-        // marked tone there is not what the user asked for. Skipping this
-        // would let the "only tone 1/4" promise leak through the custom
-        // source, which is appended AFTER dictionary filtering.
-        if let Some(pinned_body) = ctx.tps_space_pinned_body {
-            if !reading_passes_space_pin(pinned_body, &entry.roman) {
-                continue;
-            }
-        }
-        out.push(custom_entry_to_candidate(
-            entry,
-            raw_len,
-            ctx.freq_map,
-            ctx.now_ms,
-            COVERAGE_KIND_FULL,
-            ctx.mode,
-        ));
-    }
-
-    // v3.5.8 Phase 9 Item 12 — `(roman, hanji)` dedupe. `dict.bin` is
-    // already collapsed by `dictionary/build/merge_csv.py:107`'s
-    // `groupby(["hanzi", "_tl_key"])`, so the only realistic duplicate
-    // is custom-vs-`dict.bin` sharing a `(roman, hanji)` pair. MUST run
-    // BEFORE the `SortKey` sort: the winner is the lowest
-    // `source_tier_rank` survivor (custom rank 0 beats any `dict.bin`
-    // tier), which is NOT what the full 8-dim sort would pick (it
-    // weighs `score`/`freq` ahead of `source_rank`, so a high-freq
-    // `dict.bin` duplicate could otherwise mask the user's custom
-    // entry). `(roman, hanji)` is the dual key (Codex pre-impl D1) so
-    // romanization variants of the same hanji are preserved; S2
-    // extends it with `consumed_span` (Codex pre-impl S2 Q1d) — both
-    // the custom synth and its `dict.bin` duplicate are emitted at the
-    // same `(0, raw_len)` span so the collapse still fires.
-    dedupe_by_roman_hanji_span(&mut out);
-
-    // Phase 9.1 lexicographic sort. `stable_idx` is stamped from
-    // pre-sort element position via `enumerate()` BEFORE any sorting
-    // machinery runs, so the index reflects insertion order (caller-
-    // provided `keys` order × `prefix_index.lookup_exact` FST byte-
-    // sort) and is independent of how the sort algorithm chooses to
-    // invoke the key extractor. `slice::sort_by_cached_key` does NOT
-    // contractually pin the order in which it calls the key fn;
-    // earlier revisions that incremented a counter inside the closure
-    // were silently relying on stdlib internals (Codex PR #262
-    // r3216153007).
-    let mut indexed: Vec<(SortKey, RawCandidate)> = out
-        .into_iter()
-        .enumerate()
-        .map(|(i, c)| (SortKey::new(&c, raw_len, i as u32), c))
-        .collect();
-    indexed.sort_by_key(|(key, _)| *key);
-    indexed.into_iter().map(|(_, c)| c).collect()
+    merge_custom_dedupe_sort(out, ctx, raw_len, COVERAGE_KIND_FULL)
 }
 
 /// v3.5.8 Phase 9 Item 10 — partial-prefix candidate fetch for the
@@ -908,64 +951,21 @@ pub fn fetch_partial_prefix_candidates_unbounded(
             ));
         }
     }
-
-    // v3.5.8 Phase 9 Item 12 — merge `custom_dictionary.db` hits into
-    // the partial-prefix path too (legacy custom dict is prefix-visible,
-    // so Continuous must not hide the user's custom word while they are
-    // still typing toward the first syllable boundary). Tagged
-    // `COVERAGE_KIND_PARTIAL_PREFIX` — NOT `COVERAGE_KIND_FULL` — so
-    // §15.5's "partial-prefix ranks strictly below full-syllable" rule
-    // is preserved (Codex pre-impl D6). The span-aware dedupe then runs
-    // before the sort, identical to `fetch_candidates_for_keys_with_barriers`.
-    for entry in ctx.custom {
-        // A3 (§41) — same pin as the full-syllable path (see there). The
-        // typed body is a strict prefix of a partial-prefix entry's
-        // reading, so the check lands on the syllable the space closed,
-        // not on the entry's own tail.
-        if let Some(pinned_body) = ctx.tps_space_pinned_body {
-            if !reading_passes_space_pin(pinned_body, &entry.roman) {
-                continue;
-            }
-        }
-        out.push(custom_entry_to_candidate(
-            entry,
-            raw_len,
-            ctx.freq_map,
-            ctx.now_ms,
-            COVERAGE_KIND_PARTIAL_PREFIX,
-            ctx.mode,
-        ));
-    }
-    dedupe_by_roman_hanji_span(&mut out);
-
-    // Same `enumerate()`-pre-sort-stamping pattern as
-    // `fetch_candidates_for_keys_with_barriers` to keep `stable_idx` deterministic
-    // and independent of `slice::sort_by_cached_key` internals (PR-9.1
-    // PR-bot R1 fix `be86f5f7`).
-    let mut indexed: Vec<(SortKey, RawCandidate)> = out
-        .into_iter()
-        .enumerate()
-        .map(|(i, c)| (SortKey::new(&c, raw_len, i as u32), c))
-        .collect();
-    indexed.sort_by_key(|(key, _)| *key);
-    // No truncate here — the bounded wrapper `fetch_partial_prefix_candidates`
-    // applies `PARTIAL_PREFIX_OUTPUT_CAP` for callers that don't need to
-    // run a cross-batch exclude. Step 4b in `composing::continuous`
-    // (Codex PR #351 r3321758666) takes the un-truncated pool, applies
-    // its FULL-block exclude, then truncates itself — preserving the
-    // visible top-N invariant after duplicates are dropped.
-    indexed.into_iter().map(|(_, c)| c).collect()
+    merge_custom_dedupe_sort(out, ctx, raw_len, COVERAGE_KIND_PARTIAL_PREFIX)
 }
 
 /// v3.5.8 S2 — single best dictionary candidate for one exact FST
 /// key. Returns the highest-`score` [`record_to_candidate`] over
 /// `prefix_index.lookup_exact(key)` (NaN coerced low via
 /// [`NonNanF32`]; ties keep the first FST rowid for determinism), or
-/// `None` when the key has no dict hit. PR-9.6 — `enabled_sources_bitmask`
-/// gives the walker the SAME source filter the span-local path applies
-/// (`composing::continuous::assemble_candidates` via
-/// `ContinuousFetchCtx`), so a whole-sentence parse never re-surfaces a
-/// word whose only source the user toggled off. `u32::MAX` = all sources.
+/// `None` when the key has no dict hit. PR-9.6 — the walker reads the
+/// SAME `ctx.enabled_sources_bitmask` filter the span-local path
+/// applies (`composing::continuous::assemble_candidates` builds one
+/// [`ContinuousFetchCtx`] for both), so a whole-sentence parse never
+/// re-surfaces a word whose only source the user toggled off. Only the
+/// lookup fields of `ctx` are read (`prefix_index` / `dict` /
+/// `freq_map` / `now_ms` / `enabled_sources_bitmask`); `custom` /
+/// `mode` / `tps_space_pinned_body` belong to the whole-buffer merge.
 ///
 /// The whole-sentence walker (`composing::lattice::walker`) calls
 /// this once per lattice edge through a dispatch-injected edge
@@ -975,102 +975,45 @@ pub fn fetch_partial_prefix_candidates_unbounded(
 /// onto the returned candidate verbatim; the walker only reads
 /// `roman` / `hanji` / `frequency` / `syllable_count` /
 /// `display_text` off it.
-pub fn best_candidate_for_key(
-    key: &str,
-    consumed_span: ConsumedSpan,
-    freq_map: &FrequencyMap,
-    now_ms: i64,
-    prefix_index: &PrefixIndex,
-    dict: &DictionaryReader,
-    enabled_sources_bitmask: u32,
-) -> Option<RawCandidate> {
-    best_candidate_for_key_with_barriers(
-        key,
-        &[],
-        false,
-        consumed_span,
-        freq_map,
-        now_ms,
-        prefix_index,
-        dict,
-        enabled_sources_bitmask,
-    )
-}
-
-/// [`best_candidate_for_key`] plus the §35 barrier restriction for this
-/// edge's key (byte offsets of Final-only pattern slots, family prefix
-/// included). The walker resolves multi-syllable edges that may span a
-/// stripped separator, so it needs the same restriction the span-local
-/// fetch gets — without it a walker edge could re-read a
-/// separator-closed coda as the next syllable's onset.
-#[allow(clippy::too_many_arguments)]
+///
+/// `tps_final_only` is the §35 barrier restriction for this edge's key
+/// (byte offsets of Final-only pattern slots, family prefix included).
+/// The walker resolves multi-syllable edges that may span a stripped
+/// separator, so it needs the same restriction the span-local fetch
+/// gets — without it a walker edge could re-read a separator-closed
+/// coda as the next syllable's onset. Empty slice = no barriers.
 pub fn best_candidate_for_key_with_barriers(
     key: &str,
     tps_final_only: &[usize],
     tone_pinned: bool,
     consumed_span: ConsumedSpan,
-    freq_map: &FrequencyMap,
-    now_ms: i64,
-    prefix_index: &PrefixIndex,
-    dict: &DictionaryReader,
-    enabled_sources_bitmask: u32,
+    ctx: &ContinuousFetchCtx<'_>,
 ) -> Option<RawCandidate> {
-    let filter = Filter::from_enabled_bitmask(enabled_sources_bitmask);
+    let filter = Filter::from_enabled_bitmask(ctx.enabled_sources_bitmask);
     let mut best: Option<RawCandidate> = None;
-    // §35 — the walker hydrates through the SAME reading resolution as
-    // the span-local fetch (Codex pre-impl BLOCK 3): an edge the expanded
-    // segmenter admitted must find its dictionary payload, or the two
-    // layers split authority. A multi-syllable edge MAY span a stripped
-    // separator (§31 cross-space phrase edges), which is why the caller
-    // computes and passes `tps_final_only` in edge coordinates rather than
-    // this fn assuming there are no barriers (stale claim corrected by
-    // Codex post-impl 2026-08-20).
-    for_each_exact_reading(prefix_index, key, tps_final_only, |matched_key, rowid| {
-        let Some(record) = dict.record(rowid) else {
-            return;
-        };
-        if !DictionaryReader::passes_filter(record.bitmask, record.kautian_subtag, &filter) {
-            return;
-        }
-        // v3.5.8 — same `tl_abbrev` collision guard as the span-local
-        // path so the whole-sentence walker never picks an acronym
-        // record as an edge representative. v3.5.9 B-2 — routes through
-        // `matches_continuous_toneless_key` so the matching `poj_abbrev`
-        // filter fires on `poj:` keys. §35 — validated against the
-        // MATCHED key (see `for_each_exact_reading`).
-        if !matches_continuous_toneless_key(matched_key, &record.tl) {
-            return;
-        }
-        // A3 (§41) — this walker edge ends on the keyboard space the shadow
-        // stripped, so slot 0 must be synthesized from the pinned unmarked
-        // tone only. Without it the span-local list and the walker's
-        // whole-sentence slot 0 would disagree and a wrong-tone word would
-        // reappear at index 0 — the same split the explicit-tone fix (§17)
-        // closed for TL/POJ digits.
-        if tone_pinned && !reading_passes_space_pin(matched_key, &record.tl) {
-            return;
-        }
-        let effective = DictionaryReader::effective_source_bitmask(
-            record.bitmask,
-            record.kautian_subtag,
-            &filter,
-        );
-        let cand = record_to_candidate(
-            record,
-            effective,
-            consumed_span,
-            freq_map,
-            now_ms,
-            COVERAGE_KIND_FULL,
-        );
-        let better = match &best {
-            None => true,
-            Some(b) => NonNanF32::new(cand.score) > NonNanF32::new(b.score),
-        };
-        if better {
-            best = Some(cand);
-        }
-    });
+    // A multi-syllable edge MAY span a stripped separator (§31 cross-space
+    // phrase edges), which is why the caller computes and passes
+    // `tps_final_only` in edge coordinates rather than this fn assuming
+    // there are no barriers (stale claim corrected by Codex post-impl
+    // 2026-08-20).
+    exact_candidates_for_key(
+        key,
+        tps_final_only,
+        tone_pinned,
+        consumed_span,
+        &filter,
+        ctx,
+        |cand| {
+            // Strict `>`: on a tie the FIRST rowid stays (determinism).
+            let better = match &best {
+                None => true,
+                Some(b) => NonNanF32::new(cand.score) > NonNanF32::new(b.score),
+            };
+            if better {
+                best = Some(cand);
+            }
+        },
+    );
     best
 }
 
@@ -1087,7 +1030,7 @@ pub fn best_candidate_for_key_with_barriers(
 /// `n=1`).
 ///
 /// Scans **all** `prefix_index.lookup_exact("hanzi:<hanji>")` rowids —
-/// NOT [`best_candidate_for_key`], which returns a single ranking
+/// NOT [`best_candidate_for_key_with_barriers`], which returns a single ranking
 /// winner and would make a presentation separator depend on score
 /// (Codex pre-impl Q2 2026-05-18) — and returns `true` iff some record
 /// has `syllable_count == <argument>` **and** `hanzi == Some(hanji)`.
@@ -1153,19 +1096,40 @@ pub fn compound_hanji_exists(
 /// `hanzi:` keys pass through both guards untouched. A `tl:` key whose
 /// body still carries an ASCII digit is a numeric-tone (`tl:<tl_num>`)
 /// key, NOT a continuous toneless key, so the guard is skipped rather
-/// than silently filtering a non-continuous caller.
+/// than silently filtering a non-continuous caller ([`toneless_body`]).
 fn matches_continuous_tl_toneless_key(key: &str, record_tl: &str) -> bool {
-    let Some(body) = key.strip_prefix("tl:") else {
-        return true;
-    };
-    if body.bytes().any(|b| b.is_ascii_digit()) {
-        return true;
-    }
-    let toneless: String = phonetics::normalize_input(record_tl)
+    toneless_body(key, "tl:")
+        .is_none_or(|body| face_eq_with_nasal_oo_alias(&tl_toneless_face(record_tl), body))
+}
+
+/// Body of `key` when it is a toneless-surface key of `family` (`"tl:"` /
+/// `"poj:"` / `"tps:"`, colon included); `None` for any other family and
+/// for a tone-bearing body — an ASCII digit for TL/POJ, a Bopomofo tone
+/// mark for TPS. Those are numeric-tone keys (`tl:<tl_num>` /
+/// `poj:<poj_num>` / `tps:<tps_num>`) reserved for the non-continuous
+/// paths, so every toneless guard passes them through unfiltered rather
+/// than silently filtering a non-continuous caller. The surface
+/// classification is [`KeyFace::of`]'s.
+fn toneless_body<'a>(key: &'a str, family: &str) -> Option<&'a str> {
+    let body = key.strip_prefix(family)?;
+    matches!(
+        KeyFace::of(family, body)?,
+        KeyFace::TlNotone | KeyFace::PojNotone | KeyFace::TpsNotone
+    )
+    .then_some(body)
+}
+
+/// The record's `tl_notone` face — what `create_fst.py` indexes under
+/// `tl:` — reconstructed from `record.tl`. `normalize_input` yields a
+/// per-syllable numeric-tone form (`gín-á-lâng` → `gin2a2lang5`), so every
+/// ASCII tone digit is dropped to reach the stored fused surface
+/// (`remove_tone(to_numeric_tone(tl)) == tl_notone` holds for every
+/// `dictionary.csv` row — verified pre-impl; `tests/roman_num_face_parity.rs`).
+fn tl_toneless_face(record_tl: &str) -> String {
+    phonetics::normalize_input(record_tl)
         .chars()
         .filter(|c| !c.is_ascii_digit())
-        .collect();
-    face_eq_with_nasal_oo_alias(&toneless, body)
+        .collect()
 }
 
 /// `face == body`, also accepting the nasal-`oo` alias respelling of the face.
@@ -1186,7 +1150,7 @@ fn face_eq_with_nasal_oo_alias(face: &str, body: &str) -> bool {
     face == body || phonetics::nasal_oo_alias_spelling(face).is_some_and(|alias| alias == body)
 }
 
-/// v3.5.9 B-2 — POJ analog of [`matches_continuous_tl_toneless_key`].
+/// The record's `poj_notone` face — v3.5.9 B-2 POJ counterpart of [`tl_toneless_face`].
 /// `record.tl` is the only romanization the engine record carries
 /// (Codex BLOCK #1 — `dict.bin` has no `poj` field), so we derive the
 /// `poj_notone` surface at runtime byte-for-byte the way
@@ -1220,17 +1184,17 @@ fn face_eq_with_nasal_oo_alias(face: &str, body: &str) -> bool {
 /// `engine/lexicon/tests/poj_notone_parity.rs` pins this against
 /// every row of `dictionary/output/dictionary.csv`.
 ///
-/// Scope mirrors the TL guard: a `poj:` key whose body still carries
-/// an ASCII digit is treated as a numeric-tone key and passed through.
+fn poj_toneless_face(record_tl: &str) -> String {
+    derive_poj_notone_for_match(&phonetics::api::tl_display_to_poj_display(record_tl))
+}
+
+/// v3.5.9 B-2 — POJ analog of [`matches_continuous_tl_toneless_key`]:
+/// `record_tl`'s [`poj_toneless_face`] equals the `poj:` body. Scope
+/// mirrors the TL guard: a `poj:` key whose body still carries an ASCII
+/// digit is treated as a numeric-tone key and passed through.
 fn matches_continuous_poj_toneless_key(key: &str, record_tl: &str) -> bool {
-    let Some(body) = key.strip_prefix("poj:") else {
-        return true;
-    };
-    if body.bytes().any(|b| b.is_ascii_digit()) {
-        return true;
-    }
-    let poj_display = phonetics::api::tl_display_to_poj_display(record_tl);
-    face_eq_with_nasal_oo_alias(&derive_poj_notone_for_match(&poj_display), body)
+    toneless_body(key, "poj:")
+        .is_none_or(|body| face_eq_with_nasal_oo_alias(&poj_toneless_face(record_tl), body))
 }
 
 /// v3.5.9 B-2 — encoding-only POJ-notone derivation; helper for
@@ -1300,18 +1264,32 @@ fn derive_poj_notone_for_match(poj_display: &str) -> String {
 /// so the guard passes through (mirrors TL/POJ guards' digit-in-body
 /// bypass).
 fn matches_continuous_tps_toneless_key(key: &str, record_tl: &str) -> bool {
-    let Some(body) = key.strip_prefix("tps:") else {
-        return true;
-    };
-    if body.chars().any(phonetics::is_tps_tone_mark) {
-        return true;
-    }
-    let primary = phonetics::tps_notone_from_tl(record_tl);
-    if primary == body {
-        return true;
-    }
+    toneless_body(key, "tps:").is_none_or(|body| tps_face_eq(&tps_toneless_faces(record_tl), body))
+}
+
+/// The record's `tps_notone` face plus its C-3a or→er dialect variant
+/// (`None` when the primary has no ㄜ to substitute) — the two TPS
+/// toneless keys the build emits per row.
+fn tps_toneless_faces(record_tl: &str) -> (String, Option<String>) {
+    with_tps_or_variant(phonetics::tps_notone_from_tl(record_tl))
+}
+
+/// Pair a TPS face with its C-3a or→er dialect variant
+/// ([`phonetics::tps_notone_or_variant`]; matches
+/// `dictionary/common/notone.py::apply_or_dialect_variant`).
+fn with_tps_or_variant(primary: String) -> (String, Option<String>) {
     let variant = phonetics::tps_notone_or_variant(&primary);
-    !variant.is_empty() && variant == body
+    (primary, (!variant.is_empty()).then_some(variant))
+}
+
+/// `body` IS one of the two faces.
+fn tps_face_eq((primary, variant): &(String, Option<String>), body: &str) -> bool {
+    primary == body || variant.as_deref() == Some(body)
+}
+
+/// One of the two faces starts with `body`.
+fn tps_face_starts_with((primary, variant): &(String, Option<String>), body: &str) -> bool {
+    primary.starts_with(body) || variant.as_deref().is_some_and(|v| v.starts_with(body))
 }
 
 /// §35 abbrev-face guard for the TPS partial-prefix path: true when
@@ -1326,18 +1304,11 @@ fn matches_continuous_tps_toneless_key(key: &str, record_tl: &str) -> bool {
 /// acronym faces coincide with them) must keep its legitimate variant
 /// hit (Codex confirms 2026-08-19).
 fn is_tps_acronym_face_hit(matched_body: &str, record_tl: &str) -> bool {
-    let abbrev_face = phonetics::tps_abbrev_from_tl(record_tl);
-    let abbrev_variant = phonetics::tps_notone_or_variant(&abbrev_face);
-    let is_abbrev_face = matched_body == abbrev_face
-        || (!abbrev_variant.is_empty() && matched_body == abbrev_variant);
-    if !is_abbrev_face {
+    let abbrev_faces = with_tps_or_variant(phonetics::tps_abbrev_from_tl(record_tl));
+    if !tps_face_eq(&abbrev_faces, matched_body) {
         return false;
     }
-    let notone = phonetics::tps_notone_from_tl(record_tl);
-    let notone_variant = phonetics::tps_notone_or_variant(&notone);
-    let matched_is_a_toneless_face =
-        matched_body == notone || (!notone_variant.is_empty() && matched_body == notone_variant);
-    !matched_is_a_toneless_face
+    !tps_face_eq(&tps_toneless_faces(record_tl), matched_body)
 }
 
 /// Select the toneless-key guard by FST key family. Production span-local
@@ -1370,9 +1341,9 @@ fn matches_continuous_toneless_key(key: &str, record_tl: &str) -> bool {
 /// rowid whose `tl_abbrev` happens to start with `taigi`.
 ///
 /// The variant returns `true` when `reconstructed_toneless.starts_with(
-/// body)`. Reuses per-mode `derive_poj_notone_for_match` /
-/// `phonetics::tps_notone_from_tl` / `phonetics::normalize_input` so the
-/// reconstruction path is byte-identical to the equality guards. The
+/// body)`. Reuses the per-family face reconstruction ([`tl_toneless_face`] /
+/// [`poj_toneless_face`] / [`tps_toneless_faces`]) and [`toneless_body`] so
+/// the reconstruction path is byte-identical to the equality guards. The
 /// digit-in-body pass-through stays identical too — numeric-tone keys
 /// are reserved for non-continuous code paths.
 ///
@@ -1389,17 +1360,8 @@ fn matches_continuous_toneless_prefix_key(key: &str, record_tl: &str) -> bool {
 }
 
 fn matches_continuous_tl_toneless_prefix_key(key: &str, record_tl: &str) -> bool {
-    let Some(body) = key.strip_prefix("tl:") else {
-        return true;
-    };
-    if body.bytes().any(|b| b.is_ascii_digit()) {
-        return true;
-    }
-    let toneless: String = phonetics::normalize_input(record_tl)
-        .chars()
-        .filter(|c| !c.is_ascii_digit())
-        .collect();
-    starts_with_face_or_nasal_oo_alias(&toneless, body)
+    toneless_body(key, "tl:")
+        .is_none_or(|body| starts_with_face_or_nasal_oo_alias(&tl_toneless_face(record_tl), body))
 }
 
 /// `face.starts_with(body)`, also accepting the nasal-`oo` alias respelling of
@@ -1430,29 +1392,13 @@ fn starts_with_face_or_nasal_oo_alias(face: &str, body: &str) -> bool {
 }
 
 fn matches_continuous_poj_toneless_prefix_key(key: &str, record_tl: &str) -> bool {
-    let Some(body) = key.strip_prefix("poj:") else {
-        return true;
-    };
-    if body.bytes().any(|b| b.is_ascii_digit()) {
-        return true;
-    }
-    let poj_display = phonetics::api::tl_display_to_poj_display(record_tl);
-    starts_with_face_or_nasal_oo_alias(&derive_poj_notone_for_match(&poj_display), body)
+    toneless_body(key, "poj:")
+        .is_none_or(|body| starts_with_face_or_nasal_oo_alias(&poj_toneless_face(record_tl), body))
 }
 
 fn matches_continuous_tps_toneless_prefix_key(key: &str, record_tl: &str) -> bool {
-    let Some(body) = key.strip_prefix("tps:") else {
-        return true;
-    };
-    if body.chars().any(phonetics::is_tps_tone_mark) {
-        return true;
-    }
-    let primary = phonetics::tps_notone_from_tl(record_tl);
-    if primary.starts_with(body) {
-        return true;
-    }
-    let variant = phonetics::tps_notone_or_variant(&primary);
-    !variant.is_empty() && variant.starts_with(body)
+    toneless_body(key, "tps:")
+        .is_none_or(|body| tps_face_starts_with(&tps_toneless_faces(record_tl), body))
 }
 
 /// The typed input must reach INTO a record's FINAL syllable for a
@@ -1556,15 +1502,15 @@ impl<'a> SyllableReach<'a> {
                 } else {
                     phonetics::tps_notone_syllable_ends_from_tl(record_tl)
                 };
-                if primary.starts_with(matched_body) {
-                    return Some(ends);
-                }
-                let variant = phonetics::tps_notone_or_variant(&primary);
+                let faces = with_tps_or_variant(primary);
                 debug_assert!(
-                    variant.is_empty() || variant.len() == primary.len(),
+                    faces
+                        .1
+                        .as_ref()
+                        .is_none_or(|variant| variant.len() == faces.0.len()),
                     "or-variant substitution must preserve byte offsets",
                 );
-                (!variant.is_empty() && variant.starts_with(matched_body)).then_some(ends)
+                tps_face_starts_with(&faces, matched_body).then_some(ends)
             }
             face @ (KeyFace::TlNum | KeyFace::TlNotone) => {
                 let num = phonetics::tl_num_syllable_ends_from_tl(record_tl);
@@ -1683,17 +1629,17 @@ fn record_to_candidate(
     // its other source's tier, not kautian's (DD6 ranking-weight drop).
     let bitmask = effective_bitmask;
     let mode = derive_mode(hanzi.as_deref());
-    // Phase 9 Item 5: keep `roman` = `tl` alongside `display_text`
-    // before `hanzi.unwrap_or(tl)` consumes the TL string. `hanji`
-    // mirrors `DictionaryRecord.hanzi` verbatim so the proto3
-    // `optional` field can preserve the absent-vs-empty distinction.
-    let roman = tl.clone();
-    // R2 identity sidechannel: `DictionaryRecord.tl` is already canonical
-    // TL, so `canonical_tl` equals `roman` here BEFORE the composing-layer
-    // recase / POJ-render passes rewrite `roman`.
-    let canonical_tl = tl.clone();
-    let hanji = hanzi.clone();
-    let display_text = hanzi.unwrap_or(tl);
+    // Phase 9 Item 5: `roman` = `tl` alongside `display_text`. `hanji`
+    // mirrors `DictionaryRecord.hanzi` verbatim so the proto3 `optional`
+    // field can preserve the absent-vs-empty distinction. R2 identity
+    // sidechannel: `DictionaryRecord.tl` is already canonical TL, so
+    // `canonical_tl` equals `roman` here BEFORE the composing-layer recase /
+    // POJ-render passes rewrite `roman`. `display_text` is derived last so
+    // each source string is cloned once, not twice.
+    let roman = tl;
+    let canonical_tl = roman.clone();
+    let hanji = hanzi;
+    let display_text = hanji.clone().unwrap_or_else(|| roman.clone());
     // Phase 9.3a + R5 pair-key (#7): look up the candidate's
     // user-frequency snapshot by the `(display_text, canonical_tl)`
     // identity — the same pair the platform writes to `user_frequency.db`
@@ -1859,29 +1805,24 @@ fn custom_entry_to_candidate(
 /// - Survivor **insertion order is preserved** so the downstream
 ///   `SortKey.stable_idx` stays deterministic.
 fn dedupe_by_roman_hanji_span(out: &mut Vec<RawCandidate>) {
-    use std::collections::HashMap;
-    // key → (winning source rank, index of winner in `out`).
-    let mut best: HashMap<(String, Option<String>, ConsumedSpan), (u8, usize)> =
+    use std::collections::{HashMap, HashSet};
+    // key (borrowed from `out`) → (winning source rank, index of winner).
+    let mut best: HashMap<(&str, Option<&str>, ConsumedSpan), (u8, usize)> =
         HashMap::with_capacity(out.len());
     for (i, c) in out.iter().enumerate() {
         let rank = source_tier_rank(c.bitmask, c.is_custom);
-        let key = (c.roman.clone(), c.hanji.clone(), c.consumed_span);
-        match best.get(&key) {
-            // Strictly lower rank replaces; equal rank keeps the
-            // earlier index (no replace) → deterministic tie-break.
-            Some(&(best_rank, _)) if rank < best_rank => {
-                best.insert(key, (rank, i));
-            }
-            None => {
-                best.insert(key, (rank, i));
-            }
-            _ => {}
+        let key = (c.roman.as_str(), c.hanji.as_deref(), c.consumed_span);
+        // Strictly lower rank replaces; equal rank keeps the earlier index
+        // (no replace) → deterministic tie-break.
+        let slot = best.entry(key).or_insert((rank, i));
+        if rank < slot.0 {
+            *slot = (rank, i);
         }
     }
     if best.len() == out.len() {
         return; // no duplicates — common production path, skip rebuild.
     }
-    let winners: std::collections::HashSet<usize> = best.values().map(|&(_, idx)| idx).collect();
+    let winners: HashSet<usize> = best.into_values().map(|(_, idx)| idx).collect();
     let mut idx = 0usize;
     out.retain(|_| {
         let keep = winners.contains(&idx);

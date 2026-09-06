@@ -82,8 +82,6 @@ use crate::shadow::{
     build_continuous_keys, build_partial_prefix_key, custom_toneless_key,
     greedy_longest_syllabification, span_min_syllable_count, strip_tones_for_mode,
 };
-use lexicon::dictionary_reader::DictionaryReader;
-use lexicon::prefix_index::PrefixIndex;
 use lexicon::{
     best_candidate_for_key_with_barriers, derive_mode, fetch_candidates_for_keys_with_barriers,
     fetch_partial_prefix_candidates, fetch_partial_prefix_candidates_unbounded, CandidateMode,
@@ -439,23 +437,33 @@ fn fetch_via_lexicon_partial_inner_impl(
 /// Returns `None` when the synth must be suppressed (trailing-hyphen
 /// shadow short of raw, or the walker cannot span the buffer) — caller
 /// leaves the span-local list untouched (pre-S2 behavior preserved).
-#[allow(clippy::too_many_arguments)]
+///
+/// `continuous_keys` is the seam's single `build_continuous_keys` result
+/// (shadow / lattice / barriers — the per-key vectors are the span-local
+/// fetch's, unused here); `ctx` is the same [`ContinuousFetchCtx`] the
+/// span-local fetch reads (`mode` / `custom` / `freq_map` / `now_ms` /
+/// `enabled_sources_bitmask` + the dictionary readers).
 fn fetch_walker_slot0_inner(
     raw: &str,
     raw_len: u32,
-    freq_map: &FrequencyMap,
-    now_ms: i64,
-    mode: phonetics::InputMode,
-    custom: &[CustomEntry],
-    shadow: &str,
-    shadow_to_raw_end: &[usize],
-    lattice: &crate::lattice::Lattice,
-    barriers: &[usize],
+    continuous_keys: &crate::shadow::ContinuousKeys,
     inv: &SyllableInventory,
-    prefix: &PrefixIndex,
-    dict: &DictionaryReader,
-    enabled_sources_bitmask: u32,
+    ctx: &ContinuousFetchCtx<'_>,
 ) -> Option<WalkerSlot0> {
+    let crate::shadow::ContinuousKeys {
+        shadow,
+        shadow_to_raw_end,
+        lattice,
+        barriers,
+        ..
+    } = continuous_keys;
+    let ContinuousFetchCtx {
+        freq_map,
+        now_ms,
+        custom,
+        mode,
+        ..
+    } = *ctx;
     // v3.5.8 S6 (Codex pre-impl S6 Q2/Q6, 2026-05-17) — per-fetch
     // map from a custom entry's normalized toneless key to the
     // entry. `custom_toneless_key` reuses the SAME shadow pipeline
@@ -582,7 +590,7 @@ fn fetch_walker_slot0_inner(
         // `custom_dictionary.db` entry whose normalized toneless
         // roman equals this edge's key OVERRIDES the `dict.bin`
         // best candidate for the edge (checked BEFORE
-        // `best_candidate_for_key`). Same source-rank-0 precedence
+        // `best_candidate_for_key_with_barriers`). Same source-rank-0 precedence
         // custom has in the span-local `(roman,hanji,consumed_span)`
         // dedupe — an unconditional edge-content override, NOT a
         // cost competition (segmentation safety comes from the
@@ -645,17 +653,14 @@ fn fetch_walker_slot0_inner(
         // source filter as the span-local path so a whole-sentence parse
         // cannot re-surface (at slot 0) a word whose only source the user
         // toggled off. Custom edges above are unconditional (custom is not
-        // a toggleable source); dict edges honour `enabled_sources_bitmask`.
+        // a toggleable source); dict edges honour
+        // `ctx.enabled_sources_bitmask`.
         match best_candidate_for_key_with_barriers(
             &dict_key,
             &edge_final_only,
             edge_tone_pinned,
             raw_span,
-            freq_map,
-            now_ms,
-            prefix,
-            dict,
-            enabled_sources_bitmask,
+            ctx,
         ) {
             Some(c) => {
                 // v3.5.8 S3 (Codex pre-impl Q4d seam, 2026-05-16):
@@ -667,7 +672,7 @@ fn fetch_walker_slot0_inner(
                 // `lexicon::record_to_candidate`), so the same
                 // snapshot the span-local path consults applies
                 // here. Looked up BEFORE the field moves below.
-                // `best_candidate_for_key` / `record_to_candidate`
+                // `best_candidate_for_key_with_barriers` / `record_to_candidate`
                 // are deliberately UNTOUCHED — their internal
                 // `user_freq_boost` answers "which record wins
                 // inside this edge" (homophone disambiguation);
@@ -990,34 +995,17 @@ pub(crate) fn assemble_candidates(
         // [`crate::syllabifier::valid_span_endings_lowered`].
         // Inv absent → empty keys and walker skipped (graceful
         // degradation; matches pre-A2 / pre-C-3b behavior).
-        let (keys, keys_final_only, keys_tone_pinned, barriers, shadow_lattice) = match inv {
-            Some(inv) => {
-                // Literal left-anchored keys + §35 barrier metadata. A word
-                // can be hidden because the per-keystroke auto-correct picked
-                // the wrong one of two locally-indistinguishable glyph
-                // readings (考卷 / 毋是 / 雞胸); the recovery is the
-                // ambiguity-aware LOOKUP (`lookup_exact_tps_readings`) fed by
-                // this metadata — the key text stays the user's letters.
-                let continuous_keys = build_continuous_keys(raw, inv, mode);
-                let crate::shadow::ContinuousKeys {
-                    keys,
-                    final_only,
-                    tone_pinned,
-                    shadow,
-                    shadow_to_raw_end,
-                    lattice,
-                    barriers,
-                } = continuous_keys;
-                (
-                    keys,
-                    final_only,
-                    tone_pinned,
-                    barriers,
-                    Some((shadow, shadow_to_raw_end, lattice, inv)),
-                )
-            }
-            None => (Vec::new(), Vec::new(), Vec::new(), Vec::new(), None),
-        };
+        // Literal left-anchored keys + §35 barrier metadata. A word can be
+        // hidden because the per-keystroke auto-correct picked the wrong one
+        // of two locally-indistinguishable glyph readings (考卷 / 毋是 /
+        // 雞胸); the recovery is the ambiguity-aware LOOKUP
+        // (`lookup_exact_tps_readings`) fed by this metadata — the key text
+        // stays the user's letters. `None` (no inventory) = empty keys +
+        // walker skipped.
+        let continuous_keys = inv.map(|inv| build_continuous_keys(raw, inv, mode));
+        let keys: &[(ConsumedSpan, String)] = continuous_keys
+            .as_ref()
+            .map_or(&[], |continuous_keys| &continuous_keys.keys);
 
         // ---- Step 2: empty-keys partial-prefix vs span-local fetch.
         let mut candidates: Vec<RawCandidate> = if keys.is_empty() {
@@ -1045,16 +1033,15 @@ pub(crate) fn assemble_candidates(
             }
         } else {
             // ---- Step 2b: span-local fetch.
-            let mut c = if let Some(ctx) = lex_ctx.as_ref() {
-                fetch_candidates_for_keys_with_barriers(
-                    &keys,
-                    &keys_final_only,
-                    &keys_tone_pinned,
+            let mut c = match (continuous_keys.as_ref(), lex_ctx.as_ref()) {
+                (Some(continuous_keys), Some(ctx)) => fetch_candidates_for_keys_with_barriers(
+                    &continuous_keys.keys,
+                    &continuous_keys.final_only,
+                    &continuous_keys.tone_pinned,
                     raw_len,
                     ctx,
-                )
-            } else {
-                Vec::new()
+                ),
+                _ => Vec::new(),
             };
             // §35 bare-nasal merge (Codex pre-impl Q3): a single-glyph TPS
             // buffer whose ONLY span keys come from ambiguity expansion
@@ -1064,10 +1051,9 @@ pub(crate) fn assemble_candidates(
             // Run BOTH and let the (roman, hanji, span) dedupe collapse
             // overlaps; span results stay first.
             if let Some(ctx) = lex_ctx.as_ref() {
-                let literal_glyph_in_inventory =
-                    shadow_lattice.as_ref().is_some_and(|(_, _, _, inv)| {
-                        inv.contains_in(phonetics::InputMode::Tps, &raw.to_lowercase())
-                    });
+                let literal_glyph_in_inventory = inv.is_some_and(|inv| {
+                    inv.contains_in(phonetics::InputMode::Tps, &raw.to_lowercase())
+                });
                 let bare_expanded_only = mode == phonetics::InputMode::Tps
                     && raw.chars().count() == 1
                     && raw.chars().next().is_some_and(phonetics::is_tps_char)
@@ -1121,25 +1107,12 @@ pub(crate) fn assemble_candidates(
             // [`WalkerSlot0`] (cost-named); convert to wire
             // `RawCandidate` with `score = -(cost as f32)` here.
             {
-                if let (Some((shadow, shadow_to_raw_end, lattice, inv)), Some(prefix), Some(dict)) =
-                    (&shadow_lattice, prefix, dict)
+                if let (Some(continuous_keys), Some(inv), Some(ctx)) =
+                    (continuous_keys.as_ref(), inv, lex_ctx.as_ref())
                 {
-                    if let Some(slot0) = fetch_walker_slot0_inner(
-                        raw,
-                        raw_len,
-                        freq_map,
-                        now_ms,
-                        mode,
-                        custom,
-                        shadow,
-                        shadow_to_raw_end,
-                        lattice,
-                        &barriers,
-                        inv,
-                        prefix,
-                        dict,
-                        enabled_sources_bitmask,
-                    ) {
+                    if let Some(slot0) =
+                        fetch_walker_slot0_inner(raw, raw_len, continuous_keys, inv, ctx)
+                    {
                         // R2 identity sidechannel: read the canonical TL the
                         // walker already folded once (`WalkerSlot0.canonical_tl`,
                         // from the synth `roman`) — do NOT re-fold here. In the
@@ -1295,10 +1268,15 @@ pub(crate) fn assemble_candidates(
             // edge-by-edge in `fetch_walker_slot0_inner`; span-local
             // recases here at Step 3) normalizes to the same `(roman,
             // hanji, consumed_span)` triple and collapses.
-            if let (Some((shadow, shadow_to_raw_end, _, _)), Some(ctx)) =
-                (&shadow_lattice, lex_ctx.as_ref())
+            if let (Some(continuous_keys), Some(ctx)) = (continuous_keys.as_ref(), lex_ctx.as_ref())
             {
-                if synth_consumed_span(shadow_to_raw_end, shadow.len(), raw_len).is_some() {
+                if synth_consumed_span(
+                    &continuous_keys.shadow_to_raw_end,
+                    continuous_keys.shadow.len(),
+                    raw_len,
+                )
+                .is_some()
+                {
                     // v3.5.9 Codex PR #351 r3321758666 — use the un-truncated
                     // pool so the FULL-block exclude is applied BEFORE the
                     // `PARTIAL_PREFIX_OUTPUT_CAP` truncate. Otherwise, for

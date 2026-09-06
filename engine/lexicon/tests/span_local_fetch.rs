@@ -31,7 +31,7 @@ use fst::SetBuilder;
 use lexicon::dictionary_reader::DictionaryReader;
 use lexicon::prefix_index::PrefixIndex;
 use lexicon::{
-    best_candidate_for_key, fetch_candidates_for_keys_with_barriers,
+    best_candidate_for_key_with_barriers, fetch_candidates_for_keys_with_barriers,
     fetch_partial_prefix_candidates, fetch_partial_prefix_candidates_unbounded, CandidateMode,
     ConsumedSpan, ContinuousFetchCtx, CustomEntry, RawCandidate, COVERAGE_KIND_FULL,
     COVERAGE_KIND_PARTIAL_PREFIX, FORM_NOTONE, PARTIAL_PREFIX_HYDRATE_CAP,
@@ -1770,7 +1770,7 @@ fn item12_empty_custom_is_noop() {
     assert_eq!(out[0].display_text, "台語");
 }
 
-// ----- v3.5.8 S2 — best_candidate_for_key (whole-sentence walker seam) -----
+// ----- v3.5.8 S2 — best_candidate_for_key_with_barriers (whole-sentence walker seam) -----
 
 #[test]
 fn best_candidate_for_key_returns_highest_score_on_collision() {
@@ -1797,14 +1797,12 @@ fn best_candidate_for_key_returns_highest_score_on_collision() {
             },
         ],
     );
-    let best = best_candidate_for_key(
+    let best = best_candidate_for_key_with_barriers(
         "tl:taiuan",
+        &[],
+        false,
         (0, 6),
-        &FrequencyMap::new(),
-        0,
-        &prefix_index,
-        &dict,
-        u32::MAX,
+        &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     )
     .expect("key has dict hits");
     assert_eq!(best.display_text, "臺灣", "highest-score row must win");
@@ -1833,14 +1831,12 @@ fn best_candidate_for_key_none_when_key_absent() {
         }],
     );
     assert!(
-        best_candidate_for_key(
+        best_candidate_for_key_with_barriers(
             "tl:zzz",
+            &[],
+            false,
             (0, 3),
-            &FrequencyMap::new(),
-            0,
-            &prefix_index,
-            &dict,
-            u32::MAX,
+            &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
         )
         .is_none(),
         "absent key must return None"
@@ -1861,7 +1857,7 @@ fn continuous_drops_tl_abbrev_collision_keeps_genuine_toneless() {
     // Both rowids are indexed under `tl:gi`. 語 via real toneless;
     // 外夷 via its `tl_abbrev` ("gi") even though its toneless is
     // "guai". 外夷 is given a much higher freq so the pre-guard bug
-    // (it dominating the strip and `best_candidate_for_key`) would be
+    // (it dominating the strip and `best_candidate_for_key_with_barriers`) would be
     // obvious if the guard regressed.
     let (prefix_index, dict) = build_fixture(
         "rc1-abbrev",
@@ -1901,18 +1897,16 @@ fn continuous_drops_tl_abbrev_collision_keeps_genuine_toneless() {
 
     // Walker edge provider: must pick the genuine record, never the
     // higher-freq acronym collision.
-    let best = best_candidate_for_key(
+    let best = best_candidate_for_key_with_barriers(
         "tl:gi",
+        &[],
+        false,
         (0, 2),
-        &FrequencyMap::new(),
-        0,
-        &prefix_index,
-        &dict,
-        u32::MAX,
+        &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     )
     .expect("genuine toneless candidate exists");
     assert_eq!(
         best.display_text, "語",
-        "best_candidate_for_key must skip the tl_abbrev collision"
+        "best_candidate_for_key_with_barriers must skip the tl_abbrev collision"
     );
 }
