@@ -19,7 +19,7 @@ final class HorizontalCandidatePanel: CandidateBasePanel {
 
     private var itemViews: [CandidateItemView] = []
 
-    override var numberedItemViews: [CandidateItemView] { itemViews }
+    override var allItemViews: [CandidateItemView] { itemViews }
     private lazy var pageArrowView: CandidatePageArrowView = {
         let view = CandidatePageArrowView(style: style, metrics: metrics)
         view.onPageUp = { [weak self] in self?.navigate(.pageUp) }
@@ -166,19 +166,5 @@ final class HorizontalCandidatePanel: CandidateBasePanel {
 
     // MARK: - Chrome
 
-    override func applyHighlightColor(_ color: NSColor) {
-        for item in itemViews {
-            item.highlightColor = color
-        }
-    }
-
-    override func updateCorners() {
-        let size = frame.size
-        guard size.width > 0, size.height > 0 else { return }
-        if pageLayout.pages.count > 1 {
-            applyPillCorners(size: size)
-        } else {
-            super.updateCorners()
-        }
-    }
+    override var wantsPillCorners: Bool { pageLayout.pages.count > 1 }
 }

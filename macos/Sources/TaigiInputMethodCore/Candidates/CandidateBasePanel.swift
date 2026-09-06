@@ -143,14 +143,16 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
     // MARK: - Theme
 
     /// Re-resolves the highlight colour for the current accent and host, and
-    /// hands it to the subclass's cells.
+    /// repaints every cell with it.
     func syncTheme() {
         highlightColor = CandidateAccentColor.shared.highlightColor(
             style: style,
             hostBundleIdentifier: hostBundleIdentifier,
             appearance: effectiveAppearance,
         )
-        applyHighlightColor(highlightColor)
+        for item in allItemViews {
+            item.highlightColor = highlightColor
+        }
     }
 
     // MARK: - Placement
@@ -342,7 +344,9 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
     /// display-only re-render keeps it.
     var slotKeySet: CandidateSlotKeySet = .bareKeys
 
-    /// Every cell this layout currently draws a key beside, in any order.
+    /// Every cell this layout currently holds, in any order — the set both the
+    /// key labels (`refreshIndexLabels`) and the highlight colour (`syncTheme`)
+    /// are applied over.
     ///
     /// Overridden rather than held here because each layout keeps its own item
     /// views — the expandable one keeps two lists, since its grid rows are
@@ -350,8 +354,8 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
     /// above: a layout that forgot it would leave stale keys on the cells now
     /// on screen after a page turn or a scroll, which is the silent failure
     /// they all guard against.
-    var numberedItemViews: [CandidateItemView] {
-        preconditionFailure("layout subclasses must override numberedItemViews")
+    var allItemViews: [CandidateItemView] {
+        preconditionFailure("layout subclasses must override allItemViews")
     }
 
     /// Draws the key that picks each numbered cell, and blanks the rest.
@@ -372,18 +376,25 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
             guard let candidateIndex = candidateIndex(forSlot: slot) else { continue }
             keyByCandidate[candidateIndex] = CandidateIndexLabel.text(forSlot: slot, keySet: slotKeySet)
         }
-        for item in numberedItemViews {
+        for item in allItemViews {
             item.setIndexLabel(keyByCandidate[item.absoluteIndex] ?? "")
         }
     }
 
-    /// Repaints every cell with the freshly resolved highlight colour.
-    func applyHighlightColor(_: NSColor) {}
+    /// Whether the window's turning edge rounds into a pill right now: the
+    /// horizontal window with more than one page, the collapsed expandable
+    /// window with an overflow. The vertical layout never pages, so the
+    /// default stands for it.
+    var wantsPillCorners: Bool { false }
 
     /// Re-applies the corner mask for the current frame size and page state.
     func updateCorners() {
         let size = frame.size
         guard size.width > 0, size.height > 0 else { return }
+        if wantsPillCorners {
+            applyPillCorners(size: size)
+            return
+        }
         let radius: CGFloat = switch style {
         case .sequoia: Self.sequoiaCornerRadius
         case .tahoe: tahoeCornerRadius(for: size)
@@ -394,7 +405,7 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
     /// The shape a paged window's turning edge takes: Sequoia rounds only the
     /// arrow side into a half-height pill, Tahoe keeps the one radius it
     /// rounds every edge to, paged or not.
-    func applyPillCorners(size: NSSize) {
+    private func applyPillCorners(size: NSSize) {
         switch style {
         case .sequoia:
             backdrop.applyAsymmetricCorners(

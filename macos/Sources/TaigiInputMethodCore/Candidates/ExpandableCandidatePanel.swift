@@ -53,7 +53,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
     private var expandedItemViews: [CandidateItemView] = []
 
     /// Both lists: expanded, the grid's later rows are numbered too.
-    override var numberedItemViews: [CandidateItemView] { row0ItemViews + expandedItemViews }
+    override var allItemViews: [CandidateItemView] { row0ItemViews + expandedItemViews }
     private var separatorViews: [CandidateSeparatorView] = []
     private var chevronView: CandidateChevronView!
     /// Sequoia's expanded selection: a translucent bar under the selected
@@ -781,7 +781,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
     }
 
     private func updateHighlights() {
-        for item in numberedItemViews {
+        for item in allItemViews {
             item.isHighlighted = item.absoluteIndex == selectedIndex && !item.isHidden
         }
         // Renumbered with the highlight: expanded, the digits address the row
@@ -802,21 +802,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
 
     // MARK: - Chrome
 
-    override func applyHighlightColor(_ color: NSColor) {
-        for item in row0ItemViews + expandedItemViews {
-            item.highlightColor = color
-        }
-    }
-
-    override func updateCorners() {
-        let size = frame.size
-        guard size.width > 0, size.height > 0 else { return }
-        if displayMode == .collapsed, hasOverflow {
-            applyPillCorners(size: size)
-        } else {
-            super.updateCorners()
-        }
-    }
+    override var wantsPillCorners: Bool { displayMode == .collapsed && hasOverflow }
 
     private func removeExpandedItemViews() {
         expandedItemViews.forEach { $0.removeFromSuperview() }

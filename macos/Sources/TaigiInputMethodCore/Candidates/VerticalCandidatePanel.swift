@@ -47,7 +47,7 @@ final class VerticalCandidatePanel: CandidateBasePanel {
     private let rowsContainer = FlippedContainerView()
     private var itemViews: [CandidateItemView] = []
 
-    override var numberedItemViews: [CandidateItemView] { itemViews }
+    override var allItemViews: [CandidateItemView] { itemViews }
     private var separatorViews: [CandidateSeparatorView] = []
     private var boundsObserver: (any NSObjectProtocol)?
     private var scrollerStyleObserver: (any NSObjectProtocol)?
@@ -399,12 +399,6 @@ final class VerticalCandidatePanel: CandidateBasePanel {
     }
 
     // MARK: - Chrome
-
-    override func applyHighlightColor(_ color: NSColor) {
-        for item in itemViews {
-            item.highlightColor = color
-        }
-    }
 
     private func handleScrollerStyleChange() {
         scrollView.scrollerStyle = NSScroller.preferredScrollerStyle
