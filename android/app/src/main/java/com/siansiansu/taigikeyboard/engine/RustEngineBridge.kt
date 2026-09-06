@@ -739,10 +739,16 @@ object RustEngineBridge {
      * bridge. `build` fills the slice payload (and any generation /
      * config snapshot) on a [Request.Builder] whose id is already
      * allocated from the process-wide counter. Both the JNI call and
-     * `Response.parseFrom` sit inside a `try/Throwable` so no failure
-     * escapes into the keystroke path; every failure mode goes through
-     * [recordFailure] under `op`. Returns `null` on any failure, else the
-     * envelope — callers check their own slice payload.
+     * `Response.parseFrom` catch `Exception` so an engine failure degrades
+     * to "no candidates" instead of taking the keystroke path down; every
+     * failure mode goes through [recordFailure] under `op`. `Error` is
+     * deliberately NOT caught — `OutOfMemoryError` and the `LinkageError`
+     * family mean the JVM is already unrecoverable, and swallowing them
+     * would surface the real fault somewhere later and harder to read.
+     * (`System.loadLibrary` runs in this object's initializer, so a
+     * missing library fails at first access, never here.) Returns `null`
+     * on any failure, else the envelope — callers check their own slice
+     * payload.
      */
     internal fun dispatch(
         op: String,
@@ -755,13 +761,13 @@ object RustEngineBridge {
             .build()
         val responseBytes = try {
             processRequestBytes(request.toByteArray())
-        } catch (t: Throwable) {
+        } catch (t: Exception) {
             recordFailure(op, "dispatch failed: $t")
             return null
         }
         val response = try {
             Response.parseFrom(responseBytes)
-        } catch (t: Throwable) {
+        } catch (t: Exception) {
             recordFailure(op, "response decode failed")
             return null
         }
