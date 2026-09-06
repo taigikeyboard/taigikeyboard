@@ -5,6 +5,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.net.Uri
 import androidx.core.database.sqlite.transaction
+import com.siansiansu.taigikeyboard.ime.core.db.rowCount
 import com.siansiansu.taigikeyboard.ime.core.db.vacuumBestEffort
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
@@ -189,10 +190,7 @@ class CustomDictionaryService(
         withContext(Dispatchers.IO) {
             initialize()
             val db = dbHelper?.readableDatabase ?: return@withContext
-            val count =
-                db.rawQuery("SELECT COUNT(*) FROM ${Table.NAME}", null).use {
-                    if (it.moveToFirst()) it.getInt(0) else 0
-                }
+            val count = db.rowCount(Table.NAME, fallback = 0)
             if (count > 0) return@withContext
             for (entry in defaultEntries) {
                 save(Entry(id = entry.id, roman = entry.roman, hanzi = entry.hanzi))
@@ -425,8 +423,7 @@ class CustomDictionaryService(
     fun totalCount(): Int {
         return try {
             val db = dbHelper?.readableDatabase ?: return -1
-            val cursor = db.rawQuery("SELECT COUNT(*) FROM ${Table.NAME}", null)
-            cursor.use { if (it.moveToFirst()) it.getInt(0) else -1 }
+            db.rowCount(Table.NAME, fallback = -1)
         } catch (_: Exception) {
             -1
         }

@@ -4,16 +4,13 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.compose.ui.text.font.FontFamily
 import androidx.core.net.toUri
 import com.siansiansu.taigikeyboard.content.ContentType
-import com.siansiansu.taigikeyboard.i18n.ProvideDisplayLanguage
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.typeface.TypefaceLoader
-import com.siansiansu.taigikeyboard.ui.setupEdgeToEdge
+import com.siansiansu.taigikeyboard.ui.setTaigiContent
 import com.siansiansu.taigikeyboard.ui.tabs.home.DetailScreen
-import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 import androidx.compose.ui.text.font.Typeface as ComposeTypeface
 
 // Generic detail page for feature explanations, FAQ, about-developer, and version history
@@ -29,43 +26,37 @@ class DetailActivity : ComponentActivity() {
         val contentType = intent.getStringExtra(EXTRA_CONTENT_TYPE) ?: ""
         val contentKeys = intent.getStringArrayExtra(EXTRA_CONTENT_KEYS) ?: emptyArray()
 
-        setupEdgeToEdge()
+        setTaigiContent(prefs) {
+            DetailScreen(
+                titleKey = titleKey,
+                contentType = contentType,
+                contentKeys = contentKeys,
+                fontFamily = fontFamily,
+                onNavigationAction = { action ->
+                    when (action) {
+                        ACTION_SETUP_GUIDE -> {
+                            startActivity(Intent(this, SetupGuideActivity::class.java))
+                        }
 
-        setContent {
-            ProvideDisplayLanguage(prefs) {
-                TaigiKeyboardTheme {
-                    DetailScreen(
-                        titleKey = titleKey,
-                        contentType = contentType,
-                        contentKeys = contentKeys,
-                        fontFamily = fontFamily,
-                        onNavigationAction = { action ->
-                            when (action) {
-                                ACTION_SETUP_GUIDE -> {
-                                    startActivity(Intent(this, SetupGuideActivity::class.java))
-                                }
-
-                                ACTION_ABOUT_DEVELOPER -> {
-                                    startActivity(
-                                        createIntent(
-                                            this,
-                                            titleKey = ContentType.KEY_ABOUT_DEVELOPER,
-                                            contentType = ContentType.ABOUT_DEVELOPER,
-                                            contentKeys = emptyArray(),
-                                        ),
-                                    )
-                                }
-                            }
-                        },
-                        onExternalUrl = { url ->
-                            startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
-                        },
-                        onNavigateBack = {
-                            onBackPressedDispatcher.onBackPressed()
-                        },
-                    )
-                }
-            }
+                        ACTION_ABOUT_DEVELOPER -> {
+                            startActivity(
+                                createIntent(
+                                    this,
+                                    titleKey = ContentType.KEY_ABOUT_DEVELOPER,
+                                    contentType = ContentType.ABOUT_DEVELOPER,
+                                    contentKeys = emptyArray(),
+                                ),
+                            )
+                        }
+                    }
+                },
+                onExternalUrl = { url ->
+                    startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
+                },
+                onNavigateBack = {
+                    onBackPressedDispatcher.onBackPressed()
+                },
+            )
         }
     }
 

@@ -10,6 +10,7 @@ import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.engine.assocLookup
 import com.siansiansu.taigikeyboard.engine.dictionaryFilters
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.ime.core.db.rowCount
 import com.siansiansu.taigikeyboard.ime.core.db.vacuumBestEffort
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
@@ -715,11 +716,7 @@ class NextWordService(
             val db = userDatabase ?: return@withContext
 
             try {
-                val countCursor = db.rawQuery("SELECT COUNT(*) FROM user_association", null)
-                val currentCount =
-                    countCursor.use {
-                        if (it.moveToFirst()) it.getInt(0) else 0
-                    }
+                val currentCount = db.rowCount("user_association", fallback = 0)
 
                 if (currentCount <= MAX_USER_ASSOCIATIONS) {
                     logger.debug(TAG) { "[PRUNE] No pruning needed: $currentCount <= $MAX_USER_ASSOCIATIONS" }

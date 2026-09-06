@@ -1,6 +1,7 @@
 package com.siansiansu.taigikeyboard.ime.dictionary
 
 import android.database.sqlite.SQLiteDatabase
+import com.siansiansu.taigikeyboard.ime.core.db.rowCount
 
 /**
  * Capacity policy for the custom-dictionary table. Owns the row-count cap
@@ -21,10 +22,7 @@ internal object CustomDictionaryCapacityPolicy {
     private const val TABLE_NAME = "custom_dictionary"
 
     /** Current row count. Returns 0 on query failure (treated as "not full"). */
-    fun currentEntryCount(db: SQLiteDatabase): Int =
-        db.rawQuery("SELECT COUNT(*) FROM $TABLE_NAME", null).use {
-            if (it.moveToFirst()) it.getInt(0) else 0
-        }
+    fun currentEntryCount(db: SQLiteDatabase): Int = db.rowCount(TABLE_NAME, fallback = 0)
 
     /** True when a row with the given [id] already exists. */
     fun entryExists(

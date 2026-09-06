@@ -1,4 +1,4 @@
-// Best-effort SQLite maintenance shared across the user-data services.
+// SQLite helpers shared across the user-data services.
 
 package com.siansiansu.taigikeyboard.ime.core.db
 
@@ -26,3 +26,16 @@ fun vacuumBestEffort(
         logger.w(tag, "vacuum.skipped", e)
     }
 }
+
+/**
+ * `SELECT COUNT(*)` over [table]; [fallback] is returned when the cursor is
+ * empty. [table] is interpolated into the SQL, so it MUST be a hardcoded table
+ * constant — never user input (`.claude/rules/security-rules.md` § SQL).
+ */
+internal fun SQLiteDatabase.rowCount(
+    table: String,
+    fallback: Int,
+): Int =
+    rawQuery("SELECT COUNT(*) FROM $table", null).use {
+        if (it.moveToFirst()) it.getInt(0) else fallback
+    }

@@ -4,14 +4,11 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import com.siansiansu.taigikeyboard.i18n.ProvideDisplayLanguage
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
-import com.siansiansu.taigikeyboard.ui.setupEdgeToEdge
+import com.siansiansu.taigikeyboard.ui.setTaigiContent
 import com.siansiansu.taigikeyboard.ui.tabs.dictionary.CustomDictionaryScreen
 import com.siansiansu.taigikeyboard.ui.tabs.dictionary.CustomDictionaryViewModel
-import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 
 // Custom dictionary management
 class CustomDictionaryActivity : ComponentActivity() {
@@ -26,19 +23,13 @@ class CustomDictionaryActivity : ComponentActivity() {
 
         val prefs = PrefHelper(this)
 
-        setupEdgeToEdge()
-
-        setContent {
-            ProvideDisplayLanguage(prefs) {
-                TaigiKeyboardTheme {
-                    CustomDictionaryScreen(
-                        viewModel = viewModel,
-                        onNavigateBack = {
-                            onBackPressedDispatcher.onBackPressed()
-                        },
-                    )
-                }
-            }
+        setTaigiContent(prefs) {
+            CustomDictionaryScreen(
+                viewModel = viewModel,
+                onNavigateBack = {
+                    onBackPressedDispatcher.onBackPressed()
+                },
+            )
         }
     }
 }

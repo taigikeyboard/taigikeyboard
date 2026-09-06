@@ -85,4 +85,34 @@ object DictionaryCsvCodec {
         }
         return entries
     }
+
+    // Association CSV: prev_word,prev_tl,next_word,next_tl,count — one bigram per line.
+    // Mirrors ios/.../App/Tabs/Dictionary/Utilities/CSVParsers.swift encode/decodeAssociationCSV.
+    fun encodeAssociationCSV(entries: List<NextWordService.AssociationEntry>): String =
+        buildString {
+            for (entry in entries) {
+                val fields = listOf(entry.prevWord, entry.prevTl, entry.nextWord, entry.nextTl).joinToString(",") { escape(it) }
+                append("$fields,${entry.count}\n")
+            }
+        }
+
+    // Rows with fewer than 5 columns, a non-numeric count, an empty next_word, or a
+    // non-positive count are skipped; extra trailing columns are ignored.
+    fun decodeAssociationCSV(csv: String): List<NextWordService.AssociationEntry> {
+        val entries = mutableListOf<NextWordService.AssociationEntry>()
+        for (line in csv.split("\n")) {
+            val trimmed = line.trim()
+            if (trimmed.isEmpty()) continue
+            val columns = parseLine(trimmed)
+            if (columns.size < 5) continue
+            val prevWord = columns[0].trim()
+            val prevTl = columns[1].trim()
+            val nextWord = columns[2].trim()
+            val nextTl = columns[3].trim()
+            val count = columns[4].trim().toIntOrNull() ?: continue
+            if (nextWord.isEmpty() || count <= 0) continue
+            entries.add(NextWordService.AssociationEntry(prevWord, prevTl, nextWord, nextTl, count))
+        }
+        return entries
+    }
 }

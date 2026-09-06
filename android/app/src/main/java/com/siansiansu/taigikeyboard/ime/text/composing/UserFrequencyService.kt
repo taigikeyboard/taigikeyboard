@@ -7,6 +7,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.database.sqlite.SQLiteStatement
 import com.siansiansu.taigikeyboard.BuildConfig
+import com.siansiansu.taigikeyboard.ime.core.db.rowCount
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.dictionary.FrequencyData
@@ -145,15 +146,7 @@ class UserFrequencyService(
         try {
             val db = dbHelper?.readableDatabase ?: return
 
-            val countCursor =
-                db.rawQuery(
-                    "SELECT COUNT(*) FROM ${Table.NAME}",
-                    null,
-                )
-            val recordCount =
-                countCursor.use {
-                    if (it.moveToFirst()) it.getInt(0) else 0
-                }
+            val recordCount = db.rowCount(Table.NAME, fallback = 0)
 
             val metadataCursor =
                 db.rawQuery(
@@ -355,8 +348,7 @@ class UserFrequencyService(
     fun totalCount(): Int {
         return try {
             val db = dbHelper?.readableDatabase ?: return -1
-            val cursor = db.rawQuery("SELECT COUNT(*) FROM ${Table.NAME}", null)
-            cursor.use { if (it.moveToFirst()) it.getInt(0) else -1 }
+            db.rowCount(Table.NAME, fallback = -1)
         } catch (_: Exception) {
             -1
         }
@@ -444,11 +436,7 @@ class UserFrequencyService(
         try {
             val db = dbHelper?.writableDatabase ?: return
 
-            val cursor = db.rawQuery("SELECT COUNT(*) FROM ${Table.NAME}", null)
-            val currentCount =
-                cursor.use {
-                    if (it.moveToFirst()) it.getInt(0) else 0
-                }
+            val currentCount = db.rowCount(Table.NAME, fallback = 0)
 
             if (currentCount <= MAX_ENTRIES) return
 

@@ -5,21 +5,18 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
-import com.siansiansu.taigikeyboard.i18n.ProvideDisplayLanguage
 import com.siansiansu.taigikeyboard.i18n.currentStringResolver
 import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.i18n.generated.dictionaryImportBackupResult
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
-import com.siansiansu.taigikeyboard.ui.setupEdgeToEdge
+import com.siansiansu.taigikeyboard.ui.setTaigiContent
 import com.siansiansu.taigikeyboard.ui.tabs.dictionary.DataManagementScreen
 import com.siansiansu.taigikeyboard.ui.tabs.dictionary.DataManagementViewModel
-import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -94,29 +91,23 @@ class DataManagementActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        setupEdgeToEdge()
-
         val prefs = PrefHelper(this)
-        setContent {
-            ProvideDisplayLanguage(prefs) {
-                TaigiKeyboardTheme {
-                    val isProcessing by viewModel.isProcessing.collectAsStateWithLifecycle()
+        setTaigiContent(prefs) {
+            val isProcessing by viewModel.isProcessing.collectAsStateWithLifecycle()
 
-                    DataManagementScreen(
-                        isProcessing = isProcessing,
-                        onNavigateBack = {
-                            onBackPressedDispatcher.onBackPressed()
-                        },
-                        onExportBackup = {
-                            val dateStr = SimpleDateFormat(BACKUP_DATE_FORMAT, Locale.US).format(Date())
-                            exportBackupLauncher.launch("taigi_backup_$dateStr.taigi")
-                        },
-                        onImportBackup = {
-                            importBackupLauncher.launch(arrayOf("application/json", "*/*"))
-                        },
-                    )
-                }
-            }
+            DataManagementScreen(
+                isProcessing = isProcessing,
+                onNavigateBack = {
+                    onBackPressedDispatcher.onBackPressed()
+                },
+                onExportBackup = {
+                    val dateStr = SimpleDateFormat(BACKUP_DATE_FORMAT, Locale.US).format(Date())
+                    exportBackupLauncher.launch("taigi_backup_$dateStr.taigi")
+                },
+                onImportBackup = {
+                    importBackupLauncher.launch(arrayOf("application/json", "*/*"))
+                },
+            )
         }
     }
 }

@@ -76,20 +76,7 @@ class AssociationDataViewModel(
 
     suspend fun exportCSV(): String =
         withContext(Dispatchers.IO) {
-            val data = nextWord.allAssociations()
-            buildString {
-                for (entry in data) {
-                    append(
-                        "${DictionaryCsvCodec.escape(
-                            entry.prevWord,
-                        )},${DictionaryCsvCodec.escape(
-                            entry.prevTl,
-                        )},${DictionaryCsvCodec.escape(
-                            entry.nextWord,
-                        )},${DictionaryCsvCodec.escape(entry.nextTl)},${entry.count}\n",
-                    )
-                }
-            }
+            DictionaryCsvCodec.encodeAssociationCSV(nextWord.allAssociations())
         }
 
     suspend fun importCSV(uri: Uri): ImportOutcome {
@@ -101,7 +88,7 @@ class AssociationDataViewModel(
                         it.bufferedReader(Charsets.UTF_8).readText()
                     } ?: throw Exception("Cannot read file")
                 }
-            val entries = parseCSV(csvString)
+            val entries = DictionaryCsvCodec.decodeAssociationCSV(csvString)
             val imported = withContext(Dispatchers.IO) { nextWord.batchImportAssociations(entries) }
             val refreshed = withContext(Dispatchers.IO) { nextWord.allAssociations() }
             _allData.value = refreshed
@@ -109,23 +96,5 @@ class AssociationDataViewModel(
         } finally {
             _isImporting.value = false
         }
-    }
-
-    private fun parseCSV(csv: String): List<NextWordService.AssociationEntry> {
-        val entries = mutableListOf<NextWordService.AssociationEntry>()
-        for (line in csv.split("\n")) {
-            val trimmed = line.trim()
-            if (trimmed.isEmpty()) continue
-            val columns = DictionaryCsvCodec.parseLine(trimmed)
-            if (columns.size < 5) continue
-            val prevWord = columns[0].trim()
-            val prevTl = columns[1].trim()
-            val nextWord = columns[2].trim()
-            val nextTl = columns[3].trim()
-            val count = columns[4].trim().toIntOrNull() ?: continue
-            if (nextWord.isEmpty() || count <= 0) continue
-            entries.add(NextWordService.AssociationEntry(prevWord, prevTl, nextWord, nextTl, count))
-        }
-        return entries
     }
 }

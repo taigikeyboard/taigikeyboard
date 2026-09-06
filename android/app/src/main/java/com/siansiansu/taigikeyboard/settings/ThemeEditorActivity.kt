@@ -4,15 +4,12 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import com.siansiansu.taigikeyboard.i18n.ProvideDisplayLanguage
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.ThemeAppearance
 import com.siansiansu.taigikeyboard.ime.core.UserTheme
 import com.siansiansu.taigikeyboard.ime.core.UserThemeStore
-import com.siansiansu.taigikeyboard.ui.setupEdgeToEdge
+import com.siansiansu.taigikeyboard.ui.setTaigiContent
 import com.siansiansu.taigikeyboard.ui.tabs.theme.ThemeEditorScreen
-import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 import java.util.UUID
 
 // Hosts the user-theme editor (create or edit). Launched from the theme picker;
@@ -51,22 +48,16 @@ class ThemeEditorActivity : ComponentActivity() {
             return
         }
 
-        setupEdgeToEdge()
-
-        setContent {
-            // i18n live-switch root: a standalone Activity (launched from the picker), so it
-            // provides its own resolver like SettingsMainActivity / the other detail Activities.
-            ProvideDisplayLanguage(prefs) {
-                TaigiKeyboardTheme {
-                    ThemeEditorScreen(
-                        prefs = prefs,
-                        editing = editing,
-                        canSaveNew = { store.load().size < UserThemeStore.MAX_USER_THEMES },
-                        onSave = { name, appearance -> saveTheme(prefs, store, editing, name, appearance) },
-                        onNavigateBack = { onBackPressedDispatcher.onBackPressed() },
-                    )
-                }
-            }
+        // i18n live-switch root: a standalone Activity (launched from the picker), so it
+        // provides its own resolver like SettingsMainActivity / the other detail Activities.
+        setTaigiContent(prefs) {
+            ThemeEditorScreen(
+                prefs = prefs,
+                editing = editing,
+                canSaveNew = { store.load().size < UserThemeStore.MAX_USER_THEMES },
+                onSave = { name, appearance -> saveTheme(prefs, store, editing, name, appearance) },
+                onNavigateBack = { onBackPressedDispatcher.onBackPressed() },
+            )
         }
     }
 

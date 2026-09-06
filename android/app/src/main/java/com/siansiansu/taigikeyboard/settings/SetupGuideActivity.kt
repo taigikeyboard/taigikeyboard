@@ -5,13 +5,10 @@ import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import com.siansiansu.taigikeyboard.i18n.ProvideDisplayLanguage
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
-import com.siansiansu.taigikeyboard.ui.setupEdgeToEdge
+import com.siansiansu.taigikeyboard.ui.setTaigiContent
 import com.siansiansu.taigikeyboard.ui.tabs.home.SetupGuideScreen
-import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 
 // Setup guide for enabling the keyboard — shared between Home tab sub-page and first-launch full-screen mode
 class SetupGuideActivity : ComponentActivity() {
@@ -35,26 +32,20 @@ class SetupGuideActivity : ComponentActivity() {
         val isFullScreen = intent.getBooleanExtra(EXTRA_IS_FULL_SCREEN, false)
         val prefs = PrefHelper(this)
 
-        setupEdgeToEdge()
-
-        setContent {
-            ProvideDisplayLanguage(prefs) {
-                TaigiKeyboardTheme {
-                    SetupGuideScreen(
-                        isFullScreen = isFullScreen,
-                        onGoToSettings = {
-                            hasNavigatedToSettings = true
-                            startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS))
-                        },
-                        onClose = {
-                            finish()
-                        },
-                        onNavigateBack = {
-                            onBackPressedDispatcher.onBackPressed()
-                        },
-                    )
-                }
-            }
+        setTaigiContent(prefs) {
+            SetupGuideScreen(
+                isFullScreen = isFullScreen,
+                onGoToSettings = {
+                    hasNavigatedToSettings = true
+                    startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS))
+                },
+                onClose = {
+                    finish()
+                },
+                onNavigateBack = {
+                    onBackPressedDispatcher.onBackPressed()
+                },
+            )
         }
     }
 
