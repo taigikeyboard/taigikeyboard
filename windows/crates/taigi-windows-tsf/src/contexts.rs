@@ -25,7 +25,6 @@ pub struct ContextState {
     /// The list the last fetch produced with the cells shown for it; empty
     /// = no candidates showing.
     pub candidates: CandidateSource,
-    /// The highlighted candidate (PR5b: a headless list; PR6's window
     /// The caret's range when this IME left an auto space in front of it —
     /// the position the swap re-checks before it rewrites anything (the Mac's
     /// `armedAutoSpaceCaret`). Its EXISTENCE is the verdict: the arm is only

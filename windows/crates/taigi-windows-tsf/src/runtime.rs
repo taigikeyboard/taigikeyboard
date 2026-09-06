@@ -9,7 +9,7 @@
 
 use crate::module::install_directory;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 use taigi_windows_core::composing::{
     AssociationSink, ComposingManager, ComposingSessionCoordinator, CustomDictionarySource,
     FrequencySource, NextWordLearner, NoStores, SystemClock,
@@ -110,6 +110,14 @@ impl Runtime {
     /// that must not bring the engine up (termination, focus loss).
     pub fn coordinator_if_built(&self) -> Option<&Mutex<ComposingSessionCoordinator>> {
         self.coordinator.get()
+    }
+
+    /// The coordinator locked without waiting: `None` when no key has built
+    /// it yet OR when it is already held (a host re-entered us from inside
+    /// our own session). NEVER blocking — a callback that waited on the
+    /// engine would deadlock the session holding it.
+    pub(crate) fn try_coordinator(&self) -> Option<MutexGuard<'_, ComposingSessionCoordinator>> {
+        self.coordinator_if_built()?.try_lock().ok()
     }
 
     /// The coordinator, built on first use over the stores this host has

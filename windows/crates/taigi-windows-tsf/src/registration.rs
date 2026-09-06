@@ -24,10 +24,9 @@ use windows::Win32::UI::TextServices::{
     GUID_TFCAT_TIPCAP_UIELEMENTENABLED, GUID_TFCAT_TIP_KEYBOARD, TF_INPUTPROCESSORPROFILE,
 };
 
-/// STACKED-PR NOTE: the display-attribute provider lands with PR5b and the
-/// UI-less candidate list with PR6; this DLL is only installed as the
-/// complete train (PR10), so the two categories are declared here once
-/// rather than staged.
+/// Every category this TIP is registered under, declared in one pass:
+/// keyboard TIP, the preedit's display-attribute provider, the systray
+/// item, the UI-less candidate element, and the two below.
 const CATEGORIES: [GUID; 6] = [
     GUID_TFCAT_TIP_KEYBOARD,
     GUID_TFCAT_DISPLAYATTRIBUTEPROVIDER,

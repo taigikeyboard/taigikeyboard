@@ -75,8 +75,9 @@ pub(crate) struct ServiceState {
     is_lang_bar_added: bool,
     lang_bar_sink: Option<ITfLangBarItemSink>,
     pub(crate) contexts: ContextRegistry,
-    /// Tokens are allocated here until PR5b hands allocation to the
-    /// composing coordinator (one counter, never a COM address).
+    /// The counter context tokens are handed out from — one per service,
+    /// never a COM address: an address is reused once its context is gone,
+    /// and the next context would inherit the dead one's ownership.
     next_context_token: usize,
     /// The `IUnknown` identity of the focused document manager — recorded,
     /// never dereferenced; a late focus notification is a hint (contract 7).
@@ -362,7 +363,7 @@ impl TextService_Impl {
 
     /// The token for `context`, allocating on first sight. The identity
     /// query and the `AddRef` happen before the borrow; only the insert is
-    /// under it. PR5b threads the coordinator's allocator through here.
+    /// under it.
     pub(crate) fn token_for(&self, context: &ITfContext) -> Option<(ContextToken, usize)> {
         let identity = ContextRegistry::identity(context)?;
         let owned = context.clone();
@@ -374,7 +375,6 @@ impl TextService_Impl {
                 ..
             } = &mut *state;
             contexts.token_for(identity, owned, || {
-                // Same contract as `ComposingSessionCoordinator::allocate_token`:
                 // `0` reads as "no token" in the window's queued messages, so
                 // the counter must stop rather than wrap onto it. No process
                 // reaches this; the panic is caught at the COM boundary like
@@ -411,13 +411,21 @@ impl TextService_Impl {
         state.focus_generation += 1;
     }
 
+    /// The candidate window, if this host got one. ALWAYS cloned out of the
+    /// state before it is used: `CandidatePresenter`'s methods make COM
+    /// calls, and this module's rule (header) is that none may run while
+    /// the state's `RefCell` borrow is held — the `Rc` clone here ends the
+    /// borrow before the caller's `borrow_mut()` on the presenter itself.
+    pub(crate) fn presenter(&self) -> Option<Rc<RefCell<CandidatePresenter>>> {
+        self.state.borrow().presenter.clone()
+    }
+
     /// A focus / context callback's one permitted move on the window: a
     /// posted hide (W3). `owner` = only that context's list; `None` =
     /// whichever is up. When the presenter is mid-session (the callback
     /// re-entered us), the hide is flagged for the next key instead.
     fn request_ui_hide(&self, owner: Option<ContextToken>) {
-        let presenter = self.state.borrow().presenter.clone();
-        let Some(presenter) = presenter else {
+        let Some(presenter) = self.presenter() else {
             return;
         };
         let posted = match presenter.try_borrow() {
@@ -650,15 +658,13 @@ impl ITfThreadMgrEventSink_Impl for TextService_Impl {
                 if let Some(entry) = forgotten {
                     log::debug!("tsf.context_popped token={:?}", entry.token);
                     self.request_ui_hide(Some(entry.token));
-                    let released = Runtime::shared()
-                        .coordinator_if_built()
-                        .is_some_and(|mutex| match mutex.try_lock() {
-                            Ok(mut coordinator) => {
-                                coordinator.release(entry.token);
-                                true
-                            }
-                            Err(_) => false,
-                        });
+                    let released = match Runtime::shared().try_coordinator() {
+                        Some(mut coordinator) => {
+                            coordinator.release(entry.token);
+                            true
+                        }
+                        None => false,
+                    };
                     let mut state = self.state.borrow_mut();
                     state.focus_generation += 1;
                     if !released {

@@ -191,8 +191,8 @@ impl Drop for OwnedMenu {
 
 /// A CALLER-OWNED icon — `ITfLangBarItemButton::GetIcon`'s contract is
 /// that TSF destroys what it is handed, so nothing shared may be returned:
-/// the DLL's own resource loaded without `LR_SHARED`, or a `CopyIcon` of
-/// the stock application icon until the resource ships (PR10).
+/// the DLL's own resource loaded without `LR_SHARED`, or — in a build whose
+/// resource is missing — a `CopyIcon` of the stock application icon.
 pub fn owned_icon() -> Result<HICON> {
     // SAFETY: LoadImageW with a resource id from this DLL's own instance,
     // no LR_SHARED, so the handle is the caller's to destroy.

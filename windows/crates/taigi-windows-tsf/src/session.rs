@@ -8,8 +8,11 @@
 //! key the classifier CONSUMES; ownership is handed over between contexts
 //! per the coordinator's contract.
 //!
-//! Candidates are a headless list here (PR5b): the highlighted index and
-//! the slot keys work, the window arrives with PR6.
+//! The candidate list belongs to the presenter: a key only QUEUES what the
+//! window should do (`Surface`), and the queue is replayed after the
+//! session has returned — never inside it, where showing a window would run
+//! the host's `BeginUIElement` / `SetWindowPos` re-entry under the engine
+//! lock.
 
 use crate::composition::{is_password_field, is_read_only, CompositionEditor, NullExecutor};
 use crate::contexts::ContextEntry;
@@ -53,6 +56,17 @@ pub enum KeyPhase {
 enum KeyOutcome {
     Consumed,
     ToHost,
+}
+
+/// Everything a [`CompositionEditor`] is built from, snapshotted together.
+/// One value rather than three loose arguments so that the sink's COM
+/// reference has ONE well-defined lifetime at each call site: it must
+/// outlive every `ITfComposition` handle the editors built from it produce,
+/// which is what the declaration order at each site pins.
+struct EditorInputs {
+    client_id: u32,
+    display_attribute_atom: u32,
+    sink: ITfCompositionSink,
 }
 
 impl TextService_Impl {
@@ -112,7 +126,7 @@ impl TextService_Impl {
         }
 
         let bindings = ComposingKeyBindings::from_document(&settings);
-        let (is_composing, is_showing_candidates) = self.composing_flags(runtime, token, identity);
+        let (is_composing, is_showing_candidates) = self.composing_flags(runtime, token);
         let intent =
             ComposingKeyIntent::intent(&snapshot, is_composing, is_showing_candidates, &bindings);
         log::debug!(
@@ -135,10 +149,7 @@ impl TextService_Impl {
             // context (a full stop typed here is a sentence end).
             if ComposingKeyIntent::is_document_text(&snapshot) {
                 if let Some(characters) = snapshot.characters.as_deref() {
-                    if let Some(mut coordinator) = runtime
-                        .coordinator_if_built()
-                        .and_then(|m| m.try_lock().ok())
-                    {
+                    if let Some(mut coordinator) = runtime.try_coordinator() {
                         if let Some(manager) = coordinator.manager(token) {
                             manager.note_character_typed_outside_composition(characters);
                         }
@@ -161,24 +172,18 @@ impl TextService_Impl {
     /// What the engine says about this context, read without a session.
     /// A coordinator that does not exist yet (no key consumed so far) reads
     /// as idle.
-    fn composing_flags(
-        &self,
-        runtime: &Runtime,
-        token: ContextToken,
-        identity: usize,
-    ) -> (bool, bool) {
+    fn composing_flags(&self, runtime: &Runtime, token: ContextToken) -> (bool, bool) {
         let is_composing = runtime
-            .coordinator_if_built()
-            .and_then(|mutex| mutex.try_lock().ok())
+            .try_coordinator()
             .and_then(|coordinator| {
                 coordinator
                     .manager_ref(token)
                     .map(ComposingManager::is_composing)
             })
             .unwrap_or(false);
-        let _ = identity;
-        let presenter = self.state.borrow().presenter.clone();
-        let is_showing = presenter.is_some_and(|presenter| presenter.borrow().is_showing(token));
+        let is_showing = self
+            .presenter()
+            .is_some_and(|presenter| presenter.borrow().is_showing(token));
         (is_composing, is_showing)
     }
 
@@ -233,8 +238,7 @@ impl TextService_Impl {
         // inside a session) lands here, before anything new is shown.
         let hide_pending = std::mem::take(&mut self.state.borrow_mut().is_ui_hide_pending);
         if hide_pending {
-            let presenter = self.state.borrow().presenter.clone();
-            if let Some(presenter) = presenter {
+            if let Some(presenter) = self.presenter() {
                 presenter.borrow_mut().hide_for_handover();
             }
         }
@@ -255,12 +259,11 @@ impl TextService_Impl {
             log::info!("key.dropped_after_handover reason=focus_moved");
             return KeyOutcome::ToHost;
         }
-        let client_id = self.state.borrow().client_id;
-        let atom = self.state.borrow().display_attribute_atom;
-        let sink: ITfCompositionSink = self
-            .to_object()
-            .to_interface::<ITfCompositionSink>()
-            .to_owned();
+        let EditorInputs {
+            client_id,
+            display_attribute_atom: atom,
+            sink,
+        } = self.editor_inputs();
         // Every key gets exactly one chance at the swap: the arm is consumed
         // here, before any early return, and only the auto-space paths below
         // re-arm it.
@@ -348,6 +351,65 @@ impl TextService_Impl {
         outcome
     }
 
+    /// Everything a [`CompositionEditor`] is built from: the edit-session
+    /// client id, the preedit's display-attribute atom, and this service as
+    /// the composition sink. The two state fields are read under their own
+    /// short borrows and the sink's `AddRef` happens with NO borrow held —
+    /// the module rule (`text_service.rs` header) is that no COM call, not
+    /// even a reference count, runs under one.
+    fn editor_inputs(&self) -> EditorInputs {
+        let client_id = self.state.borrow().client_id;
+        let display_attribute_atom = self.state.borrow().display_attribute_atom;
+        let sink: ITfCompositionSink = self
+            .to_object()
+            .to_interface::<ITfCompositionSink>()
+            .to_owned();
+        EditorInputs {
+            client_id,
+            display_attribute_atom,
+            sink,
+        }
+    }
+
+    /// Commits `token`'s composition into `context`'s own document under
+    /// that document's OWN synchronous session — the lifecycle commit, with
+    /// no candidates, no auto space and no swap arm. Answers whether the
+    /// session ran AND every document write inside it succeeded, which is
+    /// the handover's condition for moving engine ownership.
+    fn commit_under_session(
+        &self,
+        context: &ITfContext,
+        token: ContextToken,
+        composition: &Option<ITfComposition>,
+        coordinator: &mut MutexGuard<'_, ComposingSessionCoordinator>,
+        inputs: &EditorInputs,
+    ) -> bool {
+        let session = edit_session::read_write(context, inputs.client_id, |ec| {
+            let mut editor = CompositionEditor::new(
+                context,
+                ec,
+                &inputs.sink,
+                inputs.display_attribute_atom,
+                composition.clone(),
+            );
+            if let Some(manager) = coordinator.manager(token) {
+                manager.commit_composition(&mut editor);
+            }
+            Ok(editor.failure.is_none() && editor.composition.is_none())
+        });
+        matches!(session, Ok(true))
+    }
+
+    /// Takes `token`'s candidate list off the screen. The presenter is
+    /// cloned out of the state first (see
+    /// [`TextService_Impl::presenter`]) — the `borrow_mut` here is the
+    /// presenter's own, held only for the call.
+    fn hide_candidates(&self, token: ContextToken) {
+        if let Some(presenter) = self.presenter() {
+            presenter.borrow_mut().hide(token);
+        }
+    }
+
     /// `ITfCandidateListUIElementBehavior::Finalize`: the host commits the
     /// highlighted candidate — the key path with the commit key's intent.
     pub(crate) fn ui_element_finalize(&self) -> windows::core::Result<()> {
@@ -367,7 +429,7 @@ impl TextService_Impl {
     /// host re-entered us from inside our own session.
     fn run_from_ui_element(&self, intent: ComposingKeyIntent) -> windows::core::Result<()> {
         let busy = || windows::core::Error::from_hresult(E_UNEXPECTED);
-        let presenter = self.state.borrow().presenter.clone();
+        let presenter = self.presenter();
         let owner = presenter
             .as_ref()
             .and_then(|presenter| presenter.try_borrow().ok()?.owner())
@@ -382,9 +444,7 @@ impl TextService_Impl {
         .ok_or_else(busy)?;
         let identity = ContextRegistry::identity(&context).ok_or_else(busy)?;
         let runtime = Runtime::shared();
-        let engine_free = runtime
-            .coordinator_if_built()
-            .is_some_and(|mutex| mutex.try_lock().is_ok());
+        let engine_free = runtime.try_coordinator().is_some();
         if !engine_free {
             log::warn!("ui_element.reentered intent={intent:?}");
             return Err(busy());
@@ -458,33 +518,22 @@ impl TextService_Impl {
                 None => (None, None),
             }
         };
-        let client_id = self.state.borrow().client_id;
-        let atom = self.state.borrow().display_attribute_atom;
         let is_composing = coordinator
             .manager_ref(owner)
             .is_some_and(|m| m.is_composing());
         let mut finished = !is_composing;
         if let (Some(previous_context), true) = (&previous_context, is_composing) {
-            let previous_context: &ITfContext = previous_context;
-            let sink: ITfCompositionSink = self
-                .to_object()
-                .to_interface::<ITfCompositionSink>()
-                .to_owned();
-            let session = edit_session::read_write(previous_context, client_id, |ec| {
-                let mut editor = CompositionEditor::new(
-                    previous_context,
-                    ec,
-                    &sink,
-                    atom,
-                    previous_composition.clone(),
-                );
-                if let Some(manager) = coordinator.manager(owner) {
-                    manager.commit_composition(&mut editor);
-                }
-                let wrote_cleanly = editor.failure.is_none() && editor.composition.is_none();
-                Ok(wrote_cleanly)
-            });
-            finished = matches!(session, Ok(true));
+            // Scoped to the branch, as the sink always was here: it is
+            // released at the end of this block, BEFORE the explicit
+            // `drop(previous_composition)` at the end of the function.
+            let inputs = self.editor_inputs();
+            finished = self.commit_under_session(
+                previous_context,
+                owner,
+                &previous_composition,
+                coordinator,
+                &inputs,
+            );
         }
         if !finished {
             // The previous document could not take its composition: the
@@ -496,8 +545,7 @@ impl TextService_Impl {
         log::info!("key.handover finished_previous={finished}");
         // The previous context's candidates and window are gone with its
         // ownership (`hideForHandover`).
-        let presenter = self.state.borrow().presenter.clone();
-        if let Some(presenter) = presenter {
+        if let Some(presenter) = self.presenter() {
             presenter.borrow_mut().hide_for_handover();
         }
         let stale = {
@@ -543,21 +591,16 @@ impl TextService_Impl {
         };
         drop(held);
         let Some(token) = token else { return };
-        let presenter = self.state.borrow().presenter.clone();
-        if let Some(presenter) = presenter {
-            presenter.borrow_mut().hide(token);
-        }
-        let reset_now = Runtime::shared()
-            .coordinator_if_built()
-            .is_some_and(|mutex| match mutex.try_lock() {
-                Ok(mut coordinator) => {
-                    if let Some(manager) = coordinator.manager(token) {
-                        manager.cancel_composition(&mut NullExecutor);
-                    }
-                    true
+        self.hide_candidates(token);
+        let reset_now = match Runtime::shared().try_coordinator() {
+            Some(mut coordinator) => {
+                if let Some(manager) = coordinator.manager(token) {
+                    manager.cancel_composition(&mut NullExecutor);
                 }
-                Err(_) => false,
-            });
+                true
+            }
+            None => false,
+        };
         if !reset_now {
             // The engine is busy (a session in flight re-entered us): the
             // reset is applied at the next key rather than skipped.
@@ -572,33 +615,28 @@ impl TextService_Impl {
     /// best-effort commits under each context's own session, then the
     /// engine is released for every token.
     pub(crate) fn finish_all_compositions(&self, entries: &mut [ContextEntry]) {
-        let Some(mutex) = Runtime::shared().coordinator_if_built() else {
+        let Some(mut coordinator) = Runtime::shared().try_coordinator() else {
             return;
         };
-        let Ok(mut coordinator) = mutex.try_lock() else {
-            return;
-        };
-        let client_id = self.state.borrow().client_id;
-        let atom = self.state.borrow().display_attribute_atom;
+        // Snapshotted ONCE for the whole teardown, and declared before the
+        // loop so the sink outlives every composition handle taken inside it
+        // (an editor's `ITfComposition` must not outlive the sink it was
+        // built against).
+        let inputs = self.editor_inputs();
         for entry in entries.iter_mut() {
             if coordinator
                 .manager_ref(entry.token)
                 .is_some_and(|m| m.is_composing())
             {
-                let sink: ITfCompositionSink = self
-                    .to_object()
-                    .to_interface::<ITfCompositionSink>()
-                    .to_owned();
                 let composition = entry.state.composition.take();
                 let context: &ITfContext = &entry.context;
-                let _ = edit_session::read_write(context, client_id, |ec| {
-                    let mut editor =
-                        CompositionEditor::new(context, ec, &sink, atom, composition.clone());
-                    if let Some(manager) = coordinator.manager(entry.token) {
-                        manager.commit_composition(&mut editor);
-                    }
-                    Ok(())
-                });
+                let _ = self.commit_under_session(
+                    context,
+                    entry.token,
+                    &composition,
+                    &mut coordinator,
+                    &inputs,
+                );
             }
             coordinator.release(entry.token);
         }
@@ -640,9 +678,7 @@ impl TextService_Impl {
         // A host that re-entered us from inside our own session: the switch
         // is skipped whole rather than half-applied, and the next tap does it.
         // Same probe `run_from_ui_element` makes, same polarity.
-        let engine_free = runtime
-            .coordinator_if_built()
-            .is_some_and(|mutex| mutex.try_lock().is_ok());
+        let engine_free = runtime.try_coordinator().is_some();
         if !engine_free {
             log::warn!("language_mode.reentered — switch skipped");
             return;
@@ -651,7 +687,7 @@ impl TextService_Impl {
         // flash must not straddle a settings change.
         let settings = runtime.settings.current();
         let next = self.state.borrow().language_mode.toggled();
-        let (is_composing, _) = self.composing_flags(runtime, token, identity);
+        let (is_composing, _) = self.composing_flags(runtime, token);
         if is_composing {
             let outcome = self.run_key(
                 context,
@@ -676,24 +712,18 @@ impl TextService_Impl {
         // belongs to the other mode, so the promise is spent here rather than
         // left to move a space the user typed in English. The candidate list
         // goes with the composition it described.
-        let presenter = {
+        {
             let mut state = self.state.borrow_mut();
             if let Some(entry) = state.contexts.entry_mut(identity) {
                 entry.state.armed_auto_space = None;
                 entry.state.candidates.clear();
             }
-            state.presenter.clone()
-        };
-        if let Some(presenter) = presenter {
-            presenter.borrow_mut().hide(token);
         }
+        self.hide_candidates(token);
         // The next-word context is Taiwanese. English typed after the switch
         // is not the predecessor of the word typed after the switch back, and
         // the engine is what would otherwise keep believing it is.
-        if let Some(mut coordinator) = runtime
-            .coordinator_if_built()
-            .and_then(|mutex| mutex.try_lock().ok())
-        {
+        if let Some(mut coordinator) = runtime.try_coordinator() {
             if let Some(manager) = coordinator.manager(token) {
                 manager.start_new_session();
             }
@@ -728,16 +758,15 @@ impl TextService_Impl {
                 // then the HUD, because the chord fires from anywhere and a
                 // romanization that changed with no notice reads as the
                 // keyboard breaking (USER 2026-08-26).
-                let (token, presenter) = {
+                let token = {
                     let mut state = self.state.borrow_mut();
-                    let token = state.contexts.entry_mut(identity).map(|entry| {
+                    state.contexts.entry_mut(identity).map(|entry| {
                         entry.state.candidates.clear();
                         entry.token
-                    });
-                    (token, state.presenter.clone())
+                    })
                 };
-                if let (Some(token), Some(presenter)) = (token, presenter) {
-                    presenter.borrow_mut().hide(token);
+                if let Some(token) = token {
+                    self.hide_candidates(token);
                 }
                 let settings = runtime.settings.current();
                 let mode: InputMode = settings.choice(&keys::INPUT_MODE);
@@ -809,12 +838,10 @@ impl TextService_Impl {
             let token = state.contexts.entry_mut(identity).map(|entry| entry.token);
             (token, state.presenter.clone())
         };
-        let (Some(token), Some(presenter), Some(mutex)) =
-            (token, presenter, runtime.coordinator_if_built())
-        else {
+        let (Some(token), Some(presenter)) = (token, presenter) else {
             return;
         };
-        let Ok(mut coordinator) = mutex.try_lock() else {
+        let Some(mut coordinator) = runtime.try_coordinator() else {
             return;
         };
         let Some(manager) = coordinator.manager(token) else {

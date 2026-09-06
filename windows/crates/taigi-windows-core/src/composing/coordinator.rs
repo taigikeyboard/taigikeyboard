@@ -46,7 +46,6 @@ pub struct ContextToken(pub usize);
 pub struct ComposingSessionCoordinator {
     manager: ComposingManager,
     current_owner: Option<ContextToken>,
-    next_token: usize,
 }
 
 impl ComposingSessionCoordinator {
@@ -54,23 +53,7 @@ impl ComposingSessionCoordinator {
         Self {
             manager,
             current_owner: None,
-            next_token: 1,
         }
-    }
-
-    /// A fresh, never-used token for a context the shell just met. `0` is
-    /// never handed out (it reads as "no token" in queued messages), and the
-    /// counter cannot silently wrap onto a live value: at `usize::MAX` —
-    /// which no process reaches — it stops advancing and the panic is caught
-    /// at the COM boundary like any other.
-    pub fn allocate_token(&mut self) -> ContextToken {
-        let value = self.next_token;
-        assert!(
-            value != 0 && value != usize::MAX,
-            "context token space exhausted"
-        );
-        self.next_token += 1;
-        ContextToken(value)
     }
 
     /// Makes `owner` the context that drives the engine and returns the

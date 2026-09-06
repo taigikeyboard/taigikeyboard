@@ -13,8 +13,8 @@ use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 
 use taigi_windows_core::composing::{
     AssociationSink, CandidateCommitOutcome, CandidateFetchOutcome, CandidateScript, Clock,
-    ComposingEffectExecutor, ComposingManager, ComposingSessionCoordinator, CustomDictionarySource,
-    FrequencySource, NextWordLearner,
+    ComposingEffectExecutor, ComposingManager, ComposingSessionCoordinator, ContextToken,
+    CustomDictionarySource, FrequencySource, NextWordLearner,
 };
 use taigi_windows_core::dictionary_artifacts::DictionaryArtifacts;
 use taigi_windows_core::engine::{
@@ -770,8 +770,10 @@ fn only_the_claiming_context_can_drive_the_engine_and_handover_starts_idle() {
     let _lock = engine_lock();
     let rig = rig();
     let mut coordinator = ComposingSessionCoordinator::new(rig.manager);
-    let a = coordinator.allocate_token();
-    let b = coordinator.allocate_token();
+    // The shell allocates tokens (`text_service.rs::token_for`); `0` never
+    // reaches the coordinator, so the pair here starts at 1.
+    let a = ContextToken(1);
+    let b = ContextToken(2);
     let mut recorder = Recorder::default();
 
     coordinator.claim(a).append("t", &mut recorder);

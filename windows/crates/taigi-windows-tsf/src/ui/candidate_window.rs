@@ -58,6 +58,9 @@ const OVERLAY_CORNER_RADIUS: f32 = 8.0;
 /// centre line is inset half of it — a stroke laid on the surface edge puts
 /// half of itself outside and is clipped to a half-width, uneven line.
 const BORDER_THICKNESS: f32 = 1.0;
+/// The hairline separating a symbol column (page arrows, chevron) from the
+/// candidates, and the first term of that column's width.
+const SEPARATOR_WIDTH: f32 = 1.0;
 /// Page-arrow / chevron geometry at 16 pt (`CandidatePageArrowView`,
 /// `CandidateChevronView`), scaled through `scaled_symbol_metric`.
 const ARROW_SPACING: f32 = 4.0;
@@ -65,6 +68,20 @@ const ARROW_IMAGE_WIDTH: f32 = 16.0;
 const ARROW_PADDING: f32 = 7.0;
 const CHEVRON_SPACING: f32 = 5.0;
 const CHEVRON_PADDING: f32 = 6.0;
+/// Half the width of one drawn chevron: the paging pair is the smaller of
+/// the two, the collapsed expandable row's single chevron the larger.
+const ARROW_HALF_SIZE: f32 = 4.0;
+const CHEVRON_HALF_SIZE: f32 = 5.5;
+/// Where the paging pair sits relative to the column's centre line — they
+/// straddle it rather than share it.
+const ARROW_UP_OFFSET_Y: f32 = -3.0;
+const ARROW_DOWN_OFFSET_Y: f32 = 4.0;
+/// The two strokes a chevron is drawn from.
+const CHEVRON_STROKE_WIDTH: f32 = 1.5;
+/// The scroller thumb: how far it is inset from each side of its lane, and
+/// the radius its ends are rounded to.
+const SCROLLER_THUMB_INSET: f32 = 3.0;
+const SCROLLER_THUMB_RADIUS: f32 = 3.0;
 /// The unfold's timer.
 const UNFOLD_TIMER_ID: usize = 1;
 const UNFOLD_FRAME_MILLISECONDS: u32 = 16;
@@ -210,15 +227,37 @@ impl CandidateWindow {
     }
 
     fn arrow_width(metrics: &CandidateMetrics) -> f32 {
-        1.0 + metrics.scaled_symbol_metric(ARROW_SPACING)
+        SEPARATOR_WIDTH
+            + metrics.scaled_symbol_metric(ARROW_SPACING)
             + metrics.scaled_symbol_metric(ARROW_IMAGE_WIDTH)
             + metrics.scaled_symbol_metric(ARROW_PADDING)
     }
 
     fn chevron_width(metrics: &CandidateMetrics) -> f32 {
-        1.0 + metrics.scaled_symbol_metric(CHEVRON_SPACING)
+        SEPARATOR_WIDTH
+            + metrics.scaled_symbol_metric(CHEVRON_SPACING)
             + metrics.scaled_symbol_metric(ARROW_IMAGE_WIDTH)
             + metrics.scaled_symbol_metric(CHEVRON_PADDING)
+    }
+
+    /// The centre line of a symbol column that starts at `column_x` and
+    /// leads with `spacing` — the same separator + spacing + half-image the
+    /// column's width above is built from, so the glyph cannot drift out of
+    /// the space reserved for it.
+    fn symbol_centre_x(metrics: &CandidateMetrics, column_x: f32, spacing: f32) -> f32 {
+        column_x
+            + SEPARATOR_WIDTH
+            + metrics.scaled_symbol_metric(spacing)
+            + metrics.scaled_symbol_metric(ARROW_IMAGE_WIDTH) / 2.0
+    }
+
+    /// The monitor a caret anchors its window to: the one holding the
+    /// caret's top-left corner, or `None` when it is on no screen at all.
+    fn monitor_for_caret(caret: RECT) -> Option<MonitorArea> {
+        monitor_at(POINT {
+            x: caret.left,
+            y: caret.top,
+        })
     }
 
     /// A fresh list under `settings`, anchored to `caret` (screen pixels).
@@ -231,10 +270,7 @@ impl CandidateWindow {
         caret: RECT,
         settings: &SettingsDocument,
     ) -> Option<WindowFrame> {
-        let monitor = monitor_at(POINT {
-            x: caret.left,
-            y: caret.top,
-        })?;
+        let monitor = Self::monitor_for_caret(caret)?;
         self.dpi = monitor.dpi;
         self.monitor = Some(monitor);
         self.caret = caret;
@@ -875,6 +911,38 @@ impl CandidateWindow {
         target.FillRectangle(&d2d_rect(rect), brush);
     }
 
+    /// The one text-drawing sequence every cell part goes through: the
+    /// layout for `text` in `area` (from the cache, built on a miss), the
+    /// brush recoloured, one `DrawTextLayout` with colour fonts enabled.
+    /// A layout the factory could not build draws nothing.
+    #[allow(clippy::too_many_arguments)]
+    unsafe fn draw_text(
+        &self,
+        target: &ID2D1HwndRenderTarget,
+        brush: &ID2D1SolidColorBrush,
+        index: usize,
+        part: CellPart,
+        text: &str,
+        font: taigi_windows_core::candidates::FontSpec,
+        area: Rect,
+        color: D2D1_COLOR_F,
+    ) {
+        let Some(layout) = self.cached_layout(index, part, text, font, area.width, area.height)
+        else {
+            return;
+        };
+        brush.SetColor(&color);
+        target.DrawTextLayout(
+            Vector2 {
+                X: area.x,
+                Y: area.y,
+            },
+            &layout,
+            brush,
+            D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT,
+        );
+    }
+
     /// One cell: highlight, index label, candidate, annotation.
     #[allow(clippy::too_many_arguments)]
     unsafe fn draw_cell(
@@ -908,25 +976,16 @@ impl CandidateWindow {
         let padding = metrics.horizontal_padding();
         let label = self.index_label(index);
         if !label.is_empty() {
-            if let Some(layout) = self.cached_layout(
+            self.draw_text(
+                target,
+                brush,
                 index,
                 CellPart::Index,
                 &label,
                 metrics.index_font(),
-                metrics.index_width(),
-                rect.height,
-            ) {
-                brush.SetColor(&secondary);
-                target.DrawTextLayout(
-                    Vector2 {
-                        X: rect.x + padding,
-                        Y: rect.y,
-                    },
-                    &layout,
-                    brush,
-                    D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT,
-                );
-            }
+                Rect::new(rect.x + padding, rect.y, metrics.index_width(), rect.height),
+                secondary,
+            );
         }
         let text_x = rect.x + padding + metrics.index_column_width();
         let trailing = column.map_or(padding, |(_, trailing)| trailing);
@@ -939,48 +998,30 @@ impl CandidateWindow {
                         .min(available),
                     None => self.primary_widths[index].min(available),
                 };
-                if let Some(layout) = self.cached_layout(
+                self.draw_text(
+                    target,
+                    brush,
                     index,
                     CellPart::Primary,
                     &cell.text,
                     metrics.candidate_font(),
-                    primary_width,
-                    rect.height,
-                ) {
-                    brush.SetColor(&text_color);
-                    target.DrawTextLayout(
-                        Vector2 {
-                            X: text_x,
-                            Y: rect.y,
-                        },
-                        &layout,
-                        brush,
-                        D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT,
-                    );
-                }
+                    Rect::new(text_x, rect.y, primary_width, rect.height),
+                    text_color,
+                );
                 if let Some(annotation) = &cell.annotation {
                     let annotation_x = text_x + primary_width + metrics.candidate_annotation_gap();
                     let annotation_width = (rect.right() - trailing - annotation_x).max(0.0);
                     if annotation_width > 0.0 {
-                        if let Some(layout) = self.cached_layout(
+                        self.draw_text(
+                            target,
+                            brush,
                             index,
                             CellPart::Annotation,
                             annotation,
                             metrics.annotation_font(),
-                            annotation_width,
-                            rect.height,
-                        ) {
-                            brush.SetColor(&secondary);
-                            target.DrawTextLayout(
-                                Vector2 {
-                                    X: annotation_x,
-                                    Y: rect.y,
-                                },
-                                &layout,
-                                brush,
-                                D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT,
-                            );
-                        }
+                            Rect::new(annotation_x, rect.y, annotation_width, rect.height),
+                            secondary,
+                        );
                     }
                 }
             }
@@ -999,46 +1040,33 @@ impl CandidateWindow {
                 let top = rect.y + (rect.height - block) / 2.0;
                 let centre = text_x + available / 2.0;
                 let primary_width = self.primary_widths[index].min(available);
-                if let Some(layout) = self.cached_layout(
+                self.draw_text(
+                    target,
+                    brush,
                     index,
                     CellPart::Primary,
                     &cell.text,
                     metrics.candidate_font(),
-                    primary_width,
-                    line1,
-                ) {
-                    brush.SetColor(&text_color);
-                    target.DrawTextLayout(
-                        Vector2 {
-                            X: centre - primary_width / 2.0,
-                            Y: top,
-                        },
-                        &layout,
-                        brush,
-                        D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT,
-                    );
-                }
+                    Rect::new(centre - primary_width / 2.0, top, primary_width, line1),
+                    text_color,
+                );
                 if let Some(annotation) = &cell.annotation {
                     let annotation_width = self.annotation_widths[index].min(available);
-                    if let Some(layout) = self.cached_layout(
+                    self.draw_text(
+                        target,
+                        brush,
                         index,
                         CellPart::Annotation,
                         annotation,
                         metrics.annotation_font(),
-                        annotation_width,
-                        line2,
-                    ) {
-                        brush.SetColor(&secondary);
-                        target.DrawTextLayout(
-                            Vector2 {
-                                X: centre - annotation_width / 2.0,
-                                Y: top + line1 + metrics.stacked_line_gap(),
-                            },
-                            &layout,
-                            brush,
-                            D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT,
-                        );
-                    }
+                        Rect::new(
+                            centre - annotation_width / 2.0,
+                            top + line1 + metrics.stacked_line_gap(),
+                            annotation_width,
+                            line2,
+                        ),
+                        secondary,
+                    );
                 }
             }
         }
@@ -1068,7 +1096,7 @@ impl CandidateWindow {
             },
             Vector2 { X: cx, Y: tip_y },
             brush,
-            1.5,
+            CHEVRON_STROKE_WIDTH,
             None,
         );
         target.DrawLine(
@@ -1078,7 +1106,7 @@ impl CandidateWindow {
                 Y: base_y,
             },
             brush,
-            1.5,
+            CHEVRON_STROKE_WIDTH,
             None,
         );
     }
@@ -1095,14 +1123,11 @@ impl CandidateWindow {
         self.fill(
             target,
             brush,
-            Rect::new(rect.x, rect.y, 1.0, rect.height),
+            Rect::new(rect.x, rect.y, SEPARATOR_WIDTH, rect.height),
             self.theme.separator,
         );
-        let half = metrics.scaled_symbol_metric(4.0);
-        let cx = rect.x
-            + 1.0
-            + metrics.scaled_symbol_metric(ARROW_SPACING)
-            + metrics.scaled_symbol_metric(ARROW_IMAGE_WIDTH) / 2.0;
+        let half = metrics.scaled_symbol_metric(ARROW_HALF_SIZE);
+        let cx = Self::symbol_centre_x(metrics, rect.x, ARROW_SPACING);
         let cy = rect.y + rect.height / 2.0;
         let color = |enabled: bool| {
             if enabled {
@@ -1114,7 +1139,7 @@ impl CandidateWindow {
         self.stroke_chevron(
             target,
             brush,
-            (cx, cy + metrics.scaled_symbol_metric(-3.0)),
+            (cx, cy + metrics.scaled_symbol_metric(ARROW_UP_OFFSET_Y)),
             half,
             true,
             color(can_up),
@@ -1122,7 +1147,7 @@ impl CandidateWindow {
         self.stroke_chevron(
             target,
             brush,
-            (cx, cy + metrics.scaled_symbol_metric(4.0)),
+            (cx, cy + metrics.scaled_symbol_metric(ARROW_DOWN_OFFSET_Y)),
             half,
             false,
             color(can_down),
@@ -1139,14 +1164,11 @@ impl CandidateWindow {
         self.fill(
             target,
             brush,
-            Rect::new(rect.x, rect.y, 1.0, rect.height),
+            Rect::new(rect.x, rect.y, SEPARATOR_WIDTH, rect.height),
             self.theme.separator,
         );
-        let half = metrics.scaled_symbol_metric(5.5);
-        let cx = rect.x
-            + 1.0
-            + metrics.scaled_symbol_metric(CHEVRON_SPACING)
-            + metrics.scaled_symbol_metric(ARROW_IMAGE_WIDTH) / 2.0;
+        let half = metrics.scaled_symbol_metric(CHEVRON_HALF_SIZE);
+        let cx = Self::symbol_centre_x(metrics, rect.x, CHEVRON_SPACING);
         self.stroke_chevron(
             target,
             brush,
@@ -1176,13 +1198,13 @@ impl CandidateWindow {
         brush.SetColor(&self.theme.tertiary_text);
         let rounded = D2D1_ROUNDED_RECT {
             rect: D2D_RECT_F {
-                left: width - SCROLLER_WIDTH + 3.0,
+                left: width - SCROLLER_WIDTH + SCROLLER_THUMB_INSET,
                 top: y,
-                right: width - 3.0,
+                right: width - SCROLLER_THUMB_INSET,
                 bottom: y + thumb,
             },
-            radiusX: 3.0,
-            radiusY: 3.0,
+            radiusX: SCROLLER_THUMB_RADIUS,
+            radiusY: SCROLLER_THUMB_RADIUS,
         };
         target.FillRoundedRectangle(&rounded, brush);
     }
@@ -1299,10 +1321,7 @@ impl CandidateWindow {
     pub fn dpi_changed(&mut self, window: &WindowRef, dpi: f32, suggested: RECT) {
         self.dpi = dpi;
         self.surface = None;
-        self.monitor = monitor_at(POINT {
-            x: self.caret.left,
-            y: self.caret.top,
-        });
+        self.monitor = Self::monitor_for_caret(self.caret);
         if self.monitor.is_some() {
             window.show_at(self.frame().frame);
         } else if suggested.right > suggested.left {
