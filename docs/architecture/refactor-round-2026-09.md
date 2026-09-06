@@ -118,7 +118,7 @@ Verified **not** worth touching: `ime/core/PrefHelper.kt` already uses `by prefe
 | M1.1 | `Candidates/{Horizontal:169, Vertical:403, Expandable:805}CandidatePanel.swift applyHighlightColor` | identical loop over item views ×3 (`CandidateBasePanel.swift:381` is an empty hook) | base owns the loop over an `allItemViews` accessor; subclasses supply the array |
 | M1.2 | `HorizontalCandidatePanel.swift:175-183` vs `ExpandableCandidatePanel.swift:811-819 updateCorners` | same override: pill corners when paged/overflowing else `super` | base `updateCorners()` consults `var wantsPillCorners: Bool { false }`; two subclasses override the bool |
 | M1.3 | `Candidates/CandidateChevronView.swift` (87) vs `CandidatePageArrowView.swift` (119) | share 10 members (`baseImageWidth`, `basePadding`, `baseSpacing`, `baseSymbolPointSize`, `configuration`, `imageWidth`, `padding`, `spacing`, `intrinsicContentSize`, `mouseUp`) | `CandidateEdgeControlView` base (cleanup-round seed) |
-| M1.4 (= M1b) | `macos/scripts/publish-release.sh` (306) ↔ `windows/scripts/publish-release.sh` (244): `anonymous_curl`, `anonymous_status`, `commit_site_file` | duplicated shell helpers | `scripts/release-lib.sh` sourced by both (both trains keep their own flow) |
+| M1.4 (= M1b) | `macos/scripts/publish-release.sh` (306) ↔ `windows/scripts/publish-release.sh` (244): `anonymous_curl`, `anonymous_status`, `commit_site_file` | duplicated shell helpers | `scripts/lib/release-site.sh` sourced by both (both trains keep their own flow) |
 
 Leave: `Controller/TaigiInputController.swift:492-650 handle()` — 158 lines but a flat `switch intent` (allowed shape per `ai-friendly-code.md` § Function design); `CandidateBackdrop.swift` three backdrop impls (protocol by design).
 

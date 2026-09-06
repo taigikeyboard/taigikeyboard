@@ -18,6 +18,8 @@
 
 set -euo pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/identity.sh"
+# shellcheck source=../../scripts/lib/release-site.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../scripts/lib/release-site.sh"
 
 PUBLISH_REPOSITORY="taigikeyboard/taigikeyboard.github.io"
 # The one file a release writes over there. The site's Windows download button
@@ -59,13 +61,6 @@ while [[ $# -gt 0 ]]; do
     esac
     shift
 done
-
-anonymous_curl() {
-    curl -q --netrc-file /dev/null --silent --show-error --location "$@"
-}
-anonymous_status() {
-    anonymous_curl --output /dev/null --write-out '%{http_code}' "$@" || true
-}
 
 [[ "$SHORT_VERSION" =~ ^[0-9]+(\.[0-9]+)*$ ]] ||
     fail "version '$SHORT_VERSION' is not dotted integers — the update manifest rejects suffixes"
@@ -177,27 +172,6 @@ echo "  page 200, sha256 $PUBLISHED_SHA256"
 SITE_RELEASE_JSON="$(printf '{\n  "version": "%s",\n  "tag": "%s",\n  "downloadURL": "%s",\n  "sha256": "%s",\n  "releasePageURL": "%s"\n}\n' \
     "$SHORT_VERSION" "$TAG" "$ASSET_URL" "$PUBLISHED_SHA256" "$RELEASE_PAGE_URL")"
 
-# Create or replace one file in the website repository.
-commit_site_file() {
-    local path="$1" message="$2" content="$3"
-    python3 -c 'import json,sys; json.loads(sys.stdin.read())' <<< "$content" ||
-        fail "generated $path is not valid JSON: $content"
-    local encoded_content
-    encoded_content="$(printf '%s' "$content" | base64 | tr -d '\n')"
-    local api="repos/$PUBLISH_REPOSITORY/contents/$path"
-    local -a arguments=(
-        -X PUT
-        -f "message=$message"
-        -f "content=$encoded_content"
-    )
-    local read_result
-    if read_result="$(gh api "$api" --jq .sha 2>&1)"; then
-        arguments+=(-f "sha=$read_result")
-    elif [[ "$read_result" != *"HTTP 404"* ]]; then
-        fail "cannot read $path in $PUBLISH_REPOSITORY: $read_result"
-    fi
-    gh api "$api" "${arguments[@]}" --jq '.commit.html_url'
-}
 
 echo "==> Publishing the release data"
 commit_site_file "$SITE_RELEASE_PATH" \
