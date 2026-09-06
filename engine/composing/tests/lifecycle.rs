@@ -3,21 +3,10 @@
 
 use composing::EngineHandle;
 use protos::engine::composing_request::Method;
-use protos::engine::{AppConfig, ComposingRequest, Reset, Start};
+use protos::engine::{ComposingRequest, Reset, Start};
 
-fn config_tl() -> AppConfig {
-    AppConfig {
-        tone_mode: String::new(),
-        input_mode: "tl".to_string(),
-        oo_doubletap_enabled: false,
-        nn_doubletap_enabled: false,
-        is_translate_swapped: false,
-        is_association_recording_enabled: false,
-        platform_id: 0,
-        output_both_scripts: false,
-        candidate_display_mode: 0,
-    }
-}
+mod common;
+use common::config_tl;
 
 fn req_start(text: &str) -> ComposingRequest {
     ComposingRequest {

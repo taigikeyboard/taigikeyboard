@@ -20,11 +20,11 @@
 //! 3. `mode_key_prefix(Tps)` emits the `tps:` family prefix matching
 //!    the `tps_notone` axis of the build pipeline.
 
-use std::path::PathBuf;
-
 use composing::dispatch::{build_continuous_keys_with_inventory, build_keys_tl_with_inventory};
-use fst::SetBuilder;
 use lexicon::SyllableInventory;
+
+mod common;
+use common::inventory_from_keys;
 
 fn mapped(keys: &[((u32, u32), String)]) -> Vec<((u32, u32), String)> {
     keys.iter().map(|(s, k)| (*s, k.clone())).collect()
@@ -328,8 +328,8 @@ fn bare_nasal_glyph_emits_its_expanded_span_key() {
 }
 
 // ---- Hermetic TPS SyllableInventory builder -------------------------
-// Pattern mirrors `engine/composing/tests/build_keys_tl_lattice.rs`'s
-// `build_inventory`. Samples are pre-stripped Bopomofo syllables (with
+// Key derivation is TPS-specific (no phonotactic gating); the FST tail is
+// `common::inventory_from_keys`. Samples are pre-stripped Bopomofo syllables (with
 // or without tone mark trailing); each sample is emitted as a single
 // `tps:<sample>` FST key plus, when a tone mark is present, the
 // toneless body (`tps:<body>`) — mirroring how the production C-0 build
@@ -354,23 +354,5 @@ fn build_tps_inventory(samples: &[&str]) -> SyllableInventory {
             }
         }
     }
-    keys.sort();
-    keys.dedup();
-
-    let path = unique_temp_path();
-    let file = std::fs::File::create(&path).expect("create fst");
-    let mut builder = SetBuilder::new(std::io::BufWriter::new(file)).expect("builder");
-    for key in &keys {
-        builder.insert(key.as_bytes()).expect("insert");
-    }
-    builder.finish().expect("finish");
-    SyllableInventory::open(&path).expect("open inventory")
-}
-
-fn unique_temp_path() -> PathBuf {
-    use std::sync::atomic::{AtomicU64, Ordering};
-    static COUNTER: AtomicU64 = AtomicU64::new(0);
-    let n = COUNTER.fetch_add(1, Ordering::Relaxed);
-    let pid = std::process::id();
-    std::env::temp_dir().join(format!("taigi_lattice_tps_inv_{pid}_{n}.fst"))
+    inventory_from_keys(keys)
 }

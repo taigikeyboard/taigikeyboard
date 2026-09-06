@@ -18,21 +18,10 @@
 //! If either invariant breaks, the Enter contract diverges silently.
 
 use composing::{Engine, Intent, Phase};
-use protos::engine::{AppConfig, ComposingResponse};
+use protos::engine::ComposingResponse;
 
-fn config_tl() -> AppConfig {
-    AppConfig {
-        tone_mode: String::new(),
-        input_mode: "tl".to_string(),
-        oo_doubletap_enabled: false,
-        nn_doubletap_enabled: false,
-        is_translate_swapped: false,
-        is_association_recording_enabled: false,
-        platform_id: 0,
-        output_both_scripts: false,
-        candidate_display_mode: 0,
-    }
-}
+mod common;
+use common::config_tl;
 
 fn assert_preedit_model_b_invariants(engine: &Engine, response: &ComposingResponse, label: &str) {
     let preedit = response

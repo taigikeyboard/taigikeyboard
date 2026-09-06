@@ -20,12 +20,10 @@
 //! topological order) is unit-tested in-crate in
 //! `composing/src/lattice/builder.rs`.
 
-use std::path::PathBuf;
-
 use composing::dispatch::{build_continuous_keys_with_inventory, build_keys_tl_with_inventory};
-use fst::SetBuilder;
-use lexicon::SyllableInventory;
-use phonetics::canonicalize_syllable;
+
+mod common;
+use common::build_inventory;
 
 fn mapped(keys: &[((u32, u32), String)]) -> Vec<((u32, u32), &str)> {
     keys.iter().map(|(s, k)| (*s, k.as_str())).collect()
@@ -167,44 +165,4 @@ fn full_key_seam_equals_base_key_seam_for_non_tps_modes() {
             );
         }
     }
-}
-
-fn build_inventory(samples: &[&str]) -> SyllableInventory {
-    let pairs: Vec<(String, String)> = samples
-        .iter()
-        .map(|s| {
-            canonicalize_syllable(s)
-                .unwrap_or_else(|| panic!("sample {s:?} failed canonicalize_syllable"))
-        })
-        .collect();
-
-    // v3.5.9 B-1: tagged-single-FST — emit keys with `tl:` prefix.
-    let mut keys: Vec<String> = Vec::new();
-    for (canonical, tone) in &pairs {
-        if tone.is_empty() {
-            keys.push(format!("tl:{canonical}"));
-        } else {
-            keys.push(format!("tl:{canonical}{tone}"));
-            keys.push(format!("tl:{canonical}"));
-        }
-    }
-    keys.sort();
-    keys.dedup();
-
-    let path = unique_temp_path();
-    let file = std::fs::File::create(&path).expect("create fst");
-    let mut builder = SetBuilder::new(std::io::BufWriter::new(file)).expect("builder");
-    for key in &keys {
-        builder.insert(key.as_bytes()).expect("insert");
-    }
-    builder.finish().expect("finish");
-    SyllableInventory::open(&path).expect("open inventory")
-}
-
-fn unique_temp_path() -> PathBuf {
-    use std::sync::atomic::{AtomicU64, Ordering};
-    static COUNTER: AtomicU64 = AtomicU64::new(0);
-    let n = COUNTER.fetch_add(1, Ordering::Relaxed);
-    let pid = std::process::id();
-    std::env::temp_dir().join(format!("taigi_lattice_inv_{pid}_{n}.fst"))
 }

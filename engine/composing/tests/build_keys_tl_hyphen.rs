@@ -19,12 +19,10 @@
 //! `engine/composing/tests/syllabifier_tl.rs:204-247` to avoid a shared
 //! test-utils crate.
 
-use std::path::PathBuf;
-
 use composing::dispatch::build_keys_tl_with_inventory;
-use fst::SetBuilder;
-use lexicon::SyllableInventory;
-use phonetics::canonicalize_syllable;
+
+mod common;
+use common::build_inventory;
 
 #[test]
 fn hyphenless_input_matches_pre_item8_consumed_span() {
@@ -192,45 +190,3 @@ fn multi_byte_chars_preserve_byte_correct_offset_map() {
 // inline duplication preferred over a shared crate per the comment
 // there ("small duplication is preferable to a shared test-utils
 // crate for one reuse").
-
-fn build_inventory(samples: &[&str]) -> SyllableInventory {
-    let pairs: Vec<(String, String)> = samples
-        .iter()
-        .map(|s| {
-            canonicalize_syllable(s)
-                .unwrap_or_else(|| panic!("sample {s:?} failed canonicalize_syllable"))
-        })
-        .collect();
-
-    // v3.5.9 B-1: tagged-single-FST format — emit keys with the
-    // `tl:` prefix so the production syllabifier's
-    // `contains_in(InputMode::Tl, …)` probes hit the test inventory.
-    let mut keys: Vec<String> = Vec::new();
-    for (canonical, tone) in &pairs {
-        if tone.is_empty() {
-            keys.push(format!("tl:{canonical}"));
-        } else {
-            keys.push(format!("tl:{canonical}{tone}"));
-            keys.push(format!("tl:{canonical}"));
-        }
-    }
-    keys.sort();
-    keys.dedup();
-
-    let path = unique_temp_path();
-    let file = std::fs::File::create(&path).expect("create fst");
-    let mut builder = SetBuilder::new(std::io::BufWriter::new(file)).expect("builder");
-    for key in &keys {
-        builder.insert(key.as_bytes()).expect("insert");
-    }
-    builder.finish().expect("finish");
-    SyllableInventory::open(&path).expect("open inventory")
-}
-
-fn unique_temp_path() -> PathBuf {
-    use std::sync::atomic::{AtomicU64, Ordering};
-    static COUNTER: AtomicU64 = AtomicU64::new(0);
-    let n = COUNTER.fetch_add(1, Ordering::Relaxed);
-    let pid = std::process::id();
-    std::env::temp_dir().join(format!("composing-build-keys-tl-hyphen-{pid}-{n}.fst"))
-}

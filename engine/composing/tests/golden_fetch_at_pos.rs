@@ -15,7 +15,7 @@
 //! known-valid syllables with `.expect()` canonicalization, not silent
 //! skip).
 //!
-//! ## Why this lives in `composing` and re-implements the fixture builders
+//! ## Why this lives in `composing` with its own fixture builders
 //!
 //! `dispatch::handle(FetchAtPos)` resolves candidates through the
 //! process-global `lexicon::EngineHandle` singleton, NOT injected fixtures.
@@ -24,10 +24,9 @@
 //! `engine/lexicon/tests/parity.rs`). This file must call BOTH
 //! `composing::dispatch::handle` AND `lexicon::EngineHandle::install`, so
 //! it lives in `composing` (which depends on `lexicon`). The hermetic
-//! fixture builders are re-implemented here because `lexicon/tests/common`
-//! is a lexicon-test-private module not visible to composing tests —
-//! accepted duplication, the same pattern `user_freq_plumb.rs` already
-//! uses. `parity.rs` passes `""` for `syllables_fst` → inventory `None` →
+//! fixture builders live in `tests/common/mod.rs` because
+//! `lexicon/tests/common` is a lexicon-test-private module not visible to
+//! composing tests. `parity.rs` passes `""` for `syllables_fst` → inventory `None` →
 //! the whole-sentence walker path is silently skipped; S0 therefore builds
 //! a REAL `syllables.fst` so the walker slot-0 path is exercised.
 //!
@@ -57,207 +56,53 @@
 //! do not `UPDATE_GOLDEN` to paper over it.
 
 use std::path::PathBuf;
-use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
 
-use composing::api::Engine;
-use composing::dispatch;
-use fst::SetBuilder;
-use lexicon::{EngineHandle as LexiconHandle, LexiconPaths};
-use phonetics::canonicalize_syllable;
-use protos::engine::composing_request::Method;
-use protos::engine::{
-    AppConfig, ComposingRequest, CustomDictEntry, EnterContinuous, FetchAtPos, FrequencyEntry,
-    Start,
+use protos::engine::{CustomDictEntry, FetchAtPos, FrequencyEntry};
+
+mod common;
+use common::{
+    build_syllables_fst, build_tkdb_v3, config, derive_poj_notone, empty_association_bin,
+    engine_install_lock, fetch_at_pos_response, fst_entry, install_lexicon, write_fst_set,
+    write_temp, Row,
 };
 
-const SEPARATOR: u8 = 0xFF;
-const RANK_NEUTRAL_BITMASK: u16 = 1u16 << 11;
-const TKDB_HEADER_SIZE: usize = 16;
+// --- golden-only fixture builder (union of every key family) ---------------
 
-/// Serializes install vs. assertion within THIS test binary. Each
-/// `tests/*.rs` is its own process with its own `lexicon::EngineHandle`
-/// singleton, so the cross-crate concern `parity.rs` documents does not
-/// apply here (Codex post-impl NIT); the lock is still the established
-/// pattern and keeps a future second `#[test]` in this binary from
-/// swapping the singleton mid-assertion under cargo's in-binary
-/// parallelism.
-fn engine_install_lock() -> MutexGuard<'static, ()> {
-    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-    LOCK.get_or_init(|| Mutex::new(()))
-        .lock()
-        .unwrap_or_else(PoisonError::into_inner)
-}
-
-// --- hermetic fixture builders (re-impl of lexicon/tests/common + parity) --
-
-/// One dictionary fixture row. Empty `hanzi` ⇒ TAILO (no hanji), mirroring
-/// `span_local_fetch.rs`'s `mode_carrier` row. `rowid` is the 1-based
-/// slice index, shared between `dictionary.bin` (offset-table order) and
-/// `dictionary.fst` (`tl:<key> + 0xFF + rowid_le`).
-struct Row {
-    toneless_key: &'static str,
-    hanzi: &'static str,
-    tl: &'static str,
-    syll: u8,
-    freq: u32,
-}
-
-/// Per-process temp namespace (pid) so a concurrent invocation of this
-/// same test binary cannot truncate/rewrite another's fixture files mid
-/// install/read (Codex post-impl SHOULD; mirrors the `pid`-namespaced
-/// `unique_temp_path` pattern in `span_local_fetch.rs`).
-fn write_temp(name: &str, bytes: &[u8]) -> PathBuf {
-    let pid = std::process::id();
-    let path = std::env::temp_dir().join(format!("composing-golden-s0-{pid}-{name}"));
-    std::fs::write(&path, bytes).expect("write temp fixture");
-    path
-}
-
-/// TKDB v3 byte layout — verbatim logic from
-/// `engine/lexicon/tests/common/mod.rs::build_tkdb_bin` (`build_tkdb_v3`
-/// path: every row carries a `syllable_count` byte + a `kautian_subtag` u16).
-fn build_tkdb_v3(rows: &[Row]) -> Vec<u8> {
-    let mut out = Vec::new();
-    out.extend_from_slice(b"TKDB");
-    out.extend_from_slice(&3u32.to_le_bytes()); // version
-    out.extend_from_slice(&(rows.len() as u32).to_le_bytes());
-    out.extend_from_slice(&0u32.to_le_bytes()); // build_ts
-
-    let offset_table_size = rows.len() * 4;
-    let mut offsets = Vec::<u32>::with_capacity(rows.len());
-    let mut payload = Vec::<u8>::new();
-    for row in rows {
-        offsets.push((TKDB_HEADER_SIZE + offset_table_size + payload.len()) as u32);
-        payload.extend_from_slice(&RANK_NEUTRAL_BITMASK.to_le_bytes());
-        payload.extend_from_slice(&row.freq.to_le_bytes());
-        payload.push(row.hanzi.len() as u8);
-        payload.push(row.tl.len() as u8);
-        payload.push(row.syll); // v2 layout
-        payload.extend_from_slice(&0u16.to_le_bytes()); // kautian_subtag (v3); 0 = no kautian provenance
-        payload.extend_from_slice(row.hanzi.as_bytes());
-        payload.extend_from_slice(row.tl.as_bytes());
-    }
-    for off in &offsets {
-        out.extend_from_slice(&off.to_le_bytes());
-    }
-    out.extend_from_slice(&payload);
-    out
-}
-
-/// `dictionary.fst` — entry per row keyed `b"tl:" + toneless_key + 0xFF +
-/// rowid_le_u32`, inserted in ascending byte order (verbatim pattern from
-/// `span_local_fetch.rs` / `user_freq_plumb.rs`).
+/// `dictionary.fst` — union of every key family the golden matrix exercises,
+/// each derived the way `dictionary/build/create_fst.py` does in production:
+/// - `tl:<toneless_key>` (pre-B-2 path) plus the toned `tl:<tl_num>` family via
+///   `phonetics::normalize_input` (the runtime numeric-tone normalizer), emitted
+///   only when the result carries a tone digit;
+/// - `poj:<poj_notone>` (v3.5.9 B-2) plus toned `poj:<poj_num>` — rows whose TL
+///   display fails the POJ phonotactic gate have no POJ family, as in production;
+/// - `tps:<tps_notone>` plus the C-3a er↔or variant (v3.5.9 D / C-5).
 fn build_dictionary_fst(rows: &[Row]) -> PathBuf {
     let mut entries: Vec<Vec<u8>> = Vec::with_capacity(rows.len());
     for (idx, row) in rows.iter().enumerate() {
         let rowid = (idx + 1) as u32;
-        // `tl:` family — pre-B-2 path, unchanged.
-        let mut e = Vec::with_capacity(row.toneless_key.len() + 4 + 5);
-        e.extend_from_slice(b"tl:");
-        e.extend_from_slice(row.toneless_key.as_bytes());
-        e.push(SEPARATOR);
-        e.extend_from_slice(&rowid.to_le_bytes());
-        entries.push(e);
-        // Explicit-tone fix — `tl:<tl_num>` toned family, production
-        // parity with `dictionary/build/create_fst.py:127-130` (emits
-        // `record.tl_num` alongside `tl_notone`). Derived from the display
-        // `tl` via `phonetics::normalize_input` — the SAME normalizer the
-        // runtime applies to numeric-tone input, so a toned query
-        // `tl:tai5` byte-matches this fixture key. Emitted only when the
-        // result carries a tone digit (display-unmarked tone-1/4 syllables
-        // collapse onto the toneless key, matching `normalize_input`).
+        entries.push(fst_entry(b"tl:", row.toneless_key, rowid));
         let tl_num = phonetics::normalize_input(row.tl);
         if tl_num.bytes().any(|b| b.is_ascii_digit()) {
-            let mut e_num = Vec::with_capacity(tl_num.len() + 4 + 5);
-            e_num.extend_from_slice(b"tl:");
-            e_num.extend_from_slice(tl_num.as_bytes());
-            e_num.push(SEPARATOR);
-            e_num.extend_from_slice(&rowid.to_le_bytes());
-            entries.push(e_num);
+            entries.push(fst_entry(b"tl:", &tl_num, rowid));
         }
-        // v3.5.9 B-2 — `poj:` family. Derive `poj_notone` at fixture
-        // build time the way `dictionary/build/create_fst.py:124-127`
-        // does in production (TL display → POJ display →
-        // per-syllable `canonicalize_poj_syllable` → concat). Rows whose
-        // TL display does not phonotactically gate have no POJ family
-        // entry in the real `dictionary.fst` either, so the fixture
-        // simply skips them.
         if let Some(poj_notone) = derive_poj_notone(row.tl) {
-            let mut e2 = Vec::with_capacity(poj_notone.len() + 5 + 5);
-            e2.extend_from_slice(b"poj:");
-            e2.extend_from_slice(poj_notone.as_bytes());
-            e2.push(SEPARATOR);
-            e2.extend_from_slice(&rowid.to_le_bytes());
-            entries.push(e2);
+            entries.push(fst_entry(b"poj:", &poj_notone, rowid));
         }
-        // Explicit-tone fix — `poj:<poj_num>` toned family, production
-        // parity with create_fst.py. Same per-syllable canonicalize as
-        // `derive_poj_notone` but keeps the tone digit, so a toned POJ
-        // query `poj:choa2` byte-matches.
         if let Some(poj_num) = derive_poj_num(row.tl) {
             if poj_num.bytes().any(|b| b.is_ascii_digit()) {
-                let mut e2n = Vec::with_capacity(poj_num.len() + 5 + 5);
-                e2n.extend_from_slice(b"poj:");
-                e2n.extend_from_slice(poj_num.as_bytes());
-                e2n.push(SEPARATOR);
-                e2n.extend_from_slice(&rowid.to_le_bytes());
-                entries.push(e2n);
+                entries.push(fst_entry(b"poj:", &poj_num, rowid));
             }
         }
-        // v3.5.9 D / C-5 — `tps:` family. Mirrors `create_fst.py:124-138`:
-        // emit `tps:<tps_notone>` per row (primary), plus
-        // `tps:<tps_notone_var>` for the C-3a er↔or dual-emit. Derivation
-        // uses `phonetics::tps_notone_from_tl` (same chain the runtime
-        // continuous-input guard uses) so fixture ↔ production parity
-        // holds for the cases the golden matrix exercises.
         let tps_notone = phonetics::tps_notone_from_tl(row.tl);
         if !tps_notone.is_empty() {
-            let mut e3 = Vec::with_capacity(tps_notone.len() + 4 + 5);
-            e3.extend_from_slice(b"tps:");
-            e3.extend_from_slice(tps_notone.as_bytes());
-            e3.push(SEPARATOR);
-            e3.extend_from_slice(&rowid.to_le_bytes());
-            entries.push(e3);
+            entries.push(fst_entry(b"tps:", &tps_notone, rowid));
             let tps_notone_var = phonetics::tps_notone_or_variant(&tps_notone);
             if !tps_notone_var.is_empty() {
-                let mut e4 = Vec::with_capacity(tps_notone_var.len() + 4 + 5);
-                e4.extend_from_slice(b"tps:");
-                e4.extend_from_slice(tps_notone_var.as_bytes());
-                e4.push(SEPARATOR);
-                e4.extend_from_slice(&rowid.to_le_bytes());
-                entries.push(e4);
+                entries.push(fst_entry(b"tps:", &tps_notone_var, rowid));
             }
         }
     }
-    entries.sort();
-    entries.dedup();
-    let path = write_temp("dictionary.fst", &[]);
-    let file = std::fs::File::create(&path).expect("create dictionary.fst");
-    let mut builder = SetBuilder::new(std::io::BufWriter::new(file)).expect("fst builder");
-    for entry in &entries {
-        builder.insert(entry).expect("fst insert");
-    }
-    builder.finish().expect("fst finish");
-    path
-}
-
-/// v3.5.9 B-2 — derive `poj_notone` from `record.tl` at fixture-build
-/// time, mirroring the production `dictionary/build/create_fst.py:124-127`
-/// pipeline (TL display → POJ display → per-syllable
-/// `canonicalize_poj_syllable` → concat). Returns `None` when any
-/// non-empty syllable fails phonotactic gating (the production pipeline
-/// would have flagged that row as stale and omitted its POJ keys).
-fn derive_poj_notone(tl_display: &str) -> Option<String> {
-    let poj_display = phonetics::api::tl_display_to_poj_display(tl_display);
-    let mut out = String::new();
-    for token in poj_display.split(['-', ' ']) {
-        if token.is_empty() {
-            continue;
-        }
-        let (toneless, _) = phonetics::canonicalize_poj_syllable(token)?;
-        out.push_str(&toneless);
-    }
-    (!out.is_empty()).then_some(out)
+    write_fst_set("dictionary.fst", entries)
 }
 
 /// Explicit-tone fix — derive `poj_num` (toned POJ) from `record.tl`,
@@ -279,95 +124,6 @@ fn derive_poj_num(tl_display: &str) -> Option<String> {
         out.push_str(&tone);
     }
     (!out.is_empty()).then_some(out)
-}
-
-/// `syllables.fst` — both numeric and toneless canonical keys, exactly
-/// the builder shape from `engine/composing/tests/build_keys_tl_hyphen.rs`.
-/// `.expect()` (not silent skip) so a wrong grounding assumption fails
-/// loudly here rather than degrading a matrix case (Codex pre-impl BLOCK).
-fn build_syllables_fst(samples: &[&str]) -> PathBuf {
-    // v3.5.9 B-1 / B-2: tagged-single-FST — emit both `tl:` and `poj:`
-    // family keys so production lookups via `contains_in(mode, …)`
-    // resolve under either mode. B-2 added the `poj:` family (built via
-    // `canonicalize_poj_syllable` to preserve POJ ASCII shape).
-    let mut keys: Vec<String> = Vec::new();
-    for s in samples {
-        let (canonical, tone) = canonicalize_syllable(s)
-            .unwrap_or_else(|| panic!("syllable sample {s:?} failed canonicalize_syllable"));
-        if tone.is_empty() {
-            keys.push(format!("tl:{canonical}"));
-        } else {
-            keys.push(format!("tl:{canonical}{tone}"));
-            keys.push(format!("tl:{canonical}"));
-        }
-        // v3.5.9 B-2 — derive POJ-form sample from the TL-form input
-        // (`tsua7` → POJ `chua7` then through canonicalize_poj_syllable
-        // for normalization). The production POJ inventory is sourced
-        // from the `poj_num` column of `dictionary.csv` — the fixture's
-        // TL samples were rooted in `tl_num`, so we convert each
-        // sample's display form to POJ first via
-        // `phonetics::api::tl_display_to_poj_display`.
-        let poj_display = phonetics::api::tl_display_to_poj_display(s);
-        if let Some((poj_canonical, poj_tone)) = phonetics::canonicalize_poj_syllable(&poj_display)
-        {
-            if poj_tone.is_empty() {
-                keys.push(format!("poj:{poj_canonical}"));
-            } else {
-                keys.push(format!("poj:{poj_canonical}{poj_tone}"));
-                keys.push(format!("poj:{poj_canonical}"));
-            }
-        }
-        // v3.5.9 D / C-5 — `tps:` family. Mirrors
-        // `create_syllables_fst.py`: derive per-syllable TPS from each
-        // TL sample via `phonetics::tl_numeric_token_to_tps` (the
-        // pub-widened `to_zhuyin` thunk) with `or_maps_to_er=true`
-        // matching the Node bridge default. Emit BOTH numeric (with
-        // Bopomofo tone marks) AND toneless forms — same shape the
-        // production pipeline ships.
-        let numeric = phonetics::to_tone_number(s);
-        let tps_with_tone = phonetics::tl_numeric_token_to_tps(&numeric, false, true);
-        // `to_zhuyin` emits a trailing space marker for tone-1 inputs and
-        // joins multi-token output with `-`; we treat the sample as a
-        // single syllable so strip both. The C-3a variant glyph (ㄛ) is
-        // not emitted here — syllable inventory is mode-blind; row-level
-        // variant lives in `dictionary.fst` only.
-        let tps_clean: String = tps_with_tone
-            .chars()
-            .filter(|&c| !c.is_whitespace() && c != '-')
-            .collect();
-        if !tps_clean.is_empty() {
-            let tps_toneless: String = tps_clean
-                .chars()
-                .filter(|&c| !phonetics::is_tps_tone_mark(c))
-                .collect();
-            keys.push(format!("tps:{tps_clean}"));
-            if !tps_toneless.is_empty() {
-                keys.push(format!("tps:{tps_toneless}"));
-            }
-        }
-    }
-    keys.sort();
-    keys.dedup();
-    let path = write_temp("syllables.fst", &[]);
-    let file = std::fs::File::create(&path).expect("create syllables.fst");
-    let mut builder = SetBuilder::new(std::io::BufWriter::new(file)).expect("fst builder");
-    for key in &keys {
-        builder.insert(key.as_bytes()).expect("insert");
-    }
-    builder.finish().expect("finish");
-    path
-}
-
-/// Empty `association.bin` — `TKWA` + version 1 + 0 keys/entries/ts
-/// (verbatim from `parity.rs::synth_association_bin`).
-fn empty_association_bin() -> Vec<u8> {
-    let mut out = Vec::new();
-    out.extend_from_slice(b"TKWA");
-    out.extend_from_slice(&1u32.to_le_bytes());
-    out.extend_from_slice(&0u32.to_le_bytes()); // key_count
-    out.extend_from_slice(&0u32.to_le_bytes()); // entry_count
-    out.extend_from_slice(&0u32.to_le_bytes()); // build_ts
-    out
 }
 
 // --- the single union install fixture ------------------------------------
@@ -514,15 +270,7 @@ fn install_union_fixture() {
     let fst_path = build_dictionary_fst(&rows);
     let assoc_path = write_temp("association.bin", &empty_association_bin());
     let syllables_path = build_syllables_fst(SYLLABLE_SAMPLES);
-    let paths = LexiconPaths::validated(
-        fst_path.to_str().unwrap(),
-        dict_path.to_str().unwrap(),
-        assoc_path.to_str().unwrap(),
-        syllables_path.to_str().unwrap(),
-        2,
-    )
-    .expect("LexiconPaths::validated");
-    LexiconHandle::install(paths).expect("EngineHandle::install");
+    install_lexicon(&fst_path, &dict_path, &assoc_path, &syllables_path);
 }
 
 // --- the matrix ----------------------------------------------------------
@@ -759,45 +507,14 @@ fn matrix() -> Vec<Case> {
 
 // --- driver + golden -----------------------------------------------------
 
-fn config(input_mode: &str) -> AppConfig {
-    AppConfig {
-        tone_mode: String::new(),
-        input_mode: input_mode.to_string(),
-        oo_doubletap_enabled: false,
-        nn_doubletap_enabled: false,
-        is_translate_swapped: false,
-        is_association_recording_enabled: false,
-        platform_id: 0,
-        output_both_scripts: false,
-        candidate_display_mode: 0,
-    }
-}
-
-fn req(method: Method) -> ComposingRequest {
-    ComposingRequest {
-        method: Some(method),
-    }
-}
-
 /// Drive one case through `Start → EnterContinuous → FetchAtPos` on a
 /// fresh `Engine` and format its candidate vector as a golden block.
 fn run_case(c: &Case) -> String {
     let cfg = config(c.input_mode);
-    let mut engine = Engine::new();
-    dispatch::handle(
-        &req(Method::Start(Start { text: c.raw.into() })),
-        &mut engine,
+    let resp = fetch_at_pos_response(
         &cfg,
-    )
-    .expect("Start");
-    dispatch::handle(
-        &req(Method::EnterContinuous(EnterContinuous {})),
-        &mut engine,
-        &cfg,
-    )
-    .expect("EnterContinuous");
-    let resp = dispatch::handle(
-        &req(Method::FetchAtPos(FetchAtPos {
+        c.raw,
+        FetchAtPos {
             position: 0,
             frequency_entries: c.freq.clone(),
             now_ms: c.now_ms,
@@ -806,11 +523,8 @@ fn run_case(c: &Case) -> String {
             // §34/S22: all golden cases keep the literal-roman candidate ON
             // (the toggle OFF path is covered by a focused dispatch unit test).
             literal_roman_candidate_disabled: false,
-        })),
-        &mut engine,
-        &cfg,
-    )
-    .expect("FetchAtPos");
+        },
+    );
 
     let mut block = format!("## {} :: {}\n", c.name, c.raw);
     match resp.continuous {

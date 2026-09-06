@@ -12,147 +12,22 @@
 //! so a leak from the span-local, walker slot-0, OR Step 4b prefix-scan
 //! paths would show the wrong-tone row and fail the assertion.
 //!
-//! Hermetic install of `LexiconHandle` mirrors `golden_fetch_at_pos.rs` /
-//! `tps_display_dedup.rs` (this binary is its own process with its own
+//! Hermetic install of `LexiconHandle` comes from `tests/common/mod.rs`
+//! (this binary is its own process with its own
 //! singleton; the lock guards in-binary `#[test]` parallelism). The
 //! fixture's `dictionary.fst` emits BOTH the toneless `tl:<tl_notone>` and
 //! the toned `tl:<tl_num>` key families, matching production
 //! `dictionary/build/create_fst.py:127-130` — without the toned keys the
 //! tone filter would have nothing to hit.
 
-use std::path::PathBuf;
-use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
+use protos::engine::FetchAtPos;
 
-use composing::api::Engine;
-use composing::dispatch;
-use fst::SetBuilder;
-use lexicon::{EngineHandle as LexiconHandle, LexiconPaths};
-use phonetics::canonicalize_syllable;
-use protos::engine::composing_request::Method;
-use protos::engine::{AppConfig, ComposingRequest, EnterContinuous, FetchAtPos, Start};
-
-const SEPARATOR: u8 = 0xFF;
-const RANK_NEUTRAL_BITMASK: u16 = 1u16 << 11;
-const TKDB_HEADER_SIZE: usize = 16;
-
-fn engine_install_lock() -> MutexGuard<'static, ()> {
-    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-    LOCK.get_or_init(|| Mutex::new(()))
-        .lock()
-        .unwrap_or_else(PoisonError::into_inner)
-}
-
-struct Row {
-    toneless_key: &'static str,
-    hanzi: &'static str,
-    tl: &'static str,
-    syll: u8,
-    freq: u32,
-}
-
-fn write_temp(name: &str, bytes: &[u8]) -> PathBuf {
-    let pid = std::process::id();
-    let path = std::env::temp_dir().join(format!("composing-explicit-tone-{pid}-{name}"));
-    std::fs::write(&path, bytes).expect("write temp fixture");
-    path
-}
-
-fn build_tkdb_v3(rows: &[Row]) -> Vec<u8> {
-    let mut out = Vec::new();
-    out.extend_from_slice(b"TKDB");
-    out.extend_from_slice(&3u32.to_le_bytes());
-    out.extend_from_slice(&(rows.len() as u32).to_le_bytes());
-    out.extend_from_slice(&0u32.to_le_bytes());
-    let offset_table_size = rows.len() * 4;
-    let mut offsets = Vec::<u32>::with_capacity(rows.len());
-    let mut payload = Vec::<u8>::new();
-    for row in rows {
-        offsets.push((TKDB_HEADER_SIZE + offset_table_size + payload.len()) as u32);
-        payload.extend_from_slice(&RANK_NEUTRAL_BITMASK.to_le_bytes());
-        payload.extend_from_slice(&row.freq.to_le_bytes());
-        payload.push(row.hanzi.len() as u8);
-        payload.push(row.tl.len() as u8);
-        payload.push(row.syll);
-        payload.extend_from_slice(&0u16.to_le_bytes()); // kautian_subtag (v3); 0 = none
-        payload.extend_from_slice(row.hanzi.as_bytes());
-        payload.extend_from_slice(row.tl.as_bytes());
-    }
-    for off in &offsets {
-        out.extend_from_slice(&off.to_le_bytes());
-    }
-    out.extend_from_slice(&payload);
-    out
-}
-
-/// Emits the toneless `tl:<tl_notone>` family AND the toned `tl:<tl_num>`
-/// family (derived from the display `tl` via `phonetics::normalize_input`
-/// — the SAME normalizer the runtime applies to numeric-tone input, so a
-/// `tl:tsua2` runtime query byte-matches the fixture key). Production
-/// `create_fst.py:127-130` emits both; without the toned keys the fix's
-/// tone filter would have nothing to hit.
-fn build_dictionary_fst(rows: &[Row]) -> PathBuf {
-    let mut entries: Vec<Vec<u8>> = Vec::with_capacity(rows.len() * 2);
-    for (idx, row) in rows.iter().enumerate() {
-        let rowid = (idx + 1) as u32;
-        let mut push_key = |body: &str| {
-            let mut e = Vec::with_capacity(body.len() + 4 + 5);
-            e.extend_from_slice(b"tl:");
-            e.extend_from_slice(body.as_bytes());
-            e.push(SEPARATOR);
-            e.extend_from_slice(&rowid.to_le_bytes());
-            entries.push(e);
-        };
-        push_key(row.toneless_key);
-        let tl_num = phonetics::normalize_input(row.tl);
-        if tl_num.bytes().any(|b| b.is_ascii_digit()) {
-            push_key(&tl_num);
-        }
-    }
-    entries.sort();
-    entries.dedup();
-    let path = write_temp("dictionary.fst", &[]);
-    let file = std::fs::File::create(&path).expect("create dictionary.fst");
-    let mut builder = SetBuilder::new(std::io::BufWriter::new(file)).expect("fst builder");
-    for entry in &entries {
-        builder.insert(entry).expect("fst insert");
-    }
-    builder.finish().expect("fst finish");
-    path
-}
-
-fn build_syllables_fst(samples: &[&str]) -> PathBuf {
-    let mut keys: Vec<String> = Vec::new();
-    for s in samples {
-        let (canonical, tone) = canonicalize_syllable(s)
-            .unwrap_or_else(|| panic!("syllable sample {s:?} failed canonicalize_syllable"));
-        if tone.is_empty() {
-            keys.push(format!("tl:{canonical}"));
-        } else {
-            keys.push(format!("tl:{canonical}{tone}"));
-            keys.push(format!("tl:{canonical}"));
-        }
-    }
-    keys.sort();
-    keys.dedup();
-    let path = write_temp("syllables.fst", &[]);
-    let file = std::fs::File::create(&path).expect("create syllables.fst");
-    let mut builder = SetBuilder::new(std::io::BufWriter::new(file)).expect("fst builder");
-    for key in &keys {
-        builder.insert(key.as_bytes()).expect("insert");
-    }
-    builder.finish().expect("finish");
-    path
-}
-
-fn empty_association_bin() -> Vec<u8> {
-    let mut out = Vec::new();
-    out.extend_from_slice(b"TKWA");
-    out.extend_from_slice(&1u32.to_le_bytes());
-    out.extend_from_slice(&0u32.to_le_bytes());
-    out.extend_from_slice(&0u32.to_le_bytes());
-    out.extend_from_slice(&0u32.to_le_bytes());
-    out
-}
+mod common;
+use common::{
+    build_dictionary_fst_tl_toned, build_dictionary_fst_tps, build_syllables_fst_tl,
+    build_syllables_fst_tps, build_tkdb_v3, config, empty_association_bin, engine_install_lock,
+    fetch_at_pos_response, install_lexicon, write_temp, Row,
+};
 
 /// 紙/tsuá (tone2) and 蛇/tsuâ (tone5) share the toneless key `tsua` and
 /// differ ONLY by tone — the minimal fixture that makes "explicit tone
@@ -187,38 +62,10 @@ fn fixture_rows() -> Vec<Row> {
 fn install_fixture() {
     let rows = fixture_rows();
     let dict_path = write_temp("dictionary.bin", &build_tkdb_v3(&rows));
-    let fst_path = build_dictionary_fst(&rows);
+    let fst_path = build_dictionary_fst_tl_toned(&rows);
     let assoc_path = write_temp("association.bin", &empty_association_bin());
-    let syllables_path = build_syllables_fst(&["tsua2", "tsua5", "tsu"]);
-    let paths = LexiconPaths::validated(
-        fst_path.to_str().unwrap(),
-        dict_path.to_str().unwrap(),
-        assoc_path.to_str().unwrap(),
-        syllables_path.to_str().unwrap(),
-        2,
-    )
-    .expect("LexiconPaths::validated");
-    LexiconHandle::install(paths).expect("EngineHandle::install");
-}
-
-fn config(input_mode: &str) -> AppConfig {
-    AppConfig {
-        tone_mode: String::new(),
-        input_mode: input_mode.to_string(),
-        oo_doubletap_enabled: false,
-        nn_doubletap_enabled: false,
-        is_translate_swapped: false,
-        is_association_recording_enabled: false,
-        platform_id: 0,
-        output_both_scripts: false,
-        candidate_display_mode: 0,
-    }
-}
-
-fn req(method: Method) -> ComposingRequest {
-    ComposingRequest {
-        method: Some(method),
-    }
+    let syllables_path = build_syllables_fst_tl(&["tsua2", "tsua5", "tsu"]);
+    install_lexicon(&fst_path, &dict_path, &assoc_path, &syllables_path);
 }
 
 /// Drive `raw` through `Start → EnterContinuous → FetchAtPos` in TL mode and
@@ -230,32 +77,7 @@ fn fetch_hanji(raw: &str) -> Vec<String> {
 /// Mode-parameterized driver shared by the TL and TPS fetch helpers.
 fn fetch_hanji_in(raw: &str, input_mode: &str) -> Vec<String> {
     let cfg = config(input_mode);
-    let mut engine = Engine::new();
-    dispatch::handle(
-        &req(Method::Start(Start { text: raw.into() })),
-        &mut engine,
-        &cfg,
-    )
-    .expect("Start");
-    dispatch::handle(
-        &req(Method::EnterContinuous(EnterContinuous {})),
-        &mut engine,
-        &cfg,
-    )
-    .expect("EnterContinuous");
-    let resp = dispatch::handle(
-        &req(Method::FetchAtPos(FetchAtPos {
-            position: 0,
-            frequency_entries: Vec::new(),
-            now_ms: 0,
-            custom_entries: Vec::new(),
-            enabled_sources_bitmask: 0,
-            literal_roman_candidate_disabled: false,
-        })),
-        &mut engine,
-        &cfg,
-    )
-    .expect("FetchAtPos");
+    let resp = fetch_at_pos_response(&cfg, raw, FetchAtPos::default());
     resp.continuous
         .map(|c| {
             c.candidates
@@ -360,73 +182,13 @@ fn longest_match_suppresses_shorter_prefix_syllable() {
 // mirrors of the build pipeline), so the test cannot drift from production key
 // shapes. 紙/tsuá (tone 2) vs 蛇/tsuâ (tone 5) differ ONLY by the tone mark.
 
-/// Emit the toneless `tps:<tps_notone>` family AND the toned `tps:<tps_num>`
-/// family per row, both derived from the row's TL reading — mirrors
-/// `create_fst.py:136` (`tps_num` + `tps_notone`). A tone-1 row (`tsu`) has
-/// `tps_num == tps_notone`, so only one key is emitted (dedup handles it).
-fn build_dictionary_fst_tps(rows: &[Row]) -> PathBuf {
-    let mut entries: Vec<Vec<u8>> = Vec::with_capacity(rows.len() * 2);
-    for (idx, row) in rows.iter().enumerate() {
-        let rowid = (idx + 1) as u32;
-        let mut push_key = |body: &str| {
-            let mut e = Vec::with_capacity(body.len() + 4 + 5);
-            e.extend_from_slice(b"tps:");
-            e.extend_from_slice(body.as_bytes());
-            e.push(SEPARATOR);
-            e.extend_from_slice(&rowid.to_le_bytes());
-            entries.push(e);
-        };
-        push_key(&phonetics::tps_notone_from_tl(row.tl));
-        push_key(&phonetics::tps_num_from_tl(row.tl));
-    }
-    entries.sort();
-    entries.dedup();
-    let path = write_temp("dictionary-tps.fst", &[]);
-    let file = std::fs::File::create(&path).expect("create dictionary-tps.fst");
-    let mut builder = SetBuilder::new(std::io::BufWriter::new(file)).expect("fst builder");
-    for entry in &entries {
-        builder.insert(entry).expect("fst insert");
-    }
-    builder.finish().expect("fst finish");
-    path
-}
-
-/// TPS syllables.fst: emit BOTH the toned and toneless `tps:` syllable keys so
-/// the lattice recognizes a toned syllable (the `is_false_toneless_boundary_tps`
-/// guard then makes the toned form win when a tone mark is typed).
-fn build_syllables_fst_tps(rows: &[Row]) -> PathBuf {
-    let mut keys: Vec<String> = Vec::new();
-    for row in rows {
-        keys.push(format!("tps:{}", phonetics::tps_notone_from_tl(row.tl)));
-        keys.push(format!("tps:{}", phonetics::tps_num_from_tl(row.tl)));
-    }
-    keys.sort();
-    keys.dedup();
-    let path = write_temp("syllables-tps.fst", &[]);
-    let file = std::fs::File::create(&path).expect("create syllables-tps.fst");
-    let mut builder = SetBuilder::new(std::io::BufWriter::new(file)).expect("fst builder");
-    for key in &keys {
-        builder.insert(key.as_bytes()).expect("insert");
-    }
-    builder.finish().expect("finish");
-    path
-}
-
 fn install_fixture_tps() {
     let rows = fixture_rows();
     let dict_path = write_temp("dictionary-tps.bin", &build_tkdb_v3(&rows));
     let fst_path = build_dictionary_fst_tps(&rows);
     let assoc_path = write_temp("association-tps.bin", &empty_association_bin());
     let syllables_path = build_syllables_fst_tps(&rows);
-    let paths = LexiconPaths::validated(
-        fst_path.to_str().unwrap(),
-        dict_path.to_str().unwrap(),
-        assoc_path.to_str().unwrap(),
-        syllables_path.to_str().unwrap(),
-        2,
-    )
-    .expect("LexiconPaths::validated");
-    LexiconHandle::install(paths).expect("EngineHandle::install");
+    install_lexicon(&fst_path, &dict_path, &assoc_path, &syllables_path);
 }
 
 fn fetch_hanji_tps(raw: &str) -> Vec<String> {

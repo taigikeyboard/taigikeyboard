@@ -43,13 +43,11 @@
 // Phase 9 Item 9 — POJ-display canonicalize + offset map end-to-end test.
 // Nine cases: NFC 白話字 / NFD canary / chóa / peⁿ / so͘ / so͘+soo siblings / tâi-ōe / mixed combining+digit / ASCII regression / ASCII-only guard.
 
-use std::path::PathBuf;
-
 use composing::dispatch::build_keys_tl_with_inventory;
-use fst::SetBuilder;
-use lexicon::SyllableInventory;
-use phonetics::canonicalize_syllable;
 use unicode_normalization::UnicodeNormalization;
+
+mod common;
+use common::{build_inventory, build_poj_inventory};
 
 #[test]
 fn nfc_peh_oe_ji_tl_literal_no_oe_ue_recovery() {
@@ -460,84 +458,4 @@ fn config_input_mode_string_drives_mode_through_key_construction() {
         !tl_keys.iter().any(|k| k == "tl:tsiah"),
         "config `tl` must keep the F3C identity (no `tl:tsiah`), got {tl_keys:?}",
     );
-}
-
-// ---- Hermetic SyllableInventory builder -----------------------------
-// Pattern mirrors `engine/composing/tests/build_keys_tl_hyphen.rs:177-214`.
-
-fn build_inventory(samples: &[&str]) -> SyllableInventory {
-    let pairs: Vec<(String, String)> = samples
-        .iter()
-        .map(|s| {
-            canonicalize_syllable(s)
-                .unwrap_or_else(|| panic!("sample {s:?} failed canonicalize_syllable"))
-        })
-        .collect();
-
-    // v3.5.9 B-1: tagged-single-FST — emit keys with `tl:` prefix.
-    let mut keys: Vec<String> = Vec::new();
-    for (canonical, tone) in &pairs {
-        if tone.is_empty() {
-            keys.push(format!("tl:{canonical}"));
-        } else {
-            keys.push(format!("tl:{canonical}{tone}"));
-            keys.push(format!("tl:{canonical}"));
-        }
-    }
-    keys.sort();
-    keys.dedup();
-
-    let path = unique_temp_path();
-    let file = std::fs::File::create(&path).expect("create fst");
-    let mut builder = SetBuilder::new(std::io::BufWriter::new(file)).expect("builder");
-    for key in &keys {
-        builder.insert(key.as_bytes()).expect("insert");
-    }
-    builder.finish().expect("finish");
-    SyllableInventory::open(&path).expect("open inventory")
-}
-
-fn unique_temp_path() -> PathBuf {
-    use std::sync::atomic::{AtomicU64, Ordering};
-    static COUNTER: AtomicU64 = AtomicU64::new(0);
-    let n = COUNTER.fetch_add(1, Ordering::Relaxed);
-    let pid = std::process::id();
-    std::env::temp_dir().join(format!("composing-build-keys-tl-poj-{pid}-{n}.fst"))
-}
-
-/// v3.5.9 B-2 — POJ family inventory builder. Uses
-/// `phonetics::canonicalize_poj_syllable` so emitted keys preserve POJ
-/// ASCII (e.g. `poj:chiah` not `poj:tsiah`) — distinct from the TL
-/// helper above which folds through the TL chain.
-fn build_poj_inventory(samples: &[&str]) -> SyllableInventory {
-    use phonetics::canonicalize_poj_syllable;
-
-    let pairs: Vec<(String, String)> = samples
-        .iter()
-        .map(|s| {
-            canonicalize_poj_syllable(s)
-                .unwrap_or_else(|| panic!("sample {s:?} failed canonicalize_poj_syllable"))
-        })
-        .collect();
-
-    let mut keys: Vec<String> = Vec::new();
-    for (canonical, tone) in &pairs {
-        if tone.is_empty() {
-            keys.push(format!("poj:{canonical}"));
-        } else {
-            keys.push(format!("poj:{canonical}{tone}"));
-            keys.push(format!("poj:{canonical}"));
-        }
-    }
-    keys.sort();
-    keys.dedup();
-
-    let path = unique_temp_path();
-    let file = std::fs::File::create(&path).expect("create fst");
-    let mut builder = SetBuilder::new(std::io::BufWriter::new(file)).expect("builder");
-    for key in &keys {
-        builder.insert(key.as_bytes()).expect("insert");
-    }
-    builder.finish().expect("finish");
-    SyllableInventory::open(&path).expect("open inventory")
 }

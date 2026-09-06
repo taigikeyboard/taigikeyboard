@@ -25,135 +25,14 @@
 //! key that is itself a production syllable is present as a control row
 //! (之/tsi under ㄐㄧㆵ) and asserted on.
 
-use std::path::PathBuf;
-use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
+use protos::engine::{CustomDictEntry, FetchAtPos};
 
-use composing::api::Engine;
-use composing::dispatch;
-use fst::SetBuilder;
-use lexicon::{EngineHandle as LexiconHandle, LexiconPaths};
-use protos::engine::composing_request::Method;
-use protos::engine::{
-    AppConfig, ComposingRequest, CustomDictEntry, EnterContinuous, FetchAtPos, Start,
+mod common;
+use common::{
+    build_dictionary_fst_tps, build_syllables_fst_tps, build_tkdb_v3, config,
+    empty_association_bin, engine_install_lock, fetch_at_pos_response, install_lexicon, write_temp,
+    Row,
 };
-
-const SEPARATOR: u8 = 0xFF;
-const RANK_NEUTRAL_BITMASK: u16 = 1u16 << 11;
-const TKDB_HEADER_SIZE: usize = 16;
-
-fn engine_install_lock() -> MutexGuard<'static, ()> {
-    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-    LOCK.get_or_init(|| Mutex::new(()))
-        .lock()
-        .unwrap_or_else(PoisonError::into_inner)
-}
-
-struct Row {
-    hanzi: &'static str,
-    tl: &'static str,
-    syll: u8,
-    freq: u32,
-}
-
-fn write_temp(name: &str, bytes: &[u8]) -> PathBuf {
-    let pid = std::process::id();
-    let path = std::env::temp_dir().join(format!("composing-space-pin-{pid}-{name}"));
-    std::fs::write(&path, bytes).expect("write temp fixture");
-    path
-}
-
-fn build_tkdb_v3(rows: &[Row]) -> Vec<u8> {
-    let mut out = Vec::new();
-    out.extend_from_slice(b"TKDB");
-    out.extend_from_slice(&3u32.to_le_bytes());
-    out.extend_from_slice(&(rows.len() as u32).to_le_bytes());
-    out.extend_from_slice(&0u32.to_le_bytes());
-    let offset_table_size = rows.len() * 4;
-    let mut offsets = Vec::<u32>::with_capacity(rows.len());
-    let mut payload = Vec::<u8>::new();
-    for row in rows {
-        offsets.push((TKDB_HEADER_SIZE + offset_table_size + payload.len()) as u32);
-        payload.extend_from_slice(&RANK_NEUTRAL_BITMASK.to_le_bytes());
-        payload.extend_from_slice(&row.freq.to_le_bytes());
-        payload.push(row.hanzi.len() as u8);
-        payload.push(row.tl.len() as u8);
-        payload.push(row.syll);
-        payload.extend_from_slice(&0u16.to_le_bytes()); // kautian_subtag (v3); 0 = none
-        payload.extend_from_slice(row.hanzi.as_bytes());
-        payload.extend_from_slice(row.tl.as_bytes());
-    }
-    for off in &offsets {
-        out.extend_from_slice(&off.to_le_bytes());
-    }
-    out.extend_from_slice(&payload);
-    out
-}
-
-/// Both TPS key families per row, mirroring `create_fst.py:126-141`. For a
-/// tone-1 or tone-4 row the two are byte-identical (no mark to add) — that
-/// collision IS the bug's root cause, so the fixture must reproduce it
-/// rather than paper over it with a synthetic distinguishing key.
-fn build_dictionary_fst_tps(rows: &[Row]) -> PathBuf {
-    let mut entries: Vec<Vec<u8>> = Vec::with_capacity(rows.len() * 2);
-    for (idx, row) in rows.iter().enumerate() {
-        let rowid = (idx + 1) as u32;
-        let mut push_key = |body: &str| {
-            let mut e = Vec::with_capacity(body.len() + 4 + 5);
-            e.extend_from_slice(b"tps:");
-            e.extend_from_slice(body.as_bytes());
-            e.push(SEPARATOR);
-            e.extend_from_slice(&rowid.to_le_bytes());
-            entries.push(e);
-        };
-        push_key(&phonetics::tps_notone_from_tl(row.tl));
-        push_key(&phonetics::tps_num_from_tl(row.tl));
-    }
-    entries.sort();
-    entries.dedup();
-    let path = write_temp("dictionary-tps.fst", &[]);
-    let file = std::fs::File::create(&path).expect("create dictionary-tps.fst");
-    let mut builder = SetBuilder::new(std::io::BufWriter::new(file)).expect("fst builder");
-    for entry in &entries {
-        builder.insert(entry).expect("fst insert");
-    }
-    builder.finish().expect("fst finish");
-    path
-}
-
-/// Per-syllable TPS inventory, toned + toneless, for every syllable of
-/// every fixture row (a phrase row contributes each of its syllables).
-fn build_syllables_fst_tps(rows: &[Row]) -> PathBuf {
-    let mut keys: Vec<String> = Vec::new();
-    for row in rows {
-        for token in row.tl.split(['-', ' ']) {
-            if token.is_empty() {
-                continue;
-            }
-            keys.push(format!("tps:{}", phonetics::tps_notone_from_tl(token)));
-            keys.push(format!("tps:{}", phonetics::tps_num_from_tl(token)));
-        }
-    }
-    keys.sort();
-    keys.dedup();
-    let path = write_temp("syllables-tps.fst", &[]);
-    let file = std::fs::File::create(&path).expect("create syllables-tps.fst");
-    let mut builder = SetBuilder::new(std::io::BufWriter::new(file)).expect("fst builder");
-    for key in &keys {
-        builder.insert(key.as_bytes()).expect("insert");
-    }
-    builder.finish().expect("finish");
-    path
-}
-
-fn empty_association_bin() -> Vec<u8> {
-    let mut out = Vec::new();
-    out.extend_from_slice(b"TKWA");
-    out.extend_from_slice(&1u32.to_le_bytes());
-    out.extend_from_slice(&0u32.to_le_bytes());
-    out.extend_from_slice(&0u32.to_le_bytes());
-    out.extend_from_slice(&0u32.to_le_bytes());
-    out
-}
 
 /// Three families, each minimal for one axis of the fix:
 /// - `ㄒㄧ` open rime: 詩 (si1, unmarked) vs 死 (si2) / 是 (si7). The
@@ -165,60 +44,70 @@ fn empty_association_bin() -> Vec<u8> {
 fn fixture_rows() -> Vec<Row> {
     vec![
         Row {
+            toneless_key: "",
             hanzi: "詩",
             tl: "si",
             syll: 1,
             freq: 50,
         },
         Row {
+            toneless_key: "",
             hanzi: "死",
             tl: "sí",
             syll: 1,
             freq: 900,
         },
         Row {
+            toneless_key: "",
             hanzi: "是",
             tl: "sī",
             syll: 1,
             freq: 1000,
         },
         Row {
+            toneless_key: "",
             hanzi: "這",
             tl: "tsit",
             syll: 1,
             freq: 90,
         },
         Row {
+            toneless_key: "",
             hanzi: "一",
             tl: "tsi̍t",
             syll: 1,
             freq: 800,
         },
         Row {
+            toneless_key: "",
             hanzi: "之",
             tl: "tsi",
             syll: 1,
             freq: 40,
         },
         Row {
+            toneless_key: "",
             hanzi: "交",
             tl: "kau",
             syll: 1,
             freq: 60,
         },
         Row {
+            toneless_key: "",
             hanzi: "到",
             tl: "kàu",
             syll: 1,
             freq: 700,
         },
         Row {
+            toneless_key: "",
             hanzi: "猴",
             tl: "kâu",
             syll: 1,
             freq: 300,
         },
         Row {
+            toneless_key: "",
             hanzi: "交代",
             tl: "kau-tài",
             syll: 2,
@@ -233,35 +122,7 @@ fn install_fixture_tps() {
     let fst_path = build_dictionary_fst_tps(&rows);
     let assoc_path = write_temp("association-tps.bin", &empty_association_bin());
     let syllables_path = build_syllables_fst_tps(&rows);
-    let paths = LexiconPaths::validated(
-        fst_path.to_str().unwrap(),
-        dict_path.to_str().unwrap(),
-        assoc_path.to_str().unwrap(),
-        syllables_path.to_str().unwrap(),
-        2,
-    )
-    .expect("LexiconPaths::validated");
-    LexiconHandle::install(paths).expect("EngineHandle::install");
-}
-
-fn config() -> AppConfig {
-    AppConfig {
-        tone_mode: String::new(),
-        input_mode: "tps".to_string(),
-        oo_doubletap_enabled: false,
-        nn_doubletap_enabled: false,
-        is_translate_swapped: false,
-        is_association_recording_enabled: false,
-        platform_id: 0,
-        output_both_scripts: false,
-        candidate_display_mode: 0,
-    }
-}
-
-fn req(method: Method) -> ComposingRequest {
-    ComposingRequest {
-        method: Some(method),
-    }
+    install_lexicon(&fst_path, &dict_path, &assoc_path, &syllables_path);
 }
 
 /// Drive `raw` through `Start → EnterContinuous → FetchAtPos` in TPS mode
@@ -277,33 +138,15 @@ fn fetch_hanji(raw: &str) -> Vec<String> {
 /// TL / POJ. Its pin gate is symmetry for the day that changes; see the
 /// comment at that call site.)
 fn fetch_hanji_with_custom(raw: &str, custom: Vec<CustomDictEntry>) -> Vec<String> {
-    let cfg = config();
-    let mut engine = Engine::new();
-    dispatch::handle(
-        &req(Method::Start(Start { text: raw.into() })),
-        &mut engine,
+    let cfg = config("tps");
+    let resp = fetch_at_pos_response(
         &cfg,
-    )
-    .expect("Start");
-    dispatch::handle(
-        &req(Method::EnterContinuous(EnterContinuous {})),
-        &mut engine,
-        &cfg,
-    )
-    .expect("EnterContinuous");
-    let resp = dispatch::handle(
-        &req(Method::FetchAtPos(FetchAtPos {
-            position: 0,
-            frequency_entries: Vec::new(),
-            now_ms: 0,
+        raw,
+        FetchAtPos {
             custom_entries: custom,
-            enabled_sources_bitmask: 0,
-            literal_roman_candidate_disabled: false,
-        })),
-        &mut engine,
-        &cfg,
-    )
-    .expect("FetchAtPos");
+            ..Default::default()
+        },
+    );
     resp.continuous
         .map(|c| {
             c.candidates
@@ -317,33 +160,8 @@ fn fetch_hanji_with_custom(raw: &str, custom: Vec<CustomDictEntry>) -> Vec<Strin
 /// Candidate `(hanji, consumed_span_end)` pairs for `raw`, for the tests
 /// that care about how much of the buffer a commit would eat.
 fn fetch_spans(raw: &str) -> Vec<(String, u32)> {
-    let cfg = config();
-    let mut engine = Engine::new();
-    dispatch::handle(
-        &req(Method::Start(Start { text: raw.into() })),
-        &mut engine,
-        &cfg,
-    )
-    .expect("Start");
-    dispatch::handle(
-        &req(Method::EnterContinuous(EnterContinuous {})),
-        &mut engine,
-        &cfg,
-    )
-    .expect("EnterContinuous");
-    let resp = dispatch::handle(
-        &req(Method::FetchAtPos(FetchAtPos {
-            position: 0,
-            frequency_entries: Vec::new(),
-            now_ms: 0,
-            custom_entries: Vec::new(),
-            enabled_sources_bitmask: 0,
-            literal_roman_candidate_disabled: false,
-        })),
-        &mut engine,
-        &cfg,
-    )
-    .expect("FetchAtPos");
+    let cfg = config("tps");
+    let resp = fetch_at_pos_response(&cfg, raw, FetchAtPos::default());
     resp.continuous
         .map(|c| {
             c.candidates

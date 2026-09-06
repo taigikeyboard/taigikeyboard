@@ -174,6 +174,6 @@ Deliberately not adopted: shared Swift package for iOS/macOS (diverged, §3 I1 n
 ## 6. Gates (per PR)
 
 1. Codex pre-impl ANALYSIS-ONLY on the regression surface (callers + freeze list) → implement → Codex post-impl + `/simplify` → commit → push → `gh pr create` → post-PR parallel verification for the touched platform(s).
-2. Engine PRs (E1a–E4): `cargo test -p <crate>`; E3/E4 additionally `candidate_dump` + `golden_fetch_at_pos` + `cross_mode_parity` unchanged; `make build` after merge (stale-binary gate) before any platform test run. Known-red `corpus_total_freq_matches_dictionary_csv` stays red (USER-gated).
+2. Engine PRs (E1a–E4): `cargo test -p <crate> --no-fail-fast` — the known-red lib test in `composing` (`lattice::cost::tests::corpus_total_freq_matches_dictionary_csv`) otherwise stops the run before the integration-test binaries; E3/E4 additionally `candidate_dump` + `golden_fetch_at_pos` + `cross_mode_parity` unchanged; `make build` after merge (stale-binary gate) before any platform test run. Known-red `corpus_total_freq_matches_dictionary_csv` stays red (USER-gated).
 3. `swiftformat` / `cargo fmt --all` / `spotlessApply` are **not** run repo-wide (pre-existing drift, memory ⚠).
 4. W1 is verified only on the Windows box (`ssh win`, `make windows-check` on host first); dogfood before merge.

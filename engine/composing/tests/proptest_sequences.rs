@@ -9,21 +9,9 @@
 
 use composing::{Engine, Intent};
 use proptest::prelude::*;
-use protos::engine::AppConfig;
 
-fn config_tl() -> AppConfig {
-    AppConfig {
-        tone_mode: String::new(),
-        input_mode: "tl".to_string(),
-        oo_doubletap_enabled: false,
-        nn_doubletap_enabled: false,
-        is_translate_swapped: false,
-        is_association_recording_enabled: false,
-        platform_id: 0,
-        output_both_scripts: false,
-        candidate_display_mode: 0,
-    }
-}
+mod common;
+use common::config_tl;
 
 fn arb_intent() -> impl Strategy<Value = Intent> {
     prop_oneof![

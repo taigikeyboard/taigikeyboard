@@ -21,29 +21,10 @@
 use composing::api::{Engine, Intent, Phase};
 use composing::dispatch;
 use protos::engine::composing_request::Method;
-use protos::engine::{
-    AppConfig, CommitContinuous, ComposingRequest, EnterContinuous, FetchAtPos, ResetContinuous,
-};
+use protos::engine::{CommitContinuous, EnterContinuous, FetchAtPos, ResetContinuous};
 
-fn config() -> AppConfig {
-    AppConfig {
-        tone_mode: String::new(),
-        input_mode: "tl".to_string(),
-        oo_doubletap_enabled: false,
-        nn_doubletap_enabled: false,
-        is_translate_swapped: false,
-        is_association_recording_enabled: false,
-        platform_id: 0,
-        output_both_scripts: false,
-        candidate_display_mode: 0,
-    }
-}
-
-fn req(method: Method) -> ComposingRequest {
-    ComposingRequest {
-        method: Some(method),
-    }
-}
+mod common;
+use common::{config_tl, req};
 
 // ---- Decode tests --------------------------------------------------------
 
@@ -53,7 +34,7 @@ fn decode_enter_continuous() {
     let _ = dispatch::handle(
         &req(Method::EnterContinuous(EnterContinuous {})),
         &mut engine,
-        &config(),
+        &config_tl(),
     )
     .expect("dispatch ok");
     // EnterContinuous from Idle is no-op — phase stays Idle.
@@ -73,7 +54,7 @@ fn decode_fetch_at_pos_idle_returns_no_continuous_carrier() {
             literal_roman_candidate_disabled: false,
         })),
         &mut engine,
-        &config(),
+        &config_tl(),
     )
     .expect("dispatch ok");
     assert!(
@@ -92,13 +73,13 @@ fn decode_fetch_at_pos_position_nonzero_returns_empty_carrier() {
             text: "tsua".into(),
         })),
         &mut engine,
-        &config(),
+        &config_tl(),
     )
     .unwrap();
     dispatch::handle(
         &req(Method::EnterContinuous(EnterContinuous {})),
         &mut engine,
-        &config(),
+        &config_tl(),
     )
     .unwrap();
     assert!(matches!(
@@ -116,7 +97,7 @@ fn decode_fetch_at_pos_position_nonzero_returns_empty_carrier() {
             literal_roman_candidate_disabled: false,
         })),
         &mut engine,
-        &config(),
+        &config_tl(),
     )
     .expect("dispatch ok");
     let cont = resp.continuous.expect("continuous carrier present");
@@ -137,13 +118,13 @@ fn decode_fetch_at_pos_continuous_lexicon_unavailable_returns_empty_carrier() {
             text: "tsua".into(),
         })),
         &mut engine,
-        &config(),
+        &config_tl(),
     )
     .unwrap();
     dispatch::handle(
         &req(Method::EnterContinuous(EnterContinuous {})),
         &mut engine,
-        &config(),
+        &config_tl(),
     )
     .unwrap();
 
@@ -162,7 +143,7 @@ fn decode_fetch_at_pos_continuous_lexicon_unavailable_returns_empty_carrier() {
             literal_roman_candidate_disabled: true,
         })),
         &mut engine,
-        &config(),
+        &config_tl(),
     )
     .expect("dispatch ok");
     let cont = resp.continuous.expect("continuous carrier present");
@@ -187,13 +168,13 @@ fn fetch_at_pos_literal_roman_toggle_gates_index0_prepend() {
                 text: "tsua".into(),
             })),
             &mut engine,
-            &config(),
+            &config_tl(),
         )
         .unwrap();
         dispatch::handle(
             &req(Method::EnterContinuous(EnterContinuous {})),
             &mut engine,
-            &config(),
+            &config_tl(),
         )
         .unwrap();
         let resp = dispatch::handle(
@@ -206,7 +187,7 @@ fn fetch_at_pos_literal_roman_toggle_gates_index0_prepend() {
                 literal_roman_candidate_disabled: disabled,
             })),
             &mut engine,
-            &config(),
+            &config_tl(),
         )
         .expect("dispatch ok");
         resp.continuous
@@ -262,13 +243,13 @@ fn decode_fetch_at_pos_hanzi_buffer_returns_empty_carrier() {
             text: "我好".into(),
         })),
         &mut engine,
-        &config(),
+        &config_tl(),
     )
     .unwrap();
     dispatch::handle(
         &req(Method::EnterContinuous(EnterContinuous {})),
         &mut engine,
-        &config(),
+        &config_tl(),
     )
     .unwrap();
     assert!(matches!(
@@ -286,7 +267,7 @@ fn decode_fetch_at_pos_hanzi_buffer_returns_empty_carrier() {
             literal_roman_candidate_disabled: false,
         })),
         &mut engine,
-        &config(),
+        &config_tl(),
     )
     .expect("dispatch ok");
     let cont = resp
@@ -310,13 +291,13 @@ fn decode_fetch_at_pos_mixed_hanzi_buffer_returns_empty_carrier() {
             text: "a好b".into(),
         })),
         &mut engine,
-        &config(),
+        &config_tl(),
     )
     .unwrap();
     dispatch::handle(
         &req(Method::EnterContinuous(EnterContinuous {})),
         &mut engine,
-        &config(),
+        &config_tl(),
     )
     .unwrap();
     assert!(matches!(
@@ -334,7 +315,7 @@ fn decode_fetch_at_pos_mixed_hanzi_buffer_returns_empty_carrier() {
             literal_roman_candidate_disabled: false,
         })),
         &mut engine,
-        &config(),
+        &config_tl(),
     )
     .expect("dispatch ok");
     let cont = resp
@@ -355,13 +336,13 @@ fn decode_commit_continuous_mid_commit() {
             text: "tsua".into(),
         })),
         &mut engine,
-        &config(),
+        &config_tl(),
     )
     .unwrap();
     dispatch::handle(
         &req(Method::EnterContinuous(EnterContinuous {})),
         &mut engine,
-        &config(),
+        &config_tl(),
     )
     .unwrap();
 
@@ -375,7 +356,7 @@ fn decode_commit_continuous_mid_commit() {
             syllable_count: 1,
         })),
         &mut engine,
-        &config(),
+        &config_tl(),
     )
     .expect("dispatch ok");
 
@@ -398,13 +379,13 @@ fn decode_commit_continuous_final_commit_exits_to_idle() {
             text: "tsua".into(),
         })),
         &mut engine,
-        &config(),
+        &config_tl(),
     )
     .unwrap();
     dispatch::handle(
         &req(Method::EnterContinuous(EnterContinuous {})),
         &mut engine,
-        &config(),
+        &config_tl(),
     )
     .unwrap();
 
@@ -418,7 +399,7 @@ fn decode_commit_continuous_final_commit_exits_to_idle() {
             syllable_count: 1,
         })),
         &mut engine,
-        &config(),
+        &config_tl(),
     )
     .expect("dispatch ok");
 
@@ -434,20 +415,20 @@ fn decode_reset_continuous_aborts() {
             text: "tsua".into(),
         })),
         &mut engine,
-        &config(),
+        &config_tl(),
     )
     .unwrap();
     dispatch::handle(
         &req(Method::EnterContinuous(EnterContinuous {})),
         &mut engine,
-        &config(),
+        &config_tl(),
     )
     .unwrap();
 
     let resp = dispatch::handle(
         &req(Method::ResetContinuous(ResetContinuous {})),
         &mut engine,
-        &config(),
+        &config_tl(),
     )
     .expect("dispatch ok");
 
@@ -500,13 +481,13 @@ fn enter_continuous_response_omits_continuous_carrier() {
             text: "tsua".into(),
         })),
         &mut engine,
-        &config(),
+        &config_tl(),
     )
     .unwrap();
     let resp = dispatch::handle(
         &req(Method::EnterContinuous(EnterContinuous {})),
         &mut engine,
-        &config(),
+        &config_tl(),
     )
     .expect("dispatch ok");
     assert!(
@@ -523,13 +504,13 @@ fn commit_continuous_response_omits_continuous_carrier() {
             text: "tsua".into(),
         })),
         &mut engine,
-        &config(),
+        &config_tl(),
     )
     .unwrap();
     dispatch::handle(
         &req(Method::EnterContinuous(EnterContinuous {})),
         &mut engine,
-        &config(),
+        &config_tl(),
     )
     .unwrap();
     let resp = dispatch::handle(
@@ -541,7 +522,7 @@ fn commit_continuous_response_omits_continuous_carrier() {
             syllable_count: 1,
         })),
         &mut engine,
-        &config(),
+        &config_tl(),
     )
     .expect("dispatch ok");
     assert!(
@@ -558,19 +539,19 @@ fn reset_continuous_response_omits_continuous_carrier() {
             text: "tsua".into(),
         })),
         &mut engine,
-        &config(),
+        &config_tl(),
     )
     .unwrap();
     dispatch::handle(
         &req(Method::EnterContinuous(EnterContinuous {})),
         &mut engine,
-        &config(),
+        &config_tl(),
     )
     .unwrap();
     let resp = dispatch::handle(
         &req(Method::ResetContinuous(ResetContinuous {})),
         &mut engine,
-        &config(),
+        &config_tl(),
     )
     .expect("dispatch ok");
     assert!(
@@ -590,13 +571,13 @@ fn empty_start_then_enter_continuous_stays_idle() {
     dispatch::handle(
         &req(Method::Start(protos::engine::Start { text: "".into() })),
         &mut engine,
-        &config(),
+        &config_tl(),
     )
     .unwrap();
     let resp = dispatch::handle(
         &req(Method::EnterContinuous(EnterContinuous {})),
         &mut engine,
-        &config(),
+        &config_tl(),
     )
     .expect("dispatch ok");
     assert!(
@@ -624,13 +605,13 @@ fn fetch_at_pos_carries_user_freq_snapshot_through_decode() {
             text: "tsua".into(),
         })),
         &mut engine,
-        &config(),
+        &config_tl(),
     )
     .unwrap();
     dispatch::handle(
         &req(Method::EnterContinuous(EnterContinuous {})),
         &mut engine,
-        &config(),
+        &config_tl(),
     )
     .unwrap();
 
@@ -662,7 +643,7 @@ fn fetch_at_pos_carries_user_freq_snapshot_through_decode() {
             literal_roman_candidate_disabled: true,
         })),
         &mut engine,
-        &config(),
+        &config_tl(),
     )
     .expect("dispatch ok");
 

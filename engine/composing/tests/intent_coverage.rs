@@ -4,30 +4,13 @@
 use composing::{dispatch, Engine};
 use protos::engine::composing_request::Method;
 use protos::engine::{
-    AppConfig, Append, AppendHyphen, CommitDerived, CommitPreeditThenInsertExternal, CommitRaw,
+    Append, AppendHyphen, CommitDerived, CommitPreeditThenInsertExternal, CommitRaw,
     ComposingRequest, DeleteBackward, QueryState, ReplaceLast, Reset, SelectSuggestion,
     SetSelectedCandidateIndex, Start,
 };
 
-fn config_tl() -> AppConfig {
-    AppConfig {
-        tone_mode: String::new(),
-        input_mode: "tl".to_string(),
-        oo_doubletap_enabled: false,
-        nn_doubletap_enabled: false,
-        is_translate_swapped: false,
-        is_association_recording_enabled: false,
-        platform_id: 0,
-        output_both_scripts: false,
-        candidate_display_mode: 0,
-    }
-}
-
-fn req(method: Method) -> ComposingRequest {
-    ComposingRequest {
-        method: Some(method),
-    }
-}
+mod common;
+use common::{config_tl, req};
 
 fn commit_text(resp: &protos::engine::ComposingResponse) -> Option<String> {
     resp.effect.iter().find_map(|e| match e.kind.as_ref()? {

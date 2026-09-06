@@ -13,12 +13,11 @@
 //! Reuses production `phonetics::canonicalize_syllable` so that test
 //! samples can be authored in either TL or POJ shape.
 
-use std::path::PathBuf;
-
 use composing::syllabifier::tl::valid_span_endings;
-use fst::SetBuilder;
-use lexicon::SyllableInventory;
-use phonetics::{canonicalize_poj_syllable, canonicalize_syllable, InputMode};
+use phonetics::InputMode;
+
+mod common;
+use common::{build_dual_inventory, build_inventory};
 
 const MAX_SYLLABLES: usize = 8;
 // All tests in this matrix exercise the TL family; the `mode` parameter
@@ -320,93 +319,4 @@ fn poj_mode_english_routes_to_tl_family() {
         vec![3]
     );
     assert!(valid_span_endings("chiah", 0, &inv, InputMode::English, MAX_SYLLABLES).is_empty());
-}
-
-// ---- Hermetic SyllableInventory builder -----------------------------
-
-/// Build a `SyllableInventory` from raw POJ/TL-shaped sample tokens.
-/// Pipeline: `phonetics::canonicalize_syllable` → emit numeric +
-/// toneless keys → fst::SetBuilder → temp file → `SyllableInventory::open`.
-/// Mirrors `engine/lexicon/tests/syllables_fst.rs:186-207`.
-fn build_inventory(samples: &[&str]) -> SyllableInventory {
-    let pairs: Vec<(String, String)> = samples
-        .iter()
-        .map(|s| {
-            canonicalize_syllable(s)
-                .unwrap_or_else(|| panic!("sample {s:?} failed canonicalize_syllable"))
-        })
-        .collect();
-
-    // v3.5.9 B-1: emit keys with the `tl:` family prefix so the
-    // hermetic inventory matches the tagged-single-FST format that
-    // `SyllableInventory::contains_in(InputMode::Tl, …)` queries.
-    let mut keys: Vec<String> = Vec::new();
-    for (canonical, tone) in &pairs {
-        if tone.is_empty() {
-            keys.push(format!("tl:{canonical}"));
-        } else {
-            keys.push(format!("tl:{canonical}{tone}"));
-            keys.push(format!("tl:{canonical}"));
-        }
-    }
-    keys.sort();
-    keys.dedup();
-
-    let path = unique_temp_path();
-    let file = std::fs::File::create(&path).expect("create fst");
-    let mut builder = SetBuilder::new(std::io::BufWriter::new(file)).expect("builder");
-    for key in &keys {
-        builder.insert(key.as_bytes()).expect("insert");
-    }
-    builder.finish().expect("finish");
-    SyllableInventory::open(&path).expect("open inventory")
-}
-
-/// v3.5.9 B-1 — build a hermetic tagged-single-FST inventory carrying
-/// BOTH the `tl:` and `poj:` families. TL samples canonicalize via
-/// `canonicalize_syllable` (POJ→TL fold + nasal/o-dot ASCII fold); POJ
-/// samples canonicalize via `canonicalize_poj_syllable` (encoding-only
-/// fold; POJ ASCII spelling preserved). Mirrors the production
-/// `fst-builder build-syllables --tl-input --poj-input` pipeline.
-fn build_dual_inventory(tl_samples: &[&str], poj_samples: &[&str]) -> SyllableInventory {
-    let mut keys: Vec<String> = Vec::new();
-    for s in tl_samples {
-        let (canonical, tone) = canonicalize_syllable(s)
-            .unwrap_or_else(|| panic!("tl sample {s:?} failed canonicalize_syllable"));
-        if tone.is_empty() {
-            keys.push(format!("tl:{canonical}"));
-        } else {
-            keys.push(format!("tl:{canonical}{tone}"));
-            keys.push(format!("tl:{canonical}"));
-        }
-    }
-    for s in poj_samples {
-        let (canonical, tone) = canonicalize_poj_syllable(s)
-            .unwrap_or_else(|| panic!("poj sample {s:?} failed canonicalize_poj_syllable"));
-        if tone.is_empty() {
-            keys.push(format!("poj:{canonical}"));
-        } else {
-            keys.push(format!("poj:{canonical}{tone}"));
-            keys.push(format!("poj:{canonical}"));
-        }
-    }
-    keys.sort();
-    keys.dedup();
-
-    let path = unique_temp_path();
-    let file = std::fs::File::create(&path).expect("create fst");
-    let mut builder = SetBuilder::new(std::io::BufWriter::new(file)).expect("builder");
-    for key in &keys {
-        builder.insert(key.as_bytes()).expect("insert");
-    }
-    builder.finish().expect("finish");
-    SyllableInventory::open(&path).expect("open inventory")
-}
-
-fn unique_temp_path() -> PathBuf {
-    use std::sync::atomic::{AtomicU64, Ordering};
-    static COUNTER: AtomicU64 = AtomicU64::new(0);
-    let n = COUNTER.fetch_add(1, Ordering::Relaxed);
-    let pid = std::process::id();
-    std::env::temp_dir().join(format!("composing-syllabifier-tl-{pid}-{n}.fst"))
 }

@@ -40,11 +40,11 @@ use std::collections::BTreeSet;
 use std::path::PathBuf;
 use std::sync::OnceLock;
 
-use composing::api::Engine;
-use composing::dispatch;
 use lexicon::{EngineHandle as LexiconHandle, LexiconPaths};
-use protos::engine::composing_request::Method;
-use protos::engine::{AppConfig, ComposingRequest, EnterContinuous, FetchAtPos, Start};
+use protos::engine::FetchAtPos;
+
+mod common;
+use common::{config, fetch_at_pos_response};
 
 // ---------------------------------------------------------------------------
 // Production artifact + lexicon install (once per test process).
@@ -83,58 +83,21 @@ fn lexicon_ready() -> bool {
     })
 }
 
-fn config(input_mode: &str) -> AppConfig {
-    AppConfig {
-        tone_mode: String::new(),
-        input_mode: input_mode.to_string(),
-        oo_doubletap_enabled: false,
-        nn_doubletap_enabled: false,
-        is_translate_swapped: false,
-        is_association_recording_enabled: false,
-        platform_id: 0,
-        output_both_scripts: false,
-        candidate_display_mode: 0,
-    }
-}
-
-fn req(method: Method) -> ComposingRequest {
-    ComposingRequest {
-        method: Some(method),
-    }
-}
-
 /// Drive `Start → EnterContinuous → FetchAtPos` for one input in one mode and
 /// return the set of Hanji from COMPLETE single-syllable candidates only
 /// (`consumed_span == (0, len)` + `syllable_count == 1`), dropping the
 /// literal-roman candidate (`hanji == None`, also disabled at the request).
 fn complete_syllable_hanji_set(input: &str, mode: &str) -> BTreeSet<String> {
     let cfg = config(mode);
-    let mut engine = Engine::new();
-    dispatch::handle(
-        &req(Method::Start(Start { text: input.into() })),
-        &mut engine,
+    let resp = fetch_at_pos_response(
         &cfg,
-    )
-    .expect("Start");
-    dispatch::handle(
-        &req(Method::EnterContinuous(EnterContinuous {})),
-        &mut engine,
-        &cfg,
-    )
-    .expect("EnterContinuous");
-    let resp = dispatch::handle(
-        &req(Method::FetchAtPos(FetchAtPos {
-            position: 0,
-            frequency_entries: Vec::new(),
-            now_ms: 0,
-            custom_entries: Vec::new(),
+        input,
+        FetchAtPos {
             enabled_sources_bitmask: u32::MAX,
             literal_roman_candidate_disabled: true,
-        })),
-        &mut engine,
-        &cfg,
-    )
-    .expect("FetchAtPos");
+            ..Default::default()
+        },
+    );
 
     let raw_len = input.len() as u32;
     resp.continuous

@@ -36,11 +36,11 @@
 
 use std::path::PathBuf;
 
-use composing::api::Engine;
-use composing::dispatch;
 use lexicon::{EngineHandle as LexiconHandle, LexiconPaths};
-use protos::engine::composing_request::Method;
-use protos::engine::{AppConfig, ComposingRequest, EnterContinuous, FetchAtPos, Start};
+use protos::engine::FetchAtPos;
+
+mod common;
+use common::{config, fetch_at_pos_response};
 
 const DEFAULT_INPUTS: &str = "tai5,tai5gi2,tai,tsua,ka";
 
@@ -51,26 +51,6 @@ fn production_artifact(name: &str) -> String {
         .to_str()
         .expect("artifact path is valid UTF-8")
         .to_string()
-}
-
-fn config(input_mode: &str) -> AppConfig {
-    AppConfig {
-        tone_mode: String::new(),
-        input_mode: input_mode.to_string(),
-        oo_doubletap_enabled: false,
-        nn_doubletap_enabled: false,
-        is_translate_swapped: false,
-        is_association_recording_enabled: false,
-        platform_id: 0,
-        output_both_scripts: false,
-        candidate_display_mode: 0,
-    }
-}
-
-fn req(method: Method) -> ComposingRequest {
-    ComposingRequest {
-        method: Some(method),
-    }
 }
 
 #[test]
@@ -105,32 +85,14 @@ fn dump_continuous_candidates() {
     let cfg = config(&mode);
 
     for raw in inputs.split(',').map(str::trim).filter(|s| !s.is_empty()) {
-        let mut engine = Engine::new();
-        dispatch::handle(
-            &req(Method::Start(Start { text: raw.into() })),
-            &mut engine,
+        let resp = fetch_at_pos_response(
             &cfg,
-        )
-        .expect("Start");
-        dispatch::handle(
-            &req(Method::EnterContinuous(EnterContinuous {})),
-            &mut engine,
-            &cfg,
-        )
-        .expect("EnterContinuous");
-        let resp = dispatch::handle(
-            &req(Method::FetchAtPos(FetchAtPos {
-                position: 0,
-                frequency_entries: Vec::new(),
-                now_ms: 0,
-                custom_entries: Vec::new(),
+            raw,
+            FetchAtPos {
                 enabled_sources_bitmask: bitmask,
-                literal_roman_candidate_disabled: false,
-            })),
-            &mut engine,
-            &cfg,
-        )
-        .expect("FetchAtPos");
+                ..Default::default()
+            },
+        );
 
         let candidates = resp.continuous.map(|c| c.candidates).unwrap_or_default();
         println!(
