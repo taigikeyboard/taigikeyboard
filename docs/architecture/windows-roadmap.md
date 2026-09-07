@@ -98,8 +98,8 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
 - **W2 Data locations** — `%APPDATA%\TaigiKeyboard\` holds `settings.json` and the
   three user DBs (macOS: `~/Library/Application Support/<bundle id>/`,
   `Storage/UserDataDirectory.swift:29-32`). Dictionary artefacts are copied at
-  release-build time from `ios/Resources/Dictionaries/` (macOS D8: no third committed
-  copy) and fonts from `ios/Resources/Fonts/` (`macos/scripts/bundle-app.sh:178-201`)
+  release-build time from `windows/resources/Dictionaries/` and fonts from
+  `windows/resources/Fonts/`, each platform's own committed copy
   into the install dir, resolved from the DLL's **own `HMODULE` saved in `DllMain`**
   (Codex: never from the current exe). **Codex: CONFIRM WITH CHANGES** — AppContainer
   (UWP) hosts cannot read `%APPDATA%`: the TIP holds an explicit per-process

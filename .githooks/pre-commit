@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
-# Blocks a commit that stages a credential. Activated per clone by `make hooks`,
-# which sets core.hooksPath; a clone that never runs it commits with no gate, and
-# `--no-verify` skips it. That is why the same scan also runs in CI.
+# Blocks a commit that stages a credential, or that leaves the per-platform font
+# copies out of step. Activated per clone by `make hooks`, which sets
+# core.hooksPath; a clone that never runs it commits with no gate, and
+# `--no-verify` skips it. There is no CI net behind it — the private repository
+# runs no Actions — so this hook is the only gate.
 #
-# The scan itself is scripts/gitleaks-scan.sh, shared with `make scan-secrets` and
-# with .github/workflows/secrets.yml, so the three cannot drift apart.
+# The scans themselves are scripts/gitleaks-scan.sh and scripts/sync-fonts.sh,
+# shared with `make scan-secrets` and `make fonts-check`, so the entry points
+# cannot drift apart.
 set -uo pipefail
+
+REPOSITORY_DIR="$(git rev-parse --show-toplevel)"
 
 if ! command -v gitleaks >/dev/null 2>&1; then
   echo "pre-commit: gitleaks not installed — staged changes were NOT scanned." >&2
@@ -13,7 +18,7 @@ if ! command -v gitleaks >/dev/null 2>&1; then
   exit 0
 fi
 
-if ! "$(git rev-parse --show-toplevel)/scripts/gitleaks-scan.sh" --staged; then
+if ! "$REPOSITORY_DIR/scripts/gitleaks-scan.sh" --staged; then
   cat >&2 <<'MSG'
 
 pre-commit: if that was a finding, it is shown redacted above.
@@ -23,5 +28,13 @@ pre-commit: if that was a finding, it is shown redacted above.
   real secret    -> unstage it, rotate the credential, and keep it out of the tree
 
 MSG
+  exit 1
+fi
+
+# Cheap enough to run on every commit: four `cmp`s against two directories. The
+# packaging scripts glob whole directories, so a face present on one platform and
+# not the other would ship silently rather than fail a build.
+if ! "$REPOSITORY_DIR/scripts/sync-fonts.sh" --check; then
+  echo "pre-commit: font copies are out of step — run 'make fonts' and stage the result." >&2
   exit 1
 fi

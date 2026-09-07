@@ -203,7 +203,7 @@ Logical keys (the `key_bytes` part before the separator) carry one of three sema
 | Lookup orchestration | Rust `engine/lexicon::search::search` |
 | Platform bridge | `RustEngineBridge.search` / `searchByHanzi` / `searchWithSources` (iOS `RustEngineBridge+Lexicon.swift`, Android `LexiconBridge.kt`) |
 
-There is no on-device build pathway — the fst is a read-only asset shipped in `ios/Resources/Dictionaries/dictionary.fst` and `android/app/src/main/assets/dictionary.fst` (byte-identical).
+There is no on-device build pathway — the fst is a read-only asset, one byte-identical copy per platform, written by `dictionary/build/deploy.sh`.
 
 ### 3.4 Operations
 

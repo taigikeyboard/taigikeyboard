@@ -1,2 +1,10 @@
 # Inno Setup message files are UTF-8 with CRLF and are read verbatim by ISCC.
 *.isl -text
+
+# Payload copies staged into the macOS bundle and the Windows installer. Binary
+# by extension already, but named so a checkout cannot apply text conversion to
+# a dictionary index or a font.
+*.bin -text
+*.fst -text
+*.ttf -text
+*.otf -text

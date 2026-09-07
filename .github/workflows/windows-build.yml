@@ -25,14 +25,12 @@ on:
   # There is no automated gate on the Windows build today — `make windows-check`
   # is a host-side gate the maintainer runs by hand, and it cannot see MSVC
   # linking, VERSIONINFO, or whether the installer still compiles. The paths are
-  # everything that reaches the installer: the Windows crates, the engine they
-  # link, and the dictionary and font files staged into the payload.
+  # everything that reaches the installer: the Windows crates and the payloads
+  # committed beside them, plus the engine they link.
   pull_request:
     paths:
       - 'windows/**'
       - 'engine/**'
-      - 'ios/Resources/Dictionaries/**'
-      - 'ios/Resources/Fonts/**'
       - '.github/workflows/windows-build.yml'
 
 permissions:

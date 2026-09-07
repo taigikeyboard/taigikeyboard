@@ -28,7 +28,7 @@ Burntsushi `fst` finite-state transducer holding dictionary keys (`tl:`, `poj:`,
 ### Pipeline
 
 - **Producer**: `dictionary/build/create_fst.py` shells to the Rust binary `engine/build-helpers/fst-builder`. Value layout: rowid packed in the low 32 bits of the `u64` value; high bits reserved.
-- **Shipped path**: `ios/Resources/Dictionaries/dictionary.fst` · `android/app/src/main/assets/dictionary.fst`.
+- **Shipped path**: one committed copy per platform — `ios/Resources/Dictionaries/`, `macos/Resources/Dictionaries/`, `windows/resources/Dictionaries/`, `android/app/src/main/assets/`.
 - **Size**: ~9.1 MB, byte-identical on both platforms (same build, same file).
 
 ### Reader

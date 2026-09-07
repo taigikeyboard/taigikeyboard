@@ -160,10 +160,9 @@ for localization_dir in "${BUNDLE_NAME_DIRECTORIES[@]}"; do
 done
 
 echo "==> Copying dictionary data"
-# Read from the iOS resource directory rather than keeping a third committed
-# copy of ~24MB of generated data. `make dict` regenerates these in place, so
-# both platforms bundle the same build of the dictionary by construction.
-DICTIONARY_SOURCE_DIR="$REPOSITORY_DIR/ios/Resources/Dictionaries"
+# `make dict` writes this platform's copy along with every other platform's, so
+# a bundle can only be built from the dictionary that deploy run produced.
+DICTIONARY_SOURCE_DIR="$REPOSITORY_DIR/macos/Resources/Dictionaries"
 for artifact in dictionary.fst dictionary.bin association.bin syllables.fst; do
     source_file="$DICTIONARY_SOURCE_DIR/$artifact"
     # Fail here rather than ship a bundle whose input method launches, receives
@@ -176,15 +175,15 @@ for artifact in dictionary.fst dictionary.bin association.bin syllables.fst; do
 done
 
 echo "==> Copying fonts"
-# The typefaces the candidate-window font picker offers. Read from the iOS
-# resource directory for the same reason the dictionaries are — no third
-# committed copy — and laid out under the directory Info.plist's
-# ATSApplicationFontsPath names, which is what AppKit activates at launch.
+# The typefaces the candidate-window font picker offers, laid out under the
+# directory Info.plist's ATSApplicationFontsPath names, which is what AppKit
+# activates at launch. `make fonts` keeps this platform's copy in step with
+# ios/Resources/Fonts; `make fonts-check` fails when it drifts.
 #
 # The whole directory, deliberately without a list of filenames: which faces
 # exist is `CandidateFontChoice`'s to state, not this script's, and a second
 # roster here is one a new case could be added to only one of.
-FONT_SOURCE_DIR="$REPOSITORY_DIR/ios/Resources/Fonts"
+FONT_SOURCE_DIR="$REPOSITORY_DIR/macos/Resources/Fonts"
 FONT_DESTINATION_DIR="$CONTENTS_DIR/Resources/$APPLICATION_FONTS_PATH"
 FONT_FILES=()
 for candidate in "$FONT_SOURCE_DIR"/*.ttf "$FONT_SOURCE_DIR"/*.otf; do

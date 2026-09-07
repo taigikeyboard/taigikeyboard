@@ -116,7 +116,7 @@ flowchart TD
         clean --> mxcf
     end
 
-    dep -->|data assets| iosBundle["ios/Resources/Dictionaries/"]
+    dep -->|data assets| iosBundle["per-platform Dictionaries/"]
     dep -->|data assets| andAssets["android/.../assets/"]
     xcf -->|engine binary| iosApp["iOS app build"]
     jnib -->|engine binary| andApp["Android app build"]

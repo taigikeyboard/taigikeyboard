@@ -43,8 +43,8 @@ PRODUCT_NAME_STRING_ID="$(awk '
 DISTRIBUTION_DIR="$WINDOWS_DIR/.build/distribution"
 STAGING_DIR="$WINDOWS_DIR/.build/staging"
 TARGET_DIR="$WINDOWS_DIR/target/$RELEASE_TARGET/release"
-DICTIONARIES_SOURCE_DIR="$REPOSITORY_DIR/ios/Resources/Dictionaries"
-FONTS_SOURCE_DIR="$REPOSITORY_DIR/ios/Resources/Fonts"
+DICTIONARIES_SOURCE_DIR="$WINDOWS_DIR/resources/Dictionaries"
+FONTS_SOURCE_DIR="$WINDOWS_DIR/resources/Fonts"
 INSTALLER_SCRIPT="$WINDOWS_DIR/installer/TaigiKeyboard.iss"
 TASK_DEFINITION="$WINDOWS_DIR/installer/update-check-task.xml"
 

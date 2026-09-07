@@ -13,7 +13,7 @@ Homepage and downloads: <https://taigikeyboard.tw/>
 | --- | --- |
 | `windows/` | The TSF text service, the WinUI 3 settings application, and the packaging scripts |
 | `engine/` | The shared Rust engine — segmentation, ranking, romanization, dictionary lookup |
-| `ios/Resources/` | The compiled dictionary and the fonts the installer stages into the product |
+| `windows/resources/` | The compiled dictionary and the fonts the installer stages into the product |
 
 The engine is shared with this project's iOS, Android and macOS applications,
 which are developed separately.
@@ -33,6 +33,13 @@ The engine's own tests run anywhere:
 ```
 cargo test --manifest-path engine/Cargo.toml
 ```
+
+## Code signing
+
+Windows releases are currently unsigned; the published SHA-256 in the update
+manifest is the integrity check. Who may release a signed binary, what gets
+signed, and what a user can verify are stated in
+[`CODE_SIGNING_POLICY.md`](CODE_SIGNING_POLICY.md).
 
 ## Licence
 

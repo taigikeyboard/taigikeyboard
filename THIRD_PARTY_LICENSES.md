@@ -22,8 +22,9 @@ copyright lines below were read out of each font's own `name` table.
 | 源樣黑體 GenYoGothic2 TW | `GenYoGothic2TW-R.otf` | ButTaiwan (<https://github.com/ButTaiwan/genyo-font>); derived from Adobe Source Han Sans. |
 | 源樣明體 GenYoMin2 TW | `GenYoMin2TW-R.otf` | ButTaiwan (<https://github.com/ButTaiwan/genyo-font>); derived from Adobe Source Han Serif. |
 
-Copies live at `ios/Resources/Fonts/` (also staged into the Windows installer
-by `windows/scripts/release-app.sh`) and `android/app/src/main/res/font/`.
+Copies live at `ios/Resources/Fonts/`, `macos/Resources/Fonts/`,
+`windows/resources/Fonts/` and `android/app/src/main/res/font/`. The first three
+are kept in step by `make fonts`; `make fonts-check` fails when they drift.
 
 ## Vendored source
 

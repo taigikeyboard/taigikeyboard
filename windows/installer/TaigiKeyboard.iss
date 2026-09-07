@@ -11,8 +11,8 @@
 ;   Runtime\*                      (the Windows App Runtime the settings window
 ;                                   runs on — self-contained, roadmap W17;
 ;                                   installed BESIDE the exe)
-;   Dictionaries\*                 (from ios/Resources/Dictionaries, W2)
-;   Fonts\*                        (from ios/Resources/Fonts)
+;   Dictionaries\*                 (from windows/resources/Dictionaries)
+;   Fonts\*                        (from windows/resources/Fonts)
 ;   update-check-task.xml          (the scheduled task's definition)
 ;
 ; What it does that a plain file copy would not (rakukan `rakukan_installer.iss`,

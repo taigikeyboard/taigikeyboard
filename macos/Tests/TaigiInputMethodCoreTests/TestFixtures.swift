@@ -10,10 +10,10 @@ import XCTest
 /// relative to the running bundle; only the tests, which run outside any bundle,
 /// need to know where the repository keeps its copies.
 enum TestFixtures {
-    /// `<repo>/ios/Resources/Dictionaries` — the same directory
+    /// `<repo>/macos/Resources/Dictionaries` — the same directory
     /// `bundle-app.sh` copies into the assembled `.app`.
     static let dictionaryDirectory = repositoryRoot
-        .appendingPathComponent("ios/Resources/Dictionaries")
+        .appendingPathComponent("macos/Resources/Dictionaries")
 
     /// One counter for the whole test process, so no two suites can hand the
     /// engine the same generation — spacing per-suite counters apart by hand
@@ -68,9 +68,9 @@ enum TestFixtures {
             }
     }
 
-    /// `<repo>/ios/Resources/Fonts` — the same directory `bundle-app.sh` copies
+    /// `<repo>/macos/Resources/Fonts` — the same directory `bundle-app.sh` copies
     /// into the assembled `.app`'s `ATSApplicationFontsPath`.
-    static let fontDirectory = repositoryRoot.appendingPathComponent("ios/Resources/Fonts")
+    static let fontDirectory = repositoryRoot.appendingPathComponent("macos/Resources/Fonts")
 
     /// Activates the bundled typefaces for this process, and answers which
     /// files failed to.

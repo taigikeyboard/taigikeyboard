@@ -25,10 +25,10 @@ OVERLAY_DIR="$PRIVATE_DIR/scripts/public-overlay"
 
 # Everything the Windows installer build reads. `windows/Cargo.toml:34-35` takes
 # `engine/dispatch` and `engine/protos` as path dependencies, which pulls in the
-# whole engine workspace, and `windows/scripts/lib/identity.sh:46-47` stages the
-# dictionary and font payloads out of `ios/Resources/`. The dictionary sources
-# and the pipeline that compiles them stay private; only the compiled artifacts
-# ship.
+# whole engine workspace. The dictionary and font payloads are committed under
+# `windows/resources/`, so nothing outside these two trees is needed. The
+# dictionary sources and the pipeline that compiles them stay private; only the
+# compiled artifacts ship.
 PUBLIC_PATHS=(
     .gitattributes
     .gitignore
@@ -38,8 +38,6 @@ PUBLIC_PATHS=(
     SECURITY.md
     THIRD_PARTY_LICENSES.md
     engine
-    ios/Resources/Dictionaries
-    ios/Resources/Fonts
     windows
 )
 
@@ -95,7 +93,7 @@ git -C "$PRIVATE_DIR" archive --format=tar HEAD -- "${PUBLIC_PATHS[@]}" |
 # documentation to the compiler — `engine/phonetics/src/lib.rs:2` pulls it in
 # with `include_str!`, so dropping it fails the build.
 find "$WORK_DIR" -path "$WORK_DIR/.git" -prune -o -name '*.md' -print |
-    grep -vE "/(NOTICE|SECURITY|THIRD_PARTY_LICENSES)\.md$|^$WORK_DIR/engine/README\.md$" |
+    grep -vE "/(NOTICE|SECURITY|THIRD_PARTY_LICENSES|CODE_SIGNING_POLICY)\.md$|^$WORK_DIR/engine/README\.md$" |
     xargs -r rm -f
 
 # `NOTICE` and `THIRD_PARTY_LICENSES.md` in the overlay are edited copies of the

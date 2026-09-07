@@ -180,8 +180,8 @@ echo "==> Staging the install layout"
 rm -rf "$STAGING_DIR"
 mkdir -p "$STAGING_DIR/Dictionaries" "$STAGING_DIR/Fonts" "$DISTRIBUTION_DIR"
 cp "$TARGET_DIR/$SERVICE_DLL" "$TARGET_DIR/$SETTINGS_EXE" "$STAGING_DIR/"
-# The four dictionary artefacts, from the iOS resource directory (W2: no
-# third committed copy); an empty one would be an engine with no words.
+# The four dictionary artefacts, from this platform's committed copy that
+# `make dict` writes; an empty one would be an engine with no words.
 for artifact in dictionary.fst dictionary.bin association.bin syllables.fst; do
     source_file="$DICTIONARIES_SOURCE_DIR/$artifact"
     [[ -s "$source_file" ]] || fail "missing or empty dictionary artifact $source_file (run 'make dict' + 'make build')"

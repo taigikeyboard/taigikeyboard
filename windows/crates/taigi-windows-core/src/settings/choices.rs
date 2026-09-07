@@ -184,7 +184,7 @@ impl SettingChoice for CandidateWindowSizeChoice {
 /// (`fontType`); the DEFAULT is the desktop's own — a fresh install draws in
 /// the system font (USER 2026-08-23) where iOS starts on Open Huninn.
 /// Roster + file names mirror `macos/.../Candidates/CandidateFontChoice.swift:22-49`;
-/// the files themselves ship from `ios/Resources/Fonts/`.
+/// the files themselves ship from `windows/resources/Fonts/`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum CandidateFontChoice {
     System,

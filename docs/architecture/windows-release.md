@@ -210,8 +210,8 @@ What `windows/scripts/release-app.sh` does, in order:
    Windows App Runtime files the settings exe's build script staged in the
    target directory — every name in
    `windows/build-support/windows-app-runtime-files.txt`, W17), `Dictionaries\`
-   (the four artifacts from `ios/Resources/Dictionaries`, each required
-   non-empty), `Fonts\` (every face in `ios/Resources/Fonts`), and the
+   (the four artifacts from `windows/resources/Dictionaries`, each required
+   non-empty), `Fonts\` (every face in `windows/resources/Fonts`), and the
    scheduled task's definition.
 5. **Sign the binaries** — `signtool sign /fd SHA256 /td SHA256 /tr <timestamp>
    /sha1 <thumbprint>`, then `signtool verify /pa`. Skipped entirely under

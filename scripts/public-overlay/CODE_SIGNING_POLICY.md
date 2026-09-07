@@ -11,9 +11,9 @@ user can verify for themselves.
 | macOS | `TaigiKeyboard-<version>.pkg` | Signed and notarized with an Apple Developer ID. |
 | iOS / Android | App Store / Google Play builds | Signed by the respective store pipeline. |
 
-Windows releases being unsigned is the gap this policy exists to close.
-`docs/architecture/windows-release.md` § Signing status owns what the digest
-is and is not worth in the meantime.
+Windows releases being unsigned is the gap this policy exists to close. Until
+it is, the published SHA-256 is the only integrity check a user has, and it
+proves only that the file downloaded is the file published — not who built it.
 
 ## Roles
 
@@ -57,7 +57,8 @@ have come from a tree other than the one published at that commit.
 
 `make windows-release` on a maintainer machine remains the local path for
 testing an installer; it produces nothing that is signed.
-`docs/architecture/windows-release.md` owns both procedures.
+The release procedure itself is documented with the project's other
+engineering notes, which are kept in the development repository.
 
 If a second maintainer joins, this table is updated in the same commit that
 grants them access.
