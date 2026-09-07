@@ -121,17 +121,45 @@ code-less Arm64X DLL that the loader redirects to an Arm64 or an x64 DLL
 Arm64/Arm64EC build tools, which the release machine does not have
 (`bin/Hostx64` holds `x64` and `x86` only), and a machine to test on.
 
+## Building on a GitHub-hosted runner
+
+`.github/workflows/windows-build.yml` builds the same installer on a
+GitHub-hosted `windows-2025` runner — `bash windows/scripts/release-app.sh
+--skip-sign`, the same entry point, with Inno Setup and `protoc` installed from
+version- and digest-pinned downloads and the MSVC developer environment applied.
+
+It exists for provenance, not convenience. SignPath Foundation signs only "a
+valid, automated build resulting from the source code at the noted source code
+repository", and for open-source projects requires every job leading up to the
+signing request to have run on a GitHub-hosted agent, with the artifact handed
+to its action from inside that workflow. A build cut by hand on this machine can
+never satisfy that, however carefully it is done.
+
+The workflow does not publish, and this section's manual procedure is still how
+releases are cut. Two things have to happen before that changes: the repository
+goes public (a private repository's releases are not publicly downloadable,
+which is why they live on the website repository today), and a certificate
+exists. Note also that SignPath signs an Inno Setup installer as a plain PE
+file, not as a composite — signing the binaries *inside* it is a separate
+signing operation before packaging, which is the shape
+`windows/scripts/release-app.sh` already has.
+
 ## One-time machine setup
 
-A Windows machine (or VM) with Git Bash (`cygpath`, `sha256sum`, `base64`,
-`curl`), PowerShell (reads the built files' VERSIONINFO and signature back),
-Python 3, GNU **make** (`winget install ezwinports.make` — Git for Windows does
-not ship it, and every `make` target below needs it), and:
+A Windows machine (or VM) with Git Bash (`cygpath`, `sha256sum`, and — on the
+publishing path only — `base64` and `curl`), PowerShell (reads the built files'
+VERSIONINFO and signature back), Python 3 (publishing only: it validates the
+manifest JSON), GNU **make** (`winget install ezwinports.make` — Git for Windows
+does not ship it, and every `make` target below needs it), `protoc` (the engine's
+`protos` crate runs prost-build), and:
 
 1. **Rust** with the `x86_64-pc-windows-msvc` target (`rustup target add`).
-2. **Inno Setup 6.5 or newer** (`x64compatible` is 6.3 syntax; the official
-   `ChineseTraditional.isl` ships from 6.5) — `ISCC.exe` on `PATH`, in its
-   default folder, or named by `ISCC=<path>`.
+2. **Inno Setup 6.5 or newer** (`x64compatible` is 6.3 syntax) — `ISCC.exe` on
+   `PATH`, in its default folder, or named by `ISCC=<path>`. Note that
+   `release-app.sh` resolves `iscc` from `PATH` **before** it reads `ISCC`.
+   Nothing has to be added to the Inno installation: `ChineseTraditional.isl` is
+   still an unofficial translation as of 6.7.3 and a stock install does not
+   contain it, so it is vendored at `windows/installer/Languages/`.
 3. **Windows SDK + Visual Studio Build Tools** — `rc.exe` (the resource
    compiler the crates' build scripts use for the icon + VERSIONINFO) and
    `dumpbin.exe` (beside `link.exe`; the import-table check) on `PATH`, plus

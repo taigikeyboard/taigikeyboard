@@ -1,0 +1,2 @@
+# Inno Setup message files are UTF-8 with CRLF and are read verbatim by ISCC.
+*.isl -text

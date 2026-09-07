@@ -120,10 +120,18 @@ SetupLogging=yes
 
 ; The macOS bundle's system localizations (App/*.lproj: Hanji, English,
 ; Japanese), Hanji first = the fallback when the user's UI language is none
-; of them (the app's own default). ChineseTraditional.isl is official since
-; Inno Setup 6.5.
+; of them (the app's own default).
+;
+; ChineseTraditional.isl is vendored rather than taken from `compiler:Languages`.
+; It is still an UNOFFICIAL translation as of Inno Setup 6.7.3 — it lives in the
+; source tree under `Files/Languages/Unofficial/`, and Inno's own installer
+; (`setup.iss`: `Source: "files\Languages\*.isl"`) does not descend into that
+; directory, so a stock installation does not have the file at all. Depending on
+; it meant depending on someone having dropped it into the Inno directory by
+; hand, which is exactly the kind of undeclared machine state a release must not
+; rest on. Japanese.isl and Default.isl are official and stay where they are.
 [Languages]
-Name: "chinesetraditional"; MessagesFile: "compiler:Languages\ChineseTraditional.isl"
+Name: "chinesetraditional"; MessagesFile: "{#SourcePath}Languages\ChineseTraditional.isl"
 Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "japanese"; MessagesFile: "compiler:Languages\Japanese.isl"
 

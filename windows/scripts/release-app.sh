@@ -77,8 +77,12 @@ if [[ -e "$OUTPUT_EXE" && "$force_overwrite" == false ]]; then
 fi
 
 echo "==> Checking the tools"
-for tool in cargo cygpath sha256sum base64 curl python3 powershell.exe; do
-    command -v "$tool" > /dev/null || fail "$tool is not on PATH (Git Bash, PowerShell and Python 3 are prerequisites)"
+# What building needs. `base64`, `curl` and `python3` are checked further down
+# instead: nothing in the build reads them, they belong to publish-release.sh,
+# and requiring them here would refuse a build-only run on a machine that can
+# perfectly well produce the installer.
+for tool in cargo cygpath sha256sum powershell.exe; do
+    command -v "$tool" > /dev/null || fail "$tool is not on PATH (Git Bash and PowerShell are prerequisites)"
 done
 rustup target list --installed 2>/dev/null | grep -qx "$RELEASE_TARGET" ||
     fail "the $RELEASE_TARGET target is not installed (rustup target add $RELEASE_TARGET)"
@@ -105,6 +109,11 @@ if [[ "$skip_sign" == false ]]; then
     command -v signtool > /dev/null || fail "signtool (Windows SDK) is not on PATH"
 fi
 if [[ "$publish" == true ]]; then
+    # Checked before the build rather than after it: publish-release.sh checks
+    # the same list, but reaching it costs a full release build first.
+    for tool in base64 curl python3; do
+        command -v "$tool" > /dev/null || fail "$tool is not on PATH — publishing needs it (Python 3 is a prerequisite)"
+    done
     command -v gh > /dev/null || fail "the GitHub CLI (gh) is not installed"
     gh auth status > /dev/null 2>&1 || fail "gh is not authenticated — run 'gh auth login'"
 fi
