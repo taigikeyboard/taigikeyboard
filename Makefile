@@ -57,7 +57,16 @@ doc:
 
 # Full dictionary regeneration: per-source pipeline (run.sh) then aggregate
 # merge + bin + fst + audit + deploy to Android/iOS (build.sh).
+# The submodule check is here as well as in dictionary/common/taigi_bridge.py
+# because they answer different questions. This one fails in milliseconds before
+# a ~10-minute run starts, for the one entry point people actually type; the
+# Python one is the correctness boundary that also covers the tests and direct
+# `python3 -m pipeline.run` invocations.
 dict:
+	@test -f taigi-converter/src/converter.js || { \
+	  echo "make dict: taigi-converter submodule is not checked out."; \
+	  echo "  git submodule update --init --recursive   (or: make update-submodules)"; \
+	  exit 1; }
 	bash $(DICT)/run.sh
 	bash $(DICT)/build.sh
 

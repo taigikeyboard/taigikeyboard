@@ -31,6 +31,33 @@ from typing import Any, TextIO
 
 _SCRIPT_DIR = Path(__file__).resolve().parent
 _BATCH_SCRIPT = _SCRIPT_DIR / "taigi_batch.js"
+# taigi_batch.js:8-9 imports these two out of the taigi-converter submodule. A
+# clone made without --recurse-submodules leaves that directory empty, node
+# exits on the failed import, and every conversion in the run comes back as an
+# error string — which the pipeline then treats as data. Naming the real cause
+# here is the difference between "run git submodule update --init" and chasing a
+# TypeError in cleanup.py 200 lines downstream.
+_CONVERTER_ENTRY_POINTS = (
+    _SCRIPT_DIR.parent.parent / "taigi-converter" / "src" / "converter.js",
+    _SCRIPT_DIR.parent.parent / "taigi-converter" / "src" / "phonetics.js",
+)
+
+
+class ConverterSubmoduleMissingError(RuntimeError):
+    """Raised when the taigi-converter submodule has not been checked out."""
+
+
+def _require_converter_submodule() -> None:
+    missing = [p for p in _CONVERTER_ENTRY_POINTS if not p.exists()]
+    if not missing:
+        return
+    raise ConverterSubmoduleMissingError(
+        "taigi-converter submodule is not checked out — "
+        + ", ".join(str(p) for p in missing)
+        + " missing. Run `git submodule update --init --recursive` (or "
+        "`make update-submodules`) and re-run. Without it every romanization "
+        "conversion fails and the pipeline silently ingests the error text."
+    )
 
 _logger = logging.getLogger(__name__)
 
@@ -86,6 +113,7 @@ class TaigiConverter:
             # Keep the handle as an attribute so close() can release it.
             if self._stderr_file is not None:
                 self._stderr_file.close()
+            _require_converter_submodule()
             self._stderr_file = open(self._stderr_path, "w", encoding="utf-8")
             self._process = subprocess.Popen(
                 ["node", str(_BATCH_SCRIPT)],
