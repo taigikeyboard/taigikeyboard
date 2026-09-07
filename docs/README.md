@@ -111,7 +111,7 @@ One-off snapshots ordered chronologically. Specs cited by engine code (`v358-ref
 |------|-------------|--------|
 | `go-public-checklist.md` | What has to be true before the repository is made public — history audit results, dictionary redistribution blockers, anonymous-clone check, release-chain review, and the settings to turn on afterwards | Active |
 | `roadmap.md` | Forward-looking work items not yet scheduled into a release slice | Active |
-| `CODE_SIGNING_POLICY.md` | Code-signing policy for released binaries (SignPath Foundation requirement) | Active |
+| `CODE_SIGNING_POLICY.md` | Who may release a binary, what a user can verify, and why Windows releases are unsigned | Active |
 
 ---
 
