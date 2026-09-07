@@ -16,6 +16,12 @@ name: Windows build
 # downloadable. Bringing them back here is gated on the repository going public.
 on:
   workflow_dispatch:
+  # The public repository is published as a squashed snapshot, so a push to its
+  # `main` is the only signal that its build inputs changed. Signing needs the
+  # artifact to come out of a run in that repository, not off a maintainer's box.
+  push:
+    branches:
+      - main
   # There is no automated gate on the Windows build today — `make windows-check`
   # is a host-side gate the maintainer runs by hand, and it cannot see MSVC
   # linking, VERSIONINFO, or whether the installer still compiles. The paths are
@@ -56,6 +62,11 @@ jobs:
     # on GitHub's schedule, and a release build should not change underneath a
     # release because a label was repointed.
     runs-on: windows-2025
+    # Only the public repository builds. Signing needs the artifact to come out
+    # of a run there, and a Windows runner is the most expensive gate this
+    # project has; the private repository would pay for it on every pull request
+    # and every merge to `main` without producing anything that can be signed.
+    if: github.repository == 'taigikeyboard/taigikeyboard'
     timeout-minutes: 60
     steps:
       # core.autocrlf must be off BEFORE the checkout. Everything here is
