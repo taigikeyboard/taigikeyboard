@@ -62,7 +62,7 @@ $ServiceDll = Join-Path $TargetDir 'TaigiKeyboard.dll'
 $ServiceDllNames = @($ServiceDll, (Join-Path $TargetDir 'deps\TaigiKeyboard.dll'))
 $SettingsExe = Join-Path $TargetDir 'TaigiKeyboardSettings.exe'
 $DictionariesSource = Join-Path $RepositoryDir 'ios\Resources\Dictionaries'
-$FontsSource = Join-Path $RepositoryDir 'ios\Resources\Fonts'
+$FontsSource = Join-Path $RepositoryDir 'fonts\font'
 # guids.rs: CLSID_TEXT_SERVICE.
 $Clsid = '{32C28A51-8939-4C8F-8F29-037F9FD3CF0A}'
 $ClsidKey = "HKLM:\SOFTWARE\Classes\CLSID\$Clsid"
