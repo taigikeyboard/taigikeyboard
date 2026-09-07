@@ -5,7 +5,9 @@
 
 use super::index_label::CandidateIndexLabel;
 use crate::composing::CandidateCellContent;
-use crate::settings::{CandidateFontChoice, CandidateTextSizeChoice, CandidateWindowSizeChoice};
+use crate::settings::{
+    CandidateFontChoice, CandidateFontSelection, CandidateTextSizeChoice, CandidateWindowSizeChoice,
+};
 
 /// Where a cell puts the candidate's second script (`CandidateCellArrangement.swift`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -21,7 +23,7 @@ pub enum CandidateCellArrangement {
 /// (`CandidateMetrics.swift:126`).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct FontSpec {
-    pub choice: CandidateFontChoice,
+    pub selection: CandidateFontSelection,
     pub size: f32,
 }
 
@@ -57,7 +59,7 @@ const STACKED_HIGHLIGHT_INSET: f32 = 4.0;
 pub struct CandidateMetrics {
     text_size: CandidateTextSizeChoice,
     window_size: CandidateWindowSizeChoice,
-    font_choice: CandidateFontChoice,
+    font_selection: CandidateFontSelection,
     cell_arrangement: CandidateCellArrangement,
     candidate_font_size: f32,
     annotation_font_size: f32,
@@ -94,7 +96,7 @@ impl CandidateMetrics {
     pub fn resolve(
         text_size: CandidateTextSizeChoice,
         window_size: CandidateWindowSizeChoice,
-        font_choice: CandidateFontChoice,
+        font_selection: CandidateFontSelection,
         cell_arrangement: CandidateCellArrangement,
         measurer: &dyn TextMeasurer,
     ) -> Self {
@@ -106,15 +108,15 @@ impl CandidateMetrics {
         let stacked_line_gap = (BASE_STACKED_LINE_GAP * text_scale).round();
         let vertical_padding = (BASE_VERTICAL_PADDING * chrome_scale).round();
         let candidate_font = FontSpec {
-            choice: font_choice,
+            selection: font_selection,
             size: candidate_font_size,
         };
         let annotation_font = FontSpec {
-            choice: font_choice,
+            selection: font_selection,
             size: annotation_font_size,
         };
         let index_font = FontSpec {
-            choice: CandidateFontChoice::System,
+            selection: CandidateFontSelection::BuiltIn(CandidateFontChoice::System),
             size: index_font_size,
         };
         let stacked_line_heights = matches!(cell_arrangement, CandidateCellArrangement::Stacked)
@@ -125,6 +127,17 @@ impl CandidateMetrics {
                 )
             });
         let item_height = match stacked_line_heights {
+            // The point size is what the bundled faces need: their line boxes
+            // fit the row it gives. A face the user brought has no such
+            // guarantee — tall ascenders, stacked diacritics and a fallback
+            // glyph all draw outside it — so a custom face is given its own
+            // measured line box instead. Bundled selections keep the arithmetic
+            // they shipped with, exactly
+            // (`CandidateMetrics.swift`'s inline arm).
+            None if font_selection.is_custom() => {
+                (candidate_font_size.max(measurer.line_height(candidate_font)) + vertical_padding)
+                    .ceil()
+            }
             None => candidate_font_size + vertical_padding,
             Some((candidate_line, annotation_line)) => {
                 (candidate_line + annotation_line + stacked_line_gap + vertical_padding).ceil()
@@ -140,7 +153,7 @@ impl CandidateMetrics {
         Self {
             text_size,
             window_size,
-            font_choice,
+            font_selection,
             cell_arrangement,
             candidate_font_size,
             annotation_font_size,
@@ -193,8 +206,8 @@ impl CandidateMetrics {
         self.window_size
     }
 
-    pub fn font_choice(&self) -> CandidateFontChoice {
-        self.font_choice
+    pub fn font_selection(&self) -> CandidateFontSelection {
+        self.font_selection
     }
 
     pub fn cell_arrangement(&self) -> CandidateCellArrangement {
@@ -251,14 +264,14 @@ impl CandidateMetrics {
 
     pub fn candidate_font(&self) -> FontSpec {
         FontSpec {
-            choice: self.font_choice,
+            selection: self.font_selection,
             size: self.candidate_font_size,
         }
     }
 
     pub fn annotation_font(&self) -> FontSpec {
         FontSpec {
-            choice: self.font_choice,
+            selection: self.font_selection,
             size: self.annotation_font_size,
         }
     }
@@ -266,7 +279,7 @@ impl CandidateMetrics {
     /// The system font, never the user's candidate typeface.
     pub fn index_font(&self) -> FontSpec {
         FontSpec {
-            choice: CandidateFontChoice::System,
+            selection: CandidateFontSelection::BuiltIn(CandidateFontChoice::System),
             size: self.index_font_size,
         }
     }
@@ -412,7 +425,7 @@ pub(crate) mod test_support {
         CandidateMetrics::resolve(
             text,
             window,
-            CandidateFontChoice::System,
+            CandidateFontSelection::default(),
             arrangement,
             &EmMeasurer,
         )
@@ -423,7 +436,7 @@ pub(crate) mod test_support {
 mod tests {
     use super::test_support::*;
     use super::*;
-    use crate::settings::SettingChoice;
+    use crate::settings::{CandidateFontChoice, CustomFontId, SettingChoice};
     use CandidateCellArrangement::{Inline, Stacked};
     use CandidateTextSizeChoice as T;
     use CandidateWindowSizeChoice as W;
@@ -621,5 +634,54 @@ mod tests {
         );
         assert!(stacked_width < m.measure_width(&wide_annotation, &measurer));
         assert!(stacked.item_height() > m.item_height());
+    }
+
+    /// An inline row is the point size plus padding for the bundled faces,
+    /// whose line boxes fit it. A typeface the user brought has no such
+    /// guarantee — tall ascenders, stacked diacritics, a fallback glyph — so
+    /// its row is given the measured line box instead, and the bundled
+    /// arithmetic is left exactly as it shipped
+    /// (`CandidateMetrics.swift`'s inline arm).
+    #[test]
+    fn an_inline_row_measures_a_custom_face_and_not_a_bundled_one() {
+        use CandidateCellArrangement::Inline;
+        let measurer = EmMeasurer;
+        let bundled = CandidateMetrics::resolve(
+            CandidateTextSizeChoice::Medium,
+            CandidateWindowSizeChoice::Medium,
+            CandidateFontSelection::BuiltIn(CandidateFontChoice::Iansui),
+            Inline,
+            &measurer,
+        );
+        assert_eq!(
+            bundled.item_height(),
+            bundled.candidate_font_size() + bundled.vertical_padding(),
+        );
+
+        let custom = CandidateMetrics::resolve(
+            CandidateTextSizeChoice::Medium,
+            CandidateWindowSizeChoice::Medium,
+            CandidateFontSelection::Custom(CustomFontId(1)),
+            Inline,
+            &measurer,
+        );
+        assert_eq!(
+            custom.item_height(),
+            (measurer.line_height(custom.candidate_font()) + custom.vertical_padding()).ceil(),
+        );
+        assert!(custom.item_height() > bundled.item_height());
+    }
+
+    /// Two typefaces the user added are two metrics values — a window built
+    /// for one must not be reused for the other.
+    #[test]
+    fn two_custom_typefaces_are_two_font_specs() {
+        let first = CandidateFontSelection::Custom(CustomFontId(1));
+        let second = CandidateFontSelection::Custom(CustomFontId(2));
+
+        assert_ne!(first, second);
+        assert_ne!(first, CandidateFontSelection::default());
+        assert!(first.is_custom());
+        assert!(first.built_in().is_none());
     }
 }

@@ -6,6 +6,7 @@ pub mod appearance;
 pub mod custom_dictionary;
 pub mod dictionary_search;
 pub mod dictionary_sources;
+pub mod font_management;
 pub mod general;
 pub mod shortcuts;
 

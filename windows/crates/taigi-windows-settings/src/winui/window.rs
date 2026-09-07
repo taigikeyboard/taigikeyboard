@@ -17,6 +17,7 @@ use crate::winui::cards;
 use crate::winui::pages;
 use crate::winui::pages::custom_dictionary::CustomDictionaryModel;
 use crate::winui::pages::dictionary_search::DictionarySearchModel;
+use crate::winui::pages::font_management::FontManagementModel;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::time::Duration;
@@ -41,7 +42,7 @@ type PageView = fn(&SettingsWindow, &StringResolver, &mut ViewContext<SettingsWi
 /// The panes the sidebar lists, in order, each with the page that draws
 /// it — one table, so a pane cannot be listed without a page or reachable
 /// without a row.
-const PANES: [(SettingsPane, PageView); 5] = [
+const PANES: [(SettingsPane, PageView); 6] = [
     (SettingsPane::General, pages::general::view),
     (SettingsPane::Appearance, pages::appearance::view),
     (SettingsPane::Shortcuts, pages::shortcuts::view),
@@ -53,6 +54,7 @@ const PANES: [(SettingsPane, PageView); 5] = [
         SettingsPane::DictionarySources,
         pages::dictionary_sources::view,
     ),
+    (SettingsPane::FontManagement, pages::font_management::view),
 ];
 
 /// The page for a pane the sidebar does not list: built, reachable only by
@@ -258,6 +260,7 @@ pub enum Message {
     SetSlotKeySet(Option<CandidateSlotKeySet>),
     Reset(ResetScope),
     CustomDictionary(pages::custom_dictionary::Message),
+    FontManagement(pages::font_management::Message),
     DictionarySearch(pages::dictionary_search::Message),
     StartRecording(RecorderTarget),
     /// A key the hook took while a row was recording. The generation is
@@ -280,6 +283,7 @@ pub struct SettingsWindow {
     message: Option<PageMessage>,
     updates: UpdateState,
     custom_dictionary: CustomDictionaryModel,
+    font_management: FontManagementModel,
     dictionary_search: DictionarySearchModel,
     recorder: Recorder,
     tick_generation: u64,
@@ -307,6 +311,10 @@ impl SettingsWindow {
 
     pub fn custom_dictionary(&self) -> &CustomDictionaryModel {
         &self.custom_dictionary
+    }
+
+    pub fn font_management(&self) -> &FontManagementModel {
+        &self.font_management
     }
 
     pub fn dictionary_search(&self) -> &DictionarySearchModel {
@@ -388,8 +396,12 @@ impl SettingsWindow {
         self.enter_pane(context);
     }
 
-    /// What a pane needs the first time it is shown. 自訂詞庫 is the only
-    /// one with something to fetch, and it fetches it once.
+    /// What a pane needs the first time it is shown: 自訂詞庫 fetches its
+    /// first page, 字型管理 reads the user's font folder. Each once.
+    ///
+    /// 字型管理 reads even in a read-only launch: the folder is the user's
+    /// own, and a window that cannot WRITE the selection can still say which
+    /// typefaces are there.
     fn enter_pane(&mut self, context: &ComponentContext<Self>) {
         if self.pane == SettingsPane::CustomDictionary && !self.settings.is_read_only() {
             pages::custom_dictionary::ensure_loaded(
@@ -397,6 +409,9 @@ impl SettingsWindow {
                 &self.launch.stores,
                 context,
             );
+        }
+        if self.pane == SettingsPane::FontManagement {
+            pages::font_management::ensure_loaded(&mut self.font_management);
         }
     }
 
@@ -538,6 +553,7 @@ impl Component for SettingsWindow {
             message: None,
             updates: UpdateState::new(),
             custom_dictionary: CustomDictionaryModel::default(),
+            font_management: FontManagementModel::default(),
             dictionary_search: DictionarySearchModel::default(),
             recorder: Recorder::default(),
             tick_generation: 0,
@@ -623,6 +639,22 @@ impl Component for SettingsWindow {
                 }
                 ResetScope::DictionarySources => document.reset_dictionary_sources(),
             }),
+            Message::FontManagement(message) => {
+                let Self {
+                    settings,
+                    font_management,
+                    message: alert,
+                    ..
+                } = self;
+                pages::font_management::update(
+                    font_management,
+                    message,
+                    pages::font_management::PageEnvironment {
+                        settings,
+                        message: alert,
+                    },
+                );
+            }
             Message::CustomDictionary(message) => {
                 let Self {
                     launch,

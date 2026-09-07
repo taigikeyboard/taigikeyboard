@@ -1424,7 +1424,8 @@
       "comment": "Appearance pane button that opens a file panel to take a font file into the user's typeface library.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -1442,7 +1443,8 @@
       "comment": "Appearance pane note shown when the selected custom typeface's file is gone or will not activate; the candidate window falls back to the system font and the preference is kept.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -1460,7 +1462,8 @@
       "comment": "Appearance pane failure title when a custom typeface could not be removed, which is what macOS reports while something still holds the font.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -1478,7 +1481,8 @@
       "comment": "Settings sidebar row + pane title: the pane where the candidate window's typeface is chosen and the user's own typefaces are added and removed.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "windows"
         ],
         "surfaces": [
           "host"

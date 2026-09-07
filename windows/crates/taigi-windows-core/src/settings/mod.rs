@@ -12,17 +12,19 @@
 mod choices;
 mod document;
 mod engine_settings;
+mod font_selection;
 pub mod keys;
 pub mod launch;
 
 pub use choices::{
-    AppearanceMode, CandidateFontChoice, CandidateLayout, CandidateTextSizeChoice,
-    CandidateWindowSizeChoice, SettingChoice, SettingsPane,
+    AppearanceMode, CandidateFontChoice, CandidateFontSelection, CandidateLayout,
+    CandidateTextSizeChoice, CandidateWindowSizeChoice, CustomFontId, SettingChoice, SettingsPane,
 };
 pub use document::{SettingsDocument, SettingsKey};
 pub use engine_settings::{
     CandidateDisplayMode, DictionarySourceToggles, EngineSettings, InputMode, KautianSubcollections,
 };
+pub use font_selection::{set_stored_font_selection, stored_font_selection, StoredFontSelection};
 
 /// Live-read access to the current settings document.
 ///

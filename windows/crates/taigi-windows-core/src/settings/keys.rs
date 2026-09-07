@@ -204,6 +204,17 @@ pub const CANDIDATE_WINDOW_SIZE: SettingsKey<CandidateWindowSizeChoice> =
 pub const FONT_TYPE: SettingsKey<CandidateFontChoice> =
     SettingsKey::new("fontType", CandidateFontChoice::System);
 
+/// Which typeface the user added the candidate window is set in, by the file
+/// name the font library stores it as. Read only while `fontType` holds
+/// `CandidateFontSelection::CUSTOM_RAW`; the two are written separately, so
+/// every reader tolerates one without the other.
+///
+/// Desktop-only, and NOT part of the iOS schema alignment the keys above keep:
+/// a phone keyboard has no font library to name. A file name is local by
+/// nature — a settings transfer carries the preference, never the typeface
+/// (`SettingsStore.swift`'s `customFontFile`).
+pub const CUSTOM_FONT_FILE: SettingsKey<&'static str> = SettingsKey::new("customFontFile", "");
+
 /// Which keys the candidate slots take (`CandidateSlotKeySet`). The stored
 /// name predates the letter set, from when the choice was only which
 /// modifier held the digits; kept because the values already stored under it
@@ -219,13 +230,12 @@ pub const CANDIDATE_SLOT_MODIFIER: SettingsKey<crate::keys::CandidateSlotKeySet>
 pub const CLEARED_COMPOSING_CHORD: &str = "";
 
 /// The keys the 外觀 pane's reset removes (`SettingsStore.swift:457-465`).
-pub const APPEARANCE_KEYS: [&str; 6] = [
+pub const APPEARANCE_KEYS: [&str; 5] = [
     APPEARANCE_MODE.name,
     CANDIDATE_LAYOUT.name,
     CANDIDATE_DISPLAY_MODE.name,
     CANDIDATE_WINDOW_SIZE.name,
     CANDIDATE_TEXT_SIZE.name,
-    FONT_TYPE.name,
 ];
 
 /// The 13 source toggles + 11 subcollection toggles the 詞庫來源 pane's reset
