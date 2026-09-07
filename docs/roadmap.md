@@ -104,21 +104,43 @@ the GitHub-hosted Windows build, which checks out fresh and gains a ~30 s
 
 **Phases**
 
-| # | Change | Risk |
+| # | Change | Outcome |
 | --- | --- | --- |
-| 1 | `dictionary/build/version_snapshot.py` stops reading `git show <tag>:dictionary/output/dictionary.csv`; a committed per-source summary (row counts + hashes) becomes the diff basis, with the full CSV attached as a release asset | Low |
-| 2 | Android / macOS / Windows font trees become `make fonts` output and are ignored | Low |
-| 3 | Engine binaries and dictionary output ignored; `windows-build.yml` gains `make dict`; the stale-binary gate in `CLAUDE.md` is rewritten as a bootstrap step | Low-medium — touches all four platform builds, though the build logic itself does not change |
-| 4 | `git filter-repo` purges the artifacts from history | Low, measured |
+| 1 | `version_snapshot.py` diffs releases against a committed 3.1 MB `dictionary/word-keys.tsv` instead of the 35 MB `dictionary/output/dictionary.csv` | **Merged** (#1) |
+| 2 | macOS and Windows font trees become `make fonts` output and are ignored | **Merged** (#2) |
+| 3 | iOS and macOS xcframeworks and the Android `.so` become `make build` output and are ignored; `CLAUDE.md` grows a bootstrap section | **Merged** (#3) — narrowed to the engine binaries |
+| 4 | `git filter-repo` purges the artifacts from history | **Not doing** (USER 2026-09-07) |
 
-**Phase 4 has a deadline.** It rewrites every commit SHA. The repository is
-private with no clones today, and the SHAs already churned once on 2026-09-07,
-so the marginal cost is nil — but only until it goes public. **Phase 4 runs
-before the repository is made public, or not at all.**
+**Phase 3 was narrowed, and phase 4 dropped, for one reason.** Bootstrapping a
+fresh clone found that `make dict` does not complete on a clean checkout:
 
-Phase 4 also drops ~190 MB of dead pipeline layouts (`dictionary/csv/`,
-`dictionary/6_台日大辭典/`, `dictionary/5_台華線頂對照典/`) that no longer exist
-at `HEAD`.
+    File "dictionary/common/cleanup.py", line 201, in cleanup_dataframe
+        if invalid_hanzi_count > 0 and logger:
+    TypeError: '>' not supported between instances of 'str' and 'int'
+
+An artifact that cannot be regenerated must not stop being committed, so
+`dictionary/output/`, the per-platform dictionary copies, and the per-source
+pipeline CSVs all stay tracked. Nothing under `dictionary/` was changed at all
+(USER: 「dictionary/ folder 都不要碰,只要 build 出來的產物在各大平台上有清理就好了」).
+
+That left phase 4 purging only the platform build artifacts — measured at
+**753 MB → 609 MB**, a 19% reduction bought with another full commit-SHA
+rewrite and 17 dropped commits. The 392 MB that made the rewrite worth doing is
+in the dictionary artifacts, which are staying. USER dropped phase 4 rather than
+pay the full cost for the remainder.
+
+**Where this leaves the repository**: still 753 MB, but the growth is stopped —
+the engine binaries and font copies that accounted for most of it are no longer
+committed on every rebuild. Reopening phase 4 only makes sense after the
+dictionary pipeline can rebuild from a clean checkout.
+
+**Correction to a figure above**: `make dict` takes roughly **10 minutes**, not
+the ~30 s first written here.
+
+A dead-weight note for whoever reopens this: history still carries ~190 MB of
+pipeline layouts that no longer exist at `HEAD` (`dictionary/csv/`,
+`dictionary/6_台日大辭典/`, `dictionary/5_台華線頂對照典/`). They would go in the
+same pass.
 
 **Invariant being overturned**: `.gitignore:88-92` states that the Android `.so`
 and iOS xcframework are *both* committed "so a release tag carries a complete,
