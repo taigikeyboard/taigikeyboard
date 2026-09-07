@@ -13,67 +13,67 @@ stale it is.
 
 ## 1. No credential found in history
 
-**No findings** — gitleaks 8.30.1 over the full history, 2026-09-07, `main` at
-`e787406d`, which is the watermark `.gitleaks-scanned` now records. One scanner
-under one configuration; that is evidence, not proof.
+**No findings** — gitleaks 8.30.1 over the full history, re-run 2026-09-07
+against the rewritten history, `main` at `1b00a9cc`, which `.gitleaks-scanned`
+now records. One scanner under one configuration; that is evidence, not proof.
 
 ```sh
 make scan-secrets-full
 ```
 
-1092 commits and 851 MB scanned. Eight findings, all read and dismissed:
+1135 commits and 858 MB scanned. Five findings, all read and dismissed:
 
 | Match | Verdict |
 | --- | --- |
-| `StringKey.swift` ×3 — the `i18n_macos_shortcutRejected*Key` cases | Localization key constants; the rule fires on the shape of a variable named "key" being assigned a string. |
-| `Tab1Fragment.kt` ×3 — a `titleKey` argument holding `faq_1_question` | Same shape, FAQ key. |
-| `臺灣方音符號.html` ×2 — `wgConfirmEditHCaptchaSiteKey` | A third party's hCaptcha **site** key inside a saved copy of a public web page (file removed 2026-09-05; the fingerprints stay so history scans keep passing). Site keys are published in page source by design. |
+| `Tab1Fragment.kt` ×3 — a `titleKey` argument holding `faq_1_question` | Localization key constants; the rule fires on the shape of a variable named "key" being assigned a string. |
+| `臺灣方音符號.html` ×2 — `wgConfirmEditHCaptchaSiteKey` | A third party's hCaptcha **site** key inside a saved copy of a public web page. Site keys are published in page source by design; the secret counterpart is the secret key, which is not here. |
 
-The first six stop matching once `.gitleaks.toml` applies; the last two are
-recorded in `.gitleaksignore` by fingerprint.
+Five rather than the eight recorded before: the `StringKey.swift` matches lived
+in objects the history rewrites dropped.
 
-That result was re-established on 2026-09-07 under `--diff-merges=first-parent`.
-`git log -p` prints no patch for a merge commit, so a credential added while
-resolving a conflict — a line present in neither parent — had been outside every
-scan this project ever ran, local or CI. Re-running the whole history under the
-fixed options found nothing new, at 72 s against the previous 62 s.
-
-The commit that pass covered is recorded in `.gitleaks-scanned`, and later scans
-are scoped against it: history is immutable, so what is reachable from that
-commit cannot change, and rescanning it under the same rules can only find what
-the recorded run already found. `make scan-secrets` and the workflow both scan
-`--all --not <that commit>` — 2.3 s instead of 72 s.
-
-That is a claim about the rules, not about the commits, so it expires when the
-rules do. `.gitleaks-scanned` lists what invalidates it: a gitleaks upgrade, a
-`.gitleaks.toml` change, a `.gitleaksignore` fingerprint removed or changed, a
-change to the scan's git log options, or a history rewrite. Any of those means
-another `make scan-secrets-full` and a new watermark, which is why the file
-records the version and the options the recorded pass ran under, and why the
-scan refuses to run incrementally against a gitleaks it does not recognise.
-A clean run is now the expected
-result, so a finding means something changed — either new content, or a config or
-rule-version change that surfaces something the old suppressions hid. Both are
-worth reading.
+⚠ **A gitleaks fingerprint is `<commit>:<path>:<rule>:<line>` and cannot survive a
+history rewrite.** After 2026-09-07's two rewrites every fingerprint in
+`.gitleaksignore` was stale and all five findings resurfaced, while
+`.gitleaks-scanned` named a commit that no longer existed — so the incremental
+scan had no base and silently fell back to a full sweep every run. Neither
+failure is loud. Both were refreshed; **re-check them after any future rewrite.**
 
 ## 2. Personal data — what was checked
 
 Not a clean bill of health: personal data has no scanner, and what follows is a
-list of specific things looked for on 2026-09-05, not a conclusion that none
-exists.
+list of specific things looked for, not a conclusion that none exists.
 
-The known exposure was the bug-report backlog carrying four reporters' email
-addresses and device models. It **was never committed** — it existed only as an
-untracked working-tree file, and
-`git log --all -- docs/reports/user-bug-backlog-2026-08-18.md` returns nothing.
+**The known exposure was real and is now resolved.** The bug-report backlog
+carrying four reporters' email addresses and device models *was* committed. A
+`git filter-repo` pass on 2026-09-05 removed it from every branch and tag, but
+force-pushing does not purge `refs/pull/*`: walking back from closed pull request
+#690's head still reached three commits that contained it, and
+`git fetch origin 'refs/pull/*/head:refs/pull/*'` is one command any visitor can
+run on a public repository.
+
+Resolved 2026-09-07 by migrating to a fresh repository rather than waiting on
+GitHub support to garbage-collect. The old one is `taigikeyboard-archive`,
+private. Verified on the new one with a clean mirror clone:
+
+| Check | Result |
+| --- | --- |
+| refs | 1 head, 33 tags, **0 `refs/pull`** |
+| the file, across every ref's history | 0 commits |
+| whole-object sweep for its path | 0 hits |
+| the three commits, by SHA, through the API | 404 / 404 / 404 |
+
+A second rewrite the same day replaced a work email (`alex.su@btse.com`, author
+and committer on 14 commits from 2025-11/12) with the maintainer's own, and the
+placeholder author name `--get-all` with a real one. Every commit's tree was
+compared before and after: all 1222 identical, so no file content changed.
 
 Also checked, with no hits: every RFC-1918 private address range across the whole
 history, and email-shaped strings across the tracked tree — where every match was
 `git@github.com:` in a clone script or an `@3x.png` asset filename.
 
-Not checked: IPv6 local addresses, personal names, physical addresses, anything
-inside the binary artifacts, and the contents of issues and pull requests, which
-become public alongside the code (§8).
+Not checked: IPv6 local addresses, personal names, physical addresses, and
+anything inside the binary artifacts. Pull request bodies and review comments are
+no longer a concern here — the new repository has only the migration's own.
 
 ## 3. Known third-party components are attributed
 
@@ -147,6 +147,17 @@ Verified: the submodule repository is public, and its pinned commit
 `99261d7f` is reachable anonymously. The sibling `taigi-emojis` repository is
 public as well.
 
+Re-verified 2026-09-07: `.gitmodules` uses HTTPS, and `git ls-remote` reaches
+the pinned commit `99261d7f` anonymously.
+
+⚠ **`--recursive` is not optional.** The dictionary pipeline converts every
+reading through the `taigi-converter` submodule. A clone without it fails ten
+minutes in with a `TypeError` in `dictionary/common/cleanup.py:201` that mentions
+neither node nor submodules — the import failure makes every conversion return an
+error string, which the pipeline then ingests as data. Both entry points now
+refuse to start without it (#4), and `CLAUDE.md`'s bootstrap section leads with
+it. `make dict` takes about 2 minutes once it can run.
+
 Before the flip, do this from a clean machine with no GitHub credentials
 configured, not from a maintainer environment that already works:
 
@@ -158,38 +169,36 @@ then build from the public instructions alone.
 
 ## 6. Repository size
 
-**Open decision** — not a blocker, but the window closes at the flip.
+**Decided 2026-09-07: the history is not being rewritten.** The repository stays
+at roughly 750 MB and the growth is stopped.
 
-`.git` is 749 MB, almost entirely dead `dictionary.db` blobs — 97 MB, 90 MB,
-74 MB and a long tail of 44 MB copies — from before the format moved to
-`dictionary.bin` + `dictionary.fst`. The file is no longer tracked; only its
-history remains. Full-history clones and fetches bear most of that weight —
-shallow fetches and caches soften it, but the weekly full-history scan spends
-most of its time there regardless.
+Measured with a trial `git filter-repo` before deciding:
 
-A `git filter-repo` pass would bring it to roughly 100 MB and would also drop the
-saved third-party web page from §1. It rewrites every commit hash: 1092 commits,
-33 tags, several local clones and worktrees, one submodule gitlink. Signatures
-break, and old clones can re-push the old objects.
+| | Size |
+| --- | --- |
+| Today | 753 MB |
+| Without the platform build artifacts | 609 MB |
+| Also without the dictionary artifacts | 217 MB |
 
-If §4 ends in removing a source, that removal and this cleanup are the same
-operation and should happen in one coordinated pass:
+The 392 MB that would have made a rewrite worth its cost is in the dictionary
+artifacts, and those are staying committed on the maintainer's instruction —
+`dictionary/` is not to be touched. That left a rewrite buying 19% in exchange
+for invalidating every commit SHA a second time and dropping 17 artifact-only
+commits, which was judged not worth it.
 
-1. Finish §4 so the full list of paths to drop is known.
-2. Freeze pushes, releases and tags.
-3. Take a mirror bundle, and export patches for any unmerged branch.
-4. Rewrite in a disposable mirror clone with `git filter-repo`.
-5. Verify every branch and tag, the submodule gitlink, the build inputs, a clean
-   `make scan-secrets-full` — a rewrite invalidates `.gitleaks-scanned`, so the
-   watermark has to be re-recorded against the rewritten HEAD — and the size.
-6. Force-push the refs that survive.
-7. Archive the old clones read-only; re-clone every worktree. Do not try to
-   `reset` existing worktrees onto the rewritten history.
-8. Check what GitHub kept: old pull-request refs, release and tag linkage,
-   branch protection, Actions.
-9. Do one clean anonymous recursive clone.
+Growth is stopped instead, which was the more important half:
 
-Doing nothing is defensible. Doing it after the flip is not.
+| Merged | What stopped being committed |
+| --- | --- |
+| #1 | `version_snapshot` diffs releases against a 3.1 MB key set, not the 35 MB `dictionary/output/dictionary.csv` |
+| #2 | the macOS and Windows font trees — 79 MB of copies `make fonts` regenerates |
+| #3 | the iOS and macOS xcframeworks and the Android `.so` — `librust_taigi.a` alone had been rewritten into history in 85 commits |
+
+If this is ever reopened, history still carries ~190 MB of pipeline layouts that
+no longer exist at `HEAD` (`dictionary/csv/`, `dictionary/6_台日大辭典/`,
+`dictionary/5_台華線頂對照典/`); they would go in the same pass. Note that a
+rewrite invalidates `.gitleaks-scanned` and every `.gitleaksignore` fingerprint —
+see §1.
 
 ## 7. The release and update chain is safe to expose
 
@@ -222,12 +231,28 @@ Before the flip, confirm:
 
 ## 8. What else becomes public
 
-Making a repository public exposes more than the default branch. Before the flip,
-review: releases and their assets, all tags, Actions run logs and artifacts,
-packages, the wiki, issues and pull requests including attachments and every
-review comment, and any branch that was never merged. Confirm GitHub's current
-behaviour against its own visibility documentation on the day, rather than from
-this file.
+Making a repository public exposes more than the default branch: releases and
+their assets, all tags, Actions run logs and artifacts, packages, the wiki,
+issues and pull requests including attachments and every review comment, and any
+branch that was never merged. Confirm GitHub's current behaviour against its own
+visibility documentation on the day, rather than from this file.
+
+The 2026-09-07 migration left very little of that to review. Measured on the new
+repository the same day:
+
+| | |
+| --- | --- |
+| Pull requests | 5, all from the migration itself |
+| Issues | 0 |
+| Releases | 0 — desktop releases live on the website repository |
+| Tags | 33 |
+| Branches | `main` only |
+| Wiki | disabled |
+| Actions runs | 3, all Dependabot dependency-graph updates, not workflow runs |
+
+What does become public and is worth knowing: the author email
+`minsiansu@gmail.com` on 1222 commits, and the 26 tracked files under `.claude/`
+— agent-facing prose that becomes public documentation.
 
 Also confirm the top of `README.md` states plainly that Apache-2.0 covers the
 source and **not** the dictionary data, that attribution reaches the shipped
