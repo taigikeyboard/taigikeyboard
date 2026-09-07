@@ -8,7 +8,6 @@ export PATH := $(HOME)/.cargo/bin:$(PATH)
 
 .PHONY: build test test-crate doc dict dogfood help \
         fmt lint hooks scan-secrets scan-secrets-full \
-        fonts fonts-check \
         i18n i18n-test \
         macos-release version-mobile version-desktop \
         windows-check windows-release \
@@ -188,16 +187,6 @@ hooks:
 # already did. scan-secrets-full rescans everything and prints the new baseline
 # to write into .gitleaks-scanned — needed after a gitleaks upgrade, a
 # .gitleaks.toml or .gitleaksignore change, or a history rewrite.
-# Copy the candidate-window typefaces from ios/Resources/Fonts to the macOS and
-# Windows committed copies. Fonts are external assets, so unlike the dictionary
-# nothing regenerates them — run this after adding, replacing or removing a face
-# and commit the result. `fonts-check` verifies without writing.
-fonts:
-	./scripts/sync-fonts.sh
-
-fonts-check:
-	./scripts/sync-fonts.sh --check
-
 scan-secrets:
 	./scripts/gitleaks-scan.sh
 
@@ -231,8 +220,6 @@ help:
 	@echo "  make update-submodules  Pull latest for all submodules (review + commit gitlink bumps)"
 	@echo ""
 	@echo "  make hooks              Activate the repo's git hooks in this clone (secret scan on commit)"
-	@echo "  make fonts              Copy the typefaces to the macOS + Windows committed copies"
-	@echo "  make fonts-check        Verify those copies match ios/Resources/Fonts"
 	@echo "  make scan-secrets       Scan for credentials since the last clean full scan"
 	@echo "  make scan-secrets-full  Rescan the whole history and re-baseline .gitleaks-scanned"
 	@echo ""

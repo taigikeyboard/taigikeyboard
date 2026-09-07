@@ -12,7 +12,7 @@
 ;                                   runs on — self-contained, roadmap W17;
 ;                                   installed BESIDE the exe)
 ;   Dictionaries\*                 (from windows/resources/Dictionaries)
-;   Fonts\*                        (from windows/resources/Fonts)
+;   Fonts\*                        (from the repo-root fonts/font)
 ;   update-check-task.xml          (the scheduled task's definition)
 ;
 ; What it does that a plain file copy would not (rakukan `rakukan_installer.iss`,

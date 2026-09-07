@@ -177,13 +177,13 @@ done
 echo "==> Copying fonts"
 # The typefaces the candidate-window font picker offers, laid out under the
 # directory Info.plist's ATSApplicationFontsPath names, which is what AppKit
-# activates at launch. `make fonts` keeps this platform's copy in step with
-# ios/Resources/Fonts; `make fonts-check` fails when it drifts.
+# activates at launch. They come from the repo-root `fonts/font`, the one copy
+# of the bytes every platform packages — nothing to sync, nothing to drift.
 #
 # The whole directory, deliberately without a list of filenames: which faces
 # exist is `CandidateFontChoice`'s to state, not this script's, and a second
 # roster here is one a new case could be added to only one of.
-FONT_SOURCE_DIR="$REPOSITORY_DIR/macos/Resources/Fonts"
+FONT_SOURCE_DIR="$REPOSITORY_DIR/fonts/font"
 FONT_DESTINATION_DIR="$CONTENTS_DIR/Resources/$APPLICATION_FONTS_PATH"
 FONT_FILES=()
 for candidate in "$FONT_SOURCE_DIR"/*.ttf "$FONT_SOURCE_DIR"/*.otf; do

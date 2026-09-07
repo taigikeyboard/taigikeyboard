@@ -188,7 +188,8 @@ for artifact in dictionary.fst dictionary.bin association.bin syllables.fst; do
     cp "$source_file" "$STAGING_DIR/Dictionaries/"
 done
 # Every face in the directory — which faces exist is CandidateFontChoice's
-# to state (macos/scripts/bundle-app.sh:178-201).
+# to state (macos/scripts/bundle-app.sh:177-207). The directory is the repo-root
+# `fonts/font`, the one copy of the bytes every platform packages.
 font_count=0
 for candidate in "$FONTS_SOURCE_DIR"/*.ttf "$FONTS_SOURCE_DIR"/*.otf; do
     [[ -s "$candidate" ]] || continue

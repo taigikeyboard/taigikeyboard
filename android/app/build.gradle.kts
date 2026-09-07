@@ -84,6 +84,13 @@ android {
     // lands at the assets root. Single source of truth, no copied file to drift.
     sourceSets["main"].assets.srcDir(file("$rootDir/../taigi-emojis/dist"))
 
+    // The typefaces, from the repo-root directory the other three platforms
+    // package out of too. Their names are Android resource names precisely so
+    // this needs no build-time copy or rename; `fonts/font/` merges with this
+    // module's own res/font/, which keeps `jf_openhuninn.xml` — a font-family
+    // declaration, not a typeface — in the module.
+    sourceSets["main"].res.srcDir(file("$rootDir/../fonts"))
+
     buildTypes {
         debug {
             // A9 — enable unit-test coverage so Jacoco .exec data and the

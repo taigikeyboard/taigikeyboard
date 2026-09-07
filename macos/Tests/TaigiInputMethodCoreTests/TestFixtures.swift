@@ -68,9 +68,10 @@ enum TestFixtures {
             }
     }
 
-    /// `<repo>/macos/Resources/Fonts` — the same directory `bundle-app.sh` copies
-    /// into the assembled `.app`'s `ATSApplicationFontsPath`.
-    static let fontDirectory = repositoryRoot.appendingPathComponent("macos/Resources/Fonts")
+    /// `<repo>/fonts/font` — the shared typeface directory every platform
+    /// packages from, and the one `bundle-app.sh` copies into the assembled
+    /// `.app`'s `ATSApplicationFontsPath`.
+    static let fontDirectory = repositoryRoot.appendingPathComponent("fonts/font")
 
     /// Activates the bundled typefaces for this process, and answers which
     /// files failed to.

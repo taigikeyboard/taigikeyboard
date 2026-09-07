@@ -76,12 +76,13 @@ The **user runs all builds/tests manually mid-round** — never invoke these or 
 | Windows | `make windows-check` (host-side gate: pure-crate tests + clippy against the Windows targets; the TSF DLL itself only builds on the Windows box, see `docs/architecture/windows-release.md`) | included in `windows-check` |
 | taigi-converter | — | `npm test` from `taigi-converter/` (bare `node --test tests/` fails on Node 26 with `MODULE_NOT_FOUND`) |
 
-**Bootstrap after cloning** — everything a platform build links or bundles is generated, not committed. A fresh clone does not build until these have run, in this order:
+**Bootstrap after cloning** — the engine binaries a platform build links are generated, not committed. A fresh clone does not build until this has run:
 
-| # | Command | Produces | Needed by |
-|---|---|---|---|
-| 1 | `make fonts` | `macos/Resources/Fonts/`, `windows/resources/Fonts/` from the committed `ios/Resources/Fonts/` | macOS `bundle-app.sh` + its font tests, Windows installer (`TaigiKeyboard.iss:150`) |
-| 2 | `make build` (5 s warm; minutes on a cold target dir) | iOS + macOS xcframeworks and their swift-bridge wrappers, Android `jniLibs/*.so`, platform protos | Xcode, SwiftPM, Gradle all link these |
+| Command | Produces | Needed by |
+|---|---|---|
+| `make build` (5 s warm; minutes on a cold target dir) | iOS + macOS xcframeworks and their swift-bridge wrappers, Android `jniLibs/*.so`, platform protos | Xcode, SwiftPM, Gradle all link these |
+
+The typefaces are committed, once, at `fonts/font/` — all four platforms package that directory (Android through a `res` source dir in `android/app/build.gradle.kts`, the other three by copying it), so nothing has to be staged before a build.
 
 **Clone with `--recurse-submodules`**, or run `git submodule update --init --recursive` before `make dict`. `taigi-converter` is a submodule and the dictionary pipeline converts every reading through it; `make dict` and `dictionary/common/taigi_bridge.py` both refuse to start without it.
 

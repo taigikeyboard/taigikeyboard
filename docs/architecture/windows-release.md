@@ -211,7 +211,7 @@ What `windows/scripts/release-app.sh` does, in order:
    target directory — every name in
    `windows/build-support/windows-app-runtime-files.txt`, W17), `Dictionaries\`
    (the four artifacts from `windows/resources/Dictionaries`, each required
-   non-empty), `Fonts\` (every face in `windows/resources/Fonts`), and the
+   non-empty), `Fonts\` (every face in the repo-root `fonts/font`), and the
    scheduled task's definition.
 5. **Sign the binaries** — `signtool sign /fd SHA256 /td SHA256 /tr <timestamp>
    /sha1 <thumbprint>`, then `signtool verify /pa`. Skipped entirely under

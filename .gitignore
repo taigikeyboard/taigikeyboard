@@ -103,18 +103,6 @@ macos/RustEngine/RustTaigi.swift
 macos/RustEngine/SwiftBridgeCore.swift
 android/app/src/main/jniLibs/**/*.so
 
-# === Font copies (scripts/sync-fonts.sh) ===
-# `ios/Resources/Fonts` is the committed source. macOS and Windows keep their
-# own copies because their packaging scripts read from their own platform
-# directory, but those copies are `make fonts` output, not input — 79 MB of
-# duplicate bytes that changed in git every time a face was added or replaced.
-# Run `make fonts` after cloning; `make fonts-check` verifies they match.
-# Android is NOT here: its res/font/ copies use Android resource naming and two
-# of the four differ from the source in three bytes of `head` checksum, so
-# sync-fonts.sh deliberately does not manage them (see its header).
-macos/Resources/Fonts/
-windows/resources/Fonts/
-
 # === SwiftPM build cache (macOS input method) ===
 # `.build/` holds compiled products, the assembled `.app` from
 # macos/scripts/bundle-app.sh, and the signed installer packages from

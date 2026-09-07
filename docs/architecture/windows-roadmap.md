@@ -99,7 +99,7 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   three user DBs (macOS: `~/Library/Application Support/<bundle id>/`,
   `Storage/UserDataDirectory.swift:29-32`). Dictionary artefacts are copied at
   release-build time from `windows/resources/Dictionaries/` and fonts from
-  `windows/resources/Fonts/`, each platform's own committed copy
+  the repo-root `fonts/font/` — the one copy every platform packages —
   into the install dir, resolved from the DLL's **own `HMODULE` saved in `DllMain`**
   (Codex: never from the current exe). **Codex: CONFIRM WITH CHANGES** — AppContainer
   (UWP) hosts cannot read `%APPDATA%`: the TIP holds an explicit per-process
