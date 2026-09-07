@@ -2,10 +2,13 @@
 # Distributes the candidate-window typefaces to the platforms that package them
 # from a committed copy, and checks the copies still match.
 #
-# The fonts are external assets, not build output, so nothing regenerates them
-# the way `make dict` regenerates the dictionary. `ios/Resources/Fonts/` is the
-# designated source; macOS and Windows keep their own copies so their packaging
-# scripts read from their own platform directory.
+# The typefaces themselves are external assets — nothing regenerates them the
+# way `make dict` regenerates the dictionary — but the platform *copies* are
+# this script's output. `ios/Resources/Fonts/` is the committed source; macOS
+# and Windows keep their own copies so their packaging scripts read from their
+# own platform directory, and those copies are ignored by git and produced by
+# `make fonts` (roadmap phase 2: 79 MB of duplicate bytes that git stored again
+# on every font change).
 #
 # iOS reads the source directory itself. Android is deliberately out of scope:
 # its copies live under `res/font/` with Android's lowercase resource naming,

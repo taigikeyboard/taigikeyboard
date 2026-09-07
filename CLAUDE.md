@@ -76,6 +76,14 @@ The **user runs all builds/tests manually mid-round** — never invoke these or 
 | Windows | `make windows-check` (host-side gate: pure-crate tests + clippy against the Windows targets; the TSF DLL itself only builds on the Windows box, see `docs/architecture/windows-release.md`) | included in `windows-check` |
 | taigi-converter | — | `npm test` from `taigi-converter/` (bare `node --test tests/` fails on Node 26 with `MODULE_NOT_FOUND`) |
 
+**Bootstrap after cloning** — some of what the platform builds read is generated, not committed. Run once per machine, and again whenever its inputs change:
+
+| Command | Produces | Needed by |
+|---|---|---|
+| `make fonts` | `macos/Resources/Fonts/`, `windows/resources/Fonts/` from the committed `ios/Resources/Fonts/` | macOS `bundle-app.sh` + its font tests, Windows installer (`TaigiKeyboard.iss:150`) |
+
+Ignored files survive `git checkout`, so this is a one-time step, not a per-build one. `make fonts-check` verifies the copies still match the source.
+
 **Stale-binary gate (mandatory before every iOS/Android build+test)** — iOS and Android link pre-built artifacts (`ios/RustEngine/RustTaigi.xcframework`, `android/app/src/main/jniLibs/`, `dictionary/output/dictionary.bin`, `dictionary/output/syllables.fst`). Building against stale artifacts gives **false-green tests**. Check `git diff --stat` against this table first:
 
 | If the diff touches… | Run first | Regenerates |
