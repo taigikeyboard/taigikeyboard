@@ -37,6 +37,30 @@ updates:
         update-types:
           - minor
           - patch
+    ignore:
+      # windows-rs publishes its sub-crates ahead of the `windows` umbrella
+      # crate, so a sub-crate major that the umbrella does not yet depend on
+      # cannot be taken: the TSF `#[implement]` macros would expand against the
+      # new windows-core while the interfaces still come from the old `windows`.
+      # The whole family moves in one deliberate bump, together with the
+      # `windows-reactor` git rev pinned in windows/Cargo.toml. Closed as PRs
+      # #9 and #10 on 2026-09-07.
+      - dependency-name: windows-core
+        update-types:
+          - version-update:semver-major
+      - dependency-name: windows-numerics
+        update-types:
+          - version-update:semver-major
+      - dependency-name: windows-sys
+        update-types:
+          - version-update:semver-major
+      # sha2 0.11 is the RustCrypto breaking line: no `io::Write` on the hasher
+      # and a `hybrid_array::Array` output with no `LowerHex`, which is both
+      # halves of `file_sha256` in taigi-windows-update. 0.10 is maintained and
+      # this is the repository's only sha2 call site. Closed as PR #8.
+      - dependency-name: sha2
+        update-types:
+          - version-update:semver-major
 
   - package-ecosystem: gradle
     directory: /android
