@@ -57,7 +57,7 @@ windows-core = "0.62"
 # back to the buffer's initializer (`taigi-windows-platform`'s `os_out_buffer`).
 windows-sys = "0.61"
 # `Vector2` for Direct2D draw origins (the `windows` crate takes it by this type).
-windows-numerics = "0.3"
+windows-numerics = "0.100"
 
 taigi-windows-core = { path = "crates/taigi-windows-core" }
 taigi-windows-storage = { path = "crates/taigi-windows-storage" }

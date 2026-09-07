@@ -1067,7 +1067,7 @@ dependencies = [
  "taigi-windows-storage",
  "windows",
  "windows-core 0.62.2",
- "windows-numerics 0.3.1",
+ "windows-numerics 0.100.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1320,7 +1320,7 @@ name = "windows-collections"
 version = "0.100.0"
 source = "git+https://github.com/microsoft/windows-rs?rev=dc720b3674c46ceb82d758ed20959977b32e60a9#dc720b3674c46ceb82d758ed20959977b32e60a9"
 dependencies = [
- "windows-core 0.100.0",
+ "windows-core 0.100.0 (git+https://github.com/microsoft/windows-rs?rev=dc720b3674c46ceb82d758ed20959977b32e60a9)",
 ]
 
 [[package]]
@@ -1339,11 +1339,22 @@ dependencies = [
 [[package]]
 name = "windows-core"
 version = "0.100.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "803590c6856f51d15fa2e9fabe4f4703122c8737f72ef2741b4ac09d4c2192f5"
+dependencies = [
+ "windows-link 0.100.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "windows-result 0.100.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "windows-strings 0.100.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "windows-core"
+version = "0.100.0"
 source = "git+https://github.com/microsoft/windows-rs?rev=dc720b3674c46ceb82d758ed20959977b32e60a9#dc720b3674c46ceb82d758ed20959977b32e60a9"
 dependencies = [
- "windows-link 0.100.0",
- "windows-result 0.100.0",
- "windows-strings 0.100.0",
+ "windows-link 0.100.0 (git+https://github.com/microsoft/windows-rs?rev=dc720b3674c46ceb82d758ed20959977b32e60a9)",
+ "windows-result 0.100.0 (git+https://github.com/microsoft/windows-rs?rev=dc720b3674c46ceb82d758ed20959977b32e60a9)",
+ "windows-strings 0.100.0 (git+https://github.com/microsoft/windows-rs?rev=dc720b3674c46ceb82d758ed20959977b32e60a9)",
 ]
 
 [[package]]
@@ -1362,8 +1373,8 @@ name = "windows-future"
 version = "0.100.0"
 source = "git+https://github.com/microsoft/windows-rs?rev=dc720b3674c46ceb82d758ed20959977b32e60a9#dc720b3674c46ceb82d758ed20959977b32e60a9"
 dependencies = [
- "windows-core 0.100.0",
- "windows-link 0.100.0",
+ "windows-core 0.100.0 (git+https://github.com/microsoft/windows-rs?rev=dc720b3674c46ceb82d758ed20959977b32e60a9)",
+ "windows-link 0.100.0 (git+https://github.com/microsoft/windows-rs?rev=dc720b3674c46ceb82d758ed20959977b32e60a9)",
  "windows-threading 0.100.0",
 ]
 
@@ -1398,6 +1409,12 @@ checksum = "f0805222e57f7521d6a62e36fa9163bc891acd422f971defe97d64e70d0a4fe5"
 [[package]]
 name = "windows-link"
 version = "0.100.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9b39de7c7fe78858b0144c50c3fc000bab3be17d5e9b85b1053871693c7f7415"
+
+[[package]]
+name = "windows-link"
+version = "0.100.0"
 source = "git+https://github.com/microsoft/windows-rs?rev=dc720b3674c46ceb82d758ed20959977b32e60a9#dc720b3674c46ceb82d758ed20959977b32e60a9"
 
 [[package]]
@@ -1413,10 +1430,19 @@ dependencies = [
 [[package]]
 name = "windows-numerics"
 version = "0.100.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d9c5500bf6a9098f27922953422ae7324cdd330c868e945801593455a6832701"
+dependencies = [
+ "windows-core 0.100.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "windows-numerics"
+version = "0.100.0"
 source = "git+https://github.com/microsoft/windows-rs?rev=dc720b3674c46ceb82d758ed20959977b32e60a9#dc720b3674c46ceb82d758ed20959977b32e60a9"
 dependencies = [
- "windows-core 0.100.0",
- "windows-link 0.100.0",
+ "windows-core 0.100.0 (git+https://github.com/microsoft/windows-rs?rev=dc720b3674c46ceb82d758ed20959977b32e60a9)",
+ "windows-link 0.100.0 (git+https://github.com/microsoft/windows-rs?rev=dc720b3674c46ceb82d758ed20959977b32e60a9)",
 ]
 
 [[package]]
@@ -1425,9 +1451,9 @@ version = "0.100.0"
 source = "git+https://github.com/microsoft/windows-rs?rev=dc720b3674c46ceb82d758ed20959977b32e60a9#dc720b3674c46ceb82d758ed20959977b32e60a9"
 dependencies = [
  "windows-collections 0.100.0",
- "windows-core 0.100.0",
+ "windows-core 0.100.0 (git+https://github.com/microsoft/windows-rs?rev=dc720b3674c46ceb82d758ed20959977b32e60a9)",
  "windows-future 0.100.0",
- "windows-numerics 0.100.0",
+ "windows-numerics 0.100.0 (git+https://github.com/microsoft/windows-rs?rev=dc720b3674c46ceb82d758ed20959977b32e60a9)",
  "windows-reference",
  "windows-time",
 ]
@@ -1442,7 +1468,7 @@ name = "windows-reference"
 version = "0.100.0"
 source = "git+https://github.com/microsoft/windows-rs?rev=dc720b3674c46ceb82d758ed20959977b32e60a9#dc720b3674c46ceb82d758ed20959977b32e60a9"
 dependencies = [
- "windows-core 0.100.0",
+ "windows-core 0.100.0 (git+https://github.com/microsoft/windows-rs?rev=dc720b3674c46ceb82d758ed20959977b32e60a9)",
  "windows-time",
 ]
 
@@ -1458,9 +1484,18 @@ dependencies = [
 [[package]]
 name = "windows-result"
 version = "0.100.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "44873a1ef61c85d5e2991db91fe656cfcf0731097e00dff1ac860f1cb3b752a0"
+dependencies = [
+ "windows-link 0.100.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "windows-result"
+version = "0.100.0"
 source = "git+https://github.com/microsoft/windows-rs?rev=dc720b3674c46ceb82d758ed20959977b32e60a9#dc720b3674c46ceb82d758ed20959977b32e60a9"
 dependencies = [
- "windows-link 0.100.0",
+ "windows-link 0.100.0 (git+https://github.com/microsoft/windows-rs?rev=dc720b3674c46ceb82d758ed20959977b32e60a9)",
 ]
 
 [[package]]
@@ -1475,9 +1510,18 @@ dependencies = [
 [[package]]
 name = "windows-strings"
 version = "0.100.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6a70b590c684f1d2854f74999896f7c0558f1bdde62f599088599e20ea1d2f60"
+dependencies = [
+ "windows-link 0.100.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "windows-strings"
+version = "0.100.0"
 source = "git+https://github.com/microsoft/windows-rs?rev=dc720b3674c46ceb82d758ed20959977b32e60a9#dc720b3674c46ceb82d758ed20959977b32e60a9"
 dependencies = [
- "windows-link 0.100.0",
+ "windows-link 0.100.0 (git+https://github.com/microsoft/windows-rs?rev=dc720b3674c46ceb82d758ed20959977b32e60a9)",
 ]
 
 [[package]]
@@ -1503,7 +1547,7 @@ name = "windows-threading"
 version = "0.100.0"
 source = "git+https://github.com/microsoft/windows-rs?rev=dc720b3674c46ceb82d758ed20959977b32e60a9#dc720b3674c46ceb82d758ed20959977b32e60a9"
 dependencies = [
- "windows-link 0.100.0",
+ "windows-link 0.100.0 (git+https://github.com/microsoft/windows-rs?rev=dc720b3674c46ceb82d758ed20959977b32e60a9)",
 ]
 
 [[package]]
@@ -1511,8 +1555,8 @@ name = "windows-time"
 version = "0.100.0"
 source = "git+https://github.com/microsoft/windows-rs?rev=dc720b3674c46ceb82d758ed20959977b32e60a9#dc720b3674c46ceb82d758ed20959977b32e60a9"
 dependencies = [
- "windows-core 0.100.0",
- "windows-link 0.100.0",
+ "windows-core 0.100.0 (git+https://github.com/microsoft/windows-rs?rev=dc720b3674c46ceb82d758ed20959977b32e60a9)",
+ "windows-link 0.100.0 (git+https://github.com/microsoft/windows-rs?rev=dc720b3674c46ceb82d758ed20959977b32e60a9)",
 ]
 
 [[package]]
