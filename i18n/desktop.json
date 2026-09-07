@@ -1420,24 +1420,6 @@
         "ja": "更新の自動確認を設定できませんでした。設定ウィンドウから更新を確認できます。"
       }
     },
-    "customFontSection": {
-      "comment": "Appearance pane section header over the typefaces the user added themselves, under the built-in font picker.",
-      "scope": {
-        "platforms": [
-          "macos"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "自訂字型",
-        "tailo": "tsū-tīng jī-hîng",
-        "poj": "chū-tēng jī-hêng",
-        "en": "Custom Typefaces",
-        "ja": "カスタムフォント"
-      }
-    },
     "customFontAdd": {
       "comment": "Appearance pane button that opens a file panel to take a font file into the user's typeface library.",
       "scope": {
@@ -1490,6 +1472,24 @@
         "poj": "san-tû sit-pāi",
         "en": "Could not delete",
         "ja": "削除できませんでした"
+      }
+    },
+    "fontManagementTab": {
+      "comment": "Settings sidebar row + pane title: the pane where the candidate window's typeface is chosen and the user's own typefaces are added and removed.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "字型管理",
+        "tailo": "jī-hîng kuán-lí",
+        "poj": "jī-hêng koán-lí",
+        "en": "Manage Typefaces",
+        "ja": "フォント管理"
       }
     }
   }

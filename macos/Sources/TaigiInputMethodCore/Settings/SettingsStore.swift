@@ -517,13 +517,21 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             Keys.candidateDisplayMode.name,
             Keys.candidateWindowSize.name,
             Keys.candidateTextSize.name,
-            Keys.fontType.name,
-            // Both halves of the typeface selection, never one: `fontType`
-            // alone would leave a file name pointing at nothing. The library's
-            // files stay — resetting how the window looks is not throwing away
-            // typefaces the user installed.
-            Keys.customFontFile.name,
         )
+    }
+
+    /// Puts the 字型管理 pane back to shipped state: the system typeface, and
+    /// no custom one selected.
+    ///
+    /// Its own button rather than a line in `resetAppearanceSettings`: a pane's
+    /// reset restores the rows that pane shows, and the typeface moved out of
+    /// 外觀 when it got a pane of its own.
+    ///
+    /// Both halves of the selection, never one: `fontType` alone would leave a
+    /// file name pointing at nothing. The library's FILES stay — restoring a
+    /// setting is not throwing away typefaces the user installed.
+    func resetFontSettings() {
+        removeStoredValues(Keys.fontType.name, Keys.customFontFile.name)
     }
 
     /// Puts every toggle the 辭典管理 pane owns back to shipped state, the

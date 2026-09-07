@@ -283,7 +283,6 @@ final class SettingsStoreTests: XCTestCase {
             forKey: SettingsStore.Keys.candidateWindowSize.name,
         )
         userDefaults.set(CandidateTextSizeChoice.small.rawValue, forKey: SettingsStore.Keys.candidateTextSize.name)
-        userDefaults.set(CandidateFontChoice.allCases.last?.rawValue, forKey: SettingsStore.Keys.fontType.name)
         userDefaults.set(
             CandidateDisplayMode.romanOnly.rawValue,
             forKey: SettingsStore.Keys.candidateDisplayMode.name,
@@ -296,7 +295,31 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(store.candidateDisplayMode, SettingsStore.Keys.candidateDisplayMode.defaultValue)
         XCTAssertEqual(store.candidateWindowSize, SettingsStore.Keys.candidateWindowSize.defaultValue)
         XCTAssertEqual(store.candidateTextSize, SettingsStore.Keys.candidateTextSize.defaultValue)
-        XCTAssertEqual(store.candidateFontSelection, .builtIn(SettingsStore.Keys.fontType.defaultValue))
+    }
+
+    /// The typeface is 字型管理's, not 外觀's: a pane's reset restores the rows
+    /// that pane shows, and 外觀 no longer shows the typeface.
+    @MainActor
+    func testResetAppearanceSettings_leavesTheTypefaceAlone() {
+        userDefaults.set(CandidateFontChoice.genYoMin.rawValue, forKey: SettingsStore.Keys.fontType.name)
+
+        makeStore().resetAppearanceSettings()
+
+        XCTAssertEqual(makeStore().candidateFontSelection, .builtIn(.genYoMin))
+    }
+
+    /// 字型管理's own reset, which owns BOTH halves of the selection: `fontType`
+    /// alone would leave a file name pointing at nothing.
+    @MainActor
+    func testResetFontSettings_clearsBothHalvesOfTheSelection() {
+        userDefaults.set(CandidateFontSelection.customRawValue, forKey: SettingsStore.Keys.fontType.name)
+        userDefaults.set("something.ttf", forKey: SettingsStore.Keys.customFontFile.name)
+
+        makeStore().resetFontSettings()
+
+        XCTAssertNil(userDefaults.string(forKey: SettingsStore.Keys.fontType.name))
+        XCTAssertNil(userDefaults.string(forKey: SettingsStore.Keys.customFontFile.name))
+        XCTAssertEqual(makeStore().candidateFontSelection, .builtIn(.system))
     }
 
     /// Removed, not written over — the rule `resetComposingShortcuts` states:
@@ -469,19 +492,6 @@ final class SettingsStoreTests: XCTestCase {
         userDefaults.set("left-over.ttf", forKey: SettingsStore.Keys.customFontFile.name)
 
         XCTAssertEqual(makeStore().candidateFontSelection, .builtIn(.genYoMin))
-    }
-
-    /// 外觀 reset clears BOTH halves: `fontType` alone would leave a file name
-    /// pointing at a typeface nothing selects.
-    @MainActor
-    func testResetAppearanceSettings_clearsTheCustomFontFileToo() {
-        userDefaults.set(CandidateFontSelection.customRawValue, forKey: SettingsStore.Keys.fontType.name)
-        userDefaults.set("something.ttf", forKey: SettingsStore.Keys.customFontFile.name)
-
-        makeStore().resetAppearanceSettings()
-
-        XCTAssertNil(userDefaults.string(forKey: SettingsStore.Keys.fontType.name))
-        XCTAssertNil(userDefaults.string(forKey: SettingsStore.Keys.customFontFile.name))
     }
 
     // MARK: - Composing key bindings

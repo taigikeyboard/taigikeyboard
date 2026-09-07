@@ -44,8 +44,13 @@ final class CustomDictionaryPageModel {
         max(1, (matchCount + Self.pageSize - 1) / Self.pageSize)
     }
 
-    var canPageBackward: Bool { page > 0 }
-    var canPageForward: Bool { page + 1 < pageCount }
+    var canPageBackward: Bool {
+        page > 0
+    }
+
+    var canPageForward: Bool {
+        page + 1 < pageCount
+    }
 
     func pageBackward() async {
         guard canPageBackward else { return }
@@ -337,7 +342,7 @@ struct CustomDictionaryPage: View {
         // as settings content, not as a spreadsheet. Selection is unaffected —
         // this governs only the unselected rows' backgrounds.
         .alternatingRowBackgrounds(.disabled)
-        .frame(height: Metrics.tableHeight)
+        .frame(height: Self.tableHeight)
         // The empty case as an overlay rather than in place of the table: the
         // filter box above stays reachable, and the columns stay put while a
         // filter is narrowed to nothing and widened again.
@@ -377,39 +382,27 @@ struct CustomDictionaryPage: View {
     @ViewBuilder
     private var emptyState: some View {
         if model.filter.isEmpty {
-            Image(systemName: Self.emptyStateSymbolName)
-                .font(.system(size: Metrics.emptyStateSymbolSize))
-                .foregroundStyle(.tertiary)
-                .accessibilityLabel(language.string(.dictionaryCustomDictEmpty))
+            UserDataListEmptySymbol(
+                symbolName: Self.emptyStateSymbolName,
+                accessibilityLabelKey: .dictionaryCustomDictEmpty,
+            )
         } else {
             Text(language.string(.dictionaryNoResults))
                 .foregroundStyle(.secondary)
         }
     }
 
-    /// The `+` / `−` pair under the table, where macOS puts the add and remove
-    /// verbs for an editable list. `−` is disabled with nothing selected
-    /// rather than hidden, so the pair keeps its shape.
+    /// The `+` / `−` pair under the table, with the pager at its trailing end.
     private var entryTableControls: some View {
-        HStack(spacing: 4) {
-            Button {
-                editing = CustomDictionaryRow(roman: "", hanzi: "")
-            } label: {
-                controlGlyph("plus")
-            }
-            .accessibilityLabel(language.string(.dictionaryAddEntry))
-
-            Button {
+        UserDataListControls(
+            addLabelKey: .dictionaryAddEntry,
+            isRemoveEnabled: selectedRow != nil,
+            onAdd: { editing = CustomDictionaryRow(roman: "", hanzi: "") },
+            onRemove: {
                 guard let selectedRow else { return }
                 Task { await model.delete(selectedRow) }
-            } label: {
-                controlGlyph("minus")
-            }
-            .disabled(selectedRow == nil)
-            .accessibilityLabel(language.string(.commonDelete))
-
-            Spacer()
-
+            },
+        ) {
             // Digits only, so the pager needs no wording in five languages —
             // and the two arrows carry the shortcut pane's own page verbs as
             // their accessibility labels, which are already translated.
@@ -420,7 +413,7 @@ struct CustomDictionaryPage: View {
             Button {
                 Task { await model.pageBackward() }
             } label: {
-                controlGlyph("chevron.left")
+                UserDataListControlGlyph(symbolName: "chevron.left")
             }
             .disabled(!model.canPageBackward)
             .accessibilityLabel(language.string(.desktopActionPageBackward))
@@ -428,26 +421,11 @@ struct CustomDictionaryPage: View {
             Button {
                 Task { await model.pageForward() }
             } label: {
-                controlGlyph("chevron.right")
+                UserDataListControlGlyph(symbolName: "chevron.right")
             }
             .disabled(!model.canPageForward)
             .accessibilityLabel(language.string(.desktopActionPageForward))
         }
-        // Small bordered buttons, the size AppKit gives the +/- bar under a
-        // table. `.borderless` around a bare glyph left a hit target the size
-        // of the symbol itself.
-        .buttonStyle(.bordered)
-        .controlSize(.small)
-    }
-
-    /// One button's glyph, sized so the button is as big as the control it
-    /// imitates. The frame is what does that — `contentShape` only squares off
-    /// the hit region inside whatever bounds the label already has, it cannot
-    /// grow them.
-    private func controlGlyph(_ symbolName: String) -> some View {
-        Image(systemName: symbolName)
-            .frame(width: 20, height: 14)
-            .contentShape(Rectangle())
     }
 
     /// The selected row, or nil when the selection names a row the list no
@@ -467,23 +445,12 @@ struct CustomDictionaryPage: View {
     /// draws has to say "and there is nothing in it" (USER 2026-08-24).
     static let emptyStateSymbolName = "tray"
 
-    private enum Metrics {
-        /// One `.inset` table row, and the header above them. Approximate by
-        /// nature — AppKit owns the real metrics — but the direction of the
-        /// error is what matters: a page that comes up a little short still
-        /// shows every one of its rows, because `tableHeight` is derived from
-        /// the page size rather than the page size guessed from a height.
-        static let tableRowHeight: CGFloat = 24
-        static let tableHeaderHeight: CGFloat = 28
-        /// Tall enough to read as a list rather than a row or two, short
-        /// enough that the buttons and the CSV actions under it stay on
-        /// screen at the window's floor height.
-        static let tableHeight: CGFloat = tableHeaderHeight
-            + CGFloat(CustomDictionaryPageModel.pageSize) * tableRowHeight
-        /// Large enough to read as a state rather than as a control the user
-        /// is meant to press.
-        static let emptyStateSymbolSize: CGFloat = 34
-    }
+    /// Tall enough to read as a list rather than a row or two, short enough
+    /// that the buttons and the CSV actions under it stay on screen at the
+    /// window's floor height. Derived from the page size rather than the page
+    /// size guessed from a height, so a page always shows every row it holds.
+    private static let tableHeight = UserDataListMetrics
+        .tableHeight(rows: CustomDictionaryPageModel.pageSize)
 
     /// What the dictionary holds — and, while a filter narrows it, how much of
     /// that the filter matches.
