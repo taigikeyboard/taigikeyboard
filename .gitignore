@@ -84,15 +84,24 @@ dictionary/**/data/cleaned/drop.csv
 **/*.rs.bk
 Cargo.lock.bak
 
-# === D9.2 — Rust shared-core platform artifacts ===
-# Android Rust .so (engine/scripts/build-android-libs.sh) AND iOS xcframework .a
-# are BOTH committed so a release tag carries a complete, buildable engine on
-# both platforms. The global *.so rule above would ignore the Android libs, so
-# they are explicitly re-included here. iOS xcframework + bridge .swift live
-# under ios/RustEngine/ for stable Xcode source references (R3-H3 fix); the
-# macOS counterpart lives under macos/RustEngine/ for a stable SwiftPM
-# binaryTarget path (no ignore rule matches it, so no re-include needed).
-!android/app/src/main/jniLibs/**/*.so
+# === Rust shared-core platform artifacts ===
+# `make build` output: the iOS and macOS xcframeworks with their swift-bridge
+# wrappers, and the Android .so per ABI. These were committed under D9.2 so a
+# release tag carried a complete, buildable engine — reversed 2026-09-07 in
+# favour of a tag plus a reproducible `make build`, because the .a and .so were
+# rewritten into history on every engine change and accounted for most of the
+# repository's size.
+#
+# The stable paths themselves stay: ios/RustEngine/ and macos/RustEngine/ hold
+# the hand-written README and SwiftLoggerSink.swift, and Xcode / SwiftPM
+# reference the framework at a fixed location under them.
+ios/RustEngine/RustTaigi.xcframework/
+ios/RustEngine/RustTaigi.swift
+ios/RustEngine/SwiftBridgeCore.swift
+macos/RustEngine/RustTaigi.xcframework/
+macos/RustEngine/RustTaigi.swift
+macos/RustEngine/SwiftBridgeCore.swift
+android/app/src/main/jniLibs/**/*.so
 
 # === Font copies (scripts/sync-fonts.sh) ===
 # `ios/Resources/Fonts` is the committed source. macOS and Windows keep their

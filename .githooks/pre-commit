@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # Blocks a commit that stages a credential, or that leaves the per-platform font
-# copies out of step. Activated per clone by `make hooks`, which sets
+# copies out of step with their source. Those copies are `make fonts` output and
+# are not committed, so this checks the working tree, not the index: a stale copy
+# would be packaged into a macOS or Windows build without anything else noticing.
+# Activated per clone by `make hooks`, which sets
 # core.hooksPath; a clone that never runs it commits with no gate, and
 # `--no-verify` skips it. There is no CI net behind it — the private repository
 # runs no Actions — so this hook is the only gate.
@@ -35,6 +38,6 @@ fi
 # packaging scripts glob whole directories, so a face present on one platform and
 # not the other would ship silently rather than fail a build.
 if ! "$REPOSITORY_DIR/scripts/sync-fonts.sh" --check; then
-  echo "pre-commit: font copies are out of step — run 'make fonts' and stage the result." >&2
+  echo "pre-commit: font copies are missing or out of step — run 'make fonts'." >&2
   exit 1
 fi
