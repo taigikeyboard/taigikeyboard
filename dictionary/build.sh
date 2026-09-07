@@ -8,13 +8,15 @@
 #   4. create_syllables_fst   - syllables.fst inventory (tl:/poj:/tps: tagged single FST)
 #   5. create_association_bin - association.bin (binary mmap), reusing build_ts
 #   6. verify_poj_integrity   - fail-fast POJ invariant gate
-#   7. version_snapshot       - drop summary + dictionary.csv diff vs previous release tag
+#   7. version_snapshot       - drop summary + word-keys.tsv diff vs previous release tag
 #   8. verify_known_keys      - fst fixture check (known keys such as poj:chi2)
 #   9. deploy                 - copy into the Android/iOS projects (incl. syllables.fst)
 #
 # RELEASE_VERSION=vX.Y.Z (or $1) sets step 7's diff base to the newest tag strictly below it;
-# unset compares against the newest release tag. Previous contents are read from
-# `git show <tag>:dictionary/output/dictionary.csv`; no snapshot file is written.
+# unset compares against the newest release tag. Step 7 writes the committed
+# `dictionary/word-keys.tsv` and reads the previous release's copy from
+# `git show <tag>:dictionary/word-keys.tsv` — the 3.1 MB key set, not the 35 MB CSV,
+# so output/ never has to be committed for the diff to work.
 # output/ is cleared manually; there is no clean / deploy-only subcommand.
 
 set -e
