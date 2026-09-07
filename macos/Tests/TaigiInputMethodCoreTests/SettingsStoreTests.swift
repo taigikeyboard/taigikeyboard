@@ -308,19 +308,6 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(makeStore().candidateFontSelection, .builtIn(.genYoMin))
     }
 
-    /// 字型管理's own reset, which owns BOTH halves of the selection: `fontType`
-    /// alone would leave a file name pointing at nothing.
-    @MainActor
-    func testResetFontSettings_clearsBothHalvesOfTheSelection() {
-        userDefaults.set(CandidateFontSelection.customRawValue, forKey: SettingsStore.Keys.fontType.name)
-        userDefaults.set("something.ttf", forKey: SettingsStore.Keys.customFontFile.name)
-
-        makeStore().resetFontSettings()
-
-        XCTAssertNil(userDefaults.string(forKey: SettingsStore.Keys.fontType.name))
-        XCTAssertNil(userDefaults.string(forKey: SettingsStore.Keys.customFontFile.name))
-        XCTAssertEqual(makeStore().candidateFontSelection, .builtIn(.system))
-    }
 
     /// Removed, not written over — the rule `resetComposingShortcuts` states:
     /// a stored default is indistinguishable from a value the user chose, and

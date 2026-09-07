@@ -13,13 +13,12 @@ import SwiftUI
 enum SettingsPane: String, CaseIterable, Identifiable {
     case general
     case appearance
-    /// Beside 外觀 rather than beside 自訂詞庫: this pane owns WHICH typeface
-    /// the candidate window is set in, which is a look, and the library it is
-    /// chosen from happens to live in the same list.
-    case fontManagement
     case shortcuts
     case customDictionary
     case dictionarySources
+    /// Last, under 辭典管理 (USER 2026-09-08). The two 管理 panes end the
+    /// sidebar: what the input method draws FROM, then what it draws IN.
+    case fontManagement
 
     var id: String {
         rawValue
@@ -31,10 +30,10 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         switch self {
         case .general: .desktopGeneralTab
         case .appearance: .desktopAppearanceTab
-        case .fontManagement: .desktopFontManagementTab
         case .shortcuts: .desktopShortcutsTab
         case .customDictionary: .dictionaryCustomDictionary
         case .dictionarySources: .desktopDictionarySourcesLink
+        case .fontManagement: .desktopFontManagementTab
         }
     }
 
@@ -42,10 +41,10 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         switch self {
         case .general: "gearshape"
         case .appearance: "paintpalette"
-        case .fontManagement: "textformat"
         case .shortcuts: "keyboard"
         case .customDictionary: "character.book.closed"
         case .dictionarySources: "books.vertical"
+        case .fontManagement: "textformat"
         }
     }
 }
@@ -144,14 +143,14 @@ struct SettingsDetailView: View {
             GeneralSettingsView()
         case .appearance:
             AppearanceSettingsView()
-        case .fontManagement:
-            FontManagementPage()
         case .shortcuts:
             ShortcutSettingsView()
         case .customDictionary:
             CustomDictionaryPage(stores: stores)
         case .dictionarySources:
             DictionaryTogglesView()
+        case .fontManagement:
+            FontManagementPage()
         }
     }
 }

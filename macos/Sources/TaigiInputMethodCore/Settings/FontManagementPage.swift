@@ -35,6 +35,10 @@ private struct FontRow: Identifiable {
 /// The list's SHAPE is 自訂詞庫's (`CustomDictionaryPage.entryTable`): an inset
 /// table with no striping, and the `+` / `−` pair under it that macOS gives an
 /// editable list.
+///
+/// No 回復預設 row (USER 2026-09-08): every other pane's reset restores rows the
+/// user cannot otherwise put back one by one, while this list's default is a row
+/// in it — 系統, first in the table, one click away.
 struct FontManagementPage: View {
     @Environment(DisplayLanguageStore.self) private var language
 
@@ -74,14 +78,6 @@ struct FontManagementPage: View {
                         }
                     },
                 )
-            }
-
-            // Its own section at the end, the way 外觀 draws its own: it acts
-            // on every row above it rather than on any one of them.
-            Section {
-                WideActionRow(titleKey: .themeEditorResetAll) {
-                    SettingsStore().resetFontSettings()
-                }
             }
         }
         .formStyle(.grouped)
