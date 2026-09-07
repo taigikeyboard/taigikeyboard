@@ -134,7 +134,16 @@ struct AppearanceSettingsView: View {
                         Button(language.string(.commonDelete)) { remove(font) }
                     }
                 }
-                WideActionRow(titleKey: .desktopCustomFontAdd, action: add)
+                // Trailing and bordered, not a full-width tinted row: this
+                // acts on the LIST above it, and `WideActionRow` is for the
+                // action that acts on the whole pane — 回復預設, at the end.
+                // Trailing is where System Settings puts a row's own action
+                // button, as the 詞庫 pages' 匯入 / 匯出 pair already does
+                // (`UserDataActionsSection`).
+                HStack {
+                    Spacer()
+                    Button(language.string(.desktopCustomFontAdd), action: add)
+                }
             }
 
             // Its own section, at the end, drawn the way the 快捷鍵 pane draws
