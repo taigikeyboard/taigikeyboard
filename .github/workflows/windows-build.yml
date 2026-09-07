@@ -15,22 +15,14 @@ name: Windows build
 # the website repository, which is where the update manifest points today.
 on:
   workflow_dispatch:
-  # A merge to `main` is what changes the build inputs a release is cut from, and
-  # signing needs the artifact to come out of a run here, not off a maintainer's
-  # box.
+  # Release-only. A desktop release is cut by tagging `desktop-<version>`; the
+  # Windows installer is part of that train, and signing needs the artifact to
+  # come out of a run here rather than off a maintainer's box. Everyday pushes to
+  # `main` and pull requests do not build Windows — `make windows-check` stays the
+  # host-side gate the maintainer runs by hand.
   push:
-    branches:
-      - main
-  # There is no automated gate on the Windows build today — `make windows-check`
-  # is a host-side gate the maintainer runs by hand, and it cannot see MSVC
-  # linking, VERSIONINFO, or whether the installer still compiles. The paths are
-  # everything that reaches the installer: the Windows crates and the payloads
-  # committed beside them, plus the engine they link.
-  pull_request:
-    paths:
-      - 'windows/**'
-      - 'engine/**'
-      - '.github/workflows/windows-build.yml'
+    tags:
+      - 'desktop-*'
 
 permissions:
   contents: read
