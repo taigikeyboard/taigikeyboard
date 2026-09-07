@@ -110,6 +110,6 @@ for destination in "${DESTINATIONS[@]}"; do
 done
 
 if $check_only && [[ $status -ne 0 ]]; then
-    echo "sync-fonts: run 'make fonts' and commit the result" >&2
+    echo "sync-fonts: run 'make fonts'" >&2
 fi
 exit $status

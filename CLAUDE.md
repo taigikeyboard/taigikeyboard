@@ -76,15 +76,18 @@ The **user runs all builds/tests manually mid-round** — never invoke these or 
 | Windows | `make windows-check` (host-side gate: pure-crate tests + clippy against the Windows targets; the TSF DLL itself only builds on the Windows box, see `docs/architecture/windows-release.md`) | included in `windows-check` |
 | taigi-converter | — | `npm test` from `taigi-converter/` (bare `node --test tests/` fails on Node 26 with `MODULE_NOT_FOUND`) |
 
-**Bootstrap after cloning** — some of what the platform builds read is generated, not committed. Run once per machine, and again whenever its inputs change:
+**Bootstrap after cloning** — everything a platform build links or bundles is generated, not committed. A fresh clone does not build until these have run, in this order:
 
-| Command | Produces | Needed by |
-|---|---|---|
-| `make fonts` | `macos/Resources/Fonts/`, `windows/resources/Fonts/` from the committed `ios/Resources/Fonts/` | macOS `bundle-app.sh` + its font tests, Windows installer (`TaigiKeyboard.iss:150`) |
+| # | Command | Produces | Needed by |
+|---|---|---|---|
+| 1 | `make fonts` | `macos/Resources/Fonts/`, `windows/resources/Fonts/` from the committed `ios/Resources/Fonts/` | macOS `bundle-app.sh` + its font tests, Windows installer (`TaigiKeyboard.iss:150`) |
+| 2 | `make build` (~3-5 min) | iOS + macOS xcframeworks and their swift-bridge wrappers, Android `jniLibs/*.so`, platform protos | Xcode, SwiftPM, Gradle all link these |
 
-Ignored files survive `git checkout`, so this is a one-time step, not a per-build one. `make fonts-check` verifies the copies still match the source.
+The dictionary artifacts stay committed for now: `make dict` does not currently complete on a clean checkout (`dictionary/common/cleanup.py:201`, `TypeError: '>' not supported between instances of 'str' and 'int'`), so they are not reliably reproducible and must not be ignored until that is fixed.
 
-**Stale-binary gate (mandatory before every iOS/Android build+test)** — iOS and Android link pre-built artifacts (`ios/RustEngine/RustTaigi.xcframework`, `android/app/src/main/jniLibs/`, `dictionary/output/dictionary.bin`, `dictionary/output/syllables.fst`). Building against stale artifacts gives **false-green tests**. Check `git diff --stat` against this table first:
+**Ignored files survive `git checkout`, so this is one pass per machine, not per build.** After that, re-run only what a change invalidates — the table below.
+
+**Stale-artifact gate (mandatory before every iOS/Android build+test)** — the artifacts above are local, untracked build output. They do not update themselves when a change lands, so building against a stale one gives **false-green tests**. Check `git diff --stat` against this table first:
 
 | If the diff touches… | Run first | Regenerates |
 |---|---|---|
