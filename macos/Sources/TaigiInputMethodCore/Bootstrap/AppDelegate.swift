@@ -26,8 +26,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         RustEngineBridge.installLoggerSink()
         // A bundle assembled without its fonts shows only as a picker whose
-        // every option draws alike, so it is worth one line at launch.
+        // every option draws alike, so it is worth one line at launch. About the
+        // BUNDLED roster only — a user's own typeface that fails to activate is
+        // reported by the library that owns it, and says something else entirely.
         CandidateFontChoice.reportUnavailableFonts()
+        // The user's own typeface, if one is selected: registered here so the
+        // first candidate window of the session draws in it rather than in the
+        // system face, and so that nothing on the keystroke path has to. Only
+        // the selected one — the rest of the library is parsed when the settings
+        // window asks for the picker's roster.
+        CustomFontLibrary.shared.activate(fileName: SettingsStore().selectedCustomFontFile)
         installLexiconEngine()
         // Opening is asynchronous, so this only starts it. A composition typed
         // before it finishes ranks without the user's history — one keystroke

@@ -94,7 +94,7 @@ final class CandidateFontChoiceTests: XCTestCase {
     /// width can never be taken in a font the text is not drawn in.
     func testCellLabels_areSetInTheChosenFace() {
         for choice in CandidateFontChoice.allCases {
-            let metrics = CandidateMetrics(textSize: .medium, windowSize: .medium, fontChoice: choice)
+            let metrics = CandidateMetrics(textSize: .medium, windowSize: .medium, fontSelection: .builtIn(choice))
             let view = CandidateItemView(style: .sequoia, metrics: metrics)
             view.configure(CandidateCellContent(text: "候選", annotation: "hāu-suán"))
 
@@ -122,20 +122,21 @@ final class CandidateFontChoiceTests: XCTestCase {
     /// the panel cache's equality check or the window would keep drawing in the
     /// old face until something else rebuilt it (`CandidatePanel.panel(for:)`).
     func testMetrics_differByFontChoice_soThePanelsRebuild() {
-        let system = CandidateMetrics(textSize: .medium, windowSize: .medium, fontChoice: .system)
+        let system = CandidateMetrics(textSize: .medium, windowSize: .medium, fontSelection: .builtIn(.system))
         for choice in CandidateFontChoice.allCases where choice != .system {
             XCTAssertNotEqual(
-                system, CandidateMetrics(textSize: .medium, windowSize: .medium, fontChoice: choice),
+                system,
+                CandidateMetrics(textSize: .medium, windowSize: .medium, fontSelection: .builtIn(choice)),
             )
         }
     }
 
     func testArranged_keepsTheFontChoice() {
         let stacked = CandidateMetrics(
-            textSize: .large, windowSize: .small, fontChoice: .genYoMin,
+            textSize: .large, windowSize: .small, fontSelection: .builtIn(.genYoMin),
         ).arranged(.stacked)
 
-        XCTAssertEqual(stacked.fontChoice, .genYoMin)
+        XCTAssertEqual(stacked.fontSelection, .builtIn(.genYoMin))
         XCTAssertEqual(stacked.candidateFont.fontName, CandidateFontChoice.genYoMin.postScriptName)
     }
 
@@ -146,7 +147,7 @@ final class CandidateFontChoiceTests: XCTestCase {
     /// which is the property a fifth face would break first.
     func testPrimaryColumnFloor_isTheChosenFacesOwnMeasurement() {
         for choice in CandidateFontChoice.allCases {
-            let metrics = CandidateMetrics(textSize: .medium, windowSize: .medium, fontChoice: choice)
+            let metrics = CandidateMetrics(textSize: .medium, windowSize: .medium, fontSelection: .builtIn(choice))
             XCTAssertEqual(
                 metrics.primaryColumnFloor,
                 max(metrics.candidateFontSize, metrics.measurePrimaryWidth("永")),
