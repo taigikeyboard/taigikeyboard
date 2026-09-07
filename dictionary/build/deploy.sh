@@ -7,11 +7,8 @@
 #   - output/dictionary.bin     (binary mmap format)
 #   - output/syllables.fst      (tl:/poj:/tps: tagged-single-FST syllable inventory)
 #   - output/association.bin    (word_association binary)
-# Output — one committed copy per platform:
-#   - android/app/src/main/assets/
-#   - ios/Resources/Dictionaries/
-#   - macos/Resources/Dictionaries/
-#   - windows/resources/Dictionaries/
+# Output — the one committed copy every platform packages from:
+#   - dictionaries/
 
 set -e
 
@@ -22,14 +19,13 @@ REPOSITORY_DIR="$(cd "$BASE_DIR/.." && pwd)"
 
 ARTIFACTS=(dictionary.fst dictionary.bin syllables.fst association.bin)
 
-# `label|destination` per platform. Every destination must already exist: a
-# missing one is a moved directory, not a platform to skip, and skipping it
-# would leave that platform building against a stale dictionary.
+# `label|destination`. One entry, and the loops below still iterate: the four
+# platforms each reference this directory in their own build (Android through an
+# assets source dir, iOS through a synchronized folder, macOS and Windows by
+# copying at package time), so there is nothing left to fan out to. A missing
+# destination is a moved directory, not a platform to skip.
 DESTINATIONS=(
-    "Android|$REPOSITORY_DIR/android/app/src/main/assets"
-    "iOS|$REPOSITORY_DIR/ios/Resources/Dictionaries"
-    "macOS|$REPOSITORY_DIR/macos/Resources/Dictionaries"
-    "Windows|$REPOSITORY_DIR/windows/resources/Dictionaries"
+    "shared|$REPOSITORY_DIR/dictionaries"
 )
 
 echo "=================================================="
@@ -38,9 +34,9 @@ echo "=================================================="
 echo "Source: $OUTPUT_DIR"
 echo ""
 
-# Validate every source and every destination before copying anything: a
-# missing artifact or a missing platform directory then stops the run before it
-# has updated anyone, rather than after some platforms and not others. A failure
+# Validate every source and the destination before copying anything, so a
+# missing artifact or a missing destination directory stops the run before it
+# has half-written the shared directory every platform then packages. A failure
 # during the copying itself still can, and `set -e` aborts on it.
 for artifact in "${ARTIFACTS[@]}"; do
     if [ ! -f "$OUTPUT_DIR/$artifact" ] || [ ! -s "$OUTPUT_DIR/$artifact" ]; then

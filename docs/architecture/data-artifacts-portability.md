@@ -28,7 +28,7 @@ Burntsushi `fst` finite-state transducer holding dictionary keys (`tl:`, `poj:`,
 ### Pipeline
 
 - **Producer**: `dictionary/build/create_fst.py` shells to the Rust binary `engine/build-helpers/fst-builder`. Value layout: rowid packed in the low 32 bits of the `u64` value; high bits reserved.
-- **Shipped path**: one committed copy per platform — `ios/Resources/Dictionaries/`, `macos/Resources/Dictionaries/`, `windows/resources/Dictionaries/`, `android/app/src/main/assets/`.
+- **Shipped path**: the repo-root `dictionaries/`, committed once. iOS reads it through an Xcode synchronized folder and Android through an assets source dir, both without a copy; macOS (`macos/scripts/bundle-app.sh`) and Windows (`windows/scripts/release-app.sh`) copy from it at package time.
 - **Size**: ~9.1 MB, byte-identical on both platforms (same build, same file).
 
 ### Reader
@@ -306,7 +306,7 @@ Divergence — `user_association.db` lives in `filesDir/`, not `databases/`. It 
 
 ### 7.2 Asset copy semantics — shipped trio
 
-All three read-only artifacts ship inside the APK at `android/app/src/main/assets/`. They are copied to `{filesDir}` on boot so the Rust mmap layer can map a real filesystem path. Rust `engine/lexicon` (via `mmap-host`) opens them through `memmap2`; AAPT2-compressed zip entries cannot be mapped directly, hence the copy.
+All three read-only artifacts ship inside the APK at the assets root, from the repo-root `dictionaries/` that `build.gradle.kts` adds as an assets source dir. They are copied to `{filesDir}` on boot so the Rust mmap layer can map a real filesystem path. Rust `engine/lexicon` (via `mmap-host`) opens them through `memmap2`; AAPT2-compressed zip entries cannot be mapped directly, hence the copy.
 
 | Artifact | Stamp file | Copier call-site |
 |---|---|---|

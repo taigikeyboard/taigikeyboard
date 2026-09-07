@@ -11,7 +11,7 @@
 ;   Runtime\*                      (the Windows App Runtime the settings window
 ;                                   runs on — self-contained, roadmap W17;
 ;                                   installed BESIDE the exe)
-;   Dictionaries\*                 (from windows/resources/Dictionaries)
+;   Dictionaries\*                 (from the repo-root dictionaries)
 ;   Fonts\*                        (from the repo-root fonts/font)
 ;   update-check-task.xml          (the scheduled task's definition)
 ;

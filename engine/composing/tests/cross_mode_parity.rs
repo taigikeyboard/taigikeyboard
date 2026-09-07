@@ -50,7 +50,19 @@ use common::{config, fetch_at_pos_response};
 // Production artifact + lexicon install (once per test process).
 // ---------------------------------------------------------------------------
 
+/// One of the four artifacts the platforms ship, from the committed directory
+/// they all package out of.
 fn production_artifact(name: &str) -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../dictionaries")
+        .join(name)
+}
+
+/// `dictionary.csv` — a pipeline intermediate the platforms do not ship, so it
+/// stays in the dictionary pipeline's own output directory rather than moving
+/// to `dictionaries/` with the four artifacts. It is committed, so a clean
+/// checkout has it; only the artifacts `lexicon_ready` probes can be absent.
+fn pipeline_output(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../dictionary/output")
         .join(name)
@@ -65,7 +77,7 @@ fn lexicon_ready() -> bool {
         let fst = production_artifact("dictionary.fst");
         if !fst.exists() {
             eprintln!(
-                "cross_mode_parity: production artifacts absent at {} — run `make dict && make build` first; skipping.",
+                "cross_mode_parity: production artifacts absent at {} — run `make dict` first; skipping.",
                 fst.display()
             );
             return false;
@@ -131,7 +143,7 @@ fn sampled_cases() -> Vec<Case> {
     const TOP_BY_FREQ: usize = 200;
     const STRIDE: usize = 60;
 
-    let path = production_artifact("dictionary.csv");
+    let path = pipeline_output("dictionary.csv");
     let text = std::fs::read_to_string(&path).expect("read dictionary.csv");
     let mut lines = text.lines();
     let header: Vec<&str> = lines.next().expect("CSV header").split(',').collect();

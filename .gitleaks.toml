@@ -36,10 +36,7 @@ paths = [
   '''^dictionary/(sources|supplementary)/.*/data/.*''',
   '''^dictionary/shared/data/.*''',
   '''^dictionary/baseline\.json$''',
-  '''^ios/Resources/Dictionaries/.*''',
-  '''^macos/Resources/Dictionaries/.*''',
-  '''^windows/resources/Dictionaries/.*''',
-  '''^android/app/src/main/assets/(dictionary|syllables|association).*''',
+  '''^dictionaries/.*''',
 ]
 
 [[rules]]

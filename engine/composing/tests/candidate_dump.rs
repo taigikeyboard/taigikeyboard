@@ -1,7 +1,7 @@
 //! Dev-only candidate-dump harness for continuous-input diagnosis.
 //!
 //! Drives the **production** dictionary artifacts
-//! (`dictionary/output/{dictionary.fst,dictionary.bin,association.bin,syllables.fst}`)
+//! (`dictionaries/{dictionary.fst,dictionary.bin,association.bin,syllables.fst}`)
 //! through the real `Start → EnterContinuous → FetchAtPos` pipeline and
 //! prints the full candidate list for one or more inputs. This is the
 //! deterministic, offline replacement for "log what the keyboard showed":
@@ -29,9 +29,9 @@
 //!   cargo test -p composing --test candidate_dump -- --ignored --nocapture
 //! ```
 //!
-//! Requires the production artifacts to exist (run `make dict && make build`
-//! first if `dictionary/output/` is stale or absent — see the stale-binary
-//! gate in `CLAUDE.md`). Prints `consumed_span`, `syllable_count`, `roman`,
+//! Requires the production artifacts to exist (run `make dict` first if
+//! `dictionaries/` is stale — see the stale-binary gate in `CLAUDE.md`).
+//! Prints `consumed_span`, `syllable_count`, `roman`,
 //! and `hanji` per candidate.
 
 use std::path::PathBuf;
@@ -46,7 +46,7 @@ const DEFAULT_INPUTS: &str = "tai5,tai5gi2,tai,tsua,ka";
 
 fn production_artifact(name: &str) -> String {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../dictionary/output")
+        .join("../../dictionaries")
         .join(name)
         .to_str()
         .expect("artifact path is valid UTF-8")
@@ -59,7 +59,7 @@ fn dump_continuous_candidates() {
     let fst = production_artifact("dictionary.fst");
     if !std::path::Path::new(&fst).exists() {
         eprintln!(
-            "candidate_dump: production artifacts absent at {fst} — run `make dict && make build` first; skipping."
+            "candidate_dump: production artifacts absent at {fst} — run `make dict` first; skipping."
         );
         return;
     }

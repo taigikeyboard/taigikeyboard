@@ -13,6 +13,10 @@
 
 Sample row resolution reads dictionary.csv via load_dictionary_records()
 (post-v3.5.6 part 2; previously came from `output/trie.db`).
+
+Queries the committed `dictionaries/dictionary.fst` — the index the platforms
+ship, and the one a clean checkout has. `output/` holds the same file only
+after `make dict`, and answering from it would answer about an unshipped build.
 """
 
 import shutil
@@ -21,7 +25,7 @@ import sys
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-FST_FILE = BASE_DIR / "output" / "dictionary.fst"
+FST_FILE = BASE_DIR.parent / "dictionaries" / "dictionary.fst"
 CSV_FILE = BASE_DIR / "output" / "dictionary.csv"
 ENGINE_DIR = BASE_DIR.parent / "engine"
 BUILDER_RELEASE = ENGINE_DIR / "target" / "release" / "fst-builder"

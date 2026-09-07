@@ -80,7 +80,7 @@ iOS `Settings/SharedSettings.swift` (`SettingsKey` definitions + `resetToDefault
 
 ### 5. Removed / renamed bundled assets
 
-`git diff <base>..<target> --diff-filter=D --name-only -- 'android/app/src/main/assets/**' 'ios/Sources/**/Assets.xcassets/**' 'ios/Resources/**' 'macos/Resources/**' 'windows/resources/**'`.
+`git diff <base>..<target> --diff-filter=D --name-only -- 'android/app/src/main/assets/**' 'ios/Sources/**/Assets.xcassets/**' 'ios/Resources/**' 'macos/Resources/**' 'windows/resources/**' 'dictionaries/**'`.
 
 For each deleted asset, ask: **does any persisted user state reference it by an unstable handle?**
 

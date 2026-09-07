@@ -243,7 +243,7 @@ fn poj_family_isolates_divergent_canonicals_from_tl() {
 }
 
 /// v3.5.9 B-1 production-artifact sentinel — open the checked-in
-/// `dictionary/output/syllables.fst` and probe one `tl:*` + one
+/// `dictionaries/syllables.fst` and probe one `tl:*` + one
 /// `poj:*` membership, plus a cross-family negative. Codex post-impl
 /// B-1 finding #2: `SyllableInventory::open` only validates FST parse,
 /// so loading an unprefixed pre-B asset would succeed but every
@@ -254,7 +254,7 @@ fn poj_family_isolates_divergent_canonicals_from_tl() {
 #[test]
 fn production_syllables_fst_carries_both_tl_and_poj_families() {
     let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../dictionary/output/syllables.fst");
+        .join("../../dictionaries/syllables.fst");
     if !path.exists() {
         // Dev / CI environments that strip the data artifact run
         // every other test in this file unchanged; skip with a

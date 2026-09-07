@@ -31,8 +31,7 @@ fn engine_lock() -> MutexGuard<'static, ()> {
     static INSTALLED: OnceLock<()> = OnceLock::new();
     let guard = LOCK.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
     INSTALLED.get_or_init(|| {
-        let dir =
-            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../resources/Dictionaries");
+        let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../dictionaries");
         let artifacts = DictionaryArtifacts::locate(&dir).expect("repo dictionaries present");
         engine::lexicon_install(&artifacts, 1).expect("lexicon installs");
     });

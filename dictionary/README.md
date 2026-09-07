@@ -10,7 +10,7 @@ and Android consume. Each binary is generated directly from the canonical
 ```
 dictionary/
 ├── run.sh                     # Pipeline entry point — regenerate per-source CSVs
-├── build.sh                   # Build entry point — produces output/ + deploys to android/ + ios/
+├── build.sh                   # Build entry point — produces output/ + deploys to the repo-root dictionaries/
 ├── baseline.json              # Parity gate reference (compare_baseline.py verify)
 ├── requirements.txt           # Python deps
 │
@@ -45,7 +45,7 @@ dictionary/
 # 1) Regenerate every source's canonical CSV (data/<key>.csv)
 ./run.sh
 
-# 2) Build runtime artefacts into output/ + deploy to android/ + ios/
+# 2) Build runtime artefacts into output/ + deploy to the repo-root dictionaries/
 ./build.sh
 
 # 3) Sanity-check against the committed baseline

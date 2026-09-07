@@ -98,7 +98,7 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
 - **W2 Data locations** — `%APPDATA%\TaigiKeyboard\` holds `settings.json` and the
   three user DBs (macOS: `~/Library/Application Support/<bundle id>/`,
   `Storage/UserDataDirectory.swift:29-32`). Dictionary artefacts are copied at
-  release-build time from `windows/resources/Dictionaries/` and fonts from
+  release-build time from the repo-root `dictionaries/` and fonts from
   the repo-root `fonts/font/` — the one copy every platform packages —
   into the install dir, resolved from the DLL's **own `HMODULE` saved in `DllMain`**
   (Codex: never from the current exe). **Codex: CONFIRM WITH CHANGES** — AppContainer

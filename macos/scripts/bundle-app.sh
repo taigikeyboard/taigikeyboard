@@ -160,9 +160,9 @@ for localization_dir in "${BUNDLE_NAME_DIRECTORIES[@]}"; do
 done
 
 echo "==> Copying dictionary data"
-# `make dict` writes this platform's copy along with every other platform's, so
-# a bundle can only be built from the dictionary that deploy run produced.
-DICTIONARY_SOURCE_DIR="$REPOSITORY_DIR/macos/Resources/Dictionaries"
+# The repo-root `dictionaries`, the one copy of the bytes every platform
+# packages — nothing to sync, nothing to drift.
+DICTIONARY_SOURCE_DIR="$REPOSITORY_DIR/dictionaries"
 for artifact in dictionary.fst dictionary.bin association.bin syllables.fst; do
     source_file="$DICTIONARY_SOURCE_DIR/$artifact"
     # Fail here rather than ship a bundle whose input method launches, receives
