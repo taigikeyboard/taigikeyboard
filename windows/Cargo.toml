@@ -45,7 +45,7 @@ rusqlite = { version = "0.40", features = ["bundled"] }
 uuid = { version = "1", features = ["v4"] }
 tempfile = "3"
 # The published package's SHA-256, checked on every downloaded update.
-sha2 = "0.10"
+sha2 = "0.11"
 # The COM / TSF bindings. `#[implement]` (the COM-object macro) lives in
 # `windows-core`, which is a direct dependency because the macro's expansion
 # names it.
