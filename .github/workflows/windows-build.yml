@@ -12,14 +12,12 @@ name: Windows build
 # addition once a certificate exists.
 #
 # It does NOT publish. `windows/scripts/publish-release.sh` still puts releases on
-# the website repository, because a private repository's releases are not publicly
-# downloadable. Bringing them back here is gated on the repository going public.
+# the website repository, which is where the update manifest points today.
 on:
   workflow_dispatch:
   # A merge to `main` is what changes the build inputs a release is cut from, and
   # signing needs the artifact to come out of a run here, not off a maintainer's
-  # box. Actions is disabled on this repository today, so nothing fires until it
-  # is turned on.
+  # box.
   push:
     branches:
       - main

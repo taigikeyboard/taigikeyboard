@@ -2,10 +2,19 @@
 
 A Taiwanese (Tâi-gí / 台語) input method for iOS, Android, macOS, and Windows. Romanization input (POJ, TL, TPS), Hanji (漢字), tone marks, autocomplete, and cross-system Romanization conversion.
 
-[![Security](https://github.com/taigikeyboard/taigikeyboard/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/taigikeyboard/taigikeyboard/actions/workflows/security.yml)
+[![Windows build](https://github.com/taigikeyboard/taigikeyboard/actions/workflows/windows-build.yml/badge.svg?branch=main)](https://github.com/taigikeyboard/taigikeyboard/actions/workflows/windows-build.yml)
 ![iOS 17+](https://img.shields.io/badge/iOS-17%2B-blue)
-![Android 9+](https://img.shields.io/badge/Android-9%2B-green)
+![Android 11+](https://img.shields.io/badge/Android-11%2B-green)
+![macOS 14+](https://img.shields.io/badge/macOS-14%2B-lightgrey)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue)](LICENSE)
+
+## Download
+
+| Platform | Where |
+| --- | --- |
+| iOS / iPadOS | [App Store](https://apps.apple.com/app/id6751871806) |
+| Android | [Google Play](https://play.google.com/store/apps/details?id=com.siansiansu.taigikeyboard) |
+| macOS / Windows | [taigikeyboard.tw](https://taigikeyboard.tw) |
 
 ## Features
 
