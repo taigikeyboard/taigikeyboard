@@ -5,15 +5,27 @@
 # needs an allowlist in .gitleaks.toml instead — its fingerprint changes on every
 # build. Add a line here only after reading the matched content and confirming it
 # is not a credential; never to silence a finding you have not looked at.
-
 # A third party's hCaptcha *site* key, inside a saved copy of a public web page
 # committed in v3.4.5 and removed in v3.4.6. Site keys are public by design.
-f2dc7df880034b9269fa29401c95ea178d86aa16:臺灣方音符號.html:generic-api-key:6
-2d6f3765c0b15d95bb7e3ffaef93ac20226f25b4:臺灣方音符號.html:generic-api-key:6
-
 # FAQ row titles passed as `titleKey = "faq_N_question"` to a settings helper.
 # Tab1Fragment.kt was deleted in ab811979 and no live file emits this shape, so
 # these three are historical rather than recurring.
-999cf38893f3508a2e61a6921a698fc69eb20d6c:android/app/src/main/java/com/siansiansu/taigikeyboard/settings/Tab1Fragment.kt:generic-api-key:165
-999cf38893f3508a2e61a6921a698fc69eb20d6c:android/app/src/main/java/com/siansiansu/taigikeyboard/settings/Tab1Fragment.kt:generic-api-key:172
-999cf38893f3508a2e61a6921a698fc69eb20d6c:android/app/src/main/java/com/siansiansu/taigikeyboard/settings/Tab1Fragment.kt:generic-api-key:179
+# Refreshed 2026-09-07. Every previous fingerprint referenced a commit SHA from
+# before the history rewrites of that day (PII removal, then the author-identity
+# correction), so none of them matched any more and all five findings resurfaced.
+# A fingerprint is <commit>:<path>:<rule>:<line> — it cannot survive a rewrite.
+#
+# All five are the same two shapes, re-reviewed against the matched content:
+#
+#   臺灣方音符號.html — wgConfirmEditHCaptchaSiteKey in a saved copy of a public
+#   web page. An hCaptcha *site* key is published in page source by design; the
+#   secret counterpart is the secret key, which is not here.
+#
+#   Tab1Fragment.kt — `titleKey = "faq_…"`, FAQ localization key constants. The
+#   rule fires on the shape of a variable named "key" being assigned a string.
+
+31d41453d9cb7cffd6282333e1d08fd3e1ebb5ba:臺灣方音符號.html:generic-api-key:6
+be5c4e47388373c178185a5393ae98732e6580e8:android/app/src/main/java/com/siansiansu/taigikeyboard/settings/Tab1Fragment.kt:generic-api-key:165
+be5c4e47388373c178185a5393ae98732e6580e8:android/app/src/main/java/com/siansiansu/taigikeyboard/settings/Tab1Fragment.kt:generic-api-key:172
+be5c4e47388373c178185a5393ae98732e6580e8:android/app/src/main/java/com/siansiansu/taigikeyboard/settings/Tab1Fragment.kt:generic-api-key:179
+c61c55580dc9202b61f28d927854f9a18fdd848a:臺灣方音符號.html:generic-api-key:6
