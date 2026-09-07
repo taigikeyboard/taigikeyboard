@@ -8,11 +8,15 @@ import Foundation
 enum FontRegistration {
     private static let logger = DebugLogger(category: "FontRegistration")
 
+    /// File names, not PostScript names — the two stopped matching when the
+    /// typefaces moved to the shared `fonts/font/` directory, whose names follow
+    /// Android's resource-naming rules so all four platforms can read one copy.
+    /// Ask `KeyboardFonts` for the PostScript name.
     private static let fontFileNames = [
-        "jf-openhuninn-2.1.ttf",
-        "Iansui-Regular.ttf",
-        "GenYoMin2TW-R.otf",
-        "GenYoGothic2TW-R.otf",
+        "jf_openhuninn_2_1.ttf",
+        "iansui_regular.ttf",
+        "genyomin2tw_r.otf",
+        "genyogothic2tw_r.otf",
     ]
 
     /// Registers fonts from the containing app bundle.

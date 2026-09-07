@@ -17,14 +17,16 @@ copyright lines below were read out of each font's own `name` table.
 
 | Font | File | Copyright / upstream |
 | --- | --- | --- |
-| 芫荽 Iansui | `Iansui-Regular.ttf` | Copyright 2025 The Iansui Project Authors (<https://github.com/ButTaiwan/iansui>). Designed by But Ko / Fontworks Inc.; derived from Klee One. |
-| jf open 粉圓 2.1 | `jf-openhuninn-2.1.ttf` | justfont (<https://justfont.com/huninn>). Latin/kana components: Kosugi Maru © 2010 MOTOYA CO.,LTD.; Varela Round © 2011-2016 The Varela Round Project Authors, with Reserved Font Names "Varela" and "Varela Round". |
-| 源樣黑體 GenYoGothic2 TW | `GenYoGothic2TW-R.otf` | ButTaiwan (<https://github.com/ButTaiwan/genyo-font>); derived from Adobe Source Han Sans. |
-| 源樣明體 GenYoMin2 TW | `GenYoMin2TW-R.otf` | ButTaiwan (<https://github.com/ButTaiwan/genyo-font>); derived from Adobe Source Han Serif. |
+| 芫荽 Iansui | `iansui_regular.ttf` | Copyright 2025 The Iansui Project Authors (<https://github.com/ButTaiwan/iansui>). Designed by But Ko / Fontworks Inc.; derived from Klee One. |
+| jf open 粉圓 2.1 | `jf_openhuninn_2_1.ttf` | justfont (<https://justfont.com/huninn>). Latin/kana components: Kosugi Maru © 2010 MOTOYA CO.,LTD.; Varela Round © 2011-2016 The Varela Round Project Authors, with Reserved Font Names "Varela" and "Varela Round". |
+| 源樣黑體 GenYoGothic2 TW | `genyogothic2tw_r.otf` | ButTaiwan (<https://github.com/ButTaiwan/genyo-font>); derived from Adobe Source Han Sans. |
+| 源樣明體 GenYoMin2 TW | `genyomin2tw_r.otf` | ButTaiwan (<https://github.com/ButTaiwan/genyo-font>); derived from Adobe Source Han Serif. |
 
-Copies live at `ios/Resources/Fonts/`, `macos/Resources/Fonts/`,
-`windows/resources/Fonts/` and `android/app/src/main/res/font/`. The first three
-are kept in step by `make fonts`; `make fonts-check` fails when they drift.
+The four files live once, at `fonts/font/`, and all four platforms package that
+one copy. The file names follow Android's resource-naming rules so its `res/`
+merge can read the shared directory unchanged; the PostScript names inside the
+files (`Iansui-Regular`, `jf-openhuninn-2.1`, `GenYoGothic2TW-R`,
+`GenYoMin2TW-R`) are what iOS, macOS and Windows ask for at runtime.
 
 ## Vendored source
 

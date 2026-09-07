@@ -184,7 +184,7 @@ impl SettingChoice for CandidateWindowSizeChoice {
 /// (`fontType`); the DEFAULT is the desktop's own — a fresh install draws in
 /// the system font (USER 2026-08-23) where iOS starts on Open Huninn.
 /// Roster + file names mirror `macos/.../Candidates/CandidateFontChoice.swift:22-49`;
-/// the files themselves ship from `windows/resources/Fonts/`.
+/// the files themselves ship from the repo-root `fonts/font/`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum CandidateFontChoice {
     System,
@@ -209,13 +209,17 @@ impl CandidateFontChoice {
 
     /// The bundled file under the install dir's `fonts\`, or `None` for the
     /// system face.
+    ///
+    /// File names, not PostScript names: the shared `fonts/font/` directory uses
+    /// Android's resource-naming rules so every platform reads one copy of the
+    /// bytes, and the face names inside the files are unchanged.
     pub fn file_name(self) -> Option<&'static str> {
         match self {
             Self::System => None,
-            Self::OpenHuninn => Some("jf-openhuninn-2.1.ttf"),
-            Self::Iansui => Some("Iansui-Regular.ttf"),
-            Self::GenYoMin => Some("GenYoMin2TW-R.otf"),
-            Self::GenYoGothic => Some("GenYoGothic2TW-R.otf"),
+            Self::OpenHuninn => Some("jf_openhuninn_2_1.ttf"),
+            Self::Iansui => Some("iansui_regular.ttf"),
+            Self::GenYoMin => Some("genyomin2tw_r.otf"),
+            Self::GenYoGothic => Some("genyogothic2tw_r.otf"),
         }
     }
 }

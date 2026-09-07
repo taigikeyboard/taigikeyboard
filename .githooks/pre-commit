@@ -1,16 +1,11 @@
 #!/usr/bin/env bash
-# Blocks a commit that stages a credential, or that leaves the per-platform font
-# copies out of step with their source. Those copies are `make fonts` output and
-# are not committed, so this checks the working tree, not the index: a stale copy
-# would be packaged into a macOS or Windows build without anything else noticing.
-# Activated per clone by `make hooks`, which sets
-# core.hooksPath; a clone that never runs it commits with no gate, and
-# `--no-verify` skips it. There is no CI net behind it — the private repository
-# runs no Actions — so this hook is the only gate.
+# Blocks a commit that stages a credential. Activated per clone by `make hooks`,
+# which sets core.hooksPath; a clone that never runs it commits with no gate, and
+# `--no-verify` skips it. There is no CI net behind it — the repository's only
+# workflow builds Windows release tags — so this hook is the only gate.
 #
-# The scans themselves are scripts/gitleaks-scan.sh and scripts/sync-fonts.sh,
-# shared with `make scan-secrets` and `make fonts-check`, so the entry points
-# cannot drift apart.
+# The scan itself is scripts/gitleaks-scan.sh, shared with `make scan-secrets`,
+# so the entry points cannot drift apart.
 set -uo pipefail
 
 REPOSITORY_DIR="$(git rev-parse --show-toplevel)"
@@ -31,13 +26,5 @@ pre-commit: if that was a finding, it is shown redacted above.
   real secret    -> unstage it, rotate the credential, and keep it out of the tree
 
 MSG
-  exit 1
-fi
-
-# Cheap enough to run on every commit: four `cmp`s against two directories. The
-# packaging scripts glob whole directories, so a face present on one platform and
-# not the other would ship silently rather than fail a build.
-if ! "$REPOSITORY_DIR/scripts/sync-fonts.sh" --check; then
-  echo "pre-commit: font copies are missing or out of step — run 'make fonts'." >&2
   exit 1
 fi

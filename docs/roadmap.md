@@ -89,18 +89,20 @@ reclaims the 536 MB.
 | `dictionary/output/*` | 58.6 MB | `make dict` |
 | Platform dictionary copies (×4) | 69.7 MB | `make dict` → `dictionary/build/deploy.sh` |
 | Per-source `sources/*/data/<src>.csv` | ~30 MB | `dictionary/pipeline/context.py:104-106` |
-| Font copies for Android / macOS / Windows | **118 MB** | `scripts/sync-fonts.sh` — copies from `ios/Resources/Fonts` |
+| Font copies for Android / macOS / Windows | **118 MB** | since removed — see below |
 
-`ios/Resources/Fonts` (39.4 MB) and `sources/*/data/raw/*` (~35 MB) are real
-inputs and stay committed. The other three font trees are copies of the iOS one
-and are not.
+`sources/*/data/raw/*` (~35 MB) is a real input and stays committed. So are the
+typefaces, but no longer four times over: the four copies this table measured
+became one shared `fonts/font/`, packaged by all four platforms, so 118 MB of
+duplicate left the tree and `scripts/sync-fonts.sh` went with it.
 
 **Cost of the change is close to zero for the maintainer.** Ignored files
 survive `git checkout`, so `make dict` / `make build` run once per machine, and
 after that only when their inputs change — which is what
 `CLAUDE.md`'s stale-binary gate already requires. The recurring cost falls on
 the GitHub-hosted Windows build, which checks out fresh. In the end phase 3 was
-narrowed and that workflow gained only a `make fonts` step.
+narrowed and that workflow gained only a `make fonts` step — itself removed when
+the font trees were replaced by the single shared directory.
 
 **Phases**
 

@@ -191,7 +191,7 @@ Growth is stopped instead, which was the more important half:
 | Merged | What stopped being committed |
 | --- | --- |
 | #1 | `version_snapshot` diffs releases against a 3.1 MB key set, not the 35 MB `dictionary/output/dictionary.csv` |
-| #2 | the macOS and Windows font trees — 79 MB of copies `make fonts` regenerates |
+| #2 | the macOS and Windows font trees — 79 MB of copies `make fonts` regenerated (both trees, and that step, are since gone: the typefaces live once at `fonts/font/`) |
 | #3 | the iOS and macOS xcframeworks and the Android `.so` — `librust_taigi.a` alone had been rewritten into history in 85 commits |
 
 If this is ever reopened, history still carries ~190 MB of pipeline layouts that

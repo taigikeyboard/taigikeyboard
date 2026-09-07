@@ -141,15 +141,6 @@ jobs:
           command -v rc.exe rc dumpbin || true
           echo "linker: $CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER"
 
-      # windows/resources/Fonts is `make fonts` output, not committed — the
-      # installer packages it (TaigiKeyboard.iss:150), so a fresh checkout has
-      # to produce it before the build. A developer runs this once per machine;
-      # a runner checks out clean every time. windows/resources/Dictionaries is
-      # still committed, so nothing has to regenerate it here.
-      - name: Stage the font copies
-        shell: bash
-        run: make fonts
-
       # The same entry point a release uses. --skip-sign is the current release
       # channel (docs/architecture/windows-release.md § Signing status); omitting
       # --publish is what makes this a build rather than a release.
