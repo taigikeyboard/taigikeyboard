@@ -81,9 +81,11 @@ The **user runs all builds/tests manually mid-round** — never invoke these or 
 | # | Command | Produces | Needed by |
 |---|---|---|---|
 | 1 | `make fonts` | `macos/Resources/Fonts/`, `windows/resources/Fonts/` from the committed `ios/Resources/Fonts/` | macOS `bundle-app.sh` + its font tests, Windows installer (`TaigiKeyboard.iss:150`) |
-| 2 | `make build` (~3-5 min) | iOS + macOS xcframeworks and their swift-bridge wrappers, Android `jniLibs/*.so`, platform protos | Xcode, SwiftPM, Gradle all link these |
+| 2 | `make build` (5 s warm; minutes on a cold target dir) | iOS + macOS xcframeworks and their swift-bridge wrappers, Android `jniLibs/*.so`, platform protos | Xcode, SwiftPM, Gradle all link these |
 
-The dictionary artifacts stay committed for now: `make dict` does not currently complete on a clean checkout (`dictionary/common/cleanup.py:201`, `TypeError: '>' not supported between instances of 'str' and 'int'`), so they are not reliably reproducible and must not be ignored until that is fixed.
+**Clone with `--recurse-submodules`**, or run `git submodule update --init --recursive` before `make dict`. `taigi-converter` is a submodule and the dictionary pipeline converts every reading through it; `make dict` and `dictionary/common/taigi_bridge.py` both refuse to start without it.
+
+The dictionary artifacts stay committed — that is the USER's standing instruction (2026-09-07: 「dictionary/ folder 都不要碰」), not a technical limit. `make dict` does reproduce them from a clean checkout.
 
 **Ignored files survive `git checkout`, so this is one pass per machine, not per build.** After that, re-run only what a change invalidates — the table below.
 
@@ -95,7 +97,7 @@ The dictionary artifacts stay committed for now: `make dict` does not currently 
 | `dictionary/` (CSV sources, build scripts, syllabifier rules) | `make dict` then `make build` | `dictionary.bin` + `syllables.fst`, then the bundles above |
 | platform-only Swift / Kotlin / docs | — | nothing |
 
-`make build` is sequential, ~3-5 min; `make dict` is a separate ~30 s pass that must finish first.
+`make build` is sequential — about 5 s against a warm target directory, minutes when it has to compile the engine for all five targets. `make dict` is a separate ~2 min pass that must finish first (measured 2026-09-07: 67 s of per-source pipelines, 53 s of aggregate build).
 
 **EXCEPTION — post-PR parallel verification** (`~/.claude/rules/round-workflow.md` § Codex review sandwich step 6): immediately after `gh pr create` returns the URL, run build+test for **every platform the diff touches** in the background (one message, parallel `Bash` calls with `run_in_background: true`). If the diff touches `engine/` or `dictionary/`, the stale-binary gate runs FIRST (sequentially), then the platform gates fire in parallel. On failure: report the failing target + first error line, push the fix as a new commit on the same branch (no `--amend`), re-run only the failing gate. Do NOT close the PR.
 

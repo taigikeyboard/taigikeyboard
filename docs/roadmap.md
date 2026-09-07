@@ -99,8 +99,8 @@ and are not.
 survive `git checkout`, so `make dict` / `make build` run once per machine, and
 after that only when their inputs change — which is what
 `CLAUDE.md`'s stale-binary gate already requires. The recurring cost falls on
-the GitHub-hosted Windows build, which checks out fresh and gains a ~30 s
-`make dict` step on top of a build that already compiles the engine from source.
+the GitHub-hosted Windows build, which checks out fresh. In the end phase 3 was
+narrowed and that workflow gained only a `make fonts` step.
 
 **Phases**
 
@@ -111,17 +111,20 @@ the GitHub-hosted Windows build, which checks out fresh and gains a ~30 s
 | 3 | iOS and macOS xcframeworks and the Android `.so` become `make build` output and are ignored; `CLAUDE.md` grows a bootstrap section | **Merged** (#3) — narrowed to the engine binaries |
 | 4 | `git filter-repo` purges the artifacts from history | **Not doing** (USER 2026-09-07) |
 
-**Phase 3 was narrowed, and phase 4 dropped, for one reason.** Bootstrapping a
-fresh clone found that `make dict` does not complete on a clean checkout:
+**Phase 3 was narrowed on a diagnosis that turned out to be wrong.**
+Bootstrapping a fresh clone showed `make dict` dying in `cleanup.py:201` with a
+`TypeError` comparing a str to an int, which was read as the dictionary
+artifacts being unreproducible. The real cause was that the test clone had no
+`--recurse-submodules`: `taigi-converter/` was empty, node failed its import,
+and every conversion returned an error string that the pipeline ingested as
+data. With the submodule checked out, `make dict` completes on a fresh clone and
+deploys to all four platforms. Both entry points now check for it.
 
-    File "dictionary/common/cleanup.py", line 201, in cleanup_dataframe
-        if invalid_hanzi_count > 0 and logger:
-    TypeError: '>' not supported between instances of 'str' and 'int'
-
-An artifact that cannot be regenerated must not stop being committed, so
-`dictionary/output/`, the per-platform dictionary copies, and the per-source
-pipeline CSVs all stay tracked. Nothing under `dictionary/` was changed at all
-(USER: 「dictionary/ folder 都不要碰,只要 build 出來的產物在各大平台上有清理就好了」).
+The dictionary artifacts nonetheless stay tracked, on the USER's instruction
+rather than on that reasoning: 「dictionary/ folder 都不要碰,只要 build 出來的
+產物在各大平台上有清理就好了」. `dictionary/output/`, the per-platform copies and
+the per-source pipeline CSVs are all still committed, and nothing under
+`dictionary/` was changed.
 
 That left phase 4 purging only the platform build artifacts — measured at
 **753 MB → 609 MB**, a 19% reduction bought with another full commit-SHA
@@ -134,8 +137,19 @@ the engine binaries and font copies that accounted for most of it are no longer
 committed on every rebuild. Reopening phase 4 only makes sense after the
 dictionary pipeline can rebuild from a clean checkout.
 
-**Correction to a figure above**: `make dict` takes roughly **10 minutes**, not
-the ~30 s first written here.
+**Measured runtimes** (2026-09-07, warm machine, fresh clone with submodules):
+
+| | Wall | Where it goes |
+| --- | --- | --- |
+| `make dict` | **~2 min** | `run.sh` 67 s across the nine per-source pipelines (`kautian` 26 s, `taihoa` 10 s; by stage, `extract` 15 s and `merge` 8 s dominate), then `build.sh` 53 s (`merge_csv` 16 s, `create_association_bin`+verify 13 s, `create_syllables_fst` 11 s, `create_fst` 7 s, `create_dictionary_bin`+verify 5 s, everything else under a second) |
+| `make build` | **5.1 s warm** | all six steps; every cargo invocation reports `Finished` in 0.03–0.08 s against a warm target dir. A cold build compiles the engine for five targets and takes minutes — not measured here. |
+
+208,595 raw input rows, every reading converted through the Node bridge, three
+FST/mmap artifacts built and verified. Nothing pathological.
+
+Two earlier figures in this document were wrong: `~30 s` was a guess, and the
+`10 minutes` that replaced it was measured against a run that spent most of its
+time on the broken-submodule path, failing one conversion per row.
 
 A dead-weight note for whoever reopens this: history still carries ~190 MB of
 pipeline layouts that no longer exist at `HEAD` (`dictionary/csv/`,
