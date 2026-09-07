@@ -165,7 +165,7 @@ plus a reproducible `make build` replaces a tag that carries binaries.
 
 ### Desktop custom fonts — let the user add their own typeface (3.6.8, USER-scoped 2026-09-08)
 
-**Status**: Phase 0 done (this section + memory `project_desktop_custom_fonts.md`). PR 1 next.
+**Status**: implemented on `feature/macos-custom-fonts` (PR #16) — macOS and Windows both. Awaiting real-device dogfood (S30 + S31).
 **Scope**: macOS + Windows only. iOS and Android are deliberately untouched — the USER scoped this
 to the desktop train.
 
@@ -219,12 +219,20 @@ only and never redistributed, so `THIRD_PARTY_LICENSES.md` is unaffected.
 | PR | Scope | Est. |
 |---|---|---|
 | P0 | This section + memory (admin tier, direct to main) | — |
-| P1 | macOS whole: font library (copy / validate / index / delete), the `custom` case, launch-time registration, Appearance-pane UI, i18n keys | ~450 |
-| P2 | Windows core: settings key + `Custom` variant + library and validation in `taigi-windows-storage` (pure crates, covered by `make windows-check`) | ~300 |
-| P3 | Windows render: custom private collection + revision-driven invalidation + format-cache drop | ~250 |
-| P4 | Windows settings window: list, `rfd` picker filter, delete, errors | ~300 |
+| P1 | macOS whole: font library, `CandidateFontSelection`, launch-time registration, UI, i18n keys | done |
+| P2 | Windows core + storage + platform: the selection type, the two-key resolver, the file half (host-tested) and the DirectWrite half | done |
+| P3 | Windows render: a collection per custom face, an id per loaded resource, mtime+length as the change detector, format caches dropped with it | done |
+| P4 | Windows settings window: the 字型管理 pane, `+` / `−`, the file dialog's font filter | done |
 
-P1 is one large macOS PR by the USER's standing preference for fewer, larger macOS PRs.
+All of it landed in one PR (#16) at the USER's instruction, macOS first and Windows after.
+
+**The UI shape took three tries** (USER 2026-09-08). A section in 外觀 with a per-row delete
+button, then a sheet, then a pane for the custom fonts alone — each was rejected, and the
+reason each time was the same one: choosing a typeface and managing the list are two
+selections that look alike. The answer was to put the bundled roster and the user's own
+typefaces in ONE list, in a 字型管理 pane of its own, where the selected row IS the typeface
+in use — which is how System Settings states a list like that (聲音's output devices,
+顯示器's displays). 外觀 lost its font row; each pane's reset restores the rows it shows.
 
 #### Dogfood (new items, to be added to `docs/architecture/dogfood-checklist.md` in P1/P4)
 
@@ -232,7 +240,8 @@ P1 is one large macOS PR by the USER's standing preference for fewer, larger mac
   one → falls back to the system face, all without restarting the input method.
 - **S31 Windows** — add a typeface in the settings window; an **already-running** host (Notepad plus
   a WinUI app) shows it on the next candidate window. Replacing a file under the same name does not
-  keep drawing the old one.
+  keep drawing the old one, and a file another host still holds refuses to be deleted with a message
+  rather than silently.
 
 ---
 
