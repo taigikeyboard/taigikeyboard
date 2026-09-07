@@ -121,18 +121,28 @@ code-less Arm64X DLL that the loader redirects to an Arm64 or an x64 DLL
 Arm64/Arm64EC build tools, which the release machine does not have
 (`bin/Hostx64` holds `x64` and `x86` only), and a machine to test on.
 
-## Why there is no hosted build
+## Building on a GitHub-hosted runner
 
-A GitHub-hosted `windows-2025` workflow that ran the same
-`bash windows/scripts/release-app.sh --skip-sign` existed briefly (#720), to
-give a free code-signing programme the build provenance it requires: signing
-services of that kind sign only "a valid, automated build resulting from the
-source code at the noted source code repository", which a build cut by hand on
-this machine can never satisfy. That route was dropped in 2026-09 — those
-programmes require the whole product, bundled data included, to be open source,
-and this one's dictionary sources are not — so the workflow went with it rather
-than sit unused and billing Windows runner minutes against a private
-repository. Releases are cut by the manual procedure above.
+`.github/workflows/windows-build.yml` builds the same installer on a
+GitHub-hosted `windows-2025` runner — `bash windows/scripts/release-app.sh
+--skip-sign`, the same entry point, with Inno Setup and `protoc` installed from
+version- and digest-pinned downloads and the MSVC developer environment applied.
+
+It exists for provenance, not convenience. SignPath Foundation signs only "a
+valid, automated build resulting from the source code at the noted source code
+repository", and for open-source projects requires every job leading up to the
+signing request to have run on a GitHub-hosted agent, with the artifact handed
+to its action from inside that workflow. A build cut by hand on this machine can
+never satisfy that, however carefully it is done.
+
+The workflow does not publish, and this section's manual procedure is still how
+releases are cut. Two things have to happen before that changes: the repository
+goes public (a private repository's releases are not publicly downloadable,
+which is why they live on the website repository today), and a certificate
+exists. Note also that SignPath signs an Inno Setup installer as a plain PE
+file, not as a composite — signing the binaries *inside* it is a separate
+signing operation before packaging, which is the shape
+`windows/scripts/release-app.sh` already has.
 
 ## One-time machine setup
 
