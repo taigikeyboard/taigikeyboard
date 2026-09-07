@@ -126,36 +126,29 @@ mod imp {
         factory: &IDWriteFactory3,
         file: &IDWriteFontFile,
     ) -> Result<IDWriteFontCollection1, FontFileError> {
-        // SAFETY: DWrite objects on the calling thread; the builder copies
-        // what it needs out of the file reference it is given.
-        unsafe {
-            let builder: IDWriteFontSetBuilder1 = factory
-                .CreateFontSetBuilder()
-                .and_then(|builder| builder.cast())
-                .map_err(refused)?;
-            builder.AddFontFile(file).map_err(refused)?;
-            let set = builder.CreateFontSet().map_err(refused)?;
-            factory
-                .CreateFontCollectionFromFontSet(&set)
-                .map_err(refused)
-        }
+        // SAFETY: a DWrite object on the calling thread, asked for a builder.
+        let builder = unsafe { factory.CreateFontSetBuilder() }.map_err(refused)?;
+        let builder: IDWriteFontSetBuilder1 = builder.cast().map_err(refused)?;
+        // SAFETY: the builder and the file reference are both live; the
+        // builder copies what it needs out of the reference.
+        unsafe { builder.AddFontFile(file) }.map_err(refused)?;
+        // SAFETY: the builder is live and holds the one file added above.
+        let set = unsafe { builder.CreateFontSet() }.map_err(refused)?;
+        // SAFETY: the set is live and was made by this factory.
+        unsafe { factory.CreateFontCollectionFromFontSet(&set) }.map_err(refused)
     }
 
     /// The name of the collection's first family — the one a text format will
     /// be asked for.
     fn first_family_name(collection: &IDWriteFontCollection1) -> Result<String, FontFileError> {
-        // SAFETY: the collection is live; index 0 is inside a count checked
-        // right above it.
-        let names = unsafe {
-            if collection.GetFontFamilyCount() == 0 {
-                return Err(FontFileError::NoFamilyName);
-            }
-            collection
-                .GetFontFamily(0)
-                .map_err(refused)?
-                .GetFamilyNames()
-                .map_err(refused)?
-        };
+        // SAFETY: the collection is live; the call only reads its count.
+        if unsafe { collection.GetFontFamilyCount() } == 0 {
+            return Err(FontFileError::NoFamilyName);
+        }
+        // SAFETY: index 0 is inside the count checked above.
+        let family = unsafe { collection.GetFontFamily(0) }.map_err(refused)?;
+        // SAFETY: the family is live and owns the strings it hands back.
+        let names = unsafe { family.GetFamilyNames() }.map_err(refused)?;
         localized_string(&names, 0)
     }
 

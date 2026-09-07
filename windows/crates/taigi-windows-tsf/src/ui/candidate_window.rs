@@ -310,7 +310,13 @@ impl CandidateWindow {
     /// looks (`SettingsStore.candidateFontSelection`).
     fn font_selection(&self, settings: &SettingsDocument) -> CandidateFontSelection {
         match stored_font_selection(settings) {
-            StoredFontSelection::BuiltIn(choice) => CandidateFontSelection::BuiltIn(choice),
+            StoredFontSelection::BuiltIn(choice) => {
+                // Let go of whatever custom face this process had loaded: it
+                // is not being drawn any more, and a host still holding it
+                // holds its FILE against the settings window's delete.
+                self.factory.forget_custom_font();
+                CandidateFontSelection::BuiltIn(choice)
+            }
             StoredFontSelection::Custom(file_name) => self
                 .factory
                 .custom_font_id(&file_name)

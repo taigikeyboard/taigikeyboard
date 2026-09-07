@@ -38,10 +38,8 @@ pub struct CustomFontRow {
 
 #[derive(Default)]
 pub struct FontManagementModel {
-    /// The user's own typefaces. Read when the pane is first shown and after
-    /// every change it makes; nothing else in this process writes the library.
+    /// The user's own typefaces, as the last read of the folder found them.
     custom_fonts: Vec<CustomFontRow>,
-    is_loaded: bool,
 }
 
 impl FontManagementModel {
@@ -72,6 +70,18 @@ struct Row {
     custom_file_name: Option<String>,
 }
 
+impl Row {
+    /// What the list keys this row by. The SELECTION, never the title: two
+    /// files can declare the same family name, and a duplicate key is a
+    /// reconciliation error rather than a second row.
+    fn key(&self) -> String {
+        match &self.selection {
+            StoredFontSelection::BuiltIn(choice) => format!("builtIn.{}", choice.raw()),
+            StoredFontSelection::Custom(file_name) => format!("custom.{file_name}"),
+        }
+    }
+}
+
 #[derive(Clone)]
 pub enum Message {
     /// The list's selection moved: the row's index, or `None` when the list
@@ -86,16 +96,14 @@ pub struct PageEnvironment<'a> {
     pub message: &'a mut Option<PageMessage>,
 }
 
-/// Reads the library once per window, the first time the pane is drawn.
+/// Reads the library, every time the pane is entered.
 ///
-/// Parsing a font file is not free, and a user who never opens this pane
-/// should never pay for it — the same reason the DLL loads only the SELECTED
-/// typeface.
-pub fn ensure_loaded(model: &mut FontManagementModel) {
-    if model.is_loaded {
-        return;
-    }
-    model.is_loaded = true;
+/// Every time rather than once: the user may have been in Explorer since they
+/// last looked, and the folder is theirs (`FontManagementPage.swift`'s
+/// `onAppear`). Not at window launch, though — parsing font files is not free,
+/// and a user who never opens this pane should never pay for it, which is the
+/// same reason the DLL loads only the SELECTED typeface.
+pub fn on_enter(model: &mut FontManagementModel) {
     reload(model);
 }
 
@@ -141,8 +149,15 @@ fn add(model: &mut FontManagementModel, environment: PageEnvironment<'_>) {
         }
     };
     if let Err(error) = font_file::inspect(&directory.join(&stored)) {
-        let _ = storage::remove_stored(&directory, &stored);
-        *environment.message = Some(PageMessage::failure(StringKey::CommonImportFailed, error));
+        // The copy is taken back out; a copy that will not go is worth saying
+        // so, because it stays in the list as a row that cannot be selected.
+        *environment.message = match storage::remove_stored(&directory, &stored) {
+            Ok(()) => Some(PageMessage::failure(StringKey::CommonImportFailed, error)),
+            Err(removal) => Some(PageMessage::failure(
+                StringKey::CommonImportFailed,
+                format!("{error}; the copy could not be removed either: {removal}"),
+            )),
+        };
         reload(model);
         return;
     }
@@ -225,9 +240,9 @@ pub fn view(
         .iter()
         .map(|row| {
             (
-                row.title.clone(),
+                row.key(),
                 ListViewItem::new()
-                    .tag(row.title.clone())
+                    .tag(row.key())
                     .content(TextBlock::new().text(row.title.clone())),
             )
         })
@@ -328,3 +343,57 @@ const CONTROL_GAP: f64 = 8.0;
 const SECONDARY_OPACITY: f64 = 0.6;
 const ADD_GLYPH: &str = "\u{E710}";
 const REMOVE_GLYPH: &str = "\u{E738}";
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn custom(file_name: &str, family_name: &str) -> CustomFontRow {
+        CustomFontRow {
+            file_name: file_name.to_owned(),
+            family_name: family_name.to_owned(),
+        }
+    }
+
+    fn strings() -> StringResolver {
+        StringResolver::new(taigi_windows_core::strings::DisplayLanguage::English)
+    }
+
+    /// Two files may declare the same family name, and the list keys its rows
+    /// by identity for exactly that reason: a duplicate key is a
+    /// reconciliation error, not a second row.
+    #[test]
+    fn two_typefaces_with_one_family_name_are_two_rows() {
+        let model = FontManagementModel {
+            custom_fonts: vec![custom("mine.ttf", "Iansui"), custom("mine-2.ttf", "Iansui")],
+        };
+
+        let rows = model.rows(&strings());
+        let keys: Vec<String> = rows.iter().map(Row::key).collect();
+        let unique: std::collections::BTreeSet<&String> = keys.iter().collect();
+
+        assert_eq!(keys.len(), unique.len(), "duplicate list keys: {keys:?}");
+        assert!(keys.contains(&"custom.mine.ttf".to_owned()));
+        assert!(keys.contains(&"custom.mine-2.ttf".to_owned()));
+    }
+
+    /// A custom typeface whose family name matches a bundled row's label is
+    /// still its own row.
+    #[test]
+    fn a_custom_typeface_named_like_a_bundled_one_is_its_own_row() {
+        let strings = strings();
+        let bundled_label = strings
+            .resolve(CandidateFontChoice::Iansui.label_key())
+            .to_owned();
+        let model = FontManagementModel {
+            custom_fonts: vec![custom("mine.ttf", &bundled_label)],
+        };
+
+        let rows = model.rows(&strings);
+        let keys: Vec<String> = rows.iter().map(Row::key).collect();
+        let unique: std::collections::BTreeSet<&String> = keys.iter().collect();
+
+        assert_eq!(keys.len(), unique.len());
+        assert_eq!(rows.len(), CandidateFontChoice::ALL.len() + 1);
+    }
+}

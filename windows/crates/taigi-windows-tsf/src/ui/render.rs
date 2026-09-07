@@ -96,21 +96,40 @@ impl RenderFactory {
     /// `IDWriteTextFormat` holds the collection it was made against and would
     /// keep drawing the previous bytes.
     pub fn custom_font_id(&self, file_name: &str) -> Option<CustomFontId> {
-        let path = custom_font_path(file_name)?;
-        let fingerprint = FileFingerprint::of(&path)?;
+        let Some(path) = self.custom_font_path(file_name) else {
+            self.forget_custom_font();
+            return None;
+        };
+        let Some(fingerprint) = FileFingerprint::of(&path) else {
+            // The file is gone. Let go of it before falling back, so the host
+            // stops holding a collection over bytes nobody selects — which is
+            // also what lets the settings window delete the file.
+            self.forget_custom_font();
+            return None;
+        };
         if let Some(loaded) = self.custom_font.borrow().as_ref() {
             if loaded.file_name == file_name && loaded.fingerprint == fingerprint {
                 return Some(loaded.id);
             }
         }
+        if self
+            .failed_custom_font
+            .borrow()
+            .as_ref()
+            .is_some_and(|(failed, seen)| failed == file_name && *seen == fingerprint)
+        {
+            return None;
+        }
         let (collection, info) = match taigi_windows_platform::font_file::load(&path) {
             Ok(loaded) => loaded,
             Err(error) => {
                 log::warn!("fonts.custom_not_loaded error={error}");
+                *self.failed_custom_font.borrow_mut() = Some((file_name.to_owned(), fingerprint));
                 self.forget_custom_font();
                 return None;
             }
         };
+        self.failed_custom_font.borrow_mut().take();
         let id = CustomFontId(self.next_custom_font_id.get().wrapping_add(1));
         self.next_custom_font_id.set(id.0);
         *self.custom_font.borrow_mut() = Some(LoadedCustomFont {
@@ -124,10 +143,14 @@ impl RenderFactory {
         Some(id)
     }
 
-    /// Lets go of the loaded custom face — its file is gone, or stopped being
-    /// a typeface — so the next window draws in the system font rather than
-    /// out of a collection backed by nothing.
-    fn forget_custom_font(&self) {
+    /// Lets go of the loaded custom face, whatever the reason: its file is
+    /// gone, it stopped being a typeface, or a bundled face was selected.
+    ///
+    /// Not merely tidy. A host that keeps the collection keeps the FILE it was
+    /// loaded from open enough for Windows to refuse deleting it, so the
+    /// settings window's removal would fail for as long as that host lived —
+    /// even while it was drawing in something else entirely.
+    pub fn forget_custom_font(&self) {
         if self.custom_font.borrow_mut().take().is_some() {
             self.drop_font_caches();
         }
@@ -140,21 +163,25 @@ impl RenderFactory {
         self.formats.borrow_mut().clear();
         self.ellipsis.borrow_mut().clear();
     }
-}
 
-/// Where a library file lives, as one path component under the user's font
-/// folder. The name comes out of `settings.json`, which anything can write, so
-/// it is never joined verbatim.
-fn custom_font_path(file_name: &str) -> Option<PathBuf> {
-    let component = Path::new(file_name).file_name()?;
-    if component != std::ffi::OsStr::new(file_name) {
-        return None;
+    /// Where a library file lives, as one path component under the user's font
+    /// folder. The name comes out of `settings.json`, which anything can
+    /// write, so it is never joined verbatim.
+    ///
+    /// The folder itself is resolved once — including its absence, which is
+    /// what an AppContainer host with no `%APPDATA%` gets — because resolving
+    /// it CREATES it, and this runs per candidate window.
+    fn custom_font_path(&self, file_name: &str) -> Option<PathBuf> {
+        let component = Path::new(file_name).file_name()?;
+        if component != std::ffi::OsStr::new(file_name) {
+            return None;
+        }
+        let mut cached = self.fonts_directory.borrow_mut();
+        let directory = cached
+            .get_or_insert_with(|| taigi_windows_storage::fonts_directory().ok())
+            .as_ref()?;
+        Some(directory.join(component))
     }
-    Some(
-        taigi_windows_storage::fonts_directory()
-            .ok()?
-            .join(component),
-    )
 }
 
 /// Family names as the bundled files declare them (what a text format asks
@@ -184,10 +211,19 @@ pub struct RenderFactory {
     /// twenty costs one collection, and the ids handed out here are what keeps
     /// two of them out of one cached text format.
     custom_font: RefCell<Option<LoadedCustomFont>>,
-    /// The id the next loaded custom face gets. Monotonic per process, never
-    /// derived from the file name: a file REPLACED under the same name must
-    /// not reach the format cached for the bytes it replaced.
+    /// The id the next loaded custom face gets. Counted per factory — which is
+    /// the scope the caches it keys are in — and never derived from the file
+    /// name: a file REPLACED under the same name must not reach the format
+    /// cached for the bytes it replaced.
     next_custom_font_id: Cell<u32>,
+    /// The library file that would not load, and what it looked like. Kept so
+    /// a broken or unreadable file is parsed ONCE rather than on every
+    /// candidate window for as long as it stays selected.
+    failed_custom_font: RefCell<Option<(String, FileFingerprint)>>,
+    /// The user's font folder, resolved once: asking again is two directory
+    /// creations per candidate window for a path that cannot move under a
+    /// running process.
+    fonts_directory: RefCell<Option<Option<PathBuf>>>,
     /// The UI family this Windows really carries, resolved once.
     system_family: &'static str,
     formats: RefCell<HashMap<FormatKey, IDWriteTextFormat>>,
@@ -279,6 +315,8 @@ impl RenderFactory {
             private_fonts,
             custom_font: RefCell::new(None),
             next_custom_font_id: Cell::new(0),
+            failed_custom_font: RefCell::new(None),
+            fonts_directory: RefCell::new(None),
             system_family,
             formats: RefCell::new(HashMap::new()),
             ellipsis: RefCell::new(HashMap::new()),

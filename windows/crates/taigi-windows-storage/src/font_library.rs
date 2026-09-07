@@ -31,6 +31,10 @@ pub const MAX_FILE_SIZE: u64 = 64 * 1024 * 1024;
 /// The longest a stored file's name may be, before its extension.
 const MAX_STORED_STEM_LENGTH: usize = 64;
 
+/// How many suffixes one stem may be tried with before the import gives up.
+/// A library with a hundred copies of one name is a mistake, not a use.
+const MAX_NAME_ATTEMPTS: usize = 100;
+
 /// What a stored name is built from. Everything else — separators, dots, the
 /// picked name's own script — becomes `-`, so the result can neither escape
 /// the directory nor hide an extension.
@@ -87,6 +91,16 @@ pub fn stored_file_names(directory: &Path) -> Vec<String> {
 /// typeface is settled afterwards, against the COPY, by the caller that can
 /// ask DirectWrite; a copy that fails that check is removed again
 /// (`remove_stored`).
+///
+/// The destination is CREATED, exclusively, before a byte is written: an
+/// existence check followed by `std::fs::copy` would let two imports pick the
+/// same name and overwrite one another, and would also inherit the source
+/// file's permissions — a read-only original then makes a library file the
+/// user cannot delete. Creating it here gives the copy this process's own
+/// default permissions.
+///
+/// The read is bounded too, rather than trusting the size just measured: a
+/// source that grows between the two would otherwise write past the ceiling.
 pub fn copy_in(directory: &Path, source: &Path) -> Result<String, ImportError> {
     let extension = extension_of(source);
     if !ALLOWED_EXTENSIONS.contains(&extension.as_str()) {
@@ -99,9 +113,28 @@ pub fn copy_in(directory: &Path, source: &Path) -> Result<String, ImportError> {
     if metadata.len() > MAX_FILE_SIZE {
         return Err(ImportError::TooLarge(metadata.len()));
     }
-    let stored = unused_file_name(directory, source, &extension);
-    std::fs::copy(source, directory.join(&stored)).map_err(ImportError::NotCopied)?;
+    let mut reader = std::fs::File::open(source).map_err(ImportError::Unreadable)?;
+    let (stored, mut writer) = create_unused_file(directory, source, &extension)?;
+    let written = std::io::copy(
+        &mut std::io::Read::take(&mut reader, MAX_FILE_SIZE + 1),
+        &mut writer,
+    )
+    .map_err(|error| discarding(directory, &stored, ImportError::NotCopied(error)))?;
+    if written > MAX_FILE_SIZE {
+        return Err(discarding(
+            directory,
+            &stored,
+            ImportError::TooLarge(written),
+        ));
+    }
     Ok(stored)
+}
+
+/// Takes a half-written copy back out on the way to reporting `error`. Best
+/// effort by construction: this runs because something already failed.
+fn discarding(directory: &Path, stored: &str, error: ImportError) -> ImportError {
+    let _ = remove_stored(directory, stored);
+    error
 }
 
 /// Deletes one stored typeface. The caller unregisters it first — a file
@@ -110,13 +143,19 @@ pub fn remove_stored(directory: &Path, file_name: &str) -> std::io::Result<()> {
     std::fs::remove_file(directory.join(sanitized_component(file_name)))
 }
 
-/// The name `source` will be stored under: sanitized, and suffixed until it is
-/// one no file in `directory` has.
+/// Creates the file `source` will be stored as: a sanitized name, suffixed
+/// until one is free, and CLAIMED by the creation itself.
 ///
-/// An import never overwrites, so one stored name is one set of bytes for as
-/// long as the file exists — which is what lets a selection, a text format and
-/// a cached candidate window all agree on WHICH typeface is meant.
-fn unused_file_name(directory: &Path, source: &Path, extension: &str) -> String {
+/// `create_new` is the reservation: it fails when the name is taken, so two
+/// imports racing for the same name each end up with their own — an import
+/// never overwrites, and one stored name is one set of bytes for as long as
+/// the file exists. That is what lets a selection, a text format and a cached
+/// candidate window agree on WHICH typeface is meant.
+fn create_unused_file(
+    directory: &Path,
+    source: &Path,
+    extension: &str,
+) -> Result<(String, std::fs::File), ImportError> {
     let stem = sanitized_stem(
         &source
             .file_stem()
@@ -124,12 +163,19 @@ fn unused_file_name(directory: &Path, source: &Path, extension: &str) -> String 
             .unwrap_or_default(),
     );
     let mut candidate = format!("{stem}.{extension}");
-    let mut suffix = 2;
-    while directory.join(&candidate).exists() {
-        candidate = format!("{stem}-{suffix}.{extension}");
-        suffix += 1;
+    for suffix in 2..=MAX_NAME_ATTEMPTS {
+        match std::fs::File::create_new(directory.join(&candidate)) {
+            Ok(file) => return Ok((candidate, file)),
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
+                candidate = format!("{stem}-{suffix}.{extension}");
+            }
+            Err(error) => return Err(ImportError::NotCopied(error)),
+        }
     }
-    candidate
+    Err(ImportError::NotCopied(std::io::Error::new(
+        std::io::ErrorKind::AlreadyExists,
+        "every name this typeface could be stored under is taken",
+    )))
 }
 
 /// `name` reduced to what a stored file's name may hold, or `typeface` when
@@ -259,6 +305,48 @@ mod tests {
             stored_file_names(&library),
             ["iansui-regular-2.ttf", "iansui-regular.ttf"],
         );
+    }
+
+    /// The copy is this library's file, whatever the original was. A
+    /// read-only source used to hand its permissions to the copy, which then
+    /// could not be removed — neither by a failed import's rollback nor by the
+    /// user.
+    #[cfg(unix)]
+    #[test]
+    fn a_read_only_source_still_produces_a_removable_copy() {
+        use std::os::unix::fs::PermissionsExt;
+        let library = scratch();
+        let elsewhere = scratch();
+        let source = write(&elsewhere, "locked.ttf", 16);
+        std::fs::set_permissions(&source, std::fs::Permissions::from_mode(0o444)).unwrap();
+
+        let stored = copy_in(&library, &source).unwrap();
+
+        assert!(!std::fs::metadata(library.join(&stored))
+            .unwrap()
+            .permissions()
+            .readonly());
+        remove_stored(&library, &stored).expect("the library's own copy is removable");
+    }
+
+    /// The destination is claimed by creating it, so a name already taken
+    /// cannot be written over — the property every id, cached text format and
+    /// stored selection leans on.
+    #[test]
+    fn an_import_never_writes_over_a_name_already_taken() {
+        let library = scratch();
+        let elsewhere = scratch();
+        write(&library, "mine.ttf", 1);
+        let source = write(&elsewhere, "mine.ttf", 32);
+
+        let stored = copy_in(&library, &source).unwrap();
+
+        assert_eq!(stored, "mine-2.ttf");
+        assert_eq!(
+            std::fs::metadata(library.join("mine.ttf")).unwrap().len(),
+            1
+        );
+        assert_eq!(std::fs::metadata(library.join(&stored)).unwrap().len(), 32);
     }
 
     #[test]

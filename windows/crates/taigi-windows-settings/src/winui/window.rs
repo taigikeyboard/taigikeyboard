@@ -411,7 +411,7 @@ impl SettingsWindow {
             );
         }
         if self.pane == SettingsPane::FontManagement {
-            pages::font_management::ensure_loaded(&mut self.font_management);
+            pages::font_management::on_enter(&mut self.font_management);
         }
     }
 

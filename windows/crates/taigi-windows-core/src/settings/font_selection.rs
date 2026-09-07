@@ -27,18 +27,6 @@ pub enum StoredFontSelection {
     Custom(String),
 }
 
-impl StoredFontSelection {
-    /// The bundled face to fall back to while a custom selection cannot be
-    /// drawn — the same answer `SettingsDocument::choice` gives on its own,
-    /// since `CUSTOM_RAW` is not one of the roster's raw values.
-    pub fn fallback(&self) -> CandidateFontChoice {
-        match self {
-            Self::BuiltIn(choice) => *choice,
-            Self::Custom(_) => CandidateFontChoice::DEFAULT,
-        }
-    }
-}
-
 /// What `fontType` + `customFontFile` name together.
 ///
 /// A `custom` with no file name beside it reads as the default face rather than
