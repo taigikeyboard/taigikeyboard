@@ -261,7 +261,7 @@ final class CustomFontLibrary {
     /// under a live registration would leave this process drawing from a file
     /// that no longer exists. The candidate window's panels retain the fonts
     /// they were built with, so a caller releases those before calling this
-    /// (`CustomFontsSheet.remove` → `AppearanceSettingsView.releaseBeforeRemoving`).
+    /// (`CustomFontsPage.remove`).
     func remove(_ font: CustomFont) throws {
         let url = try directory().appendingPathComponent(font.fileName)
         if activatedFonts[font.fileName] != nil {

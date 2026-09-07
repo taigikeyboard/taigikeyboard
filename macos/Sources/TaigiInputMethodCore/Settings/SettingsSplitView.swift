@@ -14,6 +14,11 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     case general
     case appearance
     case shortcuts
+    /// Beside 自訂詞庫 rather than beside 外觀: both panes are the user's OWN
+    /// content, held by this app and managed the same way, while 外觀 is where
+    /// one of them is spent. Apple's settings guidance is a pane per group of
+    /// related settings (HIG, Settings > macOS).
+    case customFont
     case customDictionary
     case dictionarySources
 
@@ -28,6 +33,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .general: .desktopGeneralTab
         case .appearance: .desktopAppearanceTab
         case .shortcuts: .desktopShortcutsTab
+        case .customFont: .desktopCustomFontSection
         case .customDictionary: .dictionaryCustomDictionary
         case .dictionarySources: .desktopDictionarySourcesLink
         }
@@ -38,6 +44,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .general: "gearshape"
         case .appearance: "paintpalette"
         case .shortcuts: "keyboard"
+        case .customFont: "textformat"
         case .customDictionary: "character.book.closed"
         case .dictionarySources: "books.vertical"
         }
@@ -140,6 +147,8 @@ struct SettingsDetailView: View {
             AppearanceSettingsView()
         case .shortcuts:
             ShortcutSettingsView()
+        case .customFont:
+            CustomFontsPage()
         case .customDictionary:
             CustomDictionaryPage(stores: stores)
         case .dictionarySources:
