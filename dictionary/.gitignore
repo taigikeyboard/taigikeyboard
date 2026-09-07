@@ -1,3 +1,14 @@
 # Ephemeral build metadata + diff (regenerated each build)
 output/.build_stats.json
 output/version_diff.txt
+
+# The four shipped artifacts. `build.sh` writes them here as the pipeline's own
+# workspace, then `build/deploy.sh` copies them to the repo-root `dictionaries/`,
+# which is where they are committed and where every platform packages them from.
+# Tracking both copies is what let four platform directories drift apart.
+# `output/dictionary.csv`, `output/corpus_total_freq.txt` and `output/.build_ts`
+# stay tracked — they are pipeline inputs to the dictionary tools, not shipped.
+output/dictionary.fst
+output/dictionary.bin
+output/association.bin
+output/syllables.fst

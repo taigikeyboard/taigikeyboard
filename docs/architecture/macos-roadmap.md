@@ -55,7 +55,7 @@ Host app — IMKTextInput client
 ```
 
 Runtime data: `dictionary.fst` / `dictionary.bin` / `association.bin` /
-`syllables.fst` read from `macos/Resources/Dictionaries/` at bundle-assembly time
+`syllables.fst` read from the repo-root `dictionaries/` at bundle-assembly time
 (read-only, fail-fast validated) into `.app/Contents/Resources`; absolute paths
 passed via `lexiconInstall`.
 
@@ -230,10 +230,10 @@ Phase-0 plan and `memory/project_macos_ime.md`.
   - Learning databases are NOT excluded from Time Machine, unlike the iOS
     backup exclusion (`behavioral-invariants.md` §29): that decision was about
     user data leaving the device through iCloud.
-- **D8 Dictionary artifacts** — read from `macos/Resources/Dictionaries/` (read-only)
+- **D8 Dictionary artifacts** — read from the repo-root `dictionaries/` (read-only)
   at bundle time with fail-fast existence/non-empty validation. That directory is
-  this platform's own committed copy; `dictionary/build/deploy.sh` writes it along
-  with every other platform's.
+  the single committed copy all four platforms package from; `dictionary/build/deploy.sh`
+  writes it.
 - **D9 Proto codegen** — `gen-macos-protos` writes to an independent output dir
   `macos/Sources/TaigiInputMethodCore/Engine/Generated/` (committed). **Revised
   2026-08-15 (USER: 「我覺得可以併入到 make build,只是現階段不 release」)**: both

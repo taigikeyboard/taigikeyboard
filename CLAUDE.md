@@ -86,7 +86,7 @@ The typefaces are committed, once, at `fonts/font/` — all four platforms packa
 
 **Clone with `--recurse-submodules`**, or run `git submodule update --init --recursive` before `make dict`. `taigi-converter` is a submodule and the dictionary pipeline converts every reading through it; `make dict` and `dictionary/common/taigi_bridge.py` both refuse to start without it.
 
-The dictionary artifacts stay committed — that is the USER's standing instruction (2026-09-07: 「dictionary/ folder 都不要碰」), not a technical limit. `make dict` does reproduce them from a clean checkout.
+The dictionary artifacts are committed, once, at `dictionaries/` — all four platforms package that directory the same way the typefaces are (Android through an `assets` source dir, iOS through an Xcode synchronized folder, macOS and Windows by copying it), so nothing has to be staged before a build. They stay committed at all because that is the USER's standing instruction (2026-09-07: 「dictionary/ folder 都不要碰」), not a technical limit; `make dict` does reproduce them from a clean checkout: `dictionary/build.sh` writes them into `dictionary/output/`, where the four shipped files are untracked scratch (`dictionary.csv`, `corpus_total_freq.txt` and `.build_ts` there stay tracked), and `dictionary/build/deploy.sh` then copies them to `dictionaries/`.
 
 **Ignored files survive `git checkout`, so this is one pass per machine, not per build.** After that, re-run only what a change invalidates — the table below.
 

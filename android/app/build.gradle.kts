@@ -91,6 +91,13 @@ android {
     // declaration, not a typeface — in the module.
     sourceSets["main"].res.srcDir(file("$rootDir/../fonts"))
 
+    // The four dictionary artifacts, from the repo-root directory the other
+    // three platforms package out of too. `srcDir` appends, so this module's
+    // own assets/ (english_freq.txt, ime/, the two i18n symlinks) is untouched,
+    // and an asset key is relative to its source dir — `dictionary.fst` lands at
+    // the assets root, exactly where TaigiKeyboardApplication opens it.
+    sourceSets["main"].assets.srcDir(file("$rootDir/../dictionaries"))
+
     buildTypes {
         debug {
             // A9 — enable unit-test coverage so Jacoco .exec data and the

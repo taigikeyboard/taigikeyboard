@@ -23,7 +23,7 @@ pub enum DictionaryArtifactsError {
 impl DictionaryArtifacts {
     /// File names as `dictionary/build/deploy.sh` writes them.
     /// The install directory's dictionary folder — where the installer
-    /// copies `windows/resources/Dictionaries/`.
+    /// copies the repo-root `dictionaries/`.
     pub const DIRECTORY_NAME: &'static str = "Dictionaries";
 
     pub const FILE_NAMES: [&'static str; 4] = [

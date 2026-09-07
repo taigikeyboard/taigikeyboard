@@ -1,5 +1,5 @@
 //! End-to-end round trips against the REAL dictionary artefacts
-//! (`windows/resources/Dictionaries`, the files the installer ships), so
+//! (the repo-root `dictionaries`, the files the installer ships), so
 //! the envelope, the install path and the composing/continuous ops are
 //! proven on the host before a Windows machine ever runs them.
 //!
@@ -18,7 +18,7 @@ use taigi_windows_core::engine::{
 use taigi_windows_core::settings::{EngineSettings, InputMode};
 
 fn dictionaries_dir() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../resources/Dictionaries")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../dictionaries")
 }
 
 /// Installs the lexicon once per test process and hands out the engine lock.

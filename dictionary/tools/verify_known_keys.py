@@ -5,8 +5,13 @@ Post-build smoke verification: assert known prefixes hit minimum counts.
 
 Reads `tools/known_keys_fixture.yaml` (a flat `prefix: min_hits` map),
 queries each against `output/dictionary.fst` via the `fst-builder` Rust
-binary (same path as `tools/query_fst.py`), and exits non-zero if any
-prefix returns fewer hits than asserted.
+binary, and exits non-zero if any prefix returns fewer hits than asserted.
+
+Deliberately `output/`, not the committed `dictionaries/`: `build.sh` runs this
+before `deploy`, so it has to gate the index this build just produced. Querying
+the deployed copy would pass on the previous build's artifacts. That also means
+a standalone run needs `make dict` first — the same requirement
+`tools/compare_baseline.py` has, and for the same reason.
 
 Defends against the PR #175 + PR #184 stale-POJ class of bug — when the
 trie ships missing `poj:` keys, POJ-mode users silently lose ~5 % of
