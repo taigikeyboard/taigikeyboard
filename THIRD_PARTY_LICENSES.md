@@ -12,7 +12,7 @@ the one component that is not open source.
 ## Fonts (shipped inside every application package)
 
 All four are licensed under the **SIL Open Font License, Version 1.1**
-(OSI-approved). The licence text is in `licenses/OFL-1.1.txt`; the per-font
+(OSI-approved). The licence text is in `fonts/OFL-1.1.txt`, beside the files it covers; the per-font
 copyright lines below were read out of each font's own `name` table.
 
 | Font | File | Copyright / upstream |
