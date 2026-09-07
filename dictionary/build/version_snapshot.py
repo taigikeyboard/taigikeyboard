@@ -9,12 +9,16 @@ Two jobs at dict build time:
    Read from `output/.build_stats.json` (written by build/merge_csv.py).
 
 2. **Version diff** — which `(hanzi, tl)` entries were added / removed versus
-   the previous RELEASE TAG's `dictionary/output/dictionary.csv`. That CSV is
-   already git-tracked and committed at every release tag, so the previous
-   release is read straight from git (`git show <tag>:…`) — no separate
-   snapshot file is stored (it would duplicate content git already retains).
-   The canonical word unit is the `(hanzi, tl)` pair (same key merge_csv dedups
-   on).
+   the previous RELEASE TAG. The canonical word unit is the `(hanzi, tl)` pair
+   (same key merge_csv dedups on), and the only thing the diff needs is that
+   key set — so this module writes one, `dictionary/word-keys.tsv`, and reads
+   the previous release's copy straight from git (`git show <tag>:…`).
+
+   That file is the diff basis precisely so `dictionary/output/` does not have
+   to be committed for the diff to work: the key set is 3.1 MB where the full
+   `dictionary.csv` it is derived from is 35 MB, and every other column in that
+   CSV is either a romanization this project computes or a source bit — none of
+   it participates in the diff.
 
 Previous-tag resolution (semver, **3-segment `vX.Y.Z` only** — a 4-segment tag
 like `v3.4.8.1` is ignored by release policy):
@@ -41,7 +45,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import io
 import json
 import re
 import subprocess
@@ -58,8 +61,12 @@ INPUT_FILE = BASE_DIR / "output" / "dictionary.csv"
 STATS_FILE = BASE_DIR / "output" / ".build_stats.json"
 DIFF_FILE = BASE_DIR / "output" / "version_diff.txt"
 
-# Repo-root-relative path of the tracked dictionary CSV inside each release tag.
-TRACKED_CSV = "dictionary/output/dictionary.csv"
+# The committed `(hanzi, tl)` key set: written here on every dictionary build,
+# read back out of a release tag to diff against. Lives outside `output/`
+# because `output/` holds build artifacts that are not committed.
+KEYS_FILE = BASE_DIR / "word-keys.tsv"
+TRACKED_KEYS = "dictionary/word-keys.tsv"
+KEYS_HEADER = "hanzi\ttl"
 
 SAMPLE_ROWS = 30
 # Release tags are 3-segment semver only; a 4-segment tag is ignored on purpose.
@@ -131,25 +138,48 @@ def resolve_prev_tag(target: str | None) -> str | None:
     return tags[-1] if tags else None
 
 
-def load_keyset_from_git(tag: str) -> set[WordKey] | None:
-    """`(hanzi, tl)` keyset from a release tag's tracked dictionary.csv.
+def write_keyset(keys: set[WordKey]) -> None:
+    """Write the sorted key set to the committed `dictionary/word-keys.tsv`.
 
-    Best-effort: any git / decode / parse / schema failure returns None so the
+    Sorted so the file is a stable diff: a rebuild that changes no words
+    produces a byte-identical file and no commit.
+    """
+    lines = [KEYS_HEADER]
+    lines.extend(f"{hanzi}\t{tl}" for hanzi, tl in sorted(keys))
+    KEYS_FILE.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _parse_keys_tsv(text: str) -> set[WordKey]:
+    """Parse `word-keys.tsv` content. Rows that are not exactly two fields are skipped."""
+    keys: set[WordKey] = set()
+    for line in text.splitlines():
+        if not line or line == KEYS_HEADER:
+            continue
+        parts = line.split("\t")
+        if len(parts) != 2:
+            continue
+        keys.add((_norm(parts[0]), _norm(parts[1])))
+    return keys
+
+
+def load_keyset_from_git(tag: str) -> set[WordKey] | None:
+    """`(hanzi, tl)` keyset from a release tag's committed word-keys.tsv.
+
+    Best-effort: any git / decode / parse failure returns None so the
     report-only diff degrades to "nothing to diff" instead of failing the build.
+    Tags cut before this file existed resolve that way, which is expected once
+    and self-heals at the release after it.
     """
     try:
-        # Raw bytes (no text=True): let pandas do the single utf-8 decode pass
-        # instead of materializing a separate ~31 MB str + StringIO copy.
         result = subprocess.run(
-            ["git", "show", f"{tag}:{TRACKED_CSV}"],
+            ["git", "show", f"{tag}:{TRACKED_KEYS}"],
             cwd=BASE_DIR,
             capture_output=True,
         )
         if result.returncode != 0:
             return None
-        df = read_dictionary_csv(io.BytesIO(result.stdout))
-        return _keyset_from_df(df, strict=False)
-    except (OSError, subprocess.SubprocessError, UnicodeDecodeError, ValueError, KeyError):
+        return _parse_keys_tsv(result.stdout.decode("utf-8"))
+    except (OSError, subprocess.SubprocessError, UnicodeDecodeError, ValueError):
         return None
 
 
@@ -190,7 +220,7 @@ def print_version_diff(
         print("  no previous release available — nothing to diff")
         return
 
-    base_label = f"{prev_tag}:{TRACKED_CSV}"
+    base_label = f"{prev_tag}:{TRACKED_KEYS}"
     added = sorted(current - prev)
     removed = sorted(prev - current)
     print(f"  vs {base_label}: +{len(added)} added, -{len(removed)} removed")
@@ -236,6 +266,7 @@ def main() -> int:
 
     print_drop_summary()
     current = load_current_keyset()
+    write_keyset(current)
 
     prev_tag = resolve_prev_tag(version)
     prev = load_keyset_from_git(prev_tag) if prev_tag else None
