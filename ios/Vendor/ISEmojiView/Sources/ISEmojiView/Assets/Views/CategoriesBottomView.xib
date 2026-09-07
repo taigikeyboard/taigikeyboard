@@ -44,7 +44,7 @@
                 <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Tf8-um-STV">
                     <rect key="frame" x="324" y="0.0" width="40" height="44"/>
                     <inset key="contentEdgeInsets" minX="16" minY="0.0" maxX="0.0" maxY="0.0"/>
-                    <state key="normal" image="ic_emojiDelete.png"/>
+                    <state key="normal" image="ic_emojiDelete"/>
                     <connections>
                         <action selector="deleteBackward" destination="f88-xx-Pa0" eventType="touchUpInside" id="gi2-jZ-BOM"/>
                     </connections>
@@ -77,6 +77,6 @@
         </view>
     </objects>
     <resources>
-        <image name="ic_emojiDelete.png" width="24" height="18"/>
+        <image name="ic_emojiDelete" width="24" height="18"/>
     </resources>
 </document>
