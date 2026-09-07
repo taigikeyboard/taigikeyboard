@@ -224,9 +224,9 @@
 			path = ../fonts/font;
 			sourceTree = "<group>";
 		};
-		F354362F2E5C437C0004DFAB /* Resources/Dictionaries */ = {
+		F354362F2E5C437C0004DFAB /* ../dictionaries */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Resources/Dictionaries;
+			path = ../dictionaries;
 			sourceTree = "<group>";
 		};
 		F35BA8872F89F134004657F0 /* Assets */ = {
@@ -324,7 +324,7 @@
 				2A2882FB2EAF0DA000AE3C75 /* Layout */,
 				2A2882FF2EAF0DAE00AE3C75 /* Lexicon */,
 				2A2883032EAF0DBE00AE3C75 /* Strings */,
-				F354362F2E5C437C0004DFAB /* Resources/Dictionaries */,
+				F354362F2E5C437C0004DFAB /* ../dictionaries */,
 				F35436232E5C43680004DFAB /* ../fonts/font */,
 				2A28831B2EAF0DDE00AE3C75 /* Settings */,
 				2A2883262EAF0E0400AE3C75 /* Styling */,
@@ -420,7 +420,7 @@
 				2A28831B2EAF0DDE00AE3C75 /* Settings */,
 				2A2883262EAF0E0400AE3C75 /* Styling */,
 				F35436232E5C43680004DFAB /* ../fonts/font */,
-				F354362F2E5C437C0004DFAB /* Resources/Dictionaries */,
+				F354362F2E5C437C0004DFAB /* ../dictionaries */,
 				F35BA8872F89F134004657F0 /* Assets */,
 				F35E7D5E2F94C2AF008B62C0 /* Composition */,
 				F361A88B2F85522D00682CC6 /* Overlays */,
@@ -454,7 +454,7 @@
 			fileSystemSynchronizedGroups = (
 				F34AE2932EEE7CE000859124 /* TaigiKeyboardTests */,
 				F35436232E5C43680004DFAB /* ../fonts/font */,
-				F354362F2E5C437C0004DFAB /* Resources/Dictionaries */,
+				F354362F2E5C437C0004DFAB /* ../dictionaries */,
 			);
 			name = TaigiKeyboardTests;
 			packageProductDependencies = (
