@@ -17,8 +17,9 @@ own terms:
 
   * Taiwanese-language dictionary data (dictionary/, and the compiled
     dictionary artifacts shipped inside every application package)
-    Each source keeps its original licence. Several sources are licensed
-    CC BY-NC 4.0 (non-commercial) or CC BY-SA 4.0; some have not yet been
+    Each source keeps its original licence. One source is licensed
+    CC BY-NC-SA 3.0 TW (non-commercial); others are CC BY-SA 4.0, CC BY 4.0,
+    CC BY-ND 3.0 TW, CC0, or 開放政府資料授權條款 1.0; some have not yet been
     determined. The dictionary data is NOT relicensed under Apache-2.0.
     See dictionary/LICENSE and dictionary/docs/SOURCES.md.
 

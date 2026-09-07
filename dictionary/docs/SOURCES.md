@@ -56,13 +56,13 @@ current-at-release values when cutting a dictionary refresh.
 - **Licence**: primary source public domain; **digitisation CC BY-NC-SA 3.0 TW** (per the ChhoeTaigi database README; verified 2026-09-05) — **non-commercial**
 - **Notes**: Largest community source (~64k rows); historic Taigi-Japanese dictionary.
 
-### kungge — 台語工藝詞庫
-- **Publisher**: 中華民國教育部 (MoE Taiwan)
-- **Origin URL**: TBD
+### kungge — 臺灣台語工藝詞庫
+- **Publisher**: 國立臺灣工藝研究發展中心 (NTCRI)
+- **Origin URL**: <https://kanggesu.ntcri.gov.tw/NTCRI_TaigiWebSite>
 - **Format**: JSON (scraped; filename encodes capture date)
 - **Captured**: `data/raw/scrape-20251210.json` → 2025-12-10
-- **Licence**: **CC BY-NC 4.0** per the in-app credits screen — **non-commercial**. Publisher statement not located; treat as the working record, not as verified.
-- **Notes**: Specialised craft/industry terminology; ~1k rows.
+- **Licence**: **no licence statement covers the vocabulary.** The site's only licence page is 圖像授權 (<https://kanggesu.ntcri.gov.tw/NTCRI_TaigiWebSite/ImageLicense>, read 2026-09-07): 姓名標示-非商業性-禁止改作 (CC BY-NC-ND, no version stated), scoped to the 示意圖片. This project takes only 漢字 + 台羅拼音 and drops `memo` / `audioPath` / images, so the position rests on 著作權法 §10-1 (facts are not expression), not on a grant — reasoning in `dictionary/LICENSE`. The earlier "CC BY-NC 4.0" record came from the in-app credits screen and was wrong.
+- **Notes**: Specialised craft/industry terminology; ~1.2k raw entries → 994 rows. 11 工藝類別.
 
 ### stti — 學科術語辭典
 - **Publisher**: 中華民國教育部 / 國家教育研究院 (National Academy for Educational Research)

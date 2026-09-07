@@ -15,7 +15,8 @@ private const val SIL_OPEN_FONT_LICENSE = "SIL Open Font License"
 private const val SIL_OPEN_FONT_LICENSE_11 = "SIL Open Font License 1.1"
 private const val CC_BY_ND_3_TW_LICENSE = "CC BY-ND 3.0 TW"
 private const val CC_BY_4_LICENSE = "CC BY 4.0"
-private const val CC_BY_NC_4_LICENSE = "CC BY-NC 4.0"
+// NTCRI publishes no licence for the glossary text; its only statement covers the images.
+private const val CC_BY_NC_ND_IMAGES_LICENSE = "CC BY-NC-ND (images only)"
 private const val CC0_LICENSE = "CC0"
 private const val CC_BY_NC_SA_3_TW_LICENSE = "CC BY-NC-SA 3.0 TW"
 private const val CC_BY_SA_4_LICENSE = "CC BY-SA 4.0"
@@ -150,16 +151,16 @@ object CopyrightDataSource {
                 id = 6,
                 title = resolver.resolve(StringKey.COMMON_KUNGGE_DICT),
                 description = resolver.resolve(StringKey.HOME_KUNGGE_COPYRIGHT),
-                license = CC_BY_NC_4_LICENSE,
+                license = CC_BY_NC_ND_IMAGES_LICENSE,
                 buttons =
                     listOf(
                         CopyrightButton(
                             text = resolver.resolve(StringKey.HOME_VIEW_LICENSE),
-                            url = "https://creativecommons.org/licenses/by-nc/4.0/deed.zh-hant",
+                            url = "https://kanggesu.ntcri.gov.tw/NTCRI_TaigiWebSite/ImageLicense",
                         ),
                         CopyrightButton(
                             text = resolver.resolve(StringKey.COMMON_VIEW_WEBSITE),
-                            url = "https://kanggesu.ntcri.org.tw/NTCRI_TaigiWebSite",
+                            url = "https://kanggesu.ntcri.gov.tw/NTCRI_TaigiWebSite",
                         ),
                     ),
             ),

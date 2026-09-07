@@ -109,15 +109,22 @@ means removal from the **history** too, if the history is going public — which
 the reason to sequence this before §6 rather than after.
 
 **The compiled dictionary is non-commercial.** `taijit` (CC BY-NC-SA 3.0 TW,
-64,250 rows) and `kungge` (CC BY-NC 4.0) carry NonCommercial terms, and the
-compiled artifacts merge every source into one index that cannot be separated
-back into per-source rows. Already stated in `dictionary/LICENSE` and `NOTICE`;
+64,250 rows) is the only source carrying a NonCommercial term over data this
+project ships, and the compiled artifacts merge every source into one index that
+cannot be separated back into per-source rows. Already stated in `dictionary/LICENSE` and `NOTICE`;
 repeated here because a public repository invites redistribution and the
 constraint has to be legible to whoever redistributes.
 
 **Two ShareAlike versions coexist.** `taihoa` and `sitbut` (CC BY-SA 4.0) and
 `taijit` (CC BY-NC-SA 3.0 TW) each carry ShareAlike terms. Whether one merged
 index satisfies both at once has not been analysed.
+
+**`kungge` has no data licence at all.** 國立臺灣工藝研究發展中心 publishes only an
+圖像授權 page (姓名標示-非商業性-禁止改作, no version, scoped to the 示意圖片); nothing
+covers the vocabulary. This project takes 漢字 + 台羅拼音 only, so the position rests
+on the same 著作權法 §10-1 reading as `kautian` below rather than on a grant. The
+in-app credits screen previously showed CC BY-NC 4.0 with no source; corrected
+2026-09-07.
 
 **The `kautian` reading is the maintainer's, not the publisher's.**
 `dictionary/LICENSE` argues that taking only 漢字 + 羅馬字 from a CC BY-ND source

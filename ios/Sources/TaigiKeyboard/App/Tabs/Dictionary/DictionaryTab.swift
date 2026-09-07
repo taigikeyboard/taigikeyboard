@@ -152,7 +152,7 @@ struct DictionaryTab: View {
                     ) { settings.isSttiDictEnabled = $0 }
                     dictToggleWithDescription(
                         title: lang.string(.commonKunggeDict),
-                        url: "https://kanggesu.ntcri.org.tw",
+                        url: "https://kanggesu.ntcri.gov.tw",
                         isOn: $isKunggeDictEnabled,
                         description: lang.string(.dictionaryKunggeDescription),
                     ) { settings.isKunggeDictEnabled = $0 }

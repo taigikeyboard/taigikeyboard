@@ -265,7 +265,7 @@ fun DictionarySettingsScreen(
                         label = L10n.commonKunggeDict,
                         checked = kunggeEnabled,
                         description = L10n.dictionaryKunggeDescription,
-                        url = "https://kanggesu.ntcri.org.tw",
+                        url = "https://kanggesu.ntcri.gov.tw",
                         onCheckedChange = {
                             kunggeEnabled = it
                             prefs.kunggeDictEnabled = it

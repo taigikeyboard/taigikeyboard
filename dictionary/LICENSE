@@ -26,17 +26,19 @@ Row counts are from `dictionary/output/dictionary.csv` (168,351 rows total).
 | `sitbut` 台灣植物名彙 | 1,351 | 540 | CC BY-SA 4.0 | ✅ 2026-09-05, ChhoeTaigi |
 | `taigitv` 公視台語新詞辭庫 | 2,114 | 1,482 | CC BY 4.0 | ✅ 2026-09-05, publisher |
 | `stti` 學科術語辭典 | 4,901 | 2,411 | 開放政府資料授權條款 1.0 | in-app credits screen; publisher statement not re-confirmed |
-| `kungge` 台語工藝詞庫 | 994 | 668 | CC BY-NC 4.0 | in-app credits screen; publisher statement not located |
+| `kungge` 台語工藝詞庫 | 994 | 668 | no data licence published; images-only CC BY-NC-ND | ✅ 2026-09-07, publisher's 圖像授權 page |
 | `khiin` frequency data | 8,086 | 8,086 | **Unverified** | Khiin project (<https://github.com/khiin-pjh/khiin>); the specific file's terms not confirmed |
 | `khpoo` 齒盤補充辭典 | 4,198 | 3,579 | **Unverified** | origin and rights holder not established |
 | `lkk` 漢羅合用建議用字 | 58 | 58 | **Unverified** | origin and rights holder not established |
 | `char_freq_merged.txt` | — | — | **Unverified** | corpus provenance not established |
 | `dev` 開發者補充辭典 | 3,449 | 2,563 | Apache-2.0 | written by this project's maintainers |
 
-The in-app credits screen (Home tab → 著作權) has carried the correct values
-for these sources all along; it, not this pipeline's own notes, was the
-accurate record. Keep the two in sync — `dictionary/LICENSE` is now the single
-place the record lives.
+The in-app credits screen (Home tab → 著作權) was the more accurate record for
+`kautian`, `itaigi`, and `taijit`, where this pipeline's own notes had drifted.
+It was **wrong** about `kungge`, which it labelled CC BY-NC 4.0 with no source;
+that was corrected on 2026-09-07 against the publisher's own page. Neither
+record is authoritative on its own — verify against the publisher.
+`dictionary/LICENSE` is the single place the record lives.
 
 ## `kautian` — what is taken, and why CC BY-ND permits it
 
@@ -74,13 +76,54 @@ Attribution is required, and the application provides it on the Home tab →
 This is the maintainer's reading, recorded so that it can be checked rather
 than re-derived. It is not legal advice.
 
+## `kungge` — what the publisher actually licenses
+
+The publisher is **國立臺灣工藝研究發展中心 (NTCRI)**, not 教育部, and the site is
+<https://kanggesu.ntcri.gov.tw/NTCRI_TaigiWebSite> (read 2026-09-07). The site has
+three pages — 首頁, 關於本站, 圖像授權 — and the only licence statement on any of
+them is the last one:
+
+> 姓名標示-非商業性-禁止改作 — 僅允許使用者在下載授權者的著作之後，依原狀態分享
+> 出去。使用者必須按照授權者指定的方式表彰其姓名，但不得對著作進行任何方式的改變，
+> 或為商業目的之使用。
+
+Three things follow, all of which contradict the record this file carried until
+2026-09-07:
+
+- The terms are **CC BY-NC-ND**, not CC BY-NC 4.0. No version is stated and the
+  page links no CC deed.
+- The page is titled **圖像授權 / `ImageLicense`**. It governs the 示意圖片, which
+  this project does not take.
+- There is **no licence statement covering the vocabulary itself**.
+
+The 關於本站 page lists the glossary's components as 詞彙名稱（臺灣台語及華語對應
+詞）、臺灣台語羅馬字拼音、真人發音音檔、示意圖片、語詞說明. The pipeline's `select`
+stage keeps only the first two, and only their Taiwanese side: the shipped
+`dictionary/sources/official/kungge/data/kungge.csv` has `hanzi` and `tl` plus
+this project's own computed romanization transforms and a corpus frequency. The
+raw scrape's `memo` (語詞說明), `audioPath`, `isHaveImage`, `provider`, and
+`mainTypeName` fields are all dropped.
+
+So the position is the same one recorded for `kautian` above, and rests on the
+same ground rather than on a grant: a word paired with its pronunciation is a
+**fact about the language**, and 著作權法 §10-1 extends protection to expression,
+not to facts. The publisher's stated terms restrict the images and the prose,
+neither of which this project redistributes.
+
+Attribution is still given — Home tab → 著作權 credits 國立臺灣工藝研究發展中心 and
+links both the site and its 圖像授權 page.
+
+This is the maintainer's reading, recorded so that it can be checked rather than
+re-derived. It is not legal advice.
+
 ## Non-commercial and share-alike obligations
 
-`taijit` (CC BY-NC-SA 3.0 TW, 64,250 rows) and `kungge` (CC BY-NC 4.0) carry
-**NonCommercial** terms. Because the compiled artifacts merge every source into
-one inseparable index, **the compiled dictionary as shipped must be treated as
-non-commercial**, regardless of the Apache-2.0 licence on this repository's
-source code. `kautian` is not the reason for that; `taijit` is.
+`taijit` (CC BY-NC-SA 3.0 TW, 64,250 rows) is the **only** source carrying a
+NonCommercial term over data this project ships. Because the compiled artifacts
+merge every source into one inseparable index, **the compiled dictionary as
+shipped must be treated as non-commercial**, regardless of the Apache-2.0
+licence on this repository's source code. Neither `kautian` nor `kungge` is a
+reason for that; `taijit` is.
 
 `taihoa` and `sitbut` (CC BY-SA 4.0) and `taijit` (CC BY-NC-SA 3.0 TW) each
 carry ShareAlike obligations. Whether one merged index can satisfy the
@@ -102,4 +145,5 @@ Applications built from this repository must credit at minimum:
 - 中華民國教育部《臺灣台語常用詞辭典》 — <https://sutian.moe.edu.tw/>
 - ChhoeTaigi 找台語 — <https://github.com/ChhoeTaigi/ChhoeTaigiDatabase>
 - 公共電視文化事業基金會 / 公視台語台 — <https://www.taigitv.org.tw/taigi-words>
+- 國立臺灣工藝研究發展中心《臺灣台語工藝詞庫》 — <https://kanggesu.ntcri.gov.tw/NTCRI_TaigiWebSite>
 - 國家教育研究院

@@ -8,7 +8,8 @@ private enum License {
     static let silOpenFont11 = "SIL Open Font License 1.1"
     static let ccByNd3Tw = "CC BY-ND 3.0 TW"
     static let ccBy4 = "CC BY 4.0"
-    static let ccByNc4 = "CC BY-NC 4.0"
+    // NTCRI publishes no licence for the glossary text; its only statement covers the images.
+    static let ccByNcNdImages = "CC BY-NC-ND (images only)"
     static let cc0 = "CC0"
     static let ccByNcSa3Tw = "CC BY-NC-SA 3.0 TW"
     static let ccBySa4 = "CC BY-SA 4.0"
@@ -78,9 +79,9 @@ struct CopyrightView: View {
             CopyrightSection(
                 title: lang.string(.commonKunggeDict),
                 description: lang.string(.homeKunggeCopyright),
-                license: License.ccByNc4,
-                licenseURL: "https://creativecommons.org/licenses/by-nc/4.0/deed.zh-hant",
-                websiteURL: "https://kanggesu.ntcri.org.tw/NTCRI_TaigiWebSite",
+                license: License.ccByNcNdImages,
+                licenseURL: "https://kanggesu.ntcri.gov.tw/NTCRI_TaigiWebSite/ImageLicense",
+                websiteURL: "https://kanggesu.ntcri.gov.tw/NTCRI_TaigiWebSite",
             )
 
             // iTaigi
