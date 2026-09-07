@@ -129,7 +129,7 @@ final class CandidatePanel: CandidatePresenter {
     /// Drops the cached panels built in `font`, hidden ones included.
     ///
     /// Called before a typeface the user installed is unregistered
-    /// (`AppearanceSettingsView.remove`): Core Text refuses to unregister a font
+    /// (`AppearanceSettingsView.releaseBeforeRemoving`): Core Text refuses to unregister a font
     /// that is still in use, and a panel built in that face — including one for
     /// a layout that is not on screen — is exactly such a use. Panels in any
     /// other face are left alone: rebuilding them would cost a window's cells

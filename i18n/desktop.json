@@ -1491,6 +1491,24 @@
         "en": "Could not delete",
         "ja": "削除できませんでした"
       }
+    },
+    "customFontManage": {
+      "comment": "Appearance pane button that opens the sheet where the user's own typefaces are added and removed.",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "管理字型",
+        "tailo": "kuán-lí jī-hîng",
+        "poj": "koán-lí jī-hêng",
+        "en": "Manage Typefaces…",
+        "ja": "フォントを管理…"
+      }
     }
   }
 }

@@ -1,7 +1,6 @@
 // The 外觀 pane: how the candidate window looks — mode, layout, size, font.
 
 import SwiftUI
-import UniformTypeIdentifiers
 
 /// The 外觀 pane of the settings window: an 外觀 pop-up of light/dark/auto,
 /// then the candidate window's own pickers — layout, what each cell shows,
@@ -49,7 +48,7 @@ struct AppearanceSettingsView: View {
     /// activating since the session began — and the two questions have
     /// different answers, so the pane asks the one it means.
     @State private var isSelectedCustomFontDrawing = false
-    @State private var message: UserDataPageMessage?
+    @State private var isManagingFonts = false
 
     @AppStorage(SettingsStore.Keys.candidateDisplayMode.name)
     private var candidateDisplayMode = SettingsStore.Keys.candidateDisplayMode.defaultValue
@@ -109,15 +108,19 @@ struct AppearanceSettingsView: View {
                     // typeface the candidate window can draw in, whoever it
                     // came from. Named by the font's own name, which is text
                     // out of a file the user chose — shown, never trusted.
-                    ForEach(customFonts, id: \.fileName) { font in
+                    ForEach(customFonts) { font in
                         Text(font.displayName).tag(CandidateFontSelection.custom(font))
                     }
                 }
             }
 
-            // The library itself, under the picker that spends it: what is
-            // installed, how to add one, and how to take one back out.
-            Section(language.string(.desktopCustomFontSection)) {
+            // The library the picker spends, one row: adding and removing
+            // typefaces is a list to manage, and a managed list is a table with
+            // a `+` / `−` pair (`CustomFontsSheet`) rather than a run of form
+            // rows. In a sheet, so this pane keeps ONE selection on screen —
+            // the picker's — and stays the single column of pop-up menus it
+            // reads as (USER 2026-09-02).
+            Section {
                 if isSelectedCustomFontUnavailable {
                     // The file named by the preference is gone or will not
                     // activate. Said here rather than silently corrected: the
@@ -127,14 +130,7 @@ struct AppearanceSettingsView: View {
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }
-                ForEach(customFonts, id: \.fileName) { font in
-                    HStack {
-                        Text(font.displayName)
-                        Spacer()
-                        Button(language.string(.commonDelete)) { remove(font) }
-                    }
-                }
-                WideActionRow(titleKey: .desktopCustomFontAdd, action: add)
+                WideActionRow(titleKey: .desktopCustomFontManage) { isManagingFonts = true }
             }
 
             // Its own section, at the end, drawn the way the 快捷鍵 pane draws
@@ -145,8 +141,10 @@ struct AppearanceSettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .userDataPageChrome(activity: .idle, message: $message)
         .onAppear(perform: reload)
+        .sheet(isPresented: $isManagingFonts, onDismiss: reload) {
+            CustomFontsSheet(onAdded: select, onRemoving: releaseBeforeRemoving, onChanged: reload)
+        }
     }
 
     /// The picker's selection, resolved across the two keys that store it and
@@ -191,58 +189,30 @@ struct AppearanceSettingsView: View {
         fontTypeRawValue == CandidateFontSelection.customRawValue && !isSelectedCustomFontDrawing
     }
 
-    /// Takes a font file the user picks into the library and selects it.
+    /// Selects a typeface the sheet just added.
     ///
     /// Selecting it is the point of adding it: a user who just chose a typeface
     /// wants to see it, and the alternative — a new row they have to find and
     /// pick — is a second step for nothing.
-    private func add() {
-        Task {
-            await UserDataFilePanels.withSettingsWindow { window in
-                guard let url = await UserDataFilePanels.chooseFileToOpen(
-                    contentTypes: [.font],
-                    in: window,
-                ) else { return }
-                do {
-                    let font = try CustomFontLibrary.shared.addFont(from: url)
-                    reload()
-                    selection.wrappedValue = .custom(font)
-                } catch {
-                    reload()
-                    message = .failure(.commonImportFailed, error)
-                }
-            }
-        }
+    private func select(_ font: CustomFont) {
+        reload()
+        selection.wrappedValue = .custom(font)
     }
 
-    /// Takes `font` back out of the library.
+    /// What the sheet asks for before it takes `font` out of the library.
     ///
-    /// In this order, and the order is the whole of it: the selection moves off
-    /// the font first, then every cached panel is dropped, and only then is the
-    /// font unregistered and its file deleted. A panel built in a face is a use
-    /// of it, and Core Text refuses to unregister a font that is in use — which
-    /// would otherwise leave this process drawing from a deleted file.
-    private func remove(_ font: CustomFont) {
+    /// The selection moves off the typeface first, then every panel built in it
+    /// is dropped: a panel in a face is a use of it, and Core Text refuses to
+    /// unregister a font that is in use. Only the panels drawn in THIS face —
+    /// dropping the others would rebuild a window's worth of cells and
+    /// constraints to delete a typeface they were never set in.
+    private func releaseBeforeRemoving(_ font: CustomFont) {
         if selectedCustomFont == font {
             selection.wrappedValue = .builtIn(.system)
         }
-        // Only the panels built in THIS face: dropping the others would rebuild
-        // a window's worth of cells and constraints to delete a typeface they
-        // were never set in.
         CandidatePanel.shared.releaseCachedPanels(drawing: font)
-        do {
-            try CustomFontLibrary.shared.remove(font)
-        } catch {
-            message = .failure(.desktopCustomFontRemoveFailed, error)
-        }
-        reload()
     }
 
-    /// Re-reads the library.
-    ///
-    /// The scan itself is invalidated by whoever changed the directory, so this
-    /// asks rather than forces — except on appear, where the user may have been
-    /// in Finder since the pane was last built.
     private func reload() {
         CustomFontLibrary.shared.invalidateCache()
         customFonts = CustomFontLibrary.shared.installedFonts()

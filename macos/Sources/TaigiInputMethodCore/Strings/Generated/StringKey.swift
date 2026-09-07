@@ -95,6 +95,7 @@ enum StringKey: String {
     case desktopCustomFontAdd = "i18n_desktop_customFontAdd"
     case desktopCustomFontMissing = "i18n_desktop_customFontMissing"
     case desktopCustomFontRemoveFailed = "i18n_desktop_customFontRemoveFailed"
+    case desktopCustomFontManage = "i18n_desktop_customFontManage"
     case dictionarySave = "i18n_dictionary_save"
     case dictionaryCustomDictionary = "i18n_dictionary_customDictionary"
     case dictionaryCustomDictEnabled = "i18n_dictionary_customDictEnabled"

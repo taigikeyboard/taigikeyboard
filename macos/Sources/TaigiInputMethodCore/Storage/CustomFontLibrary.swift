@@ -18,10 +18,16 @@ import CoreText
 /// `displayName` is the font's own name, shown in the picker. Both names come
 /// out of a file the user chose — untrusted text. They are displayed, never
 /// logged and never used to build a path.
-struct CustomFont: Hashable, Sendable {
+struct CustomFont: Hashable, Identifiable, Sendable {
     let fileName: String
     let postScriptName: String
     let displayName: String
+
+    /// The stored file name IS the identity — imports never overwrite — so a
+    /// table's selection cannot survive into a different typeface.
+    var id: String {
+        fileName
+    }
 }
 
 /// The user's own typefaces: the directory they are copied into, the import
@@ -255,7 +261,7 @@ final class CustomFontLibrary {
     /// under a live registration would leave this process drawing from a file
     /// that no longer exists. The candidate window's panels retain the fonts
     /// they were built with, so a caller releases those before calling this
-    /// (`AppearanceSettingsView.remove`).
+    /// (`CustomFontsSheet.remove` → `AppearanceSettingsView.releaseBeforeRemoving`).
     func remove(_ font: CustomFont) throws {
         let url = try directory().appendingPathComponent(font.fileName)
         if activatedFonts[font.fileName] != nil {
