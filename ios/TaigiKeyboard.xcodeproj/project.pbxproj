@@ -122,13 +122,13 @@
 			);
 			target = F3264F092E5238AD002E99A4 /* TaigiKeyboard */;
 		};
-		F3F3C9282E8969170050BE44 /* Exceptions for "Resources/Fonts" folder in "TaigiKeyboardExtension" target */ = {
+		F3F3C9282E8969170050BE44 /* Exceptions for "../fonts/font" folder in "TaigiKeyboardExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				"GenYoGothic2TW-R.otf",
-				"GenYoMin2TW-R.otf",
-				"Iansui-Regular.ttf",
-				"jf-openhuninn-2.1.ttf",
+				genyogothic2tw_r.otf,
+				genyomin2tw_r.otf,
+				iansui_regular.ttf,
+				jf_openhuninn_2_1.ttf,
 			);
 			target = F3264F692E523B37002E99A4 /* TaigiKeyboardExtension */;
 		};
@@ -216,12 +216,12 @@
 			path = TaigiKeyboardTests;
 			sourceTree = "<group>";
 		};
-		F35436232E5C43680004DFAB /* Resources/Fonts */ = {
+		F35436232E5C43680004DFAB /* ../fonts/font */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				F3F3C9282E8969170050BE44 /* Exceptions for "Resources/Fonts" folder in "TaigiKeyboardExtension" target */,
+				F3F3C9282E8969170050BE44 /* Exceptions for "../fonts/font" folder in "TaigiKeyboardExtension" target */,
 			);
-			path = Resources/Fonts;
+			path = ../fonts/font;
 			sourceTree = "<group>";
 		};
 		F354362F2E5C437C0004DFAB /* Resources/Dictionaries */ = {
@@ -325,7 +325,7 @@
 				2A2882FF2EAF0DAE00AE3C75 /* Lexicon */,
 				2A2883032EAF0DBE00AE3C75 /* Strings */,
 				F354362F2E5C437C0004DFAB /* Resources/Dictionaries */,
-				F35436232E5C43680004DFAB /* Resources/Fonts */,
+				F35436232E5C43680004DFAB /* ../fonts/font */,
 				2A28831B2EAF0DDE00AE3C75 /* Settings */,
 				2A2883262EAF0E0400AE3C75 /* Styling */,
 				F32651A42E5243C0002E99A4 /* TaigiKeyboard.app */,
@@ -377,7 +377,7 @@
 				2A28831B2EAF0DDE00AE3C75 /* Settings */,
 				2A2883262EAF0E0400AE3C75 /* Styling */,
 				2A4FAF492EAF137B006E37A8 /* App */,
-				F35436232E5C43680004DFAB /* Resources/Fonts */,
+				F35436232E5C43680004DFAB /* ../fonts/font */,
 				F35BA8872F89F134004657F0 /* Assets */,
 				F35E7D5E2F94C2AF008B62C0 /* Composition */,
 				F361A88B2F85522D00682CC6 /* Overlays */,
@@ -419,7 +419,7 @@
 				2A2883032EAF0DBE00AE3C75 /* Strings */,
 				2A28831B2EAF0DDE00AE3C75 /* Settings */,
 				2A2883262EAF0E0400AE3C75 /* Styling */,
-				F35436232E5C43680004DFAB /* Resources/Fonts */,
+				F35436232E5C43680004DFAB /* ../fonts/font */,
 				F354362F2E5C437C0004DFAB /* Resources/Dictionaries */,
 				F35BA8872F89F134004657F0 /* Assets */,
 				F35E7D5E2F94C2AF008B62C0 /* Composition */,
@@ -453,7 +453,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				F34AE2932EEE7CE000859124 /* TaigiKeyboardTests */,
-				F35436232E5C43680004DFAB /* Resources/Fonts */,
+				F35436232E5C43680004DFAB /* ../fonts/font */,
 				F354362F2E5C437C0004DFAB /* Resources/Dictionaries */,
 			);
 			name = TaigiKeyboardTests;
