@@ -3,7 +3,7 @@
 > **Type**: Planning (forward-looking)
 > **Keywords**: `roadmap`, `planning`, `released versions`, `deferred items`
 > **Status**: Active
-> **Last updated**: 2026-06-01 (pruned to one open TODO — keyboard theme picker; shipped detail moved to released-versions index + memory)
+> **Last updated**: 2026-09-07 (added the repository-size / build-artifact phases)
 
 ---
 
@@ -62,6 +62,68 @@ USER 回報詞關聯紀錄跨版本失效 (連續輸入同漢字詞之前關聯�
 kautian subcollections (腔調 + 姓名附錄 toggles + 語音差異 詞級擴展) — 5 phases MERGED, shipped **v3.6.0** (#354-#358).
 
 ---
+
+### Repository size — stop committing build artifacts (2026-09-07, USER-approved)
+
+**Status**: Phase 0 done (this section + memory). PR 1 next.
+
+The repository is **753 MB**. Source code is 61.5 MB of it; the rest is build
+output committed on every rebuild. A trial `git filter-repo` measured what is
+recoverable:
+
+| | Size |
+| --- | --- |
+| Today | 753 MB |
+| Without build artifacts | **217 MB** |
+| Also without fonts | 144 MB |
+
+Two separable problems. Gitignoring artifacts **stops growth but shrinks
+nothing** — every past revision stays in the pack. Only a history rewrite
+reclaims the 536 MB.
+
+**What is generated, and by what** (verified against the pipeline, not assumed):
+
+| Kind | Tracked | Generator |
+| --- | --- | --- |
+| Engine binaries — `.a` / `.so` / xcframework | 46.7 MB | `make build` |
+| `dictionary/output/*` | 58.6 MB | `make dict` |
+| Platform dictionary copies (×4) | 69.7 MB | `make dict` → `dictionary/build/deploy.sh` |
+| Per-source `sources/*/data/<src>.csv` | ~30 MB | `dictionary/pipeline/context.py:104-106` |
+| Font copies for Android / macOS / Windows | **118 MB** | `scripts/sync-fonts.sh` — copies from `ios/Resources/Fonts` |
+
+`ios/Resources/Fonts` (39.4 MB) and `sources/*/data/raw/*` (~35 MB) are real
+inputs and stay committed. The other three font trees are copies of the iOS one
+and are not.
+
+**Cost of the change is close to zero for the maintainer.** Ignored files
+survive `git checkout`, so `make dict` / `make build` run once per machine, and
+after that only when their inputs change — which is what
+`CLAUDE.md`'s stale-binary gate already requires. The recurring cost falls on
+the GitHub-hosted Windows build, which checks out fresh and gains a ~30 s
+`make dict` step on top of a build that already compiles the engine from source.
+
+**Phases**
+
+| # | Change | Risk |
+| --- | --- | --- |
+| 1 | `dictionary/build/version_snapshot.py` stops reading `git show <tag>:dictionary/output/dictionary.csv`; a committed per-source summary (row counts + hashes) becomes the diff basis, with the full CSV attached as a release asset | Low |
+| 2 | Android / macOS / Windows font trees become `make fonts` output and are ignored | Low |
+| 3 | Engine binaries and dictionary output ignored; `windows-build.yml` gains `make dict`; the stale-binary gate in `CLAUDE.md` is rewritten as a bootstrap step | Low-medium — touches all four platform builds, though the build logic itself does not change |
+| 4 | `git filter-repo` purges the artifacts from history | Low, measured |
+
+**Phase 4 has a deadline.** It rewrites every commit SHA. The repository is
+private with no clones today, and the SHAs already churned once on 2026-09-07,
+so the marginal cost is nil — but only until it goes public. **Phase 4 runs
+before the repository is made public, or not at all.**
+
+Phase 4 also drops ~190 MB of dead pipeline layouts (`dictionary/csv/`,
+`dictionary/6_台日大辭典/`, `dictionary/5_台華線頂對照典/`) that no longer exist
+at `HEAD`.
+
+**Invariant being overturned**: `.gitignore:88-92` states that the Android `.so`
+and iOS xcframework are *both* committed "so a release tag carries a complete,
+buildable engine on both platforms" (D9.2). That trade is being reversed: a tag
+plus a reproducible `make build` replaces a tag that carries binaries.
 
 ## Released versions index
 
