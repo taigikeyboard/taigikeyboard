@@ -247,7 +247,7 @@ in use — which is how System Settings states a list like that (聲音's output
 
 ### Desktop Telex tone keys + candidate-window toggle (USER-scoped 2026-09-08)
 
-**Status**: P0 landed (this section + memory). P1–P4 pending, in order.
+**Status**: all rounds MERGED 2026-09-09 — P1 #17 `6888be67`, P2 #18 `cbee26d1`, P3 #19 `447154ea`, P4 #20 `938994fa`. Awaiting real-device dogfood (S32 + S33).
 **Scope**: macOS + Windows only (desktop train). iOS / Android untouched apart from regenerated
 engine bindings — the new composing intent is additive.
 
@@ -309,12 +309,19 @@ mid-composition without a window commits-then-inserts like punctuation (auto-spa
 | PR | Scope | Est. |
 |---|---|---|
 | P0 | This section + memory (admin tier, direct to main) | done |
-| P1 | engine: `TelexKey` intent, proto, dispatch arm, transition, tests; `make build` regenerates bindings | ~250 |
-| P2 | macOS: `toneInputScheme` setting + General-pane picker with mode-aware legend, classifier, derived slot set, delete ⇧/⌃/⌥ + 選字齒 row + modifier collision code, tombstone `candidateSlotModifier` | >500 (coupled, not split) |
-| P3 | Windows: mirror of P2; drops `bindingSlotModifier` from i18n | >500 |
-| P4 | Candidate-window toggle, both platforms | ~200 |
+| P1 | engine: `TelexKey` intent, proto, dispatch arm, transition, tests; `make build` regenerates bindings | done #17 |
+| P2 | macOS: `toneInputScheme` setting + General-pane picker with mode-aware legend, classifier, derived slot set, delete ⇧/⌃/⌥ + 選字齒 row + modifier collision code, tombstone `candidateSlotModifier` | done #18 (+886/−927) |
+| P3 | Windows: mirror of P2; drops `bindingSlotModifier` from i18n | done #19 |
+| P4 | Candidate-window toggle, both platforms | done #20 |
 
-#### Dogfood (to be added to `docs/architecture/dogfood-checklist.md`)
+**Learned in review** (Codex post-impl, all applied): the bare-letter shortcut reservation had to
+stay scheme-independent AND the launch pass must clear global rows recorded on a typing key before
+the change (a bare `z` recorded pre-2026-09-08 would fire through Carbon / the TSF hotkey before the
+classifier saw the Telex key); a shifted number-row key is refused by key code on both recorder
+paths so the event and the registry bridge agree; the candidate-window toggle hides the bar
+*before* the next key is classified, since the setting can flip faster than its observer runs.
+
+#### Dogfood (added to `docs/architecture/dogfood-checklist.md` as S32 / S33)
 
 - **S32 Telex** — TL: `tev` → té, `tsangq` → tsa̋ng, `zhi` → tshi, `taidfgiv` → tâi-gí, `tev`+`y` → tè,
   `tev`+`v` unchanged, digit picks the slot, `q w d f` no longer pick. POJ: `zit` → chit,
