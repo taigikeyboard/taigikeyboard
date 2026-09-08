@@ -282,6 +282,20 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             defaultValue: CandidateFontChoice.system,
         )
 
+        /// Which typeface the user added the candidate window is set in, by the
+        /// file name `CustomFontLibrary` stores it as. Read only while
+        /// `fontType` holds `CandidateFontSelection.customRawValue`; the two are
+        /// written separately, so every reader tolerates one without the other.
+        ///
+        /// macOS-only, and NOT part of the iOS schema alignment the keys above
+        /// keep: a phone keyboard has no font library to name. A file name is
+        /// also local by nature — a settings transfer carries the preference,
+        /// never the typeface.
+        static let customFontFile = SettingsKey(
+            name: "customFontFile",
+            defaultValue: "",
+        )
+
         /// Which keys the candidate slots take (`CandidateSlotKeySet`).
         /// macOS-only: the phone keyboards have no slot keys to choose between,
         /// so the default is owned by `ComposingKeyBindings` rather than by the
@@ -401,19 +415,50 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
         choice(Keys.candidateWindowSize)
     }
 
-    /// The candidate window's typeface.
-    var candidateFontChoice: CandidateFontChoice {
-        choice(Keys.fontType)
+    /// The library file the user selected, or "" because the selection is one
+    /// of the bundled faces. The one place the two keys are read as a pair, so
+    /// a caller that only wants to know WHICH file does not repeat the guard.
+    var selectedCustomFontFile: String {
+        guard userDefaults.string(forKey: Keys.fontType.name) == CandidateFontSelection.customRawValue
+        else { return "" }
+        return userDefaults.string(forKey: Keys.customFontFile.name) ?? ""
+    }
+
+    /// The candidate window's typeface, resolved.
+    ///
+    /// A stored `custom` is honoured only while the file it names is in the
+    /// library AND activates: a font that has gone missing renders in the system
+    /// face rather than in nothing, and the stored preference is left alone —
+    /// reading a setting must not erase the user's choice, and the file may be
+    /// back (an external volume, a restore) before they next look.
+    ///
+    /// `choice(Keys.fontType)` carries the fallback for free: `custom` is not a
+    /// `CandidateFontChoice` raw value, so an install whose custom font is gone
+    /// reads the system font out of the very same call.
+    ///
+    /// A READ, and only a read: what activates a typeface is `CustomFontLibrary
+    /// .activate`, called at launch (`AppDelegate`) and when the picker's
+    /// selection changes (`AppearanceSettingsView`). The candidate window reads
+    /// this on every show, and a read that registered fonts would put Core Text
+    /// on the path to a keystroke's candidates.
+    @MainActor
+    var candidateFontSelection: CandidateFontSelection {
+        let fileName = selectedCustomFontFile
+        guard !fileName.isEmpty,
+              let font = CustomFontLibrary.shared.activatedFont(fileName: fileName)
+        else { return .builtIn(choice(Keys.fontType)) }
+        return .custom(font)
     }
 
     /// The metrics the candidate window renders at. The one place the three
     /// presentation choices are resolved together, so no caller has to know
     /// that the window is drawn from three settings rather than one.
+    @MainActor
     var candidateMetrics: CandidateMetrics {
         CandidateMetrics(
             textSize: candidateTextSize,
             windowSize: candidateWindowSize,
-            fontChoice: candidateFontChoice,
+            fontSelection: candidateFontSelection,
         )
     }
 
@@ -472,7 +517,6 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             Keys.candidateDisplayMode.name,
             Keys.candidateWindowSize.name,
             Keys.candidateTextSize.name,
-            Keys.fontType.name,
         )
     }
 

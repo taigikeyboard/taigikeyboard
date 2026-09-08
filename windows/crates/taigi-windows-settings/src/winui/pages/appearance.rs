@@ -1,6 +1,7 @@
 //! The 外觀 pane: the window's light / dark mode, then the candidate
-//! window's own pickers — layout, the two size steps, the typeface — and
-//! the reset card. Port of `AppearanceSettingsView.swift`. The values are
+//! window's own pickers — layout, the two size steps — and the reset card.
+//! The TYPEFACE is not here: it moved to 字型管理 (`font_management`), where
+//! the bundled roster and the user's own typefaces are one list. Port of `AppearanceSettingsView.swift`. The values are
 //! read live by the DLL's window on every show, so a change here applies
 //! from the next keystroke.
 //!
@@ -12,8 +13,8 @@ use super::choice_row;
 use crate::winui::cards;
 use crate::winui::window::{Message, ResetScope, SettingsWindow};
 use taigi_windows_core::settings::{
-    keys, AppearanceMode, CandidateDisplayMode, CandidateFontChoice, CandidateLayout,
-    CandidateTextSizeChoice, CandidateWindowSizeChoice, SettingChoice,
+    keys, AppearanceMode, CandidateDisplayMode, CandidateLayout, CandidateTextSizeChoice,
+    CandidateWindowSizeChoice, SettingChoice,
 };
 use taigi_windows_core::strings::{StringKey, StringResolver};
 use windows_reactor::*;
@@ -67,15 +68,6 @@ pub fn view(
             document.choice(&keys::CANDIDATE_TEXT_SIZE),
             |choice: CandidateTextSizeChoice| strings.resolve(choice.label_key()).to_owned(),
             |choice| Message::set_choice(choice, &keys::CANDIDATE_TEXT_SIZE),
-            context,
-        ),
-        // The roster comes from the type: a list the bundle can grow.
-        choice_row(
-            strings.resolve(StringKey::ThemeCustomFont),
-            CandidateFontChoice::ALL,
-            document.choice(&keys::FONT_TYPE),
-            |choice: CandidateFontChoice| strings.resolve(choice.label_key()).to_owned(),
-            |choice| Message::set_choice(choice, &keys::FONT_TYPE),
             context,
         ),
         // Its own section, at the end: it acts on every row above it.

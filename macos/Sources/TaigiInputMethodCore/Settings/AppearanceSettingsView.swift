@@ -1,16 +1,20 @@
-// The 外觀 pane: how the candidate window looks — mode, layout, size, font.
+// The 外觀 pane: how the candidate window looks — mode, layout, size.
 
 import SwiftUI
 
 /// The 外觀 pane of the settings window: an 外觀 pop-up of light/dark/auto,
-/// then the candidate window's own pickers — layout, what each cell shows,
-/// the two size steps, and the typeface. Every row is the same pop-up menu in
-/// one group, so the pane reads as one list rather than a drawn selector
-/// fenced off above a stack of menus (USER 2026-09-02).
+/// then the candidate window's own pickers — layout, what each cell shows and
+/// the two size steps. Every row is the same pop-up menu in one group, so the
+/// pane reads as one list rather than a drawn selector fenced off above a
+/// stack of menus (USER 2026-09-02).
 ///
-/// Two rows are deliberately absent, each argued where its own type lives: no
-/// accent-colour swatch (see `CandidateAccentColor`) and no chrome-generation
-/// picker (see `CandidateWindowStyle`). Both follow the system instead.
+/// Three rows are deliberately absent, each argued where it lives: no
+/// accent-colour swatch (see `CandidateAccentColor`), no chrome-generation
+/// picker (see `CandidateWindowStyle`) — both follow the system — and no
+/// typeface. The typeface moved to 字型管理 (`FontManagementPage`, USER
+/// 2026-09-08): the roster grows with what the user installs, so choosing one
+/// and managing the list is one table there rather than a pop-up here beside
+/// a list of files.
 ///
 /// `@AppStorage`-bound like `GeneralSettingsView`, and for the same reason:
 /// the values are read live by the candidate-window router on every show, so
@@ -29,9 +33,6 @@ struct AppearanceSettingsView: View {
 
     @AppStorage(SettingsStore.Keys.candidateTextSize.name)
     private var candidateTextSize = SettingsStore.Keys.candidateTextSize.defaultValue
-
-    @AppStorage(SettingsStore.Keys.fontType.name)
-    private var fontType = SettingsStore.Keys.fontType.defaultValue
 
     @AppStorage(SettingsStore.Keys.candidateDisplayMode.name)
     private var candidateDisplayMode = SettingsStore.Keys.candidateDisplayMode.defaultValue
@@ -78,14 +79,6 @@ struct AppearanceSettingsView: View {
                     Text(language.string(.desktopSizeSmall)).tag(CandidateTextSizeChoice.small)
                     Text(language.string(.desktopSizeMedium)).tag(CandidateTextSizeChoice.medium)
                     Text(language.string(.desktopSizeLarge)).tag(CandidateTextSizeChoice.large)
-                }
-                // The roster comes from the type rather than being spelled out
-                // row by row like the pickers above: those name three fixed
-                // steps each, while the fonts are a list the bundle can grow.
-                Picker(language.string(.themeCustomFont), selection: $fontType) {
-                    ForEach(CandidateFontChoice.allCases, id: \.self) { font in
-                        Text(language.string(font.labelKey)).tag(font)
-                    }
                 }
             }
 

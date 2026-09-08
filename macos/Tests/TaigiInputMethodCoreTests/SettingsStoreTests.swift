@@ -273,6 +273,7 @@ final class SettingsStoreTests: XCTestCase {
     /// The 外觀 pane's reset button, which has to reach every key that pane
     /// owns — a button that restored some of them would leave rows it visibly
     /// did not touch.
+    @MainActor
     func testResetAppearanceSettings_putsEveryRowBack() {
         let store = makeStore()
         userDefaults.set(AppearanceMode.dark.rawValue, forKey: SettingsStore.Keys.appearanceMode.name)
@@ -282,7 +283,6 @@ final class SettingsStoreTests: XCTestCase {
             forKey: SettingsStore.Keys.candidateWindowSize.name,
         )
         userDefaults.set(CandidateTextSizeChoice.small.rawValue, forKey: SettingsStore.Keys.candidateTextSize.name)
-        userDefaults.set(CandidateFontChoice.allCases.last?.rawValue, forKey: SettingsStore.Keys.fontType.name)
         userDefaults.set(
             CandidateDisplayMode.romanOnly.rawValue,
             forKey: SettingsStore.Keys.candidateDisplayMode.name,
@@ -295,8 +295,19 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(store.candidateDisplayMode, SettingsStore.Keys.candidateDisplayMode.defaultValue)
         XCTAssertEqual(store.candidateWindowSize, SettingsStore.Keys.candidateWindowSize.defaultValue)
         XCTAssertEqual(store.candidateTextSize, SettingsStore.Keys.candidateTextSize.defaultValue)
-        XCTAssertEqual(store.candidateFontChoice, SettingsStore.Keys.fontType.defaultValue)
     }
+
+    /// The typeface is 字型管理's, not 外觀's: a pane's reset restores the rows
+    /// that pane shows, and 外觀 no longer shows the typeface.
+    @MainActor
+    func testResetAppearanceSettings_leavesTheTypefaceAlone() {
+        userDefaults.set(CandidateFontChoice.genYoMin.rawValue, forKey: SettingsStore.Keys.fontType.name)
+
+        makeStore().resetAppearanceSettings()
+
+        XCTAssertEqual(makeStore().candidateFontSelection, .builtIn(.genYoMin))
+    }
+
 
     /// Removed, not written over — the rule `resetComposingShortcuts` states:
     /// a stored default is indistinguishable from a value the user chose, and
@@ -350,6 +361,7 @@ final class SettingsStoreTests: XCTestCase {
     /// The two size rows default one step above the metrics the window
     /// originally rendered at (USER 2026-08-21), so an install that never
     /// touched them gets the larger window — 細 is the way back.
+    @MainActor
     func testCandidateSizes_withNothingStored_areTheEnlargedDefaults() {
         let store = makeStore()
 
@@ -392,13 +404,15 @@ final class SettingsStoreTests: XCTestCase {
 
     /// A fresh Mac renders in the system font (USER 2026-08-23) — the key
     /// spelling is iOS's, the default is not.
+    @MainActor
     func testCandidateFont_withNothingStored_isTheSystemFont() {
         let store = makeStore()
 
-        XCTAssertEqual(store.candidateFontChoice, .system)
-        XCTAssertEqual(store.candidateMetrics.fontChoice, .system)
+        XCTAssertEqual(store.candidateFontSelection, .builtIn(.system))
+        XCTAssertEqual(store.candidateMetrics.fontSelection, .builtIn(.system))
     }
 
+    @MainActor
     func testCandidateFont_readsWhatTheFontPickerWrites() {
         userDefaults.set(
             CandidateFontChoice.openHuninn.rawValue,
@@ -406,17 +420,65 @@ final class SettingsStoreTests: XCTestCase {
         )
         let store = makeStore()
 
-        XCTAssertEqual(store.candidateFontChoice, .openHuninn)
-        XCTAssertEqual(store.candidateMetrics.fontChoice, .openHuninn)
+        XCTAssertEqual(store.candidateFontSelection, .builtIn(.openHuninn))
+        XCTAssertEqual(store.candidateMetrics.fontSelection, .builtIn(.openHuninn))
     }
 
     /// A face a later version drops — or an iOS value this build does not name
     /// — reads back as the system font rather than leaving the window with a
     /// typeface nothing can resolve.
+    @MainActor
     func testCandidateFont_withAnUnknownStoredValue_fallsBackToTheSystemFont() {
         userDefaults.set("comicSans", forKey: SettingsStore.Keys.fontType.name)
 
-        XCTAssertEqual(makeStore().candidateFontChoice, .system)
+        XCTAssertEqual(makeStore().candidateFontSelection, .builtIn(.system))
+    }
+
+    /// `custom` is deliberately not a `CandidateFontChoice` raw value, so the
+    /// roster's own unknown-value fallback answers for it: an install whose
+    /// typeface file is gone renders in the system font.
+    @MainActor
+    func testStoredCustom_withNoSuchFile_readsAsTheSystemFont() {
+        userDefaults.set(CandidateFontSelection.customRawValue, forKey: SettingsStore.Keys.fontType.name)
+        userDefaults.set("gone.ttf", forKey: SettingsStore.Keys.customFontFile.name)
+
+        XCTAssertEqual(makeStore().candidateFontSelection, .builtIn(.system))
+    }
+
+    /// Reading must not rewrite: the file may be back — an external volume, a
+    /// restore — before the user next opens the pane, and a preference silently
+    /// replaced by the system font is a choice they never made.
+    @MainActor
+    func testStoredCustom_withNoSuchFile_leavesThePreferenceAlone() {
+        userDefaults.set(CandidateFontSelection.customRawValue, forKey: SettingsStore.Keys.fontType.name)
+        userDefaults.set("gone.ttf", forKey: SettingsStore.Keys.customFontFile.name)
+
+        _ = makeStore().candidateFontSelection
+
+        XCTAssertEqual(
+            userDefaults.string(forKey: SettingsStore.Keys.fontType.name),
+            CandidateFontSelection.customRawValue,
+        )
+        XCTAssertEqual(userDefaults.string(forKey: SettingsStore.Keys.customFontFile.name), "gone.ttf")
+    }
+
+    /// Two keys are two writes, so every combination of them has to resolve to
+    /// something drawable — including the half-written one.
+    @MainActor
+    func testStoredCustom_withNoFileNameBesideIt_readsAsTheSystemFont() {
+        userDefaults.set(CandidateFontSelection.customRawValue, forKey: SettingsStore.Keys.fontType.name)
+
+        XCTAssertEqual(makeStore().candidateFontSelection, .builtIn(.system))
+    }
+
+    /// A file name left over from a custom selection does not make a built-in
+    /// one custom.
+    @MainActor
+    func testStoredBuiltIn_withAStaleFileNameBesideIt_readsAsTheBuiltIn() {
+        userDefaults.set(CandidateFontChoice.genYoMin.rawValue, forKey: SettingsStore.Keys.fontType.name)
+        userDefaults.set("left-over.ttf", forKey: SettingsStore.Keys.customFontFile.name)
+
+        XCTAssertEqual(makeStore().candidateFontSelection, .builtIn(.genYoMin))
     }
 
     // MARK: - Composing key bindings
@@ -499,5 +561,4 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertFalse(CandidateDisplayMode.romanOnly.effectiveOutputBothScripts(stored: true))
         XCTAssertTrue(CandidateDisplayMode.combined.effectiveOutputBothScripts(stored: true))
     }
-
 }

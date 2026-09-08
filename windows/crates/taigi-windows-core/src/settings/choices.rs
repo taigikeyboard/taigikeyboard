@@ -224,6 +224,66 @@ impl CandidateFontChoice {
     }
 }
 
+/// A typeface the user added, as this process knows it.
+///
+/// An opaque id rather than the stored file name, because it travels in
+/// `FontSpec` and ends up in the cached-text-format key: those must be
+/// `Copy`, and a hash of the name would neither be collision-free nor notice
+/// a file replaced under the same name. The renderer hands out one id per
+/// LOADED resource (`ui::render`), so a replacement gets a new id and cannot
+/// draw out of the previous one's cached format.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct CustomFontId(pub u32);
+
+/// Which typeface the candidate window is set in: one of the bundled roster,
+/// or one the user added.
+///
+/// `CandidateFontChoice` is the roster the four platforms share and stays
+/// exactly that; this is the desktop's extension of it, mirroring
+/// `macos/.../Candidates/CandidateFontSelection.swift`. Two different custom
+/// typefaces have to be two different values, or the second would draw in the
+/// first's cached text format and measured widths.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum CandidateFontSelection {
+    BuiltIn(CandidateFontChoice),
+    Custom(CustomFontId),
+}
+
+impl Default for CandidateFontSelection {
+    /// What a fresh install draws in — the desktop's own default, the system
+    /// face (`CandidateFontChoice::DEFAULT`).
+    fn default() -> Self {
+        Self::BuiltIn(CandidateFontChoice::DEFAULT)
+    }
+}
+
+impl CandidateFontSelection {
+    /// What `fontType` holds while a custom typeface is selected. Deliberately
+    /// not a `CandidateFontChoice` raw value: an older build, or a platform
+    /// with no font library, reads it back as an unknown value and falls to the
+    /// system font (`SettingsDocument::choice`), which is the honest answer to
+    /// "a typeface this build cannot see".
+    pub const CUSTOM_RAW: &'static str = "custom";
+
+    /// The bundled face this selection names, or `None` for a custom one.
+    pub fn built_in(self) -> Option<CandidateFontChoice> {
+        match self {
+            Self::BuiltIn(choice) => Some(choice),
+            Self::Custom(_) => None,
+        }
+    }
+
+    pub fn is_custom(self) -> bool {
+        matches!(self, Self::Custom(_))
+    }
+}
+
+impl From<CandidateFontChoice> for CandidateFontSelection {
+    fn from(choice: CandidateFontChoice) -> Self {
+        Self::BuiltIn(choice)
+    }
+}
+
 impl SettingChoice for CandidateFontChoice {
     const ALL: &'static [Self] = &[
         Self::System,
@@ -254,17 +314,22 @@ pub enum SettingsPane {
     Shortcuts,
     CustomDictionary,
     DictionarySources,
+    /// Last in the sidebar, under 辭典管理 (USER 2026-09-08): the two 管理
+    /// panes end the list — what the input method draws FROM, then what it
+    /// draws IN.
+    FontManagement,
     DictionarySearch,
 }
 
 impl SettingsPane {
     /// The panes the sidebar shows, top to bottom.
-    pub const SIDEBAR: [SettingsPane; 5] = [
+    pub const SIDEBAR: [SettingsPane; 6] = [
         Self::General,
         Self::Appearance,
         Self::Shortcuts,
         Self::CustomDictionary,
         Self::DictionarySources,
+        Self::FontManagement,
     ];
 
     /// The sidebar row label's i18n key (`SettingsSplitView.swift:26-34`).
@@ -278,6 +343,7 @@ impl SettingsPane {
             Self::Shortcuts => StringKey::DesktopShortcutsTab,
             Self::CustomDictionary => StringKey::DictionaryCustomDictionary,
             Self::DictionarySources => StringKey::DesktopDictionarySourcesLink,
+            Self::FontManagement => StringKey::DesktopFontManagementTab,
             Self::DictionarySearch => return None,
         })
     }
@@ -294,6 +360,9 @@ impl SettingsPane {
             Self::Shortcuts => "\u{E765}",
             Self::CustomDictionary => "\u{E82D}",
             Self::DictionarySources | Self::DictionarySearch => "\u{E8F1}",
+            // Font, the glyph Windows itself puts on a typeface list —
+            // matching the Mac's `textformat`.
+            Self::FontManagement => "\u{E8D2}",
         }
     }
 }
@@ -305,6 +374,7 @@ impl SettingChoice for SettingsPane {
         Self::Shortcuts,
         Self::CustomDictionary,
         Self::DictionarySources,
+        Self::FontManagement,
         Self::DictionarySearch,
     ];
     const DEFAULT: Self = Self::General;
@@ -315,6 +385,7 @@ impl SettingChoice for SettingsPane {
             Self::Shortcuts => "shortcuts",
             Self::CustomDictionary => "customDictionary",
             Self::DictionarySources => "dictionarySources",
+            Self::FontManagement => "fontManagement",
             Self::DictionarySearch => "dictionarySearch",
         }
     }

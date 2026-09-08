@@ -7,10 +7,13 @@
 use crate::com_out_buffer;
 use crate::module::install_directory;
 use crate::wide::{to_wide, to_wide_nul};
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 use taigi_windows_core::candidates::{FontSpec, TextMeasurer};
-use taigi_windows_core::settings::{CandidateFontChoice, SettingChoice};
+use taigi_windows_core::settings::{
+    CandidateFontChoice, CandidateFontSelection, CustomFontId, SettingChoice,
+};
 use windows::core::{Interface, Result, BOOL, PCWSTR};
 use windows::Win32::Foundation::{D2DERR_RECREATE_TARGET, HWND};
 use windows::Win32::Graphics::Direct2D::Common::{
@@ -43,6 +46,144 @@ const SYSTEM_FONT_FAMILY: &str = "Segoe UI Variable Text";
 const LEGACY_SYSTEM_FONT_FAMILY: &str = "Segoe UI";
 const LOCALE: &str = "zh-TW";
 
+/// The collection a text format is created against, and the family it asks
+/// for — for a bundled face, one the user added, or neither.
+///
+/// A face that cannot be produced answers with the system family and no
+/// collection, which is the honest fallback the bundled roster already had:
+/// a window in the system font, never one drawing nothing.
+impl RenderFactory {
+    fn face_of(
+        &self,
+        selection: CandidateFontSelection,
+    ) -> (Option<IDWriteFontCollection>, String) {
+        match selection {
+            CandidateFontSelection::BuiltIn(choice) => {
+                let collection: Option<IDWriteFontCollection> = self
+                    .private_fonts
+                    .as_ref()
+                    .filter(|fonts| fonts.loaded.contains(&choice))
+                    .and_then(|fonts| fonts.collection.cast().ok());
+                let family = collection
+                    .as_ref()
+                    .and(bundled_family_name(choice))
+                    .unwrap_or(self.system_family)
+                    .to_owned();
+                (collection, family)
+            }
+            CandidateFontSelection::Custom(id) => {
+                let loaded = self.custom_font.borrow();
+                match loaded.as_ref().filter(|font| font.id == id) {
+                    Some(font) => (font.collection.cast().ok(), font.family_name.clone()),
+                    None => (None, self.system_family.to_owned()),
+                }
+            }
+        }
+    }
+
+    /// The id `file_name`'s typeface draws under, loading it if this process
+    /// has not already — or `None` because the file is gone or is not a
+    /// typeface this Windows can read.
+    ///
+    /// Called at the top of every candidate window, before anything is
+    /// measured: the settings window may have added, replaced or deleted the
+    /// file since the last one, and a host process is not restarted for that.
+    /// Loading is skipped while the name AND the file's fingerprint are the
+    /// ones already held, so the usual answer costs one `stat`.
+    ///
+    /// A new id retires every cached text format made from the old one —
+    /// dropped here rather than left to be looked up, because an
+    /// `IDWriteTextFormat` holds the collection it was made against and would
+    /// keep drawing the previous bytes.
+    pub fn custom_font_id(&self, file_name: &str) -> Option<CustomFontId> {
+        let Some(path) = self.custom_font_path(file_name) else {
+            self.forget_custom_font();
+            return None;
+        };
+        let Some(fingerprint) = FileFingerprint::of(&path) else {
+            // The file is gone. Let go of it before falling back, so the host
+            // stops holding a collection over bytes nobody selects — which is
+            // also what lets the settings window delete the file.
+            self.forget_custom_font();
+            return None;
+        };
+        if let Some(loaded) = self.custom_font.borrow().as_ref() {
+            if loaded.file_name == file_name && loaded.fingerprint == fingerprint {
+                return Some(loaded.id);
+            }
+        }
+        if self
+            .failed_custom_font
+            .borrow()
+            .as_ref()
+            .is_some_and(|(failed, seen)| failed == file_name && *seen == fingerprint)
+        {
+            return None;
+        }
+        let (collection, info) = match taigi_windows_platform::font_file::load(&path) {
+            Ok(loaded) => loaded,
+            Err(error) => {
+                log::warn!("fonts.custom_not_loaded error={error}");
+                *self.failed_custom_font.borrow_mut() = Some((file_name.to_owned(), fingerprint));
+                self.forget_custom_font();
+                return None;
+            }
+        };
+        self.failed_custom_font.borrow_mut().take();
+        let id = CustomFontId(self.next_custom_font_id.get().wrapping_add(1));
+        self.next_custom_font_id.set(id.0);
+        *self.custom_font.borrow_mut() = Some(LoadedCustomFont {
+            id,
+            file_name: file_name.to_owned(),
+            fingerprint,
+            collection,
+            family_name: info.family_name,
+        });
+        self.drop_font_caches();
+        Some(id)
+    }
+
+    /// Lets go of the loaded custom face, whatever the reason: its file is
+    /// gone, it stopped being a typeface, or a bundled face was selected.
+    ///
+    /// Not merely tidy. A host that keeps the collection keeps the FILE it was
+    /// loaded from open enough for Windows to refuse deleting it, so the
+    /// settings window's removal would fail for as long as that host lived —
+    /// even while it was drawing in something else entirely.
+    pub fn forget_custom_font(&self) {
+        if self.custom_font.borrow_mut().take().is_some() {
+            self.drop_font_caches();
+        }
+    }
+
+    /// Both caches, together: a format and its ellipsis sign are made from the
+    /// same collection, and one outliving the other would draw a trimmed cell
+    /// in two typefaces.
+    fn drop_font_caches(&self) {
+        self.formats.borrow_mut().clear();
+        self.ellipsis.borrow_mut().clear();
+    }
+
+    /// Where a library file lives, as one path component under the user's font
+    /// folder. The name comes out of `settings.json`, which anything can
+    /// write, so it is never joined verbatim.
+    ///
+    /// The folder itself is resolved once — including its absence, which is
+    /// what an AppContainer host with no `%APPDATA%` gets — because resolving
+    /// it CREATES it, and this runs per candidate window.
+    fn custom_font_path(&self, file_name: &str) -> Option<PathBuf> {
+        let component = Path::new(file_name).file_name()?;
+        if component != std::ffi::OsStr::new(file_name) {
+            return None;
+        }
+        let mut cached = self.fonts_directory.borrow_mut();
+        let directory = cached
+            .get_or_insert_with(|| taigi_windows_storage::fonts_directory().ok())
+            .as_ref()?;
+        Some(directory.join(component))
+    }
+}
+
 /// Family names as the bundled files declare them (what a text format asks
 /// for). Mirrors macOS's PostScript names on the same files. `System` is
 /// not one of them — it is whatever this Windows carries, which only
@@ -65,6 +206,24 @@ pub struct RenderFactory {
     /// in the system face (as macOS `CandidateFontChoice.font(named:)`
     /// degrades) — per face, not per folder.
     private_fonts: Option<PrivateFonts>,
+    /// The typeface the user added, as this process last loaded it. One at a
+    /// time — only the SELECTED custom face is ever loaded, so a library of
+    /// twenty costs one collection, and the ids handed out here are what keeps
+    /// two of them out of one cached text format.
+    custom_font: RefCell<Option<LoadedCustomFont>>,
+    /// The id the next loaded custom face gets. Counted per factory — which is
+    /// the scope the caches it keys are in — and never derived from the file
+    /// name: a file REPLACED under the same name must not reach the format
+    /// cached for the bytes it replaced.
+    next_custom_font_id: Cell<u32>,
+    /// The library file that would not load, and what it looked like. Kept so
+    /// a broken or unreadable file is parsed ONCE rather than on every
+    /// candidate window for as long as it stays selected.
+    failed_custom_font: RefCell<Option<(String, FileFingerprint)>>,
+    /// The user's font folder, resolved once: asking again is two directory
+    /// creations per candidate window for a path that cannot move under a
+    /// running process.
+    fonts_directory: RefCell<Option<Option<PathBuf>>>,
     /// The UI family this Windows really carries, resolved once.
     system_family: &'static str,
     formats: RefCell<HashMap<FormatKey, IDWriteTextFormat>>,
@@ -78,9 +237,51 @@ struct PrivateFonts {
     loaded: Vec<CandidateFontChoice>,
 }
 
+/// One typeface out of the user's library, loaded.
+struct LoadedCustomFont {
+    id: CustomFontId,
+    /// The library file it came from, and what the file looked like when it
+    /// was read. Both, because the id has to change when either does: a
+    /// different file is a different typeface, and the same path with new
+    /// bytes is too.
+    file_name: String,
+    fingerprint: FileFingerprint,
+    collection: IDWriteFontCollection1,
+    /// The family a text format asks for. Out of the file the user chose:
+    /// display it, never log it.
+    family_name: String,
+}
+
+/// What tells this process that a library file changed without asking it to
+/// re-read every byte: the last write time and the length.
+///
+/// A detector, not proof — a replacement that preserved both would slip past.
+/// Imports never overwrite (`taigi_windows_storage::copy_in` suffixes a name
+/// already taken), so the only way to arrange that is by hand, in Explorer.
+#[derive(Clone, Copy, PartialEq, Eq)]
+struct FileFingerprint {
+    modified_ms: i64,
+    length: u64,
+}
+
+impl FileFingerprint {
+    fn of(path: &Path) -> Option<Self> {
+        let metadata = std::fs::metadata(path).ok()?;
+        let modified_ms = metadata
+            .modified()
+            .ok()
+            .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
+            .map_or(0, |since| since.as_millis() as i64);
+        Some(Self {
+            modified_ms,
+            length: metadata.len(),
+        })
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 struct FormatKey {
-    choice: CandidateFontChoice,
+    selection: CandidateFontSelection,
     /// Size in hundredths of a DIP, so an `f32` can key a map.
     size_centi: u32,
     /// Text centred in its box (the index slot) rather than leading.
@@ -90,7 +291,7 @@ struct FormatKey {
 impl FormatKey {
     fn of(font: FontSpec, centered: bool) -> Self {
         Self {
-            choice: font.choice,
+            selection: font.selection,
             size_centi: (font.size * 100.0).round() as u32,
             centered,
         }
@@ -112,6 +313,10 @@ impl RenderFactory {
             d2d,
             dwrite,
             private_fonts,
+            custom_font: RefCell::new(None),
+            next_custom_font_id: Cell::new(0),
+            failed_custom_font: RefCell::new(None),
+            fonts_directory: RefCell::new(None),
             system_family,
             formats: RefCell::new(HashMap::new()),
             ellipsis: RefCell::new(HashMap::new()),
@@ -129,17 +334,8 @@ impl RenderFactory {
         if let Some(format) = self.formats.borrow().get(&key) {
             return Ok(format.clone());
         }
-        let collection: Option<IDWriteFontCollection> = self
-            .private_fonts
-            .as_ref()
-            .filter(|fonts| fonts.loaded.contains(&font.choice))
-            .and_then(|fonts| fonts.collection.cast().ok());
-        let family = to_wide_nul(
-            collection
-                .as_ref()
-                .and(bundled_family_name(font.choice))
-                .unwrap_or(self.system_family),
-        );
+        let (collection, family_name) = self.face_of(font.selection);
+        let family = to_wide_nul(&family_name);
         // SAFETY: valid NUL-terminated strings; the collection is ours or none.
         let format = unsafe {
             self.dwrite.CreateTextFormat(

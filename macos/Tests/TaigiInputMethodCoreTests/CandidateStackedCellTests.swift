@@ -74,7 +74,7 @@ final class CandidateStackedCellTests: XCTestCase {
         ]
         for choice in CandidateFontChoice.allCases {
             let metrics = CandidateMetrics(
-                textSize: .medium, windowSize: .medium, fontChoice: choice,
+                textSize: .medium, windowSize: .medium, fontSelection: .builtIn(choice),
                 cellArrangement: .stacked,
             )
             for content in contents {

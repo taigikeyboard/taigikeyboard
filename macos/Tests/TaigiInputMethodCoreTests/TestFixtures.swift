@@ -26,7 +26,7 @@ enum TestFixtures {
     static let defaultCandidateMetrics = CandidateMetrics(
         textSize: SettingsStore.Keys.candidateTextSize.defaultValue,
         windowSize: SettingsStore.Keys.candidateWindowSize.defaultValue,
-        fontChoice: SettingsStore.Keys.fontType.defaultValue,
+        fontSelection: .builtIn(SettingsStore.Keys.fontType.defaultValue),
     )
 
     /// One panel of each layout, at the default metrics — what a suite

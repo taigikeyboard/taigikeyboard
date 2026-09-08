@@ -1419,6 +1419,82 @@
         "en": "Automatic update checks could not be set up. You can check for updates in the settings window.",
         "ja": "更新の自動確認を設定できませんでした。設定ウィンドウから更新を確認できます。"
       }
+    },
+    "customFontAdd": {
+      "comment": "Appearance pane button that opens a file panel to take a font file into the user's typeface library.",
+      "scope": {
+        "platforms": [
+          "macos",
+          "windows"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "加入字型",
+        "tailo": "ka-ji̍p jī-hîng",
+        "poj": "ka-ji̍p jī-hêng",
+        "en": "Add a Typeface…",
+        "ja": "フォントを追加…"
+      }
+    },
+    "customFontMissing": {
+      "comment": "Appearance pane note shown when the selected custom typeface's file is gone or will not activate; the candidate window falls back to the system font and the preference is kept.",
+      "scope": {
+        "platforms": [
+          "macos",
+          "windows"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "揣無字型，先用系統字型",
+        "tailo": "tshuē-bô jī-hîng, sian iōng hē-thóng jī-hîng",
+        "poj": "chhōe-bô jī-hêng, sian iōng hē-thóng jī-hêng",
+        "en": "The selected typeface is missing — using the system font",
+        "ja": "選択したフォントが見つかりません。システムフォントを使用します"
+      }
+    },
+    "customFontRemoveFailed": {
+      "comment": "Appearance pane failure title when a custom typeface could not be removed, which is what macOS reports while something still holds the font.",
+      "scope": {
+        "platforms": [
+          "macos",
+          "windows"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "刪除失敗",
+        "tailo": "san-tû sit-pāi",
+        "poj": "san-tû sit-pāi",
+        "en": "Could not delete",
+        "ja": "削除できませんでした"
+      }
+    },
+    "fontManagementTab": {
+      "comment": "Settings sidebar row + pane title: the pane where the candidate window's typeface is chosen and the user's own typefaces are added and removed.",
+      "scope": {
+        "platforms": [
+          "macos",
+          "windows"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "字型管理",
+        "tailo": "jī-hîng kuán-lí",
+        "poj": "jī-hêng koán-lí",
+        "en": "Manage Typefaces",
+        "ja": "フォント管理"
+      }
     }
   }
 }

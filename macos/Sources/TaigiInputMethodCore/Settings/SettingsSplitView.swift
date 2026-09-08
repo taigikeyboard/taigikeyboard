@@ -16,6 +16,9 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     case shortcuts
     case customDictionary
     case dictionarySources
+    /// Last, under 辭典管理 (USER 2026-09-08). The two 管理 panes end the
+    /// sidebar: what the input method draws FROM, then what it draws IN.
+    case fontManagement
 
     var id: String {
         rawValue
@@ -30,6 +33,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .shortcuts: .desktopShortcutsTab
         case .customDictionary: .dictionaryCustomDictionary
         case .dictionarySources: .desktopDictionarySourcesLink
+        case .fontManagement: .desktopFontManagementTab
         }
     }
 
@@ -40,6 +44,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .shortcuts: "keyboard"
         case .customDictionary: "character.book.closed"
         case .dictionarySources: "books.vertical"
+        case .fontManagement: "textformat"
         }
     }
 }
@@ -144,6 +149,8 @@ struct SettingsDetailView: View {
             CustomDictionaryPage(stores: stores)
         case .dictionarySources:
             DictionaryTogglesView()
+        case .fontManagement:
+            FontManagementPage()
         }
     }
 }

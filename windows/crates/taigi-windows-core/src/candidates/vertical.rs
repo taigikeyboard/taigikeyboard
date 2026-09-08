@@ -364,7 +364,7 @@ mod tests {
     use crate::candidates::metrics::test_support::EmMeasurer;
     use crate::candidates::CandidateCellArrangement;
     use crate::settings::{
-        CandidateFontChoice, CandidateTextSizeChoice, CandidateWindowSizeChoice,
+        CandidateFontSelection, CandidateTextSizeChoice, CandidateWindowSizeChoice,
     };
     use CandidateNavigation::*;
 
@@ -372,7 +372,7 @@ mod tests {
         CandidateMetrics::resolve(
             CandidateTextSizeChoice::Medium,
             CandidateWindowSizeChoice::Large,
-            CandidateFontChoice::System,
+            CandidateFontSelection::default(),
             CandidateCellArrangement::Inline,
             &EmMeasurer,
         )

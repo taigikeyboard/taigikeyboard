@@ -52,7 +52,7 @@ final class CandidatePanel: CandidatePresenter {
         hostBundleIdentifier: String?,
         ownedBy owner: ComposingSessionToken,
     ) {
-        let panel = self.panel(for: settings.candidateLayout)
+        let panel = panel(for: settings.candidateLayout)
         // Before the cells: the key each of them is drawn with is resolved as
         // they are built.
         panel.slotKeySet = content.slotKeySet
@@ -124,6 +124,28 @@ final class CandidatePanel: CandidatePresenter {
         // window would let the selection queries answer for candidates nobody
         // can see.
         panel?.clear()
+    }
+
+    /// Drops the cached panels built in `font`, hidden ones included.
+    ///
+    /// Called before a typeface the user installed is unregistered
+    /// (`AppearanceSettingsView.remove`): Core Text refuses to unregister a font
+    /// that is still in use, and a panel built in that face — including one for
+    /// a layout that is not on screen — is exactly such a use. Panels in any
+    /// other face are left alone: rebuilding them would cost a window's cells
+    /// and constraints to delete a typeface they were never set in.
+    func releaseCachedPanels(drawing font: CustomFont) {
+        let selection = CandidateFontSelection.custom(font)
+        let affected = panels.filter { $0.value.configuredMetrics.fontSelection == selection }
+        guard !affected.isEmpty else { return }
+        for (layout, cached) in affected {
+            cached.clear()
+            panels[layout] = nil
+            if cached === panel {
+                owner = nil
+                panel = nil
+            }
+        }
     }
 
     /// The panel for `layout`, taking down whichever other layout's panel was

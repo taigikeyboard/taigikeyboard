@@ -12,6 +12,9 @@
 //! shortcut recorder records, roadmap W5) and [`keyboard_hook`] (the
 //! thread-scoped `WH_KEYBOARD` the recorder listens through, W17-B1).
 
+/// What DirectWrite can say about a font file — wanted by the settings
+/// window (to validate an import) and by the DLL (to draw with it).
+pub mod font_file;
 /// Windows-only: it IS the Win32 keyboard API. The macOS gate type-checks
 /// it for the gnu target and `make check-box` runs its tests on the box.
 #[cfg(windows)]

@@ -18,6 +18,7 @@ mod csv;
 mod custom_dictionary;
 mod database;
 mod directory;
+mod font_library;
 mod frequency;
 mod settings_file;
 mod timestamp;
@@ -31,6 +32,10 @@ pub use custom_dictionary::{
 };
 pub use database::{immediate_transaction, UserDataDatabase, UserDataDatabaseError};
 pub use directory::{created, user_data_directory, DirectoryError, APPLICATION_FOLDER_NAME};
+pub use font_library::{
+    copy_in, fonts_directory, remove_stored, sanitized_stem, stored_file_names, ImportError,
+    ALLOWED_EXTENSIONS, FONTS_FOLDER_NAME, MAX_FILE_SIZE,
+};
 pub use frequency::UserFrequencyStore;
 pub use settings_file::{LiveSettings, SettingsFileError, SettingsFileStore};
 pub use timestamp::utc_timestamp_now;

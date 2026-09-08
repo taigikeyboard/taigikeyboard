@@ -21,4 +21,5 @@ disallowed-methods = [
     { path = "windows::Win32::Graphics::DirectWrite::IDWriteTextLayout::GetLineMetrics", reason = "read-only provenance: use crate::com_out_buffer::line_metrics" },
     { path = "windows::Win32::UI::TextServices::IEnumTfInputProcessorProfiles::Next", reason = "read-only provenance: use crate::com_out_buffer::next_input_processor_profiles" },
     { path = "windows::Win32::System::Com::IEnumGUID::Next", reason = "read-only provenance: use crate::com_out_buffer::next_guids" },
+    { path = "windows::Win32::Graphics::DirectWrite::IDWriteLocalizedStrings::GetString", reason = "read-only provenance: use the vtable call in taigi_windows_platform::font_file" },
 ]

@@ -17,11 +17,14 @@ taigi-windows-core.workspace = true
 # this crate's to read.
 raw-window-handle.workspace = true
 log.workspace = true
+thiserror.workspace = true
 
 [target.'cfg(windows)'.dependencies]
 windows = { workspace = true, features = [
     "Win32_Foundation",
     "Win32_Globalization",
+    # The font-file inspection both binaries share (`font_file`).
+    "Win32_Graphics_DirectWrite",
     "Win32_Graphics_Dwm",
     "Win32_Graphics_Gdi",
     # `CreateMutexW`'s security-attributes parameter (the single-instance

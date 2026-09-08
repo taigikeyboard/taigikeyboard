@@ -12,7 +12,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use taigi_windows_core::candidates::FontSpec;
 use taigi_windows_core::composing::ContextToken;
-use taigi_windows_core::settings::{AppearanceMode, CandidateFontChoice};
+use taigi_windows_core::settings::{AppearanceMode, CandidateFontChoice, CandidateFontSelection};
 use windows::Win32::Foundation::{POINT, RECT};
 use windows::Win32::Graphics::Direct2D::Common::D2D_SIZE_U;
 use windows_numerics::Vector2;
@@ -118,7 +118,7 @@ impl ModeFlash {
 impl FlashContent {
     fn font() -> FontSpec {
         FontSpec {
-            choice: CandidateFontChoice::System,
+            selection: CandidateFontSelection::BuiltIn(CandidateFontChoice::System),
             size: FONT_SIZE,
         }
     }

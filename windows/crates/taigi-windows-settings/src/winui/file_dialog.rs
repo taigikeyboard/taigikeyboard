@@ -33,3 +33,16 @@ pub fn save(suggested_name: &str) -> Option<PathBuf> {
 pub fn open() -> Option<PathBuf> {
     dialog().add_filter("CSV", &["csv", "txt"]).pick_file()
 }
+
+/// Which font file to take into the library, or `None` because the user
+/// cancelled. The filter is the library's own roster of extensions, so the
+/// dialog cannot offer a file the import would refuse
+/// (`taigi_windows_storage::ALLOWED_EXTENSIONS`).
+pub fn pick_font() -> Option<PathBuf> {
+    dialog()
+        .add_filter(
+            "Fonts",
+            taigi_windows_storage::ALLOWED_EXTENSIONS.as_slice(),
+        )
+        .pick_file()
+}

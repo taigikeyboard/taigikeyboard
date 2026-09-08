@@ -242,3 +242,116 @@ struct UserDataActionsSection: View {
         }
     }
 }
+
+/// Every number a managed list is drawn to — the tables of 自訂詞庫 and 自訂字型
+/// alike, so two lists of the same kind are the same size.
+///
+/// Approximate by nature: AppKit owns a table's real row metrics. The direction
+/// of the error is what matters — a height derived from a row count comes up a
+/// little short rather than cutting a row off, because the count is the input.
+enum UserDataListMetrics {
+    static let tableRowHeight: CGFloat = 24
+    static let tableHeaderHeight: CGFloat = 28
+
+    /// A table tall enough for `rows` of them.
+    static func tableHeight(rows: Int) -> CGFloat {
+        tableHeaderHeight + CGFloat(rows) * tableRowHeight
+    }
+
+    /// Large enough that an empty list's symbol reads as a state rather than as
+    /// a control the user is meant to press.
+    static let emptyStateSymbolSize: CGFloat = 34
+}
+
+/// The `+` / `−` pair under an editable list, where macOS puts the add and
+/// remove verbs for one — plus whatever a list wants at the trailing end (自訂詞庫
+/// puts its pager there; a list that fits needs nothing).
+///
+/// `−` is disabled with nothing selected rather than hidden, so the pair keeps
+/// its shape.
+struct UserDataListControls<Trailing: View>: View {
+    @Environment(DisplayLanguageStore.self) private var language
+
+    /// What the `+` announces to an assistive reader — the list's own verb,
+    /// since "add" alone does not say what is being added.
+    let addLabelKey: StringKey
+    let isRemoveEnabled: Bool
+    let onAdd: () -> Void
+    let onRemove: () -> Void
+    @ViewBuilder let trailing: () -> Trailing
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Button(action: onAdd) {
+                UserDataListControlGlyph(symbolName: "plus")
+            }
+            .accessibilityLabel(language.string(addLabelKey))
+
+            Button(action: onRemove) {
+                UserDataListControlGlyph(symbolName: "minus")
+            }
+            .disabled(!isRemoveEnabled)
+            .accessibilityLabel(language.string(.commonDelete))
+
+            Spacer()
+
+            trailing()
+        }
+        // Small bordered buttons, the size AppKit gives the +/- bar under a
+        // table. `.borderless` around a bare glyph left a hit target the size
+        // of the symbol itself.
+        .buttonStyle(.bordered)
+        .controlSize(.small)
+    }
+}
+
+extension UserDataListControls where Trailing == EmptyView {
+    init(
+        addLabelKey: StringKey,
+        isRemoveEnabled: Bool,
+        onAdd: @escaping () -> Void,
+        onRemove: @escaping () -> Void,
+    ) {
+        self.init(
+            addLabelKey: addLabelKey,
+            isRemoveEnabled: isRemoveEnabled,
+            onAdd: onAdd,
+            onRemove: onRemove,
+            trailing: { EmptyView() },
+        )
+    }
+}
+
+/// One button's glyph in a list's control bar, sized so the button is as big as
+/// the control it imitates. The frame is what does that — `contentShape` only
+/// squares off the hit region inside whatever bounds the label already has, it
+/// cannot grow them.
+struct UserDataListControlGlyph: View {
+    let symbolName: String
+
+    var body: some View {
+        Image(systemName: symbolName)
+            .frame(width: 20, height: 14)
+            .contentShape(Rectangle())
+    }
+}
+
+/// What an empty list draws: a symbol, not a sentence (USER 2026-08-24). An
+/// empty list needs no explaining, and the wording would be a string in five
+/// languages saying what the blank table already says.
+///
+/// The symbol carries a sentence as its accessibility label all the same, so a
+/// reader is still told what the blank table means.
+struct UserDataListEmptySymbol: View {
+    @Environment(DisplayLanguageStore.self) private var language
+
+    let symbolName: String
+    let accessibilityLabelKey: StringKey
+
+    var body: some View {
+        Image(systemName: symbolName)
+            .font(.system(size: UserDataListMetrics.emptyStateSymbolSize))
+            .foregroundStyle(.tertiary)
+            .accessibilityLabel(language.string(accessibilityLabelKey))
+    }
+}

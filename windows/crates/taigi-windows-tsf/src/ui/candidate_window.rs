@@ -28,8 +28,8 @@ use taigi_windows_core::candidates::{
 use taigi_windows_core::composing::CandidateCellContent;
 use taigi_windows_core::keys::{CandidateNavigation, CandidateSlotKeySet};
 use taigi_windows_core::settings::{
-    keys, AppearanceMode, CandidateFontChoice, CandidateLayout, CandidateTextSizeChoice,
-    CandidateWindowSizeChoice, SettingsDocument,
+    keys, stored_font_selection, AppearanceMode, CandidateFontSelection, CandidateLayout,
+    CandidateTextSizeChoice, CandidateWindowSizeChoice, SettingsDocument, StoredFontSelection,
 };
 use windows::Win32::Foundation::{POINT, RECT};
 use windows::Win32::Graphics::Direct2D::Common::{D2D1_COLOR_F, D2D_RECT_F, D2D_SIZE_U};
@@ -287,7 +287,7 @@ impl CandidateWindow {
         let metrics = CandidateMetrics::resolve(
             settings.choice::<CandidateTextSizeChoice>(&keys::CANDIDATE_TEXT_SIZE),
             settings.choice::<CandidateWindowSizeChoice>(&keys::CANDIDATE_WINDOW_SIZE),
-            settings.choice::<CandidateFontChoice>(&keys::FONT_TYPE),
+            self.font_selection(settings),
             layout.cell_arrangement(),
             &measurer,
         )
@@ -297,6 +297,33 @@ impl CandidateWindow {
         self.layout = Some(self.build_layout(layout, &metrics));
         self.size = self.natural_size();
         Some(self.frame())
+    }
+
+    /// Which typeface this window draws in, resolved against the library.
+    ///
+    /// Asked per show, before anything is measured: the settings window may
+    /// have added, replaced or deleted the selected file since the last one,
+    /// and no host process is restarted for that. A custom selection whose
+    /// file is gone — or was never a typeface — falls back to the bundled
+    /// default, exactly as `SettingsDocument::choice` would have, and leaves
+    /// the stored preference alone: the file may be back before the user next
+    /// looks (`SettingsStore.candidateFontSelection`).
+    fn font_selection(&self, settings: &SettingsDocument) -> CandidateFontSelection {
+        match stored_font_selection(settings) {
+            StoredFontSelection::BuiltIn(choice) => {
+                // Let go of whatever custom face this process had loaded: it
+                // is not being drawn any more, and a host still holding it
+                // holds its FILE against the settings window's delete.
+                self.factory.forget_custom_font();
+                CandidateFontSelection::BuiltIn(choice)
+            }
+            StoredFontSelection::Custom(file_name) => self
+                .factory
+                .custom_font_id(&file_name)
+                .map_or(CandidateFontSelection::default(), |id| {
+                    CandidateFontSelection::Custom(id)
+                }),
+        }
     }
 
     /// One list for the popup AND the UI-less element: what the layout
