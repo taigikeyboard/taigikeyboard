@@ -116,7 +116,7 @@
       }
     },
     "telexGuideTitle": {
-      "comment": "Title over the floating Telex guide's key table.",
+      "comment": "Title over the floating Telex guide's key table. The scheme's own name, nothing else (USER 2026-09-09: no surplus wording).",
       "scope": {
         "platforms": [
           "macos",
@@ -127,11 +127,11 @@
         ]
       },
       "values": {
-        "hanji": "Telex 鍵位",
-        "tailo": "Telex kiān-uī",
-        "poj": "Telex kiān-ūi",
-        "en": "Telex Keys",
-        "ja": "Telex キー配置"
+        "hanji": "Telex",
+        "tailo": "Telex",
+        "poj": "Telex",
+        "en": "Telex",
+        "ja": "Telex"
       }
     },
     "telexGuideTone": {
@@ -157,7 +157,7 @@
       }
     },
     "telexGuideInitial": {
-      "comment": "Telex guide row meaning for z / zh: the initial they spell (ts / tsh under TL, ch / chh under POJ — the example column shows which).",
+      "comment": "Telex guide row meaning for z: the unaspirated affricate initial it spells, written for the romanization in use — `ts` under TL, `ch` under POJ. {initial} is that spelling, so the row names the letters rather than an abstract term.",
       "scope": {
         "platforms": [
           "macos",
@@ -167,12 +167,15 @@
           "host"
         ]
       },
+      "placeholders": {
+        "initial": "string"
+      },
       "values": {
-        "hanji": "聲母",
-        "tailo": "siann-bó",
-        "poj": "siaⁿ-bó",
-        "en": "Initial",
-        "ja": "声母"
+        "hanji": "聲母 {initial}",
+        "tailo": "siann-bó {initial}",
+        "poj": "siaⁿ-bó {initial}",
+        "en": "Initial {initial}",
+        "ja": "声母 {initial}"
       }
     },
     "telexGuideHyphen": {
@@ -195,7 +198,7 @@
       }
     },
     "telexGuidePick": {
-      "comment": "Telex guide row meaning for the digits 1–9: they pick a candidate while the window is up (Telex holds the letters).",
+      "comment": "Telex guide row meaning for the digits 1–9: they pick a candidate (Telex holds the letters). Two words — the card is a key table, not prose (USER 2026-09-09).",
       "scope": {
         "platforms": [
           "macos",
@@ -206,30 +209,11 @@
         ]
       },
       "values": {
-        "hanji": "候選窗顯示時選詞",
-        "tailo": "hāu-suán-thang hián-sī ê sî suán-sû",
-        "poj": "hāu-soán-thang hián-sī ê sî soán-sû",
-        "en": "Pick a candidate while the window is up",
-        "ja": "候補ウィンドウ表示中に候補を選択"
-      }
-    },
-    "telexGuideDismiss": {
-      "comment": "Footnote under the Telex guide: how it goes away. Escape is swallowed; any other key closes it and still does its job.",
-      "scope": {
-        "platforms": [
-          "macos",
-          "windows"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "揤 Esc 抑是任何鍵關閉",
-        "tailo": "tshi̍h Esc ah-sī jīm-hô kiān kuainn-tiāu",
-        "poj": "chhi̍h Esc ah-sī jīm-hô kiān koaiⁿ-tiāu",
-        "en": "Press Esc or any key to close",
-        "ja": "Esc または任意のキーで閉じる"
+        "hanji": "選詞",
+        "tailo": "suán-sû",
+        "poj": "soán-sû",
+        "en": "Pick a candidate",
+        "ja": "候補を選択"
       }
     },
     "menuFile": {
