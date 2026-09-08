@@ -247,7 +247,7 @@ in use — which is how System Settings states a list like that (聲音's output
 
 ### Desktop Telex tone keys + candidate-window toggle (USER-scoped 2026-09-08)
 
-**Status**: all rounds MERGED 2026-09-09 — P1 #17 `6888be67`, P2 #18 `cbee26d1`, P3 #19 `447154ea`, P4 #20 `938994fa`. Awaiting real-device dogfood (S32 + S33).
+**Status**: all rounds MERGED 2026-09-09 — P1 #17 `6888be67`, P2 #18 `cbee26d1`, P3 #19 `447154ea`, P4 #20 `938994fa`, guide follow-up P5 #21 `544d77a2`, P6 #22. Awaiting real-device dogfood (S32 + S33 + S34).
 **Scope**: macOS + Windows only (desktop train). iOS / Android untouched apart from regenerated
 engine bindings — the new composing intent is additive.
 
@@ -342,8 +342,13 @@ focus loss. Always available, not gated on the Telex scheme.
 
 | PR | Scope | Est. |
 |---|---|---|
-| P5 | macOS: action + `TelexGuidePanel` + dismissal + legend removal + tests | ~400 |
-| P6 | Windows: action + GUID + preserved key + `ui/telex_guide.rs` + dismissal + legend removal; deletes the legend i18n keys | ~500 |
+| P5 | macOS: action + `TelexGuidePanel` + dismissal + legend removal + tests | done #21 |
+| P6 | Windows: action + GUID + preserved key + `ui/telex_guide.rs` + dismissal + legend removal; deletes the legend i18n keys | done #22 |
+
+**Learned in review** (Codex post-impl P5/P6, applied): every doorway that never reaches the session
+(settings, check-for-updates, the lang-bar menu) and every "hide all IME UI" request must take the
+guide down itself; the guide must close in read-only contexts too, so its dismissal sits above the
+read-only bail; a held preserved-key chord re-fires `OnPreservedKey`, so the toggle is once-per-press.
 
 #### Dogfood (added to `docs/architecture/dogfood-checklist.md` as S32 / S33; S34 for the guide)
 
