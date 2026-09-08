@@ -43,20 +43,14 @@ final class ShortcutDefaultsTests: XCTestCase {
         )
     }
 
-    /// The chords the slot tier claims out of the box: the nine bare keys of
-    /// the set it ships with. The nine shifted digits every set shares are not
-    /// chords at all — `ComposingKeyChord.make` refuses them — so no default
-    /// can sit on one (`ComposingKeyBindingsTests.testAShiftedDigit_cannotBeAChord_underAnySet`).
-    private func slotChords() throws -> [ComposingKeyChord] {
-        try CandidateSlotKeySet.bareKeyRow.map { key in
-            try ComposingKeyChord.make(key: key, modifiers: []).get()
-        }
-    }
-
+    /// The slot keys are not in this comparison because they are not chords
+    /// at all — `ComposingKeyChord.make` refuses every one under either
+    /// scheme (`CandidateSlotKeyTests.testEverySlotKey_ofEverySet_isRefusedAsAChord`),
+    /// so no default can sit on one.
     func testShippedDefaults_holdNoChordInCommon() throws {
         let composing = ComposingAction.allCases.map(\.defaultChord)
         let global = try ShortcutAction.allCases.map { try chord(of: $0) }
-        let all = composing + global + (try slotChords())
+        let all = composing + global
 
         XCTAssertEqual(
             Set(all).count,

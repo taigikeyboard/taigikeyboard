@@ -503,22 +503,19 @@ final class SettingsStoreTests: XCTestCase {
         )
     }
 
-    /// The request that freed the eight non-syllable letters: an action on a
-    /// bare `z` must survive a relaunch, stored in the same raw form every
-    /// modifier chord uses.
-    func testABareNonSyllableLetter_roundTripsThroughTheSuite() throws {
+    /// An action on a bare key — the backtick 漢羅對調 once shipped on — must
+    /// survive a relaunch, stored in the same raw form every modifier chord
+    /// uses.
+    func testABarePunctuationChord_roundTripsThroughTheSuite() throws {
         let store = makeStore()
-        // Under the digits: the shipped slot key set holds every free letter,
-        // and a read through it resolves the row empty.
-        userDefaults.set(CandidateSlotKeySet.control.rawValue, forKey: SettingsStore.Keys.candidateSlotModifier.name)
-        let bareZ = try ComposingKeyChord.make(key: "z", modifiers: []).get()
+        let bareBacktick = try ComposingKeyChord.make(key: "`", modifiers: []).get()
 
-        store.setComposingChord(bareZ, for: .pageBackward)
+        store.setComposingChord(bareBacktick, for: .pageBackward)
 
-        XCTAssertEqual(makeStore().composingKeyBindings.chord(for: .pageBackward), bareZ)
+        XCTAssertEqual(makeStore().composingKeyBindings.chord(for: .pageBackward), bareBacktick)
         XCTAssertEqual(
             userDefaults.string(forKey: ComposingAction.pageBackward.settingsKeyName),
-            "|007A",
+            "|0060",
         )
     }
 
@@ -546,10 +543,22 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertNil(makeStore().composingKeyBindings.chord(for: .pageForward))
     }
 
-    func testCandidateSlotKeySet_withAnUnknownStoredValue_fallsBackToTheLetters() {
-        userDefaults.set("nonsense", forKey: SettingsStore.Keys.candidateSlotModifier.name)
+    /// The 一般 pane writes the scheme's raw value; the bindings read it, and
+    /// the slot keys follow.
+    func testToneInputScheme_readsWhatTheGeneralPaneWrites() {
+        userDefaults.set("telex", forKey: SettingsStore.Keys.toneInputScheme.name)
 
-        XCTAssertEqual(makeStore().composingKeyBindings.slotKeySet, .bareKeys)
+        let bindings = makeStore().composingKeyBindings
+        XCTAssertEqual(bindings.toneScheme, .telex)
+        XCTAssertEqual(bindings.slotKeySet, .digits)
+    }
+
+    func testToneInputScheme_withAnUnknownStoredValue_fallsBackToStandard() {
+        userDefaults.set("nonsense", forKey: SettingsStore.Keys.toneInputScheme.name)
+
+        let bindings = makeStore().composingKeyBindings
+        XCTAssertEqual(bindings.toneScheme, .standard)
+        XCTAssertEqual(bindings.slotKeySet, .bareKeys)
     }
 
     /// The rules `current` and the swap shortcut read live on the enum — pinned once.

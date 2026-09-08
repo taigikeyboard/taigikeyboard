@@ -58,6 +58,25 @@ extension RustEngineBridge {
         )
     }
 
+    /// Applies one Telex key to the pending syllable's tone — or, for `z`,
+    /// types the affricate initial the input mode spells (`composing.proto`
+    /// `TelexKey`, `engine/composing/src/telex.rs`). Carries the app config
+    /// like `composingAppend`, because `z` resolves by `input_mode`.
+    static func composingTelexKey(
+        _ key: String,
+        settings: EngineSettings,
+        generation: UInt64,
+    ) -> ComposingTransition? {
+        var telexKey = Taigi_Engine_TelexKey()
+        telexKey.key = key
+        return dispatchComposing(
+            .telexKey(telexKey),
+            op: "composingTelexKey",
+            generation: generation,
+            config: appConfig(settings),
+        )
+    }
+
     /// Drops the last character of the raw buffer.
     static func composingDeleteBackward(
         settings: EngineSettings,

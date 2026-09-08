@@ -91,6 +91,10 @@ enum RetiredSettingsCleanup {
         // stored value is inert, and this only keeps the domain honest.
         "fullWidthPunctuationEnabled",
         "shiftTogglesAlphanumericEnabled",
+        // 選字齒, retired 2026-09-08: the slot key set is derived from
+        // `toneInputScheme` now, and the ⇧ / ⌃ / ⌥ digit sets this key could
+        // name no longer exist to migrate to.
+        "candidateSlotModifier",
     ]
 
     /// Raw values of composing actions removed from the roster: 直接送出漢字 and

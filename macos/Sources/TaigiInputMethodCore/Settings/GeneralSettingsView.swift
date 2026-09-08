@@ -33,6 +33,9 @@ struct GeneralSettingsView: View {
     @AppStorage(SettingsStore.Keys.inputMode.name)
     private var inputMode = SettingsStore.Keys.inputMode.defaultValue
 
+    @AppStorage(SettingsStore.Keys.toneInputScheme.name)
+    private var toneInputScheme = SettingsStore.Keys.toneInputScheme.defaultValue
+
     @AppStorage(SettingsStore.Keys.isAutoSpaceEnabled.name)
     private var isAutoSpaceEnabled = SettingsStore.Keys.isAutoSpaceEnabled.defaultValue
 
@@ -69,6 +72,24 @@ struct GeneralSettingsView: View {
                 Picker(language.string(.settingsInputMode), selection: $inputMode) {
                     Text(language.string(.settingsTlMode)).tag(InputMode.tl)
                     Text(language.string(.settingsPojMode)).tag(InputMode.poj)
+                }
+
+                // Directly under the romanization it belongs to: which keys
+                // type a tone is a fact about how the syllable is spelled,
+                // not a shortcut (USER 2026-09-08), and the slot keys follow
+                // from it rather than being chosen on the shortcut pane.
+                Picker(language.string(.settingsToneInputScheme), selection: $toneInputScheme) {
+                    Text(language.string(.settingsToneSchemeStandard)).tag(ToneInputScheme.standard)
+                    Text(language.string(.settingsToneSchemeTelex)).tag(ToneInputScheme.telex)
+                }
+                if toneInputScheme == .telex {
+                    // The key table, spelled for the romanization in use:
+                    // `z` is `ts` under TL and `ch` under POJ. Shown only
+                    // while Telex is on, because Standard's keys are the
+                    // ones every TL/POJ user already knows.
+                    Text(language.string(inputMode == .poj ? .settingsToneSchemeTelexLegendPoj : .settingsToneSchemeTelexLegendTl))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
 
                 Picker(language.string(.settingsDisplayLanguage), selection: displayLanguageSelection) {

@@ -118,9 +118,10 @@ enum TestFixtures {
     /// separately is testing: Control rewrites the digits it is held with, so
     /// `⌃3` really does arrive as an Escape in `characters`.
     ///
-    /// `keyCode` is the hardware key (`KeyEventSnapshot.keyCode`), read by
-    /// the shifted-digit slot chord alone. The default `0` is the `a` key; a
-    /// case about `⇧3` passes `kVK_ANSI_3`.
+    /// `keyCode` is the hardware key (`KeyEventSnapshot.keyCode`), read only
+    /// by the recorder's refusal of a shifted number-row key; `0` — the `a`
+    /// key — for everything else, since a chord is identified by the
+    /// character its key types.
     static func keyDownEvent(
         characters: String,
         modifiers: NSEvent.ModifierFlags = [],
@@ -139,21 +140,6 @@ enum TestFixtures {
             isARepeat: false,
             keyCode: keyCode,
         ))
-    }
-
-    /// `⇧1`…`⇧9` as a US layout reports them: the symbol in both character
-    /// fields, the digit only in the key code — which is what the chord is
-    /// read from. `slot` counts from zero; `modifiers` defaults to Shift alone.
-    static func shiftedDigitKeyDownEvent(
-        slot: Int,
-        modifiers: NSEvent.ModifierFlags = .shift,
-    ) throws -> NSEvent {
-        let symbols = ["!", "@", "#", "$", "%", "^", "&", "*", "("]
-        return try keyDownEvent(
-            characters: symbols[slot],
-            modifiers: modifiers,
-            keyCode: ComposingKeyIntent.numberRowKeyCodes[slot],
-        )
     }
 
     /// `client: nil`: IMK rejects anything but a real client proxy here, so a

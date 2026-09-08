@@ -1,7 +1,6 @@
 // What one key event means to a composition. Pure classification, no IMK.
 
 import AppKit
-import Carbon.HIToolbox
 
 /// A key AppKit names that this input method binds to candidate navigation.
 ///
@@ -46,11 +45,11 @@ struct KeyEventSnapshot: Sendable {
     let charactersIgnoringModifiers: String?
     /// The virtual key code (`NSEvent.keyCode`) — the key's position as the
     /// system reports it, before any layout turns it into a character.
-    /// Carried for the shifted-digit chord alone: `⇧3` types `#` on a US
-    /// layout and `charactersIgnoringModifiers` keeps Shift, so the number
-    /// row's codes are the one thing that still says which key was pressed
-    /// (`ComposingKeyIntent.shiftedDigitSlot`). Nil for a snapshot built
-    /// without an event.
+    /// Carried for the recorder's refusal of a shifted number-row key alone:
+    /// `⇧3` types `#` on a US layout and `charactersIgnoringModifiers` keeps
+    /// Shift, so the number row's codes are the one thing that still says
+    /// which key was pressed (`ComposingKeyChord.make(_:)`). Nil for a
+    /// snapshot built without an event.
     let keyCode: UInt16?
     let modifiers: NSEvent.ModifierFlags
     /// Whether AppKit has a name for this key (`NSEvent.SpecialKey`). Which
@@ -99,6 +98,10 @@ struct KeyEventSnapshot: Sendable {
 enum ComposingKeyIntent: Equatable {
     /// A romanization character to append to the composition.
     case input(String)
+    /// One of the Telex keys (`ToneInputScheme.telexKeys`), handed to the
+    /// engine's `TelexKey` intent rather than appended: the engine decides
+    /// which tone it writes, or which initial `z` spells in this input mode.
+    case telexKey(String)
     case deleteBackward
     /// Finish the composition as rendered.
     case commit
@@ -138,8 +141,8 @@ enum ComposingKeyIntent: Equatable {
     /// .alternateText(for:settings:)`).
     case commitAlternateScript
     /// Commit the candidate in this slot of the visible page, counting from
-    /// zero — what the slot keys address (`CandidateSlotKeySet`, `⇧1`…`⇧9`,
-    /// and a bare digit where one can pick).
+    /// zero — what the slot keys address (`CandidateSlotKeySet`: the bare
+    /// letters under Standard, the bare digits under Telex).
     case selectCandidateSlot(Int)
 
     /// AppKit encodes function and arrow keys as private-use scalars rather
@@ -152,14 +155,10 @@ enum ComposingKeyIntent: Equatable {
     private static let controlCharacters = CharacterSet.controlCharacters
 
     /// The chords the host owns. Named once because three rules are written
-    /// against it — the host-chord guard, the candidate-slot chord's
-    /// exclusivity, and `isDocumentText` — and a list spelled out at each of
-    /// them is a list that can drift apart.
+    /// against it — the host-chord guard, the fixed tier's modifier check, and
+    /// `isDocumentText` — and a list spelled out at each of them is a list
+    /// that can drift apart.
     private static let hostChords: NSEvent.ModifierFlags = [.command, .control, .option]
-
-    /// Every modifier that turns a key into a chord. The candidate-slot chord
-    /// takes one of them and must see none of the rest.
-    private static let chordingModifiers: NSEvent.ModifierFlags = hostChords.union(.shift)
 
     /// Classifies `key` for a session whose composition is or is not active,
     /// and whose candidate bar is or is not on screen.
@@ -219,18 +218,17 @@ enum ComposingKeyIntent: Equatable {
             }
         }
 
-        // The slot-key tier, read before the host-chord guard below — which
-        // would otherwise hand every Control chord straight to the host — and
-        // before the user's bindings, so that no binding can shadow it. Which
-        // keys pick is the user's set (`CandidateSlotKeySet`).
+        // The slot-key tier, read before the user's bindings so that no
+        // binding can shadow it. Which keys pick follows from the tone scheme
+        // (`ToneInputScheme.slotKeySet`).
         //
         // Only the four chording modifiers are compared, and exactly. Caps
         // Lock and the number pad (`.numericPad`, plus `.function` on some
         // keyboards) say how a key was reached, not which key it is — testing
-        // the full flag set would make `⌃3` select on the top row and quietly
-        // commit the composition on the keypad. A modifier the user did NOT
-        // choose keeps falling through to the host guard below, so `⌥3` stays
-        // the host's while Control holds the slots.
+        // the full flag set would make a keypad `3` miss the slot under Telex
+        // and quietly commit the composition instead. Any chording modifier
+        // makes the key miss, so `⌃3` keeps falling through to the host guard
+        // below.
         if isShowingCandidates, let slot = bindings.slotKeySet.slot(for: key) {
             return .selectCandidateSlot(slot)
         }
@@ -274,15 +272,25 @@ enum ComposingKeyIntent: Equatable {
             return hostKey(isComposing: isComposing)
         }
 
-        // A digit mid-composition is always the tone marker, whatever the
-        // buffer looks like — even after `tai5`, where the engine keeps
-        // `tai52` verbatim (§10.2). Picking a candidate is the slot keys'
-        // alone (`CandidateSlotKeySet`): one set of keys that picks, and a
-        // digit that always means the same thing (USER 2026-08-28, retiring
+        // Under Telex the tone letters and `f` are the engine's, not the
+        // composition's text. A tone letter or `f` typed outside a
+        // composition is document text (like an idle digit): there is no
+        // syllable for it to mark. `z` types an initial, so it starts one.
+        if bindings.toneScheme == .telex, ToneInputScheme.isTelexKey(first) {
+            guard isComposing || ToneInputScheme.startsComposition(first) else { return .passThrough }
+            return .telexKey(characters)
+        }
+        // Under Standard a digit mid-composition is always the tone marker,
+        // whatever the buffer looks like — even after `tai5`, where the engine
+        // keeps `tai52` verbatim (§10.2). Picking a candidate is the slot
+        // keys' alone (`CandidateSlotKeySet`): one set of keys that picks, and
+        // a digit that always means the same thing (USER 2026-08-28, retiring
         // the 2026-08-24 rule that let a bare digit pick once no tone could
         // follow — two keys for one slot read as "why does this pick and that
-        // not").
-        if isRomanizationCharacter(first) || (isComposing && isToneDigit(first)) {
+        // not"). Under Telex the digits ARE the slot keys, taken above while
+        // the bar is up; with no bar a digit falls through to the punctuation
+        // rule and commits the composition ahead of itself.
+        if isRomanizationCharacter(first) || (isComposing && bindings.toneScheme == .standard && isToneDigit(first)) {
             return .input(characters)
         }
         // Everything else printable — space, punctuation, a character from
@@ -335,61 +343,13 @@ enum ComposingKeyIntent: Equatable {
         }
     }
 
-    /// The slot `key` picks as one of the `⇧1`…`⇧9` chords, counting from
-    /// zero, or nil when it is not one — the `shift` set's rule
-    /// (`CandidateSlotKeySet.slot(for:)`), asked by the recorder's refusal as
-    /// well (`ComposingKeyChord.make(_:)`), which reserves these chords
-    /// whichever set is live.
-    ///
-    /// Shift, and only Shift, among the chording modifiers; then the digit,
-    /// read from the key code first, because Shift rewrites the characters:
-    /// `⇧3` on a US layout types `#`, and the number row's code is what still
-    /// says which key that was. A key code is a position, so this is the same
-    /// nine keys on every layout — on AZERTY, where the bare row types
-    /// `& é " …` and the digits ARE the shifted characters, `⇧&` is still the
-    /// chord that picks the first candidate. (A remapping tool that sends
-    /// another code for the key is respected: the key is then whatever it was
-    /// remapped to.) Then from `charactersIgnoringModifiers`, for a digit the
-    /// number row does not carry: the keypad's, which Shift leaves alone.
-    static func shiftedDigitSlot(_ key: KeyEventSnapshot) -> Int? {
-        guard key.modifiers.intersection(chordingModifiers) == .shift else { return nil }
-        if let keyCode = key.keyCode, let slot = numberRowKeyCodes.firstIndex(of: keyCode) {
-            return slot
-        }
-        return directSelectionSlot(key.charactersIgnoringModifiers)
-    }
-
-    /// The `1`…`9` keys of the number row, in slot order. Carbon's ANSI
-    /// codes are positions on the keyboard and hold on ISO and JIS boards
-    /// too; note that `6` and `9` sit out of numeric order.
-    static let numberRowKeyCodes: [UInt16] = [
-        kVK_ANSI_1, kVK_ANSI_2, kVK_ANSI_3, kVK_ANSI_4, kVK_ANSI_5,
-        kVK_ANSI_6, kVK_ANSI_7, kVK_ANSI_8, kVK_ANSI_9,
-    ].map(UInt16.init)
-
-    /// The slot a digit `1`…`9` names, counting from zero. `0` names none: the
-    /// bar holds nine candidates because nine is what the digits can name
-    /// without one of them meaning "the tenth".
-    ///
-    /// Shared by every rule that reads a digit as a slot — the shifted digit
-    /// above, the modifier sets in `CandidateSlotKeySet`, and the bare-digit
-    /// tier — so the nine digits address the nine slots the same way on all of
-    /// them.
-    static func directSelectionSlot(_ charactersIgnoringModifiers: String?) -> Int? {
-        guard let character = charactersIgnoringModifiers?.first,
-              character.isASCII,
-              let digit = character.wholeNumberValue,
-              (1 ... 9).contains(digit)
-        else { return nil }
-        return digit - 1
-    }
-
     /// The numeric tone markers of TL and POJ, which the engine reads as ASCII
     /// digits. A full-width `５` or another script's numeral is a character the
     /// engine cannot parse, so it is document text rather than a tone.
     ///
     /// Visible to `ComposingKeyChord`, which refuses to bind a bare digit:
-    /// the digits carry tone, so a chord may not take one away.
+    /// the digits carry tone under Standard and pick candidates under Telex,
+    /// so a chord may not take one away under either.
     static func isToneDigit(_ character: Character) -> Bool {
         character.isASCII && character.isNumber
     }
@@ -400,9 +360,10 @@ enum ComposingKeyIntent: Equatable {
     /// text, not input the engine could parse. Tone digits are handled by the
     /// caller, which knows whether a composition is running.
     ///
-    /// Wider than `ComposingKeyChord.syllableLetters` on purpose: a
-    /// custom-dictionary romanization is free text, so every ASCII letter
-    /// must reach the composition.
+    /// Every ASCII letter, not only the eighteen a syllable is spelled with:
+    /// a custom-dictionary romanization is free text, so all of them must
+    /// reach the composition. Under Telex the eight the scheme claims are
+    /// taken before this is asked.
     static func isRomanizationCharacter(_ character: Character) -> Bool {
         (character.isLetter && character.isASCII) || character == "-"
     }

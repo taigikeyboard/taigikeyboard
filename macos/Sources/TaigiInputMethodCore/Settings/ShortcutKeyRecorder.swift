@@ -22,8 +22,9 @@ struct RecordedShortcutKey {
 /// What a GLOBAL row refuses on top of the shared gate.
 ///
 /// Named rather than written inline at the row, so the policy is one testable
-/// statement: the composing tier's extra refusal is `isCandidateSlotChord`,
-/// and this is its opposite number.
+/// statement. The composing tier has no extra refusal of its own: everything
+/// it must defend — the typing keys of both tone schemes — is already in the
+/// shared gate (`ComposingKeyChord.make`).
 enum GlobalShortcutPolicy {
     static func rejection(for key: RecordedShortcutKey) -> ComposingKeyChord.Rejection? {
         // A global row stores a Carbon key CODE. A press that yields none has
@@ -95,9 +96,6 @@ enum GlobalShortcutPolicy {
 struct ShortcutKeyRecorder: NSViewRepresentable {
     /// The chord as stored, or nil for an empty row.
     let chord: ComposingKeyChord?
-    /// Which keys currently hold the candidate slots, so a chord that tier
-    /// would swallow can be refused rather than recorded and left inert.
-    let slotKeySet: CandidateSlotKeySet
     /// Passed rather than read from the environment: this is an AppKit view,
     /// and the strings are resolved inside it.
     let language: DisplayLanguageStore
@@ -125,7 +123,6 @@ struct ShortcutKeyRecorder: NSViewRepresentable {
 
     private func apply(to field: ShortcutKeyRecorderField) {
         field.language = language
-        field.slotKeySet = slotKeySet
         field.additionalRejection = additionalRejection
         field.onRecord = onRecord
     }
@@ -138,7 +135,6 @@ final class ShortcutKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
     private static let minimumWidth: Double = 130
 
     var language: DisplayLanguageStore?
-    var slotKeySet: CandidateSlotKeySet = .bareKeys
     var additionalRejection: ((RecordedShortcutKey) -> ComposingKeyChord.Rejection?)?
     var onRecord: ((RecordedShortcutKey?) -> Void)?
 
@@ -369,11 +365,10 @@ final class ShortcutKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
         switch rejection {
         case .noKey: return language.string(.desktopShortcutRejectedNoKey)
         // Every other refusal means the chord already belongs to something —
-        // typing, the input method, a candidate slot, the system, or the host
-        // app. To the reader they all mean "not this key", so naming the owner
-        // is not a distinction worth a message of its own.
-        case .typesRomanization, .reservedKey, .candidateSlotChord, .takenBySystem,
-             .notAGlobalKey, .belongsToHost:
+        // typing, the input method, the system, or the host app. To the
+        // reader they all mean "not this key", so naming the owner is not a
+        // distinction worth a message of its own.
+        case .typesRomanization, .reservedKey, .takenBySystem, .notAGlobalKey, .belongsToHost:
             return language.string(.desktopShortcutRejectedTaken)
         }
     }
@@ -442,8 +437,6 @@ final class ShortcutKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
         }
 
         switch ComposingKeyChord.make(KeyEventSnapshot(event)) {
-        case let .success(recorded) where recorded.isCandidateSlotChord(under: slotKeySet):
-            refuse(.candidateSlotChord)
         case let .success(recorded):
             // Both storage forms are read here, off the one event that carries
             // them: the Carbon key code is gone the moment this returns.

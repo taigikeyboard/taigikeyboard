@@ -1,31 +1,28 @@
-// The keys that pick a candidate out of the nine slots: the set the user
-// chooses, and the shifted digits every set shares.
+// The keys that pick a candidate out of the nine slots: the bare letters
+// under Standard, the bare digits under Telex.
 
 import AppKit
-import Carbon.HIToolbox
-import KeyboardShortcuts
 @testable import TaigiInputMethodCore
 import XCTest
 
 /// What these pin: a key `CandidateSlotKeySet` names for a slot is the key the
-/// classifier picks that slot on — and only that key, only with the bar up. The
-/// snapshots are built by hand where a layout is being described: `⇧3` types
-/// `#` on a US layout and `⇧&` types `1` on AZERTY, and in both the number-row
-/// key code is what the chord is read from.
+/// classifier picks that slot on — and only that key, only with the bar up,
+/// only under the scheme that puts it there. The snapshots are built by hand
+/// where a layout is being described: `⇧3` types `#` on a US layout.
 @MainActor
 final class CandidateSlotKeyTests: XCTestCase {
     private func snapshot(
         _ characters: String,
         modifiers: NSEvent.ModifierFlags = [],
         charactersIgnoringModifiers: String? = nil,
-        keyCode: Int? = nil,
+        keyCode: UInt16? = nil,
     ) -> KeyEventSnapshot {
         KeyEventSnapshot(
             characters: characters,
             modifiers: modifiers,
             isNamedSpecialKey: false,
             charactersIgnoringModifiers: charactersIgnoringModifiers,
-            keyCode: keyCode.map(UInt16.init),
+            keyCode: keyCode,
         )
     }
 
@@ -33,28 +30,27 @@ final class CandidateSlotKeyTests: XCTestCase {
         _ key: KeyEventSnapshot,
         isComposing: Bool = true,
         isShowingCandidates: Bool = true,
-        keySet: CandidateSlotKeySet = .bareKeys,
+        scheme: ToneInputScheme = .standard,
     ) -> ComposingKeyIntent {
         ComposingKeyIntent.intent(
             for: key,
             isComposing: isComposing,
             isShowingCandidates: isShowingCandidates,
-            bindings: ComposingKeyBindings(slotKeySet: keySet),
+            bindings: ComposingKeyBindings(toneScheme: scheme),
         )
     }
 
-    /// `⇧3` as a US layout reports it: `#` in both character fields, the
+    /// `⇧3` as a US layout reports it: `#` in both character fields, and the
     /// digit only in the key code.
-    private func shiftedDigitUS(_ digit: Int, extra: NSEvent.ModifierFlags = []) throws -> KeyEventSnapshot {
-        try KeyEventSnapshot(TestFixtures.shiftedDigitKeyDownEvent(slot: digit - 1, modifiers: extra.union(.shift)))
+    private func shiftedDigitUS(_ digit: Int) -> KeyEventSnapshot {
+        let symbols = ["!", "@", "#", "$", "%", "^", "&", "*", "("]
+        return snapshot(
+            symbols[digit - 1], modifiers: .shift,
+            keyCode: ComposingKeyChord.numberRowKeyCodes[digit - 1],
+        )
     }
 
-    /// `⇧0`, which names no slot: `)` on a US layout.
-    private func shiftedZeroUS() -> KeyEventSnapshot {
-        snapshot(")", modifiers: .shift, keyCode: kVK_ANSI_0)
-    }
-
-    // MARK: - The bare keys
+    // MARK: - The bare keys, under Standard
 
     func testTheNineBareKeys_pickSlotsZeroToEight_whileTheBarIsUp() {
         XCTAssertEqual(CandidateSlotKeySet.bareKeyRow.count, HorizontalPageLayout.pageSize, "one key per slot")
@@ -70,14 +66,12 @@ final class CandidateSlotKeyTests: XCTestCase {
         XCTAssertEqual(try makeScratchSettingsStore().composingKeyBindings.slotKeySet, .bareKeys)
     }
 
-    /// A bare digit never picks, under any set: it is the tone marker, even
+    /// A bare digit never picks under Standard: it is the tone marker, even
     /// where no tone could follow (`tai5` + `2` → `tai52`, kept verbatim by
     /// the engine). One set of keys picks; a digit always means one thing.
-    func testABareDigit_isAlwaysTheTone_underEverySet() {
-        for keySet in CandidateSlotKeySet.allCases {
-            XCTAssertEqual(intent(snapshot("2"), keySet: keySet), .input("2"), "\(keySet)")
-            XCTAssertEqual(intent(snapshot("2"), isShowingCandidates: false, keySet: keySet), .input("2"))
-        }
+    func testABareDigit_isAlwaysTheTone_underStandard() {
+        XCTAssertEqual(intent(snapshot("2")), .input("2"))
+        XCTAssertEqual(intent(snapshot("2"), isShowingCandidates: false), .input("2"))
         XCTAssertEqual(
             intent(snapshot("2"), isComposing: false, isShowingCandidates: false), .passThrough,
             "outside a composition a digit is the host's",
@@ -88,19 +82,16 @@ final class CandidateSlotKeyTests: XCTestCase {
     /// Shift is a chord, and ⇧Q is the capital the composition takes as text.
     func testALetter_underCapsLock_stillPicks_butShiftedIsTheCapital() {
         XCTAssertEqual(intent(snapshot("Q", modifiers: .capsLock)), .selectCandidateSlot(0))
-        XCTAssertEqual(intent(snapshot("Q", modifiers: .shift, keyCode: kVK_ANSI_Q)), .input("Q"))
+        XCTAssertEqual(intent(snapshot("Q", modifiers: .shift)), .input("Q"))
     }
 
     /// The bare keys are the slot tier's only while the bar is up: with none,
-    /// or under another set, `q` is a letter a custom-dictionary romanization
-    /// may need, and `;` is the punctuation it types.
+    /// `q` is a letter a custom-dictionary romanization may need, and `;` is
+    /// the punctuation it types.
     func testABareKey_isItselfWhereverItIsNotASlotKey() {
         XCTAssertEqual(intent(snapshot("q"), isShowingCandidates: false), .input("q"))
         XCTAssertEqual(intent(snapshot("q"), isComposing: false, isShowingCandidates: false), .input("q"))
-        XCTAssertEqual(intent(snapshot("q"), keySet: .control), .input("q"))
-        XCTAssertEqual(intent(snapshot("q"), keySet: .option), .input("q"))
         XCTAssertEqual(intent(snapshot(";"), isShowingCandidates: false), .commitThenInsert(";"))
-        XCTAssertEqual(intent(snapshot(";"), keySet: .control), .commitThenInsert(";"))
     }
 
     /// A syllable letter, and the punctuation typed straight after a word to
@@ -112,126 +103,116 @@ final class CandidateSlotKeyTests: XCTestCase {
         }
     }
 
-    /// One set is live at a time: under the bare keys a shifted digit is the
-    /// punctuation it types, and a bare `7` is the tone it always is.
-    func testUnderTheBareKeys_aShiftedDigitIsPunctuation_andABareDigitATone() throws {
-        XCTAssertEqual(try intent(shiftedDigitUS(7)), .commitThenInsert("&"))
-        XCTAssertEqual(intent(snapshot(";")), .selectCandidateSlot(8))
-        XCTAssertEqual(intent(snapshot("7")), .input("7"))
-    }
-
-    // MARK: - The shifted digits
-
-    func testAShiftedDigit_picksTheSlot_underTheShiftSet_only() throws {
-        XCTAssertEqual(try intent(shiftedDigitUS(1), keySet: .shift), .selectCandidateSlot(0))
-        XCTAssertEqual(try intent(shiftedDigitUS(5), keySet: .shift), .selectCandidateSlot(4))
-        XCTAssertEqual(try intent(shiftedDigitUS(9), keySet: .shift), .selectCandidateSlot(8))
-        for keySet in CandidateSlotKeySet.allCases where keySet != .shift {
-            XCTAssertEqual(try intent(shiftedDigitUS(5), keySet: keySet), .commitThenInsert("%"), "\(keySet)")
+    /// A shifted digit is the punctuation it types under either scheme —
+    /// the `⇧1`…`⇧9` set went with the picker that chose it (2026-09-08).
+    func testAShiftedDigit_isThePunctuationItTypes_underEitherScheme() {
+        for scheme in ToneInputScheme.allCases {
+            XCTAssertEqual(intent(shiftedDigitUS(7), scheme: scheme), .commitThenInsert("&"), "\(scheme)")
+            XCTAssertEqual(intent(shiftedDigitUS(5), scheme: scheme), .commitThenInsert("%"), "\(scheme)")
         }
     }
 
-    /// The reason the chord costs nothing: punctuation is typed after a
-    /// composition ends, and then `⇧2` is the `@` it always was.
-    func testAShiftedDigit_isTheSymbolItTypes_withNoBarUp() throws {
+    // MARK: - The digits, under Telex
+
+    func testTheNineDigits_pickSlotsZeroToEight_whileTheBarIsUp_underTelex() {
+        XCTAssertEqual(ToneInputScheme.telex.slotKeySet, .digits)
+        for slot in 0 ..< HorizontalPageLayout.pageSize {
+            XCTAssertEqual(intent(snapshot(String(slot + 1)), scheme: .telex), .selectCandidateSlot(slot))
+        }
+        XCTAssertEqual(intent(snapshot("0"), scheme: .telex), .commitThenInsert("0"), "`0` names no slot")
+    }
+
+    /// The letters are the scheme's tone keys under Telex, not slot keys —
+    /// and `;` is back to being the punctuation it types.
+    func testTheBareKeys_doNotPick_underTelex() {
+        XCTAssertEqual(intent(snapshot("q"), scheme: .telex), .telexKey("q"))
+        XCTAssertEqual(intent(snapshot(";"), scheme: .telex), .commitThenInsert(";"))
+    }
+
+    /// The bar is what makes a digit a pick: with none up, a digit
+    /// mid-composition is not a tone under Telex either, so it ends the
+    /// composition and lands in the document like punctuation.
+    func testADigit_withNoBarUp_isDocumentText_underTelex() {
+        XCTAssertEqual(intent(snapshot("3"), isShowingCandidates: false, scheme: .telex), .commitThenInsert("3"))
         XCTAssertEqual(
-            try intent(shiftedDigitUS(2), isShowingCandidates: false, keySet: .shift), .commitThenInsert("@"),
-        )
-        XCTAssertEqual(
-            try intent(shiftedDigitUS(2), isComposing: false, isShowingCandidates: false, keySet: .shift),
-            .passThrough,
+            intent(snapshot("3"), isComposing: false, isShowingCandidates: false, scheme: .telex), .passThrough,
         )
     }
 
-    /// Shift alone: with another chording modifier the chord is the host's —
-    /// `⇧⌘3` is the system's screenshot.
-    func testAShiftedDigit_withAnotherChordingModifier_belongsToTheHost() throws {
-        for extra in [NSEvent.ModifierFlags.command, .control, .option] {
+    /// Caps Lock and the number pad say how a key was reached, not which key
+    /// it is: a keypad `3` still picks the third candidate.
+    func testAKeypadDigit_stillPicks_underTelex() {
+        for extra in [NSEvent.ModifierFlags.numericPad, [.numericPad, .function], .capsLock] {
             XCTAssertEqual(
-                try intent(shiftedDigitUS(3, extra: extra), keySet: .shift), .commitThenPassThrough, "\(extra)",
+                intent(snapshot("3", modifiers: extra), scheme: .telex),
+                .selectCandidateSlot(2), "\(extra)",
             )
         }
     }
 
-    func testAShiftedZero_addressesNoSlot() {
-        XCTAssertEqual(intent(shiftedZeroUS(), keySet: .shift), .commitThenInsert(")"))
-    }
-
-    /// On a layout whose digits are the SHIFTED characters — AZERTY types `&`
-    /// bare and `1` with Shift — the same number-row key is pressed, and
-    /// `⇧&` still picks the first candidate.
-    func testAShiftedDigit_onALayoutWhereTheDigitIsTheShiftedCharacter_stillPicks() {
-        let azertyShiftOne = snapshot("1", modifiers: .shift, charactersIgnoringModifiers: "1", keyCode: kVK_ANSI_1)
-        XCTAssertEqual(intent(azertyShiftOne, keySet: .shift), .selectCandidateSlot(0))
-    }
-
-    /// A digit the number row does not carry — the keypad's, which Shift
-    /// leaves alone — is read off the characters instead.
-    func testAShiftedKeypadDigit_isReadOffTheCharacters() {
-        let shiftKeypadThree = snapshot("3", modifiers: [.shift, .numericPad], keyCode: kVK_ANSI_Keypad3)
-        XCTAssertEqual(intent(shiftKeypadThree, keySet: .shift), .selectCandidateSlot(2))
-    }
-
-    /// Through a real event, which is where the key code comes from.
-    func testAShiftedDigit_fromAnAppKitEvent_readsTheDigitOffTheKeyCode() throws {
-        let event = try TestFixtures.keyDownEvent(
-            characters: "#", modifiers: .shift, keyCode: UInt16(kVK_ANSI_3),
-        )
-        let key = KeyEventSnapshot(event)
-
-        XCTAssertEqual(key.keyCode, UInt16(kVK_ANSI_3))
-        XCTAssertEqual(intent(key, keySet: .shift), .selectCandidateSlot(2))
+    /// Both sets are bare keys: any chording modifier makes the key miss the
+    /// slot and reach the host as the chord it is.
+    func testAChordedSlotKey_belongsToTheHost_underEitherScheme() {
+        for modifier in [NSEvent.ModifierFlags.command, .control, .option] {
+            XCTAssertEqual(
+                intent(snapshot("3", modifiers: modifier, charactersIgnoringModifiers: "3"), scheme: .telex),
+                .commitThenPassThrough, "\(modifier)3 under Telex",
+            )
+            XCTAssertEqual(
+                intent(snapshot("q", modifiers: modifier, charactersIgnoringModifiers: "q")),
+                .commitThenPassThrough, "\(modifier)Q under Standard",
+            )
+        }
     }
 
     // MARK: - What the recorder would store
 
-    /// A shifted digit is judged as the digit, the way `⌃3` already is — so
-    /// the recorder refuses it as the slot chord it is, whichever set is
-    /// live, rather than accepting the `#` it types and storing a row that
-    /// could never be matched.
-    func testAShiftedDigit_isRefusedAsASlotChord_notRecordedAsTheSymbolItTypes() throws {
-        XCTAssertEqual(
-            try ComposingKeyChord.make(shiftedDigitUS(3)),
-            .failure(.candidateSlotChord),
-        )
-        XCTAssertEqual(
-            try ComposingKeyChord.make(shiftedZeroUS()).get().key, ")",
-            "⇧0 names no slot, so it records as the `)` it types",
-        )
+    /// Every slot key of every set is a typing key to the gate, so no chord
+    /// can ever sit on one — under either scheme, whichever is live when it
+    /// is recorded. This is what lets the bindings skip a pass against the
+    /// slot tier.
+    func testEverySlotKey_ofEverySet_isRefusedAsAChord() {
+        for keySet in CandidateSlotKeySet.allCases {
+            for slot in 0 ..< HorizontalPageLayout.pageSize {
+                let key = keySet.label(forSlot: slot)
+                XCTAssertEqual(
+                    ComposingKeyChord.make(key: key, modifiers: []),
+                    .failure(.typesRomanization), "\(keySet) slot \(slot) (`\(key)`)",
+                )
+            }
+        }
     }
 
-    /// Digits only: every other shifted key keeps the character it types,
-    /// which is what its stored chords already hold.
+    /// A shifted number-row key is refused as the digit it is, read off the
+    /// key code since a US layout types `#` for it — the same answer the
+    /// Carbon bridge gives when handed the unmodified `3` with Shift, so a
+    /// press no composing row can hold is one no global row bridges to.
+    func testAShiftedDigit_isRefusedAsTheDigitItIs_onBothPaths() throws {
+        XCTAssertEqual(ComposingKeyChord.make(shiftedDigitUS(3)), .failure(.typesRomanization))
+        XCTAssertEqual(ComposingKeyChord.make(key: "3", modifiers: .shift), .failure(.typesRomanization))
+        // A symbol reached without the number row — a keypad or another
+        // layout's own `#` key — is still the character it types.
+        XCTAssertEqual(try ComposingKeyChord.make(snapshot("#", modifiers: .shift)).get().key, "#")
+    }
+
+    /// Every other shifted key keeps the character it types, which is what
+    /// its stored chords already hold.
     func testOtherShiftedKeys_stillRecordTheCharacterTheyType() throws {
         let chord = try ComposingKeyChord.make(
-            snapshot("{", modifiers: .shift, charactersIgnoringModifiers: "{", keyCode: kVK_ANSI_LeftBracket),
+            snapshot("{", modifiers: .shift, charactersIgnoringModifiers: "{"),
         ).get()
 
         XCTAssertEqual(chord.key, "{")
         XCTAssertEqual(chord.modifiers, .shift)
     }
 
-    // MARK: - The picker
+    // MARK: - The labels
 
-    func testTheMenuLabels_nameTheKeysThemselves() {
+    func testTheLabels_nameTheKeysThemselves() {
+        XCTAssertEqual((0 ..< 9).map { CandidateSlotKeySet.bareKeys.label(forSlot: $0) }, CandidateSlotKeySet.bareKeyRow)
         XCTAssertEqual(
-            CandidateSlotKeySet.allCases.map(\.menuLabel),
-            ["q w d f z x v y ;", "⇧1 – ⇧9", "⌃1 – ⌃9", "⌥1 – ⌥9"],
+            (0 ..< 9).map { CandidateSlotKeySet.digits.label(forSlot: $0) },
+            ["1", "2", "3", "4", "5", "6", "7", "8", "9"],
         )
-    }
-
-    // MARK: - A global row left on a shifted digit
-
-    /// Before the refusal, the recorder accepted `⇧3` as the `#` it types, so
-    /// a global row can still hold one — and Carbon would dispatch it before
-    /// the classifier saw the digit. The launch pass clears it.
-    func testALaunchPass_clearsAGlobalRowLeftOnAShiftedDigit() throws {
-        let saved = KeyboardShortcuts.getShortcut(for: .openLastSettingsPane)
-        addTeardownBlock { KeyboardShortcuts.setShortcut(saved, for: .openLastSettingsPane) }
-        KeyboardShortcuts.setShortcut(.init(.three, modifiers: [.shift]), for: .openLastSettingsPane)
-
-        try ShortcutConflicts.resolveAcrossRegistries(in: makeScratchSettingsStore())
-
-        XCTAssertNil(KeyboardShortcuts.getShortcut(for: .openLastSettingsPane))
     }
 }

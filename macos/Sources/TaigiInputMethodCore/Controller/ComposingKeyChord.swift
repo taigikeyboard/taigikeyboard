@@ -1,6 +1,7 @@
 // One recordable key combination, and the keys a binding may never claim.
 
 import AppKit
+import Carbon.HIToolbox
 
 /// A key plus its modifiers, as a composing action can be bound to it.
 ///
@@ -52,24 +53,17 @@ struct ComposingKeyChord: Hashable, Sendable {
     /// Why a key could not be recorded, so the recorder can say so rather than
     /// silently doing nothing.
     enum Rejection: Error, Equatable, Sendable {
-        /// A syllable letter, a digit or the hyphen with no modifier held —
-        /// the characters a TL or POJ syllable is spelled with, tone marker
-        /// included. The eight letters no syllable uses are not refused
-        /// (`syllableLetters`).
+        /// A letter, a digit, the hyphen or `;` with no ⌘/⌃/⌥ held — every
+        /// key one of the two tone schemes types with or picks a candidate
+        /// with (`isTypingKey`). Refused whichever scheme is live, so a chord
+        /// recorded under one cannot go inert when the user switches to the
+        /// other.
         case typesRomanization
         /// Backspace, Escape, the arrows or the paging keys, which the input
         /// method reserves whatever modifiers are held.
         case reservedKey
         /// An event carrying no character to bind.
         case noKey
-        /// A candidate-slot key: one of the keys the chosen set holds
-        /// (`CandidateSlotKeySet`), or `⇧1`…`⇧9` whichever set is chosen.
-        /// Refused because that tier is classified before bound actions, so
-        /// the binding would be recorded and then never fire
-        /// (`ComposingKeyIntent.intent`). The shifted digits are refused
-        /// unconditionally because a chord is identified by the character it
-        /// types, and `⇧3` types `#` — a row on it could never be matched.
-        case candidateSlotChord
         /// A chord the system already answers to. Global-tier only: a Carbon
         /// hotkey never gets a chord the window server has taken first, so
         /// recording one would leave a row that reads as bound and does
@@ -88,21 +82,6 @@ struct ComposingKeyChord: Hashable, Sendable {
         case belongsToHost
     }
 
-    /// Whether this chord is a key of the set `slotKeySet` puts on the
-    /// candidate slots — the half of the slot tier that is a setting.
-    ///
-    /// Asked by the recorder rather than by `make`, because the answer changes
-    /// with the setting: ⌥3 is bindable while Control holds the slots, and a
-    /// bare `z` while the digits do, and each stops being so the moment the
-    /// picker moves onto it. The fixed half, `⇧1`…`⇧9`, needs no such question:
-    /// `make` refuses it outright, so no chord on it can exist to ask about.
-    func isCandidateSlotChord(under slotKeySet: CandidateSlotKeySet) -> Bool {
-        // The classifier's own slot rule rather than a second copy of it: the
-        // refusal exists because that tier is read first, so the two have to
-        // name the same chords.
-        slotKeySet.slot(forKey: key, heldWith: modifiers) != nil
-    }
-
     /// The chord `key` and `modifiers` name, or why it cannot be one.
     static func make(key rawKey: String?, modifiers rawModifiers: NSEvent.ModifierFlags)
         -> Result<ComposingKeyChord, Rejection>
@@ -112,17 +91,10 @@ struct ComposingKeyChord: Hashable, Sendable {
         guard !neverBindable.contains(key) else { return .failure(.reservedKey) }
 
         let modifiers = chordingModifiers(of: rawModifiers)
-        // `⇧1`…`⇧9` are the `shift` set's slot keys, and no chord on one could
-        // be matched under any set (`Rejection.candidateSlotChord`) — so this
-        // is refused as the slot chord it is, ahead of the typing-key rule
-        // that would otherwise catch the digit with a less true reason.
-        if modifiers == .shift, ComposingKeyIntent.directSelectionSlot(key) != nil {
-            return .failure(.candidateSlotChord)
-        }
         // Shift alone does not make a chord out of a typing key: ⇧A is still
         // the letter A, and binding it would cost the user their capitals.
         let hasChordingModifier = !modifiers.isDisjoint(with: [.command, .control, .option])
-        if !hasChordingModifier, let first = key.first, isSyllableTypingKey(first) {
+        if !hasChordingModifier, let first = key.first, isTypingKey(first) {
             return .failure(.typesRomanization)
         }
         return .success(ComposingKeyChord(key: key, modifiers: modifiers))
@@ -130,18 +102,31 @@ struct ComposingKeyChord: Hashable, Sendable {
 
     /// The chord this event would record, or why it cannot be recorded.
     ///
-    /// A shifted digit is refused by the same rule that makes it pick under
-    /// the `shift` set (`ComposingKeyIntent.shiftedDigitSlot`), read off the
-    /// event rather than its characters: `charactersIgnoringModifiers` keeps
-    /// Shift and would offer the `#` a US layout types, which the gate below
-    /// would then accept. The string gate still refuses a stored or bridged
-    /// `3` with Shift, so the two paths into a chord agree. Every other
-    /// shifted key keeps the character it types, which is what its stored
-    /// chords already hold.
+    /// A shifted number-row key is refused as the digit it is: Shift alone
+    /// does not make a chord out of a typing key (`make(key:modifiers:)`),
+    /// and `⇧3` is the `3` key even though a US layout types `#` for it. Read
+    /// off the key code, because that is the one thing Shift does not
+    /// rewrite — and it is what keeps this path and the Carbon bridge
+    /// (`ShortcutConflicts.composingChord(occupiedBy:)`, which is handed the
+    /// unmodified `3`) refusing the same press. Every other shifted key
+    /// records as the character it types, which is what its stored chords
+    /// already hold.
     static func make(_ key: KeyEventSnapshot) -> Result<ComposingKeyChord, Rejection> {
-        guard ComposingKeyIntent.shiftedDigitSlot(key) == nil else { return .failure(.candidateSlotChord) }
+        if chordingModifiers(of: key.modifiers) == .shift,
+           let keyCode = key.keyCode, numberRowKeyCodes.contains(keyCode)
+        {
+            return .failure(.typesRomanization)
+        }
         return make(key: key.charactersIgnoringModifiers ?? key.characters, modifiers: key.modifiers)
     }
+
+    /// The `1`…`9` keys of the number row, in digit order. Carbon's ANSI
+    /// codes are positions on the keyboard and hold on ISO and JIS boards
+    /// too; note that `6` and `9` sit out of numeric order.
+    static let numberRowKeyCodes: [UInt16] = [
+        kVK_ANSI_1, kVK_ANSI_2, kVK_ANSI_3, kVK_ANSI_4, kVK_ANSI_5,
+        kVK_ANSI_6, kVK_ANSI_7, kVK_ANSI_8, kVK_ANSI_9,
+    ].map(UInt16.init)
 
     /// Whether `event` is this chord. Compared on the unmodified characters for
     /// the same reason they are stored: Control rewrites the digits it is held
@@ -181,29 +166,23 @@ struct ComposingKeyChord: Hashable, Sendable {
         }
     }
 
-    /// The letters a TL or POJ syllable can be spelled with. Eight ASCII
-    /// letters are absent — d f q v w x y z — because neither romanization
-    /// uses them (`knowledge/taigi-phonetics-reference.md` §2–3; verified
-    /// against every `tl`/`poj` column of the production dictionary), and a
-    /// key that spells no syllable is exactly the kind a user wants free for
-    /// a bare binding.
+    /// The keys a composition is typed or picked with, under either tone
+    /// scheme: all 26 ASCII letters, the digits, the hyphen and `;`.
     ///
-    /// Deliberately narrower than `ComposingKeyIntent.isRomanizationCharacter`:
-    /// the input path keeps accepting all ASCII letters (a custom-dictionary
-    /// romanization is free text), while this set only decides what the
-    /// recorder defends. A bound letter outside it still wins mid-composition
-    /// because the bindings tier is classified before input
-    /// (`ComposingKeyIntent.intent`).
-    private static let syllableLetters = Set("abceghijklmnoprstu")
-
-    /// The letters and the hyphen a syllable is spelled with, plus the digits
-    /// that carry its tone (`tai5`). Asked of the normalized key, so the
-    /// case fold is `normalized`'s — the same way the reserved-key check
-    /// reads it.
-    private static func isSyllableTypingKey(_ character: Character) -> Bool {
-        syllableLetters.contains(character)
-            || character == "-"
+    /// All 26 rather than the eighteen a TL or POJ syllable is spelled with,
+    /// because the other eight are not free either: under Telex `v y d w x q
+    /// z f` type the tones, and under Standard those eight and `;` are the
+    /// candidate slots (`CandidateSlotKeySet.bareKeyRow`). One rule for both
+    /// schemes, so a chord recorded under one cannot go inert when the user
+    /// switches — which is also what lets `ComposingKeyBindings` skip any
+    /// pass against the slot tier. Asked of the normalized key, so the case
+    /// fold is `normalized`'s — the same way the reserved-key check reads it.
+    private static func isTypingKey(_ character: Character) -> Bool {
+        guard character.isASCII else { return false }
+        return character.isLetter
             || ComposingKeyIntent.isToneDigit(character)
+            || character == "-"
+            || character == ";"
     }
 }
 
