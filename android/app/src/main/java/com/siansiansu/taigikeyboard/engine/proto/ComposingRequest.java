@@ -36,6 +36,7 @@ public  final class ComposingRequest extends
     FETCH_AT_POS(31),
     COMMIT_CONTINUOUS(32),
     RESET_CONTINUOUS(33),
+    TELEX_KEY(40),
     METHOD_NOT_SET(0);
     private final int value;
     private MethodCase(int value) {
@@ -67,6 +68,7 @@ public  final class ComposingRequest extends
         case 31: return FETCH_AT_POS;
         case 32: return COMMIT_CONTINUOUS;
         case 33: return RESET_CONTINUOUS;
+        case 40: return TELEX_KEY;
         case 0: return METHOD_NOT_SET;
         default: return null;
       }
@@ -943,6 +945,76 @@ public  final class ComposingRequest extends
    */
   private void clearResetContinuous() {
     if (methodCase_ == 33) {
+      methodCase_ = 0;
+      method_ = null;
+    }
+  }
+
+  public static final int TELEX_KEY_FIELD_NUMBER = 40;
+  /**
+   * <pre>
+   * --- Telex tone keys (40s, desktop Telex scheme) ---
+   * </pre>
+   *
+   * <code>.taigi.engine.TelexKey telex_key = 40;</code>
+   */
+  @java.lang.Override
+  public boolean hasTelexKey() {
+    return methodCase_ == 40;
+  }
+  /**
+   * <pre>
+   * --- Telex tone keys (40s, desktop Telex scheme) ---
+   * </pre>
+   *
+   * <code>.taigi.engine.TelexKey telex_key = 40;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.TelexKey getTelexKey() {
+    if (methodCase_ == 40) {
+       return (com.siansiansu.taigikeyboard.engine.proto.TelexKey) method_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.TelexKey.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * --- Telex tone keys (40s, desktop Telex scheme) ---
+   * </pre>
+   *
+   * <code>.taigi.engine.TelexKey telex_key = 40;</code>
+   */
+  private void setTelexKey(com.siansiansu.taigikeyboard.engine.proto.TelexKey value) {
+    java.util.Objects.requireNonNull(value);
+    method_ = value;
+    methodCase_ = 40;
+  }
+  /**
+   * <pre>
+   * --- Telex tone keys (40s, desktop Telex scheme) ---
+   * </pre>
+   *
+   * <code>.taigi.engine.TelexKey telex_key = 40;</code>
+   */
+  private void mergeTelexKey(com.siansiansu.taigikeyboard.engine.proto.TelexKey value) {
+    java.util.Objects.requireNonNull(value);
+    if (methodCase_ == 40 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.TelexKey.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.TelexKey.newBuilder((com.siansiansu.taigikeyboard.engine.proto.TelexKey) method_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      method_ = value;
+    }
+    methodCase_ = 40;
+  }
+  /**
+   * <pre>
+   * --- Telex tone keys (40s, desktop Telex scheme) ---
+   * </pre>
+   *
+   * <code>.taigi.engine.TelexKey telex_key = 40;</code>
+   */
+  private void clearTelexKey() {
+    if (methodCase_ == 40) {
       methodCase_ = 0;
       method_ = null;
     }
@@ -1897,6 +1969,78 @@ public  final class ComposingRequest extends
       return this;
     }
 
+    /**
+     * <pre>
+     * --- Telex tone keys (40s, desktop Telex scheme) ---
+     * </pre>
+     *
+     * <code>.taigi.engine.TelexKey telex_key = 40;</code>
+     */
+    @java.lang.Override
+    public boolean hasTelexKey() {
+      return instance.hasTelexKey();
+    }
+    /**
+     * <pre>
+     * --- Telex tone keys (40s, desktop Telex scheme) ---
+     * </pre>
+     *
+     * <code>.taigi.engine.TelexKey telex_key = 40;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.TelexKey getTelexKey() {
+      return instance.getTelexKey();
+    }
+    /**
+     * <pre>
+     * --- Telex tone keys (40s, desktop Telex scheme) ---
+     * </pre>
+     *
+     * <code>.taigi.engine.TelexKey telex_key = 40;</code>
+     */
+    public Builder setTelexKey(com.siansiansu.taigikeyboard.engine.proto.TelexKey value) {
+      copyOnWrite();
+      instance.setTelexKey(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * --- Telex tone keys (40s, desktop Telex scheme) ---
+     * </pre>
+     *
+     * <code>.taigi.engine.TelexKey telex_key = 40;</code>
+     */
+    public Builder setTelexKey(
+        com.siansiansu.taigikeyboard.engine.proto.TelexKey.Builder builderForValue) {
+      copyOnWrite();
+      instance.setTelexKey(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * --- Telex tone keys (40s, desktop Telex scheme) ---
+     * </pre>
+     *
+     * <code>.taigi.engine.TelexKey telex_key = 40;</code>
+     */
+    public Builder mergeTelexKey(com.siansiansu.taigikeyboard.engine.proto.TelexKey value) {
+      copyOnWrite();
+      instance.mergeTelexKey(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * --- Telex tone keys (40s, desktop Telex scheme) ---
+     * </pre>
+     *
+     * <code>.taigi.engine.TelexKey telex_key = 40;</code>
+     */
+    public Builder clearTelexKey() {
+      copyOnWrite();
+      instance.clearTelexKey();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.ComposingRequest)
   }
   @java.lang.Override
@@ -1931,11 +2075,13 @@ public  final class ComposingRequest extends
             com.siansiansu.taigikeyboard.engine.proto.FetchAtPos.class,
             com.siansiansu.taigikeyboard.engine.proto.CommitContinuous.class,
             com.siansiansu.taigikeyboard.engine.proto.ResetContinuous.class,
+            com.siansiansu.taigikeyboard.engine.proto.TelexKey.class,
           };
           java.lang.String info =
-              "\u0000\u0010\u0001\u0000\n!\u0010\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f<\u0000" +
+              "\u0000\u0011\u0001\u0000\n(\u0011\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f<\u0000" +
               "\r<\u0000\u000e<\u0000\u000f<\u0000\u0010<\u0000\u0011<\u0000\u0012<\u0000\u0013" +
-              "<\u0000\u0014<\u0000\u0015<\u0000\u001e<\u0000\u001f<\u0000 <\u0000!<\u0000";
+              "<\u0000\u0014<\u0000\u0015<\u0000\u001e<\u0000\u001f<\u0000 <\u0000!<\u0000(<\u0000" +
+              "";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

@@ -216,6 +216,15 @@ public nonisolated struct Taigi_Engine_ComposingRequest: Sendable {
     set {method = .resetContinuous(newValue)}
   }
 
+  /// --- Telex tone keys (40s, desktop Telex scheme) ---
+  public var telexKey: Taigi_Engine_TelexKey {
+    get {
+      if case .telexKey(let v)? = method {return v}
+      return Taigi_Engine_TelexKey()
+    }
+    set {method = .telexKey(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   /// Tag layout: text-input mutators in 10s, UI-driven ops (index update + pure
@@ -241,6 +250,8 @@ public nonisolated struct Taigi_Engine_ComposingRequest: Sendable {
     case fetchAtPos(Taigi_Engine_FetchAtPos)
     case commitContinuous(Taigi_Engine_CommitContinuous)
     case resetContinuous(Taigi_Engine_ResetContinuous)
+    /// --- Telex tone keys (40s, desktop Telex scheme) ---
+    case telexKey(Taigi_Engine_TelexKey)
 
   }
 
@@ -623,6 +634,24 @@ public nonisolated struct Taigi_Engine_ResetContinuous: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// Desktop Telex scheme: one key from `v y d w x q` (tones 2 3 5 7 8 9),
+/// `z` (affricate initial `ts` / `ch` by `AppConfig.input_mode`) or `f`
+/// (hyphen), either case. The engine edits the pending tail — appending or
+/// replacing the trailing tone digit — and keeps the buffer numeric-tone.
+/// A key that changes nothing (same tone twice, tone on an empty tail) is a
+/// no-op. Idle + `z` enters composing with the expansion.
+public nonisolated struct Taigi_Engine_TelexKey: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var key: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1060,7 +1089,7 @@ nonisolated extension Taigi_Engine_CandidateMode: SwiftProtobuf._ProtoNameProvid
 
 nonisolated extension Taigi_Engine_ComposingRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ComposingRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\u{a}start\0\u{1}append\0\u{3}append_hyphen\0\u{3}replace_last\0\u{3}delete_backward\0\u{3}commit_derived\0\u{3}commit_raw\0\u{3}select_suggestion\0\u{3}commit_preedit_then_insert_external\0\u{1}reset\0\u{3}set_selected_candidate_index\0\u{3}query_state\0\u{4}\u{9}enter_continuous\0\u{3}fetch_at_pos\0\u{3}commit_continuous\0\u{3}reset_continuous\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\u{a}start\0\u{1}append\0\u{3}append_hyphen\0\u{3}replace_last\0\u{3}delete_backward\0\u{3}commit_derived\0\u{3}commit_raw\0\u{3}select_suggestion\0\u{3}commit_preedit_then_insert_external\0\u{1}reset\0\u{3}set_selected_candidate_index\0\u{3}query_state\0\u{4}\u{9}enter_continuous\0\u{3}fetch_at_pos\0\u{3}commit_continuous\0\u{3}reset_continuous\0\u{4}\u{7}telex_key\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1276,6 +1305,19 @@ nonisolated extension Taigi_Engine_ComposingRequest: SwiftProtobuf.Message, Swif
           self.method = .resetContinuous(v)
         }
       }()
+      case 40: try {
+        var v: Taigi_Engine_TelexKey?
+        var hadOneofValue = false
+        if let current = self.method {
+          hadOneofValue = true
+          if case .telexKey(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.method = .telexKey(v)
+        }
+      }()
       default: break
       }
     }
@@ -1350,6 +1392,10 @@ nonisolated extension Taigi_Engine_ComposingRequest: SwiftProtobuf.Message, Swif
     case .resetContinuous?: try {
       guard case .resetContinuous(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 33)
+    }()
+    case .telexKey?: try {
+      guard case .telexKey(let v)? = self.method else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 40)
     }()
     case nil: break
     }
@@ -1834,6 +1880,36 @@ nonisolated extension Taigi_Engine_ResetContinuous: SwiftProtobuf.Message, Swift
   }
 
   public static func ==(lhs: Taigi_Engine_ResetContinuous, rhs: Taigi_Engine_ResetContinuous) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_Engine_TelexKey: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".TelexKey"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}key\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.key) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.key.isEmpty {
+      try visitor.visitSingularStringField(value: self.key, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_TelexKey, rhs: Taigi_Engine_TelexKey) -> Bool {
+    if lhs.key != rhs.key {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

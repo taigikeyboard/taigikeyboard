@@ -313,3 +313,212 @@ fn intent_missing_method_returns_error() {
     );
     assert!(result.is_err());
 }
+
+// ---- TelexKey (desktop Telex scheme) ---------------------------------------
+
+fn telex(
+    engine: &mut Engine,
+    key: &str,
+    config: &protos::engine::AppConfig,
+) -> protos::engine::ComposingResponse {
+    dispatch::handle(
+        &req(Method::TelexKey(protos::engine::TelexKey {
+            key: key.into(),
+        })),
+        engine,
+        config,
+    )
+    .unwrap()
+}
+
+fn append(engine: &mut Engine, text: &str, config: &protos::engine::AppConfig) {
+    for ch in text.chars() {
+        dispatch::handle(
+            &req(Method::Append(Append {
+                char: ch.to_string(),
+            })),
+            engine,
+            config,
+        )
+        .unwrap();
+    }
+}
+
+#[test]
+fn intent_telex_tone_key_writes_the_digit_and_renders_the_mark() {
+    // trace: "te" + v → raw "te2" → normalize_tone → "té"
+    let mut engine = Engine::new();
+    append(&mut engine, "te", &config_tl());
+    let resp = telex(&mut engine, "v", &config_tl());
+    let preedit = resp.preedit.unwrap();
+    assert_eq!(preedit.raw_input, "te2");
+    assert_eq!(preedit.display_text, "té");
+    assert_eq!(resp.selected_candidate_index, 0);
+}
+
+#[test]
+fn intent_telex_second_tone_key_replaces_same_key_is_noop() {
+    let mut engine = Engine::new();
+    append(&mut engine, "te", &config_tl());
+    telex(&mut engine, "v", &config_tl());
+    let resp = telex(&mut engine, "y", &config_tl());
+    assert_eq!(resp.preedit.unwrap().raw_input, "te3");
+    let resp = telex(&mut engine, "y", &config_tl());
+    assert!(
+        resp.effect.is_empty(),
+        "same tone twice must not emit effects"
+    );
+    assert_eq!(resp.preedit.unwrap().raw_input, "te3");
+}
+
+#[test]
+fn intent_telex_z_from_idle_enters_composing_with_the_affricate() {
+    let mut engine = Engine::new();
+    let resp = telex(&mut engine, "z", &config_tl());
+    assert!(resp.is_composing);
+    assert_eq!(resp.preedit.unwrap().raw_input, "ts");
+    append(&mut engine, "hi", &config_tl());
+    let resp = dispatch::handle(
+        &req(Method::QueryState(QueryState {})),
+        &mut engine,
+        &config_tl(),
+    )
+    .unwrap();
+    assert_eq!(resp.preedit.unwrap().raw_input, "tshi");
+}
+
+#[test]
+fn intent_telex_z_under_poj_spells_ch() {
+    let mut engine = Engine::new();
+    let resp = telex(&mut engine, "z", &common::config("poj"));
+    assert_eq!(resp.preedit.unwrap().raw_input, "ch");
+}
+
+#[test]
+fn intent_telex_tone_key_while_idle_is_noop() {
+    let mut engine = Engine::new();
+    let resp = telex(&mut engine, "v", &config_tl());
+    assert!(!resp.is_composing);
+    assert!(resp.effect.is_empty());
+}
+
+#[test]
+fn intent_telex_f_appends_a_hyphen() {
+    let mut engine = Engine::new();
+    append(&mut engine, "tai", &config_tl());
+    telex(&mut engine, "d", &config_tl());
+    let resp = telex(&mut engine, "f", &config_tl());
+    assert_eq!(resp.preedit.unwrap().raw_input, "tai5-");
+}
+
+#[test]
+fn intent_telex_under_continuous_edits_only_the_pending_tail() {
+    let mut engine = Engine::new();
+    append(&mut engine, "tai", &config_tl());
+    dispatch::handle(
+        &req(Method::EnterContinuous(protos::engine::EnterContinuous {})),
+        &mut engine,
+        &config_tl(),
+    )
+    .unwrap();
+    let resp = telex(&mut engine, "d", &config_tl());
+    let preedit = resp.preedit.unwrap();
+    assert_eq!(preedit.raw_input, "tai5");
+    assert_eq!(preedit.display_text, "tâi");
+    assert!(matches!(
+        engine.snapshot_state().phase,
+        composing::Phase::Continuous { ref raw, .. } if raw == "tai5"
+    ));
+}
+
+fn nail(engine: &mut Engine, display_text: &str, consumed_bytes: usize) {
+    engine.apply(
+        composing::Intent::CommitContinuous {
+            display_text: display_text.to_string(),
+            canonical_text: String::new(),
+            association_tl: String::new(),
+            consumed_bytes,
+            syllable_count: 1,
+        },
+        &config_tl(),
+    );
+}
+
+fn nailed_texts(engine: &Engine) -> Vec<String> {
+    match engine.snapshot_state().phase {
+        composing::Phase::Continuous { nailed, .. } => {
+            nailed.iter().map(|s| s.display_text.clone()).collect()
+        }
+        _ => panic!("expected Continuous"),
+    }
+}
+
+#[test]
+fn intent_telex_under_continuous_keeps_nailed_segments() {
+    // Model B: nailing the whole buffer finalizes, so a nailed prefix always
+    // has a non-empty pending tail beside it — `tsu` nailed out of `tsuts`.
+    let mut engine = Engine::new();
+    append(&mut engine, "tsuts", &config_tl());
+    dispatch::handle(
+        &req(Method::EnterContinuous(protos::engine::EnterContinuous {})),
+        &mut engine,
+        &config_tl(),
+    )
+    .unwrap();
+    nail(&mut engine, "珠", 3);
+    append(&mut engine, "ai", &config_tl());
+    let resp = telex(&mut engine, "d", &config_tl());
+    let preedit = resp.preedit.unwrap();
+    assert_eq!(preedit.raw_input, "tsai5");
+    assert_eq!(preedit.display_text, "珠 tsâi");
+    assert_eq!(nailed_texts(&engine), vec!["珠"]);
+    // A no-op on the tail leaves the nailed prefix alone too.
+    let resp = telex(&mut engine, "d", &config_tl());
+    assert!(resp.effect.is_empty());
+    assert_eq!(nailed_texts(&engine), vec!["珠"]);
+}
+
+#[test]
+fn intent_telex_edit_resets_selection_noop_keeps_it() {
+    let mut engine = Engine::new();
+    append(&mut engine, "te", &config_tl());
+    let select = |engine: &mut Engine| {
+        dispatch::handle(
+            &req(Method::SetSelectedCandidateIndex(
+                SetSelectedCandidateIndex { index: 2 },
+            )),
+            engine,
+            &config_tl(),
+        )
+        .unwrap()
+    };
+    select(&mut engine);
+    let resp = telex(&mut engine, "v", &config_tl());
+    assert_eq!(resp.selected_candidate_index, 0);
+    select(&mut engine);
+    let resp = telex(&mut engine, "v", &config_tl());
+    assert_eq!(
+        resp.selected_candidate_index, 2,
+        "no-op keeps the selection"
+    );
+}
+
+#[test]
+fn intent_telex_tone_after_trailing_hyphen_is_noop() {
+    let mut engine = Engine::new();
+    append(&mut engine, "tai-", &config_tl());
+    let resp = telex(&mut engine, "v", &config_tl());
+    assert!(resp.effect.is_empty());
+    assert_eq!(resp.preedit.unwrap().raw_input, "tai-");
+}
+
+#[test]
+fn intent_telex_uppercase_f_and_poj_tone_render() {
+    let poj = common::config("poj");
+    let mut engine = Engine::new();
+    append(&mut engine, "Pa", &poj);
+    let resp = telex(&mut engine, "Y", &poj);
+    assert_eq!(resp.preedit.as_ref().unwrap().display_text, "Pà");
+    let resp = telex(&mut engine, "F", &poj);
+    assert_eq!(resp.preedit.unwrap().raw_input, "Pa3-");
+}
