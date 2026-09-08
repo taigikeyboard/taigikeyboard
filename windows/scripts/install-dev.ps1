@@ -61,7 +61,10 @@ $ServiceDll = Join-Path $TargetDir 'TaigiKeyboard.dll'
 # free, in the order the sweep visits them.
 $ServiceDllNames = @($ServiceDll, (Join-Path $TargetDir 'deps\TaigiKeyboard.dll'))
 $SettingsExe = Join-Path $TargetDir 'TaigiKeyboardSettings.exe'
-$DictionariesSource = Join-Path $RepositoryDir 'ios\Resources\Dictionaries'
+# The one committed copy every platform packages from (#14, `f4e0fb20`);
+# it used to be reached through the iOS bundle's own folder, which no longer
+# exists.
+$DictionariesSource = Join-Path $RepositoryDir 'dictionaries'
 $FontsSource = Join-Path $RepositoryDir 'fonts\font'
 # guids.rs: CLSID_TEXT_SERVICE.
 $Clsid = '{32C28A51-8939-4C8F-8F29-037F9FD3CF0A}'
