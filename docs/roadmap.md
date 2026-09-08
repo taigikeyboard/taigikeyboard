@@ -321,7 +321,31 @@ classifier saw the Telex key); a shifted number-row key is refused by key code o
 paths so the event and the registry bridge agree; the candidate-window toggle hides the bar
 *before* the next key is classified, since the setting can flip faster than its observer runs.
 
-#### Dogfood (added to `docs/architecture/dogfood-checklist.md` as S32 / S33)
+#### Follow-up: Telex guide as a global shortcut (USER 2026-09-09)
+
+USER: 「telex 的說明文字不要放在說明文字下面,而是要在『快速齒』頁面加一個 Telex 說明的快捷鍵,使用
+快捷鍵就可以快速叫出一個鍵盤 mapping 的選單可以看,然後可以按 esc 退出,或是其他按鈕退出,繼續打字」.
+
+**Design (Codex pre-impl 2026-09-09, 9 points applied).** The legend under the 聲調拍法 picker goes
+(both panes; `settings.toneSchemeTelexLegendTl/Poj` deleted once both consumers are gone). A fifth
+global action `showTelexGuide` (last row of 快速齒, default `⌃⌘/` on macOS, `Ctrl+Alt+/` on
+Windows — `Ctrl+Alt+T` was rejected: JetBrains Surround With) TOGGLES a floating guide panel: the
+same non-activating HUD chrome as the mode flash (`ModeFlashPanel.swift`, `ui/mode_flash.rs`), no
+timer, centred on the working screen (the hotkey path has no client, so no caret anchor), rows
+key | meaning | example spelled for the romanization in use (`z` = ts/ch, tone 9 `tsa̋ng` vs
+`chăng`). Dismissal happens in the per-key entry before classification: the guide hides, Escape
+(no host chord) is swallowed even mid-composition, every other key falls through; on Windows the
+Test phase answers TRUE for every non-modifier key while the guide shows, so Deliver is guaranteed
+to arrive. The other global actions hide the guide before they run. The panel is owned by the
+session that raised it (macOS token; Windows context) and goes with document / context / thread
+focus loss. Always available, not gated on the Telex scheme.
+
+| PR | Scope | Est. |
+|---|---|---|
+| P5 | macOS: action + `TelexGuidePanel` + dismissal + legend removal + tests | ~400 |
+| P6 | Windows: action + GUID + preserved key + `ui/telex_guide.rs` + dismissal + legend removal; deletes the legend i18n keys | ~500 |
+
+#### Dogfood (added to `docs/architecture/dogfood-checklist.md` as S32 / S33; S34 for the guide)
 
 - **S32 Telex** — TL: `tev` → té, `tsangq` → tsa̋ng, `zhi` → tshi, `taidfgiv` → tâi-gí, `tev`+`y` → tè,
   `tev`+`v` unchanged, digit picks the slot, `q w d f` no longer pick. POJ: `zit` → chit,
