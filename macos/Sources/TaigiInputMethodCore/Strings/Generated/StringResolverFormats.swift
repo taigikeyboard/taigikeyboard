@@ -7,6 +7,10 @@ extension StringResolver {
         format(.desktopTelexGuideTone, tone)
     }
 
+    func desktopTelexGuideInitial(initial: String) -> String {
+        format(.desktopTelexGuideInitial, initial)
+    }
+
     func desktopUpdateCurrentVersionLabel(version: String) -> String {
         format(.desktopUpdateCurrentVersionLabel, version)
     }

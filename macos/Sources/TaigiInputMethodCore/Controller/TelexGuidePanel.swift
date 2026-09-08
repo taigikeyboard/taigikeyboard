@@ -2,47 +2,30 @@
 
 import AppKit
 
-/// One row of the guide: the key, what it does (a string key, so the meaning
-/// follows the display language), and the example under each romanization.
+/// One row of the guide: the key and what it does.
 ///
-/// The examples are romanization, not prose, so they are spelled here rather
-/// than translated: `z` is `ts` under TL and `ch` under POJ, and tone 9 is a
-/// double acute (U+030B) in TL but a breve (U+0306) in POJ — the row has to
-/// show the spelling the user will actually see.
+/// Two columns, no examples and no dismiss hint (USER 2026-09-09: 「不要多餘的
+/// 說明文字…不需要範例,不需要說明如何 exit」). What the affricate keys spell
+/// still has to follow the romanization in use, so `z` carries its spelling —
+/// `ts` under TL, `ch` under POJ — inside the meaning itself.
 private struct TelexGuideRow {
     let key: String
     let meaning: Meaning
-    let tlExample: String
-    let pojExample: String
 
     enum Meaning {
         case tone(String)
-        case initial
+        /// `z` / `zh`, with the initial each spells under TL and under POJ.
+        case initial(tl: String, poj: String)
         case hyphen
         case pick
     }
 
-    /// The same example under both romanizations — every tone key but 9.
-    init(key: String, meaning: Meaning, example: String) {
-        self.init(key: key, meaning: meaning, tlExample: example, pojExample: example)
-    }
-
-    init(key: String, meaning: Meaning, tlExample: String, pojExample: String) {
-        self.key = key
-        self.meaning = meaning
-        self.tlExample = tlExample
-        self.pojExample = pojExample
-    }
-
-    func example(under inputMode: InputMode) -> String {
-        inputMode == .poj ? pojExample : tlExample
-    }
-
     @MainActor
-    func meaningText(_ language: DisplayLanguageStore) -> String {
+    func meaningText(_ inputMode: InputMode, _ language: DisplayLanguageStore) -> String {
         switch meaning {
         case let .tone(tone): language.resolver.desktopTelexGuideTone(tone: tone)
-        case .initial: language.string(.desktopTelexGuideInitial)
+        case let .initial(tl, poj):
+            language.resolver.desktopTelexGuideInitial(initial: inputMode == .poj ? poj : tl)
         case .hyphen: language.string(.desktopTelexGuideHyphen)
         case .pick: language.string(.desktopTelexGuidePick)
         }
@@ -86,22 +69,23 @@ final class TelexGuidePanel {
     /// Row order is reading order: the tones by number, then the two
     /// consonant keys, then the hyphen, then the digits.
     private static let rows: [TelexGuideRow] = [
-        TelexGuideRow(key: "v", meaning: .tone("2"), example: "tev → té"),
-        TelexGuideRow(key: "y", meaning: .tone("3"), example: "pay → pà"),
-        TelexGuideRow(key: "d", meaning: .tone("5"), example: "langd → lâng"),
-        TelexGuideRow(key: "w", meaning: .tone("7"), example: "kangw → kāng"),
-        TelexGuideRow(key: "x", meaning: .tone("8"), example: "titx → ti̍t"),
-        TelexGuideRow(key: "q", meaning: .tone("9"), tlExample: "tsangq → tsa̋ng", pojExample: "zangq → chăng"),
-        TelexGuideRow(key: "z", meaning: .initial, tlExample: "zo → tso", pojExample: "zit → chit"),
-        TelexGuideRow(key: "zh", meaning: .initial, tlExample: "zhi → tshi", pojExample: "zhit → chhit"),
-        TelexGuideRow(key: "f", meaning: .hyphen, example: "taidfgiv → tâi-gí"),
-        TelexGuideRow(key: "1–9", meaning: .pick, example: ""),
+        TelexGuideRow(key: "v", meaning: .tone("2")),
+        TelexGuideRow(key: "y", meaning: .tone("3")),
+        TelexGuideRow(key: "d", meaning: .tone("5")),
+        TelexGuideRow(key: "w", meaning: .tone("7")),
+        TelexGuideRow(key: "x", meaning: .tone("8")),
+        TelexGuideRow(key: "q", meaning: .tone("9")),
+        TelexGuideRow(key: "z", meaning: .initial(tl: "ts", poj: "ch")),
+        TelexGuideRow(key: "zh", meaning: .initial(tl: "tsh", poj: "chh")),
+        TelexGuideRow(key: "f", meaning: .hyphen),
+        TelexGuideRow(key: "1–9", meaning: .pick),
     ]
 
-    /// The examples the guide shows under `inputMode`, in row order — what a
+    /// The meanings the guide shows under `inputMode`, in row order — what a
     /// test reads to pin the romanization without walking the view tree.
-    static func examples(under inputMode: InputMode) -> [String] {
-        rows.map { $0.example(under: inputMode) }
+    @MainActor
+    static func meanings(under inputMode: InputMode, language: DisplayLanguageStore) -> [String] {
+        rows.map { $0.meaningText(inputMode, language) }
     }
 
     func toggle(inputMode: InputMode, language: DisplayLanguageStore, ownedBy owner: ComposingSessionToken) {
@@ -142,19 +126,15 @@ final class TelexGuidePanel {
         panel = nil
     }
 
-    /// The card: title, the three-column table, the dismiss hint, on the same
-    /// HUD chrome as the mode flash.
+    /// The card: the scheme's name and the two-column table, on the same HUD
+    /// chrome as the mode flash.
     private static func makePanel(inputMode: InputMode, language: DisplayLanguageStore) -> NSPanel {
         let title = NSTextField(labelWithString: language.string(.desktopTelexGuideTitle))
         title.font = .systemFont(ofSize: NSFont.systemFontSize + 2, weight: .semibold)
 
         let grid = makeGrid(inputMode: inputMode, language: language)
 
-        let hint = NSTextField(labelWithString: language.string(.desktopTelexGuideDismiss))
-        hint.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
-        hint.textColor = .secondaryLabelColor
-
-        let stack = NSStackView(views: [title, grid, hint])
+        let stack = NSStackView(views: [title, grid])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 10
@@ -184,21 +164,16 @@ final class TelexGuidePanel {
         return panel
     }
 
-    /// Key | meaning | example. The key and the example share a monospaced
-    /// face because both are things the user types; the example is secondary
-    /// so the key stays the thing the eye lands on.
+    /// Key | meaning. The key is monospaced semibold because it is a thing
+    /// the user types and the one the eye lands on.
     private static func makeGrid(inputMode: InputMode, language: DisplayLanguageStore) -> NSGridView {
         let keyFont = NSFont.monospacedSystemFont(ofSize: NSFont.systemFontSize, weight: .semibold)
-        let exampleFont = NSFont.monospacedSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
 
         let cells = rows.map { row -> [NSView] in
             let key = NSTextField(labelWithString: row.key)
             key.font = keyFont
-            let meaning = NSTextField(labelWithString: row.meaningText(language))
-            let example = NSTextField(labelWithString: row.example(under: inputMode))
-            example.font = exampleFont
-            example.textColor = .secondaryLabelColor
-            return [key, meaning, example]
+            let meaning = NSTextField(labelWithString: row.meaningText(inputMode, language))
+            return [key, meaning]
         }
         let grid = NSGridView(views: cells)
         grid.rowSpacing = 4

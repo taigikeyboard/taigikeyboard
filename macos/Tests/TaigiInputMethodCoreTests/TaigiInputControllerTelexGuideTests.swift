@@ -51,26 +51,28 @@ final class TaigiInputControllerTelexGuideTests: XCTestCase {
         XCTAssertNil(TelexGuidePanel.shared.owner)
     }
 
-    /// The card is spelled for the romanization in use: `z` is `ts` under TL
-    /// and `ch` under POJ, and tone 9 takes a different diacritic in each.
+    /// The card is spelled for the romanization in use: `z` spells `ts`
+    /// under TL and `ch` under POJ, which the meaning column names now that
+    /// the example column is gone (USER 2026-09-09).
     func testTheGuide_isSpelledForTheRomanizationInUse() throws {
         let session = try makeSession()
+        let language = TestFixtures.makeDisplayLanguageStore(.hanji, userDefaults: userDefaults)
 
         session.controller.performShortcutAction(.showTelexGuide)
-        let tlExamples = TelexGuidePanel.examples(under: .tl)
+        let tl = TelexGuidePanel.meanings(under: .tl, language: language)
         XCTAssertEqual(TelexGuidePanel.shared.shownInputMode, .tl)
-        XCTAssertTrue(tlExamples.contains("zo → tso"))
-        XCTAssertTrue(tlExamples.contains("tsangq → tsa̋ng"))
+        XCTAssertTrue(tl.contains { $0.contains("ts") && !$0.contains("tsh") }, "\(tl)")
+        XCTAssertTrue(tl.contains { $0.contains("tsh") }, "\(tl)")
 
         session.controller.performShortcutAction(.showTelexGuide)
         session.controller.settings.inputMode = .poj
         session.controller.performShortcutAction(.showTelexGuide)
 
-        let pojExamples = TelexGuidePanel.examples(under: .poj)
+        let poj = TelexGuidePanel.meanings(under: .poj, language: language)
         XCTAssertEqual(TelexGuidePanel.shared.shownInputMode, .poj)
-        XCTAssertTrue(pojExamples.contains("zit → chit"))
-        XCTAssertTrue(pojExamples.contains("zangq → chăng"))
-        XCTAssertFalse(pojExamples.contains("zo → tso"))
+        XCTAssertTrue(poj.contains { $0.contains("ch") && !$0.contains("chh") }, "\(poj)")
+        XCTAssertTrue(poj.contains { $0.contains("chh") }, "\(poj)")
+        XCTAssertFalse(poj.contains { $0.contains("ts") }, "\(poj)")
     }
 
     /// A switch that ran under an open guide would leave a table spelled for

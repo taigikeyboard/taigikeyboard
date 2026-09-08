@@ -917,9 +917,6 @@ impl TextService_Impl {
                         .resolve(StringKey::DesktopTelexGuideTitle)
                         .to_owned(),
                     rows: telex_guide_rows(settings.choice(&keys::INPUT_MODE), &strings),
-                    hint: strings
-                        .resolve(StringKey::DesktopTelexGuideDismiss)
-                        .to_owned(),
                 };
                 // Where the mode flash goes: the last caret this service saw.
                 let anchor = self.state.borrow().focused_caret;

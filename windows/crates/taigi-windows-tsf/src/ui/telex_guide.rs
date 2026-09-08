@@ -37,7 +37,6 @@ const WINDOW_CLASS: &str = "TaigiKeyboardTelexGuide";
 /// flyout rather than the Mac panel it was ported from (`theme.rs`).
 const TITLE_FONT_SIZE: f32 = 16.0;
 const ROW_FONT_SIZE: f32 = 14.0;
-const HINT_FONT_SIZE: f32 = 12.0;
 /// The insets and gaps of `TelexGuidePanel.makePanel` / `makeGrid`.
 const PADDING_X: f32 = 22.0;
 const PADDING_TOP: f32 = 16.0;
@@ -46,13 +45,13 @@ const SECTION_GAP: f32 = 10.0;
 const ROW_GAP: f32 = 4.0;
 const COLUMN_GAP: f32 = 18.0;
 
-/// What the card says: the title, the rows for the romanization in use,
-/// and the dismiss hint — resolved by the caller, who has the display
-/// language; this module only draws.
+/// What the card says: the title and the rows for the romanization in use,
+/// resolved by the caller, who has the display language; this module only
+/// draws. No dismiss hint — the card carries the keys and nothing else
+/// (USER 2026-09-09).
 pub struct TelexGuideContent {
     pub title: String,
     pub rows: Vec<TelexGuideRow>,
-    pub hint: String,
 }
 
 pub struct TelexGuide {
@@ -78,13 +77,11 @@ struct Pen<'a> {
 /// `paint` only places layouts.
 struct GuideLayout {
     title: Cell,
-    rows: Vec<[Cell; 3]>,
-    hint: Cell,
+    rows: Vec<[Cell; 2]>,
     /// The widest cell of each column, which is where the next column starts.
-    column_widths: [f32; 3],
+    column_widths: [f32; 2],
     title_height: f32,
     row_height: f32,
-    hint_height: f32,
     size: (f32, f32),
 }
 
@@ -286,8 +283,8 @@ impl Cell {
 }
 
 impl GuideLayout {
-    /// Key | meaning | example. The key is semibold so it stays the thing
-    /// the eye lands on; the example is secondary (`makeGrid`).
+    /// Key | meaning. The key is semibold so it stays the thing the eye
+    /// lands on (`makeGrid`).
     fn measure(factory: &RenderFactory, content: &TelexGuideContent) -> Self {
         let measurer = super::render::DWriteMeasurer { factory };
         let title = Cell::measure(
@@ -296,13 +293,7 @@ impl GuideLayout {
             TITLE_FONT_SIZE,
             DWRITE_FONT_WEIGHT_SEMI_BOLD,
         );
-        let hint = Cell::measure(
-            factory,
-            &content.hint,
-            HINT_FONT_SIZE,
-            DWRITE_FONT_WEIGHT_NORMAL,
-        );
-        let rows: Vec<[Cell; 3]> = content
+        let rows: Vec<[Cell; 2]> = content
             .rows
             .iter()
             .map(|row| {
@@ -319,16 +310,10 @@ impl GuideLayout {
                         ROW_FONT_SIZE,
                         DWRITE_FONT_WEIGHT_NORMAL,
                     ),
-                    Cell::measure(
-                        factory,
-                        row.example,
-                        ROW_FONT_SIZE,
-                        DWRITE_FONT_WEIGHT_NORMAL,
-                    ),
                 ]
             })
             .collect();
-        let mut column_widths = [0.0f32; 3];
+        let mut column_widths = [0.0f32; 2];
         for row in &rows {
             for (column, cell) in row.iter().enumerate() {
                 column_widths[column] = column_widths[column].max(cell.width);
@@ -336,26 +321,17 @@ impl GuideLayout {
         }
         let title_height = measurer.line_height(font(TITLE_FONT_SIZE));
         let row_height = measurer.line_height(font(ROW_FONT_SIZE));
-        let hint_height = measurer.line_height(font(HINT_FONT_SIZE));
-        let table_width = column_widths.iter().sum::<f32>() + 2.0 * COLUMN_GAP;
-        let content_width = title.width.max(table_width).max(hint.width);
+        let table_width = column_widths.iter().sum::<f32>() + COLUMN_GAP;
+        let content_width = title.width.max(table_width);
         let row_count = rows.len() as f32;
         let table_height = row_count * row_height + (row_count - 1.0).max(0.0) * ROW_GAP;
-        let height = PADDING_TOP
-            + title_height
-            + SECTION_GAP
-            + table_height
-            + SECTION_GAP
-            + hint_height
-            + PADDING_BOTTOM;
+        let height = PADDING_TOP + title_height + SECTION_GAP + table_height + PADDING_BOTTOM;
         Self {
             title,
             rows,
-            hint,
             column_widths,
             title_height,
             row_height,
-            hint_height,
             size: (content_width + 2.0 * PADDING_X, height),
         }
     }
@@ -431,7 +407,7 @@ impl WindowHandler for GuideContent {
                     theme.text,
                 );
                 y += layout.title_height + SECTION_GAP;
-                let colours = [theme.text, theme.text, theme.secondary_text];
+                let colours = [theme.text, theme.text];
                 for row in &layout.rows {
                     let mut x = PADDING_X;
                     for (column, cell) in row.iter().enumerate() {
@@ -440,14 +416,6 @@ impl WindowHandler for GuideContent {
                     }
                     y += layout.row_height + ROW_GAP;
                 }
-                y += SECTION_GAP - ROW_GAP;
-                self.draw_cell(
-                    &pen,
-                    &layout.hint,
-                    layout.hint_height,
-                    (PADDING_X, y),
-                    theme.tertiary_text,
-                );
             })
             .is_err();
         if lost {
