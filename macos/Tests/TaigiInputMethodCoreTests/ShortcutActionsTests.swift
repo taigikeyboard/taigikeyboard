@@ -45,7 +45,7 @@ final class ShortcutActionsTests: XCTestCase {
     func testEveryAction_readsAsAWholePhraseInEveryLanguage() {
         XCTAssertEqual(
             labels(),
-            ["拍開設定選單", "切換輸入模式", "輸出漢字/羅馬字", "切換候選詞顯示"],
+            ["拍開設定選單", "切換輸入模式", "輸出漢字/羅馬字", "切換候選詞顯示", "Telex 說明"],
         )
         XCTAssertEqual(
             labels(.japanese),
@@ -54,6 +54,7 @@ final class ShortcutActionsTests: XCTestCase {
                 "入力モードを切り替える",
                 "漢字／ローマ字を出力",
                 "候補の表示を切り替え",
+                "Telex の説明",
             ],
         )
         XCTAssertEqual(labels(.english).first, "Open Settings Menu")
@@ -141,9 +142,10 @@ final class ShortcutActionsTests: XCTestCase {
     /// One ⌃⌘S doorway replaced them — a command reached for rarely, so a
     /// mnemonic pays — and the switch moved to ⌃⌘C, where a command reached
     /// for all day wants the hand to stay on the bottom row. The 候選詞顯示
-    /// cycle joined on ⌃⌘H (USER 2026-09-02), last: the order here is the
-    /// order of the rows in the pane.
-    func testTheGlobalRoster_isOneDoorwayAndThreeSwitches() {
+    /// cycle joined on ⌃⌘H (USER 2026-09-02), and the Telex guide on ⌃⌘/
+    /// (USER 2026-09-09) — the key help lives on — last: the order here is
+    /// the order of the rows in the pane.
+    func testTheGlobalRoster_isOneDoorwayThreeSwitchesAndTheGuide() {
         XCTAssertEqual(
             ShortcutAction.allCases.map(\.defaultShortcut),
             [
@@ -151,6 +153,7 @@ final class ShortcutActionsTests: XCTestCase {
                 KeyboardShortcuts.Shortcut(.c, modifiers: [.control, .command]),
                 KeyboardShortcuts.Shortcut(.backtick),
                 KeyboardShortcuts.Shortcut(.h, modifiers: [.control, .command]),
+                KeyboardShortcuts.Shortcut(.slash, modifiers: [.control, .command]),
             ],
         )
     }

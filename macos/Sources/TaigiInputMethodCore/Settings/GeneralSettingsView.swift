@@ -85,15 +85,6 @@ struct GeneralSettingsView: View {
                     Text(language.string(.settingsToneSchemeStandard)).tag(ToneInputScheme.standard)
                     Text(language.string(.settingsToneSchemeTelex)).tag(ToneInputScheme.telex)
                 }
-                if toneInputScheme == .telex {
-                    // The key table, spelled for the romanization in use:
-                    // `z` is `ts` under TL and `ch` under POJ. Shown only
-                    // while Telex is on, because Standard's keys are the
-                    // ones every TL/POJ user already knows.
-                    Text(language.string(inputMode == .poj ? .settingsToneSchemeTelexLegendPoj : .settingsToneSchemeTelexLegendTl))
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
 
                 Picker(language.string(.settingsDisplayLanguage), selection: displayLanguageSelection) {
                     ForEach(DisplayLanguage.selectableLanguages, id: \.self) { option in

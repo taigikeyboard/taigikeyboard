@@ -154,11 +154,12 @@ enum ComposingKeyIntent: Equatable {
     /// `CharacterSet.controlCharacters` materializes a bridged set each access.
     private static let controlCharacters = CharacterSet.controlCharacters
 
-    /// The chords the host owns. Named once because three rules are written
-    /// against it — the host-chord guard, the fixed tier's modifier check, and
-    /// `isDocumentText` — and a list spelled out at each of them is a list
-    /// that can drift apart.
-    private static let hostChords: NSEvent.ModifierFlags = [.command, .control, .option]
+    /// The chords the host owns. Named once because four rules are written
+    /// against it — the host-chord guard, the fixed tier's modifier check,
+    /// `isDocumentText`, and the Telex guide's Escape
+    /// (`TaigiInputController.handle`) — and a list spelled out at each of
+    /// them is a list that can drift apart.
+    static let hostChords: NSEvent.ModifierFlags = [.command, .control, .option]
 
     /// Classifies `key` for a session whose composition is or is not active,
     /// and whose candidate bar is or is not on screen.

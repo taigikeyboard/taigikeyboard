@@ -253,7 +253,12 @@ public final class TaigiInputController: IMKInputController {
     /// the digits were picking out of a list that is no longer on screen.
     override public func hidePalettes() {
         Self.logger.debug("hidePalettes")
-        onMainActor(nil) { controller, _ in controller.dismissCandidates() }
+        onMainActor(nil) { controller, _ in
+            controller.dismissCandidates()
+            // The system is asking for every piece of input-method UI to go;
+            // the guide is one, and it goes without touching the composition.
+            TelexGuidePanel.shared.hide(ownedBy: controller.sessionToken)
+        }
         super.hidePalettes()
     }
 
@@ -436,6 +441,12 @@ public final class TaigiInputController: IMKInputController {
     /// fetched again.
     @MainActor
     func performShortcutAction(_ action: ShortcutAction) {
+        // A switch that ran under an open guide would leave a table spelled
+        // for the romanization the user just left. Owner-guarded, so a chord
+        // reaching a session that did not raise the guide leaves it alone.
+        if action != .showTelexGuide {
+            TelexGuidePanel.shared.hide(ownedBy: sessionToken)
+        }
         switch action {
         case .openLastSettingsPane:
             // Handled process-wide by `ShortcutHotkeys.perform` before any
@@ -476,6 +487,15 @@ public final class TaigiInputController: IMKInputController {
             let next = settings.candidateDisplayMode.next
             settings.candidateDisplayMode = next
             flash(next.displayNameKey)
+        case .showTelexGuide:
+            // Spelled for the romanization in use — `z` is `ts` under TL
+            // and `ch` under POJ — and owned by this session, so the key
+            // path below and this session's teardown are what take it down.
+            TelexGuidePanel.shared.toggle(
+                inputMode: settings.inputMode,
+                language: displayLanguageOverride ?? DisplayLanguageStore.shared,
+                ownedBy: sessionToken,
+            )
         }
     }
 
@@ -516,6 +536,21 @@ public final class TaigiInputController: IMKInputController {
         guard let manager = ComposingSessionCoordinator.shared.manager(ownedBy: sessionToken),
               let client
         else { return false }
+
+        // The guide goes down on the first key after it came up, before that
+        // key is read: it is a card to glance at, not a mode. A plain Escape
+        // ends the guide and nothing else, so a user mid-word who checked the
+        // table keeps the composition and its bar; every other key, an Escape
+        // under a host chord included (`⌃3` arrives as Escape,
+        // `ComposingKeyIntent`), goes on to do its job. Bare modifier presses
+        // cannot close it — only `.keyDown` reaches here, and a modifier on
+        // its own is a `.flagsChanged`.
+        if TelexGuidePanel.shared.isShowing {
+            TelexGuidePanel.shared.hideNow()
+            if key.characters?.first == "\u{1B}", key.modifiers.isDisjoint(with: ComposingKeyIntent.hostChords) {
+                return true
+            }
+        }
 
         // A window the user switched off since the last key comes down HERE,
         // before the key is read: the setting's observer runs on a later
@@ -1034,6 +1069,10 @@ public final class TaigiInputController: IMKInputController {
     /// session that is going away.
     @MainActor
     private func endSession(_ client: IMKTextInput?) {
+        // Owner-guarded, beside the bar's own dismissal in
+        // `finishComposition`: a guide belongs to the session that raised it,
+        // and goes when that session's focus does.
+        TelexGuidePanel.shared.hide(ownedBy: sessionToken)
         finishComposition(into: client)
         ComposingSessionCoordinator.shared.release(sessionToken)
         displayModeObservation = nil

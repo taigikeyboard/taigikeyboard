@@ -3,6 +3,10 @@
 import Foundation
 
 extension StringResolver {
+    func desktopTelexGuideTone(tone: String) -> String {
+        format(.desktopTelexGuideTone, tone)
+    }
+
     func desktopUpdateCurrentVersionLabel(version: String) -> String {
         format(.desktopUpdateCurrentVersionLabel, version)
     }
