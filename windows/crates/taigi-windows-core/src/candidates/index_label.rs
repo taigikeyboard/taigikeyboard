@@ -3,7 +3,6 @@
 
 use super::horizontal::HorizontalPageLayout;
 use crate::keys::CandidateSlotKeySet;
-use crate::settings::SettingChoice;
 
 pub struct CandidateIndexLabel;
 
@@ -20,7 +19,7 @@ impl CandidateIndexLabel {
 
     /// Every form a slot can be drawn in — each slot under each set — so the
     /// column is measured against all of them and does not change width
-    /// when the user chooses another set.
+    /// when the user switches tone scheme.
     pub fn widest_label_forms() -> Vec<String> {
         (0..HorizontalPageLayout::PAGE_SIZE)
             .flat_map(|slot| {
@@ -38,27 +37,20 @@ mod tests {
 
     #[test]
     fn labels_follow_the_set_and_a_tenth_slot_is_blank() {
-        // trace: CandidateIndexLabelTests.swift:23-39 (symbols per Windows set).
-        assert_eq!(
-            CandidateIndexLabel::text_for_slot(0, CandidateSlotKeySet::Control),
-            "Ctrl+1"
-        );
-        assert_eq!(
-            CandidateIndexLabel::text_for_slot(8, CandidateSlotKeySet::Option),
-            "Alt+9"
-        );
-        assert_eq!(
-            CandidateIndexLabel::text_for_slot(2, CandidateSlotKeySet::Shift),
-            "⇧3"
-        );
-        assert_eq!(
-            CandidateIndexLabel::text_for_slot(9, CandidateSlotKeySet::Control),
-            ""
-        );
+        // trace: CandidateIndexLabelTests.swift — bare row under Standard,
+        // digits under Telex, nothing past the ninth.
         let bare: Vec<String> = (0..9)
             .map(|slot| CandidateIndexLabel::text_for_slot(slot, CandidateSlotKeySet::BareKeys))
             .collect();
         assert_eq!(bare, ["q", "w", "d", "f", "z", "x", "v", "y", ";"]);
-        assert_eq!(CandidateIndexLabel::widest_label_forms().len(), 9 * 4);
+        let digits: Vec<String> = (0..9)
+            .map(|slot| CandidateIndexLabel::text_for_slot(slot, CandidateSlotKeySet::Digits))
+            .collect();
+        assert_eq!(digits, ["1", "2", "3", "4", "5", "6", "7", "8", "9"]);
+        assert_eq!(
+            CandidateIndexLabel::text_for_slot(9, CandidateSlotKeySet::Digits),
+            ""
+        );
+        assert_eq!(CandidateIndexLabel::widest_label_forms().len(), 9 * 2);
     }
 }

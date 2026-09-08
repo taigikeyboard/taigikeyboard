@@ -656,24 +656,6 @@
         "ja": "ショートカット"
       }
     },
-    "bindingSlotModifier": {
-      "comment": "Picker label: which key set picks a candidate by slot (q w d f z x v y ;, ⇧1-9, ⌃1-9 or ⌥1-9). Windows only since 2026-09-08 — macOS derives the set from toneInputScheme (settings.json); Windows follows in the Telex P3 round, which drops this key.",
-      "scope": {
-        "platforms": [
-          "windows"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "選字齒",
-        "tailo": "suán-jī khí",
-        "poj": "soán-jī khí",
-        "en": "Select Candidate",
-        "ja": "候補を選択"
-      }
-    },
     "actionNextCandidate": {
       "comment": "Shortcut row: move the highlight to the next candidate.",
       "scope": {

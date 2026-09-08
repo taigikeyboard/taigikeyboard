@@ -2,7 +2,6 @@
 //! Port of `ComposingKeyChord.swift`.
 
 use super::intent::ComposingKeyIntent;
-use super::slot_key_set::CandidateSlotKeySet;
 use super::snapshot::{KeyEventSnapshot, KeyModifiers};
 
 /// A key plus its modifiers, as a composing action can be bound to it.
@@ -24,20 +23,20 @@ pub struct ComposingKeyChord {
 }
 
 /// Why a key could not be recorded, so the recorder can say so rather than
-/// silently doing nothing (`ComposingKeyChord.swift:54-84`).
+/// silently doing nothing (`ComposingKeyChord.swift` `Rejection`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ChordRejection {
-    /// A syllable letter, a digit or the hyphen with no modifier held. The
-    /// eight letters no syllable uses are not refused.
+    /// A letter, a digit, the hyphen or `;` with no Ctrl/Alt/Win held — every
+    /// key one of the two tone schemes types with or picks a candidate with
+    /// (`is_typing_key`). Refused whichever scheme is live, so a chord
+    /// recorded under one cannot go inert when the user switches to the
+    /// other.
     TypesRomanization,
     /// Backspace, Escape, the arrows or the paging keys — reserved whatever
     /// modifiers are held.
     ReservedKey,
     /// An event carrying no character to bind.
     NoKey,
-    /// A candidate-slot key: one of the keys the chosen set holds, or
-    /// Shift+1…Shift+9 whichever set is chosen.
-    CandidateSlotChord,
     /// Global tier only: a chord the system already answers to.
     TakenBySystem,
     /// Global tier only: a press the hotkey registry cannot name.
@@ -47,12 +46,11 @@ pub enum ChordRejection {
     BelongsToHost,
 }
 
-/// The letters a TL or POJ syllable can be spelled with. Eight ASCII letters
-/// are absent — d f q v w x y z — because neither romanization uses them
-/// (`knowledge/taigi-phonetics-reference.md` §2–3), and a key that spells no
-/// syllable is exactly the kind a user wants free for a bare binding.
-/// CROSS-PLATFORM INVARIANT — mirrors `ComposingKeyChord.swift:256`.
-const SYLLABLE_LETTERS: &str = "abceghijklmnoprstu";
+/// The number-row virtual-key codes `1`…`9` (`VK_1`…`VK_9` = `0x31`…`0x39`),
+/// in digit order. Positions, so the same nine keys on every layout — on
+/// AZERTY, where the bare row types `& é " …`, Shift+`&` is still the `1`
+/// key. Mirrors `ComposingKeyChord.swift` `numberRowKeyCodes`.
+const NUMBER_ROW_KEY_CODES: [u16; 9] = [0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39];
 
 /// The AppKit private-use range the Mac spells its arrow keys in. Refused
 /// defensively — a raw value naming one of those scalars is a reserved key
@@ -76,32 +74,47 @@ impl ComposingKeyChord {
         // Only the four chording modifiers are part of a chord; the snapshot
         // already dropped the rest.
         let modifiers = raw_modifiers;
-        // Shift+1…Shift+9 are the `shift` set's slot keys, and no chord on one
-        // could be matched under any set — refused as the slot chord it is,
-        // ahead of the typing-key rule that would catch the digit with a less
-        // true reason.
-        if modifiers == KeyModifiers::SHIFT
-            && ComposingKeyIntent::direct_selection_slot(Some(&key)).is_some()
-        {
-            return Err(ChordRejection::CandidateSlotChord);
-        }
         // Shift alone does not make a chord out of a typing key: Shift+A is
         // still the letter A, and binding it would cost the user their capitals.
         let first = key.chars().next().ok_or(ChordRejection::NoKey)?;
-        if !modifiers.has_host_chord() && Self::is_syllable_typing_key(first) {
+        if !modifiers.has_host_chord() && Self::is_typing_key(first) {
             return Err(ChordRejection::TypesRomanization);
         }
         Ok(Self { key, modifiers })
     }
 
-    /// The chord this event would record, or why it cannot be recorded. A
-    /// shifted digit is refused by the same rule that makes it pick under the
-    /// `shift` set, read off the key code rather than the characters.
+    /// The chord this event would record, or why it cannot be recorded.
+    ///
+    /// A shifted number-row key is refused as the digit it is: Shift alone
+    /// does not make a chord out of a typing key (`make`), and Shift+3 is the
+    /// `3` key even though a US layout types `#` for it. Read off the key
+    /// code, because that is the one thing Shift does not rewrite — and it is
+    /// what keeps this path and the settings-file path (`translate_raw`,
+    /// which is handed the unmodified `3`) refusing the same press. Every
+    /// other shifted key records as the character it types, which is what its
+    /// stored chords already hold. Mirrors `ComposingKeyChord.make(_:)`.
     pub fn make_from_event(event: &KeyEventSnapshot) -> Result<Self, ChordRejection> {
-        if ComposingKeyIntent::shifted_digit_slot(event).is_some() {
-            return Err(ChordRejection::CandidateSlotChord);
+        Self::make_from_press(
+            event.unmodified_characters(),
+            event.modifiers,
+            event.key_code,
+        )
+    }
+
+    /// `make` with the key code beside the characters — the one question the
+    /// recorder (`RecordedPress`) and a live event both have to ask, so the
+    /// shifted number row is refused on both.
+    pub fn make_from_press(
+        key: Option<&str>,
+        modifiers: KeyModifiers,
+        key_code: Option<u16>,
+    ) -> Result<Self, ChordRejection> {
+        if modifiers == KeyModifiers::SHIFT
+            && key_code.is_some_and(|code| NUMBER_ROW_KEY_CODES.contains(&code))
+        {
+            return Err(ChordRejection::TypesRomanization);
         }
-        Self::make(event.unmodified_characters(), event.modifiers)
+        Self::make(key, modifiers)
     }
 
     /// Whether `event` is this chord. Compared on the unmodified characters
@@ -112,14 +125,6 @@ impl ComposingKeyChord {
             return false;
         };
         Self::normalized(characters) == self.key && event.modifiers == self.modifiers
-    }
-
-    /// Whether this chord is a key of the set `slot_key_set` puts on the
-    /// candidate slots — the half of the slot tier that is a setting.
-    pub fn is_candidate_slot_chord(&self, slot_key_set: CandidateSlotKeySet) -> bool {
-        slot_key_set
-            .slot_for_key(Some(&self.key), self.modifiers)
-            .is_some()
     }
 
     /// The form a key is stored and compared in: ASCII lowercased; the keypad
@@ -144,12 +149,23 @@ impl ComposingKeyChord {
                 .is_some_and(|c| FUNCTION_KEY_RANGE.contains(&(c as u32)))
     }
 
-    /// The letters and the hyphen a syllable is spelled with, plus the digits
-    /// that carry its tone.
-    fn is_syllable_typing_key(character: char) -> bool {
-        SYLLABLE_LETTERS.contains(character)
-            || character == '-'
+    /// The keys a composition is typed or picked with, under either tone
+    /// scheme: all 26 ASCII letters, the digits, the hyphen and `;`.
+    ///
+    /// All 26 rather than the eighteen a TL or POJ syllable is spelled with,
+    /// because the other eight are not free either: under Telex `v y d w x q
+    /// z f` type the tones, and under Standard those eight and `;` are the
+    /// candidate slots (`CandidateSlotKeySet::BARE_KEY_ROW`). One rule for
+    /// both schemes, so a chord recorded under one cannot go inert when the
+    /// user switches — which is also what lets `ComposingKeyBindings` skip
+    /// any pass against the slot tier. Asked of the normalized key, so the
+    /// case fold is `normalized`'s.
+    /// CROSS-PLATFORM INVARIANT — mirrors `ComposingKeyChord.swift` `isTypingKey`.
+    fn is_typing_key(character: char) -> bool {
+        character.is_ascii_alphabetic()
             || ComposingKeyIntent::is_tone_digit(character)
+            || character == '-'
+            || character == ';'
     }
 
     /// `"<modifiers>|<scalars>"` — modifier letters in a fixed order (`w`
@@ -191,12 +207,23 @@ impl ComposingKeyChord {
     /// a hand-edited value cannot install a binding that swallows the letters
     /// of a syllable.
     ///
-    /// NOT the recorder's whole gate: the tier rules — the candidate-slot
-    /// keys, `global_rejection`, and the composing tier's Ctrl+Alt refusal —
-    /// live in `evaluate_press`, which a value read from `settings.json` does
-    /// not pass through. A hand-edited file can therefore hold a chord the
-    /// recorder would have refused; only the UI is gated.
+    /// NOT the recorder's whole gate: the tier rules — `global_rejection`
+    /// and the composing tier's Ctrl+Alt refusal — live in `evaluate_press`,
+    /// which a value read from `settings.json` does not pass through. A
+    /// hand-edited file can therefore hold a chord the recorder would have
+    /// refused; only the UI is gated.
     pub fn from_raw(raw: &str) -> Option<Self> {
+        Self::translate_raw(raw).and_then(Result::ok)
+    }
+
+    /// [`Self::from_raw`] with the gate's refusal kept: `None` for a value
+    /// the grammar cannot read at all, `Some(Err)` for a well-formed value
+    /// naming a chord the gate refuses. The launch pass reads WHY a stored
+    /// global row fails to translate, because a row on a typing key is one
+    /// the recorder would refuse today and the preserved key would still be
+    /// dispatched first (`ShortcutActions.swift` `translation(of:)`). Kept to
+    /// the key contract: `ShortcutAction::translation_in` is its only caller.
+    pub(super) fn translate_raw(raw: &str) -> Option<Result<Self, ChordRejection>> {
         let (letters, scalars) = raw.split_once('|')?;
         let mut modifiers = KeyModifiers::NONE;
         for letter in letters.chars() {
@@ -213,7 +240,7 @@ impl ComposingKeyChord {
             let value = u32::from_str_radix(field, 16).ok()?;
             key.push(char::from_u32(value)?);
         }
-        Self::make(Some(&key), modifiers).ok()
+        Some(Self::make(Some(&key), modifiers))
     }
 
     /// The chord as a keycap label: `Shift+Enter`, `Ctrl+]`, `Space`.
@@ -249,6 +276,7 @@ impl ComposingKeyChord {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::keys::CandidateSlotKeySet;
 
     fn chord(key: &str, modifiers: KeyModifiers) -> ComposingKeyChord {
         ComposingKeyChord::make(Some(key), modifiers).expect("bindable")
@@ -256,12 +284,24 @@ mod tests {
 
     #[test]
     fn typing_keys_cannot_be_recorded_bare() {
-        // trace: ComposingKeyBindingsTests.swift:15-25 — the whole syllable
-        // alphabet plus a capital, the digits and the hyphen.
-        for key in SYLLABLE_LETTERS
+        // trace: ComposingKeyBindingsTests.swift — every ASCII letter (both
+        // schemes' keys), a capital, the digits, the hyphen and `;`.
+        for key in ('a'..='z')
+            .map(String::from)
+            .chain(["A", "V", "5", "0", "-", ";"].map(String::from))
+        {
+            assert_eq!(
+                ComposingKeyChord::make(Some(&key), KeyModifiers::NONE),
+                Err(ChordRejection::TypesRomanization),
+                "{key}"
+            );
+        }
+        // The Telex keys and the bare slot row are typing keys under one
+        // rule, so a chord recorded under either scheme stays live.
+        for key in crate::keys::ToneInputScheme::TELEX_KEYS
             .chars()
             .map(String::from)
-            .chain(["A", "5", "0", "-"].map(String::from))
+            .chain(CandidateSlotKeySet::BARE_KEY_ROW.map(String::from))
         {
             assert_eq!(
                 ComposingKeyChord::make(Some(&key), KeyModifiers::NONE),
@@ -272,26 +312,27 @@ mod tests {
     }
 
     #[test]
-    fn non_syllable_letters_can_be_recorded_bare_and_capitals_fold() {
-        for key in ["d", "f", "q", "v", "w", "x", "y", "z"] {
+    fn punctuation_can_be_recorded_bare_and_capitals_fold() {
+        for key in [",", ".", "'", "/", "[", "]", "`"] {
             let chord = chord(key, KeyModifiers::NONE);
             assert_eq!(chord.key, key);
         }
-        let shifted = chord("Z", KeyModifiers::SHIFT);
+        let shifted = chord("Z", KeyModifiers::CONTROL);
         assert_eq!(shifted.key, "z");
-        assert_eq!(shifted.modifiers, KeyModifiers::SHIFT);
+        assert_eq!(shifted.modifiers, KeyModifiers::CONTROL);
         assert_eq!(
-            ComposingKeyChord::make(Some("R"), KeyModifiers::SHIFT),
-            Err(ChordRejection::TypesRomanization)
+            ComposingKeyChord::make(Some("Z"), KeyModifiers::SHIFT),
+            Err(ChordRejection::TypesRomanization),
+            "Shift alone does not make a chord out of a letter"
         );
     }
 
     #[test]
-    fn bare_letter_and_its_shifted_twin_do_not_cross_match() {
-        let bare = chord("z", KeyModifiers::NONE);
-        let shifted = chord("Z", KeyModifiers::SHIFT);
-        let bare_event = KeyEventSnapshot::text("z", KeyModifiers::NONE);
-        let shifted_event = KeyEventSnapshot::chord(Some("Z"), "z", KeyModifiers::SHIFT);
+    fn bare_key_and_its_shifted_twin_do_not_cross_match() {
+        let bare = chord("[", KeyModifiers::NONE);
+        let shifted = chord("{", KeyModifiers::SHIFT);
+        let bare_event = KeyEventSnapshot::text("[", KeyModifiers::NONE);
+        let shifted_event = KeyEventSnapshot::chord(Some("{"), "{", KeyModifiers::SHIFT);
         assert!(bare.matches(&bare_event));
         assert!(!bare.matches(&shifted_event));
         assert!(shifted.matches(&shifted_event));
@@ -300,13 +341,19 @@ mod tests {
 
     #[test]
     fn typing_keys_bind_with_a_host_modifier_but_not_shift_alone() {
-        for modifiers in [KeyModifiers::CONTROL, KeyModifiers::ALT, KeyModifiers::WIN] {
-            assert!(ComposingKeyChord::make(Some("a"), modifiers).is_ok());
+        for key in ["a", "v", "z", "3", ";"] {
+            for modifiers in [KeyModifiers::CONTROL, KeyModifiers::ALT, KeyModifiers::WIN] {
+                assert!(
+                    ComposingKeyChord::make(Some(key), modifiers).is_ok(),
+                    "{key} {modifiers:?}"
+                );
+            }
+            assert_eq!(
+                ComposingKeyChord::make(Some(key), KeyModifiers::SHIFT),
+                Err(ChordRejection::TypesRomanization),
+                "{key}"
+            );
         }
-        assert_eq!(
-            ComposingKeyChord::make(Some("a"), KeyModifiers::SHIFT),
-            Err(ChordRejection::TypesRomanization)
-        );
     }
 
     #[test]
@@ -335,35 +382,14 @@ mod tests {
     }
 
     #[test]
-    fn shifted_digits_are_slot_chords_and_control_digits_are_ordinary() {
-        assert_eq!(
-            ComposingKeyChord::make(Some("3"), KeyModifiers::SHIFT),
-            Err(ChordRejection::CandidateSlotChord)
-        );
-        assert!(
-            chord("3", KeyModifiers::CONTROL).is_candidate_slot_chord(CandidateSlotKeySet::Control)
-        );
-        assert!(
-            !chord("3", KeyModifiers::CONTROL).is_candidate_slot_chord(CandidateSlotKeySet::Option)
-        );
-        assert!(!chord("3", KeyModifiers::CONTROL)
-            .is_candidate_slot_chord(CandidateSlotKeySet::BareKeys));
-        assert!(!chord("0", KeyModifiers::CONTROL)
-            .is_candidate_slot_chord(CandidateSlotKeySet::Control));
-        assert!(
-            chord("z", KeyModifiers::NONE).is_candidate_slot_chord(CandidateSlotKeySet::BareKeys)
-        );
-    }
-
-    #[test]
     fn raw_values_round_trip_and_stay_stable() {
         // trace: ComposingKeyBindingsTests.swift:163-172 — same shape, Windows
         // modifier letters (w/c/a/s).
         for (key, modifiers) in [
             (" ", KeyModifiers::NONE),
             ("\r", KeyModifiers::SHIFT),
-            ("z", KeyModifiers::NONE),
-            ("Z", KeyModifiers::SHIFT),
+            ("[", KeyModifiers::NONE),
+            ("z", KeyModifiers::CONTROL),
             (
                 "]",
                 KeyModifiers::WIN
@@ -386,6 +412,7 @@ mod tests {
     #[test]
     fn raw_values_that_would_take_a_typing_key_do_not_parse() {
         assert_eq!(ComposingKeyChord::from_raw("|0061"), None, "bare a");
+        assert_eq!(ComposingKeyChord::from_raw("|007A"), None, "bare z");
         assert_eq!(ComposingKeyChord::from_raw("s|0035"), None, "Shift+5");
         assert_eq!(
             ComposingKeyChord::from_raw("c|F702"),
@@ -398,22 +425,61 @@ mod tests {
             None,
             "unknown modifier letter"
         );
+        // The launch pass reads the refusal apart from a value the grammar
+        // cannot read.
+        assert_eq!(
+            ComposingKeyChord::translate_raw("|007A"),
+            Some(Err(ChordRejection::TypesRomanization))
+        );
+        assert_eq!(
+            ComposingKeyChord::translate_raw("s|0033"),
+            Some(Err(ChordRejection::TypesRomanization)),
+            "Shift+3 stored as the 3 it is"
+        );
+        assert_eq!(ComposingKeyChord::translate_raw("garbage"), None);
+        assert_eq!(
+            ComposingKeyChord::translate_raw("c|007A"),
+            Some(Ok(chord("z", KeyModifiers::CONTROL)))
+        );
     }
 
     #[test]
-    fn shifted_digit_is_refused_from_an_event_under_any_slot_set() {
+    fn shifted_number_row_key_is_refused_from_an_event_and_from_the_raw_digit() {
         // The key-code path: Shift+3 types `#`, so the characters alone would
         // slip past the digit rule — `make_from_event` reads the row.
         let shift_three =
             KeyEventSnapshot::chord(Some("#"), "#", KeyModifiers::SHIFT).with_key_code(0x33);
         assert_eq!(
             ComposingKeyChord::make_from_event(&shift_three),
-            Err(ChordRejection::CandidateSlotChord)
+            Err(ChordRejection::TypesRomanization)
+        );
+        // The raw path, handed the unmodified `3` with Shift held.
+        assert_eq!(
+            ComposingKeyChord::make(Some("3"), KeyModifiers::SHIFT),
+            Err(ChordRejection::TypesRomanization)
         );
         let keypad_three = KeyEventSnapshot::chord(Some("3"), "3", KeyModifiers::SHIFT);
         assert_eq!(
             ComposingKeyChord::make_from_event(&keypad_three),
-            Err(ChordRejection::CandidateSlotChord)
+            Err(ChordRejection::TypesRomanization)
+        );
+        // A `#` reached without the number row (a layout with a `#` key)
+        // still records as `#`.
+        let hash_key = KeyEventSnapshot::chord(Some("#"), "#", KeyModifiers::SHIFT);
+        assert_eq!(
+            ComposingKeyChord::make_from_event(&hash_key),
+            Ok(chord("#", KeyModifiers::SHIFT))
+        );
+        // Shift plus a host modifier on the number row is an ordinary chord.
+        let ctrl_shift_three = KeyEventSnapshot::chord(
+            Some("#"),
+            "3",
+            KeyModifiers::CONTROL.with(KeyModifiers::SHIFT),
+        )
+        .with_key_code(0x33);
+        assert_eq!(
+            ComposingKeyChord::make_from_event(&ctrl_shift_three),
+            Ok(chord("3", KeyModifiers::CONTROL.with(KeyModifiers::SHIFT)))
         );
         let ctrl_three = KeyEventSnapshot::chord(Some("\u{1B}"), "3", KeyModifiers::CONTROL);
         assert!(
@@ -423,31 +489,13 @@ mod tests {
     }
 
     #[test]
-    fn keypad_enter_matches_a_return_chord_and_bare_row_has_negative_controls() {
+    fn keypad_enter_matches_a_return_chord() {
         let enter = chord("\r", KeyModifiers::NONE);
         assert!(
             enter.matches(&KeyEventSnapshot::text("\u{3}", KeyModifiers::NONE)),
             "keypad Enter is Return"
         );
         assert!(!enter.matches(&KeyEventSnapshot::text("\r", KeyModifiers::SHIFT)));
-        for (slot, key) in CandidateSlotKeySet::BARE_KEY_ROW.iter().enumerate() {
-            assert!(
-                chord(key, KeyModifiers::NONE)
-                    .is_candidate_slot_chord(CandidateSlotKeySet::BareKeys),
-                "{key}"
-            );
-            assert_eq!(
-                CandidateSlotKeySet::BareKeys.slot_for_key(Some(key), KeyModifiers::NONE),
-                Some(slot)
-            );
-        }
-        for key in [",", ".", "'", "/"] {
-            assert!(
-                !chord(key, KeyModifiers::NONE)
-                    .is_candidate_slot_chord(CandidateSlotKeySet::BareKeys),
-                "{key}"
-            );
-        }
     }
 
     #[test]
@@ -457,7 +505,7 @@ mod tests {
         assert_eq!(chord("\r", KeyModifiers::SHIFT).display(), "Shift+Enter");
         assert_eq!(chord("]", KeyModifiers::CONTROL).display(), "Ctrl+]");
         assert_eq!(chord(" ", KeyModifiers::NONE).display(), "Space");
-        assert_eq!(chord("z", KeyModifiers::NONE).display(), "z");
+        assert_eq!(chord("[", KeyModifiers::NONE).display(), "[");
         assert_eq!(chord("z", KeyModifiers::CONTROL).display(), "Ctrl+Z");
     }
 }

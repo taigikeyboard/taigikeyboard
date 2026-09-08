@@ -2,7 +2,8 @@
 //! of that contract the user chooses. Pure classification — no Win32.
 //!
 //! Port of `macos/Sources/TaigiInputMethodCore/Controller/{ComposingKeyIntent,
-//! ComposingAction, ComposingKeyChord, ComposingKeyBindings}.swift`. The TSF
+//! ComposingAction, ComposingKeyChord, ComposingKeyBindings,
+//! ToneInputScheme}.swift`. The TSF
 //! shell builds a [`KeyEventSnapshot`] from `OnKeyDown` and asks
 //! [`ComposingKeyIntent::intent`]; nothing in here reads the keyboard.
 
@@ -16,6 +17,7 @@ mod shift_tap;
 mod shortcut_actions;
 mod slot_key_set;
 mod snapshot;
+mod tone_input_scheme;
 
 pub use action::ComposingAction;
 pub use bindings::ComposingKeyBindings;
@@ -32,3 +34,4 @@ pub use shift_tap::{
 pub use shortcut_actions::{global_rejection, ShortcutAction, ShortcutConflicts};
 pub use slot_key_set::CandidateSlotKeySet;
 pub use snapshot::{KeyEventSnapshot, KeyModifiers, NavigationKey};
+pub use tone_input_scheme::ToneInputScheme;

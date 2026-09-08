@@ -7,6 +7,7 @@ use super::action::ComposingAction;
 use super::chord::ComposingKeyChord;
 use super::slot_key_set::CandidateSlotKeySet;
 use super::snapshot::KeyEventSnapshot;
+use super::tone_input_scheme::ToneInputScheme;
 use crate::settings::{keys, SettingsDocument};
 
 /// "Resolved" means three things have already happened, so the classifier
@@ -16,13 +17,16 @@ use crate::settings::{keys, SettingsDocument};
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ComposingKeyBindings {
     chords: BTreeMap<ComposingAction, ComposingKeyChord>,
-    pub slot_key_set: CandidateSlotKeySet,
+    /// Which keys type a tone. Carried here because it is the other half of
+    /// the same contract the chords are: the classifier reads both off one
+    /// value, and the slot keys follow from it.
+    pub tone_scheme: ToneInputScheme,
 }
 
 impl Default for ComposingKeyBindings {
     /// What a fresh install types with.
     fn default() -> Self {
-        Self::resolve(&BTreeMap::new(), CandidateSlotKeySet::BareKeys)
+        Self::resolve(&BTreeMap::new(), ToneInputScheme::Standard)
     }
 }
 
@@ -33,7 +37,7 @@ impl ComposingKeyBindings {
     /// the two apart.
     pub fn resolve(
         stored: &BTreeMap<ComposingAction, Option<ComposingKeyChord>>,
-        slot_key_set: CandidateSlotKeySet,
+        tone_scheme: ToneInputScheme,
     ) -> Self {
         let mut resolved: BTreeMap<ComposingAction, ComposingKeyChord> = BTreeMap::new();
         for action in ComposingAction::ALL {
@@ -46,19 +50,22 @@ impl ComposingKeyBindings {
                 resolved.insert(action, chord);
             }
         }
-        Self::remove_shadowed_by_candidate_slots(&mut resolved, slot_key_set);
+        // No pass against the slot tier: every chord came through
+        // `ComposingKeyChord::make`, which refuses every bare letter, digit
+        // and `;` — the keys either scheme's slots use — so no chord can be
+        // a slot key under any scheme.
         Self::remove_duplicates(&mut resolved);
         Self::restore_unbound(&mut resolved);
         Self {
             chords: resolved,
-            slot_key_set,
+            tone_scheme,
         }
     }
 
     /// The bindings a settings document describes: `composingShortcut.<raw>`
     /// per action (absent = default, `""` = cleared, unparsable = cleared —
     /// silently restoring the default would undo a deliberate clearing) plus
-    /// the slot-key set (`SettingsStore.swift:414-434`).
+    /// the tone scheme (`SettingsStore.swift` `composingKeyBindings`).
     pub fn from_document(document: &SettingsDocument) -> Self {
         let mut stored = BTreeMap::new();
         for action in ComposingAction::ALL {
@@ -66,7 +73,13 @@ impl ComposingKeyBindings {
                 stored.insert(action, ComposingKeyChord::from_raw(raw));
             }
         }
-        Self::resolve(&stored, document.choice(&keys::CANDIDATE_SLOT_MODIFIER))
+        Self::resolve(&stored, document.choice(&keys::TONE_INPUT_SCHEME))
+    }
+
+    /// The keys that pick a candidate — derived, never stored
+    /// (`ToneInputScheme::slot_key_set`).
+    pub fn slot_key_set(&self) -> CandidateSlotKeySet {
+        self.tone_scheme.slot_key_set()
     }
 
     /// The chord on `action`, or `None` when the row is empty.
@@ -95,16 +108,6 @@ impl ComposingKeyBindings {
             .into_iter()
             .filter(|action| Some(*action) != excluding && self.chords.get(action) == Some(chord))
             .collect()
-    }
-
-    /// Drops a chord the candidate-slot tier would swallow before any binding
-    /// is looked at. Dropped from the resolved value, not from storage: the
-    /// row comes back if the picker moves off the set that shadowed it.
-    fn remove_shadowed_by_candidate_slots(
-        resolved: &mut BTreeMap<ComposingAction, ComposingKeyChord>,
-        slot_key_set: CandidateSlotKeySet,
-    ) {
-        resolved.retain(|_, chord| !chord.is_candidate_slot_chord(slot_key_set));
     }
 
     /// Drops a chord from every action but the last one holding it, with the
@@ -174,6 +177,7 @@ impl ComposingKeyBindings {
 mod tests {
     use super::*;
     use crate::keys::KeyModifiers;
+    use crate::settings::SettingChoice;
 
     fn chord(key: &str, modifiers: KeyModifiers) -> ComposingKeyChord {
         ComposingKeyChord::make(Some(key), modifiers).unwrap()
@@ -191,7 +195,8 @@ mod tests {
         for action in ComposingAction::ALL {
             assert!(bindings.chord(action).is_some(), "{action:?} starts blank");
         }
-        assert_eq!(bindings.slot_key_set, CandidateSlotKeySet::BareKeys);
+        assert_eq!(bindings.tone_scheme, ToneInputScheme::Standard);
+        assert_eq!(bindings.slot_key_set(), CandidateSlotKeySet::BareKeys);
     }
 
     #[test]
@@ -200,7 +205,7 @@ mod tests {
         let bracket = ComposingAction::PageForward.default_chord();
         let bindings = ComposingKeyBindings::resolve(
             &stored(&[(ComposingAction::NextCandidate, Some(bracket.clone()))]),
-            CandidateSlotKeySet::BareKeys,
+            ToneInputScheme::Standard,
         );
         assert_eq!(
             bindings.chord(ComposingAction::NextCandidate),
@@ -210,7 +215,7 @@ mod tests {
 
         let bindings = ComposingKeyBindings::resolve(
             &stored(&[(ComposingAction::PageBackward, Some(bracket.clone()))]),
-            CandidateSlotKeySet::BareKeys,
+            ToneInputScheme::Standard,
         );
         assert_eq!(
             bindings.chord(ComposingAction::PageBackward),
@@ -224,7 +229,7 @@ mod tests {
         let space = ComposingAction::CommitAlternateScript.default_chord();
         let bindings = ComposingKeyBindings::resolve(
             &stored(&[(ComposingAction::NextCandidate, Some(space.clone()))]),
-            CandidateSlotKeySet::BareKeys,
+            ToneInputScheme::Standard,
         );
         assert_eq!(bindings.chord(ComposingAction::NextCandidate), Some(&space));
         assert_eq!(bindings.chord(ComposingAction::CommitAlternateScript), None);
@@ -238,7 +243,7 @@ mod tests {
                 (ComposingAction::PageForward, Some(recorded.clone())),
                 (ComposingAction::PageBackward, Some(recorded.clone())),
             ]),
-            CandidateSlotKeySet::BareKeys,
+            ToneInputScheme::Standard,
         );
         assert_eq!(
             bindings.chord(ComposingAction::PageBackward),
@@ -252,7 +257,7 @@ mod tests {
         for action in ComposingAction::ALWAYS_BOUND {
             let bindings = ComposingKeyBindings::resolve(
                 &stored(&[(action, None)]),
-                CandidateSlotKeySet::BareKeys,
+                ToneInputScheme::Standard,
             );
             assert_eq!(bindings.chord(action), Some(&action.default_chord()));
         }
@@ -264,7 +269,7 @@ mod tests {
                     Some(chord("\r", KeyModifiers::NONE)),
                 ),
             ]),
-            CandidateSlotKeySet::BareKeys,
+            ToneInputScheme::Standard,
         );
         assert_eq!(
             bindings.chord(ComposingAction::ConfirmHighlighted),
@@ -276,7 +281,7 @@ mod tests {
                 ComposingAction::NextCandidate,
                 Some(chord("\r", KeyModifiers::SHIFT)),
             )]),
-            CandidateSlotKeySet::BareKeys,
+            ToneInputScheme::Standard,
         );
         assert_eq!(bindings.chord(ComposingAction::NextCandidate), None);
         assert_eq!(
@@ -308,7 +313,7 @@ mod tests {
                                 (ComposingAction::CommitLiteral, literal.clone()),
                                 (*other, other_chord.clone()),
                             ]),
-                            CandidateSlotKeySet::BareKeys,
+                            ToneInputScheme::Standard,
                         );
                         for action in ComposingAction::ALWAYS_BOUND {
                             assert!(bindings.chord(action).is_some(), "{action:?} unbound: {confirm:?} {literal:?} {other:?}={other_chord:?}");
@@ -332,7 +337,7 @@ mod tests {
                     Some(chord("\r", KeyModifiers::SHIFT)),
                 ),
             ]),
-            CandidateSlotKeySet::BareKeys,
+            ToneInputScheme::Standard,
         );
         assert_eq!(
             swapped.chord(ComposingAction::CommitLiteral),
@@ -345,36 +350,22 @@ mod tests {
     }
 
     #[test]
-    fn a_chord_the_slot_tier_would_swallow_is_dropped_only_under_that_set() {
+    fn a_recorded_chord_is_kept_under_either_scheme() {
+        // trace: no slot-tier pass any more — the gate refuses every key a
+        // slot could take, so Ctrl+3 is an ordinary chord under both schemes.
         let control_three = chord("3", KeyModifiers::CONTROL);
-        let under_control = ComposingKeyBindings::resolve(
-            &stored(&[(ComposingAction::PageForward, Some(control_three.clone()))]),
-            CandidateSlotKeySet::Control,
-        );
-        assert_eq!(under_control.chord(ComposingAction::PageForward), None);
-        let under_option = ComposingKeyBindings::resolve(
-            &stored(&[(ComposingAction::PageForward, Some(control_three.clone()))]),
-            CandidateSlotKeySet::Option,
-        );
-        assert_eq!(
-            under_option.chord(ComposingAction::PageForward),
-            Some(&control_three)
-        );
-
-        let bare_z = stored(&[(
-            ComposingAction::CommitAlternateScript,
-            Some(chord("z", KeyModifiers::NONE)),
-        )]);
-        assert_eq!(
-            ComposingKeyBindings::resolve(&bare_z, CandidateSlotKeySet::BareKeys)
-                .chord(ComposingAction::CommitAlternateScript),
-            None
-        );
-        assert_eq!(
-            ComposingKeyBindings::resolve(&bare_z, CandidateSlotKeySet::Control)
-                .chord(ComposingAction::CommitAlternateScript),
-            Some(&chord("z", KeyModifiers::NONE))
-        );
+        for scheme in ToneInputScheme::ALL {
+            let bindings = ComposingKeyBindings::resolve(
+                &stored(&[(ComposingAction::PageForward, Some(control_three.clone()))]),
+                *scheme,
+            );
+            assert_eq!(
+                bindings.chord(ComposingAction::PageForward),
+                Some(&control_three),
+                "{scheme:?}"
+            );
+            assert_eq!(bindings.slot_key_set(), scheme.slot_key_set());
+        }
     }
 
     #[test]
@@ -389,7 +380,7 @@ mod tests {
             &ComposingAction::PageBackward.settings_key_name(),
             "garbage",
         );
-        document.set_choice(&keys::CANDIDATE_SLOT_MODIFIER, CandidateSlotKeySet::Control);
+        document.set_choice(&keys::TONE_INPUT_SCHEME, ToneInputScheme::Telex);
         let bindings = ComposingKeyBindings::from_document(&document);
         assert_eq!(
             bindings.chord(ComposingAction::PageForward),
@@ -410,7 +401,8 @@ mod tests {
             Some(&chord("\r", KeyModifiers::NONE)),
             "untouched"
         );
-        assert_eq!(bindings.slot_key_set, CandidateSlotKeySet::Control);
+        assert_eq!(bindings.tone_scheme, ToneInputScheme::Telex);
+        assert_eq!(bindings.slot_key_set(), CandidateSlotKeySet::Digits);
         let event = KeyEventSnapshot::chord(Some("\u{1D}"), "]", KeyModifiers::CONTROL);
         assert_eq!(
             bindings.action_for(&event),

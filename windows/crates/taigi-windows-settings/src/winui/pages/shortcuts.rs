@@ -1,19 +1,17 @@
 //! The 快捷鍵 pane: every key the user can put an action on, in one list
 //! (`ShortcutSettingsView.swift`) — the four global chords, the keys that
-//! move through the candidates, the slot-key set, the keys that end the
-//! composition, and the reset card. Every row is the same recorder; which
-//! registry it writes to and what it refuses on top of the shared gate is
-//! the tier's. Last writer wins across both registries
+//! move through the candidates, the keys that end the composition, and the
+//! reset card. Which keys pick a candidate is not chosen here: it follows
+//! from 聲調拍法 on the 一般 pane (`ToneInputScheme`). Every row is the same
+//! recorder; which registry it writes to and what it refuses on top of the
+//! shared gate is the tier's. Last writer wins across both registries
 //! (`ShortcutConflicts`), and the loser's row visibly empties.
 
-use super::choice_row;
 use crate::winui::cards;
 use crate::winui::window::{Message, RecorderTarget, ResetScope, SettingsWindow};
 use taigi_windows_core::keys::{
-    rejection_message_key, CandidateSlotKeySet, ComposingAction, ComposingKeyBindings,
-    ComposingKeyChord, ShortcutAction,
+    rejection_message_key, ComposingAction, ComposingKeyBindings, ComposingKeyChord, ShortcutAction,
 };
-use taigi_windows_core::settings::SettingChoice;
 use taigi_windows_core::strings::{StringKey, StringResolver};
 use windows_reactor::*;
 
@@ -30,7 +28,6 @@ pub fn view(
 ) -> View {
     let document = window.document();
     let bindings = ComposingKeyBindings::from_document(document);
-    let slot_key_set = bindings.slot_key_set;
     View::fragment((
         // One group (2026-08-25, +1 on 2026-09-02): one doorway and three switches.
         View::keyed_fragment(ShortcutAction::ALL.map(|action| {
@@ -52,17 +49,6 @@ pub fn view(
             context,
             &bindings,
             ComposingAction::GROUPS[0],
-        ),
-        // Ends the moving-through group. Glyphs rather than translated
-        // words: the keys are read off the keyboard. A picker, not a
-        // recorder — one set standing for nine slots.
-        choice_row(
-            strings.resolve(StringKey::DesktopBindingSlotModifier),
-            CandidateSlotKeySet::ALL,
-            slot_key_set,
-            CandidateSlotKeySet::menu_label,
-            Message::SetSlotKeySet,
-            context,
         ),
         // Then the keys that end the composition.
         composing_rows(

@@ -5,7 +5,6 @@
 
 use super::chord::{ChordRejection, ComposingKeyChord};
 use super::shortcut_actions::global_rejection;
-use super::slot_key_set::CandidateSlotKeySet;
 use super::snapshot::KeyModifiers;
 use crate::strings::StringKey;
 
@@ -13,7 +12,7 @@ use crate::strings::StringKey;
 /// gate differs (`ShortcutSettingsView.swift:429-436`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RecorderTier {
-    /// A composing action: refuses the chosen slot set's keys.
+    /// A composing action: only the shared gate.
     Composing,
     /// A global chord: refuses what the system or the host owns.
     Global,
@@ -21,11 +20,14 @@ pub enum RecorderTier {
 
 /// One key press as the recorder sees it: the character the key types
 /// with no modifier held (`charactersIgnoringModifiers`), the chording
-/// modifiers, and whether it is a held-key repeat.
+/// modifiers, the virtual key (so a shifted number-row key can be refused as
+/// the digit it is — `ComposingKeyChord::make_from_press`), and whether it
+/// is a held-key repeat.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RecordedPress {
     pub key: Option<String>,
     pub modifiers: KeyModifiers,
+    pub key_code: Option<u16>,
     pub is_repeat: bool,
 }
 
@@ -46,12 +48,10 @@ pub enum RecorderOutcome {
 }
 
 /// The recorder's decision for `press` on a row of `tier`
-/// (`ShortcutKeyRecorder.swift:403-468`).
-pub fn evaluate_press(
-    tier: RecorderTier,
-    slot_key_set: CandidateSlotKeySet,
-    press: &RecordedPress,
-) -> RecorderOutcome {
+/// (`ShortcutKeyRecorder.swift:403-468`). The slot keys need no refusal of
+/// their own: the shared gate refuses every bare letter, digit and `;`
+/// whichever tone scheme is live (`ComposingKeyChord::make`).
+pub fn evaluate_press(tier: RecorderTier, press: &RecordedPress) -> RecorderOutcome {
     // Key repeat is dropped: holding a key would otherwise record it over
     // and over, each time re-running conflict resolution.
     if press.is_repeat {
@@ -69,13 +69,14 @@ pub fn evaluate_press(
             _ => {}
         }
     }
-    let chord = match ComposingKeyChord::make(press.key.as_deref(), press.modifiers) {
+    let chord = match ComposingKeyChord::make_from_press(
+        press.key.as_deref(),
+        press.modifiers,
+        press.key_code,
+    ) {
         Ok(chord) => chord,
         Err(reason) => return RecorderOutcome::Refused(reason),
     };
-    if chord.is_candidate_slot_chord(slot_key_set) {
-        return RecorderOutcome::Refused(ChordRejection::CandidateSlotChord);
-    }
     // Ctrl+Alt is recordable on BOTH tiers, as ⌃⌘ is on the Mac (which
     // refuses it on neither). It is what Windows reports AltGr as, but a
     // binding of ours only answers while this Taiwanese TIP is the selected
@@ -95,15 +96,14 @@ pub fn evaluate_press(
 
 /// The prompt a refusal replaces (`ShortcutKeyRecorder.swift:366-377`). Every
 /// refusal but `NoKey` means the chord already belongs to something — typing,
-/// the input method, a candidate slot, the system, or the host app — and to
-/// the reader they all mean "not this key", so one message covers them.
+/// the input method, the system, or the host app — and to the reader they
+/// all mean "not this key", so one message covers them.
 pub fn rejection_message_key(rejection: ChordRejection) -> StringKey {
     match rejection {
         ChordRejection::NoKey => StringKey::DesktopShortcutRejectedNoKey,
         ChordRejection::TypesRomanization
         | ChordRejection::ReservedKey
         | ChordRejection::NotAGlobalKey
-        | ChordRejection::CandidateSlotChord
         | ChordRejection::TakenBySystem
         | ChordRejection::BelongsToHost => StringKey::DesktopShortcutRejectedTaken,
     }
@@ -117,122 +117,80 @@ mod tests {
         RecordedPress {
             key: Some(key.to_owned()),
             modifiers,
+            key_code: None,
             is_repeat: false,
         }
     }
 
     #[test]
-    fn a_free_bare_letter_records_on_both_tiers_and_a_syllable_letter_is_refused() {
-        // trace: `z` is not in SYLLABLE_LETTERS → make Ok; no slot; global
-        // gate: nameable, no modifiers → None.
+    fn a_bare_punctuation_key_records_on_both_tiers_and_a_typing_key_is_refused() {
+        // trace: `[` is not a typing key → make Ok; global gate: nameable, no
+        // modifiers → None. `a` (syllable), `z` (Telex / slot) and `3`
+        // (tone / slot) are refused bare under either scheme.
         for tier in [RecorderTier::Composing, RecorderTier::Global] {
-            let outcome = evaluate_press(
-                tier,
-                CandidateSlotKeySet::Shift,
-                &press("z", KeyModifiers::NONE),
-            );
-            assert!(matches!(outcome, RecorderOutcome::Recorded(chord) if chord.key == "z"));
-            assert_eq!(
-                evaluate_press(
-                    tier,
-                    CandidateSlotKeySet::Shift,
-                    &press("a", KeyModifiers::NONE)
-                ),
-                RecorderOutcome::Refused(ChordRejection::TypesRomanization)
-            );
+            let outcome = evaluate_press(tier, &press("[", KeyModifiers::NONE));
+            assert!(matches!(outcome, RecorderOutcome::Recorded(chord) if chord.key == "["));
+            for key in ["a", "z", "q", "3", ";"] {
+                assert_eq!(
+                    evaluate_press(tier, &press(key, KeyModifiers::NONE)),
+                    RecorderOutcome::Refused(ChordRejection::TypesRomanization),
+                    "{tier:?} {key}"
+                );
+            }
         }
     }
 
     #[test]
-    fn the_slot_set_and_the_global_gate_refuse_on_top_of_the_shared_gate() {
-        // trace: bare `q` is slot 0 of the BareKeys set → CandidateSlotChord;
-        // under the Shift set `q` is free. Ctrl+S alone belongs to the host on
-        // the global tier only.
-        assert_eq!(
-            evaluate_press(
-                RecorderTier::Composing,
-                CandidateSlotKeySet::BareKeys,
-                &press("q", KeyModifiers::NONE)
-            ),
-            RecorderOutcome::Refused(ChordRejection::CandidateSlotChord)
-        );
+    fn the_global_gate_refuses_on_top_of_the_shared_gate() {
+        // trace: Ctrl+S alone belongs to the host on the global tier only.
         assert!(matches!(
-            evaluate_press(
-                RecorderTier::Composing,
-                CandidateSlotKeySet::Shift,
-                &press("q", KeyModifiers::NONE)
-            ),
-            RecorderOutcome::Recorded(_)
-        ));
-        assert!(matches!(
-            evaluate_press(
-                RecorderTier::Composing,
-                CandidateSlotKeySet::BareKeys,
-                &press("s", KeyModifiers::CONTROL)
-            ),
+            evaluate_press(RecorderTier::Composing, &press("s", KeyModifiers::CONTROL)),
             RecorderOutcome::Recorded(_)
         ));
         assert_eq!(
-            evaluate_press(
-                RecorderTier::Global,
-                CandidateSlotKeySet::BareKeys,
-                &press("s", KeyModifiers::CONTROL)
-            ),
+            evaluate_press(RecorderTier::Global, &press("s", KeyModifiers::CONTROL)),
             RecorderOutcome::Refused(ChordRejection::BelongsToHost)
         );
     }
 
     #[test]
     fn escape_tab_delete_and_repeats_end_or_swallow_without_recording() {
-        let set = CandidateSlotKeySet::BareKeys;
         assert_eq!(
             evaluate_press(
                 RecorderTier::Composing,
-                set,
                 &press("\u{1B}", KeyModifiers::NONE)
             ),
             RecorderOutcome::Blurred
         );
         assert_eq!(
-            evaluate_press(
-                RecorderTier::Composing,
-                set,
-                &press("\t", KeyModifiers::NONE)
-            ),
+            evaluate_press(RecorderTier::Composing, &press("\t", KeyModifiers::NONE)),
             RecorderOutcome::PassThrough
         );
         assert_eq!(
-            evaluate_press(
-                RecorderTier::Composing,
-                set,
-                &press("\u{8}", KeyModifiers::NONE)
-            ),
+            evaluate_press(RecorderTier::Composing, &press("\u{8}", KeyModifiers::NONE)),
             RecorderOutcome::Ignored
         );
         // Shift+Tab is a chord, recordable (the previous-candidate default).
         assert!(matches!(
-            evaluate_press(
-                RecorderTier::Composing,
-                set,
-                &press("\t", KeyModifiers::SHIFT)
-            ),
+            evaluate_press(RecorderTier::Composing, &press("\t", KeyModifiers::SHIFT)),
             RecorderOutcome::Recorded(_)
         ));
         let repeat = RecordedPress {
             is_repeat: true,
-            ..press("z", KeyModifiers::NONE)
+            ..press("[", KeyModifiers::NONE)
         };
         assert_eq!(
-            evaluate_press(RecorderTier::Composing, set, &repeat),
+            evaluate_press(RecorderTier::Composing, &repeat),
             RecorderOutcome::Ignored
         );
         let none = RecordedPress {
             key: None,
             modifiers: KeyModifiers::CONTROL,
+            key_code: None,
             is_repeat: false,
         };
         assert_eq!(
-            evaluate_press(RecorderTier::Composing, set, &none),
+            evaluate_press(RecorderTier::Composing, &none),
             RecorderOutcome::Refused(ChordRejection::NoKey)
         );
     }
@@ -244,7 +202,6 @@ mod tests {
             ChordRejection::ReservedKey,
             ChordRejection::BelongsToHost,
             ChordRejection::TypesRomanization,
-            ChordRejection::CandidateSlotChord,
             ChordRejection::TakenBySystem,
         ] {
             assert_eq!(
@@ -266,14 +223,14 @@ mod tests {
         // "this key types" because the modifiers arrived empty
         // (`os_out_buffer`). Ctrl+Alt is the family the Mac's ⌃⌘ roster maps
         // onto and the one the shipped globals are on, so neither tier may
-        // refuse it: `q` (no syllable uses it) rides along to pin that the
-        // rule is about the modifiers, not about the key.
+        // refuse it: `q` (a Telex / slot key, refused bare) rides along to pin
+        // that the rule is about the modifiers, not about the key.
         let ctrl_alt = KeyModifiers::CONTROL.with(KeyModifiers::ALT);
         let ctrl_shift = KeyModifiers::CONTROL.with(KeyModifiers::SHIFT);
         for (key, modifiers) in [("a", ctrl_alt), ("a", ctrl_shift), ("q", ctrl_alt)] {
             for tier in [RecorderTier::Composing, RecorderTier::Global] {
                 assert_eq!(
-                    evaluate_press(tier, CandidateSlotKeySet::BareKeys, &press(key, modifiers)),
+                    evaluate_press(tier, &press(key, modifiers)),
                     RecorderOutcome::Recorded(
                         ComposingKeyChord::make(Some(key), modifiers).expect("bindable")
                     ),
@@ -281,5 +238,36 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// A US layout hands the recorder `#` for Shift+3; the virtual key is
+    /// what still says it was the `3` key, and the recorder refuses it as
+    /// the typing key it is — the same answer the settings-file path gives
+    /// the unmodified `3` with Shift, so no row can hold the press on one
+    /// path and lose it on the other.
+    #[test]
+    fn a_shifted_number_row_key_is_refused_as_the_digit_it_is() {
+        let shifted_three = RecordedPress {
+            key: Some("#".to_owned()),
+            modifiers: KeyModifiers::SHIFT,
+            key_code: Some(0x33),
+            is_repeat: false,
+        };
+        for tier in [RecorderTier::Composing, RecorderTier::Global] {
+            assert_eq!(
+                evaluate_press(tier, &shifted_three),
+                RecorderOutcome::Refused(ChordRejection::TypesRomanization),
+                "{tier:?}"
+            );
+        }
+        // A `#` reached without the number row is still the character it types.
+        let bare_hash = RecordedPress {
+            key_code: None,
+            ..shifted_three
+        };
+        assert!(matches!(
+            evaluate_press(RecorderTier::Composing, &bare_hash),
+            RecorderOutcome::Recorded(_)
+        ));
     }
 }

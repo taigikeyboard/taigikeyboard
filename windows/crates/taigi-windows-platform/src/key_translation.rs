@@ -210,7 +210,8 @@ pub fn snapshot(virtual_key: u16, scan_code: u32) -> Option<KeyEventSnapshot> {
 /// why the shipped Ctrl+Alt globals only ever fired as preserved keys.
 ///
 /// Shift stays: a chord is stored on the key's unshifted character, and the
-/// slot tier reads the digits Shift is held with (`shifted_digit_slot`).
+/// recorder refuses a shifted number-row key as the digit it is
+/// (`ComposingKeyChord::make_from_event`).
 /// The glyph an AltGr layout would have typed is still in `characters`,
 /// which is read from the live state.
 fn unmodified_state(state: [u8; 256]) -> [u8; 256] {
@@ -268,6 +269,7 @@ pub fn recorded_press(virtual_key: u16, scan_code: u32, is_repeat: bool) -> Opti
     Some(RecordedPress {
         key,
         modifiers: snapshot.modifiers,
+        key_code: snapshot.key_code,
         is_repeat,
     })
 }

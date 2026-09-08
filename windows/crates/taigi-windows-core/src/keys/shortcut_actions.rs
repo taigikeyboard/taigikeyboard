@@ -14,7 +14,6 @@
 use super::action::ComposingAction;
 use super::bindings::ComposingKeyBindings;
 use super::chord::{ChordRejection, ComposingKeyChord};
-use super::slot_key_set::CandidateSlotKeySet;
 use super::snapshot::KeyModifiers;
 use crate::settings::{keys, SettingsDocument};
 use crate::strings::StringKey;
@@ -112,9 +111,22 @@ impl ShortcutAction {
     /// The chord the document holds for this action, or `None` for a cleared
     /// or unparsable row.
     pub fn chord_in(self, document: &SettingsDocument) -> Option<ComposingKeyChord> {
+        self.translation_in(document).and_then(Result::ok)
+    }
+
+    /// The bridge with its refusal kept: `None` for a cleared, absent-default
+    /// or unreadable row; `Some(Err)` for a stored value the gate refuses.
+    /// The launch pass reads WHY a row fails to translate, because a row on a
+    /// typing key is one the recorder would refuse today and the preserved
+    /// key would still be dispatched first (`ShortcutActions.swift`
+    /// `translation(of:)`).
+    fn translation_in(
+        self,
+        document: &SettingsDocument,
+    ) -> Option<Result<ComposingKeyChord, ChordRejection>> {
         match document.raw_string(&self.settings_key_name()) {
-            None => Some(self.default_chord()),
-            Some(raw) => ComposingKeyChord::from_raw(raw),
+            None => Some(Ok(self.default_chord())),
+            Some(raw) => ComposingKeyChord::translate_raw(raw),
         }
     }
 
@@ -254,48 +266,36 @@ impl ShortcutConflicts {
         for loser in bindings.actions_holding(chord, Some(changed)) {
             document.set_composing_chord(loser, None);
         }
-        for loser in Self::global_actions_holding(document, |held| held == chord) {
-            loser.store_in(document, None);
+        for action in ShortcutAction::ALL {
+            if action.chord_in(document).as_ref() == Some(chord) {
+                action.store_in(document, None);
+            }
         }
-    }
-
-    /// The slot key set just changed: take its keys off any global row that
-    /// held one (the picker is the last writer; the recorder refuses the
-    /// other order).
-    pub fn resolve_after_slot_key_set_change(
-        document: &mut SettingsDocument,
-        slot_key_set: CandidateSlotKeySet,
-    ) {
-        for loser in Self::global_actions_holding(document, |held| {
-            held.is_candidate_slot_chord(slot_key_set)
-        }) {
-            loser.store_in(document, None);
-        }
-    }
-
-    /// Which global actions hold a chord answering `predicate`.
-    pub fn global_actions_holding(
-        document: &SettingsDocument,
-        predicate: impl Fn(&ComposingKeyChord) -> bool,
-    ) -> Vec<ShortcutAction> {
-        ShortcutAction::ALL
-            .into_iter()
-            .filter(|action| {
-                action
-                    .chord_in(document)
-                    .is_some_and(|chord| predicate(&chord))
-            })
-            .collect()
     }
 
     /// Reconciles the two registries at launch, where no recorder ran.
     /// Recording-beats-default; when BOTH sides are recordings the GLOBAL
     /// tier wins (it is the tier that fires first — a preserved key is
-    /// dispatched before the classifier ever runs). Then a global row sitting
-    /// on a live slot chord, or on Shift+1…9, is cleared. Idempotent.
+    /// dispatched before the classifier ever runs). A global row left on a
+    /// typing key is cleared first. Idempotent.
     pub fn resolve_across_registries(document: &mut SettingsDocument) {
         for loser in Self::defaults_shadowed_by_recordings(document) {
             loser.store_in(document, None);
+        }
+        // A global row on a key the gate refuses as a typing key — a bare
+        // `z` or `q` recorded while the eight non-syllable letters were
+        // bindable (before 2026-09-08), or a Shift+3 — is not a collision to
+        // compare: it is a row that predates the refusal, and the preserved
+        // key would be dispatched before the classifier ever saw the Telex
+        // key or the slot key it now types. Cleared, the way the recorder
+        // would have refused it; a refusal is not "no conflict". `ReservedKey`
+        // rows cannot exist (the arrows and the deletes were never
+        // recordable); only the typing-key refusal names an upgrade path.
+        // Mirrors `ShortcutActions.swift` `resolveAcrossRegistries`.
+        for action in ShortcutAction::ALL {
+            if action.translation_in(document) == Some(Err(ChordRejection::TypesRomanization)) {
+                action.store_in(document, None);
+            }
         }
         let bindings = ComposingKeyBindings::from_document(document);
         let held: Vec<(ShortcutAction, ComposingKeyChord)> = ShortcutAction::ALL
@@ -318,14 +318,6 @@ impl ShortcutConflicts {
                 }
             }
         }
-        for (action, chord) in &held {
-            if chord.is_candidate_slot_chord(bindings.slot_key_set) {
-                action.store_in(document, None);
-            }
-        }
-        // Shift+1…9 cannot be a chord at all (the gate refuses them), so a
-        // raw value carrying one fails to parse and reads as cleared already —
-        // `chord_in` returns None and nothing is left to clear.
     }
 }
 
@@ -383,17 +375,6 @@ mod tests {
                 None,
                 "{action:?}'s default must be recordable"
             );
-            for set in [
-                CandidateSlotKeySet::BareKeys,
-                CandidateSlotKeySet::Shift,
-                CandidateSlotKeySet::Control,
-                CandidateSlotKeySet::Option,
-            ] {
-                assert!(
-                    !action.default_chord().is_candidate_slot_chord(set),
-                    "{action:?} under {set:?}"
-                );
-            }
         }
         let composing_defaults: Vec<_> = ComposingAction::ALL
             .iter()
@@ -444,9 +425,10 @@ mod tests {
                 alt,
                 win,
             };
-            // `q` spells no syllable, so a bare chord on it is makeable and
-            // the answer is the POLICY's, not the constructor's.
-            ComposingKeyChord::make(Some("q"), modifiers).map(|chord| global_rejection(&chord))
+            // `[` is no typing key (every letter is one, under either tone
+            // scheme), so a bare chord on it is makeable and the answer is
+            // the POLICY's, not the constructor's.
+            ComposingKeyChord::make(Some("["), modifiers).map(|chord| global_rejection(&chord))
         };
         // shift, control, alt, win → what the policy says
         let expected = [
@@ -507,9 +489,9 @@ mod tests {
             None
         );
         assert_eq!(
-            global_rejection(&chord("q", KeyModifiers::NONE)),
+            global_rejection(&chord("[", KeyModifiers::NONE)),
             None,
-            "a bare free letter is recordable"
+            "a bare punctuation key is recordable"
         );
         assert_eq!(
             global_rejection(&chord("±", KeyModifiers::CONTROL.with(KeyModifiers::SHIFT))),
@@ -613,18 +595,41 @@ mod tests {
         ShortcutConflicts::resolve_across_registries(&mut doc);
         assert_eq!(doc.to_json(), before.to_json());
 
-        // A global row on a live slot chord is cleared; one another set claims stays.
+        // A global row left on a typing key — a bare `z` recorded before the
+        // eight non-syllable letters were refused, or a Shift+3 — is cleared
+        // (written as cleared, not merely read as unparsable); Ctrl+z and
+        // Ctrl+3 are ordinary chords and stay.
         let mut doc = SettingsDocument::default();
-        ShortcutAction::OpenLastSettingsPane
-            .store_in(&mut doc, Some(&chord("q", KeyModifiers::NONE)));
+        let settings_row = ShortcutAction::OpenLastSettingsPane.settings_key_name();
+        doc.set_raw_string(&settings_row, "|007A");
+        let translate_row = ShortcutAction::ToggleTranslateSwapped.settings_key_name();
+        doc.set_raw_string(&translate_row, "s|0033");
         ShortcutAction::ToggleRomanization
+            .store_in(&mut doc, Some(&chord("z", KeyModifiers::CONTROL)));
+        ShortcutAction::CycleCandidateDisplayMode
             .store_in(&mut doc, Some(&chord("3", KeyModifiers::CONTROL)));
         ShortcutConflicts::resolve_across_registries(&mut doc);
-        assert_eq!(ShortcutAction::OpenLastSettingsPane.chord_in(&doc), None);
+        assert_eq!(
+            doc.raw_string(&settings_row),
+            Some(keys::CLEARED_COMPOSING_CHORD),
+            "bare z cleared"
+        );
+        assert_eq!(
+            doc.raw_string(&translate_row),
+            Some(keys::CLEARED_COMPOSING_CHORD),
+            "Shift+3 cleared"
+        );
         assert_eq!(
             ShortcutAction::ToggleRomanization.chord_in(&doc),
+            Some(chord("z", KeyModifiers::CONTROL))
+        );
+        assert_eq!(
+            ShortcutAction::CycleCandidateDisplayMode.chord_in(&doc),
             Some(chord("3", KeyModifiers::CONTROL))
         );
+        let before = doc.clone();
+        ShortcutConflicts::resolve_across_registries(&mut doc);
+        assert_eq!(doc.to_json(), before.to_json(), "idempotent");
 
         // An uncolliding setup is left alone.
         let mut doc = SettingsDocument::default();
@@ -656,7 +661,7 @@ mod tests {
     }
 
     #[test]
-    fn composing_recording_and_slot_set_change_clear_global_rows() {
+    fn composing_recording_clears_the_global_row_that_held_the_chord() {
         let mut doc = SettingsDocument::default();
         let shared = chord("]", KeyModifiers::CONTROL.with(KeyModifiers::SHIFT));
         ShortcutAction::ToggleRomanization.store_in(&mut doc, Some(&shared));
@@ -671,19 +676,5 @@ mod tests {
             ComposingKeyBindings::from_document(&doc).chord(ComposingAction::PageForward),
             Some(&shared)
         );
-
-        let mut doc = SettingsDocument::default();
-        ShortcutAction::ToggleRomanization
-            .store_in(&mut doc, Some(&chord("3", KeyModifiers::CONTROL)));
-        ShortcutConflicts::resolve_after_slot_key_set_change(&mut doc, CandidateSlotKeySet::Option);
-        assert!(
-            ShortcutAction::ToggleRomanization.chord_in(&doc).is_some(),
-            "Alt digits do not claim Ctrl+3"
-        );
-        ShortcutConflicts::resolve_after_slot_key_set_change(
-            &mut doc,
-            CandidateSlotKeySet::Control,
-        );
-        assert_eq!(ShortcutAction::ToggleRomanization.chord_in(&doc), None);
     }
 }

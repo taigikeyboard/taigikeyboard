@@ -22,9 +22,8 @@ use std::path::PathBuf;
 use std::rc::Rc;
 use std::time::Duration;
 use taigi_windows_core::keys::{
-    evaluate_press, CandidateSlotKeySet, ChordRejection, ComposingAction, ComposingKeyBindings,
-    ComposingKeyChord, RecordedPress, RecorderOutcome, RecorderTier, ShortcutAction,
-    ShortcutConflicts,
+    evaluate_press, ChordRejection, ComposingAction, ComposingKeyChord, RecordedPress,
+    RecorderOutcome, RecorderTier, ShortcutAction, ShortcutConflicts,
 };
 use taigi_windows_core::settings::{
     keys, AppearanceMode, SettingChoice, SettingsDocument, SettingsKey, SettingsPane,
@@ -255,9 +254,6 @@ pub enum Message {
     /// `None` when a pop-up cleared its selection: nothing to write.
     SetChoice(Option<SettingsWrite>),
     SetSwitch(SettingsKey<bool>, bool),
-    /// The slot-key set is not a plain choice: the keys it claims must
-    /// come off any global row that held one.
-    SetSlotKeySet(Option<CandidateSlotKeySet>),
     Reset(ResetScope),
     CustomDictionary(pages::custom_dictionary::Message),
     FontManagement(pages::font_management::Message),
@@ -371,8 +367,7 @@ impl SettingsWindow {
         let Some(target) = self.recorder.target else {
             return;
         };
-        let slot_key_set = ComposingKeyBindings::from_document(self.document()).slot_key_set;
-        match evaluate_press(target.tier(), slot_key_set, press) {
+        match evaluate_press(target.tier(), press) {
             RecorderOutcome::Recorded(chord) => {
                 self.stop_recording();
                 self.settings
@@ -622,15 +617,6 @@ impl Component for SettingsWindow {
             Message::SetSwitch(key, is_on) => self
                 .settings
                 .update(move |document| document.set_bool(&key, is_on)),
-            Message::SetSlotKeySet(Some(set)) => self.settings.update(move |document| {
-                document.set_choice(&keys::CANDIDATE_SLOT_MODIFIER, set);
-                // The picker is the last writer: the keys it just claimed
-                // come off any global row that held one. Composing rows
-                // need no write — they are re-resolved from storage on
-                // every read.
-                ShortcutConflicts::resolve_after_slot_key_set_change(document, set);
-            }),
-            Message::SetSlotKeySet(None) => {}
             Message::Reset(scope) => self.settings.update(|document| match scope {
                 ResetScope::Appearance => document.reset_appearance(),
                 ResetScope::Shortcuts => {
@@ -802,6 +788,7 @@ impl Component for SettingsWindow {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use taigi_windows_core::keys::ComposingKeyBindings;
     use taigi_windows_core::settings::CandidateLayout;
 
     #[test]
@@ -859,41 +846,6 @@ mod tests {
         assert_eq!(
             ComposingKeyBindings::from_document(&document).chord(ComposingAction::PageForward),
             None
-        );
-    }
-
-    #[test]
-    fn choosing_a_slot_key_set_takes_its_keys_off_the_global_row_that_held_one() {
-        // trace: the picker is the last writer. Ctrl+3 is a slot chord
-        // under the Control set, so switching to that set must empty the
-        // global row holding it — the egui pane's
-        // `resolve_after_slot_key_set_change`, which a plain one-key write
-        // would have dropped on the floor.
-        let chord = ComposingKeyChord::make(
-            Some("3"),
-            taigi_windows_core::keys::KeyModifiers {
-                control: true,
-                ..Default::default()
-            },
-        )
-        .expect("Ctrl+3 is a chord");
-        let mut document = SettingsDocument::default();
-        RecorderTarget::Global(ShortcutAction::ToggleTranslateSwapped)
-            .store(&mut document, Some(&chord));
-        assert_eq!(
-            ShortcutAction::ToggleTranslateSwapped.chord_in(&document),
-            Some(chord)
-        );
-
-        document.set_choice(&keys::CANDIDATE_SLOT_MODIFIER, CandidateSlotKeySet::Control);
-        ShortcutConflicts::resolve_after_slot_key_set_change(
-            &mut document,
-            CandidateSlotKeySet::Control,
-        );
-        assert_eq!(
-            ShortcutAction::ToggleTranslateSwapped.chord_in(&document),
-            None,
-            "the slot set claimed the key"
         );
     }
 
