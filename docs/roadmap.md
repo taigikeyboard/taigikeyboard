@@ -245,6 +245,85 @@ in use — which is how System Settings states a list like that (聲音's output
 
 ---
 
+### Desktop Telex tone keys + candidate-window toggle (USER-scoped 2026-09-08)
+
+**Status**: P0 landed (this section + memory). P1–P4 pending, in order.
+**Scope**: macOS + Windows only (desktop train). iOS / Android untouched apart from regenerated
+engine bindings — the new composing intent is additive.
+
+USER 2026-09-08: 「參考 Telex 方案 … 使用 Telex 的方式選取聲調,改用 1~9 數字選取候選詞 … 預設是
+標準,1~9 打聲調,qwdfz 選候選詞,使用者可以選擇 Telex,英文字母打聲調,1~9 選候選詞,兩種反過來」;
+「在一般設定加上一個 toggle,可以取消候選窗,預設開啟」; 「移除『選字齒』的 shift/control/option
+三個選項,並且也移除『選字齒』的快捷鍵設定」; 「台語有一些 tsh 三個字母的字,也想辦法幫使用者方便打字」.
+
+#### Design (grounded in code, Codex pre-impl reviewed 2026-09-08)
+
+**Key table.** The letters no TL or POJ syllable spells are `c d f q v w x y z` (`r` is NOT free:
+the dialect finals `ir` / `er` are in the dictionary). Six of them carry tones, two carry functions,
+`c` stays a plain letter because POJ spells `ch` / `chh` with it:
+
+| Key | Meaning | TL | POJ |
+|---|---|---|---|
+| `v` `y` `d` `w` `x` `q` | tone 2 3 5 7 8 9 | `tev` → té | `pay` → pà |
+| `z` | affricate initial | `z` → `ts`, `zh` → `tsh` | `z` → `ch`, `zh` → `chh` |
+| `f` | hyphen | `taidfgiv` → tâi-gí | same |
+| `1`–`9` | candidate slot | | |
+
+This is the kahiok scheme (madmaxieee/taigi-telex) minus its `c` → `tsh` key. Uppercase tone
+keys carry the same tone; `Z` → `Ts` / `Ch`. Tone 6 is not offered (no free letter; USER 2026-09-08
+accepted). `nn` / `oo` are native spellings the engine already handles. khiin-rs (`s f l j w`) and
+the Cathaylab Keyman keyboards (`s f w x v`) were rejected because `s` / `l` / `j` are TL initials
+and need escape rules.
+
+**Standard vs Telex are the same eight letters, swapped.** Standard = digits type tones,
+`q w d f z x v y ;` pick candidates (today's default). Telex = letters type tones, digits pick.
+The slot key set is therefore DERIVED from the scheme, not a setting: `CandidateSlotKeySet`
+shrinks to `{bareKeys, digits}`; the ⇧ / ⌃ / ⌥ sets, the 選字齒 picker row and its i18n key
+`bindingSlotModifier` go. The bare-letter reservation (a letter the slots use cannot be recorded as
+a shortcut, `ComposingKeyChord.swift:124`, `windows/.../keys/chord.rs:55`) stays and covers both
+schemes with one set; only the modifier-chord collision branches
+(`ShortcutActions.swift:435-472`, `shortcut_actions.rs:262-271`) are deleted.
+
+**Semantics live in the engine.** One new composing intent `TelexKey { key }` (tag 40, a new
+family in `composing.proto`). The engine resolves `z` by `config.input_mode`, and edits the pending
+`raw` tail: no trailing tone digit → append the digit; a different trailing digit → replace it;
+the same digit → no-op (no double-tap cancel, so a held key cannot flip-flop; Backspace removes
+the digit). Tail empty or ending in `-` → no-op. Nailed segments are never touched; selection
+resets as `append_continuous` does (`transition.rs:782`). Buffer stays numeric-tone (`tai5`), so
+the syllabifier, literal-roman candidate and auto-space contracts are untouched (Codex Q1).
+Platforms only gate on the scheme setting and classify `v y d w x q z f` → `.telexKey`; idle tone
+keys / `f` pass through to the host like idle digits do today (`ComposingKeyIntent.swift:291`),
+idle `z` starts a composition.
+
+**Candidate window toggle** `isCandidateWindowEnabled` (default on). Off = no fetch, no window;
+flipping it clears the source and hides any open window; composition still promotes to continuous.
+Space and Enter fall back to `CommitRaw` (romanization with tone marks, `tai5` → `tâi`); a digit
+mid-composition without a window commits-then-inserts like punctuation (auto-space may yield
+`tâi 3` — pinned).
+
+**Deliberately not adopted**: repurposing the dead `AppConfig.tone_mode`; literal-letter escape
+(`vv` → `v`, never a Taigi syllable); mobile Telex; dictionary segmentation for "last syllable".
+
+#### Rounds
+
+| PR | Scope | Est. |
+|---|---|---|
+| P0 | This section + memory (admin tier, direct to main) | done |
+| P1 | engine: `TelexKey` intent, proto, dispatch arm, transition, tests; `make build` regenerates bindings | ~250 |
+| P2 | macOS: `toneInputScheme` setting + General-pane picker with mode-aware legend, classifier, derived slot set, delete ⇧/⌃/⌥ + 選字齒 row + modifier collision code, tombstone `candidateSlotModifier` | >500 (coupled, not split) |
+| P3 | Windows: mirror of P2; drops `bindingSlotModifier` from i18n | >500 |
+| P4 | Candidate-window toggle, both platforms | ~200 |
+
+#### Dogfood (to be added to `docs/architecture/dogfood-checklist.md`)
+
+- **S32 Telex** — TL: `tev` → té, `tsangq` → tsa̋ng, `zhi` → tshi, `taidfgiv` → tâi-gí, `tev`+`y` → tè,
+  `tev`+`v` unchanged, digit picks the slot, `q w d f` no longer pick. POJ: `zit` → chit,
+  `zhiunnw` → chhiūⁿ, `chit` stays `chit`. Standard: unchanged from today.
+- **S33 Candidate window off** — no window ever appears; Space / Enter write `tâi`; toggling
+  mid-composition hides the window without losing text.
+
+---
+
 ## Released versions index
 
 Newest first. Links: release notes (`changelog/`) + detailed plan archive (`docs/releases/`) where one exists. Authoritative ship-date list: memory `project_released_versions.md`.
