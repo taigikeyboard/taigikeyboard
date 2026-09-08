@@ -153,4 +153,37 @@ impl KeyEventSnapshot {
             .as_deref()
             .or(self.characters.as_deref())
     }
+
+    /// Escape with no host chord held — the one key the open Telex guide
+    /// swallows (`TaigiInputController.handle`: the guide comes down and
+    /// nothing else happens). Read off `characters` with the host-chord
+    /// guard beside it, because Ctrl+3 also ARRIVES as an Escape
+    /// (`characters` above) and must go on to the host as the chord it is.
+    pub fn is_bare_escape(&self) -> bool {
+        self.characters.as_deref() == Some("\u{1B}") && !self.modifiers.has_host_chord()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_bare_escape_is_the_key_the_open_guide_swallows() {
+        // trace: Escape arrives as `\u{1B}` (`key_translation.rs`
+        // `fixed_control_character`); Ctrl+3 arrives as the same character
+        // with `characters_ignoring_modifiers` = "3" and Control held.
+        assert!(KeyEventSnapshot::text("\u{1B}", KeyModifiers::NONE).is_bare_escape());
+        assert!(
+            KeyEventSnapshot::text("\u{1B}", KeyModifiers::SHIFT).is_bare_escape(),
+            "Shift is not a host chord"
+        );
+        assert!(!KeyEventSnapshot::text("\u{1B}", KeyModifiers::CONTROL).is_bare_escape());
+        assert!(
+            !KeyEventSnapshot::chord(Some("\u{1B}"), "3", KeyModifiers::CONTROL).is_bare_escape(),
+            "Ctrl+3 is the host's chord, not an Escape"
+        );
+        assert!(!KeyEventSnapshot::text("a", KeyModifiers::NONE).is_bare_escape());
+        assert!(!KeyEventSnapshot::default().is_bare_escape());
+    }
 }

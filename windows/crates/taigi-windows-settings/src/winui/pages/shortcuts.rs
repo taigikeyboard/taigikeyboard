@@ -1,5 +1,5 @@
 //! The 快捷鍵 pane: every key the user can put an action on, in one list
-//! (`ShortcutSettingsView.swift`) — the four global chords, the keys that
+//! (`ShortcutSettingsView.swift`) — the five global chords, the keys that
 //! move through the candidates, the keys that end the composition, and the
 //! reset card. Which keys pick a candidate is not chosen here: it follows
 //! from 聲調拍法 on the 一般 pane (`ToneInputScheme`). Every row is the same
@@ -29,7 +29,8 @@ pub fn view(
     let document = window.document();
     let bindings = ComposingKeyBindings::from_document(document);
     View::fragment((
-        // One group (2026-08-25, +1 on 2026-09-02): one doorway and three switches.
+        // One group (2026-08-25, +1 on 2026-09-02, +1 on 2026-09-09): one
+        // doorway, three switches and the Telex guide.
         View::keyed_fragment(ShortcutAction::ALL.map(|action| {
             (
                 action.raw(),

@@ -25,15 +25,17 @@ use crate::settings_launcher;
 use crate::ui::mode_flash::ModeFlash;
 use crate::ui::presenter::CandidatePresenter;
 use crate::ui::render::RenderFactory;
+use crate::ui::telex_guide::TelexGuide;
 use std::cell::RefCell;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::rc::Rc;
 use taigi_windows_core::composing::ContextToken;
-use taigi_windows_core::keys::{LanguageMode, ShiftTapTracker, VK_SHIFT_CODE};
+use taigi_windows_core::keys::{LanguageMode, ShiftTapTracker, ShortcutAction, VK_SHIFT_CODE};
 use windows::core::{Error, IUnknown, Interface, Ref, Result, BOOL, BSTR, GUID};
 use windows::Win32::Foundation::{E_FAIL, E_INVALIDARG, LPARAM, POINT, RECT, WPARAM};
 use windows::Win32::System::Ole::{CONNECT_E_ADVISELIMIT, CONNECT_E_NOCONNECTION};
 use windows::Win32::System::SystemInformation::GetTickCount64;
+use windows::Win32::UI::Input::KeyboardAndMouse::{VK_CONTROL, VK_MENU};
 use windows::Win32::UI::TextServices::{
     IEnumTfDisplayAttributeInfo, ITfComposition, ITfCompositionSink, ITfCompositionSink_Impl,
     ITfContext, ITfDisplayAttributeInfo, ITfDisplayAttributeProvider,
@@ -97,11 +99,20 @@ pub(crate) struct ServiceState {
     /// Where the mode flash goes: the screen point of the last caret the
     /// window anchored to, or the primary monitor's origin before any.
     pub(crate) focused_caret: windows::Win32::Foundation::POINT,
-    /// A focus / context callback wanted the window down but the presenter
-    /// was busy (a session in flight): the next key hides first.
+    /// A focus / context callback wanted the windows down but the presenter
+    /// or the guide was busy (a session in flight): the next key hides first.
     pub(crate) is_ui_hide_pending: bool,
+    /// The Telex guide chord is down and has already toggled once through
+    /// `OnPreservedKey`, which TSF may re-fire while the chord is held and
+    /// which carries no repeat flag. Cleared by the chord's key-up, by any
+    /// other fresh key, by focus loss and by deactivation, so a missed
+    /// key-up cannot wedge the toggle.
+    pub(crate) is_guide_chord_held: bool,
     pub(crate) presenter: Option<Rc<RefCell<CandidatePresenter>>>,
     pub(crate) mode_flash: Option<Rc<RefCell<ModeFlash>>>,
+    /// The Telex key table the `showTelexGuide` chord toggles; owned by the
+    /// context that raised it, like the candidate window.
+    pub(crate) telex_guide: Option<Rc<RefCell<TelexGuide>>>,
     /// Whether keys compose Taigi or go to the document as English. Per
     /// activation — one text service instance is one thread manager, which is
     /// one application, so switching to English in a terminal leaves the
@@ -234,10 +245,12 @@ impl TextService_Impl {
                     self.to_object(),
                     Rc::downgrade(&presenter),
                 );
-                let flash = ModeFlash::new(factory);
+                let flash = ModeFlash::new(Rc::clone(&factory));
+                let guide = TelexGuide::new(factory);
                 let mut state = self.state.borrow_mut();
                 state.presenter = Some(presenter);
                 state.mode_flash = Some(Rc::new(RefCell::new(flash)));
+                state.telex_guide = Some(Rc::new(RefCell::new(guide)));
             }
             Err(error) => {
                 log::error!("ui.render_factory_failed error={error} — no candidate window")
@@ -275,7 +288,7 @@ impl TextService_Impl {
         // The windows first (no candidate may outlive its service), then the
         // compositions still open are finished into their documents — they
         // need the contexts and the engine still wired.
-        let (presenter, flash) = {
+        let (presenter, flash, guide) = {
             let mut state = self.state.borrow_mut();
             // The mode does not outlive the activation that switched it.
             // `activate` sets it too; this end is what a teardown `GetText`
@@ -283,13 +296,23 @@ impl TextService_Impl {
             // for a service that is going away.
             state.language_mode = LanguageMode::default();
             state.shift_tap.clear();
-            (state.presenter.take(), state.mode_flash.take())
+            state.is_guide_chord_held = false;
+            // The windows are destroyed below; a hide still owed is moot.
+            state.is_ui_hide_pending = false;
+            (
+                state.presenter.take(),
+                state.mode_flash.take(),
+                state.telex_guide.take(),
+            )
         };
         if let Some(presenter) = presenter {
             presenter.borrow_mut().detach();
         }
         if let Some(flash) = flash {
             flash.borrow_mut().destroy();
+        }
+        if let Some(guide) = guide {
+            guide.borrow_mut().destroy();
         }
         let mut entries = std::mem::take(&mut self.state.borrow_mut().contexts).into_entries();
         self.finish_all_compositions(&mut entries);
@@ -420,21 +443,98 @@ impl TextService_Impl {
         self.state.borrow().presenter.clone()
     }
 
-    /// A focus / context callback's one permitted move on the window: a
-    /// posted hide (W3). `owner` = only that context's list; `None` =
-    /// whichever is up. When the presenter is mid-session (the callback
+    /// The Telex guide, cloned out of the state for the same reason as
+    /// [`TextService_Impl::presenter`].
+    pub(crate) fn telex_guide(&self) -> Option<Rc<RefCell<TelexGuide>>> {
+        self.state.borrow().telex_guide.clone()
+    }
+
+    /// Takes the Telex guide down whoever raised it, without touching the
+    /// composition — the settings doorways and the key path.
+    pub(crate) fn hide_telex_guide_now(&self) {
+        if let Some(guide) = self.telex_guide() {
+            guide.borrow_mut().hide_now();
+        }
+    }
+
+    /// Takes the Telex guide down only if `token`'s context raised it.
+    pub(crate) fn hide_telex_guide_of(&self, token: ContextToken) {
+        if let Some(guide) = self.telex_guide() {
+            guide.borrow_mut().hide(token);
+        }
+    }
+
+    /// The hide a focus / context callback could not post (a window was
+    /// busy inside a session), applied now, outside any session: every key
+    /// entry and `run_key` call this before anything new is shown.
+    pub(crate) fn drain_pending_ui_hide(&self) {
+        let pending = std::mem::take(&mut self.state.borrow_mut().is_ui_hide_pending);
+        if !pending {
+            return;
+        }
+        if let Some(presenter) = self.presenter() {
+            presenter.borrow_mut().hide_for_handover();
+        }
+        self.hide_telex_guide_now();
+    }
+
+    /// The virtual key the guide chord is registered on, when it is.
+    fn guide_chord_virtual_key(&self) -> Option<u32> {
+        self.state
+            .borrow()
+            .preserved_keys
+            .virtual_key_of(ShortcutAction::ShowTelexGuide)
+    }
+
+    /// A key-down that is not the guide chord repeating ends the press the
+    /// preserved-key guard is holding (`is_guide_chord_held`).
+    pub(crate) fn release_guide_chord_on_other_key(&self, wparam: WPARAM, lparam: LPARAM) {
+        if key_translation::is_repeat(lparam) {
+            return;
+        }
+        let virtual_key = u32::from(key_translation::virtual_key(wparam));
+        if self.guide_chord_virtual_key() != Some(virtual_key) {
+            self.state.borrow_mut().is_guide_chord_held = false;
+        }
+    }
+
+    /// The release of the guide chord's own key, or of Ctrl or Alt, ends
+    /// the press the preserved-key guard is holding.
+    fn release_guide_chord_on_key_up(&self, wparam: WPARAM) {
+        let virtual_key = u32::from(key_translation::virtual_key(wparam));
+        let is_chord_key = self.guide_chord_virtual_key() == Some(virtual_key)
+            || virtual_key == u32::from(VK_CONTROL.0)
+            || virtual_key == u32::from(VK_MENU.0);
+        if is_chord_key {
+            self.state.borrow_mut().is_guide_chord_held = false;
+        }
+    }
+
+    /// A focus / context callback's one permitted move on the windows: a
+    /// posted hide (W3). `owner` = only that context's list and guide;
+    /// `None` = whichever is up. The Telex guide goes with the candidate
+    /// window — the host is asking for every piece of input-method UI to
+    /// go, and the guide is one (`TaigiInputController.hidePalettes`); the
+    /// composition is not touched. When either is mid-session (the callback
     /// re-entered us), the hide is flagged for the next key instead.
     fn request_ui_hide(&self, owner: Option<ContextToken>) {
-        let Some(presenter) = self.presenter() else {
-            return;
-        };
-        let posted = match presenter.try_borrow() {
-            Ok(presenter) => {
-                presenter.request_hide(owner);
-                true
+        // A hide still owed from an earlier callback is folded in: the
+        // windows may be free now, and the next key may never come.
+        let owed = std::mem::take(&mut self.state.borrow_mut().is_ui_hide_pending);
+        let owner = if owed { None } else { owner };
+        let mut posted = true;
+        if let Some(presenter) = self.presenter() {
+            match presenter.try_borrow() {
+                Ok(presenter) => presenter.request_hide(owner),
+                Err(_) => posted = false,
             }
-            Err(_) => false,
-        };
+        }
+        if let Some(guide) = self.telex_guide() {
+            match guide.try_borrow() {
+                Ok(guide) => guide.request_hide(owner),
+                Err(_) => posted = false,
+            }
+        }
         if !posted {
             self.state.borrow_mut().is_ui_hide_pending = true;
         }
@@ -696,8 +796,9 @@ impl ITfThreadFocusSink_Impl for TextService_Impl {
             let mut state = self.state.borrow_mut();
             state.focus_generation += 1;
             // A Shift still held belongs to whatever has the keyboard now;
-            // its release is not a tap of ours.
+            // its release is not a tap of ours — nor is the guide chord's.
             state.shift_tap.clear();
+            state.is_guide_chord_held = false;
             drop(state);
             self.request_ui_hide(None);
             Ok(())
@@ -712,7 +813,10 @@ impl ITfKeyEventSink_Impl for TextService_Impl {
         guarded("ITfKeyEventSink::OnSetFocus", || {
             // Keyboard focus moved: a press recorded before the move was made
             // in another document, and its release must not tap here.
-            self.state.borrow_mut().shift_tap.clear();
+            let mut state = self.state.borrow_mut();
+            state.shift_tap.clear();
+            state.is_guide_chord_held = false;
+            drop(state);
             if fforeground.as_bool() {
                 self.request_settings_refresh();
             }
@@ -749,6 +853,7 @@ impl ITfKeyEventSink_Impl for TextService_Impl {
     /// FALSE, `chewing_ime.py:736`).
     fn OnKeyUp(&self, pic: Ref<ITfContext>, wparam: WPARAM, lparam: LPARAM) -> Result<BOOL> {
         guarded("ITfKeyEventSink::OnKeyUp", || {
+            self.release_guide_chord_on_key_up(wparam);
             self.take_language_switch_release(pic.as_ref(), wparam, lparam);
             Ok(BOOL::from(false))
         })
@@ -767,6 +872,15 @@ impl ITfKeyEventSink_Impl for TextService_Impl {
                 .as_ref()
                 .and_then(|context| self.token_for(context))
                 .map_or(0, |(_, identity)| identity);
+            // Once per press: TSF may deliver a held chord again, and this
+            // callback cannot tell a repeat from a fresh press (no lParam).
+            if action == ShortcutAction::ShowTelexGuide {
+                let held =
+                    std::mem::replace(&mut self.state.borrow_mut().is_guide_chord_held, true);
+                if held {
+                    return Ok(BOOL::from(true));
+                }
+            }
             self.perform_global(action, identity);
             Ok(BOOL::from(true))
         })
@@ -850,8 +964,19 @@ impl ITfLangBarItemButton_Impl for TextService_Impl {
             let rows = lang_bar::menu_rows(&runtime.strings(), &runtime.settings.current());
             if let Some(id) = lang_bar::show_popup(&rows, *pt) {
                 match id {
-                    MENU_OPEN_SETTINGS => settings_launcher::open_settings(),
-                    MENU_CHECK_FOR_UPDATES => settings_launcher::check_for_updates(),
+                    MENU_OPEN_SETTINGS => {
+                        // The guide comes down first, whoever raised it: this
+                        // path never reaches the session, and the settings
+                        // window taking focus is not guaranteed to end the
+                        // context that owns the card (`ShortcutHotkeys.openSettings`).
+                        self.hide_telex_guide_now();
+                        settings_launcher::open_settings();
+                    }
+                    MENU_CHECK_FOR_UPDATES => {
+                        // Also the settings window (on 一般): same doorway.
+                        self.hide_telex_guide_now();
+                        settings_launcher::check_for_updates();
+                    }
                     other => log::warn!("tsf.menu_unknown_id id={other}"),
                 }
                 self.notify_lang_bar();

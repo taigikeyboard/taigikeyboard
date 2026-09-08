@@ -10,7 +10,7 @@
 
 use crate::guids::{
     GUID_PRESERVED_KEY_CYCLE_CANDIDATE_DISPLAY_MODE, GUID_PRESERVED_KEY_ROMANIZATION,
-    GUID_PRESERVED_KEY_SETTINGS,
+    GUID_PRESERVED_KEY_SETTINGS, GUID_PRESERVED_KEY_TELEX_GUIDE,
 };
 use crate::wide::to_wide_nul;
 use taigi_windows_core::keys::{ComposingKeyChord, ShortcutAction};
@@ -22,7 +22,7 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{
 use windows::Win32::UI::TextServices::{ITfKeystrokeMgr, TF_PRESERVEDKEY};
 
 /// The actions that ARE preserved keys, with their GUIDs.
-const PRESERVED: [(ShortcutAction, GUID); 3] = [
+const PRESERVED: [(ShortcutAction, GUID); 4] = [
     (
         ShortcutAction::OpenLastSettingsPane,
         GUID_PRESERVED_KEY_SETTINGS,
@@ -34,6 +34,10 @@ const PRESERVED: [(ShortcutAction, GUID); 3] = [
     (
         ShortcutAction::CycleCandidateDisplayMode,
         GUID_PRESERVED_KEY_CYCLE_CANDIDATE_DISPLAY_MODE,
+    ),
+    (
+        ShortcutAction::ShowTelexGuide,
+        GUID_PRESERVED_KEY_TELEX_GUIDE,
     ),
 ];
 
@@ -140,6 +144,18 @@ impl PreservedKeys {
             }
         }
         self.revision = Some(settings.revision);
+    }
+
+    /// The virtual key `action` is registered on right now, if it is.
+    pub fn virtual_key_of(&self, action: ShortcutAction) -> Option<u32> {
+        let guid = PRESERVED
+            .iter()
+            .find(|(known, _)| *known == action)
+            .map(|(_, guid)| *guid)?;
+        self.registered
+            .iter()
+            .find(|(registered, _)| *registered == guid)
+            .map(|(_, key)| key.uVKey)
     }
 
     pub fn unregister(&mut self, keystroke_mgr: &ITfKeystrokeMgr) {
