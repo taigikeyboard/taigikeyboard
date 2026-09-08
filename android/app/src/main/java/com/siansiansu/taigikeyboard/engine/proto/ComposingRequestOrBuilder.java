@@ -210,5 +210,24 @@ public interface ComposingRequestOrBuilder extends
    */
   com.siansiansu.taigikeyboard.engine.proto.ResetContinuous getResetContinuous();
 
+  /**
+   * <pre>
+   * --- Telex tone keys (40s, desktop Telex scheme) ---
+   * </pre>
+   *
+   * <code>.taigi.engine.TelexKey telex_key = 40;</code>
+   * @return Whether the telexKey field is set.
+   */
+  boolean hasTelexKey();
+  /**
+   * <pre>
+   * --- Telex tone keys (40s, desktop Telex scheme) ---
+   * </pre>
+   *
+   * <code>.taigi.engine.TelexKey telex_key = 40;</code>
+   * @return The telexKey.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.TelexKey getTelexKey();
+
   public com.siansiansu.taigikeyboard.engine.proto.ComposingRequest.MethodCase getMethodCase();
 }

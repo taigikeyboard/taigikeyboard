@@ -55,6 +55,9 @@ message ComposingRequest {
     FetchAtPos                      fetch_at_pos                         = 31;
     CommitContinuous                commit_continuous                    = 32;
     ResetContinuous                 reset_continuous                     = 33;
+
+    // --- Telex tone keys (40s, desktop Telex scheme) ---
+    TelexKey                        telex_key                            = 40;
   }
 }
 
@@ -272,6 +275,14 @@ message CommitContinuous {
 // document (already inserted via earlier `CommitTextReplacingPreedit`
 // effects).
 message ResetContinuous {}
+
+// Desktop Telex scheme: one key from `v y d w x q` (tones 2 3 5 7 8 9),
+// `z` (affricate initial `ts` / `ch` by `AppConfig.input_mode`) or `f`
+// (hyphen), either case. The engine edits the pending tail — appending or
+// replacing the trailing tone digit — and keeps the buffer numeric-tone.
+// A key that changes nothing (same tone twice, tone on an empty tail) is a
+// no-op. Idle + `z` enters composing with the expansion.
+message TelexKey { string key = 1; }
 
 message ComposingResponse {
   message Preedit {

@@ -417,6 +417,12 @@ pub enum Intent {
         syllable_count: u8,
     },
     ResetContinuous,
+    /// Desktop Telex scheme — one tone / affricate / hyphen letter applied
+    /// to the pending tail (`telex::apply_telex_key`). Unknown keys and
+    /// edits that change nothing answer with a no-op.
+    TelexKey {
+        key: String,
+    },
 }
 
 #[derive(Debug, Error)]

@@ -106,6 +106,37 @@ pub(crate) fn apply(
             config,
         ),
         Intent::ResetContinuous => reset_continuous(state, config),
+        Intent::TelexKey { key } => telex_key(state, &key, config),
+    }
+}
+
+/// `Intent::TelexKey` — edit the pending tail through
+/// `telex::apply_telex_key`; a `None` edit is a no-op. Under Continuous the
+/// nailed segments stay untouched and the preedit re-renders the whole
+/// composition; selection resets as a fresh typing step does.
+fn telex_key(state: &mut EngineState, key: &str, config: &AppConfig) -> ComposingResponse {
+    let mode = phonetics::api::parse_input_mode(&config.input_mode);
+    match &state.phase {
+        Phase::Idle => match crate::telex::apply_telex_key("", key, mode) {
+            Some(text) => enter_composing(state, text, config),
+            None => noop(state, config),
+        },
+        Phase::Composing { raw } => match crate::telex::apply_telex_key(raw, key, mode) {
+            Some(next) => enter_composing(state, next, config),
+            None => noop(state, config),
+        },
+        Phase::Continuous { raw, nailed } => match crate::telex::apply_telex_key(raw, key, mode) {
+            Some(next) => {
+                let combined = combined_display(nailed, &next, config);
+                state.phase = Phase::Continuous {
+                    raw: next.clone(),
+                    nailed: nailed.clone(),
+                };
+                state.selected_candidate_index = 0;
+                step_response(next, combined, 0)
+            }
+            None => noop(state, config),
+        },
     }
 }
 

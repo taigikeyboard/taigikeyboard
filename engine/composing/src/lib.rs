@@ -18,6 +18,7 @@ mod continuous;
 mod derived;
 mod lattice;
 mod shadow;
+pub mod telex;
 mod transition;
 
 pub use api::{ComposingError, Engine, EngineState, Intent, NailedSegment, Phase};

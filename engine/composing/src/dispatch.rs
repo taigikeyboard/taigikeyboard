@@ -79,6 +79,7 @@ pub(crate) fn decode_intent(req: &ComposingRequest) -> Result<Intent, ComposingE
             syllable_count: clamp_syllable_count(m.syllable_count),
         },
         Method::ResetContinuous(_) => Intent::ResetContinuous,
+        Method::TelexKey(m) => Intent::TelexKey { key: m.key },
     })
 }
 
