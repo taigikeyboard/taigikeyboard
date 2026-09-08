@@ -306,6 +306,17 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             defaultValue: ComposingKeyBindings.default.toneScheme,
         )
 
+        /// Whether the candidate window is shown at all. Off means no fetch
+        /// and no window — the user types romanization and Space / Return
+        /// write it as typed (USER 2026-09-08 「給使用者純打字用」). macOS-only
+        /// like `toneInputScheme`: a phone keyboard's candidate bar is the
+        /// keyboard, so the default is owned by `ComposingKeyBindings`
+        /// rather than by the shared `EngineSettings.defaults`.
+        static let isCandidateWindowEnabled = SettingsKey(
+            name: "candidateWindowEnabled",
+            defaultValue: ComposingKeyBindings.default.isCandidateWindowEnabled,
+        )
+
         /// The per-action composing chords are keyed by
         /// `ComposingAction.settingsKeyName` rather than named here one by one:
         /// the roster is the source of truth for which of them exist, and a
@@ -474,7 +485,17 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             // must stay reachable.
             chords[action] = ComposingKeyChord(rawValue: stored)
         }
-        return ComposingKeyBindings(chords: chords, toneScheme: choice(Keys.toneInputScheme))
+        return ComposingKeyBindings(
+            chords: chords,
+            toneScheme: choice(Keys.toneInputScheme),
+            isCandidateWindowEnabled: bool(Keys.isCandidateWindowEnabled),
+        )
+    }
+
+    /// Whether the candidate window is shown at all. Read by the controller's
+    /// fetch paths, never by the engine — the composition itself is unchanged.
+    var isCandidateWindowEnabled: Bool {
+        bool(Keys.isCandidateWindowEnabled)
     }
 
     /// Records `chord` on `action`, or clears the row when it is nil.

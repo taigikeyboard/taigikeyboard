@@ -561,6 +561,20 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(bindings.slotKeySet, .bareKeys)
     }
 
+    /// S33: the window ships ON, and the 一般 pane's toggle reaches both
+    /// readers — the controller's fetch gate and the classifier's bindings.
+    func testCandidateWindow_shipsOn_andReadsWhatTheGeneralPaneWrites() {
+        let fresh = makeStore()
+        XCTAssertTrue(fresh.isCandidateWindowEnabled)
+        XCTAssertTrue(fresh.composingKeyBindings.isCandidateWindowEnabled)
+
+        userDefaults.set(false, forKey: SettingsStore.Keys.isCandidateWindowEnabled.name)
+
+        let store = makeStore()
+        XCTAssertFalse(store.isCandidateWindowEnabled)
+        XCTAssertFalse(store.composingKeyBindings.isCandidateWindowEnabled)
+    }
+
     /// The rules `current` and the swap shortcut read live on the enum — pinned once.
     func testCandidateDisplayMode_rules_perMode() {
         XCTAssertEqual(CandidateDisplayMode.allCases.filter(\.allowsSwapToggle), [.sideBySide])

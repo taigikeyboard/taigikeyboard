@@ -126,6 +126,14 @@ impl TextService_Impl {
         }
 
         let bindings = ComposingKeyBindings::from_document(&settings);
+        // A window the user switched off since the last key comes down HERE,
+        // before the key is read (mirrors `TaigiInputController.handle`):
+        // the TIP has no settings observer inside the host, and a Return
+        // classified against a window still up would pick a candidate the
+        // user asked never to see.
+        if !settings.bool(&keys::IS_CANDIDATE_WINDOW_ENABLED) {
+            self.hide_candidates(token);
+        }
         let (is_composing, is_showing_candidates) = self.composing_flags(runtime, token);
         let intent =
             ComposingKeyIntent::intent(&snapshot, is_composing, is_showing_candidates, &bindings);
@@ -1002,19 +1010,19 @@ fn perform_intent(
     match intent {
         ComposingKeyIntent::Input(text) => {
             manager.append(text, editor);
-            refresh_candidates(manager, list);
+            refresh_candidates(settings, manager, list);
             surface.present(list, editor);
             KeyOutcome::Consumed
         }
         ComposingKeyIntent::TelexKey(key) => {
             manager.telex_key(key, editor);
-            refresh_candidates(manager, list);
+            refresh_candidates(settings, manager, list);
             surface.present(list, editor);
             KeyOutcome::Consumed
         }
         ComposingKeyIntent::DeleteBackward => {
             manager.delete_backward(editor);
-            refresh_candidates(manager, list);
+            refresh_candidates(settings, manager, list);
             surface.present(list, editor);
             KeyOutcome::Consumed
         }
@@ -1138,7 +1146,28 @@ fn perform_intent(
     }
 }
 
-fn refresh_candidates(manager: &mut ComposingManager, list: &mut CandidateSource) {
+/// Re-reads the candidates for the composition as it now stands
+/// (`TaigiInputController.swift` `refreshCandidates`); `Surface::present`
+/// then puts them on screen, or hides when the list is empty.
+///
+/// With the 候選窗 setting off nothing is fetched, not merely not shown: a
+/// list kept behind no window would turn `is_showing_candidates` on and hand
+/// Space and the slot keys to candidates the user cannot see. The
+/// composition itself is untouched — it still promotes to continuous, and
+/// Enter writes it as typed (`ComposingKeyIntent`). Unlike the Mac, a flip
+/// mid-composition is noticed at the NEXT key event, not at once: the TIP
+/// runs inside the host with no settings observer of its own, and
+/// `settings` is the one snapshot each key is handled against — so the next
+/// key hides an open window (off) or fetches for the composition (on).
+fn refresh_candidates(
+    settings: &SettingsDocument,
+    manager: &mut ComposingManager,
+    list: &mut CandidateSource,
+) {
+    if !settings.bool(&keys::IS_CANDIDATE_WINDOW_ENABLED) {
+        list.clear();
+        return;
+    }
     match manager.fetch_candidates().list_change() {
         CandidateListChange::Replace(candidates) => list.set(candidates, manager),
         CandidateListChange::Clear => list.clear(),
@@ -1176,7 +1205,7 @@ fn commit_candidate(
         CandidateCommitOutcome::Nailed
         | CandidateCommitOutcome::Ignored
         | CandidateCommitOutcome::Unavailable => {
-            refresh_candidates(manager, list);
+            refresh_candidates(settings, manager, list);
             surface.present(list, editor);
         }
     }

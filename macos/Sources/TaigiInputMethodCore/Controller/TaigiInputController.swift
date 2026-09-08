@@ -128,6 +128,14 @@ public final class TaigiInputController: IMKInputController {
     @MainActor
     private var displayModeObservation: AnyObject?
 
+    /// KVO on the 候選窗 key, armed and released with `displayModeObservation`:
+    /// a flip mid-composition takes an open window down (off) or fetches
+    /// one for the composition as it stands (on), rather than waiting for
+    /// the next keystroke to notice — the window and the setting must not
+    /// disagree while the user is looking at both.
+    @MainActor
+    private var candidateWindowObservation: AnyObject?
+
     // MARK: - IMK entry points
 
     /// Keydown only — the default, restated rather than left implicit so a
@@ -173,6 +181,12 @@ public final class TaigiInputController: IMKInputController {
                 of: SettingsStore.Keys.candidateDisplayMode,
                 onMainActor: { [weak controller] in
                     controller?.refetchCandidatesForDisplayModeChange()
+                },
+            )
+            controller.candidateWindowObservation = controller.settings.observeChanges(
+                of: SettingsStore.Keys.isCandidateWindowEnabled,
+                onMainActor: { [weak controller] in
+                    controller?.applyCandidateWindowSettingChange()
                 },
             )
             // Fresh focus types Taigi — and no Shift half-tapped elsewhere may
@@ -503,6 +517,14 @@ public final class TaigiInputController: IMKInputController {
               let client
         else { return false }
 
+        // A window the user switched off since the last key comes down HERE,
+        // before the key is read: the setting's observer runs on a later
+        // main-actor turn, and a Return classified against a bar still up
+        // would pick a candidate the user asked never to see.
+        if !settings.isCandidateWindowEnabled, !source.isEmpty {
+            dismissCandidates()
+        }
+
         let intent = ComposingKeyIntent.intent(
             for: key,
             isComposing: manager.isComposing,
@@ -731,6 +753,15 @@ public final class TaigiInputController: IMKInputController {
     /// them.
     @MainActor
     private func refreshCandidates(from manager: ComposingManager, client: IMKTextInput) {
+        // With the window off nothing is fetched, not merely not shown: a
+        // list kept behind no window would turn `isShowingCandidates` on and
+        // hand Space and the slot keys to candidates the user cannot see.
+        // The composition itself is untouched — it still promotes to
+        // continuous, and Return writes it as typed (`ComposingKeyIntent`).
+        guard settings.isCandidateWindowEnabled else {
+            dismissCandidates()
+            return
+        }
         switch manager.fetchCandidates() {
         case .unavailable:
             // The QUERY left the engine as it was, but the keystroke before it
@@ -810,6 +841,29 @@ public final class TaigiInputController: IMKInputController {
         }
         source = CandidateSource(candidates: fetched, manager: manager)
         updateCellsInPlace()
+    }
+
+    /// Brings the window into line with the 候選窗 setting the 一般 pane (or
+    /// `defaults write`) just flipped, for a composition that is running.
+    ///
+    /// Off takes the list and the window down together (`dismissCandidates`)
+    /// and leaves the marked text alone: the user's characters are the
+    /// engine's, and only the presentation was switched off. On fetches for
+    /// the composition as it stands — through `refreshCandidates`, which is
+    /// what a keystroke does, against the client this session last wrote
+    /// to: unlike the display-mode refetch there is no anchored window to
+    /// repaint in place, so the caret has to be asked for. With no client
+    /// to ask, the next keystroke fetches instead. An idle session has
+    /// nothing to fetch or hide.
+    @MainActor
+    private func applyCandidateWindowSettingChange() {
+        // Off takes the bar down at once; on waits for the next keystroke,
+        // which fetches anyway. Fetching here would mean asking the client
+        // for its caret outside a key event — the one IMK query this
+        // controller otherwise never makes — for a window the next key
+        // brings up on its own.
+        guard !settings.isCandidateWindowEnabled else { return }
+        dismissCandidates()
     }
 
     @MainActor
@@ -983,6 +1037,7 @@ public final class TaigiInputController: IMKInputController {
         finishComposition(into: client)
         ComposingSessionCoordinator.shared.release(sessionToken)
         displayModeObservation = nil
+        candidateWindowObservation = nil
     }
 
     /// Writes whatever is composing into `client` and leaves it with no marked

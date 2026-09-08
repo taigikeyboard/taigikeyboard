@@ -146,6 +146,7 @@ enum StringKey: String {
     case settingsCandidateDisplayModeSideBySide = "i18n_settings_candidateDisplayModeSideBySide"
     case settingsCandidateDisplayModeCombined = "i18n_settings_candidateDisplayModeCombined"
     case settingsCandidateDisplayModeRomanOnly = "i18n_settings_candidateDisplayModeRomanOnly"
+    case settingsCandidateWindow = "i18n_settings_candidateWindow"
     case settingsLiteralRomanCandidate = "i18n_settings_literalRomanCandidate"
     case settingsToneInputScheme = "i18n_settings_toneInputScheme"
     case settingsToneSchemeStandard = "i18n_settings_toneSchemeStandard"

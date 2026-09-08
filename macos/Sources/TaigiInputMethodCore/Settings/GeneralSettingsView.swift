@@ -39,6 +39,9 @@ struct GeneralSettingsView: View {
     @AppStorage(SettingsStore.Keys.isAutoSpaceEnabled.name)
     private var isAutoSpaceEnabled = SettingsStore.Keys.isAutoSpaceEnabled.defaultValue
 
+    @AppStorage(SettingsStore.Keys.isCandidateWindowEnabled.name)
+    private var isCandidateWindowEnabled = SettingsStore.Keys.isCandidateWindowEnabled.defaultValue
+
     @AppStorage(SettingsStore.Keys.isLiteralRomanCandidateEnabled.name)
     private var isLiteralRomanCandidateEnabled = SettingsStore.Keys.isLiteralRomanCandidateEnabled.defaultValue
 
@@ -101,6 +104,14 @@ struct GeneralSettingsView: View {
                 }
 
                 Toggle(language.string(.settingsAutoSpace), isOn: $isAutoSpaceEnabled)
+
+                // S33 (USER 2026-09-08): off means no window at all — the
+                // user types romanization and Space / Return write it as
+                // typed. Directly above 顯示當咧拍的字, which describes the
+                // window's content and so reads as its sub-option; that row
+                // stays enabled with the window off (one plain switch, no
+                // greyed-out state to explain).
+                Toggle(language.string(.settingsCandidateWindow), isOn: $isCandidateWindowEnabled)
 
                 // §34/S22, under 自動空白 where the USER placed it
                 // (2026-09-03). On means candidate slot 0 is the preedit

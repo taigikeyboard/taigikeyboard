@@ -21,6 +21,12 @@ pub struct ComposingKeyBindings {
     /// the same contract the chords are: the classifier reads both off one
     /// value, and the slot keys follow from it.
     pub tone_scheme: ToneInputScheme,
+    /// Whether a candidate window exists to act on. Carried here for the
+    /// same reason as `tone_scheme`: with the window off, the keys that
+    /// would confirm or page a candidate end the composition as typed
+    /// instead, and the classifier decides that off one value
+    /// (`ComposingKeyBindings.swift` `isCandidateWindowEnabled`).
+    pub is_candidate_window_enabled: bool,
 }
 
 impl Default for ComposingKeyBindings {
@@ -59,6 +65,10 @@ impl ComposingKeyBindings {
         Self {
             chords: resolved,
             tone_scheme,
+            // Resolving is about the chords and the scheme; the window
+            // switch is orthogonal, so it starts as shipped and a caller
+            // with an opinion sets it (`from_document`).
+            is_candidate_window_enabled: true,
         }
     }
 
@@ -73,7 +83,10 @@ impl ComposingKeyBindings {
                 stored.insert(action, ComposingKeyChord::from_raw(raw));
             }
         }
-        Self::resolve(&stored, document.choice(&keys::TONE_INPUT_SCHEME))
+        Self {
+            is_candidate_window_enabled: document.bool(&keys::IS_CANDIDATE_WINDOW_ENABLED),
+            ..Self::resolve(&stored, document.choice(&keys::TONE_INPUT_SCHEME))
+        }
     }
 
     /// The keys that pick a candidate — derived, never stored
@@ -366,6 +379,17 @@ mod tests {
             );
             assert_eq!(bindings.slot_key_set(), scheme.slot_key_set());
         }
+    }
+
+    #[test]
+    fn candidate_window_ships_on_and_reads_what_the_general_pane_writes() {
+        // trace: SettingsStoreTests.swift
+        // `testCandidateWindow_shipsOn_andReadsWhatTheGeneralPaneWrites`.
+        assert!(ComposingKeyBindings::default().is_candidate_window_enabled);
+        let mut document = SettingsDocument::default();
+        assert!(ComposingKeyBindings::from_document(&document).is_candidate_window_enabled);
+        document.set_bool(&keys::IS_CANDIDATE_WINDOW_ENABLED, false);
+        assert!(!ComposingKeyBindings::from_document(&document).is_candidate_window_enabled);
     }
 
     #[test]

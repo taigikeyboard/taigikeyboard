@@ -344,6 +344,48 @@ final class ComposingKeyIntentTests: XCTestCase {
         )
     }
 
+    /// S33: with the window switched off there is never a candidate to take,
+    /// so every candidate key ends the composition as typed — Return and
+    /// Space alike, and the paging keys with them, so no candidate key is
+    /// ever swallowed. The window is never up in that state, so the "bar up"
+    /// meanings are not reachable and are not asserted.
+    func testCandidateKeys_commitTheTypedText_whenTheWindowIsOff() throws {
+        let windowOff = ComposingKeyBindings(isCandidateWindowEnabled: false)
+        let cases: [(name: String, characters: String)] = [
+            ("Return", "\r"),
+            ("Space", " "),
+            ("Tab", "\t"),
+            ("Page forward", "]"),
+            ("Page backward", "["),
+        ]
+
+        for testCase in cases {
+            let event = try TestFixtures.keyDownEvent(characters: testCase.characters)
+            XCTAssertEqual(
+                ComposingKeyIntent.intent(for: KeyEventSnapshot(event), isComposing: true, bindings: windowOff),
+                .commit,
+                "\(testCase.name) writes the romanization as typed when there is no window to act on",
+            )
+            XCTAssertEqual(
+                ComposingKeyIntent.intent(for: KeyEventSnapshot(event), isComposing: false, bindings: windowOff),
+                .passThrough,
+                "\(testCase.name) is the host's with no composition, window or not",
+            )
+        }
+        // The negative control: with the window ON and no bar up, the same
+        // keys keep their shipped meanings (`testReturn_endsTheCompositionWithNoBarUp`).
+        let returnEvent = try TestFixtures.keyDownEvent(characters: "\r")
+        XCTAssertEqual(
+            ComposingKeyIntent.intent(for: KeyEventSnapshot(returnEvent), isComposing: true),
+            .commitThenPassThrough,
+        )
+        let spaceEvent = try TestFixtures.keyDownEvent(characters: " ")
+        XCTAssertEqual(
+            ComposingKeyIntent.intent(for: KeyEventSnapshot(spaceEvent), isComposing: true),
+            .commitThenInsert(" "),
+        )
+    }
+
     /// The mapping from AppKit's own key names, which the snapshot is what
     /// isolates: everything above is asserted against `NavigationKey` directly,
     /// so without this the six keys could all be extracted as nil.

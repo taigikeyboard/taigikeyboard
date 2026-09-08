@@ -118,6 +118,17 @@ impl ComposingKeyIntent {
                 if is_showing_candidates || !action.requires_candidates() {
                     return action.intent();
                 }
+                // With the window switched off there is never a candidate
+                // to confirm, swap or page to, so every key that would ends
+                // the composition as typed instead — the romanization with
+                // its tone marks (`tai5` → `tâi`), the same commit
+                // Shift+Enter makes. Paging keys included: "any candidate
+                // key commits" is one rule the user can hold. Only while the
+                // window is ON does a candidate key with no window up fall
+                // through to the host below (`ComposingKeyIntent.swift`).
+                if !bindings.is_candidate_window_enabled {
+                    return Self::Commit;
+                }
             }
         }
         // Tier 5 — Control, Alt and Win chords are the host's shortcuts, mid-
@@ -574,6 +585,42 @@ mod tests {
         assert_eq!(
             classify(&text("]"), true, false),
             ComposingKeyIntent::CommitThenInsert("]".into())
+        );
+    }
+
+    #[test]
+    fn candidate_keys_commit_the_typed_text_when_the_window_is_off() {
+        // trace: ComposingKeyIntentTests.swift
+        // `testCandidateKeys_commitTheTypedText_whenTheWindowIsOff` — S33.
+        let mut window_off = ComposingKeyBindings::default();
+        window_off.is_candidate_window_enabled = false;
+        for (name, characters) in [
+            ("Enter", "\r"),
+            ("Space", " "),
+            ("Tab", "\t"),
+            ("Page forward", "]"),
+            ("Page backward", "["),
+        ] {
+            assert_eq!(
+                ComposingKeyIntent::intent(&text(characters), true, false, &window_off),
+                ComposingKeyIntent::Commit,
+                "{name} writes the romanization as typed when there is no window to act on"
+            );
+            assert_eq!(
+                ComposingKeyIntent::intent(&text(characters), false, false, &window_off),
+                ComposingKeyIntent::PassThrough,
+                "{name} is the host's with no composition, window or not"
+            );
+        }
+        // Negative control: with the window ON and none up, the shipped
+        // meanings stand (`return_commits_the_candidate_and_shift_return_the_literal`).
+        assert_eq!(
+            classify(&text("\r"), true, false),
+            ComposingKeyIntent::CommitThenPassThrough
+        );
+        assert_eq!(
+            classify(&text(" "), true, false),
+            ComposingKeyIntent::CommitThenInsert(" ".into())
         );
     }
 

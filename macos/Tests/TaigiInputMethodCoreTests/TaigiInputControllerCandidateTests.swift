@@ -870,15 +870,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         // Both keys start from "never touched" and go back to whatever they
         // held — `withSetting` is synchronous, and this case has to await.
         for name in [key, SettingsStore.Keys.isTranslateSwapped.name] {
-            let saved = UserDefaults.standard.object(forKey: name)
-            addTeardownBlock {
-                if let saved {
-                    UserDefaults.standard.set(saved, forKey: name)
-                } else {
-                    UserDefaults.standard.removeObject(forKey: name)
-                }
-            }
-            UserDefaults.standard.removeObject(forKey: name)
+            clearSettingRestoredAtTeardown(name)
         }
         let session = try composedSession()
         let before = try XCTUnwrap(session.presenter.shownContent).cells
@@ -920,15 +912,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     func testCycleCandidateDisplayShortcut_refetchesTheOpenBar() async throws {
         let key = SettingsStore.Keys.candidateDisplayMode.name
         for name in [key, SettingsStore.Keys.isTranslateSwapped.name] {
-            let saved = UserDefaults.standard.object(forKey: name)
-            addTeardownBlock {
-                if let saved {
-                    UserDefaults.standard.set(saved, forKey: name)
-                } else {
-                    UserDefaults.standard.removeObject(forKey: name)
-                }
-            }
-            UserDefaults.standard.removeObject(forKey: name)
+            clearSettingRestoredAtTeardown(name)
         }
         let session = try composedSession()
         let before = try XCTUnwrap(session.presenter.shownContent).cells
@@ -965,6 +949,116 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
             "with no bar on screen the arrows are the host's again — navigating an invisible list "
                 + "would take a key away for nothing",
         )
+    }
+
+    // MARK: - Candidate window off (S33)
+
+    /// With the window off nothing is ever shown, and Return writes the
+    /// romanization as typed — `tai5` → `tâi` — without the paragraph break
+    /// the host would get from a Return that fell through.
+    func testWindowOff_neverShowsTheBar_andReturnWritesTheTypedText() throws {
+        try withCandidateWindow(false) {
+            let session = try makeSession()
+            for character in ["t", "a", "i", "5"] {
+                _ = try session.controller.handle(
+                    TestFixtures.keyDownEvent(characters: character), client: session.client,
+                )
+            }
+            XCTAssertFalse(session.presenter.isShowing)
+            XCTAssertFalse(
+                session.presenter.calls.contains { if case .show = $0 { true } else { false } },
+                "no window is ever put up with the setting off — got \(session.presenter.calls)",
+            )
+            XCTAssertEqual(session.client.writes.last, .setMarkedText("tâi", selectionLocation: 3))
+
+            let handled = try session.controller.handle(
+                TestFixtures.keyDownEvent(characters: "\r"), client: session.client,
+            )
+
+            XCTAssertTrue(handled, "Return is consumed — the host must not also get a newline")
+            XCTAssertEqual(session.client.insertedTexts, ["tâi"])
+        }
+    }
+
+    /// Space is the other candidate key: with no window it too writes what
+    /// was typed rather than the document's space.
+    func testWindowOff_spaceWritesTheTypedText() throws {
+        try withCandidateWindow(false) {
+            let session = try makeSession()
+            for character in ["t", "a", "i", "5"] {
+                _ = try session.controller.handle(
+                    TestFixtures.keyDownEvent(characters: character), client: session.client,
+                )
+            }
+
+            let handled = try session.controller.handle(
+                TestFixtures.keyDownEvent(characters: " "), client: session.client,
+            )
+
+            XCTAssertTrue(handled)
+            XCTAssertEqual(session.client.insertedTexts, ["tâi"])
+        }
+    }
+
+    /// Flipping the setting off while a bar is up takes the bar down at once
+    /// — through the observation armed at activation, not the next key —
+    /// and leaves the composition where it was: the next character still
+    /// extends it, with no window coming back.
+    func testTurningTheWindowOff_midComposition_hidesTheBarAndKeepsTheMarkedText() async throws {
+        clearSettingRestoredAtTeardown(SettingsStore.Keys.isCandidateWindowEnabled.name)
+        let session = try composedSession()
+        XCTAssertTrue(session.presenter.isShowing)
+        let callsBefore = session.presenter.calls.count
+
+        UserDefaults.standard.set(false, forKey: SettingsStore.Keys.isCandidateWindowEnabled.name)
+        for _ in 0..<50 where session.presenter.calls.count == callsBefore {
+            await Task.yield()
+        }
+
+        XCTAssertFalse(session.presenter.isShowing, "the setting went off, so the bar goes down")
+        XCTAssertTrue(session.client.insertedTexts.isEmpty, "only the presentation changed — nothing was committed")
+        _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "a"), client: session.client)
+        XCTAssertEqual(session.client.writes.last, .setMarkedText("taigia", selectionLocation: 6))
+        XCTAssertFalse(session.presenter.isShowing, "a keystroke after the flip fetches nothing")
+    }
+
+    /// The setting can go off between two keys faster than its observer
+    /// runs. The next key must not be read against the bar that is still up:
+    /// Return then commits the typed text rather than picking a candidate.
+    func testReturnRightAfterTheWindowGoesOff_commitsTheTypedText_notACandidate() throws {
+        clearSettingRestoredAtTeardown(SettingsStore.Keys.isCandidateWindowEnabled.name)
+        let session = try composedSession()
+        XCTAssertTrue(session.presenter.isShowing)
+
+        UserDefaults.standard.set(false, forKey: SettingsStore.Keys.isCandidateWindowEnabled.name)
+        // No yield: the observer has not run yet.
+        _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "\r"), client: session.client)
+
+        XCTAssertFalse(session.presenter.isShowing)
+        XCTAssertEqual(session.client.insertedTexts, ["taigi"], "the typed text, not the highlighted candidate")
+    }
+
+    /// The way back: flipping the setting on mid-composition takes effect on
+    /// the next keystroke, which fetches anyway — the controller does not ask
+    /// the client for its caret outside a key event.
+    func testTurningTheWindowOn_midComposition_fetchesOnTheNextKey() throws {
+        clearSettingRestoredAtTeardown(SettingsStore.Keys.isCandidateWindowEnabled.name)
+        UserDefaults.standard.set(false, forKey: SettingsStore.Keys.isCandidateWindowEnabled.name)
+        let session = try composedSession()
+        XCTAssertFalse(session.presenter.isShowing)
+
+        UserDefaults.standard.set(true, forKey: SettingsStore.Keys.isCandidateWindowEnabled.name)
+        _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "a"), client: session.client)
+
+        XCTAssertTrue(session.presenter.isShowing, "the setting went on, so the next key brings the bar up")
+        XCTAssertFalse(try XCTUnwrap(session.presenter.shownContent).cells.isEmpty)
+        XCTAssertTrue(session.client.insertedTexts.isEmpty)
+    }
+
+    /// Runs `body` with the 候選窗 setting on or off, in the `.standard`
+    /// domain the controller reads, and puts it back after.
+    private func withCandidateWindow(_ isEnabled: Bool, _ body: () throws -> Void) rethrows {
+        try withSetting(SettingsStore.Keys.isCandidateWindowEnabled.name, to: isEnabled, body)
     }
 
     // MARK: - Fixtures
@@ -1027,14 +1121,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     /// every keystroke re-reads it — and is put back at teardown.
     private func composedSession(under scheme: ToneInputScheme) throws -> Session {
         let key = SettingsStore.Keys.toneInputScheme.name
-        let saved = UserDefaults.standard.object(forKey: key)
-        addTeardownBlock {
-            if let saved {
-                UserDefaults.standard.set(saved, forKey: key)
-            } else {
-                UserDefaults.standard.removeObject(forKey: key)
-            }
-        }
+        clearSettingRestoredAtTeardown(key)
         UserDefaults.standard.set(scheme.rawValue, forKey: key)
         return try composedSession()
     }
