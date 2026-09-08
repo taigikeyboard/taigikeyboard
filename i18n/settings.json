@@ -102,9 +102,9 @@
       "values": { "hanji": "聲調拍法", "tailo": "siann-tiāu phah-huat", "poj": "siaⁿ-tiāu phah-hoat", "en": "Tone Keys", "ja": "声調の入力方式" }
     },
     "toneSchemeStandard": {
-      "comment": "toneInputScheme option: digits 1-9 type the tone, the bare letters q w d f z x v y ; pick a candidate.",
+      "comment": "toneInputScheme option: digits 1-9 type the tone, the bare letters q w d f z x v y ; pick a candidate. Named after what the user types rather than 標準 (USER 2026-09-09) — beside Telex, \"standard\" says which is the default, not which keys carry the tone.",
       "scope": { "platforms": ["macos", "windows"], "surfaces": ["host"] },
-      "values": { "hanji": "標準", "tailo": "piau-tsún", "poj": "piau-chún", "en": "Standard", "ja": "標準" }
+      "values": { "hanji": "數字調", "tailo": "sòo-jī-tiāu", "poj": "sò͘-jī-tiāu", "en": "Numeric Tones", "ja": "数字で声調" }
     },
     "toneSchemeTelex": {
       "comment": "toneInputScheme option: the letters v y d w x q type the tone, digits 1-9 pick a candidate. A scheme name, kept as-is in every language.",
