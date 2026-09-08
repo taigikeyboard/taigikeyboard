@@ -69,38 +69,15 @@ final class ModeFlashPanel {
             height: label.frame.height + padding.top + padding.bottom,
         )
 
-        let background = NSVisualEffectView(frame: NSRect(origin: .zero, size: contentSize))
-        background.material = .hudWindow
-        background.state = .active
-        background.wantsLayer = true
-        background.layer?.cornerRadius = 12
-        background.layer?.masksToBounds = true
+        let background = HUDPanel.makeBackground(size: contentSize)
         label.frame.origin = NSPoint(x: padding.left, y: padding.bottom)
         background.addSubview(label)
 
-        let panel = NSPanel(
-            contentRect: NSRect(origin: .zero, size: contentSize),
-            styleMask: [.borderless, .nonactivatingPanel],
-            backing: .buffered,
-            defer: false,
-        )
-        panel.contentView = background
-        panel.isOpaque = false
-        panel.backgroundColor = .clear
-        panel.hasShadow = true
-        panel.level = .floating
-        panel.ignoresMouseEvents = true
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        panel.isReleasedWhenClosed = false
+        let panel = HUDPanel.makePanel(background: background)
 
         // Centred a third of the way up, clear of both the caret line and the
-        // dock. `NSScreen.main` is a best effort: an input-method agent holds
-        // no key window, so on a multi-display setup the flash can land on
-        // the primary display rather than the one being typed on — accepted
-        // for a sub-second notice; anchoring to the caret would need a client
-        // query this path does not have.
-        let screen = NSScreen.main ?? NSScreen.screens.first
-        if let frame = screen?.visibleFrame {
+        // dock.
+        if let frame = HUDPanel.noticeFrame {
             panel.setFrameOrigin(NSPoint(
                 x: frame.midX - contentSize.width / 2,
                 y: frame.minY + frame.height / 3,

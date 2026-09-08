@@ -86,6 +86,19 @@ extension KeyboardShortcuts.Name {
         "cycleCandidateDisplayMode",
         initial: .init(.h, modifiers: [.control, .command]),
     )
+
+    /// The Telex key table, on demand (USER 2026-09-09): the legend under the
+    /// 聲調拍法 picker was a wall of text in a pane the user is not in while
+    /// typing, so it became a floating card any key dismisses
+    /// (`TelexGuidePanel`). `/` is the key help lives on — `?` is ⇧/, and
+    /// every app that answers "which keys do what" answers it there — and
+    /// ⌃⌘ is the family the rest of this roster is on. Not ⌃⌘T, the mnemonic
+    /// first reached for: JetBrains binds it to Surround With, and a user in
+    /// an IDE would lose one or the other.
+    static let showTelexGuide = Self(
+        "showTelexGuide",
+        initial: .init(.slash, modifiers: [.control, .command]),
+    )
 }
 
 /// One user-assignable action. The list is the single source for the recorder
@@ -98,6 +111,9 @@ enum ShortcutAction: CaseIterable, Sendable {
     case toggleTranslateSwapped
     /// Steps the 候選詞顯示 picker one place: 並排 → 合用 → 羅馬字 → 並排.
     case cycleCandidateDisplayMode
+    /// Toggles the floating Telex key table. Last, because this order is the
+    /// order of the rows in the pane, and a guide sits after the switches.
+    case showTelexGuide
 
     var name: KeyboardShortcuts.Name {
         switch self {
@@ -105,6 +121,7 @@ enum ShortcutAction: CaseIterable, Sendable {
         case .toggleRomanization: .toggleRomanization
         case .toggleTranslateSwapped: .toggleTranslateSwapped
         case .cycleCandidateDisplayMode: .cycleCandidateDisplayMode
+        case .showTelexGuide: .showTelexGuide
         }
     }
 
@@ -135,6 +152,7 @@ enum ShortcutAction: CaseIterable, Sendable {
         case .toggleRomanization: language.string(.desktopShortcutToggleRomanization)
         case .toggleTranslateSwapped: language.string(.desktopShortcutToggleTranslateSwapped)
         case .cycleCandidateDisplayMode: language.string(.desktopShortcutCycleCandidateDisplayMode)
+        case .showTelexGuide: language.string(.desktopShortcutShowTelexGuide)
         }
     }
 }
@@ -187,7 +205,9 @@ enum ShortcutHotkeys {
     /// Opening settings is process-wide and needs no session; everything else
     /// changes what the active composition renders, so it routes through the
     /// controller that owns the session — which also dismisses the candidate
-    /// bar those settings would invalidate.
+    /// bar those settings would invalidate. The guide goes the same way: it
+    /// is owned by the session that raised it, so its key path can take it
+    /// down.
     static func perform(_ action: ShortcutAction) {
         switch action {
         case .openLastSettingsPane:
@@ -195,7 +215,7 @@ enum ShortcutHotkeys {
             // pane that is belongs to the settings window, not to a chord —
             // the named panes are reached from the menu bar now.
             openSettings(on: nil, in: SettingsStore())
-        case .toggleRomanization, .toggleTranslateSwapped, .cycleCandidateDisplayMode:
+        case .toggleRomanization, .toggleTranslateSwapped, .cycleCandidateDisplayMode, .showTelexGuide:
             ComposingSessionCoordinator.shared.performShortcutAction(action)
         }
     }
@@ -218,6 +238,10 @@ enum ShortcutHotkeys {
         in settings: SettingsStore,
         show: (@MainActor () -> Void)? = nil,
     ) {
+        // The guide comes down first, whoever raised it: this path never
+        // reaches the session, and the settings window taking focus is not
+        // guaranteed to end the session that owns the card.
+        TelexGuidePanel.shared.hideNow()
         if let pane {
             settings.selectedSettingsPane = pane
         }

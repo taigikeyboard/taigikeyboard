@@ -96,6 +96,142 @@
         "ja": "候補の表示を切り替え"
       }
     },
+    "shortcutShowTelexGuide": {
+      "comment": "Shortcut-recorder row: the hotkey that toggles the floating Telex key-table guide (USER 2026-09-09). Authored whole, like its siblings.",
+      "scope": {
+        "platforms": [
+          "macos",
+          "windows"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "Telex 說明",
+        "tailo": "Telex suat-bîng",
+        "poj": "Telex soat-bêng",
+        "en": "Telex Guide",
+        "ja": "Telex の説明"
+      }
+    },
+    "telexGuideTitle": {
+      "comment": "Title over the floating Telex guide's key table.",
+      "scope": {
+        "platforms": [
+          "macos",
+          "windows"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "Telex 鍵位",
+        "tailo": "Telex kiān-uī",
+        "poj": "Telex kiān-ūi",
+        "en": "Telex Keys",
+        "ja": "Telex キー配置"
+      }
+    },
+    "telexGuideTone": {
+      "comment": "Telex guide row meaning for a tone key; {tone} is the tone number (2, 3, 5, 7, 8, 9).",
+      "scope": {
+        "platforms": [
+          "macos",
+          "windows"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "placeholders": {
+        "tone": "string"
+      },
+      "values": {
+        "hanji": "第 {tone} 聲",
+        "tailo": "tē {tone} siann",
+        "poj": "tē {tone} siaⁿ",
+        "en": "Tone {tone}",
+        "ja": "第{tone}声"
+      }
+    },
+    "telexGuideInitial": {
+      "comment": "Telex guide row meaning for z / zh: the initial they spell (ts / tsh under TL, ch / chh under POJ — the example column shows which).",
+      "scope": {
+        "platforms": [
+          "macos",
+          "windows"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "聲母",
+        "tailo": "siann-bó",
+        "poj": "siaⁿ-bó",
+        "en": "Initial",
+        "ja": "声母"
+      }
+    },
+    "telexGuideHyphen": {
+      "comment": "Telex guide row meaning for f: the syllable hyphen.",
+      "scope": {
+        "platforms": [
+          "macos",
+          "windows"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "連字號",
+        "tailo": "liân-jī-hō",
+        "poj": "liân-jī-hō",
+        "en": "Hyphen",
+        "ja": "ハイフン"
+      }
+    },
+    "telexGuidePick": {
+      "comment": "Telex guide row meaning for the digits 1–9: they pick a candidate while the window is up (Telex holds the letters).",
+      "scope": {
+        "platforms": [
+          "macos",
+          "windows"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "候選窗顯示時選詞",
+        "tailo": "hāu-suán-thang hián-sī ê sî suán-sû",
+        "poj": "hāu-soán-thang hián-sī ê sî soán-sû",
+        "en": "Pick a candidate while the window is up",
+        "ja": "候補ウィンドウ表示中に候補を選択"
+      }
+    },
+    "telexGuideDismiss": {
+      "comment": "Footnote under the Telex guide: how it goes away. Escape is swallowed; any other key closes it and still does its job.",
+      "scope": {
+        "platforms": [
+          "macos",
+          "windows"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "揤 Esc 抑是任何鍵關閉",
+        "tailo": "tshi̍h Esc ah-sī jīm-hô kiān kuainn-tiāu",
+        "poj": "chhi̍h Esc ah-sī jīm-hô kiān koaiⁿ-tiāu",
+        "en": "Press Esc or any key to close",
+        "ja": "Esc または任意のキーで閉じる"
+      }
+    },
     "menuFile": {
       "comment": "Menu-bar File menu title. An LSUIElement process builds its own menu bar so the settings window keeps the standard editing shortcuts.",
       "scope": {
