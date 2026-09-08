@@ -67,6 +67,17 @@ pub fn view(
             true,
             context.callback(|is_on| Message::SetSwitch(keys::IS_AUTO_SPACE_ENABLED, is_on)),
         ),
+        // S33 (USER 2026-09-08): off means no window at all — the user types
+        // romanization and Space / Enter write it as typed. Directly above
+        // 顯示當咧拍的字, which describes the window's content and so reads
+        // as its sub-option; that row stays enabled with the window off (one
+        // plain switch, no greyed-out state to explain).
+        cards::switch_row(
+            strings.resolve(StringKey::SettingsCandidateWindow),
+            document.bool(&keys::IS_CANDIDATE_WINDOW_ENABLED),
+            true,
+            context.callback(|is_on| Message::SetSwitch(keys::IS_CANDIDATE_WINDOW_ENABLED, is_on)),
+        ),
         // §34/S22, under 自動空白 where the USER placed it (2026-09-03). On
         // means candidate slot 0 is the preedit literal, so Enter writes the
         // typed romanization.

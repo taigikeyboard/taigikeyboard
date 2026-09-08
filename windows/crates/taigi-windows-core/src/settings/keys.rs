@@ -222,6 +222,16 @@ pub const CUSTOM_FONT_FILE: SettingsKey<&'static str> = SettingsKey::new("custom
 pub const TONE_INPUT_SCHEME: SettingsKey<crate::keys::ToneInputScheme> =
     SettingsKey::new("toneInputScheme", crate::keys::ToneInputScheme::Standard);
 
+/// Whether the candidate window is shown at all. Off means no fetch and no
+/// window — the user types romanization and Space / Enter write it as typed
+/// (USER 2026-09-08 「給使用者純打字用」, S33). Desktop-only like
+/// `toneInputScheme`: a phone keyboard's candidate bar is the keyboard
+/// (`SettingsStore.swift` `isCandidateWindowEnabled`).
+pub const IS_CANDIDATE_WINDOW_ENABLED: SettingsKey<bool> =
+    SettingsKey::new("candidateWindowEnabled", true);
+// Pinned at compile time so a silent flip to OFF is loud.
+const _: () = assert!(IS_CANDIDATE_WINDOW_ENABLED.default);
+
 // RETIRED 2026-09-08 (USER): `candidateSlotModifier` (`bareKeys` / `shift` /
 // `control` / `option`). The slot key set is now DERIVED from
 // `toneInputScheme` — the letters and the digits are the same keys under

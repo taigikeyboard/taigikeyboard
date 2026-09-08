@@ -380,6 +380,24 @@ extension XCTestCase {
         try body()
     }
 
+    /// Clears `key` in `UserDefaults.standard` and puts it back at teardown —
+    /// including "held nothing", which a bare `removeObject` would turn into a
+    /// value a later case never chose. The teardown-scoped counterpart to
+    /// `withSetting`, for cases that have to `await` and so cannot run inside
+    /// its synchronous body.
+    @MainActor
+    func clearSettingRestoredAtTeardown(_ key: String) {
+        let saved = UserDefaults.standard.object(forKey: key)
+        addTeardownBlock {
+            if let saved {
+                UserDefaults.standard.set(saved, forKey: key)
+            } else {
+                UserDefaults.standard.removeObject(forKey: key)
+            }
+        }
+        UserDefaults.standard.removeObject(forKey: key)
+    }
+
     /// The 候選詞顯示 mode, written to the `.standard` domain the shared
     /// coordinator's settings provider reads — a 合用 case has to say so to
     /// the manager, not only to a controller's scratch store.

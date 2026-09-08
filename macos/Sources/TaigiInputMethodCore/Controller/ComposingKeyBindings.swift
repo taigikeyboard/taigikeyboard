@@ -110,6 +110,11 @@ struct ComposingKeyBindings: Sendable, Equatable {
     /// the same contract the chords are: the classifier reads both off one
     /// value, and the slot keys follow from it.
     let toneScheme: ToneInputScheme
+    /// Whether a candidate window exists to act on. Carried here for the
+    /// same reason as `toneScheme`: with the window off, the keys that
+    /// would confirm or page a candidate end the composition as typed
+    /// instead, and the classifier decides that off one value.
+    let isCandidateWindowEnabled: Bool
 
     /// The keys that pick a candidate — derived, never stored
     /// (`ToneInputScheme.slotKeySet`).
@@ -121,6 +126,7 @@ struct ComposingKeyBindings: Sendable, Equatable {
     init(
         chords: [ComposingAction: ComposingKeyChord?] = [:],
         toneScheme: ToneInputScheme = .standard,
+        isCandidateWindowEnabled: Bool = true,
     ) {
         var resolved: [ComposingAction: ComposingKeyChord] = [:]
         for action in ComposingAction.allCases {
@@ -138,6 +144,7 @@ struct ComposingKeyBindings: Sendable, Equatable {
         Self.restoreUnbound(in: &resolved)
         self.chords = resolved
         self.toneScheme = toneScheme
+        self.isCandidateWindowEnabled = isCandidateWindowEnabled
     }
 
     /// The chord on `action`, or nil when the row is empty.
