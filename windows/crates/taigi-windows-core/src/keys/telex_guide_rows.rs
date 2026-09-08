@@ -26,7 +26,6 @@ enum Meaning {
         poj: &'static str,
     },
     Hyphen,
-    Pick,
 }
 
 /// A row before the display language and the romanization are known.
@@ -42,9 +41,11 @@ impl RowSpec {
 }
 
 /// Row order is reading order: the tones by number, then the two consonant
-/// keys, then the hyphen, then the digits. CROSS-PLATFORM INVARIANT —
+/// keys, then the hyphen. The digit row went 2026-09-09 (USER) — the
+/// candidate window already draws the key beside each candidate.
+/// CROSS-PLATFORM INVARIANT —
 /// mirrors `TelexGuidePanel.swift` `rows`, row for row.
-const ROWS: [RowSpec; 10] = [
+const ROWS: [RowSpec; 9] = [
     RowSpec::new("v", Meaning::Tone("2")),
     RowSpec::new("y", Meaning::Tone("3")),
     RowSpec::new("d", Meaning::Tone("5")),
@@ -66,7 +67,6 @@ const ROWS: [RowSpec; 10] = [
         },
     ),
     RowSpec::new("f", Meaning::Hyphen),
-    RowSpec::new("1–9", Meaning::Pick),
 ];
 
 /// The table for `mode`, with every meaning resolved through `strings`.
@@ -86,7 +86,6 @@ pub fn telex_guide_rows(mode: InputMode, strings: &StringResolver) -> Vec<TelexG
                 Meaning::Hyphen => strings
                     .resolve(StringKey::DesktopTelexGuideHyphen)
                     .to_owned(),
-                Meaning::Pick => strings.resolve(StringKey::DesktopTelexGuidePick).to_owned(),
             },
         })
         .collect()
@@ -105,18 +104,17 @@ mod tests {
     fn the_table_is_the_mac_panels_row_for_row() {
         // trace: TelexGuidePanel.swift `rows` — ten rows, keys in reading order.
         let keys: Vec<_> = rows(InputMode::Tl).iter().map(|row| row.key).collect();
-        assert_eq!(keys, ["v", "y", "d", "w", "x", "q", "z", "zh", "f", "1–9"]);
+        assert_eq!(keys, ["v", "y", "d", "w", "x", "q", "z", "zh", "f"]);
     }
 
     #[test]
     fn meanings_come_from_the_display_language() {
         // trace: Hanji `desktop.telexGuideTone` = "第 {0} 聲",
-        // `telexGuideHyphen` = "連字號", `telexGuidePick` = "選詞".
+        // `telexGuideHyphen` = "連字號".
         let tl = rows(InputMode::Tl);
         assert_eq!(tl[0].meaning, "第 2 聲");
         assert_eq!(tl[5].meaning, "第 9 聲");
         assert_eq!(tl[8].meaning, "連字號");
-        assert_eq!(tl[9].meaning, "選詞");
         let en = telex_guide_rows(
             InputMode::Tl,
             &StringResolver::new(DisplayLanguage::English),
@@ -136,7 +134,7 @@ mod tests {
         assert_eq!(poj[6].meaning, "聲母 ch");
         assert_eq!(poj[7].meaning, "聲母 chh");
         // Every other row reads the same under both.
-        for index in [0, 5, 8, 9] {
+        for index in [0, 5, 8] {
             assert_eq!(tl[index], poj[index], "row {index}");
         }
     }

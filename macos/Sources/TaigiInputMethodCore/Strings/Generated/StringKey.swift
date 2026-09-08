@@ -31,7 +31,6 @@ enum StringKey: String {
     case desktopTelexGuideTone = "i18n_desktop_telexGuideTone"
     case desktopTelexGuideInitial = "i18n_desktop_telexGuideInitial"
     case desktopTelexGuideHyphen = "i18n_desktop_telexGuideHyphen"
-    case desktopTelexGuidePick = "i18n_desktop_telexGuidePick"
     case desktopMenuFile = "i18n_desktop_menuFile"
     case desktopMenuClose = "i18n_desktop_menuClose"
     case desktopMenuEdit = "i18n_desktop_menuEdit"

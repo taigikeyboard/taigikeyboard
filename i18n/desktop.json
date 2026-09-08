@@ -197,25 +197,6 @@
         "ja": "ハイフン"
       }
     },
-    "telexGuidePick": {
-      "comment": "Telex guide row meaning for the digits 1–9: they pick a candidate (Telex holds the letters). Two words — the card is a key table, not prose (USER 2026-09-09).",
-      "scope": {
-        "platforms": [
-          "macos",
-          "windows"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "選詞",
-        "tailo": "suán-sû",
-        "poj": "soán-sû",
-        "en": "Pick a candidate",
-        "ja": "候補を選択"
-      }
-    },
     "menuFile": {
       "comment": "Menu-bar File menu title. An LSUIElement process builds its own menu bar so the settings window keeps the standard editing shortcuts.",
       "scope": {

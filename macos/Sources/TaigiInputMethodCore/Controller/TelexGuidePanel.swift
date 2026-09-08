@@ -17,7 +17,6 @@ private struct TelexGuideRow {
         /// `z` / `zh`, with the initial each spells under TL and under POJ.
         case initial(tl: String, poj: String)
         case hyphen
-        case pick
     }
 
     @MainActor
@@ -27,7 +26,6 @@ private struct TelexGuideRow {
         case let .initial(tl, poj):
             language.resolver.desktopTelexGuideInitial(initial: inputMode == .poj ? poj : tl)
         case .hyphen: language.string(.desktopTelexGuideHyphen)
-        case .pick: language.string(.desktopTelexGuidePick)
         }
     }
 }
@@ -78,7 +76,6 @@ final class TelexGuidePanel {
         TelexGuideRow(key: "z", meaning: .initial(tl: "ts", poj: "ch")),
         TelexGuideRow(key: "zh", meaning: .initial(tl: "tsh", poj: "chh")),
         TelexGuideRow(key: "f", meaning: .hyphen),
-        TelexGuideRow(key: "1–9", meaning: .pick),
     ]
 
     /// The meanings the guide shows under `inputMode`, in row order — what a
