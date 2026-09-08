@@ -17,8 +17,8 @@ use windows_reactor::*;
 /// A pop-up over a roster: the labels in the roster's order, the stored
 /// value selected, and the chosen entry handed to `to_message` — `None`
 /// when the pop-up cleared its selection. The row says what it MEANS, so a
-/// picker that owes more than one write (the slot-key set owes its
-/// conflict pass) is not forced through a single-key write.
+/// picker that owes more than one write (the display language writes a tag,
+/// not a `SettingChoice`) is not forced through a single-key write.
 pub fn choice_row<T: Copy + PartialEq + 'static>(
     header: &str,
     roster: &'static [T],

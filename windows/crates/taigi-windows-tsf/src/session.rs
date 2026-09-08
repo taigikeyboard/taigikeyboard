@@ -284,7 +284,7 @@ impl TextService_Impl {
         let surface = Surface {
             presenter,
             token,
-            slot_key_set: ComposingKeyBindings::from_document(settings).slot_key_set,
+            slot_key_set: ComposingKeyBindings::from_document(settings).slot_key_set(),
             actions: RefCell::new(Vec::new()),
         };
 
@@ -1002,6 +1002,12 @@ fn perform_intent(
     match intent {
         ComposingKeyIntent::Input(text) => {
             manager.append(text, editor);
+            refresh_candidates(manager, list);
+            surface.present(list, editor);
+            KeyOutcome::Consumed
+        }
+        ComposingKeyIntent::TelexKey(key) => {
+            manager.telex_key(key, editor);
             refresh_candidates(manager, list);
             surface.present(list, editor);
             KeyOutcome::Consumed

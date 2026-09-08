@@ -176,7 +176,6 @@ impl SettingsDocument {
         for action in crate::keys::ComposingAction::ALL {
             self.remove(&action.settings_key_name());
         }
-        self.remove(keys::CANDIDATE_SLOT_MODIFIER.name);
     }
 
     /// Puts every global shortcut row back to shipped state — removed, not

@@ -4,6 +4,7 @@
 
 use super::bindings::ComposingKeyBindings;
 use super::snapshot::{KeyEventSnapshot, NavigationKey};
+use super::tone_input_scheme::ToneInputScheme;
 
 /// A move in the candidate window. The six physical keys are handed through
 /// raw because what each does depends on the layout (`↓` pages a horizontal
@@ -28,6 +29,10 @@ pub enum CandidateNavigation {
 pub enum ComposingKeyIntent {
     /// A romanization character to append to the composition.
     Input(String),
+    /// One of the Telex keys (`ToneInputScheme::TELEX_KEYS`), handed to the
+    /// engine's `TelexKey` intent rather than appended: the engine decides
+    /// which tone it writes, or which initial `z` spells in this input mode.
+    TelexKey(String),
     DeleteBackward,
     /// Finish the composition as rendered (the literal commit).
     Commit,
@@ -49,13 +54,10 @@ pub enum ComposingKeyIntent {
     /// NOT lead with — the 漢羅 key.
     CommitAlternateScript,
     /// Commit the candidate in this slot of the visible page, counting from
-    /// zero.
+    /// zero — what the slot keys address (`CandidateSlotKeySet`: the bare
+    /// letters under Standard, the bare digits under Telex).
     SelectCandidateSlot(usize),
 }
-
-/// The number-row virtual-key codes `1`…`9` (`VK_1`…`VK_9` = `0x31`…`0x39`),
-/// in slot order. Positions, so the same nine keys on every layout.
-const NUMBER_ROW_KEY_CODES: [u16; 9] = [0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39];
 
 impl ComposingKeyIntent {
     /// Classifies `key` for a session whose composition is or is not active,
@@ -63,8 +65,9 @@ impl ComposingKeyIntent {
     ///
     /// `is_composing` changes the meaning of most keys: Return, Escape, Space
     /// and the digits are the composition's while it runs and the host's the
-    /// rest of the time. A bare digit never starts a composition — digits are
-    /// the numeric tone markers of TL and POJ (`tai5`).
+    /// rest of the time. A bare digit never starts a composition — under
+    /// Standard digits are the numeric tone markers of TL and POJ (`tai5`),
+    /// and under Telex a tone letter has nothing to mark when idle.
     ///
     /// `is_showing_candidates` is the second state a key turns on: the
     /// arrows, the paging keys, Space and the slot keys belong to the window
@@ -99,11 +102,12 @@ impl ComposingKeyIntent {
                 }
             }
         }
-        // Tier 3 — the slot keys, read before the host-chord guard (which
-        // would hand every Control chord to the host) and before the user's
-        // bindings, so no binding can shadow it.
+        // Tier 3 — the slot keys, read before the user's bindings so no
+        // binding can shadow it. Which keys pick follows from the tone scheme
+        // (`ToneInputScheme::slot_key_set`); both sets are bare keys, so a
+        // Ctrl+3 keeps falling through to the host-chord guard below.
         if is_showing_candidates {
-            if let Some(slot) = bindings.slot_key_set.slot_for_event(key) {
+            if let Some(slot) = bindings.slot_key_set().slot_for_event(key) {
                 return Self::SelectCandidateSlot(slot);
             }
         }
@@ -132,16 +136,37 @@ impl ComposingKeyIntent {
         if !characters.chars().all(Self::is_text_scalar) {
             return Self::host_key(is_composing);
         }
-        // Tier 7 — text. A digit mid-composition is always the tone marker,
-        // whatever the buffer looks like — even after `tai5` (§10.2).
+        // Tier 7 — text. Under Telex the tone letters and `f` are the
+        // engine's, not the composition's text. A tone letter or `f` typed
+        // outside a composition is document text (like an idle digit): there
+        // is no syllable for it to mark. `z` types an initial, so it starts
+        // one. One scalar only, for the same grapheme reason as the
+        // romanization rule below (`ComposingKeyIntent.swift` reads `first`).
+        if bindings.tone_scheme == ToneInputScheme::Telex {
+            let mut scalars = characters.chars();
+            if let (Some(first), None) = (scalars.next(), scalars.next()) {
+                if ToneInputScheme::is_telex_key(first) {
+                    if is_composing || ToneInputScheme::starts_composition(first) {
+                        return Self::TelexKey(characters.to_owned());
+                    }
+                    return Self::PassThrough;
+                }
+            }
+        }
+        // Under Standard a digit mid-composition is always the tone marker,
+        // whatever the buffer looks like — even after `tai5` (§10.2). Under
+        // Telex the digits ARE the slot keys, taken above while the window is
+        // up; with no window a digit falls through to the punctuation rule
+        // and commits the composition ahead of itself.
         //
         // The WHOLE string has to be romanization, not just its first scalar:
         // Swift's `characters.first` is a grapheme, so `a` + a combining mark
         // reads as one non-ASCII character there and goes to the document.
         // Rust's first `char` would be the bare `a`, and the engine would be
         // handed a string it cannot parse (Codex PR2b review).
+        let digits_are_tones = is_composing && bindings.tone_scheme == ToneInputScheme::Standard;
         let is_romanization = characters.chars().all(|c| {
-            Self::is_romanization_character(c) || (is_composing && Self::is_tone_digit(c))
+            Self::is_romanization_character(c) || (digits_are_tones && Self::is_tone_digit(c))
         });
         if is_romanization {
             return Self::Input(characters.to_owned());
@@ -199,25 +224,9 @@ impl ComposingKeyIntent {
         })
     }
 
-    /// The slot `key` picks as one of the Shift+1…Shift+9 chords, counting
-    /// from zero — Shift and only Shift among the chording modifiers, then
-    /// the digit read from the key code first (Shift rewrites the
-    /// characters: Shift+3 types `#`), then from the unmodified characters
-    /// for a keypad digit.
-    pub fn shifted_digit_slot(key: &KeyEventSnapshot) -> Option<usize> {
-        if key.modifiers != super::snapshot::KeyModifiers::SHIFT {
-            return None;
-        }
-        if let Some(slot) = key
-            .key_code
-            .and_then(|code| NUMBER_ROW_KEY_CODES.iter().position(|row| *row == code))
-        {
-            return Some(slot);
-        }
-        Self::direct_selection_slot(key.characters_ignoring_modifiers.as_deref())
-    }
-
-    /// The slot a digit `1`…`9` names, counting from zero. `0` names none.
+    /// The slot a digit `1`…`9` names, counting from zero. `0` names none:
+    /// the window holds nine candidates because nine is what the digits can
+    /// name without one of them meaning "the tenth" (the `Digits` set's rule).
     pub fn direct_selection_slot(characters_ignoring_modifiers: Option<&str>) -> Option<usize> {
         let digit = characters_ignoring_modifiers?
             .chars()
@@ -228,14 +237,19 @@ impl ComposingKeyIntent {
 
     /// The numeric tone markers of TL and POJ, which the engine reads as
     /// ASCII digits. A full-width `５` is document text, not a tone.
+    ///
+    /// Visible to `ComposingKeyChord`, which refuses to bind a bare digit:
+    /// the digits carry tone under Standard and pick candidates under Telex,
+    /// so a chord may not take one away under either.
     pub fn is_tone_digit(character: char) -> bool {
         character.is_ascii_digit()
     }
 
     /// The characters a TL or POJ syllable is built from. ASCII-only on
-    /// purpose. Wider than the recorder's `SYLLABLE_LETTERS`: a
-    /// custom-dictionary romanization is free text, so every ASCII letter
-    /// must reach the composition.
+    /// purpose. Every ASCII letter, not only the eighteen a syllable is
+    /// spelled with: a custom-dictionary romanization is free text, so all of
+    /// them must reach the composition. Under Telex the eight the scheme
+    /// claims are taken before this is asked.
     pub fn is_romanization_character(character: char) -> bool {
         character.is_ascii_alphabetic() || character == '-'
     }
@@ -251,7 +265,7 @@ impl ComposingKeyIntent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::keys::{CandidateSlotKeySet, KeyModifiers};
+    use crate::keys::KeyModifiers;
 
     fn classify(
         key: &KeyEventSnapshot,
@@ -405,37 +419,88 @@ mod tests {
         );
     }
 
+    fn telex_bindings() -> ComposingKeyBindings {
+        ComposingKeyBindings::resolve(&Default::default(), ToneInputScheme::Telex)
+    }
+
     #[test]
-    fn control_digits_select_under_the_control_set_despite_arriving_as_control_characters() {
-        let control_three = KeyEventSnapshot::chord(Some("\u{1B}"), "3", KeyModifiers::CONTROL);
-        let control_bindings =
-            ComposingKeyBindings::resolve(&Default::default(), CandidateSlotKeySet::Control);
+    fn under_telex_the_tone_letters_are_the_engines_while_composing() {
+        // trace: ComposingKeyIntentTests.swift (P2) — `v` composing →
+        // telexKey, capital too; idle `v` passes through; idle `z` starts.
+        let telex = telex_bindings();
         assert_eq!(
-            ComposingKeyIntent::intent(&control_three, true, true, &control_bindings),
+            ComposingKeyIntent::intent(&text("v"), true, false, &telex),
+            ComposingKeyIntent::TelexKey("v".into())
+        );
+        assert_eq!(
+            ComposingKeyIntent::intent(&text("V"), true, false, &telex),
+            ComposingKeyIntent::TelexKey("V".into())
+        );
+        assert_eq!(
+            ComposingKeyIntent::intent(&text("f"), true, true, &telex),
+            ComposingKeyIntent::TelexKey("f".into())
+        );
+        assert_eq!(
+            ComposingKeyIntent::intent(&text("v"), false, false, &telex),
+            ComposingKeyIntent::PassThrough,
+            "a tone letter has nothing to mark when idle"
+        );
+        assert_eq!(
+            ComposingKeyIntent::intent(&text("f"), false, false, &telex),
+            ComposingKeyIntent::PassThrough
+        );
+        assert_eq!(
+            ComposingKeyIntent::intent(&text("z"), false, false, &telex),
+            ComposingKeyIntent::TelexKey("z".into()),
+            "`z` types an initial, so it starts a composition"
+        );
+        // A letter neither scheme claims is still text.
+        assert_eq!(
+            ComposingKeyIntent::intent(&text("t"), true, false, &telex),
+            ComposingKeyIntent::Input("t".into())
+        );
+        // Under Standard the same keys are text (or slots, below).
+        assert_eq!(
+            classify(&text("v"), true, false),
+            ComposingKeyIntent::Input("v".into())
+        );
+    }
+
+    #[test]
+    fn under_telex_the_digits_pick_and_the_bare_letters_do_not() {
+        let telex = telex_bindings();
+        assert_eq!(
+            ComposingKeyIntent::intent(&text("3"), true, true, &telex),
             ComposingKeyIntent::SelectCandidateSlot(2)
         );
         assert_eq!(
-            ComposingKeyIntent::intent(&control_three, true, false, &control_bindings),
-            ComposingKeyIntent::CommitThenPassThrough
-        );
-        // Under the shipped bare-key set, Ctrl+3 is the host's.
-        assert_eq!(
-            classify(&control_three, true, true),
-            ComposingKeyIntent::CommitThenPassThrough
-        );
-        let with_shift = KeyEventSnapshot::chord(
-            Some("\u{1B}"),
-            "3",
-            KeyModifiers::CONTROL.with(KeyModifiers::SHIFT),
+            ComposingKeyIntent::intent(&text("3"), true, false, &telex),
+            ComposingKeyIntent::CommitThenInsert("3".into()),
+            "with no window a digit is punctuation: commit, then insert"
         );
         assert_eq!(
-            ComposingKeyIntent::intent(&with_shift, true, true, &control_bindings),
-            ComposingKeyIntent::CommitThenPassThrough
+            ComposingKeyIntent::intent(&text("3"), false, false, &telex),
+            ComposingKeyIntent::PassThrough
         );
-        let control_zero = KeyEventSnapshot::chord(Some("\u{0}"), "0", KeyModifiers::CONTROL);
         assert_eq!(
-            ComposingKeyIntent::intent(&control_zero, true, true, &control_bindings),
-            ComposingKeyIntent::CommitThenPassThrough
+            ComposingKeyIntent::intent(&text("q"), true, true, &telex),
+            ComposingKeyIntent::TelexKey("q".into()),
+            "`q` is tone 9, not slot 0"
+        );
+        assert_eq!(
+            ComposingKeyIntent::intent(&text(";"), true, true, &telex),
+            ComposingKeyIntent::CommitThenInsert(";".into())
+        );
+        let control_three = KeyEventSnapshot::chord(Some("\u{1B}"), "3", KeyModifiers::CONTROL);
+        assert_eq!(
+            ComposingKeyIntent::intent(&control_three, true, true, &telex),
+            ComposingKeyIntent::CommitThenPassThrough,
+            "a chording modifier makes the digit miss"
+        );
+        // Under Standard a bare digit with the window up is still the tone.
+        assert_eq!(
+            classify(&text("3"), true, true),
+            ComposingKeyIntent::Input("3".into())
         );
     }
 

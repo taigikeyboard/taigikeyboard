@@ -143,6 +143,21 @@ impl ComposingManager {
         self.promote_to_continuous(&settings, executor);
     }
 
+    /// Applies one Telex key — a tone letter, `z` or `f` — to the pending
+    /// syllable. Shaped like `append` because it is the same step with the
+    /// engine deciding what the key writes (`engine/composing/src/telex.rs`):
+    /// an idle `z` starts a composition the way a letter does, and the
+    /// promotion afterwards is what keeps a Telex-typed syllable on the same
+    /// continuous phase an appended one reaches (`ComposingManager.swift`
+    /// `telexKey`).
+    pub fn telex_key(&mut self, key: &str, executor: &mut dyn ComposingEffectExecutor) {
+        log::debug!("telexKey");
+        let settings = self.current_settings();
+        let transition = engine::telex_key(key, &settings, self.current_generation);
+        self.apply(transition, executor);
+        self.promote_to_continuous(&settings, executor);
+    }
+
     /// Drops the last character of the raw buffer. Ends the composition when
     /// that empties it.
     pub fn delete_backward(&mut self, executor: &mut dyn ComposingEffectExecutor) {

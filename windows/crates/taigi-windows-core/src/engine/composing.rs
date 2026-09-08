@@ -16,7 +16,7 @@
 use protos::engine::{
     composing_request, request, response, Append, CommitContinuous,
     CommitPreeditThenInsertExternal, CommitRaw, ComposingRequest, ComposingResponse,
-    CustomDictEntry, DeleteBackward, EnterContinuous, FetchAtPos, FrequencyEntry, Reset,
+    CustomDictEntry, DeleteBackward, EnterContinuous, FetchAtPos, FrequencyEntry, Reset, TelexKey,
 };
 
 use super::bridge::{app_config, continuous_app_config, record_failure, roundtrip};
@@ -51,6 +51,26 @@ pub fn append(
             char: character.to_owned(),
         }),
         "composingAppend",
+        generation,
+        Some(app_config(settings)),
+    )
+}
+
+/// Applies one Telex key to the pending syllable's tone — or, for `z`,
+/// types the affricate initial the input mode spells (`composing.proto`
+/// `TelexKey`, `engine/composing/src/telex.rs`). Carries the app config
+/// like `append`, because `z` resolves by `input_mode`. Port of
+/// `composingTelexKey` (`RustEngineBridge+Composing.swift`).
+pub fn telex_key(
+    key: &str,
+    settings: &EngineSettings,
+    generation: u64,
+) -> Option<ComposingTransition> {
+    dispatch(
+        composing_request::Method::TelexKey(TelexKey {
+            key: key.to_owned(),
+        }),
+        "composingTelexKey",
         generation,
         Some(app_config(settings)),
     )

@@ -71,6 +71,41 @@ fn append_renders_tone_digit_as_diacritic_and_updates_preedit() {
 }
 
 #[test]
+fn telex_key_writes_the_tone_and_z_spells_the_mode_affricate() {
+    // trace: engine/composing/src/telex.rs — `v` is tone 2, so `te` + `v`
+    // stores `te2` and renders `té`; a second tone letter replaces it
+    // (`y` = tone 3 → `tè`); `z` idle starts a composition as `ts` under TL
+    // and `ch` under POJ. Round-tripped with the app config, since `z`
+    // resolves by `input_mode`.
+    let _engine = engine();
+    let settings = EngineSettings::default();
+    let generation = fresh_generation();
+    compose("te", &settings, generation);
+    let toned = engine::telex_key("v", &settings, generation).expect("telex round trip");
+    assert_eq!(toned.raw_input, "te2");
+    assert_eq!(toned.display_text, "té");
+    let retoned = engine::telex_key("y", &settings, generation).expect("telex round trip");
+    assert_eq!(retoned.raw_input, "te3");
+    assert_eq!(retoned.display_text, "tè");
+    engine::reset(generation);
+
+    let generation = fresh_generation();
+    let started = engine::telex_key("z", &settings, generation).expect("telex round trip");
+    assert!(started.is_composing, "an idle z starts a composition");
+    assert_eq!(started.raw_input, "ts");
+    engine::reset(generation);
+
+    let generation = fresh_generation();
+    let poj = EngineSettings {
+        input_mode: InputMode::Poj,
+        ..EngineSettings::default()
+    };
+    let started = engine::telex_key("z", &poj, generation).expect("telex round trip");
+    assert_eq!(started.raw_input, "ch");
+    engine::reset(generation);
+}
+
+#[test]
 fn fetch_at_pos_returns_dictionary_candidates_and_commit_finalizes() {
     let _engine = engine();
     let settings = EngineSettings::default();

@@ -9,7 +9,7 @@
 //!   date type, so the desktop key says its unit (Unix milliseconds).
 //! - `hasOfferedUpdateNotifications` is absent: a Windows toast needs no
 //!   permission, so there is no one-time offer to remember.
-//! - `candidateSlotModifier` and the `composingShortcut.<action>` rows arrive
+//! - `toneInputScheme` and the `composingShortcut.<action>` rows arrive
 //!   with the key contract (`crate::keys`), whose types they are keyed on.
 //!
 //! Defaults for engine-facing keys are NOT literals here: they are read from
@@ -215,14 +215,21 @@ pub const FONT_TYPE: SettingsKey<CandidateFontChoice> =
 /// (`SettingsStore.swift`'s `customFontFile`).
 pub const CUSTOM_FONT_FILE: SettingsKey<&'static str> = SettingsKey::new("customFontFile", "");
 
-/// Which keys the candidate slots take (`CandidateSlotKeySet`). The stored
-/// name predates the letter set, from when the choice was only which
-/// modifier held the digits; kept because the values already stored under it
-/// still mean what they did (`SettingsStore.swift:277-292`).
-pub const CANDIDATE_SLOT_MODIFIER: SettingsKey<crate::keys::CandidateSlotKeySet> = SettingsKey::new(
-    "candidateSlotModifier",
-    crate::keys::CandidateSlotKeySet::BareKeys,
-);
+/// Which keys type a tone, and so which keys pick a candidate
+/// (`ToneInputScheme`). Desktop-only: the phone keyboards have a tone row of
+/// their own and no slot keys, so the default is owned by the key contract
+/// rather than by `EngineSettings` (`SettingsStore.swift` `toneInputScheme`).
+pub const TONE_INPUT_SCHEME: SettingsKey<crate::keys::ToneInputScheme> =
+    SettingsKey::new("toneInputScheme", crate::keys::ToneInputScheme::Standard);
+
+// RETIRED 2026-09-08 (USER): `candidateSlotModifier` (`bareKeys` / `shift` /
+// `control` / `option`). The slot key set is now DERIVED from
+// `toneInputScheme` — the letters and the digits are the same keys under
+// both schemes with the two jobs swapped — and the ⇧ / ⌃ / ⌥ digit sets went
+// with the picker that chose them. The spelling is permanently reserved: a
+// stored `control` still sits in existing `settings.json` files (Windows has
+// no retired-key sweep), so a future choice of slot keys must use a NEW key
+// rather than inherit those values.
 
 /// What a user-cleared composing chord row stores. An absent key means "never
 /// touched" and reads as the action's default; the empty string means the
