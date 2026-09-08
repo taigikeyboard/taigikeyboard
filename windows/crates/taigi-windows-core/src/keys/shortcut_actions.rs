@@ -28,14 +28,19 @@ pub enum ShortcutAction {
     ToggleTranslateSwapped,
     /// Steps 候選詞顯示 through its picker order (`CandidateDisplayMode::next`).
     CycleCandidateDisplayMode,
+    /// Toggles the floating Telex key table (`ui/telex_guide.rs`). Last,
+    /// because this order is the order of the rows in the pane, and a guide
+    /// sits after the switches (`ShortcutActions.swift` `showTelexGuide`).
+    ShowTelexGuide,
 }
 
 impl ShortcutAction {
-    pub const ALL: [ShortcutAction; 4] = [
+    pub const ALL: [ShortcutAction; 5] = [
         Self::OpenLastSettingsPane,
         Self::ToggleRomanization,
         Self::ToggleTranslateSwapped,
         Self::CycleCandidateDisplayMode,
+        Self::ShowTelexGuide,
     ];
 
     pub fn raw(self) -> &'static str {
@@ -44,6 +49,7 @@ impl ShortcutAction {
             Self::ToggleRomanization => "toggleRomanization",
             Self::ToggleTranslateSwapped => "toggleTranslateSwapped",
             Self::CycleCandidateDisplayMode => "cycleCandidateDisplayMode",
+            Self::ShowTelexGuide => "showTelexGuide",
         }
     }
 
@@ -78,6 +84,17 @@ impl ShortcutAction {
     /// user rebinds away from if it bites: Word's 分割視窗, Visual Studio's
     /// Server Explorer (S) and Call Stack (C), and Teams' see-all-chats (C).
     ///
+    /// `/` for the Telex guide is the Mac's ⌃⌘/ carried over the same way:
+    /// `/` is the key help lives on (`?` is Shift+/, and every app that
+    /// answers "which keys do what" answers it there). Not Ctrl+Alt+T, the
+    /// mnemonic first reached for — JetBrains binds it to Surround With, and
+    /// a user in an IDE would lose one or the other
+    /// (`ShortcutActions.swift` `showTelexGuide`). On a layout where `/`
+    /// itself needs Shift, the preserved key registers with that Shift
+    /// OR-ed in (`preserved_key`) and still fires; only the key sink's
+    /// fallback — for hosts that bypass preserved keys — cannot match
+    /// such a press, because the stored chord names `/` unshifted.
+    ///
     /// Changing a default here moves every install that never recorded the row:
     /// nothing writes a default into `settings.json`, so an absent key IS the
     /// default (`chord_in`). No migration flag, unlike the Mac's.
@@ -87,6 +104,7 @@ impl ShortcutAction {
             Self::ToggleRomanization => ("c", KeyModifiers::CONTROL.with(KeyModifiers::ALT)),
             Self::ToggleTranslateSwapped => ("`", KeyModifiers::NONE),
             Self::CycleCandidateDisplayMode => ("h", KeyModifiers::CONTROL.with(KeyModifiers::ALT)),
+            Self::ShowTelexGuide => ("/", KeyModifiers::CONTROL.with(KeyModifiers::ALT)),
         };
         ComposingKeyChord::make(Some(key), modifiers).unwrap_or_else(|rejection| {
             panic!("default chord for {self:?} is not bindable: {rejection:?}")
@@ -105,6 +123,7 @@ impl ShortcutAction {
             Self::ToggleRomanization => StringKey::DesktopShortcutToggleRomanization,
             Self::ToggleTranslateSwapped => StringKey::DesktopShortcutToggleTranslateSwapped,
             Self::CycleCandidateDisplayMode => StringKey::DesktopShortcutCycleCandidateDisplayMode,
+            Self::ShowTelexGuide => StringKey::DesktopShortcutShowTelexGuide,
         }
     }
 
@@ -338,7 +357,7 @@ mod tests {
             .collect();
         names.sort();
         names.dedup();
-        assert_eq!(names.len(), 4);
+        assert_eq!(names.len(), 5);
         assert_eq!(
             ShortcutAction::OpenLastSettingsPane.default_chord(),
             chord("s", KeyModifiers::CONTROL.with(KeyModifiers::ALT))
@@ -355,13 +374,17 @@ mod tests {
             ShortcutAction::CycleCandidateDisplayMode.default_chord(),
             chord("h", KeyModifiers::CONTROL.with(KeyModifiers::ALT))
         );
+        assert_eq!(
+            ShortcutAction::ShowTelexGuide.default_chord(),
+            chord("/", KeyModifiers::CONTROL.with(KeyModifiers::ALT))
+        );
         let mut defaults: Vec<_> = ShortcutAction::ALL
             .iter()
             .map(|a| a.default_chord())
             .collect();
         defaults.sort();
         defaults.dedup();
-        assert_eq!(defaults.len(), 4, "the defaults are all different");
+        assert_eq!(defaults.len(), 5, "the defaults are all different");
         assert_eq!(
             ShortcutAction::ALL
                 .iter()
@@ -391,7 +414,8 @@ mod tests {
     #[test]
     fn roster_order_is_the_pane_order() {
         // `ALL` is the recorder rows top to bottom (`pages/shortcuts.rs`)
-        // and the Mac's `allCases`; the display-mode cycle is the fourth row.
+        // and the Mac's `allCases`; the display-mode cycle is the fourth
+        // row and the Telex guide the last.
         assert_eq!(
             ShortcutAction::ALL,
             [
@@ -399,6 +423,7 @@ mod tests {
                 ShortcutAction::ToggleRomanization,
                 ShortcutAction::ToggleTranslateSwapped,
                 ShortcutAction::CycleCandidateDisplayMode,
+                ShortcutAction::ShowTelexGuide,
             ]
         );
         assert_eq!(
@@ -410,6 +435,12 @@ mod tests {
             StringKey::DesktopShortcutCycleCandidateDisplayMode
         );
         assert!(!ShortcutAction::CycleCandidateDisplayMode.opens_settings());
+        assert_eq!(ShortcutAction::ShowTelexGuide.raw(), "showTelexGuide");
+        assert_eq!(
+            ShortcutAction::ShowTelexGuide.label_key(),
+            StringKey::DesktopShortcutShowTelexGuide
+        );
+        assert!(!ShortcutAction::ShowTelexGuide.opens_settings());
     }
 
     #[test]

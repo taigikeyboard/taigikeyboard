@@ -111,16 +111,6 @@
       "scope": { "platforms": ["macos", "windows"], "surfaces": ["host"] },
       "values": { "hanji": "Telex", "tailo": "Telex", "poj": "Telex", "en": "Telex", "ja": "Telex" }
     },
-    "toneSchemeTelexLegendTl": {
-      "comment": "Footnote under the toneInputScheme picker while Telex is selected and the input mode is TL: the key table.",
-      "scope": { "platforms": ["windows"], "surfaces": ["host"] },
-      "values": { "hanji": "v y d w x q = 第 2 3 5 7 8 9 聲；z = ts（zh = tsh）；f = 連字號；1～9 選字", "tailo": "v y d w x q = tē 2 3 5 7 8 9 siann; z = ts (zh = tsh); f = liân-jī-hō; 1–9 suán-jī", "poj": "v y d w x q = tē 2 3 5 7 8 9 siaⁿ; z = ts (zh = tsh); f = liân-jī-hō; 1–9 soán-jī", "en": "v y d w x q = tones 2 3 5 7 8 9; z = ts (zh = tsh); f = hyphen; 1–9 pick a candidate", "ja": "v y d w x q = 第2・3・5・7・8・9声、z = ts（zh = tsh）、f = ハイフン、1〜9 で候補を選択" }
-    },
-    "toneSchemeTelexLegendPoj": {
-      "comment": "Footnote under the toneInputScheme picker while Telex is selected and the input mode is POJ: the key table, with z spelling ch / chh.",
-      "scope": { "platforms": ["windows"], "surfaces": ["host"] },
-      "values": { "hanji": "v y d w x q = 第 2 3 5 7 8 9 聲；z = ch（zh = chh）；f = 連字號；1～9 選字", "tailo": "v y d w x q = tē 2 3 5 7 8 9 siann; z = ch (zh = chh); f = liân-jī-hō; 1–9 suán-jī", "poj": "v y d w x q = tē 2 3 5 7 8 9 siaⁿ; z = ch (zh = chh); f = liân-jī-hō; 1–9 soán-jī", "en": "v y d w x q = tones 2 3 5 7 8 9; z = ch (zh = chh); f = hyphen; 1–9 pick a candidate", "ja": "v y d w x q = 第2・3・5・7・8・9声、z = ch（zh = chh）、f = ハイフン、1〜9 で候補を選択" }
-    },
     "autoSpace": {
       "comment": "Toggle label: auto-insert a space after committing a word.",
       "scope": { "platforms": ["android", "ios", "macos", "windows"], "surfaces": ["host", "extension"] },

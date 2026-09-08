@@ -8,7 +8,7 @@ use crate::updates::INSTALLED_VERSION;
 use crate::winui::cards;
 use crate::winui::window::{Message, SettingsWindow, SettingsWrite};
 use taigi_windows_core::keys::ToneInputScheme;
-use taigi_windows_core::settings::{keys, InputMode, SettingChoice, SettingsDocument};
+use taigi_windows_core::settings::{keys, InputMode, SettingChoice};
 use taigi_windows_core::strings::{DisplayLanguage, StringKey, StringResolver};
 use taigi_windows_update::checker;
 use windows_reactor::*;
@@ -52,7 +52,6 @@ pub fn view(
             |scheme| Message::set_choice(scheme, &keys::TONE_INPUT_SCHEME),
             context,
         ),
-        telex_legend(document, strings),
         choice_row(
             strings.resolve(StringKey::SettingsDisplayLanguage),
             &DisplayLanguage::PICKER,
@@ -93,24 +92,6 @@ pub fn view(
         update_row(window, strings, context),
         footer(strings, context),
     ))
-}
-
-/// The Telex key table, spelled for the romanization in use: `z` is `ts`
-/// under TL and `ch` under POJ. Shown only while Telex is on, because
-/// Standard's keys are the ones every TL/POJ user already knows.
-fn telex_legend(document: &SettingsDocument, strings: &StringResolver) -> View {
-    if document.choice(&keys::TONE_INPUT_SCHEME) != ToneInputScheme::Telex {
-        return View::empty();
-    }
-    let key = match document.choice(&keys::INPUT_MODE) {
-        InputMode::Poj => StringKey::SettingsToneSchemeTelexLegendPoj,
-        InputMode::Tl => StringKey::SettingsToneSchemeTelexLegendTl,
-    };
-    TextBlock::new()
-        .text(strings.resolve(key))
-        .text_wrapping(TextWrapping::Wrap)
-        .opacity(FOOTER_OPACITY)
-        .into()
 }
 
 /// One row, never two (`GeneralSettingsView.swift:89-117`): a known update
