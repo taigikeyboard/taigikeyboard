@@ -24,9 +24,6 @@ import SwiftUI
 struct ShortcutSettingsView: View {
     @Environment(DisplayLanguageStore.self) private var language
 
-    @AppStorage(SettingsStore.Keys.candidateSlotModifier.name)
-    private var candidateSlotKeySet = SettingsStore.Keys.candidateSlotModifier.defaultValue
-
     /// Re-read after every write so the rows repaint together: recording a
     /// chord can empty the row that had it.
     @State private var bindings = SettingsStore().composingKeyBindings
@@ -54,20 +51,11 @@ struct ShortcutSettingsView: View {
                 // that end the composition (`ComposingAction.groups`). No
                 // other surface shows this roster: the input-source menu never
                 // could, since the agent dispatches whatever it draws.
+                // The candidate-slot keys have no row here: they follow from
+                // the 聲調拍法 picker on the 一般 pane (`ToneInputScheme`), so
+                // the two halves of the key contract cannot be set apart.
                 ForEach(ComposingAction.groups[0], id: \.self) { action in
                     recorderRow(action)
-                }
-
-                // Ends the moving-through group, because that is what it does.
-                // Glyphs rather than translated words: the keys are read off
-                // the keyboard, and `q w d f z x v y ;`, ⇧, ⌃ and ⌥ are the same in
-                // every language the settings window speaks. A picker rather
-                // than a recorder because this row is one set standing for
-                // nine slots, not a key.
-                Picker(language.string(.desktopBindingSlotModifier), selection: $candidateSlotKeySet) {
-                    ForEach(CandidateSlotKeySet.allCases, id: \.self) { keySet in
-                        Text(verbatim: keySet.menuLabel).tag(keySet)
-                    }
                 }
 
                 ForEach(ComposingAction.groups[1], id: \.self) { action in
@@ -82,16 +70,6 @@ struct ShortcutSettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .onChange(of: candidateSlotKeySet) { _, newKeySet in
-            // The picker is the last writer: the keys it just claimed come off
-            // any global row that held one. The recorder refuses the other
-            // order, so between them no global shortcut sits on a live slot
-            // key. Composing rows need no write — they are re-resolved from
-            // storage on every read, and a row the new set shadows comes back
-            // if the picker moves off it again.
-            ShortcutConflicts.resolveGlobalRows(afterSlotKeySetChangedTo: newKeySet)
-            reload()
-        }
     }
 
     /// One global-hotkey row.
@@ -105,7 +83,6 @@ struct ShortcutSettingsView: View {
             ShortcutKeyRecorder(
                 chord: KeyboardShortcuts.getShortcut(for: action.name)
                     .flatMap(ShortcutConflicts.composingChord(occupiedBy:)),
-                slotKeySet: bindings.slotKeySet,
                 language: language,
                 additionalRejection: GlobalShortcutPolicy.rejection(for:),
             ) { key in
@@ -118,7 +95,6 @@ struct ShortcutSettingsView: View {
         LabeledContent(action.label(language)) {
             ShortcutKeyRecorder(
                 chord: bindings.chord(for: action),
-                slotKeySet: bindings.slotKeySet,
                 language: language,
             ) { key in
                 record(key?.chord, for: action)

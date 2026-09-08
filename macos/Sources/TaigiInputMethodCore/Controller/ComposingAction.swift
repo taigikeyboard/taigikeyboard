@@ -13,7 +13,8 @@ import AppKit
 ///   candidates, or the way out of a composition, with the composition still on
 ///   screen and no key left to fix it.
 /// - The candidate-slot keys, which are nine names for nine slots rather than
-///   one key, and so are chosen as a set (`CandidateSlotKeySet`) instead.
+///   one key, and follow from the tone scheme (`ToneInputScheme.slotKeySet`)
+///   instead.
 ///
 /// Defaults follow the system Zhuyin input method's candidate window wherever
 /// the romanization allows it, so a user arriving from that keyboard finds

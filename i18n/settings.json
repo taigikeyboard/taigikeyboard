@@ -91,6 +91,31 @@
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "自動大本字", "tailo": "tsū-tōng tuā-pún-jī", "poj": "chū-tōng tōa-pún-jī", "en": "Auto-Capitalization", "ja": "自動大文字化" }
     },
+    "toneInputScheme": {
+      "comment": "Picker label on the desktop General pane: which keys type a tone (Standard = digits, Telex = letters); the candidate-slot keys follow from the choice.",
+      "scope": { "platforms": ["macos", "windows"], "surfaces": ["host"] },
+      "values": { "hanji": "聲調拍法", "tailo": "siann-tiāu phah-huat", "poj": "siaⁿ-tiāu phah-hoat", "en": "Tone Keys", "ja": "声調の入力方式" }
+    },
+    "toneSchemeStandard": {
+      "comment": "toneInputScheme option: digits 1-9 type the tone, the bare letters q w d f z x v y ; pick a candidate.",
+      "scope": { "platforms": ["macos", "windows"], "surfaces": ["host"] },
+      "values": { "hanji": "標準", "tailo": "piau-tsún", "poj": "piau-chún", "en": "Standard", "ja": "標準" }
+    },
+    "toneSchemeTelex": {
+      "comment": "toneInputScheme option: the letters v y d w x q type the tone, digits 1-9 pick a candidate. A scheme name, kept as-is in every language.",
+      "scope": { "platforms": ["macos", "windows"], "surfaces": ["host"] },
+      "values": { "hanji": "Telex", "tailo": "Telex", "poj": "Telex", "en": "Telex", "ja": "Telex" }
+    },
+    "toneSchemeTelexLegendTl": {
+      "comment": "Footnote under the toneInputScheme picker while Telex is selected and the input mode is TL: the key table.",
+      "scope": { "platforms": ["macos", "windows"], "surfaces": ["host"] },
+      "values": { "hanji": "v y d w x q = 第 2 3 5 7 8 9 聲；z = ts（zh = tsh）；f = 連字號；1～9 選字", "tailo": "v y d w x q = tē 2 3 5 7 8 9 siann; z = ts (zh = tsh); f = liân-jī-hō; 1–9 suán-jī", "poj": "v y d w x q = tē 2 3 5 7 8 9 siaⁿ; z = ts (zh = tsh); f = liân-jī-hō; 1–9 soán-jī", "en": "v y d w x q = tones 2 3 5 7 8 9; z = ts (zh = tsh); f = hyphen; 1–9 pick a candidate", "ja": "v y d w x q = 第2・3・5・7・8・9声、z = ts（zh = tsh）、f = ハイフン、1〜9 で候補を選択" }
+    },
+    "toneSchemeTelexLegendPoj": {
+      "comment": "Footnote under the toneInputScheme picker while Telex is selected and the input mode is POJ: the key table, with z spelling ch / chh.",
+      "scope": { "platforms": ["macos", "windows"], "surfaces": ["host"] },
+      "values": { "hanji": "v y d w x q = 第 2 3 5 7 8 9 聲；z = ch（zh = chh）；f = 連字號；1～9 選字", "tailo": "v y d w x q = tē 2 3 5 7 8 9 siann; z = ch (zh = chh); f = liân-jī-hō; 1–9 suán-jī", "poj": "v y d w x q = tē 2 3 5 7 8 9 siaⁿ; z = ch (zh = chh); f = liân-jī-hō; 1–9 soán-jī", "en": "v y d w x q = tones 2 3 5 7 8 9; z = ch (zh = chh); f = hyphen; 1–9 pick a candidate", "ja": "v y d w x q = 第2・3・5・7・8・9声、z = ch（zh = chh）、f = ハイフン、1〜9 で候補を選択" }
+    },
     "autoSpace": {
       "comment": "Toggle label: auto-insert a space after committing a word.",
       "scope": { "platforms": ["android", "ios", "macos", "windows"], "surfaces": ["host", "extension"] },

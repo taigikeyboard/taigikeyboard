@@ -296,18 +296,14 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             defaultValue: "",
         )
 
-        /// Which keys the candidate slots take (`CandidateSlotKeySet`).
-        /// macOS-only: the phone keyboards have no slot keys to choose between,
-        /// so the default is owned by `ComposingKeyBindings` rather than by the
-        /// shared `EngineSettings.defaults`.
-        ///
-        /// The stored name predates the letter set, from when the choice was
-        /// only which modifier held the digits. Kept: the values already stored
-        /// under it (`control`, `option`) still mean what they did, and a
-        /// renamed key would need a migration to buy nothing the user can see.
-        static let candidateSlotModifier = SettingsKey(
-            name: "candidateSlotModifier",
-            defaultValue: ComposingKeyBindings.default.slotKeySet,
+        /// Which keys type a tone, and so which keys pick a candidate
+        /// (`ToneInputScheme`). macOS-only: the phone keyboards have a tone
+        /// row of their own and no slot keys, so the default is owned by
+        /// `ComposingKeyBindings` rather than by the shared
+        /// `EngineSettings.defaults`.
+        static let toneInputScheme = SettingsKey(
+            name: "toneInputScheme",
+            defaultValue: ComposingKeyBindings.default.toneScheme,
         )
 
         /// The per-action composing chords are keyed by
@@ -478,7 +474,7 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             // must stay reachable.
             chords[action] = ComposingKeyChord(rawValue: stored)
         }
-        return ComposingKeyBindings(chords: chords, slotKeySet: choice(Keys.candidateSlotModifier))
+        return ComposingKeyBindings(chords: chords, toneScheme: choice(Keys.toneInputScheme))
     }
 
     /// Records `chord` on `action`, or clears the row when it is nil.
@@ -501,7 +497,6 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
         for action in ComposingAction.allCases {
             userDefaults.removeObject(forKey: action.settingsKeyName)
         }
-        removeStoredValues(Keys.candidateSlotModifier.name)
     }
 
     /// Puts every key the 外觀 pane owns back to shipped state.

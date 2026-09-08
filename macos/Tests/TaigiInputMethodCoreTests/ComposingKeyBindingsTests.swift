@@ -11,27 +11,26 @@ import XCTest
 final class ComposingKeyBindingsTests: XCTestCase {
     // MARK: - What a chord may be
 
-    /// The keys a TL or POJ syllable is spelled with, tone marker included. A
-    /// recorder that took one would leave the user unable to type it. The
-    /// whole alphabet is spelled out so a letter dropped from the set by
-    /// mistake fails here; `r` and `c` are the two easy to mistake for free —
-    /// `r` spells the dialectal `ir`/`er` finals and `c` the POJ `ch`/`chh`
-    /// initials.
+    /// The keys a composition is typed or picked with under either tone
+    /// scheme: every letter, the digits, the hyphen and `;`. A recorder that
+    /// took one would leave the user unable to type it under one scheme or
+    /// the other — `v` types tone 2 under Telex and picks the seventh
+    /// candidate under Standard. The whole alphabet is spelled out so a
+    /// letter dropped from the rule by mistake fails here.
     func testTypingKeys_cannotBeRecordedBare() {
-        for key in "abceghijklmnoprstu".map(String.init) + ["A", "5", "0", "-"] {
+        for key in "abcdefghijklmnopqrstuvwxyz".map(String.init) + ["A", "V", "5", "0", "-", ";"] {
             XCTAssertEqual(
                 ComposingKeyChord.make(key: key, modifiers: []),
                 .failure(.typesRomanization),
-                "'\(key)' spells romanization — binding it costs the user the key",
+                "'\(key)' types or picks under one of the schemes — binding it costs the user the key",
             )
         }
     }
 
-    /// The eight letters no TL or POJ syllable uses are the keys a user has
-    /// free to bind bare — the whole point of narrowing the refusal to the
-    /// syllable alphabet.
-    func testNonSyllableLetters_canBeRecordedBare() throws {
-        for key in ["d", "f", "q", "v", "w", "x", "y", "z"] {
+    /// Bare punctuation outside the typing keys is what a user has free to
+    /// bind bare — the backtick 漢羅對調 shipped on, and its neighbours.
+    func testBarePunctuation_canBeRecordedBare() throws {
+        for key in ["`", "[", "]", "'", ","] {
             let chord = try ComposingKeyChord.make(key: key, modifiers: []).get()
             XCTAssertEqual(chord.key, key)
             XCTAssertEqual(chord.modifiers, [])
@@ -39,27 +38,27 @@ final class ComposingKeyBindingsTests: XCTestCase {
     }
 
     /// The factory may receive a capital, and the refusal reads the key
-    /// `normalized` has already folded: a capital of a free letter records,
-    /// a capital of a syllable letter still does not.
+    /// `normalized` has already folded: a capital is refused for the letter
+    /// it is, and records as that letter once a chording modifier frees it.
     func testCapitalsFoldToTheirLetter_beforeTheRefusalDecides() throws {
-        let chord = try ComposingKeyChord.make(key: "Z", modifiers: .shift).get()
-        XCTAssertEqual(chord.key, "z")
-        XCTAssertEqual(chord.modifiers, .shift)
-
         XCTAssertEqual(
-            ComposingKeyChord.make(key: "R", modifiers: .shift),
+            ComposingKeyChord.make(key: "Z", modifiers: .shift),
             .failure(.typesRomanization),
         )
+
+        let chord = try ComposingKeyChord.make(key: "Z", modifiers: [.shift, .control]).get()
+        XCTAssertEqual(chord.key, "z")
+        XCTAssertEqual(chord.modifiers, [.shift, .control])
     }
 
-    /// Bare `z` and ⇧Z are two different chords on one key, and each fires
-    /// only on its own event.
-    func testABareLetterChord_andItsShiftedTwin_doNotCrossMatch() throws {
-        let bare = try ComposingKeyChord.make(key: "z", modifiers: []).get()
-        let shifted = try ComposingKeyChord.make(key: "Z", modifiers: .shift).get()
+    /// A bare `` ` `` and ⇧` are two different chords on one key, and each
+    /// fires only on its own event.
+    func testABareChord_andItsShiftedTwin_doNotCrossMatch() throws {
+        let bare = try ComposingKeyChord.make(key: "`", modifiers: []).get()
+        let shifted = try ComposingKeyChord.make(key: "`", modifiers: .shift).get()
 
-        let bareEvent = try snapshot("z")
-        let shiftedEvent = try snapshot("Z", modifiers: .shift, unmodified: "z")
+        let bareEvent = try snapshot("`")
+        let shiftedEvent = try snapshot("~", modifiers: .shift, unmodified: "`")
 
         XCTAssertTrue(bare.matches(bareEvent))
         XCTAssertFalse(bare.matches(shiftedEvent))
@@ -126,8 +125,9 @@ final class ComposingKeyBindingsTests: XCTestCase {
         for (key, modifiers) in [
             (" ", NSEvent.ModifierFlags()),
             ("\r", .shift),
-            ("z", []),
-            ("Z", .shift),
+            ("`", []),
+            ("`", .shift),
+            ("Z", [.shift, .control]),
             ("]", [.command, .control, .option, .shift]),
         ] as [(String, NSEvent.ModifierFlags)] {
             let chord = try ComposingKeyChord.make(key: key, modifiers: modifiers).get()
@@ -172,6 +172,7 @@ final class ComposingKeyBindingsTests: XCTestCase {
         XCTAssertEqual(bindings.chord(for: .commitLiteral), try chord("\r", .shift))
         XCTAssertEqual(bindings.chord(for: .pageBackward), try chord("["))
         XCTAssertEqual(bindings.chord(for: .pageForward), try chord("]"))
+        XCTAssertEqual(bindings.toneScheme, .standard)
         XCTAssertEqual(bindings.slotKeySet, .bareKeys)
     }
 
@@ -353,89 +354,20 @@ final class ComposingKeyBindingsTests: XCTestCase {
 
     // MARK: - The candidate-slot tier
 
-    /// The slot keys are classified before any binding, so a row holding one
-    /// would be recorded and then never fire. Dropped here as well as refused
-    /// by the recorder, because the key set can be changed afterwards.
-    func testAChordTheSlotTierWouldSwallow_isDropped() throws {
-        let control = ComposingKeyBindings(
-            chords: [.pageForward: try chord("3", .control)],
-            slotKeySet: .control,
-        )
-        XCTAssertNil(control.chord(for: .pageForward))
+    /// A chord on a slot key cannot exist under either scheme — the gate
+    /// refuses every bare letter, digit and `;` — so the resolver has no
+    /// slot pass, and a chorded digit is an ordinary chord under both. The
+    /// scheme changes which keys pick, never which chords resolve.
+    func testTheToneScheme_leavesTheChordsAlone() throws {
+        let stored: [ComposingAction: ComposingKeyChord?] = [.pageForward: try chord("3", .control)]
 
-        let option = ComposingKeyBindings(
-            chords: [.pageForward: try chord("3", .control)],
-            slotKeySet: .option,
-        )
-        XCTAssertEqual(
-            option.chord(for: .pageForward),
-            try chord("3", .control),
-            "⌃3 is an ordinary chord once Option holds the slots",
-        )
-    }
-
-    /// Dropped from the resolved value, not from storage: the same stored
-    /// chords read differently under each set, so a row the bare keys shadow is
-    /// back the moment the picker moves off them — the way ⌥3 already is.
-    func testABareLetterTheLettersShadow_comesBackUnderTheDigits() throws {
-        let stored: [ComposingAction: ComposingKeyChord?] = [.commitAlternateScript: try chord("z")]
-
-        XCTAssertNil(
-            ComposingKeyBindings(chords: stored, slotKeySet: .bareKeys).chord(for: .commitAlternateScript),
-            "a bare `z` picks the fifth candidate while the bare keys hold the slots",
-        )
-        XCTAssertEqual(
-            ComposingKeyBindings(chords: stored, slotKeySet: .control).chord(for: .commitAlternateScript),
-            try chord("z"),
-        )
-    }
-
-    func testIsCandidateSlotChord_namesOnlyTheNineDigitsUnderTheChosenModifier() throws {
-        XCTAssertTrue(try chord("3", .control).isCandidateSlotChord(under: .control))
-        XCTAssertFalse(try chord("3", .control).isCandidateSlotChord(under: .option))
-        XCTAssertFalse(try chord("3", .control).isCandidateSlotChord(under: .bareKeys))
-        XCTAssertFalse(
-            try chord("0", .control).isCandidateSlotChord(under: .control),
-            "⌃0 addresses no slot",
-        )
-        XCTAssertFalse(
-            try chord("3", [.control, .shift]).isCandidateSlotChord(under: .control),
-            "an extra modifier makes it a different chord",
-        )
-        XCTAssertFalse(try chord("]", .control).isCandidateSlotChord(under: .control))
-    }
-
-    func testIsCandidateSlotChord_namesTheNineBareKeysOnlyUnderTheBareKeys() throws {
-        for key in CandidateSlotKeySet.bareKeyRow {
-            XCTAssertTrue(try chord(key).isCandidateSlotChord(under: .bareKeys))
-            XCTAssertFalse(try chord(key).isCandidateSlotChord(under: .control))
-            XCTAssertFalse(
-                try chord(key, .shift).isCandidateSlotChord(under: .bareKeys),
-                "⇧\(key) is a chord of its own, not a slot key",
-            )
+        for scheme in ToneInputScheme.allCases {
+            let bindings = ComposingKeyBindings(chords: stored, toneScheme: scheme)
+            XCTAssertEqual(bindings.chord(for: .pageForward), try chord("3", .control), "\(scheme)")
+            XCTAssertEqual(bindings.toneScheme, scheme)
         }
-        // Bare punctuation outside the set stays an ordinary chord.
-        XCTAssertFalse(try chord(",").isCandidateSlotChord(under: .bareKeys))
-        XCTAssertFalse(try chord("'").isCandidateSlotChord(under: .bareKeys))
-    }
-
-    /// `⇧1`…`⇧9` pick under every set, so no chord on one can exist at all:
-    /// the factory refuses it as the slot chord it is, whichever set is
-    /// chosen — a stored value cannot smuggle one in either, since it goes
-    /// through the same factory on the way out of storage.
-    func testAShiftedDigit_cannotBeAChord_underAnySet() {
-        for digit in 1 ... 9 {
-            XCTAssertEqual(
-                ComposingKeyChord.make(key: String(digit), modifiers: .shift),
-                .failure(.candidateSlotChord),
-                "⇧\(digit)",
-            )
-        }
-        XCTAssertNil(ComposingKeyChord(rawValue: "s|0033"), "a stored ⇧3 reads as no chord")
-        // `0` names no slot, so ⇧0 is refused for the digit it types, not as
-        // a slot; with another modifier a digit is an ordinary chord.
-        XCTAssertEqual(ComposingKeyChord.make(key: "0", modifiers: .shift), .failure(.typesRomanization))
-        XCTAssertNotNil(try? ComposingKeyChord.make(key: "3", modifiers: [.shift, .command]).get())
+        XCTAssertNil(ComposingKeyChord(rawValue: "|0071"), "a stored bare `q` reads as no chord")
+        XCTAssertNil(ComposingKeyChord(rawValue: "|0033"), "a stored bare `3` reads as no chord")
     }
 
     // MARK: - Keypad Enter
@@ -525,32 +457,30 @@ final class ComposingKeyBindingsTests: XCTestCase {
         XCTAssertTrue(space.matches(try snapshot(" ", modifiers: [.capsLock, .numericPad])))
     }
 
-    // MARK: - A bare letter through the intent tiers
+    // MARK: - A bare key through the intent tiers
 
-    /// The design promise behind freeing the eight letters: mid-composition
-    /// the bindings tier is read before input, so the bound letter fires its
-    /// action; everywhere the binding does not apply, the letter is still the
-    /// letter.
-    func testABareBoundLetter_firesItsAction_onlyWhereTheActionApplies() throws {
-        // Under the digits: the shipped letter set holds `z` itself, and the
-        // slot tier would take the key before this binding was read.
-        let bindings = ComposingKeyBindings(chords: [.pageForward: try chord("z")], slotKeySet: .control)
-        let z = try snapshot("z")
+    /// The design promise behind allowing bare punctuation: mid-composition
+    /// the bindings tier is read before document text, so the bound key
+    /// fires its action; everywhere the binding does not apply, the key is
+    /// still the punctuation it types.
+    func testABareBoundKey_firesItsAction_onlyWhereTheActionApplies() throws {
+        let bindings = ComposingKeyBindings(chords: [.pageForward: try chord("'")])
+        let apostrophe = try snapshot("'")
 
         XCTAssertEqual(
-            ComposingKeyIntent.intent(for: z, isComposing: true, isShowingCandidates: true, bindings: bindings),
+            ComposingKeyIntent.intent(for: apostrophe, isComposing: true, isShowingCandidates: true, bindings: bindings),
             .navigate(.pageDown),
-            "the binding wins over literal input while candidates are up",
+            "the binding wins over document text while candidates are up",
         )
         XCTAssertEqual(
-            ComposingKeyIntent.intent(for: z, isComposing: true, bindings: bindings),
-            .input("z"),
+            ComposingKeyIntent.intent(for: apostrophe, isComposing: true, bindings: bindings),
+            .commitThenInsert("'"),
             "an action that needs candidates gives the key back when none are up",
         )
         XCTAssertEqual(
-            ComposingKeyIntent.intent(for: z, isComposing: false, bindings: bindings),
-            .input("z"),
-            "with no composition there is no page to turn — the letter still starts one",
+            ComposingKeyIntent.intent(for: apostrophe, isComposing: false, bindings: bindings),
+            .passThrough,
+            "with no composition there is no page to turn — the key is the host's",
         )
     }
 

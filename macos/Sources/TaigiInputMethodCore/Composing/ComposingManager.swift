@@ -143,6 +143,26 @@ final class ComposingManager {
         promoteToContinuous(settings: settings, executing: executor)
     }
 
+    /// Applies one Telex key — a tone letter, `z` or `f` — to the pending
+    /// syllable. Shaped like `append` because it is the same step with the
+    /// engine deciding what the key writes (`engine/composing/src/telex.rs`):
+    /// an idle `z` starts a composition the way a letter does, and the
+    /// promotion afterwards is what keeps a Telex-typed syllable on the same
+    /// continuous phase an appended one reaches.
+    func telexKey(_ key: String, executing executor: ComposingEffectExecutor) {
+        Self.logger.debug("telexKey '\(key)'")
+        let settings = settingsProvider.current
+        apply(
+            RustEngineBridge.composingTelexKey(
+                key,
+                settings: settings,
+                generation: currentGeneration,
+            ),
+            executing: executor,
+        )
+        promoteToContinuous(settings: settings, executing: executor)
+    }
+
     /// Drops the last character of the raw buffer. Ends the composition when
     /// that empties it.
     func deleteBackward(executing executor: ComposingEffectExecutor) {

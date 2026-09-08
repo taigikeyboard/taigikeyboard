@@ -84,13 +84,13 @@ final class CrossTierShortcutConflictTests: XCTestCase {
 
     func testAKeypadDigit_bridgesToTheSameChordAsTheTopRow() throws {
         // Neither tier keeps the `.numericPad` flag, so the keypad's 3 and the
-        // top row's 3 are one chord — and ⌃3 is a candidate slot.
+        // top row's 3 are one chord.
         let chord = try XCTUnwrap(ShortcutConflicts.composingChord(
             occupiedBy: KeyboardShortcuts.Shortcut(.keypad3, modifiers: [.control]),
         ))
 
         XCTAssertEqual(chord.key, "3")
-        XCTAssertTrue(chord.isCandidateSlotChord(under: .control))
+        XCTAssertEqual(chord.modifiers, .control)
     }
 
     func testTheKeypadOperators_bridgeToWhatTheyType() throws {
@@ -202,38 +202,16 @@ final class CrossTierShortcutConflictTests: XCTestCase {
         XCTAssertEqual(holders, [.toggleRomanization])
     }
 
-    func testAGlobalShortcutOnASlotChord_isFound_underThatModifierOnly() {
-        recordGlobal(.init(.three, modifiers: [.control]), for: .openLastSettingsPane)
-
-        XCTAssertEqual(
-            ShortcutConflicts.globalActionsHoldingSlotChords(under: .control), [.openLastSettingsPane],
-        )
-        XCTAssertEqual(
-            ShortcutConflicts.globalActionsHoldingSlotChords(under: .option), [],
-            "⌃3 is free while Option holds the slots",
-        )
-        XCTAssertEqual(
-            ShortcutConflicts.globalActionsHoldingSlotChords(under: .bareKeys), [],
-            "⌃3 is free while the bare keys hold the slots",
-        )
-    }
-
-    func testAGlobalShortcutOnABareSlotLetter_isFound_underTheLettersOnly() {
-        recordGlobal(.init(.q), for: .openLastSettingsPane)
-
-        XCTAssertEqual(
-            ShortcutConflicts.globalActionsHoldingSlotChords(under: .bareKeys), [.openLastSettingsPane],
-        )
-        XCTAssertEqual(ShortcutConflicts.globalActionsHoldingSlotChords(under: .control), [])
-    }
-
-    /// A shifted digit bridges to the digit, the way a Control digit does —
-    /// the library names the key by what it types unmodified — and the gate
-    /// refuses that as the fixed `⇧1`…`⇧9` slot chord, so the bridge answers
-    /// nil and the recorder can no longer put one on a global row. A row that
-    /// already holds one is the launch pass's
-    /// (`CandidateSlotKeyTests.testALaunchPass_clearsAGlobalRowLeftOnAShiftedDigit`).
-    func testAGlobalShortcutOnAShiftedDigit_cannotBeRecorded_soTheBridgeAnswersNil() {
+    /// A slot key — a bare letter under Standard, a bare digit under Telex —
+    /// is a typing key to the gate, so the bridge answers nil for a global
+    /// row holding one: no composing chord can exist for it to collide with,
+    /// and the recorder refuses to put one on a global row in the first
+    /// place. A shifted digit bridges to the digit with Shift — the library
+    /// names the key by what it types unmodified — which the gate refuses
+    /// the same way.
+    func testAGlobalShortcutOnASlotKey_bridgesToNoChord() {
+        XCTAssertNil(ShortcutConflicts.composingChord(occupiedBy: KeyboardShortcuts.Shortcut(.q)))
+        XCTAssertNil(ShortcutConflicts.composingChord(occupiedBy: KeyboardShortcuts.Shortcut(.three)))
         XCTAssertNil(ShortcutConflicts.composingChord(
             occupiedBy: KeyboardShortcuts.Shortcut(.three, modifiers: [.shift]),
         ))
@@ -251,7 +229,7 @@ final class CrossTierShortcutConflictTests: XCTestCase {
                 "\(action)'s default cannot be compared across the seam",
             )
             // The slot half of this question is already pinned by
-            // `ShortcutActionsTests.testNoDefault_isACandidateSlotChord`.
+            // `ShortcutActionsTests.testNoDefault_isASlotKey`.
             XCTAssertFalse(
                 composingDefaults.contains(chord),
                 "\(action)'s default collides with a composing default",
@@ -309,24 +287,6 @@ final class CrossTierShortcutConflictTests: XCTestCase {
         XCTAssertNil(store.composingKeyBindings.chord(for: .pageForward))
     }
 
-    func testALaunchPass_clearsAGlobalRowSittingOnALiveSlotChord() throws {
-        let store = try makeScratchSettingsStore()
-        // The order the recorder cannot refuse retroactively: the shortcut was
-        // recorded while the digits held the slots, then the picker moved to
-        // the bare keys — the set a fresh store reads.
-        recordGlobal(.init(.q), for: .openLastSettingsPane)
-        // A chord only another set claims stays: ⌃3 is nobody's slot while
-        // the bare keys hold them.
-        recordGlobal(.init(.three, modifiers: [.control]), for: .toggleRomanization)
-
-        ShortcutConflicts.resolveAcrossRegistries(in: store)
-
-        XCTAssertNil(KeyboardShortcuts.getShortcut(for: .openLastSettingsPane))
-        XCTAssertEqual(
-            KeyboardShortcuts.getShortcut(for: .toggleRomanization), .init(.three, modifiers: [.control]),
-        )
-    }
-
     func testALaunchPass_leavesAnUncollidingSetupAlone() throws {
         let store = try makeScratchSettingsStore()
         ShortcutConflicts.resolveAcrossRegistries(in: store)
@@ -341,6 +301,26 @@ final class CrossTierShortcutConflictTests: XCTestCase {
                 "\(action) lost its default",
             )
         }
+    }
+
+    /// A global row recorded on a bare `z` while the eight non-syllable
+    /// letters were bindable (before 2026-09-08) would fire through Carbon
+    /// before the classifier saw the Telex key — and a `⇧3` before it saw the
+    /// slot key. The bridge refuses both as typing keys now, and a refusal is
+    /// not "no conflict": the launch pass clears the row, once.
+    func testALaunchPass_clearsAGlobalRowLeftOnATypingKey() throws {
+        let store = try makeScratchSettingsStore()
+        recordGlobal(.init(.z), for: .toggleRomanization)
+        recordGlobal(.init(.three, modifiers: [.shift]), for: .toggleTranslateSwapped)
+        recordGlobal(.init(.z, modifiers: [.control]), for: .openLastSettingsPane)
+
+        ShortcutConflicts.resolveAcrossRegistries(in: store)
+
+        XCTAssertNil(KeyboardShortcuts.getShortcut(for: .toggleRomanization))
+        XCTAssertNil(KeyboardShortcuts.getShortcut(for: .toggleTranslateSwapped))
+        XCTAssertEqual(KeyboardShortcuts.getShortcut(for: .openLastSettingsPane), .init(.z, modifiers: [.control]))
+        ShortcutConflicts.resolveAcrossRegistries(in: store)
+        XCTAssertEqual(KeyboardShortcuts.getShortcut(for: .openLastSettingsPane), .init(.z, modifiers: [.control]))
     }
 
     func testALaunchPass_isIdempotent() throws {

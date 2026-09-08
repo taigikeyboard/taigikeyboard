@@ -517,6 +517,9 @@ public final class TaigiInputController: IMKInputController {
         case let .input(text):
             manager.append(text, executing: executor)
             refreshCandidates(from: manager, client: client)
+        case let .telexKey(key):
+            manager.telexKey(key, executing: executor)
+            refreshCandidates(from: manager, client: client)
         case .deleteBackward:
             manager.deleteBackward(executing: executor)
             refreshCandidates(from: manager, client: client)

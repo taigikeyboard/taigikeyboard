@@ -149,10 +149,12 @@ final class GlobalShortcutPolicyTests: XCTestCase {
         )
     }
 
-    /// The reported failure, as a test: `z` spells no TL or POJ syllable, so
-    /// the shared gate passes it, and a global row must too.
-    func testABareNonSyllableLetter_isAccepted() throws {
-        let recorded = try key("z", shortcut: .init(.z))
+    /// The reported failure, as a test: a bare key the gate passes must pass a
+    /// global row too. The key is `'` rather than the `z` of the original
+    /// report — every letter is a typing key since Telex claimed the eight
+    /// no syllable spells (2026-09-08).
+    func testABarePunctuationKey_isAccepted() throws {
+        let recorded = try key("'", shortcut: .init(.quote))
 
         XCTAssertNil(GlobalShortcutPolicy.rejection(for: recorded))
     }
@@ -224,13 +226,15 @@ final class GlobalShortcutPolicyTests: XCTestCase {
     /// "enabled" entries included bare `a`, `s`, `f`, `q` and the bare backtick
     /// this app ships 漢羅代先 on (probe, 2026-08-26). They are slots, not
     /// shortcuts a user could name, and refusing them would rebuild the one-way
-    /// door this recorder exists to remove.
+    /// door this recorder exists to remove. Punctuation here because every
+    /// letter is a typing key since Telex claimed the free eight (2026-09-08)
+    /// — the shared gate refuses those before this policy ever sees them.
     func testBareKeys_areNotJudgedAgainstTheSystemTable() throws {
-        for character in ["d", "f", "q", "v", "w", "x", "y", "z"] {
-            let letter = try XCTUnwrap(character.first)
+        for character in ["`", "[", "]", "'", ","] {
+            let scalar = try XCTUnwrap(character.first?.asciiValue)
             let recorded = try key(
                 character,
-                shortcut: .init(carbonKeyCode: Int(letter.asciiValue ?? 0)),
+                shortcut: .init(carbonKeyCode: Int(scalar)),
             )
 
             XCTAssertNil(GlobalShortcutPolicy.rejection(for: recorded), "bare \(character) was refused")
@@ -240,7 +244,7 @@ final class GlobalShortcutPolicyTests: XCTestCase {
     /// A global row stores a Carbon key code; a press that yields none has
     /// nothing to store, however happily the composing tier would take it.
     func testAPressWithNoCarbonKeyCode_isRefused() throws {
-        let recorded = try key("z", shortcut: nil)
+        let recorded = try key("`", shortcut: nil)
 
         XCTAssertEqual(GlobalShortcutPolicy.rejection(for: recorded), .notAGlobalKey)
     }

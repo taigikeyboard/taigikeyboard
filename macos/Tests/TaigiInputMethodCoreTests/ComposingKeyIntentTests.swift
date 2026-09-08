@@ -182,108 +182,102 @@ final class ComposingKeyIntentTests: XCTestCase {
         )
     }
 
-    /// Control rewrites the characters of the digits it is chorded with, so this
-    /// is the case the whole `charactersIgnoringModifiers` field exists for:
-    /// classified from `characters`, `⌃3` arrives as `\u{1B}` and cancels the
-    /// composition instead of picking the third candidate.
-    func testControlDigits_selectCandidates_despiteArrivingAsControlCharacters() throws {
+    /// Control rewrites the characters of the digits it is chorded with —
+    /// `⌃3` arrives as `\u{1B}` — and the fixed tier must not read that as
+    /// an Escape and cancel the composition: a Control chord is the host's,
+    /// under either scheme, bar up or not. (The `⌃1`…`⌃9` slot set went with
+    /// the picker that chose it, 2026-09-08.)
+    func testControlDigits_belongToTheHost_underEitherScheme() throws {
         let controlThree = try TestFixtures.keyDownEvent(
             characters: "\u{1B}",
             modifiers: .control,
             charactersIgnoringModifiers: "3",
         )
 
-        XCTAssertEqual(
-            ComposingKeyIntent.intent(
-                for: KeyEventSnapshot(controlThree),
-                isComposing: true,
-                isShowingCandidates: true,
-                bindings: ComposingKeyBindings(slotKeySet: .control),
-            ),
-            .selectCandidateSlot(2),
-            "⌃3 selects the third candidate of the visible page, counting slots from zero",
-        )
-    }
-
-    func testControlDigits_belongToTheHostWhenNoBarIsUp() throws {
-        let controlThree = try TestFixtures.keyDownEvent(
-            characters: "\u{1B}",
-            modifiers: .control,
-            charactersIgnoringModifiers: "3",
-        )
-
-        XCTAssertEqual(
-            ComposingKeyIntent.intent(
-                for: KeyEventSnapshot(controlThree),
-                isComposing: true,
-                isShowingCandidates: false,
-            ),
-            .commitThenPassThrough,
-            "with nothing to select, a Control chord is the host's shortcut again",
-        )
-    }
-
-    /// Caps Lock does not change what a digit key means, and the number pad sets
-    /// `.numericPad` (plus `.function` on some keyboards). Testing for an exact
-    /// modifier set would make `⌃3` select on the top row and quietly commit the
-    /// composition on the keypad.
-    func testControlDigits_selectCandidates_whateverElseAppKitReports() throws {
-        for extraModifiers in [NSEvent.ModifierFlags.capsLock, .numericPad, [.numericPad, .function]] {
-            let event = try TestFixtures.keyDownEvent(
-                characters: "\u{1B}",
-                modifiers: extraModifiers.union(.control),
-                charactersIgnoringModifiers: "3",
-            )
-
-            XCTAssertEqual(
-                ComposingKeyIntent.intent(
-                    for: KeyEventSnapshot(event),
-                    isComposing: true,
-                    isShowingCandidates: true,
-                    bindings: ComposingKeyBindings(slotKeySet: .control),
-                ),
-                .selectCandidateSlot(2),
-                "⌃3 with \(extraModifiers) also held is still ⌃3",
-            )
+        for scheme in ToneInputScheme.allCases {
+            for isShowingCandidates in [true, false] {
+                XCTAssertEqual(
+                    ComposingKeyIntent.intent(
+                        for: KeyEventSnapshot(controlThree),
+                        isComposing: true,
+                        isShowingCandidates: isShowingCandidates,
+                        bindings: ComposingKeyBindings(toneScheme: scheme),
+                    ),
+                    .commitThenPassThrough,
+                    "⌃3 is the host's shortcut under \(scheme), bar \(isShowingCandidates ? "up" : "down")",
+                )
+            }
         }
     }
 
-    func testControlDigits_withAnotherChordingModifier_belongToTheHost() throws {
-        for extraModifiers in [NSEvent.ModifierFlags.command, .option, .shift] {
-            let event = try TestFixtures.keyDownEvent(
-                characters: "\u{1B}",
-                modifiers: extraModifiers.union(.control),
-                charactersIgnoringModifiers: "3",
-            )
+    // MARK: - Telex
 
-            XCTAssertEqual(
-                ComposingKeyIntent.intent(
-                    for: KeyEventSnapshot(event),
-                    isComposing: true,
-                    isShowingCandidates: true,
-                ),
-                .commitThenPassThrough,
-                "⌃⌘3 and friends are the host's — the bar binds ⌃1…⌃9 and nothing built on top of them",
-            )
+    private func telexIntent(
+        _ characters: String,
+        isComposing: Bool = true,
+        isShowingCandidates: Bool = false,
+    ) throws -> ComposingKeyIntent {
+        try ComposingKeyIntent.intent(
+            for: KeyEventSnapshot(TestFixtures.keyDownEvent(characters: characters)),
+            isComposing: isComposing,
+            isShowingCandidates: isShowingCandidates,
+            bindings: ComposingKeyBindings(toneScheme: .telex),
+        )
+    }
+
+    /// A tone letter mid-composition is the engine's Telex key, in either
+    /// case — `V` carries the same tone as `v`.
+    func testTelex_aToneLetterWhileComposing_isATelexKey() throws {
+        for key in ["v", "y", "d", "w", "x", "q", "f"] {
+            XCTAssertEqual(try telexIntent(key), .telexKey(key), key)
+        }
+        XCTAssertEqual(try telexIntent("V"), .telexKey("V"))
+    }
+
+    /// Idle, a tone letter or `f` has no syllable to mark and passes to the
+    /// host like an idle digit; `z` types an initial, so it starts one.
+    func testTelex_idleKeys_passThroughExceptZ() throws {
+        XCTAssertEqual(try telexIntent("v", isComposing: false), .passThrough)
+        XCTAssertEqual(try telexIntent("f", isComposing: false), .passThrough)
+        XCTAssertEqual(try telexIntent("z", isComposing: false), .telexKey("z"))
+        XCTAssertEqual(try telexIntent("Z", isComposing: false), .telexKey("Z"))
+    }
+
+    /// The digits are the slot keys: with the bar up a digit picks; with no
+    /// bar it is document text that ends the composition, never a tone.
+    func testTelex_aDigit_picksWithTheBarUp_andIsDocumentTextWithout() throws {
+        XCTAssertEqual(try telexIntent("3", isShowingCandidates: true), .selectCandidateSlot(2))
+        XCTAssertEqual(try telexIntent("3"), .commitThenInsert("3"))
+        XCTAssertEqual(try telexIntent("3", isComposing: false), .passThrough)
+    }
+
+    /// `q` is a tone key under Telex, not the first slot — even with the bar up.
+    func testTelex_aBareLetter_isNotASlotKey() throws {
+        XCTAssertEqual(try telexIntent("q", isShowingCandidates: true), .telexKey("q"))
+    }
+
+    /// The letters a syllable is spelled with are untouched by the scheme.
+    func testTelex_syllableLetters_areStillInput() throws {
+        for key in ["t", "a", "-", "c"] {
+            XCTAssertEqual(try telexIntent(key), .input(key), key)
+            XCTAssertEqual(try telexIntent(key, isComposing: false), .input(key), key)
         }
     }
 
-    func testControlZero_isNotACandidateChord() throws {
-        let controlZero = try TestFixtures.keyDownEvent(
-            characters: "\u{0}",
-            modifiers: .control,
-            charactersIgnoringModifiers: "0",
-        )
-
-        XCTAssertEqual(
-            ComposingKeyIntent.intent(
-                for: KeyEventSnapshot(controlZero),
-                isComposing: true,
-                isShowingCandidates: true,
-            ),
-            .commitThenPassThrough,
-            "the bar holds nine candidates, addressed by ⌃1 to ⌃9 — ⌃0 addresses nothing",
-        )
+    /// Under Standard nothing changed: a digit is the tone, `q` picks, and
+    /// `v` is a letter the composition takes.
+    func testStandard_isUnchangedByTheScheme() throws {
+        let standard = ComposingKeyBindings(toneScheme: .standard)
+        func intent(_ characters: String, isShowingCandidates: Bool = false) throws -> ComposingKeyIntent {
+            try ComposingKeyIntent.intent(
+                for: KeyEventSnapshot(TestFixtures.keyDownEvent(characters: characters)),
+                isComposing: true, isShowingCandidates: isShowingCandidates, bindings: standard,
+            )
+        }
+        XCTAssertEqual(try intent("3", isShowingCandidates: true), .input("3"))
+        XCTAssertEqual(try intent("q", isShowingCandidates: true), .selectCandidateSlot(0))
+        XCTAssertEqual(try intent("v"), .input("v"))
+        XCTAssertEqual(try intent("z"), .input("z"))
     }
 
     /// Space writes the highlighted candidate in the OTHER script — the 漢羅

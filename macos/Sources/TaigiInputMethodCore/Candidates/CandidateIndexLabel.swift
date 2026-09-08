@@ -10,13 +10,11 @@ import Foundation
 /// answers those slots from the positions it draws
 /// (`CandidatePresenter.candidateIndex(forSlot:)`).
 ///
-/// Always the chosen set: it is the only thing that picks (USER 2026-08-28,
+/// Always the live set: it is the only thing that picks (USER 2026-08-28,
 /// which retired both the bare-digit-after-a-tone rule and the `↓` latch
-/// that used to flip the hint to `1`…`9`). McBopomofo folds the modifier
-/// into the label text the same way
-/// (`references/McBopomofo/Source/InputMethodController.swift:869-877`:
-/// `{ "⇧ " + $0 }`) rather than styling the digit — which keeps the intensity
-/// of the text free to mean "selected", as it does here.
+/// that used to flip the hint to `1`…`9`), and it follows the tone scheme
+/// (`ToneInputScheme.slotKeySet`) — letters under Standard, digits under
+/// Telex.
 ///
 /// `0` is deliberately absent, unlike upstream MacishType's `"1234567890"`
 /// (`MacishCandidateWindow/CandidateWindow.swift:49`): `⌃0` is not bound and a
@@ -33,9 +31,8 @@ enum CandidateIndexLabel {
 
     /// Every form a slot can be drawn in — each slot under each set — so the
     /// column is measured against all of them and does not change width when
-    /// the user chooses another set (`CandidateMetrics.indexWidth`). Measured
-    /// rather than counted, since `⌥` sets wider than `⌃` and a letter wider
-    /// than either.
+    /// the user switches tone scheme (`CandidateMetrics.indexWidth`).
+    /// Measured rather than counted, since a letter sets wider than a digit.
     static let widestLabelForms: [String] = (0 ..< HorizontalPageLayout.pageSize).flatMap { slot in
         CandidateSlotKeySet.allCases.map { text(forSlot: slot, keySet: $0) }
     }

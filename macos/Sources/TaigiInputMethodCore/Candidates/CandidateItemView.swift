@@ -11,10 +11,10 @@ import AppKit
 /// that picked a candidate was the `⌃1`…`⌃9` chord, and a modifier badge beside
 /// every candidate is noise the reader has to look past. The column came back
 /// once bare `1`…`9` could select wherever the digit cannot be a tone marker
-/// (`ComposingKeyIntent`, 2026-08-24), and since 2026-08-28 it draws the key
-/// set the user chose (`CandidateSlotKeySet` — bare `q w d f z x v y ;` by
-/// default), so the label names a key the user can just press, and the column
-/// earns its width.
+/// (`ComposingKeyIntent`, 2026-08-24), and since 2026-08-28 it draws the live
+/// key set (`CandidateSlotKeySet` — bare `q w d f z x v y ;` under Standard,
+/// `1`…`9` under Telex), so the label names a key the user can just press,
+/// and the column earns its width.
 ///
 /// The annotation column is upstream's, and carries the candidate's other
 /// script — see `CandidateCellContent`. The metrics the cell renders at are

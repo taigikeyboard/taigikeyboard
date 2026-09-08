@@ -315,17 +315,17 @@ enum ShortcutConflicts {
     /// Nil also when the library cannot name the key at all. Either way nil
     /// means "no conflict found", never "clear something": wrongly emptying a
     /// row the user can see is worse than leaving an undetectable collision on
-    /// a key neither tier can hold a binding on. The one refusal that IS a
-    /// collision — the fixed candidate-slot chord — is read by the launch pass
-    /// through `translation(of:)` below, since no chord exists to compare.
+    /// a key neither tier can hold a binding on.
     @MainActor
     static func composingChord(occupiedBy shortcut: KeyboardShortcuts.Shortcut) -> ComposingKeyChord? {
         try? translation(of: shortcut).get()
     }
 
-    /// The bridge itself: the chord, or the gate's reason there is none.
+    /// The bridge with its refusal kept: the launch pass reads WHY a global
+    /// row failed to translate, because a row on a typing key is one the
+    /// recorder would refuse today and Carbon would still dispatch first.
     @MainActor
-    private static func translation(of shortcut: KeyboardShortcuts.Shortcut)
+    static func translation(of shortcut: KeyboardShortcuts.Shortcut)
         -> Result<ComposingKeyChord, ComposingKeyChord.Rejection>
     {
         ComposingKeyChord.make(
@@ -345,7 +345,7 @@ enum ShortcutConflicts {
     /// equivalent can address it (`Shortcut.swift:527-564`) — but a keypad key
     /// still TYPES the digit or operator on its face, and neither tier keeps
     /// the `.numericPad` flag that would tell it apart, so `⌃`-keypad-3 and
-    /// `⌃3` are one chord as far as the candidate slots are concerned.
+    /// `⌃3` are one chord.
     ///
     /// The reserved keys — the arrows, the paging keys, Escape and the two
     /// deletes — are here too, though no binding can hold one. Translating
@@ -359,8 +359,7 @@ enum ShortcutConflicts {
     /// key that changes sides fails a test rather than going quiet.
     ///
     /// Without this the bridge would miss the collisions it exists for: the
-    /// composing roster keeps its commit keys in the Return family, and the
-    /// slot tier is nine digits.
+    /// composing roster keeps its commit keys in the Return family.
     private static let namedKeyCharacters: [KeyboardShortcuts.Key: String] = {
         var characters: [KeyboardShortcuts.Key: String] = [
             .return: "\r",
@@ -405,46 +404,13 @@ enum ShortcutConflicts {
     }
 
     /// Which global actions hold `chord` — the same question from the other
-    /// side, for a composing recording or a slot-modifier change.
+    /// side, for a composing recording.
     @MainActor
     static func globalActionsHolding(_ chord: ComposingKeyChord) -> [ShortcutAction] {
-        globalActionsHolding(where: { $0 == chord })
-    }
-
-    /// The scan both of those are: bridge what each global action holds, and
-    /// keep the ones whose chord answers `predicate`. A family of chords a
-    /// future setting claims is a new predicate here, not a third near-copy.
-    @MainActor
-    static func globalActionsHolding(
-        where predicate: (ComposingKeyChord) -> Bool,
-        // The one spelling of "what the registry holds now". A stored constant
-        // cannot carry it: `getShortcut` is main-actor isolated, and only a
-        // default argument may call it from this position.
-        shortcutFor: (ShortcutAction) -> KeyboardShortcuts.Shortcut? = {
-            KeyboardShortcuts.getShortcut(for: $0.name)
-        },
-    ) -> [ShortcutAction] {
         ShortcutAction.allCases.filter { action in
-            guard let shortcut = shortcutFor(action),
-                  let chord = composingChord(occupiedBy: shortcut)
-            else { return false }
-            return predicate(chord)
+            guard let shortcut = KeyboardShortcuts.getShortcut(for: action.name) else { return false }
+            return composingChord(occupiedBy: shortcut) == chord
         }
-    }
-
-    /// Which global actions hold a candidate-slot chord under `slotKeySet`.
-    ///
-    /// The slot tier is a picker rather than a row, so it cannot lose a chord —
-    /// but it CAN take one, when the user switches the set onto keys a global
-    /// shortcut already holds. That makes the picker the last writer, and
-    /// these are the rows that empty. The recorder refuses the other order
-    /// (`ShortcutSettingsView`), so between them no global shortcut can sit on
-    /// a live slot chord.
-    @MainActor
-    static func globalActionsHoldingSlotChords(
-        under slotKeySet: CandidateSlotKeySet,
-    ) -> [ShortcutAction] {
-        globalActionsHolding(where: { $0.isCandidateSlotChord(under: slotKeySet) })
     }
 
     /// A global recording just landed: take the chord off any composing row
@@ -462,13 +428,6 @@ enum ShortcutConflicts {
     @MainActor
     static func resolveGlobalRows(after chord: ComposingKeyChord) {
         clear(globalActionsHolding(chord))
-    }
-
-    /// The slot key set just changed: take its keys off any global row that
-    /// held one.
-    @MainActor
-    static func resolveGlobalRows(afterSlotKeySetChangedTo slotKeySet: CandidateSlotKeySet) {
-        clear(globalActionsHoldingSlotChords(under: slotKeySet))
     }
 
     /// Reconciles the two registries at launch, where no recorder ran.
@@ -491,14 +450,28 @@ enum ShortcutConflicts {
         // Read once per action, not once per question — the same rule
         // `defaultsShadowedByRecordings` states above, and for the same
         // reason: every read goes to `UserDefaults`, and every bridged chord
-        // goes to the keyboard layout. Both passes below ask about the same
-        // actions.
+        // goes to the keyboard layout.
         let recorded = ShortcutAction.allCases.compactMap { action in
             KeyboardShortcuts.getShortcut(for: action.name).map { (action: action, shortcut: $0) }
         }
         let held = recorded.compactMap { action, shortcut in
             composingChord(occupiedBy: shortcut).map { (action: action, shortcut: shortcut, chord: $0) }
         }
+
+        // A global row on a key the gate refuses as a typing key — a bare
+        // `z` or `q` recorded while the eight non-syllable letters were
+        // bindable (before 2026-09-08), or a `⇧3` — is not a collision to
+        // compare: it is a row that predates the refusal, and Carbon would
+        // dispatch it before the classifier ever saw the Telex key or the
+        // slot key it now types. Cleared, the way the recorder would have
+        // refused it. `reservedKey` rows cannot exist (the arrows and the
+        // deletes were never recordable); only the typing-key refusal names
+        // an upgrade path.
+        clear(
+            recorded
+                .filter { translation(of: $0.shortcut) == .failure(.typesRomanization) }
+                .map(\.action),
+        )
 
         for (action, shortcut, chord) in held {
             let holders = bindings.actionsHolding(chord)
@@ -517,25 +490,5 @@ enum ShortcutConflicts {
                 }
             }
         }
-
-        // The slot tier last, and off the same snapshot: a live slot chord on
-        // a global row is the one collision the recorder cannot refuse
-        // retroactively, and clearing a row the loop already cleared is a
-        // no-op.
-        clear(
-            held
-                .filter { $0.chord.isCandidateSlotChord(under: bindings.slotKeySet) }
-                .map(\.action),
-        )
-        // `⇧1`…`⇧9` are not chords at all — the gate refuses them whichever
-        // set is chosen — so they are found by that refusal rather than by
-        // comparison. A row holding one predates the refusal (the recorder
-        // accepted `⇧3` as the `#` it types before 2026-08-28), and Carbon
-        // would dispatch it before the classifier ever saw the digit.
-        clear(
-            recorded
-                .filter { translation(of: $0.shortcut) == .failure(.candidateSlotChord) }
-                .map(\.action),
-        )
     }
 }

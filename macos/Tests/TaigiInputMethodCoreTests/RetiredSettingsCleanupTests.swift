@@ -73,7 +73,7 @@ final class RetiredSettingsCleanupTests: XCTestCase {
     /// domain for a later action reusing the name to inherit.
     func testChordsRecordedOnTheRetiredScriptCommits_areRemoved() throws {
         let names = ["composingShortcut.commitHanji", "composingShortcut.commitRomanization"]
-        let recorded = try ComposingKeyChord.make(key: "z", modifiers: []).get().rawValue
+        let recorded = try TestFixtures.chordNoDefaultHolds().rawValue
         for name in names {
             userDefaults.set(recorded, forKey: name)
         }
@@ -100,19 +100,30 @@ final class RetiredSettingsCleanupTests: XCTestCase {
         XCTAssertNil(userDefaults.object(forKey: "candidateWindowStyle"))
     }
 
-    /// The one setting of that shape that survived into the new one, so it must
-    /// NOT be swept up with its neighbours.
-    func testTheCandidateSlotKeySet_isKept() {
-        userDefaults.set(
-            CandidateSlotKeySet.option.rawValue,
-            forKey: SettingsStore.Keys.candidateSlotModifier.name,
+    /// 選字齒, retired 2026-09-08: the slot key set follows the tone scheme
+    /// now, and none of the values this key could hold (`shift`, `control`,
+    /// `option`) has a set left to migrate to.
+    func testTheCandidateSlotModifier_isRemoved() {
+        userDefaults.set("option", forKey: "candidateSlotModifier")
+
+        RetiredSettingsCleanup.run(userDefaults: userDefaults)
+
+        XCTAssertNil(userDefaults.object(forKey: "candidateSlotModifier"))
+        XCTAssertEqual(
+            SettingsStore(userDefaults: userDefaults).composingKeyBindings.slotKeySet,
+            .bareKeys,
         )
+    }
+
+    /// The setting that replaced it must NOT be swept up with its neighbours.
+    func testTheToneInputScheme_survivesTheSweep() {
+        userDefaults.set(ToneInputScheme.telex.rawValue, forKey: SettingsStore.Keys.toneInputScheme.name)
 
         RetiredSettingsCleanup.run(userDefaults: userDefaults)
 
         XCTAssertEqual(
-            SettingsStore(userDefaults: userDefaults).composingKeyBindings.slotKeySet,
-            .option,
+            SettingsStore(userDefaults: userDefaults).composingKeyBindings.toneScheme,
+            .telex,
         )
     }
 

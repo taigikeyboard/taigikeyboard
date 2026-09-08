@@ -37,7 +37,6 @@ final class ShortcutSettingsTests: XCTestCase {
             ComposingAction.nextCandidate.settingsKeyName,
             "composingShortcut.nextCandidate",
         )
-        XCTAssertEqual(CandidateSlotKeySet.allCases.map(\.rawValue), ["bareKeys", "shift", "control", "option"])
     }
 
     /// A row whose text is missing in one language reads as an identifier — or
@@ -77,10 +76,11 @@ final class ShortcutSettingsTests: XCTestCase {
             ("\r", .shift, "⇧↩"),
             ("]", [], "]"),
             ("j", [.control, .option], "⌃⌥J"),
-            // A bare letter shows the character it types: uppercase on a
-            // modifier-less row would read as ⇧Z (USER 2026-08-22).
-            ("z", [], "z"),
-            ("Z", .shift, "⇧Z"),
+            // A bare key shows the character it types (USER 2026-08-22: an
+            // uppercase letter on a modifier-less row would read as ⇧Z); a
+            // chorded letter prints as the keycap.
+            ("`", [], "`"),
+            ("Z", [.shift, .control], "⌃⇧Z"),
         ]
 
         for (key, modifiers, expected) in cases {
@@ -95,10 +95,9 @@ final class ShortcutSettingsTests: XCTestCase {
     /// than its default.
     func testResetComposingShortcuts_returnsEveryRowToItsDefault() throws {
         let store = SettingsStore(userDefaults: userDefaults)
-        store.setComposingChord(try ComposingKeyChord.make(key: "z", modifiers: []).get(), for: .nextCandidate)
+        store.setComposingChord(try TestFixtures.chordNoDefaultHolds(), for: .nextCandidate)
         store.setComposingChord(nil, for: .pageBackward)
         userDefaults.set("not a chord", forKey: ComposingAction.pageForward.settingsKeyName)
-        userDefaults.set(CandidateSlotKeySet.option.rawValue, forKey: SettingsStore.Keys.candidateSlotModifier.name)
 
         store.resetComposingShortcuts()
 
@@ -106,7 +105,17 @@ final class ShortcutSettingsTests: XCTestCase {
         for action in ComposingAction.allCases {
             XCTAssertEqual(bindings.chord(for: action), action.defaultChord, "\(action) did not come back")
         }
-        XCTAssertEqual(bindings.slotKeySet, .bareKeys)
+    }
+
+    /// The tone scheme is the 一般 pane's, not this pane's: the shortcut
+    /// reset leaves it where the user put it.
+    func testResetComposingShortcuts_leavesTheToneSchemeAlone() {
+        let store = SettingsStore(userDefaults: userDefaults)
+        userDefaults.set(ToneInputScheme.telex.rawValue, forKey: SettingsStore.Keys.toneInputScheme.name)
+
+        store.resetComposingShortcuts()
+
+        XCTAssertEqual(store.composingKeyBindings.toneScheme, .telex)
     }
 
     /// Removed, not written over: a stored default would be indistinguishable
@@ -114,7 +123,7 @@ final class ShortcutSettingsTests: XCTestCase {
     /// an install a later version means to move.
     func testResetComposingShortcuts_leavesNothingStored() throws {
         let store = SettingsStore(userDefaults: userDefaults)
-        store.setComposingChord(try ComposingKeyChord.make(key: "z", modifiers: []).get(), for: .nextCandidate)
+        store.setComposingChord(try TestFixtures.chordNoDefaultHolds(), for: .nextCandidate)
         store.setComposingChord(nil, for: .pageBackward)
 
         store.resetComposingShortcuts()
@@ -125,13 +134,11 @@ final class ShortcutSettingsTests: XCTestCase {
                 "\(action) still has a stored value",
             )
         }
-        XCTAssertNil(userDefaults.object(forKey: SettingsStore.Keys.candidateSlotModifier.name))
     }
 
     private static let paneStrings: [StringKey] = [
         .desktopShortcutsTab,
         .themeEditorResetAll,
-        .desktopBindingSlotModifier,
         .desktopShortcutUnbound,
         .desktopShortcutRecording,
         .desktopShortcutRejectedTaken,
