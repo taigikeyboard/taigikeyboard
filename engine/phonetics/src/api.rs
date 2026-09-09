@@ -483,6 +483,75 @@ fn rewrite_token(token: &str, target: System, keep_tl_finals: bool) -> String {
 mod tests {
     use super::*;
 
+    /// The premise `composing::derived::display_caret_utf16` aligns raw and
+    /// display on: the chain may insert combining marks, drop a character
+    /// (tone digit, second tap of a POJ `oo` / `nn`) and change case, but it
+    /// never writes a base letter the input does not have — so the display's
+    /// base letters stay a subsequence of the input's. Pinned here, next to
+    /// the code that would break it (an auto-inserted glide, a spelling
+    /// rewrite), rather than three crates downstream.
+    #[test]
+    fn normalize_tone_never_adds_a_base_letter() {
+        fn base_letters(text: &str) -> Vec<char> {
+            text.chars()
+                .filter(|c| unicode_normalization::char::canonical_combining_class(*c) == 0)
+                .map(|c| c.nfkd().next().unwrap_or(c))
+                .flat_map(char::to_lowercase)
+                .collect()
+        }
+        fn is_subsequence(needle: &[char], haystack: &[char]) -> bool {
+            let mut rest = haystack.iter();
+            needle.iter().all(|c| rest.any(|h| h == c))
+        }
+        let poj_doubletap = AppConfig {
+            input_mode: "poj".to_string(),
+            oo_doubletap_enabled: true,
+            nn_doubletap_enabled: true,
+            ..AppConfig::default()
+        };
+        let configs = [
+            AppConfig {
+                input_mode: "tl".to_string(),
+                ..AppConfig::default()
+            },
+            AppConfig {
+                input_mode: "poj".to_string(),
+                ..AppConfig::default()
+            },
+            poj_doubletap,
+        ];
+        let inputs = [
+            "tai5",
+            "ng5",
+            "ka2i",
+            "Tai5-gI2",
+            "hoon",
+            "hooon",
+            "tinn",
+            "tinnn",
+            "koo2",
+            "chhiunn5",
+            "goa2",
+            "ere2",
+            "iri2",
+            "m7",
+            "lauh8",
+            "xyz2",
+            "OOoo",
+            "ho\u{358}o",
+        ];
+        for config in &configs {
+            for input in inputs {
+                let output = normalize_tone(input, config);
+                assert!(
+                    is_subsequence(&base_letters(&output), &base_letters(input)),
+                    "{input:?} → {output:?} under {} added a base letter",
+                    config.input_mode
+                );
+            }
+        }
+    }
+
     // trace: TL literal — `teng2` → `apply_tl_tone_literal("teng","2")` places
     // acute on `e` (eng has no a/oo/ere before e) → "téng". `goa2` → place on
     // `a` → "goá" (letters kept, NOT folded to `guá`). No spelling conversion.
