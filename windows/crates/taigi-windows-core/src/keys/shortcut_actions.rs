@@ -26,15 +26,16 @@ pub enum ShortcutAction {
     /// Steps 候選詞顯示 through its picker order (`CandidateDisplayMode::next`).
     CycleCandidateDisplayMode,
     ToggleTranslateSwapped,
-    /// Opens the symbol picker over the caret. A thing typed, so it leads the
-    /// windows rather than following the guide that describes typing.
-    ShowSymbolPicker,
-    /// Toggles the floating Telex key table (`ui/telex_guide.rs`).
-    ShowTelexGuide,
-    /// Opens the settings window on whichever pane the user left it on. Last:
-    /// the one row that leaves the typing flow altogether
+    /// Opens the symbol picker over the caret. Beside the settings window
+    /// since 2026-09-10 (USER): both rows read 拍開X
     /// (`ShortcutActions.swift` `ShortcutAction`).
+    ShowSymbolPicker,
+    /// Opens the settings window on whichever pane the user left it on.
     OpenLastSettingsPane,
+    /// Toggles the floating Telex key table (`ui/telex_guide.rs`). Last on the
+    /// pane (USER 2026-09-10): the row that explains the keyboard rather than
+    /// doing anything to what is being typed.
+    ShowTelexGuide,
 }
 
 impl ShortcutAction {
@@ -43,8 +44,8 @@ impl ShortcutAction {
         Self::CycleCandidateDisplayMode,
         Self::ToggleTranslateSwapped,
         Self::ShowSymbolPicker,
-        Self::ShowTelexGuide,
         Self::OpenLastSettingsPane,
+        Self::ShowTelexGuide,
     ];
 
     pub fn raw(self) -> &'static str {
@@ -443,8 +444,8 @@ mod tests {
     fn roster_order_is_the_pane_order() {
         // `ALL` is the global recorder rows top to bottom
         // (`pages/shortcuts.rs`, under the composing rows) and the Mac's
-        // `allCases`: the three switches, then the windows a key raises,
-        // with the settings doorway last.
+        // `allCases`: the three switches, then the two 拍開X doorways
+        // together, then the Telex card last (USER 2026-09-10).
         assert_eq!(
             ShortcutAction::ALL,
             [
@@ -452,8 +453,8 @@ mod tests {
                 ShortcutAction::CycleCandidateDisplayMode,
                 ShortcutAction::ToggleTranslateSwapped,
                 ShortcutAction::ShowSymbolPicker,
-                ShortcutAction::ShowTelexGuide,
                 ShortcutAction::OpenLastSettingsPane,
+                ShortcutAction::ShowTelexGuide,
             ]
         );
         assert_eq!(ShortcutAction::ShowSymbolPicker.raw(), "showSymbolPicker");

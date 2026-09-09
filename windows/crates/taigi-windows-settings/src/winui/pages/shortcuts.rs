@@ -1,7 +1,7 @@
-//! The 快捷鍵 pane: every key the user can put an action on, in three blocks
-//! (`ShortcutSettingsView.swift`) — the keys that move through the
-//! candidates, the keys that end the composition, and the switches — plus
-//! the reset card. No headers: the grouping says it (USER 2026-09-10).
+//! The 快捷鍵 pane: every key the user can put an action on, in three titled
+//! blocks (`ShortcutSettingsView.swift`) — 選字, the keys that move through
+//! the candidates; 輸出, the keys that end the composition into the document;
+//! 其他, the switches and the windows a key raises — plus the reset card.
 //! Which keys pick a candidate is not chosen here: it follows from 聲調拍法
 //! on the 一般 pane (`ToneInputScheme`). Every row is the same recorder;
 //! which registry it writes to and what it refuses on top of the shared gate
@@ -38,6 +38,7 @@ pub fn view(
         // (`ShortcutSettingsView.swift`): the blocks in the order a user meets
         // them, and the rows inside each in their roster's own order — the
         // global block's switches first, windows last (`ShortcutAction`).
+        cards::section_title(strings.resolve(StringKey::DesktopShortcutSectionCandidateSelection)),
         composing_rows(
             window,
             strings,
@@ -57,7 +58,7 @@ pub fn view(
                 .vertical_alignment(VerticalAlignment::Center),
         ),
         // Block two: out of the composition and into the document.
-        cards::section_gap(),
+        cards::section_title(strings.resolve(StringKey::DesktopShortcutSectionOutput)),
         composing_rows(
             window,
             strings,
@@ -85,19 +86,8 @@ pub fn view(
         //
         // One block (2026-08-25, +1 on 2026-09-02, +1 on 2026-09-09): three
         // switches, the symbol picker, the Telex guide and one doorway.
-        cards::section_gap(),
-        View::keyed_fragment(ShortcutAction::ALL.map(|action| {
-            (
-                action.raw(),
-                recorder_row(
-                    window,
-                    strings,
-                    context,
-                    RecorderTarget::Global(action),
-                    action.chord_in(document),
-                ),
-            )
-        })),
+        cards::section_title(strings.resolve(StringKey::DesktopShortcutSectionOther)),
+        global_rows(window, strings, context, &ShortcutAction::ALL),
         // Both registries at once, and no conflict pass afterwards: the
         // shipped defaults hold no chord in common
         // (`ShortcutSettingsView.swift` `restoreDefaults`).
@@ -126,19 +116,44 @@ fn caret_chords_label() -> String {
         .join("  ")
 }
 
-/// `Shift+Q … Shift+;` under Standard, `Shift+1 … Shift+9` under Telex: the
-/// first and last key of the live slot set, in the recorder rows' own
-/// spelling (`ShortcutSettingsView.swift` `shiftedSlotKeysLabel`).
+/// `Shift+QWDFZXVY;` under Standard, `Shift+123456789` under Telex: every key
+/// of the live slot set behind ONE Shift, in the recorder rows' own spelling
+/// (`ShortcutSettingsView.swift` `shiftedSlotKeysLabel`).
 fn shifted_slot_keys_label(slot_keys: CandidateSlotKeySet) -> String {
-    [0, HorizontalPageLayout::PAGE_SIZE - 1]
-        .map(|slot| {
-            ComposingKeyChord {
-                key: slot_keys.label_for_slot(slot),
-                modifiers: KeyModifiers::SHIFT,
-            }
-            .display()
-        })
-        .join(" … ")
+    let keys: String = (0..HorizontalPageLayout::PAGE_SIZE)
+        .map(|slot| slot_keys.label_for_slot(slot))
+        .collect();
+    ComposingKeyChord {
+        key: keys,
+        modifiers: KeyModifiers::SHIFT,
+    }
+    .display()
+}
+
+fn global_rows(
+    window: &SettingsWindow,
+    strings: &StringResolver,
+    context: &mut ViewContext<SettingsWindow>,
+    actions: &'static [ShortcutAction],
+) -> View {
+    let document = window.document();
+    View::keyed_fragment(
+        actions
+            .iter()
+            .map(|action| {
+                (
+                    action.raw(),
+                    recorder_row(
+                        window,
+                        strings,
+                        context,
+                        RecorderTarget::Global(*action),
+                        action.chord_in(document),
+                    ),
+                )
+            })
+            .collect::<Vec<_>>(),
+    )
 }
 
 fn composing_rows(

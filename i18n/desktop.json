@@ -20,6 +20,63 @@
         "ja": "一般"
       }
     },
+    "shortcutSectionCandidateSelection": {
+      "comment": "快捷鍵 pane, first block's header: the keys that move through the candidate window.",
+      "scope": {
+        "platforms": [
+          "macos",
+          "windows"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "選字",
+        "tailo": "suán-jī",
+        "poj": "soán-jī",
+        "en": "Candidate Selection",
+        "ja": "候補選択"
+      }
+    },
+    "shortcutSectionOutput": {
+      "comment": "快捷鍵 pane, second block's header: the keys that end a composition into the document, and the switch for which script is written. 輸出 rather than 拍字 (USER 2026-09-10) — the block is about what reaches the document, not about the typing itself.",
+      "scope": {
+        "platforms": [
+          "macos",
+          "windows"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "輸出",
+        "tailo": "su-tshut",
+        "poj": "su-chhut",
+        "en": "Output",
+        "ja": "出力"
+      }
+    },
+    "shortcutSectionOther": {
+      "comment": "快捷鍵 pane, third block's header: the switches and the windows a key raises.",
+      "scope": {
+        "platforms": [
+          "macos",
+          "windows"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "其他",
+        "tailo": "kî-thann",
+        "poj": "kî-thaⁿ",
+        "en": "Other",
+        "ja": "その他"
+      }
+    },
     "shortcutOpenSettings": {
       "comment": "Shortcut-recorder row: the hotkey that opens the settings window on whichever pane it was last left on. Each row is authored whole rather than composed from the setting's own label.",
       "scope": {
@@ -59,7 +116,7 @@
       }
     },
     "shortcutToggleTranslateSwapped": {
-      "comment": "Shortcut-recorder row: the hotkey that flips which script is committed.",
+      "comment": "Shortcut-recorder row: the hotkey that flips which script is committed. 切換 rather than 輸出 (USER 2026-09-10) — it is a switch, drawn with the other switches in 其他.",
       "scope": {
         "platforms": [
           "macos",
@@ -70,11 +127,11 @@
         ]
       },
       "values": {
-        "hanji": "輸出漢字/羅馬字",
-        "tailo": "su-tshut hàn-jī / lô-má-jī",
-        "poj": "su-chhut hàn-jī / lô-má-jī",
-        "en": "Output Hanji or Romanization",
-        "ja": "漢字／ローマ字を出力"
+        "hanji": "切換漢字/羅馬字",
+        "tailo": "tshiat-uānn hàn-jī / lô-má-jī",
+        "poj": "chhiat-ōaⁿ hàn-jī / lô-má-jī",
+        "en": "Switch Hanji or Romanization",
+        "ja": "漢字／ローマ字を切り替える"
       }
     },
     "shortcutCycleCandidateDisplayMode": {
@@ -108,15 +165,15 @@
         ]
       },
       "values": {
-        "hanji": "Telex 說明",
-        "tailo": "Telex suat-bîng",
-        "poj": "Telex soat-bêng",
-        "en": "Telex Guide",
-        "ja": "Telex の説明"
+        "hanji": "拍開 Telex 說明",
+        "tailo": "phah-khui Telex suat-bîng",
+        "poj": "phah-khui Telex soat-bêng",
+        "en": "Open Telex Guide",
+        "ja": "Telex の説明を開く"
       }
     },
     "shortcutShowSymbolPicker": {
-      "comment": "Shortcut-recorder row: the chord that opens the two-level symbol picker (punctuation / brackets / special symbols) styled as a candidate window (USER 2026-09-09). Authored whole, like its siblings.",
+      "comment": "Shortcut-recorder row: the chord that opens the symbol picker (punctuation / brackets / special symbols) styled as a candidate window (USER 2026-09-09). 拍開 since 2026-09-10 (USER), pairing it with shortcutOpenSettings — the pane draws the two doorways side by side. Authored whole, like its siblings.",
       "scope": {
         "platforms": [
           "macos",
@@ -127,11 +184,11 @@
         ]
       },
       "values": {
-        "hanji": "符號選單",
-        "tailo": "hû-hō suán-tuann",
-        "poj": "hû-hō soán-toaⁿ",
-        "en": "Symbol Menu",
-        "ja": "記号メニュー"
+        "hanji": "拍開符號選單",
+        "tailo": "phah-khui hû-hō suán-tuann",
+        "poj": "phah-khui hû-hō soán-toaⁿ",
+        "en": "Open Symbol Menu",
+        "ja": "記号メニューを開く"
       }
     },
     "shortcutMoveComposingCaret": {
@@ -154,7 +211,7 @@
       }
     },
     "shortcutCommitAlternateScriptInSlot": {
-      "comment": "Read-only row after the composing commit keys on the 快速齒 pane: Shift on a candidate slot key commits that slot in the other script (what Space does for the highlighted cell) — macOS ⇧Q…⇧; / ⇧1…⇧9, Windows Shift+Q…Shift+; / Shift+1…Shift+9, following the tone scheme. Not recordable (USER 2026-09-10: 快速齒加一個快速齒提示,類似「修正...」那個快速齒一樣,使用者不能修改). Sibling of actionCommitAlternateScript.",
+      "comment": "Read-only row after the composing commit keys on the 快速齒 pane: Shift on a candidate slot key commits that slot in the other script (what Space does for the highlighted cell) — macOS ⇧QWDFZXVY; / ⇧123456789, Windows Shift+QWDFZXVY; / Shift+123456789, following the tone scheme. Shortened from 揀一格臨時拍羅馬字/漢字 (USER 2026-09-10): the key column already shows the slot keys, so naming them again in the label was the same fact twice. Not recordable (USER 2026-09-10: 快速齒加一個快速齒提示,類似「修正...」那個快速齒一樣,使用者不能修改). Sibling of actionCommitAlternateScript.",
       "scope": {
         "platforms": [
           "macos",
@@ -165,11 +222,11 @@
         ]
       },
       "values": {
-        "hanji": "揀一格臨時拍羅馬字/漢字",
-        "tailo": "kíng tsi̍t keh lîm-sî phah lô-má-jī / hàn-jī",
-        "poj": "kéng chi̍t keh lîm-sî phah lô-má-jī / hàn-jī",
-        "en": "Type Roman/Hanji Temporarily by Slot Key",
-        "ja": "選択キーで一時的にローマ字/漢字で入力"
+        "hanji": "臨時拍羅馬字/漢字",
+        "tailo": "lîm-sî phah lô-má-jī / hàn-jī",
+        "poj": "lîm-sî phah lô-má-jī / hàn-jī",
+        "en": "Type Roman/Hanji Temporarily",
+        "ja": "一時的にローマ字/漢字で入力"
       }
     },
     "telexGuideTitle": {
@@ -921,11 +978,11 @@
         ]
       },
       "values": {
-        "hanji": "送出原本拍的字",
-        "tailo": "sàng-tshut guân-pún phah ê jī",
-        "poj": "sàng-chhut goân-pún phah ê jī",
-        "en": "Commit What I Typed",
-        "ja": "入力したまま確定"
+        "hanji": "輸出當咧拍的字",
+        "tailo": "su-tshut tng-teh phah ê jī",
+        "poj": "su-chhut tng-teh phah ê jī",
+        "en": "Output What You Are Typing",
+        "ja": "入力中の文字を出力"
       }
     },
     "actionCommitAlternateScript": {

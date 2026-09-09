@@ -24,11 +24,10 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{
 use windows::Win32::UI::TextServices::{ITfKeystrokeMgr, TF_PRESERVEDKEY};
 
 /// The actions that ARE preserved keys, with their GUIDs.
+/// In `ShortcutAction::ALL` order, which is what
+/// `every_preserved_key_has_its_own_guid_and_names_its_action` compares
+/// against. Registration order itself carries nothing.
 const PRESERVED: [(ShortcutAction, GUID); 4] = [
-    (
-        ShortcutAction::OpenLastSettingsPane,
-        GUID_PRESERVED_KEY_SETTINGS,
-    ),
     (
         ShortcutAction::ToggleRomanization,
         GUID_PRESERVED_KEY_ROMANIZATION,
@@ -36,6 +35,10 @@ const PRESERVED: [(ShortcutAction, GUID); 4] = [
     (
         ShortcutAction::CycleCandidateDisplayMode,
         GUID_PRESERVED_KEY_CYCLE_CANDIDATE_DISPLAY_MODE,
+    ),
+    (
+        ShortcutAction::OpenLastSettingsPane,
+        GUID_PRESERVED_KEY_SETTINGS,
     ),
     (
         ShortcutAction::ShowTelexGuide,

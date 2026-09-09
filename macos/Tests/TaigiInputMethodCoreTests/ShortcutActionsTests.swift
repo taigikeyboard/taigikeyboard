@@ -45,17 +45,17 @@ final class ShortcutActionsTests: XCTestCase {
     func testEveryAction_readsAsAWholePhraseInEveryLanguage() {
         XCTAssertEqual(
             labels(),
-            ["切換輸入模式", "切換候選詞顯示", "輸出漢字/羅馬字", "符號選單", "Telex 說明", "拍開設定選單"],
+            ["切換輸入模式", "切換候選詞顯示", "切換漢字/羅馬字", "拍開符號選單", "拍開設定選單", "拍開 Telex 說明"],
         )
         XCTAssertEqual(
             labels(.japanese),
             [
                 "入力モードを切り替える",
                 "候補の表示を切り替え",
-                "漢字／ローマ字を出力",
-                "記号メニュー",
-                "Telex の説明",
+                "漢字／ローマ字を切り替える",
+                "記号メニューを開く",
                 "設定メニューを開く",
+                "Telex の説明を開く",
             ],
         )
         XCTAssertEqual(labels(.english).first, "Switch Input Mode")
@@ -143,10 +143,10 @@ final class ShortcutActionsTests: XCTestCase {
     /// One ⌃⌘S doorway replaced them — a command reached for rarely, so a
     /// mnemonic pays — and the switch moved to ⌃⌘C, where a command reached
     /// for all day wants the hand to stay on the bottom row. The 候選詞顯示
-    /// cycle joined on ⌃⌘H (USER 2026-09-02), the symbol picker on ⌃⌘,
-    /// (USER 2026-09-09; why not the backtick is on its `Name`), and the
-    /// Telex guide on ⌃⌘/ (USER 2026-09-09) — the key help lives on — last:
-    /// the order here is the order of the rows in the pane.
+    /// cycle joined on ⌃⌘H (USER 2026-09-02) and the symbol picker on ⌃⌘,
+    /// (USER 2026-09-09; why not the backtick is on its `Name`), drawn beside
+    /// the settings doorway because both rows read 拍開X. The Telex guide is
+    /// ⌃⌘/ — the key help lives on — and draws last (USER 2026-09-10).
     func testTheGlobalRoster_isOneDoorwayThreeSwitchesThePickerAndTheGuide() {
         XCTAssertEqual(
             ShortcutAction.allCases.map(\.defaultShortcut),
@@ -155,8 +155,8 @@ final class ShortcutActionsTests: XCTestCase {
                 KeyboardShortcuts.Shortcut(.h, modifiers: [.control, .command]),
                 KeyboardShortcuts.Shortcut(.backtick),
                 KeyboardShortcuts.Shortcut(.comma, modifiers: [.control, .command]),
-                KeyboardShortcuts.Shortcut(.slash, modifiers: [.control, .command]),
                 KeyboardShortcuts.Shortcut(.s, modifiers: [.control, .command]),
+                KeyboardShortcuts.Shortcut(.slash, modifiers: [.control, .command]),
             ],
         )
     }
