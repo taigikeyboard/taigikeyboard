@@ -23,9 +23,50 @@ final class ComposingManagerTests: XCTestCase {
         XCTAssertEqual(manager.rawInput, "t")
         XCTAssertEqual(
             executor.effects.first,
-            .updatePreedit("t"),
+            .updatePreedit("t", caretUTF16: 1),
             "the host has to be shown the preedit before anything else",
         )
+    }
+
+    /// USER's example (2026-09-09): `ka2`, ⌥← ⌥←, `h` → `kha2`, shown as `khá`
+    /// with the caret after the `h`.
+    func testMoveCaret_thenAppend_insertsWhereTheCaretIs() throws {
+        let manager = try makeManager()
+        let executor = RecordingEffectExecutor()
+        for character in ["k", "a", "2"] {
+            manager.append(character, executing: executor)
+        }
+        executor.clearEffects()
+
+        manager.moveCaret(.left, executing: executor)
+        XCTAssertEqual(
+            executor.effects,
+            [.updatePreedit("k\u{00E1}", caretUTF16: 2)],
+            "a caret move re-marks the same text with the caret moved and asks for nothing else",
+        )
+        manager.moveCaret(.left, executing: executor)
+        XCTAssertEqual(executor.effects.last, .updatePreedit("k\u{00E1}", caretUTF16: 1))
+        executor.clearEffects()
+
+        manager.append("h", executing: executor)
+
+        XCTAssertEqual(manager.rawInput, "kha2")
+        XCTAssertEqual(manager.displayText, "kh\u{00E1}")
+        XCTAssertEqual(executor.effects.first, .updatePreedit("kh\u{00E1}", caretUTF16: 2))
+    }
+
+    func testMoveCaret_atTheStart_changesNothing() throws {
+        let manager = try makeManager()
+        let executor = RecordingEffectExecutor()
+        manager.append("k", executing: executor)
+        manager.moveCaret(.left, executing: executor)
+        executor.clearEffects()
+
+        manager.moveCaret(.left, executing: executor)
+
+        XCTAssertEqual(executor.effects, [], "nothing to step over, nothing to tell the host")
+        XCTAssertTrue(manager.isComposing)
+        XCTAssertEqual(manager.rawInput, "k")
     }
 
     func testAppend_numericTone_showsTheDiacriticButKeepsTheTypedDigits() throws {
@@ -43,7 +84,7 @@ final class ComposingManagerTests: XCTestCase {
             "the mirror carries what the marked region renders, which is not what was typed",
         )
         XCTAssertTrue(
-            executor.effects.contains(.updatePreedit("t\u{00E2}i")),
+            executor.effects.contains(.updatePreedit("t\u{00E2}i", caretUTF16: 3)),
             "tone 5 must reach the user as the circumflex they read, not as the digit they typed",
         )
     }

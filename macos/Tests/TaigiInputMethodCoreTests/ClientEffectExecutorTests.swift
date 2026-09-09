@@ -9,7 +9,7 @@ final class ClientEffectExecutorTests: XCTestCase {
     func testUpdatePreedit_marksTheTextUnderlinedWithTheCaretAtTheEnd() {
         let client = RecordingTextInputClient()
 
-        ClientEffectExecutor(client: client).execute(.updatePreedit("tâi"))
+        ClientEffectExecutor(client: client).execute(.updatePreedit("tâi", caretUTF16: 3))
 
         XCTAssertEqual(
             client.writes,
@@ -28,11 +28,21 @@ final class ClientEffectExecutorTests: XCTestCase {
         )
     }
 
+    /// The engine's caret is where the client's insertion point goes — not
+    /// the end of the marked text.
+    func testUpdatePreedit_putsTheCaretWhereTheEngineSaysItIs() {
+        let client = RecordingTextInputClient()
+
+        ClientEffectExecutor(client: client).execute(.updatePreedit("khá", caretUTF16: 2))
+
+        XCTAssertEqual(client.writes, [.setMarkedText("khá", selectionLocation: 2)])
+    }
+
     func testCommit_writesOnceAndDoesNotClearTheMarkedRegionFirst() {
         let client = RecordingTextInputClient()
         let executor = ClientEffectExecutor(client: client)
 
-        executor.execute(.updatePreedit("tâi"))
+        executor.execute(.updatePreedit("tâi", caretUTF16: 3))
         executor.execute(.commitTextReplacingPreedit("台"))
 
         XCTAssertEqual(

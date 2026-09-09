@@ -26,14 +26,17 @@ final class ClientEffectExecutor: ComposingEffectExecutor {
 
     func execute(_ effect: ComposingTransition.Effect) {
         switch effect {
-        case let .updatePreedit(text):
+        case let .updatePreedit(text, caretUTF16):
             client.setMarkedText(
                 Self.markedText(text),
-                // Collapsed at the end of the composition: the engine has no
-                // caret inside the preedit, so the client should show the
-                // insertion point after everything typed so far. UTF-16 because
-                // that is the unit `NSRange` counts in.
-                selectionRange: NSRange(location: text.utf16.count, length: 0),
+                // Collapsed where the engine says the caret is — the end
+                // unless the user stepped it back (`moveCaret`). Length 0, and
+                // one underline style over the whole region: in vChewing's
+                // experience IMK shows a caret inside marked text only under
+                // both (`InputSession_HandleStates.swift:117-129`). UTF-16
+                // because that is the unit `NSRange` counts in, and what the
+                // engine sends.
+                selectionRange: NSRange(location: caretUTF16, length: 0),
                 replacementRange: Self.atInsertionPoint,
             )
 

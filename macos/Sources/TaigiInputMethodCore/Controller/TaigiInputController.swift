@@ -694,6 +694,11 @@ public final class TaigiInputController: IMKInputController {
         case .deleteBackward:
             manager.deleteBackward(executing: executor)
             refreshCandidates(from: manager, client: client)
+        case let .moveCaret(direction):
+            // No refetch: the text did not change, so the candidates, the
+            // highlight and the page still describe it. The bar stays
+            // anchored where it was — at the end of the marked region.
+            manager.moveCaret(direction, executing: executor)
         case .commit:
             commitAsTyped(from: manager, client: client, executing: executor)
         case .cancel:

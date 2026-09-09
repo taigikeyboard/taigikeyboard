@@ -485,6 +485,10 @@ enum ShortcutKeyDisplay {
         " ": "Space",
         "\r": "↩",
         "\t": "⇥",
+        // The arrows are never recorded (`ComposingKeyChord` refuses them);
+        // they are drawn for the fixed composing-caret row.
+        String(UnicodeScalar(NSLeftArrowFunctionKey)!): "←",
+        String(UnicodeScalar(NSRightArrowFunctionKey)!): "→",
     ]
 
     /// The modifiers come from the shortcut library's own renderer rather than

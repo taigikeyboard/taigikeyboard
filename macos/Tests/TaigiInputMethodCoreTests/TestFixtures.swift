@@ -145,7 +145,10 @@ enum TestFixtures {
 
     /// A key-down for one of the six navigation keys: the function-key scalar
     /// under the `.function` flag, which is what AppKit names as the arrow.
-    static func arrowKeyDownEvent(_ key: NavigationKey) throws -> NSEvent {
+    static func arrowKeyDownEvent(
+        _ key: NavigationKey,
+        modifiers: NSEvent.ModifierFlags = [],
+    ) throws -> NSEvent {
         let functionKey: Int = switch key {
         case .leftArrow: NSLeftArrowFunctionKey
         case .rightArrow: NSRightArrowFunctionKey
@@ -154,7 +157,10 @@ enum TestFixtures {
         case .pageUp: NSPageUpFunctionKey
         case .pageDown: NSPageDownFunctionKey
         }
-        return try keyDownEvent(characters: String(UnicodeScalar(functionKey)!), modifiers: .function)
+        return try keyDownEvent(
+            characters: String(UnicodeScalar(functionKey)!),
+            modifiers: modifiers.union(.function),
+        )
     }
 
     /// `<repo>/symbols/desktop-symbols.json` — the symbol picker's table,
@@ -575,7 +581,7 @@ extension [ComposingTransition.Effect] {
     /// region's contents over time.
     var preeditTexts: [String] {
         compactMap { effect in
-            if case let .updatePreedit(text) = effect {
+            if case let .updatePreedit(text, _) = effect {
                 return text
             }
             return nil

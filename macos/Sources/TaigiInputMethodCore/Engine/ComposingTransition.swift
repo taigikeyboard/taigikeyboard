@@ -13,7 +13,9 @@ struct ComposingTransition: Equatable, Sendable {
     /// the slice that needs it lands, whereas an explicitly ignored case shows
     /// up in every future `switch` the compiler checks.
     enum Effect: Equatable, Sendable {
-        case updatePreedit(String)
+        /// The composition as rendered, and where the caret sits inside it as
+        /// a UTF-16 offset — the end unless the user moved it (`moveCaret`).
+        case updatePreedit(String, caretUTF16: Int)
         case clearPreeditWithoutCommit
         case commitTextReplacingPreedit(String)
         /// Emitted only by the `Phase::Composing` backspace-to-empty branch
