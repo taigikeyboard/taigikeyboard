@@ -22,14 +22,15 @@ use crate::key_translation;
 use crate::runtime::Runtime;
 use crate::settings_launcher;
 use crate::text_service::TextService_Impl;
+use crate::ui::candidate_window::CandidateWindowContent;
 use crate::ui::presenter::CandidatePresenter;
 use crate::ui::telex_guide::TelexGuideContent;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::MutexGuard;
 use taigi_windows_core::composing::{
-    CandidateCellContent, CandidateCommitOutcome, CandidateListChange, CandidateSource,
-    ComposingManager, ComposingSessionCoordinator, ContextToken, ResolvedCommit,
+    CandidateCommitOutcome, CandidateListChange, CandidateSource, ComposingManager,
+    ComposingSessionCoordinator, ContextToken, ResolvedCommit,
 };
 use taigi_windows_core::keys::{
     telex_guide_rows, CandidateNavigation, ComposingKeyBindings, ComposingKeyIntent,
@@ -949,6 +950,7 @@ impl TextService_Impl {
             return;
         };
         let settings = runtime.settings.current();
+        let slot_key_set = ComposingKeyBindings::from_document(&settings).slot_key_set();
         let cells = {
             let mut state = self.state.borrow_mut();
             let Some(entry) = state.contexts.entry_mut(identity) else {
@@ -957,12 +959,12 @@ impl TextService_Impl {
             let source = &mut entry.state.candidates;
             if !refetch {
                 source.refresh_presentation(manager);
-                Some(source.cells())
+                Some(window_content(source, slot_key_set))
             } else {
                 match manager.fetch_candidates().list_change() {
                     CandidateListChange::Replace(candidates) => {
                         source.set(candidates, manager);
-                        Some(source.cells())
+                        Some(window_content(source, slot_key_set))
                     }
                     CandidateListChange::Clear => {
                         source.clear();
@@ -972,9 +974,27 @@ impl TextService_Impl {
             }
         };
         match cells {
-            Some(cells) => presenter.borrow_mut().update_cells(cells, &settings, token),
+            Some(content) => presenter
+                .borrow_mut()
+                .update_cells(content, &settings, token),
             None => presenter.borrow_mut().hide(token),
         }
+    }
+}
+
+/// The list as the window takes it: the cells, the keys that pick them, and
+/// whether the first cell is the §34 literal, which takes no key
+/// (`CandidateSource::leads_with_literal_roman`). Read by both the fresh-list
+/// path and the in-place update, so a repaint can never draw a different key
+/// row than a `show` of the same list would.
+fn window_content(
+    source: &CandidateSource,
+    slot_key_set: taigi_windows_core::keys::CandidateSlotKeySet,
+) -> CandidateWindowContent {
+    CandidateWindowContent {
+        cells: source.cells(),
+        slot_key_set,
+        lead_cell_is_unkeyed: source.leads_with_literal_roman(),
     }
 }
 
@@ -984,7 +1004,7 @@ impl TextService_Impl {
 /// `BeginUIElement` / `SetWindowPos` re-entry with the engine lock held.
 enum SurfaceAction {
     Show {
-        cells: Vec<CandidateCellContent>,
+        content: CandidateWindowContent,
         caret: RECT,
         document: Option<ITfDocumentMgr>,
     },
@@ -1021,10 +1041,10 @@ impl Surface {
             self.hide();
             return;
         };
-        let cells = source.cells();
+        let content = window_content(source, self.slot_key_set);
         let document = editor.document();
         self.actions.borrow_mut().push(SurfaceAction::Show {
-            cells,
+            content,
             caret,
             document,
         });
@@ -1050,18 +1070,11 @@ impl Surface {
             let mut presenter = presenter.borrow_mut();
             match action {
                 SurfaceAction::Show {
-                    cells,
+                    content,
                     caret,
                     document,
                 } => {
-                    presenter.show(
-                        cells,
-                        self.slot_key_set,
-                        caret,
-                        settings,
-                        self.token,
-                        document,
-                    );
+                    presenter.show(content, caret, settings, self.token, document);
                     shown_at = Some(caret);
                 }
                 SurfaceAction::Hide => presenter.hide(self.token),
@@ -1079,11 +1092,13 @@ impl Surface {
         self.presenter.as_ref()?.borrow().selected_index(self.token)
     }
 
-    fn candidate_index_for_slot(&self, slot: usize) -> Option<usize> {
+    /// The index the `slot`-th selection KEY addresses — shifted past the §34
+    /// literal when that cell leads the keyed row and takes no key.
+    fn candidate_index_for_key_slot(&self, slot: usize) -> Option<usize> {
         self.presenter
             .as_ref()?
             .borrow()
-            .candidate_index_for_slot(slot, self.token)
+            .candidate_index_for_key_slot(slot, self.token)
     }
 }
 
@@ -1222,7 +1237,7 @@ fn perform_intent(
         ComposingKeyIntent::SelectCandidateSlot(slot) => {
             // A chord aimed at an empty slot is consumed all the same.
             commit_candidate(
-                surface.candidate_index_for_slot(*slot),
+                surface.candidate_index_for_key_slot(*slot),
                 false,
                 settings,
                 manager,

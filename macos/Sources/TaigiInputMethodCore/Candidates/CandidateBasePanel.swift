@@ -344,8 +344,24 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
     /// display-only re-render keeps it.
     var slotKeySet: CandidateSlotKeySet = .bareKeys
 
+    /// Whether cell 0 — the §34 literal — takes no key, so the keys start on
+    /// the cell after it. Set from the content each `show` or in-place update
+    /// carries, like `slotKeySet`.
+    var leadCellIsUnkeyed = false
+
+    /// The absolute index the `slot`-th KEY addresses — the seam the drawn
+    /// labels also come from, so a key beside a cell is the key that commits
+    /// it (`CandidateIndexLabel.candidateIndex(forKeySlot:leadCellIsUnkeyed:indexForSlot:)`).
+    final func candidateIndex(forKeySlot slot: Int) -> Int? {
+        CandidateIndexLabel.candidateIndex(
+            forKeySlot: slot,
+            leadCellIsUnkeyed: leadCellIsUnkeyed,
+            indexForSlot: { candidateIndex(forSlot: $0) },
+        )
+    }
+
     /// Every cell this layout currently holds, in any order — the set both the
-    /// key labels (`refreshIndexLabels`) and the highlight colour (`syncTheme`)
+    /// key labels (`refreshCellDecorations`) and the highlight colour (`syncTheme`)
     /// are applied over.
     ///
     /// Overridden rather than held here because each layout keeps its own item
@@ -358,9 +374,10 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
         preconditionFailure("layout subclasses must override allItemViews")
     }
 
-    /// Draws the key that picks each numbered cell, and blanks the rest.
+    /// Draws the key that picks each numbered cell, blanks the rest, and marks
+    /// the §34 literal cell so it draws its own faint fill.
     ///
-    /// Derived by ASKING `candidateIndex(forSlot:)` — the same override the key
+    /// Derived by ASKING `candidateIndex(forKeySlot:)` — the same seam the key
     /// handler resolves a `1`…`9` press against (`TaigiInputController`) — so
     /// the digit a cell shows and the candidate that key commits cannot drift
     /// apart. Each layout's own numbering falls out of its slot mapping: the
@@ -369,15 +386,26 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
     ///
     /// The layouts keep only their triggers — a page rebuild, an anchor change,
     /// a selection or mode change — since that is the part their geometries do
-    /// not share.
-    func refreshIndexLabels() {
+    /// not share. Both decorations ride the same loop because both are facts
+    /// about the cells now on screen: a cell recycled onto another candidate
+    /// must give up the previous one's key AND its tint.
+    func refreshCellDecorations() {
         var keyByCandidate: [Int: String] = [:]
+        // Resolved once: the shift is a property of the row this repaint
+        // draws, not of the slot being looked up.
+        let shift = CandidateIndexLabel.keySlotShift(
+            leadCellIsUnkeyed: leadCellIsUnkeyed,
+            indexForSlot: { candidateIndex(forSlot: $0) },
+        )
         for slot in 0 ..< HorizontalPageLayout.pageSize {
-            guard let candidateIndex = candidateIndex(forSlot: slot) else { continue }
+            guard let candidateIndex = candidateIndex(forSlot: slot + shift) else { continue }
             keyByCandidate[candidateIndex] = CandidateIndexLabel.text(forSlot: slot, keySet: slotKeySet)
         }
         for item in allItemViews {
             item.setIndexLabel(keyByCandidate[item.absoluteIndex] ?? "")
+            // Cell 0 is the literal whenever the keys start after it — the one
+            // fact both decorations are read from.
+            item.isLiteralCell = leadCellIsUnkeyed && item.absoluteIndex == 0
         }
     }
 

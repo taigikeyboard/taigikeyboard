@@ -24,6 +24,13 @@ struct CandidateWindowContent: Equatable, Sendable {
     /// by the window, so the keys drawn are the ones the keystroke that
     /// produced this list was classified against.
     let slotKeySet: CandidateSlotKeySet
+
+    /// Whether the first cell is the §34 literal, which takes no key — the
+    /// keys start on the cell after it (USER 2026-09-09
+    /// 「候選詞選字鍵從第2個位置開始,第一個位置不需要有選字鍵」). False leaves every
+    /// cell keyed. Carried with the cells for the same reason `slotKeySet`
+    /// is: which cell the keys start on is a fact about THIS list.
+    let leadCellIsUnkeyed: Bool
 }
 
 /// Which way a navigation key asks the candidate window to move.
@@ -88,12 +95,17 @@ protocol CandidatePresenter {
     /// and the selection on the same absolute index. A no-op unless `owner`
     /// owns a visible, non-empty window.
     ///
+    /// Takes the whole `CandidateWindowContent`, as `show` does: the 候選詞顯示
+    /// refetch this path also serves re-presents a DIFFERENT list, so which
+    /// cell the keys start on is set from the new one rather than left as the
+    /// last `show` found it.
+    ///
     /// A separate contract from `show` on purpose: `show` is the fresh-list
     /// path and resets the selection to the first candidate, which a pure
     /// display change must not do. Callable without a client — the window is
     /// already anchored, so no caret query is needed (the queries `show`
     /// depends on are only allowed inside key events).
-    func updateCells(_ cells: [CandidateCellContent], ownedBy owner: ComposingSessionToken)
+    func updateCells(_ content: CandidateWindowContent, ownedBy owner: ComposingSessionToken)
 
     /// Moves the selection the way the current layout reads `direction`, if
     /// `owner` still owns the window. Clamps at both ends — never wraps
@@ -104,11 +116,14 @@ protocol CandidatePresenter {
     /// not own a visible window. What Space commits.
     func selectedCandidateIndex(ownedBy owner: ComposingSessionToken) -> Int?
 
-    /// The absolute index the `⌃(slot+1)` chord addresses — a position within
-    /// the page or row the user can currently see, never an absolute rank
-    /// somewhere off screen. Nil for an empty slot, which is what a short last
-    /// page ends with.
-    func candidateIndex(forSlot slot: Int, ownedBy owner: ComposingSessionToken) -> Int?
+    /// The absolute index the `slot`-th selection KEY addresses — a position
+    /// within the page or row the user can currently see, never an absolute
+    /// rank somewhere off screen, and shifted past the unkeyed §34 literal
+    /// where that cell leads the keyed row
+    /// (`CandidateIndexLabel.candidateIndex(forKeySlot:leadCellIsUnkeyed:indexForSlot:)`).
+    /// Nil for a slot the row does not fill, which is what a short last page
+    /// ends with.
+    func candidateIndex(forKeySlot slot: Int, ownedBy owner: ComposingSessionToken) -> Int?
 
     /// Hides the window if `owner` still owns it, and does nothing if another
     /// session has taken it over since.

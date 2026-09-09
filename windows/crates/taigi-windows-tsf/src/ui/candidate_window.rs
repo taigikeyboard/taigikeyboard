@@ -159,6 +159,10 @@ pub struct CandidateWindow {
     /// DirectWrite layouts by cell and box, for this list; cleared with it.
     layouts: RefCell<HashMap<LayoutKey, IDWriteTextLayout>>,
     slot_key_set: CandidateSlotKeySet,
+    /// Whether cell 0 — the §34 literal — takes no key, so the keys start on
+    /// the cell after it. Set from the list each `show` / `update_cells`
+    /// carries, like `slot_key_set`.
+    lead_cell_is_unkeyed: bool,
     /// The caret the window was anchored to (screen pixels) and its
     /// monitor — pages that change the size re-place against the same caret.
     caret: RECT,
@@ -167,6 +171,17 @@ pub struct CandidateWindow {
     /// The size the window is drawn at (DIPs), and the transition toward it.
     size: Size,
     transition: Option<SizeTransition>,
+}
+
+/// One candidate list as the window takes it: the cells in display order,
+/// the keys that pick them, and whether the first cell is the §34 literal
+/// that takes no key. Port of macOS `CandidateWindowContent`, and carried as
+/// one value for the same reason: which keys are drawn and which cell they
+/// start on are facts about THIS list, not about the window.
+pub struct CandidateWindowContent {
+    pub cells: Vec<CandidateCellContent>,
+    pub slot_key_set: CandidateSlotKeySet,
+    pub lead_cell_is_unkeyed: bool,
 }
 
 impl CandidateWindow {
@@ -187,6 +202,7 @@ impl CandidateWindow {
             annotation_widths: Vec::new(),
             layouts: RefCell::new(HashMap::new()),
             slot_key_set: CandidateSlotKeySet::BareKeys,
+            lead_cell_is_unkeyed: false,
             caret: RECT::default(),
             monitor: None,
             dpi: BASE_DPI,
@@ -265,8 +281,7 @@ impl CandidateWindow {
     /// when the caret is on no monitor.
     pub fn show(
         &mut self,
-        cells: Vec<CandidateCellContent>,
-        slot_key_set: CandidateSlotKeySet,
+        content: CandidateWindowContent,
         caret: RECT,
         settings: &SettingsDocument,
     ) -> Option<WindowFrame> {
@@ -277,8 +292,9 @@ impl CandidateWindow {
         self.appearance_mode = settings.choice(&keys::APPEARANCE_MODE);
         let system = *self.system_theme.get_or_insert_with(SystemTheme::read);
         self.theme = Theme::resolve(self.appearance_mode, &system);
-        self.slot_key_set = slot_key_set;
-        self.replace_cells(cells);
+        self.slot_key_set = content.slot_key_set;
+        self.lead_cell_is_unkeyed = content.lead_cell_is_unkeyed;
+        self.replace_cells(content.cells);
         self.transition = None;
         let layout: CandidateLayout = settings.choice(&keys::CANDIDATE_LAYOUT);
         let measurer = DWriteMeasurer {
@@ -376,13 +392,20 @@ impl CandidateWindow {
     /// its annotations, selection kept on its absolute index.
     pub fn update_cells(
         &mut self,
-        cells: Vec<CandidateCellContent>,
+        content: CandidateWindowContent,
         settings: &SettingsDocument,
     ) -> Option<WindowFrame> {
-        if self.cells.is_empty() || cells.is_empty() {
+        if self.cells.is_empty() || content.cells.is_empty() {
             return None;
         }
         let kept = self.selected_index()?;
+        let CandidateWindowContent {
+            cells,
+            slot_key_set,
+            lead_cell_is_unkeyed,
+        } = content;
+        self.slot_key_set = slot_key_set;
+        self.lead_cell_is_unkeyed = lead_cell_is_unkeyed;
         let expanded = matches!(&self.layout, Some(LayoutModel::Expandable(model)) if model.mode() == ExpandableDisplayMode::Expanded);
         self.replace_cells(cells);
         let layout: CandidateLayout = settings.choice(&keys::CANDIDATE_LAYOUT);
@@ -548,6 +571,16 @@ impl CandidateWindow {
         }
     }
 
+    /// The absolute index the `slot`-th KEY addresses — the shift past the
+    /// unkeyed §34 literal, whose rule lives in
+    /// `CandidateIndexLabel::candidate_index_for_key_slot` so the label column
+    /// and the key handler read one seam.
+    pub fn candidate_index_for_key_slot(&self, slot: usize) -> Option<usize> {
+        CandidateIndexLabel::candidate_index_for_key_slot(slot, self.lead_cell_is_unkeyed, |slot| {
+            self.candidate_index_for_slot(slot)
+        })
+    }
+
     /// Moves the selection; answers the frame when the window's size changed
     /// (a page turn, an unfold) so the presenter re-places it.
     pub fn navigate(&mut self, direction: CandidateNavigation) -> Option<WindowFrame> {
@@ -661,8 +694,13 @@ impl CandidateWindow {
     }
 
     fn index_label(&self, candidate_index: usize) -> String {
+        // Resolved once per lookup: the shift is a property of the row being
+        // drawn, not of the slot scanned for it.
+        let shift = CandidateIndexLabel::key_slot_shift(self.lead_cell_is_unkeyed, |slot| {
+            self.candidate_index_for_slot(slot)
+        });
         for slot in 0..HorizontalPageLayout::PAGE_SIZE {
-            if self.candidate_index_for_slot(slot) == Some(candidate_index) {
+            if self.candidate_index_for_slot(slot + shift) == Some(candidate_index) {
                 return CandidateIndexLabel::text_for_slot(slot, self.slot_key_set);
             }
         }
@@ -986,6 +1024,7 @@ impl CandidateWindow {
             return;
         };
         let theme = self.theme;
+        let is_literal = self.lead_cell_is_unkeyed && index == 0;
         if is_selected {
             brush.SetColor(&theme.highlight);
             let rounded = D2D1_ROUNDED_RECT {
@@ -1014,7 +1053,26 @@ impl CandidateWindow {
                 secondary,
             );
         }
-        let text_x = rect.x + padding + metrics.index_column_width();
+        // The text area starts after the key column — a row's candidates line
+        // up with each other — except a STACKED literal cell, which names no
+        // key and centres across the WHOLE cell, the cell its fill covers
+        // (USER 2026-09-09). The inline arrangement keeps the column: the
+        // vertical list aligns every row's text on one x, literal or not.
+        // The literal cell draws no fill of its own — a tint was tried on
+        // 2026-09-09 and taken back out the same day (USER: 「背景底色強調效果
+        // 不好,恢復第一個位置的背景底色」).
+        let centres_across_cell = is_literal
+            && matches!(
+                metrics.cell_arrangement(),
+                CandidateCellArrangement::Stacked
+            );
+        let text_x = rect.x
+            + padding
+            + if centres_across_cell {
+                0.0
+            } else {
+                metrics.index_column_width()
+            };
         let trailing = column.map_or(padding, |(_, trailing)| trailing);
         let available = (rect.right() - trailing - text_x).max(metrics.candidate_font_size());
         match metrics.cell_arrangement() {
@@ -1056,10 +1114,14 @@ impl CandidateWindow {
                 // Measured at resolve; always present when the arrangement
                 // stacks.
                 let (line1, line2) = metrics.stacked_line_heights().unwrap_or_default();
-                // The block is the content's, not the cell's: an unannotated
-                // cell in annotated content keeps its candidate on the upper
-                // line so the rows line up; one-line content centres it.
-                let block = if self.content_has_annotations() {
+                // The block is the CELL's: a cell carrying both scripts is two
+                // lines and a gap, and one carrying a single script is one
+                // line — centred in the cell rather than parked on the upper
+                // line of a pair it has no second half for (USER 2026-09-09,
+                // for the §34 literal cell under 漢羅對應). The cell's height
+                // still comes from the content (`CandidateMetrics::
+                // for_content`), so the row lines up either way.
+                let block = if cell.annotation.is_some() {
                     line1 + metrics.stacked_line_gap() + line2
                 } else {
                     line1

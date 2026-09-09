@@ -786,7 +786,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
         }
         // Renumbered with the highlight: expanded, the digits address the row
         // the selection is in, so they move when it changes rows.
-        refreshIndexLabels()
+        refreshCellDecorations()
         if displayMode == .expanded, style == .sequoia,
            let (rowIndex, _) = grid.position(of: selectedIndex)
         {

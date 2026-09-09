@@ -54,6 +54,19 @@ final class CandidateItemView: NSView {
         }
     }
 
+    /// Whether this is the §34 literal cell — what the user is currently
+    /// typing, not a candidate the engine offered. It names no key, so its
+    /// text centres across the whole cell rather than stepping around the key
+    /// column the other cells align on (USER 2026-09-09). It draws NO fill of
+    /// its own: a tint was tried on 2026-09-09 and taken back out the same day
+    /// (USER: 「背景底色強調效果不好,恢復第一個位置的背景底色」).
+    var isLiteralCell = false {
+        didSet {
+            guard isLiteralCell != oldValue else { return }
+            updateStackedTextArea()
+        }
+    }
+
     /// No equality guard on purpose: `NSColor` compares dynamic colours equal
     /// across light and dark even though they RESOLVE differently, and the
     /// highlight/backdrop snapshot a resolved `CGColor` — so every assignment
@@ -87,6 +100,22 @@ final class CandidateItemView: NSView {
     /// The candidate column's floor. Raised by `setPrimaryColumnWidth` so the
     /// vertical layout's rows align their annotations on one x.
     private var primaryColumnWidthConstraint: NSLayoutConstraint?
+
+    /// The stacked arrangement's constraints — nil in an inline cell. Together
+    /// they take the second line's height back when the cell has only one
+    /// script, so the line it does carry sits in the MIDDLE of the cell rather
+    /// than on the upper line of a pair (USER 2026-09-09, for the §34 literal
+    /// cell under 漢羅對應). The cell's own height is untouched, so the row
+    /// still lines up.
+    private var stackedLineGapConstraint: NSLayoutConstraint?
+    private var stackedAnnotationHeightConstraint: NSLayoutConstraint?
+
+    /// Where the stacked cell's text area starts. An ordinary cell begins it
+    /// after the key column, so the candidates of a row line up with each
+    /// other; the literal cell names no key, so it centres over the WHOLE
+    /// cell instead — which is the cell its own fill covers (USER 2026-09-09).
+    private var stackedTextAfterKeyColumnConstraint: NSLayoutConstraint?
+    private var stackedTextAcrossCellConstraint: NSLayoutConstraint?
 
     init(style: CandidateWindowStyle, metrics: CandidateMetrics) {
         self.style = style
@@ -189,18 +218,35 @@ final class CandidateItemView: NSView {
     /// its frame (the panels place cells by hand), so a vertical constraint to
     /// an edge would fight a frame the labels do not get a say in.
     private func activateStackedConstraints() {
-        // The area the two lines live in: what the cell leaves once the digit
+        // The area the two lines live in: what the cell leaves once the key
         // column has its slot. They centre in IT rather than in the cell, since
-        // the digit only ever takes width off the leading edge — centring in
-        // the cell would push the pair right of the space it occupies.
+        // the key only ever takes width off the leading edge — centring in
+        // the cell would push the pair right of the space it occupies. The
+        // literal cell is the exception: it names no key, so its text centres
+        // across the whole cell, which is the cell its fill covers.
         let textGuide = NSLayoutGuide()
         addLayoutGuide(textGuide)
 
         let padding = metrics.horizontalPadding
+        let afterKeyColumn = textGuide.leadingAnchor.constraint(
+            equalTo: indexLabel.trailingAnchor, constant: metrics.indexCandidateGap,
+        )
+        let acrossCell = textGuide.leadingAnchor.constraint(
+            equalTo: leadingAnchor, constant: padding,
+        )
+        stackedTextAfterKeyColumnConstraint = afterKeyColumn
+        stackedTextAcrossCellConstraint = acrossCell
+        let lineGap = annotationLabel.topAnchor.constraint(
+            equalTo: candidateLabel.bottomAnchor, constant: metrics.stackedLineGap,
+        )
+        // Inactive while there is a second line to draw; `configure` turns it
+        // on for a one-script cell, which is what centres that cell's single
+        // line in the pair's box.
+        let annotationHeight = annotationLabel.heightAnchor.constraint(equalToConstant: 0)
+        stackedLineGapConstraint = lineGap
+        stackedAnnotationHeightConstraint = annotationHeight
+
         NSLayoutConstraint.activate([
-            textGuide.leadingAnchor.constraint(
-                equalTo: indexLabel.trailingAnchor, constant: metrics.indexCandidateGap,
-            ),
             textGuide.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -padding),
             candidateLabel.centerXAnchor.constraint(equalTo: textGuide.centerXAnchor),
             candidateLabel.leadingAnchor.constraint(greaterThanOrEqualTo: textGuide.leadingAnchor),
@@ -208,13 +254,28 @@ final class CandidateItemView: NSView {
             annotationLabel.centerXAnchor.constraint(equalTo: textGuide.centerXAnchor),
             annotationLabel.leadingAnchor.constraint(greaterThanOrEqualTo: textGuide.leadingAnchor),
             annotationLabel.trailingAnchor.constraint(lessThanOrEqualTo: textGuide.trailingAnchor),
-            annotationLabel.topAnchor.constraint(
-                equalTo: candidateLabel.bottomAnchor, constant: metrics.stackedLineGap,
-            ),
+            lineGap,
             textGuide.topAnchor.constraint(equalTo: candidateLabel.topAnchor),
             textGuide.bottomAnchor.constraint(equalTo: annotationLabel.bottomAnchor),
             textGuide.centerYAnchor.constraint(equalTo: centerYAnchor),
         ])
+        updateStackedTextArea()
+    }
+
+    /// Points the stacked text area at the key column or at the whole cell,
+    /// whichever this cell's kind calls for. A no-op on an inline cell, which
+    /// has no such guide.
+    private func updateStackedTextArea() {
+        guard let stackedTextAfterKeyColumnConstraint, let stackedTextAcrossCellConstraint
+        else { return }
+        // Outgoing arm first: both are required equations on the same anchor,
+        // and activating one while the other still stands is a conflict Auto
+        // Layout would have to break.
+        let (outgoing, incoming) = isLiteralCell
+            ? (stackedTextAfterKeyColumnConstraint, stackedTextAcrossCellConstraint)
+            : (stackedTextAcrossCellConstraint, stackedTextAfterKeyColumnConstraint)
+        outgoing.isActive = false
+        incoming.isActive = true
     }
 
     func configure(_ cell: CandidateCellContent) {
@@ -224,13 +285,21 @@ final class CandidateItemView: NSView {
         // Reconfigured rather than rebuilt: cells are recycled across pages and
         // across renumbering, so a cell that had an annotation and now has none
         // must give the width back — and the reverse must take it again.
-        // A stacked cell keeps its second line's height whether or not there
-        // is anything on it, so its rows stay aligned; only the inline slot
-        // has width to give back.
+        // A stacked cell keeps its FRAME whether or not there is a second
+        // line, so its rows stay aligned — but it gives the empty line's
+        // height back, so the one script it does carry centres in the cell
+        // instead of sitting on the upper line (USER 2026-09-09: the §34
+        // literal cell under 漢羅對應 carries no pair to align with). Only the
+        // inline slot has width to give back.
         let hasAnnotation = cell.annotation != nil
         annotationGapConstraint?.constant = hasAnnotation ? metrics.candidateAnnotationGap : 0
         if let annotationZeroWidthConstraint, annotationZeroWidthConstraint.isActive == hasAnnotation {
             annotationZeroWidthConstraint.isActive = !hasAnnotation
+        }
+        stackedLineGapConstraint?.constant = hasAnnotation ? metrics.stackedLineGap : 0
+        if let stackedAnnotationHeightConstraint,
+           stackedAnnotationHeightConstraint.isActive == hasAnnotation {
+            stackedAnnotationHeightConstraint.isActive = !hasAnnotation
         }
         updateAppearance()
     }
@@ -266,8 +335,8 @@ final class CandidateItemView: NSView {
 
     override func layout() {
         super.layout()
-        if let highlight = highlightView, isHighlighted {
-            layoutHighlight(highlight)
+        if let highlightView, isHighlighted {
+            layoutHighlight(highlightView)
         }
     }
 
@@ -286,32 +355,30 @@ final class CandidateItemView: NSView {
     }
 
     private func updateAppearance() {
-        if isHighlighted {
-            indexLabel.textColor = .white
-            candidateLabel.textColor = .white
-            annotationLabel.textColor = .white
-            // Resolved under the panel's own appearance: `cgColor` snapshots a
-            // dynamic colour against the CURRENT drawing appearance, which is
-            // not this window's unless said so — a forced-dark panel would
-            // otherwise pin its highlight at the light resolution.
-            effectiveAppearance.performAsCurrentDrawingAppearance {
-                if let highlight = highlightView {
-                    layer?.backgroundColor = nil
-                    layoutHighlight(highlight)
-                    highlight.layer?.backgroundColor = highlightColor.cgColor
-                    highlight.isHidden = false
-                } else {
-                    layer?.backgroundColor = highlightColor.cgColor
-                }
-            }
-        } else {
-            indexLabel.textColor = .secondaryLabelColor
-            candidateLabel.textColor = .labelColor
-            annotationLabel.textColor = .secondaryLabelColor
-            if let highlight = highlightView {
-                highlight.isHidden = true
+        indexLabel.textColor = isHighlighted ? .white : .secondaryLabelColor
+        candidateLabel.textColor = isHighlighted ? .white : .labelColor
+        annotationLabel.textColor = isHighlighted ? .white : .secondaryLabelColor
+
+        guard isHighlighted else {
+            if let highlightView {
+                highlightView.isHidden = true
             } else {
                 layer?.backgroundColor = nil
+            }
+            return
+        }
+        // Resolved under the panel's own appearance: `cgColor` snapshots a
+        // dynamic colour against the CURRENT drawing appearance, which is not
+        // this window's unless said so — a forced-dark panel would otherwise
+        // pin its highlight at the light resolution.
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            if let highlightView {
+                layer?.backgroundColor = nil
+                layoutHighlight(highlightView)
+                highlightView.layer?.backgroundColor = highlightColor.cgColor
+                highlightView.isHidden = false
+            } else {
+                layer?.backgroundColor = highlightColor.cgColor
             }
         }
     }

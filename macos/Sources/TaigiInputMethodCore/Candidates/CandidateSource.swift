@@ -16,17 +16,34 @@ struct CandidateSource: Equatable, Sendable {
     /// `candidates` as the window shows them (`PresentedCandidate`).
     private(set) var presented: [PresentedCandidate]
 
-    static let empty = CandidateSource(candidates: [], presented: [])
+    /// Whether the first cell is the §34 literal, which takes no slot key
+    /// (`ComposingManager.leadsWithLiteralRomanCandidate`). Held with the
+    /// presentation it describes: it is a fact about THIS fetch under the
+    /// settings snapshot that presented it, and a stale copy would shift the
+    /// keys off by one.
+    let leadsWithLiteralRoman: Bool
 
-    private init(candidates: [ContinuousCandidate], presented: [PresentedCandidate]) {
+    static let empty = CandidateSource(candidates: [], presented: [], leadsWithLiteralRoman: false)
+
+    private init(
+        candidates: [ContinuousCandidate],
+        presented: [PresentedCandidate],
+        leadsWithLiteralRoman: Bool,
+    ) {
         self.candidates = candidates
         self.presented = presented
+        self.leadsWithLiteralRoman = leadsWithLiteralRoman
     }
 
     /// `candidates` presented under the settings in force right now.
     @MainActor
     init(candidates: [ContinuousCandidate], manager: ComposingManager) {
-        self.init(candidates: candidates, presented: manager.presentation(for: candidates))
+        let presentation = manager.presentation(for: candidates)
+        self.init(
+            candidates: candidates,
+            presented: presentation.cells,
+            leadsWithLiteralRoman: presentation.leadsWithLiteralRoman,
+        )
     }
 
     /// Read off the presented list — the one truth every "is a bar showing"

@@ -186,8 +186,12 @@ final class CandidateStackedCellTests: XCTestCase {
         }
     }
 
-    /// The empty-annotation case renders a blank second line rather than
-    /// collapsing: a page of cells of two different heights would not line up.
+    /// The empty-annotation case keeps the cell's FRAME — a page of cells of
+    /// two different heights would not line up — while the line it does carry
+    /// centres in it rather than sitting on the upper line of a pair
+    /// (USER 2026-09-09; the §34 literal cell under 漢羅對應 has no second
+    /// script to align with). `testStackedOneScriptCell_centresItsSingleLine`
+    /// pins the centring itself.
     func testStackedCell_keepsBothLinesInsideItsFrameAtEverySize() {
         for textSize in CandidateTextSizeChoice.allCases {
             for windowSize in CandidateWindowSizeChoice.allCases {
@@ -216,7 +220,10 @@ final class CandidateStackedCellTests: XCTestCase {
                     }
                     // Indices 1 and 2: the digit hint is the cell's FIRST text
                     // field, and it shares neither line — the two scripts are
-                    // the pair this asserts about.
+                    // the pair this asserts about. Only a cell that HAS both
+                    // draws two lines: the one-script cell gives the empty
+                    // line's height back and centres the line it carries.
+                    guard content.annotation != nil else { continue }
                     XCTAssertNotEqual(
                         labels[1].frame.minY, labels[2].frame.minY,
                         "\(textSize)/\(windowSize): the two scripts sit on separate lines",
@@ -224,5 +231,59 @@ final class CandidateStackedCellTests: XCTestCase {
                 }
             }
         }
+    }
+
+    /// A stacked cell with only one script centres that line in the cell,
+    /// while an annotated cell of the same size keeps the pair centred as a
+    /// block — so the single line sits LOWER than the upper line of a pair
+    /// (USER 2026-09-09: the §34 literal cell under 漢羅對應 is the user's own
+    /// typing, not half of a 漢字/羅馬字 pair).
+    func testStackedOneScriptCell_centresItsSingleLine() {
+        let metrics = TestFixtures.defaultCandidateMetrics.arranged(.stacked)
+        let frame = NSRect(
+            x: 0, y: 0, width: metrics.measureWidth(Self.cell), height: metrics.itemHeight,
+        )
+
+        let pair = CandidateItemView(style: .sequoia, metrics: metrics)
+        pair.configure(Self.cell)
+        pair.frame = frame
+        pair.layoutSubtreeIfNeeded()
+
+        let single = CandidateItemView(style: .sequoia, metrics: metrics)
+        single.configure(CandidateCellContent(text: Self.cell.text, annotation: nil))
+        single.frame = frame
+        single.layoutSubtreeIfNeeded()
+
+        // Index 1 is the candidate itself; index 0 is the digit hint.
+        let singleLine = single.subviews.compactMap { $0 as? NSTextField }[1].frame
+        let pairFirstLine = pair.subviews.compactMap { $0 as? NSTextField }[1].frame
+
+        XCTAssertEqual(
+            singleLine.midY, single.bounds.midY, accuracy: 0.5,
+            "the one line it carries is centred in the cell",
+        )
+        XCTAssertNotEqual(
+            singleLine.minY, pairFirstLine.minY,
+            "which is not where the upper line of a pair sits",
+        )
+        XCTAssertEqual(
+            single.frame.height, pair.frame.height, "the cell's own height does not move",
+        )
+
+        // Cells are RECYCLED across pages and renumbering, so the collapsed
+        // line has to come back — and go again — on the same view.
+        single.configure(Self.cell)
+        single.layoutSubtreeIfNeeded()
+        XCTAssertEqual(
+            single.subviews.compactMap { $0 as? NSTextField }[1].frame, pairFirstLine,
+            "reconfigured with both scripts, the recycled cell draws the pair again",
+        )
+
+        single.configure(CandidateCellContent(text: Self.cell.text, annotation: nil))
+        single.layoutSubtreeIfNeeded()
+        XCTAssertEqual(
+            single.subviews.compactMap { $0 as? NSTextField }[1].frame, singleLine,
+            "and back to one centred line",
+        )
     }
 }

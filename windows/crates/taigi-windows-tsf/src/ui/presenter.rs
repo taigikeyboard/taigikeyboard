@@ -12,14 +12,14 @@
 //! `EndUIElement` on every route.
 
 use super::candidate_list_element::CandidateListElement;
-use super::candidate_window::{CandidateWindow, UNFOLD_TIMER};
+use super::candidate_window::{CandidateWindow, CandidateWindowContent, UNFOLD_TIMER};
 use super::render::RenderFactory;
 use super::window::{PopupWindow, WindowHandler, WindowRef};
 use crate::text_service::TextService;
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
-use taigi_windows_core::composing::{CandidateCellContent, ContextToken};
-use taigi_windows_core::keys::{CandidateNavigation, CandidateSlotKeySet};
+use taigi_windows_core::composing::ContextToken;
+use taigi_windows_core::keys::CandidateNavigation;
 use taigi_windows_core::settings::SettingsDocument;
 use windows::core::Interface;
 use windows::Win32::Foundation::RECT;
@@ -153,17 +153,13 @@ impl CandidatePresenter {
     /// the list is really up.
     pub fn show(
         &mut self,
-        cells: Vec<CandidateCellContent>,
-        slot_key_set: CandidateSlotKeySet,
+        content: CandidateWindowContent,
         caret: RECT,
         settings: &SettingsDocument,
         owner: ContextToken,
         document: Option<ITfDocumentMgr>,
     ) {
-        let frame = self
-            .content
-            .borrow_mut()
-            .show(cells, slot_key_set, caret, settings);
+        let frame = self.content.borrow_mut().show(content, caret, settings);
         let Some(frame) = frame else {
             log::debug!("ui.no_monitor_for_caret");
             self.hide_now();
@@ -182,14 +178,14 @@ impl CandidatePresenter {
     /// Same list, new rendering; the window stays where it is.
     pub fn update_cells(
         &mut self,
-        cells: Vec<CandidateCellContent>,
+        content: CandidateWindowContent,
         settings: &SettingsDocument,
         owner: ContextToken,
     ) {
         if self.owner != Some(owner) {
             return;
         }
-        let frame = self.content.borrow_mut().update_cells(cells, settings);
+        let frame = self.content.borrow_mut().update_cells(content, settings);
         self.update_ui_element();
         if let (Some(frame), Some(window), false) = (
             frame,
@@ -232,11 +228,14 @@ impl CandidatePresenter {
         self.content.borrow().selected_index()
     }
 
-    pub fn candidate_index_for_slot(&self, slot: usize, owner: ContextToken) -> Option<usize> {
+    /// The absolute index the `slot`-th KEY addresses — the seam the drawn
+    /// labels also come from, so a key beside a cell is the key that commits
+    /// it (`CandidateWindow::candidate_index_for_key_slot`).
+    pub fn candidate_index_for_key_slot(&self, slot: usize, owner: ContextToken) -> Option<usize> {
         if self.owner != Some(owner) {
             return None;
         }
-        self.content.borrow().candidate_index_for_slot(slot)
+        self.content.borrow().candidate_index_for_key_slot(slot)
     }
 
     /// Hides if `owner` still owns the window; a no-op once another context
