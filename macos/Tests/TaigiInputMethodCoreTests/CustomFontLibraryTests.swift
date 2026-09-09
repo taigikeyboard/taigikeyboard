@@ -1,17 +1,19 @@
 // The typefaces a user adds: what the library takes in, what it refuses, and what it leaves on disk.
 
 import AppKit
+import CoreText
 @testable import TaigiInputMethodCore
 import XCTest
 
-/// The import gate. Every case here is about a file the library must NOT take —
-/// the happy path needs a typeface no other face on the running Mac carries the
-/// name of, which a test process cannot arrange (`TestFixtures` registers the
-/// bundled roster process-wide, and the system carries the rest). What a
-/// successful import looks like is dogfood item S30.
+/// The import gate: what the library takes in, what it refuses, and what a
+/// refusal leaves behind — nothing, which is the property the refusal cases
+/// have in common (no copy, no registration, no picker row).
 ///
-/// What the refusals have in common is the property worth pinning: a rejected
-/// import leaves NOTHING behind — no copy, no registration, no picker row.
+/// A successful import needs a typeface no face on the running Mac carries the
+/// name of, and the repository ships none the fixtures do not already register.
+/// `withBundledFaceWithdrawn` makes one by borrowing a bundled face for the
+/// length of a case. What an import looks like on a real Mac, with a file the
+/// user chose, is dogfood item S30.
 @MainActor
 final class CustomFontLibraryTests: XCTestCase {
     private var directory: URL!
@@ -112,6 +114,66 @@ final class CustomFontLibraryTests: XCTestCase {
         )
     }
 
+    // MARK: - The round trip
+
+    /// Add, remove, add the same typeface again — the sequence a user runs when
+    /// they change their mind, and the one that was refused with "another
+    /// typeface is already called …" until the library stopped asking
+    /// `NSFont(name:)` whether a name was taken (`RegisteredFace`).
+    ///
+    /// The second import comes from a differently NAMED source, so it is stored
+    /// beside a different file name than the first: the stale AppKit lookup
+    /// answers with the file it cached, so a case where both imports land on
+    /// one path could pass on a coincidence. What is asserted is therefore the
+    /// resolved face's own URL, not merely its PostScript name.
+    ///
+    /// The premise the refusal cases cannot have: a PostScript name that
+    /// nothing on the running Mac carries. Built by borrowing one of the
+    /// bundled faces — withdrawn from this process for the length of the case,
+    /// and put back after — since the repository ships no font the fixtures do
+    /// not register.
+    func testAddFont_afterTheSameTypefaceWasRemoved_isTakenInAgainAndDrawsOutOfTheNewFile() throws {
+        let bundled = TestFixtures.fontDirectory.appendingPathComponent("genyogothic2tw_r.otf")
+        try withBundledFaceWithdrawn(bundled, named: "GenYoGothic2TW-R") {
+            let first = try library.addFont(from: bundled)
+            XCTAssertEqual(first.postScriptName, "GenYoGothic2TW-R")
+            XCTAssertEqual(try storedFileNames(), [first.fileName])
+            XCTAssertEqual(
+                CandidateFontSelection.custom(first).font(ofSize: 13).fontName, "GenYoGothic2TW-R",
+            )
+
+            try library.remove(first)
+            XCTAssertEqual(try storedFileNames(), [], "removal left the file behind")
+            XCTAssertEqual(library.installedFonts(), [])
+            XCTAssertFalse(
+                RegisteredFace.isRegistered(named: "GenYoGothic2TW-R"),
+                "the name is still claimed after the typeface was removed",
+            )
+            XCTAssertEqual(
+                CandidateFontSelection.custom(first).font(ofSize: 13).fontName,
+                NSFont.systemFont(ofSize: 13).fontName,
+                "a removed typeface still draws",
+            )
+
+            let renamedSource = try write("borrowed-face.otf", bytes: Data(contentsOf: bundled))
+            let second = try library.addFont(from: renamedSource)
+            XCTAssertTrue(
+                second.fileName.hasSuffix("borrowed-face.otf"), "unexpected stored name \(second.fileName)",
+            )
+            XCTAssertEqual(library.installedFonts(), [second])
+            XCTAssertEqual(
+                library.activatedFont(fileName: second.fileName)?.postScriptName,
+                "GenYoGothic2TW-R",
+                "the re-imported typeface did not activate",
+            )
+            XCTAssertEqual(
+                try fileURL(drawnBy: CandidateFontSelection.custom(second).font(ofSize: 13)),
+                try library.directory().appendingPathComponent(second.fileName).standardizedFileURL,
+                "the candidate window draws out of the file the user removed",
+            )
+        }
+    }
+
     // MARK: - Stored names
 
     /// The stored name is built here, never taken from the picked file: it
@@ -126,6 +188,51 @@ final class CustomFontLibraryTests: XCTestCase {
     }
 
     // MARK: -
+
+    /// Runs `body` with `url`'s bundled face unregistered, so its PostScript
+    /// name is one no face on this Mac carries — and registers it again
+    /// afterwards, whether or not `body` threw, since the fixtures register the
+    /// bundled roster once for the whole process and every other suite draws in
+    /// it.
+    private func withBundledFaceWithdrawn(
+        _ url: URL, named postScriptName: String, _ body: () throws -> Void,
+    ) throws {
+        XCTAssertEqual(
+            TestFixtures.unregisterableFontFiles, [],
+            "the premise: the bundled faces are registered in this process",
+        )
+        guard CTFontManagerUnregisterFontsForURL(url as CFURL, .process, nil) else {
+            return XCTFail("the bundled face could not be withdrawn")
+        }
+        // Registration is process-wide state every other suite draws in, so the
+        // restoration runs however the body ends — and it takes the library's
+        // own registrations with it first, since a case that failed part way
+        // may have left one live.
+        defer {
+            library.invalidateCache()
+            for font in library.installedFonts() {
+                XCTAssertNoThrow(try library.remove(font), "a test typeface stayed registered")
+            }
+            XCTAssertTrue(
+                CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil),
+                "the bundled face was not put back for the other suites",
+            )
+        }
+        // A Mac with this typeface installed for the user cannot have the
+        // premise: the name stays claimed however this process registers it.
+        try XCTSkipIf(
+            RegisteredFace.isRegistered(named: postScriptName),
+            "\(postScriptName) is installed on this Mac",
+        )
+        try body()
+    }
+
+    /// The file `font` is read from — what tells a face resolved out of the
+    /// library's current file apart from one AppKit cached under the same name.
+    private func fileURL(drawnBy font: NSFont) throws -> URL {
+        try XCTUnwrap(CTFontCopyAttribute(font as CTFont, kCTFontURLAttribute) as? URL)
+            .standardizedFileURL
+    }
 
     private func write(_ name: String, bytes: Data) throws -> URL {
         let url = URL(fileURLWithPath: NSTemporaryDirectory())

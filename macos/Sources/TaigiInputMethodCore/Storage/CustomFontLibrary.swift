@@ -118,10 +118,23 @@ final class CustomFontLibrary {
     /// and the rendering path never needs the other files
     /// (`activate(fileName:)` resolves the one it is given).
     private var cachedFonts: [CustomFont]?
-    /// What this process has registered, by stored file name — so a second
-    /// activation is not asked of Core Text, which reports one as an error, and
-    /// so the per-show path can skip the name check it already made.
-    private var activatedFonts: [String: CustomFont] = [:]
+    /// What this process registered with Core Text and has not withdrawn again,
+    /// by stored file name — so a second registration is not asked of Core
+    /// Text, which reports one as an error, and so a removal knows what it has
+    /// to withdraw.
+    private var registrations: [String: Registration] = [:]
+
+    /// A live registration, and whether the face it activated was then
+    /// confirmed to draw out of this library's own file.
+    ///
+    /// The two facts are one value because they are one lifecycle, and separate
+    /// fields because they are not the same permission: a face that resolved to
+    /// somebody else's typeface is still this process's to unregister, and must
+    /// still never reach the candidate window.
+    private struct Registration {
+        let font: CustomFont
+        var isDrawable: Bool
+    }
 
     private let logger = DebugLogger(category: "CustomFont")
 
@@ -166,7 +179,7 @@ final class CustomFontLibrary {
     }
 
     /// The typeface `fileName` is drawing in right now, or nil because this
-    /// process never activated it or its file has since gone.
+    /// process never got it drawing or its file has since gone.
     ///
     /// The RENDERING path's question, and cheap on purpose: a dictionary hit
     /// and one `stat`. Activation itself is a lifecycle event — `activate` at
@@ -176,11 +189,11 @@ final class CustomFontLibrary {
     /// keeps drawing out of a live registration, and a window set in a typeface
     /// the user threw away is a lie.
     func activatedFont(fileName: String) -> CustomFont? {
-        guard let font = activatedFonts[fileName],
+        guard let registration = registrations[fileName], registration.isDrawable,
               let url = try? directory().appendingPathComponent(fileName),
               fileManager.fileExists(atPath: url.path)
         else { return nil }
-        return font
+        return registration.font
     }
 
     /// Makes `fileName`'s typeface drawable in this process and answers what it
@@ -196,23 +209,33 @@ final class CustomFontLibrary {
         guard !fileName.isEmpty,
               let url = try? directory().appendingPathComponent(fileName)
         else { return nil }
-        if activatedFonts[fileName] != nil {
-            return activatedFont(fileName: fileName)
+        // Registered once already: Core Text reports a second registration of
+        // the same file as an error, and nothing about the answer has changed
+        // since the first one — including a "no", when the face turned out to
+        // draw as somebody else's.
+        if let registration = registrations[fileName] {
+            return registration.isDrawable ? activatedFont(fileName: fileName) : nil
         }
         guard let font = makeFont(at: url) else { return nil }
         if let reason = register(url) {
             logger.error("[FONT] custom typeface did not activate: \(reason)")
             return nil
         }
+        // Ownership is recorded on the registration, not on the verdict below:
+        // a registration this process made is this process's to withdraw even
+        // when the withdrawal fails, and `remove` is what retries it.
+        registrations[fileName] = Registration(font: font, isDrawable: false)
         // Registered is not drawn: a name a system face also carries resolves
         // to that face instead, and a row drawing in someone else's typeface is
         // worse than one that fell back.
         guard draws(font.postScriptName, from: url) else {
-            _ = unregister(url)
+            if let reason = withdraw(url) {
+                logger.error("[FONT] rejected typeface stayed registered: \(reason)")
+            }
             logger.error("[FONT] custom typeface resolves to another face")
             return nil
         }
-        activatedFonts[fileName] = font
+        registrations[fileName]?.isDrawable = true
         return font
     }
 
@@ -258,11 +281,8 @@ final class CustomFontLibrary {
     /// (`AppearanceSettingsView.remove`).
     func remove(_ font: CustomFont) throws {
         let url = try directory().appendingPathComponent(font.fileName)
-        if activatedFonts[font.fileName] != nil {
-            if let reason = unregister(url) {
-                throw RemovalFailure.stillInUse(reason)
-            }
-            activatedFonts[font.fileName] = nil
+        if let reason = withdraw(url) {
+            throw RemovalFailure.stillInUse(reason)
         }
         try fileManager.removeItem(at: url)
         cachedFonts = nil
@@ -287,7 +307,7 @@ final class CustomFontLibrary {
         // Registering the URL registers every face in it, so a collection's
         // other faces are checked too: a name that already resolves would make
         // the picker's new row draw in whichever face won.
-        for face in descriptors where resolves(face.postScriptName) {
+        for face in descriptors where RegisteredFace.isRegistered(named: face.postScriptName) {
             throw ImportFailure.nameAlreadyResolves(face.postScriptName)
         }
         if let reason = register(url) {
@@ -298,13 +318,16 @@ final class CustomFontLibrary {
             postScriptName: first.postScriptName,
             displayName: first.displayName,
         )
-        activatedFonts[font.fileName] = font
+        // Before the verdict below, so a `didNotResolve` throw reaches
+        // `discard` with the registration owned rather than orphaned.
+        registrations[font.fileName] = Registration(font: font, isDrawable: false)
         // Resolving is not enough: the name has to resolve to THIS file. A name
         // another face already carries would otherwise pass the check while the
         // picker's new row drew in that other face.
         guard draws(first.postScriptName, from: url) else {
             throw ImportFailure.didNotResolve(first.postScriptName)
         }
+        registrations[font.fileName]?.isDrawable = true
         return font
     }
 
@@ -319,13 +342,9 @@ final class CustomFontLibrary {
     /// picker row, which `remove` can retry; the alternative is a dangling
     /// registration nothing can reach.
     private func discard(_ url: URL) {
-        let fileName = url.lastPathComponent
-        if activatedFonts[fileName] != nil {
-            if let reason = unregister(url) {
-                logger.error("[FONT] rolled-back import stayed registered: \(reason)")
-                return
-            }
-            activatedFonts[fileName] = nil
+        if let reason = withdraw(url) {
+            logger.error("[FONT] rolled-back import stayed registered: \(reason)")
+            return
         }
         do {
             try fileManager.removeItem(at: url)
@@ -393,22 +412,40 @@ final class CustomFontLibrary {
         )
     }
 
+    /// Gives up this process's registration of `url`, answering nil when there
+    /// is none left to give up or why Core Text refused.
+    ///
+    /// A refusal KEEPS the ownership: Core Text refuses while something still
+    /// holds the font, and forgetting the registration then would leave one
+    /// nothing can reach. The caller decides what a refusal means — `remove`
+    /// tells the user, an import's rollback logs it.
+    private func withdraw(_ url: URL) -> String? {
+        let fileName = url.lastPathComponent
+        guard registrations[fileName] != nil else { return nil }
+        if let reason = unregister(url) {
+            return reason
+        }
+        registrations[fileName] = nil
+        RegisteredFace.forgetResolvedFaces()
+        return nil
+    }
+
     /// Registers `url` for this process, answering nil on success or why not.
     ///
     /// Process scope: the settings window and the candidate window are one
     /// process, and a typeface this app took in is not one the user's other
     /// apps asked for.
     private func register(_ url: URL) -> String? {
-        registration(of: url, registering: true)
+        registrationChange(of: url, registering: true)
     }
 
     /// Unregisters `url`, answering nil on success or why not — `inUse` being
     /// the case a caller has to act on.
     private func unregister(_ url: URL) -> String? {
-        registration(of: url, registering: false)
+        registrationChange(of: url, registering: false)
     }
 
-    private func registration(of url: URL, registering: Bool) -> String? {
+    private func registrationChange(of url: URL, registering: Bool) -> String? {
         var error: Unmanaged<CFError>?
         let changed = registering
             ? CTFontManagerRegisterFontsForURL(url as CFURL, .process, &error)
@@ -421,21 +458,10 @@ final class CustomFontLibrary {
         return CFErrorCopyDescription(error) as String? ?? "error \(CFErrorGetCode(error))"
     }
 
-    /// Whether `postScriptName` names a face that draws — and that face itself,
-    /// not a substitution. The check `CandidateFontChoice` runs for the bundled
-    /// roster, asked here of a name the library is about to publish.
-    private func resolves(_ postScriptName: String) -> Bool {
-        CandidateFontChoice.font(named: postScriptName, ofSize: NSFont.systemFontSize)
-            .fontName == postScriptName
-    }
-
     /// Whether `postScriptName` draws out of `url` — the file the library
     /// stores — rather than out of some other face carrying the same name.
     private func draws(_ postScriptName: String, from url: URL) -> Bool {
-        let font = CandidateFontChoice.font(named: postScriptName, ofSize: NSFont.systemFontSize)
-        guard font.fontName == postScriptName,
-              let source = CTFontCopyAttribute(font as CTFont, kCTFontURLAttribute) as? URL
-        else { return false }
+        guard let source = RegisteredFace.fileURL(named: postScriptName) else { return false }
         return source.standardizedFileURL == url.standardizedFileURL
     }
 
