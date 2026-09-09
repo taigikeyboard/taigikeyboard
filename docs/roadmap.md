@@ -643,6 +643,52 @@ Standard-only enablement — USER ①.
 code → falls through as before); Windows UI-less hosts where `is_showing()` is owner + non-empty content rather than a
 visible popup — the same state the bare slot keys already act on.
 
+### Desktop 快速齒 pane — three title-less blocks (USER-scoped 2026-09-10)
+
+**Status**: MERGED 2026-09-10 — #36 `db54a8d5` (macOS + Windows in one PR). Awaiting real-device dogfood (both platforms).
+**Scope**: macOS + Windows only (desktop train). Layout + comments; no engine change, no `make build`.
+
+USER asked first for an AUDIT — whether the 快速齒 roster is internally consistent, and whether its
+modifier prefixes jump between Option / Shift / Control or land on chords a hand cannot reach. The
+audit found the roster consistent: bare key = the main action, `⇧` = that action's reverse
+(`⇧Tab`, `⇧Return`, `⇧`+slot), `⌃⌘` / `Ctrl+Alt` = the global switches, with `` ` `` the one
+USER-fixed exception (2026-09-09) and `⌥←→` / `Ctrl+←→` the host's own word-jump borrowed once.
+
+**Deliberately NOT changed** (evaluated, rejected — do not re-propose):
+
+- Slot-key order `q w d f z x v y ;` (`slot_key_set.rs:36`) walks a zigzag (slot 7 → 8 jumps from
+  the left hand's bottom row to the right hand's top row), but the order IS the keyboard's own
+  left-to-right, top-to-bottom scan, so a user can rebuild it by looking down; every cell draws its
+  key name. Reordering would spend the muscle memory of the shipped 3.6.7.
+- Two spellings of "flip": bare Space flips the highlighted cell, `⇧`+slot flips a named one. The
+  only consistent alternative is `⇧Space`, which is harder to press than bare Space.
+- Two dismiss rules: the Telex card closes on any key, the symbol menu on Escape. Different object
+  kinds — a legend versus a list being chosen from. Both answer Escape.
+- Listing the fixed tier (bare arrows, Escape, Backspace, Caps Lock↔ABC, Shift tap) on the pane.
+
+**What shipped**: the ~15 rows, previously one group, are now three title-less blocks — through the
+candidates, out of the composition, the switches. Boundaries are the rosters that already exist
+(`ComposingAction.groups[0]`, `[1]`, `ShortcutAction.allCases`), so a row cannot move on the pane
+without moving in its roster. macOS splits one `Section` into three; Windows inserts two
+`cards::section_gap()`, the break four other panes already use. Row order and behaviour identical.
+
+**No headers** (USER 2026-09-10, 「不寫多餘的說明文字」). A titled variant was costed and declined:
+the third block holds three switches AND three keys that raise a window, so 「切換」 would be wrong
+for half of it — titles would force a fourth block, four new i18n keys in five languages, and a
+longer pane. Recorded in memory rather than here.
+
+**Comment corrections carried in the same PR** (all pre-existing, Codex-found): the pane doc argued
+AGAINST splitting the list and claimed an `@AppStorage` the view does not use; `ShortcutKeyRecorder`
+said the list's seam "is not supposed to show"; `shortcuts.rs` said "five global chords" (six) and
+cited `ShortcutSettingsView.swift:578-603` in a 213-line file; `ComposingAction.groups` claimed the
+input-source menu draws the groups — nothing but the pane and its roster test consumes them.
+
+**Gate note**: macOS 853 tests / 0 failures; Windows host side green (native tests, gnu clippy, msvc
+check, TSF release build + exports, `cargo fmt --check`). `check-box` refused the freshly built
+`TaigiKeyboardSettings` test binary again (`os error 4551`, 應用程式控制原則已封鎖此檔案) — the same
+gate answered `check-box OK` against `main` earlier in the session, so it is the new binary's hash,
+not the change. Same environment item as #35's gate note.
+
 ---
 
 ## Released versions index
