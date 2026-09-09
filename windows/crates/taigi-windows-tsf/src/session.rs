@@ -35,7 +35,7 @@ use taigi_windows_core::composing::{
 };
 use taigi_windows_core::keys::{
     telex_guide_rows, CandidateNavigation, ComposingKeyBindings, ComposingKeyIntent,
-    KeyEventSnapshot, ShortcutAction, SymbolPickerIntent, SymbolPickerLevel,
+    KeyEventSnapshot, ShortcutAction, SymbolPickerIntent,
 };
 use taigi_windows_core::policies;
 use taigi_windows_core::settings::{keys, AppearanceMode, InputMode, SettingsDocument};
@@ -992,7 +992,7 @@ impl TextService_Impl {
         phase: KeyPhase,
         bindings: &ComposingKeyBindings,
     ) -> bool {
-        let Some((picker, _)) = self.live_symbol_picker(token) else {
+        let Some(picker) = self.live_symbol_picker(token) else {
             return false;
         };
         if phase == KeyPhase::Test {
@@ -1012,12 +1012,12 @@ impl TextService_Impl {
                 // same, as it is on the list: the key is the picker's while
                 // it is up.
                 let index = picker.borrow().candidate_index_for_key_slot(slot, token);
-                self.pick_symbol_cell(context, token, identity, index, bindings);
+                self.pick_symbol_cell(context, token, identity, index);
                 true
             }
             SymbolPickerIntent::Confirm => {
                 let index = picker.borrow().selected_index(token);
-                self.pick_symbol_cell(context, token, identity, index, bindings);
+                self.pick_symbol_cell(context, token, identity, index);
                 true
             }
             SymbolPickerIntent::CloseAndPassThrough => {
@@ -1027,22 +1027,20 @@ impl TextService_Impl {
         }
     }
 
-    /// The picker and the level it shows for `token`, if the popup is
-    /// really up for that context. The window is the one owner: a posted
-    /// focus hide takes it down behind the key path's back, and the level
-    /// left in the state is simply never read again until the next show
-    /// overwrites it.
-    fn live_symbol_picker(
-        &self,
-        token: ContextToken,
-    ) -> Option<(Rc<RefCell<CandidatePresenter>>, SymbolPickerLevel)> {
-        let level = self.state.borrow().symbol_picker_level?;
+    /// The picker, if its popup is really up for `token`. The window is the
+    /// one owner: a posted focus hide takes it down behind the key path's
+    /// back, and the flag left in the state is simply never read again
+    /// until the next show overwrites it.
+    fn live_symbol_picker(&self, token: ContextToken) -> Option<Rc<RefCell<CandidatePresenter>>> {
+        if !self.state.borrow().is_symbol_picker_open {
+            return None;
+        }
         let picker = self.symbol_picker()?;
         let is_up = {
             let picker = picker.borrow();
             picker.is_showing(token) && picker.is_popup_visible()
         };
-        is_up.then_some((picker, level))
+        is_up.then_some(picker)
     }
 
     /// Where the last window this service anchored to was — the point the
@@ -1095,29 +1093,29 @@ impl TextService_Impl {
                 return;
             }
         }
-        self.present_symbol_picker(context, token, SymbolPickerLevel::Categories, &bindings);
+        self.present_symbol_picker(context, token, &bindings);
     }
 
-    /// Shows `level`'s list anchored to the caret — a fresh list, so the
-    /// window selects its first cell — and records the level. The caret is
-    /// read under a read-only session (no composition is open by now, so it
-    /// is the insertion point); the window is shown OUTSIDE it, like the
-    /// composing list (`Surface::apply`). A list that did not reach the
-    /// screen leaves no level behind.
+    /// Shows the whole table anchored to the caret — one list, in file
+    /// order, so the first pick is the symbol itself (USER 2026-09-09: a
+    /// category to choose first 「會造成使用者的體驗中斷」) — and records the
+    /// picker as open. The caret is read under a read-only session (no
+    /// composition is open by now, so it is the insertion point); the window
+    /// is shown OUTSIDE it, like the composing list (`Surface::apply`). A
+    /// list that did not reach the screen leaves nothing behind.
     fn present_symbol_picker(
         &self,
         context: &ITfContext,
         token: ContextToken,
-        level: SymbolPickerLevel,
         bindings: &ComposingKeyBindings,
     ) {
-        let Some(picker) = self.symbol_picker() else {
+        let (Some(picker), Some(table)) = (self.symbol_picker(), SymbolTable::bundled()) else {
             return;
         };
-        let Some(cells) = self.symbol_picker_cells(level) else {
-            self.hide_symbol_picker_of(token);
-            return;
-        };
+        let cells = table
+            .symbols()
+            .map(|symbol| CandidateCellContent::new(symbol, None))
+            .collect();
         let (client_id, focus_generation) = {
             let state = self.state.borrow();
             (state.client_id, state.focus_generation)
@@ -1156,95 +1154,44 @@ impl TextService_Impl {
         };
         if !shown {
             picker.borrow_mut().hide(token);
-            self.state.borrow_mut().symbol_picker_level = None;
+            self.state.borrow_mut().is_symbol_picker_open = false;
             return;
         }
-        self.state.borrow_mut().symbol_picker_level = Some(level);
+        self.state.borrow_mut().is_symbol_picker_open = true;
         self.record_focused_caret(caret);
     }
 
-    /// The cells `level` shows: the category names under the display
-    /// language, or a category's symbols verbatim. `None` for a table that
-    /// did not validate or a category it no longer has.
-    fn symbol_picker_cells(&self, level: SymbolPickerLevel) -> Option<Vec<CandidateCellContent>> {
-        let table = SymbolTable::bundled()?;
-        let cells = match level {
-            SymbolPickerLevel::Categories => {
-                let strings = Runtime::shared().strings();
-                table
-                    .categories()
-                    .iter()
-                    .map(|category| {
-                        CandidateCellContent::new(strings.resolve(category.id.label_key()), None)
-                    })
-                    .collect()
-            }
-            SymbolPickerLevel::Items(id) => table
-                .category(id)?
-                .symbols
-                .iter()
-                .map(|symbol| CandidateCellContent::new(symbol.clone(), None))
-                .collect(),
-        };
-        Some(cells)
-    }
-
-    /// Acts on the cell at `index` of the list up for `token`: a category
-    /// descends to its symbols, a symbol is written and the picker closes.
-    /// `None` — a slot with no cell — does nothing, and keeps the picker up.
+    /// Writes the symbol at `index` and closes the picker. `None` — a slot
+    /// with no cell — does nothing, and keeps the picker up.
     fn pick_symbol_cell(
         &self,
         context: &ITfContext,
         token: ContextToken,
         identity: usize,
         index: Option<usize>,
-        bindings: &ComposingKeyBindings,
     ) {
-        let (Some(index), Some(table), Some((_, level))) = (
-            index,
-            SymbolTable::bundled(),
-            self.live_symbol_picker(token),
-        ) else {
+        let Some(symbol) = index
+            .and_then(|index| SymbolTable::bundled()?.symbols().nth(index))
+            .map(str::to_owned)
+        else {
             return;
         };
-        match level {
-            SymbolPickerLevel::Categories => {
-                let Some(category) = table.categories().get(index) else {
-                    return;
-                };
-                self.present_symbol_picker(
-                    context,
-                    token,
-                    SymbolPickerLevel::Items(category.id),
-                    bindings,
-                );
-            }
-            SymbolPickerLevel::Items(id) => {
-                let Some(symbol) = table
-                    .category(id)
-                    .and_then(|category| category.symbols.get(index))
-                else {
-                    return;
-                };
-                self.hide_symbol_picker_of(token);
-                // A pick is a key this input method consumes, and the
-                // runtime comes up on the first such key (W3): the engine
-                // `run_key` claims for the context has to exist, and it
-                // hears about the character as the end of a next-word
-                // context.
-                let runtime = Runtime::shared();
-                runtime.prepare_for_first_key();
-                let settings = runtime.settings.current();
-                self.run_key(
-                    context,
-                    token,
-                    identity,
-                    &KeyEventSnapshot::default(),
-                    &KeyWork::InsertSymbol(symbol.clone()),
-                    &settings,
-                );
-            }
-        }
+        self.hide_symbol_picker_of(token);
+        // A pick is a key this input method consumes, and the runtime comes
+        // up on the first such key (W3): the engine `run_key` claims for the
+        // context has to exist, and it hears about the character as the end
+        // of a next-word context.
+        let runtime = Runtime::shared();
+        runtime.prepare_for_first_key();
+        let settings = runtime.settings.current();
+        self.run_key(
+            context,
+            token,
+            identity,
+            &KeyEventSnapshot::default(),
+            &KeyWork::InsertSymbol(symbol),
+            &settings,
+        );
     }
 
     /// Re-presents the open list for `identity` under the settings in force

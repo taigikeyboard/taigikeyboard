@@ -2,27 +2,19 @@
 
 import Foundation
 
-/// One level-1 cell of the symbol picker, and the key its label is looked up
-/// under. A closed roster rather than free-form ids: the label has to exist in
-/// every display language, and a category the JSON invents would have no row
-/// to draw.
+/// How the file groups its symbols. The picker shows them as ONE list, in
+/// file order (USER 2026-09-09: a category to pick first 「會造成使用者的體驗
+/// 中斷」), so the grouping is the file's own documentation and the
+/// validation's unit — a closed roster, so the JSON cannot invent one.
 enum SymbolCategoryID: String, Decodable, CaseIterable, Sendable {
     case punctuation
     case brackets
     case specialSymbols
-
-    var labelKey: StringKey {
-        switch self {
-        case .punctuation: .symbolPunctuation
-        case .brackets: .symbolBrackets
-        case .specialSymbols: .symbolSpecialSymbols
-        }
-    }
 }
 
-/// One category and, in menu order, the exact string each of its cells
-/// inserts — a bracket pair is one entry (`「」`), which is what lets one pick
-/// write both halves (USER 2026-09-09).
+/// One group and, in menu order, the exact string each of its cells inserts
+/// — a bracket pair is one entry (`「」`), which is what lets one pick write
+/// both halves (USER 2026-09-09).
 struct SymbolCategory: Decodable, Equatable, Sendable {
     let id: SymbolCategoryID
     let symbols: [String]
@@ -108,5 +100,10 @@ struct SymbolTable: Decodable, Equatable, Sendable {
     /// The category `id` names, or nil when the table has none.
     func category(_ id: SymbolCategoryID) -> SymbolCategory? {
         categories.first { $0.id == id }
+    }
+
+    /// Every symbol in menu order — the one list the picker shows.
+    var symbols: [String] {
+        categories.flatMap(\.symbols)
     }
 }

@@ -1,7 +1,6 @@
 //! The symbol picker's table: three categories of insertable strings, compiled
 //! in from the shared desktop JSON. Port of macOS `SymbolTable.swift`.
 
-use crate::strings::StringKey;
 use serde::Deserialize;
 use std::collections::HashSet;
 use std::sync::OnceLock;
@@ -11,10 +10,10 @@ use std::sync::OnceLock;
 /// so the two pickers cannot drift.
 const BUNDLED_JSON: &str = include_str!("../../../../symbols/desktop-symbols.json");
 
-/// One level-1 cell of the symbol picker, and the key its label is looked up
-/// under. A closed roster rather than free-form ids: the label has to exist
-/// in every display language, and a category the JSON invents would have no
-/// row to draw.
+/// How the file groups its symbols. The picker shows them as ONE list, in
+/// file order (USER 2026-09-09: a category to pick first 「會造成使用者的體驗
+/// 中斷」), so the grouping is the file's own documentation and the
+/// validation's unit — a closed roster, so the JSON cannot invent one.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum SymbolCategoryId {
@@ -23,19 +22,9 @@ pub enum SymbolCategoryId {
     SpecialSymbols,
 }
 
-impl SymbolCategoryId {
-    pub fn label_key(self) -> StringKey {
-        match self {
-            Self::Punctuation => StringKey::SymbolPunctuation,
-            Self::Brackets => StringKey::SymbolBrackets,
-            Self::SpecialSymbols => StringKey::SymbolSpecialSymbols,
-        }
-    }
-}
-
-/// One category and, in menu order, the exact string each of its cells
-/// inserts — a bracket pair is one entry (`「」`), which is what lets one
-/// pick write both halves (USER 2026-09-09).
+/// One group and, in menu order, the exact string each of its cells inserts
+/// — a bracket pair is one entry (`「」`), which is what lets one pick write
+/// both halves (USER 2026-09-09).
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
 pub struct SymbolCategory {
     pub id: SymbolCategoryId,
@@ -135,6 +124,13 @@ impl SymbolTable {
     /// The category `id` names, or `None` when the table has none.
     pub fn category(&self, id: SymbolCategoryId) -> Option<&SymbolCategory> {
         self.categories.iter().find(|category| category.id == id)
+    }
+
+    /// Every symbol in menu order — the one list the picker shows.
+    pub fn symbols(&self) -> impl Iterator<Item = &str> {
+        self.categories
+            .iter()
+            .flat_map(|category| category.symbols.iter().map(String::as_str))
     }
 }
 

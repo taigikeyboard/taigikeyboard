@@ -30,9 +30,7 @@ use std::cell::RefCell;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::rc::Rc;
 use taigi_windows_core::composing::ContextToken;
-use taigi_windows_core::keys::{
-    LanguageMode, ShiftTapTracker, ShortcutAction, SymbolPickerLevel, VK_SHIFT_CODE,
-};
+use taigi_windows_core::keys::{LanguageMode, ShiftTapTracker, ShortcutAction, VK_SHIFT_CODE};
 use windows::core::{Error, IUnknown, Interface, Ref, Result, BOOL, BSTR, GUID};
 use windows::Win32::Foundation::{E_FAIL, E_INVALIDARG, LPARAM, POINT, RECT, WPARAM};
 use windows::Win32::System::Ole::{CONNECT_E_ADVISELIMIT, CONNECT_E_NOCONNECTION};
@@ -118,11 +116,11 @@ pub(crate) struct ServiceState {
     /// key contract, and a picker sharing them would hand the arrows and the
     /// slot keys to whichever list showed last (macOS `CandidatePanel.symbolPicker`).
     pub(crate) symbol_picker: Option<Rc<RefCell<CandidatePresenter>>>,
-    /// Which list the picker shows — the one piece of picker state outside
-    /// the window. WHO it shows for is the window's own owner, and the
-    /// selection is the window's too; a level is only ever read while the
-    /// window says it is up for the asking context (`live_symbol_picker`).
-    pub(crate) symbol_picker_level: Option<SymbolPickerLevel>,
+    /// Whether the picker was opened — the one piece of picker state
+    /// outside the window. WHO it is up for is the window's own owner, and
+    /// the selection is the window's too; the flag is only ever read while
+    /// the window says it is up for the asking context (`live_symbol_picker`).
+    pub(crate) is_symbol_picker_open: bool,
     pub(crate) mode_flash: Option<Rc<RefCell<ModeFlash>>>,
     /// The Telex key table the `showTelexGuide` chord toggles; owned by the
     /// context that raised it, like the candidate window.
@@ -319,7 +317,7 @@ impl TextService_Impl {
             state.is_guide_chord_held = false;
             // The windows are destroyed below; a hide still owed is moot.
             state.is_ui_hide_pending = false;
-            state.symbol_picker_level = None;
+            state.is_symbol_picker_open = false;
             (
                 state.presenter.take(),
                 state.symbol_picker.take(),
@@ -482,7 +480,7 @@ impl TextService_Impl {
     /// Takes the symbol picker down whoever raised it — the settings
     /// doorways, the handover and the pending-hide drain.
     pub(crate) fn hide_symbol_picker_now(&self) {
-        self.state.borrow_mut().symbol_picker_level = None;
+        self.state.borrow_mut().is_symbol_picker_open = false;
         if let Some(picker) = self.symbol_picker() {
             picker.borrow_mut().hide_for_handover();
         }
@@ -496,7 +494,7 @@ impl TextService_Impl {
         if !picker.borrow().is_showing(token) {
             return;
         }
-        self.state.borrow_mut().symbol_picker_level = None;
+        self.state.borrow_mut().is_symbol_picker_open = false;
         picker.borrow_mut().hide(token);
     }
 

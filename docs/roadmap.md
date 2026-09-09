@@ -401,9 +401,12 @@ Windows Test phase answers TRUE for every non-modifier key while the picker show
 the original event through the pipeline exactly once. Trigger auto-repeat neither reopens nor
 selects. Preserved actions bypass the interceptor, so their handlers dismiss the picker.
 
-**Two levels.** Level 1 = 標點符號 / 括號 / 特殊符號 (three cells); picking descends to the
-category's paged items. `SymbolPickerState = closed | categories | items(category)`; selection
-lives in the panel, never duplicated.
+**One list** (USER 2026-09-09, after dogfood: 「開啟的時候還有選擇標點符號、特殊符號,選擇後才能選,
+會造成使用者的體驗中斷,我認為可以放在一起試試看,讓使用者開啟後直接選擇使用」). The whole table in
+file order — punctuation, then bracket pairs, then special symbols — so the first key after the
+chord is already a pick. The JSON keeps its three groups as documentation and the validation's
+unit; the picker flattens them. The controller keeps one boolean (open / closed); selection lives
+in the panel, never duplicated. Shipped two-level in #26 / #27 and flattened the same day.
 
 **Bracket pairs are one cell** — `「」` `『』` `（）` `《》` `〈〉` `【】` `﹁﹂` `﹃﹄` `〔〕` `［］`
 `｛｝` `“”` `‘’` `()` `[]` `{}` `<>` `«»` `⟨⟩` `⌈⌉` `⌊⌋` — inserted as one string with the
@@ -423,13 +426,14 @@ insertion strings — read as a bundle resource on macOS and `include_str!` on W
 generator. Mobile `SymbolData` (`ios/.../Overlays/SymbolData.swift`, Android `SymbolData.kt`)
 stays as it is: its cells are single halves, a different contract.
 
-**i18n**: `symbol.punctuation` / `symbol.brackets` / `symbol.specialSymbols` scoped to
-macos + windows (not `symbol.fullWidth`: width is not a category) + `desktop.shortcutShowSymbolPicker`.
+**i18n**: `desktop.shortcutShowSymbolPicker` only. The three category labels shipped with the
+two-level menu went with it.
 
 **Deliberately not adopted**: bare `` ` `` for the picker (mainstream 新注音 / McBopomofo /
 vChewing convention, but USER keeps it for 漢羅對調 — 「台語輸入法的共識」); caret-between-halves
-via marked text or synthetic ← events; a flat single-level list (fewer states, a dozen pages);
-a symbol-table generator shared with mobile; engine involvement (`Effect` has no caret kind).
+via marked text or synthetic ← events; vChewing's nested categories (shipped, then flattened at
+USER request — one more keystroke before the first symbol read as an interruption); a symbol-table
+generator shared with mobile; engine involvement (`Effect` has no caret kind).
 
 #### Rounds
 
@@ -438,6 +442,7 @@ a symbol-table generator shared with mobile; engine involvement (`Effect` has no
 | P0 | This section + memory (admin tier, direct to main) | done |
 | P1 | macOS: action + key-path match + second `CandidatePanel` instance + JSON table + i18n + S36 + tests | done #26 |
 | P2 | Windows mirror: `symbols.rs` (`include_str!`), `keys/symbol_picker.rs`, `ShowSymbolPicker` key-sink chord, second `CandidatePresenter` (popup only), `KeyWork::InsertSymbol` | done #27 |
+| P3 | Both: one flat list, level state and category labels removed (USER dogfood 2026-09-09) | PR |
 
 Codex-named regression risks (all in S36): shortcut theft, stale focus ownership, partial commits,
 duplicate insertion after an edit-session failure, orphaned panels.
