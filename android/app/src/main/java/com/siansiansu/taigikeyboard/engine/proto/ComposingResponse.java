@@ -60,6 +60,19 @@ public  final class ComposingResponse extends
      */
     com.google.protobuf.ByteString
         getDisplayTextBytes();
+
+    /**
+     * <pre>
+     * Where the caret sits inside `display_text`, as a UTF-16 offset — the
+     * unit `setMarkedText(selectionRange:)` and `ITfRange::ShiftEnd` take.
+     * Equals the length of `display_text` unless a desktop moved the caret
+     * (`MoveCaret`). Idle → 0.
+     * </pre>
+     *
+     * <code>uint32 caret_utf16 = 3;</code>
+     * @return The caretUtf16.
+     */
+    int getCaretUtf16();
   }
   /**
    * Protobuf type {@code taigi.engine.ComposingResponse.Preedit}
@@ -205,6 +218,53 @@ public  final class ComposingResponse extends
       checkByteStringIsUtf8(value);
       displayText_ = value.toStringUtf8();
 
+    }
+
+    public static final int CARET_UTF16_FIELD_NUMBER = 3;
+    private int caretUtf16_;
+    /**
+     * <pre>
+     * Where the caret sits inside `display_text`, as a UTF-16 offset — the
+     * unit `setMarkedText(selectionRange:)` and `ITfRange::ShiftEnd` take.
+     * Equals the length of `display_text` unless a desktop moved the caret
+     * (`MoveCaret`). Idle → 0.
+     * </pre>
+     *
+     * <code>uint32 caret_utf16 = 3;</code>
+     * @return The caretUtf16.
+     */
+    @java.lang.Override
+    public int getCaretUtf16() {
+      return caretUtf16_;
+    }
+    /**
+     * <pre>
+     * Where the caret sits inside `display_text`, as a UTF-16 offset — the
+     * unit `setMarkedText(selectionRange:)` and `ITfRange::ShiftEnd` take.
+     * Equals the length of `display_text` unless a desktop moved the caret
+     * (`MoveCaret`). Idle → 0.
+     * </pre>
+     *
+     * <code>uint32 caret_utf16 = 3;</code>
+     * @param value The caretUtf16 to set.
+     */
+    private void setCaretUtf16(int value) {
+
+      caretUtf16_ = value;
+    }
+    /**
+     * <pre>
+     * Where the caret sits inside `display_text`, as a UTF-16 offset — the
+     * unit `setMarkedText(selectionRange:)` and `ITfRange::ShiftEnd` take.
+     * Equals the length of `display_text` unless a desktop moved the caret
+     * (`MoveCaret`). Idle → 0.
+     * </pre>
+     *
+     * <code>uint32 caret_utf16 = 3;</code>
+     */
+    private void clearCaretUtf16() {
+
+      caretUtf16_ = 0;
     }
 
     public static com.siansiansu.taigikeyboard.engine.proto.ComposingResponse.Preedit parseFrom(
@@ -442,6 +502,55 @@ public  final class ComposingResponse extends
         return this;
       }
 
+      /**
+       * <pre>
+       * Where the caret sits inside `display_text`, as a UTF-16 offset — the
+       * unit `setMarkedText(selectionRange:)` and `ITfRange::ShiftEnd` take.
+       * Equals the length of `display_text` unless a desktop moved the caret
+       * (`MoveCaret`). Idle → 0.
+       * </pre>
+       *
+       * <code>uint32 caret_utf16 = 3;</code>
+       * @return The caretUtf16.
+       */
+      @java.lang.Override
+      public int getCaretUtf16() {
+        return instance.getCaretUtf16();
+      }
+      /**
+       * <pre>
+       * Where the caret sits inside `display_text`, as a UTF-16 offset — the
+       * unit `setMarkedText(selectionRange:)` and `ITfRange::ShiftEnd` take.
+       * Equals the length of `display_text` unless a desktop moved the caret
+       * (`MoveCaret`). Idle → 0.
+       * </pre>
+       *
+       * <code>uint32 caret_utf16 = 3;</code>
+       * @param value The caretUtf16 to set.
+       * @return This builder for chaining.
+       */
+      public Builder setCaretUtf16(int value) {
+        copyOnWrite();
+        instance.setCaretUtf16(value);
+        return this;
+      }
+      /**
+       * <pre>
+       * Where the caret sits inside `display_text`, as a UTF-16 offset — the
+       * unit `setMarkedText(selectionRange:)` and `ITfRange::ShiftEnd` take.
+       * Equals the length of `display_text` unless a desktop moved the caret
+       * (`MoveCaret`). Idle → 0.
+       * </pre>
+       *
+       * <code>uint32 caret_utf16 = 3;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearCaretUtf16() {
+        copyOnWrite();
+        instance.clearCaretUtf16();
+        return this;
+      }
+
       // @@protoc_insertion_point(builder_scope:taigi.engine.ComposingResponse.Preedit)
     }
     @java.lang.Override
@@ -460,10 +569,11 @@ public  final class ComposingResponse extends
             java.lang.Object[] objects = new java.lang.Object[] {
               "rawInput_",
               "displayText_",
+              "caretUtf16_",
             };
             java.lang.String info =
-                "\u0000\u0002\u0000\u0000\u0001\u0002\u0002\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
-                "";
+                "\u0000\u0003\u0000\u0000\u0001\u0003\u0003\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
+                "\u0003\u000b";
             return newMessageInfo(DEFAULT_INSTANCE, info, objects);
         }
         case GET_DEFAULT_INSTANCE: {

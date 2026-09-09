@@ -343,7 +343,10 @@ mod tests {
 
     #[test]
     fn raw_input_composing_empty_is_empty() {
-        let phase = Phase::Composing { raw: String::new() };
+        let phase = Phase::Composing {
+            raw: String::new(),
+            caret: 0,
+        };
         assert_eq!(phase.raw_input(&config_tl()), "");
     }
 
@@ -355,6 +358,7 @@ mod tests {
         // `ai3`→`ài`, `li2`→`lí`; hyphens preserved.
         let phase = Phase::Composing {
             raw: "goa2-ai3-li2".to_string(),
+            caret: 0,
         };
         assert_eq!(phase.raw_input(&config_tl()), "go\u{e1}-\u{e0}i-l\u{ed}");
     }
@@ -365,6 +369,7 @@ mod tests {
         // [ɛŋ] must NOT be folded to `ing` [iŋ]. `teng2` → `téng`, NOT `tíng`.
         let phase = Phase::Composing {
             raw: "teng2".to_string(),
+            caret: 0,
         };
         assert_eq!(phase.raw_input(&config_tl()), "t\u{e9}ng");
     }
@@ -379,6 +384,7 @@ mod tests {
         assert_eq!(
             Phase::Composing {
                 raw: "ting2".to_string(),
+                caret: 0,
             }
             .raw_input(&config_poj()),
             "t\u{ed}ng"
@@ -386,6 +392,7 @@ mod tests {
         assert_eq!(
             Phase::Composing {
                 raw: "goa2".to_string(),
+                caret: 0,
             }
             .raw_input(&config_poj()),
             "g\u{f3}a"
@@ -393,6 +400,7 @@ mod tests {
         assert_eq!(
             Phase::Composing {
                 raw: "teng2".to_string(),
+                caret: 0,
             }
             .raw_input(&config_poj()),
             "t\u{e9}ng"
@@ -413,6 +421,7 @@ mod tests {
         assert_eq!(
             Phase::Composing {
                 raw: "hoonn".to_string(),
+                caret: 0,
             }
             .raw_input(&config),
             "ho\u{0358}\u{207f}"
@@ -420,6 +429,7 @@ mod tests {
         assert_eq!(
             Phase::Composing {
                 raw: "hoonnh".to_string(),
+                caret: 0,
             }
             .raw_input(&config),
             "ho\u{0358}\u{207f}h"
@@ -428,6 +438,7 @@ mod tests {
         assert_eq!(
             Phase::Composing {
                 raw: "honn".to_string(),
+                caret: 0,
             }
             .raw_input(&config),
             "ho\u{207f}"
@@ -441,6 +452,7 @@ mod tests {
         // boundary to convert and returns the raw single chunk.
         let phase = Phase::Composing {
             raw: "goa2ai3li2".to_string(),
+            caret: 0,
         };
         assert_eq!(phase.raw_input(&config_tl()), "goa2ai3li2");
     }
@@ -449,6 +461,7 @@ mod tests {
     fn raw_input_composing_poj_uses_poj_diacritics() {
         let phase = Phase::Composing {
             raw: "goa2".to_string(),
+            caret: 0,
         };
         assert_eq!(phase.raw_input(&config_poj()), "góa");
     }
@@ -458,6 +471,7 @@ mod tests {
         // Mid-commit state: "tsua" already nailed, "li2" still pending.
         let phase = Phase::Continuous {
             raw: "li2".to_string(),
+            caret: 0,
             nailed: vec![NailedSegment {
                 display_text: "紙".to_string(),
                 canonical_text: "紙".to_string(),
@@ -474,6 +488,7 @@ mod tests {
     fn raw_input_continuous_empty_pending_is_empty() {
         let phase = Phase::Continuous {
             raw: String::new(),
+            caret: 0,
             nailed: vec![NailedSegment {
                 display_text: "紙".to_string(),
                 canonical_text: "紙".to_string(),
@@ -490,6 +505,7 @@ mod tests {
     fn raw_input_tps_glyphs_pass_through_verbatim() {
         let phase = Phase::Composing {
             raw: "ㄍㄨㄚˋ".to_string(),
+            caret: 0,
         };
         assert_eq!(phase.raw_input(&config_tl()), "ㄍㄨㄚˋ");
     }
@@ -501,6 +517,7 @@ mod tests {
     fn raw_input_tps_hides_the_trailing_separator_marker() {
         let phase = Phase::Composing {
             raw: "ㄒㄧ ".to_string(),
+            caret: 0,
         };
         assert_eq!(phase.raw_input(&config_tl()), "ㄒㄧ");
     }
@@ -509,6 +526,7 @@ mod tests {
     fn raw_input_tps_hides_an_interior_separator_marker() {
         let phase = Phase::Composing {
             raw: "ㄍㄠ ㄉㄞ".to_string(),
+            caret: 0,
         };
         assert_eq!(phase.raw_input(&config_tl()), "ㄍㄠㄉㄞ");
     }
@@ -517,6 +535,7 @@ mod tests {
     fn raw_input_tps_hides_repeated_separator_markers() {
         let phase = Phase::Composing {
             raw: "ㄍㄠ  ㄉㄞ ".to_string(),
+            caret: 0,
         };
         assert_eq!(phase.raw_input(&config_tl()), "ㄍㄠㄉㄞ");
     }
@@ -525,6 +544,7 @@ mod tests {
     fn raw_input_tps_keeps_tone_marks_while_hiding_the_separator() {
         let phase = Phase::Composing {
             raw: "ㄉㄞˊ ㆣㄧˋ".to_string(),
+            caret: 0,
         };
         assert_eq!(phase.raw_input(&config_tl()), "ㄉㄞˊㆣㄧˋ");
     }
@@ -535,6 +555,7 @@ mod tests {
     fn raw_input_tl_keeps_a_literal_space() {
         let phase = Phase::Composing {
             raw: "tai uan".to_string(),
+            caret: 0,
         };
         assert_eq!(phase.raw_input(&config_tl()), "tai uan");
     }

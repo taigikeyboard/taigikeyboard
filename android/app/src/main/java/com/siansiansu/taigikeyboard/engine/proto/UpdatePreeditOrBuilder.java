@@ -21,4 +21,10 @@ public interface UpdatePreeditOrBuilder extends
    */
   com.google.protobuf.ByteString
       getDisplayBytes();
+
+  /**
+   * <code>uint32 caret_utf16 = 2;</code>
+   * @return The caretUtf16.
+   */
+  int getCaretUtf16();
 }

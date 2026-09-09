@@ -6,6 +6,10 @@
 package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
+ * <pre>
+ * `caret_utf16` mirrors `Preedit.caret_utf16` for the same composition.
+ * </pre>
+ *
  * Protobuf type {@code taigi.engine.UpdatePreedit}
  */
 @com.google.protobuf.Generated
@@ -62,6 +66,32 @@ public  final class UpdatePreedit extends
     checkByteStringIsUtf8(value);
     display_ = value.toStringUtf8();
 
+  }
+
+  public static final int CARET_UTF16_FIELD_NUMBER = 2;
+  private int caretUtf16_;
+  /**
+   * <code>uint32 caret_utf16 = 2;</code>
+   * @return The caretUtf16.
+   */
+  @java.lang.Override
+  public int getCaretUtf16() {
+    return caretUtf16_;
+  }
+  /**
+   * <code>uint32 caret_utf16 = 2;</code>
+   * @param value The caretUtf16 to set.
+   */
+  private void setCaretUtf16(int value) {
+
+    caretUtf16_ = value;
+  }
+  /**
+   * <code>uint32 caret_utf16 = 2;</code>
+   */
+  private void clearCaretUtf16() {
+
+    caretUtf16_ = 0;
   }
 
   public static com.siansiansu.taigikeyboard.engine.proto.UpdatePreedit parseFrom(
@@ -148,6 +178,10 @@ public  final class UpdatePreedit extends
   }
 
   /**
+   * <pre>
+   * `caret_utf16` mirrors `Preedit.caret_utf16` for the same composition.
+   * </pre>
+   *
    * Protobuf type {@code taigi.engine.UpdatePreedit}
    */
   public static final class Builder extends
@@ -210,6 +244,34 @@ public  final class UpdatePreedit extends
       return this;
     }
 
+    /**
+     * <code>uint32 caret_utf16 = 2;</code>
+     * @return The caretUtf16.
+     */
+    @java.lang.Override
+    public int getCaretUtf16() {
+      return instance.getCaretUtf16();
+    }
+    /**
+     * <code>uint32 caret_utf16 = 2;</code>
+     * @param value The caretUtf16 to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCaretUtf16(int value) {
+      copyOnWrite();
+      instance.setCaretUtf16(value);
+      return this;
+    }
+    /**
+     * <code>uint32 caret_utf16 = 2;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearCaretUtf16() {
+      copyOnWrite();
+      instance.clearCaretUtf16();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.UpdatePreedit)
   }
   @java.lang.Override
@@ -227,9 +289,11 @@ public  final class UpdatePreedit extends
       case BUILD_MESSAGE_INFO: {
           java.lang.Object[] objects = new java.lang.Object[] {
             "display_",
+            "caretUtf16_",
           };
           java.lang.String info =
-              "\u0000\u0001\u0000\u0000\u0001\u0001\u0001\u0000\u0000\u0000\u0001\u0208";
+              "\u0000\u0002\u0000\u0000\u0001\u0002\u0002\u0000\u0000\u0000\u0001\u0208\u0002\u000b" +
+              "";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

@@ -20,6 +20,46 @@ fileprivate nonisolated struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobu
   typealias Version = _2
 }
 
+public nonisolated enum Taigi_Engine_CaretDirection: SwiftProtobuf.Enum, Swift.CaseIterable {
+  public typealias RawValue = Int
+
+  /// treated as a no-op
+  case unspecified // = 0
+  case left // = 1
+  case right // = 2
+  case UNRECOGNIZED(Int)
+
+  public init() {
+    self = .unspecified
+  }
+
+  public init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .unspecified
+    case 1: self = .left
+    case 2: self = .right
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  public var rawValue: Int {
+    switch self {
+    case .unspecified: return 0
+    case .left: return 1
+    case .right: return 2
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  public static let allCases: [Taigi_Engine_CaretDirection] = [
+    .unspecified,
+    .left,
+    .right,
+  ]
+
+}
+
 /// v3.5.8 Phase 9.2 — candidate-type discriminator. MOE `VocType`
 /// (`VT_HANT` / `VT_TAILO` / `VT_MIXED`) is the cite. Derived in Rust
 /// from `DictionaryRecord.hanzi` presence + NFKD-normalized Latin-letter
@@ -216,13 +256,21 @@ public nonisolated struct Taigi_Engine_ComposingRequest: Sendable {
     set {method = .resetContinuous(newValue)}
   }
 
-  /// --- Telex tone keys (40s, desktop Telex scheme) ---
+  /// --- Desktop editing keys (40s: Telex tone keys, composing caret) ---
   public var telexKey: Taigi_Engine_TelexKey {
     get {
       if case .telexKey(let v)? = method {return v}
       return Taigi_Engine_TelexKey()
     }
     set {method = .telexKey(newValue)}
+  }
+
+  public var moveCaret: Taigi_Engine_MoveCaret {
+    get {
+      if case .moveCaret(let v)? = method {return v}
+      return Taigi_Engine_MoveCaret()
+    }
+    set {method = .moveCaret(newValue)}
   }
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -250,8 +298,9 @@ public nonisolated struct Taigi_Engine_ComposingRequest: Sendable {
     case fetchAtPos(Taigi_Engine_FetchAtPos)
     case commitContinuous(Taigi_Engine_CommitContinuous)
     case resetContinuous(Taigi_Engine_ResetContinuous)
-    /// --- Telex tone keys (40s, desktop Telex scheme) ---
+    /// --- Desktop editing keys (40s: Telex tone keys, composing caret) ---
     case telexKey(Taigi_Engine_TelexKey)
+    case moveCaret(Taigi_Engine_MoveCaret)
 
   }
 
@@ -658,6 +707,28 @@ public nonisolated struct Taigi_Engine_TelexKey: Sendable {
   public init() {}
 }
 
+/// Desktop only — step the caret inside the pending tail one character left
+/// or right (`⌥←` / `⌥→` on macOS, `Ctrl+←` / `Ctrl+→` on Windows). The
+/// buffer does not change, so the response carries `UpdatePreedit` (with the
+/// new `caret_utf16`) and NO `PerformAutocomplete`: candidates, highlight and
+/// page stay. At either edge of the pending tail — the caret never enters a
+/// nailed segment — the request is a no-op with no effects. Every mutator
+/// then edits at the caret: `Append` inserts there, `DeleteBackward` /
+/// `ReplaceLast` act on the character before it, `TelexKey` on the chunk
+/// before it. Mobile never sends this, so its caret stays at the end and
+/// every mutator behaves as before.
+public nonisolated struct Taigi_Engine_MoveCaret: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var direction: Taigi_Engine_CaretDirection = .unspecified
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 public nonisolated struct Taigi_Engine_ComposingResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -709,6 +780,12 @@ public nonisolated struct Taigi_Engine_ComposingResponse: Sendable {
 
     /// diacritics (UI)
     public var displayText: String = String()
+
+    /// Where the caret sits inside `display_text`, as a UTF-16 offset — the
+    /// unit `setMarkedText(selectionRange:)` and `ITfRange::ShiftEnd` take.
+    /// Equals the length of `display_text` unless a desktop moved the caret
+    /// (`MoveCaret`). Idle → 0.
+    public var caretUtf16: UInt32 = 0
 
     public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -952,12 +1029,15 @@ public nonisolated struct Taigi_Engine_Effect: Sendable {
   public init() {}
 }
 
+/// `caret_utf16` mirrors `Preedit.caret_utf16` for the same composition.
 public nonisolated struct Taigi_Engine_UpdatePreedit: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
   public var display: String = String()
+
+  public var caretUtf16: UInt32 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1083,13 +1163,17 @@ public nonisolated struct Taigi_Engine_NextWordClearForNewComposing: Sendable {
 
 fileprivate nonisolated let _protobuf_package = "taigi.engine"
 
+nonisolated extension Taigi_Engine_CaretDirection: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0CARET_DIRECTION_UNSPECIFIED\0\u{1}CARET_DIRECTION_LEFT\0\u{1}CARET_DIRECTION_RIGHT\0")
+}
+
 nonisolated extension Taigi_Engine_CandidateMode: SwiftProtobuf._ProtoNameProviding {
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0CANDIDATE_MODE_UNSPECIFIED\0\u{1}CANDIDATE_MODE_HANT\0\u{1}CANDIDATE_MODE_TAILO\0\u{1}CANDIDATE_MODE_MIXED\0")
 }
 
 nonisolated extension Taigi_Engine_ComposingRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ComposingRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\u{a}start\0\u{1}append\0\u{3}append_hyphen\0\u{3}replace_last\0\u{3}delete_backward\0\u{3}commit_derived\0\u{3}commit_raw\0\u{3}select_suggestion\0\u{3}commit_preedit_then_insert_external\0\u{1}reset\0\u{3}set_selected_candidate_index\0\u{3}query_state\0\u{4}\u{9}enter_continuous\0\u{3}fetch_at_pos\0\u{3}commit_continuous\0\u{3}reset_continuous\0\u{4}\u{7}telex_key\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\u{a}start\0\u{1}append\0\u{3}append_hyphen\0\u{3}replace_last\0\u{3}delete_backward\0\u{3}commit_derived\0\u{3}commit_raw\0\u{3}select_suggestion\0\u{3}commit_preedit_then_insert_external\0\u{1}reset\0\u{3}set_selected_candidate_index\0\u{3}query_state\0\u{4}\u{9}enter_continuous\0\u{3}fetch_at_pos\0\u{3}commit_continuous\0\u{3}reset_continuous\0\u{4}\u{7}telex_key\0\u{3}move_caret\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1318,6 +1402,19 @@ nonisolated extension Taigi_Engine_ComposingRequest: SwiftProtobuf.Message, Swif
           self.method = .telexKey(v)
         }
       }()
+      case 41: try {
+        var v: Taigi_Engine_MoveCaret?
+        var hadOneofValue = false
+        if let current = self.method {
+          hadOneofValue = true
+          if case .moveCaret(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.method = .moveCaret(v)
+        }
+      }()
       default: break
       }
     }
@@ -1396,6 +1493,10 @@ nonisolated extension Taigi_Engine_ComposingRequest: SwiftProtobuf.Message, Swif
     case .telexKey?: try {
       guard case .telexKey(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 40)
+    }()
+    case .moveCaret?: try {
+      guard case .moveCaret(let v)? = self.method else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 41)
     }()
     case nil: break
     }
@@ -1915,6 +2016,36 @@ nonisolated extension Taigi_Engine_TelexKey: SwiftProtobuf.Message, SwiftProtobu
   }
 }
 
+nonisolated extension Taigi_Engine_MoveCaret: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".MoveCaret"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}direction\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.direction) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.direction != .unspecified {
+      try visitor.visitSingularEnumField(value: self.direction, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_MoveCaret, rhs: Taigi_Engine_MoveCaret) -> Bool {
+    if lhs.direction != rhs.direction {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 nonisolated extension Taigi_Engine_ComposingResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ComposingResponse"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}preedit\0\u{1}effect\0\u{3}selected_candidate_index\0\u{3}is_composing\0\u{1}continuous\0")
@@ -1971,7 +2102,7 @@ nonisolated extension Taigi_Engine_ComposingResponse: SwiftProtobuf.Message, Swi
 
 nonisolated extension Taigi_Engine_ComposingResponse.Preedit: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = Taigi_Engine_ComposingResponse.protoMessageName + ".Preedit"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}raw_input\0\u{3}display_text\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}raw_input\0\u{3}display_text\0\u{3}caret_utf16\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1981,6 +2112,7 @@ nonisolated extension Taigi_Engine_ComposingResponse.Preedit: SwiftProtobuf.Mess
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.rawInput) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.displayText) }()
+      case 3: try { try decoder.decodeSingularUInt32Field(value: &self.caretUtf16) }()
       default: break
       }
     }
@@ -1993,12 +2125,16 @@ nonisolated extension Taigi_Engine_ComposingResponse.Preedit: SwiftProtobuf.Mess
     if !self.displayText.isEmpty {
       try visitor.visitSingularStringField(value: self.displayText, fieldNumber: 2)
     }
+    if self.caretUtf16 != 0 {
+      try visitor.visitSingularUInt32Field(value: self.caretUtf16, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Taigi_Engine_ComposingResponse.Preedit, rhs: Taigi_Engine_ComposingResponse.Preedit) -> Bool {
     if lhs.rawInput != rhs.rawInput {return false}
     if lhs.displayText != rhs.displayText {return false}
+    if lhs.caretUtf16 != rhs.caretUtf16 {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -2318,7 +2454,7 @@ nonisolated extension Taigi_Engine_Effect: SwiftProtobuf.Message, SwiftProtobuf.
 
 nonisolated extension Taigi_Engine_UpdatePreedit: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".UpdatePreedit"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}display\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}display\0\u{3}caret_utf16\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2327,6 +2463,7 @@ nonisolated extension Taigi_Engine_UpdatePreedit: SwiftProtobuf.Message, SwiftPr
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.display) }()
+      case 2: try { try decoder.decodeSingularUInt32Field(value: &self.caretUtf16) }()
       default: break
       }
     }
@@ -2336,11 +2473,15 @@ nonisolated extension Taigi_Engine_UpdatePreedit: SwiftProtobuf.Message, SwiftPr
     if !self.display.isEmpty {
       try visitor.visitSingularStringField(value: self.display, fieldNumber: 1)
     }
+    if self.caretUtf16 != 0 {
+      try visitor.visitSingularUInt32Field(value: self.caretUtf16, fieldNumber: 2)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Taigi_Engine_UpdatePreedit, rhs: Taigi_Engine_UpdatePreedit) -> Bool {
     if lhs.display != rhs.display {return false}
+    if lhs.caretUtf16 != rhs.caretUtf16 {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

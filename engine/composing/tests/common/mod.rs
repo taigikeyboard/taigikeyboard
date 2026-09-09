@@ -24,8 +24,9 @@ use fst::SetBuilder;
 use lexicon::{EngineHandle as LexiconHandle, LexiconPaths, SyllableInventory};
 use phonetics::{canonicalize_poj_syllable, canonicalize_syllable};
 use protos::engine::composing_request::Method;
+use protos::engine::effect::Kind;
 use protos::engine::{
-    AppConfig, ComposingRequest, ComposingResponse, EnterContinuous, FetchAtPos, Start,
+    AppConfig, ComposingRequest, ComposingResponse, Effect, EnterContinuous, FetchAtPos, Start,
 };
 
 pub const SEPARATOR: u8 = 0xFF;
@@ -403,6 +404,25 @@ pub fn config(input_mode: &str) -> AppConfig {
 
 pub fn config_tl() -> AppConfig {
     config("tl")
+}
+
+/// The ordered effect kinds of a response, by proto message name.
+pub fn effect_kinds(effects: &[Effect]) -> Vec<&'static str> {
+    effects
+        .iter()
+        .map(|e| match e.kind.as_ref().expect("effect kind") {
+            Kind::UpdatePreedit(_) => "UpdatePreedit",
+            Kind::ClearPreeditWithoutCommit(_) => "ClearPreeditWithoutCommit",
+            Kind::CommitTextReplacingPreedit(_) => "CommitTextReplacingPreedit",
+            Kind::DeleteBackwardFromDocument(_) => "DeleteBackwardFromDocument",
+            Kind::ResetAutocomplete(_) => "ResetAutocomplete",
+            Kind::PerformAutocomplete(_) => "PerformAutocomplete",
+            Kind::ResetAutocompleteContext(_) => "ResetAutocompleteContext",
+            Kind::NextWordUpdateLastSelectedWord(_) => "NextWordUpdateLastSelectedWord",
+            Kind::NextWordWordSelected(_) => "NextWordWordSelected",
+            Kind::NextWordClearForNewComposing(_) => "NextWordClearForNewComposing",
+        })
+        .collect()
 }
 
 pub fn req(method: Method) -> ComposingRequest {

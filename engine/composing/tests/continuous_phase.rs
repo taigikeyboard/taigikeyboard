@@ -18,7 +18,7 @@ use protos::engine::effect::Kind;
 use protos::engine::Effect;
 
 mod common;
-use common::config_tl;
+use common::{config_tl, effect_kinds};
 
 fn engine_in_continuous(raw: &str) -> Engine {
     let mut e = Engine::new();
@@ -36,23 +36,8 @@ fn assert_kinds<'a, K>(effects: &'a [Effect], expected: K)
 where
     K: IntoIterator<Item = &'a str>,
 {
-    let actual: Vec<&'static str> = effects
-        .iter()
-        .map(|e| match e.kind.as_ref().expect("effect kind") {
-            Kind::UpdatePreedit(_) => "UpdatePreedit",
-            Kind::ClearPreeditWithoutCommit(_) => "ClearPreeditWithoutCommit",
-            Kind::CommitTextReplacingPreedit(_) => "CommitTextReplacingPreedit",
-            Kind::DeleteBackwardFromDocument(_) => "DeleteBackwardFromDocument",
-            Kind::ResetAutocomplete(_) => "ResetAutocomplete",
-            Kind::PerformAutocomplete(_) => "PerformAutocomplete",
-            Kind::ResetAutocompleteContext(_) => "ResetAutocompleteContext",
-            Kind::NextWordUpdateLastSelectedWord(_) => "NextWordUpdateLastSelectedWord",
-            Kind::NextWordWordSelected(_) => "NextWordWordSelected",
-            Kind::NextWordClearForNewComposing(_) => "NextWordClearForNewComposing",
-        })
-        .collect();
     let expected: Vec<&str> = expected.into_iter().collect();
-    assert_eq!(actual, expected, "effect kinds (ordered)");
+    assert_eq!(effect_kinds(effects), expected, "effect kinds (ordered)");
 }
 
 // ---- Enter ---------------------------------------------------------
@@ -70,7 +55,7 @@ fn enter_continuous_from_composing_keeps_raw_no_effects() {
     assert_kinds(&resp.effect, std::iter::empty());
     let state = e.snapshot_state();
     match state.phase {
-        Phase::Continuous { raw, nailed } => {
+        Phase::Continuous { raw, nailed, .. } => {
             assert_eq!(raw, "tsua");
             assert!(nailed.is_empty());
         }
@@ -127,7 +112,7 @@ fn mid_commit_pushes_segment_and_emits_ordered_effects() {
     );
 
     let state = e.snapshot_state();
-    let Phase::Continuous { raw, nailed } = state.phase else {
+    let Phase::Continuous { raw, nailed, .. } = state.phase else {
         panic!("still in Continuous");
     };
     assert_eq!(raw, "a");
@@ -237,7 +222,7 @@ fn commit_continuous_out_of_range_is_noop() {
         &config_tl(),
     );
     assert!(resp.effect.is_empty());
-    let Phase::Continuous { raw, nailed } = e.snapshot_state().phase else {
+    let Phase::Continuous { raw, nailed, .. } = e.snapshot_state().phase else {
         panic!();
     };
     assert_eq!(raw, "tsua");
@@ -387,7 +372,7 @@ fn append_under_continuous_extends_pending_only() {
         &config_tl(),
     );
     assert_kinds(&resp.effect, ["UpdatePreedit", "PerformAutocomplete"]);
-    let Phase::Continuous { raw, nailed } = e.snapshot_state().phase else {
+    let Phase::Continuous { raw, nailed, .. } = e.snapshot_state().phase else {
         panic!();
     };
     assert_eq!(raw, "aguah");
@@ -433,7 +418,7 @@ fn replace_last_under_continuous_modifies_pending_only() {
         &config_tl(),
     );
     assert_kinds(&resp.effect, ["UpdatePreedit", "PerformAutocomplete"]);
-    let Phase::Continuous { raw, nailed } = e.snapshot_state().phase else {
+    let Phase::Continuous { raw, nailed, .. } = e.snapshot_state().phase else {
         panic!();
     };
     assert_eq!(raw, "agui");
@@ -472,7 +457,7 @@ fn delete_backward_under_continuous_pops_nailed_when_pending_empty() {
     );
     // pending = "a". Delete pending char first.
     e.apply(Intent::DeleteBackward, &config_tl());
-    let Phase::Continuous { raw, nailed } = e.snapshot_state().phase else {
+    let Phase::Continuous { raw, nailed, .. } = e.snapshot_state().phase else {
         panic!();
     };
     assert_eq!(raw, "");
@@ -492,7 +477,7 @@ fn delete_backward_under_continuous_pops_nailed_when_pending_empty() {
             "PerformAutocomplete",
         ],
     );
-    let Phase::Continuous { raw, nailed } = e.snapshot_state().phase else {
+    let Phase::Continuous { raw, nailed, .. } = e.snapshot_state().phase else {
         panic!();
     };
     assert_eq!(raw, "tsu");
@@ -554,7 +539,7 @@ fn delete_backward_pop_with_remaining_nailed_emits_nextword_update() {
     assert_eq!(nw.text, "珠");
     assert_eq!(nw.roman, "tsu");
 
-    let Phase::Continuous { raw, nailed } = e.snapshot_state().phase else {
+    let Phase::Continuous { raw, nailed, .. } = e.snapshot_state().phase else {
         panic!();
     };
     assert_eq!(raw, "a");
@@ -598,7 +583,7 @@ fn delete_backward_pops_multi_char_display_emits_no_document_deletes() {
             "PerformAutocomplete",
         ],
     );
-    let Phase::Continuous { raw, nailed } = e.snapshot_state().phase else {
+    let Phase::Continuous { raw, nailed, .. } = e.snapshot_state().phase else {
         panic!();
     };
     assert_eq!(raw, "tsua");
@@ -701,7 +686,7 @@ fn start_under_continuous_aborts_then_begins_fresh_composing() {
             "PerformAutocomplete",
         ],
     );
-    let Phase::Composing { raw } = e.snapshot_state().phase else {
+    let Phase::Composing { raw, .. } = e.snapshot_state().phase else {
         panic!("Start under Continuous must land in Composing");
     };
     assert_eq!(raw, "abc");
@@ -768,7 +753,7 @@ fn commit_raw_under_continuous_after_mid_commit_commits_whole_composition() {
         },
         &config_tl(),
     );
-    let Phase::Continuous { raw, nailed } = e.snapshot_state().phase else {
+    let Phase::Continuous { raw, nailed, .. } = e.snapshot_state().phase else {
         panic!("expected Continuous after mid-commit");
     };
     assert_eq!(raw, "li2");
@@ -1122,7 +1107,7 @@ fn commit_raw_under_continuous_raw_empty_after_unnail_commits_nailed_only() {
     );
     e.apply(Intent::DeleteBackward, &config_tl()); // pending "a" → ""
     let state = e.snapshot_state();
-    let Phase::Continuous { raw, nailed } = state.phase else {
+    let Phase::Continuous { raw, nailed, .. } = state.phase else {
         panic!("still Continuous with empty pending + 1 nailed");
     };
     assert_eq!(raw, "");

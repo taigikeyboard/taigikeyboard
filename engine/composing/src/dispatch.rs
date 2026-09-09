@@ -22,7 +22,7 @@
 //! the same shadow → lattice path TL/POJ already walk; the legacy
 //! `build_keys_tps` `tl:`-folded path is retired).
 
-use crate::api::{ComposingError, Engine, Intent, Phase};
+use crate::api::{CaretDirection, ComposingError, Engine, Intent, Phase};
 use crate::continuous::{assemble_candidates, retain_first_by_key};
 use crate::shadow::{build_shadow_lattice_with_barriers, left_anchored_keys_and_restrictions};
 use lexicon::{
@@ -80,6 +80,13 @@ pub(crate) fn decode_intent(req: &ComposingRequest) -> Result<Intent, ComposingE
         },
         Method::ResetContinuous(_) => Intent::ResetContinuous,
         Method::TelexKey(m) => Intent::TelexKey { key: m.key },
+        Method::MoveCaret(m) => Intent::MoveCaret {
+            direction: match m.direction() {
+                protos::engine::CaretDirection::Left => Some(CaretDirection::Left),
+                protos::engine::CaretDirection::Right => Some(CaretDirection::Right),
+                protos::engine::CaretDirection::Unspecified => None,
+            },
+        },
     })
 }
 

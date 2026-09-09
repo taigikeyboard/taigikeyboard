@@ -494,7 +494,8 @@ buffer through the engine and mirror each other, so a platform-side caret would 
 `SetBuffer` op and the insert logic written twice. librime keeps the same model
 (`references/librime/src/rime/context.h:102`).
 
-**One intent** `MoveCaret { direction: Left | Right }` — steps one `char`, clamped to the pending
+**One intent** `MoveCaret { direction: Left | Right }` (wire `CaretDirection`; unspecified or unknown
+= no step) — steps one `char`, clamped to the pending
 tail (never enters a nailed segment; at the edge = no-op, no effect). Returns `[UpdatePreedit]`
 only, NO `PerformAutocomplete`: the buffer is unchanged, candidates / highlight / page /
 generation stay. McBopomofo's `setCursor` is likewise a bare assignment
@@ -502,9 +503,10 @@ generation stay. McBopomofo's `setCursor` is likewise a bare assignment
 
 **Caret-aware mutations** (D3, Codex CONFIRM + three amendments): `Append` inserts at the caret
 (`raw.insert_str`, caret += len); `DeleteBackward` removes the char before the caret (caret 0 with
-a non-empty pending = no-op; empty pending keeps today's unnail under Continuous and today's
-`DeleteBackwardFromDocument` under Composing — `transition.rs:278`, a mobile/desktop difference the
-shared helper must not erase; after an unnail the caret sits at the end of the restored text);
+a non-empty pending = no-op; an empty pending keeps today's unnail under Continuous, and deleting
+the last char of a Composing buffer keeps today's `DeleteBackwardFromDocument` — `transition.rs:278`,
+a mobile/desktop difference the shared helper must not erase; after an unnail the caret sits at the
+end of the restored text);
 `ReplaceLast` swaps the char before the caret and keeps `selected_candidate_index`
 (`transition.rs:237`); `TelexKey` = `apply_telex_key(&raw[..caret], key)` + the untouched tail,
 caret = the converted prefix's byte length; `Start` and `CommitContinuous` (nail) put the caret at
@@ -523,8 +525,14 @@ McBopomofo's "candidates for the node at the caret" (`KeyHandler.mm:2492`): USER
 **Display caret** (D4, prefix-derivation REFUTED by Codex): `Preedit.caret_utf16` +
 `Effect::UpdatePreedit.caret_utf16` = the caret's UTF-16 offset in `display_text`, produced by
 `derived_display_with_boundaries(raw) -> (display, raw byte boundary → display UTF-16 offset)`:
-text and offsets go through the SAME chain (preprocess → per-syllable `to_tone_marks` → nasal
-case → nailed join with its separator, `composing/api.rs:292`). Deriving the prefix alone and
+the raw and display strings are walked in lockstep after the chain has run (`derived.rs`), relying
+only on what the chain can do to a character: insert marks, drop a character, change case, fold a
+POJ double tap — the fold recognised by its display signature (dot / `ⁿ` / `ᴺ`) plus the next raw
+letter, since matching alone cannot tell the second tap from a later identical letter (`hooon`).
+The premise "the chain never adds a base letter" is pinned by a phonetics test next to the code
+that could break it. Threading offsets through the chain itself was weighed and dropped: six
+phonetics functions would need offset-aware twins, and the `NormalizeTone` proto that all four
+platforms call would change shape for a desktop-only need. Deriving the prefix alone and
 taking its length is wrong, not cosmetic: `ng|5` displays `n̂g` and lands the caret before `g`
 while the insert happens after it (`phonetics/src/tl.rs:64`); `ka2|i` shows the caret before `2`;
 nailed `珠` + `|a` drops the roman-spacing space. Syllable edges map exactly; inside a syllable the
@@ -557,8 +565,7 @@ azooKey-Desktop's no-caret model.
 | PR | Scope | Est. |
 |---|---|---|
 | P0 | This section + memory + S37 (admin tier, direct to main) | done |
-| P1a | engine: `derived_display_with_boundaries` + nailed-join mapping, display text unchanged, mapping tests (the three counterexamples, POJ `oo` / `nn`, TPS marker) | 250-400 |
-| P1b | engine: caret in `Phase` (~94 patterns / ctors), `MoveCaret` proto + dispatch, caret-aware Append / DeleteBackward / ReplaceLast / TelexKey, `Preedit.caret_utf16`, `step_response` / `update_preedit` carry it, proptest generator + invariant | 400-600 |
+| P1 | engine, one PR of two commits (P1a had no caller of its own, and a `pub(crate)` fn behind a private module cannot ship unused): (a) `derived::display_caret_utf16` — lockstep raw↔display alignment, POJ folds recognised by signature (`hooon` counterexample), premise pinned in phonetics; (b) caret in `Phase`, `MoveCaret` proto + dispatch, caret-aware Append / DeleteBackward / ReplaceLast / TelexKey through `step_composing` / `step_continuous`, `Preedit.caret_utf16` via `combined_display_with_tail`, tests + proptest (TL + POJ double-tap) | ~900 |
 | P2 | macOS: `.moveCaret` tier, `ComposingManager.moveCaret`, decoder + executor selection, no refetch on move, read-only 快速齒 row + i18n, tests, S37 | 300-500 |
 | P3 | Windows mirror: `intent.rs`, `manager.rs`, `composition.rs::select_caret`, read-only row, tests, `check-box` | 300-500 |
 
