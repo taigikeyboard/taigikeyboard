@@ -189,6 +189,46 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         )
     }
 
+    /// ⇧ on a slot key is Space aimed at that slot: the cell's OTHER script,
+    /// without walking the highlight there first (USER 2026-09-10). Under
+    /// Standard the letter's capital, under Telex the digit's key code —
+    /// `⇧2` types `@` on a US layout.
+    func testShiftOnASlotKey_writesThatSlotsOtherScript_withoutWalking() throws {
+        let keys: [(name: String, scheme: ToneInputScheme, event: (Int) throws -> NSEvent)] = [
+            ("⇧letter", .standard, { slot in
+                try TestFixtures.keyDownEvent(
+                    characters: CandidateSlotKeySet.bareKeyRow[slot].uppercased(), modifiers: .shift,
+                )
+            }),
+            ("⇧digit", .telex, { slot in
+                try TestFixtures.keyDownEvent(
+                    characters: "@", modifiers: .shift, keyCode: ComposingKeyChord.numberRowKeyCodes[slot],
+                )
+            }),
+        ]
+        for (name, scheme, event) in keys {
+            try withToneScheme(scheme) {
+                let session = try composedSession()
+                let cells = try XCTUnwrap(session.presenter.shownContent).cells
+                let index = try XCTUnwrap(cells.firstTwoScriptIndex, name)
+                let otherScript = try XCTUnwrap(cells[index].annotation, name)
+                // Cell 0 is the unkeyed §34 literal, so the keys start one
+                // cell in (`CandidateIndexLabel.keySlotShift`).
+                let keySlot = index - 1
+                session.client.clearWrites()
+
+                let handled = try session.controller.handle(event(keySlot), client: session.client)
+
+                XCTAssertTrue(handled, name)
+                XCTAssertEqual(session.client.insertedTexts.last, otherScript, name)
+                XCTAssertFalse(
+                    session.presenter.calls.contains { if case .navigate = $0 { true } else { false } },
+                    "\(name): the highlight never walked there first",
+                )
+            }
+        }
+    }
+
     /// The mode never moves, however many times the key is used: this is a
     /// per-word choice, not a toggle wearing a different hat.
     func testSpace_leavesTheOutputSettingAlone() throws {
@@ -582,13 +622,15 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         for (name, scheme, event) in keys {
             try withToneScheme(scheme) {
                 let session = try composedSession()
-                let secondCell = try XCTUnwrap(session.presenter.shownContent).cells[1].text
+                // Key slot 1 is cell 2: cell 0 is the unkeyed §34 literal, so
+                // the keys start one cell in (`CandidateIndexLabel.keySlotShift`).
+                let secondKeyedCell = try XCTUnwrap(session.presenter.shownContent).cells[2].text
                 session.client.clearWrites()
 
                 let handled = try session.controller.handle(event(), client: session.client)
 
                 XCTAssertTrue(handled, name)
-                XCTAssertEqual(session.client.insertedTexts.last, secondCell, name)
+                XCTAssertEqual(session.client.insertedTexts.last, secondKeyedCell, name)
             }
         }
     }

@@ -791,15 +791,17 @@ public final class TaigiInputController: IMKInputController {
                 flip: true,
                 from: manager, client: client, executing: executor,
             )
-        case let .selectCandidateSlot(slot):
-            // A chord aimed at one of the empty slots the last page ends with
-            // resolves to no index, and is consumed all the same: `⌃7` is a
-            // candidate chord while the bar is up, and handing it to the host
-            // only when the page happens to be short would make it fire a host
-            // shortcut at random.
+        case let .selectCandidateSlot(slot, flip):
+            // A key aimed at one of the empty slots the last page ends with
+            // resolves to no index, and is consumed all the same: `y` is a
+            // slot key while the bar is up, and typing it into the composition
+            // only when the page happens to be short would make a letter land
+            // at random. `flip` is ⇧ on the key: the same cell in its other
+            // script, with Space's "nothing to write" answer for a cell that
+            // has only one.
             commitPresented(
                 at: candidatePresenter.candidateIndex(forKeySlot: slot, ownedBy: sessionToken),
-                flip: false,
+                flip: flip,
                 from: manager, client: client, executing: executor,
             )
         case let .navigate(direction):

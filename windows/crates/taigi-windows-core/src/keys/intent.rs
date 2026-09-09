@@ -103,8 +103,14 @@ pub enum ComposingKeyIntent {
     CommitAlternateScript,
     /// Commit the candidate in this slot of the visible page, counting from
     /// zero — what the slot keys address (`CandidateSlotKeySet`: the bare
-    /// letters under Standard, the bare digits under Telex).
-    SelectCandidateSlot(usize),
+    /// letters under Standard, the bare digits under Telex). With `flip`,
+    /// in the script the cell does NOT stand for — the 漢羅 key aimed at a
+    /// slot instead of at the highlight, which is what Shift on the same
+    /// key asks (USER 2026-09-10).
+    SelectCandidateSlot {
+        slot: usize,
+        flip: bool,
+    },
 }
 
 impl ComposingKeyIntent {
@@ -164,9 +170,15 @@ impl ComposingKeyIntent {
         // binding can shadow it. Which keys pick follows from the tone scheme
         // (`ToneInputScheme::slot_key_set`); both sets are bare keys, so a
         // Ctrl+3 keeps falling through to the host-chord guard below.
+        // Exactly Shift aims the 漢羅 commit at the slot instead
+        // (`CandidateSlotKeySet::shifted_slot_for_event`).
         if is_showing_candidates {
-            if let Some(slot) = bindings.slot_key_set().slot_for_event(key) {
-                return Self::SelectCandidateSlot(slot);
+            let slot_keys = bindings.slot_key_set();
+            if let Some(slot) = slot_keys.slot_for_event(key) {
+                return Self::SelectCandidateSlot { slot, flip: false };
+            }
+            if let Some(slot) = slot_keys.shifted_slot_for_event(key) {
+                return Self::SelectCandidateSlot { slot, flip: true };
             }
         }
         // Tier 4 — what the user put on this key, read before the host-chord
@@ -591,7 +603,10 @@ mod tests {
         let telex = telex_bindings();
         assert_eq!(
             ComposingKeyIntent::intent(&text("3"), true, true, &telex),
-            ComposingKeyIntent::SelectCandidateSlot(2)
+            ComposingKeyIntent::SelectCandidateSlot {
+                slot: 2,
+                flip: false
+            }
         );
         assert_eq!(
             ComposingKeyIntent::intent(&text("3"), true, false, &telex),
@@ -625,14 +640,80 @@ mod tests {
     }
 
     #[test]
+    fn shift_on_a_slot_key_flips_the_script_only_while_the_window_is_up() {
+        // trace: CandidateSlotKeyTests.swift `testALetter_underCapsLock_stillPicks_andShiftedFlipsTheScript`
+        // + `testAShiftedSlotKey_isItselfWhereverTheBarIsDown` +
+        // `testAShiftedDigit_flipsItsSlot_underTelex_andTypesUnderStandard`.
+        let shift_w = KeyEventSnapshot::text("W", KeyModifiers::SHIFT);
+        assert_eq!(
+            classify(&shift_w, true, true),
+            ComposingKeyIntent::SelectCandidateSlot {
+                slot: 1,
+                flip: true
+            }
+        );
+        assert_eq!(
+            classify(&shift_w, true, false),
+            ComposingKeyIntent::Input("W".into()),
+            "with no window the capital reaches the composition"
+        );
+        let shift_semicolon = KeyEventSnapshot::chord(Some(":"), ":", KeyModifiers::SHIFT)
+            .with_key_code(crate::keys::chord::SEMICOLON_KEY_CODE);
+        assert_eq!(
+            classify(&shift_semicolon, true, true),
+            ComposingKeyIntent::SelectCandidateSlot {
+                slot: 8,
+                flip: true
+            }
+        );
+        assert_eq!(
+            classify(&shift_semicolon, true, false),
+            ComposingKeyIntent::CommitThenInsert(":".into())
+        );
+        // Under Telex the shifted digit flips; under Standard it stays the
+        // punctuation it types, and the shifted letter is the tone key.
+        let telex = telex_bindings();
+        let shift_two =
+            KeyEventSnapshot::chord(Some("@"), "@", KeyModifiers::SHIFT).with_key_code(0x32);
+        assert_eq!(
+            ComposingKeyIntent::intent(&shift_two, true, true, &telex),
+            ComposingKeyIntent::SelectCandidateSlot {
+                slot: 1,
+                flip: true
+            }
+        );
+        assert_eq!(
+            classify(&shift_two, true, true),
+            ComposingKeyIntent::CommitThenInsert("@".into())
+        );
+        assert_eq!(
+            ComposingKeyIntent::intent(&shift_w, true, true, &telex),
+            ComposingKeyIntent::TelexKey("W".into())
+        );
+        // Shift beside a host chord is the host's, window or not.
+        let ctrl_shift_w =
+            KeyEventSnapshot::text("W", KeyModifiers::CONTROL.with(KeyModifiers::SHIFT));
+        assert_eq!(
+            classify(&ctrl_shift_w, true, true),
+            ComposingKeyIntent::CommitThenPassThrough
+        );
+    }
+
+    #[test]
     fn bare_slot_keys_pick_while_the_window_is_up_and_type_otherwise() {
         assert_eq!(
             classify(&text("q"), true, true),
-            ComposingKeyIntent::SelectCandidateSlot(0)
+            ComposingKeyIntent::SelectCandidateSlot {
+                slot: 0,
+                flip: false
+            }
         );
         assert_eq!(
             classify(&text(";"), true, true),
-            ComposingKeyIntent::SelectCandidateSlot(8)
+            ComposingKeyIntent::SelectCandidateSlot {
+                slot: 8,
+                flip: false
+            }
         );
         assert_eq!(
             classify(&text("q"), true, false),

@@ -592,6 +592,57 @@ mobile byte-parity of `Append` / `DeleteBackward` at the end.
 gate (native tests, gnu clippy, msvc check, DLL exports) and the box's platform crate passed. Merged
 on that basis; the box policy is an environment item for the USER.
 
+### Desktop ⇧ + slot key — the 漢羅 commit aimed at a slot (USER-scoped 2026-09-10)
+
+**Status**: one PR, macOS + Windows together. Awaiting real-device dogfood (S38, both platforms).
+**Scope**: macOS + Windows only (desktop train). No engine change — no `make build`.
+
+USER 2026-09-10: 「評估使用 shift + qwzx...選字齒 可以反向輸出(臨時拍羅馬字/漢字)某個候選詞的可能性。目前反向輸出只能使用方向齒 +
+space 打出來。我希望使用者可以使用shift + 選字齒,跳轉到某個候選詞,反向輸出的可能性」. Fork answers (USER 2026-09-10「1,2,3依照你的建議」):
+① one rule under both tone schemes (Standard `⇧Q…⇧;`, Telex `⇧1…⇧9`), accepting that with the window up `⇧;` no longer types `:`
+and Telex `⇧1…⇧9` no longer type `!@#$%^&*(` — the punctuation still lands after Enter / Space; ② `;` included, nine slots
+alike; ③ no hint drawn in the candidate window; plus 「快速齒加一個快速齒提示,類似「修正...」那個快速齒一樣,使用者不能修改」 —
+a read-only 快速齒 row like the composing-caret one.
+
+#### Design (grounded in code, Codex pre-impl reviewed 2026-09-10)
+
+**Keys.** While the candidate window is up, exactly ⇧ on a slot key commits that slot in the script the cell does NOT
+stand for — Space (`commitAlternateScript`) aimed at a slot instead of at the highlight, without walking the
+highlight there. Every other key keeps its meaning: bare slot keys, Space, Return / ⇧Return, Tab / ⇧Tab, the arrows
+(`⇧←` stays the host's selection), the paging keys, Esc, Backspace. Only exactly ⇧: any host modifier beside it is the
+host's chord as before. With no window up (or the window switched off) the keys fall through unchanged — `⇧Q` is the
+capital the composition takes, `⇧;` the `:` it types.
+
+**Classifier** (`ComposingKeyIntent.swift` slot tier / `intent.rs` Tier 3): `selectCandidateSlot(_:flip:)` /
+`SelectCandidateSlot { slot, flip }` (Codex: one case with a flag, not a second case — the controller branch is shared).
+Bare → `flip: false`; `CandidateSlotKeySet.shiftedSlot(for:)` / `shifted_slot_for_event` → `flip: true`. Resolved off the
+**key code** for the digits (`kVK_ANSI_1…9` / `VK_1…9`) and `;` (`kVK_ANSI_Semicolon` / `VK_OEM_1`), because both
+platforms' "unmodified" characters keep Shift (`⇧3` reads `#`, `⇧;` reads `:`); the letters read as their capital and the
+existing case fold handles them. US/ANSI positions — a layout whose `;` or number row sits elsewhere resolves the key at
+the US position (Codex RISK, accepted: the recorder's ⇧number-row refusal already makes this trade; the bare path stays
+character-matched and layout-agnostic).
+
+**Controller**: `commitPresented(at: candidateIndex(forKeySlot:), flip:)` / `commit_candidate(index, flip, …)` — the
+same slot→index mapping as the bare keys (§34 unkeyed literal shifts the keys by one), the same "nothing to write" answer
+as Space for a cell with one script (羅馬字 mode, the literal), the same auto-space verdict from the commit itself, the
+same nailed-partial refresh. 漢羅濫: each cell's own other script, like Space.
+
+**Recorder**: `⇧;` is refused as a chord by key code on both platforms, beside the number row (`ComposingKeyChord.make(_:)`
+/ `make_from_press`), so no new binding can be shadowed by the slot tier. A `⇧:` chord recorded before this round is NOT
+swept and would be shadowed while the window is up (Codex Q1 RISK, accepted: no default ships on it; the user can re-record).
+
+**快速齒 row**: read-only, after the composing commit rows (`shortcutCommitAlternateScriptInSlot`), drawn from the live
+slot set — `⇧Q … ⇧;` / `⇧1 … ⇧9` (Windows `Shift+Q … Shift+;` / `Shift+1 … Shift+9`) — by the recorder rows' renderer.
+
+**Deliberately not adopted**: a second intent case (`commitAlternateScriptInSlot`) — Codex Q5; drawing `⇧` beside the
+cells — USER ③; a per-layout "base character with Shift removed" probe (`UCKeyTranslate` / `ToUnicodeEx` with Shift
+cleared) — correct but plumbing through both platforms' snapshots for a US-position trade the recorder already makes;
+Standard-only enablement — USER ①.
+
+**Codex-named regression risks (all in S38)**: the shifted digit on a keypad (`⇧` + keypad `3` carries no number-row
+code → falls through as before); Windows UI-less hosts where `is_showing()` is owner + non-empty content rather than a
+visible popup — the same state the bare slot keys already act on.
+
 ---
 
 ## Released versions index

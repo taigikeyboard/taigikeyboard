@@ -40,6 +40,31 @@ enum CandidateSlotKeySet: CaseIterable, Sendable {
         )
     }
 
+    /// The slot `key` names with exactly ⇧ held — the 漢羅 commit aimed at a
+    /// slot (`ComposingKeyIntent.selectCandidateSlot(_:flip:)`), or nil.
+    ///
+    /// Resolved off the key CODE for the digits and `;`, because AppKit's
+    /// `charactersIgnoringModifiers` keeps Shift: `⇧3` reads `#` and `⇧;`
+    /// reads `:`, and only the key's position still says which key was
+    /// pressed — the same reading the recorder refuses those presses by
+    /// (`ComposingKeyChord.make(_:)`). The letters read as their capital,
+    /// which the case fold already handles. ANSI positions, so a layout
+    /// whose `;` or number row sits elsewhere resolves the key at the US
+    /// position instead — the trade the recorder's refusal already makes.
+    func shiftedSlot(for key: KeyEventSnapshot) -> Int? {
+        guard key.modifiers.intersection([.command, .control, .option, .shift]) == .shift else {
+            return nil
+        }
+        switch self {
+        case .bareKeys:
+            if key.keyCode == ComposingKeyChord.semicolonKeyCode { return Self.bareKeyRow.count - 1 }
+            return slot(forKey: key.charactersIgnoringModifiers, heldWith: [])
+        case .digits:
+            guard let keyCode = key.keyCode else { return nil }
+            return ComposingKeyChord.numberRowKeyCodes.firstIndex(of: keyCode)
+        }
+    }
+
     /// The keys `bareKeys` puts on slots 0…8, in slot order. Lowercase, as
     /// they are matched and drawn: a bare key types its lowercase form.
     static let bareKeyRow = ["q", "w", "d", "f", "z", "x", "v", "y", ";"]

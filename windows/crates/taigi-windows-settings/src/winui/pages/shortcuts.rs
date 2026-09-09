@@ -9,9 +9,10 @@
 
 use crate::winui::cards;
 use crate::winui::window::{Message, RecorderTarget, ResetScope, SettingsWindow};
+use taigi_windows_core::candidates::HorizontalPageLayout;
 use taigi_windows_core::keys::{
-    rejection_message_key, ComposingAction, ComposingKeyBindings, ComposingKeyChord,
-    ShortcutAction, CARET_CHORD_MODIFIERS,
+    rejection_message_key, CandidateSlotKeySet, ComposingAction, ComposingKeyBindings,
+    ComposingKeyChord, KeyModifiers, ShortcutAction, CARET_CHORD_MODIFIERS,
 };
 use taigi_windows_core::strings::{StringKey, StringResolver};
 use windows_reactor::*;
@@ -60,6 +61,17 @@ pub fn view(
             &bindings,
             ComposingAction::GROUPS[1],
         ),
+        // Shown, not recordable (USER 2026-09-10): Shift on a slot key is
+        // the 漢羅 commit aimed at that slot, and the slot keys follow the
+        // tone scheme — so the row follows it too, and there is nothing to
+        // record. After the commit rows, because it is one.
+        cards::row(
+            strings.resolve(StringKey::DesktopShortcutCommitAlternateScriptInSlot),
+            TextBlock::new()
+                .text(shifted_slot_keys_label(bindings.slot_key_set()))
+                .opacity(0.65)
+                .vertical_alignment(VerticalAlignment::Center),
+        ),
         // One group (2026-08-25, +1 on 2026-09-02, +1 on 2026-09-09): three
         // switches, the symbol picker, the Telex guide and one doorway.
         View::keyed_fragment(ShortcutAction::ALL.map(|action| {
@@ -100,6 +112,21 @@ fn caret_chords_label() -> String {
                 .join("+")
         })
         .join("  ")
+}
+
+/// `Shift+Q … Shift+;` under Standard, `Shift+1 … Shift+9` under Telex: the
+/// first and last key of the live slot set, in the recorder rows' own
+/// spelling (`ShortcutSettingsView.swift` `shiftedSlotKeysLabel`).
+fn shifted_slot_keys_label(slot_keys: CandidateSlotKeySet) -> String {
+    [0, HorizontalPageLayout::PAGE_SIZE - 1]
+        .map(|slot| {
+            ComposingKeyChord {
+                key: slot_keys.label_for_slot(slot),
+                modifiers: KeyModifiers::SHIFT,
+            }
+            .display()
+        })
+        .join(" … ")
 }
 
 fn composing_rows(

@@ -1503,11 +1503,13 @@ fn perform_work(
             );
             KeyOutcome::Consumed
         }
-        ComposingKeyIntent::SelectCandidateSlot(slot) => {
-            // A chord aimed at an empty slot is consumed all the same.
+        ComposingKeyIntent::SelectCandidateSlot { slot, flip } => {
+            // A chord aimed at an empty slot is consumed all the same. `flip`
+            // is Shift on the key: the same cell in its other script, with
+            // Space's "nothing to write" answer for a cell that has one.
             commit_candidate(
                 surface.candidate_index_for_key_slot(*slot),
-                false,
+                *flip,
                 settings,
                 manager,
                 editor,

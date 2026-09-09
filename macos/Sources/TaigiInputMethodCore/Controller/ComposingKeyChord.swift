@@ -112,13 +112,19 @@ struct ComposingKeyChord: Hashable, Sendable {
     /// records as the character it types, which is what its stored chords
     /// already hold.
     static func make(_ key: KeyEventSnapshot) -> Result<ComposingKeyChord, Rejection> {
-        if chordingModifiers(of: key.modifiers) == .shift,
-           let keyCode = key.keyCode, numberRowKeyCodes.contains(keyCode)
+        if chordingModifiers(of: key.modifiers) == .shift, let keyCode = key.keyCode,
+           numberRowKeyCodes.contains(keyCode) || keyCode == semicolonKeyCode
         {
             return .failure(.typesRomanization)
         }
         return make(key: key.charactersIgnoringModifiers ?? key.characters, modifiers: key.modifiers)
     }
+
+    /// The `;` key, refused under Shift for the same reason as the number
+    /// row: it is the ninth slot key, and `⇧;` aims the 漢羅 commit at it
+    /// (`CandidateSlotKeySet.shiftedSlot(for:)`) even though a US layout
+    /// types `:` for it.
+    static let semicolonKeyCode = UInt16(kVK_ANSI_Semicolon)
 
     /// The `1`…`9` keys of the number row, in digit order. Carbon's ANSI
     /// codes are positions on the keyboard and hold on ISO and JIS boards
