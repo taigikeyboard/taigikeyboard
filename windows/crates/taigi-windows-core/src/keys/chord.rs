@@ -243,21 +243,23 @@ impl ComposingKeyChord {
         Some(Self::make(Some(&key), modifiers))
     }
 
+    /// The modifier names a chord label leads with, in the order the system
+    /// prints them: `Win`, `Ctrl`, `Alt`, `Shift`.
+    pub fn modifier_labels(modifiers: KeyModifiers) -> impl Iterator<Item = String> {
+        [
+            (modifiers.win, "Win"),
+            (modifiers.control, "Ctrl"),
+            (modifiers.alt, "Alt"),
+            (modifiers.shift, "Shift"),
+        ]
+        .into_iter()
+        .filter(|(held, _)| *held)
+        .map(|(_, name)| name.to_owned())
+    }
+
     /// The chord as a keycap label: `Shift+Enter`, `Ctrl+]`, `Space`.
     pub fn display(&self) -> String {
-        let mut parts = Vec::new();
-        if self.modifiers.win {
-            parts.push("Win".to_owned());
-        }
-        if self.modifiers.control {
-            parts.push("Ctrl".to_owned());
-        }
-        if self.modifiers.alt {
-            parts.push("Alt".to_owned());
-        }
-        if self.modifiers.shift {
-            parts.push("Shift".to_owned());
-        }
+        let mut parts: Vec<String> = Self::modifier_labels(self.modifiers).collect();
         // A chord WITH modifiers keeps the uppercase keycap legend (`Ctrl+J`);
         // a bare key shows the character it types — an uppercase `Z` on a
         // modifier-less row reads as Shift+Z, a key the row does not hold

@@ -184,9 +184,11 @@ enum RustEngineBridge {
 
     /// `appConfig` plus the two word-boundary-spacing flags the engine consults
     /// while rendering a continuous composition's nailed prefix
-    /// (`docs/engine/continuous-input-ranking.md` §10.2). Applied only at the
-    /// entry points that render that prefix, matching iOS, so a mis-set flag
-    /// cannot leak spacing changes into the ordinary composing path.
+    /// (`docs/engine/continuous-input-ranking.md` §10.2). Every composing op
+    /// that renders the composition sends it — under Model B that is every
+    /// mutation, not only the commits — so a nail and the keystroke after it
+    /// agree on the prefix (`composingAppend`). Only `Reset`, which renders
+    /// nothing, carries no config at all.
     static func continuousAppConfig(_ settings: EngineSettings) -> Taigi_Engine_AppConfig {
         var config = appConfig(settings)
         config.isTranslateSwapped = settings.isTranslateSwapped

@@ -11,7 +11,12 @@ use protos::engine::{effect, CandidateMessage, ComposingResponse, Effect as Wire
 /// `match` the compiler checks.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Effect {
-    UpdatePreedit(String),
+    /// The composition as rendered, and where the caret sits inside it as a
+    /// UTF-16 offset — the end unless the user moved it (`MoveCaret`).
+    UpdatePreedit {
+        text: String,
+        caret_utf16: u32,
+    },
     ClearPreeditWithoutCommit,
     CommitTextReplacingPreedit(String),
     /// Emitted only by the `Phase::Composing` backspace-to-empty branch
@@ -73,7 +78,10 @@ impl Effect {
     /// error rather than a silently dropped instruction.
     pub(super) fn decode(effect: &WireEffect) -> Option<Self> {
         Some(match effect.kind.as_ref()? {
-            effect::Kind::UpdatePreedit(payload) => Effect::UpdatePreedit(payload.display.clone()),
+            effect::Kind::UpdatePreedit(payload) => Effect::UpdatePreedit {
+                text: payload.display.clone(),
+                caret_utf16: payload.caret_utf16,
+            },
             effect::Kind::ClearPreeditWithoutCommit(_) => Effect::ClearPreeditWithoutCommit,
             effect::Kind::CommitTextReplacingPreedit(payload) => {
                 Effect::CommitTextReplacingPreedit(payload.text.clone())
@@ -258,7 +266,10 @@ mod tests {
         assert_eq!(
             transition.effects,
             vec![
-                Effect::UpdatePreedit("tâi".into()),
+                Effect::UpdatePreedit {
+                    text: "tâi".into(),
+                    caret_utf16: 0,
+                },
                 Effect::NextWordWordSelected {
                     text: "台".into(),
                     roman: "tâi".into(),

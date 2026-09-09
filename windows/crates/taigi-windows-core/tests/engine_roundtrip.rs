@@ -63,10 +63,11 @@ fn append_renders_tone_digit_as_diacritic_and_updates_preedit() {
     assert!(transition.is_composing);
     assert_eq!(transition.raw_input, "tai5");
     assert_eq!(transition.display_text, "tâi");
-    assert!(transition
-        .effects
-        .iter()
-        .any(|effect| matches!(effect, Effect::UpdatePreedit(display) if display == "tâi")));
+    // The caret rides the effect: at the end, which is 3 UTF-16 units here.
+    assert!(transition.effects.iter().any(|effect| matches!(
+        effect,
+        Effect::UpdatePreedit { text, caret_utf16: 3 } if text == "tâi"
+    )));
     engine::reset(generation);
 }
 

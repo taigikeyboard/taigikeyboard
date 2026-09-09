@@ -569,6 +569,20 @@ azooKey-Desktop's no-caret model.
 | P2 | macOS: `.moveCaret` tier, `ComposingManager.moveCaret`, decoder + executor selection, no refetch on move, read-only 快速齒 row + i18n, tests, S37 | done #30 |
 | P3 | Windows mirror: `intent.rs`, `manager.rs`, `composition.rs::select_caret`, read-only row, tests, `check-box` | 300-500 |
 
+**Found in P3 (2026-09-09), fixed on both desktops in P3, still open on mobile**: after a candidate is
+nailed under hanji-first, the nail rendered the prefix with no separator (`台gi`, `CommitContinuous`
+carries the continuous config) but every mutator after it — `Append`, `DeleteBackward`, `TelexKey` —
+sent the base config, whose spacing flags are unset, so the next keystroke re-rendered `台 gi`.
+Roman-first was unaffected (both configs agree). P3 makes every op that renders the composition —
+`EnterContinuous` included, whose already-Continuous answer is a snapshot the manager mirrors — send
+the continuous config on macOS and Windows (`RustEngineBridge+Composing.swift`,
+`windows/.../engine/composing.rs`), `MoveCaret` too; only `Reset` carries none. Pinned by
+`move_caret_and_typing_after_a_nail_keep_the_hanji_first_rendering` (Windows) and
+`testCommitCandidate_nailed_underHanjiFirst_theNextKeystrokeKeepsThePrefixUnspaced` (macOS).
+iOS (`RustEngineBridge+Composing.swift:210-268`) and Android (`ComposingBridge.kt:30-117`) still
+send the base config for `Append` / `DeleteBackward` — the same drift, left for the mobile round
+(USER 2026-09-04: mobile is the next session).
+
 Codex-named regression risks (all in S37): a caret offset past a region boundary on TSF, a
 decoder dropping the new field (caret snaps to the end), candidate refetch skipped after an insert,
 mobile byte-parity of `Append` / `DeleteBackward` at the end.

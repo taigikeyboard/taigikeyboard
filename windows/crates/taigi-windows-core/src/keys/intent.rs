@@ -3,8 +3,34 @@
 //! `ComposingKeyIntent.swift:93-413`.
 
 use super::bindings::ComposingKeyBindings;
-use super::snapshot::{KeyEventSnapshot, NavigationKey};
+use super::snapshot::{KeyEventSnapshot, KeyModifiers, NavigationKey};
 use super::tone_input_scheme::ToneInputScheme;
+
+/// One step of the caret inside the composition (`ComposingKeyIntent::MoveCaret`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum CaretDirection {
+    Left,
+    Right,
+}
+
+impl CaretDirection {
+    /// The step `key` asks for, if it is one of the two horizontal arrows.
+    pub fn horizontal(key: Option<NavigationKey>) -> Option<Self> {
+        match key? {
+            NavigationKey::LeftArrow => Some(Self::Left),
+            NavigationKey::RightArrow => Some(Self::Right),
+            _ => None,
+        }
+    }
+}
+
+/// The modifier under which ← / → step the composing caret — the host's
+/// own "jump a word" chord (the Mac's ⌥, `ComposingKeyIntent.swift`
+/// `caretChordModifiers`). The 快速齒 pane draws its read-only row from
+/// this same value, so the row cannot drift from the key the classifier
+/// reads. Alt+←/→ is back / forward in Explorer and the browsers and rides
+/// `WM_SYSKEYDOWN`, so it is not this.
+pub const CARET_CHORD_MODIFIERS: KeyModifiers = KeyModifiers::CONTROL;
 
 /// A move in the candidate window. The six physical keys are handed through
 /// raw because what each does depends on the layout (`↓` pages a horizontal
@@ -64,6 +90,11 @@ pub enum ComposingKeyIntent {
     PassThrough,
     /// Move the candidate window's selection.
     Navigate(CandidateNavigation),
+    /// Step the caret inside the romanization being typed, so the next
+    /// character lands there — `ka2`, Ctrl+← Ctrl+←, `h` → `kha2`. The
+    /// engine owns the caret (`MoveCaret`); the window, if up, is left
+    /// exactly as it is.
+    MoveCaret(CaretDirection),
     /// Commit whichever candidate the window has highlighted, as the output
     /// settings render it.
     CommitHighlightedCandidate,
@@ -96,6 +127,16 @@ impl ComposingKeyIntent {
         bindings: &ComposingKeyBindings,
     ) -> Self {
         let modifiers = key.modifiers;
+
+        // Tier 0 — the caret inside the composition, on Ctrl+← / Ctrl+→.
+        // Fixed, not recordable, shown read-only on the 快速齒 pane (USER
+        // 2026-09-09). Exactly Ctrl: Ctrl+Shift+← stays the host's
+        // selection, Ctrl+Alt+← its shortcut. Idle, the chord is the host's.
+        if is_composing && modifiers == CARET_CHORD_MODIFIERS {
+            if let Some(direction) = CaretDirection::horizontal(key.navigation_key) {
+                return Self::MoveCaret(direction);
+            }
+        }
 
         // Tier 1 — fixed navigation, read before anything the user can
         // rebind so no binding can shadow it. Shift excluded: Shift+← extends
@@ -410,6 +451,64 @@ mod tests {
             ),
             ComposingKeyIntent::PassThrough
         );
+    }
+
+    /// Ctrl+← / Ctrl+→ step the caret inside the composition whether or
+    /// not the window is up — the bare arrows stay the window's (USER
+    /// 2026-09-09).
+    #[test]
+    fn control_arrows_move_the_composing_caret_window_up_or_not() {
+        for is_showing_candidates in [true, false] {
+            let left =
+                KeyEventSnapshot::navigation(NavigationKey::LeftArrow, KeyModifiers::CONTROL);
+            let right =
+                KeyEventSnapshot::navigation(NavigationKey::RightArrow, KeyModifiers::CONTROL);
+            assert_eq!(
+                classify(&left, true, is_showing_candidates),
+                ComposingKeyIntent::MoveCaret(CaretDirection::Left)
+            );
+            assert_eq!(
+                classify(&right, true, is_showing_candidates),
+                ComposingKeyIntent::MoveCaret(CaretDirection::Right)
+            );
+        }
+    }
+
+    #[test]
+    fn control_arrow_is_the_hosts_word_jump_when_nothing_is_composing() {
+        let left = KeyEventSnapshot::navigation(NavigationKey::LeftArrow, KeyModifiers::CONTROL);
+        assert_eq!(
+            classify(&left, false, false),
+            ComposingKeyIntent::PassThrough
+        );
+    }
+
+    /// Only exactly Ctrl: with Shift it is the host's selection, with Alt or
+    /// Win its shortcut — and Ctrl+↑ is not a caret key at all.
+    #[test]
+    fn control_arrow_with_any_other_chord_or_vertical_belongs_to_the_host() {
+        let cases = [
+            (
+                NavigationKey::LeftArrow,
+                KeyModifiers::CONTROL.with(KeyModifiers::SHIFT),
+            ),
+            (
+                NavigationKey::RightArrow,
+                KeyModifiers::CONTROL.with(KeyModifiers::ALT),
+            ),
+            (NavigationKey::LeftArrow, KeyModifiers::ALT),
+            (NavigationKey::LeftArrow, KeyModifiers::WIN),
+            (NavigationKey::UpArrow, KeyModifiers::CONTROL),
+            (NavigationKey::PageDown, KeyModifiers::CONTROL),
+        ];
+        for (key, modifiers) in cases {
+            let snapshot = KeyEventSnapshot::navigation(key, modifiers);
+            assert_eq!(
+                classify(&snapshot, true, true),
+                ComposingKeyIntent::CommitThenPassThrough,
+                "{key:?} under {modifiers:?}"
+            );
+        }
     }
 
     #[test]

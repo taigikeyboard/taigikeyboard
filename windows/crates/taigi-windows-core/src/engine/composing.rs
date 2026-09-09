@@ -14,12 +14,15 @@
 //! different thing from the engine answering that it is idle.
 
 use protos::engine::{
-    composing_request, request, response, Append, CommitContinuous,
-    CommitPreeditThenInsertExternal, CommitRaw, ComposingRequest, ComposingResponse,
-    CustomDictEntry, DeleteBackward, EnterContinuous, FetchAtPos, FrequencyEntry, Reset, TelexKey,
+    composing_request, request, response, Append, CaretDirection as WireCaretDirection,
+    CommitContinuous, CommitPreeditThenInsertExternal, CommitRaw, ComposingRequest,
+    ComposingResponse, CustomDictEntry, DeleteBackward, EnterContinuous, FetchAtPos,
+    FrequencyEntry, MoveCaret, Reset, TelexKey,
 };
 
-use super::bridge::{app_config, continuous_app_config, record_failure, roundtrip};
+use crate::keys::CaretDirection;
+
+use super::bridge::{continuous_app_config, record_failure, roundtrip};
 use super::transition::{ComposingTransition, ContinuousCandidate, ContinuousFetchResult};
 use crate::settings::EngineSettings;
 
@@ -41,6 +44,13 @@ pub struct CustomEntry {
 }
 
 /// Appends one typed character to the raw buffer.
+///
+/// Carries the continuous config, as every op that re-renders the
+/// composition does: under `Phase::Continuous` the answer is the whole
+/// marked region, nailed prefix included, and the prefix's word-boundary
+/// spacing reads the two flags only that config sets. With the base config
+/// a nail rendered `台gi` and the next keystroke `台 gi` (found by the
+/// composing-caret round, 2026-09-09).
 pub fn append(
     character: &str,
     settings: &EngineSettings,
@@ -52,15 +62,15 @@ pub fn append(
         }),
         "composingAppend",
         generation,
-        Some(app_config(settings)),
+        Some(continuous_app_config(settings)),
     )
 }
 
 /// Applies one Telex key to the pending syllable's tone — or, for `z`,
 /// types the affricate initial the input mode spells (`composing.proto`
-/// `TelexKey`, `engine/composing/src/telex.rs`). Carries the app config
-/// like `append`, because `z` resolves by `input_mode`. Port of
-/// `composingTelexKey` (`RustEngineBridge+Composing.swift`).
+/// `TelexKey`, `engine/composing/src/telex.rs`). Carries the same config
+/// as `append` (`z` resolves by `input_mode`, the prefix by the spacing
+/// flags). Port of `composingTelexKey` (`RustEngineBridge+Composing.swift`).
 pub fn telex_key(
     key: &str,
     settings: &EngineSettings,
@@ -72,17 +82,42 @@ pub fn telex_key(
         }),
         "composingTelexKey",
         generation,
-        Some(app_config(settings)),
+        Some(continuous_app_config(settings)),
     )
 }
 
-/// Drops the last character of the raw buffer.
+/// Drops the character before the caret. Same config as `append`.
 pub fn delete_backward(settings: &EngineSettings, generation: u64) -> Option<ComposingTransition> {
     dispatch(
         composing_request::Method::DeleteBackward(DeleteBackward {}),
         "composingDeleteBackward",
         generation,
-        Some(app_config(settings)),
+        Some(continuous_app_config(settings)),
+    )
+}
+
+/// Steps the caret one character inside the pending tail (`composing.proto`
+/// `MoveCaret`). The buffer is untouched, so the engine answers with an
+/// `UpdatePreedit` carrying the new caret and nothing else — no fetch is
+/// requested. Same config as `append`: the answer re-renders the
+/// composition the way the last keystroke did, so a move never changes the
+/// text on screen (`composingMoveCaret`, `RustEngineBridge+Composing.swift`).
+pub fn move_caret(
+    direction: CaretDirection,
+    settings: &EngineSettings,
+    generation: u64,
+) -> Option<ComposingTransition> {
+    let wire = match direction {
+        CaretDirection::Left => WireCaretDirection::Left,
+        CaretDirection::Right => WireCaretDirection::Right,
+    };
+    dispatch(
+        composing_request::Method::MoveCaret(MoveCaret {
+            direction: wire as i32,
+        }),
+        "composingMoveCaret",
+        generation,
+        Some(continuous_app_config(settings)),
     )
 }
 
@@ -135,7 +170,10 @@ pub fn enter_continuous(settings: &EngineSettings, generation: u64) -> Option<Co
         composing_request::Method::EnterContinuous(EnterContinuous {}),
         "composingEnterContinuous",
         generation,
-        Some(app_config(settings)),
+        // Same config as `append`: already under Continuous the answer is a
+        // snapshot whose `display_text` the manager mirrors, and a snapshot
+        // rendered with the base config would put the space back.
+        Some(continuous_app_config(settings)),
     )
 }
 

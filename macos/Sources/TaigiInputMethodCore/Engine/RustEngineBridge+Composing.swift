@@ -43,6 +43,13 @@ extension RustEngineBridge {
     // MARK: - Composing
 
     /// Appends one typed character to the raw buffer.
+    ///
+    /// Carries the continuous config, as every op that re-renders the
+    /// composition does: under `Phase::Continuous` the answer is the whole
+    /// marked region, nailed prefix included, and the prefix's word-boundary
+    /// spacing reads the two flags only that config sets. With the base
+    /// config a nail rendered `台gi` and the next keystroke `台 gi` (found by
+    /// the composing-caret round, 2026-09-09).
     static func composingAppend(
         _ character: String,
         settings: EngineSettings,
@@ -54,14 +61,15 @@ extension RustEngineBridge {
             .append(append),
             op: "composingAppend",
             generation: generation,
-            config: appConfig(settings),
+            config: continuousAppConfig(settings),
         )
     }
 
     /// Applies one Telex key to the pending syllable's tone — or, for `z`,
     /// types the affricate initial the input mode spells (`composing.proto`
-    /// `TelexKey`, `engine/composing/src/telex.rs`). Carries the app config
-    /// like `composingAppend`, because `z` resolves by `input_mode`.
+    /// `TelexKey`, `engine/composing/src/telex.rs`). Carries the same config
+    /// as `composingAppend` (`z` resolves by `input_mode`, the prefix by the
+    /// spacing flags).
     static func composingTelexKey(
         _ key: String,
         settings: EngineSettings,
@@ -73,11 +81,11 @@ extension RustEngineBridge {
             .telexKey(telexKey),
             op: "composingTelexKey",
             generation: generation,
-            config: appConfig(settings),
+            config: continuousAppConfig(settings),
         )
     }
 
-    /// Drops the last character of the raw buffer.
+    /// Drops the character before the caret. Same config as `composingAppend`.
     static func composingDeleteBackward(
         settings: EngineSettings,
         generation: UInt64,
@@ -86,16 +94,16 @@ extension RustEngineBridge {
             .deleteBackward(Taigi_Engine_DeleteBackward()),
             op: "composingDeleteBackward",
             generation: generation,
-            config: appConfig(settings),
+            config: continuousAppConfig(settings),
         )
     }
 
     /// Steps the caret one character inside the pending tail (`composing.proto`
     /// `MoveCaret`). The buffer is untouched, so the engine answers with an
     /// `UpdatePreedit` carrying the new caret and nothing else — no fetch is
-    /// requested. Carries the same config as `composingAppend`: the answer
-    /// re-renders the composition the way the last mutation did, so a move
-    /// between two keystrokes shows the same text they do.
+    /// requested. Same config as `composingAppend`: the answer re-renders the
+    /// composition the way the last keystroke did, so a move never changes
+    /// the text on screen.
     static func composingMoveCaret(
         _ direction: CaretDirection,
         settings: EngineSettings,
@@ -110,7 +118,7 @@ extension RustEngineBridge {
             .moveCaret(moveCaret),
             op: "composingMoveCaret",
             generation: generation,
-            config: appConfig(settings),
+            config: continuousAppConfig(settings),
         )
     }
 
@@ -179,7 +187,11 @@ extension RustEngineBridge {
             .enterContinuous(Taigi_Engine_EnterContinuous()),
             op: "composingEnterContinuous",
             generation: generation,
-            config: appConfig(settings),
+            // Same config as `composingAppend`: already under Continuous the
+            // answer is a snapshot whose `displayText` the manager mirrors,
+            // and a snapshot rendered with the base config would put the
+            // space back.
+            config: continuousAppConfig(settings),
         )
     }
 

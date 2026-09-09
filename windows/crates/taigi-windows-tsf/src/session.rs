@@ -1520,6 +1520,13 @@ fn perform_work(
             surface.navigate(*direction);
             KeyOutcome::Consumed
         }
+        ComposingKeyIntent::MoveCaret(direction) => {
+            // No refetch and no repaint: the text did not change, so the
+            // candidates, the highlight and the page still describe it
+            // (`TaigiInputController.handle` `.moveCaret`).
+            manager.move_caret(*direction, editor);
+            KeyOutcome::Consumed
+        }
     }
 }
 

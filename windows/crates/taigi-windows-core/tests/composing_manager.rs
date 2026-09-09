@@ -20,6 +20,7 @@ use taigi_windows_core::dictionary_artifacts::DictionaryArtifacts;
 use taigi_windows_core::engine::{
     self, AssociationPair, ContinuousCandidate, CustomEntry, Effect, FrequencyRow,
 };
+use taigi_windows_core::keys::CaretDirection;
 use taigi_windows_core::settings::{
     keys, CandidateDisplayMode, SettingsDocument, SettingsProvider,
 };
@@ -145,7 +146,7 @@ impl Recorder {
         self.effects
             .iter()
             .filter_map(|effect| match effect {
-                Effect::UpdatePreedit(text) => Some(text.as_str()),
+                Effect::UpdatePreedit { text, .. } => Some(text.as_str()),
                 _ => None,
             })
             .collect()
@@ -261,6 +262,127 @@ fn append_shows_the_preedit_and_mirrors_the_engine() {
     assert_eq!(rig.manager.raw_input(), "tai5");
     assert_eq!(rig.manager.display_text(), "tâi");
     assert_eq!(rig.recorder.preedits().last(), Some(&"tâi"));
+}
+
+/// USER's example (2026-09-09): `ka2`, Ctrl+← Ctrl+←, `h` → `kha2`, shown as
+/// `khá` with the caret after the `h` (`ComposingManagerTests.swift`
+/// `testMoveCaret_thenAppend_insertsWhereTheCaretIs`).
+#[test]
+fn move_caret_then_append_inserts_where_the_caret_is() {
+    let _lock = engine_lock();
+    let mut rig = rig();
+    rig.type_text("ka2");
+    rig.recorder.effects.clear();
+
+    rig.manager
+        .move_caret(CaretDirection::Left, &mut rig.recorder);
+    assert_eq!(
+        rig.recorder.effects,
+        [Effect::UpdatePreedit {
+            text: "ká".into(),
+            caret_utf16: 2
+        }],
+        "a caret move re-marks the same text with the caret moved and asks for nothing else"
+    );
+    rig.manager
+        .move_caret(CaretDirection::Left, &mut rig.recorder);
+    assert_eq!(
+        rig.recorder.effects.last(),
+        Some(&Effect::UpdatePreedit {
+            text: "ká".into(),
+            caret_utf16: 1
+        })
+    );
+    rig.recorder.effects.clear();
+
+    rig.manager.append("h", &mut rig.recorder);
+
+    assert_eq!(rig.manager.raw_input(), "kha2");
+    assert_eq!(rig.manager.display_text(), "khá");
+    assert_eq!(
+        rig.recorder.effects.first(),
+        Some(&Effect::UpdatePreedit {
+            text: "khá".into(),
+            caret_utf16: 2
+        })
+    );
+}
+
+/// Under hanji-first a nailed prefix takes no separator before the pending
+/// tail (`台gi`), and every op after the nail — a caret move, a keystroke —
+/// renders it the same way: the caret walks the tail (after `g` = 2,
+/// before it = 1), stops at the nailed segment, and the `h` typed there
+/// lands in the tail without a space appearing. Before this round the
+/// mutators sent the base config and the first keystroke after a nail
+/// showed `台 gi`.
+#[test]
+fn move_caret_and_typing_after_a_nail_keep_the_hanji_first_rendering() {
+    let _lock = engine_lock();
+    let mut rig = rig();
+    rig.settings
+        .edit(|doc| doc.set_bool(&keys::IS_TRANSLATE_SWAPPED, true));
+    rig.type_text("taigi");
+    let tai = rig
+        .candidates()
+        .into_iter()
+        .find(|c| c.hanji.as_deref() == Some("台") && c.consumed_span_end == 3)
+        .expect("台 over `tai`");
+    rig.manager
+        .commit_candidate(&tai, CandidateScript::Primary, &mut rig.recorder);
+    assert_eq!(rig.manager.display_text(), "台gi");
+    assert_eq!(rig.manager.raw_input(), "gi");
+    rig.recorder.effects.clear();
+
+    for expected_caret in [2, 1] {
+        rig.manager
+            .move_caret(CaretDirection::Left, &mut rig.recorder);
+        assert_eq!(
+            rig.recorder.effects,
+            [Effect::UpdatePreedit {
+                text: "台gi".into(),
+                caret_utf16: expected_caret,
+            }]
+        );
+        rig.recorder.effects.clear();
+    }
+
+    rig.manager
+        .move_caret(CaretDirection::Left, &mut rig.recorder);
+    assert!(
+        rig.recorder.effects.is_empty(),
+        "the caret never enters the nailed segment"
+    );
+
+    rig.manager.append("h", &mut rig.recorder);
+    assert_eq!(rig.manager.raw_input(), "hgi");
+    assert_eq!(rig.manager.display_text(), "台hgi");
+    assert_eq!(
+        rig.recorder.effects.first(),
+        Some(&Effect::UpdatePreedit {
+            text: "台hgi".into(),
+            caret_utf16: 2,
+        })
+    );
+}
+
+#[test]
+fn move_caret_at_the_start_changes_nothing() {
+    let _lock = engine_lock();
+    let mut rig = rig();
+    rig.type_text("k");
+    rig.manager
+        .move_caret(CaretDirection::Left, &mut rig.recorder);
+    rig.recorder.effects.clear();
+
+    rig.manager
+        .move_caret(CaretDirection::Left, &mut rig.recorder);
+
+    assert!(
+        rig.recorder.effects.is_empty(),
+        "nothing to step over, nothing to tell the host"
+    );
+    assert!(rig.manager.is_composing());
+    assert_eq!(rig.manager.raw_input(), "k");
 }
 
 #[test]

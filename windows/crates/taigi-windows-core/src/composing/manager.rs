@@ -20,6 +20,7 @@ use crate::engine::{
     self, CommitContinuousArgs, ComposingTransition, ContinuousCandidate, CustomEntry, Effect,
     FetchArgs, FrequencyRow,
 };
+use crate::keys::CaretDirection;
 use crate::settings::{EngineSettings, SettingsProvider};
 
 /// Writes the engine's document effects into the client that is currently
@@ -163,6 +164,21 @@ impl ComposingManager {
     pub fn delete_backward(&mut self, executor: &mut dyn ComposingEffectExecutor) {
         log::debug!("deleteBackward");
         let transition = engine::delete_backward(&self.current_settings(), self.current_generation);
+        self.apply(transition, executor);
+    }
+
+    /// Steps the caret inside the pending tail. Not a buffer change: no
+    /// promotion, and the engine asks for no fetch — the candidates on
+    /// screen still describe the same text (`ComposingManager.swift`
+    /// `moveCaret`).
+    pub fn move_caret(
+        &mut self,
+        direction: CaretDirection,
+        executor: &mut dyn ComposingEffectExecutor,
+    ) {
+        log::debug!("moveCaret");
+        let transition =
+            engine::move_caret(direction, &self.current_settings(), self.current_generation);
         self.apply(transition, executor);
     }
 
@@ -452,7 +468,7 @@ impl ComposingManager {
                 // shows no predictions, so there is nothing to hide and the
                 // context is exactly what must survive.
                 Effect::NextWordClearForNewComposing => {}
-                Effect::UpdatePreedit(_)
+                Effect::UpdatePreedit { .. }
                 | Effect::ClearPreeditWithoutCommit
                 | Effect::CommitTextReplacingPreedit(_)
                 | Effect::DeleteBackwardFromDocument
