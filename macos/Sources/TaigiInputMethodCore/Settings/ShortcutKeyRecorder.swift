@@ -85,8 +85,9 @@ enum GlobalShortcutPolicy {
 /// outright — `RecorderCocoa.swift:404-410` beeps and swallows the event
 /// before any validation of ours runs — so a user could not put 漢羅代先 on a
 /// bare `z` even though the action SHIPS on a bare backtick (USER 2026-08-26,
-/// real device). One field for both tiers is also what the pane already
-/// claims to be: one list, whose seam is not supposed to show.
+/// real device). One field for both tiers also keeps every row on the pane
+/// looking alike, which is what lets the pane group its rows by what a key
+/// does rather than by which registry holds it (`ShortcutSettingsView`).
 ///
 /// Refusing is part of the job. A user who recorded `a` here would have no way
 /// left to type the letter, so the keys a syllable is spelled with are turned

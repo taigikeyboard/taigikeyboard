@@ -1,4 +1,4 @@
-// The 快捷鍵 pane: every key the user can put an action on, in one list.
+// The 快捷鍵 pane: every key the user can put an action on, in three blocks.
 
 import AppKit
 import KeyboardShortcuts
@@ -6,10 +6,18 @@ import SwiftUI
 
 /// The 快捷鍵 pane of the settings window.
 ///
-/// One list, not two. A shortcut is a shortcut to the user reading the pane;
-/// which of them registers a Carbon hotkey and which is read by the key
-/// classifier is an implementation detail, and splitting the rows on it made
-/// the reader ask what the split meant (USER 2026-08-21).
+/// Three blocks, by what a key DOES: the keys that move through the
+/// candidates, the keys that end the composition, and the switches. No
+/// headers — the grouping says it, and a title over four rows the label
+/// already names would be words for their own sake (USER 2026-09-10).
+///
+/// Not the split the pane had until 2026-08-21, which was two blocks divided
+/// on which rows register a Carbon hotkey and which the key classifier reads.
+/// That is an implementation detail, and a reader asked what it meant (USER).
+/// The last boundary here falls in the same place — the switches are exactly
+/// the actions with a global chord — but the first two blocks are both the
+/// classifier's, so the boundaries as a set follow the actions rather than
+/// the registries.
 ///
 /// One CONTROL too, since 2026-08-26: every row is a `ShortcutKeyRecorder`.
 /// The global rows were `KeyboardShortcuts.Recorder` until then, and it beeps
@@ -20,8 +28,11 @@ import SwiftUI
 /// each refuses on top of the shared gate, which is what `onRecord` and
 /// `additionalRejection` carry.
 ///
-/// `@AppStorage` for the settings the pane owns outright, and the store for the
-/// per-action chords, whose write has to run conflict resolution first.
+/// No row writes its own chord: each recording goes through a `record`
+/// handler, which resolves the conflicts it creates across BOTH registries
+/// before the pane re-reads what that left. The two registries are the
+/// composing bindings in `SettingsStore` and the global chords in
+/// `KeyboardShortcuts`.
 struct ShortcutSettingsView: View {
     @Environment(DisplayLanguageStore.self) private var language
 
@@ -33,16 +44,18 @@ struct ShortcutSettingsView: View {
 
     var body: some View {
         Form {
+            // Block one: through the candidates.
+            //
+            // Typing order twice over: the blocks in the order a user meets
+            // them, and the rows inside each in their roster's own order
+            // (USER 2026-09-09) — so a row cannot move here without moving in
+            // the roster itself.
+            //
+            // The candidate-slot keys have no row anywhere on this pane: they
+            // follow from the 聲調拍法 picker on the 一般 pane
+            // (`ToneInputScheme`), so the two halves of the key contract
+            // cannot be set apart.
             Section {
-                // The pane reads in typing order: the keys that move through
-                // the candidates, the keys that end the composition, the
-                // switches, then the windows a key raises (USER 2026-09-09).
-                // Each roster keeps its own order, so a row cannot move here
-                // without moving in the menu that draws the same list.
-                //
-                // The candidate-slot keys have no row here: they follow from
-                // the 聲調拍法 picker on the 一般 pane (`ToneInputScheme`), so
-                // the two halves of the key contract cannot be set apart.
                 ForEach(ComposingAction.groups[0], id: \.self) { action in
                     recorderRow(action)
                 }
@@ -57,7 +70,10 @@ struct ShortcutSettingsView: View {
                     Text(Self.caretChordsLabel)
                         .foregroundStyle(.secondary)
                 }
+            }
 
+            // Block two: out of the composition and into the document.
+            Section {
                 ForEach(ComposingAction.groups[1], id: \.self) { action in
                     recorderRow(action)
                 }
@@ -70,23 +86,34 @@ struct ShortcutSettingsView: View {
                     Text(Self.shiftedSlotKeysLabel(bindings.slotKeySet))
                         .foregroundStyle(.secondary)
                 }
+            }
 
-                // One row per global action, off the same list the hotkey
-                // registration uses, so a new action cannot appear in one and
-                // not the other.
-                //
-                // One group, since 2026-08-25. There were two — the keys that
-                // opened a settings pane, then the keys that change what the
-                // user is typing — until the five pane chords were retired
-                // (USER: five chords for panes visited about once a day, which
-                // the menu bar already lists by name).
+            // Block three: the switches, and the windows a key raises. What
+            // these have in common is that none of them needs a composition
+            // running — which is also why they are the roster that holds a
+            // chord in the global registry, though the block is drawn on what
+            // they DO. Not on their modifiers: 漢羅對調 ships on a bare
+            // backtick, so ⌃⌘ names no boundary here. Nor on dispatch: the
+            // symbol picker is on this list and registers no Carbon hotkey
+            // (`ShortcutAction.firesFromTheKeyPath`).
+            //
+            // One row per global action, off the same list the hotkey
+            // registration uses, so a new action cannot appear in one and
+            // not the other.
+            //
+            // One block, since 2026-08-25. There were two — the keys that
+            // opened a settings pane, then the keys that change what the
+            // user is typing — until the five pane chords were retired
+            // (USER: five chords for panes visited about once a day, which
+            // the menu bar already lists by name).
+            Section {
                 ForEach(ShortcutAction.allCases, id: \.self) { action in
                     globalRecorderRow(action)
                 }
             }
 
-            // Its own section, at the end: it acts on every row above it rather
-            // than on any one of them.
+            // Its own section, at the end: it acts on every block above it
+            // rather than on any one row.
             Section {
                 WideActionRow(titleKey: .themeEditorResetAll, action: restoreDefaults)
             }

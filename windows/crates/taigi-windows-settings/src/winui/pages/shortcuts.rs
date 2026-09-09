@@ -1,10 +1,11 @@
-//! The 快捷鍵 pane: every key the user can put an action on, in one list
-//! (`ShortcutSettingsView.swift`) — the five global chords, the keys that
-//! move through the candidates, the keys that end the composition, and the
-//! reset card. Which keys pick a candidate is not chosen here: it follows
-//! from 聲調拍法 on the 一般 pane (`ToneInputScheme`). Every row is the same
-//! recorder; which registry it writes to and what it refuses on top of the
-//! shared gate is the tier's. Last writer wins across both registries
+//! The 快捷鍵 pane: every key the user can put an action on, in three blocks
+//! (`ShortcutSettingsView.swift`) — the keys that move through the
+//! candidates, the keys that end the composition, and the switches — plus
+//! the reset card. No headers: the grouping says it (USER 2026-09-10).
+//! Which keys pick a candidate is not chosen here: it follows from 聲調拍法
+//! on the 一般 pane (`ToneInputScheme`). Every row is the same recorder;
+//! which registry it writes to and what it refuses on top of the shared gate
+//! is the tier's. Last writer wins across both registries
 //! (`ShortcutConflicts`), and the loser's row visibly empties.
 
 use crate::winui::cards;
@@ -31,10 +32,12 @@ pub fn view(
     let document = window.document();
     let bindings = ComposingKeyBindings::from_document(document);
     View::fragment((
-        // Typing order, the row order upstream draws
-        // (`ShortcutSettingsView.swift`): the keys that move through the
-        // candidates, the caret row, the keys that end the composition, then
-        // the global rows — switches first, windows last (`ShortcutAction`).
+        // Block one: through the candidates.
+        //
+        // Typing order twice over, the order upstream draws
+        // (`ShortcutSettingsView.swift`): the blocks in the order a user meets
+        // them, and the rows inside each in their roster's own order — the
+        // global block's switches first, windows last (`ShortcutAction`).
         composing_rows(
             window,
             strings,
@@ -53,7 +56,8 @@ pub fn view(
                 .opacity(0.65)
                 .vertical_alignment(VerticalAlignment::Center),
         ),
-        // Then the keys that end the composition.
+        // Block two: out of the composition and into the document.
+        cards::section_gap(),
         composing_rows(
             window,
             strings,
@@ -72,8 +76,16 @@ pub fn view(
                 .opacity(0.65)
                 .vertical_alignment(VerticalAlignment::Center),
         ),
-        // One group (2026-08-25, +1 on 2026-09-02, +1 on 2026-09-09): three
+        // Block three: the switches, and the windows a key raises. What these
+        // have in common is that none of them needs a composition running —
+        // which is also why they are the roster that holds a chord in the
+        // global registry, though the block is drawn on what they DO. Not on
+        // their modifiers: 漢羅對調 ships on a bare backtick, so Ctrl+Alt
+        // names no boundary here.
+        //
+        // One block (2026-08-25, +1 on 2026-09-02, +1 on 2026-09-09): three
         // switches, the symbol picker, the Telex guide and one doorway.
+        cards::section_gap(),
         View::keyed_fragment(ShortcutAction::ALL.map(|action| {
             (
                 action.raw(),
@@ -88,7 +100,7 @@ pub fn view(
         })),
         // Both registries at once, and no conflict pass afterwards: the
         // shipped defaults hold no chord in common
-        // (`ShortcutSettingsView.swift:578-603`).
+        // (`ShortcutSettingsView.swift` `restoreDefaults`).
         cards::section_gap(),
         cards::action_row(
             strings.resolve(StringKey::ThemeEditorResetAll),
