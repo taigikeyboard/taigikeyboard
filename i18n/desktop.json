@@ -115,6 +115,25 @@
         "ja": "Telex の説明"
       }
     },
+    "shortcutShowSymbolPicker": {
+      "comment": "Shortcut-recorder row: the chord that opens the two-level symbol picker (punctuation / brackets / special symbols) styled as a candidate window (USER 2026-09-09). Authored whole, like its siblings.",
+      "scope": {
+        "platforms": [
+          "macos",
+          "windows"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "符號選單",
+        "tailo": "hû-hō suán-tuann",
+        "poj": "hû-hō soán-toaⁿ",
+        "en": "Symbol Menu",
+        "ja": "記号メニュー"
+      }
+    },
     "telexGuideTitle": {
       "comment": "Title over the floating Telex guide's key table. The scheme's own name, nothing else (USER 2026-09-09: no surplus wording).",
       "scope": {

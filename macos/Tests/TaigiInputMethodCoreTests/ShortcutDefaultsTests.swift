@@ -63,7 +63,7 @@ final class ShortcutDefaultsTests: XCTestCase {
     /// name's initial shortcut back — unlike the composing half, which removes
     /// its stored values — so this pins the outcome the two halves share.
     func testResettingGlobalActions_putsEveryRowBackOnItsDefault() {
-        let overrides: [KeyboardShortcuts.Key] = [.f13, .f14, .f15, .f16, .f17]
+        let overrides: [KeyboardShortcuts.Key] = [.f13, .f14, .f15, .f16, .f17, .f18]
         // An action added without an override here would otherwise be zipped
         // away, and the case would pass without ever having moved that row.
         XCTAssertEqual(overrides.count, ShortcutAction.allCases.count)

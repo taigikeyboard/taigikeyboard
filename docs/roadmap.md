@@ -436,7 +436,7 @@ a symbol-table generator shared with mobile; engine involvement (`Effect` has no
 | PR | Scope | Est. |
 |---|---|---|
 | P0 | This section + memory (admin tier, direct to main) | done |
-| P1 | macOS: action + key-path match + `SymbolPickerPanel` state + JSON table + i18n + S36 + tests | pending |
+| P1 | macOS: action + key-path match + second `CandidatePanel` instance + JSON table + i18n + S36 + tests | PR #26 |
 | P2 | Windows mirror; consumes the P1 JSON + i18n keys | pending |
 
 Codex-named regression risks (all in S36): shortcut theft, stale focus ownership, partial commits,

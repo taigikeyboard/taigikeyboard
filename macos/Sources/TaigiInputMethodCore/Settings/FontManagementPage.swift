@@ -201,7 +201,9 @@ struct FontManagementPage: View {
             fontTypeRawValue = CandidateFontChoice.system.rawValue
             customFontFile = ""
         }
-        CandidatePanel.shared.releaseCachedPanels(drawing: font)
+        for panel in CandidatePanel.allInstances {
+            panel.releaseCachedPanels(drawing: font)
+        }
         do {
             try CustomFontLibrary.shared.remove(font)
         } catch {

@@ -99,6 +99,21 @@ extension KeyboardShortcuts.Name {
         "showTelexGuide",
         initial: .init(.slash, modifiers: [.control, .command]),
     )
+
+    /// The symbol picker (USER 2026-09-09): punctuation, bracket pairs and
+    /// special symbols in a candidate-style window. `,` because the picker is
+    /// a punctuation menu and the comma is the punctuation key — and ⌃⌘ is the
+    /// family. Not the bare backtick 新注音 / McBopomofo / vChewing open their
+    /// symbol menus on: that key is 漢羅對調 here, and stays (USER 2026-09-09:
+    /// 「不要更改 ` 快捷鍵,這是台語輸入法的共識」).
+    ///
+    /// The one action Carbon never fires (`ShortcutAction.firesFromTheKeyPath`);
+    /// the name still lives in this registry so the 快捷鍵 row, the recorder
+    /// and the conflict resolution are the ones every other action uses.
+    static let showSymbolPicker = Self(
+        "showSymbolPicker",
+        initial: .init(.comma, modifiers: [.control, .command]),
+    )
 }
 
 /// One user-assignable action. The list is the single source for the recorder
@@ -111,6 +126,9 @@ enum ShortcutAction: CaseIterable, Sendable {
     case toggleTranslateSwapped
     /// Steps the 候選詞顯示 picker one place: 並排 → 合用 → 羅馬字 → 並排.
     case cycleCandidateDisplayMode
+    /// Opens the symbol picker over the caret. After the switches — it is a
+    /// thing typed, not a setting flipped — and before the guide.
+    case showSymbolPicker
     /// Toggles the floating Telex key table. Last, because this order is the
     /// order of the rows in the pane, and a guide sits after the switches.
     case showTelexGuide
@@ -121,6 +139,7 @@ enum ShortcutAction: CaseIterable, Sendable {
         case .toggleRomanization: .toggleRomanization
         case .toggleTranslateSwapped: .toggleTranslateSwapped
         case .cycleCandidateDisplayMode: .cycleCandidateDisplayMode
+        case .showSymbolPicker: .showSymbolPicker
         case .showTelexGuide: .showTelexGuide
         }
     }
@@ -129,7 +148,19 @@ enum ShortcutAction: CaseIterable, Sendable {
     /// something to the composition in flight. The two need different
     /// dispatch: a window is process-wide, while a switch has to reach the
     /// session that owns the engine (`ShortcutHotkeys.perform`).
-    var opensSettings: Bool { self == .openLastSettingsPane }
+    var opensSettings: Bool {
+        self == .openLastSettingsPane
+    }
+
+    /// Whether this action's chord is matched by the key path instead of
+    /// fired by a Carbon hotkey. A Carbon handler runs with no client and
+    /// outside any key event, and the picker needs both: it writes what the
+    /// user picks into the document and anchors its window to the caret,
+    /// which only `TaigiInputController.handle` may ask for. Everything else
+    /// on this roster flips a setting or raises a card, and needs neither.
+    var firesFromTheKeyPath: Bool {
+        self == .showSymbolPicker
+    }
 
     /// The chord a fresh install has on this action, read back from the
     /// registry the library seeds itself from.
@@ -137,7 +168,9 @@ enum ShortcutAction: CaseIterable, Sendable {
     /// Named here as well as on the `Name` so `ShortcutAction` stays the one
     /// place that knows everything about an action — and so the composing half
     /// (`ComposingAction.defaultChord`) has a sibling with the same name.
-    var defaultShortcut: KeyboardShortcuts.Shortcut? { name.initialShortcut }
+    var defaultShortcut: KeyboardShortcuts.Shortcut? {
+        name.initialShortcut
+    }
 
     /// The recorder row's label, under the active display language.
     ///
@@ -152,6 +185,7 @@ enum ShortcutAction: CaseIterable, Sendable {
         case .toggleRomanization: language.string(.desktopShortcutToggleRomanization)
         case .toggleTranslateSwapped: language.string(.desktopShortcutToggleTranslateSwapped)
         case .cycleCandidateDisplayMode: language.string(.desktopShortcutCycleCandidateDisplayMode)
+        case .showSymbolPicker: language.string(.desktopShortcutShowSymbolPicker)
         case .showTelexGuide: language.string(.desktopShortcutShowTelexGuide)
         }
     }
@@ -172,15 +206,17 @@ enum ShortcutHotkeys {
     /// Handlers go through `perform(_:)` so what a chord does is stated once,
     /// whether it ever grows a second caller or not.
     static func registerHandlers() {
-        for action in ShortcutAction.allCases {
+        for action in carbonActions {
             KeyboardShortcuts.onKeyUp(for: action.name) { perform(action) }
         }
         setEnabled(false)
     }
 
-    /// Built once: this runs on every focus change, and the roster never
-    /// varies.
-    private static let allNames = ShortcutAction.allCases.map(\.name)
+    /// The actions Carbon fires — every one but the picker
+    /// (`ShortcutAction.firesFromTheKeyPath`). Built once: the enable gate
+    /// runs on every focus change, and the roster never varies.
+    private static let carbonActions = ShortcutAction.allCases.filter { !$0.firesFromTheKeyPath }
+    private static let allNames = carbonActions.map(\.name)
 
     /// The coordinator calls this as sessions come and go; see
     /// `ComposingSessionCoordinator.registerShortcutTarget`.
@@ -211,12 +247,20 @@ enum ShortcutHotkeys {
     static func perform(_ action: ShortcutAction) {
         switch action {
         case .openLastSettingsPane:
+            // The session first, so a symbol picker it has up comes down
+            // with its state: the settings window taking focus does not
+            // guarantee the session ends (see `openSettings`), and a picker
+            // left open would keep swallowing the slot keys behind it.
+            ComposingSessionCoordinator.shared.performShortcutAction(action)
             // `nil`, so the window comes back where the user left it. Which
             // pane that is belongs to the settings window, not to a chord —
             // the named panes are reached from the menu bar now.
             openSettings(on: nil, in: SettingsStore())
         case .toggleRomanization, .toggleTranslateSwapped, .cycleCandidateDisplayMode, .showTelexGuide:
             ComposingSessionCoordinator.shared.performShortcutAction(action)
+        case .showSymbolPicker:
+            // Never registered, so never fires (`firesFromTheKeyPath`).
+            break
         }
     }
 

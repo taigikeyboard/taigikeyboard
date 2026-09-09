@@ -57,6 +57,22 @@ enum CandidateNavigation: Sendable, Equatable {
     case nextCandidate
     /// One candidate back in the list, clamped at the start.
     case previousCandidate
+
+    /// The six navigation keys, handed through as directions. One-to-one on
+    /// purpose: what a direction DOES — walk, page, scroll, expand — belongs
+    /// to the window's layout, not to the classifiers that only decide the
+    /// key is the window's while it is up (`ComposingKeyIntent`,
+    /// `SymbolPickerIntent`).
+    init(_ key: NavigationKey) {
+        self = switch key {
+        case .leftArrow: .left
+        case .rightArrow: .right
+        case .upArrow: .up
+        case .downArrow: .down
+        case .pageUp: .pageUp
+        case .pageDown: .pageDown
+        }
+    }
 }
 
 /// The candidate window, as the controller sees it.

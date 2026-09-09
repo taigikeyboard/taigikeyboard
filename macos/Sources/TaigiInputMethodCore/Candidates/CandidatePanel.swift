@@ -17,7 +17,15 @@ import AppKit
 /// vibrancy/glass chrome) while leaving what a cell says to us.
 @MainActor
 final class CandidatePanel: CandidatePresenter {
+    /// The composing bar.
     static let shared = CandidatePanel()
+
+    /// The symbol picker (USER 2026-09-09) — the same window class over its
+    /// own owner slot. A second instance rather than a second list in the
+    /// first: the bar's ownership guard and `isShowingCandidates` are read by
+    /// the composing key contract, and a picker sharing them would hand the
+    /// arrows and the slot keys to whichever list showed last.
+    static let symbolPicker = CandidatePanel()
 
     private static let logger = DebugLogger(category: "CandidatePanel")
 
@@ -132,10 +140,14 @@ final class CandidatePanel: CandidatePresenter {
         panel?.clear()
     }
 
+    /// Every instance this process draws — what a release that must reach
+    /// each cached panel walks (`FontManagementPage.remove`).
+    static var allInstances: [CandidatePanel] { [shared, symbolPicker] }
+
     /// Drops the cached panels built in `font`, hidden ones included.
     ///
     /// Called before a typeface the user installed is unregistered
-    /// (`AppearanceSettingsView.remove`): Core Text refuses to unregister a font
+    /// (`FontManagementPage.remove`): Core Text refuses to unregister a font
     /// that is still in use, and a panel built in that face — including one for
     /// a layout that is not on screen — is exactly such a use. Panels in any
     /// other face are left alone: rebuilding them would cost a window's cells
