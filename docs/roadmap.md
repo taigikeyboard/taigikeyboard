@@ -460,7 +460,7 @@ shown outside it; the auto-space swap is one helper for typed and picked text.
 
 ### Desktop composing caret — move inside the typed romanization (USER-scoped 2026-09-09)
 
-**Status**: P1 (engine) MERGED 2026-09-09 #29 `64e6b0b7`; P2 (macOS) MERGED 2026-09-09 #30 `0f3a7933`. P3 Windows pending.
+**Status**: all rounds MERGED 2026-09-09 — P1 engine #29 `64e6b0b7`, P2 macOS #30 `0f3a7933`, P3 Windows #31 `3a273bff`. Awaiting real-device dogfood (S37, both platforms).
 **Scope**: macOS + Windows only (desktop train). Engine changes — `make build` after P1.
 
 USER 2026-09-09: 「allow user 可以使用方向鍵編輯正在輸入的字 例如使用者輸入ka2，可以使用方向鍵移動到k跟a中間,
@@ -567,7 +567,7 @@ azooKey-Desktop's no-caret model.
 | P0 | This section + memory + S37 (admin tier, direct to main) | done `f3475194` |
 | P1 | engine, one PR of two commits (P1a had no caller of its own, and a `pub(crate)` fn behind a private module cannot ship unused): (a) `derived::display_caret_utf16` — lockstep raw↔display alignment, POJ folds recognised by signature (`hooon` counterexample), premise pinned in phonetics; (b) caret in `Phase`, `MoveCaret` proto + dispatch, caret-aware Append / DeleteBackward / ReplaceLast / TelexKey through `step_composing` / `step_continuous`, `Preedit.caret_utf16` via `combined_display_with_tail`, tests + proptest (TL + POJ double-tap) | done #29 |
 | P2 | macOS: `.moveCaret` tier, `ComposingManager.moveCaret`, decoder + executor selection, no refetch on move, read-only 快速齒 row + i18n, tests, S37 | done #30 |
-| P3 | Windows mirror: `intent.rs`, `manager.rs`, `composition.rs::select_caret`, read-only row, tests, `check-box` | 300-500 |
+| P3 | Windows mirror: `intent.rs`, `manager.rs`, `composition.rs::select_caret`, read-only row, tests; plus the continuous-config alignment on both desktops | done #31 |
 
 **Found in P3 (2026-09-09), fixed on both desktops in P3, still open on mobile**: after a candidate is
 nailed under hanji-first, the nail rendered the prefix with no separator (`台gi`, `CommitContinuous`
@@ -586,6 +586,11 @@ send the base config for `Append` / `DeleteBackward` — the same drift, left fo
 Codex-named regression risks (all in S37): a caret offset past a region boundary on TSF, a
 decoder dropping the new field (caret snaps to the end), candidate refetch skipped after an insert,
 mobile byte-parity of `Append` / `DeleteBackward` at the end.
+
+**Gate note (P3)**: the Windows box's App Control policy refused to execute the freshly built
+`TaigiKeyboardSettings` test binary twice (`os error 4551`, 應用程式控制原則已封鎖此檔案); the host-side
+gate (native tests, gnu clippy, msvc check, DLL exports) and the box's platform crate passed. Merged
+on that basis; the box policy is an environment item for the USER.
 
 ---
 
