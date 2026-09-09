@@ -32,6 +32,13 @@ pub struct Theme {
     pub border: D2D1_COLOR_F,
     pub highlight: D2D1_COLOR_F,
     pub highlighted_text: D2D1_COLOR_F,
+    /// The §34 literal cell's fill — what the user is currently typing, marked
+    /// as a different KIND of row rather than as a second selection (USER
+    /// 2026-09-09). WinUI's `SubtleFillColorSecondary`, the hover fill
+    /// (`microsoft-ui-xaml` `Common_themeresources_any.xaml`). `None` under a
+    /// high-contrast scheme: a decorative card in our own greys is exactly
+    /// what that scheme is chosen to get rid of.
+    pub literal_fill: Option<D2D1_COLOR_F>,
 }
 
 const fn rgb(r: u8, g: u8, b: u8) -> D2D1_COLOR_F {
@@ -123,6 +130,8 @@ impl Theme {
                 border: rgba(0x00, 0x00, 0x00, 0.2),
                 highlight,
                 highlighted_text,
+                // SubtleFillColorSecondary
+                literal_fill: Some(rgba(0xFF, 0xFF, 0xFF, 0.0605)),
             }
         } else {
             Self {
@@ -135,6 +144,7 @@ impl Theme {
                 border: rgba(0x00, 0x00, 0x00, 0.0578),
                 highlight,
                 highlighted_text,
+                literal_fill: Some(rgba(0x00, 0x00, 0x00, 0.0373)),
             }
         }
     }
@@ -161,6 +171,8 @@ impl Theme {
             border: from_rgb(colors.window_text),
             highlight: from_rgb(colors.highlight),
             highlighted_text: from_rgb(colors.highlight_text),
+            // No decorative fill under a high-contrast scheme.
+            literal_fill: None,
         }
     }
 }

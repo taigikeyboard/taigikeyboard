@@ -361,7 +361,7 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
     }
 
     /// Every cell this layout currently holds, in any order — the set both the
-    /// key labels (`refreshIndexLabels`) and the highlight colour (`syncTheme`)
+    /// key labels (`refreshCellDecorations`) and the highlight colour (`syncTheme`)
     /// are applied over.
     ///
     /// Overridden rather than held here because each layout keeps its own item
@@ -374,7 +374,8 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
         preconditionFailure("layout subclasses must override allItemViews")
     }
 
-    /// Draws the key that picks each numbered cell, and blanks the rest.
+    /// Draws the key that picks each numbered cell, blanks the rest, and marks
+    /// the §34 literal cell so it draws its own faint fill.
     ///
     /// Derived by ASKING `candidateIndex(forKeySlot:)` — the same seam the key
     /// handler resolves a `1`…`9` press against (`TaigiInputController`) — so
@@ -385,8 +386,10 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
     ///
     /// The layouts keep only their triggers — a page rebuild, an anchor change,
     /// a selection or mode change — since that is the part their geometries do
-    /// not share.
-    func refreshIndexLabels() {
+    /// not share. Both decorations ride the same loop because both are facts
+    /// about the cells now on screen: a cell recycled onto another candidate
+    /// must give up the previous one's key AND its tint.
+    func refreshCellDecorations() {
         var keyByCandidate: [Int: String] = [:]
         // Resolved once: the shift is a property of the row this repaint
         // draws, not of the slot being looked up.
@@ -400,6 +403,9 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
         }
         for item in allItemViews {
             item.setIndexLabel(keyByCandidate[item.absoluteIndex] ?? "")
+            // Cell 0 is the literal whenever the keys start after it — the one
+            // fact both decorations are read from.
+            item.isLiteralCell = leadCellIsUnkeyed && item.absoluteIndex == 0
         }
     }
 

@@ -272,7 +272,7 @@ final class VerticalCandidatePanel: CandidateBasePanel {
         // The rows are fresh and the viewport is back at the top, so the
         // anchor is 0 and the digits are drawn straight rather than through
         // `updateRowNumbering`, whose job is noticing that it MOVED.
-        refreshIndexLabels()
+        refreshCellDecorations()
         updateHighlights()
 
         if hasOverflow, NSScroller.preferredScrollerStyle != .legacy {
@@ -382,7 +382,7 @@ final class VerticalCandidatePanel: CandidateBasePanel {
         // 335-357`). Rows outside it keep their slot — the column the
         // candidates align on is one width all the way down — and draw
         // nothing in it.
-        refreshIndexLabels()
+        refreshCellDecorations()
     }
 
     private func updateHighlights() {

@@ -138,7 +138,7 @@ final class HorizontalCandidatePanel: CandidateBasePanel {
         }
         // Numbered after the page is built: the digits follow the page, so
         // they start over at `1` on every turn.
-        refreshIndexLabels()
+        refreshCellDecorations()
         updateHighlights()
 
         let hasMultiplePages = pageLayout.pages.count > 1

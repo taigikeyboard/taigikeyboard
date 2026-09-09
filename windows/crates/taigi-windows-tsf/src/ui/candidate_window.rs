@@ -1024,8 +1024,20 @@ impl CandidateWindow {
             return;
         };
         let theme = self.theme;
-        if is_selected {
-            brush.SetColor(&theme.highlight);
+        // The cell's fill, in precedence order: the selection, then the §34
+        // literal's tint — what the user is currently typing, marked as a
+        // different KIND of row rather than as a second selection (USER
+        // 2026-09-09) — then nothing. Only the SELECTION changes the text
+        // colours below.
+        let fill = if is_selected {
+            Some(theme.highlight)
+        } else if self.lead_cell_is_unkeyed && index == 0 {
+            theme.literal_fill
+        } else {
+            None
+        };
+        if let Some(fill) = fill {
+            brush.SetColor(&fill);
             let rounded = D2D1_ROUNDED_RECT {
                 rect: d2d_rect(rect),
                 radiusX: CandidateMetrics::corner_radius(CORNER_RADIUS, rect.width, rect.height),

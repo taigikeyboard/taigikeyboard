@@ -23,9 +23,10 @@ import AppKit
 final class CandidateItemView: NSView {
     let style: CandidateWindowStyle
     private let metrics: CandidateMetrics
-    /// Tahoe's highlight: a separate view under the labels, so the cell's own
-    /// layer can stay untouched. Nil on Sequoia.
-    private var highlightView: NSView?
+    /// Tahoe's cell fill — the selection highlight, or the §34 literal's tint:
+    /// a separate view under the labels, so the cell's own layer can stay
+    /// untouched. Nil on Sequoia, which paints the whole cell instead.
+    private var fillView: NSView?
 
     private let indexLabel = NSTextField(labelWithString: "")
     private let candidateLabel = NSTextField(labelWithString: "")
@@ -53,6 +54,23 @@ final class CandidateItemView: NSView {
             updateAppearance()
         }
     }
+
+    /// Whether this is the §34 literal cell — what the user is currently
+    /// typing, not a candidate the engine offered — which draws a faint fill
+    /// so it reads as a different KIND of row (USER 2026-09-09). The selection
+    /// wins over it: a highlighted literal cell is drawn like any other
+    /// highlighted cell.
+    var isLiteralCell = false {
+        didSet {
+            guard isLiteralCell != oldValue else { return }
+            updateAppearance()
+        }
+    }
+
+    /// The literal cell's fill. A system fill rather than an inactive-selection
+    /// colour, which would read as a second selection, and dynamic so it
+    /// resolves per appearance (light / dark) like every other colour here.
+    private static let literalFillColor: NSColor = .quaternarySystemFill
 
     /// No equality guard on purpose: `NSColor` compares dynamic colours equal
     /// across light and dark even though they RESOLVE differently, and the
@@ -106,11 +124,11 @@ final class CandidateItemView: NSView {
         wantsLayer = true
 
         if style == .tahoe {
-            let highlight = NSView()
-            highlight.wantsLayer = true
-            highlight.isHidden = true
-            addSubview(highlight)
-            highlightView = highlight
+            let fill = NSView()
+            fill.wantsLayer = true
+            fill.isHidden = true
+            addSubview(fill)
+            fillView = fill
         }
 
         indexLabel.font = metrics.indexFont
@@ -291,52 +309,58 @@ final class CandidateItemView: NSView {
 
     override func layout() {
         super.layout()
-        if let highlight = highlightView, isHighlighted {
-            layoutHighlight(highlight)
+        if let fillView, isHighlighted || isLiteralCell {
+            layoutFill(fillView)
         }
     }
 
-    /// Places the Tahoe highlight and rounds it concentrically with the window
+    /// Places the Tahoe fill and rounds it concentrically with the window
     /// (`CandidateMetrics.tahoeHighlightCornerRadius`). Sequoia never reaches
-    /// here — it builds no highlight view and paints the whole cell instead.
+    /// here — it builds no fill view and paints the whole cell instead.
     /// Held to the frame the cell was actually given rather than to the
     /// metrics' item height, which is what the layouts place cells at but not
     /// what a future one has to.
-    private func layoutHighlight(_ highlight: NSView) {
+    private func layoutFill(_ fill: NSView) {
         let inset = bounds.insetBy(dx: metrics.tahoeHighlightInset, dy: metrics.tahoeHighlightInset)
-        highlight.frame = inset
-        highlight.layer?.cornerRadius = CandidateMetrics.cornerRadius(
+        fill.frame = inset
+        fill.layer?.cornerRadius = CandidateMetrics.cornerRadius(
             metrics.tahoeHighlightCornerRadius, fitting: inset.size,
         )
     }
 
+    /// The cell's fill, in precedence order: the selection, then the literal
+    /// cell's tint, then nothing. Only the SELECTION changes the text colours —
+    /// the tint marks the row without claiming it is picked.
+    private var fillColor: NSColor? {
+        if isHighlighted { return highlightColor }
+        return isLiteralCell ? Self.literalFillColor : nil
+    }
+
     private func updateAppearance() {
-        if isHighlighted {
-            indexLabel.textColor = .white
-            candidateLabel.textColor = .white
-            annotationLabel.textColor = .white
-            // Resolved under the panel's own appearance: `cgColor` snapshots a
-            // dynamic colour against the CURRENT drawing appearance, which is
-            // not this window's unless said so — a forced-dark panel would
-            // otherwise pin its highlight at the light resolution.
-            effectiveAppearance.performAsCurrentDrawingAppearance {
-                if let highlight = highlightView {
-                    layer?.backgroundColor = nil
-                    layoutHighlight(highlight)
-                    highlight.layer?.backgroundColor = highlightColor.cgColor
-                    highlight.isHidden = false
-                } else {
-                    layer?.backgroundColor = highlightColor.cgColor
-                }
-            }
-        } else {
-            indexLabel.textColor = .secondaryLabelColor
-            candidateLabel.textColor = .labelColor
-            annotationLabel.textColor = .secondaryLabelColor
-            if let highlight = highlightView {
-                highlight.isHidden = true
+        indexLabel.textColor = isHighlighted ? .white : .secondaryLabelColor
+        candidateLabel.textColor = isHighlighted ? .white : .labelColor
+        annotationLabel.textColor = isHighlighted ? .white : .secondaryLabelColor
+
+        guard let fillColor else {
+            if let fillView {
+                fillView.isHidden = true
             } else {
                 layer?.backgroundColor = nil
+            }
+            return
+        }
+        // Resolved under the panel's own appearance: `cgColor` snapshots a
+        // dynamic colour against the CURRENT drawing appearance, which is not
+        // this window's unless said so — a forced-dark panel would otherwise
+        // pin its fill at the light resolution.
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            if let fillView {
+                layer?.backgroundColor = nil
+                layoutFill(fillView)
+                fillView.layer?.backgroundColor = fillColor.cgColor
+                fillView.isHidden = false
+            } else {
+                layer?.backgroundColor = fillColor.cgColor
             }
         }
     }
