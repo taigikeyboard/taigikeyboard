@@ -62,6 +62,15 @@ struct ShortcutSettingsView: View {
                     recorderRow(action)
                 }
 
+                // Shown, not recordable (USER 2026-09-10): ⇧ on a slot key is
+                // the 漢羅 commit aimed at that slot, and the slot keys follow
+                // the tone scheme — so the row follows it too, and there is
+                // nothing to record. After the commit rows, because it is one.
+                LabeledContent(language.string(.desktopShortcutCommitAlternateScriptInSlot)) {
+                    Text(Self.shiftedSlotKeysLabel(bindings.slotKeySet))
+                        .foregroundStyle(.secondary)
+                }
+
                 // One row per global action, off the same list the hotkey
                 // registration uses, so a new action cannot appear in one and
                 // not the other.
@@ -95,6 +104,16 @@ struct ShortcutSettingsView: View {
             ))
         }
         .joined(separator: "  ")
+
+    /// `⇧Q … ⇧;` under Standard, `⇧1 … ⇧9` under Telex: the first and last
+    /// key of the live slot set, drawn by the recorder rows' renderer.
+    static func shiftedSlotKeysLabel(_ keySet: CandidateSlotKeySet) -> String {
+        [0, HorizontalPageLayout.pageSize - 1]
+            .map { slot in
+                ShortcutKeyDisplay.text(for: ComposingKeyChord(key: keySet.label(forSlot: slot), modifiers: .shift))
+            }
+            .joined(separator: " … ")
+    }
 
     /// One global-hotkey row.
     ///

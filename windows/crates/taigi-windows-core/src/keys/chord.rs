@@ -50,7 +50,16 @@ pub enum ChordRejection {
 /// in digit order. Positions, so the same nine keys on every layout — on
 /// AZERTY, where the bare row types `& é " …`, Shift+`&` is still the `1`
 /// key. Mirrors `ComposingKeyChord.swift` `numberRowKeyCodes`.
-const NUMBER_ROW_KEY_CODES: [u16; 9] = [0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39];
+pub(crate) const NUMBER_ROW_KEY_CODES: [u16; 9] =
+    [0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39];
+
+/// `VK_OEM_1`, the `;` key on a US layout — refused under Shift for the same
+/// reason as the number row: it is the ninth slot key, and Shift+`;` aims
+/// the 漢羅 commit at it (`CandidateSlotKeySet::shifted_slot_for_event`)
+/// even though the layout types `:` for it. Layout-dependent by Microsoft's
+/// own word, the trade the US-position number row already makes. Mirrors
+/// `ComposingKeyChord.swift` `semicolonKeyCode`.
+pub(crate) const SEMICOLON_KEY_CODE: u16 = 0xBA;
 
 /// The AppKit private-use range the Mac spells its arrow keys in. Refused
 /// defensively — a raw value naming one of those scalars is a reserved key
@@ -110,7 +119,9 @@ impl ComposingKeyChord {
         key_code: Option<u16>,
     ) -> Result<Self, ChordRejection> {
         if modifiers == KeyModifiers::SHIFT
-            && key_code.is_some_and(|code| NUMBER_ROW_KEY_CODES.contains(&code))
+            && key_code.is_some_and(|code| {
+                NUMBER_ROW_KEY_CODES.contains(&code) || code == SEMICOLON_KEY_CODE
+            })
         {
             return Err(ChordRejection::TypesRomanization);
         }
@@ -487,6 +498,19 @@ mod tests {
         assert!(
             ComposingKeyChord::make_from_event(&ctrl_three).is_ok(),
             "Ctrl+3 is an ordinary chord to record"
+        );
+        // Shift+`;` is the ninth slot key's 漢羅 chord, refused by its key
+        // code the same way; a `:` reached without that key still records.
+        let shift_semicolon = KeyEventSnapshot::chord(Some(":"), ":", KeyModifiers::SHIFT)
+            .with_key_code(SEMICOLON_KEY_CODE);
+        assert_eq!(
+            ComposingKeyChord::make_from_event(&shift_semicolon),
+            Err(ChordRejection::TypesRomanization)
+        );
+        let colon_key = KeyEventSnapshot::chord(Some(":"), ":", KeyModifiers::SHIFT);
+        assert_eq!(
+            ComposingKeyChord::make_from_event(&colon_key),
+            Ok(chord(":", KeyModifiers::SHIFT))
         );
     }
 

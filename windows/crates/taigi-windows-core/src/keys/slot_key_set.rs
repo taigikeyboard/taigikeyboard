@@ -1,6 +1,7 @@
 //! Which keys pick a candidate out of the nine slots. Port of
 //! `CandidateSlotKeySet` (`ComposingKeyBindings.swift`).
 
+use super::chord::{NUMBER_ROW_KEY_CODES, SEMICOLON_KEY_CODE};
 use super::intent::ComposingKeyIntent;
 use super::snapshot::{KeyEventSnapshot, KeyModifiers};
 
@@ -59,6 +60,38 @@ impl CandidateSlotKeySet {
         }
     }
 
+    /// The slot `event` names with exactly Shift held — the 漢羅 commit
+    /// aimed at a slot (`ComposingKeyIntent::SelectCandidateSlot { flip }`),
+    /// or `None`.
+    ///
+    /// Resolved off the key CODE for the digits and `;`, because the
+    /// unmodified characters keep Shift (`key_translation.rs`
+    /// `unmodified_state`): Shift+3 reads `#` and Shift+`;` reads `:`, and
+    /// only the key's position still says which key was pressed — the same
+    /// reading the recorder refuses those presses by
+    /// (`ComposingKeyChord::make_from_press`). The letters read as their
+    /// capital, which the case fold already handles. Port of
+    /// `CandidateSlotKeySet.shiftedSlot(for:)`.
+    pub fn shifted_slot_for_event(self, event: &KeyEventSnapshot) -> Option<usize> {
+        if event.modifiers != KeyModifiers::SHIFT {
+            return None;
+        }
+        match self {
+            Self::BareKeys => {
+                if event.key_code == Some(SEMICOLON_KEY_CODE) {
+                    return Some(Self::BARE_KEY_ROW.len() - 1);
+                }
+                self.slot_for_key(event.unmodified_characters(), KeyModifiers::NONE)
+            }
+            Self::Digits => {
+                let key_code = event.key_code?;
+                NUMBER_ROW_KEY_CODES
+                    .iter()
+                    .position(|code| *code == key_code)
+            }
+        }
+    }
+
     /// The key this set gives the candidate in `slot`, for the nine slots a
     /// page holds — what the candidate window draws beside a cell.
     pub fn label_for_slot(self, slot: usize) -> String {
@@ -109,6 +142,58 @@ mod tests {
         let shifted =
             KeyEventSnapshot::chord(Some("#"), "#", KeyModifiers::SHIFT).with_key_code(0x33);
         assert_eq!(set.slot_for_event(&shifted), None, "Shift+3 is not a slot");
+    }
+
+    #[test]
+    fn shift_on_a_slot_key_names_the_same_slot_for_the_flip() {
+        // trace: CandidateSlotKeyTests.swift `testEveryBareKey_underShift_flipsItsSlot`
+        // + `testAShiftedDigit_flipsItsSlot_underTelex…` — letters by their
+        // capital, `;` and the digits by key code (US layout types `:` / `#`).
+        let bare = CandidateSlotKeySet::BareKeys;
+        let shift_q = KeyEventSnapshot::chord(Some("Q"), "Q", KeyModifiers::SHIFT);
+        assert_eq!(bare.shifted_slot_for_event(&shift_q), Some(0));
+        assert_eq!(
+            bare.slot_for_event(&shift_q),
+            None,
+            "the bare path still misses"
+        );
+        let shift_semicolon = KeyEventSnapshot::chord(Some(":"), ":", KeyModifiers::SHIFT)
+            .with_key_code(SEMICOLON_KEY_CODE);
+        assert_eq!(bare.shifted_slot_for_event(&shift_semicolon), Some(8));
+        let colon_elsewhere = KeyEventSnapshot::chord(Some(":"), ":", KeyModifiers::SHIFT);
+        assert_eq!(bare.shifted_slot_for_event(&colon_elsewhere), None);
+        let ctrl_shift_q = KeyEventSnapshot::chord(
+            Some("Q"),
+            "Q",
+            KeyModifiers::CONTROL.with(KeyModifiers::SHIFT),
+        );
+        assert_eq!(
+            bare.shifted_slot_for_event(&ctrl_shift_q),
+            None,
+            "exactly Shift"
+        );
+
+        let digits = CandidateSlotKeySet::Digits;
+        let shift_three =
+            KeyEventSnapshot::chord(Some("#"), "#", KeyModifiers::SHIFT).with_key_code(0x33);
+        assert_eq!(digits.shifted_slot_for_event(&shift_three), Some(2));
+        assert_eq!(
+            digits.shifted_slot_for_event(&shift_q),
+            None,
+            "letters are tones under Telex"
+        );
+        assert_eq!(digits.shifted_slot_for_event(&shift_semicolon), None);
+        assert_eq!(
+            bare.shifted_slot_for_event(&shift_three),
+            None,
+            "digits are tones under Standard"
+        );
+        let hash_elsewhere = KeyEventSnapshot::chord(Some("#"), "#", KeyModifiers::SHIFT);
+        assert_eq!(
+            digits.shifted_slot_for_event(&hash_elsewhere),
+            None,
+            "no key code, no slot"
+        );
     }
 
     #[test]

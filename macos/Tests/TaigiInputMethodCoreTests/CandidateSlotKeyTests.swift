@@ -55,7 +55,7 @@ final class CandidateSlotKeyTests: XCTestCase {
     func testTheNineBareKeys_pickSlotsZeroToEight_whileTheBarIsUp() {
         XCTAssertEqual(CandidateSlotKeySet.bareKeyRow.count, HorizontalPageLayout.pageSize, "one key per slot")
         for (slot, key) in CandidateSlotKeySet.bareKeyRow.enumerated() {
-            XCTAssertEqual(intent(snapshot(key)), .selectCandidateSlot(slot), key)
+            XCTAssertEqual(intent(snapshot(key)), .selectCandidateSlot(slot, flip: false), key)
         }
     }
 
@@ -79,10 +79,60 @@ final class CandidateSlotKeyTests: XCTestCase {
     }
 
     /// Caps Lock is a latched state, not a held chord: the letter still picks.
-    /// Shift is a chord, and ⇧Q is the capital the composition takes as text.
-    func testALetter_underCapsLock_stillPicks_butShiftedIsTheCapital() {
-        XCTAssertEqual(intent(snapshot("Q", modifiers: .capsLock)), .selectCandidateSlot(0))
-        XCTAssertEqual(intent(snapshot("Q", modifiers: .shift)), .input("Q"))
+    /// Shift is the 漢羅 chord on the same key: ⇧Q commits slot 0 in the
+    /// other script (USER 2026-09-10), so the capital no longer reaches the
+    /// composition while the bar is up.
+    func testALetter_underCapsLock_stillPicks_andShiftedFlipsTheScript() {
+        XCTAssertEqual(intent(snapshot("Q", modifiers: .capsLock)), .selectCandidateSlot(0, flip: false))
+        XCTAssertEqual(intent(snapshot("Q", modifiers: .shift)), .selectCandidateSlot(0, flip: true))
+    }
+
+    // MARK: - ⇧ on a slot key: the 漢羅 commit aimed at the slot
+
+    /// `⇧;` as a US layout reports it: `:` in both character fields, and the
+    /// `;` only in the key code.
+    private func shiftedSemicolonUS() -> KeyEventSnapshot {
+        snapshot(":", modifiers: .shift, keyCode: ComposingKeyChord.semicolonKeyCode)
+    }
+
+    /// Every bare key flips its slot under ⇧ — the letters by their capital,
+    /// `;` by its key code since a US layout types `:` for it.
+    func testEveryBareKey_underShift_flipsItsSlot() {
+        for (slot, key) in CandidateSlotKeySet.bareKeyRow.dropLast().enumerated() {
+            XCTAssertEqual(
+                intent(snapshot(key.uppercased(), modifiers: .shift)),
+                .selectCandidateSlot(slot, flip: true), key,
+            )
+        }
+        XCTAssertEqual(intent(shiftedSemicolonUS()), .selectCandidateSlot(8, flip: true))
+    }
+
+    /// A shifted digit flips its slot under Telex, where the digits are the
+    /// slot keys — read off the key code, since a US layout types `&` for
+    /// `⇧7`. Under Standard the digits are tones, and the shifted key is
+    /// still the punctuation it types.
+    func testAShiftedDigit_flipsItsSlot_underTelex_andTypesUnderStandard() {
+        XCTAssertEqual(intent(shiftedDigitUS(7), scheme: .telex), .selectCandidateSlot(6, flip: true))
+        XCTAssertEqual(intent(shiftedDigitUS(5), scheme: .telex), .selectCandidateSlot(4, flip: true))
+        XCTAssertEqual(intent(shiftedDigitUS(7), scheme: .standard), .commitThenInsert("&"))
+        XCTAssertEqual(intent(shiftedSemicolonUS(), scheme: .telex), .commitThenInsert(":"))
+    }
+
+    /// Only exactly ⇧ flips: any host chord beside it is the host's, and a
+    /// symbol reached without the key — a layout with its own `&` — is the
+    /// punctuation it types.
+    func testShiftWithAHostChord_orWithoutTheKey_doesNotFlip() {
+        XCTAssertEqual(
+            intent(snapshot("Q", modifiers: [.shift, .control])), .commitThenPassThrough,
+        )
+        XCTAssertEqual(intent(snapshot("&", modifiers: .shift), scheme: .telex), .commitThenInsert("&"))
+    }
+
+    /// With no bar up there is no slot to flip: ⇧Q is the capital the
+    /// composition takes as text again, and `⇧;` the `:` it types.
+    func testAShiftedSlotKey_isItselfWhereverTheBarIsDown() {
+        XCTAssertEqual(intent(snapshot("Q", modifiers: .shift), isShowingCandidates: false), .input("Q"))
+        XCTAssertEqual(intent(shiftedSemicolonUS(), isShowingCandidates: false), .commitThenInsert(":"))
     }
 
     /// The bare keys are the slot tier's only while the bar is up: with none,
@@ -103,21 +153,12 @@ final class CandidateSlotKeyTests: XCTestCase {
         }
     }
 
-    /// A shifted digit is the punctuation it types under either scheme —
-    /// the `⇧1`…`⇧9` set went with the picker that chose it (2026-09-08).
-    func testAShiftedDigit_isThePunctuationItTypes_underEitherScheme() {
-        for scheme in ToneInputScheme.allCases {
-            XCTAssertEqual(intent(shiftedDigitUS(7), scheme: scheme), .commitThenInsert("&"), "\(scheme)")
-            XCTAssertEqual(intent(shiftedDigitUS(5), scheme: scheme), .commitThenInsert("%"), "\(scheme)")
-        }
-    }
-
     // MARK: - The digits, under Telex
 
     func testTheNineDigits_pickSlotsZeroToEight_whileTheBarIsUp_underTelex() {
         XCTAssertEqual(ToneInputScheme.telex.slotKeySet, .digits)
         for slot in 0 ..< HorizontalPageLayout.pageSize {
-            XCTAssertEqual(intent(snapshot(String(slot + 1)), scheme: .telex), .selectCandidateSlot(slot))
+            XCTAssertEqual(intent(snapshot(String(slot + 1)), scheme: .telex), .selectCandidateSlot(slot, flip: false))
         }
         XCTAssertEqual(intent(snapshot("0"), scheme: .telex), .commitThenInsert("0"), "`0` names no slot")
     }
@@ -145,7 +186,7 @@ final class CandidateSlotKeyTests: XCTestCase {
         for extra in [NSEvent.ModifierFlags.numericPad, [.numericPad, .function], .capsLock] {
             XCTAssertEqual(
                 intent(snapshot("3", modifiers: extra), scheme: .telex),
-                .selectCandidateSlot(2), "\(extra)",
+                .selectCandidateSlot(2, flip: false), "\(extra)",
             )
         }
     }
@@ -193,6 +234,14 @@ final class CandidateSlotKeyTests: XCTestCase {
         // A symbol reached without the number row — a keypad or another
         // layout's own `#` key — is still the character it types.
         XCTAssertEqual(try ComposingKeyChord.make(snapshot("#", modifiers: .shift)).get().key, "#")
+    }
+
+    /// `⇧;` is refused the same way: it is the ninth slot key's 漢羅 chord,
+    /// and a US layout types `:` for it. A `:` reached without that key
+    /// still records.
+    func testAShiftedSemicolon_isRefusedAsTheSlotKeyItIs() throws {
+        XCTAssertEqual(ComposingKeyChord.make(shiftedSemicolonUS()), .failure(.typesRomanization))
+        XCTAssertEqual(try ComposingKeyChord.make(snapshot(":", modifiers: .shift)).get().key, ":")
     }
 
     /// Every other shifted key keeps the character it types, which is what

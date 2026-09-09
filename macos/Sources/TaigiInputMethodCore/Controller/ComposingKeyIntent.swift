@@ -170,8 +170,12 @@ enum ComposingKeyIntent: Equatable {
     case commitAlternateScript
     /// Commit the candidate in this slot of the visible page, counting from
     /// zero — what the slot keys address (`CandidateSlotKeySet`: the bare
-    /// letters under Standard, the bare digits under Telex).
-    case selectCandidateSlot(Int)
+    /// letters under Standard, the bare digits under Telex). With `flip`, in
+    /// the script the cell does NOT stand for — the 漢羅 key aimed at a slot
+    /// instead of at the highlight, which is what ⇧ on the same key asks
+    /// (USER 2026-09-10): one chord reaches a 漢羅 word the arrows would
+    /// otherwise have to walk to first.
+    case selectCandidateSlot(Int, flip: Bool)
 
     /// AppKit encodes function and arrow keys as private-use scalars rather
     /// than control characters, so a scalar check alone would let F5 through as
@@ -277,9 +281,15 @@ enum ComposingKeyIntent: Equatable {
         // the full flag set would make a keypad `3` miss the slot under Telex
         // and quietly commit the composition instead. Any chording modifier
         // makes the key miss, so `⌃3` keeps falling through to the host guard
-        // below.
-        if isShowingCandidates, let slot = bindings.slotKeySet.slot(for: key) {
-            return .selectCandidateSlot(slot)
+        // below — except exactly ⇧, which aims the 漢羅 key at the slot
+        // (`CandidateSlotKeySet.shiftedSlot(for:)`).
+        if isShowingCandidates {
+            if let slot = bindings.slotKeySet.slot(for: key) {
+                return .selectCandidateSlot(slot, flip: false)
+            }
+            if let slot = bindings.slotKeySet.shiftedSlot(for: key) {
+                return .selectCandidateSlot(slot, flip: true)
+            }
         }
 
         // What the user put on this key, read before the host-chord guard so a

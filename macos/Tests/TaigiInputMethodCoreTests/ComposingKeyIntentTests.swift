@@ -246,7 +246,7 @@ final class ComposingKeyIntentTests: XCTestCase {
     /// The digits are the slot keys: with the bar up a digit picks; with no
     /// bar it is document text that ends the composition, never a tone.
     func testTelex_aDigit_picksWithTheBarUp_andIsDocumentTextWithout() throws {
-        XCTAssertEqual(try telexIntent("3", isShowingCandidates: true), .selectCandidateSlot(2))
+        XCTAssertEqual(try telexIntent("3", isShowingCandidates: true), .selectCandidateSlot(2, flip: false))
         XCTAssertEqual(try telexIntent("3"), .commitThenInsert("3"))
         XCTAssertEqual(try telexIntent("3", isComposing: false), .passThrough)
     }
@@ -275,7 +275,7 @@ final class ComposingKeyIntentTests: XCTestCase {
             )
         }
         XCTAssertEqual(try intent("3", isShowingCandidates: true), .input("3"))
-        XCTAssertEqual(try intent("q", isShowingCandidates: true), .selectCandidateSlot(0))
+        XCTAssertEqual(try intent("q", isShowingCandidates: true), .selectCandidateSlot(0, flip: false))
         XCTAssertEqual(try intent("v"), .input("v"))
         XCTAssertEqual(try intent("z"), .input("z"))
     }
