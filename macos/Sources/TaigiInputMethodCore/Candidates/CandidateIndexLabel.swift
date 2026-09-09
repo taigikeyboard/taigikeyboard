@@ -29,6 +29,42 @@ enum CandidateIndexLabel {
         return keySet.label(forSlot: slot)
     }
 
+    /// How far the keys move along the row when the first cell takes none:
+    /// 1 while `leadCellIsUnkeyed` and the row `indexForSlot` numbers begins
+    /// with cell 0 — the §34 literal — and 0 otherwise.
+    ///
+    /// Conditional on the ROW, not on the list: the layouts number a page
+    /// (horizontal), the rows from the scroll anchor (vertical) or the row the
+    /// selection is on (expandable), and cell 0 leads only some of those.
+    /// Asking the layout where its own slot 0 lands is what keeps this one
+    /// rule right for all three. Hoisted out of the per-slot lookup because it
+    /// is invariant across a whole label repaint.
+    static func keySlotShift(
+        leadCellIsUnkeyed: Bool,
+        indexForSlot: (Int) -> Int?,
+    ) -> Int {
+        leadCellIsUnkeyed && indexForSlot(0) == 0 ? 1 : 0
+    }
+
+    /// The absolute index the `slot`-th KEY addresses: cell 0 is excluded from
+    /// the key row when it is the unkeyed §34 literal (USER 2026-09-09 — it is
+    /// what the user is already typing, not an offer to pick), and the keys
+    /// shift by one wherever the row they number begins with it.
+    ///
+    /// The ninth key falls off the shifted row — a layout answers nil past
+    /// what the row holds — so a row that leads with the literal keys eight
+    /// candidates and `;` / `9` picks nothing there (USER 2026-09-09: the page
+    /// is not enlarged to keep nine).
+    static func candidateIndex(
+        forKeySlot slot: Int,
+        leadCellIsUnkeyed: Bool,
+        indexForSlot: (Int) -> Int?,
+    ) -> Int? {
+        guard (0 ..< HorizontalPageLayout.pageSize).contains(slot) else { return nil }
+        let shift = keySlotShift(leadCellIsUnkeyed: leadCellIsUnkeyed, indexForSlot: indexForSlot)
+        return indexForSlot(slot + shift)
+    }
+
     /// Every form a slot can be drawn in — each slot under each set — so the
     /// column is measured against all of them and does not change width when
     /// the user switches tone scheme (`CandidateMetrics.indexWidth`).

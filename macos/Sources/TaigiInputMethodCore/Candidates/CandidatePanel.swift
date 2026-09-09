@@ -56,6 +56,7 @@ final class CandidatePanel: CandidatePresenter {
         // Before the cells: the key each of them is drawn with is resolved as
         // they are built.
         panel.slotKeySet = content.slotKeySet
+        panel.leadCellIsUnkeyed = content.leadCellIsUnkeyed
         let panelSize = panel.layout(content.cells, forCaret: caretRect)
         let presented = panel.present(
             panelSize: panelSize,
@@ -78,8 +79,13 @@ final class CandidatePanel: CandidatePresenter {
         self.owner = owner
     }
 
-    func updateCells(_ cells: [CandidateCellContent], ownedBy owner: ComposingSessionToken) {
-        livePanel(ownedBy: owner)?.rerender(cells)
+    func updateCells(_ content: CandidateWindowContent, ownedBy owner: ComposingSessionToken) {
+        guard let panel = livePanel(ownedBy: owner) else { return }
+        // Before the cells, as `show` sets them: the key each cell is drawn
+        // with is resolved as it is built.
+        panel.slotKeySet = content.slotKeySet
+        panel.leadCellIsUnkeyed = content.leadCellIsUnkeyed
+        panel.rerender(content.cells)
     }
 
     /// The panel `owner` may repaint in place, or nil.
@@ -104,9 +110,9 @@ final class CandidatePanel: CandidatePresenter {
         return panel.selectedIndex
     }
 
-    func candidateIndex(forSlot slot: Int, ownedBy owner: ComposingSessionToken) -> Int? {
+    func candidateIndex(forKeySlot slot: Int, ownedBy owner: ComposingSessionToken) -> Int? {
         guard self.owner == owner else { return nil }
-        return panel?.candidateIndex(forSlot: slot)
+        return panel?.candidateIndex(forKeySlot: slot)
     }
 
     func hide(ownedBy owner: ComposingSessionToken) {

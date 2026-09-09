@@ -517,7 +517,26 @@ public final class TaigiInputController: IMKInputController {
 
     @MainActor
     private func updateCellsInPlace() {
-        candidatePresenter.updateCells(source.cells, ownedBy: sessionToken)
+        candidatePresenter.updateCells(windowContent, ownedBy: sessionToken)
+    }
+
+    /// The current list as the window takes it — read by both the fresh-list
+    /// path and the in-place update, so a repaint can never draw a different
+    /// key row than a `show` of the same list would.
+    @MainActor
+    private var windowContent: CandidateWindowContent {
+        CandidateWindowContent(
+            cells: source.cells,
+            // The set the user chose — the only keys that pick. A rebind
+            // cannot strand a stale hint: reaching the shortcut pane moves
+            // focus off the client, and `finishComposition` takes the bar
+            // down with the session.
+            slotKeySet: settings.composingKeyBindings.slotKeySet,
+            // The §34 literal is what the user is already typing, not an offer
+            // to pick, so it takes no key and the keys start on the cell after
+            // it (USER 2026-09-09).
+            leadCellIsUnkeyed: source.leadsWithLiteralRoman,
+        )
     }
 
     // MARK: - Main-actor work
@@ -685,7 +704,7 @@ public final class TaigiInputController: IMKInputController {
             // only when the page happens to be short would make it fire a host
             // shortcut at random.
             commitPresented(
-                at: candidatePresenter.candidateIndex(forSlot: slot, ownedBy: sessionToken),
+                at: candidatePresenter.candidateIndex(forKeySlot: slot, ownedBy: sessionToken),
                 flip: false,
                 from: manager, client: client, executing: executor,
             )
@@ -840,14 +859,7 @@ public final class TaigiInputController: IMKInputController {
         }
 
         candidatePresenter.show(
-            CandidateWindowContent(
-                cells: source.cells,
-                // The set the user chose — the only keys that pick. A rebind
-                // cannot strand a stale hint: reaching the shortcut pane moves
-                // focus off the client, and `finishComposition` takes the bar
-                // down with the session.
-                slotKeySet: settings.composingKeyBindings.slotKeySet,
-            ),
+            windowContent,
             anchoredTo: caretRect,
             hostWindowLevel: client.windowLevel(),
             // Feeds the Multicolour accent resolution: when the system has no

@@ -14,7 +14,7 @@ use super::document_text::{
 };
 use super::learner::NextWordLearner;
 use super::outcomes::{CandidateCommitOutcome, CandidateFetchOutcome};
-use super::presentation::{presentation, PresentedCandidate};
+use super::presentation::{leads_with_literal_roman, presentation, PresentedCandidate};
 use super::stores::{Clock, CustomDictionarySource, FrequencySource};
 use crate::engine::{
     self, CommitContinuousArgs, ComposingTransition, ContinuousCandidate, CustomEntry, Effect,
@@ -308,9 +308,21 @@ impl ComposingManager {
 
     /// The cells the window shows for `candidates`, under one snapshot of the
     /// settings in force right now — 合用 splits a candidate into two, so the
-    /// window's indices are cell indices (`CandidateSource::resolve`).
-    pub fn presentation(&self, candidates: &[ContinuousCandidate]) -> Vec<PresentedCandidate> {
-        presentation(candidates, &self.current_settings())
+    /// window's indices are cell indices (`CandidateSource::resolve`) — plus
+    /// whether the first cell is the §34 literal, which takes no slot key.
+    ///
+    /// ONE snapshot for BOTH answers, so the cells and the key row can never
+    /// be resolved against two different instants. Port of macOS
+    /// `ComposingManager.presentation(for:)`.
+    pub fn presentation(
+        &self,
+        candidates: &[ContinuousCandidate],
+    ) -> (Vec<PresentedCandidate>, bool) {
+        let settings = self.current_settings();
+        (
+            presentation(candidates, &settings),
+            leads_with_literal_roman(candidates, &settings),
+        )
     }
 
     /// Commits `candidate`, which must come from the `fetch_candidates` call

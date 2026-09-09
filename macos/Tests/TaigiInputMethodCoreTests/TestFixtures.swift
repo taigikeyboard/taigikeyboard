@@ -590,7 +590,7 @@ final class RecordingEffectExecutor: ComposingEffectExecutor {
 final class RecordingCandidatePresenter: CandidatePresenter {
     enum Call: Equatable {
         case show(CandidateWindowContent, caretRect: CGRect)
-        case updateCells([CandidateCellContent], isOwner: Bool)
+        case updateCells(CandidateWindowContent, isOwner: Bool)
         case navigate(CandidateNavigation)
         case hide(isOwner: Bool)
         case hideForHandover
@@ -609,12 +609,19 @@ final class RecordingCandidatePresenter: CandidatePresenter {
     /// candidates the user can no longer see.
     var shownContent: CandidateWindowContent? {
         guard isShowing else { return nil }
-        return CandidateWindowContent(cells: cells, slotKeySet: slotKeySet)
+        return CandidateWindowContent(
+            cells: cells, slotKeySet: slotKeySet, leadCellIsUnkeyed: leadCellIsUnkeyed,
+        )
     }
 
     /// The keys the window was last told pick — what a case asserting the
     /// hint matches the key contract reads.
     private(set) var slotKeySet: CandidateSlotKeySet = .bareKeys
+
+    /// Whether the window was last told its first cell is the unkeyed §34
+    /// literal — the double shifts its slots by one when it is, as the real
+    /// panels do.
+    private(set) var leadCellIsUnkeyed = false
 
     var isShowing: Bool {
         owner != nil
@@ -630,16 +637,19 @@ final class RecordingCandidatePresenter: CandidatePresenter {
         self.owner = owner
         cells = content.cells
         slotKeySet = content.slotKeySet
+        leadCellIsUnkeyed = content.leadCellIsUnkeyed
         selectedIndex = 0
         calls.append(.show(content, caretRect: caretRect))
     }
 
-    func updateCells(_ newCells: [CandidateCellContent], ownedBy owner: ComposingSessionToken) {
-        calls.append(.updateCells(newCells, isOwner: self.owner == owner))
+    func updateCells(_ content: CandidateWindowContent, ownedBy owner: ComposingSessionToken) {
+        calls.append(.updateCells(content, isOwner: self.owner == owner))
         // The real panel's contract: content changes in place, the window
         // stays up, and the selection keeps its absolute index (clamped).
-        guard self.owner == owner, !cells.isEmpty, !newCells.isEmpty else { return }
-        cells = newCells
+        guard self.owner == owner, !cells.isEmpty, !content.cells.isEmpty else { return }
+        slotKeySet = content.slotKeySet
+        leadCellIsUnkeyed = content.leadCellIsUnkeyed
+        cells = content.cells
         selectedIndex = min(selectedIndex, cells.count - 1)
     }
 
@@ -669,10 +679,22 @@ final class RecordingCandidatePresenter: CandidatePresenter {
     }
 
     /// Slots address the first page, which is where the selection stays in
-    /// every controller case — the double never pages (see `navigate`).
-    func candidateIndex(forSlot slot: Int, ownedBy owner: ComposingSessionToken) -> Int? {
-        guard self.owner == owner, (0 ..< HorizontalPageLayout.pageSize).contains(slot) else { return nil }
-        return cells.indices.contains(slot) ? slot : nil
+    /// every controller case — the double never pages (see `navigate`). The
+    /// unkeyed literal shifts them by one, as `CandidateBasePanel
+    /// .candidateIndex(forKeySlot:)` does.
+    func candidateIndex(forKeySlot slot: Int, ownedBy owner: ComposingSessionToken) -> Int? {
+        guard self.owner == owner else { return nil }
+        // Through the production rule, so the double cannot model a window the
+        // real panels do not draw — including the shifted ninth key, which
+        // falls off the modelled page rather than reaching a tenth cell.
+        return CandidateIndexLabel.candidateIndex(
+            forKeySlot: slot,
+            leadCellIsUnkeyed: leadCellIsUnkeyed,
+            indexForSlot: { slot in
+                guard slot < HorizontalPageLayout.pageSize else { return nil }
+                return cells.indices.contains(slot) ? slot : nil
+            },
+        )
     }
 
     func hide(ownedBy owner: ComposingSessionToken) {

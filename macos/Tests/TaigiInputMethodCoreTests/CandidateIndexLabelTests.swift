@@ -258,6 +258,141 @@ final class CandidateIndexLabelTests: XCTestCase {
         )
     }
 
+    // MARK: - The unkeyed §34 literal
+
+    /// With the literal leading, the first cell draws no key and the keys
+    /// start on the cell after it: `q` picks candidate 1, not candidate 0
+    /// (USER 2026-09-09).
+    func testLeadCellIsUnkeyed_startsTheKeysOnTheSecondCell() {
+        let panel = HorizontalCandidatePanel(
+            style: .sequoia, metrics: TestFixtures.defaultCandidateMetrics,
+        )
+        panel.leadCellIsUnkeyed = true
+        _ = panel.updateCandidates(Self.cells)
+
+        let numbered = numberedCells(in: panel)
+        XCTAssertEqual(numbered.first?.item.absoluteIndex, 1, "cell 0 draws no key")
+        XCTAssertEqual(numbered.first?.digit, Self.keys[0], "the first key moved onto cell 1")
+        XCTAssertEqual(panel.candidateIndex(forKeySlot: 0), 1)
+        XCTAssertEqual(panel.candidateIndex(forKeySlot: 1), 2)
+        assertDigitsMatchSlots(in: panel)
+    }
+
+    /// The literal page keys eight candidates: the ninth key falls off the
+    /// end of the shifted row rather than the page growing a tenth cell.
+    func testLeadCellIsUnkeyed_leavesTheNinthKeyIdleOnThatPage() {
+        let panel = HorizontalCandidatePanel(
+            style: .sequoia, metrics: TestFixtures.defaultCandidateMetrics,
+        )
+        panel.leadCellIsUnkeyed = true
+        _ = panel.updateCandidates(Self.cells)
+
+        let keyed = (0 ..< 9).compactMap { panel.candidateIndex(forKeySlot: $0) }
+        XCTAssertEqual(keyed.count, numberedCells(in: panel).count)
+        XCTAssertNil(panel.candidateIndex(forKeySlot: 8), "the ninth key picks nothing here")
+        XCTAssertNil(panel.candidateIndex(forKeySlot: 9), "past the key row")
+    }
+
+    /// A page the literal is not on keys every cell from the first key —
+    /// the shift follows the row, not the list.
+    func testLeadCellIsUnkeyed_leavesLaterPagesFullyKeyed() {
+        let panel = HorizontalCandidatePanel(
+            style: .sequoia, metrics: TestFixtures.defaultCandidateMetrics,
+        )
+        panel.leadCellIsUnkeyed = true
+        _ = panel.updateCandidates(Self.cells)
+        panel.navigate(.pageDown)
+
+        let numbered = numberedCells(in: panel)
+        XCTAssertNotEqual(numbered.first?.item.absoluteIndex, 1, "the page turned")
+        XCTAssertEqual(numbered.first?.digit, Self.keys[0])
+        XCTAssertEqual(panel.candidateIndex(forKeySlot: 0), numbered.first?.item.absoluteIndex)
+        assertDigitsMatchSlots(in: panel)
+    }
+
+    /// The vertical column shifts only while the literal is the row the keys
+    /// start on; once the viewport has scrolled past it every key is back on
+    /// its own row.
+    func testLeadCellIsUnkeyed_stopsShiftingOnceTheColumnScrollsPastTheLiteral() {
+        let panel = VerticalCandidatePanel(
+            style: .sequoia, metrics: TestFixtures.defaultCandidateMetrics,
+        )
+        panel.leadCellIsUnkeyed = true
+        _ = panel.updateCandidates(Self.cells)
+        XCTAssertEqual(panel.candidateIndex(forKeySlot: 0), 1, "shifted at the top")
+
+        panel.setFrame(NSRect(x: 0, y: 0, width: 320, height: 320), display: false)
+        panel.orderFront(nil)
+        defer { panel.orderOut(nil) }
+        for _ in 0 ..< 20 {
+            panel.navigate(.nextCandidate)
+        }
+
+        let anchoredIndex = panel.candidateIndex(forSlot: 0)
+        XCTAssertNotEqual(anchoredIndex, 0, "the viewport left the literal behind")
+        XCTAssertEqual(panel.candidateIndex(forKeySlot: 0), anchoredIndex, "no shift off the top")
+        assertDigitsMatchSlots(in: panel)
+    }
+
+    /// The flag off leaves the first cell keyed, which is what a fetch with
+    /// no literal (the setting off) presents.
+    func testLeadCellKeyed_whenNoLiteralLeadsTheList() {
+        let panel = HorizontalCandidatePanel(
+            style: .sequoia, metrics: TestFixtures.defaultCandidateMetrics,
+        )
+        _ = panel.updateCandidates(Self.cells)
+
+        XCTAssertEqual(panel.candidateIndex(forKeySlot: 0), 0)
+        XCTAssertEqual(numberedCells(in: panel).first?.item.absoluteIndex, 0)
+    }
+
+    /// The expanded grid keys the row the selection is on, so the shift is
+    /// the first row's alone: walking down leaves every key on its own cell.
+    func testLeadCellIsUnkeyed_shiftsOnlyTheGridRowTheLiteralStarts() {
+        let panel = ExpandableCandidatePanel(
+            style: .sequoia, metrics: TestFixtures.defaultCandidateMetrics,
+        )
+        panel.leadCellIsUnkeyed = true
+        _ = panel.updateCandidates(Self.cells)
+
+        XCTAssertEqual(panel.displayMode, .collapsed)
+        XCTAssertEqual(panel.candidateIndex(forKeySlot: 0), 1, "the collapsed row leads with it")
+        assertDigitsMatchSlots(in: panel)
+
+        for _ in 0 ..< 20 {
+            panel.navigate(.nextCandidate)
+        }
+        XCTAssertEqual(panel.displayMode, .expanded)
+
+        let rowStart = panel.candidateIndex(forSlot: 0)
+        XCTAssertNotEqual(rowStart, 0, "the selection walked off the row the literal starts")
+        XCTAssertEqual(panel.candidateIndex(forKeySlot: 0), rowStart, "no shift on that row")
+        assertDigitsMatchSlots(in: panel)
+    }
+
+    /// The controller double shifts like the real panels, ninth key included —
+    /// a slot that falls off the page must not reach the tenth cell.
+    func testTheControllerDouble_shiftsAndDropsTheNinthKey() {
+        let presenter = RecordingCandidatePresenter()
+        let owner = ComposingSessionToken()
+        presenter.show(
+            CandidateWindowContent(
+                cells: Array(Self.cells.prefix(12)), slotKeySet: .bareKeys, leadCellIsUnkeyed: true,
+            ),
+            anchoredTo: .zero,
+            hostWindowLevel: 0,
+            hostBundleIdentifier: nil,
+            ownedBy: owner,
+        )
+
+        XCTAssertEqual(presenter.candidateIndex(forKeySlot: 0, ownedBy: owner), 1)
+        XCTAssertEqual(presenter.candidateIndex(forKeySlot: 7, ownedBy: owner), 8)
+        XCTAssertNil(
+            presenter.candidateIndex(forKeySlot: 8, ownedBy: owner),
+            "the ninth key falls off the page rather than reaching a tenth cell",
+        )
+    }
+
     // MARK: - Helpers
 
     /// Every digit drawn in `panel` resolves to the candidate its slot chord
@@ -276,7 +411,7 @@ final class CandidateIndexLabelTests: XCTestCase {
                 )
             }
             XCTAssertEqual(
-                panel.candidateIndex(forSlot: digit - 1), item.absoluteIndex,
+                panel.candidateIndex(forKeySlot: digit - 1), item.absoluteIndex,
                 "\(type(of: panel)): the cell drawn \"\(key)\" is not what that key picks",
                 file: file, line: line,
             )

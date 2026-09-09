@@ -348,15 +348,48 @@ final class ComposingManager {
 
     /// How the candidate window presents `candidates` under the settings in
     /// force right now — the cells, and which candidate and script each one
-    /// commits (`PresentedCandidate`).
+    /// commits (`PresentedCandidate`) — together with whether the first cell
+    /// is the §34 literal, which takes no slot key.
     ///
     /// Alongside `documentText` rather than derived from it: a cell shows one
     /// script or splits the two into columns while the document string may
     /// bracket them into one, so they share the settings snapshot, not the
     /// formatting. ONE snapshot for the whole list — it is a few dozen
-    /// defaults reads, and a bar is rebuilt per keystroke.
-    func presentation(for candidates: [ContinuousCandidate]) -> [PresentedCandidate] {
-        PresentedCandidate.presentation(of: candidates, settings: settingsProvider.current)
+    /// defaults reads, and a bar is rebuilt per keystroke — and one for BOTH
+    /// answers, so the cells and the key row can never be resolved against
+    /// two different instants.
+    func presentation(
+        for candidates: [ContinuousCandidate],
+    ) -> (cells: [PresentedCandidate], leadsWithLiteralRoman: Bool) {
+        let settings = settingsProvider.current
+        return (
+            PresentedCandidate.presentation(of: candidates, settings: settings),
+            Self.leadsWithLiteralRomanCandidate(candidates, settings: settings),
+        )
+    }
+
+    /// Whether `candidates` leads with the §34 literal — the WYSIWYG
+    /// romanization the engine prepends at index 0 while 顯示當咧拍的字 is on
+    /// (`engine/composing/src/dispatch.rs:260-268`). That cell takes no slot
+    /// key: it is what the user is already typing, not an offer to pick
+    /// (USER 2026-09-09), so the keys start on the cell after it
+    /// (`CandidateIndexLabel.candidateIndex(forKeySlot:leadCellIsUnkeyed:indexForSlot:)`).
+    ///
+    /// Read off the setting plus the shape of the leading candidate rather
+    /// than re-derived: the literal is roman-only by construction
+    /// (`dispatch.rs:344` `hanji: None`), and the engine's other gate — the
+    /// TPS buffer that suppresses the prepend (`dispatch.rs:331`) — cannot
+    /// arise on the desktop, where the only modes are TL and POJ
+    /// (`InputMode`). A hanji-bearing lead means the prepend did not happen,
+    /// whatever the setting says, and every cell keeps its key.
+    static func leadsWithLiteralRomanCandidate(
+        _ candidates: [ContinuousCandidate],
+        settings: EngineSettings,
+    ) -> Bool {
+        guard settings.isLiteralRomanCandidateEnabled, let first = candidates.first else {
+            return false
+        }
+        return first.presentableHanji == nil
     }
 
     /// Commits `candidate`, which must come from the `fetchCandidates()` call

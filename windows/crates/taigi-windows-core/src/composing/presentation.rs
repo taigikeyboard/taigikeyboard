@@ -78,6 +78,31 @@ pub(crate) fn presentation(
     presented
 }
 
+/// Whether `candidates` leads with the §34 literal — the WYSIWYG romanization
+/// the engine prepends at index 0 while 顯示當咧拍的字 is on
+/// (`engine/composing/src/dispatch.rs:260-268`). That cell takes no slot key:
+/// it is what the user is already typing, not an offer to pick (USER
+/// 2026-09-09), so the keys start on the cell after it
+/// (`CandidateIndexLabel::candidate_index_for_key_slot`).
+///
+/// Read off the setting plus the shape of the leading candidate rather than
+/// re-derived: the literal is roman-only by construction (`dispatch.rs:344`
+/// `hanji: None`), and the engine's other gate — the TPS buffer that
+/// suppresses the prepend (`dispatch.rs:331`) — cannot arise on the desktop,
+/// where the only modes are TL and POJ (`InputMode`). A hanji-bearing lead
+/// means the prepend did not happen, whatever the setting says, and every cell
+/// keeps its key. Port of macOS
+/// `ComposingManager.leadsWithLiteralRomanCandidate(_:settings:)`.
+pub(crate) fn leads_with_literal_roman(
+    candidates: &[ContinuousCandidate],
+    settings: &EngineSettings,
+) -> bool {
+    settings.is_literal_roman_candidate_enabled
+        && candidates
+            .first()
+            .is_some_and(|candidate| candidate.nonempty_hanji().is_none())
+}
+
 /// The candidates the engine offered for one context and the cells shown
 /// for them, written together so neither can outlive the other: `set` /
 /// `clear` are the only writes, and every window index (highlighted, slot,
@@ -86,24 +111,38 @@ pub(crate) fn presentation(
 pub struct CandidateSource {
     candidates: Vec<ContinuousCandidate>,
     presented: Vec<PresentedCandidate>,
+    leads_with_literal_roman: bool,
 }
 
 impl CandidateSource {
     /// A fresh list, presented under the settings in force right now.
     pub fn set(&mut self, candidates: Vec<ContinuousCandidate>, manager: &ComposingManager) {
-        self.presented = manager.presentation(&candidates);
+        let (presented, leads_with_literal_roman) = manager.presentation(&candidates);
+        self.presented = presented;
+        self.leads_with_literal_roman = leads_with_literal_roman;
         self.candidates = candidates;
     }
 
     /// The same list presented again under the settings in force right
     /// now (the 漢羅 flip re-renders in place).
     pub fn refresh_presentation(&mut self, manager: &ComposingManager) {
-        self.presented = manager.presentation(&self.candidates);
+        let (presented, leads_with_literal_roman) = manager.presentation(&self.candidates);
+        self.presented = presented;
+        self.leads_with_literal_roman = leads_with_literal_roman;
     }
 
     pub fn clear(&mut self) {
         self.candidates.clear();
         self.presented.clear();
+        self.leads_with_literal_roman = false;
+    }
+
+    /// Whether the first cell is the §34 literal, which takes no slot key
+    /// (`ComposingManager::leads_with_literal_roman_candidate`). A fact about
+    /// THIS fetch under the settings snapshot that presented it — a stale copy
+    /// would shift the keys off by one.
+    pub fn leads_with_literal_roman(&self) -> bool {
+        self.leads_with_literal_roman
     }
 
     pub fn is_empty(&self) -> bool {
@@ -250,6 +289,77 @@ mod tests {
             Box::new(SystemClock),
             1,
         )
+    }
+
+    /// A manager whose 顯示當咧拍的字 setting is `enabled`.
+    fn manager_with_literal(enabled: bool) -> ComposingManager {
+        let mut document = SettingsDocument::default();
+        document.set_bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED, enabled);
+        ComposingManager::new(
+            Arc::new(StaticSettingsProvider::new(document)),
+            Box::new(NoStores),
+            Box::new(NoStores),
+            NextWordLearner::new(Box::new(NoStores), Box::new(SystemClock)),
+            Box::new(SystemClock),
+            1,
+        )
+    }
+
+    /// The settings snapshot with 顯示當咧拍的字 `enabled`.
+    fn literal_settings(enabled: bool) -> EngineSettings {
+        EngineSettings {
+            is_literal_roman_candidate_enabled: enabled,
+            ..EngineSettings::default()
+        }
+    }
+
+    #[test]
+    fn the_lead_cell_is_unkeyed_only_for_a_roman_only_lead_under_the_setting() {
+        // trace: the §34 literal is roman-only (hanji None) and leads while the
+        // setting is on — that list keys from its second cell. A hanji-bearing
+        // lead means the engine did not prepend; an empty list has no lead.
+        let literal_led = vec![
+            candidate("tâi", None, 0),
+            candidate("tâi-gí", Some("台語"), 5),
+        ];
+        let dict_led = vec![candidate("tâi-gí", Some("台語"), 5)];
+
+        let on = literal_settings(true);
+        assert!(leads_with_literal_roman(&literal_led, &on));
+        assert!(!leads_with_literal_roman(&dict_led, &on));
+        assert!(!leads_with_literal_roman(&[], &on));
+
+        assert!(!leads_with_literal_roman(
+            &literal_led,
+            &literal_settings(false)
+        ));
+    }
+
+    #[test]
+    fn the_source_carries_the_unkeyed_lead_with_the_list_it_presented() {
+        // trace: set → true for a literal-led list; clear → false; a re-present
+        // under the same settings keeps it (the 漢羅 flip re-renders in place).
+        let manager = manager_with_literal(true);
+        let mut source = CandidateSource::default();
+        assert!(!source.leads_with_literal_roman());
+
+        source.set(
+            vec![
+                candidate("tâi", None, 0),
+                candidate("tâi-gí", Some("台語"), 5),
+            ],
+            &manager,
+        );
+        assert!(source.leads_with_literal_roman());
+
+        source.refresh_presentation(&manager);
+        assert!(source.leads_with_literal_roman());
+
+        source.clear();
+        assert!(!source.leads_with_literal_roman());
+
+        source.set(vec![candidate("tâi-gí", Some("台語"), 5)], &manager);
+        assert!(!source.leads_with_literal_roman());
     }
 
     #[test]
