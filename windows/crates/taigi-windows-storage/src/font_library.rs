@@ -296,18 +296,24 @@ fn has_allowed_extension(path: &Path) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::{AtomicU64, Ordering};
 
+    /// A directory of this test's own.
+    ///
+    /// The counter, not the clock alone: `SystemTime::now` is coarse enough on
+    /// Windows that two tests starting together read the same nanoseconds, and
+    /// two tests sharing a scratch directory see each other's files — which is
+    /// how `a_second_import_of_the_same_name_is_stored_beside_the_first` came
+    /// to find a `locked.ttf` the read-only-source test had written.
     fn scratch() -> PathBuf {
-        let directory = std::env::temp_dir().join(format!("taigi-fonts-{}", uuid()));
+        static NEXT: AtomicU64 = AtomicU64::new(0);
+        let directory = std::env::temp_dir().join(format!(
+            "taigi-fonts-{}-{}",
+            std::process::id(),
+            NEXT.fetch_add(1, Ordering::Relaxed),
+        ));
         std::fs::create_dir_all(&directory).unwrap();
         directory
-    }
-
-    fn uuid() -> u128 {
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos()
     }
 
     fn write(directory: &Path, name: &str, bytes: usize) -> PathBuf {
