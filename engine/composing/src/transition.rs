@@ -17,8 +17,11 @@
 //! preedit` therefore carries the **whole composition** during Continuous;
 //! tests inspect `nailed` via `Engine::snapshot_state`.
 
-use crate::api::{combined_display, nailed_prefix, EngineState, Intent, NailedSegment, Phase};
-use crate::derived::{derived_display, strip_tps_separator_markers};
+use crate::api::{
+    combined_display, combined_display_with_tail, nailed_prefix, CaretDirection, EngineState,
+    Intent, NailedSegment, Phase,
+};
+use crate::derived::{derived_display, display_caret_utf16, strip_tps_separator_markers};
 use protos::engine::composing_response::Preedit;
 use protos::engine::effect;
 use protos::engine::AppConfig;
@@ -46,10 +49,9 @@ pub(crate) fn apply(
         },
         Intent::Append { ch } => match &state.phase {
             Phase::Idle => enter_composing_or_insert_leading_hyphens(state, ch, config),
-            Phase::Composing { raw } => {
-                let mut next = raw.clone();
-                next.push_str(&ch);
-                enter_composing(state, next, config)
+            Phase::Composing { raw, caret } => {
+                let (next, caret) = insert_at_caret(raw, *caret, &ch);
+                step_composing(state, next, caret, 0, config)
             }
             Phase::Continuous { .. } => append_continuous(state, ch, config),
         },
@@ -107,13 +109,16 @@ pub(crate) fn apply(
         ),
         Intent::ResetContinuous => reset_continuous(state, config),
         Intent::TelexKey { key } => telex_key(state, &key, config),
+        Intent::MoveCaret { direction } => move_caret(state, direction, config),
     }
 }
 
-/// `Intent::TelexKey` — edit the pending tail through
-/// `telex::apply_telex_key`; a `None` edit is a no-op. Under Continuous the
-/// nailed segments stay untouched and the preedit re-renders the whole
-/// composition; selection resets as a fresh typing step does.
+/// `Intent::TelexKey` — edit the chunk before the caret through
+/// `telex::apply_telex_key` (the key acts on the syllable being typed, which
+/// is whatever ends that chunk) and keep the rest of the pending tail; a
+/// `None` edit is a no-op. Under Continuous the nailed segments stay
+/// untouched and the preedit re-renders the whole composition; selection
+/// resets as a fresh typing step does.
 fn telex_key(state: &mut EngineState, key: &str, config: &AppConfig) -> ComposingResponse {
     let mode = phonetics::api::parse_input_mode(&config.input_mode);
     match &state.phase {
@@ -121,33 +126,97 @@ fn telex_key(state: &mut EngineState, key: &str, config: &AppConfig) -> Composin
             Some(text) => enter_composing(state, text, config),
             None => noop(state, config),
         },
-        Phase::Composing { raw } => match crate::telex::apply_telex_key(raw, key, mode) {
-            Some(next) => enter_composing(state, next, config),
+        Phase::Composing { raw, caret } => match telex_before_caret(raw, *caret, key, mode) {
+            Some((next, caret)) => step_composing(state, next, caret, 0, config),
             None => noop(state, config),
         },
-        Phase::Continuous { raw, nailed } => match crate::telex::apply_telex_key(raw, key, mode) {
-            Some(next) => {
-                let combined = combined_display(nailed, &next, config);
-                state.phase = Phase::Continuous {
-                    raw: next.clone(),
-                    nailed: nailed.clone(),
-                };
-                state.selected_candidate_index = 0;
-                step_response(next, combined, 0)
+        Phase::Continuous { raw, caret, nailed } => {
+            match telex_before_caret(raw, *caret, key, mode) {
+                Some((next, caret)) => {
+                    step_continuous(state, next, caret, nailed.clone(), 0, config)
+                }
+                None => noop(state, config),
             }
-            None => noop(state, config),
-        },
+        }
     }
+}
+
+/// `Intent::MoveCaret` — step the caret one char inside the pending tail.
+/// The buffer is untouched, so the answer is the snapshot plus one
+/// `UpdatePreedit` carrying the new caret and nothing else: no
+/// `PerformAutocomplete`, so candidates, highlight and page stay. At an
+/// edge (the caret never enters a nailed segment) it is a plain snapshot.
+fn move_caret(
+    state: &mut EngineState,
+    direction: Option<CaretDirection>,
+    config: &AppConfig,
+) -> ComposingResponse {
+    let moved = match &mut state.phase {
+        Phase::Idle => None,
+        Phase::Composing { raw, caret } | Phase::Continuous { raw, caret, .. } => direction
+            .and_then(|direction| step_caret(raw, *caret, direction))
+            .map(|next| *caret = next),
+    };
+    let mut resp = snapshot(state, config);
+    if moved.is_some() {
+        if let Some(preedit) = &resp.preedit {
+            resp.effect.push(update_preedit(preedit));
+        }
+    }
+    resp
 }
 
 // ---- Helpers ------------------------------------------------------
 
-/// Drop the last `char` from `s` in a single UTF-8 walk via `Chars::as_str`.
-/// Returns "" if `s` is empty.
-fn drop_last_char(s: &str) -> String {
-    let mut it = s.chars();
-    it.next_back();
-    it.as_str().to_string()
+// Pending-tail edits around the caret. `caret` is a char boundary in
+// `0..=raw.len()`; each returns the new buffer and the new caret.
+
+fn insert_at_caret(raw: &str, caret: usize, text: &str) -> (String, usize) {
+    let mut next = String::with_capacity(raw.len() + text.len());
+    next.push_str(&raw[..caret]);
+    next.push_str(text);
+    next.push_str(&raw[caret..]);
+    (next, caret + text.len())
+}
+
+/// `None` when nothing precedes the caret.
+fn delete_before_caret(raw: &str, caret: usize) -> Option<(String, usize)> {
+    let removed = raw[..caret].chars().next_back()?;
+    let start = caret - removed.len_utf8();
+    let mut next = String::with_capacity(raw.len());
+    next.push_str(&raw[..start]);
+    next.push_str(&raw[caret..]);
+    Some((next, start))
+}
+
+fn replace_before_caret(raw: &str, caret: usize, replacement: &str) -> Option<(String, usize)> {
+    let (next, caret) = delete_before_caret(raw, caret)?;
+    Some(insert_at_caret(&next, caret, replacement))
+}
+
+/// Telex key on the chunk before the caret; the tail after it rides along.
+fn telex_before_caret(
+    raw: &str,
+    caret: usize,
+    key: &str,
+    mode: phonetics::api::InputMode,
+) -> Option<(String, usize)> {
+    let prefix = crate::telex::apply_telex_key(&raw[..caret], key, mode)?;
+    let next_caret = prefix.len();
+    let mut next = prefix;
+    next.push_str(&raw[caret..]);
+    Some((next, next_caret))
+}
+
+/// `None` at the edge the step would cross.
+fn step_caret(raw: &str, caret: usize, direction: CaretDirection) -> Option<usize> {
+    match direction {
+        CaretDirection::Left => raw[..caret]
+            .chars()
+            .next_back()
+            .map(|c| caret - c.len_utf8()),
+        CaretDirection::Right => raw[caret..].chars().next().map(|c| caret + c.len_utf8()),
+    }
 }
 
 /// Build a mid-composition step response (typing / replace-last /
@@ -157,26 +226,78 @@ fn drop_last_char(s: &str) -> String {
 /// composition** (`Σ nailed.display_text` + pending-tail derived form —
 /// callers build it via [`combined_display`], Model B) while `raw` stays the
 /// still-editable pending tail.
-fn step_response(raw: String, display: String, selected_index: i32) -> ComposingResponse {
+fn step_response(preedit: Preedit, selected_index: i32) -> ComposingResponse {
+    let effects = vec![update_preedit(&preedit), perform_autocomplete()];
     ComposingResponse {
-        preedit: Some(Preedit {
-            raw_input: raw,
-            display_text: display.clone(),
-        }),
-        effect: vec![update_preedit(display), perform_autocomplete()],
+        preedit: Some(preedit),
+        effect: effects,
         selected_candidate_index: selected_index,
         is_composing: true,
         continuous: None,
     }
 }
 
+/// The wire form of a live composition: the pending `raw`, the whole
+/// `display` (nailed prefix + pending tail under Continuous, whose derived
+/// form starts at byte `tail_start`) and the caret projected into it — the
+/// prefix's UTF-16 length plus the caret's offset inside the tail
+/// ([`display_caret_utf16`]).
+fn composition_preedit(raw: String, caret: usize, display: String, tail_start: usize) -> Preedit {
+    let (prefix, tail) = display.split_at(tail_start);
+    let caret_utf16 = prefix.encode_utf16().count() + display_caret_utf16(&raw, tail, caret);
+    Preedit {
+        raw_input: raw,
+        display_text: display,
+        caret_utf16: caret_utf16 as u32,
+    }
+}
+
 /// Enter or update the composing phase. A fresh composition step resets
 /// `selected_candidate_index` to 0.
 fn enter_composing(state: &mut EngineState, raw: String, config: &AppConfig) -> ComposingResponse {
-    state.phase = Phase::Composing { raw: raw.clone() };
-    state.selected_candidate_index = 0;
+    let caret = raw.len();
+    step_composing(state, raw, caret, 0, config)
+}
+
+/// One `Phase::Composing` step: the buffer becomes `raw` with the caret at
+/// `caret`, the preedit is re-derived and a fresh fetch requested.
+fn step_composing(
+    state: &mut EngineState,
+    raw: String,
+    caret: usize,
+    selected_index: i32,
+    config: &AppConfig,
+) -> ComposingResponse {
+    state.phase = Phase::Composing {
+        raw: raw.clone(),
+        caret,
+    };
+    state.selected_candidate_index = selected_index;
     let display = derived_display(&raw, config);
-    step_response(raw, display, 0)
+    step_response(composition_preedit(raw, caret, display, 0), selected_index)
+}
+
+/// One `Phase::Continuous` step on the pending tail: `nailed` is untouched,
+/// the whole composition re-renders (Model B) and a fresh fetch is requested.
+fn step_continuous(
+    state: &mut EngineState,
+    pending: String,
+    caret: usize,
+    nailed: Vec<NailedSegment>,
+    selected_index: i32,
+    config: &AppConfig,
+) -> ComposingResponse {
+    let (combined, tail_start) = combined_display_with_tail(&nailed, &pending, config);
+    state.phase = Phase::Continuous {
+        raw: pending.clone(),
+        caret,
+        nailed,
+    };
+    state.selected_candidate_index = selected_index;
+    step_response(
+        composition_preedit(pending, caret, combined, tail_start),
+        selected_index,
+    )
 }
 
 /// §21 INVARIANT_KHINSIANN_LEADING_MARKER_LITERAL — a leading ASCII-hyphen run
@@ -234,36 +355,31 @@ fn replace_last(
     config: &AppConfig,
 ) -> ComposingResponse {
     match &state.phase {
-        Phase::Composing { raw } => {
-            if raw.is_empty() {
+        Phase::Composing { raw, caret } => {
+            let Some((new_raw, caret)) = replace_before_caret(raw, *caret, &replacement) else {
                 return noop(state, config);
-            }
-            let mut new_raw = drop_last_char(raw);
-            new_raw.push_str(&replacement);
-            state.phase = Phase::Composing {
-                raw: new_raw.clone(),
             };
-            let display = derived_display(&new_raw, config);
-            step_response(new_raw, display, state.selected_candidate_index)
+            let preserved_index = state.selected_candidate_index;
+            step_composing(state, new_raw, caret, preserved_index, config)
         }
-        Phase::Continuous { raw, nailed } => {
-            if raw.is_empty() {
+        Phase::Continuous { raw, caret, nailed } => {
+            let Some((new_pending, caret)) = replace_before_caret(raw, *caret, &replacement) else {
                 return noop(state, config);
-            }
-            let mut new_pending = drop_last_char(raw);
-            new_pending.push_str(&replacement);
+            };
             // Empty pending + empty nailed = degenerate Continuous state
             // (Codex post-impl finding #2). Exit to Idle and clear nextword.
             if new_pending.is_empty() && nailed.is_empty() {
                 return exit_to_idle(state, abort_continuous_effects());
             }
-            let combined = combined_display(nailed, &new_pending, config);
             let preserved_index = state.selected_candidate_index;
-            state.phase = Phase::Continuous {
-                raw: new_pending.clone(),
-                nailed: nailed.clone(),
-            };
-            step_response(new_pending, combined, preserved_index)
+            step_continuous(
+                state,
+                new_pending,
+                caret,
+                nailed.clone(),
+                preserved_index,
+                config,
+            )
         }
         Phase::Idle => noop(state, config),
     }
@@ -271,11 +387,10 @@ fn replace_last(
 
 fn delete_backward(state: &mut EngineState, config: &AppConfig) -> ComposingResponse {
     match &state.phase {
-        Phase::Composing { raw } => {
-            if raw.is_empty() {
+        Phase::Composing { raw, caret } => {
+            let Some((new_raw, caret)) = delete_before_caret(raw, *caret) else {
                 return noop(state, config);
-            }
-            let new_raw = drop_last_char(raw);
+            };
             if new_raw.is_empty() {
                 return exit_to_idle(
                     state,
@@ -286,15 +401,10 @@ fn delete_backward(state: &mut EngineState, config: &AppConfig) -> ComposingResp
                     ],
                 );
             }
-            state.phase = Phase::Composing {
-                raw: new_raw.clone(),
-            };
-            state.selected_candidate_index = 0;
-            let display = derived_display(&new_raw, config);
-            step_response(new_raw, display, 0)
+            step_composing(state, new_raw, caret, 0, config)
         }
-        Phase::Continuous { raw, nailed } => {
-            delete_backward_continuous(state, raw.clone(), nailed.clone(), config)
+        Phase::Continuous { raw, caret, nailed } => {
+            delete_backward_continuous(state, raw.clone(), *caret, nailed.clone(), config)
         }
         Phase::Idle => noop(state, config),
     }
@@ -304,7 +414,9 @@ fn delete_backward(state: &mut EngineState, config: &AppConfig) -> ComposingResp
 /// Nailed segments are **not** in the document, so backspace never emits
 /// `DeleteBackwardFromDocument`: it only re-shapes the single marked region.
 /// Three branches:
-///   1. pending non-empty → drop last char of pending; if pending now empty
+///   1. pending non-empty → drop the char before the caret (nothing before
+///      it → no-op, the caret does not fall through into a nailed segment);
+///      if pending now empty
 ///      AND nailed is also empty, exit to Idle and clear the marked region
 ///      (no document char is touched — the char only ever lived in the
 ///      marked region); else stay Continuous and re-render the combined
@@ -319,21 +431,18 @@ fn delete_backward(state: &mut EngineState, config: &AppConfig) -> ComposingResp
 fn delete_backward_continuous(
     state: &mut EngineState,
     pending: String,
+    caret: usize,
     nailed: Vec<NailedSegment>,
     config: &AppConfig,
 ) -> ComposingResponse {
     if !pending.is_empty() {
-        let new_pending = drop_last_char(&pending);
+        let Some((new_pending, caret)) = delete_before_caret(&pending, caret) else {
+            return noop(state, config);
+        };
         if new_pending.is_empty() && nailed.is_empty() {
             return exit_to_idle(state, abort_continuous_effects());
         }
-        let combined = combined_display(&nailed, &new_pending, config);
-        state.phase = Phase::Continuous {
-            raw: new_pending.clone(),
-            nailed,
-        };
-        state.selected_candidate_index = 0;
-        return step_response(new_pending, combined, 0);
+        return step_continuous(state, new_pending, caret, nailed, 0, config);
     }
 
     // pending empty branches
@@ -367,23 +476,24 @@ fn delete_backward_continuous(
         ),
         None => next_word_clear_for_new_composing(),
     };
-    let combined = combined_display(&new_nailed, &new_pending, config);
+    let (combined, tail_start) = combined_display_with_tail(&new_nailed, &new_pending, config);
+    let caret = new_pending.len();
     state.phase = Phase::Continuous {
         raw: new_pending.clone(),
+        caret,
         nailed: new_nailed,
     };
     state.selected_candidate_index = 0;
 
+    let preedit = composition_preedit(new_pending, caret, combined, tail_start);
+    let effects = vec![
+        nextword_correction,
+        update_preedit(&preedit),
+        perform_autocomplete(),
+    ];
     ComposingResponse {
-        preedit: Some(Preedit {
-            raw_input: new_pending,
-            display_text: combined.clone(),
-        }),
-        effect: vec![
-            nextword_correction,
-            update_preedit(combined),
-            perform_autocomplete(),
-        ],
+        preedit: Some(preedit),
+        effect: effects,
         selected_candidate_index: 0,
         is_composing: true,
         continuous: None,
@@ -391,7 +501,7 @@ fn delete_backward_continuous(
 }
 
 fn commit_derived(state: &mut EngineState, config: &AppConfig) -> ComposingResponse {
-    let Phase::Composing { raw } = &state.phase else {
+    let Phase::Composing { raw, .. } = &state.phase else {
         return noop(state, config);
     };
     let display = derived_display(raw, config);
@@ -403,8 +513,8 @@ fn commit_derived(state: &mut EngineState, config: &AppConfig) -> ComposingRespo
 
 fn commit_raw(state: &mut EngineState, config: &AppConfig) -> ComposingResponse {
     match &state.phase {
-        Phase::Composing { raw } => commit_raw_composing(state, raw.clone(), config),
-        Phase::Continuous { raw, nailed } => {
+        Phase::Composing { raw, .. } => commit_raw_composing(state, raw.clone(), config),
+        Phase::Continuous { raw, nailed, .. } => {
             commit_raw_continuous(state, raw.clone(), nailed.clone(), config)
         }
         Phase::Idle => noop(state, config),
@@ -513,7 +623,7 @@ fn commit_preedit_then_insert_external(
     if external.is_empty() {
         return noop(state, config);
     }
-    if let Phase::Composing { raw } = &state.phase {
+    if let Phase::Composing { raw, .. } = &state.phase {
         let mut combined = derived_display(raw, config);
         combined.push_str(&external);
         return exit_to_idle(state, finalize_effects(combined));
@@ -547,21 +657,25 @@ fn set_selected_candidate_index(
 }
 
 fn snapshot(state: &EngineState, config: &AppConfig) -> ComposingResponse {
-    let (raw, display, is_composing) = match &state.phase {
-        Phase::Idle => (String::new(), String::new(), false),
-        Phase::Composing { raw } => (raw.clone(), derived_display(raw, config), true),
+    let (preedit, is_composing) = match &state.phase {
+        Phase::Idle => (Preedit::default(), false),
+        Phase::Composing { raw, caret } => (
+            composition_preedit(raw.clone(), *caret, derived_display(raw, config), 0),
+            true,
+        ),
         // Model B: the composing-buffer surface is the whole composition
         // (Σ nailed.display_text + pending-tail derived form), not the
         // pending tail alone. `raw_input` stays the still-editable tail.
-        Phase::Continuous { raw, nailed } => {
-            (raw.clone(), combined_display(nailed, raw, config), true)
+        Phase::Continuous { raw, caret, nailed } => {
+            let (combined, tail_start) = combined_display_with_tail(nailed, raw, config);
+            (
+                composition_preedit(raw.clone(), *caret, combined, tail_start),
+                true,
+            )
         }
     };
     ComposingResponse {
-        preedit: Some(Preedit {
-            raw_input: raw,
-            display_text: display,
-        }),
+        preedit: Some(preedit),
         effect: Vec::new(),
         selected_candidate_index: state.selected_candidate_index,
         is_composing,
@@ -587,32 +701,32 @@ fn noop(state: &EngineState, config: &AppConfig) -> ComposingResponse {
 
 // ---- Continuous-phase helpers --------------------------------------
 
-/// `Phase::Composing { raw }` → `Phase::Continuous { raw, nailed: [] }`.
-/// Marked text was already derived from the same `raw` and with no nailed
-/// segments the Model B composing surface equals that derived form, so no
-/// preedit refresh is necessary; emit zero effects. Idle / already-Continuous
+/// `Phase::Composing { raw, caret }` → `Phase::Continuous { raw, caret,
+/// nailed: [] }`. Marked text was already derived from the same `raw` and
+/// with no nailed segments the Model B composing surface equals that derived
+/// form, so no preedit refresh is necessary; emit zero effects. The caret
+/// rides along unchanged — a promotion that moved it would leave the host's
+/// caret where the engine's no longer is. Idle / already-Continuous
 /// / empty-raw Composing → noop (the `Continuous { raw: "", nailed: [] }`
 /// state is invalid; entering it from a degenerate empty Composing buffer
 /// would violate the "Continuous is non-empty in at least one of pending /
 /// nailed" invariant — Codex post-impl finding #2).
 fn enter_continuous(state: &mut EngineState, config: &AppConfig) -> ComposingResponse {
-    let Phase::Composing { raw } = &state.phase else {
+    let Phase::Composing { raw, caret } = &state.phase else {
         return noop(state, config);
     };
     if raw.is_empty() {
         return noop(state, config);
     }
-    let raw = raw.clone();
+    let (raw, caret) = (raw.clone(), *caret);
     let display = derived_display(&raw, config);
     state.phase = Phase::Continuous {
         raw: raw.clone(),
+        caret,
         nailed: Vec::new(),
     };
     ComposingResponse {
-        preedit: Some(Preedit {
-            raw_input: raw,
-            display_text: display,
-        }),
+        preedit: Some(composition_preedit(raw, caret, display, 0)),
         effect: Vec::new(),
         selected_candidate_index: state.selected_candidate_index,
         is_composing: true,
@@ -685,7 +799,7 @@ fn commit_preedit_then_insert_external_under_continuous(
     if external.is_empty() {
         return noop(state, config);
     }
-    let Phase::Continuous { raw, nailed } = &state.phase else {
+    let Phase::Continuous { raw, nailed, .. } = &state.phase else {
         return noop(state, config);
     };
     let mut combined = combined_display(nailed, raw, config);
@@ -718,7 +832,7 @@ fn commit_continuous(
     syllable_count: u8,
     config: &AppConfig,
 ) -> ComposingResponse {
-    let Phase::Continuous { raw, nailed } = &state.phase else {
+    let Phase::Continuous { raw, nailed, .. } = &state.phase else {
         return noop(state, config);
     };
     if display_text.is_empty()
@@ -770,22 +884,25 @@ fn commit_continuous(
 
     // Mid-commit (Model B): stay in Continuous, NO document write — just
     // re-render the combined marked region (nailed prefix + new pending).
-    let combined = combined_display(&new_nailed, &new_pending, config);
+    // Accepting a candidate is a flush of what was typed, so the caret goes
+    // to the end of the tail that is left.
+    let (combined, tail_start) = combined_display_with_tail(&new_nailed, &new_pending, config);
+    let caret = new_pending.len();
     state.phase = Phase::Continuous {
         raw: new_pending.clone(),
+        caret,
         nailed: new_nailed,
     };
     state.selected_candidate_index = 0;
+    let preedit = composition_preedit(new_pending, caret, combined, tail_start);
+    let effects = vec![
+        update_preedit(&preedit),
+        next_word_update_last_selected_word(canonical, next_word_roman),
+        perform_autocomplete(),
+    ];
     ComposingResponse {
-        preedit: Some(Preedit {
-            raw_input: new_pending,
-            display_text: combined.clone(),
-        }),
-        effect: vec![
-            update_preedit(combined),
-            next_word_update_last_selected_word(canonical, next_word_roman),
-            perform_autocomplete(),
-        ],
+        preedit: Some(preedit),
+        effect: effects,
         selected_candidate_index: 0,
         is_composing: true,
         continuous: None,
@@ -811,28 +928,24 @@ fn reset_continuous(state: &mut EngineState, config: &AppConfig) -> ComposingRes
 /// Composing's empty `Append` produces a degenerate buffer state — kept
 /// guarded here rather than echoed forward).
 fn append_continuous(state: &mut EngineState, ch: String, config: &AppConfig) -> ComposingResponse {
-    let Phase::Continuous { raw, nailed } = &state.phase else {
+    let Phase::Continuous { raw, caret, nailed } = &state.phase else {
         return noop(state, config);
     };
     if ch.is_empty() {
         return noop(state, config);
     }
-    let mut new_pending = raw.clone();
-    new_pending.push_str(&ch);
-    let combined = combined_display(nailed, &new_pending, config);
-    state.phase = Phase::Continuous {
-        raw: new_pending.clone(),
-        nailed: nailed.clone(),
-    };
-    state.selected_candidate_index = 0;
-    step_response(new_pending, combined, 0)
+    let (new_pending, caret) = insert_at_caret(raw, *caret, &ch);
+    step_continuous(state, new_pending, caret, nailed.clone(), 0, config)
 }
 
 // ---- Effect constructors ------------------------------------------
 
-fn update_preedit(display: String) -> Effect {
+fn update_preedit(preedit: &Preedit) -> Effect {
     Effect {
-        kind: Some(effect::Kind::UpdatePreedit(UpdatePreedit { display })),
+        kind: Some(effect::Kind::UpdatePreedit(UpdatePreedit {
+            display: preedit.display_text.clone(),
+            caret_utf16: preedit.caret_utf16,
+        })),
     }
 }
 

@@ -37,6 +37,7 @@ public  final class ComposingRequest extends
     COMMIT_CONTINUOUS(32),
     RESET_CONTINUOUS(33),
     TELEX_KEY(40),
+    MOVE_CARET(41),
     METHOD_NOT_SET(0);
     private final int value;
     private MethodCase(int value) {
@@ -69,6 +70,7 @@ public  final class ComposingRequest extends
         case 32: return COMMIT_CONTINUOUS;
         case 33: return RESET_CONTINUOUS;
         case 40: return TELEX_KEY;
+        case 41: return MOVE_CARET;
         case 0: return METHOD_NOT_SET;
         default: return null;
       }
@@ -953,7 +955,7 @@ public  final class ComposingRequest extends
   public static final int TELEX_KEY_FIELD_NUMBER = 40;
   /**
    * <pre>
-   * --- Telex tone keys (40s, desktop Telex scheme) ---
+   * --- Desktop editing keys (40s: Telex tone keys, composing caret) ---
    * </pre>
    *
    * <code>.taigi.engine.TelexKey telex_key = 40;</code>
@@ -964,7 +966,7 @@ public  final class ComposingRequest extends
   }
   /**
    * <pre>
-   * --- Telex tone keys (40s, desktop Telex scheme) ---
+   * --- Desktop editing keys (40s: Telex tone keys, composing caret) ---
    * </pre>
    *
    * <code>.taigi.engine.TelexKey telex_key = 40;</code>
@@ -978,7 +980,7 @@ public  final class ComposingRequest extends
   }
   /**
    * <pre>
-   * --- Telex tone keys (40s, desktop Telex scheme) ---
+   * --- Desktop editing keys (40s: Telex tone keys, composing caret) ---
    * </pre>
    *
    * <code>.taigi.engine.TelexKey telex_key = 40;</code>
@@ -990,7 +992,7 @@ public  final class ComposingRequest extends
   }
   /**
    * <pre>
-   * --- Telex tone keys (40s, desktop Telex scheme) ---
+   * --- Desktop editing keys (40s: Telex tone keys, composing caret) ---
    * </pre>
    *
    * <code>.taigi.engine.TelexKey telex_key = 40;</code>
@@ -1008,13 +1010,63 @@ public  final class ComposingRequest extends
   }
   /**
    * <pre>
-   * --- Telex tone keys (40s, desktop Telex scheme) ---
+   * --- Desktop editing keys (40s: Telex tone keys, composing caret) ---
    * </pre>
    *
    * <code>.taigi.engine.TelexKey telex_key = 40;</code>
    */
   private void clearTelexKey() {
     if (methodCase_ == 40) {
+      methodCase_ = 0;
+      method_ = null;
+    }
+  }
+
+  public static final int MOVE_CARET_FIELD_NUMBER = 41;
+  /**
+   * <code>.taigi.engine.MoveCaret move_caret = 41;</code>
+   */
+  @java.lang.Override
+  public boolean hasMoveCaret() {
+    return methodCase_ == 41;
+  }
+  /**
+   * <code>.taigi.engine.MoveCaret move_caret = 41;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.MoveCaret getMoveCaret() {
+    if (methodCase_ == 41) {
+       return (com.siansiansu.taigikeyboard.engine.proto.MoveCaret) method_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.MoveCaret.getDefaultInstance();
+  }
+  /**
+   * <code>.taigi.engine.MoveCaret move_caret = 41;</code>
+   */
+  private void setMoveCaret(com.siansiansu.taigikeyboard.engine.proto.MoveCaret value) {
+    java.util.Objects.requireNonNull(value);
+    method_ = value;
+    methodCase_ = 41;
+  }
+  /**
+   * <code>.taigi.engine.MoveCaret move_caret = 41;</code>
+   */
+  private void mergeMoveCaret(com.siansiansu.taigikeyboard.engine.proto.MoveCaret value) {
+    java.util.Objects.requireNonNull(value);
+    if (methodCase_ == 41 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.MoveCaret.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.MoveCaret.newBuilder((com.siansiansu.taigikeyboard.engine.proto.MoveCaret) method_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      method_ = value;
+    }
+    methodCase_ = 41;
+  }
+  /**
+   * <code>.taigi.engine.MoveCaret move_caret = 41;</code>
+   */
+  private void clearMoveCaret() {
+    if (methodCase_ == 41) {
       methodCase_ = 0;
       method_ = null;
     }
@@ -1971,7 +2023,7 @@ public  final class ComposingRequest extends
 
     /**
      * <pre>
-     * --- Telex tone keys (40s, desktop Telex scheme) ---
+     * --- Desktop editing keys (40s: Telex tone keys, composing caret) ---
      * </pre>
      *
      * <code>.taigi.engine.TelexKey telex_key = 40;</code>
@@ -1982,7 +2034,7 @@ public  final class ComposingRequest extends
     }
     /**
      * <pre>
-     * --- Telex tone keys (40s, desktop Telex scheme) ---
+     * --- Desktop editing keys (40s: Telex tone keys, composing caret) ---
      * </pre>
      *
      * <code>.taigi.engine.TelexKey telex_key = 40;</code>
@@ -1993,7 +2045,7 @@ public  final class ComposingRequest extends
     }
     /**
      * <pre>
-     * --- Telex tone keys (40s, desktop Telex scheme) ---
+     * --- Desktop editing keys (40s: Telex tone keys, composing caret) ---
      * </pre>
      *
      * <code>.taigi.engine.TelexKey telex_key = 40;</code>
@@ -2005,7 +2057,7 @@ public  final class ComposingRequest extends
     }
     /**
      * <pre>
-     * --- Telex tone keys (40s, desktop Telex scheme) ---
+     * --- Desktop editing keys (40s: Telex tone keys, composing caret) ---
      * </pre>
      *
      * <code>.taigi.engine.TelexKey telex_key = 40;</code>
@@ -2018,7 +2070,7 @@ public  final class ComposingRequest extends
     }
     /**
      * <pre>
-     * --- Telex tone keys (40s, desktop Telex scheme) ---
+     * --- Desktop editing keys (40s: Telex tone keys, composing caret) ---
      * </pre>
      *
      * <code>.taigi.engine.TelexKey telex_key = 40;</code>
@@ -2030,7 +2082,7 @@ public  final class ComposingRequest extends
     }
     /**
      * <pre>
-     * --- Telex tone keys (40s, desktop Telex scheme) ---
+     * --- Desktop editing keys (40s: Telex tone keys, composing caret) ---
      * </pre>
      *
      * <code>.taigi.engine.TelexKey telex_key = 40;</code>
@@ -2038,6 +2090,54 @@ public  final class ComposingRequest extends
     public Builder clearTelexKey() {
       copyOnWrite();
       instance.clearTelexKey();
+      return this;
+    }
+
+    /**
+     * <code>.taigi.engine.MoveCaret move_caret = 41;</code>
+     */
+    @java.lang.Override
+    public boolean hasMoveCaret() {
+      return instance.hasMoveCaret();
+    }
+    /**
+     * <code>.taigi.engine.MoveCaret move_caret = 41;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.MoveCaret getMoveCaret() {
+      return instance.getMoveCaret();
+    }
+    /**
+     * <code>.taigi.engine.MoveCaret move_caret = 41;</code>
+     */
+    public Builder setMoveCaret(com.siansiansu.taigikeyboard.engine.proto.MoveCaret value) {
+      copyOnWrite();
+      instance.setMoveCaret(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.MoveCaret move_caret = 41;</code>
+     */
+    public Builder setMoveCaret(
+        com.siansiansu.taigikeyboard.engine.proto.MoveCaret.Builder builderForValue) {
+      copyOnWrite();
+      instance.setMoveCaret(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.MoveCaret move_caret = 41;</code>
+     */
+    public Builder mergeMoveCaret(com.siansiansu.taigikeyboard.engine.proto.MoveCaret value) {
+      copyOnWrite();
+      instance.mergeMoveCaret(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.MoveCaret move_caret = 41;</code>
+     */
+    public Builder clearMoveCaret() {
+      copyOnWrite();
+      instance.clearMoveCaret();
       return this;
     }
 
@@ -2076,12 +2176,13 @@ public  final class ComposingRequest extends
             com.siansiansu.taigikeyboard.engine.proto.CommitContinuous.class,
             com.siansiansu.taigikeyboard.engine.proto.ResetContinuous.class,
             com.siansiansu.taigikeyboard.engine.proto.TelexKey.class,
+            com.siansiansu.taigikeyboard.engine.proto.MoveCaret.class,
           };
           java.lang.String info =
-              "\u0000\u0011\u0001\u0000\n(\u0011\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f<\u0000" +
+              "\u0000\u0012\u0001\u0000\n)\u0012\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f<\u0000" +
               "\r<\u0000\u000e<\u0000\u000f<\u0000\u0010<\u0000\u0011<\u0000\u0012<\u0000\u0013" +
               "<\u0000\u0014<\u0000\u0015<\u0000\u001e<\u0000\u001f<\u0000 <\u0000!<\u0000(<\u0000" +
-              "";
+              ")<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

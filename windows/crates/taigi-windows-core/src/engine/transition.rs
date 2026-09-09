@@ -225,11 +225,13 @@ mod tests {
             preedit: Some(protos::engine::composing_response::Preedit {
                 raw_input: "tai5".into(),
                 display_text: "tâi".into(),
+                ..Default::default()
             }),
             effect: vec![
                 WireEffect {
                     kind: Some(effect::Kind::UpdatePreedit(UpdatePreedit {
                         display: "tâi".into(),
+                        ..Default::default()
                     })),
                 },
                 WireEffect {

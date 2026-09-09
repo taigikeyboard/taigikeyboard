@@ -7,9 +7,16 @@ use lexicon::{compound_hanji_exists, EngineHandle as LexiconHandle};
 use protos::engine::{AppConfig, ComposingResponse};
 use thiserror::Error;
 
-/// Composition phase. `Idle` means no preedit; `Composing { raw }` carries
-/// the numeric-tone ASCII raw input that the platform-side state used to
-/// shadow; `Continuous { raw, nailed }` is the v3.5.8 multi-segment state.
+/// Composition phase. `Idle` means no preedit; `Composing { raw, caret }`
+/// carries the numeric-tone ASCII raw input that the platform-side state used
+/// to shadow; `Continuous { raw, caret, nailed }` is the v3.5.8 multi-segment
+/// state.
+///
+/// `caret` is the editing position inside the pending `raw`: a UTF-8 byte
+/// offset on a char boundary, `0..=raw.len()`. Every mutator edits there;
+/// only `Intent::MoveCaret` (desktop) moves it away from `raw.len()`, so on
+/// mobile it is always the end. It lives beside `raw` rather than on
+/// `EngineState` so replacing the phase can never leave a stale offset.
 ///
 /// **Model B (mainstream-aligned, see `docs/engine/continuous-input-ranking.md`
 /// §10):** `nailed` segments are **NOT** in the host document. The whole
@@ -24,11 +31,20 @@ pub enum Phase {
     Idle,
     Composing {
         raw: String,
+        caret: usize,
     },
     Continuous {
         raw: String,
+        caret: usize,
         nailed: Vec<NailedSegment>,
     },
+}
+
+/// One step of `Intent::MoveCaret`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CaretDirection {
+    Left,
+    Right,
 }
 
 impl Phase {
@@ -53,7 +69,7 @@ impl Phase {
     pub fn raw_input(&self, config: &AppConfig) -> String {
         match self {
             Phase::Idle => String::new(),
-            Phase::Composing { raw } | Phase::Continuous { raw, .. } => {
+            Phase::Composing { raw, .. } | Phase::Continuous { raw, .. } => {
                 crate::derived::derived_display(raw, config)
             }
         }
@@ -81,8 +97,8 @@ impl Phase {
     pub fn composing_display(&self, config: &AppConfig) -> String {
         match self {
             Phase::Idle => String::new(),
-            Phase::Composing { raw } => crate::derived::derived_display(raw, config),
-            Phase::Continuous { raw, nailed } => combined_display(nailed, raw, config),
+            Phase::Composing { raw, .. } => crate::derived::derived_display(raw, config),
+            Phase::Continuous { raw, nailed, .. } => combined_display(nailed, raw, config),
         }
     }
 }
@@ -284,6 +300,16 @@ pub(crate) fn nailed_prefix(nailed: &[NailedSegment], config: &AppConfig) -> Str
 /// route through this so the rendered preedit and the hard-finalize commit
 /// can never diverge (Codex post-impl review point).
 pub(crate) fn combined_display(nailed: &[NailedSegment], raw: &str, config: &AppConfig) -> String {
+    combined_display_with_tail(nailed, raw, config).0
+}
+
+/// [`combined_display`] plus the byte offset where the pending tail's derived
+/// form starts inside it — what a caret inside the tail is projected from.
+pub(crate) fn combined_display_with_tail(
+    nailed: &[NailedSegment],
+    raw: &str,
+    config: &AppConfig,
+) -> (String, usize) {
     let mut s = nailed_prefix(nailed, config);
     let derived = crate::derived::derived_display(raw, config);
     // §10.2 word boundary between the nailed prefix and the pending
@@ -292,8 +318,9 @@ pub(crate) fn combined_display(nailed: &[NailedSegment], raw: &str, config: &App
     if !s.is_empty() && !derived.is_empty() && continuous_word_space(config) && !s.ends_with('-') {
         s.push(' ');
     }
+    let tail_start = s.len();
     s.push_str(&derived);
-    s
+    (s, tail_start)
 }
 
 /// Engine state — the platform no longer shadows this.
@@ -422,6 +449,13 @@ pub enum Intent {
     /// edits that change nothing answer with a no-op.
     TelexKey {
         key: String,
+    },
+    /// Desktop caret — step one char inside the pending tail; see the
+    /// `MoveCaret` proto comment for the contract (no refetch, edge = no-op).
+    /// `None` is a wire direction the engine does not know (unspecified or
+    /// newer than this build) and steps nowhere.
+    MoveCaret {
+        direction: Option<CaretDirection>,
     },
 }
 

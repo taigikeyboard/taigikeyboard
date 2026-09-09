@@ -51,7 +51,7 @@ fn assert_preedit_model_b_invariants(engine: &Engine, response: &ComposingRespon
     // raw_input to the raw pending tail rather than the derived accessor.)
     let expected_pending_raw = match &phase {
         Phase::Idle => String::new(),
-        Phase::Composing { raw } | Phase::Continuous { raw, .. } => raw.clone(),
+        Phase::Composing { raw, .. } | Phase::Continuous { raw, .. } => raw.clone(),
     };
     let expected_display = phase.composing_display(&config_tl());
     assert_eq!(
@@ -278,7 +278,7 @@ fn invariant_holds_through_multi_step_mid_commit_chain() {
 
     // Confirm engine state matches: two nailed segments + "poo" pending.
     let state = engine.snapshot_state();
-    let Phase::Continuous { raw, nailed } = state.phase else {
+    let Phase::Continuous { raw, nailed, .. } = state.phase else {
         panic!("expected Continuous after chained mid-commit");
     };
     assert_eq!(raw, "poo");

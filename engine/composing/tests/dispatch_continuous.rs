@@ -362,7 +362,7 @@ fn decode_commit_continuous_mid_commit() {
 
     assert!(resp.is_composing, "mid-commit stays composing");
     let state = engine.snapshot_state();
-    let Phase::Continuous { raw, nailed } = &state.phase else {
+    let Phase::Continuous { raw, nailed, .. } = &state.phase else {
         panic!("expected Continuous phase, got {:?}", state.phase);
     };
     assert_eq!(raw, "a");

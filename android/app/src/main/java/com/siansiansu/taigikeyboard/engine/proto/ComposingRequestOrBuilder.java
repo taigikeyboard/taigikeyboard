@@ -212,7 +212,7 @@ public interface ComposingRequestOrBuilder extends
 
   /**
    * <pre>
-   * --- Telex tone keys (40s, desktop Telex scheme) ---
+   * --- Desktop editing keys (40s: Telex tone keys, composing caret) ---
    * </pre>
    *
    * <code>.taigi.engine.TelexKey telex_key = 40;</code>
@@ -221,13 +221,24 @@ public interface ComposingRequestOrBuilder extends
   boolean hasTelexKey();
   /**
    * <pre>
-   * --- Telex tone keys (40s, desktop Telex scheme) ---
+   * --- Desktop editing keys (40s: Telex tone keys, composing caret) ---
    * </pre>
    *
    * <code>.taigi.engine.TelexKey telex_key = 40;</code>
    * @return The telexKey.
    */
   com.siansiansu.taigikeyboard.engine.proto.TelexKey getTelexKey();
+
+  /**
+   * <code>.taigi.engine.MoveCaret move_caret = 41;</code>
+   * @return Whether the moveCaret field is set.
+   */
+  boolean hasMoveCaret();
+  /**
+   * <code>.taigi.engine.MoveCaret move_caret = 41;</code>
+   * @return The moveCaret.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.MoveCaret getMoveCaret();
 
   public com.siansiansu.taigikeyboard.engine.proto.ComposingRequest.MethodCase getMethodCase();
 }

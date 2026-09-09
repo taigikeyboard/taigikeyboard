@@ -56,8 +56,9 @@ message ComposingRequest {
     CommitContinuous                commit_continuous                    = 32;
     ResetContinuous                 reset_continuous                     = 33;
 
-    // --- Telex tone keys (40s, desktop Telex scheme) ---
+    // --- Desktop editing keys (40s: Telex tone keys, composing caret) ---
     TelexKey                        telex_key                            = 40;
+    MoveCaret                       move_caret                           = 41;
   }
 }
 
@@ -284,10 +285,33 @@ message ResetContinuous {}
 // no-op. Idle + `z` enters composing with the expansion.
 message TelexKey { string key = 1; }
 
+// Desktop only — step the caret inside the pending tail one Unicode scalar
+// value left or right (`⌥←` / `⌥→` on macOS, `Ctrl+←` / `Ctrl+→` on Windows). The
+// buffer does not change, so the response carries `UpdatePreedit` (with the
+// new `caret_utf16`) and NO `PerformAutocomplete`: candidates, highlight and
+// page stay. At either edge of the pending tail — the caret never enters a
+// nailed segment — the request is a no-op with no effects. Every mutator
+// then edits at the caret: `Append` inserts there, `DeleteBackward` /
+// `ReplaceLast` act on the character before it, `TelexKey` on the chunk
+// before it. Mobile never sends this, so its caret stays at the end and
+// every mutator behaves as before.
+message MoveCaret { CaretDirection direction = 1; }
+
+enum CaretDirection {
+  CARET_DIRECTION_UNSPECIFIED = 0;  // treated as a no-op
+  CARET_DIRECTION_LEFT        = 1;
+  CARET_DIRECTION_RIGHT       = 2;
+}
+
 message ComposingResponse {
   message Preedit {
     string raw_input    = 1;  // numeric tone, ASCII (search key)
     string display_text = 2;  // diacritics (UI)
+    // Where the caret sits inside `display_text`, as a UTF-16 offset — the
+    // unit `setMarkedText(selectionRange:)` and `ITfRange::ShiftEnd` take.
+    // Equals the UTF-16 length of `display_text` unless a desktop moved the
+    // caret (`MoveCaret`). Idle → 0.
+    uint32 caret_utf16  = 3;
   }
 
   Preedit preedit                = 1;
@@ -431,7 +455,8 @@ message Effect {
   }
 }
 
-message UpdatePreedit              { string display = 1; }
+// `caret_utf16` mirrors `Preedit.caret_utf16` for the same composition.
+message UpdatePreedit              { string display = 1; uint32 caret_utf16 = 2; }
 message ClearPreeditWithoutCommit  {}
 message CommitTextReplacingPreedit { string text = 1; }
 message DeleteBackwardFromDocument {}
