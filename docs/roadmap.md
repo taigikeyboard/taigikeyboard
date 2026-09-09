@@ -458,6 +458,116 @@ shown outside it; the auto-space swap is one helper for typed and picked text.
 
 ---
 
+### Desktop composing caret — move inside the typed romanization (USER-scoped 2026-09-09)
+
+**Status**: P0 written 2026-09-09. Rounds P1a → P1b → P2 → P3 pending.
+**Scope**: macOS + Windows only (desktop train). Engine changes — `make build` after P1.
+
+USER 2026-09-09: 「allow user 可以使用方向鍵編輯正在輸入的字 例如使用者輸入ka2，可以使用方向鍵移動到k跟a中間,
+輸入h 此時候選詞會刷新成kha2,讓使用者如果不小心輸入錯字，可以再修正」. Fork answers (USER 2026-09-09):
+「候選窗上下左右移動是很重要的功能,評估使用其他按鍵的可能性」 — the bare arrows stay candidate
+navigation; 「這個功能可以顯示在快速齒,但我不打算讓使用者更改」 — fixed chord, shown read-only;
+「到頭/尾和刪最後一字不需要,只需要方向鍵左右移動即可」 — no Home/End, no forward delete.
+
+#### Design (grounded in code, Codex pre-impl reviewed 2026-09-09)
+
+**Keys.** While composing, `⌥←` / `⌥→` (macOS) and `Ctrl+←` / `Ctrl+→` (Windows) move the caret one
+character. Every other key keeps its meaning: the bare arrows, Tab, `[` `]`, PageUp/Down and the
+slot keys still drive the candidate window (horizontal layout: ←→ step, ↑↓ page —
+`HorizontalPageLayout.swift:143-153`), Shift+arrow still commits and hands the host its selection
+(`ComposingKeyIntent.swift:211`), Home/End and forward Delete stay commit-then-pass-through. Idle:
+the chord reaches the host untouched. Why these chords: they are each platform's own "jump a word"
+chord; `⌃←/→` never reaches an IME on macOS (Mission Control), `Alt+←/→` is back/forward in
+Explorer and browsers and rides `WM_SYSKEYDOWN`. The classifier gets one fixed tier — composing +
+exactly that modifier + ←/→ → `.moveCaret` — ahead of the candidate-navigation tier
+(`ComposingKeyIntent.swift:211`, `keys/intent.rs:103`) and the host-chord tier (`:270`, `:153`).
+Not in `ComposingAction` / `ComposingKeyBindings`; `ComposingKeyChord` keeps refusing arrows.
+
+**快速齒 shows it read-only.** One row after the composing rows, before 恢復預設: label + the chord
+as text (macOS `LabeledContent` + `Text`, Windows `cards::row` + `TextBlock`), no recorder, one
+i18n key (`desktop.shortcutMoveComposingCaret`) in all five languages.
+
+**Caret lives in the engine** (D1, Codex CONFIRM). `caret: usize` = UTF-8 byte boundary into the
+PENDING `raw`, stored beside it in `Phase::Composing { raw, caret }` / `Phase::Continuous { raw,
+caret, nailed }` (`api.rs:23-32`); `Idle` has none. Default `raw.len()`. Both desktops own the
+buffer through the engine and mirror each other, so a platform-side caret would mean a new
+`SetBuffer` op and the insert logic written twice. librime keeps the same model
+(`references/librime/src/rime/context.h:102`).
+
+**One intent** `MoveCaret { direction: Left | Right }` — steps one `char`, clamped to the pending
+tail (never enters a nailed segment; at the edge = no-op, no effect). Returns `[UpdatePreedit]`
+only, NO `PerformAutocomplete`: the buffer is unchanged, candidates / highlight / page /
+generation stay. McBopomofo's `setCursor` is likewise a bare assignment
+(`reading_grid.cpp:43-46`).
+
+**Caret-aware mutations** (D3, Codex CONFIRM + three amendments): `Append` inserts at the caret
+(`raw.insert_str`, caret += len); `DeleteBackward` removes the char before the caret (caret 0 with
+a non-empty pending = no-op; empty pending keeps today's unnail under Continuous and today's
+`DeleteBackwardFromDocument` under Composing — `transition.rs:278`, a mobile/desktop difference the
+shared helper must not erase; after an unnail the caret sits at the end of the restored text);
+`ReplaceLast` swaps the char before the caret and keeps `selected_candidate_index`
+(`transition.rs:237`); `TelexKey` = `apply_telex_key(&raw[..caret], key)` + the untouched tail,
+caret = the converted prefix's byte length; `Start` and `CommitContinuous` (nail) put the caret at
+the new end; **`EnterContinuous` keeps the caret** — it is a phase promotion with no
+`UpdatePreedit` (`transition.rs:599`), moving the caret there would desync the screen. With the
+caret at the end every op is byte-identical to today, so iOS / Android (which never send
+`MoveCaret`) keep their behaviour; the proptest generator (`proptest_sequences.rs:16`) gains
+`MoveCaret`, Unicode, tone digits and POJ toggles plus a caret-boundary invariant.
+
+**Candidates** (D6, Codex CONFIRM): unchanged — the whole pending buffer, left-anchored at byte 0
+(`dispatch.rs:140`); `consumed_bytes` stays a pending-prefix length, never caret-relative;
+picking a candidate nails as today and resets the caret to the new tail's end. Deliberately not
+McBopomofo's "candidates for the node at the caret" (`KeyHandler.mm:2492`): USER's example expects
+`kha2` candidates for the whole buffer, and our lattice is left-anchored longest-match.
+
+**Display caret** (D4, prefix-derivation REFUTED by Codex): `Preedit.caret_utf16` +
+`Effect::UpdatePreedit.caret_utf16` = the caret's UTF-16 offset in `display_text`, produced by
+`derived_display_with_boundaries(raw) -> (display, raw byte boundary → display UTF-16 offset)`:
+text and offsets go through the SAME chain (preprocess → per-syllable `to_tone_marks` → nasal
+case → nailed join with its separator, `composing/api.rs:292`). Deriving the prefix alone and
+taking its length is wrong, not cosmetic: `ng|5` displays `n̂g` and lands the caret before `g`
+while the insert happens after it (`phonetics/src/tl.rs:64`); `ka2|i` shows the caret before `2`;
+nailed `珠` + `|a` drops the roman-spacing space. Syllable edges map exactly; inside a syllable the
+raw boundary after the k-th base letter maps after the k-th base letter of the display, then past
+any following combining mark (the caret never splits a grapheme — McBopomofo clamps the same way,
+`KeyHandler.mm:2429`). Many-to-one positions (`ho|o` → `ho͘`, `tin|n` → `tiⁿ`, the tone digit, a TPS
+separator marker) get no visible step; accepted. `shadow.rs` offset helpers are NOT reused: they map
+consumed ranges and forbid expanding replacements (`shadow.rs:1209`, `:1225`).
+
+**Executors** (D7): macOS `setMarkedText(..., selectionRange: NSRange(location: caret_utf16,
+length: 0))` (`ClientEffectExecutor.swift:29-38`; IMK needs `length == 0` and a uniform underline
+for the caret to show — vChewing note). Windows: a new `select_caret(range, caret_utf16)` = clone →
+`Collapse(TF_ANCHOR_START)` → `ShiftEnd(cch)` (check the reported shift; a region boundary can
+shorten it) → `Collapse(TF_ANCHOR_END)` → `SetSelection`, used ONLY by the preedit update; commit
+and external insert keep `select_end_of` (`composition.rs:210`, `:221`). Pattern from khiin-rs
+`windows/ime/src/tip/composition_mgr.rs:168-184` and KeyKey41 `StateEditSession.cpp:286-305`;
+`ITfRange::ShiftEnd` doc-lookup cited in the P3 PR. The desktop effect decoders must carry the new
+field (`RustEngineBridge+Composing.swift:343` reads only `payload.display` today). A caret move
+does not refetch candidates on either platform.
+
+**Deliberately not adopted**: librime's "arrows navigate candidates only while the caret is at the
+end, else move it" (`selector.cc:195-220` — an implicit mode switch); McBopomofo / vChewing's
+state split (our bar shows while typing, there is no closed state); syllable-unit caret
+(USER wants `k|a`); Shift+arrow marking inside the composition (host selection); Home/End and
+forward Delete (USER 2026-09-09 「不需要」); user-recordable chord (USER 「不打算讓使用者更改」);
+azooKey-Desktop's no-caret model.
+
+#### Rounds
+
+| PR | Scope | Est. |
+|---|---|---|
+| P0 | This section + memory + S37 (admin tier, direct to main) | done |
+| P1a | engine: `derived_display_with_boundaries` + nailed-join mapping, display text unchanged, mapping tests (the three counterexamples, POJ `oo` / `nn`, TPS marker) | 250-400 |
+| P1b | engine: caret in `Phase` (~94 patterns / ctors), `MoveCaret` proto + dispatch, caret-aware Append / DeleteBackward / ReplaceLast / TelexKey, `Preedit.caret_utf16`, `step_response` / `update_preedit` carry it, proptest generator + invariant | 400-600 |
+| P2 | macOS: `.moveCaret` tier, `ComposingManager.moveCaret`, decoder + executor selection, no refetch on move, read-only 快速齒 row + i18n, tests, S37 | 300-500 |
+| P3 | Windows mirror: `intent.rs`, `manager.rs`, `composition.rs::select_caret`, read-only row, tests, `check-box` | 300-500 |
+
+Codex-named regression risks (all in S37): a caret offset past a region boundary on TSF, a
+decoder dropping the new field (caret snaps to the end), candidate refetch skipped after an insert,
+mobile byte-parity of `Append` / `DeleteBackward` at the end.
+
+---
+
 ## Released versions index
 
 Newest first. Links: release notes (`changelog/`) + detailed plan archive (`docs/releases/`) where one exists. Authoritative ship-date list: memory `project_released_versions.md`.
