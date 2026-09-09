@@ -6,7 +6,9 @@
 //!
 //! The bare-backtick 漢羅對調 chord is NOT a preserved key: a bare key would
 //! be taken from every application for as long as this input method is
-//! selected. It is matched in the key sink instead.
+//! selected. It is matched in the key sink instead — and so is the symbol
+//! picker's chord, which needs the key event's edit session to write a pick
+//! (`ShortcutAction::fires_from_the_key_path`).
 
 use crate::guids::{
     GUID_PRESERVED_KEY_CYCLE_CANDIDATE_DISPLAY_MODE, GUID_PRESERVED_KEY_ROMANIZATION,
@@ -182,10 +184,17 @@ mod tests {
                 assert_ne!(guid, other, "{action:?} and {other_action:?} share a GUID");
             }
         }
+        // Two actions live in the key sink instead: the bare backtick (a
+        // preserved bare key would be taken from every application), and
+        // the symbol picker (a pick needs the key event's edit session,
+        // `ShortcutAction::fires_from_the_key_path`).
         let preserved: Vec<_> = PRESERVED.iter().map(|(action, _)| *action).collect();
         let expected: Vec<_> = ShortcutAction::ALL
             .into_iter()
-            .filter(|action| *action != ShortcutAction::ToggleTranslateSwapped)
+            .filter(|action| {
+                *action != ShortcutAction::ToggleTranslateSwapped
+                    && !action.fires_from_the_key_path()
+            })
             .collect();
         assert_eq!(preserved, expected);
     }

@@ -437,7 +437,7 @@ a symbol-table generator shared with mobile; engine involvement (`Effect` has no
 |---|---|---|
 | P0 | This section + memory (admin tier, direct to main) | done |
 | P1 | macOS: action + key-path match + second `CandidatePanel` instance + JSON table + i18n + S36 + tests | PR #26 |
-| P2 | Windows mirror; consumes the P1 JSON + i18n keys | pending |
+| P2 | Windows mirror: `symbols.rs` (`include_str!`), `keys/symbol_picker.rs`, `ShowSymbolPicker` key-sink chord, second `CandidatePresenter` (popup only), `KeyWork::InsertSymbol` | PR |
 
 Codex-named regression risks (all in S36): shortcut theft, stale focus ownership, partial commits,
 duplicate insertion after an edit-session failure, orphaned panels.

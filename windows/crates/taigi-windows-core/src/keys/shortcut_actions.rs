@@ -28,6 +28,9 @@ pub enum ShortcutAction {
     ToggleTranslateSwapped,
     /// Steps 候選詞顯示 through its picker order (`CandidateDisplayMode::next`).
     CycleCandidateDisplayMode,
+    /// Opens the symbol picker over the caret. After the switches — it is a
+    /// thing typed, not a setting flipped — and before the guide.
+    ShowSymbolPicker,
     /// Toggles the floating Telex key table (`ui/telex_guide.rs`). Last,
     /// because this order is the order of the rows in the pane, and a guide
     /// sits after the switches (`ShortcutActions.swift` `showTelexGuide`).
@@ -35,11 +38,12 @@ pub enum ShortcutAction {
 }
 
 impl ShortcutAction {
-    pub const ALL: [ShortcutAction; 5] = [
+    pub const ALL: [ShortcutAction; 6] = [
         Self::OpenLastSettingsPane,
         Self::ToggleRomanization,
         Self::ToggleTranslateSwapped,
         Self::CycleCandidateDisplayMode,
+        Self::ShowSymbolPicker,
         Self::ShowTelexGuide,
     ];
 
@@ -49,8 +53,20 @@ impl ShortcutAction {
             Self::ToggleRomanization => "toggleRomanization",
             Self::ToggleTranslateSwapped => "toggleTranslateSwapped",
             Self::CycleCandidateDisplayMode => "cycleCandidateDisplayMode",
+            Self::ShowSymbolPicker => "showSymbolPicker",
             Self::ShowTelexGuide => "showTelexGuide",
         }
+    }
+
+    /// Whether this action's chord is matched by the key sink instead of
+    /// registered as a preserved key. A preserved key fires through
+    /// `OnPreservedKey` with no key event and no edit session, and the
+    /// picker needs both: it writes what the user picks into the document
+    /// and anchors its window to the caret (`session.rs`). Everything else
+    /// on this roster flips a setting or raises a card, and needs neither.
+    /// Mirrors macOS `ShortcutAction.firesFromTheKeyPath`.
+    pub fn fires_from_the_key_path(self) -> bool {
+        self == Self::ShowSymbolPicker
     }
 
     /// Whether this action opens the settings window rather than doing
@@ -95,6 +111,12 @@ impl ShortcutAction {
     /// fallback — for hosts that bypass preserved keys — cannot match
     /// such a press, because the stored chord names `/` unshifted.
     ///
+    /// `,` for the symbol picker is the Mac's ⌃⌘, carried over the same way:
+    /// the picker is a punctuation menu and the comma is the punctuation key.
+    /// Not the bare backtick 新注音 / McBopomofo / vChewing open their symbol
+    /// menus on: that key is 漢羅對調 here, and stays (USER 2026-09-09:
+    /// 「不要更改 ` 快捷鍵,這是台語輸入法的共識」).
+    ///
     /// Changing a default here moves every install that never recorded the row:
     /// nothing writes a default into `settings.json`, so an absent key IS the
     /// default (`chord_in`). No migration flag, unlike the Mac's.
@@ -104,6 +126,7 @@ impl ShortcutAction {
             Self::ToggleRomanization => ("c", KeyModifiers::CONTROL.with(KeyModifiers::ALT)),
             Self::ToggleTranslateSwapped => ("`", KeyModifiers::NONE),
             Self::CycleCandidateDisplayMode => ("h", KeyModifiers::CONTROL.with(KeyModifiers::ALT)),
+            Self::ShowSymbolPicker => (",", KeyModifiers::CONTROL.with(KeyModifiers::ALT)),
             Self::ShowTelexGuide => ("/", KeyModifiers::CONTROL.with(KeyModifiers::ALT)),
         };
         ComposingKeyChord::make(Some(key), modifiers).unwrap_or_else(|rejection| {
@@ -123,6 +146,7 @@ impl ShortcutAction {
             Self::ToggleRomanization => StringKey::DesktopShortcutToggleRomanization,
             Self::ToggleTranslateSwapped => StringKey::DesktopShortcutToggleTranslateSwapped,
             Self::CycleCandidateDisplayMode => StringKey::DesktopShortcutCycleCandidateDisplayMode,
+            Self::ShowSymbolPicker => StringKey::DesktopShortcutShowSymbolPicker,
             Self::ShowTelexGuide => StringKey::DesktopShortcutShowTelexGuide,
         }
     }
@@ -357,7 +381,7 @@ mod tests {
             .collect();
         names.sort();
         names.dedup();
-        assert_eq!(names.len(), 5);
+        assert_eq!(names.len(), 6);
         assert_eq!(
             ShortcutAction::OpenLastSettingsPane.default_chord(),
             chord("s", KeyModifiers::CONTROL.with(KeyModifiers::ALT))
@@ -375,6 +399,10 @@ mod tests {
             chord("h", KeyModifiers::CONTROL.with(KeyModifiers::ALT))
         );
         assert_eq!(
+            ShortcutAction::ShowSymbolPicker.default_chord(),
+            chord(",", KeyModifiers::CONTROL.with(KeyModifiers::ALT))
+        );
+        assert_eq!(
             ShortcutAction::ShowTelexGuide.default_chord(),
             chord("/", KeyModifiers::CONTROL.with(KeyModifiers::ALT))
         );
@@ -384,7 +412,7 @@ mod tests {
             .collect();
         defaults.sort();
         defaults.dedup();
-        assert_eq!(defaults.len(), 5, "the defaults are all different");
+        assert_eq!(defaults.len(), 6, "the defaults are all different");
         assert_eq!(
             ShortcutAction::ALL
                 .iter()
@@ -415,7 +443,7 @@ mod tests {
     fn roster_order_is_the_pane_order() {
         // `ALL` is the recorder rows top to bottom (`pages/shortcuts.rs`)
         // and the Mac's `allCases`; the display-mode cycle is the fourth
-        // row and the Telex guide the last.
+        // row, the symbol picker the fifth and the Telex guide the last.
         assert_eq!(
             ShortcutAction::ALL,
             [
@@ -423,9 +451,23 @@ mod tests {
                 ShortcutAction::ToggleRomanization,
                 ShortcutAction::ToggleTranslateSwapped,
                 ShortcutAction::CycleCandidateDisplayMode,
+                ShortcutAction::ShowSymbolPicker,
                 ShortcutAction::ShowTelexGuide,
             ]
         );
+        assert_eq!(ShortcutAction::ShowSymbolPicker.raw(), "showSymbolPicker");
+        assert_eq!(
+            ShortcutAction::ShowSymbolPicker.label_key(),
+            StringKey::DesktopShortcutShowSymbolPicker
+        );
+        assert!(!ShortcutAction::ShowSymbolPicker.opens_settings());
+        // The picker is the one row the key sink matches itself: a pick
+        // writes into the document, which a preserved key cannot.
+        let key_path: Vec<_> = ShortcutAction::ALL
+            .into_iter()
+            .filter(|action| action.fires_from_the_key_path())
+            .collect();
+        assert_eq!(key_path, [ShortcutAction::ShowSymbolPicker]);
         assert_eq!(
             ShortcutAction::CycleCandidateDisplayMode.raw(),
             "cycleCandidateDisplayMode"

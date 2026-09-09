@@ -106,18 +106,32 @@ impl ComposingAction {
         !matches!(self, Self::CommitLiteral)
     }
 
+    /// The move through the list this action is, or `None` for the three
+    /// that commit. One table for the candidate list and the symbol picker
+    /// (`SymbolPickerIntent`), which walk and page with the same rows.
+    pub fn navigation(self) -> Option<CandidateNavigation> {
+        match self {
+            Self::NextCandidate => Some(CandidateNavigation::NextCandidate),
+            Self::PreviousCandidate => Some(CandidateNavigation::PreviousCandidate),
+            Self::PageForward => Some(CandidateNavigation::PageDown),
+            Self::PageBackward => Some(CandidateNavigation::PageUp),
+            Self::ConfirmHighlighted | Self::CommitLiteral | Self::CommitAlternateScript => None,
+        }
+    }
+
     /// What this action does, once its chord has matched and its state checked.
     pub fn intent(self) -> ComposingKeyIntent {
+        if let Some(navigation) = self.navigation() {
+            return ComposingKeyIntent::Navigate(navigation);
+        }
         match self {
-            Self::NextCandidate => ComposingKeyIntent::Navigate(CandidateNavigation::NextCandidate),
-            Self::PreviousCandidate => {
-                ComposingKeyIntent::Navigate(CandidateNavigation::PreviousCandidate)
-            }
-            Self::PageForward => ComposingKeyIntent::Navigate(CandidateNavigation::PageDown),
-            Self::PageBackward => ComposingKeyIntent::Navigate(CandidateNavigation::PageUp),
             Self::ConfirmHighlighted => ComposingKeyIntent::CommitHighlightedCandidate,
             Self::CommitLiteral => ComposingKeyIntent::Commit,
             Self::CommitAlternateScript => ComposingKeyIntent::CommitAlternateScript,
+            Self::NextCandidate
+            | Self::PreviousCandidate
+            | Self::PageForward
+            | Self::PageBackward => unreachable!("navigation actions answered above"),
         }
     }
 
