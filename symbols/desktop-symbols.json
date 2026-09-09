@@ -1,0 +1,32 @@
+{
+  "comment": "The desktop symbol picker's table (macOS + Windows). Three categories, in menu order; each symbol is the exact string one pick inserts, so a bracket pair is one entry. Read by macOS `SymbolTable` (bundled as a resource by macos/scripts/bundle-app.sh) and by the Windows `include_str!`. Mobile keeps its own single-glyph overlay in SymbolData.swift / SymbolData.kt.",
+  "categories": [
+    {
+      "id": "punctuation",
+      "symbols": [
+        "，", "。", "！", "？", "；", "：", "、", "．", "‧", "…", "～", "·",
+        "—", "–", "＿", "－", "﹏", "＝", "＠", "＃", "＄", "％", "＆", "＊",
+        "＋", "＜", "＞", "／", "＼", "｜", "＾", "｀", "＂", "＇"
+      ]
+    },
+    {
+      "id": "brackets",
+      "symbols": [
+        "「」", "『』", "（）", "《》", "〈〉", "【】", "﹁﹂", "﹃﹄", "〔〕", "［］", "｛｝",
+        "“”", "‘’", "()", "[]", "{}", "<>", "«»",
+        "❬❭", "❰❱", "⟨⟩", "⟪⟫", "⌈⌉", "⌊⌋"
+      ]
+    },
+    {
+      "id": "specialSymbols",
+      "symbols": [
+        "←", "↑", "→", "↓", "⇐", "⇒", "⇑", "⇓", "⇔", "⇕", "⏎", "↵",
+        "±", "×", "÷", "≠", "≤", "≥", "≈", "∞", "√", "°", "‰", "∴",
+        "€", "£", "¥", "₩", "¢", "₹", "￥", "￡", "￦", "￠",
+        "©", "®", "™", "§", "¶", "※", "•", "†", "‡",
+        "★", "☆", "○", "●", "◎", "△", "▲", "▽", "▼", "◇", "◆", "□", "■",
+        "♪", "♫", "✓", "✗", "♥", "♡"
+      ]
+    }
+  ]
+}

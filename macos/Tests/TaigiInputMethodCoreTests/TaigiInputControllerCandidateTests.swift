@@ -421,7 +421,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         let session = try composedSession(caretRects: [:])
 
         let handled = try session.controller.handle(
-            Self.arrowEvent(.rightArrow),
+            TestFixtures.arrowKeyDownEvent(.rightArrow),
             client: session.client,
         )
 
@@ -490,7 +490,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         let session = try makeSession()
 
         let handled = try session.controller.handle(
-            Self.arrowEvent(.rightArrow),
+            TestFixtures.arrowKeyDownEvent(.rightArrow),
             client: session.client,
         )
 
@@ -817,7 +817,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
 
     private func togglingTranslateSwappedRerendersTheBarInPlace() throws {
         let session = try composedSession()
-        _ = try session.controller.handle(Self.arrowEvent(.rightArrow), client: session.client)
+        _ = try session.controller.handle(TestFixtures.arrowKeyDownEvent(.rightArrow), client: session.client)
         let before = try XCTUnwrap(session.presenter.shownContent).cells
         let keptIndex = session.presenter.selectedIndex
         let swappedBefore = session.controller.settings.storedIsTranslateSwapped
@@ -942,7 +942,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         let session = try composedSession()
 
         session.controller.hidePalettes()
-        let handled = try session.controller.handle(Self.arrowEvent(.rightArrow), client: session.client)
+        let handled = try session.controller.handle(TestFixtures.arrowKeyDownEvent(.rightArrow), client: session.client)
 
         XCTAssertFalse(
             handled,
@@ -1074,21 +1074,6 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
 
     private static let caretRectAtEndOfComposition = CGRect(x: 120, y: 400, width: 1, height: 18)
 
-    private static func arrowEvent(_ key: NavigationKey) throws -> NSEvent {
-        let functionKey: Int = switch key {
-        case .leftArrow: NSLeftArrowFunctionKey
-        case .rightArrow: NSRightArrowFunctionKey
-        case .upArrow: NSUpArrowFunctionKey
-        case .downArrow: NSDownArrowFunctionKey
-        case .pageUp: NSPageUpFunctionKey
-        case .pageDown: NSPageDownFunctionKey
-        }
-        return try TestFixtures.keyDownEvent(
-            characters: String(UnicodeScalar(functionKey)!),
-            modifiers: .function,
-        )
-    }
-
     private struct Session: CandidateBarSession {
         let controller: TaigiInputController
         let client: RecordingTextInputClient
@@ -1096,7 +1081,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
 
         @MainActor
         func press(_ key: NavigationKey) {
-            guard let event = try? arrowEvent(key) else { return XCTFail("could not build \(key)") }
+            guard let event = try? TestFixtures.arrowKeyDownEvent(key) else { return XCTFail("could not build \(key)") }
             _ = controller.handle(event, client: client)
         }
     }

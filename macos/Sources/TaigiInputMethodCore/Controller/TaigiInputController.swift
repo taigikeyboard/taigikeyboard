@@ -57,6 +57,50 @@ public final class TaigiInputController: IMKInputController {
         set { injectedPresenter = newValue }
     }
 
+    /// Where the symbol picker is shown — the second `CandidatePanel`, over
+    /// its own owner slot (`CandidatePanel.symbolPicker`). Injectable for the
+    /// same reason `candidatePresenter` is.
+    @MainActor
+    private var injectedSymbolPickerPresenter: (any CandidatePresenter)?
+
+    @MainActor
+    var symbolPickerPresenter: any CandidatePresenter {
+        get { injectedSymbolPickerPresenter ?? CandidatePanel.symbolPicker }
+        set { injectedSymbolPickerPresenter = newValue }
+    }
+
+    /// Which list the symbol picker is showing, or nil while it is closed.
+    /// The one piece of picker state the controller keeps: the selection is
+    /// the window's (`CandidatePresenter`), as it is for the bar.
+    @MainActor
+    private(set) var symbolPickerLevel: SymbolPickerLevel?
+
+    /// The chord on the picker row, read at activation rather than per key:
+    /// the registry read decodes JSON out of `UserDefaults`, and every
+    /// keystroke would otherwise pay it before the composing contract ran.
+    /// Recording a new chord means the settings window took focus, which is
+    /// a fresh activation of this session on the way back.
+    @MainActor
+    private var symbolPickerShortcut: KeyboardShortcuts.Shortcut?
+
+    /// The table the picker draws from. `nil` means the bundle's copy, which
+    /// is what production runs with; a test injects the repository's file,
+    /// since the tests run outside any bundle.
+    @MainActor
+    var symbolTableOverride: SymbolTable?
+
+    @MainActor
+    private var symbolTable: SymbolTable? {
+        symbolTableOverride ?? SymbolTable.bundled
+    }
+
+    /// The display language the chrome renders in — the process-wide store,
+    /// or the one a test injected.
+    @MainActor
+    private var displayLanguage: DisplayLanguageStore {
+        displayLanguageOverride ?? DisplayLanguageStore.shared
+    }
+
     /// Reads and writes the user's settings for the input-source menu. Its own
     /// instance rather than a shared one: the store holds no state, and the
     /// engine's copy is constructed at the composition root
@@ -199,6 +243,11 @@ public final class TaigiInputController: IMKInputController {
             // a client query, so the activation rule above still holds.
             controller.candidatePresenter.hideForHandover()
             controller.source = .empty
+            // The picker goes the same way, for the same reason: a list left
+            // up by the outgoing session would be picked from by this one.
+            controller.symbolPickerPresenter.hideForHandover()
+            controller.symbolPickerLevel = nil
+            controller.symbolPickerShortcut = KeyboardShortcuts.getShortcut(for: .showSymbolPicker)
             // Whatever space a previous focus left armed was measured against
             // a document this activation may no longer be looking at.
             controller.armedAutoSpaceCaret = nil
@@ -256,8 +305,10 @@ public final class TaigiInputController: IMKInputController {
         onMainActor(nil) { controller, _ in
             controller.dismissCandidates()
             // The system is asking for every piece of input-method UI to go;
-            // the guide is one, and it goes without touching the composition.
+            // the guide and the picker are two, and both go without touching
+            // the composition.
             TelexGuidePanel.shared.hide(ownedBy: controller.sessionToken)
+            controller.dismissSymbolPicker()
         }
         super.hidePalettes()
     }
@@ -381,6 +432,9 @@ public final class TaigiInputController: IMKInputController {
     private func openSettings(on pane: SettingsPane?) {
         Self.logger.debug("open settings on \(pane?.rawValue ?? "the last-used pane")")
         onMainActor(nil) { controller, _ in
+            // The settings window taking focus does not guarantee this
+            // session ends, and a picker left up would swallow keys behind it.
+            controller.dismissSymbolPicker()
             ShortcutHotkeys.openSettings(
                 on: pane,
                 in: controller.settings,
@@ -447,6 +501,10 @@ public final class TaigiInputController: IMKInputController {
         if action != .showTelexGuide {
             TelexGuidePanel.shared.hide(ownedBy: sessionToken)
         }
+        // And the picker: a Carbon chord bypasses the key path that would
+        // otherwise take it down, and a romanization switched under an open
+        // list is a list the user is no longer looking at.
+        dismissSymbolPicker()
         switch action {
         case .openLastSettingsPane:
             // Handled process-wide by `ShortcutHotkeys.perform` before any
@@ -493,9 +551,12 @@ public final class TaigiInputController: IMKInputController {
             // path below and this session's teardown are what take it down.
             TelexGuidePanel.shared.toggle(
                 inputMode: settings.inputMode,
-                language: displayLanguageOverride ?? DisplayLanguageStore.shared,
+                language: displayLanguage,
                 ownedBy: sessionToken,
             )
+        case .showSymbolPicker:
+            // Matched in `handle`, never fired from here (`firesFromTheKeyPath`).
+            break
         }
     }
 
@@ -566,9 +627,45 @@ public final class TaigiInputController: IMKInputController {
         // its own is a `.flagsChanged`.
         if TelexGuidePanel.shared.isShowing {
             TelexGuidePanel.shared.hideNow()
-            if key.characters?.first == "\u{1B}", key.modifiers.isDisjoint(with: ComposingKeyIntent.hostChords) {
+            if ComposingKeyIntent.isPlainEscape(key) {
                 return true
             }
+        }
+
+        let executor = ClientEffectExecutor(client: client)
+        defer { isMarkedTextVisible = manager.isComposing }
+        // Resolved once per key: every consumer below reads the same value.
+        let bindings = settings.composingKeyBindings
+
+        // The picker chord toggles, so it is read before the picker's own
+        // keys: with the list up it is the second way out (Escape is the
+        // first), and a held chord — the keyboard's auto-repeat — is one
+        // press, not a flicker of open and closed. The chord itself touches
+        // neither the document nor the caret, so the arm it consumed on entry
+        // goes back; a commit on the way to opening re-arms or clears it.
+        if isSymbolPickerChord(key) {
+            armedAutoSpaceCaret = armedSwap
+            guard !key.isRepeat else { return true }
+            if symbolPickerLevel != nil {
+                dismissSymbolPicker()
+            } else {
+                openSymbolPicker(from: manager, client: client, executing: executor, bindings: bindings)
+            }
+            return true
+        }
+        // With the picker up, every key is the picker's first: it is a list
+        // to pick from, read before the composing contract so the slot keys
+        // and the arrows reach it rather than a bar that is not showing.
+        // A key the picker has no use for takes it down and goes on below.
+        // The arm goes back for the same reason as above; only a pick that
+        // writes consumes it (`insertSymbol`), and a key that falls through
+        // clears it again so the contract below sees what it always does.
+        if let level = symbolPickerLevel {
+            armedAutoSpaceCaret = armedSwap
+            if handleSymbolPickerKey(key, at: level, bindings: bindings, manager: manager, client: client) {
+                return true
+            }
+            armedAutoSpaceCaret = nil
         }
 
         // A window the user switched off since the last key comes down HERE,
@@ -583,12 +680,10 @@ public final class TaigiInputController: IMKInputController {
             for: key,
             isComposing: manager.isComposing,
             isShowingCandidates: !source.isEmpty,
-            bindings: settings.composingKeyBindings,
+            bindings: bindings,
         )
         Self.logger.debug("key intent \(String(describing: intent))")
 
-        let executor = ClientEffectExecutor(client: client)
-        defer { isMarkedTextVisible = manager.isComposing }
         switch intent {
         case let .input(text):
             manager.append(text, executing: executor)
@@ -600,13 +695,7 @@ public final class TaigiInputController: IMKInputController {
             manager.deleteBackward(executing: executor)
             refreshCandidates(from: manager, client: client)
         case .commit:
-            let committedText = manager.commitComposition(executing: executor)
-            dismissCandidates()
-            appendAutoSpace(
-                afterCommit: committedText,
-                wroteRomanization: AutoSpacePolicy.rawPreeditWritesRomanization(inputMode: settings.inputMode),
-                client: client,
-            )
+            commitAsTyped(from: manager, client: client, executing: executor)
         case .cancel:
             manager.cancelComposition(executing: executor)
             dismissCandidates()
@@ -653,8 +742,8 @@ public final class TaigiInputController: IMKInputController {
             // Latin text and takes Latin punctuation, whatever the mode would
             // say about a hanji word. Pinned by
             // `AutoSpaceControllerTests.testTheSwapFollowsASpaceTheAlternate…`.
-            if let armedSwap,
-               swapAutoSpace(with: key, armedAt: armedSwap, client: client, manager: manager)
+            if let armedSwap, ComposingKeyIntent.isDocumentText(key), let characters = key.characters,
+               swapAutoSpace(inserting: characters, armedAt: armedSwap, client: client, manager: manager)
             {
                 return true
             }
@@ -727,8 +816,7 @@ public final class TaigiInputController: IMKInputController {
     /// announcing a mode nothing here owns.
     @MainActor
     private func flash(_ mode: StringKey) {
-        let language = displayLanguageOverride ?? DisplayLanguageStore.shared
-        let text = language.string(mode)
+        let text = displayLanguage.string(mode)
         if let modeFlashOverride {
             modeFlashOverride(text)
         } else {
@@ -801,6 +889,24 @@ public final class TaigiInputController: IMKInputController {
             // changed" would leave a bar describing a composition that is gone.
             refreshCandidates(from: manager, client: client)
         }
+    }
+
+    /// Ends the composition as typed — the romanization with its tone marks —
+    /// and spaces it if the auto-space gate says so. What ⇧Return does, and
+    /// what the symbol picker does to a composition with no highlight to take.
+    @MainActor
+    private func commitAsTyped(
+        from manager: ComposingManager,
+        client: IMKTextInput,
+        executing executor: ComposingEffectExecutor,
+    ) {
+        let committedText = manager.commitComposition(executing: executor)
+        dismissCandidates()
+        appendAutoSpace(
+            afterCommit: committedText,
+            wroteRomanization: AutoSpacePolicy.rawPreeditWritesRomanization(inputMode: settings.inputMode),
+            client: client,
+        )
     }
 
     /// Re-reads the candidates for the composition as it now stands, and shows
@@ -919,6 +1025,177 @@ public final class TaigiInputController: IMKInputController {
         candidatePresenter.hide(ownedBy: sessionToken)
     }
 
+    // MARK: - Symbol picker
+
+    /// Whether `key` is the chord recorded on the picker row: the same key
+    /// CODE and chording modifiers the registry stores, compared as Carbon
+    /// would for the other rows — not the character, which ⌃ and ⌥ rewrite.
+    @MainActor
+    private func isSymbolPickerChord(_ key: KeyEventSnapshot) -> Bool {
+        guard let shortcut = symbolPickerShortcut,
+              let keyCode = key.keyCode, Int(keyCode) == shortcut.carbonKeyCode
+        else { return false }
+        let chording = ComposingKeyIntent.chordingModifiers
+        return key.modifiers.intersection(chording) == shortcut.modifiers.intersection(chording)
+    }
+
+    /// Ends whatever is composing, then puts the category list up over the
+    /// caret. Commit first, as vChewing does
+    /// (`InputHandler_HandleStates.swift:1110`): the picker writes into the
+    /// document, and a composition still marked there would have the symbol
+    /// land inside it. A commit that only NAILED a segment leaves the
+    /// composition running, and the picker waits for a key that ends it.
+    @MainActor
+    private func openSymbolPicker(
+        from manager: ComposingManager,
+        client: IMKTextInput,
+        executing executor: ComposingEffectExecutor,
+        bindings: ComposingKeyBindings,
+    ) {
+        if manager.isComposing {
+            // The commit moves the caret; whatever it earns re-arms.
+            armedAutoSpaceCaret = nil
+            if let highlighted = candidatePresenter.selectedCandidateIndex(ownedBy: sessionToken) {
+                commitPresented(at: highlighted, flip: false, from: manager, client: client, executing: executor)
+            } else {
+                commitAsTyped(from: manager, client: client, executing: executor)
+            }
+            guard !manager.isComposing else { return }
+        }
+        presentSymbolPicker(.categories, in: client, bindings: bindings)
+    }
+
+    /// Shows `level`'s list anchored to the caret — a fresh list, so the
+    /// window selects its first cell — and records it as the level on screen.
+    ///
+    /// The caret is asked for with no marked text: the composition is over
+    /// by the time the picker opens, and index 0 is the insertion point a
+    /// client answers for. A list that did not reach the screen — no caret,
+    /// no display for it — leaves nothing behind: a level recorded for a
+    /// window nobody can see would go on swallowing the slot keys.
+    @MainActor
+    private func presentSymbolPicker(_ level: SymbolPickerLevel, in client: IMKTextInput, bindings: ComposingKeyBindings) {
+        symbolPickerLevel = level
+        guard let cells = symbolPickerCells(at: level),
+              let caretRect = caretRect(in: client, markedTextLength: 0)
+        else {
+            dismissSymbolPicker()
+            return
+        }
+        symbolPickerPresenter.show(
+            CandidateWindowContent(cells: cells, slotKeySet: bindings.slotKeySet, leadCellIsUnkeyed: false),
+            anchoredTo: caretRect,
+            hostWindowLevel: client.windowLevel(),
+            hostBundleIdentifier: client.bundleIdentifier(),
+            ownedBy: sessionToken,
+        )
+        // The window answers a selection only while it owns a visible list.
+        if symbolPickerPresenter.selectedCandidateIndex(ownedBy: sessionToken) == nil {
+            dismissSymbolPicker()
+        }
+    }
+
+    /// The cells `level` shows: the category names under the display
+    /// language, or a category's symbols verbatim. Nil for a category the
+    /// table no longer has.
+    @MainActor
+    private func symbolPickerCells(at level: SymbolPickerLevel) -> [CandidateCellContent]? {
+        guard let table = symbolTable else { return nil }
+        switch level {
+        case .categories:
+            return table.categories.map {
+                CandidateCellContent(text: displayLanguage.string($0.id.labelKey), annotation: nil)
+            }
+        case let .items(id):
+            return table.category(id)?.symbols.map { CandidateCellContent(text: $0, annotation: nil) }
+        }
+    }
+
+    /// One key while the picker is up. Answers whether the key was consumed;
+    /// false means the picker has closed and the key goes on through the
+    /// composing contract as if the picker had never been there.
+    @MainActor
+    private func handleSymbolPickerKey(
+        _ key: KeyEventSnapshot,
+        at level: SymbolPickerLevel,
+        bindings: ComposingKeyBindings,
+        manager: ComposingManager,
+        client: IMKTextInput,
+    ) -> Bool {
+        switch SymbolPickerIntent.intent(for: key, bindings: bindings) {
+        case .close:
+            dismissSymbolPicker()
+        case let .navigate(direction):
+            symbolPickerPresenter.navigate(direction, ownedBy: sessionToken)
+        case let .pickSlot(slot):
+            // An empty slot on a short last page is consumed all the same,
+            // as it is on the bar: the key is the picker's while it is up.
+            pickSymbolCell(
+                at: symbolPickerPresenter.candidateIndex(forKeySlot: slot, ownedBy: sessionToken),
+                level: level, bindings: bindings, manager: manager, client: client,
+            )
+        case .confirm:
+            pickSymbolCell(
+                at: symbolPickerPresenter.selectedCandidateIndex(ownedBy: sessionToken),
+                level: level, bindings: bindings, manager: manager, client: client,
+            )
+        case .closeAndPassThrough:
+            dismissSymbolPicker()
+            return false
+        }
+        return true
+    }
+
+    /// Acts on the cell at `index`: a category descends to its symbols, a
+    /// symbol is written and the picker closes. Nil — a slot with no cell —
+    /// does nothing, and keeps the picker up.
+    @MainActor
+    private func pickSymbolCell(
+        at index: Int?,
+        level: SymbolPickerLevel,
+        bindings: ComposingKeyBindings,
+        manager: ComposingManager,
+        client: IMKTextInput,
+    ) {
+        guard let index, let table = symbolTable else { return }
+        switch level {
+        case .categories:
+            guard table.categories.indices.contains(index) else { return }
+            presentSymbolPicker(.items(table.categories[index].id), in: client, bindings: bindings)
+        case let .items(id):
+            guard let symbols = table.category(id)?.symbols, symbols.indices.contains(index) else { return }
+            dismissSymbolPicker()
+            insertSymbol(symbols[index], manager: manager, client: client)
+        }
+    }
+
+    /// Writes `symbol` at the caret as one string — so a bracket pair lands
+    /// as both halves, with the caret after the closing one (IMK has no way
+    /// to put it between them, and one rule for both platforms beats a
+    /// TSF-only exception) — and not through the full-width map: what the
+    /// user picked is what they get, `()` included. The one picker key that
+    /// touches the document, so the one that spends the auto-space arm: an
+    /// attaching mark swaps with the space a commit left, as a typed one
+    /// would, and the engine hears about the character either way.
+    @MainActor
+    private func insertSymbol(_ symbol: String, manager: ComposingManager, client: IMKTextInput) {
+        let armedSwap = armedAutoSpaceCaret
+        armedAutoSpaceCaret = nil
+        if let armedSwap,
+           swapAutoSpace(inserting: symbol, armedAt: armedSwap, client: client, manager: manager)
+        {
+            return
+        }
+        client.insertText(symbol, replacementRange: ClientEffectExecutor.atInsertionPoint)
+        manager.noteCharacterTypedOutsideComposition(symbol)
+    }
+
+    @MainActor
+    private func dismissSymbolPicker() {
+        symbolPickerLevel = nil
+        symbolPickerPresenter.hide(ownedBy: sessionToken)
+    }
+
     // MARK: - Full-width punctuation
 
     /// The full-width form of the text a punctuation key just typed, or nil
@@ -1006,7 +1283,7 @@ public final class TaigiInputController: IMKInputController {
     /// through untouched. Re-armed on success, so `?!` chains keep swapping.
     @MainActor
     private func swapAutoSpace(
-        with key: KeyEventSnapshot,
+        inserting characters: String,
         armedAt armedCaret: Int,
         client: IMKTextInput,
         manager: ComposingManager,
@@ -1020,9 +1297,7 @@ public final class TaigiInputController: IMKInputController {
         // a matter of history, and a display mode changed since then does not
         // rewrite it; asking the mode again would refuse to swap a space this
         // controller had just written.
-        guard ComposingKeyIntent.isDocumentText(key),
-              let characters = key.characters,
-              AutoSpacePunctuation.isAttaching(characters),
+        guard AutoSpacePunctuation.isAttaching(characters),
               settings.isAutoSpaceEnabled
         else { return false }
         let caret = client.selectedRange()
@@ -1106,8 +1381,11 @@ public final class TaigiInputController: IMKInputController {
     private func finishComposition(into client: IMKTextInput?) {
         // Before the client check: the bar belongs to this session whether or not
         // it still has a client to write into, and a session on its way out that
-        // leaves one on screen leaves it there for good.
+        // leaves one on screen leaves it there for good. The picker likewise —
+        // and on a click outside, where this is also reached, the caret it was
+        // anchored to has moved.
         dismissCandidates()
+        dismissSymbolPicker()
         // Focus is moving or the user clicked — either way the caret the swap
         // was measured against is gone. (No auto space is appended here
         // either: lifecycle commits are not a finished word.)

@@ -58,6 +58,11 @@ struct KeyEventSnapshot: Sendable {
     let isNamedSpecialKey: Bool
     /// The navigation key this event is, if it is one of the six.
     let navigationKey: NavigationKey?
+    /// Whether this key-down is the keyboard's auto-repeat of a key still
+    /// held (`NSEvent.isARepeat`). Read by the symbol-picker chord, which
+    /// toggles: a held chord would otherwise open and close the picker on
+    /// every repeat. False for a snapshot built without an event.
+    let isRepeat: Bool
 
     init(
         characters: String?,
@@ -66,6 +71,7 @@ struct KeyEventSnapshot: Sendable {
         charactersIgnoringModifiers: String? = nil,
         keyCode: UInt16? = nil,
         navigationKey: NavigationKey? = nil,
+        isRepeat: Bool = false,
     ) {
         self.characters = characters
         self.charactersIgnoringModifiers = charactersIgnoringModifiers ?? characters
@@ -73,18 +79,21 @@ struct KeyEventSnapshot: Sendable {
         self.modifiers = modifiers
         self.isNamedSpecialKey = isNamedSpecialKey
         self.navigationKey = navigationKey
+        self.isRepeat = isRepeat
     }
 
     init(_ event: NSEvent) {
+        // Read only off a key event: `NSEvent.keyCode` and `isARepeat` raise
+        // on any other type, and the recorder's monitor also sees mouse-ups.
+        let isKeyEvent = event.type == .keyDown || event.type == .keyUp
         self.init(
             characters: event.characters,
             modifiers: event.modifierFlags,
             isNamedSpecialKey: event.specialKey != nil,
             charactersIgnoringModifiers: event.charactersIgnoringModifiers,
-            // Read only off a key event: `NSEvent.keyCode` raises on any
-            // other type, and the recorder's monitor also sees mouse-ups.
-            keyCode: event.type == .keyDown || event.type == .keyUp ? event.keyCode : nil,
+            keyCode: isKeyEvent ? event.keyCode : nil,
             navigationKey: event.specialKey.flatMap(NavigationKey.init),
+            isRepeat: isKeyEvent && event.isARepeat,
         )
     }
 }
@@ -206,7 +215,7 @@ enum ComposingKeyIntent: Equatable {
             // Shift deliberately excluded: ⇧← extends a selection, and a user
             // who has finished choosing a candidate should get that back rather
             // than walk the bar a second time.
-            return intent(for: navigation)
+            return .navigate(CandidateNavigation(navigation))
         }
         if modifiers.isDisjoint(with: Self.hostChords), let first = key.characters?.first {
             switch first {
@@ -336,20 +345,17 @@ enum ComposingKeyIntent: Equatable {
         isComposing ? .commitThenPassThrough : .passThrough
     }
 
-    /// The six navigation keys, handed through as directions. The mapping is
-    /// one-to-one on purpose: what a direction DOES — walk, page, scroll,
-    /// expand — belongs to the candidate window's layout, not to this table,
-    /// which only decides that the key is the window's while it is up.
-    private static func intent(for navigation: NavigationKey) -> ComposingKeyIntent {
-        switch navigation {
-        case .leftArrow: .navigate(.left)
-        case .rightArrow: .navigate(.right)
-        case .upArrow: .navigate(.up)
-        case .downArrow: .navigate(.down)
-        case .pageUp: .navigate(.pageUp)
-        case .pageDown: .navigate(.pageDown)
-        }
+    /// True for an Escape with no host chord held — the key that closes
+    /// whatever card or list this input method has up (the Telex guide, the
+    /// symbol picker). `⌃3` arrives as Escape too, and is the host's.
+    static func isPlainEscape(_ key: KeyEventSnapshot) -> Bool {
+        key.characters?.first == "\u{1B}" && key.modifiers.isDisjoint(with: hostChords)
     }
+
+    /// The four chording modifiers — what a recorded chord is made of. Caps
+    /// Lock, the number pad and the function flag say how a key was reached,
+    /// not which key it is.
+    static let chordingModifiers: NSEvent.ModifierFlags = hostChords.union(.shift)
 
     /// The numeric tone markers of TL and POJ, which the engine reads as ASCII
     /// digits. A full-width `５` or another script's numeral is a character the

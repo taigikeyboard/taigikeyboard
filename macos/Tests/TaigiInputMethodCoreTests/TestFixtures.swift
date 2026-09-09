@@ -127,6 +127,7 @@ enum TestFixtures {
         modifiers: NSEvent.ModifierFlags = [],
         charactersIgnoringModifiers: String? = nil,
         keyCode: UInt16 = 0,
+        isARepeat: Bool = false,
     ) throws -> NSEvent {
         try XCTUnwrap(NSEvent.keyEvent(
             with: .keyDown,
@@ -137,9 +138,35 @@ enum TestFixtures {
             context: nil,
             characters: characters,
             charactersIgnoringModifiers: charactersIgnoringModifiers ?? characters,
-            isARepeat: false,
+            isARepeat: isARepeat,
             keyCode: keyCode,
         ))
+    }
+
+    /// A key-down for one of the six navigation keys: the function-key scalar
+    /// under the `.function` flag, which is what AppKit names as the arrow.
+    static func arrowKeyDownEvent(_ key: NavigationKey) throws -> NSEvent {
+        let functionKey: Int = switch key {
+        case .leftArrow: NSLeftArrowFunctionKey
+        case .rightArrow: NSRightArrowFunctionKey
+        case .upArrow: NSUpArrowFunctionKey
+        case .downArrow: NSDownArrowFunctionKey
+        case .pageUp: NSPageUpFunctionKey
+        case .pageDown: NSPageDownFunctionKey
+        }
+        return try keyDownEvent(characters: String(UnicodeScalar(functionKey)!), modifiers: .function)
+    }
+
+    /// `<repo>/symbols/desktop-symbols.json` — the symbol picker's table,
+    /// which `bundle-app.sh` copies into the assembled `.app`. The tests run
+    /// outside any bundle, so a controller case injects this copy.
+    static let symbolTableURL = repositoryRoot
+        .appendingPathComponent("symbols")
+        .appendingPathComponent(SymbolTable.fileName)
+
+    /// The shipped symbol table, read the way the app reads it.
+    static func shippedSymbolTable() throws -> SymbolTable {
+        try SymbolTable.load(from: symbolTableURL)
     }
 
     /// `client: nil`: IMK rejects anything but a real client proxy here, so a
@@ -335,7 +362,9 @@ enum TestFixtures {
         ]
         for modifiers in candidates {
             let chord = try ComposingKeyChord.make(key: key, modifiers: modifiers).get()
-            if !taken.contains(chord) { return chord }
+            if !taken.contains(chord) {
+                return chord
+            }
         }
         throw XCTSkip("every \(key) chord this fixture knows is a default now")
     }
@@ -376,7 +405,9 @@ extension XCTestCase {
                 UserDefaults.standard.removeObject(forKey: key)
             }
         }
-        if let value { UserDefaults.standard.set(value, forKey: key) }
+        if let value {
+            UserDefaults.standard.set(value, forKey: key)
+        }
         try body()
     }
 
@@ -430,6 +461,23 @@ protocol CandidateBarSession {
 }
 
 extension CandidateBarSession {
+    /// Types `text` one character per key event, answering whether the last
+    /// one was consumed.
+    @discardableResult
+    func type(_ text: String) throws -> Bool {
+        var handled = false
+        for character in text.map(String.init) {
+            handled = try controller.handle(TestFixtures.keyDownEvent(characters: character), client: client)
+        }
+        return handled
+    }
+
+    /// One navigation key.
+    @discardableResult
+    func press(_ key: NavigationKey) throws -> Bool {
+        try controller.handle(TestFixtures.arrowKeyDownEvent(key), client: client)
+    }
+
     /// §34 opens the bar on the one-script literal — 顯示當咧拍的字 ships ON —
     /// so a case about a candidate that carries both scripts walks ⇥ onto the
     /// first one and hands it back.
@@ -443,7 +491,7 @@ extension CandidateBarSession {
 
     /// ⇥ `count` cells along a freshly opened bar.
     func walk(cells count: Int) throws {
-        for _ in 0..<count {
+        for _ in 0 ..< count {
             _ = try controller.handle(TestFixtures.keyDownEvent(characters: "\t"), client: client)
         }
         XCTAssertEqual(presenter.selectedIndex, count)
@@ -453,8 +501,13 @@ extension CandidateBarSession {
 extension [CandidateCellContent] {
     /// The first cell carrying both scripts — under 並排 the one an annotation
     /// sits on; the §34 literal ahead of it has one.
-    var firstTwoScriptIndex: Int? { firstIndex { $0.annotation != nil } }
-    var firstTwoScriptCell: CandidateCellContent? { firstTwoScriptIndex.map { self[$0] } }
+    var firstTwoScriptIndex: Int? {
+        firstIndex { $0.annotation != nil }
+    }
+
+    var firstTwoScriptCell: CandidateCellContent? {
+        firstTwoScriptIndex.map { self[$0] }
+    }
 }
 
 extension DictionarySourceToggles {
@@ -623,6 +676,12 @@ final class RecordingCandidatePresenter: CandidatePresenter {
     /// panels do.
     private(set) var leadCellIsUnkeyed = false
 
+    /// When set, `show` records the call but puts nothing on screen and takes
+    /// no owner — what the real panel does for a caret on no display
+    /// (`CandidatePanel.show`), so a case can pin what the controller does
+    /// with a list that never reached the screen.
+    var refusesToShow = false
+
     var isShowing: Bool {
         owner != nil
     }
@@ -634,12 +693,16 @@ final class RecordingCandidatePresenter: CandidatePresenter {
         hostBundleIdentifier _: String?,
         ownedBy owner: ComposingSessionToken,
     ) {
+        calls.append(.show(content, caretRect: caretRect))
+        guard !refusesToShow else {
+            hideForHandover()
+            return
+        }
         self.owner = owner
         cells = content.cells
         slotKeySet = content.slotKeySet
         leadCellIsUnkeyed = content.leadCellIsUnkeyed
         selectedIndex = 0
-        calls.append(.show(content, caretRect: caretRect))
     }
 
     func updateCells(_ content: CandidateWindowContent, ownedBy owner: ComposingSessionToken) {

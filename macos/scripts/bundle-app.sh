@@ -174,6 +174,17 @@ for artifact in dictionary.fst dictionary.bin association.bin syllables.fst; do
     cp "$source_file" "$CONTENTS_DIR/Resources/$artifact"
 done
 
+echo "==> Copying symbol table"
+# The symbol picker's table, from the repo-root `symbols` — the one copy both
+# desktop platforms read (Windows compiles it in). Fail here rather than ship
+# a chord that opens nothing: `SymbolTable.bundled` logs and stays nil.
+SYMBOL_TABLE_FILE="$REPOSITORY_DIR/symbols/desktop-symbols.json"
+if [[ ! -s "$SYMBOL_TABLE_FILE" ]]; then
+    echo "error: missing or empty symbol table $SYMBOL_TABLE_FILE" >&2
+    exit 1
+fi
+cp "$SYMBOL_TABLE_FILE" "$CONTENTS_DIR/Resources/desktop-symbols.json"
+
 echo "==> Copying fonts"
 # The typefaces the candidate-window font picker offers, laid out under the
 # directory Info.plist's ATSApplicationFontsPath names, which is what AppKit

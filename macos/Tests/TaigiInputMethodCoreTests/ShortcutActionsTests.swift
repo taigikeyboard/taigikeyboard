@@ -45,7 +45,7 @@ final class ShortcutActionsTests: XCTestCase {
     func testEveryAction_readsAsAWholePhraseInEveryLanguage() {
         XCTAssertEqual(
             labels(),
-            ["拍開設定選單", "切換輸入模式", "輸出漢字/羅馬字", "切換候選詞顯示", "Telex 說明"],
+            ["拍開設定選單", "切換輸入模式", "輸出漢字/羅馬字", "切換候選詞顯示", "符號選單", "Telex 說明"],
         )
         XCTAssertEqual(
             labels(.japanese),
@@ -54,6 +54,7 @@ final class ShortcutActionsTests: XCTestCase {
                 "入力モードを切り替える",
                 "漢字／ローマ字を出力",
                 "候補の表示を切り替え",
+                "記号メニュー",
                 "Telex の説明",
             ],
         )
@@ -142,10 +143,11 @@ final class ShortcutActionsTests: XCTestCase {
     /// One ⌃⌘S doorway replaced them — a command reached for rarely, so a
     /// mnemonic pays — and the switch moved to ⌃⌘C, where a command reached
     /// for all day wants the hand to stay on the bottom row. The 候選詞顯示
-    /// cycle joined on ⌃⌘H (USER 2026-09-02), and the Telex guide on ⌃⌘/
-    /// (USER 2026-09-09) — the key help lives on — last: the order here is
-    /// the order of the rows in the pane.
-    func testTheGlobalRoster_isOneDoorwayThreeSwitchesAndTheGuide() {
+    /// cycle joined on ⌃⌘H (USER 2026-09-02), the symbol picker on ⌃⌘,
+    /// (USER 2026-09-09; why not the backtick is on its `Name`), and the
+    /// Telex guide on ⌃⌘/ (USER 2026-09-09) — the key help lives on — last:
+    /// the order here is the order of the rows in the pane.
+    func testTheGlobalRoster_isOneDoorwayThreeSwitchesThePickerAndTheGuide() {
         XCTAssertEqual(
             ShortcutAction.allCases.map(\.defaultShortcut),
             [
@@ -153,9 +155,17 @@ final class ShortcutActionsTests: XCTestCase {
                 KeyboardShortcuts.Shortcut(.c, modifiers: [.control, .command]),
                 KeyboardShortcuts.Shortcut(.backtick),
                 KeyboardShortcuts.Shortcut(.h, modifiers: [.control, .command]),
+                KeyboardShortcuts.Shortcut(.comma, modifiers: [.control, .command]),
                 KeyboardShortcuts.Shortcut(.slash, modifiers: [.control, .command]),
             ],
         )
+    }
+
+    /// The picker is the one row Carbon never fires: a pick writes into the
+    /// client, which a hotkey handler does not have. Pinned by name so an
+    /// action added later has to say which side it is on.
+    func testOnlyThePicker_firesFromTheKeyPath() {
+        XCTAssertEqual(ShortcutAction.allCases.filter(\.firesFromTheKeyPath), [.showSymbolPicker])
     }
 
     /// No global chord opens a NAMED pane any more; the menu bar does that
