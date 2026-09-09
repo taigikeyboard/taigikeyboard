@@ -1029,9 +1029,10 @@ impl CandidateWindow {
         // different KIND of row rather than as a second selection (USER
         // 2026-09-09) — then nothing. Only the SELECTION changes the text
         // colours below.
+        let is_literal = self.lead_cell_is_unkeyed && index == 0;
         let fill = if is_selected {
             Some(theme.highlight)
-        } else if self.lead_cell_is_unkeyed && index == 0 {
+        } else if is_literal {
             theme.literal_fill
         } else {
             None
@@ -1064,7 +1065,23 @@ impl CandidateWindow {
                 secondary,
             );
         }
-        let text_x = rect.x + padding + metrics.index_column_width();
+        // The text area starts after the key column — a row's candidates line
+        // up with each other — except a STACKED literal cell, which names no
+        // key and centres across the WHOLE cell, the cell its fill covers
+        // (USER 2026-09-09). The inline arrangement keeps the column: the
+        // vertical list aligns every row's text on one x, literal or not.
+        let centres_across_cell = is_literal
+            && matches!(
+                metrics.cell_arrangement(),
+                CandidateCellArrangement::Stacked
+            );
+        let text_x = rect.x
+            + padding
+            + if centres_across_cell {
+                0.0
+            } else {
+                metrics.index_column_width()
+            };
         let trailing = column.map_or(padding, |(_, trailing)| trailing);
         let available = (rect.right() - trailing - text_x).max(metrics.candidate_font_size());
         match metrics.cell_arrangement() {

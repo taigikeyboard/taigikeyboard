@@ -63,6 +63,7 @@ final class CandidateItemView: NSView {
     var isLiteralCell = false {
         didSet {
             guard isLiteralCell != oldValue else { return }
+            updateStackedTextArea()
             updateAppearance()
         }
     }
@@ -70,7 +71,10 @@ final class CandidateItemView: NSView {
     /// The literal cell's fill. A system fill rather than an inactive-selection
     /// colour, which would read as a second selection, and dynamic so it
     /// resolves per appearance (light / dark) like every other colour here.
-    private static let literalFillColor: NSColor = .quaternarySystemFill
+    /// One step up the fill scale from the faintest (USER 2026-09-09:
+    /// 「背景顏色稍微強調一點」) — the quaternary fill was hard to see over the
+    /// panel's vibrancy backdrop.
+    private static let literalFillColor: NSColor = .tertiarySystemFill
 
     /// No equality guard on purpose: `NSColor` compares dynamic colours equal
     /// across light and dark even though they RESOLVE differently, and the
@@ -114,6 +118,13 @@ final class CandidateItemView: NSView {
     /// still lines up.
     private var stackedLineGapConstraint: NSLayoutConstraint?
     private var stackedAnnotationHeightConstraint: NSLayoutConstraint?
+
+    /// Where the stacked cell's text area starts. An ordinary cell begins it
+    /// after the key column, so the candidates of a row line up with each
+    /// other; the literal cell names no key, so it centres over the WHOLE
+    /// cell instead — which is the cell its own fill covers (USER 2026-09-09).
+    private var stackedTextAfterKeyColumnConstraint: NSLayoutConstraint?
+    private var stackedTextAcrossCellConstraint: NSLayoutConstraint?
 
     init(style: CandidateWindowStyle, metrics: CandidateMetrics) {
         self.style = style
@@ -216,14 +227,24 @@ final class CandidateItemView: NSView {
     /// its frame (the panels place cells by hand), so a vertical constraint to
     /// an edge would fight a frame the labels do not get a say in.
     private func activateStackedConstraints() {
-        // The area the two lines live in: what the cell leaves once the digit
+        // The area the two lines live in: what the cell leaves once the key
         // column has its slot. They centre in IT rather than in the cell, since
-        // the digit only ever takes width off the leading edge — centring in
-        // the cell would push the pair right of the space it occupies.
+        // the key only ever takes width off the leading edge — centring in
+        // the cell would push the pair right of the space it occupies. The
+        // literal cell is the exception: it names no key, so its text centres
+        // across the whole cell, which is the cell its fill covers.
         let textGuide = NSLayoutGuide()
         addLayoutGuide(textGuide)
 
         let padding = metrics.horizontalPadding
+        let afterKeyColumn = textGuide.leadingAnchor.constraint(
+            equalTo: indexLabel.trailingAnchor, constant: metrics.indexCandidateGap,
+        )
+        let acrossCell = textGuide.leadingAnchor.constraint(
+            equalTo: leadingAnchor, constant: padding,
+        )
+        stackedTextAfterKeyColumnConstraint = afterKeyColumn
+        stackedTextAcrossCellConstraint = acrossCell
         let lineGap = annotationLabel.topAnchor.constraint(
             equalTo: candidateLabel.bottomAnchor, constant: metrics.stackedLineGap,
         )
@@ -235,9 +256,6 @@ final class CandidateItemView: NSView {
         stackedAnnotationHeightConstraint = annotationHeight
 
         NSLayoutConstraint.activate([
-            textGuide.leadingAnchor.constraint(
-                equalTo: indexLabel.trailingAnchor, constant: metrics.indexCandidateGap,
-            ),
             textGuide.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -padding),
             candidateLabel.centerXAnchor.constraint(equalTo: textGuide.centerXAnchor),
             candidateLabel.leadingAnchor.constraint(greaterThanOrEqualTo: textGuide.leadingAnchor),
@@ -250,6 +268,23 @@ final class CandidateItemView: NSView {
             textGuide.bottomAnchor.constraint(equalTo: annotationLabel.bottomAnchor),
             textGuide.centerYAnchor.constraint(equalTo: centerYAnchor),
         ])
+        updateStackedTextArea()
+    }
+
+    /// Points the stacked text area at the key column or at the whole cell,
+    /// whichever this cell's kind calls for. A no-op on an inline cell, which
+    /// has no such guide.
+    private func updateStackedTextArea() {
+        guard let stackedTextAfterKeyColumnConstraint, let stackedTextAcrossCellConstraint
+        else { return }
+        // Outgoing arm first: both are required equations on the same anchor,
+        // and activating one while the other still stands is a conflict Auto
+        // Layout would have to break.
+        let (outgoing, incoming) = isLiteralCell
+            ? (stackedTextAfterKeyColumnConstraint, stackedTextAcrossCellConstraint)
+            : (stackedTextAcrossCellConstraint, stackedTextAfterKeyColumnConstraint)
+        outgoing.isActive = false
+        incoming.isActive = true
     }
 
     func configure(_ cell: CandidateCellContent) {

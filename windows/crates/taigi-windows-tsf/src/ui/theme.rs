@@ -34,8 +34,11 @@ pub struct Theme {
     pub highlighted_text: D2D1_COLOR_F,
     /// The §34 literal cell's fill — what the user is currently typing, marked
     /// as a different KIND of row rather than as a second selection (USER
-    /// 2026-09-09). WinUI's `SubtleFillColorSecondary`, the hover fill
-    /// (`microsoft-ui-xaml` `Common_themeresources_any.xaml`). `None` under a
+    /// 2026-09-09). Twice the alpha of WinUI's `SubtleFillColorSecondary`
+    /// hover fill (`microsoft-ui-xaml` `Common_themeresources_any.xaml`):
+    /// the hover value alone barely read against the flyout background (USER
+    /// 2026-09-09 「背景顏色稍微強調一點」), and it mirrors the macOS step from
+    /// the quaternary system fill to the tertiary one. `None` under a
     /// high-contrast scheme: a decorative card in our own greys is exactly
     /// what that scheme is chosen to get rid of.
     pub literal_fill: Option<D2D1_COLOR_F>,
@@ -130,8 +133,7 @@ impl Theme {
                 border: rgba(0x00, 0x00, 0x00, 0.2),
                 highlight,
                 highlighted_text,
-                // SubtleFillColorSecondary
-                literal_fill: Some(rgba(0xFF, 0xFF, 0xFF, 0.0605)),
+                literal_fill: Some(rgba(0xFF, 0xFF, 0xFF, 0.121)),
             }
         } else {
             Self {
@@ -144,7 +146,7 @@ impl Theme {
                 border: rgba(0x00, 0x00, 0x00, 0.0578),
                 highlight,
                 highlighted_text,
-                literal_fill: Some(rgba(0x00, 0x00, 0x00, 0.0373)),
+                literal_fill: Some(rgba(0x00, 0x00, 0x00, 0.0746)),
             }
         }
     }

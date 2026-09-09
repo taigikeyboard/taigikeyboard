@@ -64,6 +64,55 @@ final class CandidateLiteralCellTests: XCTestCase {
         )
     }
 
+    /// The literal cell names no key, so its text centres across the WHOLE
+    /// cell — the cell its fill covers — rather than in the area an ordinary
+    /// cell leaves once the key column has its slot (USER 2026-09-09). An
+    /// ordinary cell keeps the column, which is what lines a row's candidates
+    /// up with each other.
+    func testTheLiteralCell_centresItsTextAcrossTheWholeCell() {
+        let metrics = TestFixtures.defaultCandidateMetrics.arranged(.stacked)
+        let content = CandidateCellContent(text: "tâi", annotation: nil)
+        let frame = NSRect(x: 0, y: 0, width: metrics.measureWidth(content), height: metrics.itemHeight)
+
+        let literal = CandidateItemView(style: .sequoia, metrics: metrics)
+        literal.isLiteralCell = true
+        literal.configure(content)
+        literal.frame = frame
+        literal.layoutSubtreeIfNeeded()
+
+        let ordinary = CandidateItemView(style: .sequoia, metrics: metrics)
+        ordinary.configure(content)
+        ordinary.setIndexLabel("q")
+        ordinary.frame = frame
+        ordinary.layoutSubtreeIfNeeded()
+
+        // Index 1 is the candidate itself; index 0 is the key column.
+        let literalText = literal.subviews.compactMap { $0 as? NSTextField }[1].frame
+        let ordinaryText = ordinary.subviews.compactMap { $0 as? NSTextField }[1].frame
+
+        XCTAssertEqual(
+            literalText.midX, literal.bounds.midX, accuracy: 0.5,
+            "the literal cell's text is centred in the cell its fill covers",
+        )
+        XCTAssertEqual(
+            literalText.midY, literal.bounds.midY, accuracy: 0.5,
+            "vertically too — a one-script cell gives the empty line's height back",
+        )
+        XCTAssertGreaterThan(
+            ordinaryText.midX, literalText.midX,
+            "an ordinary cell still centres to the right of the key column",
+        )
+
+        // And back: a recycled cell that stops being the literal takes the key
+        // column into account again, with no constraint left over from before.
+        literal.isLiteralCell = false
+        literal.setIndexLabel("q")
+        literal.layoutSubtreeIfNeeded()
+        XCTAssertEqual(
+            literal.subviews.compactMap { $0 as? NSTextField }[1].frame, ordinaryText,
+        )
+    }
+
     /// The fill resolves DIFFERENTLY in the two appearances — a fixed tint
     /// would read wrong in one of them — and the selection's fill wins over
     /// it. Pinned on the Tahoe cell, whose fill is a view of its own.
