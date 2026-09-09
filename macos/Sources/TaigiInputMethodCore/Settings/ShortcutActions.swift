@@ -126,7 +126,7 @@ extension KeyboardShortcuts.Name {
 /// row that leaves the typing flow altogether (USER 2026-09-09).
 enum ShortcutAction: CaseIterable, Sendable {
     case toggleRomanization
-    /// Steps the 選字顯示 picker one place: 並排 → 合用 → 羅馬字 → 並排.
+    /// Steps the 候選詞顯示 picker one place: 並排 → 合用 → 羅馬字 → 並排.
     case cycleCandidateDisplayMode
     case toggleTranslateSwapped
     /// Opens the symbol picker over the caret. A thing typed, so it leads the

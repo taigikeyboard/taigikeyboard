@@ -23,7 +23,7 @@ use crate::strings::StringKey;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum ShortcutAction {
     ToggleRomanization,
-    /// Steps 選字顯示 through its picker order (`CandidateDisplayMode::next`).
+    /// Steps 候選詞顯示 through its picker order (`CandidateDisplayMode::next`).
     CycleCandidateDisplayMode,
     ToggleTranslateSwapped,
     /// Opens the symbol picker over the caret. A thing typed, so it leads the
@@ -441,18 +441,19 @@ mod tests {
 
     #[test]
     fn roster_order_is_the_pane_order() {
-        // `ALL` is the recorder rows top to bottom (`pages/shortcuts.rs`)
-        // and the Mac's `allCases`; the display-mode cycle is the fourth
-        // row, the symbol picker the fifth and the Telex guide the last.
+        // `ALL` is the global recorder rows top to bottom
+        // (`pages/shortcuts.rs`, under the composing rows) and the Mac's
+        // `allCases`: the three switches, then the windows a key raises,
+        // with the settings doorway last.
         assert_eq!(
             ShortcutAction::ALL,
             [
-                ShortcutAction::OpenLastSettingsPane,
                 ShortcutAction::ToggleRomanization,
-                ShortcutAction::ToggleTranslateSwapped,
                 ShortcutAction::CycleCandidateDisplayMode,
+                ShortcutAction::ToggleTranslateSwapped,
                 ShortcutAction::ShowSymbolPicker,
                 ShortcutAction::ShowTelexGuide,
+                ShortcutAction::OpenLastSettingsPane,
             ]
         );
         assert_eq!(ShortcutAction::ShowSymbolPicker.raw(), "showSymbolPicker");
