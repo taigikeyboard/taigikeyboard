@@ -173,7 +173,7 @@
       }
     },
     "shortcutShowSymbolPicker": {
-      "comment": "Shortcut-recorder row: the chord that opens the two-level symbol picker (punctuation / brackets / special symbols) styled as a candidate window (USER 2026-09-09). Authored whole, like its siblings.",
+      "comment": "Shortcut-recorder row: the chord that opens the symbol picker (punctuation / brackets / special symbols) styled as a candidate window (USER 2026-09-09). 拍開 since 2026-09-10 (USER), pairing it with shortcutOpenSettings — the pane draws the two doorways side by side. Authored whole, like its siblings.",
       "scope": {
         "platforms": [
           "macos",
@@ -184,11 +184,11 @@
         ]
       },
       "values": {
-        "hanji": "符號選單",
-        "tailo": "hû-hō suán-tuann",
-        "poj": "hû-hō soán-toaⁿ",
-        "en": "Symbol Menu",
-        "ja": "記号メニュー"
+        "hanji": "拍開符號選單",
+        "tailo": "phah-khui hû-hō suán-tuann",
+        "poj": "phah-khui hû-hō soán-toaⁿ",
+        "en": "Open Symbol Menu",
+        "ja": "記号メニューを開く"
       }
     },
     "shortcutMoveComposingCaret": {
