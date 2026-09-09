@@ -362,7 +362,7 @@ read-only bail; a held preserved-key chord re-fires `OnPreservedKey`, so the tog
 
 ### Desktop symbol picker (USER-scoped 2026-09-09)
 
-**Status**: all rounds MERGED 2026-09-09 — P1 macOS #26 `843e3453`, P2 Windows #27 `d5a8940b`. Awaiting real-device dogfood (S36, both platforms).
+**Status**: all rounds MERGED 2026-09-09 — P1 macOS #26 `843e3453`, P2 Windows #27 `d5a8940b`, P3 flat list #28 `7245a5b2`. Awaiting real-device dogfood (S36, both platforms).
 **Scope**: macOS + Windows only (desktop train). Engine untouched — no `make build`.
 
 USER 2026-09-09: 「增加快捷鍵叫出特殊符號選單(包含標點符號、括號、特殊符號),風格為候選詞選單,
@@ -442,7 +442,7 @@ generator shared with mobile; engine involvement (`Effect` has no caret kind).
 | P0 | This section + memory (admin tier, direct to main) | done |
 | P1 | macOS: action + key-path match + second `CandidatePanel` instance + JSON table + i18n + S36 + tests | done #26 |
 | P2 | Windows mirror: `symbols.rs` (`include_str!`), `keys/symbol_picker.rs`, `ShowSymbolPicker` key-sink chord, second `CandidatePresenter` (popup only), `KeyWork::InsertSymbol` | done #27 |
-| P3 | Both: one flat list, level state and category labels removed (USER dogfood 2026-09-09) | PR |
+| P3 | Both: one flat list, level state and category labels removed (USER dogfood 2026-09-09) | done #28 |
 
 Codex-named regression risks (all in S36): shortcut theft, stale focus ownership, partial commits,
 duplicate insertion after an edit-session failure, orphaned panels.
