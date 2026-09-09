@@ -105,9 +105,13 @@ final class CustomFontLibraryTests: XCTestCase {
 
         XCTAssertEqual(
             library.installedFonts(),
-            [CustomFont(fileName: "mine.ttf", postScriptName: "Iansui-Regular", displayName: "Iansui Regular")],
+            [CustomFont(fileName: "mine.ttf", postScriptName: "Iansui-Regular")],
         )
         XCTAssertEqual(library.font(fileName: "mine.ttf")?.postScriptName, "Iansui-Regular")
+        XCTAssertEqual(
+            library.installedFonts().first?.displayName, "mine",
+            "the picker lists the stored file's name, not the name the font declares",
+        )
         XCTAssertNil(
             library.activatedFont(fileName: "mine.ttf"),
             "a file in the directory is not a typeface this process activated",
@@ -176,15 +180,57 @@ final class CustomFontLibraryTests: XCTestCase {
 
     // MARK: - Stored names
 
-    /// The stored name is built here, never taken from the picked file: it
-    /// becomes a path, and the name it came from is the user's to choose.
+    /// The stored name is ALSO the name the picker shows, so the user's own
+    /// spelling survives — their capitals, their spaces, their script.
+    func testSanitized_keepsThePickedNameAsTheUserSpelledIt() {
+        XCTAssertEqual(CustomFontLibrary.sanitized("My Font"), "My Font")
+        XCTAssertEqual(CustomFontLibrary.sanitized("源樣明體"), "源樣明體")
+        XCTAssertEqual(CustomFontLibrary.sanitized("SnailFont-Pomacea"), "SnailFont-Pomacea")
+        XCTAssertEqual(CustomFontLibrary.sanitized("jf-openhuninn-2.1"), "jf-openhuninn-2.1")
+    }
+
+    /// What it does not keep: anything that would make the name more than one
+    /// path component, anything Windows refuses, and anything that draws
+    /// nothing.
     func testSanitized_reducesANameToWhatMayBeAPathComponent() {
-        XCTAssertEqual(CustomFontLibrary.sanitized("My Font"), "my-font")
         XCTAssertEqual(CustomFontLibrary.sanitized("../../etc/passwd"), "etc-passwd")
-        XCTAssertEqual(CustomFontLibrary.sanitized("源樣明體"), "typeface")
+        XCTAssertEqual(CustomFontLibrary.sanitized("a:b|c?d*e\"f<g>h"), "a-b-c-d-e-f-g-h")
         XCTAssertEqual(CustomFontLibrary.sanitized(""), "typeface")
         XCTAssertEqual(CustomFontLibrary.sanitized("..."), "typeface")
-        XCTAssertEqual(CustomFontLibrary.sanitized(String(repeating: "a", count: 200)).count, 64)
+        XCTAssertEqual(CustomFontLibrary.sanitized("  . - "), "typeface")
+    }
+
+    /// Windows resolves a device name on the part before the first dot,
+    /// ignoring case and trailing spaces — so `CON.foo.ttf` is `CON` to it.
+    /// One naming rule for both platforms means refusing them here too.
+    func testSanitized_refusesAWindowsDeviceName() {
+        XCTAssertEqual(CustomFontLibrary.sanitized("CON"), "typeface")
+        XCTAssertEqual(CustomFontLibrary.sanitized("nul"), "typeface")
+        XCTAssertEqual(CustomFontLibrary.sanitized("CON.foo"), "typeface")
+        XCTAssertEqual(CustomFontLibrary.sanitized("Com1"), "typeface")
+        XCTAssertEqual(CustomFontLibrary.sanitized("COM¹"), "typeface")
+        XCTAssertEqual(CustomFontLibrary.sanitized("CONSOLE"), "CONSOLE", "only the whole name is a device")
+    }
+
+    /// A name that draws nothing, or draws the rest of itself somewhere else.
+    /// ZWNJ and ZWJ stay: they join letters and emoji, and dropping them
+    /// rewrites text the user meant.
+    func testSanitized_dropsTheInvisibleCharactersButKeepsTheJoiners() {
+        XCTAssertEqual(CustomFontLibrary.sanitized("Fo\u{202E}nt"), "Font")
+        XCTAssertEqual(CustomFontLibrary.sanitized("Fo\u{200B}nt"), "Font")
+        XCTAssertEqual(CustomFontLibrary.sanitized("Fo\u{FEFF}nt"), "Font")
+        XCTAssertEqual(CustomFontLibrary.sanitized("Fo\u{0009}nt"), "Font")
+        XCTAssertEqual(CustomFontLibrary.sanitized("\u{200D}"), "typeface", "a joiner alone is still nothing")
+        XCTAssertEqual(CustomFontLibrary.sanitized("क\u{200D}ष"), "क\u{200D}ष")
+    }
+
+    /// The cap counts Unicode scalars, the unit the Windows port counts, and
+    /// the edges are trimmed again afterwards so a cut cannot leave a dot or a
+    /// space behind.
+    func testSanitized_capsTheLengthInScalarsAndTrimsWhatTheCutLeaves() {
+        XCTAssertEqual(CustomFontLibrary.sanitized(String(repeating: "a", count: 200)).unicodeScalars.count, 64)
+        XCTAssertEqual(CustomFontLibrary.sanitized(String(repeating: "字", count: 200)).unicodeScalars.count, 64)
+        XCTAssertEqual(CustomFontLibrary.sanitized(String(repeating: "a", count: 63) + " tail"), String(repeating: "a", count: 63))
     }
 
     // MARK: -

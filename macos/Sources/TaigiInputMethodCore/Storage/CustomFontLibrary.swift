@@ -12,16 +12,28 @@ import CoreText
 /// (`CandidateFontSelection`).
 ///
 /// `postScriptName` is what Core Text read out of the file's first face, kept
-/// exactly as it came: it is the name `NSFont(name:)` is asked for, and a
+/// exactly as it came: it is the name `RegisteredFace` is asked for, and a
 /// lowercased or otherwise tidied copy would resolve to nothing.
-///
-/// `displayName` is the font's own name, shown in the picker. Both names come
-/// out of a file the user chose — untrusted text. They are displayed, never
-/// logged and never used to build a path.
 struct CustomFont: Hashable, Sendable {
     let fileName: String
     let postScriptName: String
-    let displayName: String
+
+    /// What the picker lists this typeface as: the stored file's name without
+    /// its extension.
+    ///
+    /// The file's name rather than the name the font file declares (USER
+    /// 2026-09-10). A row is something the user has to recognise as the thing
+    /// they added, and what they added was a file they chose and named; a font
+    /// can declare a name that means nothing to them, and the two desktop
+    /// platforms read a different name out of the same file anyway — Core Text
+    /// gives "Iansui Regular" where DirectWrite gives "Iansui".
+    ///
+    /// Derived rather than stored, so there is no second copy of a name to
+    /// drift from the file it belongs to. Untrusted text still: shown, never
+    /// logged (`CustomFontLibrary.sanitized`).
+    var displayName: String {
+        (fileName as NSString).deletingPathExtension
+    }
 }
 
 /// The user's own typefaces: the directory they are copied into, the import
@@ -307,25 +319,21 @@ final class CustomFontLibrary {
         // Registering the URL registers every face in it, so a collection's
         // other faces are checked too: a name that already resolves would make
         // the picker's new row draw in whichever face won.
-        for face in descriptors where RegisteredFace.isRegistered(named: face.postScriptName) {
-            throw ImportFailure.nameAlreadyResolves(face.postScriptName)
+        for postScriptName in descriptors where RegisteredFace.isRegistered(named: postScriptName) {
+            throw ImportFailure.nameAlreadyResolves(postScriptName)
         }
         if let reason = register(url) {
             throw ImportFailure.registrationFailed(reason)
         }
-        let font = CustomFont(
-            fileName: url.lastPathComponent,
-            postScriptName: first.postScriptName,
-            displayName: first.displayName,
-        )
+        let font = CustomFont(fileName: url.lastPathComponent, postScriptName: first)
         // Before the verdict below, so a `didNotResolve` throw reaches
         // `discard` with the registration owned rather than orphaned.
         registrations[font.fileName] = Registration(font: font, isDrawable: false)
         // Resolving is not enough: the name has to resolve to THIS file. A name
         // another face already carries would otherwise pass the check while the
         // picker's new row drew in that other face.
-        guard draws(first.postScriptName, from: url) else {
-            throw ImportFailure.didNotResolve(first.postScriptName)
+        guard draws(first, from: url) else {
+            throw ImportFailure.didNotResolve(first)
         }
         registrations[font.fileName]?.isDrawable = true
         return font
@@ -372,32 +380,117 @@ final class CustomFontLibrary {
         return directory.appendingPathComponent(candidate)
     }
 
-    /// `name` reduced to the characters a file name may hold here: ASCII
-    /// letters, digits, `-` and `_`. Everything else — separators, dots, the
-    /// name's own script — becomes `-`, and a name left with nothing is
-    /// replaced outright, so the result can neither escape the directory nor
-    /// hide an extension.
+    /// `name` reduced to what one path component may hold, keeping as much of
+    /// the picked file's own name as is safe to keep.
+    ///
+    /// The stored name is also the name the picker LISTS (`CustomFont`), so
+    /// this keeps the user's spelling: their capitals, their spaces, their
+    /// script. Everything it removes it removes for a reason a comment can
+    /// give:
+    ///
+    /// - The structural characters become `-`. A separator would let the name
+    ///   escape the directory, and the rest are what Windows refuses in a file
+    ///   name, kept out here too so one library has one naming rule.
+    /// - The invisible characters are dropped outright — controls, the bidi
+    ///   overrides, the line and paragraph separators, the zero-width space and
+    ///   the byte-order mark. A row's title has to look like what it is, and
+    ///   two names that differ only in what nobody can see are two rows a user
+    ///   cannot tell apart. ZWNJ and ZWJ are deliberately NOT in that set: they
+    ///   join letters and emoji, and dropping them rewrites legitimate text.
+    /// - The edges are trimmed of dots, spaces and dashes, and trimmed again
+    ///   after the length cap, so a truncation cannot put one back.
+    /// - A Windows device name (`CON`, `NUL`, `COM1`…) is refused whole,
+    ///   matched the way Windows matches it: on the part before the first dot,
+    ///   ignoring case and trailing spaces.
+    ///
+    /// The cap counts Unicode scalars rather than characters, because Swift's
+    /// `Character` is a grapheme cluster that can hold arbitrarily many of them
+    /// — and the Windows port counts `char`, which is a scalar. One rule, one
+    /// number, both platforms.
     nonisolated static func sanitized(_ name: String) -> String {
-        let allowed = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyz0123456789-_")
-        let reduced = String(name.lowercased().unicodeScalars.map { allowed.contains($0) ? Character($0) : "-" })
-            .trimmingCharacters(in: CharacterSet(charactersIn: "-"))
-        return reduced.isEmpty ? "typeface" : String(reduced.prefix(64))
+        var kept = String.UnicodeScalarView()
+        for scalar in name.unicodeScalars where !isInvisible(scalar) {
+            kept.append(isStructural(scalar) ? "-" : scalar)
+        }
+        let trimmed = String(kept).trimmingCharacters(in: trimmedFromTheEnds)
+        let capped = String(String.UnicodeScalarView(trimmed.unicodeScalars.prefix(maximumStoredNameLength)))
+            .trimmingCharacters(in: trimmedFromTheEnds)
+        guard capped.unicodeScalars.contains(where: isVisible), !isWindowsDeviceName(capped) else {
+            return "typeface"
+        }
+        return capped
     }
+
+    /// The longest a stored name may be, before its extension, counted in
+    /// Unicode scalars.
+    private nonisolated static let maximumStoredNameLength = 64
+
+    /// Trimmed from both ends, before and after the length cap. Windows drops a
+    /// trailing dot or space of its own accord, and a name that starts with one
+    /// reads as an accident rather than as a name.
+    private nonisolated static let trimmedFromTheEnds = CharacterSet(charactersIn: "-. ")
+
+    /// Whether `scalar` would make the name more than one path component, or is
+    /// one Windows refuses in a file name at all.
+    private nonisolated static func isStructural(_ scalar: Unicode.Scalar) -> Bool {
+        "/\\<>:\"|?*".unicodeScalars.contains(scalar)
+    }
+
+    /// Whether `scalar` puts a mark on screen — so a name made of nothing but
+    /// joiners and spaces is refused rather than listed as a blank row that
+    /// nothing can be said about.
+    private nonisolated static func isVisible(_ scalar: Unicode.Scalar) -> Bool {
+        !scalar.properties.isDefaultIgnorableCodePoint && !CharacterSet.whitespaces.contains(scalar)
+    }
+
+    /// Whether `scalar` draws nothing, or draws the rest of the name somewhere
+    /// other than where it is written.
+    private nonisolated static func isInvisible(_ scalar: Unicode.Scalar) -> Bool {
+        switch scalar.value {
+        case 0x00 ... 0x1F, 0x7F ... 0x9F: true // C0, DEL and C1
+        case 0x061C, 0x200B, 0x200E, 0x200F: true // Arabic letter mark, ZWSP, LRM, RLM
+        case 0x2028, 0x2029: true // line and paragraph separators
+        case 0x202A ... 0x202E, 0x2066 ... 0x2069: true // the bidi overrides and isolates
+        case 0xFEFF: true // byte-order mark
+        default: false
+        }
+    }
+
+    /// Whether `stem` is one of the names Windows reserves for a device.
+    ///
+    /// Matched on the part before the first dot — `CON.foo` is `CON` to
+    /// Windows — with trailing spaces ignored and case folded, which is how
+    /// Windows itself resolves one.
+    private nonisolated static func isWindowsDeviceName(_ stem: String) -> Bool {
+        let head = stem.split(separator: ".", maxSplits: 1, omittingEmptySubsequences: false)[0]
+        let candidate = head.replacingOccurrences(of: " +$", with: "", options: .regularExpression).uppercased()
+        return windowsDeviceNames.contains(candidate)
+    }
+
+    /// `COM` and `LPT` take the superscript digits too, which Windows folds to
+    /// their ASCII forms.
+    private nonisolated static let windowsDeviceNames: Set<String> = {
+        var names: Set = ["CON", "PRN", "AUX", "NUL"]
+        for digit in "123456789" {
+            names.insert("COM\(digit)")
+            names.insert("LPT\(digit)")
+        }
+        for superscript in "¹²³" {
+            names.insert("COM\(superscript)")
+            names.insert("LPT\(superscript)")
+        }
+        return names
+    }()
 
     // MARK: - Core Text
 
     /// The faces `url`'s file declares, without registering it. Nil when the
     /// file is not a font this Mac can read.
-    private func readFaces(at url: URL) -> [(postScriptName: String, displayName: String)]? {
+    private func readFaces(at url: URL) -> [String]? {
         guard let descriptors = CTFontManagerCreateFontDescriptorsFromURL(url as CFURL) as? [CTFontDescriptor] else {
             return nil
         }
-        return descriptors.compactMap { descriptor in
-            guard let postScriptName = CTFontDescriptorCopyAttribute(descriptor, kCTFontNameAttribute) as? String
-            else { return nil }
-            let displayName = CTFontDescriptorCopyAttribute(descriptor, kCTFontDisplayNameAttribute) as? String
-            return (postScriptName, displayName ?? postScriptName)
-        }
+        return descriptors.compactMap { CTFontDescriptorCopyAttribute($0, kCTFontNameAttribute) as? String }
     }
 
     /// The font `url`'s first face declares, or nil because the file is not one
@@ -405,11 +498,7 @@ final class CustomFontLibrary {
     /// the picker offers.
     private func makeFont(at url: URL) -> CustomFont? {
         guard let first = readFaces(at: url)?.first else { return nil }
-        return CustomFont(
-            fileName: url.lastPathComponent,
-            postScriptName: first.postScriptName,
-            displayName: first.displayName,
-        )
+        return CustomFont(fileName: url.lastPathComponent, postScriptName: first)
     }
 
     /// Gives up this process's registration of `url`, answering nil when there
@@ -477,6 +566,15 @@ final class CustomFontLibrary {
             .filter { Self.allowedFileExtensions.contains($0.pathExtension.lowercased()) }
             .filter { (try? $0.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true }
             .compactMap(makeFont(at:))
-            .sorted { $0.displayName.localizedStandardCompare($1.displayName) == .orderedAscending }
+            // By what the picker shows, with the whole file name as the
+            // tie-break: `mine.ttf` and `mine.otf` list under one title, and a
+            // pair whose order the comparator calls equal must still have one.
+            .sorted {
+                switch $0.displayName.localizedStandardCompare($1.displayName) {
+                case .orderedAscending: true
+                case .orderedDescending: false
+                case .orderedSame: $0.fileName < $1.fileName
+                }
+            }
     }
 }
