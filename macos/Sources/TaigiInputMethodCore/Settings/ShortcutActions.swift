@@ -121,31 +121,33 @@ extension KeyboardShortcuts.Name {
 /// adds the action everywhere at once.
 /// The case order is the row order of the 快速齒 pane, and the pane reads in
 /// the order a user meets these keys: the switches that change what is being
-/// typed, then the windows a key raises — the Telex card that explains the
-/// typing, then the two 拍開X doorways together, the symbol picker and the
-/// settings window (USER 2026-09-10).
+/// typed, then the two 拍開X doorways together — the symbol picker and the
+/// settings window — and the Telex card last, the row that explains the
+/// keyboard rather than changing what it types (USER 2026-09-10).
 enum ShortcutAction: CaseIterable, Sendable {
     case toggleRomanization
     /// Steps the 候選詞顯示 picker one place: 並排 → 合用 → 羅馬字 → 並排.
     case cycleCandidateDisplayMode
     case toggleTranslateSwapped
-    /// Toggles the floating Telex key table.
-    case showTelexGuide
     /// Opens the symbol picker over the caret. Beside the settings window
     /// since 2026-09-10 (USER): both rows read 拍開X, and a pane that puts
     /// the two doorways together says what they have in common.
     case showSymbolPicker
     /// Opens the settings window on whichever pane the user left it on.
     case openLastSettingsPane
+    /// Toggles the floating Telex key table. Last on the pane (USER
+    /// 2026-09-10): it is the row that explains the keyboard rather than
+    /// doing anything to what is being typed.
+    case showTelexGuide
 
     var name: KeyboardShortcuts.Name {
         switch self {
         case .toggleRomanization: .toggleRomanization
         case .cycleCandidateDisplayMode: .cycleCandidateDisplayMode
         case .toggleTranslateSwapped: .toggleTranslateSwapped
-        case .showTelexGuide: .showTelexGuide
         case .showSymbolPicker: .showSymbolPicker
         case .openLastSettingsPane: .openLastSettingsPane
+        case .showTelexGuide: .showTelexGuide
         }
     }
 
@@ -189,9 +191,9 @@ enum ShortcutAction: CaseIterable, Sendable {
         case .toggleRomanization: language.string(.desktopShortcutToggleRomanization)
         case .cycleCandidateDisplayMode: language.string(.desktopShortcutCycleCandidateDisplayMode)
         case .toggleTranslateSwapped: language.string(.desktopShortcutToggleTranslateSwapped)
-        case .showTelexGuide: language.string(.desktopShortcutShowTelexGuide)
         case .showSymbolPicker: language.string(.desktopShortcutShowSymbolPicker)
         case .openLastSettingsPane: language.string(.desktopShortcutOpenSettings)
+        case .showTelexGuide: language.string(.desktopShortcutShowTelexGuide)
         }
     }
 }
