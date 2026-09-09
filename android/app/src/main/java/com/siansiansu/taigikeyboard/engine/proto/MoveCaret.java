@@ -7,8 +7,8 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * Desktop only — step the caret inside the pending tail one character left
- * or right (`⌥←` / `⌥→` on macOS, `Ctrl+←` / `Ctrl+→` on Windows). The
+ * Desktop only — step the caret inside the pending tail one Unicode scalar
+ * value left or right (`⌥←` / `⌥→` on macOS, `Ctrl+←` / `Ctrl+→` on Windows). The
  * buffer does not change, so the response carries `UpdatePreedit` (with the
  * new `caret_utf16`) and NO `PerformAutocomplete`: candidates, highlight and
  * page stay. At either edge of the pending tail — the caret never enters a
@@ -157,8 +157,8 @@ public  final class MoveCaret extends
 
   /**
    * <pre>
-   * Desktop only — step the caret inside the pending tail one character left
-   * or right (`⌥←` / `⌥→` on macOS, `Ctrl+←` / `Ctrl+→` on Windows). The
+   * Desktop only — step the caret inside the pending tail one Unicode scalar
+   * value left or right (`⌥←` / `⌥→` on macOS, `Ctrl+←` / `Ctrl+→` on Windows). The
    * buffer does not change, so the response carries `UpdatePreedit` (with the
    * new `caret_utf16`) and NO `PerformAutocomplete`: candidates, highlight and
    * page stay. At either edge of the pending tail — the caret never enters a

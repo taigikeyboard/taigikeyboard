@@ -65,8 +65,8 @@ public  final class ComposingResponse extends
      * <pre>
      * Where the caret sits inside `display_text`, as a UTF-16 offset — the
      * unit `setMarkedText(selectionRange:)` and `ITfRange::ShiftEnd` take.
-     * Equals the length of `display_text` unless a desktop moved the caret
-     * (`MoveCaret`). Idle → 0.
+     * Equals the UTF-16 length of `display_text` unless a desktop moved the
+     * caret (`MoveCaret`). Idle → 0.
      * </pre>
      *
      * <code>uint32 caret_utf16 = 3;</code>
@@ -226,8 +226,8 @@ public  final class ComposingResponse extends
      * <pre>
      * Where the caret sits inside `display_text`, as a UTF-16 offset — the
      * unit `setMarkedText(selectionRange:)` and `ITfRange::ShiftEnd` take.
-     * Equals the length of `display_text` unless a desktop moved the caret
-     * (`MoveCaret`). Idle → 0.
+     * Equals the UTF-16 length of `display_text` unless a desktop moved the
+     * caret (`MoveCaret`). Idle → 0.
      * </pre>
      *
      * <code>uint32 caret_utf16 = 3;</code>
@@ -241,8 +241,8 @@ public  final class ComposingResponse extends
      * <pre>
      * Where the caret sits inside `display_text`, as a UTF-16 offset — the
      * unit `setMarkedText(selectionRange:)` and `ITfRange::ShiftEnd` take.
-     * Equals the length of `display_text` unless a desktop moved the caret
-     * (`MoveCaret`). Idle → 0.
+     * Equals the UTF-16 length of `display_text` unless a desktop moved the
+     * caret (`MoveCaret`). Idle → 0.
      * </pre>
      *
      * <code>uint32 caret_utf16 = 3;</code>
@@ -256,8 +256,8 @@ public  final class ComposingResponse extends
      * <pre>
      * Where the caret sits inside `display_text`, as a UTF-16 offset — the
      * unit `setMarkedText(selectionRange:)` and `ITfRange::ShiftEnd` take.
-     * Equals the length of `display_text` unless a desktop moved the caret
-     * (`MoveCaret`). Idle → 0.
+     * Equals the UTF-16 length of `display_text` unless a desktop moved the
+     * caret (`MoveCaret`). Idle → 0.
      * </pre>
      *
      * <code>uint32 caret_utf16 = 3;</code>
@@ -506,8 +506,8 @@ public  final class ComposingResponse extends
        * <pre>
        * Where the caret sits inside `display_text`, as a UTF-16 offset — the
        * unit `setMarkedText(selectionRange:)` and `ITfRange::ShiftEnd` take.
-       * Equals the length of `display_text` unless a desktop moved the caret
-       * (`MoveCaret`). Idle → 0.
+       * Equals the UTF-16 length of `display_text` unless a desktop moved the
+       * caret (`MoveCaret`). Idle → 0.
        * </pre>
        *
        * <code>uint32 caret_utf16 = 3;</code>
@@ -521,8 +521,8 @@ public  final class ComposingResponse extends
        * <pre>
        * Where the caret sits inside `display_text`, as a UTF-16 offset — the
        * unit `setMarkedText(selectionRange:)` and `ITfRange::ShiftEnd` take.
-       * Equals the length of `display_text` unless a desktop moved the caret
-       * (`MoveCaret`). Idle → 0.
+       * Equals the UTF-16 length of `display_text` unless a desktop moved the
+       * caret (`MoveCaret`). Idle → 0.
        * </pre>
        *
        * <code>uint32 caret_utf16 = 3;</code>
@@ -538,8 +538,8 @@ public  final class ComposingResponse extends
        * <pre>
        * Where the caret sits inside `display_text`, as a UTF-16 offset — the
        * unit `setMarkedText(selectionRange:)` and `ITfRange::ShiftEnd` take.
-       * Equals the length of `display_text` unless a desktop moved the caret
-       * (`MoveCaret`). Idle → 0.
+       * Equals the UTF-16 length of `display_text` unless a desktop moved the
+       * caret (`MoveCaret`). Idle → 0.
        * </pre>
        *
        * <code>uint32 caret_utf16 = 3;</code>
