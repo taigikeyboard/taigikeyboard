@@ -59,7 +59,7 @@
     "candidateDisplayModeSideBySide": {
       "comment": "Picker value (default): cell shows hanji and romanization as primary + secondary; the 文/A key decides which leads.",
       "scope": { "platforms": ["android", "ios", "macos", "windows"], "surfaces": ["host", "extension"] },
-      "values": { "hanji": "漢羅並排", "tailo": "Hàn-Lô pīng-pâi", "poj": "Hàn-Lô pēng-pâi", "en": "Hanji and Romanization", "ja": "漢字とローマ字" }
+      "values": { "hanji": "漢羅對應", "tailo": "Hàn-Lô tuì-ìng", "poj": "Hàn-Lô tùi-èng", "en": "Hanji–Romanization Pairing", "ja": "漢字とローマ字の対応" }
     },
     "candidateDisplayModeCombined": {
       "comment": "Picker value: cell shows hanji and romanization as ONE label (漢字 羅馬字); committing writes the hanji; the 文/A key is inert. TL/POJ only.",

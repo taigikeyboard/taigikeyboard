@@ -38,7 +38,7 @@ interface EngineSettings {
     val isAutoCap: Boolean
 
     /**
-     * Candidate cell rendering mode (漢羅並排 / 羅馬字 / 漢羅濫). Under
+     * Candidate cell rendering mode (漢羅對應 / 羅馬字 / 漢羅濫). Under
      * [CandidateDisplayMode.ROMAN_ONLY] the two script flags below read
      * `false` regardless of their stored values; under
      * [CandidateDisplayMode.COMBINED] `isTranslateSwapped` reads `true`.

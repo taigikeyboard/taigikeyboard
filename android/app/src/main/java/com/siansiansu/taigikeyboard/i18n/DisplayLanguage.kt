@@ -65,7 +65,7 @@ enum class DisplayLanguage(
     val endonym: String
         get() =
             when (this) {
-                HANJI -> "台漢"
+                HANJI -> "漢字"
                 TAILO -> "Tâi-lô"
                 POJ -> "Pe̍h-ōe-jī"
                 JAPANESE -> "日本語"

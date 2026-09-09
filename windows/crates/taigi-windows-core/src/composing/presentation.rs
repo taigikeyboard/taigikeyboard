@@ -32,7 +32,7 @@ pub struct PresentedCandidate {
 /// keys. Hanji cells were exempt until 2026-09-03 on Core Principle #7
 /// grounds: 重 tîng / 重 tāng ARE two words, but under 漢羅濫 they draw two
 /// identical 重 cells, and the losing reading stays reachable through its own
-/// roman cell. 漢羅並排 is untouched — its annotation tells the pair apart.
+/// roman cell. 漢羅對應 is untouched — its annotation tells the pair apart.
 pub(crate) fn presentation(
     candidates: &[ContinuousCandidate],
     settings: &EngineSettings,

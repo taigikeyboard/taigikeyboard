@@ -78,7 +78,7 @@
       }
     },
     "shortcutCycleCandidateDisplayMode": {
-      "comment": "Shortcut-recorder row: the hotkey that cycles 候選詞顯示 through 漢羅並排 → 漢羅濫 → 羅馬字 (the picker order). Authored whole, like its siblings.",
+      "comment": "Shortcut-recorder row: the hotkey that cycles 候選詞顯示 through 漢羅對應 → 漢羅濫 → 羅馬字 (the picker order). Authored whole, like its siblings.",
       "scope": {
         "platforms": [
           "macos",

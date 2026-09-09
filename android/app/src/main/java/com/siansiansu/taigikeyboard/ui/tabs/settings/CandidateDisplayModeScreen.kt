@@ -1,6 +1,6 @@
 package com.siansiansu.taigikeyboard.ui.tabs.settings
 
-// Sub-screen for selecting the candidate display mode (漢羅並排 / 羅馬字 / 漢羅濫).
+// Sub-screen for selecting the candidate display mode (漢羅對應 / 羅馬字 / 漢羅濫).
 
 import androidx.compose.runtime.Composable
 import com.siansiansu.taigikeyboard.ui.components.SelectionListScreen

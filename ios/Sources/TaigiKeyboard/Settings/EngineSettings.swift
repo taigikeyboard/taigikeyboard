@@ -23,7 +23,7 @@ protocol EngineSettings {
     // Drift causes silent divergence (hanji-first spurious word-boundary spaces).
     var isOutputBothScripts: Bool { get }
 
-    /// Candidate cell rendering mode (漢羅並排 / 羅馬字). Under `.romanOnly`
+    /// Candidate cell rendering mode (漢羅對應 / 羅馬字). Under `.romanOnly`
     /// the two flags above read `false` regardless of their stored values —
     /// they are derived, never overwritten — so auto-space, the commit
     /// formatter, and the engine `AppConfig` all take the roman-first arms.

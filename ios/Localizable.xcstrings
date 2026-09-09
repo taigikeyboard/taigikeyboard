@@ -3194,13 +3194,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hanji and Romanization"
+            "value": "Hanji–Romanization Pairing"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "漢字とローマ字"
+            "value": "漢字とローマ字の対応"
           }
         }
       }

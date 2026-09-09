@@ -38,7 +38,7 @@ enum DisplayLanguage: String, CaseIterable {
     /// android .../i18n/DisplayLanguage.kt `endonym`. Drift causes silent divergence.
     var endonym: String {
         switch self {
-        case .hanji: "台漢"
+        case .hanji: "漢字"
         case .tailo: "Tâi-lô"
         case .poj: "Pe̍h-ōe-jī"
         case .japanese: "日本語"

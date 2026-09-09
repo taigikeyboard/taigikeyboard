@@ -28,7 +28,7 @@ public extension KeyboardContext {
         }
     }
 
-    /// Inert unless 候選詞顯示 = 漢羅並排: under 羅馬字 there is no hanji to
+    /// Inert unless 候選詞顯示 = 漢羅對應: under 羅馬字 there is no hanji to
     /// lead with, under 漢羅濫 every cell is already single-script (the split
     /// happens upstream, each cell commits its own script), and toggling
     /// the derived getter would overwrite the stored flag. The key stays

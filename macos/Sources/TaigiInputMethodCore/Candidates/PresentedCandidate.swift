@@ -5,7 +5,7 @@ import Foundation
 /// A cell as the window shows it, with the candidate it stands for and the
 /// script its own commit writes.
 ///
-/// Under 漢羅並排 and 羅馬字 a candidate is one cell, so the window's list IS the
+/// Under 漢羅對應 and 羅馬字 a candidate is one cell, so the window's list IS the
 /// fetched list and a cell's position is the candidate's index. 漢羅濫 breaks
 /// that: a candidate carrying both scripts is TWO adjacent cells — the Hanji,
 /// then the romanization — each committing its own script (USER 2026-09-02:
@@ -36,7 +36,7 @@ struct PresentedCandidate: Equatable, Sendable {
     /// were exempt until 2026-09-03 on Core Principle #7 grounds: 重/tîng and
     /// 重/tāng ARE two words, but under 漢羅濫 they draw two identical 重 cells,
     /// and the losing reading stays reachable through its own romanization
-    /// cell. 漢羅並排 is untouched — its subtitle tells the pair apart.
+    /// cell. 漢羅對應 is untouched — its subtitle tells the pair apart.
     static func presentation(
         of candidates: [ContinuousCandidate],
         settings: EngineSettings,

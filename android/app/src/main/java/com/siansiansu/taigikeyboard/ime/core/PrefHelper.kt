@@ -325,7 +325,7 @@ class PrefHelper(
 
     var storedOutputBothScripts: Boolean by preference(PreferenceKeys.OUTPUT_BOTH_SCRIPTS, false)
 
-    // Candidate cell rendering mode (漢羅並排 / 羅馬字 / 漢羅濫). String-backed like
+    // Candidate cell rendering mode (漢羅對應 / 羅馬字 / 漢羅濫). String-backed like
     // `inputMode`; unknown stored values coerce to SIDE_BY_SIDE.
     override var candidateDisplayMode: CandidateDisplayMode
         get() =

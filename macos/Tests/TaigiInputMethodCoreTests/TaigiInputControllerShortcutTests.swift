@@ -166,7 +166,7 @@ final class TaigiInputControllerShortcutTests: XCTestCase {
 
         controller.performShortcutAction(.cycleCandidateDisplayMode)
         XCTAssertEqual(controller.settings.candidateDisplayMode, .sideBySide)
-        XCTAssertEqual(flashes, ["漢羅濫", "羅馬字", "漢羅並排"])
+        XCTAssertEqual(flashes, ["漢羅濫", "羅馬字", "漢羅對應"])
 
         XCTAssertTrue(controller.settings.storedIsTranslateSwapped, "the cycle flipped a stored swap it must not touch")
     }

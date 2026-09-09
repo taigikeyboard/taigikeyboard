@@ -293,7 +293,7 @@ final class SharedSettingsTests: XCTestCase {
         XCTAssertEqual(snap.keyShadowIntensity, 0)
     }
 
-    // MARK: - Candidate display mode (漢羅並排 / 羅馬字) — stored vs derived split
+    // MARK: - Candidate display mode (漢羅對應 / 羅馬字) — stored vs derived split
 
     /// Under `.romanOnly` the derived swap / both-scripts pair reads `false`
     /// while the stored flags keep the user's `true`; leaving the mode
