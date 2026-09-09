@@ -30,8 +30,38 @@ pub fn view(
     let document = window.document();
     let bindings = ComposingKeyBindings::from_document(document);
     View::fragment((
-        // One group (2026-08-25, +1 on 2026-09-02, +1 on 2026-09-09): one
-        // doorway, three switches and the Telex guide.
+        // Typing order, the row order upstream draws
+        // (`ShortcutSettingsView.swift`): the keys that move through the
+        // candidates, the caret row, the keys that end the composition, then
+        // the global rows — switches first, windows last (`ShortcutAction`).
+        composing_rows(
+            window,
+            strings,
+            context,
+            &bindings,
+            ComposingAction::GROUPS[0],
+        ),
+        // Shown, not recordable (USER 2026-09-09): the caret inside the
+        // composition rides the host's own word-jump chord, and the
+        // classifier reads it before any binding (`ComposingKeyIntent`). With
+        // the candidate movers, because moving the caret is what it is.
+        cards::row(
+            strings.resolve(StringKey::DesktopShortcutMoveComposingCaret),
+            TextBlock::new()
+                .text(caret_chords_label())
+                .opacity(0.65)
+                .vertical_alignment(VerticalAlignment::Center),
+        ),
+        // Then the keys that end the composition.
+        composing_rows(
+            window,
+            strings,
+            context,
+            &bindings,
+            ComposingAction::GROUPS[1],
+        ),
+        // One group (2026-08-25, +1 on 2026-09-02, +1 on 2026-09-09): three
+        // switches, the symbol picker, the Telex guide and one doorway.
         View::keyed_fragment(ShortcutAction::ALL.map(|action| {
             (
                 action.raw(),
@@ -44,32 +74,6 @@ pub fn view(
                 ),
             )
         })),
-        // The keys that move through the candidates.
-        composing_rows(
-            window,
-            strings,
-            context,
-            &bindings,
-            ComposingAction::GROUPS[0],
-        ),
-        // Then the keys that end the composition.
-        composing_rows(
-            window,
-            strings,
-            context,
-            &bindings,
-            ComposingAction::GROUPS[1],
-        ),
-        // Shown, not recordable (USER 2026-09-09): the caret inside the
-        // composition rides the host's own word-jump chord, and the
-        // classifier reads it before any binding (`ComposingKeyIntent`).
-        cards::row(
-            strings.resolve(StringKey::DesktopShortcutMoveComposingCaret),
-            TextBlock::new()
-                .text(caret_chords_label())
-                .opacity(0.65)
-                .vertical_alignment(VerticalAlignment::Center),
-        ),
         // Both registries at once, and no conflict pass afterwards: the
         // shipped defaults hold no chord in common
         // (`ShortcutSettingsView.swift:578-603`).

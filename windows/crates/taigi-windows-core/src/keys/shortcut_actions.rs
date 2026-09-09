@@ -22,29 +22,29 @@ use crate::strings::StringKey;
 /// recorder rows, the preserved-key registration and the menu.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum ShortcutAction {
-    /// Opens the settings window on whichever pane the user left it on.
-    OpenLastSettingsPane,
     ToggleRomanization,
-    ToggleTranslateSwapped,
     /// Steps 候選詞顯示 through its picker order (`CandidateDisplayMode::next`).
     CycleCandidateDisplayMode,
-    /// Opens the symbol picker over the caret. After the switches — it is a
-    /// thing typed, not a setting flipped — and before the guide.
+    ToggleTranslateSwapped,
+    /// Opens the symbol picker over the caret. A thing typed, so it leads the
+    /// windows rather than following the guide that describes typing.
     ShowSymbolPicker,
-    /// Toggles the floating Telex key table (`ui/telex_guide.rs`). Last,
-    /// because this order is the order of the rows in the pane, and a guide
-    /// sits after the switches (`ShortcutActions.swift` `showTelexGuide`).
+    /// Toggles the floating Telex key table (`ui/telex_guide.rs`).
     ShowTelexGuide,
+    /// Opens the settings window on whichever pane the user left it on. Last:
+    /// the one row that leaves the typing flow altogether
+    /// (`ShortcutActions.swift` `ShortcutAction`).
+    OpenLastSettingsPane,
 }
 
 impl ShortcutAction {
     pub const ALL: [ShortcutAction; 6] = [
-        Self::OpenLastSettingsPane,
         Self::ToggleRomanization,
-        Self::ToggleTranslateSwapped,
         Self::CycleCandidateDisplayMode,
+        Self::ToggleTranslateSwapped,
         Self::ShowSymbolPicker,
         Self::ShowTelexGuide,
+        Self::OpenLastSettingsPane,
     ];
 
     pub fn raw(self) -> &'static str {
@@ -441,18 +441,19 @@ mod tests {
 
     #[test]
     fn roster_order_is_the_pane_order() {
-        // `ALL` is the recorder rows top to bottom (`pages/shortcuts.rs`)
-        // and the Mac's `allCases`; the display-mode cycle is the fourth
-        // row, the symbol picker the fifth and the Telex guide the last.
+        // `ALL` is the global recorder rows top to bottom
+        // (`pages/shortcuts.rs`, under the composing rows) and the Mac's
+        // `allCases`: the three switches, then the windows a key raises,
+        // with the settings doorway last.
         assert_eq!(
             ShortcutAction::ALL,
             [
-                ShortcutAction::OpenLastSettingsPane,
                 ShortcutAction::ToggleRomanization,
-                ShortcutAction::ToggleTranslateSwapped,
                 ShortcutAction::CycleCandidateDisplayMode,
+                ShortcutAction::ToggleTranslateSwapped,
                 ShortcutAction::ShowSymbolPicker,
                 ShortcutAction::ShowTelexGuide,
+                ShortcutAction::OpenLastSettingsPane,
             ]
         );
         assert_eq!(ShortcutAction::ShowSymbolPicker.raw(), "showSymbolPicker");

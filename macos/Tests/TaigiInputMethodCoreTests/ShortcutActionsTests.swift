@@ -45,20 +45,20 @@ final class ShortcutActionsTests: XCTestCase {
     func testEveryAction_readsAsAWholePhraseInEveryLanguage() {
         XCTAssertEqual(
             labels(),
-            ["拍開設定選單", "切換輸入模式", "輸出漢字/羅馬字", "切換候選詞顯示", "符號選單", "Telex 說明"],
+            ["切換輸入模式", "切換候選詞顯示", "輸出漢字/羅馬字", "符號選單", "Telex 說明", "拍開設定選單"],
         )
         XCTAssertEqual(
             labels(.japanese),
             [
-                "設定メニューを開く",
                 "入力モードを切り替える",
-                "漢字／ローマ字を出力",
                 "候補の表示を切り替え",
+                "漢字／ローマ字を出力",
                 "記号メニュー",
                 "Telex の説明",
+                "設定メニューを開く",
             ],
         )
-        XCTAssertEqual(labels(.english).first, "Open Settings Menu")
+        XCTAssertEqual(labels(.english).first, "Switch Input Mode")
         // The trap this replaced: composing a row from the setting's own label produced a doubled
         // verb — "括弧で併記を切り替える", "Toggle Annotate in Brackets".
         XCTAssertFalse(labels(.japanese).contains { $0.contains("併記を切り替えるを") })
@@ -151,12 +151,12 @@ final class ShortcutActionsTests: XCTestCase {
         XCTAssertEqual(
             ShortcutAction.allCases.map(\.defaultShortcut),
             [
-                KeyboardShortcuts.Shortcut(.s, modifiers: [.control, .command]),
                 KeyboardShortcuts.Shortcut(.c, modifiers: [.control, .command]),
-                KeyboardShortcuts.Shortcut(.backtick),
                 KeyboardShortcuts.Shortcut(.h, modifiers: [.control, .command]),
+                KeyboardShortcuts.Shortcut(.backtick),
                 KeyboardShortcuts.Shortcut(.comma, modifiers: [.control, .command]),
                 KeyboardShortcuts.Shortcut(.slash, modifiers: [.control, .command]),
+                KeyboardShortcuts.Shortcut(.s, modifiers: [.control, .command]),
             ],
         )
     }

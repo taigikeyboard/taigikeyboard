@@ -146,11 +146,11 @@
         ]
       },
       "values": {
-        "hanji": "移動組字游標",
-        "tailo": "suá tsoo-jī ê iû-piau",
-        "poj": "sóa cho͘-jī ê iû-piau",
-        "en": "Move the composing caret",
-        "ja": "入力中の文字のカーソル移動"
+        "hanji": "修正當咧拍的字",
+        "tailo": "siu-tsìng tng-teh phah ê jī",
+        "poj": "siu-chèng tng-teh phah ê jī",
+        "en": "Fix What You Are Typing",
+        "ja": "入力中の文字を修正"
       }
     },
     "telexGuideTitle": {
@@ -579,9 +579,9 @@
         ]
       },
       "values": {
-        "hanji": "候選窗排列",
-        "tailo": "hāu-suán thang pâi-lia̍t",
-        "poj": "hāu-soán thang pâi-lia̍t",
+        "hanji": "選字窗排列",
+        "tailo": "suán-jī-thang pâi-lia̍t",
+        "poj": "soán-jī-thang pâi-lia̍t",
         "en": "Candidate Window Layout",
         "ja": "候補ウィンドウの配置"
       }
@@ -712,9 +712,9 @@
         ]
       },
       "values": {
-        "hanji": "候選窗大細",
-        "tailo": "hāu-suán thang tuā-sè",
-        "poj": "hāu-soán thang tōa-sè",
+        "hanji": "選字窗大細",
+        "tailo": "suán-jī-thang tuā-sè",
+        "poj": "soán-jī-thang tōa-sè",
         "en": "Candidate Window Size",
         "ja": "候補ウィンドウの大きさ"
       }

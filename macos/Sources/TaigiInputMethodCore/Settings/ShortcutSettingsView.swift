@@ -34,6 +34,34 @@ struct ShortcutSettingsView: View {
     var body: some View {
         Form {
             Section {
+                // The pane reads in typing order: the keys that move through
+                // the candidates, the keys that end the composition, the
+                // switches, then the windows a key raises (USER 2026-09-09).
+                // Each roster keeps its own order, so a row cannot move here
+                // without moving in the menu that draws the same list.
+                //
+                // The candidate-slot keys have no row here: they follow from
+                // the 聲調拍法 picker on the 一般 pane (`ToneInputScheme`), so
+                // the two halves of the key contract cannot be set apart.
+                ForEach(ComposingAction.groups[0], id: \.self) { action in
+                    recorderRow(action)
+                }
+
+                // Shown, not recordable (USER 2026-09-09): the caret inside the
+                // composition rides the host's own word-jump chord, and the
+                // classifier reads it before any binding (`ComposingKeyIntent`).
+                // With the candidate movers, because moving the caret is what
+                // it is — the greyed field is what tells it from the rows that
+                // record.
+                LabeledContent(language.string(.desktopShortcutMoveComposingCaret)) {
+                    Text(Self.caretChordsLabel)
+                        .foregroundStyle(.secondary)
+                }
+
+                ForEach(ComposingAction.groups[1], id: \.self) { action in
+                    recorderRow(action)
+                }
+
                 // One row per global action, off the same list the hotkey
                 // registration uses, so a new action cannot appear in one and
                 // not the other.
@@ -42,33 +70,9 @@ struct ShortcutSettingsView: View {
                 // opened a settings pane, then the keys that change what the
                 // user is typing — until the five pane chords were retired
                 // (USER: five chords for panes visited about once a day, which
-                // the menu bar already lists by name). What is left is one
-                // doorway and three switches, which is not two groups' worth.
+                // the menu bar already lists by name).
                 ForEach(ShortcutAction.allCases, id: \.self) { action in
                     globalRecorderRow(action)
-                }
-
-                // The keys that move through the candidates, then the keys
-                // that end the composition (`ComposingAction.groups`). No
-                // other surface shows this roster: the input-source menu never
-                // could, since the agent dispatches whatever it draws.
-                // The candidate-slot keys have no row here: they follow from
-                // the 聲調拍法 picker on the 一般 pane (`ToneInputScheme`), so
-                // the two halves of the key contract cannot be set apart.
-                ForEach(ComposingAction.groups[0], id: \.self) { action in
-                    recorderRow(action)
-                }
-
-                ForEach(ComposingAction.groups[1], id: \.self) { action in
-                    recorderRow(action)
-                }
-
-                // Shown, not recordable (USER 2026-09-09): the caret inside the
-                // composition rides the host's own word-jump chord, and the
-                // classifier reads it before any binding (`ComposingKeyIntent`).
-                LabeledContent(language.string(.desktopShortcutMoveComposingCaret)) {
-                    Text(Self.caretChordsLabel)
-                        .foregroundStyle(.secondary)
                 }
             }
 

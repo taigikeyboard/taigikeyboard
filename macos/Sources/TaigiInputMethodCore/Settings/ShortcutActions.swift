@@ -119,28 +119,32 @@ extension KeyboardShortcuts.Name {
 /// One user-assignable action. The list is the single source for the recorder
 /// rows, the handler registration, and the enable/disable gate — adding a case
 /// adds the action everywhere at once.
+/// The case order is the row order of the 快速齒 pane, and the pane reads in
+/// the order a user meets these keys: the switches that change what is being
+/// typed, then the windows a key raises — the symbol picker while typing, the
+/// Telex card that explains the typing, and the settings window last, the one
+/// row that leaves the typing flow altogether (USER 2026-09-09).
 enum ShortcutAction: CaseIterable, Sendable {
-    /// Opens the settings window on whichever pane the user left it on.
-    case openLastSettingsPane
     case toggleRomanization
-    case toggleTranslateSwapped
     /// Steps the 候選詞顯示 picker one place: 並排 → 合用 → 羅馬字 → 並排.
     case cycleCandidateDisplayMode
-    /// Opens the symbol picker over the caret. After the switches — it is a
-    /// thing typed, not a setting flipped — and before the guide.
+    case toggleTranslateSwapped
+    /// Opens the symbol picker over the caret. A thing typed, so it leads the
+    /// windows rather than following the guide that describes typing.
     case showSymbolPicker
-    /// Toggles the floating Telex key table. Last, because this order is the
-    /// order of the rows in the pane, and a guide sits after the switches.
+    /// Toggles the floating Telex key table.
     case showTelexGuide
+    /// Opens the settings window on whichever pane the user left it on.
+    case openLastSettingsPane
 
     var name: KeyboardShortcuts.Name {
         switch self {
-        case .openLastSettingsPane: .openLastSettingsPane
         case .toggleRomanization: .toggleRomanization
-        case .toggleTranslateSwapped: .toggleTranslateSwapped
         case .cycleCandidateDisplayMode: .cycleCandidateDisplayMode
+        case .toggleTranslateSwapped: .toggleTranslateSwapped
         case .showSymbolPicker: .showSymbolPicker
         case .showTelexGuide: .showTelexGuide
+        case .openLastSettingsPane: .openLastSettingsPane
         }
     }
 
@@ -181,12 +185,12 @@ enum ShortcutAction: CaseIterable, Sendable {
     @MainActor
     func label(_ language: DisplayLanguageStore) -> String {
         switch self {
-        case .openLastSettingsPane: language.string(.desktopShortcutOpenSettings)
         case .toggleRomanization: language.string(.desktopShortcutToggleRomanization)
-        case .toggleTranslateSwapped: language.string(.desktopShortcutToggleTranslateSwapped)
         case .cycleCandidateDisplayMode: language.string(.desktopShortcutCycleCandidateDisplayMode)
+        case .toggleTranslateSwapped: language.string(.desktopShortcutToggleTranslateSwapped)
         case .showSymbolPicker: language.string(.desktopShortcutShowSymbolPicker)
         case .showTelexGuide: language.string(.desktopShortcutShowTelexGuide)
+        case .openLastSettingsPane: language.string(.desktopShortcutOpenSettings)
         }
     }
 }

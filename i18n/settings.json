@@ -79,7 +79,7 @@
     "candidateWindow": {
       "comment": "Toggle label on the desktop General pane: show the candidate window at all. Off = no window, Space / Enter write the typed romanization (S33).",
       "scope": { "platforms": ["macos", "windows"], "surfaces": ["host"] },
-      "values": { "hanji": "候選窗", "tailo": "hāu-suán-thang", "poj": "hāu-soán-thang", "en": "Candidate Window", "ja": "候補ウィンドウ" }
+      "values": { "hanji": "選字窗", "tailo": "suán-jī-thang", "poj": "soán-jī-thang", "en": "Candidate Window", "ja": "候補ウィンドウ" }
     },
     "literalRomanCandidate": {
       "comment": "Toggle label: show what is being typed as the first candidate in the strip (§34 literal-roman candidate). All four platforms.",
