@@ -1024,21 +1024,9 @@ impl CandidateWindow {
             return;
         };
         let theme = self.theme;
-        // The cell's fill, in precedence order: the selection, then the §34
-        // literal's tint — what the user is currently typing, marked as a
-        // different KIND of row rather than as a second selection (USER
-        // 2026-09-09) — then nothing. Only the SELECTION changes the text
-        // colours below.
         let is_literal = self.lead_cell_is_unkeyed && index == 0;
-        let fill = if is_selected {
-            Some(theme.highlight)
-        } else if is_literal {
-            theme.literal_fill
-        } else {
-            None
-        };
-        if let Some(fill) = fill {
-            brush.SetColor(&fill);
+        if is_selected {
+            brush.SetColor(&theme.highlight);
             let rounded = D2D1_ROUNDED_RECT {
                 rect: d2d_rect(rect),
                 radiusX: CandidateMetrics::corner_radius(CORNER_RADIUS, rect.width, rect.height),
@@ -1070,6 +1058,9 @@ impl CandidateWindow {
         // key and centres across the WHOLE cell, the cell its fill covers
         // (USER 2026-09-09). The inline arrangement keeps the column: the
         // vertical list aligns every row's text on one x, literal or not.
+        // The literal cell draws no fill of its own — a tint was tried on
+        // 2026-09-09 and taken back out the same day (USER: 「背景底色強調效果
+        // 不好,恢復第一個位置的背景底色」).
         let centres_across_cell = is_literal
             && matches!(
                 metrics.cell_arrangement(),

@@ -5,11 +5,12 @@ import AppKit
 import XCTest
 
 /// What these pin: with 顯示當咧拍的字 on, cell 0 is what the user is currently
-/// typing rather than a candidate the engine offered, so it draws a fill of its
-/// own (USER 2026-09-09) — and only cell 0 does, in whichever layout is up.
-/// The selection still wins: a highlighted literal cell is drawn like any other
-/// highlighted cell, which is what keeps the tint from reading as a second
-/// selection.
+/// typing rather than a candidate the engine offered — it is marked as such,
+/// in whichever layout is up, and being marked is what centres its text across
+/// the whole cell (it names no key, so it does not step around the key column
+/// the other cells align on). It draws NO fill of its own: a tint was tried on
+/// 2026-09-09 and taken back out the same day (USER: 「背景底色強調效果不好,
+/// 恢復第一個位置的背景底色」).
 @MainActor
 final class CandidateLiteralCellTests: XCTestCase {
     private static let cells: [CandidateCellContent] = (0 ..< 12).map {
@@ -23,7 +24,7 @@ final class CandidateLiteralCellTests: XCTestCase {
             _ = panel.updateCandidates(Self.cells)
 
             let marked = TestFixtures.candidateCells(in: panel).filter(\.isLiteralCell)
-            XCTAssertEqual(marked.map(\.absoluteIndex), [0], "\(label): only cell 0 carries the fill")
+            XCTAssertEqual(marked.map(\.absoluteIndex), [0], "\(label): only cell 0 is the literal")
             panel.clear()
         }
     }
@@ -42,7 +43,8 @@ final class CandidateLiteralCellTests: XCTestCase {
     }
 
     /// A list re-presented without the literal leaves no cell marked — the
-    /// mark rides the same repaint as the keys
+    /// mark rides the same repaint as the keys, and it is what places the
+    /// text
     /// (`CandidateBasePanel.refreshCellDecorations`), so it cannot outlive the
     /// list it was read from.
     func testARerenderedList_dropsTheMarkWithTheLiteral() {
@@ -110,46 +112,6 @@ final class CandidateLiteralCellTests: XCTestCase {
         literal.layoutSubtreeIfNeeded()
         XCTAssertEqual(
             literal.subviews.compactMap { $0 as? NSTextField }[1].frame, ordinaryText,
-        )
-    }
-
-    /// The fill resolves DIFFERENTLY in the two appearances — a fixed tint
-    /// would read wrong in one of them — and the selection's fill wins over
-    /// it. Pinned on the Tahoe cell, whose fill is a view of its own.
-    func testTheFill_resolvesPerAppearance_andTheSelectionWins() throws {
-        var tintPerAppearance: [CGColor] = []
-        for appearance in [NSAppearance(named: .aqua), NSAppearance(named: .darkAqua)] {
-            let view = CandidateItemView(
-                style: .tahoe, metrics: TestFixtures.defaultCandidateMetrics.arranged(.stacked),
-            )
-            view.appearance = try XCTUnwrap(appearance)
-            view.frame = NSRect(x: 0, y: 0, width: 80, height: 40)
-            view.configure(Self.cells[0])
-
-            view.isLiteralCell = true
-            view.layoutSubtreeIfNeeded()
-            let fill = try XCTUnwrap(view.subviews.first { !($0 is NSTextField) })
-            let tint = try XCTUnwrap(fill.layer?.backgroundColor)
-            tintPerAppearance.append(tint)
-            XCTAssertFalse(fill.isHidden, "the literal cell draws a fill of its own")
-            XCTAssertEqual(fill.frame, view.bounds.insetBy(dx: 4, dy: 4), "at the highlight's shape")
-
-            view.isHighlighted = true
-            view.layoutSubtreeIfNeeded()
-            XCTAssertFalse(fill.isHidden)
-            XCTAssertNotEqual(
-                fill.layer?.backgroundColor, tint, "the selection paints over the tint",
-            )
-
-            view.isHighlighted = false
-            view.isLiteralCell = false
-            XCTAssertTrue(fill.isHidden, "an ordinary unselected cell draws none")
-        }
-
-        XCTAssertEqual(tintPerAppearance.count, 2)
-        XCTAssertNotEqual(
-            tintPerAppearance[0], tintPerAppearance[1],
-            "the tint follows the appearance rather than being one fixed colour",
         )
     }
 }
