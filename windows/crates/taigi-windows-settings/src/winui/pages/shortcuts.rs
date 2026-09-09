@@ -1,7 +1,7 @@
 //! The 快捷鍵 pane: every key the user can put an action on, in three titled
 //! blocks (`ShortcutSettingsView.swift`) — 選字, the keys that move through
-//! the candidates; 輸出, the keys that end the composition plus the switch
-//! that says which script they write; 其他, the rest — plus the reset card.
+//! the candidates; 輸出, the keys that end the composition into the document;
+//! 其他, the switches and the windows a key raises — plus the reset card.
 //! Which keys pick a candidate is not chosen here: it follows from 聲調拍法
 //! on the 一般 pane (`ToneInputScheme`). Every row is the same recorder;
 //! which registry it writes to and what it refuses on top of the shared gate
@@ -77,21 +77,17 @@ pub fn view(
                 .opacity(0.65)
                 .vertical_alignment(VerticalAlignment::Center),
         ),
-        // A global row inside the composing block (USER 2026-09-10):
-        // 輸出漢字/羅馬字 says which script every commit above it writes, so
-        // it belongs with them rather than among the switches. Last of the
-        // block, after the two rows that flip the script for one commit — the
-        // standing switch follows the temporary ones.
-        global_rows(window, strings, context, ShortcutAction::GROUPS[0]),
-        // Block three: the remaining switches, and the windows a key raises.
-        // What these have in common is that none of them needs a composition
-        // running. Not their modifiers: 漢羅對調 ships on a bare backtick, so
-        // Ctrl+Alt names no boundary here. Nor the registry — the block was
-        // the whole global roster until 2026-09-10, when 輸出漢字/羅馬字 moved
-        // up to the commits it describes, so the roster now spans two blocks
-        // and only `ShortcutAction::GROUPS` says which.
+        // Block three: the switches, and the windows a key raises. What these
+        // have in common is that none of them needs a composition running —
+        // which is also why they are the roster that holds a chord in the
+        // global registry, though the block is drawn on what they DO. Not on
+        // their modifiers: 漢羅對調 ships on a bare backtick, so Ctrl+Alt
+        // names no boundary here.
+        //
+        // One block (2026-08-25, +1 on 2026-09-02, +1 on 2026-09-09): three
+        // switches, the symbol picker, the Telex guide and one doorway.
         cards::section_title(strings.resolve(StringKey::DesktopShortcutSectionOther)),
-        global_rows(window, strings, context, ShortcutAction::GROUPS[1]),
+        global_rows(window, strings, context, &ShortcutAction::ALL),
         // Both registries at once, and no conflict pass afterwards: the
         // shipped defaults hold no chord in common
         // (`ShortcutSettingsView.swift` `restoreDefaults`).

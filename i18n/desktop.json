@@ -116,7 +116,7 @@
       }
     },
     "shortcutToggleTranslateSwapped": {
-      "comment": "Shortcut-recorder row: the hotkey that flips which script is committed.",
+      "comment": "Shortcut-recorder row: the hotkey that flips which script is committed. 切換 rather than 輸出 (USER 2026-09-10) — it is a switch, drawn with the other switches in 其他.",
       "scope": {
         "platforms": [
           "macos",
@@ -127,11 +127,11 @@
         ]
       },
       "values": {
-        "hanji": "輸出漢字/羅馬字",
-        "tailo": "su-tshut hàn-jī / lô-má-jī",
-        "poj": "su-chhut hàn-jī / lô-má-jī",
-        "en": "Output Hanji or Romanization",
-        "ja": "漢字／ローマ字を出力"
+        "hanji": "切換漢字/羅馬字",
+        "tailo": "tshiat-uānn hàn-jī / lô-má-jī",
+        "poj": "chhiat-ōaⁿ hàn-jī / lô-má-jī",
+        "en": "Switch Hanji or Romanization",
+        "ja": "漢字／ローマ字を切り替える"
       }
     },
     "shortcutCycleCandidateDisplayMode": {
@@ -165,11 +165,11 @@
         ]
       },
       "values": {
-        "hanji": "Telex 說明",
-        "tailo": "Telex suat-bîng",
-        "poj": "Telex soat-bêng",
-        "en": "Telex Guide",
-        "ja": "Telex の説明"
+        "hanji": "拍開 Telex 說明",
+        "tailo": "phah-khui Telex suat-bîng",
+        "poj": "phah-khui Telex soat-bêng",
+        "en": "Open Telex Guide",
+        "ja": "Telex の説明を開く"
       }
     },
     "shortcutShowSymbolPicker": {
@@ -978,11 +978,11 @@
         ]
       },
       "values": {
-        "hanji": "送出原本拍的字",
-        "tailo": "sàng-tshut guân-pún phah ê jī",
-        "poj": "sàng-chhut goân-pún phah ê jī",
-        "en": "Commit What I Typed",
-        "ja": "入力したまま確定"
+        "hanji": "輸出當咧拍的字",
+        "tailo": "su-tshut tng-teh phah ê jī",
+        "poj": "su-chhut tng-teh phah ê jī",
+        "en": "Output What You Are Typing",
+        "ja": "入力中の文字を出力"
       }
     },
     "actionCommitAlternateScript": {

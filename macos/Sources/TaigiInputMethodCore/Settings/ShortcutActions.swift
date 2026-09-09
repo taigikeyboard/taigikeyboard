@@ -116,12 +116,10 @@ extension KeyboardShortcuts.Name {
     )
 }
 
-/// One user-assignable action. The list is the single source for the handler
-/// registration, the conflict resolution and the enable/disable gate — adding
-/// a case adds the action to all three at once. The recorder rows come off
-/// `groups` below instead, so a case has to say which block of the 快速齒 pane
-/// it is drawn in.
-/// The case order is the order the pane draws within a block, and it reads in
+/// One user-assignable action. The list is the single source for the recorder
+/// rows, the handler registration, and the enable/disable gate — adding a case
+/// adds the action everywhere at once.
+/// The case order is the row order of the 快速齒 pane, and the pane reads in
 /// the order a user meets these keys: the switches that change what is being
 /// typed, then the windows a key raises — the Telex card that explains the
 /// typing, then the two 拍開X doorways together, the symbol picker and the
@@ -139,25 +137,6 @@ enum ShortcutAction: CaseIterable, Sendable {
     case showSymbolPicker
     /// Opens the settings window on whichever pane the user left it on.
     case openLastSettingsPane
-
-    /// The roster split into the blocks the settings pane draws it in: the one
-    /// switch that belongs with the keys that end a composition — it says which
-    /// script those keys write — and everything else, which is the 其他 block.
-    ///
-    /// Written out rather than derived from `allCases`, the same shape
-    /// `ComposingAction.groups` has and for the same reason: a new case has to
-    /// say which block it belongs to, and `ShortcutActionTests` pins that every
-    /// case appears exactly once. Presentation only — hotkey registration,
-    /// conflict resolution and reset all keep reading `allCases`, so the order
-    /// the pane draws cannot reach the order a chord is registered or resolved
-    /// in.
-    static let groups: [[ShortcutAction]] = [
-        [.toggleTranslateSwapped],
-        [
-            .toggleRomanization, .cycleCandidateDisplayMode, .showTelexGuide,
-            .showSymbolPicker, .openLastSettingsPane,
-        ],
-    ]
 
     var name: KeyboardShortcuts.Name {
         switch self {

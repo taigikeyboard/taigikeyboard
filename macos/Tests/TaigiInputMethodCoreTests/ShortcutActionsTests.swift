@@ -34,15 +34,6 @@ final class ShortcutActionsTests: XCTestCase {
         XCTAssertEqual(Set(names).count, names.count, "two actions share a storage name: \(names)")
     }
 
-    /// A case added to the roster but not to a group would have no row on the
-    /// 快捷鍵 pane, which draws from the groups rather than from `allCases`.
-    func testTheGroups_holdEveryActionExactlyOnce() {
-        let grouped = ShortcutAction.groups.flatMap(\.self)
-
-        XCTAssertEqual(Set(grouped), Set(ShortcutAction.allCases))
-        XCTAssertEqual(grouped.count, ShortcutAction.allCases.count, "an action is in two groups")
-    }
-
     func testEveryAction_hasItsOwnLabel() {
         let rows = labels()
 
@@ -54,15 +45,15 @@ final class ShortcutActionsTests: XCTestCase {
     func testEveryAction_readsAsAWholePhraseInEveryLanguage() {
         XCTAssertEqual(
             labels(),
-            ["切換輸入模式", "切換候選詞顯示", "輸出漢字/羅馬字", "Telex 說明", "拍開符號選單", "拍開設定選單"],
+            ["切換輸入模式", "切換候選詞顯示", "切換漢字/羅馬字", "拍開 Telex 說明", "拍開符號選單", "拍開設定選單"],
         )
         XCTAssertEqual(
             labels(.japanese),
             [
                 "入力モードを切り替える",
                 "候補の表示を切り替え",
-                "漢字／ローマ字を出力",
-                "Telex の説明",
+                "漢字／ローマ字を切り替える",
+                "Telex の説明を開く",
                 "記号メニューを開く",
                 "設定メニューを開く",
             ],

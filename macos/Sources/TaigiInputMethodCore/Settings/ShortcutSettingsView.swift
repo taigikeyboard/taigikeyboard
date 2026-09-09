@@ -7,9 +7,8 @@ import SwiftUI
 /// The 快捷鍵 pane of the settings window.
 ///
 /// Three blocks, by what a key DOES: 選字, the keys that move through the
-/// candidates; 輸出, the keys that end the composition plus the switch that
-/// says which script they write; and 其他, the rest of the switches and the
-/// windows a key raises. Titled since 2026-09-10 (USER) — the blocks shipped
+/// candidates; 輸出, the keys that end the composition into the document; and
+/// 其他, the switches and the windows a key raises. Titled since 2026-09-10 (USER) — the blocks shipped
 /// headerless the same day, and a header is what tells a reader which of the
 /// three a key they are hunting for lives in.
 ///
@@ -90,34 +89,22 @@ struct ShortcutSettingsView: View {
                     Text(Self.shiftedSlotKeysLabel(bindings.slotKeySet))
                         .foregroundStyle(.secondary)
                 }
-
-                // A global row inside the composing block (USER 2026-09-10):
-                // 輸出漢字/羅馬字 says which script every commit above it
-                // writes, so it belongs with them rather than among the
-                // switches. Last of the block, after the two rows that flip
-                // the script for one commit — the standing switch follows the
-                // temporary ones.
-                ForEach(ShortcutAction.groups[0], id: \.self) { action in
-                    globalRecorderRow(action)
-                }
             } header: {
                 Text(language.string(.desktopShortcutSectionOutput))
             }
 
-            // Block three: the remaining switches, and the windows a key
-            // raises. What these have in common is that none of them needs a
-            // composition running. Not their modifiers: 漢羅對調 ships on a
-            // bare backtick, so ⌃⌘ names no boundary here. Nor dispatch: the
+            // Block three: the switches, and the windows a key raises. What
+            // these have in common is that none of them needs a composition
+            // running — which is also why they are the roster that holds a
+            // chord in the global registry, though the block is drawn on what
+            // they DO. Not on their modifiers: 漢羅對調 ships on a bare
+            // backtick, so ⌃⌘ names no boundary here. Nor on dispatch: the
             // symbol picker is on this list and registers no Carbon hotkey
-            // (`ShortcutAction.firesFromTheKeyPath`). Nor the registry — the
-            // block was the whole global roster until 2026-09-10, when
-            // 輸出漢字/羅馬字 moved up to the commits it describes, so the
-            // roster now spans two blocks and only `ShortcutAction.groups`
-            // says which.
+            // (`ShortcutAction.firesFromTheKeyPath`).
             //
-            // One row per global action across the two groups, off a roster
-            // a test pins against the list the hotkey registration uses, so a
-            // new action cannot appear in one and not the other.
+            // One row per global action, off the same list the hotkey
+            // registration uses, so a new action cannot appear in one and
+            // not the other.
             //
             // One block, since 2026-08-25. There were two — the keys that
             // opened a settings pane, then the keys that change what the
@@ -125,7 +112,7 @@ struct ShortcutSettingsView: View {
             // (USER: five chords for panes visited about once a day, which
             // the menu bar already lists by name).
             Section {
-                ForEach(ShortcutAction.groups[1], id: \.self) { action in
+                ForEach(ShortcutAction.allCases, id: \.self) { action in
                     globalRecorderRow(action)
                 }
             } header: {

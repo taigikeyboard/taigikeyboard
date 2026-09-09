@@ -19,8 +19,7 @@ use crate::settings::{keys, SettingsDocument};
 use crate::strings::StringKey;
 
 /// One user-assignable global action. The list is the single source for the
-/// preserved-key registration and the menu; the recorder rows come off
-/// [`ShortcutAction::GROUPS`], which is this roster in the pane's blocks.
+/// recorder rows, the preserved-key registration and the menu.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum ShortcutAction {
     ToggleRomanization,
@@ -46,26 +45,6 @@ impl ShortcutAction {
         Self::ShowTelexGuide,
         Self::ShowSymbolPicker,
         Self::OpenLastSettingsPane,
-    ];
-
-    /// The roster split into the blocks the settings pane draws it in
-    /// (`ShortcutActions.swift` `ShortcutAction.groups`): the one switch that
-    /// belongs with the keys that end a composition — it says which script
-    /// those keys write — and everything else, which is the 其他 block.
-    ///
-    /// Presentation only: conflict resolution and reset keep reading
-    /// [`Self::ALL`] and the preserved-key registration its own `PRESERVED`
-    /// list (`preserved_keys.rs`), so the order the pane draws cannot reach
-    /// the order a chord is registered or resolved in.
-    pub const GROUPS: [&'static [ShortcutAction]; 2] = [
-        &[Self::ToggleTranslateSwapped],
-        &[
-            Self::ToggleRomanization,
-            Self::CycleCandidateDisplayMode,
-            Self::ShowTelexGuide,
-            Self::ShowSymbolPicker,
-            Self::OpenLastSettingsPane,
-        ],
     ];
 
     pub fn raw(self) -> &'static str {
@@ -393,20 +372,6 @@ mod tests {
         ComposingKeyChord::make(Some(key), modifiers).unwrap()
     }
 
-    /// An action added to the roster but not to a group would have no row on
-    /// the 快捷鍵 pane, which draws from the groups rather than from `ALL`.
-    #[test]
-    fn groups_hold_every_action_exactly_once() {
-        let mut grouped: Vec<_> = ShortcutAction::GROUPS
-            .iter()
-            .flat_map(|group| group.iter().copied())
-            .collect();
-        assert_eq!(grouped.len(), ShortcutAction::ALL.len());
-        grouped.sort();
-        grouped.dedup();
-        assert_eq!(grouped.len(), ShortcutAction::ALL.len());
-    }
-
     #[test]
     fn roster_defaults_and_keys() {
         // trace: ShortcutActionsTests.swift:31-160 (Windows chords).
@@ -476,10 +441,10 @@ mod tests {
 
     #[test]
     fn roster_order_is_the_pane_order() {
-        // `ALL` is the Mac's `allCases` order: the three switches, then the
-        // windows a key raises — the Telex card, then the two 拍開X doorways
-        // together (USER 2026-09-10). The rows the pane draws are
-        // `GROUPS` over this roster (`pages/shortcuts.rs`).
+        // `ALL` is the global recorder rows top to bottom
+        // (`pages/shortcuts.rs`, under the composing rows) and the Mac's
+        // `allCases`: the three switches, then the windows a key raises — the
+        // Telex card, then the two 拍開X doorways together (USER 2026-09-10).
         assert_eq!(
             ShortcutAction::ALL,
             [
