@@ -154,6 +154,14 @@ Source: "{#Dist}\update-check-task.xml"; DestDir: "{app}"; Flags: ignoreversion
 ; shortcut would sit beside the new one on a machine that ran an older build.
 [InstallDelete]
 Type: files; Name: "{autoprograms}\Taigi Keyboard.lnk"
+; The bundled typefaces were renamed when they moved to the repo-root
+; fonts/font directory (3.6.8). `ignoreversion` only overwrites files it also
+; ships, so an upgrade from 3.6.7 or earlier would leave the four old-name
+; copies behind as ~40 MB of dead weight until uninstall.
+Type: files; Name: "{app}\Fonts\GenYoGothic2TW-R.otf"
+Type: files; Name: "{app}\Fonts\GenYoMin2TW-R.otf"
+Type: files; Name: "{app}\Fonts\Iansui-Regular.ttf"
+Type: files; Name: "{app}\Fonts\jf-openhuninn-2.1.ttf"
 
 [Icons]
 ; The AUMID is what lets an unpackaged desktop app post toasts (W9); the
