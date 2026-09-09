@@ -69,11 +69,11 @@ public final class TaigiInputController: IMKInputController {
         set { injectedSymbolPickerPresenter = newValue }
     }
 
-    /// Which list the symbol picker is showing, or nil while it is closed.
-    /// The one piece of picker state the controller keeps: the selection is
-    /// the window's (`CandidatePresenter`), as it is for the bar.
+    /// Whether the symbol picker is up for this session — the one piece of
+    /// picker state the controller keeps: the list is the table's, and the
+    /// selection is the window's (`CandidatePresenter`), as for the bar.
     @MainActor
-    private(set) var symbolPickerLevel: SymbolPickerLevel?
+    private(set) var isSymbolPickerOpen = false
 
     /// The chord on the picker row, read at activation rather than per key:
     /// the registry read decodes JSON out of `UserDefaults`, and every
@@ -246,7 +246,7 @@ public final class TaigiInputController: IMKInputController {
             // The picker goes the same way, for the same reason: a list left
             // up by the outgoing session would be picked from by this one.
             controller.symbolPickerPresenter.hideForHandover()
-            controller.symbolPickerLevel = nil
+            controller.isSymbolPickerOpen = false
             controller.symbolPickerShortcut = KeyboardShortcuts.getShortcut(for: .showSymbolPicker)
             // Whatever space a previous focus left armed was measured against
             // a document this activation may no longer be looking at.
@@ -646,7 +646,7 @@ public final class TaigiInputController: IMKInputController {
         if isSymbolPickerChord(key) {
             armedAutoSpaceCaret = armedSwap
             guard !key.isRepeat else { return true }
-            if symbolPickerLevel != nil {
+            if isSymbolPickerOpen {
                 dismissSymbolPicker()
             } else {
                 openSymbolPicker(from: manager, client: client, executing: executor, bindings: bindings)
@@ -660,9 +660,9 @@ public final class TaigiInputController: IMKInputController {
         // The arm goes back for the same reason as above; only a pick that
         // writes consumes it (`insertSymbol`), and a key that falls through
         // clears it again so the contract below sees what it always does.
-        if let level = symbolPickerLevel {
+        if isSymbolPickerOpen {
             armedAutoSpaceCaret = armedSwap
-            if handleSymbolPickerKey(key, at: level, bindings: bindings, manager: manager, client: client) {
+            if handleSymbolPickerKey(key, bindings: bindings, manager: manager, client: client) {
                 return true
             }
             armedAutoSpaceCaret = nil
@@ -1039,7 +1039,7 @@ public final class TaigiInputController: IMKInputController {
         return key.modifiers.intersection(chording) == shortcut.modifiers.intersection(chording)
     }
 
-    /// Ends whatever is composing, then puts the category list up over the
+    /// Ends whatever is composing, then puts the symbol list up over the
     /// caret. Commit first, as vChewing does
     /// (`InputHandler_HandleStates.swift:1110`): the picker writes into the
     /// document, and a composition still marked there would have the symbol
@@ -1062,28 +1062,32 @@ public final class TaigiInputController: IMKInputController {
             }
             guard !manager.isComposing else { return }
         }
-        presentSymbolPicker(.categories, in: client, bindings: bindings)
+        presentSymbolPicker(in: client, bindings: bindings)
     }
 
-    /// Shows `level`'s list anchored to the caret — a fresh list, so the
-    /// window selects its first cell — and records it as the level on screen.
+    /// Shows the whole table anchored to the caret — one list, in file
+    /// order, so the first pick is the symbol itself (USER 2026-09-09: a
+    /// category to choose first 「會造成使用者的體驗中斷」) — and records the
+    /// picker as open.
     ///
     /// The caret is asked for with no marked text: the composition is over
     /// by the time the picker opens, and index 0 is the insertion point a
     /// client answers for. A list that did not reach the screen — no caret,
-    /// no display for it — leaves nothing behind: a level recorded for a
-    /// window nobody can see would go on swallowing the slot keys.
+    /// no display for it — leaves nothing behind: a picker recorded as open
+    /// over a window nobody can see would go on swallowing the slot keys.
     @MainActor
-    private func presentSymbolPicker(_ level: SymbolPickerLevel, in client: IMKTextInput, bindings: ComposingKeyBindings) {
-        symbolPickerLevel = level
-        guard let cells = symbolPickerCells(at: level),
-              let caretRect = caretRect(in: client, markedTextLength: 0)
-        else {
+    private func presentSymbolPicker(in client: IMKTextInput, bindings: ComposingKeyBindings) {
+        isSymbolPickerOpen = true
+        guard let table = symbolTable, let caretRect = caretRect(in: client, markedTextLength: 0) else {
             dismissSymbolPicker()
             return
         }
         symbolPickerPresenter.show(
-            CandidateWindowContent(cells: cells, slotKeySet: bindings.slotKeySet, leadCellIsUnkeyed: false),
+            CandidateWindowContent(
+                cells: table.symbols.map { CandidateCellContent(text: $0, annotation: nil) },
+                slotKeySet: bindings.slotKeySet,
+                leadCellIsUnkeyed: false,
+            ),
             anchoredTo: caretRect,
             hostWindowLevel: client.windowLevel(),
             hostBundleIdentifier: client.bundleIdentifier(),
@@ -1095,29 +1099,12 @@ public final class TaigiInputController: IMKInputController {
         }
     }
 
-    /// The cells `level` shows: the category names under the display
-    /// language, or a category's symbols verbatim. Nil for a category the
-    /// table no longer has.
-    @MainActor
-    private func symbolPickerCells(at level: SymbolPickerLevel) -> [CandidateCellContent]? {
-        guard let table = symbolTable else { return nil }
-        switch level {
-        case .categories:
-            return table.categories.map {
-                CandidateCellContent(text: displayLanguage.string($0.id.labelKey), annotation: nil)
-            }
-        case let .items(id):
-            return table.category(id)?.symbols.map { CandidateCellContent(text: $0, annotation: nil) }
-        }
-    }
-
     /// One key while the picker is up. Answers whether the key was consumed;
     /// false means the picker has closed and the key goes on through the
     /// composing contract as if the picker had never been there.
     @MainActor
     private func handleSymbolPickerKey(
         _ key: KeyEventSnapshot,
-        at level: SymbolPickerLevel,
         bindings: ComposingKeyBindings,
         manager: ComposingManager,
         client: IMKTextInput,
@@ -1132,12 +1119,12 @@ public final class TaigiInputController: IMKInputController {
             // as it is on the bar: the key is the picker's while it is up.
             pickSymbolCell(
                 at: symbolPickerPresenter.candidateIndex(forKeySlot: slot, ownedBy: sessionToken),
-                level: level, bindings: bindings, manager: manager, client: client,
+                manager: manager, client: client,
             )
         case .confirm:
             pickSymbolCell(
                 at: symbolPickerPresenter.selectedCandidateIndex(ownedBy: sessionToken),
-                level: level, bindings: bindings, manager: manager, client: client,
+                manager: manager, client: client,
             )
         case .closeAndPassThrough:
             dismissSymbolPicker()
@@ -1146,27 +1133,13 @@ public final class TaigiInputController: IMKInputController {
         return true
     }
 
-    /// Acts on the cell at `index`: a category descends to its symbols, a
-    /// symbol is written and the picker closes. Nil — a slot with no cell —
-    /// does nothing, and keeps the picker up.
+    /// Writes the symbol at `index` and closes the picker. Nil — a slot with
+    /// no cell — does nothing, and keeps the picker up.
     @MainActor
-    private func pickSymbolCell(
-        at index: Int?,
-        level: SymbolPickerLevel,
-        bindings: ComposingKeyBindings,
-        manager: ComposingManager,
-        client: IMKTextInput,
-    ) {
-        guard let index, let table = symbolTable else { return }
-        switch level {
-        case .categories:
-            guard table.categories.indices.contains(index) else { return }
-            presentSymbolPicker(.items(table.categories[index].id), in: client, bindings: bindings)
-        case let .items(id):
-            guard let symbols = table.category(id)?.symbols, symbols.indices.contains(index) else { return }
-            dismissSymbolPicker()
-            insertSymbol(symbols[index], manager: manager, client: client)
-        }
+    private func pickSymbolCell(at index: Int?, manager: ComposingManager, client: IMKTextInput) {
+        guard let index, let symbols = symbolTable?.symbols, symbols.indices.contains(index) else { return }
+        dismissSymbolPicker()
+        insertSymbol(symbols[index], manager: manager, client: client)
     }
 
     /// Writes `symbol` at the caret as one string — so a bracket pair lands
@@ -1192,7 +1165,7 @@ public final class TaigiInputController: IMKInputController {
 
     @MainActor
     private func dismissSymbolPicker() {
-        symbolPickerLevel = nil
+        isSymbolPickerOpen = false
         symbolPickerPresenter.hide(ownedBy: sessionToken)
     }
 

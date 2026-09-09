@@ -37,15 +37,18 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
 
     // MARK: - The chord
 
-    func testTheChord_opensTheCategoryList_anchoredAtTheCaret() throws {
+    /// One list, the whole table, so the first pick is a symbol (USER
+    /// 2026-09-09: a category to choose first 「會造成使用者的體驗中斷」).
+    func testTheChord_opensTheWholeTable_anchoredAtTheCaret() throws {
         let session = try makeSession()
 
         let handled = try session.pressPickerChord()
 
         XCTAssertTrue(handled)
-        XCTAssertEqual(session.controller.symbolPickerLevel, .categories)
+        XCTAssertTrue(session.controller.isSymbolPickerOpen)
         let content = try XCTUnwrap(session.picker.shownContent)
-        XCTAssertEqual(content.cells.map(\.text), ["標點符號", "括號", "特殊符號"])
+        XCTAssertEqual(content.cells.map(\.text), try TestFixtures.shippedSymbolTable().symbols)
+        XCTAssertEqual(content.cells.first?.text, "，", "punctuation leads: the most-typed marks are on the first page")
         XCTAssertEqual(content.slotKeySet, .bareKeys, "the picker is picked with the bar's own keys")
         XCTAssertFalse(content.leadCellIsUnkeyed)
         XCTAssertEqual(session.picker.calls.last, .show(content, caretRect: Self.caretRect))
@@ -60,7 +63,7 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
 
         XCTAssertTrue(handled)
         XCTAssertFalse(session.picker.isShowing)
-        XCTAssertNil(session.controller.symbolPickerLevel)
+        XCTAssertFalse(session.controller.isSymbolPickerOpen)
     }
 
     /// A held chord is the keyboard's auto-repeat, and one press: a picker
@@ -105,7 +108,7 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
 
         XCTAssertTrue(handled)
         XCTAssertFalse(session.picker.isShowing)
-        XCTAssertNil(session.controller.symbolPickerLevel)
+        XCTAssertFalse(session.controller.isSymbolPickerOpen)
     }
 
     /// A list the window refused to put up — a caret on no display — leaves
@@ -118,7 +121,7 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
 
         try session.pressPickerChord()
 
-        XCTAssertNil(session.controller.symbolPickerLevel)
+        XCTAssertFalse(session.controller.isSymbolPickerOpen)
         XCTAssertTrue(try session.type("q"), "q starts a composition, as it does with no picker")
         XCTAssertEqual(session.client.writes, [.setMarkedText("q", selectionLocation: 1)])
     }
@@ -136,31 +139,17 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
 
     // MARK: - Walking and picking
 
-    func testASlotKey_descendsIntoTheCategory() throws {
+    /// The first key after the chord is already a pick: no category to
+    /// choose first.
+    func testASlotKey_writesTheSymbolAndCloses() throws {
         let session = try makeSession()
         try session.pressPickerChord()
 
         try session.type("w")
 
-        XCTAssertEqual(session.controller.symbolPickerLevel, .items(.brackets))
-        XCTAssertEqual(
-            try XCTUnwrap(session.picker.shownContent).cells.map(\.text),
-            try XCTUnwrap(TestFixtures.shippedSymbolTable().category(.brackets)).symbols,
-        )
-        XCTAssertEqual(session.picker.selectedIndex, 0, "a fresh list selects its first cell")
-        XCTAssertEqual(session.client.writes, [])
-    }
-
-    func testASlotKeyOnTheSymbols_writesItAndCloses() throws {
-        let session = try makeSession()
-        try session.pressPickerChord()
-        try session.type("q")
-
-        try session.type("q")
-
-        XCTAssertEqual(session.client.insertedTexts, ["，"])
+        XCTAssertEqual(session.client.insertedTexts, ["。"])
         XCTAssertFalse(session.picker.isShowing)
-        XCTAssertNil(session.controller.symbolPickerLevel)
+        XCTAssertFalse(session.controller.isSymbolPickerOpen)
     }
 
     /// One pick, both halves (USER 2026-09-09) — and one write, so the pair
@@ -168,9 +157,10 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
     func testABracketPair_isOneWrite() throws {
         let session = try makeSession()
         try session.pressPickerChord()
-        try session.type("w")
+        let pair = try XCTUnwrap(TestFixtures.shippedSymbolTable().symbols.firstIndex(of: "「」"))
 
-        try session.type("q")
+        try session.walkPicker(cells: pair)
+        try session.type("\r")
 
         XCTAssertEqual(session.client.writes, [.insertText("「」")])
     }
@@ -178,7 +168,6 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
     func testReturn_writesTheHighlightedSymbol() throws {
         let session = try makeSession()
         try session.pressPickerChord()
-        try session.type("q")
 
         try session.type("\t")
         try session.type("\r")
@@ -191,7 +180,6 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
     func testTheArrows_walkTheList() throws {
         let session = try makeSession()
         try session.pressPickerChord()
-        try session.type("q")
 
         try session.press(.rightArrow)
         try session.press(.rightArrow)
@@ -200,21 +188,17 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
         XCTAssertEqual(session.client.writes, [])
     }
 
-    /// Escape closes from either level (USER 2026-09-09) and is swallowed:
-    /// the host must not see the Escape that closed a list of ours.
-    func testEscape_closesFromEitherLevel_andIsSwallowed() throws {
+    /// Escape closes and is swallowed: the host must not see the Escape
+    /// that closed a list of ours.
+    func testEscape_closes_andIsSwallowed() throws {
         let session = try makeSession()
         try session.pressPickerChord()
-        try session.type("q")
-        XCTAssertEqual(session.controller.symbolPickerLevel, .items(.punctuation))
+        try session.press(.rightArrow)
 
         XCTAssertTrue(try session.type("\u{1B}"))
-        XCTAssertNil(session.controller.symbolPickerLevel)
+
+        XCTAssertFalse(session.controller.isSymbolPickerOpen)
         XCTAssertFalse(session.picker.isShowing)
-
-        try session.pressPickerChord()
-        XCTAssertTrue(try session.type("\u{1B}"))
-        XCTAssertNil(session.controller.symbolPickerLevel)
         XCTAssertEqual(session.client.writes, [])
     }
 
@@ -237,14 +221,9 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
         let session = try makeSession()
         session.controller.settings.storedIsTranslateSwapped = true
         try session.pressPickerChord()
-        try session.type("w")
-        let asciiParentheses = try XCTUnwrap(
-            TestFixtures.shippedSymbolTable().category(.brackets)?.symbols.firstIndex(of: "()"),
-        )
+        let asciiParentheses = try XCTUnwrap(TestFixtures.shippedSymbolTable().symbols.firstIndex(of: "()"))
 
-        for _ in 0 ..< asciiParentheses {
-            try session.type("\t")
-        }
+        try session.walkPicker(cells: asciiParentheses)
         try session.type("\r")
 
         XCTAssertEqual(session.client.insertedTexts, ["()"])
@@ -264,7 +243,6 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
         XCTAssertFalse(session.presenter.isShowing, "the bar went with the composition")
         XCTAssertTrue(session.picker.isShowing)
 
-        try session.type("q")
         try session.type("q")
         XCTAssertEqual(session.client.insertedTexts, [Self.composition, "，"])
     }
@@ -304,7 +282,7 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
 
         let session = try XCTUnwrap(nailed, "taigi must offer a candidate shorter than the whole buffer")
         XCTAssertFalse(session.picker.isShowing)
-        XCTAssertNil(session.controller.symbolPickerLevel)
+        XCTAssertFalse(session.controller.isSymbolPickerOpen)
     }
 
     /// A picked attaching mark swaps with the auto space the commit left, as
@@ -320,7 +298,6 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
         try session.pressPickerChord()
         XCTAssertEqual(session.client.documentTextForReads, "\(Self.composition) ")
 
-        try session.type("q")
         try session.press(.rightArrow)
         try session.press(.leftArrow)
         try session.type("q")
@@ -342,7 +319,6 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
         try session.pressPickerChord()
         try session.pressPickerChord(isARepeat: true)
         try session.type("q")
-        try session.type("q")
 
         XCTAssertEqual(session.client.documentTextForReads, "\(Self.composition)， ")
     }
@@ -356,7 +332,7 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
         session.controller.hidePalettes()
 
         XCTAssertFalse(session.picker.isShowing)
-        XCTAssertNil(session.controller.symbolPickerLevel)
+        XCTAssertFalse(session.controller.isSymbolPickerOpen)
     }
 
     /// A Carbon chord bypasses the key path that would take the picker down,
@@ -368,7 +344,7 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
         session.controller.performShortcutAction(.toggleRomanization)
 
         XCTAssertFalse(session.picker.isShowing)
-        XCTAssertNil(session.controller.symbolPickerLevel)
+        XCTAssertFalse(session.controller.isSymbolPickerOpen)
         XCTAssertEqual(session.controller.settings.inputMode, .poj, "the switch itself still ran")
     }
 
@@ -383,7 +359,7 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
         session.controller.showPreferences(nil)
 
         XCTAssertFalse(session.picker.isShowing)
-        XCTAssertNil(session.controller.symbolPickerLevel)
+        XCTAssertFalse(session.controller.isSymbolPickerOpen)
     }
 
     /// IMK activates the incoming session before it deactivates the outgoing
@@ -412,6 +388,16 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
         /// The composing bar.
         let presenter: RecordingCandidatePresenter
         let picker: RecordingCandidatePresenter
+
+        /// ⇥ `count` cells along the open picker — `walk(cells:)` reads the
+        /// bar's selection, and the picker keeps its own.
+        @MainActor
+        func walkPicker(cells count: Int) throws {
+            for _ in 0 ..< count {
+                try type("\t")
+            }
+            XCTAssertEqual(picker.selectedIndex, count)
+        }
 
         @MainActor
         @discardableResult

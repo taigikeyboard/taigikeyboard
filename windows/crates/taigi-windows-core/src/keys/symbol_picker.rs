@@ -1,20 +1,10 @@
-//! What a key means while the symbol picker is up, and which level the
-//! picker is on. Port of macOS `SymbolPicker.swift`.
+//! What a key means while the symbol picker is up. Port of macOS
+//! `SymbolPicker.swift`.
 
 use super::bindings::ComposingKeyBindings;
 use super::intent::CandidateNavigation;
 use super::snapshot::KeyEventSnapshot;
 use super::ComposingAction;
-use crate::symbols::SymbolCategoryId;
-
-/// Which list the symbol picker is showing: the three categories, or the
-/// symbols of one of them. Only the level lives outside the window; the
-/// selection is the window's, as it is for the candidate list.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum SymbolPickerLevel {
-    Categories,
-    Items(SymbolCategoryId),
-}
 
 /// The picker's reading of one key event, decided before any window is
 /// asked anything. Its own table rather than a branch of
@@ -23,8 +13,7 @@ pub enum SymbolPickerLevel {
 /// never fetched.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SymbolPickerIntent {
-    /// Take the picker down and swallow the key. Escape, from either level
-    /// (USER 2026-09-09: one key out, never two).
+    /// Take the picker down and swallow the key. Escape.
     Close,
     /// Move the selection the way the window's layout reads the direction.
     Navigate(CandidateNavigation),

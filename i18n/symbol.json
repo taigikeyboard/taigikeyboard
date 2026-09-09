@@ -25,21 +25,6 @@
       "comment": "Symbol overlay category tab: kaomoji / emoticons (extension-only).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["extension"] },
       "values": { "hanji": "顏文字", "tailo": "gân-bûn-jī", "poj": "gân-bûn-jī", "en": "Kaomoji", "ja": "顔文字" }
-    },
-    "punctuation": {
-      "comment": "Desktop symbol picker, level-1 category cell: full-width punctuation marks (USER 2026-09-09). Not `fullWidth`: width is not a category, and the picker's brackets are full-width too.",
-      "scope": { "platforms": ["macos", "windows"], "surfaces": ["host"] },
-      "values": { "hanji": "標點符號", "tailo": "phiau-tiám-hû-hō", "poj": "phiau-tiám-hû-hō", "en": "Punctuation", "ja": "句読点" }
-    },
-    "brackets": {
-      "comment": "Desktop symbol picker, level-1 category cell: bracket and quote PAIRS, both halves inserted by one pick (USER 2026-09-09).",
-      "scope": { "platforms": ["macos", "windows"], "surfaces": ["host"] },
-      "values": { "hanji": "括號", "tailo": "kuat-hō", "poj": "koat-hō", "en": "Brackets", "ja": "括弧" }
-    },
-    "specialSymbols": {
-      "comment": "Desktop symbol picker, level-1 category cell: arrows, math, currency and dingbats (USER 2026-09-09).",
-      "scope": { "platforms": ["macos", "windows"], "surfaces": ["host"] },
-      "values": { "hanji": "特殊符號", "tailo": "ti̍k-sû hû-hō", "poj": "te̍k-sû hû-hō", "en": "Special Symbols", "ja": "特殊記号" }
     }
   }
 }
