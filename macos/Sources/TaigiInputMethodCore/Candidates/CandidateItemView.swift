@@ -88,6 +88,15 @@ final class CandidateItemView: NSView {
     /// vertical layout's rows align their annotations on one x.
     private var primaryColumnWidthConstraint: NSLayoutConstraint?
 
+    /// The stacked arrangement's constraints — nil in an inline cell. Together
+    /// they take the second line's height back when the cell has only one
+    /// script, so the line it does carry sits in the MIDDLE of the cell rather
+    /// than on the upper line of a pair (USER 2026-09-09, for the §34 literal
+    /// cell under 漢羅對應). The cell's own height is untouched, so the row
+    /// still lines up.
+    private var stackedLineGapConstraint: NSLayoutConstraint?
+    private var stackedAnnotationHeightConstraint: NSLayoutConstraint?
+
     init(style: CandidateWindowStyle, metrics: CandidateMetrics) {
         self.style = style
         self.metrics = metrics
@@ -197,6 +206,16 @@ final class CandidateItemView: NSView {
         addLayoutGuide(textGuide)
 
         let padding = metrics.horizontalPadding
+        let lineGap = annotationLabel.topAnchor.constraint(
+            equalTo: candidateLabel.bottomAnchor, constant: metrics.stackedLineGap,
+        )
+        // Inactive while there is a second line to draw; `configure` turns it
+        // on for a one-script cell, which is what centres that cell's single
+        // line in the pair's box.
+        let annotationHeight = annotationLabel.heightAnchor.constraint(equalToConstant: 0)
+        stackedLineGapConstraint = lineGap
+        stackedAnnotationHeightConstraint = annotationHeight
+
         NSLayoutConstraint.activate([
             textGuide.leadingAnchor.constraint(
                 equalTo: indexLabel.trailingAnchor, constant: metrics.indexCandidateGap,
@@ -208,9 +227,7 @@ final class CandidateItemView: NSView {
             annotationLabel.centerXAnchor.constraint(equalTo: textGuide.centerXAnchor),
             annotationLabel.leadingAnchor.constraint(greaterThanOrEqualTo: textGuide.leadingAnchor),
             annotationLabel.trailingAnchor.constraint(lessThanOrEqualTo: textGuide.trailingAnchor),
-            annotationLabel.topAnchor.constraint(
-                equalTo: candidateLabel.bottomAnchor, constant: metrics.stackedLineGap,
-            ),
+            lineGap,
             textGuide.topAnchor.constraint(equalTo: candidateLabel.topAnchor),
             textGuide.bottomAnchor.constraint(equalTo: annotationLabel.bottomAnchor),
             textGuide.centerYAnchor.constraint(equalTo: centerYAnchor),
@@ -224,13 +241,21 @@ final class CandidateItemView: NSView {
         // Reconfigured rather than rebuilt: cells are recycled across pages and
         // across renumbering, so a cell that had an annotation and now has none
         // must give the width back — and the reverse must take it again.
-        // A stacked cell keeps its second line's height whether or not there
-        // is anything on it, so its rows stay aligned; only the inline slot
-        // has width to give back.
+        // A stacked cell keeps its FRAME whether or not there is a second
+        // line, so its rows stay aligned — but it gives the empty line's
+        // height back, so the one script it does carry centres in the cell
+        // instead of sitting on the upper line (USER 2026-09-09: the §34
+        // literal cell under 漢羅對應 carries no pair to align with). Only the
+        // inline slot has width to give back.
         let hasAnnotation = cell.annotation != nil
         annotationGapConstraint?.constant = hasAnnotation ? metrics.candidateAnnotationGap : 0
         if let annotationZeroWidthConstraint, annotationZeroWidthConstraint.isActive == hasAnnotation {
             annotationZeroWidthConstraint.isActive = !hasAnnotation
+        }
+        stackedLineGapConstraint?.constant = hasAnnotation ? metrics.stackedLineGap : 0
+        if let stackedAnnotationHeightConstraint,
+           stackedAnnotationHeightConstraint.isActive == hasAnnotation {
+            stackedAnnotationHeightConstraint.isActive = !hasAnnotation
         }
         updateAppearance()
     }

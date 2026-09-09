@@ -1094,10 +1094,14 @@ impl CandidateWindow {
                 // Measured at resolve; always present when the arrangement
                 // stacks.
                 let (line1, line2) = metrics.stacked_line_heights().unwrap_or_default();
-                // The block is the content's, not the cell's: an unannotated
-                // cell in annotated content keeps its candidate on the upper
-                // line so the rows line up; one-line content centres it.
-                let block = if self.content_has_annotations() {
+                // The block is the CELL's: a cell carrying both scripts is two
+                // lines and a gap, and one carrying a single script is one
+                // line — centred in the cell rather than parked on the upper
+                // line of a pair it has no second half for (USER 2026-09-09,
+                // for the §34 literal cell under 漢羅對應). The cell's height
+                // still comes from the content (`CandidateMetrics::
+                // for_content`), so the row lines up either way.
+                let block = if cell.annotation.is_some() {
                     line1 + metrics.stacked_line_gap() + line2
                 } else {
                     line1
