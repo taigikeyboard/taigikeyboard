@@ -8,6 +8,20 @@ A Taiwanese input method for iOS, Android, macOS, and Windows. Romanization inpu
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-lightgrey)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue)](LICENSE)
 
+## Why
+
+Taiwanese is spoken by millions, and no operating system vendor ships a keyboard
+for it — Apple, Google and Microsoft all include Mandarin input methods and none
+include Taiwanese. A language that cannot be typed cannot be written online,
+cannot accumulate text corpora, and cannot feed the tooling every other language
+takes for granted. An input method is the foundational layer of digital language
+infrastructure, and for Taiwanese that layer has been missing.
+
+Existing alternatives each cover one slice: one romanization system, or one
+platform, or romanization without Hanji. This project aims at full coverage —
+all three romanization systems in use today, Hanji and 漢羅 mixed script,
+continuous multi-syllable input, and the same behavior on all four platforms.
+
 ## Download
 
 | Platform | Where |
