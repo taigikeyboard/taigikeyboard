@@ -1,6 +1,6 @@
-# Taigi Keyboard
+# TaigiKeyboard 台語齒盤
 
-A Taiwanese input method for iOS, Android, macOS, and Windows. Romanization input (POJ, TL, TPS), Hanji (漢字), tone marks, autocomplete, and cross-system Romanization conversion.
+A Taiwanese input method for iOS, Android, macOS, and Windows. Romanization input in POJ, TL and TPS, Hanji, tone marks, autocomplete, and cross-system Romanization conversion.
 
 [![Windows build](https://github.com/taigikeyboard/taigikeyboard/actions/workflows/windows-build.yml/badge.svg?branch=main)](https://github.com/taigikeyboard/taigikeyboard/actions/workflows/windows-build.yml)
 ![iOS 17+](https://img.shields.io/badge/iOS-17%2B-blue)
@@ -32,8 +32,8 @@ continuous multi-syllable input, and the same behavior on all four platforms.
 
 ## Features
 
-- Romanization input: POJ (Pe̍h-ōe-jī), TL (台羅), TPS (方音符號)
-- Hanji (漢字) input via romanization
+- Romanization input: POJ, TL, TPS
+- Hanji input via romanization
 - Tone marks, tone numbers, tone variation
 - Autocomplete and next-word prediction
 - Custom dictionary and user frequency learning
@@ -41,17 +41,17 @@ continuous multi-syllable input, and the same behavior on all four platforms.
 
 ## Architecture
 
-All four platforms share a Rust core. Algorithms (phonetics, composing, lexicon, ranking, next-word, dispatch) live in `engine/`. Platform code is thin glue: Swift on iOS and macOS via swift-bridge, Kotlin on Android via JNI, Rust all the way down on Windows. Protobuf carries payloads across the FFI boundary.
+All four platforms share a Rust core. Algorithms for phonetics, composing, lexicon, ranking, next-word and dispatch live in `engine/`. Platform code is thin glue: Swift on iOS and macOS via swift-bridge, Kotlin on Android via JNI, Rust all the way down on Windows. Protobuf carries payloads across the FFI boundary.
 
 | Path | Stack |
 | --- | --- |
-| `engine/` | Rust workspace; xcframework for iOS, JNI `.so` for Android (arm64-v8a + armeabi-v7a) |
+| `engine/` | Rust workspace; xcframework for iOS, JNI `.so` for Android on arm64-v8a and armeabi-v7a |
 | `ios/` | Swift + KeyboardKit |
 | `android/` | Kotlin + Jetpack Compose UI; FlorisBoard-derived view hierarchy |
 | `macos/` | Swift + InputMethodKit; SwiftPM |
 | `windows/` | Rust + Text Services Framework; Inno Setup installer |
 | `dictionary/` | Source data + FST/mmap build pipeline |
-| `taigi-converter/` | Canonical TL/POJ/TPS converter (git submodule) |
+| `taigi-converter/` | Canonical TL/POJ/TPS converter, a git submodule |
 
 ## Documentation
 
