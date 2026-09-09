@@ -360,6 +360,90 @@ read-only bail; a held preserved-key chord re-fires `OnPreservedKey`, so the tog
 
 ---
 
+### Desktop symbol picker (USER-scoped 2026-09-09)
+
+**Status**: P0 done (this section + memory). P1 macOS / P2 Windows pending.
+**Scope**: macOS + Windows only (desktop train). Engine untouched — no `make build`.
+
+USER 2026-09-09: 「增加快捷鍵叫出特殊符號選單(包含標點符號、括號、特殊符號),風格為候選詞選單,
+快捷鍵不能設定太難按,或是太複雜的組合 … 選取後合起來(注意括號的部分因為是成對,避免 user 要打開
+選單兩次的情形),或者是按某一個按鍵退出」. Fork answers (USER 2026-09-09): 「Fork A 不要更改 `
+快捷鍵,這是台語輸入法的共識, Fork B 依照你的建議處理」 — bare `` ` `` stays 漢羅對調; the picker
+gets `⌃⌘,` / `Ctrl+Alt+,`; two-level menu with Escape closing from either level.
+
+#### Design (grounded in code, Codex pre-impl reviewed 2026-09-09, 10 points CONFIRMED)
+
+**Trigger routes through the key path, not Carbon / a preserved key.** A sixth global action
+`showSymbolPicker` (快速齒 row, recorder, conflict resolver, i18n label all reused) that
+`ShortcutHotkeys.registerHandlers` skips on macOS; `TaigiInputController.handle` matches the
+recorded chord by key code + normalised modifiers right after the Telex-guide block
+(`TaigiInputController.swift:567-572`). Windows already matches non-preserved chords in
+`session.rs::global_action_for` (:1371); the picker adds a context-aware branch there and is NOT
+in `preserved_keys::PRESERVED` (roster test exemption widened). Why: the pick and the bracket
+insert need a client / edit session and a caret rect, which only the key path has (the hotkey path
+has no client, `TaigiInputController.swift:505-508`; Chromium deadlock rule :161-166); read-only
+contexts are already bailed above.
+
+**Panel = a second instance of the candidate window.** `CandidatePanel.show` /
+`CandidateWindow::show` take only `[CandidateCellContent]` (plain strings) + a caret rect — no
+engine coupling. macOS opens `CandidatePanel.init` to internal and keeps a `symbolPicker`
+instance with its own owner; Windows constructs a second `CandidatePresenter` without the UI-less
+element wiring (host-drawn lists are not offered for the picker; documented limitation). Layout
+follows the user's candidate-layout setting. Every teardown that hides the composing bar hides the
+picker too: `hideForHandover`, `hidePalettes`, deactivation, Windows pending hides, and the
+font-cache release at `FontManagementPage.swift:204`.
+
+**Keys while open** (intercepted before the classifier, like the guide, but consuming): the
+scheme-derived slot keys pick; arrows / PageUp / PageDown / the recorded paging chords / Tab
+navigate through the panel's own `navigate`; Return picks the highlighted cell; **Escape closes
+from either level**; any other key closes the picker and falls through to normal handling.
+Windows Test phase answers TRUE for every non-modifier key while the picker shows; Deliver runs
+the original event through the pipeline exactly once. Trigger auto-repeat neither reopens nor
+selects. Preserved actions bypass the interceptor, so their handlers dismiss the picker.
+
+**Two levels.** Level 1 = 標點符號 / 括號 / 特殊符號 (three cells); picking descends to the
+category's paged items. `SymbolPickerState = closed | categories | items(category)`; selection
+lives in the panel, never duplicated.
+
+**Bracket pairs are one cell** — `「」` `『』` `（）` `《》` `〈〉` `【】` `﹁﹂` `﹃﹄` `〔〕` `［］`
+`｛｝` `“”` `‘’` `()` `[]` `{}` `<>` `«»` `⟨⟩` `⌈⌉` `⌊⌋` — inserted as one string with the
+caret AFTER the closing half on both platforms. IMK has no selection setter; TSF could shift the
+selection but parity + determinism win. Insert bypasses full-width remapping (`()` stays `()`)
+and takes the attaching-punctuation auto-space swap (`guá ` + `，` → `guá，`). The composing
+manager is told about the external text like any pass-through.
+
+**Mid-composition = commit first, then open** (vChewing). A visible highlighted candidate →
+the same path as `commitHighlightedCandidate` (selected cell's script, no flip); otherwise the
+same path as `.commit`. The picker opens only after the composition has actually ended, and the
+anchor is asked for afterwards; Windows waits for the edit session to succeed and revalidates the
+context owner.
+
+**One desktop data source.** `symbols/desktop-symbols.json` — three categories, ordered
+insertion strings — read as a bundle resource on macOS and `include_str!` on Windows. No
+generator. Mobile `SymbolData` (`ios/.../Overlays/SymbolData.swift`, Android `SymbolData.kt`)
+stays as it is: its cells are single halves, a different contract.
+
+**i18n**: `symbol.punctuation` / `symbol.brackets` / `symbol.specialSymbols` scoped to
+macos + windows (not `symbol.fullWidth`: width is not a category) + `desktop.shortcutShowSymbolPicker`.
+
+**Deliberately not adopted**: bare `` ` `` for the picker (mainstream 新注音 / McBopomofo /
+vChewing convention, but USER keeps it for 漢羅對調 — 「台語輸入法的共識」); caret-between-halves
+via marked text or synthetic ← events; a flat single-level list (fewer states, a dozen pages);
+a symbol-table generator shared with mobile; engine involvement (`Effect` has no caret kind).
+
+#### Rounds
+
+| PR | Scope | Est. |
+|---|---|---|
+| P0 | This section + memory (admin tier, direct to main) | done |
+| P1 | macOS: action + key-path match + `SymbolPickerPanel` state + JSON table + i18n + S36 + tests | pending |
+| P2 | Windows mirror; consumes the P1 JSON + i18n keys | pending |
+
+Codex-named regression risks (all in S36): shortcut theft, stale focus ownership, partial commits,
+duplicate insertion after an edit-session failure, orphaned panels.
+
+---
+
 ## Released versions index
 
 Newest first. Links: release notes (`changelog/`) + detailed plan archive (`docs/releases/`) where one exists. Authoritative ship-date list: memory `project_released_versions.md`.
