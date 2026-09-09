@@ -23,6 +23,23 @@ pub enum CandidateNavigation {
     PreviousCandidate,
 }
 
+/// The six navigation keys as directions, one-to-one on purpose: what a
+/// direction DOES — walk, page, scroll, expand — belongs to the window's
+/// layout, not to the classifiers that only decide the key is the window's
+/// while it is up (`ComposingKeyIntent`, `SymbolPickerIntent`).
+impl From<NavigationKey> for CandidateNavigation {
+    fn from(key: NavigationKey) -> Self {
+        match key {
+            NavigationKey::LeftArrow => Self::Left,
+            NavigationKey::RightArrow => Self::Right,
+            NavigationKey::UpArrow => Self::Up,
+            NavigationKey::DownArrow => Self::Down,
+            NavigationKey::PageUp => Self::PageUp,
+            NavigationKey::PageDown => Self::PageDown,
+        }
+    }
+}
+
 /// The composing meaning of a key event, decided before any engine call.
 /// Every variant but `PassThrough` is a key the host never receives.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -225,14 +242,7 @@ impl ComposingKeyIntent {
     }
 
     fn navigate(navigation: NavigationKey) -> Self {
-        Self::Navigate(match navigation {
-            NavigationKey::LeftArrow => CandidateNavigation::Left,
-            NavigationKey::RightArrow => CandidateNavigation::Right,
-            NavigationKey::UpArrow => CandidateNavigation::Up,
-            NavigationKey::DownArrow => CandidateNavigation::Down,
-            NavigationKey::PageUp => CandidateNavigation::PageUp,
-            NavigationKey::PageDown => CandidateNavigation::PageDown,
-        })
+        Self::Navigate(CandidateNavigation::from(navigation))
     }
 
     /// The slot a digit `1`…`9` names, counting from zero. `0` names none:

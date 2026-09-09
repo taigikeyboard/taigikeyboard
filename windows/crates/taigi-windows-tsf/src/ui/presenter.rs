@@ -81,6 +81,17 @@ impl CandidatePresenter {
         self.weak_self = weak_self;
     }
 
+    /// Wires a presenter that only ever draws its own popup — the symbol
+    /// picker (`session.rs`). No thread manager and no service, so
+    /// `begin_or_update_ui_element` never registers a UI-less element: the
+    /// host-drawn candidate contract is the composing list's, and a host
+    /// that draws candidate lists itself would otherwise be handed a menu
+    /// of punctuation as one. Documented divergence from the composing
+    /// window, not an oversight.
+    pub fn attach_popup_only(&mut self, weak_self: Weak<RefCell<CandidatePresenter>>) {
+        self.weak_self = weak_self;
+    }
+
     /// Tears everything down (deactivation).
     pub fn detach(&mut self) {
         self.hide_now();

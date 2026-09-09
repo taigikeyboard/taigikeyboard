@@ -28,21 +28,23 @@ use crate::ui::telex_guide::TelexGuideContent;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::MutexGuard;
+use taigi_windows_core::composing::CandidateCellContent;
 use taigi_windows_core::composing::{
     CandidateCommitOutcome, CandidateListChange, CandidateSource, ComposingManager,
     ComposingSessionCoordinator, ContextToken, ResolvedCommit,
 };
 use taigi_windows_core::keys::{
     telex_guide_rows, CandidateNavigation, ComposingKeyBindings, ComposingKeyIntent,
-    KeyEventSnapshot, ShortcutAction,
+    KeyEventSnapshot, ShortcutAction, SymbolPickerIntent, SymbolPickerLevel,
 };
 use taigi_windows_core::policies;
 use taigi_windows_core::settings::{keys, AppearanceMode, InputMode, SettingsDocument};
 use taigi_windows_core::strings::{StringKey, StringResolver};
+use taigi_windows_core::symbols::SymbolTable;
 use windows::core::{Interface, BOOL};
 use windows::Win32::Foundation::{E_UNEXPECTED, LPARAM, POINT, RECT, WPARAM};
 use windows::Win32::UI::TextServices::{
-    ITfComposition, ITfCompositionSink, ITfContext, ITfDocumentMgr, ITfRange,
+    ITfComposition, ITfCompositionSink, ITfContext, ITfDocumentMgr, ITfRange, TF_ES_READ,
 };
 use windows_core::IUnknownImpl;
 
@@ -59,6 +61,15 @@ pub enum KeyPhase {
 enum KeyOutcome {
     Consumed,
     ToHost,
+}
+
+/// What one edit session is asked to do: a key's composing intent, or a
+/// symbol the picker chose — text that arrived as no key at all, written
+/// outside any composition (the picker opens only once the composition
+/// has ended, `toggle_symbol_picker`).
+enum KeyWork {
+    Compose(ComposingKeyIntent),
+    InsertSymbol(String),
 }
 
 /// Everything a [`CompositionEditor`] is built from, snapshotted together.
@@ -128,15 +139,37 @@ impl TextService_Impl {
         // preserved keys normally arrive through `OnPreservedKey`; this is
         // their fallback in hosts that bypass preserved keys.
         if let Some(action) = global_action {
-            // A held guide chord would otherwise toggle the card on every
-            // auto-repeat; the other actions already read as one press
-            // (a switch repeated is a switch back — left as is). This is the
-            // fallback path only: `OnPreservedKey` carries no repeat flag.
-            let is_guide_repeat =
-                action == ShortcutAction::ShowTelexGuide && key_translation::is_repeat(lparam);
-            if phase == KeyPhase::Deliver && !is_guide_repeat {
-                self.perform_global(action, identity);
+            // A held toggle chord — the guide's or the picker's — would
+            // otherwise flip on every auto-repeat; the switches already read
+            // as one press (a switch repeated is a switch back — left as
+            // is). The guide's is the fallback path only: `OnPreservedKey`
+            // carries no repeat flag.
+            let is_toggle_repeat = matches!(
+                action,
+                ShortcutAction::ShowTelexGuide | ShortcutAction::ShowSymbolPicker
+            ) && key_translation::is_repeat(lparam);
+            if phase == KeyPhase::Deliver && !is_toggle_repeat {
+                // The picker's chord is the one global action the key sink
+                // owns outright (`ShortcutAction::fires_from_the_key_path`):
+                // a pick writes into the document and anchors to the caret,
+                // both of which need this key event's context.
+                if action.fires_from_the_key_path() {
+                    self.toggle_symbol_picker(context, token, identity, &settings);
+                } else {
+                    self.perform_global(action, identity);
+                }
             }
+            return BOOL::from(true);
+        }
+
+        // Resolved once per key: the picker and the composing contract below
+        // read the same value.
+        let bindings = ComposingKeyBindings::from_document(&settings);
+        // With the picker up, every key is the picker's first — read before
+        // the composing contract so the slot keys and the arrows reach it
+        // rather than a list that is not showing. A key the picker has no
+        // use for takes it down and goes on below.
+        if self.symbol_picker_takes_key(context, token, identity, &snapshot, phase, &bindings) {
             return BOOL::from(true);
         }
 
@@ -152,7 +185,6 @@ impl TextService_Impl {
             return BOOL::from(false);
         }
 
-        let bindings = ComposingKeyBindings::from_document(&settings);
         // A window the user switched off since the last key comes down HERE,
         // before the key is read (mirrors `TaigiInputController.handle`):
         // the TIP has no settings observer inside the host, and a Return
@@ -200,7 +232,14 @@ impl TextService_Impl {
         if setup.lexicon.is_none() {
             log::warn!("key.no_lexicon");
         }
-        let outcome = self.run_key(context, token, identity, &snapshot, &intent, &settings);
+        let outcome = self.run_key(
+            context,
+            token,
+            identity,
+            &snapshot,
+            &KeyWork::Compose(intent),
+            &settings,
+        );
         BOOL::from(outcome == KeyOutcome::Consumed)
     }
 
@@ -286,7 +325,7 @@ impl TextService_Impl {
         token: ContextToken,
         identity: usize,
         snapshot: &KeyEventSnapshot,
-        intent: &ComposingKeyIntent,
+        work: &KeyWork,
         settings: &SettingsDocument,
     ) -> KeyOutcome {
         let runtime = Runtime::shared();
@@ -345,8 +384,8 @@ impl TextService_Impl {
             }
             let manager = coordinator.claim(token);
             let mut editor = CompositionEditor::new(context, ec, &sink, atom, composition.clone());
-            let outcome = perform_intent(
-                intent,
+            let outcome = perform_work(
+                work,
                 snapshot,
                 settings,
                 manager,
@@ -371,10 +410,7 @@ impl TextService_Impl {
         // engine lock, so a host re-entering us from `BeginUIElement` /
         // `SetWindowPos` finds neither held.
         if let Some(caret) = surface.apply(settings) {
-            self.state.borrow_mut().focused_caret = POINT {
-                x: caret.left,
-                y: caret.top,
-            };
+            self.record_focused_caret(caret);
         }
 
         let (outcome, composition_after) = match session {
@@ -501,15 +537,16 @@ impl TextService_Impl {
             return Err(busy());
         }
         let settings = runtime.settings.current();
+        log::debug!("ui_element.intent {intent:?}");
         let outcome = self.run_key(
             &context,
             owner,
             identity,
             &KeyEventSnapshot::default(),
-            &intent,
+            &KeyWork::Compose(intent),
             &settings,
         );
-        log::debug!("ui_element.intent {intent:?} outcome={outcome:?}");
+        log::debug!("ui_element.outcome {outcome:?}");
         Ok(())
     }
 
@@ -599,6 +636,7 @@ impl TextService_Impl {
         if let Some(presenter) = self.presenter() {
             presenter.borrow_mut().hide_for_handover();
         }
+        self.hide_symbol_picker_now();
         let stale = {
             let mut state = self.state.borrow_mut();
             state.contexts.entry_by_token_mut(owner).map(|entry| {
@@ -643,10 +681,11 @@ impl TextService_Impl {
         drop(held);
         let Some(token) = token else { return };
         self.hide_candidates(token);
-        // The guide belongs to the context whose composition the host just
-        // ended; a click elsewhere or a focus loss takes it down with the
-        // list (`TaigiInputController.endSession`).
+        // The guide and the picker belong to the context whose composition
+        // the host just ended; a click elsewhere or a focus loss takes them
+        // down with the list (`TaigiInputController.endSession`).
         self.hide_telex_guide_of(token);
+        self.hide_symbol_picker_of(token);
         let reset_now = match Runtime::shared().try_coordinator() {
             Some(mut coordinator) => {
                 if let Some(manager) = coordinator.manager(token) {
@@ -749,7 +788,7 @@ impl TextService_Impl {
                 token,
                 identity,
                 &KeyEventSnapshot::default(),
-                &ComposingKeyIntent::Commit,
+                &KeyWork::Compose(ComposingKeyIntent::Commit),
                 &settings,
             );
             // The commit is the switch's precondition, not a courtesy: a
@@ -775,6 +814,8 @@ impl TextService_Impl {
             }
         }
         self.hide_candidates(token);
+        // A list of symbols is not English either.
+        self.hide_symbol_picker_of(token);
         // The next-word context is Taiwanese. English typed after the switch
         // is not the predecessor of the word typed after the switch back, and
         // the engine is what would otherwise keep believing it is.
@@ -815,7 +856,14 @@ impl TextService_Impl {
                 }
             }
         }
+        // And the picker, unconditionally: no global action can reach the
+        // key path that would otherwise take it down, and a romanization
+        // switched under an open list is a list the user is no longer
+        // looking at (`TaigiInputController.performShortcutAction`).
+        self.hide_symbol_picker_now();
         match action {
+            // Matched in the key sink before this is reached (`key_down`).
+            ShortcutAction::ShowSymbolPicker => {}
             ShortcutAction::OpenLastSettingsPane => settings_launcher::open_settings(),
             ShortcutAction::ToggleRomanization => {
                 let Some(store) = runtime.settings_store() else {
@@ -925,6 +973,276 @@ impl TextService_Impl {
                 guide
                     .borrow_mut()
                     .toggle(content, anchor, appearance, token);
+            }
+        }
+    }
+
+    /// The open symbol picker's claim on `snapshot`: TRUE from the test
+    /// phase for every key while the list shows, so the delivery is
+    /// guaranteed to arrive; at delivery the key is the picker's
+    /// (`SymbolPickerIntent`) — or the picker closes and the key goes on
+    /// through the composing contract as if it had never been there
+    /// (answers `false`, the "TRUE test, FALSE delivery" disagreement).
+    fn symbol_picker_takes_key(
+        &self,
+        context: &ITfContext,
+        token: ContextToken,
+        identity: usize,
+        snapshot: &KeyEventSnapshot,
+        phase: KeyPhase,
+        bindings: &ComposingKeyBindings,
+    ) -> bool {
+        let Some((picker, _)) = self.live_symbol_picker(token) else {
+            return false;
+        };
+        if phase == KeyPhase::Test {
+            return true;
+        }
+        match SymbolPickerIntent::intent(snapshot, bindings) {
+            SymbolPickerIntent::Close => {
+                self.hide_symbol_picker_of(token);
+                true
+            }
+            SymbolPickerIntent::Navigate(direction) => {
+                picker.borrow_mut().navigate(direction, token);
+                true
+            }
+            SymbolPickerIntent::PickSlot(slot) => {
+                // An empty slot on a short last page is consumed all the
+                // same, as it is on the list: the key is the picker's while
+                // it is up.
+                let index = picker.borrow().candidate_index_for_key_slot(slot, token);
+                self.pick_symbol_cell(context, token, identity, index, bindings);
+                true
+            }
+            SymbolPickerIntent::Confirm => {
+                let index = picker.borrow().selected_index(token);
+                self.pick_symbol_cell(context, token, identity, index, bindings);
+                true
+            }
+            SymbolPickerIntent::CloseAndPassThrough => {
+                self.hide_symbol_picker_of(token);
+                false
+            }
+        }
+    }
+
+    /// The picker and the level it shows for `token`, if the popup is
+    /// really up for that context. The window is the one owner: a posted
+    /// focus hide takes it down behind the key path's back, and the level
+    /// left in the state is simply never read again until the next show
+    /// overwrites it.
+    fn live_symbol_picker(
+        &self,
+        token: ContextToken,
+    ) -> Option<(Rc<RefCell<CandidatePresenter>>, SymbolPickerLevel)> {
+        let level = self.state.borrow().symbol_picker_level?;
+        let picker = self.symbol_picker()?;
+        let is_up = {
+            let picker = picker.borrow();
+            picker.is_showing(token) && picker.is_popup_visible()
+        };
+        is_up.then_some((picker, level))
+    }
+
+    /// Where the last window this service anchored to was — the point the
+    /// mode flash and the guide centre on.
+    fn record_focused_caret(&self, caret: RECT) {
+        self.state.borrow_mut().focused_caret = POINT {
+            x: caret.left,
+            y: caret.top,
+        };
+    }
+
+    /// The picker chord: down if up; otherwise the composition is ended
+    /// first — commit first, as vChewing does
+    /// (`InputHandler_HandleStates.swift:1110`): the picker writes into the
+    /// document, and a composition still marked there would have the symbol
+    /// land inside it. A visible highlight commits what is highlighted, the
+    /// way Enter does; a composition with no window commits as typed. A
+    /// commit that only NAILED a segment leaves the composition running,
+    /// and the picker waits for a key that ends it.
+    fn toggle_symbol_picker(
+        &self,
+        context: &ITfContext,
+        token: ContextToken,
+        identity: usize,
+        settings: &SettingsDocument,
+    ) {
+        if self.live_symbol_picker(token).is_some() {
+            self.hide_symbol_picker_of(token);
+            return;
+        }
+        let bindings = ComposingKeyBindings::from_document(settings);
+        let runtime = Runtime::shared();
+        let (is_composing, is_showing) = self.composing_flags(runtime, token);
+        if is_composing {
+            let intent = if is_showing {
+                ComposingKeyIntent::CommitHighlightedCandidate
+            } else {
+                ComposingKeyIntent::Commit
+            };
+            let outcome = self.run_key(
+                context,
+                token,
+                identity,
+                &KeyEventSnapshot::default(),
+                &KeyWork::Compose(intent),
+                settings,
+            );
+            let (still_composing, _) = self.composing_flags(runtime, token);
+            if outcome != KeyOutcome::Consumed || still_composing {
+                return;
+            }
+        }
+        self.present_symbol_picker(context, token, SymbolPickerLevel::Categories, &bindings);
+    }
+
+    /// Shows `level`'s list anchored to the caret — a fresh list, so the
+    /// window selects its first cell — and records the level. The caret is
+    /// read under a read-only session (no composition is open by now, so it
+    /// is the insertion point); the window is shown OUTSIDE it, like the
+    /// composing list (`Surface::apply`). A list that did not reach the
+    /// screen leaves no level behind.
+    fn present_symbol_picker(
+        &self,
+        context: &ITfContext,
+        token: ContextToken,
+        level: SymbolPickerLevel,
+        bindings: &ComposingKeyBindings,
+    ) {
+        let Some(picker) = self.symbol_picker() else {
+            return;
+        };
+        let Some(cells) = self.symbol_picker_cells(level) else {
+            self.hide_symbol_picker_of(token);
+            return;
+        };
+        let (client_id, focus_generation) = {
+            let state = self.state.borrow();
+            (state.client_id, state.focus_generation)
+        };
+        let caret = edit_session::run_sync(context, client_id, TF_ES_READ, |ec| {
+            Ok(crate::ui::caret::caret_rect(context, ec, None))
+        });
+        // The session can re-enter the focus callbacks, and a window that
+        // has not been created yet has no HWND for their posted hide to
+        // reach: a focus that moved under the session gets no picker (the
+        // handover's own rule in `run_key`).
+        let focus_moved = self.state.borrow().focus_generation != focus_generation
+            || self.token_for(context).map(|(t, _)| t) != Some(token);
+        let (Ok(Some(caret)), false) = (caret, focus_moved) else {
+            log::debug!("symbol_picker.not_shown focus_moved={focus_moved}");
+            self.hide_symbol_picker_of(token);
+            return;
+        };
+        let content = CandidateWindowContent {
+            cells,
+            slot_key_set: bindings.slot_key_set(),
+            lead_cell_is_unkeyed: false,
+        };
+        // No document: the picker registers no UI-less element
+        // (`CandidatePresenter::attach_popup_only`).
+        let settings = Runtime::shared().settings.current();
+        picker
+            .borrow_mut()
+            .show(content, caret, &settings, token, None);
+        // `show` takes the owner before it creates the window, so the level
+        // is recorded only for a popup that really reached the screen — an
+        // owned list nobody can see would swallow the slot keys.
+        let shown = {
+            let picker = picker.borrow();
+            picker.is_showing(token) && picker.is_popup_visible()
+        };
+        if !shown {
+            picker.borrow_mut().hide(token);
+            self.state.borrow_mut().symbol_picker_level = None;
+            return;
+        }
+        self.state.borrow_mut().symbol_picker_level = Some(level);
+        self.record_focused_caret(caret);
+    }
+
+    /// The cells `level` shows: the category names under the display
+    /// language, or a category's symbols verbatim. `None` for a table that
+    /// did not validate or a category it no longer has.
+    fn symbol_picker_cells(&self, level: SymbolPickerLevel) -> Option<Vec<CandidateCellContent>> {
+        let table = SymbolTable::bundled()?;
+        let cells = match level {
+            SymbolPickerLevel::Categories => {
+                let strings = Runtime::shared().strings();
+                table
+                    .categories()
+                    .iter()
+                    .map(|category| {
+                        CandidateCellContent::new(strings.resolve(category.id.label_key()), None)
+                    })
+                    .collect()
+            }
+            SymbolPickerLevel::Items(id) => table
+                .category(id)?
+                .symbols
+                .iter()
+                .map(|symbol| CandidateCellContent::new(symbol.clone(), None))
+                .collect(),
+        };
+        Some(cells)
+    }
+
+    /// Acts on the cell at `index` of the list up for `token`: a category
+    /// descends to its symbols, a symbol is written and the picker closes.
+    /// `None` — a slot with no cell — does nothing, and keeps the picker up.
+    fn pick_symbol_cell(
+        &self,
+        context: &ITfContext,
+        token: ContextToken,
+        identity: usize,
+        index: Option<usize>,
+        bindings: &ComposingKeyBindings,
+    ) {
+        let (Some(index), Some(table), Some((_, level))) = (
+            index,
+            SymbolTable::bundled(),
+            self.live_symbol_picker(token),
+        ) else {
+            return;
+        };
+        match level {
+            SymbolPickerLevel::Categories => {
+                let Some(category) = table.categories().get(index) else {
+                    return;
+                };
+                self.present_symbol_picker(
+                    context,
+                    token,
+                    SymbolPickerLevel::Items(category.id),
+                    bindings,
+                );
+            }
+            SymbolPickerLevel::Items(id) => {
+                let Some(symbol) = table
+                    .category(id)
+                    .and_then(|category| category.symbols.get(index))
+                else {
+                    return;
+                };
+                self.hide_symbol_picker_of(token);
+                // A pick is a key this input method consumes, and the
+                // runtime comes up on the first such key (W3): the engine
+                // `run_key` claims for the context has to exist, and it
+                // hears about the character as the end of a next-word
+                // context.
+                let runtime = Runtime::shared();
+                runtime.prepare_for_first_key();
+                let settings = runtime.settings.current();
+                self.run_key(
+                    context,
+                    token,
+                    identity,
+                    &KeyEventSnapshot::default(),
+                    &KeyWork::InsertSymbol(symbol.clone()),
+                    &settings,
+                );
             }
         }
     }
@@ -1102,11 +1420,11 @@ impl Surface {
     }
 }
 
-/// The intent, performed against the engine and the document in one
-/// session (`handle(_:client:)`'s switch).
+/// The session's work, performed against the engine and the document
+/// (`handle(_:client:)`'s switch, plus the picker's insert).
 #[allow(clippy::too_many_arguments)]
-fn perform_intent(
-    intent: &ComposingKeyIntent,
+fn perform_work(
+    work: &KeyWork,
     snapshot: &KeyEventSnapshot,
     settings: &SettingsDocument,
     manager: &mut ComposingManager,
@@ -1115,6 +1433,21 @@ fn perform_intent(
     surface: &Surface,
     armed_swap: Option<&ITfRange>,
 ) -> KeyOutcome {
+    let intent = match work {
+        KeyWork::Compose(intent) => intent,
+        KeyWork::InsertSymbol(symbol) => {
+            // One string at the caret, so a bracket pair lands as both
+            // halves with the caret after the closing one (`「」`), and not
+            // through the full-width map: what the user picked is what they
+            // get, `()` included. An attaching mark swaps with the auto
+            // space a commit left, as a typed one would.
+            if !swap_auto_space(symbol, armed_swap, settings, manager, editor) {
+                editor.insert_external(symbol);
+                manager.note_character_typed_outside_composition(symbol);
+            }
+            return KeyOutcome::Consumed;
+        }
+    };
     match intent {
         ComposingKeyIntent::Input(text) => {
             manager.append(text, editor);
@@ -1183,21 +1516,10 @@ fn perform_intent(
             let Some(characters) = snapshot.characters.as_deref() else {
                 return KeyOutcome::ToHost;
             };
-            if let Some(anchor) = armed_swap {
-                // The arm's EXISTENCE is the verdict — it is only ever set
-                // after a commit that wrote romanization earned its space — so
-                // only 自動空白 itself is re-read live here.
-                if ComposingKeyIntent::is_document_text(snapshot)
-                    && policies::is_attaching_punctuation(characters)
-                    && settings.bool(&keys::IS_AUTO_SPACE_ENABLED)
-                    && editor.swap_preceding_space(&format!("{characters} "), anchor)
-                {
-                    manager.note_character_typed_outside_composition(characters);
-                    // Re-armed at the caret the rewrite left, re-verified
-                    // against the document on the next key (`?!` chains).
-                    editor.arm_swap();
-                    return KeyOutcome::Consumed;
-                }
+            if ComposingKeyIntent::is_document_text(snapshot)
+                && swap_auto_space(characters, armed_swap, settings, manager, editor)
+            {
+                return KeyOutcome::Consumed;
             }
             if ComposingKeyIntent::is_document_text(snapshot) {
                 if let Some(mapped) = full_width_mapped(settings, characters) {
@@ -1252,6 +1574,35 @@ fn perform_intent(
             KeyOutcome::Consumed
         }
     }
+}
+
+/// The auto-space swap (`guá ` + `，` → `guá，`, §23) for `text` that is
+/// about to be written outside a composition — typed, or picked from the
+/// symbol picker. The arm's EXISTENCE is the verdict — it is only ever set
+/// after a commit that wrote romanization earned its space — so only
+/// 自動空白 itself is re-read live here. Answers whether the rewrite
+/// happened; on success the swap is re-armed at the caret the rewrite
+/// left, re-verified against the document on the next key (`?!` chains),
+/// and the engine hears about the character as the end of a context.
+fn swap_auto_space(
+    text: &str,
+    armed_swap: Option<&ITfRange>,
+    settings: &SettingsDocument,
+    manager: &mut ComposingManager,
+    editor: &mut CompositionEditor<'_>,
+) -> bool {
+    let Some(anchor) = armed_swap else {
+        return false;
+    };
+    if !policies::is_attaching_punctuation(text)
+        || !settings.bool(&keys::IS_AUTO_SPACE_ENABLED)
+        || !editor.swap_preceding_space(&format!("{text} "), anchor)
+    {
+        return false;
+    }
+    manager.note_character_typed_outside_composition(text);
+    editor.arm_swap();
+    true
 }
 
 /// Re-reads the candidates for the composition as it now stands

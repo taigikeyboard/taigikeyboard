@@ -17,6 +17,7 @@ mod shift_tap;
 mod shortcut_actions;
 mod slot_key_set;
 mod snapshot;
+mod symbol_picker;
 mod telex_guide_rows;
 mod tone_input_scheme;
 
@@ -35,5 +36,6 @@ pub use shift_tap::{
 pub use shortcut_actions::{global_rejection, ShortcutAction, ShortcutConflicts};
 pub use slot_key_set::CandidateSlotKeySet;
 pub use snapshot::{KeyEventSnapshot, KeyModifiers, NavigationKey};
+pub use symbol_picker::{SymbolPickerIntent, SymbolPickerLevel};
 pub use telex_guide_rows::{telex_guide_rows, TelexGuideRow};
 pub use tone_input_scheme::ToneInputScheme;

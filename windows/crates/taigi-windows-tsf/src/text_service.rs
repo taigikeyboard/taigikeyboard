@@ -30,7 +30,9 @@ use std::cell::RefCell;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::rc::Rc;
 use taigi_windows_core::composing::ContextToken;
-use taigi_windows_core::keys::{LanguageMode, ShiftTapTracker, ShortcutAction, VK_SHIFT_CODE};
+use taigi_windows_core::keys::{
+    LanguageMode, ShiftTapTracker, ShortcutAction, SymbolPickerLevel, VK_SHIFT_CODE,
+};
 use windows::core::{Error, IUnknown, Interface, Ref, Result, BOOL, BSTR, GUID};
 use windows::Win32::Foundation::{E_FAIL, E_INVALIDARG, LPARAM, POINT, RECT, WPARAM};
 use windows::Win32::System::Ole::{CONNECT_E_ADVISELIMIT, CONNECT_E_NOCONNECTION};
@@ -109,6 +111,18 @@ pub(crate) struct ServiceState {
     /// key-up cannot wedge the toggle.
     pub(crate) is_guide_chord_held: bool,
     pub(crate) presenter: Option<Rc<RefCell<CandidatePresenter>>>,
+    /// The symbol picker (USER 2026-09-09): the same window class over its
+    /// own owner slot, popup only (`CandidatePresenter::attach_popup_only`).
+    /// A second instance rather than a second list in the first: the
+    /// composing list's ownership and `is_showing` are read by the composing
+    /// key contract, and a picker sharing them would hand the arrows and the
+    /// slot keys to whichever list showed last (macOS `CandidatePanel.symbolPicker`).
+    pub(crate) symbol_picker: Option<Rc<RefCell<CandidatePresenter>>>,
+    /// Which list the picker shows — the one piece of picker state outside
+    /// the window. WHO it shows for is the window's own owner, and the
+    /// selection is the window's too; a level is only ever read while the
+    /// window says it is up for the asking context (`live_symbol_picker`).
+    pub(crate) symbol_picker_level: Option<SymbolPickerLevel>,
     pub(crate) mode_flash: Option<Rc<RefCell<ModeFlash>>>,
     /// The Telex key table the `showTelexGuide` chord toggles; owned by the
     /// context that raised it, like the candidate window.
@@ -245,10 +259,16 @@ impl TextService_Impl {
                     self.to_object(),
                     Rc::downgrade(&presenter),
                 );
+                let symbol_picker =
+                    Rc::new(RefCell::new(CandidatePresenter::new(Rc::clone(&factory))));
+                symbol_picker
+                    .borrow_mut()
+                    .attach_popup_only(Rc::downgrade(&symbol_picker));
                 let flash = ModeFlash::new(Rc::clone(&factory));
                 let guide = TelexGuide::new(factory);
                 let mut state = self.state.borrow_mut();
                 state.presenter = Some(presenter);
+                state.symbol_picker = Some(symbol_picker);
                 state.mode_flash = Some(Rc::new(RefCell::new(flash)));
                 state.telex_guide = Some(Rc::new(RefCell::new(guide)));
             }
@@ -288,7 +308,7 @@ impl TextService_Impl {
         // The windows first (no candidate may outlive its service), then the
         // compositions still open are finished into their documents — they
         // need the contexts and the engine still wired.
-        let (presenter, flash, guide) = {
+        let (presenter, symbol_picker, flash, guide) = {
             let mut state = self.state.borrow_mut();
             // The mode does not outlive the activation that switched it.
             // `activate` sets it too; this end is what a teardown `GetText`
@@ -299,14 +319,19 @@ impl TextService_Impl {
             state.is_guide_chord_held = false;
             // The windows are destroyed below; a hide still owed is moot.
             state.is_ui_hide_pending = false;
+            state.symbol_picker_level = None;
             (
                 state.presenter.take(),
+                state.symbol_picker.take(),
                 state.mode_flash.take(),
                 state.telex_guide.take(),
             )
         };
         if let Some(presenter) = presenter {
             presenter.borrow_mut().detach();
+        }
+        if let Some(symbol_picker) = symbol_picker {
+            symbol_picker.borrow_mut().detach();
         }
         if let Some(flash) = flash {
             flash.borrow_mut().destroy();
@@ -449,6 +474,32 @@ impl TextService_Impl {
         self.state.borrow().telex_guide.clone()
     }
 
+    /// The symbol picker's window, cloned out for the same reason.
+    pub(crate) fn symbol_picker(&self) -> Option<Rc<RefCell<CandidatePresenter>>> {
+        self.state.borrow().symbol_picker.clone()
+    }
+
+    /// Takes the symbol picker down whoever raised it — the settings
+    /// doorways, the handover and the pending-hide drain.
+    pub(crate) fn hide_symbol_picker_now(&self) {
+        self.state.borrow_mut().symbol_picker_level = None;
+        if let Some(picker) = self.symbol_picker() {
+            picker.borrow_mut().hide_for_handover();
+        }
+    }
+
+    /// Takes the symbol picker down only if `token`'s context raised it.
+    pub(crate) fn hide_symbol_picker_of(&self, token: ContextToken) {
+        let Some(picker) = self.symbol_picker() else {
+            return;
+        };
+        if !picker.borrow().is_showing(token) {
+            return;
+        }
+        self.state.borrow_mut().symbol_picker_level = None;
+        picker.borrow_mut().hide(token);
+    }
+
     /// Takes the Telex guide down whoever raised it, without touching the
     /// composition — the settings doorways and the key path.
     pub(crate) fn hide_telex_guide_now(&self) {
@@ -475,6 +526,7 @@ impl TextService_Impl {
         if let Some(presenter) = self.presenter() {
             presenter.borrow_mut().hide_for_handover();
         }
+        self.hide_symbol_picker_now();
         self.hide_telex_guide_now();
     }
 
@@ -526,6 +578,13 @@ impl TextService_Impl {
         if let Some(presenter) = self.presenter() {
             match presenter.try_borrow() {
                 Ok(presenter) => presenter.request_hide(owner),
+                Err(_) => posted = false,
+            }
+        }
+        // The picker goes with the list.
+        if let Some(picker) = self.symbol_picker() {
+            match picker.try_borrow() {
+                Ok(picker) => picker.request_hide(owner),
                 Err(_) => posted = false,
             }
         }
@@ -965,16 +1024,19 @@ impl ITfLangBarItemButton_Impl for TextService_Impl {
             if let Some(id) = lang_bar::show_popup(&rows, *pt) {
                 match id {
                     MENU_OPEN_SETTINGS => {
-                        // The guide comes down first, whoever raised it: this
-                        // path never reaches the session, and the settings
-                        // window taking focus is not guaranteed to end the
-                        // context that owns the card (`ShortcutHotkeys.openSettings`).
+                        // The guide and the picker come down first, whoever
+                        // raised them: this path never reaches the session,
+                        // and the settings window taking focus is not
+                        // guaranteed to end the context that owns the card
+                        // (`ShortcutHotkeys.openSettings`).
                         self.hide_telex_guide_now();
+                        self.hide_symbol_picker_now();
                         settings_launcher::open_settings();
                     }
                     MENU_CHECK_FOR_UPDATES => {
                         // Also the settings window (on 一般): same doorway.
                         self.hide_telex_guide_now();
+                        self.hide_symbol_picker_now();
                         settings_launcher::check_for_updates();
                     }
                     other => log::warn!("tsf.menu_unknown_id id={other}"),

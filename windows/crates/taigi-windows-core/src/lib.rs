@@ -19,3 +19,4 @@ pub mod keys;
 pub mod policies;
 pub mod settings;
 pub mod strings;
+pub mod symbols;
