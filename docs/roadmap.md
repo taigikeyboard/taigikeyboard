@@ -362,7 +362,7 @@ read-only bail; a held preserved-key chord re-fires `OnPreservedKey`, so the tog
 
 ### Desktop symbol picker (USER-scoped 2026-09-09)
 
-**Status**: P0 done (this section + memory). P1 macOS / P2 Windows pending.
+**Status**: all rounds MERGED 2026-09-09 — P1 macOS #26 `843e3453`, P2 Windows #27 `d5a8940b`. Awaiting real-device dogfood (S36, both platforms).
 **Scope**: macOS + Windows only (desktop train). Engine untouched — no `make build`.
 
 USER 2026-09-09: 「增加快捷鍵叫出特殊符號選單(包含標點符號、括號、特殊符號),風格為候選詞選單,
@@ -436,11 +436,20 @@ a symbol-table generator shared with mobile; engine involvement (`Effect` has no
 | PR | Scope | Est. |
 |---|---|---|
 | P0 | This section + memory (admin tier, direct to main) | done |
-| P1 | macOS: action + key-path match + second `CandidatePanel` instance + JSON table + i18n + S36 + tests | PR #26 |
-| P2 | Windows mirror: `symbols.rs` (`include_str!`), `keys/symbol_picker.rs`, `ShowSymbolPicker` key-sink chord, second `CandidatePresenter` (popup only), `KeyWork::InsertSymbol` | PR |
+| P1 | macOS: action + key-path match + second `CandidatePanel` instance + JSON table + i18n + S36 + tests | done #26 |
+| P2 | Windows mirror: `symbols.rs` (`include_str!`), `keys/symbol_picker.rs`, `ShowSymbolPicker` key-sink chord, second `CandidatePresenter` (popup only), `KeyWork::InsertSymbol` | done #27 |
 
 Codex-named regression risks (all in S36): shortcut theft, stale focus ownership, partial commits,
 duplicate insertion after an edit-session failure, orphaned panels.
+
+**Learned in review** (Codex post-impl P1/P2 + `/simplify`, all applied): the chord and every
+navigation key touch nothing, so the auto-space arm goes back at the branch head and only the pick
+that writes spends it; a window that refused to show (no display, `CreateWindowExW` failed) must
+leave no level behind or an invisible picker swallows the slot keys; the settings doorway never
+reaches the key path, so it dismisses the picker itself; on Windows the window is the ONE owner —
+the level carries no context token, and a posted focus hide needs no reconciliation; the caret is
+read under a `TF_ES_READ` session with the focus generation revalidated across it, and the popup is
+shown outside it; the auto-space swap is one helper for typed and picked text.
 
 ---
 
