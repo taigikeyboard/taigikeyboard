@@ -1,5 +1,6 @@
 // The 快捷鍵 pane: every key the user can put an action on, in one list.
 
+import AppKit
 import KeyboardShortcuts
 import SwiftUI
 
@@ -61,6 +62,14 @@ struct ShortcutSettingsView: View {
                 ForEach(ComposingAction.groups[1], id: \.self) { action in
                     recorderRow(action)
                 }
+
+                // Shown, not recordable (USER 2026-09-09): the caret inside the
+                // composition rides the host's own word-jump chord, and the
+                // classifier reads it before any binding (`ComposingKeyIntent`).
+                LabeledContent(language.string(.desktopShortcutMoveComposingCaret)) {
+                    Text(Self.caretChordsLabel)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             // Its own section, at the end: it acts on every row above it rather
@@ -71,6 +80,17 @@ struct ShortcutSettingsView: View {
         }
         .formStyle(.grouped)
     }
+
+    /// `⌥←  ⌥→`, drawn by the same renderer as the recorder rows so the two
+    /// speak one glyph vocabulary, from the modifier the classifier reads.
+    static let caretChordsLabel = [NSLeftArrowFunctionKey, NSRightArrowFunctionKey]
+        .map { arrow in
+            ShortcutKeyDisplay.text(for: ComposingKeyChord(
+                key: String(UnicodeScalar(arrow)!),
+                modifiers: ComposingKeyIntent.caretChordModifiers,
+            ))
+        }
+        .joined(separator: "  ")
 
     /// One global-hotkey row.
     ///

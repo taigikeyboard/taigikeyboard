@@ -89,6 +89,13 @@ final class ShortcutSettingsTests: XCTestCase {
         }
     }
 
+    /// The read-only caret row is drawn from the classifier's own modifier
+    /// through the recorder rows' renderer — the row cannot say ⌥ while the
+    /// key reads something else (USER 2026-09-09: shown, not recordable).
+    func testCaretChordsLabel_drawsTheOptionArrows() {
+        XCTAssertEqual(ShortcutSettingsView.caretChordsLabel, "⌥←  ⌥→")
+    }
+
     /// Every row comes back, whatever state the domain was left in: a chord the
     /// user recorded, the empty string that means a row was cleared, and a value
     /// this build cannot parse — the three ways a row can hold something other

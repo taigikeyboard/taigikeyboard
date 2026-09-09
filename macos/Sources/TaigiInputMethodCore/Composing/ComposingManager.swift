@@ -176,6 +176,21 @@ final class ComposingManager {
         )
     }
 
+    /// Steps the caret inside the pending tail. Not a buffer change: no
+    /// promotion, and the engine asks for no fetch — the candidates on screen
+    /// still describe the same text.
+    func moveCaret(_ direction: CaretDirection, executing executor: ComposingEffectExecutor) {
+        Self.logger.debug("moveCaret \(String(describing: direction))")
+        apply(
+            RustEngineBridge.composingMoveCaret(
+                direction,
+                settings: settingsProvider.current,
+                generation: currentGeneration,
+            ),
+            executing: executor,
+        )
+    }
+
     /// Commits the composition as rendered. Under the continuous phase the
     /// engine builds the text from its own state — `Σ nailed.display_text +
     /// derived(pending)` (`transition.rs:443`) — so passing the mirrored

@@ -29,6 +29,21 @@ enum NavigationKey: Sendable, Equatable {
     }
 }
 
+/// One step of the caret inside the composition (`ComposingKeyIntent.moveCaret`).
+enum CaretDirection: Sendable, Equatable {
+    case left
+    case right
+
+    /// The step `key` asks for, if it is one of the two horizontal arrows.
+    init?(_ key: NavigationKey?) {
+        switch key {
+        case .leftArrow: self = .left
+        case .rightArrow: self = .right
+        default: return nil
+        }
+    }
+}
+
 /// The parts of an `NSEvent` a composing decision is made from.
 ///
 /// A value rather than the event itself so the classification can be reasoned
@@ -137,6 +152,10 @@ enum ComposingKeyIntent: Equatable {
     /// window is laid out as a row, a list or a grid, and the window is where
     /// the layout lives (`CandidatePresenter.navigate`).
     case navigate(CandidateNavigation)
+    /// Step the caret inside the romanization being typed, so the next
+    /// character lands there — `ka2`, `⌥←` `⌥←`, `h` → `kha2`. The engine owns
+    /// the caret (`MoveCaret`); the bar, if up, is left exactly as it is.
+    case moveCaret(CaretDirection)
     /// Commit whichever candidate the bar has highlighted, written as the
     /// output settings render it.
     case commitHighlightedCandidate
@@ -169,6 +188,11 @@ enum ComposingKeyIntent: Equatable {
     /// (`TaigiInputController.handle`) — and a list spelled out at each of
     /// them is a list that can drift apart.
     static let hostChords: NSEvent.ModifierFlags = [.command, .control, .option]
+
+    /// The modifier under which ← / → step the composing caret. The 快速齒
+    /// pane draws its read-only row from this same value, so the row cannot
+    /// drift from the key the classifier reads.
+    static let caretChordModifiers: NSEvent.ModifierFlags = [.option]
 
     /// Classifies `key` for a session whose composition is or is not active,
     /// and whose candidate bar is or is not on screen.
@@ -203,6 +227,21 @@ enum ComposingKeyIntent: Equatable {
         bindings: ComposingKeyBindings = .default,
     ) -> ComposingKeyIntent {
         let modifiers = key.modifiers.intersection(.deviceIndependentFlagsMask)
+
+        // The caret inside the composition, on ⌥← / ⌥→ — the host's own
+        // "jump a word" chord, and the one chord that is neither a candidate
+        // key (the bare arrows) nor one macOS takes first (⌃← is Mission
+        // Control). Fixed, not recordable, shown read-only on the 快速齒 pane
+        // (USER 2026-09-09). Compared on the four chording modifiers alone:
+        // an arrow always carries `.function`, and `.numericPad` says how the
+        // key was reached, not which key it is. Exactly ⌥: ⌥⇧← stays the
+        // host's selection, ⌥⌘← its shortcut. Idle, the chord is the host's.
+        if isComposing,
+           modifiers.intersection(Self.chordingModifiers) == Self.caretChordModifiers,
+           let direction = CaretDirection(key.navigationKey)
+        {
+            return .moveCaret(direction)
+        }
 
         // The fixed tier, read before anything the user can rebind so that no
         // binding can shadow it. These are the keys a user who has mis-bound

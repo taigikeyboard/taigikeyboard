@@ -13,7 +13,10 @@ import XCTest
 final class ComposingEffectDecodingTests: XCTestCase {
     func testDecodeTransition_everyEffectKind_mapsWithPayloadsAndKeepsWireOrder() {
         let response = makeResponse(effects: [
-            makeEffect(.updatePreedit(payload(Taigi_Engine_UpdatePreedit()) { $0.display = "tâi" })),
+            makeEffect(.updatePreedit(payload(Taigi_Engine_UpdatePreedit()) {
+                $0.display = "tâi"
+                $0.caretUtf16 = 2
+            })),
             makeEffect(.clearPreeditWithoutCommit_p(Taigi_Engine_ClearPreeditWithoutCommit())),
             makeEffect(.commitTextReplacingPreedit(
                 payload(Taigi_Engine_CommitTextReplacingPreedit()) { $0.text = "台語" },
@@ -41,7 +44,7 @@ final class ComposingEffectDecodingTests: XCTestCase {
         let transition = RustEngineBridge.decodeTransition(response)
 
         XCTAssertEqual(transition.effects, [
-            .updatePreedit("tâi"),
+            .updatePreedit("tâi", caretUTF16: 2),
             .clearPreeditWithoutCommit,
             .commitTextReplacingPreedit("台語"),
             .deleteBackwardFromDocument,

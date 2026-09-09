@@ -481,6 +481,74 @@ final class ComposingKeyIntentTests: XCTestCase {
         )
     }
 
+    // MARK: - Composing caret
+
+    /// ⌥← / ⌥→ step the caret inside the composition whether or not the bar
+    /// is up — the bare arrows stay the bar's (USER 2026-09-09).
+    func testOptionArrows_moveTheComposingCaret_barUpOrNot() {
+        for isShowingCandidates in [true, false] {
+            XCTAssertEqual(
+                ComposingKeyIntent.intent(
+                    for: navigationSnapshot(.leftArrow, modifiers: .option),
+                    isComposing: true,
+                    isShowingCandidates: isShowingCandidates,
+                ),
+                .moveCaret(.left),
+            )
+            XCTAssertEqual(
+                ComposingKeyIntent.intent(
+                    for: navigationSnapshot(.rightArrow, modifiers: .option),
+                    isComposing: true,
+                    isShowingCandidates: isShowingCandidates,
+                ),
+                .moveCaret(.right),
+            )
+        }
+    }
+
+    /// An arrow always arrives under `.function`, and a keypad arrow under
+    /// `.numericPad` too; neither says which key was pressed.
+    func testOptionArrow_ignoresTheFlagsThatSayHowTheKeyWasReached() {
+        XCTAssertEqual(
+            ComposingKeyIntent.intent(
+                for: navigationSnapshot(.leftArrow, modifiers: [.option, .function, .numericPad]),
+                isComposing: true,
+            ),
+            .moveCaret(.left),
+        )
+    }
+
+    func testOptionArrow_isTheHostsWordJump_whenNothingIsComposing() {
+        XCTAssertEqual(
+            ComposingKeyIntent.intent(
+                for: navigationSnapshot(.leftArrow, modifiers: .option),
+                isComposing: false,
+            ),
+            .passThrough,
+        )
+    }
+
+    /// Only exactly ⌥: with Shift it is the host's selection, with Command
+    /// its shortcut — and ⌥↑ is not a caret key at all.
+    func testOptionArrow_withAnyOtherChord_orVertical_belongsToTheHost() {
+        for (key, modifiers) in [
+            (NavigationKey.leftArrow, NSEvent.ModifierFlags([.option, .shift])),
+            (.rightArrow, [.option, .command]),
+            (.upArrow, [.option]),
+            (.pageDown, [.option]),
+        ] {
+            XCTAssertEqual(
+                ComposingKeyIntent.intent(
+                    for: navigationSnapshot(key, modifiers: modifiers),
+                    isComposing: true,
+                    isShowingCandidates: true,
+                ),
+                .commitThenPassThrough,
+                "\(key) under \(modifiers.rawValue)",
+            )
+        }
+    }
+
     private func navigationSnapshot(
         _ key: NavigationKey,
         modifiers: NSEvent.ModifierFlags = [],

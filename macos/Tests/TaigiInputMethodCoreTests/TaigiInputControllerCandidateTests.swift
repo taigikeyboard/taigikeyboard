@@ -486,6 +486,40 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         XCTAssertTrue(session.presenter.calls.contains(.navigate(.pageUp)))
     }
 
+    /// ⌥← steps the caret inside the marked text and leaves the bar exactly
+    /// as it was: no refetch, no navigation, same highlight. The next typed
+    /// character lands at the caret and the bar refreshes for the new text.
+    func testOptionLeft_movesTheCaretWithoutTouchingTheBar_andTheNextKeyLandsThere() throws {
+        let session = try composedSession()
+        let callsBefore = session.presenter.calls.count
+        session.client.clearWrites()
+
+        let handled = try session.controller.handle(
+            TestFixtures.arrowKeyDownEvent(.leftArrow, modifiers: .option),
+            client: session.client,
+        )
+
+        XCTAssertTrue(handled)
+        XCTAssertEqual(session.presenter.calls.count, callsBefore, "the bar is not touched by a caret move")
+        XCTAssertEqual(session.client.writes, [.setMarkedText("taigi", selectionLocation: 4)])
+
+        _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "h"), client: session.client)
+
+        XCTAssertEqual(session.client.writes.last, .setMarkedText("taighi", selectionLocation: 5))
+        XCTAssertGreaterThan(session.presenter.calls.count, callsBefore, "typing refetches the bar")
+    }
+
+    func testOptionLeft_reachesTheHostWhenNothingIsComposing() throws {
+        let session = try makeSession()
+
+        let handled = try session.controller.handle(
+            TestFixtures.arrowKeyDownEvent(.leftArrow, modifiers: .option),
+            client: session.client,
+        )
+
+        XCTAssertFalse(handled, "with no composition, ⌥← is the host's word jump")
+    }
+
     func testArrowKeys_reachTheHostWhenNoBarIsUp() throws {
         let session = try makeSession()
 

@@ -41,7 +41,7 @@ final class RustEngineBridgeComposingTests: XCTestCase {
         XCTAssertEqual(transition.rawInput, "t")
         XCTAssertEqual(
             transition.effects.first,
-            .updatePreedit("t"),
+            .updatePreedit("t", caretUTF16: 1),
             "the host has to be told to show the preedit before anything else",
         )
     }

@@ -90,6 +90,30 @@ extension RustEngineBridge {
         )
     }
 
+    /// Steps the caret one character inside the pending tail (`composing.proto`
+    /// `MoveCaret`). The buffer is untouched, so the engine answers with an
+    /// `UpdatePreedit` carrying the new caret and nothing else — no fetch is
+    /// requested. Carries the same config as `composingAppend`: the answer
+    /// re-renders the composition the way the last mutation did, so a move
+    /// between two keystrokes shows the same text they do.
+    static func composingMoveCaret(
+        _ direction: CaretDirection,
+        settings: EngineSettings,
+        generation: UInt64,
+    ) -> ComposingTransition? {
+        var moveCaret = Taigi_Engine_MoveCaret()
+        moveCaret.direction = switch direction {
+        case .left: .left
+        case .right: .right
+        }
+        return dispatchComposing(
+            .moveCaret(moveCaret),
+            op: "composingMoveCaret",
+            generation: generation,
+            config: appConfig(settings),
+        )
+    }
+
     /// Commits the whole composition exactly as the marked region renders it —
     /// `Σ nailed.display_text + derived(pending)` under the continuous phase
     /// (`transition.rs:443`), which is what the snapshot reports as
@@ -341,7 +365,7 @@ extension RustEngineBridge {
         guard let kind = effect.kind else { return nil }
         switch kind {
         case let .updatePreedit(payload):
-            return .updatePreedit(payload.display)
+            return .updatePreedit(payload.display, caretUTF16: Int(payload.caretUtf16))
         case .clearPreeditWithoutCommit_p:
             return .clearPreeditWithoutCommit
         case let .commitTextReplacingPreedit(payload):

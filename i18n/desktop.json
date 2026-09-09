@@ -134,6 +134,25 @@
         "ja": "記号メニュー"
       }
     },
+    "shortcutMoveComposingCaret": {
+      "comment": "Read-only row under the composing keys on the 快速齒 pane: the fixed chord that moves the caret inside the romanization being typed (macOS ⌥←/⌥→, Windows Ctrl+←/→). Not recordable (USER 2026-09-09: 這個功能可以顯示在快速齒,但我不打算讓使用者更改). Authored whole, like its siblings.",
+      "scope": {
+        "platforms": [
+          "macos",
+          "windows"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "移動組字游標",
+        "tailo": "suá tsoo-jī ê iû-piau",
+        "poj": "sóa cho͘-jī ê iû-piau",
+        "en": "Move the composing caret",
+        "ja": "入力中の文字のカーソル移動"
+      }
+    },
     "telexGuideTitle": {
       "comment": "Title over the floating Telex guide's key table. The scheme's own name, nothing else (USER 2026-09-09: no surplus wording).",
       "scope": {
