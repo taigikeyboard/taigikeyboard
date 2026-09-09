@@ -7,7 +7,7 @@ import SwiftUI
 /// The 快捷鍵 pane of the settings window.
 ///
 /// Three blocks, by what a key DOES: 選字, the keys that move through the
-/// candidates; 拍字, the keys that end the composition plus the switch that
+/// candidates; 輸出, the keys that end the composition plus the switch that
 /// says which script they write; and 其他, the rest of the switches and the
 /// windows a key raises. Titled since 2026-09-10 (USER) — the blocks shipped
 /// headerless the same day, and a header is what tells a reader which of the
@@ -101,7 +101,7 @@ struct ShortcutSettingsView: View {
                     globalRecorderRow(action)
                 }
             } header: {
-                Text(language.string(.desktopShortcutSectionTyping))
+                Text(language.string(.desktopShortcutSectionOutput))
             }
 
             // Block three: the remaining switches, and the windows a key
@@ -152,14 +152,18 @@ struct ShortcutSettingsView: View {
         }
         .joined(separator: "  ")
 
-    /// `⇧Q … ⇧;` under Standard, `⇧1 … ⇧9` under Telex: the first and last
-    /// key of the live slot set, drawn by the recorder rows' renderer.
+    /// `⇧QWDFZXVY;` under Standard, `⇧123456789` under Telex: every key of the
+    /// live slot set behind ONE ⇧, drawn by the recorder rows' renderer.
+    ///
+    /// The whole run rather than the first and last with an ellipsis between
+    /// (USER 2026-09-10): the set is not alphabetical, so `⇧Q … ⇧;` named no
+    /// series a reader could fill in. One ⇧ rather than one per key, because
+    /// repeating it nine times says the modifier nine times and the keys once.
     static func shiftedSlotKeysLabel(_ keySet: CandidateSlotKeySet) -> String {
-        [0, HorizontalPageLayout.pageSize - 1]
-            .map { slot in
-                ShortcutKeyDisplay.text(for: ComposingKeyChord(key: keySet.label(forSlot: slot), modifiers: .shift))
-            }
-            .joined(separator: " … ")
+        let keys = (0 ..< HorizontalPageLayout.pageSize)
+            .map { keySet.label(forSlot: $0) }
+            .joined()
+        return ShortcutKeyDisplay.text(for: ComposingKeyChord(key: keys, modifiers: .shift))
     }
 
     /// One global-hotkey row.

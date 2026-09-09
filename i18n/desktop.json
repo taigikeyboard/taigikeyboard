@@ -39,8 +39,8 @@
         "ja": "候補選択"
       }
     },
-    "shortcutSectionTyping": {
-      "comment": "快捷鍵 pane, second block's header: the keys that end a composition into the document, and the switch for which script is written.",
+    "shortcutSectionOutput": {
+      "comment": "快捷鍵 pane, second block's header: the keys that end a composition into the document, and the switch for which script is written. 輸出 rather than 拍字 (USER 2026-09-10) — the block is about what reaches the document, not about the typing itself.",
       "scope": {
         "platforms": [
           "macos",
@@ -51,11 +51,11 @@
         ]
       },
       "values": {
-        "hanji": "拍字",
-        "tailo": "phah-jī",
-        "poj": "phah-jī",
-        "en": "Typing",
-        "ja": "入力"
+        "hanji": "輸出",
+        "tailo": "su-tshut",
+        "poj": "su-chhut",
+        "en": "Output",
+        "ja": "出力"
       }
     },
     "shortcutSectionOther": {
@@ -211,7 +211,7 @@
       }
     },
     "shortcutCommitAlternateScriptInSlot": {
-      "comment": "Read-only row after the composing commit keys on the 快速齒 pane: Shift on a candidate slot key commits that slot in the other script (what Space does for the highlighted cell) — macOS ⇧Q…⇧; / ⇧1…⇧9, Windows Shift+Q…Shift+; / Shift+1…Shift+9, following the tone scheme. Not recordable (USER 2026-09-10: 快速齒加一個快速齒提示,類似「修正...」那個快速齒一樣,使用者不能修改). Sibling of actionCommitAlternateScript.",
+      "comment": "Read-only row after the composing commit keys on the 快速齒 pane: Shift on a candidate slot key commits that slot in the other script (what Space does for the highlighted cell) — macOS ⇧QWDFZXVY; / ⇧123456789, Windows Shift+QWDFZXVY; / Shift+123456789, following the tone scheme. Shortened from 揀一格臨時拍羅馬字/漢字 (USER 2026-09-10): the key column already shows the slot keys, so naming them again in the label was the same fact twice. Not recordable (USER 2026-09-10: 快速齒加一個快速齒提示,類似「修正...」那個快速齒一樣,使用者不能修改). Sibling of actionCommitAlternateScript.",
       "scope": {
         "platforms": [
           "macos",
@@ -222,11 +222,11 @@
         ]
       },
       "values": {
-        "hanji": "揀一格臨時拍羅馬字/漢字",
-        "tailo": "kíng tsi̍t keh lîm-sî phah lô-má-jī / hàn-jī",
-        "poj": "kéng chi̍t keh lîm-sî phah lô-má-jī / hàn-jī",
-        "en": "Type Roman/Hanji Temporarily by Slot Key",
-        "ja": "選択キーで一時的にローマ字/漢字で入力"
+        "hanji": "臨時拍羅馬字/漢字",
+        "tailo": "lîm-sî phah lô-má-jī / hàn-jī",
+        "poj": "lîm-sî phah lô-má-jī / hàn-jī",
+        "en": "Type Roman/Hanji Temporarily",
+        "ja": "一時的にローマ字/漢字で入力"
       }
     },
     "telexGuideTitle": {

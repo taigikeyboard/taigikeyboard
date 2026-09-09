@@ -23,7 +23,7 @@ enum StringKey: String {
     case commonFontGenYoGothic = "i18n_common_fontGenYoGothic"
     case desktopGeneralTab = "i18n_desktop_generalTab"
     case desktopShortcutSectionCandidateSelection = "i18n_desktop_shortcutSectionCandidateSelection"
-    case desktopShortcutSectionTyping = "i18n_desktop_shortcutSectionTyping"
+    case desktopShortcutSectionOutput = "i18n_desktop_shortcutSectionOutput"
     case desktopShortcutSectionOther = "i18n_desktop_shortcutSectionOther"
     case desktopShortcutOpenSettings = "i18n_desktop_shortcutOpenSettings"
     case desktopShortcutToggleRomanization = "i18n_desktop_shortcutToggleRomanization"

@@ -1,6 +1,6 @@
 //! The 快捷鍵 pane: every key the user can put an action on, in three titled
 //! blocks (`ShortcutSettingsView.swift`) — 選字, the keys that move through
-//! the candidates; 拍字, the keys that end the composition plus the switch
+//! the candidates; 輸出, the keys that end the composition plus the switch
 //! that says which script they write; 其他, the rest — plus the reset card.
 //! Which keys pick a candidate is not chosen here: it follows from 聲調拍法
 //! on the 一般 pane (`ToneInputScheme`). Every row is the same recorder;
@@ -58,7 +58,7 @@ pub fn view(
                 .vertical_alignment(VerticalAlignment::Center),
         ),
         // Block two: out of the composition and into the document.
-        cards::section_title(strings.resolve(StringKey::DesktopShortcutSectionTyping)),
+        cards::section_title(strings.resolve(StringKey::DesktopShortcutSectionOutput)),
         composing_rows(
             window,
             strings,
@@ -120,19 +120,18 @@ fn caret_chords_label() -> String {
         .join("  ")
 }
 
-/// `Shift+Q … Shift+;` under Standard, `Shift+1 … Shift+9` under Telex: the
-/// first and last key of the live slot set, in the recorder rows' own
-/// spelling (`ShortcutSettingsView.swift` `shiftedSlotKeysLabel`).
+/// `Shift+QWDFZXVY;` under Standard, `Shift+123456789` under Telex: every key
+/// of the live slot set behind ONE Shift, in the recorder rows' own spelling
+/// (`ShortcutSettingsView.swift` `shiftedSlotKeysLabel`).
 fn shifted_slot_keys_label(slot_keys: CandidateSlotKeySet) -> String {
-    [0, HorizontalPageLayout::PAGE_SIZE - 1]
-        .map(|slot| {
-            ComposingKeyChord {
-                key: slot_keys.label_for_slot(slot),
-                modifiers: KeyModifiers::SHIFT,
-            }
-            .display()
-        })
-        .join(" … ")
+    let keys: String = (0..HorizontalPageLayout::PAGE_SIZE)
+        .map(|slot| slot_keys.label_for_slot(slot))
+        .collect();
+    ComposingKeyChord {
+        key: keys,
+        modifiers: KeyModifiers::SHIFT,
+    }
+    .display()
 }
 
 fn global_rows(
