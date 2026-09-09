@@ -34,6 +34,15 @@ final class ShortcutActionsTests: XCTestCase {
         XCTAssertEqual(Set(names).count, names.count, "two actions share a storage name: \(names)")
     }
 
+    /// A case added to the roster but not to a group would have no row on the
+    /// 快捷鍵 pane, which draws from the groups rather than from `allCases`.
+    func testTheGroups_holdEveryActionExactlyOnce() {
+        let grouped = ShortcutAction.groups.flatMap(\.self)
+
+        XCTAssertEqual(Set(grouped), Set(ShortcutAction.allCases))
+        XCTAssertEqual(grouped.count, ShortcutAction.allCases.count, "an action is in two groups")
+    }
+
     func testEveryAction_hasItsOwnLabel() {
         let rows = labels()
 

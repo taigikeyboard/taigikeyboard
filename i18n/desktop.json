@@ -20,6 +20,63 @@
         "ja": "一般"
       }
     },
+    "shortcutSectionCandidateSelection": {
+      "comment": "快捷鍵 pane, first block's header: the keys that move through the candidate window.",
+      "scope": {
+        "platforms": [
+          "macos",
+          "windows"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "選字",
+        "tailo": "suán-jī",
+        "poj": "soán-jī",
+        "en": "Candidate Selection",
+        "ja": "候補選択"
+      }
+    },
+    "shortcutSectionTyping": {
+      "comment": "快捷鍵 pane, second block's header: the keys that end a composition into the document, and the switch for which script is written.",
+      "scope": {
+        "platforms": [
+          "macos",
+          "windows"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "拍字",
+        "tailo": "phah-jī",
+        "poj": "phah-jī",
+        "en": "Typing",
+        "ja": "入力"
+      }
+    },
+    "shortcutSectionOther": {
+      "comment": "快捷鍵 pane, third block's header: the switches and the windows a key raises.",
+      "scope": {
+        "platforms": [
+          "macos",
+          "windows"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "其他",
+        "tailo": "kî-thann",
+        "poj": "kî-thaⁿ",
+        "en": "Other",
+        "ja": "その他"
+      }
+    },
     "shortcutOpenSettings": {
       "comment": "Shortcut-recorder row: the hotkey that opens the settings window on whichever pane it was last left on. Each row is authored whole rather than composed from the setting's own label.",
       "scope": {
