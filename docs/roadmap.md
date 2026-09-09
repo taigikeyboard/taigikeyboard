@@ -594,7 +594,7 @@ on that basis; the box policy is an environment item for the USER.
 
 ### Desktop ⇧ + slot key — the 漢羅 commit aimed at a slot (USER-scoped 2026-09-10)
 
-**Status**: one PR, macOS + Windows together. Awaiting real-device dogfood (S38, both platforms).
+**Status**: MERGED 2026-09-10 — #35 `4db4aa92` (macOS + Windows in one PR). Awaiting real-device dogfood (S38, both platforms).
 **Scope**: macOS + Windows only (desktop train). No engine change — no `make build`.
 
 USER 2026-09-10: 「評估使用 shift + qwzx...選字齒 可以反向輸出(臨時拍羅馬字/漢字)某個候選詞的可能性。目前反向輸出只能使用方向齒 +
