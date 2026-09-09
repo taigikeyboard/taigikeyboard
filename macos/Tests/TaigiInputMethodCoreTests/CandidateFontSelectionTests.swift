@@ -14,7 +14,7 @@ import XCTest
 @MainActor
 final class CandidateFontSelectionTests: XCTestCase {
     private func customFont(_ fileName: String) -> CustomFont {
-        CustomFont(fileName: fileName, postScriptName: "Whatever-Regular", displayName: "Whatever")
+        CustomFont(fileName: fileName, postScriptName: "Whatever-Regular")
     }
 
     // MARK: - Two custom fonts are two typefaces

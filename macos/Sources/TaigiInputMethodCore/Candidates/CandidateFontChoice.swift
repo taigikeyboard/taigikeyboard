@@ -72,15 +72,18 @@ enum CandidateFontChoice: String, CaseIterable, Sendable {
     /// a seam a test can reach, no case being able to name a face that fails to
     /// activate while the bundle is intact.
     ///
-    /// The name is checked, not just the nil-ness: `NSFont(name:)` SUBSTITUTES
-    /// rather than fails for some names (`scripts/make-menubar-icon.swift`
-    /// guards the same way), and a substituted face is a typeface the user did
-    /// not pick — the system font is the honest answer to "this did not
-    /// activate".
+    /// Through `RegisteredFace`, which answers out of the registration list
+    /// rather than out of AppKit's name cache. A bundled face is registered
+    /// once at launch and would resolve either way; a typeface the user brought
+    /// can be withdrawn mid-session, and one path for both is what keeps "this
+    /// name draws" meaning the same thing everywhere.
+    ///
+    /// Nil is not the only refusal: a name nothing carries SUBSTITUTES rather
+    /// than fails, and a substituted face is a typeface the user did not pick —
+    /// the system font is the honest answer to "this did not activate".
     static func font(named postScriptName: String?, ofSize size: CGFloat) -> NSFont {
         guard let postScriptName,
-              let font = NSFont(name: postScriptName, size: size),
-              font.fontName == postScriptName
+              let font = RegisteredFace.font(named: postScriptName, ofSize: size)
         else {
             return .systemFont(ofSize: size)
         }
@@ -96,7 +99,7 @@ enum CandidateFontChoice: String, CaseIterable, Sendable {
     /// before any candidate is drawn, so asking once beats asking per cell.
     static func reportUnavailableFonts() {
         let missing = allCases.compactMap(\.postScriptName).filter {
-            font(named: $0, ofSize: NSFont.systemFontSize).fontName != $0
+            !RegisteredFace.isRegistered(named: $0)
         }
         guard !missing.isEmpty else { return }
         logger.error(

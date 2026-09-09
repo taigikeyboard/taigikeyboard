@@ -28,22 +28,85 @@ pub const ALLOWED_EXTENSIONS: [&str; 3] = ["ttf", "otf", "ttc"];
 /// mistaken pick, not a security boundary.
 pub const MAX_FILE_SIZE: u64 = 64 * 1024 * 1024;
 
-/// The longest a stored file's name may be, before its extension.
+/// The longest a stored file's name may be, before its extension, counted in
+/// Unicode scalars — the unit the macOS port counts, so one rule gives one
+/// answer on both.
 const MAX_STORED_STEM_LENGTH: usize = 64;
 
 /// How many suffixes one stem may be tried with before the import gives up.
 /// A library with a hundred copies of one name is a mistake, not a use.
 const MAX_NAME_ATTEMPTS: usize = 100;
 
-/// What a stored name is built from. Everything else — separators, dots, the
-/// picked name's own script — becomes `-`, so the result can neither escape
-/// the directory nor hide an extension.
-fn is_allowed_in_stored_name(character: char) -> bool {
-    character.is_ascii_lowercase()
-        || character.is_ascii_digit()
-        || character == '-'
-        || character == '_'
+/// Whether `character` would make the name more than one path component, or is
+/// one Windows refuses in a file name at all.
+fn is_structural(character: char) -> bool {
+    matches!(
+        character,
+        '/' | '\\' | '<' | '>' | ':' | '"' | '|' | '?' | '*'
+    )
 }
+
+/// Whether `character` draws nothing, or draws the rest of the name somewhere
+/// other than where it is written.
+///
+/// ZWNJ and ZWJ are deliberately absent: they join letters and emoji, and
+/// dropping them rewrites text the user meant.
+fn is_invisible(character: char) -> bool {
+    matches!(character,
+        '\u{0}'..='\u{1F}' | '\u{7F}'..='\u{9F}'      // C0, DEL and C1
+        | '\u{61C}' | '\u{200B}' | '\u{200E}' | '\u{200F}' // Arabic letter mark, ZWSP, LRM, RLM
+        | '\u{2028}' | '\u{2029}'                      // line and paragraph separators
+        | '\u{202A}'..='\u{202E}' | '\u{2066}'..='\u{2069}' // the bidi overrides and isolates
+        | '\u{FEFF}')
+}
+
+/// Whether `character` puts a mark on screen. The complement of Unicode's
+/// Default_Ignorable_Code_Point, which the macOS port asks Foundation for by
+/// name (`CustomFontLibrary.isVisible`); spelled out here rather than pulling
+/// in a Unicode property crate for one predicate. Only the ignorables
+/// `is_invisible` does NOT already drop can reach this.
+fn is_visible(character: char) -> bool {
+    !character.is_whitespace()
+        && !matches!(character,
+            '\u{AD}' | '\u{34F}' | '\u{115F}'..='\u{1160}' | '\u{17B4}'..='\u{17B5}'
+            | '\u{180B}'..='\u{180F}' | '\u{200B}'..='\u{200F}' | '\u{202A}'..='\u{202E}'
+            | '\u{2060}'..='\u{206F}' | '\u{3164}' | '\u{FE00}'..='\u{FE0F}' | '\u{FEFF}'
+            | '\u{FFA0}' | '\u{FFF0}'..='\u{FFF8}' | '\u{1BCA0}'..='\u{1BCA3}'
+            | '\u{1D173}'..='\u{1D17A}' | '\u{E0000}'..='\u{E0FFF}')
+}
+
+/// The names Windows reserves for a device, matched on the part before the
+/// first dot with trailing spaces ignored and case folded — which is how
+/// Windows itself resolves one, so `CON.foo` is `CON` to it.
+fn is_windows_device_name(stem: &str) -> bool {
+    const DEVICES: [&str; 4] = ["CON", "PRN", "AUX", "NUL"];
+    let head = stem
+        .split('.')
+        .next()
+        .unwrap_or_default()
+        .trim_end_matches(' ');
+    let folded = head.to_uppercase();
+    if DEVICES.contains(&folded.as_str()) {
+        return true;
+    }
+    // `COM` and `LPT` take the superscript digits too, which Windows folds to
+    // their ASCII forms.
+    let Some(port) = folded
+        .strip_prefix("COM")
+        .or_else(|| folded.strip_prefix("LPT"))
+    else {
+        return false;
+    };
+    matches!(
+        port,
+        "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "¹" | "²" | "³"
+    )
+}
+
+/// Trimmed from both ends, before and after the length cap. Windows drops a
+/// trailing dot or space of its own accord, and a name that starts with one
+/// reads as an accident rather than as a name.
+const TRIMMED_FROM_THE_ENDS: [char; 3] = ['-', '.', ' '];
 
 #[derive(Debug, thiserror::Error)]
 pub enum ImportError {
@@ -178,27 +241,36 @@ fn create_unused_file(
     )))
 }
 
-/// `name` reduced to what a stored file's name may hold, or `typeface` when
-/// nothing of it survives. The stored name is built from characters this
-/// function chose, never from the picked file's own name verbatim — a name is
-/// untrusted text, and this one becomes a path.
+/// `name` reduced to what one path component may hold, keeping as much of the
+/// picked file's own name as is safe to keep, or `typeface` when nothing
+/// showable survives.
+///
+/// The stored name is also the name the pane LISTS (`font_management`), so this
+/// keeps the user's spelling: their capitals, their spaces, their script. Port
+/// of `CustomFontLibrary.sanitized`, which carries the reasoning for each
+/// removal.
 pub fn sanitized_stem(name: &str) -> String {
     let reduced: String = name
-        .to_lowercase()
         .chars()
+        .filter(|character| !is_invisible(*character))
         .map(|character| {
-            if is_allowed_in_stored_name(character) {
-                character
-            } else {
+            if is_structural(character) {
                 '-'
+            } else {
+                character
             }
         })
         .collect();
-    let trimmed = reduced.trim_matches('-');
-    if trimmed.is_empty() {
+    let capped: String = reduced
+        .trim_matches(|character| TRIMMED_FROM_THE_ENDS.contains(&character))
+        .chars()
+        .take(MAX_STORED_STEM_LENGTH)
+        .collect();
+    let trimmed = capped.trim_matches(|character| TRIMMED_FROM_THE_ENDS.contains(&character));
+    if !trimmed.chars().any(is_visible) || is_windows_device_name(trimmed) {
         "typeface".to_owned()
     } else {
-        trimmed.chars().take(MAX_STORED_STEM_LENGTH).collect()
+        trimmed.to_owned()
     }
 }
 
@@ -244,14 +316,63 @@ mod tests {
         path
     }
 
+    /// The stored name is ALSO the name the pane shows, so the user's own
+    /// spelling survives — their capitals, their spaces, their script.
     #[test]
-    fn stored_names_are_built_here_not_taken_from_the_picked_file() {
-        assert_eq!(sanitized_stem("My Font"), "my-font");
+    fn a_stored_name_keeps_the_picked_name_as_the_user_spelled_it() {
+        assert_eq!(sanitized_stem("My Font"), "My Font");
+        assert_eq!(sanitized_stem("源樣明體"), "源樣明體");
+        assert_eq!(sanitized_stem("SnailFont-Pomacea"), "SnailFont-Pomacea");
+        assert_eq!(sanitized_stem("jf-openhuninn-2.1"), "jf-openhuninn-2.1");
+    }
+
+    /// What it does not keep: anything that would make the name more than one
+    /// path component, anything Windows refuses, and anything that draws
+    /// nothing.
+    #[test]
+    fn a_stored_name_is_one_path_component_and_nothing_else() {
         assert_eq!(sanitized_stem("../../windows/system32"), "windows-system32");
-        assert_eq!(sanitized_stem("源樣明體"), "typeface");
+        assert_eq!(sanitized_stem("a:b|c?d*e\"f<g>h"), "a-b-c-d-e-f-g-h");
         assert_eq!(sanitized_stem(""), "typeface");
         assert_eq!(sanitized_stem("..."), "typeface");
-        assert_eq!(sanitized_stem(&"a".repeat(200)).len(), 64);
+        assert_eq!(sanitized_stem("  . - "), "typeface");
+    }
+
+    /// Windows resolves a device name on the part before the first dot,
+    /// ignoring case and trailing spaces.
+    #[test]
+    fn a_windows_device_name_is_refused() {
+        assert_eq!(sanitized_stem("CON"), "typeface");
+        assert_eq!(sanitized_stem("nul"), "typeface");
+        assert_eq!(sanitized_stem("CON.foo"), "typeface");
+        assert_eq!(sanitized_stem("Com1"), "typeface");
+        assert_eq!(sanitized_stem("COM¹"), "typeface");
+        assert_eq!(sanitized_stem("CONSOLE"), "CONSOLE");
+    }
+
+    /// A name that draws nothing, or draws the rest of itself somewhere else.
+    /// ZWNJ and ZWJ stay: they join letters and emoji.
+    #[test]
+    fn the_invisible_characters_go_and_the_joiners_stay() {
+        assert_eq!(sanitized_stem("Fo\u{202E}nt"), "Font");
+        assert_eq!(sanitized_stem("Fo\u{200B}nt"), "Font");
+        assert_eq!(sanitized_stem("Fo\u{FEFF}nt"), "Font");
+        assert_eq!(sanitized_stem("Fo\u{9}nt"), "Font");
+        assert_eq!(sanitized_stem("\u{200D}"), "typeface");
+        assert_eq!(sanitized_stem("क\u{200D}ष"), "क\u{200D}ष");
+    }
+
+    /// The cap counts Unicode scalars, the unit the macOS port counts, and the
+    /// edges are trimmed again afterwards so a cut cannot leave a dot or a
+    /// space behind.
+    #[test]
+    fn a_stored_name_is_capped_in_scalars_and_retrimmed_after_the_cut() {
+        assert_eq!(sanitized_stem(&"a".repeat(200)).chars().count(), 64);
+        assert_eq!(sanitized_stem(&"字".repeat(200)).chars().count(), 64);
+        assert_eq!(
+            sanitized_stem(&format!("{} tail", "a".repeat(63))),
+            "a".repeat(63),
+        );
     }
 
     #[test]
@@ -299,11 +420,11 @@ mod tests {
         let elsewhere = scratch();
         let source = write(&elsewhere, "Iansui Regular.ttf", 16);
 
-        assert_eq!(copy_in(&library, &source).unwrap(), "iansui-regular.ttf");
-        assert_eq!(copy_in(&library, &source).unwrap(), "iansui-regular-2.ttf");
+        assert_eq!(copy_in(&library, &source).unwrap(), "Iansui Regular.ttf");
+        assert_eq!(copy_in(&library, &source).unwrap(), "Iansui Regular-2.ttf");
         assert_eq!(
             stored_file_names(&library),
-            ["iansui-regular-2.ttf", "iansui-regular.ttf"],
+            ["Iansui Regular-2.ttf", "Iansui Regular.ttf"],
         );
     }
 

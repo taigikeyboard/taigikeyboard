@@ -29,7 +29,7 @@ enum CandidateFontSelection: Hashable, Sendable {
     /// build cannot see".
     static let customRawValue = "custom"
 
-    /// The PostScript name to ask AppKit for, or nil for the system font.
+    /// The PostScript name to ask Core Text for, or nil for the system font.
     var postScriptName: String? {
         switch self {
         case let .builtIn(choice): choice.postScriptName

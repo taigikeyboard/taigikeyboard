@@ -26,14 +26,27 @@ use taigi_windows_storage as storage;
 use windows_reactor::*;
 
 /// A typeface the user added, as the pane holds it.
+///
+/// The library file name is the whole of it: it is the identity, it is what the
+/// settings document stores, and — without its extension — it is what the list
+/// shows. The family the file declares is not held here; it is DirectWrite's
+/// business, read where a text format is built (`ui::render`).
 #[derive(Clone, PartialEq, Eq)]
 pub struct CustomFontRow {
-    /// The library file name — the identity, and what the settings document
-    /// stores.
     pub file_name: String,
-    /// The family the file declares. Untrusted text out of a file the user
-    /// chose: shown, never logged.
-    pub family_name: String,
+}
+
+/// A stored file's name without its extension — what the list shows for a
+/// typeface the user added.
+///
+/// The file's name rather than the name the font file declares (USER
+/// 2026-09-10). A row is something the user has to recognise as the thing they
+/// added, and what they added was a file they chose and named. Untrusted text
+/// still: shown, never logged (`storage::sanitized_stem` built it).
+fn displayed_name(file_name: &str) -> &str {
+    file_name
+        .rsplit_once('.')
+        .map_or(file_name, |(stem, _)| stem)
 }
 
 #[derive(Default)]
@@ -54,7 +67,7 @@ impl FontManagementModel {
                 custom_file_name: None,
             })
             .chain(self.custom_fonts.iter().map(|font| Row {
-                title: font.family_name.clone(),
+                title: displayed_name(&font.file_name).to_owned(),
                 selection: StoredFontSelection::Custom(font.file_name.clone()),
                 custom_file_name: Some(font.file_name.clone()),
             }))
@@ -214,11 +227,11 @@ fn reload(model: &mut FontManagementModel) {
     model.custom_fonts = storage::stored_file_names(&directory)
         .into_iter()
         .filter_map(|file_name| {
-            let info = font_file::inspect(&directory.join(&file_name)).ok()?;
-            Some(CustomFontRow {
-                file_name,
-                family_name: info.family_name,
-            })
+            // Inspected, and the answer thrown away: what the list needs is
+            // the file name it already has, but a file DirectWrite cannot read
+            // is not a row — the same skip the macOS scan makes.
+            font_file::inspect(&directory.join(&file_name)).ok()?;
+            Some(CustomFontRow { file_name })
         })
         .collect();
 }
@@ -348,10 +361,9 @@ const REMOVE_GLYPH: &str = "\u{E738}";
 mod tests {
     use super::*;
 
-    fn custom(file_name: &str, family_name: &str) -> CustomFontRow {
+    fn custom(file_name: &str) -> CustomFontRow {
         CustomFontRow {
             file_name: file_name.to_owned(),
-            family_name: family_name.to_owned(),
         }
     }
 
@@ -359,13 +371,13 @@ mod tests {
         StringResolver::new(taigi_windows_core::strings::DisplayLanguage::English)
     }
 
-    /// Two files may declare the same family name, and the list keys its rows
-    /// by identity for exactly that reason: a duplicate key is a
-    /// reconciliation error, not a second row.
+    /// Two files may be stored under one stem — `mine.ttf` beside `mine.otf` —
+    /// and the list keys its rows by identity for exactly that reason: a
+    /// duplicate key is a reconciliation error, not a second row.
     #[test]
-    fn two_typefaces_with_one_family_name_are_two_rows() {
+    fn two_typefaces_with_one_displayed_name_are_two_rows() {
         let model = FontManagementModel {
-            custom_fonts: vec![custom("mine.ttf", "Iansui"), custom("mine-2.ttf", "Iansui")],
+            custom_fonts: vec![custom("mine.ttf"), custom("mine-2.ttf")],
         };
 
         let rows = model.rows(&strings());
@@ -377,7 +389,7 @@ mod tests {
         assert!(keys.contains(&"custom.mine-2.ttf".to_owned()));
     }
 
-    /// A custom typeface whose family name matches a bundled row's label is
+    /// A custom typeface whose file is named like a bundled row's label is
     /// still its own row.
     #[test]
     fn a_custom_typeface_named_like_a_bundled_one_is_its_own_row() {
@@ -386,7 +398,7 @@ mod tests {
             .resolve(CandidateFontChoice::Iansui.label_key())
             .to_owned();
         let model = FontManagementModel {
-            custom_fonts: vec![custom("mine.ttf", &bundled_label)],
+            custom_fonts: vec![custom(&format!("{bundled_label}.ttf"))],
         };
 
         let rows = model.rows(&strings);
@@ -395,5 +407,31 @@ mod tests {
 
         assert_eq!(keys.len(), unique.len());
         assert_eq!(rows.len(), CandidateFontChoice::ALL.len() + 1);
+    }
+
+    /// The list shows the stored file's name without its extension — the user's
+    /// own spelling, kept through the import (`storage::sanitized_stem`).
+    #[test]
+    fn a_custom_row_is_titled_with_its_file_name_without_the_extension() {
+        let model = FontManagementModel {
+            custom_fonts: vec![custom("SnailFont-Pomacea.ttf"), custom("源樣明體.otf")],
+        };
+
+        let titles: Vec<String> = model
+            .rows(&strings())
+            .into_iter()
+            .skip(CandidateFontChoice::ALL.len())
+            .map(|row| row.title)
+            .collect();
+
+        assert_eq!(titles, vec!["SnailFont-Pomacea", "源樣明體"]);
+    }
+
+    /// A name carrying an interior dot keeps it — only the LAST one separates
+    /// the extension.
+    #[test]
+    fn only_the_last_dot_separates_the_extension() {
+        assert_eq!(displayed_name("jf-openhuninn-2.1.ttf"), "jf-openhuninn-2.1");
+        assert_eq!(displayed_name("noextension"), "noextension");
     }
 }
