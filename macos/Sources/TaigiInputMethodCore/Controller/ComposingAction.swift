@@ -129,9 +129,9 @@ enum ComposingAction: String, CaseIterable, Sendable {
         }
     }
 
-    /// The roster split into the groups the settings pane and the input-source
-    /// menu both draw: the keys that move through the candidates, and the keys
-    /// that end the composition.
+    /// The roster split into the blocks the settings pane draws: the keys that
+    /// move through the candidates, and the keys that end the composition.
+    /// Each is a `Section` of its own there (`ShortcutSettingsView`).
     ///
     /// Written out rather than derived from `allCases` order so that adding a
     /// case has to say which group it belongs to — `ComposingActionTests` pins
