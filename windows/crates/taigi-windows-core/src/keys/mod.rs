@@ -24,7 +24,7 @@ mod tone_input_scheme;
 pub use action::ComposingAction;
 pub use bindings::ComposingKeyBindings;
 pub use chord::{ChordRejection, ComposingKeyChord};
-pub use intent::{CandidateNavigation, ComposingKeyIntent};
+pub use intent::{CandidateNavigation, CaretDirection, ComposingKeyIntent, CARET_CHORD_MODIFIERS};
 pub use language_mode::LanguageMode;
 pub use recorder::{
     evaluate_press, rejection_message_key, RecordedPress, RecorderOutcome, RecorderTier,

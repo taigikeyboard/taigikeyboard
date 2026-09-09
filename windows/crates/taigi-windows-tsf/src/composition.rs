@@ -14,18 +14,20 @@ use crate::wide::to_wide;
 use std::mem::ManuallyDrop;
 use taigi_windows_core::composing::ComposingEffectExecutor;
 use taigi_windows_core::engine::Effect;
-use windows::core::{IUnknown, Interface, Result, BOOL};
+use windows::core::{Error, IUnknown, Interface, Result, BOOL};
+use windows::Win32::Foundation::{E_FAIL, E_INVALIDARG};
 use windows::Win32::System::Com::CoTaskMemFree;
 use windows::Win32::System::Variant::{VariantClear, VARIANT, VT_I4, VT_UNKNOWN};
 use windows::Win32::UI::TextServices::{
     ITfComposition, ITfCompositionSink, ITfContext, ITfContextComposition, ITfInputScope,
     ITfInsertAtSelection, ITfRange, TfActiveSelEnd, GUID_PROP_ATTRIBUTE, GUID_PROP_INPUTSCOPE,
-    INSERT_TEXT_AT_SELECTION_FLAGS, IS_PASSWORD, TF_AE_NONE, TF_ANCHOR_END, TF_IAS_QUERYONLY,
-    TF_SELECTION, TF_SELECTIONSTYLE, TS_SD_READONLY,
+    INSERT_TEXT_AT_SELECTION_FLAGS, IS_PASSWORD, TF_AE_NONE, TF_ANCHOR_END, TF_ANCHOR_START,
+    TF_IAS_QUERYONLY, TF_SELECTION, TF_SELECTIONSTYLE, TS_SD_READONLY,
 };
 
 /// A `TF_SELECTION` collapsed on `range` — how every edit here leaves the
-/// caret: after what was just written.
+/// caret: after what was just written, or where the engine put it inside
+/// the composition (`select_caret`).
 fn collapsed_selection(range: ITfRange) -> TF_SELECTION {
     TF_SELECTION {
         range: ManuallyDrop::new(Some(range)),
@@ -40,11 +42,57 @@ fn collapsed_selection(range: ITfRange) -> TF_SELECTION {
 unsafe fn select_end_of(context: &ITfContext, ec: EditCookie, range: &ITfRange) -> Result<()> {
     let caret = range.Clone()?;
     caret.Collapse(ec, TF_ANCHOR_END)?;
+    select(context, ec, caret)
+}
+
+/// Makes the already-collapsed `caret` the host's selection.
+unsafe fn select(context: &ITfContext, ec: EditCookie, caret: ITfRange) -> Result<()> {
     let selection = collapsed_selection(caret);
     let outcome = context.SetSelection(ec, std::slice::from_ref(&selection));
     // The struct's ManuallyDrop range is ours to release.
     drop(ManuallyDrop::into_inner(selection.range));
     outcome
+}
+
+/// Places the caret `caret_utf16` code units into `range`, which holds
+/// `text_utf16` units — where the engine says it is (`Preedit.caret_utf16`):
+/// the end unless the user stepped it back (`MoveCaret`). Clone, collapse
+/// at the start, shift the end anchor forward, collapse there, select — the
+/// shape khiin-rs (`windows/ime/src/tip/composition_mgr.rs:168-184`) and
+/// KeyKey41 (`StateEditSession.cpp:286-305`) both use.
+///
+/// `ITfRange::ShiftEnd` (msctf.h, MS Learn, read 2026-09-09) reports how far
+/// the anchor really moved and stops at a region boundary. A caret past the
+/// text, or a shift that came up short, is an error rather than a nearer
+/// caret: the host's selection would then disagree with the engine's caret
+/// and the next character would land somewhere the user did not see, so
+/// the session's failure path (abandon the composition) is the honest
+/// answer.
+unsafe fn select_caret(
+    context: &ITfContext,
+    ec: EditCookie,
+    range: &ITfRange,
+    caret_utf16: u32,
+    text_utf16: usize,
+) -> Result<()> {
+    let requested = usize::try_from(caret_utf16)
+        .ok()
+        .filter(|caret| *caret <= text_utf16)
+        .and_then(|caret| i32::try_from(caret).ok())
+        .ok_or_else(|| Error::new(E_INVALIDARG, "composition caret outside the preedit"))?;
+    let caret = range.Clone()?;
+    caret.Collapse(ec, TF_ANCHOR_START)?;
+    let mut shifted = 0i32;
+    caret.ShiftEnd(ec, requested, &mut shifted, std::ptr::null())?;
+    if shifted != requested {
+        log::debug!("composition.caret_shift_short requested={requested} shifted={shifted}");
+        return Err(Error::new(
+            E_FAIL,
+            "composition caret stopped at a region boundary",
+        ));
+    }
+    caret.Collapse(ec, TF_ANCHOR_END)?;
+    select(context, ec, caret)
 }
 
 /// The caret's own range (a clone of the selection, collapsed at its end),
@@ -181,10 +229,11 @@ impl<'a> CompositionEditor<'a> {
         Ok(composition)
     }
 
-    unsafe fn set_preedit(&mut self, text: &str) -> Result<()> {
+    unsafe fn set_preedit(&mut self, text: &str, caret_utf16: u32) -> Result<()> {
         let composition = self.composition_or_start()?;
         let range = composition.GetRange()?;
-        range.SetText(self.ec, 0, &to_wide(text))?;
+        let wide = to_wide(text);
+        range.SetText(self.ec, 0, &wide)?;
         if self.display_attribute_atom != 0 {
             if let Ok(property) = self.context.GetProperty(&GUID_PROP_ATTRIBUTE) {
                 // Clear then set: the clear is what makes TSF notify the
@@ -207,7 +256,12 @@ impl<'a> CompositionEditor<'a> {
                 }
             }
         }
-        select_end_of(self.context, self.ec, &range)
+        // Most keystrokes leave the caret at the end: that is three COM calls
+        // (`select_end_of`), not the five a shift is.
+        if caret_utf16 as usize == wide.len() {
+            return select_end_of(self.context, self.ec, &range);
+        }
+        select_caret(self.context, self.ec, &range, caret_utf16, wide.len())
     }
 
     /// Ends the composition with `text` in its place: one `SetText`, the
@@ -328,7 +382,7 @@ impl ComposingEffectExecutor for CompositionEditor<'_> {
         // context; the composition handle is this editor's own.
         let outcome = unsafe {
             match effect {
-                Effect::UpdatePreedit(text) => self.set_preedit(text),
+                Effect::UpdatePreedit { text, caret_utf16 } => self.set_preedit(text, *caret_utf16),
                 Effect::ClearPreeditWithoutCommit => self.end_with(""),
                 Effect::CommitTextReplacingPreedit(text) => self.end_with(text),
                 // NAMED DIVERGENCE (as macOS `ClientEffectExecutor.swift:56-63`):

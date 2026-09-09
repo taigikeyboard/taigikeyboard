@@ -149,6 +149,35 @@ final class ComposingManagerCandidateTests: XCTestCase {
         )
     }
 
+    /// Under hanji-first the nailed prefix takes no separator, and the
+    /// keystroke after the nail renders it the same way — with the base
+    /// config it used to re-render `台 gi` (found by the composing-caret
+    /// round, 2026-09-09).
+    func testCommitCandidate_nailed_underHanjiFirst_theNextKeystrokeKeepsThePrefixUnspaced() throws {
+        let manager = try TestFixtures.makeComposingManager(
+            settingsProvider: StubEngineSettingsProvider(swapped: true),
+            startingGeneration: TestFixtures.generationCounter.next(),
+        )
+        let executor = RecordingEffectExecutor()
+        composeTaigi(manager, executing: executor)
+        let candidate = try XCTUnwrap(
+            self.candidate(from: manager, requiringHanji: true) { $0 > 0 && $0 < $1 },
+            "taigi must offer a hanji candidate shorter than the whole buffer",
+        )
+        _ = manager.commitCandidate(candidate, executing: executor)
+        let nailed = manager.displayText
+        XCTAssertFalse(nailed.contains(" "), "hanji-first joins without a space — got \(nailed)")
+        executor.clearEffects()
+
+        manager.append("h", executing: executor)
+
+        XCTAssertEqual(manager.displayText, nailed + "h")
+        XCTAssertEqual(
+            executor.effects.first,
+            .updatePreedit(nailed + "h", caretUTF16: (nailed + "h").utf16.count),
+        )
+    }
+
     func testCommitCandidate_nailed_leavesRawInputAsTheTailAndDisplayTextWhole() throws {
         let manager = try makeManager()
         let executor = RecordingEffectExecutor()

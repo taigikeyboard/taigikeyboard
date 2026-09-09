@@ -10,7 +10,8 @@
 use crate::winui::cards;
 use crate::winui::window::{Message, RecorderTarget, ResetScope, SettingsWindow};
 use taigi_windows_core::keys::{
-    rejection_message_key, ComposingAction, ComposingKeyBindings, ComposingKeyChord, ShortcutAction,
+    rejection_message_key, ComposingAction, ComposingKeyBindings, ComposingKeyChord,
+    ShortcutAction, CARET_CHORD_MODIFIERS,
 };
 use taigi_windows_core::strings::{StringKey, StringResolver};
 use windows_reactor::*;
@@ -59,6 +60,16 @@ pub fn view(
             &bindings,
             ComposingAction::GROUPS[1],
         ),
+        // Shown, not recordable (USER 2026-09-09): the caret inside the
+        // composition rides the host's own word-jump chord, and the
+        // classifier reads it before any binding (`ComposingKeyIntent`).
+        cards::row(
+            strings.resolve(StringKey::DesktopShortcutMoveComposingCaret),
+            TextBlock::new()
+                .text(caret_chords_label())
+                .opacity(0.65)
+                .vertical_alignment(VerticalAlignment::Center),
+        ),
         // Both registries at once, and no conflict pass afterwards: the
         // shipped defaults hold no chord in common
         // (`ShortcutSettingsView.swift:578-603`).
@@ -71,6 +82,20 @@ pub fn view(
             context.callback(|()| Message::Reset(ResetScope::Shortcuts)),
         ),
     ))
+}
+
+/// `Ctrl+←  Ctrl+→`, named by the same modifier labels the recorder rows
+/// use, from the modifier the classifier reads (`ShortcutSettingsView.swift`
+/// `caretChordsLabel`).
+fn caret_chords_label() -> String {
+    ["←", "→"]
+        .map(|arrow| {
+            ComposingKeyChord::modifier_labels(CARET_CHORD_MODIFIERS)
+                .chain([arrow.to_owned()])
+                .collect::<Vec<_>>()
+                .join("+")
+        })
+        .join("  ")
 }
 
 fn composing_rows(
