@@ -4,6 +4,7 @@ Two release trains, two version numbers (`docs/architecture/manual-release-notes
 
 ## Desktop — macOS + Windows
 
+- [v3.6.8](changelog/desktop-v3.6.8.md)
 - [v3.6.7](changelog/desktop-v3.6.7.md)
 
 ## Mobile — iOS + Android
