@@ -201,7 +201,8 @@ Report the commit SHA, the release range, and both rendered sections.
 
 Everything below is the maintainer's, on the machine named. This skill runs none
 of it. The release is a **draft** until step 4: no tag, no public download,
-nothing a user can reach.
+nothing a user can reach. Full procedure and rationale:
+`docs/architecture/desktop-release.md`.
 
 **1. Stage the macOS package — on the Mac, from a clean tree:**
 
@@ -228,9 +229,10 @@ stages, packages with Inno Setup, then attaches the installer and its receipt to
 the **same** draft (creating it if Windows goes first). Before this:
 `make windows-check` on the Mac is the host-side gate.
 
-Whichever platform stages first creates the draft; the second must be **at that
-same commit** — it stops if the draft targets a different one, or if the release
-has already been published.
+Whichever platform stages first creates the draft; the second moves the draft's
+target (and any tag) onto its own commit. A release that has already been
+**published** is the exception — it stops rather than adding an asset that would
+be public with no test.
 
 **3. Test what was staged — the whole point of the draft:**
 
@@ -240,27 +242,21 @@ gh release download desktop-<target> --repo taigikeyboard/taigikeyboard --dir ~/
 
 Install both, run the dogfood checklist items this release touches.
 
-**4. Publish, when both pass:**
+**4. Publish, when both pass — the last manual step:**
 
 ```bash
 gh release edit desktop-<target> --repo taigikeyboard/taigikeyboard --draft=false
 ```
 
-This creates the tag and fires `.github/workflows/windows-build.yml` (a
-GitHub-hosted rebuild for SignPath provenance; it does not publish). The
-download becomes public here — the website and installed copies still know
-nothing.
+This creates the tag and fires two workflows:
+`.github/workflows/announce-release.yml`, which proves both downloads are
+anonymously reachable, writes both `_data/*_release.json` to the website in one
+commit and waits for the live appcasts (a platform whose installer is absent is
+skipped with a note); and `.github/workflows/windows-build.yml`, a GitHub-hosted
+rebuild for SignPath provenance that publishes nothing.
 
-**5. Announce — either machine:**
-
-```bash
-make desktop-announce
-```
-
-Proves both downloads are anonymously reachable and hash to their staged
-receipts, writes both `_data/*_release.json` to the website in one commit, and
-waits for the live appcasts. A platform whose installer is not on the release is
-skipped with a note.
+`make desktop-announce` runs the same announcement by hand — for a re-run after
+a failed job, or when its token has expired.
 
 ## Guardrails
 
@@ -269,6 +265,7 @@ skipped with a note.
   `release-mobile`'s surface, and desktop-only work must never enter a store note.
 - Never run `make macos-release`, `make windows-release`, `make desktop-announce`,
   either `release-app.sh`, either `publish-release.sh`, or `announce-release.sh`.
+  The hand-off section tells the maintainer to run them; the skill never does.
 - Never create, move, or push a tag; never create, publish, or un-draft a GitHub
   release.
 - Never request, store, or use signing certificates, notarization credentials,

@@ -102,31 +102,13 @@ published yet" looks like on the wire.
 
 ## Publishing a release
 
-Two halves, with a manual test between them.
-
-`macos/scripts/publish-release.sh` — which `make macos-release` runs straight
-after a successful build — **stages** the package: it checks the package really
-is this app at this version, puts it and a `.sha256` receipt on the **draft**
-release `desktop-<version>` in this repository (the one the Windows installer
-shares), and reads the asset back to prove the upload landed whole. A draft has
-no tag and no public asset URL, so nothing here is announced or reachable. The
-maintainer downloads it, tests it, and publishes the release by hand.
-
-`scripts/announce-release.sh` (`make desktop-announce`) is the half that reaches
-users. It refuses while the release is a draft; fetches the package and its
-receipt **anonymously**, with no GitHub credentials, and requires the bytes to
-hash to what the receipt says — so what a user downloads is what was tested, not
-merely what GitHub currently holds; writes `_data/macos_release.json` (with the
-Windows one, in a single commit); and waits for the live manifest URL to serve
-the new version and package URL. That wait is also what proves the site rendered
-the manifest from what was committed.
-
-Re-running either half after a failure is the intended recovery — a draft is
-added to rather than replaced, and an asset already staged is verified in place.
-
-The order is the point. A manifest published before its download is reachable
+Staged on a draft, tested by hand, published by a person, announced by
+`.github/workflows/announce-release.yml` — the flow, and what each step checks,
+is `docs/architecture/desktop-release.md`. What matters here is that the
+announcement writes `_data/macos_release.json` only after it has downloaded the
+package **anonymously**: a manifest published before its download is reachable
 points every checker at a 404, and a developer's own browser cannot see that
-happening — it is authenticated.
+happening because it is authenticated.
 
-See `docs/architecture/macos-release.md` for the one-time account setup and the
-full release procedure.
+See `docs/architecture/desktop-release.md` for the release procedure and
+`docs/architecture/macos-release.md` for the one-time Apple account setup.

@@ -324,65 +324,39 @@ reading its own payload.
 
 ## Staging and publishing the installer
 
-A desktop release happens in two halves with a manual test between them, and
-nothing reaches a user until a person publishes it. The full table is in
-`macos-release.md` § Publishing the package; the Windows-side steps are:
+The flow — stage on a draft, test, publish, announce — is desktop-wide and lives
+in `desktop-release.md`. The Windows-side commands are:
 
 ```sh
 make windows-release RELEASE_FLAGS=--skip-sign   # stages the .exe on the draft
 ```
 
-Then, once the Mac has staged its package too:
+then, once the Mac has staged its package and both have been tested:
 
 ```sh
 gh release download desktop-<version> --repo taigikeyboard/taigikeyboard --dir ~/Downloads
 # install it, use it, check SmartScreen behaviour on a machine that has never seen it
 gh release edit desktop-<version> --repo taigikeyboard/taigikeyboard --draft=false
-make desktop-announce
 ```
 
-`windows/scripts/publish-release.sh` (run by `--publish`):
+Publishing is the last manual step; the announcement runs itself.
 
-1. Checks the shared preconditions before touching the installer — `gh` present
-   and authenticated, a dotted-integer version, a clean tree, HEAD pushed, and
-   `changelog/desktop-v<version>.md` committed — so a mistake costs a second
-   rather than a signtool round trip.
-2. Refuses a `-dirty` name, an installer whose VERSIONINFO is not
+What `windows/scripts/publish-release.sh` asserts that no other platform can:
+
+1. A `-dirty` name is refused, as is an installer whose VERSIONINFO is not
    `TaigiKeyboard` / the checkout's version, and — when
    `WINDOWS_SIGNING_THUMBPRINT` is set — a signer other than that certificate
    (what a signed installed copy pins). The Authenticode gate (`signtool verify`
-   must trust the installer) stands unless `--allow-unsigned` is passed, which
-   is what `release-app.sh --skip-sign --publish` passes down; naming a
-   certificate AND `--allow-unsigned` is a contradiction and fails. A direct
-   invocation without the flag therefore cannot publish unsigned by accident.
-3. Creates (or attaches to) the **draft** release `desktop-<version>` in this
-   repository — the same draft the macOS package goes on — recording the commit
-   this checkout is at as what publishing will tag, with the whole
-   `changelog/desktop-v<version>.md` as the notes, read out of that commit
-   rather than the working tree. When macOS staged first the draft already
-   exists and the installer is added to it; either way an existing tag must
-   dereference to this same commit and an existing draft must already target it,
-   and a release that has already been published is refused (an asset added to
-   it would be public immediately). A staged asset is never replaced: an
-   identical one is verified in place, and one whose bytes differ stops the run.
-4. Uploads `TaigiKeyboard-<version>.exe.sha256` beside the installer and reads
-   the installer back — authenticated, since a draft has no anonymous URL —
-   requiring its SHA-256 to equal the local file's. That receipt is what the
-   announcement holds the published bytes against, and it is also what a user
-   can check a manual download with, which matters on an unsigned channel.
+   must trust the installer) stands unless `--allow-unsigned` is passed, which is
+   what `release-app.sh --skip-sign --publish` passes down; naming a certificate
+   AND `--allow-unsigned` is a contradiction and fails. A direct invocation
+   without the flag therefore cannot publish unsigned by accident.
+2. `TaigiKeyboard-<version>.exe.sha256` goes up beside the installer. On an
+   unsigned channel that digest is what a user can check a manual download
+   against, and it is what `_data/windows_release.json` publishes as
+   `packageSHA256` — the field `taigi-windows-update::verify::admit` requires
+   before it will install anything.
 
-`scripts/announce-release.sh` (`make desktop-announce`), after the manual
-publish, is what writes `_data/windows_release.json` — now carrying `sha256` —
-and waits until `https://taigikeyboard.tw/appcast/windows.json` serves the new
-version, its installer URL **and** that digest. The manifest every installed
-copy polls is rendered from that data file by the site's own build
-(`windows/updates/README.md` § One published fact, one committed file), so the
-poll is also what proves the site built what was committed. It runs on either
-machine — everything it needs is on the release — and both platforms' data files
-go in one website commit.
-
-Re-running either half after a failure adds to what is there rather than tearing
-it down; the site data is written only after the download is provably reachable.
 The site advertises the download only once its `enable_windows_download` flag is
 on — the data file alone does not.
 

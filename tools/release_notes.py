@@ -20,6 +20,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 MAX_STORE_CHARACTERS = 500
+# The store text is what a user reads in a list; past that it stops being read.
+# The real ceiling is MAX_STORE_CHARACTERS, which Google Play enforces — this
+# one is a shape check, loose enough to let a release that genuinely did eight
+# visible things say so.
+MAX_ENTRIES = 8
 ALLOWED_PREFIXES = ("New:", "Fixed:", "Improved:", "Changed:", "Updated:")
 FORBIDDEN_MARKETING_PHRASES = (
     "#1",
@@ -137,8 +142,10 @@ def load_notes(repo_root: Path, version: str, platform: str) -> PlatformNotes:
 
 def validate_notes(notes: PlatformNotes, path: Path | None = None) -> None:
     label = str(path) if path is not None else notes.platform
-    if not 1 <= len(notes.entries) <= 5:
-        raise ReleaseNotesError(f"{label}: expected 1-5 non-empty entries")
+    if not 1 <= len(notes.entries) <= MAX_ENTRIES:
+        raise ReleaseNotesError(
+            f"{label}: expected 1-{MAX_ENTRIES} non-empty entries"
+        )
 
     for index, entry in enumerate(notes.entries, start=1):
         if entry.startswith(("-", "*", "•")):

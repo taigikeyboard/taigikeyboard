@@ -82,13 +82,18 @@ Run the `upgrade-check` procedure for `<base-tag> → HEAD`:
 
 ## 3. Rebuild release artifacts
 
-Run sequentially and stop on failure:
+Only what the release range touched (`CLAUDE.md` § stale-artifact gate). `make
+dict` is a ~2 minute pass and only the dictionary sources can invalidate it;
+running it on a range that never touched them rebuilds a byte-identical
+artifact.
 
 ```bash
-RELEASE_VERSION=<target> make dict
-make i18n
-make build
+RELEASE_VERSION=<target> make dict   # only if the range touched dictionary/
+make i18n                            # only if the range touched i18n/
+make build                           # if the range touched engine/ or dictionary/
 ```
+
+Stop on the first failure.
 
 ## 4. Update release content
 
@@ -108,7 +113,8 @@ If target content already exists, merge new information by topic. Refine an exis
 Canonical store-note rules:
 
 - English prose; Taigi terms and examples may retain 漢字 / TL / POJ / TPS.
-- One to five non-empty entries without source bullet markers.
+- One to eight non-empty entries without source bullet markers. The 500-character
+  ceiling usually binds first.
 - Start each entry with `New:`, `Fixed:`, `Improved:`, `Changed:`, or `Updated:`.
 - End each entry with punctuation.
 - Include only concrete user-visible changes.

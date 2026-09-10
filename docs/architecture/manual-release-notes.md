@@ -59,7 +59,7 @@ python3 tools/release_notes.py check-versions --train mobile --version vMAJOR.MI
 python3 tools/release_notes_test.py
 ```
 
-The validator requires one to five factual user-visible entries, approved prefixes, terminal punctuation, platform-safe wording, and at most 500 rendered Unicode characters. The 500-character ceiling satisfies Google Play and keeps the Apple text concise.
+The validator requires one to eight factual user-visible entries, approved prefixes, terminal punctuation, platform-safe wording, and at most 500 rendered Unicode characters. The 500-character ceiling is Google Play's and is the real limit; the entry count is a shape check.
 
 ## Copy for manual paste
 

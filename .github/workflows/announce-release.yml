@@ -1,0 +1,57 @@
+name: Announce desktop release
+
+# The second half of a desktop release, run for you.
+#
+# `make macos-release` / `make windows-release` stage each platform's installer
+# on a DRAFT release that no user can reach. You download it, test it, and press
+# Publish. That publish fires this: it proves each installer downloads
+# anonymously, then writes the website data `appcast/{macos,windows}.json` is
+# rendered from, and waits until the live appcasts serve it. Nothing else is
+# left to do by hand.
+#
+# `make desktop-announce` runs the identical script locally — for a re-run after
+# a failure here, or when the token below has expired.
+on:
+  release:
+    types: [published]
+  # For a re-run: the release is already published, so this is idempotent.
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Desktop version to announce (defaults to the checkout's)
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  announce:
+    name: website + appcasts
+    runs-on: ubuntu-latest
+    # Desktop releases only. A mobile release published here — the mobile train
+    # ships through the stores, so there should never be one — carries no
+    # desktop installer, and the site data is the desktop train's.
+    if: >-
+      github.repository == 'taigikeyboard/taigikeyboard' &&
+      (github.event_name != 'release' ||
+       startsWith(github.event.release.tag_name, 'desktop-'))
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Announce
+        env:
+          # The script reads this repository's release and commits to the
+          # WEBSITE repository, which the workflow's own GITHUB_TOKEN cannot
+          # reach. One fine-grained token covering both — taigikeyboard
+          # (Contents: read) and taigikeyboard.github.io (Contents: write) —
+          # stored as the SITE_CONTENTS_TOKEN secret. When it expires this job
+          # fails and `make desktop-announce` still works from a machine with
+          # `gh` logged in.
+          GH_TOKEN: ${{ secrets.SITE_CONTENTS_TOKEN }}
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            bash scripts/announce-release.sh --version "${{ inputs.version }}"
+          else
+            bash scripts/announce-release.sh
+          fi
