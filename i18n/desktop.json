@@ -108,11 +108,11 @@
         ]
       },
       "values": {
-        "hanji": "切換輸入模式",
-        "tailo": "tshiat-uānn su-ji̍p bôo-sik",
-        "poj": "chhiat-ōaⁿ su-ji̍p bô͘-sek",
-        "en": "Switch Input Mode",
-        "ja": "入力モードを切り替える"
+        "hanji": "切換台羅/白話字",
+        "tailo": "tshiat-uānn Tâi-lô / Pe̍h-ōe-jī",
+        "poj": "chhiat-ōaⁿ Tâi-lô / Pe̍h-ōe-jī",
+        "en": "Switch Tâi-lô or Pe̍h-ōe-jī",
+        "ja": "台羅／白話字を切り替える"
       }
     },
     "shortcutToggleTranslateSwapped": {
@@ -127,11 +127,11 @@
         ]
       },
       "values": {
-        "hanji": "切換漢字/羅馬字",
-        "tailo": "tshiat-uānn hàn-jī / lô-má-jī",
-        "poj": "chhiat-ōaⁿ hàn-jī / lô-má-jī",
-        "en": "Switch Hanji or Romanization",
-        "ja": "漢字／ローマ字を切り替える"
+        "hanji": "切換漢字/羅馬字模式",
+        "tailo": "tshiat-uānn hàn-jī / lô-má-jī bôo-sik",
+        "poj": "chhiat-ōaⁿ hàn-jī / lô-má-jī bô͘-sek",
+        "en": "Switch Hanji or Romanization Mode",
+        "ja": "漢字／ローマ字モードを切り替える"
       }
     },
     "shortcutCycleCandidateDisplayMode": {
@@ -222,11 +222,11 @@
         ]
       },
       "values": {
-        "hanji": "臨時拍羅馬字/漢字",
-        "tailo": "lîm-sî phah lô-má-jī / hàn-jī",
-        "poj": "lîm-sî phah lô-má-jī / hàn-jī",
-        "en": "Type Roman/Hanji Temporarily",
-        "ja": "一時的にローマ字/漢字で入力"
+        "hanji": "漢字模式輸出羅馬字/羅馬字模式輸出漢字",
+        "tailo": "hàn-jī bôo-sik tshut lô-má-jī / lô-má-jī bôo-sik tshut hàn-jī",
+        "poj": "hàn-jī bô͘-sek chhut lô-má-jī / lô-má-jī bô͘-sek chhut hàn-jī",
+        "en": "Output Romanization in Hanji Mode, Hanji in Romanization Mode",
+        "ja": "漢字モードでローマ字、ローマ字モードで漢字を出力"
       }
     },
     "telexGuideTitle": {
@@ -997,11 +997,11 @@
         ]
       },
       "values": {
-        "hanji": "臨時拍羅馬字/漢字",
-        "tailo": "lîm-sî phah lô-má-jī / hàn-jī",
-        "poj": "lîm-sî phah lô-má-jī / hàn-jī",
-        "en": "Type Roman/Hanji Temporarily",
-        "ja": "一時的にローマ字/漢字で入力"
+        "hanji": "漢字模式輸出羅馬字/羅馬字模式輸出漢字",
+        "tailo": "hàn-jī bôo-sik tshut lô-má-jī / lô-má-jī bôo-sik tshut hàn-jī",
+        "poj": "hàn-jī bô͘-sek chhut lô-má-jī / lô-má-jī bô͘-sek chhut hàn-jī",
+        "en": "Output Romanization in Hanji Mode, Hanji in Romanization Mode",
+        "ja": "漢字モードでローマ字、ローマ字モードで漢字を出力"
       }
     },
     "shortcutUnbound": {

@@ -45,7 +45,7 @@ final class ShortcutActionsTests: XCTestCase {
     func testEveryAction_readsAsAWholePhraseInEveryLanguage() {
         XCTAssertEqual(
             labels(),
-            ["切換輸入模式", "切換候選詞顯示", "切換漢字/羅馬字", "拍開符號選單", "拍開設定選單", "拍開 Telex 說明"],
+            ["切換台羅/白話字", "切換候選詞顯示", "切換漢字/羅馬字模式", "拍開符號選單", "拍開設定選單", "拍開 Telex 說明"],
         )
         XCTAssertEqual(
             labels(.japanese),
