@@ -119,16 +119,29 @@ Two desktop-specific upgrade checks on top of it:
 
 ## 3. Rebuild release artifacts
 
-Only when the range touched `engine/` or `dictionary/` (`CLAUDE.md` §
-stale-artifact gate). The release scripts deliberately do **not** rebuild them:
-a release from a clean tree ships exactly what is committed, so a stale
-committed artifact ships stale.
+**Always**, not only when the range touched them. The engine binaries a platform
+links are generated and gitignored (`macos/RustEngine/RustTaigi.xcframework/`,
+`android/app/src/main/jniLibs/**`), so nothing in the tree says which commit the
+local copy was built from — a clean tree proves nothing about them, and a
+machine that last built on another branch would ship that. Rebuilding costs
+seconds against a warm target directory.
 
 ```bash
-RELEASE_VERSION=<target> make dict   # only if dictionary/ moved
 make i18n
 make build
 ```
+
+`make dict` is the exception: run it only when the range touched `dictionary/`
+sources. Its outputs are committed, and rebuilding them produces byte-different
+`association.bin` / `dictionary.bin` on every run, so an unconditional pass
+would put noise in the release commit.
+
+```bash
+RELEASE_VERSION=<target> make dict   # only if dictionary/ sources moved
+```
+
+Commit whatever the rebuild changed before staging: staging refuses a dirty
+tree.
 
 ## 4. Update release content
 

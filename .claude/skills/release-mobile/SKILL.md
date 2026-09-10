@@ -82,18 +82,25 @@ Run the `upgrade-check` procedure for `<base-tag> → HEAD`:
 
 ## 3. Rebuild release artifacts
 
-Only what the release range touched (`CLAUDE.md` § stale-artifact gate). `make
-dict` is a ~2 minute pass and only the dictionary sources can invalidate it;
-running it on a range that never touched them rebuilds a byte-identical
-artifact.
+**Always**, not only when the range touched them. The engine binaries iOS and
+Android link are generated and gitignored, so a clean tree says nothing about
+which commit the local copies came from; a machine that last built on another
+branch would ship that.
 
 ```bash
-RELEASE_VERSION=<target> make dict   # only if the range touched dictionary/
-make i18n                            # only if the range touched i18n/
-make build                           # if the range touched engine/ or dictionary/
+make i18n
+make build
 ```
 
-Stop on the first failure.
+`make dict` is the exception: run it only when the range touched `dictionary/`
+sources. Its outputs are committed and rebuild byte-differently every run, so an
+unconditional pass would put noise in the release commit.
+
+```bash
+RELEASE_VERSION=<target> make dict   # only if dictionary/ sources moved
+```
+
+Stop on the first failure, and commit whatever the rebuild changed.
 
 ## 4. Update release content
 

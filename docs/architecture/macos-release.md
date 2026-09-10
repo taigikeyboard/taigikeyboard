@@ -91,16 +91,22 @@ existing profile should be reused.
 ## Cutting a release
 
 ```sh
-make build          # only when engine/ or dictionary/ sources moved
+make i18n
+make build          # always: see below
 make macos-release
 ```
 
-`make macos-release` deliberately does not rebuild the Rust engine or the
-dictionary. Both platforms link pre-built artifacts that are committed to the
-repository, so a release from a clean tree ships exactly what is committed —
-but nothing can prove those committed artifacts were regenerated from the
-committed sources. That is what the stale-binary gate in `CLAUDE.md` is for, and
-it stays a manual step.
+`make macos-release` does not rebuild the engine itself, and the rebuild above
+is not optional. The xcframework this app links
+(`macos/RustEngine/RustTaigi.xcframework/`) is generated and gitignored, so
+**a clean tree says nothing about it** — it is not in the tree. A machine whose
+last build was on another branch, or before the newest engine commit, will
+package that silently: signed, notarized and shipped, with every gate passing.
+
+(That has not always been true. Until 2026-09-07 the engine binaries were
+committed, and "a release from a clean tree ships exactly what is committed" was
+a complete argument. The repository-slimming round stopped committing them, and
+the release flow's assumption outlived the fact.)
 
 What the script does, in order:
 

@@ -192,7 +192,8 @@ does not ship it, and every `make` target below needs it), `protoc` (the engine'
 ## Cutting a release
 
 ```sh
-make build              # only when engine/ or dictionary/ sources moved
+make i18n
+make build                   # regenerates the platform protos
 make version-desktop 3.7.0   # macOS + Windows together, at the repository root
 make windows-release RELEASE_FLAGS=--skip-sign   # from Git Bash, on the Windows machine
 ```
@@ -200,9 +201,11 @@ make windows-release RELEASE_FLAGS=--skip-sign   # from Git Bash, on the Windows
 That stages the installer on a draft release nobody can reach. Testing,
 publishing and announcing are in § Staging and publishing the installer below.
 
-`make windows-release` does not rebuild the engine or the dictionary: both are
-pre-built artifacts committed to the repository (`CLAUDE.md` § stale-binary
-gate), and a release from a clean tree ships exactly what is committed.
+`make windows-release` does not rebuild the engine, and mostly does not need to:
+the TSF service and the settings exe compile the engine crates from source
+through cargo, so they cannot link a stale copy the way the Mac's xcframework
+can. The generated protos are the exception, which is what `make build` above
+covers.
 
 What `windows/scripts/release-app.sh` does, in order:
 
