@@ -20,6 +20,7 @@
 
 use crate::presentation::PageMessage;
 use crate::winui::cards;
+use crate::winui::list_selection::{selectable_list, SettledRows};
 use crate::winui::window::{Message as WindowMessage, SettingsWindow};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -123,6 +124,8 @@ pub enum Message {
     JobFinished(u64, Box<JobOutcome>),
     /// The job at this generation has run long enough to say so.
     ShowBusy(u64),
+    /// What the list on screen holds, as `list_selection` reports it.
+    RowsApplied(Option<Vec<String>>),
 }
 
 /// What a load hands back: the page it fetched, or why it could not.
@@ -171,6 +174,9 @@ pub struct CustomDictionaryModel {
     /// The row the list has selected, by ID — never by index, which moves
     /// under a reload.
     selected_id: Option<String>,
+    /// Which rows the list on screen holds, so the selection index reaches
+    /// XAML a render after the rows it counts do (`list_selection`).
+    settled: SettledRows,
     editing: Option<EditingRow>,
     /// The destructive command waiting on its dialog, if any.
     confirming: Option<Confirm>,
@@ -322,9 +328,17 @@ pub fn update(
             }
         }
         Message::Select(index) => {
-            model.selected_id = index
-                .and_then(|index| model.rows.get(index))
-                .map(|row| row.id.clone());
+            // The index names a row of the list ON SCREEN, which a reload may
+            // already have renumbered here — so it is resolved through the
+            // rows XAML holds (`list_selection`). A cleared selection is not
+            // acted on: single-select gives the user no way to clear one, so
+            // the `-1` is the handover's own, and the row the user chose stays
+            // chosen. A row a reload really dropped is cleared where that
+            // reload lands (`Message::Loaded`).
+            let Some(id) = index.and_then(|index| model.settled.key_at(index)) else {
+                return;
+            };
+            model.selected_id = Some(id.to_owned());
         }
         Message::Add => {
             model.editing = Some(EditingRow {
@@ -453,6 +467,7 @@ pub fn update(
                 model.is_busy_shown = true;
             }
         }
+        Message::RowsApplied(rows) => model.settled.report(rows),
     }
 }
 
@@ -796,15 +811,23 @@ fn entry_table(
         .collect::<Vec<_>>();
     let has_selection = model.selected_row().is_some();
     // The list itself stays live while a job runs: selecting a row writes
-    // nothing, and the verbs over it are what a job turns off.
-    let list = ListView::new()
-        .selection_mode(ListViewSelectionMode::Single)
-        .selected_index(model.selected_index())
-        .on_selection_changed(
-            context.callback(|index| WindowMessage::CustomDictionary(Message::Select(index))),
-        )
-        .height(TABLE_HEIGHT)
-        .collection_slot(ListViewSlot::Items, items);
+    // nothing, and the verbs over it are what a job turns off. The selection
+    // index reaches XAML a render after the rows it counts (`list_selection`);
+    // the verbs above stay on the stored selection.
+    let list = selectable_list(
+        "customDictionary.rows",
+        &model.settled,
+        items,
+        model.selected_index(),
+        ListView::new()
+            .selection_mode(ListViewSelectionMode::Single)
+            .on_selection_changed(
+                context.callback(|index| WindowMessage::CustomDictionary(Message::Select(index))),
+            )
+            .height(TABLE_HEIGHT),
+        context,
+        |rows| WindowMessage::CustomDictionary(Message::RowsApplied(rows)),
+    );
     // OVER the list, not in place of it (`CustomDictionaryPage.swift:363-371`):
     // the columns and the controls under them stay put while a filter is
     // narrowed to nothing and widened again. The sentence is only ever there

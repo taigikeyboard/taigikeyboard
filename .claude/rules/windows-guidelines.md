@@ -45,6 +45,23 @@ shared engine). Read before modifying Windows code. Design record: `docs/archite
   `winui::pane_planning` against the reactor's `RecordingRuntime` — **a new pane belongs in that
   test.** The net reaches each pane's LAUNCH state only: a subtree behind user state (a dialog,
   a busy overlay, a search result row) is `View::empty()` there and is still dogfood-only.
+- **An index-valued property must never name a row the render is still inserting.** Reactor plans a
+  node's PROPERTIES before its children, so `ListView::selected_index` reaches XAML ahead of the
+  items of the same render; an index the native list does not number yet is `E_INVALIDARG`, and
+  reactor turns a failed native command into `std::process::abort()` — a silent `0xc0000409` with
+  no panic and nothing in the log but Windows Error Reporting. It killed the settings window the
+  first time a user added a custom typeface (2026-09-11), five bundled rows on screen and index 5
+  asked for. Every dynamic list goes through `winui::list_selection`: the render that changes the
+  rows draws no selection, an effect reports the rows once the native commands applied, and the
+  render after that carries the index — which also means a selection EVENT is resolved through the
+  rows XAML holds (`SettledRows::key_at`), never through the model's newer ones. The effect's
+  cleanup withdraws the report, so a list rebuilt with its pane starts unsettled. Reactor has the
+  same guard on its OWN re-apply path — `with_controlled_collection_preserved` skips an index the
+  collection does not number (`native/winui/mod.rs:2986-3013`) — and only the direct `SetProperty`
+  at `mod.rs:1955-1977` sets one unchecked; upstream that is a one-comparison fix, but the pin is
+  a SHA and a bump is its own round, so `list_selection` is what holds until then. The same hazard
+  belongs to every children-fed, index-selected element (`GridView`, `FlipView`, `Pivot`,
+  `TabView`, `RadioButtons`) — none is used today; give the next one the same treatment.
 - **A lang-bar item's menu is drawn by us, not by TSF.** The Windows 8+ taskbar input indicator
   hosts `GUID_LBI_INPUTMODE` and routes clicks to `ITfLangBarItemButton::OnClick`; it never drives
   `InitMenu`, so a `TF_LBI_STYLE_BTN_MENU` item shows nothing at all there. The item is a
