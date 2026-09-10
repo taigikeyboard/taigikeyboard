@@ -222,11 +222,11 @@
         ]
       },
       "values": {
-        "hanji": "漢字模式輸出羅馬字/羅馬字模式輸出漢字",
-        "tailo": "hàn-jī bôo-sik tshut lô-má-jī / lô-má-jī bôo-sik tshut hàn-jī",
-        "poj": "hàn-jī bô͘-sek chhut lô-má-jī / lô-má-jī bô͘-sek chhut hàn-jī",
-        "en": "Output Romanization in Hanji Mode, Hanji in Romanization Mode",
-        "ja": "漢字モードでローマ字、ローマ字モードで漢字を出力"
+        "hanji": "迒模式輸出",
+        "tailo": "hānn bôo-sik su-tshut",
+        "poj": "hāⁿ bô͘-sek su-chhut",
+        "en": "Cross-Mode Output",
+        "ja": "モード横断出力"
       }
     },
     "telexGuideTitle": {
@@ -997,11 +997,11 @@
         ]
       },
       "values": {
-        "hanji": "漢字模式輸出羅馬字/羅馬字模式輸出漢字",
-        "tailo": "hàn-jī bôo-sik tshut lô-má-jī / lô-má-jī bôo-sik tshut hàn-jī",
-        "poj": "hàn-jī bô͘-sek chhut lô-má-jī / lô-má-jī bô͘-sek chhut hàn-jī",
-        "en": "Output Romanization in Hanji Mode, Hanji in Romanization Mode",
-        "ja": "漢字モードでローマ字、ローマ字モードで漢字を出力"
+        "hanji": "迒模式輸出",
+        "tailo": "hānn bôo-sik su-tshut",
+        "poj": "hānn bô͘-sek su-chhut",
+        "en": "Cross-Mode Output",
+        "ja": "モード横断出力"
       }
     },
     "shortcutUnbound": {
