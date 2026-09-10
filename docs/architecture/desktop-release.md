@@ -13,7 +13,7 @@ A desktop release happens in two halves with a manual test between them, and
 
 | | Runs | Does |
 |---|---|---|
-| Stage both | `make desktop-release` (this Mac) | Builds, signs, notarizes and stages the `.pkg` here, then drives the Windows box over `ssh win` — moving its checkout to this commit — to build, package and attach the `.exe` to the same draft. Both halves or neither, from one commit, onto a draft it re-creates each run (`scripts/stage-desktop.sh`) |
+| Stage both | `make desktop-release` (this Mac) | Builds, signs, notarizes and stages the `.pkg` here, then dispatches `windows-build.yml` and waits: a GitHub-hosted runner builds the `.exe` from the same commit and attaches it to the same draft. Both halves or neither, onto a draft it re-creates each run (`scripts/stage-desktop.sh`) |
 | **Test** | the maintainer | Open the draft's page — a draft is visible in the web UI to anyone who can write the repository — download both assets, install, use them |
 | **Publish** | the maintainer | **Publish release** on that same page (or `gh release edit desktop-<version> --draft=false`). This is what creates the tag |
 | Announce | **automatic** — publishing fires `.github/workflows/announce-release.yml` | Proves both downloads are anonymously reachable, writes both `_data/*_release.json`, waits for the live appcasts. `make desktop-announce` is the same script, for a re-run |

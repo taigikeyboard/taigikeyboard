@@ -1,15 +1,12 @@
 #!/usr/bin/env bash
 # Stage both desktop installers on this version's draft release: the package
-# here, the installer on the Windows box over ssh.
+# built here, the installer built on a GitHub-hosted runner.
 #
 # Usage: stage-desktop.sh   (no options — a release is both halves or neither)
 #
 # The two builds cannot share a machine — one needs Xcode and a Developer ID,
-# the other MSVC and Inno Setup — so this drives the second over `ssh win`
-# rather than pretending they are one build. Everything it runs is the same
-# `make macos-release` / `make windows-release` a person would type; what it
-# adds is putting the box on the same commit first, and failing loudly when it
-# cannot.
+# the other MSVC and Inno Setup — so this runs the first here and dispatches the
+# second to CI, then waits for it. Both build from this commit.
 #
 # Nothing here reaches a user: both halves stage on a DRAFT release
 # (`docs/architecture/desktop-release.md`). Publishing stays a person's.
@@ -24,9 +21,6 @@
 # holding two installers built from different commits — the exact thing the
 # tag is supposed to describe. Re-running the whole thing is the recovery.
 #
-# The box's checkout is moved to this commit with a detached checkout, which is
-# what `desktop_release_preflight` requires of it: committed clean, and an
-# ancestor of `origin/main`.
 
 set -euo pipefail
 
@@ -36,12 +30,6 @@ fail() {
 }
 
 REPOSITORY_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-
-# The box, and where its clone lives. Overridable for a second machine without
-# editing this file.
-WINDOWS_SSH_HOST="${WINDOWS_SSH_HOST:-win}"
-WINDOWS_REPO_DIR="${WINDOWS_REPO_DIR:-C:\\Users\\minsi\\Workspace\\taigikeyboard}"
-WINDOWS_BASH="${WINDOWS_BASH:-C:\\Program Files\\Git\\bin\\bash.exe}"
 
 [[ $# -eq 0 ]] || {
     echo "error: stage-desktop.sh takes no arguments" >&2
@@ -90,80 +78,43 @@ echo "==> macOS — build, sign, notarize, stage (this Mac)"
 make -C "$REPOSITORY_DIR" macos-release
 
 echo ""
-echo "==> Windows — $WINDOWS_SSH_HOST:$WINDOWS_REPO_DIR"
-ssh -o ConnectTimeout=15 -o BatchMode=yes "$WINDOWS_SSH_HOST" "echo ok" > /dev/null 2>&1 ||
-    fail "$WINDOWS_SSH_HOST is not reachable — power the box on and run this again; a release is both installers or neither"
+echo "==> Windows — GitHub-hosted runner"
 
-# One bash -lc: the box's default shell is PowerShell, and `make` needs Git
-# Bash. GIT_SSH_COMMAND is what stops the fetch below from hanging — an ssh
-# git spawns inside this ssh session inherits its stdout and both wait
-# (reference_windows_dev_box: "nested ssh hangs").
-# Built in a temporary file rather than a command substitution: bash 3.2 —
-# what macOS ships and what runs this — mishandles a heredoc inside `$( )`,
-# and the body leaked into this script as code (2026-09-10).
-remote_body="$(mktemp)"
-trap 'rm -f "$remote_body"' EXIT
-cat > "$remote_body" <<'REMOTE'
-set -euo pipefail
-cd "$(cygpath "$WINDOWS_REPO_DIR")"
-export GIT_SSH_COMMAND="ssh -o BatchMode=yes -o ConnectTimeout=15"
-
-# The checkout first: everything below reads a script out of this tree, so it
-# has to be the tree of the commit being staged, not whatever the box was
-# left on (2026-09-10: unlock ran from the previous checkout, which had no
-# such mode).
-git fetch --quiet origin main
-git checkout --quiet --detach "$SOURCE_COMMIT"
-git status --porcelain --ignore-submodules=none | head -5
-
-# An ssh session is not the interactive shell the box's PATH was set up for:
-# the MSVC tools the release gates need (dumpbin's import-table check, and the
-# linker behind cargo) are added by the Visual Studio environment, which only a
-# developer prompt or a login shell runs. Ask vswhere where the toolchain is
-# and put its x64 binaries on PATH rather than hard-coding a version.
-if ! command -v dumpbin > /dev/null; then
-    vs_root="$('/c/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe' \
-        -latest -products '*' -property installationPath | tr -d '\r')"
-    [ -n "$vs_root" ] || { echo "vswhere found no Visual Studio installation" >&2; exit 1; }
-    msvc_bin="$(ls -d "$(cygpath "$vs_root")"/VC/Tools/MSVC/*/bin/Hostx64/x64 2> /dev/null | sort -V | tail -1)"
-    [ -n "$msvc_bin" ] || { echo "no MSVC x64 tools under $vs_root" >&2; exit 1; }
-    export PATH="$msvc_bin:$PATH"
-fi
-
-# The dev TIP is registered in place from this build tree, so a release build
-# has to overwrite a DLL that explorer — or any host that has typed Taigi since
-# — still has mapped (`os error 5`). `install-dev.ps1 unlock` renames both names
-# the linker writes through out of the way, which Windows allows even for a
-# loaded file.
+# The installer is built by `.github/workflows/windows-build.yml` on a
+# GitHub-hosted Windows runner, not on the maintainer's box. That box is a
+# development machine: its dev TIP is registered from the build tree, so a
+# release build has to link over a DLL something still has mapped, and its App
+# Control policy blocks freshly built binaries outright. Both are properties of
+# that machine rather than of the release, and a clean runner has neither.
 #
-# The build stays in the SHARED target directory on purpose. A release-only
-# CARGO_TARGET_DIR removes the contention but means every build-script binary is
-# newly created, and this box's App Control policy blocks those outright
-# (`os error 4551`). Reusing the tree it has already admitted is what works
-# here.
+# workflow_dispatch takes a branch or tag, never a bare SHA, so the commit being
+# staged has to be what `main` points at — which it is, since the release prep
+# was just pushed there.
+git -C "$REPOSITORY_DIR" fetch --quiet origin main
+[[ "$SOURCE_COMMIT" == "$(git -C "$REPOSITORY_DIR" rev-parse FETCH_HEAD)" ]] ||
+    fail "HEAD (${SOURCE_COMMIT:0:7}) is not origin/main's tip — the Windows build runs from a branch, so push this commit to main first"
 
-powershell.exe -NoProfile -ExecutionPolicy Bypass \
-    -File windows/scripts/install-dev.ps1 unlock
-make windows-release RELEASE_FLAGS=--skip-sign
-REMOTE
+dispatched_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+gh workflow run windows-build.yml --repo "$RELEASE_REPOSITORY" --ref main ||
+    fail "cannot dispatch the Windows build"
 
+# `gh workflow run` returns nothing that identifies the run, so find the one
+# built from this commit and started after the dispatch.
+echo "  waiting for the run to appear"
+run_id=""
+for _ in $(seq 1 30); do
+    run_id="$(gh run list --repo "$RELEASE_REPOSITORY" --workflow windows-build.yml \
+        --json databaseId,headSha,createdAt,event \
+        --jq "[.[] | select(.headSha == \"$SOURCE_COMMIT\" and .event == \"workflow_dispatch\" and .createdAt >= \"$dispatched_at\")] | first | .databaseId // empty")"
+    [[ -n "$run_id" ]] && break
+    sleep 5
+done
+[[ -n "$run_id" ]] ||
+    fail "the dispatched run never appeared — check $RELEASE_REPOSITORY's Actions tab"
 
-# `bash -s` reads the script from stdin. Passing it as an argument instead
-# means PowerShell — the box's login shell — parses it first, and it split a
-# multi-line script into positional arguments while still exiting 0, so the
-# failure read as success (2026-09-10, first run of this script).
-{
-    # Single-quoted: the path is a Windows one, and bash eats the backslashes
-    # out of an unquoted assignment (C:\Users\minsi… became C:Usersminsi…).
-    printf "WINDOWS_REPO_DIR='%s'\nSOURCE_COMMIT='%s'\n" "$WINDOWS_REPO_DIR" "$SOURCE_COMMIT"
-    cat "$remote_body"
-} | ssh "$WINDOWS_SSH_HOST" "& '$WINDOWS_BASH' -s" ||
-    fail "staging on $WINDOWS_SSH_HOST failed — the log above is the box's; fix it and run this again, which re-stages both halves"
-
-# PowerShell's exit status is not proof: ask the release what it now holds.
-# Whatever the remote log said, an installer that is not on the draft is not
-# staged.
-WINDOWS_ASSET_NAME="TaigiKeyboard-$DESKTOP_VERSION.exe"
+echo "  https://github.com/$RELEASE_REPOSITORY/actions/runs/$run_id"
+gh run watch "$run_id" --repo "$RELEASE_REPOSITORY" --exit-status ||
+    fail "the Windows build failed — its log is at the URL above; fix it and run this again, which re-stages both halves"
 
 # The draft's own page, from the API: a draft has no tag, so its URL is not the
 # `releases/tag/<tag>` address a published release has. It is where the

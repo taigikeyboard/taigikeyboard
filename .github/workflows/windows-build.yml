@@ -14,6 +14,12 @@ name: Windows build
 # It does NOT publish. `windows/scripts/publish-release.sh` stages the installer
 # a release actually ships on, and `scripts/announce-release.sh` announces it.
 on:
+  # How a release stages the Windows installer: `scripts/stage-desktop.sh`
+  # dispatches this after staging the macOS package, and the run attaches its
+  # installer to the same draft. The maintainer's own box is not in the release
+  # path — it is a development machine, with a dev install registered in its
+  # build tree and an App Control policy that blocks freshly built binaries,
+  # and fighting both over ssh is what this replaces.
   workflow_dispatch:
   # Release-only. A desktop release is staged as a draft and published by hand;
   # publishing is what creates the `desktop-<version>` tag, and this fires on
@@ -33,7 +39,9 @@ on:
     types: [published]
 
 permissions:
-  contents: read
+  # Attaching the installer to the draft release is a write; the run's own
+  # GITHUB_TOKEN can do it inside this repository, so no PAT is involved.
+  contents: write
 
 concurrency:
   group: windows-build-${{ github.ref }}
@@ -199,3 +207,47 @@ jobs:
           if-no-files-found: error
           include-hidden-files: true
           retention-days: 14
+
+      # Only a dispatched run stages a release. A run triggered by `release:
+      # published` is the provenance rebuild — the release it would attach to
+      # is already public, and its installer is the one people are downloading.
+      - name: Attach the installer to the draft release
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version="$(awk '
+              /^\[workspace\.package\]/ { inside = 1; next }
+              inside && /^\[/ { exit }
+              inside && /^version *=/ { gsub(/[" ]/, "", $3); print $3; exit }
+          ' windows/Cargo.toml)"
+          tag="desktop-$version"
+
+          # The draft is the macOS half's; this run joins it. A published
+          # release means the staging order was broken — an asset added to it
+          # would be public with no test — and no release at all means the Mac
+          # has not staged yet.
+          state="$(gh release view "$tag" --json isDraft --jq '.isDraft|tostring' 2>&1)" || {
+              echo "no release $tag: $state" >&2
+              echo "The macOS half stages first and creates the draft." >&2
+              exit 1
+          }
+          [ "$state" = true ] || {
+              echo "$tag is already published — an asset added now would be public with no test" >&2
+              exit 1
+          }
+
+          cd windows/.build/distribution
+          installer="TaigiKeyboard-$version.exe"
+          [ -f "$installer" ] || { echo "no $installer in $(pwd)" >&2; exit 1; }
+          # The digest beside the installer, in the same shape the macOS half
+          # stages: an unsigned channel gives a user nothing else to check a
+          # manual download against.
+          sha256sum "$installer" | cut -d' ' -f1 > "$installer.sha256.tmp"
+          printf '%s  %s\n' "$(cat "$installer.sha256.tmp")" "$installer" > "$installer.sha256"
+          rm -f "$installer.sha256.tmp"
+
+          gh release upload "$tag" "$installer" "$installer.sha256" --repo "$GITHUB_REPOSITORY"
+          echo "attached $installer to $tag (built from $GITHUB_SHA)"

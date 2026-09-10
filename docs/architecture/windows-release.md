@@ -191,15 +191,12 @@ does not ship it, and every `make` target below needs it), `protoc` (the engine'
 
 ## Cutting a release
 
-```sh
-make i18n
-make build                   # regenerates the platform protos
-make version-desktop 3.7.0   # macOS + Windows together, at the repository root
-make windows-release RELEASE_FLAGS=--skip-sign   # from Git Bash, on the Windows machine
-```
-
-That stages the installer on a draft release nobody can reach. Testing,
-publishing and announcing are in § Staging and publishing the installer below.
+A release does not build here at all: `make desktop-release` on the Mac
+dispatches `.github/workflows/windows-build.yml`, which builds the installer on
+a GitHub-hosted runner and attaches it to the same draft the macOS package is
+staged on (`desktop-release.md`). `make windows-release` remains what a person
+runs on a Windows machine to produce an installer by hand — for a dev loop, or
+when CI cannot.
 
 `make windows-release` does not rebuild the engine, and mostly does not need to:
 the TSF service and the settings exe compile the engine crates from source
@@ -328,13 +325,8 @@ reading its own payload.
 ## Staging and publishing the installer
 
 The flow — stage on a draft, test, publish, announce — is desktop-wide and lives
-in `desktop-release.md`. The Windows-side commands are:
-
-```sh
-make windows-release RELEASE_FLAGS=--skip-sign   # stages the .exe on the draft
-```
-
-then, once the Mac has staged its package and both have been tested:
+in `desktop-release.md`. The installer reaches the draft from CI; once both
+halves are staged and tested:
 
 ```sh
 gh release download desktop-<version> --repo taigikeyboard/taigikeyboard --dir ~/Downloads

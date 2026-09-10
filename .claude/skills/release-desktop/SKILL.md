@@ -1,6 +1,6 @@
 ---
 name: release-desktop
-description: Prepare a DESKTOP release (macOS + Windows, one shared version) on main - rebuild generated artifacts, set the desktop version, write the `### macOS` and `### Windows` sections of `changelog/desktop-v<version>.md`, link it from CHANGELOG.md, validate, commit, and push. Then stages BOTH installers on a draft release nobody can reach: builds, signs and notarizes the package here and drives the Windows box over ssh for the installer (`make desktop-release`). Stops before publishing — publishing the draft is the maintainer's one manual step, and it announces the release itself. Takes no version argument - it releases the version already in the tree (set beforehand with `make version-desktop x.y.z`); an optional argument only overrides the release base. Desktop train only; the mobile train (iOS + Android) is `release-mobile`.
+description: Prepare a DESKTOP release (macOS + Windows, one shared version) on main - rebuild generated artifacts, set the desktop version, write the `### macOS` and `### Windows` sections of `changelog/desktop-v<version>.md`, link it from CHANGELOG.md, validate, commit, and push. Then stages BOTH installers on a draft release nobody can reach: builds, signs and notarizes the package here and dispatches CI for the Windows installer (`make desktop-release`). Stops before publishing — publishing the draft is the maintainer's one manual step, and it announces the release itself. Takes no version argument - it releases the version already in the tree (set beforehand with `make version-desktop x.y.z`); an optional argument only overrides the release base. Desktop train only; the mobile train (iOS + Android) is `release-mobile`.
 ---
 
 # Release Desktop
@@ -228,9 +228,10 @@ make desktop-release
 
 `scripts/stage-desktop.sh` runs `make macos-release` here — build, sign,
 notarize, package, put the `.pkg` and its `.sha256` on the **draft**
-`desktop-<target>` — then moves the Windows box's checkout to this commit over
-`ssh win` and runs `make windows-release RELEASE_FLAGS=--skip-sign` there, which
-attaches the installer to the same draft. Whichever runs first creates it.
+`desktop-<target>` — then dispatches `.github/workflows/windows-build.yml` and
+waits for it: a GitHub-hosted runner builds the installer from the same commit
+and attaches it to the same draft. The maintainer's Windows box is not in the
+release path.
 
 A draft has no tag and no public asset URL: nothing here reaches a user, and
 nothing is announced. The tag appears when the draft is published.
