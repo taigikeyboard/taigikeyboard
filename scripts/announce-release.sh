@@ -51,56 +51,41 @@ while [[ $# -gt 0 ]]; do
     shift
 done
 
-# The desktop train's version, read the way `windows/scripts/lib/identity.sh`
-# reads it: `windows/Cargo.toml` is one of the two files `make version-desktop`
-# writes, and unlike the macOS plist it can be parsed without PlistBuddy, so
-# this works on either machine. `check-versions --train desktop` is what proves
-# the other file agrees.
-[[ -n "$version" ]] || version="$(awk '
-    /^\[workspace\.package\]/ { inside = 1; next }
-    inside && /^\[/ { exit }
-    inside && /^version *=/ { gsub(/[" ]/, "", $3); print $3; exit }
-' "$REPOSITORY_DIR/windows/Cargo.toml" | tr -d '\r')"
-[[ "$version" =~ ^[0-9]+(\.[0-9]+)*$ ]] ||
-    fail "version '$version' is not dotted integers — the update manifests reject suffixes"
-
+# Empty unless --version was passed: the shared library then reads the desktop
+# train's version out of the checkout.
 SHORT_VERSION="$version"
+[[ -z "$SHORT_VERSION" || "$SHORT_VERSION" =~ ^[0-9]+(\.[0-9]+)*$ ]] ||
+    fail "version '$SHORT_VERSION' is not dotted integers — the update manifests reject suffixes"
+
 # shellcheck source=lib/release-site.sh
 source "$REPOSITORY_DIR/scripts/lib/release-site.sh"
+# The release object: its tag, its repository, the per-platform asset names and
+# `release_sha256`. Its staging half (`desktop_release_preflight`,
+# `stage_desktop_asset`) is the other script's; nothing here calls it.
 # shellcheck source=lib/desktop-release.sh
 source "$REPOSITORY_DIR/scripts/lib/desktop-release.sh"
 
-APP_NAME="TaigiKeyboard"
-# What each platform contributes to the release, and where its announcement
-# goes. `sha256` is Windows-only: an unsigned installer has nothing else to be
-# held against, while a package carries Apple's own signature.
-MACOS_ASSET="$APP_NAME-$SHORT_VERSION.pkg"
-WINDOWS_ASSET="$APP_NAME-$SHORT_VERSION.exe"
-MACOS_SITE_PATH="_data/macos_release.json"
-WINDOWS_SITE_PATH="_data/windows_release.json"
-MACOS_MANIFEST_URL="https://taigikeyboard.tw/appcast/macos.json"
-WINDOWS_MANIFEST_URL="https://taigikeyboard.tw/appcast/windows.json"
-
-command -v gh > /dev/null || fail "the GitHub CLI (gh) is not installed"
-gh auth status > /dev/null 2>&1 || fail "gh is not authenticated — run 'gh auth login'"
+desktop_release_scratch_and_tools
 
 # ---------------------------------------------------------------------------
 # The release must be published, and must be the one that was staged.
 # ---------------------------------------------------------------------------
 
 release_json="$(gh release view "$DESKTOP_TAG" --repo "$RELEASE_REPOSITORY" \
-    --json isDraft,assets 2>&1)" ||
+    --json isDraft,targetCommitish,assets 2>&1)" ||
     fail "no release $DESKTOP_TAG in $RELEASE_REPOSITORY: $release_json"
-# One read, both facts. Asset names come back one per line so a name is matched
-# whole: `TaigiKeyboard-3.6.8.pkg` and `TaigiKeyboard-3.6.8.pkg.sha256` differ
-# only by a suffix.
+# One read, every fact this needs. Asset names come back one per line so a name
+# is matched whole: `TaigiKeyboard-3.6.8.pkg` and `TaigiKeyboard-3.6.8.pkg.sha256`
+# differ only by a suffix.
 {
     read -r is_draft
+    read -r recorded_commit
     staged_assets="$(cat)"
 } < <(printf '%s' "$release_json" | python3 -c '
 import json, sys
 release = json.load(sys.stdin)
 print("true" if release["isDraft"] else "false")
+print(release["targetCommitish"])
 print("\n".join(asset["name"] for asset in release["assets"]))')
 
 [[ "$is_draft" == false ]] ||
@@ -111,16 +96,9 @@ print("\n".join(asset["name"] for asset in release["assets"]))')
 # to let drift. Compare the two rather than trusting either: a tag created by
 # hand between staging and publishing would otherwise announce a release whose
 # tag does not describe what is in it.
-recorded_commit="$(gh release view "$DESKTOP_TAG" --repo "$RELEASE_REPOSITORY" --json targetCommitish --jq .targetCommitish)"
-tag_reference="$(gh api "repos/$RELEASE_REPOSITORY/git/ref/tags/$DESKTOP_TAG" \
-    --jq '.object.sha + " " + .object.type')" ||
+tagged_commit="$(desktop_tag_commit)"
+[[ -n "$tagged_commit" ]] ||
     fail "$DESKTOP_TAG is published but carries no tag — publish it again from the release page"
-read -r tagged_commit tagged_type <<< "$tag_reference"
-# An annotated tag points at a tag object, which points at the commit.
-if [[ "$tagged_type" == "tag" ]]; then
-    tagged_commit="$(gh api "repos/$RELEASE_REPOSITORY/git/tags/$tagged_commit" --jq .object.sha)" ||
-        fail "cannot dereference the annotated tag $DESKTOP_TAG"
-fi
 [[ "$tagged_commit" == "$recorded_commit" ]] ||
     fail "$DESKTOP_TAG names commit ${tagged_commit:0:7}, but the release was staged from ${recorded_commit:0:7} — the tag was moved or created by hand; do not announce it"
 echo "==> $DESKTOP_TAG is published, tagging ${tagged_commit:0:7}"
@@ -185,31 +163,37 @@ verify_platform_asset() {
     announced_platforms+=("$platform")
 }
 
+# The site data the website renders its appcast from. `sha256` is Windows-only:
+# an unsigned installer has nothing else to be held against, while a package
+# carries Apple's own signature, so it is dropped when no digest is passed.
 site_release_json() {
-    local tag="$1" asset_url="$2" digest="${3:-}"
-    if [[ -n "$digest" ]]; then
-        printf '{\n  "version": "%s",\n  "tag": "%s",\n  "downloadURL": "%s",\n  "sha256": "%s",\n  "releasePageURL": "%s"\n}\n' \
-            "$SHORT_VERSION" "$tag" "$asset_url" "$digest" "$RELEASE_PAGE_URL"
-    else
-        printf '{\n  "version": "%s",\n  "tag": "%s",\n  "downloadURL": "%s",\n  "releasePageURL": "%s"\n}\n' \
-            "$SHORT_VERSION" "$tag" "$asset_url" "$RELEASE_PAGE_URL"
-    fi
+    python3 -c '
+import json, sys
+version, tag, download_url, page_url, digest = sys.argv[1:6]
+release = {"version": version, "tag": tag, "downloadURL": download_url}
+if digest:
+    release["sha256"] = digest
+release["releasePageURL"] = page_url
+print(json.dumps(release, indent=2))
+' "$SHORT_VERSION" "$DESKTOP_TAG" "$1" "$RELEASE_PAGE_URL" "${2:-}"
 }
-
-RELEASE_TEMP_DIR="$(mktemp -d)"
-trap 'rm -rf "$RELEASE_TEMP_DIR"' EXIT
 
 declare -a site_files=()
 declare -a macos_manifest_fields=() windows_manifest_fields=()
 
+# Each platform's results are bound as soon as they are produced: the verifier
+# reports through globals, and two calls sharing them must not depend on order.
 if verify_platform_asset macOS "$MACOS_ASSET"; then
-    site_files+=("$MACOS_SITE_PATH" "$(site_release_json "$DESKTOP_TAG" "$ASSET_URL")")
-    macos_manifest_fields=("version=$SHORT_VERSION" "packageURL=$ASSET_URL")
+    macos_url="$ASSET_URL"
+    site_files+=("$MACOS_SITE_PATH" "$(site_release_json "$macos_url")")
+    macos_manifest_fields=("version=$SHORT_VERSION" "packageURL=$macos_url")
 fi
 if verify_platform_asset Windows "$WINDOWS_ASSET"; then
-    site_files+=("$WINDOWS_SITE_PATH" "$(site_release_json "$DESKTOP_TAG" "$ASSET_URL" "$ASSET_SHA256")")
+    windows_url="$ASSET_URL"
+    windows_sha256="$ASSET_SHA256"
+    site_files+=("$WINDOWS_SITE_PATH" "$(site_release_json "$windows_url" "$windows_sha256")")
     windows_manifest_fields=(
-        "version=$SHORT_VERSION" "packageURL=$ASSET_URL" "packageSHA256=$ASSET_SHA256"
+        "version=$SHORT_VERSION" "packageURL=$windows_url" "packageSHA256=$windows_sha256"
     )
 fi
 

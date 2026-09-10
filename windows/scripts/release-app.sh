@@ -73,7 +73,7 @@ HEAD_COMMIT="$(git -C "$REPOSITORY_DIR" rev-parse --short HEAD)"
 # the same one macOS publishes (`TaigiKeyboard-<version>.pkg`).
 QUALIFIER=""
 [[ -z "$TREE_STATUS" ]] || QUALIFIER="$QUALIFIER-dirty"
-OUTPUT_EXE="$DISTRIBUTION_DIR/$APP_NAME-$SHORT_VERSION$QUALIFIER.exe"
+OUTPUT_EXE="$DISTRIBUTION_DIR/${WINDOWS_ASSET%.exe}$QUALIFIER.exe"
 if [[ -e "$OUTPUT_EXE" && "$force_overwrite" == false ]]; then
     fail "$OUTPUT_EXE already exists — bump the version, or pass --force"
 fi

@@ -133,7 +133,7 @@ fi
 if [[ "$skip_notarize" == true ]]; then
     QUALIFIER="$QUALIFIER-unnotarized"
 fi
-OUTPUT_PKG="$DISTRIBUTION_DIR/$APP_NAME-$SHORT_VERSION$QUALIFIER.pkg"
+OUTPUT_PKG="$DISTRIBUTION_DIR/${MACOS_ASSET%.pkg}$QUALIFIER.pkg"
 
 # One stat, so it comes before the keychain and network checks below.
 if [[ -e "$OUTPUT_PKG" && "$force_overwrite" == false ]]; then

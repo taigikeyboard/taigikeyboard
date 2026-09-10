@@ -275,7 +275,10 @@ what only a Mac can say about the package.
 
 ### What announcing checks, in order
 
-1. The release is published, not a draft, and carries the tag.
+1. The release is published, not a draft, and its tag dereferences to the commit
+   the release recorded when it was staged — a tag created or moved by hand in
+   between would otherwise announce a release whose tag does not describe what
+   is in it.
 2. For each platform's installer on it: the asset **and** its `.sha256` receipt
    are fetched **with no credentials at all** — `curl -q --netrc-file /dev/null`
    is what guarantees that; an authenticated check cannot tell a public URL from

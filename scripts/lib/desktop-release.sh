@@ -17,11 +17,31 @@
 # `scripts/announce-release.sh` is the other half — it runs after that manual
 # publish and is what tells the website and every installed copy.
 RELEASE_REPOSITORY="taigikeyboard/taigikeyboard"
+# The platform identity libraries set SHORT_VERSION from their own project file;
+# `scripts/announce-release.sh` has no platform library, and PlistBuddy does not
+# exist on the Windows box, so the fallback reads `windows/Cargo.toml` — the
+# other file `make version-desktop` writes, held equal to the plist by
+# `release_notes.py check-versions --train desktop`.
+SHORT_VERSION="${SHORT_VERSION:-$(awk '
+    /^\[workspace\.package\]/ { inside = 1; next }
+    inside && /^\[/ { exit }
+    inside && /^version *=/ { gsub(/[" ]/, "", $3); print $3; exit }
+' "$REPOSITORY_DIR/windows/Cargo.toml" | tr -d '\r')}"
 DESKTOP_TAG="desktop-$SHORT_VERSION"
+# Valid only once the release is published: a draft has no tag for this URL to
+# name, which is why staging prints the API's own draft URL instead.
 RELEASE_PAGE_URL="https://github.com/$RELEASE_REPOSITORY/releases/tag/$DESKTOP_TAG"
 # Both platforms on one page, because both are on one release. The title says
 # the version; which platform an asset is for is what the asset is named.
 RELEASE_TITLE="Taigi Keyboard Desktop $SHORT_VERSION"
+
+# What each platform puts on the release. One name each, read by every script
+# that writes the file (`release-app.sh`), stages it (`publish-release.sh`) or
+# looks for it (`announce-release.sh`), so the three cannot drift — a name the
+# announcement does not recognise reads as "that platform was never staged"
+# rather than as an error. A throwaway build appends its qualifier to the stem.
+MACOS_ASSET="TaigiKeyboard-$SHORT_VERSION.pkg"
+WINDOWS_ASSET="TaigiKeyboard-$SHORT_VERSION.exe"
 
 # A file's SHA-256 as lowercase hex, on either host: macOS ships `shasum`, Git
 # Bash on the Windows box ships `sha256sum`. It is what the Windows manifest
@@ -45,11 +65,7 @@ release_sha256() {
 #   DESKTOP_SOURCE_COMMIT  the commit the tag names
 #   DESKTOP_NOTES_FILE     the release body, read out of that commit
 desktop_release_preflight() {
-    RELEASE_TEMP_DIR="$(mktemp -d)"
-    trap 'rm -rf "$RELEASE_TEMP_DIR"' EXIT
-
-    command -v gh > /dev/null || fail "the GitHub CLI (gh) is not installed"
-    gh auth status > /dev/null 2>&1 || fail "gh is not authenticated — run 'gh auth login'"
+    desktop_release_scratch_and_tools
     # The update manifest only accepts dotted integers — its checker rejects
     # anything with a suffix as malformed, and does so silently, so a
     # `3.6.5-beta` here would publish a release every installed copy quietly
@@ -59,6 +75,16 @@ desktop_release_preflight() {
 
     _resolve_source_commit
     _read_release_notes
+}
+
+# The scratch directory both halves put temporaries in, and the tool both need.
+# One EXIT trap for the whole run: a second one anywhere would replace it.
+desktop_release_scratch_and_tools() {
+    RELEASE_TEMP_DIR="$(mktemp -d)"
+    trap 'rm -rf "$RELEASE_TEMP_DIR"' EXIT
+
+    command -v gh > /dev/null || fail "the GitHub CLI (gh) is not installed"
+    gh auth status > /dev/null 2>&1 || fail "gh is not authenticated — run 'gh auth login'"
 }
 
 # A release created here creates a real git tag on a real commit, which the
@@ -108,7 +134,7 @@ _read_release_notes() {
 # user can check a manual download with.
 stage_desktop_asset() {
     local asset_path="$1"
-    local asset_name local_sha256 receipt staged_assets release_exists
+    local asset_name local_sha256 receipt
     asset_name="$(basename "$asset_path")"
     local_sha256="$(release_sha256 "$asset_path")"
     receipt="$RELEASE_TEMP_DIR/$asset_name.sha256"
@@ -122,7 +148,6 @@ stage_desktop_asset() {
     # different states — the second must not take the create path.
     local release_exists=true
     _read_staged_asset_names || release_exists=false
-    staged_assets="$STAGED_ASSET_NAMES"
 
     if [[ "$release_exists" == false ]]; then
         echo "==> Creating draft release $DESKTOP_TAG in $RELEASE_REPOSITORY"
@@ -137,12 +162,12 @@ stage_desktop_asset() {
             --title "$RELEASE_TITLE" \
             --notes-file "$DESKTOP_NOTES_FILE" \
             "$asset_path" "$receipt"
-    elif grep -qxF "$asset_name" <<< "$staged_assets"; then
+    elif grep -qxF "$asset_name" <<< "$STAGED_ASSET_NAMES"; then
         echo "==> $asset_name is already on $DESKTOP_TAG — verifying it"
         # The receipt may be missing if a previous run died between the two
         # uploads; upload it only when it is not there, so a staged digest is
         # never quietly rewritten.
-        grep -qxF "$asset_name.sha256" <<< "$staged_assets" ||
+        grep -qxF "$asset_name.sha256" <<< "$STAGED_ASSET_NAMES" ||
             gh release upload "$DESKTOP_TAG" "$receipt" --repo "$RELEASE_REPOSITORY"
     else
         echo "==> Draft $DESKTOP_TAG exists — attaching $asset_name to it"
@@ -197,11 +222,22 @@ _require_release_names_commit() {
 }
 
 _require_tag_names_commit() {
+    local tagged
+    tagged="$(desktop_tag_commit)"
+    [[ -z "$tagged" || "$tagged" == "$DESKTOP_SOURCE_COMMIT" ]] ||
+        fail "$DESKTOP_TAG names commit ${tagged:0:7}, but this checkout is ${DESKTOP_SOURCE_COMMIT:0:7} — check out the commit the other platform released from, or cut a new version"
+}
+
+# The commit this version's tag names, or nothing when there is no tag yet.
+# Both halves ask: staging, to refuse a build that does not match a tag pushed
+# by hand; the announcement, to refuse a tag that does not match what the
+# release recorded.
+desktop_tag_commit() {
     local reference object_sha object_type
     if ! reference="$(gh api "repos/$RELEASE_REPOSITORY/git/ref/tags/$DESKTOP_TAG" \
         --jq '.object.sha + " " + .object.type' 2>&1)"; then
         _require_absent "$reference" "the tag $DESKTOP_TAG in $RELEASE_REPOSITORY"
-        return 0 # No tag yet; publishing the draft will create it.
+        return 0
     fi
 
     read -r object_sha object_type <<< "$reference"
@@ -210,8 +246,7 @@ _require_tag_names_commit() {
         object_sha="$(gh api "repos/$RELEASE_REPOSITORY/git/tags/$object_sha" --jq .object.sha)" ||
             fail "cannot dereference the annotated tag $DESKTOP_TAG"
     fi
-    [[ "$object_sha" == "$DESKTOP_SOURCE_COMMIT" ]] ||
-        fail "$DESKTOP_TAG names commit ${object_sha:0:7}, but this checkout is ${DESKTOP_SOURCE_COMMIT:0:7} — check out the commit the other platform released from, or cut a new version"
+    printf '%s\n' "$object_sha"
 }
 
 _require_draft_targets_commit() {
@@ -253,8 +288,6 @@ _verify_staged_asset() {
     [[ "$staged_sha256" == "$local_sha256" ]] ||
         fail "$DESKTOP_TAG holds $asset_name as $staged_sha256, but this build is $local_sha256 — either the upload did not land whole, or that name was staged from a different build; a staged asset is never replaced, so delete the draft and stage again"
     echo "  sha256 $staged_sha256"
-
-    DRAFT_URL="$(gh release view "$DESKTOP_TAG" --repo "$RELEASE_REPOSITORY" --json url --jq .url)"
 }
 
 # What is left to do, printed by each platform script when its staging is done.
@@ -262,10 +295,14 @@ _verify_staged_asset() {
 # the draft: the maintainer installs what was staged, and only then publishes.
 desktop_draft_summary() {
     local platform="$1"
+    # The draft's own URL, from the API: a draft has no tag, so it is not the
+    # `releases/tag/<tag>` address the announcement uses.
+    local draft_url
+    draft_url="$(gh release view "$DESKTOP_TAG" --repo "$RELEASE_REPOSITORY" --json url --jq .url)"
 
     echo ""
     echo "✓ staged $platform $SHORT_VERSION on the draft $DESKTOP_TAG"
-    echo "  draft     $DRAFT_URL"
+    echo "  draft     $draft_url"
     echo "  commit    ${DESKTOP_SOURCE_COMMIT:0:7} (what publishing will tag)"
     echo ""
     echo "  Nothing is public yet. To test what was staged:"

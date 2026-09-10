@@ -57,7 +57,7 @@ desktop_release_preflight
 # The release build names its output exactly this; anything unpublishable
 # (`-dirty`, `-unnotarized`) carries a qualifier and therefore cannot be picked
 # up by accident here.
-[[ -n "$pkg_path" ]] || pkg_path="$DISTRIBUTION_DIR/$APP_NAME-$SHORT_VERSION.pkg"
+[[ -n "$pkg_path" ]] || pkg_path="$DISTRIBUTION_DIR/$MACOS_ASSET"
 [[ -f "$pkg_path" ]] || fail "no package at $pkg_path — run 'make macos-release' first"
 PKG_NAME="$(basename "$pkg_path")"
 # Absolute from here on: the identity check below reads the package from inside

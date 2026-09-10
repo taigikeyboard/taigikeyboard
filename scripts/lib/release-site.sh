@@ -10,6 +10,12 @@
 # is how a change of release host silently starts writing `_data/` into the app
 # repository.
 SITE_REPOSITORY="taigikeyboard/taigikeyboard.github.io"
+# What a release writes over there, and what the site renders from it. The
+# manifest URLs are compiled into every shipped copy, so they never move.
+MACOS_SITE_PATH="_data/macos_release.json"
+WINDOWS_SITE_PATH="_data/windows_release.json"
+MACOS_MANIFEST_URL="https://taigikeyboard.tw/appcast/macos.json"
+WINDOWS_MANIFEST_URL="https://taigikeyboard.tw/appcast/windows.json"
 
 # -q must come first: it is what stops curl reading ~/.curlrc, which could
 # otherwise switch on the netrc that --netrc-file disables here. Together they

@@ -186,8 +186,7 @@ does not ship it, and every `make` target below needs it), `protoc` (the engine'
 6. **A clone whose `origin` is this repository, with HEAD committed clean and
    already pushed.** Publishing tags the commit the box is sitting on, so it
    refuses a dirty tree and a HEAD that is not an ancestor of `origin/main` —
-   the release clone on the box is what `docs/architecture/windows-release.md`
-   § Cutting a release assumes, and it must have fetched the commit being
+   the release clone on the box is what § Cutting a release below assumes, and it must have fetched the commit being
    released rather than a local-only one.
 
 ## Cutting a release

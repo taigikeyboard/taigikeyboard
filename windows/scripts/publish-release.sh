@@ -45,7 +45,7 @@ done
 # The shared half first, so a dirty tree or an uncommitted changelog stops
 # before signtool is asked anything.
 desktop_release_preflight
-[[ -n "$installer_path" ]] || installer_path="$DISTRIBUTION_DIR/$APP_NAME-$SHORT_VERSION.exe"
+[[ -n "$installer_path" ]] || installer_path="$DISTRIBUTION_DIR/$WINDOWS_ASSET"
 [[ -f "$installer_path" ]] || fail "no installer at $installer_path — run 'make windows-release' first"
 INSTALLER_NAME="$(basename "$installer_path")"
 installer_path="$(cd "$(dirname "$installer_path")" && pwd)/$INSTALLER_NAME"
@@ -53,7 +53,7 @@ installer_path="$(cd "$(dirname "$installer_path")" && pwd)/$INSTALLER_NAME"
 echo "==> Verifying the installer is publishable"
 [[ "$allow_unsigned" == false || -z "${WINDOWS_SIGNING_THUMBPRINT:-}" ]] ||
     fail "--allow-unsigned and WINDOWS_SIGNING_THUMBPRINT contradict: a certificate is named, so sign the installer instead of publishing it unsigned"
-[[ "$INSTALLER_NAME" == "$APP_NAME-$SHORT_VERSION.exe" ]] ||
+[[ "$INSTALLER_NAME" == "$WINDOWS_ASSET" ]] ||
     fail "$INSTALLER_NAME is not the release name for $SHORT_VERSION (a -dirty build is not publishable)"
 # Staging needs a digest and PowerShell's file metadata; the announcement's
 # tools (curl, python3) are `scripts/announce-release.sh`'s problem, and it can
@@ -70,8 +70,8 @@ else
         fail "$INSTALLER_NAME carries no Authenticode signature Windows trusts — the in-app updater would refuse it (pass --allow-unsigned to publish it anyway)"
 fi
 # What every installed copy checks the download against
-# (taigi-windows-update::verify::admit): the published digest (read back by
-# `publish_desktop_asset`), this product, this version, and — when the release
+# (taigi-windows-update::verify::admit): the digest staged beside the
+# installer, this product, this version, and — when the release
 # certificate is named — signed by exactly it. A renamed file signed by anyone
 # else never reaches the manifest.
 require_version_info "$installer_path"
