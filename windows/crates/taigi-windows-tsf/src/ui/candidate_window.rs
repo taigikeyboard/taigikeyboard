@@ -139,7 +139,6 @@ impl LayoutKey {
 }
 
 pub struct CandidateWindow {
-    factory: Rc<RenderFactory>,
     surface: Option<Surface>,
     /// What the surface was last sized / scaled to, so a paint only asks
     /// Direct2D to resize when something changed.
@@ -158,6 +157,11 @@ pub struct CandidateWindow {
     annotation_widths: Vec<f32>,
     /// DirectWrite layouts by cell and box, for this list; cleared with it.
     layouts: RefCell<HashMap<LayoutKey, IDWriteTextLayout>>,
+    /// Declared after everything built from it, because that is the drop
+    /// order: the surface and the layouts above are only valid while the
+    /// factories this shares live, and this window can hold the last
+    /// reference to them (`ui::render::RenderFactory`).
+    factory: Rc<RenderFactory>,
     slot_key_set: CandidateSlotKeySet,
     /// Whether cell 0 — the §34 literal — takes no key, so the keys start on
     /// the cell after it. Set from the list each `show` / `update_cells`

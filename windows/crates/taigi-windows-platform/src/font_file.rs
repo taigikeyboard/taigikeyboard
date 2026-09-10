@@ -17,6 +17,18 @@
 //! this Windows already carries cannot win the lookup, and the macOS library's
 //! name-collision refusal has nothing to guard against here.
 //!
+//! THE COLLECTION MAY NOT OUTLIVE THE FACTORY THAT BUILT IT. An
+//! `IDWriteFontCollection1` does not keep its factory alive, and DirectWrite
+//! reads factory-owned state when a layout resolves the family — so a
+//! collection whose factory has been released faults inside `DWrite.dll`, not
+//! here, and takes the host process with it (2026-09-11: `load` used to make
+//! an isolated factory of its own and drop it, and typing in any host with a
+//! custom typeface selected killed the host with `0xc0000005`; measured
+//! headlessly — keeping that factory alive, or building against the caller's,
+//! both remove it). `load` therefore takes the factory the caller will draw
+//! with; `inspect` owns a factory for the length of one call and lets nothing
+//! built from it escape.
+//!
 //! On a non-Windows host every function answers "not a font", so the callers
 //! compile and their pure parts test natively (`make check` on macOS).
 
@@ -43,10 +55,13 @@ pub enum FontFileError {
 
 /// Whether `path` is a typeface this Windows can draw with, and what its first
 /// family is called. What an import validates with.
+///
+/// Owns a factory for the length of the call: only the NAME comes back, and
+/// the collection is dropped before the factory that made it.
 pub fn inspect(path: &Path) -> Result<FontFaceInfo, FontFileError> {
     #[cfg(windows)]
     {
-        imp::load(path).map(|(_, info)| info)
+        imp::inspect(path)
     }
     #[cfg(not(windows))]
     {
@@ -71,19 +86,36 @@ mod imp {
 
     /// The file's family as a collection of its own, plus its name.
     ///
-    /// Isolated factory: a validation pass in the settings window, and the
-    /// TIP's own drawing factory, have no reason to share caches — and this
-    /// one is dropped as soon as the collection it made is held.
-    pub fn load(path: &Path) -> Result<(IDWriteFontCollection1, FontFaceInfo), FontFileError> {
+    /// `factory` is the caller's, and the collection it answers with is only
+    /// usable while that factory lives — see the module doc for what happens
+    /// when it does not. Draw with the SAME factory the text formats are made
+    /// on, which is what the bundled roster already does
+    /// (`ui::render::load_private_fonts`).
+    pub fn load(
+        factory: &IDWriteFactory3,
+        path: &Path,
+    ) -> Result<(IDWriteFontCollection1, FontFaceInfo), FontFileError> {
+        let file = file_reference(factory, path)?;
+        require_supported(&file)?;
+        let collection = collection_of(factory, &file)?;
+        let family_name = first_family_name(&collection)?;
+        Ok((collection, FontFaceInfo { family_name }))
+    }
+
+    /// The family name alone, read under a factory of this call's own.
+    ///
+    /// Isolated: a validation pass in the settings window has no reason to
+    /// share caches with anything. Nothing built from that factory leaves —
+    /// the collection is dropped here, while the factory that made it is
+    /// still alive.
+    pub fn inspect(path: &Path) -> Result<FontFaceInfo, FontFileError> {
         // SAFETY: plain factory creation on the calling thread; the type
         // parameter names the interface asked for.
         let factory: IDWriteFactory3 =
             unsafe { DWriteCreateFactory(DWRITE_FACTORY_TYPE_ISOLATED) }.map_err(refused)?;
-        let file = file_reference(&factory, path)?;
-        require_supported(&file)?;
-        let collection = collection_of(&factory, &file)?;
-        let family_name = first_family_name(&collection)?;
-        Ok((collection, FontFaceInfo { family_name }))
+        let (collection, info) = load(&factory, path)?;
+        drop(collection);
+        Ok(info)
     }
 
     fn file_reference(
@@ -199,5 +231,81 @@ mod imp {
 
     fn to_wide_nul(text: &str) -> Vec<u16> {
         text.encode_utf16().chain(std::iter::once(0)).collect()
+    }
+}
+
+/// The collection `load` answers with has to survive being drawn: the caller's
+/// factory builds it, a text format asks that factory for the family, and a
+/// layout resolves it. That last step is where a collection whose factory had
+/// been released faulted inside `DWrite.dll` and took the host process with it
+/// — an access violation, so this test does not fail with a message: the test
+/// process dies and cargo reports the signal.
+///
+/// Windows-only, and it needs the bundled typefaces: `make check-box` runs it
+/// on the box, out of a checkout that has them.
+#[cfg(all(test, windows))]
+mod tests {
+    use super::*;
+    use windows::core::{Interface, PCWSTR};
+    use windows::Win32::Graphics::DirectWrite::{
+        DWriteCreateFactory, IDWriteFactory3, DWRITE_FACTORY_TYPE_SHARED,
+        DWRITE_FONT_STRETCH_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_WEIGHT_NORMAL,
+        DWRITE_TEXT_METRICS,
+    };
+
+    /// A typeface every checkout has: the repo-root folder all four platforms
+    /// package (`fonts/font/`).
+    fn bundled_typeface() -> std::path::PathBuf {
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../../fonts/font/iansui_regular.ttf")
+    }
+
+    fn wide(text: &str) -> Vec<u16> {
+        text.encode_utf16().chain(std::iter::once(0)).collect()
+    }
+
+    #[test]
+    fn a_loaded_collection_still_draws_after_the_call_that_built_it() {
+        let path = bundled_typeface();
+        assert!(path.is_file(), "no bundled typeface at {}", path.display());
+        // SAFETY: DirectWrite calls on the test thread, each out-parameter a
+        // live local; the factory outlives everything built from it.
+        unsafe {
+            let factory: IDWriteFactory3 =
+                DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED).expect("a shared factory");
+
+            let (collection, info) = load(&factory, &path).expect("the typeface loads");
+            assert!(!info.family_name.is_empty());
+
+            let family = wide(&info.family_name);
+            let locale = wide("zh-TW");
+            let format = factory
+                .CreateTextFormat(
+                    PCWSTR(family.as_ptr()),
+                    &collection
+                        .cast::<windows::Win32::Graphics::DirectWrite::IDWriteFontCollection>()
+                        .expect("a font collection"),
+                    DWRITE_FONT_WEIGHT_NORMAL,
+                    DWRITE_FONT_STYLE_NORMAL,
+                    DWRITE_FONT_STRETCH_NORMAL,
+                    18.0,
+                    PCWSTR(locale.as_ptr()),
+                )
+                .expect("a text format");
+
+            let text: Vec<u16> = "台語 tâi-gí".encode_utf16().collect();
+            let layout = factory
+                .CreateTextLayout(&text, &format, 400.0, 100.0)
+                .expect("a layout");
+            let mut metrics = DWRITE_TEXT_METRICS::default();
+            layout.GetMetrics(&mut metrics).expect("metrics");
+
+            assert!(
+                metrics.width > 0.0 && metrics.height > 0.0,
+                "the text measured to nothing: {} x {}",
+                metrics.width,
+                metrics.height,
+            );
+        }
     }
 }
