@@ -12,6 +12,7 @@
 //! leave the list.
 
 use super::super::cards;
+use super::super::list_selection::{selectable_list, SettledRows};
 use super::super::window::{Message as WindowMessage, SettingsWindow};
 use crate::presentation::PageMessage;
 use crate::settings_writer::SettingsWriter;
@@ -53,6 +54,9 @@ fn displayed_name(file_name: &str) -> &str {
 pub struct FontManagementModel {
     /// The user's own typefaces, as the last read of the folder found them.
     custom_fonts: Vec<CustomFontRow>,
+    /// Which rows the list on screen holds, so the selection index reaches
+    /// XAML a render after the row it names does (`list_selection`).
+    settled: SettledRows,
 }
 
 impl FontManagementModel {
@@ -102,6 +106,8 @@ pub enum Message {
     Select(Option<usize>),
     Add,
     Remove,
+    /// What the list on screen holds, as `list_selection` reports it.
+    RowsApplied(Option<Vec<String>>),
 }
 
 pub struct PageEnvironment<'a> {
@@ -123,8 +129,15 @@ pub fn on_enter(model: &mut FontManagementModel) {
 pub fn update(model: &mut FontManagementModel, message: Message, environment: PageEnvironment<'_>) {
     match message {
         Message::Select(Some(index)) => {
+            // The index names a row of the list ON SCREEN, which is not always
+            // the list this model would draw now — so it is resolved through
+            // the rows XAML holds, and a row the library no longer has writes
+            // nothing (`list_selection`).
+            let Some(key) = model.settled.key_at(index).map(str::to_owned) else {
+                return;
+            };
             let rows = model.rows(&environment.settings.strings());
-            if let Some(row) = rows.get(index) {
+            if let Some(row) = rows.iter().find(|row| row.key() == key) {
                 let selection = row.selection.clone();
                 environment
                     .settings
@@ -134,6 +147,7 @@ pub fn update(model: &mut FontManagementModel, message: Message, environment: Pa
         Message::Select(None) => {}
         Message::Add => add(model, environment),
         Message::Remove => remove(model, environment),
+        Message::RowsApplied(rows) => model.settled.report(rows),
     }
 }
 
@@ -252,22 +266,32 @@ pub fn view(
     let items = rows
         .iter()
         .map(|row| {
+            let key = row.key();
             (
-                row.key(),
+                key.clone(),
                 ListViewItem::new()
-                    .tag(row.key())
+                    .tag(key)
                     .content(TextBlock::new().text(row.title.clone())),
             )
         })
         .collect::<Vec<_>>();
-    let list = ListView::new()
-        .selection_mode(ListViewSelectionMode::Single)
-        .selected_index(selected)
-        .on_selection_changed(
-            context.callback(|index| WindowMessage::FontManagement(Message::Select(index))),
-        )
-        .height(LIST_HEIGHT)
-        .collection_slot(ListViewSlot::Items, items);
+    // The index reaches XAML a render after the row it names (`list_selection`);
+    // `can_remove` above stays on the STORED selection, so the `−` button does
+    // not blink off for that render.
+    let list = selectable_list(
+        "fontManagement.rows",
+        &model.settled,
+        items,
+        selected,
+        ListView::new()
+            .selection_mode(ListViewSelectionMode::Single)
+            .on_selection_changed(
+                context.callback(|index| WindowMessage::FontManagement(Message::Select(index))),
+            )
+            .height(LIST_HEIGHT),
+        context,
+        |rows| WindowMessage::FontManagement(Message::RowsApplied(rows)),
+    );
     View::fragment((cards::frame(View::fragment((
         missing_note(window, strings),
         list,
@@ -378,6 +402,7 @@ mod tests {
     fn two_typefaces_with_one_displayed_name_are_two_rows() {
         let model = FontManagementModel {
             custom_fonts: vec![custom("mine.ttf"), custom("mine-2.ttf")],
+            ..FontManagementModel::default()
         };
 
         let rows = model.rows(&strings());
@@ -399,6 +424,7 @@ mod tests {
             .to_owned();
         let model = FontManagementModel {
             custom_fonts: vec![custom(&format!("{bundled_label}.ttf"))],
+            ..FontManagementModel::default()
         };
 
         let rows = model.rows(&strings);
@@ -415,6 +441,7 @@ mod tests {
     fn a_custom_row_is_titled_with_its_file_name_without_the_extension() {
         let model = FontManagementModel {
             custom_fonts: vec![custom("SnailFont-Pomacea.ttf"), custom("源樣明體.otf")],
+            ..FontManagementModel::default()
         };
 
         let titles: Vec<String> = model

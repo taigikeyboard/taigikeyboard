@@ -189,6 +189,9 @@ pub fn choice_row(
         header,
         ComboBox::new()
             .items_source(labels)
+            // Safe where a `ListView`'s is not (`list_selection`): a pop-up's items are a
+            // PROPERTY, and reactor's visitor emits `ComboBoxItemsSource` before
+            // `ComboBoxSelectedIndex` in the same batch.
             .selected_index(selected)
             .on_selection_changed(on_change)
             .width(PICKER_WIDTH),

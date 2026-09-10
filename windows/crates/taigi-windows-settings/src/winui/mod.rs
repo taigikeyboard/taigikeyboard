@@ -9,6 +9,7 @@
 
 mod cards;
 mod file_dialog;
+mod list_selection;
 mod pages;
 #[cfg(test)]
 mod pane_planning;
