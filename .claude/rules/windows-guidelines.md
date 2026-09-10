@@ -107,8 +107,9 @@ shared engine). Read before modifying Windows code. Design record: `docs/archite
 ## Release
 
 - `make windows-release` runs on a Windows host (Git Bash); `windows/scripts/publish-release.sh`
-  mirrors the macOS publisher and targets the same website repo. Never run it without USER's
-  explicit release instruction (`diagnosis-discipline.md` § No unilateral release scope).
+  mirrors the macOS publisher and attaches to the same `desktop-<version>` release in this repo
+  (`scripts/lib/desktop-release.sh`); only `_data/windows_release.json` goes to the website repo.
+  Never run it without USER's explicit release instruction (`diagnosis-discipline.md` § No unilateral release scope).
 - **Releases ship UNSIGNED** (owner 2026-09-04, no certificate for a year or two):
   `make windows-release RELEASE_FLAGS=--skip-sign`, which passes `--allow-unsigned` down to the
   publisher; the artifact keeps the plain `TaigiKeyboard-<version>.exe` name. What admits a

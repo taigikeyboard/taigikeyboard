@@ -38,8 +38,11 @@ Unknown extra fields are ignored. Before the first release the manifest reads
 ## Where it lives
 
 In the website repository (`taigikeyboard/taigikeyboard.github.io`), at
-`appcast/windows.json` — never by hand, never from this (private)
-repository, and never before the installer is anonymously reachable.
+`appcast/windows.json` — never by hand, and never before the installer is
+anonymously reachable. It lives there, not here, because `PUBLISHED_URL` is
+compiled into every shipped copy: the manifest has to stay at a fixed URL on a
+domain the project controls. The installer it announces is a release asset in
+this repository.
 
 ### One published fact, one committed file
 
@@ -49,18 +52,18 @@ repository, and never before the installer is anonymously reachable.
 ```json
 {
   "version": "3.7.0",
-  "tag": "windows-v3.7.0",
-  "downloadURL": "https://github.com/taigikeyboard/taigikeyboard.github.io/releases/download/windows-v3.7.0/TaigiKeyboard-3.7.0.exe",
+  "tag": "desktop-3.7.0",
+  "downloadURL": "https://github.com/taigikeyboard/taigikeyboard/releases/download/desktop-3.7.0/TaigiKeyboard-3.7.0.exe",
   "sha256": "115b6d19c0a2f4e6ab8d7315f0c9e24d5b6a1f8309e7c4d25a0b3f6178e917d2",
-  "releasePageURL": "https://github.com/taigikeyboard/taigikeyboard.github.io/releases/tag/windows-v3.7.0"
+  "releasePageURL": "https://github.com/taigikeyboard/taigikeyboard/releases/tag/desktop-3.7.0"
 }
 ```
 
 That file is what the site's Windows download button links at — straight at
 the installer so the download starts on one click, which is why its URL
 carries the version, and deliberately not `/releases/latest/download/...`,
-since `latest` resolves across a repository that is a website rather than
-this input method's release channel. Whether the button is shown at all is
+since `latest` resolves repository-wide and the last release here may be a
+macOS one. Whether the button is shown at all is
 the site's `enable_windows_download` flag, not this file: the release flow
 fills the file the moment any installer is published, a test publish
 included.

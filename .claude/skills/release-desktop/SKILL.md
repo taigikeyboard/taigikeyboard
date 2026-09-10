@@ -45,9 +45,9 @@ Derive the release base unless one was passed:
 git describe --tags --abbrev=0 --match 'desktop-*' HEAD
 ```
 
-Desktop releases before 2026-09 were never tagged in this repository — their
-tags (`macos-v…` / `windows-v…`) live on the website repository. With no
-`desktop-*` tag, fall back to the commit that set the current version:
+Desktop releases cut before 2026-09-09 were tagged on the website repository
+(`macos-v…` / `windows-v…`), not here. With no `desktop-*` tag, fall back to
+the commit that set the current version:
 
 ```bash
 git log --format='%h %ad %s' --date=short -S'<target>' -- macos/App/Info.plist | tail -1
@@ -93,9 +93,10 @@ Sort every user-visible change before writing anything:
 - **Windows-only** → the `### Windows` section.
 - **Shared** (engine, dictionary, a behavior landing on both desktop platforms)
   → describe it in **both** sections, each in that platform's own terms
-  (its own shortcut spelling: `⌃⌘H` on macOS, `Ctrl+Alt+H` on Windows). A
-  publish script extracts one section as that platform's whole release body, so
-  a fact mentioned only in the other section reaches nobody.
+  (its own shortcut spelling: `⌃⌘H` on macOS, `Ctrl+Alt+H` on Windows). Both
+  platforms share one release page carrying the whole file, so a reader on
+  either platform should find their own wording of the change under their own
+  heading rather than having to read the other platform's section for it.
 - **iOS-only / Android-only** → NOT this release. Mobile work belongs to
   `changelog/v<version>.md` and the store notes, written by `release-mobile`.
 
@@ -136,7 +137,8 @@ make build
 | `changelog/desktop-v<target>.md` | The desktop record: a lead paragraph, then `### macOS` and `### Windows` |
 | `CHANGELOG.md` | Link to it, at the top of the `## Desktop — macOS + Windows` list (newest first) |
 
-Shape of `changelog/desktop-v<target>.md` — the publish scripts depend on it:
+Shape of `changelog/desktop-v<target>.md` — this whole file becomes the release
+body, so it is what users read on the release page:
 
 ```markdown
 # desktop v<target>
@@ -156,14 +158,13 @@ Shape of `changelog/desktop-v<target>.md` — the publish scripts depend on it:
 
 Rules:
 
-- `### macOS` and `### Windows` are matched literally by
-  `macos/scripts/publish-release.sh` and `windows/scripts/publish-release.sh`.
-  A missing section does not fail the publish — it silently degrades to a
-  one-line `TaigiKeyboard for <platform> <version>` release body. Write both.
+- The file must be **committed** before either platform publishes: the release
+  body is read out of the tagged commit, not the working tree, and a version
+  with no changelog in that commit fails the publish outright.
 - English prose; Taigi terms, UI labels and examples keep 漢字 / TL / POJ / TPS.
-- The section is the GitHub release body users read: concrete user-visible
-  behavior, with the PR number in `(#NNN)`. No refactors, tests, tooling, or
-  dependency bumps unless a user feels them.
+- This is the GitHub release body users read: concrete user-visible behavior,
+  with the PR number in `(#NNN)`. No refactors, tests, tooling, or dependency
+  bumps unless a user feels them.
 - A subsection per surface, not one flat list — these bodies run long and the
   headings are what make them readable.
 - Idempotent: re-running on an existing target file merges by topic. Refine the
@@ -208,11 +209,12 @@ make macos-release
 ```
 
 Builds, signs with both Developer ID certificates, notarizes, staples, packages,
-then `macos/scripts/publish-release.sh` uploads the `.pkg` to the
-`taigikeyboard/taigikeyboard.github.io` release tagged `macos-v<target>` and
-points `_data/macos_release.json` at it. The site renders
-`appcast/macos.json` from that file — that manifest is what installed copies
-check. Needs the notarization credential (`docs/architecture/macos-release.md`).
+then `macos/scripts/publish-release.sh` puts the `.pkg` on the `desktop-<target>`
+release **in this repository** — creating it, tagging the commit the checkout is
+at, with the whole `changelog/desktop-v<target>.md` as its body — and points
+`_data/macos_release.json` at the asset. The site renders `appcast/macos.json`
+from that file; that manifest is what installed copies check. Needs the
+notarization credential (`docs/architecture/macos-release.md`).
 
 **2. Windows installer — on the Windows box (`ssh win`), from Git Bash, clean tree:**
 
@@ -223,16 +225,23 @@ make windows-release RELEASE_FLAGS=--skip-sign
 There is no Authenticode certificate yet, so `--skip-sign` is the release
 channel, stated explicitly so nothing publishes unsigned by accident. Builds,
 stages, packages with Inno Setup, then `windows/scripts/publish-release.sh
---allow-unsigned` uploads to the `windows-v<target>` release on the website
-repository and writes `_data/windows_release.json`; the published manifest
-carries the installer's SHA-256, which is what the in-app updater verifies.
-Before this: `make windows-check` on the Mac is the host-side gate.
+--allow-unsigned` attaches the installer to the **same** `desktop-<target>`
+release (creating it if Windows goes first) and writes
+`_data/windows_release.json`; the published manifest carries the installer's
+SHA-256, which is what the in-app updater verifies. Before this:
+`make windows-check` on the Mac is the host-side gate.
 
-**3. Tag, if the maintainer wants one:** `desktop-<target>` on this repository.
-That tag is also the only trigger of `.github/workflows/windows-build.yml`
-(plus manual dispatch), which rebuilds the installer on a GitHub-hosted runner
-for SignPath provenance. It does not publish. Tagging is user-gated — never
-create, move, or push it.
+Whichever platform publishes first creates the release and the tag; the second
+must be **at that same commit** — its publish stops if the existing tag names a
+different one. Between the two publishes the release page carries one installer,
+which is the intended state: each platform's manifest moves as soon as its own
+asset is downloadable.
+
+**3. The tag** — `desktop-<target>` on this repository — is created by whichever
+publish runs first, so there is nothing to do by hand. (It is also the only
+trigger of `.github/workflows/windows-build.yml` besides manual dispatch;
+`docs/architecture/windows-release.md` covers pushing it early to start that
+build.) The skill never creates, moves, or pushes it.
 
 ## Guardrails
 

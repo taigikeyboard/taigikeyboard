@@ -27,6 +27,8 @@ set -euo pipefail
 
 # shellcheck source=lib/bundle-identity.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/bundle-identity.sh"
+# shellcheck source=../../scripts/lib/desktop-release.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../scripts/lib/desktop-release.sh"
 
 STAGING_DIR="$DISTRIBUTION_DIR/staging"
 # pkgbuild takes the *contents* of --root and lays them down under
@@ -459,7 +461,7 @@ echo "✓ $OUTPUT_PKG"
 echo "  version   $SHORT_VERSION (build $BUILD_VERSION)"
 echo "  commit    $HEAD_COMMIT"
 echo "  installs  $INSTALL_DIR/$APP_NAME.app (no administrator password)"
-echo "  sha256    $(shasum -a 256 "$OUTPUT_PKG" | cut -d' ' -f1)"
+echo "  sha256    $(release_sha256 "$OUTPUT_PKG")"
 if [[ "$skip_notarize" == true ]]; then
     echo ""
     echo "  ⚠ not notarized — Gatekeeper blocks this on every Mac but this one."
