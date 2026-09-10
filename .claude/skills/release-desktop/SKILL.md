@@ -240,27 +240,21 @@ gh release download desktop-<target> --repo taigikeyboard/taigikeyboard --dir ~/
 
 Install both, run the dogfood checklist items this release touches.
 
-**4. Publish, when both pass:**
+**4. Publish, when both pass — the last manual step:**
 
 ```bash
 gh release edit desktop-<target> --repo taigikeyboard/taigikeyboard --draft=false
 ```
 
-This creates the tag and fires `.github/workflows/windows-build.yml` (a
-GitHub-hosted rebuild for SignPath provenance; it does not publish). The
-download becomes public here — the website and installed copies still know
-nothing.
+This creates the tag and fires two workflows:
+`.github/workflows/announce-release.yml`, which proves both downloads are
+anonymously reachable, writes both `_data/*_release.json` to the website in one
+commit and waits for the live appcasts (a platform whose installer is absent is
+skipped with a note); and `.github/workflows/windows-build.yml`, a GitHub-hosted
+rebuild for SignPath provenance that publishes nothing.
 
-**5. Announce — either machine:**
-
-```bash
-make desktop-announce
-```
-
-Proves both downloads are anonymously reachable and hash to their staged
-receipts, writes both `_data/*_release.json` to the website in one commit, and
-waits for the live appcasts. A platform whose installer is not on the release is
-skipped with a note.
+`make desktop-announce` runs the same announcement by hand — for a re-run after
+a failed job, or when its token has expired.
 
 ## Guardrails
 
@@ -269,6 +263,7 @@ skipped with a note.
   `release-mobile`'s surface, and desktop-only work must never enter a store note.
 - Never run `make macos-release`, `make windows-release`, `make desktop-announce`,
   either `release-app.sh`, either `publish-release.sh`, or `announce-release.sh`.
+  The hand-off section tells the maintainer to run them; the skill never does.
 - Never create, move, or push a tag; never create, publish, or un-draft a GitHub
   release.
 - Never request, store, or use signing certificates, notarization credentials,

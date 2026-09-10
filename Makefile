@@ -115,9 +115,9 @@ windows-check:
 
 # Announce a desktop release a person has already published: prove both
 # installers download anonymously, point the website at them, wait for the live
-# appcasts. `make macos-release` / `make windows-release` only STAGE their
-# installer on a draft nobody can reach; this is the half that reaches users,
-# and it runs anywhere with gh + curl (`scripts/announce-release.sh`).
+# appcasts. Publishing the release runs this automatically
+# (`.github/workflows/announce-release.yml`); this target is the same script by
+# hand, for a re-run after a failed job or an expired token.
 desktop-announce:
 	bash scripts/announce-release.sh $(RELEASE_FLAGS)
 

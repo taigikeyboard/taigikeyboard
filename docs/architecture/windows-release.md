@@ -338,8 +338,12 @@ Then, once the Mac has staged its package too:
 gh release download desktop-<version> --repo taigikeyboard/taigikeyboard --dir ~/Downloads
 # install it, use it, check SmartScreen behaviour on a machine that has never seen it
 gh release edit desktop-<version> --repo taigikeyboard/taigikeyboard --draft=false
-make desktop-announce
 ```
+
+Publishing is the last manual step: it fires
+`.github/workflows/announce-release.yml`, which announces both platforms.
+`make desktop-announce` runs the same script by hand if that job fails or its
+token has expired (`macos-release.md` § One-time: the announcement's token).
 
 `windows/scripts/publish-release.sh` (run by `--publish`):
 
@@ -371,8 +375,8 @@ make desktop-announce
    announcement holds the published bytes against, and it is also what a user
    can check a manual download with, which matters on an unsigned channel.
 
-`scripts/announce-release.sh` (`make desktop-announce`), after the manual
-publish, is what writes `_data/windows_release.json` — now carrying `sha256` —
+`scripts/announce-release.sh` — run for you by the publish, or by hand with
+`make desktop-announce` — is what writes `_data/windows_release.json` — now carrying `sha256` —
 and waits until `https://taigikeyboard.tw/appcast/windows.json` serves the new
 version, its installer URL **and** that digest. The manifest every installed
 copy polls is rendered from that data file by the site's own build

@@ -150,6 +150,21 @@ the two above through it fails on purpose.
 `--skip-notarize` and `--allow-dirty` both stamp the reason into the output
 filename, so an unpublishable package cannot be confused for a release.
 
+### One-time: the announcement's token
+
+The announcement commits to the website repository, which a workflow's own
+`GITHUB_TOKEN` cannot reach. One fine-grained personal access token covers it:
+
+- Repository access: `taigikeyboard/taigikeyboard` and
+  `taigikeyboard/taigikeyboard.github.io`.
+- Permissions: **Contents: read** on the first (the script reads the release),
+  **Contents: write** on the second (it writes `_data/*_release.json`).
+- Stored as the `SITE_CONTENTS_TOKEN` secret on `taigikeyboard/taigikeyboard`.
+
+Give it an expiry and let it lapse: the day it does, the workflow fails loudly
+and `make desktop-announce` from a machine with `gh` logged in does the same
+job, so a release is never blocked on it.
+
 ## Versioning
 
 `macos/App/Info.plist` is the single source of truth, and the release script
@@ -219,7 +234,7 @@ A desktop release happens in two halves with a manual test between them, and
 | Stage the installer | `make windows-release RELEASE_FLAGS=--skip-sign` (the Windows box) | Attaches the `.exe` to the same draft |
 | **Test** | the maintainer | `gh release download desktop-<version> --repo taigikeyboard/taigikeyboard --dir ~/Downloads`, install, use both |
 | **Publish** | the maintainer | `gh release edit desktop-<version> --repo taigikeyboard/taigikeyboard --draft=false`, or the web UI. This is what creates the tag |
-| Announce | `make desktop-announce` (either machine) | Proves both downloads are anonymously reachable, writes both `_data/*_release.json`, waits for the live appcasts |
+| Announce | **automatic** — publishing fires `.github/workflows/announce-release.yml` | Proves both downloads are anonymously reachable, writes both `_data/*_release.json`, waits for the live appcasts. `make desktop-announce` is the same script, for a re-run |
 
 Staging creates no tag — publishing does — and a draft has no public asset URL,
 so no user, no search engine and no installed copy can reach what is staged.

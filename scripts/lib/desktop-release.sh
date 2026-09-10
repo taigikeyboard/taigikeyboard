@@ -128,10 +128,9 @@ _read_release_notes() {
 # `scripts/announce-release.sh`'s job, after the draft is published.
 #
 # Alongside the installer goes `<installer>.sha256`, the digest of what was
-# staged. It is what the announcement holds the published bytes against, so the
-# thing a user downloads is checked against a digest recorded before anyone
-# tested it — and on Windows, where releases are unsigned, it is also what a
-# user can check a manual download with.
+# staged: on Windows, where releases are unsigned, it is what a user can check a
+# manual download against, and `windows-release.md` promises every release
+# publishes one.
 stage_desktop_asset() {
     local asset_path="$1"
     local asset_name local_sha256 receipt
@@ -229,9 +228,7 @@ _require_tag_names_commit() {
 }
 
 # The commit this version's tag names, or nothing when there is no tag yet.
-# Both halves ask: staging, to refuse a build that does not match a tag pushed
-# by hand; the announcement, to refuse a tag that does not match what the
-# release recorded.
+# Staging asks, to refuse a build that does not match a tag pushed by hand.
 desktop_tag_commit() {
     local reference object_sha object_type
     if ! reference="$(gh api "repos/$RELEASE_REPOSITORY/git/ref/tags/$DESKTOP_TAG" \
