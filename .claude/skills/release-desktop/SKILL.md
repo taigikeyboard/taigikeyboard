@@ -246,14 +246,16 @@ Report the draft URL and which halves are on it.
 
 ## Hand off — the one manual step
 
-**Test what was staged, then publish it.** This is the decision the draft exists
-to protect, so the skill never does it:
+**Test what was staged, then publish it** — on the draft's own page, which step
+7 printed. A draft is visible in the web UI to anyone who can write this
+repository: the two assets are download links there, and **Publish release** is a
+button on the same page. This is the decision the draft exists to protect, so the
+skill never presses it.
 
-```bash
-gh release download desktop-<target> --repo taigikeyboard/taigikeyboard --dir ~/Downloads
-# install both, run the dogfood checklist items this release touches
-gh release edit desktop-<target> --repo taigikeyboard/taigikeyboard --draft=false
-```
+Install both, run the dogfood checklist items this release touches, then publish.
+(The same two steps from a terminal, if that is closer to hand:
+`gh release download desktop-<target> --repo taigikeyboard/taigikeyboard --dir ~/Downloads`
+and `gh release edit desktop-<target> --repo taigikeyboard/taigikeyboard --draft=false`.)
 
 Publishing creates the tag and fires two workflows:
 `.github/workflows/announce-release.yml`, which proves both downloads are

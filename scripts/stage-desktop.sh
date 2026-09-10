@@ -93,8 +93,22 @@ REMOTE
 ssh "$WINDOWS_SSH_HOST" "& '$WINDOWS_BASH' -lc \"\$(cat)\"" <<< "$remote_script" ||
     fail "staging on $WINDOWS_SSH_HOST failed — the log above is the box's; re-run this script with --skip-macos once it is fixed"
 
+# The draft's own page, from the API: a draft has no tag, so its URL is not the
+# `releases/tag/<tag>` address a published release has. It is where the
+# maintainer downloads what was staged and, when it passes, presses Publish.
+DESKTOP_VERSION="$(awk '
+    /^\[workspace\.package\]/ { inside = 1; next }
+    inside && /^\[/ { exit }
+    inside && /^version *=/ { gsub(/[" ]/, "", $3); print $3; exit }
+' "$REPOSITORY_DIR/windows/Cargo.toml" | tr -d '\r')"
+DRAFT_URL="$(gh release view "desktop-$DESKTOP_VERSION" \
+    --repo taigikeyboard/taigikeyboard --json url --jq .url 2> /dev/null || true)"
+
 echo ""
 echo "✓ both installers staged on the draft for ${SOURCE_COMMIT:0:7}"
-echo "  test them, then publish:"
-echo "    gh release download desktop-<version> --repo taigikeyboard/taigikeyboard --dir ~/Downloads"
-echo "    gh release edit desktop-<version> --repo taigikeyboard/taigikeyboard --draft=false"
+echo ""
+echo "  Open the draft, download both assets, install and test them:"
+echo "    ${DRAFT_URL:-https://github.com/taigikeyboard/taigikeyboard/releases}"
+echo ""
+echo "  When they pass, press \"Publish release\" on that page. That is the whole"
+echo "  remaining step: it tags the commit and announces the release itself."

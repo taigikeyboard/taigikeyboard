@@ -14,8 +14,8 @@ A desktop release happens in two halves with a manual test between them, and
 | | Runs | Does |
 |---|---|---|
 | Stage both | `make desktop-release` (this Mac) | Builds, signs, notarizes and stages the `.pkg` here, then drives the Windows box over `ssh win` — moving its checkout to this commit — to build, package and attach the `.exe` to the same draft. `RELEASE_FLAGS=--skip-windows` / `--skip-macos` run one half (`scripts/stage-desktop.sh`) |
-| **Test** | the maintainer | `gh release download desktop-<version> --repo taigikeyboard/taigikeyboard --dir ~/Downloads`, install, use both |
-| **Publish** | the maintainer | `gh release edit desktop-<version> --repo taigikeyboard/taigikeyboard --draft=false`, or the web UI. This is what creates the tag |
+| **Test** | the maintainer | Open the draft's page — a draft is visible in the web UI to anyone who can write the repository — download both assets, install, use them |
+| **Publish** | the maintainer | **Publish release** on that same page (or `gh release edit desktop-<version> --draft=false`). This is what creates the tag |
 | Announce | **automatic** — publishing fires `.github/workflows/announce-release.yml` | Proves both downloads are anonymously reachable, writes both `_data/*_release.json`, waits for the live appcasts. `make desktop-announce` is the same script, for a re-run |
 
 Staging creates no tag — publishing does — and a draft has no public asset URL,
