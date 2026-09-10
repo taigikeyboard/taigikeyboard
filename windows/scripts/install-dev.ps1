@@ -6,6 +6,8 @@
 #
 #   .\install-dev.ps1 install     build, register, refresh the indicator
 #   .\install-dev.ps1 uninstall   unregister (user data under %APPDATA% stays)
+#   .\install-dev.ps1 unlock      free the dll names the linker writes through,
+#                                 so a release build can link over a dev install
 #   .\install-dev.ps1 reload      re-register what is already built
 #
 # Requires an ELEVATED shell: a text service is loaded into every process of
@@ -20,7 +22,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('install', 'uninstall', 'reload')]
+    [ValidateSet('install', 'uninstall', 'reload', 'unlock')]
     [string] $Action = 'install'
 )
 
@@ -297,6 +299,16 @@ switch ($Action) {
         Write-Host ''
         Write-Host "OK  registered $ServiceDll"
         Write-Host '    Win+Space to switch to it. Settings is Ctrl+Alt+S while it is active.'
+    }
+    'unlock' {
+        # No registration change and no build: just the names. A release build
+        # runs from the same tree the dev install is registered from, and a host
+        # that has the old dll mapped stops the linker replacing it.
+        Write-Host '==> Freeing the build output'
+        Stop-SettingsWindow
+        Clear-BuildOutput
+        Write-Host ''
+        Write-Host 'OK  the linker can write the service dll.'
     }
     'uninstall' {
         Assert-Elevated

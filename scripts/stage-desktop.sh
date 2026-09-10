@@ -139,13 +139,19 @@ if ! command -v dumpbin > /dev/null; then
     export PATH="\$msvc_bin:\$PATH"
 fi
 
-# Out of the dev build tree. The box registers its development TIP in place
-# from windows/target/<triple>/release/TaigiKeyboard.dll, so a release build
-# there has to overwrite a DLL that explorer (or any host that has typed Taigi)
-# still has mapped — `error: failed to remove file ... 存取被拒 (os error 5)`.
-# A release-only target directory has no such contention, and a release that
-# compiles from scratch is what "every run starts clean" means on this side too.
-export CARGO_TARGET_DIR="\$(pwd)/windows/target-release"
+# The dev TIP is registered in place from this build tree, so a release build
+# has to overwrite a DLL that explorer — or any host that has typed Taigi since
+# — still has mapped (`os error 5`). `install-dev.ps1 unlock` renames both names
+# the linker writes through out of the way, which Windows allows even for a
+# loaded file.
+#
+# The build stays in the SHARED target directory on purpose. A release-only
+# CARGO_TARGET_DIR removes the contention but means every build-script binary is
+# newly created, and this box\'s App Control policy blocks those outright
+# (`os error 4551`). Reusing the tree it has already admitted is what works
+# here.
+powershell.exe -NoProfile -ExecutionPolicy Bypass \
+    -File windows/scripts/install-dev.ps1 unlock
 git fetch --quiet origin main
 git checkout --quiet --detach $SOURCE_COMMIT
 git status --porcelain --ignore-submodules=none | head -5
