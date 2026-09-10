@@ -42,7 +42,12 @@ PRODUCT_NAME_STRING_ID="$(awk '
 
 DISTRIBUTION_DIR="$WINDOWS_DIR/.build/distribution"
 STAGING_DIR="$WINDOWS_DIR/.build/staging"
-TARGET_DIR="$WINDOWS_DIR/target/$RELEASE_TARGET/release"
+# Honours CARGO_TARGET_DIR, which is how a release build stays out of the dev
+# build tree: the box registers its dev TIP in place from
+# `windows/target/<triple>/release/TaigiKeyboard.dll`, and any process that has
+# that DLL mapped stops the linker writing over it (`os error 5`). A release
+# compiles into its own directory instead of fighting for that file.
+TARGET_DIR="${CARGO_TARGET_DIR:-$WINDOWS_DIR/target}/$RELEASE_TARGET/release"
 DICTIONARIES_SOURCE_DIR="$REPOSITORY_DIR/dictionaries"
 FONTS_SOURCE_DIR="$REPOSITORY_DIR/fonts/font"
 INSTALLER_SCRIPT="$WINDOWS_DIR/installer/TaigiKeyboard.iss"

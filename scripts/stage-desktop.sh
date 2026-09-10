@@ -138,6 +138,14 @@ if ! command -v dumpbin > /dev/null; then
     [ -n "\$msvc_bin" ] || { echo "no MSVC x64 tools under \$vs_root" >&2; exit 1; }
     export PATH="\$msvc_bin:\$PATH"
 fi
+
+# Out of the dev build tree. The box registers its development TIP in place
+# from windows/target/<triple>/release/TaigiKeyboard.dll, so a release build
+# there has to overwrite a DLL that explorer (or any host that has typed Taigi)
+# still has mapped — `error: failed to remove file ... 存取被拒 (os error 5)`.
+# A release-only target directory has no such contention, and a release that
+# compiles from scratch is what "every run starts clean" means on this side too.
+export CARGO_TARGET_DIR="\$(pwd)/windows/target-release"
 git fetch --quiet origin main
 git checkout --quiet --detach $SOURCE_COMMIT
 git status --porcelain --ignore-submodules=none | head -5
