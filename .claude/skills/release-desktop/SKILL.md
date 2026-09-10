@@ -119,6 +119,12 @@ Two desktop-specific upgrade checks on top of it:
 
 ## 3. Rebuild release artifacts
 
+**The skill runs these itself.** `CLAUDE.md` § Build & Test reserves builds for
+the user mid-round; a release is a named exception, like post-PR verification —
+the whole point of this step is that the artifact being shipped was built from
+the commit being released, and asking the user to remember it is what the
+conditional version already got wrong.
+
 **Always**, not only when the range touched them. The engine binaries a platform
 links are generated and gitignored (`macos/RustEngine/RustTaigi.xcframework/`,
 `android/app/src/main/jniLibs/**`), so nothing in the tree says which commit the

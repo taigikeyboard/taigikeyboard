@@ -82,6 +82,12 @@ Run the `upgrade-check` procedure for `<base-tag> → HEAD`:
 
 ## 3. Rebuild release artifacts
 
+**The skill runs these itself.** `CLAUDE.md` § Build & Test reserves builds for
+the user mid-round; a release is a named exception, like post-PR verification —
+the whole point of this step is that the artifact being shipped was built from
+the commit being released, and asking the user to remember it is what the
+conditional version already got wrong.
+
 **Always**, not only when the range touched them. The engine binaries iOS and
 Android link are generated and gitignored, so a clean tree says nothing about
 which commit the local copies came from; a machine that last built on another
