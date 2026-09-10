@@ -76,12 +76,21 @@ echo "==> Staging $DESKTOP_TAG from ${SOURCE_COMMIT:0:7}"
 # A draft for this version is the previous attempt; it goes, so this run builds
 # both halves from one commit. A PUBLISHED release cannot be re-cut — its
 # installers are downloadable and its tag is what people already have.
+#
+# Only a run that stages EVERYTHING may delete: a recovery run staging one half
+# would otherwise throw away the half that is already on the draft, which is the
+# one thing it was invoked to keep (2026-09-10: --skip-macos deleted a notarized
+# package and cost a second notarization round).
 existing_state="$(gh release view "$DESKTOP_TAG" --repo "$RELEASE_REPOSITORY" --json isDraft --jq '.isDraft|tostring' 2>&1)" || existing_state=""
 case "$existing_state" in
     true)
-        echo "  removing the previous draft — every run stages both halves afresh"
-        gh release delete "$DESKTOP_TAG" --repo "$RELEASE_REPOSITORY" --yes ||
-            fail "cannot remove the existing draft $DESKTOP_TAG"
+        if [[ "$skip_macos" == true || "$skip_windows" == true ]]; then
+            echo "  keeping the existing draft — this run stages one half into it"
+        else
+            echo "  removing the previous draft — every full run stages both halves afresh"
+            gh release delete "$DESKTOP_TAG" --repo "$RELEASE_REPOSITORY" --yes ||
+                fail "cannot remove the existing draft $DESKTOP_TAG"
+        fi
         ;;
     false)
         fail "$DESKTOP_TAG is already published — it cannot be re-cut. Bump to the next version (make version-desktop) and stage that"
@@ -120,9 +129,11 @@ ssh -o ConnectTimeout=15 -o BatchMode=yes "$WINDOWS_SSH_HOST" "echo ok" > /dev/n
 # Bash. GIT_SSH_COMMAND is what stops the fetch below from hanging — an ssh
 # git spawns inside this ssh session inherits its stdout and both wait
 # (reference_windows_dev_box: "nested ssh hangs").
-remote_script=$(cat <<REMOTE
+remote_script="$(
+    printf 'WINDOWS_REPO_DIR=%s\nSOURCE_COMMIT=%s\n' "$WINDOWS_REPO_DIR" "$SOURCE_COMMIT"
+    cat <<'REMOTE'
 set -euo pipefail
-cd "\$(cygpath '$WINDOWS_REPO_DIR')"
+cd "$(cygpath "$WINDOWS_REPO_DIR")"
 export GIT_SSH_COMMAND="ssh -o BatchMode=yes -o ConnectTimeout=15"
 
 # An ssh session is not the interactive shell the box's PATH was set up for:
@@ -131,12 +142,12 @@ export GIT_SSH_COMMAND="ssh -o BatchMode=yes -o ConnectTimeout=15"
 # developer prompt or a login shell runs. Ask vswhere where the toolchain is
 # and put its x64 binaries on PATH rather than hard-coding a version.
 if ! command -v dumpbin > /dev/null; then
-    vs_root="\$('/c/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe' \
-        -latest -products '*' -property installationPath | tr -d '\\r')"
-    [ -n "\$vs_root" ] || { echo "vswhere found no Visual Studio installation" >&2; exit 1; }
-    msvc_bin="\$(ls -d "\$(cygpath "\$vs_root")"/VC/Tools/MSVC/*/bin/Hostx64/x64 2> /dev/null | sort -V | tail -1)"
-    [ -n "\$msvc_bin" ] || { echo "no MSVC x64 tools under \$vs_root" >&2; exit 1; }
-    export PATH="\$msvc_bin:\$PATH"
+    vs_root="$('/c/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe' \
+        -latest -products '*' -property installationPath | tr -d '\r')"
+    [ -n "$vs_root" ] || { echo "vswhere found no Visual Studio installation" >&2; exit 1; }
+    msvc_bin="$(ls -d "$(cygpath "$vs_root")"/VC/Tools/MSVC/*/bin/Hostx64/x64 2> /dev/null | sort -V | tail -1)"
+    [ -n "$msvc_bin" ] || { echo "no MSVC x64 tools under $vs_root" >&2; exit 1; }
+    export PATH="$msvc_bin:$PATH"
 fi
 
 # The dev TIP is registered in place from this build tree, so a release build
@@ -147,17 +158,17 @@ fi
 #
 # The build stays in the SHARED target directory on purpose. A release-only
 # CARGO_TARGET_DIR removes the contention but means every build-script binary is
-# newly created, and this box\'s App Control policy blocks those outright
+# newly created, and this box's App Control policy blocks those outright
 # (`os error 4551`). Reusing the tree it has already admitted is what works
 # here.
 powershell.exe -NoProfile -ExecutionPolicy Bypass \
     -File windows/scripts/install-dev.ps1 unlock
 git fetch --quiet origin main
-git checkout --quiet --detach $SOURCE_COMMIT
+git checkout --quiet --detach "$SOURCE_COMMIT"
 git status --porcelain --ignore-submodules=none | head -5
 make windows-release RELEASE_FLAGS=--skip-sign
 REMOTE
-)
+)"
 
 # `bash -s` reads the script from stdin. Passing it as an argument instead
 # means PowerShell — the box's login shell — parses it first, and it split a
