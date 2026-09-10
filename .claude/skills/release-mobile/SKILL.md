@@ -1,12 +1,15 @@
 ---
-name: release-helper
-description: Prepare a release on main, rebuild generated artifacts, update the detailed changelog, create concise English iOS and Android What's New text, mirror it into both mobile apps' version history, validate it, commit, and push. Use when preparing a version for manual App Store Connect or Google Play release. Never tags, uploads builds, or submits a store release. Mobile train only (iOS + Android share one version); the desktop train (macOS + Windows) has its own version, its own `changelog/desktop-v<version>.md`, and its own publish scripts, none of which this skill touches.
+name: release-mobile
+description: Prepare a MOBILE release (iOS + Android, one shared version) on main - rebuild generated artifacts, update the detailed changelog, write concise English iOS and Android What's New text, mirror it into both apps' version history, validate, commit, and push. Use when preparing a version for manual App Store Connect or Google Play release. Never tags, uploads builds, or submits a store release. Mobile train only; the desktop train (macOS + Windows) is `release-desktop`.
 ---
 
-# Release Helper
+# Release Mobile
+
+The mobile train is iOS + Android, sharing one version. The desktop train is a
+separate skill, `release-desktop`; a release never mixes the two.
 
 Run from `main`. Require `<base-tag> <target>` in semantic-version form.
-Example: `/release-helper v3.6.4 v3.6.5`
+Example: `/release-mobile v3.6.4 v3.6.5`
 
 Never create or move a tag, upload a build, edit store metadata, or submit a release. The user handles every store action manually.
 
@@ -128,7 +131,7 @@ The user pastes iOS text into App Store Connect and Android text into the chosen
 
 ## Desktop train
 
-macOS and Windows are the **desktop train**: one version number shared by the two, moved by `make version-desktop x.y.z`, independent of the mobile number this skill prepares. Each desktop platform announces itself through its own GitHub release on the website repository — `macos/scripts/publish-release.sh` extracts the `### macOS` section and `windows/scripts/publish-release.sh` the `### Windows` section of `changelog/desktop-v<version>.md` as the release body, falling back to a one-line `TaigiKeyboard for <platform> <version>` note when the section is missing. This skill does not write that file, run those scripts, or publish anything for desktop.
+macOS and Windows are the **desktop train**: one version number shared by the two, moved by `make version-desktop x.y.z`, independent of the mobile number this skill prepares. It has its own skill (`release-desktop`), its own record (`changelog/desktop-v<version>.md`), and its own publish scripts. This skill never writes that file, runs those scripts, or publishes anything for desktop.
 
 What that means while preparing a mobile release:
 
@@ -139,8 +142,9 @@ What that means while preparing a mobile release:
 ## Guardrails
 
 - Never edit another version's changelog or store-note files.
+- Never touch `changelog/desktop-v<version>.md`, `macos/`, or `windows/` — that is `release-desktop`'s surface.
 - Never hand-edit the generated target history entry.
-- Never create, move, or push a tag.
+- Never create, move, or push a tag. When the user tags a mobile release themselves, the name is `mobile-<version>` (the pre-2026-09 tags are the bare `v<version>` form).
 - Never request, store, or use signing certificates, keystores, API keys, or store credentials.
 - Never upload a build, edit a live store listing, or submit production.
 - Never run the macOS release or publish scripts, and never put macOS-only work in a store note.
