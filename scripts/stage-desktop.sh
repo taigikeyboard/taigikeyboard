@@ -51,6 +51,10 @@ DESKTOP_VERSION="$(awk '
 ' "$REPOSITORY_DIR/windows/Cargo.toml" | tr -d '\r')"
 DESKTOP_TAG="desktop-$DESKTOP_VERSION"
 RELEASE_REPOSITORY="taigikeyboard/taigikeyboard"
+# What CI is expected to leave on the draft. Checked at the end, because a run
+# that reports success and attaches nothing is exactly what happened the first
+# time this script drove a second machine.
+WINDOWS_ASSET_NAME="TaigiKeyboard-$DESKTOP_VERSION.exe"
 
 echo "==> Staging $DESKTOP_TAG from ${SOURCE_COMMIT:0:7}"
 
@@ -125,7 +129,7 @@ DRAFT_URL="$(printf '%s' "$draft_json" | python3 -c 'import json,sys; print(json
 printf '%s' "$draft_json" |
     python3 -c 'import json,sys; sys.exit(0 if sys.argv[1] in [a["name"] for a in json.load(sys.stdin)["assets"]] else 1)' \
         "$WINDOWS_ASSET_NAME" 2> /dev/null ||
-    fail "the box reported no error but $WINDOWS_ASSET_NAME is not on the draft — read the remote log above, then run this again"
+    fail "the Windows run reported success but $WINDOWS_ASSET_NAME is not on the draft — read its log above, then run this again"
 
 echo ""
 echo "✓ both installers staged on the draft for ${SOURCE_COMMIT:0:7}"
