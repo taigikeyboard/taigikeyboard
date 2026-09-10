@@ -16,9 +16,11 @@ before invoking. Example: `/release-desktop`
 One optional argument, `<base-ref>`, overrides the derived release base.
 Example: `/release-desktop desktop-3.6.7`
 
-This skill prepares the repository. It never builds, signs, notarizes, packages,
-publishes, or tags — every one of those is the maintainer's own command, on the
-right machine, and they are listed in § Hand off.
+This skill takes a release as far as it can go without a person: it rebuilds,
+writes the changelog, commits, and stages **both** installers on a draft release
+nobody can reach. It stops there. Publishing that draft is the maintainer's,
+because it is the decision the draft exists to protect — and publishing
+announces the release itself.
 
 ## 1. Validate context
 
@@ -206,7 +208,7 @@ every claim in a section is traceable to a commit in the range.
 
 Deterministic validation does not replace the user's factual review.
 
-## 6. Commit and hand off
+## 6. Commit
 
 ```bash
 git add -A
@@ -214,79 +216,65 @@ git commit -m "desktop v<target>: release prep + changelog"
 git push origin main
 ```
 
-Report the commit SHA, the release range, and both rendered sections.
+Report the commit SHA, the release range, and both rendered sections. Ask the
+maintainer to read the changelog back before staging: deterministic validation
+cannot tell whether a sentence describes the behavior that shipped.
 
-## Hand off
-
-Everything below is the maintainer's, on the machine named. This skill runs none
-of it. The release is a **draft** until step 4: no tag, no public download,
-nothing a user can reach. Full procedure and rationale:
-`docs/architecture/desktop-release.md`.
-
-**1. Stage the macOS package — on the Mac, from a clean tree:**
+## 7. Stage both installers
 
 ```bash
-make macos-release
+make desktop-release
 ```
 
-Builds, signs with both Developer ID certificates, notarizes, staples, packages,
-then `macos/scripts/publish-release.sh` puts the `.pkg` (and a `.sha256`
-receipt) on the **draft** `desktop-<target>` release in this repository —
-creating it, recording the commit the checkout is at as what publishing will
-tag, with the whole `changelog/desktop-v<target>.md` as its body. Needs the
-notarization credential (`docs/architecture/macos-release.md`).
+`scripts/stage-desktop.sh` runs `make macos-release` here — build, sign,
+notarize, package, put the `.pkg` and its `.sha256` on the **draft**
+`desktop-<target>` — then moves the Windows box's checkout to this commit over
+`ssh win` and runs `make windows-release RELEASE_FLAGS=--skip-sign` there, which
+attaches the installer to the same draft. Whichever runs first creates it.
 
-**2. Stage the Windows installer — on the Windows box (`ssh win`), Git Bash, clean tree:**
+A draft has no tag and no public asset URL: nothing here reaches a user, and
+nothing is announced. The tag appears when the draft is published.
+
+When the box is off, or its half fails:
 
 ```bash
-make windows-release RELEASE_FLAGS=--skip-sign
+make desktop-release RELEASE_FLAGS=--skip-windows   # the Mac's half alone
+make desktop-release RELEASE_FLAGS=--skip-macos     # the box's half, later
 ```
 
-There is no Authenticode certificate yet, so `--skip-sign` is the release
-channel, stated explicitly so nothing ships unsigned by accident. Builds,
-stages, packages with Inno Setup, then attaches the installer and its receipt to
-the **same** draft (creating it if Windows goes first). Before this:
-`make windows-check` on the Mac is the host-side gate.
+Report the draft URL and which halves are on it.
 
-Whichever platform stages first creates the draft; the second moves the draft's
-target (and any tag) onto its own commit. A release that has already been
-**published** is the exception — it stops rather than adding an asset that would
-be public with no test.
+## Hand off — the one manual step
 
-**3. Test what was staged — the whole point of the draft:**
+**Test what was staged, then publish it.** This is the decision the draft exists
+to protect, so the skill never does it:
 
 ```bash
 gh release download desktop-<target> --repo taigikeyboard/taigikeyboard --dir ~/Downloads
-```
-
-Install both, run the dogfood checklist items this release touches.
-
-**4. Publish, when both pass — the last manual step:**
-
-```bash
+# install both, run the dogfood checklist items this release touches
 gh release edit desktop-<target> --repo taigikeyboard/taigikeyboard --draft=false
 ```
 
-This creates the tag and fires two workflows:
+Publishing creates the tag and fires two workflows:
 `.github/workflows/announce-release.yml`, which proves both downloads are
 anonymously reachable, writes both `_data/*_release.json` to the website in one
-commit and waits for the live appcasts (a platform whose installer is absent is
-skipped with a note); and `.github/workflows/windows-build.yml`, a GitHub-hosted
-rebuild for SignPath provenance that publishes nothing.
+commit and waits for the live appcasts; and `.github/workflows/windows-build.yml`,
+a GitHub-hosted rebuild for SignPath provenance that publishes nothing.
 
 `make desktop-announce` runs the same announcement by hand — for a re-run after
-a failed job, or when its token has expired.
+a failed job, or when its token has expired. Full procedure and rationale:
+`docs/architecture/desktop-release.md`.
 
 ## Guardrails
 
 - Never edit another version's changelog.
 - Never touch `changelog/v<version>.md` or `changelog/store/**` — that is
   `release-mobile`'s surface, and desktop-only work must never enter a store note.
-- Never run `make macos-release`, `make windows-release`, `make desktop-announce`,
-  either `release-app.sh`, either `publish-release.sh`, or `announce-release.sh`.
-  The hand-off section tells the maintainer to run them; the skill never does.
-- Never create, move, or push a tag; never create, publish, or un-draft a GitHub
-  release.
+- Never publish or un-draft a release, and never push a tag by hand: publishing
+  is the manual step this whole flow is shaped around, and it is what creates the
+  tag.
+- Never run `make desktop-announce` or `announce-release.sh` — the publish runs
+  the announcement.
 - Never request, store, or use signing certificates, notarization credentials,
   or thumbprints.
 - Never pass `--allow-downgrade`, `--allow-dirty`, or `--force` to any release

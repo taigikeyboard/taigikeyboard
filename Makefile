@@ -9,7 +9,7 @@ export PATH := $(HOME)/.cargo/bin:$(PATH)
 .PHONY: build test test-crate doc dict dogfood help \
         fmt lint hooks scan-secrets scan-secrets-full \
         i18n i18n-test \
-        macos-release desktop-announce version-mobile version-desktop \
+        macos-release desktop-release desktop-announce version-mobile version-desktop \
         windows-check windows-release \
         update-submodules
 
@@ -112,6 +112,16 @@ macos-release:
 # behaviour is the dogfood run-book's (docs/architecture/windows-roadmap.md W13).
 windows-check:
 	$(MAKE) -C windows check
+
+# Stage BOTH desktop installers on this version's draft release: the package
+# here, the installer on the Windows box over ssh (scripts/stage-desktop.sh).
+# The two builds cannot share a machine, so this drives the second rather than
+# pretending they are one build. Nothing it does reaches a user — publishing the
+# draft stays a person's, and that publish announces the release itself.
+#   make desktop-release                    both
+#   make desktop-release RELEASE_FLAGS=--skip-windows   the Mac's half alone
+desktop-release:
+	bash scripts/stage-desktop.sh $(RELEASE_FLAGS)
 
 # Announce a desktop release a person has already published: prove both
 # installers download anonymously, point the website at them, wait for the live
@@ -225,6 +235,7 @@ help:
 	@echo "  make i18n-test          Run the i18n codegen + production-content unit tests"
 	@echo "  make dogfood            Print continuous-input dogfood test table (TL/POJ/TPS + 漢字)"
 	@echo "  make macos-release      Sign + notarize + stage the package on the draft release"
+	@echo "  make desktop-release    Stage both desktop installers on the draft (Mac + the box over ssh)"
 	@echo "  make desktop-announce   Announce a published desktop release (website + appcasts)"
 	@echo "  make windows-check      Host-side compile + test gate for the Windows input method"
 	@echo "  make windows-release    Build + package + stage the installer on the draft (on Windows)"
