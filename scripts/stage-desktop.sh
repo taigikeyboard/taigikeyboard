@@ -90,19 +90,34 @@ make windows-release RELEASE_FLAGS=--skip-sign
 REMOTE
 )
 
-ssh "$WINDOWS_SSH_HOST" "& '$WINDOWS_BASH' -lc \"\$(cat)\"" <<< "$remote_script" ||
-    fail "staging on $WINDOWS_SSH_HOST failed — the log above is the box's; re-run this script with --skip-macos once it is fixed"
+# `bash -s` reads the script from stdin. Passing it as an argument instead
+# means PowerShell — the box's login shell — parses it first, and it split a
+# multi-line script into positional arguments while still exiting 0, so the
+# failure read as success (2026-09-10, first run of this script).
+ssh "$WINDOWS_SSH_HOST" "& '$WINDOWS_BASH' -s" <<< "$remote_script" ||
+    fail "staging on $WINDOWS_SSH_HOST failed — the log above is the box's; re-run with --skip-macos once it is fixed"
+
+# PowerShell's exit status is not proof: ask the release what it now holds.
+# Whatever the remote log said, an installer that is not on the draft is not
+# staged.
+WINDOWS_ASSET_NAME="TaigiKeyboard-$(awk '
+    /^\[workspace\.package\]/ { inside = 1; next }
+    inside && /^\[/ { exit }
+    inside && /^version *=/ { gsub(/[" ]/, "", $3); print $3; exit }
+' "$REPOSITORY_DIR/windows/Cargo.toml" | tr -d '\r').exe"
 
 # The draft's own page, from the API: a draft has no tag, so its URL is not the
 # `releases/tag/<tag>` address a published release has. It is where the
 # maintainer downloads what was staged and, when it passes, presses Publish.
-DESKTOP_VERSION="$(awk '
-    /^\[workspace\.package\]/ { inside = 1; next }
-    inside && /^\[/ { exit }
-    inside && /^version *=/ { gsub(/[" ]/, "", $3); print $3; exit }
-' "$REPOSITORY_DIR/windows/Cargo.toml" | tr -d '\r')"
-DRAFT_URL="$(gh release view "desktop-$DESKTOP_VERSION" \
-    --repo taigikeyboard/taigikeyboard --json url --jq .url 2> /dev/null || true)"
+DESKTOP_VERSION="${WINDOWS_ASSET_NAME#TaigiKeyboard-}"
+DESKTOP_VERSION="${DESKTOP_VERSION%.exe}"
+draft_json="$(gh release view "desktop-$DESKTOP_VERSION" \
+    --repo taigikeyboard/taigikeyboard --json url,assets 2> /dev/null || true)"
+DRAFT_URL="$(printf '%s' "$draft_json" | python3 -c 'import json,sys; print(json.load(sys.stdin)["url"])' 2> /dev/null || true)"
+printf '%s' "$draft_json" |
+    python3 -c 'import json,sys; sys.exit(0 if sys.argv[1] in [a["name"] for a in json.load(sys.stdin)["assets"]] else 1)' \
+        "$WINDOWS_ASSET_NAME" 2> /dev/null ||
+    fail "the box reported no error but $WINDOWS_ASSET_NAME is not on the draft — read the remote log above; the macOS half is staged and can be left alone (re-run with --skip-macos)"
 
 echo ""
 echo "✓ both installers staged on the draft for ${SOURCE_COMMIT:0:7}"
