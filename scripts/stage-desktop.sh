@@ -129,12 +129,23 @@ ssh -o ConnectTimeout=15 -o BatchMode=yes "$WINDOWS_SSH_HOST" "echo ok" > /dev/n
 # Bash. GIT_SSH_COMMAND is what stops the fetch below from hanging — an ssh
 # git spawns inside this ssh session inherits its stdout and both wait
 # (reference_windows_dev_box: "nested ssh hangs").
-remote_script="$(
-    printf 'WINDOWS_REPO_DIR=%s\nSOURCE_COMMIT=%s\n' "$WINDOWS_REPO_DIR" "$SOURCE_COMMIT"
-    cat <<'REMOTE'
+# Built in a temporary file rather than a command substitution: bash 3.2 —
+# what macOS ships and what runs this — mishandles a heredoc inside `$( )`,
+# and the body leaked into this script as code (2026-09-10).
+remote_body="$(mktemp)"
+trap 'rm -f "$remote_body"' EXIT
+cat > "$remote_body" <<'REMOTE'
 set -euo pipefail
 cd "$(cygpath "$WINDOWS_REPO_DIR")"
 export GIT_SSH_COMMAND="ssh -o BatchMode=yes -o ConnectTimeout=15"
+
+# The checkout first: everything below reads a script out of this tree, so it
+# has to be the tree of the commit being staged, not whatever the box was
+# left on (2026-09-10: unlock ran from the previous checkout, which had no
+# such mode).
+git fetch --quiet origin main
+git checkout --quiet --detach "$SOURCE_COMMIT"
+git status --porcelain --ignore-submodules=none | head -5
 
 # An ssh session is not the interactive shell the box's PATH was set up for:
 # the MSVC tools the release gates need (dumpbin's import-table check, and the
@@ -161,20 +172,21 @@ fi
 # newly created, and this box's App Control policy blocks those outright
 # (`os error 4551`). Reusing the tree it has already admitted is what works
 # here.
+
 powershell.exe -NoProfile -ExecutionPolicy Bypass \
     -File windows/scripts/install-dev.ps1 unlock
-git fetch --quiet origin main
-git checkout --quiet --detach "$SOURCE_COMMIT"
-git status --porcelain --ignore-submodules=none | head -5
 make windows-release RELEASE_FLAGS=--skip-sign
 REMOTE
-)"
+
 
 # `bash -s` reads the script from stdin. Passing it as an argument instead
 # means PowerShell — the box's login shell — parses it first, and it split a
 # multi-line script into positional arguments while still exiting 0, so the
 # failure read as success (2026-09-10, first run of this script).
-ssh "$WINDOWS_SSH_HOST" "& '$WINDOWS_BASH' -s" <<< "$remote_script" ||
+{
+    printf 'WINDOWS_REPO_DIR=%s\nSOURCE_COMMIT=%s\n' "$WINDOWS_REPO_DIR" "$SOURCE_COMMIT"
+    cat "$remote_body"
+} | ssh "$WINDOWS_SSH_HOST" "& '$WINDOWS_BASH' -s" ||
     fail "staging on $WINDOWS_SSH_HOST failed — the log above is the box's; re-run with --skip-macos once it is fixed"
 
 # PowerShell's exit status is not proof: ask the release what it now holds.
