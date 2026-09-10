@@ -210,55 +210,98 @@ simply upgrades it. No uninstall step is needed first.
 
 ## Publishing the package
 
-`macos/scripts/publish-release.sh` uploads the package and announces it.
-`make macos-release` runs it on success, so cutting a release never invokes it
-by hand. It stays a separate script because the two halves fail for unrelated
-reasons — if only the upload failed, running it alone re-publishes the package
-already sitting in `macos/.build/distribution/` without rebuilding or
-re-notarizing.
+A desktop release happens in two halves with a manual test between them, and
+**nothing reaches a user until a person publishes it**:
 
-Everything goes to the **website** repository, `taigikeyboard/taigikeyboard.github.io`:
+| | Runs | Does |
+|---|---|---|
+| Stage the package | `make macos-release` (this Mac) | Builds, signs, notarizes, packages, then `macos/scripts/publish-release.sh` puts the `.pkg` on a **draft** release `desktop-<version>` |
+| Stage the installer | `make windows-release RELEASE_FLAGS=--skip-sign` (the Windows box) | Attaches the `.exe` to the same draft |
+| **Test** | the maintainer | `gh release download desktop-<version> --repo taigikeyboard/taigikeyboard --dir ~/Downloads`, install, use both |
+| **Publish** | the maintainer | `gh release edit desktop-<version> --repo taigikeyboard/taigikeyboard --draft=false`, or the web UI. This is what creates the tag |
+| Announce | `make desktop-announce` (either machine) | Proves both downloads are anonymously reachable, writes both `_data/*_release.json`, waits for the live appcasts |
+
+Staging creates no tag — publishing does — and a draft has no public asset URL,
+so no user, no search engine and no installed copy can reach what is staged.
+(A tag pushed by hand beforehand is accepted, as long as it names the commit
+being staged.) Between the two halves, the `.sha256` receipt staged beside each
+installer is what later proves the published bytes are the ones that were
+staged rather than something swapped in afterwards; that they are the ones that
+were *tested* rests on the maintainer having tested this release's download.
+
+The release goes in **this** repository; only the website's own data goes to
+`taigikeyboard/taigikeyboard.github.io`:
 
 | What | Where | Why there |
 |---|---|---|
-| The `.pkg` | a GitHub release asset, tagged `macos-v<version>` | Release assets live outside git, so they cost the Pages site neither its 1 GB size limit nor its bandwidth allowance, and never enter the site's history. Committing 20 MB per version would do all three. |
-| `_data/macos_release.json` | committed site data — **the only file a release writes** | The landing page's macOS download button reads it and links straight at the package, so its URL carries the version. Keeping it as data the release flow writes is what stops the page hard-coding a version, and what keeps the button off `/releases/latest` — that alias is repository-wide, and the repository it would resolve against is a website. |
-| `appcast/macos.json` | **rendered** from that data by the site's own build, served at `https://taigikeyboard.tw/appcast/macos.json` | The app source repository is private, so nothing served from it — raw file or releases page — answers an anonymous request with anything but `404`. Rendered rather than written because two files meant two commits, and two Pages runs seconds apart deploy their own trees: see *One published fact, one committed file* in `macos/updates/README.md` for the day the manifest sat a release behind. |
+| The `.pkg` and its `.sha256` | assets on the GitHub release `desktop-<version>` **in this repository**, shared with the Windows installer | One desktop version is one release, beside the source it was built from: the tag names that commit, the notes are that commit's changelog. Releases lived on the website repository while this one was private and nothing served from it was anonymously reachable; it has been public since 2026-09-07. Release assets live outside git either way, so they cost no repository its size or bandwidth allowance. |
+| `_data/macos_release.json` | committed site data in the website repository — written only by the announcement | The landing page's macOS download button reads it and links straight at the package, so its URL carries the version. Keeping it as data the release flow writes is what stops the page hard-coding a version, and what keeps the button off `/releases/latest` — that alias is repository-wide, and this repository's last release may be a Windows installer. |
+| `appcast/macos.json` | **rendered** from that data by the site's own build, served at `https://taigikeyboard.tw/appcast/macos.json` | Every installed copy has that URL baked in (`UpdateChecker.publishedURL`) and expects `version` / `downloadPageURL` / `packageURL`, so the manifest stays a static file on the project's own domain rather than anything GitHub serves. Rendered rather than written because two files meant two commits, and two Pages runs seconds apart deploy their own trees: see *One published fact, one committed file* in `macos/updates/README.md` for the day the manifest sat a release behind. |
 
-In order:
+The pieces that are not macOS-specific — the draft, its tag identity, the
+create-or-attach rule, the read-back, and the whole announcement — live in
+`scripts/lib/desktop-release.sh`, `scripts/lib/release-site.sh` and
+`scripts/announce-release.sh`, shared with Windows. `publish-release.sh` owns
+what only a Mac can say about the package.
 
-1. Check the package is stapled, passes Gatekeeper, and — read out of its own
+### What staging checks, in order
+
+1. The shared preconditions, before any evidence is gathered about the package,
+   so a mistake costs a second rather than a notarization wait: `gh` present and
+   authenticated, a dotted-integer version, a clean tree, HEAD an ancestor of
+   `origin/main`, and `changelog/desktop-v<version>.md` present **in that
+   commit**. Not `main`'s tip — `main` may move between the two platforms'
+   staging runs, and requiring the tip would strand whichever runs second.
+2. The package is stapled, passes Gatekeeper, and — read out of its own
    `Distribution` — declares this bundle identifier at this build version.
    `--pkg` can point at any file, and the tag and manifest version both come
-   from `Info.plist`, so a stale package would otherwise be announced under the
+   from `Info.plist`, so a stale package would otherwise be staged under the
    current version's name.
-2. `gh release create`, with the `### macOS` section of
-   `changelog/desktop-v<version>.md` (the desktop train's record) as the notes
-   when that section exists — the rest of that file is Windows work this page's
-   reader cannot install. A missing section falls back to a
-   one-line note rather than failing. If the release already exists — a re-run after something below
-   failed — the package is uploaded into it instead. The release is never
-   deleted: the manifest may already point at it, and taking it away to put it
-   back leaves a 404 for as long as the second attempt takes, or forever if it
-   fails. Re-uploading an asset that already exists does remove it first, so
-   re-publishing an *already-announced* version has a window where its download
-   404s; a new version writes a name nothing points at yet.
-3. **Re-fetch the release page and the asset with no credentials at all**, and
-   require `200` for the page and `206` for the asset — a one-byte range request
-   proves it downloads without pulling tens of megabytes (`200` counts too: the
-   server ignored the range and sent all of it). `curl -q --netrc-file /dev/null` is what guarantees that: an
-   authenticated check cannot tell a public URL from a private one, which is
-   exactly how the first version of this shipped pointing at a private
-   repository.
-4. Write `_data/macos_release.json` — one file, one commit — then poll the live
-   manifest URL until it serves the new version: GitHub Pages has to build and
-   its CDN has to expire. That poll does double duty, because the manifest is
-   rendered rather than written: it is the only thing that proves the site built
-   what was committed.
+3. Whatever already exists for this version names this commit. Two things can:
+   a git tag (from a hand-push, or a release published earlier) is
+   dereferenced and compared; a draft has no tag, only `targetCommitish`, which
+   must be this exact commit SHA. A branch name there would tag whatever that
+   branch points at on publish day, so it is refused. A release that is already
+   published is refused outright — an asset added to it would be public
+   immediately, which is the one thing this flow exists to prevent.
+4. `gh release create --draft --target <commit>` with the whole
+   `changelog/desktop-v<version>.md` as the notes (both platforms share the
+   page, so both sections belong on it), or an upload into the existing draft.
+   Never `--clobber`, and never over an asset already staged: an identical one
+   is verified in place, a differing one stops the run.
+5. The staged asset is downloaded back — authenticated, since a draft has no
+   anonymous URL — and its SHA-256 compared to the local file's, so what the
+   maintainer is about to test is provably what was built.
 
-Step 3 gates step 4 on purpose. The manifest is what every installed copy polls,
+### What announcing checks, in order
+
+1. The release is published, not a draft, and its tag dereferences to the commit
+   the release recorded when it was staged — a tag created or moved by hand in
+   between would otherwise announce a release whose tag does not describe what
+   is in it.
+2. For each platform's installer on it: the asset **and** its `.sha256` receipt
+   are fetched **with no credentials at all** — `curl -q --netrc-file /dev/null`
+   is what guarantees that; an authenticated check cannot tell a public URL from
+   a private one, which is how the first version of this shipped pointing at a
+   private repository. The downloaded bytes must hash to what the receipt says,
+   which is what makes "what a user downloads" the same thing as "what was
+   tested" rather than merely "what GitHub currently holds".
+3. Both platforms' data files are written to the website in **one** commit, so
+   the two cannot race each other's Pages deployment.
+4. Each live appcast is polled until it serves this version **and** its package
+   URL (and on Windows the digest). Both fields, not just the version, because a
+   render that dropped `packageURL` still reads as a valid update and would
+   quietly cost every install the in-app download. The poll is also the only
+   thing that proves the site built what was committed, since the manifest is
+   rendered rather than written.
+
+Step 2 gates step 3 on purpose. The manifest is what every installed copy polls,
 so announcing a version before its download is reachable points all of them at
 a 404 — and the developer's own browser, being logged in, cannot see it happen.
+
+A platform whose installer is not on the release is skipped with a note, and its
+manifest is left where it was: one platform can lag, and announcing the one that
+is ready beats making it wait.
 
 `macos/updates/README.md` documents the manifest wire format.
 

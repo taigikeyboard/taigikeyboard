@@ -28,14 +28,16 @@ download and what it has to prove).
 The file itself is **not** in this repository. It is served from the website
 repository, `taigikeyboard/taigikeyboard.github.io`, at `appcast/macos.json`.
 
-Two constraints put it there rather than here:
+What puts it there rather than here: **`UpdateChecker.publishedURL` is compiled
+into every shipped build** and old installs request it forever, so the manifest
+has to sit at a fixed URL on a domain the project controls — one that can be
+repointed at different hosting later without stranding them. The package it
+announces is a release asset in this repository; the manifest is not.
 
-- **This repository is private.** Anything served from it — `raw.githubusercontent.com`
-  or a releases page — answers an anonymous request with `404`. A manifest here
-  is a manifest no user can read.
-- **`UpdateChecker.publishedURL` is compiled into every shipped build** and old
-  installs request it forever. Only a URL on a domain the project controls can
-  be repointed at different hosting later without stranding them.
+(There was a second reason until 2026-09-07: this repository was private, so
+nothing served from it answered an anonymous request with anything but `404`.
+That is why the releases lived over there too. They are back here; the manifest
+stays where every installed copy already looks for it.)
 
 Keeping a second copy here to review would only give it somewhere to drift, and
 a hand-edited manifest can go live before the package it announces exists.
@@ -47,17 +49,16 @@ A release writes exactly one file over there, `_data/macos_release.json`:
 ```json
 {
   "version": "3.6.6",
-  "tag": "macos-v3.6.6",
-  "downloadURL": "https://github.com/taigikeyboard/taigikeyboard.github.io/releases/download/macos-v3.6.6/TaigiKeyboard-3.6.6.pkg",
-  "releasePageURL": "https://github.com/taigikeyboard/taigikeyboard.github.io/releases/tag/macos-v3.6.6"
+  "tag": "desktop-3.6.6",
+  "downloadURL": "https://github.com/taigikeyboard/taigikeyboard/releases/download/desktop-3.6.6/TaigiKeyboard-3.6.6.pkg",
+  "releasePageURL": "https://github.com/taigikeyboard/taigikeyboard/releases/tag/desktop-3.6.6"
 }
 ```
 
 That file is what the site's macOS download button links at — straight at the
 package so the download starts on one click, which is why its URL carries the
 version, and deliberately not `/releases/latest/download/...`, since `latest`
-resolves across a repository that is a website rather than this app's release
-channel.
+resolves repository-wide and the last release here may be a Windows one.
 
 The manifest is **rendered** from it by the site's own build:
 `appcast/macos.json` over there is a Jekyll template reading
@@ -101,27 +102,27 @@ published yet" looks like on the wire.
 
 ## Publishing a release
 
+Two halves, with a manual test between them.
+
 `macos/scripts/publish-release.sh` — which `make macos-release` runs straight
-after a successful build — does the whole sequence:
+after a successful build — **stages** the package: it checks the package really
+is this app at this version, puts it and a `.sha256` receipt on the **draft**
+release `desktop-<version>` in this repository (the one the Windows installer
+shares), and reads the asset back to prove the upload landed whole. A draft has
+no tag and no public asset URL, so nothing here is announced or reachable. The
+maintainer downloads it, tests it, and publishes the release by hand.
 
-1. Checks the package really is this app at this version, then uploads it as a
-   GitHub release asset on the website repository — release assets, unlike
-   committed files, do not count against the 1 GB GitHub Pages site limit or its
-   bandwidth allowance, and never enter the site's git history.
-2. Re-fetches the release page and the asset **anonymously**, with no GitHub
-   credentials, and requires the page to answer `200` and the asset `206` — one
-   byte, rather than tens of megabytes, to prove it downloads (`200` counts too:
-   it means the server ignored the range and sent the whole thing).
-3. Only then writes `_data/macos_release.json` — one commit — and waits for the
-   live manifest URL to serve the new version. That wait is also what proves the
-   site rendered the manifest from what was committed, which is the one step of
-   the announcement the script no longer performs itself.
+`scripts/announce-release.sh` (`make desktop-announce`) is the half that reaches
+users. It refuses while the release is a draft; fetches the package and its
+receipt **anonymously**, with no GitHub credentials, and requires the bytes to
+hash to what the receipt says — so what a user downloads is what was tested, not
+merely what GitHub currently holds; writes `_data/macos_release.json` (with the
+Windows one, in a single commit); and waits for the live manifest URL to serve
+the new version and package URL. That wait is also what proves the site rendered
+the manifest from what was committed.
 
-Re-running it after a failure is the intended recovery — it adds to an existing
-release rather than replacing it, so the release the manifest points at is never
-torn down and rebuilt. Re-publishing a version whose package was already
-uploaded is narrower: replacing an asset removes it first, so that one download
-404s until the upload finishes.
+Re-running either half after a failure is the intended recovery — a draft is
+added to rather than replaced, and an asset already staged is verified in place.
 
 The order is the point. A manifest published before its download is reachable
 points every checker at a 404, and a developer's own browser cannot see that

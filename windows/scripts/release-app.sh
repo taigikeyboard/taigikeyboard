@@ -27,6 +27,8 @@
 
 set -euo pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/identity.sh"
+# shellcheck source=../../scripts/lib/desktop-release.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../scripts/lib/desktop-release.sh"
 
 TIMESTAMP_URL="${TIMESTAMP_URL:-http://timestamp.digicert.com}"
 allow_dirty=false
@@ -71,7 +73,7 @@ HEAD_COMMIT="$(git -C "$REPOSITORY_DIR" rev-parse --short HEAD)"
 # the same one macOS publishes (`TaigiKeyboard-<version>.pkg`).
 QUALIFIER=""
 [[ -z "$TREE_STATUS" ]] || QUALIFIER="$QUALIFIER-dirty"
-OUTPUT_EXE="$DISTRIBUTION_DIR/$APP_NAME-$SHORT_VERSION$QUALIFIER.exe"
+OUTPUT_EXE="$DISTRIBUTION_DIR/${WINDOWS_ASSET%.exe}$QUALIFIER.exe"
 if [[ -e "$OUTPUT_EXE" && "$force_overwrite" == false ]]; then
     fail "$OUTPUT_EXE already exists — bump the version, or pass --force"
 fi
@@ -243,7 +245,7 @@ echo "✓ $OUTPUT_EXE"
 echo "  version   $SHORT_VERSION"
 echo "  commit    $HEAD_COMMIT"
 echo "  installs  %ProgramFiles%\\TaigiKeyboard (administrator prompt)"
-echo "  sha256    $(sha256_of "$OUTPUT_EXE")"
+echo "  sha256    $(release_sha256 "$OUTPUT_EXE")"
 declare -a PUBLISH_ARGS=(--installer "$OUTPUT_EXE")
 if [[ "$skip_sign" == true ]]; then
     PUBLISH_ARGS+=(--allow-unsigned)

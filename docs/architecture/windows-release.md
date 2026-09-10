@@ -2,9 +2,10 @@
 
 The operator procedure for cutting a Windows release (roadmap
 `windows-roadmap.md` W8 / W9). Mirror of `macos-release.md`: the same order,
-the same website repository, the same manifest contract — with Authenticode
-in place of Developer ID + notarization, and an Inno Setup installer in place
-of a product archive.
+the same GitHub release — one per desktop version, holding both platforms'
+installers — the same manifest contract, with Authenticode in place of
+Developer ID + notarization and an Inno Setup installer in place of a product
+archive.
 
 ## Signing status — UNSIGNED is the current channel
 
@@ -135,11 +136,16 @@ signing request to have run on a GitHub-hosted agent, with the artifact handed
 to its action from inside that workflow. A build cut by hand on this machine can
 never satisfy that, however carefully it is done.
 
-The workflow does not publish, and this section's manual procedure is still how
-releases are cut. Two things have to happen before that changes: the repository
-goes public (a private repository's releases are not publicly downloadable,
-which is why they live on the website repository today), and a certificate
-exists. Note also that SignPath signs an Inno Setup installer as a plain PE
+The workflow runs on `release: published` — the manual publish of the draft,
+which is also what creates the tag. It does not publish anything itself, and it
+does **not** vouch for the installer that was staged from the maintainer's box:
+that is the point SignPath changes. When a certificate exists the order has to
+invert — hosted build and sign first, then stage the signed installer on the
+draft — because signing after the release is published is too late.
+
+This section's manual procedure is still how releases are cut. What has to happen before that changes is a certificate; the
+repository went public on 2026-09-07, which is what let the releases move back
+here from the website repository. Note also that SignPath signs an Inno Setup installer as a plain PE
 file, not as a composite — signing the binaries *inside* it is a separate
 signing operation before packaging, which is the shape
 `windows/scripts/release-app.sh` already has.
@@ -174,16 +180,25 @@ does not ship it, and every `make` target below needs it), `protoc` (the engine'
    installer signed with the same leaf (see *Notes*). `TIMESTAMP_URL`
    overrides the RFC 3161 server (default DigiCert). `signtool.exe` in item 3
    is needed only on this path.
-5. **`gh`** authenticated to an account that can write the website repository
-   (`taigikeyboard/taigikeyboard.github.io`).
+5. **`gh`** authenticated to an account that can write this repository (the
+   release) and the website repository, `taigikeyboard/taigikeyboard.github.io`
+   (the download button's data file).
+6. **A clone whose `origin` is this repository, with HEAD committed clean and
+   already pushed.** Publishing tags the commit the box is sitting on, so it
+   refuses a dirty tree and a HEAD that is not an ancestor of `origin/main` —
+   the release clone on the box is what § Cutting a release below assumes, and it must have fetched the commit being
+   released rather than a local-only one.
 
 ## Cutting a release
 
 ```sh
 make build              # only when engine/ or dictionary/ sources moved
 make version-desktop 3.7.0   # macOS + Windows together, at the repository root
-make windows-release    # from Git Bash, on the Windows machine
+make windows-release RELEASE_FLAGS=--skip-sign   # from Git Bash, on the Windows machine
 ```
+
+That stages the installer on a draft release nobody can reach. Testing,
+publishing and announcing are in § Staging and publishing the installer below.
 
 `make windows-release` does not rebuild the engine or the dictionary: both are
 pre-built artifacts committed to the repository (`CLAUDE.md` § stale-binary
@@ -307,11 +322,32 @@ The installer never launches the settings window itself: the window removes
 stale staged update packages at launch, and the installer may still be
 reading its own payload.
 
-## Publishing the installer
+## Staging and publishing the installer
+
+A desktop release happens in two halves with a manual test between them, and
+nothing reaches a user until a person publishes it. The full table is in
+`macos-release.md` § Publishing the package; the Windows-side steps are:
+
+```sh
+make windows-release RELEASE_FLAGS=--skip-sign   # stages the .exe on the draft
+```
+
+Then, once the Mac has staged its package too:
+
+```sh
+gh release download desktop-<version> --repo taigikeyboard/taigikeyboard --dir ~/Downloads
+# install it, use it, check SmartScreen behaviour on a machine that has never seen it
+gh release edit desktop-<version> --repo taigikeyboard/taigikeyboard --draft=false
+make desktop-announce
+```
 
 `windows/scripts/publish-release.sh` (run by `--publish`):
 
-1. Refuses a `-dirty` name, an installer whose VERSIONINFO is not
+1. Checks the shared preconditions before touching the installer — `gh` present
+   and authenticated, a dotted-integer version, a clean tree, HEAD pushed, and
+   `changelog/desktop-v<version>.md` committed — so a mistake costs a second
+   rather than a signtool round trip.
+2. Refuses a `-dirty` name, an installer whose VERSIONINFO is not
    `TaigiKeyboard` / the checkout's version, and — when
    `WINDOWS_SIGNING_THUMBPRINT` is set — a signer other than that certificate
    (what a signed installed copy pins). The Authenticode gate (`signtool verify`
@@ -319,27 +355,36 @@ reading its own payload.
    is what `release-app.sh --skip-sign --publish` passes down; naming a
    certificate AND `--allow-unsigned` is a contradiction and fails. A direct
    invocation without the flag therefore cannot publish unsigned by accident.
-2. Creates (or reuses) the GitHub release `windows-v<version>` on the
-   website repository with the `### Windows` section of
-   `changelog/desktop-v<version>.md` (the desktop train's record), and
-   uploads the installer as its asset.
-3. Fetches the release page and one byte of the asset **anonymously** — the
-   page must answer `200`, the asset `206` (or `200`) — then downloads the
-   whole asset anonymously and requires its SHA-256 to equal the local
-   installer's. The digest the manifest publishes is therefore one the URL was
-   observed serving, which is what catches a truncated upload or the wrong
-   file having been handed to `--installer`.
-4. Writes `_data/windows_release.json` — one file, one commit, now carrying
-   `sha256` — then waits until `https://taigikeyboard.tw/appcast/windows.json`
-   serves the new version, its installer URL **and** that digest. The manifest every installed copy
-   polls is rendered from that data file by the site's own build
-   (`windows/updates/README.md` § One published fact, one committed file),
-   so the poll is also what proves the site built what was committed.
+3. Creates (or attaches to) the **draft** release `desktop-<version>` in this
+   repository — the same draft the macOS package goes on — recording the commit
+   this checkout is at as what publishing will tag, with the whole
+   `changelog/desktop-v<version>.md` as the notes, read out of that commit
+   rather than the working tree. When macOS staged first the draft already
+   exists and the installer is added to it; either way an existing tag must
+   dereference to this same commit and an existing draft must already target it,
+   and a release that has already been published is refused (an asset added to
+   it would be public immediately). A staged asset is never replaced: an
+   identical one is verified in place, and one whose bytes differ stops the run.
+4. Uploads `TaigiKeyboard-<version>.exe.sha256` beside the installer and reads
+   the installer back — authenticated, since a draft has no anonymous URL —
+   requiring its SHA-256 to equal the local file's. That receipt is what the
+   announcement holds the published bytes against, and it is also what a user
+   can check a manual download with, which matters on an unsigned channel.
 
-Re-running after a failure adds to the existing release rather than tearing
-it down; the data file is written only after the download is provably
-reachable. The site advertises the download only once its
-`enable_windows_download` flag is on — the data file alone does not.
+`scripts/announce-release.sh` (`make desktop-announce`), after the manual
+publish, is what writes `_data/windows_release.json` — now carrying `sha256` —
+and waits until `https://taigikeyboard.tw/appcast/windows.json` serves the new
+version, its installer URL **and** that digest. The manifest every installed
+copy polls is rendered from that data file by the site's own build
+(`windows/updates/README.md` § One published fact, one committed file), so the
+poll is also what proves the site built what was committed. It runs on either
+machine — everything it needs is on the release — and both platforms' data files
+go in one website commit.
+
+Re-running either half after a failure adds to what is there rather than tearing
+it down; the site data is written only after the download is provably reachable.
+The site advertises the download only once its `enable_windows_download` flag is
+on — the data file alone does not.
 
 ## Notes
 

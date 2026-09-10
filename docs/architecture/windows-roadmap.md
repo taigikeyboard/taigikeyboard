@@ -275,8 +275,8 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   `windows/scripts/release-app.sh` (bash via Git Bash, mirroring
   `macos/scripts/release-app.sh`): clean-tree preflight → cargo release builds → `iscc`
   → optional `signtool` (env-gated) → SHA-256 → `windows/scripts/publish-release.sh`
-  (mirror of the macOS publisher: GitHub release on the website repo tagged
-  `windows-v<version>`, anonymous 200/206 checks, then the ONE committed file
+  (mirror of the macOS publisher: the shared `desktop-<version>` GitHub release
+  in this repo, anonymous read-back checks, then the ONE committed file
   `_data/windows_release.json` — the site renders `appcast/windows.json` from it —
   poll live). Root `make windows-release`,
   `make windows-check`. Version source of truth = `windows/Cargo.toml`
@@ -593,7 +593,7 @@ PR4 + PR7; PR10 last.
 | `tools/release_notes.py` Windows version file | PR1b | yes | no |
 | Root `Makefile` `windows-*` targets | PR1b | yes | no |
 | `engine/` crates consumed by path from `windows/` | PR2 | no change | no |
-| Website repo: `appcast/windows.json`, `_data/windows_release.json`, `windows-v*` tags | PR10 | yes | separate repo |
+| Website repo: `appcast/windows.json`, `_data/windows_release.json` | PR10 | yes | separate repo (the release itself moved to `desktop-*` tags here, 2026-09-09) |
 
 ## 最佳實踐對齊 (references)
 

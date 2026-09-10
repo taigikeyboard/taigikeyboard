@@ -45,9 +45,9 @@ Derive the release base unless one was passed:
 git describe --tags --abbrev=0 --match 'desktop-*' HEAD
 ```
 
-Desktop releases before 2026-09 were never tagged in this repository — their
-tags (`macos-v…` / `windows-v…`) live on the website repository. With no
-`desktop-*` tag, fall back to the commit that set the current version:
+Desktop releases cut before 2026-09-09 were tagged on the website repository
+(`macos-v…` / `windows-v…`), not here. With no `desktop-*` tag, fall back to
+the commit that set the current version:
 
 ```bash
 git log --format='%h %ad %s' --date=short -S'<target>' -- macos/App/Info.plist | tail -1
@@ -93,9 +93,10 @@ Sort every user-visible change before writing anything:
 - **Windows-only** → the `### Windows` section.
 - **Shared** (engine, dictionary, a behavior landing on both desktop platforms)
   → describe it in **both** sections, each in that platform's own terms
-  (its own shortcut spelling: `⌃⌘H` on macOS, `Ctrl+Alt+H` on Windows). A
-  publish script extracts one section as that platform's whole release body, so
-  a fact mentioned only in the other section reaches nobody.
+  (its own shortcut spelling: `⌃⌘H` on macOS, `Ctrl+Alt+H` on Windows). Both
+  platforms share one release page carrying the whole file, so a reader on
+  either platform should find their own wording of the change under their own
+  heading rather than having to read the other platform's section for it.
 - **iOS-only / Android-only** → NOT this release. Mobile work belongs to
   `changelog/v<version>.md` and the store notes, written by `release-mobile`.
 
@@ -136,7 +137,8 @@ make build
 | `changelog/desktop-v<target>.md` | The desktop record: a lead paragraph, then `### macOS` and `### Windows` |
 | `CHANGELOG.md` | Link to it, at the top of the `## Desktop — macOS + Windows` list (newest first) |
 
-Shape of `changelog/desktop-v<target>.md` — the publish scripts depend on it:
+Shape of `changelog/desktop-v<target>.md` — this whole file becomes the release
+body, so it is what users read on the release page:
 
 ```markdown
 # desktop v<target>
@@ -156,14 +158,13 @@ Shape of `changelog/desktop-v<target>.md` — the publish scripts depend on it:
 
 Rules:
 
-- `### macOS` and `### Windows` are matched literally by
-  `macos/scripts/publish-release.sh` and `windows/scripts/publish-release.sh`.
-  A missing section does not fail the publish — it silently degrades to a
-  one-line `TaigiKeyboard for <platform> <version>` release body. Write both.
+- The file must be **committed** before either platform publishes: the release
+  body is read out of the tagged commit, not the working tree, and a version
+  with no changelog in that commit fails the publish outright.
 - English prose; Taigi terms, UI labels and examples keep 漢字 / TL / POJ / TPS.
-- The section is the GitHub release body users read: concrete user-visible
-  behavior, with the PR number in `(#NNN)`. No refactors, tests, tooling, or
-  dependency bumps unless a user feels them.
+- This is the GitHub release body users read: concrete user-visible behavior,
+  with the PR number in `(#NNN)`. No refactors, tests, tooling, or dependency
+  bumps unless a user feels them.
 - A subsection per surface, not one flat list — these bodies run long and the
   headings are what make them readable.
 - Idempotent: re-running on an existing target file merges by topic. Refine the
@@ -198,50 +199,78 @@ Report the commit SHA, the release range, and both rendered sections.
 
 ## Hand off
 
-Everything below is the maintainer's, on the machine named. This skill runs
-none of it.
+Everything below is the maintainer's, on the machine named. This skill runs none
+of it. The release is a **draft** until step 4: no tag, no public download,
+nothing a user can reach.
 
-**1. macOS package — on the Mac, from a clean tree:**
+**1. Stage the macOS package — on the Mac, from a clean tree:**
 
 ```bash
 make macos-release
 ```
 
 Builds, signs with both Developer ID certificates, notarizes, staples, packages,
-then `macos/scripts/publish-release.sh` uploads the `.pkg` to the
-`taigikeyboard/taigikeyboard.github.io` release tagged `macos-v<target>` and
-points `_data/macos_release.json` at it. The site renders
-`appcast/macos.json` from that file — that manifest is what installed copies
-check. Needs the notarization credential (`docs/architecture/macos-release.md`).
+then `macos/scripts/publish-release.sh` puts the `.pkg` (and a `.sha256`
+receipt) on the **draft** `desktop-<target>` release in this repository —
+creating it, recording the commit the checkout is at as what publishing will
+tag, with the whole `changelog/desktop-v<target>.md` as its body. Needs the
+notarization credential (`docs/architecture/macos-release.md`).
 
-**2. Windows installer — on the Windows box (`ssh win`), from Git Bash, clean tree:**
+**2. Stage the Windows installer — on the Windows box (`ssh win`), Git Bash, clean tree:**
 
 ```bash
 make windows-release RELEASE_FLAGS=--skip-sign
 ```
 
 There is no Authenticode certificate yet, so `--skip-sign` is the release
-channel, stated explicitly so nothing publishes unsigned by accident. Builds,
-stages, packages with Inno Setup, then `windows/scripts/publish-release.sh
---allow-unsigned` uploads to the `windows-v<target>` release on the website
-repository and writes `_data/windows_release.json`; the published manifest
-carries the installer's SHA-256, which is what the in-app updater verifies.
-Before this: `make windows-check` on the Mac is the host-side gate.
+channel, stated explicitly so nothing ships unsigned by accident. Builds,
+stages, packages with Inno Setup, then attaches the installer and its receipt to
+the **same** draft (creating it if Windows goes first). Before this:
+`make windows-check` on the Mac is the host-side gate.
 
-**3. Tag, if the maintainer wants one:** `desktop-<target>` on this repository.
-That tag is also the only trigger of `.github/workflows/windows-build.yml`
-(plus manual dispatch), which rebuilds the installer on a GitHub-hosted runner
-for SignPath provenance. It does not publish. Tagging is user-gated — never
-create, move, or push it.
+Whichever platform stages first creates the draft; the second must be **at that
+same commit** — it stops if the draft targets a different one, or if the release
+has already been published.
+
+**3. Test what was staged — the whole point of the draft:**
+
+```bash
+gh release download desktop-<target> --repo taigikeyboard/taigikeyboard --dir ~/Downloads
+```
+
+Install both, run the dogfood checklist items this release touches.
+
+**4. Publish, when both pass:**
+
+```bash
+gh release edit desktop-<target> --repo taigikeyboard/taigikeyboard --draft=false
+```
+
+This creates the tag and fires `.github/workflows/windows-build.yml` (a
+GitHub-hosted rebuild for SignPath provenance; it does not publish). The
+download becomes public here — the website and installed copies still know
+nothing.
+
+**5. Announce — either machine:**
+
+```bash
+make desktop-announce
+```
+
+Proves both downloads are anonymously reachable and hash to their staged
+receipts, writes both `_data/*_release.json` to the website in one commit, and
+waits for the live appcasts. A platform whose installer is not on the release is
+skipped with a note.
 
 ## Guardrails
 
 - Never edit another version's changelog.
 - Never touch `changelog/v<version>.md` or `changelog/store/**` — that is
   `release-mobile`'s surface, and desktop-only work must never enter a store note.
-- Never run `make macos-release`, `make windows-release`, either
-  `release-app.sh`, or either `publish-release.sh`.
-- Never create, move, or push a tag; never create a GitHub release.
+- Never run `make macos-release`, `make windows-release`, `make desktop-announce`,
+  either `release-app.sh`, either `publish-release.sh`, or `announce-release.sh`.
+- Never create, move, or push a tag; never create, publish, or un-draft a GitHub
+  release.
 - Never request, store, or use signing certificates, notarization credentials,
   or thumbprints.
 - Never pass `--allow-downgrade`, `--allow-dirty`, or `--force` to any release
