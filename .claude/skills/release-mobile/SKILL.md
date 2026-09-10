@@ -1,6 +1,6 @@
 ---
 name: release-mobile
-description: Prepare a MOBILE release (iOS + Android, one shared version) on main - rebuild generated artifacts, update the detailed changelog, write concise English iOS and Android What's New text, mirror it into both apps' version history, validate, commit, and push. Use when preparing a version for manual App Store Connect or Google Play release. Never tags, uploads builds, or submits a store release. Mobile train only; the desktop train (macOS + Windows) is `release-desktop`.
+description: Prepare a MOBILE release (iOS + Android, one shared version) on main - rebuild generated artifacts, update the detailed changelog, write concise English iOS and Android What's New text, mirror it into both apps' version history, validate, commit, and push. Use when preparing a version for manual App Store Connect or Google Play release. Never tags, uploads builds, or submits a store release. Takes no version argument - it releases the version already in the tree (set beforehand with `make version-mobile x.y.z`); an optional argument only overrides the release base. Mobile train only; the desktop train (macOS + Windows) is `release-desktop`.
 ---
 
 # Release Mobile
@@ -8,8 +8,12 @@ description: Prepare a MOBILE release (iOS + Android, one shared version) on mai
 The mobile train is iOS + Android, sharing one version. The desktop train is a
 separate skill, `release-desktop`; a release never mixes the two.
 
-Run from `main`. Require `<base-tag> <target>` in semantic-version form.
-Example: `/release-mobile v3.6.4 v3.6.5`
+Run from `main`. Takes no version: **`<target>` is whatever version the tree
+already carries** — the maintainer sets it with `make version-mobile x.y.z`
+before invoking. Example: `/release-mobile`
+
+One optional argument, `<base-tag>`, overrides the derived release base.
+Example: `/release-mobile v3.6.4`
 
 Never create or move a tag, upload a build, edit store metadata, or submit a release. The user handles every store action manually.
 
@@ -17,13 +21,40 @@ Never create or move a tag, upload a build, edit store metadata, or submit a rel
 
 - Require a clean worktree and `HEAD = main`.
 - Run `git fetch --prune --tags --force` and `git pull --ff-only origin main`.
-- Require `<base-tag>` to exist and be an ancestor of `HEAD`.
-- Require `<target>` to match `vMAJOR.MINOR.PATCH`.
-- Run `python3 tools/release_notes.py check-versions --train mobile --version <target>`.
-- Report open PRs and ask before continuing if any exist.
-- Use `<base-tag>..HEAD` as the release range. State it before edits.
 
-The skill may report a required version change but must not edit the user-owned iOS `.pbxproj`. When `check-versions` fails because the tree still carries the previous version, give the user the one command that sets both mobile platforms — `make version-mobile <target without the v>` — and continue after they run it. The desktop train (macOS + Windows) is numbered separately and is not this skill's concern.
+Derive `<target>` from the tree, never from an argument:
+
+```bash
+grep -m1 'versionName = ' android/app/build.gradle.kts    # 3.6.6 -> target v3.6.6
+python3 tools/release_notes.py check-versions --train mobile --version <target>
+```
+
+That check is what proves the iOS `MARKETING_VERSION` carries the same number,
+so a half-applied bump stops here instead of shipping. The skill must not edit
+the user-owned iOS `.pbxproj`: when the two disagree, hand the user the one
+command that sets both — `make version-mobile <target without the v>` — and
+continue after they run it. The desktop train is numbered separately and is not
+this skill's concern.
+
+Derive the release base unless one was passed:
+
+```bash
+git describe --tags --abbrev=0 --match 'v*' --match 'mobile-*' HEAD
+```
+
+Older mobile tags are the bare `v<version>` form, newer ones `mobile-<version>`.
+When the derived base does not exist or is not an ancestor of `HEAD`, stop and
+ask for one rather than guessing a commit.
+
+Then, before any edit:
+
+- Require `<target>` to match `vMAJOR.MINOR.PATCH`, and
+  `changelog/store/<target>/` to be absent or unreleased — never re-prepare a
+  version already tagged.
+- Report open PRs and ask before continuing if any exist.
+- **State the derived version and range — `preparing mobile <target>, range
+  <base>..HEAD, N commits` — and wait for the user to confirm.** Nothing is
+  derived silently, because nothing was passed in.
 
 ## 2. Analyze the release
 

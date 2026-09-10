@@ -1,6 +1,6 @@
 ---
 name: release-desktop
-description: Prepare a DESKTOP release (macOS + Windows, one shared version) on main - rebuild generated artifacts, set the desktop version, write the `### macOS` and `### Windows` sections of `changelog/desktop-v<version>.md`, link it from CHANGELOG.md, validate, commit, and push. Use when preparing a macOS package or a Windows installer for publication. Never tags, builds a package, signs, notarizes, publishes, or runs `make macos-release` / `make windows-release`. Desktop train only; the mobile train (iOS + Android) is `release-mobile`.
+description: Prepare a DESKTOP release (macOS + Windows, one shared version) on main - rebuild generated artifacts, set the desktop version, write the `### macOS` and `### Windows` sections of `changelog/desktop-v<version>.md`, link it from CHANGELOG.md, validate, commit, and push. Use when preparing a macOS package or a Windows installer for publication. Never tags, builds a package, signs, notarizes, publishes, or runs `make macos-release` / `make windows-release`. Takes no version argument - it releases the version already in the tree (set beforehand with `make version-desktop x.y.z`); an optional argument only overrides the release base. Desktop train only; the mobile train (iOS + Android) is `release-mobile`.
 ---
 
 # Release Desktop
@@ -9,14 +9,12 @@ The desktop train is macOS + Windows, sharing one version, moved by
 `make version-desktop x.y.z`, unrelated to the mobile number. The mobile train
 has its own skill (`release-mobile`); a release never mixes the two.
 
-Run from `main`. Require `<base-ref> <target>`, target in semantic-version form.
-Example: `/release-desktop desktop-3.6.7 3.6.8`
+Run from `main`. Takes no version: **`<target>` is whatever version the tree
+already carries** — the maintainer sets it with `make version-desktop x.y.z`
+before invoking. Example: `/release-desktop`
 
-`<base-ref>` is the point the previous desktop release shipped from — the
-`desktop-<version>` tag when one exists, otherwise the commit that bumped the
-previous desktop version (`git log --oneline -S'CFBundleShortVersionString' -- macos/App/Info.plist`
-finds it). Desktop releases before 2026-09 were never tagged in this repository;
-their tags (`macos-v…` / `windows-v…`) live on the website repository.
+One optional argument, `<base-ref>`, overrides the derived release base.
+Example: `/release-desktop desktop-3.6.7`
 
 This skill prepares the repository. It never builds, signs, notarizes, packages,
 publishes, or tags — every one of those is the maintainer's own command, on the
@@ -26,16 +24,47 @@ right machine, and they are listed in § Hand off.
 
 - Require a clean worktree and `HEAD = main`.
 - Run `git fetch --prune --tags --force` and `git pull --ff-only origin main`.
-- Require `<base-ref>` to resolve and be an ancestor of `HEAD`.
-- Require `<target>` to match `MAJOR.MINOR.PATCH`.
-- Run `python3 tools/release_notes.py check-versions --train desktop --version <target>`.
-- Report open PRs and ask before continuing if any exist.
-- Use `<base-ref>..HEAD` as the release range. State it before edits.
 
-When `check-versions` fails because the tree still carries the previous desktop
-version, run `make version-desktop <target>` — it writes both macOS plist keys
-and `windows/Cargo.toml` in one pass, or neither. Unlike the iOS `.pbxproj`,
-these two files are not user-owned, so this skill may run that command itself.
+Derive `<target>` from the tree, never from an argument:
+
+```bash
+/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' macos/App/Info.plist
+python3 tools/release_notes.py check-versions --train desktop --version <target>
+```
+
+That check is what proves `windows/Cargo.toml` and both macOS plist keys carry
+the same number, so a half-applied bump stops here instead of shipping two
+desktop platforms on different versions. When they disagree, run
+`make version-desktop <target>` — it writes all three in one pass, or none.
+Unlike the iOS `.pbxproj`, these files are not user-owned, so the skill may run
+that itself.
+
+Derive the release base unless one was passed:
+
+```bash
+git describe --tags --abbrev=0 --match 'desktop-*' HEAD
+```
+
+Desktop releases before 2026-09 were never tagged in this repository — their
+tags (`macos-v…` / `windows-v…`) live on the website repository. With no
+`desktop-*` tag, fall back to the commit that set the current version:
+
+```bash
+git log --format='%h %ad %s' --date=short -S'<target>' -- macos/App/Info.plist | tail -1
+```
+
+That bump is the proxy for where the previous release shipped from, and it is a
+proxy — anything merged between that release and the bump falls outside the
+range. Say so when using it, and prefer an explicit `<base-ref>`.
+
+Then, before any edit:
+
+- Require `<target>` to match `MAJOR.MINOR.PATCH`, and
+  `changelog/desktop-v<target>.md` to be absent or not yet published.
+- Report open PRs and ask before continuing if any exist.
+- **State the derived version and range — `preparing desktop <target>, range
+  <base>..HEAD, N commits` — and wait for the user to confirm.** Nothing is
+  derived silently, because nothing was passed in.
 
 **The desktop train only moves upward.** `CFBundleVersion` derives as
 `MAJOR*10000 + MINOR*100 + PATCH` and is what the macOS Installer compares
