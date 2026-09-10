@@ -120,7 +120,10 @@ impl RenderFactory {
         {
             return None;
         }
-        let (collection, info) = match taigi_windows_platform::font_file::load(&path) {
+        // Against THIS factory, which is what the collection stays valid
+        // against (`font_file`'s module doc).
+        let (collection, info) = match taigi_windows_platform::font_file::load(&self.dwrite, &path)
+        {
             Ok(loaded) => loaded,
             Err(error) => {
                 log::warn!("fonts.custom_not_loaded error={error}");
@@ -198,10 +201,18 @@ fn bundled_family_name(choice: CandidateFontChoice) -> Option<&'static str> {
     })
 }
 
-/// Process-wide factories plus the caches built from them.
+/// The factories one activation draws with, plus the caches built from them.
+///
+/// FIELD ORDER IS THE DROP ORDER. Rust drops a struct's fields in declaration
+/// order, and the font collections, text formats and inline objects here are
+/// only valid while `dwrite` lives: a custom collection released after its
+/// factory faults inside DirectWrite when a layout resolves the family
+/// (measured 2026-09-11 — `taigi_windows_platform::font_file`'s module doc).
+/// The rule this project holds to is therefore that a DirectWrite object is
+/// dropped before the factory that built it, and the factories are declared
+/// LAST so that falls out of the type. Nothing DirectWrite- or
+/// Direct2D-shaped may be added after them.
 pub struct RenderFactory {
-    d2d: ID2D1Factory,
-    dwrite: IDWriteFactory3,
     /// The bundled faces that loaded. A choice whose file is missing draws
     /// in the system face (as macOS `CandidateFontChoice.font(named:)`
     /// degrades) — per face, not per folder.
@@ -228,6 +239,10 @@ pub struct RenderFactory {
     system_family: &'static str,
     formats: RefCell<HashMap<FormatKey, IDWriteTextFormat>>,
     ellipsis: RefCell<HashMap<FormatKey, IDWriteInlineObject>>,
+    /// Last, and last dropped: the collections, formats and inline objects
+    /// above were built from these.
+    d2d: ID2D1Factory,
+    dwrite: IDWriteFactory3,
 }
 
 /// The bundled fonts as one DirectWrite collection, plus which choices it
@@ -310,8 +325,6 @@ impl RenderFactory {
         let private_fonts = load_private_fonts(&dwrite);
         let system_family = system_family(&dwrite);
         Ok(Self {
-            d2d,
-            dwrite,
             private_fonts,
             custom_font: RefCell::new(None),
             next_custom_font_id: Cell::new(0),
@@ -320,6 +333,8 @@ impl RenderFactory {
             system_family,
             formats: RefCell::new(HashMap::new()),
             ellipsis: RefCell::new(HashMap::new()),
+            d2d,
+            dwrite,
         })
     }
 

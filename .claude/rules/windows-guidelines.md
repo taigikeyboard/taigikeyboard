@@ -45,6 +45,18 @@ shared engine). Read before modifying Windows code. Design record: `docs/archite
   `winui::pane_planning` against the reactor's `RecordingRuntime` — **a new pane belongs in that
   test.** The net reaches each pane's LAUNCH state only: a subtree behind user state (a dialog,
   a busy overlay, a search result row) is `View::empty()` there and is still dogfood-only.
+- **A DirectWrite object is dropped BEFORE the factory that built it.** A collection, format,
+  layout or inline object does not keep its factory alive, and DirectWrite reads factory-owned
+  state when a layout resolves a family — so one that outlives its factory faults inside
+  `DWrite.dll` (`0xc0000005`), in the HOST process, with nothing of ours on the stack.
+  `font_file::load` therefore takes the caller's factory: the TIP passes its own
+  `RenderFactory::dwrite`, the same one every text format is made on and the one the bundled
+  roster already uses. Measured headlessly on the box 2026-09-11 — collection built by a
+  throwaway isolated factory: AV at `GetMetrics`; same factory kept alive, or the caller's
+  factory used: fine. Typing in any host with a custom typeface selected killed the host.
+  Corollary: **field order is drop order** — a struct holding both a factory and things built
+  from it declares the factory LAST (`RenderFactory`, `CandidateWindow`).
+
 - **An index-valued property must never name a row the render is still inserting.** Reactor plans a
   node's PROPERTIES before its children, so `ListView::selected_index` reaches XAML ahead of the
   items of the same render; an index the native list does not number yet is `E_INVALIDARG`, and
