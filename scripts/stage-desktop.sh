@@ -2,7 +2,7 @@
 # Stage both desktop installers on this version's draft release: the package
 # here, the installer on the Windows box over ssh.
 #
-# Usage: stage-desktop.sh [--skip-macos] [--skip-windows]
+# Usage: stage-desktop.sh   (no options — a release is both halves or neither)
 #
 # The two builds cannot share a machine — one needs Xcode and a Developer ID,
 # the other MSVC and Inno Setup — so this drives the second over `ssh win`
@@ -14,13 +14,15 @@
 # Nothing here reaches a user: both halves stage on a DRAFT release
 # (`docs/architecture/desktop-release.md`). Publishing stays a person's.
 #
-# Every run starts from a clean draft: an existing one for this version is
-# DELETED first and both installers are built again (USER 2026-09-10 —
-# 「我希望重複release的過程是原子性的,每一次都從新的開始建置,避免過多的複雜度」).
-# Re-running is how a release is fixed, and a half-finished draft is state a
-# script has to reason about — the first run of this script announced two
-# installers when the draft held one, because it was reasoning about which
-# halves were already there. There is nothing to reason about now.
+# Every run stages BOTH installers from one commit, and starts from a clean
+# draft: an existing one for this version is deleted first (USER 2026-09-10 —
+# 「我希望重複release的過程是原子性的,每一次都從新的開始建置」;
+# 2026-09-11 — 「我不希望有--skip-macos或是skip-windows,我希望一次就是兩個一起建立」).
+#
+# There is deliberately no way to stage one half. Both escapes existed for a
+# box that was off or a half that failed, and both were how a draft ended up
+# holding two installers built from different commits — the exact thing the
+# tag is supposed to describe. Re-running the whole thing is the recovery.
 #
 # The box's checkout is moved to this commit with a detached checkout, which is
 # what `desktop_release_preflight` requires of it: committed clean, and an
@@ -41,20 +43,11 @@ WINDOWS_SSH_HOST="${WINDOWS_SSH_HOST:-win}"
 WINDOWS_REPO_DIR="${WINDOWS_REPO_DIR:-C:\\Users\\minsi\\Workspace\\taigikeyboard}"
 WINDOWS_BASH="${WINDOWS_BASH:-C:\\Program Files\\Git\\bin\\bash.exe}"
 
-skip_macos=false
-skip_windows=false
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        --skip-macos) skip_macos=true ;;
-        --skip-windows) skip_windows=true ;;
-        *)
-            echo "error: unknown argument '$1'" >&2
-            echo "usage: stage-desktop.sh [--skip-macos] [--skip-windows]" >&2
-            exit 2
-            ;;
-    esac
-    shift
-done
+[[ $# -eq 0 ]] || {
+    echo "error: stage-desktop.sh takes no arguments" >&2
+    echo "A release is both installers from one commit; there is no half of one." >&2
+    exit 2
+}
 
 SOURCE_COMMIT="$(git -C "$REPOSITORY_DIR" rev-parse HEAD)"
 [[ -z "$(git -C "$REPOSITORY_DIR" status --porcelain --ignore-submodules=none)" ]] ||
@@ -76,21 +69,12 @@ echo "==> Staging $DESKTOP_TAG from ${SOURCE_COMMIT:0:7}"
 # A draft for this version is the previous attempt; it goes, so this run builds
 # both halves from one commit. A PUBLISHED release cannot be re-cut — its
 # installers are downloadable and its tag is what people already have.
-#
-# Only a run that stages EVERYTHING may delete: a recovery run staging one half
-# would otherwise throw away the half that is already on the draft, which is the
-# one thing it was invoked to keep (2026-09-10: --skip-macos deleted a notarized
-# package and cost a second notarization round).
 existing_state="$(gh release view "$DESKTOP_TAG" --repo "$RELEASE_REPOSITORY" --json isDraft --jq '.isDraft|tostring' 2>&1)" || existing_state=""
 case "$existing_state" in
     true)
-        if [[ "$skip_macos" == true || "$skip_windows" == true ]]; then
-            echo "  keeping the existing draft — this run stages one half into it"
-        else
-            echo "  removing the previous draft — every full run stages both halves afresh"
-            gh release delete "$DESKTOP_TAG" --repo "$RELEASE_REPOSITORY" --yes ||
-                fail "cannot remove the existing draft $DESKTOP_TAG"
-        fi
+        echo "  removing the previous draft — every run stages both halves afresh"
+        gh release delete "$DESKTOP_TAG" --repo "$RELEASE_REPOSITORY" --yes ||
+            fail "cannot remove the existing draft $DESKTOP_TAG"
         ;;
     false)
         fail "$DESKTOP_TAG is already published — it cannot be re-cut. Bump to the next version (make version-desktop) and stage that"
@@ -101,29 +85,14 @@ case "$existing_state" in
         ;;
 esac
 
-# One half staged alone would contradict the fresh-draft rule the run above
-# just applied, so the skips are for recovery, not for routine use.
-if [[ "$skip_macos" == true || "$skip_windows" == true ]]; then
-    echo "  note: staging one half only — the draft will hold one installer"
-fi
-
-if [[ "$skip_macos" == false ]]; then
-    echo ""
-    echo "==> macOS — build, sign, notarize, stage (this Mac)"
-    make -C "$REPOSITORY_DIR" macos-release
-else
-    echo "  skipping macOS"
-fi
-
-if [[ "$skip_windows" == true ]]; then
-    echo "  skipping Windows"
-    exit 0
-fi
+echo ""
+echo "==> macOS — build, sign, notarize, stage (this Mac)"
+make -C "$REPOSITORY_DIR" macos-release
 
 echo ""
 echo "==> Windows — $WINDOWS_SSH_HOST:$WINDOWS_REPO_DIR"
 ssh -o ConnectTimeout=15 -o BatchMode=yes "$WINDOWS_SSH_HOST" "echo ok" > /dev/null 2>&1 ||
-    fail "$WINDOWS_SSH_HOST is not reachable — power the box on, or re-run with --skip-windows and stage it later"
+    fail "$WINDOWS_SSH_HOST is not reachable — power the box on and run this again; a release is both installers or neither"
 
 # One bash -lc: the box's default shell is PowerShell, and `make` needs Git
 # Bash. GIT_SSH_COMMAND is what stops the fetch below from hanging — an ssh
@@ -189,7 +158,7 @@ REMOTE
     printf "WINDOWS_REPO_DIR='%s'\nSOURCE_COMMIT='%s'\n" "$WINDOWS_REPO_DIR" "$SOURCE_COMMIT"
     cat "$remote_body"
 } | ssh "$WINDOWS_SSH_HOST" "& '$WINDOWS_BASH' -s" ||
-    fail "staging on $WINDOWS_SSH_HOST failed — the log above is the box's; re-run with --skip-macos once it is fixed"
+    fail "staging on $WINDOWS_SSH_HOST failed — the log above is the box's; fix it and run this again, which re-stages both halves"
 
 # PowerShell's exit status is not proof: ask the release what it now holds.
 # Whatever the remote log said, an installer that is not on the draft is not
@@ -205,7 +174,7 @@ DRAFT_URL="$(printf '%s' "$draft_json" | python3 -c 'import json,sys; print(json
 printf '%s' "$draft_json" |
     python3 -c 'import json,sys; sys.exit(0 if sys.argv[1] in [a["name"] for a in json.load(sys.stdin)["assets"]] else 1)' \
         "$WINDOWS_ASSET_NAME" 2> /dev/null ||
-    fail "the box reported no error but $WINDOWS_ASSET_NAME is not on the draft — read the remote log above; the macOS half is staged and can be left alone (re-run with --skip-macos)"
+    fail "the box reported no error but $WINDOWS_ASSET_NAME is not on the draft — read the remote log above, then run this again"
 
 echo ""
 echo "✓ both installers staged on the draft for ${SOURCE_COMMIT:0:7}"

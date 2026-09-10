@@ -235,14 +235,12 @@ attaches the installer to the same draft. Whichever runs first creates it.
 A draft has no tag and no public asset URL: nothing here reaches a user, and
 nothing is announced. The tag appears when the draft is published.
 
-When the box is off, or its half fails:
+Both halves or neither: there is no way to stage one. An existing draft for
+this version is deleted first, so a re-run is a fresh build of both from one
+commit — which is what the tag on the published release will describe. If the
+box is off or its half fails, fix that and run the whole thing again.
 
-```bash
-make desktop-release RELEASE_FLAGS=--skip-windows   # the Mac's half alone
-make desktop-release RELEASE_FLAGS=--skip-macos     # the box's half, later
-```
-
-Report the draft URL and which halves are on it.
+Report the draft URL.
 
 ## Hand off — the one manual step
 
