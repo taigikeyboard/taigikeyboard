@@ -14,6 +14,14 @@
 # Nothing here reaches a user: both halves stage on a DRAFT release
 # (`docs/architecture/desktop-release.md`). Publishing stays a person's.
 #
+# Every run starts from a clean draft: an existing one for this version is
+# DELETED first and both installers are built again (USER 2026-09-10 —
+# 「我希望重複release的過程是原子性的,每一次都從新的開始建置,避免過多的複雜度」).
+# Re-running is how a release is fixed, and a half-finished draft is state a
+# script has to reason about — the first run of this script announced two
+# installers when the draft held one, because it was reasoning about which
+# halves were already there. There is nothing to reason about now.
+#
 # The box's checkout is moved to this commit with a detached checkout, which is
 # what `desktop_release_preflight` requires of it: committed clean, and an
 # ancestor of `origin/main`.
@@ -55,7 +63,40 @@ git -C "$REPOSITORY_DIR" fetch --quiet origin main
 git -C "$REPOSITORY_DIR" merge-base --is-ancestor "$SOURCE_COMMIT" FETCH_HEAD ||
     fail "HEAD (${SOURCE_COMMIT:0:7}) is not on origin/main — push it first; the box can only fetch what origin has"
 
-echo "==> Staging desktop ${SOURCE_COMMIT:0:7} on the draft release"
+DESKTOP_VERSION="$(awk '
+    /^\[workspace\.package\]/ { inside = 1; next }
+    inside && /^\[/ { exit }
+    inside && /^version *=/ { gsub(/[" ]/, "", $3); print $3; exit }
+' "$REPOSITORY_DIR/windows/Cargo.toml" | tr -d '\r')"
+DESKTOP_TAG="desktop-$DESKTOP_VERSION"
+RELEASE_REPOSITORY="taigikeyboard/taigikeyboard"
+
+echo "==> Staging $DESKTOP_TAG from ${SOURCE_COMMIT:0:7}"
+
+# A draft for this version is the previous attempt; it goes, so this run builds
+# both halves from one commit. A PUBLISHED release cannot be re-cut — its
+# installers are downloadable and its tag is what people already have.
+existing_state="$(gh release view "$DESKTOP_TAG" --repo "$RELEASE_REPOSITORY" --json isDraft --jq '.isDraft|tostring' 2>&1)" || existing_state=""
+case "$existing_state" in
+    true)
+        echo "  removing the previous draft — every run stages both halves afresh"
+        gh release delete "$DESKTOP_TAG" --repo "$RELEASE_REPOSITORY" --yes ||
+            fail "cannot remove the existing draft $DESKTOP_TAG"
+        ;;
+    false)
+        fail "$DESKTOP_TAG is already published — it cannot be re-cut. Bump to the next version (make version-desktop) and stage that"
+        ;;
+    *)
+        [[ "$existing_state" == *"release not found"* || "$existing_state" == *"HTTP 404"* || -z "$existing_state" ]] ||
+            fail "cannot read $DESKTOP_TAG in $RELEASE_REPOSITORY: $existing_state"
+        ;;
+esac
+
+# One half staged alone would contradict the fresh-draft rule the run above
+# just applied, so the skips are for recovery, not for routine use.
+if [[ "$skip_macos" == true || "$skip_windows" == true ]]; then
+    echo "  note: staging one half only — the draft will hold one installer"
+fi
 
 if [[ "$skip_macos" == false ]]; then
     echo ""
@@ -83,6 +124,20 @@ remote_script=$(cat <<REMOTE
 set -euo pipefail
 cd "\$(cygpath '$WINDOWS_REPO_DIR')"
 export GIT_SSH_COMMAND="ssh -o BatchMode=yes -o ConnectTimeout=15"
+
+# An ssh session is not the interactive shell the box's PATH was set up for:
+# the MSVC tools the release gates need (dumpbin's import-table check, and the
+# linker behind cargo) are added by the Visual Studio environment, which only a
+# developer prompt or a login shell runs. Ask vswhere where the toolchain is
+# and put its x64 binaries on PATH rather than hard-coding a version.
+if ! command -v dumpbin > /dev/null; then
+    vs_root="\$('/c/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe' \
+        -latest -products '*' -property installationPath | tr -d '\\r')"
+    [ -n "\$vs_root" ] || { echo "vswhere found no Visual Studio installation" >&2; exit 1; }
+    msvc_bin="\$(ls -d "\$(cygpath "\$vs_root")"/VC/Tools/MSVC/*/bin/Hostx64/x64 2> /dev/null | sort -V | tail -1)"
+    [ -n "\$msvc_bin" ] || { echo "no MSVC x64 tools under \$vs_root" >&2; exit 1; }
+    export PATH="\$msvc_bin:\$PATH"
+fi
 git fetch --quiet origin main
 git checkout --quiet --detach $SOURCE_COMMIT
 git status --porcelain --ignore-submodules=none | head -5
@@ -100,18 +155,12 @@ ssh "$WINDOWS_SSH_HOST" "& '$WINDOWS_BASH' -s" <<< "$remote_script" ||
 # PowerShell's exit status is not proof: ask the release what it now holds.
 # Whatever the remote log said, an installer that is not on the draft is not
 # staged.
-WINDOWS_ASSET_NAME="TaigiKeyboard-$(awk '
-    /^\[workspace\.package\]/ { inside = 1; next }
-    inside && /^\[/ { exit }
-    inside && /^version *=/ { gsub(/[" ]/, "", $3); print $3; exit }
-' "$REPOSITORY_DIR/windows/Cargo.toml" | tr -d '\r').exe"
+WINDOWS_ASSET_NAME="TaigiKeyboard-$DESKTOP_VERSION.exe"
 
 # The draft's own page, from the API: a draft has no tag, so its URL is not the
 # `releases/tag/<tag>` address a published release has. It is where the
 # maintainer downloads what was staged and, when it passes, presses Publish.
-DESKTOP_VERSION="${WINDOWS_ASSET_NAME#TaigiKeyboard-}"
-DESKTOP_VERSION="${DESKTOP_VERSION%.exe}"
-draft_json="$(gh release view "desktop-$DESKTOP_VERSION" \
+draft_json="$(gh release view "$DESKTOP_TAG" \
     --repo taigikeyboard/taigikeyboard --json url,assets 2> /dev/null || true)"
 DRAFT_URL="$(printf '%s' "$draft_json" | python3 -c 'import json,sys; print(json.load(sys.stdin)["url"])' 2> /dev/null || true)"
 printf '%s' "$draft_json" |
