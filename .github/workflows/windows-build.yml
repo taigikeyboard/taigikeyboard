@@ -11,18 +11,26 @@ name: Windows build
 # that. This workflow is the prerequisite; the signing step is a later, small
 # addition once a certificate exists.
 #
-# It does NOT publish. `windows/scripts/publish-release.sh` still puts releases on
-# the website repository, which is where the update manifest points today.
+# It does NOT publish. `windows/scripts/publish-release.sh` stages the installer
+# a release actually ships on, and `scripts/announce-release.sh` announces it.
 on:
   workflow_dispatch:
-  # Release-only. A desktop release is cut by tagging `desktop-<version>`; the
-  # Windows installer is part of that train, and signing needs the artifact to
-  # come out of a run here rather than off a maintainer's box. Everyday pushes to
-  # `main` and pull requests do not build Windows — `make windows-check` stays the
-  # host-side gate the maintainer runs by hand.
-  push:
-    tags:
-      - 'desktop-*'
+  # Release-only. A desktop release is staged as a draft and published by hand;
+  # publishing is what creates the `desktop-<version>` tag, and this fires on
+  # that publish rather than on the tag push — a release published from a draft
+  # whose tag was pushed earlier creates no new tag, and a tag-push trigger
+  # would miss it. Everyday pushes to `main` and pull requests do not build
+  # Windows: `make windows-check` stays the host-side gate the maintainer runs
+  # by hand.
+  #
+  # The run rebuilds the installer on a GitHub-hosted agent for provenance; it
+  # does not publish, and it does NOT vouch for the installer that was staged
+  # from the maintainer's box. When SignPath signing lands, the order has to
+  # change: hosted build and sign FIRST, then stage the signed installer on the
+  # draft (docs/architecture/windows-release.md § Building on a GitHub-hosted
+  # runner).
+  release:
+    types: [published]
 
 permissions:
   contents: read
@@ -51,11 +59,15 @@ jobs:
     # on GitHub's schedule, and a release build should not change underneath a
     # release because a label was repointed.
     runs-on: windows-2025
-    # Only this repository builds. A Windows runner is the most expensive gate
-    # this project has, and a fork has nothing to sign with; without the guard
-    # every fork would burn runner minutes producing an artifact no certificate
-    # will ever cover.
-    if: github.repository == 'taigikeyboard/taigikeyboard'
+    # Only this repository builds, and only for the desktop train. A Windows
+    # runner is the most expensive gate this project has: a fork has nothing to
+    # sign with, and a mobile release — should one ever be published here — has
+    # no Windows installer in it. `workflow_dispatch` carries no release, so it
+    # is admitted on the repository check alone.
+    if: >-
+      github.repository == 'taigikeyboard/taigikeyboard' &&
+      (github.event_name != 'release' ||
+       startsWith(github.event.release.tag_name, 'desktop-'))
     timeout-minutes: 60
     steps:
       # core.autocrlf must be off BEFORE the checkout. Everything here is

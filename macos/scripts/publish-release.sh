@@ -1,51 +1,33 @@
 #!/usr/bin/env bash
-# Publish an already-built, notarized package: attach it to this version's
-# desktop release, prove it is anonymously downloadable, then point the update
-# manifest at it. Split from release-app.sh because the two fail for unrelated
-# reasons and rebuilding costs a notarization round trip — a failed upload must
-# not mean waiting through that again.
+# Stage an already-built, notarized package on this version's DRAFT desktop
+# release. Split from release-app.sh because the two fail for unrelated reasons
+# and rebuilding costs a notarization round trip — a failed upload must not mean
+# waiting through that again.
 #
 # Usage: publish-release.sh [--pkg <path>]
 #
-#   --pkg <path>  Package to publish (default: the release-named pkg for the
+#   --pkg <path>  Package to stage (default: the release-named pkg for the
 #                 version in App/Info.plist).
+#
+# NOTHING HERE REACHES A USER. The release is a draft: no tag, no public
+# download. The maintainer downloads what was staged, tests it, publishes the
+# release by hand, and then `scripts/announce-release.sh` (`make
+# desktop-announce`) tells the website and every installed copy.
 #
 # The release itself — one per desktop version, holding both platforms'
 # installers — is `scripts/lib/desktop-release.sh`. This script owns what only
 # macOS can say: that the package is notarized, is this app, and is this
-# version, and what the Mac's own update manifest then announces.
+# version.
 #
-# Re-running after a failure is safe and is the intended recovery: an existing
-# release is added to, never deleted, because the manifest may already be
-# pointing at it, and an asset already published is kept rather than replaced.
+# Re-running after a failure is the intended recovery: the draft is added to,
+# never torn down, and an asset already staged is verified rather than replaced.
 
 set -euo pipefail
 
 # shellcheck source=lib/bundle-identity.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/bundle-identity.sh"
-# shellcheck source=../../scripts/lib/release-site.sh
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../scripts/lib/release-site.sh"
 # shellcheck source=../../scripts/lib/desktop-release.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../scripts/lib/desktop-release.sh"
-
-# The one file a release writes to the website repository. The site's macOS download button
-# links straight at the package, so its URL carries the version and changes
-# every release; it is committed as site data rather than written into the page,
-# which keeps this script the only thing that edits it — and keeps the button
-# off `/releases/latest`, which resolves repository-wide and would hand a Mac
-# whatever was released last, Windows installer included.
-#
-# The update manifest at `appcast/macos.json` is *rendered* from this file by
-# the site's own build, not written here. It used to be a second literal file
-# this script committed separately, and two commits seconds apart raced: each
-# Pages run deploys the tree of its own commit, so on 2026-08-28 the run for the
-# earlier commit finished last and served a manifest one release behind for a
-# day, while the download button was already current. One published fact, one
-# committed file, nothing to race.
-SITE_RELEASE_PATH="_data/macos_release.json"
-# The domain is the project's own, so the hosting underneath it can change
-# without stranding installs that have UpdateChecker.publishedURL baked in.
-MANIFEST_URL="https://taigikeyboard.tw/appcast/macos.json"
 
 pkg_path=""
 
@@ -122,14 +104,5 @@ print((reference.get("version") or "") if reference is not None else "")
 [[ "$PACKAGE_VERSION" == "$BUILD_VERSION" ]] ||
     fail "$PKG_NAME is build $PACKAGE_VERSION, but this checkout is $BUILD_VERSION ($SHORT_VERSION) — it would be announced as the wrong version"
 
-publish_desktop_asset "$pkg_path"
-
-# `downloadURL` reaches the app as the manifest's `packageURL`, which is what
-# lets it fetch the installer itself instead of sending the user to a browser;
-# an install that reads it still verifies the package's own Developer ID
-# signature, so the URL is a convenience rather than something trusted.
-SITE_RELEASE_JSON="$(printf '{\n  "version": "%s",\n  "tag": "%s",\n  "downloadURL": "%s",\n  "releasePageURL": "%s"\n}\n' \
-    "$SHORT_VERSION" "$DESKTOP_TAG" "$ASSET_URL" "$RELEASE_PAGE_URL")"
-
-announce_desktop_platform macOS "$SITE_RELEASE_PATH" "$MANIFEST_URL" "$SITE_RELEASE_JSON" \
-    "version=$SHORT_VERSION" "packageURL=$ASSET_URL"
+stage_desktop_asset "$pkg_path"
+desktop_draft_summary macOS

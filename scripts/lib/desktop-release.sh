@@ -1,20 +1,21 @@
 #!/usr/bin/env bash
-# The GitHub release a desktop version is published as, shared by
+# The GitHub release a desktop version is staged into, shared by
 # macos/scripts/publish-release.sh and windows/scripts/publish-release.sh.
 # Sourced, not executed, AFTER the platform identity library (`fail`,
-# `REPOSITORY_DIR`, `SHORT_VERSION`); a publish additionally needs
-# `release-site.sh` sourced for the anonymous fetches. The release scripts
-# source it for `release_sha256` alone. Why the release lives here rather than
-# on the website repository: `docs/architecture/macos-release.md` § Publishing
-# the package.
+# `REPOSITORY_DIR`, `SHORT_VERSION`). The release scripts source it for
+# `release_sha256` alone. Why the release lives here rather than on the website
+# repository: `docs/architecture/macos-release.md` § Publishing the package.
 #
 # One desktop version is ONE release, tagged `desktop-<version>`, holding both
 # platforms' installers. The two are built on two machines at two times — the
 # package on a Mac once Apple has notarized it, the installer on a Windows box —
-# so whichever publishes first creates the release and the other attaches its
-# asset to it. Neither waits for the other: each platform's own update manifest
-# moves as soon as its own asset is proven downloadable.
-
+# so whichever runs first creates the release and the other attaches its asset.
+#
+# That release is a DRAFT until a person publishes it. A draft has no public
+# asset URL and no git tag, so nothing here reaches a user: the maintainer
+# downloads the artifacts from the draft, tests them, and publishes by hand.
+# `scripts/announce-release.sh` is the other half — it runs after that manual
+# publish and is what tells the website and every installed copy.
 RELEASE_REPOSITORY="taigikeyboard/taigikeyboard"
 DESKTOP_TAG="desktop-$SHORT_VERSION"
 RELEASE_PAGE_URL="https://github.com/$RELEASE_REPOSITORY/releases/tag/$DESKTOP_TAG"
@@ -91,72 +92,117 @@ _read_release_notes() {
         fail "changelog/desktop-v$SHORT_VERSION.md is empty in ${DESKTOP_SOURCE_COMMIT:0:7}"
 }
 
-# Create the release or attach to it, then prove the asset is downloadable.
-# Runs after `desktop_release_preflight`, and sets ASSET_URL and
-# PUBLISHED_SHA256 — what the caller announces to the website — as globals,
-# because its own stdout is the operator's log.
-publish_desktop_asset() {
+# Put one platform's installer on this version's DRAFT release, creating the
+# draft if this is the first platform to run, and prove the bytes GitHub now
+# holds are the bytes that were built.
+#
+# Nothing here is public: a draft is visible only to people who can write this
+# repository, and it has no `releases/download/<tag>/<name>` URL for anyone to
+# find. The read-back is therefore authenticated — the anonymous proof is
+# `scripts/announce-release.sh`'s job, after the draft is published.
+#
+# Alongside the installer goes `<installer>.sha256`, the digest of what was
+# staged. It is what the announcement holds the published bytes against, so the
+# thing a user downloads is checked against a digest recorded before anyone
+# tested it — and on Windows, where releases are unsigned, it is also what a
+# user can check a manual download with.
+stage_desktop_asset() {
     local asset_path="$1"
-    local asset_name local_sha256 published_assets
+    local asset_name local_sha256 receipt staged_assets release_exists
     asset_name="$(basename "$asset_path")"
     local_sha256="$(release_sha256 "$asset_path")"
-    ASSET_URL="https://github.com/$RELEASE_REPOSITORY/releases/download/$DESKTOP_TAG/$asset_name"
+    receipt="$RELEASE_TEMP_DIR/$asset_name.sha256"
+    printf '%s  %s\n' "$local_sha256" "$asset_name" > "$receipt"
 
-    # Before either branch: a tag can exist without a release — pushed by hand to
-    # start the Windows provenance build, or left by a half-finished publish —
-    # and `gh release create` silently ignores --target for a tag that is already
-    # there. Checking only on the attach path would let a create publish this
-    # build under a tag naming a different commit.
-    _require_tag_names_commit
+    _require_release_names_commit
 
-    if ! published_assets="$(_published_asset_names)"; then
-        echo "==> Creating release $DESKTOP_TAG in $RELEASE_REPOSITORY"
-        # --target is what makes the tag name this commit rather than main's
-        # tip, which may already have moved past it.
+    # Called directly, not in a command substitution: `fail` inside one exits
+    # only the subshell, so a network error would have gone on to create a
+    # second release. "No release" and "a release holding nothing yet" are also
+    # different states — the second must not take the create path.
+    local release_exists=true
+    _read_staged_asset_names || release_exists=false
+    staged_assets="$STAGED_ASSET_NAMES"
+
+    if [[ "$release_exists" == false ]]; then
+        echo "==> Creating draft release $DESKTOP_TAG in $RELEASE_REPOSITORY"
+        # --draft: no tag, no public download, nothing announced. --target is
+        # what the tag will name when a person publishes it — a full SHA, never
+        # a branch, so the tag cannot end up on whatever main has moved to by
+        # then.
         gh release create "$DESKTOP_TAG" \
             --repo "$RELEASE_REPOSITORY" \
+            --draft \
             --target "$DESKTOP_SOURCE_COMMIT" \
             --title "$RELEASE_TITLE" \
             --notes-file "$DESKTOP_NOTES_FILE" \
-            "$asset_path"
-    elif grep -qxF "$asset_name" <<< "$published_assets"; then
+            "$asset_path" "$receipt"
+    elif grep -qxF "$asset_name" <<< "$staged_assets"; then
         echo "==> $asset_name is already on $DESKTOP_TAG — verifying it"
+        # The receipt may be missing if a previous run died between the two
+        # uploads; upload it only when it is not there, so a staged digest is
+        # never quietly rewritten.
+        grep -qxF "$asset_name.sha256" <<< "$staged_assets" ||
+            gh release upload "$DESKTOP_TAG" "$receipt" --repo "$RELEASE_REPOSITORY"
     else
-        echo "==> Release $DESKTOP_TAG exists — attaching $asset_name to it"
-        # No --clobber: it deletes before it uploads, which takes the download
-        # away for as long as the upload runs — or for good if it fails — while
-        # every published manifest still points at it.
-        gh release upload "$DESKTOP_TAG" "$asset_path" --repo "$RELEASE_REPOSITORY"
+        echo "==> Draft $DESKTOP_TAG exists — attaching $asset_name to it"
+        # No --clobber anywhere in this flow: it deletes before it uploads, so a
+        # failure part-way leaves nothing where an asset used to be.
+        gh release upload "$DESKTOP_TAG" "$asset_path" "$receipt" --repo "$RELEASE_REPOSITORY"
     fi
 
-    _verify_published_asset "$asset_name" "$local_sha256"
+    _verify_staged_asset "$asset_name" "$local_sha256"
 }
 
-# The names already on the release, or non-zero when there is no release yet.
-# A failed `gh release view` means "no such release" only when GitHub said so:
-# a rate limit, an expired token or a network fault read as one would take the
-# create path and fail there, reporting the wrong problem.
-_published_asset_names() {
+# Sets STAGED_ASSET_NAMES to the names already on the draft, one per line, and
+# returns non-zero when there is no release yet. A failed `gh release view`
+# means "no such release" only when GitHub said so: a rate limit, an expired
+# token or a network fault read as one would take the create path and make a
+# second release, reporting the wrong problem.
+_read_staged_asset_names() {
     local result
     if result="$(gh release view "$DESKTOP_TAG" --repo "$RELEASE_REPOSITORY" \
         --json assets --jq '.assets[].name' 2>&1)"; then
-        printf '%s\n' "$result"
+        STAGED_ASSET_NAMES="$result"
         return 0
     fi
-    [[ "$result" == *"release not found"* || "$result" == *"HTTP 404"* ]] ||
-        fail "cannot read release $DESKTOP_TAG in $RELEASE_REPOSITORY: $result"
+    _require_absent "$result" "release $DESKTOP_TAG in $RELEASE_REPOSITORY"
+    STAGED_ASSET_NAMES=""
     return 1
 }
 
-# The tag is what both platforms' assets hang off, so the second machine must be
-# at the same commit as the first — a package built elsewhere that happens to
-# carry the same version would otherwise ship under a tag that does not describe
-# it. The tag is never moved: a mismatch is a stop, not a fixup.
+# GitHub said "not there", rather than "I could not tell you". Anything else —
+# a rate limit, an expired token, a network fault — must stop the run rather
+# than read as permission to create, publish or overwrite.
+_require_absent() {
+    local result="$1" what="$2"
+    [[ "$result" == *"release not found"* || "$result" == *"HTTP 404"* || "$result" == *"Not Found"* ]] ||
+        fail "cannot read $what: $result"
+}
+
+# Whatever already exists for this version has to name the commit being staged,
+# so the second machine cannot hang a differently-built installer off the first
+# machine's release. Two things can exist, and they are checked differently:
+#
+#   a git tag   — from a hand-push, or from a release published earlier. It is
+#                 authoritative and immovable: `gh release create` silently
+#                 ignores --target once the tag is there.
+#   a draft     — no tag yet, only `targetCommitish`, which GitHub resolves when
+#                 the draft is published. A branch name there would tag whatever
+#                 that branch points at on publish day, so only a full SHA equal
+#                 to this commit is accepted.
+_require_release_names_commit() {
+    _require_tag_names_commit
+    _require_draft_targets_commit
+}
+
 _require_tag_names_commit() {
     local reference object_sha object_type
-    reference="$(gh api "repos/$RELEASE_REPOSITORY/git/ref/tags/$DESKTOP_TAG" \
-        --jq '.object.sha + " " + .object.type' 2> /dev/null)" ||
-        return 0 # No tag yet; the create below makes it name this commit.
+    if ! reference="$(gh api "repos/$RELEASE_REPOSITORY/git/ref/tags/$DESKTOP_TAG" \
+        --jq '.object.sha + " " + .object.type' 2>&1)"; then
+        _require_absent "$reference" "the tag $DESKTOP_TAG in $RELEASE_REPOSITORY"
+        return 0 # No tag yet; publishing the draft will create it.
+    fi
 
     read -r object_sha object_type <<< "$reference"
     # An annotated tag points at a tag object, which points at the commit.
@@ -168,31 +214,64 @@ _require_tag_names_commit() {
         fail "$DESKTOP_TAG names commit ${object_sha:0:7}, but this checkout is ${DESKTOP_SOURCE_COMMIT:0:7} — check out the commit the other platform released from, or cut a new version"
 }
 
-# Anonymously, because that is how every user and every installed copy reaches
-# it — and whole, because the digest published next has to be the one this URL
-# actually serves. Those are different facts the moment an upload truncates or
-# the wrong build was handed to the script, and this is the last step that can
-# catch it before somebody's update window downloads it. GitHub can take a
-# moment to make a fresh asset reachable, so an unreachable one is retried; only
-# bytes that arrived whole and hash differently are a hard stop.
-_verify_published_asset() {
-    local asset_name="$1" local_sha256="$2"
-    local downloaded="$RELEASE_TEMP_DIR/published-$asset_name"
-    local page_status attempt
+_require_draft_targets_commit() {
+    local state target is_draft
+    if ! state="$(gh release view "$DESKTOP_TAG" --repo "$RELEASE_REPOSITORY" \
+        --json isDraft,targetCommitish --jq '(.isDraft|tostring) + " " + .targetCommitish' 2>&1)"; then
+        # A read that merely failed must not read as "no release yet" — the
+        # upload below would then add an asset to a release that may already be
+        # published, which is the one thing this flow exists to prevent.
+        _require_absent "$state" "release $DESKTOP_TAG in $RELEASE_REPOSITORY"
+        return 0
+    fi
+    read -r is_draft target <<< "$state"
 
-    echo "==> Reading the release back without credentials"
-    for attempt in 1 2 3 4 5; do
-        page_status="$(anonymous_status "$RELEASE_PAGE_URL")"
-        if [[ "$page_status" == "200" ]] && anonymous_download "$ASSET_URL" "$downloaded"; then
-            PUBLISHED_SHA256="$(release_sha256 "$downloaded")"
-            [[ "$PUBLISHED_SHA256" == "$local_sha256" ]] ||
-                fail "$ASSET_URL serves $PUBLISHED_SHA256, but $asset_name here is $local_sha256 — either the upload did not land whole, or that name was published from a different build and a published asset is never replaced; cut a new version"
-            echo "  page 200, sha256 $PUBLISHED_SHA256"
-            return
-        fi
-        [[ $attempt -eq 5 ]] &&
-            fail "$DESKTOP_TAG is not anonymously reachable (page $page_status, asset $ASSET_URL) — is $RELEASE_REPOSITORY public?"
-        echo "  page $page_status, asset unreadable — retrying in 5s"
-        sleep 5
-    done
+    if [[ "$is_draft" != true ]]; then
+        fail "$DESKTOP_TAG is already published — an asset added now would be public immediately. Put it back in draft (gh release edit $DESKTOP_TAG --repo $RELEASE_REPOSITORY --draft=true) to keep testing, or cut a new version"
+    fi
+    [[ "$target" == "$DESKTOP_SOURCE_COMMIT" ]] ||
+        fail "the draft $DESKTOP_TAG will tag '$target', but this checkout is ${DESKTOP_SOURCE_COMMIT:0:7} — it was created from a different commit (or from a branch, which would tag whatever that branch points at on publish day); delete the draft and stage again, or cut a new version"
+}
+
+# Authenticated, because a draft has no anonymous URL to read — but still a
+# whole download, because "GitHub holds these bytes" and "the upload landed
+# whole" are different facts. The maintainer is about to test what this proves.
+_verify_staged_asset() {
+    local asset_name="$1" local_sha256="$2"
+    local download_dir="$RELEASE_TEMP_DIR/staged"
+    local staged_sha256
+
+    echo "==> Reading the staged asset back"
+    rm -rf "$download_dir"
+    mkdir -p "$download_dir"
+    gh release download "$DESKTOP_TAG" \
+        --repo "$RELEASE_REPOSITORY" \
+        --pattern "$asset_name" \
+        --dir "$download_dir" ||
+        fail "cannot read $asset_name back from the draft $DESKTOP_TAG"
+    staged_sha256="$(release_sha256 "$download_dir/$asset_name")"
+    [[ "$staged_sha256" == "$local_sha256" ]] ||
+        fail "$DESKTOP_TAG holds $asset_name as $staged_sha256, but this build is $local_sha256 — either the upload did not land whole, or that name was staged from a different build; a staged asset is never replaced, so delete the draft and stage again"
+    echo "  sha256 $staged_sha256"
+
+    DRAFT_URL="$(gh release view "$DESKTOP_TAG" --repo "$RELEASE_REPOSITORY" --json url --jq .url)"
+}
+
+# What is left to do, printed by each platform script when its staging is done.
+# The two manual steps between here and a user seeing anything are the point of
+# the draft: the maintainer installs what was staged, and only then publishes.
+desktop_draft_summary() {
+    local platform="$1"
+
+    echo ""
+    echo "✓ staged $platform $SHORT_VERSION on the draft $DESKTOP_TAG"
+    echo "  draft     $DRAFT_URL"
+    echo "  commit    ${DESKTOP_SOURCE_COMMIT:0:7} (what publishing will tag)"
+    echo ""
+    echo "  Nothing is public yet. To test what was staged:"
+    echo "    gh release download $DESKTOP_TAG --repo $RELEASE_REPOSITORY --dir ~/Downloads"
+    echo ""
+    echo "  When both platforms are staged and both have been tested, publish and announce:"
+    echo "    gh release edit $DESKTOP_TAG --repo $RELEASE_REPOSITORY --draft=false"
+    echo "    make desktop-announce"
 }

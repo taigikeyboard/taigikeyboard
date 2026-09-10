@@ -199,58 +199,78 @@ Report the commit SHA, the release range, and both rendered sections.
 
 ## Hand off
 
-Everything below is the maintainer's, on the machine named. This skill runs
-none of it.
+Everything below is the maintainer's, on the machine named. This skill runs none
+of it. The release is a **draft** until step 4: no tag, no public download,
+nothing a user can reach.
 
-**1. macOS package — on the Mac, from a clean tree:**
+**1. Stage the macOS package — on the Mac, from a clean tree:**
 
 ```bash
 make macos-release
 ```
 
 Builds, signs with both Developer ID certificates, notarizes, staples, packages,
-then `macos/scripts/publish-release.sh` puts the `.pkg` on the `desktop-<target>`
-release **in this repository** — creating it, tagging the commit the checkout is
-at, with the whole `changelog/desktop-v<target>.md` as its body — and points
-`_data/macos_release.json` at the asset. The site renders `appcast/macos.json`
-from that file; that manifest is what installed copies check. Needs the
+then `macos/scripts/publish-release.sh` puts the `.pkg` (and a `.sha256`
+receipt) on the **draft** `desktop-<target>` release in this repository —
+creating it, recording the commit the checkout is at as what publishing will
+tag, with the whole `changelog/desktop-v<target>.md` as its body. Needs the
 notarization credential (`docs/architecture/macos-release.md`).
 
-**2. Windows installer — on the Windows box (`ssh win`), from Git Bash, clean tree:**
+**2. Stage the Windows installer — on the Windows box (`ssh win`), Git Bash, clean tree:**
 
 ```bash
 make windows-release RELEASE_FLAGS=--skip-sign
 ```
 
 There is no Authenticode certificate yet, so `--skip-sign` is the release
-channel, stated explicitly so nothing publishes unsigned by accident. Builds,
-stages, packages with Inno Setup, then `windows/scripts/publish-release.sh
---allow-unsigned` attaches the installer to the **same** `desktop-<target>`
-release (creating it if Windows goes first) and writes
-`_data/windows_release.json`; the published manifest carries the installer's
-SHA-256, which is what the in-app updater verifies. Before this:
+channel, stated explicitly so nothing ships unsigned by accident. Builds,
+stages, packages with Inno Setup, then attaches the installer and its receipt to
+the **same** draft (creating it if Windows goes first). Before this:
 `make windows-check` on the Mac is the host-side gate.
 
-Whichever platform publishes first creates the release and the tag; the second
-must be **at that same commit** — its publish stops if the existing tag names a
-different one. Between the two publishes the release page carries one installer,
-which is the intended state: each platform's manifest moves as soon as its own
-asset is downloadable.
+Whichever platform stages first creates the draft; the second must be **at that
+same commit** — it stops if the draft targets a different one, or if the release
+has already been published.
 
-**3. The tag** — `desktop-<target>` on this repository — is created by whichever
-publish runs first, so there is nothing to do by hand. (It is also the only
-trigger of `.github/workflows/windows-build.yml` besides manual dispatch;
-`docs/architecture/windows-release.md` covers pushing it early to start that
-build.) The skill never creates, moves, or pushes it.
+**3. Test what was staged — the whole point of the draft:**
+
+```bash
+gh release download desktop-<target> --repo taigikeyboard/taigikeyboard --dir ~/Downloads
+```
+
+Install both, run the dogfood checklist items this release touches.
+
+**4. Publish, when both pass:**
+
+```bash
+gh release edit desktop-<target> --repo taigikeyboard/taigikeyboard --draft=false
+```
+
+This creates the tag and fires `.github/workflows/windows-build.yml` (a
+GitHub-hosted rebuild for SignPath provenance; it does not publish). The
+download becomes public here — the website and installed copies still know
+nothing.
+
+**5. Announce — either machine:**
+
+```bash
+make desktop-announce
+```
+
+Proves both downloads are anonymously reachable and hash to their staged
+receipts, writes both `_data/*_release.json` to the website in one commit, and
+waits for the live appcasts. A platform whose installer is not on the release is
+skipped with a note.
 
 ## Guardrails
 
 - Never edit another version's changelog.
 - Never touch `changelog/v<version>.md` or `changelog/store/**` — that is
   `release-mobile`'s surface, and desktop-only work must never enter a store note.
-- Never run `make macos-release`, `make windows-release`, either
-  `release-app.sh`, or either `publish-release.sh`.
-- Never create, move, or push a tag; never create a GitHub release.
+- Never run `make macos-release`, `make windows-release`, `make desktop-announce`,
+  either `release-app.sh`, either `publish-release.sh`, or `announce-release.sh`.
+- Never create, move, or push a tag; never create, publish, or un-draft a GitHub
+  release.
 - Never request, store, or use signing certificates, notarization credentials,
   or thumbprints.
 - Never pass `--allow-downgrade`, `--allow-dirty`, or `--force` to any release

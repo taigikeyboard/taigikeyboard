@@ -9,7 +9,7 @@ export PATH := $(HOME)/.cargo/bin:$(PATH)
 .PHONY: build test test-crate doc dict dogfood help \
         fmt lint hooks scan-secrets scan-secrets-full \
         i18n i18n-test \
-        macos-release version-mobile version-desktop \
+        macos-release desktop-announce version-mobile version-desktop \
         windows-check windows-release \
         update-submodules
 
@@ -88,10 +88,13 @@ i18n-test:
 dogfood:
 	python3 $(DICT)/tools/gen_dogfood.py
 
-# Cut a macOS release: build, sign, notarize, upload, announce. The only entry
-# point for one — `macos/Makefile` is the dev loop and stops at `bundle`.
+# Cut a macOS release: build, sign, notarize, and stage the package on this
+# version's DRAFT desktop release. The only entry point for one — `macos/Makefile`
+# is the dev loop and stops at `bundle`. Nothing here reaches a user: the draft
+# has no tag and no public download, and `make desktop-announce` is what
+# announces the release a person publishes after testing it.
 #
-# `--publish` is baked in because publishing IS the point of this target, and
+# `--publish` is baked in because staging IS the point of this target, and
 # `--force` because re-cutting the same version is the normal case: a release is
 # tested by running this flow, and the local package from the previous attempt
 # must not be what stops the next one.
@@ -110,10 +113,20 @@ macos-release:
 windows-check:
 	$(MAKE) -C windows check
 
+# Announce a desktop release a person has already published: prove both
+# installers download anonymously, point the website at them, wait for the live
+# appcasts. `make macos-release` / `make windows-release` only STAGE their
+# installer on a draft nobody can reach; this is the half that reaches users,
+# and it runs anywhere with gh + curl (`scripts/announce-release.sh`).
+desktop-announce:
+	bash scripts/announce-release.sh $(RELEASE_FLAGS)
+
 # Cut a Windows release — on a Windows machine, from Git Bash: release
-# builds, signing, the Inno Setup installer, publish to the website repo
-# (windows/scripts/release-app.sh; procedure and one-time setup in
-# docs/architecture/windows-release.md). There is no certificate, so today the
+# builds, signing, the Inno Setup installer, and staging it on the same draft
+# desktop release the Mac's package goes on (windows/scripts/release-app.sh;
+# procedure and one-time setup in docs/architecture/windows-release.md). Like
+# the macOS target it announces nothing — `make desktop-announce` does, after a
+# person has tested and published. There is no certificate, so today the
 # operator types `make windows-release RELEASE_FLAGS=--skip-sign` — unsigned is
 # the Windows release channel (that doc's § Signing status), and the flag stays
 # explicit rather than defaulted so nothing publishes unsigned by accident.
@@ -212,6 +225,7 @@ help:
 	@echo "  make i18n-test          Run the i18n codegen + production-content unit tests"
 	@echo "  make dogfood            Print continuous-input dogfood test table (TL/POJ/TPS + 漢字)"
 	@echo "  make macos-release      Cut a macOS release: sign, notarize, upload, announce"
+	@echo "  make desktop-announce   Announce a published desktop release (website + appcasts)"
 	@echo "  make windows-check      Host-side compile + test gate for the Windows input method"
 	@echo "  make windows-release    Cut a Windows release (on Windows): build, package, publish"
 	@echo "                          — add RELEASE_FLAGS=--skip-sign until a certificate exists"

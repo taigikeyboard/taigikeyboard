@@ -46,8 +46,9 @@ this repository.
 
 ### One published fact, one committed file
 
-`windows/scripts/publish-release.sh` writes exactly one file over there,
-`_data/windows_release.json`:
+`scripts/announce-release.sh` writes exactly one file over there,
+`_data/windows_release.json` — in the same commit as the macOS one, after the
+maintainer has published the release:
 
 ```json
 {
