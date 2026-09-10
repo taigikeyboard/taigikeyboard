@@ -184,7 +184,9 @@ REMOTE
 # multi-line script into positional arguments while still exiting 0, so the
 # failure read as success (2026-09-10, first run of this script).
 {
-    printf 'WINDOWS_REPO_DIR=%s\nSOURCE_COMMIT=%s\n' "$WINDOWS_REPO_DIR" "$SOURCE_COMMIT"
+    # Single-quoted: the path is a Windows one, and bash eats the backslashes
+    # out of an unquoted assignment (C:\Users\minsi… became C:Usersminsi…).
+    printf "WINDOWS_REPO_DIR='%s'\nSOURCE_COMMIT='%s'\n" "$WINDOWS_REPO_DIR" "$SOURCE_COMMIT"
     cat "$remote_body"
 } | ssh "$WINDOWS_SSH_HOST" "& '$WINDOWS_BASH' -s" ||
     fail "staging on $WINDOWS_SSH_HOST failed — the log above is the box's; re-run with --skip-macos once it is fixed"
