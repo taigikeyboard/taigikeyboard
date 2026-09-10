@@ -201,7 +201,8 @@ Report the commit SHA, the release range, and both rendered sections.
 
 Everything below is the maintainer's, on the machine named. This skill runs none
 of it. The release is a **draft** until step 4: no tag, no public download,
-nothing a user can reach.
+nothing a user can reach. Full procedure and rationale:
+`docs/architecture/desktop-release.md`.
 
 **1. Stage the macOS package — on the Mac, from a clean tree:**
 
@@ -228,9 +229,10 @@ stages, packages with Inno Setup, then attaches the installer and its receipt to
 the **same** draft (creating it if Windows goes first). Before this:
 `make windows-check` on the Mac is the host-side gate.
 
-Whichever platform stages first creates the draft; the second must be **at that
-same commit** — it stops if the draft targets a different one, or if the release
-has already been published.
+Whichever platform stages first creates the draft; the second moves the draft's
+target (and any tag) onto its own commit. A release that has already been
+**published** is the exception — it stops rather than adding an asset that would
+be public with no test.
 
 **3. Test what was staged — the whole point of the draft:**
 

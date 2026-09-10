@@ -113,7 +113,8 @@ If target content already exists, merge new information by topic. Refine an exis
 Canonical store-note rules:
 
 - English prose; Taigi terms and examples may retain 漢字 / TL / POJ / TPS.
-- One to five non-empty entries without source bullet markers.
+- One to eight non-empty entries without source bullet markers. The 500-character
+  ceiling usually binds first.
 - Start each entry with `New:`, `Fixed:`, `Improved:`, `Changed:`, or `Updated:`.
 - End each entry with punctuation.
 - Include only concrete user-visible changes.

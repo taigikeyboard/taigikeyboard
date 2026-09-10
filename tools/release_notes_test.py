@@ -26,6 +26,20 @@ class ReleaseNotesValidationTests(unittest.TestCase):
             "• Fixed: candidate selection is now more reliable.",
         )
 
+    def test_admits_eight_entries_and_rejects_a_ninth(self) -> None:
+        entries = tuple(f"Fixed: bug {index}." for index in range(1, 9))
+
+        release_notes.validate_notes(
+            release_notes.PlatformNotes(platform="ios", entries=entries)
+        )
+
+        with self.assertRaisesRegex(release_notes.ReleaseNotesError, "expected 1-8"):
+            release_notes.validate_notes(
+                release_notes.PlatformNotes(
+                    platform="ios", entries=entries + ("Fixed: bug 9.",)
+                )
+            )
+
     def test_rejects_other_platform_name(self) -> None:
         notes = release_notes.PlatformNotes(
             platform="ios",

@@ -51,7 +51,8 @@
 | `architecture/macos-roadmap.md` | macOS desktop IME (InputMethodKit over the shared engine) — design, PR table, dogfood run-book | Active |
 | `architecture/macos-candidate-window-port.md` | macOS candidate window port (MacishType-style layouts) — design + not-adopted list | Reference |
 | `architecture/manual-release-notes.md` | Canonical English What's New, in-app history sync, validation, and manual store paste workflow | Active |
-| `architecture/macos-release.md` | macOS Developer ID signing, notarization, and web-distributed `.pkg` workflow | Active |
+| `architecture/desktop-release.md` | How a desktop version reaches a user: staged on a draft, tested, published by hand, announced automatically | Active |
+| `architecture/macos-release.md` | macOS Developer ID signing, notarization, and what only a Mac asserts about its `.pkg` | Active |
 | `architecture/windows-roadmap.md` | Windows desktop IME (TSF in Rust over the shared engine, macOS UX parity) — design W1–W16, PR table, reference alignment, dogfood run-book | Active |
 | `architecture/windows-release.md` | Windows installer (Inno Setup), Authenticode signing, and web-distributed installer workflow | Active |
 | `architecture/ios-exemplar.md` | iOS architectural pattern (alignment target for Android) | Reference |
