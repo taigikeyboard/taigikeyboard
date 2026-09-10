@@ -364,11 +364,13 @@ token has expired (`macos-release.md` § One-time: the announcement's token).
    this checkout is at as what publishing will tag, with the whole
    `changelog/desktop-v<version>.md` as the notes, read out of that commit
    rather than the working tree. When macOS staged first the draft already
-   exists and the installer is added to it; either way an existing tag must
-   dereference to this same commit and an existing draft must already target it,
-   and a release that has already been published is refused (an asset added to
-   it would be public immediately). A staged asset is never replaced: an
-   identical one is verified in place, and one whose bytes differ stops the run.
+   exists and the installer is added to it; either way an existing tag or draft
+   target is moved onto this commit, so re-staging never has to be untangled by
+   hand. A release that has already been published is the exception: it is
+   refused, because an asset added to it would be public immediately and moving
+   its tag would rewrite a version people already have. A staged asset is never
+   replaced: an identical one is verified in place, and one whose bytes differ
+   stops the run.
 4. Uploads `TaigiKeyboard-<version>.exe.sha256` beside the installer and reads
    the installer back — authenticated, since a draft has no anonymous URL —
    requiring its SHA-256 to equal the local file's. That receipt is what the

@@ -272,13 +272,16 @@ what only a Mac can say about the package.
    `--pkg` can point at any file, and the tag and manifest version both come
    from `Info.plist`, so a stale package would otherwise be staged under the
    current version's name.
-3. Whatever already exists for this version names this commit. Two things can:
-   a git tag (from a hand-push, or a release published earlier) is
-   dereferenced and compared; a draft has no tag, only `targetCommitish`, which
-   must be this exact commit SHA. A branch name there would tag whatever that
-   branch points at on publish day, so it is refused. A release that is already
-   published is refused outright — an asset added to it would be public
-   immediately, which is the one thing this flow exists to prevent.
+3. Whatever already exists for this version is pointed at this commit. Re-staging
+   is the normal case — a fix, a second attempt, the other platform running a day
+   later — so a draft's `targetCommitish` is rewritten to this exact SHA (never a
+   branch name, which would tag whatever that branch points at on publish day),
+   and a tag left by a hand-push or an earlier attempt is force-moved through the
+   git refs API, since `gh release create` ignores `--target` once a tag exists.
+   The one thing that is refused rather than moved is a release that is already
+   **published**: its installers are downloadable, so moving its tag would rewrite
+   what a version people already have means, and adding an asset to it would go
+   public with no test. Put it back in draft, or cut a new version.
 4. `gh release create --draft --target <commit>` with the whole
    `changelog/desktop-v<version>.md` as the notes (both platforms share the
    page, so both sections belong on it), or an upload into the existing draft.

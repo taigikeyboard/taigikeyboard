@@ -139,7 +139,7 @@ stage_desktop_asset() {
     receipt="$RELEASE_TEMP_DIR/$asset_name.sha256"
     printf '%s  %s\n' "$local_sha256" "$asset_name" > "$receipt"
 
-    _require_release_names_commit
+    _align_release_with_commit
 
     # Called directly, not in a command substitution: `fail` inside one exits
     # only the subshell, so a network error would have gone on to create a
@@ -204,31 +204,40 @@ _require_absent() {
         fail "cannot read $what: $result"
 }
 
-# Whatever already exists for this version has to name the commit being staged,
-# so the second machine cannot hang a differently-built installer off the first
-# machine's release. Two things can exist, and they are checked differently:
+# Point everything that already exists for this version at the commit being
+# staged. Re-staging is the normal case — a fix, a second attempt, the other
+# platform running a day later — so a version that has already been tagged or
+# drafted is moved rather than refused. Two things can exist:
 #
-#   a git tag   — from a hand-push, or from a release published earlier. It is
-#                 authoritative and immovable: `gh release create` silently
-#                 ignores --target once the tag is there.
-#   a draft     — no tag yet, only `targetCommitish`, which GitHub resolves when
-#                 the draft is published. A branch name there would tag whatever
-#                 that branch points at on publish day, so only a full SHA equal
-#                 to this commit is accepted.
-_require_release_names_commit() {
-    _require_tag_names_commit
-    _require_draft_targets_commit
+#   a draft   — no tag yet, only `targetCommitish`, which GitHub resolves into a
+#               tag when a person publishes it. Editable while it is a draft.
+#   a git tag — from a hand-push, or from a release published earlier. `gh
+#               release create` silently ignores --target once it exists, so it
+#               is moved through the git refs API instead.
+#
+# The one case that is refused rather than moved is a release that has already
+# been PUBLISHED: its installers are downloadable, so moving its tag would
+# rewrite what a version people already have means, and adding an asset to it
+# would go public without a test. Both halves say so and stop.
+_align_release_with_commit() {
+    _align_tag_with_commit
+    _align_draft_with_commit
 }
 
-_require_tag_names_commit() {
+_align_tag_with_commit() {
     local tagged
     tagged="$(desktop_tag_commit)"
-    [[ -z "$tagged" || "$tagged" == "$DESKTOP_SOURCE_COMMIT" ]] ||
-        fail "$DESKTOP_TAG names commit ${tagged:0:7}, but this checkout is ${DESKTOP_SOURCE_COMMIT:0:7} — check out the commit the other platform released from, or cut a new version"
+    [[ -n "$tagged" && "$tagged" != "$DESKTOP_SOURCE_COMMIT" ]] || return 0
+
+    echo "  $DESKTOP_TAG names ${tagged:0:7}; moving it to ${DESKTOP_SOURCE_COMMIT:0:7}"
+    # --force, because this is a deliberate move of a tag whose release has not
+    # been published — the published case never reaches here.
+    gh api "repos/$RELEASE_REPOSITORY/git/refs/tags/$DESKTOP_TAG" \
+        -X PATCH -F force=true -f "sha=$DESKTOP_SOURCE_COMMIT" --jq .object.sha > /dev/null ||
+        fail "cannot move the tag $DESKTOP_TAG onto ${DESKTOP_SOURCE_COMMIT:0:7}"
 }
 
 # The commit this version's tag names, or nothing when there is no tag yet.
-# Staging asks, to refuse a build that does not match a tag pushed by hand.
 desktop_tag_commit() {
     local reference object_sha object_type
     if ! reference="$(gh api "repos/$RELEASE_REPOSITORY/git/ref/tags/$DESKTOP_TAG" \
@@ -246,7 +255,7 @@ desktop_tag_commit() {
     printf '%s\n' "$object_sha"
 }
 
-_require_draft_targets_commit() {
+_align_draft_with_commit() {
     local state target is_draft
     if ! state="$(gh release view "$DESKTOP_TAG" --repo "$RELEASE_REPOSITORY" \
         --json isDraft,targetCommitish --jq '(.isDraft|tostring) + " " + .targetCommitish' 2>&1)"; then
@@ -258,11 +267,16 @@ _require_draft_targets_commit() {
     fi
     read -r is_draft target <<< "$state"
 
-    if [[ "$is_draft" != true ]]; then
+    [[ "$is_draft" == true ]] ||
         fail "$DESKTOP_TAG is already published — an asset added now would be public immediately. Put it back in draft (gh release edit $DESKTOP_TAG --repo $RELEASE_REPOSITORY --draft=true) to keep testing, or cut a new version"
-    fi
-    [[ "$target" == "$DESKTOP_SOURCE_COMMIT" ]] ||
-        fail "the draft $DESKTOP_TAG will tag '$target', but this checkout is ${DESKTOP_SOURCE_COMMIT:0:7} — it was created from a different commit (or from a branch, which would tag whatever that branch points at on publish day); delete the draft and stage again, or cut a new version"
+    [[ "$target" != "$DESKTOP_SOURCE_COMMIT" ]] || return 0
+
+    echo "  the draft targets '$target'; pointing it at ${DESKTOP_SOURCE_COMMIT:0:7}"
+    # A branch name here would tag whatever that branch points at on publish
+    # day, so the target is always rewritten to a full SHA.
+    gh release edit "$DESKTOP_TAG" --repo "$RELEASE_REPOSITORY" \
+        --target "$DESKTOP_SOURCE_COMMIT" > /dev/null ||
+        fail "cannot point the draft $DESKTOP_TAG at ${DESKTOP_SOURCE_COMMIT:0:7}"
 }
 
 # Authenticated, because a draft has no anonymous URL to read — but still a

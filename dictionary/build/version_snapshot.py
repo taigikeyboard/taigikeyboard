@@ -69,8 +69,11 @@ TRACKED_KEYS = "dictionary/word-keys.tsv"
 KEYS_HEADER = "hanzi\ttl"
 
 SAMPLE_ROWS = 30
-# Release tags are 3-segment semver only; a 4-segment tag is ignored on purpose.
-VERSION_RE = re.compile(r"^v\d+\.\d+\.\d+$")
+# The mobile train's release tags: `v3.6.5` up to 2026-09, `mobile-3.6.6` after
+# the two trains were named apart. 3-segment semver only — a 4-segment tag is
+# ignored on purpose — and `desktop-*` never matches: the desktop train ships no
+# dictionary of its own to diff against.
+VERSION_RE = re.compile(r"^(?:v|mobile-)\d+\.\d+\.\d+$")
 
 WordKey = tuple[str, str]
 
@@ -81,8 +84,8 @@ def _norm(text: str) -> str:
 
 
 def parse_version(tag: str) -> tuple[int, ...]:
-    """`v3.10.0` → (3, 10, 0) for semantic-version sorting (not string sort)."""
-    return tuple(int(p) for p in tag.lstrip("v").split("."))
+    """`v3.10.0` / `mobile-3.10.0` → (3, 10, 0), for semantic-version sorting."""
+    return tuple(int(part) for part in tag.split("-")[-1].lstrip("v").split("."))
 
 
 def _keyset_from_df(df, *, strict: bool) -> set[WordKey]:
