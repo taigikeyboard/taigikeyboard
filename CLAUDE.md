@@ -65,7 +65,7 @@ Cross-project process rules auto-load from `~/.claude/rules/` (don't duplicate t
 
 ## Build & Test
 
-The **user runs all builds/tests manually mid-round** — never invoke these or add build hooks/reminders mid-round. **Commit-first ordering**: commit → push → `gh pr create` with NO pre-commit test gate; the post-PR parallel verification (below) fires AFTER `gh pr create` returns, in parallel with the PR-bot review. Do NOT block commit / push / PR-open on test results.
+**Commit-first ordering**: commit → push → `gh pr create` with NO pre-commit test gate; the post-PR parallel verification (below) fires AFTER `gh pr create` returns, in parallel with the PR-bot review. Do NOT block commit / push / PR-open on test results.
 
 | Platform | Build | Test |
 |---|---|---|
@@ -100,9 +100,9 @@ The dictionary artifacts are committed, once, at `dictionaries/` — all four pl
 
 `make build` is sequential — about 5 s against a warm target directory, minutes when it has to compile the engine for all five targets. `make dict` is a separate ~2 min pass that must finish first (measured 2026-09-07: 67 s of per-source pipelines, 53 s of aggregate build).
 
-**EXCEPTION — a release.** `/release-mobile` and `/release-desktop` run `make i18n` + `make build` themselves (and `make dict` when dictionary sources moved): the engine binaries a platform links are generated and gitignored, so nothing else can prove the shipped artifact was built from the commit being released.
+**A release rebuilds first.** `/release-mobile` and `/release-desktop` run `make i18n` + `make build` themselves (and `make dict` when dictionary sources moved): the engine binaries a platform links are generated and gitignored, so nothing else can prove the shipped artifact was built from the commit being released.
 
-**EXCEPTION — post-PR parallel verification** (`~/.claude/rules/round-workflow.md` § Codex review sandwich step 6): immediately after `gh pr create` returns the URL, run build+test for **every platform the diff touches** in the background (one message, parallel `Bash` calls with `run_in_background: true`). If the diff touches `engine/` or `dictionary/`, the stale-binary gate runs FIRST (sequentially), then the platform gates fire in parallel. On failure: report the failing target + first error line, push the fix as a new commit on the same branch (no `--amend`), re-run only the failing gate. Do NOT close the PR.
+**Post-PR parallel verification** (`~/.claude/rules/round-workflow.md` § Codex review sandwich step 6): immediately after `gh pr create` returns the URL, run build+test for **every platform the diff touches** in the background (one message, parallel `Bash` calls with `run_in_background: true`). If the diff touches `engine/` or `dictionary/`, the stale-binary gate runs FIRST (sequentially), then the platform gates fire in parallel. On failure: report the failing target + first error line, push the fix as a new commit on the same branch (no `--amend`), re-run only the failing gate. Do NOT close the PR.
 
 ## Communication
 
