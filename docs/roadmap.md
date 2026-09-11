@@ -245,6 +245,104 @@ in use — which is how System Settings states a list like that (聲音's output
 
 ---
 
+### Desktop installed typefaces — the fonts the OS already has, listed and selectable (USER-scoped 2026-09-11)
+
+**Status**: P0 (this section + memory). PR1 macOS and PR2 Windows to follow.
+**Scope**: macOS + Windows only (desktop train). iOS / Android untouched.
+
+**The report** (USER 2026-09-11): a user tried to use a typeface their Mac already has and the
+字型管理 pane refused it with `another typeface is already called …`. Not a defect in that check —
+it is the `nameAlreadyResolves` refusal at `CustomFontLibrary.swift:322`, and it is right: the
+library's model is *import a font FILE, copy it, register the copy, draw the copy*, and a name a
+system face already carries resolves to that face, so a registered copy would never draw. The
+model simply has no path for a typeface that is already installed. The user is left with a dead
+end and an error message that reads as a bug.
+
+USER 2026-09-11 decisions: list the installed typefaces directly in the same table (「如果是系統字
+型，有辦法在UI直接列出來使用嗎？」); **do not filter them by Hanji coverage** — Taiwanese is Hanji
+AND romanization, so a Latin-only face is a legitimate choice for the roman half (「因為台語有漢字跟
+羅馬字,所以字體都是必須的」); add a **search field** to keep a 200–300-row list usable.
+
+#### Design (grounded in code)
+
+**A third kind of row, not a third library.** `CandidateFontSelection` gains one case,
+`installed(family)` — a family name the OS reports right now. Nothing is copied, nothing is
+registered, nothing is owned: the OS is the authority on what exists, the same way the directory
+is the authority for the user's own files. The table reads **bundled five → imported → installed**,
+the selected row IS the typeface in use, as today (`FontManagementPage.rows`).
+
+**Stored as the third value of the existing pair.** `fontType` holds a new raw value
+`"installed"` (`"system"` is taken — it is `CandidateFontChoice.system`'s raw value) and a new key
+`installedFontFamily` names the family. Same shape as `"custom"` + `customFontFile`
+(`SettingsStore.swift:280-297`, `font_selection.rs:31-63`): an older build or another platform
+reads `"installed"` as unknown and falls to the system face; the two keys are written together by
+the one writer. Family name rather than PostScript name: it is what the listing API hands back on
+both platforms, and it survives the OS swapping a face's file under the same family.
+
+**Listing.** macOS `CTFontManagerCopyAvailableFontFamilyNames()`, dropping names that start with
+`.` (hidden UI faces); measured 2026-09-11 on this Mac: 261 families, 33 ms cold, 13–16 ms warm,
+sort included — below anything the user can feel. Windows
+`IDWriteFactory::GetSystemFontCollection(check_for_updates = TRUE)`, each family's name through
+`IDWriteLocalizedStrings` (vtable call, not the `&mut [T]` wrapper — `windows/clippy.toml`). Read
+**every time the pane appears**, never cached across a launch, so a font installed or removed in
+Font Book / Settings shows up on the next visit. macOS additionally observes
+`kCTFontManagerRegisteredFontsChangedNotification` while the pane is open and re-reads;
+Windows has no cheap equivalent and re-reads on entry only (a `WM_FONTCHANGE` hook is a
+follow-up if dogfood wants it). The search field filters the in-memory array; it never re-queries.
+
+**Rendering.**
+- macOS: through `RegisteredFace`, the one resolution path (USER 2026-09-10 — do not split it).
+  It grows a family-matching entry point: a descriptor with `kCTFontFamilyNameAttribute`
+  mandatory, matched fresh, the family checked on the result, memoized under the same lock. The
+  same `kCTFontManagerRegisteredFontsChangedNotification` clears the memo (today only
+  `CustomFontLibrary.withdraw` does, `RegisteredFace.swift:66-77`), so a face removed while the
+  input method runs stops resolving instead of drawing out of a stale object. Not found →
+  `.builtIn(.system)`, preference kept — the same rule as a missing custom file
+  (`SettingsStore.candidateFontSelection`).
+- Windows: `CreateTextFormat` with the **system collection** (`None`), no `CustomFontId`, no
+  private collection to keep alive. `FontSpec` / `FormatKey` are `Copy` and cannot hold a
+  `String`, so the render factory interns family names into a small `InstalledFontId(u32)` the
+  way `CustomFontId` names a loaded resource; the format cache is keyed on it. Family not in the
+  system collection → default face, preference kept.
+
+**The pane.** One search field above the table (`TextField` with a magnifying-glass label on
+macOS; `TextBox` on Windows, as 自訂詞庫's), filtering all three groups by case- and
+diacritic-insensitive contains. The selected row stays selected while filtered out; clearing the
+field shows it again. `+` (import a file) unchanged. `−` disabled on bundled and installed rows —
+an installed row has nothing to delete. The `nameAlreadyResolves` refusal stays: it is still the
+right answer for a file whose face is already there, and the row for that face is now in the table.
+
+**Deliberately not adopted**
+- Filtering to Hanji-capable faces (USER refused 2026-09-11 — the roman half needs Latin faces too).
+- A sub-page or sheet for the installed list (USER refused popups 2026-09-08; the search field
+  keeps one table usable).
+- Reusing `customFontFile` for the family name: one key would carry two kinds of identity and
+  the Windows reader treats that value as a path component (`remove_stored`).
+- Storing the PostScript name of the family's regular face at pick time: brittle across OS font
+  updates, and not what the listing API returns.
+- Per-weight / style selection inside a family: the roster is single-weight today.
+
+#### Rounds
+
+| PR | Scope | Est. |
+|---|---|---|
+| P0 | This section + memory (admin tier, direct to main) | — |
+| PR1 | macOS: `installed` case, `installedFontFamily` key, `RegisteredFace` family matching + notification-driven memo clear, pane rows + search field, i18n keys, tests | ~400 LOC |
+| PR2 | Windows: `Installed(InstalledFontId)` + interner, stored pair, system-collection format path, `GetSystemFontCollection` listing, pane rows + `TextBox` search; `check-box` | ~500 LOC |
+
+#### Dogfood (to be added to `docs/architecture/dogfood-checklist.md` in PR1 / PR2)
+
+- **S40 macOS** — 字型管理 lists the Mac's families after the five bundled + imported rows; typing
+  in the search field narrows all three groups; select an installed family → candidate window
+  redraws in it without restart. Install a font in Font Book while the pane is open → it appears;
+  remove the selected one → candidate window falls back to the system face, pane selection reads
+  系統, no crash. Importing a file whose face is installed still refuses, and the face is in the list.
+- **S41 Windows** — same in the settings window, with an already-running host (Notepad + a WinUI
+  app) drawing the chosen family on the next candidate window; pane open time not perceptibly
+  slower than 3.6.8.
+
+---
+
 ### Desktop Telex tone keys + candidate-window toggle (USER-scoped 2026-09-08)
 
 **Status**: all rounds MERGED 2026-09-09 — P1 #17 `6888be67`, P2 #18 `cbee26d1`, P3 #19 `447154ea`, P4 #20 `938994fa`, guide follow-up P5 #21 `544d77a2`, P6 #22. Awaiting real-device dogfood (S32 + S33 + S34).
