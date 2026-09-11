@@ -30,7 +30,7 @@ import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Manages all keyboard mode / layout / popup /
- * composing / smartbar / candidate-debounce coordination.
+ * composing / smartbar / candidate-fetch coordination.
  *
  * Implements [TaigiKeyboard.EventListener]; consumes key events and
  * routes them through Rust engine bridges + UI state managers. Holds
@@ -161,7 +161,7 @@ class TextInputManager(
     fun getComposingManager(): ComposingManager? = synchronized(composingLock) { composingManager }
 
     /**
-     * Trigger the standard debounced Taigi candidate recompute pipeline.
+     * Trigger the standard Taigi candidate recompute pipeline.
      * Used by [com.siansiansu.taigikeyboard.ime.text.smartbar.CandidateClickHandler]
      * after a Continuous mid-commit, where the engine emits
      * `PerformAutocomplete` but `DefaultComposingDelegate` treats it as a
@@ -169,7 +169,7 @@ class TextInputManager(
      * keystroke pipeline, not from effect dispatch.
      */
     fun requestTaigiCandidateRefresh() {
-        candidateCoordinator.updateTaigiCandidatesDebounced()
+        candidateCoordinator.updateTaigiCandidates()
     }
 
     companion object {
@@ -428,7 +428,7 @@ class TextInputManager(
      */
     fun refetchCandidatesForDisplayModeChange() {
         if (composingManager?.isComposing() == true) {
-            candidateCoordinator.updateTaigiCandidatesDebounced()
+            candidateCoordinator.updateTaigiCandidates()
         }
     }
 

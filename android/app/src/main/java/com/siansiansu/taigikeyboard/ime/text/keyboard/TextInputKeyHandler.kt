@@ -258,7 +258,7 @@ internal class TextInputKeyHandler(
                 "[DELETE] deleteBackward=true, rawInput='$rawInput', composingText='$composingText'"
             }
             candidateCoordinator.scheduleDisplayDerivation()
-            candidateCoordinator.updateTaigiCandidatesDebounced()
+            candidateCoordinator.updateTaigiCandidates()
             return
         }
         logger.debug(TAG) { "[DELETE] deleteBackward=false or composingManager=null" }
@@ -439,7 +439,7 @@ internal class TextInputKeyHandler(
             if (lastChar != null && !RustEngineBridge.isTpsToneMark(lastChar) && lastChar != ' ') {
                 composingManager?.appendCharacter(" ", ic)
                 candidateCoordinator.scheduleDisplayDerivation()
-                candidateCoordinator.updateTaigiCandidatesDebounced()
+                candidateCoordinator.updateTaigiCandidates()
                 return
             }
         }
@@ -548,7 +548,7 @@ internal class TextInputKeyHandler(
                 logger.debug("PERF") {
                     "[1] handleTaigiInput composing: ${System.currentTimeMillis() - inputStart}ms"
                 }
-                candidateCoordinator.updateTaigiCandidatesDebounced()
+                candidateCoordinator.updateTaigiCandidates()
             } else {
                 if (char == "-" && smartbarManager.isShowingNextWordCandidates()) {
                     ic.commitText("-", 1)
@@ -560,7 +560,7 @@ internal class TextInputKeyHandler(
                     logger.debug("PERF") {
                         "[1] handleTaigiInput newComposing: ${System.currentTimeMillis() - inputStart}ms"
                     }
-                    candidateCoordinator.updateTaigiCandidatesDebounced()
+                    candidateCoordinator.updateTaigiCandidates()
                 }
             }
         } else if (manager.isComposing() && char.length == 1 && char[0].isDigit()) {
@@ -570,7 +570,7 @@ internal class TextInputKeyHandler(
             logger.debug("PERF") {
                 "[1] handleTaigiInput composing digit: ${System.currentTimeMillis() - inputStart}ms"
             }
-            candidateCoordinator.updateTaigiCandidatesDebounced()
+            candidateCoordinator.updateTaigiCandidates()
         } else {
             if (manager.isComposing()) {
                 manager.commitComposition(ic)
