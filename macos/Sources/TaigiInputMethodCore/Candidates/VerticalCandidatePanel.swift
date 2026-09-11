@@ -4,15 +4,20 @@ import AppKit
 
 /// The scrolling vertical candidate window — MacishType's `MacishVerticalPanel`
 /// (`references/MacishType/macos/MacishType/MacishCandidateWindow/
-/// MacishVerticalPanel.swift`; MIT, © 2026 Luke Chang) with one simplification
-/// the Codex pre-impl confirmed:
+/// MacishVerticalPanel.swift`; MIT, © 2026 Luke Chang) with two departures:
 ///
 /// - Widths are measured eagerly over the whole displayed list rather than
 ///   estimated from the top three rows and corrected later. With the
 ///   200-candidate display cap that is bounded work, and it removes the
 ///   mid-scroll window-widening animation upstream needs when its heuristic
-///   misses. Rows are built up front for the same reason: the lazy build
-///   exists to hide measurement work this port no longer defers.
+///   misses.
+/// - Rows are built for the viewport plus a small buffer as it moves, and
+///   kept until the next list replaces them (`materialiseRows`). Building
+///   every row up front — up to two hundred layer-backed views with three
+///   labels each, before the window is presented — was a visible pause on
+///   every keystroke on a slower Mac. The width pass stays whole-list because
+///   the column has to be as wide as the widest candidate; the view pass does
+///   not.
 ///
 /// Upstream's column alignment IS kept — every row's annotation starts at the
 /// same x — because this window shows two scripts per row.
@@ -30,6 +35,10 @@ final class VerticalCandidatePanel: CandidateBasePanel {
     /// Air between an overlay scroller and the text it would otherwise touch.
     private static let overlayScrollerGap: CGFloat = 2
 
+    /// Rows built beyond each edge of the viewport, so a one-row step or a
+    /// slow scroll never lands on a row that does not exist yet.
+    private static let materialiseBuffer = 2
+
     private static let separatorHeight: CGFloat = 1
 
     private var cells: [CandidateCellContent] = []
@@ -44,11 +53,21 @@ final class VerticalCandidatePanel: CandidateBasePanel {
     private var isBuildingLayout = false
 
     private let scrollView = NSScrollView()
-    private let rowsContainer = FlippedContainerView()
-    private var itemViews: [CandidateItemView] = []
+    private let rowsContainer = PreparingRowsContainerView()
+    /// The rows built so far, by absolute index — sparse, since rows are
+    /// materialised as the viewport reaches them.
+    private var itemViewsByRow: [Int: CandidateItemView] = [:]
+    /// The separator under each built row, keyed by the row ABOVE it. Keyed
+    /// rather than positional because the set is sparse: the Tahoe rule that
+    /// hides the hairlines touching the selection asks by row.
+    private var separatorViewsByRow: [Int: CandidateSeparatorView] = [:]
+    /// What every row of the current list renders at — resolved once per
+    /// list by `rebuildRows`, read by every later materialisation. The row
+    /// width is the rows container's.
+    private var rowTrailingInset: CGFloat = 0
+    private var rowPrimaryColumnWidth: CGFloat = 0
 
-    override var allItemViews: [CandidateItemView] { itemViews }
-    private var separatorViews: [CandidateSeparatorView] = []
+    override var allItemViews: [CandidateItemView] { Array(itemViewsByRow.values) }
     private var boundsObserver: (any NSObjectProtocol)?
     private var scrollerStyleObserver: (any NSObjectProtocol)?
 
@@ -72,13 +91,24 @@ final class VerticalCandidatePanel: CandidateBasePanel {
             scrollView.bottomAnchor.constraint(equalTo: contentContainer.bottomAnchor),
         ])
 
+        // Two hooks for a scroll, both synchronous, because a row the viewport
+        // reaches must exist before the frame that shows it: responsive
+        // scrolling pre-renders the overdraw region and asks the document view
+        // to prepare it first (`prepareContent(in:)`), and the bounds
+        // notification covers every scroll, programmatic ones included. A nil
+        // queue delivers on the posting thread, which for a scroll is the main
+        // thread — a hop through a `Task`, the pattern the accent observer
+        // uses, would let a fast wheel paint a blank row first.
+        rowsContainer.onPrepareContent = { [weak self] rect in
+            self?.materialiseRows(coveringMinY: rect.minY, maxY: rect.maxY)
+        }
         scrollView.contentView.postsBoundsChangedNotifications = true
         boundsObserver = NotificationCenter.default.addObserver(
             forName: NSView.boundsDidChangeNotification,
             object: scrollView.contentView,
-            queue: .main,
+            queue: nil,
         ) { [weak self] _ in
-            Task { @MainActor [weak self] in
+            MainActor.assumeIsolated {
                 self?.scrollViewDidScroll()
             }
         }
@@ -205,7 +235,10 @@ final class VerticalCandidatePanel: CandidateBasePanel {
         // Width: the widest displayed cell, floored at one slot and capped at
         // what the screen leaves once the scroller has its share — a long
         // phrase widens the window rather than truncating inside a fixed one.
-        let widest = cells.map(metrics.measureWidth).max() ?? 0
+        let primaryWidths = cells.map { metrics.measurePrimaryWidth($0.text) }
+        let widest = zip(cells, primaryWidths)
+            .map { metrics.cellWidth(for: $0, primaryWidth: $1) }
+            .max() ?? 0
         let scroller = scrollerLayout(hasOverflow: hasOverflow)
         let contentWidth = min(
             max(widest, metrics.baseWidth),
@@ -218,9 +251,7 @@ final class VerticalCandidatePanel: CandidateBasePanel {
         // (`MacishVerticalPanel.swift:119-131`). The widest candidate sets the
         // column — clamped to what the capped window can actually hold, since
         // a column wider than the cell would push text past its edge.
-        let widestPrimary = cells
-            .map { metrics.measurePrimaryWidth($0.text) }
-            .max() ?? 0
+        let widestPrimary = primaryWidths.max() ?? 0
         let primaryColumnWidth = min(
             widestPrimary,
             metrics.maximumPrimaryColumnWidth(
@@ -240,40 +271,17 @@ final class VerticalCandidatePanel: CandidateBasePanel {
             + CGFloat(max(cells.count - 1, 0)) * Self.separatorHeight
             + bottomPeek
         rowsContainer.frame.size = NSSize(width: geometry.itemWidth, height: naturalContentHeight)
-
-        for (index, cell) in cells.enumerated() {
-            let item = CandidateItemView(style: style, metrics: metrics)
-            item.absoluteIndex = index
-            item.highlightColor = highlightColor
-            item.trailingInset = geometry.itemTrailing
-            item.setPrimaryColumnWidth(primaryColumnWidth)
-            item.configure(cell)
-            item.frame = NSRect(x: 0, y: yForRow(index), width: geometry.itemWidth, height: itemHeight)
-            item.onClick = { [weak self, weak item] in
-                guard let self, let item else { return }
-                select(item.absoluteIndex)
-            }
-            rowsContainer.addSubview(item)
-            itemViews.append(item)
-        }
-        for index in 0 ..< max(cells.count - 1, 0) {
-            let separator = CandidateSeparatorView()
-            separator.horizontalInset = style == .tahoe ? metrics.tahoeSeparatorInset : 0
-            separator.frame = NSRect(
-                x: 0, y: yForRow(index) + itemHeight,
-                width: geometry.itemWidth, height: Self.separatorHeight,
-            )
-            rowsContainer.addSubview(separator)
-            separatorViews.append(separator)
-        }
+        rowTrailingInset = geometry.itemTrailing
+        rowPrimaryColumnWidth = primaryColumnWidth
 
         scrollView.contentView.scroll(to: .zero)
         scrollView.reflectScrolledClipView(scrollView.contentView)
-        // The rows are fresh and the viewport is back at the top, so the
-        // anchor is 0 and the digits are drawn straight rather than through
-        // `updateRowNumbering`, whose job is noticing that it MOVED.
-        refreshCellDecorations()
-        updateHighlights()
+        // The viewport is back at the top, so the anchor is 0 and the digits
+        // are drawn straight rather than through `updateRowNumbering`, whose
+        // job is noticing that it MOVED. Decorated by the materialisation,
+        // which is what builds the rows there are to decorate — called here
+        // because the bounds observer is gated off during a rebuild.
+        materialiseRowsAroundViewport()
 
         if hasOverflow, NSScroller.preferredScrollerStyle != .legacy {
             scrollView.flashScrollers()
@@ -322,6 +330,66 @@ final class VerticalCandidatePanel: CandidateBasePanel {
         CGFloat(row) * rowHeight
     }
 
+    // MARK: - Materialisation
+
+    /// Builds whichever rows the viewport now reaches that do not exist yet.
+    private func materialiseRowsAroundViewport() {
+        let viewport = scrollView.contentView.bounds
+        // Before the window is presented the clip view has no size; the nine
+        // rows the window opens on are the viewport then.
+        let height = max(viewport.height, CGFloat(Self.visibleRows) * rowHeight)
+        materialiseRows(coveringMinY: viewport.minY, maxY: viewport.minY + height)
+    }
+
+    /// Builds the rows under `minY ... maxY` of the rows container — plus
+    /// `materialiseBuffer` beyond each edge — that do not exist yet, and
+    /// decorates the list if it built any. Decorations and highlights are
+    /// re-applied here because `updateRowNumbering` returns early when the
+    /// anchor has not moved, which is exactly the case for a row that scrolled
+    /// into an already-numbered viewport.
+    private func materialiseRows(coveringMinY minY: CGFloat, maxY: CGFloat) {
+        guard !cells.isEmpty else { return }
+        let firstRow = max(Int(floor(minY / rowHeight)) - Self.materialiseBuffer, 0)
+        let lastRow = min(
+            Int(floor(maxY / rowHeight)) + Self.materialiseBuffer,
+            cells.count - 1,
+        )
+        guard firstRow <= lastRow else { return }
+        let missingRows = (firstRow ... lastRow).filter { itemViewsByRow[$0] == nil }
+        guard !missingRows.isEmpty else { return }
+        missingRows.forEach(materialiseRow)
+        refreshCellDecorations()
+        updateHighlights()
+    }
+
+    private func materialiseRow(_ row: Int) {
+        let itemHeight = metrics.itemHeight
+        let itemWidth = rowsContainer.bounds.width
+        let item = CandidateItemView(style: style, metrics: metrics)
+        item.absoluteIndex = row
+        item.highlightColor = highlightColor
+        item.trailingInset = rowTrailingInset
+        item.setPrimaryColumnWidth(rowPrimaryColumnWidth)
+        item.configure(cells[row])
+        item.frame = NSRect(x: 0, y: yForRow(row), width: itemWidth, height: itemHeight)
+        item.onClick = { [weak self, weak item] in
+            guard let self, let item else { return }
+            select(item.absoluteIndex)
+        }
+        rowsContainer.addSubview(item)
+        itemViewsByRow[row] = item
+
+        guard row + 1 < cells.count else { return }
+        let separator = CandidateSeparatorView()
+        separator.horizontalInset = style == .tahoe ? metrics.tahoeSeparatorInset : 0
+        separator.frame = NSRect(
+            x: 0, y: yForRow(row) + itemHeight,
+            width: itemWidth, height: Self.separatorHeight,
+        )
+        rowsContainer.addSubview(separator)
+        separatorViewsByRow[row] = separator
+    }
+
     // MARK: - Scrolling
 
     private func scrollViewDidScroll() {
@@ -334,6 +402,7 @@ final class VerticalCandidatePanel: CandidateBasePanel {
         if targetHeight < rowsContainer.frame.height {
             rowsContainer.frame.size.height = targetHeight
         }
+        materialiseRowsAroundViewport()
         updateRowNumbering()
     }
 
@@ -386,14 +455,14 @@ final class VerticalCandidatePanel: CandidateBasePanel {
     }
 
     private func updateHighlights() {
-        for item in itemViews {
+        for item in itemViewsByRow.values {
             item.isHighlighted = item.absoluteIndex == selectedIndex
         }
         guard style == .tahoe else { return }
         // Tahoe suppresses the hairlines touching the selection pill — the
         // pill supplies the row's edges (`MacishVerticalPanel.swift:430-437`).
-        for (index, separator) in separatorViews.enumerated() {
-            let touchesSelection = index == selectedIndex - 1 || index == selectedIndex
+        for (rowAbove, separator) in separatorViewsByRow {
+            let touchesSelection = rowAbove == selectedIndex - 1 || rowAbove == selectedIndex
             separator.alphaValue = touchesSelection ? 0 : 1
         }
     }
@@ -411,9 +480,22 @@ final class VerticalCandidatePanel: CandidateBasePanel {
     }
 
     private func removeRowViews() {
-        itemViews.forEach { $0.removeFromSuperview() }
-        itemViews = []
-        separatorViews.forEach { $0.removeFromSuperview() }
-        separatorViews = []
+        itemViewsByRow.values.forEach { $0.removeFromSuperview() }
+        itemViewsByRow = [:]
+        separatorViewsByRow.values.forEach { $0.removeFromSuperview() }
+        separatorViewsByRow = [:]
+    }
+}
+
+/// The rows' document view: flipped like every row container, and the seam
+/// responsive scrolling prepares ahead through — AppKit asks it for the
+/// overdraw region before the scroll that reveals it, which is where the rows
+/// under that region get built.
+private final class PreparingRowsContainerView: FlippedContainerView {
+    var onPrepareContent: ((NSRect) -> Void)?
+
+    override func prepareContent(in rect: NSRect) {
+        onPrepareContent?(rect)
+        super.prepareContent(in: rect)
     }
 }

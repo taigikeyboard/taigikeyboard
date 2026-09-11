@@ -49,23 +49,30 @@ enum TestFixtures {
     /// window's content view is not.
     @MainActor
     static func candidateCells(in panel: CandidateBasePanel) -> [CandidateItemView] {
-        func collect(_ view: NSView) -> [CandidateItemView] {
-            if let item = view as? CandidateItemView {
-                return [item]
-            }
-            return view.subviews.flatMap(collect)
-        }
         func topDownY(_ item: CandidateItemView) -> CGFloat {
             item.superview?.isFlipped == false ? -item.frame.origin.y : item.frame.origin.y
         }
-        guard let root = panel.contentView else { return [] }
-        return collect(root)
+        return descendants(of: panel, as: CandidateItemView.self)
             .filter { !$0.isHidden }
             .sorted {
                 topDownY($0) == topDownY($1)
                     ? $0.frame.origin.x < $1.frame.origin.x
                     : topDownY($0) < topDownY($1)
             }
+    }
+
+    /// Every view of type `T` in `panel`'s view tree, in tree order — the
+    /// walk every suite that asserts about what a panel DRAWS starts from.
+    @MainActor
+    static func descendants<T: NSView>(of panel: CandidateBasePanel, as _: T.Type) -> [T] {
+        func collect(_ view: NSView) -> [T] {
+            if let match = view as? T {
+                return [match]
+            }
+            return view.subviews.flatMap(collect)
+        }
+        guard let root = panel.contentView else { return [] }
+        return collect(root)
     }
 
     /// `<repo>/fonts/font` — the shared typeface directory every platform
@@ -810,5 +817,49 @@ enum InstalledLexicon {
         }
         stats = RustEngineBridge.lexiconInstall(artifacts: artifacts, dictionaryVersion: 1)
         return stats
+    }
+}
+
+extension XCTestCase {
+    /// Every key drawn in `panel` resolves to the candidate its slot chord
+    /// commits — the whole point of drawing them.
+    @MainActor
+    func assertDigitsMatchSlots(
+        in panel: CandidateBasePanel, file: StaticString = #filePath, line: UInt = #line,
+    ) {
+        for (key, item) in numberedCells(in: panel) {
+            // A digit label names its slot directly; the bare keys map by
+            // position instead.
+            guard let digit = Int(key)
+                ?? CandidateSlotKeySet.bareKeyRow.firstIndex(of: key).map({ $0 + 1 })
+            else {
+                return XCTFail(
+                    "\(type(of: panel)): drew a keyless label \"\(key)\"", file: file, line: line,
+                )
+            }
+            XCTAssertEqual(
+                panel.candidateIndex(forKeySlot: digit - 1), item.absoluteIndex,
+                "\(type(of: panel)): the cell drawn \"\(key)\" is not what that key picks",
+                file: file, line: line,
+            )
+        }
+    }
+
+    /// The cells drawing a key, in the order they are laid out.
+    @MainActor
+    func numberedCells(
+        in panel: CandidateBasePanel,
+    ) -> [(digit: String, item: CandidateItemView)] {
+        TestFixtures.candidateCells(in: panel).compactMap { item in
+            item.indexLabelText.isEmpty ? nil : (item.indexLabelText, item)
+        }
+    }
+
+    /// Shows `panel` at a fixed size — a suite that asserts about the scroll
+    /// viewport needs one, and an unshown window never scrolls.
+    @MainActor
+    func showForScrolling(_ panel: CandidateBasePanel) {
+        panel.setFrame(NSRect(x: 0, y: 0, width: 320, height: 320), display: false)
+        panel.orderFront(nil)
     }
 }
