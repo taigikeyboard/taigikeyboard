@@ -102,12 +102,13 @@ pub(crate) struct ServiceState {
     /// A focus / context callback wanted the windows down but the presenter
     /// or the guide was busy (a session in flight): the next key hides first.
     pub(crate) is_ui_hide_pending: bool,
-    /// The Telex guide chord is down and has already toggled once through
+    /// A once-per-press chord (`ShortcutAction::fires_once_per_press`: the
+    /// guide's or the picker's) is down and has already toggled through
     /// `OnPreservedKey`, which TSF may re-fire while the chord is held and
-    /// which carries no repeat flag. Cleared by the chord's key-up, by any
-    /// other fresh key, by focus loss and by deactivation, so a missed
-    /// key-up cannot wedge the toggle.
-    pub(crate) is_guide_chord_held: bool,
+    /// which carries no repeat flag. Cleared by the chord's key-up, by Ctrl's
+    /// or Alt's, by any other fresh key, by focus loss and by deactivation,
+    /// so a missed key-up cannot wedge the toggle.
+    pub(crate) held_toggle_chord: Option<ShortcutAction>,
     pub(crate) presenter: Option<Rc<RefCell<CandidatePresenter>>>,
     /// The symbol picker (USER 2026-09-09): the same window class over its
     /// own owner slot, popup only (`CandidatePresenter::attach_popup_only`).
@@ -314,7 +315,7 @@ impl TextService_Impl {
             // for a service that is going away.
             state.language_mode = LanguageMode::default();
             state.shift_tap.clear();
-            state.is_guide_chord_held = false;
+            state.held_toggle_chord = None;
             // The windows are destroyed below; a hide still owed is moot.
             state.is_ui_hide_pending = false;
             state.is_symbol_picker_open = false;
@@ -528,35 +529,37 @@ impl TextService_Impl {
         self.hide_telex_guide_now();
     }
 
-    /// The virtual key the guide chord is registered on, when it is.
-    fn guide_chord_virtual_key(&self) -> Option<u32> {
-        self.state
-            .borrow()
-            .preserved_keys
-            .virtual_key_of(ShortcutAction::ShowTelexGuide)
+    /// The virtual key the held toggle chord is registered on, when one is.
+    fn held_toggle_virtual_key(&self) -> Option<u32> {
+        let state = self.state.borrow();
+        state
+            .held_toggle_chord
+            .and_then(|action| state.preserved_keys.virtual_key_of(action))
     }
 
-    /// A key-down that is not the guide chord repeating ends the press the
-    /// preserved-key guard is holding (`is_guide_chord_held`).
-    pub(crate) fn release_guide_chord_on_other_key(&self, wparam: WPARAM, lparam: LPARAM) {
+    /// A key-down that is not the held toggle chord repeating ends the press
+    /// the preserved-key guard is holding (`held_toggle_chord`).
+    pub(crate) fn release_toggle_chord_on_other_key(&self, wparam: WPARAM, lparam: LPARAM) {
         if key_translation::is_repeat(lparam) {
             return;
         }
         let virtual_key = u32::from(key_translation::virtual_key(wparam));
-        if self.guide_chord_virtual_key() != Some(virtual_key) {
-            self.state.borrow_mut().is_guide_chord_held = false;
+        if self.held_toggle_virtual_key() != Some(virtual_key) {
+            self.state.borrow_mut().held_toggle_chord = None;
         }
     }
 
-    /// The release of the guide chord's own key, or of Ctrl or Alt, ends
-    /// the press the preserved-key guard is holding.
-    fn release_guide_chord_on_key_up(&self, wparam: WPARAM) {
+    /// The release of the held toggle chord's own key, or of Ctrl or Alt,
+    /// ends the press the preserved-key guard is holding. Ctrl's and Alt's
+    /// releases reach `OnKeyUp` in every host measured; the chord key's own
+    /// release under a held Alt may not (the down never did).
+    fn release_toggle_chord_on_key_up(&self, wparam: WPARAM) {
         let virtual_key = u32::from(key_translation::virtual_key(wparam));
-        let is_chord_key = self.guide_chord_virtual_key() == Some(virtual_key)
+        let is_chord_key = self.held_toggle_virtual_key() == Some(virtual_key)
             || virtual_key == u32::from(VK_CONTROL.0)
             || virtual_key == u32::from(VK_MENU.0);
         if is_chord_key {
-            self.state.borrow_mut().is_guide_chord_held = false;
+            self.state.borrow_mut().held_toggle_chord = None;
         }
     }
 
@@ -778,6 +781,9 @@ impl ITfThreadMgrEventSink_Impl for TextService_Impl {
                 if changed {
                     state.focused_document = focused;
                     state.focus_generation += 1;
+                    // A toggle chord pressed in the document that just lost
+                    // focus: its key-up goes to whatever has it now.
+                    state.held_toggle_chord = None;
                     if focused != 0 {
                         state.is_settings_refresh_pending = true;
                     }
@@ -797,7 +803,10 @@ impl ITfThreadMgrEventSink_Impl for TextService_Impl {
         guarded("ITfThreadMgrEventSink::OnPushContext", || {
             if let Some(context) = pic.as_ref() {
                 self.token_for(context);
-                self.state.borrow_mut().focus_generation += 1;
+                let mut state = self.state.borrow_mut();
+                state.focus_generation += 1;
+                state.held_toggle_chord = None;
+                drop(state);
                 self.request_ui_hide(None);
             }
             Ok(())
@@ -824,6 +833,7 @@ impl ITfThreadMgrEventSink_Impl for TextService_Impl {
                     };
                     let mut state = self.state.borrow_mut();
                     state.focus_generation += 1;
+                    state.held_toggle_chord = None;
                     if !released {
                         // The engine was busy: released under the next key.
                         state.deferred_releases.push(entry.token);
@@ -855,7 +865,7 @@ impl ITfThreadFocusSink_Impl for TextService_Impl {
             // A Shift still held belongs to whatever has the keyboard now;
             // its release is not a tap of ours — nor is the guide chord's.
             state.shift_tap.clear();
-            state.is_guide_chord_held = false;
+            state.held_toggle_chord = None;
             drop(state);
             self.request_ui_hide(None);
             Ok(())
@@ -872,7 +882,7 @@ impl ITfKeyEventSink_Impl for TextService_Impl {
             // in another document, and its release must not tap here.
             let mut state = self.state.borrow_mut();
             state.shift_tap.clear();
-            state.is_guide_chord_held = false;
+            state.held_toggle_chord = None;
             drop(state);
             if fforeground.as_bool() {
                 self.request_settings_refresh();
@@ -910,7 +920,7 @@ impl ITfKeyEventSink_Impl for TextService_Impl {
     /// FALSE, `chewing_ime.py:736`).
     fn OnKeyUp(&self, pic: Ref<ITfContext>, wparam: WPARAM, lparam: LPARAM) -> Result<BOOL> {
         guarded("ITfKeyEventSink::OnKeyUp", || {
-            self.release_guide_chord_on_key_up(wparam);
+            self.release_toggle_chord_on_key_up(wparam);
             self.take_language_switch_release(pic.as_ref(), wparam, lparam);
             Ok(BOOL::from(false))
         })
@@ -925,19 +935,35 @@ impl ITfKeyEventSink_Impl for TextService_Impl {
             let Some(action) = preserved_keys::action_for_guid(unsafe { &*rguid }) else {
                 return Ok(BOOL::from(false));
             };
+            // The picker runs against the context the chord was pressed in
+            // (`needs_key_context`); a host that named none gets the key
+            // back, and so does a read-only one — the key sink's own answer,
+            // decided BEFORE the latch so a refused press leaves none behind.
+            let picker_target = match (action.needs_key_context(), pic.as_ref()) {
+                (true, None) => return Ok(BOOL::from(false)),
+                (true, Some(context)) => match self.symbol_picker_target(context) {
+                    Some((token, identity)) => Some((context, token, identity)),
+                    None => return Ok(BOOL::from(false)),
+                },
+                (false, _) => None,
+            };
+            // Once per press: TSF may deliver a held chord again, and this
+            // callback cannot tell a repeat from a fresh press (no lParam).
+            if action.fires_once_per_press() {
+                let held = self.state.borrow_mut().held_toggle_chord.replace(action);
+                if held == Some(action) {
+                    return Ok(BOOL::from(true));
+                }
+            }
+            if let Some((context, token, identity)) = picker_target {
+                let settings = Runtime::shared().settings.current();
+                self.toggle_symbol_picker(context, token, identity, &settings);
+                return Ok(BOOL::from(true));
+            }
             let identity = pic
                 .as_ref()
                 .and_then(|context| self.token_for(context))
                 .map_or(0, |(_, identity)| identity);
-            // Once per press: TSF may deliver a held chord again, and this
-            // callback cannot tell a repeat from a fresh press (no lParam).
-            if action == ShortcutAction::ShowTelexGuide {
-                let held =
-                    std::mem::replace(&mut self.state.borrow_mut().is_guide_chord_held, true);
-                if held {
-                    return Ok(BOOL::from(true));
-                }
-            }
             self.perform_global(action, identity);
             Ok(BOOL::from(true))
         })

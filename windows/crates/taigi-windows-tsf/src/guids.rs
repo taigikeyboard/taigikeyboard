@@ -22,6 +22,10 @@ pub const GUID_PRESERVED_KEY_ROMANIZATION: GUID =
 /// Preserved key: cycle 候選詞顯示 (allocated 2026-09-02 for the shortcut).
 pub const GUID_PRESERVED_KEY_CYCLE_CANDIDATE_DISPLAY_MODE: GUID =
     GUID::from_u128(0xD9F5E060_8D5F_4A05_86AF_CF6B2F5F9EB6);
+/// Preserved key: toggle the symbol picker (allocated 2026-09-11: the key sink
+/// never saw the chord, `ShortcutAction::needs_key_context`).
+pub const GUID_PRESERVED_KEY_SYMBOL_PICKER: GUID =
+    GUID::from_u128(0x2314D70DC04C4C839D2AC36A193743D6);
 /// Preserved key: toggle the Telex guide (allocated 2026-09-09 for the shortcut).
 pub const GUID_PRESERVED_KEY_TELEX_GUIDE: GUID =
     GUID::from_u128(0xE78B520C_3DCD_43FE_B3D7_492D2185E03F);
