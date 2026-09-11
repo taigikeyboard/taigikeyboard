@@ -59,15 +59,28 @@ impl ShortcutAction {
         }
     }
 
-    /// Whether this action's chord is matched by the key sink instead of
-    /// registered as a preserved key. A preserved key fires through
-    /// `OnPreservedKey` with no key event and no edit session, and the
-    /// picker needs both: it writes what the user picks into the document
-    /// and anchors its window to the caret (`session.rs`). Everything else
-    /// on this roster flips a setting or raises a card, and needs neither.
-    /// Mirrors macOS `ShortcutAction.firesFromTheKeyPath`.
-    pub fn fires_from_the_key_path(self) -> bool {
+    /// Whether this action runs against the context the chord was pressed
+    /// in — the picker anchors its window to that context's caret and writes
+    /// the pick into its document (`session.rs` `toggle_symbol_picker`) —
+    /// rather than through `perform_global`, which flips a setting or raises
+    /// a card and needs no context. Both doorways route it there: the key
+    /// sink's match, and `OnPreservedKey` with the context TSF hands it.
+    ///
+    /// It IS a preserved key, like every other Ctrl+Alt chord here. The key
+    /// sink alone cannot carry it: a key pressed with Alt held never reached
+    /// `OnKeyDown` in Notepad or Chrome (dev box, 2026-09-11 — the sink saw
+    /// the Ctrl press and the Alt release, never the comma), while the
+    /// preserved keys fired. Differs from macOS `firesFromTheKeyPath`, which
+    /// skips Carbon registration because the key path there sees the chord.
+    pub fn needs_key_context(self) -> bool {
         self == Self::ShowSymbolPicker
+    }
+
+    /// Whether a held chord must fire ONCE: the guide and the picker toggle,
+    /// so an auto-repeat would flip them back. The switches read as one
+    /// press already (a switch repeated is a switch back — left as is).
+    pub fn fires_once_per_press(self) -> bool {
+        matches!(self, Self::ShowTelexGuide | Self::ShowSymbolPicker)
     }
 
     /// Whether this action opens the settings window rather than doing
@@ -463,13 +476,24 @@ mod tests {
             StringKey::DesktopShortcutShowSymbolPicker
         );
         assert!(!ShortcutAction::ShowSymbolPicker.opens_settings());
-        // The picker is the one row the key sink matches itself: a pick
-        // writes into the document, which a preserved key cannot.
-        let key_path: Vec<_> = ShortcutAction::ALL
+        // The picker is the one row that runs against the pressed context:
+        // a pick writes into its document.
+        let context_actions: Vec<_> = ShortcutAction::ALL
             .into_iter()
-            .filter(|action| action.fires_from_the_key_path())
+            .filter(|action| action.needs_key_context())
             .collect();
-        assert_eq!(key_path, [ShortcutAction::ShowSymbolPicker]);
+        assert_eq!(context_actions, [ShortcutAction::ShowSymbolPicker]);
+        let once: Vec<_> = ShortcutAction::ALL
+            .into_iter()
+            .filter(|action| action.fires_once_per_press())
+            .collect();
+        assert_eq!(
+            once,
+            [
+                ShortcutAction::ShowSymbolPicker,
+                ShortcutAction::ShowTelexGuide
+            ]
+        );
         assert_eq!(
             ShortcutAction::CycleCandidateDisplayMode.raw(),
             "cycleCandidateDisplayMode"

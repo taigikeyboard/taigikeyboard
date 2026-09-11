@@ -99,7 +99,7 @@ impl TextService_Impl {
         // Before any bail: a hide a callback could not post must not wait
         // for a key this context will never consume.
         self.drain_pending_ui_hide();
-        self.release_guide_chord_on_other_key(wparam, lparam);
+        self.release_toggle_chord_on_other_key(wparam, lparam);
         let Some(context) = context else {
             return BOOL::from(false);
         };
@@ -135,25 +135,20 @@ impl TextService_Impl {
         // The global chords, before the classifier — the Carbon hotkey's
         // position on the Mac, and like it independent of whether a
         // composition is running (UX decision, roadmap W5: a bare key is
-        // matched here rather than registered as a preserved key). The two
+        // matched here rather than registered as a preserved key). The
         // preserved keys normally arrive through `OnPreservedKey`; this is
         // their fallback in hosts that bypass preserved keys.
         if let Some(action) = global_action {
-            // A held toggle chord — the guide's or the picker's — would
-            // otherwise flip on every auto-repeat; the switches already read
-            // as one press (a switch repeated is a switch back — left as
-            // is). The guide's is the fallback path only: `OnPreservedKey`
-            // carries no repeat flag.
-            let is_toggle_repeat = matches!(
-                action,
-                ShortcutAction::ShowTelexGuide | ShortcutAction::ShowSymbolPicker
-            ) && key_translation::is_repeat(lparam);
+            // A held toggle chord would otherwise flip on every auto-repeat
+            // (`fires_once_per_press`). This is the fallback path only:
+            // `OnPreservedKey` carries no repeat flag and keeps its own latch.
+            let is_toggle_repeat =
+                action.fires_once_per_press() && key_translation::is_repeat(lparam);
             if phase == KeyPhase::Deliver && !is_toggle_repeat {
-                // The picker's chord is the one global action the key sink
-                // owns outright (`ShortcutAction::fires_from_the_key_path`):
-                // a pick writes into the document and anchors to the caret,
-                // both of which need this key event's context.
-                if action.fires_from_the_key_path() {
+                // The picker runs against this key event's context
+                // (`ShortcutAction::needs_key_context`): a pick writes into
+                // the document and anchors to the caret.
+                if action.needs_key_context() {
                     self.toggle_symbol_picker(context, token, identity, &settings);
                 } else {
                     self.perform_global(action, identity);
@@ -862,7 +857,8 @@ impl TextService_Impl {
         // looking at (`TaigiInputController.performShortcutAction`).
         self.hide_symbol_picker_now();
         match action {
-            // Matched in the key sink before this is reached (`key_down`).
+            // Routed to `toggle_symbol_picker` by both doorways before this
+            // is reached (`needs_key_context`).
             ShortcutAction::ShowSymbolPicker => {}
             ShortcutAction::OpenLastSettingsPane => settings_launcher::open_settings(),
             ShortcutAction::ToggleRomanization => {
@@ -1052,6 +1048,20 @@ impl TextService_Impl {
         };
     }
 
+    /// The context a preserved picker chord runs against, after the
+    /// housekeeping every key gets first (`key_down`): `None` for a context
+    /// this service does not know or a read-only one — the key sink's own
+    /// bail, so `OnPreservedKey` hands the key back the same way.
+    pub(crate) fn symbol_picker_target(
+        &self,
+        context: &ITfContext,
+    ) -> Option<(ContextToken, usize)> {
+        self.refresh_settings_if_pending();
+        self.drain_pending_ui_hide();
+        let target = self.token_for(context)?;
+        (!is_read_only(context)).then_some(target)
+    }
+
     /// The picker chord: down if up; otherwise the composition is ended
     /// first — commit first, as vChewing does
     /// (`InputHandler_HandleStates.swift:1110`): the picker writes into the
@@ -1060,7 +1070,7 @@ impl TextService_Impl {
     /// way Enter does; a composition with no window commits as typed. A
     /// commit that only NAILED a segment leaves the composition running,
     /// and the picker waits for a key that ends it.
-    fn toggle_symbol_picker(
+    pub(crate) fn toggle_symbol_picker(
         &self,
         context: &ITfContext,
         token: ContextToken,
