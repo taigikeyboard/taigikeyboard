@@ -1,6 +1,6 @@
-// Candidate update coordinator, extracted from TextInputManager. Manages the Taigi/English
-// candidate debounce flow, display-derivation scheduling, and lifecycle cancellation; caches
-// TaigiAutocompleteService per input mode to reduce rebuild cost.
+// Candidate update coordinator, extracted from TextInputManager. Schedules Taigi candidate
+// fetches off Main (English still debounced), owns display-derivation scheduling and lifecycle
+// cancellation; caches TaigiAutocompleteService across keystrokes.
 
 package com.siansiansu.taigikeyboard.ime.text
 
@@ -23,8 +23,9 @@ import kotlinx.coroutines.withContext
 /**
  * Coordinates candidate update jobs extracted from TextInputManager.
  *
- * Manages debounced Taigi/English candidate updates and display derivation
- * scheduling with proper cancellation on lifecycle events.
+ * Schedules Taigi candidate fetches (immediate, off Main) and debounced
+ * English updates, plus display-derivation scheduling, with cancellation on
+ * lifecycle events.
  */
 class CandidateUpdateCoordinator(
     private val scope: CoroutineScope,
@@ -49,35 +50,43 @@ class CandidateUpdateCoordinator(
     private var englishAutocompleteService: com.siansiansu.taigikeyboard.ime.text.composing.EnglishAutocompleteService? = null
 
     /**
-     * Debounced Taigi candidate update. Runs on `Dispatchers.Default`: the
-     * engine's dictionary scan costs tens of milliseconds for a one-letter
-     * prefix and must not block touch handling. Only the strip publish hops
-     * back to Main (see [publishIfCurrent]).
+     * Schedules a Taigi candidate update for the current composing state.
+     * Runs on `Dispatchers.Default`: the engine's dictionary scan costs tens
+     * of milliseconds for a one-letter prefix and must not block touch
+     * handling. Only the strip publish hops back to Main (see
+     * [publishIfCurrent]).
+     *
+     * No fixed delay: the 50 ms debounce that used to sit here (v3.4.5, when
+     * autocomplete ran in Kotlin on Main) added a constant to every
+     * keystroke's candidate latency once the fetch moved off Main; iOS
+     * fetches per keystroke with no delay. A newer keystroke cancels the
+     * older job; a JNI call already in flight cannot be interrupted, so the
+     * job either stops at its next suspension point or reaches
+     * [publishIfCurrent], which drops the stale result.
      *
      * The composing state is captured HERE, on Main, at schedule time — not
-     * after the debounce. A candidate tap that final-commits while the job
-     * is still delayed is not a cancellation, and a job that captured its
-     * state only on waking would see `rawInput == null`, pass every guard,
-     * and clear the NextWord predictions the commit just produced.
+     * on the worker. A candidate tap that final-commits before the job runs
+     * is not a cancellation, and a job that captured its state only on
+     * waking would see `rawInput == null`, pass every guard, and clear the
+     * NextWord predictions the commit just produced.
      */
-    fun updateTaigiCandidatesDebounced() {
+    fun updateTaigiCandidates() {
         candidateUpdateJob?.cancel()
         val manager = getComposingManager() ?: return
         val fetchContext = FetchContext(manager, manager.stateToken())
         val trace = TraceContext.current
+        val candidateStart = System.currentTimeMillis()
 
         candidateUpdateJob =
             scope.launch(Dispatchers.Default) {
-                delay(CANDIDATE_DEBOUNCE_MS)
                 if (!isActive || !fetchContext.isCurrent(getComposingManager())) return@launch
 
                 val traceId = trace ?: TraceId.untraced
                 logger.debug(TAG) {
-                    "[trace=$traceId] [CANDIDATE] fn=updateTaigiCandidatesDebounced debounce-fire (untraced from here)"
+                    "[trace=$traceId] [CANDIDATE] fn=updateTaigiCandidates worker-start (untraced from here)"
                 }
 
-                val candidateStart = System.currentTimeMillis()
-                updateTaigiCandidates(fetchContext)
+                fetchTaigiCandidates(fetchContext)
 
                 logger.debug("PERF") {
                     "[TOTAL] updateTaigiCandidates: ${System.currentTimeMillis() - candidateStart}ms"
@@ -102,7 +111,8 @@ class CandidateUpdateCoordinator(
     }
 
     /**
-     * Debounced English candidate update.
+     * Debounced English candidate update. Coalesces rapid English updates
+     * before reading the InputConnection on Main.
      */
     fun updateEnglishCandidatesDebounced() {
         logger.debug(EN_TAG) { "[1] updateEnglishCandidatesDebounced() called" }
@@ -111,7 +121,7 @@ class CandidateUpdateCoordinator(
 
         englishCandidateUpdateJob =
             scope.launch {
-                delay(CANDIDATE_DEBOUNCE_MS)
+                delay(ENGLISH_CANDIDATE_DEBOUNCE_MS)
                 if (!isActive) return@launch
 
                 logger.debug(EN_TAG) { "[2] After debounce, calling updateEnglishCandidates()" }
@@ -120,15 +130,9 @@ class CandidateUpdateCoordinator(
     }
 
     /**
-     * Update Taigi candidates using autocomplete service.
+     * Fetches Taigi candidates for [fetchContext] on the worker and publishes them.
      */
-    private suspend fun updateTaigiCandidates(fetchContext: FetchContext) {
-        logger.debug(TAG) {
-            val stackTrace = Thread.currentThread().stackTrace
-            val caller = stackTrace.getOrNull(3)?.methodName ?: "unknown"
-            "[DEBUG] updateTaigiCandidates() called from: $caller"
-        }
-
+    private suspend fun fetchTaigiCandidates(fetchContext: FetchContext) {
         val rawInput = fetchContext.rawInput
         if (rawInput.isNullOrEmpty()) {
             logger.debug(TAG) { "[CANDIDATES] rawInput=${if (rawInput == null) "null" else "empty"}, clearCandidates" }
@@ -146,8 +150,8 @@ class CandidateUpdateCoordinator(
                     // Runs on the worker: `fetchContinuousCandidates` is
                     // read-only (no InputConnection, no state mirror), so
                     // no Main hop is needed. The manager is re-resolved per
-                    // fetch so a detach between debounce and fetch collapses
-                    // to empty.
+                    // fetch so a detach between scheduling and fetch
+                    // collapses to empty.
                     continuousFetcher = {
                         getComposingManager()?.fetchContinuousCandidates() ?: emptyList()
                     },
@@ -301,7 +305,7 @@ class CandidateUpdateCoordinator(
     companion object {
         private const val TAG = "CandidateCoordinator"
         private const val EN_TAG = "ENSPELL"
-        private const val CANDIDATE_DEBOUNCE_MS = 50L
+        private const val ENGLISH_CANDIDATE_DEBOUNCE_MS = 50L
     }
 }
 

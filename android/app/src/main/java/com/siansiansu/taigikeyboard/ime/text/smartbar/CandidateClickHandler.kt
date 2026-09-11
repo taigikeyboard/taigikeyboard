@@ -403,10 +403,10 @@ class CandidateClickHandler(
         // Mid-commit: engine stays in Continuous with a fresh pending span,
         // but `PerformAutocomplete` is a delegate no-op so the strip would
         // keep stale `consumedBytes` metadata until the next keypress. Trigger
-        // the standard debounced refresh. Final-commit deliberately skipped:
-        // it emits NextWordWordSelected which drives async NextWord predict;
-        // a debounced Taigi refresh would later see `rawInput=null` and call
-        // `clearCandidates()`, racing with / wiping the fresh predictions.
+        // the standard refresh. Final-commit deliberately skipped: it emits
+        // NextWordWordSelected which drives async NextWord predict; a Taigi
+        // refresh would see `rawInput=null` and call `clearCandidates()`,
+        // racing with / wiping the fresh predictions.
         if (result.didCommit && !result.didFinalCommit) {
             onRequestCandidateRefresh()
         }
