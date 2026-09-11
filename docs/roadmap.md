@@ -312,8 +312,12 @@ Windows, as 自訂詞庫's), filtering all three groups by case- and diacritic-i
 (the 2026-08-26 finding that paged 自訂詞庫), so the page size IS the table height (10 rows) and
 paging reaches every row. A new search starts on page 1; the selected row stays selected while
 off-page or filtered out, with `−` disabled until it is visible again. `+` (import a file) unchanged. `−` disabled on bundled and installed rows —
-an installed row has nothing to delete. The `nameAlreadyResolves` refusal stays: it is still the
-right answer for a file whose face is already there, and the row for that face is now in the table.
+an installed row has nothing to delete. The `nameAlreadyResolves` refusal stays in the library — it
+is still the right answer for a file whose face is already there — but the pane no longer shows it
+as an error: it selects the row that already draws that face (bundled, imported, or installed
+family), turns to its page, and shows one receipt, `desktopCustomFontAlreadyInstalled` (USER
+2026-09-11 「簡單跳出提示,並且跳轉到那個字型」; the one new i18n key of the feature). The file's
+name is irrelevant — the face is known by the name inside the file.
 
 **Deliberately not adopted**
 - Filtering to Hanji-capable faces (USER refused 2026-09-11 — the roman half needs Latin faces too).

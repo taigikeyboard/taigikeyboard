@@ -218,14 +218,20 @@ struct FontManagementPage: View {
                 do {
                     let font = try CustomFontLibrary.shared.addFont(from: url)
                     reload()
-                    let row = FontRow(stored: .customFile(font.fileName), title: font.displayName, customFont: font)
-                    select(row)
-                    // Shown as well as selected: the row lands after the
-                    // bundled five and the other imports, which may be past
-                    // the first page, and a search would hide it.
-                    filter = ""
-                    if let index = rows.firstIndex(where: { $0.id == row.id }) {
-                        page = index / Self.pageSize
+                    show(FontRow(stored: .customFile(font.fileName), title: font.displayName, customFont: font))
+                } catch let CustomFontLibrary.ImportFailure.nameAlreadyResolves(postScriptName) {
+                    // The face is already on this Mac — installed, or bundled.
+                    // The user asked to type in it, not to own a copy of it, so
+                    // the row that already draws it is selected (USER
+                    // 2026-09-11 「跳出提示,並且跳轉到那個字型」). The file
+                    // name they gave it is irrelevant: the face is known by
+                    // the name inside the file.
+                    reload()
+                    if let row = rowDrawing(postScriptName) {
+                        show(row)
+                        message = .done(.desktopCustomFontAlreadyInstalled)
+                    } else {
+                        message = .failure(.commonImportFailed, CustomFontLibrary.ImportFailure.nameAlreadyResolves(postScriptName))
                     }
                 } catch {
                     message = .failure(.commonImportFailed, error)
@@ -233,6 +239,33 @@ struct FontManagementPage: View {
                 }
             }
         }
+    }
+
+    /// Selects `row` and turns to its page with the search cleared: a row
+    /// the user just added or was sent to lands after the bundled five and
+    /// the other imports, which may be past the first page, and a search
+    /// would hide it.
+    private func show(_ row: FontRow) {
+        select(row)
+        filter = ""
+        if let index = rows.firstIndex(where: { $0.id == row.id }) {
+            page = index / Self.pageSize
+        }
+    }
+
+    /// The row that already draws the face named `postScriptName`: the bundled
+    /// row carrying that name, the import that carries it, or the installed
+    /// row of its family.
+    private func rowDrawing(_ postScriptName: String) -> FontRow? {
+        let rows = rows
+        if let bundled = CandidateFontChoice.allCases.first(where: { $0.postScriptName == postScriptName }) {
+            return rows.first { $0.stored == .builtIn(bundled) }
+        }
+        if let imported = customFonts.first(where: { $0.postScriptName == postScriptName }) {
+            return rows.first { $0.stored == .customFile(imported.fileName) }
+        }
+        guard let family = RegisteredFace.font(.postScript(postScriptName), ofSize: 12)?.familyName else { return nil }
+        return rows.first { $0.stored == .installedFamily(family) }
     }
 
     /// Takes `font` out of the library.
