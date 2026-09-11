@@ -120,3 +120,16 @@ have all of it.
   ships — so upgrading from 3.6.7 or earlier left four dead copies, about 40 MB,
   in the install directory until an uninstall. The installer now sweeps them.
   (#34)
+
+#### Fixes
+
+- **Adding a typeface or a custom word in 設定 no longer closes the window.**
+  The settings window aborted when a row was added to 字型管理 or 自訂詞庫: the
+  list was told which row to select before it had the row. (#41)
+- **Typing with a custom typeface no longer crashes the host application.** The
+  font file was loaded through a DirectWrite factory that was released as soon
+  as the file was read, so the first candidate drawn in that face took the host
+  down with it. (#43)
+- **Ctrl+Alt+, opens 符號選單.** The chord was never delivered while Alt was
+  held; it is now registered as a preserved key, like the other Ctrl+Alt
+  shortcuts. (#44)
