@@ -17,8 +17,9 @@ import com.siansiansu.taigikeyboard.ime.text.key.KeyData
  * reaches back into the keyboard layer for label formatting (input-mode
  * + caps/capsLock + KeyLabelCaseCache lookups stay on the caller side).
  *
- * `popupCells` is also pre-resolved — Phase C's `buildPopupCell` logic moves
- * to the caller side so the popup layer stays a pure renderer of state.
+ * `popupCells` is likewise built on the caller side (`buildPopupCells`) so
+ * the popup layer stays a pure renderer of state; it is wrapped in a [Lazy]
+ * because only the long-press path reads it.
  */
 data class KeyAnchor(
     val data: KeyData,
@@ -29,7 +30,9 @@ data class KeyAnchor(
     val xInWindow: Int,
     val yInWindow: Int,
     val computedLabel: String,
-    val popupCells: List<PopupCell>,
+    /** Resolved on first read — only [PopupHost.extend] (long-press) consumes it,
+     *  so a plain tap never pays for building the cell list. */
+    val popupCells: Lazy<List<PopupCell>>,
     val isLandscape: Boolean,
     /** Solver-derived per-key cell dims (legacy
      *  `KeyboardView.desiredKeyWidth/desiredKeyHeight`). Drives popup

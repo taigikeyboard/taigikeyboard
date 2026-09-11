@@ -196,7 +196,7 @@ private object NoOpKeyEventDispatcher : KeyEventDispatcher {
             xInWindow = 0,
             yInWindow = 0,
             computedLabel = "",
-            popupCells = emptyList(),
+            popupCells = lazyOf(emptyList()),
             isLandscape = false,
             desiredKeyWidth = desiredKeyWidth,
             desiredKeyHeight = desiredKeyHeight,

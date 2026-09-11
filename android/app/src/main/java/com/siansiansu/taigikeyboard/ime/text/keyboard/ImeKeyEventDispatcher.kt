@@ -57,31 +57,25 @@ internal class ImeKeyEventDispatcher(
         val isLandscape = taigikeyboard.resources.configuration.orientation ==
             android.content.res.Configuration.ORIENTATION_LANDSCAPE
         val inputMode = prefs.inputMode
-        val computedLabel = computeKeyLetter(
-            bounds.data,
-            inputMode,
-            capsStateManager.caps,
-            capsStateManager.capsLock,
-        )
+        val caps = capsStateManager.caps
+        val capsLock = capsStateManager.capsLock
+        val computedLabel = computeKeyLetter(bounds.data, inputMode, caps, capsLock)
         // TPS glyph keys get their own glyph prepended to the long-press popup
         // so the base letter stays selectable (base-first; parity with iOS
         // Callouts.TPSCallouts.calloutChars). Applied at anchor resolution, not
         // in the layout JSON, because the keycap hint draws data.popup directly.
         val anchorData = tpsPopupWithBaseGlyph(bounds.data, prefs.isTpsLayout)
 
-        // Skip popup-cell resolution when the key has no popup variants — most
-        // presses never trigger long-press extend. KeyTouchCoordinator already
-        // gates the long-press path on data.popup.isNotEmpty().
+        // Popup cells are only consumed by the long-press extend() path, so
+        // build them lazily; a plain tap never runs buildPopupCells. Caps state
+        // was captured above, so a shift release during the long-press delay
+        // does not change what the popup shows.
         val popupCells = if (anchorData.popup.isEmpty()) {
-            emptyList()
+            lazyOf(emptyList())
         } else {
-            buildPopupCells(
-                anchorData,
-                inputMode,
-                capsStateManager.caps,
-                capsStateManager.capsLock,
-                taigikeyboard.resources,
-            )
+            lazy(LazyThreadSafetyMode.NONE) {
+                buildPopupCells(anchorData, inputMode, caps, capsLock, taigikeyboard.resources)
+            }
         }
 
         return KeyAnchor(
