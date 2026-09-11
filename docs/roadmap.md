@@ -462,6 +462,43 @@ focus loss. Always available, not gated on the Telex scheme.
 guide down itself; the guide must close in read-only contexts too, so its dismissal sits above the
 read-only bail; a held preserved-key chord re-fires `OnPreservedKey`, so the toggle is once-per-press.
 
+#### Follow-up: Telex keys for tone 1 and tone 4 (USER-decided 2026-09-11, NOT scheduled)
+
+A user reported that Telex has no key for tone 1 or tone 4. USER 2026-09-11: 「先寫成文件,之後的版本
+再處理」 — design recorded here, no round opened; the USER schedules it.
+
+**Why a key at all.** Tones 1 / 4 are unmarked, so the raw buffer `tai` already reads as tone 1.
+The key is an explicit pin: it narrows candidates (`tai` matches every tone, `tai1` only tone 1)
+and ends a syllable in continuous input, exactly what the digits `1` / `4` do in the Standard
+scheme. The buffer stays numeric-tone (`tai1`, `sit4`), so nothing downstream changes.
+
+**Keys.** `c` = tone 1, `r` = tone 4. Every other free letter (`v y d w x q z f`) is taken; the
+kahiok scheme (madmaxieee/taigi-telex, checked 2026-09-11) offers no tone-1 / tone-4 key either.
+Both keys are context-gated by the pending tail before the caret, so neither spelling they collide
+with is lost:
+
+| Key | Tail before caret | Meaning |
+|---|---|---|
+| `c` | empty, ends in `-`, or already ends in a tone digit | literal `c` — POJ `chia`, `tai5chia`, `taifchia` still type |
+| `c` | complete syllable, no tone digit | append `1` |
+| `r` | ends in a stop coda `p` / `t` / `k` / `h` | append `4` (`sit` → `sit4`, `irk` → `irk4`) |
+| `r` | anything else | literal `r` — the dialect finals still type |
+
+`r` is safe because every `r`-bearing final in `knowledge/taigi-phonetics-reference.md` §3.2.6
+(`ir er ere irm irn irng irinn erh ereh irp irt irk`) has `r` directly after `i` / `e`, never after
+a stop coda, while tone 4 needs a stop coda; the two cases never overlap. The residual ambiguity is
+`c` alone: `tai` + `c` meant as the start of POJ `chia` pins `tai1` instead — type `z` (already
+`ch` / `chh` in Telex) or tone the previous syllable first, which Telex asks for anyway.
+
+**Rejected**: `;` / `'` (free in Telex since digits pick slots, but not letters — inconsistent with
+the other six tone keys); a single "unmarked tone" key that picks 1 vs 4 by coda (USER 2026-09-11
+asked for two keys); dropping the `ir` / `er` finals (Core Principle #3).
+
+**When opened**: feature round. Engine `telex.rs` (`c` / `r` in `TELEX_KEYS`, the two gates, tests
+whose fixture includes all twelve `r` finals per `taigi-incidents.md` § Trace before assert),
+`TelexKey` proto unchanged; macOS + Windows classifiers add `c` / `r` → `.telexKey`; Telex guide
+rows + i18n; S32 gains `taic` → tai1, `sitr` → sit4, `erh` / `chia` unchanged.
+
 #### Dogfood (added to `docs/architecture/dogfood-checklist.md` as S32 / S33; S34 for the guide)
 
 - **S32 Telex** — TL: `tev` → té, `tsangq` → tsa̋ng, `zhi` → tshi, `taidfgiv` → tâi-gí, `tev`+`y` → tè,
