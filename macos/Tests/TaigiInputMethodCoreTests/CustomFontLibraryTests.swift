@@ -145,8 +145,12 @@ final class CustomFontLibraryTests: XCTestCase {
             XCTAssertEqual(
                 CandidateFontSelection.custom(first).font(ofSize: 13).fontName, "GenYoGothic2TW-R",
             )
+            // The family the registered file carries is what the installed
+            // list is told to leave out.
+            XCTAssertEqual(library.registeredFamilies(), ["GenYoGothic2 TW"])
 
             try library.remove(first)
+            XCTAssertEqual(library.registeredFamilies(), [], "a removed file still reports its family")
             XCTAssertEqual(try storedFileNames(), [], "removal left the file behind")
             XCTAssertEqual(library.installedFonts(), [])
             XCTAssertFalse(

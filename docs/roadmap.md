@@ -332,12 +332,12 @@ right answer for a file whose face is already there, and the row for that face i
 
 #### Dogfood (to be added to `docs/architecture/dogfood-checklist.md` in PR1 / PR2)
 
-- **S40 macOS** — 字型管理 lists the Mac's families after the five bundled + imported rows; typing
+- **S42 macOS** — 字型管理 lists the Mac's families after the five bundled + imported rows; typing
   in the search field narrows all three groups; select an installed family → candidate window
   redraws in it without restart. Install a font in Font Book while the pane is open → it appears;
   remove the selected one → candidate window falls back to the system face, pane selection reads
   系統, no crash. Importing a file whose face is installed still refuses, and the face is in the list.
-- **S41 Windows** — same in the settings window, with an already-running host (Notepad + a WinUI
+- **S43 Windows** — same in the settings window, with an already-running host (Notepad + a WinUI
   app) drawing the chosen family on the next candidate window; pane open time not perceptibly
   slower than 3.6.8.
 

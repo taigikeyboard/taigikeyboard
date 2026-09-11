@@ -296,6 +296,18 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             defaultValue: "",
         )
 
+        /// Which OS-installed family the candidate window is set in, by the
+        /// name the OS reports. Read only while `fontType` holds
+        /// `CandidateFontSelection.installedRawValue`; the same two-key shape
+        /// as `customFontFile`, and its own key rather than that one because a
+        /// family name is not a file name — the Windows reader treats
+        /// `customFontFile` as a path component. macOS-only, and local like a
+        /// file name: the same family may not exist on another machine.
+        static let installedFontFamily = SettingsKey(
+            name: "installedFontFamily",
+            defaultValue: "",
+        )
+
         /// Which keys type a tone, and so which keys pick a candidate
         /// (`ToneInputScheme`). macOS-only: the phone keyboards have a tone
         /// row of their own and no slot keys, so the default is owned by
@@ -422,39 +434,42 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
         choice(Keys.candidateWindowSize)
     }
 
-    /// The library file the user selected, or "" because the selection is one
-    /// of the bundled faces. The one place the two keys are read as a pair, so
-    /// a caller that only wants to know WHICH file does not repeat the guard.
-    var selectedCustomFontFile: String {
-        guard userDefaults.string(forKey: Keys.fontType.name) == CandidateFontSelection.customRawValue
-        else { return "" }
-        return userDefaults.string(forKey: Keys.customFontFile.name) ?? ""
+    /// The typeface selection as stored, decoded from its three keys.
+    var storedFontSelection: StoredFontSelection {
+        StoredFontSelection(
+            fontType: userDefaults.string(forKey: Keys.fontType.name) ?? Keys.fontType.defaultValue.rawValue,
+            customFontFile: userDefaults.string(forKey: Keys.customFontFile.name) ?? "",
+            installedFontFamily: userDefaults.string(forKey: Keys.installedFontFamily.name) ?? "",
+        )
     }
 
     /// The candidate window's typeface, resolved.
     ///
-    /// A stored `custom` is honoured only while the file it names is in the
-    /// library AND activates: a font that has gone missing renders in the system
-    /// face rather than in nothing, and the stored preference is left alone —
-    /// reading a setting must not erase the user's choice, and the file may be
-    /// back (an external volume, a restore) before they next look.
-    ///
-    /// `choice(Keys.fontType)` carries the fallback for free: `custom` is not a
-    /// `CandidateFontChoice` raw value, so an install whose custom font is gone
-    /// reads the system font out of the very same call.
+    /// A stored custom file is honoured only while it is in the library AND
+    /// activates, and a stored installed family only while the OS still has
+    /// it: a font that has gone missing renders in the system face rather than
+    /// in nothing, and the stored preference is left alone — reading a setting
+    /// must not erase the user's choice, and the file or the family may be back
+    /// (an external volume, a restore, a reinstall) before they next look.
     ///
     /// A READ, and only a read: what activates a typeface is `CustomFontLibrary
     /// .activate`, called at launch (`AppDelegate`) and when the picker's
-    /// selection changes (`AppearanceSettingsView`). The candidate window reads
+    /// selection changes (`FontManagementPage`). The candidate window reads
     /// this on every show, and a read that registered fonts would put Core Text
-    /// on the path to a keystroke's candidates.
+    /// on the path to a keystroke's candidates. The existence checks are memo
+    /// hits after the first show (`RegisteredFace`).
     @MainActor
     var candidateFontSelection: CandidateFontSelection {
-        let fileName = selectedCustomFontFile
-        guard !fileName.isEmpty,
-              let font = CustomFontLibrary.shared.activatedFont(fileName: fileName)
-        else { return .builtIn(choice(Keys.fontType)) }
-        return .custom(font)
+        switch storedFontSelection {
+        case let .builtIn(choice):
+            return .builtIn(choice)
+        case let .customFile(fileName):
+            guard let font = CustomFontLibrary.shared.activatedFont(fileName: fileName) else { return .default }
+            return .custom(font)
+        case let .installedFamily(family):
+            guard RegisteredFace.isRegistered(.family(family)) else { return .default }
+            return .installed(family: family)
+        }
     }
 
     /// The metrics the candidate window renders at. The one place the three

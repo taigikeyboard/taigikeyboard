@@ -247,12 +247,12 @@ struct CandidateMetrics: Equatable, Sendable {
         switch cellArrangement {
         case .inline:
             // The point size is what the four bundled faces need: their line
-            // boxes fit the row it gives. A face the user brought has no such
-            // guarantee — tall ascenders, stacked diacritics and a fallback
-            // glyph all draw outside it — so a custom face is given its own
-            // measured line box instead. Bundled selections keep the arithmetic
-            // they shipped with, exactly.
-            if fontSelection.isCustom {
+            // boxes fit the row it gives. A face the user brought, or one the
+            // OS supplies, has no such guarantee — tall ascenders, stacked
+            // diacritics and a fallback glyph all draw outside it — so those
+            // are given their own measured line box instead. Bundled
+            // selections keep the arithmetic they shipped with, exactly.
+            if fontSelection.requiresLineBoxMeasurement {
                 let lineBox = max(candidateFontSize, Self.lineHeight(of: fontSelection.font(ofSize: candidateFontSize)))
                 itemHeight = (lineBox + verticalPadding).rounded(.up)
             } else {
@@ -375,6 +375,12 @@ extension CandidateMetrics {
     }
 
     private static var primaryColumnFloors: [PrimaryColumnFloorKey: CGFloat] = [:]
+
+    /// Drops every cached floor because the registration list moved
+    /// (`FontRegistryObserver`). Re-measuring is one glyph per face and size.
+    static func forgetPrimaryColumnFloors() {
+        primaryColumnFloors.removeAll()
+    }
 
     /// The width a cell wants for `cell`. Font-based rather than going through
     /// a template view: with fixed chrome widths, the sum IS the fitting size,

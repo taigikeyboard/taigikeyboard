@@ -166,6 +166,18 @@ final class CandidatePanel: CandidatePresenter {
         }
     }
 
+    /// Forgets every cached panel without taking down the one on screen, so
+    /// the next show builds a fresh one and `panel(for:)` clears this one then.
+    ///
+    /// Called when the registration list moved (`FontRegistryObserver`). The
+    /// visible panel is kept up rather than cleared because the notification
+    /// can land mid-composition — a font manager working in the background, or
+    /// a delayed delivery — and a cleared panel drops its owner, leaving the
+    /// arrow keys and the slot keys with nothing to act on until the next show.
+    func forgetCachedPanels() {
+        panels.removeAll()
+    }
+
     /// The panel for `layout`, taking down whichever other layout's panel was
     /// up: the settings are live-read per show, so a switch mid-composition
     /// swaps windows on the next keystroke rather than leaving two on screen.

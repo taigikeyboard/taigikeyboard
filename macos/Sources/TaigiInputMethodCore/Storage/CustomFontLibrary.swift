@@ -145,6 +145,10 @@ final class CustomFontLibrary {
     /// still never reach the candidate window.
     private struct Registration {
         let font: CustomFont
+        /// Every family the file carries — all of a `.ttc`'s, since registering
+        /// the URL registered every face in it. Read when the file was, so the
+        /// 字型管理 pane's exclusion costs no parse (`registeredFamilies`).
+        let families: Set<String>
         var isDrawable: Bool
     }
 
@@ -228,15 +232,16 @@ final class CustomFontLibrary {
         if let registration = registrations[fileName] {
             return registration.isDrawable ? activatedFont(fileName: fileName) : nil
         }
-        guard let font = makeFont(at: url) else { return nil }
+        guard let faces = readFaces(at: url), let first = faces.first else { return nil }
         if let reason = register(url) {
             logger.error("[FONT] custom typeface did not activate: \(reason)")
             return nil
         }
+        let font = CustomFont(fileName: fileName, postScriptName: first.postScriptName)
         // Ownership is recorded on the registration, not on the verdict below:
         // a registration this process made is this process's to withdraw even
         // when the withdrawal fails, and `remove` is what retries it.
-        registrations[fileName] = Registration(font: font, isDrawable: false)
+        registrations[fileName] = Registration(font: font, families: Set(faces.map(\.familyName)), isDrawable: false)
         // Registered is not drawn: a name a system face also carries resolves
         // to that face instead, and a row drawing in someone else's typeface is
         // worse than one that fell back.
@@ -300,6 +305,17 @@ final class CustomFontLibrary {
         cachedFonts = nil
     }
 
+    /// Every family the files this process registered carry. What the
+    /// 字型管理 pane leaves out of the OS-installed list: these are rows of the
+    /// library already, and a second row naming the same file as an installed
+    /// family would select something no restart re-activates
+    /// (`RegisteredFace.installedFamilies`). By name, so a family the OS also
+    /// has goes missing from that list while a custom file carries a face of
+    /// it — accepted: the custom row draws that family already.
+    func registeredFamilies() -> Set<String> {
+        registrations.values.reduce(into: []) { $0.formUnion($1.families) }
+    }
+
     /// Forgets the scanned roster, so the next `installedFonts()` re-reads the
     /// directory. For a caller that knows the files changed without going
     /// through this library — a test, or a pane re-read after the user may have
@@ -313,27 +329,29 @@ final class CustomFontLibrary {
     /// Registers the copy at `url`, checks that the face it names is the one
     /// that draws, and answers the font that joined the library.
     private func take(in url: URL) throws -> CustomFont {
-        guard let descriptors = readFaces(at: url), let first = descriptors.first else {
+        guard let faces = readFaces(at: url), let first = faces.first else {
             throw ImportFailure.noFace
         }
         // Registering the URL registers every face in it, so a collection's
         // other faces are checked too: a name that already resolves would make
         // the picker's new row draw in whichever face won.
-        for postScriptName in descriptors where RegisteredFace.isRegistered(named: postScriptName) {
-            throw ImportFailure.nameAlreadyResolves(postScriptName)
+        for face in faces where RegisteredFace.isRegistered(named: face.postScriptName) {
+            throw ImportFailure.nameAlreadyResolves(face.postScriptName)
         }
         if let reason = register(url) {
             throw ImportFailure.registrationFailed(reason)
         }
-        let font = CustomFont(fileName: url.lastPathComponent, postScriptName: first)
+        let font = CustomFont(fileName: url.lastPathComponent, postScriptName: first.postScriptName)
         // Before the verdict below, so a `didNotResolve` throw reaches
         // `discard` with the registration owned rather than orphaned.
-        registrations[font.fileName] = Registration(font: font, isDrawable: false)
+        registrations[font.fileName] = Registration(
+            font: font, families: Set(faces.map(\.familyName)), isDrawable: false,
+        )
         // Resolving is not enough: the name has to resolve to THIS file. A name
         // another face already carries would otherwise pass the check while the
         // picker's new row drew in that other face.
-        guard draws(first, from: url) else {
-            throw ImportFailure.didNotResolve(first)
+        guard draws(first.postScriptName, from: url) else {
+            throw ImportFailure.didNotResolve(first.postScriptName)
         }
         registrations[font.fileName]?.isDrawable = true
         return font
@@ -484,13 +502,24 @@ final class CustomFontLibrary {
 
     // MARK: - Core Text
 
+    /// The two names a face in a file declares.
+    private struct FaceNames {
+        let postScriptName: String
+        let familyName: String
+    }
+
     /// The faces `url`'s file declares, without registering it. Nil when the
     /// file is not a font this Mac can read.
-    private func readFaces(at url: URL) -> [String]? {
+    private func readFaces(at url: URL) -> [FaceNames]? {
         guard let descriptors = CTFontManagerCreateFontDescriptorsFromURL(url as CFURL) as? [CTFontDescriptor] else {
             return nil
         }
-        return descriptors.compactMap { CTFontDescriptorCopyAttribute($0, kCTFontNameAttribute) as? String }
+        return descriptors.compactMap { descriptor in
+            guard let postScriptName = CTFontDescriptorCopyAttribute(descriptor, kCTFontNameAttribute) as? String,
+                  let familyName = CTFontDescriptorCopyAttribute(descriptor, kCTFontFamilyNameAttribute) as? String
+            else { return nil }
+            return FaceNames(postScriptName: postScriptName, familyName: familyName)
+        }
     }
 
     /// The font `url`'s first face declares, or nil because the file is not one
@@ -498,7 +527,7 @@ final class CustomFontLibrary {
     /// the picker offers.
     private func makeFont(at url: URL) -> CustomFont? {
         guard let first = readFaces(at: url)?.first else { return nil }
-        return CustomFont(fileName: url.lastPathComponent, postScriptName: first)
+        return CustomFont(fileName: url.lastPathComponent, postScriptName: first.postScriptName)
     }
 
     /// Gives up this process's registration of `url`, answering nil when there

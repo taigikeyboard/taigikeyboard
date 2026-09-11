@@ -73,6 +73,13 @@ enum TestFixtures {
     /// `.app`'s `ATSApplicationFontsPath`.
     static let fontDirectory = repositoryRoot.appendingPathComponent("fonts/font")
 
+    /// A family the running Mac has installed — the premise of every installed-
+    /// typeface case, taken from the live list because no family is guaranteed
+    /// on every Mac.
+    static func anyInstalledFamily() throws -> String {
+        try XCTUnwrap(RegisteredFace.installedFamilies(excluding: []).first, "this Mac reports no installed families")
+    }
+
     /// Activates the bundled typefaces for this process, and answers which
     /// files failed to.
     ///
