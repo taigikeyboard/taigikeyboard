@@ -82,7 +82,7 @@ Composing engine state machine lives in Rust `engine/composing` (since v3.5.4 / 
 | Item | Location |
 |------|----------|
 | State machine (`Phase × Intent → (state', Effect[])`) | Rust `engine/composing` (`api.rs`, `transition.rs`, `derived.rs`) |
-| FFI singleton + generation guard | Rust `engine/composing::EngineHandle` |
+| FFI singleton + generation guard | Rust `engine/composing::EngineHandle` (read-only intents never reset — see below) |
 | Tone-mark application + POJ doubletap (`oo→o͘`, `nn→ⁿ`) | Rust `engine/phonetics` |
 | iOS bridge + 12 op surface | `Engine/RustEngineBridge.swift` (composingStart / Append / AppendHyphen / ReplaceLast / DeleteBackward / CommitDerived / CommitRaw / SelectSuggestion / CommitPreeditThenInsertExternal / Reset / SetSelectedCandidateIndex / QueryState) |
 | iOS platform wrapper | `Input/Composing/ComposingManager.swift` (Combine + KeyboardKit context wiring) |
@@ -90,6 +90,8 @@ Composing engine state machine lives in Rust `engine/composing` (since v3.5.4 / 
 | Android bridge | `engine/RustEngineBridge.kt` (matching 12-op surface) |
 | Android platform wrapper | `ime/text/composing/ComposingManager.kt` |
 | Android effect interpreter | `ime/text/composing/ComposingDelegate.kt` (`InputConnection`; **must zero composing region via `setComposingText("", 1)` before `finishComposingText()`** to honor `clearPreeditWithoutCommit` semantics) |
+
+**Read-only intents and threading.** `Intent::is_read_only()` (`FetchAtPos`, `QueryState`) never mutate: `EngineHandle` answers them from a clone of the engine with the mutex released, and a generation mismatch on one returns `Engine::idle_snapshot` **without** resetting state or recording the generation — only the next mutating intent resets. This lets Android run the candidate fetch on `Dispatchers.Default` (`CandidateUpdateCoordinator`): a stale worker fetch can never wipe a newer context, and the coordinator re-validates `ComposingManager.stateToken()` (raw buffer + generation) on Main before touching the strip. iOS / macOS / Windows fetch synchronously on their main threads and mirror the returned snapshot; the mismatch response they see is unchanged (Idle). `lexicon::EngineHandle` state is an `RwLock`, so a worker fetch's dictionary scan and the main thread's `Append` display render (compound-hyphen oracle) read concurrently.
 
 For per-pub-item descriptions in 台灣華語, see `migration-inventory.csv` (filter `area=composing`). Architectural contract — including Effect ordering rules + Android binding addendum — lives in `architecture/composing-state-boundary.md`.
 

@@ -9,6 +9,7 @@ import com.siansiansu.taigikeyboard.ime.core.logging.TraceContext
 import com.siansiansu.taigikeyboard.ime.core.logging.TraceId
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager
+import com.siansiansu.taigikeyboard.ime.text.composing.TaigiAutocompleteService
 import com.siansiansu.taigikeyboard.ime.text.composing.shouldSplitCombinedCells
 import com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarManager
 import kotlinx.coroutines.CoroutineScope
@@ -48,16 +49,27 @@ class CandidateUpdateCoordinator(
     private var englishAutocompleteService: com.siansiansu.taigikeyboard.ime.text.composing.EnglishAutocompleteService? = null
 
     /**
-     * Debounced Taigi candidate update.
+     * Debounced Taigi candidate update. Runs on `Dispatchers.Default`: the
+     * engine's dictionary scan costs tens of milliseconds for a one-letter
+     * prefix and must not block touch handling. Only the strip publish hops
+     * back to Main (see [publishIfCurrent]).
+     *
+     * The composing state is captured HERE, on Main, at schedule time — not
+     * after the debounce. A candidate tap that final-commits while the job
+     * is still delayed is not a cancellation, and a job that captured its
+     * state only on waking would see `rawInput == null`, pass every guard,
+     * and clear the NextWord predictions the commit just produced.
      */
     fun updateTaigiCandidatesDebounced() {
         candidateUpdateJob?.cancel()
+        val manager = getComposingManager() ?: return
+        val fetchContext = FetchContext(manager, manager.stateToken())
         val trace = TraceContext.current
 
         candidateUpdateJob =
-            scope.launch {
+            scope.launch(Dispatchers.Default) {
                 delay(CANDIDATE_DEBOUNCE_MS)
-                if (!isActive) return@launch
+                if (!isActive || !fetchContext.isCurrent(getComposingManager())) return@launch
 
                 val traceId = trace ?: TraceId.untraced
                 logger.debug(TAG) {
@@ -65,7 +77,7 @@ class CandidateUpdateCoordinator(
                 }
 
                 val candidateStart = System.currentTimeMillis()
-                updateTaigiCandidates()
+                updateTaigiCandidates(fetchContext)
 
                 logger.debug("PERF") {
                     "[TOTAL] updateTaigiCandidates: ${System.currentTimeMillis() - candidateStart}ms"
@@ -110,56 +122,34 @@ class CandidateUpdateCoordinator(
     /**
      * Update Taigi candidates using autocomplete service.
      */
-    private suspend fun updateTaigiCandidates() {
+    private suspend fun updateTaigiCandidates(fetchContext: FetchContext) {
         logger.debug(TAG) {
             val stackTrace = Thread.currentThread().stackTrace
             val caller = stackTrace.getOrNull(3)?.methodName ?: "unknown"
             "[DEBUG] updateTaigiCandidates() called from: $caller"
         }
 
-        val manager =
-            getComposingManager() ?: run {
-                logger.debug(TAG) { "[CANDIDATES] composingManager=null, skip" }
-                return
-            }
-
-        val rawInput =
-            manager.getRawInput() ?: run {
-                logger.debug(TAG) { "[CANDIDATES] rawInput=null, clearCandidates" }
-                smartbarManager.clearCandidates()
-                return
-            }
-        if (rawInput.isEmpty()) {
-            logger.debug(TAG) { "[CANDIDATES] rawInput=empty, clearCandidates" }
-            smartbarManager.clearCandidates()
+        val rawInput = fetchContext.rawInput
+        if (rawInput.isNullOrEmpty()) {
+            logger.debug(TAG) { "[CANDIDATES] rawInput=${if (rawInput == null) "null" else "empty"}, clearCandidates" }
+            publishIfCurrent(fetchContext) { smartbarManager.clearCandidates() }
             return
         }
-        val displayText = manager.getComposingText() ?: rawInput
+        val displayText = fetchContext.manager.getComposingText() ?: rawInput
 
         logger.debug(TAG) { "[CANDIDATES] rawInput='$rawInput', displayText='$displayText'" }
 
         val service =
             synchronized(serviceLock) {
-                taigiAutocompleteService ?: com.siansiansu.taigikeyboard.ime.text.composing.TaigiAutocompleteService(
+                taigiAutocompleteService ?: TaigiAutocompleteService(
                     logger = taigikeyboard.compositionRoot.logger,
-                    // Continuous-input fetcher hops back to the IME main
-                    // thread before invoking `fetchContinuousCandidates`;
-                    // the underlying `applyTransition` writes to
-                    // InputConnection so the off-main coroutine context the
-                    // autocomplete job runs in is unsafe. BOTH the manager
-                    // and IC are re-resolved INSIDE the Main block so a
-                    // detach/editor swap between the dispatch hop and the
-                    // fetch returns null and collapses to empty.
+                    // Runs on the worker: `fetchContinuousCandidates` is
+                    // read-only (no InputConnection, no state mirror), so
+                    // no Main hop is needed. The manager is re-resolved per
+                    // fetch so a detach between debounce and fetch collapses
+                    // to empty.
                     continuousFetcher = {
-                        withContext(Dispatchers.Main) {
-                            val mgr = getComposingManager()
-                            val ic = taigikeyboard.currentInputConnection
-                            if (mgr != null && ic != null) {
-                                mgr.fetchContinuousCandidates(ic)
-                            } else {
-                                emptyList()
-                            }
-                        }
+                        getComposingManager()?.fetchContinuousCandidates() ?: emptyList()
                     },
                     // 漢羅濫 split cells (§42 second exception). Live-read per
                     // fetch — the cached service must see a settings change on
@@ -184,19 +174,32 @@ class CandidateUpdateCoordinator(
         logger.debug(TAG) { "[CANDIDATES] found ${suggestions.size} suggestions" }
 
         val uiStart = System.currentTimeMillis()
-        withContext(Dispatchers.Main) {
-            // Stale-result guard: composing state may have changed during the
-            // search await (backspace cleared the buffer, or a new keystroke
-            // arrived). Drop this result rather than overwrite the now-current
-            // candidate list with stale data.
-            if (!isActive) return@withContext
-            val currentRaw = getComposingManager()?.getRawInput()
-            if (currentRaw != rawInput) {
-                logger.debug(TAG) { "[CANDIDATES] stale result dropped (was='$rawInput', now='$currentRaw')" }
-                return@withContext
-            }
+        publishIfCurrent(fetchContext) {
             smartbarManager.updateCandidates(suggestions)
             logger.debug("PERF") { "[4] updateCandidates UI: ${System.currentTimeMillis() - uiStart}ms" }
+        }
+    }
+
+    /**
+     * Hop to Main and run [publish] against the candidate strip unless the
+     * job was cancelled or [fetchContext] no longer matches the live
+     * composing state (backspace cleared the buffer, a new keystroke landed,
+     * a candidate tap committed, or the input context changed).
+     */
+    private suspend fun publishIfCurrent(
+        fetchContext: FetchContext,
+        publish: () -> Unit,
+    ) {
+        withContext(Dispatchers.Main.immediate) {
+            if (!isActive) return@withContext
+            val current = getComposingManager()
+            if (!fetchContext.isCurrent(current)) {
+                logger.debug(TAG) {
+                    "[CANDIDATES] stale result dropped (was='${fetchContext.rawInput}', now='${current?.getRawInput()}')"
+                }
+                return@withContext
+            }
+            publish()
         }
     }
 
@@ -300,4 +303,19 @@ class CandidateUpdateCoordinator(
         private const val EN_TAG = "ENSPELL"
         private const val CANDIDATE_DEBOUNCE_MS = 50L
     }
+}
+
+/**
+ * The composing state a worker-side candidate fetch was computed against. A
+ * result is published only if the same manager still shows the same raw
+ * buffer under the same input-context generation — otherwise the strip would
+ * render candidates for text the user has already moved past.
+ */
+internal class FetchContext(
+    val manager: ComposingManager,
+    private val token: ComposingManager.StateToken,
+) {
+    val rawInput: String? get() = token.rawInput
+
+    fun isCurrent(current: ComposingManager?): Boolean = current === manager && current.stateToken() == token
 }

@@ -339,10 +339,11 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         apply(boosted.transition)
         // Engine determinism: same `Phase::Continuous { raw }` returns the
         // same candidate set. A `nil` phase-2 carrier with `isBridgeFailure
-        // == false` means a `bumpGeneration` raced in between and engine
-        // reset to Idle BEFORE this fetch — the applied transition already
-        // mirrors that Idle state, so returning phase-1 candidates would
-        // render stale suggestions against the new context. Surface as
+        // == false` means a `bumpGeneration` raced in between: FetchAtPos is
+        // read-only, so the engine answered the stale generation with an
+        // Idle snapshot (it resets on the next mutating request). The applied
+        // transition mirrors that Idle state, so returning phase-1 candidates
+        // would render stale suggestions against the new context. Surface as
         // "no candidates this frame" instead. Codex pre/post-impl Q5/R2.
         return boosted.candidates ?? []
     }

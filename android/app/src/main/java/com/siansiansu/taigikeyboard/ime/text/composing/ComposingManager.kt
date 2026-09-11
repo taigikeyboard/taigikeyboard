@@ -23,6 +23,7 @@ import com.siansiansu.taigikeyboard.engine.composingSelectSuggestion
 import com.siansiansu.taigikeyboard.engine.composingStart
 import com.siansiansu.taigikeyboard.engine.dictionaryFilters
 import com.siansiansu.taigikeyboard.engine.NormalizeMode
+import kotlinx.coroutines.CancellationException
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.engine.ToneTogglesCarrier
 import com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry
@@ -114,6 +115,16 @@ class ComposingManager(
      */
     private val currentGeneration: Long
         get() = sharedGeneration.get()
+
+    /**
+     * Value snapshot of the composing state a worker-side candidate fetch is
+     * computed against: the raw buffer (`null` when not composing) and the
+     * input-context generation. Two tokens compare equal iff a result fetched
+     * under one is still valid to publish under the other.
+     */
+    data class StateToken(val rawInput: String?, val generation: Long)
+
+    fun stateToken(): StateToken = StateToken(getRawInput(), currentGeneration)
 
     /**
      * `true` while the manager is dispatching effects from a self-driven
@@ -480,82 +491,51 @@ class ComposingManager(
      * their first selection of a phrase.
      *
      * Android divergence (intentional, per `.claude/rules/cross-platform-alignment.md`
-     * §3): iOS is sync because Swift `frequencyDataBatch` is sync; Android
-     * is `suspend` because Kotlin `frequencyDataBatch` owns `Dispatchers.IO`
-     * internally (`UserFrequencyService.kt:225`). Same observable behaviour,
-     * different threading model.
+     * §3): iOS runs both phases synchronously on the main thread and mirrors
+     * the fetch snapshot into its state; Android runs this whole function on
+     * `Dispatchers.Default` (`CandidateUpdateCoordinator`) so the dictionary
+     * scan never blocks a keystroke, and mirrors nothing — `FetchAtPos` is
+     * read-only in the engine (no effects, no state change), so there is no
+     * transition to apply; the coordinator validates [stateToken] before
+     * publishing. Same observable behaviour, different threading model.
      *
-     * Caller invariant: enters on the IME main thread (the autocomplete
-     * service wraps the call in `withContext(Dispatchers.Main)`); the
-     * SQLite hop happens inside `UserFrequencyService.frequencyDataBatch`'s
-     * own `withContext(Dispatchers.IO)`, after which the suspension resumes
-     * back on Main for the second `applyTransition` — `InputConnection`
-     * writes are Main-only.
+     * Thread-agnostic: touches only `StateFlow` / atomic state, the volatile
+     * prefs cache behind [settingsProvider], and the JNI bridge (the engine
+     * serialises internally). Never touches `InputConnection`. Settings are
+     * captured once into an immutable [ContinuousFetchSettings] so the two
+     * fetch phases and the SQLite hops in between see one snapshot even if
+     * the user flips a toggle mid-fetch.
      */
-    suspend fun fetchContinuousCandidates(ic: InputConnection): List<RustEngineBridge.ContinuousCandidate> {
-        val settings = settingsProvider.current
-        val mode = resolveMode(settings.inputMode)
-        val toggles = carrier(settings.toneToggles)
+    suspend fun fetchContinuousCandidates(): List<RustEngineBridge.ContinuousCandidate> {
+        val fetch = captureFetchSettings()
+        val token = stateToken()
 
         // v3.5.8 Phase 9 Item 12 — query `custom_dictionary.db` once
         // for the current raw buffer; the same `customEntries` feeds
         // both fetch phases (the result depends only on the raw
         // buffer, stable across the two FFI calls). `buildCustomEntries`
-        // suspends on `Dispatchers.IO`; it self-guards against a
-        // keystroke racing during that await by re-checking
-        // `_rawInput.value` after `service.search` resumes (the
-        // generation guard CANNOT cover this — `generation` only bumps
-        // on a new input context, never per keystroke; Codex post-impl
-        // 2026-05-15 P2).
-        val customEntries = buildCustomEntries(_rawInput.value, settings)
-        val generation = currentGeneration
-        val spacing = continuousSpacingFlags(settings)
-
-        // PR-9.6 — compute the dictionary source-toggle bitmask from the
-        // SAME settings snapshot + SAME `dictionaryFilters` bridge the Tab3
-        // browse path uses (`DictionarySearchViewModel`), so keyboard
-        // candidates honour the same 12 source toggles + kautian
-        // subcollection (腔調/姓名) toggles. Computed once and shared by
-        // both fetch phases (depends only on `settings`, stable across the
-        // two FFI calls — mirrors `customEntries`).
-        val enabledSourcesBitmask = RustEngineBridge.dictionaryFilters(
-            RustEngineBridge.DictionaryToggles.from(settings),
-        ).dictionaryFilterBitmask
-
-        // §34/S22 — invert the 顯示當咧拍的字 setting into the engine's
-        // `disabled` wire flag. Computed once from the same snapshot and
-        // shared by both fetch phases so a mid-fetch settings change cannot
-        // make the two phases disagree (mirrors `enabledSourcesBitmask`).
-        val literalRomanCandidateDisabled = !settings.isLiteralRomanCandidateEnabled
-        // Same single-snapshot rule for the display mode (engine collapses
-        // same-roman rows under ROMAN_ONLY in both fetch phases).
-        val candidateDisplayMode = settings.candidateDisplayMode
+        // suspends on `Dispatchers.IO` and drops its rows if the state
+        // token moved during that await (Codex post-impl 2026-05-15 P2).
+        val customEntries = buildCustomEntries(token, fetch)
 
         // Phase 1: neutral fetch to learn candidate displayText keys.
         val neutral = RustEngineBridge.composingFetchAtPos(
-            mode = mode,
-            toggles = toggles,
-            generation = generation,
+            mode = fetch.mode,
+            toggles = fetch.toggles,
+            generation = token.generation,
             customEntries = customEntries,
-            effectiveSwapped = spacing.effectiveSwapped,
-            outputBothScripts = spacing.outputBothScripts,
-            enabledSourcesBitmask = enabledSourcesBitmask,
-            literalRomanCandidateDisabled = literalRomanCandidateDisabled,
-            candidateDisplayMode = candidateDisplayMode,
+            effectiveSwapped = fetch.spacing.effectiveSwapped,
+            outputBothScripts = fetch.spacing.outputBothScripts,
+            enabledSourcesBitmask = fetch.enabledSourcesBitmask,
+            literalRomanCandidateDisabled = fetch.literalRomanCandidateDisabled,
+            candidateDisplayMode = fetch.candidateDisplayMode,
         )
-        // Phase-1 FFI failure: do NOT apply the synthesized `NOOP` — that
-        // would clobber the mirror with false Idle state. Surface as "no
-        // candidates this frame"; the mirror keeps reflecting the most
-        // recent successful transition (typically the keystroke's
-        // append/promote that brought us into Continuous), so the next
-        // keystroke's fetch finds the right engine state. Mirrors iOS
-        // PR #265 r3216857164 pre-impl S5 + post-impl T2.
-        if (neutral.isBridgeFailure) {
-            return emptyList()
-        }
+        // Phase-1 FFI failure or empty carrier → "no candidates this frame".
+        // Nothing to mirror: a matching-generation fetch echoes the state the
+        // keystroke already wrote, and a stale-generation fetch answers with
+        // an Idle snapshot that the coordinator's publish guard drops.
         val neutralCandidates = neutral.candidates
-        if (neutralCandidates.isNullOrEmpty()) {
-            applyTransition(neutral.transition, ic)
+        if (neutral.isBridgeFailure || neutralCandidates.isNullOrEmpty()) {
             return emptyList()
         }
 
@@ -564,47 +544,40 @@ class ComposingManager(
         // ranking on the phase-1 response.
         val userFreq = userFrequencyService
         if (userFreq == null || !userFreq.isConnected()) {
-            applyTransition(neutral.transition, ic)
             return neutralCandidates
         }
 
         // Phase 2: populated fetch with the user-frequency snapshot.
         // `buildFrequencyEntries` runs the SQL inside the service's own
-        // `Dispatchers.IO` block, then resumes back on the caller's Main
+        // `Dispatchers.IO` block, then resumes on the caller's worker
         // context before the second FFI call.
         val entries = buildFrequencyEntries(neutralCandidates, userFreq)
         val nowMs = System.currentTimeMillis()
         val boosted = RustEngineBridge.composingFetchAtPos(
-            mode = mode,
-            toggles = toggles,
-            generation = generation,
+            mode = fetch.mode,
+            toggles = fetch.toggles,
+            generation = token.generation,
             frequencyEntries = entries,
             nowMs = nowMs,
             customEntries = customEntries,
-            effectiveSwapped = spacing.effectiveSwapped,
-            outputBothScripts = spacing.outputBothScripts,
-            enabledSourcesBitmask = enabledSourcesBitmask,
-            literalRomanCandidateDisabled = literalRomanCandidateDisabled,
-            candidateDisplayMode = candidateDisplayMode,
+            effectiveSwapped = fetch.spacing.effectiveSwapped,
+            outputBothScripts = fetch.spacing.outputBothScripts,
+            enabledSourcesBitmask = fetch.enabledSourcesBitmask,
+            literalRomanCandidateDisabled = fetch.literalRomanCandidateDisabled,
+            candidateDisplayMode = fetch.candidateDisplayMode,
         )
-        // Phase-2 FFI failure: engine state did NOT change since phase-1
-        // (the request never reached the engine). Apply phase-1's transition
-        // (the real engine snapshot from the moment phase-1 succeeded) and
-        // return phase-1 candidates — degrade to neutral-ranked instead of
-        // dropping the frame. Mirrors iOS PR #265 r3216857164.
+        // Phase-2 FFI failure: the request never reached the engine —
+        // degrade to the neutral-ranked phase-1 list instead of dropping
+        // the frame. Mirrors iOS PR #265 r3216857164.
         if (boosted.isBridgeFailure) {
-            applyTransition(neutral.transition, ic)
             return neutralCandidates
         }
-        applyTransition(boosted.transition, ic)
         // Engine determinism: same `Phase::Continuous { raw }` returns the
         // same candidate set. A `null` phase-2 carrier with `isBridgeFailure
-        // == false` means a `bumpGeneration` raced in between and engine
-        // reset to Idle BEFORE this fetch — the applied transition already
-        // mirrors that Idle state, so returning phase-1 candidates would
-        // render stale suggestions against the new context. Surface as
-        // "no candidates this frame" instead. Mirrors iOS PR #265 Codex
-        // pre/post-impl Q5/R2.
+        // == false` means a `bumpGeneration` raced in between: the engine
+        // answered the stale generation with an Idle snapshot, so phase-1's
+        // list belongs to the old context. Surface as "no candidates this
+        // frame" instead. Mirrors iOS PR #265 Codex pre/post-impl Q5/R2.
         return boosted.candidates ?: emptyList()
     }
 
@@ -670,33 +643,31 @@ class ComposingManager(
      * on the caller context before the FFI.
      */
     private suspend fun buildCustomEntries(
-        rawInput: String,
-        settings: com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings,
+        token: StateToken,
+        fetch: ContinuousFetchSettings,
     ): List<CustomDictEntry> {
         val service = customDictionaryService ?: return emptyList()
-        if (!settings.isCustomDictEnabled || rawInput.isEmpty()) return emptyList()
+        val rawInput = token.rawInput
+        if (!fetch.isCustomDictEnabled || rawInput.isNullOrEmpty()) return emptyList()
         // v3.6.1 R3 — derive the single family-native query key from the raw
-        // buffer + settings input mode. `settings.inputMode` is the platform
-        // string (incl. "tps"); `InputMode.fromPrefString` collapses "tps" → TL
-        // and the engine upgrades to the TPS family via `contains_tps` on the
-        // raw input. `null` key (residue-only input) → no custom matches.
+        // buffer + settings input mode. `inputMode` is the platform string
+        // (incl. "tps"); `InputMode.fromPrefString` collapses "tps" → TL and
+        // the engine upgrades to the TPS family via `contains_tps` on the raw
+        // input. `null` key (residue-only input) → no custom matches.
         val queryKey =
             CustomDictionaryDerivation.deriveCustomQueryKey(
                 rawInput,
-                com.siansiansu.taigikeyboard.ime.core.settings.InputMode.fromPrefString(settings.inputMode),
+                com.siansiansu.taigikeyboard.ime.core.settings.InputMode.fromPrefString(fetch.inputMode),
             ) ?: return emptyList()
         return try {
             val rows = service.search(family = queryKey.family, form = queryKey.form, key = queryKey.key, limit = 20)
             // v3.5.8 Phase 9 Item 12 — await-race guard (Codex post-impl
             // 2026-05-15 P2). `service.search` suspends on `Dispatchers
-            // .IO`; a keystroke landing during that await mutates
-            // `_rawInput.value` WITHOUT bumping `generation` (generation
-            // only bumps on a new input context, not per keystroke), so
-            // the generation guard cannot catch this. If the buffer
-            // moved under us these rows belong to a stale prefix —
-            // inject nothing rather than wrong candidates; the racing
-            // keystroke's own fetch produces the correct custom set.
-            if (_rawInput.value != rawInput) {
+            // .IO`; a keystroke landing during that await moves the state
+            // token, so these rows belong to a stale prefix — inject
+            // nothing rather than wrong candidates; the racing keystroke's
+            // own fetch produces the correct custom set.
+            if (stateToken() != token) {
                 return emptyList()
             }
             rows.map { entry ->
@@ -706,6 +677,8 @@ class ComposingManager(
                 }
                 builder.build()
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             logger.w(TAG, "[CONTINUOUS] custom dict query failed: ${e.message}", e)
             emptyList()
@@ -929,6 +902,46 @@ class ComposingManager(
         val effectiveSwapped: Boolean,
         val outputBothScripts: Boolean,
     )
+
+    /**
+     * Immutable per-fetch settings snapshot. `EngineSettingsProvider.current`
+     * is a live view (every getter re-reads the prefs cache), so both fetch
+     * phases and the custom-dictionary query read from this value instead —
+     * a toggle flipped mid-fetch cannot make the phases disagree.
+     */
+    private class ContinuousFetchSettings(
+        val inputMode: String,
+        val mode: NormalizeMode,
+        val toggles: ToneTogglesCarrier,
+        val spacing: ContinuousSpacingFlags,
+        // PR-9.6 — same dictionary source-toggle bitmask + same
+        // `dictionaryFilters` bridge the Tab3 browse path uses, so keyboard
+        // candidates honour the 12 source toggles + kautian subcollection
+        // (腔調/姓名) toggles.
+        val enabledSourcesBitmask: UInt,
+        // §34/S22 — invert of the 顯示當咧拍的字 setting (engine wire flag).
+        val literalRomanCandidateDisabled: Boolean,
+        // 候選詞顯示 — ROMAN_ONLY makes the engine collapse same-roman rows.
+        val candidateDisplayMode: com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode,
+        val isCustomDictEnabled: Boolean,
+    )
+
+    private fun captureFetchSettings(): ContinuousFetchSettings {
+        val settings = settingsProvider.current
+        val inputMode = settings.inputMode
+        return ContinuousFetchSettings(
+            inputMode = inputMode,
+            mode = resolveMode(inputMode),
+            toggles = carrier(settings.toneToggles),
+            spacing = continuousSpacingFlags(settings),
+            enabledSourcesBitmask = RustEngineBridge.dictionaryFilters(
+                RustEngineBridge.DictionaryToggles.from(settings),
+            ).dictionaryFilterBitmask,
+            literalRomanCandidateDisabled = !settings.isLiteralRomanCandidateEnabled,
+            candidateDisplayMode = settings.candidateDisplayMode,
+            isCustomDictEnabled = settings.isCustomDictEnabled,
+        )
+    }
 }
 
 /**

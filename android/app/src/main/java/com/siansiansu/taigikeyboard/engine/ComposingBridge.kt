@@ -480,7 +480,9 @@ private inline fun composingFetchDispatch(
 ): RustEngineBridge.ContinuousFetchResult {
     val payload = composingProtoRoundtrip(methodSetter, op, generation, config)
         ?: return RustEngineBridge.ContinuousFetchResult.NOOP
-    val transition = synthComposing(payload)
+    // FetchAtPos is read-only: the response carries no effects and the
+    // platform mirrors nothing from it, so only the candidate carrier is
+    // decoded (no `synthComposing` walk per fetch).
     val candidates: List<RustEngineBridge.ContinuousCandidate>? = if (payload.hasContinuous()) {
         payload.continuous.candidatesList.map { msg ->
             // v3.5.8 Phase 9 Item 5 — `hanji` is proto3 `optional`;
@@ -515,10 +517,9 @@ private inline fun composingFetchDispatch(
     }
     RustEngineBridge.backend.tdebug("RustEngineBridge") {
         val count = candidates?.size ?: -1
-        "[FFI<-] fn=composingFetchDispatch op=$op effects=${transition.effects.size} candidates=$count"
+        "[FFI<-] fn=composingFetchDispatch op=$op candidates=$count"
     }
     return RustEngineBridge.ContinuousFetchResult(
-        transition = transition,
         candidates = candidates,
         isBridgeFailure = false,
     )

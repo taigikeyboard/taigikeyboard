@@ -38,7 +38,7 @@ use ranking::build_frequency_map;
 
 /// Decode the proto request into a typed `Intent`. Returns `MissingMethod`
 /// when `oneof method` is empty.
-pub(crate) fn decode_intent(req: &ComposingRequest) -> Result<Intent, ComposingError> {
+pub fn decode_intent(req: &ComposingRequest) -> Result<Intent, ComposingError> {
     use composing_request::Method;
     let Some(method) = req.method.clone() else {
         return Err(ComposingError::MissingMethod);
@@ -95,16 +95,36 @@ pub(crate) fn decode_intent(req: &ComposingRequest) -> Result<Intent, ComposingE
 /// layer up in `EngineHandle::handle` (`handle.rs`); this fn is the
 /// in-process Rust API also used directly by the workspace tests.
 ///
-/// `FetchAtPos` is short-circuited here (not via `engine.apply`) so the
-/// pure transition table stays free of lexicon access. See module docs.
+/// Read-only intents (`FetchAtPos`, `QueryState`) are short-circuited via
+/// [`query`] (not `engine.apply`) so the pure transition table stays free
+/// of lexicon access. See module docs.
 pub fn handle(
     req: &ComposingRequest,
     engine: &mut Engine,
     config: &AppConfig,
 ) -> Result<ComposingResponse, ComposingError> {
     let intent = decode_intent(req)?;
+    Ok(apply(intent, engine, config))
+}
+
+/// Apply an already-decoded intent. Read-only intents are answered by
+/// [`query`] so the pure transition table never sees them.
+pub fn apply(intent: Intent, engine: &mut Engine, config: &AppConfig) -> ComposingResponse {
+    if intent.is_read_only() {
+        query(&intent, engine, config)
+    } else {
+        engine.apply(intent, config)
+    }
+}
+
+/// Answer a read-only intent (`Intent::is_read_only`) from `engine` without
+/// mutating it — the `&Engine` receiver is the type-level guarantee that
+/// `EngineHandle` relies on when it runs a fetch against a released-lock
+/// clone. Callers gate on `is_read_only`; a mutating intent here is a
+/// programming error.
+pub fn query(intent: &Intent, engine: &Engine, config: &AppConfig) -> ComposingResponse {
     match intent {
-        Intent::QueryState => Ok(engine.snapshot(config)),
+        Intent::QueryState => engine.snapshot(config),
         Intent::FetchAtPos {
             position,
             frequency_entries,
@@ -112,17 +132,17 @@ pub fn handle(
             custom_entries,
             enabled_sources_bitmask,
             literal_roman_candidate_disabled,
-        } => Ok(handle_fetch_at_pos(
+        } => handle_fetch_at_pos(
             engine,
-            position,
-            &frequency_entries,
-            now_ms,
-            &custom_entries,
-            enabled_sources_bitmask,
-            literal_roman_candidate_disabled,
+            *position,
+            frequency_entries,
+            *now_ms,
+            custom_entries,
+            *enabled_sources_bitmask,
+            *literal_roman_candidate_disabled,
             config,
-        )),
-        intent => Ok(engine.apply(intent, config)),
+        ),
+        mutating => unreachable!("query() called with mutating intent {mutating:?}"),
     }
 }
 
