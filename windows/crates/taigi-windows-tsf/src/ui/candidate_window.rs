@@ -154,7 +154,8 @@ pub struct CandidateWindow {
     cells: Vec<CandidateCellContent>,
     /// Per-cell measurements taken once per list (a paint never measures).
     primary_widths: Vec<f32>,
-    annotation_widths: Vec<f32>,
+    /// `None` for a cell with no annotation to draw.
+    annotation_widths: Vec<Option<f32>>,
     /// DirectWrite layouts by cell and box, for this list; cleared with it.
     layouts: RefCell<HashMap<LayoutKey, IDWriteTextLayout>>,
     /// Declared after everything built from it, because that is the drop
@@ -384,7 +385,7 @@ impl CandidateWindow {
         self.annotation_widths = self
             .cells
             .iter()
-            .map(|cell| metrics.annotation_text_width(cell.annotation.as_deref(), &measurer))
+            .map(|cell| metrics.measure_annotation(cell.annotation.as_deref(), &measurer))
             .collect();
     }
 
@@ -444,14 +445,15 @@ impl CandidateWindow {
         Some(self.frame())
     }
 
+    /// Lays the list out from the widths `measure_cells` took — every
+    /// keystroke's list is measured once, not once for the columns and again
+    /// for the cells.
     fn build_layout(&self, layout: CandidateLayout, metrics: &CandidateMetrics) -> LayoutModel {
-        let measurer = DWriteMeasurer {
-            factory: &self.factory,
-        };
         let widths: Vec<f32> = self
-            .cells
+            .primary_widths
             .iter()
-            .map(|cell| metrics.measure_width(cell, &measurer))
+            .zip(&self.annotation_widths)
+            .map(|(&primary, &annotation)| metrics.cell_width(primary, annotation))
             .collect();
         let maximum = self.maximum_window_width(metrics);
         match layout {
@@ -1152,8 +1154,10 @@ impl CandidateWindow {
                     Rect::new(centre - primary_width / 2.0, top, primary_width, line1),
                     text_color,
                 );
-                if let Some(annotation) = &cell.annotation {
-                    let annotation_width = self.annotation_widths[index].min(available);
+                if let (Some(annotation), Some(measured)) =
+                    (&cell.annotation, self.annotation_widths[index])
+                {
+                    let annotation_width = measured.min(available);
                     self.draw_text(
                         target,
                         brush,

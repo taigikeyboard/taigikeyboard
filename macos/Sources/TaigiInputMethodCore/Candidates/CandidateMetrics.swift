@@ -387,7 +387,14 @@ extension CandidateMetrics {
     /// and a shared template view would drag its Auto Layout state into every
     /// measurement.
     func measureWidth(_ cell: CandidateCellContent) -> CGFloat {
-        let text = max(primaryColumnFloor, measurePrimaryWidth(cell.text))
+        cellWidth(for: cell, primaryWidth: measurePrimaryWidth(cell.text))
+    }
+
+    /// `measureWidth` for a cell whose primary text is already measured: the
+    /// vertical layout measures every primary once for its column and hands
+    /// the widths back in, so a two-hundred-row list is not measured twice.
+    func cellWidth(for cell: CandidateCellContent, primaryWidth: CGFloat) -> CGFloat {
+        let text = max(primaryColumnFloor, primaryWidth)
         switch cellArrangement {
         case .inline:
             return horizontalPadding + indexColumnWidth + text

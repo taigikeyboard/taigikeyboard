@@ -332,15 +332,29 @@ impl CandidateMetrics {
 
     /// The width a cell wants for `cell`.
     pub fn measure_width(&self, cell: &CandidateCellContent, measurer: &dyn TextMeasurer) -> f32 {
-        let text = self
-            .primary_column_floor
-            .max(self.measure_primary_width(&cell.text, measurer));
+        self.cell_width(
+            self.measure_primary_width(&cell.text, measurer),
+            self.measure_annotation(cell.annotation.as_deref(), measurer),
+        )
+    }
+
+    /// `measure_width` for a cell whose two texts are already measured:
+    /// `primary_width` at the candidate font, `annotation_width` at the
+    /// annotation font, or `None` for an absent or empty annotation. The
+    /// window measures every cell's texts once per list
+    /// (`CandidateWindow::measure_cells`) and lays out from those, rather than
+    /// building a second DirectWrite layout per text just to sum the same
+    /// numbers with the chrome.
+    pub fn cell_width(&self, primary_width: f32, annotation_width: Option<f32>) -> f32 {
+        let text = self.primary_column_floor.max(primary_width);
         match self.cell_arrangement {
+            // The gap is charged beside an annotation that is there, whatever
+            // it measured: an absent second script must cost the cell no width.
             CandidateCellArrangement::Inline => {
                 self.horizontal_padding
                     + self.index_column_width()
                     + text
-                    + self.annotation_width(cell.annotation.as_deref(), measurer)
+                    + annotation_width.map_or(0.0, |width| self.candidate_annotation_gap + width)
                     + self.horizontal_padding
             }
             // The two scripts are on top of each other, so the cell is as wide
@@ -348,7 +362,7 @@ impl CandidateMetrics {
             CandidateCellArrangement::Stacked => {
                 self.horizontal_padding
                     + self.index_column_width()
-                    + text.max(self.annotation_text_width(cell.annotation.as_deref(), measurer))
+                    + text.max(annotation_width.unwrap_or(0.0))
                     + self.horizontal_padding
             }
         }
@@ -365,28 +379,16 @@ impl CandidateMetrics {
             .max(cell_width - self.horizontal_padding - self.index_column_width() - trailing_inset)
     }
 
-    /// The gap plus the annotation, or nothing when absent or empty.
-    pub fn annotation_width(&self, annotation: Option<&str>, measurer: &dyn TextMeasurer) -> f32 {
-        match annotation.filter(|a| !a.is_empty()) {
-            None => 0.0,
-            Some(annotation) => {
-                self.candidate_annotation_gap
-                    + self.annotation_text_width(Some(annotation), measurer)
-            }
-        }
-    }
-
-    /// The annotation's own width, without the gap — what a stacked cell
-    /// measures.
-    pub fn annotation_text_width(
+    /// The annotation's own width at the annotation font, or `None` for an
+    /// absent or empty one — the shape `cell_width` takes.
+    pub fn measure_annotation(
         &self,
         annotation: Option<&str>,
         measurer: &dyn TextMeasurer,
-    ) -> f32 {
-        match annotation.filter(|a| !a.is_empty()) {
-            None => 0.0,
-            Some(annotation) => measurer.width(annotation, self.annotation_font()).ceil(),
-        }
+    ) -> Option<f32> {
+        annotation
+            .filter(|a| !a.is_empty())
+            .map(|annotation| measurer.width(annotation, self.annotation_font()).ceil())
     }
 }
 
@@ -587,8 +589,8 @@ mod tests {
         // trace: CandidateMetricsTests.swift:220-353.
         let m = metrics(T::Medium, W::Medium, Inline);
         let measurer = EmMeasurer;
-        assert_eq!(m.annotation_width(None, &measurer), 0.0);
-        assert_eq!(m.annotation_width(Some(""), &measurer), 0.0);
+        assert_eq!(m.measure_annotation(None, &measurer), None);
+        assert_eq!(m.measure_annotation(Some(""), &measurer), None);
         let cell = CandidateCellContent::new("tâi", Some("台".into()));
         let expected = m.horizontal_padding()
             + m.index_width()
@@ -634,6 +636,35 @@ mod tests {
         );
         assert!(stacked_width < m.measure_width(&wide_annotation, &measurer));
         assert!(stacked.item_height() > m.item_height());
+    }
+
+    /// `cell_width` over pre-measured texts is `measure_width` — the window
+    /// lays out from one measuring pass, so the two must not drift apart.
+    #[test]
+    fn cell_width_from_premeasured_texts_matches_measure_width() {
+        let measurer = EmMeasurer;
+        let cells = [
+            CandidateCellContent::new("tâi", Some("台".into())),
+            CandidateCellContent::new("tâi", Some("台語齒盤".into())),
+            CandidateCellContent::new("永", None),
+            CandidateCellContent::new("永", Some("".into())),
+        ];
+        for m in [
+            metrics(T::Medium, W::Medium, Inline),
+            metrics(T::Medium, W::Medium, Stacked),
+        ] {
+            for cell in &cells {
+                let primary = m.measure_primary_width(&cell.text, &measurer);
+                let annotation = m.measure_annotation(cell.annotation.as_deref(), &measurer);
+                assert_eq!(
+                    m.cell_width(primary, annotation),
+                    m.measure_width(cell, &measurer),
+                    "{:?} {:?}",
+                    m.cell_arrangement(),
+                    cell
+                );
+            }
+        }
     }
 
     /// An inline row is the point size plus padding for the bundled faces,

@@ -454,6 +454,6 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
 
 /// A plain view whose origin is the top-left corner, so layout code can place
 /// row 0 at y=0 and grow downward the way it reads.
-final class FlippedContainerView: NSView {
+class FlippedContainerView: NSView {
     override var isFlipped: Bool { true }
 }

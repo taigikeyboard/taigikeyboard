@@ -126,8 +126,7 @@ final class CandidateIndexLabelTests: XCTestCase {
         _ = panel.updateCandidates(Self.cells)
         // Shown, because the numbering is read off the live scroll viewport —
         // an unshown window never scrolls, so the anchor could not move.
-        panel.setFrame(NSRect(x: 0, y: 0, width: 320, height: 320), display: false)
-        panel.orderFront(nil)
+        showForScrolling(panel)
         defer { panel.orderOut(nil) }
 
         for _ in 0 ..< 20 {
@@ -321,8 +320,7 @@ final class CandidateIndexLabelTests: XCTestCase {
         _ = panel.updateCandidates(Self.cells)
         XCTAssertEqual(panel.candidateIndex(forKeySlot: 0), 1, "shifted at the top")
 
-        panel.setFrame(NSRect(x: 0, y: 0, width: 320, height: 320), display: false)
-        panel.orderFront(nil)
+        showForScrolling(panel)
         defer { panel.orderOut(nil) }
         for _ in 0 ..< 20 {
             panel.navigate(.nextCandidate)
@@ -391,39 +389,5 @@ final class CandidateIndexLabelTests: XCTestCase {
             presenter.candidateIndex(forKeySlot: 8, ownedBy: owner),
             "the ninth key falls off the page rather than reaching a tenth cell",
         )
-    }
-
-    // MARK: - Helpers
-
-    /// Every digit drawn in `panel` resolves to the candidate its slot chord
-    /// commits — the whole point of drawing them.
-    private func assertDigitsMatchSlots(
-        in panel: CandidateBasePanel, file: StaticString = #filePath, line: UInt = #line,
-    ) {
-        for (key, item) in numberedCells(in: panel) {
-            // A digit label names its slot directly; the bare keys map by
-            // position instead.
-            guard let digit = Int(key)
-                ?? CandidateSlotKeySet.bareKeyRow.firstIndex(of: key).map({ $0 + 1 })
-            else {
-                return XCTFail(
-                    "\(type(of: panel)): drew a keyless label \"\(key)\"", file: file, line: line,
-                )
-            }
-            XCTAssertEqual(
-                panel.candidateIndex(forKeySlot: digit - 1), item.absoluteIndex,
-                "\(type(of: panel)): the cell drawn \"\(key)\" is not what that key picks",
-                file: file, line: line,
-            )
-        }
-    }
-
-    /// The cells drawing a digit, in the order they are laid out.
-    private func numberedCells(
-        in panel: CandidateBasePanel,
-    ) -> [(digit: String, item: CandidateItemView)] {
-        TestFixtures.candidateCells(in: panel).compactMap { item in
-            item.indexLabelText.isEmpty ? nil : (item.indexLabelText, item)
-        }
     }
 }

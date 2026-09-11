@@ -37,6 +37,10 @@ final class CandidateItemView: NSView {
     /// break the column its neighbours align on.
     var indexLabelText: String { indexLabel.stringValue }
 
+    /// The candidate text currently drawn — what a test reads to check a row
+    /// was built from the cells it should have been.
+    var candidateLabelText: String { candidateLabel.stringValue }
+
     /// Which candidate this cell shows, in the absolute order of
     /// `CandidateWindowContent.cells`. The identity clicks and highlights
     /// speak in.
