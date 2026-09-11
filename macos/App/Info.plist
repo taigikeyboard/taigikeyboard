@@ -64,9 +64,9 @@
 	     `make version-desktop x.y.z`, which sets the same version on Windows in
 	     the same pass. -->
 	<key>CFBundleShortVersionString</key>
-	<string>3.6.8</string>
+	<string>3.6.9</string>
 	<key>CFBundleVersion</key>
-	<string>30608</string>
+	<string>30609</string>
 	<key>InputMethodConnectionName</key>
 	<string>com.siansiansu.inputmethod.TaigiKeyboard_Connection</string>
 	<key>InputMethodServerControllerClass</key>
