@@ -1041,6 +1041,7 @@ dependencies = [
  "taigi-windows-storage",
  "taigi-windows-update",
  "tempfile",
+ "unicode-normalization",
  "windows-reactor",
  "windows-reactor-setup",
 ]

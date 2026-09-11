@@ -215,6 +215,16 @@ pub const FONT_TYPE: SettingsKey<CandidateFontChoice> =
 /// (`SettingsStore.swift`'s `customFontFile`).
 pub const CUSTOM_FONT_FILE: SettingsKey<&'static str> = SettingsKey::new("customFontFile", "");
 
+/// Which OS-installed family the candidate window is set in, by the name the
+/// OS reports. Read only while `fontType` holds
+/// `CandidateFontSelection::INSTALLED_RAW`; the same two-key shape as
+/// `customFontFile`, and its own key rather than that one because a family
+/// name is not a file name — `customFontFile` is treated as a path component.
+/// Desktop-only and local like a file name (`SettingsStore.swift`'s
+/// `installedFontFamily`).
+pub const INSTALLED_FONT_FAMILY: SettingsKey<&'static str> =
+    SettingsKey::new("installedFontFamily", "");
+
 /// Which keys type a tone, and so which keys pick a candidate
 /// (`ToneInputScheme`). Desktop-only: the phone keyboards have a tone row of
 /// their own and no slot keys, so the default is owned by the key contract

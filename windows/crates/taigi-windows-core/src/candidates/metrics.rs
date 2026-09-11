@@ -128,13 +128,13 @@ impl CandidateMetrics {
             });
         let item_height = match stacked_line_heights {
             // The point size is what the bundled faces need: their line boxes
-            // fit the row it gives. A face the user brought has no such
-            // guarantee — tall ascenders, stacked diacritics and a fallback
-            // glyph all draw outside it — so a custom face is given its own
-            // measured line box instead. Bundled selections keep the arithmetic
-            // they shipped with, exactly
+            // fit the row it gives. A face the user brought, or one the OS
+            // supplies, has no such guarantee — tall ascenders, stacked
+            // diacritics and a fallback glyph all draw outside it — so those
+            // are given their own measured line box instead. Bundled
+            // selections keep the arithmetic they shipped with, exactly
             // (`CandidateMetrics.swift`'s inline arm).
-            None if font_selection.is_custom() => {
+            None if font_selection.requires_line_box_measurement() => {
                 (candidate_font_size.max(measurer.line_height(candidate_font)) + vertical_padding)
                     .ceil()
             }
@@ -681,7 +681,22 @@ mod tests {
 
         assert_ne!(first, second);
         assert_ne!(first, CandidateFontSelection::default());
-        assert!(first.is_custom());
+        assert!(first.requires_line_box_measurement());
         assert!(first.built_in().is_none());
+    }
+
+    /// An installed family measures its line box like a custom face: neither
+    /// carries the bundled roster's fits-the-row guarantee — and two installed
+    /// ids are two typefaces.
+    #[test]
+    fn an_installed_family_is_measured_and_distinct_per_id() {
+        use crate::settings::InstalledFontId;
+        let first = CandidateFontSelection::Installed(InstalledFontId(1));
+        let second = CandidateFontSelection::Installed(InstalledFontId(2));
+
+        assert!(first.requires_line_box_measurement());
+        assert_ne!(first, second);
+        assert_ne!(first, CandidateFontSelection::Custom(CustomFontId(1)));
+        assert_eq!(first.built_in(), None);
     }
 }
