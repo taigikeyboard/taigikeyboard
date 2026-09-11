@@ -17,6 +17,7 @@ import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.i18n.ProvideDisplayLanguage
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
+import com.siansiansu.taigikeyboard.ime.core.isKeyboardNightMode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.keyboard.AnchorSide
@@ -74,9 +75,10 @@ class KeyPopupManager(
     private var row1count: Int = 0
     private var activeExtIndex: Int? = null
 
-    /** Resolved once per [show] and reused by the immediately-following
-     *  [extend] during a long-press; cleared on [hide] so a fresh touch-down
-     *  picks up any theme/font change between popups. */
+    /** Memoised [resolveDisplayParams] output. Re-resolved only when one of its
+     *  inputs flips (see [DisplayKey]); every other press reuses it, so the five
+     *  theme-attr lookups + typeface load stop running on each touch-down. */
+    private var cachedDisplayKey: DisplayKey? = null
     private var cachedDisplay: PopupDisplayParams? = null
 
     override val isShowingPopup: Boolean
@@ -112,7 +114,12 @@ class KeyPopupManager(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT,
             )
-            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
+            // The window is dismissed on every key UP (see [hide]), which detaches this
+            // view. The default DisposeOnDetachedFromWindow would then tear the whole
+            // composition down and rebuild it on the next DOWN — theme, display-language
+            // scope and its `createConfigurationContext` included. Tie the composition to
+            // the IME lifecycle instead so dismiss/show only re-attaches the view.
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
                 TaigiKeyboardTheme {
                     // Popups compose in a SEPARATE PopupWindow tree from the keyboard body, so they
@@ -185,6 +192,27 @@ class KeyPopupManager(
         hostView = view
     }
 
+    /**
+     * Returns the display params for the current theme / font / screen config,
+     * re-resolving only when one of those inputs changed since the last press.
+     * Same shape as [com.siansiansu.taigikeyboard.ime.core.ThemeAppearanceCache].
+     */
+    private fun displayParams(): PopupDisplayParams {
+        val config = ime.resources.configuration
+        val key = DisplayKey(
+            isNightMode = isKeyboardNightMode(ime),
+            fontType = ime.prefs.fontType,
+            densityDpi = config.densityDpi,
+            fontScale = config.fontScale,
+        )
+        val cached = cachedDisplay
+        if (cached != null && key == cachedDisplayKey) return cached
+        return resolveDisplayParams().also {
+            cachedDisplayKey = key
+            cachedDisplay = it
+        }
+    }
+
     private fun resolveDisplayParams(): PopupDisplayParams {
         val res = ime.resources
         val density = res.displayMetrics.density
@@ -204,10 +232,6 @@ class KeyPopupManager(
             typeface = TypefaceLoader.getTypefaceByType(prefs.fontType, ime),
         )
     }
-
-    private fun freshDisplayParams(): PopupDisplayParams = resolveDisplayParams().also { cachedDisplay = it }
-
-    private fun reuseDisplayParams(): PopupDisplayParams = cachedDisplay ?: freshDisplayParams()
 
     /**
      * Shows a preview popup for the given [anchor]. Mirrors the legacy
@@ -243,7 +267,7 @@ class KeyPopupManager(
 
         installPopupViewTreeOwnersIfNeeded()
 
-        val display = freshDisplayParams()
+        val display = displayParams()
         _previewState.value = PreviewState.Visible(
             label = anchor.computedLabel,
             showThreeDots = anchor.data.popup.isNotEmpty(),
@@ -294,8 +318,8 @@ class KeyPopupManager(
 
         installPopupViewTreeOwnersIfNeeded()
 
-        val display = reuseDisplayParams()
-        val cells = anchor.popupCells
+        val display = displayParams()
+        val cells = anchor.popupCells.value
 
         // Closed-form: the initially-active cell sits at row1count + offset
         // for LEFT anchors and at row1count + (row0count - 1 - offset) for
@@ -432,7 +456,7 @@ class KeyPopupManager(
         // lifecycle cleanup, so toggling `_previewState` to Hidden alone
         // leaves the previous frame painted on the popup decor view until
         // a new press triggers redraw — visible as a lingering callout on
-        // tap UP. Mirrors `dismissAllPopups()`. Pins
+        // tap UP. Pins
         // `INVARIANT_keyboard_popup_hide_dismisses_preview_window`.
         if (window.isShowing) {
             window.dismiss()
@@ -441,7 +465,6 @@ class KeyPopupManager(
             windowExt.dismiss()
         }
         activeExtIndex = null
-        cachedDisplay = null
         // Clear the anchor so a subsequent press whose hit-test misses
         // (`activeKey == null`) doesn't read the previous press's KeyData
         // through `activeKeyData()`. Pins
@@ -449,19 +472,18 @@ class KeyPopupManager(
         lastAnchor = null
     }
 
-    override fun dismissAllPopups() {
-        _previewState.value = PreviewState.Hidden
-        _extendedState.value = ExtendedState.Hidden
-        if (window.isShowing) {
-            window.dismiss()
-        }
-        if (windowExt.isShowing) {
-            windowExt.dismiss()
-        }
-        activeExtIndex = null
-        cachedDisplay = null
-        lastAnchor = null
-    }
+    override fun dismissAllPopups() = hide()
+
+    /** The [resolveDisplayParams] inputs that can change at runtime today (night-mode
+     *  theme variant, font pref, dp/sp scaling); equality drives the re-resolve gate.
+     *  The theme style itself is fixed (`R.style.KeyboardTheme`) and the popup dimens
+     *  have no qualifier variants, so neither needs a key field. */
+    private data class DisplayKey(
+        val isNightMode: Boolean,
+        val fontType: String,
+        val densityDpi: Int,
+        val fontScale: Float,
+    )
 
     private companion object {
         /** Key codes whose touch-down does NOT trigger a preview popup but
