@@ -1,15 +1,15 @@
 //! `EngineHandle` — process-singleton lifecycle for the lexicon engine.
 //!
-//! Holds `Mutex<Option<EngineState>>`. `install` builds a fresh
+//! Holds `RwLock<Option<EngineState>>` — `install` is the only writer, every
+//! query takes a shared read lock so a long dictionary scan on one thread
+//! never blocks a composing `Append` on another. `install` builds a fresh
 //! `EngineState` from validated paths and atomically swaps it in
 //! ON SUCCESS — if any step fails, the previous state stays intact.
 //!
-//! `with_state` borrows the active state under the mutex, runs the
-//! caller's closure, and returns. Concurrent `search` calls serialize
-//! with each other and with `install`. No read/write split until
-//! profiling proves contention (audit § scope D8 deferred).
+//! `with_state` borrows the active state under a read lock, runs the
+//! caller's closure, and returns; only `install` waits for readers.
 
-use std::sync::Mutex;
+use std::sync::RwLock;
 
 use once_cell::sync::Lazy;
 
@@ -43,7 +43,7 @@ pub struct EngineState {
 // Zero-sized control handle; every API is an associated function.
 pub struct EngineHandle;
 
-static STATE: Lazy<Mutex<Option<EngineState>>> = Lazy::new(|| Mutex::new(None));
+static STATE: Lazy<RwLock<Option<EngineState>>> = Lazy::new(|| RwLock::new(None));
 
 // Post-install stats, surfaced to the platform UI and health checks.
 #[derive(Debug, Clone, Copy)]
@@ -80,21 +80,23 @@ impl EngineHandle {
         };
 
         let mut guard = STATE
-            .lock()
-            .map_err(|_| LexiconError::Internal("install: state mutex poisoned".into()))?;
+            .write()
+            .map_err(|_| LexiconError::Internal("install: state lock poisoned".into()))?;
         *guard = Some(new_state);
 
         Ok(stats)
     }
 
-    // Runs the closure over the active EngineState under the mutex; NotInitialized before install.
+    // Runs the closure over the active EngineState under a shared read lock; NotInitialized
+    // before install. Closures must not call `with_state` again (a pending writer can
+    // deadlock a recursive reader).
     pub fn with_state<F, R>(f: F) -> Result<R, LexiconError>
     where
         F: FnOnce(&EngineState) -> Result<R, LexiconError>,
     {
         let guard = STATE
-            .lock()
-            .map_err(|_| LexiconError::Internal("with_state: state mutex poisoned".into()))?;
+            .read()
+            .map_err(|_| LexiconError::Internal("with_state: state lock poisoned".into()))?;
         match guard.as_ref() {
             Some(state) => f(state),
             None => Err(LexiconError::NotInitialized),

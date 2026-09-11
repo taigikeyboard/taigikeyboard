@@ -459,6 +459,17 @@ pub enum Intent {
     },
 }
 
+impl Intent {
+    /// `true` for intents that only read engine state. `dispatch::query`
+    /// answers them from `&Engine`; `EngineHandle` runs them against a
+    /// clone with its locks released and never lets them reset state on a
+    /// generation mismatch (a stale worker-thread fetch must not wipe a
+    /// newer context).
+    pub fn is_read_only(&self) -> bool {
+        matches!(self, Intent::QueryState | Intent::FetchAtPos { .. })
+    }
+}
+
 #[derive(Debug, Error)]
 pub enum ComposingError {
     #[error("composing request missing method")]
@@ -474,6 +485,13 @@ pub struct Engine {
 impl Engine {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// The response a fresh (Idle) engine gives: what a generation-mismatch
+    /// reset would have produced. `EngineHandle` answers read-only intents
+    /// carrying a stale generation with this instead of resetting.
+    pub fn idle_snapshot(config: &AppConfig) -> ComposingResponse {
+        Self::default().snapshot(config)
     }
 
     /// Pure read — no state mutation, no effects emitted. Used by

@@ -29,10 +29,10 @@ import kotlinx.coroutines.CancellationException
 class TaigiAutocompleteService(
     private val logger: LoggerBackend,
     /**
-     * Continuous-input candidate fetcher. Caller MUST hop to the IME main
-     * thread before invoking [com.siansiansu.taigikeyboard.ime.text.composing
-     * .ComposingManager.fetchContinuousCandidates] — the fetch's
-     * `applyTransition` writes to InputConnection.
+     * Continuous-input candidate fetcher. Thread-agnostic: production wires
+     * [com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager
+     * .fetchContinuousCandidates], a read-only engine query that never
+     * touches InputConnection, and invokes it on `Dispatchers.Default`.
      */
     private val continuousFetcher: suspend () -> List<RustEngineBridge.ContinuousCandidate>,
     /**

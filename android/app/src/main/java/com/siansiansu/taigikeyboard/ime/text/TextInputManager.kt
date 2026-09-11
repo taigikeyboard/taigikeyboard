@@ -185,7 +185,9 @@ class TextInputManager(
             CandidateUpdateCoordinator(
                 scope = this,
                 taigikeyboard = taigikeyboard,
-                getComposingManager = { composingManager },
+                // Synchronized getter: the coordinator resolves the manager from
+                // a worker thread while `composingManager` is swapped on Main.
+                getComposingManager = ::getComposingManager,
                 smartbarManager = smartbarManager,
             )
     }

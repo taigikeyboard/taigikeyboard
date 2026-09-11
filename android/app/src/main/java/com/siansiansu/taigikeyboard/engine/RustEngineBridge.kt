@@ -516,13 +516,11 @@ object RustEngineBridge {
      * r3216857164 — `ios/Sources/TaigiKeyboard/Engine/RustEngineBridge.swift`.
      */
     data class ContinuousFetchResult(
-        val transition: ComposingTransition,
         val candidates: List<ContinuousCandidate>?,
         val isBridgeFailure: Boolean,
     ) {
         companion object {
             val NOOP = ContinuousFetchResult(
-                transition = ComposingTransition.NOOP,
                 candidates = null,
                 isBridgeFailure = true,
             )

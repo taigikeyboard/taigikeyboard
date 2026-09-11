@@ -619,3 +619,38 @@ fn synth_association_bin_with_one_entry(
 
     out
 }
+
+// --- with_state readers do not serialize against each other -------------------
+
+/// A composing `Append` on the IME main thread renders its display through
+/// `with_state` (compound-hyphen oracle) while a worker-thread candidate
+/// fetch may be inside a multi-millisecond `with_state` prefix scan. The
+/// state lock must therefore be shared for readers: a second reader that
+/// starts while the first is still held has to complete, not wait.
+#[test]
+fn with_state_admits_a_second_reader_while_one_is_held() {
+    let _guard = engine_install_lock();
+    let (fst_path, dict_path, assoc_path) = build_minimal_install_fixture("concurrent-readers");
+    let paths = LexiconPaths::validated(
+        fst_path.to_str().unwrap(),
+        dict_path.to_str().unwrap(),
+        assoc_path.to_str().unwrap(),
+        "",
+        1,
+    )
+    .expect("paths validated");
+    EngineHandle::install(paths).expect("install");
+
+    let second_reader_finished = EngineHandle::with_state(|_held| {
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let outcome = EngineHandle::with_state(|_| Ok(()));
+            tx.send(outcome.is_ok()).expect("main thread still waiting");
+        });
+        Ok(rx
+            .recv_timeout(std::time::Duration::from_secs(5))
+            .expect("second with_state reader must not block behind the first"))
+    })
+    .expect("first with_state");
+    assert!(second_reader_finished);
+}
