@@ -5,7 +5,8 @@ of digits — with a key card a shortcut raises; the candidate window can be tur
 off entirely and the romanization committed as typed; a symbol picker opens the
 whole punctuation table on one chord; the caret moves inside what is being
 composed; ⇧ with a selection key commits that candidate in the other script; and
-the candidate window can be drawn in a typeface the user supplies. 快捷鍵 is
+the candidate window can be drawn in a typeface the user supplies or in any the
+OS already has. 快捷鍵 is
 re-ordered and titled to read in the order the keys are met. macOS and Windows
 have all of it.
 
@@ -63,6 +64,14 @@ have all of it.
   re-importing the same file was refused with "another typeface is already called
   …", for a font that was no longer there: macOS keeps a lookup that an
   unregister never clears, and the check believed it. (#37)
+- **The typefaces the Mac already has are in the list.** 字型管理 lists every
+  installed family after the bundled five and the added files, so a face on the
+  Mac is one click away rather than an import that was refused with "another
+  typeface is already called …". A search field and a pager — one page of ten
+  rows, as 自訂詞庫 has — keep a few hundred families usable in one table.
+  Importing a file whose face the Mac already has selects that row and says so
+  instead of failing; a family installed or removed in Font Book is picked up
+  without restarting the input method. (#45)
 
 #### Settings
 
@@ -107,6 +116,11 @@ have all of it.
 
 - **A typeface of your own for the candidate window**, added in 字型管理 and
   listed under its file name. (#16, #37)
+- **The typefaces Windows already has are in the list**, after the bundled five
+  and the added files, with the same search field and ten-row pager as the Mac's
+  pane. Importing a file whose face Windows already has selects that row and says
+  so; a family installed or removed in Windows' font settings is picked up by the
+  next candidate window. (#46)
 
 #### Settings
 
