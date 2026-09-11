@@ -9,6 +9,7 @@
 
 mod cards;
 mod file_dialog;
+mod list_pager;
 mod list_selection;
 mod pages;
 #[cfg(test)]

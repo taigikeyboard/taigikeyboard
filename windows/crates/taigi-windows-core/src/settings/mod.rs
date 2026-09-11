@@ -18,7 +18,8 @@ pub mod launch;
 
 pub use choices::{
     AppearanceMode, CandidateFontChoice, CandidateFontSelection, CandidateLayout,
-    CandidateTextSizeChoice, CandidateWindowSizeChoice, CustomFontId, SettingChoice, SettingsPane,
+    CandidateTextSizeChoice, CandidateWindowSizeChoice, CustomFontId, InstalledFontId, SettingChoice,
+    SettingsPane,
 };
 pub use document::{SettingsDocument, SettingsKey};
 pub use engine_settings::{

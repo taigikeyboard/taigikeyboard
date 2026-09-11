@@ -70,8 +70,36 @@ pub fn inspect(path: &Path) -> Result<FontFaceInfo, FontFileError> {
     }
 }
 
+/// Every family the OS has installed, by the name `family_name_of` picks, in
+/// DirectWrite's order. Read fresh each call — `check_for_updates` is on, so a
+/// font installed or removed since the last call is reflected.
+///
+/// What the 字型管理 pane lists after the bundled and imported rows (and sorts,
+/// by the same fold it searches with); nothing is loaded for a family until
+/// the candidate window asks the system collection for it.
+pub fn system_families() -> Result<Vec<String>, FontFileError> {
+    #[cfg(windows)]
+    {
+        imp::system_families()
+    }
+    #[cfg(not(windows))]
+    {
+        Err(FontFileError::NotAFont)
+    }
+}
+
+/// The locale a family is named in for storage, display and lookup alike.
+///
+/// One rule for every reader: the name `inspect` reads out of a file, the
+/// name the pane lists and stores, and the name the renderer looks up have to
+/// be the SAME string for the same family, or an import would not find the
+/// installed row it duplicates and a stored selection would not resolve.
+/// `en-us` first because nearly every family carries it; the first name the
+/// family declares otherwise.
+pub const FAMILY_NAME_LOCALE: &str = "en-us";
+
 #[cfg(windows)]
-pub use imp::load;
+pub use imp::{load, system_collection};
 
 #[cfg(windows)]
 mod imp {
@@ -79,9 +107,10 @@ mod imp {
     use std::path::Path;
     use windows::core::{Interface, BOOL, PCWSTR, PWSTR};
     use windows::Win32::Graphics::DirectWrite::{
-        DWriteCreateFactory, IDWriteFactory3, IDWriteFontCollection1, IDWriteFontFile,
-        IDWriteFontSetBuilder1, IDWriteLocalizedStrings, DWRITE_FACTORY_TYPE_ISOLATED,
-        DWRITE_FONT_FACE_TYPE_UNKNOWN, DWRITE_FONT_FILE_TYPE_UNKNOWN,
+        DWriteCreateFactory, IDWriteFactory3, IDWriteFontCollection1, IDWriteFontFamily,
+        IDWriteFontFile, IDWriteFontSetBuilder1, IDWriteLocalizedStrings,
+        DWRITE_FACTORY_TYPE_ISOLATED, DWRITE_FACTORY_TYPE_SHARED, DWRITE_FONT_FACE_TYPE_UNKNOWN,
+        DWRITE_FONT_FILE_TYPE_UNKNOWN,
     };
 
     /// The file's family as a collection of its own, plus its name.
@@ -118,11 +147,65 @@ mod imp {
         Ok(info)
     }
 
+    /// The OS's font collection, as this factory sees it. `check_for_updates`
+    /// makes DirectWrite look for fonts installed or removed since the factory
+    /// last built the collection; without it, the answer may predate them.
+    pub fn system_collection(
+        factory: &IDWriteFactory3,
+        check_for_updates: bool,
+    ) -> Result<IDWriteFontCollection1, FontFileError> {
+        let mut collection: Option<IDWriteFontCollection1> = None;
+        // SAFETY: the out-parameter is a live local; the call fills it or
+        // fails. Downloadable (cloud) fonts are left out: a family the OS has
+        // not fetched yet is not one the candidate window can draw in now.
+        unsafe { factory.GetSystemFontCollection(false, &mut collection, check_for_updates) }
+            .map_err(refused)?;
+        collection.ok_or_else(|| FontFileError::DirectWrite("no system font collection".to_owned()))
+    }
+
+    pub fn system_families() -> Result<Vec<String>, FontFileError> {
+        // SHARED, unlike `inspect`: enumerating the OS's fonts is exactly the
+        // work DirectWrite's process-wide cache exists for, and nothing built
+        // here escapes to be drawn with.
+        // SAFETY: plain factory creation on the calling thread.
+        let factory: IDWriteFactory3 =
+            unsafe { DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED) }.map_err(refused)?;
+        let collection = system_collection(&factory, true)?;
+        // SAFETY: the collection is live; the call only reads its count.
+        let count = unsafe { collection.GetFontFamilyCount() };
+        let mut families = Vec::with_capacity(count as usize);
+        for index in 0..count {
+            // SAFETY: `index` is inside the count read above.
+            let Ok(family) = (unsafe { collection.GetFontFamily(index) }) else { continue };
+            // A family with no readable name is skipped rather than failing
+            // the list: one odd font must not empty the pane.
+            if let Ok(name) = family_name_of(&family) {
+                families.push(name);
+            }
+        }
+        Ok(families)
+    }
+
+    /// The name a family goes by everywhere in this program
+    /// (`FAMILY_NAME_LOCALE`, else its first).
+    pub(super) fn family_name_of(family: &IDWriteFontFamily) -> Result<String, FontFileError> {
+        // SAFETY: the family is live and owns the strings it hands back.
+        let names = unsafe { family.GetFamilyNames() }.map_err(refused)?;
+        let locale = super::to_wide_nul(super::FAMILY_NAME_LOCALE);
+        let mut index = 0_u32;
+        let mut exists = BOOL(0);
+        // SAFETY: a live NUL-terminated locale name and two live out-parameters.
+        let found = unsafe { names.FindLocaleName(PCWSTR(locale.as_ptr()), &mut index, &mut exists) }
+            .is_ok()
+            && exists.as_bool();
+        localized_string(&names, if found { index } else { 0 })
+    }
+
     fn file_reference(
         factory: &IDWriteFactory3,
         path: &Path,
     ) -> Result<IDWriteFontFile, FontFileError> {
-        let wide = to_wide_nul(&path.to_string_lossy());
+        let wide = super::to_wide_nul(&path.to_string_lossy());
         // SAFETY: a live NUL-terminated path for the duration of the call. The
         // write-time argument is `None` on purpose: DirectWrite then reads the
         // file's own, and a fabricated one makes later operations fail
@@ -179,9 +262,7 @@ mod imp {
         }
         // SAFETY: index 0 is inside the count checked above.
         let family = unsafe { collection.GetFontFamily(0) }.map_err(refused)?;
-        // SAFETY: the family is live and owns the strings it hands back.
-        let names = unsafe { family.GetFamilyNames() }.map_err(refused)?;
-        localized_string(&names, 0)
+        family_name_of(&family)
     }
 
     /// One string out of a `IDWriteLocalizedStrings`, read through the vtable.
@@ -229,9 +310,11 @@ mod imp {
         FontFileError::DirectWrite(error.to_string())
     }
 
-    fn to_wide_nul(text: &str) -> Vec<u16> {
-        text.encode_utf16().chain(std::iter::once(0)).collect()
-    }
+}
+
+#[cfg(windows)]
+fn to_wide_nul(text: &str) -> Vec<u16> {
+    text.encode_utf16().chain(std::iter::once(0)).collect()
 }
 
 /// The collection `load` answers with has to survive being drawn: the caller's
@@ -260,10 +343,6 @@ mod tests {
             .join("../../../fonts/font/iansui_regular.ttf")
     }
 
-    fn wide(text: &str) -> Vec<u16> {
-        text.encode_utf16().chain(std::iter::once(0)).collect()
-    }
-
     #[test]
     fn a_loaded_collection_still_draws_after_the_call_that_built_it() {
         let path = bundled_typeface();
@@ -277,8 +356,8 @@ mod tests {
             let (collection, info) = load(&factory, &path).expect("the typeface loads");
             assert!(!info.family_name.is_empty());
 
-            let family = wide(&info.family_name);
-            let locale = wide("zh-TW");
+            let family = to_wide_nul(&info.family_name);
+            let locale = to_wide_nul("zh-TW");
             let format = factory
                 .CreateTextFormat(
                     PCWSTR(family.as_ptr()),
@@ -306,6 +385,33 @@ mod tests {
                 metrics.width,
                 metrics.height,
             );
+        }
+    }
+
+    /// Every name `system_families` lists resolves back through
+    /// `FindFamilyName` in the same collection — the round trip the stored
+    /// selection depends on (`ui::render::installed_font_id`). The docs
+    /// promise a case-insensitive exact match and say nothing about localized
+    /// aliases, so this is what proves the `FAMILY_NAME_LOCALE` rule holds on
+    /// a real system, including families that carry no `en-us` name.
+    #[test]
+    fn every_listed_family_is_found_again_by_the_name_it_was_listed_under() {
+        let families = system_families().expect("the system collection lists");
+        assert!(families.len() > 10, "suspiciously few families: {families:?}");
+        // SAFETY: DirectWrite calls on the test thread with live locals.
+        unsafe {
+            let factory: IDWriteFactory3 =
+                DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED).expect("a shared factory");
+            let collection = system_collection(&factory, false).expect("the system collection");
+            for family in &families {
+                let name = to_wide_nul(family);
+                let mut index = 0_u32;
+                let mut exists = windows::core::BOOL(0);
+                collection
+                    .FindFamilyName(PCWSTR(name.as_ptr()), &mut index, &mut exists)
+                    .expect("FindFamilyName");
+                assert!(exists.as_bool(), "listed family not found again: {family}");
+            }
         }
     }
 }

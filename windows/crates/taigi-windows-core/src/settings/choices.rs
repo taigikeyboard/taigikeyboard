@@ -235,8 +235,16 @@ impl CandidateFontChoice {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct CustomFontId(pub u32);
 
+/// A family the OS has installed, as this process knows it — the same opaque
+/// shape as `CustomFontId`, for the same reason: it keys cached text formats.
+/// The renderer hands out one id per (family, system-collection generation),
+/// so a family that came back after a reinstall does not draw out of a format
+/// made against the collection it left (`ui::render`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct InstalledFontId(pub u32);
+
 /// Which typeface the candidate window is set in: one of the bundled roster,
-/// or one the user added.
+/// one the user added, or a family the OS has installed.
 ///
 /// `CandidateFontChoice` is the roster the four platforms share and stays
 /// exactly that; this is the desktop's extension of it, mirroring
@@ -247,6 +255,9 @@ pub struct CustomFontId(pub u32);
 pub enum CandidateFontSelection {
     BuiltIn(CandidateFontChoice),
     Custom(CustomFontId),
+    /// Nothing copied or loaded for it: the OS is the authority on whether
+    /// it exists, the way the library's directory is for a custom font.
+    Installed(InstalledFontId),
 }
 
 impl Default for CandidateFontSelection {
@@ -265,16 +276,25 @@ impl CandidateFontSelection {
     /// "a typeface this build cannot see".
     pub const CUSTOM_RAW: &'static str = "custom";
 
-    /// The bundled face this selection names, or `None` for a custom one.
+    /// What `fontType` holds while an installed family is selected. Outside
+    /// the roster for the same reason as `CUSTOM_RAW`; not `"system"`, which
+    /// is `CandidateFontChoice::System`'s own raw value.
+    pub const INSTALLED_RAW: &'static str = "installed";
+
+    /// The bundled face this selection names, or `None` for any other kind.
     pub fn built_in(self) -> Option<CandidateFontChoice> {
         match self {
             Self::BuiltIn(choice) => Some(choice),
-            Self::Custom(_) => None,
+            Self::Custom(_) | Self::Installed(_) => None,
         }
     }
 
-    pub fn is_custom(self) -> bool {
-        matches!(self, Self::Custom(_))
+    /// Whether the cell geometry has to measure this face's line box. A
+    /// bundled face's is known to fit the height an inline row is given; a
+    /// face the user added or the OS supplies carries no such guarantee
+    /// (`CandidateMetrics::for_content`).
+    pub fn requires_line_box_measurement(self) -> bool {
+        matches!(self, Self::Custom(_) | Self::Installed(_))
     }
 }
 

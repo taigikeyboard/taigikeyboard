@@ -247,7 +247,7 @@ in use — which is how System Settings states a list like that (聲音's output
 
 ### Desktop installed typefaces — the fonts the OS already has, listed and selectable (USER-scoped 2026-09-11)
 
-**Status**: PR1 macOS open (#45). PR2 Windows to follow.
+**Status**: PR1 macOS MERGED `0c3ff680` (#45, S42 PASS 2026-09-11). PR2 Windows in review.
 **Scope**: macOS + Windows only (desktop train). iOS / Android untouched.
 
 **The report** (USER 2026-09-11): a user tried to use a typeface their Mac already has and the
@@ -299,11 +299,18 @@ follow-up if dogfood wants it). The search field filters the in-memory array; it
   input method runs stops resolving instead of drawing out of a stale object. Not found →
   `.builtIn(.system)`, preference kept — the same rule as a missing custom file
   (`SettingsStore.candidateFontSelection`).
-- Windows: `CreateTextFormat` with the **system collection** (`None`), no `CustomFontId`, no
-  private collection to keep alive. `FontSpec` / `FormatKey` are `Copy` and cannot hold a
-  `String`, so the render factory interns family names into a small `InstalledFontId(u32)` the
-  way `CustomFontId` names a loaded resource; the format cache is keyed on it. Family not in the
-  system collection → default face, preference kept.
+- Windows: `CreateTextFormat` against the **system collection** the family was just verified in
+  (`GetSystemFontCollection`), no private collection to keep alive. `FontSpec` / `FormatKey` are
+  `Copy` and cannot hold a `String`, so the render factory hands out an `InstalledFontId(u32)` per
+  (family, collection generation) the way `CustomFontId` names a loaded resource. The collection's
+  `IDWriteFontCollection3::GetExpirationEvent` is polled with a zero timeout at the top of every
+  candidate window (the cheap answer to "did the installed set change" — a hit on a stale
+  collection would otherwise never notice a removal, Codex pre-impl 2026-09-11); when it fires the
+  collection is re-fetched with an update check and every cached text format is dropped. Family
+  not in the collection → default face, preference kept. One family-name rule everywhere
+  (`font_file::FAMILY_NAME_LOCALE` = `en-us`, else the family's first name): what `inspect` reads
+  out of a file, what the pane lists and stores, and what the renderer looks up have to be the same
+  string, or an import would not find the installed row it duplicates.
 
 **The pane.** One search field above the table (`UserDataFilterField` on macOS; `TextBox` on
 Windows, as 自訂詞庫's), filtering all three groups by case- and diacritic-insensitive contains, and
@@ -335,7 +342,7 @@ name is irrelevant — the face is known by the name inside the file.
 |---|---|---|
 | P0 | This section + memory (admin tier, direct to main) | — |
 | PR1 | macOS: `installed` case, `installedFontFamily` key, `RegisteredFace` family matching + notification-driven memo clear, pane rows + search field, i18n keys, tests | ~400 LOC |
-| PR2 | Windows: `Installed(InstalledFontId)` + interner, stored pair, system-collection format path, `GetSystemFontCollection` listing, pane rows + `TextBox` search; `check-box` | ~500 LOC |
+| PR2 | Windows: `Installed(InstalledFontId)`, `StoredFontSelection::Installed` + `installedFontFamily`, system-collection format path with expiration polling, `font_file::system_families`, pane rows + `TextBox` search + `list_pager` (extracted from 自訂詞庫) + already-installed redirect; `check-box` | ~700 LOC |
 
 #### Dogfood (to be added to `docs/architecture/dogfood-checklist.md` in PR1 / PR2)
 

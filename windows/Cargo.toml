@@ -38,6 +38,7 @@ log = "0.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
+unicode-normalization = "0.1"
 # `bundled` compiles SQLite in: no system library to find on a user's machine,
 # one version everywhere, and the same WAL/UPSERT capability floor on every
 # Windows the DLL loads on (contrast Android, `android-guidelines.md §8a`).

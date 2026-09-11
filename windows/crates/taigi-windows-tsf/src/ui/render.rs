@@ -12,10 +12,11 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use taigi_windows_core::candidates::{FontSpec, TextMeasurer};
 use taigi_windows_core::settings::{
-    CandidateFontChoice, CandidateFontSelection, CustomFontId, SettingChoice,
+    CandidateFontChoice, CandidateFontSelection, CustomFontId, InstalledFontId, SettingChoice,
 };
 use windows::core::{Interface, Result, BOOL, PCWSTR};
-use windows::Win32::Foundation::{D2DERR_RECREATE_TARGET, HWND};
+use windows::Win32::Foundation::{D2DERR_RECREATE_TARGET, HANDLE, HWND, WAIT_TIMEOUT};
+use windows::Win32::System::Threading::WaitForSingleObject;
 use windows::Win32::Graphics::Direct2D::Common::{
     D2D1_ALPHA_MODE_PREMULTIPLIED, D2D1_COLOR_F, D2D1_PIXEL_FORMAT, D2D_SIZE_U,
 };
@@ -27,7 +28,8 @@ use windows::Win32::Graphics::Direct2D::{
 };
 use windows::Win32::Graphics::DirectWrite::{
     DWriteCreateFactory, IDWriteFactory3, IDWriteFontCollection, IDWriteFontCollection1,
-    IDWriteFontSetBuilder1, IDWriteInlineObject, IDWriteTextFormat, IDWriteTextLayout,
+    IDWriteFontCollection3, IDWriteFontSetBuilder1, IDWriteInlineObject, IDWriteTextFormat,
+    IDWriteTextLayout,
     DWRITE_FACTORY_TYPE_SHARED, DWRITE_FONT_STRETCH_NORMAL, DWRITE_FONT_STYLE_NORMAL,
     DWRITE_FONT_WEIGHT_NORMAL, DWRITE_LINE_METRICS, DWRITE_PARAGRAPH_ALIGNMENT_CENTER,
     DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_TEXT_METRICS, DWRITE_TRIMMING,
@@ -47,7 +49,7 @@ const LEGACY_SYSTEM_FONT_FAMILY: &str = "Segoe UI";
 const LOCALE: &str = "zh-TW";
 
 /// The collection a text format is created against, and the family it asks
-/// for — for a bundled face, one the user added, or neither.
+/// for — for a bundled face, one the user added, one the OS has, or none.
 ///
 /// A face that cannot be produced answers with the system family and no
 /// collection, which is the honest fallback the bundled roster already had:
@@ -78,7 +80,111 @@ impl RenderFactory {
                     None => (None, self.system_family.to_owned()),
                 }
             }
+            CandidateFontSelection::Installed(id) => {
+                // Against the system collection this process verified the
+                // family in (`installed_font_id`), named explicitly rather
+                // than left as `None`: the format then resolves the family
+                // in the same collection the check ran against.
+                let resolved = self.installed_font.borrow();
+                let fonts = self.system_fonts.borrow();
+                match (resolved.as_ref().filter(|font| font.id == id), fonts.as_ref()) {
+                    (Some(font), Some(fonts)) => (fonts.collection.cast().ok(), font.family.clone()),
+                    _ => (None, self.system_family.to_owned()),
+                }
+            }
         }
+    }
+
+    /// The id `family` draws under while the OS has it, or `None` because it
+    /// does not — or because the name is not one DirectWrite can be asked
+    /// for (it comes out of `settings.json`, which anything can write).
+    ///
+    /// Called at the top of every candidate window, like `custom_font_id`. The
+    /// system collection is re-fetched when DirectWrite says it expired — a
+    /// font installed or removed since — and every text format made against
+    /// the old one is dropped then, so a family the OS replaced under its own
+    /// name is drawn from the new bytes and one it removed falls back rather
+    /// than drawing from a collection that no longer has it. A new id per
+    /// family AND per collection generation, for the same reason
+    /// `CustomFontId` is per loaded resource. The custom face, if one was
+    /// loaded, is let go: the selection is not it any more.
+    pub fn installed_font_id(&self, family: &str) -> Option<InstalledFontId> {
+        self.forget_custom_font();
+        let id = self.resolve_installed_font(family);
+        if id.is_none() {
+            self.forget_installed_font();
+        }
+        id
+    }
+
+    fn resolve_installed_font(&self, family: &str) -> Option<InstalledFontId> {
+        if self.refresh_system_fonts_if_expired() {
+            // Unconditionally, not only when an installed family was resolved:
+            // a selection that was already falling back has formats cached
+            // against the collection that just went stale too.
+            self.installed_font.borrow_mut().take();
+            self.drop_font_caches();
+        }
+        // Verified against this very collection already: the usual answer.
+        if let Some(resolved) = self.installed_font.borrow().as_ref() {
+            if resolved.family == family {
+                return Some(resolved.id);
+            }
+        }
+        {
+            let fonts = self.system_fonts.borrow();
+            if !collection_has_family(&fonts.as_ref()?.collection, family) {
+                return None;
+            }
+        }
+        let id = InstalledFontId(self.next_installed_font_id.get().wrapping_add(1));
+        self.next_installed_font_id.set(id.0);
+        *self.installed_font.borrow_mut() = Some(ResolvedInstalledFont {
+            id,
+            family: family.to_owned(),
+        });
+        self.drop_font_caches();
+        Some(id)
+    }
+
+    /// Lets go of the resolved installed family, so a text format made for it
+    /// is not served again under a selection that moved elsewhere.
+    pub fn forget_installed_font(&self) {
+        if self.installed_font.borrow_mut().take().is_some() {
+            self.drop_font_caches();
+        }
+    }
+
+    /// Lets go of whichever non-bundled face was resolved — what a bundled
+    /// selection does, so a host stops holding a custom file and stops
+    /// serving formats made for a face that is not being drawn.
+    pub fn forget_selected_fonts(&self) {
+        self.forget_custom_font();
+        self.forget_installed_font();
+    }
+
+    /// Makes sure `system_fonts` reflects what the OS has installed right now,
+    /// answering whether it was (re)fetched — in which case anything made
+    /// against the previous collection is stale.
+    ///
+    /// DirectWrite signals a collection's expiration event when the installed
+    /// set changed (`IDWriteFontCollection3::GetExpirationEvent`); polling it
+    /// with a zero timeout is what makes this cheap enough for every candidate
+    /// window.
+    fn refresh_system_fonts_if_expired(&self) -> bool {
+        let is_current = self.system_fonts.borrow().as_ref().is_some_and(|fonts| {
+            // SAFETY: the handle is owned by the live collection; a zero
+            // timeout only reads its state. Only a timeout proves the event
+            // has not fired — a failed wait re-fetches rather than trusting a
+            // collection it could not check.
+            let state = unsafe { WaitForSingleObject(fonts.expiration, 0) };
+            state == WAIT_TIMEOUT
+        });
+        if is_current {
+            return false;
+        }
+        *self.system_fonts.borrow_mut() = fetch_system_fonts(&self.dwrite);
+        true
     }
 
     /// The id `file_name`'s typeface draws under, loading it if this process
@@ -96,6 +202,7 @@ impl RenderFactory {
     /// `IDWriteTextFormat` holds the collection it was made against and would
     /// keep drawing the previous bytes.
     pub fn custom_font_id(&self, file_name: &str) -> Option<CustomFontId> {
+        self.forget_installed_font();
         let Some(path) = self.custom_font_path(file_name) else {
             self.forget_custom_font();
             return None;
@@ -231,6 +338,17 @@ pub struct RenderFactory {
     /// a broken or unreadable file is parsed ONCE rather than on every
     /// candidate window for as long as it stays selected.
     failed_custom_font: RefCell<Option<(String, FileFingerprint)>>,
+    /// The OS's font collection as last fetched, with the event that says it
+    /// went stale. Fetched once at construction — which is also where the UI
+    /// family is probed — and again whenever the event fires.
+    system_fonts: RefCell<Option<SystemFonts>>,
+    /// The installed family the selection last resolved to, and its id. One
+    /// at a time, like `custom_font`.
+    installed_font: RefCell<Option<ResolvedInstalledFont>>,
+    /// The id the next resolved installed family gets — per factory, like
+    /// `next_custom_font_id`, and bumped whenever the family OR the collection
+    /// it was verified in changes.
+    next_installed_font_id: Cell<u32>,
     /// The user's font folder, resolved once: asking again is two directory
     /// creations per candidate window for a path that cannot move under a
     /// running process.
@@ -250,6 +368,59 @@ pub struct RenderFactory {
 struct PrivateFonts {
     collection: IDWriteFontCollection1,
     loaded: Vec<CandidateFontChoice>,
+}
+
+/// The OS's font collection and how DirectWrite says when it expired.
+struct SystemFonts {
+    collection: IDWriteFontCollection1,
+    /// Signalled once the installed set changed. Owned by `collection`, never
+    /// closed here.
+    expiration: HANDLE,
+}
+
+/// The OS's collection as of now, with its expiration event — or `None`
+/// because DirectWrite would not answer. `IDWriteFontCollection3` is required
+/// rather than optional: every Windows this installs on has it
+/// (`MinVersion=10.0.17763`, Inno), and a collection whose staleness cannot
+/// be asked about would have to be re-fetched on every show.
+fn fetch_system_fonts(dwrite: &IDWriteFactory3) -> Option<SystemFonts> {
+    let collection = taigi_windows_platform::font_file::system_collection(dwrite, true)
+        .map_err(|error| log::warn!("fonts.system_collection_unavailable error={error}"))
+        .ok()?;
+    let newer: IDWriteFontCollection3 = collection.cast().ok()?;
+    // SAFETY: the collection is live; the handle it answers with is its own.
+    let expiration = unsafe { newer.GetExpirationEvent() };
+    if expiration.is_invalid() {
+        return None;
+    }
+    Some(SystemFonts {
+        collection,
+        expiration,
+    })
+}
+
+/// Whether `collection` has a family called `family`. A name with an embedded
+/// NUL is not one DirectWrite can be asked for — it would be truncated into
+/// some other, valid name — so it is refused before the call.
+fn collection_has_family(collection: &IDWriteFontCollection1, family: &str) -> bool {
+    if family.is_empty() || family.contains('\0') {
+        return false;
+    }
+    let name = to_wide_nul(family);
+    let mut index = 0_u32;
+    let mut exists = BOOL::default();
+    // SAFETY: a live NUL-terminated name and two live out-parameters on the
+    // calling thread.
+    unsafe { collection.FindFamilyName(PCWSTR(name.as_ptr()), &mut index, &mut exists) }.is_ok()
+        && exists.as_bool()
+}
+
+/// An OS-installed family the selection resolved to.
+struct ResolvedInstalledFont {
+    id: InstalledFontId,
+    /// The family a text format asks for. Out of `settings.json`: display it,
+    /// never log it.
+    family: String,
 }
 
 /// One typeface out of the user's library, loaded.
@@ -323,12 +494,16 @@ impl RenderFactory {
             )
         };
         let private_fonts = load_private_fonts(&dwrite);
-        let system_family = system_family(&dwrite);
+        let system_fonts = fetch_system_fonts(&dwrite);
+        let system_family = system_family(system_fonts.as_ref().map(|fonts| &fonts.collection));
         Ok(Self {
             private_fonts,
             custom_font: RefCell::new(None),
             next_custom_font_id: Cell::new(0),
             failed_custom_font: RefCell::new(None),
+            system_fonts: RefCell::new(system_fonts),
+            installed_font: RefCell::new(None),
+            next_installed_font_id: Cell::new(0),
             fonts_directory: RefCell::new(None),
             system_family,
             formats: RefCell::new(HashMap::new()),
@@ -464,39 +639,17 @@ impl RenderFactory {
     }
 }
 
-/// The UI family to draw in: the Windows 11 variable face when this system
-/// carries it, the Windows 10 one otherwise.
-///
-/// Probed rather than left to DirectWrite's mapper: `CreateTextFormat`
-/// accepts a family that does not exist and substitutes at LAYOUT time, so
-/// a missing family would not fail anywhere this code could see — it would
-/// just draw in whatever the mapper picked, and measure in it too.
-fn system_family(dwrite: &IDWriteFactory3) -> &'static str {
-    // SAFETY: a collection query and a name lookup on the calling thread;
-    // the out-parameters are live locals.
-    unsafe {
-        let mut collection: Option<IDWriteFontCollection1> = None;
-        if dwrite
-            .GetSystemFontCollection(false, &mut collection, false)
-            .is_err()
-        {
-            return LEGACY_SYSTEM_FONT_FAMILY;
+/// The UI family this Windows really carries: the Windows 11 variable face
+/// when the system collection has it, Windows 10's otherwise.
+fn system_family(collection: Option<&IDWriteFontCollection1>) -> &'static str {
+    match collection {
+        Some(collection) if collection_has_family(collection, SYSTEM_FONT_FAMILY) => {
+            SYSTEM_FONT_FAMILY
         }
-        let Some(collection) = collection else {
-            return LEGACY_SYSTEM_FONT_FAMILY;
-        };
-        let name = to_wide_nul(SYSTEM_FONT_FAMILY);
-        let mut index = 0u32;
-        let mut exists = BOOL::default();
-        if collection
-            .FindFamilyName(PCWSTR(name.as_ptr()), &mut index, &mut exists)
-            .is_err()
-            || !exists.as_bool()
-        {
+        _ => {
             log::debug!("fonts.system_variable_absent");
-            return LEGACY_SYSTEM_FONT_FAMILY;
+            LEGACY_SYSTEM_FONT_FAMILY
         }
-        SYSTEM_FONT_FAMILY
     }
 }
 

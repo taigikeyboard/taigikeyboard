@@ -20,6 +20,7 @@
 
 use crate::presentation::PageMessage;
 use crate::winui::cards;
+use crate::winui::list_pager::{self, icon_button};
 use crate::winui::list_selection::{selectable_list, SettledRows};
 use crate::winui::window::{Message as WindowMessage, SettingsWindow};
 use std::path::PathBuf;
@@ -195,7 +196,7 @@ pub struct CustomDictionaryModel {
 
 impl CustomDictionaryModel {
     fn page_count_for(match_count: usize) -> usize {
-        match_count.div_ceil(PAGE_SIZE).max(1)
+        list_pager::page_count(match_count, PAGE_SIZE)
     }
 
     fn page_count(&self) -> usize {
@@ -716,8 +717,6 @@ fn write_atomically(path: &PathBuf, contents: String) -> Result<(), String> {
 const ADD_GLYPH: &str = "\u{E710}";
 const EDIT_GLYPH: &str = "\u{E70F}";
 const REMOVE_GLYPH: &str = "\u{E738}";
-const PREVIOUS_GLYPH: &str = "\u{E76B}";
-const NEXT_GLYPH: &str = "\u{E76C}";
 
 pub fn view(
     window: &SettingsWindow,
@@ -873,78 +872,34 @@ fn table_controls(
     is_enabled: bool,
     has_selection: bool,
 ) -> View {
-    let can_forward = is_enabled && model.page + 1 < model.page_count();
-    let can_backward = is_enabled && model.page > 0;
-    let page = model.page;
-    Grid::new()
-        .columns([GridLength::Auto, GridLength::STAR, GridLength::Auto])
-        .margin(Thickness::new(0.0, TABLE_HEADER_GAP, 0.0, 0.0))
-        .children((
-            StackPanel::new()
-                .orientation(Orientation::Horizontal)
-                .spacing(CONTROL_GAP)
-                .grid_column(0)
-                .children((
-                    icon_button(
-                        ADD_GLYPH,
-                        strings.resolve(StringKey::DictionaryAddEntry),
-                        is_enabled,
-                        context.callback(|()| WindowMessage::CustomDictionary(Message::Add)),
-                    ),
-                    icon_button(
-                        EDIT_GLYPH,
-                        strings.resolve(StringKey::DictionaryEditEntry),
-                        is_enabled && has_selection,
-                        context.callback(|()| WindowMessage::CustomDictionary(Message::Edit)),
-                    ),
-                    icon_button(
-                        REMOVE_GLYPH,
-                        strings.resolve(StringKey::CommonDelete),
-                        is_enabled && has_selection,
-                        context.callback(|()| WindowMessage::CustomDictionary(Message::Delete)),
-                    ),
-                )),
-            // Digits only: the pager needs no wording in five languages.
-            TextBlock::new()
-                .text(format!("{} / {}", model.page + 1, model.page_count()))
-                .opacity(SECONDARY_OPACITY)
-                .horizontal_alignment(HorizontalAlignment::Right)
-                .vertical_alignment(VerticalAlignment::Center)
-                .margin(Thickness::xy(CONTROL_GAP, 0.0))
-                .grid_column(1),
-            StackPanel::new()
-                .orientation(Orientation::Horizontal)
-                .spacing(CONTROL_GAP)
-                .grid_column(2)
-                .children((
-                    icon_button(
-                        PREVIOUS_GLYPH,
-                        strings.resolve(StringKey::DesktopActionPageBackward),
-                        can_backward,
-                        context.callback(move |()| {
-                            WindowMessage::CustomDictionary(Message::ShowPage(
-                                page.saturating_sub(1),
-                            ))
-                        }),
-                    ),
-                    icon_button(
-                        NEXT_GLYPH,
-                        strings.resolve(StringKey::DesktopActionPageForward),
-                        can_forward,
-                        context.callback(move |()| {
-                            WindowMessage::CustomDictionary(Message::ShowPage(page + 1))
-                        }),
-                    ),
-                )),
-        ))
-}
-
-fn icon_button(glyph: &str, tooltip: &str, is_enabled: bool, on_click: Callback<()>) -> View {
-    Button::new()
-        .is_enabled(is_enabled)
-        .on_click(on_click)
-        .content(FontIcon::new().glyph(glyph))
-        .tooltip(tooltip)
+    list_pager::bar(
+        (
+            icon_button(
+                ADD_GLYPH,
+                strings.resolve(StringKey::DictionaryAddEntry),
+                is_enabled,
+                context.callback(|()| WindowMessage::CustomDictionary(Message::Add)),
+            ),
+            icon_button(
+                EDIT_GLYPH,
+                strings.resolve(StringKey::DictionaryEditEntry),
+                is_enabled && has_selection,
+                context.callback(|()| WindowMessage::CustomDictionary(Message::Edit)),
+            ),
+            icon_button(
+                REMOVE_GLYPH,
+                strings.resolve(StringKey::CommonDelete),
+                is_enabled && has_selection,
+                context.callback(|()| WindowMessage::CustomDictionary(Message::Delete)),
+            ),
+        ),
+        model.page,
+        model.page_count(),
+        is_enabled,
+        strings,
+        context,
+        |page| WindowMessage::CustomDictionary(Message::ShowPage(page)),
+    )
 }
 
 /// Import and export, side by side under the table.

@@ -331,10 +331,11 @@ impl CandidateWindow {
     fn font_selection(&self, settings: &SettingsDocument) -> CandidateFontSelection {
         match stored_font_selection(settings) {
             StoredFontSelection::BuiltIn(choice) => {
-                // Let go of whatever custom face this process had loaded: it
-                // is not being drawn any more, and a host still holding it
-                // holds its FILE against the settings window's delete.
-                self.factory.forget_custom_font();
+                // Let go of whatever custom or installed face this process had
+                // resolved: it is not being drawn any more, and a host still
+                // holding a custom face holds its FILE against the settings
+                // window's delete.
+                self.factory.forget_selected_fonts();
                 CandidateFontSelection::BuiltIn(choice)
             }
             StoredFontSelection::Custom(file_name) => self
@@ -342,6 +343,14 @@ impl CandidateWindow {
                 .custom_font_id(&file_name)
                 .map_or(CandidateFontSelection::default(), |id| {
                     CandidateFontSelection::Custom(id)
+                }),
+            // An installed family the OS no longer has falls back the same
+            // way a missing custom file does, preference kept.
+            StoredFontSelection::Installed(family) => self
+                .factory
+                .installed_font_id(&family)
+                .map_or(CandidateFontSelection::default(), |id| {
+                    CandidateFontSelection::Installed(id)
                 }),
         }
     }
