@@ -1666,11 +1666,11 @@
         ]
       },
       "values": {
-        "hanji": "這个字型電腦本底就有，已經替你揀起來",
-        "tailo": "tsit ê jī-hîng tiān-náu pún-té tō ū, í-king thè lí kíng khí-lâi",
-        "poj": "chit ê jī-hêng tiān-náu pún-té tō ū, í-keng thè lí kéng khí-lâi",
-        "en": "This computer already has this typeface — it is now selected",
-        "ja": "このフォントはすでにインストールされています。選択しました"
+        "hanji": "這个字型電腦本底就有",
+        "tailo": "tsit ê jī-hîng tiān-náu pún-té tō ū",
+        "poj": "chit ê jī-hêng tiān-náu pún-té tō ū",
+        "en": "This computer already has this typeface",
+        "ja": "このフォントはすでにインストールされています"
       }
     },
     "customFontRemoveFailed": {
