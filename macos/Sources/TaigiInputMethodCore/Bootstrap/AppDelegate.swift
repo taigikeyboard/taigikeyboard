@@ -30,12 +30,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // BUNDLED roster only — a user's own typeface that fails to activate is
         // reported by the library that owns it, and says something else entirely.
         CandidateFontChoice.reportUnavailableFonts()
+        // From here on, a font installed or removed behind this process — Font
+        // Book, or the user's own import — drops what was resolved in it.
+        FontRegistryObserver.install()
         // The user's own typeface, if one is selected: registered here so the
         // first candidate window of the session draws in it rather than in the
         // system face, and so that nothing on the keystroke path has to. Only
         // the selected one — the rest of the library is parsed when the settings
         // window asks for the picker's roster.
-        CustomFontLibrary.shared.activate(fileName: SettingsStore().selectedCustomFontFile)
+        CustomFontLibrary.shared.activate(fileName: SettingsStore().storedFontSelection.customFontFile)
         installLexiconEngine()
         // Opening is asynchronous, so this only starts it. A composition typed
         // before it finishes ranks without the user's history — one keystroke

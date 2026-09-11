@@ -1654,6 +1654,25 @@
         "ja": "選択したフォントが見つかりません。システムフォントを使用します"
       }
     },
+    "customFontAlreadyInstalled": {
+      "comment": "字型管理 receipt shown when the user imports a font file whose face this computer already has; the import is dropped and the installed row is selected instead.",
+      "scope": {
+        "platforms": [
+          "macos",
+          "windows"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "這个字型電腦本底就有",
+        "tailo": "tsit ê jī-hîng tiān-náu pún-té tō ū",
+        "poj": "chit ê jī-hêng tiān-náu pún-té tō ū",
+        "en": "This computer already has this typeface",
+        "ja": "このフォントはすでにインストールされています"
+      }
+    },
     "customFontRemoveFailed": {
       "comment": "Appearance pane failure title when a custom typeface could not be removed, which is what macOS reports while something still holds the font.",
       "scope": {

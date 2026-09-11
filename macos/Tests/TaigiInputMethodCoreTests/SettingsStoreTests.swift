@@ -471,6 +471,55 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(makeStore().candidateFontSelection, .builtIn(.system))
     }
 
+    /// An installed family resolves while the OS has it. Taken from the live
+    /// list rather than assumed: no family is guaranteed on every Mac.
+    @MainActor
+    func testStoredInstalled_withAFamilyTheOSHas_readsAsInstalled() throws {
+        let family = try TestFixtures.anyInstalledFamily()
+        userDefaults.set(CandidateFontSelection.installedRawValue, forKey: SettingsStore.Keys.fontType.name)
+        userDefaults.set(family, forKey: SettingsStore.Keys.installedFontFamily.name)
+
+        XCTAssertEqual(makeStore().candidateFontSelection, .installed(family: family))
+    }
+
+    /// `installed` is outside the roster like `custom`, so a family the OS no
+    /// longer has falls to the system font the same way — and the preference
+    /// stays, since a reinstall may bring the family back.
+    @MainActor
+    func testStoredInstalled_withNoSuchFamily_readsAsTheSystemFont_andLeavesThePreferenceAlone() {
+        userDefaults.set(CandidateFontSelection.installedRawValue, forKey: SettingsStore.Keys.fontType.name)
+        userDefaults.set("No Such Family 4f9a", forKey: SettingsStore.Keys.installedFontFamily.name)
+
+        XCTAssertEqual(makeStore().candidateFontSelection, .builtIn(.system))
+        XCTAssertEqual(
+            userDefaults.string(forKey: SettingsStore.Keys.fontType.name),
+            CandidateFontSelection.installedRawValue,
+        )
+        XCTAssertEqual(
+            userDefaults.string(forKey: SettingsStore.Keys.installedFontFamily.name),
+            "No Such Family 4f9a",
+        )
+    }
+
+    /// The half-written pair for the installed kind.
+    @MainActor
+    func testStoredInstalled_withNoFamilyBesideIt_readsAsTheSystemFont() {
+        userDefaults.set(CandidateFontSelection.installedRawValue, forKey: SettingsStore.Keys.fontType.name)
+
+        XCTAssertEqual(makeStore().candidateFontSelection, .builtIn(.system))
+    }
+
+    /// A family left over from an installed selection does not make a built-in
+    /// one installed — the same rule as a stale file name.
+    @MainActor
+    func testStoredBuiltIn_withAStaleFamilyBesideIt_readsAsTheBuiltIn() throws {
+        let family = try TestFixtures.anyInstalledFamily()
+        userDefaults.set(CandidateFontChoice.genYoMin.rawValue, forKey: SettingsStore.Keys.fontType.name)
+        userDefaults.set(family, forKey: SettingsStore.Keys.installedFontFamily.name)
+
+        XCTAssertEqual(makeStore().candidateFontSelection, .builtIn(.genYoMin))
+    }
+
     /// A file name left over from a custom selection does not make a built-in
     /// one custom.
     @MainActor

@@ -1,4 +1,4 @@
-// Which typeface the candidate window draws in: one of the bundled roster, or one the user added.
+// Which typeface the candidate window draws in: one of the bundled roster, one the user added, or one the Mac has.
 
 import AppKit
 
@@ -6,8 +6,9 @@ import AppKit
 ///
 /// `CandidateFontChoice` is the roster the four platforms share, and stays
 /// exactly that. This type is the desktop's extension of it: a Mac can also
-/// draw in a font the user brought (`CustomFontLibrary`), which no phone
-/// keyboard can, so the extension lives here rather than as a fifth case in a
+/// draw in a font the user brought (`CustomFontLibrary`) or in any family the
+/// OS has installed (`RegisteredFace.installedFamilies`), which no phone
+/// keyboard can, so the extension lives here rather than as more cases in a
 /// cross-platform enum.
 ///
 /// Carried through `CandidateMetrics` rather than resolved at each label,
@@ -17,6 +18,10 @@ import AppKit
 enum CandidateFontSelection: Hashable, Sendable {
     case builtIn(CandidateFontChoice)
     case custom(CustomFont)
+    /// A family the OS has installed, by the name it reports. Nothing is
+    /// copied or registered for it: the OS is the authority on whether it
+    /// exists, the way the library's directory is for a custom font.
+    case installed(family: String)
 
     /// What a fresh install renders in.
     static let `default` = Self.builtIn(.system)
@@ -29,28 +34,37 @@ enum CandidateFontSelection: Hashable, Sendable {
     /// build cannot see".
     static let customRawValue = "custom"
 
-    /// The PostScript name to ask Core Text for, or nil for the system font.
-    var postScriptName: String? {
+    /// What `fontType` holds while an installed family is selected. Outside the
+    /// roster for the same reason as `customRawValue`; not `"system"`, which is
+    /// `CandidateFontChoice.system`'s own raw value.
+    static let installedRawValue = "installed"
+
+    /// How `RegisteredFace` is asked for this selection's face, or nil for the
+    /// system font.
+    var faceQuery: RegisteredFace.Query? {
         switch self {
-        case let .builtIn(choice): choice.postScriptName
-        case let .custom(font): font.postScriptName
+        case let .builtIn(choice): choice.postScriptName.map(RegisteredFace.Query.postScript)
+        case let .custom(font): .postScript(font.postScriptName)
+        case let .installed(family): .family(family)
         }
     }
 
     /// This selection at `size`, falling back to the system font when the face
     /// did not activate — the bundled roster's rule, applied to the user's own
-    /// fonts too.
+    /// fonts and to the OS's too.
     func font(ofSize size: CGFloat) -> NSFont {
-        CandidateFontChoice.font(named: postScriptName, ofSize: size)
+        faceQuery.flatMap { RegisteredFace.font($0, ofSize: size) } ?? .systemFont(ofSize: size)
     }
 
-    /// Whether the face is one the user added. The cell geometry asks: a
-    /// bundled face's line box is known to fit the height an inline row is
-    /// given, and an arbitrary one's is not (`CandidateMetrics.init`).
-    var isCustom: Bool {
-        if case .custom = self {
-            return true
+    /// Whether the cell geometry has to measure this face's line box. A
+    /// bundled face's is known to fit the height an inline row is given; a
+    /// face the user added or the OS supplies carries no such guarantee, so
+    /// its rows are sized from the font rather than from the point size
+    /// (`CandidateMetrics.init`).
+    var requiresLineBoxMeasurement: Bool {
+        switch self {
+        case .builtIn: false
+        case .custom, .installed: true
         }
-        return false
     }
 }

@@ -1,4 +1,4 @@
-// The resolved typeface: what the two stored keys mean together, and that two custom fonts are two values.
+// The resolved typeface: two custom fonts are two values, and an installed family resolves by name.
 
 import AppKit
 @testable import TaigiInputMethodCore
@@ -60,5 +60,58 @@ final class CandidateFontSelectionTests: XCTestCase {
             textSize: .medium, windowSize: .medium, fontSelection: .custom(customFont("one.ttf")),
         )
         XCTAssertGreaterThan(custom.itemHeight, custom.candidateFontSize + custom.verticalPadding)
+    }
+
+    // MARK: - Installed families
+
+    /// A family the OS has resolves to a member of THAT family — not to a
+    /// substitute, which is what descriptor matching hands back for a name
+    /// nothing carries. The family comes from the live list: none is
+    /// guaranteed on every Mac.
+    func testAnInstalledFamily_resolvesToAFaceOfThatFamily() throws {
+        let family = try TestFixtures.anyInstalledFamily()
+
+        let font = CandidateFontSelection.installed(family: family).font(ofSize: 20)
+
+        XCTAssertEqual(font.familyName, family)
+        XCTAssertEqual(font.pointSize, 20)
+    }
+
+    /// A family the OS does not have falls back to the system font, like a
+    /// custom face that did not activate.
+    func testAnUnknownFamily_fallsBackToTheSystemFont() {
+        let selection = CandidateFontSelection.installed(family: "No Such Family 4f9a")
+
+        XCTAssertFalse(RegisteredFace.isRegistered(.family("No Such Family 4f9a")))
+        XCTAssertEqual(selection.font(ofSize: 20), .systemFont(ofSize: 20))
+    }
+
+    /// The installed list is the registration list minus what the caller
+    /// names: hidden UI faces never, and the families this process registered
+    /// itself — the bundled roster (`TestFixtures`) would otherwise show up
+    /// twice, once as its own row and once as a family whose selection no
+    /// restart re-activates.
+    func testInstalledFamilies_leaveOutTheFamiliesTheyAreAskedTo() throws {
+        XCTAssertEqual(TestFixtures.unregisterableFontFiles, [])
+        let bundled = try XCTUnwrap(RegisteredFace.font(.postScript("Iansui-Regular"), ofSize: 12)?.familyName)
+        XCTAssertTrue(RegisteredFace.installedFamilies(excluding: []).contains(bundled))
+
+        let filtered = RegisteredFace.installedFamilies(excluding: [bundled])
+
+        XCTAssertFalse(filtered.contains(bundled))
+        XCTAssertFalse(filtered.contains { $0.hasPrefix(".") }, "the OS's hidden UI faces are not offered")
+        XCTAssertEqual(filtered, filtered.sorted { $0.localizedStandardCompare($1) == .orderedAscending })
+    }
+
+    /// The inline row measures an installed face's line box like a custom one:
+    /// neither carries the bundled roster's fits-the-row guarantee.
+    func testInlineHeight_isMeasuredForAnInstalledFace() throws {
+        let family = try TestFixtures.anyInstalledFamily()
+        let metrics = CandidateMetrics(
+            textSize: .medium, windowSize: .medium, fontSelection: .installed(family: family),
+        )
+
+        XCTAssertTrue(metrics.fontSelection.requiresLineBoxMeasurement)
+        XCTAssertGreaterThanOrEqual(metrics.itemHeight, metrics.candidateFontSize + metrics.verticalPadding)
     }
 }

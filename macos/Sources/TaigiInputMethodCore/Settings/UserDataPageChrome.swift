@@ -263,9 +263,48 @@ enum UserDataListMetrics {
     static let emptyStateSymbolSize: CGFloat = 34
 }
 
+/// The `n / N` readout and the two arrows a paged list puts at the trailing
+/// end of its `UserDataListControls` (自訂詞庫, 字型管理).
+///
+/// A list is paged rather than scrolled because a fixed-height `Table` inside
+/// a `Form` is one scroll view inside another, and the inner one does not
+/// scroll (USER, real device, 2026-08-26). A page that FITS the table needs no
+/// scroller of its own, and every row is reachable by paging.
+struct UserDataListPager: View {
+    @Environment(DisplayLanguageStore.self) private var language
+
+    /// Zero-based; shown one-based.
+    let page: Int
+    let pageCount: Int
+    let onBackward: () -> Void
+    let onForward: () -> Void
+
+    var body: some View {
+        // Digits only, so the pager needs no wording in five languages — and
+        // the two arrows carry the shortcut pane's own page verbs as their
+        // accessibility labels, which are already translated.
+        Text(verbatim: "\(page + 1) / \(pageCount)")
+            .foregroundStyle(.secondary)
+            .monospacedDigit()
+
+        Button(action: onBackward) {
+            UserDataListControlGlyph(symbolName: "chevron.left")
+        }
+        .disabled(page <= 0)
+        .accessibilityLabel(language.string(.desktopActionPageBackward))
+
+        Button(action: onForward) {
+            UserDataListControlGlyph(symbolName: "chevron.right")
+        }
+        .disabled(page + 1 >= pageCount)
+        .accessibilityLabel(language.string(.desktopActionPageForward))
+    }
+}
+
 /// The `+` / `−` pair under an editable list, where macOS puts the add and
-/// remove verbs for one — plus whatever a list wants at the trailing end (自訂詞庫
-/// puts its pager there; a list that fits needs nothing).
+/// remove verbs for one — plus whatever a list wants at the trailing end (a
+/// paged list puts its `UserDataListPager` there; a list that fits needs
+/// nothing).
 ///
 /// `−` is disabled with nothing selected rather than hidden, so the pair keeps
 /// its shape.
