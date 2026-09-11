@@ -263,15 +263,15 @@
         "tone": "string"
       },
       "values": {
-        "hanji": "第 {tone} 聲",
-        "tailo": "tē {tone} siann",
-        "poj": "tē {tone} siaⁿ",
+        "hanji": "第 {tone} 調",
+        "tailo": "tē {tone} tiāu",
+        "poj": "tē {tone} tiāu",
         "en": "Tone {tone}",
         "ja": "第{tone}声"
       }
     },
     "telexGuideInitial": {
-      "comment": "Telex guide row meaning for z: the unaspirated affricate initial it spells, written for the romanization in use — `ts` under TL, `ch` under POJ. {initial} is that spelling, so the row names the letters rather than an abstract term.",
+      "comment": "Telex guide row meaning for z: the unaspirated affricate initial it spells, written for the romanization in use — `ts` under TL, `ch` under POJ. {initial} is that spelling, so the row shows only the letters (USER 2026-09-11: no 聲母 label).",
       "scope": {
         "platforms": [
           "macos",
@@ -285,11 +285,11 @@
         "initial": "string"
       },
       "values": {
-        "hanji": "聲母 {initial}",
-        "tailo": "siann-bó {initial}",
-        "poj": "siaⁿ-bó {initial}",
-        "en": "Initial {initial}",
-        "ja": "声母 {initial}"
+        "hanji": "{initial}",
+        "tailo": "{initial}",
+        "poj": "{initial}",
+        "en": "{initial}",
+        "ja": "{initial}"
       }
     },
     "telexGuideHyphen": {
@@ -304,9 +304,9 @@
         ]
       },
       "values": {
-        "hanji": "連字號",
-        "tailo": "liân-jī-hō",
-        "poj": "liân-jī-hō",
+        "hanji": "連劃",
+        "tailo": "liân-ue̍h",
+        "poj": "liân-oe̍h",
         "en": "Hyphen",
         "ja": "ハイフン"
       }
