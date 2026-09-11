@@ -99,6 +99,7 @@ One-off snapshots ordered chronologically. Specs cited by engine code (`v358-ref
 | `reports/2026-06-22-i18n-symbol-draft-review.md` | i18n symbol draft proofread sheet | Historical |
 | `reports/2026-06-22-i18n-tl-draft-review.md` | i18n TL draft proofread sheet | Historical |
 | `reports/2026-08-30-hanlo-together-mode-research.md` | 候選詞顯示 picker research: 漢羅並排 (default, title/subtitle) / 漢羅濫 (one-label hanji+roman, formerly 漢羅齊出; Part I) / 羅馬字 (roman-only cells in today's candidate UI, all 4 platforms; Part II — 3-column + 台語拼音校正 considered and dropped, kept as future 校正 reference) — research only, not implemented | Plan |
+| `reports/2026-09-11-windows-candidate-window-paint-latency.md` | Windows candidate window frame-before-content latency: measured on the box (2-5 ms steady, one 171 ms first-show in Chrome), mechanism (in-proc `ShowWindow` before `WM_PAINT`), what mozc / PIME / khiin do, options B (in-proc sync paint) / C (renderer process) costed — evaluation only, nothing decided | Plan |
 
 ### `releases/` — Per-Release Archives (1)
 
