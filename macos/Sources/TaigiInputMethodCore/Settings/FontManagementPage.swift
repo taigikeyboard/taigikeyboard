@@ -34,11 +34,11 @@ private struct FontRow: Identifiable {
 /// where selecting a row is what makes it the one in use.
 ///
 /// The list's SHAPE is 自訂詞庫's (`CustomDictionaryPage.entryTable`): a search
-/// field, an inset table with no striping, and the `+` / `−` pair under it that
-/// macOS gives an editable list. The search field is what makes a few hundred
-/// installed families usable in one table (USER 2026-09-11) — the alternative,
-/// a sub-page or a sheet for them, is the popup this pane's shape was chosen
-/// to avoid.
+/// field, an inset table with no striping, one page of rows at a time, and the
+/// `+` / `−` pair under it with the pager at its trailing end. The search field
+/// and the pager are what make a few hundred installed families usable in one
+/// table (USER 2026-09-11) — the alternative, a sub-page or a sheet for them,
+/// is the popup this pane's shape was chosen to avoid.
 ///
 /// No 回復預設 row (USER 2026-09-08): every other pane's reset restores rows the
 /// user cannot otherwise put back one by one, while this list's default is a row
@@ -58,20 +58,29 @@ struct FontManagementPage: View {
     @State private var customFonts: [CustomFont] = []
     @State private var installedFamilies: [String] = []
     @State private var filter = ""
+    /// Which page of the filtered rows is on screen, zero-based. Clamped when
+    /// read: the rows under it change with the filter and with what the OS
+    /// has, and a page past the end shows the last one rather than nothing.
+    @State private var page = 0
     @State private var message: UserDataPageMessage?
 
-    /// Enough of the list to scan without paging through it a handful of rows
-    /// at a time, now that the installed families make it a few hundred long;
-    /// still inside the settings window's minimum content height with the
-    /// search field and the controls around it.
-    private static let visibleRowCount = 12
+    /// How many rows one page holds — the table's height, exactly, as 自訂詞庫
+    /// does it (`CustomDictionaryPageModel.pageSize`): a page that fits the
+    /// table never needs a scroller of its own, which a `Table` inside a
+    /// `Form` cannot have (`UserDataListPager`). The installed families make
+    /// this list a few hundred rows; the search field finds one, the pager
+    /// reaches every one.
+    private static let pageSize = 10
 
     var body: some View {
         // Resolved once per render: the list is a few hundred rows and the
         // search field re-renders on every keystroke, so the controls, the
         // table and the binding below all read these locals.
         let rows = rows
-        let visibleRows = filter.isEmpty ? rows : rows.filter { $0.title.localizedStandardContains(filter) }
+        let matchingRows = filter.isEmpty ? rows : rows.filter { $0.title.localizedStandardContains(filter) }
+        let pageCount = max(1, (matchingRows.count + Self.pageSize - 1) / Self.pageSize)
+        let currentPage = min(page, pageCount - 1)
+        let visibleRows = Array(matchingRows.dropFirst(currentPage * Self.pageSize).prefix(Self.pageSize))
         let selectedRow = rows.first { $0.stored == stored }
         let visibleSelectedRow = visibleRows.contains { $0.id == selectedRow?.id } ? selectedRow : nil
         Form {
@@ -100,10 +109,20 @@ struct FontManagementPage: View {
                             remove(font)
                         }
                     },
-                )
+                ) {
+                    UserDataListPager(
+                        page: currentPage,
+                        pageCount: pageCount,
+                        onBackward: { page = currentPage - 1 },
+                        onForward: { page = currentPage + 1 },
+                    )
+                }
             }
         }
         .formStyle(.grouped)
+        // A new search starts from its first page; the old page number was
+        // about rows that may no longer match.
+        .onChange(of: filter) { page = 0 }
         .onAppear(perform: reload)
         .onReceive(FontRegistryObserver.registrationListMoved) { reload() }
         .userDataPageChrome(activity: .idle, message: $message)
@@ -132,7 +151,7 @@ struct FontManagementPage: View {
         // Every row the same colour, as on the 自訂詞庫 table: settings
         // content, not a spreadsheet.
         .alternatingRowBackgrounds(.disabled)
-        .frame(height: UserDataListMetrics.tableHeight(rows: Self.visibleRowCount))
+        .frame(height: UserDataListMetrics.tableHeight(rows: Self.pageSize))
         .contextMenu(forSelectionType: FontRow.ID.self) { ids in
             if let font = rows.first(where: { $0.id == ids.first })?.customFont {
                 Button(language.string(.commonDelete), role: .destructive) { remove(font) }
@@ -199,7 +218,15 @@ struct FontManagementPage: View {
                 do {
                     let font = try CustomFontLibrary.shared.addFont(from: url)
                     reload()
-                    select(FontRow(stored: .customFile(font.fileName), title: font.displayName, customFont: font))
+                    let row = FontRow(stored: .customFile(font.fileName), title: font.displayName, customFont: font)
+                    select(row)
+                    // Shown as well as selected: the row lands after the
+                    // bundled five and the other imports, which may be past
+                    // the first page, and a search would hide it.
+                    filter = ""
+                    if let index = rows.firstIndex(where: { $0.id == row.id }) {
+                        page = index / Self.pageSize
+                    }
                 } catch {
                     message = .failure(.commonImportFailed, error)
                     reload()

@@ -403,28 +403,12 @@ struct CustomDictionaryPage: View {
                 Task { await model.delete(selectedRow) }
             },
         ) {
-            // Digits only, so the pager needs no wording in five languages —
-            // and the two arrows carry the shortcut pane's own page verbs as
-            // their accessibility labels, which are already translated.
-            Text(verbatim: "\(model.page + 1) / \(model.pageCount)")
-                .foregroundStyle(.secondary)
-                .monospacedDigit()
-
-            Button {
-                Task { await model.pageBackward() }
-            } label: {
-                UserDataListControlGlyph(symbolName: "chevron.left")
-            }
-            .disabled(!model.canPageBackward)
-            .accessibilityLabel(language.string(.desktopActionPageBackward))
-
-            Button {
-                Task { await model.pageForward() }
-            } label: {
-                UserDataListControlGlyph(symbolName: "chevron.right")
-            }
-            .disabled(!model.canPageForward)
-            .accessibilityLabel(language.string(.desktopActionPageForward))
+            UserDataListPager(
+                page: model.page,
+                pageCount: model.pageCount,
+                onBackward: { Task { await model.pageBackward() } },
+                onForward: { Task { await model.pageForward() } },
+            )
         }
     }
 

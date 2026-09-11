@@ -247,7 +247,7 @@ in use — which is how System Settings states a list like that (聲音's output
 
 ### Desktop installed typefaces — the fonts the OS already has, listed and selectable (USER-scoped 2026-09-11)
 
-**Status**: P0 (this section + memory). PR1 macOS and PR2 Windows to follow.
+**Status**: PR1 macOS open (#45). PR2 Windows to follow.
 **Scope**: macOS + Windows only (desktop train). iOS / Android untouched.
 
 **The report** (USER 2026-09-11): a user tried to use a typeface their Mac already has and the
@@ -305,10 +305,13 @@ follow-up if dogfood wants it). The search field filters the in-memory array; it
   way `CustomFontId` names a loaded resource; the format cache is keyed on it. Family not in the
   system collection → default face, preference kept.
 
-**The pane.** One search field above the table (`TextField` with a magnifying-glass label on
-macOS; `TextBox` on Windows, as 自訂詞庫's), filtering all three groups by case- and
-diacritic-insensitive contains. The selected row stays selected while filtered out; clearing the
-field shows it again. `+` (import a file) unchanged. `−` disabled on bundled and installed rows —
+**The pane.** One search field above the table (`UserDataFilterField` on macOS; `TextBox` on
+Windows, as 自訂詞庫's), filtering all three groups by case- and diacritic-insensitive contains, and
+**one page of rows at a time** with 自訂詞庫's pager at the trailing end of the `+` / `−` bar (USER
+2026-09-11 「跟自訂詞庫一樣的實作」): a fixed-height table inside a form cannot scroll on its own
+(the 2026-08-26 finding that paged 自訂詞庫), so the page size IS the table height (10 rows) and
+paging reaches every row. A new search starts on page 1; the selected row stays selected while
+off-page or filtered out, with `−` disabled until it is visible again. `+` (import a file) unchanged. `−` disabled on bundled and installed rows —
 an installed row has nothing to delete. The `nameAlreadyResolves` refusal stays: it is still the
 right answer for a file whose face is already there, and the row for that face is now in the table.
 
