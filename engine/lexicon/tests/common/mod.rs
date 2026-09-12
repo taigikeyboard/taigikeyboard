@@ -201,3 +201,29 @@ pub fn fetch_candidates_for_endings(
     };
     fetch_candidates_for_keys_with_barriers(&keys, &[], &[], input.len() as u32, &inner)
 }
+
+/// One `dictionary.fst` wire entry: `key || 0xFF || rowid_le_4`.
+pub fn wire_entry(key: &str, rowid: u32) -> Vec<u8> {
+    let mut wire = key.as_bytes().to_vec();
+    wire.push(0xFF);
+    wire.extend_from_slice(&rowid.to_le_bytes());
+    wire
+}
+
+/// Build a wire-format `dictionary.fst` from `(key, rowid)` pairs and
+/// open it as a `PrefixIndex`.
+pub fn build_wire_index(name: &str, entries: &[(&str, u32)]) -> lexicon::prefix_index::PrefixIndex {
+    let mut wires: Vec<Vec<u8>> = entries
+        .iter()
+        .map(|(key, rowid)| wire_entry(key, *rowid))
+        .collect();
+    wires.sort();
+    let path = write_temp(name, &[]);
+    let file = std::fs::File::create(&path).expect("create fst");
+    let mut builder = fst::SetBuilder::new(std::io::BufWriter::new(file)).expect("builder");
+    for wire in &wires {
+        builder.insert(wire).expect("insert");
+    }
+    builder.finish().expect("finish");
+    lexicon::prefix_index::PrefixIndex::open(&path).expect("open index")
+}
