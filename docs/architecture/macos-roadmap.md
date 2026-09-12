@@ -1,17 +1,18 @@
 # macOS Desktop IME — Roadmap
 
-> **Type**: Planning (forward-looking)
-> **Keywords**: `macos`, `InputMethodKit`, `IMKit`, `third platform`, `engine reuse`
-> **Status**: Implementation complete 2026-08-17 (PR0–PR13 all merged); remaining work is the single batched device dogfood
-> **Session memory**: project memory `project_macos_ime.md` (Claude auto-memory) (phase status + active pointer)
+> **Type**: Reference (shipped; kept as the design record)
+> **Keywords**: `macos`, `InputMethodKit`, `IMKit`, `desktop`, `engine reuse`
+> **Status**: shipped — PR0–PR13 merged 2026-08-17; candidate-window port 2026-08-18 (D11); released in desktop v3.6.7 (first macOS + Windows desktop release) and v3.6.8 (`changelog/desktop-v3.6.7.md`, `changelog/desktop-v3.6.8.md`). Device dogfood runs as one batch per USER 2026-08-15 (「我想等 desktop 實作完成再 dogfood」); the batch is still open. Release mechanics: `desktop-release.md`.
+> **Session memory**: project memory `project_macos_ime.md` (Claude auto-memory)
 > **Plan provenance**: Phase-0 research + Codex pre-impl design review (ANALYSIS-ONLY, 2026-08-15) — FFI-reuse / SwiftPM-bundle / platform_id-deferral all confirmed; generation-ownership, proto-gen isolation, PR sizing, bundle-metadata cautions incorporated.
 
 ---
 
 ## Goal
 
-Add macOS as the third platform (after iOS/Android) to prove the shared Rust
-engine reuses cleanly behind a thin native shell. Native InputMethodKit app
+Add macOS (one of the two desktop platforms beside Windows TSF; iOS and Android
+are the mobile pair) to prove the shared Rust engine reuses cleanly behind a
+thin native shell. Native InputMethodKit app
 (IMKServer / IMKInputController — NOT KeyboardKit), TL + POJ only (no TPS),
 modern SwiftUI settings (macOS 14+), custom-dictionary support, macOS-conventional
 shortcuts.
@@ -21,7 +22,7 @@ shortcuts.
 purely additive" rule came from a concurrent iOS/Android session — **lifted
 2026-08-15 (USER: 「目前沒有並行 session」)**. Shared-surface changes are now
 allowed on their merits; the coordination register below stays as the record of
-what each PR touches, and PR8a's proto regen is still user-timed.
+what each PR touches. PR8a's proto regen landed in #528 (2026-08-17).
 
 ## Architecture (approved)
 
@@ -59,7 +60,7 @@ Runtime data: `dictionary.fst` / `dictionary.bin` / `association.bin` /
 (read-only, fail-fast validated) into `.app/Contents/Resources`; absolute paths
 passed via `lexiconInstall`.
 
-## Design decisions (D1–D10, grounded in code)
+## Design decisions (D1–D11, grounded in code)
 
 All grounded in actual code reads (actual code reading); full citations in the
 Phase-0 plan and project memory `project_macos_ime.md` (Claude auto-memory).
@@ -201,7 +202,7 @@ Phase-0 plan and project memory `project_macos_ime.md` (Claude auto-memory).
   FFI). **No migrator** — macOS never shipped a v1 schema (revised 2026-08-17;
   same dead-code rationale as `UserFrequencyStore`). Entries ride
   `FetchAtPos.custom_entries` — zero new FFI. CSV via NSOpen/SavePanel.
-  Backup-exclusion policy = user decision at PR12. Seed parity with iOS: two
+  Backup-exclusion policy decided at PR12: inside Time Machine scope. Seed parity with iOS: two
   default entries (`gâu-tsá/𠢕早`, `tsia̍h-pá--buē/食飽未`). Re-activated
   2026-08-17 as PR11 (store) + PR12 (UI).
 - **D7 User freq / nextword** — **CLOSED at PR8a+PR9 (#528)**. PR3–PR7 ran the
@@ -261,6 +262,54 @@ Phase-0 plan and project memory `project_macos_ime.md` (Claude auto-memory).
   under `set -o pipefail`: `grep -q` closes the pipe, `nm` takes SIGPIPE, and the
   check fails spuriously — read the symbol table into a variable first.
 
+- **D11 Candidate window — MacishType port (2026-08-18, three PRs
+  `bac7a983` → `1849349f` → `ba682ceb`; Codex pre-impl 2026-08-18)** — the
+  one-row SwiftUI bar in a borderless `NSPanel` was replaced by a port of
+  MacishType's candidate window (`references/MacishType/macos/MacishType/`,
+  MIT, © 2026 Luke Chang; ported files carry the attribution in their header)
+  so the panel matches the native input-method look: system accent colour
+  (Multicolour → host app's `NSAccentColorName` when it resolves, else system),
+  three layouts (`horizontal` width-packed pages · `vertical` scrolling ·
+  `expandable` one row + chevron grid; `candidateLayout`, default
+  `expandable`), light/dark following the system appearance, Sequoia
+  (`NSVisualEffectView`, 6pt corners, row bar) vs Tahoe (`NSGlassEffectView`,
+  capsule, inset pill) chrome resolved from the running OS. Navigation moved
+  from the controller-side `CandidateListModel` into the panel behind the
+  `CandidatePresenter` seam (`show` / `navigate` / `selectedCandidateIndex` /
+  `candidateIndex(forSlot:)` / `hide`), every entry owner-token guarded; the
+  panel is the single selection authority, `isShowingCandidates` stays
+  `!fetchedCandidates.isEmpty`. Pure geometry (`HorizontalPageLayout`,
+  `ExpandedGridLayout`, `CandidatePanelPositioning`, `ScreenLookup`) is
+  value-typed and unit-tested; AppKit layout / scroll / animation are
+  dogfood-gated. Presentation keys (`candidateLayout`,
+  `candidateAppearanceMode`, `candidateWindowSize`, `candidateTextSize`,
+  `fontType`) sit beside the store's macOS-only keys, not in `EngineSettings`.
+  One private-API carve-out survives, guarded by `responds(to:)`: upstream's
+  `_adaptiveAppearance` KVC on `NSGlassEffectView`. The
+  `candidateWindowStyle` override PR3 shipped was removed (asymmetric below
+  macOS 26) and is swept by `RetiredSettingsCleanup`. `maxDisplayCandidates =
+  200` is kept as a stated decision.
+
+  Deliberately NOT carried over (each confirmed by the Codex pass):
+
+  | Upstream thing | Why not |
+  |---|---|
+  | `Candidate.annotation` + vertical column-alignment / top-3 width heuristic | Taigi candidates are one composed string; widths are measured eagerly over the displayed list |
+  | `Candidate.payload` | absolute index into the controller's retained array is the identity |
+  | `-1` no-selection sentinel, "first arrow reveals", empty confirm, `initialHighlight < 0` | the IME always selects index 0 on every fresh fetch; the suspended-selection state is unreachable |
+  | `indexLabels` + `candidateIndex(for:)` / `navigationIntent(...)` | key classification stays in `ComposingKeyIntent`; slot keys are a fixed nine (`CandidateSlotKeySet`, shipped `q w d f z x v y ;` since 2026-08-28; drawn per #604) |
+  | upstream placement (`topLeftPoint`, composition-start/end fallback, screen lookup) | `CandidatePanelPositioning` + `ScreenLookup` are pure, tested, and clamp oversized panels |
+  | `windowEffectiveAppearance` client-appearance read | undocumented selector; system appearance instead |
+  | double-click commit + `candidateConfirmed` delegate | a mouse commit is a new asynchronous engine entry needing owner-token + generation + live-client validation; a click selects, only keys commit |
+
+  References borrowed: MacishType `CandidateWindow.swift:150-300` (panel owns
+  candidates + selection), `MacishHorizontalBasePanel.swift:12-34`
+  (width-packed page), `MacishBasePanel.swift:129-177` (accent + luminance
+  clamp), `MacishVerticalPanel.swift:255-330` (lazy vertical render — later
+  extended by #47 on-demand rows), `MacishHorizontalExpandablePanel.swift:99-220`;
+  McBopomofo `HorizontalCandidateController.swift:509` (highlight clamps at
+  both ends — the D4 no-wrap rule).
+
 ## Phase / PR table
 
 | PR | Phase | Scope | Status |
@@ -274,7 +323,7 @@ Phase-0 plan and project memory `project_macos_ime.md` (Claude auto-memory).
 | PR4b | Candidate IMK integration | `KeyEventSnapshot` named-key discriminator; Space / arrows / paging / `Ctrl+1…9` intents; controller routing; `CandidatePanel` + SwiftUI bar; caret anchor + screen selection; panel owner token; `hidePalettes` | **Merged** #525 `a93fa507` |
 | PR5 | Settings + menubar | `SettingsStore` + live-read provider replacing `DefaultEngineSettingsProvider`; SwiftUI form; `SettingsWindowController`; programmatic main menu; IMK `menu()` with `showPreferences:` + TL/POJ items; `Ctrl+Shift+,` as the settings item's key equivalent | **Merged** #527 `62ff7d40` |
 | PR6 | Custom dict persistence | **re-activated 2026-08-17 (USER), folded into PR11 below** (supersedes 2026-08-16「先不實作」). No migrator — macOS never shipped a v1 schema | folded → PR11 |
-| PR7 | Custom dict UI | **re-activated 2026-08-17 (USER), folded into PR12 below.** Backup-exclusion decision stays user-gated at PR12 | folded → PR12 |
+| PR7 | Custom dict UI | **re-activated 2026-08-17 (USER), folded into PR12 below.** Backup-exclusion decided at PR12 (inside TM scope) | folded → PR12 |
 | PR8a+PR9 | Proto coordination + freq/nextword ⚠ | **merged into ONE PR at USER instruction.** `PLATFORM_MACOS` + triple-touch regen (`rust-migration-policy.md` §4; ios/android GENERATED files only) · macOS nextword decide contract · `user_frequency.db` + `user_association.db` · phase-2 boosted fetch · learning settings | **Merged** #528 `652eb28d` |
 
 ### Settings v2 + 詞庫 page track (2026-08-17, USER-approved plan)
@@ -293,8 +342,8 @@ in the generated protos. PR sizing ~600-1000 LOC each (USER chose fewer/larger P
 |---|---|---|---|
 | PR10 | Window restyle + shortcuts | NSTabViewController `.toolbar` tabs + resizable window; `GeneralSettingsView` + `DictionarySettingsPane` shell; KeyboardShortcuts dep + `ShortcutActions` registry + recorder UI; IMK menu key equivalent read from the stored chord | **Merged** #534 `43cd8d6a` |
 | PR11 | 詞庫 data layer (no UI) — **Merged** #537 `83bfa549` | 24 source-toggle keys (iOS `SharedSettings.swift:53-84` spellings) + `DictionarySourceToggles` in `EngineSettings`; `lexiconDictionaryFilters` bridge + `FetchAtPos.enabled_sources_bitmask` + `custom_entries` wiring; `CustomDictionaryStore` (schema v2 + side table, cap 30000, no migrator) + phonetics derive bridge; `UserDataDatabase.perform` + freq/assoc list/delete/clear/batchImportMerge APIs; CSV codecs third mirror. ⚠ intended behavior change: defaults exclude iTaigi/台日/台華/植物/異體/khiin from continuous candidates (was sentinel all-on) | done |
-| PR12 | 詞庫 tab UI — **Merged** #538 `29bc5ada` | toggles view (MOE + kautian 11 + other + supplement); custom-dict CRUD + CSV + seed; 詞頻/詞關聯 viewers (limit 100, pair-key delete, clear, CSV); 備份還原 `.taigi` (BackupService JSON v2, `platform:"macos"`); NSOpen/NSSavePanel helpers. Custom-dict Time-Machine policy = USER decision here (default: stays inside TM, matching 2026-08-16 learning-DB decision) | Pending |
-| PR13 | 辭典搜尋 — **Merged** #539 `88e0b223` | lexicon search bridge (searchWithSources/searchByHanzi/isHanzi) + tlToPoj; `DictionarySearchService` (toggle snapshot per query, kautian-first sort, badge retag, custom-dict prefix merge); search UI (300ms debounce, field at TOP of 詞庫 tab — mac idiom) + 萌典教典/ChhoeTaigi external links via NSWorkspace.open | Pending |
+| PR12 | 詞庫 tab UI — **Merged** #538 `29bc5ada` | toggles view (MOE + kautian 11 + other + supplement); custom-dict CRUD + CSV + seed; 詞頻/詞關聯 viewers (limit 100, pair-key delete, clear, CSV); 備份還原 `.taigi` (BackupService JSON v2, `platform:"macos"`); NSOpen/NSSavePanel helpers. Custom-dict Time-Machine policy: stays inside TM scope (plan default, unchanged) | done |
+| PR13 | 辭典搜尋 — **Merged** #539 `88e0b223` | lexicon search bridge (searchWithSources/searchByHanzi/isHanzi) + tlToPoj; `DictionarySearchService` (toggle snapshot per query, kautian-first sort, badge retag, custom-dict prefix merge); search UI (300ms debounce, field at TOP of 詞庫 tab — mac idiom) + 萌典教典/ChhoeTaigi external links via NSWorkspace.open | done |
 
 **TRACK COMPLETE 2026-08-17** — all four merged, `swift test` 329/329 on main (was 170 before PR10). Nothing from this track is outstanding except the batched device dogfood and the two open items below.
 
@@ -378,9 +427,8 @@ retired panes, and clears the two recording toggles they carried so a stored
   way to pick: the bare-digit-after-a-tone rule (#602, 2026-08-24) and the `↓` latch (#610) are
   both retired 2026-08-28; a bare digit is always the tone, and the window always draws the
   chosen set.
-- PR8a timing (proto regen window vs concurrent iOS/Android session).
-- Custom-dict Time-Machine/backup-exclusion policy (decided at PR12; plan default =
-  stays inside TM scope, matching the 2026-08-16 learning-DB decision).
-- macOS dogfood acceptance checklist contents (proposed at PR9). **Dogfood cadence decided
+- ~~PR8a timing~~ — resolved: regen landed with #528 (2026-08-17), no concurrent session.
+- ~~Custom-dict Time-Machine/backup-exclusion policy~~ — resolved at PR12 with the plan default: all three macOS databases stay inside Time Machine scope (the iOS iCloud exclusion in `behavioral-invariants.md` §29 was about data leaving the device). Still the USER's to change.
+- ~~macOS dogfood acceptance checklist contents~~ — resolved: per-feature `Sn` items live in `dogfood-checklist.md`. **Dogfood cadence decided
   2026-08-15 (USER: 「我想等 desktop 實作完成再 dogfood」)** — device dogfood is not a per-PR
-  gate; it runs once as a batch after the desktop IME is implemented.
+  gate; it runs once as a batch, and that batch is still open.

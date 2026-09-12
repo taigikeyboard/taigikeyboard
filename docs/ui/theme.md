@@ -8,10 +8,47 @@
 
 ## Summary
 
-- Flat design: no shadows, uses borders
-- User-customizable colors, fonts, and key sizing
+- Theme picker (v3.6.2, 主題 tab): built-in theme families + up to 5 saved custom themes — see § Theme Picker below
+- Keys keep the platform's standard subtle key shadow by default; a custom theme can set its own key-shadow intensity (0 = flat … 4)
+- Font is a global keyboard setting (Settings tab), not part of a theme
 - iOS: Light/Dark Mode; Android: Light/Dark/Auto Mode
-- Platform-native color systems with custom overrides via `KeyboardColorSettings`
+- Platform-native color systems with custom overrides via `KeyboardColorSettings`, bundled per theme as `ThemeAppearance`
+
+---
+
+## Theme Picker (v3.6.2, current state)
+
+Shipped in v3.6.2 (`changelog/v3.6.2.md`) as the 主題 tab of the main app (tab order in [app-ui.md](app-ui.md)).
+
+### Built-in catalog
+
+Three key-style **families** over one shared set of 7 colours (`ios/Sources/TaigiKeyboard/Settings/BuiltInThemes.swift`, Android `ime/core/BuiltInThemes.kt`):
+
+| Family | Key rendering |
+|---|---|
+| 經典 (classic) | filled keys |
+| 框線 (framed) | transparent keys + 1pt outline |
+| 簡潔 (clean) | transparent keys, no outline |
+
+Colours per family: 預設 (adaptive, follows light/dark), five light-only soft gradients (櫻花 / 金煌 / 海風 / 翠青 / 藤紫), and 暗眠山貓 (Catppuccin Mocha, dark-only). The active theme paints every keyboard surface (keyboard, candidate strip, expanded candidate overlay, symbol / layout / settings overlays).
+
+### Custom themes
+
+`Create New…` on the custom shelf opens the editor (`App/Tabs/Theme/ThemeEditorView.swift` + `ThemeEditorViewModel.swift`; Android `ui/tabs/theme/ThemeEditorScreen.kt` hosted by `settings/ThemeEditorActivity.kt`). A custom theme captures one `ThemeAppearance` bundle (`Settings/KeyboardThemeModels.swift`, Android `ime/core/ThemeAppearance.kt`): the six role colours (`KeyboardColorSettings`, `nil` = inherit adaptive), the five size scalars, and `keyShadowIntensity`. Up to `UserThemeStore.maxUserThemes = 5` (`Settings/UserThemeStore.swift`; Android `ime/core/UserThemeStore.kt` `MAX_USER_THEMES`). A live keyboard preview (`KeyboardPreviewPanel.swift` / `ThemePreviewEnvironment.swift`) is pinned in the editor.
+
+### Key shadow
+
+Slider range 0…4 in 0.5 steps (`App/Tabs/Theme/ThemeControlRows.swift` `ThemeSliderRanges.shadow`). Three-state at render time (`KeyboardExtension/TaigiKeyboardView.swift` § "Per-theme key shadow"): `nil` (default and built-in themes) leaves KeyboardKit's standard button shadow; `0` renders flat (`.noShadow`); `> 0` renders a `Keyboard.ButtonShadowStyle` of that point size. Android mirrors this in `ime/text/keyboard/KeyContent.kt` (`keyShadowSpec(intensity)` → `null` for 0, a Compose drop shadow otherwise).
+
+### Resolution and storage
+
+| Piece | iOS (`Settings/`) | Android (`ime/core/`) |
+|---|---|---|
+| Theme id + selection | `KeyboardThemeModels.swift` `ThemeId` | `ThemeId.kt` |
+| Built-in catalog | `BuiltInThemes.swift` | `BuiltInThemes.kt` |
+| Resolver (selected id → `ThemeAppearance`) | `ThemeResolver.swift` | `ThemeResolver.kt` (+ `ThemeAppearanceCache.kt`) |
+| User themes persistence | `UserThemeStore.swift` (UserDefaults, App Group) | `UserThemeStore.kt` (DataStore) |
+| Picker UI | `App/Tabs/Theme/ThemePickerView.swift` | `ui/tabs/theme/ThemePickerScreen.kt` |
 
 ---
 
@@ -43,7 +80,7 @@
 
 ## User Customization
 
-### Customizable Properties
+### Customizable Properties (per custom theme; `ThemeAppearance`)
 
 | Property | Range | Default |
 |----------|-------|---------|
@@ -52,6 +89,7 @@
 | Candidate text size scale | 0.85–1.15 | 1.0 |
 | Key corner radius | 0–15 pt/dp | 6 |
 | Key border width | 0–3 pt/dp | 0 |
+| Key shadow intensity | 0–4 pt/dp | 0 (flat) for a new custom theme; built-in themes keep the platform standard shadow |
 | Keyboard background color | RGBA | (adaptive) |
 | Key text color | RGBA | (adaptive) |
 | Normal key fill color | RGBA | (adaptive) |
@@ -59,7 +97,7 @@
 | Candidate text color | RGBA | (adaptive) |
 | Candidate background color | RGBA | (adaptive) |
 
-### Font Options
+### Font Options (global setting — Settings tab, not per theme)
 - System default
 - jf-openhuninn-2.1
 - Iansui-Regular
@@ -130,7 +168,7 @@ When custom background is set: uses that color, ignores Liquid Glass.
 
 ### Avoid Modern Style
 
-- No heavy shadows
+- No heavy shadows (keys keep the platform's subtle default; custom themes cap at 4pt)
 - No floating card effects
 - No overly rounded corners
 - No uniform icon circles

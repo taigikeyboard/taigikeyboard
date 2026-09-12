@@ -9,6 +9,8 @@ produces.
 
 iOS is unaffected — it continues to ship through App Store Connect.
 
+**Entry point for a desktop release is [`desktop-release.md`](desktop-release.md)** (one version, one draft GitHub release holding the macOS package and the Windows installer, `make desktop-release`); this file is the macOS-specific half it drives.
+
 ## Architectures
 
 One universal `.pkg`, not one download per Mac. Every layer carries both

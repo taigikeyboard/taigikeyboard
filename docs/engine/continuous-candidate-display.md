@@ -1,9 +1,9 @@
 # Continuous-Input Candidate Display — Spec
 
-> **Type**: Specification (problem + proposed fix, partially shipped)
+> **Type**: Specification (problem + fix, shipped v3.5.8)
 > **Keywords**: `Continuous`, `Candidate`, `display`, `roman`, `hanji`, `subtitle`, `dual-line`, `wire-schema`, `eliminate-fallback`
-> **Related**: [continuous-input-ranking.md](continuous-input-ranking.md), [composing.md](composing.md), [autocomplete.md](autocomplete.md), [binary-format.md](binary-format.md), [`.claude/rules/cross-platform-alignment.md`](../../.claude/rules/cross-platform-alignment.md)
-> **Status**: §4 dual-line carrier shipped (Items 5–6); §15 fallback retire **COMPLETE** — Items 7–12 closed every engine syllabification gap and **Item 13 (v3.5.8 capstone) retired the platform lexicon fallback** so the Continuous engine is the single candidate source. All in v3.5.8 per `feedback_v358_full_scope.md` (satisfaction-gated; no `v3.5.9+` deferrals). Item 13 = v3.5.8 feature-complete.
+> **Related**: [continuous-input-ranking.md](continuous-input-ranking.md), [composing.md](composing.md), [binary-format.md](binary-format.md), [`.claude/rules/cross-platform-alignment.md`](../../.claude/rules/cross-platform-alignment.md)
+> **Status**: §4 dual-line carrier shipped (Items 5–6); §15 fallback retire **COMPLETE** — Items 7–12 closed every engine syllabification gap and **Item 13 (v3.5.8 capstone) retired the platform lexicon fallback** so the Continuous engine is the single candidate source. All in v3.5.8 (USER 2026-05-11: 「v3.5.8 的版本就是連續打字的版本,修復到我滿意為止」). Item 13 = v3.5.8 feature-complete; see [`changelog/v3.5.8.md`](../../changelog/v3.5.8.md).
 > **Author**: Dogfood findings 2026-05-11. Source observation = user during v3.5.8 dogfood. §15 added 2026-05-11 (night) per user pivot 「engine 內部處理所有切音節邏輯,fallback 是冗餘」.
 > **Adjacent spec (2026-05-13)**: [`continuous-input-ranking.md`](continuous-input-ranking.md) §10 — Commit Behavior & Display Split. Composing buffer (`rawInput`) vs candidate[0] (segmented) split + Enter / Tap-0 / Tap-N commit dispatch. Grounded in MOE `KeySectionsModel` (§10.1.1). Drafted; co-confirm pending in the same Codex pass as this doc.
 
@@ -36,7 +36,7 @@ User expectation:
 
 ### 1.2 Why this matters
 
-- **Dogfood is qualitative gate** (per [`feedback_perf_gate.md`](../../knowledge/feedback)) — UX inconsistency drowns out signal for the remaining Phase 9 sub-PRs (9.4a / 9.4b / 9.5 / 9.6).
+- **Dogfood is qualitative gate** (`~/.claude/rules/code-review-rules.md` §9) — UX inconsistency drowns out signal for the remaining Phase 9 sub-PRs (9.4a / 9.4b / 9.5 / 9.6).
 - **Phase 9.6 will compound the problem** — custom_dict integration will route custom candidates through the same `CandidateMessage` carrier; without a roman/hanji split, custom continuous candidates ship single-line too.
 - **Mainstream IME parity** — MOE Tâi-gí (`tutgInputLine` candidates) and khiin-rs (`khiin/src/candidate.rs`) both expose roman + hanji as separate display fields; aligning brings Taigi Keyboard back into the mainstream pattern.
 
@@ -374,7 +374,7 @@ TPS-layout interaction (`isTPSLayout = true`):
 UI looks up roman/hanji by `display_text` on each candidate via a second FFI call.
 
 **Rejected**:
-- Violates "engine owns display strings" principle ([`project_v358_continuous_input.md` §關鍵設計決定 §8](../../knowledge/feedback))
+- Violates "engine owns display strings" principle (v3.5.8 design decision, [`docs/releases/v3.5.8/plan.md`](../releases/v3.5.8/plan.md))
 - Violates [`.claude/rules/cross-platform-alignment.md`](../../.claude/rules/cross-platform-alignment.md) "behavior contract pinned at engine layer"
 - Doubles FFI overhead per fetch (typically 5-30 candidates)
 - Race window: between FetchAtPos response and platform re-lookup the dictionary state could change
@@ -410,7 +410,7 @@ proto3 additive change — new fields default to empty when absent.
 | New Rust | Old platform | New fields ignored | unchanged — current behavior (graceful) |
 | New Rust | New platform | Full wire | dual-line render (target) |
 
-**Defensive read (platform side)**: if `roman.isEmpty()` after decode, fall back to `displayText` for cell title. This protects against partial rollout where the librust_taigi.a was rebuilt but proto regen was skipped, or where a stale wire reaches the platform. (Phase 6 already requires lockstep regen per [`feedback_proto_gen_script.md`](../../knowledge/feedback) so this should never happen in practice.)
+**Defensive read (platform side)**: if `roman.isEmpty()` after decode, fall back to `displayText` for cell title. This protects against partial rollout where the librust_taigi.a was rebuilt but proto regen was skipped, or where a stale wire reaches the platform. (Phase 6 already requires lockstep regen via `make build`, so this should never happen in practice.)
 
 **Asset coupling**: librust_taigi.a is bundled inside the app on both platforms — no over-the-air engine update, no out-of-band wire skew. Release ships proto + Rust + iOS bridge + Android bridge in lockstep.
 
@@ -437,17 +437,16 @@ proto3 additive change — new fields default to empty when absent.
 
 | Test | Location | Asserts |
 |---|---|---|
-| `decodeContinuousCandidate_carriesRoman` | `ios/Tests/TaigiKeyboardTests/Engine/RustEngineBridgeContinuousTests.swift` | proto wire with `roman = "tsua"` → `ContinuousCandidate.roman == "tsua"` |
+| `decodeContinuousCandidate_carriesRoman` | `ios/TaigiKeyboardTests/RustEngineBridgeContinuousTests.swift` | proto wire with `roman = "tsua"` → `ContinuousCandidate.roman == "tsua"` |
 | `decodeContinuousCandidate_carriesHanjiAsOptional` | same | proto wire with `hanji = "珠"` → `.hanji == "珠"`; absent → `.hanji == nil` |
-| `buildContinuousSuggestions_emitsDualLineForHant` | `TaigiAutocompleteServiceContinuousTests.swift` (new) | HANT candidate → `Suggestion(title: roman, subtitle: hanji)` |
+| `buildContinuousSuggestions_emitsDualLineForHant` | `ios/TaigiKeyboardTests/TaigiAutocompleteServiceContinuousTests.swift` | HANT candidate → `Suggestion(title: roman, subtitle: hanji)` |
 | `buildContinuousSuggestions_emitsSingleLineForTailo` | same | TAILO candidate → `Suggestion(subtitle: nil)` |
 
 ### 8.4 Android bridge tests
 
 | Test | Location | Asserts |
 |---|---|---|
-| `decode_continuous_candidate_carries_roman` | `android/app/src/test/.../engine/RustEngineBridgeContinuousTest.kt` (new) | Mirror of iOS |
-| `buildContinuousSuggestionsForCandidates_emits_TaigiWord_with_hanji` | `ContinuousSuggestionsContractTest.kt` (existing) | New assertion: HANT candidate → `TaigiWord.hanzi != null` |
+| `Item 6 — HANT candidate emits dual-line carrier` / `TAILO … single-line` / `MIXED … dual-line` | `android/app/src/test/java/com/siansiansu/taigikeyboard/ime/text/composing/ContinuousSuggestionsContractTest.kt` | Android has no separate bridge decode test; the contract test covers wire → `TaigiWord` end to end (HANT → `hanzi != null`, TAILO → single-line) |
 
 ### 8.5 Acceptance / regression
 
@@ -525,7 +524,7 @@ Recommendation: **A** with rename to `Phase 9.4a` (display fix) and the current 
 
 ### Q9 — Pair with Finding 1 (dashed border removal)?
 
-Finding 1 in [`project_v358_dogfood_findings.md`](../../knowledge/feedback) — user-decide to remove the dashed border overlay on slot-0. Should it ship together (one PR) or separately (two PRs)?
+Dogfood Finding 1 (2026-05-11) — user-decide to remove the dashed border overlay on slot-0. Should it ship together (one PR) or separately (two PRs)?
 
 Options:
 
@@ -558,11 +557,11 @@ Per [`~/.claude/rules/planning.md`](https://github.com/siansiansu/configurations
 
 ## 11. Mainstream IME Cite-and-Trace
 
-Per [`feedback_plan_cite_best_practices.md`](../../knowledge/feedback) — display contract precedents:
+Per `~/.claude/rules/planning.md` § Cite best practices explicitly — display contract precedents:
 
 | IME | Carrier | Field shape |
 |---|---|---|
-| MOE Tâi-gí Android (per [`project_v358_continuous_input.md`](../../knowledge/feedback) MOE探索) | `NailCandidate { VocType, candidate_id }` + `tutgInputLine` lookup | Distinct `hanji` / `tailo` fields per `NailCandidate`; UI renders both |
+| MOE Tâi-gí Android (per [`../references/moe-taigi-reference.md`](../references/moe-taigi-reference.md)) | `NailCandidate { VocType, candidate_id }` + `tutgInputLine` lookup | Distinct `hanji` / `tailo` fields per `NailCandidate`; UI renders both |
 | khiin-rs ([`docs/references/khiin-reference.md`](../references/khiin-reference.md)) | `Candidate { tl: String, ascii: String, hanji: String }` | Three fields; `Bigram` ranker reads `hanji`, UI reads pair |
 | librime (CJK general) | `CandidateInfo { text, comment, type }` | `text` = primary (hanji); `comment` = secondary (annotation, often romanization) |
 | azooKey (per [`docs/references/azookey-reference.md`](../references/azookey-reference.md)) | `Candidate { text: String, ruby: String? }` | `text` = primary, `ruby` = furigana / secondary |
@@ -603,12 +602,9 @@ Per [`.claude/rules/cross-platform-alignment.md`](../../.claude/rules/cross-plat
 
 ## 14. Status & Next Action
 
-- **2026-05-11 (day)**: §1-14 display fix drafted from dogfood findings; recorded in [`project_v358_dogfood_findings.md`](../../knowledge/feedback)
-- **2026-05-11 (night)**: §15 added per user pivot — eliminate platform-side lexicon fallback; engine becomes single source of candidates (MOE `tutgInputLine` analog). All work scoped to v3.5.8 per [`feedback_v358_full_scope.md`](../../knowledge/feedback) (user wording: 「v3.5.8 的版本就是連續打字的版本,修復到我滿意為止」).
-- **Pending**: Codex weekly quota recovery → pre-impl consult on §9 + §15.7 Open Questions
-- **Then**: implement display fix (§1-14) + fallback retire (§15) as Phase 9 continuation; sub-PR count not capped per `~/.claude/rules/planning.md` § Persistent hand-off (200-500 LOC/PR discipline)
-
-This spec is **frozen** until Codex consult; updates after that should be tracked in commit messages, not retroactive edits.
+- **2026-05-11 (day)**: §1-14 display fix drafted from dogfood findings.
+- **2026-05-11 (night)**: §15 added per user pivot — eliminate platform-side lexicon fallback; engine becomes single source of candidates (MOE `tutgInputLine` analog). All work scoped to v3.5.8 (USER 2026-05-11: 「v3.5.8 的版本就是連續打字的版本,修復到我滿意為止」).
+- **Complete (v3.5.8)**: Codex pre-impl consult on §9 + §15.7 done; display fix (§1-14, Items 5–6) and fallback retire (§15, Items 7–13) implemented and shipped — [`changelog/v3.5.8.md`](../../changelog/v3.5.8.md) § Shared / § Engine. Later changes are tracked in commit messages and the module docs of `engine/lexicon/src/continuous.rs` / `engine/composing/src/continuous.rs`, not by retroactive edits here.
 
 ---
 

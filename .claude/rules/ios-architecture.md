@@ -44,12 +44,14 @@ iOS code is organized into four layers. Dependencies flow **top-down only** — 
 └──────────────────────────────────────────────────────────────┘
                              │
 ┌──────────────────────────────────────────────────────────────┐
-│  Engine Layer         (Phonetics/, Input/, Lexicon/,         │
-│                        NextWord/, Autocomplete/Services,     │
+│  Engine Layer         (Engine/, Input/, Lexicon/,            │
+│                        NextWord/, Composition/, Logging/,    │
+│                        Autocomplete/Services,                │
 │                        Settings/ pure parts)                 │
-│  Pure-logic: phonetics, trie, input pipeline, next-word      │
-│  scoring, DB repositories, engine settings protocol          │
-│  Imports: Foundation ONLY                                    │
+│  Rust FFI bridge (RustEngineBridge + generated protos),      │
+│  input pipeline, next-word glue, DB repositories, engine     │
+│  settings protocol, service graph wiring, logging backend    │
+│  Imports: Foundation ONLY (+ SwiftProtobuf in Engine/)       │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -57,7 +59,9 @@ iOS code is organized into four layers. Dependencies flow **top-down only** — 
 
 | Folder                     | Layer    | Notes                                             |
 |----------------------------|----------|---------------------------------------------------|
-| `Phonetics/`               | Engine   | All files Foundation-only                         |
+| `Engine/`                  | Engine   | `RustEngineBridge*.swift` FFI facade + `Generated/*.pb.swift` protos; Foundation + SwiftProtobuf only. Phonetics / tone logic lives in the Rust engine, not in Swift. |
+| `Composition/`             | Engine   | `CompositionRoot` — production service graph shared by app + extension; Foundation-only |
+| `Logging/`                 | Engine   | `LoggerBackend` (Shared-Core Candidate); `DebugLogger.swift` at the root is the extension-facing wrapper |
 | `Input/`                   | Engine   | Incl. `Composing/` — must be KK-free (see §3)     |
 | `Lexicon/`                 | Engine   | DB repos allowed (Foundation + SQLite3 C API). `LexiconService`, `NextWordService`, `DictionaryRepository` all inject `EngineSettingsProvider`. |
 | `NextWord/`                | Engine   |                                                   |
@@ -71,7 +75,7 @@ iOS code is organized into four layers. Dependencies flow **top-down only** — 
 | `Overlays/`                | Platform | Except `CandidateRowLayoutEngine` (Engine)        |
 | `Styling/`                 | Platform |                                                   |
 | `App/`                     | App      | Host app, tabs, settings UI                       |
-| `Strings/`                 | App      | Inline text, no `.strings` catalog               |
+| `Strings/`                 | App      | `Strings/Generated/` (codegen from `i18n/*.json` via `make i18n`) + `DisplayLanguageStore` / `StringResolver` / `DisplayLanguage` runtime resolvers |
 
 ---
 
@@ -131,12 +135,12 @@ If an Engine-layer file appears to need KeyboardKit, the file is in the **wrong 
 ### Folders
 
 - Group by feature / layer, not by type kind.
-  - **Good**: `NextWord/Services/`, `NextWord/Repository/`, `Phonetics/Parser/`
+  - **Good**: `NextWord/Services/`, `NextWord/Repository/`, `Engine/Generated/`
   - **Bad**: `Models/` at the root mixing unrelated value types, `Utils/` as a dumping ground
 - No ordering hacks (no leading `_`, no numeric prefixes like `Tab1-4`).
 - Folder names describe what is inside, not when it was added or its position in the UI.
 
-- App tab folders (`Home/`, `Layout/`, `Dictionary/`, `Settings/`) align with `TabType` enum cases and UI-visible titles; tab structs / Texts enums follow the folder name (`HomeTab` / `HomeTexts`).
+- App tab folders (`Home/`, `Theme/`, `Layout/`, `Dictionary/`, `Settings/`) align with `TabType` enum cases and UI-visible titles; tab structs follow the folder name (`HomeTab`, `ThemeTab`). Tab titles come from `i18n/nav.json`, not per-tab `*Texts` enums.
 - Do **not** introduce a type named `Keyboard` or `KeyboardExtension` — KeyboardKit already owns the `Keyboard` namespace.
 
 ---

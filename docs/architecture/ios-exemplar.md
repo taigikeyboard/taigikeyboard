@@ -1,12 +1,12 @@
-# iOS Exemplar — Architectural Contract for Android Phase II
+# iOS Exemplar — Cross-platform Architectural Pattern
 
-**Status**: authored 2026-04-19 as Phase I G8 deliverable (ahead of G1–G7 / G9 implementation, so the pattern guides that work). Revised same day after Codex + Gemini review cycle; the Android-side sections (§1 mapping, §3 live-read, §5.2 marker, §5.3 constants, §6 ViewModel pattern) are now concrete enough to port from directly. This is the doc Android Phase II copies from — "look at iOS and copy it" is not a plan; this is.
+**Type**: Reference. **Status**: authored 2026-04-19 as the alignment target for the Android port; Android converged on it in 2026-04 (the A-rounds), and since the Rust extraction (v3.5.1 → v3.5.9) the pure-engine layer lives in `engine/<crate>` crates rather than in Swift / Kotlin. The pattern below still governs how every platform's glue (iOS, Android, macOS, Windows) is shaped around the engine. Android-specific deviations are in §9.
 
-**Audience**: anyone aligning Android structure to iOS, or deciding what behavioral surface the Rust engine must preserve.
+**Audience**: anyone aligning a platform's structure to iOS, or deciding what behavioral surface the Rust engine must preserve.
 
 **Scope**: architectural pattern only. Behavioral contracts live in `behavioral-invariants.md`; the live Rust / native ownership inventory lives in `../engine/migration-inventory.csv`; data-artifact portability (`dictionary.fst` / `dictionary.bin` / SQLite) lives in `data-artifacts-portability.md` — all three are referenced but not duplicated here.
 
-**Contract of this doc**: if Android's Phase II code diverges from the pattern below, fix Android (not this doc) unless the divergence is justified by a platform constraint documented inline.
+**Contract of this doc**: if a platform's code diverges from the pattern below, fix the platform (not this doc) unless the divergence is justified by a platform constraint documented inline (§9 for Android).
 
 ---
 
@@ -95,7 +95,7 @@
 Each entry point constructs the object graph once:
 
 ```swift
-// Pseudocode — exact shape after G7 (singleton stripping):
+// Pseudocode — shape since the singleton-stripping round:
 @main struct TaigiKeyboardApp: App {
     let root: CompositionRoot = .app()       // constructs all services for the host app
     var body: some Scene { WindowGroup { ContentView().environmentObject(root) } }
@@ -109,16 +109,16 @@ override func viewDidLoad() {
 }
 ```
 
-**CompositionRoot** (planned under G7) is a plain struct holding the service instances; not a framework. Views reach its pieces via plain init parameters or `@EnvironmentObject`. No `@Environment` magic beyond what SwiftUI already provides.
+**CompositionRoot** (`Composition/CompositionRoot.swift`) is a plain struct holding the service instances; not a framework. Views reach its pieces via plain init parameters or `@EnvironmentObject`. No `@Environment` magic beyond what SwiftUI already provides.
 
 **What must NOT be in the composition root**:
 - Side-effect initialization (loading `dictionary.bin`, starting Timers) — services own their own lazy load.
 - Feature toggles — those live in `EngineSettingsProvider`.
-- Global singletons — `static let shared` persists only for `SharedSettings` (cross-process store) after G7.
+- Global singletons — `static let shared` persists only for `SharedSettings` (cross-process store).
 
 **Android parallel**:
-- Application-level DI in `Application.onCreate`.
-- IME service-level DI in `TaigiInputMethodService.onCreate`.
+- Application-level DI in `TaigiKeyboardApplication.onCreate`.
+- IME service-level DI in `TaigiKeyboard.onCreate` (`LifecycleInputMethodService`). See §9.1.
 - Hilt / manual DI both acceptable; the pattern is "construct once per entry point, inject via init".
 
 ---
@@ -134,7 +134,7 @@ public protocol EngineSettings {
     var isAutoCapitalizationEnabled: Bool { get }
     var isTranslateSwapped: Bool { get }
     var isAssociationRecordingEnabled: Bool { get }
-    var toneToggles: ToneToggles { get }     // added by G4 Precondition
+    var toneToggles: ToneToggles { get }
     // … other read-only engine-visible flags
 }
 
@@ -179,19 +179,19 @@ Code review must check that every field on `EngineSettings` is either a `get()` 
 
 ---
 
-## 4. Engine vs platform split (planned Phase I pattern)
+## 4. Engine vs platform split
 
-Two instances of this pattern ship during Phase I implementation (G4-impl + G5-impl); both design docs land before the code does:
+Two instances of this pattern exist; both state machines now live in Rust (`engine/composing`, `engine/nextword`) and the platform files below are the executors. The boundary docs describe the contract each platform binds to:
 
 ### 4.1 Composing pipeline — see `composing-state-boundary.md`
 
-- **Pure** — `ComposingState` (struct), `ComposingTransition` (struct + `Effect` enum), `ToneToggles` (struct).
+- **Pure** — `engine/composing` (`ComposingState`, `ComposingTransition`, the `Effect` list); `ToneToggles` on the settings side.
 - **Platform** — `ComposingManager` (`ObservableObject`, `@Published`, owns `ComposingDelegate` implemented by `KeyboardViewController` on iOS and by an `InputConnection` wrapper on Android).
 - **Contract** — `Effect` enum names are platform-neutral (`updatePreedit`, `clearPreeditWithoutCommit`, `commitTextReplacingPreedit`, `deleteBackwardFromDocument`, `resetAutocomplete`, `performAutocomplete`, `resetAutocompleteContext`). iOS and Android bindings interpret the same enum. **Critical Android caveat**: `finishComposingText()` commits the composing region by default — bindings MUST zero the region via `setComposingText("", 1)` before issuing it, to honor `clearPreeditWithoutCommit` semantics. See the Effect → platform mapping table in `composing-state-boundary.md` §2.2.
 
 ### 4.2 NextWord pipeline — see `nextword-engine-boundary.md`
 
-- **Pure** — `NextWordEngine` (enum, static `decide(intent:state:input:)`), `NextWordIntent` / `NextWordPersistedState` / `NextWordDecisionInput` / `NextWordOutcome` / `Outcome.Effect`, `RawNextWordPrediction` (shared DTO replacing the platform-service `Prediction` type at the engine boundary).
+- **Pure** — `engine/nextword` (`decide(intent, state, input) → Outcome`, `NextWordIntent` / `NextWordPersistedState` / `NextWordDecisionInput` / `NextWordOutcome` / `Outcome.Effect`), `RawNextWordPrediction` (shared DTO replacing the platform-service `Prediction` type at the engine boundary).
 - **Platform** — `NextWordController` (owns `Timer`, `@MainActor` dispatch, settings snapshot, query-generation counter).
 - **Contract** — Engine never reads clock; executor supplies `nowMs`. Scheduling = effect values (`rescheduleContextTimeout(after:)`, `cancelContextTimeout`). Prediction races eliminated by `currentGeneration` on both `queryPredictions` and `clearPredictionsUI` — late query results drop on generation mismatch.
 
@@ -210,39 +210,23 @@ Sources/TaigiKeyboard/
 ├── App/                      # Host-app target code (tabs, views)
 │   ├── TaigiKeyboardApp.swift
 │   ├── ContentView.swift
-│   └── Tabs/
-│       ├── <Feature>/
-│       │   ├── <Feature>View.swift
-│       │   └── <Feature>ViewModel.swift
+│   └── Tabs/<Feature>/{<Feature>View,<Feature>ViewModel}.swift
 ├── KeyboardExtension/        # Extension-only code (controller, setup)
+├── Composition/              # CompositionRoot (DI, §2)
+├── Engine/                   # RustEngineBridge + RustEngineBridge+<Area>.swift (proto FFI)
 ├── Actions/                  # KK ActionHandler seams (platform-side)
 ├── Autocomplete/             # Autocomplete service + views + VMs
 ├── Callouts/, Emojis/, Layout/, Overlays/, Styling/    # UI only
 ├── Logging/                  # Cross-cutting: LoggerBackend
-├── Input/                    # Input pipeline (shared-core heavy)
-│   ├── Composing/
-│   │   ├── ComposingState.swift         # PURE (G4-impl)
-│   │   ├── ComposingTransition.swift    # PURE (G4-impl)
-│   │   ├── ToneToggles.swift            # PURE (G4-impl, may colocate with EngineSettings)
-│   │   ├── ComposingManager.swift       # PLATFORM
-│   │   └── ComposingDelegate.swift      # PLATFORM
-│   └── TPS/
-├── Lexicon/                  # Candidates + DB
-│   ├── Models/, Utils/, Trie/            # shared-core candidates
-│   ├── Services/                         # platform
-│   └── Database/                         # platform
-├── NextWord/
-│   ├── NextWordScorer.swift              # PURE
-│   ├── NextWordEngine.swift              # PURE (G5-impl)
-│   ├── NextWordOutcome.swift             # PURE (G5-impl)
-│   ├── RawNextWordPrediction.swift       # PURE (G5-impl)
-│   ├── NextWordController.swift          # PLATFORM
-│   ├── Services/                         # platform
-│   └── Repository/                       # platform
-├── Phonetics/                # PURE (incl. parameterized ToneConverter after G4 precondition)
+├── Input/                    # CharacterInputPipeline, AutoSpacePunctuation
+│   └── Composing/            # ComposingManager + ComposingDelegate (PLATFORM executor)
+├── Lexicon/                  # Models/, Utils/ (shared-core candidates) · Services/, Database/ (platform)
+├── NextWord/                 # NextWordController (PLATFORM executor) · Services/, Repository/
 ├── Settings/                 # EngineSettings + provider (PURE protocols)
 └── Strings/                  # localized strings (platform)
 ```
+
+Phonetics, TPS, composing, next-word scoring / decision, ranking and case-transform have no Swift directory any more — they are Rust crates reached through `Engine/`.
 
 ### 5.2 Marker comment (required at top of every shared-core candidate)
 
@@ -261,26 +245,21 @@ Sources/TaigiKeyboard/
 // endregion
 ```
 
-Android Studio's `// region` / `// endregion` pair gives the same code-folding hint as Swift's `// MARK:`. Verification greps look for the literal string `Shared-Core Candidate` on a comment line — both syntaxes satisfy it. Per-file ownership now lives in `../engine/migration-inventory.csv`; the historical roster doc has been retired.
+Android Studio's `// region` / `// endregion` pair gives the same code-folding hint as Swift's `// MARK:`. Verification greps look for the literal string `Shared-Core Candidate` on a comment line — both syntaxes satisfy it (`grep -rl "Shared-Core Candidate" ios/Sources android/app/src/main`, 16 files each as of 2026-09-13). Per-file ownership lives in `../engine/migration-inventory.csv`.
 
-### 5.3 Cross-platform invariant comment (required when a constant must mirror Android)
+### 5.3 Cross-platform invariant comment (required when a constant must mirror another platform)
 
 ```swift
 /// CROSS-PLATFORM INVARIANT — constants MUST mirror Android
 /// `<path/to/KotlinFile.kt>`. Drift causes silent divergence.
 ```
 
-Already used in `NextWordScorer.swift` and `TaigiUnicode.swift`. Required wherever a numeric constant is duplicated in Kotlin. Explicit list of constants that need this marker after Phase I implementation:
-
-- **Scoring constants** (`NextWordScorer.swift`): `userWeight (50.0)`, `dictWeight (1.0)`, `decayHalfLifeHours (168.0)`, `learningBonus (300.0)`, `highUsageDecayFloor (0.95)`, `lowUsageDecayFloor (0.3)`, `highUsageThreshold (3)`.
-- **Candidate scoring** (`CandidateProcessor.swift`): recency window (`1 hour`), `cappedUserFreq` cap (`100`), user-freq multiplier (`100`), completion penalty (`-1000`), closeness max (`500`), exact bonus (`100`), recency bonus (`200`), **tier multipliers `SOURCE_TIERS` (`kautian=15, taigitv=13, stti=12, kungge=11`) + `TIER_DENOMINATOR (10)`** — bit positions mirror `dictionary/build/create_dictionary_bin.py`; first-match-wins traversal.
-- **NextWord timing** (`NextWordEngine.swift` after G5-impl): `associationTimeoutMs (10_000)`, `contextTimeoutSeconds (30)`.
-- **Taigi Unicode preprocessing** (`TaigiUnicode.swift`): `U+207F` / `U+1D3A` / `U+0358` codepoint handling.
+Required wherever a value is duplicated literally across platforms and drift would silently change behavior. Numeric engine constants (NextWord scoring — `USER_WEIGHT` / `LEARNING_BONUS` / decay in `engine/nextword/src/scorer.rs`; candidate `SOURCE_TIERS` / `TIER_DENOMINATOR` in `engine/ranking/src/score.rs`; NextWord timing `CONTEXT_TIMEOUT_MS` in `engine/nextword/src/decide.rs`) live once in Rust, so the marker now binds the surfaces that still have a per-platform copy: settings-key / model tables (`Settings/SettingsModels.swift` ↔ Android `EngineSettings.kt` ↔ macOS `CandidateFontChoice.swift` ↔ Windows `keys.rs`), candidate-strip layout constants, the `mul` keyboard locale tag (`behavioral-invariants.md` §39), and any residual timing constant a platform executor mirrors from the engine (Android `NextWordHandler.kt` `CONTEXT_TIMEOUT_MS`). The policy (constants + tests + docs update together, `INVARIANT_*` test-label prefix) lives in `.claude/rules/cross-platform-alignment.md` §3a.
 
 ### 5.4 Naming
 
 - **Protocols** — describe capability, not identity. `ComposingStateProvider` ✅, `ComposingManagerProtocol` ✗.
-- **Enums as pure namespaces** — `enum NextWordScorer { static func scoreDict(…) }` ✅ (no instances, pure static). Matches the style already in the roster.
+- **Enums as pure namespaces** — `enum ExternalLookupURLBuilder { static func …(…) }` ✅ (no instances, pure static; `Lexicon/Utils/`).
 - **Struct value types** — prefer for state (`ComposingState`, `NextWordPersistedState`, `FrequencyData`, `TaigiWord`).
 - **Verb-style methods** — `calculateScore`, not `scoreFor`. Matches Swift API design guidelines.
 
@@ -296,7 +275,7 @@ Do NOT leave `public` on platform executor internals "just in case" — that is 
 
 ## 6. ViewModel pattern (Android copy target)
 
-After G3 (Dictionary tab Views → ViewModel), every tab view follows this shape on iOS:
+Every tab view follows this shape on iOS:
 
 ```swift
 @MainActor
@@ -371,38 +350,23 @@ The AndroidX `ViewModel` class is for tab / settings app code, not for IME-inter
 
 ---
 
-## 7. Immutable contract surface — 36 shared-core candidates (→ 43 after G4 + G5 impl)
+## 7. Contract surface — shared-core candidates
 
-Live Rust / native roster lives in `../engine/migration-inventory.csv`. The historical Phase I categorisation is preserved below for context; most items now belong to Rust crates.
+The live roster is `../engine/migration-inventory.csv` (one row per symbol; `status` ∈ rust / native / wont_migrate). Historically iOS carried 43 Swift shared-core candidates across Phonetics, Input/TPS, Lexicon, NextWord, Autocomplete, Settings and Logging; the Phonetics, TPS, Composing, NextWord, ranking and case-transform groups migrated to Rust crates and only the Lexicon model / utility files, Settings protocols and `LoggerBackend` remain marked on each platform (16 files each on iOS and Android).
 
-- **Phonetics** (9): `TaigiPhonetics`, `PhoneticsTables`, `SyllableParser`, `TLFormatter`, `POJFormatter`, `PhoneticsConverter`, `RomanizationConverter`, `ToneRestoration`, `ToneUtilities`.
-- **Input** (7): `CharacterInputPipeline`, `CaseTransformer`, TPS (`TPSConverter`, `TPSTables`, `TPSInputAdjuster`, `TPSToTL`, `TLToTPS`).
-- **Lexicon** (11): models + `TaigiUnicode` + `CandidateProcessor` + `InputNormalizer` + `CustomDictionaryDerivation`.
-- **NextWord** (3): `EnginePrediction`, `NextWordScorer`, `AutocompleteContextBooster`.
-- **Autocomplete** (2): `AutocompleteInputClassifier`, `AutocompleteProviders`.
-- **Settings** (3): `EngineSettings`, `EngineSettingsProvider`, `InputMode`.
-- **Logging** (1): `LoggerBackend`.
-
-Planned additions after Phase I implementation:
-
-- **G4-impl (+4)**: `ComposingState`, `ComposingTransition`, `ToneToggles`, promoted `ToneConverter` (after Precondition parameterization).
-- **G5-impl (+3)**: `NextWordEngine`, `NextWordOutcome`, `RawNextWordPrediction`.
-
-Roster target by end of Phase I: **43 candidates**. Phase II gating signal #3 asks for ≥ 40 — met.
-
-**Contract surface rule**: adding to the roster requires the five-grep verification to pass. Removing from the roster requires a written rationale + Codex review.
+**Contract surface rule**: adding a marker requires the import-purity greps to pass (`.claude/rules/ios-shared-core-candidates.md` §1, `.claude/rules/android-guidelines.md` §1). Removing one requires a written rationale + Codex review.
 
 ---
 
 ## 8. Anti-patterns explicitly banned
 
-The refactors in Phase I exist because these previously slipped in. They must not return:
+These previously slipped in and were refactored out. They must not return:
 
 1. **`.shared` read inside an engine-layer file.** Use DI with `= .shared` default at the boundary only.
 2. **`@Published` / `ObservableObject` / `StateFlow` on a type that has no view.** If a type isn't driving UI, don't pay Combine's / Flow's cost — use plain properties + a notify hook.
 3. **Clock read inside a pure function.** `Date()`, `CFAbsoluteTimeGetCurrent`, `DispatchTime.now`, `System.currentTimeMillis()`, `android.os.SystemClock.*` → caller passes `nowMs`.
 4. **Direct repository call from a View.** Always a ViewModel in between.
-5. **Singleton resurrection.** If a service is `static let shared` / `companion object INSTANCE`, it must also accept DI; if DI defaults are gone after G7, do not reintroduce `shared`.
+5. **Singleton resurrection.** If a service is `static let shared` / `companion object INSTANCE`, it must also accept DI; do not reintroduce `shared` where DI defaults have been removed.
 6. **Combine / Flow publishers crossing target boundaries.** Extension and host app each own their own object graph.
 7. **`UIKit` / `SwiftUI` / Android SDK / Compose imports inside `Lexicon/Models/`, surviving `Autocomplete/Services/` shells, or any Foundation-only Lexicon utility file.** (Phonetics, TPS, Composing engine, NextWord engine, and case-transform are all in Rust now.) Enforced by `Foundation`-only import greps + the Rust-side `forbid(unsafe_code)` lint per `.claude/rules/rust-best-practices.md`.
 8. **Platform-bound DTOs in engine signatures.** `NextWordService.Prediction` leaking into `filterPredictions` was the Codex finding that motivated `RawNextWordPrediction`. Rule: services map their rows to shared-core DTOs at the service boundary.
@@ -410,25 +374,51 @@ The refactors in Phase I exist because these previously slipped in. They must no
 
 ---
 
-## 9. Phase II expectations (Android mirror)
+## 9. Android deviations from this exemplar
 
-Phase II delivers an Android target in the same shape:
+Android has converged on the shape above. Where it *must* diverge — for platform, framework, or language-semantic reasons — the divergence is recorded here so later rounds do not re-litigate it. Kotlin rules (marker criteria, invariant syntax, DI, coroutines, IME lifecycle) are in `.claude/rules/android-guidelines.md`; naming and access levels follow §5.4 / §5.5 with these refinements: `object` only for stateless utilities; shared-core types `public`, platform wiring `internal`; no `inline` / `reified` or cross-boundary extension functions at the shared-core boundary.
 
-- **File-level parity** — every pure iOS file has one Kotlin twin in the same layer position. Identical constants. Identical invariant comments cross-referencing each other.
-- **Behavioral parity** — `behavioral-invariants.md` tests exist on both platforms (xcodebuild test + gradle test), with identical labels.
-- **DI root parity** — Android has one composition root per entry point (Application + InputMethodService); no `.shared` / `companion object` singletons reach into engine files.
-- **ViewModel parity** — Kotlin `ViewModel` + `StateFlow` shape for every Dictionary tab view (per §6); repositories reachable only via services called from VMs.
-- **Effect-enum parity** — `ComposingTransition.Effect` and `NextWordOutcome.Effect` implemented verbatim on Android. The InputConnection binding contract (§4.1 + `composing-state-boundary.md` §2.2) is the only place Android deviates in behavior, and the deviations are documented there.
+### 9.1 Composition scope
 
-**Phase II entry gate**: Android state audit doc (pre-phase deliverable) documents the current deltas between Android code and this exemplar. Without that audit, Phase II is translation work without a map.
+iOS composes the engine graph at two entry points (§2). Android also has two live scopes:
+
+- **IME service graph** — `TaigiKeyboard : LifecycleInputMethodService` (`ime/core/TaigiKeyboard.kt`). Created in `onCreate`, torn down in `onDestroy`. Owns per-session state (composing, candidates, next-word history).
+- **App graph** — `TaigiKeyboardApplication : Application` owns the warm-up chain (`prefs.warmUp()` + `migrateFromSharedPreferences` + per-service `init(context)`); `CompositionRoot` (`ime/core/CompositionRoot.kt`) is the process-wide service holder both scopes reach into. Services are idempotent, so a duplicate `init` during migration stays safe.
+
+Engine-layer code receives its dependencies via constructor injection from whichever scope constructs it. No `.INSTANCE` reach-ins (`.claude/rules/android-guidelines.md` §4).
+
+### 9.2 Settings live-read
+
+Android stores settings in DataStore behind `PrefHelper`'s cached `Preferences` snapshot; iOS uses `UserDefaults` / `SharedSettings`. §3 warns about the `val x = prefs.getX()` snapshot anti-pattern. The Android mirror is `ime/core/settings/EngineSettings.kt` + `EngineSettingsProvider.kt`: each field on `EngineSettings` is a `get()` property that re-reads the cache on every access, and `EngineSettingsProvider.current` returns a live view. Rule enforced at PR review:
+
+- Inside a shared-core candidate that receives `EngineSettings`, read through the property at the point of decision — never capture into a local `val` at constructor time.
+- A caller that needs multi-field consistency within one operation captures a local copy explicitly.
+
+### 9.3 Coroutines and threading
+
+Shared-core candidates on Android must not import `kotlinx.coroutines.*`, `Dispatchers.*`, or own a `CoroutineScope`. Async orchestration lives in the platform wrapper exclusively — matching iOS (no `Task {}` or `DispatchQueue` inside shared-core Swift files). Platform-side conventions:
+
+- `TaigiKeyboard.serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)` — cancelled in `onDestroy`.
+- `ViewModel.viewModelScope` — cancelled automatically by AndroidX.
+- `Dispatchers.IO` for DB / file / network; `Dispatchers.Default` for pure CPU.
+- Clock injection: shared-core callers that need the wall clock take `nowMs: Long` as a parameter. No `System.currentTimeMillis()` inside candidate files.
+- Long-running timers (context-timeout, association-timeout) use `kotlinx.coroutines.delay` from the platform wrapper (`ime/text/smartbar/NextWordHandler.kt`) — a straight port of the iOS `NextWordController` timer pattern. See `nextword-engine-boundary.md` §13 (Android binding).
+
+### 9.4 InputConnection binding
+
+`InputConnection.finishComposingText()` **commits** the current composing region by default — it is not a clear-without-commit primitive. The platform wrapper zeroes the composing region with `ic.setComposingText("", 1)` before calling `ic.finishComposingText()` when the intent is `clearPreeditWithoutCommit`. `commitTextReplacingPreedit` atomically replaces the composing region via a single `ic.commitText(text, 1)` — no pre-finish, or the preedit is double-committed. Full binding table and test hooks: `composing-state-boundary.md` §11.2.
+
+### 9.5 Package layout
+
+iOS uses `Lexicon/`, `NextWord/`, `Settings/` as sibling trees (§5.1). Android keeps `ime/dictionary/*` plus `ime/core/{logging,settings}/*` and `ime/text/{composing,smartbar}/*`; the trees are not renamed to match iOS because moving files across packages churns every import in the module for no behavioral gain.
 
 ---
 
 ## 10. Cross-references
 
 - Live Rust / native ownership inventory: `../engine/migration-inventory.csv`.
-- Phase I G0–G10 plan: closed and removed; see git history for the historical task list.
 - Behavioral invariants: `behavioral-invariants.md`.
-- Engine/platform split exemplars: `composing-state-boundary.md`, `nextword-engine-boundary.md`.
-- Data-artifact portability (G10, pending): `data-artifacts-portability.md`.
-- Docs-review cycle (2026-04-19) that reshaped the Effect enum, added RawNextWordPrediction, mandated generation-based race elimination, and concretized the Android mapping: findings incorporated throughout.
+- Engine/platform split exemplars: `composing-state-boundary.md` (§11 Android binding), `nextword-engine-boundary.md` (§13 Android binding).
+- Data-artifact portability: `data-artifacts-portability.md`.
+- Cross-platform policy (refactor-freeze, invariant-discipline, divergence docs): `.claude/rules/cross-platform-alignment.md`.
+- Four-platform layout and build map: `system-overview.md`.

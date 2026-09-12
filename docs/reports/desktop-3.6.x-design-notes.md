@@ -1,14 +1,14 @@
 # Desktop 3.6.x — design notes (frozen snapshot)
 
 > **Type**: Historical
-> **Keywords**: `desktop`, `macos`, `windows`, `telex`, `symbol picker`, `composing caret`, `slot key`, `快速齒`, `installed fonts`
+> **Keywords**: `desktop`, `macos`, `windows`, `telex`, `symbol picker`, `composing caret`, `slot key`, `快速齒`, `installed fonts`, `custom fonts`
 > **Related**: ../roadmap.md, architecture/dogfood-checklist.md
 
 ---
 
 ## Summary
 
-- Verbatim design bodies of the six desktop sections that shipped in 3.6.8 and were collapsed out of `docs/roadmap.md` on 2026-09-13. Frozen: do not edit; the roadmap keeps status + commit + pending dogfood per item.
+- Verbatim design bodies of the seven desktop sections that shipped in 3.6.8 and were collapsed out of `docs/roadmap.md` on 2026-09-13 (custom fonts appended the same day). Frozen: do not edit; the roadmap keeps status + commit + pending dogfood per item.
 - The Telex tone-1/4 follow-up is NOT here — it is still a live design and stays in the roadmap.
 
 ---
@@ -580,3 +580,83 @@ gate answered `check-box OK` against `main` earlier in the session, so it is the
 not the change. Same environment item as #35's gate note.
 
 ---
+
+### Desktop custom fonts — let the user add their own typeface (3.6.8, USER-scoped 2026-09-08)
+
+**Status**: MERGED `e7d217ab` (#16) — macOS and Windows both. Awaiting real-device dogfood (S30 + S31).
+**Scope**: macOS + Windows only. iOS and Android are deliberately untouched — the USER scoped this
+to the desktop train.
+
+Today the candidate-window typeface is a closed roster of five: the system face plus the four
+files in the repo-root `fonts/font/`. `CandidateFontChoice` spells that roster three times over —
+as a Swift enum with PostScript names (`macos/.../Candidates/CandidateFontChoice.swift:22-48`), as
+a Rust enum with file names (`windows/.../settings/choices.rs:188-245`), and as DirectWrite family
+names (`windows/.../ui/render.rs:50-58`). A user who wants any other face has no way in.
+
+**The feature**: an "add a typeface" flow in the Appearance pane. The user picks a font file; the
+app copies it into its own directory, reads the face name back out of it, and the file joins the
+picker's roster. Added faces can be removed again.
+
+#### Design
+
+**A font library, copied — not a path remembered.** The chosen file is copied into
+`~/Library/Application Support/TaigiKeyboard/Fonts/` (macOS) and `%APPDATA%\TaigiKeyboard\Fonts\`
+(Windows), beside a small `fonts.json` index holding, per entry, the stored file name, the display
+name, and the face name the font declares. The original may live on a removable volume, be deleted,
+or sit somewhere a host process cannot read; the app-owned copy is the only one that is always
+there. On Windows the same directory already holds `settings.json` and the user-data databases that
+the TIP reads from inside every host process, so the path is proven reachable.
+
+**The enum does not open up.** `CandidateFontChoice` gains one unit case, `custom` (raw value
+`"custom"`), and a new settings key `customFontFile` names which stored file is live. The user may
+keep several installed; only one is ever selected, so one key carries it. This keeps Windows'
+`FontSpec`/`FormatKey` `Copy + Hash` (`windows/.../candidates/metrics.rs:23-26`) and keeps
+`SettingChoice::raw` returning `&'static str`.
+
+**Import validates by loading.** Extension in `.ttf` / `.otf` / `.ttc`, a size ceiling (the bundled
+GenYoMin is already >20 MB — 64 MB), and then the real gate: the file must load and yield a face
+name — `CTFontManagerCreateFontDescriptorsFromURL` on macOS, `IDWriteFontSetBuilder1::AddFontFile`
+plus `GetPropertyValues(FAMILY_NAME)` on Windows. A file that fails is refused with a message and
+nothing is left behind. A `.ttc` contributes its first face, matching the single-weight model the
+roster already has. Name collisions get a suffix.
+
+**Taking effect without a restart** is the real Windows work. macOS registers the copy with
+`CTFontManagerRegisterFontsForURL(.process)` in the same process that draws the candidate window,
+so the next window picks it up. On Windows the TIP lives in each host process and
+`load_private_fonts` runs exactly once, at `RenderFactory::new` (`render.rs:294-322`). The custom
+face needs its own collection, keyed by file name + mtime + the `settings.json` revision the TIP
+already watches, and both `formats` and `ellipsis` caches must be dropped when that key moves —
+otherwise replacing a file under the same name keeps drawing the old outlines.
+
+**Deliberately not adopted**: weight/variable-axis selection, a rendered preview of each face,
+syncing the library between machines, and any mobile counterpart. Fonts are copied for local use
+only and never redistributed, so `THIRD_PARTY_LICENSES.md` is unaffected.
+
+#### Rounds
+
+| PR | Scope | Est. |
+|---|---|---|
+| P0 | This section + memory (admin tier, direct to main) | — |
+| P1 | macOS whole: font library, `CandidateFontSelection`, launch-time registration, UI, i18n keys | done |
+| P2 | Windows core + storage + platform: the selection type, the two-key resolver, the file half (host-tested) and the DirectWrite half | done |
+| P3 | Windows render: a collection per custom face, an id per loaded resource, mtime+length as the change detector, format caches dropped with it | done |
+| P4 | Windows settings window: the 字型管理 pane, `+` / `−`, the file dialog's font filter | done |
+
+All of it landed in one PR (#16) at the USER's instruction, macOS first and Windows after.
+
+**The UI shape took three tries** (USER 2026-09-08). A section in 外觀 with a per-row delete
+button, then a sheet, then a pane for the custom fonts alone — each was rejected, and the
+reason each time was the same one: choosing a typeface and managing the list are two
+selections that look alike. The answer was to put the bundled roster and the user's own
+typefaces in ONE list, in a 字型管理 pane of its own, where the selected row IS the typeface
+in use — which is how System Settings states a list like that (聲音's output devices,
+顯示器's displays). 外觀 lost its font row; each pane's reset restores the rows it shows.
+
+#### Dogfood (new items, to be added to `docs/architecture/dogfood-checklist.md` in P1/P4)
+
+- **S30 macOS** — add a typeface → select it → the candidate window redraws in it → delete the live
+  one → falls back to the system face, all without restarting the input method.
+- **S31 Windows** — add a typeface in the settings window; an **already-running** host (Notepad plus
+  a WinUI app) shows it on the next candidate window. Replacing a file under the same name does not
+  keep drawing the old one, and a file another host still holds refuses to be deleted with a message
+  rather than silently.

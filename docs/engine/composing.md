@@ -2,7 +2,7 @@
 
 > **Type**: Feature
 > **Keywords**: `Composing`, `rawInput`, `composingText`, `ComposingManager`
-> **Related**: autocomplete.md, tone.md
+> **Related**: continuous-candidate-display.md, tone.md
 
 ---
 

@@ -6,7 +6,7 @@ paths: ["ios/**/*.swift"]
 
 Marking criteria + roster for iOS files eligible for cross-platform extraction (iOS ↔ Android). Marking a file is a **contract** about its dependencies, not a promise to extract it. Split out from `.claude/rules/ios-architecture.md` for focus.
 
-The criteria below apply to any new candidate marking and to the residual `native_pending` / `native_keep` roster in `docs/engine/migration-inventory.csv`.
+The criteria below apply to any new candidate marking and to the `native_keep` roster in `docs/engine/migration-inventory.csv` (15 rows; the CSV has zero `native_pending` rows — every planned migration has shipped or been marked `wont_migrate`).
 
 ## 1. Criteria — ALL must hold
 
@@ -30,11 +30,11 @@ Files that are engine-layer but **do not** qualify should begin with a one-line 
 
 ## 3. Candidate roster
 
-**Authoritative inventory: `docs/engine/migration-inventory.csv`** (148 rows, 13-col schema). Filter `status=rust_shipped` for already-migrated items; `native_pending` / `native_keep` for residual platform candidates; `wont_migrate` for explicit exclusions (UI / SQLite user-data / KeyboardKit wrappers / etc.). Do not re-enumerate here — update the CSV and point back.
+**Authoritative inventory: `docs/engine/migration-inventory.csv`** (148 rows, 13-col schema). Filter `status=rust_shipped` (92) for already-migrated items; `native_keep` (15) for platform-stays candidates (no `native_pending` rows remain; one `rust_partial`); `wont_migrate` (40) for explicit exclusions (UI / SQLite user-data / KeyboardKit wrappers / etc.). Do not re-enumerate here — update the CSV and point back.
 
 ## 4. Exclusions, soft dependencies, verification
 
-`migration-inventory.csv` rows with `status=wont_migrate` enumerate the exclusions (Lexicon Database/* SQLite, Services/* glue, KeyboardKit wrappers, URL builders, App-Group / FileManager paths). Per-criterion enforcement is documented in §1 above; running the original verification greps against `Foundation`-only candidate files still applies but the candidate set is the live `native_pending` / `native_keep` filter on the CSV.
+`migration-inventory.csv` rows with `status=wont_migrate` enumerate the exclusions (Lexicon Database/* SQLite, Services/* glue, KeyboardKit wrappers, URL builders, App-Group / FileManager paths). Per-criterion enforcement is documented in §1 above; running the original verification greps against `Foundation`-only candidate files still applies but the candidate set is the live `native_keep` filter on the CSV.
 
 Matches inside `///` doc comments of a candidate file are informational, not violations (e.g., `CandidateProcessor` documents that it does *not* use `SharedSettings.shared`; `EnginePrediction` documents that it does *not* `import KeyboardKit`).
 

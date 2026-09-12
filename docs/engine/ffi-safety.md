@@ -139,8 +139,7 @@ Tests live in `android-jni/tests/` and `swift-ffi/tests/` per `.claude/rules/rus
 
 Rust core never sees platform-only surfaces. The authoritative exclude lists live in:
 
-- `../architecture/ios-exemplar.md` §1
-- `../architecture/android-exemplar.md` §2.2–§2.4
+- `../architecture/ios-exemplar.md` §1 (layer map), §9.2–§9.4 (Android deviations: live-read, coroutines, InputConnection)
 - `../../rules/ios-shared-core-candidates.md` §1 (criteria + exclusions)
 - `../../rules/android-guidelines.md` §1
 - `../../rules/cross-platform-alignment.md` §1c
@@ -159,6 +158,5 @@ This document does not re-enumerate those symbols. Adding a third copy of the sa
 - `references/khiin-rs/android/rust/src/lib.rs:64` — unsafe `&mut` from raw pointer with no sync (failure mode for §3)
 - `references/khiin-rs/swift/bridge/src/lib.rs:33-48` — no `Drop` impl on bridge struct (failure mode for §4)
 - `references/khiin-rs/android/app/src/main/kotlin/be/chiahpa/khiin/EngineManager.kt:39-48` — Kotlin shutdown declaration without matching Rust extern (failure mode for §4)
-- `docs/architecture/behavioral-invariants.md:295-309` (§11 settings live-read), `:313-323` (§12 logger backend neutrality)
-- `docs/architecture/ios-exemplar.md:13-68` (§1 layer map)
-- `docs/architecture/android-exemplar.md:39-84` (§2.2–§2.4)
+- `docs/architecture/behavioral-invariants.md` §11 (settings live-read), §12 (logger backend neutrality)
+- `docs/architecture/ios-exemplar.md` §1 (layer map), §9.2–§9.4 (Android deviations)

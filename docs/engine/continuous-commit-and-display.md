@@ -240,7 +240,7 @@ Cross-platform: every case must pass identically on iOS and Android per `.claude
 
 ### 10.10 Codex Co-Review Log (2026-05-13)
 
-Codex spec co-review pass against §10 + [`continuous-candidate-display.md`](continuous-candidate-display.md) (transcript: `/tmp/v358-codex-review-out.txt`). Outputs synthesized into §10 inline:
+Codex spec co-review pass against §10 + [`continuous-candidate-display.md`](continuous-candidate-display.md) (transcript not retained). Outputs synthesized into §10 inline:
 
 | Codex finding | Landed in |
 |---|---|
@@ -265,7 +265,7 @@ Fix-plan ordering **(historical log — the Item 3 Enter/commit semantics below 
 
 `(roman, hanji)` ranker dedupe is **deferred to Item 12** (custom-dict integration) — the first slice that can emit cross-source duplicates. Today the default `dict.bin` builder collapses duplicates via `dictionary/build/merge_csv.py`'s `groupby(["hanzi", "_tl_key"])`, so no realistic input surfaces a duplicate `(roman, hanji)` pair into the Continuous ranker. Locking the winner policy (lowest `source_tier_rank` vs SortKey winner) without real custom-dict plumb context would be premature; Item 12 picks it then.
 
-Durable re-grounding of the fix plan in a future session: re-run the Codex consult (`/tmp/v358-spec-review.txt` prompt) against the latest spec. Plan does not need to live in a separate doc — the spec itself now carries enough structure for an implementer to plan from.
+Durable re-grounding of the fix plan in a future session: re-run a Codex ANALYSIS-ONLY consult against the latest spec. Plan does not need to live in a separate doc — the spec itself now carries enough structure for an implementer to plan from.
 
 ---
 

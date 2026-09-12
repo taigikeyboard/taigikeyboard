@@ -9,21 +9,24 @@
 ## Summary
 
 - iOS/Android main app UI design specifications
-- 4-Tab structure: Home (頭頁), Layout (佈局), Dictionary (詞庫), Settings (設定)
+- 5-Tab structure: Home (頭頁), Theme (主題), Layout (佈局), Dictionary (詞庫), Settings (設定)
 - Supports Light/Dark Mode (iOS)
 
 ---
 
 ## Tab Structure
 
-| Tab | iOS | Android |
-|-----|-----|---------|
-| Home (頭頁) | `HomeTab.swift` | `HomeScreen.kt` |
-| Layout (佈局) | `LayoutTab.swift` | `LayoutScreen.kt` |
-| Dictionary (詞庫) | `DictionaryTab.swift` | `DictionarySettingsScreen.kt` |
-| Settings (設定) | `SettingsTab.swift` | `InputSettingsScreen.kt` |
+Tab order is fixed by iOS `App/Tabs/TabType.swift` (`home = 0 … settings = 4`) and mirrored by Android `SettingsMainActivity.kt` `TAB_*` constants. Tab titles come from `i18n/nav.json` (`nav.tabHome` … `nav.tabSettings`).
 
-Android uses Jetpack Compose screens (not Fragments). Tab container: `MainSettingsScreen.kt`.
+| Tab | iOS (`ios/Sources/TaigiKeyboard/App/Tabs/`) | Android (`ui/tabs/`) |
+|-----|-----|---------|
+| Home (頭頁) | `Home/HomeTab.swift` | `home/HomeScreen.kt` |
+| Theme (主題) | `Theme/ThemeTab.swift` (+ `ThemePickerView`, `ThemeEditorView`) | `theme/ThemePickerScreen.kt` + `ThemeEditorScreen.kt` |
+| Layout (佈局) | `Layout/LayoutTab.swift` | `layout/LayoutScreen.kt` |
+| Dictionary (詞庫) | `Dictionary/DictionaryTab.swift` | `dictionary/DictionarySettingsScreen.kt` |
+| Settings (設定) | `Settings/SettingsTab.swift` | `settings/InputSettingsScreen.kt` |
+
+iOS tab container: `App/ContentView.swift` (`TabView`). Android uses Jetpack Compose screens (not Fragments); tab container: `ui/tabs/MainSettingsScreen.kt` (Material3 `NavigationBar`) mounted by `settings/SettingsMainActivity.kt`. The Theme tab is documented in [theme.md](theme.md).
 
 ---
 
@@ -120,7 +123,12 @@ Previous Debug screens (`DebugView`, `DebugActivity`) were removed and replaced 
 
 ## Localization Architecture
 
-**Mid-migration — per-file correspondence is in flux.** App-UI strings are moving to a generated-resource pipeline (`i18n/*.json` → `tools/i18n/generate.py` → `i18n/generated/{L10n,StringKey,GeneratedTaigiStrings}.kt`). Android migrated namespaces use the generated accessors; not-yet-migrated namespaces keep hand-written `localization/*Texts.kt`. iOS still uses `Strings/*Texts.swift`. Authoritative status: [`../architecture/i18n-multilang-plan.md`](../architecture/i18n-multilang-plan.md).
+**Shipped in v3.6.4** (`changelog/v3.6.4.md`): every app-UI string is generated from the shared JSON source. `i18n/*.json` (one namespace per file — `common`, `nav`, `home`, `layout`, `dictionary`, `settings`, `keyboard`, `symbol`, `desktop`) → `make i18n` (`tools/i18n/generate.py`) → typed accessors on each platform:
+
+- iOS: `Strings/Generated/{StringKey,GeneratedTaigiStrings,StringResolverFormats}.swift` + `Localizable.xcstrings`; resolved at runtime by `Strings/StringResolver.swift` against `Strings/DisplayLanguageStore.swift`.
+- Android: `i18n/generated/{L10n,StringKey,GeneratedTaigiStrings,StringResolverFormats}.kt`.
+
+No hand-written `*Texts.swift` / `*Texts.kt` facades remain. Home-tab feature / FAQ content is a separate nested schema under `i18n/content/` (see above). Key-management rules: `.claude/rules/i18n.md`; invariants §37-§39.
 
 ---
 
@@ -186,4 +194,4 @@ When layout appearance changes (font size, key labels, etc.), update these scree
 | Tab container | `SettingsMainActivity.kt` + `MainSettingsScreen.kt` |
 | Navigation | Compose Navigation (no XML) |
 | Theme | `Theme.kt` + `AppStyle.kt` |
-| Strings | generated `i18n/generated/L10n.kt` (migrated namespaces) + residual `localization/*Texts.kt` — see Localization Architecture above |
+| Strings | generated `i18n/generated/{L10n,StringKey,GeneratedTaigiStrings,StringResolverFormats}.kt` — see Localization Architecture above |

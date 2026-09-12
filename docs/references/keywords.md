@@ -19,7 +19,7 @@ Engine state machine lives in Rust `engine/composing` (since v3.5.4). Platform s
 | **commitComposition** | Effect interpreter inserts derived text + clears preedit | iOS `ComposingDelegate.execute(_:)` / Android `ComposingDelegate` |
 | **markedText** | iOS inline composition display via `setMarkedText` | iOS `KeyboardViewController.setMarkedText()` |
 
-### 2. Autocomplete (`engine/autocomplete.md`)
+### 2. Autocomplete (`engine/continuous-candidate-display.md`)
 | Keyword | Definition | Owner |
 |---------|-----------|-------|
 | **Suggestion** | A candidate word (text + title + subtitle + metadata) | iOS `Autocomplete.Suggestion` / Android `CandidateAdapter` |
@@ -38,7 +38,6 @@ All tone logic lives in Rust `engine/phonetics` (since v3.5.1). Bridge surface: 
 | **toneMarks** | Unicode diacritics: á(2), à(3), â(5), ā(7), a̍(8) | Rust `phonetics::api::to_tone_marks` |
 | **tonePosition** | Vowel receiving the diacritic (TL vs POJ rules differ) | Rust `phonetics::poj::to_poj` / `phonetics::tl::to_tl` |
 | **toneRestoration** | Re-apply tone after backspace deletes a diacritic | Rust `phonetics::normalization::restore_tone` |
-| **flickTone** | Swipe direction maps to tone: left(2), top(3), right(5), bottom(7), long-press(8) | iOS `FlickDirection` (UI-only; tone math via Rust) |
 
 ### 4. Dictionary & Lexicon (`engine/binary-format.md`, `engine/sort.md`)
 fst prefix index (replaced MARISA in v3.5.6) + dictionary/association mmap readers all live in Rust `engine/lexicon`.
@@ -60,7 +59,7 @@ fst prefix index (replaced MARISA in v3.5.6) + dictionary/association mmap reade
 ### 5. Segmentation — ARCHIVED (removed in v3.4.6)
 | Keyword | Definition | Notes |
 |---------|-----------|-------|
-| ~~**SyllableSegmenter**~~ | Removed in v3.4.6 | Historical analysis: `reports/2026-03-11-segmentation-tie-bug.md` |
+| ~~**SyllableSegmenter**~~ | Removed in v3.4.6 | Replaced by Rust `composing::syllabifier` (see `engine/syllabifier.md`) |
 
 ### 6. Next-Word Prediction (`engine/nextword.md`)
 NextWord state machine lives in Rust `engine/nextword` (since v3.5.5). Platform glue handles timer/threading + UI.
@@ -104,7 +103,7 @@ NextWord state machine lives in Rust `engine/nextword` (since v3.5.5). Platform 
 | **DataManagement** | Production UI for user data (replaced Debug screens) | `DataManagementView` / `DataManagementScreen` |
 | **DictionarySearch** | In-app dictionary search from settings (uses `RustEngineBridge.searchByHanzi` for hanzi inputs) | `DictionarySearchViewModel` |
 
-### 11. Input Flow (`engine/flow.md`)
+### 11. Input Flow (`architecture/system-overview.md` §4)
 | Keyword | Definition | Key Class/Method |
 |---------|-----------|-----------------|
 | **ActionHandler** | Central dispatcher for all keyboard actions | `ActionHandler` |
@@ -140,8 +139,7 @@ NextWord state machine lives in Rust `engine/nextword` (since v3.5.5). Platform 
 | **ExpandedOverlay** | Full-screen overlay | Grid view of all candidates | `ExpandedCandidateOverlay` |
 | **AlphaRow1-3** | Main area | Letter key rows | `TaigiLayouts` |
 | **SystemRow** | Bottom row | Globe, 123, comma, space, period, enter | `TaigiLayouts` |
-| **FlickCallout** | Overlay on key | 4-direction tone swipe indicator | `FlickKeyDef` |
-| **LongPressCallout** | Overlay on key | Tone 8 / special character popup | `Callouts+TaigiCalloutBuilder` |
+| **LongPressCallout** | Overlay on key | Tone 8 / special character popup | `TaigiCallouts+Builder.swift` |
 | **MarkedText** | Inline in text field | Underlined composing text | `setMarkedText()` |
 
 ### App Screens (Main App, not keyboard extension)

@@ -2,7 +2,7 @@
 
 > **Type**: Feature
 > **Keywords**: `UserFrequency`, `Sort`, `Score`, `FrequencyData`, `ranking`
-> **Related**: autocomplete.md, binary-format.md
+> **Related**: continuous-candidate-display.md, binary-format.md
 
 ---
 

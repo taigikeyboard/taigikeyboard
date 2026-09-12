@@ -1,27 +1,27 @@
-# Continuous-Input Ranking — Known Limitation
+# Continuous-Input Ranking
 
-> **Type**: Specification (problem statement, no implementation plan)
+> **Type**: Specification (resolved gap record + live ranking pointers)
 > **Keywords**: `Continuous`, `Ranking`, `phrase-priority`, `language-model`, `user_freq_boost`, `taiuantaigi`
-> **Related**: [composing.md](composing.md), [sort.md](sort.md), [autocomplete.md](autocomplete.md), [binary-format.md](binary-format.md)
-> **Status**: Open. v3.5.8 ships with this limitation documented; resolution deferred.
-> **Audit date**: 2026-05-11 (during v3.5.8 Phase 9)
+> **Related**: [composing.md](composing.md), [sort.md](sort.md), [binary-format.md](binary-format.md)
+> **Status**: Resolved. The whole-sentence lattice + min-cost walker and user-frequency decay shipped in v3.5.8 (see [`changelog/v3.5.8.md`](../../changelog/v3.5.8.md) § Engine and §8 below). §1–§3 record the pre-fix gap as audited 2026-05-11 during v3.5.8 Phase 9.
+> **Live ranking authority**: the module docs of [`engine/lexicon/src/continuous.rs`](../../engine/lexicon/src/continuous.rs) (span-local fetch, `ContinuousFetchCtx`, `SortKey` ordering) and `engine/composing/src/lattice/` (walker cost model). When this document and those module docs disagree, the module docs win.
 
 ---
 
 ## Summary
 
-The v3.5.8 「連續輸入 (Continuous Input)」 candidate ranking compares candidates from **different consumed spans** of the same input buffer using a **flat frequency × syllable-bias** formula with **`user_freq_boost` hardcoded to `1.0`**. This produces user-facing ranking that is misaligned with mainstream IME behavior whenever a low-frequency multi-syllable phrase exactly matches the full input buffer while high-frequency single characters match a short prefix.
+**Pre-fix state (audited 2026-05-11).** The first v3.5.8 Phase 5 「連續輸入 (Continuous Input)」 candidate ranking compared candidates from **different consumed spans** of the same input buffer using a **flat frequency × syllable-bias** formula with **`user_freq_boost` hardcoded to `1.0`**. This produces user-facing ranking that is misaligned with mainstream IME behavior whenever a low-frequency multi-syllable phrase exactly matches the full input buffer while high-frequency single characters match a short prefix.
 
 **Concrete example (input `taiuantaigi`, 11 chars, 4 TL syllables `tâi-uân-tâi-gí`):**
 
 - Expected (mainstream IME, MOE Tâi-gí, Rime, Google Pinyin behavior): full-buffer phrase 「臺灣台語」 / 「台灣台語」 surfaces in the first 1–3 candidate slots.
 - Actual: 「台」 (`freq=31281`, `syll=1`) ranks #1; 「臺灣台語」 (`freq=12`, `syll=4`) ranks **near last** (`score = 12 × 1.3 = 15.6` vs `台 score = 31281`).
 
-This document records the gap, the evidence chain, and the architectural reasoning for why no Phase 9 fix is attempted. Resolution is left to a future release.
+This document records the gap and its evidence chain (§1–§4), the mainstream comparison that shaped the fix (§5–§7), and the shipped resolution (§8 STATUS callout: lattice S1–S9). The live implementation is described by the `engine/lexicon/src/continuous.rs` module docs, not by §2–§3 below.
 
 ---
 
-## 1. Problem Statement
+## 1. Problem Statement (pre-fix, resolved by §8)
 
 ### 1.1 User-expected behavior
 
@@ -50,7 +50,9 @@ User of a Continuous-input IME types whole phrases and expects phrase-level matc
 
 ---
 
-## 2. Current Implementation (mechanically correct)
+## 2. Implementation at audit time (2026-05-11, pre-lattice)
+
+> Historical snapshot. The live pipeline adds the whole-sentence lattice + walker in front of the span-local fetch (§8) and derives `user_freq_boost` per candidate inside the lexicon (§2.1 note). Line numbers below are as of the audit and are not maintained.
 
 ### 2.1 Pipeline (cite-and-trace)
 
@@ -64,7 +66,7 @@ User of a Continuous-input IME types whole phrases and expects phrase-level matc
 | Final commit | same fn, `new_pending.is_empty()` branch | `exit_to_idle` + `NextWordWordSelected(trigger_prediction=true)` |
 | Frequency record | iOS [`ActionHandler+Suggestions.swift:81-83`](../../ios/Sources/TaigiKeyboard/Actions/ActionHandler+Suggestions.swift) / Android [`CandidateClickHandler.kt:345-349`](../../android/app/src/main/java/com/siansiansu/taigikeyboard/ime/text/smartbar/CandidateClickHandler.kt) | Writes `displayText` to `user_frequency.db` on every successful commit |
 
-**Status**: every stage above is implemented and tested. This document does not propose changing any of them.
+**Status**: every stage above was implemented and tested at audit time. Since v3.5.8 the fetch is `fetch_candidates_for_keys_with_barriers` taking a `ContinuousFetchCtx` ([`engine/lexicon/src/continuous.rs:325`](../../engine/lexicon/src/continuous.rs), entry at `:667`), and `user_freq_boost` is derived per candidate from the platform-supplied `freq_map` in `record_to_candidate` (`continuous.rs:1651-1657`) and `custom_entry_to_candidate` (`continuous.rs:1750-1756`) via `ranking::user_freq_boost` ([`engine/ranking/src/score.rs:242`](../../engine/ranking/src/score.rs)); `calculate_continuous_score` is at `score.rs:469`.
 
 ### 2.2 Generated keys for `taiuantaigi`
 
@@ -79,7 +81,7 @@ User of a Continuous-input IME types whole phrases and expects phrase-level matc
 
 ---
 
-## 3. The Gap
+## 3. The Gap (pre-fix, resolved by §8)
 
 ### 3.1 Computed ranking under current formula
 
@@ -129,27 +131,24 @@ This is a **secondary concern** — the formula gap is the dominant problem, and
 
 #### Gap B — `user_freq_boost` is hardcoded to `1.0`
 
-> **CLOSED by S3 (branch `lattice-s3-userfreq`, 2026-05-16)** for the whole-sentence walker path. The walker's `Σ edge_score` objective now folds in `ranking::decayed_user_weight_delta` (librime `formula_d` wall-clock adaptation, cap-before-decay) multiplicatively, with a McBopomofo epsilon-boost and syllable-aware damping. See the §STATUS 2026-05-16 callout near §7 for the full mechanism and rationale. The literal-`1.0` description below documents the pre-S3 span-local state and the gap evidence chain; it is retained for the audit trail.
+> **CLOSED by S3 (2026-05-16, shipped v3.5.8)** for the whole-sentence walker path, and for the span-local path by `ContinuousFetchCtx.freq_map` (§2.1 note). The walker's `Σ edge_score` objective now folds in `ranking::decayed_user_weight_delta` (librime `formula_d` wall-clock adaptation, cap-before-decay) multiplicatively, with a McBopomofo epsilon-boost and syllable-aware damping. See the §STATUS 2026-05-16 callout near §7 for the full mechanism and rationale. The literal-`1.0` description below documents the pre-S3 span-local state and the gap evidence chain; it is retained for the audit trail.
 
-`fetch_via_lexicon` calls `fetch_candidates_for_keys` with `user_freq_boost = 1.0` literal:
+At audit time `fetch_via_lexicon` (then in `engine/composing/src/dispatch.rs`) called `fetch_candidates_for_keys` with a `user_freq_boost = 1.0` literal. That literal no longer exists. Today the boost is derived inside the lexicon from the platform-supplied frequency snapshot:
 
 ```rust
-// engine/composing/src/dispatch.rs:312-323
-fn fetch_via_lexicon(keys: &[(ConsumedSpan, String)]) -> Vec<RawCandidate> {
-    LexiconHandle::with_state(|state| {
-        ...
-        Ok(fetch_candidates_for_keys(keys, u32::MAX, 1.0, prefix, dict))
-    })
-    .unwrap_or_default()
-}
+// engine/lexicon/src/continuous.rs:1651-1657 (record_to_candidate)
+let freq_data = freq_map.get(&display_text, &canonical_tl);
+let count_u32 = u32::try_from(freq_data.count).unwrap_or(0);
+let boost = user_freq_boost(count_u32);
+let score = calculate_continuous_score(frequency, syllable_count, boost);
+let recency = recency_rank(now_ms, freq_data.last_used_ms);
 ```
 
-This means **`user_frequency.db` is not consulted during Continuous candidate fetch**. The lexicon (non-Continuous) path does read user frequency via the legacy additive `calculate_score`; only Continuous skips it. The platform side records frequency on every commit (§2.1, last row), but the recorded data has no read path back into Continuous ranking — repeated user selection of 「臺灣台語」 has zero effect on the next Continuous fetch's ranking.
+`freq_map` / `now_ms` arrive through `ContinuousFetchCtx` (`continuous.rs:325-338`), keyed by the `(display_text, canonical_tl)` pair (Core Principle #6). The pre-fix mechanism is kept below for the audit trail.
 
-This is documented as a Phase 6 → Phase 9 deferred item:
+At audit time this meant **`user_frequency.db` was not consulted during Continuous candidate fetch**. The lexicon (non-Continuous) path does read user frequency via the legacy additive `calculate_score`; only Continuous skips it. The platform side records frequency on every commit (§2.1, last row), but the recorded data has no read path back into Continuous ranking — repeated user selection of 「臺灣台語」 has zero effect on the next Continuous fetch's ranking.
 
-- [`docs/releases/v3.5.8/plan.md` § Phase 6 限制](../releases/v3.5.8/plan.md#phase-6--proto--dispatch-rpc) — "deferred to Phase 9 dogfood"
-- [`engine/composing/src/dispatch.rs:301-309`](../../engine/composing/src/dispatch.rs) — inline note explaining the intentional defer
+The v3.5.8 plan tracked this from Phase 6 to Phase 9 ([`docs/releases/v3.5.8/plan.md` § Phase 6 限制](../releases/v3.5.8/plan.md#phase-6--proto--dispatch-rpc)); the inline note in `dispatch.rs` was removed with the fix.
 
 **Cross-IME contrast (MOE Tâi-gí)**: MOE's native API exposes `AddUserVoc(database, hanji, tailo, weight: float)` ([`Tailo.java:5-7`](../../references/moe_taigi_apk/decompiled/sources/moe/taigi/Tailo.java)) — user vocabulary entries carry a **floating-point weight** that is read directly by the C++ ranker via the same `tutgDataBase` handle the dictionary uses. This means MOE's user-selection feedback enters the ranking path on the very next keystroke, with no separate plumbing layer. Our user_frequency.db lives platform-side and is read only by the legacy non-Continuous lexicon path; closing this loop for Continuous is what Gap B fix would entail. (See §7 Goal G2.)
 
@@ -175,7 +174,7 @@ The transition state machine (`commit_continuous`) operates on byte spans and `d
 
 ## 4. Independent Co-confirmation (Codex)
 
-A second-opinion review was conducted via Codex on 2026-05-11 (transcript: `/tmp/codex-v358-ranking-coconfirm.txt`). Findings:
+A second-opinion review was conducted via Codex on 2026-05-11 (transcript not retained). Findings:
 
 | Question | Codex verdict |
 |---|---|
@@ -250,7 +249,7 @@ Implication: MOE's flow is **eager-segment-internal / lazy-segment-exposed**. En
 | `CompositioMode CM_EAZY` (sic) | Toggle exists, semantic unknown | Possibly "tolerance" or "skill level" mode for novice users |
 | `tutg` codename | C++ project name | No public docs found |
 
-(Research notes: `references/moe_taigi_apk/README.md` is a one-liner; full agent research summaries archived in session memory of session b5ed5e81.)
+(Research notes: `references/moe_taigi_apk/README.md` is a one-liner; the findings above are the retained summary.)
 
 ### 5.2 Khiin-rs (`references/khiin-rs/`)
 
@@ -298,7 +297,7 @@ A holistic fix requires all three — which is by definition out of Phase 9 scop
 
 **Target**: bring Continuous-input behavior into alignment with the conventions established by mainstream IMEs ── primarily **MOE Tâi-gí**, **Rime / librime**, and **Google Pinyin**. These three are the reference set; alignment with one is generally consistent with all three because they share architectural primitives.
 
-This section states **direction**, not schedule. Per `feedback_no_future_planning.md`, no specific release version is committed here. The goals are the criteria a future plan must satisfy to "close" this spec.
+This section states **direction**, not schedule (`~/.claude/rules/planning.md` § No future-version planning); no specific release version is committed here. The goals are the criteria a future plan must satisfy to "close" this spec.
 
 ### 7.1 Goal axes
 
@@ -336,23 +335,23 @@ A future plan that **closes G1 + G2 + G4** while preserving G3 is the success cr
 
 ---
 
-## 8. Decision for v3.5.8
+## 8. Resolution (shipped v3.5.8)
 
 > **STATUS 2026-05-16 (整句 lattice + walker 進度)**: Gap A (§3.2 — no phrase-priority signal, the §1 `taiuantaigi` motivation) is now **closed by the whole-sentence walker**: [`docs/releases/v3.5.8/plan.md`](../releases/v3.5.8/plan.md) §整句 lattice + walker **S1 DONE & MERGED** (main `4caa0c24` #284, behavior-neutral lattice builder) + **S2 DONE** (branch `lattice-s2-walker`, engine-only `walk_best` relaxation walker emitting one synthesized full-buffer best path at slot 0 — `taiuantaigi`→臺灣台語, no-hanji path→synthesized roman, subsuming paused Bug 2). G1 converges at S2. **Gap B (§3.2 — `user_freq_boost` hardcoded `1.0` in the walker path objective) is now closed by S3** (branch `lattice-s3-userfreq`): `ranking::decayed_user_weight_delta` is a librime `formula_d` wall-clock adaptation (`delta = (user_freq_boost(count) − 1) × exp(−age_ms / τ)`, **cap applied before decay** so a huge stale count is not pinned high — Codex pre-impl S3 Q4a/Q4c BLOCK condition; τ = `USER_WEIGHT_DECAY_TAU_MS` = 30 days, dogfood-tunable 14–90 days), folded multiplicatively into `composing::lattice::cost::edge_score` together with a McBopomofo-style additive epsilon-boost on multi-syllable edges (`WALKER_PHRASE_EPSILON` = 0.001) and **syllable-aware damping** (`WALKER_SINGLE_SYLLABLE_USER_DELTA_SCALE` = 0.0) so a hot single character cannot ride the boost to sweep the whole sentence. Seam (Codex S3 Q4d): `EdgeChoice.user_weight_delta` computed in `dispatch::fetch_walker_slot0`; `lexicon::best_candidate_for_key` / `record_to_candidate` untouched (record selection and path objective are orthogonal — no double counting). The S2 no-dict tie lever is preserved (no-dict edge → `user_weight_delta = 0.0` → `edge_score` still exactly `1.0`). **G2 converges at S3.** G4/G5 unchanged. Engine-only; forward-only Model B commit preserved (Codex pre-impl S2 Q1c = option ii). The pre-2026-05-11 "ship with limitation documented" path below is fully superseded. **S5 (cost-model correction) DONE & MERGED** (main `3830af39` #287): the S2/S3 `edge_score` was an unsound max-Σ objective (dropped khiin's `ln(1/p)` normalization + minimization) that structurally rewarded over-segmentation (dogfood `taiuan`→`乾伊有俺`); S5 is a faithful khiin min-cost port (`cost = ln(1/p)/toneless_len^0.2·n_syls^0.2 − ln_1p(applied_δ)`, `min Σ`). **S6 (custom dict → slot-0 walker, audit 缺口 1) — engine-only**: `fetch_walker_slot0` now threads `&[CustomEntry]` and, for any lattice edge whose normalized toneless key (`custom_toneless_key`, reusing the edge's own `canonicalize_poj_shadow`→`build_hyphen_shadow`→`strip_ascii_tone_digits` pipeline so the match is byte-identical — Codex pre-impl S6 Q2 BLOCK) equals a `custom_dictionary.db` entry, that custom entry **overrides** the `dict.bin` best candidate for the edge (same source-rank-0 precedence custom has in the span-local `(roman,hanji,consumed_span)` dedupe — Codex S6 Q3). A custom edge is scored with `cost::CUSTOM_EFFECTIVE_FREQ = 2_000` (effective-frequency proxy, **not** a cost floor — it still pays the corpus-normalization toll, Codex S6 Q1 BLOCK), is flagged `EdgeChoice.is_custom` (propagated to the synth `RawCandidate.is_custom` when any winning edge is custom, Codex S6 Q4) and `dict_hit:true` (a lexicon-backed hit — the all-OOV carve-out must not fire, Codex S6 Q7). Scope = **G1a only** (whole-buffer == a custom entry); G1b (mid-sentence custom) is a free ride only when the custom roman naturally aligns to syllable-boundary edges — no synthetic non-syllabifier edges ([`docs/releases/v3.5.8/plan.md`](../releases/v3.5.8/plan.md) §整句 lattice + walker S6). **S7 (OOV-cost fix, S5-followup) — engine-only**: S5 ported khiin's *dictionary* probability but substituted a length-independent `1/CORPUS_TOTAL_FREQ` for khiin's length-scaled unknown-word branch (`references/khiin-rs/khiin/src/data/segmenter.rs:83`, `p = 1e-5 / 10^word_len`), and `fetch_walker_slot0` hardcoded the no-dict edge `syllable_count = 1`, so a single whole-buffer OOV blob edge (one `ln(CORPUS)` toll, still taking the `÷ toneless_len^0.2` discount) cost *less* than a correct dict-covering decomposition → the walker chose it, `any_dict` went false and `dispatch::fetch_walker_slot0`'s carve-out rendered bare roman (dogfood `taiuanta`→`tai uan ta`, `taiuantai`→`tai uan tai`, reproduced against the real dictionary 2026-05-18; the S5 module doc only reasoned about a *wholly*-OOV buffer and missed this mixed case). Fix: `cost::UNKNOWN_SYLLABLE_DECAY = 10.0` → an OOV edge is priced `p = (1 / CORPUS_TOTAL_FREQ) / 10^syllable_count` (the corpus-normalized analogue of khiin's `/ 10^word_len`, keyed on the **real syllable count**); `edge_cost` gains a `dict_hit` parameter and the OOV pricing is selected **solely** from `dict_hit == false`, never `frequency == 0` (a real `dict.bin` record may legitimately have frequency 0, and a custom edge is scored at the `CUSTOM_EFFECTIVE_FREQ` proxy — Codex pre-impl Q2); the no-dict edge's `syllable_count` is now the real span count, byte-identical to the custom branch (Codex Q3). The carve-out fires only for a buffer with **no dictionary hit anywhere**; OOV pricing governs **path selection** only, never the rendered string. Verified against the real dictionary: `taiuanta`→`台員乾`, `taiuantai`→`台員台`, `taiuantaigi`→`台灣台語` (unchanged). Pinned only as "OOV loses to the *intended best* dict-covering path" via hermetic `cost`/`walker` tests — NOT a global "OOV beats any dict path" guarantee (Codex pre-impl Q1 BLOCK). ([`docs/releases/v3.5.8/plan.md`](../releases/v3.5.8/plan.md) §整句 lattice + walker S7). **S8 (SortKey coverage demote, slots-1..n dogfood fix) — engine-only**: the span-local `SortKey` (continuous-path only, never on the wire) ranked candidates by `(coverage_kind, tier, -coverage_bytes, recency, -score, -freq, …)` — `-coverage_bytes` (graded longest-coverage-first within a tier) sat *above* score/freq. That was the pre-walker Gap-A surfacing of phrases; with the slot-0 whole-sentence walker now owning phrase priority (G1 closed by S2), it only buried the short single-syllable first-segment candidate (dogfood: typing `guaikingkahuekhoo`, 「我」/Guá ranked behind even 2-syllable candidates, slowing segment-by-segment selection). S8 relocates `-coverage_bytes` from dim 3 to dim 6 (below `-score`/`-freq`, above `source_rank`); `coverage_kind`/`tier` unchanged. Coverage is now a weak tiebreak firing only when score AND freq are equal — aligned with librime's per-segment menu (`references/librime/src/rime/gear/script_translator.cc::PrepareCandidate`: `kSentence` on top ≡ our slot-0 walker, plus `kNumExactMatchOnTop = 1` so a longer code-length never buries a shorter strict match). No proto/platform/Model-B change (`SortKey` internal to `RawCandidate`). ([`docs/releases/v3.5.8/plan.md`](../releases/v3.5.8/plan.md) §整句 lattice + walker S8). **S9 (RC0 — long-sentence OOV blob, S7-followup) — engine-only**: S5/S7 conflated khiin's two distinct mechanisms — (1) the *known-word* corpus-gap floor `p = 1e-5 / 10^word_len` (`segmenter.rs:75-92`) and (2) the *uncovered-span* `BIG = 1e10` per-advanced-char penalty in `segment_min_cost:198-206`. S5 priced a genuine OOV span with mechanism (1)'s smooth probability, so a one-edge whole-buffer OOV blob (one `÷ word_len^0.2`-discounted toll) undercut a dict-covering path that accumulates a per-edge `ln(CORPUS/freq)` toll linearly in edge count — past ~6 dict edges the blob won → `any_dict == false` → bare roman (`ginalangtsiahpngbesai → "gin a lang tsiah png be sai"` instead of 囡仔人食飯袂使; threshold exactly 6 syllables, real-dictionary repro 2026-05-18). S7's `UNKNOWN_SYLLABLE_DECAY` only softened the slope (`taiuanta`/`taiuantai` merely fell below the 6-edge threshold). S9 de-conflates: `edge_cost`'s OOV branch is khiin mechanism (2) — `OOV_PER_CHAR_PENALTY = 1e10` (khiin's literal `BIG`) `× toneless_len`, unbiased and with no user discount; the dict branch keeps the full khiin formula; `UNKNOWN_SYLLABLE_DECAY` removed. "OOV loses to any dict-coverable path" now holds at every length as a **cost property** (khiin's own `BIG`), NOT a lexicographic `dict_hit` rule (Codex pre-impl S7 Q1 / RC0 Q2). `span_min_syllable_count` kept (OOV cost no longer uses syllable_count, but it still feeds the synthesized candidate's syllable-sum metadata — Codex pre-impl RC0 Q3). Verified real-dict: `ginalangtsiahpngbesai`→囡仔人食飯袂使 (6+ syllables now hanzi); `taiuan`/`taiuanta`/`taiuantai`/`taiuantaigi` unchanged (no S5/S7 regression). ([`docs/releases/v3.5.8/plan.md`](../releases/v3.5.8/plan.md) §整句 lattice + walker S9).
 
-> **REVISED 2026-05-11 (evening)**: Original decision was "ship with limitation documented." User pivot: **v3.5.8 will not ship until Continuous-input ranking is fixed.** Phase 9 scope expanded from "dogfood + cleanup" (~100 LOC) to "ranking 修復 + 主流 IME 對齊" (TBD;Goal axes G1+G2+G4 base, G5 stretch). See [`docs/releases/v3.5.8/plan.md` § Phase 9](../releases/v3.5.8/plan.md#phase-9--continuous-input-ranking-修復--主流-ime-對齊-finalized-2026-05-11) and `memory/project_v358_continuous_input.md`.
+> **REVISED 2026-05-11 (evening)**: Original decision was "ship with limitation documented." User pivot: **v3.5.8 will not ship until Continuous-input ranking is fixed.** Phase 9 scope expanded from "dogfood + cleanup" (~100 LOC) to "ranking 修復 + 主流 IME 對齊" (TBD;Goal axes G1+G2+G4 base, G5 stretch). See [`docs/releases/v3.5.8/plan.md` § Phase 9](../releases/v3.5.8/plan.md#phase-9--continuous-input-ranking-修復--主流-ime-對齊-finalized-2026-05-11); the phase-by-phase history is archived there.
 >
 > **Original §8 text preserved below for hand-off recovery.** It describes the deferred path that was rejected by the 2026-05-11 pivot.
 
 ---
 
-**[ORIGINAL — superseded]** Ship with this limitation documented. Phase 9 budget (≤ 200 LOC + dogfood notes per [`docs/releases/v3.5.8/plan.md` § Phase 9 PR 拆分](../releases/v3.5.8/plan.md#phase-9--continuous-input-ranking-修復--主流-ime-對齊-finalized-2026-05-11)) does not accommodate a meaningful fix. Per `feedback_no_future_planning.md`, this document does **not** propose specific scoping for v3.5.9+.
+**[ORIGINAL — superseded]** Ship with this limitation documented. Phase 9 budget (≤ 200 LOC + dogfood notes per [`docs/releases/v3.5.8/plan.md` § Phase 9 PR 拆分](../releases/v3.5.8/plan.md#phase-9--continuous-input-ranking-修復--主流-ime-對齊-finalized-2026-05-11)) does not accommodate a meaningful fix. This document does **not** propose specific scoping for later releases (`~/.claude/rules/planning.md` § No future-version planning).
 
 Constraints binding the decision:
 
 - v3.5.8 is dogfood-oriented (per [`docs/releases/v3.5.8/plan.md`](../releases/v3.5.8/plan.md) header).
-- `feedback_no_slice_toggles.md` — no fallback toggle to disable Continuous; we ship as-is or we don't ship.
-- Solo maintainer (`feedback_solo_maintainer.md`) — ranking work blocks other v3.5.8 phases if attempted now.
+- No fallback toggle to disable Continuous (USER rule at the time); we ship as-is or we don't ship.
+- Solo maintainer — ranking work blocks other v3.5.8 phases if attempted now.
 - `~/.claude/rules/round-workflow.md` § Branching & rounds — context-clear between rounds; this decision must be recoverable from this document alone.
 
 **What v3.5.8 release notes should communicate to users:**
@@ -364,9 +363,9 @@ Constraints binding the decision:
 
 ---
 
-## 9. Open Questions (deferred — not in scope for this spec)
+## 9. Open Questions
 
-These are noted to prevent re-discovery in future sessions. Not committed to any release.
+Recorded 2026-05-11 to prevent re-discovery in future sessions; several were answered by the §8 work (Q1 → soft bias via the walker cost model; Q2 → `ContinuousFetchCtx.freq_map` per fetch). Not committed to any release.
 
 1. **Should phrase-priority be a hard tier or a soft bias?** Hard: "if any candidate consumes the full buffer, show only those." Soft: "boost full-buffer matches by a tier multiplier." Hard is simpler but may show empty strips for nonsense input; soft requires LM probability or curated phrase weights.
 2. **Should `user_freq_boost` plumb through `AppConfig` (live-read each fetch) or extend `FetchAtPos` (per-candidate boost)?** Cross-platform AppConfig has live-read semantics per `behavioral-invariants.md` §11; per-candidate boost requires the platform to send N values per fetch. AppConfig path is cheaper for the Continuous use case.
@@ -399,9 +398,7 @@ These are noted to prevent re-discovery in future sessions. Not committed to any
 | `docs/architecture/behavioral-invariants.md` | §11 live-read settings (relevant for Q2 above) |
 | `.claude/rules/cross-platform-alignment.md` | §3a CROSS-PLATFORM INVARIANT (relevant if ranking constants get tuned per platform — they must not) |
 | `.claude/rules/rust-ffi-safety.md` | §2 domain↔proto boundary (relevant if `FetchAtPos` proto evolves) |
-| `feedback_no_future_planning.md` | Why §8/§9 here record the limitation but do not schedule a fix |
-| `feedback_no_slice_toggles.md` | Why no `useContinuousV2` toggle is proposed |
+| [`engine/lexicon/src/continuous.rs`](../../engine/lexicon/src/continuous.rs) module docs | Live ranking authority: `ContinuousFetchCtx`, `SortKey`, `user_freq_boost` derivation |
 | `references/moe_taigi_apk/decompiled/sources/moe/taigi/TailoJNI.java` | MOE native ranking entry point |
 | `references/moe_taigi_apk/decompiled/sources/android/moe/taiwanese/taigi/data/local/model/CandidateModel.java` | MOE per-candidate metadata schema |
 | `references/khiin-rs/khiin/src/data/segmenter.rs:122` | Khiin segmentation cost formula |
-| `/tmp/codex-v358-ranking-coconfirm.txt` | Codex co-confirmation transcript (transient) |

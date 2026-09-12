@@ -2,7 +2,7 @@
 
 > **Type**: Reference
 > **Keywords**: `bootstrap`, `make build`, `make dict`, `dictionaries`, `fonts`, `stale-artifact gate`
-> **Related**: ../../CLAUDE.md § Build & Test, data-artifacts-portability.md, ../roadmap.md § Repository size
+> **Related**: ../../CLAUDE.md § Build & Test, data-artifacts-portability.md, system-overview.md §3
 
 ---
 

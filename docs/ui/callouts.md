@@ -28,9 +28,9 @@
 
 | File | Responsibility |
 |------|----------------|
-| `Callouts/Callouts+TaigiCalloutBuilder.swift` | `taigiCalloutActions` — long-press entry point; decides the lookup chain |
-| `Callouts/Callouts+TaigiCalloutMaps.swift` | `TaigiToneMaps` (proxies the engine cache), `TPSCallouts`, `MOE1Callouts`, `MOE2Callouts`, `SymbolCallouts` |
-| `Callouts/Callouts+TaigiCalloutStyle.swift` | `CalloutStyle.taigi(for:)` font sizing |
+| `Callouts/TaigiCallouts+Builder.swift` | `taigiCalloutActions` — long-press entry point; decides the lookup chain |
+| `Callouts/TaigiCallouts+Maps.swift` | `TaigiToneMaps` (proxies the engine cache), `TPSCallouts`, `MOE1Callouts`, `MOE2Callouts`, `SymbolCallouts` |
+| `Callouts/KeyboardCalloutStyle+Taigi.swift` | `KeyboardCalloutStyle.taigi(for:)` font sizing |
 | `Engine/RustEngineBridge+Phonetics.swift` | `static let toneVariations` lazy cache `{ poj, tl: [String:[String]] }` |
 
 ### Android (JSON-driven, pre-baked)

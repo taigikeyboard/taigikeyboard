@@ -150,7 +150,7 @@ Codifying `.claude/rules/cross-platform-alignment.md` §4.1 in Rust terms:
 
 - **No async runtime** (`tokio`, `async-std`, `smol`). Engine is synchronous. Platform wrappers handle threading.
 - **No global state in Rust.** No `lazy_static!` / `once_cell::sync::Lazy` in engine or phonetics crates. Engine lifetime is platform-managed.
-- **No Rust-side UI.** No GTK / Tauri / egui. The Rust workspace ships engine + phonetics + CLI only — platform frontends stay in Swift / Kotlin.
+- **No Rust-side UI in `engine/`.** No GTK / Tauri / egui. The `engine/` workspace ships engine + phonetics + CLI only. The Windows frontend (`windows/` workspace: TSF DLL `taigi-windows-tsf` + WinUI 3 settings window via `windows-reactor`) is Rust by necessity but a separate workspace governed by `windows-guidelines.md`; iOS / Android / macOS frontends stay in Swift / Kotlin.
 - **No web-target builds** (`wasm32-*`). Future consideration, not a current deliverable.
 - **No FFI-crossing types from `std::sync` beyond `Arc<Mutex<...>>`.** Channels, condvars, parking_lot stay Rust-internal.
 - **No `Send`-ing `Rc<...>` / `RefCell<...>`.** Interior mutability across FFI is rejected — use `Mutex` if shared, plain ownership if not.

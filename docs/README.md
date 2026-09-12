@@ -7,7 +7,7 @@
 
 ## Summary
 
-- Cross-platform reference for iOS/Android implementation alignment
+- Cross-platform reference for iOS / Android / macOS / Windows implementation alignment — start at `architecture/system-overview.md`
 - Quick reference for Claude Code, bullet-point style, concise
 
 ---
@@ -26,10 +26,8 @@
 | `engine/continuous-input-ranking.md` | Continuous-input ranking source of truth: lexicographic SortKey + user_freq_boost + recency_rank | Active |
 | `engine/continuous-candidate-display.md` | Continuous candidate dual-line display (roman + hanji) spec — §4 carrier shipped (Items 5+6); §15 fallback retire DONE (Item 13) | Active |
 | `engine/continuous-commit-and-display.md` | Continuous mode commit/display contract (Model B) — extracted from `continuous-input-ranking.md` §10 | Active |
-| `engine/autocomplete.md` | Candidate search and suggestion pipeline | Active |
 | `engine/tone.md` | Tone conversion / restoration / nasal-marker — Rust `engine/phonetics` | Active |
 | `engine/sort.md` | Candidate ranking — Rust `engine/ranking` | Active |
-| `engine/flow.md` | End-to-end IME data flow (keystroke → candidates → commit) | Active |
 | `engine/nextword.md` | Next-word prediction — Rust `engine/nextword` | Active |
 | `engine/tps.md` | TPS Taiwanese Phonetic Symbols (方音符號) — Rust `engine/phonetics::tps` | Active |
 | `engine/custom-dictionary.md` | User-defined dictionary (CRUD, CSV import/export) — platform SQLite | Active |
@@ -40,34 +38,29 @@
 
 | File | Description | Status |
 |------|-------------|--------|
-| `architecture/system-overview.md` | Mermaid architecture diagrams: system context, engine crate graph, build pipeline, keystroke flow | Active |
+| `architecture/system-overview.md` | Four-platform architecture entry point: system context, engine crate graph, build pipeline, keystroke flow + per-platform glue chain | Active |
 | `architecture/behavioral-invariants.md` | Cross-platform behavior contract (every Rust slice must preserve) | Active |
 | `architecture/dogfood-checklist.md` | Real-device acceptance items `Sn` (type X → expect Y, pins `INVARIANT_*`, per-item `Status` line) — read before a dogfood pass | Active |
 | `architecture/incident-log.md` | Dated incident narratives behind the rules in `.claude/rules/taigi-incidents.md` (append-only) | Reference |
 | `architecture/build-artifacts.md` | What is committed (`dictionaries/`, `fonts/font/`) vs generated (`make build`), why, measured timings, release-rebuild rule | Active |
 | `architecture/pr-number-migration.md` | Resolving pre-2026-09-07 `#NNN` PR numbers (archive repository, numbering restarted at #1) | Reference |
-| `architecture/refactor-round-2026-09.md` | Refactor round 2026-09 (#706–#717): behavior-freeze record, PR table, net −2,209 lines | Historical |
-| `architecture/composing-state-boundary.md` | Composing engine ↔ platform binding contract (effect enum, race rules) — G4 design record; state machine since moved to Rust | Reference |
-| `architecture/nextword-engine-boundary.md` | NextWord engine ↔ platform binding contract (generation, decay, timer) | Active |
+| `architecture/composing-state-boundary.md` | Composing engine ↔ platform binding contract (§2.2 Effect table, ordering, §11 Android `InputConnection` binding); section numbers frozen | Reference |
+| `architecture/nextword-engine-boundary.md` | NextWord engine ↔ platform binding contract (generation, decay, timer, §13 Android binding); section numbers frozen | Reference |
 | `architecture/keyboard-body-invariants-android.md` | Android Compose keyboard-body geometry / touch-target invariants (refactor-freeze contract) | Active |
-| `architecture/data-artifacts-portability.md` | Binary artifacts + SQLite portability contract | Active |
-| `architecture/i18n-multilang-plan.md` | App-UI multi-language plan — `i18n/` JSON → codegen resources; shipped, kept as the design record | Reference |
-| `architecture/macos-roadmap.md` | macOS desktop IME (InputMethodKit over the shared engine) — design, PR table, dogfood run-book | Active |
-| `architecture/macos-candidate-window-port.md` | macOS candidate window port (MacishType-style layouts) — design + not-adopted list | Reference |
+| `architecture/data-artifacts-portability.md` | Binary artifacts + SQLite portability contract (iOS / Android §1–7, macOS / Windows stores §8, decision register) | Active |
+| `architecture/macos-roadmap.md` | macOS desktop IME (InputMethodKit over the shared engine) — design decisions D1–D11 incl. candidate-window port, PR table; shipped desktop v3.6.7/v3.6.8 | Reference |
 | `architecture/manual-release-notes.md` | Canonical English What's New, in-app history sync, validation, and manual store paste workflow | Active |
 | `architecture/desktop-release.md` | How a desktop version reaches a user: staged on a draft, tested, published by hand, announced automatically | Active |
 | `architecture/macos-release.md` | macOS Developer ID signing, notarization, and what only a Mac asserts about its `.pkg` | Active |
-| `architecture/windows-roadmap.md` | Windows desktop IME (TSF in Rust over the shared engine, macOS UX parity) — design W1–W16, PR table, reference alignment, dogfood run-book | Active |
+| `architecture/windows-roadmap.md` | Windows desktop IME (TSF in Rust over the shared engine, macOS UX parity) — design W1–W17, PR table, reference alignment, dogfood run-book; shipped desktop v3.6.7/v3.6.8 | Reference |
 | `architecture/windows-release.md` | Windows installer (Inno Setup), Authenticode signing, and web-distributed installer workflow | Active |
-| `architecture/ios-exemplar.md` | iOS architectural pattern (alignment target for Android) | Reference |
-| `architecture/android-exemplar.md` | Android-specific deviations from iOS exemplar | Reference |
+| `architecture/ios-exemplar.md` | Cross-platform architectural pattern (layers, DI, live-read settings, markers) + §9 Android deviations | Reference |
 
-### `ui/` — Presentation & Layout (8)
+### `ui/` — Presentation & Layout (7)
 
 | File | Description | Status |
 |------|-------------|--------|
 | `ui/layout.md` | Keyboard layout definitions and conversion | Active |
-| `ui/flick.md` | Flick tone keyboard layout and input | Active |
 | `ui/case.md` | Case handling (Shift, CapsLock, transformation) | Active |
 | `ui/device.md` | Device adaptation for iPhone and iPad | Active |
 | `ui/app-ui.md` | Main App UI structure (tabs, settings) | Active |
@@ -75,7 +68,7 @@
 | `ui/emoji.md` | Emoji keyboard (ISEmojiView iOS / Compose Android, taigi-emojis data) | Active |
 | `ui/callouts.md` | Long-press callouts + tone-variation menus (engine map + platform popups) | Active |
 
-### `references/` — External IME Research (7)
+### `references/` — External IME Research (6)
 
 | File | Description | Status |
 |------|-------------|--------|
@@ -102,7 +95,7 @@ One-off snapshots ordered chronologically. Specs cited by engine code (`v358-ref
 | `reports/2026-06-22-i18n-symbol-draft-review.md` | i18n symbol draft proofread sheet | Historical |
 | `reports/2026-06-22-i18n-tl-draft-review.md` | i18n TL draft proofread sheet | Historical |
 | `reports/2026-08-30-hanlo-together-mode-research.md` | 候選詞顯示 picker research: 漢羅並排 (default, title/subtitle) / 漢羅濫 (one-label hanji+roman, formerly 漢羅齊出; Part I) / 羅馬字 (roman-only cells in today's candidate UI, all 4 platforms; Part II — 3-column + 台語拼音校正 considered and dropped, kept as future 校正 reference) — research only, not implemented | Plan |
-| `reports/desktop-3.6.x-design-notes.md` | Frozen design bodies of the six desktop 3.6.8 sections collapsed out of `roadmap.md` (installed typefaces, Telex, symbol picker, composing caret, ⇧+slot, 快速齒 pane) | Historical |
+| `reports/desktop-3.6.x-design-notes.md` | Frozen design bodies of the seven desktop 3.6.8 sections collapsed out of `roadmap.md` (installed typefaces, Telex, symbol picker, composing caret, ⇧+slot, 快速齒 pane, custom fonts) | Historical |
 | `reports/2026-09-11-windows-candidate-window-paint-latency.md` | Windows candidate window frame-before-content latency: measured on the box (2-5 ms steady, one 171 ms first-show in Chrome), mechanism (in-proc `ShowWindow` before `WM_PAINT`), what mozc / PIME / khiin do, options B (in-proc sync paint) / C (renderer process) costed — evaluation only, nothing decided | Plan |
 
 ### `releases/` — Per-Release Archives (1)
@@ -115,8 +108,8 @@ One-off snapshots ordered chronologically. Specs cited by engine code (`v358-ref
 
 | File | Description | Status |
 |------|-------------|--------|
-| `go-public-checklist.md` | What has to be true before the repository is made public — history audit results, dictionary redistribution blockers, anonymous-clone check, release-chain review, and the settings to turn on afterwards | Active |
-| `roadmap.md` | Forward-looking work items not yet scheduled into a release slice | Active |
+| `go-public-checklist.md` | Go-public audit record — repository PUBLIC since 2026-09-07 (flip record, GitHub scanning state), re-run procedure per section, dictionary-licence position still open | Reference |
+| `roadmap.md` | Forward-looking work items, released-versions index (mobile + desktop trains), closed phases | Active |
 | `CODE_SIGNING_POLICY.md` | Code-signing policy for released binaries (SignPath Foundation requirement) | Active |
 
 ---

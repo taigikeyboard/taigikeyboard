@@ -1,46 +1,14 @@
-# G4-design — Composing State / Platform Boundary
+# Composing State / Platform Boundary
 
-**Status**: design deliverable for Phase I G4, authored 2026-04-19. Revised same day after Codex + Gemini review (see `codex-review-2026-04-19.md` for the earlier strategic pass; this revision captures the G4/G5/G8 docs-review cycle). iOS G4-impl landed via PR #138 (2026-04-19); Android A4-impl landed via PR #152 (2026-04-20). This doc front-loaded the boundary so earlier Phase I groups (G1 / G2 / G3 / G6) did not lock in assumptions that contradict it (per Codex finding I1); §11 Android Binding Addendum now reflects landed shape.
+> **Type**: Reference (contract) · **Section numbering**: renumbered? no — gaps are intentional. §2.2, §11.1–§11.10 are cited by code (`ComposingDelegate.swift` / `.kt`, `KeyboardViewController+TextInput.swift`, `TextInputManager.kt`, `MediaInputManager.kt`), by `behavioral-invariants.md` §13 and by `../engine/rust-core-proto.md`, so their numbers are frozen; the pre-Rust design sections (§1, §4–§9) were removed 2026-09-13 and their numbers are not reused.
 
-**Goal**: split `Input/Composing/ComposingManager.swift` into
-
-1. **`ComposingState`** — pure Foundation-only state machine, shared-core candidate.
-2. **`ComposingManager`** — iOS platform wrapper: `ObservableObject` + `@Published` fan-out + `UITextDocumentProxy` side effects.
-
-…without regressing any behavior captured in `behavioral-invariants.md` or changing the user-perceived composing UX.
-
-**Non-goal**: do NOT implement in this doc. G4-impl takes the sketch here, writes code, and wires G9 golden-text regression tests against it.
-
-**Precondition** (resolved during G4-impl, PR #138 (2026-04-19)): `ToneConverter.preprocessPojInput` was parameterized (takes `isDoubleTapOOEnabled` / `isDoubleTapNNEnabled` as arguments instead of reading `SharedSettings.shared`). The parameterization was folded into G4-impl; `ComposingState.derivedDisplay` is now Foundation-pure.
-
-> **SUPERSEDED (Path G Rust migration)**: the pure state machine this doc designs as a Swift `ComposingState` was subsequently moved to **Rust `engine/composing`**; `ComposingState.swift` / `.kt` were deleted. The **Effect → platform binding contract (§2.2)** remains the live contract — `ComposingDelegate.execute(_:)` on iOS / Android interprets the same `Effect` enum. §6 roster and §11 "landed [Swift] shape" describe the pre-Rust era and are retained as design history. Treat this doc as **Reference**, not the current implementation map (see `system-overview.md`).
+**What this doc is**: the contract between the composing state machine — Rust `engine/composing` since v3.5.4 (Path G, old #197; `ComposingState.swift` / `.kt` were deleted) — and each platform's effect interpreter: iOS `Input/Composing/ComposingManager.swift` + `ComposingDelegate.swift` (`UITextDocumentProxy`), Android `ime/text/composing/ComposingManager.kt` + `ComposingDelegate.kt` (`InputConnection`, §11), macOS `Composing/ComposingManager.swift` + `ClientEffectExecutor.swift` (IMKit marked text), Windows `taigi-windows-core::composing` + `tsf/src/composition.rs` (TSF edit sessions). The **Effect → platform binding (§2.2)** and the ordering contracts (§2.3, §2.4) are what every interpreter honours; the wrappers are `wont_migrate` glue (`../engine/migration-inventory.csv`, `area=composing`). Originally authored 2026-04-19 as the Phase I G4 design (Codex + Gemini reviewed); iOS G4-impl old #138, Android A4-impl old #152.
 
 ---
 
-## 1. What exists today
+## 2. Contract shape
 
-`ComposingManager.swift` mixes four concerns:
-
-| Concern | Evidence |
-|---|---|
-| **Pure state machine** | private `enum ComposingState { idle, composing(raw:) }`, transition rules, ordering contract (`startComposing` / `appendCharacter` / `deleteBackward` / `commit*` / `selectSuggestion` / `reset`). |
-| **Derivation** | `deriveDisplay(raw:)` → `TPSTables.containsTPS` / `ToneConverter.convertToToneMarks`. **Important**: `ToneConverter` today reads two `SharedSettings` booleans (`isDoubleTapOOEnabled`, `isDoubleTapNNEnabled`). Non-Foundation-pure until parameterized — see Precondition above. |
-| **Combine publication** | `ObservableObject`, four `@Published` properties, `syncStateToProperties()` idle/no-op guards. |
-| **Platform side effects** | `ComposingDelegate` calls (`insertText`, `deleteBackward`, `setMarkedText`, `clearMarkedText`, `resetAutocomplete`, `performAutocomplete`, `resetAutocompleteContext`) + `ComposingContextSink.isComposingText`. |
-
-**Status (post-v3.5.4)**: the engine state machine is now Rust `engine/composing` — `ComposingState.swift` / `ComposingState.kt` were deleted under Path G (PR #197). `ComposingManager` and `ComposingDelegate` remain platform-side as the effect interpreter wrapping `RustEngineBridge.composing*`. They are explicitly `wont_migrate` per `migration-inventory.csv` (KeyboardKit + `UITextDocumentProxy` / `InputConnection` glue).
-
-**Ordering contracts that must survive the split** (non-obvious):
-
-- `deleteBackward` empties raw → **idle transition + `clearSelectionAndSuggestions` run before `delegate?.deleteBackward()`**. Reversed, `markedText` leaks past the text-document deletion.
-- `selectSuggestion` → `clearMarkedText → insertText → state=.idle → clearSelection → resetAutocomplete → resetAutocompleteContext`. Routing through `updateComposingState(.idle)` is deliberately skipped to avoid re-emitting `clearMarkedText` after `insertText`.
-- `commit*` → `updateComposingState(.idle) → clearSelectionAndSuggestions → delegate.insertText → delegate.resetAutocompleteContext`. Must capture `text` before the idle transition (which zeroes `composingText` / `rawInput`).
-- `syncStateToProperties` guards every `@Published` write with an inequality check — idle→idle transitions must NOT fan out `objectWillChange`. This prevents SwiftUI over-redraw during `reset`.
-- **Idle implies `selectedCandidateIndex == -1`**. The pure state must enforce this so Android's candidate-bar recycler does not keep a stale highlight after `reset()` / `selectSuggestion(...)`. Today this is incidental (platform sets it); the split makes it an explicit invariant.
-
----
-
-## 2. Target shape
+The Swift sketches in §2.1–§2.4 are the original design notation; the state machine they describe now runs in Rust (`engine/composing`, `ComposingTransition` carried in the proto response) and the wrapper column is what each platform still implements.
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
@@ -219,99 +187,17 @@ Per-intent exceptions are expressed in the engine's `Transition.effects` list, n
 
 Implication: every `apply` call on the wrapper side threads `mode` + `toneToggles` through. Cheap — value types, no copy problem.
 
-`ToneToggles` lives alongside `EngineSettings` so Android's `EngineSettings` implementation exposes the same two flags. `ToneConverter.preprocessPojInput(_, toggles: ToneToggles)` replaces the current `SharedSettings.shared` read after the Precondition lands.
-
----
-
-## 4. ComposingDelegate fate
-
-`ComposingDelegate` today is a protocol over iOS-shaped operations (`setMarkedText`, `insertText`, …). After G4-impl, the wrapper no longer calls those methods directly — it calls `delegate.execute(_: Effect)`. `ComposingDelegate` becomes a thin iOS interpreter of the neutral `Effect` enum.
-
-**Decision**: `ComposingDelegate` stays **platform-side**, stays excluded from the shared-core roster. Its only method becomes `execute(_: ComposingTransition.Effect)` (or a small set of methods, one per effect case — pick in G4-impl). Android's Phase II mirror defines its own platform-side delegate that interprets the same `Effect` enum against `InputConnection` per the table in §2.2.
-
-`ComposingTransition.Effect` is the **shared behavioral contract**. `ComposingDelegate` is the **iOS translator**. Android has its own translator. The contract sits above both — neutral.
-
----
-
-## 5. ComposingContextSink fate
-
-`ComposingContextSink { var isComposingText: Bool { get set } }` — today, `KeyboardContext` conforms. This is a KeyboardKit-shaped hook.
-
-**Decision**: stays platform-side. The wrapper owns the reference and assigns `isComposingText` on every transition (Phase 3). `ComposingState` does not know about it.
-
----
-
-## 6. What becomes a shared-core candidate
-
-After G4-impl:
-
-| File | Role | Candidate? |
-|---|---|---|
-| `Input/Composing/ComposingState.swift` *(new)* | Pure state machine + transitions | **Yes** — adds to roster. |
-| `Input/Composing/ComposingTransition.swift` *(new)* | `Transition` + `Effect` types | **Yes**. |
-| `Input/Composing/ToneToggles.swift` *(new, may colocate with `EngineSettings.swift`)* | Two-bool value type | **Yes**. |
-| `Phonetics/ToneConverter.swift` *(updated — Precondition)* | Parameterized POJ preprocess | **Yes** (moves from Exclusions into roster). |
-| `Input/Composing/ComposingManager.swift` *(reduced)* | iOS wrapper, `ObservableObject`, delegate routing | No — platform-specific. Stays in Exclusions. |
-| `Input/Composing/ComposingDelegate.swift` *(reduced to `execute`)* | iOS Effect interpreter | No — iOS-shaped. |
-| `Autocomplete/Services/AutocompleteProviders.swift` | `ComposingStateProvider` protocol | Unchanged; wrapper continues to conform. |
-
-Net: roster **+4 files** (ComposingState, ComposingTransition, ToneToggles, promoted ToneConverter). Android Phase II mirrors must implement the same four.
-
----
-
-## 7. Risks + mitigations
-
-| Risk | Mitigation |
-|---|---|
-| Android binding implements `clearPreeditWithoutCommit` via raw `finishComposingText()` and accidentally commits the preedit. | Binding contract in §2.2 mandates `setComposingText("", 1)` first, then `finishComposingText()`. G9 adds `INVARIANT_composing_clear_preedit_does_not_commit` as a platform-side integration test on both iOS and Android. |
-| `commitTextReplacingPreedit` on Android double-commits if the binding issues `finishComposingText()` before `commitText()`. | Binding contract forbids pre-finish before commit; `commitText()` atomically replaces the composing region on Android. G9 test covers this sequence explicitly. |
-| `@Published` fan-out order changes and UI flashes between transitions. | Phase 1 of §2.4 applies all `@Published` writes atomically inside one synchronous call — SwiftUI batches. Keep the no-op inequality guards. G9 adds a golden-text regression test for `commitRawInput`-at-index-0 (Enter-on-English) path. |
-| `selectSuggestion`'s intentional skip of `updateComposingState(.idle)` gets re-introduced as a bug during refactor. | Expressed as the explicit single-effect `commitTextReplacingPreedit` in `ComposingState.apply(.selectSuggestion)`. Unit test asserts the Effect list contains `commitTextReplacingPreedit` and NOT the two-step pair. |
-| `derivedDisplay` reads phonetic tables (POJ doubletap, TPS, tone marks). | Resolved post-Rust extraction: `phonetics::api::normalize_tone` is called inline by `composing::derived` with `ToneToggles` carried on `AppConfig`. No platform-side phonetics code remains in the composing path. |
-| Live settings change mid-composition renders stale display. | `apply` is called per-intent; the wrapper passes `settingsProvider.current.inputMode` and `settingsProvider.current.toneToggles` at call time. A settings change between keystrokes takes effect on the next keystroke — matches invariant §11 (live read, no snapshot). |
-| Platform keeps an obsolete `selectedCandidateIndex` highlight after idle transition. | Pure state enforces `selectedCandidateIndex = -1` in idle. G9 test `INVARIANT_composing_idle_has_no_selected_candidate` covers `reset`, `deleteBackward`-to-idle, `commit*`, `selectSuggestion`. |
-
----
-
-## 8. Test hooks for G9
-
-G9 must cover at minimum:
-
-- `INVARIANT_composing_delete_order` — `deleteBackward` at raw length 1 emits exactly `[clearPreeditWithoutCommit, resetAutocomplete, deleteBackwardFromDocument]`.
-- `INVARIANT_composing_select_suggestion_is_atomic_commit` — `selectSuggestion(text)` emits `[commitTextReplacingPreedit(text), resetAutocomplete, resetAutocompleteContext]` and transitions to `.idle` with `selectedCandidateIndex == -1`.
-- `INVARIANT_composing_commit_captures_text_before_idle` — `commitComposition` inserts derived text, then transitions to `.idle`; never inserts empty string after idle transition.
-- `INVARIANT_composing_replace_last_preserves_selected_index` — `replaceLastCharacter` does NOT reset `selectedCandidateIndex` (TPS auto-correct contract).
-- `INVARIANT_composing_idle_to_idle_is_noop` — repeated `reset()` on idle state produces a `Transition` with empty `effects` and no state changes.
-- `INVARIANT_composing_idle_has_no_selected_candidate` — every idle-producing intent returns `newSelectedIndex == -1`.
-- `INVARIANT_composing_clear_preedit_does_not_commit` — both platforms must pin that the `clearPreeditWithoutCommit` effect (or its binding-side equivalent) never inserts text. Android side covered as a JVM unit test in `ComposingManagerTest` against a hand-rolled `RecordingInputConnection` (records `setComposingText` / `finishComposingText` / `commitText` order). iOS side covered at the engine + wrapper layer in `ComposingStateTests` and `ComposingManagerTests`. UIKit `UITextDocumentProxy` integration is intentionally not covered — the project lacks a UI test harness; the binding (`KeyboardViewController+TextInput.swift`) is two trivial lines that cannot insert text.
-
-All pure-state tests are runnable without a simulator; the binding-side tests above run on the standard JVM / XCTest targets — no instrumentation harness required.
-
----
-
-## 9. Decisions not taken in G4-design
-
-Deferred to G4-impl (can change there without breaking this boundary):
-
-- Whether `ComposingState` is a `struct` (copy-on-apply, pure functional) or a `class` owning mutable state. Lean **struct** — enables `Equatable` snapshot diffing in tests. G4-impl confirms.
-- Naming: `ComposingState.apply(intent:mode:toneToggles:)` vs `reduce(intent:mode:toneToggles:)`. Pick in code review.
-- Whether `ComposingDelegate.execute(_: Effect)` is one method or one method per effect case. Lean **single method + switch** for a tight contract surface; G4-impl confirms after seeing binding code.
-
-Already decided (moved out of "deferred" after review cycle):
-
-- `ToneConverter.preprocessPojInput` parameterization — **Precondition**, not deferred.
-- `selectedCandidateIndex` lives inside `ComposingState`, invariantly `-1` in idle — confirmed.
-- Effect names — platform-neutral (`updatePreedit` etc.) not iOS-named (`setMarkedText` etc.) — confirmed.
+`ToneToggles` lives alongside `EngineSettings` so every platform's `EngineSettings` exposes the same two flags; the engine receives them on `AppConfig` per request and `phonetics::normalize_tone` reads them there — no platform-side phonetics code remains in the composing path.
 
 ---
 
 ## 10. Cross-references
 
 - Live Rust / native ownership inventory: `../engine/migration-inventory.csv` (filter `area=composing`).
-- G5-design counterpart (same pattern for Timer-driven decay): `nextword-engine-boundary.md`.
-- Behavioral invariant pin: `behavioral-invariants.md` §13 (composing-buffer reset semantics).
-- Behavioral invariants this doc must not regress: `behavioral-invariants.md` §§1–3, 9, 11.
-- Docs-review cycle (2026-04-19, same day): findings incorporated above.
+- Next-word counterpart (same executor / effect pattern): `nextword-engine-boundary.md`.
+- Behavioral invariant pin: `behavioral-invariants.md` §13 (composing-buffer reset semantics); must not regress §§1–3, 9, 11.
+- Wire shape of the composing requests / effects: `../engine/rust-core-proto.md`; engine internals: `../engine/composing.md`.
+- Four-platform glue map: `system-overview.md` §4.
 
 ---
 
@@ -319,7 +205,7 @@ Already decided (moved out of "deferred" after review cycle):
 
 **Status**: A4-design deliverable for Phase II, authored 2026-04-20 on branch `phase2/a4a5-design-android-binding`. Pairs with `nextword-engine-boundary.md` §13. Codex pre + post reviewed.
 
-**Purpose**: lock Android-specific binding contract for the `Effect` enum defined in §2.2 before A4-impl lands. iOS-authored §§1–10 stay platform-neutral in intent; this addendum captures the Kotlin / `InputConnection` / coroutine details the iOS doc could not.
+**Purpose**: the Android-specific binding contract for the `Effect` enum defined in §2.2. §2–§3 stay platform-neutral in intent; this addendum captures the Kotlin / `InputConnection` / coroutine details.
 
 **Scope**: binding contract only. A4-impl writes the code that honors the contract.
 

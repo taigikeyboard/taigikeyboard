@@ -1,43 +1,14 @@
 # NextWord Engine / Platform Boundary
 
-**Status (post-v3.5.5)**: engine state machine + decision tables + scoring all live in Rust `engine/nextword` (since PR #198, 2026-05-02). Pre-Rust `NextWord/NextWordEngine.swift` and `ime/core/nextword/NextWordEngine.kt` were deleted under Path G; the boundary contract documented below is now upheld by the Rust crate plus thin platform executors.
+> **Type**: Reference (contract) · **Section numbering**: renumbered? no — gaps are intentional. §3, §5, §13.3, §13.5, §13.6, §13.10 are cited by code (`engine/protos/proto/nextword.proto`, generated `nextword.pb.swift` / `*.java`, `NextWordService.kt`, `SmartbarManager.kt`, `NextWordHandler.kt`, `RustEngineBridge.kt`, `RustEngineBridge+NextWord.swift`), §2.4 / §3 by `../engine/rust-core-proto.md`, §13.3 by `../engine/nextword.md`; their numbers are frozen. The pre-Rust design sections (§1, §8, §9, §11) were removed 2026-09-13 and their numbers are not reused.
 
-**Today's split**:
-
-1. **`engine/nextword`** — Rust state machine (validate input, decide whether to record / reset / predict, score + filter raw predictions, generation guard). Cross-platform canonical.
-2. **`NextWordController.swift`** (iOS) / **`ime/text/smartbar/NextWordHandler.kt`** + **`ime/dictionary/NextWordService.kt`** (Android) — platform executors: own the `Timer` / coroutine for context timeout, `@MainActor` / Main-dispatcher hops, settings snapshot, and bridging to SQLite user-association reads / writes.
-
-The Rust crate preserves the exact decay math, association-window semantics, and user-perceived prediction lifecycle that this doc continues to describe — see Rust `engine/nextword/src/scorer.rs` for the canonical constants.
+**What this doc is**: the contract between the next-word state machine — Rust `engine/nextword` since v3.5.5 (Path G, old #198; `NextWordEngine.swift` / `.kt` were deleted) — and each platform's executor: iOS `NextWord/NextWordController.swift` (Timer, `@MainActor`, generation counter) + `NextWord/Services/NextWordService.swift` (SQLite); Android `ime/text/smartbar/NextWordHandler.kt` + `ime/dictionary/NextWordService.kt` (§13); macOS `NextWord/NextWordLearner.swift` (write-and-rank, no prediction surface — `macos-roadmap.md` D7); Windows `taigi-windows-core::engine::nextword` + `taigi-windows-storage::association`. The crate owns validation, the record / reset / predict decision, scoring + filtering (`engine/nextword/src/scorer.rs`, constants pinned by `behavioral-invariants.md` §7–§8) and the generation guard; the executors own the clock, the context-timeout timer, the main-thread hop, the settings snapshot and the user-association store. Platform-neutral learning decisions are `behavioral-invariants.md` §40. Originally authored 2026-04-19 as the Phase I G5 design (Codex + Gemini reviewed).
 
 ---
 
-## 1. What exists today
+## 2. Contract shape
 
-`NextWordController.swift` mixes:
-
-| Concern | Evidence |
-|---|---|
-| **Pure decision logic** | `isNoiseText`, `isSentenceEndPunctuation`, `shouldRecordAssociation`, `splitCompoundWord`, `recordCompoundWordAssociations` plumbing, `makePredictions` filter/convert. |
-| **Romanization normalization** | `RomanizationConverter.pojToTL` usage, already a candidate. |
-| **Platform time source** | `Self.currentTimestampMs = Int64(Date().timeIntervalSince1970 * 1000)` — read at **two** places per `process` call (once inside `shouldRecordAssociation`, once when assigning `lastSelectionTime`). G5-impl normalizes these into one intent timestamp. |
-| **Platform scheduling** | `Timer.scheduledTimer` for 30 s context timeout, `Task { @MainActor … }` for prediction query, `DispatchQueue.main.async` on timeout fan-out. |
-| **Platform settings read** | `settingsProvider.current` inside `process` and `makePredictions`. |
-| **Service I/O** | `nextWordService.recordAssociation`, `nextWordService.predict` (SQLite + binary mmap). Raw prediction rows are currently typed as `NextWordService.Prediction` — platform-bound DTO that leaks into any pure code consuming it. G5-impl introduces a shared-core DTO (see §2.4). |
-| **UI fan-out** | `contextUpdater?.setNextWordPredictions / resetNextWordSuggestions`. |
-
-Only the first two columns are Foundation-pure. The rest block `NextWordController` from the roster (see Exclusions: *Timer, DispatchQueue.main, @MainActor, SharedSettings.shared*).
-
-**Timing contracts that must survive the split** (non-obvious):
-
-- **10 s association window** (`associationTimeoutMs`): currently read with two separate `currentTimestampMs` calls per `process`. G5-impl intentionally normalizes to a single `nowMs` captured at intent entry. This is a **behavior clarification**, not strict preservation — the 1–2 ms gap between the two reads was never observable, but the tests in §10 pin the behavior at boundaries.
-- **30 s context timeout**: fires on the Timer, resets state, optionally clears UI suggestions. The Timer is rescheduled at every successful `process` / `triggerPrediction`. Keep the rescheduling order: stop → start. A missed stop leaks timers.
-- **`@MainActor` hop for prediction** — the actual prediction query happens off-main (`NextWordService` is an async API); the UI update happens on main. G5-impl must preserve this threading — pure engine must not force main-thread usage.
-- **Compound-word associations fire inside a single `Task`** — today `recordCompoundWordAssociations` loops `await nextWordService.recordAssociation` sequentially. Keep sequential ordering; parallel `Task`s would race on the SQLite UNIQUE constraint.
-- **Stale-prediction race** — a prediction Task in flight may resolve *after* a context timeout or `resetFull` clears state. Today the code accepts this race (late predictions leak onto the UI). G5-impl **eliminates** the race via query generations, not deferred (§3).
-
----
-
-## 2. Target shape
+The Swift sketches below are the original design notation; the engine half runs in Rust and the executor column is what each platform implements.
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
@@ -250,14 +221,14 @@ static func shouldRecordAssociation(_ state: NextWordPersistedState, nowMs: Int6
 }
 ```
 
-Strict `<` boundary preserved. 10 s constant lives in `NextWordEngine` alongside 30 s context timeout.
+Strict `<` boundary preserved. The 10 s constant lives in `engine/nextword/src/decide.rs` alongside the 30 s context timeout (`CONTEXT_TIMEOUT_MS`).
 
-**Boundary tests mandated in G9**:
+**Boundary tests**:
 - `nowMs - lastSelectionTimeMs == 9_999` → `true`
 - `nowMs - lastSelectionTimeMs == 10_000` → `false`
 - `nowMs - lastSelectionTimeMs < 0` (clock skew / wrapped) → `false` (do not record against a future-relative negative age).
 
-The third case is a new assertion — today's implementation returns `true` for a negative delta, which is almost certainly wrong. G5-impl closes this with an explicit `max(0, nowMs - lastSelectionTimeMs)` or a `nowMs >= lastSelectionTimeMs` precondition, documented in the test.
+The third case is enforced by `engine/nextword/src/decide.rs::should_record_association` (`ASSOCIATION_TIMEOUT_MS = 10_000`; negative delta → `false`, pinned by its unit test). The pre-Rust Swift executor returned `true` for a negative delta — that was corrected when the rule moved into the crate (§13.8).
 
 ---
 
@@ -284,36 +255,9 @@ Invariant §11 (engine settings are live-read) still holds at the executor level
 
 ---
 
-## 8. What becomes a shared-core candidate
+## 10. Invariant test labels
 
-| File | Role | Candidate? |
-|---|---|---|
-| `NextWord/NextWordEngine.swift` *(new)* | Pure decide + pure filter | **Yes** — adds to roster. |
-| `NextWord/NextWordOutcome.swift` *(new)* | `Intent` / `PersistedState` / `DecisionInput` / `Outcome` / `Effect` types | **Yes**. |
-| `NextWord/RawNextWordPrediction.swift` *(new)* | Shared-core prediction DTO (replaces platform-bound `NextWordService.Prediction` at the boundary) | **Yes**. |
-| `NextWord/NextWordController.swift` *(reduced)* | iOS Timer + @MainActor + settings read + service I/O + UI fan-out + generation bookkeeping | No — platform executor. Stays in Exclusions. |
-| `NextWord/Services/NextWordService.swift` *(updated)* | Adds mapping `Prediction → RawNextWordPrediction` at service boundary | No — SQLite + file manager + shared singleton. Stays in Exclusions. |
-| `NextWord/NextWordScorer.swift` | Pure ranking constants | Already a candidate. |
-
-Net: roster **+3 files** (NextWordEngine, NextWordOutcome, RawNextWordPrediction).
-
----
-
-## 9. Risks + mitigations
-
-| Risk | Mitigation |
-|---|---|
-| Decay math changes because engine recomputes `nowMs` differently from platform `Self.currentTimestampMs`. | Engine never reads clock — executor supplies `nowMs` once per intent. Invariant §7 tests assert decay = f(`lastUsedMs`, `nowMs`). |
-| Timer leak if executor's reschedule path doesn't invalidate on every `rescheduleContextTimeout` effect. | G9 adds **mandated** unit test: sequence of 100 `wordSelected` intents → executor state shows exactly one live Timer reference at the end. No longer optional. |
-| `recordCompoundAssociations` emitted as pairs could shuffle if executor reconstructs from `splitCompoundWord` twice. | `Outcome.Effect.recordCompoundAssociations` carries the full pair list from the engine; executor loops them verbatim. No re-split on executor side. |
-| ~~Context timeout fires during a prediction `Task` → races `setPredictions` with `clearPredictionsUI`.~~ | **Eliminated** by `currentGeneration` in §3. Any invalidating intent bumps the generation; late query results compare against current generation and drop on mismatch. G9 test `INVARIANT_nextword_late_prediction_is_discarded` covers this. |
-| `NextWordService.Prediction` DTO leaks into engine signature. | **Eliminated** by `RawNextWordPrediction` in shared-core (§2.4). Service maps at the boundary. |
-| Settings change between snapshot and prediction-filter re-read produces inconsistent `isTranslateSwapped` usage. | Executor takes a fresh settings snapshot at query-resolve time; engine never crosses that boundary twice. Documented, no new failure mode. |
-| Negative `nowMs - lastSelectionTimeMs` (clock skew) returns `true` today. | New invariant: strict `< 10_000` and `>= 0`. G9 boundary tests cover it. |
-
----
-
-## 10. Test hooks for G9
+Pinned in `engine/nextword` tests (pure) and the platform executor tests (the last two):
 
 - `INVARIANT_nextword_association_window_strict_lt_10s` — boundary tests: 9_999 → true, 10_000 → false, negative delta → false.
 - `INVARIANT_nextword_backspace_does_not_record` — `decide(.backspace(...))` never includes `recordAssociation` or `recordCompoundAssociations` effects.
@@ -329,27 +273,13 @@ Pure-state tests runnable without simulator; the last two require iOS + Android 
 
 ---
 
-## 11. Decisions deferred to G5-impl
-
-- Whether `NextWordEngine` is an `enum` (static-only, pure-function namespace like `NextWordScorer`) or a `struct` holding `state`. Lean **enum** — matches scorer, no state to own.
-- Whether the executor wraps engine calls in a `@MainActor` func. Lean **no** — engine is thread-agnostic; executor's main-thread needs are explicit.
-- Whether `NextWordOutcome.Effect` should be a sealed hierarchy (class-ish with associated values) or the flat enum above. Lean **flat enum** — matches `ComposingTransition.Effect` in G4-design.
-
-Already decided (moved out of "deferred" after review cycle):
-
-- `NextWordPersistedState` vs `NextWordDecisionInput` split — **not deferred**, design above.
-- `RawNextWordPrediction` DTO — **not deferred**, design above.
-- Query generation for race elimination — **not deferred**, design above.
-- Negative-delta fix in `shouldRecordAssociation` — **not deferred**, boundary test above.
-
----
-
 ## 12. Cross-references
 
 - Live Rust / native ownership inventory: `../engine/migration-inventory.csv` (filter `area=nextword`).
-- Composing counterpart (same pattern for SwiftUI-scheduled state): `composing-state-boundary.md`.
-- Behavioral invariants this doc must not regress: `behavioral-invariants.md` §§7, 8, 11.
-- Engine implementation: Rust `engine/nextword` (since v3.5.5 / PR #198).
+- Composing counterpart (same executor / effect pattern): `composing-state-boundary.md`.
+- Behavioral invariants this doc must not regress: `behavioral-invariants.md` §§7, 8, 11, 24, 25, 40.
+- Engine implementation: Rust `engine/nextword` (since v3.5.5, old #198); engine notes `../engine/nextword.md`; wire shape `../engine/rust-core-proto.md`.
+- Four-platform glue map: `system-overview.md` §4.
 
 ---
 
@@ -357,7 +287,7 @@ Already decided (moved out of "deferred" after review cycle):
 
 **Status**: A5-design deliverable for Phase II, authored 2026-04-20 on branch `phase2/a4a5-design-android-binding`. Pairs with `composing-state-boundary.md` §11. Codex pre + post reviewed.
 
-**Purpose**: lock Android-specific binding contract for the `NextWordEngine` / `NextWordOutcome` shape defined in §§2–7 before A5-impl lands. iOS-authored §§1–12 stay platform-neutral in intent; this addendum captures clock injection, Kotlin coroutine scheduling, and the cross-Service clock path the iOS doc could not.
+**Purpose**: the Android-specific binding contract for the engine / outcome shape defined in §§2–7. §§2–12 stay platform-neutral in intent; this addendum captures clock injection, Kotlin coroutine scheduling, and the cross-Service clock path.
 
 **Scope**: binding contract only. A5-impl writes the code that honors the contract.
 

@@ -9,7 +9,7 @@
 ## Summary
 
 - TPS (Taiwanese Phonetic Symbols) input method
-- Input phonetic symbols, automatically convert to TL for Trie search
+- Input phonetic symbols; the engine looks them up directly in the `tps:` FST key family of `dictionary.fst` (no per-keystroke TPS→TL conversion — see § Tone 1/4 Ambiguous Syllable Matching)
 - QWERTY-style keyboard layout
 
 ---
@@ -25,7 +25,7 @@ Since v3.5.1 (PR #186) all TPS conversion + key-level auto-adjust lives in Rust 
 | TL → TPS (display + numeric) | Rust `phonetics::api::to_tone_marks` + TPS path inside same crate |
 | Key-level auto-adjust (positional ㄇ/ㆬ + ㄫ/ㆭ/ㄥ, palatalization ㄗ→ㄐ, syllabic nasal, ㆮ/ㆯ) | Rust `phonetics::tps_adjust` |
 | Bridge — detection | `RustEngineBridge.containsTPS(_)` / `isTPSToneMark(_)` |
-| Bridge — TL → TPS | `RustEngineBridge.tlNumericToTPS(_)` / `tlDisplayToTPS(_)` (TPS → TL stays Rust-internal — `phonetics::tps_to_tl` is consumed by `composing::continuous` for per-span TPS→TL conversion; C-1 retired the `lexicon::classify_input` consumer, no FFI surface) |
+| Bridge — TL → TPS | `RustEngineBridge.tlNumericToTPS(_)` / `tlDisplayToTPS(_)` (TPS → TL stays Rust-internal — `phonetics::tps_to_tl` is consumed only by `phonetics::tps_adjust` for syllable validation; C-1 retired the `lexicon::classify_input` consumer and C-3b retired the `composing::continuous` fold; no FFI surface) |
 | Bridge — input adjust | `RustEngineBridge.tpsInputAdjust(incoming:rawInput:)` returning `(adjusted, replaceLast?)` |
 | iOS TPS-aware glue | `Layout/TaigiLayouts.swift` (layout def), `Settings/SharedSettings.swift` (`.tps` type), `Autocomplete/Views/CandidateCellHelper.swift` (candidate TPS display), `Input/CharacterInputPipeline.swift` (calls bridge) |
 | Android TPS-aware glue | `ime/text/CharacterInputPipeline.kt`, `ime/text/TextInputManager.handleTaigiInput()`, layout JSON under `ime/text/characters/tps*.json` |
@@ -35,10 +35,12 @@ Since v3.5.1 (PR #186) all TPS conversion + key-level auto-adjust lives in Rust 
 ## Conversion Flow
 
 ```
-User input → TPS detection → TPSToTL.convert() → InputNormalizer → Trie search
-     ↓              ↓                ↓                ↓              ↓
-  ㄉㄧㄠˊ    →   Is TPS    →      tiau5       →     tiau5    →  Found word
+User input → key-level adjust → shadow/lattice → tps: key → FST lookup
+     ↓              ↓                  ↓              ↓            ↓
+  ㄉㄧㄠˊ  → phonetics::tps_adjust → composing → tps:ㄉㄧㄠˊ → dictionary hit
 ```
+
+Under `InputMode::Tps` the buffer stays Bopomofo end to end: `composing::shadow::mode_key_prefix` (`engine/composing/src/shadow.rs:22-28`) selects the `tps` family, and the lexicon fetch (`engine/lexicon/src/continuous.rs`) looks the key up in `dictionary.fst` populated at build time by `dictionary/build/create_fst.py`. The legacy per-syllable `phonetics::tps_to_tl` fold into `tl:` keys was retired in v3.5.9 D / C-3b (`engine/composing/src/continuous.rs:334-340`); `tps_to_tl` now serves only `phonetics::tps_adjust` syllable validation (`engine/phonetics/src/tps_adjust.rs:179-180`).
 
 ---
 

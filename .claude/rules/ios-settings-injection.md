@@ -1,7 +1,6 @@
 ---
 paths:
   - "ios/Sources/TaigiKeyboard/Settings/**"
-  - "ios/Sources/TaigiKeyboard/Engine/EngineSettings*.swift"
   - "ios/Sources/TaigiKeyboard/Input/Composing/**"
   - "ios/Sources/TaigiKeyboard/Lexicon/Services/**"
   - "ios/Sources/TaigiKeyboard/NextWord/**"

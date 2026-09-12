@@ -9,7 +9,7 @@
 
 ## Summary
 
-Three read-only binary assets live in the dictionary bundle and are mmap-loaded by both iOS and Android:
+Three read-only binary assets live in the dictionary bundle and are mmap-loaded by the shared Rust `engine/lexicon` readers on all four platforms — iOS, Android, macOS (`macos/Sources/TaigiInputMethodCore/Engine/DictionaryArtifacts.swift`) and Windows (`windows/crates/taigi-windows-core/src/dictionary_artifacts.rs`, which also validates `syllables.fst`):
 
 | File | Magic | Purpose | Size |
 |---|---|---|---|
@@ -17,10 +17,10 @@ Three read-only binary assets live in the dictionary bundle and are mmap-loaded 
 | `association.bin` | `TKWA` | prev_word → list of next-word predictions | ~3.1 MB |
 | `dictionary.fst` | (fst) | prefix key → rowid (for prefix + exact lookup) | ~9.2 MB |
 
-All formats use **little-endian** integers and **strict UTF-8** strings. Both platforms ship reader code that must agree byte-for-byte; mismatches surface as silent decode failures.
+All formats use **little-endian** integers and **strict UTF-8** strings. The Rust reader is the only reader; the Python writer and the Rust reader must agree byte-for-byte, and mismatches surface as silent decode failures.
 
 **Source-of-truth** for layout: this document.
-**Source-of-truth** for *content*: the Python build pipeline at `dictionary/build/` (`merge_csv.py` → `create_dictionary_bin.py` → `create_fst.py` → `create_association_bin.py` → `verify_poj_integrity.py` → `version_snapshot.py` → `deploy.sh`; the binary writers read `dictionary.csv` directly via `dictionary_records.py` / `associations.py`, while `create_fst.py` shells to the Rust `engine/build-helpers/fst-builder`). When any step changes the binary layout, this document and both readers must be updated **in the same change set**.
+**Source-of-truth** for *content*: the Python build pipeline at `dictionary/build/` (`merge_csv.py` → `create_dictionary_bin.py` → `create_fst.py` → `create_association_bin.py` → `verify_poj_integrity.py` → `version_snapshot.py` → `deploy.sh`; the binary writers read `dictionary.csv` directly via `dictionary_records.py` / `associations.py`, while `create_fst.py` shells to the Rust `engine/build-helpers/fst-builder`). When any step changes the binary layout, this document, the Python writer and the Rust reader must be updated **in the same change set**.
 
 ---
 

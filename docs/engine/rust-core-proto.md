@@ -104,7 +104,7 @@ enum CommandType {
 
 ## 5. Generation counter — platform-owned, FFI carries it through
 
-Authoritative ownership of `currentGeneration` lives in the **platform engine executor**, not in Rust. The contract is already specified at `docs/architecture/nextword-engine-boundary.md:50-65` (executor owns the counter, supplies it per intent) and `:194-204` (only state transitions that invalidate pending prediction queries bump it).
+Authoritative ownership of `currentGeneration` lives in the **platform engine executor**, not in Rust. The contract is specified in `docs/architecture/nextword-engine-boundary.md` §2 (executor owns the counter, supplies it per intent) and §3 (only state transitions that invalidate pending prediction queries bump it).
 
 For the first-slice proto, `generation` is purely an **FFI correlation / stale-response field**:
 
@@ -113,7 +113,7 @@ For the first-slice proto, `generation` is purely an **FFI correlation / stale-r
 - **Phonetics slice** does not consult or mutate `generation` — it is stateless.
 - **Composing slice** carries it through transitions but does not bump it. Bumping is a NextWord concern (platform side).
 
-This lifts the existing platform-side mechanism (iOS G5-impl + Android A5-impl, see `docs/architecture/nextword-engine-boundary.md:120,194`) onto the wire so platform and Rust agree on the protocol shape. Whether NextWord generation ownership migrates into Rust is a separate decision.
+This lifts the existing platform-side mechanism (iOS G5-impl + Android A5-impl, see `docs/architecture/nextword-engine-boundary.md` §2.4, §3) onto the wire so platform and Rust agree on the protocol shape. Whether NextWord generation ownership migrates into Rust is a separate decision.
 
 ---
 
@@ -122,7 +122,7 @@ This lifts the existing platform-side mechanism (iOS G5-impl + Android A5-impl, 
 - Every stateful `Request` carries `AppConfig config_snapshot` (current settings as of that call).
 - Rust reads `request.config_snapshot` for **that call only**. Engine state never stores a settings struct across calls.
 - Enforces `docs/architecture/behavioral-invariants.md:295-299` (§11 settings live-read invariant) at the FFI level.
-- Mirrors `EngineSettings` live-read on iOS (`docs/architecture/ios-exemplar.md` §3) and Android (`docs/architecture/android-exemplar.md:39-54` §2.2).
+- Mirrors `EngineSettings` live-read on iOS (`docs/architecture/ios-exemplar.md` §3) and Android (`docs/architecture/ios-exemplar.md` §9.2).
 
 `CMD_SET_CONFIG` (the khiin-rs equivalent at `references/khiin-rs/khiin/src/engine.rs:296`) is OPTIONAL platform warmup / compat command. It MUST NOT replace the per-request snapshot; the per-request snapshot is the authoritative source for every operation.
 
@@ -322,6 +322,6 @@ message CaseResponse {
 - `references/khiin-rs/khiin/src/engine.rs:57` — `send_command_bytes` shape
 - `references/khiin-rs/README.md:140-152` — protobuf rationale + request-id correlation
 - `docs/architecture/behavioral-invariants.md:295-309` (§11 settings live-read)
-- `docs/architecture/nextword-engine-boundary.md:50-65,120,194-204` — generation counter ownership
+- `docs/architecture/nextword-engine-boundary.md` §2, §2.4, §3 — generation counter ownership
 - `docs/architecture/composing-state-boundary.md` §11.10 — Android `Effect` divergences
 - `ios/Sources/TaigiKeyboard/Input/Composing/ComposingState.swift:47-49` — `selectSuggestion(String)` shape

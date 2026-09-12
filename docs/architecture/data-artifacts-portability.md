@@ -1,6 +1,6 @@
-# Data Artifact Portability Audit (G10)
+# Data Artifact Portability Audit
 
-Snapshot of how the five data artifacts that back the IME are produced, stored, and consumed on iOS and Android, plus the open decisions that must be resolved before any shared Rust core owns them. Not a design doc for the Rust side — an inventory of constraints.
+Snapshot of how the data artifacts that back the IME are produced, stored, and consumed on iOS and Android (§1–§7) and on macOS / Windows (§8), plus the decision register. Not a design doc for the Rust side — an inventory of constraints.
 
 - **Originally authored**: 2026-04-19 as Phase I G10 deliverable.
 - **Current state**: dictionary read path is now in Rust `engine/lexicon` (since v3.5.6); SQLite user-data stays platform-side permanently (`status=wont_migrate` per `migration-inventory.csv`).
@@ -102,10 +102,9 @@ Read-only next-word bigram/phrase table. Sibling to `dictionary.bin` with a dist
 
 | Platform | Entry point |
 |---|---|
-| iOS | `ios/.../Lexicon/Database/AssociationBinaryReader.swift` — mmap + `UnsafeRawPointer.loadUnaligned`, binary search on key offset table |
-| Android | `android/.../ime/dictionary/AssociationBinaryReader.kt` — `MappedByteBuffer` absolute-position reads, binary search on key offset table |
+| Rust core | `engine/lexicon/src/association_reader.rs` — `mmap_host` read-only map, binary search on the key offset table; `lookup(prev_word, limit)` + `build_timestamp()` |
 
-Both expose `lookup(prevWord, limit=...)`. Behavior aligned.
+The iOS / Android byte-level readers (`AssociationBinaryReader.swift` / `.kt`) were deleted with the Path G Rust swap; every platform hands the bundled path to `engine/lexicon::EngineHandle::install` and reads through the bridge.
 
 ### Divergence
 
@@ -113,7 +112,7 @@ None observed. Key sort order, bitmask layout, and entry skip semantics match. S
 
 ### Rust-core path
 
-Re-implement reader in Rust alongside dictionary.bin parser. Share `byteorder` + `memmap2`. Binary-search harness is trivial.
+Done — the Rust reader shares `mmap-host` with the `dictionary.bin` parser.
 
 ### Open decisions
 
@@ -252,7 +251,7 @@ Terminal schema converges. Version _numbers_ diverge because Android recorded ea
 ### Open decisions
 
 - **D5**. `custom_dictionary` version-namespace unification. Must land **before** any Rust-owned migration code. Track as a Phase IV-A prerequisite.
-- **D6**. Lift `CustomDictionaryDerivation` transforms to the shared core so both platforms stop maintaining parallel implementations. Already a shared-core roster candidate — prioritise in the Phonetics slice (Phase IV-A proof).
+- **D6**. Resolved — the derivation transforms live in `engine/phonetics/src/derivation.rs`; the platform `CustomDictionaryDerivation` files are thin bridges (see the decision register).
 
 ---
 
@@ -280,7 +279,7 @@ Distribution-channel design (OTA vs app-bundle) is out of scope for this audit.
 | D3 | `dictionary.bin` + `association.bin` version-bump policy | **Resolved** — `dictionary.bin` is at `version: u32 = 2` (v3.5.8 Phase 1, added `syllable_count`); `association.bin` remains at `version: u32 = 1`. Rust readers reject mismatch at open time, with `dictionary.bin` v1 surfacing an explicit `v1→v2` rebuild message. |
 | D4 | Lift bitmask semantics to single shared-core enum | **Resolved** — bitmask constants now live in Rust `engine/lexicon` (`KHIIN_BIT`, `VARIANT_BIT`; the unread `DEV_BIT` was dropped 2026-09-05). Platform `EnabledDictionaries` DTOs mirror the layout for UI toggles only. |
 | D5 | `custom_dictionary` version-namespace unification | **Open** — both platforms keep native SQLite (`wont_migrate`); unification only matters if a future Rust slice ever owns custom-dict writes (no plan to do so). |
-| D6 | Lift `CustomDictionaryDerivation` to shared core | **Open** — currently `native_pending` in `migration-inventory.csv`; could be folded into `engine/lexicon::key_normalizer` if user-data write path ever moves. |
+| D6 | Lift `CustomDictionaryDerivation` to shared core | **Resolved** — `rust_shipped` in `migration-inventory.csv` (v3.5.1 D9.4 phonetics slice): `generateNotone` / `generateAbbrev` / `generateRomanNum` delegate to `engine/phonetics/src/derivation.rs` via `RustEngineBridge.derive*`; the Swift / Kotlin files remain as thin bridges (iOS keeps a 5-line `searchPrefix` dispatcher). |
 | D7 | Cross-artifact cohesion check for the shipped trio | **Open** — see `binary-format.md` §5.1 (no checksum acknowledgement); revisit only if OTA delivery ships. |
 
 ---
@@ -344,17 +343,21 @@ DataStore blobs are **out of shared-core scope** per §Summary (iOS `SharedSetti
 
 This section is pointer-only — the substantive contract lives in iOS §§1–3.
 
-- **UTF-8 decode** — Android `DictionaryBinaryReader.decodeUtf8Strict` (`DictionaryBinaryReader.kt:106`) uses `CodingErrorAction.REPORT` and returns `null` on invalid bytes with no log. `AssociationBinaryReader` follows the same contract. Matches iOS "hanzi-optional, tl-required" (§2). Policy alignment covered by D2.
-- **Bitmask semantics duplication** — `DictionaryBinaryReader.BIT_TO_SOURCE` (`DictionaryBinaryReader.kt:124`) hardcodes the 12 dictionary source bits. `AssociationBinaryReader` holds no source-mapping table of its own; `passesFilter` routes through `EnabledDictionaries.associationBitmask()` (`EnabledDictionaries.kt:52`), which masks `sourceBitmask()` to bits 0–8 (the 9-bit subset iOS §3 documents). Silent-drift risk between `EnabledDictionaries.sourceBitmask` and `DictionaryBinaryReader.BIT_TO_SOURCE` is flagged in §2; covered by D4.
-- **`build_ts` cohesion** — both binary readers expose `buildTimestamp` from the mmap header. The build pipeline enforces `build_ts` equality across `dictionary.bin` and `association.bin` (iOS §3 Format). Android does nothing extra here; readers simply surface whatever the shipped bytes carry.
+- **UTF-8 decode** — the Rust readers apply the "hanzi-optional, tl-required" contract (§2); Android has no byte-level reader of its own any more (D2 resolved).
+- **Bitmask semantics** — bit constants live in Rust `engine/lexicon`; Android's `EnabledDictionaries` DTO mirrors the layout for UI toggles only (D4 resolved).
+- **`build_ts` cohesion** — the Rust readers expose `build_timestamp()` from the mmap header; the build pipeline enforces `build_ts` equality across `dictionary.bin` and `association.bin` (iOS §3 Format). Android does nothing extra here.
 
 ### 7.6 Cross-references
 
 - iOS readers / writers: §§1–6 above.
 - Cross-platform invariants the delivery mechanism must preserve: §Update / delivery items 1–4. Android additions in §7.2 (stamp cohesion) and §7.4 (DataStore out-of-scope reminder).
-- Phase II gate #8: closed (Phase II audit doc retired post-completion).
-- Android exemplar roster and marker convention: `docs/architecture/android-exemplar.md` §§3, 5 (I/O wrappers are explicitly excluded from the candidate roster there).
-- Candidate-class markers on the Android readers: `DictionaryBinaryReader.kt` / `AssociationBinaryReader.kt` are platform-only I/O wrappers by construction (mmap over `MappedByteBuffer`) and are not carried on the Shared-Core candidate roster.
+- Shared-core marker convention + Android deviations: `docs/architecture/ios-exemplar.md` §5.2, §9 (I/O wrappers are excluded from the candidate roster).
+
+---
+
+## 8. macOS / Windows stores
+
+Both desktop platforms keep the same three user databases, in the same shapes, with no migrator (neither ever shipped an older schema): macOS under `~/Library/Application Support/<bundle id>/` through `Storage/{UserFrequencyStore,UserAssociationStore,CustomDictionaryStore}.swift` over a shared `SQLiteConnection` (`SQLite3`, `PRAGMA user_version` per store), Windows under `%APPDATA%\TaigiKeyboard\` through `taigi-windows-storage` (`frequency.rs`, `association.rs`, `custom_dictionary.rs`, `rusqlite`, WAL + bounded busy handling, migration under `BEGIN IMMEDIATE`). Schema versions are byte-identical to the mobile shapes and carry the `CROSS-PLATFORM INVARIANT` marker: `user_frequency` **v2**, `user_association` **v6** (one column wider in its unique key than the pre-§40 v5 shape, so 一字多音 stay separate on the previous word; iOS `NextWordSchema.schemaVersion` and Android `NextWordService.DATABASE_VERSION` are 6 as well), `custom_dictionary` **v3** (iOS `CustomDictionarySchema.schemaVersion = 3`; Android's own `DATABASE_VERSION` namespace is D5). `LearningCapacity` caps the learning tables at 20 000 / 50 000 rows on both desktops. Neither desktop reads or writes `.taigi` backups (`macos-roadmap.md` § Settings pane roster); the custom dictionary has CSV import/export only. Desktop databases stay inside Time Machine / roaming-profile scope — the iOS OS-backup exclusion (`behavioral-invariants.md` §29) is not mirrored.
 
 ---
 

@@ -2,7 +2,7 @@
 
 > **Type**: Feature
 > **Keywords**: `NextWord`, `Bigram`, `WordAssociation`, `UserLearning`, `nextword crate`
-> **Related**: autocomplete.md, sort.md, architecture/nextword-engine-boundary.md, binary-format.md
+> **Related**: continuous-candidate-display.md, sort.md, architecture/nextword-engine-boundary.md, binary-format.md
 
 ---
 

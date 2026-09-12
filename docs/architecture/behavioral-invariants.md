@@ -2,7 +2,7 @@
 
 **Status**: originally authored 2026-04-19 as the Phase 0 gate; remains the immutable cross-platform behavior contract through and beyond the Phase IV-B Rust extraction (slices v3.5.1 → case-transform). Each Rust slice must preserve every invariant in this document.
 
-**Purpose**: enumerate the cross-platform behaviors that the engine — Rust crates plus surviving platform glue — must uphold on both iOS and Android.
+**Purpose**: enumerate the cross-platform behaviors that the engine — Rust crates plus surviving platform glue — must uphold on every platform: iOS, Android, macOS (IMKit), Windows (TSF).
 
 **Scope boundary**: this doc captures *cross-platform behavior* only. Architecture purity (DI, ObservableObject, singletons, candidate-purity criteria) lives in `.claude/rules/ios-shared-core-candidates.md` + `.claude/rules/cross-platform-alignment.md`. The current Rust / pending / wont-migrate inventory is `docs/engine/migration-inventory.csv`. Data-artifact portability (`dictionary.fst`, `dictionary.bin`, `association.bin`, SQLite user data) lives in `data-artifacts-portability.md`. Android-only keyboard body invariants (touch, popup, window insets) live in [`keyboard-body-invariants-android.md`](keyboard-body-invariants-android.md).
 
@@ -10,7 +10,7 @@
 
 **Test references**: each invariant ends with one or more `INVARIANT_*` test-case labels. Rust slices wire labels into `engine/<crate>/tests/`; platform tests cover bridge + integration paths.
 
-**Drift policy**: if iOS and Android behavior diverge on any invariant, treat the divergence as a regression — open an issue, do not adjust this doc to match the code.
+**Drift policy**: if any two of the four platforms (iOS, Android, macOS, Windows) diverge on an invariant, treat the divergence as a regression — open an issue, do not adjust this doc to match the code. UI-only invariants name the platforms they bind.
 
 ---
 
@@ -244,7 +244,7 @@ Bit positions mirror `dictionary/build/create_dictionary_bin.py`. `stti` is in t
 
 **Why**: decay shapes the entire learning curve for user associations. A change here is not caught by scoring tests — it surfaces only after days of use.
 
-**Scope**: `engine/nextword/src/scorer.rs` (canonical, post-v3.5.5 swap). Pre-swap mirrors in `NextWord/NextWordScorer.swift` + Android `NextWordService.kt` were deleted in PR for v3.5.5; iOS/Android platforms now route through `RustEngineBridge.nextwordFilter` for the score+merge+sort+limit step.
+**Scope**: `engine/nextword/src/scorer.rs` (canonical since the v3.5.5 Rust swap; the pre-swap Swift / Kotlin mirrors no longer exist). Every platform routes through `RustEngineBridge.nextwordFilter` for the score+merge+sort+limit step.
 
 **Corner cases**:
 - `nowMs - lastUsedMs` can be negative if the user rewinds the clock; the formula produces a factor > 1. Callers must not rely on decay ≤ 1.
@@ -390,7 +390,20 @@ Bit positions mirror `dictionary/build/create_dictionary_bin.py`. `stti` is in t
 
 - Adding a new invariant: append to this doc + index; create a matching `INVARIANT_*` test stub in G9 immediately.
 - Removing an invariant: requires a written rationale in the commit message and a Codex review pass.
-- Modifying a constant (decay, weights, thresholds): update iOS source + Android mirror + this doc in the same commit; reject cross-platform drift at review time.
+- Modifying a constant (decay, weights, thresholds): the Rust engine crate is the single source; a platform-side mirror (iOS, Android, macOS, Windows) that still exists moves in the same commit as the engine + this doc; reject cross-platform drift at review time.
+
+### Parity decisions left open by the 2026-09 refactor round
+
+The 2026-09 refactor round (old #706–#717, behavior-frozen) found these divergences and left them **untouched** because unifying them changes an observable property — each is a parity decision that needs its own round, dogfood, and (where a public op changes) an invariant entry here:
+
+| Divergence | Why it is not a refactor |
+|---|---|
+| `engine/ranking/src/score.rs` `is_nonspacing_mark` (strict Unicode `Mn`) vs `engine/phonetics/src/derivation.rs` hard-coded ranges | the two predicates differ on exotic input; unifying is a parity decision + dogfood, not a move |
+| `engine/phonetics/src/tps.rs` `is_tps_tone_mark` (8 fixed scalars incl. U+0307) vs `tps_adjust.rs` `TONE_MARK_CHARS` (table-derived, excludes U+0300–036F) | different sets; the `tps_adjust` version backs the public `Method::IsTpsToneMark` op — unification changes a public op |
+| `derive_poj_notone_for_match` → `poj_num_syllable_ends_from_tl` | replace only with a parity proof over every dictionary row (`tests/poj_notone_parity.rs`-style byte-equality) |
+| Byte-identical `*.pb.swift` macOS ↔ iOS | build-graph change in `.xcodeproj` / `Package.swift` — user-only config (CLAUDE.md Core Principle #1) |
+| Settings-key table ×2 (`SettingsStore.swift` ↔ `keys.rs`) | needs a generator = new tooling |
+| Engine `WalkerSlot0` ↔ `RawCandidate` mirror, `bounded` fetch trio, `prefix_index.rs` four lookups, `SyllableReach` / `KeyFace` | each source doc explains a deliberate divergence (sign bridge D3, cap ordering, `INVARIANT_LEX_LOOKUP_ROWIDS_ORDER`) |
 
 ---
 
@@ -399,21 +412,6 @@ Bit positions mirror `dictionary/build/create_dictionary_bin.py`. `stti` is in t
 - Live Rust / native ownership inventory: `docs/engine/migration-inventory.csv`.
 - Per-platform criteria + exclusions: `.claude/rules/ios-shared-core-candidates.md` §1, `.claude/rules/android-guidelines.md` §1.
 - Data-artifact portability (`dictionary.fst` / `.bin` / SQLite user data): `docs/architecture/data-artifacts-portability.md`.
-
----
-
-## Test-label drift snapshot (2026-04-29)
-
-Doc-sweep audit found **18 `INVARIANT_*` labels live in tests but are not enumerated as named invariants in this document**. Per line 9 ("an invariant without a label is not"), the inverse — test labels not bound to a named invariant — points to behaviors that may merit explicit documentation. Backfill is out of scope for the doc sweep; tracked as future work.
-
-Orphan test labels grouped by module (verbatim from `grep -rn "INVARIANT_[a-z_]+" {ios,android}/.../test{,s}/`):
-
-- **Composing** (5): `..._commit_captures_text_before_idle`, `..._delete_order`, `..._idle_has_no_selected_candidate`, `..._replace_last_preserves_selected_index`, `..._select_suggestion_is_atomic_commit`.
-- **NextWord** (8): `..._association_window_strict_lt_`, `..._backspace_does_not_record`, `..._compound_pairs_are_sequential`, `..._generation_bumps_on_invalidating_intents`, `..._late_prediction_is_discarded`, `..._prediction_filter_hides_empty_tl_in_roman_mode`, `..._rescheduling_leaks_no_timer`, `..._sentence_end_resets_context`.
-- **Unicode** (5 sub-labels of §2 `INVARIANT_nfd_preprocessed_platform_parity`): `..._idempotent_on_ascii`, `..._keeps_tone_combining_marks`, `..._nasal_marker_substitution`, `..._o_combining_dot_collapses`, `..._repeated_o_combining_dot`.
-
-The Unicode bucket is partial coverage of the existing umbrella label and need not be lifted as separate invariants. Composing + NextWord buckets pin behaviors not currently named in §13 / §7-§8 — backfill candidates.
-
 
 ---
 

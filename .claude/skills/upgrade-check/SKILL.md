@@ -114,7 +114,7 @@ Emit a markdown report:
 |---|------|------|-------------------------------|--------|
 ...
 
-## Behavior changes — confirm each is in changelog/<target>.md (mobile) / changelog/desktop-<target>.md (desktop)
+## Behavior changes — confirm each is in changelog/v<version>.md (mobile) / changelog/desktop-v<version>.md (desktop)
 - ...
 
 ## Blocking — must fix before release
@@ -124,7 +124,7 @@ Emit a markdown report:
 Rules:
 - Every row cites `file:line` + the old→new value. No claim without evidence.
 - A SAFE result for a whole area still gets one row ("schema: all 6 unchanged → no migration runs").
-- BEHAVIOR-CHANGE findings are cross-checked against `changelog/<target>.md`; flag any that are missing from the changelog.
+- BEHAVIOR-CHANGE findings are cross-checked against the target changelog file (`changelog/v<version>.md` / `changelog/desktop-v<version>.md`); flag any that are missing from the changelog.
 - Never assign release scope (in/out of vX) — that is user-gated (`~/.claude/rules/diagnosis-discipline.md` § No unilateral release scope). Report compat facts only.
 - This skill does not fix anything. If a BLOCKING finding needs a code change, that is a separate user-gated bugfix round (Core Principle #4).
 

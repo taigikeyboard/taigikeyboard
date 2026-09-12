@@ -8,7 +8,7 @@ Mandatory rules for Android development. Core architecture + Kotlin idioms + DI 
 
 **Three goals** every rule below serves at least one of:
 
-- **R — Rust-friendly**: reduce future friction when residual `native_pending` / `native_keep` files move to a Rust crate
+- **R — Rust-friendly**: reduce future friction if a `native_keep` file (`docs/engine/migration-inventory.csv`; the CSV has no `native_pending` rows left) later moves to a Rust crate
 - **B — Best practice**: Kotlin / Android idiomatic code
 - **A — Anti-regression**: reduce "fix A, break B" outcomes during refactor rounds
 

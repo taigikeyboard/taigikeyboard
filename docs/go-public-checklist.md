@@ -1,13 +1,24 @@
 # Going public — checklist
 
-This repository is private and will be made public at a date that has not been
-set. The flip is irreversible in practice: forks, caches and archives keep
-whatever the history contained at that moment. This file is the ordered list of
-what has to be true first, how each item was checked, and when — so the flip is
-a mechanical step rather than a judgement call made in a hurry.
+> **Type**: Reference (the flip happened; kept as the audit record and the re-run procedure)
 
-Re-run each audit rather than trusting the recorded result; the dates say how
-stale it is.
+**Flip record — PUBLIC since 2026-09-07.** The repository `taigikeyboard/taigikeyboard`
+was created public on 2026-09-07 (`gh repo view --json createdAt,visibility` →
+`2026-09-07T06:58:51Z`, `PUBLIC`) as the PII-free successor of the old private
+repository (`docs/architecture/pr-number-migration.md`). Verified 2026-09-13 with
+`gh api repos/taigikeyboard/taigikeyboard --jq '.security_and_analysis'`:
+`secret_scanning` **enabled**, `secret_scanning_push_protection` **enabled**,
+`dependabot_security_updates` enabled, `secret_scanning_non_provider_patterns`
+**disabled**, `secret_scanning_validity_checks` disabled. The §4 dictionary
+licence position was published as recorded below (the maintainer's reading,
+not a grant) and stays the open legal item — also the likely obstacle for the
+SignPath Foundation application submitted 2026-09-07 (memory
+`project_oss_public_signpath.md`; no verdict recorded as of 2026-09-13).
+
+The flip was irreversible in practice: forks, caches and archives keep whatever
+the history contained at that moment. This file is the ordered list of what had
+to be true first, how each item was checked, and when. Re-run each audit rather
+than trusting the recorded result; the dates say how stale it is.
 
 ---
 
@@ -86,7 +97,12 @@ repositories, and the Rust, Swift and Gradle dependency sets.
 
 ## 4. The dictionary may lawfully be redistributed
 
-**Blocked.** This is the item that decides the date.
+**Published as-is 2026-09-07 with the position below on record; not settled.**
+Before the flip this was the item that decided the date. The data went public
+with the maintainer's licence reading in `dictionary/LICENSE`, and the four
+unlicensed sources are still unlicensed — resolving them (licence in writing,
+permission, replacement, or removal) is now a public-history problem: removal
+from the tree no longer removes the rows from forks and caches.
 
 `dictionary/LICENSE` and `dictionary/docs/SOURCES.md` cover all nine main
 sources and the three supplementary sets, verified 2026-09-05. Publishing the
@@ -223,7 +239,7 @@ Before the flip, confirm:
   tag kept in a trailing comment so Dependabot's `github-actions` ecosystem can
   still bump them. `permissions: contents: read` bounds what a moved tag could
   reach but does not remove it, since a malicious action still runs with read
-  access to a private tree and can shape the gate's own verdict. The gitleaks
+  access to the tree and can shape the gate's own verdict. The gitleaks
   binary `secrets.yml` downloads was already pinned by SHA-256. Note that pinning
   `taiki-e/install-action` does not pin the `cargo-audit` / `cargo-deny` builds it
   fetches — that is a second layer, still floating.
@@ -261,19 +277,24 @@ ready for the volume a public repository attracts.
 
 ## 9. Flip
 
-Only after every section above is settled — not §4 alone. §4 is the one that is
-outright blocked, but §7 has not been audited at all and §8 has not been
-reviewed, and both are pre-publication work.
+**Done 2026-09-07** — the new repository was created public rather than flipped
+(see the flip record at the top), after §1, §2, §3, §5 and §6 were re-run against
+the rewritten history. §4 went out with its position recorded, not resolved; §7
+and §8 were not audited to the depth this section asked for before the flip and
+remain worth a pass. For a future repository the command is:
 
 ```sh
-gh repo edit taigikeyboard/taigikeyboard --visibility public
+gh repo edit <owner>/<repo> --visibility public
 ```
 
 ## 10. Turn on GitHub's own scanning
 
-Secret scanning and push protection come free with a public repository; on a
-private one they need a paid GitHub security entitlement, which this repository
-does not have — so in practice §9 is what makes them available here. Push
+**State 2026-09-13**: `secret_scanning` and `secret_scanning_push_protection`
+enabled; `secret_scanning_non_provider_patterns` disabled (the third `-f` line
+below has not been applied). Secret scanning and push protection come free with
+a public repository; on a private one they need a paid GitHub security
+entitlement, which this repository did not have — so §9 is what made them
+available here. Push
 protection rejects a push containing a recognised credential before the objects
 reach the server. It is the server-side preventive layer, the one gate a clone
 cannot skip and `--no-verify` cannot reach, though a push can still be bypassed
@@ -301,7 +322,7 @@ gh api repos/taigikeyboard/taigikeyboard --jq '.visibility, .security_and_analys
 
 ---
 
-## What runs in the meantime
+## What runs regardless
 
 None of this depends on the repository being public.
 
