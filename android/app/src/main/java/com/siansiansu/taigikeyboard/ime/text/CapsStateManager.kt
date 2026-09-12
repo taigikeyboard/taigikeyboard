@@ -22,7 +22,6 @@ class CapsStateManager(
         private set
     var capsLock: Boolean = false
         private set
-    private var cursorCapsMode: CapsMode = CapsMode.NONE
     private var hasCapsRecentlyChanged: Boolean = false
     var hasSpaceRecentlyPressed: Boolean = false
 
@@ -49,18 +48,14 @@ class CapsStateManager(
     }
 
     /**
-     * Update caps state based on cursor position and editor info.
+     * Re-derive auto-caps from the cursor position. Called on every cursor
+     * update (`CURSOR_UPDATE_MONITOR`), so it must stay cheap: caps lock
+     * owns the shift state outright, and with auto-capitalization off the
+     * answer is always "no caps" — neither case touches the editor.
      */
     fun updateCapsState() {
-        cursorCapsMode = fetchCurrentCursorCapsMode()
-        if (!capsLock) {
-            caps = if (taigikeyboard.prefs.autoCapitalizationEnabled) {
-                cursorCapsMode != CapsMode.NONE
-            } else {
-                false
-            }
-            onInvalidateAllKeys()
-        }
+        if (capsLock) return
+        applyAutoCaps()
     }
 
     /**
@@ -68,9 +63,20 @@ class CapsStateManager(
      */
     fun resetSingleShift() {
         if (caps && !capsLock) {
-            caps = false
-            updateCapsState()
+            applyAutoCaps()
         }
+    }
+
+    // `getCursorCapsMode` is a blocking IPC round-trip to the editor's
+    // process and `onInvalidateAllKeys` rebuilds the keyboard appearance,
+    // so both run only when they can change what the user sees.
+    private fun applyAutoCaps() {
+        val wantsCaps =
+            taigikeyboard.prefs.autoCapitalizationEnabled &&
+                fetchCurrentCursorCapsMode() != CapsMode.NONE
+        if (caps == wantsCaps) return
+        caps = wantsCaps
+        onInvalidateAllKeys()
     }
 
     private fun fetchCurrentCursorCapsMode(): CapsMode {
