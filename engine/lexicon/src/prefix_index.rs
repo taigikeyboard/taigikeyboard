@@ -3,12 +3,15 @@
 //! Wire format (mirrors `dictionary/build/create_fst.py` / fst-builder):
 //!     key_bytes (UTF-8) || 0xFF || rowid_le_4
 //!
+//! The separator sits at the fixed offset `len - 5`; the rowid bytes may
+//! themselves be `0xFF`, so a key is never located by searching for it.
+//!
 //! `lookup_prefix` does a byte-range scan on `[prefix+0xFF, prefix+0x100)`
 //! and decodes the trailing 4-byte rowid per hit. Insertion order is
 //! preserved through fst's deterministic byte-sorted iteration. Replaces
 //! both platforms' MARISA-trie + native-bridge stack.
 
-use fst::{IntoStreamer, Set, Streamer};
+use fst::{Automaton, IntoStreamer, Set, Streamer};
 use mmap_host::MmapHandle;
 
 use crate::error::LexiconError;
@@ -16,6 +19,9 @@ use crate::error::LexiconError;
 // Separator byte between key and rowid; 0xFF is chosen because it is larger than any valid
 // UTF-8 byte, guaranteeing correct scan boundaries.
 const SEPARATOR: u8 = 0xFF;
+
+/// Bytes a wire entry carries after its key: the separator + the rowid.
+const WIRE_SUFFIX_LEN: usize = 1 + std::mem::size_of::<u32>();
 
 pub struct PrefixIndex {
     set: Set<MmappedSetData>,
@@ -99,60 +105,135 @@ impl PrefixIndex {
     /// order is still decided by the caller's `SortKey` (recency / score /
     /// frequency). Length just decides which rowids enter the pool.
     ///
-    /// `skip` is evaluated on each `matched_key` during the scan (e.g. to
-    /// drop TPS acronym / abbrev key surfaces) so excluded keys never
-    /// consume a bucket slot. `matched_key` is the UTF-8 key reconstructed
-    /// from the wire entry by dropping the trailing `0xFF || rowid_le_4`;
-    /// the separator sits at the fixed offset `entry.len() - 5` (the rowid
-    /// little-endian bytes may contain `0xFF`, so it is located by offset,
-    /// never by searching for `0xFF`). `lookup_prefix` is unchanged so
-    /// normal `search` keeps its byte-order acronym matching.
+    /// `skip` is evaluated per distinct `matched_key` (e.g. to drop TPS
+    /// acronym / abbrev key surfaces) so excluded keys never consume a
+    /// bucket slot; see [`Self::collect_shortest_first`] for the walk.
+    /// `lookup_prefix` is unchanged so normal `search` keeps its byte-order
+    /// acronym matching.
     pub fn lookup_prefix_shortest_first(
         &self,
         prefix: &str,
         cap: usize,
-        mut skip: impl FnMut(&str) -> bool,
+        skip: impl FnMut(&str) -> bool,
     ) -> Vec<u32> {
-        let prefix_bytes = prefix.as_bytes();
-        if prefix_bytes.is_empty() || cap == 0 {
+        if prefix.is_empty() || cap == 0 {
             return Vec::new();
         }
-        let lo: Vec<u8> = prefix_bytes.to_vec();
-        let Some(hi) = next_lex_sibling(prefix_bytes) else {
-            // prefix is all 0xFF — no successor (mirrors `lookup_prefix`;
-            // never reached for `tps:` / `tl:` / `poj:` prefixes). Bucketing
-            // adds no value on this edge; fall back to a plain filtered scan.
-            let mut stream = self.set.range().ge(&lo).into_stream();
-            let mut out = decode_rowids_filtered(&mut stream, lo.len(), &mut skip);
-            out.truncate(cap);
-            return out;
-        };
-        let mut stream = self.set.range().ge(&lo).lt(&hi).into_stream();
-        let min_key_len = prefix_bytes.len();
-        // Bucket survivors by matched-key byte length. The full range is
-        // scanned (byte order ≠ length order, so a short key can appear
-        // anywhere); the `BTreeMap` then yields the buckets in ascending
-        // length order, so draining it into the cap is shortest-first with
-        // no extra sort. Same total rowid memory as `lookup_prefix`, one
-        // extra O(n) bucketing pass. Within a length, scan (byte) order is
-        // preserved as the stable tiebreak.
+        // Bucket survivors by matched-key byte length; the `BTreeMap`
+        // yields the buckets in ascending length order, so draining it
+        // into the cap is shortest-first with no extra sort. Within a
+        // length, scan (byte) order is preserved as the stable tiebreak.
         let mut buckets: std::collections::BTreeMap<usize, Vec<u32>> =
             std::collections::BTreeMap::new();
-        use fst::Streamer;
-        while let Some(entry) = stream.next() {
-            if let Some((key_len, rowid)) = decode_entry_filtered(entry, min_key_len, &mut skip) {
-                buckets.entry(key_len).or_default().push(rowid);
-            }
-        }
-        let mut out: Vec<u32> = Vec::with_capacity(cap);
-        for (_len, bucket) in buckets {
-            if out.len() >= cap {
+        self.collect_shortest_first(
+            prefix.as_bytes(),
+            prefix.len(),
+            cap,
+            fst::automaton::AlwaysMatch,
+            skip,
+            |matched_key, rowid| buckets.entry(matched_key.len()).or_default().push(rowid),
+        );
+        buckets.into_values().flatten().take(cap).collect()
+    }
+
+    /// Shared walk behind the two shortest-first lookups: streams the wire
+    /// entries under `range_prefix` that `filter` accepts and hands every
+    /// surviving `(matched_key, rowid)` to `on_hit`.
+    ///
+    /// Byte order ≠ length order, so a short key can sit anywhere in the
+    /// range — but the FST is a trie, and an entry's byte length is its
+    /// depth. The range is therefore walked in **widening entry-length
+    /// bands**: each band admits [`BAND_CEILING_EXTRA_BYTES`] more key
+    /// bytes past `min_key_len`, the last band is unbounded, and the walk
+    /// stops after the first band that brings the survivor total to `cap`.
+    /// Inside a band the automaton prunes every subtree deeper than the
+    /// ceiling and, once the separator fixes an entry's length, every rowid
+    /// subtree of a key an earlier band already emitted ([`EntryLenBand`]).
+    /// A single-initial prefix fills a 500-rowid cap from the first band,
+    /// so the walk never descends into the multi-syllable bulk of the range.
+    ///
+    /// Equivalence with a full scan: bands ascend, so every entry the walk
+    /// never visits is longer than every entry it emitted, and a band is
+    /// always drained completely — so once the emitted survivors reach
+    /// `cap`, the caller's own length ordering over them (bucket / sort)
+    /// selects exactly the `cap` shortest survivors of the whole range.
+    /// Byte order inside a band is NOT length order (`tl:taa` streams
+    /// before `tl:ta`), which is why the stop check sits after the band,
+    /// never inside it.
+    ///
+    /// `skip` must be a pure predicate of the key: it is evaluated once per
+    /// **distinct** key, not per entry — the rowids of one key are
+    /// consecutive in the stream, and the TL / POJ acronym predicate
+    /// backtracks through syllable splits, so calling it per rowid
+    /// dominated the old scan. A skipped key's remaining rowids are not
+    /// streamed either: the walk re-seeks to the key's lex sibling (every
+    /// extension of the key byte-sorts BEFORE `key || 0xFF`, so nothing
+    /// under the key is left behind) — acronym keys such as `tl:ts` carry
+    /// thousands of rowids each and were ~80 % of the entries a
+    /// single-initial band streamed. A non-UTF-8 key (never produced by
+    /// the build pipeline) is dropped the same way.
+    fn collect_shortest_first<A: Automaton>(
+        &self,
+        range_prefix: &[u8],
+        min_key_len: usize,
+        cap: usize,
+        filter: A,
+        mut skip: impl FnMut(&str) -> bool,
+        mut on_hit: impl FnMut(&str, u32),
+    ) {
+        let hi = next_lex_sibling(range_prefix);
+        let min_entry_len = min_key_len + WIRE_SUFFIX_LEN;
+        let mut survivors = 0usize;
+        let mut last_key = String::new();
+        let mut floor = min_entry_len - 1;
+        for ceiling in BAND_CEILING_EXTRA_BYTES
+            .iter()
+            .map(|extra| min_entry_len + extra)
+            .chain([usize::MAX])
+        {
+            let band = EntryLenBand {
+                min_exclusive: floor,
+                max_inclusive: ceiling,
+            };
+            floor = ceiling;
+            let mut resume_at: Vec<u8> = range_prefix.to_vec();
+            'band: loop {
+                let mut builder = self.set.search((&filter).intersection(band)).ge(&resume_at);
+                if let Some(hi) = &hi {
+                    builder = builder.lt(hi);
+                }
+                let mut stream = builder.into_stream();
+                while let Some(entry) = stream.next() {
+                    let Some((key_bytes, rowid)) = split_wire_entry(entry) else {
+                        continue;
+                    };
+                    if key_bytes != last_key.as_bytes() {
+                        match std::str::from_utf8(key_bytes) {
+                            Ok(key) if !skip(key) => {
+                                last_key.clear();
+                                last_key.push_str(key);
+                            }
+                            _ => {
+                                // The key starts with the non-empty UTF-8
+                                // `range_prefix`, so it is never all 0xFF
+                                // and the sibling always exists.
+                                let Some(after_key) = next_lex_sibling(key_bytes) else {
+                                    continue;
+                                };
+                                resume_at = after_key;
+                                continue 'band;
+                            }
+                        }
+                    }
+                    on_hit(&last_key, rowid);
+                    survivors += 1;
+                }
                 break;
             }
-            let remaining = cap - out.len();
-            out.extend(bucket.into_iter().take(remaining));
+            if survivors >= cap {
+                return;
+            }
         }
-        out
     }
 
     /// TPS ambiguity-aware exact lookup — one automaton walk returning
@@ -178,7 +259,6 @@ impl PrefixIndex {
         key: &str,
         final_only_offsets: &[usize],
     ) -> Vec<(String, u32, u32)> {
-        use fst::{IntoStreamer, Streamer};
         // Unambiguous key (no family glyph): the pattern could only match
         // the literal — use the narrow-range exact lookup, zero automaton.
         if !crate::tps_pattern::has_ambiguous_glyph(key) {
@@ -193,32 +273,20 @@ impl PrefixIndex {
             crate::tps_pattern::WireMode::ExactWire,
             final_only_offsets,
         );
-        // Constrain the automaton scan to the family prefix's range so it
-        // never touches `tl:` / `poj:` / `hanzi:` regions.
-        let prefix = key
-            .split(':')
-            .next()
-            .map(|p| format!("{p}:"))
-            .unwrap_or_default();
+        let family = family_prefix(key);
         let mut builder = self.set.search(&pattern);
-        if let Some(hi) = next_lex_sibling(prefix.as_bytes()) {
-            builder = builder.ge(prefix.as_bytes()).lt(&hi);
+        if let Some(hi) = next_lex_sibling(family.as_bytes()) {
+            builder = builder.ge(family.as_bytes()).lt(&hi);
         }
         let mut stream = builder.into_stream();
         let mut out: Vec<(String, u32, u32)> = Vec::new();
         while let Some(entry) = stream.next() {
-            if entry.len() < 5 {
-                continue;
-            }
-            // Wire = key || 0xFF || rowid_le_4: the separator sits at the
-            // fixed offset len-5 (rowid bytes may themselves be 0xFF).
-            let key_end = entry.len() - 5;
-            let Ok(matched_key) = std::str::from_utf8(&entry[..key_end]) else {
+            let Some((key_bytes, rowid)) = split_wire_entry(entry) else {
                 continue;
             };
-            let mut buf = [0u8; 4];
-            buf.copy_from_slice(&entry[entry.len() - 4..]);
-            let rowid = u32::from_le_bytes(buf);
+            let Ok(matched_key) = std::str::from_utf8(key_bytes) else {
+                continue;
+            };
             let subst = crate::tps_pattern::substitution_count(key, matched_key);
             out.push((matched_key.to_string(), rowid, subst));
         }
@@ -238,9 +306,8 @@ impl PrefixIndex {
         &self,
         prefix_key: &str,
         cap: usize,
-        mut skip: impl FnMut(&str) -> bool,
+        skip: impl FnMut(&str) -> bool,
     ) -> Vec<(String, u32)> {
-        use fst::{IntoStreamer, Streamer};
         if prefix_key.is_empty() || cap == 0 {
             return Vec::new();
         }
@@ -254,52 +321,33 @@ impl PrefixIndex {
             crate::tps_pattern::WireMode::StartsWith,
             &[],
         );
-        let family = prefix_key
-            .split(':')
-            .next()
-            .map(|p| format!("{p}:"))
-            .unwrap_or_default();
-        let mut builder = self.set.search(&pattern);
-        if let Some(hi) = next_lex_sibling(family.as_bytes()) {
-            builder = builder.ge(family.as_bytes()).lt(&hi);
-        }
-        let mut stream = builder.into_stream();
-        // (matched_key_len, subst_on_typed_prefix, byte-order index) buckets;
-        // the matched key travels with the rowid so record guards validate
-        // against what the pattern actually hit (Codex post-impl BLOCK 1).
-        let mut survivors: Vec<(usize, u32, usize, u32, String)> = Vec::new();
-        let mut order = 0usize;
-        while let Some(entry) = stream.next() {
-            if entry.len() < 5 {
-                continue;
-            }
-            let key_end = entry.len() - 5;
-            let Ok(matched_key) = std::str::from_utf8(&entry[..key_end]) else {
-                continue;
-            };
-            if skip(matched_key) {
-                continue;
-            }
-            // Substitutions can only occur inside the typed prefix; the
-            // charwise zip stops at the shorter side, so the shared helper
-            // applies as-is.
-            let subst = crate::tps_pattern::substitution_count(prefix_key, matched_key);
-            let mut buf = [0u8; 4];
-            buf.copy_from_slice(&entry[entry.len() - 4..]);
-            survivors.push((
-                key_end,
-                subst,
-                order,
-                u32::from_le_bytes(buf),
-                matched_key.to_string(),
-            ));
-            order += 1;
-        }
-        survivors.sort_by_key(|&(len, subst, ord, _, _)| (len, subst, ord));
+        // Walk the whole family range, NOT the literal key's own narrow
+        // range: an alternate glyph may byte-sort far from the literal.
+        let family = family_prefix(prefix_key);
+        // (matched_key_len, subst_on_typed_prefix) survivors; the matched
+        // key travels with the rowid so record guards validate against
+        // what the pattern actually hit (Codex post-impl BLOCK 1).
+        let mut survivors: Vec<(usize, u32, u32, String)> = Vec::new();
+        self.collect_shortest_first(
+            family.as_bytes(),
+            prefix_key.len(),
+            cap,
+            &pattern,
+            skip,
+            |matched_key, rowid| {
+                // Substitutions can only occur inside the typed prefix; the
+                // charwise zip stops at the shorter side, so the shared
+                // helper applies as-is.
+                let subst = crate::tps_pattern::substitution_count(prefix_key, matched_key);
+                survivors.push((matched_key.len(), subst, rowid, matched_key.to_string()));
+            },
+        );
+        // Stable sort: byte order within equal (len, subst) is preserved.
+        survivors.sort_by_key(|&(len, subst, _, _)| (len, subst));
         survivors
             .into_iter()
             .take(cap)
-            .map(|(_, _, _, rowid, matched_key)| (matched_key, rowid))
+            .map(|(_, _, rowid, matched_key)| (matched_key, rowid))
             .collect()
     }
 
@@ -328,12 +376,12 @@ impl PrefixIndex {
         let mut stream = self.set.range().ge(&lo).lt(&hi).into_stream();
         let mut out: Vec<u32> = Vec::new();
         while let Some(entry) = stream.next() {
-            if entry.len() != key_bytes.len() + 1 + 4 {
+            if entry.len() != key_bytes.len() + WIRE_SUFFIX_LEN {
                 continue;
             }
-            let mut buf = [0u8; 4];
-            buf.copy_from_slice(&entry[entry.len() - 4..]);
-            out.push(u32::from_le_bytes(buf));
+            if let Some((_, rowid)) = split_wire_entry(entry) {
+                out.push(rowid);
+            }
         }
         out
     }
@@ -356,60 +404,97 @@ fn next_lex_sibling(prefix: &[u8]) -> Option<Vec<u8>> {
     None
 }
 
+/// The `<family>:` prefix of a namespaced key (`tps:ㄍㄚ` → `tps:`) —
+/// the range bound that keeps a family-wide automaton walk from touching
+/// the `tl:` / `poj:` / `hanzi:` regions.
+fn family_prefix(key: &str) -> String {
+    key.split(':')
+        .next()
+        .map(|family| format!("{family}:"))
+        .unwrap_or_default()
+}
+
+/// Split one wire entry into `(key_bytes, rowid)`; `None` when the entry
+/// is too short to carry the separator + rowid suffix.
+fn split_wire_entry(entry: &[u8]) -> Option<(&[u8], u32)> {
+    let key_end = entry.len().checked_sub(WIRE_SUFFIX_LEN)?;
+    let mut buf = [0u8; 4];
+    buf.copy_from_slice(&entry[key_end + 1..]);
+    Some((&entry[..key_end], u32::from_le_bytes(buf)))
+}
+
+/// Key bytes past the typed prefix that each widening band of
+/// [`PrefixIndex::collect_shortest_first`] admits (ceilings, not
+/// increments) before the walk falls back to the unbounded range. A perf
+/// heuristic only — the result is the same for any ascending ceilings.
+/// Two bytes = two roman letters, enough for every 500-rowid production
+/// roman prefix to fill its cap in one walk; a wider first band admits
+/// the 3-letter acronym keys too and triples the `skip` calls. A
+/// Bopomofo glyph is three bytes, so a TPS walk needs the +4 band — the
+/// empty +2 pass costs microseconds. Later ceilings double so a sparse
+/// prefix reaches the unbounded walk in a handful of cheap passes.
+const BAND_CEILING_EXTRA_BYTES: [usize; 5] = [2, 4, 8, 16, 32];
+
+/// `fst::Automaton` accepting exactly the wire entries whose byte length
+/// lies in `(min_exclusive, max_inclusive]`, with subtree pruning on both
+/// sides: nothing deeper than `max_inclusive` is descended, and once the
+/// `0xFF` separator fixes an entry's length at `sep_depth + 5`, a length
+/// already covered by an earlier band prunes that key's whole rowid
+/// subtree. Keys are UTF-8, so the first `0xFF` on a path is always the
+/// separator; later `0xFF` bytes belong to the rowid and are ignored.
+#[derive(Clone, Copy)]
+struct EntryLenBand {
+    min_exclusive: usize,
+    max_inclusive: usize,
+}
+
+/// `(depth, separator depth once seen)`.
+type EntryLenState = (usize, Option<usize>);
+
+impl EntryLenBand {
+    fn admits(&self, entry_len: usize) -> bool {
+        entry_len > self.min_exclusive && entry_len <= self.max_inclusive
+    }
+}
+
+impl Automaton for EntryLenBand {
+    type State = EntryLenState;
+
+    fn start(&self) -> EntryLenState {
+        (0, None)
+    }
+
+    fn is_match(&self, &(depth, sep): &EntryLenState) -> bool {
+        sep.is_some_and(|sep_depth| depth == sep_depth + WIRE_SUFFIX_LEN && self.admits(depth))
+    }
+
+    fn can_match(&self, &(depth, sep): &EntryLenState) -> bool {
+        match sep {
+            Some(sep_depth) => {
+                depth <= sep_depth + WIRE_SUFFIX_LEN && self.admits(sep_depth + WIRE_SUFFIX_LEN)
+            }
+            // The shortest completion of a key at this depth is the key
+            // itself plus separator + rowid.
+            None => depth + WIRE_SUFFIX_LEN <= self.max_inclusive,
+        }
+    }
+
+    fn accept(&self, &(depth, sep): &EntryLenState, byte: u8) -> EntryLenState {
+        let sep = sep.or((byte == SEPARATOR).then_some(depth));
+        (depth + 1, sep)
+    }
+}
+
 fn decode_rowids(
     stream: &mut fst::set::Stream<'_, fst::automaton::AlwaysMatch>,
     min_key_len: usize,
 ) -> Vec<u32> {
-    use fst::Streamer;
     let mut out: Vec<u32> = Vec::new();
     while let Some(entry) = stream.next() {
-        if entry.len() < min_key_len + 1 + 4 {
+        if entry.len() < min_key_len + WIRE_SUFFIX_LEN {
             continue;
         }
-        let mut buf = [0u8; 4];
-        buf.copy_from_slice(&entry[entry.len() - 4..]);
-        out.push(u32::from_le_bytes(buf));
-    }
-    out
-}
-
-/// Parse one wire entry `key_bytes || 0xFF || rowid_le_4`, applying
-/// `skip(matched_key)`. Returns `(matched_key_len, rowid)` for a surviving
-/// entry, or `None` when the entry is too short or skipped. The separator
-/// is at the fixed offset `entry.len() - 5`; the rowid little-endian bytes
-/// may contain `0xFF`, so it is located by offset, never by searching for
-/// `0xFF`. A non-UTF-8 key (never produced by the build pipeline) is kept
-/// rather than dropped — the skip predicate is a filter, not a validator.
-fn decode_entry_filtered(
-    entry: &[u8],
-    min_key_len: usize,
-    skip: &mut impl FnMut(&str) -> bool,
-) -> Option<(usize, u32)> {
-    if entry.len() < min_key_len + 1 + 4 {
-        return None;
-    }
-    let key_bytes = &entry[..entry.len() - 5];
-    if let Ok(key) = std::str::from_utf8(key_bytes) {
-        if skip(key) {
-            return None;
-        }
-    }
-    let mut buf = [0u8; 4];
-    buf.copy_from_slice(&entry[entry.len() - 4..]);
-    Some((key_bytes.len(), u32::from_le_bytes(buf)))
-}
-
-/// [`decode_rowids`] variant that drops an entry when `skip(matched_key)`
-/// is `true`. Thin stream wrapper over [`decode_entry_filtered`].
-fn decode_rowids_filtered(
-    stream: &mut fst::set::Stream<'_, fst::automaton::AlwaysMatch>,
-    min_key_len: usize,
-    skip: &mut impl FnMut(&str) -> bool,
-) -> Vec<u32> {
-    use fst::Streamer;
-    let mut out: Vec<u32> = Vec::new();
-    while let Some(entry) = stream.next() {
-        if let Some((_, rowid)) = decode_entry_filtered(entry, min_key_len, skip) {
+        if let Some((_, rowid)) = split_wire_entry(entry) {
             out.push(rowid);
         }
     }
