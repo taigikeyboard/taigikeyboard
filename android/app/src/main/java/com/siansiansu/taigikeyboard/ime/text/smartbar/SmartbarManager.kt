@@ -563,7 +563,18 @@ class SmartbarManager(
         )
     }
 
+    /**
+     * Bumped on every [clearCandidates]. An async candidate producer captures
+     * it when it starts and publishes only if it is unchanged, so a strip
+     * cleared by any path (space, Enter, candidate tap, symbol, mode switch)
+     * cannot be repopulated by a result computed for the text before the
+     * clear.
+     */
+    var clearEpoch: Int = 0
+        private set
+
     fun clearCandidates() {
+        clearEpoch++
         logger.debug(TAG) {
             val stackTrace = Thread.currentThread().stackTrace
             val caller = stackTrace.getOrNull(3)?.methodName ?: "unknown"

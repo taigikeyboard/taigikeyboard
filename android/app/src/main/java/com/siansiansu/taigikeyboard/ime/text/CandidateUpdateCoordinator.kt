@@ -8,14 +8,18 @@ import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.core.logging.TraceContext
 import com.siansiansu.taigikeyboard.ime.core.logging.TraceId
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
+import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager
+import com.siansiansu.taigikeyboard.ime.text.composing.EnglishAutocompleteService
 import com.siansiansu.taigikeyboard.ime.text.composing.TaigiAutocompleteService
 import com.siansiansu.taigikeyboard.ime.text.composing.shouldSplitCombinedCells
 import com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarManager
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -46,7 +50,7 @@ class CandidateUpdateCoordinator(
     private var taigiAutocompleteService: com.siansiansu.taigikeyboard.ime.text.composing.TaigiAutocompleteService? = null
 
     // English autocomplete service
-    private var englishAutocompleteService: com.siansiansu.taigikeyboard.ime.text.composing.EnglishAutocompleteService? = null
+    private var englishAutocompleteService: EnglishAutocompleteService? = null
 
     /**
      * Schedules a Taigi candidate update for the current composing state.
@@ -94,27 +98,38 @@ class CandidateUpdateCoordinator(
     }
 
     /**
-     * Debounced English candidate update. Coalesces rapid English updates
-     * before reading the InputConnection on Main.
+     * English candidate update. Reads the editor text here, on Main, at
+     * schedule time — the same shape as [updateTaigiCandidates]'s
+     * [FetchContext] capture — then runs the matcher on a worker and
+     * publishes on Main. No debounce: every keystroke refreshes the strip
+     * (the Taigi path dropped its debounce in #50 for the same reason).
+     * The publish is guarded by [SmartbarManager.clearEpoch] captured here,
+     * so a strip cleared by any path while the matcher ran stays cleared.
      */
-    fun updateEnglishCandidatesDebounced() {
-        logger.debug(EN_TAG) { "[1] updateEnglishCandidatesDebounced() called" }
-
+    fun updateEnglishCandidates() {
         englishCandidateUpdateJob?.cancel()
-
+        val textBeforeCursor =
+            taigikeyboard.currentInputConnection?.getTextBeforeCursor(100, 0)?.toString() ?: ""
+        if (textBeforeCursor.isEmpty()) {
+            smartbarManager.clearCandidates()
+            return
+        }
+        val clearEpoch = smartbarManager.clearEpoch
+        logger.debug(EN_TAG) { "[1] updateEnglishCandidates textBeforeCursor='$textBeforeCursor'" }
         englishCandidateUpdateJob =
-            scope.launch {
-                delay(ENGLISH_CANDIDATE_DEBOUNCE_MS)
-                if (!isActive) return@launch
-
-                logger.debug(EN_TAG) { "[2] After debounce, calling updateEnglishCandidates()" }
-                updateEnglishCandidates()
+            scope.launch(Dispatchers.Default) {
+                val words = englishSuggestions(textBeforeCursor)
+                withContext(Dispatchers.Main.immediate) {
+                    if (smartbarManager.clearEpoch != clearEpoch) return@withContext
+                    if (words.isNotEmpty()) {
+                        smartbarManager.updateEnglishCandidates(words)
+                    } else {
+                        smartbarManager.clearCandidates()
+                    }
+                }
             }
     }
 
-    /**
-     * Fetches Taigi candidates for [fetchContext] on the worker and publishes them.
-     */
     private suspend fun fetchTaigiCandidates(fetchContext: FetchContext) {
         val rawInput = fetchContext.rawInput
         if (rawInput.isNullOrEmpty()) {
@@ -190,74 +205,34 @@ class CandidateUpdateCoordinator(
         }
     }
 
-    /**
-     * Update English candidates using spell-check service.
-     */
-    private suspend fun updateEnglishCandidates() {
-        logger.debug(EN_TAG) { "[3] updateEnglishCandidates() called" }
-
-        val ic =
-            taigikeyboard.currentInputConnection ?: run {
-                logger.debug(EN_TAG) { "[3] inputConnection is null" }
-                return
-            }
-
-        val textBeforeCursor = ic.getTextBeforeCursor(100, 0)?.toString() ?: ""
-
-        if (textBeforeCursor.isEmpty()) {
-            logger.debug(EN_TAG) { "[3] textBeforeCursor is empty" }
-            smartbarManager.clearCandidates()
-            return
-        }
-
-        logger.debug(EN_TAG) { "[3] textBeforeCursor='$textBeforeCursor'" }
-
-        if (englishAutocompleteService == null) {
-            logger.debug(EN_TAG) { "[4] Creating EnglishAutocompleteService..." }
-            englishAutocompleteService =
-                com.siansiansu.taigikeyboard.ime.text.composing
-                    .EnglishAutocompleteService(taigikeyboard.context)
-        }
-
+    /** Spell-check suggestions for the current word of [textBeforeCursor], as strip rows. */
+    private suspend fun englishSuggestions(textBeforeCursor: String): List<TaigiWord> {
+        // `destroy()` cancels this job before it nulls the field under the
+        // same lock; a worker that reaches the lock afterwards must not
+        // re-create a service nobody closes.
+        val context = currentCoroutineContext()
         val service =
-            englishAutocompleteService ?: run {
-                logger.debug(EN_TAG) { "[4] service is null after creation" }
-                return
+            synchronized(serviceLock) {
+                context.ensureActive()
+                englishAutocompleteService ?: EnglishAutocompleteService(taigikeyboard.context)
+                    .also { englishAutocompleteService = it }
             }
-
-        try {
-            logger.debug(EN_TAG) { "[5] Calling getSuggestions()..." }
-            val startTime = System.currentTimeMillis()
+        return try {
             val suggestions = service.getSuggestions(textBeforeCursor)
-            val elapsed = System.currentTimeMillis() - startTime
-
-            if (logger.isDebugEnabled) {
-                logger.d(EN_TAG, "[6] getSuggestions() returned ${suggestions.size} suggestions in ${elapsed}ms")
-                suggestions.forEachIndexed { i, s -> logger.d(EN_TAG, "[6]   [$i] ${s.text}") }
+            logger.debug(EN_TAG) { "[2] getSuggestions → ${suggestions.map { it.text }}" }
+            suggestions.mapIndexed { index, suggestion ->
+                TaigiWord(
+                    id = -100 - index,
+                    roman = suggestion.text,
+                    hanzi = null,
+                    lengthScore = null,
+                )
             }
-
-            val words =
-                suggestions.mapIndexed { index, suggestion ->
-                    com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord(
-                        id = -100 - index,
-                        roman = suggestion.text,
-                        hanzi = null,
-                        lengthScore = null,
-                    )
-                }
-
-            withContext(Dispatchers.Main) {
-                if (words.isNotEmpty()) {
-                    smartbarManager.updateEnglishCandidates(words)
-                } else {
-                    smartbarManager.clearCandidates()
-                }
-            }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             logger.e(EN_TAG, "[ERROR] Failed to get suggestions", e)
-            withContext(Dispatchers.Main) {
-                smartbarManager.clearCandidates()
-            }
+            emptyList()
         }
     }
 
@@ -276,9 +251,9 @@ class CandidateUpdateCoordinator(
      */
     fun destroy() {
         cancelAll()
-        englishAutocompleteService?.close()
-        englishAutocompleteService = null
         synchronized(serviceLock) {
+            englishAutocompleteService?.close()
+            englishAutocompleteService = null
             taigiAutocompleteService = null
         }
     }
@@ -286,7 +261,6 @@ class CandidateUpdateCoordinator(
     companion object {
         private const val TAG = "CandidateCoordinator"
         private const val EN_TAG = "ENSPELL"
-        private const val ENGLISH_CANDIDATE_DEBOUNCE_MS = 50L
     }
 }
 

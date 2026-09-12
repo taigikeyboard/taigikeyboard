@@ -266,7 +266,7 @@ internal class TextInputKeyHandler(
 
         // English mode: update candidates after backspace
         if (prefs.inputMode == "english") {
-            candidateCoordinator.updateEnglishCandidatesDebounced()
+            candidateCoordinator.updateEnglishCandidates()
             return
         }
 
@@ -518,7 +518,7 @@ internal class TextInputKeyHandler(
             if (caps && !capsLock) {
                 capsStateManager.resetSingleShift()
             }
-            candidateCoordinator.updateEnglishCandidatesDebounced()
+            candidateCoordinator.updateEnglishCandidates()
             return
         }
 
