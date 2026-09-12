@@ -79,7 +79,6 @@
 | `references/azookey-reference.md` | azooKey research (SwiftUI, Flick, CustardKit) | Reference |
 | `references/khiin-reference.md` | khiin-rs research (DPSegment, Bigram, Trie) | Reference |
 | `references/moe-taigi-reference.md` | MOE Taigi IME analysis (Segmentation, Nail) | Reference |
-| `references/moe-taigi-asr-reference.md` | MOE Taigi IME ASR implementation analysis | Reference |
 | `references/rime-reference.md` | librime research (Pipeline, DAG, SpellingAlgebra) | Reference |
 | `references/keywords.md` | Standardized keyword mapping for core logic and UI | Reference |
 

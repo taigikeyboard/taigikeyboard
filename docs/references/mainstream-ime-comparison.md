@@ -9,7 +9,6 @@
 > - [`khiin-reference.md`](./khiin-reference.md) — khiin-rs DP segmentation + bigram + dual-trie
 > - [`rime-reference.md`](./rime-reference.md) — librime Pipeline / Spelling Algebra / user-dict decay
 > - [`moe-taigi-reference.md`](./moe-taigi-reference.md) — MOE Taigi InputLine / Nail / segmentation
-> - [`moe-taigi-asr-reference.md`](./moe-taigi-asr-reference.md) — MOE Taigi ASR sidecar
 
 ---
 
@@ -285,7 +284,7 @@ If you are working on… → read these in order.
   - **Han-lo mixed candidates** (`VT_MIXED`) — show 漢字 + TL in the same candidate. We do this.
   - **UserVoc / LearnedVoc separation** — manual vs auto-learning. We don't (yet); flagged as potential v3.6 work.
   - **Nail commit flow** — segment-by-segment confirmation. **Explicitly rejected** for our UX in 2026-03; keep for context.
-- **Deep-dive**: [`moe-taigi-reference.md`](./moe-taigi-reference.md) (engine analysis) + [`moe-taigi-asr-reference.md`](./moe-taigi-asr-reference.md) (their ASR sidecar)
+- **Deep-dive**: [`moe-taigi-reference.md`](./moe-taigi-reference.md) (engine analysis)
 
 ### 14. aiongtaigi-sushi (decompiled) — `references/aiongtaigi-sushi/`
 
