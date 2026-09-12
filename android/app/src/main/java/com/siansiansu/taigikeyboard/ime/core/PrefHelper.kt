@@ -715,6 +715,16 @@ class PrefHelper(
             }.distinctUntilChanged()
 
     /**
+     * Observes 候選詞顯示 as a Flow — any writer (host picker or in-keyboard overlay). The IME
+     * re-renders its live surfaces and re-fetches the open list on each change; the layout
+     * drops the 文/A key under 漢羅濫 / 羅馬字, so cached layouts must not outlive the mode.
+     */
+    fun observeCandidateDisplayMode(): Flow<CandidateDisplayMode> =
+        dataStore.data
+            .map { prefs -> CandidateDisplayMode.fromStorage(prefs[PreferenceKeys.CANDIDATE_DISPLAY_MODE]) }
+            .distinctUntilChanged()
+
+    /**
      * Observes the app UI display-language tag as a Flow, so the host app + keyboard IME Compose
      * surfaces recompose live whenever it changes (any writer: host picker or in-keyboard overlay).
      */

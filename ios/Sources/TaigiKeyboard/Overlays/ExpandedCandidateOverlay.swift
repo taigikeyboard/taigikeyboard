@@ -1,4 +1,4 @@
-// Expanded candidate overlay — wrapping candidate grid, paging, and the 漢字 / 羅馬字 toggle (hidden under TPS).
+// Expanded candidate overlay — wrapping candidate grid, paging, and the 漢字 / 羅馬字 toggle (hidden under TPS and single-script display modes).
 
 import KeyboardKit
 import SwiftUI
@@ -186,8 +186,9 @@ struct ExpandedCandidateOverlay: View {
                     },
                 )
 
-                // Hide translate button for TPS layout (always hanzi-only)
-                if !isTPSLayout {
+                // No 文/A where there is no lead script to flip: TPS (always hanzi)
+                // and the single-script display modes (漢羅濫 / 羅馬字).
+                if !isTPSLayout, candidateDisplayMode.allowsSwapToggle {
                     ExpandedCandidateControlButton(
                         iconName: "translate",
                         yOffset: 25,

@@ -383,6 +383,13 @@ class LayoutManager(
 
         val result = mergeLayouts(keyboardMode, subtype, main, modifier, extension)
 
+        // 文/A only exists where there is a lead script to flip: under 漢羅濫 /
+        // 羅馬字 it is dropped from every mode's rows (characters + symbols mods
+        // all carry it) and SPACE (flexGrow 1) takes the freed width.
+        if (!prefs.candidateDisplayMode.allowsSwapToggle) {
+            result.arrangement.forEach { row -> row.removeAll { it.code == KeyCode.TRANSLATE } }
+        }
+
         // Globe key toggle: skip English and TPS layouts (TPS has more keys, no room for globe)
         if (inputMode != "english" && inputMode != "tps" && keyboardMode == KeyboardMode.CHARACTERS) {
             if (prefs.isGlobeKeyEnabled) {

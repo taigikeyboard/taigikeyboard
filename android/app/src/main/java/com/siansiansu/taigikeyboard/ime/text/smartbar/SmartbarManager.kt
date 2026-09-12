@@ -371,8 +371,6 @@ class SmartbarManager(
             // EngineSettingsProvider.current — no manual refresh needed.
         }
 
-        overlayView.onCandidateDisplayModeChanged = ::onCandidateDisplayModeChanged
-
         overlayView.onOpenApp = {
             val context = overlayView.context
             val intent =
@@ -511,10 +509,10 @@ class SmartbarManager(
     fun getCachedIsTranslateSwapped(): Boolean = cachedIsTranslateSwapped
 
     /**
-     * 文/A key + overlay control button. Only SIDE_BY_SIDE toggles; ROMAN_ONLY
-     * and COMBINED are inert (the key stays visible, its active state reads
-     * the derived value — `false` / `true`); the stored flag is what flips,
-     * the cache re-derives from it.
+     * 文/A key + overlay control button. Only SIDE_BY_SIDE toggles; under
+     * ROMAN_ONLY and COMBINED the key is hidden (`LayoutManager` /
+     * `CandidateOverlayContent`) and this guard keeps any other caller safe.
+     * The stored flag is what flips; the cache re-derives from it.
      */
     fun toggleTranslateSwapped() {
         if (!prefs.candidateDisplayMode.allowsSwapToggle) return
@@ -526,9 +524,11 @@ class SmartbarManager(
     }
 
     /**
-     * 候選詞顯示 changed from the in-keyboard settings overlay: the derived
-     * pair flips without any stored flag moving, so the same live surfaces
-     * the 文/A toggle touches must re-render now, not on the next event.
+     * 候選詞顯示 changed (host picker or in-keyboard overlay — both arrive via
+     * `PrefHelper.observeCandidateDisplayMode`): the derived pair flips without
+     * any stored flag moving, so the same live surfaces the 文/A toggle touches
+     * must re-render now, not on the next event. The layout reload inside also
+     * adds / removes the 文/A key.
      */
     fun onCandidateDisplayModeChanged() {
         refreshScriptFlagCache()

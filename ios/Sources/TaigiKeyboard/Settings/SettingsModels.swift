@@ -82,7 +82,8 @@ public enum CandidateDisplayMode: String, CaseIterable, Codable {
     }
 
     /// Only side-by-side has a lead script the 文/A key can flip; the other two
-    /// fix it, so the key is inert and the stored swap waits for the way back.
+    /// fix it, so the key is hidden (bottom row + expanded overlay) and the
+    /// stored swap waits for the way back.
     var allowsSwapToggle: Bool {
         self == .sideBySide
     }

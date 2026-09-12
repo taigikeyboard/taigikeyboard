@@ -6,11 +6,17 @@ struct LayoutConverter {
     let context: KeyboardContext
     let config: KeyboardLayoutConfiguration
 
-    /// Entry point: converts [[KeyDef]] to KeyboardLayout.
+    /// Entry point: converts [[KeyDef]] to KeyboardLayout. The 文/A key is
+    /// dropped whenever the display mode has no lead script to flip (漢羅濫 /
+    /// 羅馬字); `.space` is `.available`, so it takes the freed width.
     func convert(_ keyDefs: [[KeyDef]]) -> KeyboardLayout {
+        let showsTranslateKey = context.candidateDisplayMode.allowsSwapToggle
         let itemRows = keyDefs.map { row in
-            row.map { keyDef in
-                createItem(from: keyDef)
+            row.compactMap { keyDef -> KeyboardLayoutItem? in
+                if case .translate = keyDef, !showsTranslateKey {
+                    return nil
+                }
+                return createItem(from: keyDef)
             }
         }
         return KeyboardLayout(itemRows: itemRows, configuration: config)

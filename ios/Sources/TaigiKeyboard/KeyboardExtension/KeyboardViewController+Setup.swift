@@ -163,6 +163,7 @@ extension KeyboardViewController {
         lastKeyboardLayoutType = keyboardSettings.keyboardLayoutType
         lastResolvedKeyHeightScale = keyboardSettings
             .resolvedAppearance(for: state.keyboardContext.colorScheme).keyHeightScale
+        lastCandidateDisplayMode = state.keyboardContext.candidateDisplayMode
     }
 
     /// Called at initial setup and from syncSettings() when input mode changes.
@@ -246,6 +247,18 @@ extension KeyboardViewController {
             setupLogger.debug("[SETTINGS] Key height changed: \(lastResolvedKeyHeightScale.map { String($0) } ?? "nil") -> \(currentKeyHeightScale) — rebuilding keyboard view")
             lastResolvedKeyHeightScale = currentKeyHeightScale
             viewWillSetupKeyboardView()
+        }
+
+        // 候選詞顯示 decides whether the 文/A key is in the layout (dropped under
+        // 漢羅濫 / 羅馬字). The in-keyboard picker already re-renders through
+        // `KeyboardContext.candidateDisplayMode`; a host-app change only lands
+        // here, so nudge the same context path — NOT a view rebuild, which would
+        // tear down an open overlay when this fires for an in-process write.
+        let currentCandidateDisplayMode = state.keyboardContext.candidateDisplayMode
+        if lastCandidateDisplayMode != currentCandidateDisplayMode {
+            setupLogger.debug("[SETTINGS] CandidateDisplayMode changed: \(lastCandidateDisplayMode?.rawValue ?? "nil") -> \(currentCandidateDisplayMode.rawValue)")
+            lastCandidateDisplayMode = currentCandidateDisplayMode
+            state.keyboardContext.notifyDisplayChange()
         }
 
         // Sync auto-capitalization override from KeyboardKit settings

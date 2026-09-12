@@ -237,6 +237,15 @@ class TaigiKeyboard : LifecycleInputMethodService() {
             }
         }
 
+        // Observe 候選詞顯示 changes from either writer (host picker / in-keyboard
+        // overlay): re-render the strip + overlay, reload the cached layouts (the
+        // 文/A key is dropped under 漢羅濫 / 羅馬字) and re-fetch the open list.
+        serviceScope.launch {
+            prefs.observeCandidateDisplayMode().collect {
+                smartbarManager.onCandidateDisplayModeChanged()
+            }
+        }
+
         // Observe display-language changes and refresh the legacy View smartbar /
         // media-input a11y labels. Compose overlays follow the picker via
         // ProvideDisplayLanguage; the non-Compose buttons need this imperative

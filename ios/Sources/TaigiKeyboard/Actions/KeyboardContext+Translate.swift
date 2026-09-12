@@ -31,14 +31,17 @@ public extension KeyboardContext {
     /// Inert unless 候選詞顯示 = 漢羅對應: under 羅馬字 there is no hanji to
     /// lead with, under 漢羅濫 every cell is already single-script (the split
     /// happens upstream, each cell commits its own script), and toggling
-    /// the derived getter would overwrite the stored flag. The key stays
-    /// visible; its active state reads the derived value.
+    /// the derived getter would overwrite the stored flag. The key is hidden
+    /// in those modes (`LayoutConverter` / `ExpandedCandidateOverlay`); the
+    /// guard keeps any other caller safe.
     func toggleTranslateSwapped() {
         guard candidateDisplayMode.allowsSwapToggle else { return }
         isTranslateSwapped.toggle()
     }
 
-    private func notifyDisplayChange() {
+    /// Re-renders every reader of the display pair (strip, expanded overlay,
+    /// layout). Also the hook for `syncSettings()` when a host-app write lands.
+    internal func notifyDisplayChange() {
         DispatchQueue.main.async {
             self.objectWillChange.send()
         }
