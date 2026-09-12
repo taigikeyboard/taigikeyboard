@@ -27,7 +27,9 @@ enum DisplayLanguage: String, CaseIterable {
     case english = "en"
 
     /// Persisted tag (`SharedSettings.displayLanguage`). Equals the raw value; mirrors Android's `.tag`.
-    var tag: String { rawValue }
+    var tag: String {
+        rawValue
+    }
 
     /// The language's own name in its own script (endonym), shown in the picker regardless of the
     /// current UI language — the W3C-recommended convention, so a user can always find their language.
@@ -83,8 +85,12 @@ enum DisplayLanguage: String, CaseIterable {
     /// the UI in 漢字, not English.
     /// CROSS-PLATFORM INVARIANT — mirrors android .../i18n/DisplayLanguage.kt `resolveAutomatic`.
     static func resolveAutomatic(_ deviceLanguageSubtag: String) -> DisplayLanguage {
-        if deviceLanguageSubtag.hasPrefix("ja") { return .japanese }
-        if deviceLanguageSubtag.hasPrefix("en") { return .english }
+        if deviceLanguageSubtag.hasPrefix("ja") {
+            return .japanese
+        }
+        if deviceLanguageSubtag.hasPrefix("en") {
+            return .english
+        }
         return .hanji
     }
 

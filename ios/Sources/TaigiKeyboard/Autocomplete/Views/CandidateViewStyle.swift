@@ -142,18 +142,30 @@ extension CandidateView.ItemStyle {
             // Transparent background lets the system effect through; pressed/selected use the idle
             // color at +0.6 opacity, the first candidate a lower 0.4 to keep the state hierarchy.
             let pressedLook = (backgroundColor ?? Color.keyboardButtonBackgroundLiquid(for: colorScheme)).opacity(0.6)
-            if isPressed { return pressedLook }
-            if isFirstCandidate { return Color.keyboardButtonBackgroundLiquid(for: colorScheme).opacity(0.4) }
-            if isSelected { return pressedLook }
+            if isPressed {
+                return pressedLook
+            }
+            if isFirstCandidate {
+                return Color.keyboardButtonBackgroundLiquid(for: colorScheme).opacity(0.4)
+            }
+            if isSelected {
+                return pressedLook
+            }
             return Color.white.opacity(0.001)
         } else {
             // Follows KeyboardKit's `backgroundColorPressed`; the first candidate fills the key-cap
             // background as a light hint, matching Android `key_bgColor` and the Rime-family
             // highlighted-candidate convention.
             let pressedLook = selectedBackgroundColor ?? Color.keyboardDarkButtonBackground(for: colorScheme)
-            if isPressed { return pressedLook }
-            if isFirstCandidate { return Color.keyboardButtonBackground }
-            if isSelected { return pressedLook }
+            if isPressed {
+                return pressedLook
+            }
+            if isFirstCandidate {
+                return Color.keyboardButtonBackground
+            }
+            if isSelected {
+                return pressedLook
+            }
             return backgroundColor ?? Color.clear
         }
     }

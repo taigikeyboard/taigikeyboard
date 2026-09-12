@@ -48,10 +48,14 @@ struct CandidateSource: Equatable, Sendable {
 
     /// Read off the presented list — the one truth every "is a bar showing"
     /// check reads.
-    var isEmpty: Bool { presented.isEmpty }
+    var isEmpty: Bool {
+        presented.isEmpty
+    }
 
     /// What the window draws, in display order.
-    var cells: [CandidateCellContent] { presented.map(\.cell) }
+    var cells: [CandidateCellContent] {
+        presented.map(\.cell)
+    }
 
     /// The candidate behind cell `cellIndex` and the script its commit writes:
     /// the cell's own, or the other one when `flip` (Space). nil past the

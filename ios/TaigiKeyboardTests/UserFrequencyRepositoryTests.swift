@@ -1,5 +1,5 @@
-@testable import TaigiKeyboard
 import SQLite3
+@testable import TaigiKeyboard
 import XCTest
 
 /// v3.6.1 R5 — `user_frequency.db` `(漢字, canonical-TL)` pair-key identity.

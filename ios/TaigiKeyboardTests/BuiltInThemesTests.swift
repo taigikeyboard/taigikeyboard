@@ -1,5 +1,5 @@
-@testable import TaigiKeyboard
 import SwiftUI
+@testable import TaigiKeyboard
 import XCTest
 
 /// Tests for the built-in theme catalog.
@@ -197,17 +197,20 @@ final class BuiltInThemesTests: XCTestCase {
         XCTAssertEqual(
             style.resolvedBackgroundColor(for: .light, isSelected: true, isFirstCandidate: true,
                                           firstCandidateThemeColor: highlight, pressedThemeColor: pressed),
-            highlight, "selected first candidate must show the light highlight, not the dark pressed color")
+            highlight, "selected first candidate must show the light highlight, not the dark pressed color",
+        )
         // actual press on the first candidate → dark pressed feedback
         XCTAssertEqual(
             style.resolvedBackgroundColor(for: .light, isPressed: true, isFirstCandidate: true,
                                           firstCandidateThemeColor: highlight, pressedThemeColor: pressed),
-            pressed, "an actual press still darkens the first candidate")
+            pressed, "an actual press still darkens the first candidate",
+        )
         // a selected NON-first candidate (hardware nav) → dark pressed/selection
         XCTAssertEqual(
             style.resolvedBackgroundColor(for: .light, isSelected: true, isFirstCandidate: false,
                                           firstCandidateThemeColor: highlight, pressedThemeColor: pressed),
-            pressed, "a selected non-first candidate keeps the dark selection color")
+            pressed, "a selected non-first candidate keeps the dark selection color",
+        )
     }
 
     // trace: a gradient theme's CandidateTheme carries non-nil tints; a flat theme leaves them nil (neutral fallback)
@@ -258,7 +261,7 @@ final class BuiltInThemesTests: XCTestCase {
 
     // trace: high 8 bits are masked → 0xFF1E1E2E resolves identically to 0x1E1E2E
     func testCodableColorHex_ignoresHighByte() {
-        XCTAssertEqual(CodableColor(hex: 0xFF1E1E2E), CodableColor(hex: 0x1E1E2E))
+        XCTAssertEqual(CodableColor(hex: 0xFF1E_1E2E), CodableColor(hex: 0x1E1E2E))
     }
 
     // MARK: - Helpers

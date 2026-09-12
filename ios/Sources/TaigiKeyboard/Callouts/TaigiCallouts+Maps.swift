@@ -80,7 +80,9 @@ public extension TaigiCallouts {
         /// (base-first, matching KeyboardKit's English callouts). Punctuation
         /// keeps variant-only callouts. Returns nil for keys without callouts.
         static func calloutChars(for char: String) -> [String]? {
-            if let variants = glyphActions[char] { return [char] + variants }
+            if let variants = glyphActions[char] {
+                return [char] + variants
+            }
             return punctuationActions[char]
         }
     }

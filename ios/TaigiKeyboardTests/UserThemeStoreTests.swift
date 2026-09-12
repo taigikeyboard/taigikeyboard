@@ -1,5 +1,5 @@
-@testable import TaigiKeyboard
 import SwiftUI
+@testable import TaigiKeyboard
 import XCTest
 
 /// Tests for `UserThemeStore` — the App Group JSON persistence for

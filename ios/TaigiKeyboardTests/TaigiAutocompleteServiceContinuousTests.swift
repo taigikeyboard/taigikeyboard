@@ -1,5 +1,5 @@
-@testable import TaigiKeyboard
 import KeyboardKit
+@testable import TaigiKeyboard
 import XCTest
 
 /// v3.5.8 Phase 9 Item 4 — pins the Continuous-input suggestion-emission
@@ -23,7 +23,6 @@ import XCTest
 /// Full `ActionHandler` tap-decode tests require mocking
 /// `KeyboardContext` / `composingManager` and are deferred.
 final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
-
     private var service: TaigiAutocompleteService!
 
     override class func setUp() {
@@ -551,7 +550,9 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
         var rawInput = "gua"
         var composingText = "gua"
         var fetchResult: [RustEngineBridge.ContinuousCandidate] = []
-        func fetchContinuousCandidates() -> [RustEngineBridge.ContinuousCandidate] { fetchResult }
+        func fetchContinuousCandidates() -> [RustEngineBridge.ContinuousCandidate] {
+            fetchResult
+        }
     }
 
     /// `platform_autocomplete_no_lexicon_branch` (§15.6): after the

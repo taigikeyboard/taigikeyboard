@@ -35,11 +35,15 @@ final class CandidateItemView: NSView {
     /// slot's width is charged to the cell either way, so blanking the text is
     /// the whole of "no digit here" — a cell that gave the width back would
     /// break the column its neighbours align on.
-    var indexLabelText: String { indexLabel.stringValue }
+    var indexLabelText: String {
+        indexLabel.stringValue
+    }
 
     /// The candidate text currently drawn — what a test reads to check a row
     /// was built from the cells it should have been.
-    var candidateLabelText: String { candidateLabel.stringValue }
+    var candidateLabelText: String {
+        candidateLabel.stringValue
+    }
 
     /// Which candidate this cell shows, in the absolute order of
     /// `CandidateWindowContent.cells`. The identity clicks and highlights
@@ -175,7 +179,9 @@ final class CandidateItemView: NSView {
     }
 
     @available(*, unavailable)
-    required init?(coder _: NSCoder) { fatalError() }
+    required init?(coder _: NSCoder) {
+        fatalError()
+    }
 
     /// The two scripts side by side on one baseline: the candidate leads, the
     /// annotation follows it, and the cell is as wide as both together.
@@ -302,7 +308,8 @@ final class CandidateItemView: NSView {
         }
         stackedLineGapConstraint?.constant = hasAnnotation ? metrics.stackedLineGap : 0
         if let stackedAnnotationHeightConstraint,
-           stackedAnnotationHeightConstraint.isActive == hasAnnotation {
+           stackedAnnotationHeightConstraint.isActive == hasAnnotation
+        {
             stackedAnnotationHeightConstraint.isActive = !hasAnnotation
         }
         updateAppearance()

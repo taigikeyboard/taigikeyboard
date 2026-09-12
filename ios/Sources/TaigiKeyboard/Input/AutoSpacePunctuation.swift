@@ -1,5 +1,6 @@
 // Classifies punctuation that attaches to the preceding word under auto-space.
 // MARK: - Shared-Core Candidate
+
 // Pure logic, Foundation-only. Eligible for cross-platform extraction.
 
 import Foundation

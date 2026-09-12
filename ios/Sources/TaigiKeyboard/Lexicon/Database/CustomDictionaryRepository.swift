@@ -192,11 +192,15 @@ final class CustomDictionaryRepository: @unchecked Sendable {
                 }
 
                 for i in batchStart ..< batchEnd {
-                    if insertedCount >= remainingCapacity { break }
+                    if insertedCount >= remainingCapacity {
+                        break
+                    }
 
                     let entry = entries[i]
                     let key = "\(entry.roman)|\(entry.hanzi)"
-                    if existingKeys.contains(key) { continue }
+                    if existingKeys.contains(key) {
+                        continue
+                    }
 
                     var stmt: OpaquePointer?
                     guard sqlite3_prepare_v2(db, Self.upsertEntrySQL, -1, &stmt, nil) == SQLITE_OK else { continue }
@@ -216,7 +220,9 @@ final class CustomDictionaryRepository: @unchecked Sendable {
                     throw LexiconError.queryExecutionFailed("Failed to commit batch transaction")
                 }
 
-                if insertedCount >= remainingCapacity { break }
+                if insertedCount >= remainingCapacity {
+                    break
+                }
             }
 
             return insertedCount

@@ -150,10 +150,14 @@ final class ButtonTextProvider {
     /// Character key text with display overrides and case transforms.
     private func characterText(for char: String) -> String {
         // Display label override for hard-to-see characters
-        if char == "˙" { return "·" } // U+02D9 → U+00B7 (middle dot)
+        if char == "˙" {
+            return "·"
+        } // U+02D9 → U+00B7 (middle dot)
 
         // TPS layout: display full-width comma
-        if char == ",", settings.keyboardLayoutType == .tps { return "，" }
+        if char == ",", settings.keyboardLayoutType == .tps {
+            return "，"
+        }
 
         // "nn" key shows nasal marker ⁿ/ᴺ in POJ mode
         // In TL mode, display as literal "nn" (falls through to case transform)

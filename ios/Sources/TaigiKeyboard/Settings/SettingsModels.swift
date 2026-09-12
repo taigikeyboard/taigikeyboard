@@ -77,11 +77,15 @@ public enum CandidateDisplayMode: String, CaseIterable, Codable {
 
     /// Whether the cell shows any Hanji — `false` only under `.romanOnly`. Gates
     /// the effective 括號標註 flag and that setting's enabled state.
-    var showsHanji: Bool { self != .romanOnly }
+    var showsHanji: Bool {
+        self != .romanOnly
+    }
 
     /// Only side-by-side has a lead script the 文/A key can flip; the other two
     /// fix it, so the key is inert and the stored swap waits for the way back.
-    var allowsSwapToggle: Bool { self == .sideBySide }
+    var allowsSwapToggle: Bool {
+        self == .sideBySide
+    }
 
     /// Effective swap for a stored flag. `.combined` lists the pair hanji-first
     /// as split single-script cells: forcing the pair on is a compatibility

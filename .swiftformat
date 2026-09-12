@@ -18,3 +18,23 @@
 --exclude macos/.build
 --exclude ios/build
 --exclude references
+
+# Rules that rewrite declarations rather than lay them out. Each one changes
+# tokens the compiler sees — a struct into an enum, a force-unwrap into an
+# XCTUnwrap, an outlet's ownership, an inferred type — so a formatting pass
+# could change behaviour. The project runs the formatter as a layout tool only;
+# semantic rewrites are code changes and go through review on their own.
+--disable docComments
+--disable enumNamespaces
+--disable extensionAccessControl
+--disable noForceUnwrapInTests
+--disable opaqueGenericParameters
+--disable preferForLoop
+--disable redundantFileprivate
+--disable redundantPublic
+--disable redundantSwiftUIGroup
+--disable redundantThrows
+--disable redundantType
+--disable simplifyGenericConstraints
+--disable strongOutlets
+--disable unusedArguments

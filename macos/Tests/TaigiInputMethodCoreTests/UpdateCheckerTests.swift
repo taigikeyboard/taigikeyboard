@@ -157,8 +157,12 @@ final class UpdateCheckerTests: XCTestCase {
             settings: SettingsStore(userDefaults: userDefaults),
             installedVersionText: installed,
             fetchManifest: {
-                if fetchDelayNanoseconds > 0 { try await Task.sleep(nanoseconds: fetchDelayNanoseconds) }
-                if fetchFails { throw UpdateManifest.ManifestError.malformed }
+                if fetchDelayNanoseconds > 0 {
+                    try await Task.sleep(nanoseconds: fetchDelayNanoseconds)
+                }
+                if fetchFails {
+                    throw UpdateManifest.ManifestError.malformed
+                }
                 return manifest
             },
             announce: { [weak self] manifest in

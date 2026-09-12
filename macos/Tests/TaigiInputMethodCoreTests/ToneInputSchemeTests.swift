@@ -22,7 +22,7 @@ final class ToneInputSchemeTests: XCTestCase {
     /// The eight Telex keys are the eight letters of the Standard slot row:
     /// what one scheme types tones with, the other picks with.
     func testTheTelexKeys_areTheLettersOfTheBareSlotRow() {
-        let slotLetters = Set(CandidateSlotKeySet.bareKeyRow.compactMap { $0.first }.filter(\.isLetter))
+        let slotLetters = Set(CandidateSlotKeySet.bareKeyRow.compactMap(\.first).filter(\.isLetter))
         XCTAssertEqual(ToneInputScheme.telexKeys, slotLetters)
         XCTAssertEqual(ToneInputScheme.telexKeys, ["v", "y", "d", "w", "x", "q", "z", "f"])
     }

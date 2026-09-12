@@ -21,7 +21,7 @@ final class ImportExportHandler: ObservableObject {
 
     // nonisolated: the stored value is referenced as a default-argument from a nonisolated context; the
     // closure itself stays @MainActor-typed and is only ever invoked on the main actor.
-    nonisolated private static let defaultErrorFormatter: @MainActor (Error) -> String = { $0.localizedDescription }
+    private nonisolated static let defaultErrorFormatter: @MainActor (Error) -> String = { $0.localizedDescription }
 
     /// Exports data as CSV and triggers the file exporter sheet.
     func performExport(_ csvGenerator: @escaping () async throws -> String) {

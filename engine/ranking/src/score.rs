@@ -1009,7 +1009,7 @@ mod tests {
         let mut map = FrequencyMap::new();
         map.insert("重".to_owned(), String::new(), freq(5, 500)); // legacy merged 重
         map.insert("重".to_owned(), "tîng".to_owned(), freq(2, 200)); // re-learned tîng
-        // Exact reading shadows legacy (no sum: 2, not 7).
+                                                                      // Exact reading shadows legacy (no sum: 2, not 7).
         assert_eq!(map.get("重", "tîng").count, 2);
         // Not-yet-re-learned reading inherits the legacy bucket.
         assert_eq!(map.get("重", "tāng").count, 5);

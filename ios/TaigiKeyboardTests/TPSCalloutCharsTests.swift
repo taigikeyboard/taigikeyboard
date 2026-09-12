@@ -1,5 +1,5 @@
-@testable import TaigiKeyboard
 import KeyboardKit
+@testable import TaigiKeyboard
 import XCTest
 
 /// Pins `TaigiCallouts.TPSCallouts.calloutChars` — the TPS long-press callout
@@ -37,7 +37,7 @@ final class TPSCalloutCharsTests: XCTestCase {
     func testMergedActionsTable_coversBothPartitions_variantsOnly() {
         XCTAssertEqual(
             TaigiCallouts.TPSCallouts.actions.count,
-            TaigiCallouts.TPSCallouts.glyphActions.count + TaigiCallouts.TPSCallouts.punctuationActions.count
+            TaigiCallouts.TPSCallouts.glyphActions.count + TaigiCallouts.TPSCallouts.punctuationActions.count,
         )
         for (key, variants) in TaigiCallouts.TPSCallouts.glyphActions {
             XCTAssertEqual(TaigiCallouts.TPSCallouts.actions[key], variants, key)

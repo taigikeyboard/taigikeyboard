@@ -68,7 +68,11 @@ final class TaigiInputControllerShortcutTests: XCTestCase {
         controller.performShortcutAction(.toggleRomanization)
         XCTAssertTrue(
             presenter.calls.dropFirst(callsBefore).contains {
-                if case .hide = $0 { true } else { false }
+                if case .hide = $0 {
+                    true
+                } else {
+                    false
+                }
             },
             "a romanization switch left stale candidates on screen",
         )
@@ -77,7 +81,11 @@ final class TaigiInputControllerShortcutTests: XCTestCase {
         controller.performShortcutAction(.toggleTranslateSwapped)
         XCTAssertFalse(
             presenter.calls.dropFirst(callsBefore).contains {
-                if case .hide = $0 { true } else { false }
+                if case .hide = $0 {
+                    true
+                } else {
+                    false
+                }
             },
             "a display-only swap must not route through dismissal",
         )

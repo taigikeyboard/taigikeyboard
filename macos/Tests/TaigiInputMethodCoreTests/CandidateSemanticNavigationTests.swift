@@ -211,5 +211,4 @@ final class CandidateSemanticNavigationTests: XCTestCase {
             "`→` jumps a whole viewport here, which is why 'next candidate' is its own direction",
         )
     }
-
 }

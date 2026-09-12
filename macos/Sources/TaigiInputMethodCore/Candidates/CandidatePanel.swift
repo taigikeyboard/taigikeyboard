@@ -142,7 +142,9 @@ final class CandidatePanel: CandidatePresenter {
 
     /// Every instance this process draws — what a release that must reach
     /// each cached panel walks (`FontManagementPage.remove`).
-    static var allInstances: [CandidatePanel] { [shared, symbolPicker] }
+    static var allInstances: [CandidatePanel] {
+        [shared, symbolPicker]
+    }
 
     /// Drops the cached panels built in `font`, hidden ones included.
     ///

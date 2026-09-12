@@ -68,7 +68,9 @@ enum NextWordRepository {
                 count = MAX(count, excluded.count),
                 last_used = CURRENT_TIMESTAMP;
         """
-        if sqlite3_exec(db, "BEGIN TRANSACTION;", nil, nil, nil) != SQLITE_OK { return 0 }
+        if sqlite3_exec(db, "BEGIN TRANSACTION;", nil, nil, nil) != SQLITE_OK {
+            return 0
+        }
 
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {

@@ -46,7 +46,9 @@ enum UserFrequencySchema {
     /// / `created_at` are preserved exactly. Fresh installs (no table) skip
     /// this entirely — `createFrequencyTable` builds the new shape directly.
     private static func migrateToPairKeyIfNeeded(db: OpaquePointer) throws {
-        if sqliteReadUserVersion(db: db) >= pairKeySchemaVersion { return }
+        if sqliteReadUserVersion(db: db) >= pairKeySchemaVersion {
+            return
+        }
         // version < 2: fresh install (no table) OR pre-R5 v1 (table without
         // `tl`). Only the latter needs a rebuild. The `columnExists` re-check
         // (beyond the `user_version` gate) is an iOS-specific safety net —

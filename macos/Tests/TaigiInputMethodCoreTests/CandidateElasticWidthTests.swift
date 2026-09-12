@@ -80,5 +80,4 @@ final class CandidateElasticWidthTests: XCTestCase {
             "and must still fit the width budget",
         )
     }
-
 }

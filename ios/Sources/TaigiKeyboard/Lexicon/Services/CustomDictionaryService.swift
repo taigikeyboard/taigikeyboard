@@ -90,7 +90,9 @@ final class CustomDictionaryService: @unchecked Sendable {
     func importFromFile(url: URL) async throws -> ImportResult {
         let accessing = url.startAccessingSecurityScopedResource()
         defer {
-            if accessing { url.stopAccessingSecurityScopedResource() }
+            if accessing {
+                url.stopAccessingSecurityScopedResource()
+            }
         }
 
         // Pre-validate file size

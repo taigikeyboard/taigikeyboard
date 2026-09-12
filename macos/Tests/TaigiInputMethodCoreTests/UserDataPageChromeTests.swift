@@ -153,7 +153,7 @@ final class CustomDictionaryPagingTests: XCTestCase {
     /// straight from a directory answers every query with "not open", which is
     /// enough for the work-slot cases above and useless here.
     private func makeModel() throws -> CustomDictionaryPageModel {
-        CustomDictionaryPageModel(store: try TestFixtures.makeUserDataStores().customDictionary)
+        try CustomDictionaryPageModel(store: TestFixtures.makeUserDataStores().customDictionary)
     }
 
     private func seed(_ model: CustomDictionaryPageModel, count: Int) async {
@@ -217,7 +217,7 @@ final class CustomDictionaryPagingTests: XCTestCase {
         await model.pageForward()
         XCTAssertEqual(model.page, 1)
 
-        await model.delete(try XCTUnwrap(model.rows.first))
+        try await model.delete(XCTUnwrap(model.rows.first))
 
         XCTAssertEqual(model.page, 0)
         XCTAssertEqual(model.rows.count, size)

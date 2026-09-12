@@ -96,7 +96,9 @@ final class CandidatePageArrowView: NSView {
     }
 
     @available(*, unavailable)
-    required init?(coder _: NSCoder) { fatalError() }
+    required init?(coder _: NSCoder) {
+        fatalError()
+    }
 
     override var intrinsicContentSize: NSSize {
         NSSize(
@@ -111,9 +113,13 @@ final class CandidatePageArrowView: NSView {
         // NSView default coordinates: y grows upward, so above the middle is
         // the up arrow.
         if localPoint.y > bounds.midY {
-            if canPageUp { onPageUp?() }
+            if canPageUp {
+                onPageUp?()
+            }
         } else {
-            if canPageDown { onPageDown?() }
+            if canPageDown {
+                onPageDown?()
+            }
         }
     }
 }

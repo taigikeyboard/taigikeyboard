@@ -64,7 +64,9 @@ class CustomLayoutService {
             return device.isIPad || device.isSmallIPhone
         }
         // TPS layout has more keys — never show globe key
-        if settings.inputMode == .tps { return false }
+        if settings.inputMode == .tps {
+            return false
+        }
         return settings.isGlobeKeyEnabled
     }
 

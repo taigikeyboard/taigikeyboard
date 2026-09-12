@@ -64,7 +64,9 @@ final class CandidateChevronView: NSView {
     }
 
     @available(*, unavailable)
-    required init?(coder _: NSCoder) { fatalError() }
+    required init?(coder _: NSCoder) {
+        fatalError()
+    }
 
     override var intrinsicContentSize: NSSize {
         NSSize(

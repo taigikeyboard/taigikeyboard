@@ -44,9 +44,15 @@ enum BuiltInThemes {
         case clean // transparent keys, no border
 
         /// Keys are transparent (background shows through) for framed / clean.
-        var hasTransparentKeys: Bool { self != .classic }
+        var hasTransparentKeys: Bool {
+            self != .classic
+        }
+
         /// Only the framed family draws the key outline.
-        var isBordered: Bool { self == .framed }
+        var isBordered: Bool {
+            self == .framed
+        }
+
         /// id prefix per family — 經典 keeps the legacy `standard*` ids.
         var idPrefix: String {
             switch self {

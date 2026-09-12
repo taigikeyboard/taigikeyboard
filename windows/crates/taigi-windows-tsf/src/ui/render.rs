@@ -16,7 +16,6 @@ use taigi_windows_core::settings::{
 };
 use windows::core::{Interface, Result, BOOL, PCWSTR};
 use windows::Win32::Foundation::{D2DERR_RECREATE_TARGET, HANDLE, HWND, WAIT_TIMEOUT};
-use windows::Win32::System::Threading::WaitForSingleObject;
 use windows::Win32::Graphics::Direct2D::Common::{
     D2D1_ALPHA_MODE_PREMULTIPLIED, D2D1_COLOR_F, D2D1_PIXEL_FORMAT, D2D_SIZE_U,
 };
@@ -29,13 +28,13 @@ use windows::Win32::Graphics::Direct2D::{
 use windows::Win32::Graphics::DirectWrite::{
     DWriteCreateFactory, IDWriteFactory3, IDWriteFontCollection, IDWriteFontCollection1,
     IDWriteFontCollection3, IDWriteFontSetBuilder1, IDWriteInlineObject, IDWriteTextFormat,
-    IDWriteTextLayout,
-    DWRITE_FACTORY_TYPE_SHARED, DWRITE_FONT_STRETCH_NORMAL, DWRITE_FONT_STYLE_NORMAL,
-    DWRITE_FONT_WEIGHT_NORMAL, DWRITE_LINE_METRICS, DWRITE_PARAGRAPH_ALIGNMENT_CENTER,
-    DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_TEXT_METRICS, DWRITE_TRIMMING,
-    DWRITE_TRIMMING_GRANULARITY_CHARACTER, DWRITE_WORD_WRAPPING_NO_WRAP,
+    IDWriteTextLayout, DWRITE_FACTORY_TYPE_SHARED, DWRITE_FONT_STRETCH_NORMAL,
+    DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_LINE_METRICS,
+    DWRITE_PARAGRAPH_ALIGNMENT_CENTER, DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_TEXT_METRICS,
+    DWRITE_TRIMMING, DWRITE_TRIMMING_GRANULARITY_CHARACTER, DWRITE_WORD_WRAPPING_NO_WRAP,
 };
 use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT_UNKNOWN;
+use windows::Win32::System::Threading::WaitForSingleObject;
 
 /// The install directory's font folder — where the installer (PR10) copies the
 /// repo-root `fonts/font/` (macOS `bundle-app.sh:177-207`).
@@ -87,8 +86,13 @@ impl RenderFactory {
                 // in the same collection the check ran against.
                 let resolved = self.installed_font.borrow();
                 let fonts = self.system_fonts.borrow();
-                match (resolved.as_ref().filter(|font| font.id == id), fonts.as_ref()) {
-                    (Some(font), Some(fonts)) => (fonts.collection.cast().ok(), font.family.clone()),
+                match (
+                    resolved.as_ref().filter(|font| font.id == id),
+                    fonts.as_ref(),
+                ) {
+                    (Some(font), Some(fonts)) => {
+                        (fonts.collection.cast().ok(), font.family.clone())
+                    }
                     _ => (None, self.system_family.to_owned()),
                 }
             }

@@ -389,7 +389,9 @@ final class ComposingManagerTests: XCTestCase {
             .nextWordClearForNewComposing,
         ])
         XCTAssertFalse(spy.effects.contains { effect in
-            if case .commitTextReplacingPreedit = effect { return true }
+            if case .commitTextReplacingPreedit = effect {
+                return true
+            }
             return false
         })
     }

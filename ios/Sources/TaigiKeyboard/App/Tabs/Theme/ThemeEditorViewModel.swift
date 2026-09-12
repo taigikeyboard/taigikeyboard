@@ -36,7 +36,9 @@ final class ThemeEditorViewModel: ObservableObject {
     }
 
     /// Whether the title is for an edit (vs. a new theme).
-    var isEditing: Bool { editingId != nil }
+    var isEditing: Bool {
+        editingId != nil
+    }
 
     /// For a NEW theme, whether the store is below the cap; always `true` when
     /// editing (updates never hit the cap). The Save flow checks this before

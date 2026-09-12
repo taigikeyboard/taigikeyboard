@@ -308,7 +308,6 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(makeStore().candidateFontSelection, .builtIn(.genYoMin))
     }
 
-
     /// Removed, not written over — the rule `resetComposingShortcuts` states:
     /// a stored default is indistinguishable from a value the user chose, and
     /// would pin this version's default onto an install a later version means

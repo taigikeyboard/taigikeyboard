@@ -5,8 +5,8 @@
 // commit resolver fall back to the unmarked path TOGETHER (Android
 // `resolveMarkedCellCommit` parity).
 
-@testable import TaigiKeyboard
 import KeyboardKit
+@testable import TaigiKeyboard
 import XCTest
 
 final class ActionHandlerMarkedCellCommitTests: XCTestCase {

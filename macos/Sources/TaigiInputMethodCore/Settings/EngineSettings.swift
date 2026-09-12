@@ -28,7 +28,9 @@ enum CandidateDisplayMode: String, CaseIterable, Sendable {
     case romanOnly
 
     /// Whether the cell shows any Hanji — `false` only under `.romanOnly`.
-    var showsHanji: Bool { self != .romanOnly }
+    var showsHanji: Bool {
+        self != .romanOnly
+    }
 
     /// The mode after this one, in the order the 外觀 picker lists them, and
     /// round again from the end — what the cycle shortcut steps through, so
@@ -52,7 +54,9 @@ enum CandidateDisplayMode: String, CaseIterable, Sendable {
     /// Only side-by-side has a lead script the swap shortcut can flip; the
     /// other two fix it, so the shortcut is inert and the stored swap waits
     /// for the way back.
-    var allowsSwapToggle: Bool { self == .sideBySide }
+    var allowsSwapToggle: Bool {
+        self == .sideBySide
+    }
 
     /// Effective swap for a stored flag. `.combined` leads with — and commits —
     /// the Hanji: forcing the pair on is a compatibility projection of that,

@@ -9,7 +9,9 @@ struct FrequencyListItem: Identifiable {
     let word: String
     let tl: String
     let count: Int
-    var id: String { "\(word)\t\(tl)" }
+    var id: String {
+        "\(word)\t\(tl)"
+    }
 }
 
 /// ViewModel for `FrequencyDataView`.
@@ -90,7 +92,11 @@ final class FrequencyDataViewModel: ObservableObject {
     private static func readFileData(from url: URL) async throws -> Data {
         try await Task.detached(priority: .userInitiated) {
             let accessing = url.startAccessingSecurityScopedResource()
-            defer { if accessing { url.stopAccessingSecurityScopedResource() } }
+            defer {
+                if accessing {
+                    url.stopAccessingSecurityScopedResource()
+                }
+            }
             return try Data(contentsOf: url)
         }.value
     }

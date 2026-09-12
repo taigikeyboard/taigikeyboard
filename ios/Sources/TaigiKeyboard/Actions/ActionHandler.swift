@@ -164,9 +164,9 @@ public class ActionHandler: StandardKeyboardActionHandler {
     private func isSpacebarDragGestureEnding(_ gesture: Keyboard.Gesture) -> Bool {
         switch gesture {
         case .release, .end:
-            return keyboardContext.isSpacebarDragGestureActive
+            keyboardContext.isSpacebarDragGestureActive
         default:
-            return false
+            false
         }
     }
 
@@ -174,8 +174,12 @@ public class ActionHandler: StandardKeyboardActionHandler {
     /// when not composing and pressing space or "-" during NextWord
     private func shouldSkipAutocomplete(for action: KeyboardAction) -> Bool {
         guard !composingManager.isComposing else { return false }
-        if action == .space { return true }
-        if case .character("-") = action, nextWordController.isShowing { return true }
+        if action == .space {
+            return true
+        }
+        if case .character("-") = action, nextWordController.isShowing {
+            return true
+        }
         return false
     }
 

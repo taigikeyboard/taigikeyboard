@@ -78,7 +78,9 @@ enum ComposingAction: String, CaseIterable, Sendable {
     /// Read from a table built once rather than rebuilt per read: the bindings
     /// are resolved on every keystroke and every menu draw, and each entry runs
     /// the bindability gate to build.
-    var defaultChord: ComposingKeyChord { Self.defaultChords[self] ?? freshChord }
+    var defaultChord: ComposingKeyChord {
+        Self.defaultChords[self] ?? freshChord
+    }
 
     private static let defaultChords: [ComposingAction: ComposingKeyChord] =
         Dictionary(uniqueKeysWithValues: allCases.map { ($0, $0.freshChord) })
@@ -150,13 +152,17 @@ enum ComposingAction: String, CaseIterable, Sendable {
     static let alwaysBound: Set<ComposingAction> = [.confirmHighlighted, .commitLiteral]
 
     /// The settings key this action's chord is stored under.
-    var settingsKeyName: String { Self.settingsKeyName(rawValue: rawValue) }
+    var settingsKeyName: String {
+        Self.settingsKeyName(rawValue: rawValue)
+    }
 
     /// The same key for a raw value the roster no longer has a case for — what
     /// `RetiredSettingsCleanup` sweeps. Composed here rather than written out
     /// there, so the namespace has one owner and a tombstone cannot be left
     /// behind by a rename.
-    static func settingsKeyName(rawValue: String) -> String { "composingShortcut.\(rawValue)" }
+    static func settingsKeyName(rawValue: String) -> String {
+        "composingShortcut.\(rawValue)"
+    }
 
     /// The recorder row's label, under the active display language.
     @MainActor

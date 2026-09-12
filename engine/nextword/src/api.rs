@@ -40,22 +40,13 @@ pub(crate) enum Intent {
         now_ms: i64,
     },
     /// Backspace — re-queries using the last character as context.
-    Backspace {
-        last_char: String,
-        now_ms: i64,
-    },
+    Backspace { last_char: String, now_ms: i64 },
     /// Context timeout — resets state and clears candidates after the 30 s idle window.
-    ContextTimeoutFired {
-        now_ms: i64,
-    },
+    ContextTimeoutFired { now_ms: i64 },
     /// New composing — hides candidates, keeps context; emits ClearPredictionsUI if showing.
-    ClearForNewComposing {
-        now_ms: i64,
-    },
+    ClearForNewComposing { now_ms: i64 },
     /// Full reset — same as the context timeout, clearing all state.
-    ResetFull {
-        now_ms: i64,
-    },
+    ResetFull { now_ms: i64 },
     /// Android-only Space-path. Mutates state without timer effects or
     /// generation bump; emits compound-only effect.
     UpdateLastSelectedWord {
@@ -67,9 +58,7 @@ pub(crate) enum Intent {
     /// no effects, no generation bump. Called by the platform after
     /// rendering the result of an async predict() so subsequent clear/reset
     /// paths know whether to emit `ClearPredictionsUI`.
-    SetIsShowing {
-        is_showing: bool,
-    },
+    SetIsShowing { is_showing: bool },
 }
 
 /// Engine errors surface as `ErrorCode::FailInvariant` at the FFI seam.

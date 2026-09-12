@@ -1,5 +1,5 @@
-@testable import TaigiKeyboard
 import SwiftUI
+@testable import TaigiKeyboard
 import XCTest
 
 /// Tests for `ThemeResolver` — the pure mapping from a selected theme id to

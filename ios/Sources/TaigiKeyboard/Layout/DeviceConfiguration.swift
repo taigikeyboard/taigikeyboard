@@ -12,7 +12,9 @@ enum ScreenSizeClass {
         let width = UIScreen.main.bounds.width
         let isIPad = UIDevice.current.userInterfaceIdiom == .pad
 
-        if isIPad { return .pad }
+        if isIPad {
+            return .pad
+        }
 
         switch width {
         case ..<375: return .phoneCompact

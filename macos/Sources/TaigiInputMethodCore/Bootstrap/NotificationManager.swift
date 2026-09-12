@@ -66,7 +66,9 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         return UNUserNotificationCenter.current()
     }()
 
-    private override init() { super.init() }
+    override private init() {
+        super.init()
+    }
 
     /// Installs the delegate. Called from `applicationDidFinishLaunching`,
     /// which is the deadline Apple documents for it.

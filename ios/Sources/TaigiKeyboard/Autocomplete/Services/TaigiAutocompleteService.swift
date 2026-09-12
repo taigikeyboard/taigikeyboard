@@ -214,7 +214,7 @@ class TaigiAutocompleteService: KeyboardKit.AutocompleteService {
     /// scripts keep separate keys. Split OFF (the default — 並排 / 羅馬字 / TPS
     /// all resolve to `false` at the caller) emits the un-split shape
     /// byte-identically — 並排's subtitle tells 重/tîng from 重/tāng.
-    internal func buildContinuousSuggestions(
+    func buildContinuousSuggestions(
         from candidates: [RustEngineBridge.ContinuousCandidate],
         splitCombinedCells: Bool = false,
     ) -> [AutocompleteSuggestion] {

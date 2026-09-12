@@ -25,7 +25,9 @@ enum ToneInputScheme: String, CaseIterable, Sendable {
     case telex
 
     /// The keys that pick a candidate under this scheme.
-    var slotKeySet: CandidateSlotKeySet { self == .telex ? .digits : .bareKeys }
+    var slotKeySet: CandidateSlotKeySet {
+        self == .telex ? .digits : .bareKeys
+    }
 
     /// Lower-case Telex keys: `v y d w x q` for tones 2 3 5 7 8 9, `z` for
     /// the affricate initial (`ts` / `ch`; `zh` then spells `tsh` / `chh`),

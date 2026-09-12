@@ -1,5 +1,5 @@
-@testable import TaigiKeyboard
 import SwiftUI
+@testable import TaigiKeyboard
 import XCTest
 
 /// Tests for the `SettingsKey<T>` typed descriptor introduced by B8a iOS

@@ -11,7 +11,9 @@ enum DeviceCapabilities {
     /// Whether the current device should show the globe key by default.
     /// `true` for iPad and Touch-ID iPhones, `false` otherwise.
     static var prefersGlobeKeyByDefault: Bool {
-        if UIDevice.current.userInterfaceIdiom == .pad { return true }
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            return true
+        }
         guard UIDevice.current.userInterfaceIdiom == .phone else { return false }
 
         let laContext = LAContext()

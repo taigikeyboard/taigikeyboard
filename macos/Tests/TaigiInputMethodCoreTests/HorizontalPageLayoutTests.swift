@@ -14,7 +14,7 @@ final class HorizontalPageLayoutTests: XCTestCase {
 
     /// A cell cap wide enough that only the tests that name their own see it —
     /// the screen budget the panels pass is far above the row budget too.
-    private static let roomyCellWidth: CGFloat = 1_000
+    private static let roomyCellWidth: CGFloat = 1000
 
     private func pack(
         _ widths: [CGFloat],

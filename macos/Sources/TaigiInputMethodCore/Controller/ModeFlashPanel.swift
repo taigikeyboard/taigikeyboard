@@ -49,7 +49,9 @@ final class ModeFlashPanel {
         } completionHandler: {
             Task { @MainActor [weak self] in
                 panel.orderOut(nil)
-                if self?.panel === panel { self?.panel = nil }
+                if self?.panel === panel {
+                    self?.panel = nil
+                }
             }
         }
     }

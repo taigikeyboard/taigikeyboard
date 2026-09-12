@@ -57,7 +57,9 @@ enum CandidateSlotKeySet: CaseIterable, Sendable {
         }
         switch self {
         case .bareKeys:
-            if key.keyCode == ComposingKeyChord.semicolonKeyCode { return Self.bareKeyRow.count - 1 }
+            if key.keyCode == ComposingKeyChord.semicolonKeyCode {
+                return Self.bareKeyRow.count - 1
+            }
             return slot(forKey: key.charactersIgnoringModifiers, heldWith: [])
         case .digits:
             guard let keyCode = key.keyCode else { return nil }
@@ -143,7 +145,9 @@ struct ComposingKeyBindings: Sendable, Equatable {
 
     /// The keys that pick a candidate — derived, never stored
     /// (`ToneInputScheme.slotKeySet`).
-    var slotKeySet: CandidateSlotKeySet { toneScheme.slotKeySet }
+    var slotKeySet: CandidateSlotKeySet {
+        toneScheme.slotKeySet
+    }
 
     /// What a fresh install types with.
     static let `default` = ComposingKeyBindings()
@@ -173,7 +177,9 @@ struct ComposingKeyBindings: Sendable, Equatable {
     }
 
     /// The chord on `action`, or nil when the row is empty.
-    func chord(for action: ComposingAction) -> ComposingKeyChord? { chords[action] }
+    func chord(for action: ComposingAction) -> ComposingKeyChord? {
+        chords[action]
+    }
 
     /// The action `event` is bound to, if any.
     ///

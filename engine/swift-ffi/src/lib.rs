@@ -171,4 +171,3 @@ impl log::Log for PlatformLogger {
 
     fn flush(&self) {}
 }
-

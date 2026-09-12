@@ -5,8 +5,8 @@
 // in `TaigiAutocompleteService.buildContinuousSuggestions`), plus the content-level
 // subtitle-space flag and the marked-cell no-op in `suggestionToHandle`.
 
-@testable import TaigiKeyboard
 import KeyboardKit
+@testable import TaigiKeyboard
 import XCTest
 
 final class CandidateCellHelperTests: XCTestCase {
