@@ -37,7 +37,6 @@ class CandidateUpdateCoordinator(
 
     private var candidateUpdateJob: Job? = null
     private var englishCandidateUpdateJob: Job? = null
-    private var displayDerivationJob: Job? = null
 
     // Cached TaigiAutocompleteService — created once and reused across
     // keystrokes. Mode-agnostic after v3.5.8 Item 13 (the engine owns
@@ -92,22 +91,6 @@ class CandidateUpdateCoordinator(
                     "[TOTAL] updateTaigiCandidates: ${System.currentTimeMillis() - candidateStart}ms"
                 }
             }
-    }
-
-    /**
-     * Obsolete after v3.5.4 (Composing → Rust shared core). The Rust
-     * dispatch returns the display form synchronously inside the
-     * bridge-emitted `UpdatePreedit` effect, which the
-     * [DefaultComposingDelegate] applies via `ic.setComposingText` during
-     * the dispatch itself. The async refresh path existed only to absorb
-     * Kotlin tone-converter latency; Rust dispatch is microsecond-scale
-     * so no async refresh is needed.
-     *
-     * Kept as a no-op shim so existing call sites (TextInputManager) do
-     * not need to be edited in this commit.
-     */
-    fun scheduleDisplayDerivation() {
-        displayDerivationJob?.cancel()
     }
 
     /**
@@ -286,8 +269,6 @@ class CandidateUpdateCoordinator(
         candidateUpdateJob = null
         englishCandidateUpdateJob?.cancel()
         englishCandidateUpdateJob = null
-        displayDerivationJob?.cancel()
-        displayDerivationJob = null
     }
 
     /**

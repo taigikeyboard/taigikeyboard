@@ -257,7 +257,6 @@ internal class TextInputKeyHandler(
                 val composingText = composingManager?.getComposingText()
                 "[DELETE] deleteBackward=true, rawInput='$rawInput', composingText='$composingText'"
             }
-            candidateCoordinator.scheduleDisplayDerivation()
             candidateCoordinator.updateTaigiCandidates()
             return
         }
@@ -438,7 +437,6 @@ internal class TextInputKeyHandler(
             val lastChar = rawInput.lastOrNull()
             if (lastChar != null && !RustEngineBridge.isTpsToneMark(lastChar) && lastChar != ' ') {
                 composingManager?.appendCharacter(" ", ic)
-                candidateCoordinator.scheduleDisplayDerivation()
                 candidateCoordinator.updateTaigiCandidates()
                 return
             }
@@ -544,7 +542,6 @@ internal class TextInputKeyHandler(
                     manager.appendCharacter(char, ic)
                 }
                 if (prefs.isToolbarAutoCollapse) smartbarManager.collapseToolbarIfOpen()
-                candidateCoordinator.scheduleDisplayDerivation()
                 logger.debug("PERF") {
                     "[1] handleTaigiInput composing: ${System.currentTimeMillis() - inputStart}ms"
                 }
@@ -556,7 +553,6 @@ internal class TextInputKeyHandler(
                 } else {
                     manager.startComposing(char, ic)
                     if (prefs.isToolbarAutoCollapse) smartbarManager.collapseToolbarIfOpen()
-                    candidateCoordinator.scheduleDisplayDerivation()
                     logger.debug("PERF") {
                         "[1] handleTaigiInput newComposing: ${System.currentTimeMillis() - inputStart}ms"
                     }
@@ -566,7 +562,6 @@ internal class TextInputKeyHandler(
         } else if (manager.isComposing() && char.length == 1 && char[0].isDigit()) {
             manager.appendCharacter(char, ic)
             if (prefs.isToolbarAutoCollapse) smartbarManager.collapseToolbarIfOpen()
-            candidateCoordinator.scheduleDisplayDerivation()
             logger.debug("PERF") {
                 "[1] handleTaigiInput composing digit: ${System.currentTimeMillis() - inputStart}ms"
             }
