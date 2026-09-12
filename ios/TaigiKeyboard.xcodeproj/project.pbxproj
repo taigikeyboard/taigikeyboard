@@ -1011,8 +1011,9 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/KeyboardKit/KeyboardKit.git";
 			requirement = {
-				kind = exactVersion;
-				version = 10.9.0;
+				kind = versionRange;
+				maximumVersion = 11.0.0;
+				minimumVersion = 10.9.0;
 			};
 		};
 		F39D1D522F9E8C4D0053D307 /* XCRemoteSwiftPackageReference "swift-protobuf" */ = {
