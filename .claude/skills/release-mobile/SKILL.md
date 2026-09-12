@@ -1,6 +1,6 @@
 ---
 name: release-mobile
-description: Prepare a MOBILE release (iOS + Android, one shared version) on main - rebuild generated artifacts, update the detailed changelog, write concise English iOS and Android What's New text, mirror it into both apps' version history, validate, commit, and push. Use when preparing a version for manual App Store Connect or Google Play release. Never tags, uploads builds, or submits a store release. Takes no version argument - it releases the version already in the tree (set beforehand with `make version-mobile x.y.z`); an optional argument only overrides the release base. Mobile train only; the desktop train (macOS + Windows) is `release-desktop`.
+description: Prepare a MOBILE release (iOS + Android, one shared version) on main - rebuild generated artifacts, update the detailed changelog, write concise English iOS and Android What's New text, mirror it into both apps' version history, validate, commit, push, and tag the release commit `mobile-<version>`. Use when preparing a version for manual App Store Connect or Google Play release. Never uploads builds or submits a store release. Takes no version argument - it releases the version already in the tree (set beforehand with `make version-mobile x.y.z`); an optional argument only overrides the release base. Mobile train only; the desktop train (macOS + Windows) is `release-desktop`.
 ---
 
 # Release Mobile
@@ -15,7 +15,7 @@ before invoking. Example: `/release-mobile`
 One optional argument, `<base-tag>`, overrides the derived release base.
 Example: `/release-mobile v3.6.4`
 
-Never create or move a tag, upload a build, edit store metadata, or submit a release. The user handles every store action manually.
+The release commit is tagged `mobile-<version>` and the tag pushed. Never upload a build, edit store metadata, or submit a release: the user handles every store action manually.
 
 ## 1. Validate context
 
@@ -49,7 +49,8 @@ ask for one rather than guessing a commit.
 Then, before any edit:
 
 - Require `<target>` to match `vMAJOR.MINOR.PATCH`, and
-  `changelog/store/<target>/` to be absent or unreleased — never re-prepare a
+  `changelog/store/<target>/` to be absent or unreleased, and no `mobile-<target
+  without the v>` tag to exist locally or on `origin` — never re-prepare a
   version already tagged.
 - Report open PRs and ask before continuing if any exist.
 - **State the derived version and range — `preparing mobile <target>, range
@@ -160,17 +161,23 @@ python3 tools/release_notes.py print --version <target> --platform android
 
 Passing deterministic validation does not replace the user's factual review.
 
-## 6. Commit and hand off
+## 6. Commit, tag, and hand off
 
-Commit and push `main`. Do not tag.
+Commit and push `main`, then tag the release commit and push the tag. The tag
+name is `mobile-<version>` without the `v` (`v3.6.8` → `mobile-3.6.8`); the
+pre-2026-09 mobile tags are the bare `v<version>` form and stay as they are.
 
 ```bash
 git add -A
 git commit -m "<target>: release prep + store notes"
 git push origin main
+git tag -a mobile-<version> -m "<target>"
+git push origin mobile-<version>
 ```
 
-Report the commit SHA and both rendered texts. Give the user these clipboard commands:
+The tag is what `git describe --match 'mobile-*'` finds as the base of the
+next mobile release, so a release without it would be folded into the next
+range. Report the commit SHA, the tag and both rendered texts. Give the user these clipboard commands:
 
 ```bash
 python3 tools/release_notes.py print --version <target> --platform ios | pbcopy
@@ -194,7 +201,7 @@ What that means while preparing a mobile release:
 - Never edit another version's changelog or store-note files.
 - Never touch `changelog/desktop-v<version>.md`, `macos/`, or `windows/` — that is `release-desktop`'s surface.
 - Never hand-edit the generated target history entry.
-- Never create, move, or push a tag. When the user tags a mobile release themselves, the name is `mobile-<version>` (the pre-2026-09 tags are the bare `v<version>` form).
+- Tag only the release commit made in § 6, only as `mobile-<version>`, and never move or delete an existing tag.
 - Never request, store, or use signing certificates, keystores, API keys, or store credentials.
 - Never upload a build, edit a live store listing, or submit production.
 - Never run the macOS release or publish scripts, and never put macOS-only work in a store note.
