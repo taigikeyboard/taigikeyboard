@@ -71,5 +71,6 @@ Details and timings: `docs/architecture/build-artifacts.md`.
 
 ## References
 
+- `docs/architecture/system-overview.md` — read first for architecture; LSP plugins (rust-analyzer / swift / kotlin) installed — prefer go-to-definition / references over grep+Read chains
 - `docs/README.md` — documentation index · `docs/roadmap.md` + project memory — live multi-PR plan and round hand-off
 - `#NNN` written before 2026-09-07 = old repository; resolve via `git log --all --oneline --grep="(#NNN)"` (`docs/architecture/pr-number-migration.md`)
