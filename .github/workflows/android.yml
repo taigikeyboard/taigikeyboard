@@ -1,0 +1,55 @@
+name: Android
+
+# The Android app's JVM unit tests. They run without the engine: nothing in
+# `:app:testDebugUnitTest` loads `librust_taigi.so` (verified 2026-09-12 in a
+# fresh worktree where `jniLibs/` held only `.gitkeep`), so the job needs no
+# NDK, no cargo and no `make build` — only a JDK and the Gradle cache.
+#
+# The instrumented and SQLite-backed paths are not covered here; those stay on
+# a device (`android-guidelines.md §8a`).
+#
+# Budget: ~1 min warm, ~4 min cold (Gradle distribution + dependencies).
+on:
+  pull_request:
+    paths:
+      - 'android/**'
+      - 'i18n/**'
+      - '.github/workflows/android.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'android/**'
+      - 'i18n/**'
+      - '.github/workflows/android.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  unit-tests:
+    name: JVM unit tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # sourceCompatibility / jvmTarget are 17 (android/app/build.gradle.kts).
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: 17
+
+      # Caches the wrapper distribution and dependencies; writes the cache only
+      # from main so pull requests read a stable one instead of each saving
+      # their own.
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      - name: Unit tests
+        working-directory: android
+        run: ./gradlew :app:testDebugUnitTest --no-daemon
