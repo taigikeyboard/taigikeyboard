@@ -170,6 +170,8 @@ struct SettingsSelectionOverlay: View {
             }
             .pickerStyle(.menu)
             .labelsHidden()
+            // `.menu` paints its label in the accent colour; match the row text instead.
+            .tint(theme.primaryTextColor)
             .fixedSize()
         }
         .font(KeyboardFonts.globalFont(size: 15))
