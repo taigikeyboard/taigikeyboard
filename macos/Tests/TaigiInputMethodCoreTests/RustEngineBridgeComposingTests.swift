@@ -217,5 +217,4 @@ final class RustEngineBridgeComposingTests: XCTestCase {
         XCTAssertEqual(leading.displayText, "taigi", "the preedit literal leads the list")
         XCTAssertNil(leading.hanji, "the literal carries one script — a commit writes the romanization")
     }
-
 }

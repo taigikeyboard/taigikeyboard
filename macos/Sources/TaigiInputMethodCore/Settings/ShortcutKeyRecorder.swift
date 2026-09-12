@@ -222,7 +222,9 @@ final class ShortcutKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
         return true
     }
 
-    override var canBecomeKeyView: Bool { canBecomeKey }
+    override var canBecomeKeyView: Bool {
+        canBecomeKey
+    }
 
     /// The normal way a session ends: the field editor detaching posts this
     /// whenever focus leaves, text change or none — only the BEGIN

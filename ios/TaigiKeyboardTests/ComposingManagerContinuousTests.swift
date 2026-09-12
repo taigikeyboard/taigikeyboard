@@ -246,7 +246,9 @@ final class ComposingManagerContinuousTests: XCTestCase {
             "didFinalCommit must imply didCommit; both stay false on noop",
         )
         let emittedCommitText = spy.effects.contains { effect in
-            if case .commitTextReplacingPreedit = effect { return true }
+            if case .commitTextReplacingPreedit = effect {
+                return true
+            }
             return false
         }
         XCTAssertFalse(

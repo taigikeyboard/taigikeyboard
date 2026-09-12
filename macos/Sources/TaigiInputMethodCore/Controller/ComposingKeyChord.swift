@@ -202,10 +202,18 @@ extension ComposingKeyChord: RawRepresentable {
     /// read` would print it as a line break.
     var rawValue: String {
         var letters = ""
-        if modifiers.contains(.command) { letters += "d" }
-        if modifiers.contains(.control) { letters += "c" }
-        if modifiers.contains(.option) { letters += "o" }
-        if modifiers.contains(.shift) { letters += "s" }
+        if modifiers.contains(.command) {
+            letters += "d"
+        }
+        if modifiers.contains(.control) {
+            letters += "c"
+        }
+        if modifiers.contains(.option) {
+            letters += "o"
+        }
+        if modifiers.contains(.shift) {
+            letters += "s"
+        }
         let scalars = key.unicodeScalars
             .map { String(format: "%04X", $0.value) }
             .joined(separator: ",")

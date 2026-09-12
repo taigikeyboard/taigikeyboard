@@ -231,7 +231,9 @@ public extension RustEngineBridge {
         var request = Taigi_Engine_Request()
         request.id = nextRequestID()
         request.payload = .phonetics(phonetics)
-        if let config { request.configSnapshot = config }
+        if let config {
+            request.configSnapshot = config
+        }
 
         guard let response = send(request, op: op) else { return nil }
         guard response.error == .ok else {

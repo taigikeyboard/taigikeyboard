@@ -7,51 +7,56 @@
 
 import Foundation
 
-final public class EmojiLoader {
-    
+public final class EmojiLoader {
     public static func recentEmojiCategory() -> EmojiCategory {
-        return EmojiCategory(
+        EmojiCategory(
             category: .recents,
-            emojis: RecentEmojisManager.sharedInstance.recentEmojis()
+            emojis: RecentEmojisManager.sharedInstance.recentEmojis(),
         )
     }
-    
+
     public static func emojiCategories() -> [EmojiCategory] {
-        var emojiPListFileName = "ISEmojiList_iOS10";
-        if #available(iOS 11.0, *) { emojiPListFileName = "ISEmojiList_iOS11" }
-        if #available(iOS 12.1, *) { emojiPListFileName = "ISEmojiList_iOS12.1" }
-        if #available(iOS 18.0, *) { emojiPListFileName = "ISEmojiList" }
-        
+        var emojiPListFileName = "ISEmojiList_iOS10"
+        if #available(iOS 11.0, *) {
+            emojiPListFileName = "ISEmojiList_iOS11"
+        }
+        if #available(iOS 12.1, *) {
+            emojiPListFileName = "ISEmojiList_iOS12.1"
+        }
+        if #available(iOS 18.0, *) {
+            emojiPListFileName = "ISEmojiList"
+        }
+
         guard let filePath = Bundle.podBundle.path(forResource: emojiPListFileName, ofType: "plist") else {
             return []
         }
-        
-        guard let categories = NSArray(contentsOfFile: filePath) as? [[String:Any]] else {
+
+        guard let categories = NSArray(contentsOfFile: filePath) as? [[String: Any]] else {
             return []
         }
-        
+
         var emojiCategories = [EmojiCategory]()
-        
+
         let availableCategories: [Category] = [
             .smileysAndPeople, .animalsAndNature, .foodAndDrink,
-            .activity, .travelAndPlaces, .objects, .symbols, .flags
+            .activity, .travelAndPlaces, .objects, .symbols, .flags,
         ]
-        
+
         for dictionary in categories {
             guard let title = dictionary["title"] as? String else {
                 continue
             }
-            
+
             guard let category = availableCategories.first(where: { $0.title == title }) else {
                 continue
             }
-            
+
             guard let rawEmojis = dictionary["emojis"] as? [Any] else {
                 continue
             }
-            
+
             var emojis = [Emoji]()
-            
+
             for value in rawEmojis {
                 if let string = value as? String {
                     emojis.append(Emoji(emojis: [string]))
@@ -59,12 +64,11 @@ final public class EmojiLoader {
                     emojis.append(Emoji(emojis: array))
                 }
             }
-            
+
             let emojiCategory = EmojiCategory(category: category, emojis: emojis)
             emojiCategories.append(emojiCategory)
         }
-        
+
         return emojiCategories
     }
-    
 }

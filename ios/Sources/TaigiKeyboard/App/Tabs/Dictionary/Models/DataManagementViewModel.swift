@@ -42,7 +42,11 @@ final class DataManagementViewModel: ObservableObject {
     private static func readFileData(from url: URL) async throws -> Data {
         try await Task.detached(priority: .userInitiated) {
             let accessing = url.startAccessingSecurityScopedResource()
-            defer { if accessing { url.stopAccessingSecurityScopedResource() } }
+            defer {
+                if accessing {
+                    url.stopAccessingSecurityScopedResource()
+                }
+            }
             return try Data(contentsOf: url)
         }.value
     }

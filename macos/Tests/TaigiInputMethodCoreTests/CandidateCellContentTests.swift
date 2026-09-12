@@ -265,5 +265,4 @@ final class CandidateCellContentTests: XCTestCase {
             }
         }
     }
-
 }

@@ -392,19 +392,45 @@ public extension RustEngineBridge {
     /// 6 inline Rust golden tests.
     private static func platformFallbackFilters(toggles: DictionaryToggles) -> DictionaryFilters {
         var dictMask: UInt32 = 0
-        if toggles.kautian { dictMask |= 1 << 0 }
-        if toggles.taigitv { dictMask |= 1 << 1 }
-        if toggles.itaigi { dictMask |= 1 << 2 }
-        if toggles.sitbut { dictMask |= 1 << 3 }
-        if toggles.taihoa { dictMask |= 1 << 4 }
-        if toggles.taijit { dictMask |= 1 << 5 }
-        if toggles.kungge { dictMask |= 1 << 6 }
-        if toggles.stti { dictMask |= 1 << 7 }
-        if toggles.khpoo { dictMask |= 1 << 8 }
-        if toggles.khiin { dictMask |= 1 << 9 }
-        if toggles.dev { dictMask |= 1 << 10 }
-        if toggles.lkk { dictMask |= 1 << 11 }
-        if toggles.variant { dictMask |= 1 << 12 }
+        if toggles.kautian {
+            dictMask |= 1 << 0
+        }
+        if toggles.taigitv {
+            dictMask |= 1 << 1
+        }
+        if toggles.itaigi {
+            dictMask |= 1 << 2
+        }
+        if toggles.sitbut {
+            dictMask |= 1 << 3
+        }
+        if toggles.taihoa {
+            dictMask |= 1 << 4
+        }
+        if toggles.taijit {
+            dictMask |= 1 << 5
+        }
+        if toggles.kungge {
+            dictMask |= 1 << 6
+        }
+        if toggles.stti {
+            dictMask |= 1 << 7
+        }
+        if toggles.khpoo {
+            dictMask |= 1 << 8
+        }
+        if toggles.khiin {
+            dictMask |= 1 << 9
+        }
+        if toggles.dev {
+            dictMask |= 1 << 10
+        }
+        if toggles.lkk {
+            dictMask |= 1 << 11
+        }
+        if toggles.variant {
+            dictMask |= 1 << 12
+        }
         dictMask |= encodeKautianSubcollWire(toggles)
 
         let allAssocOn = toggles.kautian && toggles.taigitv && toggles.itaigi
@@ -413,18 +439,42 @@ public extension RustEngineBridge {
         let assocMask: UInt32 = allAssocOn ? UInt32.max : (dictMask & 0x1FF)
 
         var enabled: Set<DictionarySource> = [.custom]
-        if toggles.dev { enabled.insert(.dev) }
-        if toggles.kautian { enabled.insert(.kautian) }
-        if toggles.taigitv { enabled.insert(.taigitv) }
-        if toggles.itaigi { enabled.insert(.itaigi) }
-        if toggles.sitbut { enabled.insert(.sitbut) }
-        if toggles.taihoa { enabled.insert(.taihoa) }
-        if toggles.taijit { enabled.insert(.taijit) }
-        if toggles.kungge { enabled.insert(.kungge) }
-        if toggles.stti { enabled.insert(.stti) }
-        if toggles.khpoo { enabled.insert(.khpoo) }
-        if toggles.khiin { enabled.insert(.khiin) }
-        if toggles.lkk { enabled.insert(.lkk) }
+        if toggles.dev {
+            enabled.insert(.dev)
+        }
+        if toggles.kautian {
+            enabled.insert(.kautian)
+        }
+        if toggles.taigitv {
+            enabled.insert(.taigitv)
+        }
+        if toggles.itaigi {
+            enabled.insert(.itaigi)
+        }
+        if toggles.sitbut {
+            enabled.insert(.sitbut)
+        }
+        if toggles.taihoa {
+            enabled.insert(.taihoa)
+        }
+        if toggles.taijit {
+            enabled.insert(.taijit)
+        }
+        if toggles.kungge {
+            enabled.insert(.kungge)
+        }
+        if toggles.stti {
+            enabled.insert(.stti)
+        }
+        if toggles.khpoo {
+            enabled.insert(.khpoo)
+        }
+        if toggles.khiin {
+            enabled.insert(.khiin)
+        }
+        if toggles.lkk {
+            enabled.insert(.lkk)
+        }
         return DictionaryFilters(
             dictionaryFilterBitmask: dictMask,
             assocLookupBitmask: assocMask,
@@ -458,7 +508,9 @@ public extension RustEngineBridge {
         for (index, isOn) in accents.enumerated() where isOn {
             subtag |= 1 << (accentShift + UInt16(index))
         }
-        if sub.nameAppendix { subtag |= 1 << nameBit }
+        if sub.nameAppendix {
+            subtag |= 1 << nameBit
+        }
         return activeBit | (UInt32(subtag) << shift)
     }
 
@@ -631,9 +683,15 @@ public extension RustEngineBridge {
         var proto = Taigi_Engine_TaigiWord()
         proto.id = Int64(word.id)
         proto.roman = word.roman
-        if let hanzi = word.hanzi { proto.hanji = hanzi }
-        if let length = word.lengthScore { proto.lengthScore = Int32(length) }
-        if let mask = word.sourceBitmask { proto.sourceBitmask = UInt32(mask) }
+        if let hanzi = word.hanzi {
+            proto.hanji = hanzi
+        }
+        if let length = word.lengthScore {
+            proto.lengthScore = Int32(length)
+        }
+        if let mask = word.sourceBitmask {
+            proto.sourceBitmask = UInt32(mask)
+        }
         return proto
     }
 

@@ -22,6 +22,7 @@ final class SharedSettings {
     static let sharedUserDefaults = UserDefaults(suiteName: appGroupId) ?? .standard
 
     // MARK: - Typed key descriptors
+
     //
     // Each persisted field has a `SettingsKey<T>` descriptor pairing the raw
     // UserDefaults key with its default value + codec. Key spellings are

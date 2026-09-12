@@ -100,7 +100,11 @@ struct CandidateSuggestionsRow: View {
                 .padding(.horizontal, CandidateViewModels.Spacing.small)
                 .onChange(of: selectedCandidateIndex) { _, newIndex in
                     if newIndex >= 0 {
-                        let animationDuration = if #available(iOS 16.0, *) { 0.25 } else { 0.15 }
+                        let animationDuration = if #available(iOS 16.0, *) {
+                            0.25
+                        } else {
+                            0.15
+                        }
                         withAnimation(.easeInOut(duration: animationDuration)) {
                             proxy.scrollTo("candidate_\(newIndex)", anchor: .center)
                         }

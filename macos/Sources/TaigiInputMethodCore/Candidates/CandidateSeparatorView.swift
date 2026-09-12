@@ -12,7 +12,9 @@ final class CandidateSeparatorView: NSView {
     /// window's rounded edge; Sequoia runs it full width.
     var horizontalInset: CGFloat = 0 {
         didSet {
-            if horizontalInset != oldValue { needsDisplay = true }
+            if horizontalInset != oldValue {
+                needsDisplay = true
+            }
         }
     }
 
@@ -22,9 +24,13 @@ final class CandidateSeparatorView: NSView {
     }
 
     @available(*, unavailable)
-    required init?(coder _: NSCoder) { fatalError() }
+    required init?(coder _: NSCoder) {
+        fatalError()
+    }
 
-    override var allowsVibrancy: Bool { true }
+    override var allowsVibrancy: Bool {
+        true
+    }
 
     override func draw(_: NSRect) {
         NSColor.separatorColor.setFill()

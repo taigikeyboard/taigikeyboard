@@ -1,5 +1,5 @@
-@testable import TaigiKeyboard
 import SQLite3
+@testable import TaigiKeyboard
 import XCTest
 
 /// v3.6.1 R1 — `user_association.db` next-word recall.

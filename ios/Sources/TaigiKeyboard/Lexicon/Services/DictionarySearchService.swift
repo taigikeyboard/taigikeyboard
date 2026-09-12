@@ -161,7 +161,9 @@ final class DictionarySearchService: @unchecked Sendable {
         results.sorted { a, b in
             let aMoe = a.sources.contains(.kautian)
             let bMoe = b.sources.contains(.kautian)
-            if aMoe != bMoe { return aMoe }
+            if aMoe != bMoe {
+                return aMoe
+            }
             return a.frequency > b.frequency
         }
     }

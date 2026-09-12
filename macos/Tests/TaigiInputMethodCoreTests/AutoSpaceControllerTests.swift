@@ -455,7 +455,6 @@ final class AutoSpaceControllerTests: XCTestCase {
 
     // MARK: - Helpers
 
-
     private struct Session: CandidateBarSession {
         let controller: TaigiInputController
         let client: RecordingTextInputClient

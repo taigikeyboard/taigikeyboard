@@ -222,7 +222,13 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
                 XCTAssertTrue(handled, name)
                 XCTAssertEqual(session.client.insertedTexts.last, otherScript, name)
                 XCTAssertFalse(
-                    session.presenter.calls.contains { if case .navigate = $0 { true } else { false } },
+                    session.presenter.calls.contains {
+                        if case .navigate = $0 {
+                            true
+                        } else {
+                            false
+                        }
+                    },
                     "\(name): the highlight never walked there first",
                 )
             }
@@ -905,7 +911,13 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         XCTAssertTrue(session.presenter.isShowing, "the bar must stay up across a display-only flip")
         XCTAssertFalse(
             session.presenter.calls.dropFirst(callsBefore)
-                .contains { if case .hide = $0 { true } else { false } },
+                .contains {
+                    if case .hide = $0 {
+                        true
+                    } else {
+                        false
+                    }
+                },
             "a swap must not route through dismissal",
         )
         XCTAssertEqual(session.presenter.selectedIndex, keptIndex)
@@ -954,14 +966,20 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         let callsBefore = session.presenter.calls.count
 
         UserDefaults.standard.set(CandidateDisplayMode.romanOnly.rawValue, forKey: key)
-        for _ in 0..<50 where session.presenter.calls.count == callsBefore {
+        for _ in 0 ..< 50 where session.presenter.calls.count == callsBefore {
             await Task.yield()
         }
 
         XCTAssertTrue(session.presenter.isShowing, "the bar must stay up across a display-only change")
         XCTAssertFalse(
             session.presenter.calls.dropFirst(callsBefore)
-                .contains { if case .hide = $0 { true } else { false } },
+                .contains {
+                    if case .hide = $0 {
+                        true
+                    } else {
+                        false
+                    }
+                },
             "a display-mode change must not route through dismissal",
         )
         let after = try XCTUnwrap(session.presenter.shownContent).cells
@@ -996,7 +1014,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         let callsBefore = session.presenter.calls.count
 
         session.controller.performShortcutAction(.cycleCandidateDisplayMode)
-        for _ in 0..<50 where session.presenter.calls.count == callsBefore {
+        for _ in 0 ..< 50 where session.presenter.calls.count == callsBefore {
             await Task.yield()
         }
 
@@ -1004,7 +1022,13 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         XCTAssertTrue(session.presenter.isShowing, "the bar must stay up across a display-mode change")
         XCTAssertFalse(
             session.presenter.calls.dropFirst(callsBefore)
-                .contains { if case .hide = $0 { true } else { false } },
+                .contains {
+                    if case .hide = $0 {
+                        true
+                    } else {
+                        false
+                    }
+                },
             "a display-mode change must not route through dismissal",
         )
         let after = try XCTUnwrap(session.presenter.shownContent).cells
@@ -1042,7 +1066,13 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
             }
             XCTAssertFalse(session.presenter.isShowing)
             XCTAssertFalse(
-                session.presenter.calls.contains { if case .show = $0 { true } else { false } },
+                session.presenter.calls.contains {
+                    if case .show = $0 {
+                        true
+                    } else {
+                        false
+                    }
+                },
                 "no window is ever put up with the setting off — got \(session.presenter.calls)",
             )
             XCTAssertEqual(session.client.writes.last, .setMarkedText("tâi", selectionLocation: 3))
@@ -1087,7 +1117,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         let callsBefore = session.presenter.calls.count
 
         UserDefaults.standard.set(false, forKey: SettingsStore.Keys.isCandidateWindowEnabled.name)
-        for _ in 0..<50 where session.presenter.calls.count == callsBefore {
+        for _ in 0 ..< 50 where session.presenter.calls.count == callsBefore {
             await Task.yield()
         }
 
@@ -1161,8 +1191,6 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
             _ = controller.handle(event, client: client)
         }
     }
-
-
 
     /// An activated session that has typed nothing yet.
     private func makeSession(

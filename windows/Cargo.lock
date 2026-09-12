@@ -1006,7 +1006,7 @@ dependencies = [
 
 [[package]]
 name = "taigi-windows-core"
-version = "3.6.8"
+version = "3.6.9"
 dependencies = [
  "dispatch",
  "log",
@@ -1019,7 +1019,7 @@ dependencies = [
 
 [[package]]
 name = "taigi-windows-platform"
-version = "3.6.8"
+version = "3.6.9"
 dependencies = [
  "log",
  "raw-window-handle",
@@ -1031,7 +1031,7 @@ dependencies = [
 
 [[package]]
 name = "taigi-windows-settings"
-version = "3.6.8"
+version = "3.6.9"
 dependencies = [
  "log",
  "raw-window-handle",
@@ -1048,7 +1048,7 @@ dependencies = [
 
 [[package]]
 name = "taigi-windows-storage"
-version = "3.6.8"
+version = "3.6.9"
 dependencies = [
  "log",
  "rusqlite",
@@ -1061,7 +1061,7 @@ dependencies = [
 
 [[package]]
 name = "taigi-windows-tsf"
-version = "3.6.8"
+version = "3.6.9"
 dependencies = [
  "log",
  "taigi-windows-core",
@@ -1074,7 +1074,7 @@ dependencies = [
 
 [[package]]
 name = "taigi-windows-update"
-version = "3.6.8"
+version = "3.6.9"
 dependencies = [
  "log",
  "serde",

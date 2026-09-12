@@ -110,7 +110,9 @@ impl FontManagementModel {
     fn selection_at(&self, index: usize) -> Option<StoredFontSelection> {
         let bundled = CandidateFontChoice::ALL.len();
         if index < bundled {
-            return Some(StoredFontSelection::BuiltIn(CandidateFontChoice::ALL[index]));
+            return Some(StoredFontSelection::BuiltIn(
+                CandidateFontChoice::ALL[index],
+            ));
         }
         let index = index - bundled;
         if let Some(font) = self.custom_fonts.get(index) {
@@ -507,7 +509,8 @@ pub fn view(
             .placeholder_text(strings.resolve(StringKey::DictionarySearchPlaceholder))
             .margin(Thickness::new(0.0, 0.0, 0.0, list_pager::CONTROL_GAP))
             .on_text_changed(
-                context.callback(|text| WindowMessage::FontManagement(Message::FilterChanged(text))),
+                context
+                    .callback(|text| WindowMessage::FontManagement(Message::FilterChanged(text))),
             ),
         list,
         list_pager::bar(
@@ -547,9 +550,10 @@ fn missing_note(
 ) -> View {
     let is_missing = match stored {
         StoredFontSelection::BuiltIn(_) => false,
-        StoredFontSelection::Custom(file_name) => {
-            !model.custom_fonts.iter().any(|font| &font.file_name == file_name)
-        }
+        StoredFontSelection::Custom(file_name) => !model
+            .custom_fonts
+            .iter()
+            .any(|font| &font.file_name == file_name),
         StoredFontSelection::Installed(family) => !model.has_installed(family),
     };
     if !is_missing {
@@ -682,7 +686,11 @@ mod tests {
         assert_eq!(keys.len(), CandidateFontChoice::ALL.len() + 3);
         assert_eq!(
             &keys[CandidateFontChoice::ALL.len()..],
-            &["custom.Arial.ttf", "installed.Arial", "installed.Microsoft JhengHei"],
+            &[
+                "custom.Arial.ttf",
+                "installed.Arial",
+                "installed.Microsoft JhengHei"
+            ],
         );
     }
 
@@ -798,6 +806,9 @@ mod tests {
         model.show(&StoredFontSelection::Installed("Family 16".to_owned()));
 
         assert_eq!(model.filter, "");
-        assert_eq!(model.page, (CandidateFontChoice::ALL.len() + 16) / PAGE_SIZE);
+        assert_eq!(
+            model.page,
+            (CandidateFontChoice::ALL.len() + 16) / PAGE_SIZE
+        );
     }
 }

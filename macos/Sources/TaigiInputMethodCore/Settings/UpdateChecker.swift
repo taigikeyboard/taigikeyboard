@@ -37,7 +37,6 @@ struct UpdateManifest: Equatable {
         let packageURL: URL?
     }
 
-
     /// Decodes and validates in one step, so no caller can hold a manifest the
     /// checker would refuse to act on. Unknown fields are ignored — the wire
     /// format may grow, old installs must keep reading it.
@@ -157,7 +156,9 @@ struct DottedVersion: Comparable {
         for index in 0 ..< max(lhs.components.count, rhs.components.count) {
             let left = index < lhs.components.count ? lhs.components[index] : 0
             let right = index < rhs.components.count ? rhs.components[index] : 0
-            if left != right { return left < right }
+            if left != right {
+                return left < right
+            }
         }
         return false
     }
@@ -289,7 +290,9 @@ final class UpdateChecker {
 
     private func startCheck(isManualCheck: Bool) -> Task<Void, Never>? {
         guard !isCheckInFlight else {
-            if isManualCheck { isManualOutcomeWanted = true }
+            if isManualCheck {
+                isManualOutcomeWanted = true
+            }
             return nil
         }
         isCheckInFlight = true
@@ -303,7 +306,7 @@ final class UpdateChecker {
         return Task {
             let outcome: Outcome
             do {
-                outcome = classify(try await fetchManifest())
+                outcome = try await classify(fetchManifest())
             } catch {
                 Self.logger.debug("manifest fetch failed: \(error.localizedDescription)")
                 outcome = .failed
@@ -389,7 +392,6 @@ final class UpdateChecker {
         settings.updatePendingManifest = nil
         UpdateInstallation.shared.discardStagedPackage()
     }
-
 }
 
 /// The shipped announcement: a system notification, worded from the live
@@ -508,7 +510,9 @@ enum UpdateAlertPresenter {
     ) async {
         let alert = NSAlert()
         alert.messageText = title
-        if let detail { alert.informativeText = detail }
+        if let detail {
+            alert.informativeText = detail
+        }
         alert.addButton(withTitle: language.string(.commonOk))
         await alert.beginSheetModal(for: window)
     }

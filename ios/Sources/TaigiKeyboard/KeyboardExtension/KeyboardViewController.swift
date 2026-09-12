@@ -191,9 +191,13 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
     override func textWillChange(_ textInput: UITextInput?) {
         super.textWillChange(textInput)
         guard let manager = actionHandler?.composingManager else { return }
-        if manager.selfCommitInProgress { return }
+        if manager.selfCommitInProgress {
+            return
+        }
         let id = textInput.map { ObjectIdentifier($0 as AnyObject) }
-        if lastTextInputID == id { return }
+        if lastTextInputID == id {
+            return
+        }
         lastTextInputID = id
         // Real input-field switch — hard-abort the continuous composition
         // (Model B: nailed segments were never in the document, so the

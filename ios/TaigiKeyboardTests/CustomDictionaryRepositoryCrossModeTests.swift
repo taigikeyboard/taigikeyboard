@@ -1,5 +1,5 @@
-@testable import TaigiKeyboard
 import SQLite3
+@testable import TaigiKeyboard
 import XCTest
 
 /// v3.6.1 R3 — `custom_dictionary.db` cross-input-mode search via the
@@ -93,7 +93,6 @@ final class CustomDictionaryRepositoryCrossModeTests: XCTestCase {
         try await assertFinds(input: "tsiah", mode: .tl, expectedHanzi: "食")
         try await assertFinds(input: "chiah", mode: .poj, expectedHanzi: "食")
     }
-
 
     /// INVARIANT_CUSTOM_DICT_CAPACITY — the 30000-row cap constant is pinned on
     /// both platforms (Android `CustomDictionaryCapacityPolicy.MAX_ENTRIES`), and

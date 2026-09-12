@@ -183,5 +183,4 @@ final class VerticalCandidateRowMaterialisationTests: XCTestCase {
     private func builtRows(in panel: CandidateBasePanel) -> [Int] {
         itemsByRow(in: panel).keys.sorted()
     }
-
 }

@@ -292,7 +292,9 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
     /// hold whichever layout the setting names without knowing which subclass
     /// it is. Every layout is authoritative for its own selection.
 
-    var isEmpty: Bool { true }
+    var isEmpty: Bool {
+        true
+    }
 
     /// The absolute index of the selected candidate. Stored here because every
     /// layout speaks the same absolute-index identity; meaningful only while
@@ -323,7 +325,9 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
 
     /// Empties the window so nothing can be selected or committed from it —
     /// hiding must drop the state, not just the pixels.
-    func clear() { hide() }
+    func clear() {
+        hide()
+    }
 
     /// Moves the selection the way this layout reads `direction`.
     func navigate(_: CandidateNavigation) {
@@ -413,7 +417,9 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
     /// horizontal window with more than one page, the collapsed expandable
     /// window with an overflow. The vertical layout never pages, so the
     /// default stands for it.
-    var wantsPillCorners: Bool { false }
+    var wantsPillCorners: Bool {
+        false
+    }
 
     /// Re-applies the corner mask for the current frame size and page state.
     func updateCorners() {
@@ -455,5 +461,7 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
 /// A plain view whose origin is the top-left corner, so layout code can place
 /// row 0 at y=0 and grow downward the way it reads.
 class FlippedContainerView: NSView {
-    override var isFlipped: Bool { true }
+    override var isFlipped: Bool {
+        true
+    }
 }

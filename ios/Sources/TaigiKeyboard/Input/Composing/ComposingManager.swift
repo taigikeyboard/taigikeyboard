@@ -164,7 +164,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
     ) -> (effectiveSwapped: Bool, outputBothScripts: Bool) {
         (
             effectiveSwapped: settings.isTranslateSwapped || settings.inputMode == .tps,
-            outputBothScripts: settings.isOutputBothScripts
+            outputBothScripts: settings.isOutputBothScripts,
         )
     }
 
@@ -503,11 +503,15 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         // effect-backed signal. `applyAsSelfCommit` body inlined (3 lines)
         // for the same reason — semantics identical to the helper.
         let hasCommitText = transition.effects.contains { effect in
-            if case .commitTextReplacingPreedit = effect { return true }
+            if case .commitTextReplacingPreedit = effect {
+                return true
+            }
             return false
         }
         let hasNail = transition.effects.contains { effect in
-            if case .nextWordUpdateLastSelectedWord = effect { return true }
+            if case .nextWordUpdateLastSelectedWord = effect {
+                return true
+            }
             return false
         }
         // Model B: nail (mid-commit) emits no commit-text; the learning
@@ -673,8 +677,12 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
     private func apply(_ transition: RustEngineBridge.ComposingTransition) {
         // Phase 1 — mutate observable mirror (guarded-inequality writes keep
         // idle→idle silent and avoid redundant SwiftUI invalidation).
-        if isComposing != transition.isComposing { isComposing = transition.isComposing }
-        if rawInput != transition.rawInput { rawInput = transition.rawInput }
+        if isComposing != transition.isComposing {
+            isComposing = transition.isComposing
+        }
+        if rawInput != transition.rawInput {
+            rawInput = transition.rawInput
+        }
         if !transition.effects.isEmpty, composingText != transition.displayText {
             composingText = transition.displayText
         }

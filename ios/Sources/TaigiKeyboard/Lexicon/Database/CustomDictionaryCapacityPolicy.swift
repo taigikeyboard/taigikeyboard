@@ -39,7 +39,9 @@ enum CustomDictionaryCapacityPolicy {
     /// row (same `id`) is not an insert and bypasses the check.
     /// Must run inside the same transaction as the write to avoid TOCTOU.
     static func guardInsertCapacity(db: OpaquePointer, id: String) throws {
-        if entryExists(db: db, id: id) { return }
+        if entryExists(db: db, id: id) {
+            return
+        }
         guard currentEntryCount(db: db) < maxEntries else {
             throw LexiconError.queryExecutionFailed(
                 "Custom dictionary is full (max \(maxEntries) entries)",

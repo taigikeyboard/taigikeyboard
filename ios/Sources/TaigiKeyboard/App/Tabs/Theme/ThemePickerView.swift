@@ -225,7 +225,7 @@ private struct CreateNewThemeCard: View {
 private struct ThemeCardAction: Identifiable {
     let id = UUID()
     let title: String
-    var role: ButtonRole? = nil
+    var role: ButtonRole?
     let action: () -> Void
 }
 
@@ -236,7 +236,7 @@ private struct ThemeGalleryCard: View {
     let title: String
     /// Full appearance for the live custom-theme preview; `nil` for built-in cards
     /// (they render via `previewImageName` and never reach the live preview).
-    var appearance: ThemeAppearance? = nil
+    var appearance: ThemeAppearance?
     /// Screenshot asset name; `nil` → render the live custom-theme button preview.
     let previewImageName: String?
     let isSelected: Bool

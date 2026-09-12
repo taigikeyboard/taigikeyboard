@@ -330,8 +330,8 @@ final class CustomDictionaryStore: @unchecked Sendable {
                 // that write already left current keys behind. Writing the
                 // snapshot's keys over those would re-file the word under a
                 // romanization it no longer has.
-                let current = Dictionary(
-                    try Self.entryRomans(connection).map { ($0.id, $0.roman) },
+                let current = try Dictionary(
+                    Self.entryRomans(connection).map { ($0.id, $0.roman) },
                     uniquingKeysWith: { first, _ in first },
                 )
                 for entry in rederived where current[entry.id] == entry.roman {

@@ -120,7 +120,7 @@ final class CrossTierShortcutConflictTests: XCTestCase {
                 occupiedBy: KeyboardShortcuts.Shortcut(key, modifiers: [.control]),
             )
             XCTAssertEqual(
-                chord?.key, String(try XCTUnwrap(UnicodeScalar(functionKey))),
+                chord?.key, try String(XCTUnwrap(UnicodeScalar(functionKey))),
                 "the library reports a display glyph for this key",
             )
         }
@@ -197,7 +197,7 @@ final class CrossTierShortcutConflictTests: XCTestCase {
     func testAComposingChord_isSeenByTheGlobalRowHoldingIt() throws {
         recordGlobal(.init(.r, modifiers: [.control, .command]), for: .toggleRomanization)
 
-        let holders = ShortcutConflicts.globalActionsHolding(try chord("r", [.control, .command]))
+        let holders = try ShortcutConflicts.globalActionsHolding(chord("r", [.control, .command]))
 
         XCTAssertEqual(holders, [.toggleRomanization])
     }

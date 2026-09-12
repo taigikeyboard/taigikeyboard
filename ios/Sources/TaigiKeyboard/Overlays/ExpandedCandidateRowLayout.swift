@@ -40,7 +40,9 @@ enum ExpandedCandidateRowLayout {
             currentRowWidth += (currentRow.count == 1 ? 0 : itemSpacing) + cellWidth
         }
 
-        if !currentRow.isEmpty { rows.append(currentRow) }
+        if !currentRow.isEmpty {
+            rows.append(currentRow)
+        }
         return rows
     }
 }

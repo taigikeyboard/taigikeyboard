@@ -18,56 +18,56 @@ public enum Category: Equatable {
     case symbols
     case flags
     case custom(String, String)
-    
+
     static var count = 10
-    
+
     var title: String {
         switch self {
         case .recents:
-            return "Frequently Used"
+            "Frequently Used"
         case .smileysAndPeople:
-            return "Smileys & People"
+            "Smileys & People"
         case .animalsAndNature:
-            return "Animals & Nature"
+            "Animals & Nature"
         case .foodAndDrink:
-            return "Food & Drink"
+            "Food & Drink"
         case .activity:
-            return "Activity"
+            "Activity"
         case .travelAndPlaces:
-            return "Travel & Places"
+            "Travel & Places"
         case .objects:
-            return "Objects"
+            "Objects"
         case .symbols:
-            return "Symbols"
+            "Symbols"
         case .flags:
-            return "Flags"
-        case .custom(let title, _):
-            return title
+            "Flags"
+        case let .custom(title, _):
+            title
         }
     }
-    
+
     var iconName: String {
         switch self {
         case .recents:
-            return "ic_recents"
+            "ic_recents"
         case .smileysAndPeople:
-            return "ic_smileys_people"
+            "ic_smileys_people"
         case .animalsAndNature:
-            return "ic_animals_nature"
+            "ic_animals_nature"
         case .foodAndDrink:
-            return "ic_food_drink"
+            "ic_food_drink"
         case .activity:
-            return "ic_activity"
+            "ic_activity"
         case .travelAndPlaces:
-            return "ic_travel_places"
+            "ic_travel_places"
         case .objects:
-            return "ic_objects"
+            "ic_objects"
         case .symbols:
-            return "ic_symbols"
+            "ic_symbols"
         case .flags:
-            return "ic_flags"
-        case .custom(_, let iconName):
-            return iconName
+            "ic_flags"
+        case let .custom(_, iconName):
+            iconName
         }
     }
 }

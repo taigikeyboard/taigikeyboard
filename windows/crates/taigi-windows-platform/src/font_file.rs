@@ -176,7 +176,9 @@ mod imp {
         let mut families = Vec::with_capacity(count as usize);
         for index in 0..count {
             // SAFETY: `index` is inside the count read above.
-            let Ok(family) = (unsafe { collection.GetFontFamily(index) }) else { continue };
+            let Ok(family) = (unsafe { collection.GetFontFamily(index) }) else {
+                continue;
+            };
             // A family with no readable name is skipped rather than failing
             // the list: one odd font must not empty the pane.
             if let Ok(name) = family_name_of(&family) {
@@ -195,9 +197,10 @@ mod imp {
         let mut index = 0_u32;
         let mut exists = BOOL(0);
         // SAFETY: a live NUL-terminated locale name and two live out-parameters.
-        let found = unsafe { names.FindLocaleName(PCWSTR(locale.as_ptr()), &mut index, &mut exists) }
-            .is_ok()
-            && exists.as_bool();
+        let found =
+            unsafe { names.FindLocaleName(PCWSTR(locale.as_ptr()), &mut index, &mut exists) }
+                .is_ok()
+                && exists.as_bool();
         localized_string(&names, if found { index } else { 0 })
     }
 
@@ -309,7 +312,6 @@ mod imp {
     fn refused(error: windows::core::Error) -> FontFileError {
         FontFileError::DirectWrite(error.to_string())
     }
-
 }
 
 #[cfg(windows)]
@@ -397,7 +399,10 @@ mod tests {
     #[test]
     fn every_listed_family_is_found_again_by_the_name_it_was_listed_under() {
         let families = system_families().expect("the system collection lists");
-        assert!(families.len() > 10, "suspiciously few families: {families:?}");
+        assert!(
+            families.len() > 10,
+            "suspiciously few families: {families:?}"
+        );
         // SAFETY: DirectWrite calls on the test thread with live locals.
         unsafe {
             let factory: IDWriteFactory3 =

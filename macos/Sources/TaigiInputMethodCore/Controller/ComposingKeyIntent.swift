@@ -301,7 +301,9 @@ enum ComposingKeyIntent: Equatable {
         // Above the named-special-key guard for the same reason, since Return,
         // Space and Tab are all keys AppKit names and all keys a user may bind.
         if isComposing, let action = bindings.action(for: key) {
-            if isShowingCandidates || !action.requiresCandidates { return action.intent }
+            if isShowingCandidates || !action.requiresCandidates {
+                return action.intent
+            }
             // With the window switched off there is never a candidate to
             // confirm, swap or page to, so every key that would ends the
             // composition as typed instead — the romanization with its tone
@@ -310,7 +312,9 @@ enum ComposingKeyIntent: Equatable {
             // user can hold, where "Return commits but Tab is swallowed"
             // would read as a stuck key. Only while the window is ON does a
             // candidate key with no bar up fall through to the host below.
-            if !bindings.isCandidateWindowEnabled { return .commit }
+            if !bindings.isCandidateWindowEnabled {
+                return .commit
+            }
         }
 
         // Command, control and option chords are the host's shortcuts. This

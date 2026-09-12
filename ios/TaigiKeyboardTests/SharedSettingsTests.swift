@@ -1,5 +1,5 @@
-@testable import TaigiKeyboard
 import SwiftUI
+@testable import TaigiKeyboard
 import XCTest
 
 /// Tests for `SharedSettings.setInputMode(_:)` / `setKeyboardLayoutType(_:)`
@@ -108,7 +108,7 @@ final class SharedSettingsTests: XCTestCase {
         // is guarded on `keyboardLayoutType == .tps`.
         settings.setInputMode(.poj)
         settings.setKeyboardLayoutType(.qwerty)
-        settings.setInputMode(.tps)              // layoutBeforeTps = .qwerty
+        settings.setInputMode(.tps) // layoutBeforeTps = .qwerty
         defaults.set(KeyboardLayoutType.moe2.rawValue, forKey: "keyboardLayoutType") // raw layout swap
 
         settings.setInputMode(.tl)

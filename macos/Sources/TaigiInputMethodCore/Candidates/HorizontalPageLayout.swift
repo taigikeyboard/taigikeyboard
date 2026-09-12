@@ -143,13 +143,13 @@ struct HorizontalPageLayout: Equatable {
     func target(for direction: CandidateNavigation, from selection: Int) -> Int? {
         switch direction {
         case .right, .nextCandidate:
-            return selection + 1 < candidateCount ? selection + 1 : nil
+            selection + 1 < candidateCount ? selection + 1 : nil
         case .left, .previousCandidate:
-            return selection > 0 ? selection - 1 : nil
+            selection > 0 ? selection - 1 : nil
         case .down, .pageDown:
-            return pagedTarget(from: selection, step: 1)
+            pagedTarget(from: selection, step: 1)
         case .up, .pageUp:
-            return pagedTarget(from: selection, step: -1)
+            pagedTarget(from: selection, step: -1)
         }
     }
 

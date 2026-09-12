@@ -252,8 +252,12 @@ struct TaigiKeyboardView: View {
         }
         .onChange(of: composingManager.isComposing) { _, isComposing in
             guard isComposing else { return }
-            if panels.isSymbolExpanded { panels.isSymbolExpanded = false }
-            if panels.isSettingsExpanded { panels.isSettingsExpanded = false }
+            if panels.isSymbolExpanded {
+                panels.isSymbolExpanded = false
+            }
+            if panels.isSettingsExpanded {
+                panels.isSettingsExpanded = false
+            }
         }
     }
 
@@ -333,19 +337,25 @@ struct TaigiKeyboardView: View {
                         let wasOpen = panels.isSettingsExpanded
                         panels.closeAll()
                         expandState.collapse()
-                        if !wasOpen { panels.isSettingsExpanded = true }
+                        if !wasOpen {
+                            panels.isSettingsExpanded = true
+                        }
                     },
                     onLayoutTap: {
                         let wasOpen = panels.isLayoutExpanded
                         panels.closeAll()
                         expandState.collapse()
-                        if !wasOpen { panels.isLayoutExpanded = true }
+                        if !wasOpen {
+                            panels.isLayoutExpanded = true
+                        }
                     },
                     onSymbolTap: {
                         let wasOpen = panels.isSymbolExpanded
                         panels.closeAll()
                         expandState.collapse()
-                        if !wasOpen { panels.isSymbolExpanded = true }
+                        if !wasOpen {
+                            panels.isSymbolExpanded = true
+                        }
                     },
                     onDismissKeyboard: { [unowned services] in
                         panels.closeAll()

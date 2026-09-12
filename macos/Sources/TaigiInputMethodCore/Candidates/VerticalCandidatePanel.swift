@@ -67,11 +67,16 @@ final class VerticalCandidatePanel: CandidateBasePanel {
     private var rowTrailingInset: CGFloat = 0
     private var rowPrimaryColumnWidth: CGFloat = 0
 
-    override var allItemViews: [CandidateItemView] { Array(itemViewsByRow.values) }
+    override var allItemViews: [CandidateItemView] {
+        Array(itemViewsByRow.values)
+    }
+
     private var boundsObserver: (any NSObjectProtocol)?
     private var scrollerStyleObserver: (any NSObjectProtocol)?
 
-    override var isEmpty: Bool { cells.isEmpty }
+    override var isEmpty: Bool {
+        cells.isEmpty
+    }
 
     override init(style: CandidateWindowStyle, metrics: CandidateMetrics) {
         super.init(style: style, metrics: metrics)
@@ -136,7 +141,9 @@ final class VerticalCandidatePanel: CandidateBasePanel {
 
     // MARK: - Content
 
-    private var rowHeight: CGFloat { metrics.itemHeight + Self.separatorHeight }
+    private var rowHeight: CGFloat {
+        metrics.itemHeight + Self.separatorHeight
+    }
 
     override func updateCandidates(_ newCells: [CandidateCellContent]) -> CGSize {
         cells = Array(newCells.prefix(Self.maxDisplayCandidates))

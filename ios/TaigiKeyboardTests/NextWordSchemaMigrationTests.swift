@@ -1,5 +1,5 @@
-@testable import TaigiKeyboard
 import SQLite3
+@testable import TaigiKeyboard
 import XCTest
 
 /// `user_association.db` schema migrations, up to and including the v6 key

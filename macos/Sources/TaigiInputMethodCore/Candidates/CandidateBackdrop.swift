@@ -112,7 +112,9 @@ private final class VibrancyBackgroundView: NSVisualEffectView {
     }
 
     @available(*, unavailable)
-    required init?(coder _: NSCoder) { fatalError() }
+    required init?(coder _: NSCoder) {
+        fatalError()
+    }
 
     func applyUniformCorners(size: NSSize, radius: CGFloat) {
         applyAsymmetricCorners(size: size, leftRadius: radius, rightRadius: radius)
@@ -122,7 +124,9 @@ private final class VibrancyBackgroundView: NSVisualEffectView {
         guard size.width > 0, size.height > 0 else { return }
         // Rebuilding the mask image is the expensive part, and resize events
         // repeat the same geometry — repaint only when it actually changed.
-        if size == cachedSize, leftRadius == cachedLeft, rightRadius == cachedRight { return }
+        if size == cachedSize, leftRadius == cachedLeft, rightRadius == cachedRight {
+            return
+        }
         cachedSize = size
         cachedLeft = leftRadius
         cachedRight = rightRadius
@@ -159,7 +163,9 @@ private final class GlassBackgroundView: NSGlassEffectView {
     }
 
     @available(*, unavailable)
-    required init?(coder _: NSCoder) { fatalError() }
+    required init?(coder _: NSCoder) {
+        fatalError()
+    }
 
     func applyUniformCorners(size _: NSSize, radius: CGFloat) {
         layer?.mask = nil

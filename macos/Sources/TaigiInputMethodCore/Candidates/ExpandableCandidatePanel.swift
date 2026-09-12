@@ -53,7 +53,10 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
     private var expandedItemViews: [CandidateItemView] = []
 
     /// Both lists: expanded, the grid's later rows are numbered too.
-    override var allItemViews: [CandidateItemView] { row0ItemViews + expandedItemViews }
+    override var allItemViews: [CandidateItemView] {
+        row0ItemViews + expandedItemViews
+    }
+
     private var separatorViews: [CandidateSeparatorView] = []
     private var chevronView: CandidateChevronView!
     /// Sequoia's expanded selection: a translucent bar under the selected
@@ -63,7 +66,9 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
     private var isAnimating = false
     private var scrollerStyleObserver: (any NSObjectProtocol)?
 
-    override var isEmpty: Bool { cells.isEmpty }
+    override var isEmpty: Bool {
+        cells.isEmpty
+    }
 
     override init(style: CandidateWindowStyle, metrics: CandidateMetrics) {
         super.init(style: style, metrics: metrics)
@@ -130,18 +135,35 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
 
     // MARK: - Content
 
-    private var itemHeight: CGFloat { metrics.itemHeight }
-    private var rowHeight: CGFloat { itemHeight + Self.separatorHeight }
+    private var itemHeight: CGFloat {
+        metrics.itemHeight
+    }
+
+    private var rowHeight: CGFloat {
+        itemHeight + Self.separatorHeight
+    }
+
     /// Whether the list holds more than the collapsed row shows — what the
     /// chevron, the paging-edge corner and the expand paths all key on.
-    private var hasOverflow: Bool { cells.count > collapsedRow.count }
-    private var gridWidth: CGFloat { expandedColumnWidth * CGFloat(expandedColumnCount) }
+    private var hasOverflow: Bool {
+        cells.count > collapsedRow.count
+    }
+
+    private var gridWidth: CGFloat {
+        expandedColumnWidth * CGFloat(expandedColumnCount)
+    }
+
     /// The grid's total width, for the tests that pin what a long candidate
     /// does to it — the panel itself renders the grid rather than reporting it.
-    var expandedGridWidthForTesting: CGFloat { gridWidth }
+    var expandedGridWidthForTesting: CGFloat {
+        gridWidth
+    }
+
     /// The chevron's reserved width — what the collapsed row packs around and
     /// lays the chevron out at.
-    private var chevronWidth: CGFloat { chevronView.intrinsicContentSize.width }
+    private var chevronWidth: CGFloat {
+        chevronView.intrinsicContentSize.width
+    }
 
     /// The grid's column width: the nine-slot row the collapsed mode packs to,
     /// widened until the longest candidate fits a full row of columns, and
@@ -440,9 +462,9 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
     private func layoutForMode() -> CGSize {
         switch displayMode {
         case .collapsed:
-            return rebuildCollapsedFrames()
+            rebuildCollapsedFrames()
         case .expanded:
-            return layoutExpanded()
+            layoutExpanded()
         }
     }
 
@@ -802,7 +824,9 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
 
     // MARK: - Chrome
 
-    override var wantsPillCorners: Bool { displayMode == .collapsed && hasOverflow }
+    override var wantsPillCorners: Bool {
+        displayMode == .collapsed && hasOverflow
+    }
 
     private func removeExpandedItemViews() {
         expandedItemViews.forEach { $0.removeFromSuperview() }
@@ -879,9 +903,13 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
         for _ in 0 ..< 8 {
             let mt = 1 - t
             let xError = 3 * mt * mt * t * x1 + 3 * mt * t * t * x2 + t * t * t - x
-            if abs(xError) < 1e-7 { break }
+            if abs(xError) < 1e-7 {
+                break
+            }
             let derivative = 3 * mt * mt * x1 + 6 * mt * t * (x2 - x1) + 3 * t * t * (1 - x2)
-            if abs(derivative) < 1e-7 { break }
+            if abs(derivative) < 1e-7 {
+                break
+            }
             t -= xError / derivative
         }
         return 3 * t * t - 2 * t * t * t
@@ -964,7 +992,9 @@ final class CandidateRowHighlightView: NSView {
     }
 
     @available(*, unavailable)
-    required init?(coder _: NSCoder) { fatalError() }
+    required init?(coder _: NSCoder) {
+        fatalError()
+    }
 
     override func draw(_: NSRect) {
         let isDark = effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua

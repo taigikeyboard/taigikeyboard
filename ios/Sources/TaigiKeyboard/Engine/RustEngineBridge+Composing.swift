@@ -636,7 +636,9 @@ public extension RustEngineBridge {
         request.id = nextRequestID()
         request.generation = generation
         request.payload = .composing(composing)
-        if let config { request.configSnapshot = config }
+        if let config {
+            request.configSnapshot = config
+        }
 
         guard let bytes = encodeRequest(request, op: op) else { return nil }
         logger.debug("[FFI->] fn=composingDispatch op=\(op) id=\(request.id) generation=\(generation)")

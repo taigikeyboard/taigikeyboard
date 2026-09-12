@@ -35,14 +35,37 @@ final class ThemePreviewEnvironment: KeyboardEnvironment {
         inputMode = base.inputMode
     }
 
-    var colorSettings: KeyboardColorSettings { appearance.colors }
-    func resolvedAppearance(for _: ColorScheme) -> ThemeAppearance { appearance }
-    var keyFontSizeScale: CGFloat { CGFloat(appearance.keyFontSizeScale) }
-    var keyBorderWidth: CGFloat { CGFloat(appearance.keyBorderWidth) }
-    var candidateTextSizeScale: CGFloat { CGFloat(appearance.candidateTextSizeScale) }
-    var fontType: FontType { base.fontType }
-    var keyboardLayoutType: KeyboardLayoutType { base.keyboardLayoutType }
-    var settingsUserDefaults: UserDefaults { base.settingsUserDefaults }
+    var colorSettings: KeyboardColorSettings {
+        appearance.colors
+    }
+
+    func resolvedAppearance(for _: ColorScheme) -> ThemeAppearance {
+        appearance
+    }
+
+    var keyFontSizeScale: CGFloat {
+        CGFloat(appearance.keyFontSizeScale)
+    }
+
+    var keyBorderWidth: CGFloat {
+        CGFloat(appearance.keyBorderWidth)
+    }
+
+    var candidateTextSizeScale: CGFloat {
+        CGFloat(appearance.candidateTextSizeScale)
+    }
+
+    var fontType: FontType {
+        base.fontType
+    }
+
+    var keyboardLayoutType: KeyboardLayoutType {
+        base.keyboardLayoutType
+    }
+
+    var settingsUserDefaults: UserDefaults {
+        base.settingsUserDefaults
+    }
 
     func snapshot(for _: ColorScheme) -> SettingsSnapshot {
         SettingsSnapshot(

@@ -283,9 +283,9 @@ final class ComposingKeyBindingsTests: XCTestCase {
 
     /// Restoring one must not leave its default on two rows.
     func testRestoringAnAlwaysBoundAction_takesItsChordBack() throws {
-        let bindings = ComposingKeyBindings(chords: [
+        let bindings = try ComposingKeyBindings(chords: [
             .confirmHighlighted: nil,
-            .pageForward: try chord("\r"),
+            .pageForward: chord("\r"),
         ])
 
         XCTAssertEqual(bindings.chord(for: .confirmHighlighted), try chord("\r"))
@@ -334,9 +334,9 @@ final class ComposingKeyBindingsTests: XCTestCase {
     /// Swapping the pair is a state a user can ask for, and both rows stay full
     /// so nothing is restored over it.
     func testTheAlwaysBoundActions_maySwapTheirChords() throws {
-        let bindings = ComposingKeyBindings(chords: [
-            .commitLiteral: try chord("\r"),
-            .confirmHighlighted: try chord("\r", .shift),
+        let bindings = try ComposingKeyBindings(chords: [
+            .commitLiteral: chord("\r"),
+            .confirmHighlighted: chord("\r", .shift),
         ])
 
         XCTAssertEqual(bindings.chord(for: .commitLiteral), try chord("\r"))
@@ -346,7 +346,7 @@ final class ComposingKeyBindingsTests: XCTestCase {
     /// Their two chords belong to them: an ordinary action holding one gives it
     /// up, so the keys that end a composition stay where a user can find them.
     func testAnOrdinaryAction_cannotHoldAnAlwaysBoundChord() throws {
-        let bindings = ComposingKeyBindings(chords: [.nextCandidate: try chord("\r", .shift)])
+        let bindings = try ComposingKeyBindings(chords: [.nextCandidate: chord("\r", .shift)])
 
         XCTAssertNil(bindings.chord(for: .nextCandidate))
         XCTAssertEqual(bindings.chord(for: .commitLiteral), try chord("\r", .shift))
@@ -359,7 +359,7 @@ final class ComposingKeyBindingsTests: XCTestCase {
     /// slot pass, and a chorded digit is an ordinary chord under both. The
     /// scheme changes which keys pick, never which chords resolve.
     func testTheToneScheme_leavesTheChordsAlone() throws {
-        let stored: [ComposingAction: ComposingKeyChord?] = [.pageForward: try chord("3", .control)]
+        let stored: [ComposingAction: ComposingKeyChord?] = try [.pageForward: chord("3", .control)]
 
         for scheme in ToneInputScheme.allCases {
             let bindings = ComposingKeyBindings(chords: stored, toneScheme: scheme)
@@ -378,10 +378,10 @@ final class ComposingKeyBindingsTests: XCTestCase {
         let keypad = try chord("\u{3}")
 
         XCTAssertEqual(keypad, try chord("\r"))
-        XCTAssertTrue(keypad.matches(try snapshot("\r")))
-        XCTAssertTrue(try chord("\r").matches(try snapshot("\u{3}")))
+        XCTAssertTrue(try keypad.matches(snapshot("\r")))
+        XCTAssertTrue(try chord("\r").matches(snapshot("\u{3}")))
         XCTAssertEqual(
-            ComposingKeyBindings.default.action(for: try snapshot("\u{3}")),
+            try ComposingKeyBindings.default.action(for: snapshot("\u{3}")),
             .confirmHighlighted,
             "the keypad commits out of the box, as it always has",
         )
@@ -397,9 +397,9 @@ final class ComposingKeyBindingsTests: XCTestCase {
         let backTab = try chord("\u{19}", .shift)
 
         XCTAssertEqual(backTab, try chord("\t", .shift))
-        XCTAssertTrue(backTab.matches(try snapshot("\u{19}", modifiers: .shift)))
+        XCTAssertTrue(try backTab.matches(snapshot("\u{19}", modifiers: .shift)))
         XCTAssertEqual(
-            ComposingKeyBindings.default.action(for: try snapshot("\u{19}", modifiers: .shift)),
+            try ComposingKeyBindings.default.action(for: snapshot("\u{19}", modifiers: .shift)),
             .previousCandidate,
             "⇧⇥ walks back through the candidates out of the box",
         )
@@ -413,14 +413,14 @@ final class ComposingKeyBindingsTests: XCTestCase {
     }
 
     func testActionsHolding_namesTheRowsARecordingWouldEmpty() throws {
-        let bindings = ComposingKeyBindings(chords: [.pageForward: try chord("]")])
+        let bindings = try ComposingKeyBindings(chords: [.pageForward: chord("]")])
 
         XCTAssertEqual(
-            bindings.actionsHolding(try chord("]"), excluding: .nextCandidate),
+            try bindings.actionsHolding(chord("]"), excluding: .nextCandidate),
             [.pageForward],
         )
         XCTAssertEqual(
-            bindings.actionsHolding(try chord("]"), excluding: .pageForward),
+            try bindings.actionsHolding(chord("]"), excluding: .pageForward),
             [],
             "the row being recorded is not its own conflict",
         )
@@ -431,10 +431,10 @@ final class ComposingKeyBindingsTests: XCTestCase {
     func testAChordMatches_onlyItsOwnKeyAndModifiers() throws {
         let optionReturn = try chord("\r", .option)
 
-        XCTAssertTrue(optionReturn.matches(try snapshot("\r", modifiers: .option)))
-        XCTAssertFalse(optionReturn.matches(try snapshot("\r")), "no modifier held")
+        XCTAssertTrue(try optionReturn.matches(snapshot("\r", modifiers: .option)))
+        XCTAssertFalse(try optionReturn.matches(snapshot("\r")), "no modifier held")
         XCTAssertFalse(
-            optionReturn.matches(try snapshot("\r", modifiers: [.option, .shift])),
+            try optionReturn.matches(snapshot("\r", modifiers: [.option, .shift])),
             "an extra chording modifier is a different chord",
         )
     }
@@ -446,7 +446,7 @@ final class ComposingKeyBindingsTests: XCTestCase {
         let optionJ = try chord("j", .option)
 
         XCTAssertTrue(
-            optionJ.matches(try snapshot("∆", modifiers: .option, unmodified: "j")),
+            try optionJ.matches(snapshot("∆", modifiers: .option, unmodified: "j")),
             "⌥J arrives as ∆",
         )
     }
@@ -454,7 +454,7 @@ final class ComposingKeyBindingsTests: XCTestCase {
     func testMatching_ignoresTheNonChordingModifiers() throws {
         let space = try chord(" ")
 
-        XCTAssertTrue(space.matches(try snapshot(" ", modifiers: [.capsLock, .numericPad])))
+        XCTAssertTrue(try space.matches(snapshot(" ", modifiers: [.capsLock, .numericPad])))
     }
 
     // MARK: - A bare key through the intent tiers
@@ -464,7 +464,7 @@ final class ComposingKeyBindingsTests: XCTestCase {
     /// fires its action; everywhere the binding does not apply, the key is
     /// still the punctuation it types.
     func testABareBoundKey_firesItsAction_onlyWhereTheActionApplies() throws {
-        let bindings = ComposingKeyBindings(chords: [.pageForward: try chord("'")])
+        let bindings = try ComposingKeyBindings(chords: [.pageForward: chord("'")])
         let apostrophe = try snapshot("'")
 
         XCTAssertEqual(

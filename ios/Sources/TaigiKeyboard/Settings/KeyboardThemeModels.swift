@@ -37,13 +37,13 @@ struct BuiltInTheme: Equatable {
     /// Asset name for the card preview screenshot (sized to match the 齒盤佈局
     /// page's `layout_*_preview` assets). `nil` → fall back to the live color
     /// swatch.
-    var previewImageName: String? = nil
+    var previewImageName: String?
 
     /// Optional key-outline width override. Built-in themes are colors-first, but
     /// a theme may carry this one appearance scalar so the resolver applies it on
     /// top of the factory sizes (used by the 框線 key-style family). `nil` keeps
     /// the factory `keyBorderWidth` (0 = no border).
-    var keyBorderWidth: Double? = nil
+    var keyBorderWidth: Double?
 
     /// Picks the variant for `scheme`, falling back to the other variant when
     /// one is absent. `.default` (all-nil → KeyboardKit adaptive) is the final
@@ -95,7 +95,6 @@ struct ThemeAppearance: Codable, Equatable {
         keyCornerRadius: 6,
         keyBorderWidth: 0,
     )
-
 }
 
 // Decode lives in an extension so the struct keeps its synthesized memberwise init.

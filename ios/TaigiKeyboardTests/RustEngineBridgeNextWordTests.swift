@@ -273,7 +273,9 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         let result = clearForNewComposing(nowMs: 100)
         var sawClear = false
         for effect in result.effects {
-            if case .clearPredictionsUI = effect { sawClear = true }
+            if case .clearPredictionsUI = effect {
+                sawClear = true
+            }
         }
         XCTAssertTrue(sawClear, "ClearForNewComposing must emit clearPredictionsUI when is_showing=true")
     }

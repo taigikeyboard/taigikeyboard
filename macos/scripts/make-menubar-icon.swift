@@ -29,8 +29,8 @@ let sidePoints = 16
 let scales = [1, 2]
 
 let outputURL = URL(fileURLWithPath: #filePath)
-    .deletingLastPathComponent()   // scripts/
-    .deletingLastPathComponent()   // macos/
+    .deletingLastPathComponent() // scripts/
+    .deletingLastPathComponent() // macos/
     .appendingPathComponent("App/MenuBarIcon.tiff")
 
 func fail(_ message: String) -> Never {
@@ -67,7 +67,7 @@ func makePage(scale: Int, outline: CGPath) -> NSBitmapImageRep {
     guard let page = NSBitmapImageRep(
         bitmapDataPlanes: nil, pixelsWide: pixels, pixelsHigh: pixels,
         bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
-        colorSpaceName: .calibratedRGB, bytesPerRow: 0, bitsPerPixel: 0
+        colorSpaceName: .calibratedRGB, bytesPerRow: 0, bitsPerPixel: 0,
     ) else {
         fail("could not allocate a \(pixels)×\(pixels) bitmap")
     }
@@ -84,7 +84,7 @@ func makePage(scale: Int, outline: CGPath) -> NSBitmapImageRep {
     context.addPath(CGPath(
         roundedRect: CGRect(x: 0, y: 0, width: side, height: side),
         cornerWidth: side * cornerRadiusRatio, cornerHeight: side * cornerRadiusRatio,
-        transform: nil
+        transform: nil,
     ))
     context.fillPath()
 
@@ -95,7 +95,7 @@ func makePage(scale: Int, outline: CGPath) -> NSBitmapImageRep {
     let glyphScale = min(inner / ink.width, inner / ink.height)
     context.concatenate(CGAffineTransform(
         translationX: (side - ink.width * glyphScale) / 2,
-        y: (side - ink.height * glyphScale) / 2
+        y: (side - ink.height * glyphScale) / 2,
     ).scaledBy(x: glyphScale, y: glyphScale)
         .translatedBy(x: -ink.minX, y: -ink.minY))
     context.setBlendMode(.destinationOut)
@@ -109,6 +109,7 @@ let pages = scales.map { makePage(scale: $0, outline: outline) }
 guard let tiff = NSBitmapImageRep.representationOfImageReps(in: pages, using: .tiff, properties: [:]) else {
     fail("could not encode the pages as a TIFF")
 }
+
 do {
     try tiff.write(to: outputURL)
 } catch {
@@ -120,9 +121,11 @@ do {
 guard let written = NSImage(contentsOf: outputURL) else {
     fail("\(outputURL.path) is not readable as an image")
 }
+
 guard written.representations.count == scales.count else {
     fail("expected \(scales.count) pages, got \(written.representations.count)")
 }
+
 for (scale, page) in zip(scales, written.representations) {
     let pixels = sidePoints * scale
     guard page.pixelsWide == pixels, page.pixelsHigh == pixels,
@@ -131,4 +134,5 @@ for (scale, page) in zip(scales, written.representations) {
         fail("page \(scale)× is \(page.pixelsWide)×\(page.pixelsHigh) at \(page.size), expected \(pixels)×\(pixels) at \(sidePoints)pt")
     }
 }
+
 print("✓ \(outputURL.path) — \(scales.map { "\(sidePoints * $0)px" }.joined(separator: " + ")), '\(glyph)' in \(fontPostScriptName)")

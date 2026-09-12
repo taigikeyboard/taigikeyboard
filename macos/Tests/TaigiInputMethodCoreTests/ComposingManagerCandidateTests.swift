@@ -161,7 +161,7 @@ final class ComposingManagerCandidateTests: XCTestCase {
         let executor = RecordingEffectExecutor()
         composeTaigi(manager, executing: executor)
         let candidate = try XCTUnwrap(
-            self.candidate(from: manager, requiringHanji: true) { $0 > 0 && $0 < $1 },
+            candidate(from: manager, requiringHanji: true) { $0 > 0 && $0 < $1 },
             "taigi must offer a hanji candidate shorter than the whole buffer",
         )
         _ = manager.commitCandidate(candidate, executing: executor)

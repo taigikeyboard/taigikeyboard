@@ -136,7 +136,8 @@ enum RetiredSettingsCleanup {
             userDefaults.removeObject(forKey: ComposingAction.settingsKeyName(rawValue: rawValue))
         }
         if let pane = userDefaults.string(forKey: SettingsStore.Keys.selectedSettingsPane.name),
-           retiredPaneRawValues.contains(pane) {
+           retiredPaneRawValues.contains(pane)
+        {
             userDefaults.removeObject(forKey: SettingsStore.Keys.selectedSettingsPane.name)
         }
         for name in retiredShortcutNames {

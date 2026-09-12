@@ -1,5 +1,5 @@
-@testable import TaigiKeyboard
 import SQLite3
+@testable import TaigiKeyboard
 import XCTest
 
 /// v3.6.1 R7 — user-data DBs are excluded from OS / iCloud automatic backup.

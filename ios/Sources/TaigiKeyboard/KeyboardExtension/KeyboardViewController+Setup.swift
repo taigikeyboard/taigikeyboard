@@ -14,7 +14,7 @@ extension KeyboardViewController {
         // Must be called before any KeyboardSettings access. Legacy setup path
         // kept on purpose: the standard setupKeyboardKit(for:) migration did
         // NOT fix the auto-cap symptom on device (2026-08-28) — see the
-        // FIXME layers in KeyboardViewController.
+        // FIXME: layers in KeyboardViewController.
         KeyboardSettings.setupStore(for: .taigiKeyboard)
 
         state.keyboardContext.settings.spacebarLongPressBehavior = .moveInputCursor
@@ -268,5 +268,4 @@ extension KeyboardViewController {
             }
         }
     }
-
 }

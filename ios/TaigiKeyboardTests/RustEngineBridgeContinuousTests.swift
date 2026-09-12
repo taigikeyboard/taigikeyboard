@@ -1,5 +1,5 @@
-@testable import TaigiKeyboard
 import SwiftProtobuf
+@testable import TaigiKeyboard
 import XCTest
 
 /// v3.5.8 Phase 7A — iOS bridge surface tests for the continuous-input slice.
@@ -133,7 +133,9 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
         let reset = RustEngineBridge.composingResetContinuous(generation: envelopeGen)
         XCTAssertFalse(reset.isComposing, "ResetContinuous must exit to Idle")
         let hasClear = reset.effects.contains { effect in
-            if case .nextWordClearForNewComposing = effect { return true }
+            if case .nextWordClearForNewComposing = effect {
+                return true
+            }
             return false
         }
         XCTAssertTrue(
@@ -163,7 +165,9 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
             generation: envelopeGen,
         )
         let selectedRoman: String? = commit.effects.lazy.compactMap { effect -> String? in
-            if case let .nextWordWordSelected(_, roman, _) = effect { return roman }
+            if case let .nextWordWordSelected(_, roman, _) = effect {
+                return roman
+            }
             return nil
         }.first
         XCTAssertNotNil(
@@ -205,7 +209,9 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
         XCTAssertTrue(commit.isComposing, "Mid-commit must stay in Continuous phase")
         XCTAssertEqual(commit.rawInput, "bak", "Pending tail should remain after mid-commit")
         let hasUpdate = commit.effects.contains { effect in
-            if case .nextWordUpdateLastSelectedWord = effect { return true }
+            if case .nextWordUpdateLastSelectedWord = effect {
+                return true
+            }
             return false
         }
         XCTAssertTrue(
@@ -236,9 +242,9 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
             case .nextWordUpdateLastSelectedWord,
                  .nextWordWordSelected,
                  .nextWordClearForNewComposing:
-                return true
+                true
             default:
-                return false
+                false
             }
         }
         XCTAssertFalse(
