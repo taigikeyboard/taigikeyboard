@@ -1,0 +1,6 @@
+New: 候選詞顯示 picker — 漢羅對應, 漢羅濫 (漢字 and 羅馬字 as separate cells), or 羅馬字 only.
+New: 顯示當咧拍的字 — what you are typing is offered as the first candidate; on by default.
+Fixed: POJ tone marks — 落 is la̍uh, not lau̍h; ere and iri mark the last vowel.
+Fixed: POJ o͘ⁿ spelling finds 好 and 呼; double-tapping oo then nn folds both.
+Fixed: a romanized word gets its automatic space in 漢字 mode too.
+Improved: no duplicate candidates under 漢羅濫 or 羅馬字; 文/A hides when it has nothing to swap.
