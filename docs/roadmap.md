@@ -18,44 +18,44 @@
 
 ## Active / In-flight items
 
-### v3.6.1 — 使用者資料跨輸入模式 key 一致性 (USER-scoped 2026-06-03)
+### v3.6.1 — user-data key consistency across input modes (USER-scoped 2026-06-03)
 
-**Status**: Analysis done, NO code. USER 將嚴格 review 多次後決定修復方向。**Full audit**: [`docs/reports/2026-06-03-user-data-cross-mode-audit.md`](reports/2026-06-03-user-data-cross-mode-audit.md).
+**Status**: Analysis done, NO code. The USER will review strictly, several times, before deciding the fix direction. **Full audit**: [`docs/reports/2026-06-03-user-data-cross-mode-audit.md`](reports/2026-06-03-user-data-cross-mode-audit.md).
 
-USER 回報詞關聯紀錄跨版本失效 (連續輸入同漢字詞之前關聯詞跑不出來)。稽核四項使用者資料功能的跨 mode (tl/poj/tps) 共享 + 單→三索引相容性:
+The USER reported that word-association records stop working across versions (under continuous input, the associations previously learned for the same Hanji word no longer surface). The audit covered the four user-data features for cross-mode (tl/poj/tps) sharing and single-index → triple-index compatibility:
 
-- 🔴 **詞關聯** `user_association.db` — 真 bug。`prev_tl` 當 hard filter 但羅馬字形式因路徑/版本而異 (一般 commit=canonical TL `tâi-gí` / 連續輸入=raw slice `taigi`),exact-match miss。修向:prev_tl 降 ranking 訊號 (Codex 排 C>A>B)。**非三索引引起** (prev_tl filter 自 v3.4.7)。
-- 🔴 **自訂詞庫** `custom_dictionary.db` — 真 cross-mode 缺口。單一 raw roman + mode-blind SQLite query,TL/POJ↔TPS 硬 miss。三索引未碰自訂詞路徑,但造成系統字典 tri-index / 自訂詞 single-index 不對稱。
-- ✅ **詞頻** `user_frequency.db` — 已跨 mode 共享 (key=漢字優先),三索引未碰。僅 hanji-absent 自訂 TPS 詞一 sliver。
-- 🟢 **備份復原** `.taigi` JSON — 相容,restore re-derive 自動 re-key。不需修 (依賴上面修好)。
+- 🔴 **Word association** `user_association.db` — a real bug. `prev_tl` is used as a hard filter, but the romanization form differs by path / version (a normal commit stores canonical TL `tâi-gí`; continuous input stores the raw slice `taigi`), so the exact match misses. Fix direction: demote `prev_tl` to a ranking signal (Codex ranks C > A > B). **Not caused by the triple index** (the `prev_tl` filter dates from v3.4.7).
+- 🔴 **Custom dictionary** `custom_dictionary.db` — a real cross-mode gap. A single raw roman key plus a mode-blind SQLite query, so TL/POJ ↔ TPS misses outright. The triple index never touched the custom-word path, but it left the system dictionary tri-indexed and the custom dictionary single-indexed — asymmetric.
+- ✅ **Word frequency** `user_frequency.db` — already shared across modes (key = Hanji first), untouched by the triple index. Only a sliver: hanji-absent custom TPS words.
+- 🟢 **Backup / restore** `.taigi` JSON — compatible; restore re-derives and therefore re-keys automatically. No fix needed (depends on the fixes above).
 
-**三索引價值評估**: 四 bug 無一由三索引造成,回退修不好任何一個。真橫切問題 = 使用者資料層 key 含 mode-dependent surface form (違反 `2026-05-20-triple-index-eval.md` §硬約束 #2「user-history key = candidate identity」)。**v3.6.1 主題 = 補齊該契約到關聯,不動三索引。** 三索引 (系統字典三軸搜尋 + 架構去耦) 價值獨立成立。
+**Value of the triple index**: none of the four bugs is caused by it, and reverting it would fix none of them. The real cross-cutting problem is that user-data keys contain a mode-dependent surface form (violating `2026-05-20-triple-index-eval.md` § hard constraint #2 「user-history key = candidate identity」). **v3.6.1's theme = extend that contract to association; the triple index stays.** The triple index (three-axis system-dictionary search + architectural decoupling) stands on its own value.
 
-**DB 生命週期 + 最佳實踐 (報告 §7,Codex 驗證)**:
-- **升級安全**: 現役 v4 用戶升 v3.6.1 安全 (前提推薦修法純查詢、不 bump schema)。⚠ pre-v3 休眠用戶仍會被既有 `user_association` DROP 清空關聯 (歷史遺留)。**新 cleanup migration 必須 UPDATE/DELETE,絕不可 DROP。**
-- **膨脹**: 詞頻~22k / 關聯~55k bounded ✅;**Android 自訂詞無上限** (iOS 30k throw) = parity gap,user-authored 不可 LRU 驅逐 → 對齊用 hard cap + grandfather + 擋新增。
-- **冗餘清理**: 關聯 dead-row (prev_tl 非 key 卻當 read filter + 被覆寫) → **推薦修法直接消滅整個 dead-row class,無需 data migration,絕不可 DELETE dead rows (relaxed query 下已非 dead)**。orphan 清理 + VACUUM (需 2x 暫存,非啟動路徑) = maintenance 後輪。
-- **最佳實踐**: ✅ parameterized SQL / index / batch txn;缺 VACUUM/integrity/optimize、orphan 清理;record path 吞錯;多處 iOS/Android divergence。Codex 補: 詞頻 key=displayText 多音字合併污染 (違 #7,非 hotfix)、備份隱私政策、多進程長 txn、遷移執行緒。
+**DB lifecycle + best practices (report §7, Codex-verified)**:
+- **Upgrade safety**: current v4 users upgrading to v3.6.1 are safe (assuming the recommended query-only fix, no schema bump). ⚠ Dormant pre-v3 users still have their associations wiped by the existing `user_association` DROP (historical). **Any new cleanup migration must UPDATE / DELETE, never DROP.**
+- **Growth**: frequency ~22k / association ~55k rows, bounded ✅; **Android custom words have no cap** (iOS throws at 30k) = parity gap; user-authored data cannot be LRU-evicted → align with a hard cap + grandfathering + refusing new entries.
+- **Redundancy cleanup**: association dead rows (`prev_tl` is not a key yet acts as a read filter and gets overwritten) → **the recommended fix eliminates the whole dead-row class with no data migration; never DELETE dead rows (under the relaxed query they are no longer dead)**. Orphan cleanup + VACUUM (needs 2× temporary space, off the startup path) = a later maintenance round.
+- **Best practices**: ✅ parameterized SQL / indexes / batched transactions; missing VACUUM / integrity / optimize and orphan cleanup; the record path swallows errors; several iOS / Android divergences. Codex additions: frequency key = displayText merges 一字多音 readings (violates #7, not a hotfix); backup privacy policy; long multi-process transactions; migration thread.
 
-**USER 拍板 2026-06-03**: v3.6.1 **一併處理全部**;well-planned PRs,context 間清除可獨立 debug;大部分 auto mode (依 Claude+Codex 建議);commit to main。**7 個實作 round (R1-R7)** + R0 admin (docs)。詳見報告 §8。
+**USER decision 2026-06-03**: v3.6.1 **handles all of it**; well-planned PRs, each independently debuggable after a context clear; mostly auto mode (per Claude + Codex recommendation); commit to main. **7 implementation rounds (R1–R7)** + R0 admin (docs). Details in report §8.
 
-| Round | Scope | 風險 | auto? |
+| Round | Scope | Risk | auto? |
 |---|---|---|---|
-| R1 🔴 | 詞關聯 recall + dedup:查詢 `WHERE prev_word=?` + prev_tl→ORDER BY ranking (rank-before-truncate, overfetch) + `filter.rs` **toneless-collapse** (toneless→toned 同漢字;2 guardrail:分隔符+聲調不敏感 復用 `roman_reading_eq` / 不做歧義一對多)。無 migration | 低 | ✅+Codex |
-| R2 | 連續輸入 commit 帶 canonical TL (寫層根治 next_tl fragmentation;**proto triple-touch** `CommitContinuous +association_tl` + 候選帶 TL + emit 僅 NextWord 不進 lattice);R5 foundational | 中 | ⚠ Codex fork 先 |
-| R3 | 自訂詞 cross-mode (設計 fork→Codex;**偏好寫入多家族鍵**,查詢端 canonicalize 風險破壞 lattice byte identity) | 中-高 | ⚠ Codex fork 先 |
-| R4 | Android 自訂詞 cap parity (hard cap+grandfather+擋新增,不自動驅逐) | 低 | ✅ |
-| R5 ⚠ | 多音字 freq (hanji,tl) pair-key (修 #7)。**全範圍**:schema ALTER+tl + `FrequencyEntry` proto +tl + ranking key + candidate key extraction + **backup migration** + tolerant;**依賴 R2** | **高** | ⚠ Codex pre/post |
-| R6 | SQLite hygiene (VACUUM on-demand 非啟動路徑/optimize/integrity/journal parity/冗餘 index/record 錯誤上拋) | 低 | ✅ |
-| R7 | 備份/隱私 (learned data 是否 exclude cloud backup;與 R5 backup migration 協調) | 低 | ⛔ USER 產品決策後 |
+| R1 🔴 | Association recall + dedup: query `WHERE prev_word=?` with `prev_tl` moved into ORDER BY ranking (rank-before-truncate, overfetch) + `filter.rs` **toneless-collapse** (toneless → toned, same Hanji; two guardrails: separator- and tone-insensitive compare reusing `roman_reading_eq`; no one-to-many ambiguity). No migration | low | ✅ + Codex |
+| R2 | Continuous-input commit carries canonical TL (write-side root fix for `next_tl` fragmentation; **proto triple-touch** `CommitContinuous +association_tl` + candidates carry TL + emit only to NextWord, not into the lattice); foundational for R5 | medium | ⚠ Codex fork first |
+| R3 | Custom words cross-mode (design fork → Codex; **prefer writing multi-family keys**; canonicalizing on the query side risks breaking lattice byte identity) | medium–high | ⚠ Codex fork first |
+| R4 | Android custom-word cap parity (hard cap + grandfathering + refuse new entries, no auto-eviction) | low | ✅ |
+| R5 ⚠ | 一字多音 frequency `(hanji, tl)` pair key (fixes #7). **Full scope**: schema ALTER + tl, `FrequencyEntry` proto + tl, ranking key, candidate key extraction, **backup migration** + tolerant reader; **depends on R2** | **high** | ⚠ Codex pre / post |
+| R6 | SQLite hygiene (on-demand VACUUM off the startup path / optimize / integrity / journal parity / redundant indexes / record errors propagated) | low | ✅ |
+| R7 | Backup / privacy (whether learned data is excluded from cloud backup; coordinate with the R5 backup migration) | low | ⛔ after the USER's product decision |
 
-依賴:R5→R2 (canonical TL)。R1 讀層自足。順序 R1→R2→R3→R4→R5→R6→R7。刻意不做 (YAGNI/Codex): orphan 清理。
+Dependencies: R5 → R2 (canonical TL). R1 is self-contained on the read side. Order R1 → R2 → R3 → R4 → R5 → R6 → R7. Deliberately not done (YAGNI / Codex): orphan cleanup.
 
-**Root cause (2 co-bug,最終 review 確認)**: (1) `prev_tl` hard-filter → recall miss;(2) `next_tl` raw/canonical fragmentation + filter `(hanzi,tl)` merge → 重複顯示。R1 讀層 (查詢放寬+toneless-collapse) + R2 寫層 (canonical TL) 雙修。
+**Root cause (two co-bugs, confirmed in final review)**: (1) `prev_tl` hard filter → recall miss; (2) `next_tl` raw / canonical fragmentation + the filter's `(hanzi, tl)` merge → duplicate display. Fixed on both sides: R1 read side (relaxed query + toneless-collapse) + R2 write side (canonical TL).
 
-**雙簽核**: Codex 對抗 review 7 objection → 全 resolved → 確認 pass「no remaining objection」(R1 2 guardrail 為條件)。Claude 亦無異議。
+**Dual sign-off**: Codex adversarial review raised 7 objections → all resolved → confirmed pass 「no remaining objection」 (conditional on the two R1 guardrails). Claude had no objection either.
 
-**三索引繼續實作價值 (USER #5)**: **已 100% 完成,無 pending。** 三軸全 first-class — TL 本來是 / POJ B-1#308+B-2#309 / TPS D#334-340。價值已交付 (三軸對稱搜尋 + 架構去耦),應保留;回退=失 TPS/POJ first-class 搜尋 + 重引架構債。與 v3.6.1 (使用者資料層) 正交,**v3.6.1 不動三索引**。
+**Continuing the triple index (USER #5)**: **100% complete, nothing pending.** All three axes first-class — TL always was / POJ B-1 #308 + B-2 #309 / TPS D #334–340. The value is delivered (symmetric three-axis search + architectural decoupling) and should be kept; reverting would lose first-class TPS / POJ search and reintroduce the architectural debt. Orthogonal to v3.6.1 (user-data layer); **v3.6.1 does not touch the triple index.**
 
 ---
 
