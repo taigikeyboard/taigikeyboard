@@ -3,6 +3,7 @@
 
 package com.siansiansu.taigikeyboard.ime.text.composing
 
+import android.view.inputmethod.ExtractedText
 import android.view.inputmethod.InputConnection
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge.ComposingTransition
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge.ComposingTransition.Effect
@@ -15,25 +16,41 @@ import org.junit.Test
 
 class ComposingManagerHostReconciliationTest {
     /**
-     * `InputConnection` stand-in: answers `getTextBeforeCursor` with [textBeforeCursor] (`null` for
-     * a dead connection), records every write by name, and throws on a read when [readsForbidden]
-     * so an idle reconcile is proven not to round-trip.
+     * `InputConnection` stand-in over a document snapshot: `getExtractedText` returns [text] with a
+     * cursor at [cursor] (`null` text = dead connection; [selectionStart] for a non-collapsed
+     * selection; [startOffset] for a partial extraction). Records writes + composing regions, and
+     * throws on a read when [readsForbidden] so an idle reconcile is proven not to round-trip.
      */
     private class FakeHost(
-        private val textBeforeCursor: CharSequence?,
+        private val text: String?,
+        private val cursor: Int = text?.length ?: 0,
+        private val selectionStart: Int = cursor,
+        private val startOffset: Int = 0,
         private val readsForbidden: Boolean = false,
     ) {
         val writes = mutableListOf<String>()
+        val regions = mutableListOf<Pair<Int, Int>>()
 
         val ic: InputConnection =
             Proxy.newProxyInstance(
                 InputConnection::class.java.classLoader,
                 arrayOf(InputConnection::class.java),
-            ) { _, method, _ ->
+            ) { _, method, args ->
                 when (method.name) {
-                    "getTextBeforeCursor" -> {
+                    "getExtractedText" -> {
                         check(!readsForbidden) { "host read while idle" }
-                        textBeforeCursor
+                        text?.let {
+                            ExtractedText().apply {
+                                this.text = it
+                                this.startOffset = this@FakeHost.startOffset
+                                this.selectionStart = this@FakeHost.selectionStart
+                                this.selectionEnd = cursor
+                            }
+                        }
+                    }
+                    "setComposingRegion" -> {
+                        regions += (args!![0] as Int) to (args[1] as Int)
+                        true
                     }
                     "setComposingText", "finishComposingText", "commitText", "deleteSurroundingText" -> {
                         writes += method.name
@@ -73,25 +90,41 @@ class ComposingManagerHostReconciliationTest {
     }
 
     @Test
-    fun reconcile_hostStillHoldsPreedit_keepsStateAndGeneration() {
-        // trace: first key wrote "a"; a stale focus-move report (-1/-1) arrives; the host
-        // re-read (ordered after the write) returns "a" → keep, no generation bump.
-        val manager = composing("a")
+    fun reconcile_hostStillHoldsPreedit_keepsStateAndGeneration_andReassertsSpan() {
+        // trace: doc "abcd", first key wrote "tai" → "abcdtai|"; a stale focus-move report (-1/-1,
+        // its own selEnd=4) arrives; the snapshot (ordered after the write) shows "tai" before
+        // cursor 7 → keep, no generation bump, span re-asserted at [4,7) — never [1,4) from the
+        // report's stale coordinate.
+        val manager = composing("tai")
         val tokenBefore = manager.stateToken()
+        val host = FakeHost("abcdtai")
 
-        manager.reconcileWithHost(FakeHost("a").ic)
+        manager.reconcileWithHost(host.ic)
 
         assertTrue(manager.isComposing())
-        assertEquals("a", manager.getRawInput())
+        assertEquals("tai", manager.getRawInput())
         assertEquals(tokenBefore, manager.stateToken())
+        assertEquals(listOf(4 to 7), host.regions)
+        assertTrue(host.writes.isEmpty())
+    }
+
+    @Test
+    fun reconcile_partialExtraction_usesStartOffset() {
+        // trace: host extracted only "xtai" starting at document offset 100, cursor at local 4.
+        val manager = composing("tai")
+        val host = FakeHost("xtai", startOffset = 100)
+        manager.reconcileWithHost(host.ic)
+        assertEquals(listOf(101 to 104), host.regions)
     }
 
     @Test
     fun reconcile_unicodePreedit_keeps() {
-        // trace: "o͘" = 'o' + U+0358 (two UTF-16 units); read length follows the display text.
+        // trace: "o͘" = 'o' + U+0358 (two UTF-16 units); region length follows the display text.
         val manager = composing("o͘")
-        manager.reconcileWithHost(FakeHost("o͘").ic)
+        val host = FakeHost("o͘")
+        manager.reconcileWithHost(host.ic)
         assertTrue(manager.isComposing())
+        assertEquals(listOf(0 to 2), host.regions)
     }
 
     @Test
@@ -99,7 +132,7 @@ class ComposingManagerHostReconciliationTest {
         // trace: real tap-away — cursor moved, the text before it is no longer the preedit.
         val manager = composing("a")
         val generationBefore = manager.stateToken().generation
-        val host = FakeHost("z")
+        val host = FakeHost("az", cursor = 2)
 
         manager.reconcileWithHost(host.ic)
 
@@ -107,16 +140,27 @@ class ComposingManagerHostReconciliationTest {
         assertNull(manager.getRawInput())
         assertEquals(generationBefore + 1, manager.stateToken().generation)
         assertTrue("INVARIANT_composing_external_region_clear_discards_state: no IC write", host.writes.isEmpty())
+        assertTrue(host.regions.isEmpty())
         // A second report for the same clear finds an idle manager → no read, no further bump.
-        manager.reconcileWithHost(FakeHost("z", readsForbidden = true).ic)
+        manager.reconcileWithHost(FakeHost("az", readsForbidden = true).ic)
         assertEquals(generationBefore + 1, manager.stateToken().generation)
     }
 
     @Test
-    fun reconcile_shortRead_clears() {
+    fun reconcile_cursorMovedInsidePreedit_clears() {
+        // trace: "tai" written, user tapped between "t" and "a" → text before cursor is "t".
         val manager = composing("tai")
-        manager.reconcileWithHost(FakeHost("ai").ic)
+        manager.reconcileWithHost(FakeHost("tai", cursor = 1).ic)
         assertFalse(manager.isComposing())
+    }
+
+    @Test
+    fun reconcile_nonCollapsedSelection_clears() {
+        val manager = composing("tai")
+        val host = FakeHost("tai", cursor = 3, selectionStart = 0)
+        manager.reconcileWithHost(host.ic)
+        assertFalse(manager.isComposing())
+        assertTrue(host.regions.isEmpty())
     }
 
     @Test
@@ -146,7 +190,7 @@ class ComposingManagerHostReconciliationTest {
     @Test
     fun reconcile_commitAThenStartB_lateCallbackForA_keepsB() {
         // trace: commit "A" → start "b" → A's late -1/-1 report. isComposing is true again
-        // for B, so the read must compare against B's preedit.
+        // for B, so the snapshot must be compared against B's preedit.
         val manager = composing("a")
         manager.applyTransition(
             ComposingTransition(
@@ -159,9 +203,9 @@ class ComposingManagerHostReconciliationTest {
             FakeHost("a").ic,
         )
         assertFalse(manager.isComposing())
-        manager.applyTransition(preedit("b"), FakeHost("b").ic)
+        manager.applyTransition(preedit("b"), FakeHost("Ab").ic)
 
-        manager.reconcileWithHost(FakeHost("b").ic)
+        manager.reconcileWithHost(FakeHost("Ab").ic)
 
         assertTrue(manager.isComposing())
         assertEquals("b", manager.getRawInput())

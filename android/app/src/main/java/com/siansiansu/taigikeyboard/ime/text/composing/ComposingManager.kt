@@ -7,6 +7,7 @@
 
 package com.siansiansu.taigikeyboard.ime.text.composing
 
+import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InputConnection
 import com.siansiansu.taigikeyboard.engine.composingAppend
 import com.siansiansu.taigikeyboard.engine.composingAppendHyphen
@@ -831,30 +832,58 @@ class ComposingManager(
 
     /**
      * Re-reads the host to decide whether a "no composing region" signal is
-     * current: `getTextBeforeCursor` is proxied to the editor after our
-     * earlier write, so a stale report still sees the applied preedit
-     * ([displayText] is what the last `UpdatePreedit` wrote — `_displayText`
-     * is assigned before the effects run, so a host callback re-entering
-     * from inside `setComposingText` already compares against the new text).
-     * Exact match keeps state (no generation bump; an in-flight fetch still
-     * publishes); anything else — mismatch, short read, `null` from a dead
-     * connection — is the pre-existing [onExternalComposingRegionCleared].
-     * Text equality is a heuristic: a host that dropped the span but kept
-     * the same text before the cursor (or moved the cursor to the end of
-     * identical text elsewhere) is kept too (`behavioral-invariants.md` §13).
+     * current. One `getExtractedText` snapshot supplies both the text and
+     * the cursor — the report's own selection may predate our write, so it
+     * is never used as a coordinate. The snapshot is proxied to the editor
+     * after our earlier `setComposingText`, so on hosts that honour the
+     * read-after-edit contract a stale report sees the applied preedit; a
+     * host that answers from a cache (Chromium UI-thread path, older Compose
+     * batches) can only be stale as a whole, which lands on the clear
+     * branch ([displayText] is what the last `UpdatePreedit` wrote;
+     * `_displayText` is assigned before the effects run, so a host callback
+     * re-entering from inside `setComposingText` already compares against
+     * the new text). Preedit found right before a collapsed cursor → keep
+     * state (no generation bump; an in-flight fetch still publishes) and
+     * re-assert the composing span over it — the FlorisBoard
+     * `setComposingRegion` shape — so a host that really dropped the span
+     * composes on again instead of inserting the whole preedit on the next
+     * key. Anything else — mismatch, selection, `null` (dead connection or
+     * an editor without extraction) — is the pre-existing
+     * [onExternalComposingRegionCleared].
+     * Remaining heuristic: a cursor at the end of identical text elsewhere
+     * is kept too (`behavioral-invariants.md` §13).
      */
     fun reconcileWithHost(ic: InputConnection?) {
         if (selfCommitInProgress || !_isComposing.value) return
         val expected = _displayText.value
-        val hostTail = if (expected.isEmpty()) null else ic?.getTextBeforeCursor(expected.length, 0)
-        if (hostTail?.toString() == expected) {
-            logger.tdebug(TAG) { "[COMPOSE] fn=reconcileWithHost kept len=${expected.length}" }
+        val region = if (expected.isEmpty()) null else hostPreeditRegion(ic, expected)
+        if (region == null) {
+            logger.tdebug(TAG) { "[COMPOSE] fn=reconcileWithHost cleared expectedLen=${expected.length}" }
+            onExternalComposingRegionCleared()
             return
         }
-        logger.tdebug(TAG) {
-            "[COMPOSE] fn=reconcileWithHost cleared expectedLen=${expected.length} hostLen=${hostTail?.length}"
-        }
-        onExternalComposingRegionCleared()
+        logger.tdebug(TAG) { "[COMPOSE] fn=reconcileWithHost kept region=$region" }
+        ic?.setComposingRegion(region.first, region.second)
+    }
+
+    /**
+     * Absolute `[start, end)` of [expected] when it sits right before the
+     * host's collapsed cursor, from one [InputConnection.getExtractedText]
+     * snapshot; `null` when the read fails, the selection is not collapsed,
+     * or the text before the cursor differs.
+     */
+    private fun hostPreeditRegion(
+        ic: InputConnection?,
+        expected: String,
+    ): Pair<Int, Int>? {
+        val extracted = ic?.getExtractedText(ExtractedTextRequest(), 0) ?: return null
+        val text = extracted.text ?: return null
+        if (extracted.selectionStart != extracted.selectionEnd) return null
+        val localEnd = extracted.selectionEnd
+        val localStart = localEnd - expected.length
+        if (localStart < 0 || localEnd > text.length) return null
+        if (text.subSequence(localStart, localEnd).toString() != expected) return null
+        return (extracted.startOffset + localStart) to (extracted.startOffset + localEnd)
     }
 
     // endregion
