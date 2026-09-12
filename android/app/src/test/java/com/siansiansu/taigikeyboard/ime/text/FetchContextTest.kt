@@ -3,9 +3,7 @@
 
 package com.siansiansu.taigikeyboard.ime.text
 
-import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
-import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettingsProvider
-import com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager
+import com.siansiansu.taigikeyboard.ime.text.composing.composingManagerForTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -13,13 +11,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class FetchContextTest {
-    // The manager never reads settings on the paths exercised here (no engine dispatch).
-    private object UnusedSettingsProvider : EngineSettingsProvider {
-        override val current: EngineSettings
-            get() = error("state token must not read settings")
-    }
-
-    private fun manager() = ComposingManager(settingsProvider = UnusedSettingsProvider)
+    private fun manager() = composingManagerForTest()
 
     @Test
     fun stateToken_isStableWhileNothingChanges() {

@@ -11,7 +11,6 @@ import com.siansiansu.taigikeyboard.ime.core.Subtype
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.popup.KeyPopupManager
 import com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager
-import com.siansiansu.taigikeyboard.ime.text.composing.hostReportsNoComposingRegion
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.key.KeyVariation
 import com.siansiansu.taigikeyboard.ime.text.keyboard.ImeKeyEventDispatcher
@@ -293,35 +292,25 @@ class TextInputManager(
             isComposingEnabled = keyVariation != KeyVariation.PASSWORD
         }
 
-        synchronized(composingLock) {
-            composingManager =
-                if (isComposingEnabled && keyboardMode == KeyboardMode.CHARACTERS) {
-                    ComposingManager(
-                        settingsProvider = taigikeyboard.prefs,
-                        // Route NextWord-shaped composing effects (Continuous
-                        // mid/final commits, abort) into the SmartbarManager-
-                        // owned NextWordHandler.
-                        nextWordRouter = { effect -> smartbarManager.dispatchComposingNextWordEffect(effect) },
-                        logger = taigikeyboard.compositionRoot.logger,
-                        // User-frequency snapshot source for the
-                        // Continuous-input two-phase fetch. Mirrors iOS
-                        // `ComposingManager(userFrequencyService:
-                        // CompositionRoot.userFrequencyService)`.
-                        userFrequencyService = taigikeyboard.compositionRoot.userFreq,
-                        // v3.5.8 Phase 9 Item 12 — `custom_dictionary.db`
-                        // source for the Continuous fetch. Same shared
-                        // instance the legacy lexicon path uses. Mirrors
-                        // iOS `ComposingManager(customDictionaryRepository:
-                        // CompositionRoot.customDictionaryRepository)`.
-                        customDictionaryService = taigikeyboard.compositionRoot.customDict,
-                    )
+        val isComposingEligible = isComposingEnabled && keyboardMode == KeyboardMode.CHARACTERS
+        // Restart in the same editor (app `setText` / `restartInput`): keep the
+        // live manager and reconcile it against the host instead of rebuilding
+        // + wiping the host composing region. That wipe deleted the first key
+        // typed before a late restart landed (USER report 2026-09-12). The
+        // host may still have changed under us, so `reconcileWithHost` below
+        // re-reads it and discards state when the preedit is gone.
+        val isManagerKept =
+            synchronized(composingLock) {
+                if (restarting && isComposingEligible && composingManager != null) {
+                    true
                 } else {
-                    null
+                    composingManager = if (isComposingEligible) newComposingManager() else null
+                    false
                 }
-        }
+            }
 
         capsStateManager.updateCapsState()
-        keyHandler.resetComposingText()
+        if (!isManagerKept) keyHandler.resetComposingText()
         uiCoordinator.publishKeyVariation(keyVariation)
         // Publish the editor's target mode layout SYNCHRONOUSLY so a fresh
         // ComposeView (register-before-start lifecycle order) measures the
@@ -336,17 +325,46 @@ class TextInputManager(
         pushAppearance()
         smartbarManager.onStartInputView(keyboardMode, isComposingEnabled)
 
-        // v3.5.4 lifecycle (plan §4.2): bump on every onStartInputView,
-        // including `restarting=true`. The block above unconditionally
-        // reassigns `composingManager` and the preceding `resetComposingText()`
-        // wiped the host editor's composing region — both signals say
-        // "platform-side state is fresh", so the process-singleton Rust
-        // engine MUST drop its preedit too. Without this bump, a restart
-        // (orientation flip, soft-keyboard re-show) would leave the engine
-        // holding stale buffer text that the next `deleteBackward` query
-        // would read as authoritative (Codex post-impl PR #197 r3163335192).
-        composingManager?.bumpGeneration()
+        val manager = getComposingManager()
+        if (!isManagerKept) {
+            // v3.5.4 lifecycle (plan §4.2): the block above reassigned
+            // `composingManager` and the preceding `resetComposingText()`
+            // wiped the host editor's composing region — both signals say
+            // "platform-side state is fresh", so the process-singleton Rust
+            // engine MUST drop its preedit too. Without this bump, a new
+            // editor would leave the engine holding stale buffer text that
+            // the next `deleteBackward` query would read as authoritative
+            // (Codex post-impl PR #197 r3163335192).
+            manager?.bumpGeneration()
+        } else if (manager != null) {
+            manager.reconcileWithHost(taigikeyboard.currentInputConnection)
+            // The in-flight fetch may have been cancelled and the strip
+            // cleared meanwhile (`onFinishInputView`); a surviving composition
+            // needs its candidates back.
+            if (manager.isComposing()) candidateCoordinator.updateTaigiCandidates()
+        }
     }
+
+    private fun newComposingManager(): ComposingManager =
+        ComposingManager(
+            settingsProvider = taigikeyboard.prefs,
+            // Route NextWord-shaped composing effects (Continuous
+            // mid/final commits, abort) into the SmartbarManager-
+            // owned NextWordHandler.
+            nextWordRouter = { effect -> smartbarManager.dispatchComposingNextWordEffect(effect) },
+            logger = taigikeyboard.compositionRoot.logger,
+            // User-frequency snapshot source for the
+            // Continuous-input two-phase fetch. Mirrors iOS
+            // `ComposingManager(userFrequencyService:
+            // CompositionRoot.userFrequencyService)`.
+            userFrequencyService = taigikeyboard.compositionRoot.userFreq,
+            // v3.5.8 Phase 9 Item 12 — `custom_dictionary.db`
+            // source for the Continuous fetch. Same shared
+            // instance the legacy lexicon path uses. Mirrors
+            // iOS `ComposingManager(customDictionaryRepository:
+            // CompositionRoot.customDictionaryRepository)`.
+            customDictionaryService = taigikeyboard.compositionRoot.customDict,
+        )
 
     override fun onFinishInputView(finishingInput: Boolean) {
         candidateCoordinator.cancelAll()
@@ -461,17 +479,12 @@ class TextInputManager(
         candidatesStart: Int,
         candidatesEnd: Int,
     ) {
-        // When the host editor reports no composing region (both
-        // candidate offsets == -1, e.g. user taps to move the cursor or
-        // changes the selection), sync internal ComposingManager state so
-        // a later commit/reset does not re-insert stale preedit at the
-        // new cursor. Closes the root cause of the commitComposition
-        // fast/slow split in `composing-state-boundary.md` §11.10
-        // divergence #3; pinned by
-        // `INVARIANT_composing_external_region_clear_discards_state`.
-        if (hostReportsNoComposingRegion(candidatesStart, candidatesEnd)) {
-            composingManager?.onExternalComposingRegionCleared()
-        }
+        // A host "no composing region" report (`-1/-1`) must not re-insert
+        // stale preedit at the new cursor (`composing-state-boundary.md`
+        // §11.10 divergence #3; `INVARIANT_composing_external_region_clear_
+        // discards_state`), but it may also be older than our own last write
+        // — the manager reconciles against the host before discarding.
+        composingManager?.onHostSelectionUpdate(candidatesStart, candidatesEnd, taigikeyboard.currentInputConnection)
     }
 
     /** Forwarder kept for external callers — [SmartbarManager],

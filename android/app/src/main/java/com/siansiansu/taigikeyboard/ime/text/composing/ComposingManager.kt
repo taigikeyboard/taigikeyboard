@@ -2,7 +2,8 @@
 // InputConnection. State lives in the Rust singleton EngineHandle; this layer only mirrors the latest
 // raw/display/isComposing/selectedCandidateIndex into 4 StateFlows for sync callers (.value) and Compose
 // observers, without rebuilding the state machine. bumpGeneration fires from
-// onStartInputView(restarting=false) so Rust can detect an input-context change.
+// onStartInputView on a new editor so Rust can detect an input-context change; a same-editor restart
+// keeps the manager and reconciles it against the host (reconcileWithHost).
 
 package com.siansiansu.taigikeyboard.ime.text.composing
 
@@ -146,13 +147,20 @@ class ComposingManager(
 
     /**
      * Bump on real input-context change. Engine drops state silently on the
-     * next request. Wired by [com.siansiansu.taigikeyboard.ime.text.TextInputManager]
-     * in commit 11.
+     * next request, so the mirror is zeroed here too — a mirror still
+     * claiming "composing" after a bump would let [reconcileWithHost] keep a
+     * composition the engine has already discarded (Codex post-impl,
+     * 2026-09-12). Wired by
+     * [com.siansiansu.taigikeyboard.ime.text.TextInputManager] in commit 11.
      *
      * Process-singleton via companion `AtomicLong` so it survives
      * `ComposingManager` reconstruction.
      */
     fun bumpGeneration() {
+        _rawInput.value = ""
+        _displayText.value = ""
+        _isComposing.value = false
+        _selectedCandidateIndex.value = -1
         sharedGeneration.incrementAndGet()
     }
 
@@ -802,11 +810,51 @@ class ComposingManager(
     fun onExternalComposingRegionCleared() {
         if (selfCommitInProgress) return
         if (!_isComposing.value) return
-        _rawInput.value = ""
-        _displayText.value = ""
-        _isComposing.value = false
-        _selectedCandidateIndex.value = -1
         bumpGeneration()
+    }
+
+    /**
+     * Host `onUpdateSelection` entry point. `-1/-1` means the host reports no
+     * composing region — but that report may predate the IME's own last
+     * `setComposingText` (an app focus / draft-restore selection move sent
+     * before it processed our write). Treating every such report as current
+     * lost the first key after an IME / app switch (USER report 2026-09-12),
+     * so the decision is delegated to [reconcileWithHost].
+     */
+    fun onHostSelectionUpdate(
+        candidatesStart: Int,
+        candidatesEnd: Int,
+        ic: InputConnection?,
+    ) {
+        if (hostReportsNoComposingRegion(candidatesStart, candidatesEnd)) reconcileWithHost(ic)
+    }
+
+    /**
+     * Re-reads the host to decide whether a "no composing region" signal is
+     * current: `getTextBeforeCursor` is proxied to the editor after our
+     * earlier write, so a stale report still sees the applied preedit
+     * ([displayText] is what the last `UpdatePreedit` wrote — `_displayText`
+     * is assigned before the effects run, so a host callback re-entering
+     * from inside `setComposingText` already compares against the new text).
+     * Exact match keeps state (no generation bump; an in-flight fetch still
+     * publishes); anything else — mismatch, short read, `null` from a dead
+     * connection — is the pre-existing [onExternalComposingRegionCleared].
+     * Text equality is a heuristic: a host that dropped the span but kept
+     * the same text before the cursor (or moved the cursor to the end of
+     * identical text elsewhere) is kept too (`behavioral-invariants.md` §13).
+     */
+    fun reconcileWithHost(ic: InputConnection?) {
+        if (selfCommitInProgress || !_isComposing.value) return
+        val expected = _displayText.value
+        val hostTail = if (expected.isEmpty()) null else ic?.getTextBeforeCursor(expected.length, 0)
+        if (hostTail?.toString() == expected) {
+            logger.tdebug(TAG) { "[COMPOSE] fn=reconcileWithHost kept len=${expected.length}" }
+            return
+        }
+        logger.tdebug(TAG) {
+            "[COMPOSE] fn=reconcileWithHost cleared expectedLen=${expected.length} hostLen=${hostTail?.length}"
+        }
+        onExternalComposingRegionCleared()
     }
 
     // endregion
@@ -823,7 +871,9 @@ class ComposingManager(
         }
     }
 
-    private fun applyTransition(
+    // `internal` so JVM tests can feed a transition without dispatching the
+    // engine (JNI); production callers are all inside this class.
+    internal fun applyTransition(
         transition: RustEngineBridge.ComposingTransition,
         ic: InputConnection,
     ) {
@@ -969,7 +1019,7 @@ private fun RustEngineBridge.ComposingTransition.Effect.describeKind(): String =
  * editor no longer reports a composing region? Both coordinates are `-1`
  * when no region exists.
  */
-internal fun hostReportsNoComposingRegion(
+private fun hostReportsNoComposingRegion(
     candidatesStart: Int,
     candidatesEnd: Int,
 ): Boolean = candidatesStart == -1 && candidatesEnd == -1
