@@ -20,7 +20,7 @@ enum class CandidateDisplayMode(
     /**
      * 漢羅濫 (§42 second exception): each hanji-bearing candidate lists
      * adjacent one-script 漢字 + 羅馬字 cells, no subtitle; a tap commits
-     * that cell's script. 文/A inert.
+     * that cell's script. 文/A hidden.
      */
     COMBINED("combined"),
     ;
@@ -48,7 +48,7 @@ enum class CandidateDisplayMode(
     /** Whether the cell shows any hanji — false only for [ROMAN_ONLY]; also gates the 括號標註 toggle's enabled state. */
     val showsHanji: Boolean get() = this != ROMAN_ONLY
 
-    /** Only side-by-side has a lead script the 文/A key can flip; the other two fix it, so the key is inert. */
+    /** Only side-by-side has a lead script the 文/A key can flip; the other two fix it, so the key is hidden (bottom row + expanded overlay). */
     val allowsSwapToggle: Boolean get() = this == SIDE_BY_SIDE
 
     companion object {

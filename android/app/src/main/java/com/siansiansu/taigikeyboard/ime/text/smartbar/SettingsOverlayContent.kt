@@ -60,7 +60,6 @@ fun SettingsOverlayContent(
     refreshTrigger: Int,
     onDismiss: () -> Unit,
     onOpenApp: () -> Unit,
-    onCandidateDisplayModeChanged: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
 
@@ -122,8 +121,8 @@ fun SettingsOverlayContent(
             onSelected = {
                 if (it != candidateDisplayMode) {
                     candidateDisplayMode = it
+                    // The IME reacts through PrefHelper.observeCandidateDisplayMode.
                     prefs.candidateDisplayMode = it
-                    onCandidateDisplayModeChanged()
                     autoDismissIfNeeded()
                 }
             },

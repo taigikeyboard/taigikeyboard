@@ -95,7 +95,8 @@ fun KeyboardPreviewPanel(
             ContextThemeWrapper(context, R.style.KeyboardTheme)
         }
 
-        val layoutData = remember(layoutType, previewInputMode, themedContext) {
+        // 候選詞顯示 decides whether the 文/A key is in the bottom row.
+        val layoutData = remember(layoutType, previewInputMode, prefs.candidateDisplayMode, themedContext) {
             val layoutManager = LayoutManager(themedContext, prefs)
             KeyboardLayoutData.from(
                 layoutManager.fetchComputedLayoutForPreview(

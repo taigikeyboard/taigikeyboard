@@ -45,6 +45,11 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
     /// Colors / font / corner already update in place via `TaigiKeyboardView`.
     var lastResolvedKeyHeightScale: Double?
 
+    /// Previous 候選詞顯示 mode. The 文/A key's presence is baked into the
+    /// layout; a host-app change re-renders through the keyboard context in
+    /// `syncSettings()` (the in-keyboard picker already goes through it).
+    var lastCandidateDisplayMode: CandidateDisplayMode?
+
     /// Identity of the most recent `UITextInput` seen by `textWillChange`.
     /// Pointer-equality detects field switches without touching the iOS 26
     /// SDK's broken `documentIdentifier` UUID bridge.

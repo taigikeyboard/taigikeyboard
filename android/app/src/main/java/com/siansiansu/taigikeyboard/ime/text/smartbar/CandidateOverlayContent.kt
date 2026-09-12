@@ -234,7 +234,9 @@ fun CandidateOverlayContent(
         ControlPanel(
             modifier = Modifier.align(Alignment.TopEnd),
             colors = colors,
-            showTranslate = !isTPSLayout,
+            // No 文/A where there is no lead script to flip: TPS (always hanzi)
+            // and the single-script display modes (漢羅濫 / 羅馬字).
+            showTranslate = !isTPSLayout && candidateDisplayMode.allowsSwapToggle,
             isTranslateActivated = isTranslateSwapped,
             onCollapse = onCollapse,
             onPageUp = {
