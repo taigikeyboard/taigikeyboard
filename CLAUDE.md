@@ -109,7 +109,7 @@ The dictionary artifacts are committed, once, at `dictionaries/` — all four pl
 - Reply in **Taiwanese Mandarin (台灣華語)**; documentation and code comments stay in **English**.
 - **Doc-authoring language**: living reference (`.claude/rules/**`, `docs/architecture/**`, `docs/engine/**`, `docs/roadmap.md`) defaults to **English prose**; CJK only for (a) verbatim USER quotes kept as evidence and (b) domain phonetic terms / examples. Dated snapshots (`docs/reports/**`, `docs/releases/**`) are frozen — do **not** retro-translate.
 - Concise, bullet-point, key points only — no filler.
-- Analyze first and present options; explain scope of impact before changing code.
+- Recommendation first, then 2-4 ranked options with one-line trade-offs and impact scope, before changing code. Output shape rules: global `CLAUDE.md` § Interaction defaults.
 
 ## PR numbers before the 2026-09-07 migration
 
