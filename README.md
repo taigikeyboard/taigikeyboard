@@ -2,7 +2,6 @@
 
 A Taiwanese input method for iOS, Android, macOS, and Windows. Romanization input in POJ, TL and TPS, Hanji, tone marks, autocomplete, and cross-system Romanization conversion.
 
-[![Windows build](https://github.com/taigikeyboard/taigikeyboard/actions/workflows/windows-build.yml/badge.svg?branch=main)](https://github.com/taigikeyboard/taigikeyboard/actions/workflows/windows-build.yml)
 ![iOS 17+](https://img.shields.io/badge/iOS-17%2B-blue)
 ![Android 11+](https://img.shields.io/badge/Android-11%2B-green)
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-lightgrey)
