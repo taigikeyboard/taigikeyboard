@@ -99,25 +99,21 @@ class NextWordHandler(
      * Mark `isShowing = false` + bump generation to drop any in-flight
      * prediction result that might land after this point. Called from
      * [SmartbarManager.clearCandidates] AFTER the UI is already cleared, so
-     * we explicitly close the visibility gate (`SetIsShowing(false)`) before
-     * dispatching `ClearForNewComposing` to avoid recursive `onClearCandidates`.
+     * the `ClearPredictionsUI` effect the engine emits while it was still
+     * showing is applied to the mirror only — re-running [onClearCandidates]
+     * would recurse into the caller.
      */
     fun clearNextWordState() {
         val settings = settingsProvider.current
-        val cfgMode = settings.inputMode.toEngineInputMode()
-        val swapped = settings.isTranslateSwapped
-        val recording = settings.isAssociationRecordingEnabled
-        applyDecideResult(
-            RustEngineBridge.nextwordSetIsShowing(false, cfgMode, swapped, recording, envelopeGen),
-        )
         applyDecideResult(
             RustEngineBridge.nextwordClearForNewComposing(
                 System.currentTimeMillis(),
-                cfgMode,
-                swapped,
-                recording,
+                settings.inputMode.toEngineInputMode(),
+                settings.isTranslateSwapped,
+                settings.isAssociationRecordingEnabled,
                 envelopeGen,
             ),
+            isUiAlreadyCleared = true,
         )
     }
 
@@ -302,15 +298,21 @@ class NextWordHandler(
 
     // / Mirror engine state echo, then run effects in the order the engine
     // / emitted. Runs on the IME main thread (caller invariant).
-    private fun applyDecideResult(result: RustEngineBridge.NextWordDecideResult) {
+    private fun applyDecideResult(
+        result: RustEngineBridge.NextWordDecideResult,
+        isUiAlreadyCleared: Boolean = false,
+    ) {
         cachedLastSelectedWord = result.lastSelectedWord
         cachedIsShowing = result.isShowing
         for (effect in result.effects) {
-            execute(effect)
+            execute(effect, isUiAlreadyCleared)
         }
     }
 
-    private fun execute(effect: RustEngineBridge.NextWordDecideResult.Effect) {
+    private fun execute(
+        effect: RustEngineBridge.NextWordDecideResult.Effect,
+        isUiAlreadyCleared: Boolean,
+    ) {
         when (effect) {
             is RustEngineBridge.NextWordDecideResult.Effect.RescheduleContextTimeout -> {
                 scheduleContextTimeout(afterMs = effect.afterMs)
@@ -338,7 +340,7 @@ class NextWordHandler(
             }
 
             is RustEngineBridge.NextWordDecideResult.Effect.ClearPredictionsUI -> {
-                onClearCandidates()
+                if (!isUiAlreadyCleared) onClearCandidates()
                 cachedIsShowing = false
             }
         }
