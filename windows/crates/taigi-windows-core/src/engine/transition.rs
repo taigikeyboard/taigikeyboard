@@ -171,8 +171,11 @@ impl ContinuousCandidate {
         }
     }
 
-    /// `display_text` is `hanji.unwrap_or(roman)` by engine contract; a
-    /// candidate with no hanji is romanization-only.
+    /// A candidate with no hanji is romanization-only. (Its `display_text`
+    /// is normally `hanji.unwrap_or(roman)`, but the §34 literal may carry
+    /// the identity of a dictionary row it absorbed — engine
+    /// `adopt_collapsed_dict_identity` — so `hanji`, not `display_text`, is
+    /// the script test.)
     pub fn is_roman_only(&self) -> bool {
         self.hanji.is_none()
     }

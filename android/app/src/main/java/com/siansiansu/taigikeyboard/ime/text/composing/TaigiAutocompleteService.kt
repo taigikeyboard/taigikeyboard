@@ -164,32 +164,53 @@ internal fun buildContinuousSuggestionsForCandidates(
         }
     }
 
-    val result = ArrayList<TaigiWord>(candidates.size * 2)
-    // Dedupe keys = the text each cell shows. The §34 literal, being
-    // hanji-less and fetched first, absorbs a later same roman (e.g. 台's
-    // `tâi`); 食/𤆬 share one `tsia̍h` cell; 重/tîng and 重/tāng share one 重.
+    // The §34 literal, being hanji-less and fetched first, absorbs a later
+    // same roman (e.g. 台's `tâi`); 食/𤆬 share one `tsia̍h` cell; 重/tîng and
+    // 重/tāng share one 重. The roman cell keeps its candidate's hanji:
+    // displayText and the 詞頻 pair-key must not move (§42 — identity is
+    // shared, only the marker decides the shown/committed script).
+    return splitIntoSingleScriptCells(
+        items = candidates,
+        hanziOf = { it.hanji },
+        romanOf = { it.roman },
+    ) { candidate, cellScript, ordinal ->
+        continuousWord(
+            id = ordinal + 1,
+            candidate = candidate,
+            hanzi = candidate.hanji?.takeIf { it.isNotEmpty() },
+            cellScript = cellScript,
+        )
+    }
+}
+
+/**
+ * The 漢羅濫 split (§42): each item becomes a 漢字 cell (when [hanziOf] is
+ * non-empty) then a 羅馬字 cell (when [romanOf] is non-null), each script
+ * deduped on the text its cell shows, first-seen wins — a one-script cell
+ * carries nothing that could tell it from an earlier cell reading the same
+ * (USER 2026-09-03 「相同的漢字 or 羅馬字不能重複出現」). [emit] builds the cell
+ * for `(item, cellScript, ordinal)`; the Continuous and NextWord builders
+ * differ only in that constructor.
+ */
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Autocomplete/Services/TaigiAutocompleteService.swift splitIntoSingleScriptCells
+// and the desktop PresentedCandidate split. Drift causes silent divergence (cell order or dedupe survivor differs on one platform).
+internal fun <T> splitIntoSingleScriptCells(
+    items: List<T>,
+    hanziOf: (T) -> String?,
+    romanOf: (T) -> String?,
+    emit: (item: T, cellScript: String, ordinal: Int) -> TaigiWord,
+): List<TaigiWord> {
+    val result = ArrayList<TaigiWord>(items.size * 2)
     val seenHanjiCells = HashSet<String>()
     val seenRomanCells = HashSet<String>()
-    for (candidate in candidates) {
-        val hanzi = candidate.hanji?.takeIf { it.isNotEmpty() }
+    for (item in items) {
+        val hanzi = hanziOf(item)?.takeIf { it.isNotEmpty() }
         if (hanzi != null && seenHanjiCells.add(hanzi)) {
-            result += continuousWord(
-                id = result.size + 1,
-                candidate = candidate,
-                hanzi = hanzi,
-                cellScript = TaigiWord.MetadataKeys.CELL_SCRIPT_HANJI,
-            )
+            result += emit(item, TaigiWord.MetadataKeys.CELL_SCRIPT_HANJI, result.size)
         }
-        if (seenRomanCells.add(candidate.roman)) {
-            // The roman cell keeps its candidate's hanji: displayText and
-            // the 詞頻 pair-key must not move (§42 — identity is shared,
-            // only the marker decides the shown/committed script).
-            result += continuousWord(
-                id = result.size + 1,
-                candidate = candidate,
-                hanzi = hanzi,
-                cellScript = TaigiWord.MetadataKeys.CELL_SCRIPT_ROMAN,
-            )
+        val roman = romanOf(item)
+        if (roman != null && seenRomanCells.add(roman)) {
+            result += emit(item, TaigiWord.MetadataKeys.CELL_SCRIPT_ROMAN, result.size)
         }
     }
     return result

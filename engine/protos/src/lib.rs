@@ -26,4 +26,18 @@ impl engine::AppConfig {
         // prost's accessor already maps an unknown value to `Unspecified`.
         self.candidate_display_mode() == engine::CandidateDisplayMode::RomanOnly
     }
+
+    /// Whether every candidate cell shows ONE script (羅馬字, or 漢羅濫's
+    /// split cells) — the displays under which a cell that reads like an
+    /// earlier one is collapsed into it (§42 / §44), so the collapsed row's
+    /// identity has to survive on the survivor. For 漢羅濫 the collapse is the
+    /// platform's (§42 split) and the engine relies on it keeping the FIRST
+    /// roman cell — the slot-0 §34 literal — as the survivor. 並排 (and the
+    /// same fallbacks as [`Self::is_roman_only_display`]) answer `false`.
+    pub fn is_single_script_display(&self) -> bool {
+        matches!(
+            self.candidate_display_mode(),
+            engine::CandidateDisplayMode::RomanOnly | engine::CandidateDisplayMode::Combined
+        )
+    }
 }

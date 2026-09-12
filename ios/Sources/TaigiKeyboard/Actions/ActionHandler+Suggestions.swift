@@ -184,8 +184,26 @@ extension ActionHandler {
         if composingManager.isComposing || isNextWordPrediction {
             let effectiveSwapped = isTPSLayout || settings.isTranslateSwapped
 
-            let (roman, hanzi) = parseRomanAndHanzi(from: suggestion, isNextWord: isNextWordPrediction, effectiveSwapped: effectiveSwapped)
-            let resolved = formatOutputText(roman: roman, hanzi: hanzi, isTPSLayout: isTPSLayout, effectiveSwapped: effectiveSwapped)
+            // §42 漢羅濫 split prediction cells carry a `cellScript` marker
+            // (`ActionHandler.predictionSuggestions`) — the marker decides the
+            // script, exactly as on the Continuous path; identity rides the
+            // shared sidechannels, so nothing is parsed back from the cell.
+            let roman: String
+            let hanzi: String?
+            let resolved: ResolvedCommit
+            if let cellScript = CandidateCellScript.marker(for: suggestion) {
+                roman = suggestion.additionalInfo["tl"] ?? ""
+                hanzi = suggestion.additionalInfo["hanzi"]
+                resolved = Self.markedCellCommit(
+                    cellScript: cellScript,
+                    cellText: suggestion.text,
+                    roman: suggestion.additionalInfo[CandidateCellScript.bracketRomanKey],
+                    isOutputBothScripts: settings.isOutputBothScripts,
+                )
+            } else {
+                (roman, hanzi) = parseRomanAndHanzi(from: suggestion, isNextWord: isNextWordPrediction, effectiveSwapped: effectiveSwapped)
+                resolved = formatOutputText(roman: roman, hanzi: hanzi, isTPSLayout: isTPSLayout, effectiveSwapped: effectiveSwapped)
+            }
             let textToCommit = resolved.text
 
             commitSuggestionText(textToCommit, isNextWord: isNextWordPrediction, suggestion: suggestion)

@@ -5,7 +5,9 @@ import Foundation
 /// Turns a candidate into document text according to the output settings.
 ///
 /// Separate from the candidate's own `displayText`, which is the engine's
-/// canonical form (`hanji ?? roman`) and pairs with `canonicalTl` to identify
+/// canonical form (`hanji ?? roman`; the §34 literal may carry the identity of
+/// a dictionary row it absorbed — engine `adopt_collapsed_dict_identity`) and
+/// pairs with `canonicalTl` to identify
 /// the word the user's frequency and association data are learnt under — the
 /// identity is that PAIR, never either field alone, because one Hanji has
 /// several readings and they are different morphemes (Core Principle #7).

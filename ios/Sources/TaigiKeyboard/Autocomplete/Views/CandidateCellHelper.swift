@@ -19,7 +19,7 @@ enum CandidateCellHelper {
 
     /// The cell's main title, per display mode: TPS shows hanji (TPS symbols when there is none) and
     /// ignores `candidateDisplayMode`; 羅馬字 always shows the engine `roman` (`text`); 漢羅濫 is
-    /// single-script — a split cell shows its own `text`, an un-split NextWord row is hanji-led;
+    /// single-script — a split cell shows its own `text`, an un-split row (wire defect) is hanji-led;
     /// 並排 lets `isTranslateSwapped` pick the roman / hanji order.
     // Arm order mirrors Android SmartbarCandidateStrip.kt / macOS CandidateCellContent:
     // TPS → romanOnly → combined → swapped → default.
@@ -44,9 +44,11 @@ enum CandidateCellHelper {
         // CROSS-PLATFORM INVARIANT — mirrors the desktop split cells (§42 second
         // exception: macOS/Windows PresentedCandidate) and Android candidateCellText:
         // under 濫 every cell is single-script. Split cells (marked upstream in
-        // TaigiAutocompleteService.buildContinuousSuggestions) carry their script in
-        // `text`; un-split rows (NextWord predictions) render hanji-led. Drift causes
-        // silent divergence (one platform re-joining the two scripts into one label).
+        // TaigiAutocompleteService.buildContinuousSuggestions and
+        // ActionHandler.predictionSuggestions) carry their script in `text`; an
+        // un-split dual-script row (a wire-defective marker) renders hanji-led.
+        // Drift causes silent divergence (one platform re-joining the two scripts
+        // into one label).
         if candidateDisplayMode == .combined {
             if let subtitle = suggestion.subtitle, !subtitle.isEmpty {
                 return subtitle

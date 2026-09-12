@@ -74,16 +74,10 @@ fn fetch(
     input_mode: &str,
     candidate_display_mode: i32,
 ) -> Vec<(Option<String>, String)> {
-    let cfg = config_with_display_mode(input_mode, candidate_display_mode);
-    let resp = fetch_at_pos_response(&cfg, raw, FetchAtPos::default());
-    resp.continuous
-        .map(|c| {
-            c.candidates
-                .into_iter()
-                .map(|cand| (cand.hanji, cand.roman))
-                .collect()
-        })
-        .unwrap_or_default()
+    fetch_with_identity(raw, input_mode, candidate_display_mode)
+        .into_iter()
+        .map(|(hanji, roman, _, _)| (hanji, roman))
+        .collect()
 }
 
 fn rows_with_roman<'a>(
@@ -131,6 +125,78 @@ fn roman_only_collapses_same_roman_rows_keeping_the_top_ranked_one() {
     );
 }
 
+/// `(hanji, roman, display_text, canonical_tl)` per candidate, strip order —
+/// the identity sidechannels the platform round-trips on commit.
+fn fetch_with_identity(
+    raw: &str,
+    input_mode: &str,
+    candidate_display_mode: i32,
+) -> Vec<(Option<String>, String, String, String)> {
+    let cfg = config_with_display_mode(input_mode, candidate_display_mode);
+    let resp = fetch_at_pos_response(&cfg, raw, FetchAtPos::default());
+    resp.continuous
+        .map(|c| {
+            c.candidates
+                .into_iter()
+                .map(|cand| (cand.hanji, cand.roman, cand.display_text, cand.canonical_tl))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// Under a single-script display the literal absorbs dict 隻/tsiah, so its
+/// commit must still learn 隻: the literal inherits the absorbed row's
+/// `display_text` (the NextWord / 詞頻 key) and `canonical_tl` while it
+/// keeps reading and committing the bare roman (`hanji` stays absent).
+#[test]
+fn single_script_display_literal_inherits_absorbed_dict_identity() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    let combined = CandidateDisplayMode::Combined as i32;
+    for mode in [ROMAN_ONLY, combined] {
+        let candidates = fetch_with_identity("tsiah", "tl", mode);
+        let literal = &candidates[0];
+        assert_eq!(
+            literal.1, "tsiah",
+            "literal stays at index 0; got {candidates:?}"
+        );
+        assert_eq!(
+            literal.0, None,
+            "literal stays a roman-only cell (mode {mode})"
+        );
+        assert_eq!(
+            literal.2, "隻",
+            "literal carries the absorbed 隻 identity (mode {mode}); got {candidates:?}"
+        );
+        assert_eq!(
+            literal.3, "tsiah",
+            "canonical TL follows the absorbed row (mode {mode})"
+        );
+        // 濫 keeps the dict row itself: the platform split draws its 漢字 cell.
+        assert_eq!(
+            candidates.iter().any(|c| c.0.as_deref() == Some("隻")),
+            mode == combined,
+            "only COMBINED keeps 隻's own row; got {candidates:?}"
+        );
+    }
+}
+
+/// 並排 lists the dict row beside the literal, so the literal stays a pure
+/// romanization commit with its own (roman) identity.
+#[test]
+fn side_by_side_literal_keeps_its_own_roman_identity() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    let candidates = fetch_with_identity("tsiah", "tl", SIDE_BY_SIDE);
+    let literal = &candidates[0];
+    assert_eq!(literal.1, "tsiah");
+    assert_eq!(literal.0, None);
+    assert_eq!(
+        literal.2, "tsiah",
+        "並排 literal identity = its roman; got {candidates:?}"
+    );
+}
+
 #[test]
 fn side_by_side_keeps_every_row_for_explicit_default_and_unknown_values() {
     let _lock = engine_install_lock();
@@ -158,7 +224,8 @@ fn side_by_side_keeps_every_row_for_explicit_default_and_unknown_values() {
         explicit,
         "unknown value = side-by-side"
     );
-    // 漢羅合用 keeps every row too — a one-label cell is distinct by (hanji, roman).
+    // 漢羅濫 keeps every row too — the split into one-script cells is the
+    // platform's (§42); only the literal's identity sidechannel differs.
     assert_eq!(
         fetch("tsiah", "tl", CandidateDisplayMode::Combined as i32),
         explicit,
