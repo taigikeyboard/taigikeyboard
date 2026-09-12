@@ -481,7 +481,12 @@ internal class TextInputKeyHandler(
      */
     private fun handleTaigiInput(keyData: KeyData) {
         val inputStart = System.currentTimeMillis()
-        val ic = taigikeyboard.currentInputConnection ?: return
+        // Unbound window (app-switch gap) or non-composing editor: the key is
+        // dropped; the reason is logged so a "first key did nothing" report is
+        // attributable.
+        val ic =
+            taigikeyboard.currentInputConnection
+                ?: return logger.debug(TAG) { "[TAIGI] fn=handleTaigiInput dropped reason=no-input-connection" }
         taigikeyboard.compositionRoot.logger.tdebug(TAG) {
             "[TAIGI] fn=handleTaigiInput code=${keyData.code} label='${keyData.label}'"
         }
@@ -522,7 +527,9 @@ internal class TextInputKeyHandler(
             return
         }
 
-        val manager = composingManager ?: return
+        val manager =
+            composingManager
+                ?: return logger.debug(TAG) { "[TAIGI] fn=handleTaigiInput dropped reason=no-composing-manager" }
 
         // Standalone digit: commit directly without entering composing mode.
         // Digits only enter composing as tone markers appended to existing romanization.
