@@ -4,6 +4,7 @@
 
 package com.siansiansu.taigikeyboard.ime.text.smartbar
 
+import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.engine.nextwordBackspace
 import com.siansiansu.taigikeyboard.engine.nextwordClearForNewComposing
 import com.siansiansu.taigikeyboard.engine.nextwordContextTimeoutFired
@@ -12,13 +13,13 @@ import com.siansiansu.taigikeyboard.engine.nextwordResetFull
 import com.siansiansu.taigikeyboard.engine.nextwordSetIsShowing
 import com.siansiansu.taigikeyboard.engine.nextwordUpdateLastSelectedWord
 import com.siansiansu.taigikeyboard.engine.nextwordWordSelected
-import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettingsProvider
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.dictionary.NextWordService
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
+import com.siansiansu.taigikeyboard.ime.text.composing.splitIntoSingleScriptCells
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -51,6 +52,9 @@ class NextWordHandler(
     private val logger: LoggerBackend,
     private val onUpdateCandidates: (List<TaigiWord>) -> Unit,
     private val onClearCandidates: () -> Unit,
+    // 漢羅濫 split (§42): live-read per render so a picker change applies to
+    // the next prediction list. Same provider shape as CandidateUpdateCoordinator.
+    private val splitCombinedCellsProvider: () -> Boolean,
 ) {
     // / Cached state echoed from every decide call. Synchronous read for
     // / SmartbarManager / CandidateClickHandler.
@@ -436,27 +440,9 @@ class NextWordHandler(
 
         val nowShowing = filterResult.predictions.isNotEmpty()
         if (nowShowing) {
-            val words = filterResult.predictions.mapIndexed { index, p ->
-                TaigiWord(
-                    id = -index - 1,
-                    // Pre-Rust convention: emit roman in `roman` only when
-                    // subtitle is present (== prediction is mode-shaped to
-                    // roman-display). Hanji-only predictions land with
-                    // subtitle=null and roman="" so SmartbarManager renders
-                    // hanzi without the roman line.
-                    roman = if (p.subtitle != null) p.text else "",
-                    hanzi = p.hanzi,
-                    lengthScore = p.score.toInt(),
-                    // R5 pair-key (#7): canonical-TL reading for the
-                    // user-frequency `(displayText, canonicalTl)` write.
-                    // `p.tl` is the engine-side canonical TL (only text/subtitle
-                    // are mode-shaped), matching the Continuous read key. Without
-                    // it the freq write would land in the legacy tl=="" bucket
-                    // and 重/tāng could inherit a count learned from 重/tîng.
-                    additionalInfo = mapOf(TaigiWord.MetadataKeys.CANONICAL_TL to p.tl),
-                )
-            }
-            onUpdateCandidates(words)
+            onUpdateCandidates(
+                buildPredictionWords(filterResult.predictions, splitCombinedCellsProvider()),
+            )
             scheduleContextTimeout(CONTEXT_TIMEOUT_MS)
         } else {
             onClearCandidates()
@@ -557,3 +543,55 @@ private fun String.toEngineInputMode(): InputMode =
         "english" -> InputMode.ENGLISH
         else -> InputMode.POJ
     }
+
+/**
+ * NextWord prediction cells. Ids run `-1..-n` — the NextWord sentinel range
+ * (`-99..-1`; English is `<= -100`) read by [CandidateClickHandler]; 30
+ * predictions split to at most 60 cells, still inside it.
+ *
+ * 漢羅濫 ([splitCombinedCells], §42): [splitIntoSingleScriptCells] — a
+ * prediction with romanization becomes a 漢字 cell then a 羅馬字 cell sharing
+ * the prediction's identity; a hanji-only prediction lists its 漢字 cell
+ * alone. Every other mode emits one dual-script word per prediction
+ * (`roman = ""` when the engine shaped no subtitle, so the strip renders the
+ * hanzi alone).
+ */
+internal fun buildPredictionWords(
+    predictions: List<RustEngineBridge.NextWordEnginePrediction>,
+    splitCombinedCells: Boolean,
+): List<TaigiWord> {
+    if (!splitCombinedCells) {
+        return predictions.mapIndexed { index, p ->
+            predictionWord(id = -index - 1, prediction = p, cellScript = null)
+        }
+    }
+
+    return splitIntoSingleScriptCells(
+        items = predictions,
+        hanziOf = { it.hanzi },
+        romanOf = { if (it.subtitle != null) it.text else null },
+    ) { prediction, cellScript, ordinal ->
+        predictionWord(id = -ordinal - 1, prediction = prediction, cellScript = cellScript)
+    }
+}
+
+private fun predictionWord(
+    id: Int,
+    prediction: RustEngineBridge.NextWordEnginePrediction,
+    cellScript: String?,
+): TaigiWord {
+    // R5 pair-key (#7): canonical-TL reading for the user-frequency
+    // `(displayText, canonicalTl)` write. `tl` is the engine-side canonical
+    // TL (only text/subtitle are mode-shaped), matching the Continuous read
+    // key. Without it the freq write would land in the legacy tl=="" bucket
+    // and 重/tāng could inherit a count learned from 重/tîng.
+    val identity = TaigiWord.MetadataKeys.CANONICAL_TL to prediction.tl
+    return TaigiWord(
+        id = id,
+        roman = if (prediction.subtitle != null) prediction.text else "",
+        hanzi = prediction.hanzi,
+        lengthScore = prediction.score.toInt(),
+        additionalInfo =
+            if (cellScript == null) mapOf(identity) else mapOf(identity, TaigiWord.MetadataKeys.CELL_SCRIPT to cellScript),
+    )
+}

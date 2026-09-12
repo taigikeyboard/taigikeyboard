@@ -247,32 +247,68 @@ extension ActionHandler: AutocompleteContextUpdater {
     /// engine's `RustEngineBridge.NextWordEnginePrediction` touches
     /// KeyboardKit types.
     func setNextWordPredictions(_ predictions: [RustEngineBridge.NextWordEnginePrediction]) {
-        let suggestions = predictions.map { prediction in
-            AutocompleteSuggestion(
-                text: prediction.text,
-                title: prediction.text,
-                subtitle: prediction.subtitle,
-                additionalInfo: [
-                    "isNextWord": "true",
-                    "hanzi": prediction.hanzi,
-                    // Raw TL sidechannel — NOT the commit string. Consumed only
-                    // by the association-recording fork in
-                    // `handleSuggestionSelection` (engine's `pojToTL` needs raw
-                    // roman, not the mode-shaped display `text`).
-                    "tl": prediction.tl,
-                    // R5 pair-key (#7): canonical-TL reading for the
-                    // user-frequency `(displayText, canonicalTl)` write.
-                    // `prediction.tl` is the engine-side canonical TL (only
-                    // `text`/`subtitle` are mode-shaped), matching the
-                    // Continuous read key. Without it the freq write would
-                    // land in the legacy `tl == ""` bucket and 重/tāng could
-                    // inherit a count learned from 重/tîng.
-                    "canonicalTl": prediction.tl,
-                    "displayText": prediction.hanzi,
-                ],
-            )
+        // §42 漢羅濫 splits prediction cells like the Continuous list; TPS is
+        // hanji-first and ignores the picker. Live-read so a picker change
+        // applies to the next prediction list.
+        let splitCombinedCells = shouldSplitCombinedCells(
+            keyboardLayoutType: settings.keyboardLayoutType,
+            candidateDisplayMode: settings.candidateDisplayMode,
+        )
+        keyboardController?.state.autocompleteContext.suggestionsFromService =
+            Self.predictionSuggestions(predictions, splitCombinedCells: splitCombinedCells)
+    }
+
+    /// NextWord prediction cells. 漢羅濫 (`splitCombinedCells`, §42):
+    /// `splitIntoSingleScriptCells` — a prediction with romanization becomes a
+    /// 漢字 cell then a 羅馬字 cell sharing the prediction's identity; a
+    /// hanji-only prediction (`subtitle == nil`) lists its 漢字 cell alone.
+    /// Every other mode emits one dual-script suggestion per prediction.
+    // CROSS-PLATFORM INVARIANT — mirrors android/.../smartbar/NextWordHandler.kt buildPredictionWords.
+    // Drift causes silent divergence (one platform's 漢羅濫 predictions render hanji-led).
+    static func predictionSuggestions(
+        _ predictions: [RustEngineBridge.NextWordEnginePrediction],
+        splitCombinedCells: Bool,
+    ) -> [AutocompleteSuggestion] {
+        guard splitCombinedCells else {
+            return predictions.map { prediction in
+                AutocompleteSuggestion(
+                    text: prediction.text,
+                    title: prediction.text,
+                    subtitle: prediction.subtitle,
+                    additionalInfo: predictionIdentity(prediction),
+                )
+            }
         }
-        keyboardController?.state.autocompleteContext.suggestionsFromService = suggestions
+
+        return splitIntoSingleScriptCells(
+            predictions,
+            hanji: { $0.hanzi },
+            roman: { $0.subtitle != nil ? $0.text : nil },
+            sidechannels: predictionIdentity,
+        )
+    }
+
+    private static func predictionIdentity(
+        _ prediction: RustEngineBridge.NextWordEnginePrediction,
+    ) -> [String: String] {
+        [
+            "isNextWord": "true",
+            "hanzi": prediction.hanzi,
+            // Raw TL sidechannel — NOT the commit string. Consumed only
+            // by the association-recording fork in
+            // `handleSuggestionSelection` (engine's `pojToTL` needs raw
+            // roman, not the mode-shaped display `text`).
+            "tl": prediction.tl,
+            // R5 pair-key (#7): canonical-TL reading for the
+            // user-frequency `(displayText, canonicalTl)` write.
+            // `prediction.tl` is the engine-side canonical TL (only
+            // `text`/`subtitle` are mode-shaped), matching the
+            // Continuous read key. Without it the freq write would
+            // land in the legacy `tl == ""` bucket and 重/tāng could
+            // inherit a count learned from 重/tîng.
+            "canonicalTl": prediction.tl,
+            "displayText": prediction.hanzi,
+        ]
     }
 
     func resetNextWordSuggestions() {

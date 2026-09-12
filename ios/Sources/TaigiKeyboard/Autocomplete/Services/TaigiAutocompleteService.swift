@@ -53,6 +53,43 @@ func shouldSplitCombinedCells(
     keyboardLayoutType != .tps && candidateDisplayMode == .combined
 }
 
+/// The 漢羅濫 split (§42): each item becomes a 漢字 cell (when `hanji` is
+/// non-empty) then a 羅馬字 cell (when `roman` is non-nil), neither with a
+/// subtitle, each carrying its `CandidateCellScript` marker on top of the
+/// item's `sidechannels` (the hanji cell also carries the roman under
+/// `bracketRomanKey` for 括號標註). Each script dedupes on the text its cell
+/// shows, first-seen wins — a one-script cell carries nothing that could tell
+/// it from an earlier cell reading the same (USER 2026-09-03 「相同的漢字 or
+/// 羅馬字不能重複出現」). The Continuous and NextWord builders differ only in
+/// the three projections.
+// CROSS-PLATFORM INVARIANT — mirrors android/.../composing/TaigiAutocompleteService.kt splitIntoSingleScriptCells
+// and the desktop PresentedCandidate split. Drift causes silent divergence (cell order or dedupe survivor differs on one platform).
+func splitIntoSingleScriptCells<T>(
+    _ items: [T],
+    hanji: (T) -> String?,
+    roman: (T) -> String?,
+    sidechannels: (T) -> [String: String],
+) -> [AutocompleteSuggestion] {
+    var suggestions: [AutocompleteSuggestion] = []
+    var seenHanjiCells = Set<String>()
+    var seenRomanCells = Set<String>()
+    for item in items {
+        let identity = sidechannels(item)
+        let roman = roman(item)
+        if let hanji = hanji(item), !hanji.isEmpty, seenHanjiCells.insert(hanji).inserted {
+            var hanjiInfo = identity
+            hanjiInfo[CandidateCellScript.infoKey] = CandidateCellScript.hanji
+            hanjiInfo[CandidateCellScript.bracketRomanKey] = roman
+            suggestions.append(AutocompleteSuggestion(text: hanji, title: hanji, subtitle: nil, additionalInfo: hanjiInfo))
+        }
+        guard let roman, seenRomanCells.insert(roman).inserted else { continue }
+        var romanInfo = identity
+        romanInfo[CandidateCellScript.infoKey] = CandidateCellScript.roman
+        suggestions.append(AutocompleteSuggestion(text: roman, title: roman, subtitle: nil, additionalInfo: romanInfo))
+    }
+    return suggestions
+}
+
 /// Turns `ComposingManager`'s span-local engine candidates into KeyboardKit suggestions.
 /// An empty engine result means an empty candidate row — the inline pre-edit still holds
 /// the composing buffer, and Enter commits the pending tail.
@@ -222,40 +259,12 @@ class TaigiAutocompleteService: KeyboardKit.AutocompleteService {
             return candidates.map { dualScriptSuggestion(for: $0) }
         }
 
-        // CROSS-PLATFORM INVARIANT — mirrors the desktop split (§42 second
-        // exception, #666) and Android buildContinuousSuggestionsForCandidates:
-        // hanji cell before its roman cell; each script deduped on the rendered
-        // cell text, first-seen wins. Drift causes silent divergence (cell order
-        // or dedupe survivor differs on one platform).
-        var suggestions: [AutocompleteSuggestion] = []
-        var seenHanjiCells = Set<String>()
-        var seenRomanCells = Set<String>()
-        for c in candidates {
-            let sidechannels = continuousSidechannels(for: c)
-            let hanji = (c.hanji?.isEmpty == false) ? c.hanji : nil
-            if let hanji, seenHanjiCells.insert(hanji).inserted {
-                var hanjiInfo = sidechannels
-                hanjiInfo[CandidateCellScript.infoKey] = CandidateCellScript.hanji
-                // Bracket form carrier: 括號標註 ON commits `漢字 (羅馬字)`.
-                hanjiInfo[CandidateCellScript.bracketRomanKey] = c.roman
-                suggestions.append(AutocompleteSuggestion(
-                    text: hanji,
-                    title: hanji,
-                    subtitle: nil,
-                    additionalInfo: hanjiInfo,
-                ))
-            }
-            guard seenRomanCells.insert(c.roman).inserted else { continue }
-            var romanInfo = sidechannels
-            romanInfo[CandidateCellScript.infoKey] = CandidateCellScript.roman
-            suggestions.append(AutocompleteSuggestion(
-                text: c.roman,
-                title: c.roman,
-                subtitle: nil,
-                additionalInfo: romanInfo,
-            ))
-        }
-        return suggestions
+        return splitIntoSingleScriptCells(
+            candidates,
+            hanji: { $0.hanji },
+            roman: { $0.roman },
+            sidechannels: continuousSidechannels(for:),
+        )
     }
 
     /// The un-split dual-script suggestion every non-濫 mode emits (today's shape).

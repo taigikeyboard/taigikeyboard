@@ -90,26 +90,12 @@ class CandidateClickHandler(
             val isTPSLayout = prefs.isTpsLayout
             val effectiveSwapped = isTPSLayout || cachedIsTranslateSwapped
 
-            // Convert roman to TPS for bracket annotation when in TPS mode
-            val bracketRoman =
-                if (isTPSLayout) {
-                    RustEngineBridge.tlDisplayToTps(selectedWord.roman, prefs.tpsOrMapsToER)
-                } else {
-                    selectedWord.roman
-                }
-
             val resolved =
                 if (isEnglishSuggestion) {
                     // An English word IS Latin text, so it takes the spacing.
                     ResolvedCommit(selectedWord.roman, wroteRomanization = true)
                 } else {
-                    resolveUnmarkedCommit(
-                        roman = selectedWord.roman,
-                        bracketRoman = bracketRoman,
-                        hanzi = selectedWord.hanzi,
-                        effectiveSwapped = effectiveSwapped,
-                        outputBothScripts = cachedOutputBothScripts,
-                    )
+                    resolveTaigiCommit(selectedWord, isTPSLayout, effectiveSwapped, cachedOutputBothScripts)
                 }
             val textToCommit = resolved.text
 
@@ -170,6 +156,39 @@ class CandidateClickHandler(
     }
 
     /**
+     * Document text + auto-space verdict for one Taigi candidate tap — every
+     * tap path (strip, expanded overlay, Continuous) resolves through here.
+     * A §42 漢羅濫 [TaigiWord.MetadataKeys.CELL_SCRIPT]-marked cell commits
+     * the script its marker names ([resolveMarkedCellCommit]); an unmarked
+     * cell follows the mode ([resolveUnmarkedCommit]), with the 括號標註 roman
+     * TPS-rendered under the TPS layout.
+     */
+    private fun resolveTaigiCommit(
+        word: TaigiWord,
+        isTPSLayout: Boolean,
+        effectiveSwapped: Boolean,
+        outputBothScripts: Boolean,
+    ): ResolvedCommit {
+        word.additionalInfo[TaigiWord.MetadataKeys.CELL_SCRIPT]?.let { cellScript ->
+            resolveMarkedCellCommit(
+                cellScript = cellScript,
+                roman = word.roman,
+                hanzi = word.hanzi,
+                outputBothScripts = outputBothScripts,
+            )
+        }?.let { return it }
+        val bracketRoman =
+            if (isTPSLayout) RustEngineBridge.tlDisplayToTps(word.roman, prefs.tpsOrMapsToER) else word.roman
+        return resolveUnmarkedCommit(
+            roman = word.roman,
+            bracketRoman = bracketRoman,
+            hanzi = word.hanzi,
+            effectiveSwapped = effectiveSwapped,
+            outputBothScripts = outputBothScripts,
+        )
+    }
+
+    /**
      * Handle English candidate click (3-column layout).
      */
     fun handleEnglishCandidateClick(index: Int) {
@@ -222,22 +241,7 @@ class CandidateClickHandler(
         val isTPSLayout = prefs.isTpsLayout
         val effectiveSwapped = isTPSLayout || cachedIsTranslateSwapped
 
-        // Convert roman to TPS for bracket annotation when in TPS mode
-        val bracketRoman =
-            if (isTPSLayout) {
-                RustEngineBridge.tlDisplayToTps(word.roman, prefs.tpsOrMapsToER)
-            } else {
-                word.roman
-            }
-
-        val resolved =
-            resolveUnmarkedCommit(
-                roman = word.roman,
-                bracketRoman = bracketRoman,
-                hanzi = word.hanzi,
-                effectiveSwapped = effectiveSwapped,
-                outputBothScripts = cachedOutputBothScripts,
-            )
+        val resolved = resolveTaigiCommit(word, isTPSLayout, effectiveSwapped, cachedOutputBothScripts)
         val textToCommit = resolved.text
 
         if (isNextWordPred) {
@@ -344,31 +348,7 @@ class CandidateClickHandler(
         val cachedOutputBothScripts = getOutputBothScripts()
         val isTPSLayout = prefs.isTpsLayout
         val effectiveSwapped = isTPSLayout || cachedIsTranslateSwapped
-        val markedCommit =
-            info[TaigiWord.MetadataKeys.CELL_SCRIPT]?.let { cellScript ->
-                resolveMarkedCellCommit(
-                    cellScript = cellScript,
-                    roman = selectedWord.roman,
-                    hanzi = selectedWord.hanzi,
-                    outputBothScripts = cachedOutputBothScripts,
-                )
-            }
-        val resolved =
-            markedCommit ?: run {
-                val bracketRoman =
-                    if (isTPSLayout) {
-                        RustEngineBridge.tlDisplayToTps(selectedWord.roman, prefs.tpsOrMapsToER)
-                    } else {
-                        selectedWord.roman
-                    }
-                resolveUnmarkedCommit(
-                    roman = selectedWord.roman,
-                    bracketRoman = bracketRoman,
-                    hanzi = selectedWord.hanzi,
-                    effectiveSwapped = effectiveSwapped,
-                    outputBothScripts = cachedOutputBothScripts,
-                )
-            }
+        val resolved = resolveTaigiCommit(selectedWord, isTPSLayout, effectiveSwapped, cachedOutputBothScripts)
         val textToCommit = resolved.text
 
         // R2: canonical TL identity sidechannel — forwarded as

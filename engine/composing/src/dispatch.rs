@@ -285,12 +285,15 @@ fn handle_fetch_at_pos(
     // produced on its own stays. Inverted sentinel: proto3 default `false`
     // = show (legacy always-on), so un-wired builds are unaffected.
     if !literal_roman_candidate_disabled {
-        if let Some(literal) = literal_roman_candidate(raw, config, mode) {
+        if let Some(mut literal) = literal_roman_candidate(raw, config, mode) {
             // Drop a pre-existing IDENTICAL bare-roman (hanji-absent Tailo)
             // so the literal is not duplicated; dict rows with hanji stay (a
             // `tâi`/台 dict candidate and a bare `tâi` commit differ — Codex
             // pre-impl F5).
             candidates.retain(|c| !(c.hanji.is_none() && c.roman == literal.roman));
+            if config.is_single_script_display() {
+                adopt_collapsed_dict_identity(&mut literal, &candidates);
+            }
             candidates.insert(0, literal);
         }
     }
@@ -325,6 +328,31 @@ fn dedupe_display_roman(candidates: &mut Vec<RawCandidate>) {
     retain_first_by_key(candidates, |c| Some(c.roman.clone()));
 }
 
+/// Under a single-script display the §34 literal absorbs the dictionary row
+/// that reads the same (`dedupe_display_roman` under 羅馬字; the platform's
+/// 漢羅濫 roman-cell dedupe under 濫), so tapping the literal becomes the only
+/// way to commit that word. The literal therefore takes the absorbed row's
+/// identity — `display_text` (the `canonical_text` NextWord and 詞頻 key on)
+/// and `canonical_tl` — while `roman` / `hanji: None` stay, so the cell still
+/// reads, orders and writes the preedit literal. First-seen (top-ranked) wins
+/// among 同音異字, the rule that picks the visible cell. Not applied under
+/// 並排, where the dictionary row keeps its own cell.
+///
+/// Consequence, deliberate: a single-syllable literal that inherits a
+/// dictionary word joins a compound run with the nailed prefix
+/// (`api::nailed_prefix`, `台` + literal `gí` → `tâi-gí`), exactly as the
+/// absorbed dictionary cell would have.
+fn adopt_collapsed_dict_identity(literal: &mut RawCandidate, candidates: &[RawCandidate]) {
+    let Some(absorbed) = candidates
+        .iter()
+        .find(|c| c.hanji.is_some() && c.roman == literal.roman)
+    else {
+        return;
+    };
+    literal.display_text = absorbed.display_text.clone();
+    literal.canonical_tl = absorbed.canonical_tl.clone();
+}
+
 /// Build the literal-roman candidate for 漢羅 fast input
 /// (`INVARIANT_CONTINUOUS_LITERAL_ROMAN_CANDIDATE` §34 / dogfood S22).
 ///
@@ -343,8 +371,9 @@ fn dedupe_display_roman(candidates: &mut Vec<RawCandidate>) {
 /// * the preedit literal is non-empty.
 ///
 /// The candidate is roman-only (`hanji = None` → `CandidateMode::Tailo`),
-/// with `roman == display_text ==` the preedit literal — WYSIWYG with the
-/// underline (§30 literal-no-fold: tone marks only, no spelling fold). It
+/// with `roman == display_text ==` the preedit literal (except the identity
+/// it inherits under a single-script display — `adopt_collapsed_dict_identity`)
+/// — WYSIWYG with the underline (§30 literal-no-fold: tone marks only, no spelling fold). It
 /// mirrors the preedit EXACTLY, so a tone-1/4 syllable or an unhyphenated
 /// multi-syllable blob keeps its raw digits as the underline shows them
 /// (`tai1`, `goa2ai3li2` — the engine does not auto-syllabify, §10.2). It

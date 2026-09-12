@@ -843,8 +843,10 @@ public nonisolated struct Taigi_Engine_ContinuousResponse: Sendable {
 /// (roman / hanji) the same way the legacy lexicon path does. The
 /// engine continues to authority-stamp commit semantics and
 /// `user_frequency.db` write keys via `display_text`
-/// (= `hanji.unwrap_or(roman)`); `roman` and `hanji` are NEVER read
-/// for commit. `roman` is the display romanization for the active
+/// (= `hanji.unwrap_or(roman)`; under a single-script display the §34
+/// literal carries the identity of the same-roman dictionary row it
+/// absorbed — `composing::dispatch::adopt_collapsed_dict_identity`);
+/// `roman` and `hanji` are NEVER read for commit. `roman` is the display romanization for the active
 /// input mode — the underlying `DictionaryRecord.tl` by default, or
 /// POJ-display (`oo`→`o͘`, `nn`→`ⁿ`, …) when
 /// `AppConfig.input_mode = poj` (engine-rendered, mirroring the

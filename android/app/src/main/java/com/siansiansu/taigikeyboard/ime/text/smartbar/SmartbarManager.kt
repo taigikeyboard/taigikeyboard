@@ -22,6 +22,7 @@ import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.dictionary.SuggestionCaseTransformer
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import com.siansiansu.taigikeyboard.ime.text.TextInputManager
+import com.siansiansu.taigikeyboard.ime.text.composing.shouldSplitCombinedCells
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardMode
 import com.siansiansu.taigikeyboard.ime.theme.getColorFromAttr
@@ -113,6 +114,9 @@ class SmartbarManager(
             logger = compositionRoot.logger,
             onUpdateCandidates = { updateCandidates(it) },
             onClearCandidates = { clearCandidates() },
+            splitCombinedCellsProvider = {
+                shouldSplitCombinedCells(prefs.candidateDisplayMode, prefs.isTpsLayout)
+            },
         )
 
     private val toolbarManager =
