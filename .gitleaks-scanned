@@ -28,4 +28,11 @@
 # rewrites removed, so the incremental scan had no valid base and every run fell
 # back to a full sweep. This is a full-history clean result on the rewritten
 # history — 1135 commits, 858 MB, five findings, all dismissed in .gitleaksignore.
-commit=1b00a9ccd7ccead83972d6f81f9d59e460a144dc
+# Refreshed 2026-09-12: the #5 refresh dropped the `gitleaks=` line, so every
+# incremental scan since failed the version check before scanning anything.
+# Full-history rescan, 1328 commits, 977 MB, no leaks. The watermark is main's
+# tip rather than the branch head that ran the scan — a squash-merged branch's
+# commits vanish with the branch, and a watermark must stay resolvable.
+commit=1a76ba80f9ffd2297643af9ecd1f075d5bbc7954
+date=2026-09-12
+gitleaks=8.30.1
