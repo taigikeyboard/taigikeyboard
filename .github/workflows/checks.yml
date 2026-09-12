@@ -1,0 +1,87 @@
+name: Checks
+
+# The gates that need no compiler: generated i18n artifacts are current, the
+# i18n codegen's own tests pass, and Swift formatting matches .swiftformat.
+# Everything here reads files; the whole job is well under a minute.
+#
+# Swift is linted here on Linux rather than on a macOS runner because
+# swiftformat parses source without building it — the macOS toolchain would
+# cost minutes to set up for a check that takes seconds.
+on:
+  pull_request:
+    paths:
+      - 'i18n/**'
+      - 'tools/i18n/**'
+      - 'ios/**/*.swift'
+      - 'ios/.swift-version'
+      - 'macos/**/*.swift'
+      - '.swiftformat'
+      - '.github/workflows/checks.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'i18n/**'
+      - 'tools/i18n/**'
+      - 'ios/**/*.swift'
+      - 'ios/.swift-version'
+      - 'macos/**/*.swift'
+      - '.swiftformat'
+      - '.github/workflows/checks.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # The version the maintainer's machine runs. Rules change between releases,
+  # so an unpinned lint would disagree with `swiftformat ios macos` locally.
+  SWIFTFORMAT_VERSION: 0.63.0
+  SWIFTFORMAT_SHA256: b4a3cbb8c852a0baaf9adf853e221ff1dabf921a3d8957a602e0bda3af8470f1
+
+jobs:
+  i18n:
+    name: i18n generated + codegen tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Codegen unit tests
+        run: python3 tools/i18n/test_i18n.py
+
+      # Same check Gradle's `checkI18nGenerated` runs before every Android
+      # build: the committed outputs must match what i18n/*.json generates.
+      - name: Generated artifacts are current
+        run: python3 tools/i18n/check.py
+
+  swiftformat:
+    name: swiftformat --lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install swiftformat ${{ env.SWIFTFORMAT_VERSION }}
+        run: |
+          set -euo pipefail
+          curl -sSfL -o "$RUNNER_TEMP/swiftformat.zip" \
+            "https://github.com/nicklockwood/SwiftFormat/releases/download/${SWIFTFORMAT_VERSION}/swiftformat_linux.zip"
+          echo "${SWIFTFORMAT_SHA256}  $RUNNER_TEMP/swiftformat.zip" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/bin"
+          unzip -q "$RUNNER_TEMP/swiftformat.zip" -d "$RUNNER_TEMP/bin"
+          mv "$RUNNER_TEMP/bin/swiftformat_linux" "$RUNNER_TEMP/bin/swiftformat"
+          chmod +x "$RUNNER_TEMP/bin/swiftformat"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+          # GITHUB_PATH takes effect in the next step, not this one.
+          "$RUNNER_TEMP/bin/swiftformat" --version
+
+      # One directory per invocation: swiftformat reads `--lint ios macos` as a
+      # value for --lint and refuses it.
+      - name: Lint
+        run: |
+          set -euo pipefail
+          swiftformat --lint ios
+          swiftformat --lint macos
