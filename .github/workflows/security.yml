@@ -1,0 +1,75 @@
+name: Security
+
+# cargo audit + cargo deny over both Cargo workspaces. Neither tool builds
+# anything (both read Cargo.lock / `cargo metadata`), so the job needs no
+# protoc, no target cache, and no toolchain install — the runner image's
+# stable cargo is enough. Tools come as prebuilt binaries: `cargo install`
+# used to compile both from source on every run, 6–13 min of an 8.6 min
+# average (measured 2026-09-06). Prebuilt: 37 s.
+#
+# `cargo deny` runs on the engine only — `engine/deny.toml` carries the
+# licence allowlist and the wildcard-path exemption. The Windows workspace has
+# no deny.toml, so it gets the advisory check alone; its engine crates are path
+# dependencies and are already covered by the engine's run.
+on:
+  schedule:
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'engine/Cargo.lock'
+      - 'engine/**/Cargo.toml'
+      - 'engine/deny.toml'
+      - 'windows/Cargo.lock'
+      - 'windows/**/Cargo.toml'
+      - '.github/workflows/security.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'engine/Cargo.lock'
+      - 'engine/**/Cargo.toml'
+      - 'engine/deny.toml'
+      - 'windows/Cargo.lock'
+      - 'windows/**/Cargo.toml'
+      - '.github/workflows/security.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  audit:
+    name: cargo audit + cargo deny
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      # Both workspaces carry a rust-toolchain.toml listing the Apple and
+      # Android targets; without this, the first `cargo` call would make
+      # rustup download all of them for a job that compiles nothing.
+      RUSTUP_TOOLCHAIN: stable
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: |
+            engine
+            windows
+
+      - name: Install cargo-audit + cargo-deny (prebuilt)
+        uses: taiki-e/install-action@9534c84618278caac52cb373bb164ed464dbd8af # v2.87.11
+        with:
+          tool: cargo-audit,cargo-deny
+
+      - name: cargo audit (engine)
+        working-directory: engine
+        run: cargo audit
+
+      - name: cargo audit (windows)
+        working-directory: windows
+        run: cargo audit
+
+      - name: cargo deny check (engine)
+        working-directory: engine
+        run: cargo deny check
