@@ -16,7 +16,7 @@ Each rule is tagged with one or more of `[R]`, `[S]`, `[A]`.
 
 ## 1. Workspace layout `[R]` `[A]`
 
-Cargo workspace with one crate per concern. Models khiin-rs (`references/khiin-rs/Cargo.toml`) with deliberate deviations. Full crate list lives in `docs/architecture/file-structure.md` § Directory Structure; the runtime dependency graph + layering invariant in §1a below.
+Cargo workspace with one crate per concern. Models khiin-rs (`references/khiin-rs/Cargo.toml`) with deliberate deviations. Full crate list lives in `docs/architecture/system-overview.md`; the runtime dependency graph + layering invariant in §1a below.
 
 - **`phonetics`** — pure POJ/TL/TPS / Unicode / tone, no I/O, zero platform dependencies, portable to any Rust target. Corresponds to `knowledge/` reference content + `taigi-converter/` behavior.
 - **Domain crates** (`composing`, `lexicon`, `ranking`, `nextword`) own the state machines, candidate scoring, and next-word prediction. Dependency direction per §1a.

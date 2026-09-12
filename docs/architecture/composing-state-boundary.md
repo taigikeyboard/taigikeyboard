@@ -13,7 +13,7 @@
 
 **Precondition** (resolved during G4-impl, PR #138 (2026-04-19)): `ToneConverter.preprocessPojInput` was parameterized (takes `isDoubleTapOOEnabled` / `isDoubleTapNNEnabled` as arguments instead of reading `SharedSettings.shared`). The parameterization was folded into G4-impl; `ComposingState.derivedDisplay` is now Foundation-pure.
 
-> **SUPERSEDED (Path G Rust migration)**: the pure state machine this doc designs as a Swift `ComposingState` was subsequently moved to **Rust `engine/composing`**; `ComposingState.swift` / `.kt` were deleted. The **Effect → platform binding contract (§2.2)** remains the live contract — `ComposingDelegate.execute(_:)` on iOS / Android interprets the same `Effect` enum. §6 roster and §11 "landed [Swift] shape" describe the pre-Rust era and are retained as design history. Treat this doc as **Reference**, not the current implementation map (see `file-structure.md` + `system-overview.md`).
+> **SUPERSEDED (Path G Rust migration)**: the pure state machine this doc designs as a Swift `ComposingState` was subsequently moved to **Rust `engine/composing`**; `ComposingState.swift` / `.kt` were deleted. The **Effect → platform binding contract (§2.2)** remains the live contract — `ComposingDelegate.execute(_:)` on iOS / Android interprets the same `Effect` enum. §6 roster and §11 "landed [Swift] shape" describe the pre-Rust era and are retained as design history. Treat this doc as **Reference**, not the current implementation map (see `system-overview.md`).
 
 ---
 

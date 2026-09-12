@@ -3,7 +3,7 @@
 > **Type**: Planning (forward-looking)
 > **Keywords**: `macos`, `InputMethodKit`, `IMKit`, `third platform`, `engine reuse`
 > **Status**: Implementation complete 2026-08-17 (PR0–PR13 all merged); remaining work is the single batched device dogfood
-> **Session memory**: `memory/project_macos_ime.md` (phase status + active pointer)
+> **Session memory**: project memory `project_macos_ime.md` (Claude auto-memory) (phase status + active pointer)
 > **Plan provenance**: Phase-0 research + Codex pre-impl design review (ANALYSIS-ONLY, 2026-08-15) — FFI-reuse / SwiftPM-bundle / platform_id-deferral all confirmed; generation-ownership, proto-gen isolation, PR sizing, bundle-metadata cautions incorporated.
 
 ---
@@ -62,7 +62,7 @@ passed via `lexiconInstall`.
 ## Design decisions (D1–D10, grounded in code)
 
 All grounded in actual code reads (actual code reading); full citations in the
-Phase-0 plan and `memory/project_macos_ime.md`.
+Phase-0 plan and project memory `project_macos_ime.md` (Claude auto-memory).
 
 - **D1 Engine artifact** — engine `swift-ffi` crate reused UNCHANGED (4 fns,
   bytes-in/bytes-out protobuf, platform-neutral; `engine/swift-ffi/src/lib.rs:41-54`).

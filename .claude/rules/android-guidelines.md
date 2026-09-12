@@ -61,10 +61,11 @@ The **policy** (constants + tests + docs update together, comment format, `INVAR
 
 ## 3. Kotlin idioms `[B]`
 
-- `val` over `var`; immutable collections over mutable where exposed.
+Generic Kotlin idioms (`val` over `var`, sealed hierarchies, data classes, coroutines) live in the global `~/.claude/rules/kotlin.md`; this section keeps only the project-specific ones.
+
+- Follow the [Android Keyboard Design Guidelines](https://developer.android.com/develop/ui/views/touch-and-input/creating-input-method) for IME components.
 - Prefer `requireNotNull(x)` / `checkNotNull(x)` / `x ?: error("…")` over `!!`.
-- `sealed class` / `sealed interface` for restricted hierarchies; `enum class` for pure enums with no associated state.
-- `data class` for value objects.
+- `enum class` for pure enums with no associated state (sealed hierarchies and data classes: global `kotlin.md`).
 - Scope functions have distinct roles:
   - `let` — null-safe chaining or transforming a non-null reference into a different shape.
   - `apply` — configuring a receiver (builder style), returns the receiver.

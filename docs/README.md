@@ -23,7 +23,7 @@
 | `engine/ffi-safety.md` | Cross-FFI safety contract: panic boundaries, size caps, generation semantics | Active |
 | `engine/rust-core-proto.md` | Engine proto envelope + per-slice request/response shapes | Active |
 | `engine/composing.md` | Composing state machine (`Phase::Idle` / `Composing { raw }`) — Rust `engine/composing` | Active |
-| `engine/continuous-input-ranking.md` | Continuous-input lexicographic SortKey + user_freq_boost + recency_rank spec (v3.5.8 Phase 9 source of truth) | Active |
+| `engine/continuous-input-ranking.md` | Continuous-input ranking source of truth: lexicographic SortKey + user_freq_boost + recency_rank | Active |
 | `engine/continuous-candidate-display.md` | Continuous candidate dual-line display (roman + hanji) spec — §4 carrier shipped (Items 5+6); §15 fallback retire DONE (Item 13) | Active |
 | `engine/continuous-commit-and-display.md` | Continuous mode commit/display contract (Model B) — extracted from `continuous-input-ranking.md` §10 | Active |
 | `engine/autocomplete.md` | Candidate search and suggestion pipeline | Active |
@@ -42,7 +42,11 @@
 |------|-------------|--------|
 | `architecture/system-overview.md` | Mermaid architecture diagrams: system context, engine crate graph, build pipeline, keystroke flow | Active |
 | `architecture/behavioral-invariants.md` | Cross-platform behavior contract (every Rust slice must preserve) | Active |
-| `architecture/dogfood-checklist.md` | Real-device acceptance items S1–S28 (type X → expect Y, pins `INVARIANT_*`) — read before a dogfood pass | Active |
+| `architecture/dogfood-checklist.md` | Real-device acceptance items `Sn` (type X → expect Y, pins `INVARIANT_*`, per-item `Status` line) — read before a dogfood pass | Active |
+| `architecture/incident-log.md` | Dated incident narratives behind the rules in `.claude/rules/taigi-incidents.md` (append-only) | Reference |
+| `architecture/build-artifacts.md` | What is committed (`dictionaries/`, `fonts/font/`) vs generated (`make build`), why, measured timings, release-rebuild rule | Active |
+| `architecture/pr-number-migration.md` | Resolving pre-2026-09-07 `#NNN` PR numbers (archive repository, numbering restarted at #1) | Reference |
+| `architecture/refactor-round-2026-09.md` | Refactor round 2026-09 (#706–#717): behavior-freeze record, PR table, net −2,209 lines | Historical |
 | `architecture/composing-state-boundary.md` | Composing engine ↔ platform binding contract (effect enum, race rules) — G4 design record; state machine since moved to Rust | Reference |
 | `architecture/nextword-engine-boundary.md` | NextWord engine ↔ platform binding contract (generation, decay, timer) | Active |
 | `architecture/keyboard-body-invariants-android.md` | Android Compose keyboard-body geometry / touch-target invariants (refactor-freeze contract) | Active |
@@ -98,6 +102,7 @@ One-off snapshots ordered chronologically. Specs cited by engine code (`v358-ref
 | `reports/2026-06-22-i18n-symbol-draft-review.md` | i18n symbol draft proofread sheet | Historical |
 | `reports/2026-06-22-i18n-tl-draft-review.md` | i18n TL draft proofread sheet | Historical |
 | `reports/2026-08-30-hanlo-together-mode-research.md` | 候選詞顯示 picker research: 漢羅並排 (default, title/subtitle) / 漢羅濫 (one-label hanji+roman, formerly 漢羅齊出; Part I) / 羅馬字 (roman-only cells in today's candidate UI, all 4 platforms; Part II — 3-column + 台語拼音校正 considered and dropped, kept as future 校正 reference) — research only, not implemented | Plan |
+| `reports/desktop-3.6.x-design-notes.md` | Frozen design bodies of the six desktop 3.6.8 sections collapsed out of `roadmap.md` (installed typefaces, Telex, symbol picker, composing caret, ⇧+slot, 快速齒 pane) | Historical |
 | `reports/2026-09-11-windows-candidate-window-paint-latency.md` | Windows candidate window frame-before-content latency: measured on the box (2-5 ms steady, one 171 ms first-show in Chrome), mechanism (in-proc `ShowWindow` before `WM_PAINT`), what mozc / PIME / khiin do, options B (in-proc sync paint) / C (renderer process) costed — evaluation only, nothing decided | Plan |
 
 ### `releases/` — Per-Release Archives (1)

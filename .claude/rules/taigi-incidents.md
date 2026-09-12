@@ -1,60 +1,28 @@
-# Taigi Incident Appendix
+# Taigi Incident Rules
 
-Project-specific incidents that produced the abstracted cross-project rules in `~/.claude/rules/` (managed by the [`configurations`](https://github.com/siansiansu/configurations) dotfiles repo). One entry per incident: what went wrong, the USER's words where they set the rule, and the pointer for the full receipt. Read alongside a global rule when you want its concrete Taigi "why".
+Project-specific imperative rules distilled from past incidents. The dated narratives that produced them live in `docs/architecture/incident-log.md`; the abstracted cross-project rules in `~/.claude/rules/` (managed by the [`configurations`](https://github.com/siansiansu/configurations) dotfiles repo).
 
-## Maps to `~/.claude/rules/diagnosis-discipline.md`
+## Diagnosis (`~/.claude/rules/diagnosis-discipline.md`)
 
-### Confirm bug before round
+- **Confirm before a round**: a USER `確認:input X → expected Y` line is a dogfood criterion, not an observed bug. Unmerged / unbuilt prerequisite PRs mean the path never ran.
+- **Trace before assert**: grep the real tables (`engine/phonetics/src/tables.rs`) before writing an oracle or claiming a fold is safe; `to_tl` returns "" for tones 1 / 4.
+- **Fixture rule**: a syllabifier / continuous-fetch / golden fixture exercising syllable `X` must also include every production syllable that is a strict prefix of `X` and assert its absence (or presence). Confirm against production artifacts via `engine/composing/tests/candidate_dump.rs` first.
+- **Fix-location rule**: display-only candidate strips belong in the span-local key builder (`composing::shadow::left_anchored_keys_and_restrictions`), never in `syllabifier::valid_span_endings` — touching the primitive reintroduces the `span_min_syllable_count("tania")` regression.
+- **Verify pipeline claims**: grep production data + run a real query before trusting a roadmap's "current behaviour"; `dictionary/common/notone.py::remove_tone()` already strips digits and hyphens.
+- **Verify hard-prerequisite claims**: memory + Codex agreement is not verification; `dictionary/build/merge_csv.py` `groupby((hanzi, _tl_key))` already enforces `(hanzi, tl)` uniqueness.
+- **Circuit-break at 3+ failed fixes**: compare to `references/aiongtaigi-sushi` / `references/florisboard` before adding a mitigation; the IME window uses platform-default insets, never `MATCH_PARENT × MATCH_PARENT` + custom inset.
+- **Release scope is USER-gated**: never write "documented known limitation", "post-vX", "deferred" or "ready to tag" without the USER's dated words (USER: 「不要擅自決定哪些超出 v3.5.8 的範圍,v3.5.8 該 release 的時候我會給你明確的指示」).
 
-- **2026-05-16 Bug 7** — USER `確認:input "taiuantaigi" → expected …` was treated as an observed bug; a fix round was about to open. USER: "等等,已經確認 Bug 7 是 real bug 嗎". It was not — PRs #281/#282 were unmerged, the path had never run.
+## Review (`~/.claude/rules/round-workflow.md`, `code-review-rules.md`)
 
-### Trace before assert
+- Ask for `/code-review` on any diff carrying numeric / geometry fidelity risk (refactor freeze, wide caller surface); the Codex sandwich alone misses e.g. a double `toInt()` truncation.
+- Qualitative perf gate: base checklist = **S1 POJ diacritics**, **S2 TPS composition**, **S3 Hanji candidate scroll**, plus iOS keyboard-extension 64 MB hard cap, leak-free + no-keyboard-dismiss. Per-feature `Sn` acceptance items live in `docs/architecture/dogfood-checklist.md`; root-cause receipts in `docs/architecture/behavioral-invariants.md §N` + project memory (Claude auto-memory, `~/.claude/projects/-Users-alexsu-Workspace-taigikeyboard/memory/`).
 
-- **PR #310** (`ad085b3b`) — a test oracle assumed `to_tl` adds default tone diacritics; `engine/phonetics/src/tables.rs:43-47` returns "" for tones 1/4. Two false BLOCKs raised against the wrong oracle. Same round: grep of `tables.rs` showed uppercase `TH`/`IN`/`OR` parse as valid finals, so an "unconditional fold is safe" pre-impl claim was false.
-- **2026-05-31 `tai5`→`ta` prefix collision** (S5 / `INVARIANT_CONTINUOUS_LONGEST_MATCH_PREFIX`) — the masking test built its inventory as `build_inventory(&["tai5"])`; `ta` was never in the fixture, so the production collision could not fire. **Fixture rule**: a syllabifier / continuous-fetch / golden fixture exercising syllable `X` must also include every production syllable that is a strict prefix of `X` and assert its absence (or presence). Confirm against production artifacts via `engine/composing/tests/candidate_dump.rs` first. **Fix-location rule**: display-only candidate strips belong in the span-local key builder (`composing::shadow::left_anchored_keys_and_restrictions`), never in `syllabifier::valid_span_endings` — the first attempt there reintroduced the PR #290 `span_min_syllable_count("tania")` regression.
+## Planning (`~/.claude/rules/planning.md`)
 
-### Verify pipeline claims
+- Read the module's entry point (`api.rs` / `dispatch.rs`) before proposing integration; `engine/nextword` only filters / scores what the platform feeds, it fetches nothing.
+- Cite best practices from `docs/references/mainstream-ime-comparison.md` first. Proven cites: `references/khiin-rs/khiin/src/buffer_mgr.rs` (commit-and-resegment), `references/librime/src/rime/...` (segment status state machine), `references/aiongtaigi-sushi` / `references/florisboard` (IME window / inset).
 
-- **v3.5.8 Phase 1 / 1b plans** — plan cited 3 nonexistent paths (fixed in PR #249 `9eb7b890`); a CRITICAL phase turned out to be a NO-OP because `dictionary/common/notone.py::remove_tone()` already stripped digits and hyphens.
+## Phonetics (`.claude/rules/phonetics.md`, CLAUDE.md Core Principle #3)
 
-### Verify hard-prerequisite claims
-
-- **PR #270 → slim-down `27c8672c`** (2026-05-14) — memory + Codex agreed a `(roman, hanji)` ranker dedupe was a hard prerequisite; `dictionary/build/merge_csv.py:107` `groupby((hanzi, _tl_key))` already enforced uniqueness. ~155 LOC + 9 tests reverted.
-
-### Workaround circuit-breaker
-
-- **PR #179 → #180** (2026-04-25) — 8 Codex-approved mitigations for IME dismiss, failure rate never zero, new hosts kept appearing. Comparing to `references/aiongtaigi-sushi` / `references/florisboard` exposed the `MATCH_PARENT × MATCH_PARENT` + custom-inset architecture; #180 reverted to platform defaults. Receipt: `memory/project_ime_window_arch.md`.
-
-### No unilateral release scope
-
-- **2026-05-16 v3.5.8 Bug 3** — I labelled a missing underline "documented known limitation" and pushed segmentation redesign "post-v3.5.8". USER: 「不要擅自決定哪些超出 v3.5.8 的範圍,v3.5.8 該 release 的時候我會給你明確的指示」. Both were must-fix.
-
-## Maps to `~/.claude/rules/round-workflow.md`
-
-### Second pass over the opened diff
-
-- **PR #227** (2026-05-07) — sandwich passed "math fidelity"; a diff-level review caught a double `toInt()` truncation (±1px on non-integer-density devices). The `/codex-pr-review` step was retired 2026-08-16 at USER request (「移除 codex-pr-review,這個已不需要」); ask for `/code-review` when a refactor diff carries numeric / geometry fidelity risk.
-
-## Maps to `~/.claude/rules/code-review-rules.md`
-
-### Qualitative perf gate (§9)
-
-- Base checklist: **S1 POJ diacritics**, **S2 TPS composition**, **S3 Hanji candidate scroll**, plus iOS keyboard-extension 64 MB hard cap, leak-free + no-keyboard-dismiss.
-- Per-feature acceptance items **S4–S28** live in `docs/architecture/dogfood-checklist.md`; root-cause receipts in `docs/architecture/behavioral-invariants.md §N` + `memory/project_*.md`.
-
-## Maps to `~/.claude/rules/planning.md`
-
-### Grounded in code
-
-- **v3.5.8 連續輸入 plan** — drafted a `nextword` integration assuming it fetches bigram predictions; `engine/nextword/src/api.rs:42-84` showed it only filters / scores what the platform feeds. One read flipped direction and reasoning.
-
-### Cite best practices
-
-- Start at `docs/references/mainstream-ime-comparison.md` (TL;DR matrix + topic index → per-repo cards). Proven cites: `references/khiin-rs/khiin/src/buffer_mgr.rs` (commit-and-resegment), `references/librime/src/rime/...` (segment status state machine), `references/aiongtaigi-sushi` / `references/florisboard` (IME window / inset).
-
-## Maps to `~/.claude/rules/phonetics.md`
-
-### Authoritative-source-only (CLAUDE.md Core Principle #3)
-
-- **2026-04-26 `iri/erk/eeh`** — proposed removing finals absent from the dictionary. USER: "iri/erk/eeh 這個有意義,是特殊字尾". They are dialectal finals per `knowledge/taigi-phonetics-reference.md` §3.2.6.
-- **2026-05-20 TPS schema** — proposed `tps_num = digit-tone` and a "bopomofo" option. USER: "TPS 有自己的聲調表示方法,不是用數字輸入" / "TPS 不是 bopomofo". Answer was in `knowledge/taigi-phonetics-reference.md` §5 + `engine/phonetics/src/tps.rs::ZHUYIN_TONES`.
+- **Authoritative-source-only**: never remove or infer a TL / POJ / TPS rule from dictionary or test absence. `iri` / `erk` / `eeh` are dialectal finals (`knowledge/taigi-phonetics-reference.md` §3.2.6). TPS has its own tone marks (`engine/phonetics/src/tps.rs::ZHUYIN_TONES`) — not digit tones, not bopomofo.

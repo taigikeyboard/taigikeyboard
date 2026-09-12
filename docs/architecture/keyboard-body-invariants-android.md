@@ -28,7 +28,7 @@
 
 ## Why these invariants exist
 
-Phase D structurally retires the dismiss-bug hazard documented in `memory/project_ime_window_arch.md`. Any drift on these invariants risks resurrecting that class of bugs (off-by-pixel ghost taps, pinned-popup latency drift, lost multi-touch cancellation, navbar-area inset re-tunes that re-introduce `MATCH_PARENT × MATCH_PARENT` + `TOUCHABLE_INSETS_VISIBLE` pairing).
+Phase D structurally retires the dismiss-bug hazard documented in project memory `project_ime_window_arch.md` (Claude auto-memory). Any drift on these invariants risks resurrecting that class of bugs (off-by-pixel ghost taps, pinned-popup latency drift, lost multi-touch cancellation, navbar-area inset re-tunes that re-introduce `MATCH_PARENT × MATCH_PARENT` + `TOUCHABLE_INSETS_VISIBLE` pairing).
 
 ---
 
@@ -93,6 +93,6 @@ A keyboard press is initiated only on `ACTION_DOWN` / `ACTION_POINTER_DOWN`. If 
 ## Cross-references
 
 - Parent doc (cross-platform invariants §1–§15): `behavioral-invariants.md`.
-- Architectural context for the dismiss-bug class: `memory/project_ime_window_arch.md` (auto-memory, local-only).
+- Architectural context for the dismiss-bug class: project memory `project_ime_window_arch.md` (Claude auto-memory, local-only).
 - Layout solver pinned tests: `KeyboardLayoutSolverTest` (Android JVM unit).
 - AOSP LatinIME parity reference: `PointerTracker.onMoveEvent` (no MOVE-driven press promotion).

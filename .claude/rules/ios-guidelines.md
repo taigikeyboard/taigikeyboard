@@ -27,6 +27,7 @@ Mandatory rules for iOS development. Read before modifying iOS code.
 
 ## Architecture Notes
 
+- **Separate SwiftUI View from Controller** — Views must not directly hold Controller references (also Memory Management rule 1)
 - **SQLite layer**: `SQLiteConnectionManager` handles connection, queue, and initialization. Repositories use raw `sqlite3_*` C API inside `connectionManager.execute { db in }` closures — this verbosity is inherent to the C API, don't add wrapper abstractions
 - **Shared constant**: `SQLiteConnectionManager.sqliteTransient` replaces inline `unsafeBitCast(-1, to: sqlite3_destructor_type.self)` — use it for all `sqlite3_bind_text` calls
 

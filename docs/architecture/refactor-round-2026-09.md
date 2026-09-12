@@ -3,7 +3,7 @@
 > **Type**: Plan (multi-PR)
 > **Status**: CLOSED 2026-09-07 — all 11 phases merged (#706–#717). Net −2,209 lines. Outstanding: Windows `check-box` + dogfood (box was powered off), and the A1a JNI-throwable parity delta is USER-vetoable.
 > **Workflow type**: Refactor (`~/.claude/rules/round-workflow.md` § Workflow types) — every PR is behavior-frozen per `.claude/rules/cross-platform-alignment.md §1`. No user-visible change, no persisted-data change, no ranking change.
-> **Memory**: `memory/project_refactor_round_2026_09.md` (phase status + active pointer)
+> **Memory**: project memory file deleted 2026-09-13 (round CLOSED; this doc is the record)
 
 USER 2026-09-06: 「review engine, ios, android, macos, windows, 不影響功能的情況下, plan to 增加可讀性, 可維護性, 減少程式碼耦合, 減少重複實作, 不 over-design, 此為重構 round」.
 

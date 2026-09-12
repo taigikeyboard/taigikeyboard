@@ -937,7 +937,7 @@ Where the platforms **intentionally diverge** is the interaction with the OS mas
 
 **Scope**: platform-side only — no shared Rust engine. Android `ime/core/KeyPressVibrator.kt` (+ callers `ImeKeyEventDispatcher`, `MediaInputManager`); iOS KeyboardKit `feedbackService` + `state.feedbackContext` (`KeyboardViewController+Setup.swift`), custom-key path `ActionHandler+CustomActions.swift`. Android-only diff in PR #444 — no `make build`.
 
-**Tests**: device-matrix dogfood only (haptics + audio are not unit-testable on JVM/sim). Cross-platform device acceptance: Android Samsung+Pixel matrix + iOS 5-item checklist, both PASS 2026-06-19 (`memory/project_keypress_vibration_feedback.md`).
+**Tests**: device-matrix dogfood only (haptics + audio are not unit-testable on JVM/sim). Cross-platform device acceptance: Android Samsung+Pixel matrix + iOS 5-item checklist, both PASS 2026-06-19 (project memory `project_keypress_vibration_feedback.md` (Claude auto-memory)).
 
 ## §37 — App UI display-language production roster
 

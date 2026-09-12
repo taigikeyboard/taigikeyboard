@@ -3,7 +3,7 @@
 > **Type**: Planning (forward-looking)
 > **Keywords**: `windows`, `TSF`, `Text Services Framework`, `fourth platform`, `engine reuse`, `macOS parity`
 > **Status**: Phase 0 approved 2026-08-29; PR1–PR10 + parity audit merged 2026-08-29 (authored without a Windows machine). **W17 (2026-08-30/31)**: the settings window moved from egui to WinUI 3 via `windows-reactor` — USER decision, Codex GO WITH CHANGES; a Windows box (`ssh win`) gates it. **W17 complete 2026-08-31** (A0 #647 / A #648 / B1 #649 / B #650 / C #651): WinUI 3 is the settings window, eframe/egui is gone, and nothing of it has been SEEN yet — every pane is a dogfood item on the box. Phase status in memory.
-> **Session memory**: `memory/project_windows_ime.md` (phase status + active pointer)
+> **Session memory**: project memory `project_windows_ime.md` (Claude auto-memory) (phase status + active pointer)
 > **Sibling**: `docs/architecture/macos-roadmap.md` — the platform this one mirrors
 
 ---
