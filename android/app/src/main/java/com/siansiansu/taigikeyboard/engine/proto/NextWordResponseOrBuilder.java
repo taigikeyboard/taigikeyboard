@@ -32,27 +32,5 @@ public interface NextWordResponseOrBuilder extends
    */
   com.siansiansu.taigikeyboard.engine.proto.FilterResult getFilter();
 
-  /**
-   * <code>.taigi.engine.BoostResult boost = 3;</code>
-   * @return Whether the boost field is set.
-   */
-  boolean hasBoost();
-  /**
-   * <code>.taigi.engine.BoostResult boost = 3;</code>
-   * @return The boost.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.BoostResult getBoost();
-
-  /**
-   * <code>.taigi.engine.StateSnapshot state_snapshot = 4;</code>
-   * @return Whether the stateSnapshot field is set.
-   */
-  boolean hasStateSnapshot();
-  /**
-   * <code>.taigi.engine.StateSnapshot state_snapshot = 4;</code>
-   * @return The stateSnapshot.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.StateSnapshot getStateSnapshot();
-
   public com.siansiansu.taigikeyboard.engine.proto.NextWordResponse.ResultCase getResultCase();
 }

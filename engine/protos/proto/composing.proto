@@ -29,9 +29,15 @@ option java_multiple_files = true;
 // `docs/engine/composing-slice-plan.md §5b.2` for the full semantic table.
 
 message ComposingRequest {
-  // Tag layout: text-input mutators in 10s, UI-driven ops (index update + pure
-  // read) in 20s, v3.5.8 continuous-input ops in 30s. Spacing leaves room for
-  // future families without renumbering existing variants.
+  // Tag layout: text-input mutators in 10s, v3.5.8 continuous-input ops in
+  // 30s, desktop key ops in 40s. Spacing leaves room for future families
+  // without renumbering existing variants.
+  //
+  // Tags 20 (`set_selected_candidate_index`) and 21 (`query_state`) had no
+  // production caller and were removed 2026-09-25.
+  reserved 20, 21;
+  reserved "set_selected_candidate_index", "query_state";
+
   oneof method {
     // --- Text-input mutators (10s) ---
     Start                           start                                = 10;
@@ -44,10 +50,6 @@ message ComposingRequest {
     SelectSuggestion                select_suggestion                    = 17;
     CommitPreeditThenInsertExternal commit_preedit_then_insert_external  = 18;
     Reset                           reset                                = 19;
-
-    // --- UI-driven ops (20s) ---
-    SetSelectedCandidateIndex       set_selected_candidate_index         = 20;
-    QueryState                      query_state                          = 21;
 
     // --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
     EnterContinuous                 enter_continuous                     = 30;
@@ -102,15 +104,6 @@ message CommitPreeditThenInsertExternal { string text = 1; }
 // `[ClearPreeditWithoutCommit, ResetAutocomplete]` if was composing,
 // `[]` if was Idle.
 message Reset {}
-
-// Externally override `selected_candidate_index` (candidate-bar tap,
-// keyboard-arrow gesture). Pure index mutation; emits no effects.
-message SetSelectedCandidateIndex { int32 index = 1; }
-
-// Pure read — replaces platform `manager.isComposingText` getter without
-// shadowing engine state on the platform side. Returns current preedit +
-// is_composing + selected_candidate_index. Emits no effects.
-message QueryState {}
 
 // v3.5.8 Phase 6 — transition `Phase::Composing { raw }` → `Phase::Continuous
 // { raw, committed: [] }`. No payload: the buffer is already populated by
@@ -354,7 +347,7 @@ message ComposingResponse {
   // `FetchAtPos` (other continuous methods leave it absent: state-changing
   // ops emit Effects, and the platform follows up with `FetchAtPos` to
   // refresh the candidate strip — keeps each RPC single-purpose). Optional
-  // at the wire level: existing 12 methods leave it absent (proto3 zero-
+  // at the wire level: every other method leaves it absent (proto3 zero-
   // default safe). Pending-display text is NOT duplicated here — it is
   // already in `preedit.display_text` for `Phase::Continuous`.
   optional ContinuousResponse continuous = 5;

@@ -81,16 +81,6 @@ final class UserFrequencyRepositoryTests: XCTestCase {
         XCTAssertEqual(rows.count, 2, "legacy + exact are distinct rows, never merged")
     }
 
-    /// The single-word aggregate accessor sums across readings (UI / compat).
-    func test_userFrequency_singleWordAccessor_aggregatesReadings() async throws {
-        try await repository.ensureInitialized()
-        await repository.recordWord("重", tl: "tîng")
-        await repository.recordWord("重", tl: "tîng")
-        await repository.recordWord("重", tl: "tāng")
-
-        XCTAssertEqual(repository.count(for: "重"), 3, "aggregate count = tîng(2) + tāng(1)")
-    }
-
     // MARK: - Migration
 
     /// A pre-R5 table (inline `word UNIQUE`, no `tl`) is rebuilt into the
@@ -110,7 +100,9 @@ final class UserFrequencyRepositoryTests: XCTestCase {
 
         // The migrated row still increments in place on a matching write.
         await repository.recordWord("重", tl: "")
-        XCTAssertEqual(repository.count(for: "重"), 6, "legacy bucket increments, not duplicates")
+        let after = repository.frequencyDataBatch(for: ["重"])
+        XCTAssertEqual(after.count, 1, "legacy bucket increments, not duplicates")
+        XCTAssertEqual(after.first?.data.count, 6, "legacy bucket increments in place")
     }
 
     /// Directly create the pre-R5 `user_frequency` schema + seed one row, then

@@ -81,29 +81,6 @@ final class UserFrequencyRepository: @unchecked Sendable {
 
     // MARK: - Queries
 
-    /// Usage count for a single word.
-    func count(for word: String) -> Int {
-        frequencyData(for: word).count
-    }
-
-    /// Full frequency snapshot for a single word (count + last-used millis).
-    func frequencyData(for word: String) -> FrequencyData {
-        guard connectionManager.isConnected() else { return .empty }
-        do {
-            return try connectionManager.executeSync { db in
-                Self.queryFrequencyData(db: db, word: word)
-            }
-        } catch {
-            return .empty
-        }
-    }
-
-    /// Batch lookup — one SQL round-trip for many words. R5: returns one
-    /// ROW per `(word, tl)` reading (a word may yield several: each learned
-    /// reading + the legacy `tl == ""` bucket), so the engine can build its
-    /// `(display_text, canonical_tl)` pair-keyed `FrequencyMap`. Keyed on
-    /// `word` only (`WHERE word IN`), so the caller still dedupes the query
-    /// keys by display text.
     func frequencyDataBatch(for words: [String]) -> [FrequencyRow] {
         guard connectionManager.isConnected(), !words.isEmpty else { return [] }
         do {
@@ -299,32 +276,6 @@ final class UserFrequencyRepository: @unchecked Sendable {
         guard sqlite3_step(stmt) == SQLITE_DONE else {
             throw LexiconError.queryExecutionFailed(String(cString: sqlite3_errmsg(db)))
         }
-    }
-
-    private static func queryFrequencyData(db: OpaquePointer, word: String) -> FrequencyData {
-        // R5: a word may now span several `(word, tl)` rows. This
-        // single-word accessor (UI count display / compat) aggregates them:
-        // total count + most-recent last_used. The pair-keyed ranking path
-        // does NOT use this — it consults the per-reading bucket via
-        // `frequencyDataBatch`.
-        let sql = """
-            SELECT SUM(count), MAX(strftime('%s', last_used) * 1000)
-            FROM \(UserFrequencySchema.tableName)
-            WHERE word = ?;
-        """
-        var stmt: OpaquePointer?
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return .empty }
-        defer { sqlite3_finalize(stmt) }
-
-        stmt.bindText(1, word)
-
-        if sqlite3_step(stmt) == SQLITE_ROW {
-            // SUM/MAX over zero rows yields SQL NULL → column_int = 0.
-            let count = Int(sqlite3_column_int(stmt, 0))
-            let lastUsedMillis = sqlite3_column_int64(stmt, 1)
-            return FrequencyData(count: count, lastUsedMillis: lastUsedMillis)
-        }
-        return .empty
     }
 
     private static func queryFrequencyDataBatch(db: OpaquePointer, words: [String]) -> [FrequencyRow] {

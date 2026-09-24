@@ -19,8 +19,6 @@ public struct FrequencyData {
         self.count = count
         self.lastUsedMillis = lastUsedMillis
     }
-
-    public static let empty = FrequencyData(count: 0, lastUsedMillis: 0)
 }
 
 /// One `user_frequency.db` row in R5 `(word, tl)` pair-key form: the

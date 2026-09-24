@@ -22,7 +22,6 @@ fn over_1mb_input_completes_without_panic() {
     assert!(huge.len() > 1_000_000, "input must exceed 1 MB threshold");
     let req = Request {
         id: 1,
-        r#type: 0,
         config_snapshot: None,
         generation: 0,
         payload: Some(request::Payload::Phonetics(PhoneticsRequest {

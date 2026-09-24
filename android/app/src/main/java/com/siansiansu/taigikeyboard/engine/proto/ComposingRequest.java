@@ -30,8 +30,6 @@ public  final class ComposingRequest extends
     SELECT_SUGGESTION(17),
     COMMIT_PREEDIT_THEN_INSERT_EXTERNAL(18),
     RESET(19),
-    SET_SELECTED_CANDIDATE_INDEX(20),
-    QUERY_STATE(21),
     ENTER_CONTINUOUS(30),
     FETCH_AT_POS(31),
     COMMIT_CONTINUOUS(32),
@@ -63,8 +61,6 @@ public  final class ComposingRequest extends
         case 17: return SELECT_SUGGESTION;
         case 18: return COMMIT_PREEDIT_THEN_INSERT_EXTERNAL;
         case 19: return RESET;
-        case 20: return SET_SELECTED_CANDIDATE_INDEX;
-        case 21: return QUERY_STATE;
         case 30: return ENTER_CONTINUOUS;
         case 31: return FETCH_AT_POS;
         case 32: return COMMIT_CONTINUOUS;
@@ -607,126 +603,6 @@ public  final class ComposingRequest extends
    */
   private void clearReset() {
     if (methodCase_ == 19) {
-      methodCase_ = 0;
-      method_ = null;
-    }
-  }
-
-  public static final int SET_SELECTED_CANDIDATE_INDEX_FIELD_NUMBER = 20;
-  /**
-   * <pre>
-   * --- UI-driven ops (20s) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.SetSelectedCandidateIndex set_selected_candidate_index = 20;</code>
-   */
-  @java.lang.Override
-  public boolean hasSetSelectedCandidateIndex() {
-    return methodCase_ == 20;
-  }
-  /**
-   * <pre>
-   * --- UI-driven ops (20s) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.SetSelectedCandidateIndex set_selected_candidate_index = 20;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.SetSelectedCandidateIndex getSetSelectedCandidateIndex() {
-    if (methodCase_ == 20) {
-       return (com.siansiansu.taigikeyboard.engine.proto.SetSelectedCandidateIndex) method_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.SetSelectedCandidateIndex.getDefaultInstance();
-  }
-  /**
-   * <pre>
-   * --- UI-driven ops (20s) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.SetSelectedCandidateIndex set_selected_candidate_index = 20;</code>
-   */
-  private void setSetSelectedCandidateIndex(com.siansiansu.taigikeyboard.engine.proto.SetSelectedCandidateIndex value) {
-    java.util.Objects.requireNonNull(value);
-    method_ = value;
-    methodCase_ = 20;
-  }
-  /**
-   * <pre>
-   * --- UI-driven ops (20s) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.SetSelectedCandidateIndex set_selected_candidate_index = 20;</code>
-   */
-  private void mergeSetSelectedCandidateIndex(com.siansiansu.taigikeyboard.engine.proto.SetSelectedCandidateIndex value) {
-    java.util.Objects.requireNonNull(value);
-    if (methodCase_ == 20 &&
-        method_ != com.siansiansu.taigikeyboard.engine.proto.SetSelectedCandidateIndex.getDefaultInstance()) {
-      method_ = com.siansiansu.taigikeyboard.engine.proto.SetSelectedCandidateIndex.newBuilder((com.siansiansu.taigikeyboard.engine.proto.SetSelectedCandidateIndex) method_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      method_ = value;
-    }
-    methodCase_ = 20;
-  }
-  /**
-   * <pre>
-   * --- UI-driven ops (20s) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.SetSelectedCandidateIndex set_selected_candidate_index = 20;</code>
-   */
-  private void clearSetSelectedCandidateIndex() {
-    if (methodCase_ == 20) {
-      methodCase_ = 0;
-      method_ = null;
-    }
-  }
-
-  public static final int QUERY_STATE_FIELD_NUMBER = 21;
-  /**
-   * <code>.taigi.engine.QueryState query_state = 21;</code>
-   */
-  @java.lang.Override
-  public boolean hasQueryState() {
-    return methodCase_ == 21;
-  }
-  /**
-   * <code>.taigi.engine.QueryState query_state = 21;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.QueryState getQueryState() {
-    if (methodCase_ == 21) {
-       return (com.siansiansu.taigikeyboard.engine.proto.QueryState) method_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.QueryState.getDefaultInstance();
-  }
-  /**
-   * <code>.taigi.engine.QueryState query_state = 21;</code>
-   */
-  private void setQueryState(com.siansiansu.taigikeyboard.engine.proto.QueryState value) {
-    java.util.Objects.requireNonNull(value);
-    method_ = value;
-    methodCase_ = 21;
-  }
-  /**
-   * <code>.taigi.engine.QueryState query_state = 21;</code>
-   */
-  private void mergeQueryState(com.siansiansu.taigikeyboard.engine.proto.QueryState value) {
-    java.util.Objects.requireNonNull(value);
-    if (methodCase_ == 21 &&
-        method_ != com.siansiansu.taigikeyboard.engine.proto.QueryState.getDefaultInstance()) {
-      method_ = com.siansiansu.taigikeyboard.engine.proto.QueryState.newBuilder((com.siansiansu.taigikeyboard.engine.proto.QueryState) method_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      method_ = value;
-    }
-    methodCase_ = 21;
-  }
-  /**
-   * <code>.taigi.engine.QueryState query_state = 21;</code>
-   */
-  private void clearQueryState() {
-    if (methodCase_ == 21) {
       methodCase_ = 0;
       method_ = null;
     }
@@ -1687,126 +1563,6 @@ public  final class ComposingRequest extends
 
     /**
      * <pre>
-     * --- UI-driven ops (20s) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.SetSelectedCandidateIndex set_selected_candidate_index = 20;</code>
-     */
-    @java.lang.Override
-    public boolean hasSetSelectedCandidateIndex() {
-      return instance.hasSetSelectedCandidateIndex();
-    }
-    /**
-     * <pre>
-     * --- UI-driven ops (20s) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.SetSelectedCandidateIndex set_selected_candidate_index = 20;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.SetSelectedCandidateIndex getSetSelectedCandidateIndex() {
-      return instance.getSetSelectedCandidateIndex();
-    }
-    /**
-     * <pre>
-     * --- UI-driven ops (20s) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.SetSelectedCandidateIndex set_selected_candidate_index = 20;</code>
-     */
-    public Builder setSetSelectedCandidateIndex(com.siansiansu.taigikeyboard.engine.proto.SetSelectedCandidateIndex value) {
-      copyOnWrite();
-      instance.setSetSelectedCandidateIndex(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * --- UI-driven ops (20s) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.SetSelectedCandidateIndex set_selected_candidate_index = 20;</code>
-     */
-    public Builder setSetSelectedCandidateIndex(
-        com.siansiansu.taigikeyboard.engine.proto.SetSelectedCandidateIndex.Builder builderForValue) {
-      copyOnWrite();
-      instance.setSetSelectedCandidateIndex(builderForValue.build());
-      return this;
-    }
-    /**
-     * <pre>
-     * --- UI-driven ops (20s) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.SetSelectedCandidateIndex set_selected_candidate_index = 20;</code>
-     */
-    public Builder mergeSetSelectedCandidateIndex(com.siansiansu.taigikeyboard.engine.proto.SetSelectedCandidateIndex value) {
-      copyOnWrite();
-      instance.mergeSetSelectedCandidateIndex(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * --- UI-driven ops (20s) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.SetSelectedCandidateIndex set_selected_candidate_index = 20;</code>
-     */
-    public Builder clearSetSelectedCandidateIndex() {
-      copyOnWrite();
-      instance.clearSetSelectedCandidateIndex();
-      return this;
-    }
-
-    /**
-     * <code>.taigi.engine.QueryState query_state = 21;</code>
-     */
-    @java.lang.Override
-    public boolean hasQueryState() {
-      return instance.hasQueryState();
-    }
-    /**
-     * <code>.taigi.engine.QueryState query_state = 21;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.QueryState getQueryState() {
-      return instance.getQueryState();
-    }
-    /**
-     * <code>.taigi.engine.QueryState query_state = 21;</code>
-     */
-    public Builder setQueryState(com.siansiansu.taigikeyboard.engine.proto.QueryState value) {
-      copyOnWrite();
-      instance.setQueryState(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.QueryState query_state = 21;</code>
-     */
-    public Builder setQueryState(
-        com.siansiansu.taigikeyboard.engine.proto.QueryState.Builder builderForValue) {
-      copyOnWrite();
-      instance.setQueryState(builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.QueryState query_state = 21;</code>
-     */
-    public Builder mergeQueryState(com.siansiansu.taigikeyboard.engine.proto.QueryState value) {
-      copyOnWrite();
-      instance.mergeQueryState(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.QueryState query_state = 21;</code>
-     */
-    public Builder clearQueryState() {
-      copyOnWrite();
-      instance.clearQueryState();
-      return this;
-    }
-
-    /**
-     * <pre>
      * --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
      * </pre>
      *
@@ -2169,8 +1925,6 @@ public  final class ComposingRequest extends
             com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion.class,
             com.siansiansu.taigikeyboard.engine.proto.CommitPreeditThenInsertExternal.class,
             com.siansiansu.taigikeyboard.engine.proto.Reset.class,
-            com.siansiansu.taigikeyboard.engine.proto.SetSelectedCandidateIndex.class,
-            com.siansiansu.taigikeyboard.engine.proto.QueryState.class,
             com.siansiansu.taigikeyboard.engine.proto.EnterContinuous.class,
             com.siansiansu.taigikeyboard.engine.proto.FetchAtPos.class,
             com.siansiansu.taigikeyboard.engine.proto.CommitContinuous.class,
@@ -2179,10 +1933,9 @@ public  final class ComposingRequest extends
             com.siansiansu.taigikeyboard.engine.proto.MoveCaret.class,
           };
           java.lang.String info =
-              "\u0000\u0012\u0001\u0000\n)\u0012\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f<\u0000" +
+              "\u0000\u0010\u0001\u0000\n)\u0010\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f<\u0000" +
               "\r<\u0000\u000e<\u0000\u000f<\u0000\u0010<\u0000\u0011<\u0000\u0012<\u0000\u0013" +
-              "<\u0000\u0014<\u0000\u0015<\u0000\u001e<\u0000\u001f<\u0000 <\u0000!<\u0000(<\u0000" +
-              ")<\u0000";
+              "<\u0000\u001e<\u0000\u001f<\u0000 <\u0000!<\u0000(<\u0000)<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

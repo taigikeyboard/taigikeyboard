@@ -77,7 +77,6 @@ fn invariant_append_when_idle_behaves_as_start() {
 fn invariant_append_when_composing_appends_and_resets_index() {
     let mut engine = Engine::new();
     engine.apply(Intent::Start { text: "a".into() }, &config_tl());
-    engine.apply(Intent::SetSelectedCandidateIndex { index: 5 }, &config_tl());
     let resp = engine.apply(Intent::Append { ch: "b".into() }, &config_tl());
     assert_eq!(raw_input(&resp), "ab");
     assert_eq!(resp.selected_candidate_index, 0);
@@ -91,13 +90,12 @@ fn invariant_append_hyphen_appends_literal_dash() {
     assert_eq!(raw_input(&resp), "a-");
 }
 
-// ---- ReplaceLast preserves selected_candidate_index ----
+// ---- ReplaceLast ----
 
 #[test]
-fn invariant_replace_last_preserves_selected_index() {
+fn invariant_replace_last_swaps_the_last_char() {
     let mut engine = Engine::new();
     engine.apply(Intent::Start { text: "ab".into() }, &config_tl());
-    engine.apply(Intent::SetSelectedCandidateIndex { index: 3 }, &config_tl());
     let resp = engine.apply(
         Intent::ReplaceLast {
             replacement: "c".into(),
@@ -105,7 +103,6 @@ fn invariant_replace_last_preserves_selected_index() {
         &config_tl(),
     );
     assert_eq!(raw_input(&resp), "ac");
-    assert_eq!(resp.selected_candidate_index, 3);
 }
 
 #[test]
@@ -157,7 +154,6 @@ fn invariant_delete_backward_to_empty_emits_clear_reset_delete_doc() {
 fn invariant_delete_backward_partial_resets_index_to_zero() {
     let mut engine = Engine::new();
     engine.apply(Intent::Start { text: "ab".into() }, &config_tl());
-    engine.apply(Intent::SetSelectedCandidateIndex { index: 7 }, &config_tl());
     let resp = engine.apply(Intent::DeleteBackward, &config_tl());
     assert_eq!(raw_input(&resp), "a");
     assert_eq!(resp.selected_candidate_index, 0);
@@ -299,21 +295,10 @@ fn invariant_reset_composing_emits_clear_and_reset_autocomplete_only() {
     assert_eq!(resp.selected_candidate_index, -1);
 }
 
-// ---- SetSelectedCandidateIndex ----
+// ---- Snapshot ----
 
 #[test]
-fn invariant_set_selected_candidate_index_emits_no_effects() {
-    let mut engine = Engine::new();
-    engine.apply(Intent::Start { text: "a".into() }, &config_tl());
-    let resp = engine.apply(Intent::SetSelectedCandidateIndex { index: 4 }, &config_tl());
-    assert!(resp.effect.is_empty());
-    assert_eq!(resp.selected_candidate_index, 4);
-}
-
-// ---- QueryState ----
-
-#[test]
-fn invariant_query_state_does_not_mutate() {
+fn invariant_snapshot_does_not_mutate() {
     let mut engine = Engine::new();
     engine.apply(Intent::Start { text: "abc".into() }, &config_tl());
     let snap_a = engine.snapshot(&config_tl());
@@ -353,32 +338,6 @@ fn invariant_is_composing_matches_phase_after_every_response() {
     assert!(r3.is_composing);
     let r4 = engine.apply(Intent::Reset, &config_tl());
     assert!(!r4.is_composing);
-}
-
-#[test]
-fn invariant_external_index_resets_on_append_and_delete_backward() {
-    let mut engine = Engine::new();
-    engine.apply(Intent::Start { text: "ab".into() }, &config_tl());
-    engine.apply(Intent::SetSelectedCandidateIndex { index: 9 }, &config_tl());
-    let r_app = engine.apply(Intent::Append { ch: "c".into() }, &config_tl());
-    assert_eq!(r_app.selected_candidate_index, 0);
-    engine.apply(Intent::SetSelectedCandidateIndex { index: 9 }, &config_tl());
-    let r_del = engine.apply(Intent::DeleteBackward, &config_tl());
-    assert_eq!(r_del.selected_candidate_index, 0);
-}
-
-#[test]
-fn invariant_replace_last_does_not_reset_external_index() {
-    let mut engine = Engine::new();
-    engine.apply(Intent::Start { text: "ab".into() }, &config_tl());
-    engine.apply(Intent::SetSelectedCandidateIndex { index: 9 }, &config_tl());
-    let resp = engine.apply(
-        Intent::ReplaceLast {
-            replacement: "z".into(),
-        },
-        &config_tl(),
-    );
-    assert_eq!(resp.selected_candidate_index, 9);
 }
 
 // ---- Multi-step sequences ----

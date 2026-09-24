@@ -243,50 +243,6 @@ class UserFrequencyService(
 
     // Public API — Queries
 
-    /** Current count for [word], or 0 if unknown. */
-    suspend fun frequency(word: String): Int =
-        withContext(Dispatchers.IO) {
-            frequencyData(word).count
-        }
-
-    /** Frequency + last-used for [word]. Returns [FrequencyData.EMPTY] on error / missing row. */
-    suspend fun frequencyData(word: String): FrequencyData =
-        withContext(Dispatchers.IO) {
-            try {
-                ensureInitialized()
-                val db = dbHelper?.readableDatabase ?: return@withContext FrequencyData.EMPTY
-
-                // R5: a word may span several `(word, tl)` rows. This
-                // single-word accessor (UI count / compat) aggregates them:
-                // total count + most-recent last_used. The pair-keyed
-                // ranking path uses `frequencyDataBatch` (per-reading).
-                val cursor =
-                    db.rawQuery(
-                        """
-                        SELECT SUM(${Table.COUNT}), MAX(strftime('%s', ${Table.LAST_USED}) * 1000)
-                        FROM ${Table.NAME}
-                        WHERE ${Table.WORD} = ?
-                        """.trimIndent(),
-                        arrayOf(word),
-                    )
-
-                cursor.use {
-                    // SUM/MAX over zero rows yields one all-NULL row → treat
-                    // as EMPTY; a real hit has a non-null count.
-                    if (it.moveToFirst() && !it.isNull(0)) {
-                        val count = it.getInt(0)
-                        val lastUsedMillis = it.getLong(1)
-                        return@withContext FrequencyData(count, lastUsedMillis)
-                    }
-                }
-
-                FrequencyData.EMPTY
-            } catch (e: Exception) {
-                logger.e(TAG, "[QUERY] Failed to get frequency data for: $word", e)
-                FrequencyData.EMPTY
-            }
-        }
-
     /**
      * Batch lookup — R5 returns one ROW per `(word, tl)` reading for every
      * [words] entry in the DB (a word may yield several: each learned

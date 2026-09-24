@@ -123,7 +123,7 @@ Engine state machine + decision tables + scoring all live in Rust `engine/nextwo
 |-----------|----------|
 | Persisted state (`last_selected_word`, `last_selection_time_ms`, `is_showing`, `current_generation`) | Rust `nextword::api::PersistedState` |
 | Intent set (`WordSelected`, `Backspace`, `ContextTimeoutFired`, `ClearForNewComposing`, `ResetFull`, `UpdateLastSelectedWord`, `SetIsShowing`) | Rust `nextword::api::Intent` |
-| Decide / filter / score / booster | Rust `engine/nextword/src/{decide,filter,scorer,booster}.rs` |
+| Decide / filter / score | Rust `engine/nextword/src/{decide,filter,scorer}.rs` |
 | Generation guard (drops stale async results) | Rust `nextword::PersistedState.current_generation` |
 | Bigram source (read-only) | `association.bin` via Rust `engine/lexicon::assoc_lookup` |
 | User association source | `user_association.db` SQLite, platform-side (`wont_migrate`) — iOS `UserFrequencyService.swift` / Android `UserFrequencyService.kt` |

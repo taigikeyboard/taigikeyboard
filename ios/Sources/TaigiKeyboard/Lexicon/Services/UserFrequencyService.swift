@@ -34,14 +34,6 @@ final class UserFrequencyService: @unchecked Sendable {
         }
     }
 
-    func frequency(for word: String) -> Int {
-        repository.count(for: word)
-    }
-
-    func frequencyData(for word: String) -> FrequencyData {
-        repository.frequencyData(for: word)
-    }
-
     func frequencyDataBatch(for words: [String]) -> [FrequencyRow] {
         repository.frequencyDataBatch(for: words)
     }

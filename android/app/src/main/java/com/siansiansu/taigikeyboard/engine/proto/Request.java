@@ -93,49 +93,6 @@ public  final class Request extends
     id_ = 0;
   }
 
-  public static final int TYPE_FIELD_NUMBER = 2;
-  private int type_;
-  /**
-   * <code>.taigi.engine.CommandType type = 2;</code>
-   * @return The enum numeric value on the wire for type.
-   */
-  @java.lang.Override
-  public int getTypeValue() {
-    return type_;
-  }
-  /**
-   * <code>.taigi.engine.CommandType type = 2;</code>
-   * @return The type.
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.CommandType getType() {
-    com.siansiansu.taigikeyboard.engine.proto.CommandType result = com.siansiansu.taigikeyboard.engine.proto.CommandType.forNumber(type_);
-    return result == null ? com.siansiansu.taigikeyboard.engine.proto.CommandType.UNRECOGNIZED : result;
-  }
-  /**
-   * <code>.taigi.engine.CommandType type = 2;</code>
-   * @param value The enum numeric value on the wire for type to set.
-   */
-  private void setTypeValue(int value) {
-      type_ = value;
-  }
-  /**
-   * <code>.taigi.engine.CommandType type = 2;</code>
-   * @param value The type to set.
-   * @throws IllegalArgumentException if UNRECOGNIZED is provided.
-   */
-  private void setType(com.siansiansu.taigikeyboard.engine.proto.CommandType value) {
-    type_ = value.getNumber();
-
-  }
-  /**
-   * <code>.taigi.engine.CommandType type = 2;</code>
-   */
-  private void clearType() {
-
-    type_ = 0;
-  }
-
   public static final int CONFIG_SNAPSHOT_FIELD_NUMBER = 3;
   private com.siansiansu.taigikeyboard.engine.proto.AppConfig configSnapshot_;
   /**
@@ -597,53 +554,6 @@ public  final class Request extends
     }
 
     /**
-     * <code>.taigi.engine.CommandType type = 2;</code>
-     * @return The enum numeric value on the wire for type.
-     */
-    @java.lang.Override
-    public int getTypeValue() {
-      return instance.getTypeValue();
-    }
-    /**
-     * <code>.taigi.engine.CommandType type = 2;</code>
-     * @param value The type to set.
-     * @throws IllegalArgumentException if UNRECOGNIZED is provided.
-     * @return This builder for chaining.
-     */
-    public Builder setTypeValue(int value) {
-      copyOnWrite();
-      instance.setTypeValue(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.CommandType type = 2;</code>
-     * @return The type.
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.CommandType getType() {
-      return instance.getType();
-    }
-    /**
-     * <code>.taigi.engine.CommandType type = 2;</code>
-     * @param value The enum numeric value on the wire for type to set.
-     * @return This builder for chaining.
-     */
-    public Builder setType(com.siansiansu.taigikeyboard.engine.proto.CommandType value) {
-      copyOnWrite();
-      instance.setType(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.CommandType type = 2;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearType() {
-      copyOnWrite();
-      instance.clearType();
-      return this;
-    }
-
-    /**
      * <code>.taigi.engine.AppConfig config_snapshot = 3;</code>
      */
     @java.lang.Override
@@ -978,7 +888,6 @@ public  final class Request extends
             "payloadCase_",
             "bitField0_",
             "id_",
-            "type_",
             "configSnapshot_",
             "generation_",
             com.siansiansu.taigikeyboard.engine.proto.PhoneticsRequest.class,
@@ -988,8 +897,8 @@ public  final class Request extends
             com.siansiansu.taigikeyboard.engine.proto.CaseRequest.class,
           };
           java.lang.String info =
-              "\u0000\t\u0001\u0001\u0001\u000e\t\u0000\u0000\u0000\u0001\u000b\u0002\f\u0003\u1009" +
-              "\u0000\u0004\u0003\n<\u0000\u000b<\u0000\f<\u0000\r<\u0000\u000e<\u0000";
+              "\u0000\b\u0001\u0001\u0001\u000e\b\u0000\u0000\u0000\u0001\u000b\u0003\u1009\u0000" +
+              "\u0004\u0003\n<\u0000\u000b<\u0000\f<\u0000\r<\u0000\u000e<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

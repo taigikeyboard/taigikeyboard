@@ -231,12 +231,11 @@ fn encode(response: &Response) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use protos::engine::{AppConfig, CommandType, IsHanziRequest, LexiconRequest};
+    use protos::engine::{AppConfig, IsHanziRequest, LexiconRequest};
 
     fn lexicon_request(req: IsHanziRequest) -> Request {
         Request {
             id: 42,
-            r#type: CommandType::CmdLexicon as i32,
             config_snapshot: Some(AppConfig::default()),
             generation: 7,
             payload: Some(request::Payload::Lexicon(LexiconRequest {
@@ -281,7 +280,6 @@ mod tests {
     fn dispatch_returns_fail_invariant_for_missing_payload() {
         let req = Request {
             id: 1,
-            r#type: CommandType::CmdUnspecified as i32,
             config_snapshot: None,
             generation: 0,
             payload: None,
@@ -298,7 +296,6 @@ mod tests {
     fn dispatch_returns_fail_invariant_for_lexicon_missing_method() {
         let req = Request {
             id: 9,
-            r#type: CommandType::CmdLexicon as i32,
             config_snapshot: None,
             generation: 0,
             payload: Some(request::Payload::Lexicon(LexiconRequest { method: None })),

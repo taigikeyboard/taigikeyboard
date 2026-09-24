@@ -120,9 +120,6 @@ public nonisolated struct Taigi_Engine_ComposingRequest: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  /// Tag layout: text-input mutators in 10s, UI-driven ops (index update + pure
-  /// read) in 20s, v3.5.8 continuous-input ops in 30s. Spacing leaves room for
-  /// future families without renumbering existing variants.
   public var method: Taigi_Engine_ComposingRequest.OneOf_Method? = nil
 
   /// --- Text-input mutators (10s) ---
@@ -206,23 +203,6 @@ public nonisolated struct Taigi_Engine_ComposingRequest: Sendable {
     set {method = .reset(newValue)}
   }
 
-  /// --- UI-driven ops (20s) ---
-  public var setSelectedCandidateIndex: Taigi_Engine_SetSelectedCandidateIndex {
-    get {
-      if case .setSelectedCandidateIndex(let v)? = method {return v}
-      return Taigi_Engine_SetSelectedCandidateIndex()
-    }
-    set {method = .setSelectedCandidateIndex(newValue)}
-  }
-
-  public var queryState: Taigi_Engine_QueryState {
-    get {
-      if case .queryState(let v)? = method {return v}
-      return Taigi_Engine_QueryState()
-    }
-    set {method = .queryState(newValue)}
-  }
-
   /// --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
   public var enterContinuous: Taigi_Engine_EnterContinuous {
     get {
@@ -275,9 +255,6 @@ public nonisolated struct Taigi_Engine_ComposingRequest: Sendable {
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  /// Tag layout: text-input mutators in 10s, UI-driven ops (index update + pure
-  /// read) in 20s, v3.5.8 continuous-input ops in 30s. Spacing leaves room for
-  /// future families without renumbering existing variants.
   public nonisolated enum OneOf_Method: Equatable, Sendable {
     /// --- Text-input mutators (10s) ---
     case start(Taigi_Engine_Start)
@@ -290,9 +267,6 @@ public nonisolated struct Taigi_Engine_ComposingRequest: Sendable {
     case selectSuggestion(Taigi_Engine_SelectSuggestion)
     case commitPreeditThenInsertExternal(Taigi_Engine_CommitPreeditThenInsertExternal)
     case reset(Taigi_Engine_Reset)
-    /// --- UI-driven ops (20s) ---
-    case setSelectedCandidateIndex(Taigi_Engine_SetSelectedCandidateIndex)
-    case queryState(Taigi_Engine_QueryState)
     /// --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
     case enterContinuous(Taigi_Engine_EnterContinuous)
     case fetchAtPos(Taigi_Engine_FetchAtPos)
@@ -430,33 +404,6 @@ public nonisolated struct Taigi_Engine_CommitPreeditThenInsertExternal: Sendable
 /// `[ClearPreeditWithoutCommit, ResetAutocomplete]` if was composing,
 /// `[]` if was Idle.
 public nonisolated struct Taigi_Engine_Reset: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-/// Externally override `selected_candidate_index` (candidate-bar tap,
-/// keyboard-arrow gesture). Pure index mutation; emits no effects.
-public nonisolated struct Taigi_Engine_SetSelectedCandidateIndex: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var index: Int32 = 0
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-/// Pure read — replaces platform `manager.isComposingText` getter without
-/// shadowing engine state on the platform side. Returns current preedit +
-/// is_composing + selected_candidate_index. Emits no effects.
-public nonisolated struct Taigi_Engine_QueryState: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -808,7 +755,7 @@ public nonisolated struct Taigi_Engine_ComposingResponse: Sendable {
   /// `FetchAtPos` (other continuous methods leave it absent: state-changing
   /// ops emit Effects, and the platform follows up with `FetchAtPos` to
   /// refresh the candidate strip — keeps each RPC single-purpose). Optional
-  /// at the wire level: existing 12 methods leave it absent (proto3 zero-
+  /// at the wire level: every other method leaves it absent (proto3 zero-
   /// default safe). Pending-display text is NOT duplicated here — it is
   /// already in `preedit.display_text` for `Phase::Continuous`.
   public var continuous: Taigi_Engine_ContinuousResponse {
@@ -1261,7 +1208,7 @@ nonisolated extension Taigi_Engine_CandidateMode: SwiftProtobuf._ProtoNameProvid
 
 nonisolated extension Taigi_Engine_ComposingRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ComposingRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\u{a}start\0\u{1}append\0\u{3}append_hyphen\0\u{3}replace_last\0\u{3}delete_backward\0\u{3}commit_derived\0\u{3}commit_raw\0\u{3}select_suggestion\0\u{3}commit_preedit_then_insert_external\0\u{1}reset\0\u{3}set_selected_candidate_index\0\u{3}query_state\0\u{4}\u{9}enter_continuous\0\u{3}fetch_at_pos\0\u{3}commit_continuous\0\u{3}reset_continuous\0\u{4}\u{7}telex_key\0\u{3}move_caret\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\u{a}start\0\u{1}append\0\u{3}append_hyphen\0\u{3}replace_last\0\u{3}delete_backward\0\u{3}commit_derived\0\u{3}commit_raw\0\u{3}select_suggestion\0\u{3}commit_preedit_then_insert_external\0\u{1}reset\0\u{4}\u{b}enter_continuous\0\u{3}fetch_at_pos\0\u{3}commit_continuous\0\u{3}reset_continuous\0\u{4}\u{7}telex_key\0\u{3}move_caret\0\u{b}set_selected_candidate_index\0\u{b}query_state\0\u{c}\u{14}\u{1}\u{c}\u{15}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1399,32 +1346,6 @@ nonisolated extension Taigi_Engine_ComposingRequest: SwiftProtobuf.Message, Swif
           self.method = .reset(v)
         }
       }()
-      case 20: try {
-        var v: Taigi_Engine_SetSelectedCandidateIndex?
-        var hadOneofValue = false
-        if let current = self.method {
-          hadOneofValue = true
-          if case .setSelectedCandidateIndex(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.method = .setSelectedCandidateIndex(v)
-        }
-      }()
-      case 21: try {
-        var v: Taigi_Engine_QueryState?
-        var hadOneofValue = false
-        if let current = self.method {
-          hadOneofValue = true
-          if case .queryState(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.method = .queryState(v)
-        }
-      }()
       case 30: try {
         var v: Taigi_Engine_EnterContinuous?
         var hadOneofValue = false
@@ -1553,14 +1474,6 @@ nonisolated extension Taigi_Engine_ComposingRequest: SwiftProtobuf.Message, Swif
     case .reset?: try {
       guard case .reset(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 19)
-    }()
-    case .setSelectedCandidateIndex?: try {
-      guard case .setSelectedCandidateIndex(let v)? = self.method else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 20)
-    }()
-    case .queryState?: try {
-      guard case .queryState(let v)? = self.method else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 21)
     }()
     case .enterContinuous?: try {
       guard case .enterContinuous(let v)? = self.method else { preconditionFailure() }
@@ -1838,55 +1751,6 @@ nonisolated extension Taigi_Engine_Reset: SwiftProtobuf.Message, SwiftProtobuf._
   }
 
   public static func ==(lhs: Taigi_Engine_Reset, rhs: Taigi_Engine_Reset) -> Bool {
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Taigi_Engine_SetSelectedCandidateIndex: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".SetSelectedCandidateIndex"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}index\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularInt32Field(value: &self.index) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if self.index != 0 {
-      try visitor.visitSingularInt32Field(value: self.index, fieldNumber: 1)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Taigi_Engine_SetSelectedCandidateIndex, rhs: Taigi_Engine_SetSelectedCandidateIndex) -> Bool {
-    if lhs.index != rhs.index {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Taigi_Engine_QueryState: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".QueryState"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    // Load everything into unknown fields
-    while try decoder.nextFieldNumber() != nil {}
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Taigi_Engine_QueryState, rhs: Taigi_Engine_QueryState) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

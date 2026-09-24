@@ -13,7 +13,6 @@ pub mod api;
 pub mod dispatch;
 pub mod handle;
 
-mod booster;
 mod decide;
 mod filter;
 mod scorer;

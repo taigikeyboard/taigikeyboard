@@ -13,11 +13,7 @@ package com.siansiansu.taigikeyboard.ime.dictionary
 data class FrequencyData(
     val count: Int,
     val lastUsedMillis: Long,
-) {
-    companion object {
-        val EMPTY = FrequencyData(count = 0, lastUsedMillis = 0L)
-    }
-}
+)
 
 /**
  * One `user_frequency.db` row in R5 `(word, tl)` pair-key form: the

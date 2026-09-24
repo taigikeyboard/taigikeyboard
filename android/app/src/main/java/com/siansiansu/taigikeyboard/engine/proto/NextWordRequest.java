@@ -28,8 +28,6 @@ public  final class NextWordRequest extends
     UPDATE_LAST_SELECTED_WORD(15),
     SET_IS_SHOWING(16),
     FILTER_PREDICTIONS(20),
-    BOOST_CANDIDATES(21),
-    QUERY_STATE(30),
     METHOD_NOT_SET(0);
     private final int value;
     private MethodCase(int value) {
@@ -53,8 +51,6 @@ public  final class NextWordRequest extends
         case 15: return UPDATE_LAST_SELECTED_WORD;
         case 16: return SET_IS_SHOWING;
         case 20: return FILTER_PREDICTIONS;
-        case 21: return BOOST_CANDIDATES;
-        case 30: return QUERY_STATE;
         case 0: return METHOD_NOT_SET;
         default: return null;
       }
@@ -621,156 +617,6 @@ public  final class NextWordRequest extends
    */
   private void clearFilterPredictions() {
     if (methodCase_ == 20) {
-      methodCase_ = 0;
-      method_ = null;
-    }
-  }
-
-  public static final int BOOST_CANDIDATES_FIELD_NUMBER = 21;
-  /**
-   * <pre>
-   * Stateless candidate reorder helper (NextWord-derived first-char set).
-   * Pure function; engine state untouched. Routes through standard
-   * EngineHandle::handle path (brief mutex acquire — no observable cost).
-   * </pre>
-   *
-   * <code>.taigi.engine.BoostCandidates boost_candidates = 21;</code>
-   */
-  @java.lang.Override
-  public boolean hasBoostCandidates() {
-    return methodCase_ == 21;
-  }
-  /**
-   * <pre>
-   * Stateless candidate reorder helper (NextWord-derived first-char set).
-   * Pure function; engine state untouched. Routes through standard
-   * EngineHandle::handle path (brief mutex acquire — no observable cost).
-   * </pre>
-   *
-   * <code>.taigi.engine.BoostCandidates boost_candidates = 21;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.BoostCandidates getBoostCandidates() {
-    if (methodCase_ == 21) {
-       return (com.siansiansu.taigikeyboard.engine.proto.BoostCandidates) method_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.BoostCandidates.getDefaultInstance();
-  }
-  /**
-   * <pre>
-   * Stateless candidate reorder helper (NextWord-derived first-char set).
-   * Pure function; engine state untouched. Routes through standard
-   * EngineHandle::handle path (brief mutex acquire — no observable cost).
-   * </pre>
-   *
-   * <code>.taigi.engine.BoostCandidates boost_candidates = 21;</code>
-   */
-  private void setBoostCandidates(com.siansiansu.taigikeyboard.engine.proto.BoostCandidates value) {
-    java.util.Objects.requireNonNull(value);
-    method_ = value;
-    methodCase_ = 21;
-  }
-  /**
-   * <pre>
-   * Stateless candidate reorder helper (NextWord-derived first-char set).
-   * Pure function; engine state untouched. Routes through standard
-   * EngineHandle::handle path (brief mutex acquire — no observable cost).
-   * </pre>
-   *
-   * <code>.taigi.engine.BoostCandidates boost_candidates = 21;</code>
-   */
-  private void mergeBoostCandidates(com.siansiansu.taigikeyboard.engine.proto.BoostCandidates value) {
-    java.util.Objects.requireNonNull(value);
-    if (methodCase_ == 21 &&
-        method_ != com.siansiansu.taigikeyboard.engine.proto.BoostCandidates.getDefaultInstance()) {
-      method_ = com.siansiansu.taigikeyboard.engine.proto.BoostCandidates.newBuilder((com.siansiansu.taigikeyboard.engine.proto.BoostCandidates) method_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      method_ = value;
-    }
-    methodCase_ = 21;
-  }
-  /**
-   * <pre>
-   * Stateless candidate reorder helper (NextWord-derived first-char set).
-   * Pure function; engine state untouched. Routes through standard
-   * EngineHandle::handle path (brief mutex acquire — no observable cost).
-   * </pre>
-   *
-   * <code>.taigi.engine.BoostCandidates boost_candidates = 21;</code>
-   */
-  private void clearBoostCandidates() {
-    if (methodCase_ == 21) {
-      methodCase_ = 0;
-      method_ = null;
-    }
-  }
-
-  public static final int QUERY_STATE_FIELD_NUMBER = 30;
-  /**
-   * <pre>
-   * --- Pure reads (30s) — return StateSnapshot ---
-   * </pre>
-   *
-   * <code>.taigi.engine.NextWordQueryState query_state = 30;</code>
-   */
-  @java.lang.Override
-  public boolean hasQueryState() {
-    return methodCase_ == 30;
-  }
-  /**
-   * <pre>
-   * --- Pure reads (30s) — return StateSnapshot ---
-   * </pre>
-   *
-   * <code>.taigi.engine.NextWordQueryState query_state = 30;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.NextWordQueryState getQueryState() {
-    if (methodCase_ == 30) {
-       return (com.siansiansu.taigikeyboard.engine.proto.NextWordQueryState) method_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.NextWordQueryState.getDefaultInstance();
-  }
-  /**
-   * <pre>
-   * --- Pure reads (30s) — return StateSnapshot ---
-   * </pre>
-   *
-   * <code>.taigi.engine.NextWordQueryState query_state = 30;</code>
-   */
-  private void setQueryState(com.siansiansu.taigikeyboard.engine.proto.NextWordQueryState value) {
-    java.util.Objects.requireNonNull(value);
-    method_ = value;
-    methodCase_ = 30;
-  }
-  /**
-   * <pre>
-   * --- Pure reads (30s) — return StateSnapshot ---
-   * </pre>
-   *
-   * <code>.taigi.engine.NextWordQueryState query_state = 30;</code>
-   */
-  private void mergeQueryState(com.siansiansu.taigikeyboard.engine.proto.NextWordQueryState value) {
-    java.util.Objects.requireNonNull(value);
-    if (methodCase_ == 30 &&
-        method_ != com.siansiansu.taigikeyboard.engine.proto.NextWordQueryState.getDefaultInstance()) {
-      method_ = com.siansiansu.taigikeyboard.engine.proto.NextWordQueryState.newBuilder((com.siansiansu.taigikeyboard.engine.proto.NextWordQueryState) method_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      method_ = value;
-    }
-    methodCase_ = 30;
-  }
-  /**
-   * <pre>
-   * --- Pure reads (30s) — return StateSnapshot ---
-   * </pre>
-   *
-   * <code>.taigi.engine.NextWordQueryState query_state = 30;</code>
-   */
-  private void clearQueryState() {
-    if (methodCase_ == 30) {
       methodCase_ = 0;
       method_ = null;
     }
@@ -1449,162 +1295,6 @@ public  final class NextWordRequest extends
       return this;
     }
 
-    /**
-     * <pre>
-     * Stateless candidate reorder helper (NextWord-derived first-char set).
-     * Pure function; engine state untouched. Routes through standard
-     * EngineHandle::handle path (brief mutex acquire — no observable cost).
-     * </pre>
-     *
-     * <code>.taigi.engine.BoostCandidates boost_candidates = 21;</code>
-     */
-    @java.lang.Override
-    public boolean hasBoostCandidates() {
-      return instance.hasBoostCandidates();
-    }
-    /**
-     * <pre>
-     * Stateless candidate reorder helper (NextWord-derived first-char set).
-     * Pure function; engine state untouched. Routes through standard
-     * EngineHandle::handle path (brief mutex acquire — no observable cost).
-     * </pre>
-     *
-     * <code>.taigi.engine.BoostCandidates boost_candidates = 21;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.BoostCandidates getBoostCandidates() {
-      return instance.getBoostCandidates();
-    }
-    /**
-     * <pre>
-     * Stateless candidate reorder helper (NextWord-derived first-char set).
-     * Pure function; engine state untouched. Routes through standard
-     * EngineHandle::handle path (brief mutex acquire — no observable cost).
-     * </pre>
-     *
-     * <code>.taigi.engine.BoostCandidates boost_candidates = 21;</code>
-     */
-    public Builder setBoostCandidates(com.siansiansu.taigikeyboard.engine.proto.BoostCandidates value) {
-      copyOnWrite();
-      instance.setBoostCandidates(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * Stateless candidate reorder helper (NextWord-derived first-char set).
-     * Pure function; engine state untouched. Routes through standard
-     * EngineHandle::handle path (brief mutex acquire — no observable cost).
-     * </pre>
-     *
-     * <code>.taigi.engine.BoostCandidates boost_candidates = 21;</code>
-     */
-    public Builder setBoostCandidates(
-        com.siansiansu.taigikeyboard.engine.proto.BoostCandidates.Builder builderForValue) {
-      copyOnWrite();
-      instance.setBoostCandidates(builderForValue.build());
-      return this;
-    }
-    /**
-     * <pre>
-     * Stateless candidate reorder helper (NextWord-derived first-char set).
-     * Pure function; engine state untouched. Routes through standard
-     * EngineHandle::handle path (brief mutex acquire — no observable cost).
-     * </pre>
-     *
-     * <code>.taigi.engine.BoostCandidates boost_candidates = 21;</code>
-     */
-    public Builder mergeBoostCandidates(com.siansiansu.taigikeyboard.engine.proto.BoostCandidates value) {
-      copyOnWrite();
-      instance.mergeBoostCandidates(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * Stateless candidate reorder helper (NextWord-derived first-char set).
-     * Pure function; engine state untouched. Routes through standard
-     * EngineHandle::handle path (brief mutex acquire — no observable cost).
-     * </pre>
-     *
-     * <code>.taigi.engine.BoostCandidates boost_candidates = 21;</code>
-     */
-    public Builder clearBoostCandidates() {
-      copyOnWrite();
-      instance.clearBoostCandidates();
-      return this;
-    }
-
-    /**
-     * <pre>
-     * --- Pure reads (30s) — return StateSnapshot ---
-     * </pre>
-     *
-     * <code>.taigi.engine.NextWordQueryState query_state = 30;</code>
-     */
-    @java.lang.Override
-    public boolean hasQueryState() {
-      return instance.hasQueryState();
-    }
-    /**
-     * <pre>
-     * --- Pure reads (30s) — return StateSnapshot ---
-     * </pre>
-     *
-     * <code>.taigi.engine.NextWordQueryState query_state = 30;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.NextWordQueryState getQueryState() {
-      return instance.getQueryState();
-    }
-    /**
-     * <pre>
-     * --- Pure reads (30s) — return StateSnapshot ---
-     * </pre>
-     *
-     * <code>.taigi.engine.NextWordQueryState query_state = 30;</code>
-     */
-    public Builder setQueryState(com.siansiansu.taigikeyboard.engine.proto.NextWordQueryState value) {
-      copyOnWrite();
-      instance.setQueryState(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * --- Pure reads (30s) — return StateSnapshot ---
-     * </pre>
-     *
-     * <code>.taigi.engine.NextWordQueryState query_state = 30;</code>
-     */
-    public Builder setQueryState(
-        com.siansiansu.taigikeyboard.engine.proto.NextWordQueryState.Builder builderForValue) {
-      copyOnWrite();
-      instance.setQueryState(builderForValue.build());
-      return this;
-    }
-    /**
-     * <pre>
-     * --- Pure reads (30s) — return StateSnapshot ---
-     * </pre>
-     *
-     * <code>.taigi.engine.NextWordQueryState query_state = 30;</code>
-     */
-    public Builder mergeQueryState(com.siansiansu.taigikeyboard.engine.proto.NextWordQueryState value) {
-      copyOnWrite();
-      instance.mergeQueryState(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * --- Pure reads (30s) — return StateSnapshot ---
-     * </pre>
-     *
-     * <code>.taigi.engine.NextWordQueryState query_state = 30;</code>
-     */
-    public Builder clearQueryState() {
-      copyOnWrite();
-      instance.clearQueryState();
-      return this;
-    }
-
     // @@protoc_insertion_point(builder_scope:taigi.engine.NextWordRequest)
   }
   @java.lang.Override
@@ -1631,13 +1321,10 @@ public  final class NextWordRequest extends
             com.siansiansu.taigikeyboard.engine.proto.UpdateLastSelectedWord.class,
             com.siansiansu.taigikeyboard.engine.proto.SetIsShowing.class,
             com.siansiansu.taigikeyboard.engine.proto.FilterPredictions.class,
-            com.siansiansu.taigikeyboard.engine.proto.BoostCandidates.class,
-            com.siansiansu.taigikeyboard.engine.proto.NextWordQueryState.class,
           };
           java.lang.String info =
-              "\u0000\n\u0001\u0000\n\u001e\n\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f<\u0000\r" +
-              "<\u0000\u000e<\u0000\u000f<\u0000\u0010<\u0000\u0014<\u0000\u0015<\u0000\u001e<\u0000" +
-              "";
+              "\u0000\b\u0001\u0000\n\u0014\b\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f<\u0000\r" +
+              "<\u0000\u000e<\u0000\u000f<\u0000\u0010<\u0000\u0014<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

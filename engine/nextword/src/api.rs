@@ -3,7 +3,7 @@
 //! / boost lives in submodules; this module is the stable surface that
 //! `dispatch.rs` and external crates consume.
 
-use protos::engine::{AppConfig, DecideResult, FilterResult, RawNextWordPrediction, StateSnapshot};
+use protos::engine::{AppConfig, DecideResult, FilterResult, RawNextWordPrediction};
 use thiserror::Error;
 
 /// Long-lived state the engine mutates. Mirrors iOS
@@ -83,16 +83,6 @@ pub struct Engine {
 impl Engine {
     pub fn new() -> Self {
         Self::default()
-    }
-
-    /// Pure read — no state mutation. Used by `Intent::QueryState` and
-    /// the generation-mismatch path's post-drop re-snapshot.
-    pub(crate) fn snapshot(&self) -> StateSnapshot {
-        StateSnapshot {
-            last_selected_word: self.state.last_selected_word.clone().unwrap_or_default(),
-            is_showing: self.state.is_showing,
-            current_generation: self.state.current_generation,
-        }
     }
 
     /// Apply `intent` against the current state, mutate, and return the

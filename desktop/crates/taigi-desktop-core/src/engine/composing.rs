@@ -6,9 +6,8 @@
 //! `ReplaceLast` is TPS-only, `Start` is unnecessary (`Append` enters
 //! `Phase::Composing` from Idle), `SelectSuggestion` double-counts the nailed
 //! prefix under `Phase::Continuous` (`transition.rs:724`) so the literal
-//! commit is `CommitRaw`, and `SetSelectedCandidateIndex` is absent for good —
-//! nothing in the engine reads it and candidate navigation is a permanent
-//! platform-side concern (`cross-platform-alignment.md` §5.1).
+//! commit is `CommitRaw`. Candidate navigation is a permanent platform-side
+//! concern (`cross-platform-alignment.md` §4.1).
 //!
 //! Every op answers `None` when the round-trip itself failed, which is a
 //! different thing from the engine answering that it is idle.

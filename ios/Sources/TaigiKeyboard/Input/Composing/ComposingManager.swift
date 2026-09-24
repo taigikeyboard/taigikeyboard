@@ -630,11 +630,6 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         applyAsSelfCommit(RustEngineBridge.composingReset(generation: currentGeneration))
     }
 
-    public func setSelectedCandidateIndex(_ index: Int) {
-        logger.debug("[COMPOSE] fn=setSelectedCandidateIndex index=\(index)")
-        apply(RustEngineBridge.composingSetSelectedCandidateIndex(index, generation: currentGeneration))
-    }
-
     // MARK: - Apply Transition (three-phase, see boundary doc §2.4)
 
     // Self-commit variant of `apply`: the `selfCommitInProgress` flag suppresses a redundant generation bump.

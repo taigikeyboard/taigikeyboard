@@ -294,19 +294,13 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         XCTAssertEqual(result.effects, [])
     }
 
-    // MARK: - QueryState read-back
+    // MARK: - Decide echo
 
-    func testQueryState_reflectsLastWordSelected() {
-        _ = wordSelected(text: "早", roman: "tsá", nowMs: 0)
-        let snapshot = RustEngineBridge.nextwordQueryState(
-            mode: .tl,
-            translateSwapped: false,
-            associationRecordingEnabled: true,
-            generation: envelopeGen,
-        )
-        XCTAssertEqual(snapshot.lastSelectedWord, "早")
-        XCTAssertFalse(snapshot.isShowing, "is_showing is platform-driven, not engine-set")
-        XCTAssertEqual(snapshot.currentGeneration, baselineGen &+ 1)
+    func testWordSelected_echoesLastSelectedWord() {
+        let result = wordSelected(text: "早", roman: "tsá", nowMs: 0)
+        XCTAssertEqual(result.lastSelectedWord, "早")
+        XCTAssertFalse(result.isShowing, "is_showing is platform-driven, not engine-set")
+        XCTAssertEqual(result.currentGeneration, baselineGen &+ 1)
     }
 
     // MARK: - Filter: scoring + ordering
@@ -475,42 +469,6 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         XCTAssertEqual(result.predictions.count, 3, "distinct polyphones must not collapse")
     }
 
-    // MARK: - Boost: partition reorder
-
-    func testBoost_emptyPredictedReturnsInputUntouched() {
-        let words = ["alpha", "beta", "gamma"]
-        let result = RustEngineBridge.nextwordBoostCandidates(
-            words: words,
-            predictedFirstChars: [],
-            mode: .tl, translateSwapped: false, associationRecordingEnabled: true,
-            generation: envelopeGen,
-        )
-        XCTAssertEqual(result, words)
-    }
-
-    func testBoost_partitionsMatchingFirstCharToFront() {
-        let words = ["甲級", "九份", "alpha", "九龍"]
-        let result = RustEngineBridge.nextwordBoostCandidates(
-            words: words,
-            predictedFirstChars: ["九"],
-            mode: .tl, translateSwapped: false, associationRecordingEnabled: true,
-            generation: envelopeGen,
-        )
-        // 九-prefixed entries float to the top, original order preserved.
-        XCTAssertEqual(result, ["九份", "九龍", "甲級", "alpha"])
-    }
-
-    func testBoost_noMatchesReturnsInputOrderUnchanged() {
-        let words = ["alpha", "beta"]
-        let result = RustEngineBridge.nextwordBoostCandidates(
-            words: words,
-            predictedFirstChars: ["九"],
-            mode: .tl, translateSwapped: false, associationRecordingEnabled: true,
-            generation: envelopeGen,
-        )
-        XCTAssertEqual(result, words)
-    }
-
     // MARK: - Helpers
 
     /// Every recorded compound pair in `result`, or nil when it recorded no
@@ -582,8 +540,11 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         )
     }
 
+    /// Current engine generation, read through `SetIsShowing(false)` — the
+    /// one intent that echoes state without bumping the generation.
     private func currentGen() -> UInt64 {
-        RustEngineBridge.nextwordQueryState(
+        RustEngineBridge.nextwordSetIsShowing(
+            false,
             mode: .tl,
             translateSwapped: false,
             associationRecordingEnabled: true,

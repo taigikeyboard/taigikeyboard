@@ -2,11 +2,11 @@
 
 import Foundation
 
-/// The next-word intents macOS uses, which is three of the engine's nine.
+/// The next-word intents macOS uses, which is three of the engine's eight.
 ///
 /// macOS learns but does not predict, so the whole read half of the slice —
-/// `FilterPredictions`, `BoostCandidates`, `NextWordQueryState`, `SetIsShowing`
-/// — has no caller here and is not wrapped. `Backspace` is absent for the same
+/// `FilterPredictions`, `SetIsShowing` — has no caller here and is not
+/// wrapped. `Backspace` is absent for the same
 /// reason: it exists to re-issue a prediction query against the character left
 /// behind, and it records nothing.
 ///

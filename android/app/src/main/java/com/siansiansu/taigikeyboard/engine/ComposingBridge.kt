@@ -1,4 +1,4 @@
-// Composing + Continuous-input ops (12 composing, 4 continuous) — extensions on RustEngineBridge mirroring
+// Composing + Continuous-input ops (10 composing, 4 continuous) — extensions on RustEngineBridge mirroring
 // iOS RustEngineBridge+Composing.swift via the shared JNI roundtrip; nested types stay in RustEngineBridge.
 
 package com.siansiansu.taigikeyboard.engine
@@ -11,7 +11,7 @@ import com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry
 import com.siansiansu.taigikeyboard.ime.core.logging.tdebug
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
 
-// region Composing slice (12 ops)
+// region Composing slice (10 ops)
 
 fun RustEngineBridge.composingStart(
     text: String,
@@ -177,36 +177,6 @@ fun RustEngineBridge.composingReset(generation: Long): RustEngineBridge.Composin
     return composingDispatch(
         methodSetter = { it.reset = payload },
         op = "composingReset",
-        generation = generation,
-        config = null,
-    )
-}
-
-// Reports the selected index so NextWord / Booster can read the context word. Does not commit.
-fun RustEngineBridge.composingSetSelectedCandidateIndex(
-    index: Int,
-    generation: Long,
-): RustEngineBridge.ComposingTransition {
-    val payload = com.siansiansu.taigikeyboard.engine.proto
-        .SetSelectedCandidateIndex
-        .newBuilder()
-        .setIndex(index)
-        .build()
-    return composingDispatch(
-        methodSetter = { it.setSelectedCandidateIndex = payload },
-        op = "composingSetSelectedCandidateIndex",
-        generation = generation,
-        config = null,
-    )
-}
-
-fun RustEngineBridge.composingQueryState(generation: Long): RustEngineBridge.ComposingTransition {
-    val payload = com.siansiansu.taigikeyboard.engine.proto.QueryState
-        .newBuilder()
-        .build()
-    return composingDispatch(
-        methodSetter = { it.queryState = payload },
-        op = "composingQueryState",
         generation = generation,
         config = null,
     )

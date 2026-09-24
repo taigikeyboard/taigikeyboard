@@ -10,7 +10,7 @@
 //! applying a mutating request. NO effects emitted from the drop itself —
 //! the request's own effects then apply against fresh state.
 //!
-//! Read-only intents (`Intent::is_read_only`: `FetchAtPos`, `QueryState`)
+//! Read-only intents (`Intent::is_read_only`: `FetchAtPos`)
 //! never mutate. A platform may run the candidate search on a worker
 //! thread (Android does), so a fetch can finish after the main thread has
 //! already moved the engine to a newer generation. Letting that stale

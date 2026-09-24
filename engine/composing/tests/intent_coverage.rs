@@ -5,8 +5,7 @@ use composing::{dispatch, Engine};
 use protos::engine::composing_request::Method;
 use protos::engine::{
     Append, AppendHyphen, CommitDerived, CommitPreeditThenInsertExternal, CommitRaw,
-    ComposingRequest, DeleteBackward, QueryState, ReplaceLast, Reset, SelectSuggestion,
-    SetSelectedCandidateIndex, Start,
+    ComposingRequest, DeleteBackward, ReplaceLast, Reset, SelectSuggestion, Start,
 };
 
 mod common;
@@ -256,28 +255,7 @@ fn intent_reset_returns_to_idle() {
 }
 
 #[test]
-fn intent_set_selected_candidate_index_mutates_only_index() {
-    let mut engine = Engine::new();
-    dispatch::handle(
-        &req(Method::Start(Start { text: "a".into() })),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
-    let resp = dispatch::handle(
-        &req(Method::SetSelectedCandidateIndex(
-            SetSelectedCandidateIndex { index: 3 },
-        )),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
-    assert_eq!(resp.selected_candidate_index, 3);
-    assert!(resp.effect.is_empty());
-}
-
-#[test]
-fn intent_query_state_emits_no_effects() {
+fn snapshot_emits_no_effects() {
     let mut engine = Engine::new();
     dispatch::handle(
         &req(Method::Start(Start { text: "abc".into() })),
@@ -285,12 +263,7 @@ fn intent_query_state_emits_no_effects() {
         &config_tl(),
     )
     .unwrap();
-    let resp = dispatch::handle(
-        &req(Method::QueryState(QueryState {})),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
+    let resp = engine.snapshot(&config_tl());
     assert!(resp.is_composing);
     assert_eq!(resp.preedit.unwrap().raw_input, "abc");
     assert!(resp.effect.is_empty());
@@ -371,12 +344,7 @@ fn intent_telex_z_from_idle_enters_composing_with_the_affricate() {
     assert!(resp.is_composing);
     assert_eq!(resp.preedit.unwrap().raw_input, "ts");
     append(&mut engine, "hi", &config_tl());
-    let resp = dispatch::handle(
-        &req(Method::QueryState(QueryState {})),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
+    let resp = engine.snapshot(&config_tl());
     assert_eq!(resp.preedit.unwrap().raw_input, "tshi");
 }
 
@@ -473,28 +441,11 @@ fn intent_telex_under_continuous_keeps_nailed_segments() {
 }
 
 #[test]
-fn intent_telex_edit_resets_selection_noop_keeps_it() {
+fn intent_telex_edit_resets_selection() {
     let mut engine = Engine::new();
     append(&mut engine, "te", &config_tl());
-    let select = |engine: &mut Engine| {
-        dispatch::handle(
-            &req(Method::SetSelectedCandidateIndex(
-                SetSelectedCandidateIndex { index: 2 },
-            )),
-            engine,
-            &config_tl(),
-        )
-        .unwrap()
-    };
-    select(&mut engine);
     let resp = telex(&mut engine, "v", &config_tl());
     assert_eq!(resp.selected_candidate_index, 0);
-    select(&mut engine);
-    let resp = telex(&mut engine, "v", &config_tl());
-    assert_eq!(
-        resp.selected_candidate_index, 2,
-        "no-op keeps the selection"
-    );
 }
 
 #[test]

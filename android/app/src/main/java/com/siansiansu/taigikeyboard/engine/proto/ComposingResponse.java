@@ -898,7 +898,7 @@ public  final class ComposingResponse extends
    * `FetchAtPos` (other continuous methods leave it absent: state-changing
    * ops emit Effects, and the platform follows up with `FetchAtPos` to
    * refresh the candidate strip — keeps each RPC single-purpose). Optional
-   * at the wire level: existing 12 methods leave it absent (proto3 zero-
+   * at the wire level: every other method leaves it absent (proto3 zero-
    * default safe). Pending-display text is NOT duplicated here — it is
    * already in `preedit.display_text` for `Phase::Continuous`.
    * </pre>
@@ -915,7 +915,7 @@ public  final class ComposingResponse extends
    * `FetchAtPos` (other continuous methods leave it absent: state-changing
    * ops emit Effects, and the platform follows up with `FetchAtPos` to
    * refresh the candidate strip — keeps each RPC single-purpose). Optional
-   * at the wire level: existing 12 methods leave it absent (proto3 zero-
+   * at the wire level: every other method leaves it absent (proto3 zero-
    * default safe). Pending-display text is NOT duplicated here — it is
    * already in `preedit.display_text` for `Phase::Continuous`.
    * </pre>
@@ -932,7 +932,7 @@ public  final class ComposingResponse extends
    * `FetchAtPos` (other continuous methods leave it absent: state-changing
    * ops emit Effects, and the platform follows up with `FetchAtPos` to
    * refresh the candidate strip — keeps each RPC single-purpose). Optional
-   * at the wire level: existing 12 methods leave it absent (proto3 zero-
+   * at the wire level: every other method leaves it absent (proto3 zero-
    * default safe). Pending-display text is NOT duplicated here — it is
    * already in `preedit.display_text` for `Phase::Continuous`.
    * </pre>
@@ -950,7 +950,7 @@ public  final class ComposingResponse extends
    * `FetchAtPos` (other continuous methods leave it absent: state-changing
    * ops emit Effects, and the platform follows up with `FetchAtPos` to
    * refresh the candidate strip — keeps each RPC single-purpose). Optional
-   * at the wire level: existing 12 methods leave it absent (proto3 zero-
+   * at the wire level: every other method leaves it absent (proto3 zero-
    * default safe). Pending-display text is NOT duplicated here — it is
    * already in `preedit.display_text` for `Phase::Continuous`.
    * </pre>
@@ -975,7 +975,7 @@ public  final class ComposingResponse extends
    * `FetchAtPos` (other continuous methods leave it absent: state-changing
    * ops emit Effects, and the platform follows up with `FetchAtPos` to
    * refresh the candidate strip — keeps each RPC single-purpose). Optional
-   * at the wire level: existing 12 methods leave it absent (proto3 zero-
+   * at the wire level: every other method leaves it absent (proto3 zero-
    * default safe). Pending-display text is NOT duplicated here — it is
    * already in `preedit.display_text` for `Phase::Continuous`.
    * </pre>
@@ -1367,7 +1367,7 @@ public  final class ComposingResponse extends
      * `FetchAtPos` (other continuous methods leave it absent: state-changing
      * ops emit Effects, and the platform follows up with `FetchAtPos` to
      * refresh the candidate strip — keeps each RPC single-purpose). Optional
-     * at the wire level: existing 12 methods leave it absent (proto3 zero-
+     * at the wire level: every other method leaves it absent (proto3 zero-
      * default safe). Pending-display text is NOT duplicated here — it is
      * already in `preedit.display_text` for `Phase::Continuous`.
      * </pre>
@@ -1384,7 +1384,7 @@ public  final class ComposingResponse extends
      * `FetchAtPos` (other continuous methods leave it absent: state-changing
      * ops emit Effects, and the platform follows up with `FetchAtPos` to
      * refresh the candidate strip — keeps each RPC single-purpose). Optional
-     * at the wire level: existing 12 methods leave it absent (proto3 zero-
+     * at the wire level: every other method leaves it absent (proto3 zero-
      * default safe). Pending-display text is NOT duplicated here — it is
      * already in `preedit.display_text` for `Phase::Continuous`.
      * </pre>
@@ -1401,7 +1401,7 @@ public  final class ComposingResponse extends
      * `FetchAtPos` (other continuous methods leave it absent: state-changing
      * ops emit Effects, and the platform follows up with `FetchAtPos` to
      * refresh the candidate strip — keeps each RPC single-purpose). Optional
-     * at the wire level: existing 12 methods leave it absent (proto3 zero-
+     * at the wire level: every other method leaves it absent (proto3 zero-
      * default safe). Pending-display text is NOT duplicated here — it is
      * already in `preedit.display_text` for `Phase::Continuous`.
      * </pre>
@@ -1419,7 +1419,7 @@ public  final class ComposingResponse extends
      * `FetchAtPos` (other continuous methods leave it absent: state-changing
      * ops emit Effects, and the platform follows up with `FetchAtPos` to
      * refresh the candidate strip — keeps each RPC single-purpose). Optional
-     * at the wire level: existing 12 methods leave it absent (proto3 zero-
+     * at the wire level: every other method leaves it absent (proto3 zero-
      * default safe). Pending-display text is NOT duplicated here — it is
      * already in `preedit.display_text` for `Phase::Continuous`.
      * </pre>
@@ -1438,7 +1438,7 @@ public  final class ComposingResponse extends
      * `FetchAtPos` (other continuous methods leave it absent: state-changing
      * ops emit Effects, and the platform follows up with `FetchAtPos` to
      * refresh the candidate strip — keeps each RPC single-purpose). Optional
-     * at the wire level: existing 12 methods leave it absent (proto3 zero-
+     * at the wire level: every other method leaves it absent (proto3 zero-
      * default safe). Pending-display text is NOT duplicated here — it is
      * already in `preedit.display_text` for `Phase::Continuous`.
      * </pre>
@@ -1456,7 +1456,7 @@ public  final class ComposingResponse extends
      * `FetchAtPos` (other continuous methods leave it absent: state-changing
      * ops emit Effects, and the platform follows up with `FetchAtPos` to
      * refresh the candidate strip — keeps each RPC single-purpose). Optional
-     * at the wire level: existing 12 methods leave it absent (proto3 zero-
+     * at the wire level: every other method leaves it absent (proto3 zero-
      * default safe). Pending-display text is NOT duplicated here — it is
      * already in `preedit.display_text` for `Phase::Continuous`.
      * </pre>

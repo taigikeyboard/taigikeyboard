@@ -20,56 +20,6 @@ fileprivate nonisolated struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobu
   typealias Version = _2
 }
 
-public nonisolated enum Taigi_Engine_CommandType: SwiftProtobuf.Enum, Swift.CaseIterable {
-  public typealias RawValue = Int
-  case cmdUnspecified // = 0
-  case cmdPhonetics // = 1
-  case cmdComposing // = 2
-  case cmdLexicon // = 3
-  case cmdNextword // = 4
-  case cmdCase // = 5
-  case UNRECOGNIZED(Int)
-
-  public init() {
-    self = .cmdUnspecified
-  }
-
-  public init?(rawValue: Int) {
-    switch rawValue {
-    case 0: self = .cmdUnspecified
-    case 1: self = .cmdPhonetics
-    case 2: self = .cmdComposing
-    case 3: self = .cmdLexicon
-    case 4: self = .cmdNextword
-    case 5: self = .cmdCase
-    default: self = .UNRECOGNIZED(rawValue)
-    }
-  }
-
-  public var rawValue: Int {
-    switch self {
-    case .cmdUnspecified: return 0
-    case .cmdPhonetics: return 1
-    case .cmdComposing: return 2
-    case .cmdLexicon: return 3
-    case .cmdNextword: return 4
-    case .cmdCase: return 5
-    case .UNRECOGNIZED(let i): return i
-    }
-  }
-
-  // The compiler won't synthesize support with the UNRECOGNIZED case.
-  public static let allCases: [Taigi_Engine_CommandType] = [
-    .cmdUnspecified,
-    .cmdPhonetics,
-    .cmdComposing,
-    .cmdLexicon,
-    .cmdNextword,
-    .cmdCase,
-  ]
-
-}
-
 public nonisolated enum Taigi_Engine_ErrorCode: SwiftProtobuf.Enum, Swift.CaseIterable {
   public typealias RawValue = Int
   case ok // = 0
@@ -322,11 +272,6 @@ public nonisolated struct Taigi_Engine_Request: @unchecked Sendable {
     set {_uniqueStorage()._id = newValue}
   }
 
-  public var type: Taigi_Engine_CommandType {
-    get {_storage._type}
-    set {_uniqueStorage()._type = newValue}
-  }
-
   public var configSnapshot: Taigi_Engine_AppConfig {
     get {_storage._configSnapshot ?? Taigi_Engine_AppConfig()}
     set {_uniqueStorage()._configSnapshot = newValue}
@@ -469,44 +414,9 @@ public nonisolated struct Taigi_Engine_Response: Sendable {
   public init() {}
 }
 
-public nonisolated struct Taigi_Engine_Command: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var request: Taigi_Engine_Request {
-    get {_request ?? Taigi_Engine_Request()}
-    set {_request = newValue}
-  }
-  /// Returns true if `request` has been explicitly set.
-  public var hasRequest: Bool {self._request != nil}
-  /// Clears the value of `request`. Subsequent reads from it will return its default value.
-  public mutating func clearRequest() {self._request = nil}
-
-  public var response: Taigi_Engine_Response {
-    get {_response ?? Taigi_Engine_Response()}
-    set {_response = newValue}
-  }
-  /// Returns true if `response` has been explicitly set.
-  public var hasResponse: Bool {self._response != nil}
-  /// Clears the value of `response`. Subsequent reads from it will return its default value.
-  public mutating func clearResponse() {self._response = nil}
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-
-  fileprivate var _request: Taigi_Engine_Request? = nil
-  fileprivate var _response: Taigi_Engine_Response? = nil
-}
-
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate nonisolated let _protobuf_package = "taigi.engine"
-
-nonisolated extension Taigi_Engine_CommandType: SwiftProtobuf._ProtoNameProviding {
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0CMD_UNSPECIFIED\0\u{1}CMD_PHONETICS\0\u{1}CMD_COMPOSING\0\u{1}CMD_LEXICON\0\u{1}CMD_NEXTWORD\0\u{1}CMD_CASE\0")
-}
 
 nonisolated extension Taigi_Engine_ErrorCode: SwiftProtobuf._ProtoNameProviding {
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0OK\0\u{1}FAIL_PARSE\0\u{1}FAIL_INTERNAL\0\u{1}FAIL_IO\0\u{1}FAIL_INVARIANT\0")
@@ -602,11 +512,10 @@ nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtob
 
 nonisolated extension Taigi_Engine_Request: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Request"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}type\0\u{3}config_snapshot\0\u{1}generation\0\u{2}\u{6}phonetics\0\u{1}composing\0\u{1}lexicon\0\u{1}nextword\0\u{3}case_transform\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{4}\u{2}config_snapshot\0\u{1}generation\0\u{2}\u{6}phonetics\0\u{1}composing\0\u{1}lexicon\0\u{1}nextword\0\u{3}case_transform\0\u{b}type\0\u{c}\u{2}\u{1}")
 
   fileprivate class _StorageClass {
     var _id: UInt32 = 0
-    var _type: Taigi_Engine_CommandType = .cmdUnspecified
     var _configSnapshot: Taigi_Engine_AppConfig? = nil
     var _generation: UInt64 = 0
     var _payload: Taigi_Engine_Request.OneOf_Payload?
@@ -621,7 +530,6 @@ nonisolated extension Taigi_Engine_Request: SwiftProtobuf.Message, SwiftProtobuf
 
     init(copying source: _StorageClass) {
       _id = source._id
-      _type = source._type
       _configSnapshot = source._configSnapshot
       _generation = source._generation
       _payload = source._payload
@@ -644,7 +552,6 @@ nonisolated extension Taigi_Engine_Request: SwiftProtobuf.Message, SwiftProtobuf
         // enabled. https://github.com/apple/swift-protobuf/issues/1034
         switch fieldNumber {
         case 1: try { try decoder.decodeSingularUInt32Field(value: &_storage._id) }()
-        case 2: try { try decoder.decodeSingularEnumField(value: &_storage._type) }()
         case 3: try { try decoder.decodeSingularMessageField(value: &_storage._configSnapshot) }()
         case 4: try { try decoder.decodeSingularUInt64Field(value: &_storage._generation) }()
         case 10: try {
@@ -727,9 +634,6 @@ nonisolated extension Taigi_Engine_Request: SwiftProtobuf.Message, SwiftProtobuf
       if _storage._id != 0 {
         try visitor.visitSingularUInt32Field(value: _storage._id, fieldNumber: 1)
       }
-      if _storage._type != .cmdUnspecified {
-        try visitor.visitSingularEnumField(value: _storage._type, fieldNumber: 2)
-      }
       try { if let v = _storage._configSnapshot {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
       } }()
@@ -769,7 +673,6 @@ nonisolated extension Taigi_Engine_Request: SwiftProtobuf.Message, SwiftProtobuf
         let _storage = _args.0
         let rhs_storage = _args.1
         if _storage._id != rhs_storage._id {return false}
-        if _storage._type != rhs_storage._type {return false}
         if _storage._configSnapshot != rhs_storage._configSnapshot {return false}
         if _storage._generation != rhs_storage._generation {return false}
         if _storage._payload != rhs_storage._payload {return false}
@@ -910,45 +813,6 @@ nonisolated extension Taigi_Engine_Response: SwiftProtobuf.Message, SwiftProtobu
     if lhs.error != rhs.error {return false}
     if lhs.generation != rhs.generation {return false}
     if lhs.payload != rhs.payload {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Taigi_Engine_Command: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".Command"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}request\0\u{1}response\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularMessageField(value: &self._request) }()
-      case 2: try { try decoder.decodeSingularMessageField(value: &self._response) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    try { if let v = self._request {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
-    } }()
-    try { if let v = self._response {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
-    } }()
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Taigi_Engine_Command, rhs: Taigi_Engine_Command) -> Bool {
-    if lhs._request != rhs._request {return false}
-    if lhs._response != rhs._response {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

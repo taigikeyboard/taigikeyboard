@@ -3,9 +3,7 @@
 
 use composing::EngineHandle;
 use protos::engine::composing_request::Method;
-use protos::engine::{
-    Append, ComposingRequest, EnterContinuous, FetchAtPos, QueryState, Reset, Start,
-};
+use protos::engine::{Append, ComposingRequest, EnterContinuous, FetchAtPos, Reset, Start};
 
 mod common;
 use common::{config_tl, req};
@@ -167,16 +165,12 @@ fn lifecycle_fetch_at_pos_with_mismatched_generation_leaves_state_intact() {
 }
 
 #[test]
-fn lifecycle_query_state_with_mismatched_generation_leaves_state_intact() {
+fn lifecycle_read_only_fetch_with_mismatched_generation_leaves_state_intact() {
     let handle = EngineHandle::new();
     handle.handle(&req_start("ta"), &config_tl(), 1).unwrap();
-    let stale = handle
-        .handle(&req(Method::QueryState(QueryState {})), &config_tl(), 2)
-        .unwrap();
+    let stale = handle.handle(&req_fetch_at_pos(), &config_tl(), 2).unwrap();
     assert!(!stale.is_composing);
-    let resp = handle
-        .handle(&req(Method::QueryState(QueryState {})), &config_tl(), 1)
-        .unwrap();
+    let resp = handle.handle(&req_fetch_at_pos(), &config_tl(), 1).unwrap();
     assert_eq!(resp.preedit.unwrap().raw_input, "ta");
 }
 
@@ -212,9 +206,7 @@ fn lifecycle_read_only_fetch_never_observes_a_newer_generation() {
         std::thread::spawn(move || {
             let mut leaked = 0usize;
             while !stop.load(Ordering::Relaxed) {
-                let resp = handle
-                    .handle(&req(Method::QueryState(QueryState {})), &config_tl(), 1)
-                    .unwrap();
+                let resp = handle.handle(&req_fetch_at_pos(), &config_tl(), 1).unwrap();
                 if resp.preedit.map(|p| p.raw_input) == Some("b".to_string()) {
                     leaked += 1;
                 }

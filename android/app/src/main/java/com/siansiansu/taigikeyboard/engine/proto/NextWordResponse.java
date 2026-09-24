@@ -22,8 +22,6 @@ public  final class NextWordResponse extends
       implements com.google.protobuf.AbstractMessageLite.InternalOneOfEnum {
     DECIDE(1),
     FILTER(2),
-    BOOST(3),
-    STATE_SNAPSHOT(4),
     RESULT_NOT_SET(0);
     private final int value;
     private ResultCase(int value) {
@@ -41,8 +39,6 @@ public  final class NextWordResponse extends
       switch (value) {
         case 1: return DECIDE;
         case 2: return FILTER;
-        case 3: return BOOST;
-        case 4: return STATE_SNAPSHOT;
         case 0: return RESULT_NOT_SET;
         default: return null;
       }
@@ -159,106 +155,6 @@ public  final class NextWordResponse extends
    */
   private void clearFilter() {
     if (resultCase_ == 2) {
-      resultCase_ = 0;
-      result_ = null;
-    }
-  }
-
-  public static final int BOOST_FIELD_NUMBER = 3;
-  /**
-   * <code>.taigi.engine.BoostResult boost = 3;</code>
-   */
-  @java.lang.Override
-  public boolean hasBoost() {
-    return resultCase_ == 3;
-  }
-  /**
-   * <code>.taigi.engine.BoostResult boost = 3;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.BoostResult getBoost() {
-    if (resultCase_ == 3) {
-       return (com.siansiansu.taigikeyboard.engine.proto.BoostResult) result_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.BoostResult.getDefaultInstance();
-  }
-  /**
-   * <code>.taigi.engine.BoostResult boost = 3;</code>
-   */
-  private void setBoost(com.siansiansu.taigikeyboard.engine.proto.BoostResult value) {
-    java.util.Objects.requireNonNull(value);
-    result_ = value;
-    resultCase_ = 3;
-  }
-  /**
-   * <code>.taigi.engine.BoostResult boost = 3;</code>
-   */
-  private void mergeBoost(com.siansiansu.taigikeyboard.engine.proto.BoostResult value) {
-    java.util.Objects.requireNonNull(value);
-    if (resultCase_ == 3 &&
-        result_ != com.siansiansu.taigikeyboard.engine.proto.BoostResult.getDefaultInstance()) {
-      result_ = com.siansiansu.taigikeyboard.engine.proto.BoostResult.newBuilder((com.siansiansu.taigikeyboard.engine.proto.BoostResult) result_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      result_ = value;
-    }
-    resultCase_ = 3;
-  }
-  /**
-   * <code>.taigi.engine.BoostResult boost = 3;</code>
-   */
-  private void clearBoost() {
-    if (resultCase_ == 3) {
-      resultCase_ = 0;
-      result_ = null;
-    }
-  }
-
-  public static final int STATE_SNAPSHOT_FIELD_NUMBER = 4;
-  /**
-   * <code>.taigi.engine.StateSnapshot state_snapshot = 4;</code>
-   */
-  @java.lang.Override
-  public boolean hasStateSnapshot() {
-    return resultCase_ == 4;
-  }
-  /**
-   * <code>.taigi.engine.StateSnapshot state_snapshot = 4;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.StateSnapshot getStateSnapshot() {
-    if (resultCase_ == 4) {
-       return (com.siansiansu.taigikeyboard.engine.proto.StateSnapshot) result_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.StateSnapshot.getDefaultInstance();
-  }
-  /**
-   * <code>.taigi.engine.StateSnapshot state_snapshot = 4;</code>
-   */
-  private void setStateSnapshot(com.siansiansu.taigikeyboard.engine.proto.StateSnapshot value) {
-    java.util.Objects.requireNonNull(value);
-    result_ = value;
-    resultCase_ = 4;
-  }
-  /**
-   * <code>.taigi.engine.StateSnapshot state_snapshot = 4;</code>
-   */
-  private void mergeStateSnapshot(com.siansiansu.taigikeyboard.engine.proto.StateSnapshot value) {
-    java.util.Objects.requireNonNull(value);
-    if (resultCase_ == 4 &&
-        result_ != com.siansiansu.taigikeyboard.engine.proto.StateSnapshot.getDefaultInstance()) {
-      result_ = com.siansiansu.taigikeyboard.engine.proto.StateSnapshot.newBuilder((com.siansiansu.taigikeyboard.engine.proto.StateSnapshot) result_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      result_ = value;
-    }
-    resultCase_ = 4;
-  }
-  /**
-   * <code>.taigi.engine.StateSnapshot state_snapshot = 4;</code>
-   */
-  private void clearStateSnapshot() {
-    if (resultCase_ == 4) {
       resultCase_ = 0;
       result_ = null;
     }
@@ -469,102 +365,6 @@ public  final class NextWordResponse extends
       return this;
     }
 
-    /**
-     * <code>.taigi.engine.BoostResult boost = 3;</code>
-     */
-    @java.lang.Override
-    public boolean hasBoost() {
-      return instance.hasBoost();
-    }
-    /**
-     * <code>.taigi.engine.BoostResult boost = 3;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.BoostResult getBoost() {
-      return instance.getBoost();
-    }
-    /**
-     * <code>.taigi.engine.BoostResult boost = 3;</code>
-     */
-    public Builder setBoost(com.siansiansu.taigikeyboard.engine.proto.BoostResult value) {
-      copyOnWrite();
-      instance.setBoost(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.BoostResult boost = 3;</code>
-     */
-    public Builder setBoost(
-        com.siansiansu.taigikeyboard.engine.proto.BoostResult.Builder builderForValue) {
-      copyOnWrite();
-      instance.setBoost(builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.BoostResult boost = 3;</code>
-     */
-    public Builder mergeBoost(com.siansiansu.taigikeyboard.engine.proto.BoostResult value) {
-      copyOnWrite();
-      instance.mergeBoost(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.BoostResult boost = 3;</code>
-     */
-    public Builder clearBoost() {
-      copyOnWrite();
-      instance.clearBoost();
-      return this;
-    }
-
-    /**
-     * <code>.taigi.engine.StateSnapshot state_snapshot = 4;</code>
-     */
-    @java.lang.Override
-    public boolean hasStateSnapshot() {
-      return instance.hasStateSnapshot();
-    }
-    /**
-     * <code>.taigi.engine.StateSnapshot state_snapshot = 4;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.StateSnapshot getStateSnapshot() {
-      return instance.getStateSnapshot();
-    }
-    /**
-     * <code>.taigi.engine.StateSnapshot state_snapshot = 4;</code>
-     */
-    public Builder setStateSnapshot(com.siansiansu.taigikeyboard.engine.proto.StateSnapshot value) {
-      copyOnWrite();
-      instance.setStateSnapshot(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.StateSnapshot state_snapshot = 4;</code>
-     */
-    public Builder setStateSnapshot(
-        com.siansiansu.taigikeyboard.engine.proto.StateSnapshot.Builder builderForValue) {
-      copyOnWrite();
-      instance.setStateSnapshot(builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.StateSnapshot state_snapshot = 4;</code>
-     */
-    public Builder mergeStateSnapshot(com.siansiansu.taigikeyboard.engine.proto.StateSnapshot value) {
-      copyOnWrite();
-      instance.mergeStateSnapshot(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.StateSnapshot state_snapshot = 4;</code>
-     */
-    public Builder clearStateSnapshot() {
-      copyOnWrite();
-      instance.clearStateSnapshot();
-      return this;
-    }
-
     // @@protoc_insertion_point(builder_scope:taigi.engine.NextWordResponse)
   }
   @java.lang.Override
@@ -585,12 +385,10 @@ public  final class NextWordResponse extends
             "resultCase_",
             com.siansiansu.taigikeyboard.engine.proto.DecideResult.class,
             com.siansiansu.taigikeyboard.engine.proto.FilterResult.class,
-            com.siansiansu.taigikeyboard.engine.proto.BoostResult.class,
-            com.siansiansu.taigikeyboard.engine.proto.StateSnapshot.class,
           };
           java.lang.String info =
-              "\u0000\u0004\u0001\u0000\u0001\u0004\u0004\u0000\u0000\u0000\u0001<\u0000\u0002<" +
-              "\u0000\u0003<\u0000\u0004<\u0000";
+              "\u0000\u0002\u0001\u0000\u0001\u0002\u0002\u0000\u0000\u0000\u0001<\u0000\u0002<" +
+              "\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

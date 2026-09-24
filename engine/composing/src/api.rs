@@ -465,10 +465,6 @@ pub enum Intent {
         text: String,
     },
     Reset,
-    SetSelectedCandidateIndex {
-        index: i32,
-    },
-    QueryState,
     EnterContinuous,
     /// v3.5.8 Phase 6 — pure read of span-local continuous-input
     /// candidates for the current `Phase::Continuous { raw }` starting
@@ -573,7 +569,7 @@ impl Intent {
     /// generation mismatch (a stale worker-thread fetch must not wipe a
     /// newer context).
     pub fn is_read_only(&self) -> bool {
-        matches!(self, Intent::QueryState | Intent::FetchAtPos { .. })
+        matches!(self, Intent::FetchAtPos { .. })
     }
 }
 
@@ -601,13 +597,12 @@ impl Engine {
         Self::default().snapshot(config)
     }
 
-    /// Pure read — no state mutation, no effects emitted. Used by
-    /// `Intent::QueryState` and the generation-mismatch path's post-drop
-    /// re-snapshot. `config` is the request's `AppConfig` so
+    /// Pure read — no state mutation, no effects emitted. Used by the
+    /// `FetchAtPos` read path and the generation-mismatch idle snapshot. `config` is the request's `AppConfig` so
     /// `Preedit.display_text` reflects the caller's actual mode/toggles
     /// (per Codex PR #197 r3169707395).
     pub fn snapshot(&self, config: &AppConfig) -> ComposingResponse {
-        crate::transition::apply(&mut self.state.clone(), Intent::QueryState, config)
+        crate::transition::snapshot(&self.state, config)
     }
 
     /// Apply `intent` against the current state, mutate, and return the

@@ -14,13 +14,13 @@ import SwiftProtobuf
 ///
 /// - `RustEngineBridge+Phonetics.swift` — 8 phonetics + 2 derivation + 5
 ///   TPS ops + lazy `toneVariations` cache + `ToneVariationsCache`.
-/// - `RustEngineBridge+Composing.swift` — 12 composing + 4 continuous
+/// - `RustEngineBridge+Composing.swift` — 10 composing + 4 continuous
 ///   ops + `ComposingTransition` / `CandidateMode` / `ContinuousCandidate`
 ///   / `ContinuousFetchResult` synthesized types.
 /// - `RustEngineBridge+Lexicon.swift` — install / search / assoc /
 ///   dictionary-filters / isHanzi reads.
-/// - `RustEngineBridge+NextWord.swift` — 6 decide intents + filter /
-///   boost / queryState + setIsShowing.
+/// - `RustEngineBridge+NextWord.swift` — 6 decide intents + setIsShowing
+///   + filter.
 /// - `RustEngineBridge+CaseTransform.swift` — per-char / per-word case
 ///   transforms.
 ///
