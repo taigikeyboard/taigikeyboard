@@ -242,9 +242,15 @@ private fun platformFallbackFilters(toggles: RustEngineBridge.DictionaryToggles)
     if (toggles.variant) dictMask = dictMask or (1u shl 12)
     dictMask = dictMask or encodeKautianSubcollWire(toggles)
 
-    val allAssocOn = toggles.kautian && toggles.taigitv && toggles.itaigi &&
-        toggles.sitbut && toggles.taihoa && toggles.taijit &&
-        toggles.kungge && toggles.stti && toggles.khpoo
+    val allAssocOn = toggles.kautian &&
+        toggles.taigitv &&
+        toggles.itaigi &&
+        toggles.sitbut &&
+        toggles.taihoa &&
+        toggles.taijit &&
+        toggles.kungge &&
+        toggles.stti &&
+        toggles.khpoo
     val assocMask: UInt = if (allAssocOn) UInt.MAX_VALUE else (dictMask and 0x1FFu)
 
     val enabled = mutableSetOf(DictionarySource.CUSTOM)
