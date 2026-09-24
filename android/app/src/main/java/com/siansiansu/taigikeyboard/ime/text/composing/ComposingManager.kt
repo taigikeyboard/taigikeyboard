@@ -579,9 +579,8 @@ class ComposingManager(
      * marshalled — missing rows mean "no user usage yet" and the engine
      * applies `user_freq_boost(0) = 1.0` neutral. Mirrors iOS
      * `ComposingManager.swift:308 buildFrequencyEntries`. Proto marshaling
-     * delegates to `RustEngineBridge.frequencyDataToProtoEntries` so the
-     * legacy `processCandidates` site and this Continuous-fetch site share
-     * a single `count` clamp + field-naming source of truth.
+     * delegates to `RustEngineBridge.frequencyRowsToProtoEntries` (single
+     * `count` clamp + field-naming source of truth).
      */
     private suspend fun buildFrequencyEntries(
         candidates: List<RustEngineBridge.ContinuousCandidate>,

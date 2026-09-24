@@ -28,9 +28,9 @@ Policy lives here; the technical spec is `docs/engine/ffi-safety.md`. Enforcemen
 
 ## 2. Domain↔proto boundary rule `[R]` `[A]`
 
-Every domain crate (`engine/phonetics`, `engine/ranking`, `engine/composing`, any future stateless slice) follows one surface pattern.
+Every domain crate reached by the dispatcher (`engine/phonetics`, `engine/lexicon`, `engine/composing`, `engine/nextword`, any future stateless slice) follows one surface pattern.
 
-**Rule.** The **dispatch / RPC façade** of each domain crate (the function the dispatcher routes through — `phonetics::dispatch::handle`, `ranking::process_candidates`, future `composing::*`) accepts and returns **protobuf-generated types** (`protos::engine::*`) directly. There is no parallel native-Rust mirror tier and no proto↔native translation layer between `engine/dispatch` and the domain crate. The protobuf schema is the cross-platform contract; duplicating it doubles maintenance with no consumer.
+**Rule.** The **dispatch / RPC façade** of each domain crate (the function the dispatcher routes through — `phonetics::dispatch::handle`, `lexicon::dispatch::handle`, `composing::*`) accepts and returns **protobuf-generated types** (`protos::engine::*`) directly. There is no parallel native-Rust mirror tier and no proto↔native translation layer between `engine/dispatch` and the domain crate. The protobuf schema is the cross-platform contract; duplicating it doubles maintenance with no consumer.
 
 This rule binds the cross-platform RPC seam, not every public function. CLI helpers, test fixtures, and stable native-Rust convenience APIs (`phonetics::to_tone_marks`, `phonetics::to_tone_number`, `phonetics::normalize_to_tl`, `phonetics::strip_tone_mark`, etc.) may keep native signatures — they were intentionally exposed for in-process Rust callers (CLI, integration tests). What is forbidden is letting those native helpers grow into a **second proto-mirroring type tier** that the dispatcher routes through.
 
@@ -53,7 +53,7 @@ mod syllable;
 
 | Layer | Type vocabulary | Visibility |
 |---|---|---|
-| `phonetics`, `ranking`, `composing` (domain) | **Dispatch façade** takes / returns `protos::engine::*` directly. Native-Rust helpers (CLI / test convenience functions) may exist alongside but never grow into a parallel mirror tier. | Implementation modules `mod`-private; one or two `pub mod` façades; `pub use` only for genuine cross-crate symbols. |
+| `phonetics`, `lexicon`, `composing`, `nextword` (domain) | **Dispatch façade** takes / returns `protos::engine::*` directly. Native-Rust helpers (CLI / test convenience functions) may exist alongside but never grow into a parallel mirror tier. | Implementation modules `mod`-private; one or two `pub mod` façades; `pub use` only for genuine cross-crate symbols. |
 | `engine/dispatch` | Single `process_request(&[u8]) -> Vec<u8>`. Decodes once, routes by `Request.payload` variant to the matching domain crate, encodes once. | Pure routing — no proto↔proto translation. |
 | `swift-ffi`, `android-jni` | Bytes in, bytes out across the FFI seam. `catch_unwind` per §1. | Calls `dispatch::process_request` directly. |
 

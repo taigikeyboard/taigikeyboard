@@ -1,8 +1,8 @@
 //! Top-level FFI dispatch — single bytes-in / bytes-out entry point.
 //!
 //! Decodes a `taigi.engine.Request`, routes by its `payload` oneof variant
-//! to the matching module crate (`phonetics` for phonetics ops, `ranking`
-//! for lexicon ops), re-encodes the response, and returns the byte buffer.
+//! to the matching module crate (`phonetics`, `composing`, `lexicon`,
+//! `nextword`), re-encodes the response, and returns the byte buffer.
 //!
 //! Wrapped in `catch_unwind` per `docs/engine/ffi-safety.md` §2 so panics
 //! anywhere in the decode → dispatch → encode pipeline surface as a
@@ -131,46 +131,16 @@ fn run(bytes: &[u8]) -> Response {
                 log::warn!("lexicon request missing method (id={id})");
                 return error_response(id, ErrorCode::FailInvariant, generation);
             };
-            match method {
-                // Tag 10 — ranking crate (no behavior change).
-                protos::engine::lexicon_request::Method::ProcessCandidates(req) => {
-                    let resp = ranking::process_candidates(req);
-                    Response {
-                        id,
-                        error: ErrorCode::Ok as i32,
-                        generation,
-                        payload: Some(response::Payload::Lexicon(
-                            protos::engine::LexiconResponse {
-                                result: Some(
-                                    protos::engine::lexicon_response::Result::ProcessCandidatesResult(
-                                        resp,
-                                    ),
-                                ),
-                            },
-                        )),
-                    }
-                }
-                // Tags 11-18 — engine/lexicon.
-                lex_method @ (protos::engine::lexicon_request::Method::Install(_)
-                | protos::engine::lexicon_request::Method::Search(_)
-                | protos::engine::lexicon_request::Method::SearchWithSources(_)
-                | protos::engine::lexicon_request::Method::SearchByHanzi(_)
-                | protos::engine::lexicon_request::Method::AssocLookup(_)
-                | protos::engine::lexicon_request::Method::ClassifyInput(_)
-                | protos::engine::lexicon_request::Method::IsHanzi(_)
-                | protos::engine::lexicon_request::Method::DictionaryFilters(_)) => {
-                    match lexicon::dispatch::handle(lex_method) {
-                        Ok(lex_resp) => Response {
-                            id,
-                            error: ErrorCode::Ok as i32,
-                            generation,
-                            payload: Some(response::Payload::Lexicon(lex_resp)),
-                        },
-                        Err(err) => {
-                            log::warn!("lexicon dispatch failed (id={id}): {err}");
-                            error_response(id, lexicon_error_code(&err), generation)
-                        }
-                    }
+            match lexicon::dispatch::handle(method) {
+                Ok(lex_resp) => Response {
+                    id,
+                    error: ErrorCode::Ok as i32,
+                    generation,
+                    payload: Some(response::Payload::Lexicon(lex_resp)),
+                },
+                Err(err) => {
+                    log::warn!("lexicon dispatch failed (id={id}): {err}");
+                    error_response(id, lexicon_error_code(&err), generation)
                 }
             }
         }
@@ -263,56 +233,25 @@ fn encode(response: &Response) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use protos::engine::{
-        AppConfig, CommandType, FrequencyEntry, LexiconRequest, ProcessCandidatesRequest, TaigiWord,
-    };
+    use protos::engine::{AppConfig, CommandType, IsHanziRequest, LexiconRequest};
 
-    fn lexicon_request(req: ProcessCandidatesRequest) -> Request {
+    fn lexicon_request(req: IsHanziRequest) -> Request {
         Request {
             id: 42,
             r#type: CommandType::CmdLexicon as i32,
             config_snapshot: Some(AppConfig::default()),
             generation: 7,
             payload: Some(request::Payload::Lexicon(LexiconRequest {
-                method: Some(protos::engine::lexicon_request::Method::ProcessCandidates(
-                    req,
-                )),
+                method: Some(protos::engine::lexicon_request::Method::IsHanzi(req)),
             })),
         }
     }
 
     #[test]
-    fn dispatch_routes_lexicon_request_to_ranking() {
-        let candidates = ProcessCandidatesRequest {
-            raw: vec![
-                TaigiWord {
-                    id: 1,
-                    roman: "gua".to_owned(),
-                    hanji: Some("我".to_owned()),
-                    length_score: Some(50),
-                    source_bitmask: None,
-                },
-                TaigiWord {
-                    id: 2,
-                    roman: "gua".to_owned(),
-                    hanji: Some("我".to_owned()),
-                    length_score: Some(50),
-                    source_bitmask: None,
-                },
-            ],
-            normalized_input: "gua".to_owned(),
-            tps_dedup_enabled: false,
-            freq: vec![FrequencyEntry {
-                display_text_key: "我".to_owned(),
-                count: 5,
-                last_used_ms: 0,
-                canonical_tl: String::new(),
-            }],
-            now_ms: 1_000_000_000,
-            include_breakdown: true,
-            merge_order_only: false,
-        };
-        let req = lexicon_request(candidates);
+    fn dispatch_routes_lexicon_request_to_lexicon() {
+        let req = lexicon_request(IsHanziRequest {
+            text: "我".to_owned(),
+        });
         let mut buf = Vec::with_capacity(req.encoded_len());
         req.encode(&mut buf).unwrap();
 
@@ -327,11 +266,10 @@ mod tests {
             panic!("expected Lexicon payload, got {payload:?}");
         };
         let result = lex_resp.result.expect("result present");
-        let protos::engine::lexicon_response::Result::ProcessCandidatesResult(pc) = result else {
-            panic!("expected ProcessCandidatesResult, got {result:?}");
+        let protos::engine::lexicon_response::Result::IsHanziResult(is_hanzi) = result else {
+            panic!("expected IsHanziResult, got {result:?}");
         };
-        assert_eq!(pc.ranked.len(), 1, "duplicate dropped by engine dedup");
-        assert_eq!(pc.breakdown.len(), 1, "breakdown requested");
+        assert!(is_hanzi.is_hanzi, "我 is hanzi");
     }
 
     #[test]

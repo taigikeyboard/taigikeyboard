@@ -360,9 +360,7 @@ pub(crate) fn roman_reading_eq(a: &str, b: &str) -> bool {
 /// 1-syllable `灣` re-emitted by the walker at the full-buffer span
 /// `(0, raw_len)` are distinct commit surfaces; the rationale matches
 /// `lexicon::dedupe_by_roman_hanji_span`. `hanji = None` or empty
-/// hanji passes through to mirror
-/// `engine/ranking/src/dedup.rs::remove_display_duplicates` (the
-/// normal-mode path, called from `ranking::process`); upstream
+/// hanji passes through (roman-only rows are unique by roman); upstream
 /// `lexicon::dedupe_by_roman_hanji_span` already collapses exact
 /// `(roman, hanji, span)` duplicates so this branch never reaches a
 /// truly identical pair.
@@ -1853,7 +1851,7 @@ mod tests {
         }
         // Hanji-absent rows render as TPS / roman in the UI and are
         // unique by roman — always survive regardless of repetition on
-        // any other axis. Mirrors `ranking::dedup::remove_display_duplicates`.
+        // any other axis.
         let mut roman_only = vec![
             mk("ㄉㄞ", None, (0, 3)),
             mk("ㄉㄞ", None, (0, 3)),     // duplicate roman, both kept

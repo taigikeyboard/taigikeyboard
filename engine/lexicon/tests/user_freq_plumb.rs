@@ -34,9 +34,12 @@ use lexicon::ContinuousFetchCtx;
 use phonetics::InputMode;
 use protos::engine::FrequencyEntry;
 use ranking::{
-    build_frequency_map, FrequencyMap, BOOST_ALPHA, MAX_BOOST, RECENCY_WINDOW_MS,
-    USER_WEIGHT_DECAY_TAU_MS,
+    build_frequency_map, FrequencyMap, BOOST_ALPHA, MAX_BOOST, USER_WEIGHT_DECAY_TAU_MS,
 };
+
+/// Length of the retired binary 1-hour recency window (epoch-ms). The
+/// tests below pin that a selection older than it still counts.
+const RETIRED_RECENCY_WINDOW_MS: i64 = 60 * 60 * 1000;
 
 /// v3.5.9 D7 — collapse the six-arg ctx into one literal per test
 /// site. `fetch_candidates_for_endings` is the test-only entry per D8;
@@ -253,7 +256,7 @@ fn user_weight_persists_past_the_old_one_hour_window() {
     let now_ms = 1_700_000_000_000_i64;
     // Past the retired 1-hour recency window: the selection must still
     // count (the 2026-09-14 bug — 更新 sank below 警訊 after one hour).
-    let last_used_ms = now_ms - RECENCY_WINDOW_MS;
+    let last_used_ms = now_ms - RETIRED_RECENCY_WINDOW_MS;
     let map = build_frequency_map(&[FrequencyEntry {
         display_text_key: "台".into(),
         count: 1,
@@ -268,7 +271,7 @@ fn user_weight_persists_past_the_old_one_hour_window() {
         &ctx(&map, now_ms, &prefix_index, &dict),
     );
     let expected = f64::from(BOOST_ALPHA)
-        * (-(RECENCY_WINDOW_MS as f64) / USER_WEIGHT_DECAY_TAU_MS as f64).exp();
+        * (-(RETIRED_RECENCY_WINDOW_MS as f64) / USER_WEIGHT_DECAY_TAU_MS as f64).exp();
     // f32 boost arithmetic → ~2e-8 slack.
     assert!((out[0].user_weight - expected).abs() < 1e-6);
 }
@@ -422,7 +425,7 @@ fn rare_selected_homophone_outranks_common_never_selected_after_hours() {
     let map = build_frequency_map(&[FrequencyEntry {
         display_text_key: "更新".into(),
         count: 1,
-        last_used_ms: now_ms - 2 * RECENCY_WINDOW_MS,
+        last_used_ms: now_ms - 2 * RETIRED_RECENCY_WINDOW_MS,
         canonical_tl: "king-sin".into(),
     }]);
     let out = fetch_candidates_for_endings(

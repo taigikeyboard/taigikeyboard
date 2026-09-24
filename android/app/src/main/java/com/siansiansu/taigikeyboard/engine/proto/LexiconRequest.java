@@ -20,7 +20,6 @@ public  final class LexiconRequest extends
   private java.lang.Object method_;
   public enum MethodCase
       implements com.google.protobuf.AbstractMessageLite.InternalOneOfEnum {
-    PROCESS_CANDIDATES(10),
     INSTALL(11),
     SEARCH(12),
     SEARCH_WITH_SOURCES(13),
@@ -44,7 +43,6 @@ public  final class LexiconRequest extends
 
     public static MethodCase forNumber(int value) {
       switch (value) {
-        case 10: return PROCESS_CANDIDATES;
         case 11: return INSTALL;
         case 12: return SEARCH;
         case 13: return SEARCH_WITH_SOURCES;
@@ -72,76 +70,6 @@ public  final class LexiconRequest extends
   private void clearMethod() {
     methodCase_ = 0;
     method_ = null;
-  }
-
-  public static final int PROCESS_CANDIDATES_FIELD_NUMBER = 10;
-  /**
-   * <pre>
-   * ranking
-   * </pre>
-   *
-   * <code>.taigi.engine.ProcessCandidatesRequest process_candidates = 10;</code>
-   */
-  @java.lang.Override
-  public boolean hasProcessCandidates() {
-    return methodCase_ == 10;
-  }
-  /**
-   * <pre>
-   * ranking
-   * </pre>
-   *
-   * <code>.taigi.engine.ProcessCandidatesRequest process_candidates = 10;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesRequest getProcessCandidates() {
-    if (methodCase_ == 10) {
-       return (com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesRequest) method_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesRequest.getDefaultInstance();
-  }
-  /**
-   * <pre>
-   * ranking
-   * </pre>
-   *
-   * <code>.taigi.engine.ProcessCandidatesRequest process_candidates = 10;</code>
-   */
-  private void setProcessCandidates(com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesRequest value) {
-    java.util.Objects.requireNonNull(value);
-    method_ = value;
-    methodCase_ = 10;
-  }
-  /**
-   * <pre>
-   * ranking
-   * </pre>
-   *
-   * <code>.taigi.engine.ProcessCandidatesRequest process_candidates = 10;</code>
-   */
-  private void mergeProcessCandidates(com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesRequest value) {
-    java.util.Objects.requireNonNull(value);
-    if (methodCase_ == 10 &&
-        method_ != com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesRequest.getDefaultInstance()) {
-      method_ = com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesRequest.newBuilder((com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesRequest) method_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      method_ = value;
-    }
-    methodCase_ = 10;
-  }
-  /**
-   * <pre>
-   * ranking
-   * </pre>
-   *
-   * <code>.taigi.engine.ProcessCandidatesRequest process_candidates = 10;</code>
-   */
-  private void clearProcessCandidates() {
-    if (methodCase_ == 10) {
-      methodCase_ = 0;
-      method_ = null;
-    }
   }
 
   public static final int INSTALL_FIELD_NUMBER = 11;
@@ -815,78 +743,6 @@ public  final class LexiconRequest extends
 
     /**
      * <pre>
-     * ranking
-     * </pre>
-     *
-     * <code>.taigi.engine.ProcessCandidatesRequest process_candidates = 10;</code>
-     */
-    @java.lang.Override
-    public boolean hasProcessCandidates() {
-      return instance.hasProcessCandidates();
-    }
-    /**
-     * <pre>
-     * ranking
-     * </pre>
-     *
-     * <code>.taigi.engine.ProcessCandidatesRequest process_candidates = 10;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesRequest getProcessCandidates() {
-      return instance.getProcessCandidates();
-    }
-    /**
-     * <pre>
-     * ranking
-     * </pre>
-     *
-     * <code>.taigi.engine.ProcessCandidatesRequest process_candidates = 10;</code>
-     */
-    public Builder setProcessCandidates(com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesRequest value) {
-      copyOnWrite();
-      instance.setProcessCandidates(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * ranking
-     * </pre>
-     *
-     * <code>.taigi.engine.ProcessCandidatesRequest process_candidates = 10;</code>
-     */
-    public Builder setProcessCandidates(
-        com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesRequest.Builder builderForValue) {
-      copyOnWrite();
-      instance.setProcessCandidates(builderForValue.build());
-      return this;
-    }
-    /**
-     * <pre>
-     * ranking
-     * </pre>
-     *
-     * <code>.taigi.engine.ProcessCandidatesRequest process_candidates = 10;</code>
-     */
-    public Builder mergeProcessCandidates(com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesRequest value) {
-      copyOnWrite();
-      instance.mergeProcessCandidates(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * ranking
-     * </pre>
-     *
-     * <code>.taigi.engine.ProcessCandidatesRequest process_candidates = 10;</code>
-     */
-    public Builder clearProcessCandidates() {
-      copyOnWrite();
-      instance.clearProcessCandidates();
-      return this;
-    }
-
-    /**
-     * <pre>
      * lexicon read-path
      * </pre>
      *
@@ -1479,7 +1335,6 @@ public  final class LexiconRequest extends
           java.lang.Object[] objects = new java.lang.Object[] {
             "method_",
             "methodCase_",
-            com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesRequest.class,
             com.siansiansu.taigikeyboard.engine.proto.InstallRequest.class,
             com.siansiansu.taigikeyboard.engine.proto.SearchRequest.class,
             com.siansiansu.taigikeyboard.engine.proto.SearchWithSourcesRequest.class,
@@ -1490,8 +1345,8 @@ public  final class LexiconRequest extends
             com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersRequest.class,
           };
           java.lang.String info =
-              "\u0000\t\u0001\u0000\n\u0012\t\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f<\u0000\r" +
-              "<\u0000\u000e<\u0000\u000f<\u0000\u0010<\u0000\u0011<\u0000\u0012<\u0000";
+              "\u0000\b\u0001\u0000\u000b\u0012\b\u0000\u0000\u0000\u000b<\u0000\f<\u0000\r<\u0000" +
+              "\u000e<\u0000\u000f<\u0000\u0010<\u0000\u0011<\u0000\u0012<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

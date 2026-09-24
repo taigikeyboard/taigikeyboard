@@ -21,8 +21,8 @@ import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * User-word frequency service. Records how often each displayed word is
- * picked so the engine ranking pipeline (`RustEngineBridge.processCandidates`)
- * can boost them. Owned by `CompositionRoot`.
+ * picked so the engine's Continuous-input ranking (`FetchAtPos`) can boost
+ * them. Owned by `CompositionRoot`.
  *
  * File layout: Constants · Schema · Properties · Init ·
  * Public API (Recording / Queries / Mutations) · Pruning · DatabaseHelper.

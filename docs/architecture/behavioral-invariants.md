@@ -133,101 +133,29 @@
 
 **Invariant**: two distinct dedup passes exist and must run in the documented order:
 
-1. **`removeDuplicates(_:)`** runs *before* scoring. Key = `"\(roman)|\(hanzi ?? "")"`. Removes true duplicates.
-2. **`removeDisplayDuplicates(_:)`** runs *after* sorting, only in TPS mode. Key = `hanzi` (continuous path keys on `(hanzi, consumed_span)` to preserve legitimate distinct partial vs full-buffer surfaces). Keeps the highest-ranked entry per hanzi (entries without hanzi are always kept).
+1. **Engine dedup** runs *before* sorting — the Continuous pre-sort `(roman, hanji, consumed_span)` dedupe. Removes true duplicates.
+2. **Display dedup** runs *after* sorting, only in TPS mode. Key = `(hanzi, consumed_span)` to preserve legitimate distinct partial vs full-buffer surfaces. Keeps the highest-ranked entry per hanzi (entries without hanzi are always kept).
 
 Reversing or merging these two passes changes ordering. Running display dedup before sort drops higher-ranked entries.
 
 **Why**: the keyboard shows TPS symbols to the left of candidates; visually identical hanzi with different roman forms is confusing, but the ranked winner must be retained.
 
 **Scope**:
-- Legacy `LexiconService.search` / NextWord ranking pipeline — Rust `engine/ranking::dedup` + `ranking::process_candidates` (single source, since v3.5.2). Bridged via `RustEngineBridge.processCandidates(_:tpsDedupEnabled:...)`.
 - Continuous `FetchAtPos` production path (current dogfood) — Rust `engine/composing::continuous::dedupe_display_hanji_for_tps`, gated on `mode == InputMode::Tps` in `assemble_candidates`. Runs after the walker slot-0 prepend + POJ presentation pass. Two `dict.bin` rows sharing the toneless TPS key (e.g. `灣/uan` + `灣/uân` at `tps:ㄨㄢ`) survive the pre-sort `(roman, hanji, consumed_span)` dedupe — distinct romanization is a legitimate TL/POJ UI signal — and only collapse here, where the TPS UI hides romanization entirely.
 - **候選詞顯示 = 羅馬字 (§44) is the mirror-image display pass for the OTHER script**, `composing::dispatch::dedupe_display_roman`, keyed on the **rendered roman alone** (the span left the key 2026-09-03, see §44), TL/POJ only. It runs in `dispatch::handle_fetch_at_pos` AFTER the §34 literal prepend — deliberately NOT beside the TPS pass inside `assemble_candidates`, because the literal is inserted later and a pass there would leave `台/tâi` standing next to the bare literal `tâi` as two identical cells. Consequence for the clause above: under 羅馬字 an entry without hanji (the §34 literal, a roman-only custom entry) DOES participate in the collapse — it is first-seen (inserted at index 0) and therefore the survivor; "entries without hanzi are always kept" stays true for the TPS pass only. Both display passes keep the ordering rule: after sort, first-seen wins.
 
+The legacy linear pipeline (`ranking::dedup` + `ranking::process_candidates`, bridged as `RustEngineBridge.processCandidates`) had no production caller since v3.5.8 and was removed 2026-09-25 with its `INVARIANT_engine_dedup_*` / `INVARIANT_display_dedup_*` tests.
+
 **Test labels**:
-- `INVARIANT_engine_dedup_keys_on_roman_plus_hanzi`
-- `INVARIANT_display_dedup_runs_after_sort`
-- `INVARIANT_display_dedup_keeps_words_without_hanzi`
 - `dedupe_display_hanji_for_tps_collapses_same_hanji_same_span` + `tps_input_collapses_duplicate_hanji` (continuous `FetchAtPos` path, `engine/composing/tests/tps_display_dedup.rs`)
 
 ---
 
-## 6. Candidate scoring — determinism + ordering
+## 6. Candidate scoring — retired additive formula
 
-**Invariant**: Rust `ranking::score` is **pure** — same inputs yield the same `ScoreBreakdown`. Given identical `(word, normalizedInput, frequencyData, currentTime)`, iOS and Android return the same total because both call into the same Rust crate via the FFI seam.
+The additive `ScoreBreakdown` formula (`userFreqScore` + `recencyBonus` + `exactBonus` + `completionPenalty` + `closenessBonus` + tier-weighted `baseFreqScore`, `ranking::score::calculate_score` / `SOURCE_TIERS`) served only the legacy `ProcessCandidates` op. That op had no production caller since v3.5.8 and was removed 2026-09-25 together with the formula and its `INVARIANT_*` tests (proto tag 10 reserved in `lexicon.proto`).
 
-Priority ordering (typical regime):
-
-```
-userFreqScore  (0 … +10000)          dominates within typical frequencies
-completionPenalty (0 or -1000)        separates exact vs completion tiers
-closenessBonus (0 … +500)             orders among completions
-recencyBonus   (0 or +200)            tiebreaker within same freq
-exactBonus     (0 or +100)            tiebreaker
-baseFreqScore  (≈ lengthScore/10 × tier)  fallback (cold-start dominant, uncapped)
-```
-
-### Bounded dominance of `userFreqScore`
-
-`userFreqScore` is capped at `USER_FREQ_CAP × USER_FREQ_WEIGHT = 10000` (reached at count = 100), but `baseFreqScore = (lengthScore / 10) × numerator / 10` is **not** capped. For very high-frequency dictionary entries, the base score can exceed user frequency. The invariant is therefore **bounded**, not absolute.
-
-**Pairwise dominance threshold**: `userFreqScore` dominates a competitor's `baseFreqScore` when
-
-```
-count × 100  >  (lengthScore / 10) × numerator / 10
-⟺  lengthScore  <  count × 10_000 / numerator
-```
-
-Concrete thresholds:
-
-| user count | userFreqScore | dominates default-tier up to `lengthScore` | dominates tier-1 (1.5×) up to `lengthScore` |
-|---|---|---|---|
-| 10  | 1000   | 10_000  | ≈ 6_667  |
-| 50  | 5000   | 50_000  | ≈ 33_333 |
-| 100 | 10_000 (cap) | 100_000 | ≈ 66_667 |
-
-Outside that regime, raw dictionary frequency becomes the leading factor — this is intentional: heavily-used dictionary entries (e.g., "的" with `lengthScore ≈ 200_000`) should stay on top even for users who haven't formed a habit yet.
-
-**Worked example (typical regime)**: User has used word A (`lengthScore=500`, default tier) 10 times; candidate B (`lengthScore=800`, default tier) is cold. A: `userFreqScore = 1000`, `baseFreqScore = 50`. B: `userFreqScore = 0`, `baseFreqScore = 80`. A wins (~970 lead after other bonuses).
-
-**Worked example (heavy-frequency regime)**: User has used rare word A (`lengthScore=100`, default tier) 100 times; candidate B is "的" (`lengthScore=200_000`, default tier). A: `userFreqScore = 10000`, `baseFreqScore = 10`. B: `userFreqScore = 0`, `baseFreqScore = 20000`. B wins (~9990 lead). A only resurfaces if other bonuses close the gap or if the user enters text where A matches exactly while B is a completion (`-1000` penalty flips the balance).
-
-### Tier-based `baseFreqScore` multiplier
-
-`baseFreqScore = (lengthScore / BASE_FREQ_DIVISOR) × tierNumerator / TIER_DENOMINATOR`. Tiers are selected by first-match-wins traversal of `SOURCE_TIERS`:
-
-| Tier | Dictionary | Bit | Numerator | Effective multiplier |
-|---|---|---|---|---|
-| 1 | 教育部臺灣台語常用詞辭典 (kautian) | 0 | 15 | 1.5× |
-| 2 | 公視台語新詞辭庫 (taigitv) | 1 | 13 | 1.3× |
-| 3 | 教育部學科術語辭典 (stti) | 7 | 12 | 1.2× |
-| 4 | 台語工藝詞庫 (kungge) | 6 | 11 | 1.1× |
-| 5 (default) | 其他來源 / 補充資料 / `nil` bitmask | — | 10 | 1.0× |
-
-Bit positions mirror `dictionary/build/create_dictionary_bin.py`. `stti` is in the ranking tier list but **not** in `dictionary/build/merge_csv.py:116` OFFICIAL_SOURCES (which governs dedup priority only) — intentional divergence.
-
-**Why**: the scoring formula is the user-visible ordering of every candidate. Drift means the keyboard ranks differently on iOS vs Android for the same word + same user state.
-
-**Scope**: Rust `engine/ranking/src/{score,sort,process}.rs` — `score_candidate`, `roman_to_base`, `input_to_base`, `sort_by_score`, `tier_numerator`, `SOURCE_TIERS` (constants pinned in `score.rs`). Bridged via `RustEngineBridge.processCandidates`.
-
-**Corner cases**:
-- `currentTime` is injected at the call site (ms since epoch). No call inside the engine reads the clock.
-- `cappedUserFreq = min(count, 100)` — per-word count saturates at 100; never uncapped.
-- Recency window is exactly 1 hour (`60 * 60 * 1000` ms); boundary condition `(currentTime - lastUsedMillis) < oneHourMillis` is strict `<`.
-- `romanToBase` must strip hyphens, spaces, NFD combining marks, and digits in that order.
-- Sort is stable on ties in the sense that the original array order is preserved when `total` ties (Swift `sorted(by:)` is not guaranteed stable — documented weakness; ordering fallback currently relies on the pre-sort input order).
-- Tier bonus is bounded at max 1.5× — cannot invert a frequency gap > 1.5× between default- and tier-1 candidates. Proven by `INVARIANT_tier_bonus_preserves_frequency_ordering`.
-- Integer math throughout: `rawBase * numerator / denominator` is computed bit-exact across Swift and Kotlin.
-
-**Test labels**:
-- `INVARIANT_score_is_deterministic`
-- `INVARIANT_user_freq_dominates_ranking` (bounded — see worked examples above)
-- `INVARIANT_completion_penalty_separates_tiers`
-- `INVARIANT_recency_window_is_exactly_1_hour`
-- `INVARIANT_roman_to_base_strips_tones_hyphens_digits`
-- `INVARIANT_tier_bonus_preserves_frequency_ordering`
-- `INVARIANT_tier_bonus_first_match_wins`
+Live candidate ranking is the Continuous `FetchAtPos` path: lexicographic sort key with `ranking::source_tier_rank`, `ranking::calculate_continuous_score`, and the decayed user weight (`ranking::decayed_user_weight_delta`). See `docs/engine/continuous-input-ranking.md` and the user-frequency pair-key section below.
 
 ---
 
@@ -753,11 +681,10 @@ User-selection frequency is keyed by the **`(display_text, canonical_tl)` PAIR**
 - **Read path** — the continuous fetch sends one `FrequencyEntry{display_text_key, canonical_tl, count, last_used_ms}` per `(word, tl)` row (a word yields several: each reading + the legacy bucket); the engine resolves via the tolerant `get`.
 - **Backup** — `.taigi` v2 carries `tl` per frequency row; restore upserts `ON CONFLICT(word, tl)`. A pre-R5 (v1) backup has no reading → imports to the legacy `tl = ""` bucket.
 - **CSV export / management viewer — retired 2026-09-22.** The 詞頻紀錄 page (per-`(word, tl)` list, delete, 3-column `word,tl,count` CSV with the legacy 2-column import bucket) and its CSV codecs left both mobile apps; the `.taigi` backup (above) is the only export path and already carries the pair per row. Recording is always on (no toggle).
-- **Non-production note** — the non-continuous `ranking::sort_by_score` / `process_candidates` path also pair-keys (tl = `TaigiWord.roman`), but it has no production caller on either platform (test seam only); the live user-frequency path is Continuous-input via `lexicon::continuous`.
 
-**Scope**: engine `ranking` (`FrequencyMap`, `build_frequency_map`, `sort.rs`) + `lexicon::continuous` + `composing::continuous` (walker edges) read the pair key; platform-native SQLite (`rust-migration-policy §6`) owns storage + write + migration + backup.
+**Scope**: engine `ranking` (`FrequencyMap`, `build_frequency_map`) + `lexicon::continuous` + `composing::continuous` (walker edges) read the pair key; platform-native SQLite (`rust-migration-policy §6`) owns storage + write + migration + backup.
 
-**Platform sites**: proto `FrequencyEntry.canonical_tl` (`lexicon.proto`). Engine `ranking/src/score.rs` (`FrequencyMap` nested struct + tolerant `get` + `build_frequency_map`), `ranking/src/sort.rs`, `lexicon/src/continuous.rs` (2 sites), `composing/src/continuous.rs` (3 sites). iOS `UserFrequencySchema.swift` (migration), `UserFrequencyRepository.swift` (pair upsert + row-level batch), `UserFrequencyService.swift`, `FrequencyData.swift` (`FrequencyRow`), `ComposingManager.swift` (`buildFrequencyEntries`), `ActionHandler+Suggestions.swift`, `BackupService.swift`. Android `UserFrequencyService.kt` (migration + pair upsert + row-level batch), `FrequencyData.kt` (`FrequencyRow`), `RustEngineBridge.kt` (`frequencyRowsToProtoEntries`), `ComposingManager.kt`, `CandidateClickHandler.kt`, `BackupService.kt`.
+**Platform sites**: proto `FrequencyEntry.canonical_tl` (`lexicon.proto`). Engine `ranking/src/score.rs` (`FrequencyMap` nested struct + tolerant `get` + `build_frequency_map`), `lexicon/src/continuous.rs` (2 sites), `composing/src/continuous.rs` (3 sites). iOS `UserFrequencySchema.swift` (migration), `UserFrequencyRepository.swift` (pair upsert + row-level batch), `UserFrequencyService.swift`, `FrequencyData.swift` (`FrequencyRow`), `ComposingManager.swift` (`buildFrequencyEntries`), `ActionHandler+Suggestions.swift`, `BackupService.swift`. Android `UserFrequencyService.kt` (migration + pair upsert + row-level batch), `FrequencyData.kt` (`FrequencyRow`), `RustEngineBridge.kt` (`frequencyRowsToProtoEntries`), `ComposingManager.kt`, `CandidateClickHandler.kt`, `BackupService.kt`.
 
 **Tests**: engine `ranking/src/score.rs` (`frequency_map_pair_key_separates_homograph_readings`, `frequency_map_legacy_empty_tl_is_tolerant_fallback`, `frequency_map_missing_pair_is_neutral_cold_start`) — pin separate-reading buckets + tolerant fallback (no sum) + neutral cold-start. iOS `UserFrequencyRepositoryTests.swift` (`test_INVARIANT_USER_FREQ_PAIR_KEY_*` — pair upsert keeps readings separate, tolerant batch read, migration backfills `tl=''` against the real temp-DB repository). The cross-mode learn-then-rank device sequence is dogfood-pinned (**S15**). Cross-platform device acceptance: `.claude/rules/taigi-incidents.md` § Qualitative perf gate.
 

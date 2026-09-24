@@ -11,9 +11,7 @@ import com.siansiansu.taigikeyboard.ime.core.logging.NullLoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
 import com.siansiansu.taigikeyboard.ime.dictionary.DictionarySource
-import com.siansiansu.taigikeyboard.ime.dictionary.FrequencyData
 import com.siansiansu.taigikeyboard.ime.dictionary.FrequencyRow
-import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import java.util.ArrayDeque
 import java.util.concurrent.atomic.AtomicInteger
 import com.siansiansu.taigikeyboard.engine.proto.CandidateDisplayMode as ProtoCandidateDisplayMode
@@ -224,53 +222,6 @@ object RustEngineBridge {
         val assocLookupBitmask: UInt,
         val enabledSources: Set<DictionarySource>,
     )
-
-    /**
-     * Per-candidate score breakdown returned alongside the ranked list when
-     * the caller opts in via `includeBreakdown = true`. Six fields sum to
-     * the engine's sort key. Mirrors iOS `RustEngineBridge.ScoreBreakdown`
-     * and proto `Taigi_Engine_ScoreBreakdown`.
-     */
-    data class ScoreBreakdown(
-        val userFreqScore: Int,
-        val recencyBonus: Int,
-        val exactBonus: Int,
-        val completionPenalty: Int,
-        val closenessBonus: Int,
-        val baseFreqScore: Int,
-    ) {
-        val total: Int
-            get() = userFreqScore + recencyBonus + exactBonus + completionPenalty + closenessBonus + baseFreqScore
-    }
-
-    /**
-     * Composite return for the lexicon ranking pipeline. Production
-     * callers typically read [ranked]; tests inspect [breakdowns] to pin
-     * the engine's six score components on the FFI boundary.
-     */
-    data class CandidateRanking(
-        val ranked: List<TaigiWord>,
-        val breakdowns: List<ScoreBreakdown>,
-    )
-
-    /**
-     * Marshal a `Map<String, FrequencyData>` snapshot into the proto
-     * `FrequencyEntry` wire shape. Used by the legacy `ProcessCandidatesRequest`
-     * ranking path (test-only on both platforms — no production caller).
-     * `canonicalTl` defaults to "" (the engine's legacy tolerant-fallback
-     * bucket), which is correct for that path's word-keyed map.
-     */
-    internal fun frequencyDataToProtoEntries(
-        data: Map<String, FrequencyData>,
-    ): List<FrequencyEntry> =
-        data.map { (word, snapshot) ->
-            FrequencyEntry
-                .newBuilder()
-                .setDisplayTextKey(word)
-                .setCount(maxOf(0, snapshot.count))
-                .setLastUsedMs(snapshot.lastUsedMillis)
-                .build()
-        }
 
     /**
      * R5 (#7): marshal `(word, tl)` pair-key rows into proto `FrequencyEntry`

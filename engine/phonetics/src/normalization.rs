@@ -128,9 +128,10 @@ fn trie_key_unicode_form(text: &str) -> String {
 /// CROSS-PLATFORM INVARIANT — byte-exact mirror of iOS
 /// `Lexicon/Utils/TaigiUnicode.swift::nfdPreprocessed` and Android
 /// `ime/dictionary/TaigiUnicode.kt::nfdPreprocessed` until v3.5.3
-/// follow-up (PR #192) removed those platform copies. Production routes:
-/// - `engine/ranking::score::roman_to_base` (candidate scoring)
-/// - `Method::NfdPreprocessForLookup` (URL builder phonetic prep)
+/// follow-up (PR #192) removed those platform copies. Production routes
+/// include toneless-key derivation, syllable folding, custom-dictionary
+/// search keys and `Method::NfdPreprocessForLookup` (URL builder
+/// phonetic prep).
 ///
 /// Distinct from [`trie_key_unicode_form`] — see module-level docs.
 pub fn taigi_unicode_base_form(input: &str) -> String {

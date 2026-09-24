@@ -116,7 +116,7 @@ The gap is the product of three orthogonal design / data choices:
 | 3 | 1.2× |
 | 4 | 1.3× |
 
-Maximum 1.3× cannot bridge a 100×–1000× freq disparity between phrases and single chars. There is no exact-match bonus, no completion-penalty, no language-model probability, no length-priority tier. The legacy `calculate_score` ([`engine/ranking/src/score.rs:86-120`](../../engine/ranking/src/score.rs)) has `EXACT_BONUS = 100` and `COMPLETION_PENALTY = -1000` but those apply only to the non-Continuous lexicon path.
+Maximum 1.3× cannot bridge a 100×–1000× freq disparity between phrases and single chars. There is no exact-match bonus, no completion-penalty, no language-model probability, no length-priority tier. The legacy additive `calculate_score` (`EXACT_BONUS = 100`, `COMPLETION_PENALTY = -1000`) served only the non-Continuous `ProcessCandidates` path and was removed with it on 2026-09-25.
 
 **Code citation**: [`engine/ranking/src/score.rs:178-181`](../../engine/ranking/src/score.rs).
 
@@ -145,11 +145,11 @@ let score = calculate_continuous_score(frequency, syllable_count);
 
 `freq_map` / `now_ms` arrive through `ContinuousFetchCtx` (`continuous.rs:325-338`), keyed by the `(display_text, canonical_tl)` pair (Core Principle #6). The pre-fix mechanism is kept below for the audit trail.
 
-At audit time this meant **`user_frequency.db` was not consulted during Continuous candidate fetch**. The lexicon (non-Continuous) path does read user frequency via the legacy additive `calculate_score`; only Continuous skips it. The platform side records frequency on every commit (§2.1, last row), but the recorded data has no read path back into Continuous ranking — repeated user selection of 「臺灣台語」 has zero effect on the next Continuous fetch's ranking.
+At audit time this meant **`user_frequency.db` was not consulted during Continuous candidate fetch**. The lexicon (non-Continuous) path did read user frequency via the legacy additive `calculate_score` (removed 2026-09-25); only Continuous skipped it. The platform side records frequency on every commit (§2.1, last row), but the recorded data has no read path back into Continuous ranking — repeated user selection of 「臺灣台語」 has zero effect on the next Continuous fetch's ranking.
 
 The v3.5.8 plan tracked this from Phase 6 to Phase 9 ([`docs/releases/v3.5.8/plan.md` § Phase 6 限制](../releases/v3.5.8/plan.md#phase-6--proto--dispatch-rpc)); the inline note in `dispatch.rs` was removed with the fix.
 
-**Cross-IME contrast (MOE Tâi-gí)**: MOE's native API exposes `AddUserVoc(database, hanji, tailo, weight: float)` ([`Tailo.java:5-7`](../../references/moe_taigi_apk/decompiled/sources/moe/taigi/Tailo.java)) — user vocabulary entries carry a **floating-point weight** that is read directly by the C++ ranker via the same `tutgDataBase` handle the dictionary uses. This means MOE's user-selection feedback enters the ranking path on the very next keystroke, with no separate plumbing layer. Our user_frequency.db lives platform-side and is read only by the legacy non-Continuous lexicon path; closing this loop for Continuous is what Gap B fix would entail. (See §7 Goal G2.)
+**Cross-IME contrast (MOE Tâi-gí)**: MOE's native API exposes `AddUserVoc(database, hanji, tailo, weight: float)` ([`Tailo.java:5-7`](../../references/moe_taigi_apk/decompiled/sources/moe/taigi/Tailo.java)) — user vocabulary entries carry a **floating-point weight** that is read directly by the C++ ranker via the same `tutgDataBase` handle the dictionary uses. This means MOE's user-selection feedback enters the ranking path on the very next keystroke, with no separate plumbing layer. At audit time our user_frequency.db was read only by the legacy non-Continuous lexicon path; closing this loop for Continuous was the Gap B fix. (See §7 Goal G2.)
 
 #### Gap C — Dictionary phrase coverage and frequency calibration
 

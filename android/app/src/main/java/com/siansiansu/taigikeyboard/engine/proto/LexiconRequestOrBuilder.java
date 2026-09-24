@@ -12,25 +12,6 @@ public interface LexiconRequestOrBuilder extends
 
   /**
    * <pre>
-   * ranking
-   * </pre>
-   *
-   * <code>.taigi.engine.ProcessCandidatesRequest process_candidates = 10;</code>
-   * @return Whether the processCandidates field is set.
-   */
-  boolean hasProcessCandidates();
-  /**
-   * <pre>
-   * ranking
-   * </pre>
-   *
-   * <code>.taigi.engine.ProcessCandidatesRequest process_candidates = 10;</code>
-   * @return The processCandidates.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesRequest getProcessCandidates();
-
-  /**
-   * <pre>
    * lexicon read-path
    * </pre>
    *

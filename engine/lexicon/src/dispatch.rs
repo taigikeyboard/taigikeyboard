@@ -1,6 +1,5 @@
-//! Dispatch: route `LexiconRequest.method` oneof variants 11-18 to the
-//! per-method API. Tag 10 (process_candidates) stays routed to `ranking`
-//! by `engine/dispatch::lib.rs`; this crate owns the read-path variants
+//! Dispatch: route every `LexiconRequest.method` oneof variant to the
+//! per-method API — the read-path variants
 //! (Install/Search/SearchWithSources/SearchByHanzi/AssocLookup), the
 //! classification variants (ClassifyInput/IsHanzi), and the v3.5.8
 //! DictionaryFilters variant.
@@ -75,14 +74,9 @@ pub fn handle_dictionary_filters(
     })
 }
 
-/// Convenience: dispatch `LexiconRequest.method` directly to the matching
-/// handler. Returns `None` for tag 10 (process_candidates) — callers must
-/// route that through the `ranking` crate per plan §6.
+/// Dispatch `LexiconRequest.method` to the matching handler.
 pub fn handle(method: Method) -> Result<LexiconResponse, LexiconError> {
     match method {
-        Method::ProcessCandidates(_) => Err(LexiconError::Internal(
-            "process_candidates routes to ranking crate; not handled here".into(),
-        )),
         Method::Install(req) => handle_install(req),
         Method::Search(req) => handle_search(req),
         Method::SearchWithSources(req) => handle_search_with_sources(req),

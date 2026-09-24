@@ -9,14 +9,12 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * <pre>
  * `TaigiWord` mirrors iOS `Lexicon/Models/TaigiWord.swift` /
  * Android `ime/dictionary/TaigiWord.kt`. `id` is the dictionary row id;
- * `length_score` is the dictionary frequency / length proxy used as the
- * `baseFreqScore` cold-start signal. `source_bitmask` is the
- * `dictionary/common/source_bits.py` bitmask consumed by the
- * SOURCE_TIERS first-match-wins multiplier.
+ * `length_score` is the dictionary frequency / length proxy.
+ * `source_bitmask` is the `dictionary/common/source_bits.py` bitmask.
  *
  * Optional fields use proto3 `optional` so platforms can distinguish
  * "field absent" from "scalar default" — important for `length_score`
- * where 0 is a meaningful zero-score signal vs absent (use default tier).
+ * where 0 is a meaningful zero-score signal vs absent.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.TaigiWord}
@@ -315,14 +313,12 @@ public  final class TaigiWord extends
    * <pre>
    * `TaigiWord` mirrors iOS `Lexicon/Models/TaigiWord.swift` /
    * Android `ime/dictionary/TaigiWord.kt`. `id` is the dictionary row id;
-   * `length_score` is the dictionary frequency / length proxy used as the
-   * `baseFreqScore` cold-start signal. `source_bitmask` is the
-   * `dictionary/common/source_bits.py` bitmask consumed by the
-   * SOURCE_TIERS first-match-wins multiplier.
+   * `length_score` is the dictionary frequency / length proxy.
+   * `source_bitmask` is the `dictionary/common/source_bits.py` bitmask.
    *
    * Optional fields use proto3 `optional` so platforms can distinguish
    * "field absent" from "scalar default" — important for `length_score`
-   * where 0 is a meaningful zero-score signal vs absent (use default tier).
+   * where 0 is a meaningful zero-score signal vs absent.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.TaigiWord}
