@@ -35,7 +35,6 @@ pub(super) fn roundtrip(
         generation,
         payload: Some(payload),
         config_snapshot: config,
-        ..Default::default()
     };
     let request_id = request.id;
     log::debug!("[engine->] op={op} id={request_id} generation={generation}");
