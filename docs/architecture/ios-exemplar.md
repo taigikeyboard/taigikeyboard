@@ -131,7 +131,6 @@ override func viewDidLoad() {
 // Foundation-only, shared-core candidate
 public protocol EngineSettings {
     var inputMode: InputMode { get }
-    var isAutoCapitalizationEnabled: Bool { get }
     var isTranslateSwapped: Bool { get }
     var isAssociationRecordingEnabled: Bool { get }
     var toneToggles: ToneToggles { get }

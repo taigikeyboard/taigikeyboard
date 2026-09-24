@@ -107,25 +107,6 @@ public interface LexiconRequestOrBuilder extends
 
   /**
    * <pre>
-   * v3.5.7 IME classifier
-   * </pre>
-   *
-   * <code>.taigi.engine.ClassifyInputRequest classify_input = 16;</code>
-   * @return Whether the classifyInput field is set.
-   */
-  boolean hasClassifyInput();
-  /**
-   * <pre>
-   * v3.5.7 IME classifier
-   * </pre>
-   *
-   * <code>.taigi.engine.ClassifyInputRequest classify_input = 16;</code>
-   * @return The classifyInput.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.ClassifyInputRequest getClassifyInput();
-
-  /**
-   * <pre>
    * v3.5.7 Tab3 short-circuit
    * </pre>
    *

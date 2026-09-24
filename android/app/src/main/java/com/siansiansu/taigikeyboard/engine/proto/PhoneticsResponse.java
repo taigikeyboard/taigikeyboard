@@ -22,7 +22,6 @@ public  final class PhoneticsResponse extends
       implements com.google.protobuf.AbstractMessageLite.InternalOneOfEnum {
     STRING_RESULT(10),
     STRIP_TONE_RESULT(11),
-    OPTIONAL_STRING_RESULT(12),
     BOOL_RESULT(13),
     TONE_VARIATIONS_RESULT(14),
     TPS_ADJUST_RESULT(15),
@@ -44,7 +43,6 @@ public  final class PhoneticsResponse extends
       switch (value) {
         case 10: return STRING_RESULT;
         case 11: return STRIP_TONE_RESULT;
-        case 12: return OPTIONAL_STRING_RESULT;
         case 13: return BOOL_RESULT;
         case 14: return TONE_VARIATIONS_RESULT;
         case 15: return TPS_ADJUST_RESULT;
@@ -165,56 +163,6 @@ public  final class PhoneticsResponse extends
    */
   private void clearStripToneResult() {
     if (resultCase_ == 11) {
-      resultCase_ = 0;
-      result_ = null;
-    }
-  }
-
-  public static final int OPTIONAL_STRING_RESULT_FIELD_NUMBER = 12;
-  /**
-   * <code>.taigi.engine.OptionalStringResult optional_string_result = 12;</code>
-   */
-  @java.lang.Override
-  public boolean hasOptionalStringResult() {
-    return resultCase_ == 12;
-  }
-  /**
-   * <code>.taigi.engine.OptionalStringResult optional_string_result = 12;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.OptionalStringResult getOptionalStringResult() {
-    if (resultCase_ == 12) {
-       return (com.siansiansu.taigikeyboard.engine.proto.OptionalStringResult) result_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.OptionalStringResult.getDefaultInstance();
-  }
-  /**
-   * <code>.taigi.engine.OptionalStringResult optional_string_result = 12;</code>
-   */
-  private void setOptionalStringResult(com.siansiansu.taigikeyboard.engine.proto.OptionalStringResult value) {
-    java.util.Objects.requireNonNull(value);
-    result_ = value;
-    resultCase_ = 12;
-  }
-  /**
-   * <code>.taigi.engine.OptionalStringResult optional_string_result = 12;</code>
-   */
-  private void mergeOptionalStringResult(com.siansiansu.taigikeyboard.engine.proto.OptionalStringResult value) {
-    java.util.Objects.requireNonNull(value);
-    if (resultCase_ == 12 &&
-        result_ != com.siansiansu.taigikeyboard.engine.proto.OptionalStringResult.getDefaultInstance()) {
-      result_ = com.siansiansu.taigikeyboard.engine.proto.OptionalStringResult.newBuilder((com.siansiansu.taigikeyboard.engine.proto.OptionalStringResult) result_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      result_ = value;
-    }
-    resultCase_ = 12;
-  }
-  /**
-   * <code>.taigi.engine.OptionalStringResult optional_string_result = 12;</code>
-   */
-  private void clearOptionalStringResult() {
-    if (resultCase_ == 12) {
       resultCase_ = 0;
       result_ = null;
     }
@@ -626,54 +574,6 @@ public  final class PhoneticsResponse extends
     }
 
     /**
-     * <code>.taigi.engine.OptionalStringResult optional_string_result = 12;</code>
-     */
-    @java.lang.Override
-    public boolean hasOptionalStringResult() {
-      return instance.hasOptionalStringResult();
-    }
-    /**
-     * <code>.taigi.engine.OptionalStringResult optional_string_result = 12;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.OptionalStringResult getOptionalStringResult() {
-      return instance.getOptionalStringResult();
-    }
-    /**
-     * <code>.taigi.engine.OptionalStringResult optional_string_result = 12;</code>
-     */
-    public Builder setOptionalStringResult(com.siansiansu.taigikeyboard.engine.proto.OptionalStringResult value) {
-      copyOnWrite();
-      instance.setOptionalStringResult(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.OptionalStringResult optional_string_result = 12;</code>
-     */
-    public Builder setOptionalStringResult(
-        com.siansiansu.taigikeyboard.engine.proto.OptionalStringResult.Builder builderForValue) {
-      copyOnWrite();
-      instance.setOptionalStringResult(builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.OptionalStringResult optional_string_result = 12;</code>
-     */
-    public Builder mergeOptionalStringResult(com.siansiansu.taigikeyboard.engine.proto.OptionalStringResult value) {
-      copyOnWrite();
-      instance.mergeOptionalStringResult(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.OptionalStringResult optional_string_result = 12;</code>
-     */
-    public Builder clearOptionalStringResult() {
-      copyOnWrite();
-      instance.clearOptionalStringResult();
-      return this;
-    }
-
-    /**
      * <code>.taigi.engine.BoolResult bool_result = 13;</code>
      */
     @java.lang.Override
@@ -885,15 +785,14 @@ public  final class PhoneticsResponse extends
             "resultCase_",
             com.siansiansu.taigikeyboard.engine.proto.StringResult.class,
             com.siansiansu.taigikeyboard.engine.proto.StripToneResult.class,
-            com.siansiansu.taigikeyboard.engine.proto.OptionalStringResult.class,
             com.siansiansu.taigikeyboard.engine.proto.BoolResult.class,
             com.siansiansu.taigikeyboard.engine.proto.ToneVariationsResult.class,
             com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult.class,
             com.siansiansu.taigikeyboard.engine.proto.CustomSearchKeysResult.class,
           };
           java.lang.String info =
-              "\u0000\u0007\u0001\u0000\n\u0010\u0007\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f" +
-              "<\u0000\r<\u0000\u000e<\u0000\u000f<\u0000\u0010<\u0000";
+              "\u0000\u0006\u0001\u0000\n\u0010\u0006\u0000\u0000\u0000\n<\u0000\u000b<\u0000\r" +
+              "<\u0000\u000e<\u0000\u000f<\u0000\u0010<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

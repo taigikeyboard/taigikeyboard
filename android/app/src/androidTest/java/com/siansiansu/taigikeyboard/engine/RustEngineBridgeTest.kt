@@ -35,16 +35,7 @@ class RustEngineBridgeTest {
         RustEngineBridge.resetDiagnosticsForTesting()
     }
 
-    private fun togglesOff() = PojMarkerOptionsCarrier(false, false, isNasalMarkerUppercaseEnabled = true)
-
-    // region Phonetics core (8 ops)
-
-    @Test fun op_normalizeTone_TL() {
-        assertEquals(
-            "guá",
-            RustEngineBridge.normalizeTone("gua2", NormalizeMode.TL, togglesOff()),
-        )
-    }
+    // region Phonetics core (6 ops)
 
     @Test fun op_stripTone_returnsBareAndTone() {
         val outcome = RustEngineBridge.stripTone("guá")
@@ -60,20 +51,8 @@ class RustEngineBridgeTest {
         assertEquals("góa", RustEngineBridge.tlToPoj("guá"))
     }
 
-    @Test fun op_normalizeToTl_passthrough() {
-        assertEquals("hoo", RustEngineBridge.normalizeToTl("hoo"))
-    }
-
     @Test fun op_normalizeInput_extractsToneFromDiacritic() {
         assertEquals("ho2", RustEngineBridge.normalizeInput("hó"))
-    }
-
-    @Test fun op_restoreTone_returnsBareForToneMarked() {
-        assertEquals("ho", RustEngineBridge.restoreTone("hó"))
-    }
-
-    @Test fun op_restoreTone_returnsNullForPlain() {
-        assertNull(RustEngineBridge.restoreTone("ho"))
     }
 
     @Test fun op_toneVariations_lazyCache_returnsBothModes() {
@@ -98,15 +77,7 @@ class RustEngineBridgeTest {
     }
 
     // endregion
-    // region TPS (5 ops)
-
-    @Test fun op_containsTps_trueForZhuyin() {
-        assertTrue(RustEngineBridge.containsTps("ㄉㄧㄠ"))
-    }
-
-    @Test fun op_containsTps_falseForLatin() {
-        assertFalse(RustEngineBridge.containsTps("tiau"))
-    }
+    // region TPS (4 ops)
 
     @Test fun op_tlNumericToTps_basic() {
         val out = RustEngineBridge.tlNumericToTps("tiau5", false)

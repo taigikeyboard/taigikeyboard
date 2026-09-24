@@ -12,8 +12,7 @@
 //! never re-implements them.
 //!
 //! `adjust_nasal_marker_case` is re-homed here from the former
-//! `case_adjust.rs` (formerly `pub(crate)` and called by
-//! `Method::NormalizeTone` in-band). The function keeps its existing
+//! `case_adjust.rs` (formerly `pub(crate)`). The function keeps its existing
 //! contract; `case_adjust.rs` is removed in this slice.
 
 use std::borrow::Cow;
@@ -147,38 +146,6 @@ pub fn raise_case(text: &str, letter_case: LetterCase, mode: InputMode) -> Strin
     }
 }
 
-/// Gate on `auto_cap_enabled` + `input` first char's case. If both true and
-/// `text` starts with a letter, uppercase the first letter via tone tables;
-/// otherwise return `text` as-is. Matches `CaseTransformer.capitalizeCandidate`.
-pub fn capitalize_candidate(
-    text: &str,
-    input: &str,
-    auto_cap_enabled: bool,
-    mode: InputMode,
-) -> String {
-    if !auto_cap_enabled {
-        return text.to_string();
-    }
-
-    let Some(first_input) = input.chars().next() else {
-        return text.to_string();
-    };
-    if !first_input.is_uppercase() {
-        return text.to_string();
-    }
-
-    let Some(first_text) = text.chars().next() else {
-        return text.to_string();
-    };
-    if !first_text.is_alphabetic() {
-        return text.to_string();
-    }
-
-    let capitalized = uppercase_tone_char(&first_text.to_string(), mode);
-    let rest: String = text.chars().skip(1).collect();
-    capitalized + &rest
-}
-
 /// Apply the SuggestionCaseTransformer per-word case transformation:
 /// - `CapsLocked`: full upper
 /// - else with non-empty `composing_text`: split typed-portion (matchCase
@@ -241,8 +208,8 @@ fn transform_suggestion_inner(
 ///   letter (digits, punctuation) do not reset the carried case.
 ///
 /// Re-homed from the former `case_adjust.rs::adjust_nasal_marker_case`.
-/// Called in-band by `Method::NormalizeTone` (engine remains source-of-truth)
-/// AND by `transform_suggestion` (post-process).
+/// Called in-band by `apply_nasal_marker_case` (the last step of
+/// `api::normalize_tone`) AND by `transform_suggestion` (post-process).
 pub fn adjust_nasal_marker_case(text: &str) -> String {
     if !text.contains(NASAL_LOWER) && !text.contains(NASAL_UPPER) {
         return text.to_string();
@@ -509,40 +476,6 @@ mod tests {
             transform_input_case("Tsh", LetterCase::Lowercased, InputMode::Tl),
             "tsh"
         );
-    }
-
-    // -----------------------------------------------------------------
-    // capitalize_candidate
-    // -----------------------------------------------------------------
-
-    #[test]
-    fn capitalize_candidate_disabled_passthrough() {
-        assert_eq!(
-            capitalize_candidate("góa", "Goa", false, InputMode::Poj),
-            "góa"
-        );
-    }
-
-    #[test]
-    fn capitalize_candidate_lowercase_input_passthrough() {
-        assert_eq!(
-            capitalize_candidate("góa", "goa", true, InputMode::Poj),
-            "góa"
-        );
-    }
-
-    #[test]
-    fn capitalize_candidate_uppercase_input_capitalizes() {
-        assert_eq!(
-            capitalize_candidate("góa", "Goa", true, InputMode::Poj),
-            "Góa"
-        );
-    }
-
-    #[test]
-    fn capitalize_candidate_empty_inputs_passthrough() {
-        assert_eq!(capitalize_candidate("", "G", true, InputMode::Poj), "");
-        assert_eq!(capitalize_candidate("góa", "", true, InputMode::Poj), "góa");
     }
 
     // -----------------------------------------------------------------

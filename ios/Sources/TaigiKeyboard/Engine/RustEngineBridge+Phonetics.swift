@@ -4,41 +4,23 @@ import SwiftProtobuf
 // MARK: - RustEngineBridge Phonetics + Derivation + TPS surface
 
 /// Phonetics / Derivation / TPS extension for `RustEngineBridge`. Holds
-/// the 15 typed phonetics methods (Codex v2 §7 review per
+/// the typed phonetics methods (Codex v2 §7 review per
 /// `~/.claude/rules/round-workflow.md` § Codex review sandwich — D9.4
 /// surface) plus the lazy `toneVariations` cache and
 /// the three private dispatch helpers (`dispatch` / `stringDispatch` /
 /// `boolDispatch`) shared by every method here.
 ///
-/// TPS is folded into this file because the 5 TPS ops have zero
+/// TPS is folded into this file because the TPS ops have zero
 /// independent lifecycle from phonetics — they share the same dispatch
 /// helpers, so colocation keeps those helpers `private` to one file
 /// instead of widening to `internal`.
 public extension RustEngineBridge {
-    // MARK: Phonetics core (8 ops)
-
-    /// `Method::NormalizeTone` — input + AppConfig.input_mode + PojMarkerOptions →
-    /// tone-marked string. Caller MUST supply `PojMarkerOptions`; engine reads
-    /// them per request (live-read invariant).
-    static func normalizeTone(
-        _ input: String,
-        mode: InputMode,
-        toggles: PojMarkerOptions,
-    ) -> String {
-        var payload = Taigi_Engine_NormalizeTone()
-        payload.input = input
-        return stringDispatch(
-            method: .normalizeTone(payload),
-            input: input,
-            op: "normalizeTone",
-            config: appConfig(mode: mode, toggles: toggles),
-        )
-    }
+    // MARK: Phonetics core (6 ops)
 
     static func stripTone(_ input: String) -> (bare: String, tone: String) {
         var payload = Taigi_Engine_StripTone()
         payload.input = input
-        let resp = dispatch(method: .stripTone(payload), op: "stripTone", config: nil)
+        let resp = dispatch(method: .stripTone(payload), op: "stripTone")
         guard case let .stripToneResult(r)? = resp?.result else {
             recordFailure(op: "stripTone", message: "missing result")
             return (input, "")
@@ -49,24 +31,13 @@ public extension RustEngineBridge {
     static func pojToTl(_ input: String) -> String {
         var payload = Taigi_Engine_PojToTl()
         payload.input = input
-        return stringDispatch(method: .pojToTl(payload), input: input, op: "pojToTl", config: nil)
+        return stringDispatch(method: .pojToTl(payload), input: input, op: "pojToTl")
     }
 
     static func tlToPoj(_ input: String) -> String {
         var payload = Taigi_Engine_TlToPoj()
         payload.input = input
-        return stringDispatch(method: .tlToPoj(payload), input: input, op: "tlToPoj", config: nil)
-    }
-
-    static func normalizeToTl(_ input: String) -> String {
-        var payload = Taigi_Engine_NormalizeToTl()
-        payload.input = input
-        return stringDispatch(
-            method: .normalizeToTl(payload),
-            input: input,
-            op: "normalizeToTl",
-            config: nil,
-        )
+        return stringDispatch(method: .tlToPoj(payload), input: input, op: "tlToPoj")
     }
 
     static func normalizeInput(_ input: String) -> String {
@@ -76,7 +47,6 @@ public extension RustEngineBridge {
             method: .normalizeInput(payload),
             input: input,
             op: "normalizeInput",
-            config: nil,
         )
     }
 
@@ -92,27 +62,14 @@ public extension RustEngineBridge {
             method: .nfdPreprocessForLookup(payload),
             input: input,
             op: "nfdPreprocessForLookup",
-            config: nil,
         )
-    }
-
-    static func restoreTone(_ text: String) -> String? {
-        var payload = Taigi_Engine_RestoreTone()
-        payload.text = text
-        let resp = dispatch(method: .restoreTone(payload), op: "restoreTone", config: nil)
-        guard case let .optionalStringResult(r)? = resp?.result else {
-            recordFailure(op: "restoreTone", message: "missing result")
-            return nil
-        }
-        return r.present ? r.output : nil
     }
 
     /// Lazy-init cache for `Method::GetToneVariations`. Swift `static let`
     /// initializer is dispatch_once-equivalent — thread-safe by construction.
     static let toneVariations: ToneVariationsCache = {
         let resp = dispatch(method: .getToneVariations(Taigi_Engine_GetToneVariations()),
-                            op: "getToneVariations",
-                            config: nil)
+                            op: "getToneVariations")
         guard case let .toneVariationsResult(r)? = resp?.result else {
             recordFailure(op: "getToneVariations", message: "missing result")
             return ToneVariationsCache(poj: [:], tl: [:])
@@ -128,13 +85,13 @@ public extension RustEngineBridge {
     static func deriveNotone(_ roman: String) -> String {
         var payload = Taigi_Engine_DeriveNotone()
         payload.roman = roman
-        return stringDispatch(method: .deriveNotone(payload), input: roman, op: "deriveNotone", config: nil)
+        return stringDispatch(method: .deriveNotone(payload), input: roman, op: "deriveNotone")
     }
 
     static func deriveAbbrev(_ roman: String) -> String {
         var payload = Taigi_Engine_DeriveAbbrev()
         payload.roman = roman
-        return stringDispatch(method: .deriveAbbrev(payload), input: roman, op: "deriveAbbrev", config: nil)
+        return stringDispatch(method: .deriveAbbrev(payload), input: roman, op: "deriveAbbrev")
     }
 
     /// `Method::DeriveCustomSearchKeys` — WRITE side (v3.6.1 R3). Full
@@ -160,13 +117,7 @@ public extension RustEngineBridge {
         return customSearchKeys(method: .deriveCustomQueryKey(payload), op: "deriveCustomQueryKey").first
     }
 
-    // MARK: TPS (5 ops)
-
-    static func containsTPS(_ text: String) -> Bool {
-        var payload = Taigi_Engine_ContainsTps()
-        payload.text = text
-        return boolDispatch(method: .containsTps(payload), op: "containsTps")
-    }
+    // MARK: TPS (4 ops)
 
     static func tlNumericToTPS(_ text: String, orMapsToER: Bool) -> String {
         var payload = Taigi_Engine_TlNumericToTps()
@@ -176,7 +127,6 @@ public extension RustEngineBridge {
             method: .tlNumericToTps(payload),
             input: text,
             op: "tlNumericToTps",
-            config: nil,
         )
     }
 
@@ -188,7 +138,6 @@ public extension RustEngineBridge {
             method: .tlDisplayToTps(payload),
             input: text,
             op: "tlDisplayToTps",
-            config: nil,
         )
     }
 
@@ -205,7 +154,7 @@ public extension RustEngineBridge {
         var payload = Taigi_Engine_TpsInputAdjust()
         payload.incoming = incoming
         payload.rawInput = rawInput
-        let resp = dispatch(method: .tpsInputAdjust(payload), op: "tpsInputAdjust", config: nil)
+        let resp = dispatch(method: .tpsInputAdjust(payload), op: "tpsInputAdjust")
         guard case let .tpsAdjustResult(r)? = resp?.result else {
             recordFailure(op: "tpsInputAdjust", message: "missing result")
             return (incoming, nil)
@@ -217,13 +166,11 @@ public extension RustEngineBridge {
     // MARK: Private dispatch (phonetics envelope)
 
     /// Phonetics envelope dispatch — encode → FFI roundtrip → decode the
-    /// `PhoneticsResponse` payload. `config` is optional because most
-    /// phonetics ops don't need an `AppConfig` snapshot; `NormalizeTone`
-    /// is the live-read holdout that supplies one.
+    /// `PhoneticsResponse` payload. No phonetics op reads an `AppConfig`
+    /// snapshot, so none is sent.
     private static func dispatch(
         method: Taigi_Engine_PhoneticsRequest.OneOf_Method,
         op: String,
-        config: Taigi_Engine_AppConfig?,
     ) -> Taigi_Engine_PhoneticsResponse? {
         var phonetics = Taigi_Engine_PhoneticsRequest()
         phonetics.method = method
@@ -231,9 +178,6 @@ public extension RustEngineBridge {
         var request = Taigi_Engine_Request()
         request.id = nextRequestID()
         request.payload = .phonetics(phonetics)
-        if let config {
-            request.configSnapshot = config
-        }
 
         guard let response = send(request, op: op) else { return nil }
         guard response.error == .ok else {
@@ -251,9 +195,8 @@ public extension RustEngineBridge {
         method: Taigi_Engine_PhoneticsRequest.OneOf_Method,
         input: String,
         op: String,
-        config: Taigi_Engine_AppConfig?,
     ) -> String {
-        guard let resp = dispatch(method: method, op: op, config: config) else { return input }
+        guard let resp = dispatch(method: method, op: op) else { return input }
         guard case let .stringResult(s)? = resp.result else {
             recordFailure(op: op, message: "expected StringResult")
             return input
@@ -265,7 +208,7 @@ public extension RustEngineBridge {
         method: Taigi_Engine_PhoneticsRequest.OneOf_Method,
         op: String,
     ) -> Bool {
-        guard let resp = dispatch(method: method, op: op, config: nil) else { return false }
+        guard let resp = dispatch(method: method, op: op) else { return false }
         guard case let .boolResult(b)? = resp.result else {
             recordFailure(op: op, message: "expected BoolResult")
             return false
@@ -279,7 +222,7 @@ public extension RustEngineBridge {
         method: Taigi_Engine_PhoneticsRequest.OneOf_Method,
         op: String,
     ) -> [CustomSearchKey] {
-        guard let resp = dispatch(method: method, op: op, config: nil) else { return [] }
+        guard let resp = dispatch(method: method, op: op) else { return [] }
         guard case let .customSearchKeysResult(r)? = resp.result else {
             recordFailure(op: op, message: "expected CustomSearchKeysResult")
             return []

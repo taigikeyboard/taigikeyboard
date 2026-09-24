@@ -10,8 +10,7 @@
 //! responsibility lives here.
 
 use phonetics::case_transform::{
-    adjust_nasal_marker_case, capitalize_candidate, transform_input_case, transform_suggestion,
-    LetterCase,
+    adjust_nasal_marker_case, transform_input_case, transform_suggestion, LetterCase,
 };
 use phonetics::InputMode;
 
@@ -245,70 +244,6 @@ fn poj_o_dot_lowercase() {
             &got, expected,
             "POJ o-dot lower '{}' expected '{}', got '{}'",
             input, expected, got
-        );
-    }
-}
-
-// =========================================================================
-// CaseTransformer.capitalizeCandidate
-// =========================================================================
-
-#[test]
-fn capitalize_candidate_input_uppercase_capitalizes() {
-    assert_eq!(
-        capitalize_candidate("tâi-gí", "Tai", true, InputMode::Poj),
-        "Tâi-gí"
-    );
-}
-
-#[test]
-fn capitalize_candidate_input_lowercase_passthrough() {
-    assert_eq!(
-        capitalize_candidate("tâi-gí", "tai", true, InputMode::Poj),
-        "tâi-gí"
-    );
-}
-
-#[test]
-fn capitalize_candidate_auto_cap_off_passthrough() {
-    assert_eq!(
-        capitalize_candidate("tâi-gí", "Tai", false, InputMode::Poj),
-        "tâi-gí"
-    );
-}
-
-#[test]
-fn capitalize_candidate_tone_letter_first_uses_table() {
-    assert_eq!(
-        capitalize_candidate("ô-pêh-sai", "O", true, InputMode::Poj),
-        "Ô-pêh-sai"
-    );
-}
-
-#[test]
-fn capitalize_candidate_non_letter_first_passthrough() {
-    assert_eq!(
-        capitalize_candidate("123abc", "A", true, InputMode::Poj),
-        "123abc"
-    );
-}
-
-#[test]
-fn capitalize_candidate_is_deterministic() {
-    // INVARIANT mirror — same inputs must produce same output across calls.
-    let fixtures: &[(&str, &str, bool, InputMode)] = &[
-        ("台語", "T", true, InputMode::Tl),
-        ("tâi-gí", "t", false, InputMode::Tl),
-        ("Guá", "G", true, InputMode::Poj),
-        ("hō-gē", "H", true, InputMode::Poj),
-    ];
-    for (text, input, auto_cap, mode) in fixtures {
-        let first = capitalize_candidate(text, input, *auto_cap, *mode);
-        let second = capitalize_candidate(text, input, *auto_cap, *mode);
-        assert_eq!(
-            first, second,
-            "non-determinism on ({}, {}, {}, {:?})",
-            text, input, auto_cap, mode
         );
     }
 }

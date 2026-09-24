@@ -26,24 +26,7 @@ final class RustEngineBridgeTests: XCTestCase {
         RustEngineBridge.install()
     }
 
-    // MARK: - Phonetics core (8 ops)
-
-    func test_op_normalizeTone_TL() {
-        let toggles = PojMarkerOptions(isDoubleTapOOEnabled: false, isDoubleTapNNEnabled: false, isNasalMarkerUppercaseEnabled: true)
-        XCTAssertEqual(
-            RustEngineBridge.normalizeTone("gua2", mode: .tl, toggles: toggles),
-            "guá",
-        )
-    }
-
-    /// ⁿ大本字 (§53) crosses the bridge inverted: ON = wire default (`SIÂᴺ`),
-    /// OFF = `force_lowercase_nasal_marker` (`SIÂⁿ`).
-    func test_op_normalizeTone_POJ_nasalMarkerFollowsTheSwitch() {
-        let uppercase = PojMarkerOptions(isDoubleTapOOEnabled: false, isDoubleTapNNEnabled: true, isNasalMarkerUppercaseEnabled: true)
-        XCTAssertEqual(RustEngineBridge.normalizeTone("SIANN5", mode: .poj, toggles: uppercase), "SI\u{C2}\u{1D3A}")
-        let lowercase = PojMarkerOptions(isDoubleTapOOEnabled: false, isDoubleTapNNEnabled: true, isNasalMarkerUppercaseEnabled: false)
-        XCTAssertEqual(RustEngineBridge.normalizeTone("SIANN5", mode: .poj, toggles: lowercase), "SI\u{C2}\u{207F}")
-    }
+    // MARK: - Phonetics core (6 ops)
 
     func test_op_stripTone_returnsBareAndToneTuple() {
         let result = RustEngineBridge.stripTone("guá")
@@ -59,20 +42,8 @@ final class RustEngineBridgeTests: XCTestCase {
         XCTAssertEqual(RustEngineBridge.tlToPoj("guá"), "góa")
     }
 
-    func test_op_normalizeToTL_passthrough() {
-        XCTAssertEqual(RustEngineBridge.normalizeToTl("hoo"), "hoo")
-    }
-
     func test_op_normalizeInput_extractsToneFromDiacritic() {
         XCTAssertEqual(RustEngineBridge.normalizeInput("hó"), "ho2")
-    }
-
-    func test_op_restoreTone_returnsBareForToneMarked() {
-        XCTAssertEqual(RustEngineBridge.restoreTone("hó"), "ho")
-    }
-
-    func test_op_restoreTone_returnsNilForPlain() {
-        XCTAssertNil(RustEngineBridge.restoreTone("ho"))
     }
 
     func test_op_toneVariations_lazyCache_returnsBothModes() {
@@ -95,15 +66,7 @@ final class RustEngineBridgeTests: XCTestCase {
         XCTAssertEqual(RustEngineBridge.deriveAbbrev("gâu-tsá"), "gt")
     }
 
-    // MARK: - TPS (5 ops)
-
-    func test_op_containsTPS_trueForZhuyin() {
-        XCTAssertTrue(RustEngineBridge.containsTPS("ㄉㄧㄠ"))
-    }
-
-    func test_op_containsTPS_falseForLatin() {
-        XCTAssertFalse(RustEngineBridge.containsTPS("tiau"))
-    }
+    // MARK: - TPS (4 ops)
 
     func test_op_tlNumericToTPS_basic() {
         let out = RustEngineBridge.tlNumericToTPS("tiau5", orMapsToER: false)

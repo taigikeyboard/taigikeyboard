@@ -585,9 +585,6 @@ class PrefHelper(
     // logic. See `ime/core/settings/EngineSettings.kt` for the contract.
     // ------------------------------------------------------------------ //
 
-    override val isAutoCap: Boolean
-        get() = autoCapitalizationEnabled
-
     // EFFECTIVE script pair — the mode projects the stored flags (rules on
     // CandidateDisplayMode). Every engine / commit / layout / auto-space
     // reader goes through these two; only the settings UI and the 文/A

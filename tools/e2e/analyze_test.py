@@ -162,9 +162,9 @@ class ScenarioFileTests(unittest.TestCase):
 class MethodNameTests(unittest.TestCase):
     def test_names_come_from_the_repo_protos(self) -> None:
         names = analyze.load_method_names(analyze.REPO_ROOT / "engine" / "protos" / "proto")
-        # trace: phonetics.proto PhoneticsRequest `normalize_tone = 10`;
+        # trace: phonetics.proto PhoneticsRequest `strip_tone = 11`;
         # composing.proto ComposingRequest `fetch_at_pos = 31`.
-        self.assertEqual(names[("phonetics", 10)], "normalize_tone")
+        self.assertEqual(names[("phonetics", 11)], "strip_tone")
         self.assertEqual(names[("composing", 31)], "fetch_at_pos")
 
 

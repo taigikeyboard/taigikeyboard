@@ -1,38 +1,15 @@
-//! `NormalizeTone` integration tests for in-band nasal-marker case
+//! `api::normalize_tone` integration tests for in-band nasal-marker case
 //! agreement: the case of the POJ nasal marker (ⁿ U+207F vs ᴺ U+1D3A)
 //! must agree with the case of the preceding letter on the way out of
-//! `NormalizeTone`. The standalone `adjust_nasal_marker_case` unit
+//! `normalize_tone`. The standalone `adjust_nasal_marker_case` unit
 //! tests live alongside the helper in `engine/phonetics/src/case_adjust.rs`;
-//! these tests pin the rule end-to-end through the dispatcher.
+//! these tests pin the rule end-to-end through the public API.
 
-use phonetics::dispatch::handle;
-use protos::engine::phonetics_request::Method;
-use protos::engine::phonetics_response::Result as PhonResult;
-use protos::engine::{AppConfig, NormalizeTone, PhoneticsRequest, PhoneticsResponse, StringResult};
-
-fn run(method: Method, config: AppConfig) -> PhoneticsResponse {
-    let req = PhoneticsRequest {
-        method: Some(method),
-    };
-    handle(&req, &config).expect("dispatch handle should succeed")
-}
-
-fn string_result(resp: &PhoneticsResponse) -> &str {
-    let result = resp.result.as_ref().expect("phonetics result");
-    match result {
-        PhonResult::StringResult(StringResult { output }) => output.as_str(),
-        other => panic!("expected StringResult, got {other:?}"),
-    }
-}
+use phonetics::api::normalize_tone;
+use protos::engine::AppConfig;
 
 fn normalize(input: &str, cfg: AppConfig) -> String {
-    let resp = run(
-        Method::NormalizeTone(NormalizeTone {
-            input: input.to_string(),
-        }),
-        cfg,
-    );
-    string_result(&resp).to_string()
+    normalize_tone(input, &cfg)
 }
 
 fn poj_doubletap() -> AppConfig {

@@ -45,7 +45,7 @@ Every phase that touches settings wiring must verify:
 2. Without relaunching the keyboard, change the setting in the host app.
 3. Interact with the keyboard again — the new setting must be applied.
 
-Settings requiring this check: `inputMode`, `isAutoSpaceEnabled`, `isOutputBothScripts`, `isAutoCap`, enabled-dictionaries set, TPS layout toggle.
+Settings requiring this check: `inputMode`, `isAutoSpaceEnabled`, `isOutputBothScripts`, enabled-dictionaries set, TPS layout toggle.
 
 ## 6. References
 

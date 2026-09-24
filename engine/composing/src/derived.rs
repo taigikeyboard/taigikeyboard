@@ -3,8 +3,7 @@
 //! TPS inputs are already display-ready (return as-is). POJ/TL inputs go
 //! through the full `phonetics::api::normalize_tone` chain (POJ doubletap
 //! preprocessing → tone-mark application → nasal-marker case adjustment) per
-//! plan §3.2a. The platform `RustEngineBridge.normalizeTone` call sites are
-//! replaced by this in-process call.
+//! plan §3.2a.
 //!
 //! This is the rendering primitive behind [`crate::api::Phase::raw_input`] —
 //! see `docs/engine/continuous-input-ranking.md` §10.2 / §10.3 clarification β

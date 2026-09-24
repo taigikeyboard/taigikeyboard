@@ -1,11 +1,7 @@
-//! Input classification primitives for the IME and Tab3 search.
+//! Input classification primitives.
 //!
-//! Two consumers, both reach this module via the lexicon proto dispatch:
-//!
-//! - `classify_input` — the IME autocomplete classifier. Replaces iOS
-//!   `AutocompleteInputClassifier.classify(rawInput:)` and Android
-//!   `AutocompleteInputClassifier.determineInputType` per-keystroke ladder.
-//! - `is_hanzi` — the Tab3 search short-circuit predicate. Replaces iOS
+//! - `is_hanzi` — the Tab3 search short-circuit predicate (lexicon proto
+//!   dispatch) and the Continuous fetch's Hanji check. Replaces iOS
 //!   `CandidateProcessor.isHanzi` and Android `DictionarySearchViewModel`'s
 //!   inline 16-bit `Char.code` check (parity correction — that inline check
 //!   silently missed Extensions B/C/D/E because Kotlin `Char.code` tops out
@@ -14,9 +10,6 @@
 //! Pure functions — no I/O, no engine handle. INVARIANT contracts live in
 //! `docs/architecture/behavioral-invariants.md` under the umbrella label
 //! `INVARIANT_LEX_INPUT_CLASSIFICATION`.
-
-use phonetics::has_tone_marks;
-use protos::engine::InputType;
 
 /// Returns `true` iff `text` contains at least one CJK Unified Ideograph
 /// (Unified block + Extensions A–E).
@@ -35,44 +28,6 @@ pub fn is_hanzi(text: &str) -> bool {
             || (0x2B740..=0x2B81F).contains(&cp) // Extension D
             || (0x2B820..=0x2CEAF).contains(&cp) // Extension E
     })
-}
-
-/// Returns `true` iff `text` contains an ASCII numeric tone digit.
-///
-/// ASCII digits 2, 3, 5, 6, 7, 8, 9 are numeric tone markers; 1, 4, and 0
-/// are not. See `INVARIANT_LEX_INPUT_CLASSIFICATION_NUMERIC_TONE_SET`.
-pub fn contains_numeric_tone(text: &str) -> bool {
-    text.chars()
-        .any(|c| c.is_ascii_digit() && !matches!(c, '0' | '1' | '4'))
-}
-
-/// Result of `classify_input`. `input_type` is the typed proto enum;
-/// callers at the proto boundary (`api::classify_input`) convert to `i32`.
-pub struct Classification {
-    // Detected input type (Hanzi / toned roman / toneless roman).
-    pub input_type: InputType,
-    // Lexicon search key, passed through unchanged; TPS queries reach the
-    // tps: family via SearchRequest{input_mode=Tps} through key_normalizer.
-    pub search_key: String,
-}
-
-/// Classify `raw` into `(input_type, search_key)`.
-///
-/// Precedence — see `INVARIANT_LEX_INPUT_CLASSIFICATION_PRECEDENCE`.
-/// Search key — see `INVARIANT_LEX_INPUT_CLASSIFICATION_SEARCH_KEY`.
-pub fn classify_input(raw: &str) -> Classification {
-    let input_type = if is_hanzi(raw) {
-        InputType::Hanzi
-    } else if has_tone_marks(raw) || contains_numeric_tone(raw) {
-        InputType::RomanWithTone
-    } else {
-        InputType::RomanNoTone
-    };
-
-    Classification {
-        input_type,
-        search_key: raw.to_owned(),
-    }
 }
 
 #[cfg(test)]
@@ -133,86 +88,5 @@ mod tests {
     fn is_hanzi_just_below_unified_block_no_match() {
         // 0x4DFF is in Yijing Hexagram Symbols block, NOT CJK
         assert!(!is_hanzi("\u{4DFF}"));
-    }
-
-    // INVARIANT_LEX_INPUT_CLASSIFICATION_NUMERIC_TONE_SET
-    #[test]
-    fn numeric_tone_2_yes() {
-        assert!(contains_numeric_tone("gua2"));
-    }
-    #[test]
-    fn numeric_tone_9_yes() {
-        assert!(contains_numeric_tone("gua9"));
-    }
-    #[test]
-    fn numeric_tone_0_no() {
-        assert!(!contains_numeric_tone("gua0"));
-    }
-    #[test]
-    fn numeric_tone_1_no() {
-        assert!(!contains_numeric_tone("gua1"));
-    }
-    #[test]
-    fn numeric_tone_4_no() {
-        assert!(!contains_numeric_tone("gua4"));
-    }
-    #[test]
-    fn numeric_tone_no_digit_no() {
-        assert!(!contains_numeric_tone("gua"));
-    }
-    #[test]
-    fn numeric_tone_only_excluded_digits_no() {
-        assert!(!contains_numeric_tone("0140"));
-    }
-
-    // INVARIANT_LEX_INPUT_CLASSIFICATION_PRECEDENCE
-    #[test]
-    fn classify_hanzi_short_circuits_over_numeric_tone() {
-        // hanzi takes precedence over a trailing numeric-tone digit
-        let r = classify_input("好2");
-        assert_eq!(r.input_type, InputType::Hanzi);
-    }
-    #[test]
-    fn classify_tone_mark_before_numeric_check() {
-        // tone-mark detection runs before numeric-tone scan
-        let r = classify_input("hó");
-        assert_eq!(r.input_type, InputType::RomanWithTone);
-    }
-    #[test]
-    fn classify_numeric_tone_yields_with_tone() {
-        let r = classify_input("gua2");
-        assert_eq!(r.input_type, InputType::RomanWithTone);
-    }
-    #[test]
-    fn classify_no_tone_yields_no_tone() {
-        let r = classify_input("gua");
-        assert_eq!(r.input_type, InputType::RomanNoTone);
-    }
-    #[test]
-    fn classify_empty_yields_no_tone() {
-        let r = classify_input("");
-        assert_eq!(r.input_type, InputType::RomanNoTone);
-        assert_eq!(r.search_key, "");
-    }
-
-    // INVARIANT_LEX_INPUT_CLASSIFICATION_SEARCH_KEY
-    #[test]
-    fn search_key_passthrough_when_not_tps() {
-        let r = classify_input("gua2");
-        assert_eq!(r.search_key, "gua2");
-    }
-    #[test]
-    fn search_key_passthrough_for_hanzi() {
-        let r = classify_input("好");
-        assert_eq!(r.search_key, "好");
-    }
-    #[test]
-    fn search_key_tps_passes_through_raw() {
-        // C-1: TPS input is no longer pre-converted to TL. `search_key`
-        // mirrors `raw` so the per-keystroke search path can hit the
-        // `tps:` FST family directly via `SearchRequest{input_mode=Tps}`.
-        let tps_input = "\u{310d}\u{3128}\u{311a}\u{02cb}";
-        let r = classify_input(tps_input);
-        assert_eq!(r.search_key, tps_input);
     }
 }

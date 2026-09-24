@@ -12,29 +12,18 @@ public interface PhoneticsRequestOrBuilder extends
 
   /**
    * <pre>
-   * --- Phonetics core (8 ops) ---
+   * --- Phonetics core (6 ops) ---
    * </pre>
    *
-   * <code>.taigi.engine.NormalizeTone normalize_tone = 10;</code>
-   * @return Whether the normalizeTone field is set.
-   */
-  boolean hasNormalizeTone();
-  /**
-   * <pre>
-   * --- Phonetics core (8 ops) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.NormalizeTone normalize_tone = 10;</code>
-   * @return The normalizeTone.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.NormalizeTone getNormalizeTone();
-
-  /**
    * <code>.taigi.engine.StripTone strip_tone = 11;</code>
    * @return Whether the stripTone field is set.
    */
   boolean hasStripTone();
   /**
+   * <pre>
+   * --- Phonetics core (6 ops) ---
+   * </pre>
+   *
    * <code>.taigi.engine.StripTone strip_tone = 11;</code>
    * @return The stripTone.
    */
@@ -63,17 +52,6 @@ public interface PhoneticsRequestOrBuilder extends
   com.siansiansu.taigikeyboard.engine.proto.TlToPoj getTlToPoj();
 
   /**
-   * <code>.taigi.engine.NormalizeToTl normalize_to_tl = 14;</code>
-   * @return Whether the normalizeToTl field is set.
-   */
-  boolean hasNormalizeToTl();
-  /**
-   * <code>.taigi.engine.NormalizeToTl normalize_to_tl = 14;</code>
-   * @return The normalizeToTl.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.NormalizeToTl getNormalizeToTl();
-
-  /**
    * <code>.taigi.engine.NormalizeInput normalize_input = 15;</code>
    * @return Whether the normalizeInput field is set.
    */
@@ -83,17 +61,6 @@ public interface PhoneticsRequestOrBuilder extends
    * @return The normalizeInput.
    */
   com.siansiansu.taigikeyboard.engine.proto.NormalizeInput getNormalizeInput();
-
-  /**
-   * <code>.taigi.engine.RestoreTone restore_tone = 16;</code>
-   * @return Whether the restoreTone field is set.
-   */
-  boolean hasRestoreTone();
-  /**
-   * <code>.taigi.engine.RestoreTone restore_tone = 16;</code>
-   * @return The restoreTone.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.RestoreTone getRestoreTone();
 
   /**
    * <code>.taigi.engine.GetToneVariations get_tone_variations = 18;</code>
@@ -171,29 +138,18 @@ public interface PhoneticsRequestOrBuilder extends
 
   /**
    * <pre>
-   * --- TPS (5 ops) ---
+   * --- TPS (4 ops) ---
    * </pre>
    *
-   * <code>.taigi.engine.ContainsTps contains_tps = 30;</code>
-   * @return Whether the containsTps field is set.
-   */
-  boolean hasContainsTps();
-  /**
-   * <pre>
-   * --- TPS (5 ops) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.ContainsTps contains_tps = 30;</code>
-   * @return The containsTps.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.ContainsTps getContainsTps();
-
-  /**
    * <code>.taigi.engine.TlNumericToTps tl_numeric_to_tps = 32;</code>
    * @return Whether the tlNumericToTps field is set.
    */
   boolean hasTlNumericToTps();
   /**
+   * <pre>
+   * --- TPS (4 ops) ---
+   * </pre>
+   *
    * <code>.taigi.engine.TlNumericToTps tl_numeric_to_tps = 32;</code>
    * @return The tlNumericToTps.
    */

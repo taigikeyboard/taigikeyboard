@@ -286,8 +286,7 @@ fn decode_fetch_at_pos_hanzi_buffer_returns_empty_carrier() {
 }
 
 // `is_hanzi` is `.any()`, so a single stray CJK char anywhere in an
-// otherwise-romanized buffer also fails closed (matches platform D-8
-// `classify_input` Hanzi precedence). Spec §15.3.E.
+// otherwise-romanized buffer also fails closed. Spec §15.3.E.
 #[test]
 fn decode_fetch_at_pos_mixed_hanzi_buffer_returns_empty_carrier() {
     let mut engine = Engine::new();

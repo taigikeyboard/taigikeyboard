@@ -6,8 +6,8 @@
 //! Helpers are split across submodules:
 //! - This file owns the dispatch + result-shape construction.
 //! - `derivation` owns CustomDictionaryDerivation port (notone / abbrev).
-//! - `normalization` owns InputNormalizer + ToneRestoration ports
-//!   (NFD / combining-mark mechanics).
+//! - `normalization` owns the InputNormalizer port (NFD / combining-mark
+//!   mechanics).
 //! - `tps_adjust` owns the TPSAdjustmentBundle port (collapsed entry).
 //! - `tone_variations` owns the GetToneVariations init-pull table builder.
 //! - `api`, `syllable`, `tps`, `poj`, `tl`, `tables`, `case_adjust`
@@ -25,16 +25,13 @@ use crate::tps_adjust;
 use protos::engine::phonetics_request::Method;
 use protos::engine::phonetics_response::Result as PhonResult;
 use protos::engine::{
-    AppConfig, BoolResult, CustomSearchKeysResult, OptionalStringResult, PhoneticsRequest,
-    PhoneticsResponse, StringResult, StripToneResult, TpsAdjustResult,
+    BoolResult, CustomSearchKeysResult, OptionalStringResult, PhoneticsRequest, PhoneticsResponse,
+    StringResult, StripToneResult, TpsAdjustResult,
 };
 
-/// Dispatch a decoded `PhoneticsRequest` against the per-request `AppConfig`
-/// snapshot (live-read settings per `behavioral-invariants.md` §11).
-pub fn handle(
-    req: &PhoneticsRequest,
-    config: &AppConfig,
-) -> Result<PhoneticsResponse, PhoneticsError> {
+/// Dispatch a decoded `PhoneticsRequest`. Every remaining op is a pure
+/// function of its payload — none reads the `AppConfig` snapshot.
+pub fn handle(req: &PhoneticsRequest) -> Result<PhoneticsResponse, PhoneticsError> {
     let Some(method) = &req.method else {
         // The most common cause is a Swift/Rust proto schema mismatch
         // (xcframework built before the proto was updated). Run
@@ -47,9 +44,6 @@ pub fn handle(
 
     let result = match method {
         // --- Phonetics core ---
-        Method::NormalizeTone(payload) => PhonResult::StringResult(StringResult {
-            output: crate::api::normalize_tone(&payload.input, config),
-        }),
         Method::StripTone(payload) => {
             let (bare, tone) = crate::syllable::strip_tone_mark(&payload.input);
             PhonResult::StripToneResult(StripToneResult { bare, tone })
@@ -60,22 +54,9 @@ pub fn handle(
         Method::TlToPoj(payload) => PhonResult::StringResult(StringResult {
             output: tl_display_to_poj_display(&payload.input),
         }),
-        Method::NormalizeToTl(payload) => PhonResult::StringResult(StringResult {
-            output: crate::syllable::normalize_to_tl(&payload.input),
-        }),
         Method::NormalizeInput(payload) => PhonResult::StringResult(StringResult {
             output: normalization::normalize_input(&payload.input),
         }),
-        Method::RestoreTone(payload) => match normalization::restore_tone(&payload.text) {
-            Some(s) => PhonResult::OptionalStringResult(OptionalStringResult {
-                output: s,
-                present: true,
-            }),
-            None => PhonResult::OptionalStringResult(OptionalStringResult {
-                output: String::new(),
-                present: false,
-            }),
-        },
         Method::GetToneVariations(_) => PhonResult::ToneVariationsResult(tone_variations::build()),
         Method::NfdPreprocessForLookup(payload) => PhonResult::StringResult(StringResult {
             output: normalization::taigi_unicode_base_form(&payload.input),
@@ -108,9 +89,6 @@ pub fn handle(
         }
 
         // --- TPS ---
-        Method::ContainsTps(payload) => PhonResult::BoolResult(BoolResult {
-            value: tps::is_zhuyin(&payload.text),
-        }),
         Method::TlNumericToTps(payload) => PhonResult::StringResult(StringResult {
             output: tps_to_tps_numeric(&payload.text, payload.or_maps_to_er),
         }),
@@ -156,10 +134,6 @@ fn to_proto_key(k: custom_search::CustomSearchKey) -> protos::engine::CustomSear
         key: k.key,
     }
 }
-
-// `parse_input_mode`, `preprocess_for_normalize_tone`, and the nasal-double-n
-// helper moved to `crate::api` in v3.5.4 commit 3 so `composing::derived` can
-// call the same chain via `crate::api::normalize_tone`.
 
 /// `Method::TlNumericToTps` — input is numeric tone form (e.g. `"hoo2"`).
 /// Mirrors iOS `TLToTPS.convert` / Android `TPSConverter.toTPS`.

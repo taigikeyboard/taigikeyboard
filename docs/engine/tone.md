@@ -1,7 +1,7 @@
 # Tone Processing
 
 > **Type**: Feature
-> **Keywords**: `Tone`, `phonetics`, `numericTone`, `toneMarks`, `restoreTone`
+> **Keywords**: `Tone`, `phonetics`, `numericTone`, `toneMarks`, `normalize_tone`
 > **Related**: composing.md, binary-format.md, migration-inventory.csv
 
 ---
@@ -33,7 +33,7 @@
 
 ## Core Logic
 
-### 1. Input Display (`normalizeTone`)
+### 1. Input Display (`normalize_tone`)
 
 | Input | rawInput | Display (TL) | Display (POJ) |
 |-------|----------|--------------|----------------|
@@ -42,7 +42,7 @@
 | `at4` | `at4` | `at4` | `at4` |
 | `hoo2` | `hoo2` | `hóo` | `hó͘` |
 
-Rust entry: `phonetics::api::normalize_tone(input, &AppConfig)`. Bridge: `RustEngineBridge.normalizeTone(_, mode:, toggles:)`.
+Rust entry: `phonetics::api::normalize_tone(input, &AppConfig)`, called in-process by `composing::derived` for the preedit. No platform bridge — the `NormalizeTone` op (no production caller) was removed 2026-09-25.
 
 ### 2. Default-Tone Heuristic (`normalize_input`)
 
@@ -55,11 +55,9 @@ otherwise                → tone "1" (yin-ping)
 
 This runs inside `phonetics::normalization::normalize_input`, which builds the lookup-side TL numeric form.
 
-### 3. Tone Restoration (`restoreTone`)
+### 3. Tone Restoration (retired)
 
-Backspace path: locate the LAST combining tone mark (NFD), drop it, NFC-recompose. Returns `None` if the input has no tone mark.
-
-Rust entry: `phonetics::normalization::restore_tone`. Bridge: `RustEngineBridge.restoreTone(_)` returning `String?`.
+Retired 2026-09-25: `phonetics::normalization::restore_tone`, the `RestoreTone` op and the `RustEngineBridge.restoreTone` bridges had no production caller and were removed. Backspace edits the raw composing buffer in `engine/composing`.
 
 ---
 
@@ -91,9 +89,8 @@ POJ ↔ TL display conversion: `phonetics::api::poj_display_to_tl_display` / `tl
 | POJ doubletap preprocess (`oo`→`o͘`, `nn`→`ⁿ`) | Rust `phonetics::api::normalize_tone` (internally calls crate-private `preprocess_for_normalize_tone`) |
 | Nasal-marker case adjust (`ⁿ` ↔ `ᴺ`) | Rust `phonetics::case_transform::adjust_nasal_marker_case` |
 | Lookup-side Unicode prep (NFD + nasal → `nn`, dot → `o`) | Rust `phonetics::normalization::taigi_unicode_base_form` |
-| Tone restoration on backspace | Rust `phonetics::normalization::restore_tone` |
 | Tone-letter case mapping (POJ/TL aware upper/lower) | Rust `phonetics::case_transform` |
-| Bridge surface (iOS) | `Engine/RustEngineBridge.swift` (9 phonetics ops + case extension) |
+| Bridge surface (iOS) | `Engine/RustEngineBridge+Phonetics.swift` + `RustEngineBridge+CaseTransform.swift` |
 | Bridge surface (Android) | `engine/RustEngineBridge.kt` + `CaseTransformBridge.kt` |
 | Flick tone UI mapping (left=2, top=3, right=5, bottom=7, long-press=8) | iOS `FlickDirection` (UI only; tone math via Rust) |
 

@@ -25,7 +25,6 @@ public  final class LexiconRequest extends
     SEARCH_WITH_SOURCES(13),
     SEARCH_BY_HANZI(14),
     ASSOC_LOOKUP(15),
-    CLASSIFY_INPUT(16),
     IS_HANZI(17),
     DICTIONARY_FILTERS(18),
     METHOD_NOT_SET(0);
@@ -48,7 +47,6 @@ public  final class LexiconRequest extends
         case 13: return SEARCH_WITH_SOURCES;
         case 14: return SEARCH_BY_HANZI;
         case 15: return ASSOC_LOOKUP;
-        case 16: return CLASSIFY_INPUT;
         case 17: return IS_HANZI;
         case 18: return DICTIONARY_FILTERS;
         case 0: return METHOD_NOT_SET;
@@ -417,76 +415,6 @@ public  final class LexiconRequest extends
    */
   private void clearAssocLookup() {
     if (methodCase_ == 15) {
-      methodCase_ = 0;
-      method_ = null;
-    }
-  }
-
-  public static final int CLASSIFY_INPUT_FIELD_NUMBER = 16;
-  /**
-   * <pre>
-   * v3.5.7 IME classifier
-   * </pre>
-   *
-   * <code>.taigi.engine.ClassifyInputRequest classify_input = 16;</code>
-   */
-  @java.lang.Override
-  public boolean hasClassifyInput() {
-    return methodCase_ == 16;
-  }
-  /**
-   * <pre>
-   * v3.5.7 IME classifier
-   * </pre>
-   *
-   * <code>.taigi.engine.ClassifyInputRequest classify_input = 16;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.ClassifyInputRequest getClassifyInput() {
-    if (methodCase_ == 16) {
-       return (com.siansiansu.taigikeyboard.engine.proto.ClassifyInputRequest) method_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.ClassifyInputRequest.getDefaultInstance();
-  }
-  /**
-   * <pre>
-   * v3.5.7 IME classifier
-   * </pre>
-   *
-   * <code>.taigi.engine.ClassifyInputRequest classify_input = 16;</code>
-   */
-  private void setClassifyInput(com.siansiansu.taigikeyboard.engine.proto.ClassifyInputRequest value) {
-    java.util.Objects.requireNonNull(value);
-    method_ = value;
-    methodCase_ = 16;
-  }
-  /**
-   * <pre>
-   * v3.5.7 IME classifier
-   * </pre>
-   *
-   * <code>.taigi.engine.ClassifyInputRequest classify_input = 16;</code>
-   */
-  private void mergeClassifyInput(com.siansiansu.taigikeyboard.engine.proto.ClassifyInputRequest value) {
-    java.util.Objects.requireNonNull(value);
-    if (methodCase_ == 16 &&
-        method_ != com.siansiansu.taigikeyboard.engine.proto.ClassifyInputRequest.getDefaultInstance()) {
-      method_ = com.siansiansu.taigikeyboard.engine.proto.ClassifyInputRequest.newBuilder((com.siansiansu.taigikeyboard.engine.proto.ClassifyInputRequest) method_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      method_ = value;
-    }
-    methodCase_ = 16;
-  }
-  /**
-   * <pre>
-   * v3.5.7 IME classifier
-   * </pre>
-   *
-   * <code>.taigi.engine.ClassifyInputRequest classify_input = 16;</code>
-   */
-  private void clearClassifyInput() {
-    if (methodCase_ == 16) {
       methodCase_ = 0;
       method_ = null;
     }
@@ -1103,78 +1031,6 @@ public  final class LexiconRequest extends
 
     /**
      * <pre>
-     * v3.5.7 IME classifier
-     * </pre>
-     *
-     * <code>.taigi.engine.ClassifyInputRequest classify_input = 16;</code>
-     */
-    @java.lang.Override
-    public boolean hasClassifyInput() {
-      return instance.hasClassifyInput();
-    }
-    /**
-     * <pre>
-     * v3.5.7 IME classifier
-     * </pre>
-     *
-     * <code>.taigi.engine.ClassifyInputRequest classify_input = 16;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.ClassifyInputRequest getClassifyInput() {
-      return instance.getClassifyInput();
-    }
-    /**
-     * <pre>
-     * v3.5.7 IME classifier
-     * </pre>
-     *
-     * <code>.taigi.engine.ClassifyInputRequest classify_input = 16;</code>
-     */
-    public Builder setClassifyInput(com.siansiansu.taigikeyboard.engine.proto.ClassifyInputRequest value) {
-      copyOnWrite();
-      instance.setClassifyInput(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * v3.5.7 IME classifier
-     * </pre>
-     *
-     * <code>.taigi.engine.ClassifyInputRequest classify_input = 16;</code>
-     */
-    public Builder setClassifyInput(
-        com.siansiansu.taigikeyboard.engine.proto.ClassifyInputRequest.Builder builderForValue) {
-      copyOnWrite();
-      instance.setClassifyInput(builderForValue.build());
-      return this;
-    }
-    /**
-     * <pre>
-     * v3.5.7 IME classifier
-     * </pre>
-     *
-     * <code>.taigi.engine.ClassifyInputRequest classify_input = 16;</code>
-     */
-    public Builder mergeClassifyInput(com.siansiansu.taigikeyboard.engine.proto.ClassifyInputRequest value) {
-      copyOnWrite();
-      instance.mergeClassifyInput(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * v3.5.7 IME classifier
-     * </pre>
-     *
-     * <code>.taigi.engine.ClassifyInputRequest classify_input = 16;</code>
-     */
-    public Builder clearClassifyInput() {
-      copyOnWrite();
-      instance.clearClassifyInput();
-      return this;
-    }
-
-    /**
-     * <pre>
      * v3.5.7 Tab3 short-circuit
      * </pre>
      *
@@ -1340,13 +1196,12 @@ public  final class LexiconRequest extends
             com.siansiansu.taigikeyboard.engine.proto.SearchWithSourcesRequest.class,
             com.siansiansu.taigikeyboard.engine.proto.SearchByHanziRequest.class,
             com.siansiansu.taigikeyboard.engine.proto.AssocLookupRequest.class,
-            com.siansiansu.taigikeyboard.engine.proto.ClassifyInputRequest.class,
             com.siansiansu.taigikeyboard.engine.proto.IsHanziRequest.class,
             com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersRequest.class,
           };
           java.lang.String info =
-              "\u0000\b\u0001\u0000\u000b\u0012\b\u0000\u0000\u0000\u000b<\u0000\f<\u0000\r<\u0000" +
-              "\u000e<\u0000\u000f<\u0000\u0010<\u0000\u0011<\u0000\u0012<\u0000";
+              "\u0000\u0007\u0001\u0000\u000b\u0012\u0007\u0000\u0000\u0000\u000b<\u0000\f<\u0000" +
+              "\r<\u0000\u000e<\u0000\u000f<\u0000\u0011<\u0000\u0012<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

@@ -67,23 +67,6 @@ public extension RustEngineBridge {
         return caseStringDispatch(method: .transformInputCase(payload), op: "transformInputCase", mode: mode, isNasalMarkerUppercaseEnabled: isNasalMarkerUppercaseEnabled, fallback: text)
     }
 
-    /// Capitalize candidate first letter when `autoCapEnabled` and `input`
-    /// starts with an uppercase letter. Replaces
-    /// `CaseTransformer.capitalizeCandidate`.
-    static func capitalizeCandidate(
-        _ text: String,
-        basedOn input: String,
-        autoCapEnabled: Bool,
-        mode: InputMode,
-        isNasalMarkerUppercaseEnabled: Bool,
-    ) -> String {
-        var payload = Taigi_Engine_CapitalizeCandidate()
-        payload.text = text
-        payload.input = input
-        payload.autoCapEnabled = autoCapEnabled
-        return caseStringDispatch(method: .capitalizeCandidate(payload), op: "capitalizeCandidate", mode: mode, isNasalMarkerUppercaseEnabled: isNasalMarkerUppercaseEnabled, fallback: text)
-    }
-
     /// Per-suggestion case transformation. Output is post-processed via
     /// engine-side `adjustNasalMarkerCase` (no separate FFI hop needed).
     /// Replaces the body of `SuggestionCaseTransformer.transform` per word.

@@ -3,11 +3,10 @@
 //! envelope responses.
 
 use protos::engine::{
-    AssocLookupRequest, AssocLookupResponse, ClassifyInputRequest, ClassifyInputResponse,
-    DictionaryFiltersRequest, DictionaryFiltersResponse, InstallRequest, InstallResponse,
-    IsHanziRequest, IsHanziResponse, LexiconAssocEntry, SearchByHanziRequest,
-    SearchByHanziResponse, SearchRequest, SearchResponse, SearchWithSourcesRequest,
-    SearchWithSourcesResponse, TaigiWord,
+    AssocLookupRequest, AssocLookupResponse, DictionaryFiltersRequest, DictionaryFiltersResponse,
+    InstallRequest, InstallResponse, IsHanziRequest, IsHanziResponse, LexiconAssocEntry,
+    SearchByHanziRequest, SearchByHanziResponse, SearchRequest, SearchResponse,
+    SearchWithSourcesRequest, SearchWithSourcesResponse, TaigiWord,
 };
 
 use crate::classification;
@@ -121,15 +120,6 @@ pub fn assoc_lookup(req: AssocLookupRequest) -> Result<AssocLookupResponse, Lexi
         Ok(AssocLookupResponse {
             entries: entries.into_iter().map(assoc_out_to_proto).collect(),
         })
-    })
-}
-
-// Classifies raw input as Hanji / toned / toneless romanization and returns the search key.
-pub fn classify_input(req: ClassifyInputRequest) -> Result<ClassifyInputResponse, LexiconError> {
-    let result = classification::classify_input(&req.raw);
-    Ok(ClassifyInputResponse {
-        input_type: result.input_type as i32,
-        search_key: result.search_key,
     })
 }
 

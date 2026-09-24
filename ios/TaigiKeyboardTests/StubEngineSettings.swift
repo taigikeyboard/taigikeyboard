@@ -4,7 +4,6 @@
 // stored property so a test states exactly the snapshot a request is rendered under.
 struct StubEngineSettings: EngineSettings {
     var inputMode: InputMode = .tl
-    var isAutoCap = false
     var isTranslateSwapped = false
     var isOutputBothScripts = false
     var candidateDisplayMode: CandidateDisplayMode = .sideBySide

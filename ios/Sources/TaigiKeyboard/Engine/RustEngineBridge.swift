@@ -18,7 +18,7 @@ import SwiftProtobuf
 ///   ops + `ComposingTransition` / `CandidateMode` / `ContinuousCandidate`
 ///   / `ContinuousFetchResult` synthesized types.
 /// - `RustEngineBridge+Lexicon.swift` — install / search / assoc /
-///   classify-input / dictionary-filters / isHanzi reads.
+///   dictionary-filters / isHanzi reads.
 /// - `RustEngineBridge+NextWord.swift` — 6 decide intents + filter /
 ///   boost / queryState + setIsShowing.
 /// - `RustEngineBridge+CaseTransform.swift` — per-char / per-word case
@@ -27,9 +27,8 @@ import SwiftProtobuf
 /// Retired-op history available via git log on
 /// `engine/protos/proto/phonetics.proto`.
 ///
-/// Per `~/.claude/rules/round-workflow.md` § Codex review sandwich: every method
-/// requiring AppConfig (currently NormalizeTone for POJ preprocessing)
-/// takes the necessary fields as mandatory parameters — no global default.
+/// Every method requiring AppConfig (composing, case transform) takes the
+/// necessary fields as mandatory parameters — no global default.
 ///
 /// Per Codex v2 §8 + v3 §7: error visibility is hardened. DEBUG asserts on
 /// failure; release returns a graceful fallback + logs + records a
@@ -182,9 +181,9 @@ public enum RustEngineBridge {
         #endif
     }
 
-    /// Shared `AppConfig` builder. `internal` because three extension
-    /// files (`+Phonetics`, `+Composing`, `+CaseTransform`) build their
-    /// envelopes on top of it. Every composing op wraps it with
+    /// Shared `AppConfig` builder. `internal` because two extension
+    /// files (`+Composing`, `+CaseTransform`) build their envelopes on top
+    /// of it. Every composing op wraps it with
     /// `continuousAppConfig(settings)` (private to `+Composing.swift`),
     /// which adds the §10.2 word-boundary spacing flags.
     ///

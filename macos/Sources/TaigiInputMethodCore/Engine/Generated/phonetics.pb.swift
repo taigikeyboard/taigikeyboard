@@ -27,15 +27,7 @@ public nonisolated struct Taigi_Engine_PhoneticsRequest: Sendable {
 
   public var method: Taigi_Engine_PhoneticsRequest.OneOf_Method? = nil
 
-  /// --- Phonetics core (8 ops) ---
-  public var normalizeTone: Taigi_Engine_NormalizeTone {
-    get {
-      if case .normalizeTone(let v)? = method {return v}
-      return Taigi_Engine_NormalizeTone()
-    }
-    set {method = .normalizeTone(newValue)}
-  }
-
+  /// --- Phonetics core (6 ops) ---
   public var stripTone: Taigi_Engine_StripTone {
     get {
       if case .stripTone(let v)? = method {return v}
@@ -60,28 +52,12 @@ public nonisolated struct Taigi_Engine_PhoneticsRequest: Sendable {
     set {method = .tlToPoj(newValue)}
   }
 
-  public var normalizeToTl: Taigi_Engine_NormalizeToTl {
-    get {
-      if case .normalizeToTl(let v)? = method {return v}
-      return Taigi_Engine_NormalizeToTl()
-    }
-    set {method = .normalizeToTl(newValue)}
-  }
-
   public var normalizeInput: Taigi_Engine_NormalizeInput {
     get {
       if case .normalizeInput(let v)? = method {return v}
       return Taigi_Engine_NormalizeInput()
     }
     set {method = .normalizeInput(newValue)}
-  }
-
-  public var restoreTone: Taigi_Engine_RestoreTone {
-    get {
-      if case .restoreTone(let v)? = method {return v}
-      return Taigi_Engine_RestoreTone()
-    }
-    set {method = .restoreTone(newValue)}
   }
 
   public var getToneVariations: Taigi_Engine_GetToneVariations {
@@ -133,15 +109,7 @@ public nonisolated struct Taigi_Engine_PhoneticsRequest: Sendable {
     set {method = .deriveCustomQueryKey(newValue)}
   }
 
-  /// --- TPS (5 ops) ---
-  public var containsTps: Taigi_Engine_ContainsTps {
-    get {
-      if case .containsTps(let v)? = method {return v}
-      return Taigi_Engine_ContainsTps()
-    }
-    set {method = .containsTps(newValue)}
-  }
-
+  /// --- TPS (4 ops) ---
   public var tlNumericToTps: Taigi_Engine_TlNumericToTps {
     get {
       if case .tlNumericToTps(let v)? = method {return v}
@@ -177,14 +145,11 @@ public nonisolated struct Taigi_Engine_PhoneticsRequest: Sendable {
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public nonisolated enum OneOf_Method: Equatable, Sendable {
-    /// --- Phonetics core (8 ops) ---
-    case normalizeTone(Taigi_Engine_NormalizeTone)
+    /// --- Phonetics core (6 ops) ---
     case stripTone(Taigi_Engine_StripTone)
     case pojToTl(Taigi_Engine_PojToTl)
     case tlToPoj(Taigi_Engine_TlToPoj)
-    case normalizeToTl(Taigi_Engine_NormalizeToTl)
     case normalizeInput(Taigi_Engine_NormalizeInput)
-    case restoreTone(Taigi_Engine_RestoreTone)
     case getToneVariations(Taigi_Engine_GetToneVariations)
     case nfdPreprocessForLookup(Taigi_Engine_NfdPreprocessForLookup)
     /// --- Derivation (4 ops) ---
@@ -192,29 +157,13 @@ public nonisolated struct Taigi_Engine_PhoneticsRequest: Sendable {
     case deriveAbbrev(Taigi_Engine_DeriveAbbrev)
     case deriveCustomSearchKeys(Taigi_Engine_DeriveCustomSearchKeys)
     case deriveCustomQueryKey(Taigi_Engine_DeriveCustomQueryKey)
-    /// --- TPS (5 ops) ---
-    case containsTps(Taigi_Engine_ContainsTps)
+    /// --- TPS (4 ops) ---
     case tlNumericToTps(Taigi_Engine_TlNumericToTps)
     case tlDisplayToTps(Taigi_Engine_TlDisplayToTps)
     case isTpsToneMark(Taigi_Engine_IsTpsToneMark)
     case tpsInputAdjust(Taigi_Engine_TpsInputAdjust)
 
   }
-
-  public init() {}
-}
-
-/// `NormalizeTone` reads `AppConfig.input_mode` (POJ / TL) and
-/// `AppConfig.oo_doubletap_enabled` / `nn_doubletap_enabled` from envelope's
-/// per-request `config_snapshot`. Engine never caches settings.
-public nonisolated struct Taigi_Engine_NormalizeTone: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var input: String = String()
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 }
@@ -255,18 +204,6 @@ public nonisolated struct Taigi_Engine_TlToPoj: Sendable {
   public init() {}
 }
 
-public nonisolated struct Taigi_Engine_NormalizeToTl: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var input: String = String()
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
 /// `NormalizeInput` is the full pipeline that produces a trie-query key:
 /// TPS preprocess (if input contains TPS) → per-syllable diacritic→digit →
 /// checked-ending heuristic for default tone (1 vs 4). Replaces both
@@ -277,21 +214,6 @@ public nonisolated struct Taigi_Engine_NormalizeInput: Sendable {
   // methods supported on all messages.
 
   public var input: String = String()
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-/// `RestoreTone` removes the LAST combining tone mark from `text` and NFC
-/// recomposes. Returns absent if no tone mark found. Replaces both
-/// platforms' `ToneRestoration.restore`.
-public nonisolated struct Taigi_Engine_RestoreTone: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var text: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -415,18 +337,6 @@ public nonisolated struct Taigi_Engine_DeriveCustomQueryKey: Sendable {
   public init() {}
 }
 
-public nonisolated struct Taigi_Engine_ContainsTps: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var text: String = String()
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
 /// `TlNumericToTps` input is numeric tone form (e.g. "hoo2"). Replaces
 /// iOS `TLToTPS.convert` / Android `TPSConverter.toTPS`.
 public nonisolated struct Taigi_Engine_TlNumericToTps: Sendable {
@@ -514,14 +424,6 @@ public nonisolated struct Taigi_Engine_PhoneticsResponse: Sendable {
     set {result = .stripToneResult(newValue)}
   }
 
-  public var optionalStringResult: Taigi_Engine_OptionalStringResult {
-    get {
-      if case .optionalStringResult(let v)? = result {return v}
-      return Taigi_Engine_OptionalStringResult()
-    }
-    set {result = .optionalStringResult(newValue)}
-  }
-
   public var boolResult: Taigi_Engine_BoolResult {
     get {
       if case .boolResult(let v)? = result {return v}
@@ -559,7 +461,6 @@ public nonisolated struct Taigi_Engine_PhoneticsResponse: Sendable {
   public nonisolated enum OneOf_Result: Equatable, Sendable {
     case stringResult(Taigi_Engine_StringResult)
     case stripToneResult(Taigi_Engine_StripToneResult)
-    case optionalStringResult(Taigi_Engine_OptionalStringResult)
     case boolResult(Taigi_Engine_BoolResult)
     case toneVariationsResult(Taigi_Engine_ToneVariationsResult)
     case tpsAdjustResult(Taigi_Engine_TpsAdjustResult)
@@ -723,7 +624,7 @@ fileprivate nonisolated let _protobuf_package = "taigi.engine"
 
 nonisolated extension Taigi_Engine_PhoneticsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PhoneticsRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}normalize_tone\0\u{3}strip_tone\0\u{3}poj_to_tl\0\u{3}tl_to_poj\0\u{3}normalize_to_tl\0\u{3}normalize_input\0\u{3}restore_tone\0\u{4}\u{2}get_tone_variations\0\u{3}nfd_preprocess_for_lookup\0\u{3}derive_notone\0\u{3}derive_abbrev\0\u{3}derive_custom_search_keys\0\u{3}derive_custom_query_key\0\u{4}\u{7}contains_tps\0\u{4}\u{2}tl_numeric_to_tps\0\u{3}tl_display_to_tps\0\u{3}is_tps_tone_mark\0\u{3}tps_input_adjust\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{b}strip_tone\0\u{3}poj_to_tl\0\u{3}tl_to_poj\0\u{4}\u{2}normalize_input\0\u{4}\u{3}get_tone_variations\0\u{3}nfd_preprocess_for_lookup\0\u{3}derive_notone\0\u{3}derive_abbrev\0\u{3}derive_custom_search_keys\0\u{3}derive_custom_query_key\0\u{4}\u{9}tl_numeric_to_tps\0\u{3}tl_display_to_tps\0\u{3}is_tps_tone_mark\0\u{3}tps_input_adjust\0\u{b}normalize_tone\0\u{b}normalize_to_tl\0\u{b}restore_tone\0\u{b}contains_tps\0\u{c}\u{a}\u{1}\u{c}\u{e}\u{1}\u{c}\u{10}\u{1}\u{c}\u{1e}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -731,19 +632,6 @@ nonisolated extension Taigi_Engine_PhoneticsRequest: SwiftProtobuf.Message, Swif
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 10: try {
-        var v: Taigi_Engine_NormalizeTone?
-        var hadOneofValue = false
-        if let current = self.method {
-          hadOneofValue = true
-          if case .normalizeTone(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.method = .normalizeTone(v)
-        }
-      }()
       case 11: try {
         var v: Taigi_Engine_StripTone?
         var hadOneofValue = false
@@ -783,19 +671,6 @@ nonisolated extension Taigi_Engine_PhoneticsRequest: SwiftProtobuf.Message, Swif
           self.method = .tlToPoj(v)
         }
       }()
-      case 14: try {
-        var v: Taigi_Engine_NormalizeToTl?
-        var hadOneofValue = false
-        if let current = self.method {
-          hadOneofValue = true
-          if case .normalizeToTl(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.method = .normalizeToTl(v)
-        }
-      }()
       case 15: try {
         var v: Taigi_Engine_NormalizeInput?
         var hadOneofValue = false
@@ -807,19 +682,6 @@ nonisolated extension Taigi_Engine_PhoneticsRequest: SwiftProtobuf.Message, Swif
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
           self.method = .normalizeInput(v)
-        }
-      }()
-      case 16: try {
-        var v: Taigi_Engine_RestoreTone?
-        var hadOneofValue = false
-        if let current = self.method {
-          hadOneofValue = true
-          if case .restoreTone(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.method = .restoreTone(v)
         }
       }()
       case 18: try {
@@ -900,19 +762,6 @@ nonisolated extension Taigi_Engine_PhoneticsRequest: SwiftProtobuf.Message, Swif
           self.method = .deriveCustomQueryKey(v)
         }
       }()
-      case 30: try {
-        var v: Taigi_Engine_ContainsTps?
-        var hadOneofValue = false
-        if let current = self.method {
-          hadOneofValue = true
-          if case .containsTps(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.method = .containsTps(v)
-        }
-      }()
       case 32: try {
         var v: Taigi_Engine_TlNumericToTps?
         var hadOneofValue = false
@@ -976,10 +825,6 @@ nonisolated extension Taigi_Engine_PhoneticsRequest: SwiftProtobuf.Message, Swif
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
     // https://github.com/apple/swift-protobuf/issues/1182
     switch self.method {
-    case .normalizeTone?: try {
-      guard case .normalizeTone(let v)? = self.method else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 10)
-    }()
     case .stripTone?: try {
       guard case .stripTone(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 11)
@@ -992,17 +837,9 @@ nonisolated extension Taigi_Engine_PhoneticsRequest: SwiftProtobuf.Message, Swif
       guard case .tlToPoj(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 13)
     }()
-    case .normalizeToTl?: try {
-      guard case .normalizeToTl(let v)? = self.method else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 14)
-    }()
     case .normalizeInput?: try {
       guard case .normalizeInput(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 15)
-    }()
-    case .restoreTone?: try {
-      guard case .restoreTone(let v)? = self.method else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 16)
     }()
     case .getToneVariations?: try {
       guard case .getToneVariations(let v)? = self.method else { preconditionFailure() }
@@ -1028,10 +865,6 @@ nonisolated extension Taigi_Engine_PhoneticsRequest: SwiftProtobuf.Message, Swif
       guard case .deriveCustomQueryKey(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 23)
     }()
-    case .containsTps?: try {
-      guard case .containsTps(let v)? = self.method else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 30)
-    }()
     case .tlNumericToTps?: try {
       guard case .tlNumericToTps(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 32)
@@ -1055,36 +888,6 @@ nonisolated extension Taigi_Engine_PhoneticsRequest: SwiftProtobuf.Message, Swif
 
   public static func ==(lhs: Taigi_Engine_PhoneticsRequest, rhs: Taigi_Engine_PhoneticsRequest) -> Bool {
     if lhs.method != rhs.method {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Taigi_Engine_NormalizeTone: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".NormalizeTone"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}input\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.input) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.input.isEmpty {
-      try visitor.visitSingularStringField(value: self.input, fieldNumber: 1)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Taigi_Engine_NormalizeTone, rhs: Taigi_Engine_NormalizeTone) -> Bool {
-    if lhs.input != rhs.input {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1180,36 +983,6 @@ nonisolated extension Taigi_Engine_TlToPoj: SwiftProtobuf.Message, SwiftProtobuf
   }
 }
 
-nonisolated extension Taigi_Engine_NormalizeToTl: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".NormalizeToTl"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}input\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.input) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.input.isEmpty {
-      try visitor.visitSingularStringField(value: self.input, fieldNumber: 1)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Taigi_Engine_NormalizeToTl, rhs: Taigi_Engine_NormalizeToTl) -> Bool {
-    if lhs.input != rhs.input {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
 nonisolated extension Taigi_Engine_NormalizeInput: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".NormalizeInput"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}input\0")
@@ -1235,36 +1008,6 @@ nonisolated extension Taigi_Engine_NormalizeInput: SwiftProtobuf.Message, SwiftP
 
   public static func ==(lhs: Taigi_Engine_NormalizeInput, rhs: Taigi_Engine_NormalizeInput) -> Bool {
     if lhs.input != rhs.input {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Taigi_Engine_RestoreTone: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".RestoreTone"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.text) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.text.isEmpty {
-      try visitor.visitSingularStringField(value: self.text, fieldNumber: 1)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Taigi_Engine_RestoreTone, rhs: Taigi_Engine_RestoreTone) -> Bool {
-    if lhs.text != rhs.text {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1444,36 +1187,6 @@ nonisolated extension Taigi_Engine_DeriveCustomQueryKey: SwiftProtobuf.Message, 
   }
 }
 
-nonisolated extension Taigi_Engine_ContainsTps: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".ContainsTps"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.text) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.text.isEmpty {
-      try visitor.visitSingularStringField(value: self.text, fieldNumber: 1)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Taigi_Engine_ContainsTps, rhs: Taigi_Engine_ContainsTps) -> Bool {
-    if lhs.text != rhs.text {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
 nonisolated extension Taigi_Engine_TlNumericToTps: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".TlNumericToTps"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0\u{3}or_maps_to_er\0")
@@ -1611,7 +1324,7 @@ nonisolated extension Taigi_Engine_TpsInputAdjust: SwiftProtobuf.Message, SwiftP
 
 nonisolated extension Taigi_Engine_PhoneticsResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PhoneticsResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}string_result\0\u{3}strip_tone_result\0\u{3}optional_string_result\0\u{3}bool_result\0\u{3}tone_variations_result\0\u{3}tps_adjust_result\0\u{3}custom_search_keys_result\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}string_result\0\u{3}strip_tone_result\0\u{4}\u{2}bool_result\0\u{3}tone_variations_result\0\u{3}tps_adjust_result\0\u{3}custom_search_keys_result\0\u{b}optional_string_result\0\u{c}\u{c}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1643,19 +1356,6 @@ nonisolated extension Taigi_Engine_PhoneticsResponse: SwiftProtobuf.Message, Swi
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
           self.result = .stripToneResult(v)
-        }
-      }()
-      case 12: try {
-        var v: Taigi_Engine_OptionalStringResult?
-        var hadOneofValue = false
-        if let current = self.result {
-          hadOneofValue = true
-          if case .optionalStringResult(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.result = .optionalStringResult(v)
         }
       }()
       case 13: try {
@@ -1728,10 +1428,6 @@ nonisolated extension Taigi_Engine_PhoneticsResponse: SwiftProtobuf.Message, Swi
     case .stripToneResult?: try {
       guard case .stripToneResult(let v)? = self.result else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 11)
-    }()
-    case .optionalStringResult?: try {
-      guard case .optionalStringResult(let v)? = self.result else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 12)
     }()
     case .boolResult?: try {
       guard case .boolResult(let v)? = self.result else { preconditionFailure() }

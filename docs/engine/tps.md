@@ -20,11 +20,11 @@ Since v3.5.1 (PR #186) all TPS conversion + key-level auto-adjust lives in Rust 
 
 | Concern | Location |
 |---------|----------|
-| TPS detection / tone-mark tables | Rust `phonetics::tps::is_zhuyin`, `phonetics::tables` |
+| TPS detection / tone-mark tables | Rust `phonetics::tps::is_zhuyin` / `phonetics::api::contains_tps` (Rust-internal: composing, custom search, nextword), `phonetics::tables` |
 | TPS → TL (numeric tone) | Rust `phonetics::tps::from_zhuyin` (re-exported as `phonetics::tps_to_tl`) |
 | TL → TPS (display + numeric) | Rust `phonetics::api::to_tone_marks` + TPS path inside same crate |
 | Key-level auto-adjust (positional ㄇ/ㆬ + ㄫ/ㆭ/ㄥ, palatalization ㄗ→ㄐ, syllabic nasal, ㆮ/ㆯ) | Rust `phonetics::tps_adjust` |
-| Bridge — detection | `RustEngineBridge.containsTPS(_)` / `isTPSToneMark(_)` |
+| Bridge — detection | `RustEngineBridge.isTPSToneMark(_)` (the `ContainsTps` op had no production caller and was removed 2026-09-25) |
 | Bridge — TL → TPS | `RustEngineBridge.tlNumericToTPS(_)` / `tlDisplayToTPS(_)` (TPS → TL stays Rust-internal — `phonetics::tps_to_tl` is consumed only by `phonetics::tps_adjust` for syllable validation; C-1 retired the `lexicon::classify_input` consumer and C-3b retired the `composing::continuous` fold; no FFI surface) |
 | Bridge — input adjust | `RustEngineBridge.tpsInputAdjust(incoming:rawInput:)` returning `(adjusted, replaceLast?)` |
 | iOS TPS-aware glue | `Layout/TaigiLayouts.swift` (layout def), `Settings/SharedSettings.swift` (`.tps` type), `Autocomplete/Views/CandidateCellHelper.swift` (candidate TPS display), `Input/CharacterInputPipeline.swift` (calls bridge) |
@@ -186,7 +186,6 @@ Entering tone codas (ㆴ/ㆵ/ㆻ/ㆷ) are accessed via **long-press popups**:
 
 ```swift
 // iOS — Engine/RustEngineBridge.swift
-RustEngineBridge.containsTPS("ㄉㄧㄠˊ")             // true
 RustEngineBridge.isTPSToneMark("ˋ")                // true
 RustEngineBridge.tlNumericToTPS("tiau5", orMapsToER: false)  // "ㄉㄧㄠˊ"
 RustEngineBridge.tlDisplayToTPS("guá",  orMapsToER: false)   // "ㄍㄨㄚˋ"

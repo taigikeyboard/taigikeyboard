@@ -30,13 +30,6 @@ interface EngineSettings {
     /** Current input mode — `"poj"`, `"tl"`, `"tps"`, or `"english"`. */
     val inputMode: String
 
-    /**
-     * Auto-capitalization toggle consumed by candidate case-transformation.
-     * Mirrors iOS `isAutoCap` (which itself bridges
-     * KeyboardKit's `isAutocapitalizationEnabled`).
-     */
-    val isAutoCap: Boolean
-
     // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/EngineSettings.swift:candidateDisplayMode.
     // Drift causes silent divergence (one platform collapses same-roman candidates, the other does not).
 

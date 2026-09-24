@@ -12,8 +12,6 @@ import Foundation
 /// files can depend on this protocol without pulling platform frameworks.
 protocol EngineSettings {
     var inputMode: InputMode { get }
-    // Sourced from KeyboardKit `isAutocapitalizationEnabled`.
-    var isAutoCap: Bool { get }
     var isTranslateSwapped: Bool { get }
     /// Output both hanji + roman ("both-scripts"). The continuous-input
     /// §10.2 word-boundary-spacing predicate needs this to tell

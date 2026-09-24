@@ -40,6 +40,11 @@ enum LetterCase {
 // =========================================================================
 
 message CaseRequest {
+  // Tag 21 was `capitalize_candidate` (no production caller; removed
+  // 2026-09-25).
+  reserved 21;
+  reserved "capitalize_candidate";
+
   oneof method {
     // --- Per-char (single grapheme cluster) helpers ---
     UppercaseToneChar       uppercase_tone_char        = 10;
@@ -48,7 +53,6 @@ message CaseRequest {
 
     // --- Per-string compound transforms ---
     TransformInputCase      transform_input_case       = 20;
-    CapitalizeCandidate     capitalize_candidate       = 21;
     TransformSuggestion     transform_suggestion       = 22;
   }
 }
@@ -85,15 +89,6 @@ message LowercaseToneChar { string input = 1; }
 message TransformInputCase {
   string     text        = 1;
   LetterCase letter_case = 2;
-}
-
-// `CapitalizeCandidate` gates on `auto_cap_enabled` + `input` first char's
-// case. If both true, the candidate's first letter is uppercased via tone
-// tables; otherwise returned as-is. Matches `CaseTransformer.capitalizeCandidate`.
-message CapitalizeCandidate {
-  string text             = 1;
-  string input            = 2;
-  bool   auto_cap_enabled = 3;
 }
 
 // `TransformSuggestion` applies the SuggestionCaseTransformer per-word
