@@ -30,7 +30,7 @@ object ThemeResolver {
         builtInThemes.firstOrNull { it.id == themeId }?.let { builtIn ->
             // Built-in themes are colors-first -> factory sizes + their night-mode
             // color variant, plus an optional per-theme appearance override
-            // (keyBorderWidth, used by the 框線 family).
+            // (keyBorderWidth, used by the Outlined family).
             return ThemeAppearance.DEFAULT.copy(
                 colors = builtIn.colors(isDark),
                 keyBorderWidth = builtIn.keyBorderWidth ?: ThemeAppearance.DEFAULT.keyBorderWidth,

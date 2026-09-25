@@ -415,7 +415,7 @@ data class KeyboardAppearance(
     val inputMode: String,
     val caps: Boolean,
     val capsLock: Boolean,
-    /** ⁿ大本字 (§53): the `nn` key shows ᴺ under caps only while it is on. */
+    /** ⁿ becomes ᴺ in capitals (§53): the `nn` key shows ᴺ under caps only while it is on. */
     val isNasalMarkerUppercaseEnabled: Boolean,
     val isComposing: Boolean,
     /** Layout-facing punctuation width (`PrefHelper.isFullWidthPunctuation`); lights 文/A and the `、` slot. */

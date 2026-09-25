@@ -327,7 +327,7 @@ class PrefHelper(
 
     var storedOutputBothScripts: Boolean by preference(PreferenceKeys.OUTPUT_BOTH_SCRIPTS, false)
 
-    // Candidate cell rendering mode (漢羅對應 / 羅馬字 / 漢羅濫). String-backed like
+    // Candidate cell rendering mode (Hanji–Romanization Pairing / Romanization Only / Hanji with Romanization). String-backed like
     // `inputMode`; unknown stored values coerce to SIDE_BY_SIDE.
     override var candidateDisplayMode: CandidateDisplayMode
         get() =
@@ -339,10 +339,10 @@ class PrefHelper(
     // App UI display language tag (i18n). Default = system (Automatic) — fresh install follows device OS locale.
     var displayLanguageTag: String by preference(PreferenceKeys.DISPLAY_LANGUAGE, DisplayLanguage.DEFAULT_TAG)
 
-    // §34/S22 — 顯示當咧拍的字 toggle. Default true (on; USER 2026-09-03).
+    // §34/S22 — Show Typed Text First toggle. Default true (on; USER 2026-09-03).
     var literalRomanCandidateEnabled: Boolean by preference(PreferenceKeys.LITERAL_ROMAN_CANDIDATE, true)
 
-    // 無連字符 (§49) — the STORED switch the settings toggle binds; the
+    // No Hyphens (§49) — the STORED switch the settings toggle binds; the
     // engine-facing `isHyphenlessRomanEnabled` folds TPS on top of it.
     var storedHyphenlessRomanEnabled: Boolean by preference(PreferenceKeys.HYPHENLESS_ROMAN, false)
 
@@ -351,7 +351,7 @@ class PrefHelper(
 
     var enableDoubleTapNN: Boolean by preference(PreferenceKeys.ENABLE_DOUBLE_TAP_NN, true)
 
-    // ⁿ大本字 (§53): the POJ nasal marker follows the case of the letters before
+    // ⁿ becomes ᴺ in capitals (§53): the POJ nasal marker follows the case of the letters before
     // it (`SIÂᴺ`); off, always `ⁿ`. Reaches the engine through `pojMarkerOptions`
     // (inverted as `AppConfig.force_lowercase_nasal_marker`) and the case ops.
     // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift:isNasalMarkerUppercaseEnabled (ON).
@@ -572,7 +572,7 @@ class PrefHelper(
 
     var variantEnabled: Boolean by preference(PreferenceKeys.VARIANT_DICT_ENABLED, false)
 
-    // 在來字 (Khiin) dictionary toggle
+    // Conventional Characters (Khiin) dictionary toggle
     var khiin: Boolean by preference(PreferenceKeys.KHIIN_ENABLED, false)
 
     // ------------------------------------------------------------------ //
@@ -611,7 +611,7 @@ class PrefHelper(
     override val isLiteralRomanCandidateEnabled: Boolean
         get() = literalRomanCandidateEnabled
 
-    // Effective 無連字符 — never under a TPS layout: the engine receives TPS
+    // Effective No Hyphens — never under a TPS layout: the engine receives TPS
     // as "tl"/"poj" and the strip would break the platform's `-` re-split
     // of the candidate roman for bopomofo (`tlDisplayToTps`).
     // CROSS-PLATFORM INVARIANT — mirrors ios SharedSettings.isHyphenlessRomanEnabled (inputMode != .tps && …).
@@ -732,9 +732,9 @@ class PrefHelper(
             }.distinctUntilChanged()
 
     /**
-     * Observes 候選詞顯示 as a Flow — any writer (host picker or in-keyboard overlay). The IME
+     * Observes Candidate Display as a Flow — any writer (host picker or in-keyboard overlay). The IME
      * re-renders its live surfaces and re-fetches the open list on each change; the layout
-     * drops the 文/A key under 漢羅濫 / 羅馬字, so cached layouts must not outlive the mode.
+     * drops the 文/A key under Hanji with Romanization / Romanization Only, so cached layouts must not outlive the mode.
      */
     fun observeCandidateDisplayMode(): Flow<CandidateDisplayMode> =
         dataStore.data

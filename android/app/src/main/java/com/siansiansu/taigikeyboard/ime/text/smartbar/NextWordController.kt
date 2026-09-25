@@ -53,7 +53,7 @@ class NextWordController(
     private val logger: LoggerBackend,
     private val onUpdateCandidates: (List<TaigiWord>) -> Unit,
     private val onClearCandidates: () -> Unit,
-    // 漢羅濫 split (§42): live-read per render so a picker change applies to
+    // Hanji with Romanization split (§42): live-read per render so a picker change applies to
     // the next prediction list. Same provider shape as CandidateUpdateCoordinator.
     private val splitCombinedCellsProvider: () -> Boolean,
 ) {
@@ -539,9 +539,9 @@ private fun String.toEngineInputMode(): InputMode =
  * (`-99..-1`; English is `<= -100`) read by [CandidateClickHandler]; 30
  * predictions split to at most 60 cells, still inside it.
  *
- * 漢羅濫 ([splitCombinedCells], §42): [splitIntoSingleScriptCells] — a
- * prediction with romanization becomes a 漢字 cell then a 羅馬字 cell sharing
- * the prediction's identity; a hanji-only prediction lists its 漢字 cell
+ * Hanji with Romanization ([splitCombinedCells], §42): [splitIntoSingleScriptCells] — a
+ * prediction with romanization becomes a Hanji cell then a romanization cell sharing
+ * the prediction's identity; a hanji-only prediction lists its Hanji cell
  * alone. Every other mode emits one dual-script word per prediction
  * (`roman = ""` when the engine shaped no subtitle, so the strip renders the
  * hanzi alone).

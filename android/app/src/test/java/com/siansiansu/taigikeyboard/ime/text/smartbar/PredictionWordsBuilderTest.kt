@@ -10,8 +10,8 @@ import org.junit.Test
 
 /**
  * Pins the NextWord prediction cell shape [buildPredictionWords] emits per
- * 候選詞顯示 mode (§42, USER 2026-09-12: 濫 must list both scripts of a
- * prediction, 羅馬字 the roman alone, 並排 today's dual-script cell).
+ * Candidate Display mode (§42, USER 2026-09-12: mixed mode must list both scripts of a
+ * prediction, Romanization Only the roman alone, Pairing today's dual-script cell).
  * Mirrors iOS `ActionHandler.setNextWordPredictions`.
  */
 class PredictionWordsBuilderTest {
@@ -32,9 +32,9 @@ class PredictionWordsBuilderTest {
     private val predictions =
         listOf(
             prediction(text = "tsia̍h", subtitle = "食", hanzi = "食"),
-            // 同音異字 — same roman, different hanji.
+            // Homophones — same roman, different hanji.
             prediction(text = "tsia̍h", subtitle = "𤆬", hanzi = "𤆬"),
-            // 一字多音 — same hanji, different roman.
+            // Multi-reading Hanji — same hanji, different roman.
             prediction(text = "tîng", subtitle = "重", hanzi = "重"),
             prediction(text = "tāng", subtitle = "重", hanzi = "重"),
             // Hanji-only prediction (engine shaped no roman).
@@ -64,7 +64,7 @@ class PredictionWordsBuilderTest {
             listOf(
                 MetadataKeys.CELL_SCRIPT_HANJI to "食",
                 MetadataKeys.CELL_SCRIPT_ROMAN to "tsia̍h",
-                // 𤆬's roman cell reads like 食's → collapsed; its 漢字 cell stays.
+                // 𤆬's roman cell reads like 食's → collapsed; its Hanji cell stays.
                 MetadataKeys.CELL_SCRIPT_HANJI to "𤆬",
                 MetadataKeys.CELL_SCRIPT_HANJI to "重",
                 MetadataKeys.CELL_SCRIPT_ROMAN to "tîng",

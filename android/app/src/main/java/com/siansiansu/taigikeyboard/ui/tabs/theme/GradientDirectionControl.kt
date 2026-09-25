@@ -116,7 +116,7 @@ private val PRESET_RANGE_STEPS = (FULL_TURN / ThemeGradient.PRESET_STEP).toInt()
  * the preview keys' touches, draws the current direction as an axis through the centre with an
  * arrowhead at the gradient's end, and reports every drag position through
  * [GradientDirectionDrag] to [onAngleChange]. Landing on a preset ticks. The pointer is the
- * whole control (USER 2026-09-19: no 方向 row — seeing the pointer is enough); for TalkBack
+ * whole control (USER 2026-09-19: no Direction row — seeing the pointer is enough); for TalkBack
  * it is one adjustable element labelled [label] that steps through the 45° presets.
  * Mirrors iOS GradientDirectionOverlay.
  */

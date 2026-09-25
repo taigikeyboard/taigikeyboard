@@ -62,7 +62,7 @@ class BuiltInThemesTest {
         assertEquals(StringKey.THEME_PALETTE_DEFAULT, BuiltInThemes.theme(ThemeId.DEFAULT)?.displayNameKey)
     }
 
-    // Three key-style families (經典/框線/簡潔), each carrying the same 7 colors.
+    // Three key-style families (Filled/Outlined/Borderless), each carrying the same 7 colors.
     @Test
     fun families_threeKeyStyleFamiliesEachWithSevenColors() {
         assertEquals(
@@ -87,7 +87,7 @@ class BuiltInThemesTest {
         assertEquals(21, BuiltInThemes.all.size)
     }
 
-    // 經典 keeps filled keys; 框線/簡潔 recolor keys to transparent (key == background).
+    // Filled keeps filled keys; Outlined/Borderless recolor keys to transparent (key == background).
     @Test
     fun keyStyleFamilies_framedAndCleanHaveTransparentKeys() {
         val classic = BuiltInThemes.theme("standardBlue")!!.colors(isDark = false)
@@ -99,7 +99,7 @@ class BuiltInThemesTest {
         }
     }
 
-    // Only the 框線 family draws the outline; 經典/簡潔 leave keyBorderWidth null.
+    // Only the Outlined family draws the outline; Filled/Borderless leave keyBorderWidth null.
     @Test
     fun keyStyleFamilies_onlyFramedCarriesKeyBorderWidth() {
         assertEquals(1.0f, BuiltInThemes.theme("framedBlue")!!.keyBorderWidth!!, 0f)
@@ -126,7 +126,7 @@ class BuiltInThemesTest {
         }
     }
 
-    // framed/clean 預設 stay adaptive (bg/text null) but carry transparent keys; 經典 預設 fully adaptive.
+    // framed/clean Default stay adaptive (bg/text null) but carry transparent keys; Filled Default fully adaptive.
     @Test
     fun keyStyleFamilies_defaultVariantsAdaptiveWithTransparentKeys() {
         for (id in listOf("framedDefault", "cleanDefault")) {
@@ -158,11 +158,11 @@ class BuiltInThemesTest {
         }
     }
 
-    // 暗眠山貓 is the dark-only Catppuccin Mocha theme across all 3 families — light == null
+    // Catppuccin is the dark-only Catppuccin Mocha theme across all 3 families — light == null
     // so BOTH schemes resolve to the dark variant (always dark, the mirror of the 5
     // light-only gradients). gradient top #1E1E2E (Base) → #181825 (Mantle); key+candidate
-    // text #CDD6F4 (Text); 經典 keys (letter + function) share #313244 (Surface0);
-    // 框線/簡潔 keep transparent keys.
+    // text #CDD6F4 (Text); Filled keys (letter + function) share #313244 (Surface0);
+    // Outlined/Borderless keep transparent keys.
     @Test
     fun catppuccinTheme_isDarkOnlyAcrossFamilies() {
         for (id in listOf("standardCatppuccin", "framedCatppuccin", "cleanCatppuccin")) {
@@ -177,11 +177,11 @@ class BuiltInThemesTest {
             assertEquals("$id key text = Mocha Text", 0xFFCDD6F4.toInt(), colors.keyTextColor)
             assertEquals("$id candidate text = Mocha Text", 0xFFCDD6F4.toInt(), colors.candidateTextColor)
         }
-        // 經典 暗眠山貓: letter + function keys share the Surface0 neutral fill.
+        // Filled Catppuccin: letter + function keys share the Surface0 neutral fill.
         val classic = BuiltInThemes.theme("standardCatppuccin")!!.colors(isDark = true)
         assertEquals("經典 暗眠山貓 letter key = Mocha Surface0", 0xFF313244.toInt(), classic.normalKeyFillColor)
         assertEquals("經典 暗眠山貓 function key shares the Surface0 fill", 0xFF313244.toInt(), classic.specialKeyFillColor)
-        // 框線/簡潔 keep keys transparent (gradient shows through).
+        // Outlined/Borderless keep keys transparent (gradient shows through).
         for (id in listOf("framedCatppuccin", "cleanCatppuccin")) {
             val colors = BuiltInThemes.theme(id)!!.colors(isDark = true)
             assertEquals("$id letter keys must be transparent", 0, colors.normalKeyFillColor)

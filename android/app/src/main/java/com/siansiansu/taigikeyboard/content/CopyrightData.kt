@@ -39,7 +39,7 @@ object CopyrightDataSource {
     // Resolver-driven so the i18n strings re-resolve under the active display language.
     fun copyrightPages(resolver: StringResolver): List<CopyrightPage> =
         listOf(
-            // 字體
+            // Fonts
             CopyrightPage(
                 id = 0,
                 title = resolver.resolve(StringKey.COMMON_FONT_OPEN_HUNINN),
@@ -110,7 +110,7 @@ object CopyrightDataSource {
                         ),
                     ),
             ),
-            // 辭典
+            // Dictionaries
             // 1. 教育部臺灣台語常用詞辭典
             CopyrightPage(
                 id = 4,

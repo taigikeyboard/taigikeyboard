@@ -248,7 +248,7 @@ class NextWordService(
                 // fetchUserRows. prev_word (Hanji) is the only lookup key;
                 // prev_tl is a ranking signal (exact > empty > mismatch),
                 // NOT a hard filter, so a mismatched non-empty prev_tl
-                // (the other reading of a 一字多音 Hanji, or a pre-v3.6.1
+                // (the other reading of a multi-reading Hanji, or a pre-v3.6.1
                 // raw form) is still recalled. Drift causes silent
                 // divergence. Pins behavioral-invariants.md §24.
                 //
@@ -447,7 +447,7 @@ class NextWordService(
     // ------------------------------------------------------------------ //
 
     // / The v6 table. The UNIQUE key carries `prev_tl` because a Taiwanese word
-    // / is the `(漢字, canonical TL)` pair (CLAUDE.md Core Principle #7) on the
+    // / is the `(Hanji, canonical TL)` pair (CLAUDE.md Core Principle #7) on the
     // / bigram's PREVIOUS side as well as its next: 重/tîng → 複 and 重/tāng → 複
     // / are two observations, not one. CROSS-PLATFORM INVARIANT — mirrors
     // / ios/…/NextWord/Repository/NextWordSchema.swift `createTables`.

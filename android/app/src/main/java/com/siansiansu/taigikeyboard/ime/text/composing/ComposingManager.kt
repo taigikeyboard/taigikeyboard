@@ -664,7 +664,7 @@ class ComposingManager(
     /**
      * §50 — learned phrases whose derived key EQUALS the raw buffer's query
      * key (`LearnedPhraseService.matches`), as `FetchAtPos.learned_entries`;
-     * not gated by 啟用自訂詞庫 (manual rows only) — learning is always on.
+     * not gated by Enable Custom Dictionary (manual rows only) — learning is always on.
      * Same await-race guard as [buildCustomEntries].
      */
     private suspend fun buildLearnedEntries(
@@ -764,7 +764,7 @@ class ComposingManager(
         val didCommit = hasCommitText || hasNail
         val didFinalCommit = hasCommitText && !transition.isComposing
         // §50 — surfaced to the tap handler, which owns the store write
-        // (same seam as 詞頻 / NextWord learning), while the effect itself
+        // (same seam as word-frequency / NextWord learning), while the effect itself
         // still flows through the delegate like every other effect.
         val learnedPhrase =
             transition.effects
@@ -961,9 +961,9 @@ class ComposingManager(
         // PR-9.6 — same dictionary source-toggle bitmask + same
         // `dictionaryFilters` bridge the Tab3 browse path uses, so keyboard
         // candidates honour the 12 source toggles + kautian subcollection
-        // (腔調/姓名) toggles.
+        // (accent / surname) toggles.
         val enabledSourcesBitmask: UInt,
-        // §34/S22 — invert of the 顯示當咧拍的字 setting (engine wire flag).
+        // §34/S22 — invert of the Show Typed Text First setting (engine wire flag).
         val literalRomanCandidateDisabled: Boolean,
         val isCustomDictEnabled: Boolean,
     )

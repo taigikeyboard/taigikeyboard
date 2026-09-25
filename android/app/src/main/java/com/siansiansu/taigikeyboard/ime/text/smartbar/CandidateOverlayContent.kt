@@ -104,7 +104,7 @@ private val PageButtonSize = 45.dp
  * Row breaks are computed by [CandidateRowLayout.arrangeRows] from android [Paint] pixel
  * measurement — kept identical to the legacy View so wrapping does not shift. Two-line cell
  * widths are measured as max(roman, hanzi) so toggling translate swaps text without reflowing
- * the grid; single-line 濫/COMBINED cells measure their rendered title (see [measureCellWidth]).
+ * the grid; single-line mixed/COMBINED cells measure their rendered title (see [measureCellWidth]).
  *
  * @param resetKey bumped on each overlay show(); re-arms click protection and resets scroll/page.
  */
@@ -153,7 +153,7 @@ fun CandidateOverlayContent(
 
     // Rows do NOT depend on isTranslateSwapped: two-line cell width is max(roman, hanzi) and
     // COMBINED single-line titles are swap-invariant, so a swap never reflows. They DO depend
-    // on candidateDisplayMode: a 濫 cell — marked split cell or the unmarked hanji-led
+    // on candidateDisplayMode: a mixed cell — marked split cell or the unmarked hanji-led
     // NextWord row (§42 second exception) — measures its rendered single-line title.
     val rows =
         remember(suggestions, isTPSLayout, orMapsToER, typeface, candidateDisplayMode) {
@@ -237,8 +237,8 @@ fun CandidateOverlayContent(
         ControlPanel(
             modifier = Modifier.align(Alignment.TopEnd),
             colors = colors,
-            // No 文/A under TPS (always hanzi, always full-width) or 羅馬字
-            // (always half-width); under 漢羅濫 it flips punctuation width.
+            // No 文/A under TPS (always hanzi, always full-width) or Romanization Only
+            // (always half-width); under Hanji with Romanization it flips punctuation width.
             showTranslate = !isTPSLayout && candidateDisplayMode.allowsSwapToggle,
             isTranslateActivated = isFullWidthPunctuation,
             onCollapse = onCollapse,
@@ -579,7 +579,7 @@ private fun measureCellWidth(
         val titleWidth = primaryPaint.measureText(title)
         return maxOf(minCellWidthPx, (titleWidth + cellPaddingPx + 0.5f).toInt())
     }
-    // §42 濫 cells — marked split cells AND the unmarked COMBINED row (a NextWord
+    // §42 mixed cells — marked split cells AND the unmarked COMBINED row (a NextWord
     // prediction, hanji-led) — render ONE script at the title font. Derive the
     // measured string from the same [candidateCellText] source the render uses
     // so measure and render cannot drift. COMBINED titles are swap-invariant

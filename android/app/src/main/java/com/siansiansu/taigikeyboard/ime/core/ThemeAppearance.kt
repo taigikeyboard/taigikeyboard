@@ -51,7 +51,7 @@ data class ThemeAppearance(
 
         /**
          * The draft a NEW user theme starts from: factory sizes + the concrete light
-         * palette ([UserThemeSeed.colors]). Also what 恢復預設 restores. Mirrors iOS
+         * palette ([UserThemeSeed.colors]). Also what Reset to Defaults restores. Mirrors iOS
          * ThemeAppearance.userThemeSeed.
          */
         val USER_THEME_SEED = DEFAULT.copy(colors = UserThemeSeed.colors)

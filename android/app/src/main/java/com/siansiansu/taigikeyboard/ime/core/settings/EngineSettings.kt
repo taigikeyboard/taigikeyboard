@@ -34,7 +34,7 @@ interface EngineSettings {
     // Drift causes silent divergence (one platform collapses same-roman candidates, the other does not).
 
     /**
-     * Candidate cell rendering mode (漢羅對應 / 羅馬字 / 漢羅濫). Under
+     * Candidate cell rendering mode (Hanji–Romanization Pairing / Romanization Only / Hanji with Romanization). Under
      * [CandidateDisplayMode.ROMAN_ONLY] the two script flags below read
      * `false` regardless of their stored values; under
      * [CandidateDisplayMode.COMBINED] `isTranslateSwapped` reads `true`.
@@ -42,7 +42,7 @@ interface EngineSettings {
     val candidateDisplayMode: CandidateDisplayMode
 
     /**
-     * EFFECTIVE translate-swap: `true` under 漢羅濫, else stored AND mode != roman-only. The
+     * EFFECTIVE translate-swap: `true` under Hanji with Romanization, else stored AND mode != roman-only. The
      * stored read-write flag lives on the concrete implementation
      * (`PrefHelper.storedIsTranslateSwapped`); engine / commit readers must
      * use this derived view. Punctuation width is NOT this flag — the layout
@@ -68,7 +68,7 @@ interface EngineSettings {
     /**
      * Literal-roman candidate toggle (§34/S22). When on (default), TL/POJ
      * composing surfaces the preedit literal (`derived_display`) as the
-     * index-0 candidate so 漢羅 mixing commits the romanization in one tap.
+     * index-0 candidate so Hanji-with-romanization mixing commits the romanization in one tap.
      * `ComposingManager` inverts it into
      * `FetchAtPos.literalRomanCandidateDisabled`. Gates ONLY that forced
      * prepend, not naturally-produced roman candidates.
@@ -79,13 +79,13 @@ interface EngineSettings {
     // Drift causes silent divergence (one platform still shows hyphens).
 
     /**
-     * 無連字符 (`behavioral-invariants.md` §49), EFFECTIVE: the stored switch
+     * No Hyphens (`behavioral-invariants.md` §49), EFFECTIVE: the stored switch
      * with TPS folded off. Forwarded verbatim as `AppConfig.hyphenless_roman`.
      */
     val isHyphenlessRomanEnabled: Boolean
 
     /**
-     * The POJ marker options (double-tap folds + ⁿ大本字, §53) bundled as a
+     * The POJ marker options (double-tap folds + ⁿ becomes ᴺ in capitals, §53) bundled as a
      * live-read value so `ComposingState` / `ToneConverter` can stay
      * Kotlin-stdlib-pure.
      */

@@ -145,8 +145,8 @@ fun ThemeEditorScreen(
     // Seeded drafts always carry a background; the seed is the last-resort read.
     val background = draft.colors.background ?: UserThemeSeed.BACKGROUND
     val setBackground: (ThemeBackground) -> Unit = { next -> updateColors { it.copy(background = next) } }
-    // The 背景 segmented choice. Normally `background.kind`; it runs ahead of the background
-    // while 照片 is chosen but no photo has been picked yet, so the picker row shows without
+    // The Background segmented choice. Normally `background.kind`; it runs ahead of the background
+    // while Photo is chosen but no photo has been picked yet, so the picker row shows without
     // the surface changing (the draft keeps its solid / gradient until a photo lands).
     // Mirrors iOS ThemeEditorViewModel.backgroundKind.
     var selectedKind by rememberSaveable { mutableStateOf(background.kind) }
@@ -232,7 +232,7 @@ fun ThemeEditorScreen(
                             onKindChange = { kind ->
                                 // Switching keeps the current hue: solid -> gradient runs the solid
                                 // color into a lighter tint of it; gradient -> solid keeps the first
-                                // stop; leaving a photo lands on the seed colour. Choosing 照片
+                                // stop; leaving a photo lands on the seed colour. Choosing Photo
                                 // changes nothing until a photo is picked.
                                 selectedKind = kind
                                 if (kind == background.kind) return@BackgroundKindRow
@@ -278,7 +278,7 @@ fun ThemeEditorScreen(
                                 val gradient = background.gradient
                                 // The editor authors two-stop gradients; the two stops ARE the
                                 // gradient, not overrides of a seed -> no reset icon.
-                                // No 方向 row: the pointer on the preview below is the direction control.
+                                // No Direction row: the pointer on the preview below is the direction control.
                                 listOf(StringKey.THEME_GRADIENT_START_COLOR, StringKey.THEME_GRADIENT_END_COLOR)
                                     .forEachIndexed { index, labelKey ->
                                         if (index > 0) SettingsDivider(Modifier.padding(vertical = 8.dp))
@@ -517,7 +517,7 @@ private fun ThemeNameDialog(
     )
 }
 
-// 純色 / 漸層 segmented choice for the background surface.
+// Solid / Gradient segmented choice for the background surface.
 @Composable
 private fun BackgroundKindRow(
     kind: ThemeBackground.Kind,
@@ -539,7 +539,7 @@ private fun BackgroundKindRow(
 }
 
 // The photo picker row: a thumbnail of the current theme photo (or a placeholder while none
-// is picked) beside the 選擇照片 / 更換照片 label; tapping the row opens the system photo
+// is picked) beside the Choose Photo / Change Photo label; tapping the row opens the system photo
 // picker (no storage permission needed). Mirrors iOS ThemePhotoRow.
 @Composable
 private fun PhotoRow(

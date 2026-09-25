@@ -244,7 +244,7 @@ fun RustEngineBridge.composingFetchAtPos(
     // sends). Default `0u` = proto3-absent sentinel → engine all-on,
     // preserving pre-PR-9.6 behaviour for callers (incl. tests).
     enabledSourcesBitmask: UInt = 0u,
-    // §34/S22 — invert of the 顯示當咧拍的字 setting. Default `false` = show
+    // §34/S22 — invert of the Show Typed Text First setting. Default `false` = show
     // (proto3-absent sentinel → engine prepends the literal-roman
     // candidate, the pre-toggle always-on behaviour for callers/tests).
     literalRomanCandidateDisabled: Boolean = false,

@@ -8,8 +8,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Pins the 漢羅濫 marked-cell commit contract (§42 second exception):
- * hanji cell → 漢字, or `漢字 (羅馬字)` under 括號標註 (the only marked
+ * Pins the Hanji with Romanization marked-cell commit contract (§42 second exception):
+ * hanji cell → Hanji, or `Hanji (romanization)` under Annotate in Brackets (the only marked
  * hanji commit that writes romanization); roman cell → the BARE roman,
  * brackets IGNORED (desktop `.alternate` parity), always romanization —
  * the `wroteRomanization` verdict drives the continuous final-commit
@@ -42,7 +42,7 @@ class MarkedCellCommitResolverTest {
         )
     }
 
-    /** 括號標註 ON must NOT bracket a roman-cell commit — bare roman, auto-space fires. */
+    /** Annotate in Brackets ON must NOT bracket a roman-cell commit — bare roman, auto-space fires. */
     @Test
     fun test_INVARIANT_roman_cell_commits_bare_roman_even_with_brackets_on() {
         assertEquals(
@@ -65,7 +65,7 @@ class MarkedCellCommitResolverTest {
         )
     }
 
-    /** 括號標註 ON without a roman to bracket commits the bare 漢字 — never `台語 ()`. */
+    /** Annotate in Brackets ON without a roman to bracket commits the bare Hanji — never `台語 ()`. */
     @Test
     fun hanjiCell_bracketsOn_missingRoman_commitsHanjiAlone() {
         assertEquals(

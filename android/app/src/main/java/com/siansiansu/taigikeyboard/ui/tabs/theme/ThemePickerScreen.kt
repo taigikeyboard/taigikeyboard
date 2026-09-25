@@ -79,8 +79,8 @@ import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 import com.siansiansu.taigikeyboard.ui.theme.SectionHeader
 
 // Theme tab main screen: a custom-theme shelf (Create New + saved themes with an
-// apply/edit/delete menu) above one built-in shelf per key-style family (經典 /
-// 框線 / 簡潔 — same 7 colors, different key style). Selecting any card writes
+// apply/edit/delete menu) above one built-in shelf per key-style family (Filled /
+// Outlined / Borderless — same 7 colors, different key style). Selecting any card writes
 // selectedThemeId, which wakes the P2 render seam (gradient background + key shadow
 // + key border). The editor lives in ThemeEditorActivity; add/edit/delete refresh
 // this shelf reactively via observeUserThemes().
@@ -256,7 +256,7 @@ private fun BuiltInThemeShelf(
                 preview = {
                     // Maps theme.previewImageName to an explicit R.drawable.* (NEVER
                     // resources.getIdentifier, which the resource shrinker can't track).
-                    // 預設 (reuses phahtaigi) + the 5 漸層 themes ship a screenshot; the
+                    // Default (reuses phahtaigi) + the 5 gradient themes ship a screenshot; the
                     // rest fall through to null → neutral placeholder. Mirrors iOS
                     // UIImage(named:).
                     BuiltInThemePreview(
@@ -480,7 +480,7 @@ private fun CustomThemeButtonPreview(appearance: ThemeAppearance) {
                     .let { if (shadow > 0f) it.shadow(shadow.dp, cornerShape, clip = false) else it }
                     .background(keyFill, cornerShape)
                     // Border follows the key text color (mirrors the real keyboard's
-                    // role-first border) so the preview matches the live 框線 look.
+                    // role-first border) so the preview matches the live Outlined look.
                     .let { if (borderWidth > 0f) it.border(borderWidth.dp, keyText, cornerShape) else it },
             contentAlignment = Alignment.Center,
         ) {
@@ -499,15 +499,15 @@ private const val CUSTOM_PREVIEW_GLYPH_BASE_SP = 26f
 
 // Maps a built-in theme's previewImageName to its bundled screenshot drawable, or
 // null when none ships (scaffold → neutral placeholder). Explicit when — never
-// resources.getIdentifier, which the resource shrinker can't track. The 預設 default
+// resources.getIdentifier, which the resource shrinker can't track. The Default
 // (adaptive) reuses the phahtaigi layout screenshot (light + night buckets), so its
-// card adapts to dark mode like the theme does. The 5 漸層 themes (櫻花/金煌/海風/翠青/
-// 藤紫) are light-only, so a single drawable-xxhdpi asset serves both light and dark.
+// card adapts to dark mode like the theme does. The 5 gradient themes (Sakura/Gold/Sea Breeze/Jade/
+// Wisteria) are light-only, so a single drawable-xxhdpi asset serves both light and dark.
 // Mirrors iOS UIImage(named: previewImageName) in ThemePickerView.swift — except iOS
 // byte-copies phahtaigi into a name-keyed theme_standard_preview imageset, while this
-// ID-keyed map points 預設 straight at R.drawable.layout_phahtaigi_preview (no copy).
-// 框線 / 簡潔 families ship their own screenshots: theme_framed_preview /
-// theme_clean_preview carry light + night buckets (adaptive 預設); the 5 漸層
+// ID-keyed map points Default straight at R.drawable.layout_phahtaigi_preview (no copy).
+// Outlined / Borderless families ship their own screenshots: theme_framed_preview /
+// theme_clean_preview carry light + night buckets (adaptive Default); the 5 gradient
 // theme_framed*_preview / theme_clean*_preview are light-only single bucket.
 @DrawableRes
 private fun builtInThemePreviewRes(previewImageName: String?): Int? =

@@ -77,7 +77,7 @@ fun SettingsOverlayContent(
 
     // Toggle states — refreshTrigger as key ensures re-read from prefs on each show()
     var candidateDisplayMode by remember(refreshTrigger) { mutableStateOf(prefs.candidateDisplayMode) }
-    // 括號標註 binds the STORED flag; it is only disabled (not cleared) while roman-only.
+    // Annotate in Brackets binds the STORED flag; it is only disabled (not cleared) while roman-only.
     var outputBoth by remember(refreshTrigger) { mutableStateOf(prefs.storedOutputBothScripts) }
     var literalRomanCandidate by remember(refreshTrigger) { mutableStateOf(prefs.literalRomanCandidateEnabled) }
     var autoCap by remember(refreshTrigger) { mutableStateOf(prefs.autoCapitalizationEnabled) }
@@ -296,7 +296,7 @@ fun SettingsOverlayContent(
     }
 }
 
-// 候選詞顯示 dropdown row — same icon / label / padding shape as the SwitchRow siblings; the trailing
+// Candidate Display dropdown row — same icon / label / padding shape as the SwitchRow siblings; the trailing
 // slot shows the current value + a drop-down arrow and opens a DropdownMenu of the three modes
 // (three segments no longer fit beside the label at keyboard width with en / ja strings).
 @Composable

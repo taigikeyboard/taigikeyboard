@@ -136,7 +136,7 @@ class CandidateClickHandler(
             appendAutoSpaceIfEarned(taigikeyboard, ic, textToCommit, resolved.wroteRomanization)
 
             // R5 pair-key (#7): the candidate's canonical-TL reading from the
-            // metadata sidechannel keeps 一字多音 in separate buckets; "" only
+            // metadata sidechannel keeps multi-reading Hanji in separate buckets; "" only
             // on wire skew / TPS-OOV / English rows.
             val canonicalTl = selectedWord.additionalInfo[TaigiWord.MetadataKeys.CANONICAL_TL] ?: ""
             scope.launch {
@@ -144,7 +144,7 @@ class CandidateClickHandler(
             }
 
             // NextWord learns the canonical reading, not the rendered `roman`
-            // (無連字符 strips its hyphens, §49) — mirrors iOS
+            // (No Hyphens strips its hyphens, §49) — mirrors iOS
             // ActionHandler+Suggestions.swift `associationRoman` (`additionalInfo["tl"]`).
             onNextWordPrediction(
                 selectedWord.displayText,
@@ -159,9 +159,9 @@ class CandidateClickHandler(
     /**
      * Document text + auto-space verdict for one Taigi candidate tap — every
      * tap path (strip, expanded overlay, Continuous) resolves through here.
-     * A §42 漢羅濫 [TaigiWord.MetadataKeys.CELL_SCRIPT]-marked cell commits
+     * A §42 Hanji with Romanization [TaigiWord.MetadataKeys.CELL_SCRIPT]-marked cell commits
      * the script its marker names ([resolveMarkedCellCommit]); an unmarked
-     * cell follows the mode ([resolveUnmarkedCommit]), with the 括號標註 roman
+     * cell follows the mode ([resolveUnmarkedCommit]), with the Annotate in Brackets roman
      * TPS-rendered under the TPS layout.
      */
     private fun resolveTaigiCommit(
@@ -304,11 +304,11 @@ class CandidateClickHandler(
      * `selectSuggestion(text)` — would lose `consumedBytes` and corrupt
      * `Phase::Continuous { raw }` byte alignment.
      *
-     * §42 漢羅濫 split cells: a [TaigiWord.MetadataKeys.CELL_SCRIPT]-marked
+     * §42 Hanji with Romanization split cells: a [TaigiWord.MetadataKeys.CELL_SCRIPT]-marked
      * cell resolves its document string via [resolveMarkedCellCommit]
      * (the marker is authoritative; the mode-derived when-expr is bypassed)
      * and its auto-space verdict rides [ResolvedCommit.wroteRomanization].
-     * Identity (`commitContinuous` canonicalText/associationTl, 詞頻
+     * Identity (`commitContinuous` canonicalText/associationTl, word-frequency
      * pair-key) is marker-independent — both cells commit the same
      * candidate.
      */
@@ -338,9 +338,9 @@ class CandidateClickHandler(
         // DISPLAY_TEXT sidechannel is forwarded as canonicalText so
         // user_frequency.db + NextWord keys stay mode-independent (decision b).
         //
-        // §42 漢羅濫 split cells: a CELL_SCRIPT-marked cell resolves the
-        // document text DIRECTLY from the marker (hanji cell → 漢字 or
-        // `漢字 (羅馬字)` under 括號標註; roman cell → the BARE roman,
+        // §42 Hanji with Romanization split cells: a CELL_SCRIPT-marked cell resolves the
+        // document text DIRECTLY from the marker (hanji cell → Hanji or
+        // `Hanji (romanization)` under Annotate in Brackets; roman cell → the BARE roman,
         // brackets ignored — desktop `.alternate` parity), bypassing the
         // mode-derived when-expr. Marked cells never exist under TPS (the
         // builder split is gated off there), so no TPS re-render applies.
@@ -421,7 +421,7 @@ class CandidateClickHandler(
 }
 
 /**
- * 括號標註 / both-scripts commit form when 漢字 leads — the romanization
+ * Annotate in Brackets / both-scripts commit form when Hanji leads — the romanization
  * rides in trailing brackets. Single spelling for the four hanji-first
  * commit sites; the roman-first inverse (`roman (hanzi)`) stays inline.
  */
@@ -442,11 +442,11 @@ private fun bracketedCommit(
  * The verdict is resolved by the SAME arm that picks the string, never from
  * the output mode afterwards. Auto-space is a property of ROMANIZATION
  * (`guá beh khì` needs the gaps, 我欲去 does not), and a candidate with no
- * Hanji — the 字面羅馬字 candidate (§34), an out-of-vocabulary name, a
+ * Hanji — the literal-romanization candidate (§34), an out-of-vocabulary name, a
  * romanization-only custom entry — falls to the last arm and writes its
  * romanization whatever the mode leads with.
  *
- * `bracketRoman` is the 括號標註 rendering of `roman` (TPS-converted in a
+ * `bracketRoman` is the Annotate in Brackets rendering of `roman` (TPS-converted in a
  * TPS layout); the bare `roman` is what a roman-led commit writes.
  */
 internal fun resolveUnmarkedCommit(
@@ -457,7 +457,7 @@ internal fun resolveUnmarkedCommit(
     outputBothScripts: Boolean,
 ): ResolvedCommit =
     when {
-        // 括號標註 writes the pair, so the romanization IS in the document
+        // Annotate in Brackets writes the pair, so the romanization IS in the document
         // whichever half leads.
         outputBothScripts && !hanzi.isNullOrEmpty() ->
             ResolvedCommit(
@@ -519,7 +519,7 @@ internal fun rawPreeditWritesRomanization(isTPSLayout: Boolean): Boolean = !isTP
 /**
  * Whether to insert the trailing auto-space: the setting is on, the commit
  * wrote romanization, and the committed DOCUMENT string does not end in a
- * hyphen continuation (a mid-word 連字 keeps composing). The Continuous
+ * hyphen continuation (a mid-word hyphen keeps composing). The Continuous
  * caller still owns the final-commit gate.
  */
 internal fun shouldAppendAutoSpace(
@@ -532,9 +532,9 @@ internal fun shouldAppendAutoSpace(
 // and the desktop `.alternate` commit rule. Drift causes silent divergence (a bracketed roman-cell commit, or a missing auto-space).
 
 /**
- * Document text + auto-space verdict for a 漢羅濫
+ * Document text + auto-space verdict for a Hanji with Romanization
  * [TaigiWord.MetadataKeys.CELL_SCRIPT]-marked cell (§42 second exception).
- * Hanji cell → the 漢字, or `漢字 (羅馬字)` when 括號標註 is on (only then
+ * Hanji cell → the Hanji, or `Hanji (romanization)` when Annotate in Brackets is on (only then
  * did the commit write romanization); roman cell → the BARE roman, brackets
  * IGNORED (desktop `.alternate` parity), always romanization. Returns
  * `null` for an unknown marker or a marker whose payload is missing (wire
@@ -556,7 +556,7 @@ internal fun resolveMarkedCellCommit(
             if (outputBothScripts && roman.isNotEmpty()) {
                 ResolvedCommit(text = bracketedCommit(hanzi, roman), wroteRomanization = true)
             } else {
-                // No roman to bracket → the bare 漢字, never empty brackets.
+                // No roman to bracket → the bare Hanji, never empty brackets.
                 ResolvedCommit(text = hanzi, wroteRomanization = false)
             }
 

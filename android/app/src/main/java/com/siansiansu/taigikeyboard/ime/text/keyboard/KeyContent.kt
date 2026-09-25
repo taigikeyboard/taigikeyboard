@@ -122,7 +122,7 @@ internal fun KeyContent(
             }
         }.background(Color(backgroundArgb), shape)
     // Border follows the theme keyTextColor role first (falling back to the
-    // adaptive keyFg), so the 框線 outline stays visible on a light-only gradient in
+    // adaptive keyFg), so the Outlined outline stays visible on a light-only gradient in
     // dark mode — same role-first rule the key glyph/label uses (mirrors iOS).
     val borderColor = colors.keyTextColor?.let { Color(it) } ?: Color(themeColors.keyFg)
     val borderedModifier = if (borderWidthDp > 0f) {
@@ -571,7 +571,7 @@ internal fun computeKeyLetter(
     }
     if (baseLabel == "˙") return "·"
     // The POJ `nn` key shows the marker it composes; its case (`ᴺ` under caps
-    // only while ⁿ大本字 is on, §53) is the engine's rule, applied below like
+    // only while "ⁿ becomes ᴺ in capitals" is on, §53) is the engine's rule, applied below like
     // the literal `ⁿ` long-press cell's.
     val label = if (baseLabel == "nn" && inputMode == "poj") "ⁿ" else baseLabel
     return KeyLabelCaseCache.getOrCompute(

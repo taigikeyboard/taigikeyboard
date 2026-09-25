@@ -153,7 +153,7 @@ class CandidateUpdateCoordinator(
                     continuousFetcher = {
                         getComposingManager()?.fetchContinuousCandidates() ?: emptyList()
                     },
-                    // 漢羅濫 split cells (§42 second exception). Live-read per
+                    // Hanji with Romanization split cells (§42 second exception). Live-read per
                     // fetch — the cached service must see a settings change on
                     // the next keystroke. TPS ignores the picker, so the split
                     // never fires under the TPS layout.

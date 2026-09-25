@@ -77,7 +77,7 @@ class UserFrequencyService(
             VALUES (?, ?, ?, datetime('now'))
             """.trimIndent()
 
-        // R5 (#7): identity is `UNIQUE(word, tl)` — 一字多音 keep separate
+        // R5 (#7): identity is `UNIQUE(word, tl)` — multi-reading Hanji keep separate
         // rows. `tl` defaults to '' (the legacy fallback bucket). One source
         // for onCreate and the JVM SQL tests.
         internal val CREATE_TABLE_SQL =
@@ -102,7 +102,7 @@ class UserFrequencyService(
         const val WORD = "word"
 
         // R5 (#7): canonical-TL reading. The identity is `(word, tl)`, so
-        // 一字多音 (重/tîng vs 重/tāng) keep separate rows. `tl == ''` is the
+        // Multi-reading Hanji (重/tîng vs 重/tāng) keep separate rows. `tl == ''` is the
         // legacy fallback bucket (pre-R5 rows / old-backup import).
         const val TL = "tl"
         const val COUNT = "count"
@@ -211,7 +211,7 @@ class UserFrequencyService(
 
     /**
      * Record a usage of [word] with its canonical-TL reading [tl]. R5 (#7):
-     * `(word, tl)` is the identity, so 一字多音 increment separate buckets.
+     * `(word, tl)` is the identity, so multi-reading Hanji increment separate buckets.
      * Pass `""` only when the candidate has no canonical TL (wire skew /
      * TPS-OOV) → the legacy fallback bucket.
      */
@@ -292,7 +292,7 @@ class UserFrequencyService(
     /**
      * All `(word, tl, count)` rows, one per learned reading + any legacy
      * `tl == ''` row. Preserves the R5 per-reading identity (#7). Shared by all
-     * three consumers — the `.taigi` backup export, the 詞頻 management viewer
+     * three consumers — the `.taigi` backup export, the word-frequency management viewer
      * (which lists + deletes per `(word, tl)`), AND the hand-editable CSV
      * export — all per-reading. Do NOT add viewer-only SQL (limit / filter)
      * here — it would leak into backup; split a wrapper if their needs diverge.
@@ -370,7 +370,7 @@ class UserFrequencyService(
 
     /**
      * Delete a single `(word, tl)` reading. R5 (#7): identity is the pair, so
-     * 一字多音 (重/tāng vs 重/tîng) delete independently. Deleting the legacy
+     * Multi-reading Hanji (重/tāng vs 重/tîng) delete independently. Deleting the legacy
      * `tl == ''` row removes only the fallback bucket; re-learned exact rows
      * survive.
      */
