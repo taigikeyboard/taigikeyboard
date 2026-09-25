@@ -28,8 +28,8 @@ taigi-emojis/      # Emoji data generator (own CLAUDE.md)
 2. **Cross-platform alignment** — align on **intended behavior**, not API calls; verify each platform independently; document when the same behavior needs different implementations.
 3. **Phonetics = authoritative-source-only** — never infer TL/POJ/TPS rules from test/dictionary absence; read `knowledge/taigi-phonetics-reference.md` and `taigi-converter/` first (`.claude/rules/phonetics.md`).
 4. **Bugfix = confirm root cause, then wait for approval** before any branch or edit. Release scope / timing / tag = user-gated. Both per `~/.claude/rules/diagnosis-discipline.md`.
-5. **Direction-first over fix-scope** — between two correct fixes prefer consistency and correct architectural direction over the smaller diff; state the trade-off. (USER 2026-05-25: 「考慮一致性、最佳實踐，方向正確會比較重要」)
-6. **Word identity = (漢字, canonical-TL) pair** — neither alone is a key (`重/tîng` ≠ `重/tāng`). Governs every dedup / lookup / ranking-merge / variant decision project-wide. POJ/TPS are alternate renderings of the same TL reading. (USER 2026-05-29: 「(羅馬字 + 漢字)的組合視為同一個字」)
+5. **Direction-first over fix-scope** — between two correct fixes prefer consistency and correct architectural direction over the smaller diff; state the trade-off. (USER 2026-05-25: "consider consistency and best practice; getting the direction right matters more")
+6. **Word identity = (漢字, canonical-TL) pair** — neither alone is a key (`重/tîng` ≠ `重/tāng`). Governs every dedup / lookup / ranking-merge / variant decision project-wide. POJ/TPS are alternate renderings of the same TL reading. (USER 2026-05-29: "treat the (romanization + Hanji) combination as one word")
 
 ## Read before…
 
@@ -70,7 +70,7 @@ Details and timings: `docs/architecture/build-artifacts.md`.
 
 ## Communication
 
-- Reply in **Taiwanese Mandarin (台灣華語)**; code, comments and docs in **English**. Living reference docs use English prose; CJK only for verbatim USER quotes and phonetic examples. Dated snapshots (`docs/reports/**`, `docs/releases/**`) are frozen.
+- Reply in **Taiwanese Mandarin (台灣華語)**; code, comments and docs in **English**. Living docs and comments are English-only: UI labels by their i18n `en` value, USER quotes translated to English. CJK only for Taigi content (phonetic / Hanji examples, test data, proper names of dictionaries and fonts). Dated snapshots (`docs/reports/**`, `docs/releases/**`) are frozen.
 - Recommendation first, then ranked options with one-line trade-offs, before changing code.
 
 ## References

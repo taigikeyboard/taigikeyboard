@@ -57,7 +57,7 @@ record: `docs/architecture/linux-roadmap.md`.
 
 ## Settings window (GTK 4 + libadwaita)
 
-- Native widgets only (USER 「設定選單UI使用原生UI元件」): `adw::PreferencesPage` / `Group` /
+- Native widgets only (USER: "use native UI components for the settings UI"): `adw::PreferencesPage` / `Group` /
   `ActionRow` / `SwitchRow` / `ComboRow` / `EntryRow` / `ExpanderRow`, `adw::AlertDialog`,
   `adw::Banner`, `adw::Toast`, `gtk::ColumnView`, `gtk::FileDialog`. No custom-drawn cards.
 - Pin the `gtk4` / `libadwaita` crate versions to what the Homebrew and Ubuntu libraries
