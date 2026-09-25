@@ -29,10 +29,10 @@ SOURCE_BITS: Final[dict[str, int]] = {
     "taijit":  5,   # 台日大辭典 (ChhoeTaigi)
     "kungge":  6,   # 台語工藝詞庫 (MoE)
     "stti":    7,   # 學科術語辭典 (MoE)
-    "khpoo":   8,   # 齒盤補充辭典
-    "khiin":   9,   # Khiin 頻率/轉換
-    "dev":    10,   # 開發者補充辭典
-    "lkk":    11,   # LKK 漢羅合用建議用字
+    "khpoo":   8,   # keyboard supplementary dictionary
+    "khiin":   9,   # Khiin frequency/conversion
+    "dev":    10,   # developer supplementary dictionary
+    "lkk":    11,   # LKK Han-Lo Recommended Characters
 }
 
 IS_VARIANT_BIT: Final[int] = 12  # bit 12 in dictionary.bin u16 bitmask
@@ -51,10 +51,10 @@ DICT_BIN_COLUMNS: Final[list[str]] = list(SOURCE_BITS.keys()) + ["is_variant"]
 # The wire `enabled_sources_bitmask` carries the user's subcollection ENABLE
 # bits in the SAME 12-bit layout (main | accent[10] | name) at a high offset;
 # see lexicon.proto + dictionary_reader.rs `Filter::from_enabled_bitmask`.
-KAUTIAN_SUBTAG_MAIN_BIT: Final[int] = 0  # headword (主條目)
+KAUTIAN_SUBTAG_MAIN_BIT: Final[int] = 0  # headword (main entry)
 KAUTIAN_SUBTAG_ACCENT_SHIFT: Final[int] = 1  # accent_mask occupies bits 1..=10
 KAUTIAN_SUBTAG_ACCENT_COUNT: Final[int] = 10  # 10 dialect columns (語音差異)
-KAUTIAN_SUBTAG_NAME_BIT: Final[int] = 11  # 姓名附錄 (名 + 姓)
+KAUTIAN_SUBTAG_NAME_BIT: Final[int] = 11  # name appendix (名 + 姓 sheets)
 # Bits 12..15 are reserved and must remain 0.
 _KAUTIAN_SUBTAG_ACCENT_MASK: Final[int] = (1 << KAUTIAN_SUBTAG_ACCENT_COUNT) - 1
 # All subtag bits in use (main | accent[10] | name); bits 12-15 reserved. The

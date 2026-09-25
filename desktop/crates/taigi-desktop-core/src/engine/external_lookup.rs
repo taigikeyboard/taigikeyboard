@@ -1,10 +1,10 @@
-//! The two web dictionaries a search result can be looked up in — 教典 and
-//! 台語辭典 (ChhoeTaigi) — and the digit-tone spelling of a TL reading their
+//! The two web dictionaries a search result can be looked up in — the MOE dictionary and
+//! ChhoeTaigi's Taigi dictionary — and the digit-tone spelling of a TL reading their
 //! query strings take. Port of `ExternalLookupURLBuilder.swift`.
 
 use super::phonetics::{nfd_preprocess_for_lookup, strip_tone};
 
-/// 教典's search URL for `tl`, or `None` when the reading spells nothing.
+/// The MOE dictionary's search URL for `tl`, or `None` when the reading spells nothing.
 pub fn moe_url(tl: &str) -> Option<String> {
     url(
         "https://sutian.moe.edu.tw/zh-hant/tshiau/",

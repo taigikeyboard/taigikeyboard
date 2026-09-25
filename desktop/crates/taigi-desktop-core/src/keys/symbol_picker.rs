@@ -35,7 +35,7 @@ impl SymbolPickerIntent {
     /// the fixed navigation keys, then the slot keys, then whatever the user
     /// put on the paging and confirm rows — so a user who moved paging to
     /// Alt+Enter pages the picker with it too. Only the list-specific
-    /// outcomes differ: there is no other script to commit, so the 漢羅 key
+    /// outcomes differ: there is no other script to commit, so the Hanji/romanization key
     /// confirms like Enter, and the literal-commit key has no literal to
     /// write, so it falls through.
     pub fn intent(key: &KeyEventSnapshot, bindings: &ComposingKeyBindings) -> Self {

@@ -189,14 +189,14 @@ impl SettingsDocument {
         self.revision = self.revision.saturating_add(1);
     }
 
-    /// Puts every setting the 一般 pane owns back to shipped state.
+    /// Puts every setting the General pane owns back to shipped state.
     pub fn reset_general(&mut self) {
         for name in keys::GENERAL_KEYS {
             self.remove(name);
         }
     }
 
-    /// Puts every key the 外觀 pane owns back to shipped state.
+    /// Puts every key the Appearance pane owns back to shipped state.
     pub fn reset_appearance(&mut self) {
         for name in keys::APPEARANCE_KEYS {
             self.remove(name);
@@ -233,7 +233,7 @@ impl SettingsDocument {
         }
     }
 
-    /// Puts every toggle the 詞庫來源 pane owns back to shipped state.
+    /// Puts every toggle the Dictionary Sources pane owns back to shipped state.
     pub fn reset_dictionary_sources(&mut self) {
         for name in keys::DICTIONARY_SOURCE_KEYS {
             self.remove(name);
@@ -242,7 +242,7 @@ impl SettingsDocument {
 
     /// The engine-facing snapshot as of this document.
     ///
-    /// The swap and 括號標註 pair comes out DERIVED — the rules live on
+    /// The swap and Annotate in Brackets pair comes out DERIVED — the rules live on
     /// `CandidateDisplayMode` (invariants §42). The stored bools are left
     /// alone, so switching back to side-by-side restores them. Every consumer
     /// of the pair reads it from here, never `bool(&IS_TRANSLATE_SWAPPED)`
@@ -414,7 +414,7 @@ mod tests {
         use crate::settings::CandidateSizeChoice;
         // Never touched → the new default; the text ladder's old spellings
         // → the nearest step; the retired window knob changes nothing; a
-        // read writes nothing; the 外觀 reset removes the key.
+        // read writes nothing; the Appearance reset removes the key.
         let mut doc = SettingsDocument::default();
         assert_eq!(
             doc.choice(&keys::CANDIDATE_SIZE),
@@ -456,9 +456,9 @@ mod tests {
 
     #[test]
     fn reset_general_removes_the_pane_s_keys_and_nothing_else() {
-        // trace: 一般 owns the swap, the tone keys and auto-space; the
+        // trace: General owns the swap, the tone keys and auto-space; the
         // display language is the user's UI choice, the candidate layout is
-        // 外觀's and the update date is bookkeeping — all three survive.
+        // Appearance's and the update date is bookkeeping — all three survive.
         // Removed, not written: the swap reads its default (hanji-first)
         // with no key stored.
         let mut doc = SettingsDocument::default();
@@ -521,8 +521,8 @@ mod tests {
         // hanji-first), both=false; mode=combined → (true, false): each
         // script is its own adjacent cell, hanji first, and a commit writes
         // the hanji — the projection of that onto the pair is a forced swap.
-        // Stored both=true → (true, true), so 括號標註 still yields
-        // `漢字 (羅馬字)`. Roman-only still masks to (false, false); back to
+        // Stored both=true → (true, true), so Annotate in Brackets still yields
+        // `Hanji (romanization)`. Roman-only still masks to (false, false); back to
         // sideBySide reads the stored (false, true) again with no bool
         // written in between.
         let mut doc = SettingsDocument::default();
@@ -629,7 +629,7 @@ mod tests {
 
     /// §34/S22 — the ON default is covered by `empty_document_reads_every_default`;
     /// what only this pins is that `engine_settings()` maps THIS key, so a user
-    /// who turned 顯示當咧拍的字 off keeps it off across the 2026-09-03 flip.
+    /// who turned Show Typed Text First off keeps it off across the 2026-09-03 flip.
     #[test]
     fn literal_roman_candidate_honours_a_stored_false() {
         let mut doc = SettingsDocument::default();

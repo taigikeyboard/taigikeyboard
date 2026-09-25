@@ -1,6 +1,6 @@
-//! 候選詞顯示 = 羅馬字 display-dedup integration test (§44 /
+//! Candidate Display = Romanization Only display-dedup integration test (§44 /
 //! `INVARIANT_ROMAN_ONLY_CELLS_COLLAPSE_SAME_ROMAN`). Roman-only cells hide
-//! the hanji, so rows that differ only in hanji — 同音異字 `食/tsia̍h` +
+//! the hanji, so rows that differ only in hanji — homophones `食/tsia̍h` +
 //! `𤆬/tsia̍h`, and the §34 literal `tsiah` beside dict `隻/tsiah` — are
 //! visible duplicates. `composing::dispatch` collapses them by the RENDERED
 //! ROMAN alone AFTER the literal prepend; first-seen wins (top-ranked sorted
@@ -28,7 +28,7 @@ use common::{
 };
 
 fn fixture_rows() -> Vec<Row> {
-    // Toneless key `tsiah` carries three production-shaped rows: two 同音異字
+    // Toneless key `tsiah` carries three production-shaped rows: two homophone
     // readings `tsia̍h` (食 high-freq, 𤆬 low-freq) and the tone-4 `tsiah`
     // (隻) whose roman equals the §34 literal for raw input `tsiah`.
     vec![
@@ -146,7 +146,7 @@ fn fetch_with_identity(
 
 /// Under a single-script display the literal absorbs dict 隻/tsiah, so its
 /// commit must still learn 隻: the literal inherits the absorbed row's
-/// `display_text` (the NextWord / 詞頻 key) and `canonical_tl` while it
+/// `display_text` (the NextWord / frequency key) and `canonical_tl` while it
 /// keeps reading and committing the bare roman (`hanji` stays absent).
 #[test]
 fn single_script_display_literal_inherits_absorbed_dict_identity() {
@@ -172,7 +172,7 @@ fn single_script_display_literal_inherits_absorbed_dict_identity() {
             literal.3, "tsiah",
             "canonical TL follows the absorbed row (mode {mode})"
         );
-        // 濫 keeps the dict row itself: the platform split draws its 漢字 cell.
+        // Hanji with Romanization keeps the dict row itself: the platform split draws its Hanji cell.
         assert_eq!(
             candidates.iter().any(|c| c.0.as_deref() == Some("隻")),
             mode == combined,
@@ -181,7 +181,7 @@ fn single_script_display_literal_inherits_absorbed_dict_identity() {
     }
 }
 
-/// 並排 lists the dict row beside the literal, so the literal stays a pure
+/// Pairing lists the dict row beside the literal, so the literal stays a pure
 /// romanization commit with its own (roman) identity.
 #[test]
 fn side_by_side_literal_keeps_its_own_roman_identity() {
@@ -224,7 +224,7 @@ fn side_by_side_keeps_every_row_for_explicit_default_and_unknown_values() {
         explicit,
         "unknown value = side-by-side"
     );
-    // 漢羅濫 keeps every row too — the split into one-script cells is the
+    // Hanji with Romanization keeps every row too — the split into one-script cells is the
     // platform's (§42); only the literal's identity sidechannel differs.
     assert_eq!(
         fetch("tsiah", "tl", CandidateDisplayMode::Combined as i32),

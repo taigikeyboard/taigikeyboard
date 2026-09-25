@@ -37,7 +37,7 @@ pub fn is_gate_active(is_auto_space_enabled: bool, wrote_romanization: bool) -> 
 ///
 /// A `match` over a two-variant enum rather than `true`, so that adding a
 /// non-romanized layout (TPS composes Bopomofo, which takes no spacing)
-/// fails to compile here instead of silently spacing 注音.
+/// fails to compile here instead of silently spacing Bopomofo.
 /// CROSS-PLATFORM INVARIANT — mirrors `macos/.../AutoSpacePolicy.swift`
 /// `rawPreeditWritesRomanization(inputMode:)`.
 pub fn raw_preedit_writes_romanization(input_mode: InputMode) -> bool {

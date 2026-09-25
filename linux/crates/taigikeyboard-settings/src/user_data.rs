@@ -1,4 +1,4 @@
-//! The user-data stores the window reads and writes (自訂詞庫, the three
+//! The user-data stores the window reads and writes (Custom Dictionary, the three
 //! learning tables), opened once at launch under `$XDG_DATA_HOME/taigikeyboard`
 //! (roadmap L7). Port of the Windows `user_data.rs`: the launch migrations
 //! run on a background thread off the open; no directory means no stores

@@ -1,7 +1,8 @@
 //! A3 (§41) — TPS keyboard-space tone pinning integration test.
 //!
 //! Reported bug (Gmail `19eeca0bc4a8e6e1`, v3.6.3):
-//! 「方音齒盤兮第一佮第四調無法度用空白齒揀聲調，其他聲調正常。」 TPS writes
+//! "On the TPS keyboard, tones 1 and 4 cannot be picked with the space key;
+//! the other tones work." TPS writes
 //! tones 2/3/5/6/7/8/9 with a standalone mark, so typing the mark already
 //! filters candidates to that tone (§17). Tones 1 (open rime) and 4 (stop
 //! coda ㆴㆵㆻㆷ) carry NO mark — the keyboard's space is their only

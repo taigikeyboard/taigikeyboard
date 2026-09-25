@@ -1,4 +1,4 @@
-//! The 字型管理 pane: every typeface the candidate window can be set in — the
+//! The Manage Typefaces pane: every typeface the candidate window can be set in — the
 //! bundled roster, the ones the user added, and the families this Windows has
 //! installed — as one list whose SELECTION is the typeface in use. Port of
 //! `FontManagementPage.swift`.
@@ -10,12 +10,12 @@
 //!
 //! A search box and a pager (`list_pager`) are what make a few hundred
 //! installed families usable in one list (USER 2026-09-11) — one page of rows
-//! at a time, as 自訂詞庫 does it, because a fixed-height list inside the pane
+//! at a time, as Custom Dictionary does it, because a fixed-height list inside the pane
 //! cannot scroll on its own.
 //!
 //! `+` takes a font file into `%APPDATA%\TaigiKeyboard\Fonts` and selects it —
 //! unless this Windows already has the face, in which case the installed row is
-//! selected instead (USER 2026-09-11 「跳出提示,並且跳轉到那個字型」); `−` is
+//! selected instead (USER 2026-09-11: "pop up a notice and jump to that typeface"); `−` is
 //! disabled on the bundled and installed rows — only a typeface the user added
 //! can leave the list.
 
@@ -566,7 +566,7 @@ fn missing_note(
         .into()
 }
 
-/// How many rows one page holds — the list's height, exactly, as 自訂詞庫 does
+/// How many rows one page holds — the list's height, exactly, as Custom Dictionary does
 /// it: a page that fits the list never needs a scroller of its own, which a
 /// list inside the pane's scroll view cannot have (`list_pager`).
 const PAGE_SIZE: usize = 10;

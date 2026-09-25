@@ -278,7 +278,7 @@ impl LexiconRow {
         }
     }
 
-    /// The search page's order (`DictionarySearchService.Ordering`): 教典
+    /// The search page's order (`DictionarySearchService.Ordering`): MOE dictionary
     /// records first, then by length score descending, then as the engine
     /// listed them.
     pub fn sorted_for_search(rows: Vec<LexiconRow>) -> Vec<LexiconRow> {
@@ -309,7 +309,7 @@ fn wire_input_mode(mode: InputMode) -> i32 {
     }
 }
 
-/// The 辭典搜尋 page's all-source romanization lookup
+/// The Dictionary Search page's all-source romanization lookup
 /// (`RustEngineBridge+Lexicon.swift:245-264`).
 pub fn search_with_sources(
     input: &str,
@@ -339,7 +339,7 @@ pub fn search_with_sources(
     }
 }
 
-/// The 辭典搜尋 page's hanji-prefix lookup (`RustEngineBridge+Lexicon.swift:267-286`).
+/// The Dictionary Search page's hanji-prefix lookup (`RustEngineBridge+Lexicon.swift:267-286`).
 pub fn search_by_hanzi(
     query: &str,
     mode: InputMode,

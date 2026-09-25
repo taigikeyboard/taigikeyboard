@@ -2,8 +2,8 @@
 //! regression net for the pages (roadmap L12, the Windows `pane_planning`):
 //! every built pane is in the stack; a row's switch writes its key; an
 //! outside write shows on the next tick without bumping the revision; a
-//! display language picked in the window rebuilds the sidebar; 字型管理 and
-//! 關於 are not listed; the read-only window writes nothing; a reset
+//! display language picked in the window rebuilds the sidebar; Manage Typefaces and
+//! About are not listed; the read-only window writes nothing; a reset
 //! keeps the display language.
 //!
 //! Needs a display: GTK cannot initialise without one, so the test skips
@@ -81,7 +81,7 @@ fn every_built_pane_is_in_the_stack(window: &Rc<SettingsWindow>) {
     eprintln!("panes: {} panes in the stack", SettingsPane::ALL.len());
 }
 
-/// trace: 一般's first switch row is 候選窗 (`IS_CANDIDATE_WINDOW_ENABLED`,
+/// trace: General's first switch row is Show Candidate Window (`IS_CANDIDATE_WINDOW_ENABLED`,
 /// default true). Flipping the switch writes `false`; flipping back `true`.
 fn a_switch_row_writes_its_key(window: &Rc<SettingsWindow>) {
     let page = window.page_widget(SettingsPane::General).expect("general");
@@ -142,8 +142,8 @@ fn a_language_picked_here_rebuilds_the_sidebar(window: &Rc<SettingsWindow>) {
     eprintln!("panes: language rebuild");
 }
 
-/// 字型管理 has no page on Linux (the panel's font is the framework's), so
-/// a stored 字型管理 lands on 一般; 關於 is shown without a sidebar row.
+/// Manage Typefaces has no page on Linux (the panel's font is the framework's), so
+/// a stored Manage Typefaces lands on General; About is shown without a sidebar row.
 fn the_font_pane_routes_to_general_and_about_is_unlisted(window: &Rc<SettingsWindow>) {
     assert!(!SIDEBAR.contains(&SettingsPane::FontManagement));
     assert_eq!(
@@ -178,7 +178,7 @@ fn a_reset_keeps_the_display_language(window: &Rc<SettingsWindow>) {
     eprintln!("panes: reset keeps the language");
 }
 
-/// trace: recording on 顯示 Telex 表 (default Ctrl+Alt+/); a bare `a`
+/// trace: recording on Open Telex Guide (default Ctrl+Alt+/); a bare `a`
 /// (keysym 0x61, keycode 38, no modifiers) is refused and recording
 /// continues; a pane switch or any other row's write ends it; then
 /// Ctrl+Alt+K (0x6b, keycode 45, CONTROL 1<<2 | MOD1 1<<3) is recorded and
@@ -250,8 +250,8 @@ fn a_recorded_press_binds_the_row(window: &Rc<SettingsWindow>) {
     eprintln!("panes: recorder binds, clears, resolves across registries");
 }
 
-/// trace: the 教典 row is the first switch on 詞庫來源 (`IS_KAUTIAN_ENABLED`,
-/// default true); the eleven 腔口 rows after it grey out while it is off
+/// trace: the MOE dictionary row is the first switch on Dictionary Sources (`IS_KAUTIAN_ENABLED`,
+/// default true); the eleven accent rows after it grey out while it is off
 /// and come back, still set, when it is on.
 fn the_kautian_expander_switch_writes_its_key(window: &Rc<SettingsWindow>) {
     let page = window

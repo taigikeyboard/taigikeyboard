@@ -174,7 +174,7 @@ fn continuous_word_space(config: &AppConfig) -> bool {
 /// - else, find the **longest run** `[j, j+n)` (`n >= 2`) starting at
 ///   the current position such that every member is single-syllable
 ///   AND `is_compound(Σ canonical_text, n)` is true. If found, emit
-///   `joiner` (`-`, or `` under 無連字符) between run members; otherwise
+///   `joiner` (`-`, or `` under No Hyphens) between run members; otherwise
 ///   advance one segment and emit a single space at the boundary.
 ///
 /// Anti-overgluing (overlapping bigrams `AB` + `BC` without trigram
@@ -198,7 +198,7 @@ fn nailed_prefix_with_oracle(
     hyphenless: bool,
     is_compound: impl Fn(&str, u8) -> bool,
 ) -> String {
-    // 無連字符: the engine-synthesised compound joiner is the one hyphen in
+    // No Hyphens: the engine-synthesised compound joiner is the one hyphen in
     // this render that no user typed and no platform committed, so it is
     // the one this flag owns here. Segment text arrives already rendered.
     let joiner = if hyphenless { "" } else { "-" };
@@ -506,7 +506,7 @@ pub enum Intent {
     /// wire/sentinel contract: the `FetchAtPos` proto comment.
     /// §34 / S22 — `literal_roman_candidate_disabled` gates the always-on
     /// preedit-literal roman candidate (index-0 `derived_display` WYSIWYG row
-    /// for 漢羅 one-tap). Decoded verbatim from `FetchAtPos`; OFF suppresses
+    /// for Hanji-romanization one-tap). Decoded verbatim from `FetchAtPos`; OFF suppresses
     /// only the §34 forced prepend, not the natural roman candidates. Full
     /// wire/sentinel contract: the `FetchAtPos` proto comment.
     FetchAtPos {
@@ -887,7 +887,7 @@ mod tests {
 
     #[test]
     fn hyphenless_joiner_glues_the_compound_run_and_keeps_the_typed_hyphen() {
-        // 無連字符: the compound run is still detected (no spurious space
+        // No Hyphens: the compound run is still detected (no spurious space
         // between 台 and 灣) but joined with nothing; the following word
         // boundary and a user-typed `tai-` continuation are untouched.
         let n = [

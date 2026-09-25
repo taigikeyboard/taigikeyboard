@@ -118,12 +118,12 @@ def _extract_csv(ctx: PipelineContext, path: Path, opts: dict) -> None:
 
 
 def _extract_csv_stti(ctx: PipelineContext, df: pd.DataFrame, opts: dict) -> pd.DataFrame:
-    """STTI extract — expand rows whose 漢字 carries multiple variant readings.
+    """STTI extract — expand rows whose Hanji carries multiple variant readings.
 
-    For each row: if 漢字 contains spaces, split both 漢字/臺羅 by space and
+    For each row: if the Hanji contains spaces, split both Hanji/TL by space and
     pair them up 1:1; otherwise run `expand_variant_readings` to detect
     space-separated variant readings by greedy-grouping TL tokens against
-    the 漢字 character count.
+    the Hanji character count.
     """
     hanzi_col = opts.get("hanzi_col", "臺灣台語詞彙")
     tl_col = opts.get("tl_col", "臺羅")
@@ -165,8 +165,8 @@ def _extract_csv_stti(ctx: PipelineContext, df: pd.DataFrame, opts: dict) -> pd.
 def _expand_variant_readings(hanzi: str, tl: str) -> list[str]:
     """Greedy-group space-separated TL tokens against hanzi char count.
 
-    Used by stti where one 漢字 phrase may ship with N variant readings in
-    the 臺羅 column, concatenated by spaces. Returns one TL per variant.
+    Used by stti where one Hanji phrase may ship with N variant readings in
+    the TL column, concatenated by spaces. Returns one TL per variant.
     """
     tokens = tl.split()
     if len(tokens) <= 1:

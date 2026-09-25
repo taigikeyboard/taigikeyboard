@@ -165,8 +165,8 @@ impl ComposingKeyBindings {
     /// its key back; a row holding a pool chord the user recorded there keeps
     /// it, and the emptied commit
     /// row stays empty — the last recording wins here as everywhere else on
-    /// the pane (USER 2026-09-19: Enter recorded on 迒模式輸出 used to be handed
-    /// straight back to 確定). An unbound Return still ends the composition:
+    /// the pane (USER 2026-09-19: Enter recorded on Output the Other Script used to be handed
+    /// straight back to Confirm Key). An unbound Return still ends the composition:
     /// it commits before passing through to the host
     /// (`ComposingKeyIntent::host_key`).
     fn restore_unbound(resolved: &mut BTreeMap<ComposingAction, ComposingKeyChord>) {
@@ -280,8 +280,8 @@ mod tests {
         }
     }
 
-    /// The reported failure (USER 2026-09-19): Enter recorded on 迒模式輸出
-    /// was handed straight back to 確定. The emptied commit row takes the
+    /// The reported failure (USER 2026-09-19): Enter recorded on Output the Other Script
+    /// was handed straight back to Confirm Key. The emptied commit row takes the
     /// pair's OTHER default when it is free and stays empty when it is not.
     #[test]
     fn a_row_recorded_onto_a_commit_default_keeps_it() {

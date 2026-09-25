@@ -514,7 +514,7 @@ fn a_flood_of_rejected_rows_does_not_starve_the_readings_that_survive() {
     );
 }
 
-/// Filler 漢字 for the flood rows, deliberately DIFFERENT from the single
+/// Filler Hanji for the flood rows, deliberately DIFFERENT from the single
 /// reading under test so a leaked flood row shows up in the assertion instead
 /// of hiding behind an identical label.
 const FLOOD_HANZI: &str = "汁";
@@ -604,7 +604,7 @@ fn a_toned_or_dialect_variant_body_is_measured_on_its_own_face() {
 
 #[test]
 fn a_khinsiann_separator_does_not_add_a_syllable() {
-    // 輕聲 `--` leaves an empty run between the hyphens. Counting it would make
+    // A neutral-tone `--` leaves an empty run between the hyphens. Counting it would make
     // 予我 look three syllables long and shift every boundary, so the guard
     // would drop it one keystroke late.
     // trace: 予我 `hōo--guá` → tl_num "hoo7gua2", ends at 4 and 8. Typed
@@ -632,7 +632,7 @@ fn a_khinsiann_separator_does_not_add_a_syllable() {
 
 #[test]
 fn a_space_separated_reading_splits_at_the_space() {
-    // A 詞組 reading separates its words with a space rather than a hyphen;
+    // A multi-word reading separates its words with a space rather than a hyphen;
     // both are syllable boundaries to the build pipeline.
     // trace: 也是 `iā sī` → tl_num "ia7si7", ends at 4 and 8. Typed `ia7` (3)
     // → head 4 ≥ 3 → dropped; `ia7s` (4) → kept.

@@ -3,8 +3,8 @@
 //! full-buffer "best reading" by joining per-syllable canonical romans
 //! with a SPACE. For a genuine multi-word reading that space-join is the
 //! desired display, but when the synth's `(hanji, span)` coincides with a
-//! single lexical dict word that stores its own separator form (`-` 連字
-//! or `--` 輕聲), the space-join is a malformed rendering of that word.
+//! single lexical dict word that stores its own separator form (`-` hyphen
+//! or `--` neutral tone), the space-join is a malformed rendering of that word.
 //!
 //! Reported symptom: typing `hoogua` showed best candidate `hōo guá`
 //! (space) instead of the dictionary word 予我 `hōo--guá` (khinsiann). The
@@ -35,7 +35,7 @@ use common::{
     Row,
 };
 
-/// 予我/hōo--guá (輕聲, freq 16) + 戶外/hōo-guā (連字, freq 25) collide on
+/// 予我/hōo--guá (neutral tone, freq 16) + 戶外/hōo-guā (hyphen, freq 25) collide on
 /// `tl_notone = hoogua`. 予/hōo + 我/guá are high-freq single chars so the
 /// walker's min-cost path is the 予+我 split → synth `hōo guá` (space).
 fn fixture_rows() -> Vec<Row> {
@@ -50,7 +50,7 @@ fn fixture_rows() -> Vec<Row> {
         Row {
             toneless_key: "hoogua",
             hanzi: "戶外",
-            tl: "hōo-guā", // 連字; tl_num hoo7gua7 — tone 7 (different word)
+            tl: "hōo-guā", // hyphen; tl_num hoo7gua7 — tone 7 (different word)
             syll: 2,
             freq: 25,
         },

@@ -1,27 +1,27 @@
 # -*- coding: utf-8 -*-
 """kautian req2 — word-level accent variant generation.
 
-Phase 5 (final phase) of the kautian subcollections feature. The 語音差異
-sheet is single-character only (407 rows): each 漢字 carries one TL reading per
-dialect accent (鹿港偏泉腔 … 臺中偏漳腔). Multi-character headwords only ever
-carry the one standard 教育部 reading. This module generates WORD-LEVEL accent
+Phase 5 (final phase) of the kautian subcollections feature. The 語音差異 (accent differences)
+sheet is single-character only (407 rows): each Hanji carries one TL reading per
+dialect accent (Lukang (Quanzhou-leaning) … Taichung (Zhangzhou-leaning)). Multi-character headwords only ever
+carry the one standard MOE reading. This module generates WORD-LEVEL accent
 variants by substituting each syllable of a multi-char main entry with that
 char's per-accent reading, then tags the generated row with the accent bits
 that produced it.
 
 Two-syllable example — 八月 (base "peh-gue̍h", 八∈語音差異 as pueh/peh, 月∉):
-the 泉腔 accents read 八 as "pueh" → generate "pueh-gue̍h" tagged with those
-accents' bits; the 漳腔 accents read 八 as "peh" == base → no row (the base
+the Quanzhou-leaning accents read 八 as "pueh" → generate "pueh-gue̍h" tagged with those
+accents' bits; the Zhangzhou-leaning accents read 八 as "peh" == base → no row (the base
 headword already covers it, gated independently by the main toggle, DD6).
 
 Design (USER-locked decisions, see project memory `project_kautian_subcollections`):
 
 - **DD9 same-morpheme gate** — a syllable is only substituted when its base
   reading is itself one of that char's listed dialect readings. 八卦's 八/pat
-  (文讀) is NOT in 八's 語音差異 set {pueh, peh} (白讀), so 八卦 generates
-  nothing — different morpheme, 一字多音.
-- **DD4 conservative skip** — only `漢字數==音節數` tokenizable rows; a
-  comma-multi accent cell (新竹 女="lír,lí") skips that one accent bit, not the
+  (literary reading) is NOT in 八's 語音差異 set {pueh, peh} (colloquial reading), so 八卦 generates
+  nothing — different morpheme, one character with several readings.
+- **DD4 conservative skip** — only `hanji count == syllable count` tokenizable rows; a
+  comma-multi accent cell (Hsinchu 女="lír,lí") skips that one accent bit, not the
   whole word; generated readings that fail strict TL→POJ conversion are skipped
   + reported (prevents the downstream `poj` stage's whole-source abort).
 - **DD4b equal rank** — generated rows inherit the base word's `frequency` and
@@ -66,7 +66,7 @@ class WordGenResult:
 
     `variants` maps each generated reading → OR of the accent bits that
     produced it (only readings that differ from the base are kept). `aligned`
-    is False when 漢字數≠音節數 or the row is not tokenizable (skipped).
+    is False when hanji count ≠ syllable count or the row is not tokenizable (skipped).
     `ambiguous_accents` counts accent bits skipped because the char's reading
     for that accent was comma-multi.
     """
@@ -163,7 +163,7 @@ def generate_variants_for_word(
         return WordGenResult(aligned=False)
     if len(chars) < 2:
         # Single-char main entry — nothing to generate (req2 is word-level),
-        # but it is aligned, not a 漢羅 mismatch.
+        # but it is aligned, not a Hanji/romanization mismatch.
         return WordGenResult(aligned=True)
 
     result = WordGenResult()

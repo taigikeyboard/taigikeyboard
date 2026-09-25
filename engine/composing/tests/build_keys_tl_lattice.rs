@@ -80,7 +80,7 @@ fn internal_hyphen_output_is_byte_identical_to_pre_s1() {
 #[test]
 fn longest_match_suppresses_shorter_single_syllable_prefix() {
     // §18 INVARIANT_CONTINUOUS_LONGEST_MATCH_PREFIX (USER 2026-05-31
-    // 「免調也壓制」). Input `tai` with BOTH `ta` and `tai` valid single
+    // "suppress even without a tone"). Input `tai` with BOTH `ta` and `tai` valid single
     // syllables. The shorter `ta` (end 2) is a strict prefix of the longest
     // single `tai` (end 3) and has no multi-syllable phrase reading, so it is
     // suppressed — only `tl:tai` survives. This is the reported bug (`tai` /

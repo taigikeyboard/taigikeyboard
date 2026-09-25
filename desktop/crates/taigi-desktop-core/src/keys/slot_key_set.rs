@@ -60,7 +60,7 @@ impl CandidateSlotKeySet {
         }
     }
 
-    /// The slot `event` names with exactly Shift held — the 漢羅 commit
+    /// The slot `event` names with exactly Shift held — the Hanji/romanization commit
     /// aimed at a slot (`ComposingKeyIntent::SelectCandidateSlot { flip }`),
     /// or `None`.
     ///

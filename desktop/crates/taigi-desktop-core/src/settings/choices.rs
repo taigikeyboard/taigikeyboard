@@ -19,7 +19,7 @@ pub trait SettingChoice: Copy + PartialEq + std::fmt::Debug + 'static {
     }
 }
 
-/// The candidate window's layout. Order = the 外觀 pane's pop-up
+/// The candidate window's layout. Order = the Appearance pane's pop-up
 /// (`SettingsStore.swift:236-239`, `CandidateLayout.swift:11-14`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum CandidateLayout {
@@ -55,7 +55,7 @@ impl SettingChoice for CandidateLayout {
 
 /// Light / dark / follow the system. Stored under the name it had when only
 /// the candidate window read it (`candidateAppearanceMode`), like macOS.
-/// Order = the 外觀 pane's thumbnail row: light, dark, auto
+/// Order = the Appearance pane's thumbnail row: light, dark, auto
 /// (`AppearanceSettingsView.swift:106`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum AppearanceMode {
@@ -342,7 +342,7 @@ impl SettingsPane {
     /// The sidebar row label's i18n key, and the window title
     /// (`SettingsSplitView.swift`, `labelKey`). `None` for the unlisted
     /// search page, which has no row and no title of its own on macOS
-    /// either; 關於 has a title without a row.
+    /// either; About has a title without a row.
     pub fn title_key(self) -> Option<crate::strings::StringKey> {
         use crate::strings::StringKey;
         Some(match self {
@@ -454,7 +454,7 @@ mod tests {
     #[test]
     fn the_two_knob_spellings_read_as_the_nearest_step() {
         // trace: old text ladder small 16 / medium 20 / large 23 → 15 / 20 / 23
-        // (USER 2026-09-23). `extraLarge` (特大, retired 2026-08-21) was
+        // (USER 2026-09-23). `extraLarge` (Extra Large, retired 2026-08-21) was
         // never a spelling of this ladder and stays unknown.
         assert_eq!(
             CandidateSizeChoice::from_raw("small"),
@@ -482,7 +482,7 @@ mod tests {
             .all(|pane| pane.title_key().is_some()));
     }
 
-    /// 關於 is a pane — it persists, it titles the window — but not a row:
+    /// About is a pane — it persists, it titles the window — but not a row:
     /// the input-source menu is its one doorway (USER 2026-09-20).
     #[test]
     fn about_is_a_pane_with_a_title_but_not_in_the_sidebar() {

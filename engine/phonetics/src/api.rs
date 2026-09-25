@@ -307,7 +307,7 @@ pub fn is_nasal_marker(c: char) -> bool {
 ///
 /// `is_alphabetic` covers everything this IME writes: Latin for TL / POJ —
 /// including the decomposed forms, since `ji̍t` / `m̄` / `o͘` all keep a Latin
-/// base under their combining marks — 漢字 (`Lo`), and both Bopomofo blocks for
+/// base under their combining marks — Hanji (`Lo`), and both Bopomofo blocks for
 /// TPS (`Lo`). Digits, punctuation, symbols, emoji, and bare combining marks
 /// are not.
 ///
@@ -407,9 +407,9 @@ pub fn render_typed_separators(
     Some(out)
 }
 
-/// 無連字符 (`AppConfig.hyphenless_roman`, `behavioral-invariants.md` §49)
+/// No Hyphens (`AppConfig.hyphenless_roman`, `behavioral-invariants.md` §49)
 /// — the rendered form of a dictionary-supplied romanization with the
-/// inter-syllable `-` dropped and the 輕聲 marker `--` written as
+/// inter-syllable `-` dropped and the neutral-tone marker `--` written as
 /// [`crate::tps::KHINSIANN_DOT`] (`tâi-uân` → `tâiuân`, `hōo--guá` →
 /// `hōo·guá`). Spaces (word boundaries) are kept. Display only: identity
 /// keys (`display_text`, `canonical_tl`) never pass through here, and

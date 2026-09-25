@@ -284,7 +284,7 @@ pub(crate) fn should_record_association(state: &PersistedState, now_ms: i64) -> 
 }
 
 /// Split a commit into the words a bigram may be learned between. Whitespace
-/// is the only word boundary — `-` is a 連字 / 輕聲 joiner *inside* a word, in
+/// is the only word boundary — `-` is a compound / neutral-tone joiner *inside* a word, in
 /// engine-rendered output and in raw typed text alike
 /// (`engine/composing/src/transition.rs:481-483` passes the pending tail's
 /// literal keystroke buffer). See `behavioral-invariants.md` §40.
@@ -316,10 +316,10 @@ pub(crate) fn compound_association_pairs(display_text: &str, roman: &str) -> Vec
     let roman_parts = split_compound(roman);
     // Record nothing rather than a pair whose romanization had to be guessed.
     // The two strings are split by the same rule and zipped by position, so
-    // they line up only when both sides segmented identically — 漢字 `也是`
+    // they line up only when both sides segmented identically — Hanji `也是`
     // carries no space while its romanization `iā sī` does, and padding the
     // short side would attach an empty `next_tl` to a real word. An empty TL is
-    // not a neutral value here: word identity is the `(漢字, canonical TL)`
+    // not a neutral value here: word identity is the `(Hanji, canonical TL)`
     // pair (`CLAUDE.md` Core Principle #7), so a blank one writes a row no
     // correctly-keyed lookup will ever match again.
     if parts.len() <= 1 || roman_parts.len() != parts.len() {
@@ -541,13 +541,13 @@ mod tests {
 
     #[test]
     fn split_compound_breaks_on_whitespace_but_never_on_hyphen() {
-        // trace: 詞組 spacing is the only word boundary a commit carries.
+        // trace: multi-word spacing is the only word boundary a commit carries.
         assert_eq!(
             split_compound("iā sī"),
             vec!["iā", "sī"],
             "the walker's space-join is a real word boundary",
         );
-        // 連字 and 輕聲 hyphens live INSIDE one word — and so does a hyphen the
+        // Compound and neutral-tone hyphens live INSIDE one word — and so does a hyphen the
         // user typed, so a raw pending tail is one unit as well.
         assert_eq!(split_compound("tâi-gí"), vec!["tâi-gí"]);
         assert_eq!(split_compound("hōo--guá"), vec!["hōo--guá"]);
@@ -585,7 +585,7 @@ mod tests {
             ("ㄍㄠ ㄉㄞ", "ㄍㄠ ㄉㄞ", "TPS on both sides"),
             ("ㄍㄠ ㄉㄞ", "kau tài", "Bopomofo in display_text alone"),
             ("交 代", "ㄍㄠ ㄉㄞ", "Bopomofo in roman alone"),
-            // Segmentation disagreement: 漢字 `也是` has no space, `iā sī` does.
+            // Segmentation disagreement: Hanji `也是` has no space, `iā sī` does.
             ("也是", "iā sī", "1 vs 2 parts — never pair a guessed TL"),
             ("a b", "x", "a missing romanization is never padded"),
             // No boundary at all.

@@ -1,4 +1,4 @@
-//! What a downloaded package has to prove before the 安裝 button appears:
+//! What a downloaded package has to prove before the Install button appears:
 //! the SHA-256 the manifest published, always — and, when the running copy
 //! carries a trusted Authenticode signature of its own, that the package is
 //! signed by the SAME certificate (the leaf's thumbprint) with a VERSIONINFO

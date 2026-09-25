@@ -1,5 +1,5 @@
-//! 辭典搜尋: a search field, the first five hits, each with its source
-//! badges and a menu to look the reading up in 教典 or ChhoeTaigi. Port of
+//! Dictionary Search: a search field, the first five hits, each with its source
+//! badges and a menu to look the reading up in the MOE dictionary or ChhoeTaigi. Port of
 //! `DictionarySearchPage.swift`. Built but UNLISTED, as on macOS (not
 //! released yet, USER 2026-08-21): reached only by `--pane dictionarySearch`.
 //! The lookup — the engine's FFI and the custom-dictionary query, plus the

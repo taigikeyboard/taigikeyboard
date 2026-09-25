@@ -1,5 +1,5 @@
 //! Toolkit-neutral presentation: the display-language resolver and the
-//! labels built on it, the pane titles, the links the 關於 page offers.
+//! labels built on it, the pane titles, the links the About page offers.
 //! Port of the Windows settings crate's `presentation.rs`.
 
 use taigi_desktop_core::settings::{keys, SettingsDocument, SettingsPane};
@@ -7,7 +7,7 @@ use taigi_desktop_core::strings::{DisplayLanguage, StringKey, StringResolver};
 
 /// `AboutPage.sponsorURL`.
 pub const SPONSOR_URL: &str = "https://p.ecpay.com.tw/AA663DE";
-/// `AboutPage.websiteURL` — also the 一般 pane's download link (roadmap L10).
+/// `AboutPage.websiteURL` — also the General pane's download link (roadmap L10).
 pub const WEBSITE_URL: &str = "https://taigikeyboard.tw";
 /// `AboutPage.githubURL`.
 pub const GITHUB_URL: &str = "https://github.com/taigikeyboard";

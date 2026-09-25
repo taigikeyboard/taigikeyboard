@@ -4,7 +4,7 @@
 //! delivered through `OnPreservedKey` before the key sink sees the key, in
 //! every host — the Carbon hotkey's role on the Mac.
 //!
-//! The bare-backtick 漢羅對調 chord is NOT a preserved key: a bare key would
+//! The bare-backtick Hanji/Romanization Swap chord is NOT a preserved key: a bare key would
 //! be taken from every application for as long as this input method is
 //! selected. It is matched in the key sink instead. The symbol picker's
 //! chord IS one — the key sink never sees a key pressed with Alt held

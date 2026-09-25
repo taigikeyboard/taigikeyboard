@@ -8,7 +8,7 @@ pub const SETTINGS_EXE_NAME: &str = "TaigiKeyboardSettings.exe";
 /// `--pane <raw>`: open on this pane (absent = where the user left it).
 pub const PANE_FLAG: &str = "--pane";
 /// `--check-now`: run an update check with the window up (the menu's
-/// 檢查更新 row, `TaigiInputController.swift:375-383`).
+/// Check for Updates row, `TaigiInputController.swift:375-383`).
 pub const CHECK_NOW_FLAG: &str = "--check-now";
 /// `--check-updates`: the headless check the scheduled task runs (W9);
 /// no window.

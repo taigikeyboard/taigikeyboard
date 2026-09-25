@@ -332,7 +332,7 @@ pub struct CustomEntry {
     pub hanji: Option<String>,
 }
 
-/// Learned phrases (§50) — one auto-learned `(漢字, canonical-TL)` pair
+/// Learned phrases (§50) — one auto-learned `(Hanji, canonical-TL)` pair
 /// hoisted from `protos::engine::LearnedEntry` (proto→domain boundary in
 /// `composing/src/dispatch.rs::build_learned_entries`). Unlike
 /// [`CustomEntry`] both fields are canonical (the engine emitted them on
@@ -450,7 +450,7 @@ pub enum TonePin {
 
 /// §52 — one `-` run the user typed inside a span: where it sits in the
 /// typed body, and whether it was the khinsiann `--` (two or more) rather
-/// than a plain 連字 `-`. A reading must end a syllable there AND, when
+/// than a plain hyphen `-`. A reading must end a syllable there AND, when
 /// another of its syllables follows, separate the two the same way: a
 /// typed `--` keeps 去啊 `khì--ah` and drops 忍氣 `jím-khì`-shaped words;
 /// a typed `-` does the reverse (a dictionary space counts as plain).
@@ -742,7 +742,7 @@ fn exact_candidates_for_key(
 /// # Barriers
 ///
 /// `tps_final_only[i]` = byte offsets into `keys[i].1` of glyphs
-/// immediately before a stripped separator / 連字 barrier — those pattern
+/// immediately before a stripped separator / hyphen barrier — those pattern
 /// slots keep only Final-role readings (§31 boundary respect; §35).
 /// Parallel-indexed rather than widening the key tuple so the many
 /// existing `(span, key)` call sites and fixtures stay untouched; an

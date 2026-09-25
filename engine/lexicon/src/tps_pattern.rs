@@ -12,7 +12,7 @@
 //! branches the FST actually has).
 //!
 //! Positional restriction: callers pass the byte offsets of slots that sit
-//! immediately before a HARD syllable close (a stripped separator / 連字
+//! immediately before a HARD syllable close (a stripped separator / hyphen
 //! barrier, or a tone mark). Those slots keep only `Final`-role members —
 //! an `Initial` reading there would need a following nucleus the user has
 //! explicitly closed off. Everything else keeps the whole family;

@@ -1,10 +1,10 @@
-//! The 關於 page: what the project is and where to find it. Port of
+//! The About page: what the project is and where to find it. Port of
 //! `AboutPage.swift`.
 //!
-//! What the tray menu's 關於 row opens (USER 2026-09-20): two lines the
+//! What the tray menu's About row opens (USER 2026-09-20): two lines the
 //! USER wrote; the sponsor and the four community links as rows of one card; the attribution line. In
-//! the same cards as every other pane (USER 2026-09-20 「用頁面式」). No app
-//! icon, no name and no version — the update row on 一般 already says which build
+//! the same cards as every other pane (USER 2026-09-20: "make it a page"). No app
+//! icon, no name and no version — the update row on General already says which build
 //! this is.
 
 use crate::presentation::{DISCORD_URL, EMAIL_URL, GITHUB_URL, SPONSOR_URL, WEBSITE_URL};
@@ -31,9 +31,9 @@ pub fn view(
     strings: &StringResolver,
     context: &mut ViewContext<SettingsWindow>,
 ) -> View {
-    // No heading (USER 2026-09-20 「不需要『台語齒盤』標題」): the window
+    // No heading (USER 2026-09-20: "no 'TaigiKeyboard' heading needed"): the window
     // title already names the page. Leading-aligned like the cards under
-    // it (USER 2026-09-20 「文案改為靠左」).
+    // it (USER 2026-09-20: "left-align the copy").
     let introduction = cards::frame(StackPanel::new().spacing(PARAGRAPH_SPACING).children((
         paragraph(strings.resolve(StringKey::DesktopAboutIntroProject)),
         paragraph(strings.resolve(StringKey::DesktopAboutIntroMaintainer)),

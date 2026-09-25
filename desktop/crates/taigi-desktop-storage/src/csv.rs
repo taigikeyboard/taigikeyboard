@@ -72,7 +72,7 @@ pub enum CustomDictionaryCSVError {
     Read(String),
 }
 
-/// The `roman,hanzi` CSV the 自訂詞庫 page reads and writes.
+/// The `roman,hanzi` CSV the Custom Dictionary page reads and writes.
 pub struct CustomDictionaryCSV;
 
 impl CustomDictionaryCSV {
@@ -91,7 +91,7 @@ impl CustomDictionaryCSV {
             .collect()
     }
 
-    /// Parses `csv` into rows. A row needs a romanization; the 漢字 column
+    /// Parses `csv` into rows. A row needs a romanization; the Hanji column
     /// may be empty. Unusable rows are dropped, but a file that is entirely
     /// unusable is reported.
     pub fn decode(

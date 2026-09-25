@@ -11,7 +11,7 @@ use taigi_desktop_core::settings::{SettingChoice, SettingsPane};
 pub struct LaunchOptions {
     /// `--pane <raw>`; an unknown raw value is ignored (the stored pane wins).
     pub pane: Option<SettingsPane>,
-    /// `--check-now`: the menu's 檢查更新 — check with the window up (PR9).
+    /// `--check-now`: the menu's Check for Updates — check with the window up (PR9).
     pub check_now: bool,
     /// `--check-updates`: the scheduled task's check, no window (PR9).
     pub headless_check: bool,

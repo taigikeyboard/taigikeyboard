@@ -1,4 +1,4 @@
-//! The 一般 pane: input script, tone keys, the candidate window's two
+//! The General pane: input script, tone keys, the candidate window's two
 //! switches, output script and its shape, auto-space, display language;
 //! then the version row and the reset row. Port of `GeneralSettingsView.swift`
 //! in the Windows pane's row order (USER 2026-09-21: the typing pipeline's).
@@ -11,12 +11,12 @@ use taigi_desktop_core::keys::ToneInputScheme;
 use taigi_desktop_core::settings::{keys, InputMode, SettingChoice, SettingsDocument};
 use taigi_desktop_core::strings::{DisplayLanguage, StringKey};
 
-/// The 輸出 pop-up's roster: the stored swap as the two scripts it picks
+/// The Output pop-up's roster: the stored swap as the two scripts it picks
 /// between, Hanji (the default) first.
 const OUTPUT_SCRIPTS: &[bool] = &[true, false];
 
 pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> PageContext<'a> {
-    // One run of rows, no sub-groups (USER 2026-09-18 「不要分組」).
+    // One run of rows, no sub-groups (USER 2026-09-18: "no grouping").
     let group = adw::PreferencesGroup::new();
     context.choice_row(
         &group,

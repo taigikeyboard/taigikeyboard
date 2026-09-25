@@ -1,4 +1,4 @@
-//! The 辭典搜尋 page's lookup: the custom dictionary first, then the
+//! The Dictionary Search page's lookup: the custom dictionary first, then the
 //! engine's dictionaries under the user's source toggles, in the page's
 //! order. Port of `DictionarySearchService.swift`.
 

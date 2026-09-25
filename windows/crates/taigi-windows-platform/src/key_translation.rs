@@ -66,7 +66,7 @@ pub fn is_modifier_key(virtual_key: u16) -> bool {
 }
 
 /// Whether a modifier OTHER than the Shift key identified by `scan_code` is
-/// already held. Asked as a Shift press could arm the 中/英 tap
+/// already held. Asked as a Shift press could arm the Chinese/English tap
 /// ([`taigi_desktop_core::keys::ShiftTapTracker`]): Ctrl+Shift is the OS's own
 /// keyboard-layout switch, and holding one Shift while tapping the other is a
 /// chord too — neither may switch our mode.

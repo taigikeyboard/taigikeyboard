@@ -348,7 +348,7 @@ impl ComposingManager {
     }
 
     /// The cells the window shows for `candidates`, under one snapshot of the
-    /// settings in force right now — 合用 splits a candidate into two, so the
+    /// settings in force right now — Combined splits a candidate into two, so the
     /// window's indices are cell indices (`CandidateSource::resolve`) — plus
     /// whether the first cell is the §34 literal, which takes no slot key.
     ///

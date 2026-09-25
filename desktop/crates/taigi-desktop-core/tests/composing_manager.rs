@@ -533,7 +533,7 @@ fn commit_candidate_roman_output_writes_the_romanization_and_alternate_writes_th
 /// trace: `resolved_commit` — the hanji-absent arm, through the real engine.
 /// §34's literal is a one-script candidate, so it earns the auto space under
 /// every mode; the old gate read `(script, swap)` and called it a hanji
-/// commit in 漢字優先 and 漢羅濫, the two modes that force the swap on.
+/// commit in Hanji-first and Hanji with Romanization, the two modes that force the swap on.
 #[test]
 fn commit_candidate_with_no_hanji_wrote_romanization_under_every_mode() {
     let _lock = engine_lock();
@@ -562,7 +562,7 @@ fn commit_candidate_with_no_hanji_wrote_romanization_under_every_mode() {
     }
 }
 
-/// And the other direction is untouched: a 漢字 commit earns nothing.
+/// And the other direction is untouched: a Hanji commit earns nothing.
 #[test]
 fn commit_candidate_of_a_hanji_wrote_no_romanization_when_the_mode_leads_with_it() {
     let _lock = engine_lock();
@@ -621,7 +621,7 @@ fn commit_candidate_after_the_composition_ended_is_ignored() {
     );
 }
 
-/// §34 under the shipped defaults (顯示當咧拍的字 ON): a fresh bar has the
+/// §34 under the shipped defaults (Show Typed Text First ON): a fresh bar has the
 /// typed literal in slot 0 — one script — so the highlighted-candidate commit
 /// that Enter routes to (`keys/intent.rs` `return_commits_the_candidate_and_shift_return_the_literal`;
 /// the window opens on slot 0) writes exactly what was typed in either output
@@ -661,7 +661,7 @@ fn enter_on_a_fresh_bar_commits_the_typed_literal_in_either_mode() {
     }
 }
 
-/// 顯示當咧拍的字 OFF, read through the real settings document: the forced §34
+/// Show Typed Text First OFF, read through the real settings document: the forced §34
 /// row is gone, so the bar opens on a two-script dictionary candidate and Enter
 /// writes that word rather than the typed letters. Asserted against the cell the
 /// bar actually offered, not against a fixed dictionary word — which reading

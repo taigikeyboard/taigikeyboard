@@ -1,4 +1,4 @@
-//! Pure-function syllable boundary scanners for v3.5.8 連續輸入 Phase 3.
+//! Pure-function syllable boundary scanners for v3.5.8 continuous input Phase 3.
 //!
 //! TL and TPS share one segmenter shape: BFS over a `SyllableInventory`
 //! where each chain link `lowered[cur..end]` is accepted only if the

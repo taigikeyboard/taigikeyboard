@@ -1,30 +1,31 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-從 dictionary.csv 建立 fst 前綴索引
+Build the fst prefix index from dictionary.csv
 
-輸入：output/dictionary.csv
-輸出：output/dictionary.fst
+Input: output/dictionary.csv
+Output: output/dictionary.fst
 
-Key 格式（前綴式）：
-- tl:<tl_num>：TL 數字聲調（如 tl:hoo2se3，數字當 syllable separator）
-- tl:<tl_notone>：TL 去調 fused（如 tl:hoose，連 hyphen 也已脫掉）
-- poj:<poj_num>：POJ 數字聲調（如 poj:ho2se3）
-- poj:<poj_notone>：POJ 去調 fused（如 poj:hoose）
-- tps:<tps_num>：TPS Bopomofo + 聲調符號（如 tps:ㄏㆦ˫ㄙㆤ˪）
-- tps:<tps_notone>：TPS 去調 fused（如 tps:ㄏㆦㄙㆤ）
-- tps:<tps_num_var>     C-3a er↔or 方言 always-on：TL `er`/`or` 兩種注音字形（ㄜ vs ㄛ）
-- tps:<tps_notone_var>  同上,僅當源 `tps_*` 含 ㄜ 時 emit;A always-on,取代 runtime
-- tl-abbrev:<tl_abbrev>：TL 縮寫（如 tl-abbrev:hs）— own family since §46 so a
+Key format (prefixed):
+- tl:<tl_num>: TL digit tones (e.g. tl:hoo2se3; the digits act as syllable separators)
+- tl:<tl_notone>: TL toneless, fused (e.g. tl:hoose; even the hyphens are gone)
+- poj:<poj_num>: POJ digit tones (e.g. poj:ho2se3)
+- poj:<poj_notone>: POJ toneless, fused (e.g. poj:hoose)
+- tps:<tps_num>: TPS Bopomofo + tone marks (e.g. tps:ㄏㆦ˫ㄙㆤ˪)
+- tps:<tps_notone>: TPS toneless, fused (e.g. tps:ㄏㆦㄙㆤ)
+- tps:<tps_num_var>     C-3a er↔or dialect, always-on: the two Bopomofo shapes of TL `er`/`or` (ㄜ vs ㄛ)
+- tps:<tps_notone_var>  same as above, emitted only when the source `tps_*` holds ㄜ; A always-on, replaces runtime
+- tl-abbrev:<tl_abbrev>: TL abbreviation (e.g. tl-abbrev:hs) — own family since §46 so a
   `tl:` prefix scan never meets an acronym key (engine reader:
   `lexicon::fetch_abbrev_candidates`; Tab3 `lexicon::search` unions both)
-- poj-abbrev:<poj_abbrev>：POJ 縮寫（如 poj-abbrev:hs）
-- tps-abbrev:<tps_abbrev>：TPS 縮寫（如 tps-abbrev:ㄏㄙ）
-- tps-abbrev:<tps_abbrev_var>  `tps_or_mapped_to_er` toggle (per PR C-3a)。
-- tl:/poj: 鼻化 oo 別名：`onn` → `oonn` 逐音節展開後的 num + notone 鍵
-  （如 tl:hoonn3 / tl:hoonn），同 rowid。POJ `o͘ⁿ`（到引擎是 ASCII `oonn`）
-  是台日大辭典系的寫法,字典欄位一律正規 `onn`,故只在此多發一把輸入用鍵。
-- hanzi:<hanzi>：漢字前綴搜尋（如 hanzi:好無）
+- poj-abbrev:<poj_abbrev>: POJ abbreviation (e.g. poj-abbrev:hs)
+- tps-abbrev:<tps_abbrev>: TPS abbreviation (e.g. tps-abbrev:ㄏㄙ)
+- tps-abbrev:<tps_abbrev_var>  `tps_or_mapped_to_er` toggle (per PR C-3a).
+- tl:/poj: nasal oo alias: the num + notone keys after `onn` → `oonn` per syllable
+  (e.g. tl:hoonn3 / tl:hoonn), same rowid. POJ `o͘ⁿ` (ASCII `oonn` in the engine)
+  is the 台日大辭典-family spelling; dictionary columns are always normalized to
+  `onn`, so this is the one place that emits the extra input key.
+- hanzi:<hanzi>: Hanji prefix search (e.g. hanzi:好無)
 
 Fused-toneless invariant — `tl_notone` / `poj_notone` are produced
 upstream by `dictionary/common/notone.py::remove_tone()` which strips
@@ -39,8 +40,9 @@ pinned by `engine/lexicon/tests/fused_toneless_key.rs`.
 Wire format (per docs/engine/lexicon-slice-plan.md §2.2):
     key_bytes (UTF-8) || 0xFF || rowid_le_4
 
-實際 fst 建置由 Rust binary `engine/build-helpers/fst-builder` 完成；
-本 Python 腳本只負責讀取 dictionary.csv、組 stdin pairs、shell out 到 Rust。
+The fst itself is built by the Rust binary `engine/build-helpers/fst-builder`;
+this Python script only reads dictionary.csv, assembles the stdin pairs and
+shells out to Rust.
 
 Romanization-key filter mirrors the original create_trie_db.sh JOIN +
 syllable cap on `tl_num` (Codex pre-impl review Q6): emit a romanization

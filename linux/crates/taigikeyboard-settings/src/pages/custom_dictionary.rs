@@ -1,4 +1,4 @@
-//! 自訂詞庫: the words the user added themselves. Port of
+//! Custom Dictionary: the words the user added themselves. Port of
 //! `CustomDictionaryPage.swift` / the Windows `custom_dictionary.rs`: rows
 //! fetched one PAGE at a time (10), a filter that reloads once it settles,
 //! a list whose selection drives the add / edit / delete trio, the pager
@@ -10,7 +10,7 @@
 //! share the page's one work slot (refused, not queued — a queued delete
 //! would name a row the list may no longer show).
 //!
-//! The table is the Mac's: two columns, 羅馬字 then 漢字, under a header,
+//! The table is the Mac's: two columns, romanization then Hanji, under a header,
 //! a double-click (or Enter) on a row edits it, the ✎ button over the
 //! selection is the keyboard-reachable way (the Windows shape). The empty
 //! list says so in words.
@@ -666,7 +666,7 @@ impl CustomDictionaryPage {
     }
 
     /// Add or edit one entry (`CustomDictionaryEntrySheet`): two entry rows
-    /// in an alert dialog; 儲存 only with a romanization, which is what the
+    /// in an alert dialog; Save only with a romanization, which is what the
     /// entry is found by.
     fn entry_dialog(self: &Rc<Self>, original: CustomDictionaryRow) {
         let is_new = original.roman.is_empty();
@@ -930,7 +930,7 @@ impl CustomDictionaryPage {
         widgets.entries.set_description(Some(&drawn.count));
         remove_rows(&widgets.list);
         for (roman, hanzi) in &drawn.rows {
-            // Two columns, 羅馬字 then 漢字 (the Mac's table). Plain labels:
+            // Two columns, romanization then Hanji (the Mac's table). Plain labels:
             // user text, never markup.
             let cells = two_columns(
                 &gtk::Label::builder()

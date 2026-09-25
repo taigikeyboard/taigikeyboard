@@ -1,4 +1,4 @@
-//! Publishing the 中/英 mode where the rest of Windows can read it.
+//! Publishing the Chinese/English mode where the rest of Windows can read it.
 //!
 //! `GUID_COMPARTMENT_KEYBOARD_INPUTMODE_CONVERSION` is the thread-manager
 //! compartment TSF defines for an input method's conversion flags:
@@ -82,7 +82,7 @@ mod tests {
     use super::*;
 
     /// A flag this input method does not own — full-width mode is another
-    /// service's business, and a 中/英 switch may not drop it.
+    /// service's business, and a Chinese/English switch may not drop it.
     const OTHER_FLAG: u32 = 0x0008;
 
     #[test]

@@ -7,7 +7,7 @@ collision merge, POJ-convertibility skip, and the `BridgeDeadError` re-raise.
 The core (`generate_variants_for_word`, `apply_word_accent_generation`) is
 bridge-free; `apply_*` takes an injected `poj_convertible` so these stay
 offline. Accent bit order (matches config.yaml select.dialect_columns):
-0 鹿港 / 1 三峽 / 2 臺北 / 3 宜蘭 / 4 臺南 / 5 高雄 / 6 金門 / 7 馬公 / 8 新竹 / 9 臺中.
+0 Lukang / 1 Sansia / 2 Taipei / 3 Yilan / 4 Tainan / 5 Kaohsiung / 6 Kinmen / 7 Makung / 8 Hsinchu / 9 Taichung.
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ from common.kautian_accent_wordgen import (
 )
 from common.kautian_provenance import COL_ACCENT_MASK, COL_MAIN, COL_NAME
 
-# 八: pueh in 泉腔 (bits 0,1,2,6,7,8 = 455); peh in 漳/混 (bits 3,4,5,9 = 568).
+# 八: pueh in Quanzhou-leaning (bits 0,1,2,6,7,8 = 455); peh in Zhangzhou-leaning/mixed (bits 3,4,5,9 = 568).
 EIGHT_TABLE = {"八": {"pueh": 455, "peh": 568}}
 
 
@@ -34,15 +34,15 @@ def _always_convertible(_reading: str) -> bool:
 
 
 def test_dd9_文讀_reading_generates_nothing():
-    # 八卦's 八 is read /pat/ (文讀), NOT in 八's 語音差異 set {pueh, peh}
-    # (白讀) → different morpheme → no accent variant (DD9).
+    # 八卦's 八 is read /pat/ (literary reading), NOT in 八's 語音差異 set {pueh, peh}
+    # (colloquial reading) → different morpheme → no accent variant (DD9).
     result = generate_variants_for_word("八卦", "pat-kuà", EIGHT_TABLE)
     assert result.aligned
     assert result.variants == {}
 
 
 def test_single_variable_char_ors_matching_accents():
-    # 八字 base "pueh-jī": 字 is fixed (∉ table); the 漳/混腔 accents read 八 as
+    # 八字 base "pueh-jī": 字 is fixed (∉ table); the Zhangzhou-leaning/mixed accents read 八 as
     # "peh" → all four produce "peh-jī" sharing one row with OR'd bits = 568.
     result = generate_variants_for_word("八字", "pueh-jī", EIGHT_TABLE)
     assert result.variants == {"peh-jī": 568}
@@ -61,7 +61,7 @@ def test_two_variable_chars_distinct_readings():
 
 
 def test_comma_multi_skips_that_accent_only():
-    # 新竹 (bit8) cell was comma-multi "lír,lí" → both readings carry bit8.
+    # Hsinchu (bit8) cell was comma-multi "lír,lí" → both readings carry bit8.
     # Generating bit8 is ambiguous → skipped (counted), other accents proceed.
     table = {"女": {"lír": (1 << 8) | (1 << 0), "lí": (1 << 8) | (1 << 3)}}
     # base "lír-X": bit0 → lír (no change); bit3 → lí (change → "lí-X"); bit8 → ambiguous.
@@ -78,7 +78,7 @@ def test_separator_preserved_space_and_hyphen():
 
 
 def test_misaligned_hanlo_not_generated():
-    # 漢字數 (1) != 音節數 (2) → not aligned, skipped.
+    # hanji count (1) != syllable count (2) → not aligned, skipped.
     result = generate_variants_for_word("八", "pueh-jī", EIGHT_TABLE)
     assert not result.aligned
     assert result.variants == {}

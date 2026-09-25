@@ -35,7 +35,7 @@ def test_encode_subtag_name_only():
 
 
 def test_encode_subtag_accent_mask_shifted_to_bits_1_through_10():
-    # accent bit 0 (鹿港) → subtag bit 1; accent bit 9 (臺中) → subtag bit 10.
+    # accent bit 0 (Lukang) → subtag bit 1; accent bit 9 (Taichung) → subtag bit 10.
     assert encode_kautian_subtag(has_main=False, accent_mask=0b01, has_name=False) == 0b10
     assert encode_kautian_subtag(has_main=False, accent_mask=0b10_0000_0000, has_name=False) == (
         1 << 10

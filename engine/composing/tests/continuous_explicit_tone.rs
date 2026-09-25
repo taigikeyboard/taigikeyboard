@@ -142,7 +142,7 @@ fn toneless_input_still_surfaces_all_tones() {
 fn longest_match_suppresses_shorter_prefix_syllable() {
     let _lock = engine_install_lock();
     install_fixture();
-    // INVARIANT_CONTINUOUS_LONGEST_MATCH_PREFIX (USER 2026-05-31「免調也壓制」).
+    // INVARIANT_CONTINUOUS_LONGEST_MATCH_PREFIX (USER 2026-05-31: "suppress even without a tone").
     // 珠/tsu is a SHORTER single syllable that is a strict prefix of tsua —
     // the reported bug's `ta` ⊂ `tai` / `tai5` shape. The span-local candidate
     // strip surfaces only the LONGEST single syllable at offset 0, so 珠 (tsu,

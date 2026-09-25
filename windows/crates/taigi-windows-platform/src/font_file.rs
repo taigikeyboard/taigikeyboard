@@ -74,7 +74,7 @@ pub fn inspect(path: &Path) -> Result<FontFaceInfo, FontFileError> {
 /// DirectWrite's order. Read fresh each call — `check_for_updates` is on, so a
 /// font installed or removed since the last call is reflected.
 ///
-/// What the 字型管理 pane lists after the bundled and imported rows (and sorts,
+/// What the Manage Typefaces pane lists after the bundled and imported rows (and sorts,
 /// by the same fold it searches with); nothing is loaded for a family until
 /// the candidate window asks the system collection for it.
 pub fn system_families() -> Result<Vec<String>, FontFileError> {

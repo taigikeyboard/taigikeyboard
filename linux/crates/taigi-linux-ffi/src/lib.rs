@@ -222,7 +222,7 @@ pub unsafe extern "C" fn taigi_runtime_mode_symbol(runtime: *const TaigiRuntime)
 }
 
 /// Opens the settings window where the user left it — the framework's own
-/// configure button (Fcitx5 `setSubConfig`), beside the 設定 menu row.
+/// configure button (Fcitx5 `setSubConfig`), beside the Settings menu row.
 #[no_mangle]
 pub extern "C" fn taigi_open_settings() -> bool {
     guarded("taigi_open_settings", false, || open_settings(None))

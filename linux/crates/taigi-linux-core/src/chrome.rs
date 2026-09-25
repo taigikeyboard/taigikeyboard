@@ -1,6 +1,6 @@
 //! The chrome both shells share (roadmap L6, PR5): the panel menu rows,
 //! the mode label beside the icon, and the global shortcut actions —
-//! romanization / 漢羅 / display-mode switches, the Telex guide, the
+//! romanization / Hanji-romanization / display-mode switches, the Telex guide, the
 //! symbol picker, the settings doorway. Port of the Windows
 //! `session.rs::perform_global` + `lang_bar.rs::menu_rows`, with the
 //! HUD and the two floating windows replaced by what a panel can draw:
@@ -25,7 +25,7 @@ use taigi_linux_platform::open_settings;
 
 /// The menu row that opens the settings window on the last pane.
 pub const MENU_SETTINGS: &str = "settings";
-/// The menu row that opens the settings window on 關於.
+/// The menu row that opens the settings window on About.
 pub const MENU_ABOUT: &str = "about";
 
 /// One row of the panel menu — a status-area action on Fcitx5, a
@@ -43,8 +43,8 @@ pub enum MenuItem {
 }
 
 /// The rows every desktop shares (`taigi_desktop_core::keys::MENU`: the
-/// two switches, 台語齒盤設定 — Fcitx5 lists its own 輸入法設定 in the same
-/// menu — then 關於), each with its Linux id. No 檢查更新: the distribution's
+/// two switches, TaigiKeyboard Settings — Fcitx5 lists its own Input Method Settings in the same
+/// menu — then About), each with its Linux id. No Check for Updates: the distribution's
 /// package manager updates an input method (USER 2026-09-25).
 pub fn menu_items(runtime: &Runtime) -> Vec<MenuItem> {
     let settings = runtime.settings.current();

@@ -146,7 +146,7 @@ impl AssociationSink for UserAssociationStore {
     }
 }
 
-/// The unique key carries `prev_tl` because a word is the `(漢字, canonical
+/// The unique key carries `prev_tl` because a word is the `(Hanji, canonical
 /// TL)` pair on the bigram's PREVIOUS side as well (§24). The `DROP INDEX`
 /// is the one migration: pre-convergence builds named the same index
 /// `idx_user_prev`.

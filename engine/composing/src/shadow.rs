@@ -210,7 +210,7 @@ pub(crate) struct ShadowLattice {
     pub shadow: String,
     pub shadow_to_raw_end: Vec<usize>,
     pub lattice: Lattice,
-    /// Stripped-separator / 連字 barriers (§35).
+    /// Stripped-separator / hyphen barriers (§35).
     pub barriers: Vec<usize>,
     /// The typed `-` runs among them, `(shadow offset, run length)` (§52 kind,
     /// §55 rendering).
@@ -224,7 +224,7 @@ pub(crate) struct ShadowLattice {
 /// first-tone phrase (`ㄍㄠ ㄉㄞ`) yields a cross-space edge; it is a
 /// no-op for TL/POJ/English.
 /// Returns a [`ShadowLattice`] — the shadow, its raw offset map, the
-/// DAG, the stripped-separator / 連字 barrier set in shadow coordinates
+/// DAG, the stripped-separator / hyphen barrier set in shadow coordinates
 /// (§35) and the `--` subset of it (§52). Shared by [`build_continuous_keys`] (left-anchored projection —
 /// byte-identical to pre-S1, the S1 pinning tests guard this),
 /// `continuous::fetch_walker_slot0_inner` (S2 whole-sentence walker) and
@@ -241,7 +241,7 @@ pub(crate) fn build_shadow_lattice_with_barriers(
     lattice_from_canonical_with_barriers(&canonical, &canonical_to_raw_end, inv, mode)
 }
 
-/// The separator layers of a canonical shadow: the 連字 hyphen strip, the
+/// The separator layers of a canonical shadow: the compound-hyphen strip, the
 /// TPS space strip, and their barriers merged into final-shadow
 /// coordinates. One body for the lattice pipeline and the whole-buffer
 /// key (`fused_shadow_with_barriers`) so a typed `-` pins both the same
@@ -314,7 +314,7 @@ fn separator_layers(canonical: &str, mode: InputMode) -> SeparatorLayers {
 }
 
 /// [`lattice_from_canonical`] plus the merged barrier set: every shadow
-/// byte offset where a user separator (TPS space) or 連字 hyphen was
+/// byte offset where a user separator (TPS space) or compound hyphen was
 /// stripped. Barriers gate the §35 ambiguity expansion — a single
 /// syllable may not cross one, and the glyph before one is Final-only —
 /// and the TPS syllabifier receives them so an expanded probe cannot
@@ -352,7 +352,7 @@ fn lattice_from_canonical_with_barriers(
     // an empty display.
     //
     // Fixed HERE, after the barrier merge, rather than inside the shared
-    // strip primitive: that primitive also serves the 連字 layer, where a
+    // strip primitive: that primitive also serves the hyphen layer, where a
     // trailing hyphen MUST stay pending
     // (`build_hyphen_shadow_trailing_hyphen_is_not_consumed`), and moving the
     // endpoint earlier would shift the hyphen-barrier `rposition` projection
@@ -393,7 +393,7 @@ fn lattice_from_canonical_with_barriers(
 ///   text stays the user's letters and the substitution-count ordering
 ///   has a stable baseline.
 /// - `final_only[i]` = byte offsets into `keys[i]` (family prefix
-///   included) of glyphs immediately before a stripped separator / 連字
+///   included) of glyphs immediately before a stripped separator / hyphen
 ///   barrier: those pattern slots keep only Final-role readings (§31 —
 ///   the user's explicit boundary is never re-read as an onset).
 /// - the base triple feeds the whole-sentence walker, which resolves
@@ -496,7 +496,7 @@ pub(crate) fn build_continuous_keys(
 ///
 /// Each key also carries its §35 barrier restriction — byte offsets
 /// (into the emitted key string, family prefix included) of glyphs
-/// immediately before a stripped separator / 連字 barrier — and its §41
+/// immediately before a stripped separator / hyphen barrier — and its §41
 /// tone pin. `barriers` are shadow coordinates from
 /// [`build_shadow_lattice_with_barriers`]; empty for TL/POJ/English.
 pub(crate) fn left_anchored_keys_and_restrictions(
@@ -516,7 +516,7 @@ pub(crate) fn left_anchored_keys_and_restrictions(
     // parameter — they cannot drift.
 
     // Longest-match prefix suppression (`INVARIANT_CONTINUOUS_LONGEST_MATCH_PREFIX`,
-    // USER 2026-05-31「免調也壓制」): among the SINGLE-syllable spans anchored at
+    // USER 2026-05-31: "suppress even without a tone"): among the SINGLE-syllable spans anchored at
     // offset 0, surface only the LONGEST. A shorter single syllable that is a
     // strict prefix of a longer one (`ta`⊂`tai`⊂`tai5`, `tsu`⊂`tsua`) is
     // dropped — fixing the reported bug where typing a complete syllable
@@ -1042,7 +1042,7 @@ fn strip_char_shadow(input: &str, skip: char) -> (String, Vec<usize>) {
 
 /// [`strip_char_shadow`] plus the OUTPUT byte offsets where a stripped
 /// char sat — the "barrier" positions the §35 ambiguity expansion needs:
-/// a stripped separator / 連字 is the user's explicit syllable close, so
+/// a stripped separator / hyphen is the user's explicit syllable close, so
 /// (a) no single-syllable probe may cross it and (b) the glyph just
 /// before it may only read as a Final form. Offsets are in shadow
 /// coordinates (`0 ≤ b ≤ shadow.len()`); consecutive stripped chars
@@ -1827,7 +1827,7 @@ mod tests {
     use super::*;
 
     // Barrier metadata — the §35 contract's raw material. The pipeline
-    // strips the TPS space / 連字 but records where they sat, and the
+    // strips the TPS space / hyphen but records where they sat, and the
     // ambiguity-aware lookup uses those offsets for the Final-only
     // restriction (direction tests live in lexicon/tests/tps_readings.rs).
     #[test]
@@ -1911,7 +1911,7 @@ mod tests {
         assert_eq!(shadow_to_raw_end[shadow.len()], raw.len());
     }
 
-    // Mixed tails the endpoint rule must NOT consume: the moment a 連字
+    // Mixed tails the endpoint rule must NOT consume: the moment a hyphen
     // appears in the tail the hyphen contract wins, whichever order the two
     // separators came in. Codex post-impl 2026-08-21 asked for these
     // explicitly — the comment claimed the `␠-` / `-␠` shapes were covered
@@ -1961,7 +1961,7 @@ mod tests {
 
     #[test]
     fn trailing_hyphen_is_still_not_consumed() {
-        // The 連字 contract is untouched: a trailing hyphen stays pending
+        // The hyphen contract is untouched: a trailing hyphen stays pending
         // (the tail rule accepts ASCII spaces only).
         let inv = test_inventory(&["tps:ㄒㄧ"]);
         let raw = "ㄒㄧ-";

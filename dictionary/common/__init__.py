@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-dictionary2 共用模組
+dictionary2 shared modules
 """
 
 from __future__ import annotations

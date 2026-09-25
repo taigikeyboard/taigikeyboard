@@ -33,7 +33,7 @@ use protos::engine::{
 };
 
 /// Learned phrases (§50) — the longest composition the final commit turns
-/// into one learned `(漢字, canonical-TL)` pair, in syllables. ChiaKey caps
+/// into one learned `(Hanji, canonical-TL)` pair, in syllables. ChiaKey caps
 /// its in-buffer word capture at 6 characters; a Taigi phrase past six
 /// syllables is a clause, not a word.
 const MAX_LEARNED_PHRASE_SYLLABLES: usize = 6;
@@ -47,7 +47,7 @@ pub(crate) fn apply(
     match intent {
         Intent::Start { text } => match &state.phase {
             Phase::Continuous { .. } => start_under_continuous(state, text, config),
-            // §21: a leading `--` 輕聲 marker typed from Idle is a document
+            // §21: a leading `--` neutral-tone marker typed from Idle is a document
             // literal, not composing input (see helper). Composing-phase Start
             // (non-production) keeps the plain enter-composing behavior.
             Phase::Idle => enter_composing_or_insert_leading_hyphens(state, text, config),
@@ -294,14 +294,14 @@ fn step_continuous(
 }
 
 /// §21 INVARIANT_KHINSIANN_LEADING_MARKER_LITERAL — a leading ASCII-hyphen run
-/// typed from `Phase::Idle` (no syllable content yet) is the 輕聲 (neutral-tone)
+/// typed from `Phase::Idle` (no syllable content yet) is the neutral-tone (khinsiann)
 /// marker `--` (e.g. `--ah` 矣). It is a **document literal**, not composing
 /// input: insert the run verbatim and — if a syllable remainder follows in the
 /// same text — enter composing with the remainder. The underlined preedit then
 /// covers only the convertible syllable, matching the candidate strip and the
 /// reference IME (MOE).
 ///
-/// Internal hyphens (typed AFTER syllable content, e.g. the 連字 in `tai-bak`)
+/// Internal hyphens (typed AFTER syllable content, e.g. the hyphen in `tai-bak`)
 /// never reach this fn — the buffer is already `Phase::Composing`, so they stay
 /// composing-boundary delimiters via the `Append`/`Composing` arm.
 ///
@@ -1025,7 +1025,7 @@ fn next_word_word_selected(text: String, roman: String, trigger_prediction: bool
     }
 }
 
-/// Learned phrases (§50) — the `(漢字, canonical-TL)` pair a final
+/// Learned phrases (§50) — the `(Hanji, canonical-TL)` pair a final
 /// continuous commit learns from its nailed segments, or `None` when the
 /// composition is not one: fewer than two segments, any segment without
 /// a hanji pick or without a canonical TL, or more than

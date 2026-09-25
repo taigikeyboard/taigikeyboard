@@ -20,7 +20,7 @@ use taigi_desktop_core::settings::{SettingChoice, SettingsDocument, SettingsKey,
 use taigi_desktop_core::strings::{StringKey, StringResolver};
 use taigi_desktop_storage::UserDataStores;
 
-/// The panes this crate draws, listed or not (辭典搜尋 and 關於 have no
+/// The panes this crate draws, listed or not (Dictionary Search and About have no
 /// sidebar row, as on the other desktops).
 pub const BUILT: [SettingsPane; 7] = [
     SettingsPane::General,
@@ -38,7 +38,7 @@ type Refresher = Box<dyn Fn(&SettingsDocument)>;
 pub struct Page {
     pub widget: adw::PreferencesPage,
     refreshers: Vec<Refresher>,
-    /// A page's own state object (自訂詞庫, 辭典搜尋), kept for the page's
+    /// A page's own state object (Custom Dictionary, Dictionary Search), kept for the page's
     /// life; its widgets hold it weakly.
     retained: Vec<Rc<dyn Any>>,
     /// Set while `refresh` runs, so a row's notify handler does not write
@@ -48,7 +48,7 @@ pub struct Page {
 
 impl Page {
     /// The page's retained state object of type `T`, if it has one (the
-    /// tests drive 自訂詞庫 through it).
+    /// tests drive Custom Dictionary through it).
     pub fn state<T: 'static>(&self) -> Option<Rc<T>> {
         self.retained
             .iter()
@@ -154,7 +154,7 @@ impl<'a> PageContext<'a> {
     }
 
     /// The flag a refresh raises while it sets the rows, for a handler
-    /// that is not one of the shapes above (the 教典 expander's switch).
+    /// that is not one of the shapes above (the MOE dictionary expander's switch).
     pub fn refreshing_flag(&self) -> Rc<Cell<bool>> {
         Rc::clone(&self.suppress)
     }
@@ -227,7 +227,7 @@ impl<'a> PageContext<'a> {
         row
     }
 
-    /// A page's 恢復預設設定 row, its own group at the end, acting on every
+    /// A page's Reset to Defaults row, its own group at the end, acting on every
     /// row above it. One shape for every pane that has one.
     pub fn reset_row(&mut self, page: &adw::PreferencesPage, reset: fn(&mut SettingsDocument)) {
         let group = adw::PreferencesGroup::new();
@@ -276,7 +276,7 @@ pub fn build(
     let context = PageContext::new(window, strings, document, stores, job_slot);
     let widget = adw::PreferencesPage::new();
     // Explicit per pane: a pane added to `BUILT` without a page is a
-    // mistake to hear about, not a 一般 page under the wrong title.
+    // mistake to hear about, not a General page under the wrong title.
     let context = match pane {
         SettingsPane::General => general::build(context, &widget),
         SettingsPane::Appearance => appearance::build(context, &widget),

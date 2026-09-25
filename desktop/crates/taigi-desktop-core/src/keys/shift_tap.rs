@@ -1,7 +1,7 @@
 //! Recognising a Shift TAP — one Shift pressed on its own and released with
 //! no other key in between — which is a common Windows CJK convention for
-//! switching 中/英: the USER confirmed it on 微軟注音 (2026-09-04), and
-//! 新酷音 ships it on by default. Pure state, no Win32: the TSF key sink
+//! switching Chinese/English: the USER confirmed it on 微軟注音 (Microsoft Bopomofo, 2026-09-04), and
+//! 新酷音 (New Chewing) ships it on by default. Pure state, no Win32: the TSF key sink
 //! reports presses and releases, this decides.
 //!
 //! The rule is 新酷音's (`references/PIME/python/input_methods/chewing/

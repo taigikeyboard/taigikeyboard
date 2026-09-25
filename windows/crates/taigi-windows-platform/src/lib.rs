@@ -337,7 +337,7 @@ pub fn executable_directory() -> Option<std::path::PathBuf> {
 pub type Rgb = (u8, u8, u8);
 
 /// `HKCU\…\Themes\Personalize\AppsUseLightTheme` = 0 → dark. Missing (older
-/// Windows) → light. Read by the candidate window for its 自動 mode; the
+/// Windows) → light. Read by the candidate window for its Automatic mode; the
 /// settings window lets egui/winit read the same value.
 #[cfg(windows)]
 pub fn system_prefers_dark() -> bool {

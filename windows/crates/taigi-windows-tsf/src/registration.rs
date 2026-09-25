@@ -32,7 +32,7 @@ const CATEGORIES: [GUID; 6] = [
     GUID_TFCAT_DISPLAYATTRIBUTEPROVIDER,
     GUID_TFCAT_TIPCAP_SYSTRAYSUPPORT,
     GUID_TFCAT_TIPCAP_UIELEMENTENABLED,
-    // True since the Shift tap gave this service a 中/英 mode: it keeps
+    // True since the Shift tap gave this service a Chinese/English mode: it keeps
     // `GUID_COMPARTMENT_KEYBOARD_INPUTMODE_CONVERSION` current
     // (`conversion_mode.rs`). Declared only because it IS true — the roadmap
     // refused it while there was no mode to publish.
@@ -44,7 +44,7 @@ const CATEGORIES: [GUID; 6] = [
     // § Declaring compatibility; khiin `reg/registrar.rs:31` declares it too).
     // Without it Windows keeps this service out of every WinUI 3 / UWP text
     // control — including our OWN settings window, where the user could type
-    // English but never Taigi while 微軟注音 worked in the same box.
+    // English but never Taigi while 微軟注音 (Microsoft Bopomofo) worked in the same box.
     //
     // The roadmap refused it for W2's AppContainer degradation, which reads
     // the opposite way round: the TIP already degrades on purpose there
@@ -297,7 +297,7 @@ fn register_profile(dll_path: &str) -> Result<()> {
 /// Only `SetLanguageProfileDisplayName` writes the profile's `Display
 /// Description`, the value the shell resolves. Measured on Windows 11: our own
 /// key had `Description = @C:\…\TaigiKeyboard.dll,-100` and no `Display
-/// Description` while 微軟倉頡 next to it had `Description = "Microsoft
+/// Description` while 微軟倉頡 (Microsoft Changjie) next to it had `Description = "Microsoft
 /// Changjie"` and `Display Description = @%SystemRoot%\SYSTEM32\input.dll,
 /// -5067`. khiin-rs registers the same pair (`reg/registrar.rs:100-107`).
 fn set_profile_display_name(profiles: &ITfInputProcessorProfiles, dll_path: &str) -> Result<()> {

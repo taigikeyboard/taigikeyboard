@@ -105,7 +105,7 @@ fn read_rows(path: &Path) -> std::io::Result<Vec<Row>> {
 }
 
 /// A reading the continuous path can actually reach: a `tl:`/`poj:` lookup key
-/// is romanization, so a row whose `tl` column holds 漢字 (an upstream
+/// is romanization, so a row whose `tl` column holds Hanji (an upstream
 /// build-pipeline anomaly) is unreachable and out of the gate — the same
 /// carve-out `tps_notone_parity` makes for non-Bopomofo `tps_notone`.
 fn is_romanization(reading: &str) -> bool {

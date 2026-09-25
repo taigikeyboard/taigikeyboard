@@ -55,7 +55,7 @@ pub(crate) const NUMBER_ROW_KEY_CODES: [u16; 9] =
 
 /// `VK_OEM_1`, the `;` key on a US layout — refused under Shift for the same
 /// reason as the number row: it is the ninth slot key, and Shift+`;` aims
-/// the 漢羅 commit at it (`CandidateSlotKeySet::shifted_slot_for_event`)
+/// the Hanji/romanization commit at it (`CandidateSlotKeySet::shifted_slot_for_event`)
 /// even though the layout types `:` for it. Layout-dependent by Microsoft's
 /// own word, the trade the US-position number row already makes. Mirrors
 /// `ComposingKeyChord.swift` `semicolonKeyCode`.
@@ -499,7 +499,7 @@ mod tests {
             ComposingKeyChord::make_from_event(&ctrl_three).is_ok(),
             "Ctrl+3 is an ordinary chord to record"
         );
-        // Shift+`;` is the ninth slot key's 漢羅 chord, refused by its key
+        // Shift+`;` is the ninth slot key's Hanji/romanization chord, refused by its key
         // code the same way; a `:` reached without that key still records.
         let shift_semicolon = KeyEventSnapshot::chord(Some(":"), ":", KeyModifiers::SHIFT)
             .with_key_code(SEMICOLON_KEY_CODE);

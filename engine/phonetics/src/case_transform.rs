@@ -60,7 +60,7 @@ fn uppercase_internal(input: &str, mode: InputMode, all_chars: bool) -> String {
 
     // Mode-specific tone-letter table lookup. Table values are first-letter
     // upper (TL `óo` → `Óo`); Caps Lock raises the rest too (`ÓO`, USER
-    // 2026-09-25 「caps-lock 不是應該都大寫嗎」, behavioral-invariants.md
+    // 2026-09-25: "shouldn't caps-lock make it all upper case?", behavioral-invariants.md
     // "CapsLock → all upper").
     if let Some(map) = lower_to_upper(mode) {
         if let Some(mapped) = map.get(input) {
@@ -242,7 +242,7 @@ pub fn adjust_nasal_marker_case(text: &str) -> String {
     result
 }
 
-/// ⁿ大本字 (`behavioral-invariants.md` §53): the marker follows the preceding
+/// ⁿ becomes ᴺ in capitals (`behavioral-invariants.md` §53): the marker follows the preceding
 /// letter's case ([`adjust_nasal_marker_case`]), or with `force_lowercase`
 /// (`AppConfig.force_lowercase_nasal_marker`, the switch OFF) it is always
 /// `ⁿ` ([`lowercase_nasal_markers`]). Borrowed when nothing would change.

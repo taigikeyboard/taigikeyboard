@@ -1,6 +1,6 @@
 //! Which dictionaries the engine draws from, in three sections —
-//! 教育部, the others, the supplements — with 教典's eleven subcollections
-//! always visible under it, greyed while 教典 is off. Port of
+//! MOE, the others, the supplements — with the MOE dictionary's eleven subcollections
+//! always visible under it, greyed while the MOE dictionary is off. Port of
 //! `DictionaryTogglesView.swift`. Every toggle is read live by the engine
 //! bridge on the next fetch.
 
@@ -11,7 +11,7 @@ use taigi_desktop_core::settings::{keys, SettingsKey};
 use taigi_desktop_core::strings::{StringKey, StringResolver};
 use windows_reactor::*;
 
-/// The 教典 subcollections, in `DictionaryTogglesView`'s order.
+/// The MOE dictionary subcollections, in `DictionaryTogglesView`'s order.
 const KAUTIAN_SUBCOLLECTIONS: [(SettingsKey<bool>, StringKey); 11] = [
     (
         keys::IS_KAUTIAN_ACCENT_LUKANG_ENABLED,
@@ -91,13 +91,13 @@ pub fn view(
     let is_kautian_enabled = window.document().bool(&keys::IS_KAUTIAN_ENABLED);
     View::fragment((
         cards::section_title(strings.resolve(StringKey::DictionaryMoeSectionTitle)),
-        // 教典 and its eleven subcollections are ONE always-open card: the
+        // The MOE dictionary and its eleven subcollections are ONE always-open card: the
         // parent source is the group's first line, the subcollections step
         // in under it and stay browsable — they are read far more often
-        // than they are changed, and a collapsed group hides which 腔口 the
+        // than they are changed, and a collapsed group hides which accents the
         // engine is currently drawing from. Why this is a card and not an
         // `Expander` that starts open is written out on `cards::group`.
-        // Disabled, not cleared, while 教典 is off: the choices come back
+        // Disabled, not cleared, while the MOE dictionary is off: the choices come back
         // with it. `DictionaryTogglesView.swift` indents the same eleven
         // under the same master toggle.
         cards::group(

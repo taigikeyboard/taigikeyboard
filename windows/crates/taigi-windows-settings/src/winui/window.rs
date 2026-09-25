@@ -1,12 +1,12 @@
 //! The settings window as one Reactor component: a `NavigationView` of the
 //! panes, the selected pane's page in its content, and the window's own
-//! chrome — Mica, the 外觀 theme, the title, the write-failure banner and
+//! chrome — Mica, the Appearance theme, the title, the write-failure banner and
 //! the one alert at a time. Port of `app.rs`'s job, message-driven:
 //! `view` is immutable, so every control sends a message and the state
 //! moves in `update`.
 //!
 //! Named divergences from the Mac (and from the egui window), all
-//! deliberate: the window frame is not persisted; the 外觀 mode is a native
+//! deliberate: the window frame is not persisted; the Appearance mode is a native
 //! pop-up rather than three drawn thumbnails; the window may be narrowed
 //! until `NavigationView` compacts its pane.
 
@@ -92,7 +92,7 @@ const FORM_INSET: f64 = 24.0;
 pub struct Launch {
     live: Rc<LiveSettings>,
     /// Held open for the window's life: the launch migrations run off it,
-    /// and the 自訂詞庫 and 辭典搜尋 pages read it.
+    /// and the Custom Dictionary and Dictionary Search pages read it.
     stores: UserDataStores,
     is_read_only: bool,
     pane: SettingsPane,
@@ -188,7 +188,7 @@ impl SettingsWrite {
     }
 }
 
-/// Which pane's 恢復預設 card was pressed. Each puts back exactly the keys
+/// Which pane's Reset to Defaults card was pressed. Each puts back exactly the keys
 /// that pane owns.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ResetScope {
@@ -394,10 +394,10 @@ impl SettingsWindow {
         self.enter_pane(context);
     }
 
-    /// What a pane needs the first time it is shown: 自訂詞庫 fetches its
-    /// first page, 字型管理 reads the user's font folder. Each once.
+    /// What a pane needs the first time it is shown: Custom Dictionary fetches its
+    /// first page, Manage Typefaces reads the user's font folder. Each once.
     ///
-    /// 字型管理 reads even in a read-only launch: the folder is the user's
+    /// Manage Typefaces reads even in a read-only launch: the folder is the user's
     /// own, and a window that cannot WRITE the selection can still say which
     /// typefaces are there.
     fn enter_pane(&mut self, context: &ComponentContext<Self>) {
@@ -517,7 +517,7 @@ struct Recorder {
     hook: Option<KeyboardHook>,
 }
 
-/// The 外觀 setting drives the whole window, not only the candidate window
+/// The Appearance setting drives the whole window, not only the candidate window
 /// (`AppearanceSettingsView`): WinUI resolves `System` against the machine.
 fn window_theme(mode: AppearanceMode) -> WindowTheme {
     match mode {
@@ -533,7 +533,7 @@ impl Component for SettingsWindow {
 
     fn create(input: &Self::Input, context: &ComponentContext<Self>) -> Self {
         let launch = Rc::clone(&input.0);
-        // A pane this build has no page for opens on 一般 IN MEMORY and is
+        // A pane this build has no page for opens on General IN MEMORY and is
         // NOT written back: the egui window still has that pane, and a
         // preview launch must not move its stored selection.
         let listed = page_view(launch.pane).is_some();
@@ -557,7 +557,7 @@ impl Component for SettingsWindow {
             tick_generation: 0,
             tick: None,
         };
-        // The overdue daily check, or the menu's 檢查更新 (`--check-now`)
+        // The overdue daily check, or the menu's Check for Updates (`--check-now`)
         // — the manual one always answers.
         if window.launch.is_check_now {
             window.updates.check_manually(&mut window.settings);
@@ -857,7 +857,7 @@ mod tests {
     fn every_pane_has_a_page_and_only_the_search_one_is_unlisted() {
         // trace: the roster and the dispatch are one table, so a pane
         // cannot be listed without a page or drawn without a row — and
-        // 辭典搜尋 is built but unlisted, reachable only by `--pane`
+        // Dictionary Search is built but unlisted, reachable only by `--pane`
         // (macOS does the same, USER 2026-08-21).
         for pane in SettingsPane::SIDEBAR {
             assert!(

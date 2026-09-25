@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-合併多個詞庫為單一 CSV
+Merge several dictionaries into a single CSV
 
-輸入（依 INPUT_FILES 合併順序列出）：
+Inputs (listed in INPUT_FILES merge order):
 - sources/official/kautian/data/kautian.csv
 - sources/official/taigitv/data/taigitv.csv
 - sources/community/itaigi/data/itaigi.csv
@@ -13,9 +13,9 @@
 - sources/official/kungge/data/kungge.csv
 - sources/official/stti/data/stti.csv
 - sources/supplementary/khpoo/data/khpoo.csv
-- Khiin 詞頻資料（補充不在其他詞庫中的詞條）
+- Khiin frequency data (entries missing from the other dictionaries)
 
-輸出：
+Output:
 - output/dictionary.csv
 """
 
@@ -105,23 +105,23 @@ def main():
     # filters (e.g. khiin >4-syllable cap / romanization failures).
     drop_stats: dict = {"filter_drops": Counter()}
 
-    # 合併
+    # Merge
     merged_df = pd.concat(all_dfs, ignore_index=True)
     drop_stats["raw_rows"] = len(merged_df)
     logger.info(f"\n  Total before merge: {len(merged_df)} records")
 
-    # 建立正規化 key（空白→連字符）用於跨辭典去重
-    # 官方辭典 tl 可能含空白（如 "m̄ bat"），非官方辭典為連字符（如 "m̄-bat"）
-    # 去重時視為同一筆，但保留官方版本（含空白）的 tl
+    # Build a normalized key (space → hyphen) for cross-dictionary dedup
+    # Official dictionaries' tl may hold spaces (e.g. "m̄ bat"), unofficial ones hyphens (e.g. "m̄-bat")
+    # Dedup treats them as one entry but keeps the official (spaced) tl
     OFFICIAL_SOURCES = ["kautian", "taigitv", "kungge"]
     merged_df["_tl_key"] = merged_df["tl"].str.replace(" ", "-", regex=False)
     merged_df["_is_official"] = merged_df[OFFICIAL_SOURCES].any(axis=1)
 
-    # 排序：官方辭典排在前面，確保 groupby 的 "first" 取到官方版本
+    # Sort: official dictionaries first, so groupby's "first" takes the official version
     merged_df = merged_df.sort_values("_is_official", ascending=False, ignore_index=True)
 
-    # 去重複：相同 (hanzi, _tl_key) 合併來源欄位
-    # dropna=False: 確保 groupby 不會自動排除含 NaN 的列
+    # Dedup: rows with the same (hanzi, _tl_key) merge their source columns
+    # dropna=False: keeps groupby from silently dropping rows that hold NaN
     agg_dict = {}
     for col in merged_df.columns:
         if col in ["hanzi", "_tl_key"]:
@@ -140,10 +140,10 @@ def main():
             agg_dict[col] = "first"
     result_df = merged_df.groupby(["hanzi", "_tl_key"], as_index=False, dropna=False).agg(agg_dict)
 
-    # 移除臨時欄位
+    # Drop the temporary column
     result_df = result_df.drop(columns=["_tl_key"])
 
-    # 排序：依 frequency 降序
+    # Sort: by frequency, descending
     result_df = result_df.sort_values(
         ["frequency", "hanzi", "tl"],
         ascending=[False, True, True],
@@ -153,7 +153,7 @@ def main():
     drop_stats["after_dedup"] = len(result_df)
     logger.info(f"  After dedup: {len(result_df)} records")
 
-    # 補入 Khiin 獨有的詞條（不屬於任何辭典來源）
+    # Add Khiin-only entries (in no dictionary source)
     khiin_new = _load_khiin_new_entries(result_df, BASE_DIR, logger, drop_stats["filter_drops"])
     drop_stats["khiin_added"] = len(khiin_new) if khiin_new is not None else 0
     if khiin_new is not None and len(khiin_new) > 0:
@@ -170,7 +170,7 @@ def main():
     if "dev" not in result_df.columns:
         result_df["dev"] = False
 
-    # 補入開發者補充辭典
+    # Add the developer supplementary dictionary
     dev_new = _load_dev_supplement(result_df, BASE_DIR, logger, drop_stats["filter_drops"])
     drop_stats["dev_added"] = len(dev_new) if dev_new is not None else 0
     if dev_new is not None and len(dev_new) > 0:
@@ -182,7 +182,7 @@ def main():
         )
         logger.info(f"  After dev supplement: {len(result_df)} records")
 
-    # 補入 LKK 漢羅合用建議用字
+    # Add LKK Han-Lo Recommended Characters
     if "lkk" not in result_df.columns:
         result_df["lkk"] = False
     lkk_new = _load_lkk_entries(result_df, BASE_DIR, logger, drop_stats["filter_drops"])
@@ -200,11 +200,11 @@ def main():
     # tagged by any named source (or by dev/lkk supplements).
     result_df["khiin"] = ~(result_df[SOURCE_COLUMNS].any(axis=1) | result_df["dev"] | result_df["lkk"])
 
-    # 統計來源
+    # Source statistics
     logger.info(f"\n  [source statistics]")
     for col in SOURCE_COLUMNS:
         total = result_df[col].sum()
-        # 計算該來源獨有的數量
+        # Count the rows only this source has
         other_cols = [c for c in SOURCE_COLUMNS if c != col]
         only_mask = result_df[col]
         for other in other_cols:
@@ -223,7 +223,7 @@ def main():
         if flag_col in result_df.columns:
             result_df[flag_col] = result_df[flag_col].fillna(False).astype(bool)
 
-    # 儲存
+    # Save
     result_df.to_csv(output_path, index=False)
 
     # Persist drop stats for build/version_snapshot.py's build summary.
@@ -522,7 +522,7 @@ def _load_lkk_entries(
     existing_df: pd.DataFrame, base_dir: Path, logger, filter_drops: Counter
 ) -> pd.DataFrame | None:
     """
-    Load LKK 漢羅合用建議用字 dictionary entries.
+    Load LKK Han-Lo Recommended Characters dictionary entries.
 
     Reads a minimal CSV (hanzi, tl) and auto-generates all romanization columns.
     If a (hanzi, tl) pair already exists, marks it lkk=True.

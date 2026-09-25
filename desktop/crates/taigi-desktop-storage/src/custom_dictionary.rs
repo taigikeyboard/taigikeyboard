@@ -68,7 +68,7 @@ pub struct CustomDictionaryIdentity {
 
 /// A word the user added: the romanization exactly as typed (TL or POJ
 /// display form — nothing here folds it; the engine canonicalises per mode)
-/// and the 漢字 it stands for, which may be empty. Timestamps are the stored
+/// and the Hanji it stands for, which may be empty. Timestamps are the stored
 /// `yyyy-MM-dd HH:mm:ss` UTC text. CROSS-PLATFORM INVARIANT — the stored
 /// shape mirrors iOS `CustomDictionaryEntry.swift:11-31` and Android's table.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -209,7 +209,7 @@ impl CustomDictionaryStore {
 
     /// A page of entries for the settings list, newest edit first. The
     /// filter and the limit are both SQL. `LIKE` is case-insensitive for
-    /// ASCII, which is the romanization; 漢字 have no case to fold.
+    /// ASCII, which is the romanization; Hanji have no case to fold.
     pub fn rows(
         &self,
         filter: &str,

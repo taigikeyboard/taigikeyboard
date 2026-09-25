@@ -263,14 +263,14 @@ fn handle_fetch_at_pos(
     );
     // INVARIANT_CONTINUOUS_LITERAL_ROMAN_CANDIDATE (§34): whenever composing
     // in TL/POJ — tone or no tone — surface the current composing result
-    // (= the preedit WYSIWYG) as a roman-only candidate at index 0, so 漢羅
+    // (= the preedit WYSIWYG) as a roman-only candidate at index 0, so Hanji-romanization
     // mixing commits the romanization in one tap without toggling 文/A and
     // the list does not jump when a tone is added. Display-layer prepend —
     // the segmentation / cost primitive (`assemble_candidates`) is never
     // touched (incidents S5/§18/S9). NOT re-run through Step 5's POJ recase:
     // `derived_display` is already the mode-correct POJ/TL literal.
     //
-    // §34 / S22 toggle (顯示當咧拍的字): when the user turns the setting OFF
+    // §34 / S22 toggle (Show Typed Text First): when the user turns the setting OFF
     // the platform sends `literal_roman_candidate_disabled = true` and the
     // forced prepend is skipped — the dedupe `retain` lives inside this
     // block so it is skipped too. This suppresses ONLY the §34 WYSIWYG
@@ -290,7 +290,7 @@ fn handle_fetch_at_pos(
             candidates.insert(0, literal);
         }
     }
-    // §44 羅馬字 display dedupe — must run AFTER the literal prepend (a pass
+    // §44 Romanization Only display dedupe — must run AFTER the literal prepend (a pass
     // inside `assemble_candidates` never sees the literal → two `tâi` cells).
     if config.is_roman_only_display()
         && matches!(mode, phonetics::InputMode::Tl | phonetics::InputMode::Poj)
@@ -305,7 +305,7 @@ fn handle_fetch_at_pos(
     )
 }
 
-/// 羅馬字-mode display dedupe (§44) — key = the **rendered roman alone**,
+/// Romanization Only display dedupe (§44) — key = the **rendered roman alone**,
 /// first-seen wins (top-ranked sorted row, or the §34 literal when it is in
 /// the group). Mirror of `continuous::dedupe_display_hanji_for_tps` for the
 /// other script; keys on the roman the user actually sees — the POJ
@@ -315,21 +315,21 @@ fn handle_fetch_at_pos(
 /// that a partial-prefix row and a full-buffer row are different actions.
 /// They are — but under a single-script display they render as the same
 /// string, so the user has no way to tell which cell commits which slice and
-/// the second cell reads as a defect (USER: 「相同的漢字 or 羅馬字不能重複出現」).
+/// the second cell reads as a defect (USER: "the same Hanji or romanization must not appear twice").
 /// A cell that reads exactly like an earlier one is never listed.
 fn dedupe_display_roman(candidates: &mut Vec<RawCandidate>) {
     retain_first_by_key(candidates, |c| Some(c.roman.clone()));
 }
 
 /// Under a single-script display the §34 literal absorbs the dictionary row
-/// that reads the same (`dedupe_display_roman` under 羅馬字; the platform's
-/// 漢羅濫 roman-cell dedupe under 濫), so tapping the literal becomes the only
+/// that reads the same (`dedupe_display_roman` under Romanization Only; the platform's
+/// Hanji with Romanization roman-cell dedupe under it), so tapping the literal becomes the only
 /// way to commit that word. The literal therefore takes the absorbed row's
-/// identity — `display_text` (the `canonical_text` NextWord and 詞頻 key on)
+/// identity — `display_text` (the `canonical_text` NextWord and the frequency records key on)
 /// and `canonical_tl` — while `roman` / `hanji: None` stay, so the cell still
 /// reads, orders and writes the preedit literal. First-seen (top-ranked) wins
-/// among 同音異字, the rule that picks the visible cell. Not applied under
-/// 並排, where the dictionary row keeps its own cell.
+/// among homophones, the rule that picks the visible cell. Not applied under
+/// Pairing, where the dictionary row keeps its own cell.
 ///
 /// Consequence, deliberate: a single-syllable literal that inherits a
 /// dictionary word joins a compound run with the nailed prefix
@@ -346,7 +346,7 @@ fn adopt_collapsed_dict_identity(literal: &mut RawCandidate, candidates: &[RawCa
     literal.canonical_tl = absorbed.canonical_tl.clone();
 }
 
-/// Build the literal-roman candidate for 漢羅 fast input
+/// Build the literal-roman candidate for Hanji-romanization fast input
 /// (`INVARIANT_CONTINUOUS_LITERAL_ROMAN_CANDIDATE` §34 / dogfood S22).
 ///
 /// Surfaces the **current composing result** — the preedit literal
@@ -354,9 +354,9 @@ fn adopt_collapsed_dict_identity(literal: &mut RawCandidate, candidates: &[RawCa
 /// in TL/POJ, tone or no tone. The candidate always mirrors the underline,
 /// so the list does not jump when a tone is added: `tai`→`tai`,
 /// `tai5`→`tâi`, `nng7`→`nn̄g`, `taigi`→`taigi`, `tai5-gi2`→`tâi-gí`. This
-/// makes 漢羅 (mixed Han + roman) input commit the romanization in one tap
-/// without toggling 文/A, even in 漢字 mode (PhahTaigi parity — the lomaji
-/// candidate is always present, USER 2026-06-06 "邏輯 should consist").
+/// makes mixed Hanji-romanization input commit the romanization in one tap
+/// without toggling 文/A, even in Hanji mode (PhahTaigi parity — the lomaji
+/// candidate is always present, USER 2026-06-06: "the logic should be consistent").
 ///
 /// Returns `Some` when:
 /// * `mode` is TL or POJ — TPS is hanji-first (diacritic-glyph tones,
@@ -370,7 +370,7 @@ fn adopt_collapsed_dict_identity(literal: &mut RawCandidate, candidates: &[RawCa
 /// mirrors the preedit EXACTLY, so a tone-1/4 syllable or an unhyphenated
 /// multi-syllable blob keeps its raw digits as the underline shows them
 /// (`tai1`, `goa2ai3li2` — the engine does not auto-syllabify, §10.2). It
-/// carries `canonical_tl` via `canonical_tl_form` so 詞頻 / 詞關聯 learn the
+/// carries `canonical_tl` via `canonical_tl_form` so the frequency / association records learn the
 /// canonical `(∅, TL)` identity on commit (Core Principle #7; §24/§28).
 fn literal_roman_candidate(
     raw: &str,
@@ -656,7 +656,7 @@ mod tests {
         assert_eq!(proto.display_text, "tāi");
     }
 
-    /// §44 羅馬字 display dedupe keys on the rendered roman ALONE: two rows
+    /// §44 Romanization Only display dedupe keys on the rendered roman ALONE: two rows
     /// reading `tâi` collapse even when they consume different slices of the
     /// buffer, because a single-script cell shows the user nothing that tells
     /// the two apart (USER 2026-09-03). First-seen — the top-ranked row, or
@@ -698,7 +698,7 @@ mod tests {
     }
 
     // ----- INVARIANT_CONTINUOUS_LITERAL_ROMAN_CANDIDATE (§34) -----
-    // 漢羅 fast input: TL/POJ + written tone → roman-only literal candidate
+    // Hanji-romanization fast input: TL/POJ + written tone → roman-only literal candidate
     // (= preedit WYSIWYG) injected at index 0. Tests assert the GATE +
     // self-consistency; the literal string is asserted against
     // `derived_display` (the source of truth) rather than a hard-coded
@@ -776,7 +776,7 @@ mod tests {
 
     #[test]
     fn literal_roman_candidate_toneless_now_shown() {
-        // USER 2026-06-06 「邏輯 should consist」: toneless input ALSO surfaces
+        // USER 2026-06-06: "the logic should be consistent": toneless input ALSO surfaces
         // the composing literal (= preedit), not only when toned. `taigi`
         // → `taigi`. (Previously gated on a written tone — now always shown.)
         let cfg = config_tl();

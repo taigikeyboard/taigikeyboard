@@ -1,7 +1,7 @@
 """kautian_provenance stage — join subcollection membership onto cleaned rows.
 
 Reads the provenance maps stashed by `select` (built from the raw ODS sheets
-before the dialect melt drops 腔調) and adds `kautian_main` /
+before the dialect melt drops the accent columns) and adds `kautian_main` /
 `kautian_accent_mask` / `kautian_name`. Runs after `cleanup` (so `tl` is
 normalized) and before `frequency`. No-op when no maps are stashed — only the
 kautian config wires this stage in.

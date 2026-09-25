@@ -152,7 +152,7 @@ fn typed_hyphen_drops_the_readings_that_do_not_end_a_syllable_there() {
 
 #[test]
 fn typed_run_kind_selects_between_a_compound_and_a_khinsiann_reading() {
-    // `jim-khi` is the 連字 compound 忍氣 `jím-khì`; `jim--khi` is not — the
+    // `jim-khi` is the hyphenated compound 忍氣 `jím-khì`; `jim--khi` is not — the
     // typed `--` asks for a khinsiann boundary the compound does not have,
     // so the walker builds 忍 + 去 with the typed join instead.
     let _lock = engine_install_lock();

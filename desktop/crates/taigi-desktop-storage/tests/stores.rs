@@ -75,7 +75,7 @@ fn hanzi_of(rows: &[CustomDictionaryRow]) -> Vec<&str> {
 
 #[test]
 fn recording_counts_the_pair_and_reads_back_by_word() {
-    // trace: LearningStoreTests.swift — a word is (漢字, canonical TL).
+    // trace: LearningStoreTests.swift — a word is (Hanji, canonical TL).
     let directory = scratch();
     let store = frequency_store(&directory, UserFrequencyStore::shipped_capacity());
     store.record("重", "tāng");

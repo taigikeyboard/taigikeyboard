@@ -19,7 +19,7 @@ const LIST_ORDER: &str = "count DESC, last_used DESC, word ASC, tl ASC";
 
 /// Records candidate commits and answers what the ranker should boost. The
 /// engine does the ranking (`engine/ranking/src/score.rs`); this store only
-/// hands it counts. A word is the `(漢字, canonical TL)` PAIR (Core Principle
+/// hands it counts. A word is the `(Hanji, canonical TL)` PAIR (Core Principle
 /// #7): 重/tîng and 重/tāng are different rows.
 pub struct UserFrequencyStore {
     database: UserDataDatabase,

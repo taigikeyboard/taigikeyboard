@@ -1,4 +1,4 @@
-//! ⁿ大本字 (`AppConfig.force_lowercase_nasal_marker`, USER 2026-09-22)
+//! ⁿ becomes ᴺ in capitals (`AppConfig.force_lowercase_nasal_marker`, USER 2026-09-22)
 //! integration test (`behavioral-invariants.md` §53). One nasal-marker case
 //! rule for the §34 literal (preedit) and every candidate's `roman`: by
 //! default (proto `false`, the switch ON) the marker follows the typed
@@ -186,7 +186,7 @@ fn force_lowercase_nasal_marker_changes_nothing_for_lowercase_typing() {
 fn under_a_roman_only_display_the_literal_and_the_dictionary_row_now_read_the_same_and_collapse() {
     let _lock = engine_install_lock();
     install_fixture();
-    // 羅馬字 (`candidate_display_mode` = ROMAN_ONLY): before this rule the
+    // Romanization Only (`candidate_display_mode` = ROMAN_ONLY): before this rule the
     // Caps Lock literal `SIAᴺ` and the 聲 row `SIAⁿ` differed only in the
     // marker's case and showed as two cells; now they read the same, so
     // `dedupe_display_roman` keeps one and the literal adopts 聲's identity

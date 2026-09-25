@@ -1,6 +1,6 @@
 //! Typed word separator in the continuous-input romanization (USER
 //! 2026-09-21, 2026-09-22). The separator at every typed boundary is the
-//! one the user typed — `-` 連字 or `--` 輕聲 — whether the boundary falls
+//! one the user typed — `-` hyphen or `--` neutral tone — whether the boundary falls
 //! between two walker segments or inside one dictionary word whose record
 //! stores a space (§55); a space stays only where nothing was typed. The
 //! kind of the typed run still decides which words are offered (§52:
@@ -183,7 +183,7 @@ fn typed_separator_follows_the_hyphenless_setting() {
 
 // ---- A typed `-` inside a dictionary word (USER 2026-09-22, §55) ----
 // `pang-tang-lai` read 放重利 as the record stores it, `pàng tāng-lāi`
-// (a 教典 phrase with a space); the user typed the hyphen, so the rendered
+// (a MOE dictionary phrase with a space); the user typed the hyphen, so the rendered
 // separator is the hyphen. Fixture: 放/pàng + 重利/tāng-lāi singles and the
 // phrase 放重利/`pàng tāng-lāi`, so the whole buffer is one dictionary edge.
 
@@ -245,7 +245,7 @@ fn typed_hyphen_replaces_the_records_space() {
     }
     let cells = fetch("pang-tang-lai", "poj", false);
     assert_eq!(cell_with_hanji(&cells, "放重利").1, "pàng-tāng-lāi");
-    // 無連字符 drops the typed `-` like any other (§49).
+    // No Hyphens drops the typed `-` like any other (§49).
     let cells = fetch("pang-tang-lai", "tl", true);
     assert_eq!(cell_with_hanji(&cells, "放重利").1, "pàngtānglāi");
 }
@@ -310,7 +310,7 @@ fn single(engine: &mut Engine, cfg: &AppConfig, hanji: &str) -> CandidateMessage
 }
 
 /// `CommitContinuous` the way a platform tap sends it: `display_text` is
-/// the candidate's roman under 羅馬字 output, its hanji under 漢字 output.
+/// the candidate's roman under romanization output, its hanji under Hanji output.
 fn pick(engine: &mut Engine, cfg: &AppConfig, hanji: &str) -> ComposingResponse {
     let c = single(engine, cfg, hanji);
     let display_text = if cfg.is_translate_swapped {
@@ -383,7 +383,7 @@ fn two_picks_under_hyphenless_render_the_run_as_a_dot() {
     for (raw, fin) in [
         ("tng--lai", "tńg·lâi"),
         ("tng-lai", "tńglâi"),
-        // The oracle's joiner is the hyphen 無連字符 drops.
+        // The oracle's joiner is the hyphen No Hyphens drops.
         ("tnglai", "tńglâi"),
     ] {
         let cfg = roman_cfg(true);

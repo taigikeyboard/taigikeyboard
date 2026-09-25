@@ -1,9 +1,9 @@
-//! The 快捷鍵 pane: every key the user can put an action on, in three titled
-//! blocks (`ShortcutSettingsView.swift`) — 選字, the keys that move through
-//! the candidates; 輸出, the keys that end the composition into the document;
-//! 其他, the switches and the windows a key raises — plus the reset card.
-//! Which keys pick a candidate is not chosen here: it follows from 聲調拍法
-//! on the 一般 pane (`ToneInputScheme`). Every row is the same recorder;
+//! The Shortcuts pane: every key the user can put an action on, in three titled
+//! blocks (`ShortcutSettingsView.swift`) — Candidate Selection, the keys that move through
+//! the candidates; Output, the keys that end the composition into the document;
+//! Other, the switches and the windows a key raises — plus the reset card.
+//! Which keys pick a candidate is not chosen here: it follows from Tone Keys
+//! on the General pane (`ToneInputScheme`). Every row is the same recorder;
 //! which registry it writes to and what it refuses on top of the shared gate
 //! is the tier's. Last writer wins across both registries
 //! (`ShortcutConflicts`), and the loser's row visibly empties.
@@ -49,7 +49,7 @@ pub fn view(
         ),
         // Shown, not recordable (USER 2026-09-20): the bare slot keys pick a
         // candidate off the visible page, and which keys they are follows
-        // the 聲調拍法 picker (`ToneInputScheme`) — so the row follows it too.
+        // the Tone Keys picker (`ToneInputScheme`) — so the row follows it too.
         // First of the fixed rows because it is the main way through the
         // bar; its Shift twin sits with the commit rows below.
         fixed_row(
@@ -82,7 +82,7 @@ pub fn view(
             ComposingAction::GROUPS[1],
         ),
         // Shown, not recordable (USER 2026-09-10): Shift on a slot key is
-        // the 漢羅 commit aimed at that slot, and the slot keys follow the
+        // the Hanji/romanization commit aimed at that slot, and the slot keys follow the
         // tone scheme — so the row follows it too, and there is nothing to
         // record. After the commit rows, because it is one.
         fixed_row(
@@ -90,7 +90,7 @@ pub fn view(
             shifted_slot_keys_label(bindings.slot_key_set()),
         ),
         // Shown, not recordable (USER 2026-09-20): Ctrl on a punctuation key
-        // types it in the other width once, whatever the 漢羅 mode would have
+        // types it in the other width once, whatever the Hanji/romanization mode would have
         // typed (`ComposingKeyIntent::width_flip_character`). Here because it
         // writes into the document; three sample chords, since the row stands
         // for every key of the map.
@@ -110,7 +110,7 @@ pub fn view(
         // have in common is that none of them needs a composition running —
         // which is also why they are the roster that holds a chord in the
         // global registry, though the block is drawn on what they DO. Not on
-        // their modifiers: 漢羅對調 ships on a bare backtick, so Ctrl+Alt
+        // their modifiers: Hanji/Romanization Swap ships on a bare backtick, so Ctrl+Alt
         // names no boundary here.
         //
         // One block (2026-08-25, +1 on 2026-09-02, +1 on 2026-09-09): three

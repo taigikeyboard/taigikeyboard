@@ -3,14 +3,14 @@
 #
 # Prints an ASCII table of test groups for MANUAL on-device testing. Every
 # group is RANDOMLY generated from real dictionary words (different each run)
-# and shown in ALL THREE modes (TL / POJ / TPS) plus a 漢字 column. Each row
+# and shown in ALL THREE modes (TL / POJ / TPS) plus a Hanji column. Each row
 # targets ONE edge-case aspect plain random concatenation would miss (lone
 # initials, explicit tone, ir-after-sibilant, stop/nasal codas, oo/er/ee finals,
-# 連字 / 輕聲 separators, longest-match prefix, continuous segmentation, …).
+# hyphen / neutral-tone separators, longest-match prefix, continuous segmentation, …).
 # Aspect is documented per PLAN entry; rows are unlabelled in output, PLAN order
 # fixed, so a row's aspect is recoverable on request.
 #
-# The 漢字 column lists the words the input should surface, freq-sorted, padded
+# The Hanji column lists the words the input should surface, freq-sorted, padded
 # with more same-input candidates up to the widest cell in the run — a LOOSE
 # expectation (dictionary same-key words by frequency), NOT the engine's actual
 # ranked output (no engine is run). The human tester eyeballs the device.
@@ -145,8 +145,8 @@ def build_buckets(pool):
         "nasal_vowel": [r for r in mono if "nn" in r["tl_notone"]],
         "oo": [r for r in mono if "oo" in r["tl_notone"]],  # o͘ / TPS ㆦ
         "er_ee": [r for r in mono if "er" in r["tl_notone"] or "ee" in r["tl_notone"]],  # §3.2.6
-        "hyphen": [r for r in pool if "-" in r["tl"] and "--" not in r["tl"]],  # 連字 separator
-        "khinsiann": [r for r in pool if "--" in r["tl"]],  # 輕聲 `--` separator
+        "hyphen": [r for r in pool if "-" in r["tl"] and "--" not in r["tl"]],  # hyphen separator
+        "khinsiann": [r for r in pool if "--" in r["tl"]],  # neutral-tone `--` separator
         "prefix_collision": [
             r for r in mono
             if len(r["tl_notone"].strip()) >= 2
@@ -193,8 +193,8 @@ def same_reading(pool, column, value, exclude):
     return freq_sorted_hanzi([r for r in pool if r[column].strip() == value], exclude)
 
 
-# --- row builders: each returns [漢字, TL, POJ, TPS, candidates] ---------------
-# candidates = extra same-input Hanji (freq-sorted) used to pad the 漢字 cell.
+# --- row builders: each returns [Hanji, TL, POJ, TPS, candidates] ---------------
+# candidates = extra same-input Hanji (freq-sorted) used to pad the Hanji cell.
 
 def sample_aspect(bucket_key, columns=TONED, key_column="tl_num"):
     """Factory for the common shape: pick a random word from `bucket_key`, show
@@ -249,13 +249,13 @@ PLAN = [
     sample_aspect("mono", TONELESS, "tl_notone"),          # no tone -> all tones
     build_tone9,                                           # #434 tone-9
     sample_aspect("ir_sibilant"),                          # #435 ir after sibilant
-    sample_aspect("stop_coda"),                            # 入聲 stop coda ㆴㆵㆻㆷ
+    sample_aspect("stop_coda"),                            # entering-tone stop coda ㆴㆵㆻㆷ
     sample_aspect("nasal_vowel"),                          # nasalized -nn ㆩ/ㆧ
     sample_aspect("oo"),                                   # §1 oo / o͘ vowel ㆦ
     sample_aspect("er_ee"),                                # §3.2.6 er / ee finals
     sample_aspect("prefix_collision"),                     # §18 #371 longest-match prefix
-    sample_aspect("hyphen"),                               # §22 #380 連字 separator
-    sample_aspect("khinsiann"),                            # §22 #379/#380 輕聲 `--`
+    sample_aspect("hyphen"),                               # §22 #380 hyphen separator
+    sample_aspect("khinsiann"),                            # §22 #379/#380 neutral-tone `--`
     make_continuous("", WORDS_PER_PHRASE),                 # continuous no-space segmentation
     make_continuous(" "),                                  # #391 space soft-sep vs boundary
     sample_aspect("tps_stop_gate", TONELESS, "tps_notone"),   # §32 #392 stop-coda gate
@@ -310,7 +310,7 @@ def render_table(headers, rows):
 def main():
     buckets = build_buckets(load_rows())
     built = [builder(buckets) for builder in PLAN]
-    target = max(display_width(row[0]) for row in built)  # widest 漢字 (continuous rows)
+    target = max(display_width(row[0]) for row in built)  # widest Hanji (continuous rows)
     rows = [[fill_hanzi(primary, cands, target), tl, poj, tps] for primary, tl, poj, tps, cands in built]
     print(render_table(["漢字", "TL", "POJ", "TPS"], rows))
 

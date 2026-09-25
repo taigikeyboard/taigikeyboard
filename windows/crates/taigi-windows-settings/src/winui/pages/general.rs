@@ -1,4 +1,4 @@
-//! The 一般 pane: input script, output script, tone keys, auto-space, the
+//! The General pane: input script, output script, tone keys, auto-space, the
 //! candidate window's two switches, display language; then the update row
 //! and the reset card. Port of `GeneralSettingsView.swift`.
 
@@ -13,7 +13,7 @@ use taigi_desktop_core::strings::{DisplayLanguage, StringKey, StringResolver};
 use taigi_desktop_update::checker;
 use windows_reactor::*;
 
-/// The spinner beside the 檢查更新 button.
+/// The spinner beside the Check for Updates button.
 const SPINNER_SIZE: f64 = 20.0;
 /// The update note's weight, as opacity — `PrimaryText` at less than full
 /// is WinUI's secondary text, and it follows the theme.
@@ -25,15 +25,15 @@ pub fn view(
     context: &mut ViewContext<SettingsWindow>,
 ) -> View {
     let document = window.document();
-    // One run of cards, no sub-groups (USER 2026-09-18 「不要分組」), in the
+    // One run of cards, no sub-groups (USER 2026-09-18: "no grouping"), in the
     // order the typing pipeline runs (USER 2026-09-21): what is typed and
     // how its tones are spelled, then the candidate window and its content,
     // then what a commit writes and its shape, then the app's language
     // (`GeneralSettingsView.swift`).
     View::fragment((
-        // A pop-up like the 輸出文字 row below, not a radio group (System
-        // Settings' shape for a small mutually-exclusive choice). 輸入文字 /
-        // 輸出文字 name the pair (USER 2026-09-18); mobile keeps 輸入模式,
+        // A pop-up like the Output Script row below, not a radio group (System
+        // Settings' shape for a small mutually-exclusive choice). Input Script /
+        // Output Script name the pair (USER 2026-09-18); mobile keeps Input Mode,
         // whose picker also holds TPS.
         choice_row(
             strings.resolve(StringKey::SettingsInputScript),
@@ -47,7 +47,7 @@ pub fn view(
         // Which keys type a tone is a fact about how the syllable is
         // spelled, not a shortcut (USER 2026-09-08), and the slot keys
         // follow from it rather than being chosen on the shortcut pane.
-        // Under 輸入文字 because both say what the user types.
+        // Under Input Script because both say what the user types.
         choice_row(
             strings.resolve(StringKey::SettingsToneInputScheme),
             ToneInputScheme::ALL,
@@ -59,7 +59,7 @@ pub fn view(
         ),
         // S33 (USER 2026-09-08): off means no window at all — the user types
         // romanization and Space / Enter write it as typed. Directly above
-        // 顯示當咧拍的字, which describes the window's content and so reads
+        // Show Typed Text First, which describes the window's content and so reads
         // as its sub-option; that row stays enabled with the window off (one
         // plain switch, no greyed-out state to explain).
         cards::switch_row(
@@ -80,8 +80,8 @@ pub fn view(
         ),
         // Which script a commit writes (USER 2026-09-18): the same stored
         // swap the backtick shortcut toggles, so the two never disagree.
-        // Disabled exactly where the shortcut is inert — 候選詞顯示 = 羅馬字
-        // shows no Hanji to lead with (`allows_swap_toggle`); under 漢羅濫
+        // Disabled exactly where the shortcut is inert — Candidate Display = Romanization Only
+        // shows no Hanji to lead with (`allows_swap_toggle`); under Hanji with Romanization
         // both scripts are on screen and this only picks the punctuation
         // width, as the shortcut does there. A cleared pop-up writes nothing,
         // the rule `Message::set_choice` states for every other picker.
@@ -99,7 +99,7 @@ pub fn view(
             },
             context,
         ),
-        // 無連字符 (§49), directly under 輸出文字 — it describes that output's
+        // No Hyphens (§49), directly under Output Script — it describes that output's
         // shape.
         cards::switch_row(
             strings.resolve(StringKey::SettingsHyphenlessRoman),
@@ -107,7 +107,7 @@ pub fn view(
             true,
             context.callback(|is_on| Message::SetSwitch(keys::IS_HYPHENLESS_ROMAN_ENABLED, is_on)),
         ),
-        // ⁿ大本字 (§53): the other switch that shapes the output's romanization.
+        // ⁿ becomes ᴺ in capitals (§53): the other switch that shapes the output's romanization.
         cards::switch_row(
             strings.resolve(StringKey::SettingsNasalMarkerUppercase),
             document.bool(&keys::IS_NASAL_MARKER_UPPERCASE_ENABLED),
@@ -140,7 +140,7 @@ pub fn view(
     ))
 }
 
-/// The 輸出 pop-up's roster: the stored swap as the two scripts it picks
+/// The Output pop-up's roster: the stored swap as the two scripts it picks
 /// between, Hanji (the default) first.
 const OUTPUT_SCRIPTS: &[bool] = &[true, false];
 
