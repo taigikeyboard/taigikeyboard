@@ -69,7 +69,7 @@ fun Modifier.themeBackground(
                         .shared(context)
                         .themeImages
                         .bitmap(background.image.file)
-                        ?.let { Modifier.themePhoto(it, background.image.dim, surface.dimsTowardWhite, topInsetPx) }
+                        ?.let { Modifier.themePhoto(it, background.image, surface.dimsTowardWhite, topInsetPx) }
                         // A missing photo file paints the seed grey so the keyboard never renders see-through.
                         ?: Modifier.background(Color(UserThemeSeed.SOLID_COLOR))
                 null -> Modifier.background(fallback)
@@ -81,24 +81,26 @@ fun Modifier.themeBackground(
 private val desaturate = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(ThemeImageBackground.SATURATION) })
 
 /**
- * The desaturated, dimmed photo aspect-filled over the whole keyboard (`coverRect`, shifted
+ * The desaturated, dimmed photo aspect-filled over the whole keyboard at its focus (`coverRect`, shifted
  * up by [topInsetPx]) and clipped to this surface; the image wrapper and destination rect are
  * computed once per draw size, only `drawImage` + the tone fill run per frame.
  */
 private fun Modifier.themePhoto(
     bitmap: Bitmap,
-    dim: Float,
+    photo: ThemeImageBackground,
     dimsTowardWhite: Boolean,
     topInsetPx: Float,
 ): Modifier {
     val image = bitmap.asImageBitmap()
-    val tone = (if (dimsTowardWhite) Color.White else Color.Black).copy(alpha = dim)
+    val tone = (if (dimsTowardWhite) Color.White else Color.Black).copy(alpha = photo.dim)
     return drawWithCache {
         val rect =
             ThemeImageBackground.coverRect(
                 imageWidth = bitmap.width.toFloat(),
                 imageHeight = bitmap.height.toFloat(),
                 bounds = SurfaceRect(left = 0f, top = -topInsetPx, width = size.width, height = size.height + topInsetPx),
+                focusX = photo.focusX,
+                focusY = photo.focusY,
             )
         val dstOffset = IntOffset(rect.left.roundToInt(), rect.top.roundToInt())
         val dstSize = IntSize(rect.width.roundToInt(), rect.height.roundToInt())

@@ -113,24 +113,30 @@ data class SurfaceRect(
     val height: Float,
 )
 
-// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/KeyboardColorSettings.swift ThemeImageBackground.
-// Drift causes silent divergence.
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/KeyboardColorSettings.swift ThemeImageBackground
+// (same JSON fields, SATURATION, dim range, DEFAULT_DIM, DEFAULT_FOCUS). Drift causes silent divergence.
 
 /**
  * A photo as the keyboard surface: [file] is the JPEG's name inside the app-private
  * `ThemeImageStore` directory (written by the settings app, read by the IME), [dim] the
  * opacity of the tone overlay laid over the desaturated photo so keys stay readable
  * (USER 2026-09-19: "the photo saturation must not be too eye-catching"). The overlay is white when the key text is dark
- * and black otherwise.
+ * and black otherwise. [focusX] / [focusY] say which part of the aspect-filled photo stays in
+ * view on each axis: 0 = its left / top edge, 1 = its right / bottom edge, 0.5 = centred (the
+ * default). An alignment, not a focal point, so the crop never exposes a gap and the same
+ * values fit every keyboard aspect (portrait, landscape, tablet).
  */
 data class ThemeImageBackground(
     val file: String,
     /** Opacity of the tone overlay, within [DIM_MIN]..[DIM_MAX] (the editor slider range). */
     val dim: Float = DEFAULT_DIM,
+    val focusX: Float = DEFAULT_FOCUS,
+    val focusY: Float = DEFAULT_FOCUS,
 ) {
     init {
         require(file.isNotEmpty()) { "a photo background needs a file name" }
         require(dim in DIM_MIN..DIM_MAX) { "dim $dim outside $DIM_MIN..$DIM_MAX" }
+        require(focusX in 0f..1f && focusY in 0f..1f) { "focus ($focusX, $focusY) outside 0..1" }
     }
 
     companion object {
@@ -140,34 +146,42 @@ data class ThemeImageBackground(
         const val DIM_MAX = 0.8f
         const val DIM_STEP = 0.05f
         const val DEFAULT_DIM = 0.35f
+        const val DEFAULT_FOCUS = 0.5f
 
         /**
          * The rectangle that scales an `imageWidth`×`imageHeight` photo to cover [bounds]
-         * (aspect fill, centred) — the photo's drawn frame over the whole keyboard, from
-         * which a panel shows its slice.
+         * (aspect fill), aligned on each axis by `focusX` / `focusY` (see [ThemeImageBackground.focusX])
+         * — the photo's drawn frame over the whole keyboard, from which a panel shows its slice.
          */
         fun coverRect(
             imageWidth: Float,
             imageHeight: Float,
             bounds: SurfaceRect,
+            focusX: Float,
+            focusY: Float,
         ): SurfaceRect {
             if (imageWidth <= 0f || imageHeight <= 0f) return bounds
             val scale = max(bounds.width / imageWidth, bounds.height / imageHeight)
             val width = imageWidth * scale
             val height = imageHeight * scale
             return SurfaceRect(
-                left = bounds.left + (bounds.width - width) / 2,
-                top = bounds.top + (bounds.height - height) / 2,
+                left = bounds.left + (bounds.width - width) * focusX,
+                top = bounds.top + (bounds.height - height) * focusY,
                 width = width,
                 height = height,
             )
         }
 
-        /** Decodes `{ "file": …, "dim"?: n }`; null when the file name is empty. */
+        /** Decodes `{ "file": …, "dim"?: n, "focusX"?: n, "focusY"?: n }`; null when the file name is empty. */
         fun fromJson(obj: JSONObject): ThemeImageBackground? {
             val file = obj.optString("file")
             if (file.isEmpty()) return null
-            return ThemeImageBackground(file, obj.optDouble("dim", DEFAULT_DIM.toDouble()).toFloat().coerceIn(DIM_MIN, DIM_MAX))
+            return ThemeImageBackground(
+                file = file,
+                dim = obj.optDouble("dim", DEFAULT_DIM.toDouble()).toFloat().coerceIn(DIM_MIN, DIM_MAX),
+                focusX = obj.optDouble("focusX", DEFAULT_FOCUS.toDouble()).toFloat().coerceIn(0f, 1f),
+                focusY = obj.optDouble("focusY", DEFAULT_FOCUS.toDouble()).toFloat().coerceIn(0f, 1f),
+            )
         }
     }
 }
@@ -184,7 +198,7 @@ data class ThemeImageBackground(
  * (Compose) and `KeyboardThemeSurfaceController` (View).
  *
  * JSON: `{"type":"solid","color":argb}` / `{"type":"gradient","stops":[…],"angle":180}` /
- * `{"type":"image","file":"<uuid>.jpg","dim":0.35}`.
+ * `{"type":"image","file":"<uuid>.jpg","dim":0.35,"focusX":0.5,"focusY":0.5}`.
  */
 sealed class ThemeBackground {
     data class Solid(
@@ -227,7 +241,11 @@ sealed class ThemeBackground {
             when (this@ThemeBackground) {
                 is Solid -> put("color", color)
                 is Gradient -> put("stops", JSONArray(gradient.stops)).put("angle", gradient.angle.toDouble())
-                is Image -> put("file", image.file).put("dim", image.dim.toDouble())
+                is Image ->
+                    put("file", image.file)
+                        .put("dim", image.dim.toDouble())
+                        .put("focusX", image.focusX.toDouble())
+                        .put("focusY", image.focusY.toDouble())
             }
         }
 

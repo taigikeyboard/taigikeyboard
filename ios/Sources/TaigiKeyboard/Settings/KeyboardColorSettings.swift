@@ -169,22 +169,36 @@ struct KeyboardSurfaceSlice: Equatable {
 /// `ThemeImageStore` directory (written by the host app, read by the extension), `dim`
 /// the opacity of the tone overlay laid over the desaturated photo so keys stay readable
 /// (USER 2026-09-19: "the photo's saturation must not be too loud"). The overlay is white when the key text is
-/// dark and black otherwise.
+/// dark and black otherwise. `focusX` / `focusY` say which part of the aspect-filled photo
+/// stays in view on each axis: 0 = its left / top edge, 1 = its right / bottom edge, 0.5 =
+/// centred (the default). An alignment, not a focal point, so the crop never exposes a gap
+/// and the same values fit every keyboard aspect (portrait, landscape, iPad).
 // CROSS-PLATFORM INVARIANT — mirrors android .../ime/core/KeyboardColorSettings.kt ThemeImageBackground
-// (same JSON fields, `saturation`, `dimRange`, `defaultDim`). Drift causes silent divergence.
+// (same JSON fields, `saturation`, `dimRange`, `defaultDim`, `defaultFocus`). Drift causes silent divergence.
 struct ThemeImageBackground: Codable, Equatable {
     /// Saturation multiplier applied to every photo (1 = untouched).
     static let saturation: Double = 0.7
     static let dimRange: ClosedRange<Double> = 0 ... 0.8
     static let dimStep: Double = 0.05
     static let defaultDim: Double = 0.35
+    static let defaultFocus: Double = 0.5
+    static let centredFocus = CGPoint(x: defaultFocus, y: defaultFocus)
 
     let file: String
     var dim: Double
+    var focusX: Double
+    var focusY: Double
 
-    init(file: String, dim: Double = ThemeImageBackground.defaultDim) {
+    init(
+        file: String,
+        dim: Double = ThemeImageBackground.defaultDim,
+        focusX: Double = ThemeImageBackground.defaultFocus,
+        focusY: Double = ThemeImageBackground.defaultFocus,
+    ) {
         self.file = file
         self.dim = min(max(dim, Self.dimRange.lowerBound), Self.dimRange.upperBound)
+        self.focusX = min(max(focusX, 0), 1)
+        self.focusY = min(max(focusY, 0), 1)
     }
 
     init(from decoder: Decoder) throws {
@@ -193,21 +207,42 @@ struct ThemeImageBackground: Codable, Equatable {
         guard !file.isEmpty else {
             throw DecodingError.dataCorruptedError(forKey: .file, in: container, debugDescription: "empty image file name")
         }
-        try self.init(file: file, dim: container.decodeIfPresent(Double.self, forKey: .dim) ?? Self.defaultDim)
+        try self.init(
+            file: file,
+            dim: container.decodeIfPresent(Double.self, forKey: .dim) ?? Self.defaultDim,
+            focusX: container.decodeIfPresent(Double.self, forKey: .focusX) ?? Self.defaultFocus,
+            focusY: container.decodeIfPresent(Double.self, forKey: .focusY) ?? Self.defaultFocus,
+        )
     }
 
-    /// The rectangle that scales `imageSize` to cover `bounds` (aspect fill, centred) — the
-    /// photo's drawn frame over the whole keyboard, from which a panel shows its slice.
-    static func coverRect(imageSize: CGSize, in bounds: CGRect) -> CGRect {
+    /// The rectangle that scales `imageSize` to cover `bounds` (aspect fill), aligned on each
+    /// axis by `focus` (see `focusX` / `focusY`) — the photo's drawn frame over the whole
+    /// keyboard, from which a panel shows its slice.
+    static func coverRect(imageSize: CGSize, in bounds: CGRect, focus: CGPoint) -> CGRect {
         guard imageSize.width > 0, imageSize.height > 0 else { return bounds }
         let scale = max(bounds.width / imageSize.width, bounds.height / imageSize.height)
         let size = CGSize(width: imageSize.width * scale, height: imageSize.height * scale)
         return CGRect(
-            x: bounds.midX - size.width / 2,
-            y: bounds.midY - size.height / 2,
+            x: bounds.minX + (bounds.width - size.width) * focus.x,
+            y: bounds.minY + (bounds.height - size.height) * focus.y,
             width: size.width,
             height: size.height,
         )
+    }
+
+    /// `focusX` / `focusY` as a point, the form `coverRect` takes.
+    var focus: CGPoint {
+        CGPoint(x: focusX, y: focusY)
+    }
+
+    /// This photo with Fade `dim` (clamped).
+    func with(dim: Double) -> ThemeImageBackground {
+        ThemeImageBackground(file: file, dim: dim, focusX: focusX, focusY: focusY)
+    }
+
+    /// This photo moved to `focus` (clamped into 0…1).
+    func with(focus: CGPoint) -> ThemeImageBackground {
+        ThemeImageBackground(file: file, dim: dim, focusX: focus.x, focusY: focus.y)
     }
 }
 
@@ -221,7 +256,7 @@ struct ThemeImageBackground: Codable, Equatable {
 /// lives in `ThemeBackgroundSurface`.
 ///
 /// JSON: `{"type":"solid","color":{…}}` / `{"type":"gradient","stops":[…],"angle":180}` /
-/// `{"type":"image","file":"<uuid>.jpg","dim":0.35}`.
+/// `{"type":"image","file":"<uuid>.jpg","dim":0.35,"focusX":0.5,"focusY":0.5}`.
 // CROSS-PLATFORM INVARIANT — mirrors android .../ime/core/KeyboardColorSettings.kt ThemeBackground
 // (same `type` discriminator and field names; Android stores the colour as an ARGB int).
 enum ThemeBackground: Codable, Equatable {

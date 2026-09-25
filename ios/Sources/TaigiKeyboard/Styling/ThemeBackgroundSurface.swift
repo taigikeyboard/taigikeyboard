@@ -40,28 +40,66 @@ struct ThemeBackgroundSurface: View, Equatable {
     }
 }
 
-/// A desaturated, dimmed photo covering the whole surface (aspect fill, centred). A missing
-/// file (deleted theme photo, provisioning failure) paints the seed grey so the keyboard
-/// never renders see-through.
+/// A desaturated, dimmed photo covering the whole surface (aspect fill, aligned by the
+/// photo's focus). A missing file (deleted theme photo, provisioning failure) paints the
+/// seed grey so the keyboard never renders see-through.
 private struct ThemeImageFill: View {
     let image: ThemeImageBackground
     let tone: Color
 
     var body: some View {
         if let uiImage = ThemeImageCache.shared.image(for: image.file) {
-            Color.clear
-                .overlay {
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .scaledToFill()
-                        .saturation(ThemeImageBackground.saturation)
-                }
+            FocusedPhotoFill(image: Image(uiImage: uiImage), focus: image.focus)
                 .overlay(tone.opacity(image.dim))
-                .clipped()
         } else {
             UserThemeSeed.solidColor.color
         }
     }
+}
+
+/// `image` aspect-filled and desaturated over this view and clipped to it, placed where
+/// `ThemeImageBackground.coverRect` puts it for `focus`: a fractional alignment guide on
+/// both the surface and the photo lines up the surface's `focus` point with the photo's,
+/// so the photo's left edge lands at `(surface − photo) × focus.x` (same for y). Plain
+/// `Image` layout, no oversized frame + `.offset` (#429).
+struct FocusedPhotoFill: View {
+    let image: Image
+    let focus: CGPoint
+
+    var body: some View {
+        Color.clear
+            .alignmentGuide(HorizontalAlignment.photoFocus) { $0.width * focus.x }
+            .alignmentGuide(VerticalAlignment.photoFocus) { $0.height * focus.y }
+            .overlay(alignment: Alignment(horizontal: .photoFocus, vertical: .photoFocus)) {
+                image
+                    .resizable()
+                    .scaledToFill()
+                    .saturation(ThemeImageBackground.saturation)
+                    .alignmentGuide(HorizontalAlignment.photoFocus) { $0.width * focus.x }
+                    .alignmentGuide(VerticalAlignment.photoFocus) { $0.height * focus.y }
+            }
+            .clipped()
+    }
+}
+
+private extension HorizontalAlignment {
+    enum PhotoFocus: AlignmentID {
+        static func defaultValue(in context: ViewDimensions) -> CGFloat {
+            context[HorizontalAlignment.center]
+        }
+    }
+
+    static let photoFocus = HorizontalAlignment(PhotoFocus.self)
+}
+
+private extension VerticalAlignment {
+    enum PhotoFocus: AlignmentID {
+        static func defaultValue(in context: ViewDimensions) -> CGFloat {
+            context[VerticalAlignment.center]
+        }
+    }
+
+    static let photoFocus = VerticalAlignment(PhotoFocus.self)
 }
 
 /// The photo drawn as this view's slice of the whole keyboard: the cover rect is computed
@@ -79,7 +117,7 @@ private struct ThemeImageSlice: View {
                 context.fill(Path(bounds), with: .color(UserThemeSeed.solidColor.color))
                 return
             }
-            let photoRect = ThemeImageBackground.coverRect(imageSize: uiImage.size, in: slice.keyboardRect(width: size.width))
+            let photoRect = ThemeImageBackground.coverRect(imageSize: uiImage.size, in: slice.keyboardRect(width: size.width), focus: image.focus)
             var photo = context
             photo.addFilter(.saturation(ThemeImageBackground.saturation))
             photo.draw(Image(uiImage: uiImage), in: photoRect)

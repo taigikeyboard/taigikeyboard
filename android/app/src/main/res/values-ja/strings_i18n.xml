@@ -226,6 +226,7 @@
     <string name="i18n_theme_photoPick">写真を選択</string>
     <string name="i18n_theme_photoChange">写真を変更</string>
     <string name="i18n_theme_photoDim">淡くする</string>
+    <string name="i18n_theme_photoPosition">位置</string>
     <string name="i18n_theme_gradientDirection">方向</string>
     <string name="i18n_theme_colorKeySection">キー</string>
     <string name="i18n_theme_candidateSection">候補バー</string>

@@ -4356,6 +4356,24 @@
           }
         }
       }
+    },
+    "i18n_theme_photoPosition": {
+      "comment": "Photo position: the VoiceOver / TalkBack label of the drag surface over the theme editor preview that moves the photo (no visible row on either platform).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Position"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "位置"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

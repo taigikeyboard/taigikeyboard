@@ -164,11 +164,83 @@ final class ThemeBackgroundTests: XCTestCase {
     // a 1:2 photo fills the width and centres vertically; a panel slice keeps the whole-keyboard framing
     func testCoverRect_aspectFillCentred() {
         let square = CGRect(x: 0, y: 0, width: 100, height: 100)
-        XCTAssertEqual(ThemeImageBackground.coverRect(imageSize: CGSize(width: 200, height: 100), in: square), CGRect(x: -50, y: 0, width: 200, height: 100))
-        XCTAssertEqual(ThemeImageBackground.coverRect(imageSize: CGSize(width: 100, height: 200), in: square), CGRect(x: 0, y: -50, width: 100, height: 200))
+        XCTAssertEqual(ThemeImageBackground.coverRect(imageSize: CGSize(width: 200, height: 100), in: square, focus: ThemeImageBackground.centredFocus), CGRect(x: -50, y: 0, width: 200, height: 100))
+        XCTAssertEqual(ThemeImageBackground.coverRect(imageSize: CGSize(width: 100, height: 200), in: square, focus: ThemeImageBackground.centredFocus), CGRect(x: 0, y: -50, width: 100, height: 200))
         let slicedKeyboard = CGRect(x: 0, y: -50, width: 100, height: 300)
-        XCTAssertEqual(ThemeImageBackground.coverRect(imageSize: CGSize(width: 100, height: 100), in: slicedKeyboard), CGRect(x: -100, y: -50, width: 300, height: 300))
-        XCTAssertEqual(ThemeImageBackground.coverRect(imageSize: .zero, in: square), square, "degenerate image size falls back to the bounds")
+        XCTAssertEqual(ThemeImageBackground.coverRect(imageSize: CGSize(width: 100, height: 100), in: slicedKeyboard, focus: ThemeImageBackground.centredFocus), CGRect(x: -100, y: -50, width: 300, height: 300))
+        XCTAssertEqual(ThemeImageBackground.coverRect(imageSize: .zero, in: square, focus: ThemeImageBackground.centredFocus), square, "degenerate image size falls back to the bounds")
+    }
+
+    // trace: focus aligns the cover rect — a 2:1 photo over a 1:1 keyboard overflows 100 horizontally:
+    // focusX 0 → x = 0 (left edge shows), 1 → x = 100 − 200 = −100 (right edge shows); the non-overflowing
+    // axis ignores focus (100 − 100 = 0); a sliced keyboard keeps its origin offset
+    func testCoverRect_focusAlignsOverflowingAxis() {
+        let square = CGRect(x: 0, y: 0, width: 100, height: 100)
+        let wide = CGSize(width: 200, height: 100)
+        XCTAssertEqual(ThemeImageBackground.coverRect(imageSize: wide, in: square, focus: CGPoint(x: 0, y: 1)), CGRect(x: 0, y: 0, width: 200, height: 100))
+        XCTAssertEqual(ThemeImageBackground.coverRect(imageSize: wide, in: square, focus: CGPoint(x: 1, y: 0)), CGRect(x: -100, y: 0, width: 200, height: 100))
+        let slicedKeyboard = CGRect(x: 0, y: -50, width: 100, height: 300)
+        XCTAssertEqual(ThemeImageBackground.coverRect(imageSize: CGSize(width: 100, height: 100), in: slicedKeyboard, focus: CGPoint(x: 1, y: 0)), CGRect(x: -200, y: -50, width: 300, height: 300))
+    }
+
+    // trace: `focusX` / `focusY` round-trip; absent → 0.5 (old themes stay centred); out of range clamps into 0…1
+    func testImageBackground_focusRoundTripDefaultAndClamp() throws {
+        var colors = KeyboardColorSettings()
+        colors.background = .image(ThemeImageBackground(file: "a.jpg", focusX: 0.2, focusY: 0.9))
+        let data = try JSONEncoder().encode(colors)
+        XCTAssertEqual(try JSONDecoder().decode(KeyboardColorSettings.self, from: data), colors)
+        let absent = try XCTUnwrap(decode(#"{ "background": { "type": "image", "file": "b.jpg", "dim": 0.5 } }"#).background?.image)
+        XCTAssertEqual(absent.focus, CGPoint(x: 0.5, y: 0.5))
+        XCTAssertEqual(ThemeImageBackground(file: "a.jpg", focusX: -1, focusY: 3).focus, CGPoint(x: 0, y: 1))
+    }
+
+    // trace: FocusedPhotoFill renders where coverRect says — a 100×300 photo (top half red, bottom half blue, desaturated ×0.7)
+    // over a 100×100 surface overflows 200 vertically: focusY 0 shows rows 0…100 (red), 1 shows rows 200…300 (blue)
+    @MainActor
+    func testFocusedPhotoFill_movesPixelsWithFocus() throws {
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = 1
+        let photo = UIGraphicsImageRenderer(size: CGSize(width: 100, height: 300), format: format).image { context in
+            UIColor.red.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 100, height: 150))
+            UIColor.blue.setFill()
+            context.fill(CGRect(x: 0, y: 150, width: 100, height: 150))
+        }
+        func centrePixel(focusY: CGFloat) throws -> (red: UInt8, blue: UInt8) {
+            let renderer = ImageRenderer(content: FocusedPhotoFill(image: Image(uiImage: photo), focus: CGPoint(x: 0.5, y: focusY)).frame(width: 100, height: 100))
+            renderer.scale = 1
+            let cgImage = try XCTUnwrap(renderer.cgImage)
+            var pixel = [UInt8](repeating: 0, count: 4)
+            let context = try XCTUnwrap(CGContext(
+                data: &pixel, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4,
+                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue,
+            ))
+            context.draw(cgImage, in: CGRect(x: -50, y: -50, width: 100, height: 100))
+            return (pixel[0], pixel[2])
+        }
+        // The fill desaturates (×0.7), so compare which channel dominates rather than pure values.
+        let top = try centrePixel(focusY: 0)
+        XCTAssertGreaterThan(Int(top.red) - Int(top.blue), 100, "focusY 0 shows the red top half: \(top)")
+        let bottom = try centrePixel(focusY: 1)
+        XCTAssertGreaterThan(Int(bottom.blue) - Int(bottom.red), 100, "focusY 1 shows the blue bottom half: \(bottom)")
+    }
+
+    // trace: a 100×300 photo over a 100×100 preview covers 100×300 → overflow (0, −200), vertical axis;
+    // dragging down 50 moves the photo with the finger: 0.5 + 50 / −200 = 0.25 (more of the top shows);
+    // x never overflows so a sideways drag keeps 0.5; a long drag up clamps at 1
+    func testPhotoPositionDrag_followsFingerOnOverflowingAxis() {
+        let tall = CGSize(width: 100, height: 300)
+        let preview = CGSize(width: 100, height: 100)
+        let centred = ThemeImageBackground(file: "a.jpg")
+        XCTAssertEqual(PhotoPositionDrag.axis(imageSize: tall, surface: preview), .vertical)
+        XCTAssertEqual(PhotoPositionDrag.axis(imageSize: CGSize(width: 200, height: 100), surface: preview), .horizontal)
+        XCTAssertNil(PhotoPositionDrag.axis(imageSize: CGSize(width: 50, height: 50), surface: preview), "exact fit has nothing to move")
+        let dragged = PhotoPositionDrag.dragged(centred, by: CGSize(width: 30, height: 50), along: .vertical, imageSize: tall, surface: preview)
+        XCTAssertEqual(dragged.focus, CGPoint(x: 0.5, y: 0.25), "only the vertical axis moves")
+        XCTAssertEqual(dragged.dim, centred.dim, "Fade kept")
+        XCTAssertEqual(PhotoPositionDrag.dragged(centred, by: CGSize(width: 0, height: -1000), along: .vertical, imageSize: tall, surface: preview).focusY, 1)
+        XCTAssertEqual(PhotoPositionDrag.stepped(centred.with(focus: CGPoint(x: 0.5, y: 0.95)), along: .vertical, increment: true).focusY, 1)
+        XCTAssertEqual(PhotoPositionDrag.stepped(centred, along: .horizontal, increment: false).focusX, 0.4, accuracy: 1e-9)
     }
 
     // trace: the surface pairs the background with its photo tone — dark key text → white overlay,
