@@ -94,17 +94,17 @@
     "backgroundTypePhoto": {
       "comment": "Theme editor background type (segmented picker): a photo from the user's library.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "照片", "tailo": "Tsiàu-phìnn", "poj": "Chiàu-phìⁿ", "en": "Photo", "ja": "写真" }
+      "values": { "hanji": "相片", "tailo": "Siòng-phìnn", "poj": "Siòng-phìⁿ", "en": "Photo", "ja": "写真" }
     },
     "photoPick": {
       "comment": "Theme editor row label / button: open the photo picker when no photo is set yet.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "選擇照片", "tailo": "Suán tsiàu-phìnn", "poj": "Soán chiàu-phìⁿ", "en": "Choose Photo", "ja": "写真を選択" }
+      "values": { "hanji": "選擇相片", "tailo": "Suán siòng-phìnn", "poj": "Soán siòng-phìⁿ", "en": "Choose Photo", "ja": "写真を選択" }
     },
     "photoChange": {
       "comment": "Theme editor row label / button: open the photo picker to replace the current photo.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "更換照片", "tailo": "Uānn tsiàu-phìnn", "poj": "Ōaⁿ chiàu-phìⁿ", "en": "Change Photo", "ja": "写真を変更" }
+      "values": { "hanji": "更換相片", "tailo": "Uānn siòng-phìnn", "poj": "Ōaⁿ siòng-phìⁿ", "en": "Change Photo", "ja": "写真を変更" }
     },
     "photoDim": {
       "comment": "Theme editor slider label: how strongly the photo is toned down (a white or black overlay) so keys stay readable.",
