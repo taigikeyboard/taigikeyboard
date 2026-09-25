@@ -23,9 +23,9 @@ CROSS_CARGO := $(shell command -v cargo-zigbuild >/dev/null 2>&1 && echo "cargo 
 # Where `make install` puts things; a package build passes DESTDIR.
 PREFIX ?= /usr
 DESTDIR ?=
-# Each distribution's packaging guideline places four things differently: the
-# IBus engine (a helper only ibus-daemon runs), the bundled typefaces, and the
-# licence texts (docs/architecture/linux-release.md § Paths per distribution).
+# Each distribution places three things its own way: the IBus engine (where
+# its own ibus-chewing / ibus-anthy packages put theirs), the bundled
+# typefaces and the licence texts (its packaging guideline) (docs/architecture/linux-release.md § Paths per distribution).
 # `rpm` / `arch` pass their LAYOUT; the default is the FHS / Debian one, which
 # the `.deb` and a source install share.
 LAYOUT ?= debian
@@ -40,13 +40,13 @@ ifeq ($(LAYOUT),debian)
   FONTDIR_OTF := $(PREFIX)/share/fonts/opentype/taigikeyboard
   LICENSEDIR := $(PREFIX)/share/doc/taigikeyboard
 else ifeq ($(LAYOUT),fedora)
-  LIBEXECDIR := $(PREFIX)/libexec/taigikeyboard
+  LIBEXECDIR := $(PREFIX)/libexec
   FONTDIR_TTF := $(PREFIX)/share/fonts/taigikeyboard
   FONTDIR_OTF := $(FONTDIR_TTF)
   LICENSEDIR := $(PREFIX)/share/licenses/taigikeyboard
   LICENSE_TEXTS += ../LICENSE
 else ifeq ($(LAYOUT),arch)
-  LIBEXECDIR := $(PREFIX)/lib/taigikeyboard
+  LIBEXECDIR := $(PREFIX)/lib/ibus
   FONTDIR_TTF := $(PREFIX)/share/fonts/taigikeyboard
   FONTDIR_OTF := $(FONTDIR_TTF)
   LICENSEDIR := $(PREFIX)/share/licenses/taigikeyboard
@@ -196,8 +196,6 @@ install-fcitx5: build-fcitx5
 
 uninstall:
 	rm -f $(DESTDIR)$(LIBEXECDIR)/ibus-engine-taigikeyboard
-	# A package-own engine directory (fedora / arch), never the shared /usr/libexec.
-	$(if $(filter-out debian,$(LAYOUT)),-rmdir $(DESTDIR)$(LIBEXECDIR))
 	rm -f $(DESTDIR)$(PREFIX)/bin/taigikeyboard-settings
 	rm -f $(DESTDIR)$(PREFIX)/lib/fcitx5/libtaigikeyboard.so $(DESTDIR)$(PREFIX)/lib/*/fcitx5/libtaigikeyboard.so
 	rm -f $(DESTDIR)$(PREFIX)/share/fcitx5/inputmethod/taigikeyboard.conf $(DESTDIR)$(PREFIX)/share/fcitx5/addon/taigikeyboard.conf

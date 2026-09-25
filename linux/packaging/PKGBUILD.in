@@ -1,9 +1,9 @@
 # The Arch package (`make -C linux arch`): the same staged `make install`
-# recipe the `.deb` packs, staged with LAYOUT=arch (engine in
-# /usr/lib/taigikeyboard, fonts and custom licences under their package
+# recipe the `.deb` packs, staged with LAYOUT=arch (engine in /usr/lib/ibus
+# beside ibus-chewing's, fonts and custom licences under their package
 # directories), never a second build inside makepkg. `@VERSION@` /
-# `@STAGEROOT@` are rendered by the Makefile. pacman has no alternative dependencies: fcitx5 is required (the
-# addon links libFcitx5Core, which only the fcitx5 package provides; Fcitx5 is
+# `@STAGEROOT@` are rendered by the Makefile. pacman has no alternative
+# dependencies: fcitx5 is required (the addon links libFcitx5Core, which only the fcitx5 package provides; Fcitx5 is
 # the primary shell), IBus is optional.
 pkgname=taigikeyboard
 pkgver=@VERSION@

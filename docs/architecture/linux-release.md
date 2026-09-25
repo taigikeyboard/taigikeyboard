@@ -42,16 +42,16 @@ pacman has no alternatives, so Arch requires `fcitx5`). Shared paths:
 
 ### Paths per distribution
 
-Three things follow each distribution's packaging guideline, selected by
+Three things follow each distribution's own practice, selected by
 `make install LAYOUT=debian|fedora|arch` (`linux/Makefile`; `debian` is the
 default and what a source install uses):
 
 | | Debian / Ubuntu (`.deb`) | Fedora (`.rpm`) | Arch |
 |---|---|---|---|
-| IBus engine (a helper only `ibus-daemon` runs) | `/usr/libexec/ibus-engine-taigikeyboard` | `/usr/libexec/taigikeyboard/ibus-engine-taigikeyboard` | `/usr/lib/taigikeyboard/ibus-engine-taigikeyboard` |
+| IBus engine (a helper only `ibus-daemon` runs), where the distribution's own `ibus-chewing` / `ibus-anthy` put theirs | `/usr/libexec/ibus-engine-taigikeyboard` | `/usr/libexec/ibus-engine-taigikeyboard` | `/usr/lib/ibus/ibus-engine-taigikeyboard` (Arch's IBus libexecdir; the guideline forbids `/usr/libexec`) |
 | The four bundled typefaces (fontconfig fallbacks, roadmap L4) | `/usr/share/fonts/{truetype,opentype}/taigikeyboard/` | `/usr/share/fonts/taigikeyboard/` | `/usr/share/fonts/taigikeyboard/` |
 | Licence texts | `/usr/share/doc/taigikeyboard/copyright`: header (Apache-2.0 → `/usr/share/common-licenses`) + NOTICE + `THIRD_PARTY_LICENSES.md` + OFL + `dictionary/LICENSE` | `/usr/share/licenses/taigikeyboard/`: `LICENSE`, `NOTICE`, `THIRD_PARTY_LICENSES.md`, `fonts-OFL-1.1.txt`, `dictionary-LICENSE` (`%license`) | Same directory and files minus `LICENSE` (Apache-2.0 is in the `licenses` package) |
-| Guideline | Policy §12.5 (`copyright`), FHS 3.0 (`/usr/libexec`), Fonts/PackagingPolicy | Packaging Guidelines (`%{_libexecdir}/%{name}`, `%license`), Fonts Policy | Arch package guidelines ("Avoid `/usr/libexec`… use `/usr/lib/$pkgname`"), font package guidelines |
+| Guideline | Policy §12.5 (`copyright`), FHS 3.0 (`/usr/libexec`), Fonts/PackagingPolicy | Packaging Guidelines (`%license`), Fonts Policy | Arch package guidelines ("Avoid `/usr/libexec`"), font package guidelines |
 
 Fedora's Fonts Policy also discourages typefaces bundled inside an
 application package; they stay bundled (USER 2026-09-25), so `𧉟` never
