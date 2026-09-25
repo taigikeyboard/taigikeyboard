@@ -68,10 +68,6 @@ struct HomeTab: View {
                 // Links and contact
                 Section {
                     // External links
-                    Link(destination: URL(string: "https://www.taigikeyboard.tw/")!) {
-                        Label(lang.string(.homeUserGuide), systemImage: "arrow.up.right.square")
-                    }
-
                     Link(destination: URL(string: "https://taigikeyboard.tw/privacypolicy")!) {
                         Label(lang.string(.homePrivacyPolicy), systemImage: "arrow.up.right.square")
                     }

@@ -125,7 +125,6 @@ enum class StringKey(
     HOME_SETUP_GUIDE_GO_TO_SETTINGS(R.string.i18n_home_setupGuideGoToSettings),
     HOME_SETUP_GUIDE_STEP1_SETTINGS(R.string.i18n_home_setupGuideStep1Settings),
     HOME_SETUP_GUIDE_STEP2_ADD_KEYBOARD(R.string.i18n_home_setupGuideStep2AddKeyboard),
-    HOME_USER_GUIDE(R.string.i18n_home_userGuide),
     HOME_RATE_US(R.string.i18n_home_rateUs),
     HOME_ABOUT_KEYBOARD(R.string.i18n_home_aboutKeyboard),
     HOME_ABOUT_INTRO_PROJECT(R.string.i18n_home_aboutIntroProject),
