@@ -29,7 +29,6 @@ fun RustEngineBridge.nextwordWordSelected(
     nowMs: Long,
     mode: InputMode,
     translateSwapped: Boolean,
-    associationRecordingEnabled: Boolean,
     generation: Long,
 ): RustEngineBridge.NextWordDecideResult {
     val payload = com.siansiansu.taigikeyboard.engine.proto.WordSelected
@@ -44,7 +43,7 @@ fun RustEngineBridge.nextwordWordSelected(
         methodSetter = { it.wordSelected = payload },
         op = "nextwordWordSelected",
         generation = generation,
-        config = nextwordConfig(mode, translateSwapped, associationRecordingEnabled),
+        config = nextwordConfig(mode, translateSwapped),
     )
 }
 
@@ -54,7 +53,6 @@ fun RustEngineBridge.nextwordBackspace(
     nowMs: Long,
     mode: InputMode,
     translateSwapped: Boolean,
-    associationRecordingEnabled: Boolean,
     generation: Long,
 ): RustEngineBridge.NextWordDecideResult {
     val payload = com.siansiansu.taigikeyboard.engine.proto.Backspace
@@ -66,7 +64,7 @@ fun RustEngineBridge.nextwordBackspace(
         methodSetter = { it.backspace = payload },
         op = "nextwordBackspace",
         generation = generation,
-        config = nextwordConfig(mode, translateSwapped, associationRecordingEnabled),
+        config = nextwordConfig(mode, translateSwapped),
     )
 }
 
@@ -74,7 +72,6 @@ fun RustEngineBridge.nextwordContextTimeoutFired(
     nowMs: Long,
     mode: InputMode,
     translateSwapped: Boolean,
-    associationRecordingEnabled: Boolean,
     generation: Long,
 ): RustEngineBridge.NextWordDecideResult {
     val payload = com.siansiansu.taigikeyboard.engine.proto.ContextTimeoutFired
@@ -85,7 +82,7 @@ fun RustEngineBridge.nextwordContextTimeoutFired(
         methodSetter = { it.contextTimeoutFired = payload },
         op = "nextwordContextTimeoutFired",
         generation = generation,
-        config = nextwordConfig(mode, translateSwapped, associationRecordingEnabled),
+        config = nextwordConfig(mode, translateSwapped),
     )
 }
 
@@ -94,7 +91,6 @@ fun RustEngineBridge.nextwordClearForNewComposing(
     nowMs: Long,
     mode: InputMode,
     translateSwapped: Boolean,
-    associationRecordingEnabled: Boolean,
     generation: Long,
 ): RustEngineBridge.NextWordDecideResult {
     val payload = com.siansiansu.taigikeyboard.engine.proto.ClearForNewComposing
@@ -105,7 +101,7 @@ fun RustEngineBridge.nextwordClearForNewComposing(
         methodSetter = { it.clearForNewComposing = payload },
         op = "nextwordClearForNewComposing",
         generation = generation,
-        config = nextwordConfig(mode, translateSwapped, associationRecordingEnabled),
+        config = nextwordConfig(mode, translateSwapped),
     )
 }
 
@@ -114,7 +110,6 @@ fun RustEngineBridge.nextwordResetFull(
     nowMs: Long,
     mode: InputMode,
     translateSwapped: Boolean,
-    associationRecordingEnabled: Boolean,
     generation: Long,
 ): RustEngineBridge.NextWordDecideResult {
     val payload = com.siansiansu.taigikeyboard.engine.proto.ResetFull
@@ -125,7 +120,7 @@ fun RustEngineBridge.nextwordResetFull(
         methodSetter = { it.resetFull = payload },
         op = "nextwordResetFull",
         generation = generation,
-        config = nextwordConfig(mode, translateSwapped, associationRecordingEnabled),
+        config = nextwordConfig(mode, translateSwapped),
     )
 }
 
@@ -141,7 +136,6 @@ fun RustEngineBridge.nextwordSetIsShowing(
     isShowing: Boolean,
     mode: InputMode,
     translateSwapped: Boolean,
-    associationRecordingEnabled: Boolean,
     generation: Long,
 ): RustEngineBridge.NextWordDecideResult {
     val payload = com.siansiansu.taigikeyboard.engine.proto.SetIsShowing
@@ -152,7 +146,7 @@ fun RustEngineBridge.nextwordSetIsShowing(
         methodSetter = { it.setIsShowing = payload },
         op = "nextwordSetIsShowing",
         generation = generation,
-        config = nextwordConfig(mode, translateSwapped, associationRecordingEnabled),
+        config = nextwordConfig(mode, translateSwapped),
     )
 }
 
@@ -168,7 +162,6 @@ fun RustEngineBridge.nextwordUpdateLastSelectedWord(
     nowMs: Long,
     mode: InputMode,
     translateSwapped: Boolean,
-    associationRecordingEnabled: Boolean,
     generation: Long,
 ): RustEngineBridge.NextWordDecideResult {
     val payload = com.siansiansu.taigikeyboard.engine.proto.UpdateLastSelectedWord
@@ -181,7 +174,7 @@ fun RustEngineBridge.nextwordUpdateLastSelectedWord(
         methodSetter = { it.updateLastSelectedWord = payload },
         op = "nextwordUpdateLastSelectedWord",
         generation = generation,
-        config = nextwordConfig(mode, translateSwapped, associationRecordingEnabled),
+        config = nextwordConfig(mode, translateSwapped),
     )
 }
 
@@ -197,7 +190,6 @@ fun RustEngineBridge.nextwordFilter(
     limit: Int,
     mode: InputMode,
     translateSwapped: Boolean,
-    associationRecordingEnabled: Boolean,
     generation: Long,
     candidateDisplayMode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
     hyphenlessRoman: Boolean = false,
@@ -230,7 +222,7 @@ fun RustEngineBridge.nextwordFilter(
         // Fields 9 / 10 ride only the filter request — the sole nextword reader
         // (`nextword/src/filter.rs` collapses same-roman predictions under ROMAN_ONLY
         // and shapes `text` hyphenless under 無連字符).
-        config = nextwordConfig(mode, translateSwapped, associationRecordingEnabled, candidateDisplayMode, hyphenlessRoman),
+        config = nextwordConfig(mode, translateSwapped, candidateDisplayMode, hyphenlessRoman),
     ) ?: return RustEngineBridge.NextWordFilterResult(emptyList(), wasStale = false)
     if (!resp.hasFilter()) {
         RustEngineBridge.recordFailure("nextwordFilter", "missing filter result")
@@ -261,7 +253,6 @@ private fun decisionInput(nowMs: Long): DecisionInput =
 private fun nextwordConfig(
     mode: InputMode,
     translateSwapped: Boolean,
-    associationRecordingEnabled: Boolean,
     candidateDisplayMode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
     hyphenlessRoman: Boolean = false,
 ): AppConfig =
@@ -278,7 +269,6 @@ private fun nextwordConfig(
         .setCandidateDisplayMode(candidateDisplayMode.toProto())
         .setHyphenlessRoman(hyphenlessRoman)
         .setIsTranslateSwapped(translateSwapped)
-        .setIsAssociationRecordingEnabled(associationRecordingEnabled)
         .setPlatformId(Platform.PLATFORM_ANDROID)
         .build()
 

@@ -618,12 +618,6 @@ class PrefHelper(
     override val isHyphenlessRomanEnabled: Boolean
         get() = !isTpsLayout && storedHyphenlessRomanEnabled
 
-    // The 詞頻紀錄 / 詞關聯紀錄 pages and their toggles left the mobile UI on
-    // 2026-09-22 (desktop retired them earlier); the engine carrier still takes
-    // the flag, so it is pinned on here and a stale stored value is never read.
-    override val isAssociationRecordingEnabled: Boolean
-        get() = true
-
     override val pojMarkerOptions: PojMarkerOptions
         get() = PojMarkerOptions(enableDoubleTapOO, enableDoubleTapNN, isNasalMarkerUppercaseEnabled)
 

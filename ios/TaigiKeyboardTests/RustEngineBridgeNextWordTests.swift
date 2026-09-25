@@ -52,7 +52,6 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             nowMs: 0,
             mode: .tl,
             translateSwapped: false,
-            associationRecordingEnabled: true,
             generation: envelopeGen,
         )
         baselineGen = baseline.currentGeneration
@@ -84,24 +83,6 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         for effect in result.effects {
             if case .recordAssociation = effect {
                 XCTFail("association at 20s should be dropped (>= 10s window)")
-            }
-        }
-    }
-
-    func testWordSelected_recordingDisabled_emitsNoRecord() {
-        _ = wordSelected(
-            text: "早", roman: "tsá", nowMs: 0,
-            associationRecordingEnabled: false,
-        )
-        let result = wordSelected(
-            text: "安", roman: "an", nowMs: 5000,
-            associationRecordingEnabled: false,
-        )
-        for effect in result.effects {
-            switch effect {
-            case .recordAssociation, .recordCompoundAssociations:
-                XCTFail("recording disabled — no record effects allowed")
-            default: continue
             }
         }
     }
@@ -251,7 +232,6 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             nowMs: 100,
             mode: .tl,
             translateSwapped: false,
-            associationRecordingEnabled: true,
             generation: envelopeGen,
         )
         XCTAssertNil(result.lastSelectedWord)
@@ -267,7 +247,6 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             true,
             mode: .tl,
             translateSwapped: false,
-            associationRecordingEnabled: true,
             generation: envelopeGen,
         )
         let result = clearForNewComposing(nowMs: 100)
@@ -286,7 +265,6 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             true,
             mode: .tl,
             translateSwapped: false,
-            associationRecordingEnabled: true,
             generation: envelopeGen,
         )
         XCTAssertEqual(result.currentGeneration, baselineGen, "no generation bump")
@@ -315,7 +293,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             queryGeneration: gen,
             nowMs: 1000,
             limit: 10,
-            mode: .tl, translateSwapped: false, associationRecordingEnabled: true,
+            mode: .tl, translateSwapped: false,
             generation: envelopeGen,
         )
         XCTAssertFalse(result.wasStale)
@@ -332,7 +310,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             queryGeneration: gen,
             nowMs: 1000,
             limit: 10,
-            mode: .tl, translateSwapped: false, associationRecordingEnabled: true,
+            mode: .tl, translateSwapped: false,
             generation: envelopeGen,
         )
         XCTAssertEqual(result.predictions.count, 1, "(好, hó) merges across sources")
@@ -356,7 +334,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             queryGeneration: gen,
             nowMs: 1000,
             limit: 10,
-            mode: .tl, translateSwapped: false, associationRecordingEnabled: true,
+            mode: .tl, translateSwapped: false,
             generation: envelopeGen,
         )
         XCTAssertEqual(result.predictions.count, 1)
@@ -373,7 +351,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             queryGeneration: gen,
             nowMs: 1000,
             limit: 10,
-            mode: .tl, translateSwapped: true, associationRecordingEnabled: true,
+            mode: .tl, translateSwapped: true,
             generation: envelopeGen,
         )
         XCTAssertEqual(result.predictions.count, 2)
@@ -386,7 +364,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             queryGeneration: gen,
             nowMs: 1000,
             limit: 10,
-            mode: .poj, translateSwapped: false, associationRecordingEnabled: true,
+            mode: .poj, translateSwapped: false,
             generation: envelopeGen,
         )
         XCTAssertEqual(result.predictions.count, 1)
@@ -403,7 +381,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             queryGeneration: gen &- 1, // mismatch
             nowMs: 1000,
             limit: 10,
-            mode: .tl, translateSwapped: false, associationRecordingEnabled: true,
+            mode: .tl, translateSwapped: false,
             generation: envelopeGen,
         )
         XCTAssertTrue(result.wasStale)
@@ -420,7 +398,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             queryGeneration: gen,
             nowMs: 1000,
             limit: 3,
-            mode: .tl, translateSwapped: false, associationRecordingEnabled: true,
+            mode: .tl, translateSwapped: false,
             generation: envelopeGen,
         )
         XCTAssertEqual(result.predictions.count, 3)
@@ -442,7 +420,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             queryGeneration: gen,
             nowMs: 1000,
             limit: 10,
-            mode: .tl, translateSwapped: false, associationRecordingEnabled: true,
+            mode: .tl, translateSwapped: false,
             generation: envelopeGen,
         )
         XCTAssertEqual(result.predictions.count, 1, "raw variant folds into canonical (台語 once)")
@@ -463,7 +441,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             queryGeneration: gen,
             nowMs: 1000,
             limit: 10,
-            mode: .tl, translateSwapped: false, associationRecordingEnabled: true,
+            mode: .tl, translateSwapped: false,
             generation: envelopeGen,
         )
         XCTAssertEqual(result.predictions.count, 3, "distinct polyphones must not collapse")
@@ -491,7 +469,6 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         requireRomanMode: Bool = false,
         triggerPrediction: Bool = true,
         translateSwapped: Bool = false,
-        associationRecordingEnabled: Bool = true,
     ) -> RustEngineBridge.NextWordDecideResult {
         RustEngineBridge.nextwordWordSelected(
             text: text,
@@ -501,7 +478,6 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             nowMs: nowMs,
             mode: .tl,
             translateSwapped: translateSwapped,
-            associationRecordingEnabled: associationRecordingEnabled,
             generation: envelopeGen,
         )
     }
@@ -515,7 +491,6 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             nowMs: nowMs,
             mode: .tl,
             translateSwapped: false,
-            associationRecordingEnabled: true,
             generation: envelopeGen,
         )
     }
@@ -525,7 +500,6 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             nowMs: nowMs,
             mode: .tl,
             translateSwapped: false,
-            associationRecordingEnabled: true,
             generation: envelopeGen,
         )
     }
@@ -535,7 +509,6 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             nowMs: nowMs,
             mode: .tl,
             translateSwapped: false,
-            associationRecordingEnabled: true,
             generation: envelopeGen,
         )
     }
@@ -547,7 +520,6 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             false,
             mode: .tl,
             translateSwapped: false,
-            associationRecordingEnabled: true,
             generation: envelopeGen,
         ).currentGeneration
     }

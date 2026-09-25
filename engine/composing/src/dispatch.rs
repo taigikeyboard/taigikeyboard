@@ -727,7 +727,6 @@ mod tests {
             oo_doubletap_enabled: false,
             nn_doubletap_enabled: false,
             is_translate_swapped: false,
-            is_association_recording_enabled: false,
             platform_id: 0,
             output_both_scripts: false,
             candidate_display_mode: 0,

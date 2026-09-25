@@ -139,10 +139,11 @@ public nonisolated enum Taigi_Engine_Platform: SwiftProtobuf.Enum, Swift.CaseIte
 /// preprocessing (oo→o͘, nn→ⁿ) read by `phonetics::api::normalize_tone` on the
 /// composing path.
 ///
-/// v3.5.5 added `is_translate_swapped` + `is_association_recording_enabled`
-/// + `platform_id` for the NextWord engine. `platform_id` originally branched
-/// the compound-split separator and the noise-punct set; those converged to one
-/// platform-neutral contract (behavioral-invariants.md §40) and it is now
+/// v3.5.5 added `is_translate_swapped` + `platform_id` for the NextWord
+/// engine (tag 6 `is_association_recording_enabled` retired 2026-09-25 —
+/// association recording is always on since the toggle left every UI).
+/// `platform_id` originally branched the compound-split separator and the
+/// noise-punct set; those converged to one platform-neutral contract (behavioral-invariants.md §40) and it is now
 /// validated caller identity only.
 ///
 /// v3.5.8 added `output_both_scripts`: the engine's Model B continuous
@@ -244,8 +245,6 @@ public nonisolated struct Taigi_Engine_AppConfig: Sendable {
   public var nnDoubletapEnabled: Bool = false
 
   public var isTranslateSwapped: Bool = false
-
-  public var isAssociationRecordingEnabled: Bool = false
 
   public var platformID: Taigi_Engine_Platform = .unspecified
 
@@ -432,7 +431,7 @@ nonisolated extension Taigi_Engine_CandidateDisplayMode: SwiftProtobuf._ProtoNam
 
 nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AppConfig"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}tone_mode\0\u{3}input_mode\0\u{3}oo_doubletap_enabled\0\u{3}nn_doubletap_enabled\0\u{3}is_translate_swapped\0\u{3}is_association_recording_enabled\0\u{3}platform_id\0\u{3}output_both_scripts\0\u{3}candidate_display_mode\0\u{3}hyphenless_roman\0\u{3}force_lowercase_nasal_marker\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}tone_mode\0\u{3}input_mode\0\u{3}oo_doubletap_enabled\0\u{3}nn_doubletap_enabled\0\u{3}is_translate_swapped\0\u{4}\u{2}platform_id\0\u{3}output_both_scripts\0\u{3}candidate_display_mode\0\u{3}hyphenless_roman\0\u{3}force_lowercase_nasal_marker\0\u{b}is_association_recording_enabled\0\u{c}\u{6}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -445,7 +444,6 @@ nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtob
       case 3: try { try decoder.decodeSingularBoolField(value: &self.ooDoubletapEnabled) }()
       case 4: try { try decoder.decodeSingularBoolField(value: &self.nnDoubletapEnabled) }()
       case 5: try { try decoder.decodeSingularBoolField(value: &self.isTranslateSwapped) }()
-      case 6: try { try decoder.decodeSingularBoolField(value: &self.isAssociationRecordingEnabled) }()
       case 7: try { try decoder.decodeSingularEnumField(value: &self.platformID) }()
       case 8: try { try decoder.decodeSingularBoolField(value: &self.outputBothScripts) }()
       case 9: try { try decoder.decodeSingularEnumField(value: &self.candidateDisplayMode) }()
@@ -472,9 +470,6 @@ nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtob
     if self.isTranslateSwapped != false {
       try visitor.visitSingularBoolField(value: self.isTranslateSwapped, fieldNumber: 5)
     }
-    if self.isAssociationRecordingEnabled != false {
-      try visitor.visitSingularBoolField(value: self.isAssociationRecordingEnabled, fieldNumber: 6)
-    }
     if self.platformID != .unspecified {
       try visitor.visitSingularEnumField(value: self.platformID, fieldNumber: 7)
     }
@@ -499,7 +494,6 @@ nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtob
     if lhs.ooDoubletapEnabled != rhs.ooDoubletapEnabled {return false}
     if lhs.nnDoubletapEnabled != rhs.nnDoubletapEnabled {return false}
     if lhs.isTranslateSwapped != rhs.isTranslateSwapped {return false}
-    if lhs.isAssociationRecordingEnabled != rhs.isAssociationRecordingEnabled {return false}
     if lhs.platformID != rhs.platformID {return false}
     if lhs.outputBothScripts != rhs.outputBothScripts {return false}
     if lhs.candidateDisplayMode != rhs.candidateDisplayMode {return false}

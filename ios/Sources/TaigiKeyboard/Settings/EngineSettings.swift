@@ -30,7 +30,6 @@ protocol EngineSettings {
     // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/core/settings/EngineSettings.kt:candidateDisplayMode.
     // Drift causes silent divergence (one platform still shows hanji / swaps scripts under 羅馬字).
     var candidateDisplayMode: CandidateDisplayMode { get }
-    var isAssociationRecordingEnabled: Bool { get }
 
     /// Literal-roman candidate toggle (§34/S22). When on (default), TL/POJ
     /// composing surfaces the preedit literal (`derived_display`) as the

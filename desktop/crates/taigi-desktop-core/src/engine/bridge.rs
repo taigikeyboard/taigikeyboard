@@ -122,13 +122,12 @@ pub(super) fn continuous_app_config(settings: &EngineSettings) -> AppConfig {
     }
 }
 
-/// `app_config` plus the two fields the next-word decide table reads: the
-/// swap flag (suppresses recording for raw-romanization commits) and the
-/// recording switch (`decide.rs:109`, `:130`).
+/// `app_config` plus the field the next-word decide table reads: the swap
+/// flag, which suppresses recording for raw-romanization commits
+/// (`decide.rs:86`).
 pub(super) fn nextword_config(settings: &EngineSettings) -> AppConfig {
     AppConfig {
         is_translate_swapped: settings.is_translate_swapped,
-        is_association_recording_enabled: settings.is_association_recording_enabled,
         ..app_config(settings)
     }
 }
@@ -224,14 +223,12 @@ mod tests {
         let settings = EngineSettings {
             is_translate_swapped: true,
             is_output_both_scripts: true,
-            is_association_recording_enabled: false,
             ..EngineSettings::default()
         };
         let continuous = continuous_app_config(&settings);
         assert!(continuous.is_translate_swapped && continuous.output_both_scripts);
-        assert!(!continuous.is_association_recording_enabled);
         let nextword = nextword_config(&settings);
-        assert!(nextword.is_translate_swapped && !nextword.is_association_recording_enabled);
+        assert!(nextword.is_translate_swapped);
         assert!(!nextword.output_both_scripts);
     }
 

@@ -55,10 +55,11 @@ enum Platform {
 // preprocessing (oo→o͘, nn→ⁿ) read by `phonetics::api::normalize_tone` on the
 // composing path.
 //
-// v3.5.5 added `is_translate_swapped` + `is_association_recording_enabled`
-// + `platform_id` for the NextWord engine. `platform_id` originally branched
-// the compound-split separator and the noise-punct set; those converged to one
-// platform-neutral contract (behavioral-invariants.md §40) and it is now
+// v3.5.5 added `is_translate_swapped` + `platform_id` for the NextWord
+// engine (tag 6 `is_association_recording_enabled` retired 2026-09-25 —
+// association recording is always on since the toggle left every UI).
+// `platform_id` originally branched the compound-split separator and the
+// noise-punct set; those converged to one platform-neutral contract (behavioral-invariants.md §40) and it is now
 // validated caller identity only.
 //
 // v3.5.8 added `output_both_scripts`: the engine's Model B continuous
@@ -112,12 +113,14 @@ enum CandidateDisplayMode {
 // (`phonetics::case_transform::apply_nasal_marker_case`, §53); identity
 // keys already fold both glyphs to `nn`.
 message AppConfig {
+  reserved 6;
+  reserved "is_association_recording_enabled";
+
   string tone_mode = 1;
   string input_mode = 2;
   bool oo_doubletap_enabled = 3;
   bool nn_doubletap_enabled = 4;
   bool is_translate_swapped = 5;
-  bool is_association_recording_enabled = 6;
   Platform platform_id = 7;
   bool output_both_scripts = 8;
   CandidateDisplayMode candidate_display_mode = 9;

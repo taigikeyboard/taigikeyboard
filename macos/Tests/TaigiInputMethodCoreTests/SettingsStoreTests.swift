@@ -84,7 +84,6 @@ final class SettingsStoreTests: XCTestCase {
         userDefaults.set(true, forKey: SettingsStore.Keys.isTranslateSwapped.name)
         userDefaults.set(true, forKey: SettingsStore.Keys.isOutputBothScripts.name)
         userDefaults.set(false, forKey: SettingsStore.Keys.isFrequencyRecordingEnabled.name)
-        userDefaults.set(false, forKey: SettingsStore.Keys.isAssociationRecordingEnabled.name)
         // §34/S22 — the default moved ON on 2026-09-03, so a stored `false`
         // has to keep winning: someone who turned 顯示當咧拍的字 off stays off.
         userDefaults.set(false, forKey: SettingsStore.Keys.isLiteralRomanCandidateEnabled.name)
@@ -103,7 +102,6 @@ final class SettingsStoreTests: XCTestCase {
                 isHyphenlessRomanEnabled: true,
                 isNasalMarkerUppercaseEnabled: false,
                 isFrequencyRecordingEnabled: false,
-                isAssociationRecordingEnabled: false,
                 isCustomDictEnabled: EngineSettings.defaults.isCustomDictEnabled,
                 dictionarySources: EngineSettings.defaults.dictionarySources,
             ),

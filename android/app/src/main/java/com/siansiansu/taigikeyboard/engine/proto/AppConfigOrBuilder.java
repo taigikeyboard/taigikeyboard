@@ -53,12 +53,6 @@ public interface AppConfigOrBuilder extends
   boolean getIsTranslateSwapped();
 
   /**
-   * <code>bool is_association_recording_enabled = 6;</code>
-   * @return The isAssociationRecordingEnabled.
-   */
-  boolean getIsAssociationRecordingEnabled();
-
-  /**
    * <code>.taigi.engine.Platform platform_id = 7;</code>
    * @return The enum numeric value on the wire for platformId.
    */

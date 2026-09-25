@@ -189,10 +189,6 @@ pub struct EngineSettings {
     /// Read on the write path only; the boost always applies to whatever was
     /// learned. CROSS-PLATFORM INVARIANT — `SharedSettings.swift:48` (ON).
     pub is_frequency_recording_enabled: bool,
-    /// `AppConfig.is_association_recording_enabled`, gating the
-    /// `RecordAssociation` effects (`engine/nextword/src/decide.rs:130`).
-    /// CROSS-PLATFORM INVARIANT — `SharedSettings.swift:49` (ON).
-    pub is_association_recording_enabled: bool,
     /// Gates the custom-dictionary lookup itself: off means
     /// `FetchAtPos.custom_entries` goes out empty. CROSS-PLATFORM INVARIANT —
     /// `SharedSettings.swift:51` (ON).
@@ -223,7 +219,6 @@ impl EngineSettings {
             is_hyphenless_roman_enabled: false,
             is_nasal_marker_uppercase_enabled: true,
             is_frequency_recording_enabled: true,
-            is_association_recording_enabled: true,
             is_custom_dict_enabled: true,
             dictionary_sources: DictionarySourceToggles::DEFAULT,
         }

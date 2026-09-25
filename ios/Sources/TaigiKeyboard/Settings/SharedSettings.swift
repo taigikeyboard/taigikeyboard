@@ -278,16 +278,6 @@ final class SharedSettings {
         set { userDefaults.set(newValue, for: Self.isOutputBothScriptsKey) }
     }
 
-    // MARK: - Association Recording (always on)
-
-    // Feeds NextWord suggestions. The 詞頻紀錄 / 詞關聯紀錄 pages and their
-    // toggles left the mobile UI on 2026-09-22 (desktop retired them earlier);
-    // the engine carrier still takes the flag, so it is pinned on here and a
-    // stale `associationRecordingEnabled` default is never read.
-    var isAssociationRecordingEnabled: Bool {
-        true
-    }
-
     // MARK: - Literal-Roman Candidate (§34/S22, default: on)
 
     // 顯示當咧拍的字: put the literal roman candidate first while composing in TL/POJ.

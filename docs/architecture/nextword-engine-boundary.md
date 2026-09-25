@@ -185,7 +185,7 @@ For `wordSelected(text, roman, requireRomanMode, triggerPrediction)`:
 | `text` empty | `[]` | unchanged |
 | `text` is noise punctuation, NOT sentence-end | `[]` | unchanged |
 | `text` is sentence-end punctuation | `[cancelContextTimeout] + [clearPredictionsUI(gen) if isShowing]` | reset to defaults + bump generation |
-| `settings.isAssociationRecordingEnabled && shouldRecordAssociation(state, nowMs) && state.lastSelectedWord != nil` | `[recordAssociation(...), recordCompoundAssociations(...)]` (append) | — |
+| `shouldRecordAssociation(state, nowMs) && state.lastSelectedWord != nil` (recording is always on — the `is_association_recording_enabled` gate was retired 2026-09-25) | `[recordAssociation(...), recordCompoundAssociations(...)]` (append) | — |
 | Always (for valid text) | append `[rescheduleContextTimeout(30)]` | `lastSelectedWord/Roman = ...`, `lastSelectionTimeMs = nowMs`, bump generation |
 | `triggerPrediction == true` | append `[queryPredictions(textTl, romanTl, newGen)]` | — |
 
@@ -247,7 +247,7 @@ Executor's `recordCompoundAssociations` effect feeds straight into a single `Tas
 
 ## 7. Settings access — snapshot-per-intent (with live live-read at executor)
 
-`NextWordController` today reads `settingsProvider.current` twice in `process` (for `isTranslateSwapped` and `isAssociationRecordingEnabled`) and once in `makePredictions`. Between those reads, a settings change could technically flip the answer — though in practice settings updates during a single `process` call are not observed.
+`NextWordController` originally read `settingsProvider.current` twice in `process` (for `isTranslateSwapped` and the since-retired `isAssociationRecordingEnabled`) and once in `makePredictions`. Between those reads, a settings change could technically flip the answer — though in practice settings updates during a single `process` call are not observed.
 
 **Decision**: executor reads `settingsProvider.current` once at the start of `process` and snapshots it into `NextWordDecisionInput.settings`, then passes the value to `decide`. Prediction-filter step gets its own snapshot at query-resolve time (Task boundary). This matches *per-keystroke live* semantics without forcing the engine to query a provider.
 

@@ -9,11 +9,13 @@ import KeyboardShortcuts
 /// is free, and re-clearing also catches a manual `defaults write` that would
 /// otherwise resurrect hidden state.
 ///
-/// The engine still reads three recording/output settings keys — they are
+/// The engine still reads two recording/output settings keys — they are
 /// cross-platform contract, and the composing carrier encodes them either way —
 /// so a value stored by a build that HAD the toggle would silently outlive the
 /// UI that set it. Removing the stored values returns each to its default:
-/// 括號標注 back off, 詞頻紀錄 and 詞關聯紀錄 back on.
+/// 括號標注 back off, 詞頻紀錄 back on. 詞關聯紀錄 is no longer a setting at
+/// all (association recording is unconditional), so its key is swept with the
+/// retired names.
 @MainActor
 enum RetiredSettingsCleanup {
     /// Raw `KeyboardShortcuts.Name`s of the retired hotkey actions, kept so a
@@ -95,6 +97,11 @@ enum RetiredSettingsCleanup {
         // `toneInputScheme` now, and the ⇧ / ⌃ / ⌥ digit sets this key could
         // name no longer exist to migrate to.
         "candidateSlotModifier",
+        // 詞關聯紀錄, retired 2026-09-25 when the engine dropped
+        // `AppConfig.is_association_recording_enabled`: association recording
+        // is always on, so a stored value (a `false` left by an older build or
+        // a hand edit) is inert now.
+        "associationRecordingEnabled",
     ]
 
     /// Raw values of composing actions removed from the roster: 直接送出漢字 and
@@ -113,22 +120,21 @@ enum RetiredSettingsCleanup {
 
     static func run(userDefaults: UserDefaults = .standard) {
         userDefaults.removeObject(forKey: SettingsStore.Keys.isOutputBothScripts.name)
-        // The 詞頻紀錄 / 詞關聯紀錄 toggles went with the panes that carried
-        // them. Unlike the retired names below this changes BEHAVIOUR rather
-        // than only tidying: `SettingsStore.current` still reads both keys, so
-        // a `false` stored by a build that HAD the toggles would keep learning
-        // switched off with nothing left to switch it back on. Clearing them
-        // returns both to their `true` defaults.
+        // The 詞頻紀錄 toggle went with the pane that carried it. Unlike the
+        // retired names below this changes BEHAVIOUR rather than only tidying:
+        // `SettingsStore.current` still reads the key, so a `false` stored by a
+        // build that HAD the toggle would keep learning switched off with
+        // nothing left to switch it back on. Clearing it returns it to its
+        // `true` default.
         //
         // Launch-time, and the read is live, so this restores the default once
         // per launch rather than making the key unreachable — a deliberate
         // `defaults write` still takes effect for the rest of that session.
-        // Closing that would mean not reading these from defaults at all, which
-        // is a wider change than this round: the key beside them
+        // Closing that would mean not reading it from defaults at all, which
+        // is a wider change than this round: the key beside it
         // (`isOutputBothScripts`) is read live on purpose — see
         // `CandidateDocumentText`.
         userDefaults.removeObject(forKey: SettingsStore.Keys.isFrequencyRecordingEnabled.name)
-        userDefaults.removeObject(forKey: SettingsStore.Keys.isAssociationRecordingEnabled.name)
         for name in retiredDefaultsNames {
             userDefaults.removeObject(forKey: name)
         }

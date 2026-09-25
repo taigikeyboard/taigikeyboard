@@ -132,7 +132,6 @@ override func viewDidLoad() {
 public protocol EngineSettings {
     var inputMode: InputMode { get }
     var isTranslateSwapped: Bool { get }
-    var isAssociationRecordingEnabled: Bool { get }
     var toneToggles: ToneToggles { get }
     // … other read-only engine-visible flags
 }

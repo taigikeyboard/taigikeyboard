@@ -825,21 +825,6 @@ fn a_comma_leaves_the_bigram_intact_and_a_letter_outside_is_not_a_word() {
 }
 
 #[test]
-fn with_association_recording_off_two_commits_learn_nothing() {
-    let _lock = engine_lock();
-    let mut rig = rig();
-    rig.settings
-        .edit(|doc| doc.set_bool(&keys::IS_ASSOCIATION_RECORDING_ENABLED, false));
-    rig.type_text("tai5");
-    let tai = rig.candidate("台");
-    rig.commit(&tai, CandidateScript::Primary);
-    rig.type_text("gi2");
-    let gi = rig.candidate("語");
-    rig.commit(&gi, CandidateScript::Primary);
-    assert!(rig.memory.associations.lock().unwrap().is_empty());
-}
-
-#[test]
 fn a_new_session_and_a_mid_composition_punctuation_both_forget_the_context() {
     let _lock = engine_lock();
     let mut rig = rig();

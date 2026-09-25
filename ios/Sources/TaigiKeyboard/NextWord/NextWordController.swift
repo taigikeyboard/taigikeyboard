@@ -86,7 +86,6 @@ final class NextWordController {
             nowMs: Self.currentTimestampMs,
             mode: settings.inputMode,
             translateSwapped: settings.isTranslateSwapped,
-            associationRecordingEnabled: settings.isAssociationRecordingEnabled,
             generation: envelopeGen,
         )
         applyDecideResult(result)
@@ -99,7 +98,6 @@ final class NextWordController {
             nowMs: Self.currentTimestampMs,
             mode: settings.inputMode,
             translateSwapped: settings.isTranslateSwapped,
-            associationRecordingEnabled: settings.isAssociationRecordingEnabled,
             generation: envelopeGen,
         )
         applyDecideResult(result)
@@ -111,7 +109,6 @@ final class NextWordController {
             nowMs: Self.currentTimestampMs,
             mode: settings.inputMode,
             translateSwapped: settings.isTranslateSwapped,
-            associationRecordingEnabled: settings.isAssociationRecordingEnabled,
             generation: envelopeGen,
         )
         applyDecideResult(result)
@@ -124,7 +121,6 @@ final class NextWordController {
             nowMs: Self.currentTimestampMs,
             mode: settings.inputMode,
             translateSwapped: settings.isTranslateSwapped,
-            associationRecordingEnabled: settings.isAssociationRecordingEnabled,
             generation: envelopeGen,
         )
         applyDecideResult(result)
@@ -149,7 +145,6 @@ final class NextWordController {
             nowMs: Self.currentTimestampMs,
             mode: settings.inputMode,
             translateSwapped: settings.isTranslateSwapped,
-            associationRecordingEnabled: settings.isAssociationRecordingEnabled,
             generation: envelopeGen,
         )
         applyDecideResult(result)
@@ -246,7 +241,6 @@ final class NextWordController {
             limit: 30,
             mode: settings.inputMode,
             translateSwapped: settings.isTranslateSwapped,
-            associationRecordingEnabled: settings.isAssociationRecordingEnabled,
             candidateDisplayMode: settings.candidateDisplayMode,
             hyphenlessRoman: settings.isHyphenlessRomanEnabled,
             generation: envelopeGen,
@@ -269,7 +263,6 @@ final class NextWordController {
             nowShowing,
             mode: settings.inputMode,
             translateSwapped: settings.isTranslateSwapped,
-            associationRecordingEnabled: settings.isAssociationRecordingEnabled,
             generation: envelopeGen,
         )
         cachedIsShowing = synced.isShowing
@@ -319,7 +312,6 @@ final class NextWordController {
             nowMs: Self.currentTimestampMs,
             mode: settings.inputMode,
             translateSwapped: settings.isTranslateSwapped,
-            associationRecordingEnabled: settings.isAssociationRecordingEnabled,
             generation: envelopeGen,
         )
         applyDecideResult(result)
