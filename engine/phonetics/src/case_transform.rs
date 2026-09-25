@@ -58,10 +58,17 @@ fn uppercase_internal(input: &str, mode: InputMode, all_chars: bool) -> String {
         return "\u{1D3A}".to_string();
     }
 
-    // Mode-specific tone-letter table lookup.
+    // Mode-specific tone-letter table lookup. Table values are first-letter
+    // upper (TL `óo` → `Óo`); Caps Lock raises the rest too (`ÓO`, USER
+    // 2026-09-25 「caps-lock 不是應該都大寫嗎」, behavioral-invariants.md
+    // "CapsLock → all upper").
     if let Some(map) = lower_to_upper(mode) {
         if let Some(mapped) = map.get(input) {
-            return (*mapped).to_string();
+            return if all_chars {
+                mapped.to_uppercase()
+            } else {
+                (*mapped).to_string()
+            };
         }
     }
 
@@ -432,6 +439,36 @@ mod tests {
     #[test]
     fn full_uppercase_tone_string_uppercases_all() {
         assert_eq!(full_uppercase_tone_string("tsh", InputMode::Tl), "TSH");
+    }
+
+    #[test]
+    fn caps_lock_raises_every_letter_of_a_tl_oo_table_entry() {
+        // trace: table "óo"→"Óo" (first-letter upper), all_chars → to_uppercase → "ÓO"
+        assert_eq!(full_uppercase_tone_string("óo", InputMode::Tl), "ÓO");
+        assert_eq!(full_uppercase_tone_string("o̍o", InputMode::Tl), "O̍O");
+        assert_eq!(
+            transform_input_case("óo", LetterCase::CapsLocked, InputMode::Tl),
+            "ÓO"
+        );
+        assert_eq!(
+            raise_case("óo", LetterCase::CapsLocked, InputMode::Tl),
+            "ÓO"
+        );
+    }
+
+    #[test]
+    fn shift_keeps_a_tl_oo_table_entry_first_letter_only() {
+        assert_eq!(uppercase_tone_char("óo", InputMode::Tl), "Óo");
+        assert_eq!(
+            transform_input_case("óo", LetterCase::Uppercased, InputMode::Tl),
+            "Óo"
+        );
+    }
+
+    #[test]
+    fn caps_lock_tl_oo_lowercases_back() {
+        // trace: "ÓO" misses the reverse table ("Óo" only) → stdlib lowercase
+        assert_eq!(lowercase_tone_char("ÓO", InputMode::Tl), "óo");
     }
 
     #[test]
