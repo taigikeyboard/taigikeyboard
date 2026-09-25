@@ -1,4 +1,4 @@
-# Taigi Keyboard - Technical Specifications
+# TaigiKeyboard - Technical Specifications
 
 > **Type**: Index
 > **Keywords**: `spec`, `index`, `specification`

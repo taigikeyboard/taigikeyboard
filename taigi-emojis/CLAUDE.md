@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Guidelines for Claude Code in this repo (Python emoji-data pipeline for the Taigi keyboard).
+Guidelines for Claude Code in this repo (Python emoji-data pipeline for TaigiKeyboard).
 
 Cross-project process rules (workflow, planning, review, naming, docs, Python) auto-load from
 `~/.claude/rules/` (user-global, from the `configurations` dotfiles repo). Project rules live in
@@ -8,7 +8,7 @@ Cross-project process rules (workflow, planning, review, naming, docs, Python) a
 
 ## Project Overview
 
-**taigi-emojis** — the single emoji source of truth for the Taigi keyboard (iOS + Android).
+**taigi-emojis** — the single emoji source of truth for TaigiKeyboard (iOS + Android).
 A Python generator
 merges pinned Unicode + CLDR data with a hand overlay of 台語/華語 search keywords and emits one
 `dist/emoji.json` both platforms consume directly from this repository.

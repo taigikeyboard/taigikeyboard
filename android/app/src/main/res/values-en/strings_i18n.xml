@@ -112,9 +112,9 @@
     <string name="i18n_home_newFeatures">Feature Settings</string>
     <string name="i18n_home_setupGuide">How to Enable</string>
     <string name="i18n_home_setupGuideDescription">Your phone requires third-party keyboards to be enabled manually. Follow the steps below to finish setup.</string>
-    <string name="i18n_home_setupInfoMessage">\"Allow Full Access\" lets the keyboard share settings and usage data with the app. Taigi Keyboard does not send what you type over the network.</string>
+    <string name="i18n_home_setupInfoMessage">\"Allow Full Access\" lets the keyboard share settings and usage data with the app. TaigiKeyboard does not send what you type over the network.</string>
     <string name="i18n_home_setupBrandWarning">Steps may differ slightly between phone brands, but the overall process is much the same.</string>
-    <string name="i18n_home_setupGuideCompletedMessage">Once done, restart the app you are using. Then, wherever you can type, press and hold the globe icon to switch to Taigi Keyboard.</string>
+    <string name="i18n_home_setupGuideCompletedMessage">Once done, restart the app you are using. Then, wherever you can type, press and hold the globe icon to switch to TaigiKeyboard.</string>
     <string name="i18n_home_setupGuideGoToSettings">Open Settings</string>
     <string name="i18n_home_setupGuideStep1Settings">Tap \"Keyboards\"</string>
     <string name="i18n_home_setupGuideStep2AddKeyboard">Tap \"Add keyboard\" and \"Allow Full Access\"</string>
@@ -122,7 +122,7 @@
     <string name="i18n_home_rateUs">Rate Us</string>
     <string name="i18n_home_aboutDeveloper">About</string>
     <string name="i18n_home_privacyPolicy">Privacy Policy</string>
-    <string name="i18n_home_freePromise">Taigi Keyboard will remain free and will not add paid features. I want everyone who wishes to learn or write Taiwanese to be able to use it without cost.</string>
+    <string name="i18n_home_freePromise">TaigiKeyboard will remain free and will not add paid features. I want everyone who wishes to learn or write Taiwanese to be able to use it without cost.</string>
     <string name="i18n_home_version">Current Version</string>
     <string name="i18n_home_copyrightNotice">Acknowledgements</string>
     <string name="i18n_home_viewLicense">License</string>

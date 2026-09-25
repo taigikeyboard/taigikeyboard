@@ -40,7 +40,7 @@ ChiaKey.app (macOS InputMethodKit host, Obj-C++)
 
 Side processes: Preferences app, Phrase Editor, Updater. None talk to the IME over XPC any more; they use files + `NSDistributedNotificationCenter` (§5).
 
-| Dimension | ChiaKey | Taigi Keyboard |
+| Dimension | ChiaKey | TaigiKeyboard |
 |---|---|---|
 | Engine language / host | C++ / Obj-C++ IMK, macOS only | Rust engine, Swift IMK / Rust TSF / Swift KeyboardKit / Kotlin |
 | Segmentation | Manjusri `Graph::walk` bigram path search | `engine/composing/src/lattice` |
@@ -187,9 +187,9 @@ Side processes: Preferences app, Phrase Editor, Updater. None talk to the IME ov
 
 ## 9. User-facing input features (from https://chiaki.ch/works/chiakey, fetched 2026-09-19)
 
-The product page lists six features. Each is traced to source below and compared with what Taigi Keyboard ships on desktop (macOS IMK / Windows TSF) and mobile.
+The product page lists six features. Each is traced to source below and compared with what TaigiKeyboard ships on desktop (macOS IMK / Windows TSF) and mobile.
 
-| # | Feature as advertised | ChiaKey mechanism (`file`) | Taigi Keyboard today | Transfer? |
+| # | Feature as advertised | ChiaKey mechanism (`file`) | TaigiKeyboard today | Transfer? |
 |---|---|---|---|---|
 | 1 | **選字學習** — context + selection history rank candidates; frequently chosen rise | Two tiers on every candidate pick (`OVIMSmartMandarin.h::chooseCandidate`): (a) **context-keyed override** keyed by `(previous reading, this reading)` — BOS counts as a context so sentence-initial picks are learnable; promoted to a context-free override only after 3 distinct contexts (`LanguageModel.h` `c_overrideGeneralizationContexts`); a pick that equals the lexicon's first candidate *clears* a stale override instead of storing one; (b) **user bigram** `(previous text, this text)` at `LearnedBigramScore = log10(1)` so one correction sticks. Punctuation / passthrough / ctrl keys never learn. Learning is suspended while the Phrase Editor lock is fresh. | `user_frequency` count + recency (`engine/ranking`), next-word association write-only on macOS (`macos-roadmap.md` § learning), next-word predictions on mobile (`engine/nextword`). Single-tier, context-free. | The **"pick equals lexicon default → clear override"** rule and the **context-keyed → generalized** promotion are the two ideas; both are lattice-side and only relevant if a user-correction complaint arrives (Core Principle #4, reactive). |
 | 2 | **新增詞彙** — `Shift+←/→/Home/End` marks characters in the composing buffer, `Enter` adds; or `Ctrl+1…9` adds the preceding N characters | Mark mode in `OVIMSmartMandarin.cpp` ~370–475: only when no reading is pending; span capped at **6 characters**; highlight drawn via `PVTextBuffer::setHighlightMark`; tooltip 「正在選取字詞組：X，請按 ENTER 鍵加入資料庫」; `Esc` / bare arrow cancels; any other key beeps and drops the mark. `Ctrl+N` path `handleQuickUserUnigramKey` ~213: beeps if fewer than N characters precede the cursor. Both call `addUserUnigram(qstring, current)` (`LanguageModel.h` ~1700), which rejects duplicates already in the system or user unigram table and refuses while the editor lock is fresh. Added word = **(reading sequence, text) pair**, i.e. the same `(reading, 漢字)` identity as our Core Principle #6. | Custom words are added in the settings app (`自訂詞庫` pane on macOS; iOS / Android custom-dictionary screens), not from the composing buffer. On mobile, S50 covers 披頭巾 via custom word. | **In-buffer word capture** is the one desktop input feature we lack. The `Ctrl+N` form is the cheaper of the two (no highlight rendering, no mark state machine). Our `⌃1…9` chord is already taken as one of the candidate slot-key picker choices (`macos-roadmap.md` D4), so a desktop version would need its own chord. Not proposed; recorded as the reference. |
@@ -200,7 +200,7 @@ The product page lists six features. Each is traced to source below and compared
 
 Other page claims, for the record: lexicon layers (base characters, contextual correction, trending terms, Taiwan-usage adjustment, personal dictionary) built from ~470 M characters of Taiwanese text — that is `ChiaKey-Lexicon`, outside this repo; macOS 10.13+ and Apple Silicon native. The `OVAFHomophoneLookup` (backtick), `OVAFReverseLookup`, `OVAFBopomofoCorrection`, `YKAFPhraseAware` and `YKAFWordCount` around-filters exist in the tree but are not advertised on the page.
 
-**Net for Taigi Keyboard**: of the six, four we already have or deliberately do not want (3, 4, 6, and the learning in 1 in a simpler form). The two genuinely missing input gestures are **in-buffer word capture** (2) and **forced phrase break** (5); both are desktop-only and both stay unscheduled until a USER-reported need (Core Principle #4).
+**Net for TaigiKeyboard**: of the six, four we already have or deliberately do not want (3, 4, 6, and the learning in 1 in a simpler form). The two genuinely missing input gestures are **in-buffer word capture** (2) and **forced phrase break** (5); both are desktop-only and both stay unscheduled until a USER-reported need (Core Principle #4).
 
 ---
 
@@ -215,7 +215,7 @@ Other page claims, for the record: lexicon layers (base characters, contextual c
 
 ## Deliberately not adopted
 
-| ChiaKey pattern | Why not for Taigi Keyboard |
+| ChiaKey pattern | Why not for TaigiKeyboard |
 |---|---|
 | Obj-C++ InputMethodKit host + OpenVanilla module loader | Our macOS host is Swift over the Rust engine (`docs/architecture/macos-roadmap.md`); module plug-in system is YAGNI for one engine. |
 | SQLite-resident bigram LM queried at keystroke time | Our lexicon is an FST + mmap binary (`docs/engine/binary-format.md`); ranking is in `engine/ranking`. |

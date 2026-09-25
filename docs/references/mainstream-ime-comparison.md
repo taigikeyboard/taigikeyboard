@@ -15,7 +15,7 @@
 
 ## How to use this file
 
-1. **TL;DR matrix** below gives one row per repo + the dimensions Taigi Keyboard cares about (segmentation, ranking, user adaptation, tone handling, license, platform).
+1. **TL;DR matrix** below gives one row per repo + the dimensions TaigiKeyboard cares about (segmentation, ranking, user adaptation, tone handling, license, platform).
 2. **Topic index** maps "I am working on X" → "read these repos in order".
 3. **Per-repo cards** give a 1-screen summary of *what / why we care / where to look*. They are intentionally short. For depth, follow the deep-dive link if one exists, otherwise grep the path listed under "Where to look".
 4. **External pointers** at the bottom list important IMEs not under `references/` — clone them on demand.
@@ -275,7 +275,7 @@ If you are working on… → read these in order.
 
 ### 12. khiin-rs — `references/khiin-rs/`
 
-- **What**: Rust-based Taigi IME for desktop (Win/Linux). Closest open-source architectural cousin to Taigi Keyboard.
+- **What**: Rust-based Taigi IME for desktop (Win/Linux). Closest open-source architectural cousin to TaigiKeyboard.
 - **Why we care**: Three input modes (Continuous / Classic / Manual), POJ/TL syllable validation, Telex tone input (`s/f/l/j`), unigram + bigram DB, word-level DP segmentation.
 - **Where to look**:
   - `ji/src/lomaji.rs` + `tone.rs` — tone conversion, syllable validation

@@ -1,4 +1,4 @@
-/// Taigi keyboard layout definitions — each layout is [[KeyDef]]
+/// TaigiKeyboard layout definitions — each layout is [[KeyDef]]
 ///
 /// _withGlobe variants are derived by inserting .globe at bottom-row index 1.
 /// .char(half, fullWidth: full) shows half-width by default,

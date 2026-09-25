@@ -674,7 +674,7 @@ fn en(key: StringKey) -> Option<&'static str> {
         StringKey::DesktopCustomFontRemoveFailed => "Could not delete",
         StringKey::DesktopFontManagementTab => "Manage Typefaces",
         StringKey::DesktopAboutTab => "About the Keyboard",
-        StringKey::DesktopMenuSettings => "Taigi Keyboard Settings",
+        StringKey::DesktopMenuSettings => "TaigiKeyboard Settings",
         StringKey::DictionaryCustomDictionary => "Custom Dictionary",
         StringKey::DictionaryCustomDictEnabled => "Enable Custom Dictionary",
         StringKey::DictionaryVariantDictionary => "Variant Characters",

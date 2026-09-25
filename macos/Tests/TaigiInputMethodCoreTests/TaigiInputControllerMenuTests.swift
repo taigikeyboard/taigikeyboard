@@ -320,7 +320,7 @@ final class TaigiInputControllerMenuTests: XCTestCase {
 
         try XCTUnwrap(controller.displayLanguageOverride).setLanguage(.english)
 
-        XCTAssertEqual(try item(action: Self.openSettings, in: menu()).title, "Taigi Keyboard Settings")
+        XCTAssertEqual(try item(action: Self.openSettings, in: menu()).title, "TaigiKeyboard Settings")
     }
 
     /// ⌘, belongs to the application being typed into. A key equivalent claimed

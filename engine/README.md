@@ -1,6 +1,6 @@
 # engine — Rust shared-core workspace
 
-Cross-platform shared core for the Taigi Keyboard. iOS and Android route their phonetics, composing, lexicon-ranking, and next-word call sites through the same Rust implementation via a single proto-encoded byte buffer crossing the FFI seam.
+Cross-platform shared core for TaigiKeyboard. iOS and Android route their phonetics, composing, lexicon-ranking, and next-word call sites through the same Rust implementation via a single proto-encoded byte buffer crossing the FFI seam.
 
 ## Crates
 

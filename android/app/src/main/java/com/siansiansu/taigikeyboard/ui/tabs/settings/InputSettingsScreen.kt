@@ -54,7 +54,7 @@ import com.siansiansu.taigikeyboard.ui.theme.SectionHeader
 
 private const val FEATURE_ID_HANLO_DESIGN = "hanloDesign"
 private const val FEATURE_ID_CASE_SWITCH = "caseSwitch"
-private const val DIAGNOSTIC_CLIP_LABEL = "Taigi Keyboard Diagnostic"
+private const val DIAGNOSTIC_CLIP_LABEL = "TaigiKeyboard Diagnostic"
 private const val DIAGNOSTIC_MIME_TYPE = "text/plain"
 private const val DIAGNOSTIC_EMAIL = "info@taigikeyboard.tw"
 
@@ -437,7 +437,7 @@ private fun DiagnosticSection(viewModel: DiagnosticViewModel) {
             textColor = MaterialTheme.colorScheme.primary,
             onClick = {
                 val info = viewModel.gather()
-                val subject = Uri.encode("Taigi Keyboard Bug Report (v${info.appVersion})")
+                val subject = Uri.encode("TaigiKeyboard Bug Report (v${info.appVersion})")
                 val body = Uri.encode(info.formatted())
                 val uri = "mailto:$DIAGNOSTIC_EMAIL?subject=$subject&body=$body".toUri()
                 try {

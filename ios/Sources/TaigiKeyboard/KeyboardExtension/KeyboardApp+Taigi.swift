@@ -16,6 +16,6 @@ extension KeyboardApp {
     /// `SettingsSelectionOverlay`) — a custom prefix would strand existing
     /// users' persisted settings.
     static var taigiKeyboard: KeyboardApp {
-        .init(name: "Taigi Keyboard", appGroupId: SharedSettings.appGroupId)
+        .init(name: "TaigiKeyboard", appGroupId: SharedSettings.appGroupId)
     }
 }

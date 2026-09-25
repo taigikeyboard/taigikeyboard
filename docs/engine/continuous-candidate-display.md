@@ -38,7 +38,7 @@ User expectation:
 
 - **Dogfood is qualitative gate** (`~/.claude/rules/code-review-rules.md` §9) — UX inconsistency drowns out signal for the remaining Phase 9 sub-PRs (9.4a / 9.4b / 9.5 / 9.6).
 - **Phase 9.6 will compound the problem** — custom_dict integration will route custom candidates through the same `CandidateMessage` carrier; without a roman/hanji split, custom continuous candidates ship single-line too.
-- **Mainstream IME parity** — MOE Tâi-gí (`tutgInputLine` candidates) and khiin-rs (`khiin/src/candidate.rs`) both expose roman + hanji as separate display fields; aligning brings Taigi Keyboard back into the mainstream pattern.
+- **Mainstream IME parity** — MOE Tâi-gí (`tutgInputLine` candidates) and khiin-rs (`khiin/src/candidate.rs`) both expose roman + hanji as separate display fields; aligning brings TaigiKeyboard back into the mainstream pattern.
 
 ---
 
@@ -545,7 +545,7 @@ Per [`~/.claude/rules/planning.md`](https://github.com/siansiansu/configurations
 - **No** changes to `engine/ranking` SortKey **base policy** (display fields don't enter ranking) — see §15.5 for how partial-prefix candidates fit the 8-dim SortKey (S8 demoted `-coverage` to a weak tiebreak below score/freq)
 - **No** changes to `user_frequency.db` schema (commit key remains `display_text`)
 - **No** custom_dictionary integration (still scheduled for Phase 9.6 — wire fields will naturally flow once custom path emits `RawCandidate`)
-- **No** keyboard-level mode toggle (HanjiMode / TailoMode like MOE) — Taigi Keyboard's `isTranslateSwapped` axis is the deliberate UX differentiator (§11 + §15.1)
+- **No** keyboard-level mode toggle (HanjiMode / TailoMode like MOE) — TaigiKeyboard's `isTranslateSwapped` axis is the deliberate UX differentiator (§11 + §15.1)
 
 **Previously out-of-scope, NOW IN SCOPE per §15** (user pivot 2026-05-11 night):
 
@@ -566,7 +566,7 @@ Per `~/.claude/rules/planning.md` § Cite best practices explicitly — display 
 | librime (CJK general) | `CandidateInfo { text, comment, type }` | `text` = primary (hanji); `comment` = secondary (annotation, often romanization) |
 | azooKey (per [`docs/references/azookey-reference.md`](../references/azookey-reference.md)) | `Candidate { text: String, ruby: String? }` | `text` = primary, `ruby` = furigana / secondary |
 
-All four reference IMEs ship **at least two display fields** per candidate. Taigi Keyboard's current single-`display_text` shape is the outlier; Option A brings parity.
+All four reference IMEs ship **at least two display fields** per candidate. TaigiKeyboard's current single-`display_text` shape is the outlier; Option A brings parity.
 
 ---
 

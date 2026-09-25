@@ -101,7 +101,7 @@ class TaigiAutocompleteService: KeyboardKit.AutocompleteService {
     // MARK: - KeyboardKit Learning Stubs (protocol requirement, unused by Taigi)
 
     // KeyboardKit's AutocompleteService protocol mandates these members without defaults.
-    // Taigi keyboard does not surface ignore/learn UX, so all implementations are no-ops.
+    // TaigiKeyboard does not surface ignore/learn UX, so all implementations are no-ops.
 
     var canIgnoreWords: Bool {
         false

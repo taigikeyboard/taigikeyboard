@@ -1,7 +1,7 @@
 Source: taigikeyboard
 Section: utils
 Priority: optional
-Maintainer: Taigi Keyboard <info@taigikeyboard.tw>
+Maintainer: TaigiKeyboard <info@taigikeyboard.tw>
 
 Package: taigikeyboard
 Architecture: amd64

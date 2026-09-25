@@ -1,7 +1,7 @@
 [project]
 name = "taigi-emojis"
 version = "0.1.0"
-description = "Single emoji source of truth for the Taigi keyboard (iOS + Android)"
+description = "Single emoji source of truth for TaigiKeyboard (iOS + Android)"
 requires-python = ">=3.13"
 dependencies = []
 

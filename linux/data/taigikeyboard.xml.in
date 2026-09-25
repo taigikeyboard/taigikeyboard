@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  The IBus component registration for Taigi Keyboard. Installed as
+  The IBus component registration for TaigiKeyboard. Installed as
   @PREFIX@/share/ibus/component/taigikeyboard.xml (linux/Makefile renders
   @PREFIX@, @LIBEXECDIR@ and @VERSION@ — @LIBEXECDIR@ is the same variable the
   engine is installed under, per distribution layout); ibus-daemon reads the
@@ -9,10 +9,10 @@
 -->
 <component>
   <name>org.freedesktop.IBus.TaigiKeyboard</name>
-  <description>Taigi Keyboard input method engine</description>
+  <description>TaigiKeyboard input method engine</description>
   <exec>@LIBEXECDIR@/ibus-engine-taigikeyboard --ibus</exec>
   <version>@VERSION@</version>
-  <author>Taigi Keyboard</author>
+  <author>TaigiKeyboard</author>
   <license>Apache-2.0</license>
   <homepage>https://taigikeyboard.tw</homepage>
   <textdomain>taigikeyboard</textdomain>
@@ -21,7 +21,7 @@
       <name>taigikeyboard</name>
       <language>nan</language>
       <license>Apache-2.0</license>
-      <author>Taigi Keyboard</author>
+      <author>TaigiKeyboard</author>
       <icon>taigikeyboard</icon>
       <layout>us</layout>
       <longname>台語齒盤</longname>

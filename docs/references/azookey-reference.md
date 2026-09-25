@@ -126,11 +126,11 @@ NavigationStack(path: $path) {
 
 ---
 
-## Taigi Keyboard Application Suggestions
+## TaigiKeyboard Application Suggestions
 
 ### Worth Referencing
 
-| azooKey Design | Taigi Keyboard Application |
+| azooKey Design | TaigiKeyboard Application |
 |----------------|---------------------------|
 | Flick five-way input | Tone variations (a → á/à/â/ā/a̍) |
 | UnifiedKeyModelProtocol | Unified key interface |

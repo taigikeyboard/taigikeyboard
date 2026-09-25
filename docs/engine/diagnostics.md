@@ -66,7 +66,7 @@ Located in the **Settings** tab, "裝置資訊" section.
 |--------|-------|-----------|
 | Copy | "Khó͘-phih 裝置資訊" | Pasteboard/Clipboard, with visual feedback |
 | Share | "分享裝置資訊" | Native share sheet |
-| Email | "Email 回報問題" | Pre-filled mailto with subject "Taigi Keyboard Bug Report (v{version})" |
+| Email | "Email 回報問題" | Pre-filled mailto with subject "TaigiKeyboard Bug Report (v{version})" |
 
 ---
 

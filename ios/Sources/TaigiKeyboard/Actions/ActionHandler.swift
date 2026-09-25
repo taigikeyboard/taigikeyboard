@@ -1,7 +1,7 @@
 import Foundation
 import KeyboardKit
 
-/// Taigi keyboard action handler — dispatches keyboard gestures to per-action handlers.
+/// TaigiKeyboard action handler — dispatches keyboard gestures to per-action handlers.
 ///
 /// **Action flow** (gesture → output):
 /// 1. `handle(_:on:)` — KeyboardKit entry point, filters gesture type

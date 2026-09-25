@@ -95,7 +95,7 @@ current-at-release values when cutting a dictionary refresh.
   source to set `is_variant` bit on matching (hanzi, tl) rows.
 
 ### dev — 開發者補充辭典 (supplementary/dev/)
-- **Publisher**: Taigi Keyboard maintainers
+- **Publisher**: TaigiKeyboard maintainers
 - **Origin URL**: internal (repo-native)
 - **Format**: CSV (`data/dev.csv`)
 - **Captured**: repo-native; maintained by hand

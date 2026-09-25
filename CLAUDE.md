@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-**Taigi Keyboard** — cross-platform Taiwanese input method: iOS (Swift + KeyboardKit), Android (Kotlin + FlorisBoard), macOS (IMKit), Windows (TSF, Rust), Linux (Fcitx5 + IBus, Rust) over a shared Rust engine. POJ/TL/TPS romanization, Hanji, tone variation, autocomplete, continuous input.
+**TaigiKeyboard** — cross-platform Taiwanese input method: iOS (Swift + KeyboardKit), Android (Kotlin + FlorisBoard), macOS (IMKit), Windows (TSF, Rust), Linux (Fcitx5 + IBus, Rust) over a shared Rust engine. POJ/TL/TPS romanization, Hanji, tone variation, autocomplete, continuous input.
 
 Rule layers:
 - **Cross-project process rules** — `~/.claude/rules/` (from the [`configurations`](https://github.com/siansiansu/configurations) dotfiles repo; run its `setup.sh` on a fresh machine).

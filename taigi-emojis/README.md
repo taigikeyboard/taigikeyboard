@@ -1,6 +1,6 @@
 # taigi-emojis
 
-Single emoji source of truth for the [Taigi keyboard](https://github.com/taigikeyboard)
+Single emoji source of truth for the [TaigiKeyboard](https://github.com/taigikeyboard)
 (iOS + Android). A Python generator merges pinned Unicode + CLDR data with a hand overlay
 of Taiwanese (台語) / 華語 search keywords and emits one `dist/emoji.json` both apps consume.
 
@@ -56,9 +56,9 @@ merged + per-locale keywords). Schema in `.claude/rules/output-contract.md`.
 
 Both apps read `dist/emoji.json` directly and decode it into their own native model — no shared
 platform modules, no platform-side hardcoded emoji lists. This pipeline is tracked directly in the
-Taigi Keyboard repository; each app glyph-filters emoji its OS font cannot render at load (test the
+TaigiKeyboard repository; each app glyph-filters emoji its OS font cannot render at load (test the
 whole grapheme cluster, not per-scalar).
 
 The original standalone [taigi-emojis repository](https://github.com/taigikeyboard/taigi-emojis)
 remains available for history and reference. It is not automatically synchronized with this in-repo
-copy; new Taigi Keyboard emoji changes are authored here.
+copy; new TaigiKeyboard emoji changes are authored here.

@@ -1,6 +1,6 @@
 ---
 name: phonetics-specialist
-description: Read-only phonetics check for Taigi Keyboard. Use when a change or question touches TL/POJ/TPS conversion, tone placement or sandhi marks, syllable validity, or engine/phonetics tables; verifies against knowledge/taigi-phonetics-reference.md and the taigi-converter submodule and returns a cited answer with TL/POJ/TPS columns plus codebase-vs-reference discrepancies. Not for dictionary ranking, UI, or platform IME behavior. Never edits files.
+description: Read-only phonetics check for TaigiKeyboard. Use when a change or question touches TL/POJ/TPS conversion, tone placement or sandhi marks, syllable validity, or engine/phonetics tables; verifies against knowledge/taigi-phonetics-reference.md and the taigi-converter submodule and returns a cited answer with TL/POJ/TPS columns plus codebase-vs-reference discrepancies. Not for dictionary ranking, UI, or platform IME behavior. Never edits files.
 model: sonnet
 tools: Read, Grep, Glob, Bash
 ---

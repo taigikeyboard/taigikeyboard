@@ -302,7 +302,7 @@ struct SettingsTab: View {
 
                     ShareLink(
                         item: diagnosticText,
-                        subject: Text("Taigi Keyboard Bug Report"),
+                        subject: Text("TaigiKeyboard Bug Report"),
                         message: Text(diagnosticText),
                     ) {
                         Label(lang.string(.settingsDiagnosticShare), systemImage: "arrow.up.forward.square")
@@ -310,7 +310,7 @@ struct SettingsTab: View {
 
                     Button {
                         let info = DiagnosticService.gather()
-                        let subject = "Taigi Keyboard Bug Report (v\(info.appVersion))"
+                        let subject = "TaigiKeyboard Bug Report (v\(info.appVersion))"
                             .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
                         let body = info.formatted()
                             .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""

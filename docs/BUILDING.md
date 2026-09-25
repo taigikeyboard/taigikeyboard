@@ -1,4 +1,4 @@
-# Building Taigi Keyboard
+# Building TaigiKeyboard
 
 How to go from a fresh clone to a build and a test run on one platform. You do
 not need every toolchain: pick the row you work on.
