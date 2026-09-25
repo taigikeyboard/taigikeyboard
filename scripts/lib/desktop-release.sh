@@ -34,7 +34,7 @@ DESKTOP_TAG="desktop-$SHORT_VERSION"
 RELEASE_PAGE_URL="https://github.com/$RELEASE_REPOSITORY/releases/tag/$DESKTOP_TAG"
 # Both platforms on one page, because both are on one release. The title says
 # the version; which platform an asset is for is what the asset is named.
-RELEASE_TITLE="Taigi Keyboard Desktop $SHORT_VERSION"
+RELEASE_TITLE="TaigiKeyboard Desktop $SHORT_VERSION"
 
 # What each platform puts on the release. One name each, read by every script
 # that writes the file (`release-app.sh`), stages it (`publish-release.sh`) or
