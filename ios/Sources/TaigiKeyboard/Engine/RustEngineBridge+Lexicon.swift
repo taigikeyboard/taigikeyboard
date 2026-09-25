@@ -85,22 +85,26 @@ public extension RustEngineBridge {
         }
     }
 
-    /// Output of `lexiconDictionaryFilters` — ready-to-send bitmasks plus
+    /// Output of `lexiconDictionaryFilters` — ready-to-send bitmask plus
     /// the decoded enabled-source set for Tab3 retag. Replaces verbatim
     /// platform `EnabledDictionaries` bit math (deleted in v3.5.8 slice).
-    ///
-    /// `assocLookupBitmask` carries the `UInt32.max` sentinel when all 9
-    /// association sources are on — preserves the documented
-    /// `lexicon.proto:166-173` shortcut. Caller forwards directly to
-    /// `lexiconAssocLookup(enabledSourcesBitmask:)`.
     ///
     /// `internal` (not `public`) because `enabledSources` references the
     /// internal `DictionarySource` enum.
     internal struct DictionaryFilters: Equatable {
         let dictionaryFilterBitmask: UInt32
-        // `UInt32.max` sentinel when all 9 assoc sources are on, matching the proto shortcut.
-        let assocLookupBitmask: UInt32
         let enabledSources: Set<DictionarySource>
+
+        /// What a failed resolve degrades to: every source on. `UInt32.max` is
+        /// the engine's "filter disabled" sentinel on both the search path
+        /// (`dictionary_reader.rs::Filter::from_enabled_bitmask`) and the
+        /// composing path. Fail-open on purpose — a wider candidate list is
+        /// recoverable, an empty one looks like a broken keyboard. Mirrors
+        /// Android `RustEngineBridge.DictionaryFilters.ALL_SOURCES_ENABLED`.
+        static let allSourcesEnabled = DictionaryFilters(
+            dictionaryFilterBitmask: UInt32.max,
+            enabledSources: Set(DictionarySource.allCases),
+        )
     }
 
     // MARK: - Methods
@@ -222,22 +226,17 @@ public extension RustEngineBridge {
     internal static func lexiconDictionaryFilters(toggles: DictionaryToggles) -> DictionaryFilters {
         var payload = Taigi_Engine_DictionaryFiltersRequest()
         payload.toggles = dictionaryTogglesProto(toggles)
-        // Binary skew fallback: when method 18 dispatch fails (e.g. Swift
-        // updated but xcframework not rebuilt) but methods 12-17 still work,
-        // the dev-only fallback would silently strip user-enabled dictionaries.
-        // Mirror Rust `engine/lexicon/src/dictionary_filters.rs::compute_filters`
-        // here so search call paths continue to honor user toggles.
-        // Codex PR #210 r3182714295.
+        // The bit layout belongs to Rust (`compute_filters`); no platform
+        // mirror. `lexiconDispatch` records its own failures.
         guard let resp = lexiconDispatch(method: .dictionaryFilters(payload), op: "lexiconDictionaryFilters") else {
-            return platformFallbackFilters(toggles: toggles)
+            return .allSourcesEnabled
         }
         guard case let .dictionaryFiltersResult(r)? = resp.result else {
             recordFailure(op: "lexiconDictionaryFilters", message: "missing dictionary_filters result")
-            return platformFallbackFilters(toggles: toggles)
+            return .allSourcesEnabled
         }
         return DictionaryFilters(
             dictionaryFilterBitmask: r.dictionaryFilterBitmask,
-            assocLookupBitmask: r.assocLookupBitmask,
             enabledSources: Set(r.enabledSourceCodes.compactMap(platformDictionarySource(from:))),
         )
     }
@@ -303,135 +302,6 @@ public extension RustEngineBridge {
             lengthScore: proto.hasLengthScore ? proto.lengthScore : nil,
             sourceBitmask: proto.hasSourceBitmask ? proto.sourceBitmask : nil,
         )
-    }
-
-    /// Fallback only for platform/Rust binary skew where method 18 is absent.
-    /// Rust `engine/lexicon/src/dictionary_filters.rs::compute_filters` is
-    /// authoritative; keep this bit layout in sync with
-    /// `engine/protos/proto/lexicon.proto`. Bit positions pinned by the
-    /// 6 inline Rust golden tests.
-    private static func platformFallbackFilters(toggles: DictionaryToggles) -> DictionaryFilters {
-        var dictMask: UInt32 = 0
-        if toggles.kautian {
-            dictMask |= 1 << 0
-        }
-        if toggles.taigitv {
-            dictMask |= 1 << 1
-        }
-        if toggles.itaigi {
-            dictMask |= 1 << 2
-        }
-        if toggles.sitbut {
-            dictMask |= 1 << 3
-        }
-        if toggles.taihoa {
-            dictMask |= 1 << 4
-        }
-        if toggles.taijit {
-            dictMask |= 1 << 5
-        }
-        if toggles.kungge {
-            dictMask |= 1 << 6
-        }
-        if toggles.stti {
-            dictMask |= 1 << 7
-        }
-        if toggles.khpoo {
-            dictMask |= 1 << 8
-        }
-        if toggles.khiin {
-            dictMask |= 1 << 9
-        }
-        if toggles.dev {
-            dictMask |= 1 << 10
-        }
-        if toggles.lkk {
-            dictMask |= 1 << 11
-        }
-        if toggles.variant {
-            dictMask |= 1 << 12
-        }
-        dictMask |= encodeKautianSubcollWire(toggles)
-
-        let allAssocOn = toggles.kautian && toggles.taigitv && toggles.itaigi
-            && toggles.sitbut && toggles.taihoa && toggles.taijit
-            && toggles.kungge && toggles.stti && toggles.khpoo
-        let assocMask: UInt32 = allAssocOn ? UInt32.max : (dictMask & 0x1FF)
-
-        var enabled: Set<DictionarySource> = [.custom]
-        if toggles.dev {
-            enabled.insert(.dev)
-        }
-        if toggles.kautian {
-            enabled.insert(.kautian)
-        }
-        if toggles.taigitv {
-            enabled.insert(.taigitv)
-        }
-        if toggles.itaigi {
-            enabled.insert(.itaigi)
-        }
-        if toggles.sitbut {
-            enabled.insert(.sitbut)
-        }
-        if toggles.taihoa {
-            enabled.insert(.taihoa)
-        }
-        if toggles.taijit {
-            enabled.insert(.taijit)
-        }
-        if toggles.kungge {
-            enabled.insert(.kungge)
-        }
-        if toggles.stti {
-            enabled.insert(.stti)
-        }
-        if toggles.khpoo {
-            enabled.insert(.khpoo)
-        }
-        if toggles.khiin {
-            enabled.insert(.khiin)
-        }
-        if toggles.lkk {
-            enabled.insert(.lkk)
-        }
-        return DictionaryFilters(
-            dictionaryFilterBitmask: dictMask,
-            assocLookupBitmask: assocMask,
-            enabledSources: enabled,
-        )
-    }
-
-    /// kautian subcollection wire ENCODE — fallback-only mirror of Rust
-    /// `engine/lexicon/src/dictionary_filters.rs::encode_kautian_subcoll_wire`.
-    /// Returns the wire high region (bit 13 active + bits 14..=25 enable mask)
-    /// when the kautian master is on; `0` otherwise (kautian rows drop via the
-    /// source-OR anyway). Keeps fallback behaviour identical to the engine so a
-    /// binary-skew session does not silently revert subcollection toggles.
-    ///
-    /// CROSS-PLATFORM INVARIANT — bit positions mirror
-    /// `engine/lexicon/src/dictionary_reader.rs` (`WIRE_KAUTIAN_SUBCOLL_*` /
-    /// `KAUTIAN_SUBTAG_*`). Drift causes silent subcollection-filter divergence.
-    private static func encodeKautianSubcollWire(_ toggles: DictionaryToggles) -> UInt32 {
-        guard toggles.kautian else { return 0 }
-        let activeBit: UInt32 = 1 << 13
-        let shift: UInt32 = 14
-        let mainBit: UInt16 = 0
-        let accentShift: UInt16 = 1
-        let nameBit: UInt16 = 11
-        let sub = toggles.kautianSubcoll
-        var subtag: UInt16 = 1 << mainBit // main always on when master on
-        let accents = [
-            sub.lukang, sub.sansia, sub.taipak, sub.gilan, sub.tainan,
-            sub.kaohsiung, sub.kinmen, sub.makung, sub.sintik, sub.taichung,
-        ]
-        for (index, isOn) in accents.enumerated() where isOn {
-            subtag |= 1 << (accentShift + UInt16(index))
-        }
-        if sub.nameAppendix {
-            subtag |= 1 << nameBit
-        }
-        return activeBit | (UInt32(subtag) << shift)
     }
 
     /// Map proto `DictionarySourceCode` to the platform `DictionarySource`

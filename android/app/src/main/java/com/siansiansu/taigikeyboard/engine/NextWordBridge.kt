@@ -153,7 +153,7 @@ fun RustEngineBridge.nextwordSetIsShowing(
 /**
  * Android-only Space-path intent. Codex v1 P1: preserves the
  * "compound-only / no timer reschedule / no generation bump"
- * semantics of the legacy `NextWordHandler.updateLastSelectedWord`.
+ * semantics of the legacy `NextWordController.updateLastSelectedWord`.
  * iOS reaches it through the continuous-input mid-commit handshake (region header above).
  */
 fun RustEngineBridge.nextwordUpdateLastSelectedWord(

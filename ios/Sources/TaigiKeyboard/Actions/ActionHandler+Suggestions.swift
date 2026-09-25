@@ -333,7 +333,7 @@ extension ActionHandler {
             // (Case B) where `subtitle == nil`. The raw-TL sidechannel on
             // `additionalInfo["tl"]` is consumed separately at the association call
             // site (see `handleSuggestionSelection`).
-            // Mirror: android/.../smartbar/NextWordHandler.kt:355-363 (TaigiWord.roman).
+            // Mirror: android/.../smartbar/NextWordController.kt:355-363 (TaigiWord.roman).
             // Swapped/TPS Case B (hanzi-only, no roman): `subtitle == nil` after
             // `suggestionToHandle` (swap gate requires non-empty subtitle). Fall
             // back to `""` so bracket-mode output stays `"漢字 ()"` — matches the

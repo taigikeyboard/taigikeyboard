@@ -1,7 +1,7 @@
 // Pins the NextWord prediction cell shape `ActionHandler.predictionSuggestions`
 // emits per 候選詞顯示 mode (§42, USER 2026-09-12: 濫 lists both scripts of a
 // prediction, 羅馬字 the roman alone, 並排 today's dual-script cell). Android
-// parity: `NextWordHandler.buildPredictionWords`.
+// parity: `NextWordController.buildPredictionWords`.
 
 import KeyboardKit
 @testable import TaigiKeyboard

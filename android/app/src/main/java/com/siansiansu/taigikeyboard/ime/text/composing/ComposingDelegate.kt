@@ -83,7 +83,7 @@ object DefaultComposingDelegate : ComposingDelegate {
  * Sibling of [ComposingDelegate] for v3.5.8 Phase 4 NextWord-shaped Effects
  * (`NextWordUpdateLastSelectedWord` / `NextWordWordSelected` /
  * `NextWordClearForNewComposing`). Decoupled because these targets are
- * `NextWordHandler` / `NextWordService`, not [InputConnection].
+ * `NextWordController` / `NextWordService`, not [InputConnection].
  *
  * [ComposingManager.applyTransition] dispatches each NextWord-shaped Effect
  * here in proto-list order, sandwiched alongside [DefaultComposingDelegate]

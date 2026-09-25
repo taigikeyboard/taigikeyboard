@@ -252,7 +252,7 @@ Android Studio's `// region` / `// endregion` pair gives the same code-folding h
 /// `<path/to/KotlinFile.kt>`. Drift causes silent divergence.
 ```
 
-Required wherever a value is duplicated literally across platforms and drift would silently change behavior. Numeric engine constants (NextWord scoring — `USER_WEIGHT` / `LEARNING_BONUS` / decay in `engine/nextword/src/scorer.rs`; candidate `SOURCE_TIERS` / `TIER_DENOMINATOR` in `engine/ranking/src/score.rs`; NextWord timing `CONTEXT_TIMEOUT_MS` in `engine/nextword/src/decide.rs`) live once in Rust, so the marker now binds the surfaces that still have a per-platform copy: settings-key / model tables (`Settings/SettingsModels.swift` ↔ Android `EngineSettings.kt` ↔ macOS `CandidateFontChoice.swift` ↔ Windows `keys.rs`), candidate-strip layout constants, the `mul` keyboard locale tag (`behavioral-invariants.md` §39), and any residual timing constant a platform executor mirrors from the engine (Android `NextWordHandler.kt` `CONTEXT_TIMEOUT_MS`). The policy (constants + tests + docs update together, `INVARIANT_*` test-label prefix) lives in `.claude/rules/cross-platform-alignment.md` §3a.
+Required wherever a value is duplicated literally across platforms and drift would silently change behavior. Numeric engine constants (NextWord scoring — `USER_WEIGHT` / `LEARNING_BONUS` / decay in `engine/nextword/src/scorer.rs`; candidate `SOURCE_TIERS` / `TIER_DENOMINATOR` in `engine/ranking/src/score.rs`; NextWord timing `CONTEXT_TIMEOUT_MS` in `engine/nextword/src/decide.rs`) live once in Rust, so the marker now binds the surfaces that still have a per-platform copy: settings-key / model tables (`Settings/SettingsModels.swift` ↔ Android `EngineSettings.kt` ↔ macOS `CandidateFontChoice.swift` ↔ Windows `keys.rs`), candidate-strip layout constants, the `mul` keyboard locale tag (`behavioral-invariants.md` §39), and any residual timing constant a platform executor mirrors from the engine (Android `NextWordController.kt` `CONTEXT_TIMEOUT_MS`). The policy (constants + tests + docs update together, `INVARIANT_*` test-label prefix) lives in `.claude/rules/cross-platform-alignment.md` §3a.
 
 ### 5.4 Naming
 
@@ -400,7 +400,7 @@ Shared-core candidates on Android must not import `kotlinx.coroutines.*`, `Dispa
 - `ViewModel.viewModelScope` — cancelled automatically by AndroidX.
 - `Dispatchers.IO` for DB / file / network; `Dispatchers.Default` for pure CPU.
 - Clock injection: shared-core callers that need the wall clock take `nowMs: Long` as a parameter. No `System.currentTimeMillis()` inside candidate files.
-- Long-running timers (context-timeout, association-timeout) use `kotlinx.coroutines.delay` from the platform wrapper (`ime/text/smartbar/NextWordHandler.kt`) — a straight port of the iOS `NextWordController` timer pattern. See `nextword-engine-boundary.md` §13 (Android binding).
+- Long-running timers (context-timeout, association-timeout) use `kotlinx.coroutines.delay` from the platform wrapper (`ime/text/smartbar/NextWordController.kt`) — a straight port of the iOS `NextWordController` timer pattern. See `nextword-engine-boundary.md` §13 (Android binding).
 
 ### 9.4 InputConnection binding
 

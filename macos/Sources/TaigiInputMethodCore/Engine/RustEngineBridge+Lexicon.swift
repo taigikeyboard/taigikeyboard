@@ -105,12 +105,10 @@ extension RustEngineBridge {
     ///
     /// The bit layout — including the kautian subcollection region in bits
     /// 13-25 — belongs to Rust (`engine/lexicon/src/dictionary_filters.rs`),
-    /// and this asks for it rather than reproducing it. iOS keeps a mirrored
-    /// bit-math fallback for the window where a rebuilt Swift binary meets an
-    /// old xcframework (`RustEngineBridge+Lexicon.swift:424-464`); macOS
-    /// deliberately does not, per `planning.md` § No redundant fallback — the
-    /// two artefacts here are built by one `make build`, and a second copy of
-    /// the layout is a second thing to keep in step.
+    /// and this asks for it rather than reproducing it. No platform keeps a
+    /// mirrored bit-math fallback (`planning.md` § No redundant fallback) —
+    /// the bridge and the engine are built by one `make build`, and a second
+    /// copy of the layout is a second thing to keep in step.
     ///
     /// `nil` means the round-trip failed. Callers resolve this ONCE per query
     /// and pass the answer down: the mask sent to the engine and the source
