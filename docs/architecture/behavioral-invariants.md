@@ -575,6 +575,14 @@ Truth table, one spelling per platform:
 - **One index** — `(prev_word, prev_tl)` serves the recall query's `WHERE` from its left prefix and its tier ordering from the second column.
 - **Existing rows are grandfathered** — the v5→v6 rebuild preserves every row (widening a UNIQUE key cannot conflict, since the old key is a strict subset of the new). A row merged under the old key keeps its last-writer `prev_tl` and its summed count; a later commit under the other reading starts a fresh row. There is no way to recover which observations belonged to which reading, so nothing is split or deleted. Databases last written before v3 are the exception — those shapes were already dropped rather than migrated, and still are.
 
+### `INVARIANT_NEXTWORD_LOOKUP_KEY_LAST_GRAPHEME`
+
+The bundled `association.bin` lookup keys on the committed word's **last user-perceived character, whole** — and so does the backspace re-predict. A supplementary-plane Hanji (𣍐 U+2334D, a UTF-16 surrogate pair; 557 dictionary words carry one before their last character) is one key. iOS gets this from Swift `String.last`; Android's Kotlin `String.last()` returned one UTF-16 unit — the low surrogate alone — so after 𣍐 Android showed no bundled predictions (parity correction 2026-09-25, toward iOS).
+
+**Platform sites**: iOS `NextWordService.bundledLookupKey(for:)` + `ActionHandler+KeyActions.swift::handleBackspaceForNextWord` (`String.last`); Android `lastGrapheme` (`ime/text/keyboard/TextInputKeyHandler.kt`, ICU `BreakIterator`) at `NextWordService.predict` + `NextWordHandler.handleBackspaceForNextWord`.
+
+**Tests**: iOS `NextWordRepositoryTests.testINVARIANT_nextwordLookupKey_keepsSupplementaryHanjiWhole`, Android `TextInputKeyHandlerTest` `INVARIANT nextword lookup key keeps a supplementary Hanji whole`.
+
 ### `INVARIANT_NEXTWORD_READ_LAYER_DEDUP`
 
 `engine/nextword/src/filter.rs` collapses separator/tone-only romanization variants of the SAME next word into ONE prediction, AFTER the `(hanzi, tl)` merge and BEFORE shaping/sort/truncate. Rows are grouped by `(hanzi, phonetics::toneless_reading_key(tl))` (separator- AND tone-insensitive). Canonical selection within a group is **separator-based** — a genuine multi-syllable reading is ALWAYS hyphen/space-separated in canonical TL, so a no-separator row sharing the toneless key can only be a fused raw keystroke slice:
