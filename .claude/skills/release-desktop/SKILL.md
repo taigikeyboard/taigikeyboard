@@ -203,7 +203,7 @@ Rules:
 - The file must be **committed** before either platform publishes: the release
   body is read out of the tagged commit, not the working tree, and a version
   with no changelog in that commit fails the publish outright.
-- English prose; Taigi terms, UI labels and examples keep 漢字 / TL / POJ / TPS.
+- English only: UI labels by their i18n `en` value (look up `"hanji": "<label>"` in `i18n/*.json`), quotes translated; CJK / TL / POJ / TPS only for Taigi example words and readings.
 - This is the GitHub release body users read: concrete user-visible behavior,
   with the PR number in `(#NNN)`. No refactors, tests, tooling, or dependency
   bumps unless a user feels them.

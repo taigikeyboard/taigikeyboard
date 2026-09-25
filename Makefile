@@ -21,7 +21,7 @@ export PATH := $(HOME)/.cargo/bin:$(PATH)
 # the Android jniLibs and the macOS xcframework. Build ONLY — does NOT run tests
 # (use `make test`). Refreshing all of them together is what keeps no platform
 # stale behind an engine change; macOS is built here although it has its own
-# release flow (USER 2026-08-15: 「我覺得可以併入到 make build,只是現階段不 release」).
+# release flow (USER 2026-08-15: "I think it can be merged into make build, just not released at this stage").
 # macOS only, with every toolchain in docs/BUILDING.md. The steps run in this
 # order, one after another (sub-makes, so `-j` cannot reorder them): the bindings
 # must be regenerated before any native build compiles the protos crate.

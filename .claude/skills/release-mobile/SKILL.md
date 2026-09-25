@@ -121,7 +121,7 @@ If target content already exists, merge new information by topic. Refine an exis
 
 Canonical store-note rules:
 
-- English prose; Taigi terms and examples may retain 漢字 / TL / POJ / TPS.
+- English only: UI labels by their i18n `en` value, quotes translated; CJK / TL / POJ / TPS only for Taigi example words and readings.
 - One to eight non-empty entries without source bullet markers. The 500-character
   ceiling usually binds first.
 - Start each entry with `New:`, `Fixed:`, `Improved:`, `Changed:`, or `Updated:`.
