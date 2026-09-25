@@ -12,12 +12,15 @@ import SwiftUI
 /// clips to its own bounds natively — never an oversized frame + `.offset` + `.clipped()`,
 /// which froze the keyboard extension on gradient themes (#429). The whole-surface photo
 /// uses plain `Image` modifiers (one texture upload, the saturation is a render-server
-/// filter, nothing re-rasterises per keystroke).
+/// filter, nothing re-rasterises per keystroke). The photo is decoded off the main actor
+/// (`ThemePhotoImage`); until it lands the surface paints the seed grey. `photoVariant`
+/// picks the decode — `.thumbnail` for small previews (theme cards).
 ///
 /// `Equatable` so call sites can `.equatable()` and skip the body when nothing changed.
 struct ThemeBackgroundSurface: View, Equatable {
     let surface: ThemeSurface
     var slice: KeyboardSurfaceSlice?
+    var photoVariant: ThemeImageVariant = .full
 
     var body: some View {
         switch surface.background {
@@ -27,33 +30,23 @@ struct ThemeBackgroundSurface: View, Equatable {
             let points = slice.map(gradient.unitPoints(in:)) ?? gradient.unitPoints
             LinearGradient(colors: gradient.colors, startPoint: points.start, endPoint: points.end)
         case let .image(image):
-            if let slice {
-                ThemeImageSlice(image: image, tone: tone, slice: slice)
-            } else {
-                ThemeImageFill(image: image, tone: tone)
+            ThemePhotoImage(file: image.file, variant: photoVariant) { uiImage in
+                if let slice {
+                    ThemeImageSlice(uiImage: uiImage, image: image, tone: tone, slice: slice)
+                } else {
+                    FocusedPhotoFill(image: Image(uiImage: uiImage), focus: image.focus)
+                        .overlay(tone.opacity(image.dim))
+                }
+            } placeholder: {
+                // Not decoded yet, or the file is missing (deleted theme photo, provisioning
+                // failure): the seed grey, so the keyboard never renders see-through.
+                UserThemeSeed.solidColor.color
             }
         }
     }
 
     private var tone: Color {
         surface.dimsTowardWhite ? .white : .black
-    }
-}
-
-/// A desaturated, dimmed photo covering the whole surface (aspect fill, aligned by the
-/// photo's focus). A missing file (deleted theme photo, provisioning failure) paints the
-/// seed grey so the keyboard never renders see-through.
-private struct ThemeImageFill: View {
-    let image: ThemeImageBackground
-    let tone: Color
-
-    var body: some View {
-        if let uiImage = ThemeImageCache.shared.image(for: image.file) {
-            FocusedPhotoFill(image: Image(uiImage: uiImage), focus: image.focus)
-                .overlay(tone.opacity(image.dim))
-        } else {
-            UserThemeSeed.solidColor.color
-        }
     }
 }
 
@@ -106,6 +99,7 @@ private extension VerticalAlignment {
 /// over the keyboard frame (`KeyboardSurfaceSlice.keyboardRect`) and the `Canvas` shows
 /// only what falls inside its own bounds.
 private struct ThemeImageSlice: View {
+    let uiImage: UIImage
     let image: ThemeImageBackground
     let tone: Color
     let slice: KeyboardSurfaceSlice
@@ -113,10 +107,6 @@ private struct ThemeImageSlice: View {
     var body: some View {
         Canvas(rendersAsynchronously: false) { context, size in
             let bounds = CGRect(origin: .zero, size: size)
-            guard let uiImage = ThemeImageCache.shared.image(for: image.file) else {
-                context.fill(Path(bounds), with: .color(UserThemeSeed.solidColor.color))
-                return
-            }
             let photoRect = ThemeImageBackground.coverRect(imageSize: uiImage.size, in: slice.keyboardRect(width: size.width), focus: image.focus)
             var photo = context
             photo.addFilter(.saturation(ThemeImageBackground.saturation))

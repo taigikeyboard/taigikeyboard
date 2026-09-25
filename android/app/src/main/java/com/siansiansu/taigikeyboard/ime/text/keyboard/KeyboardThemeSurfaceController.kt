@@ -13,9 +13,14 @@ import com.siansiansu.taigikeyboard.ime.core.InputView
 import com.siansiansu.taigikeyboard.ime.core.KeyboardColorSettings
 import com.siansiansu.taigikeyboard.ime.core.ThemeBackground
 import com.siansiansu.taigikeyboard.ime.core.ThemeGradient
+import com.siansiansu.taigikeyboard.ime.core.ThemeImageBackground
+import com.siansiansu.taigikeyboard.ime.core.ThemeImageVariant
 import com.siansiansu.taigikeyboard.ime.core.ThemeSurface
 import com.siansiansu.taigikeyboard.ime.core.UserThemeSeed
 import com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarView
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 
 /**
  * Applies the View-layer side of a resolved theme. The theme background (solid or
@@ -28,12 +33,19 @@ import com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarView
  * and restores the attr-backed chrome, so the default path is visually unchanged.
  * The Compose keyboard body handles its own transparency separately, by reading
  * `background != null`.
+ *
+ * A photo not yet decoded paints the seed grey and is decoded off the main thread on
+ * [scope] (the IME-lifetime scope); it is swapped in only if no newer surface was applied
+ * meanwhile ([generation]), so a stale decode never overwrites the current theme.
  */
 internal class KeyboardThemeSurfaceController(
     private val inputView: InputView,
+    private val scope: CoroutineScope,
 ) {
     private var applied: ThemeSurface? = null
     private var hasApplied = false
+    private var generation = 0
+    private var photoJob: Job? = null
 
     fun apply(colors: KeyboardColorSettings) {
         // apply() runs on every keyboard show; only re-allocate the drawable when the
@@ -42,24 +54,42 @@ internal class KeyboardThemeSurfaceController(
         if (!hasApplied || applied != surface) {
             hasApplied = true
             applied = surface
-            inputView.findViewById<ViewGroup>(R.id.text_input_content)?.background = surface?.let { drawable(it) }
+            generation++
+            photoJob?.cancel()
+            setSurfaceDrawable(surface?.let { drawable(it) })
         }
         inputView.findViewById<SmartbarView>(R.id.smartbar)?.applyThemeSurface(colors)
+    }
+
+    private fun setSurfaceDrawable(drawable: Drawable?) {
+        inputView.findViewById<ViewGroup>(R.id.text_input_content)?.background = drawable
     }
 
     private fun drawable(surface: ThemeSurface): Drawable =
         when (val background = surface.background) {
             is ThemeBackground.Solid -> ColorDrawable(background.color)
             is ThemeBackground.Gradient -> gradientDrawable(background.gradient)
-            is ThemeBackground.Image ->
-                // A missing photo file paints the seed grey so the keyboard never renders see-through.
-                CompositionRoot
-                    .shared(inputView.context)
-                    .themeImages
-                    .bitmap(background.image.file)
-                    ?.let { ThemeImageDrawable(it, background.image, surface.dimsTowardWhite) }
-                    ?: ColorDrawable(UserThemeSeed.SOLID_COLOR)
+            is ThemeBackground.Image -> photoDrawable(background.image, surface.dimsTowardWhite)
         }
+
+    /**
+     * The photo drawable on a cache hit; otherwise the seed grey now (also the final look when
+     * the file is missing, so the keyboard never renders see-through) and the photo once decoded.
+     */
+    private fun photoDrawable(
+        photo: ThemeImageBackground,
+        dimsTowardWhite: Boolean,
+    ): Drawable {
+        val images = CompositionRoot.shared(inputView.context).themeImages
+        images.cached(photo.file, ThemeImageVariant.FULL)?.let { return ThemeImageDrawable(it, photo, dimsTowardWhite) }
+        val requested = generation
+        photoJob =
+            scope.launch {
+                val bitmap = images.load(photo.file, ThemeImageVariant.FULL) ?: return@launch
+                if (requested == generation) setSurfaceDrawable(ThemeImageDrawable(bitmap, photo, dimsTowardWhite))
+            }
+        return ColorDrawable(UserThemeSeed.SOLID_COLOR)
+    }
 
     /**
      * The same direction math as the Compose brush (`ThemeGradient.unitPoints`), so the View

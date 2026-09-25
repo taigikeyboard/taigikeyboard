@@ -227,7 +227,7 @@ class TextInputManager(
             },
         )
 
-        themeSurface = KeyboardThemeSurfaceController(inputView)
+        themeSurface = KeyboardThemeSurfaceController(inputView, scope = this)
 
         val overlayView =
             inputView.findViewById<com.siansiansu.taigikeyboard.ime.text.smartbar.CandidateOverlayView>(

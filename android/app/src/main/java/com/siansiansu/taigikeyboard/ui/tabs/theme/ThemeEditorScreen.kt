@@ -54,7 +54,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
@@ -71,8 +70,10 @@ import com.siansiansu.taigikeyboard.ime.core.ThemeAppearance
 import com.siansiansu.taigikeyboard.ime.core.ThemeBackground
 import com.siansiansu.taigikeyboard.ime.core.ThemeGradient
 import com.siansiansu.taigikeyboard.ime.core.ThemeImageBackground
+import com.siansiansu.taigikeyboard.ime.core.ThemeImageVariant
 import com.siansiansu.taigikeyboard.ime.core.UserTheme
 import com.siansiansu.taigikeyboard.ime.core.UserThemeSeed
+import com.siansiansu.taigikeyboard.ime.core.rememberThemePhoto
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
 import com.siansiansu.taigikeyboard.ui.components.ColorRow
 import com.siansiansu.taigikeyboard.ui.components.SegmentedChoiceRow
@@ -251,7 +252,7 @@ fun ThemeEditorScreen(
                                 val photo = background.asImage
                                 PhotoRow(
                                     label = if (photo == null) L10n.themePhotoPick else L10n.themePhotoChange,
-                                    bitmap = photo?.let { themeImageCache.bitmap(it.file) },
+                                    bitmap = rememberThemePhoto(photo?.file, ThemeImageVariant.THUMBNAIL),
                                     onClick = { photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
                                 )
                                 if (photo != null) {
@@ -446,7 +447,7 @@ fun ThemeEditorScreen(
                     )
                 }
                 (background as? ThemeBackground.Image)?.image?.let { photo ->
-                    themeImageCache.bitmap(photo.file)?.let { bitmap ->
+                    rememberThemePhoto(photo.file, ThemeImageVariant.FULL)?.let { bitmap ->
                         PhotoPositionOverlay(
                             label = L10n.themePhotoPosition,
                             imageWidth = bitmap.width,
@@ -554,12 +555,8 @@ private fun PhotoRow(
     onClick: () -> Unit,
 ) {
     val view = LocalView.current
-    // Row-sized thumbnail scaled once per photo (the cached photo is 1280 px).
-    val thumbnailPx = with(LocalDensity.current) { PHOTO_THUMBNAIL_SIZE.roundToPx() * 2 }
-    val thumbnail =
-        remember(bitmap, thumbnailPx) {
-            bitmap?.let { Bitmap.createScaledBitmap(it, thumbnailPx, thumbnailPx * it.height / it.width, true).asImageBitmap() }
-        }
+    // [bitmap] is the thumbnail decode (off the main thread), not the 1280 px photo.
+    val thumbnail = remember(bitmap) { bitmap?.asImageBitmap() }
     Row(
         modifier =
             Modifier

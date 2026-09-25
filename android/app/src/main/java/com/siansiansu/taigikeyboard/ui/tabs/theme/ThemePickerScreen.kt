@@ -67,6 +67,7 @@ import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.ThemeAppearance
 import com.siansiansu.taigikeyboard.ime.core.ThemeId
+import com.siansiansu.taigikeyboard.ime.core.ThemeImageVariant
 import com.siansiansu.taigikeyboard.ime.core.UserTheme
 import com.siansiansu.taigikeyboard.ime.core.UserThemeSeed
 import com.siansiansu.taigikeyboard.ime.core.UserThemeStore
@@ -460,7 +461,7 @@ private fun CustomThemeBackgroundPreview(appearance: ThemeAppearance) {
         modifier =
             Modifier
                 .fillMaxSize()
-                .themeBackground(appearance.colors.surface, fallback = Color(UserThemeSeed.SOLID_COLOR)),
+                .themeBackground(appearance.colors.surface, fallback = Color(UserThemeSeed.SOLID_COLOR), photoVariant = ThemeImageVariant.THUMBNAIL),
     )
 }
 

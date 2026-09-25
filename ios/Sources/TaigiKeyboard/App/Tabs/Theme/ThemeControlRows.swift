@@ -86,16 +86,18 @@ struct ThemePhotoRow: View {
     @Binding var selection: PhotosPickerItem?
 
     private static let thumbnailSize: CGFloat = 44
-    /// Row-sized thumbnail, prepared once per photo off the main actor (the cached photo is
-    /// 1280 px; scaling it every body evaluation is waste).
-    @State private var thumbnail: UIImage?
 
     var body: some View {
         PhotosPicker(selection: $selection, matching: .images) {
             HStack(spacing: 12) {
                 Group {
-                    if let thumbnail {
-                        Image(uiImage: thumbnail).resizable().scaledToFill()
+                    // The thumbnail decode (off the main actor), not the 1280 px photo.
+                    if let file {
+                        ThemePhotoImage(file: file, variant: .thumbnail) { image in
+                            Image(uiImage: image).resizable().scaledToFill()
+                        } placeholder: {
+                            Color(.tertiarySystemFill)
+                        }
                     } else {
                         Color(.tertiarySystemFill)
                     }
@@ -108,14 +110,6 @@ struct ThemePhotoRow: View {
                 Image(latinSystemName: "photo.on.rectangle")
                     .foregroundColor(.secondary)
             }
-        }
-        .task(id: file) {
-            guard let file, let image = ThemeImageCache.shared.image(for: file) else {
-                thumbnail = nil
-                return
-            }
-            let side = Self.thumbnailSize * UIScreen.main.scale
-            thumbnail = await image.byPreparingThumbnail(ofSize: CGSize(width: side, height: side))
         }
     }
 }

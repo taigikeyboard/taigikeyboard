@@ -352,6 +352,9 @@ private struct CustomThemeBackgroundPreview: View {
     let appearance: ThemeAppearance
 
     var body: some View {
-        ThemeBackgroundSurface(surface: appearance.colors.surface ?? ThemeSurface(background: UserThemeSeed.background, dimsTowardWhite: true)).equatable()
+        ThemeBackgroundSurface(
+            surface: appearance.colors.surface ?? ThemeSurface(background: UserThemeSeed.background, dimsTowardWhite: true),
+            photoVariant: .thumbnail,
+        ).equatable()
     }
 }
