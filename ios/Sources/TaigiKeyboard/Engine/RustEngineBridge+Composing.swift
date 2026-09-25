@@ -352,7 +352,6 @@ public extension RustEngineBridge {
     }
 
     /// Read-only candidate query for the current `Phase::Continuous { raw }`.
-    /// `position` is reserved as `0` in v3.5.8 (Phase 6 dispatch validates).
     /// Caller MUST share the active composing-session generation — FetchAtPos
     /// is read-only and bumping generation would reset engine state before
     /// the fetch (`engine/composing/src/dispatch.rs:103-160`).
