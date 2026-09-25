@@ -88,9 +88,9 @@ struct HomeTab: View {
                     }
 
                     NavigationLink {
-                        AboutDeveloperView()
+                        AboutKeyboardView()
                     } label: {
-                        Label(lang.string(.homeAboutDeveloper), systemImage: "info.circle")
+                        Label(lang.string(.homeAboutKeyboard), systemImage: "info.circle")
                     }
 
                     // Version info

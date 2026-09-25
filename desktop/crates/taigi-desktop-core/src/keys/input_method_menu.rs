@@ -34,7 +34,7 @@ impl MenuCommand {
             Self::Shortcut(action) => action.label_key(),
             Self::OpenSettings => StringKey::DesktopMenuSettings,
             Self::CheckForUpdates => StringKey::DesktopUpdateCheckNow,
-            Self::About => StringKey::DesktopAboutTab,
+            Self::About => StringKey::HomeAboutKeyboard,
         }
     }
 

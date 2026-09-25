@@ -13,8 +13,8 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
     let introduction = adw::PreferencesGroup::new();
     let paragraphs = gtk::Box::new(gtk::Orientation::Vertical, 10);
     for key in [
-        StringKey::DesktopAboutIntroProject,
-        StringKey::DesktopAboutIntroMaintainer,
+        StringKey::HomeAboutIntroProject,
+        StringKey::HomeAboutIntroMaintainer,
     ] {
         paragraphs.append(
             &gtk::Label::builder()
@@ -31,10 +31,10 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
     let links = adw::PreferencesGroup::new();
     for (key, url) in [
         (StringKey::DesktopSponsorLink, SPONSOR_URL),
-        (StringKey::DesktopWebsiteLink, WEBSITE_URL),
-        (StringKey::DesktopGithubLink, GITHUB_URL),
-        (StringKey::DesktopDiscordLink, DISCORD_URL),
-        (StringKey::DesktopEmailLink, EMAIL_URL),
+        (StringKey::HomeWebsiteLink, WEBSITE_URL),
+        (StringKey::HomeGithubLink, GITHUB_URL),
+        (StringKey::HomeDiscordLink, DISCORD_URL),
+        (StringKey::HomeEmailLink, EMAIL_URL),
     ] {
         let title = context.strings.resolve(key).to_owned();
         context.link_row(&links, &title, url);
@@ -44,7 +44,7 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
     let footer = adw::PreferencesGroup::new();
     footer.add(
         &gtk::Label::builder()
-            .label(context.strings.resolve(StringKey::DesktopCopyrightLine))
+            .label(context.strings.resolve(StringKey::HomeCopyrightLine))
             .css_classes(["dim-label", "caption"])
             .build(),
     );

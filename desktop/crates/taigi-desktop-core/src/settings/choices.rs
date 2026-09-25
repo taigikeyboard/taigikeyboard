@@ -352,7 +352,7 @@ impl SettingsPane {
             Self::CustomDictionary => StringKey::DictionaryCustomDictionary,
             Self::DictionarySources => StringKey::DesktopDictionarySourcesLink,
             Self::FontManagement => StringKey::DesktopFontManagementTab,
-            Self::About => StringKey::DesktopAboutTab,
+            Self::About => StringKey::HomeAboutKeyboard,
             Self::DictionarySearch => return None,
         })
     }
@@ -490,7 +490,7 @@ mod tests {
         assert!(!SettingsPane::SIDEBAR.contains(&SettingsPane::About));
         assert_eq!(
             SettingsPane::About.title_key(),
-            Some(crate::strings::StringKey::DesktopAboutTab)
+            Some(crate::strings::StringKey::HomeAboutKeyboard)
         );
         assert_eq!(SettingsPane::from_raw("about"), Some(SettingsPane::About));
     }

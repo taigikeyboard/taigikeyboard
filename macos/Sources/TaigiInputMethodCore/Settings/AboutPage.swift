@@ -19,8 +19,8 @@ struct AboutPage: View {
             // under it (USER 2026-09-20: "left-align the copy").
             Section {
                 VStack(alignment: .leading, spacing: Metrics.paragraphSpacing) {
-                    Text(language.string(.desktopAboutIntroProject))
-                    Text(language.string(.desktopAboutIntroMaintainer))
+                    Text(language.string(.homeAboutIntroProject))
+                    Text(language.string(.homeAboutIntroMaintainer))
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.vertical, Metrics.cardInset)
@@ -32,12 +32,12 @@ struct AboutPage: View {
             // is neither a setting nor a link.
             Section {
                 ExternalLinkButton(titleKey: .desktopSponsorLink, url: Self.sponsorURL, style: .row(.heart))
-                ExternalLinkButton(titleKey: .desktopWebsiteLink, url: Self.websiteURL, style: .row(.globe))
-                ExternalLinkButton(titleKey: .desktopGithubLink, url: Self.githubURL, style: .row(.github))
-                ExternalLinkButton(titleKey: .desktopDiscordLink, url: Self.discordURL, style: .row(.discord))
-                ExternalLinkButton(titleKey: .desktopEmailLink, url: Self.emailURL, style: .row(.envelope))
+                ExternalLinkButton(titleKey: .homeWebsiteLink, url: Self.websiteURL, style: .row(.globe))
+                ExternalLinkButton(titleKey: .homeGithubLink, url: Self.githubURL, style: .row(.github))
+                ExternalLinkButton(titleKey: .homeDiscordLink, url: Self.discordURL, style: .row(.discord))
+                ExternalLinkButton(titleKey: .homeEmailLink, url: Self.emailURL, style: .row(.envelope))
             } footer: {
-                Text(language.string(.desktopCopyrightLine))
+                Text(language.string(.homeCopyrightLine))
                     .frame(maxWidth: .infinity)
                     .padding(.top, Metrics.footerGap)
             }

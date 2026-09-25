@@ -270,23 +270,180 @@
         "ja": "評価する"
       }
     },
-    "aboutDeveloper": {
-      "comment": "Home resource link + about-developer page title.",
+    "aboutKeyboard": {
+      "comment": "About page title and the row that opens it: the mobile Home resource link; on desktop the input-source menu row and settings window title (no sidebar row).",
       "scope": {
         "platforms": [
           "android",
-          "ios"
+          "ios",
+          "macos",
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
         ]
       },
       "values": {
-        "hanji": "關於",
-        "tailo": "Kuan-î",
-        "poj": "Koan-î",
-        "en": "About",
-        "ja": "このアプリについて"
+        "hanji": "關於齒盤",
+        "tailo": "Kuan-î Khí-puânn",
+        "poj": "Koan-î Khí-pôaⁿ",
+        "en": "About the Keyboard",
+        "ja": "齒盤について"
+      }
+    },
+    "aboutIntroProject": {
+      "comment": "About page (all platforms), first line: what the project is. Two short paragraphs in all (USER 2026-09-20: \"the description text is too much and too long\"). Hanji authored by the USER 2026-09-20 (revised same day: paid-features + education-groups lines); tailo / poj generated 2026-09-20.",
+      "scope": {
+        "platforms": [
+          "android",
+          "ios",
+          "macos",
+          "windows",
+          "linux"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "台語齒盤是一个自由、開源 ê 台語拍字家私，永遠免費、無廣告，嘛袂推出付費功能。毋管是一般使用者、先生、學校抑是台語教育團體，攏會當自由使用。希望予逐家用台語、教台語 ê 時，免有額外 ê 負擔。",
+        "tailo": "Tâi-gí Khí-puânn sī tsi̍t ê tsū-iû, khai-guân ê Tâi-gí phah-jī ke-si, íng-uán bián-huì, bô kóng-kò, mā bē tshui-tshut hù-huì kong-lîng. M̄-kuán sī it-puann sú-iōng-tsiá, sian-sinn, ha̍k-hāu ia̍h-sī Tâi-gí kàu-io̍k thuân-thé, lóng ē-tàng tsū-iû sú-iōng. Hi-bāng hōo ta̍k-ke iōng Tâi-gí, kà Tâi-gí ê sî, bián ū gia̍h-guā ê hū-tam.",
+        "poj": "Tâi-gí Khí-pôaⁿ sī chi̍t ê chū-iû, khai-goân ê Tâi-gí phah-jī ke-si, éng-oán bián-hùi, bô kóng-kò, mā bē chhui-chhut hù-hùi kong-lêng. M̄-koán sī it-poaⁿ sú-iōng-chiá, sian-siⁿ, ha̍k-hāu ia̍h-sī Tâi-gí kàu-io̍k thoân-thé, lóng ē-tàng chū-iû sú-iōng. Hi-bāng hō͘ ta̍k-ke iōng Tâi-gí, kà Tâi-gí ê sî, bián ū gia̍h-gōa ê hū-tam.",
+        "en": "TaigiKeyboard is a free, open-source Taiwanese input method — free forever, with no ads and no paid features ever. Everyday users, teachers, schools and Taiwanese-language education groups are all free to use it. The hope is that using and teaching Taiwanese comes with no extra burden.",
+        "ja": "台語齒盤は、自由でオープンソースの台湾語入力ツールです。ずっと無料で、広告もなく、有料機能を出すこともありません。一般の利用者、先生、学校、台湾語教育団体のどなたでも自由に使えます。台湾語を使うとき、教えるときに、余計な負担がないことを願っています。"
+      }
+    },
+    "aboutIntroMaintainer": {
+      "comment": "About page (all platforms), second line: one maintainer, the hope. Hanji authored by the USER 2026-09-20 (revised same day: paid-features + education-groups lines); tailo / poj generated 2026-09-20.",
+      "scope": {
+        "platforms": [
+          "android",
+          "ios",
+          "macos",
+          "windows",
+          "linux"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "這个計畫目前由我一个人利用上班以外 ê 時間開發佮維護。向望會當一直做落去，予逐个想欲用母語拍字 ê 人，攏會當輕鬆用母語拍字。",
+        "tailo": "Tsit ê kè-uē bo̍k-tsiân iû guá tsi̍t ê lâng lī-iōng siōng-pan í-guā ê sî-kan khai-huat kah uî-hōo. Ǹg-bāng ē-tàng it-ti̍t tsò lo̍h-khì, hōo ta̍k ê siūnn-beh iōng bó-gí phah-jī ê lâng, lóng ē-tàng khin-sang iōng bó-gí phah-jī.",
+        "poj": "Chit ê kè-ōe bo̍k-chiân iû goá chi̍t ê lâng lī-iōng siōng-pan í-gōa ê sî-kan khai-hoat kah ûi-hō͘. Ǹg-bāng ē-tàng it-ti̍t chò lo̍h-khì, hō͘ ta̍k ê siūⁿ-beh iōng bó-gí phah-jī ê lâng, lóng ē-tàng khin-sang iōng bó-gí phah-jī.",
+        "en": "This project is developed and maintained by one person, in the hours outside a day job. I hope to keep it going, so that everyone who wants to type in their mother tongue can do so with ease.",
+        "ja": "このプロジェクトは現在、私一人が本業以外の時間で開発と保守を行っています。これからも続けていき、母語で入力したいすべての人が、気軽に母語で入力できることを願っています。"
+      }
+    },
+    "websiteLink": {
+      "comment": "About page: title of the website link card. The host name itself — same in every language.",
+      "scope": {
+        "platforms": [
+          "android",
+          "ios",
+          "macos",
+          "windows",
+          "linux"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "taigikeyboard.tw",
+        "tailo": "taigikeyboard.tw",
+        "poj": "taigikeyboard.tw",
+        "en": "taigikeyboard.tw",
+        "ja": "taigikeyboard.tw"
+      }
+    },
+    "githubLink": {
+      "comment": "About page footer: tooltip + accessibility name of the GitHub icon link. A product name — same in every language.",
+      "scope": {
+        "platforms": [
+          "android",
+          "ios",
+          "macos",
+          "windows",
+          "linux"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "GitHub",
+        "tailo": "GitHub",
+        "poj": "GitHub",
+        "en": "GitHub",
+        "ja": "GitHub"
+      }
+    },
+    "discordLink": {
+      "comment": "About page footer: tooltip + accessibility name of the Discord icon link. A product name — same in every language.",
+      "scope": {
+        "platforms": [
+          "android",
+          "ios",
+          "macos",
+          "windows",
+          "linux"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "Discord",
+        "tailo": "Discord",
+        "poj": "Discord",
+        "en": "Discord",
+        "ja": "Discord"
+      }
+    },
+    "emailLink": {
+      "comment": "About page footer: tooltip + accessibility name of the email icon link. The address itself — same in every language.",
+      "scope": {
+        "platforms": [
+          "android",
+          "ios",
+          "macos",
+          "windows",
+          "linux"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "info@taigikeyboard.tw",
+        "tailo": "info@taigikeyboard.tw",
+        "poj": "info@taigikeyboard.tw",
+        "en": "info@taigikeyboard.tw",
+        "ja": "info@taigikeyboard.tw"
+      }
+    },
+    "copyrightLine": {
+      "comment": "About page footer: authorship line (desktop: beside the sponsor link; mobile has no sponsor link — App Store 3.1.1). Same in every language — a personal name carries no translation. The year is a literal, updated by hand at release time.",
+      "scope": {
+        "platforms": [
+          "android",
+          "ios",
+          "macos",
+          "windows",
+          "linux"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "© 2026 Bîn-hiân",
+        "tailo": "© 2026 Bîn-hiân",
+        "poj": "© 2026 Bîn-hiân",
+        "en": "© 2026 Bîn-hiân",
+        "ja": "© 2026 Bîn-hiân"
       }
     },
     "privacyPolicy": {
@@ -306,25 +463,6 @@
         "poj": "Ín-su-khoân chèng-chhek",
         "en": "Privacy Policy",
         "ja": "プライバシーポリシー"
-      }
-    },
-    "freePromise": {
-      "comment": "About-developer page body: the maintainer's promise that the keyboard stays free.",
-      "scope": {
-        "platforms": [
-          "android",
-          "ios"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "台語齒盤會一直免費，嘛袂設付費功能。我向望想欲學台語、寫台語 ê 人攏會當無負擔使用。",
-        "tailo": "Tâi-gí khí-puânn ē it-ti̍t bián-huì, mā buē siat hù-huì kong-lîng. Guá ǹg-bāng siūnn-beh ha̍k tâi-gí, siá tâi-gí ê lâng lóng ē-tàng bô hū-tam sú-iōng.",
-        "poj": "Tâi-gí khí-pôaⁿ ē it-ti̍t bián-hùi, mā bōe siat hù-hùi kong-lêng. Góa ǹg-bāng siūⁿ-beh ha̍k tâi-gí, siá tâi-gí ê lâng lóng ē-tàng bô hū-tam sú-iōng.",
-        "en": "TaigiKeyboard will remain free and will not add paid features. I want everyone who wishes to learn or write Taiwanese to be able to use it without cost.",
-        "ja": "台語キーボードは今後も無料で、有料機能を設けません。台湾語を学びたい、書きたい人が費用を気にせず使えることを願っています。"
       }
     },
     "version": {

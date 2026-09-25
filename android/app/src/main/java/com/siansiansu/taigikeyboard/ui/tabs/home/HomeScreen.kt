@@ -173,7 +173,7 @@ fun HomeScreen(
                 SettingsDivider(Modifier.padding(horizontal = 16.dp))
                 NavigationRow(
                     icon = painterResource(R.drawable.ic_info),
-                    label = L10n.homeAboutDeveloper,
+                    label = L10n.homeAboutKeyboard,
                     trailingIcon = chevronRight,
                     onClick = onAboutDeveloper,
                 )

@@ -120,9 +120,15 @@
     <string name="i18n_home_setupGuideStep2AddKeyboard">「キーボードを追加」「フルアクセスを許可」をタップ</string>
     <string name="i18n_home_userGuide">プロジェクトのサイト</string>
     <string name="i18n_home_rateUs">評価する</string>
-    <string name="i18n_home_aboutDeveloper">このアプリについて</string>
+    <string name="i18n_home_aboutKeyboard">齒盤について</string>
+    <string name="i18n_home_aboutIntroProject">台語齒盤は、自由でオープンソースの台湾語入力ツールです。ずっと無料で、広告もなく、有料機能を出すこともありません。一般の利用者、先生、学校、台湾語教育団体のどなたでも自由に使えます。台湾語を使うとき、教えるときに、余計な負担がないことを願っています。</string>
+    <string name="i18n_home_aboutIntroMaintainer">このプロジェクトは現在、私一人が本業以外の時間で開発と保守を行っています。これからも続けていき、母語で入力したいすべての人が、気軽に母語で入力できることを願っています。</string>
+    <string name="i18n_home_websiteLink">taigikeyboard.tw</string>
+    <string name="i18n_home_githubLink">GitHub</string>
+    <string name="i18n_home_discordLink">Discord</string>
+    <string name="i18n_home_emailLink">info@taigikeyboard.tw</string>
+    <string name="i18n_home_copyrightLine">© 2026 Bîn-hiân</string>
     <string name="i18n_home_privacyPolicy">プライバシーポリシー</string>
-    <string name="i18n_home_freePromise">台語キーボードは今後も無料で、有料機能を設けません。台湾語を学びたい、書きたい人が費用を気にせず使えることを願っています。</string>
     <string name="i18n_home_version">現在のバージョン</string>
     <string name="i18n_home_copyrightNotice">謝辞</string>
     <string name="i18n_home_viewLicense">ライセンス</string>
