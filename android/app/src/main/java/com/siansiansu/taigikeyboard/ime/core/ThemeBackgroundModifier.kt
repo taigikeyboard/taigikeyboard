@@ -16,7 +16,6 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.clipRect
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import kotlin.math.roundToInt
@@ -46,17 +45,20 @@ fun ThemeGradient.brush(
  * dimmed photo (aspect-fill over the whole keyboard, then this surface's slice — see
  * [ThemeGradient.brush] for [topInsetPx]); null (adaptive) paints [fallback]. The modifier is
  * remembered on its inputs so the draw cache survives the host's recompositions and the brush
- * is rebuilt only when the draw size changes. A missing photo file paints the seed grey.
+ * is rebuilt only when the draw size changes. The photo is decoded off the main thread
+ * ([rememberThemePhoto], [photoVariant] picks the decode — THUMBNAIL for small previews); until
+ * it lands, or when the file is missing, the surface paints the seed grey.
  */
 @Composable
 fun Modifier.themeBackground(
     surface: ThemeSurface?,
     fallback: Color,
     topInsetPx: Float = 0f,
+    photoVariant: ThemeImageVariant = ThemeImageVariant.FULL,
 ): Modifier {
-    val context = LocalContext.current
+    val photo = rememberThemePhoto((surface?.background as? ThemeBackground.Image)?.image?.file, photoVariant)
     return then(
-        remember(surface, fallback, topInsetPx) {
+        remember(surface, fallback, topInsetPx, photo) {
             when (val background = surface?.background) {
                 is ThemeBackground.Solid -> Modifier.background(Color(background.color))
                 is ThemeBackground.Gradient ->
@@ -65,12 +67,9 @@ fun Modifier.themeBackground(
                         onDrawBehind { drawRect(brush) }
                     }
                 is ThemeBackground.Image ->
-                    CompositionRoot
-                        .shared(context)
-                        .themeImages
-                        .bitmap(background.image.file)
+                    photo
                         ?.let { Modifier.themePhoto(it, background.image, surface.dimsTowardWhite, topInsetPx) }
-                        // A missing photo file paints the seed grey so the keyboard never renders see-through.
+                        // Not decoded yet / missing file: the seed grey, so the keyboard never renders see-through.
                         ?: Modifier.background(Color(UserThemeSeed.SOLID_COLOR))
                 null -> Modifier.background(fallback)
             }

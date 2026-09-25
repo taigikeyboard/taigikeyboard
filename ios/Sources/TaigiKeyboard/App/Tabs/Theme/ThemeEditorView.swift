@@ -124,12 +124,16 @@ struct ThemeEditorView: View {
                         label: lang.string(.themeGradientDirection),
                         angle: viewModel.gradientAngleBinding,
                     )
-                } else if let photo = viewModel.photoBinding, let image = ThemeImageCache.shared.image(for: photo.wrappedValue.file) {
-                    PhotoPositionOverlay(
-                        label: lang.string(.themePhotoPosition),
-                        imageSize: image.size,
-                        photo: photo,
-                    )
+                } else if let photo = viewModel.photoBinding {
+                    ThemePhotoImage(file: photo.wrappedValue.file, variant: .full) { image in
+                        PhotoPositionOverlay(
+                            label: lang.string(.themePhotoPosition),
+                            imageSize: image.size,
+                            photo: photo,
+                        )
+                    } placeholder: {
+                        EmptyView()
+                    }
                 }
             }
         }
