@@ -218,7 +218,7 @@
     <string name="i18n_theme_palettePurple">藤紫</string>
     <string name="i18n_theme_paletteCatppuccin">暗眠山貓</string>
     <string name="i18n_theme_backgroundSection">背景</string>
-    <string name="i18n_theme_backgroundTypeSolid">純色</string>
+    <string name="i18n_theme_backgroundTypeSolid">孤色</string>
     <string name="i18n_theme_backgroundTypeGradient">漸層</string>
     <string name="i18n_theme_gradientStartColor">開始</string>
     <string name="i18n_theme_gradientEndColor">結束</string>
