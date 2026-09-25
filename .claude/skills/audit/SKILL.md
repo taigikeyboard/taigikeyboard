@@ -10,7 +10,7 @@ Answer one question: **what in the tree costs maintenance without paying for it,
 
 Output is a report; the USER decides which rounds open (`~/.claude/rules/diagnosis-discipline.md` § No unilateral release scope). Never write "deferred", "post-vX" or "known limitation".
 
-Worked example of the finished product: `docs/reports/2026-09-24-mobile-smart-suggestions-brainstorm.md` §3 (it produced R1 #187–#191 and R3 #194–#196).
+Worked example of the finished product: `docs/reports/2026-09-24-mobile-smart-suggestions-brainstorm.md` §3.
 
 ## 1. Scope → surfaces
 

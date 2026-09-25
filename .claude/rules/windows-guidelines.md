@@ -15,7 +15,7 @@ shared engine). Read before modifying Windows code. Design record: `docs/archite
   `cargo check --target x86_64-pc-windows-msvc` for the non-C crates. These gates prove compilation,
   not behaviour — behaviour is the dogfood run-book's job. Never claim "works on Windows".
 - Put logic in `taigi-desktop-core` (`unsafe_code = forbid`, host-testable, in the `desktop/`
-  workspace SHARED WITH LINUX since 2026-09-22 — `linux-roadmap.md` L2) whenever it does not need a
+  workspace shared with Linux — `linux-roadmap.md` L2) whenever it does not need a
   Win32 handle. `taigi-windows-tsf` and `taigi-windows-settings` are thin shells. A change under
   `desktop/` runs `make -C desktop test` AND `make windows-check`.
 - Pin UI-framework versions to what has actually run on the Windows box: `windows-reactor` is a

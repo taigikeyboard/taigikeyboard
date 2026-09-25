@@ -11,7 +11,7 @@ Answer one question: **can a user on `<base-ref>` upgrade to `<target-ref>` with
 Run from `main`. User supplies `<base-ref> [<target-ref>]`.
 Example: `/upgrade-check v3.6.2 v3.6.3` · `/upgrade-check v3.6.2` (target = HEAD).
 
-**Read-only.** This skill greps two refs and reports. It NEVER builds, edits files, or commits. Safe to run anytime, on a dirty tree.
+**Read-only.** This skill greps two refs and reports; it does not build, edit files, or commit, so it is safe on a dirty tree.
 
 ## What this checks (and what it does NOT)
 
