@@ -281,8 +281,7 @@ public nonisolated struct Taigi_Engine_ComposingRequest: Sendable {
   public init() {}
 }
 
-/// Begin a fresh composition buffer with `text`. Caret resets;
-/// `selected_candidate_index` set to 0.
+/// Begin a fresh composition buffer with `text`. Caret resets.
 public nonisolated struct Taigi_Engine_Start: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -320,9 +319,7 @@ public nonisolated struct Taigi_Engine_AppendHyphen: Sendable {
   public init() {}
 }
 
-/// TPS auto-correct: replace the last raw-input character. Intentionally
-/// preserves `selected_candidate_index` (correction on top of an in-progress
-/// selection, not a fresh composition step).
+/// TPS auto-correct: replace the last raw-input character.
 public nonisolated struct Taigi_Engine_ReplaceLast: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -744,9 +741,6 @@ public nonisolated struct Taigi_Engine_ComposingResponse: Sendable {
 
   /// ordered side effects; prost preserves order
   public var effect: [Taigi_Engine_Effect] = []
-
-  /// -1 idle, 0 fresh, preserved on ReplaceLast
-  public var selectedCandidateIndex: Int32 = 0
 
   /// mirrors `state.isComposing`
   public var isComposing: Bool = false
@@ -2049,7 +2043,7 @@ nonisolated extension Taigi_Engine_MoveCaret: SwiftProtobuf.Message, SwiftProtob
 
 nonisolated extension Taigi_Engine_ComposingResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ComposingResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}preedit\0\u{1}effect\0\u{3}selected_candidate_index\0\u{3}is_composing\0\u{1}continuous\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}preedit\0\u{1}effect\0\u{4}\u{2}is_composing\0\u{1}continuous\0\u{b}selected_candidate_index\0\u{c}\u{3}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2059,7 +2053,6 @@ nonisolated extension Taigi_Engine_ComposingResponse: SwiftProtobuf.Message, Swi
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularMessageField(value: &self._preedit) }()
       case 2: try { try decoder.decodeRepeatedMessageField(value: &self.effect) }()
-      case 3: try { try decoder.decodeSingularInt32Field(value: &self.selectedCandidateIndex) }()
       case 4: try { try decoder.decodeSingularBoolField(value: &self.isComposing) }()
       case 5: try { try decoder.decodeSingularMessageField(value: &self._continuous) }()
       default: break
@@ -2078,9 +2071,6 @@ nonisolated extension Taigi_Engine_ComposingResponse: SwiftProtobuf.Message, Swi
     if !self.effect.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.effect, fieldNumber: 2)
     }
-    if self.selectedCandidateIndex != 0 {
-      try visitor.visitSingularInt32Field(value: self.selectedCandidateIndex, fieldNumber: 3)
-    }
     if self.isComposing != false {
       try visitor.visitSingularBoolField(value: self.isComposing, fieldNumber: 4)
     }
@@ -2093,7 +2083,6 @@ nonisolated extension Taigi_Engine_ComposingResponse: SwiftProtobuf.Message, Swi
   public static func ==(lhs: Taigi_Engine_ComposingResponse, rhs: Taigi_Engine_ComposingResponse) -> Bool {
     if lhs._preedit != rhs._preedit {return false}
     if lhs.effect != rhs.effect {return false}
-    if lhs.selectedCandidateIndex != rhs.selectedCandidateIndex {return false}
     if lhs.isComposing != rhs.isComposing {return false}
     if lhs._continuous != rhs._continuous {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}

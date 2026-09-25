@@ -2,7 +2,7 @@
 
 //! Composing slice — Intent → Effect state machine for the v3.5.4 Rust core.
 //!
-//! Owns `Phase::Idle | Composing { raw }` plus `selected_candidate_index`.
+//! Owns `Phase::Idle | Composing { raw } | Continuous { .. }`.
 //! External callers reach the engine through `dispatch::handle`; the engine
 //! itself is held inside a singleton `Mutex<Engine>` at the FFI boundary
 //! (see `engine/dispatch::EngineHandle`).

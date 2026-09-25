@@ -428,15 +428,11 @@ pub(crate) fn combined_display_with_tail(
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct EngineState {
     pub phase: Phase,
-    pub selected_candidate_index: i32,
 }
 
 impl Default for EngineState {
     fn default() -> Self {
-        Self {
-            phase: Phase::Idle,
-            selected_candidate_index: -1,
-        }
+        Self { phase: Phase::Idle }
     }
 }
 
@@ -606,8 +602,7 @@ impl Engine {
     }
 
     /// Apply `intent` against the current state, mutate, and return the
-    /// resulting response (preedit + ordered effects + new index +
-    /// is_composing). Delegates to the pure transition table in
+    /// resulting response (preedit + ordered effects + is_composing). Delegates to the pure transition table in
     /// `transition.rs`.
     pub fn apply(&mut self, intent: Intent, config: &AppConfig) -> ComposingResponse {
         crate::transition::apply(&mut self.state, intent, config)

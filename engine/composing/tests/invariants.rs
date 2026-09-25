@@ -40,11 +40,10 @@ fn effect_kinds(resp: &ComposingResponse) -> Vec<&'static str> {
 // ---- Initial state ----
 
 #[test]
-fn invariant_initial_state_is_idle_with_index_minus_one() {
+fn invariant_initial_state_is_idle() {
     let engine = Engine::new();
     let snap = engine.snapshot(&config_tl());
     assert!(!snap.is_composing);
-    assert_eq!(snap.selected_candidate_index, -1);
     assert_eq!(snap.preedit.unwrap_or_default().raw_input, "");
 }
 
@@ -58,7 +57,6 @@ fn invariant_start_emits_update_preedit_then_perform_autocomplete() {
         effect_kinds(&resp),
         vec!["updatePreedit", "performAutocomplete"]
     );
-    assert_eq!(resp.selected_candidate_index, 0);
     assert!(resp.is_composing);
 }
 
@@ -70,16 +68,14 @@ fn invariant_append_when_idle_behaves_as_start() {
         effect_kinds(&resp),
         vec!["updatePreedit", "performAutocomplete"]
     );
-    assert_eq!(resp.selected_candidate_index, 0);
 }
 
 #[test]
-fn invariant_append_when_composing_appends_and_resets_index() {
+fn invariant_append_when_composing_appends() {
     let mut engine = Engine::new();
     engine.apply(Intent::Start { text: "a".into() }, &config_tl());
     let resp = engine.apply(Intent::Append { ch: "b".into() }, &config_tl());
     assert_eq!(raw_input(&resp), "ab");
-    assert_eq!(resp.selected_candidate_index, 0);
 }
 
 #[test]
@@ -151,12 +147,12 @@ fn invariant_delete_backward_to_empty_emits_clear_reset_delete_doc() {
 }
 
 #[test]
-fn invariant_delete_backward_partial_resets_index_to_zero() {
+fn invariant_delete_backward_partial_keeps_composing() {
     let mut engine = Engine::new();
     engine.apply(Intent::Start { text: "ab".into() }, &config_tl());
     let resp = engine.apply(Intent::DeleteBackward, &config_tl());
     assert_eq!(raw_input(&resp), "a");
-    assert_eq!(resp.selected_candidate_index, 0);
+    assert!(resp.is_composing);
 }
 
 #[test]
@@ -182,7 +178,6 @@ fn invariant_commit_derived_emits_commit_then_reset_pair() {
         ]
     );
     assert!(!resp.is_composing);
-    assert_eq!(resp.selected_candidate_index, -1);
 }
 
 #[test]
@@ -292,7 +287,6 @@ fn invariant_reset_composing_emits_clear_and_reset_autocomplete_only() {
         vec!["clearPreeditWithoutCommit", "resetAutocomplete"]
     );
     assert!(!resp.is_composing);
-    assert_eq!(resp.selected_candidate_index, -1);
 }
 
 // ---- Snapshot ----
@@ -310,21 +304,19 @@ fn invariant_snapshot_does_not_mutate() {
 // ---- Phase invariants ----
 
 #[test]
-fn invariant_idle_implies_empty_raw_and_minus_one_index() {
+fn invariant_idle_implies_empty_raw() {
     let engine = Engine::new();
     let snap = engine.snapshot(&config_tl());
     assert!(!snap.is_composing);
-    assert_eq!(snap.selected_candidate_index, -1);
     assert_eq!(snap.preedit.unwrap().raw_input, "");
 }
 
 #[test]
-fn invariant_composing_implies_non_negative_index() {
+fn invariant_start_snapshot_is_composing() {
     let mut engine = Engine::new();
     engine.apply(Intent::Start { text: "a".into() }, &config_tl());
     let snap = engine.snapshot(&config_tl());
     assert!(snap.is_composing);
-    assert!(snap.selected_candidate_index >= 0);
 }
 
 #[test]
@@ -358,5 +350,4 @@ fn invariant_commit_then_compose_again_works() {
     engine.apply(Intent::CommitDerived, &config_tl());
     let resp = engine.apply(Intent::Start { text: "b".into() }, &config_tl());
     assert_eq!(raw_input(&resp), "b");
-    assert_eq!(resp.selected_candidate_index, 0);
 }

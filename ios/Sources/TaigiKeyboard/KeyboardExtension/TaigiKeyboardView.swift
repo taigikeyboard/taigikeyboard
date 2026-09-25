@@ -104,7 +104,8 @@ struct TaigiKeyboardView: View {
         // Read beside the swap on the same live path: both come from SharedSettings via the
         // KeyboardContext extension, so a mode change re-renders exactly like a swap does.
         let candidateDisplayMode = keyboardContext.candidateDisplayMode
-        let selectedCandidateIndex = composingManager.selectedCandidateIndex
+        // While typing the first candidate is always selected; idle has no selection.
+        let selectedCandidateIndex = composingManager.isComposing ? 0 : -1
         let theme = CandidateTheme.resolved(
             candidateTextSizeScale: p.settings.candidateTextSizeScale,
             colorSettings: colors,

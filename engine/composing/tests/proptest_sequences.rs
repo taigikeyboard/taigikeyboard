@@ -1,8 +1,7 @@
 //! Property tests for append/delete/replace sequences. Per plan §7.3.
 //!
 //! Random Intent sequences must preserve:
-//! - `Idle ⟹ raw_input == "" ∧ selected_candidate_index == -1`
-//! - `Composing ⟹ selected_candidate_index >= 0`
+//! - `Idle ⟹ raw_input == ""`
 //! - `is_composing` matches phase on every response
 //! - the caret is a char boundary of the pending tail and its display
 //!   projection never exceeds the display
@@ -72,21 +71,17 @@ proptest! {
     })]
 
     #[test]
-    fn random_sequences_preserve_phase_index_invariants(
+    fn random_sequences_preserve_phase_invariants(
         intents in proptest::collection::vec(arb_intent(), 1..=12),
         cfg in arb_config(),
     ) {
         let mut engine = Engine::new();
         for intent in intents {
             let resp = engine.apply(intent, &cfg);
-            // Idle ⟹ empty raw + -1 index
+            // Idle ⟹ empty raw
             if !resp.is_composing {
                 let raw = resp.preedit.as_ref().map(|p| p.raw_input.as_str()).unwrap_or("");
                 prop_assert_eq!(raw, "");
-                prop_assert_eq!(resp.selected_candidate_index, -1);
-            } else {
-                // Composing ⟹ non-negative index
-                prop_assert!(resp.selected_candidate_index >= 0);
             }
             let preedit = resp.preedit.clone().unwrap_or_default();
             let display_utf16 = preedit.display_text.encode_utf16().count();
@@ -122,7 +117,6 @@ proptest! {
         let snap_a = engine.snapshot(&cfg);
         let snap_b = engine.snapshot(&cfg);
         prop_assert_eq!(snap_a.is_composing, snap_b.is_composing);
-        prop_assert_eq!(snap_a.selected_candidate_index, snap_b.selected_candidate_index);
         prop_assert_eq!(
             snap_a.preedit.unwrap().raw_input,
             snap_b.preedit.unwrap().raw_input

@@ -185,9 +185,8 @@ final class BuiltInThemesTests: XCTestCase {
         XCTAssertEqual(blueTop.deepened(by: KeyboardColorSettings.candidatePressedDeepenFactor), CodableColor(hex: 0x7C8898))
     }
 
-    // trace: state priority is press > firstCandidate > selected. The engine sets
-    // selectedCandidateIndex=0 while typing, so the first candidate is BOTH selected and
-    // first — it must show the LIGHT highlight, not the dark pressed/selection color.
+    // trace: state priority is press > firstCandidate > selected. While typing, the first
+    // candidate is always selected, so it is BOTH selected and first — it must show the LIGHT highlight, not the dark pressed/selection color.
     func testResolvedBackgroundColor_firstCandidateLightBeatsSelection() {
         let style = CandidateView.ItemStyle.standard
         let highlight = Color.green

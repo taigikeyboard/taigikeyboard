@@ -302,11 +302,6 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
         ).transition
         XCTAssertEqual(before.rawInput, after.rawInput, "rawInput must not change across FetchAtPos")
         XCTAssertEqual(before.isComposing, after.isComposing, "isComposing must not change")
-        XCTAssertEqual(
-            before.selectedCandidateIndex,
-            after.selectedCandidateIndex,
-            "selectedCandidateIndex must not change",
-        )
     }
 
     // MARK: - Phase 9.2 mode carrier

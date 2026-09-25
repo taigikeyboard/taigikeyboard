@@ -13,7 +13,7 @@ Engine state machine lives in Rust `engine/composing` (since v3.5.4). Platform s
 |---------|-----------|-------|
 | **rawInput** | Numeric-tone ASCII preedit (e.g. `gua2`) — drives lexicon search-key | Rust `composing::Phase::Composing { raw }` |
 | **composingText** | Derived display text (e.g. `guá`) — Rust applies tone marks per `AppConfig.input_mode` | Rust `composing::derived` |
-| **ComposingState** | `Phase::Idle` or `Phase::Composing { raw }` + `selected_candidate_index` | Rust `composing::EngineState` |
+| **ComposingState** | `Phase::Idle`, `Phase::Composing { raw, caret }` or `Phase::Continuous { .. }` | Rust `composing::EngineState` |
 | **Intent** | Input intents: 10 text-input (Start / Append / AppendHyphen / ReplaceLast / DeleteBackward / CommitDerived / CommitRaw / SelectSuggestion / CommitPreeditThenInsertExternal / Reset), 4 continuous-input (EnterContinuous / FetchAtPos / CommitContinuous / ResetContinuous), 2 desktop editing keys (TelexKey / MoveCaret) | Rust `composing::Intent` |
 | **Effect** | Platform-neutral effect enum (updatePreedit / clearPreeditWithoutCommit / commitTextReplacingPreedit / deleteBackwardFromDocument / resetAutocomplete / performAutocomplete / resetAutocompleteContext) | Rust `composing::transition` |
 | **commitComposition** | Effect interpreter inserts derived text + clears preedit | iOS `ComposingDelegate.execute(_:)` / Android `ComposingDelegate` |

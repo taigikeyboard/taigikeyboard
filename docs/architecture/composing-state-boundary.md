@@ -13,8 +13,7 @@ The Swift sketches in §2.1–§2.4 are the original design notation; the state 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
 │  Platform wrapper (iOS): ComposingManager                            │
-│  - ObservableObject + @Published isComposing/composingText/          │
-│    rawInput/selectedCandidateIndex                                   │
+│  - @Observable isComposing/composingText/rawInput                    │
 │  - Owns ComposingDelegate wiring (UITextDocumentProxy side effects)  │
 │  - Owns ComposingContextSink notification                            │
 │  - Reads EngineSettingsProvider.current per intent                   │
@@ -68,7 +67,7 @@ public struct ToneToggles: Equatable {
 }
 ```
 
-The `selectedCandidateIndex == -1` invariant in idle is asserted in `ComposingState.apply(...)` — every idle-producing path sets it explicitly. Tests verify this for `reset`, `deleteBackward` emptying raw, `commit*`, and `selectSuggestion`.
+The original design carried a `selectedCandidateIndex` (`-1` in idle) through the state machine; it was removed 2026-09-25 — with no setter it was always `isComposing ? 0 : -1`, and candidate highlight is platform-owned.
 
 ### 2.2 Transitions + platform-neutral Effects
 

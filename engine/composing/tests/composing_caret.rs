@@ -120,7 +120,6 @@ fn append_inserts_at_the_caret_and_refetches() {
         &config_tl(),
     );
     assert_eq!(kinds(&resp), vec!["UpdatePreedit", "PerformAutocomplete"]);
-    assert_eq!(resp.selected_candidate_index, 0);
     let p = preedit(&resp);
     assert_eq!(
         (p.raw_input.as_str(), p.display_text.as_str()),

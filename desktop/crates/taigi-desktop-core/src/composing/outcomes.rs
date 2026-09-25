@@ -121,7 +121,6 @@ mod tests {
             raw_input: String::new(),
             display_text: String::new(),
             effects,
-            selected_candidate_index: 0,
             is_composing,
         }
     }

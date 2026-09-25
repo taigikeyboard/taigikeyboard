@@ -238,58 +238,34 @@ extension ActionHandler {
 
         // Taigi mode
         if composingManager.isComposing {
-            // Captured before the commit clears them: the raw input, the
-            // highlighted index, and the suggestion that index names.
+            // Captured before the commit clears it.
             let capturedRawInput = composingManager.rawInput
-            let selectedIndex = composingManager.selectedCandidateIndex
-            let suggestions = keyboardController?.state.autocompleteContext.suggestions ?? []
 
-            // The document string each arm writes, and whether it is
-            // romanization — resolved per arm, because the two arms write
-            // different things: index 0 commits the composition verbatim,
-            // any other index commits that candidate's own display text.
-            let committedText: String
-            let wroteRomanization: Bool
-            if selectedIndex == 0 {
-                // Enter at index 0: commit raw input (literal keystrokes)
-                // This allows English words to pass through without tone conversion
-                // (Google Pinyin convention: Enter = raw Latin text, Space = converted text)
-                //
-                // Model B §10.3: `commitRawInput()`→CommitRaw → the engine's
-                // Continuous final-commit emits the terminal
-                // NextWordWordSelected(trigger:true), routed to
-                // `nextWordController.process` → records the association +
-                // predicts. Enter KEEPS the engine prediction (nothing clears
-                // after; only auto-space inserts a literal). The old manual
-                // `process(requireRomanMode:true)` was redundant — in swapped
-                // mode it no-op'd (so the engine effect already drove
-                // behavior since Phase 9 Item 3), in non-swapped mode it
-                // double-recorded the association. Removing it is
-                // behavior-preserving and makes the engine effect the SOLE
-                // source (§10.3).
-                composingManager.commitRawInput()
-                committedText = capturedRawInput
-                wroteRomanization = Self.rawPreeditWritesRomanization(isTPSLayout: isTPSLayout)
-            } else {
-                // Non-zero index: confirm selected candidate. This commits the
-                // suggestion's own `text` verbatim, so THAT string — not the
-                // raw input, and not a mode-derived rendering — is what the
-                // auto space answers for.
-                // Strip KK type at the boundary; ComposingManager is engine-pure.
-                _ = composingManager.confirmSelectedCandidate(availableTexts: suggestions.map(\.text))
-                let selected = suggestions.indices.contains(selectedIndex) ? suggestions[selectedIndex] : nil
-                committedText = selected?.text ?? ""
-                wroteRomanization = selected.map(highlightedCandidateWroteRomanization) ?? false
-            }
+            // Enter commits raw input (literal keystrokes).
+            // This allows English words to pass through without tone conversion
+            // (Google Pinyin convention: Enter = raw Latin text, Space = converted text)
+            //
+            // Model B §10.3: `commitRawInput()`→CommitRaw → the engine's
+            // Continuous final-commit emits the terminal
+            // NextWordWordSelected(trigger:true), routed to
+            // `nextWordController.process` → records the association +
+            // predicts. Enter KEEPS the engine prediction (nothing clears
+            // after; only auto-space inserts a literal). The old manual
+            // `process(requireRomanMode:true)` was redundant — in swapped
+            // mode it no-op'd (so the engine effect already drove
+            // behavior since Phase 9 Item 3), in non-swapped mode it
+            // double-recorded the association. Removing it is
+            // behavior-preserving and makes the engine effect the SOLE
+            // source (§10.3).
+            composingManager.commitRawInput()
 
             // Auto-space follows what the commit WROTE, not the output mode:
-            // a raw commit is romanization in TL/POJ and Bopomofo in TPS,
-            // while a confirmed candidate can be the 漢字 itself. The hyphen
-            // check runs on the committed string, so a 連字 the user is
-            // continuing suppresses the space on either arm.
+            // a raw commit is romanization in TL/POJ and Bopomofo in TPS. The
+            // hyphen check runs on the committed string, so a 連字 the user is
+            // continuing suppresses the space.
             appendAutoSpaceIfEarned(
-                documentText: committedText,
-                wroteRomanization: wroteRomanization,
+                documentText: capturedRawInput,
+                wroteRomanization: Self.rawPreeditWritesRomanization(isTPSLayout: isTPSLayout),
             )
             return true
         } else {

@@ -183,7 +183,7 @@ message ComposingRequest {
     Start start = 10;                                          // begin new buffer; caret reset
     Append append = 11;                                        // if idle, acts as Start
     AppendHyphen append_hyphen = 12;                           // alias for Append("-")
-    ReplaceLast replace_last = 13;                             // TPS auto-correct; preserves selected_candidate_index
+    ReplaceLast replace_last = 13;                             // TPS auto-correct
     DeleteBackward delete_backward = 14;
     CommitDerived commit_derived = 15;                         // commit tone-marked form
     CommitRaw commit_raw = 16;                                 // commit literal raw input (e.g. English passthrough)
@@ -221,7 +221,7 @@ message ComposingResponse {
   }
   Preedit preedit = 1;
   repeated Effect effect = 2;          // ordered side effects for platform to interpret
-  int32 selected_candidate_index = 3;  // -1 idle; 0 fresh composition; preserved on ReplaceLast
+  reserved 3;                          // selected_candidate_index (removed 2026-09-25)
   bool is_composing = 4;
   optional ContinuousResponse continuous = 5;  // FetchAtPos only
 }
@@ -253,7 +253,7 @@ message ResetAutocompleteContext {}
 - Why each intent is on the wire (not collapsed into fewer):
   - `Start` vs `Append` — `Append` becomes `Start` when idle but the explicit `Start` is what platform code emits at composition begin (caret reset semantics differ — see iOS `case start` at `ComposingState.swift:25` and Android `data class Start` at `ComposingState.kt:49-51`).
   - `AppendHyphen` — semantic alias kept distinct so platform call-sites don't synthesize `"-"` strings on the wire.
-  - `ReplaceLast` — TPS auto-correct (`ActionHandler+KeyActions.swift:37-39` iOS, `TextInputManager.kt:850,855` Android). Intentionally preserves `selectedCandidateIndex`; emulating it via `DeleteBackward + Append` would reset the index and regress candidate-bar behavior (documented at `ComposingState.kt:62-65`).
+  - `ReplaceLast` — TPS auto-correct (`ActionHandler+KeyActions.swift:37-39` iOS, `TextInputManager.kt:850,855` Android).
   - `CommitDerived` vs `CommitRaw` — distinct semantics: derived = tone-marked form (e.g. "guá"), raw = literal numeric form (e.g. "gua2") used for English passthrough on Enter-at-index-0 (`ComposingState.swift:41-45`, `ComposingState.kt:73-81`). A single `commit_composition` would lose this distinction.
   - `CommitPreeditThenInsertExternal` — emoji palette / clipboard paste atomic write (`MediaInputManager.kt:155` Android; iOS emoji delegate). Splitting into commit + insert reintroduces the silent-finish-composing race this intent was added to prevent.
 - Mirrors the `ComposingTransition` / `Effect` shape already in iOS+Android Phase II:
@@ -263,7 +263,7 @@ message ResetAutocompleteContext {}
 - The platform interpreter maps document-mutation effects (`CommitTextReplacingPreedit` / `UpdatePreedit` / `ClearPreeditWithoutCommit` / `DeleteBackwardFromDocument`) to `setComposingText` / `commitText` / `deleteSurroundingText` / equivalent, and routes autocomplete-control effects (`ResetAutocomplete` / `PerformAutocomplete` / `ResetAutocompleteContext`) to the platform autocomplete subsystem.
 - `DeleteBackwardFromDocument` is required to preserve the delete-to-empty path: when the user backspaces a 1-char raw buffer, the composing state emits `clearPreeditWithoutCommit` + `resetAutocomplete` + `deleteBackwardFromDocument` (`ComposingState.swift:144-149`, Android `ComposingState.kt:211-215`) so the host editor's last grapheme is removed atomically with the preedit clear.
 - The 3 autocomplete-control effects MUST be on the wire. Composing emits them as part of normal transitions (typing, commit, reset — see `ComposingTransition.swift:33-43`, `ComposingTransition.kt:55-64`); without them on the wire, a Rust composing slice cannot tell the platform autocomplete subsystem when to clear suggestions, run a fresh query, or reset the bigram history. Candidate queries / context resets would drift even when text effects are correct. The autocomplete subsystem itself stays platform-side; only the cross-subsystem signals cross the FFI.
-- `selected_candidate_index` on `ComposingResponse` mirrors `ComposingTransition.newSelectedIndex` (`ComposingTransition.swift:48`, `ComposingTransition.kt:28`). Semantics: `-1` in idle, `0` on fresh composition, **preserved on `ReplaceLast`** (`ComposingState.swift:126-132`). Platform commit paths (e.g. iOS `ComposingManager.confirmSelectedCandidate` → `availableTexts[selectedCandidateIndex]`) depend on this field — without it, append/delete/reset/replaceLast cannot synchronize the index and a stale index could commit the wrong suggestion.
+- `selected_candidate_index` (tag 3) was removed 2026-09-25: with no setter it was always `is_composing ? 0 : -1`, and candidate highlight is platform-owned (iOS derives it from `isComposing`).
 - **Prediction-related effects** (`QueryPredictions`, candidate-list updates) are NOT in this slice — they belong to NextWord.
 
 ---
@@ -326,7 +326,7 @@ message CaseResponse {
 - Bytes vs string vs repeated for candidate lists (perf measurement needed).
 - Streaming responses for incremental candidate updates (vs full snapshot).
 - Whether NextWord generation ownership migrates from platform to Rust.
-- UI-driven candidate selection (e.g. candidate-bar tap, arrow-key navigation) stays platform-side. A `SetSelectedCandidateIndex` wire op existed but no platform ever called it; it was removed 2026-09-25 (tag 20 reserved). The engine still echoes `selected_candidate_index` on every `ComposingResponse`.
+- UI-driven candidate selection (e.g. candidate-bar tap, arrow-key navigation) stays platform-side. A `SetSelectedCandidateIndex` wire op existed but no platform ever called it; it was removed 2026-09-25 (tag 20 reserved). The echoed `selected_candidate_index` (response tag 3) followed on the same date.
 
 ---
 

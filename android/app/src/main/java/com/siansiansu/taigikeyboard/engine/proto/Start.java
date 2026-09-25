@@ -7,8 +7,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * Begin a fresh composition buffer with `text`. Caret resets;
- * `selected_candidate_index` set to 0.
+ * Begin a fresh composition buffer with `text`. Caret resets.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.Start}
@@ -154,8 +153,7 @@ public  final class Start extends
 
   /**
    * <pre>
-   * Begin a fresh composition buffer with `text`. Caret resets;
-   * `selected_candidate_index` set to 0.
+   * Begin a fresh composition buffer with `text`. Caret resets.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.Start}

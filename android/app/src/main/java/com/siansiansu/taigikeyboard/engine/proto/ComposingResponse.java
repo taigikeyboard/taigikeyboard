@@ -814,44 +814,6 @@ public  final class ComposingResponse extends
     effect_.remove(index);
   }
 
-  public static final int SELECTED_CANDIDATE_INDEX_FIELD_NUMBER = 3;
-  private int selectedCandidateIndex_;
-  /**
-   * <pre>
-   * -1 idle, 0 fresh, preserved on ReplaceLast
-   * </pre>
-   *
-   * <code>int32 selected_candidate_index = 3;</code>
-   * @return The selectedCandidateIndex.
-   */
-  @java.lang.Override
-  public int getSelectedCandidateIndex() {
-    return selectedCandidateIndex_;
-  }
-  /**
-   * <pre>
-   * -1 idle, 0 fresh, preserved on ReplaceLast
-   * </pre>
-   *
-   * <code>int32 selected_candidate_index = 3;</code>
-   * @param value The selectedCandidateIndex to set.
-   */
-  private void setSelectedCandidateIndex(int value) {
-
-    selectedCandidateIndex_ = value;
-  }
-  /**
-   * <pre>
-   * -1 idle, 0 fresh, preserved on ReplaceLast
-   * </pre>
-   *
-   * <code>int32 selected_candidate_index = 3;</code>
-   */
-  private void clearSelectedCandidateIndex() {
-
-    selectedCandidateIndex_ = 0;
-  }
-
   public static final int IS_COMPOSING_FIELD_NUMBER = 4;
   private boolean isComposing_;
   /**
@@ -1283,46 +1245,6 @@ public  final class ComposingResponse extends
 
     /**
      * <pre>
-     * -1 idle, 0 fresh, preserved on ReplaceLast
-     * </pre>
-     *
-     * <code>int32 selected_candidate_index = 3;</code>
-     * @return The selectedCandidateIndex.
-     */
-    @java.lang.Override
-    public int getSelectedCandidateIndex() {
-      return instance.getSelectedCandidateIndex();
-    }
-    /**
-     * <pre>
-     * -1 idle, 0 fresh, preserved on ReplaceLast
-     * </pre>
-     *
-     * <code>int32 selected_candidate_index = 3;</code>
-     * @param value The selectedCandidateIndex to set.
-     * @return This builder for chaining.
-     */
-    public Builder setSelectedCandidateIndex(int value) {
-      copyOnWrite();
-      instance.setSelectedCandidateIndex(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * -1 idle, 0 fresh, preserved on ReplaceLast
-     * </pre>
-     *
-     * <code>int32 selected_candidate_index = 3;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearSelectedCandidateIndex() {
-      copyOnWrite();
-      instance.clearSelectedCandidateIndex();
-      return this;
-    }
-
-    /**
-     * <pre>
      * mirrors `state.isComposing`
      * </pre>
      *
@@ -1488,13 +1410,12 @@ public  final class ComposingResponse extends
             "preedit_",
             "effect_",
             com.siansiansu.taigikeyboard.engine.proto.Effect.class,
-            "selectedCandidateIndex_",
             "isComposing_",
             "continuous_",
           };
           java.lang.String info =
-              "\u0000\u0005\u0000\u0001\u0001\u0005\u0005\u0000\u0001\u0000\u0001\u1009\u0000\u0002" +
-              "\u001b\u0003\u0004\u0004\u0007\u0005\u1009\u0001";
+              "\u0000\u0004\u0000\u0001\u0001\u0005\u0004\u0000\u0001\u0000\u0001\u1009\u0000\u0002" +
+              "\u001b\u0004\u0007\u0005\u1009\u0001";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

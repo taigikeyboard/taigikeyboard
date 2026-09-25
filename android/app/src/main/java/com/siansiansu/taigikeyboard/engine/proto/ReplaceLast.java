@@ -7,9 +7,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * TPS auto-correct: replace the last raw-input character. Intentionally
- * preserves `selected_candidate_index` (correction on top of an in-progress
- * selection, not a fresh composition step).
+ * TPS auto-correct: replace the last raw-input character.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.ReplaceLast}
@@ -155,9 +153,7 @@ public  final class ReplaceLast extends
 
   /**
    * <pre>
-   * TPS auto-correct: replace the last raw-input character. Intentionally
-   * preserves `selected_candidate_index` (correction on top of an in-progress
-   * selection, not a fresh composition step).
+   * TPS auto-correct: replace the last raw-input character.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.ReplaceLast}
