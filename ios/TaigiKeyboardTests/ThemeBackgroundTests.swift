@@ -293,4 +293,22 @@ final class ThemeBackgroundTests: XCTestCase {
         XCTAssertEqual(seeded.candidateTextColor, UserThemeSeed.colors.candidateTextColor)
         XCTAssertEqual(UserThemeSeed.colors.seededForUserTheme(), UserThemeSeed.colors, "seeding the seed is a no-op")
     }
+
+    // trace: a theme saved with two key fills loads with the special fill folded into the letter fill
+    func testSeededForUserTheme_foldsSpecialKeyFillIntoKeyFill() {
+        var colors = KeyboardColorSettings()
+        colors.normalKeyFillColor = CodableColor(hex: 0x112233)
+        colors.specialKeyFillColor = CodableColor(hex: 0xABB1BA)
+        let seeded = colors.seededForUserTheme()
+        XCTAssertEqual(seeded.normalKeyFillColor, CodableColor(hex: 0x112233))
+        XCTAssertEqual(seeded.specialKeyFillColor, CodableColor(hex: 0x112233))
+    }
+
+    // trace: the single key-fill row writes both fills
+    func testKeyFillColor_setsLetterAndSpecialFill() {
+        var colors = UserThemeSeed.colors
+        colors.keyFillColor = CodableColor(hex: 0x445566)
+        XCTAssertEqual(colors.normalKeyFillColor, CodableColor(hex: 0x445566))
+        XCTAssertEqual(colors.specialKeyFillColor, CodableColor(hex: 0x445566))
+    }
 }

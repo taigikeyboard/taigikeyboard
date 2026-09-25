@@ -304,18 +304,23 @@ data class KeyboardColorSettings(
         get() = background?.let { ThemeSurface(it, isDarkArgb(keyTextColor ?: UserThemeSeed.KEY_TEXT)) }
 
     /**
-     * Fills every null role from [UserThemeSeed]. Applied when a user theme is decoded
-     * ([UserTheme.fromJson]), so themes saved before the seed existed become
-     * scheme-invariant without a migration write.
+     * The user-theme key fill: one colour for letter and special keys alike
+     * (USER 2026-09-26). Mirrors iOS `keyFillColor`.
+     */
+    fun withKeyFill(color: Int): KeyboardColorSettings = copy(normalKeyFillColor = color, specialKeyFillColor = color)
+
+    /**
+     * Fills every null role from [UserThemeSeed] and folds the special key fill into
+     * the letter fill ([withKeyFill]). Applied when a user theme is decoded
+     * ([UserTheme.fromJson]), so themes saved before the seed or the single key fill
+     * existed match the editor without a migration write.
      */
     fun seededForUserTheme(): KeyboardColorSettings =
         KeyboardColorSettings(
             background = background ?: UserThemeSeed.BACKGROUND,
             keyTextColor = keyTextColor ?: UserThemeSeed.KEY_TEXT,
-            normalKeyFillColor = normalKeyFillColor ?: UserThemeSeed.NORMAL_KEY_FILL,
-            specialKeyFillColor = specialKeyFillColor ?: UserThemeSeed.SPECIAL_KEY_FILL,
             candidateTextColor = candidateTextColor ?: UserThemeSeed.CANDIDATE_TEXT,
-        )
+        ).withKeyFill(normalKeyFillColor ?: UserThemeSeed.KEY_FILL)
 
     /** The JSON object form. [toJson] is the string serialization; nested users (e.g. [ThemeAppearance]) embed this directly. */
     fun toJsonObject(): JSONObject {
@@ -380,23 +385,22 @@ fun isDarkArgb(argb: Int): Boolean {
 /**
  * The concrete light palette every user theme starts from, so a user theme never
  * carries a null (scheme-following) role and renders identically in light and dark
- * mode (USER 2026-09-19). Background is the light keyboard grey; both key fills
- * are white (USER 2026-09-25).
+ * mode (USER 2026-09-19). Background is the light keyboard grey; the key fill is
+ * white (USER 2026-09-25) and shared by letter and special keys.
  */
 object UserThemeSeed {
     const val SOLID_COLOR = 0xFFD4D5DD.toInt()
     val BACKGROUND: ThemeBackground = ThemeBackground.Solid(SOLID_COLOR)
     const val KEY_TEXT = 0xFF000000.toInt()
-    const val NORMAL_KEY_FILL = 0xFFFFFFFF.toInt()
-    const val SPECIAL_KEY_FILL = 0xFFFFFFFF.toInt()
+    const val KEY_FILL = 0xFFFFFFFF.toInt()
     const val CANDIDATE_TEXT = 0xFF000000.toInt()
 
     val colors =
         KeyboardColorSettings(
             background = BACKGROUND,
             keyTextColor = KEY_TEXT,
-            normalKeyFillColor = NORMAL_KEY_FILL,
-            specialKeyFillColor = SPECIAL_KEY_FILL,
+            normalKeyFillColor = KEY_FILL,
+            specialKeyFillColor = KEY_FILL,
             candidateTextColor = CANDIDATE_TEXT,
         )
 }

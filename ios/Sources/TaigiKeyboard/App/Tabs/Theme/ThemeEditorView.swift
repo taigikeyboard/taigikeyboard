@@ -71,10 +71,9 @@ struct ThemeEditorView: View {
                     }
                 }
 
-                // Keys: fills + text, then shape, then size.
+                // Keys: fill + text, then shape, then size.
                 Section(header: Text(lang.string(.themeColorKeySection))) {
-                    colorRow(lang.string(.themeColorNormalKeyFill), \.normalKeyFillColor)
-                    colorRow(lang.string(.themeColorSpecialKeyFill), \.specialKeyFillColor)
+                    colorRow(lang.string(.themeColorKeyFill), \.keyFillColor)
                     colorRow(lang.string(.themeColorKeyText), \.keyTextColor)
                     sliderRow(lang.string(.themeKeyCornerRadius), \.keyCornerRadius,
                               ThemeSliderRanges.radius, ThemeSliderRanges.radiusStep)

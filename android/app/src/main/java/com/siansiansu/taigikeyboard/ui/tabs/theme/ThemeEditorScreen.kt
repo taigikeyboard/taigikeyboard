@@ -301,23 +301,15 @@ fun ThemeEditorScreen(
 
                 Spacer(Modifier.height(24.dp))
 
-                // Keys: fills + text, then shape, then size.
+                // Keys: fill + text, then shape, then size.
                 SectionHeader(L10n.themeColorKeySection)
                 SettingsCard {
                     Column(modifier = Modifier.padding(24.dp)) {
                         RoleColorRow(
-                            labelKey = StringKey.THEME_COLOR_NORMAL_KEY_FILL,
+                            labelKey = StringKey.THEME_COLOR_KEY_FILL,
                             currentColor = draft.colors.normalKeyFillColor,
-                            seedColor = UserThemeSeed.NORMAL_KEY_FILL,
-                            onColorChange = { v -> updateColors { it.copy(normalKeyFillColor = v) } },
-                            onPickerOpen = { colorPickerTarget = it },
-                        )
-                        SettingsDivider(Modifier.padding(vertical = 8.dp))
-                        RoleColorRow(
-                            labelKey = StringKey.THEME_COLOR_SPECIAL_KEY_FILL,
-                            currentColor = draft.colors.specialKeyFillColor,
-                            seedColor = UserThemeSeed.SPECIAL_KEY_FILL,
-                            onColorChange = { v -> updateColors { it.copy(specialKeyFillColor = v) } },
+                            seedColor = UserThemeSeed.KEY_FILL,
+                            onColorChange = { v -> updateColors { it.withKeyFill(v) } },
                             onPickerOpen = { colorPickerTarget = it },
                         )
                         SettingsDivider(Modifier.padding(vertical = 8.dp))

@@ -211,10 +211,27 @@ class ThemeBackgroundTest {
         val seeded = colors.seededForUserTheme()
         assertEquals(colors.background, seeded.background)
         assertEquals(0xFF123456.toInt(), seeded.keyTextColor)
-        assertEquals(UserThemeSeed.NORMAL_KEY_FILL, seeded.normalKeyFillColor)
-        assertEquals(UserThemeSeed.SPECIAL_KEY_FILL, seeded.specialKeyFillColor)
+        assertEquals(UserThemeSeed.KEY_FILL, seeded.normalKeyFillColor)
+        assertEquals(UserThemeSeed.KEY_FILL, seeded.specialKeyFillColor)
         assertEquals(UserThemeSeed.CANDIDATE_TEXT, seeded.candidateTextColor)
         assertEquals("seeding the seed is a no-op", UserThemeSeed.colors, UserThemeSeed.colors.seededForUserTheme())
+    }
+
+    // A theme saved with two key fills loads with the special fill folded into the letter fill.
+    @Test
+    fun seededForUserTheme_foldsSpecialKeyFillIntoKeyFill() {
+        val colors = KeyboardColorSettings(normalKeyFillColor = 0xFF112233.toInt(), specialKeyFillColor = 0xFFABB1BA.toInt())
+        val seeded = colors.seededForUserTheme()
+        assertEquals(0xFF112233.toInt(), seeded.normalKeyFillColor)
+        assertEquals(0xFF112233.toInt(), seeded.specialKeyFillColor)
+    }
+
+    // The single key-fill row writes both fills.
+    @Test
+    fun withKeyFill_setsLetterAndSpecialFill() {
+        val colors = UserThemeSeed.colors.withKeyFill(0xFF445566.toInt())
+        assertEquals(0xFF445566.toInt(), colors.normalKeyFillColor)
+        assertEquals(0xFF445566.toInt(), colors.specialKeyFillColor)
     }
 
     // Switching Solid -> Gradient seeds a vertical gradient from the solid colour into a lighter tint of it.

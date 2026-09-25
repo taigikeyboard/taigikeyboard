@@ -362,7 +362,7 @@ private struct CustomThemeButtonPreview: View {
 
     var body: some View {
         let colors = appearance.colors
-        let keyFill = (colors.normalKeyFillColor ?? UserThemeSeed.normalKeyFill).color
+        let keyFill = (colors.normalKeyFillColor ?? UserThemeSeed.keyFill).color
         let keyText = (colors.keyTextColor ?? UserThemeSeed.keyText).color
         let cornerRadius = CGFloat(appearance.keyCornerRadius)
         let borderWidth = CGFloat(appearance.keyBorderWidth)

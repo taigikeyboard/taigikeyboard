@@ -350,6 +350,16 @@ struct KeyboardColorSettings: Equatable {
         background?.solidColor
     }
 
+    /// The user-theme key fill: one colour for letter and special keys alike
+    /// (USER 2026-09-26). Reads the letter fill; writes both fills.
+    var keyFillColor: CodableColor? {
+        get { normalKeyFillColor }
+        set {
+            normalKeyFillColor = newValue
+            specialKeyFillColor = newValue
+        }
+    }
+
     /// The background gradient, or nil for a solid / photo / adaptive background. Single
     /// source for the candidate-tint derivation and the built-in theme tests.
     var backgroundGradient: ThemeGradient? {
@@ -430,23 +440,22 @@ extension KeyboardColorSettings: Codable {
 
 /// The concrete light palette every user theme starts from, so a user theme never
 /// carries a `nil` (scheme-following) role and renders identically in light and
-/// dark mode (USER 2026-09-19). Background is the light keyboard grey; both key
-/// fills are white (USER 2026-09-25).
+/// dark mode (USER 2026-09-19). Background is the light keyboard grey; the key
+/// fill is white (USER 2026-09-25) and shared by letter and special keys.
 // CROSS-PLATFORM INVARIANT — mirrors android .../ime/core/KeyboardColorSettings.kt UserThemeSeed
 // Drift = a new custom theme starts from different colors per platform.
 enum UserThemeSeed {
     static let solidColor = CodableColor(hex: 0xD4D5DD)
     static let background = ThemeBackground.solid(solidColor)
     static let keyText = CodableColor(hex: 0x000000)
-    static let normalKeyFill = CodableColor(hex: 0xFFFFFF)
-    static let specialKeyFill = CodableColor(hex: 0xFFFFFF)
+    static let keyFill = CodableColor(hex: 0xFFFFFF)
     static let candidateText = CodableColor(hex: 0x000000)
 
     static let colors = KeyboardColorSettings(
         background: background,
         keyTextColor: keyText,
-        normalKeyFillColor: normalKeyFill,
-        specialKeyFillColor: specialKeyFill,
+        normalKeyFillColor: keyFill,
+        specialKeyFillColor: keyFill,
         candidateTextColor: candidateText,
     )
 
@@ -457,17 +466,18 @@ enum UserThemeSeed {
 }
 
 extension KeyboardColorSettings {
-    /// Fills every `nil` role from `UserThemeSeed`. Applied when user themes are loaded,
-    /// so themes saved before the seed existed become scheme-invariant without a
+    /// Fills every `nil` role from `UserThemeSeed` and folds the special key fill into
+    /// the letter fill (`keyFillColor`). Applied when user themes are loaded, so themes
+    /// saved before the seed or the single key fill existed match the editor without a
     /// migration write.
     func seededForUserTheme() -> KeyboardColorSettings {
-        KeyboardColorSettings(
+        var seeded = KeyboardColorSettings(
             background: background ?? UserThemeSeed.background,
             keyTextColor: keyTextColor ?? UserThemeSeed.keyText,
-            normalKeyFillColor: normalKeyFillColor ?? UserThemeSeed.normalKeyFill,
-            specialKeyFillColor: specialKeyFillColor ?? UserThemeSeed.specialKeyFill,
             candidateTextColor: candidateTextColor ?? UserThemeSeed.candidateText,
         )
+        seeded.keyFillColor = normalKeyFillColor ?? UserThemeSeed.keyFill
+        return seeded
     }
 }
 
