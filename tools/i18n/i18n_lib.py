@@ -170,8 +170,8 @@ IDENTIFIER_RE = re.compile(r"[a-z][a-zA-Z0-9]*")
 
 # A half-width comma in a Hanji value, EXCEPT one sitting between two digits.
 #
-# Taiwanese written in 漢字 punctuates full-width. Every other i18n namespace already did;
-# desktop.json (then macos.json) was the one that drifted (USER 2026-08-24: 「hanji 必須使用全形逗號」). A numeric
+# Taiwanese written in Hanji punctuates full-width. Every other i18n namespace already did;
+# desktop.json (then macos.json) was the one that drifted (USER 2026-08-24: "hanji must use full-width commas"). A numeric
 # separator (`上限 30,000 項`) is exempt — that is how a number is written, not how a sentence is
 # punctuated. Comma only: the half-width `; : ? ( )` still in the sources are product copy, and
 # copy is the USER's call.

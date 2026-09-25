@@ -6,7 +6,7 @@ import XCTest
 
 /// An install upgraded across the trim must behave like a fresh one: the
 /// retired toggles fall back to their `false` defaults, a selection on the
-/// unlisted pane falls back to 一般, and the retired hotkeys lose their chords.
+/// unlisted pane falls back to General, and the retired hotkeys lose their chords.
 @MainActor
 final class RetiredSettingsCleanupTests: XCTestCase {
     private var suiteName = ""
@@ -33,7 +33,7 @@ final class RetiredSettingsCleanupTests: XCTestCase {
         XCTAssertFalse(settings.storedIsOutputBothScripts)
     }
 
-    /// A tombstone for 顯示當咧拍的字 is what left its earlier pane row dead —
+    /// A tombstone for Show Typed Text First is what left its earlier pane row dead —
     /// the sweep cleared what the row wrote, every launch (`behavioral-invariants.md`
     /// §34 desktop notes). The row is back, so the sweep must leave the key alone.
     func testTheLiteralRomanCandidateSetting_survivesTheSweep() {
@@ -85,7 +85,7 @@ final class RetiredSettingsCleanupTests: XCTestCase {
         }
     }
 
-    /// The 外觀 pane's two retired rows: the accent-colour swatch and the
+    /// The Appearance pane's two retired rows: the accent-colour swatch and the
     /// candidate-window chrome picker. Nothing reads either key any more — the
     /// highlight always follows the system accent and the chrome always
     /// follows the running OS — so this keeps the defaults domain from
@@ -100,7 +100,7 @@ final class RetiredSettingsCleanupTests: XCTestCase {
         XCTAssertNil(userDefaults.object(forKey: "candidateWindowStyle"))
     }
 
-    /// 選字齒, retired 2026-09-08: the slot key set follows the tone scheme
+    /// Candidate Selection Keys, retired 2026-09-08: the slot key set follows the tone scheme
     /// now, and none of the values this key could hold (`shift`, `control`,
     /// `option`) has a set left to migrate to.
     func testTheCandidateSlotModifier_isRemoved() {
@@ -127,7 +127,7 @@ final class RetiredSettingsCleanupTests: XCTestCase {
         )
     }
 
-    /// The learning toggles went with the 詞頻紀錄 / 詞關聯紀錄 panes. The
+    /// The learning toggles went with the Frequency Records / Association Records panes. The
     /// frequency half is a behaviour fix, not hygiene: the engine still reads
     /// that key, so a stored `false` would keep learning off with no UI left
     /// to turn it on. The association key is no longer read at all (recording

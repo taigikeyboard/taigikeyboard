@@ -303,7 +303,7 @@ final class UpdateInstallationTests: XCTestCase {
     func testDiscardDuringADownload_resetsAtOnceAndTheLandingChangesNothing() async throws {
         // trace: this is what a launch-time cleanup does to a download the user
         // has already started. The row must go back to offering one, not sit on
-        // 咧下載… forever, and the retired download must not resurrect itself.
+        // Downloading… forever, and the retired download must not resurrect itself.
         let installation = makeInstallation()
         seams.write { $0.heldAttempt = 1 }
         installation.startDownload(for: packagedManifest)
@@ -324,7 +324,7 @@ final class UpdateInstallationTests: XCTestCase {
     }
 
     func testFailedAttempts_leaveNothingOnDisk() async throws {
-        // trace: three presses of 閣試一擺, three staging directories. A failure
+        // trace: three presses of Try Again, three staging directories. A failure
         // that only changed the state would strand each one — `packageRejected`
         // carries no URL, so nothing afterwards knows where to look — and the
         // rejected package is a whole download, not an empty directory.

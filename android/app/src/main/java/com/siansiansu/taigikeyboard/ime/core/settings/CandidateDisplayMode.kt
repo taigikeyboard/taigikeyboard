@@ -18,15 +18,15 @@ enum class CandidateDisplayMode(
     ROMAN_ONLY("romanOnly"),
 
     /**
-     * 漢羅濫 (§42 second exception): each hanji-bearing candidate lists
-     * adjacent one-script 漢字 + 羅馬字 cells, no subtitle; a tap commits
+     * Hanji with Romanization (§42 second exception): each hanji-bearing candidate lists
+     * adjacent one-script Hanji + romanization cells, no subtitle; a tap commits
      * that cell's script. 文/A stays, as the punctuation-width toggle only.
      */
     COMBINED("combined"),
     ;
 
     // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift isTranslateSwapped derivation.
-    // Drift causes silent divergence (one platform commits roman under 漢羅濫, or hanji under roman-only).
+    // Drift causes silent divergence (one platform commits roman under Hanji with Romanization, or hanji under roman-only).
 
     /**
      * Effective `isTranslateSwapped` under this mode. COMBINED forces `true`
@@ -43,18 +43,18 @@ enum class CandidateDisplayMode(
     /**
      * Effective `outputBothScripts` under this mode. Only ROMAN_ONLY
      * suppresses it; COMBINED keeps the stored value (bracket form becomes
-     * `漢字 (羅馬字)`, same as today's swapped mode).
+     * `Hanji (romanization)`, same as today's swapped mode).
      */
     fun effectiveOutputBothScripts(stored: Boolean): Boolean = stored && showsHanji
 
-    /** Whether the cell shows any hanji — false only for [ROMAN_ONLY]; also gates the 括號標註 toggle's enabled state. */
+    /** Whether the cell shows any hanji — false only for [ROMAN_ONLY]; also gates the Annotate in Brackets toggle's enabled state. */
     val showsHanji: Boolean get() = this != ROMAN_ONLY
 
     /**
      * Whether the 文/A key is shown (bottom row + expanded overlay) and its tap
      * writes the stored swap — exactly where hanji is on screen. Under COMBINED
      * the cells are split per script, so the key only picks the punctuation
-     * width (USER 2026-09-13 「漢羅濫需要有 isTranslateSwapped 的按鈕」);
+     * width (USER 2026-09-13: "Hanji with Romanization needs the isTranslateSwapped button");
      * ROMAN_ONLY hides it and the stored swap waits for the way back.
      */
     val allowsSwapToggle: Boolean get() = showsHanji
@@ -62,7 +62,7 @@ enum class CandidateDisplayMode(
     /**
      * Whether the character / symbol layouts type full-width punctuation
      * (`，。` over `,.`) for a stored swap flag — the stored flag masked like
-     * 括號標註, NOT the candidate projection [effectiveTranslateSwapped], which
+     * Annotate in Brackets, NOT the candidate projection [effectiveTranslateSwapped], which
      * COMBINED forces on while 文/A still picks the width. TPS has its own JSON.
      * Mirrored on iOS / macOS / Windows beside [effectiveOutputBothScripts].
      */

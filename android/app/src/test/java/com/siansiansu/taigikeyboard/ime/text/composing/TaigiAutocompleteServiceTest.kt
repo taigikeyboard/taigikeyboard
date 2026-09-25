@@ -76,9 +76,9 @@ class TaigiAutocompleteServiceTest {
         }
 
     /**
-     * §42 濫 split gate: 漢羅濫 + non-TPS splits, everything else does not.
+     * §42 mixed split gate: Hanji with Romanization + non-TPS splits, everything else does not.
      * Pins the polarity of the TPS clause (an inverted condition would split
-     * under TPS and stop splitting under 漢羅濫).
+     * under TPS and stop splitting under Hanji with Romanization).
      */
     @Test
     fun `split gate is combined mode outside TPS only`() {
@@ -95,7 +95,7 @@ class TaigiAutocompleteServiceTest {
 
     /**
      * The split flag is LIVE-READ per fetch, never snapshotted at construction:
-     * flipping 候選詞顯示 takes effect on the very next keystroke.
+     * flipping Candidate Display takes effect on the very next keystroke.
      */
     @Test
     fun `split provider is re-read on every fetch`() =

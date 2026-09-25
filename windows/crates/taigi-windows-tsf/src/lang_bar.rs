@@ -1,7 +1,7 @@
 //! The tray button and its menu — the rows every desktop shares
 //! (`taigi_desktop_core::keys::MENU`, the macOS `TaigiInputController.menu()`):
 //! the two global shortcuts a click can stand in for / separator /
-//! 台語齒盤設定 / separator / 檢查更新, 關於齒盤 (roadmap W6). The button sits in the standard input-mode slot
+//! TaigiKeyboard Settings / separator / Check for Updates, About the Keyboard (roadmap W6). The button sits in the standard input-mode slot
 //! (`GUID_LBI_INPUTMODE`, rakukan `language_bar.rs:21-23`).
 //!
 //! The menu is DRAWN HERE, from `OnClick`, rather than declared through
@@ -57,7 +57,7 @@ pub const LANG_BAR_SINK_COOKIE: u32 = 0x5461_6967;
 /// The DLL icon resource the installer build adds (PR10); index 1.
 const ICON_RESOURCE_ID: u16 = 1;
 /// What the tray shows when it draws text instead of the icon: the script
-/// being typed, in one character, as 微軟注音 spells its own 中/英 state.
+/// being typed, in one character, as 微軟注音 (Microsoft Bopomofo) spells its own 中/英 state.
 /// Not an i18n string — it names the script, so it reads the same in every UI
 /// language.
 pub fn tray_text(mode: LanguageMode) -> &'static str {

@@ -38,15 +38,15 @@ struct DictionarySourceToggles: Equatable, Sendable {
     var kungge: Bool
     /// 學科術語辭典.
     var stti: Bool
-    /// 腔口補充資料.
+    /// Accent Variations.
     var khpoo: Bool
-    /// 異用字.
+    /// Variant characters.
     var variant: Bool
     /// 在來字.
     var khiin: Bool
     /// LKK 漢羅合用建議用字.
     var lkk: Bool
-    /// 詞庫增補檔案.
+    /// Supplementary Word List.
     var dev: Bool
 
     /// Always populated, never absent: the engine reads an absent
@@ -73,7 +73,7 @@ struct DictionarySourceToggles: Equatable, Sendable {
 
         /// CROSS-PLATFORM INVARIANT — every subcollection defaults ON, mirroring
         /// ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift:74-84.
-        /// Drift changes which 腔口 a fresh install offers.
+        /// Drift changes which accents a fresh install offers.
         static let defaults = KautianSubcollections(
             accentLukang: true,
             accentSansia: true,

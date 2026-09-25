@@ -893,7 +893,7 @@
       }
     },
     "searchPlaceholder": {
-      "comment": "Search-field placeholder in the dictionary browser, and the filter box on the macOS 自訂詞庫 pane.",
+      "comment": "Search-field placeholder in the dictionary browser, and the filter box on the macOS Custom Dictionary pane.",
       "scope": {
         "platforms": [
           "android",

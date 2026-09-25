@@ -38,7 +38,7 @@ final class SettingsStoreTests: XCTestCase {
 
     /// Hanji-first out of the box (USER 2026-09-18): with nothing stored a
     /// commit writes the hanji, and the punctuation width derived from the
-    /// swap under 並排 follows it.
+    /// swap under Hanji–Romanization Pairing follows it.
     func testCurrent_withNothingStored_isHanjiFirst() {
         let current = makeStore().current
         XCTAssertTrue(current.isTranslateSwapped)
@@ -46,8 +46,8 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertNil(userDefaults.object(forKey: SettingsStore.Keys.isTranslateSwapped.name))
     }
 
-    /// The 一般 pane's reset button: every row the pane draws goes back, and
-    /// nothing the pane does not draw — 外觀's keys, the update bookkeeping —
+    /// The General pane's reset button: every row the pane draws goes back, and
+    /// nothing the pane does not draw — Appearance's keys, the update bookkeeping —
     /// moves. Removed, not written, like the other resets.
     func testResetGeneralSettings_putsEveryRowBackAndLeavesTheRestAlone() {
         let store = makeStore()
@@ -85,7 +85,7 @@ final class SettingsStoreTests: XCTestCase {
         userDefaults.set(true, forKey: SettingsStore.Keys.isOutputBothScripts.name)
         userDefaults.set(false, forKey: SettingsStore.Keys.isFrequencyRecordingEnabled.name)
         // §34/S22 — the default moved ON on 2026-09-03, so a stored `false`
-        // has to keep winning: someone who turned 顯示當咧拍的字 off stays off.
+        // has to keep winning: someone who turned Show Typed Text First off stays off.
         userDefaults.set(false, forKey: SettingsStore.Keys.isLiteralRomanCandidateEnabled.name)
         userDefaults.set(true, forKey: SettingsStore.Keys.isHyphenlessRomanEnabled.name)
         userDefaults.set(false, forKey: SettingsStore.Keys.isNasalMarkerUppercaseEnabled.name)
@@ -138,7 +138,7 @@ final class SettingsStoreTests: XCTestCase {
     /// The one platform-side rule of the combined display: the swap reads
     /// `true` whatever is stored — the Hanji cell comes first and its commit
     /// writes the Hanji — while the bracket setting is read as stored, so
-    /// 括號標註 still commits `漢字 (羅馬字)`. The stored swap survives the
+    /// Annotate in Brackets still commits `Hanji (romanization)`. The stored swap survives the
     /// mode, so leaving it gives the user their own swap straight back.
     func testCurrent_underCombined_forcesTheSwapOn_readsTheBracketAsStored_andLeavesTheStoredValuesAlone() {
         let store = makeStore()
@@ -316,7 +316,7 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(makeStore().candidateLayout, .expandable)
     }
 
-    /// The 外觀 pane's reset button, which has to reach every key that pane
+    /// The Appearance pane's reset button, which has to reach every key that pane
     /// owns — a button that restored some of them would leave rows it visibly
     /// did not touch.
     @MainActor
@@ -339,8 +339,8 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertNil(userDefaults.object(forKey: SettingsStore.Keys.candidateSize.name), "removed, not written")
     }
 
-    /// The typeface is 字型管理's, not 外觀's: a pane's reset restores the rows
-    /// that pane shows, and 外觀 no longer shows the typeface.
+    /// The typeface is Manage Typefaces', not Appearance's: a pane's reset restores the rows
+    /// that pane shows, and Appearance no longer shows the typeface.
     @MainActor
     func testResetAppearanceSettings_leavesTheTypefaceAlone() {
         userDefaults.set(CandidateFontChoice.genYoMin.rawValue, forKey: SettingsStore.Keys.fontType.name)
@@ -362,8 +362,8 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertNil(userDefaults.object(forKey: SettingsStore.Keys.candidateLayout.name))
     }
 
-    /// The 辭典管理 pane's reset button, which owns the master sources and the
-    /// 腔口 subcollections alike: a 腔口 left switched off would be a source
+    /// The Manage Dictionaries pane's reset button, which owns the master sources and the
+    /// accent subcollections alike: an accent left switched off would be a source
     /// the user had visibly restored still missing candidates.
     func testResetDictionarySources_putsEverySourceAndAccentBack() {
         let store = makeStore()
@@ -378,9 +378,9 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertNil(userDefaults.object(forKey: SettingsStore.Keys.isKautianAccentTainanEnabled.name))
     }
 
-    /// The 外觀 row's contract: 自動 forces nothing (the panel resolves
+    /// The Appearance row's contract: Automatic forces nothing (the panel resolves
     /// against the system), and the two explicit modes force the matching
-    /// appearance — a mode that resolved to nil would silently behave as 自動.
+    /// appearance — a mode that resolved to nil would silently behave as Automatic.
     func testAppearanceMode_withNothingStored_followsTheSystem() {
         XCTAssertEqual(makeStore().appearanceMode, .auto)
         XCTAssertNil(AppearanceMode.auto.forcedAppearance)
@@ -399,7 +399,7 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(makeStore().appearanceMode, .auto, "unknown values fall back to 自動")
     }
 
-    /// One size knob, defaulting to 標準 — a step smaller than the two-knob
+    /// One size knob, defaulting to Standard — a step smaller than the two-knob
     /// ladder's 20pt default (USER 2026-09-23), so an install that never
     /// touched the size gets the smaller window.
     @MainActor
@@ -444,7 +444,7 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(makeStore().candidateMetrics, CandidateMetrics(size: .standard))
     }
 
-    /// The 特大 tier was removed (USER 2026-08-21) before this ladder existed:
+    /// The Extra Large tier was removed (USER 2026-08-21) before this ladder existed:
     /// an install that stored it reads back as the default rather than
     /// crashing or pinning a ghost size.
     func testCandidateSize_withUnknownStoredValues_fallsBackToTheDefault() {
@@ -605,7 +605,7 @@ final class SettingsStoreTests: XCTestCase {
         )
     }
 
-    /// An action on a bare key — the backtick 漢羅對調 once shipped on — must
+    /// An action on a bare key — the backtick Hanji/romanization swap once shipped on — must
     /// survive a relaunch, stored in the same raw form every modifier chord
     /// uses.
     func testABarePunctuationChord_roundTripsThroughTheSuite() throws {
@@ -645,7 +645,7 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertNil(makeStore().composingKeyBindings.chord(for: .pageForward))
     }
 
-    /// The 一般 pane writes the scheme's raw value; the bindings read it, and
+    /// The General pane writes the scheme's raw value; the bindings read it, and
     /// the slot keys follow.
     func testToneInputScheme_readsWhatTheGeneralPaneWrites() {
         userDefaults.set("telex", forKey: SettingsStore.Keys.toneInputScheme.name)
@@ -663,7 +663,7 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(bindings.slotKeySet, .bareKeys)
     }
 
-    /// S33: the window ships ON, and the 一般 pane's toggle reaches both
+    /// S33: the window ships ON, and the General pane's toggle reaches both
     /// readers — the controller's fetch gate and the classifier's bindings.
     func testCandidateWindow_shipsOn_andReadsWhatTheGeneralPaneWrites() {
         let fresh = makeStore()
@@ -685,13 +685,13 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertFalse(CandidateDisplayMode.romanOnly.effectiveTranslateSwapped(stored: true))
         XCTAssertFalse(CandidateDisplayMode.romanOnly.effectiveOutputBothScripts(stored: true))
         XCTAssertTrue(CandidateDisplayMode.combined.effectiveOutputBothScripts(stored: true))
-        // Punctuation width follows the STORED swap under 並排 / 合用, never under 羅馬字.
+        // Punctuation width follows the STORED swap under Hanji–Romanization Pairing / Hanji with Romanization, never under Romanization Only.
         XCTAssertFalse(CandidateDisplayMode.combined.effectiveFullWidthPunctuation(stored: false))
         XCTAssertTrue(CandidateDisplayMode.combined.effectiveFullWidthPunctuation(stored: true))
         XCTAssertFalse(CandidateDisplayMode.romanOnly.effectiveFullWidthPunctuation(stored: true))
     }
 
-    /// Under 合用 the candidate projection stays swapped while the punctuation
+    /// Under Hanji with Romanization the candidate projection stays swapped while the punctuation
     /// width follows the stored flag the swap shortcut toggles.
     func testCurrent_underCombined_punctuationWidthFollowsTheStoredSwap() {
         let store = makeStore()

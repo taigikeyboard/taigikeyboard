@@ -6,7 +6,7 @@ package com.siansiansu.taigikeyboard.ime.core.settings
 
 /**
  * The POJ marker options the engine reads when it renders text: the two
- * double-tap folds that compose `o͘` / `ⁿ` (`oo` / `nn`) and ⁿ大本字, the case
+ * double-tap folds that compose `o͘` / `ⁿ` (`oo` / `nn`) and ⁿ becomes ᴺ in capitals, the case
  * rule of the nasal marker it composed (`SIÂᴺ` after a capital, or always `ⁿ`;
  * `behavioral-invariants.md` §53).
  *

@@ -1363,7 +1363,7 @@ fn partial_prefix_high_freq_short_candidate_survives_past_legacy_byte_sort_cap()
     // though it would have been dropped at rowid 31 under the old
     // pre-cap.
     //
-    // Goal cited in PR description: "in normal case, 短候選排前面".
+    // Goal cited in PR description: "in normal case, short candidates first".
     let mut rows: Vec<Row> = (0..35)
         .map(|i| {
             // `ka-aa`, `ka-ab`, …, `ka-bi` — all multi-syllable

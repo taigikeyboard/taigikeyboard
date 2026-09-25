@@ -104,7 +104,7 @@ struct ToolShortcutsToolbar: View {
         }
         .buttonStyle(.plain)
         .frame(maxWidth: .infinity)
-        // VoiceOver reads the full mode name (台羅/白話字/…) via the existing InputMode.displayNameKey
+        // VoiceOver reads the full mode name (Tâi-lô/Pe̍h-ōe-jī/…) via the existing InputMode.displayNameKey
         // while the visible chip stays the short code (TL/POJ/…). Selected state is conveyed by the
         // .isSelected trait, not baked into the label, so VoiceOver announces "selected" itself.
         .accessibilityLabel(lang.string(mode.displayNameKey))

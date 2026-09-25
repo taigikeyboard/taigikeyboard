@@ -39,7 +39,7 @@ final class SharedSettings {
 
     private static let isDoubleTapOOEnabledKey: SettingsKey<Bool> = .bool("enableDoubleTapOO", default: true)
     private static let isDoubleTapNNEnabledKey: SettingsKey<Bool> = .bool("enableDoubleTapNN", default: true)
-    /// ⁿ大本字 ships ON on all four platforms (USER 2026-09-22).
+    /// ⁿ becomes ᴺ in capitals ships ON on all four platforms (USER 2026-09-22).
     private static let isNasalMarkerUppercaseEnabledKey: SettingsKey<Bool> = .bool("nasalMarkerUppercaseEnabled", default: true)
     /// Hanji-first out of the box (USER 2026-09-18): the hanji is the title,
     /// the romanization the subtitle, and a commit writes the hanji. Same
@@ -154,7 +154,7 @@ final class SharedSettings {
         set { userDefaults.set(newValue, for: Self.isDoubleTapNNEnabledKey) }
     }
 
-    /// ⁿ大本字 (§53): the POJ nasal marker follows the case of the letters
+    /// ⁿ becomes ᴺ in capitals (§53): the POJ nasal marker follows the case of the letters
     /// before it (`SIÂᴺ`); off, always `ⁿ`. Reaches the engine through
     /// `pojMarkerOptions` (inverted as `AppConfig.force_lowercase_nasal_marker`)
     /// and the case ops; the `nn` key label reads it off `SettingsSnapshot`.
@@ -271,7 +271,7 @@ final class SharedSettings {
         set { userDefaults.set(newValue, for: Self.layoutBeforeTpsKey) }
     }
 
-    /// Raw stored 括號標註 flag — read-write counterpart of the derived
+    /// Raw stored Annotate in Brackets flag — read-write counterpart of the derived
     /// `isOutputBothScripts`; same split as `storedIsTranslateSwapped`.
     var storedIsOutputBothScripts: Bool {
         get { userDefaults.value(for: Self.isOutputBothScriptsKey) }
@@ -280,13 +280,13 @@ final class SharedSettings {
 
     // MARK: - Literal-Roman Candidate (§34/S22, default: on)
 
-    // 顯示當咧拍的字: put the literal roman candidate first while composing in TL/POJ.
+    // Show Typed Text First: put the literal roman candidate first while composing in TL/POJ.
     var isLiteralRomanCandidateEnabled: Bool {
         get { userDefaults.value(for: Self.isLiteralRomanCandidateEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isLiteralRomanCandidateEnabledKey) }
     }
 
-    // MARK: - Hyphenless Romanization (無連字符, §49, default: off)
+    // MARK: - Hyphenless Romanization (No Hyphens, §49, default: off)
 
     /// The STORED switch, bound by the settings toggle. `isHyphenlessRomanEnabled`
     /// (the engine-facing value) folds TPS on top of it.
@@ -350,7 +350,7 @@ final class SharedSettings {
     }
 
     /// Variant characters toggle (default: off)
-    // Variant-character (異體字) candidates.
+    // Variant-character candidates.
     var isVariantEnabled: Bool {
         get { userDefaults.value(for: Self.isVariantEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isVariantEnabledKey) }
@@ -363,13 +363,13 @@ final class SharedSettings {
     }
 
     /// LKK Hàn-lô mixed script suggestions (default: on)
-    // LKK mixed Hanji-romanization (漢羅混寫) candidates.
+    // LKK mixed Hanji-romanization candidates.
     var isLkkDictEnabled: Bool {
         get { userDefaults.value(for: Self.isLkkDictEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isLkkDictEnabledKey) }
     }
 
-    /// Developer supplement dictionary (詞庫增補檔案) toggle (default: on)
+    /// Developer supplement dictionary (Supplementary Word List) toggle (default: on)
     var isDevDictEnabled: Bool {
         get { userDefaults.value(for: Self.isDevDictEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isDevDictEnabledKey) }
@@ -377,7 +377,7 @@ final class SharedSettings {
 
     // MARK: - Kautian Subcollections (nested under the kautian master, default on)
 
-    // Accent (腔口) classification, in `config.yaml` dialect_columns order: 鹿港/三峽/臺北/金門/
+    // Accent classification, in `config.yaml` dialect_columns order: 鹿港/三峽/臺北/金門/
     // 馬公/新竹 偏泉腔, 宜蘭/臺中 偏漳腔, 臺南/高雄 混合腔. The identifier names the locality;
     // the classification is what the identifier cannot carry.
 
@@ -431,7 +431,7 @@ final class SharedSettings {
         set { userDefaults.set(newValue, for: Self.isKautianAccentTaichungEnabledKey) }
     }
 
-    // 姓名附錄 (given + family names).
+    // Surname Appendix (given + family names).
     var isKautianNameAppendixEnabled: Bool {
         get { userDefaults.value(for: Self.isKautianNameAppendixEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isKautianNameAppendixEnabledKey) }
@@ -720,12 +720,12 @@ extension SharedSettings: EngineSettings {
             || candidateDisplayMode.effectiveFullWidthPunctuation(stored: storedIsTranslateSwapped)
     }
 
-    /// Effective 括號標註 — same seam, same rule owner.
+    /// Effective Annotate in Brackets — same seam, same rule owner.
     var isOutputBothScripts: Bool {
         candidateDisplayMode.effectiveOutputBothScripts(stored: storedIsOutputBothScripts)
     }
 
-    /// Effective 無連字符 — never under a TPS layout: the engine receives TPS as
+    /// Effective No Hyphens — never under a TPS layout: the engine receives TPS as
     /// `"tl"` / `"poj"` and the strip would break the platform's `-` re-split of
     /// the candidate roman for bopomofo (`tlDisplayToTPS`). Same fold, same seam
     /// as the swap fold in `RustEngineBridge.continuousAppConfig`.

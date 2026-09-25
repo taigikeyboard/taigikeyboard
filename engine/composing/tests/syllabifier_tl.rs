@@ -27,7 +27,7 @@ const MODE: InputMode = InputMode::Tl;
 #[test]
 fn tsua_yields_3_and_4_key_multi_cut_case() {
     // tsu (3, 珠), tsua (4, 紙), and chain tsu+a (4) — all valid.
-    // Matches `docs/releases/v3.5.8/plan.md` § Phase 3 — Test 矩陣 `tsua` → `{3, 4}` — the 關鍵 case.
+    // Matches `docs/releases/v3.5.8/plan.md` § Phase 3 — Test 矩陣 `tsua` → `{3, 4}` — the key case.
     let inv = build_inventory(&["tsu1", "tsua7", "a2"]);
     assert_eq!(
         valid_span_endings("tsua", 0, &inv, MODE, MAX_SYLLABLES),

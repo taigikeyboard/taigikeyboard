@@ -25,9 +25,9 @@ enum DictionarySource: String, CaseIterable {
     case taijit // 台日大辭典
     case kungge // 台語工藝詞庫
     case stti // 學科術語辭典
-    case khpoo // 腔口補充資料
+    case khpoo // Accent Variations
     case khiin // 在來字
     case lkk // LKK漢羅合用建議用字
-    case dev // 開發補充資料
-    case custom // 自訂詞庫
+    case dev // developer supplementary data
+    case custom // Custom Dictionary
 }

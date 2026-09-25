@@ -3,7 +3,7 @@
 import AppKit
 
 /// The only feedback a mode-switching chord has: a small HUD that names the
-/// new mode and fades. Raised by the 台羅/白話字 switch, which fires from
+/// new mode and fades. Raised by the TL/POJ switch, which fires from
 /// anywhere — a mode with no indicator reads as the input method breaking
 /// (spelling stops matching what the user typed), so the switch announces
 /// itself once,

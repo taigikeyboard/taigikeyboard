@@ -129,8 +129,8 @@ pub(crate) const ZHUYIN_TONES_ENCODE_SAFE: &[(&str, &str)] = &[
     ("9", "\u{02c6}"),
 ];
 
-/// The 輕聲 marker as TPS writes it (`--` → `·` U+00B7, `zhuyin.js:204`);
-/// 無連字符 romanization (`api::hyphenless_display`) writes the same glyph.
+/// The neutral-tone marker as TPS writes it (`--` → `·` U+00B7, `zhuyin.js:204`);
+/// No Hyphens romanization (`api::hyphenless_display`) writes the same glyph.
 pub(crate) const KHINSIANN_DOT: &str = "\u{00b7}";
 
 const PUNCTUATION_CHARS: &[&str] = &[
@@ -393,7 +393,7 @@ fn tps_notone_collecting(record_tl: &str, mut ends: Option<&mut Vec<u32>>) -> St
 
 /// The TL syllable tokens of a record reading. Splits on the three
 /// separators the build pipeline treats as syllable boundaries (ASCII
-/// hyphen, space, tab) and drops the empty runs a 輕聲 `--` produces.
+/// hyphen, space, tab) and drops the empty runs a neutral-tone `--` produces.
 /// Single source for every per-token TPS derivation below.
 pub(crate) fn tl_syllable_tokens(record_tl: &str) -> impl Iterator<Item = &str> {
     record_tl

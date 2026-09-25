@@ -1,10 +1,10 @@
 // How the fetched list becomes the window's list: one cell per candidate, or
-// two under 漢羅合用, each mapped back to what it commits.
+// two under Hanji with Romanization, each mapped back to what it commits.
 
 @testable import TaigiInputMethodCore
 import XCTest
 
-/// The presentation rules per display mode, and the 漢羅濫 pair order and
+/// The presentation rules per display mode, and the Hanji with Romanization pair order and
 /// per-script dedupe that give the window its cells.
 final class PresentedCandidateTests: XCTestCase {
     private let taigi = TestFixtures.candidate(roman: "tâi-gí", hanji: "台語", consumedSpanEnd: 5)
@@ -12,7 +12,7 @@ final class PresentedCandidateTests: XCTestCase {
 
     // MARK: - One cell per candidate
 
-    /// 並排 and 羅馬字 show one cell per candidate — byte-identical to the cell
+    /// Hanji–Romanization Pairing and Romanization Only show one cell per candidate — byte-identical to the cell
     /// `CandidateCellContent.cell(for:settings:)` has always built — committing
     /// the primary script, with the cell's position naming the candidate.
     func testOneCellDisplays_presentEveryCandidateOnce_asTheExistingCell() {
@@ -52,7 +52,7 @@ final class PresentedCandidateTests: XCTestCase {
         }
     }
 
-    // MARK: - 漢羅合用
+    // MARK: - Hanji with Romanization
 
     private let combined = TestFixtures.settings(swapped: true, candidateDisplayMode: .combined)
 
@@ -75,7 +75,7 @@ final class PresentedCandidateTests: XCTestCase {
         ])
     }
 
-    /// The stored swap flag has no say under 合用 — the pair order is the
+    /// The stored swap flag has no say under Hanji with Romanization — the pair order is the
     /// mode's, not the flag's.
     func testCombined_ignoresTheSwapFlag() {
         let stored = TestFixtures.settings(swapped: false, candidateDisplayMode: .combined)

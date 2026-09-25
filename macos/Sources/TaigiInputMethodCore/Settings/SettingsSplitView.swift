@@ -9,7 +9,7 @@ import SwiftUI
 /// `String` raw values so the selected pane can persist through
 /// `@AppStorage` — Apple's Settings guidance is to reopen on the pane the
 /// user last used. A value persisted by a build whose case is since removed is
-/// cleared at launch (`RetiredSettingsCleanup`), landing on the default, 一般.
+/// cleared at launch (`RetiredSettingsCleanup`), landing on the default, General.
 enum SettingsPane: String, CaseIterable, Identifiable {
     case general
     case appearance
@@ -21,15 +21,15 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     /// Last (USER 2026-09-08): what the input method draws IN, after what
     /// it draws FROM.
     case fontManagement
-    /// Unlisted: the input-source menu's 關於 row opens it, and the sidebar
-    /// shows no row for it (USER 2026-09-20 「不需要出現在設定選單中」).
+    /// Unlisted: the input-source menu's About row opens it, and the sidebar
+    /// shows no row for it (USER 2026-09-20: "it does not need to appear in the settings menu").
     case about
 
     var id: String {
         rawValue
     }
 
-    /// The panes the sidebar lists, top to bottom: every case but 關於.
+    /// The panes the sidebar lists, top to bottom: every case but About.
     static let sidebar: [SettingsPane] = allCases.filter { $0 != .about }
 
     /// A key rather than a resolved string, so the sidebar re-renders under
@@ -46,7 +46,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         }
     }
 
-    /// The sidebar row's icon; 關於 has no row, and names the symbol its
+    /// The sidebar row's icon; About has no row, and names the symbol its
     /// title would carry anywhere else.
     var symbolName: String {
         switch self {
@@ -113,7 +113,7 @@ struct SettingsSidebarView: View {
     private var selectedPane = SettingsStore.Keys.selectedSettingsPane.defaultValue
 
     /// The list's own selection: the stored pane when the list has a row for
-    /// it, nothing when it is 關於. An optional binding says "no row" in the
+    /// it, nothing when it is About. An optional binding says "no row" in the
     /// list's own vocabulary rather than handing it a tag it cannot find,
     /// and a `nil` written back (the list clearing itself) leaves the stored
     /// pane alone — only a row the user picked moves it.
@@ -150,7 +150,7 @@ struct SettingsSidebarView: View {
 /// its name from `SettingsSplitViewController`, the one place that knows both
 /// the selection and the display language.
 ///
-/// The 揣辭典 pane's `EngineSettingsProvider` is not threaded through here.
+/// The Dictionary Search pane's `EngineSettingsProvider` is not threaded through here.
 /// That pane is unlisted (not released yet, USER 2026-08-21) and nothing else
 /// on this side reads a provider, so carrying one would be three signatures
 /// held open for a caller that does not exist; relisting the pane adds it back

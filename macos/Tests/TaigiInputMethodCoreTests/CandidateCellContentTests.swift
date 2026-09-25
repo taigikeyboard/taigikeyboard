@@ -3,7 +3,7 @@
 @testable import TaigiInputMethodCore
 import XCTest
 
-/// The display mapping: a candidate is a `(漢字, 羅馬字)` pair, and the cell
+/// The display mapping: a candidate is a `(Hanji, romanization)` pair, and the cell
 /// shows both — the swap setting decides which one leads.
 final class CandidateCellContentTests: XCTestCase {
     private func candidate(roman: String, hanji: String?) -> ContinuousCandidate {

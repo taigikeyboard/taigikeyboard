@@ -200,7 +200,7 @@ final class RustEngineBridgeComposingTests: XCTestCase {
         XCTAssertNil(result.candidates, "no continuous phase must read as nil, not as an empty list")
     }
 
-    /// §34 under the shipped defaults: 顯示當咧拍的字 is ON out of the box on
+    /// §34 under the shipped defaults: Show Typed Text First is ON out of the box on
     /// all four platforms (USER 2026-09-03), so with TL/POJ text composed the
     /// preedit literal leads the list and Return commits what was typed. The OFF
     /// half is `TaigiInputControllerCandidateTests`, which drives the same

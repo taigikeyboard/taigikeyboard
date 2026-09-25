@@ -1,6 +1,6 @@
-//! The 詞庫來源 pane: which dictionaries the engine draws from, in three
-//! groups — 教育部, the others, the supplements — with 教典's eleven
-//! subcollections stepped in under it, always visible and greyed while 教典
+//! The Dictionary Sources pane: which dictionaries the engine draws from, in three
+//! groups — MOE, the others, the supplements — with the MOE dictionary's eleven
+//! subcollections stepped in under it, always visible and greyed while the MOE dictionary
 //! is off (the Mac's and Windows' shape; roadmap PR7; port of
 //! `DictionaryTogglesView.swift` and the Windows `dictionary_sources.rs`).
 //! Every toggle is read live by the engine bridge on the next fetch.
@@ -10,11 +10,11 @@ use adw::prelude::*;
 use taigi_desktop_core::settings::{keys, SettingsDocument, SettingsKey};
 use taigi_desktop_core::strings::StringKey;
 
-/// How far a 腔口 row steps in under 教典 (`DictionaryTogglesView.swift`'s
+/// How far an accent row steps in under the MOE dictionary (`DictionaryTogglesView.swift`'s
 /// indent).
 const SUBCOLLECTION_INDENT: i32 = 20;
 
-/// The 教典 subcollections, in `DictionaryTogglesView`'s order.
+/// The MOE dictionary subcollections, in `DictionaryTogglesView`'s order.
 const KAUTIAN_SUBCOLLECTIONS: [(SettingsKey<bool>, StringKey); 11] = [
     (
         keys::IS_KAUTIAN_ACCENT_LUKANG_ENABLED,
@@ -94,8 +94,8 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
                 .resolve(StringKey::DictionaryMoeSectionTitle),
         )
         .build();
-    // 教典 first, its eleven 腔口 stepped in under it: disabled, not cleared,
-    // while 教典 is off — the choices come back with it
+    // The MOE dictionary first, its eleven accents stepped in under it: disabled, not cleared,
+    // while the MOE dictionary is off — the choices come back with it
     // (`DictionaryTogglesView.swift` indents the same eleven under the same
     // master toggle; the Windows card greys them the same way).
     context.switch_row(&moe, StringKey::CommonMoeDict, keys::IS_KAUTIAN_ENABLED);

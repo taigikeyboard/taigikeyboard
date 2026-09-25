@@ -1,5 +1,5 @@
-//! The two-stage install: a finished download turns the 一般 pane's button
-//! into 安裝 rather than launching the installer on its own, so nothing
+//! The two-stage install: a finished download turns the General pane's button
+//! into Install rather than launching the installer on its own, so nothing
 //! takes the focus away from a document the user may have gone back to
 //! typing in. Port of `UpdateInstallation` + `UpdatePackageDownload`. The
 //! download and the verification run on a thread; the pane polls. What a

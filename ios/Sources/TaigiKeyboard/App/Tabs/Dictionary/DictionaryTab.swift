@@ -89,7 +89,7 @@ struct DictionaryTab: View {
                         .font(AppStyle.sectionHeaderFont)
                 }
 
-                // MOE dictionaries (教育部)
+                // MOE dictionaries
                 Section {
                     dictToggleWithDescription(
                         title: lang.string(.commonMoeDict),
@@ -334,7 +334,7 @@ struct DictionaryTab: View {
         case .kungge: .dictionaryKunggeTag
         case .stti: .dictionarySttiTag
         case .lkk: .dictionaryLkkTag
-        // khpoo/khiin/dev/custom collapse to one "補充資料" badge (reuses the section-title key).
+        // khpoo/khiin/dev/custom collapse to one "Supplementary Data" badge (reuses the section-title key).
         case .khpoo, .khiin, .dev, .custom: .dictionarySupplementSectionTitle
         }
     }

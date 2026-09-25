@@ -55,7 +55,7 @@ class CandidateCellTextTest {
     }
 
     /**
-     * §42 second exception: a marked 濫 cell renders ONE script, no
+     * §42 second exception: a marked mixed cell renders ONE script, no
      * subtitle — the split already happened at the builder. The roman cell
      * keeps its `hanzi` field (identity) but renders roman alone.
      */
@@ -69,7 +69,7 @@ class CandidateCellTextTest {
             CandidateCellText("tâi-gí", null),
             cell(mode = CandidateDisplayMode.COMBINED, cellScript = TaigiWord.MetadataKeys.CELL_SCRIPT_ROMAN),
         )
-        // The swap flag (projected true under 濫) must not change either render.
+        // The swap flag (projected true under mixed mode) must not change either render.
         assertEquals(
             CandidateCellText("tâi-gí", null),
             cell(
@@ -88,7 +88,7 @@ class CandidateCellTextTest {
         )
     }
 
-    /** NextWord prediction rows are not split — unmarked 濫 rows render hanji-led single-script. */
+    /** NextWord prediction rows are not split — unmarked mixed rows render hanji-led single-script. */
     @Test
     fun combined_unmarkedRow_rendersHanjiLedSingleScript() {
         assertEquals(CandidateCellText("台語", null), cell(mode = CandidateDisplayMode.COMBINED))

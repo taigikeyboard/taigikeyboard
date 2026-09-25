@@ -16,12 +16,12 @@
 #
 # Every run stages ALL installers from one commit, and starts from a clean
 # draft: an existing one for this version is deleted first (USER 2026-09-10 —
-# 「我希望重複release的過程是原子性的,每一次都從新的開始建置」;
-# 2026-09-11 — 「我不希望有--skip-macos或是skip-windows,我希望一次就是兩個一起建立」).
+# "I want a repeated release to be atomic, every run building from scratch";
+# 2026-09-11 — "I do not want --skip-macos or skip-windows; I want both built together in one go").
 #
 # A PATCH release is its own version holding ONE platform's installers (USER
-# 2026-09-24 — 「讓各自的desktop版本可以單獨上patch,而不用從頭執行release
-# pipeline」): 3.7.0 ships every platform, 3.7.1 only the platform it fixes.
+# 2026-09-24 — "let each desktop version take a patch on its own, without running the release
+# pipeline from the top"): 3.7.0 ships every platform, 3.7.1 only the platform it fixes.
 # That is not a way to stage one half of a release — the old escapes that
 # stranded a draft with installers from two commits stay gone. The draft still
 # starts clean and everything on it is built from one commit; it just names

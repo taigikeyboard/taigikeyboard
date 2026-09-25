@@ -200,7 +200,7 @@ final class SettingsWindowTests: XCTestCase {
         XCTAssertFalse(SettingsSplitViewController.isPaneScrollView(elsewhere.contentView, in: detailView))
     }
 
-    /// The 快速齒 pane on screen and laid out, with the clip view of its own
+    /// The Shortcuts pane on screen and laid out, with the clip view of its own
     /// scroll view — the one a wheel event over the pane moves.
     private func makeShownWindowWithPaneClipView() throws -> (NSWindow, NSClipView) {
         SettingsStore().selectedSettingsPane = .shortcuts
@@ -219,7 +219,7 @@ final class SettingsWindowTests: XCTestCase {
         return scrollView
     }
 
-    /// The window follows the app's own 外觀 setting, not just the system's —
+    /// The window follows the app's own Appearance setting, not just the system's —
     /// the same choice the candidate window reads.
     func testWindow_followsTheAppearanceSetting() {
         let window = makeWindow(language: makeStore())
@@ -227,7 +227,7 @@ final class SettingsWindowTests: XCTestCase {
         window.contentViewController?.viewWillAppear()
 
         // Whatever the machine running this has stored, the window's override
-        // has to match what the setting resolves to — including nil for 自動.
+        // has to match what the setting resolves to — including nil for Automatic.
         XCTAssertEqual(window.appearance, SettingsStore().appearanceMode.forcedAppearance)
     }
 
@@ -301,9 +301,9 @@ final class SettingsWindowTests: XCTestCase {
     // MARK: - Pane roster
 
     /// Raw values are the persistence contract: `@AppStorage` writes them, so
-    /// renaming a case silently resets every user to 一般. The order is also
+    /// renaming a case silently resets every user to General. The order is also
     /// the sidebar order — the flat list renders `sidebar` directly — so
-    /// this doubles as the roster. 詞頻紀錄 / 詞關聯紀錄 / 備份復原 are absent by
+    /// this doubles as the roster. Frequency Records / Association Records / Backup and Restore are absent by
     /// decision, not by omission — see `RetiredSettingsCleanup`, which sweeps a
     /// selection left pointing at one of them.
     func testPaneRawValues_stayStable() {
@@ -316,7 +316,7 @@ final class SettingsWindowTests: XCTestCase {
         )
     }
 
-    /// 關於 is a pane — it persists, it titles the window — but not a row: the
+    /// About is a pane — it persists, it titles the window — but not a row: the
     /// input-source menu is its one doorway (USER 2026-09-20).
     func testAbout_isAPaneButNotInTheSidebar() {
         XCTAssertTrue(SettingsPane.allCases.contains(.about))

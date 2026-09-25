@@ -81,7 +81,7 @@ fun InputSettingsScreen(
     var inputMode by remember(resetCounter) { mutableStateOf(prefs.inputMode) }
     var fontType by remember(resetCounter) { mutableStateOf(prefs.fontType) }
     var candidateDisplayMode by remember(resetCounter) { mutableStateOf(prefs.candidateDisplayMode) }
-    // 括號標註 binds the STORED flag; it is only disabled (not cleared) while roman-only.
+    // Annotate in Brackets binds the STORED flag; it is only disabled (not cleared) while roman-only.
     var outputBoth by remember(resetCounter) { mutableStateOf(prefs.storedOutputBothScripts) }
     var literalRomanCandidate by remember(resetCounter) { mutableStateOf(prefs.literalRomanCandidateEnabled) }
     var hyphenlessRoman by remember(resetCounter) { mutableStateOf(prefs.storedHyphenlessRomanEnabled) }
@@ -189,7 +189,7 @@ fun InputSettingsScreen(
 
                 Spacer(Modifier.height(24.dp))
 
-                // Global keyboard font — its own card below 輸入模式 (font is a global
+                // Global keyboard font — its own card below Input Mode (font is a global
                 // setting, not per-theme). Mirrors iOS SettingsTab font Section.
                 SettingsCard {
                     SettingNavigationRow(
@@ -335,7 +335,7 @@ fun InputSettingsScreen(
                         },
                     )
                     SettingsDivider()
-                    // ⁿ大本字 (§53) — the case rule of the marker the row above composes.
+                    // ⁿ becomes ᴺ in capitals (§53) — the case rule of the marker the row above composes.
                     SwitchRow(
                         label = L10n.settingsNasalMarkerUppercase,
                         checked = nasalMarkerUppercase,

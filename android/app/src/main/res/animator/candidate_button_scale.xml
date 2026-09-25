@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 候選詞按鈕按下時的縮放動畫：模擬 iOS scaleEffect(0.95) -->
+<!-- Candidate button press scale animation: mimics iOS scaleEffect(0.95) -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- 按下狀態：縮小到 0.95 倍 -->
+    <!-- Pressed state: scale down to 0.95x -->
     <item android:state_pressed="true">
         <set>
             <objectAnimator
@@ -19,7 +19,7 @@
         </set>
     </item>
 
-    <!-- 預設狀態：恢復原始大小 -->
+    <!-- Default state: restore original size -->
     <item>
         <set>
             <objectAnimator

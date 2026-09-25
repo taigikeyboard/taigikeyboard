@@ -104,7 +104,7 @@ pub(crate) fn valid_span_endings_lowered(
             if !lowered.is_char_boundary(end) {
                 continue;
             }
-            // §52 — a typed 連字 / 輕聲 hyphen is an explicit syllable
+            // §52 — a typed compound / neutral-tone hyphen is an explicit syllable
             // boundary: no single syllable crosses it (`khi|ah` is never
             // `khiah`). Chains still meet AT a barrier, as in TPS.
             if super::crosses_barrier(barriers, cur, end) {

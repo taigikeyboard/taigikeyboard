@@ -178,8 +178,8 @@ impl CandidateMetrics {
 
     /// These metrics for content that does or does not carry an annotated
     /// cell: a stacked cell is one line tall (the inline height) when nothing
-    /// in the list has an annotation — 羅馬字, or 合用's one-script cells —
-    /// and the two-line box otherwise, so 並排's mixed lists keep lining up.
+    /// in the list has an annotation — Romanization Only, or Combined's one-script cells —
+    /// and the two-line box otherwise, so Pairing's mixed lists keep lining up.
     /// Inline is one line either way. Idempotent: resolved once per list,
     /// on `show` and on `update_cells`.
     pub fn for_content(&self, has_annotations: bool) -> Self {

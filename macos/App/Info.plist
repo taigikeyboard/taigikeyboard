@@ -114,7 +114,7 @@
 		<string>Hant</string>
 	</array>
 	<!-- The `.taigi` backup document. Declared so the open and save panels in
-	     詞庫 → 備份還原 can filter for it; an undeclared extension resolves only
+	     Dictionary → Backup and Restore can filter for it; an undeclared extension resolves only
 	     to a dynamic type nothing recognises. Same identifier iOS exports
 	     (ios/Sources/TaigiKeyboard-Info.plist), because it is the same format.
 	     Deliberately NOT paired with CFBundleDocumentTypes: declaring the type

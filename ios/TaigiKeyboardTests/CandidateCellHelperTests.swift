@@ -1,7 +1,7 @@
 // Pins the candidate cell arm order (TPS → romanOnly → combined → swapped → default)
 // for `CandidateCellHelper.displayTitle` / `displaySubtitle` — the platform half of
-// 候選詞顯示 = 羅馬字 (the engine half collapses same-roman rows) and of
-// 候選詞顯示 = 漢羅濫 (§42 split cells: every cell is single-script, split upstream
+// Candidate Display = Romanization Only (the engine half collapses same-roman rows) and of
+// Candidate Display = Hanji with Romanization (§42 split cells: every cell is single-script, split upstream
 // in `TaigiAutocompleteService.buildContinuousSuggestions`), plus the content-level
 // subtitle-space flag and the marked-cell no-op in `suggestionToHandle`.
 
@@ -13,7 +13,7 @@ final class CandidateCellHelperTests: XCTestCase {
     private let dual = AutocompleteSuggestion(text: "tâi-gí", title: "tâi-gí", subtitle: "台語")
     private let romanOnlyRow = AutocompleteSuggestion(text: "tâi", title: "tâi", subtitle: nil)
 
-    /// §42 split cells as `buildContinuousSuggestions` emits them under 濫:
+    /// §42 split cells as `buildContinuousSuggestions` emits them under Hanji with Romanization:
     /// single-script `text`, `subtitle = nil`, `cellScript` marker.
     private let markedHanjiCell = AutocompleteSuggestion(
         text: "台語",
@@ -70,7 +70,7 @@ final class CandidateCellHelperTests: XCTestCase {
         XCTAssertEqual(title, "tâi")
     }
 
-    // MARK: - combined arm (漢羅濫 §42 split cells)
+    // MARK: - combined arm (Hanji with Romanization §42 split cells)
 
     func testDisplaySubtitle_combined_isNil() {
         for suggestion in [markedHanjiCell, markedRomanCell, dual] {
@@ -85,7 +85,7 @@ final class CandidateCellHelperTests: XCTestCase {
     }
 
     /// Un-split rows (NextWord predictions) keep the dual-script shape and
-    /// render hanji-led single-script under 濫 — no split, no commit change.
+    /// render hanji-led single-script under Hanji with Romanization — no split, no commit change.
     func testDisplayTitle_combined_unsplitRow_isHanjiLed() {
         let title = CandidateCellHelper.displayTitle(
             for: dual,
@@ -97,7 +97,7 @@ final class CandidateCellHelperTests: XCTestCase {
         XCTAssertEqual(title, "台語", "un-split row under 濫 leads with the hanji")
     }
 
-    /// The 濫 arm ignores the swap flag for EVERY row shape — marked split
+    /// The Hanji with Romanization arm ignores the swap flag for EVERY row shape — marked split
     /// cells render their own script, un-split rows stay hanji-led. Mirrors
     /// Android `test_INVARIANT_combined_marked_cells_are_single_script` +
     /// `combined_unmarkedRow_rendersHanjiLedSingleScript`, and is the property
@@ -148,7 +148,7 @@ final class CandidateCellHelperTests: XCTestCase {
         XCTAssertEqual(title, "台語", "TPS: title = hanji even under combined")
     }
 
-    /// A 濫 split cell is single-script, so the width path is the default
+    /// A Hanji with Romanization split cell is single-script, so the width path is the default
     /// measure — the cell's `text` at the title font, no joined label.
     func testMeasuredCellWidth_combined_measuresSingleScriptAtTitleFont() {
         let titleFontSize: CGFloat = 17
@@ -171,7 +171,7 @@ final class CandidateCellHelperTests: XCTestCase {
         )
     }
 
-    /// An un-split 濫 row (NextWord prediction) renders hanji-led single-line
+    /// An un-split Hanji with Romanization row (NextWord prediction) renders hanji-led single-line
     /// at the TITLE font — width measures the rendered title, not the two-line
     /// `max(text@title, subtitle@subtitle)` rule.
     func testMeasuredCellWidth_combined_unsplitRow_measuresHanjiLedTitleFont() {
@@ -306,7 +306,7 @@ final class CandidateCellHelperTests: XCTestCase {
         ))
     }
 
-    /// A mixed 並排 list (one hanji-less literal among two-line cells) keeps
+    /// A mixed Hanji–Romanization Pairing list (one hanji-less literal among two-line cells) keeps
     /// the flag TRUE — the spacer stays so rows line up.
     func testContentHasSubtitles_mixedSideBySideList_isTrue() {
         XCTAssertTrue(CandidateCellHelper.contentHasSubtitles(
@@ -338,7 +338,7 @@ final class CandidateCellHelperTests: XCTestCase {
         ))
     }
 
-    /// Swapped 並排 puts the roman in the subtitle slot; a hanji-less row's
+    /// Swapped Hanji–Romanization Pairing puts the roman in the subtitle slot; a hanji-less row's
     /// subtitle equals its title and the cell skips it — the flag must apply
     /// the same predicate.
     func testContentHasSubtitles_swappedHanjiLessOnlyList_isFalse() {

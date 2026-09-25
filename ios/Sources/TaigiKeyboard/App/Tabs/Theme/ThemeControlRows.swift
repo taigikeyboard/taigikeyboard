@@ -77,7 +77,7 @@ struct ThemeSliderRow: View {
 // MARK: - Photo row
 
 /// A `PhotosPicker` row: a thumbnail of the current theme photo (or a placeholder while
-/// none is picked) beside the 選擇照片 / 更換照片 label. Tapping anywhere on the row opens
+/// none is picked) beside the Choose Photo / Change Photo label. Tapping anywhere on the row opens
 /// the system picker (images only; no photo-library permission is required).
 struct ThemePhotoRow: View {
     let label: String

@@ -93,7 +93,7 @@ Composing engine state machine lives in Rust `engine/composing` (since v3.5.4 / 
 
 **Read-only intents and threading.** `Intent::is_read_only()` (only `FetchAtPos`) never mutates: `EngineHandle` answers them from a clone of the engine with the mutex released, and a generation mismatch on one returns `Engine::idle_snapshot` **without** resetting state or recording the generation — only the next mutating intent resets. This lets Android run the candidate fetch on `Dispatchers.Default` (`CandidateUpdateCoordinator`): a stale worker fetch can never wipe a newer context, and the coordinator re-validates `ComposingManager.stateToken()` (raw buffer + generation) on Main before touching the strip. iOS / macOS / Windows fetch synchronously on their main threads and mirror the returned snapshot; the mismatch response they see is unchanged (Idle). `lexicon::EngineHandle` state is an `RwLock`, so a worker fetch's dictionary scan and the main thread's `Append` display render (compound-hyphen oracle) read concurrently.
 
-For per-pub-item descriptions in 台灣華語, see `migration-inventory.csv` (filter `area=composing`). Architectural contract — including Effect ordering rules + Android binding addendum — lives in `architecture/composing-state-boundary.md`.
+For per-pub-item descriptions in Taiwanese Mandarin, see `migration-inventory.csv` (filter `area=composing`). Architectural contract — including Effect ordering rules + Android binding addendum — lives in `architecture/composing-state-boundary.md`.
 
 ## Tests
 

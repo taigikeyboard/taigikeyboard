@@ -5,7 +5,7 @@ import InputMethodKit
 @testable import TaigiInputMethodCore
 import XCTest
 
-/// Drives the real controller and engine with the 漢羅對調 swap ON, where the
+/// Drives the real controller and engine with the Hanji/romanization swap ON, where the
 /// shipped full-width default takes effect. The roman-first sites are covered
 /// by the negative cases here and by `AutoSpaceControllerTests`, whose suite
 /// runs entirely in the mode this feature is inert in.
@@ -54,7 +54,7 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
         XCTAssertEqual(session.client.insertedTexts, [])
     }
 
-    /// 合用 forces the candidate projection hanji-first, but the punctuation
+    /// Hanji with Romanization forces the candidate projection hanji-first, but the punctuation
     /// width still follows the stored swap the chord toggles: half-width
     /// until it is on, full-width after.
     func testCombinedDisplay_punctuationWidthFollowsTheStoredSwap() throws {
@@ -77,7 +77,7 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
         XCTAssertEqual(fullWidth.client.insertedTexts, ["，"])
     }
 
-    /// 羅馬字 writes romanization, which takes half-width marks whatever is stored.
+    /// Romanization Only writes romanization, which takes half-width marks whatever is stored.
     func testRomanOnlyDisplay_passesPunctuationThrough() throws {
         let session = try makeSession(configure: {
             $0.candidateDisplayMode = .romanOnly
@@ -109,7 +109,7 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
         // flips to hanji-first before typing the punctuation. The swap still
         // wins: the word in front of the caret is the romanization that commit
         // wrote, and a display mode changed afterwards does not rewrite it.
-        // The full-width map serves the NEXT 漢字 word, not this one — so the
+        // The full-width map serves the NEXT Hanji word, not this one — so the
         // document reads `taigi, `, half-width, exactly as it would have
         // without the flip. Auto-space (OFF by default) is turned on because
         // an armed space is what this case is about: the arm exists only where
@@ -134,16 +134,16 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
     /// ⚠ Both rewrites fire here, and they answer to different questions: the
     /// auto space follows what this commit WROTE — the preedit as typed, which
     /// is romanization on a platform shipping TL and POJ only — while the
-    /// full-width map still follows the output MODE. So 漢字優先 gets
+    /// full-width map still follows the output MODE. So Hanji-first gets
     /// `taigi？ `. The map reading the mode rather than the committed string is
     /// the same approximation this round removed from the auto-space gate,
-    /// left standing because which marks 漢字 mode types is a 全形標點 policy
+    /// left standing because which marks Hanji mode types is a Full-width Punctuation policy
     /// question, not an auto-space one.
     func testPunctuationMidComposition_commitsWithTheFullWidthForm_inOneMutation() throws {
         // BOTH domains: `withTranslateSwapped` moves the one the shared
         // coordinator's `ComposingManager` reads (which resolves the commit),
         // `configure` the controller's own store (which the full-width map
-        // reads). A case about "the user is in 漢字 mode" needs them to agree.
+        // reads). A case about "the user is in Hanji mode" needs them to agree.
         // Auto-space is OFF by default and is what puts the trailing space in
         // `taigi？ `, so this case turns it on to reach that site.
         try withTranslateSwapped(true) {
@@ -202,7 +202,7 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
     }
 
     /// The key is read under the modifier: `⌃[` arrives as Escape, and in
-    /// 羅馬字 mode it types `「` rather than cancelling anything.
+    /// romanization mode it types `「` rather than cancelling anything.
     func testControlBracket_typesTheFullWidthBracketInRomanFirstMode() throws {
         let session = try makeSession(configure: { $0.storedIsTranslateSwapped = false })
 

@@ -18,9 +18,9 @@ enum CandidateCellHelper {
     // MARK: - Display text
 
     /// The cell's main title, per display mode: TPS shows hanji (TPS symbols when there is none) and
-    /// ignores `candidateDisplayMode`; 羅馬字 always shows the engine `roman` (`text`); 漢羅濫 is
+    /// ignores `candidateDisplayMode`; Romanization Only always shows the engine `roman` (`text`); Hanji with Romanization is
     /// single-script — a split cell shows its own `text`, an un-split row (wire defect) is hanji-led;
-    /// 並排 lets `isTranslateSwapped` pick the roman / hanji order.
+    /// Hanji–Romanization Pairing lets `isTranslateSwapped` pick the roman / hanji order.
     // Arm order mirrors Android SmartbarCandidateStrip.kt / macOS CandidateCellContent:
     // TPS → romanOnly → combined → swapped → default.
     static func displayTitle(
@@ -43,7 +43,7 @@ enum CandidateCellHelper {
 
         // CROSS-PLATFORM INVARIANT — mirrors the desktop split cells (§42 second
         // exception: macOS/Windows PresentedCandidate) and Android candidateCellText:
-        // under 濫 every cell is single-script. Split cells (marked upstream in
+        // under Hanji with Romanization every cell is single-script. Split cells (marked upstream in
         // TaigiAutocompleteService.buildContinuousSuggestions and
         // ActionHandler.predictionSuggestions) carry their script in `text`; an
         // un-split dual-script row (a wire-defective marker) renders hanji-led.
@@ -66,8 +66,8 @@ enum CandidateCellHelper {
     /// The cell's subtitle, per display mode.
     ///
     /// - TPS: no subtitle
-    /// - 羅馬字: no subtitle (hanji not shown)
-    /// - 漢羅濫: no subtitle (split cells are already single-script upstream)
+    /// - Romanization Only: no subtitle (hanji not shown)
+    /// - Hanji with Romanization: no subtitle (split cells are already single-script upstream)
     /// - default: `isTranslateSwapped` picks whether the subtitle is roman or hanji
     static func displaySubtitle(
         for suggestion: AutocompleteSuggestion,
@@ -94,7 +94,7 @@ enum CandidateCellHelper {
         isTPSLayout: Bool,
         orMapsToER: Bool,
     ) -> AutocompleteSuggestion {
-        // §42 漢羅濫 split cell: the `cellScript` marker is authoritative — the
+        // §42 Hanji with Romanization split cell: the `cellScript` marker is authoritative — the
         // cell already carries exactly the script it commits, so the swap / TPS
         // rewrites below must not touch it (a swapped rewrite would replace a
         // marked cell's text; the TPS fallback would re-render its roman).
@@ -127,7 +127,7 @@ enum CandidateCellHelper {
     // MARK: - Cell width measurement
 
     /// Measures title and subtitle at their font sizes and returns max + padding. Always measures
-    /// both, so a translate toggle never triggers a layout reflow. Under 漢羅濫 each cell is
+    /// both, so a translate toggle never triggers a layout reflow. Under Hanji with Romanization each cell is
     /// single-line: it measures the rendered title at the title font (a split cell's own `text`;
     /// an un-split NextWord row's hanji-led title) — measurement and render share one source.
     ///
@@ -155,7 +155,7 @@ enum CandidateCellHelper {
             return max(minimumCellWidth, width + cellHorizontalPadding)
         }
 
-        // §42 漢羅濫: every cell renders single-line at the TITLE font — a
+        // §42 Hanji with Romanization: every cell renders single-line at the TITLE font — a
         // marked split cell shows its own `text`, an un-split row (NextWord
         // prediction) shows the hanji-led title. Measure the rendered title so
         // measure and render share the source (`displayTitle`'s combined arm
@@ -219,9 +219,9 @@ enum CandidateCellHelper {
     ///
     /// Mirrors desktop §42 "one-script content is one line tall": the invisible
     /// subtitle spacer in `CandidateButtonView` / `ExpandedCandidateGridCell`
-    /// renders only when the CONTENT has a subtitle somewhere — a mixed 並排
+    /// renders only when the CONTENT has a subtitle somewhere — a mixed Hanji–Romanization Pairing
     /// list (one hanji-less literal among two-line cells) keeps the spacer so
-    /// rows line up, while an all-single-line list (羅馬字 / 漢羅濫 / TPS)
+    /// rows line up, while an all-single-line list (Romanization Only / Hanji with Romanization / TPS)
     /// reserves nothing. Reads the cells' own render source
     /// (`renderedSubtitle`) so the two predicates cannot drift.
     static func contentHasSubtitles(

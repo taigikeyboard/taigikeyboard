@@ -15,10 +15,10 @@ package com.siansiansu.taigikeyboard.ime.core.settings
  * across call sites; aligning with iOS is a separate scope.
  */
 enum class InputMode {
-    /** Pe̍h-ōe-jī (白話字) */
+    /** Pe̍h-ōe-jī (POJ) */
     POJ,
 
-    /** Tâi-lô (台羅) */
+    /** Tâi-lô (TL) */
     TL,
 
     /** English passthrough */

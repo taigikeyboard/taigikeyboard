@@ -1,7 +1,7 @@
-//! The 關於 page: what the project is and where to find it. Port of
+//! The About page: what the project is and where to find it. Port of
 //! `AboutPage.swift` / the Windows `about.rs`: two paragraphs, the sponsor
 //! and the four community links as rows of one group, the attribution
-//! line. No app icon, no name and no version — the 一般 pane's version row
+//! line. No app icon, no name and no version — the General pane's version row
 //! already says which build this is.
 
 use super::PageContext;

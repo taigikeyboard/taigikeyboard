@@ -187,7 +187,7 @@ final class CustomDictionaryStore: @unchecked Sendable {
             }
             // Both columns, because the user filters by whichever half of the
             // entry they remember. `LIKE` is case-insensitive for ASCII in
-            // SQLite, which is the romanization; 漢字 have no case to fold.
+            // SQLite, which is the romanization; Hanji have no case to fold.
             let pattern = "%\(SQLiteConnection.escapedForLike(trimmed))%"
             return try connection.query(
                 """

@@ -1,7 +1,7 @@
-//! The 快速齒 pane: every key the user can put an action on, in three
+//! The Shortcuts pane: every key the user can put an action on, in three
 //! titled groups (`ShortcutSettingsView.swift`, the Windows `shortcuts.rs`)
-//! — 選字, the keys that move through the candidates; 輸出, the keys that
-//! end the composition into the document; 其他, the switches and the
+//! — Candidate Selection, the keys that move through the candidates; Output, the keys that
+//! end the composition into the document; Other, the switches and the
 //! lists a key raises — plus the reset row. Every recorder row is the same
 //! field; which registry it writes to is the tier's. Last writer wins
 //! across both registries (`ShortcutConflicts`), and the loser's row
@@ -38,7 +38,7 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
     for action in ComposingAction::GROUPS[0] {
         recorder_row(&mut context, &selection, RecorderTarget::Composing(*action));
     }
-    // Shown, not recordable: the bare slot keys follow the 聲調拍法 picker
+    // Shown, not recordable: the bare slot keys follow the Tone Keys picker
     // (`ToneInputScheme`), the fixed navigation tier, the caret chord.
     let slot_row = fixed_row(
         &mut context,
@@ -90,7 +90,7 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
         CANCEL_KEY_LABEL.to_owned(),
     );
     page.add(&output);
-    // The two slot-key rows follow the tone scheme picked on 一般.
+    // The two slot-key rows follow the tone scheme picked on General.
     context.on_refresh(move |document: &SettingsDocument| {
         let slot_keys = ComposingKeyBindings::from_document(document).slot_key_set();
         slot_row.set_subtitle(&slot_keys_label(slot_keys));
@@ -245,7 +245,7 @@ fn slot_keys_label(slot_keys: CandidateSlotKeySet) -> String {
     .display()
 }
 
-/// The same run behind ONE Shift: the 漢羅 commit aimed at a slot.
+/// The same run behind ONE Shift: the Hanji/romanization commit aimed at a slot.
 fn shifted_slot_keys_label(slot_keys: CandidateSlotKeySet) -> String {
     ComposingKeyChord {
         key: slot_keys_run(slot_keys),

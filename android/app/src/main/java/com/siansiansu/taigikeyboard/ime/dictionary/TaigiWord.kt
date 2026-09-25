@@ -84,19 +84,19 @@ data class TaigiWord(
         // Drift causes silent divergence (one platform's tap commits the other script).
 
         /**
-         * 漢羅濫 split-cell commit-script marker ([CELL_SCRIPT_HANJI] or
+         * Hanji with Romanization split-cell commit-script marker ([CELL_SCRIPT_HANJI] or
          * [CELL_SCRIPT_ROMAN]). Present only on the split cells the builder
-         * emits under 漢羅濫 (`behavioral-invariants.md` §42 second
+         * emits under Hanji with Romanization (`behavioral-invariants.md` §42 second
          * exception); says what the cell SHOWS and COMMITS. Identity fields
          * (`hanzi`, [DISPLAY_TEXT], [CANONICAL_TL]) stay on both cells so
-         * 詞頻 / NextWord keys are marker-independent.
+         * Word-frequency / NextWord keys are marker-independent.
          */
         const val CELL_SCRIPT = "cellScript"
 
-        /** [CELL_SCRIPT] value: the cell shows and commits the 漢字. */
+        /** [CELL_SCRIPT] value: the cell shows and commits the Hanji. */
         const val CELL_SCRIPT_HANJI = "hanji"
 
-        /** [CELL_SCRIPT] value: the cell shows and commits the bare 羅馬字. */
+        /** [CELL_SCRIPT] value: the cell shows and commits the bare romanization. */
         const val CELL_SCRIPT_ROMAN = "roman"
     }
 }

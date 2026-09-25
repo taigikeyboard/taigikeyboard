@@ -82,7 +82,7 @@ final class CandidateDocumentTextTests: XCTestCase {
             ).wroteRomanization,
             "a pure 漢字 commit earns no space",
         )
-        // 括號標註 writes the pair either way round, and the pair HAS the roman.
+        // Annotate in Brackets writes the pair either way round, and the pair HAS the roman.
         for swapped in [false, true] {
             XCTAssertTrue(
                 CandidateDocumentText.resolved(
@@ -95,7 +95,7 @@ final class CandidateDocumentTextTests: XCTestCase {
 
     /// trace: `resolved` — the hanji-absent arm. Romanization under EVERY
     /// mode, including the two the old mode proxy called a hanji commit
-    /// (漢字優先 and 漢羅濫).
+    /// (Hanji-first and Hanji with Romanization).
     func testResolved_aCandidateWithNoHanjiAlwaysCarriesRomanization() {
         let romanOnly = TestFixtures.candidate(roman: "taigi", hanji: nil)
 
@@ -115,7 +115,7 @@ final class CandidateDocumentTextTests: XCTestCase {
     }
 
     /// Space writes the script the mode does NOT lead with, so the verdict
-    /// inverts with it — and 括號標註 never applies, since the alternate is one
+    /// inverts with it — and Annotate in Brackets never applies, since the alternate is one
     /// script by itself. The strings themselves are pinned by
     /// `testAlternate_isWhicheverScriptThePrimaryIsNot`.
     func testResolvedAlternate_invertsTheModeAndIgnoresBrackets() {
@@ -149,7 +149,7 @@ final class CandidateDocumentTextTests: XCTestCase {
         )
     }
 
-    // MARK: - The other script (the 漢羅 key)
+    // MARK: - The other script (the Hanji/romanization key)
 
     /// Space writes whichever script Return does not — that is the whole
     /// gesture, and it is why the key needs no mode of its own.
@@ -228,8 +228,8 @@ final class CandidateDocumentTextTests: XCTestCase {
         }
     }
 
-    /// Verbatim, hyphens included. 298 dictionary entries write the 輕聲 `--`
-    /// into the hanji field — MOE orthography, pinned by §21/S8 — and the 漢羅
+    /// Verbatim, hyphens included. 298 dictionary entries write the neutral-tone `--`
+    /// into the hanji field — MOE orthography, pinned by §21/S8 — and the mixed-script
     /// mixed entries carry the romanized half's own hyphen. Stripping either
     /// here would be this layer second-guessing the dictionary.
     func testAlternate_writesTheFieldVerbatim() {

@@ -318,7 +318,7 @@ Engine::~Engine() {
 
 /* One action per row, registered under a stable name; the titles are
  * filled by refreshMenu. Separators are rows too (`setSeparator`). The
- * configure row takes the 設定 row's title. */
+ * configure row takes the Settings row's title. */
 void Engine::buildMenu() {
     TaigiMenu *menu = taigi_runtime_menu(runtime_);
     if (!menu) {

@@ -1,7 +1,7 @@
 // Case-transform ops — extensions on RustEngineBridge that delegate char/string case handling
 // (including POJ/TL tone-mark case mapping) to Rust `phonetics::case_transform`; iOS counterpart is
 // `RustEngineBridge+CaseTransform.swift`. Single FFI hop per per-char or per-word case operation.
-// Mode and ⁿ大本字 (§53) are forwarded via the envelope `AppConfig`; case-transform is independent
+// Mode and ⁿ-becomes-ᴺ-in-capitals (§53) are forwarded via the envelope `AppConfig`; case-transform is independent
 // of POJ doubletap preprocessing so the fold fields are left off. Suggestion skip rules
 // (`id < 0 && id != -2` and `id == 0`) stay platform-side — only transform-eligible items reach
 // `transformSuggestion(...)`. The `LetterCase` indicator lives on `RustEngineBridge.LetterCase`.
@@ -110,7 +110,7 @@ fun RustEngineBridge.transformInputCase(
 /**
  * Per-suggestion case transformation. Output is post-processed via
  * engine-side `adjust_nasal_marker_case` (no separate FFI hop needed), or
- * always-lowercase `ⁿ` when ⁿ大本字 is off (§53).
+ * always-lowercase `ⁿ` when "ⁿ becomes ᴺ in capitals" is off (§53).
  * CapsLock uppercases everything; otherwise the candidate is split at the composing length —
  * typed portion matches the typed case, remaining portion is title- or lower-cased.
  */

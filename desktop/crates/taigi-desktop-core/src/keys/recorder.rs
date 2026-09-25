@@ -55,9 +55,9 @@ pub fn evaluate_press(tier: RecorderTier, press: &RecordedPress) -> RecorderOutc
     if press.is_repeat {
         return RecorderOutcome::Ignored;
     }
-    // Tab is recorded like any other key: it is the shipped key of 後一个候選
+    // Tab is recorded like any other key: it is the shipped key of Next Candidate
     // (`ComposingAction::NextCandidate`), and a field that let it walk the
-    // form instead left 恢復預設設定 — every row at once — as the only way to
+    // form instead left Reset to Defaults — every row at once — as the only way to
     // put it back (USER 2026-09-19). Escape and a click outside remain the
     // ways to leave a field.
     if press.modifiers.is_empty() {
@@ -84,8 +84,8 @@ pub fn evaluate_press(tier: RecorderTier, press: &RecordedPress) -> RecorderOutc
     // and the composing tier's bindings live exactly as long as the global
     // tier's preserved keys do. Refusing the whole family on one tier while
     // the other ships three defaults on it (`ShortcutAction::default_chord`)
-    // was a rule with no line to draw (USER 2026-09-04, real device: 打開設定
-    // 選單 could not take Ctrl+Alt+A).
+    // was a rule with no line to draw (USER 2026-09-04, real device: Open Settings
+    // Menu could not take Ctrl+Alt+A).
     if tier == RecorderTier::Global {
         if let Some(reason) = global_rejection(&chord) {
             return RecorderOutcome::Refused(reason);

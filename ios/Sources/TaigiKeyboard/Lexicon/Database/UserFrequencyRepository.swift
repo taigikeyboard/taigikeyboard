@@ -135,7 +135,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
 
     /// All `(word, tl, count)` rows, one per learned reading + any legacy
     /// `tl == ""` row. Preserves the R5 per-reading identity. Shared by all
-    /// three consumers — the `.taigi` backup export, the 詞頻 management viewer
+    /// three consumers — the `.taigi` backup export, the frequency management viewer
     /// (which lists + deletes per `(word, tl)`), AND the hand-editable CSV
     /// export — all per-reading. Do NOT add viewer-only SQL (limit / filter)
     /// here — it would leak into backup; split a wrapper if their needs diverge.
@@ -151,7 +151,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
     }
 
     /// Delete a single `(word, tl)` reading from the frequency table. R5
-    /// (#7): identity is the pair, so 一字多音 (重/tāng vs 重/tîng) delete
+    /// (#7): identity is the pair, so polyphonic Hanji (重/tāng vs 重/tîng) delete
     /// independently. Deleting the legacy `tl == ""` row removes only the
     /// fallback bucket; re-learned exact-reading rows survive.
     func deleteWord(_ word: String, tl: String) async throws {

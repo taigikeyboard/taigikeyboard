@@ -68,8 +68,8 @@ extension KeyboardShortcuts.Name {
         initial: .init(.backtick),
     )
 
-    /// The way round the 候選詞顯示 picker from the keyboard (USER 2026-09-02):
-    /// the backtick above is inert outside 並排, so a user in 合用 or 羅馬字
+    /// The way round the Candidate Display picker from the keyboard (USER 2026-09-02):
+    /// the backtick above is inert outside Hanji–Romanization Pairing, so a user in Hanji with Romanization or Romanization Only
     /// had no key that led back. H for Hàn-Lô, the thing being switched — a
     /// command reached for now and then, where a mnemonic pays. ⌃⌘ is the
     /// family the two switches above live in. McBopomofo's ⌃⌘H is its 半形標點
@@ -88,7 +88,7 @@ extension KeyboardShortcuts.Name {
     )
 
     /// The Telex key table, on demand (USER 2026-09-09): the legend under the
-    /// 聲調拍法 picker was a wall of text in a pane the user is not in while
+    /// Tone Keys picker was a wall of text in a pane the user is not in while
     /// typing, so it became a floating card any key dismisses
     /// (`TelexGuidePanel`). `/` is the key help lives on — `?` is ⇧/, and
     /// every app that answers "which keys do what" answers it there — and
@@ -104,11 +104,11 @@ extension KeyboardShortcuts.Name {
     /// special symbols in a candidate-style window. `,` because the picker is
     /// a punctuation menu and the comma is the punctuation key — and ⌃⌘ is the
     /// family. Not the bare backtick 新注音 / McBopomofo / vChewing open their
-    /// symbol menus on: that key is 漢羅對調 here, and stays (USER 2026-09-09:
-    /// 「不要更改 ` 快捷鍵,這是台語輸入法的共識」).
+    /// symbol menus on: that key is the Hanji/romanization swap here, and stays (USER 2026-09-09:
+    /// "do not change the ` shortcut; it is the consensus among Taigi input methods").
     ///
     /// The one action Carbon never fires (`ShortcutAction.firesFromTheKeyPath`);
-    /// the name still lives in this registry so the 快捷鍵 row, the recorder
+    /// the name still lives in this registry so the Shortcuts row, the recorder
     /// and the conflict resolution are the ones every other action uses.
     static let showSymbolPicker = Self(
         "showSymbolPicker",
@@ -119,14 +119,14 @@ extension KeyboardShortcuts.Name {
 /// One user-assignable action. The list is the single source for the recorder
 /// rows, the handler registration, and the enable/disable gate — adding a case
 /// adds the action everywhere at once.
-/// The case order is the row order of the 快速齒 pane (USER 2026-09-21): the
-/// three switches in the order the 一般 pane lists what they switch — 輸入文字,
-/// 輸出文字, 候選詞顯示 — then the windows a key raises, the ones used while
+/// The case order is the row order of the Shortcuts pane (USER 2026-09-21): the
+/// three switches in the order the General pane lists what they switch — Input Script,
+/// Output Script, Candidate Display — then the windows a key raises, the ones used while
 /// typing first and the settings window last.
 enum ShortcutAction: CaseIterable, Sendable {
     case toggleRomanization
     case toggleTranslateSwapped
-    /// Steps the 候選詞顯示 picker one place: 並排 → 合用 → 羅馬字 → 並排.
+    /// Steps the Candidate Display picker one place: Hanji–Romanization Pairing → Hanji with Romanization → Romanization Only → Hanji–Romanization Pairing.
     case cycleCandidateDisplayMode
     /// Opens the symbol picker over the caret.
     case showSymbolPicker

@@ -93,7 +93,7 @@ class ThemeResolverTest {
         assertEquals(0f, resolved.keyShadowIntensity, 0f)
     }
 
-    // A 框線 family theme (id "framedBlue") carries keyBorderWidth=1.0 ON TOP of
+    // An Outlined family theme (id "framedBlue") carries keyBorderWidth=1.0 ON TOP of
     // factory sizes; other scalars stay factory.
     @Test
     fun resolved_framedFamily_carriesKeyBorderWidth() {
@@ -103,7 +103,7 @@ class ThemeResolverTest {
         assertEquals(ThemeAppearance.DEFAULT.keyCornerRadius, resolved.keyCornerRadius, 0f)
     }
 
-    // 經典 / 簡潔 family themes keep the factory border (0).
+    // Filled / Borderless family themes keep the factory border (0).
     @Test
     fun resolved_classicAndCleanFamilies_keepFactoryKeyBorderWidth() {
         for (id in listOf("standardBlue", "cleanBlue")) {

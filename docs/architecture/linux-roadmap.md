@@ -2,7 +2,7 @@
 
 > **Type**: Planning (design record + PR table; becomes Reference once shipped)
 > **Keywords**: `linux`, `IBus`, `D-Bus`, `zbus`, `GTK4`, `libadwaita`, `desktop`, `engine reuse`, `macOS parity`, `Windows parity`
-> **Status**: **implemented — PR0–PR9 all MERGED 2026-09-23 (#140–#151); first-machine dogfood S74 pending (no Linux machine yet)**. History: PR0 2026-09-22; **2026-09-23 USER decision: Fcitx5 is the primary frontend, the IBus engine (PR3) is kept as the second** (「選項 1，Fcitx5 主、IBus 保留，go」) — a Linux VM for dogfood exists from here on, which removes the one reason IBus was chosen first (§ L1). Authored WITHOUT a Linux machine, the way the Windows platform was (`windows-roadmap.md` § W13); verified on the macOS host + a GitHub-hosted Ubuntu runner, dogfooded later.
+> **Status**: **implemented — PR0–PR9 all MERGED 2026-09-23 (#140–#151); first-machine dogfood S74 pending (no Linux machine yet)**. History: PR0 2026-09-22; **2026-09-23 USER decision: Fcitx5 is the primary frontend, the IBus engine (PR3) is kept as the second** ("option 1, Fcitx5 primary, keep IBus, go") — a Linux VM for dogfood exists from here on, which removes the one reason IBus was chosen first (§ L1). Authored WITHOUT a Linux machine, the way the Windows platform was (`windows-roadmap.md` § W13); verified on the macOS host + a GitHub-hosted Ubuntu runner, dogfooded later.
 > **Session memory**: project memory `project_linux_ime.md` (Claude auto-memory)
 > **Siblings**: `macos-roadmap.md` (behaviour oracle), `windows-roadmap.md` (the blind-authoring precedent and the crates this platform reuses)
 
@@ -12,7 +12,7 @@
 
 Add Linux as the fifth platform (third desktop platform beside macOS and Windows). USER 2026-09-22 (verbatim):
 
-> design and implement linux desktop, the design should be consist with windows and macos … 設定選單UI使用原生UI元件
+> design and implement linux desktop, the design should be consist with windows and macos … the settings menu UI uses native UI components
 
 Three consequences shape every decision below:
 
@@ -80,8 +80,9 @@ Application (GTK / Qt / Chromium / Electron / terminal) ── IBus client modul
         ▼
 ┌─────────────────────────────────────────────────────────────────────────────────────────┐
 │ taigikeyboard-settings (crate taigikeyboard-settings, bin; gtk4-rs + libadwaita)         │
-│  adw::ApplicationWindow + NavigationSplitView sidebar: 一般 / 外觀 / 快捷鍵 / 詞庫來源 /  │
-│  自訂詞庫 / 關於 (+ unlisted 辭典搜尋); PreferencesPage / PreferencesGroup / ActionRow /  │
+│  adw::ApplicationWindow + NavigationSplitView sidebar: General / Appearance /            │
+│  Shortcuts / Dictionary Sources / Custom Dictionary / About (+ unlisted                  │
+│  Dictionary Search); PreferencesPage / PreferencesGroup / ActionRow /                    │
 │  SwitchRow / ComboRow; AlertDialog; Banner; ColumnView table; gtk::FileDialog CSV        │
 └─────────────────────────────────────────────────────────────────────────────────────────┘
 Runtime data: $XDG_CONFIG_HOME/taigikeyboard/settings.json ·
@@ -98,8 +99,8 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
 `serialize` functions were read, not remembered).
 
 - **L1 Frameworks = Fcitx5 (primary) + IBus (second), one Rust core, two thin shells.**
-  **Revised 2026-09-23** (USER: 「我認為使用Fcitx5比較好，我可以安裝linux vm測試」 → 「選項 1，
-  Fcitx5 主、IBus 保留，go」). The original choice of IBus first had ONE real reason: no Linux
+  **Revised 2026-09-23** (USER: "I think Fcitx5 is better; I can install a linux vm to test" → "option 1, Fcitx5
+  primary, keep IBus, go"). The original choice of IBus first had ONE real reason: no Linux
   machine, so only a pure-D-Bus engine could be compiled and checked from the Mac; with a
   VM that reason is gone, and Fcitx5 is where Taiwanese / CJK Linux users are (fcitx5-chewing,
   fcitx5-rime, KDE's default), has the most complete Wayland story, draws its own themed
@@ -238,7 +239,7 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
   `gtk::ColumnView` over a `gio::ListStore`, CSV import / export through
   `gtk::FileDialog`, the shortcut recorder a `gtk::EventControllerKey` on the focused row
   (GTK delivers key events to the app — no hook, unlike WinUI). Adwaita follows the
-  system light / dark (`adw::StyleManager` default) as every GNOME app does; the 外觀
+  system light / dark (`adw::StyleManager` default) as every GNOME app does; the Appearance
   mode row is **not shown** on Linux — it would restyle only this window, while the
   candidate panel's colours are the daemon's (§ L4). Qt /
   KDE parity is **not in this slice**: one toolkit, and IBus's own panel is GTK. The
@@ -253,7 +254,7 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
   forbids self-positioned popups without layer-shell, and every IBus engine (rime, mozc,
   chewing, anthy) lets the panel draw. So: `UpdateLookupTable` with the
   `MAX_DISPLAY_CANDIDATES`-capped list the Windows layouts hold, `labels` = the slot-key
-  set the 快捷鍵 pane records (`CandidateSlotKeySet`), `page_size` = that cap, `cursor_pos`
+  set the Shortcuts pane records (`CandidateSlotKeySet`), `page_size` = that cap, `cursor_pos`
   = the highlighted slot, `orientation` from `candidateLayout` (horizontal →
   `HORIZONTAL`; vertical and expandable → `VERTICAL` — the expandable grid has no panel
   equivalent). The preedit is `UpdatePreeditText` with one `UNDERLINE_SINGLE` attribute
@@ -263,25 +264,26 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
   `composition_terminated`). `CandidateClicked` selects the slot, never commits
   (`CandidateItemView.swift:47-48` — identical semantics); `PageUp` / `PageDown` /
   `CursorUp` / `CursorDown` from the panel run the same `CandidateNavigation` intents the
-  keys do. 外觀 rows that the panel owns are **not shown** on Linux: 候選字大小, 候選窗大小,
-  字型, and the window's 外觀 mode (§ L3). The 字型管理 pane is **not shown** either
-  (USER 2026-09-24 「for linux,拿掉字型管理頁面」, after a report that picking a typeface
+  keys do. Appearance rows that the panel owns are **not shown** on Linux: Candidate Text
+  Size, Candidate Window Size, Font, and the window's Appearance mode (§ L3). The Manage
+  Typefaces pane is **not shown** either
+  (USER 2026-09-24: "for linux, remove the Manage Typefaces page", after a report that picking a typeface
   there left the panel unchanged): the panel's font is the framework's — Fcitx5
-  › 附加元件 › 經典使用者介面 › 字體 (`classicui.conf` `Font=`), IBus › 偏好設定 › 使用自訂字型
-  under `ibus-ui-gtk3`, and nothing per input method under GNOME Shell, whose IBus popup
+  › Addons › Classic User Interface › Font (`classicui.conf` `Font=`), IBus › Preferences ›
+  Use custom font under `ibus-ui-gtk3`, and nothing per input method under GNOME Shell, whose IBus popup
   reads no font setting (GNOME 46 `ibusCandidatePopup.js`; `custom-font` verified to have
   no effect on the Ubuntu 24.04 VM). The bundled typefaces install as system fonts (L7),
   so they are in those pickers, and a user adds a typeface the system way
-  (`~/.local/share/fonts`). A stored / launched `fontManagement` pane lands on 一般.
-  `候選窗排列` offers only
-  橫 / 直 (a stored expandable reads as 直, the key is never rewritten) and
-  `候選字顯示方式` stays. The candidate window
+  (`~/.local/share/fonts`). A stored / launched `fontManagement` pane lands on General.
+  `Candidate Window Layout` offers only
+  Horizontal / Vertical (a stored expandable reads as Vertical, the key is never rewritten) and
+  `Candidate Display Mode` stays. The candidate window
   switch (`candidateWindowEnabled`) maps to "no lookup table" — identical semantics.
   `Effect::DeleteBackwardFromDocument` is a no-op as on macOS / Windows (the preedit is
   never in the document). Two more named divergences the panel forces: the §34 literal
   cell, keyless on macOS / Windows (`lead_cell_is_unkeyed`), takes the first slot key —
-  the panel labels every position of every page the same way; and a 合用 cell's other
-  script (`CandidateCellContent::annotation`) is drawn after the text in the same cell,
+  the panel labels every position of every page the same way; and under the combined
+  (mixed) display option a cell's other script (`CandidateCellContent::annotation`) is drawn after the text in the same cell,
   not as a second line. The auto-space swap (§23) needs the client's surrounding text
   (`IBUS_CAP_SURROUNDING_TEXT` → `DeleteSurroundingText`); a client without it gets
   the mark after the space, as typed (logged, named). The Telex guide (Windows draws a card, macOS a panel) is shown
@@ -310,10 +312,10 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
   (`taigi-desktop-core::keys::ComposingKeyIntent`) is used unchanged. **Global chords**:
   `openLastSettingsPane` Ctrl+Alt+S, `toggleRomanization` Ctrl+Alt+C, `toggleTranslateSwapped`
   bare `` ` `` — the Windows roster verbatim (macOS ⌃⌘ under ⌘→Ctrl / ⌃→Alt; USER
-  2026-08-31 「快捷鍵邏輯必須與 macOS 一致」), matched in the key path while this engine is
+  2026-08-31 "the shortcut logic must match macOS"), matched in the key path while this engine is
   the active one — IBus has no preserved-key registry, so there the chords live exactly as
   long as the Windows fallback path's do; the Fcitx5 addon matches them in `keyEvent` the
-  same way (one classifier, two shells), and may later also register them as Fcitx5 hotkeys. **No Shift-tap 中/英 mode** (Windows W5b): IBus
+  same way (one classifier, two shells), and may later also register them as Fcitx5 hotkeys. **No Shift-tap Chinese/English mode** (Windows W5b): IBus
   switches engines (Super+Space) the way macOS switches input sources, which is why the
   Mac has no mode of its own either; every key in English is another engine's.
 - **L6 Panel menu = status-area actions (Fcitx5) / engine properties (IBus).** On Fcitx5:
@@ -325,9 +327,9 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
   panel indicator text — IBus shows an engine's symbol in the top bar) and whose
   sub-properties mirror the Mac's input-source menu row for row
   (`InputSourceMenuRenderer.swift`, `TaigiInputController.swift:372-`): the two switch rows
-  under their 快捷鍵-pane names with the recorded chord in the tooltip, a separator, 台語齒盤設定
-  (`PropertyActivate` → spawn the settings window on the last pane), a separator, 關於
-  (settings window on the 關於 pane) — the shared list's 檢查更新 row is skipped (§ L10).
+  under their Shortcuts-pane names with the recorded chord in the tooltip, a separator, TaigiKeyboard Settings
+  (`PropertyActivate` → spawn the settings window on the last pane), a separator, About
+  (settings window on the About pane) — the shared list's Check for Updates row is skipped (§ L10).
   Titles are resolved from
   `taigi-desktop-core::strings` in the display language each time the rows are built
   (PR5, `chrome::menu_items`; one list, both shells — since 2026-09-25 the rows themselves
@@ -376,13 +378,13 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
   method is a system package (Fcitx5 and IBus load it from system paths), and a Linux
   packager's review of the 2026-09-24 reversal put it plainly: an input method has no
   business checking its own updates; an update nag works against the distribution that
-  packages it. USER 2026-09-25: 「for desktop,只有macos,windows需要檢查更新功能,linux不需要，可以整個拿掉」.
+  packages it. USER 2026-09-25: "for desktop, only macos and windows need the update check; linux doesn't, it can be removed entirely".
   The manual and automatic checks (#176, #178, never released) are removed whole: no
-  檢查更新 row in the panel menu (`chrome::menu_id` skips the shared
+  Check for Updates row in the panel menu (`chrome::menu_id` skips the shared
   `MenuCommand::CheckForUpdates`), no engine trigger, no `--check-now` / `--check-updates`
   (refused, L8), no D-Bus service file, no `appcast/linux.json`, and the settings binary
-  links no `taigi-desktop-update` — no TLS stack in the package. The 一般 pane keeps the
-  running version and a 去下載 link to taigikeyboard.tw. No build flag either: there is
+  links no `taigi-desktop-update` — no TLS stack in the package. The General pane keeps the
+  running version and a Download link to taigikeyboard.tw. No build flag either: there is
   nothing to switch off. Spawned children stay reaped on a thread (`launcher::spawn_detached`).
 - **L11 Packaging + release.** `make -C linux install PREFIX=/usr DESTDIR=` installs the two
   binaries, the component XML (rendered with the prefix), the dictionaries, a
@@ -438,19 +440,19 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
 | Behaviour | macOS | Windows | Linux | Class |
 |---|---|---|---|---|
 | Candidate window | own `NSPanel`, 3 layouts | own D2D popup, 3 layouts | daemon lookup table, orientation from layout | platform-adapted presentation |
-| 外觀 rows 候選字大小 / 候選窗大小 / 字型 | yes | yes | hidden (panel-owned) | unsupported host capability |
-| 字型管理 pane | selects the candidate typeface | selects the candidate typeface | hidden (panel-owned; font set in Fcitx5 / IBus) | unsupported host capability |
+| Appearance rows Candidate Text Size / Candidate Window Size / Font | yes | yes | hidden (panel-owned) | unsupported host capability |
+| Manage Typefaces pane | selects the candidate typeface | selects the candidate typeface | hidden (panel-owned; font set in Fcitx5 / IBus) | unsupported host capability |
 | Focus loss mid-composition | client commits | text stays as host left it | daemon commits (`PREEDIT_COMMIT`) | platform-adapted |
-| 中/英 Shift tap | none (OS switches sources) | yes | none (IBus switches engines) | identical to macOS |
+| Chinese/English Shift tap | none (OS switches sources) | yes | none (IBus switches engines) | identical to macOS |
 | Global chords | Carbon hotkeys, session-scoped | preserved keys + fallback | matched in `ProcessKeyEvent` while active | identical semantics |
 | Mode flash HUD | yes | yes | panel property symbol / label | platform-adapted |
 | Menu | input-source menu | tray button menu | panel property menu | platform-adapted |
 | Update check | Sparkle-style in-app | scheduled task + in-app | none; version + download link (§ L10) | named divergence: the package manager updates a Linux input method |
 | Data dir | `~/Library/Application Support/<bundle>` | `%APPDATA%\TaigiKeyboard` | XDG config + data split | platform-adapted |
 | Settings frame persisted | yes | no | no | named divergence |
-| 教典 off: its eleven 腔口 rows | shown, greyed | shown, greyed | shown, greyed (USER 2026-09-23: mirror the other desktops; the expander of PR7 reverted) | identical semantics |
+| MOE dictionary off: its eleven accent rows | shown, greyed | shown, greyed | shown, greyed (USER 2026-09-23: mirror the other desktops; the expander of PR7 reverted) | identical semantics |
 | Sidebar icons | SF Symbols | Fluent | Adwaita symbolic (`preferences-system`, `applications-graphics`, `input-keyboard`, `emblem-documents`, `x-office-address-book`) | identical semantics |
-| 自訂詞庫 table | two columns 羅馬字 / 漢字, double-click edits | two columns, ✎ edits | two columns, double-click or ✎ edits | identical semantics |
+| Custom Dictionary table | two columns Romanization / Hanji, double-click edits | two columns, ✎ edits | two columns, double-click or ✎ edits | identical semantics |
 | Release flow | `make desktop-release` stages the `.pkg` | the `.exe` on the same draft | the `.deb` on the same draft (`linux-build.yml` `attach`); announce writes `_data/linux_release.json` (download buttons only, no appcast, § L10) | identical semantics |
 
 ## Phase / PR table
@@ -467,9 +469,9 @@ PR0 (quota, 2026-09-22); each later PR records its own verdict here.
 | PR3 | Engine I — wire | `linux/` workspace + toolchain; `taigi-linux-platform` (XDG paths, prefix, key translation, launcher, open URL; host stubs none needed); `taigikeyboard-ibus`: bus address + connection, factory, engine object with the full key path (snapshot → intent → manager inside the runtime lock → preedit / commit / lookup table), focus + reset + destroy lifecycle, wire types with signature tests; component XML template; `linux/Makefile`; `linux-build.yml` with the daemon smoke | MERGED #143 `28b3e4f6` 2026-09-23 — Codex skipped (quota) |
 | PR4 | Fcitx5 shell | `taigi-linux-core` extracted from the IBus crate (runtime, session, executor `Emit`, selection; IBus crate rebased on it); `taigi-linux-ffi` staticlib + `taigikeyboard.h` C ABI with a header-compiles test; `linux/fcitx5/` CMake addon (`InputMethodEngineV3`, client preedit, `CommonCandidateList`, commit, delete-surrounding, reset / deactivate, addon + inputmethod `.conf`); `linux/Makefile` `build-fcitx5` / install into `${libdir}/fcitx5`; CI builds the addon | MERGED #144 `68dfc6b3` 2026-09-23 — Codex skipped (quota); CI facts: Ubuntu 24.04 ships fcitx5 **5.1.7** — no `add_fcitx5_addon` (5.1.12+) and no `FCITX_ADDON_FACTORY_V2`, so the addon uses `add_library(MODULE)` + `FCITX_ADDON_FACTORY`; the `.conf` files install under `${CMAKE_INSTALL_DATADIR}/fcitx5` (`FCITX_INSTALL_PKGDATADIR` is always `/usr/share/fcitx5`); `make -C linux check-cpp` syntax-checks the C++ on the Mac over a `references/fcitx5` 5.1.7 clone |
 | PR5 | Chrome, both shells | status-area actions (Fcitx5) / properties menu (IBus) per § L6, settings live reload (§ L9), global chords + toggle latch, symbol picker + Telex guide as candidate lists, mode label (`subModeLabelImpl` / property symbol), `run-engine` dev target | MERGED #147 `076041db` 2026-09-23 (#146 auto-closed with its base branch) — `chrome.rs` in `taigi-linux-core`: chords + latch, Telex guide and symbol picker as lookup tables, `menu_items` / `mode_label` / `mode_symbol` / `Emit::ModeChanged` + `AnnounceMode`; Fcitx5 status-area `SimpleAction`s + `subMode` / `subModeLabelImpl` + `showInputMethodInformation`, panel paging routed through the core; IBus `RegisterProperties` root `InputMode` + `PropertyActivate`; live reload was already `LiveSettings::current()` (L9). Codex post-impl FIX → applied |
-| PR6 | Settings I | `taigikeyboard-settings`: `adw` shell (sidebar, pane routing, `--pane`, single instance, display language, live tick), 一般, 外觀 (Linux row set), 關於 | this PR (branch `feat/linux-settings-shell`) — crate `taigikeyboard-settings` (lib + bin): `adw::Application` `tw.taigikeyboard.Settings` with `HANDLES_COMMAND_LINE` (second launch re-activates on `--pane`), `NavigationSplitView` sidebar + `gtk::Stack` of `adw::PreferencesPage`s, write-failure / read-only `adw::Banner`, 1 s `glib::timeout_add_local` live tick (a display-language change rebuilds the pages), `StyleManager` colour scheme from 外觀; 一般 (Linux row set + version / 去下載 row, no update check) / 外觀 (mode · 候選窗排列 · 候選詞顯示) / 關於; Windows-only flags refused by name; `tests/panes.rs` (`harness = false`; mounts the whole window, then: every built pane in the stack, a switch row writes its key, an outside write is adopted on the tick without a revision bump, a language picked in the window rebuilds the sidebar, an unbuilt `--pane` lands on 一般, the read-only window writes nothing, reset keeps the language; skips without a display unless `TAIGI_REQUIRE_DISPLAY` — set on CI under xvfb); `make -C linux run-settings` opens the window on the Mac. Codex post-impl **FIX → applied** (local write follows the same rebuild path as an outside one; unbuilt panes route to 一般 and `--pane` is remembered; read-only = in-memory defaults, never a temp file; the content `NavigationPage` title is what the header bar draws (libadwaita 1.5); refused flags print to the caller's stderr via `printerr_literal` (gio `v2_80`)) |
-| PR7 | Settings II | 快捷鍵 (recorder over `EventControllerKey`, both registries, conflicts, slot-key-set picker), 詞庫來源 (教典 subcollections in an `adw::ExpanderRow`) | MERGED #149 2026-09-23 — 快速齒 (recorder over a capture-phase `EventControllerKey`, keycode latch, recording ends on pane switch / other write / focus loss) + 詞庫來源 (教典 `ExpanderRow`); Codex FIX applied |
-| PR8 | Settings III | 自訂詞庫 (`ColumnView` table, paging, CRUD dialog, CSV via `FileDialog`, delete all, clear learning — background work on a `gio` task with the 400 ms busy card), unlisted 辭典搜尋 + external lookup URLs; headless pane-mount test | MERGED #150 2026-09-23 — 自訂詞庫 + 辭典搜尋; Codex FIX applied (render snapshot, window `JobSlot`, `changed` generations, banner for the data dir, lexicon retry, weak dialog, `use_markup(false)`) |
+| PR6 | Settings I | `taigikeyboard-settings`: `adw` shell (sidebar, pane routing, `--pane`, single instance, display language, live tick), General, Appearance (Linux row set), About | this PR (branch `feat/linux-settings-shell`) — crate `taigikeyboard-settings` (lib + bin): `adw::Application` `tw.taigikeyboard.Settings` with `HANDLES_COMMAND_LINE` (second launch re-activates on `--pane`), `NavigationSplitView` sidebar + `gtk::Stack` of `adw::PreferencesPage`s, write-failure / read-only `adw::Banner`, 1 s `glib::timeout_add_local` live tick (a display-language change rebuilds the pages), `StyleManager` colour scheme from Appearance; General (Linux row set + version / Download row, no update check) / Appearance (mode · Candidate Window Layout · Candidate Display) / About; Windows-only flags refused by name; `tests/panes.rs` (`harness = false`; mounts the whole window, then: every built pane in the stack, a switch row writes its key, an outside write is adopted on the tick without a revision bump, a language picked in the window rebuilds the sidebar, an unbuilt `--pane` lands on General, the read-only window writes nothing, reset keeps the language; skips without a display unless `TAIGI_REQUIRE_DISPLAY` — set on CI under xvfb); `make -C linux run-settings` opens the window on the Mac. Codex post-impl **FIX → applied** (local write follows the same rebuild path as an outside one; unbuilt panes route to General and `--pane` is remembered; read-only = in-memory defaults, never a temp file; the content `NavigationPage` title is what the header bar draws (libadwaita 1.5); refused flags print to the caller's stderr via `printerr_literal` (gio `v2_80`)) |
+| PR7 | Settings II | Shortcuts (recorder over `EventControllerKey`, both registries, conflicts, slot-key-set picker), Dictionary Sources (MOE dictionary subcollections in an `adw::ExpanderRow`) | MERGED #149 2026-09-23 — Shortcuts (recorder over a capture-phase `EventControllerKey`, keycode latch, recording ends on pane switch / other write / focus loss) + Dictionary Sources (MOE dictionary `ExpanderRow`); Codex FIX applied |
+| PR8 | Settings III | Custom Dictionary (`ColumnView` table, paging, CRUD dialog, CSV via `FileDialog`, delete all, clear learning — background work on a `gio` task with the 400 ms busy card), unlisted Dictionary Search + external lookup URLs; headless pane-mount test | MERGED #150 2026-09-23 — Custom Dictionary + Dictionary Search; Codex FIX applied (render snapshot, window `JobSlot`, `changed` generations, banner for the data dir, lexicon retry, weak dialog, `use_markup(false)`) |
 | PR9 | Packaging + release | `make -C linux install / uninstall` (both shells), `.desktop` + icon (`tools/desktop/make-app-icon.swift` PNG set), `cargo-deb` metadata, CI `.deb` artifact on release publish, `scripts/stage-desktop.sh` dispatch, `docs/architecture/linux-release.md`, `desktop-release.md` + `system-overview.md` + README rows, `S74` dogfood item (VM: KDE Plasma + Fcitx5 first, then GNOME + IBus) | MERGED #151 2026-09-23 — `make -C linux deb` (dpkg-deb over the install layout, `Depends` from dpkg-shlibdeps: `fcitx5 | ibus, libadwaita-1-0 (>= 1.5~beta), libc6 (>= 2.39), libfcitx5core7 (>= 5.1.7), libfcitx5utils2 (>= 5.1.7), libgcc-s1, libglib2.0-0t64 (>= 2.79.0), libgtk-4-1 (>= 4.9.3), libstdc++6 (>= 13.1)`), `.desktop` + hicolor icons, `linux-build.yml` build/attach split, `stage-desktop.sh` both hosted runs, `linux-release.md`, S74; Codex FIX applied (the addon file is `libtaigikeyboard.so` — the `Library=export:` name — never `--clobber`, `source_sha` guard, read-only build job) |
 
 Dependencies: PR1 → PR2 → PR3 → PR4 → PR5; PR2 → PR6 → PR7 → PR8; PR9 last. PR4/PR5 and
@@ -486,9 +488,9 @@ PR6–PR8 are parallelisable after PR3.
 | Root `Makefile` `desktop-check` / `linux-check` / `version-desktop` | PR2 | yes | no |
 | `scripts/stage-desktop.sh` dispatches `linux-build.yml`; announce workflow Linux asset | PR8 | yes | separate repo for the website half |
 
-## 最佳實踐對齊 (references)
+## Best practices alignment (references)
 
-| 主流做法 | 來源 | 本 plan 對應 |
+| Mainstream practice | Source | This plan (phase) |
 |---|---|---|
 | Engine as a separate process the daemon spawns from a component XML; panel draws preedit + candidates | ibus `src/ibusfactory.c`, `src/ibusengine.c`; rime `ibus-rime`, mozc `unix/ibus/` | L1, L4 |
 | Serialisable wire tuples `(sa{sv}…)` in a fixed field order kept for compatibility | ibus `src/ibusserializable.c:277`, `src/ibusenginedesc.c` ("The serialized order should be kept") | L1 |
@@ -512,13 +514,13 @@ and the client processes it itself).
 
 Ordered acceptance for the first machine (Ubuntu / Fedora GNOME on Wayland, then an X11
 session, then a KDE session with IBus): (1) `make -C linux install` → `ibus restart` →
-the engine appears in Settings › Keyboard › Input Sources under 台語 (nan) with the 台
+the engine appears in Settings › Keyboard › Input Sources under Taigi (nan) with the 台
 symbol; (2) S1 POJ diacritics + S2 TPS-off + S3 candidate paging on the panel in gedit /
-GTK4 text view, Firefox, a Qt app, a terminal; (3) slot-key labels match the 快捷鍵 pane;
+GTK4 text view, Firefox, a Qt app, a terminal; (3) slot-key labels match the Shortcuts pane;
 (4) focus loss commits the preedit; (5) Ctrl+Alt+S opens the settings window on the last
 pane, second launch re-activates it; (6) Ctrl+Alt+C / bare `` ` `` switch and the panel
 symbol follows; (7) every settings row round-trips through `settings.json` and the engine
-picks it up on the next composition; (8) 自訂詞庫 CRUD + CSV; (9) `.deb` install /
+picks it up on the next composition; (8) Custom Dictionary CRUD + CSV; (9) `.deb` install /
 remove keeps `~/.config/taigikeyboard` + `~/.local/share/taigikeyboard`; (10) high
 contrast + large text; (11) a GNOME session with the engine on an external keyboard with
 a non-US layout (keysym vs keycode). Each `Sn` line lands in `dogfood-checklist.md` with

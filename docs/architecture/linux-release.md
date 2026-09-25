@@ -148,8 +148,8 @@ Windows channel is; an apt repository with its own key is outside this slice.
 Linux packages are updated by the package manager (`linux-roadmap.md` L10):
 an input method is a system package, and one that checks for its own updates
 works against the distribution that packages it. The input method checks for
-nothing, manually or automatically; the 一般 pane shows the running version
-and a 去下載 link to taigikeyboard.tw, the panel menu has no 檢查更新 row, the
+nothing, manually or automatically; the General pane shows the running version
+and a Download link to taigikeyboard.tw, the panel menu has no Check for Updates row, the
 `update*` settings keys stay unwritten and `taigi-desktop-update` is not linked
 (no TLS stack in the package). The announcement (`scripts/announce-release.sh`)
 still writes `_data/linux_release.json`, `_data/linux_rpm_release.json` and
@@ -171,7 +171,7 @@ sudo pacman -U ./taigikeyboard-<version>-1-x86_64.pkg.tar.zst    # Arch
 fcitx5 -r            # or: ibus restart
 ```
 
-Then add 台語齒盤 in `fcitx5-configtool` (Fcitx5) or the desktop's input-source
+Then add TaigiKeyboard in `fcitx5-configtool` (Fcitx5) or the desktop's input-source
 settings (IBus). First-machine acceptance is the dogfood run-book in
 `linux-roadmap.md` and `dogfood-checklist.md` S74. Uninstall: `sudo apt remove taigikeyboard`
 (`sudo dnf remove taigikeyboard`, `sudo pacman -R taigikeyboard`).

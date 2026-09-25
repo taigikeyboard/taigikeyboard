@@ -66,13 +66,13 @@ val CandidateCellText.showsSubtitle: Boolean
 
 // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Autocomplete/Views/CandidateCellHelper.swift displayTitle / displaySubtitle
 // and the desktop PresentedCandidate one-script cells. Drift causes silent divergence
-// (one platform shows a subtitle under roman-only, or still renders the superseded one-label 濫 cell).
+// (one platform shows a subtitle under roman-only, or still renders the superseded one-label mixed cell).
 
 /**
  * Arm order — hanji-less rows are roman regardless of mode; TPS precedes
  * ROMAN_ONLY / COMBINED so TPS ignores the setting; COMBINED renders ONE
  * script per cell, no subtitle (the builder already split each candidate
- * into adjacent 漢字 + 羅馬字 cells — §42 second exception): the
+ * into adjacent Hanji + romanization cells — §42 second exception): the
  * [cellScript] marker says which script this cell shows, and an unmarked
  * COMBINED row (a NextWord prediction — not split) renders hanji-led;
  * swap decides the lead otherwise. `displayRoman` is already TPS-converted

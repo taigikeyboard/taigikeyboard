@@ -1,15 +1,15 @@
 import SwiftUI
 
-/// The theme tab root: a gallery of horizontal shelves (mirrors the齒盤佈局 page
+/// The theme tab root: a gallery of horizontal shelves (mirrors the Layout page
 /// layout — 240pt cards with screenshot previews, horizontal scroll).
 ///
 /// - **Custom Themes** — the user's saved themes (apply / edit / delete via a
 ///   per-card menu) plus a `Create New…` card (hidden at the cap). These show a
 ///   live button preview (background + a styled centered key).
-/// - **經典 / 框線 / 簡潔** — one shelf per built-in key-style family
-///   (`BuiltInThemes.families`). All three carry the SAME 7 colors (預設 + 5 light
-///   gradients + dark 暗眠山貓); they differ only in key style (經典 = filled keys, 框線 =
-///   transparent keys + outline, 簡潔 = transparent keys). Each card shows its
+/// - **Filled / Outlined / Borderless** — one shelf per built-in key-style family
+///   (`BuiltInThemes.families`). All three carry the SAME 7 colors (Default + 5 light
+///   gradients + dark Catppuccin); they differ only in key style (Filled = filled keys, Outlined =
+///   transparent keys + outline, Borderless = transparent keys). Each card shows its
 ///   screenshot (or a neutral placeholder until one ships) and applies on tap.
 ///
 /// `selectedThemeId` / `themeRevision` are read via `@AppStorage` on the App
@@ -137,7 +137,7 @@ enum ThemeEditorRoute: Hashable {
 
 // MARK: - Card metrics
 
-/// Shared dimensions for every card so the theme shelves line up with the 齒盤佈局
+/// Shared dimensions for every card so the theme shelves line up with the Layout
 /// page. `width` matches `LayoutOptionCard.cardWidth`; `previewAspectRatio`
 /// matches the `layout_*_preview` assets (585×369) so theme screenshots render
 /// at the identical size.
@@ -150,7 +150,7 @@ private enum ThemeCardMetrics {
 // MARK: - Shelf
 
 /// One shelf: a gray section header above a horizontally scrolling row of cards
-/// (mirrors the 齒盤佈局 page's `layoutSection`).
+/// (mirrors the Layout page's `layoutSection`).
 private struct ThemeShelf<Content: View>: View {
     let title: String
     @ViewBuilder let content: Content
@@ -242,7 +242,7 @@ private struct ThemeGalleryCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Button(action: onTap) {
-                // Color.clear sets the aspect-ratio box (same ratio as the 齒盤佈局
+                // Color.clear sets the aspect-ratio box (same ratio as the Layout
                 // assets); the preview is overlaid to fill it. Selection marker mirrors
                 // LayoutOptionCard: a dimming mask + a blue circle checkmark over the
                 // preview, plus a blue stroke when selected (no border otherwise).
@@ -321,7 +321,7 @@ private struct ThemeGalleryCard: View {
 // MARK: - Screenshot placeholder
 
 /// Neutral fallback for a built-in card whose screenshot asset is not yet added
-/// (scaffold stage) — mirrors the 齒盤佈局 page's missing-image fallback.
+/// (scaffold stage) — mirrors the Layout page's missing-image fallback.
 private struct ThemeScreenshotPlaceholder: View {
     let title: String
 
@@ -373,7 +373,7 @@ private struct CustomThemeButtonPreview: View {
             .overlay {
                 if borderWidth > 0 {
                     // Border follows the key text color (mirrors the real keyboard's
-                    // role-first border), so the preview matches the live 框線 look.
+                    // role-first border), so the preview matches the live Outlined look.
                     RoundedRectangle(cornerRadius: cornerRadius)
                         .strokeBorder(keyText, lineWidth: borderWidth)
                 }

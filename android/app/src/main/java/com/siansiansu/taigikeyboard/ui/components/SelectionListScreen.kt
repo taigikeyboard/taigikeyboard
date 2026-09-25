@@ -1,4 +1,4 @@
-// Generic single-choice sub-screen shared by the settings pickers (input mode, 候選詞顯示).
+// Generic single-choice sub-screen shared by the settings pickers (input mode, Candidate Display).
 package com.siansiansu.taigikeyboard.ui.components
 
 import androidx.activity.compose.BackHandler

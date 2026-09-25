@@ -270,7 +270,7 @@ fn adjust_nasalized_vowel_key(char_str: &str, raw_input: &str) -> String {
 /// dedicated TPS mark key — neither layout exposes `ˆ`, so its sole input
 /// affordance is the digit-`9` popup (Android) / numeric pad (iOS). Without
 /// this normalization the literal `9` dangles as a non-syllable char and the
-/// tone-9 dictionary words (昨昏 `ㄗㄤˆ`, 才 `ㄘㄞˆ`, the 日語借詞 set) stay
+/// tone-9 dictionary words (昨昏 `ㄗㄤˆ`, 才 `ㄘㄞˆ`, the Japanese loanword set) stay
 /// unreachable.
 ///
 /// Fires only when `raw_input` ends in a TPS syllable body that can carry a
@@ -500,7 +500,7 @@ mod tests {
             "ㄗㄤ",   // tsang → 昨昏
             "ㄘㄞ",   // tshai → 才
             "ㄗㄨ",   // tsu → 喌
-            "ㄒㄧㄢ", // sian (an nasal-coda final) → 日語借詞 せんせい
+            "ㄒㄧㄢ", // sian (an nasal-coda final) → Japanese loanword せんせい
             "ㄍㄚ",   // bare onset+vowel
             "ㆦ",     // zero-onset vowel
         ] {

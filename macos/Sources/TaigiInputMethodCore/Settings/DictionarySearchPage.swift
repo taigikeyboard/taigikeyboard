@@ -1,4 +1,4 @@
-// The 揣辭典 pane: looking a word up across the enabled dictionaries.
+// The Dictionary Search pane: looking a word up across the enabled dictionaries.
 
 import AppKit
 import SwiftUI
@@ -7,7 +7,7 @@ import SwiftUI
 @Observable
 final class DictionarySearchModel {
     /// How many of the results the list shows. The engine is asked for more so
-    /// the 教育部-first sort has something to reorder; the rest are one scroll
+    /// the MOE-first sort has something to reorder; the rest are one scroll
     /// away in the dictionaries themselves.
     static let visibleResultLimit = 5
 
@@ -81,7 +81,7 @@ struct DictionarySearchPage: View {
 
                 if !model.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     if model.results.isEmpty {
-                        // Nothing while the query is still settling: "揣無" is an
+                        // Nothing while the query is still settling: "No results" is an
                         // answer, and showing it before anything has been asked
                         // would be the wrong one.
                         if !model.isSearching {

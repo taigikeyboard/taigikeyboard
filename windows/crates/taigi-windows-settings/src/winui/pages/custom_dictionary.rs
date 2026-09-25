@@ -1,4 +1,4 @@
-//! 自訂詞庫: the words the user added themselves. Port of
+//! Custom Dictionary: the words the user added themselves. Port of
 //! `CustomDictionaryPage.swift`: rows fetched one PAGE at a time (10, so a
 //! page never needs a scroller of its own), a filter that reloads once it
 //! settles, a `ListView` whose selection drives the add / edit / delete

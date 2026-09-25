@@ -1,7 +1,7 @@
-//! 無連字符 (`AppConfig.hyphenless_roman`, USER 2026-09-20) integration test
+//! No Hyphens (`AppConfig.hyphenless_roman`, USER 2026-09-20) integration test
 //! (`INVARIANT_HYPHENLESS_ROMAN_DISPLAY_ONLY`). With the flag on, every
 //! candidate's rendered `roman` drops the dictionary's inter-syllable `-`
-//! and writes the 輕聲 marker `--` as `·` — dictionary and custom rows
+//! and writes the neutral-tone marker `--` as `·` — dictionary and custom rows
 //! alike — while the identity sidechannels the platform round-trips on
 //! commit (`display_text`, `canonical_tl`) keep the dictionary form, and the
 //! §34 literal keeps whatever the user typed. Off, nothing changes.

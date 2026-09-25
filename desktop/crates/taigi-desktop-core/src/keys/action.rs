@@ -25,7 +25,7 @@ pub enum ComposingAction {
     /// Commits the romanization exactly as typed. Shift+Enter — the escape
     /// hatch, one of the two actions that may never be left unbound.
     CommitLiteral,
-    /// Commits the highlighted candidate in the OTHER script — the 漢羅 key.
+    /// Commits the highlighted candidate in the OTHER script — the Hanji/romanization key.
     /// Space (rime-phah-taibun binds the same gesture on `\`).
     CommitAlternateScript,
 }

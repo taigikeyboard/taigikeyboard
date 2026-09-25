@@ -105,7 +105,7 @@ pub(crate) fn valid_span_endings_lowered(
             if !probe.is_char_boundary(end) {
                 continue;
             }
-            // §35 barrier contract, part (a): a stripped separator / 連字
+            // §35 barrier contract, part (a): a stripped separator / hyphen
             // is a mandatory syllable cut — no SINGLE syllable may cross
             // it (`cur < barrier < end`). Chains may still span it link
             // by link, which is exactly the §31 soft-separator behavior

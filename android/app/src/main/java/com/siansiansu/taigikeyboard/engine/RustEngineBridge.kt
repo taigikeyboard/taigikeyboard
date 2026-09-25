@@ -802,7 +802,7 @@ object RustEngineBridge {
 
     /**
      * Phonetics / composing base [AppConfig] — input mode + the POJ marker
-     * options (doubletap folds, ⁿ大本字 inverted on the wire as
+     * options (doubletap folds, ⁿ-becomes-ᴺ inverted on the wire as
      * `force_lowercase_nasal_marker`, §53). `internal` so sibling impl
      * objects share one canonical factory (no per-slice drift).
      */
@@ -842,7 +842,7 @@ object RustEngineBridge {
      * commits: `Append` / `DeleteBackward` after a nail re-render the
      * nailed prefix through `combined_display(nailed, raw, config)` too,
      * so a nail and the keystroke after it must agree on the prefix
-     * (the 2026-05-18 "commit entry points only" split left 漢字優先
+     * (the 2026-05-18 "commit entry points only" split left Hanji-first
      * showing `台 gi` while typing after `台`; desktop closed the same
      * drift in #31, S37). Only `Reset`, which carries no config, stays
      * outside.
@@ -859,7 +859,7 @@ object RustEngineBridge {
             .setIsTranslateSwapped(settings.isTranslateSwapped || settings.inputMode == "tps")
             .setOutputBothScripts(settings.isOutputBothScripts)
             .setCandidateDisplayMode(settings.candidateDisplayMode.toProto())
-            // Proto field 10 — 無連字符; already TPS-folded by `PrefHelper.isHyphenlessRomanEnabled` (§49).
+            // Proto field 10 — No Hyphens; already TPS-folded by `PrefHelper.isHyphenlessRomanEnabled` (§49).
             .setHyphenlessRoman(settings.isHyphenlessRomanEnabled)
             .build()
 
@@ -888,7 +888,7 @@ object RustEngineBridge {
 enum class NormalizeMode { POJ, TL, ENGLISH }
 
 /**
- * Carrier for the POJ marker options (the two doubletap folds + ⁿ大本字).
+ * Carrier for the POJ marker options (the two doubletap folds + ⁿ becomes ᴺ in capitals).
  * Caller (e.g. ComposingManager) MUST construct this from live settings per
  * Codex v2 §7 — no default value at the wrapper level.
  */

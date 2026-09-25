@@ -4,7 +4,7 @@ import Foundation
 
 /// One learned row: a word, the reading it was learned under, and its usage.
 ///
-/// A word is identified by the `(漢字, canonical TL)` PAIR (`CLAUDE.md` Core
+/// A word is identified by the `(Hanji, canonical TL)` PAIR (`CLAUDE.md` Core
 /// Principle #7), which is why `tl` is part of the row rather than a label on
 /// it: 重/tîng (重複) and 重/tāng (重量) are different words, and committing one
 /// must not promote the other.

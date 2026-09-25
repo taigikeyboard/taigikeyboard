@@ -16,7 +16,7 @@ pub mod engine {
 }
 
 impl engine::AppConfig {
-    /// Whether candidate cells render romanization only (候選詞顯示 = 羅馬字).
+    /// Whether candidate cells render romanization only (Candidate Display = Romanization Only).
     ///
     /// The single normalisation point for `candidate_display_mode`: the
     /// proto3 default `0`, an unknown value from a newer platform, and
@@ -27,12 +27,12 @@ impl engine::AppConfig {
         self.candidate_display_mode() == engine::CandidateDisplayMode::RomanOnly
     }
 
-    /// Whether every candidate cell shows ONE script (羅馬字, or 漢羅濫's
+    /// Whether every candidate cell shows ONE script (Romanization Only, or Hanji with Romanization's
     /// split cells) — the displays under which a cell that reads like an
     /// earlier one is collapsed into it (§42 / §44), so the collapsed row's
-    /// identity has to survive on the survivor. For 漢羅濫 the collapse is the
+    /// identity has to survive on the survivor. For Hanji with Romanization the collapse is the
     /// platform's (§42 split) and the engine relies on it keeping the FIRST
-    /// roman cell — the slot-0 §34 literal — as the survivor. 並排 (and the
+    /// roman cell — the slot-0 §34 literal — as the survivor. Pairing (and the
     /// same fallbacks as [`Self::is_roman_only_display`]) answer `false`.
     pub fn is_single_script_display(&self) -> bool {
         matches!(

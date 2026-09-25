@@ -261,7 +261,7 @@ extension RustEngineBridge {
         return result.rows.map(row(from:))
     }
 
-    /// Searches by 漢字.
+    /// Searches by Hanji.
     static func lexiconSearchByHanzi(
         query: String,
         inputMode: LexiconInputMode,
@@ -283,7 +283,7 @@ extension RustEngineBridge {
         return result.rows.map(row(from:))
     }
 
-    /// Whether `text` contains 漢字, and so which of the two searches to run.
+    /// Whether `text` contains Hanji, and so which of the two searches to run.
     ///
     /// Asked of the engine rather than tested here: the ranges are an
     /// invariant the three platforms share
@@ -291,7 +291,7 @@ extension RustEngineBridge {
     /// hand-written version had an unreachable clause for exactly this reason —
     /// its 16-bit character type could not express the extension planes.
     ///
-    /// `false` on a failed round-trip, which routes a 漢字 query down the
+    /// `false` on a failed round-trip, which routes a Hanji query down the
     /// romanization path and finds nothing, rather than failing the search.
     static func isHanzi(_ text: String) -> Bool {
         var payload = Taigi_Engine_IsHanziRequest()

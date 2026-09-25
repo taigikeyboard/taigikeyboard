@@ -142,7 +142,7 @@ impl CandidateMode {
 ///
 /// The span offsets are byte offsets into the raw buffer the engine holds,
 /// and `canonical_tl` is the identity romanization (Core Principle #7 keys a
-/// word on the `(漢字, canonical TL)` pair). Both must be round-tripped back
+/// word on the `(Hanji, canonical TL)` pair). Both must be round-tripped back
 /// to the engine verbatim on commit.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ContinuousCandidate {

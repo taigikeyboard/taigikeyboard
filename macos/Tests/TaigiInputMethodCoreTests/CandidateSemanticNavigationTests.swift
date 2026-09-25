@@ -16,7 +16,7 @@ final class CandidateSemanticNavigationTests: XCTestCase {
         CandidateCellContent(text: "候\($0)", annotation: "hau\($0)")
     }
 
-    /// The 漢羅 swap path: same list, new rendering. Every layout keeps the
+    /// The Hanji/romanization swap path: same list, new rendering. Every layout keeps the
     /// selection on its absolute index and swaps every cell's scripts —
     /// `rerenderCandidates` is a distinct contract from the fresh-list
     /// `updateCandidates`, which resets the selection to the first candidate.
@@ -78,7 +78,7 @@ final class CandidateSemanticNavigationTests: XCTestCase {
 
     /// The mode a re-render comes back in is the mode it went in with, NOT one
     /// re-derived from where the selection sits: a grid opened with `↓` while
-    /// the first candidate is still selected must stay a grid across a 漢羅
+    /// the first candidate is still selected must stay a grid across a Hanji/romanization
     /// swap. Folding it back to a row and unfolding again is what made the
     /// window blink on device (USER 2026-08-23).
     func testExpandable_rerenderKeepsTheGridOpenEvenWithTheSelectionOnRowZero() {

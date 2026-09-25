@@ -24,7 +24,7 @@ use crate::strings::StringKey;
 pub enum ShortcutAction {
     ToggleRomanization,
     ToggleTranslateSwapped,
-    /// Steps 候選詞顯示 through its picker order (`CandidateDisplayMode::next`).
+    /// Steps Candidate Display through its picker order (`CandidateDisplayMode::next`).
     CycleCandidateDisplayMode,
     /// Opens the symbol picker over the caret.
     ShowSymbolPicker,
@@ -95,23 +95,23 @@ impl ShortcutAction {
     ///
     /// Ctrl+Alt is the Mac's ⌃⌘ under this platform's modifier mapping
     /// (`windows-guidelines.md`: ⌘→Ctrl, ⌃→Alt), so the two desktops keep one
-    /// roster: ⌃⌘S → Ctrl+Alt+S for 設定, ⌃⌘C → Ctrl+Alt+C for the
+    /// roster: ⌃⌘S → Ctrl+Alt+S for Settings, ⌃⌘C → Ctrl+Alt+C for the
     /// romanization switch, ⌃⌘H → Ctrl+Alt+H for the display-mode cycle. The
     /// letters are the Mac's reasons, unchanged — S for Settings / siat-tīng /
     /// settei, C for the bottom row a key pressed all day should sit on
-    /// (`ShortcutActions.swift:31-52`), and H for Hàn-Lô / 漢羅, the thing the
+    /// (`ShortcutActions.swift:31-52`), and H for Hàn-Lô (Hanji/romanization), the thing the
     /// cycle switches. USER 2026-08-31: the chord logic has to match macOS's.
     ///
     /// Ctrl+Shift is NOT that family and its S and C are both taken —
-    /// Ctrl+Shift+S is 另存新檔 in Word / Excel / LibreOffice / GIMP / Inkscape
-    /// and 全部儲存 in Visual Studio; Ctrl+Shift+C opens the DevTools element
+    /// Ctrl+Shift+S is Save As in Word / Excel / LibreOffice / GIMP / Inkscape
+    /// and Save All in Visual Studio; Ctrl+Shift+C opens the DevTools element
     /// picker in Chrome / Edge. Nor is any other pair of modifiers free with
     /// these letters: Alt+Shift is the input-language-switch chord and Word's
-    /// Alt+Shift+<letter> family, Win+Shift+S is 剪取工具 and Win+Ctrl+S is
+    /// Alt+Shift+<letter> family, Win+Shift+S is Snipping Tool and Win+Ctrl+S is
     /// speech recognition (and Win chords are refused outright below).
     /// Ctrl+Alt+S is JetBrains' own Settings chord, i.e. an existing Windows
     /// convention for exactly this command. What it does cost, and what a
-    /// user rebinds away from if it bites: Word's 分割視窗, Visual Studio's
+    /// user rebinds away from if it bites: Word's Split, Visual Studio's
     /// Server Explorer (S) and Call Stack (C), and Teams' see-all-chats (C).
     ///
     /// `/` for the Telex guide is the Mac's ⌃⌘/ carried over the same way:
@@ -127,9 +127,9 @@ impl ShortcutAction {
     ///
     /// `,` for the symbol picker is the Mac's ⌃⌘, carried over the same way:
     /// the picker is a punctuation menu and the comma is the punctuation key.
-    /// Not the bare backtick 新注音 / McBopomofo / vChewing open their symbol
-    /// menus on: that key is 漢羅對調 here, and stays (USER 2026-09-09:
-    /// 「不要更改 ` 快捷鍵,這是台語輸入法的共識」).
+    /// Not the bare backtick 新注音 (New Phonetic) / McBopomofo / vChewing open their symbol
+    /// menus on: that key is Hanji/Romanization Swap here, and stays (USER 2026-09-09:
+    /// "do not change the ` shortcut; it is the consensus among Taigi input methods").
     ///
     /// Changing a default here moves every install that never recorded the row:
     /// nothing writes a default into `settings.json`, so an absent key IS the
@@ -457,7 +457,7 @@ mod tests {
     fn roster_order_is_the_pane_order() {
         // `ALL` is the global recorder rows top to bottom
         // (`pages/shortcuts.rs`, under the composing rows) and the Mac's
-        // `allCases`: the three switches in the 一般 pane's order of what
+        // `allCases`: the three switches in the General pane's order of what
         // they switch, then the windows used while typing, the settings
         // window last (USER 2026-09-21).
         assert_eq!(

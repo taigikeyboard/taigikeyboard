@@ -9,9 +9,9 @@ import XCTest
 /// file, and `ThemeId.default` is the legacy-buffer sentinel. A built-in id
 /// that is a UUID string or equals "default" would be mis-routed.
 ///
-/// The catalog is a key-STYLE axis: three families (經典 / 框線 / 簡潔) share the
-/// same 6 colors and differ only in key style — 經典 fills keys, 框線 / 簡潔 make
-/// keys transparent (background shows through), 框線 adding an outline.
+/// The catalog is a key-STYLE axis: three families (Filled / Outlined / Borderless) share the
+/// same 6 colors and differ only in key style — Filled fills keys, Outlined / Borderless make
+/// keys transparent (background shows through), Outlined adding an outline.
 final class BuiltInThemesTests: XCTestCase {
     // trace: families flatten into `all`; a non-empty catalog is required for the picker shelves
     func testFamilies_flattenIntoAll() {
@@ -63,7 +63,7 @@ final class BuiltInThemesTests: XCTestCase {
         XCTAssertEqual(BuiltInThemes.theme(id: ThemeId.default)?.displayNameKey, .themePaletteDefault)
     }
 
-    // trace: three key-style families (經典/框線/簡潔), each carrying the same 7 colors
+    // trace: three key-style families (Filled/Outlined/Borderless), each carrying the same 7 colors
     func testFamilies_threeKeyStyleFamiliesEachWithSevenColors() {
         XCTAssertEqual(BuiltInThemes.families.map(\.titleKey), [.themeFamilyClassic, .themeFamilyFramed, .themeFamilyClean])
         for family in BuiltInThemes.families {
@@ -76,7 +76,7 @@ final class BuiltInThemesTests: XCTestCase {
         XCTAssertEqual(BuiltInThemes.all.count, 21, "3 families × 7 colors")
     }
 
-    // trace: 經典 keeps filled keys; 框線/簡潔 recolor keys to transparent (key == background)
+    // trace: Filled keeps filled keys; Outlined/Borderless recolor keys to transparent (key == background)
     func testKeyStyleFamilies_framedAndCleanHaveTransparentKeys() {
         let classic = BuiltInThemes.theme(id: "standardBlue")!.colors(for: .light)
         XCTAssertEqual(classic.normalKeyFillColor?.alpha, 1, "經典 keys are opaque (white)")
@@ -87,7 +87,7 @@ final class BuiltInThemesTests: XCTestCase {
         }
     }
 
-    // trace: only the 框線 family draws the outline; 經典/簡潔 leave keyBorderWidth nil
+    // trace: only the Outlined family draws the outline; Filled/Borderless leave keyBorderWidth nil
     func testKeyStyleFamilies_onlyFramedCarriesKeyBorderWidth() {
         XCTAssertEqual(BuiltInThemes.theme(id: "framedBlue")?.keyBorderWidth, 1.0)
         XCTAssertNil(BuiltInThemes.theme(id: "standardBlue")?.keyBorderWidth)
@@ -111,7 +111,7 @@ final class BuiltInThemesTests: XCTestCase {
         }
     }
 
-    // trace: framed/clean 預設 stay adaptive (bg/text nil) but carry transparent keys; 經典 預設 fully adaptive
+    // trace: framed/clean Default stay adaptive (bg/text nil) but carry transparent keys; Filled Default fully adaptive
     func testKeyStyleFamilies_defaultVariantsAdaptiveWithTransparentKeys() {
         for id in ["framedDefault", "cleanDefault"] {
             let colors = BuiltInThemes.theme(id: id)!.colors(for: .light)
@@ -142,11 +142,11 @@ final class BuiltInThemesTests: XCTestCase {
         }
     }
 
-    // trace: 暗眠山貓 is the dark-only Catppuccin Mocha theme across all 3 families —
+    // trace: Catppuccin is the dark-only Catppuccin Mocha theme across all 3 families —
     // light == nil so BOTH schemes resolve to the dark variant (always dark, the mirror of
     // the 5 light-only gradients). gradient top #1E1E2E (Base) → #181825 (Mantle);
-    // key+candidate text #CDD6F4 (Text); 經典 keys (letter + function) share #313244
-    // (Surface0); 框線/簡潔 keep transparent keys.
+    // key+candidate text #CDD6F4 (Text); Filled keys (letter + function) share #313244
+    // (Surface0); Outlined/Borderless keep transparent keys.
     func testCatppuccinTheme_isDarkOnlyAcrossFamilies() {
         for id in ["standardCatppuccin", "framedCatppuccin", "cleanCatppuccin"] {
             let theme = BuiltInThemes.theme(id: id)!
@@ -160,11 +160,11 @@ final class BuiltInThemesTests: XCTestCase {
             XCTAssertEqual(colors.keyTextColor, CodableColor(hex: 0xCDD6F4), "\(id) key text = Mocha Text")
             XCTAssertEqual(colors.candidateTextColor, CodableColor(hex: 0xCDD6F4), "\(id) candidate text = Mocha Text")
         }
-        // 經典 暗眠山貓: letter + function keys share the Surface0 neutral fill.
+        // Filled Catppuccin: letter + function keys share the Surface0 neutral fill.
         let classic = BuiltInThemes.theme(id: "standardCatppuccin")!.colors(for: .dark)
         XCTAssertEqual(classic.normalKeyFillColor, CodableColor(hex: 0x313244), "經典 暗眠山貓 letter key = Mocha Surface0")
         XCTAssertEqual(classic.specialKeyFillColor, CodableColor(hex: 0x313244), "經典 暗眠山貓 function key shares the Surface0 fill")
-        // 框線/簡潔 keep keys transparent (gradient shows through).
+        // Outlined/Borderless keep keys transparent (gradient shows through).
         for id in ["framedCatppuccin", "cleanCatppuccin"] {
             let colors = BuiltInThemes.theme(id: id)!.colors(for: .dark)
             XCTAssertEqual(colors.normalKeyFillColor?.alpha, 0, "\(id) letter keys must be transparent")
@@ -174,8 +174,8 @@ final class BuiltInThemesTests: XCTestCase {
 
     // trace: candidate tints derive from the gradient top stop — highlight LIGHTENED
     // toward white ×0.5, pressed DEEPENED toward black ×0.65 (each 0-255 component truncated):
-    //   櫻花 top E6C2D0 → highlight F2E0E7, pressed 957E87
-    //   海風 top BFD2EA → highlight DFE8F4, pressed 7C8898
+    //   Sakura top E6C2D0 → highlight F2E0E7, pressed 957E87
+    //   Sea Breeze top BFD2EA → highlight DFE8F4, pressed 7C8898
     func testCodableColor_derivesCandidateTints() {
         let pinkTop = CodableColor(hex: 0xE6C2D0)
         XCTAssertEqual(pinkTop.lightened(towardWhite: KeyboardColorSettings.candidateHighlightLightenFactor), CodableColor(hex: 0xF2E0E7))

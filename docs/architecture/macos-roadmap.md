@@ -2,7 +2,7 @@
 
 > **Type**: Reference (shipped; kept as the design record)
 > **Keywords**: `macos`, `InputMethodKit`, `IMKit`, `desktop`, `engine reuse`
-> **Status**: shipped — PR0–PR13 merged 2026-08-17; candidate-window port 2026-08-18 (D11); released in desktop v3.6.7 (first macOS + Windows desktop release) and v3.6.8 (`changelog/desktop-v3.6.7.md`, `changelog/desktop-v3.6.8.md`). Device dogfood runs as one batch per USER 2026-08-15 (「我想等 desktop 實作完成再 dogfood」); the batch is still open. Release mechanics: `desktop-release.md`.
+> **Status**: shipped — PR0–PR13 merged 2026-08-17; candidate-window port 2026-08-18 (D11); released in desktop v3.6.7 (first macOS + Windows desktop release) and v3.6.8 (`changelog/desktop-v3.6.7.md`, `changelog/desktop-v3.6.8.md`). Device dogfood runs as one batch per USER 2026-08-15 ("I want to wait until the desktop implementation is done before dogfooding"); the batch is still open. Release mechanics: `desktop-release.md`.
 > **Session memory**: project memory `project_macos_ime.md` (Claude auto-memory)
 > **Plan provenance**: Phase-0 research + Codex pre-impl design review (ANALYSIS-ONLY, 2026-08-15) — FFI-reuse / SwiftPM-bundle / platform_id-deferral all confirmed; generation-ownership, proto-gen isolation, PR sizing, bundle-metadata cautions incorporated.
 
@@ -20,7 +20,7 @@ shortcuts.
 **Hard constraints**: release actions stay user-gated. The
 "no modification of `ios/`, `android/`, `i18n/`, `content/`; `engine/` changes
 purely additive" rule came from a concurrent iOS/Android session — **lifted
-2026-08-15 (USER: 「目前沒有並行 session」)**. Shared-surface changes are now
+2026-08-15 (USER: "there are no parallel sessions right now")**. Shared-surface changes are now
 allowed on their merits; the coordination register below stays as the record of
 what each PR touches. PR8a's proto regen landed in #528 (2026-08-17).
 
@@ -214,7 +214,7 @@ Phase-0 plan and project memory `project_macos_ime.md` (Claude auto-memory).
     required). `split_compound` splits on whitespace only — a hyphen is inside
     a macOS word (`tâi-gí`, `hōo--guá`), a space is only emitted between
     segments the walker calls separate words. `compound_association_pairs`
-    emits nothing when the 漢字 and romanization sides split into different
+    emits nothing when the Hanji and romanization sides split into different
     counts, rather than padding an empty TL onto a real word (Core Principle
     #7). `is_noise_text` is "contains no letter" rather than a third
     punctuation table.
@@ -225,7 +225,7 @@ Phase-0 plan and project memory `project_macos_ime.md` (Claude auto-memory).
     real history. No context timer — the engine's strict 10 s association
     window already fences recording, and `is_showing` is never true here.
   - `user_association.db` ships schema v6, one column wider in its unique key
-    than the iOS/Android v5 shape, so 一字多音 stay separate on the PREVIOUS
+    than the iOS/Android v5 shape, so multi-reading characters stay separate on the PREVIOUS
     word too. The same gap on iOS and Android is real and unfixed — correcting
     it there is a migration over existing user data.
   - Learning databases are NOT excluded from Time Machine, unlike the iOS
@@ -237,10 +237,10 @@ Phase-0 plan and project memory `project_macos_ime.md` (Claude auto-memory).
   writes it.
 - **D9 Proto codegen** — `gen-macos-protos` writes to an independent output dir
   `macos/Sources/TaigiInputMethodCore/Engine/Generated/` (committed). **Revised
-  2026-08-15 (USER: 「我覺得可以併入到 make build,只是現階段不 release」)**: both
+  2026-08-15 (USER: "I think it can be folded into make build, just not released at this stage")**: both
   macOS steps now run inside root `make build`, so no committed artefact can go
   stale behind an engine change and no separate drift rule is needed.
-  **Revised 2026-08-26 (USER: 「我覺得可以一起,讓指令簡單」)**: the `make
+  **Revised 2026-08-26 (USER: "I think they can go together, to keep the commands simple")**: the `make
   macos-protos` / `make macos-engine` shortcuts PR1 added are gone. They only
   ever saved the 3-5 min mobile rebuild, and regenerating one platform's
   artefacts from shared sources is what leaves the others stale against the same
@@ -324,18 +324,18 @@ Phase-0 plan and project memory `project_macos_ime.md` (Claude auto-memory).
 | PR4a | Candidate engine seam | `CommitContinuous` bridge op; manager `fetchCandidates` + effect-backed `commitCandidate`; document-string formatter; pure `CandidateListModel`; tests. No key-table change, no window, no user-visible behaviour | **Merged** #524 `4b155238` |
 | PR4b | Candidate IMK integration | `KeyEventSnapshot` named-key discriminator; Space / arrows / paging / `Ctrl+1…9` intents; controller routing; `CandidatePanel` + SwiftUI bar; caret anchor + screen selection; panel owner token; `hidePalettes` | **Merged** #525 `a93fa507` |
 | PR5 | Settings + menubar | `SettingsStore` + live-read provider replacing `DefaultEngineSettingsProvider`; SwiftUI form; `SettingsWindowController`; programmatic main menu; IMK `menu()` with `showPreferences:` + TL/POJ items; `Ctrl+Shift+,` as the settings item's key equivalent | **Merged** #527 `62ff7d40` |
-| PR6 | Custom dict persistence | **re-activated 2026-08-17 (USER), folded into PR11 below** (supersedes 2026-08-16「先不實作」). No migrator — macOS never shipped a v1 schema | folded → PR11 |
+| PR6 | Custom dict persistence | **re-activated 2026-08-17 (USER), folded into PR11 below** (supersedes 2026-08-16 "don't implement it for now"). No migrator — macOS never shipped a v1 schema | folded → PR11 |
 | PR7 | Custom dict UI | **re-activated 2026-08-17 (USER), folded into PR12 below.** Backup-exclusion decided at PR12 (inside TM scope) | folded → PR12 |
 | PR8a+PR9 | Proto coordination + freq/nextword ⚠ | **merged into ONE PR at USER instruction.** `PLATFORM_MACOS` + triple-touch regen (`rust-migration-policy.md` §4; ios/android GENERATED files only) · macOS nextword decide contract · `user_frequency.db` + `user_association.db` · phase-2 boosted fetch · learning settings | **Merged** #528 `652eb28d` |
 
-### Settings v2 + 詞庫 page track (2026-08-17, USER-approved plan)
+### Settings v2 + Dictionary page track (2026-08-17, USER-approved plan)
 
-Goals: (a) 詞庫 settings page with FULL iOS/Android Tab3 parity — 資料管理 4 sub-pages
-(自訂詞庫/詞頻/詞關聯/備份還原) + 24 dictionary source toggles + live dictionary search
+Goals: (a) Dictionary settings page with FULL iOS/Android Tab3 parity — Data Management 4 sub-pages
+(Custom Dictionary/Frequency/Association/Backup and Restore) + 24 dictionary source toggles + live dictionary search
 with external lookup; (b) native macOS preferences style — NSTabViewController toolbar
-tabs ([⚙ 一般] [📖 詞庫]), resizable window; (c) Magnet-style configurable shortcuts
+tabs ([⚙ General] [📖 Dictionary]), resizable window; (c) Magnet-style configurable shortcuts
 (sindresorhus/KeyboardShortcuts lib — first non-Apple dependency, USER-approved) for
-開啟設定視窗 (default `Ctrl+Shift+,`) / TL↔POJ 切換 / 候選開關 (漢羅對調·漢羅並列; the 顯示當咧拍的字 SHORTCUT stays retired 2026-09-02 — its 一般-pane settings row came back 2026-09-03, §34).
+Open Settings Window (default `Ctrl+Shift+,`) / TL↔POJ switch / candidate toggle (Hanji/romanization swap · Hanji/romanization side-by-side; the Show Typed Text SHORTCUT stays retired 2026-09-02 — its General-pane settings row came back 2026-09-03, §34).
 Strings stay Traditional-Chinese literals (PR5 convention). Zero new FFI — all ops already
 in the generated protos. PR sizing ~600-1000 LOC each (USER chose fewer/larger PRs
 2026-08-17 over the 200-500 default; session-per-PR overhead).
@@ -343,9 +343,9 @@ in the generated protos. PR sizing ~600-1000 LOC each (USER chose fewer/larger P
 | PR | Phase | Scope | Status |
 |---|---|---|---|
 | PR10 | Window restyle + shortcuts | NSTabViewController `.toolbar` tabs + resizable window; `GeneralSettingsView` + `DictionarySettingsPane` shell; KeyboardShortcuts dep + `ShortcutActions` registry + recorder UI; IMK menu key equivalent read from the stored chord | **Merged** #534 `43cd8d6a` |
-| PR11 | 詞庫 data layer (no UI) — **Merged** #537 `83bfa549` | 24 source-toggle keys (iOS `SharedSettings.swift:53-84` spellings) + `DictionarySourceToggles` in `EngineSettings`; `lexiconDictionaryFilters` bridge + `FetchAtPos.enabled_sources_bitmask` + `custom_entries` wiring; `CustomDictionaryStore` (schema v2 + side table, cap 30000, no migrator) + phonetics derive bridge; `UserDataDatabase.perform` + freq/assoc list/delete/clear/batchImportMerge APIs; CSV codecs third mirror. ⚠ intended behavior change: defaults exclude iTaigi/台日/台華/植物/異體/khiin from continuous candidates (was sentinel all-on) | done |
-| PR12 | 詞庫 tab UI — **Merged** #538 `29bc5ada` | toggles view (MOE + kautian 11 + other + supplement); custom-dict CRUD + CSV + seed; 詞頻/詞關聯 viewers (limit 100, pair-key delete, clear, CSV); 備份還原 `.taigi` (BackupService JSON v2, `platform:"macos"`); NSOpen/NSSavePanel helpers. Custom-dict Time-Machine policy: stays inside TM scope (plan default, unchanged) | done |
-| PR13 | 辭典搜尋 — **Merged** #539 `88e0b223` | lexicon search bridge (searchWithSources/searchByHanzi/isHanzi) + tlToPoj; `DictionarySearchService` (toggle snapshot per query, kautian-first sort, badge retag, custom-dict prefix merge); search UI (300ms debounce, field at TOP of 詞庫 tab — mac idiom) + 萌典教典/ChhoeTaigi external links via NSWorkspace.open | done |
+| PR11 | Dictionary data layer (no UI) — **Merged** #537 `83bfa549` | 24 source-toggle keys (iOS `SharedSettings.swift:53-84` spellings) + `DictionarySourceToggles` in `EngineSettings`; `lexiconDictionaryFilters` bridge + `FetchAtPos.enabled_sources_bitmask` + `custom_entries` wiring; `CustomDictionaryStore` (schema v2 + side table, cap 30000, no migrator) + phonetics derive bridge; `UserDataDatabase.perform` + freq/assoc list/delete/clear/batchImportMerge APIs; CSV codecs third mirror. ⚠ intended behavior change: defaults exclude iTaigi/台日/台華/植物/異體/khiin from continuous candidates (was sentinel all-on) | done |
+| PR12 | Dictionary tab UI — **Merged** #538 `29bc5ada` | toggles view (MOE + kautian 11 + other + supplement); custom-dict CRUD + CSV + seed; frequency/association viewers (limit 100, pair-key delete, clear, CSV); Backup and Restore `.taigi` (BackupService JSON v2, `platform:"macos"`); NSOpen/NSSavePanel helpers. Custom-dict Time-Machine policy: stays inside TM scope (plan default, unchanged) | done |
+| PR13 | Dictionary Search — **Merged** #539 `88e0b223` | lexicon search bridge (searchWithSources/searchByHanzi/isHanzi) + tlToPoj; `DictionarySearchService` (toggle snapshot per query, kautian-first sort, badge retag, custom-dict prefix merge); search UI (300ms debounce, field at TOP of Dictionary tab — mac idiom) + 萌典 (moedict) MOE dictionary/ChhoeTaigi external links via NSWorkspace.open | done |
 
 **TRACK COMPLETE 2026-08-17** — all four merged, `swift test` 329/329 on main (was 170 before PR10). Nothing from this track is outstanding except the batched device dogfood and the two open items below.
 
@@ -376,7 +376,7 @@ review per `.claude/rules/rust-ffi-safety.md` §5. Engine-touched PRs run
 | `PLATFORM_MACOS` + regen | PR8a | yes | **yes — generated `.pb.swift`/`.java` only, semantically inert; user-coordinated timing** |
 | `engine/swift-ffi` crate | — | **no change needed** | — |
 
-## 最佳實踐對齊 (references)
+## Best practices alignment (references)
 
 Entry point per repo policy: `docs/references/mainstream-ime-comparison.md`
 (cards #2 azooKey-Desktop, #11 McBopomofo, #12 khiin-rs, #20 MacishType).
@@ -388,7 +388,7 @@ Key borrowings (full file:line table in the Phase-0 plan / memory):
 - McBopomofo — recognizedEvents mask, mature IMK lifecycle patterns.
 - iOS in-repo — ComposingManager contract, EngineSettingsProvider live-read, custom-dict schema v2 invariant.
 
-**刻意不採用**: khiin settings helper app · Xcode project (pbxproj user-only) ·
+**Deliberately not adopted**: khiin settings helper app · Xcode project (pbxproj user-only) ·
 `IMKCandidates` · macOS-local action enum · in-IME English mode · TPS seams ·
 universal binary now · third committed dictionary copy · shielding window level ·
 azooKey out-of-process XPC daemon (+ its async queue/idempotency machinery — our
@@ -398,14 +398,14 @@ Methods` sudo install.
 
 ## Settings pane roster (current)
 
-一般 · 外觀 · 快捷鍵 · 自訂詞庫 · 辭典管理.
+General · Appearance · Shortcuts · Custom Dictionary · Manage Dictionaries.
 
-The 詞頻紀錄, 詞關聯紀錄 and 備份還原 panes that PR12 shipped were removed (USER
+The Frequency Records, Association Records and Backup and Restore panes that PR12 shipped were removed (USER
 2026-08-24). Both learning tables are self-trimming — `LearningCapacity` caps
 them at 20000 / 50000 rows and evicts least-used-first, so they cannot grow
 without bound (a row ceiling, not a byte one: SQLite does not shrink the file) —
-and the decision was that learned records are not the user's to administer. What replaced the three panes is one destructive button in 一般,
-清除學習紀錄, which empties both tables at once.
+and the decision was that learned records are not the user's to administer. What replaced the three panes is one destructive button in General,
+Clear Learning Records, which empties both tables at once.
 
 Consequences, accepted with the decision: macOS no longer reads or writes
 `.taigi`, so an iOS/Android backup cannot be imported here and learned data does
@@ -433,5 +433,5 @@ read at all since 2026-09-25; the sweep keeps stale defaults tidy).
 - ~~PR8a timing~~ — resolved: regen landed with #528 (2026-08-17), no concurrent session.
 - ~~Custom-dict Time-Machine/backup-exclusion policy~~ — resolved at PR12 with the plan default: all three macOS databases stay inside Time Machine scope (the iOS iCloud exclusion in `behavioral-invariants.md` §29 was about data leaving the device). Still the USER's to change.
 - ~~macOS dogfood acceptance checklist contents~~ — resolved: per-feature `Sn` items live in `dogfood-checklist.md`. **Dogfood cadence decided
-  2026-08-15 (USER: 「我想等 desktop 實作完成再 dogfood」)** — device dogfood is not a per-PR
+  2026-08-15 (USER: "I want to wait until the desktop implementation is done before dogfooding")** — device dogfood is not a per-PR
   gate; it runs once as a batch, and that batch is still open.

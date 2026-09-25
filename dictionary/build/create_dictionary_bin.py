@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-從 dictionary.csv 建立 dictionary.bin（binary mmap 格式）
+Build dictionary.bin (binary mmap format) from dictionary.csv
 
-輸入：output/dictionary.csv
-輸出：output/dictionary.bin
+Input: output/dictionary.csv
+Output: output/dictionary.bin
 
-Binary 格式（version 3,little-endian）：
+Binary format (version 3, little-endian):
   Header (16 bytes):
     magic:    4 bytes  "TKDB"
     version:  u32      3
@@ -42,9 +42,9 @@ Binary 格式（version 3,little-endian）：
   u16 between `syllable_count` and the `hanzi` payload. Older binaries are NOT
   readable by the Rust v3 reader; rebuild + redeploy artifacts in lockstep.
 
-用法：
-  python3 create_dictionary_bin.py            # 建立 binary
-  python3 create_dictionary_bin.py --verify    # 建立並驗證
+Usage:
+  python3 create_dictionary_bin.py            # build the binary
+  python3 create_dictionary_bin.py --verify    # build and verify
 """
 
 import struct

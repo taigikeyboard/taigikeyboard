@@ -1,7 +1,7 @@
 import Foundation
 import SQLite3
 
-/// One learned phrase (§50): the `(漢字, canonical-TL)` pair the user once
+/// One learned phrase (§50): the `(Hanji, canonical-TL)` pair the user once
 /// composed segment by segment, and how often it was composed or picked.
 struct LearnedPhrase: Equatable {
     let hanzi: String

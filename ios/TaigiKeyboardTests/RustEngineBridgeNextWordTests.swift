@@ -103,9 +103,9 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
 
     func testWordSelected_untrustworthyBoundary_emitsNoCompoundPairs() {
         // §40, the shapes that must NOT produce a pair:
-        //  - `-` is a 連字 joining the syllables of ONE word; pre-§40 iOS split
+        //  - `-` is a hyphen joining the syllables of ONE word; pre-§40 iOS split
         //    here and taught tshit → niû.
-        //  - 漢字 `也是` carries no space while `iā sī` does, and padding the
+        //  - Hanji `也是` carries no space while `iā sī` does, and padding the
         //    short side attaches a blank TL that Core Principle #7 makes
         //    unmatchable — so record nothing instead.
         //  - `台語 ˆ` passes the whole-string noise gate (台語 IS word material)
@@ -427,7 +427,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         XCTAssertEqual(result.predictions.first?.tl, "tâi-gí", "canonical tone-marked row kept")
     }
 
-    /// INVARIANT_NEXTWORD_READ_LAYER_DEDUP — genuine 一字多音 (Core Principle
+    /// INVARIANT_NEXTWORD_READ_LAYER_DEDUP — genuine polyphonic Hanji (Core Principle
     /// #7) is preserved: 重/tāng + 重/tàng share the toneless key `tang` but
     /// both carry tone marks, so the collapse leaves all readings intact.
     func testFilter_preservesDistinctPolyphones() {

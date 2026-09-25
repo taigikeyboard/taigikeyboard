@@ -400,7 +400,7 @@ impl CandidateWindow {
         self.theme = Theme::resolve(self.appearance_mode, &system);
     }
 
-    /// New cells in place (the 漢羅 flip, a display-mode change): re-packed
+    /// New cells in place (the Hanji/romanization flip, a display-mode change): re-packed
     /// and re-measured, the height reflowed for content that gained or lost
     /// its annotations, selection kept on its absolute index.
     pub fn update_cells(
@@ -1076,8 +1076,8 @@ impl CandidateWindow {
         // (USER 2026-09-09). The inline arrangement keeps the column: the
         // vertical list aligns every row's text on one x, literal or not.
         // The literal cell draws no fill of its own — a tint was tried on
-        // 2026-09-09 and taken back out the same day (USER: 「背景底色強調效果
-        // 不好,恢復第一個位置的背景底色」).
+        // 2026-09-09 and taken back out the same day (USER: "the background-tint highlight
+        // does not work; restore the first slot's background").
         let centres_across_cell = is_literal
             && matches!(
                 metrics.cell_arrangement(),
@@ -1135,7 +1135,7 @@ impl CandidateWindow {
                 // lines and a gap, and one carrying a single script is one
                 // line — centred in the cell rather than parked on the upper
                 // line of a pair it has no second half for (USER 2026-09-09,
-                // for the §34 literal cell under 漢羅對應). The cell's height
+                // for the §34 literal cell under Hanji–Romanization Pairing). The cell's height
                 // still comes from the content (`CandidateMetrics::
                 // for_content`), so the row lines up either way.
                 let block = if cell.annotation.is_some() {

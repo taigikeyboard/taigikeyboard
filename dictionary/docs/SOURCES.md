@@ -12,7 +12,7 @@ current-at-release values when cutting a dictionary refresh.
 - **Format**: ODS (OpenDocument Spreadsheet, 18 sheets)
 - **Captured**: `data/raw/kautian.ods` (file committed 2026-04-23; actual
   MoE release date TBD)
-- **Licence**: **CC BY-ND 3.0 TW** (創用CC 姓名標示-禁止改作 3.0 臺灣) — verified 2026-09-05 against the publisher's 版權聲明, <https://sutian.moe.edu.tw/zh-hant/piantsip/pankhuan-singbing/>. Covers 文字、音檔內容. **Commercial use permitted; no NonCommercial term.** This file previously recorded CC BY-NC 4.0, which was wrong. Only 漢字 + 羅馬字 are taken — see `dictionary/LICENSE` for why CC BY-ND permits that.
+- **Licence**: **CC BY-ND 3.0 TW** (創用CC 姓名標示-禁止改作 3.0 臺灣) — verified 2026-09-05 against the publisher's copyright notice, <https://sutian.moe.edu.tw/zh-hant/piantsip/pankhuan-singbing/>. Covers text and audio content (文字、音檔內容). **Commercial use permitted; no NonCommercial term.** This file previously recorded CC BY-NC 4.0, which was wrong. Only Hanji + romanization are taken — see `dictionary/LICENSE` for why CC BY-ND permits that.
 - **Notes**: Multi-sheet; pipeline `select`/`expand`/`merge` stages
   handle the pivoting. Largest single source (~49k rows).
 
@@ -61,8 +61,8 @@ current-at-release values when cutting a dictionary refresh.
 - **Origin URL**: <https://kanggesu.ntcri.gov.tw/NTCRI_TaigiWebSite>
 - **Format**: JSON (scraped; filename encodes capture date)
 - **Captured**: `data/raw/scrape-20251210.json` → 2025-12-10
-- **Licence**: **no licence statement covers the vocabulary.** The site's only licence page is 圖像授權 (<https://kanggesu.ntcri.gov.tw/NTCRI_TaigiWebSite/ImageLicense>, read 2026-09-07): 姓名標示-非商業性-禁止改作 (CC BY-NC-ND, no version stated), scoped to the 示意圖片. This project takes only 漢字 + 台羅拼音 and drops `memo` / `audioPath` / images, so the position rests on 著作權法 §10-1 (facts are not expression), not on a grant — reasoning in `dictionary/LICENSE`. The earlier "CC BY-NC 4.0" record came from the in-app credits screen and was wrong.
-- **Notes**: Specialised craft/industry terminology; ~1.2k raw entries → 994 rows. 11 工藝類別.
+- **Licence**: **no licence statement covers the vocabulary.** The site's only licence page is the image licence, 圖像授權 (<https://kanggesu.ntcri.gov.tw/NTCRI_TaigiWebSite/ImageLicense>, read 2026-09-07): 姓名標示-非商業性-禁止改作 (CC BY-NC-ND, no version stated), scoped to the illustrations. This project takes only Hanji + TL romanization and drops `memo` / `audioPath` / images, so the position rests on Copyright Act (著作權法) §10-1 (facts are not expression), not on a grant — reasoning in `dictionary/LICENSE`. The earlier "CC BY-NC 4.0" record came from the in-app credits screen and was wrong.
+- **Notes**: Specialised craft/industry terminology; ~1.2k raw entries → 994 rows. 11 craft categories.
 
 ### stti — 學科術語辭典
 - **Publisher**: 中華民國教育部 / 國家教育研究院 (National Academy for Educational Research)
@@ -103,7 +103,7 @@ current-at-release values when cutting a dictionary refresh.
 - **Notes**: Targeted coverage gaps uncovered during dogfooding.
 
 ### lkk — LKK 漢羅合用建議用字 (supplementary/lkk/)
-- **Publisher**: TBD (community-authored list of recommended 漢羅混寫 spellings)
+- **Publisher**: TBD (community-authored list of recommended Hanji-with-romanization spellings)
 - **Origin URL**: TBD
 - **Format**: CSV (`data/lkk.csv`)
 - **Captured**: TBD

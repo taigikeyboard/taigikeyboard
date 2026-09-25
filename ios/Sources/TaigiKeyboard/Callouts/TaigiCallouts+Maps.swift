@@ -30,7 +30,7 @@ public extension TaigiCallouts {
         }
     }
 
-    /// TPS layout callouts (方音符號 long-press variants)
+    /// TPS layout callouts (Phonetic Symbols long-press variants)
     enum TPSCallouts {
         /// Glyph keys — long-press prepends the key's own glyph before these
         /// variants (see `calloutChars`). USER scope 2026-08-21: letter-variant
@@ -39,7 +39,7 @@ public extension TaigiCallouts {
             // Row 1: number shortcuts (digits accessible via long-press)
             "ㆠ": ["1"], "ˋ": ["2"], "˪": ["3"], "ㆣ": ["4"], "ˊ": ["5"],
             "ˇ": ["6"], "˫": ["7"], "˙": ["8"], "ㆩ": ["0"],
-            // Checked tone finals (入聲韻尾)
+            // Checked tone finals
             "ㄅ": ["ㆴ"],
             "ㄉ": ["ㆵ"],
             "ㄍ": ["ㆻ"],

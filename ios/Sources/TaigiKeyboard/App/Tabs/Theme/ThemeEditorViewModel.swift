@@ -19,8 +19,8 @@ import SwiftUI
 final class ThemeEditorViewModel: ObservableObject {
     @Published var name: String
     @Published var appearance: ThemeAppearance
-    /// The 背景 segmented choice. Normally `background.kind`; it can run ahead of the
-    /// background while 照片 is chosen but no photo has been picked yet, so the picker
+    /// The Background segmented choice. Normally `background.kind`; it can run ahead of the
+    /// background while Photo is chosen but no photo has been picked yet, so the picker
     /// row shows without the surface changing (the draft keeps its solid / gradient
     /// until a photo lands).
     @Published private(set) var backgroundKind: ThemeBackground.Kind
@@ -88,9 +88,9 @@ final class ThemeEditorViewModel: ObservableObject {
         appearance = next
     }
 
-    /// Segmented 純色 / 漸層 / 照片 choice. Switching keeps the current hue: solid → gradient
+    /// Segmented Solid / Gradient / Photo choice. Switching keeps the current hue: solid → gradient
     /// runs the solid color into a lighter tint of it; gradient → solid keeps the first
-    /// stop; leaving a photo lands on the seed colour. Choosing 照片 changes nothing until
+    /// stop; leaving a photo lands on the seed colour. Choosing Photo changes nothing until
     /// a photo is picked (`setPhoto`).
     var backgroundKindBinding: Binding<ThemeBackground.Kind> {
         Binding(
@@ -108,13 +108,13 @@ final class ThemeEditorViewModel: ObservableObject {
         )
     }
 
-    /// The draft photo, or nil while 照片 is chosen but nothing has been picked.
+    /// The draft photo, or nil while Photo is chosen but nothing has been picked.
     var photo: ThemeImageBackground? {
         background.image
     }
 
     /// Makes the stored photo `file` (see `ThemeImageStore.save`) the background, keeping
-    /// the current 淡化 when replacing a photo.
+    /// the current Fade when replacing a photo.
     func setPhoto(file: String) {
         setBackground(.image(ThemeImageBackground(file: file, dim: photo?.dim ?? ThemeImageBackground.defaultDim)))
     }
@@ -129,7 +129,7 @@ final class ThemeEditorViewModel: ObservableObject {
         )
     }
 
-    /// The solid background color (row shown only while the kind is 純色).
+    /// The solid background color (row shown only while the kind is Solid).
     var solidBackgroundBinding: Binding<Color> {
         Binding(
             get: { (self.background.solidColor ?? UserThemeSeed.solidColor).color },
@@ -145,7 +145,7 @@ final class ThemeEditorViewModel: ObservableObject {
         setBackground(UserThemeSeed.background)
     }
 
-    /// The current gradient (rows shown only while the kind is 漸層).
+    /// The current gradient (rows shown only while the kind is Gradient).
     private var gradient: ThemeGradient {
         background.gradient ?? .seeded(from: UserThemeSeed.solidColor)
     }

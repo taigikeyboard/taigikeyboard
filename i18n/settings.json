@@ -7,7 +7,7 @@
       "values": { "hanji": "恢復", "tailo": "Hue-ho̍k", "poj": "Hoe-ho̍k", "en": "Reset", "ja": "リセット" }
     },
     "inputMode": {
-      "comment": "Settings row + sub-screen title for selecting the active input mode (mobile). The desktop 一般 pane labels its TL / POJ picker inputScript instead.",
+      "comment": "Settings row + sub-screen title for selecting the active input mode (mobile). The desktop General pane labels its TL / POJ picker inputScript instead.",
       "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host"] },
       "values": { "hanji": "輸入模式", "tailo": "Su-ji̍p bôo-sik", "poj": "Su-ji̍p bô͘-sek", "en": "Input Mode", "ja": "入力モード" }
     },
@@ -22,12 +22,12 @@
       "values": { "hanji": "自動", "tailo": "Tsū-tōng", "poj": "Chū-tōng", "en": "Automatic", "ja": "自動" }
     },
     "pojMode": {
-      "comment": "Input-mode option: Pe̍h-ōe-jī (白話字) romanization. Also the iOS smartbar input-mode button a11y label (extension surface). Also the Pe̍h-ōe-jī settings section header (pojSettingsSectionTitle merged 2026-09-20).",
+      "comment": "Input-mode option: Pe̍h-ōe-jī (POJ) romanization. Also the iOS smartbar input-mode button a11y label (extension surface). Also the Pe̍h-ōe-jī settings section header (pojSettingsSectionTitle merged 2026-09-20).",
       "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "白話字", "tailo": "Pe̍h-uē-jī", "poj": "Pe̍h-ōe-jī", "en": "Pe̍h-ōe-jī", "ja": "Pe̍h-ōe-jī" }
     },
     "tlMode": {
-      "comment": "Input-mode option: Tâi-lô (台羅) romanization. Also the iOS smartbar input-mode button a11y label (extension surface).",
+      "comment": "Input-mode option: Tâi-lô (TL) romanization. Also the iOS smartbar input-mode button a11y label (extension surface).",
       "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "台羅", "tailo": "Tâi-lô", "poj": "Tâi-lô", "en": "Tâi-lô", "ja": "Tâi-lô" }
     },
@@ -42,7 +42,7 @@
       "values": { "hanji": "台語", "tailo": "Tâi-gí", "poj": "Tâi-gí", "en": "Taigi", "ja": "台湾語" }
     },
     "tpsMode": {
-      "comment": "Input-mode option: Taiwanese Phonetic Symbols (方音符號). Also the iOS smartbar input-mode button a11y label (extension surface). Also the TPS settings section header and the layout page's TPS section header (tpsSettingsSectionTitle / layout.taigiPhonetic merged 2026-09-20).",
+      "comment": "Input-mode option: Taiwanese Phonetic Symbols (TPS). Also the iOS smartbar input-mode button a11y label (extension surface). Also the TPS settings section header and the layout page's TPS section header (tpsSettingsSectionTitle / layout.taigiPhonetic merged 2026-09-20).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "方音符號", "tailo": "Hong-im-hû-hō", "poj": "Hong-im-hû-hō", "en": "Phonetic Symbols", "ja": "方音符号" }
     },
@@ -52,7 +52,7 @@
       "values": { "hanji": "拍字設定", "tailo": "Phah-jī siat-tīng", "poj": "Phah-jī siat-tēng", "en": "Typing", "ja": "入力" }
     },
     "candidateDisplayMode": {
-      "comment": "Picker label: how a candidate cell renders the (漢字, 羅馬字) pair — side by side (today) or romanization only. Host settings + iOS/Android in-keyboard settings overlay; desktop appearance pane.",
+      "comment": "Picker label: how a candidate cell renders the (Hanji, romanization) pair — side by side (today) or romanization only. Host settings + iOS/Android in-keyboard settings overlay; desktop appearance pane.",
       "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "候選詞顯示", "tailo": "Hāu-suán-sû hián-sī", "poj": "Hāu-soán-sû hián-sī", "en": "Candidate Display", "ja": "候補の表示" }
     },
@@ -62,7 +62,7 @@
       "values": { "hanji": "漢羅對應", "tailo": "Hàn-Lô tuì-ìng", "poj": "Hàn-Lô tùi-èng", "en": "Hanji–Romanization Pairing", "ja": "漢字とローマ字の対応" }
     },
     "candidateDisplayModeCombined": {
-      "comment": "Picker value: cell shows hanji and romanization as ONE label (漢字 羅馬字); committing writes the hanji; the 文/A key is inert. TL/POJ only.",
+      "comment": "Picker value: cell shows hanji and romanization as ONE label (Hanji romanization); committing writes the hanji; the 文/A key is inert. TL/POJ only.",
       "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "漢羅濫", "tailo": "Hàn-Lô lām", "poj": "Hàn-Lô lām", "en": "Hanji with Romanization", "ja": "漢字＋ローマ字" }
     },
@@ -77,12 +77,12 @@
       "values": { "hanji": "括號標註", "tailo": "Kuat-hō phiau-tsù", "poj": "Koat-hō phiau-chù", "en": "Annotate in Brackets", "ja": "括弧で併記" }
     },
     "inputScript": {
-      "comment": "Desktop 一般 pane: label of the TL / POJ picker (USER 2026-09-18 「輸入/輸出文字」), paired with outputScript below. Mobile keeps inputMode (輸入模式) — its picker also holds TPS.",
+      "comment": "Desktop General pane: label of the TL / POJ picker (USER 2026-09-18: \"input/output script\"), paired with outputScript below. Mobile keeps inputMode (Input Mode) — its picker also holds TPS.",
       "scope": { "platforms": ["macos", "windows", "linux"], "surfaces": ["host"] },
       "values": { "hanji": "輸入文字", "tailo": "Su-ji̍p bûn-jī", "poj": "Su-ji̍p bûn-jī", "en": "Input Script", "ja": "入力文字" }
     },
     "outputScript": {
-      "comment": "Desktop 一般 pane: label of the 漢字 / 羅馬字 picker — which script a commit writes, the same stored swap the backtick shortcut flips. Paired with inputScript above.",
+      "comment": "Desktop General pane: label of the Hanji / romanization picker — which script a commit writes, the same stored swap the backtick shortcut flips. Paired with inputScript above.",
       "scope": { "platforms": ["macos", "windows", "linux"], "surfaces": ["host"] },
       "values": { "hanji": "輸出文字", "tailo": "Su-tshut bûn-jī", "poj": "Su-chhut bûn-jī", "en": "Output Script", "ja": "出力文字" }
     },
@@ -97,12 +97,12 @@
       "values": { "hanji": "羅馬字", "tailo": "Lô-má-jī", "poj": "Lô-má-jī", "en": "Romanization", "ja": "ローマ字" }
     },
     "hyphenlessRoman": {
-      "comment": "Toggle label: render candidate / committed romanization without the dictionary's inter-syllable hyphen, 輕聲 -- as · (tâi-uân → tâiuân, hōo--guá → hōo·guá). All four platforms, host settings only.",
+      "comment": "Toggle label: render candidate / committed romanization without the dictionary's inter-syllable hyphen, neutral-tone -- as · (tâi-uân → tâiuân, hōo--guá → hōo·guá). All four platforms, host settings only.",
       "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host"] },
       "values": { "hanji": "無連字符", "tailo": "Bô liân-jī-hû", "poj": "Bô liân-jī-hû", "en": "No Hyphens", "ja": "ハイフンなし" }
     },
     "hyphenlessRomanInfo": {
-      "comment": "Help text for the 無連字符 toggle (mobile host app).",
+      "comment": "Help text for the No Hyphens toggle (mobile host app).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
       "values": { "hanji": "候選詞佮送出的羅馬字無連字符（tâi-uân → tâiuân），輕聲記號 -- 改用 ·（hōo--guá → hōo·guá）。你家己拍的連字符無影響。", "tailo": "Hāu-suán sû kah sàng-tshut ê lô-má-jī bô liân-jī-hû (tâi-uân → tâiuân), khin-siann kì-hō -- kái iōng · (hōo--guá → hōo·guá). Lí ka-kī phah ê liân-jī-hû bô íng-hióng.", "poj": "Hāu-soán sû kah sàng-chhut ê lô-má-jī bô liân-jī-hû (tâi-oân → tâioân), khin-siaⁿ kì-hō -- kái iōng · (hō͘--goá → hō͘·goá). Lí ka-kī phah ê liân-jī-hû bô éng-hióng.", "en": "Shows and commits romanization without hyphens between syllables (tâi-uân → tâiuân); the neutral-tone marker -- becomes · (hōo--guá → hōo·guá). Hyphens you type yourself are unaffected.", "ja": "候補と確定するローマ字から音節間のハイフンを省きます（tâi-uân → tâiuân）。軽声記号 -- は · になります（hōo--guá → hōo·guá）。自分で入力したハイフンは変わりません。" }
     },
@@ -117,7 +117,7 @@
       "values": { "hanji": "當咧拍的字囥第一个", "tailo": "Tng-teh phah ê jī khǹg tē-it ê", "poj": "Tng-teh phah ê jī khǹg tē-it ê", "en": "Show Typed Text First", "ja": "入力中の文字を先頭に表示" }
     },
     "literalRomanCandidateInfo": {
-      "comment": "Help text for the 當咧拍的字囥第一个 toggle.",
+      "comment": "Help text for the Show Typed Text First toggle.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
       "values": { "hanji": "候選詞列第一格顯示你拍 ê 羅馬字，點揤抑是揤 Enter 送出。關閉了後干焦會當用 Enter 送出。", "tailo": "Hāu-suán sû lia̍t tē-it keh hián-sī lí phah ê lô-má-jī, tiám-tshi̍h ah-sī tshi̍h Enter sàng-tshut. Kuainn--khí-lâi liáu-āu kan-ta ē-tàng iōng Enter sàng-tshut.", "poj": "Hāu-soán sû lia̍t tē-it keh hián-sī lí phah ê lô-má-jī, tiám-chhi̍h ah-sī chhi̍h Enter sàng-chhut. Koaiⁿ--khí-lâi liáu-āu kan-ta ē-tàng iōng Enter sàng-chhut.", "en": "Shows what you typed in the first slot of the candidate bar; tap it or press Enter to commit. When off, only Enter commits it.", "ja": "入力したローマ字を候補バーの先頭に表示し、タップか Enter で確定できます。オフの場合は Enter でのみ確定できます。" }
     },
@@ -202,7 +202,7 @@
       "values": { "hanji": "大本字時 ⁿ 轉做 ᴺ", "tailo": "Tuā-pún-jī sî ⁿ tsuán tsò ᴺ", "poj": "Tōa-pún-jī sî ⁿ choán chò ᴺ", "en": "ⁿ becomes ᴺ in capitals", "ja": "大文字では ⁿ を ᴺ に" }
     },
     "nasalMarkerUppercaseInfo": {
-      "comment": "Help text for the ⁿ 大本字 toggle (mobile host app).",
+      "comment": "Help text for the ⁿ becomes ᴺ in capitals toggle (mobile host app).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
       "values": { "hanji": "拍大本字的時陣，鼻音記號 ⁿ 嘛寫做大本字 ᴺ（SIÂᴺ）。關掉了後永遠寫小本字 ⁿ（SIÂⁿ）。", "tailo": "Phah tuā-pún-jī ê sî-tsūn, phīnn-im kì-hō ⁿ mā siá tsò tuā-pún-jī ᴺ (SIÂᴺ). Kuainn tiāu liáu-āu íng-uán siá sió-pún-jī ⁿ (SIÂⁿ).", "poj": "Phah tōa-pún-jī ê sî-chūn, phīⁿ-im kì-hō ⁿ mā siá chò tōa-pún-jī ᴺ (SIÂᴺ). Koaiⁿ tiāu liáu-āu éng-oán siá sió-pún-jī ⁿ (SIÂⁿ).", "en": "When you type in capitals, the nasal marker ⁿ is written as its capital ᴺ (SIÂᴺ). Off, it is always ⁿ (SIÂⁿ).", "ja": "大文字で入力すると鼻音記号 ⁿ も大文字の ᴺ になります（SIÂᴺ）。オフにすると常に ⁿ になります（SIÂⁿ）。" }
     },

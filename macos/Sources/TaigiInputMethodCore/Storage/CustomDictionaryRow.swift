@@ -2,7 +2,7 @@
 
 import Foundation
 
-/// A word the user added themselves: the romanization they typed and the 漢字
+/// A word the user added themselves: the romanization they typed and the Hanji
 /// it stands for.
 ///
 /// The romanization is stored exactly as typed, in whichever script the user

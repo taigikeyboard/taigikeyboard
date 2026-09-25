@@ -1,6 +1,6 @@
 //! The input-method menu — the Windows tray button's popup and the Linux
-//! panel menu — as one ordered list (USER 2026-09-24: 「我希望macos,windows,
-//! linux的選單內容都一致,包含i18n」). Each shell maps a command to its own
+//! panel menu — as one ordered list (USER 2026-09-24: "I want the macOS, Windows
+//! and Linux menus to be identical, i18n included"). Each shell maps a command to its own
 //! row id and draws the chord its own way; the rows, their order and their
 //! words are decided here. The Mac builds the same list in Swift
 //! (`TaigiInputController.menu()`), held to it by
@@ -14,16 +14,16 @@ use crate::strings::{StringKey, StringResolver};
 /// What a menu row does.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MenuCommand {
-    /// A global shortcut a click stands in for, under the 快捷鍵 pane's own
+    /// A global shortcut a click stands in for, under the Shortcuts pane's own
     /// name for it.
     Shortcut(ShortcutAction),
     /// The settings window, wherever the user left it.
     OpenSettings,
-    /// The manual update check, in the settings window on 一般. macOS and
+    /// The manual update check, in the settings window on General. macOS and
     /// Windows only: Linux draws no row for it — the distribution's package
     /// manager updates an input method (USER 2026-09-25).
     CheckForUpdates,
-    /// The 關於 page — it has no sidebar row (USER 2026-09-20), so the menu
+    /// The About page — it has no sidebar row (USER 2026-09-20), so the menu
     /// is its one doorway.
     About,
 }
@@ -51,10 +51,10 @@ impl MenuCommand {
 }
 
 /// The rows in order; `None` is a separator. The two switches first — not
-/// the 漢羅對調 swap, whose bare-backtick default the Mac's menu can never
+/// the Hanji/Romanization Swap, whose bare-backtick default the Mac's menu can never
 /// print; not the symbol picker, which needs the caret a click has no hold
-/// of; not the Telex guide (USER 2026-09-20: 「極少人使用」) — then the
-/// settings doorway, then the check and 關於.
+/// of; not the Telex guide (USER 2026-09-20: "hardly anyone uses it") — then the
+/// settings doorway, then the check and About.
 pub const MENU: [Option<MenuCommand>; 7] = [
     Some(MenuCommand::Shortcut(ShortcutAction::ToggleRomanization)),
     Some(MenuCommand::Shortcut(

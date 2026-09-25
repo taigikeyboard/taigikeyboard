@@ -11,9 +11,9 @@ enum InputMode: String, CaseIterable, Sendable {
     case poj
 }
 
-/// How the candidate window renders the `(漢字, 羅馬字)` pair: both scripts
+/// How the candidate window renders the `(Hanji, romanization)` pair: both scripts
 /// side by side (the swap setting decides which leads), each script as its own
-/// adjacent cell (漢羅濫, `PresentedCandidate`), or the romanization alone.
+/// adjacent cell (Hanji with Romanization, `PresentedCandidate`), or the romanization alone.
 ///
 /// Raw values are the storage contract every platform shares
 /// (`docs/reports/2026-08-30-hanlo-together-mode-research.md` §12) — the same
@@ -32,7 +32,7 @@ enum CandidateDisplayMode: String, CaseIterable, Sendable {
         self != .romanOnly
     }
 
-    /// The mode after this one, in the order the 外觀 picker lists them, and
+    /// The mode after this one, in the order the Appearance picker lists them, and
     /// round again from the end — what the cycle shortcut steps through, so
     /// the key and the picker agree on what "next" is.
     var next: CandidateDisplayMode {
@@ -53,8 +53,8 @@ enum CandidateDisplayMode: String, CaseIterable, Sendable {
 
     /// Whether the swap shortcut writes the stored swap — exactly where Hanji
     /// is on screen. Under `.combined` the cells are split per script, so the
-    /// shortcut only picks the punctuation width (USER 2026-09-13 「漢羅濫需要有
-    /// isTranslateSwapped 的按鈕」); `.romanOnly` leaves it inert and the stored
+    /// shortcut only picks the punctuation width (USER 2026-09-13: "Hanji with Romanization needs an
+    /// isTranslateSwapped button"); `.romanOnly` leaves it inert and the stored
     /// swap waits for the way back.
     var allowsSwapToggle: Bool {
         showsHanji
@@ -73,14 +73,14 @@ enum CandidateDisplayMode: String, CaseIterable, Sendable {
         self == .combined || (stored && showsHanji)
     }
 
-    /// Effective 括號標註 for a stored flag — off only where there is no Hanji
-    /// to bracket; `.combined` keeps it (`漢字 (羅馬字)`).
+    /// Effective Annotate in Brackets for a stored flag — off only where there is no Hanji
+    /// to bracket; `.combined` keeps it (`Hanji (romanization)`).
     func effectiveOutputBothScripts(stored: Bool) -> Bool {
         stored && showsHanji
     }
 
     /// Whether a typed punctuation key becomes full-width (`，` for `,`) for a
-    /// stored swap flag — the stored flag masked like 括號標註, NOT the candidate
+    /// stored swap flag — the stored flag masked like Annotate in Brackets, NOT the candidate
     /// projection above, which `.combined` forces on while the swap shortcut
     /// still picks the width. Mirrored on ios / android / windows beside
     /// `effectiveOutputBothScripts`.
@@ -143,7 +143,7 @@ struct EngineSettings: Equatable, Sendable {
     let candidateDisplayMode: CandidateDisplayMode
 
     /// §34/S22 — when on, TL/POJ composing surfaces the preedit literal as the
-    /// index-0 candidate so 漢羅 commits the romanization in one keystroke, and
+    /// index-0 candidate so mixed-script writing commits the romanization in one keystroke, and
     /// Return on a fresh bar writes what was typed. The bridge inverts it into
     /// `FetchAtPos.literal_roman_candidate_disabled`.
     /// CROSS-PLATFORM INVARIANT — mirrors `isLiteralRomanCandidateEnabled` in
@@ -153,7 +153,7 @@ struct EngineSettings: Equatable, Sendable {
     /// Drift changes which candidate leads the list on a fresh install.
     let isLiteralRomanCandidateEnabled: Bool
 
-    /// 無連字符 (`behavioral-invariants.md` §49) — sent as
+    /// No Hyphens (`behavioral-invariants.md` §49) — sent as
     /// `AppConfig.hyphenless_roman` on the base config; no TPS layout here,
     /// so no fold.
     /// CROSS-PLATFORM INVARIANT — mirrors `isHyphenlessRomanEnabled` in
@@ -161,7 +161,7 @@ struct EngineSettings: Equatable, Sendable {
     /// `hyphenlessRomanEnabled` in android/…/ime/core/PrefHelper.kt, both OFF.
     let isHyphenlessRomanEnabled: Bool
 
-    /// ⁿ大本字 (`behavioral-invariants.md` §53) — the POJ nasal marker follows
+    /// ⁿ becomes ᴺ in capitals (`behavioral-invariants.md` §53) — the POJ nasal marker follows
     /// the case of the letters before it (`SIÂᴺ`); off, it is always `ⁿ`.
     /// Sent inverted as `AppConfig.force_lowercase_nasal_marker` on the base
     /// config.
@@ -194,9 +194,9 @@ struct EngineSettings: Equatable, Sendable {
     /// default for the same setting, so someone using two of the four platforms
     /// gets the same composition and the same candidate order out of the box.
     ///
-    /// Hanji-first since 2026-09-18 (USER 「預設都是先輸出漢字，也就是漢字是
-    /// title，羅馬字是 subtitle」): the stored swap is on, and the two effective
-    /// fields are DERIVED from it under 並排 the way `SettingsStore.current`
+    /// Hanji-first since 2026-09-18 (USER: "by default Hanji is output first, that is, Hanji is the
+    /// title and romanization is the subtitle"): the stored swap is on, and the two effective
+    /// fields are DERIVED from it under Hanji–Romanization Pairing the way `SettingsStore.current`
     /// derives them, so the snapshot cannot say one thing about the swap and
     /// another about the width.
     static let defaults: EngineSettings = {

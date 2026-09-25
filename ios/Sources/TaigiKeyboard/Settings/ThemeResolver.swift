@@ -32,7 +32,7 @@ enum ThemeResolver {
         if let builtIn = builtInThemes.first(where: { $0.id == themeId }) {
             // Built-in themes are colors-first → factory sizes + their
             // colorScheme-appropriate color variant, plus an optional per-theme
-            // appearance override (`keyBorderWidth`, used by the 框線 family).
+            // appearance override (`keyBorderWidth`, used by the Outlined family).
             var appearance = ThemeAppearance.default
             appearance.colors = builtIn.colors(for: colorScheme)
             appearance.keyBorderWidth = builtIn.keyBorderWidth ?? ThemeAppearance.default.keyBorderWidth

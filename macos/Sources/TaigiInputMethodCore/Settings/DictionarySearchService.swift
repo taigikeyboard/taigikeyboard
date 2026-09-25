@@ -1,4 +1,4 @@
-// Looking a word up in the dictionaries, from the 詞庫 tab.
+// Looking a word up in the dictionaries, from the Dictionary tab.
 
 import Foundation
 
@@ -12,7 +12,7 @@ struct DictionarySearchResult: Equatable, Identifiable, Sendable {
     /// would make SwiftUI treat them as one row repeated.
     ///
     /// This is display identity, not word identity — anything matching or
-    /// deduping WORDS still keys on the `(漢字, canonical TL)` pair.
+    /// deduping WORDS still keys on the `(Hanji, canonical TL)` pair.
     enum ID: Hashable, Sendable {
         case system(Int64)
         case custom(String)
@@ -69,7 +69,7 @@ struct DictionarySearchService: Sendable {
     ///
     /// Order is a contract, in three parts: the user's own entries lead,
     /// because a word they added themselves is the one they meant; then the
-    /// bundled results, 教育部 first because it is the reference dictionary;
+    /// bundled results, MOE first because it is the reference dictionary;
     /// then by the engine's own ranking, with its original order as the final
     /// tie-break so the same query twice gives the same list.
     func search(_ query: String) -> [DictionarySearchResult] {
@@ -84,7 +84,7 @@ struct DictionarySearchService: Sendable {
             isHanziQuery: isHanziQuery,
             filters: filters,
         )
-        // The custom dictionary is keyed by romanization, so a 漢字 query has
+        // The custom dictionary is keyed by romanization, so a Hanji query has
         // nothing to look up in it.
         let customResults = isHanziQuery ? [] : customResults(query: query, settings: settings)
 
@@ -122,7 +122,7 @@ struct DictionarySearchService: Sendable {
             )
 
         // Sorted BEFORE the badges are trimmed: the sort asks whether a row is
-        // a 教育部 row, and a row that is one is still one when the user has
+        // a MOE row, and a row that is one is still one when the user has
         // that dictionary switched off but reached the list through another
         // source it also belongs to.
         return Ordering.sorted(rows).map { row in
@@ -152,11 +152,11 @@ struct DictionarySearchService: Sendable {
     /// Its own type so the order can be tested against rows a fixture names,
     /// rather than only against whatever the shipped dictionary returns.
     enum Ordering {
-        /// 教育部 first — it is the reference dictionary — then by the
+        /// MOE first — it is the reference dictionary — then by the
         /// engine's own score, then by the order the engine returned them in.
         ///
         /// Reads the row's own bitmask, never a trimmed badge list: the sort
-        /// runs before the badges are trimmed, so a 教育部 row is one even
+        /// runs before the badges are trimmed, so a MOE row is one even
         /// when the user has that dictionary switched off and the row reached
         /// the list through another source it also belongs to.
         static func sorted(_ rows: [LexiconRow]) -> [LexiconRow] {

@@ -76,7 +76,7 @@ pub const IS_AUTO_SPACE_ENABLED: SettingsKey<bool> = SettingsKey::new("autoSpace
 const _: () = assert!(!IS_AUTO_SPACE_ENABLED.default);
 
 // RETIRED 2026-09-05 (USER): `shiftTogglesEnglishEnabled`. The Shift tap now
-// switches 中/英 unconditionally — the 一般 pane is a 1:1 mirror of the Mac's,
+// switches Chinese/English unconditionally — the General pane is a 1:1 mirror of the Mac's,
 // which has no such row, and the tray letter plus the mode flash already say
 // which mode is on. The spelling is permanently reserved: a stored `false`
 // still sits in existing `settings.json` files (Windows has no retired-key
@@ -214,7 +214,7 @@ pub const TONE_INPUT_SCHEME: SettingsKey<crate::keys::ToneInputScheme> =
 
 /// Whether the candidate window is shown at all. Off means no fetch and no
 /// window — the user types romanization and Space / Enter write it as typed
-/// (USER 2026-09-08 「給使用者純打字用」, S33). Desktop-only like
+/// (USER 2026-09-08: "for users who just want to type", S33). Desktop-only like
 /// `toneInputScheme`: a phone keyboard's candidate bar is the keyboard
 /// (`SettingsStore.swift` `isCandidateWindowEnabled`).
 pub const IS_CANDIDATE_WINDOW_ENABLED: SettingsKey<bool> =
@@ -236,7 +236,7 @@ const _: () = assert!(IS_CANDIDATE_WINDOW_ENABLED.default);
 /// user cleared the row, which is why the two cannot be collapsed.
 pub const CLEARED_COMPOSING_CHORD: &str = "";
 
-/// The keys the 一般 pane's reset removes — every input setting the pane
+/// The keys the General pane's reset removes — every input setting the pane
 /// draws, same shape as `DICTIONARY_SOURCE_KEYS`. Not the display language
 /// (USER 2026-09-20: the reset must not switch the UI language under the
 /// user), not the update bookkeeping, not the remembered pane
@@ -252,7 +252,7 @@ pub const GENERAL_KEYS: [&str; 8] = [
     IS_NASAL_MARKER_UPPERCASE_ENABLED.name,
 ];
 
-/// The keys the 外觀 pane's reset removes (`SettingsStore.swift:457-465`).
+/// The keys the Appearance pane's reset removes (`SettingsStore.swift:457-465`).
 pub const APPEARANCE_KEYS: [&str; 4] = [
     APPEARANCE_MODE.name,
     CANDIDATE_LAYOUT.name,
@@ -260,7 +260,7 @@ pub const APPEARANCE_KEYS: [&str; 4] = [
     CANDIDATE_SIZE.name,
 ];
 
-/// The 13 source toggles + 11 subcollection toggles the 詞庫來源 pane's reset
+/// The 13 source toggles + 11 subcollection toggles the Dictionary Sources pane's reset
 /// removes (`SettingsStore.swift:476-503`).
 pub const DICTIONARY_SOURCE_KEYS: [&str; 24] = [
     IS_KAUTIAN_ENABLED.name,

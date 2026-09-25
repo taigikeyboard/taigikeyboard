@@ -6,14 +6,14 @@ import SwiftUI
 /// `SharedSettings`.
 public extension KeyboardContext {
     /// Whether hanji-first mode is active (`true` = hanji, `false` = roman) —
-    /// the DERIVED candidate projection (`true` under 漢羅濫, `false` under
-    /// 羅馬字). Read-only: writers go through `toggleTranslateSwapped()`.
+    /// the DERIVED candidate projection (`true` under Hanji with Romanization, `false` under
+    /// Romanization Only). Read-only: writers go through `toggleTranslateSwapped()`.
     var isTranslateSwapped: Bool {
         SharedSettings.shared.isTranslateSwapped
     }
 
     /// Whether the character / symbol layouts type full-width punctuation —
-    /// the stored swap under 並排 / 漢羅濫, never under 羅馬字, always under TPS.
+    /// the stored swap under Hanji–Romanization Pairing / Hanji with Romanization, never under Romanization Only, always under TPS.
     var isFullWidthPunctuation: Bool {
         SharedSettings.shared.isFullWidthPunctuation
     }
@@ -29,9 +29,9 @@ public extension KeyboardContext {
         }
     }
 
-    /// Flips the STORED swap. Under 並排 that flips the lead script and the
-    /// punctuation width; under 漢羅濫 only the punctuation width (each cell
-    /// already commits its own script). Inert under 羅馬字 (always half-width)
+    /// Flips the STORED swap. Under Hanji–Romanization Pairing that flips the lead script and the
+    /// punctuation width; under Hanji with Romanization only the punctuation width (each cell
+    /// already commits its own script). Inert under Romanization Only (always half-width)
     /// and TPS (always full-width, hanji-first) — where the key is hidden
     /// anyway (`LayoutConverter` / `ExpandedCandidateOverlay`); the guard keeps
     /// any other caller safe.

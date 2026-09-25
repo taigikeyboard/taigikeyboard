@@ -2,7 +2,7 @@
 //! on the Mac, a `UNUserNotification`). Unpackaged-desktop toasts need an
 //! Application User Model ID with a Start-menu shortcut carrying it — the
 //! installer creates the shortcut (PR10); this only speaks the id. No
-//! activation handler: the toast is informational, and the 一般 pane is the
+//! activation handler: the toast is informational, and the General pane is the
 //! surface that keeps working after it is dismissed (roadmap W9).
 
 /// The Application User Model ID the installer stamps on the Start-menu

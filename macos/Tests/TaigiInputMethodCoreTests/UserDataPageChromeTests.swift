@@ -2,7 +2,7 @@ import AppKit
 @testable import TaigiInputMethodCore
 import XCTest
 
-/// The 詞庫 pages hold what happened, not how to say it — an import running
+/// The Dictionary pages hold what happened, not how to say it — an import running
 /// across a display-language change has to report itself in the language in
 /// force when the alert draws, not the one in force when it started.
 ///
@@ -58,7 +58,7 @@ final class UserDataPageChromeTests: XCTestCase {
 /// empty line under its title reads as a message that failed to load.
 ///
 /// It exists because two `.alert` modifiers on one view chain do not stack:
-/// the 刪除學習紀錄 receipt had an alert of its own further down the chain and
+/// the Delete Learning Records receipt had an alert of its own further down the chain and
 /// SwiftUI kept the other one, so no message ever appeared (USER 2026-08-26).
 /// Every page message goes through the one channel now, and this case is what
 /// let the title-only receipt join it.
@@ -140,7 +140,7 @@ final class CustomDictionaryWorkSlotTests: XCTestCase {
     }
 }
 
-/// Paging the 自訂詞庫 list.
+/// Paging the Custom Dictionary list.
 ///
 /// The reported failure: 17000 entries, and the list would not scroll — a flat
 /// `LIMIT 100` in a fixed-height `Table` inside a `Form` put one scroll view

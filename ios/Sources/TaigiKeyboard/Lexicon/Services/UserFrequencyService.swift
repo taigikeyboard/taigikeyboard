@@ -26,7 +26,7 @@ final class UserFrequencyService: @unchecked Sendable {
 
     /// Record a candidate commit. R5: the `(word, tl)` pair is the identity
     /// (Core Principle #7) — `tl` is the candidate's canonical-TL reading so
-    /// 一字多音 keep separate counts. Pass `""` only when the candidate has
+    /// polyphonic Hanji keep separate counts. Pass `""` only when the candidate has
     /// no canonical TL (wire skew / TPS-OOV) → the legacy fallback bucket.
     func recordUsage(for word: String, tl: String) {
         Task { [weak self] in

@@ -8,7 +8,7 @@ import com.siansiansu.taigikeyboard.i18n.generated.StringKey
  * One built-in, read-only theme: a named palette with optional light/dark 6-role
  * color variants resolved against night-mode at render time. A null variant falls
  * back to the other. A theme may also carry one appearance override
- * ([keyBorderWidth], used by the 框線 family). Mirrors iOS BuiltInTheme.
+ * ([keyBorderWidth], used by the Outlined family). Mirrors iOS BuiltInTheme.
  */
 data class BuiltInTheme(
     val id: String,
@@ -31,7 +31,7 @@ data class BuiltInTheme(
 
 /**
  * One built-in family — a section header + its variant themes (one picker shelf).
- * The three families (經典 / 框線 / 簡潔) are a key-STYLE axis over one shared set
+ * The three families (Filled / Outlined / Borderless) are a key-STYLE axis over one shared set
  * of 7 colors.
  */
 data class BuiltInThemeFamily(
@@ -41,9 +41,9 @@ data class BuiltInThemeFamily(
 
 /**
  * The app-bundled, read-only theme catalog. Three key-style families, each with
- * the same 7 colors (adaptive 預設 + 5 light-only gradients + 1 dark-only 暗眠山貓).
- * 經典 keeps filled keys; 框線 / 簡潔 make keys transparent (background shows
- * through), 框線 adding an outline. Mirrors iOS BuiltInThemes.
+ * the same 7 colors (adaptive Default + 5 light-only gradients + 1 dark-only Catppuccin).
+ * Filled keeps filled keys; Outlined / Borderless make keys transparent (background shows
+ * through), Outlined adding an outline. Mirrors iOS BuiltInThemes.
  */
 object BuiltInThemes {
     // `by lazy` so the catalog builds on FIRST ACCESS, not during object init: a
@@ -66,13 +66,13 @@ object BuiltInThemes {
 
     /**
      * The per-family key-style axis. All three families share one set of colors;
-     * only the key rendering differs. [idPrefix] keeps 經典 on the legacy
+     * only the key rendering differs. [idPrefix] keeps Filled on the legacy
      * `standard*` ids.
      */
     private enum class KeyStyle(
         val idPrefix: String,
     ) {
-        CLASSIC("standard"), // filled keys (white over a gradient, adaptive for 預設)
+        CLASSIC("standard"), // filled keys (white over a gradient, adaptive for Default)
         FRAMED("framed"), // transparent keys + outline border
         CLEAN("clean"), // transparent keys, no border
         ;
@@ -82,9 +82,9 @@ object BuiltInThemes {
     }
 
     /**
-     * One of the 7 shared color identities. [gradient] == null is the adaptive 預設
+     * One of the 7 shared color identities. [gradient] == null is the adaptive Default
      * head; the next 5 are soft light single-hue gradients (raw 0xRRGGBB pairs); the
-     * last is the dark-only 暗眠山貓 (Catppuccin Mocha) gradient ([isDarkPalette]), which
+     * last is the dark-only Catppuccin (Catppuccin Mocha) gradient ([isDarkPalette]), which
      * lands in the `dark` variant slot with light text over a dark gradient.
      */
     private data class BaseColor(
@@ -114,7 +114,7 @@ object BuiltInThemes {
     private const val DARK_KEY_FILL = 0x313244 // Catppuccin Mocha Surface0
     private const val DARK_KEY_TEXT = 0xCDD6F4 // Catppuccin Mocha Text
 
-    // Transparent fill for the 框線 / 簡潔 families — the keyboard background shows through.
+    // Transparent fill for the Outlined / Borderless families — the keyboard background shows through.
     private const val TRANSPARENT_KEY_FILL = 0x00000000
 
     // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/BuiltInThemes.swift outlinedKeyBorderWidth.
@@ -122,10 +122,10 @@ object BuiltInThemes {
     private const val OUTLINED_KEY_BORDER_WIDTH = 1.0f
 
     /**
-     * Builds the 7 themes for one key-style family. The 經典 head keeps the
+     * Builds the 7 themes for one key-style family. The Filled head keeps the
      * [ThemeId.DEFAULT] sentinel (so reset shows it selected); framed / clean use
      * `framedDefault` / `cleanDefault` ids. A light theme builds into the `light`
-     * slot (`dark` null); a dark theme (暗眠山貓) builds into the `dark` slot (`light`
+     * slot (`dark` null); a dark theme (Catppuccin) builds into the `dark` slot (`light`
      * null) — mirror-symmetric. Preview slots mirror the family id prefix; missing
      * assets fall back to a neutral placeholder until screenshots ship.
      */
@@ -153,8 +153,8 @@ object BuiltInThemes {
         }
 
     /**
-     * Resolves the color palette for one (color, key-style) pair. 經典 預設 stays
-     * fully adaptive (null); framed / clean 預設 carry only transparent key fills so
+     * Resolves the color palette for one (color, key-style) pair. Filled Default stays
+     * fully adaptive (null); framed / clean Default carry only transparent key fills so
      * the adaptive background/text still show through and adapt to dark mode.
      */
     private fun colorsFor(
@@ -166,7 +166,7 @@ object BuiltInThemes {
             val neutralFill = if (base.isDarkPalette) DARK_KEY_FILL else LIGHT_KEY_FILL
             return gradientColors(top, bottom, keyText, neutralFill, style.hasTransparentKeys)
         }
-        if (!style.hasTransparentKeys) return null // 經典 預設 stays adaptive
+        if (!style.hasTransparentKeys) return null // Filled Default stays adaptive
         return KeyboardColorSettings(
             normalKeyFillColor = TRANSPARENT_KEY_FILL,
             specialKeyFillColor = TRANSPARENT_KEY_FILL,
@@ -176,7 +176,7 @@ object BuiltInThemes {
     /**
      * One scheme variant for a gradient color: the vertical 2-stop background gradient
      * + key/candidate text ([keyText]). Keys are either the neutral fill ([neutralFill],
-     * 經典) or transparent so the gradient shows through (框線 / 簡潔). The gradient owns
+     * Filled) or transparent so the gradient shows through (Outlined / Borderless). The gradient owns
      * the whole surface — the candidate bar is transparent over it. light/dark themes
      * pass their own keyText/neutralFill.
      */

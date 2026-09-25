@@ -22,7 +22,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
-// ViewModel for dictionary search in Tab 3 (詞庫)
+// ViewModel for dictionary search in Tab 3 (Dictionary)
 class DictionarySearchViewModel(
     application: Application,
 ) : AndroidViewModel(application) {
@@ -134,7 +134,7 @@ class DictionarySearchViewModel(
 
             logger.debug(TAG) { "[SEARCH] custom dictionary returned ${customResults.size} results" }
 
-            // Sort: KAUTIAN (教育部) first, then by frequency
+            // Sort: KAUTIAN (MOE) first, then by frequency
             val sorted =
                 searchResults.sortedWith(
                     compareByDescending<DictionarySearchResult> { DictionarySource.KAUTIAN in it.sources }

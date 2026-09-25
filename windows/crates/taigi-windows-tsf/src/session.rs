@@ -171,7 +171,7 @@ impl TextService_Impl {
         // English mode: below the global chords, above everything that
         // composes. Every key is the document's — including the ones this
         // input method would otherwise consume outside a composition (the
-        // auto-space swap, full-width punctuation, the bare 漢羅 key), which
+        // auto-space swap, full-width punctuation, the bare Hanji/romanization key), which
         // is what makes the mode mean "type English here" rather than "stop
         // composing". Nothing needs ending first: entering the mode already
         // committed the composition and spent the arm
@@ -744,7 +744,7 @@ impl TextService_Impl {
         flash.borrow_mut().flash(&text, anchor, appearance);
     }
 
-    /// A Shift tap switched 中/英. Runs on the TIP thread from `OnKeyUp`,
+    /// A Shift tap switched Chinese/English. Runs on the TIP thread from `OnKeyUp`,
     /// outside any session of ours, and in this order: what is half-typed is
     /// written to the document under the mode it was typed in, the state that
     /// mode left behind is spent, and only then does the mode flip and the
@@ -1093,7 +1093,7 @@ impl TextService_Impl {
 
     /// Shows the whole table anchored to the caret — one list, in file
     /// order, so the first pick is the symbol itself (USER 2026-09-09: a
-    /// category to choose first 「會造成使用者的體驗中斷」) — and records the
+    /// category to choose first "would interrupt the user's experience") — and records the
     /// picker as open. The caret is read under a read-only session (no
     /// composition is open by now, so it is the insertion point); the window
     /// is shown OUTSIDE it, like the composing list (`Surface::apply`). A
@@ -1357,7 +1357,7 @@ impl Surface {
     }
 
     // Both answer the window's absolute index, which is a CELL index into
-    // the source's presentation (合用 shows two cells per candidate) — the
+    // the source's presentation (Combined shows two cells per candidate) — the
     // commit resolves it through `CandidateSource::resolve`, never by
     // indexing the fetched list.
     fn selected_index(&self) -> Option<usize> {
@@ -1446,8 +1446,8 @@ fn perform_work(
             // character rides the same single mutation as the commit. Both
             // rewrites CAN fire: this path commits the preedit as typed,
             // which is romanization under every mode, while the full-width
-            // map still answers to the output MODE — so 漢字優先 gets
-            // `taigi？ `. That approximation is a 全形標點 policy question,
+            // map still answers to the output MODE — so Hanji-first gets
+            // `taigi？ `. That approximation is a full-width punctuation policy question,
             // left standing (macOS pins the same pair).
             let is_width_flip = ComposingKeyIntent::width_flip_character(snapshot).is_some();
             let document_text =
@@ -1554,7 +1554,7 @@ fn perform_work(
 /// about to be written outside a composition — typed, or picked from the
 /// symbol picker. The arm's EXISTENCE is the verdict — it is only ever set
 /// after a commit that wrote romanization earned its space — so only
-/// 自動空白 itself is re-read live here. Answers whether the rewrite
+/// Auto-Space itself is re-read live here. Answers whether the rewrite
 /// happened; on success the swap is re-armed at the caret the rewrite
 /// left, re-verified against the document on the next key (`?!` chains),
 /// and the engine hears about the character as the end of a context.
@@ -1583,7 +1583,7 @@ fn swap_auto_space(
 /// (`TaigiInputController.swift` `refreshCandidates`); `Surface::present`
 /// then puts them on screen, or hides when the list is empty.
 ///
-/// With the 候選窗 setting off nothing is fetched, not merely not shown: a
+/// With the Show Candidate Window setting off nothing is fetched, not merely not shown: a
 /// list kept behind no window would turn `is_showing_candidates` on and hand
 /// Space and the slot keys to candidates the user cannot see. The
 /// composition itself is untouched — it still promotes to continuous, and
@@ -1609,7 +1609,7 @@ fn refresh_candidates(
 
 /// Commits the candidate behind window cell `cell_index`, in the cell's own
 /// script or (`flip`, Space) the other one. The script is resolved BEFORE the
-/// commit and the same one decides the auto space, so a 合用 roman cell earns
+/// commit and the same one decides the auto space, so a Combined roman cell earns
 /// it as `Alternate` under the derived swap.
 #[allow(clippy::too_many_arguments)]
 fn commit_candidate(
@@ -1644,7 +1644,7 @@ fn commit_candidate(
     }
 }
 
-/// The gate every auto-space site reads — 自動空白 live
+/// The gate every auto-space site reads — Auto-Space live
 /// (`isAutoSpaceGateActive`), and `wrote_romanization` from whatever
 /// resolved the string this commit wrote. Never re-derived from the output
 /// mode here: a candidate commit gets it from `composing::resolved_commit`,

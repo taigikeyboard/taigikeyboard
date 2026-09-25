@@ -36,7 +36,7 @@ class TaigiAutocompleteService(
      */
     private val continuousFetcher: suspend () -> List<RustEngineBridge.ContinuousCandidate>,
     /**
-     * Live-read: `true` iff the strip renders 漢羅濫 split cells (mode ==
+     * Live-read: `true` iff the strip renders Hanji with Romanization split cells (mode ==
      * COMBINED and the layout is not TPS — TPS ignores the picker). Read
      * per fetch, never snapshotted, so a settings change takes effect on
      * the next keystroke (android-guidelines §6 live-read rule).
@@ -70,10 +70,10 @@ class TaigiAutocompleteService(
 
 // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Autocomplete/Services/TaigiAutocompleteService.swift
 // `shouldSplitCombinedCells`. Drift causes silent divergence (one platform still splitting
-// under TPS, or not splitting under 漢羅濫).
+// under TPS, or not splitting under Hanji with Romanization).
 
 /**
- * Whether the candidate strip renders 漢羅濫 split cells: the picker is set to
+ * Whether the candidate strip renders Hanji with Romanization split cells: the picker is set to
  * [CandidateDisplayMode.COMBINED] and the layout is not TPS (TPS is hanji-first
  * by construction and ignores the picker). Read per fetch, never snapshotted,
  * so a settings change takes effect on the next keystroke
@@ -85,7 +85,7 @@ internal fun shouldSplitCombinedCells(
 ): Boolean = candidateDisplayMode == CandidateDisplayMode.COMBINED && !isTpsLayout
 
 // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Autocomplete/Services/TaigiAutocompleteService.swift buildContinuousSuggestions
-// and the desktop PresentedCandidate split. Drift causes silent divergence (one platform still renders the superseded one-label 濫 cell).
+// and the desktop PresentedCandidate split. Drift causes silent divergence (one platform still renders the superseded one-label mixed cell).
 
 /**
  * Wrap a list of engine [RustEngineBridge.ContinuousCandidate] into the
@@ -132,23 +132,23 @@ internal fun shouldSplitCombinedCells(
  * Top-level so the contract is unit-testable without instantiating
  * collaborators.
  *
- * 漢羅濫 split (`behavioral-invariants.md` §42 second exception, desktop
+ * Hanji with Romanization split (`behavioral-invariants.md` §42 second exception, desktop
  * shipped first in #666): when [splitCombinedCells] is `true`, a
- * hanji-bearing candidate emits TWO adjacent one-script cells — a 漢字 cell
- * then a 羅馬字 cell — each carrying the SAME identity sidechannels and a
+ * hanji-bearing candidate emits TWO adjacent one-script cells — a Hanji cell
+ * then a romanization cell — each carrying the SAME identity sidechannels and a
  * [TaigiWord.MetadataKeys.CELL_SCRIPT] marker saying what the cell shows
  * and commits. The roman cell KEEPS `hanzi` so `TaigiWord.displayText` and
- * the 詞頻 `(displayText, canonicalTl)` pair-key stay marker-independent.
+ * the word-frequency `(displayText, canonicalTl)` pair-key stay marker-independent.
  * Hanji-less candidates emit their roman cell alone.
  *
  * BOTH scripts dedupe on the TEXT THE CELL SHOWS, first-seen (fetched order)
  * wins: a one-script cell carries nothing that could tell it from an earlier
  * cell reading the same, so a second one is a defect, not a second offer
- * (USER 2026-09-03 「相同的漢字 or 羅馬字不能重複出現」) — 重/tîng and 重/tāng draw
- * ONE 重 cell and keep both roman cells. 漢字 cells were exempt until then on
+ * (USER 2026-09-03: "the same Hanji or romanization must not appear twice") — 重/tîng and 重/tāng draw
+ * ONE 重 cell and keep both roman cells. Hanji cells were exempt until then on
  * Core Principle #7 grounds. The two scripts keep separate keys. Every other
  * mode ([splitCombinedCells] `false`, the default) emits exactly the
- * pre-split shape — 並排's subtitle tells 重/tîng from 重/tāng.
+ * pre-split shape — Pairing's subtitle tells 重/tîng from 重/tāng.
  */
 internal fun buildContinuousSuggestionsForCandidates(
     candidates: List<RustEngineBridge.ContinuousCandidate>,
@@ -168,7 +168,7 @@ internal fun buildContinuousSuggestionsForCandidates(
     // The §34 literal, being hanji-less and fetched first, absorbs a later
     // same roman (e.g. 台's `tâi`); 食/𤆬 share one `tsia̍h` cell; 重/tîng and
     // 重/tāng share one 重. The roman cell keeps its candidate's hanji:
-    // displayText and the 詞頻 pair-key must not move (§42 — identity is
+    // displayText and the word-frequency pair-key must not move (§42 — identity is
     // shared, only the marker decides the shown/committed script).
     return splitIntoSingleScriptCells(
         items = candidates,
@@ -188,11 +188,11 @@ internal fun buildContinuousSuggestionsForCandidates(
 // and the desktop PresentedCandidate split. Drift causes silent divergence (cell order or dedupe survivor differs on one platform).
 
 /**
- * The 漢羅濫 split (§42): each item becomes a 漢字 cell (when [hanziOf] is
- * non-empty) then a 羅馬字 cell (when [romanOf] is non-null), each script
+ * The Hanji with Romanization split (§42): each item becomes a Hanji cell (when [hanziOf] is
+ * non-empty) then a romanization cell (when [romanOf] is non-null), each script
  * deduped on the text its cell shows, first-seen wins — a one-script cell
  * carries nothing that could tell it from an earlier cell reading the same
- * (USER 2026-09-03 「相同的漢字 or 羅馬字不能重複出現」). [emit] builds the cell
+ * (USER 2026-09-03: "the same Hanji or romanization must not appear twice"). [emit] builds the cell
  * for `(item, cellScript, ordinal)`; the Continuous and NextWord builders
  * differ only in that constructor.
  */
@@ -220,7 +220,7 @@ internal fun <T> splitIntoSingleScriptCells(
 
 /**
  * One continuous-candidate [TaigiWord]. The marker-less form ([cellScript]
- * `null`) is the unsplit carrier; a 濫 split cell adds its
+ * `null`) is the unsplit carrier; a mixed split cell adds its
  * [TaigiWord.MetadataKeys.CELL_SCRIPT] marker on top of the same
  * sidechannels. Synthetic [id] ≥ 1 keeps Continuous candidates outside
  * English (id ≤ -100) and NextWord (-99..-1) sentinel ranges, and clear of

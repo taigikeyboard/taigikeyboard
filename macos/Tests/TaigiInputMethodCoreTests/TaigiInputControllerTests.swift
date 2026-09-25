@@ -119,7 +119,7 @@ final class TaigiInputControllerTests: XCTestCase {
     }
 
     /// Keydown only. The mask carried `flagsChanged` while a solo-Shift tap
-    /// drove 英數; that feature went on 2026-08-26 — there is no English mode
+    /// drove English (ABC); that feature went on 2026-08-26 — there is no English mode
     /// here now, the user switches input sources — and a mask still asking for
     /// modifier transitions would be this input method owning events nothing
     /// reads.

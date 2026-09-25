@@ -159,7 +159,7 @@ fn poj_o_with_dot_above_right_becomes_oo() {
 #[test]
 fn poj_o_dot_atomic_longest_match_suppresses_shorter_so() {
     // §18 longest-match prefix suppression (`INVARIANT_CONTINUOUS_LONGEST_MATCH_PREFIX`,
-    // USER 2026-05-31「免調也壓制」). Against the live `dictionary.csv`
+    // USER 2026-05-31: "suppress even without a tone"). Against the live `dictionary.csv`
     // sibling pair where both `so` (no tone, e.g. 蓑) and `soo` (no tone,
     // e.g. 數) are valid syllables, the shadow `soo` (from POJ `so\u{0358}`)
     // has single-syllable ends {2 (`so`), 3 (`soo`)}. `so` is a strict

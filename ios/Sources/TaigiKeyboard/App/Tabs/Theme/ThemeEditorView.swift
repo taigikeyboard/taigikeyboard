@@ -6,10 +6,10 @@ import SwiftUI
 /// reuses `ThemeColorRow` / `ThemeSliderRow`. A gradient's direction is set by
 /// dragging on the preview (`GradientDirectionOverlay`), not by a form row.
 ///
-/// Three sections, one per visual surface (USER 2026-09-19): **背景** (type
-/// 純色 / 漸層 / 照片 and its rows — the keyboard and the candidate bar share this
-/// one surface), **按鍵** (fills, text, shape, size), **候選詞** (text color + size),
-/// then 恢復預設. Font is a global setting, not part of a theme, so the editor
+/// Three sections, one per visual surface (USER 2026-09-19): **Background** (type
+/// Solid / Gradient / Photo and its rows — the keyboard and the candidate bar share this
+/// one surface), **Keys** (fills, text, shape, size), **Candidate Bar** (text color + size),
+/// then Reset to Defaults. Font is a global setting, not part of a theme, so the editor
 /// has no font control. The photo comes from `PhotosPicker` (no library permission
 /// needed) and is stored through `SharedSettings.saveThemeImage`.
 ///
@@ -55,7 +55,7 @@ struct ThemeEditorView: View {
                         // The two stops ARE the gradient, not overrides of a seed → no reset arrow.
                         ColorPicker(lang.string(.themeGradientStartColor), selection: viewModel.gradientStopBinding(0), supportsOpacity: false)
                         ColorPicker(lang.string(.themeGradientEndColor), selection: viewModel.gradientStopBinding(1), supportsOpacity: false)
-                    // No 方向 row: the pointer on the preview below is the direction control.
+                    // No Direction row: the pointer on the preview below is the direction control.
                     case .image:
                         ThemePhotoRow(
                             label: lang.string(viewModel.photo == nil ? .themePhotoPick : .themePhotoChange),
@@ -172,7 +172,7 @@ struct ThemeEditorView: View {
     private func commit() {
         let trimmed = pendingName.trimmingCharacters(in: .whitespacesAndNewlines)
         // CROSS-PLATFORM INVARIANT — mirrors android ThemeEditorScreen.kt:343 `ifEmpty { resolve(THEME_EDITOR_TITLE_NEW) }`.
-        // Persisted name freezes the creation-language label (an editable user value); release falls back to「新主題」.
+        // Persisted name freezes the creation-language label (an editable user value); release falls back to "New Theme".
         viewModel.name = trimmed.isEmpty ? lang.string(.themeEditorTitleNew) : trimmed
         if viewModel.save() {
             dismiss()

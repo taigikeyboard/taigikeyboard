@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-從 dictionary.csv 建立 association.bin
+Build association.bin from dictionary.csv
 
-輸入：output/dictionary.csv
-輸出：output/association.bin
+Input: output/dictionary.csv
+Output: output/association.bin
 
-Binary 格式（little-endian）：
+Binary format (little-endian):
   Header (20 bytes):
     magic:       4 bytes  "TKWA"
     version:     u32      1
@@ -35,9 +35,9 @@ Binary 格式（little-endian）：
       next_word:     [u8]  UTF-8 bytes
       next_tl:       [u8]  UTF-8 bytes
 
-用法：
-  python3 create_association_bin.py            # 建立 binary
-  python3 create_association_bin.py --verify    # 建立並驗證
+Usage:
+  python3 create_association_bin.py            # build the binary
+  python3 create_association_bin.py --verify    # build and verify
 """
 
 import struct

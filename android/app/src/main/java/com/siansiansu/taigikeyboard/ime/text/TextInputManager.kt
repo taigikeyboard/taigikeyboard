@@ -438,8 +438,8 @@ class TextInputManager(
 
     /**
      * Re-fetches the Taigi candidates for the composition as it stands. The
-     * 候選詞顯示 picker is not a pure cell-rendering switch: the engine
-     * collapses same-roman rows under 羅馬字 (§44), so the list itself
+     * Candidate Display picker is not a pure cell-rendering switch: the engine
+     * collapses same-roman rows under Romanization Only (§44), so the list itself
      * changes; repainting the cached suggestions would keep the duplicates
      * on screen until the next keystroke. No-op when nothing is composing —
      * the coordinator would otherwise clear a prediction strip.

@@ -332,7 +332,7 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
 
         /// Whether the candidate window is shown at all. Off means no fetch
         /// and no window — the user types romanization and Space / Return
-        /// write it as typed (USER 2026-09-08 「給使用者純打字用」). macOS-only
+        /// write it as typed (USER 2026-09-08: "for users who just want to type"). macOS-only
         /// like `toneInputScheme`: a phone keyboard's candidate bar is the
         /// keyboard, so the default is owned by `ComposingKeyBindings`
         /// rather than by the shared `EngineSettings.defaults`.
@@ -558,7 +558,7 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
         }
     }
 
-    /// Puts every key the 外觀 pane owns back to shipped state.
+    /// Puts every key the Appearance pane owns back to shipped state.
     ///
     /// Removes the stored values rather than writing the defaults over them,
     /// for the reason `resetComposingShortcuts` states: a written-through
@@ -573,7 +573,7 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
         )
     }
 
-    /// Puts every input setting the 一般 pane owns back to shipped state — the
+    /// Puts every input setting the General pane owns back to shipped state — the
     /// romanization, the tone keys, the output script and the four switches.
     /// Removed rather than written, like `resetAppearanceSettings`, and
     /// spelled out like `resetDictionarySources`. The display language stays
@@ -593,8 +593,8 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
         )
     }
 
-    /// Puts every toggle the 辭典管理 pane owns back to shipped state, the
-    /// master sources and the 腔口 subcollections alike.
+    /// Puts every toggle the Manage Dictionaries pane owns back to shipped state, the
+    /// master sources and the accent subcollections alike.
     ///
     /// Removed rather than written, like `resetAppearanceSettings`.
     ///
@@ -651,8 +651,8 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
     }
 
     /// The pane the settings window shows. Written as well as read, because a
-    /// caller that opens the window ON a pane — the 檢查更新 row, which needs
-    /// 一般 — moves it there: the window binds this key with `@AppStorage`, so
+    /// caller that opens the window ON a pane — the Check for Updates row, which needs
+    /// General — moves it there: the window binds this key with `@AppStorage`, so
     /// a write lands even while it is already open. Left alone by the doorway
     /// row and its chord, which is what reopens the window where the user was.
     var selectedSettingsPane: SettingsPane {
@@ -683,8 +683,8 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
         set { userDefaults.set(newValue, forKey: Keys.hasOfferedUpdateNotifications.name) }
     }
 
-    /// How the candidate window renders each `(漢字, 羅馬字)` pair. Written by
-    /// the 外觀 pane through `@AppStorage`; the setter is here so a test can
+    /// How the candidate window renders each `(Hanji, romanization)` pair. Written by
+    /// the Appearance pane through `@AppStorage`; the setter is here so a test can
     /// drive the mode the way it drives `inputMode`.
     var candidateDisplayMode: CandidateDisplayMode {
         get { choice(Keys.candidateDisplayMode) }
@@ -699,8 +699,8 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
     /// engine composes under: `current` derives the effective pair from them
     /// and `candidateDisplayMode`. A gate that read these directly would apply
     /// a swap the romanization-only display has switched off, which is why the
-    /// only callers are the writers — the shortcut toggle, the 一般 pane's
-    /// 輸出 picker (through `@AppStorage` on the same key) and the tests.
+    /// only callers are the writers — the shortcut toggle, the General pane's
+    /// Output Script picker (through `@AppStorage` on the same key) and the tests.
     var storedIsTranslateSwapped: Bool {
         get { bool(Keys.isTranslateSwapped) }
         set { userDefaults.set(newValue, forKey: Keys.isTranslateSwapped.name) }

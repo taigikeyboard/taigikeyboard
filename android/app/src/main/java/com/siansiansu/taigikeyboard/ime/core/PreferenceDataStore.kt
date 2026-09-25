@@ -68,7 +68,7 @@ object PreferenceKeys {
     val HEIGHT_FACTOR = stringPreferencesKey("looknfeel__height_factor")
     val LONG_PRESS_DELAY = intPreferencesKey("looknfeel__long_press_delay")
 
-    // Dictionary toggles. VARIANT = 異用字, KHIIN = 在來字,
+    // Dictionary toggles. VARIANT = Variant Characters, KHIIN = Conventional Characters,
     // LKK = LKK漢羅合用建議用字, DEV = 開發者補充辭典.
     val CUSTOM_DICT_ENABLED = booleanPreferencesKey("dictionary__custom_dict_enabled")
     val MOE_DICT_ENABLED = booleanPreferencesKey("dictionary__moe_dict_enabled")

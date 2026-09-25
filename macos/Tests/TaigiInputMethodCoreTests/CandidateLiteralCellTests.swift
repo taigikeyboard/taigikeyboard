@@ -4,13 +4,13 @@ import AppKit
 @testable import TaigiInputMethodCore
 import XCTest
 
-/// What these pin: with 顯示當咧拍的字 on, cell 0 is what the user is currently
+/// What these pin: with Show Typed Text First on, cell 0 is what the user is currently
 /// typing rather than a candidate the engine offered — it is marked as such,
 /// in whichever layout is up, and being marked is what centres its text across
 /// the whole cell (it names no key, so it does not step around the key column
 /// the other cells align on). It draws NO fill of its own: a tint was tried on
-/// 2026-09-09 and taken back out the same day (USER: 「背景底色強調效果不好,
-/// 恢復第一個位置的背景底色」).
+/// 2026-09-09 and taken back out the same day (USER: "the background-tint emphasis looks bad,
+/// restore the first slot's background").
 @MainActor
 final class CandidateLiteralCellTests: XCTestCase {
     private static let cells: [CandidateCellContent] = (0 ..< 12).map {

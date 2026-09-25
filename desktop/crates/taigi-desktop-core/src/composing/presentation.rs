@@ -1,6 +1,6 @@
 //! The cells the window shows for a fetched list, each knowing which
 //! candidate it stands for and which of that candidate's scripts it commits.
-//! Under 漢羅濫 one candidate is TWO adjacent one-script cells (hanji, then
+//! Under Hanji with Romanization one candidate is TWO adjacent one-script cells (hanji, then
 //! roman), so a window index is a CELL index and never indexes the fetched
 //! list directly. Port of macOS `ComposingManager.presentation(for:)`
 //! (invariants §42).
@@ -22,17 +22,17 @@ pub struct PresentedCandidate {
 }
 
 /// The cells for `candidates` under `settings`, in display order: one
-/// `Primary` cell per candidate, except 漢羅濫 splits a hanji-bearing
+/// `Primary` cell per candidate, except Hanji with Romanization splits a hanji-bearing
 /// candidate into a hanji cell then an `Alternate` roman cell.
 ///
 /// Both scripts dedupe on the TEXT THE CELL SHOWS, first-seen wins: a
 /// one-script cell carries nothing that could tell it from an earlier cell
 /// reading the same, so a second one is a defect, not a second offer
-/// (USER 2026-09-03 「相同的漢字 or 羅馬字不能重複出現」). The scripts keep separate
+/// (USER 2026-09-03: "the same Hanji or romanization must not appear twice"). The scripts keep separate
 /// keys. Hanji cells were exempt until 2026-09-03 on Core Principle #7
-/// grounds: 重 tîng / 重 tāng ARE two words, but under 漢羅濫 they draw two
+/// grounds: 重 tîng / 重 tāng ARE two words, but under Hanji with Romanization they draw two
 /// identical 重 cells, and the losing reading stays reachable through its own
-/// roman cell. 漢羅對應 is untouched — its annotation tells the pair apart.
+/// roman cell. Hanji–Romanization Pairing is untouched — its annotation tells the pair apart.
 pub(crate) fn presentation(
     candidates: &[ContinuousCandidate],
     settings: &EngineSettings,
@@ -79,7 +79,7 @@ pub(crate) fn presentation(
 }
 
 /// Whether `candidates` leads with the §34 literal — the WYSIWYG romanization
-/// the engine prepends at index 0 while 顯示當咧拍的字 is on
+/// the engine prepends at index 0 while Show Typed Text First is on
 /// (`engine/composing/src/dispatch.rs:260-268`). That cell takes no slot key:
 /// it is what the user is already typing, not an offer to pick (USER
 /// 2026-09-09), so the keys start on the cell after it
@@ -124,7 +124,7 @@ impl CandidateSource {
     }
 
     /// The same list presented again under the settings in force right
-    /// now (the 漢羅 flip re-renders in place).
+    /// now (the Hanji/romanization flip re-renders in place).
     pub fn refresh_presentation(&mut self, manager: &ComposingManager) {
         let (presented, leads_with_literal_roman) = manager.presentation(&self.candidates);
         self.presented = presented;
@@ -292,7 +292,7 @@ mod tests {
         )
     }
 
-    /// A manager whose 顯示當咧拍的字 setting is `enabled`.
+    /// A manager whose Show Typed Text First setting is `enabled`.
     fn manager_with_literal(enabled: bool) -> ComposingManager {
         let mut document = SettingsDocument::default();
         document.set_bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED, enabled);
@@ -307,7 +307,7 @@ mod tests {
         )
     }
 
-    /// The settings snapshot with 顯示當咧拍的字 `enabled`.
+    /// The settings snapshot with Show Typed Text First `enabled`.
     fn literal_settings(enabled: bool) -> EngineSettings {
         EngineSettings {
             is_literal_roman_candidate_enabled: enabled,
@@ -340,7 +340,7 @@ mod tests {
     #[test]
     fn the_source_carries_the_unkeyed_lead_with_the_list_it_presented() {
         // trace: set → true for a literal-led list; clear → false; a re-present
-        // under the same settings keeps it (the 漢羅 flip re-renders in place).
+        // under the same settings keeps it (the Hanji/romanization flip re-renders in place).
         let manager = manager_with_literal(true);
         let mut source = CandidateSource::default();
         assert!(!source.leads_with_literal_roman());

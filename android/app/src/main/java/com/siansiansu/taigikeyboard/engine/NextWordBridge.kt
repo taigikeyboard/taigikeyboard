@@ -226,7 +226,7 @@ fun RustEngineBridge.nextwordPredictNext(
         generation = generation,
         // Fields 9 / 10 ride only the predict request — the sole nextword reader
         // (`nextword/src/filter.rs` collapses same-roman predictions under ROMAN_ONLY
-        // and shapes `text` hyphenless under 無連字符).
+        // and shapes `text` hyphenless under No Hyphens).
         config = nextwordConfig(mode, translateSwapped, candidateDisplayMode, hyphenlessRoman),
     ) ?: return RustEngineBridge.NextWordFilterResult(emptyList(), wasStale = false)
     if (!resp.hasFilter()) {

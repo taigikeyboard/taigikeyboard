@@ -85,7 +85,7 @@ data class ThemeGradient(
 
         /**
          * The first vertical gradient a user sees when switching a solid background to
-         * 漸層: the solid color running into a lighter tint of itself.
+         * Gradient: the solid color running into a lighter tint of itself.
          */
         fun seeded(solid: Int): ThemeGradient = ThemeGradient(listOf(solid, lightenedArgb(solid, SEED_LIGHTEN_FACTOR)))
 
@@ -120,7 +120,7 @@ data class SurfaceRect(
  * A photo as the keyboard surface: [file] is the JPEG's name inside the app-private
  * `ThemeImageStore` directory (written by the settings app, read by the IME), [dim] the
  * opacity of the tone overlay laid over the desaturated photo so keys stay readable
- * (USER 2026-09-19 「圖片彩度不能太搶眼」). The overlay is white when the key text is dark
+ * (USER 2026-09-19: "the photo saturation must not be too eye-catching"). The overlay is white when the key text is dark
  * and black otherwise.
  */
 data class ThemeImageBackground(
@@ -180,7 +180,7 @@ data class ThemeImageBackground(
  * candidate bar is the same surface: a solid background colours both, a gradient
  * or photo paints once behind both (the bar goes transparent). A null
  * [KeyboardColorSettings.background] means "adaptive" (`?keyboard_bgColor`) and
- * is reserved for the 經典 預設 head. Rendering lives in `Modifier.themeBackground`
+ * is reserved for the Filled Default head. Rendering lives in `Modifier.themeBackground`
  * (Compose) and `KeyboardThemeSurfaceController` (View).
  *
  * JSON: `{"type":"solid","color":argb}` / `{"type":"gradient","stops":[…],"angle":180}` /
@@ -199,7 +199,7 @@ sealed class ThemeBackground {
         val image: ThemeImageBackground,
     ) : ThemeBackground()
 
-    /** The JSON discriminator, also the editor's 純色 / 漸層 / 照片 segmented choice. */
+    /** The JSON discriminator, also the editor's Solid / Gradient / Photo segmented choice. */
     enum class Kind(
         val jsonValue: String,
     ) {

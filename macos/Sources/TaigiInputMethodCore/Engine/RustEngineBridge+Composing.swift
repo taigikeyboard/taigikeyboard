@@ -235,7 +235,7 @@ extension RustEngineBridge {
     ) -> ContinuousFetchResult? {
         var fetch = Taigi_Engine_FetchAtPos()
         // §34/S22 — positive platform setting → inverted proto disable gate
-        // (the field's own comment carries why), so 顯示當咧拍的字 ON leaves the
+        // (the field's own comment carries why), so Show Typed Text First ON leaves the
         // preedit literal leading the list and Return commits what was typed.
         // CROSS-PLATFORM INVARIANT — mirrors desktop/crates/taigi-desktop-core/src/engine/composing.rs
         // `fetch_at_pos`, which inverts the same setting onto the same field.
@@ -276,7 +276,7 @@ extension RustEngineBridge {
     /// document; `canonicalText` and `associationTl` are the identity keys the
     /// engine learns from, which is why they are separate arguments rather than
     /// derived from the rendering (Core Principle #7 keys a word on the
-    /// `(漢字, canonical TL)` pair).
+    /// `(Hanji, canonical TL)` pair).
     ///
     /// Consuming the whole pending buffer makes this a final commit — the
     /// engine writes the composition to the document and exits to Idle. Anything

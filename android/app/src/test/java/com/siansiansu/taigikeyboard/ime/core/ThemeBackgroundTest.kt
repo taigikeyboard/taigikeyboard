@@ -192,7 +192,7 @@ class ThemeBackgroundTest {
         assertEquals("seeding the seed is a no-op", UserThemeSeed.colors, UserThemeSeed.colors.seededForUserTheme())
     }
 
-    // Switching 純色 -> 漸層 seeds a vertical gradient from the solid colour into a lighter tint of it.
+    // Switching Solid -> Gradient seeds a vertical gradient from the solid colour into a lighter tint of it.
     @Test
     fun seededGradient_runsSolidIntoLighterTint() {
         val seeded = ThemeGradient.seeded(0xFF204080.toInt())

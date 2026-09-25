@@ -1,8 +1,8 @@
-// The 外觀 pane: how the candidate window looks — mode, layout, size.
+// The Appearance pane: how the candidate window looks — mode, layout, size.
 
 import SwiftUI
 
-/// The 外觀 pane of the settings window: an 外觀 pop-up of light/dark/auto,
+/// The Appearance pane of the settings window: an Appearance pop-up of light/dark/auto,
 /// then the candidate window's own pickers — layout, size and what each cell
 /// shows. Every row is the same pop-up menu in one group, so the pane reads
 /// as one list rather than a drawn selector fenced off above a stack of menus
@@ -11,7 +11,7 @@ import SwiftUI
 /// Three rows are deliberately absent, each argued where it lives: no
 /// accent-colour swatch (see `CandidateAccentColor`), no chrome-generation
 /// picker (see `CandidateWindowStyle`) — both follow the system — and no
-/// typeface. The typeface moved to 字型管理 (`FontManagementPage`, USER
+/// typeface. The typeface moved to Manage Typefaces (`FontManagementPage`, USER
 /// 2026-09-08): the roster grows with what the user installs, so choosing one
 /// and managing the list is one table there rather than a pop-up here beside
 /// a list of files.
@@ -74,7 +74,7 @@ struct AppearanceSettingsView: View {
                 }
             }
 
-            // Its own section, at the end, drawn the way the 快捷鍵 pane draws
+            // Its own section, at the end, drawn the way the Shortcuts pane draws
             // its own: it acts on every row above it rather than on any one of
             // them.
             Section {

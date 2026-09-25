@@ -10,7 +10,7 @@ const val BCP47_HANJI = "nan-Hant-TW"
 
 /**
  * How a [DisplayLanguage]'s strings are resolved (plan D2 hybrid):
- * - [Native] — backed by an Android resource set selected via a per-locale Context (en/ja/漢字).
+ * - [Native] — backed by an Android resource set selected via a per-locale Context (en/ja/Hanji).
  * - [GeneratedMap] — TL/POJ have no OS locale, so strings come from a generated Kotlin map.
  * - [Automatic] — [DisplayLanguage.SYSTEM]'s sentinel: a selection policy with NO authored strings.
  *   The resolver must never read it; the boundary maps it to a concrete language via
@@ -106,7 +106,7 @@ enum class DisplayLanguage(
          * Resolves [SYSTEM]/Automatic to a concrete authored language from the device OS locale's
          * language subtag (lowercased): Japanese device → [JAPANESE], English device → [ENGLISH],
          * everything else (incl. Chinese / absent locale) → [HANJI]. Taiwanese Hanji is the neutral
-         * default so a Chinese-locale (or any non-ja/en) device reads the UI in 漢字, not English.
+         * default so a Chinese-locale (or any non-ja/en) device reads the UI in Hanji, not English.
          * Pure — the OS read happens at the call site, so this stays unit-testable.
          */
         fun resolveAutomatic(deviceLanguageSubtag: String): DisplayLanguage =

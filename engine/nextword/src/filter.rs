@@ -72,7 +72,7 @@ pub(crate) fn filter(
                 // backed by several rows differing in the PREVIOUS word's
                 // reading (重/tîng → 複 and 重/tāng → 複, both recalled by the
                 // Hanji-only lookup), and adding them would give it several
-                // `LEARNING_BONUS` terms for being 一字多音 rather than for
+                // `LEARNING_BONUS` terms for being polyphonic rather than for
                 // being well-learned.
                 //
                 // The engine does not — and cannot — verify that two colliding
@@ -117,10 +117,10 @@ pub(crate) fn filter(
             .unwrap_or(std::cmp::Ordering::Equal)
     });
 
-    // 3b. 候選詞顯示 = 羅馬字 (§44): the prediction cell hides `subtitle`
-    //     (the hanji), so 同音異字 predictions (`食/tsia̍h` + `𤆬/tsia̍h`,
+    // 3b. Candidate Display = Romanization Only (§44): the prediction cell hides `subtitle`
+    //     (the hanji), so homophone predictions (`食/tsia̍h` + `𤆬/tsia̍h`,
     //     distinct after the `(hanzi, tl)` merge) read as duplicates.
-    //     Collapse by the rendered `text` — under 羅馬字 the platform sends
+    //     Collapse by the rendered `text` — under Romanization Only the platform sends
     //     `is_translate_swapped = false`, so `shape_prediction` already
     //     dropped roman-empty rows and `text` is always the romanization.
     //     After the score sort so first-seen = best-scored; before the
@@ -244,7 +244,7 @@ fn shape_prediction(m: MergedRow, config: &AppConfig) -> Option<EnginePrediction
     } else {
         phonetics::api::tl_display_to_poj_display(&m.tl)
     };
-    // 無連字符 — presentation only; `tl` below stays the association key.
+    // No Hyphens — presentation only; `tl` below stays the association key.
     if config.hyphenless_roman {
         roman = phonetics::api::hyphenless_display(&roman);
     }
@@ -333,7 +333,7 @@ mod tests {
     }
 
     /// §24 prediction identity — under the v6 storage key the two readings of
-    /// a 一字多音 previous word are two rows, and the Hanji-only lookup returns
+    /// a polyphonic previous word are two rows, and the Hanji-only lookup returns
     /// BOTH. Their scores must not stack: one predicted word, one learning
     /// bonus. Two count-5 user rows would otherwise score ~2× a single one.
     #[test]
@@ -887,7 +887,7 @@ mod tests {
         assert_eq!(result.predictions[0].hanzi, "予我");
     }
 
-    // trace (Codex post-impl P1): genuine 一字多音 single-syllable readings
+    // trace (Codex post-impl P1): genuine polyphonic single-syllable readings
     // 當/tàng (tone 3, diacritic) and 當/tang (tone 1, NO diacritic) are both
     // real dictionary words. They share toneless key "tang" but NEITHER has a
     // separator, so the group must NOT fold — folding would hide 當/tang.
@@ -997,7 +997,7 @@ mod tests {
         }
     }
 
-    /// §44 — 羅馬字 cells hide the hanji, so 同音異字 predictions (distinct
+    /// §44 — Romanization Only cells hide the hanji, so homophone predictions (distinct
     /// after the `(hanzi, tl)` merge) collapse to the best-scored one;
     /// side-by-side keeps both.
     #[test]
@@ -1028,7 +1028,7 @@ mod tests {
         );
     }
 
-    /// 無連字符 shapes only the cell text; `tl` stays the association key
+    /// No Hyphens shapes only the cell text; `tl` stays the association key
     /// the platform hands back on tap, in TL and POJ mode alike.
     #[test]
     fn hyphenless_roman_strips_prediction_text_but_not_its_tl_key() {

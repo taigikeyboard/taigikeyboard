@@ -380,7 +380,7 @@ class LayoutManager(
 
         val result = mergeLayouts(keyboardMode, subtype, main, modifier, extension)
 
-        // 文/A is dropped where it could flip nothing — 羅馬字 (always half-width)
+        // 文/A is dropped where it could flip nothing — Romanization Only (always half-width)
         // and TPS (always full-width) — from every mode's rows (characters +
         // symbols mods all carry it) and SPACE (flexGrow 1) takes the freed width.
         if (!prefs.candidateDisplayMode.allowsSwapToggle || prefs.isTpsLayout) {

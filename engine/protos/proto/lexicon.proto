@@ -285,7 +285,7 @@ message TaigiWord {
 // canonical_tl)` PAIR (Core Principle #7). `canonical_tl` is the
 // candidate's canonical-TL reading, snapshotted BEFORE the POJ-render
 // pass (= `RawCandidate.canonical_tl`). One `display_text` (e.g. 重) now
-// carries one entry PER reading (重/tîng vs 重/tāng), so 一字多音 keep
+// carries one entry PER reading (重/tîng vs 重/tāng), so polyphonic characters keep
 // separate frequency buckets. `canonical_tl == ""` is the LEGACY sentinel
 // for pre-R5 rows / old-backup imports the platform could not re-key; the
 // engine treats it as a tolerant fallback bucket consulted by ALL readings
@@ -361,17 +361,17 @@ message DictionaryToggles {
   bool kungge  = 7;  // 台語工藝詞庫
   bool stti    = 8;  // 學科術語辭典
   bool khpoo   = 9;  // 腔口補充資料
-  bool variant = 10; // 異用字 (filter bit 12)
-  bool khiin   = 11; // 在來字 (filter bit 9)
-  bool lkk     = 12; // LKK漢羅合用建議用字
-  bool dev     = 14; // 開發者補充辭典 (詞庫增補檔案, filter bit 10) — default on, now toggleable
+  bool variant = 10; // Variant Characters (異用字, filter bit 12)
+  bool khiin   = 11; // Conventional Characters (在來字, filter bit 9)
+  bool lkk     = 12; // LKK Han-Lo Recommended Characters
+  bool dev     = 14; // developer supplement (Supplementary Word List, filter bit 10) — default on, now toggleable
   // kautian subcollection toggles. Absent ⇒ engine skips the subcollection
   // gate (legacy all-on). Only meaningful when `kautian = true`.
   KautianSubcollToggles kautian_subcoll = 13;
 }
 
 // `KautianSubcollToggles` is the per-subcollection enable state for the
-// kautian source (Phase 3). The main subcollection (主條目 / headword) is
+// kautian source (Phase 3). The main subcollection (main entry / headword) is
 // NOT a field — it is always on whenever the kautian master toggle is on,
 // so `compute_filters` sets its subtag bit unconditionally when this
 // message is present. Field tags map to the kautian subtag bit positions:
@@ -380,17 +380,17 @@ message DictionaryToggles {
 // `engine/lexicon/src/dictionary_reader.rs` (`KAUTIAN_SUBTAG_*`); see
 // `docs/engine/binary-format.md` §4.5.
 message KautianSubcollToggles {
-  bool accent_lukang    = 1;  // 鹿港偏泉腔 (subtag bit 1)
-  bool accent_sansia    = 2;  // 三峽偏泉腔 (subtag bit 2)
-  bool accent_taipak    = 3;  // 臺北偏泉腔 (subtag bit 3)
-  bool accent_gilan     = 4;  // 宜蘭偏漳腔 (subtag bit 4)
-  bool accent_tainan    = 5;  // 臺南混合腔 (subtag bit 5)
-  bool accent_kaohsiung = 6;  // 高雄混合腔 (subtag bit 6)
-  bool accent_kinmen    = 7;  // 金門偏泉腔 (subtag bit 7)
-  bool accent_makung    = 8;  // 馬公偏泉腔 (subtag bit 8)
-  bool accent_sintik    = 9;  // 新竹偏泉腔 (subtag bit 9)
-  bool accent_taichung  = 10; // 臺中偏漳腔 (subtag bit 10)
-  bool name_appendix    = 11; // 姓名附錄 名+姓 (subtag bit 11)
+  bool accent_lukang    = 1;  // Lukang (Quanzhou-leaning) (subtag bit 1)
+  bool accent_sansia    = 2;  // Sansia (Quanzhou-leaning) (subtag bit 2)
+  bool accent_taipak    = 3;  // Taipei (Quanzhou-leaning) (subtag bit 3)
+  bool accent_gilan     = 4;  // Yilan (Zhangzhou-leaning) (subtag bit 4)
+  bool accent_tainan    = 5;  // Tainan (Mixed) (subtag bit 5)
+  bool accent_kaohsiung = 6;  // Kaohsiung (Mixed) (subtag bit 6)
+  bool accent_kinmen    = 7;  // Kinmen (Quanzhou-leaning) (subtag bit 7)
+  bool accent_makung    = 8;  // Makung (Quanzhou-leaning) (subtag bit 8)
+  bool accent_sintik    = 9;  // Hsinchu (Quanzhou-leaning) (subtag bit 9)
+  bool accent_taichung  = 10; // Taichung (Zhangzhou-leaning) (subtag bit 10)
+  bool name_appendix    = 11; // Surname Appendix, 名+姓 (subtag bit 11)
 }
 
 // `DictionarySourceCode` is the wire-stable mapping for

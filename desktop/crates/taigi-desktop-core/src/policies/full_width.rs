@@ -1,11 +1,11 @@
 //! Maps typed half-width punctuation to its full-width form for hanji-first
 //! output. Port of `FullWidthPunctuation.swift`: applied only while the
-//! 漢羅對調 swap has Hanji coming first (the MOE rule 漢字模式全形, 臺羅模式
-//! 半形); the caller reads the mode, and the auto-space swap is read first
+//! Hanji/Romanization Swap has Hanji coming first (the MOE rule: full-width in Hanji mode, TL mode
+//! half-width); the caller reads the mode, and the auto-space swap is read first
 //! and wins. The mode is a default, not a wall: Ctrl on any key of this map
 //! types the other width once (`ComposingKeyIntent::width_flip_character`).
 
-/// The MOE manual's 符號快捷鍵對照表, minus what this input method must keep
+/// The MOE manual's symbol shortcut table, minus what this input method must keep
 /// half-width: digits (tone markers), the hyphen (syllable separator),
 /// letters, and the straight double quote (one glyph serves both sides).
 const MAP: [(char, char); 24] = [

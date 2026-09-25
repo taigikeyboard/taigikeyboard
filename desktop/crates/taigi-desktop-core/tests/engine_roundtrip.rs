@@ -216,7 +216,7 @@ fn partial_commit_nails_a_segment_and_stays_composing() {
     engine::reset(generation);
 }
 
-/// §34 leads the list under the shipped defaults: 顯示當咧拍的字 is ON out of
+/// §34 leads the list under the shipped defaults: Show Typed Text First is ON out of
 /// the box on all four platforms (USER 2026-09-03), so with TL/POJ text
 /// composed the preedit literal is slot 0. What a commit of that slot writes,
 /// and the OFF half of the switch, are `composing_manager.rs`'s

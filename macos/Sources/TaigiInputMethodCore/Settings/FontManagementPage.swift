@@ -1,4 +1,4 @@
-// 字型管理: which typeface the candidate window is set in — bundled, added by the user, or installed on this Mac.
+// Manage Typefaces: which typeface the candidate window is set in — bundled, added by the user, or installed on this Mac.
 
 import SwiftUI
 import UniformTypeIdentifiers
@@ -8,7 +8,7 @@ import UniformTypeIdentifiers
 ///
 /// The three kinds are rows of ONE list on purpose. The list's selection is
 /// the typeface the candidate window draws in, whichever kind it is — so there
-/// is one selection with one meaning, which is what a picker in 外觀 beside a
+/// is one selection with one meaning, which is what a picker in Appearance beside a
 /// table here could not have had (the picker's selection and the table's would
 /// have been two highlights meaning different things).
 private struct FontRow: Identifiable {
@@ -30,19 +30,19 @@ private struct FontRow: Identifiable {
 ///
 /// A table whose selection is the live typeface, rather than a pop-up menu:
 /// this list grows and shrinks with what the user installs, and System Settings
-/// states such a list the same way — 聲音's output devices, 顯示器's displays,
+/// states such a list the same way — Sound's output devices, Displays' displays,
 /// where selecting a row is what makes it the one in use.
 ///
-/// The list's SHAPE is 自訂詞庫's (`CustomDictionaryPage.entryTable`): a search
+/// The list's SHAPE is Custom Dictionary's (`CustomDictionaryPage.entryTable`): a search
 /// field, an inset table with no striping, one page of rows at a time, and the
 /// `+` / `−` pair under it with the pager at its trailing end. The search field
 /// and the pager are what make a few hundred installed families usable in one
 /// table (USER 2026-09-11) — the alternative, a sub-page or a sheet for them,
 /// is the popup this pane's shape was chosen to avoid.
 ///
-/// No 回復預設 row (USER 2026-09-08): every other pane's reset restores rows the
+/// No Reset to Defaults row (USER 2026-09-08): every other pane's reset restores rows the
 /// user cannot otherwise put back one by one, while this list's default is a row
-/// in it — 系統, first in the table, one click away.
+/// in it — System, first in the table, one click away.
 struct FontManagementPage: View {
     @Environment(DisplayLanguageStore.self) private var language
 
@@ -64,7 +64,7 @@ struct FontManagementPage: View {
     @State private var page = 0
     @State private var message: UserDataPageMessage?
 
-    /// How many rows one page holds — the table's height, exactly, as 自訂詞庫
+    /// How many rows one page holds — the table's height, exactly, as Custom Dictionary
     /// does it (`CustomDictionaryPageModel.pageSize`): a page that fits the
     /// table never needs a scroller of its own, which a `Table` inside a
     /// `Form` cannot have (`UserDataListPager`). The installed families make
@@ -148,7 +148,7 @@ struct FontManagementPage: View {
             }
         }
         .tableStyle(.inset)
-        // Every row the same colour, as on the 自訂詞庫 table: settings
+        // Every row the same colour, as on the Custom Dictionary table: settings
         // content, not a spreadsheet.
         .alternatingRowBackgrounds(.disabled)
         .frame(height: UserDataListMetrics.tableHeight(rows: Self.pageSize))
@@ -223,7 +223,7 @@ struct FontManagementPage: View {
                     // The face is already on this Mac — installed, or bundled.
                     // The user asked to type in it, not to own a copy of it, so
                     // the row that already draws it is selected (USER
-                    // 2026-09-11 「跳出提示,並且跳轉到那個字型」). The file
+                    // 2026-09-11: "show a notice and jump to that typeface"). The file
                     // name they gave it is irrelevant: the face is known by
                     // the name inside the file.
                     reload()

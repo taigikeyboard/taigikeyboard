@@ -23,7 +23,7 @@ enum ThemeId {
 /// A read-only, app-bundled theme: a named palette with light and/or dark
 /// 6-role color variants, resolved against the system `colorScheme` at render
 /// time. `light`/`dark` are concrete `KeyboardColorSettings` (every role set);
-/// a `nil` variant (e.g. 暗眠山貓/Catppuccin, which ships dark-only by design)
+/// a `nil` variant (e.g. Catppuccin, which ships dark-only by design)
 /// falls back to the other variant.
 struct BuiltInTheme: Equatable {
     let id: String
@@ -34,14 +34,14 @@ struct BuiltInTheme: Equatable {
     let light: KeyboardColorSettings?
     let dark: KeyboardColorSettings?
 
-    /// Asset name for the card preview screenshot (sized to match the 齒盤佈局
+    /// Asset name for the card preview screenshot (sized to match the Layout
     /// page's `layout_*_preview` assets). `nil` → fall back to the live color
     /// swatch.
     var previewImageName: String?
 
     /// Optional key-outline width override. Built-in themes are colors-first, but
     /// a theme may carry this one appearance scalar so the resolver applies it on
-    /// top of the factory sizes (used by the 框線 key-style family). `nil` keeps
+    /// top of the factory sizes (used by the Outlined key-style family). `nil` keeps
     /// the factory `keyBorderWidth` (0 = no border).
     var keyBorderWidth: Double?
 
@@ -98,7 +98,7 @@ struct ThemeAppearance: Codable, Equatable {
     )
 
     /// The draft a NEW user theme starts from: factory sizes + the concrete light
-    /// palette (`UserThemeSeed.colors`). Also what 恢復預設 restores.
+    /// palette (`UserThemeSeed.colors`). Also what Reset to Defaults restores.
     static let userThemeSeed: ThemeAppearance = {
         var appearance = ThemeAppearance.default
         appearance.colors = UserThemeSeed.colors

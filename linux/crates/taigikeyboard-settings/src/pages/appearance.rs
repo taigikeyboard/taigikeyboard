@@ -1,7 +1,7 @@
-//! The 外觀 pane, the Linux row set (roadmap L4): the candidate list's
+//! The Appearance pane, the Linux row set (roadmap L4): the candidate list's
 //! layout and what each cell shows. The panel draws the list, so the
 //! window's light / dark mode, the size and typeface rows of the other
-//! desktops are not drawn, and the layout picker offers only 橫 / 直.
+//! desktops are not drawn, and the layout picker offers only Horizontal / Vertical.
 //! Port of `AppearanceSettingsView.swift`.
 
 use super::PageContext;

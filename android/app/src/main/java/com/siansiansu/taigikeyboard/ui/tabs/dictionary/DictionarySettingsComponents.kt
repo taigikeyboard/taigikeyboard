@@ -71,7 +71,7 @@ private fun DictionarySource.tagKey(): StringKey =
         DictionarySource.KUNGGE -> StringKey.DICTIONARY_KUNGGE_TAG
         DictionarySource.STTI -> StringKey.DICTIONARY_STTI_TAG
         DictionarySource.LKK -> StringKey.DICTIONARY_LKK_TAG
-        // khpoo/khiin/dev/custom collapse to one "補充資料" badge (reuses the section-title key).
+        // khpoo/khiin/dev/custom collapse to one "Supplementary Data" badge (reuses the section-title key).
         DictionarySource.KHPOO,
         DictionarySource.KHIIN,
         DictionarySource.DEV,
@@ -223,7 +223,7 @@ internal fun DictionaryInfoSwitch(
 }
 
 // Title-only switch row for nested subcollection toggles (no info button).
-// Used for the kautian 腔調 / 姓名附錄 rows nested under the MOE master toggle;
+// Used for the kautian accent / Surname Appendix rows nested under the MOE master toggle;
 // `enabled = false` greys the label + switch (DD7), `modifier` carries the
 // nested indent. Mirrors iOS DictionaryTab.kautianSubcollToggle.
 @Composable

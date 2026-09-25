@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-測試 fst 前綴索引查詢
+Test fst prefix-index queries
 
-用法：
+Usage:
     python query_fst.py <prefix>
     python query_fst.py tl:gua
     python query_fst.py poj:goa
     python query_fst.py hanzi:好
 
-支援前綴查詢；exact-match 由前綴查詢自然涵蓋（key 完全相符 = 前綴長度等於 key 長度）。
+Supports prefix queries; exact matches fall out of them (an exact key match =
+a prefix as long as the key).
 
 Sample row resolution reads dictionary.csv via load_dictionary_records()
 (post-v3.5.6 part 2; previously came from `output/trie.db`).

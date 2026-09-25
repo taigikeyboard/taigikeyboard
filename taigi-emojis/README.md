@@ -2,7 +2,7 @@
 
 Single emoji source of truth for the [TaigiKeyboard](https://github.com/taigikeyboard)
 (iOS + Android). A Python generator merges pinned Unicode + CLDR data with a hand overlay
-of Taiwanese (台語) / 華語 search keywords and emits one `dist/emoji.json` both apps consume.
+of Taiwanese (Taigi) / Mandarin search keywords and emits one `dist/emoji.json` both apps consume.
 
 Currently pinned to **Unicode Emoji 17.0** (CLDR 48) — 1889 emoji.
 
@@ -29,11 +29,11 @@ make test    # golden specs + drift guard
 emoji  action  category  order  taigi_keywords  zh_Hant_keywords  en_keywords  name  notes
 ```
 
-- `patch` — add keywords to an existing emoji (e.g. add 台語 search terms).
+- `patch` — add keywords to an existing emoji (e.g. add Taigi search terms).
 - `add` — add a brand-new emoji not in upstream.
 - `exclude` — drop an upstream emoji.
 
-Keywords are `|`-separated. For Taigi terms, use 漢字 and only verified 羅馬字 — never invent
+Keywords are `|`-separated. For Taigi terms, use Hanji and only verified romanization — never invent
 romanization (see `.claude/rules/emoji-data-authoring.md`).
 
 ## Update to a new Unicode version

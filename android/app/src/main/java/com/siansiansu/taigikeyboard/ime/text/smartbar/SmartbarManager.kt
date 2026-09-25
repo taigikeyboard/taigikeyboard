@@ -537,7 +537,7 @@ class SmartbarManager(
     }
 
     /**
-     * 候選詞顯示 changed (host picker or in-keyboard overlay — both arrive via
+     * Candidate Display changed (host picker or in-keyboard overlay — both arrive via
      * `PrefHelper.observeCandidateDisplayMode`): the derived pair flips without
      * any stored flag moving, so the same live surfaces the 文/A toggle touches
      * must re-render now, not on the next event. The layout reload inside also
@@ -546,7 +546,7 @@ class SmartbarManager(
     fun onCandidateDisplayModeChanged() {
         refreshScriptFlagCache()
         refreshSurfacesForScriptFlags()
-        // The repaint above reuses `currentSuggestions`; under 羅馬字 the engine
+        // The repaint above reuses `currentSuggestions`; under Romanization Only the engine
         // returns a DIFFERENT list (same-roman rows collapsed, §44), so the
         // composition is fetched again and the repaint is overwritten.
         textInputManager.refetchCandidatesForDisplayModeChange()

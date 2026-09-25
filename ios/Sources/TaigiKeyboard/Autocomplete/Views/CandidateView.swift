@@ -9,7 +9,7 @@ struct CandidateView: View {
     let suggestions: [AutocompleteSuggestion]
     let selectedCandidateIndex: Int
     let onSuggestionTap: (AutocompleteSuggestion) -> Void
-    /// Swaps the 漢字 / 羅馬字 display positions.
+    /// Swaps the Hanji / romanization display positions.
     let isTranslateSwapped: Bool
     let candidateDisplayMode: CandidateDisplayMode
     let onSettingsTap: () -> Void

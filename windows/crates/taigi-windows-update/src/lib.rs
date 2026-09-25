@@ -8,7 +8,7 @@
 //!
 //! What the check is triggered by is NOT in here (Codex W9): the installer's
 //! scheduled task runs `--check-updates`, the window checks when
-//! overdue at launch, the user checks from the 一般 pane or the lang-bar
+//! overdue at launch, the user checks from the General pane or the lang-bar
 //! menu, and the DLL only ever READS the pending manifest.
 
 pub mod installation;

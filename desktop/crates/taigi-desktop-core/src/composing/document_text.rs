@@ -25,7 +25,7 @@ impl CandidateScript {
 }
 
 /// One candidate as the window renders it — both scripts, in the order the
-/// user's swap setting puts them. A Taigi candidate is a `(漢字, 羅馬字)`
+/// user's swap setting puts them. A Taigi candidate is a `(Hanji, romanization)`
 /// pair (Core Principle #7), and showing only one makes several read
 /// identically. Display only; what a commit writes is [`document_text`].
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -49,7 +49,7 @@ impl CandidateCellContent {
     /// CROSS-PLATFORM INVARIANT — mirrors
     /// `ios/.../TaigiAutocompleteService.swift:150-162` (primary =
     /// romanization, secondary = Hanji) and the swap flip; arm order is the
-    /// same on every platform. Serves 並排 and 羅馬字; 合用's split cells
+    /// same on every platform. Serves Pairing and Romanization Only; Combined's split cells
     /// are built by [`super::presentation`].
     pub fn cell(candidate: &ContinuousCandidate, settings: &EngineSettings) -> Self {
         match candidate.nonempty_hanji() {
@@ -93,7 +93,7 @@ pub fn document_text(candidate: &ContinuousCandidate, settings: &EngineSettings)
 /// 我欲去 does not), so its gate has to answer for the string this commit
 /// actually writes. Deriving the verdict from the output mode instead is
 /// only ever an approximation, and it is wrong for a candidate with no
-/// Hanji: the 字面羅馬字 candidate (§34), an out-of-vocabulary name, a
+/// Hanji: the literal-romanization candidate (§34), an out-of-vocabulary name, a
 /// romanization-only custom entry all write their romanization whatever the
 /// mode leads with.
 /// CROSS-PLATFORM INVARIANT — mirrors `macos/.../CandidateDocumentText.swift`
@@ -112,7 +112,7 @@ pub fn resolved_commit(
         };
     };
     if settings.is_output_both_scripts {
-        // 括號標註 writes the pair, so the romanization IS in the document
+        // Annotate in Brackets writes the pair, so the romanization IS in the document
         // whichever half leads.
         let text = if settings.is_translate_swapped {
             format!("{hanji} ({})", candidate.roman)
@@ -138,7 +138,7 @@ pub fn resolved_commit(
 
 /// What Space commits — the script `document_text` does NOT lead with, or
 /// `None` when the candidate has one script or the mode shows no hanji.
-/// Read off the settings, never the cell: under 合用 the flip in
+/// Read off the settings, never the cell: under Combined the flip in
 /// `CandidateSource::resolve` turns this into "the other cell's script".
 /// `is_output_both_scripts` is not consulted — Space writes one script, so
 /// its verdict is simply which script that is.
@@ -238,7 +238,7 @@ mod tests {
     fn alternate_text_follows_the_display_mode_not_the_cell() {
         // trace: hanji present → SideBySide both swaps = the annotation the
         // cell carries today; Combined (derived swap = true) = roman; RomanOnly
-        // = None; hanji-less = None; 括號標註 ignored (one script).
+        // = None; hanji-less = None; Annotate in Brackets ignored (one script).
         let c = candidate("tâi-gí", Some("台語"), 0);
         for both in [false, true] {
             let side_by_side = |swapped| EngineSettings {
@@ -297,7 +297,7 @@ mod tests {
     fn a_candidate_with_no_hanji_always_carries_romanization() {
         // trace: `resolved_commit` — the hanji-absent arm. Romanization
         // under EVERY mode, including the two the old mode proxy called a
-        // hanji commit (漢字優先 and 漢羅濫).
+        // hanji commit (Hanji-first and Hanji with Romanization).
         for c in [candidate("taigi", None, 0), candidate("taigi", Some(""), 0)] {
             for (swapped, both) in [(false, false), (true, false), (false, true), (true, true)] {
                 let resolved = resolved_commit(&c, &settings(swapped, both));

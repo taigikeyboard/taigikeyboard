@@ -41,8 +41,8 @@ ACCENT_COLUMNS = [
 
 
 def test_build_accent_mask_map_shared_reading_ors_bits():
-    # 八: pueh in 鹿港/三峽/臺北/金門/馬公/新竹 (bits 0,1,2,6,7,8) = 455;
-    #     peh in 宜蘭/臺南/高雄/臺中 (bits 3,4,5,9) = 568.
+    # 八: pueh in Lukang/Sansia/Taipei/Kinmen/Makung/Hsinchu (bits 0,1,2,6,7,8) = 455;
+    #     peh in Yilan/Tainan/Kaohsiung/Taichung (bits 3,4,5,9) = 568.
     df = pd.DataFrame(
         {
             "漢字": ["八"],
@@ -64,7 +64,7 @@ def test_build_accent_mask_map_shared_reading_ors_bits():
 
 
 def test_build_accent_mask_map_comma_multi_reading_splits():
-    # 新竹 女 = "lír,lí" → both sub-readings carry that column's bit (bit 8).
+    # Hsinchu 女 = "lír,lí" → both sub-readings carry that column's bit (bit 8).
     df = pd.DataFrame({"漢字": ["女"], **{c: [None] for c in ACCENT_COLUMNS}})
     df.loc[0, "新竹偏泉腔"] = "lír,lí"
     accent_map = build_accent_mask_map(df, ACCENT_COLUMNS, preserve_spaces=True)
@@ -107,7 +107,7 @@ def test_build_membership_set_strips_bracket_annotations():
 def test_apply_provenance_bracketed_headword_overlapping_name_stays_main():
     # Regression (Codex BLOCK): 八/pat is a headword (詞目 【文】pat) AND a name
     # reading. With a cleanup-normalized main_set it must stay kautian_main=True
-    # so it survives when the 姓名附錄 toggle is off (DD6).
+    # so it survives when the Surname Appendix toggle is off (DD6).
     df = pd.DataFrame({"hanzi": ["八"], "tl": ["pat"]})
     out = apply_provenance(
         df, accent_map={}, name_set={("八", "pat")}, main_set={("八", "pat")}

@@ -308,7 +308,7 @@
       }
     },
     "i18n_common_other": {
-      "comment": "Generic Other: home section header above the FAQ / other list (mobile), 快速齒 pane third block's header — the switches and the windows a key raises (desktop). Merged 2026-09-20 from home.faq / desktop.shortcutSectionOther.",
+      "comment": "Generic Other: home section header above the FAQ / other list (mobile), Shortcuts pane third block's header — the switches and the windows a key raises (desktop). Merged 2026-09-20 from home.faq / desktop.shortcutSectionOther.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -380,7 +380,7 @@
       }
     },
     "i18n_common_settings": {
-      "comment": "Generic Settings label: main-app bottom-nav tab title + page title (mobile), smartbar settings button a11y label (extension). Merged 2026-09-20 from keyboard.settings / nav.tabSettings. The desktop menu row is desktop.menuSettings (台語齒盤設定) since 2026-09-25 — one menu on three desktops.",
+      "comment": "Generic Settings label: main-app bottom-nav tab title + page title (mobile), smartbar settings button a11y label (extension). Merged 2026-09-20 from keyboard.settings / nav.tabSettings. The desktop menu row is desktop.menuSettings (TaigiKeyboard Settings) since 2026-09-25 — one menu on three desktops.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -1604,7 +1604,7 @@
       }
     },
     "i18n_dictionary_searchPlaceholder": {
-      "comment": "Search-field placeholder in the dictionary browser, and the filter box on the macOS 自訂詞庫 pane.",
+      "comment": "Search-field placeholder in the dictionary browser, and the filter box on the macOS Custom Dictionary pane.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -1892,7 +1892,7 @@
       }
     },
     "i18n_home_appHeaderTitle": {
-      "comment": "Home tab large title — the app name; ALSO the desktop 關於 page heading. ALSO the macOS bundle's localized name (macos/App/*.lproj/InfoPlist.strings) — editing this renames the macOS input source; see MACOS_BUNDLE_NAME_KEY in tools/i18n/i18n_lib.py.",
+      "comment": "Home tab large title — the app name; ALSO the desktop About page heading. ALSO the macOS bundle's localized name (macos/App/*.lproj/InfoPlist.strings) — editing this renames the macOS input source; see MACOS_BUNDLE_NAME_KEY in tools/i18n/i18n_lib.py.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -2630,7 +2630,7 @@
       }
     },
     "i18n_layout_tpsLayout": {
-      "comment": "Layout name: the Taiwanese Phonetic Symbols (方音符號) keyboard.",
+      "comment": "Layout name: the Taiwanese Phonetic Symbols (TPS) keyboard.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -2756,7 +2756,7 @@
       }
     },
     "i18n_settings_candidateDisplayMode": {
-      "comment": "Picker label: how a candidate cell renders the (漢字, 羅馬字) pair — side by side (today) or romanization only. Host settings + iOS/Android in-keyboard settings overlay; desktop appearance pane.",
+      "comment": "Picker label: how a candidate cell renders the (Hanji, romanization) pair — side by side (today) or romanization only. Host settings + iOS/Android in-keyboard settings overlay; desktop appearance pane.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -2774,7 +2774,7 @@
       }
     },
     "i18n_settings_candidateDisplayModeCombined": {
-      "comment": "Picker value: cell shows hanji and romanization as ONE label (漢字 羅馬字); committing writes the hanji; the 文/A key is inert. TL/POJ only.",
+      "comment": "Picker value: cell shows hanji and romanization as ONE label (Hanji romanization); committing writes the hanji; the 文/A key is inert. TL/POJ only.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -3062,7 +3062,7 @@
       }
     },
     "i18n_settings_hyphenlessRoman": {
-      "comment": "Toggle label: render candidate / committed romanization without the dictionary's inter-syllable hyphen, 輕聲 -- as · (tâi-uân → tâiuân, hōo--guá → hōo·guá). All four platforms, host settings only.",
+      "comment": "Toggle label: render candidate / committed romanization without the dictionary's inter-syllable hyphen, neutral-tone -- as · (tâi-uân → tâiuân, hōo--guá → hōo·guá). All four platforms, host settings only.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -3080,7 +3080,7 @@
       }
     },
     "i18n_settings_hyphenlessRomanInfo": {
-      "comment": "Help text for the 無連字符 toggle (mobile host app).",
+      "comment": "Help text for the No Hyphens toggle (mobile host app).",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -3098,7 +3098,7 @@
       }
     },
     "i18n_settings_inputMode": {
-      "comment": "Settings row + sub-screen title for selecting the active input mode (mobile). The desktop 一般 pane labels its TL / POJ picker inputScript instead.",
+      "comment": "Settings row + sub-screen title for selecting the active input mode (mobile). The desktop General pane labels its TL / POJ picker inputScript instead.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -3152,7 +3152,7 @@
       }
     },
     "i18n_settings_literalRomanCandidateInfo": {
-      "comment": "Help text for the 當咧拍的字囥第一个 toggle.",
+      "comment": "Help text for the Show Typed Text First toggle.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -3188,7 +3188,7 @@
       }
     },
     "i18n_settings_nasalMarkerUppercaseInfo": {
-      "comment": "Help text for the ⁿ 大本字 toggle (mobile host app).",
+      "comment": "Help text for the ⁿ becomes ᴺ in capitals toggle (mobile host app).",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -3242,7 +3242,7 @@
       }
     },
     "i18n_settings_pojMode": {
-      "comment": "Input-mode option: Pe̍h-ōe-jī (白話字) romanization. Also the iOS smartbar input-mode button a11y label (extension surface). Also the Pe̍h-ōe-jī settings section header (pojSettingsSectionTitle merged 2026-09-20).",
+      "comment": "Input-mode option: Pe̍h-ōe-jī (POJ) romanization. Also the iOS smartbar input-mode button a11y label (extension surface). Also the Pe̍h-ōe-jī settings section header (pojSettingsSectionTitle merged 2026-09-20).",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -3332,7 +3332,7 @@
       }
     },
     "i18n_settings_tlMode": {
-      "comment": "Input-mode option: Tâi-lô (台羅) romanization. Also the iOS smartbar input-mode button a11y label (extension surface).",
+      "comment": "Input-mode option: Tâi-lô (TL) romanization. Also the iOS smartbar input-mode button a11y label (extension surface).",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -3386,7 +3386,7 @@
       }
     },
     "i18n_settings_tpsMode": {
-      "comment": "Input-mode option: Taiwanese Phonetic Symbols (方音符號). Also the iOS smartbar input-mode button a11y label (extension surface). Also the TPS settings section header and the layout page's TPS section header (tpsSettingsSectionTitle / layout.taigiPhonetic merged 2026-09-20).",
+      "comment": "Input-mode option: Taiwanese Phonetic Symbols (TPS). Also the iOS smartbar input-mode button a11y label (extension surface). Also the TPS settings section header and the layout page's TPS section header (tpsSettingsSectionTitle / layout.taigiPhonetic merged 2026-09-20).",
       "extractionState": "manual",
       "localizations": {
         "en": {

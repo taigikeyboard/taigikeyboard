@@ -45,7 +45,7 @@ final class DictionarySearchServiceTests: XCTestCase {
         )
     }
 
-    /// 漢字 go to the other engine entry point. Which one to use is asked of
+    /// Hanji go to the other engine entry point. Which one to use is asked of
     /// the engine, not decided by scanning code points here.
     func testAHanziQuery_findsWords() {
         let results = makeService().search("台語")
@@ -92,7 +92,7 @@ final class DictionarySearchServiceTests: XCTestCase {
 
     // MARK: - Order
 
-    /// 教育部 is the reference dictionary, so its rows lead the bundled ones
+    /// MOE is the reference dictionary, so its rows lead the bundled ones
     /// whatever the engine scored them.
     func testKautianResultsComeFirst() {
         let results = makeService().search("taigi").filter { $0.sources != [.custom] }

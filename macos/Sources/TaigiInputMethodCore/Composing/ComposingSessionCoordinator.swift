@@ -60,7 +60,7 @@ final class ComposingSessionCoordinator {
 
     private let composingManager: ComposingManager
 
-    /// The user's three databases. Exposed because the 詞庫 settings pages
+    /// The user's three databases. Exposed because the Dictionary settings pages
     /// read and write the same files the composition does, and a second set of
     /// store objects over the same paths would mean two serial queues racing
     /// for one connection each.
@@ -96,7 +96,7 @@ final class ComposingSessionCoordinator {
     func openUserDataStores() {
         userDataStores.open()
         // After the open, and deliberately not awaited: the seed is what a
-        // brand-new install finds in 詞庫 管理, and a first keystroke typed
+        // brand-new install finds in Dictionary management, and a first keystroke typed
         // before it lands simply does not match the two seeded words yet.
         let customDictionary = userDataStores.customDictionary
         Task {

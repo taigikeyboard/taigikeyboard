@@ -184,7 +184,7 @@ struct DottedVersion: Comparable {
 /// activates this app, which is what keeps a composition in the user's document
 /// out of reach (`TaigiInputController.finishComposition`).
 ///
-/// The manual path — the settings window's 檢查更新 button, and the
+/// The manual path — the settings window's Check for Updates button, and the
 /// input-source menu row that opens that window and then starts a check —
 /// reports every outcome on that window (`UpdateAlertPresenter`).
 @Observable
@@ -428,7 +428,7 @@ enum UpdateAnnouncement {
 ///
 /// A sheet on that window rather than an app-modal alert, and nothing at all
 /// once the window has gone: a manual check is asked for from the settings
-/// window (its 檢查更新 button, or the menu row that brings the window up
+/// window (its Check for Updates button, or the menu row that brings the window up
 /// before starting the check), and the answer can be seconds behind the
 /// question. By then the user may be back in their document — where this
 /// `LSUIElement` process is not the active application, so an app-modal alert
@@ -437,7 +437,7 @@ enum UpdateAnnouncement {
 /// composing (`UpdateNotificationOffer`). A sheet takes no focus, and a closed
 /// window means the question was dismissed with it. The one outcome that
 /// outlives the window is the one that has somewhere to live: an available
-/// update is recorded before this is called and shows on the 一般 pane.
+/// update is recorded before this is called and shows on the General pane.
 @MainActor
 enum UpdateAlertPresenter {
     private static let logger = DebugLogger(category: "UpdateChecker")
@@ -471,7 +471,7 @@ enum UpdateAlertPresenter {
             alert.addButton(withTitle: language.string(.desktopUpdateLaterAction))
             guard await alert.beginSheetModal(for: window) == .alertFirstButtonReturn else { return }
             if installsInApp {
-                // Progress, and the 安裝 press that follows it, belong to the
+                // Progress, and the Install press that follows it, belong to the
                 // row this sheet is covering. Idempotent for this version, so a
                 // second check while one is arriving or staged fetches nothing.
                 UpdateInstallation.shared.startDownload(for: manifest)

@@ -1,4 +1,4 @@
-//! What a manual check (the 檢查更新 press) says: an alert with its own
+//! What a manual check (the Check for Updates press) says: an alert with its own
 //! buttons (`UpdateAlertPresenter`). The words and the first button are
 //! decided here; each settings window draws them in its own toolkit.
 

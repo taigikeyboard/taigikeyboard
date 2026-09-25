@@ -1,22 +1,22 @@
-// The 關於 page: what the project is and where to find it.
+// The About page: what the project is and where to find it.
 
 import SwiftUI
 
-/// What the input-source menu's 關於 row opens (USER 2026-09-20): two lines the
+/// What the input-source menu's About row opens (USER 2026-09-20): two lines the
 /// USER wrote; the sponsor and the four community links as rows; the
 /// attribution line.
 ///
-/// A grouped `Form` like every other pane (USER 2026-09-20 「用頁面式」), so the
+/// A grouped `Form` like every other pane (USER 2026-09-20: "make it a page"), so the
 /// page sits where the settings do and reads in the same cards. No app icon, no
-/// name and no version — the update row on 一般 already says which build this is.
+/// name and no version — the update row on General already says which build this is.
 struct AboutPage: View {
     @Environment(DisplayLanguageStore.self) private var language
 
     var body: some View {
         Form {
-            // No heading (USER 2026-09-20 「不需要『台語齒盤』標題」): the window
+            // No heading (USER 2026-09-20: "no 'TaigiKeyboard' heading needed"): the window
             // title already names the page. Leading-aligned like the rows
-            // under it (USER 2026-09-20 「文案改為靠左」).
+            // under it (USER 2026-09-20: "left-align the copy").
             Section {
                 VStack(alignment: .leading, spacing: Metrics.paragraphSpacing) {
                     Text(language.string(.desktopAboutIntroProject))

@@ -334,7 +334,7 @@ final class ComposingManager {
 
     /// The learned rows for the candidates on offer, or `nil` when there is
     /// nothing to look them up with. Deduped by the key the engine ranks on, so
-    /// a list holding one 漢字 under two readings asks about it once.
+    /// a list holding one Hanji under two readings asks about it once.
     private func frequencyRows(
         for candidates: [ContinuousCandidate],
     ) -> [FrequencyRow]? {
@@ -399,7 +399,7 @@ final class ComposingManager {
     }
 
     /// Whether `candidates` leads with the §34 literal — the WYSIWYG
-    /// romanization the engine prepends at index 0 while 顯示當咧拍的字 is on
+    /// romanization the engine prepends at index 0 while Show Typed Text First is on
     /// (`engine/composing/src/dispatch.rs:260-268`). That cell takes no slot
     /// key: it is what the user is already typing, not an offer to pick
     /// (USER 2026-09-09), so the keys start on the cell after it
@@ -507,7 +507,7 @@ final class ComposingManager {
     /// written is the `(display text, canonical TL)` pair the ranker looks the
     /// candidate up by (`CLAUDE.md` Core Principle #7) — recording under the
     /// document rendering instead would key the row on a string that changes
-    /// with the 漢羅 settings.
+    /// with the Hanji/romanization settings.
     private func recordUsage(
         of candidate: ContinuousCandidate,
         after outcome: CandidateCommitOutcome,

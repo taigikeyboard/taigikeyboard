@@ -6,7 +6,7 @@ import XCTest
 /// widening (`behavioral-invariants.md` §24).
 ///
 /// v6 makes the UNIQUE key `(prev_word, prev_tl, next_word, next_tl)` so the
-/// two readings of a 一字多音 previous word stay separate observations. SQLite
+/// two readings of a polyphonic Hanji previous word stay separate observations. SQLite
 /// cannot ALTER a table-level UNIQUE, so every pre-v6 database with a table is
 /// rebuilt in one convergent step rather than climbing the old ladder.
 ///

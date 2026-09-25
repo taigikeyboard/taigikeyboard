@@ -53,7 +53,7 @@ CREATE INDEX idx_custom_abbrev ON custom_dictionary(abbrev);
 CREATE INDEX idx_custom_roman_num ON custom_dictionary(roman_num);
 ```
 
-A `custom_search_key` side table backs cross-input-mode (三索引 TL / POJ / TPS) lookup — see `CustomDictionarySchema.swift` (iOS) / `CustomDictionaryService.kt` (Android) for its DDL.
+A `custom_search_key` side table backs cross-input-mode (three-index TL / POJ / TPS) lookup — see `CustomDictionarySchema.swift` (iOS) / `CustomDictionaryService.kt` (Android) for its DDL.
 
 ---
 
@@ -106,7 +106,7 @@ A `.taigi` file is a single plain-text **JSON** document carrying **all three** 
 
 - Top-level: `version`, `exportedAt` (ISO-8601 UTC), `platform` (`ios`/`android`), `appVersion`, plus `customDictionary[]` (`roman`, `hanzi`), `userFrequency[]` (`word`, `tl`, `count`, `lastUsed`), `userAssociation[]` (`prevWord`, `prevTl`, `nextWord`, `nextTl`, `count`, `lastUsed`).
 - **Version**: export writes `2`; import accepts `version >= 1`.
-- **v1 → v2**: v2 adds the per-row `tl` (canonical-TL) field to `userFrequency`, supporting the `(漢字, canonical-TL)` pair identity (Core Principle #7 / R5). `tl` is optional on decode — a pre-R5 v1 backup with no `tl` imports into the legacy `tl=""` bucket.
+- **v1 → v2**: v2 adds the per-row `tl` (canonical-TL) field to `userFrequency`, supporting the `(Hanji, canonical-TL)` pair identity (Core Principle #7 / R5). `tl` is optional on decode — a pre-R5 v1 backup with no `tl` imports into the legacy `tl=""` bucket.
 - Custom-dict rows carry only `roman`+`hanzi`; internal id/timestamps/derived columns are regenerated on import.
 
 ### Import semantics — **merge, never replace**

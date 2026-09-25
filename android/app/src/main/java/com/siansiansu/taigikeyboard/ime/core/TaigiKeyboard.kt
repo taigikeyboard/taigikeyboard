@@ -123,7 +123,7 @@ class TaigiKeyboard : LifecycleInputMethodService() {
 
     /**
      * Whether the space in front of the caret is one this IME wrote and
-     * 自動空白 is still on. The setting is read live so switching the feature
+     * Auto-Space is still on. The setting is read live so switching the feature
      * off stops the swap; the provenance is the consumed arm.
      */
     internal val isAutoSpaceSwapArmed: Boolean
@@ -237,9 +237,9 @@ class TaigiKeyboard : LifecycleInputMethodService() {
             }
         }
 
-        // Observe 候選詞顯示 changes from either writer (host picker / in-keyboard
+        // Observe Candidate Display changes from either writer (host picker / in-keyboard
         // overlay): re-render the strip + overlay, reload the cached layouts (the
-        // 文/A key is dropped under 漢羅濫 / 羅馬字) and re-fetch the open list.
+        // 文/A key is dropped under Hanji with Romanization / Romanization Only) and re-fetch the open list.
         serviceScope.launch {
             prefs.observeCandidateDisplayMode().collect {
                 smartbarManager.onCandidateDisplayModeChanged()

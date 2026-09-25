@@ -57,7 +57,7 @@ struct SettingsTab: View {
         _isDoubleTapNNEnabled = State(initialValue: settings.isDoubleTapNNEnabled)
         _isNasalMarkerUppercaseEnabled = State(initialValue: settings.isNasalMarkerUppercaseEnabled)
         _candidateDisplayMode = State(initialValue: settings.candidateDisplayMode)
-        // Toggle binds the STORED flag: it keeps showing the user's choice while disabled under 羅馬字.
+        // Toggle binds the STORED flag: it keeps showing the user's choice while disabled under Romanization Only.
         _isOutputBothScripts = State(initialValue: settings.storedIsOutputBothScripts)
         _literalRomanCandidateEnabled = State(initialValue: settings.isLiteralRomanCandidateEnabled)
         _isHyphenlessRomanEnabled = State(initialValue: settings.storedIsHyphenlessRomanEnabled)
@@ -103,7 +103,7 @@ struct SettingsTab: View {
                     }
                 }
 
-                // Global keyboard font — its own Section (separate card) below 輸入模式.
+                // Global keyboard font — its own Section (separate card) below Input Mode.
                 // Applies to every theme (font is NOT per-theme); native Form grouped
                 // container, no hand-rolled card.
                 Section {
@@ -125,7 +125,7 @@ struct SettingsTab: View {
                 // Typing options
                 Section {
                     // Default Form picker style = navigation-link row + selection subpage, the same
-                    // shape as the 輸入模式 / 字型 rows above without a bespoke subpage view.
+                    // shape as the Input Mode / Font rows above without a bespoke subpage view.
                     Picker(selection: $candidateDisplayMode) {
                         ForEach(CandidateDisplayMode.allCases, id: \.self) { mode in
                             Text(lang.string(mode.displayNameKey)).tag(mode)
@@ -143,7 +143,7 @@ struct SettingsTab: View {
                             SettingInfoButton(description: featureSummary("hanloDesign"))
                         }
                     }
-                    // 括號標註 is meaningless without hanji; stored value stays untouched.
+                    // Annotate in Brackets is meaningless without hanji; stored value stays untouched.
                     .disabled(!candidateDisplayMode.showsHanji)
                     .onChange(of: isOutputBothScripts) { _, newValue in
                         settings.storedIsOutputBothScripts = newValue
@@ -250,7 +250,7 @@ struct SettingsTab: View {
                             settings.isDoubleTapNNEnabled = newValue
                         }
 
-                    // ⁿ大本字 (§53) — the case rule of the marker the row above composes.
+                    // ⁿ becomes ᴺ in capitals (§53) — the case rule of the marker the row above composes.
                     Toggle(isOn: $isNasalMarkerUppercaseEnabled) {
                         HStack {
                             Text(lang.string(.settingsNasalMarkerUppercase))
@@ -265,7 +265,7 @@ struct SettingsTab: View {
                         .font(AppStyle.sectionHeaderFont)
                 }
 
-                // TPS (方音符號) settings
+                // TPS (Phonetic Symbols) settings
                 Section {
                     Toggle(isOn: $isTpsOrMappedToER) {
                         HStack {

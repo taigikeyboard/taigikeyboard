@@ -88,7 +88,7 @@ pub fn derive_abbrev_first_letter(roman: &str) -> String {
 /// letter when no initial matches (a zero-initial syllable, `âng` → `a`).
 /// This is what TPS has always done with its one-glyph initials (披頭巾
 /// `ㄆㄊㄍ`), and what a typist means by `phthk` for `phi-thâu-kin`
-/// (USER 2026-09-18: 「送氣（p/ph、t/th、k/kh、ts/tsh）愛獨立處理」). Longest
+/// (USER 2026-09-18: "aspirates (p/ph, t/th, k/kh, ts/tsh) must be handled on their own"). Longest
 /// match, not the syllable parser's shortest-first split, so syllabic 黃
 /// `ng` keeps `ng` and `nng` gives `n`. "" when fewer than 2 syllables.
 ///

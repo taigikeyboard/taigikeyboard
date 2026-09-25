@@ -36,7 +36,7 @@ pub(crate) fn handle(request: &CaseRequest, config: &AppConfig) -> Option<CaseRe
             mode,
         ),
     };
-    // ⁿ大本字 OFF (§53): the raise-only ops write `ᴺ` after a capital; fold
+    // ⁿ becomes ᴺ in capitals OFF (§53): the raise-only ops write `ᴺ` after a capital; fold
     // it back so the platform never receives the capital marker.
     let output = if config.force_lowercase_nasal_marker {
         phonetics::case_transform::lowercase_nasal_markers(&output)
@@ -145,7 +145,7 @@ mod tests {
 
     #[test]
     fn dispatch_force_lowercase_nasal_marker_folds_the_capital_marker_on_every_op() {
-        // ⁿ大本字 OFF (§53): Caps Lock over a POJ nasal suggestion.
+        // ⁿ becomes ᴺ in capitals OFF (§53): Caps Lock over a POJ nasal suggestion.
         let suggestion = CaseRequest {
             method: Some(Method::TransformSuggestion(TransformSuggestion {
                 original_text: "sia\u{207f}".to_string(),

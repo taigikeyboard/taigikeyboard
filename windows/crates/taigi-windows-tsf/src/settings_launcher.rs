@@ -28,7 +28,7 @@ enum Priority {
     /// typing that just activated us. Not background mode
     /// (`PROCESS_MODE_BACKGROUND_BEGIN`), which throttles I/O too — and
     /// this work IS the I/O, so it would still be running when the user
-    /// reaches for 設定.
+    /// reaches for Settings.
     BelowNormal,
 }
 
@@ -50,7 +50,7 @@ pub fn open_settings() {
     launch(&[], Priority::Inherit);
 }
 
-/// The window on 一般 with an update check running — where the answer lands.
+/// The window on General with an update check running — where the answer lands.
 pub fn check_for_updates() {
     launch(
         &[PANE_FLAG, SettingsPane::General.raw(), CHECK_NOW_FLAG],
@@ -58,7 +58,7 @@ pub fn check_for_updates() {
     );
 }
 
-/// The window on 關於, the pane the sidebar does not list — the menu is its
+/// The window on About, the pane the sidebar does not list — the menu is its
 /// one doorway (USER 2026-09-20).
 pub fn open_about() {
     launch(&[PANE_FLAG, SettingsPane::About.raw()], Priority::Inherit);

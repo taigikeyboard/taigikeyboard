@@ -6,7 +6,7 @@
 //! rebuilt only when the display language changes.
 //!
 //! Named divergences from the Mac, all deliberate: the window frame is
-//! not persisted; the 外觀 mode is a combo row.
+//! not persisted; the Appearance mode is a combo row.
 
 use crate::pages::{self, Page};
 use crate::presentation::{pane_title, PageMessage};
@@ -32,7 +32,7 @@ const INITIAL_HEIGHT: i32 = 560;
 pub struct SettingsWindow {
     window: adw::ApplicationWindow,
     writer: RefCell<SettingsWriter>,
-    /// Held open for the window's life: the 自訂詞庫 and 辭典搜尋 pages
+    /// Held open for the window's life: the Custom Dictionary and Dictionary Search pages
     /// read it. `None` when the data directory could not be had — the
     /// banner says so (`data_failure`).
     stores: Option<UserDataStores>,
@@ -218,7 +218,7 @@ impl SettingsWindow {
         self.recorder.borrow_mut().stop()
     }
 
-    /// A row's ×: the chord goes, the row shows 未設定.
+    /// A row's ×: the chord goes, the row shows None.
     pub fn clear_shortcut(self: &Rc<Self>, target: RecorderTarget) {
         self.update(|document| target.store(document, None));
     }
@@ -304,7 +304,7 @@ impl SettingsWindow {
 
     /// Opens (or re-activates) the window on `pane`. A `--pane` is a
     /// selection like a sidebar click and is remembered the same way
-    /// (Windows `select_pane`); an unlisted page (關於) is shown, not stored.
+    /// (Windows `select_pane`); an unlisted page (About) is shown, not stored.
     pub fn show(self: &Rc<Self>, pane: SettingsPane) {
         if self.stop_recording() {
             self.refresh_pages();
@@ -364,8 +364,8 @@ impl SettingsWindow {
         );
     }
 
-    /// Puts `pane` on screen; a pane this crate has no page for (字型管理,
-    /// a stored value from another desktop) lands on 一般, as on Windows.
+    /// Puts `pane` on screen; a pane this crate has no page for (Manage Typefaces,
+    /// a stored value from another desktop) lands on General, as on Windows.
     /// Answers the pane shown.
     pub fn show_pane(&self, pane: SettingsPane) -> SettingsPane {
         let pane = if pages::BUILT.contains(&pane) {

@@ -4,10 +4,10 @@ import Foundation
 
 /// One cell as the window renders it — both scripts, in the order the user's
 /// swap setting puts them; or one script alone: the romanization under the
-/// romanization-only display, and either script by itself under 漢羅濫,
+/// romanization-only display, and either script by itself under Hanji with Romanization,
 /// where a candidate is two adjacent cells (`PresentedCandidate`).
 ///
-/// A Taigi candidate is a `(漢字, 羅馬字)` pair (Core Principle #7), and showing
+/// A Taigi candidate is a `(Hanji, romanization)` pair (Core Principle #7), and showing
 /// only one of them makes several candidates read identically: two Hanji with
 /// the same reading, or one Hanji under two readings. iOS and Android have
 /// always shown both — primary text with the other script under it
@@ -36,7 +36,7 @@ struct CandidateCellContent: Equatable, Sendable {
     }
 
     /// The cell for `candidate` under `settings` — the one-cell-per-candidate
-    /// displays. 漢羅濫 splits a candidate into two cells instead, which
+    /// displays. Hanji with Romanization splits a candidate into two cells instead, which
     /// `PresentedCandidate.presentation(of:settings:)` builds itself.
     ///
     /// CROSS-PLATFORM INVARIANT — mirrors

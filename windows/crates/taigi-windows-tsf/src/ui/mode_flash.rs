@@ -1,5 +1,5 @@
-//! A brief on-screen flash naming the mode just switched into (台羅 /
-//! 白話字), port of `ModeFlashPanel.swift`: a small card centred a third
+//! A brief on-screen flash naming the mode just switched into (TL /
+//! POJ), port of `ModeFlashPanel.swift`: a small card centred a third
 //! of the way up the monitor of the last caret the service saw (the
 //! primary monitor before any), held 0.8 s, then gone. NAMED
 //! SIMPLIFICATION: no fade (a plain hide after the hold); the corners are

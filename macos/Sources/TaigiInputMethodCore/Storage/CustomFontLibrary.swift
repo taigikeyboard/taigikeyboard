@@ -147,7 +147,7 @@ final class CustomFontLibrary {
         let font: CustomFont
         /// Every family the file carries — all of a `.ttc`'s, since registering
         /// the URL registered every face in it. Read when the file was, so the
-        /// 字型管理 pane's exclusion costs no parse (`registeredFamilies`).
+        /// Manage Typefaces pane's exclusion costs no parse (`registeredFamilies`).
         let families: Set<String>
         var isDrawable: Bool
     }
@@ -306,7 +306,7 @@ final class CustomFontLibrary {
     }
 
     /// Every family the files this process registered carry. What the
-    /// 字型管理 pane leaves out of the OS-installed list: these are rows of the
+    /// Manage Typefaces pane leaves out of the OS-installed list: these are rows of the
     /// library already, and a second row naming the same file as an installed
     /// family would select something no restart re-activates
     /// (`RegisteredFace.installedFamilies`). By name, so a family the OS also

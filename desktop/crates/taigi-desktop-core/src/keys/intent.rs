@@ -26,15 +26,15 @@ impl CaretDirection {
 
 /// The modifier under which ← / → step the composing caret — the host's
 /// own "jump a word" chord (the Mac's ⌥, `ComposingKeyIntent.swift`
-/// `caretChordModifiers`). The 快速齒 pane draws its read-only row from
+/// `caretChordModifiers`). The Shortcuts pane draws its read-only row from
 /// this same value, so the row cannot drift from the key the classifier
 /// reads. Alt+←/→ is back / forward in Explorer and the browsers and rides
 /// `WM_SYSKEYDOWN`, so it is not this.
 pub const CARET_CHORD_MODIFIERS: KeyModifiers = KeyModifiers::CONTROL;
 
 /// The modifier that types a punctuation key in the other width, once — the
-/// 新注音 / Microsoft IME gesture (`Ctrl+,` → `，`). Fixed, not recordable,
-/// shown read-only on the 快速齒 pane like the caret chord
+/// 新注音 (New Phonetic) / Microsoft IME gesture (`Ctrl+,` → `，`). Fixed, not recordable,
+/// shown read-only on the Shortcuts pane like the caret chord
 /// (`ComposingKeyIntent.swift` `widthFlipModifiers`); the row is drawn from
 /// this same value the classifier compares against.
 pub const WIDTH_FLIP_MODIFIERS: KeyModifiers = KeyModifiers::CONTROL;
@@ -106,12 +106,12 @@ pub enum ComposingKeyIntent {
     /// settings render it.
     CommitHighlightedCandidate,
     /// Commit the highlighted candidate in the script the output settings do
-    /// NOT lead with — the 漢羅 key.
+    /// NOT lead with — the Hanji/romanization key.
     CommitAlternateScript,
     /// Commit the candidate in this slot of the visible page, counting from
     /// zero — what the slot keys address (`CandidateSlotKeySet`: the bare
     /// letters under Standard, the bare digits under Telex). With `flip`,
-    /// in the script the cell does NOT stand for — the 漢羅 key aimed at a
+    /// in the script the cell does NOT stand for — the Hanji/romanization key aimed at a
     /// slot instead of at the highlight, which is what Shift on the same
     /// key asks (USER 2026-09-10).
     SelectCandidateSlot {
@@ -142,7 +142,7 @@ impl ComposingKeyIntent {
         let modifiers = key.modifiers;
 
         // Tier 0 — the caret inside the composition, on Ctrl+← / Ctrl+→.
-        // Fixed, not recordable, shown read-only on the 快速齒 pane (USER
+        // Fixed, not recordable, shown read-only on the Shortcuts pane (USER
         // 2026-09-09). Exactly Ctrl: Ctrl+Shift+← stays the host's
         // selection, Ctrl+Alt+← its shortcut. Idle, the chord is the host's.
         if is_composing && modifiers == CARET_CHORD_MODIFIERS {
@@ -177,7 +177,7 @@ impl ComposingKeyIntent {
         // binding can shadow it. Which keys pick follows from the tone scheme
         // (`ToneInputScheme::slot_key_set`); both sets are bare keys, so a
         // Ctrl+3 keeps falling through to the host-chord guard below.
-        // Exactly Shift aims the 漢羅 commit at the slot instead
+        // Exactly Shift aims the Hanji/romanization commit at the slot instead
         // (`CandidateSlotKeySet::shifted_slot_for_event`).
         if is_showing_candidates {
             let slot_keys = bindings.slot_key_set();

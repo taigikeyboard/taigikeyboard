@@ -1,4 +1,4 @@
-"""Variants stage — mark (and optionally generate) 異用字 rows.
+"""Variants stage — mark (and optionally generate) variant-character (異用字) rows.
 
 Two modes keyed off `stage_options.variants.mode`:
 

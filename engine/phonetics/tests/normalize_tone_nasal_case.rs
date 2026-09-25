@@ -142,7 +142,7 @@ fn normalize_tone_tl_keeps_every_typed_capital() {
 }
 
 // -------------------------------------------------------------------------
-// ⁿ大本字 OFF (`AppConfig.force_lowercase_nasal_marker`, USER 2026-09-22, §53):
+// ⁿ becomes ᴺ in capitals OFF (`AppConfig.force_lowercase_nasal_marker`, USER 2026-09-22, §53):
 // the marker is always `ⁿ`, whatever the case of the letters before it.
 // -------------------------------------------------------------------------
 

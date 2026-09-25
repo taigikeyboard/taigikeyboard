@@ -98,11 +98,11 @@ extension ActionHandler {
             // (user decision b). Frequency recording below already keys on
             // the canonical sidechannel and is unchanged.
             //
-            // §42 漢羅濫 split cells arrive with an `additionalInfo["cellScript"]`
+            // §42 Hanji with Romanization split cells arrive with an `additionalInfo["cellScript"]`
             // marker and resolve the document text DIRECTLY from the marker +
             // info fields (`markedCellCommit` below), bypassing the swap
             // reconstruction — the identity sidechannels are shared by both
-            // cells, so 詞頻 / NextWord recording is unchanged whichever cell
+            // cells, so frequency / NextWord recording is unchanged whichever cell
             // of the same candidate is tapped.
             let docText: String
             // Whether this commit wrote romanization into the document — the
@@ -110,12 +110,12 @@ extension ActionHandler {
             // follows the script actually committed, not the mode). Both arms
             // resolve it beside the string, never from the mode afterwards:
             //   marked roman cell          → true  (bare roman)
-            //   marked hanji, 括號標註 OFF → false (pure 漢字)
-            //   marked hanji, 括號標註 ON  → true  (`漢字 (羅馬字)` DID write
+            //   marked hanji, Annotate in Brackets OFF → false (pure Hanji)
+            //   marked hanji, Annotate in Brackets ON  → true  (`Hanji (romanization)` DID write
             //                                       the romanization)
             //   unmarked, no hanji         → true  (§34 literal, an OOV name:
             //                                       romanization under every mode)
-            //   unmarked, hanji + swapped  → false (pure 漢字)
+            //   unmarked, hanji + swapped  → false (pure Hanji)
             //   unmarked, otherwise        → true  (roman-led, or the bracket form)
             let wroteRomanization: Bool
             if let cellScript = CandidateCellScript.marker(for: suggestion) {
@@ -168,7 +168,7 @@ extension ActionHandler {
             // suggestion.text) ensures frequency tracks what the engine
             // committed, not the TPS surface form (PR #257 r3214912627).
             // R5 pair-key (#7): record `(displayText, canonical TL)` so
-            // 一字多音 keep separate frequency buckets. `associationTl` is
+            // polyphonic Hanji keep separate frequency buckets. `associationTl` is
             // the canonical-TL sidechannel already extracted above (the same
             // reading NextWord learns); empty only on wire skew / TPS-OOV.
             if didCommit {
@@ -199,7 +199,7 @@ extension ActionHandler {
         if composingManager.isComposing || isNextWordPrediction {
             let effectiveSwapped = isTPSLayout || settings.isTranslateSwapped
 
-            // §42 漢羅濫 split prediction cells carry a `cellScript` marker
+            // §42 Hanji with Romanization split prediction cells carry a `cellScript` marker
             // (`ActionHandler.predictionSuggestions`) — the marker decides the
             // script, exactly as on the Continuous path; identity rides the
             // shared sidechannels, so nothing is parsed back from the cell.
@@ -255,16 +255,16 @@ extension ActionHandler {
 
     // MARK: - Suggestion Helpers
 
-    /// §42 漢羅濫 marked-cell document text.
+    /// §42 Hanji with Romanization marked-cell document text.
     ///
     /// A split cell's `cellScript` marker is authoritative, so the document
     /// string resolves directly from the marker + info fields — never through
     /// `parseRomanAndHanzi` (whose contract is "derive from the UI-shaped
     /// suggestion") and never through a new `formatOutputText` arm:
-    /// - `"hanji"` cell commits the hanji; 括號標註 ON appends the roman
-    ///   sidechannel as `漢字 (羅馬字)` — today's swapped output. TPS never
-    ///   applies (濫 is TL/POJ only), so the bracket roman is never TPS-rendered.
-    /// - `"roman"` cell commits the BARE roman; 括號標註 is ignored (desktop
+    /// - `"hanji"` cell commits the hanji; Annotate in Brackets ON appends the roman
+    ///   sidechannel as `Hanji (romanization)` — today's swapped output. TPS never
+    ///   applies (Hanji with Romanization is TL/POJ only), so the bracket roman is never TPS-rendered.
+    /// - `"roman"` cell commits the BARE roman; Annotate in Brackets is ignored (desktop
     ///   `.alternate` parity).
     ///
     /// Precondition: `cellScript` came from `CandidateCellScript.marker(for:)`,
@@ -297,7 +297,7 @@ extension ActionHandler {
 
     /// Whether to insert the trailing auto-space: the setting is on, the commit
     /// wrote romanization, and the committed DOCUMENT string does not end in a
-    /// hyphen continuation (a mid-word 連字 keeps composing). The caller still
+    /// hyphen continuation (a mid-word hyphen keeps composing). The caller still
     /// owns the final-commit gate on the Continuous path.
     // CROSS-PLATFORM INVARIANT — mirrors android/.../smartbar/CandidateClickHandler.kt
     // `shouldAppendAutoSpace`. Drift causes silent divergence (one platform spacing
@@ -310,7 +310,7 @@ extension ActionHandler {
         isAutoSpaceEnabled && wroteRomanization && !documentText.hasSuffix("-")
     }
 
-    /// The 括號標註 hanji-led output shape `漢字 (羅馬字)` — single spelling
+    /// The Annotate in Brackets hanji-led output shape `Hanji (romanization)` — single spelling
     /// shared by `formatOutputText`'s swapped arm and the §42 marked hanji cell.
     static func bracketedHanjiCommit(hanzi: String, roman: String) -> String {
         "\(hanzi) (\(roman))"
@@ -336,7 +336,7 @@ extension ActionHandler {
             // Mirror: android/.../smartbar/NextWordController.kt:355-363 (TaigiWord.roman).
             // Swapped/TPS Case B (hanzi-only, no roman): `subtitle == nil` after
             // `suggestionToHandle` (swap gate requires non-empty subtitle). Fall
-            // back to `""` so bracket-mode output stays `"漢字 ()"` — matches the
+            // back to `""` so bracket-mode output stays `"Hanji ()"` — matches the
             // pre-fix sidechannel behavior, avoids Hanji duplication.
             let roman = effectiveSwapped
                 ? (suggestion.subtitle ?? "")
@@ -358,7 +358,7 @@ extension ActionHandler {
     /// 我欲去 does not), so its gate has to answer for the string this commit
     /// actually writes. Deriving the verdict from the output mode instead is
     /// only ever an approximation, and it is wrong for a candidate with no
-    /// Hanji: the 字面羅馬字 candidate (§34), an out-of-vocabulary name, a
+    /// Hanji: the literal romanization candidate (§34), an out-of-vocabulary name, a
     /// romanization-only custom entry all fall to the last arm and write
     /// romanization whatever the mode leads with.
     // CROSS-PLATFORM INVARIANT — mirrors android/.../CandidateClickHandler.kt
@@ -374,7 +374,7 @@ extension ActionHandler {
             ? RustEngineBridge.tlDisplayToTPS(roman, orMapsToER: settings.isTpsOrMappedToER)
             : roman
 
-        // 括號標註 writes the pair, so the romanization IS in the document
+        // Annotate in Brackets writes the pair, so the romanization IS in the document
         // whichever half leads.
         if settings.isOutputBothScripts, let hanzi, !hanzi.isEmpty {
             let text = effectiveSwapped

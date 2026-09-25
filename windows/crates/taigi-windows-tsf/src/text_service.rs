@@ -186,7 +186,7 @@ impl TextService_Impl {
             state.thread_mgr = Some(owned_thread_mgr);
             state.client_id = client_id;
             state.activate_flags = flags;
-            // The 中/英 mode is per ACTIVATION: TSF may deactivate and
+            // The Chinese/English mode is per ACTIVATION: TSF may deactivate and
             // reactivate the same object, and a mode carried over would leave
             // the tray letter, the compartment and the classifier disagreeing.
             // The Shift press goes with it — the one that armed it belonged to
@@ -673,7 +673,7 @@ impl TextService_Impl {
         );
     }
 
-    /// Whether this release would switch 中/英 — the test callback's answer,
+    /// Whether this release would switch Chinese/English — the test callback's answer,
     /// which leaves the press unspent. Answering TRUE is what asks TSF for
     /// the delivery the switch itself runs in.
     fn is_language_switch_release(&self, wparam: WPARAM, lparam: LPARAM) -> bool {
@@ -711,7 +711,7 @@ impl TextService_Impl {
         self.toggle_language_mode(context, token, identity);
     }
 
-    /// The ONE way the 中/英 mode changes. Three things say which mode is on —
+    /// The ONE way the Chinese/English mode changes. Three things say which mode is on —
     /// the classifier's gate, the TSF conversion-mode compartment and the tray
     /// letter — and a switch that moved only some of them is a mode the user
     /// and the system disagree about. They move here, together, or not at all.
@@ -921,7 +921,7 @@ impl ITfKeyEventSink_Impl for TextService_Impl {
         })
     }
 
-    /// TRUE only for the release that would switch 中/英, and it switches
+    /// TRUE only for the release that would switch Chinese/English, and it switches
     /// nothing here: a test callback answers whether the service WOULD handle
     /// the key, and the answer is what asks TSF for the delivery below.
     fn OnTestKeyUp(&self, _pic: Ref<ITfContext>, wparam: WPARAM, lparam: LPARAM) -> Result<BOOL> {
@@ -939,7 +939,7 @@ impl ITfKeyEventSink_Impl for TextService_Impl {
 
     /// The Shift tap switches the mode here, and the release still goes to
     /// the host: an application tracks its own Shift state, and a release it
-    /// never sees leaves that state stuck down (新酷音 answers the same
+    /// never sees leaves that state stuck down (新酷音 / New Chewing answers the same
     /// FALSE, `chewing_ime.py:736`).
     fn OnKeyUp(&self, pic: Ref<ITfContext>, wparam: WPARAM, lparam: LPARAM) -> Result<BOOL> {
         guarded("ITfKeyEventSink::OnKeyUp", || {
@@ -1082,13 +1082,13 @@ impl ITfLangBarItemButton_Impl for TextService_Impl {
                         settings_launcher::open_settings();
                     }
                     Some(MenuCommand::CheckForUpdates) => {
-                        // Also the settings window (on 一般): same doorway.
+                        // Also the settings window (on General): same doorway.
                         self.hide_telex_guide_now();
                         self.hide_symbol_picker_now();
                         settings_launcher::check_for_updates();
                     }
                     Some(MenuCommand::About) => {
-                        // The settings window on 關於, the pane the sidebar
+                        // The settings window on About, the pane the sidebar
                         // does not list: same doorway.
                         self.hide_telex_guide_now();
                         self.hide_symbol_picker_now();

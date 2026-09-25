@@ -42,7 +42,7 @@ impl SettingChoice for InputMode {
 }
 
 /// What a candidate cell shows: both scripts (the swap decides which leads),
-/// the romanization alone, or both in ONE label led by the hanji (漢羅濫,
+/// the romanization alone, or both in ONE label led by the hanji (Hanji with Romanization,
 /// `Combined`). Stored spellings and the per-mode rules are the same on every
 /// platform (`SettingsModels.swift` `CandidateDisplayMode`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -60,8 +60,8 @@ impl CandidateDisplayMode {
 
     /// Whether the swap shortcut writes the stored swap — exactly where hanji
     /// is on screen. Under `Combined` the cells are split per script, so the
-    /// shortcut only picks the punctuation width (USER 2026-09-13 「漢羅濫需要有
-    /// isTranslateSwapped 的按鈕」); `RomanOnly` leaves it inert and the stored
+    /// shortcut only picks the punctuation width (USER 2026-09-13: "Hanji with Romanization needs an
+    /// isTranslateSwapped button"); `RomanOnly` leaves it inert and the stored
     /// swap waits for the way back.
     pub fn allows_swap_toggle(self) -> bool {
         self.shows_hanji()
@@ -80,14 +80,14 @@ impl CandidateDisplayMode {
         matches!(self, Self::Combined) || (stored && self.shows_hanji())
     }
 
-    /// Effective 括號標註 for a stored flag — off only where there is no hanji
-    /// to bracket; `Combined` keeps it (`漢字 (羅馬字)`).
+    /// Effective Annotate in Brackets for a stored flag — off only where there is no hanji
+    /// to bracket; `Combined` keeps it (`Hanji (romanization)`).
     pub fn effective_output_both_scripts(self, stored: bool) -> bool {
         stored && self.shows_hanji()
     }
 
     /// Whether a typed punctuation key becomes full-width (`，` for `,`) for a
-    /// stored swap flag — the stored flag masked like 括號標註, NOT the
+    /// stored swap flag — the stored flag masked like Annotate in Brackets, NOT the
     /// candidate projection above, which `Combined` forces on while the swap
     /// shortcut still picks the width. Mirrored on macOS / iOS / Android
     /// beside `effective_output_both_scripts`.
@@ -100,7 +100,7 @@ impl CandidateDisplayMode {
     /// has to be exact; `SideBySide` is spelled out rather than left
     /// `Unspecified` so a build that sets the field is telling apart from
     /// one that never did. `Combined` has no engine reader either: a combined
-    /// cell is distinct by its `(漢字, 羅馬字)` pair, so nothing collapses.
+    /// cell is distinct by its `(Hanji, romanization)` pair, so nothing collapses.
     pub fn wire(self) -> protos::engine::CandidateDisplayMode {
         match self {
             Self::SideBySide => protos::engine::CandidateDisplayMode::SideBySide,
@@ -120,8 +120,8 @@ impl CandidateDisplayMode {
     }
 
     /// The mode after this one in picker order — what the
-    /// `CycleCandidateDisplayMode` shortcut steps to: 並排 → 合用 → 羅馬字 →
-    /// 並排. CROSS-PLATFORM INVARIANT — mirrors macOS `CandidateDisplayMode.next`.
+    /// `CycleCandidateDisplayMode` shortcut steps to: Pairing → Combined → Romanization Only →
+    /// Pairing. CROSS-PLATFORM INVARIANT — mirrors macOS `CandidateDisplayMode.next`.
     pub fn next(self) -> Self {
         match self {
             Self::SideBySide => Self::Combined,
@@ -173,13 +173,13 @@ pub struct EngineSettings {
     /// (`ios/.../SharedSettings.swift`) and `literalRomanCandidateEnabled`
     /// (`android/.../PrefHelper.kt`), both default ON.
     pub is_literal_roman_candidate_enabled: bool,
-    /// 無連字符 (`behavioral-invariants.md` §49) — `AppConfig.hyphenless_roman`
+    /// No Hyphens (`behavioral-invariants.md` §49) — `AppConfig.hyphenless_roman`
     /// on the base config; no TPS layout here, so no fold.
     /// CROSS-PLATFORM INVARIANT — mirrors `isHyphenlessRomanEnabled`
     /// (`macos/.../EngineSettings.swift`, `ios/.../SharedSettings.swift`) and
     /// `hyphenlessRomanEnabled` (`android/.../PrefHelper.kt`), all OFF.
     pub is_hyphenless_roman_enabled: bool,
-    /// ⁿ大本字 (`behavioral-invariants.md` §53) — the POJ nasal marker follows
+    /// ⁿ becomes ᴺ in capitals (`behavioral-invariants.md` §53) — the POJ nasal marker follows
     /// the case of the letters before it (`SIÂᴺ`); off, always `ⁿ`. Sent
     /// inverted as `AppConfig.force_lowercase_nasal_marker` on the base config.
     /// CROSS-PLATFORM INVARIANT — mirrors `isNasalMarkerUppercaseEnabled`
@@ -254,13 +254,13 @@ pub struct DictionarySourceToggles {
     pub stti: bool,
     /// 腔口補充資料.
     pub khpoo: bool,
-    /// 異用字.
+    /// Variant Characters (異用字).
     pub variant: bool,
-    /// 在來字.
+    /// Conventional Characters (在來字).
     pub khiin: bool,
-    /// LKK 漢羅合用建議用字.
+    /// LKK Han-Lo Recommended Characters.
     pub lkk: bool,
-    /// 詞庫增補檔案.
+    /// Supplementary Word List (詞庫增補檔案).
     pub dev: bool,
     /// Always populated: an absent subcollection message tells the engine to
     /// skip the gate (`lexicon.proto` `DictionaryToggles.kautian_subcoll`).

@@ -1,5 +1,5 @@
 //! Whether the keys reaching this input method compose Taigi or go straight
-//! to the document as English — the Windows CJK 中/英 mode, toggled by a
+//! to the document as English — the Windows CJK Chinese/English mode, toggled by a
 //! Shift tap (`ShiftTapTracker`).
 
 use crate::strings::StringKey;
@@ -12,7 +12,7 @@ use crate::strings::StringKey;
 ///
 /// This is a transient mode, never persisted: a fresh activation of the text
 /// service starts in [`LanguageMode::Taigi`], the way Windows CJK IMEs start
-/// in 中文 (新酷音 `chewing_ime.py:183`).
+/// in Chinese mode (新酷音 New Chewing, `chewing_ime.py:183`).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum LanguageMode {
     #[default]

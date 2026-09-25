@@ -1,5 +1,5 @@
 //! The window's side of updates: the overdue check at launch, the manual
-//! check (`--check-now`, the 一般 pane's button), what each outcome leaves
+//! check (`--check-now`, the General pane's button), what each outcome leaves
 //! in `settings.json`, the toast for an automatic find, and the two-stage
 //! install the pending row drives. The decisions are the update crate's;
 //! this runs them on a thread and reads the answer when the window looks.
@@ -86,7 +86,7 @@ impl UpdateState {
         }
     }
 
-    /// The 檢查更新 press (`checkManually`).
+    /// The Check for Updates press (`checkManually`).
     pub fn check_manually(&mut self, settings: &mut SettingsWriter) {
         self.start_check(settings, true);
     }
@@ -189,7 +189,7 @@ impl UpdateState {
         open_download_page(manifest)
     }
 
-    /// 稍後, or the OK on an answer with nothing to do.
+    /// Later, or the OK on an answer with nothing to do.
     pub fn dismiss_manual_outcome(&mut self) {
         self.manual_outcome = None;
     }
@@ -287,7 +287,7 @@ mod tests {
 
     #[test]
     fn an_answered_manual_outcome_leaves_nothing_for_the_window_to_show() {
-        // trace: 稍後 dismisses; proceeding on an outcome with nothing to
+        // trace: Later dismisses; proceeding on an outcome with nothing to
         // fetch also clears it, and opens no URL.
         let mut updates = UpdateState::new();
         updates.manual_outcome = Some(ManualOutcome {

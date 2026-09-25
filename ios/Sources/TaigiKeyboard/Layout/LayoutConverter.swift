@@ -7,7 +7,7 @@ struct LayoutConverter {
     let config: KeyboardLayoutConfiguration
 
     /// Entry point: converts [[KeyDef]] to KeyboardLayout. The 文/A key is
-    /// dropped where it could flip nothing — 羅馬字 (always half-width) and TPS
+    /// dropped where it could flip nothing — Romanization Only (always half-width) and TPS
     /// (always full-width); `.space` is `.available`, so it takes the freed width.
     func convert(_ keyDefs: [[KeyDef]]) -> KeyboardLayout {
         let showsTranslateKey = context.candidateDisplayMode.allowsSwapToggle

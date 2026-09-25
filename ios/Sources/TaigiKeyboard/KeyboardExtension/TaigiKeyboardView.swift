@@ -302,7 +302,7 @@ struct TaigiKeyboardView: View {
                 if borderWidth > 0, params.item.action != .none {
                     // Border follows the key text color (role-first → adaptive
                     // Color(.label) when the theme leaves keyTextColor nil), so the
-                    // 框線 outline stays visible on both light and adaptive-dark
+                    // The Outlined family's outline stays visible on both light and adaptive-dark
                     // backgrounds (a hardcoded black border vanishes in dark mode).
                     params.view.overlay(
                         RoundedRectangle(cornerRadius: p.settings.keyCornerRadius)
@@ -425,7 +425,7 @@ struct TaigiKeyboardView: View {
     /// instead of the system appearance. Returns nil for non-emoji keys and for the
     /// default/adaptive theme (keyTextColor nil) — both keep the system colorScheme.
     /// Dark keyText ⇒ light-palette theme ⇒ `.light` (light asset variant); light keyText
-    /// (e.g. 暗眠山貓) ⇒ `.dark` (dark variant, correctly tinted light on a dark keycap).
+    /// (e.g. Catppuccin) ⇒ `.dark` (dark variant, correctly tinted light on a dark keycap).
     private static func emojiAssetColorScheme(
         for action: KeyboardAction,
         colors: KeyboardColorSettings,

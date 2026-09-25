@@ -29,7 +29,7 @@ final class LearningStoreTests: XCTestCase {
         XCTAssertEqual(rows.first?.count, 2, "the second commit adds to the row the first one made, rather than making another")
     }
 
-    /// Core Principle #7: a Taiwanese word is the `(漢字, canonical TL)` pair.
+    /// Core Principle #7: a Taiwanese word is the `(Hanji, canonical TL)` pair.
     /// 重/tîng (重複) and 重/tāng (重量) are different words, so committing one
     /// must not promote the other.
     func testRecord_keepsTheTwoReadingsOfOneHanjiApart() throws {
@@ -124,8 +124,8 @@ final class LearningStoreTests: XCTestCase {
         )
     }
 
-    /// The next word is keyed by its reading as well as its 漢字 (Core Principle
-    /// #7), so the same 漢字 read two ways is two observations.
+    /// The next word is keyed by its reading as well as its Hanji (Core Principle
+    /// #7), so the same Hanji read two ways is two observations.
     func testRecordPairs_theSameNextHanjiUnderTwoReadingsIsTwoRows() throws {
         stores.association.record([
             AssociationPair(previous: "看", previousTl: "khuànn", next: "重", nextTl: "tāng"),
@@ -137,7 +137,7 @@ final class LearningStoreTests: XCTestCase {
     }
 
     /// The PREVIOUS word is half of a bigram's identity, and it is a
-    /// `(漢字, canonical TL)` pair like any other word (Core Principle #7). 重
+    /// `(Hanji, canonical TL)` pair like any other word (Core Principle #7). 重
     /// read as 重複's tîng and 重 read as 重量's tāng are different predecessors,
     /// so the two observations must not merge into one row.
     func testRecordPairs_theSamePreviousHanjiUnderTwoReadingsIsTwoRows() throws {

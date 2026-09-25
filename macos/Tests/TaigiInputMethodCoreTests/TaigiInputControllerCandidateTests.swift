@@ -141,7 +141,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         XCTAssertEqual(marked, "tev")
     }
 
-    // MARK: - The 漢羅 key
+    // MARK: - The Hanji/romanization key
 
     /// Space writes the highlighted candidate in the script Return does not —
     /// what makes `我ê名` cost one key for the romanized word instead of a round
@@ -248,7 +248,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         XCTAssertEqual(session.controller.settings.storedIsTranslateSwapped, before)
     }
 
-    /// The mirror image, in 漢字 mode — the direction the `我ê名` example is
+    /// The mirror image, in Hanji mode — the direction the `我ê名` example is
     /// actually typed in: Return writes the hanji, Space writes the
     /// romanization, and the key is the same key either way.
     func testSwappedMode_ReturnWritesHanjiAndSpaceWritesRomanization() throws {
@@ -277,7 +277,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         }
     }
 
-    /// With 括號標注 on, Return writes the bracketed pair and Space still writes
+    /// With Annotate in Brackets on, Return writes the bracketed pair and Space still writes
     /// ONE script — the bracket setting says how to show a candidate that
     /// carries both, and Space is the request for the other one by itself.
     func testBothScriptsMode_SpaceStillWritesASingleScript() throws {
@@ -303,7 +303,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     ///
     /// Driven through the real production source of a hanji-less candidate: the
     /// §34 literal-romanization candidate, which the engine prepends at index 0
-    /// under the shipped 顯示當咧拍的字 default, and which the bar opens
+    /// under the shipped Show Typed Text First default, and which the bar opens
     /// highlighted.
     func testSpace_onASingleScriptCandidate_writesNothing() throws {
         let session = try composedSession()
@@ -318,11 +318,11 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         XCTAssertTrue(session.client.insertedTexts.isEmpty)
     }
 
-    // MARK: - 漢羅合用: two cells per candidate
+    // MARK: - Hanji with Romanization: two cells per candidate
 
-    /// Under 合用 a candidate is two adjacent one-script cells — the Hanji, then
+    /// Under Hanji with Romanization a candidate is two adjacent one-script cells — the Hanji, then
     /// its romanization — not one formatted label (USER 2026-09-02). Pinned
-    /// against the 並排 bar for the same composition, so the assertion follows
+    /// against the Hanji–Romanization Pairing bar for the same composition, so the assertion follows
     /// whatever the dictionary ranks first rather than naming it.
     func testCombined_showsTheHanjiAndItsRomanizationAsAdjacentCells() throws {
         let sideBySide = try XCTUnwrap(composedSession().presenter.shownContent).cells
@@ -408,7 +408,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     }
 
     /// The window shows BOTH scripts by default, matching iOS and Android: a
-    /// Taigi word is the `(漢字, 羅馬字)` pair, and a bar showing one of them
+    /// Taigi word is the `(Hanji, romanization)` pair, and a bar showing one of them
     /// makes different words read identically.
     func testBarCells_carryBothScriptsByDefault() throws {
         let session = try composedSession()
@@ -600,7 +600,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
 
     /// ⇥ walks the bar rather than committing from it, pairing with the ⇧⇥ that
     /// already walked back (`ComposingAction.nextCandidate`). Space held this
-    /// job until 2026-08-25, when it became the 漢羅 key.
+    /// job until 2026-08-25, when it became the Hanji/romanization key.
     func testTab_walksToTheNextCandidateWithoutCommitting() throws {
         let session = try composedSession()
         let cells = try XCTUnwrap(session.presenter.shownContent).cells
@@ -702,10 +702,10 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         )
     }
 
-    // MARK: - §34 literal leads under 顯示當咧拍的字
+    // MARK: - §34 literal leads under Show Typed Text First
 
     /// The bar opens on the typed letters — the §34 literal, one script, with
-    /// 顯示當咧拍的字 at its shipped ON (USER 2026-09-03) — so Return writes
+    /// Show Typed Text First at its shipped ON (USER 2026-09-03) — so Return writes
     /// exactly what was typed in either output mode; the dictionary's first
     /// candidate is one cell along.
     func testReturn_onAFreshBar_writesTheTypedLiteral_inEitherMode() throws {
@@ -728,7 +728,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         }
     }
 
-    /// 顯示當咧拍的字 OFF, driven through the real `UserDefaults` the shipped
+    /// Show Typed Text First OFF, driven through the real `UserDefaults` the shipped
     /// settings provider reads: the forced §34 row is gone, so the bar opens on
     /// a dictionary candidate that carries both scripts and Return writes that
     /// word rather than the typed letters.
@@ -863,7 +863,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         XCTAssertEqual(session.controller.settings.inputMode, .poj)
     }
 
-    /// The 漢羅 swap keeps the bar UP: it changes how a candidate displays and
+    /// The Hanji/romanization swap keeps the bar UP: it changes how a candidate displays and
     /// commits, never which candidates exist — dismissing here read as the
     /// window vanishing on the hotkey (real device, 2026-08-21). The same list
     /// re-renders with the scripts flipped, and the selection keeps its index.
@@ -876,7 +876,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         try withSetting(SettingsStore.Keys.isTranslateSwapped.name, to: nil, body)
     }
 
-    /// 合用's adjacency: the Hanji is a cell of its own, its romanization the
+    /// Hanji with Romanization's adjacency: the Hanji is a cell of its own, its romanization the
     /// very next one.
     private func assertRomanizationFollowsHanji(
         in cells: [CandidateCellContent], hanji: String, romanization: String,
@@ -948,7 +948,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         }
     }
 
-    /// The 外觀 pane's display-mode row writes `UserDefaults` straight through
+    /// The Appearance pane's display-mode row writes `UserDefaults` straight through
     /// `@AppStorage`, so unlike the swap chord no controller code runs the
     /// write — the open bar has to notice on its own. Written to the domain
     /// the way the pane writes it, then awaited: the observation hops to the
@@ -956,7 +956,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     func testChangingTheDisplayMode_refetchesTheOpenBarInPlace() async throws {
         let key = SettingsStore.Keys.candidateDisplayMode.name
         // The mode starts from "never touched" and the swap roman-first — so
-        // a 並排 cell's `text` IS the romanization the assertions compare —
+        // a Hanji–Romanization Pairing cell's `text` IS the romanization the assertions compare —
         // and both go back to whatever they held: `withSetting` is
         // synchronous, and this case has to await.
         clearSettingRestoredAtTeardown(key)
@@ -1002,7 +1002,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     /// what re-fetches the open bar — one mechanism, one turn later. Pinned
     /// through the chord so a handler that stopped writing the observed key,
     /// or an activation that stopped arming it, fails here rather than on a
-    /// real device. One press, side by side → 合用: every two-script cell
+    /// real device. One press, side by side → Hanji with Romanization: every two-script cell
     /// becomes two adjacent one-script cells, the bar stays up.
     func testCycleCandidateDisplayShortcut_refetchesTheOpenBar() async throws {
         let key = SettingsStore.Keys.candidateDisplayMode.name
@@ -1163,7 +1163,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         XCTAssertTrue(session.client.insertedTexts.isEmpty)
     }
 
-    /// Runs `body` with the 候選窗 setting on or off, in the `.standard`
+    /// Runs `body` with the Show Candidate Window setting on or off, in the `.standard`
     /// domain the controller reads, and puts it back after.
     private func withCandidateWindow(_ isEnabled: Bool, _ body: () throws -> Void) rethrows {
         try withSetting(SettingsStore.Keys.isCandidateWindowEnabled.name, to: isEnabled, body)

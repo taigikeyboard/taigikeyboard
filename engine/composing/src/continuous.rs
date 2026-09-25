@@ -285,7 +285,7 @@ fn dedupe_rendered_continuous(candidates: &mut Vec<RawCandidate>) {
 
 /// Keeps the first candidate seen per `key`; a candidate whose key is `None`
 /// is always kept. The one body behind every post-sort "first-seen wins"
-/// pass (rendered / TPS-hanji / 羅馬字-roman), so their survivor rule cannot
+/// pass (rendered / TPS-hanji / Romanization Only roman), so their survivor rule cannot
 /// drift.
 pub(crate) fn retain_first_by_key<K: std::hash::Hash + Eq>(
     candidates: &mut Vec<RawCandidate>,
@@ -316,7 +316,7 @@ fn retain_absent_from(existing: &[RawCandidate], batch: &mut Vec<RawCandidate>) 
 
 /// Two romanizations are the **same reading** when they differ only in
 /// syllable separators: ASCII space (walker synth multi-word join), `-`
-/// (連字 compound), or `--` (輕聲 khinsiann, two `-` chars). Tone
+/// (hyphen compound), or `--` (neutral-tone khinsiann, two `-` chars). Tone
 /// diacritics live inside the syllable letters and are NOT stripped, so
 /// the comparison is tone-preserving:
 ///
@@ -1246,7 +1246,7 @@ pub(crate) fn assemble_candidates(
                         // space-join IS the desired display. But when the
                         // synth's full-buffer `(hanji, span)` coincides
                         // with a single lexical dict word that stores its
-                        // own separator form (`-` 連字 / `--` 輕聲), the
+                        // own separator form (`-` hyphen / `--` neutral tone), the
                         // space-join is a malformed rendering of that word
                         // (`予我` synth `hōo guá` vs dict `hōo--guá`). The
                         // existing `(roman, hanji, span)` dedupe below
@@ -1271,7 +1271,7 @@ pub(crate) fn assemble_candidates(
                         // * `roman_reading_eq` → `hōo guá` matches
                         //   `hōo--guá` (予我) but NOT `hōo-guā` (戶外,
                         //   tone 7 ≠ tone 2) — respects Core Principle #7
-                        //   word identity (漢字 + canonical 羅馬字).
+                        //   word identity (Hanji + canonical romanization).
                         // * `!slot0_cand.is_custom` → never replace a
                         //   custom-influenced walker path with a non-custom
                         //   dict row (would drop the user's custom-dict
@@ -1451,7 +1451,7 @@ pub(crate) fn assemble_candidates(
             }
         }
         // ---- Step 5: presentation pass (typed separators, POJ render,
-        // 無連字符, ⁿ case).
+        // No Hyphens, ⁿ case).
         // §55 — the separator at every typed boundary is the one the user
         // typed (`phonetics::api::render_typed_separators`). `roman` only:
         // `display_text` / `canonical_tl` keep the record's form, so the
@@ -1502,7 +1502,7 @@ pub(crate) fn assemble_candidates(
                 cand.roman = recase_tl_as_poj_display(&cand.roman);
             }
         }
-        // 無連字符 (§49) — same presentation seam, same field: only
+        // No Hyphens (§49) — same presentation seam, same field: only
         // `roman`, for dictionary, custom and walker rows alike;
         // `display_text` / `canonical_tl` keep the dictionary form. After
         // the POJ render (which splits on `-`), before the rendered
@@ -1516,7 +1516,7 @@ pub(crate) fn assemble_candidates(
                 }
             }
         }
-        // ⁿ大本字 (§53) — same seam, same field: the one nasal-marker case
+        // ⁿ becomes ᴺ in capitals (§53) — same seam, same field: the one nasal-marker case
         // rule the preedit follows (`normalize_tone`), triggered by the
         // marker, not the mode. `raise_case` leaves the marker as stored,
         // so without this a Caps Lock strip read `SIAⁿ` under a `SIAᴺ`
@@ -1575,7 +1575,7 @@ mod tests {
     fn roman_reading_eq_matches_separator_variants_preserves_tone() {
         // 予我: walker space-join vs dict khinsiann — same reading.
         assert!(roman_reading_eq("hōo guá", "hōo--guá"));
-        // 連字 vs space — same reading.
+        // Hyphen vs space — same reading.
         assert!(roman_reading_eq("tâi gí", "tâi-gí"));
         // 戶外: tone 7 `guā` ≠ tone 2 `guá` — different reading despite
         // sharing the separator-stripped consonant/vowel skeleton.

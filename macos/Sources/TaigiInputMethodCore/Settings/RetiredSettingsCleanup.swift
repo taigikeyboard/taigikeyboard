@@ -13,7 +13,7 @@ import KeyboardShortcuts
 /// cross-platform contract, and the composing carrier encodes them either way —
 /// so a value stored by a build that HAD the toggle would silently outlive the
 /// UI that set it. Removing the stored values returns each to its default:
-/// 括號標注 back off, 詞頻紀錄 back on. 詞關聯紀錄 is no longer a setting at
+/// Annotate in Brackets back off, Frequency Records back on. Association Records is no longer a setting at
 /// all (association recording is unconditional), so its key is swept with the
 /// retired names.
 @MainActor
@@ -27,9 +27,9 @@ enum RetiredSettingsCleanup {
     private static let retiredShortcutNames = [
         KeyboardShortcuts.Name("toggleBothScripts"),
         KeyboardShortcuts.Name("toggleLiteralRomanCandidate"),
-        // 開啟設定, retired 2026-08-24 when every pane got a row of its own:
+        // Open Settings, retired 2026-08-24 when every pane got a row of its own:
         // a chord for "whichever pane was last used" is a second key for what
-        // 一般 does. Unlike the two above this one shipped, so real installs
+        // General does. Unlike the two above this one shipped, so real installs
         // hold ⌃⇧, — or whatever the user recorded over it.
         //
         // The CONCEPT came back on 2026-08-25 as `openLastSettingsPane` on
@@ -83,29 +83,29 @@ enum RetiredSettingsCleanup {
         "spaceKeyBehavior",
         "bracketPagingBehavior",
         "tabCycleBehavior",
-        // The 外觀 pane's two retired rows — the reasoning for each lives on
+        // The Appearance pane's two retired rows — the reasoning for each lives on
         // its type, `CandidateAccentColor` and `CandidateWindowStyle`.
         "candidateAccentColor",
         "candidateWindowStyle",
-        // 全形標點 and Shift 切換英數, retired 2026-08-24. 全形標點 is always
+        // Full-width Punctuation and Shift-to-English, retired 2026-08-24. Full-width Punctuation is always
         // on now; the Shift toggle's whole feature went on 2026-08-26, when
         // this input method stopped having an English mode. Either way the
         // stored value is inert, and this only keeps the domain honest.
         "fullWidthPunctuationEnabled",
         "shiftTogglesAlphanumericEnabled",
-        // 選字齒, retired 2026-09-08: the slot key set is derived from
+        // Candidate Selection Keys, retired 2026-09-08: the slot key set is derived from
         // `toneInputScheme` now, and the ⇧ / ⌃ / ⌥ digit sets this key could
         // name no longer exist to migrate to.
         "candidateSlotModifier",
-        // 詞關聯紀錄, retired 2026-09-25 when the engine dropped
+        // Association Records, retired 2026-09-25 when the engine dropped
         // `AppConfig.is_association_recording_enabled`: association recording
         // is always on, so a stored value (a `false` left by an older build or
         // a hand edit) is inert now.
         "associationRecordingEnabled",
     ]
 
-    /// Raw values of composing actions removed from the roster: 直接送出漢字 and
-    /// 直接送出羅馬字, retired 2026-08-25 when the 漢羅對調 switch was left as the
+    /// Raw values of composing actions removed from the roster: Commit Hanji Directly and
+    /// Commit Romanization Directly, retired 2026-08-25 when the Hanji/romanization switch was left as the
     /// one place a user chooses which script a commit writes.
     ///
     /// Their chords are stored under `ComposingAction.settingsKeyName`, which
@@ -120,7 +120,7 @@ enum RetiredSettingsCleanup {
 
     static func run(userDefaults: UserDefaults = .standard) {
         userDefaults.removeObject(forKey: SettingsStore.Keys.isOutputBothScripts.name)
-        // The 詞頻紀錄 toggle went with the pane that carried it. Unlike the
+        // The Frequency Records toggle went with the pane that carried it. Unlike the
         // retired names below this changes BEHAVIOUR rather than only tidying:
         // `SettingsStore.current` still reads the key, so a `false` stored by a
         // build that HAD the toggle would keep learning switched off with

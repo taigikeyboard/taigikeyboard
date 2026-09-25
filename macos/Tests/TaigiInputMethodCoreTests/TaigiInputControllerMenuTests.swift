@@ -68,11 +68,11 @@ final class TaigiInputControllerMenuTests: XCTestCase {
 
     /// The global shortcuts a click can stand in for, then the doorway, then —
     /// past the rule — the two commands with somewhere to go rather than
-    /// somewhere to be: the check, and the 關於 page the sidebar does not list
+    /// somewhere to be: the check, and the About page the sidebar does not list
     /// (USER 2026-09-19: the menu is where a user looks up the chords they
-    /// last recorded; USER 2026-09-20: 關於 lives only here). Each shortcut
-    /// row carries the 快捷鍵 pane's own name for it; the doorway is
-    /// 台語齒盤設定. The same rows as Windows and Linux: this literal is the one
+    /// last recorded; USER 2026-09-20: About lives only here). Each shortcut
+    /// row carries the Shortcuts pane's own name for it; the doorway is
+    /// TaigiKeyboard Settings. The same rows as Windows and Linux: this literal is the one
     /// `taigi_desktop_core::keys::input_method_menu` asserts. No composing key appears here; the menu stopped
     /// being that roster when the agent proved unable to display one without
     /// also dispatching it.
@@ -96,7 +96,7 @@ final class TaigiInputControllerMenuTests: XCTestCase {
         )
     }
 
-    /// The 漢羅對調 swap stays off the menu: its default is the bare backtick,
+    /// The Hanji/romanization swap stays off the menu: its default is the bare backtick,
     /// and a bare key equivalent here would be eaten by the agent everywhere
     /// this input source is selected — so the row could never print the one
     /// chord it is known by. The picker stays off too: it needs the caret a
@@ -199,7 +199,7 @@ final class TaigiInputControllerMenuTests: XCTestCase {
         }
     }
 
-    /// 檢查更新 is a command, not a shortcut, and a key equivalent claimed here
+    /// Check for Updates is a command, not a shortcut, and a key equivalent claimed here
     /// is taken from the host application for as long as this input source is
     /// selected. (The regression that retired the roster: anything the agent's
     /// key column can draw, typing can trigger — a bare Return sent every
@@ -211,7 +211,7 @@ final class TaigiInputControllerMenuTests: XCTestCase {
         XCTAssertEqual(row.keyEquivalentModifierMask, [])
     }
 
-    /// 關於 is a command too: no chord, same rule.
+    /// About is a command too: no chord, same rule.
     func testTheAboutRow_claimsNoKeyEquivalent() throws {
         let row = try item(action: Self.showAbout, in: menu())
 
@@ -232,7 +232,7 @@ final class TaigiInputControllerMenuTests: XCTestCase {
 
     /// The general form of the rule above: only a global-shortcut row may
     /// claim a key. A row that claims one the user cannot see and re-record in
-    /// the 快捷鍵 pane is a key taken from the host that no surface admits to.
+    /// the Shortcuts pane is a key taken from the host that no surface admits to.
     func testOnlyTheShortcutRows_claimAKey() throws {
         let shortcutRows = [Self.toggleRomanization, Self.cycleCandidateDisplayMode, Self.openSettings]
         for row in try menu().items where !row.keyEquivalent.isEmpty {
@@ -243,7 +243,7 @@ final class TaigiInputControllerMenuTests: XCTestCase {
         }
     }
 
-    /// The row prints the chord the 快捷鍵 pane holds for it right now, not the
+    /// The row prints the chord the Shortcuts pane holds for it right now, not the
     /// one it shipped with: the menu is rebuilt on every draw, which is what
     /// lets it follow a re-recording with no refresh wiring of its own.
     func testTheSettingsRow_printsTheRecordedChord() throws {
@@ -284,7 +284,7 @@ final class TaigiInputControllerMenuTests: XCTestCase {
     }
 
     /// The check needs the window it will answer in, so the row opens it — on
-    /// 一般, where the update rows live — and only then starts the check. The
+    /// General, where the update rows live — and only then starts the check. The
     /// other order would leave the answer with nowhere to appear, or would take
     /// the user's focus seconds after they had gone back to typing.
     ///

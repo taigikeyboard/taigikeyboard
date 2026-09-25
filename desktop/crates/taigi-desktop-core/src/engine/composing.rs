@@ -42,7 +42,7 @@ pub struct CustomEntry {
     pub hanzi: String,
 }
 
-/// One auto-learned phrase (§50): the `(漢字, canonical-TL)` pair the user
+/// One auto-learned phrase (§50): the `(Hanji, canonical-TL)` pair the user
 /// composed segment by segment. Rides `FetchAtPos.learned_entries`, a
 /// competitor of the dictionary rows — never the override `CustomEntry` is.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -229,7 +229,7 @@ pub fn fetch_at_pos(
             .collect(),
         enabled_sources_bitmask: args.enabled_sources_bitmask,
         // §34/S22 — positive platform setting → inverted proto disable gate
-        // (the field's own comment carries why), so 顯示當咧拍的字 ON leaves the
+        // (the field's own comment carries why), so Show Typed Text First ON leaves the
         // preedit literal leading the list and Enter commits what was typed.
         // CROSS-PLATFORM INVARIANT — mirrors
         // `macos/Sources/TaigiInputMethodCore/Engine/RustEngineBridge+Composing.swift`

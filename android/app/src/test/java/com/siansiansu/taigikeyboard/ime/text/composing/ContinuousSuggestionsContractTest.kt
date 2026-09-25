@@ -481,7 +481,7 @@ class ContinuousSuggestionsContractTest {
         val romanCell = result[1]
         assertEquals(MetadataKeys.CELL_SCRIPT_HANJI, hanjiCell.additionalInfo[MetadataKeys.CELL_SCRIPT])
         assertEquals(MetadataKeys.CELL_SCRIPT_ROMAN, romanCell.additionalInfo[MetadataKeys.CELL_SCRIPT])
-        // The roman cell KEEPS hanzi so displayText / 詞頻 pair-key stay put (#7).
+        // The roman cell KEEPS hanzi so displayText / word-frequency pair-key stay put (#7).
         assertEquals("台語", hanjiCell.hanzi)
         assertEquals("台語", romanCell.hanzi)
         assertEquals("台語", romanCell.displayText)
@@ -533,8 +533,8 @@ class ContinuousSuggestionsContractTest {
 
     @Test
     fun `S27 combined split - one hanji cell per shown 漢字, both readings keep their roman cell`() {
-        // 一字多音 (#7): 重/tîng and 重/tāng are two words but draw the SAME
-        // 漢字 cell, so 濫 lists 重 once (first-seen reading) and keeps both
+        // Multi-reading Hanji (#7): 重/tîng and 重/tāng are two words but draw the SAME
+        // Hanji cell, so mixed mode lists 重 once (first-seen reading) and keeps both
         // roman cells — the losing reading stays reachable through its own
         // romanization. A repeat at a different consumed span reads the same
         // on screen, so it adds nothing (USER 2026-09-03).
@@ -561,7 +561,7 @@ class ContinuousSuggestionsContractTest {
 
     @Test
     fun `S27 combined split OFF - default path byte-identical to the pre-split shape`() {
-        // 並排 / 羅馬字 / TPS all resolve to splitCombinedCells = false at the
+        // Pairing / Romanization Only / TPS all resolve to splitCombinedCells = false at the
         // provider — one carrier per candidate, no CELL_SCRIPT marker.
         val candidates = listOf(
             cand(consumedSpanEnd = 7, syllableCount = 2, displayText = "台語", roman = "tâi-gí", hanji = "台語"),

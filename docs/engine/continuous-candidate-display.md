@@ -3,8 +3,8 @@
 > **Type**: Specification (problem + fix, shipped v3.5.8)
 > **Keywords**: `Continuous`, `Candidate`, `display`, `roman`, `hanji`, `subtitle`, `dual-line`, `wire-schema`, `eliminate-fallback`
 > **Related**: [continuous-input-ranking.md](continuous-input-ranking.md), [composing.md](composing.md), [binary-format.md](binary-format.md), [`.claude/rules/cross-platform-alignment.md`](../../.claude/rules/cross-platform-alignment.md)
-> **Status**: §4 dual-line carrier shipped (Items 5–6); §15 fallback retire **COMPLETE** — Items 7–12 closed every engine syllabification gap and **Item 13 (v3.5.8 capstone) retired the platform lexicon fallback** so the Continuous engine is the single candidate source. All in v3.5.8 (USER 2026-05-11: 「v3.5.8 的版本就是連續打字的版本,修復到我滿意為止」). Item 13 = v3.5.8 feature-complete; see [`changelog/mobile-v3.5.8.md`](../../changelog/mobile-v3.5.8.md).
-> **Author**: Dogfood findings 2026-05-11. Source observation = user during v3.5.8 dogfood. §15 added 2026-05-11 (night) per user pivot 「engine 內部處理所有切音節邏輯,fallback 是冗餘」.
+> **Status**: §4 dual-line carrier shipped (Items 5–6); §15 fallback retire **COMPLETE** — Items 7–12 closed every engine syllabification gap and **Item 13 (v3.5.8 capstone) retired the platform lexicon fallback** so the Continuous engine is the single candidate source. All in v3.5.8 (USER 2026-05-11: "v3.5.8 is the continuous-typing release; keep fixing it until I am satisfied"). Item 13 = v3.5.8 feature-complete; see [`changelog/mobile-v3.5.8.md`](../../changelog/mobile-v3.5.8.md).
+> **Author**: Dogfood findings 2026-05-11. Source observation = user during v3.5.8 dogfood. §15 added 2026-05-11 (night) per user pivot: "the engine handles all syllable-segmentation logic internally; the fallback is redundant".
 > **Adjacent spec (2026-05-13)**: [`continuous-input-ranking.md`](continuous-input-ranking.md) §10 — Commit Behavior & Display Split. Composing buffer (`rawInput`) vs candidate[0] (segmented) split + Enter / Tap-0 / Tap-N commit dispatch. Grounded in MOE `KeySectionsModel` (§10.1.1). Drafted; co-confirm pending in the same Codex pass as this doc.
 
 ---
@@ -32,7 +32,7 @@ Expected behavior: **every dictionary-sourced continuous candidate renders dual-
 
 User expectation:
 
-> 預期必須只有「漢字+羅馬字並行」,並且是單向資料流。
+> "The expectation: only 'Hanji + romanization side by side', with one-way data flow."
 
 ### 1.2 Why this matters
 
@@ -130,7 +130,7 @@ Android `TaigiWord.displayText` ([`TaigiWord.kt:38-40`](../../android/app/src/ma
 
 ---
 
-## 3. Why the user sees "交錯" (interleave)
+## 3. Why the user sees "interleave"
 
 ### 3.1 Within one `autocomplete()` call — mutually exclusive
 
@@ -158,7 +158,7 @@ Android [`TaigiAutocompleteService.kt:71-77`](../../android/app/src/main/java/co
 - ~~TPS tone-1 untoned syllables (deferred to Phase 9.4a)~~ **RESOLVED — Phase 9 Item 7 / 9.4a** (`tps::valid_span_endings` next-initial-seen rule + `build_keys_tps` digitless tone-1 accept)
 - Single-character prefix below the first valid ending
 
-Each toggle flips the strip's cell shape, producing the user-observed "交錯" across successive keystrokes.
+Each toggle flips the strip's cell shape, producing the user-observed "interleave" across successive keystrokes.
 
 ### 3.3 Slot-0 vs slots 1..n
 
@@ -474,7 +474,7 @@ Options:
 
 Recommendation: **A**. Aligns with `TaigiWord.kt` Android field name (`hanzi`), `taigi-converter` zh-TW glossary, and existing `tl_notone` / `tl` already-overloaded `tl` would conflict with the "FST key" usage.
 
-Trade-off: `DictionaryRecord` uses `hanzi` (Hanyu Pinyin spelling). Stick with `hanzi` everywhere for consistency, OR rename `DictionaryRecord` field. Recommended: keep `hanzi` everywhere in code; UI strings + commit messages use 漢字 / hanji as preferred.
+Trade-off: `DictionaryRecord` uses `hanzi` (Hanyu Pinyin spelling). Stick with `hanzi` everywhere for consistency, OR rename `DictionaryRecord` field. Recommended: keep `hanzi` everywhere in code; UI strings + commit messages use Hanji / hanji as preferred.
 
 ### Q2 — Should `display_text` stay on the wire?
 
@@ -603,7 +603,7 @@ Per [`.claude/rules/cross-platform-alignment.md`](../../.claude/rules/cross-plat
 ## 14. Status & Next Action
 
 - **2026-05-11 (day)**: §1-14 display fix drafted from dogfood findings.
-- **2026-05-11 (night)**: §15 added per user pivot — eliminate platform-side lexicon fallback; engine becomes single source of candidates (MOE `tutgInputLine` analog). All work scoped to v3.5.8 (USER 2026-05-11: 「v3.5.8 的版本就是連續打字的版本,修復到我滿意為止」).
+- **2026-05-11 (night)**: §15 added per user pivot — eliminate platform-side lexicon fallback; engine becomes single source of candidates (MOE `tutgInputLine` analog). All work scoped to v3.5.8 (USER 2026-05-11: "v3.5.8 is the continuous-typing release; keep fixing it until I am satisfied").
 - **Complete (v3.5.8)**: Codex pre-impl consult on §9 + §15.7 done; display fix (§1-14, Items 5–6) and fallback retire (§15, Items 7–13) implemented and shipped — [`changelog/mobile-v3.5.8.md`](../../changelog/mobile-v3.5.8.md) § Shared / § Engine. Later changes are tracked in commit messages and the module docs of `engine/lexicon/src/continuous/` / `engine/composing/src/continuous.rs`, not by retroactive edits here.
 
 ---

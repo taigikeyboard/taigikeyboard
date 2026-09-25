@@ -13,7 +13,7 @@ extension ActionHandler {
         }
     }
 
-    /// Toggle romanization / Hanji (漢字) display mode
+    /// Toggle romanization / Hanji display mode
     func handleTranslateToggle() {
         keyboardContext.toggleTranslateSwapped()
         if feedbackContext.settings.isHapticFeedbackEnabled {

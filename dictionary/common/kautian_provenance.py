@@ -83,9 +83,9 @@ def build_accent_mask_map(
     """Map ``(hanzi, cleaned reading) → OR of accent bits``.
 
     `dialect_columns` is in bit order (index 0 → bit 0). A cell may hold
-    comma/slash-separated readings (e.g. 新竹 女 = "lír,lí"); each gets the
+    comma/slash-separated readings (e.g. Hsinchu 女 = "lír,lí"); each gets the
     column's bit. The same reading shared across columns ORs their bits
-    (八/pueh ∈ 鹿港/三峽/臺北/金門/馬公/新竹 → bits 0,1,2,6,7,8).
+    (八/pueh ∈ Lukang/Sansia/Taipei/Kinmen/Makung/Hsinchu → bits 0,1,2,6,7,8).
     """
     if len(dialect_columns) > ACCENT_COLUMN_COUNT:
         raise ValueError(

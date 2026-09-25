@@ -41,7 +41,7 @@ final class CandidateMetricsTests: XCTestCase {
         ])
     }
 
-    /// A fresh install renders at 標準 — a step smaller than the two-knob
+    /// A fresh install renders at Standard — a step smaller than the two-knob
     /// ladder's default of 20pt text in a 30pt row (USER 2026-09-23: the
     /// standard size was still too big).
     func testDefault_isTheStandardStep() {
@@ -114,10 +114,10 @@ final class CandidateMetricsTests: XCTestCase {
 
     // MARK: - Content-resolved height
 
-    /// A stacked layout showing a list with no annotated cell — 羅馬字, or
-    /// 漢羅合用 where every cell is one script — has nothing to stack, and
+    /// A stacked layout showing a list with no annotated cell — Romanization Only, or
+    /// Hanji with Romanization where every cell is one script — has nothing to stack, and
     /// renders one line tall: the inline metrics, capsule and inset included
-    /// (USER 2026-09-02: no second-line air under 羅馬字).
+    /// (USER 2026-09-02: no second-line air under Romanization Only).
     func testStackedMetrics_withNoAnnotatedCell_resolveToTheOneLineHeight() {
         let stacked = defaultMetrics.arranged(.stacked)
 
@@ -125,7 +125,7 @@ final class CandidateMetricsTests: XCTestCase {
     }
 
     /// One annotated cell in the list keeps the two-line height for the whole
-    /// list — 並排's mixed lists (a §34 literal beside Hanji rows) line up.
+    /// list — Hanji–Romanization Pairing's mixed lists (a §34 literal beside Hanji rows) line up.
     func testStackedMetrics_withAnAnnotatedCell_keepTheTwoLineHeight() {
         let stacked = defaultMetrics.arranged(.stacked)
 
@@ -145,7 +145,7 @@ final class CandidateMetricsTests: XCTestCase {
     /// cells are the size range macOS itself capsules, and the selection sits
     /// a hairline inside it.
     ///
-    /// trace: 標準 inline → itemHeight 26, container 13, inset 2, highlight 11.
+    /// trace: Standard inline → itemHeight 26, container 13, inset 2, highlight 11.
     func testInlineArrangement_keepsTheCapsuleAndItsHairlineInset() {
         let inline = defaultMetrics.arranged(.inline)
 

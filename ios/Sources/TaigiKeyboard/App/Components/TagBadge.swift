@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Small grey capsule tag beside a list row's text — dictionary source tags
-/// and the §50 自動學 badge share it.
+/// and the §50 auto-learned badge share it.
 struct TagBadge: View {
     let text: String
 

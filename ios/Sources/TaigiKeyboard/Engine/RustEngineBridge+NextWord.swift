@@ -347,9 +347,9 @@ public extension RustEngineBridge {
         hyphenlessRoman: Bool = false,
     ) -> Taigi_Engine_AppConfig {
         var cfg = Taigi_Engine_AppConfig()
-        // Proto field 9 — the nextword filter collapses same-roman predictions under 羅馬字.
+        // Proto field 9 — the nextword filter collapses same-roman predictions under Romanization Only.
         cfg.candidateDisplayMode = candidateDisplayMode.engineValue
-        // Proto field 10 — 無連字符 shapes `EnginePrediction.text`; `tl` keeps the hyphen.
+        // Proto field 10 — No Hyphens shapes `EnginePrediction.text`; `tl` keeps the hyphen.
         cfg.hyphenlessRoman = hyphenlessRoman
         switch mode {
         case .poj: cfg.inputMode = "poj"

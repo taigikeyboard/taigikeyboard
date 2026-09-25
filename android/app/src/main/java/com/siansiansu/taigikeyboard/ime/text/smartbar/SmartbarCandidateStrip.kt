@@ -75,7 +75,7 @@ fun TaigiCandidateStrip(
         }
 
     // §42: content-level sizing — when NO shown cell carries a subtitle
-    // (羅馬字 mode; 濫 split cells; an all-roman list) the title is sized for
+    // (Romanization Only mode; mixed split cells; an all-roman list) the title is sized for
     // one line instead of reserving the 58/42 split. Subtitle presence never
     // depends on the TPS re-render of `roman`, so `word.roman` suffices here.
     val contentHasSubtitles =

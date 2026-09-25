@@ -2,7 +2,7 @@
 
 import Foundation
 
-/// Builds the 教典 and ChhoeTaigi query URLs for a reading.
+/// Builds the MOE dictionary and ChhoeTaigi query URLs for a reading.
 ///
 /// Platform-owned by design, not engine work: these are two websites' query
 /// conventions, and a convention is not phonetics. Mirrors

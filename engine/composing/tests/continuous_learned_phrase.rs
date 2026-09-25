@@ -178,7 +178,7 @@ fn khinsiann_segment_keeps_its_double_hyphen() {
 fn typed_separator_before_a_segment_is_the_joiner() {
     // The `-` run the user typed folds into the NEXT segment's raw
     // prefix (記 over `ki` leaves `--khilai` pending), so it is read there:
-    // `--` learns the khinsiann, `-` the 連字, nothing the word space.
+    // `--` learns the khinsiann, `-` the hyphen, nothing the word space.
     for (raw, consumed, tl) in [
         ("ki--khilai", 8, "kì--khí-lâi"),
         ("ki-khilai", 7, "kì-khí-lâi"),

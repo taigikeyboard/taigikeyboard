@@ -60,7 +60,7 @@ final class TaigiInputControllerShortcutTests: XCTestCase {
 
     /// What happens to the bar follows what the setting invalidates: the
     /// romanization switch changes what a fetch would return, so it takes the
-    /// bar down; the 漢羅 swap changes only how the same candidates display,
+    /// bar down; the Hanji/romanization swap changes only how the same candidates display,
     /// so it must NOT dismiss — the re-render path is pinned in
     /// `TaigiInputControllerCandidateTests`.
     func testTheRomanizationSwitch_takesTheBarDown_andTheSwapDoesNot() {
@@ -103,7 +103,7 @@ final class TaigiInputControllerShortcutTests: XCTestCase {
         XCTAssertEqual(flashes, ["白話字", "台羅"])
     }
 
-    /// The 漢羅 swap does not announce itself: it changes how the candidates on
+    /// The Hanji/romanization swap does not announce itself: it changes how the candidates on
     /// screen render, and they re-render where the user is already looking.
     func testTheTranslateSwap_raisesNoFlash() {
         controller.performShortcutAction(.toggleTranslateSwapped)
@@ -136,7 +136,7 @@ final class TaigiInputControllerShortcutTests: XCTestCase {
     /// the Hanji cell always comes first, so the candidate projection stays
     /// `true` whatever the chord does — but the chord is NOT inert: it flips
     /// the STORED swap, which is what picks the punctuation width there
-    /// (USER 2026-09-13 「漢羅濫需要有 isTranslateSwapped 的按鈕」), and the
+    /// (USER 2026-09-13: "Hanji with Romanization needs an isTranslateSwapped button"), and the
     /// flipped value is what the user gets back on returning to side-by-side.
     func testTheTranslateSwap_underCombined_flipsThePunctuationWidthOnly() {
         controller.settings.storedIsTranslateSwapped = false
@@ -154,7 +154,7 @@ final class TaigiInputControllerShortcutTests: XCTestCase {
         XCTAssertFalse(controller.settings.current.isFullWidthPunctuation, "a second press goes back to half-width")
     }
 
-    /// The cycle walks the 外觀 picker's order and comes back round, so three
+    /// The cycle walks the Appearance picker's order and comes back round, so three
     /// presses return the user where they started; each press names the mode
     /// switched INTO, in the picker's own words — the strip changes shape,
     /// and a strip that did so with no notice reads as breakage. The STORED

@@ -44,9 +44,9 @@ final class ComposingManagerLearningTests: XCTestCase {
         )
     }
 
-    /// A Taiwanese word is the `(漢字, canonical TL)` pair (Core Principle #7),
+    /// A Taiwanese word is the `(Hanji, canonical TL)` pair (Core Principle #7),
     /// and which SCRIPT it was written in is not part of that. Committing the
-    /// other script must therefore land on the same row — otherwise 漢羅 typing
+    /// other script must therefore land on the same row — otherwise mixed-script typing
     /// would quietly split every word's frequency in two, and neither half
     /// would rank.
     func testAlternateScriptCommit_learnsTheSameWordAsThePrimaryOne() throws {
@@ -152,7 +152,7 @@ final class ComposingManagerLearningTests: XCTestCase {
         )
     }
 
-    /// A 漢羅 sentence mixes the scripts word by word, so a bigram will
+    /// A mixed-script sentence mixes the scripts word by word, so a bigram will
     /// routinely have one half written in each. The pair must still be learnt
     /// under the identity, not under whichever rendering reached the document —
     /// otherwise `我 ê` learnt in mixed script would never predict `ê` again.

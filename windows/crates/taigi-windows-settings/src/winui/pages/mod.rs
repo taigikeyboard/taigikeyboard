@@ -17,7 +17,7 @@ use crate::winui::window::{Message, ResetScope, SettingsWindow};
 use taigi_desktop_core::strings::{StringKey, StringResolver};
 use windows_reactor::*;
 
-/// A pane's 恢復預設設定 card, after a gap: its own section at the end,
+/// A pane's Reset to Defaults card, after a gap: its own section at the end,
 /// acting on every row above it. One shape for every pane that has one.
 pub fn reset_row(
     strings: &StringResolver,

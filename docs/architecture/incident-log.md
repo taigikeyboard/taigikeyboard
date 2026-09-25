@@ -14,7 +14,7 @@ One entry per incident: what went wrong, the USER's words where they set the rul
 
 ### Confirm bug before round
 
-- **2026-05-16 Bug 7** — USER `確認:input "taiuantaigi" → expected …` was treated as an observed bug; a fix round was about to open. USER: "等等,已經確認 Bug 7 是 real bug 嗎". It was not — PRs #281/#282 were unmerged, the path had never run.
+- **2026-05-16 Bug 7** — USER `確認:input "taiuantaigi" → expected …` was treated as an observed bug; a fix round was about to open. USER: "wait, has Bug 7 actually been confirmed as a real bug?". It was not — PRs #281/#282 were unmerged, the path had never run.
 
 ### Trace before assert
 
@@ -35,7 +35,7 @@ One entry per incident: what went wrong, the USER's words where they set the rul
 
 ### No unilateral release scope
 
-- **2026-05-16 v3.5.8 Bug 3** — a missing underline was labelled "documented known limitation" and the segmentation redesign pushed "post-v3.5.8". USER: 「不要擅自決定哪些超出 v3.5.8 的範圍,v3.5.8 該 release 的時候我會給你明確的指示」. Both were must-fix.
+- **2026-05-16 v3.5.8 Bug 3** — a missing underline was labelled "documented known limitation" and the segmentation redesign pushed "post-v3.5.8". USER: "don't decide on your own what falls outside the v3.5.8 scope; when v3.5.8 is due for release I will give you explicit instructions". Both were must-fix.
 
 ## Maps to `~/.claude/rules/round-workflow.md`
 
@@ -47,19 +47,19 @@ One entry per incident: what went wrong, the USER's words where they set the rul
 
 ### Grounded in code
 
-- **v3.5.8 連續輸入 plan** — drafted a `nextword` integration assuming it fetches bigram predictions; `engine/nextword/src/api.rs:42-84` showed it only filters / scores what the platform feeds. One read flipped direction and reasoning.
+- **v3.5.8 continuous-input plan** — drafted a `nextword` integration assuming it fetches bigram predictions; `engine/nextword/src/api.rs:42-84` showed it only filters / scores what the platform feeds. One read flipped direction and reasoning.
 
-- **2026-09-18 iPad external keyboard (PRs #77 / #78 / #80 / #83, reverted)** — three PRs built hardware-key composing on `UIInputViewController.pressesBegan`, with "iPadOS delivers `pressesBegan` to the extension" listed only as an unverified dogfood assumption. Real-iPad dogfood: hardware keys reach the host as plain ASCII; the extension never receives `UIPress` events (iPadOS routes them to the host app's responder chain only — the same limit every third-party keyboard has, e.g. PTT iOS 2023-07-24「ipad不接受第三方輸入法在鍵盤上已經被詬病了很久」). USER: 「為什麼一開始planning的階段沒有跟我說不能做？」 / 「ios不支援第三方輸入法做外接鍵盤,revert外接鍵盤相關的功能」. A platform-capability assumption that the whole plan rests on gets a 20-line spike PR on device BEFORE the plan, not a dogfood row after it.
+- **2026-09-18 iPad external keyboard (PRs #77 / #78 / #80 / #83, reverted)** — three PRs built hardware-key composing on `UIInputViewController.pressesBegan`, with "iPadOS delivers `pressesBegan` to the extension" listed only as an unverified dogfood assumption. Real-iPad dogfood: hardware keys reach the host as plain ASCII; the extension never receives `UIPress` events (iPadOS routes them to the host app's responder chain only — the same limit every third-party keyboard has, e.g. PTT iOS 2023-07-24「ipad不接受第三方輸入法在鍵盤上已經被詬病了很久」). USER: "why didn't you tell me at the planning stage that it couldn't be done?" / "iOS doesn't support external keyboards for third-party input methods; revert the external-keyboard features". A platform-capability assumption that the whole plan rests on gets a 20-line spike PR on device BEFORE the plan, not a dogfood row after it.
 
 ## Maps to `.claude/rules/phonetics.md`
 
 ### Authoritative-source-only (CLAUDE.md Core Principle #3)
 
-- **2026-04-26 `iri/erk/eeh`** — proposed removing finals absent from the dictionary. USER: "iri/erk/eeh 這個有意義,是特殊字尾". They are dialectal finals per `knowledge/taigi-phonetics-reference.md` §3.2.6.
-- **2026-05-20 TPS schema** — proposed `tps_num = digit-tone` and a "bopomofo" option. USER: "TPS 有自己的聲調表示方法,不是用數字輸入" / "TPS 不是 bopomofo". Answer was in `knowledge/taigi-phonetics-reference.md` §5 + `engine/phonetics/src/tps.rs::ZHUYIN_TONES`.
+- **2026-04-26 `iri/erk/eeh`** — proposed removing finals absent from the dictionary. USER: "iri/erk/eeh are meaningful; they are special finals". They are dialectal finals per `knowledge/taigi-phonetics-reference.md` §3.2.6.
+- **2026-05-20 TPS schema** — proposed `tps_num = digit-tone` and a "bopomofo" option. USER: "TPS has its own tone notation; it is not typed with digits" / "TPS is not bopomofo". Answer was in `knowledge/taigi-phonetics-reference.md` §5 + `engine/phonetics/src/tps.rs::ZHUYIN_TONES`.
 
 ## Privacy (`.claude/rules/taigi-incidents.md` § Privacy)
 
 ### Personal identifiers in the public tree
 
-- **2026-09-24 privacy scrub** — an open-source readiness audit (`docs/reports/2026-09-24-open-source-readiness-and-layout.md`) found, 17 days after the repository went public, a former work address written out in `docs/go-public-checklist.md` (the very address the 2026-09-07 history rewrite had removed from commit metadata), the Gmail-triage skill's Google Cloud project ID and personal mailbox label layout, and the Discord-triage skill's server and channel IDs plus a runtime `state.json` committed on every run. gitleaks passed all of them: none is a credential. USER: 「Go Round 0,不改寫歷史,但我希望未來可以避免類似的事情發生」. The tree was scrubbed and both skills moved to the private dotfiles repo; prevention = the `personal-email` gitleaks rule (pre-commit + CI) and a private-denylist pre-commit check for identifiers that cannot be listed publicly. Older commits still carry the values.
+- **2026-09-24 privacy scrub** — an open-source readiness audit (`docs/reports/2026-09-24-open-source-readiness-and-layout.md`) found, 17 days after the repository went public, a former work address written out in `docs/go-public-checklist.md` (the very address the 2026-09-07 history rewrite had removed from commit metadata), the Gmail-triage skill's Google Cloud project ID and personal mailbox label layout, and the Discord-triage skill's server and channel IDs plus a runtime `state.json` committed on every run. gitleaks passed all of them: none is a credential. USER: "Go Round 0; don't rewrite history, but I want to avoid this kind of thing happening in future". The tree was scrubbed and both skills moved to the private dotfiles repo; prevention = the `personal-email` gitleaks rule (pre-commit + CI) and a private-denylist pre-commit check for identifiers that cannot be listed publicly. Older commits still carry the values.

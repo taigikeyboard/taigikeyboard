@@ -481,21 +481,21 @@ extension XCTestCase {
         setSettingRestoredAtTeardown(key, to: nil)
     }
 
-    /// The 候選詞顯示 mode, written to the `.standard` domain the shared
-    /// coordinator's settings provider reads — a 合用 case has to say so to
+    /// The Candidate Display mode, written to the `.standard` domain the shared
+    /// coordinator's settings provider reads — a Hanji with Romanization case has to say so to
     /// the manager, not only to a controller's scratch store.
     @MainActor
     func withDisplayMode(_ mode: CandidateDisplayMode, _ body: () throws -> Void) rethrows {
         try withSetting(SettingsStore.Keys.candidateDisplayMode.name, to: mode.rawValue, body)
     }
 
-    /// Runs `body` with 漢字優先 on or off.
+    /// Runs `body` with Hanji-first on or off.
     ///
     /// Through `withSetting` rather than a scratch store, for the reason
     /// spelled out there: the controller reads its own `SettingsStore` while
     /// the shared coordinator's `ComposingManager` reads another, so a swap
     /// written to a scratch suite renders the bar one way and gates the commit
-    /// the other. A case that means "the user is in 漢字 mode" has to move the
+    /// the other. A case that means "the user is in Hanji mode" has to move the
     /// domain BOTH of them read.
     @MainActor
     func withTranslateSwapped(_ swapped: Bool, _ body: () throws -> Void) rethrows {
@@ -530,7 +530,7 @@ extension CandidateBarSession {
         try controller.handle(TestFixtures.arrowKeyDownEvent(key), client: client)
     }
 
-    /// §34 opens the bar on the one-script literal — 顯示當咧拍的字 ships ON —
+    /// §34 opens the bar on the one-script literal — Show Typed Text First ships ON —
     /// so a case about a candidate that carries both scripts walks ⇥ onto the
     /// first one and hands it back.
     @discardableResult
@@ -551,7 +551,7 @@ extension CandidateBarSession {
 }
 
 extension [CandidateCellContent] {
-    /// The first cell carrying both scripts — under 並排 the one an annotation
+    /// The first cell carrying both scripts — under Hanji–Romanization Pairing the one an annotation
     /// sits on; the §34 literal ahead of it has one.
     var firstTwoScriptIndex: Int? {
         firstIndex { $0.annotation != nil }

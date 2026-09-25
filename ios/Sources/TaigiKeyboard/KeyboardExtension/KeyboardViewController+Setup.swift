@@ -248,8 +248,8 @@ extension KeyboardViewController {
             viewWillSetupKeyboardView()
         }
 
-        // 候選詞顯示 decides whether the 文/A key is in the layout (dropped under
-        // 漢羅濫 / 羅馬字). The in-keyboard picker already re-renders through
+        // Candidate Display decides whether the 文/A key is in the layout (dropped under
+        // Hanji with Romanization / Romanization Only). The in-keyboard picker already re-renders through
         // `KeyboardContext.candidateDisplayMode`; a host-app change only lands
         // here, so nudge the same context path — NOT a view rebuild, which would
         // tear down an open overlay when this fires for an in-process write.

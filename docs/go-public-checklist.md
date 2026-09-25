@@ -136,14 +136,14 @@ constraint has to be legible to whoever redistributes.
 index satisfies both at once has not been analysed.
 
 **`kungge` has no data licence at all.** 國立臺灣工藝研究發展中心 publishes only an
-圖像授權 page (姓名標示-非商業性-禁止改作, no version, scoped to the 示意圖片); nothing
-covers the vocabulary. This project takes 漢字 + 台羅拼音 only, so the position rests
-on the same 著作權法 §10-1 reading as `kautian` below rather than on a grant. The
+image-licence page (Attribution-NonCommercial-NoDerivs, no version, scoped to the illustrations); nothing
+covers the vocabulary. This project takes Hanji + TL romanization only, so the position rests
+on the same Copyright Act (著作權法) §10-1 reading as `kautian` below rather than on a grant. The
 in-app credits screen previously showed CC BY-NC 4.0 with no source; corrected
 2026-09-07.
 
 **The `kautian` reading is the maintainer's, not the publisher's.**
-`dictionary/LICENSE` argues that taking only 漢字 + 羅馬字 from a CC BY-ND source
+`dictionary/LICENSE` argues that taking only Hanji + romanization from a CC BY-ND source
 is a Collection rather than an Adaptation. That argument is recorded so it can be
 checked — it is not a permission that was granted.
 

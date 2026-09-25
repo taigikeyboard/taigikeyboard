@@ -11,8 +11,8 @@ use std::sync::OnceLock;
 const BUNDLED_JSON: &str = include_str!("../../../../symbols/desktop-symbols.json");
 
 /// How the file groups its symbols. The picker shows them as ONE list, in
-/// file order (USER 2026-09-09: a category to pick first 「會造成使用者的體驗
-/// 中斷」), so the grouping is the file's own documentation and the
+/// file order (USER 2026-09-09: a category to pick first "would interrupt the
+/// user's experience"), so the grouping is the file's own documentation and the
 /// validation's unit — a closed roster, so the JSON cannot invent one.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -136,7 +136,7 @@ impl SymbolTable {
 
 /// The last few picks, most recent first — the front of the picker's list,
 /// so a symbol used a moment ago is on the first page under the first slot
-/// keys (USER 2026-09-19: 「符號選單能夠依照最近輸入排序」). One page, not
+/// keys (USER 2026-09-19: "the symbol menu should sort by most recent use"). One page, not
 /// the whole table: past `CAPACITY` a symbol falls back to its file place,
 /// so the brackets stay together and the rest of the list keeps its order.
 /// Port of macOS `RecentSymbols.swift`.

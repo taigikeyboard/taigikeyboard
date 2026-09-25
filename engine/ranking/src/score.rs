@@ -97,7 +97,7 @@ impl FrequencyData {
 /// `canonical_tl` = the candidate's canonical-TL reading
 /// ([`RawCandidate::canonical_tl`], snapshotted before the POJ-render
 /// pass). One `display_text` (e.g. 重) holds one bucket PER reading so
-/// 一字多音 (重/tîng vs 重/tāng) keep separate counts.
+/// Polyphonic characters (重/tîng vs 重/tāng) keep separate counts.
 ///
 /// Internally a nested `display_text → (canonical_tl → FrequencyData)`
 /// map: the outer level lets [`get`](Self::get) borrow `&str` and the
@@ -472,7 +472,7 @@ mod tests {
 
     #[test]
     fn frequency_map_pair_key_separates_homograph_readings() {
-        // R5 / Core Principle #7: 一字多音 — same hanji 重, two readings
+        // R5 / Core Principle #7: polyphonic character — same hanji 重, two readings
         // tîng (重複) vs tāng (重量) — keep SEPARATE buckets. The
         // pre-R5 hanji-only key merged them.
         let mut map = FrequencyMap::new();

@@ -673,7 +673,7 @@ pub(crate) fn present_table(
 }
 
 /// The cells as the panel draws them: the leading script, the other script
-/// (合用) after a space; labels = the slot keys, one per page position.
+/// (Combined) after a space; labels = the slot keys, one per page position.
 ///
 /// NAMED DIVERGENCE: the §34 literal cell, which takes no key on macOS and
 /// Windows (`lead_cell_is_unkeyed`), takes the first slot key here — the
@@ -735,7 +735,7 @@ fn pass_through_may_consume(
 }
 
 /// Re-reads the candidates for the composition as it now stands; with the
-/// 候選窗 setting off nothing is fetched, not merely not shown.
+/// Show Candidate Window setting off nothing is fetched, not merely not shown.
 pub(crate) fn refresh_candidates(
     settings: &SettingsDocument,
     manager: &mut ComposingManager,

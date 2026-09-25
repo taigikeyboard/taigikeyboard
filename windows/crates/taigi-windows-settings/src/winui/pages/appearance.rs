@@ -1,7 +1,7 @@
-//! The 外觀 pane: the window's light / dark mode, then the candidate
+//! The Appearance pane: the window's light / dark mode, then the candidate
 //! window's own pickers — layout, size, what each cell shows — and the
 //! reset card.
-//! The TYPEFACE is not here: it moved to 字型管理 (`font_management`), where
+//! The TYPEFACE is not here: it moved to Manage Typefaces (`font_management`), where
 //! the bundled roster and the user's own typefaces are one list. Port of `AppearanceSettingsView.swift`. The values are
 //! read live by the DLL's window on every show, so a change here applies
 //! from the next keystroke.

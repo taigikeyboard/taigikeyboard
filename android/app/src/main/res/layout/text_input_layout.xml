@@ -6,7 +6,7 @@
     android:layout_height="wrap_content"
     tools:ignore="MergeRootFrame">
 
-    <!-- 主要鍵盤視圖：Smartbar + 鍵盤 (Compose body) -->
+    <!-- Main keyboard view: Smartbar + keyboard (Compose body) -->
     <LinearLayout
         android:id="@+id/text_input_content"
         android:layout_width="match_parent"
@@ -26,7 +26,7 @@
 
     </LinearLayout>
 
-    <!-- 候選詞展開 Overlay：從 Smartbar 下方開始，向下覆蓋鍵盤 -->
+    <!-- Expanded candidate overlay: starts below the Smartbar, covers the keyboard downward -->
     <com.siansiansu.taigikeyboard.ime.text.smartbar.CandidateOverlayView
         android:id="@+id/candidate_overlay"
         android:layout_width="match_parent"

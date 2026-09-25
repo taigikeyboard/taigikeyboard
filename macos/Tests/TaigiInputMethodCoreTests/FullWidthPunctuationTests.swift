@@ -4,7 +4,7 @@
 import XCTest
 
 /// The pure policy — what maps and what never does. When it applies at all is
-/// the 漢羅對調 mode, read by the controller and covered by
+/// the Hanji/romanization swap mode, read by the controller and covered by
 /// `FullWidthPunctuationControllerTests`
 /// (`testRomanFirstMode_passesPunctuationThrough`).
 final class FullWidthPunctuationTests: XCTestCase {

@@ -21,31 +21,31 @@ protocol EngineSettings {
     // Drift causes silent divergence (hanji-first spurious word-boundary spaces).
     var isOutputBothScripts: Bool { get }
 
-    /// Candidate cell rendering mode (漢羅對應 / 羅馬字). Under `.romanOnly`
+    /// Candidate cell rendering mode (Hanji–Romanization Pairing / Romanization Only). Under `.romanOnly`
     /// the two flags above read `false` regardless of their stored values —
     /// they are derived, never overwritten — so auto-space, the commit
     /// formatter, and the engine `AppConfig` all take the roman-first arms.
     /// The bridge forwards this as `AppConfig.candidate_display_mode` so the
     /// engine collapses same-roman rows for display.
     // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/core/settings/EngineSettings.kt:candidateDisplayMode.
-    // Drift causes silent divergence (one platform still shows hanji / swaps scripts under 羅馬字).
+    // Drift causes silent divergence (one platform still shows hanji / swaps scripts under Romanization Only).
     var candidateDisplayMode: CandidateDisplayMode { get }
 
     /// Literal-roman candidate toggle (§34/S22). When on (default), TL/POJ
     /// composing surfaces the preedit literal (`derived_display`) as the
-    /// index-0 candidate so 漢羅 mixing commits the romanization in one tap.
+    /// index-0 candidate so mixed-script writing commits the romanization in one tap.
     /// The bridge inverts this into `FetchAtPos.literal_roman_candidate_disabled`.
     // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/core/settings/EngineSettings.kt:isLiteralRomanCandidateEnabled.
     // Drift causes silent divergence (one platform shows the §34 candidate, the other does not).
     var isLiteralRomanCandidateEnabled: Bool { get }
 
-    /// 無連字符 (`behavioral-invariants.md` §49), EFFECTIVE: the stored switch
+    /// No Hyphens (`behavioral-invariants.md` §49), EFFECTIVE: the stored switch
     /// with TPS folded off. Forwarded verbatim as `AppConfig.hyphenless_roman`.
     // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/core/settings/EngineSettings.kt:isHyphenlessRomanEnabled.
     // Drift causes silent divergence (one platform still shows hyphens).
     var isHyphenlessRomanEnabled: Bool { get }
 
-    /// The POJ marker options (double-tap folds + ⁿ大本字, §53) bundled as a
+    /// The POJ marker options (double-tap folds + ⁿ becomes ᴺ in capitals, §53) bundled as a
     /// live-read value so `ComposingState` / `ToneConverter` can stay
     /// Foundation-pure.
     var pojMarkerOptions: PojMarkerOptions { get }

@@ -209,7 +209,7 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
         }
         lastCaretRect = caretRect
         self.hostBundleIdentifier = hostBundleIdentifier
-        // Nil resolves against the system — the 自動 behaviour. Set before
+        // Nil resolves against the system — the Automatic behaviour. Set before
         // `syncTheme` below, whose Tahoe correction reads the effective
         // appearance this assignment decides.
         appearance = forcedAppearance

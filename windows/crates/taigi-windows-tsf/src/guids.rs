@@ -19,7 +19,7 @@ pub const GUID_PRESERVED_KEY_SETTINGS: GUID =
 /// Preserved key: TL ↔ POJ (PR5b registers it).
 pub const GUID_PRESERVED_KEY_ROMANIZATION: GUID =
     GUID::from_u128(0x566EAAED_32AC_422E_9ACE_2A2A30EBC413);
-/// Preserved key: cycle 候選詞顯示 (allocated 2026-09-02 for the shortcut).
+/// Preserved key: cycle Candidate Display (allocated 2026-09-02 for the shortcut).
 pub const GUID_PRESERVED_KEY_CYCLE_CANDIDATE_DISPLAY_MODE: GUID =
     GUID::from_u128(0xD9F5E060_8D5F_4A05_86AF_CF6B2F5F9EB6);
 /// Preserved key: toggle the symbol picker (allocated 2026-09-11: the key sink

@@ -232,7 +232,7 @@ impl PrefixIndex {
     /// natural-reading-first dedupe.
     ///
     /// `final_only_offsets` = byte offsets (into `key`) of glyphs
-    /// immediately before a stripped separator / 連字 barrier; those
+    /// immediately before a stripped separator / hyphen barrier; those
     /// slots keep only Final-role readings (§31 — the user's explicit
     /// boundary must not be re-read as a syllable onset). Tone-mark
     /// restriction is derived inside the pattern builder.

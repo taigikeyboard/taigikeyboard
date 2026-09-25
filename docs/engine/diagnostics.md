@@ -60,13 +60,13 @@ User taps button (Copy/Share/Email)
 
 ## User Interface
 
-Located in the **Settings** tab, "裝置資訊" section.
+Located in the **Settings** tab, "Device Info" section.
 
 | Action | Label | Mechanism |
 |--------|-------|-----------|
-| Copy | "Khó͘-phih 裝置資訊" | Pasteboard/Clipboard, with visual feedback |
-| Share | "分享裝置資訊" | Native share sheet |
-| Email | "Email 回報問題" | Pre-filled mailto with subject "TaigiKeyboard Bug Report (v{version})" |
+| Copy | "Copy Device Info" | Pasteboard/Clipboard, with visual feedback |
+| Share | "Share Device Info" | Native share sheet |
+| Email | "Email a Bug Report" | Pre-filled mailto with subject "TaigiKeyboard Bug Report (v{version})" |
 
 ---
 
