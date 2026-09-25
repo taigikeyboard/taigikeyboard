@@ -162,7 +162,7 @@ public extension RustEngineBridge {
     /// - `nil` → engine reached `handle_fetch_at_pos` but `Phase::Continuous`
     ///   was not active (proto `continuous` field absent).
     /// - `[]` → continuous phase active but no candidates (no syllable
-    ///   inventory installed, no FST hits, or `position != 0`).
+    ///   inventory installed, no FST hits, or a hanji-contaminated buffer).
     /// - non-empty → candidates returned in score-desc order.
     ///
     /// `transition` carries the engine snapshot (preedit / `isComposing`);
@@ -398,7 +398,6 @@ public extension RustEngineBridge {
         learnedEntries: [Taigi_Engine_LearnedEntry] = [],
     ) -> ContinuousFetchResult {
         var payload = Taigi_Engine_FetchAtPos()
-        payload.position = 0
         payload.frequencyEntries = frequencyEntries
         payload.nowMs = nowMs
         payload.customEntries = customEntries

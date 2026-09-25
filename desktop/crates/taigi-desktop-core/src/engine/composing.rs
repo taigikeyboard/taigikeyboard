@@ -216,7 +216,6 @@ pub fn fetch_at_pos(
     args: &FetchArgs<'_>,
 ) -> Option<ContinuousFetchResult> {
     let fetch = FetchAtPos {
-        position: 0,
         frequency_entries: args.frequency_rows.iter().map(frequency_entry).collect(),
         now_ms: args.now_ms,
         custom_entries: args.custom_entries.iter().map(custom_dict_entry).collect(),

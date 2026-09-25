@@ -9,7 +9,7 @@
 //! syllable inventory) and so it is resolved here in dispatch outside
 //! the pure transition table. After v3.5.9 A2 the candidate-assembly
 //! 6-step seam lives in [`crate::continuous::assemble_candidates`];
-//! dispatch only handles the phase/hanzi/position guards, the proto →
+//! dispatch only handles the phase/hanzi guards, the proto →
 //! domain hoists (`mode`, `freq_map`, `custom`), and wire encoding.
 //!
 //! The mode-aware key construction lives in `composing::continuous`
@@ -62,7 +62,6 @@ pub fn decode_intent(req: &ComposingRequest) -> Result<Intent, ComposingError> {
         Method::Reset(_) => Intent::Reset,
         Method::EnterContinuous(_) => Intent::EnterContinuous,
         Method::FetchAtPos(m) => Intent::FetchAtPos {
-            position: m.position,
             frequency_entries: m.frequency_entries,
             now_ms: m.now_ms,
             custom_entries: m.custom_entries,
@@ -125,7 +124,6 @@ pub fn apply(intent: Intent, engine: &mut Engine, config: &AppConfig) -> Composi
 pub fn query(intent: &Intent, engine: &Engine, config: &AppConfig) -> ComposingResponse {
     match intent {
         Intent::FetchAtPos {
-            position,
             frequency_entries,
             now_ms,
             custom_entries,
@@ -134,7 +132,6 @@ pub fn query(intent: &Intent, engine: &Engine, config: &AppConfig) -> ComposingR
             learned_entries,
         } => handle_fetch_at_pos(
             engine,
-            *position,
             frequency_entries,
             *now_ms,
             custom_entries,
@@ -157,18 +154,13 @@ pub fn query(intent: &Intent, engine: &Engine, config: &AppConfig) -> ComposingR
 /// `candidates`, distinct from "FetchAtPos was a no-op because state
 /// was wrong").
 ///
-/// `position != 0` is reserved for future partial-fetch use; the
-/// engine treats it as an empty result today (matches the
-/// `FetchAtPos.position` proto comment).
-///
 /// v3.5.9 A2: the candidate-assembly 6-step seam lives in
 /// [`crate::continuous::assemble_candidates`]; this fn does the
-/// phase/hanzi/position guards, the proto→domain hoists, and the wire
+/// phase/hanzi guards, the proto→domain hoists, and the wire
 /// encoding around it.
 #[allow(clippy::too_many_arguments)]
 fn handle_fetch_at_pos(
     engine: &Engine,
-    position: u32,
     frequency_entries: &[FrequencyEntry],
     now_ms: i64,
     custom_entries: &[CustomDictEntry],
@@ -189,15 +181,7 @@ fn handle_fetch_at_pos(
     // letting the syllabifier / lexicon scan garbage. Ports the platform
     // D-8 guard (`LexiconService` Hanzi classification) into the engine
     // so the behavior survives the Item 13 platform-fallback retire.
-    // Runs ahead of the reserved-position check because contaminated
-    // `raw` is dead regardless of `position`.
     if is_hanzi(raw) {
-        return with_continuous(snapshot, ContinuousResponse::default());
-    }
-    if position != 0 {
-        // Position field is reserved (always 0 in v3.5.8); non-zero
-        // returns an empty candidate carrier so the caller can still
-        // tell "FetchAtPos was reached" vs "wrong phase".
         return with_continuous(snapshot, ContinuousResponse::default());
     }
     // v3.5.9 D / C-3b — mode upgrade: the raw buffer trumps

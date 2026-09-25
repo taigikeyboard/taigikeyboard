@@ -510,7 +510,6 @@ pub enum Intent {
     /// only the §34 forced prepend, not the natural roman candidates. Full
     /// wire/sentinel contract: the `FetchAtPos` proto comment.
     FetchAtPos {
-        position: u32,
         frequency_entries: Vec<protos::engine::FrequencyEntry>,
         now_ms: i64,
         custom_entries: Vec<protos::engine::CustomDictEntry>,

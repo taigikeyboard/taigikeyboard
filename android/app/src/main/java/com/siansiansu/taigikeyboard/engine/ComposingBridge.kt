@@ -256,7 +256,6 @@ fun RustEngineBridge.composingFetchAtPos(
 ): RustEngineBridge.ContinuousFetchResult {
     val payload = com.siansiansu.taigikeyboard.engine.proto.FetchAtPos
         .newBuilder()
-        .setPosition(0)
         .addAllFrequencyEntries(frequencyEntries)
         .setNowMs(nowMs)
         .addAllCustomEntries(customEntries)

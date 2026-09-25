@@ -457,7 +457,7 @@ object RustEngineBridge {
      * - `null` → engine reached `handle_fetch_at_pos` but `Phase::Continuous`
      *   was not active (proto `continuous` field absent).
      * - `emptyList()` → continuous phase active but no candidates (no syllable
-     *   inventory installed, no FST hits, or `position != 0`).
+     *   inventory installed, no FST hits, or a hanji-contaminated buffer).
      * - non-empty → candidates returned in score-desc order.
      *
      * `transition` carries the engine snapshot (preedit / `isComposing`);

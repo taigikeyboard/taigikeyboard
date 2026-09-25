@@ -8,9 +8,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
 /**
  * <pre>
  * v3.5.8 Phase 6 — Pure read: returns the candidate list for the current
- * `Phase::Continuous { raw }` starting at byte offset `position` (always
- * `0` in v3.5.8; field reserved for future partial-fetch capability and
- * validated to `0` today). The engine routes the raw buffer through
+ * `Phase::Continuous { raw }` (the whole buffer). The engine routes the raw buffer through
  * mode-specific key builders in `composing::dispatch` — TL/POJ via
  * `build_keys_tl` (which since Phase 9 Item 8 includes a hyphen-shadow
  * pre-pass so `tâi-uân` etc. produce the same `tl:&lt;toneless&gt;` keys as
@@ -104,32 +102,6 @@ public  final class FetchAtPos extends
     customEntries_ = emptyProtobufList();
     learnedEntries_ = emptyProtobufList();
   }
-  public static final int POSITION_FIELD_NUMBER = 1;
-  private int position_;
-  /**
-   * <code>uint32 position = 1;</code>
-   * @return The position.
-   */
-  @java.lang.Override
-  public int getPosition() {
-    return position_;
-  }
-  /**
-   * <code>uint32 position = 1;</code>
-   * @param value The position to set.
-   */
-  private void setPosition(int value) {
-
-    position_ = value;
-  }
-  /**
-   * <code>uint32 position = 1;</code>
-   */
-  private void clearPosition() {
-
-    position_ = 0;
-  }
-
   public static final int FREQUENCY_ENTRIES_FIELD_NUMBER = 2;
   private com.google.protobuf.Internal.ProtobufList<com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry> frequencyEntries_;
   /**
@@ -686,9 +658,7 @@ public  final class FetchAtPos extends
   /**
    * <pre>
    * v3.5.8 Phase 6 — Pure read: returns the candidate list for the current
-   * `Phase::Continuous { raw }` starting at byte offset `position` (always
-   * `0` in v3.5.8; field reserved for future partial-fetch capability and
-   * validated to `0` today). The engine routes the raw buffer through
+   * `Phase::Continuous { raw }` (the whole buffer). The engine routes the raw buffer through
    * mode-specific key builders in `composing::dispatch` — TL/POJ via
    * `build_keys_tl` (which since Phase 9 Item 8 includes a hyphen-shadow
    * pre-pass so `tâi-uân` etc. produce the same `tl:&lt;toneless&gt;` keys as
@@ -781,34 +751,6 @@ public  final class FetchAtPos extends
       super(DEFAULT_INSTANCE);
     }
 
-
-    /**
-     * <code>uint32 position = 1;</code>
-     * @return The position.
-     */
-    @java.lang.Override
-    public int getPosition() {
-      return instance.getPosition();
-    }
-    /**
-     * <code>uint32 position = 1;</code>
-     * @param value The position to set.
-     * @return This builder for chaining.
-     */
-    public Builder setPosition(int value) {
-      copyOnWrite();
-      instance.setPosition(value);
-      return this;
-    }
-    /**
-     * <code>uint32 position = 1;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearPosition() {
-      copyOnWrite();
-      instance.clearPosition();
-      return this;
-    }
 
     /**
      * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
@@ -1336,7 +1278,6 @@ public  final class FetchAtPos extends
       }
       case BUILD_MESSAGE_INFO: {
           java.lang.Object[] objects = new java.lang.Object[] {
-            "position_",
             "frequencyEntries_",
             com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry.class,
             "nowMs_",
@@ -1348,8 +1289,8 @@ public  final class FetchAtPos extends
             com.siansiansu.taigikeyboard.engine.proto.LearnedEntry.class,
           };
           java.lang.String info =
-              "\u0000\u0007\u0000\u0000\u0001\u0007\u0007\u0000\u0003\u0000\u0001\u000b\u0002\u001b" +
-              "\u0003\u0002\u0004\u001b\u0005\u000b\u0006\u0007\u0007\u001b";
+              "\u0000\u0006\u0000\u0000\u0002\u0007\u0006\u0000\u0003\u0000\u0002\u001b\u0003\u0002" +
+              "\u0004\u001b\u0005\u000b\u0006\u0007\u0007\u001b";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

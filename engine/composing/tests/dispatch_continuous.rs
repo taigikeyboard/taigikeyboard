@@ -7,8 +7,6 @@
 //!   - Idle / Composing phase → `continuous = None` snapshot.
 //!   - `Phase::Continuous` + lexicon NOT installed → `continuous =
 //!     Some(empty)`.
-//!   - `position != 0` → `continuous = Some(empty)` (reserved for future
-//!     partial-fetch capability).
 //! - Round-trip through dispatch for `EnterContinuous`, `CommitContinuous`,
 //!   `ResetContinuous` (state changes match `transition.rs` Phase-4
 //!   contract).
@@ -18,7 +16,7 @@
 //! the lexicon parity suite — composing-side tests stay focused on the
 //! dispatch wiring + decode contract.
 
-use composing::api::{Engine, Intent, Phase};
+use composing::api::{Engine, Phase};
 use composing::dispatch;
 use protos::engine::composing_request::Method;
 use protos::engine::{CommitContinuous, EnterContinuous, FetchAtPos, ResetContinuous};
@@ -46,7 +44,6 @@ fn decode_fetch_at_pos_idle_returns_no_continuous_carrier() {
     let mut engine = Engine::new();
     let resp = dispatch::handle(
         &req(Method::FetchAtPos(FetchAtPos {
-            position: 0,
             frequency_entries: vec![],
             now_ms: 0,
             custom_entries: vec![],
@@ -62,50 +59,6 @@ fn decode_fetch_at_pos_idle_returns_no_continuous_carrier() {
         resp.continuous.is_none(),
         "expected None, got {:?}",
         resp.continuous
-    );
-}
-
-#[test]
-fn decode_fetch_at_pos_position_nonzero_returns_empty_carrier() {
-    let mut engine = Engine::new();
-    // Get into Phase::Continuous via Start + EnterContinuous.
-    dispatch::handle(
-        &req(Method::Start(protos::engine::Start {
-            text: "tsua".into(),
-        })),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
-    dispatch::handle(
-        &req(Method::EnterContinuous(EnterContinuous {})),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
-    assert!(matches!(
-        engine.snapshot_state().phase,
-        Phase::Continuous { .. }
-    ));
-
-    let resp = dispatch::handle(
-        &req(Method::FetchAtPos(FetchAtPos {
-            position: 1,
-            frequency_entries: vec![],
-            now_ms: 0,
-            custom_entries: vec![],
-            enabled_sources_bitmask: 0,
-            literal_roman_candidate_disabled: false,
-            learned_entries: vec![],
-        })),
-        &mut engine,
-        &config_tl(),
-    )
-    .expect("dispatch ok");
-    let cont = resp.continuous.expect("continuous carrier present");
-    assert!(
-        cont.candidates.is_empty(),
-        "non-zero position must yield empty candidates"
     );
 }
 
@@ -132,7 +85,6 @@ fn decode_fetch_at_pos_continuous_lexicon_unavailable_returns_empty_carrier() {
 
     let resp = dispatch::handle(
         &req(Method::FetchAtPos(FetchAtPos {
-            position: 0,
             frequency_entries: vec![],
             now_ms: 0,
             custom_entries: vec![],
@@ -182,7 +134,6 @@ fn fetch_at_pos_literal_roman_toggle_gates_index0_prepend() {
         .unwrap();
         let resp = dispatch::handle(
             &req(Method::FetchAtPos(FetchAtPos {
-                position: 0,
                 frequency_entries: vec![],
                 now_ms: 0,
                 custom_entries: vec![],
@@ -263,7 +214,6 @@ fn decode_fetch_at_pos_hanzi_buffer_returns_empty_carrier() {
 
     let resp = dispatch::handle(
         &req(Method::FetchAtPos(FetchAtPos {
-            position: 0,
             frequency_entries: vec![],
             now_ms: 0,
             custom_entries: vec![],
@@ -311,7 +261,6 @@ fn decode_fetch_at_pos_mixed_hanzi_buffer_returns_empty_carrier() {
 
     let resp = dispatch::handle(
         &req(Method::FetchAtPos(FetchAtPos {
-            position: 0,
             frequency_entries: vec![],
             now_ms: 0,
             custom_entries: vec![],
@@ -451,29 +400,6 @@ fn decode_reset_continuous_aborts() {
 }
 
 // ---- Intent shape sanity --------------------------------------------------
-
-#[test]
-fn fetch_at_pos_decodes_to_position_field() {
-    // Sanity: the `position` field on FetchAtPos round-trips through
-    // dispatch::decode_intent. We verify by constructing the Intent
-    // and decoding via a public test helper. Since decode_intent is
-    // pub(crate), the public smoke test is the dispatch::handle
-    // path: send a request with position=1 and confirm the engine
-    // ends up with `continuous = Some(empty)` (the position-nonzero
-    // branch). This is already covered by
-    // `decode_fetch_at_pos_position_nonzero_returns_empty_carrier`;
-    // here we just lock the typed-Intent shape so a future field
-    // rename keeps the test surface in sync.
-    let _ = Intent::FetchAtPos {
-        position: 7,
-        frequency_entries: vec![],
-        now_ms: 0,
-        custom_entries: vec![],
-        enabled_sources_bitmask: 0,
-        literal_roman_candidate_disabled: false,
-        learned_entries: vec![],
-    };
-}
 
 // ---- Optional-presence contract for `ContinuousResponse` -----------------
 // Per `composing.proto:152-161`, only `FetchAtPos` populates the
@@ -626,7 +552,6 @@ fn fetch_at_pos_carries_user_freq_snapshot_through_decode() {
 
     let resp = dispatch::handle(
         &req(Method::FetchAtPos(FetchAtPos {
-            position: 0,
             frequency_entries: vec![
                 protos::engine::FrequencyEntry {
                     display_text_key: "珠仔".into(),
