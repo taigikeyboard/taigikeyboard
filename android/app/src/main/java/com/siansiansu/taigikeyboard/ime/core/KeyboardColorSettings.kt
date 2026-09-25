@@ -380,15 +380,15 @@ fun isDarkArgb(argb: Int): Boolean {
 /**
  * The concrete light palette every user theme starts from, so a user theme never
  * carries a null (scheme-following) role and renders identically in light and dark
- * mode (USER 2026-09-19). Background is the light keyboard grey; the special key
- * fill is the iOS light dark-button grey.
+ * mode (USER 2026-09-19). Background is the light keyboard grey; both key fills
+ * are white (USER 2026-09-25).
  */
 object UserThemeSeed {
     const val SOLID_COLOR = 0xFFD4D5DD.toInt()
     val BACKGROUND: ThemeBackground = ThemeBackground.Solid(SOLID_COLOR)
     const val KEY_TEXT = 0xFF000000.toInt()
     const val NORMAL_KEY_FILL = 0xFFFFFFFF.toInt()
-    const val SPECIAL_KEY_FILL = 0xFFABB1BA.toInt()
+    const val SPECIAL_KEY_FILL = 0xFFFFFFFF.toInt()
     const val CANDIDATE_TEXT = 0xFF000000.toInt()
 
     val colors =

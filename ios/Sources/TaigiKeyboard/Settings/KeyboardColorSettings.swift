@@ -430,8 +430,8 @@ extension KeyboardColorSettings: Codable {
 
 /// The concrete light palette every user theme starts from, so a user theme never
 /// carries a `nil` (scheme-following) role and renders identically in light and
-/// dark mode (USER 2026-09-19). Background is the light keyboard grey; the special
-/// key fill is KeyboardKit's light dark-button grey.
+/// dark mode (USER 2026-09-19). Background is the light keyboard grey; both key
+/// fills are white (USER 2026-09-25).
 // CROSS-PLATFORM INVARIANT — mirrors android .../ime/core/KeyboardColorSettings.kt UserThemeSeed
 // Drift = a new custom theme starts from different colors per platform.
 enum UserThemeSeed {
@@ -439,7 +439,7 @@ enum UserThemeSeed {
     static let background = ThemeBackground.solid(solidColor)
     static let keyText = CodableColor(hex: 0x000000)
     static let normalKeyFill = CodableColor(hex: 0xFFFFFF)
-    static let specialKeyFill = CodableColor(hex: 0xABB1BA)
+    static let specialKeyFill = CodableColor(hex: 0xFFFFFF)
     static let candidateText = CodableColor(hex: 0x000000)
 
     static let colors = KeyboardColorSettings(

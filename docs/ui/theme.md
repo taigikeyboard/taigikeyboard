@@ -38,7 +38,7 @@ Colours per family: Default (adaptive, follows light/dark), five light-only soft
 
 **Editor order** (USER 2026-09-19, three sections = three surfaces; both platforms): **Background** — segmented Solid / Gradient / Photo, then the solid colour row, or the Start Color / End Color rows (no Direction row — the direction is the pointer on the pinned preview), or the Choose Photo / Change Photo picker row + a Fade slider · **Keys** — Normal Key Fill · Special Key Fill · Key Text · Key Corner Radius · Key Border Width · Key Shadow · Keyboard Height · Key Font Size · **Candidate Bar** — Candidate Text · Candidate Text Size · Reset to Defaults · pinned preview. The candidate bar has no colour of its own: it is the same surface as the keyboard.
 
-**Scheme-invariant user themes** (USER 2026-09-19). A new custom theme starts from `UserThemeSeed` (background `0xD4D5DD`, key text `0x000000`, normal fill `0xFFFFFF`, special fill `0xABB1BA`, candidate text `0x000000`; a CROSS-PLATFORM INVARIANT mirrored in Android `UserThemeSeed`), so every role is concrete and the theme renders identically in light and dark mode. `UserThemeStore.load()` (iOS) / `UserTheme.fromJson` (Android) fills any `nil` role of an older saved theme from the same seed (no migration write). Each colour row's reset arrow restores the seed value; Reset to Defaults restores the whole seed. The `default` buffer and built-in themes keep `nil` = adaptive.
+**Scheme-invariant user themes** (USER 2026-09-19). A new custom theme starts from `UserThemeSeed` (background `0xD4D5DD`, key text `0x000000`, normal fill `0xFFFFFF`, special fill `0xFFFFFF`, candidate text `0x000000`; a CROSS-PLATFORM INVARIANT mirrored in Android `UserThemeSeed`), so every role is concrete and the theme renders identically in light and dark mode. `UserThemeStore.load()` (iOS) / `UserTheme.fromJson` (Android) fills any `nil` role of an older saved theme from the same seed (no migration write). Each colour row's reset arrow restores the seed value; Reset to Defaults restores the whole seed. The `default` buffer and built-in themes keep `nil` = adaptive.
 
 ### Background surface
 
@@ -109,7 +109,7 @@ Slider range 0…4 in 0.5 steps (`App/Tabs/Theme/ThemeControlRows.swift` `ThemeS
 | Background (keyboard + candidate bar) | `ThemeBackground`: solid RGBA, or a 2-stop gradient + angle | seed `0xD4D5DD` solid (user theme); adaptive (`default` buffer) |
 | Key text color | RGBA | seed `0x000000` (user theme); adaptive (`default` buffer) |
 | Normal key fill color | RGBA | seed `0xFFFFFF` (user theme); adaptive (`default` buffer) |
-| Special key fill color | RGBA | seed `0xABB1BA` (user theme); adaptive (`default` buffer) |
+| Special key fill color | RGBA | seed `0xFFFFFF` (user theme); adaptive (`default` buffer) |
 | Candidate text color | RGBA | seed `0x000000` (user theme); adaptive (`default` buffer) |
 
 ### Font Options (global setting — Settings tab, not per theme)
