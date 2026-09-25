@@ -291,7 +291,7 @@ class ContinuousSuggestionsContractTest {
 
     /**
      * MIXED candidate (`hanji` carries Latin letters per `derive_mode`
-     * NFKD scan in `engine/lexicon/src/continuous.rs`). Renders
+     * NFKD scan in `engine/lexicon/src/continuous/`). Renders
      * dual-line the same way HANT does.
      */
     @Test

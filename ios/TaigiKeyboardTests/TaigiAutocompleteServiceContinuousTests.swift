@@ -232,7 +232,7 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
     }
 
     /// MIXED candidate (hanji contains Latin letters, per
-    /// `derive_mode` NFKD scan in `engine/lexicon/src/continuous.rs`).
+    /// `derive_mode` NFKD scan in `engine/lexicon/src/continuous/`).
     /// Renders dual-line the same way HANT does.
     func testItem6_MIXEDCandidate_DualLine() {
         let candidates = [

@@ -367,7 +367,7 @@ object RustEngineBridge {
      * MOE-aligned candidate-type discriminator. Wire mirror of
      * `protos::engine::CandidateMode` (Phase 9.2). Engine derives in Rust
      * from `DictionaryRecord.hanzi` presence + NFKD-normalized Latin-letter
-     * detection (`engine/lexicon/src/continuous.rs::derive_mode`); the
+     * detection (`engine/lexicon/src/continuous/mod.rs::derive_mode`); the
      * platform reads but never recomputes (no display-text sniffing —
      * that would parallel-implement the derive and violate
      * `.claude/rules/cross-platform-alignment.md`).

@@ -14,7 +14,7 @@
 //!
 //! The mode-aware key construction lives in `composing::continuous`
 //! per the Phase 5 module contract pinned in
-//! `engine/lexicon/src/continuous.rs`: TL/English emit `tl:<lowered>`,
+//! `engine/lexicon/src/continuous/`: TL/English emit `tl:<lowered>`,
 //! POJ emits `poj:<lowered>` (v3.5.9 B-2 PR #309 promoted POJ to a
 //! first-class FST key family via `composing::shadow::mode_key_prefix`),
 //! and TPS emits `tps:<bopomofo_toneless>` against the C-0 emit of
