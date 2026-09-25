@@ -227,9 +227,9 @@
     <string name="i18n_theme_backgroundTypeGradient">漸層</string>
     <string name="i18n_theme_gradientStartColor">開始</string>
     <string name="i18n_theme_gradientEndColor">結束</string>
-    <string name="i18n_theme_backgroundTypePhoto">照片</string>
-    <string name="i18n_theme_photoPick">選擇照片</string>
-    <string name="i18n_theme_photoChange">更換照片</string>
+    <string name="i18n_theme_backgroundTypePhoto">相片</string>
+    <string name="i18n_theme_photoPick">選擇相片</string>
+    <string name="i18n_theme_photoChange">更換相片</string>
     <string name="i18n_theme_photoDim">淡化</string>
     <string name="i18n_theme_photoPosition">位置</string>
     <string name="i18n_theme_gradientDirection">方向</string>
