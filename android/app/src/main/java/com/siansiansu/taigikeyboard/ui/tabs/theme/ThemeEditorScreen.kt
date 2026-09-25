@@ -93,7 +93,8 @@ import org.json.JSONObject
 // light / dark and every color row has a value to reset to. The draft is local —
 // nothing persists until Save, and Back discards. The name is entered in a Save-time
 // dialog (no inline field), so the soft keyboard never squeezes the preview. A gradient's
-// direction is set by dragging on the preview (GradientDirectionOverlay), not by a form row.
+// direction and a photo's position are set by dragging on the preview
+// (GradientDirectionOverlay / PhotoPositionOverlay), not by form rows.
 // Mirrors iOS ThemeEditorView.
 
 // Slider ranges (mirror the Layout-tab appearance editor; shadow is editor-only).
@@ -426,7 +427,8 @@ fun ThemeEditorScreen(
 
             HorizontalDivider()
             // While the background is a gradient the preview doubles as the direction
-            // control: drag on it to set the angle.
+            // control (drag to set the angle); while it is a photo, as the position
+            // control (drag to move the photo).
             Box {
                 KeyboardPreviewPanel(
                     prefs = prefs,
@@ -450,6 +452,18 @@ fun ThemeEditorScreen(
                         onAngleChange = remember(gradient) { { angle: Float -> setBackground(ThemeBackground.Gradient(gradient.copy(angle = angle))) } },
                         modifier = Modifier.matchParentSize(),
                     )
+                }
+                (background as? ThemeBackground.Image)?.image?.let { photo ->
+                    themeImageCache.bitmap(photo.file)?.let { bitmap ->
+                        PhotoPositionOverlay(
+                            label = L10n.themePhotoPosition,
+                            imageWidth = bitmap.width,
+                            imageHeight = bitmap.height,
+                            photo = photo,
+                            onPhotoChange = { setBackground(ThemeBackground.Image(it)) },
+                            modifier = Modifier.matchParentSize(),
+                        )
+                    }
                 }
             }
         }

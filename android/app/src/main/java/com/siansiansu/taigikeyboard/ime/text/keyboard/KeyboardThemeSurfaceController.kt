@@ -57,7 +57,7 @@ internal class KeyboardThemeSurfaceController(
                     .shared(inputView.context)
                     .themeImages
                     .bitmap(background.image.file)
-                    ?.let { ThemeImageDrawable(it, background.image.dim, surface.dimsTowardWhite) }
+                    ?.let { ThemeImageDrawable(it, background.image, surface.dimsTowardWhite) }
                     ?: ColorDrawable(UserThemeSeed.SOLID_COLOR)
         }
 

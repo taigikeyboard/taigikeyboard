@@ -222,6 +222,7 @@ enum StringKey: String {
     case themePhotoPick = "i18n_theme_photoPick"
     case themePhotoChange = "i18n_theme_photoChange"
     case themePhotoDim = "i18n_theme_photoDim"
+    case themePhotoPosition = "i18n_theme_photoPosition"
     case themeGradientDirection = "i18n_theme_gradientDirection"
     case themeColorKeySection = "i18n_theme_colorKeySection"
     case themeCandidateSection = "i18n_theme_candidateSection"

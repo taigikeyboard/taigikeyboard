@@ -452,6 +452,8 @@ object L10n {
         @Composable get() = stringRes(StringKey.THEME_PHOTO_CHANGE)
     val themePhotoDim: String
         @Composable get() = stringRes(StringKey.THEME_PHOTO_DIM)
+    val themePhotoPosition: String
+        @Composable get() = stringRes(StringKey.THEME_PHOTO_POSITION)
     val themeGradientDirection: String
         @Composable get() = stringRes(StringKey.THEME_GRADIENT_DIRECTION)
     val themeColorKeySection: String

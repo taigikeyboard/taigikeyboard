@@ -3,8 +3,9 @@ import SwiftUI
 
 /// The user-theme editor: the full appearance bundle + a live draft preview
 /// pinned at the bottom. Pushed as a child page (uses the parent `NavigationStack`);
-/// reuses `ThemeColorRow` / `ThemeSliderRow`. A gradient's direction is set by
-/// dragging on the preview (`GradientDirectionOverlay`), not by a form row.
+/// reuses `ThemeColorRow` / `ThemeSliderRow`. A gradient's direction and a photo's
+/// position are set by dragging on the preview (`GradientDirectionOverlay` /
+/// `PhotoPositionOverlay`), not by form rows.
 ///
 /// Three sections, one per visual surface (USER 2026-09-19): **Background** (type
 /// Solid / Gradient / Photo and its rows — the keyboard and the candidate bar share this
@@ -111,7 +112,8 @@ struct ThemeEditorView: View {
             // entered in an alert at save time), so the software keyboard never
             // appears to squeeze it. User themes own shadow (slider 0 = flat) →
             // `appliesThemeShadow: true`. While the background is a gradient the
-            // preview doubles as the direction control: drag on it to set the angle.
+            // preview doubles as the direction control (drag to set the angle); while
+            // it is a photo, as the position control (drag to move the photo).
             KeyboardPreviewPanel(
                 appearance: viewModel.appearance,
                 appliesThemeShadow: true,
@@ -122,6 +124,12 @@ struct ThemeEditorView: View {
                     GradientDirectionOverlay(
                         label: lang.string(.themeGradientDirection),
                         angle: viewModel.gradientAngleBinding,
+                    )
+                } else if let photo = viewModel.photoBinding, let image = ThemeImageCache.shared.image(for: photo.wrappedValue.file) {
+                    PhotoPositionOverlay(
+                        label: lang.string(.themePhotoPosition),
+                        imageSize: image.size,
+                        photo: photo,
                     )
                 }
             }

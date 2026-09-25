@@ -17,13 +17,13 @@ import com.siansiansu.taigikeyboard.ime.core.ThemeImageBackground
 import kotlin.math.roundToInt
 
 /**
- * Draws the theme photo aspect-filled and centred over the drawable's bounds (the whole
- * keyboard parent), at [ThemeImageBackground.SATURATION], then the tone overlay at the
- * photo's dim — the same look `Modifier.themeBackground` gives the Compose overlays.
+ * Draws the theme photo aspect-filled over the drawable's bounds (the whole keyboard
+ * parent) at the photo's focus, at [ThemeImageBackground.SATURATION], then the tone overlay
+ * at the photo's dim — the same look `Modifier.themeBackground` gives the Compose overlays.
  */
 internal class ThemeImageDrawable(
     private val bitmap: Bitmap,
-    dim: Float,
+    private val photo: ThemeImageBackground,
     dimsTowardWhite: Boolean,
 ) : Drawable() {
     private val photoPaint =
@@ -33,7 +33,7 @@ internal class ThemeImageDrawable(
     private val tonePaint =
         Paint().apply {
             color = if (dimsTowardWhite) android.graphics.Color.WHITE else android.graphics.Color.BLACK
-            alpha = (dim * 255).roundToInt()
+            alpha = (photo.dim * 255).roundToInt()
         }
     private val source = Rect(0, 0, bitmap.width, bitmap.height)
     private val destination = RectF()
@@ -44,6 +44,8 @@ internal class ThemeImageDrawable(
                 imageWidth = bitmap.width.toFloat(),
                 imageHeight = bitmap.height.toFloat(),
                 bounds = SurfaceRect(bounds.left.toFloat(), bounds.top.toFloat(), bounds.width().toFloat(), bounds.height().toFloat()),
+                focusX = photo.focusX,
+                focusY = photo.focusY,
             )
         destination.set(cover.left, cover.top, cover.left + cover.width, cover.top + cover.height)
     }

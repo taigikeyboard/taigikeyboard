@@ -128,7 +128,8 @@ private struct GradientDirectionAxis: View, Equatable {
     }
 }
 
-private extension CGSize {
+extension CGSize {
+    /// The midpoint of a rect of this size at the origin.
     var center: CGPoint {
         CGPoint(x: width / 2, y: height / 2)
     }

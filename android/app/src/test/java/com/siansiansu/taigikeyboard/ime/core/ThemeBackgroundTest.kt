@@ -146,11 +146,36 @@ class ThemeBackgroundTest {
     @Test
     fun coverRect_aspectFillCentred() {
         val square = SurfaceRect(0f, 0f, 100f, 100f)
-        assertEquals(SurfaceRect(-50f, 0f, 200f, 100f), ThemeImageBackground.coverRect(200f, 100f, square))
-        assertEquals(SurfaceRect(0f, -50f, 100f, 200f), ThemeImageBackground.coverRect(100f, 200f, square))
+        assertEquals(SurfaceRect(-50f, 0f, 200f, 100f), ThemeImageBackground.coverRect(200f, 100f, square, CENTRE, CENTRE))
+        assertEquals(SurfaceRect(0f, -50f, 100f, 200f), ThemeImageBackground.coverRect(100f, 200f, square, CENTRE, CENTRE))
         val slicedKeyboard = SurfaceRect(0f, -50f, 100f, 300f)
-        assertEquals(SurfaceRect(-100f, -50f, 300f, 300f), ThemeImageBackground.coverRect(100f, 100f, slicedKeyboard))
-        assertEquals(square, ThemeImageBackground.coverRect(0f, 0f, square))
+        assertEquals(SurfaceRect(-100f, -50f, 300f, 300f), ThemeImageBackground.coverRect(100f, 100f, slicedKeyboard, CENTRE, CENTRE))
+        assertEquals(square, ThemeImageBackground.coverRect(0f, 0f, square, CENTRE, CENTRE))
+    }
+
+    // Focus aligns the cover rect: a 2:1 photo over a 1:1 keyboard overflows 100 horizontally —
+    // focusX 0 -> left 0 (left edge shows), 1 -> 100 - 200 = -100 (right edge shows); the
+    // non-overflowing axis ignores focus; a sliced keyboard keeps its origin offset.
+    @Test
+    fun coverRect_focusAlignsOverflowingAxis() {
+        val square = SurfaceRect(0f, 0f, 100f, 100f)
+        assertEquals(SurfaceRect(0f, 0f, 200f, 100f), ThemeImageBackground.coverRect(200f, 100f, square, focusX = 0f, focusY = 1f))
+        assertEquals(SurfaceRect(-100f, 0f, 200f, 100f), ThemeImageBackground.coverRect(200f, 100f, square, focusX = 1f, focusY = 0f))
+        val slicedKeyboard = SurfaceRect(0f, -50f, 100f, 300f)
+        assertEquals(SurfaceRect(-200f, -50f, 300f, 300f), ThemeImageBackground.coverRect(100f, 100f, slicedKeyboard, focusX = 1f, focusY = 0f))
+    }
+
+    // `focusX` / `focusY` round-trip; absent -> 0.5 (old themes stay centred); out of range clamps into 0..1.
+    @Test
+    fun imageBackground_focusRoundTripDefaultAndClamp() {
+        val colors = KeyboardColorSettings(background = ThemeBackground.Image(ThemeImageBackground("a.jpg", focusX = 0.25f, focusY = 0.75f)))
+        assertEquals(colors, KeyboardColorSettings.fromJson(colors.toJson()))
+        val absent = decode("""{ "background": { "type": "image", "file": "b.jpg", "dim": 0.5 } }""").background?.asImage
+        assertEquals(ThemeImageBackground.DEFAULT_FOCUS, absent?.focusX)
+        assertEquals(ThemeImageBackground.DEFAULT_FOCUS, absent?.focusY)
+        val clamped = decode("""{ "background": { "type": "image", "file": "a.jpg", "focusX": -1, "focusY": 3 } }""").background?.asImage
+        assertEquals(0f, clamped?.focusX)
+        assertEquals(1f, clamped?.focusY)
     }
 
     // The surface pairs the background with its photo tone: dark key text -> white overlay, light -> black;
@@ -205,6 +230,7 @@ class ThemeBackgroundTest {
     // endregion
 
     private companion object {
+        const val CENTRE = ThemeImageBackground.DEFAULT_FOCUS
         const val EPSILON = 1e-6f
         const val RED = 0xFFFF0000.toInt()
         const val GREEN = 0xFF00FF00.toInt()
