@@ -144,7 +144,7 @@ internal fun shouldSplitCombinedCells(
  * BOTH scripts dedupe on the TEXT THE CELL SHOWS, first-seen (fetched order)
  * wins: a one-script cell carries nothing that could tell it from an earlier
  * cell reading the same, so a second one is a defect, not a second offer
- * (USER 2026-09-03 「相同的漢字 or 羅馬字不能重複出現」) — 重/tîng and 重/tāng draw
+ * (USER 2026-09-03: "the same Hanji or romanization must not appear twice") — 重/tîng and 重/tāng draw
  * ONE 重 cell and keep both roman cells. Hanji cells were exempt until then on
  * Core Principle #7 grounds. The two scripts keep separate keys. Every other
  * mode ([splitCombinedCells] `false`, the default) emits exactly the
@@ -192,7 +192,7 @@ internal fun buildContinuousSuggestionsForCandidates(
  * non-empty) then a romanization cell (when [romanOf] is non-null), each script
  * deduped on the text its cell shows, first-seen wins — a one-script cell
  * carries nothing that could tell it from an earlier cell reading the same
- * (USER 2026-09-03 「相同的漢字 or 羅馬字不能重複出現」). [emit] builds the cell
+ * (USER 2026-09-03: "the same Hanji or romanization must not appear twice"). [emit] builds the cell
  * for `(item, cellScript, ordinal)`; the Continuous and NextWord builders
  * differ only in that constructor.
  */

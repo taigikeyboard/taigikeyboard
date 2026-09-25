@@ -120,7 +120,7 @@ data class SurfaceRect(
  * A photo as the keyboard surface: [file] is the JPEG's name inside the app-private
  * `ThemeImageStore` directory (written by the settings app, read by the IME), [dim] the
  * opacity of the tone overlay laid over the desaturated photo so keys stay readable
- * (USER 2026-09-19 「圖片彩度不能太搶眼」). The overlay is white when the key text is dark
+ * (USER 2026-09-19: "the photo saturation must not be too eye-catching"). The overlay is white when the key text is dark
  * and black otherwise.
  */
 data class ThemeImageBackground(

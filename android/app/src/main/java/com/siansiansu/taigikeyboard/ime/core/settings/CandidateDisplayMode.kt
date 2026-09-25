@@ -54,7 +54,7 @@ enum class CandidateDisplayMode(
      * Whether the 文/A key is shown (bottom row + expanded overlay) and its tap
      * writes the stored swap — exactly where hanji is on screen. Under COMBINED
      * the cells are split per script, so the key only picks the punctuation
-     * width (USER 2026-09-13 「漢羅濫需要有 isTranslateSwapped 的按鈕」);
+     * width (USER 2026-09-13: "Hanji with Romanization needs the isTranslateSwapped button");
      * ROMAN_ONLY hides it and the stored swap waits for the way back.
      */
     val allowsSwapToggle: Boolean get() = showsHanji
