@@ -19,6 +19,7 @@ use prost::Message;
 use protos::engine::{request, response, ErrorCode, Request, Response};
 
 mod case;
+mod predict;
 #[cfg(feature = "e2e-trace")]
 pub mod trace;
 
@@ -143,6 +144,7 @@ fn run(bytes: &[u8]) -> Response {
             }
         }
         request::Payload::Nextword(nw_req) => {
+            let nw_req = predict::expand_predict_next(nw_req);
             match nextword::EngineHandle::instance().handle(&nw_req, &config, generation) {
                 Ok(nw_resp) => Response {
                     id,

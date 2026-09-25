@@ -149,6 +149,17 @@ public nonisolated struct Taigi_Engine_NextWordRequest: Sendable {
     set {method = .filterPredictions(newValue)}
   }
 
+  /// Whole prediction query — bundled lookup + filter in one call. Expanded
+  /// into FilterPredictions by engine/dispatch (nextword cannot see lexicon);
+  /// returns FilterResult.
+  public var predictNext: Taigi_Engine_PredictNext {
+    get {
+      if case .predictNext(let v)? = method {return v}
+      return Taigi_Engine_PredictNext()
+    }
+    set {method = .predictNext(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public nonisolated enum OneOf_Method: Equatable, Sendable {
@@ -178,6 +189,10 @@ public nonisolated struct Taigi_Engine_NextWordRequest: Sendable {
     /// Pure post-query filter+merge+sort+limit — return FilterResult
     /// (handles stale-gen drop).
     case filterPredictions(Taigi_Engine_FilterPredictions)
+    /// Whole prediction query — bundled lookup + filter in one call. Expanded
+    /// into FilterPredictions by engine/dispatch (nextword cannot see lexicon);
+    /// returns FilterResult.
+    case predictNext(Taigi_Engine_PredictNext)
 
   }
 
@@ -405,6 +420,47 @@ public nonisolated struct Taigi_Engine_FilterPredictions: Sendable {
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+}
+
+/// One next-word query: engine/dispatch looks up the bundled bigrams for the
+/// last character of `word` (source mask from `toggles`, 2 x limit rows),
+/// prepends them to `user_rows`, and runs FilterPredictions. An empty `word`
+/// filters nothing (no dict rows, user rows ignored). A bundled-lookup failure
+/// (lexicon not installed) drops only the dict rows.
+///
+/// `user_rows` keeps the FilterPredictions ordering contract above: the
+/// platform SQL's best-evidence-first order, never reordered.
+public nonisolated struct Taigi_Engine_PredictNext: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var word: String = String()
+
+  /// SOURCE_USER rows
+  public var userRows: [Taigi_Engine_RawNextWordPrediction] = []
+
+  public var toggles: Taigi_Engine_DictionaryToggles {
+    get {_toggles ?? Taigi_Engine_DictionaryToggles()}
+    set {_toggles = newValue}
+  }
+  /// Returns true if `toggles` has been explicitly set.
+  public var hasToggles: Bool {self._toggles != nil}
+  /// Clears the value of `toggles`. Subsequent reads from it will return its default value.
+  public mutating func clearToggles() {self._toggles = nil}
+
+  public var queryGeneration: UInt64 = 0
+
+  public var nowMs: Int64 = 0
+
+  /// 30 default if 0
+  public var limit: Int32 = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _toggles: Taigi_Engine_DictionaryToggles? = nil
 }
 
 /// Pre-merge un-scored row tagged by source. Platform NextWordService.predict
@@ -719,7 +775,7 @@ nonisolated extension Taigi_Engine_Source: SwiftProtobuf._ProtoNameProviding {
 
 nonisolated extension Taigi_Engine_NextWordRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".NextWordRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}word_selected\0\u{1}backspace\0\u{3}context_timeout_fired\0\u{3}clear_for_new_composing\0\u{3}reset_full\0\u{3}update_last_selected_word\0\u{3}set_is_showing\0\u{4}\u{4}filter_predictions\0\u{b}boost_candidates\0\u{b}query_state\0\u{c}\u{15}\u{1}\u{c}\u{1e}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}word_selected\0\u{1}backspace\0\u{3}context_timeout_fired\0\u{3}clear_for_new_composing\0\u{3}reset_full\0\u{3}update_last_selected_word\0\u{3}set_is_showing\0\u{4}\u{4}filter_predictions\0\u{4}\u{2}predict_next\0\u{b}boost_candidates\0\u{b}query_state\0\u{c}\u{15}\u{1}\u{c}\u{1e}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -831,6 +887,19 @@ nonisolated extension Taigi_Engine_NextWordRequest: SwiftProtobuf.Message, Swift
           self.method = .filterPredictions(v)
         }
       }()
+      case 22: try {
+        var v: Taigi_Engine_PredictNext?
+        var hadOneofValue = false
+        if let current = self.method {
+          hadOneofValue = true
+          if case .predictNext(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.method = .predictNext(v)
+        }
+      }()
       default: break
       }
     }
@@ -873,6 +942,10 @@ nonisolated extension Taigi_Engine_NextWordRequest: SwiftProtobuf.Message, Swift
     case .filterPredictions?: try {
       guard case .filterPredictions(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 20)
+    }()
+    case .predictNext?: try {
+      guard case .predictNext(let v)? = self.method else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 22)
     }()
     case nil: break
     }
@@ -1222,6 +1295,65 @@ nonisolated extension Taigi_Engine_FilterPredictions: SwiftProtobuf.Message, Swi
 
   public static func ==(lhs: Taigi_Engine_FilterPredictions, rhs: Taigi_Engine_FilterPredictions) -> Bool {
     if lhs.raw != rhs.raw {return false}
+    if lhs.queryGeneration != rhs.queryGeneration {return false}
+    if lhs.nowMs != rhs.nowMs {return false}
+    if lhs.limit != rhs.limit {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_Engine_PredictNext: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".PredictNext"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}word\0\u{3}user_rows\0\u{1}toggles\0\u{3}query_generation\0\u{3}now_ms\0\u{1}limit\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.word) }()
+      case 2: try { try decoder.decodeRepeatedMessageField(value: &self.userRows) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._toggles) }()
+      case 4: try { try decoder.decodeSingularUInt64Field(value: &self.queryGeneration) }()
+      case 5: try { try decoder.decodeSingularInt64Field(value: &self.nowMs) }()
+      case 6: try { try decoder.decodeSingularInt32Field(value: &self.limit) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.word.isEmpty {
+      try visitor.visitSingularStringField(value: self.word, fieldNumber: 1)
+    }
+    if !self.userRows.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.userRows, fieldNumber: 2)
+    }
+    try { if let v = self._toggles {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    } }()
+    if self.queryGeneration != 0 {
+      try visitor.visitSingularUInt64Field(value: self.queryGeneration, fieldNumber: 4)
+    }
+    if self.nowMs != 0 {
+      try visitor.visitSingularInt64Field(value: self.nowMs, fieldNumber: 5)
+    }
+    if self.limit != 0 {
+      try visitor.visitSingularInt32Field(value: self.limit, fieldNumber: 6)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_PredictNext, rhs: Taigi_Engine_PredictNext) -> Bool {
+    if lhs.word != rhs.word {return false}
+    if lhs.userRows != rhs.userRows {return false}
+    if lhs._toggles != rhs._toggles {return false}
     if lhs.queryGeneration != rhs.queryGeneration {return false}
     if lhs.nowMs != rhs.nowMs {return false}
     if lhs.limit != rhs.limit {return false}

@@ -14,8 +14,6 @@ use crate::scorer;
 use indexmap::IndexMap;
 use protos::engine::{AppConfig, EnginePrediction, FilterResult, RawNextWordPrediction, Source};
 
-const DEFAULT_LIMIT: usize = 30;
-
 struct MergedRow {
     hanzi: String,
     tl: String,
@@ -41,11 +39,7 @@ pub(crate) fn filter(
         });
     }
 
-    let effective_limit = if limit <= 0 {
-        DEFAULT_LIMIT
-    } else {
-        limit as usize
-    };
+    let effective_limit = crate::api::effective_prediction_limit(limit);
 
     // 1. score each row, fail-invariant on Source::Unspecified, merge by
     //    (hanzi, tl). IndexMap preserves insertion order — matches Android
@@ -799,7 +793,10 @@ mod tests {
             &config_tl_mode_translate_swapped(false),
         )
         .unwrap();
-        assert_eq!(result.predictions.len(), DEFAULT_LIMIT);
+        assert_eq!(
+            result.predictions.len(),
+            crate::api::DEFAULT_PREDICTION_LIMIT
+        );
     }
 
     // --- read-layer reading-variant collapse (v3.6.1 R1) ----------------

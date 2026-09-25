@@ -158,5 +158,28 @@ public interface NextWordRequestOrBuilder extends
    */
   com.siansiansu.taigikeyboard.engine.proto.FilterPredictions getFilterPredictions();
 
+  /**
+   * <pre>
+   * Whole prediction query — bundled lookup + filter in one call. Expanded
+   * into FilterPredictions by engine/dispatch (nextword cannot see lexicon);
+   * returns FilterResult.
+   * </pre>
+   *
+   * <code>.taigi.engine.PredictNext predict_next = 22;</code>
+   * @return Whether the predictNext field is set.
+   */
+  boolean hasPredictNext();
+  /**
+   * <pre>
+   * Whole prediction query — bundled lookup + filter in one call. Expanded
+   * into FilterPredictions by engine/dispatch (nextword cannot see lexicon);
+   * returns FilterResult.
+   * </pre>
+   *
+   * <code>.taigi.engine.PredictNext predict_next = 22;</code>
+   * @return The predictNext.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.PredictNext getPredictNext();
+
   public com.siansiansu.taigikeyboard.engine.proto.NextWordRequest.MethodCase getMethodCase();
 }

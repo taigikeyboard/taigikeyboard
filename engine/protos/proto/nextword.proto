@@ -5,6 +5,8 @@ package taigi.engine;
 option java_package = "com.siansiansu.taigikeyboard.engine.proto";
 option java_multiple_files = true;
 
+import "lexicon.proto";
+
 // NextWord slice — Intent → Effect state machine.
 //
 // Mirrors iOS NextWord/NextWordOutcome.swift + Android
@@ -63,6 +65,10 @@ message NextWordRequest {
     // Pure post-query filter+merge+sort+limit — return FilterResult
     // (handles stale-gen drop).
     FilterPredictions    filter_predictions      = 20;
+    // Whole prediction query — bundled lookup + filter in one call. Expanded
+    // into FilterPredictions by engine/dispatch (nextword cannot see lexicon);
+    // returns FilterResult.
+    PredictNext          predict_next            = 22;
   }
 }
 
@@ -148,6 +154,23 @@ message FilterPredictions {
   uint64                          query_generation  = 2;  // matches state.current_generation when fresh
   int64                           now_ms            = 3;  // single decision-time clock per intent
   int32                           limit             = 4;  // post-merge truncation; 30 default if 0
+}
+
+// One next-word query: engine/dispatch looks up the bundled bigrams for the
+// last character of `word` (source mask from `toggles`, 2 x limit rows),
+// prepends them to `user_rows`, and runs FilterPredictions. An empty `word`
+// filters nothing (no dict rows, user rows ignored). A bundled-lookup failure
+// (lexicon not installed) drops only the dict rows.
+//
+// `user_rows` keeps the FilterPredictions ordering contract above: the
+// platform SQL's best-evidence-first order, never reordered.
+message PredictNext {
+  string                          word              = 1;
+  repeated RawNextWordPrediction  user_rows         = 2;  // SOURCE_USER rows
+  DictionaryToggles               toggles           = 3;
+  uint64                          query_generation  = 4;
+  int64                           now_ms            = 5;
+  int32                           limit             = 6;  // 30 default if 0
 }
 
 // Pre-merge un-scored row tagged by source. Platform NextWordService.predict
