@@ -109,8 +109,8 @@
 /// (khiin `segmenter.rs:82-86`, where `p = occurrences / total`).
 ///
 /// **Provenance**: `Σ frequency` over every row of
-/// `dictionary/output/dictionary.csv` (159 034 entries) =
-/// `12_910_574`, measured 2026-05-17. `dict.bin` v2 carries only
+/// `dictionary/output/dictionary.csv` (168 958 entries) =
+/// `13_056_588`, measured 2026-09-26. `dict.bin` v2 carries only
 /// per-record frequency, no corpus-total metadata
 /// (`dictionary/build/create_dictionary_bin.py`), so this is baked as a
 /// constant rather than summed at lexicon init (Codex pre-impl S5 Q4 =
@@ -129,7 +129,7 @@
 /// fails `cargo test --workspace`, not silent drift. **Recompute and
 /// update this constant whenever the dictionary is rebuilt** — the
 /// artifact will print the expected value in the failure message.
-pub(crate) const CORPUS_TOTAL_FREQ: f64 = 13_095_142.0;
+pub(crate) const CORPUS_TOTAL_FREQ: f64 = 13_056_588.0;
 
 /// Compile-time invariant: `CORPUS_TOTAL_FREQ` must exceed
 /// `1 + max(freq)` (的 = 184_693) so every `ln(1/p)` is strictly
@@ -492,9 +492,9 @@ mod tests {
         // Entries assertion is secondary (Codex Q4 SHOULD): catches
         // "same Σ, different record universe" drift. Hand-typed
         // `EXPECTED_DICT_ENTRIES` matches the constant doc-comment
-        // (165 995 @ 2026-05-30, post kautian Phase 5 #358); update
-        // alongside the constant on dictionary rebuild.
-        const EXPECTED_DICT_ENTRIES: u32 = 168_467;
+        // (168 958 @ 2026-09-26); update alongside the constant on
+        // dictionary rebuild.
+        const EXPECTED_DICT_ENTRIES: u32 = 168_958;
 
         let artifact = corpus_total_freq_artifact_path();
         let csv = artifact.parent().unwrap().join("dictionary.csv");
