@@ -57,7 +57,7 @@ pub(crate) fn apply(
             Phase::Idle => enter_composing_or_insert_leading_hyphens(state, ch, config),
             Phase::Composing { raw, caret } => {
                 let (next, caret) = insert_at_caret(raw, *caret, &ch);
-                step_composing(state, next, caret, 0, config)
+                step_composing(state, next, caret, config)
             }
             Phase::Continuous { .. } => append_continuous(state, ch, config),
         },
@@ -131,14 +131,12 @@ fn telex_key(state: &mut EngineState, key: &str, config: &AppConfig) -> Composin
             None => noop(state, config),
         },
         Phase::Composing { raw, caret } => match telex_before_caret(raw, *caret, key, mode) {
-            Some((next, caret)) => step_composing(state, next, caret, 0, config),
+            Some((next, caret)) => step_composing(state, next, caret, config),
             None => noop(state, config),
         },
         Phase::Continuous { raw, caret, nailed } => {
             match telex_before_caret(raw, *caret, key, mode) {
-                Some((next, caret)) => {
-                    step_continuous(state, next, caret, nailed.clone(), 0, config)
-                }
+                Some((next, caret)) => step_continuous(state, next, caret, nailed.clone(), config),
                 None => noop(state, config),
             }
         }
@@ -230,12 +228,11 @@ fn step_caret(raw: &str, caret: usize, direction: CaretDirection) -> Option<usiz
 /// composition** (`Σ nailed.display_text` + pending-tail derived form —
 /// callers build it via [`combined_display`], Model B) while `raw` stays the
 /// still-editable pending tail.
-fn step_response(preedit: Preedit, selected_index: i32) -> ComposingResponse {
+fn step_response(preedit: Preedit) -> ComposingResponse {
     let effects = vec![update_preedit(&preedit), perform_autocomplete()];
     ComposingResponse {
         preedit: Some(preedit),
         effect: effects,
-        selected_candidate_index: selected_index,
         is_composing: true,
         continuous: None,
     }
@@ -256,11 +253,10 @@ fn composition_preedit(raw: String, caret: usize, display: String, tail_start: u
     }
 }
 
-/// Enter or update the composing phase. A fresh composition step resets
-/// `selected_candidate_index` to 0.
+/// Enter or update the composing phase.
 fn enter_composing(state: &mut EngineState, raw: String, config: &AppConfig) -> ComposingResponse {
     let caret = raw.len();
-    step_composing(state, raw, caret, 0, config)
+    step_composing(state, raw, caret, config)
 }
 
 /// One `Phase::Composing` step: the buffer becomes `raw` with the caret at
@@ -269,16 +265,14 @@ fn step_composing(
     state: &mut EngineState,
     raw: String,
     caret: usize,
-    selected_index: i32,
     config: &AppConfig,
 ) -> ComposingResponse {
     state.phase = Phase::Composing {
         raw: raw.clone(),
         caret,
     };
-    state.selected_candidate_index = selected_index;
     let display = derived_display(&raw, config);
-    step_response(composition_preedit(raw, caret, display, 0), selected_index)
+    step_response(composition_preedit(raw, caret, display, 0))
 }
 
 /// One `Phase::Continuous` step on the pending tail: `nailed` is untouched,
@@ -288,7 +282,6 @@ fn step_continuous(
     pending: String,
     caret: usize,
     nailed: Vec<NailedSegment>,
-    selected_index: i32,
     config: &AppConfig,
 ) -> ComposingResponse {
     let (combined, tail_start) = combined_display_with_tail(&nailed, &pending, config);
@@ -297,11 +290,7 @@ fn step_continuous(
         caret,
         nailed,
     };
-    state.selected_candidate_index = selected_index;
-    step_response(
-        composition_preedit(pending, caret, combined, tail_start),
-        selected_index,
-    )
+    step_response(composition_preedit(pending, caret, combined, tail_start))
 }
 
 /// §21 INVARIANT_KHINSIANN_LEADING_MARKER_LITERAL — a leading ASCII-hyphen run
@@ -349,8 +338,7 @@ fn enter_composing_or_insert_leading_hyphens(
     resp
 }
 
-/// TPS auto-correct. Preserves `selected_candidate_index` (correction on top
-/// of an in-progress selection). Under `Phase::Continuous` it edits the
+/// TPS auto-correct. Under `Phase::Continuous` it edits the
 /// pending tail only — nailed segments are untouched — but the preedit
 /// re-renders the whole composition (Model B).
 fn replace_last(
@@ -363,8 +351,7 @@ fn replace_last(
             let Some((new_raw, caret)) = replace_before_caret(raw, *caret, &replacement) else {
                 return noop(state, config);
             };
-            let preserved_index = state.selected_candidate_index;
-            step_composing(state, new_raw, caret, preserved_index, config)
+            step_composing(state, new_raw, caret, config)
         }
         Phase::Continuous { raw, caret, nailed } => {
             let Some((new_pending, caret)) = replace_before_caret(raw, *caret, &replacement) else {
@@ -375,15 +362,7 @@ fn replace_last(
             if new_pending.is_empty() && nailed.is_empty() {
                 return exit_to_idle(state, abort_continuous_effects());
             }
-            let preserved_index = state.selected_candidate_index;
-            step_continuous(
-                state,
-                new_pending,
-                caret,
-                nailed.clone(),
-                preserved_index,
-                config,
-            )
+            step_continuous(state, new_pending, caret, nailed.clone(), config)
         }
         Phase::Idle => noop(state, config),
     }
@@ -405,7 +384,7 @@ fn delete_backward(state: &mut EngineState, config: &AppConfig) -> ComposingResp
                     ],
                 );
             }
-            step_composing(state, new_raw, caret, 0, config)
+            step_composing(state, new_raw, caret, config)
         }
         Phase::Continuous { raw, caret, nailed } => {
             delete_backward_continuous(state, raw.clone(), *caret, nailed.clone(), config)
@@ -446,7 +425,7 @@ fn delete_backward_continuous(
         if new_pending.is_empty() && nailed.is_empty() {
             return exit_to_idle(state, abort_continuous_effects());
         }
-        return step_continuous(state, new_pending, caret, nailed, 0, config);
+        return step_continuous(state, new_pending, caret, nailed, config);
     }
 
     // pending empty branches
@@ -487,7 +466,6 @@ fn delete_backward_continuous(
         caret,
         nailed: new_nailed,
     };
-    state.selected_candidate_index = 0;
 
     let preedit = composition_preedit(new_pending, caret, combined, tail_start);
     let effects = vec![
@@ -498,7 +476,6 @@ fn delete_backward_continuous(
     ComposingResponse {
         preedit: Some(preedit),
         effect: effects,
-        selected_candidate_index: 0,
         is_composing: true,
         continuous: None,
     }
@@ -672,7 +649,6 @@ pub(crate) fn snapshot(state: &EngineState, config: &AppConfig) -> ComposingResp
     ComposingResponse {
         preedit: Some(preedit),
         effect: Vec::new(),
-        selected_candidate_index: state.selected_candidate_index,
         is_composing,
         continuous: None,
     }
@@ -680,11 +656,9 @@ pub(crate) fn snapshot(state: &EngineState, config: &AppConfig) -> ComposingResp
 
 fn exit_to_idle(state: &mut EngineState, effects: Vec<Effect>) -> ComposingResponse {
     state.phase = Phase::Idle;
-    state.selected_candidate_index = -1;
     ComposingResponse {
         preedit: Some(Preedit::default()),
         effect: effects,
-        selected_candidate_index: -1,
         is_composing: false,
         continuous: None,
     }
@@ -723,7 +697,6 @@ fn enter_continuous(state: &mut EngineState, config: &AppConfig) -> ComposingRes
     ComposingResponse {
         preedit: Some(composition_preedit(raw, caret, display, 0)),
         effect: Vec::new(),
-        selected_candidate_index: state.selected_candidate_index,
         is_composing: true,
         continuous: None,
     }
@@ -742,7 +715,6 @@ fn start_under_continuous(
 ) -> ComposingResponse {
     // Drop continuous state to Idle first.
     state.phase = Phase::Idle;
-    state.selected_candidate_index = -1;
     let mut effects = abort_continuous_effects();
     let resp = enter_composing(state, text, config);
     effects.extend(resp.effect);
@@ -896,7 +868,6 @@ fn commit_continuous(
         caret,
         nailed: new_nailed,
     };
-    state.selected_candidate_index = 0;
     let preedit = composition_preedit(new_pending, caret, combined, tail_start);
     let effects = vec![
         update_preedit(&preedit),
@@ -906,7 +877,6 @@ fn commit_continuous(
     ComposingResponse {
         preedit: Some(preedit),
         effect: effects,
-        selected_candidate_index: 0,
         is_composing: true,
         continuous: None,
     }
@@ -938,7 +908,7 @@ fn append_continuous(state: &mut EngineState, ch: String, config: &AppConfig) ->
         return noop(state, config);
     }
     let (new_pending, caret) = insert_at_caret(raw, *caret, &ch);
-    step_continuous(state, new_pending, caret, nailed.clone(), 0, config)
+    step_continuous(state, new_pending, caret, nailed.clone(), config)
 }
 
 // ---- Effect constructors ------------------------------------------

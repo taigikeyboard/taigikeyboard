@@ -1,6 +1,6 @@
 // Android platform shell for the Rust composing engine (engine/composing crate): pipes Intent → Effect into
 // InputConnection. State lives in the Rust singleton EngineHandle; this layer only mirrors the latest
-// raw/display/isComposing/selectedCandidateIndex into 4 StateFlows for sync callers (.value) and Compose
+// raw/display/isComposing into 3 StateFlows for sync callers (.value) and Compose
 // observers, without rebuilding the state machine. bumpGeneration fires from
 // onStartInputView on a new editor so Rust can detect an input-context change; a same-editor restart
 // keeps the manager and reconciles it against the host (reconcileWithHost).
@@ -44,10 +44,10 @@ import java.util.concurrent.atomic.AtomicLong
  * Android platform wrapper around the Rust shared-core composing engine
  * (`engine/composing` crate, accessed via `RustEngineBridge.composing*`).
  *
- * Engine state (phase + raw input + selectedCandidateIndex) lives inside
+ * Engine state (phase + raw input) lives inside
  * the Rust singleton EngineHandle; this wrapper:
  * - mirrors the latest response into per-field [StateFlow]s
- *   ([rawInput] / [displayText] / [isComposing] / [selectedCandidateIndex])
+ *   ([rawInput] / [displayText] / [isComposing])
  *   so existing synchronous callers (TextInputManager,
  *   CandidateUpdateCoordinator, SmartbarManager, CandidateClickHandler)
  *   keep their `.value`-equivalent read shape while future Compose
@@ -95,7 +95,7 @@ class ComposingManager(
     /** §50 `learned_phrases.db` for `FetchAtPos.learned_entries`; `null` = none (tests / Preview). */
     private val learnedPhraseService: LearnedPhraseService? = null,
 ) {
-    // Engine-mirror state: 4 MutableStateFlow, public read-only StateFlow surface; sync getters read `.value`.
+    // Engine-mirror state: 3 MutableStateFlow, public read-only StateFlow surface; sync getters read `.value`.
     // CROSS-PLATFORM PAIR — mirrors iOS `ComposingManager.swift` @Observable mirror.
     private val _rawInput = MutableStateFlow("")
     val rawInput: StateFlow<String> = _rawInput.asStateFlow()
@@ -105,9 +105,6 @@ class ComposingManager(
 
     private val _isComposing = MutableStateFlow(false)
     val isComposing: StateFlow<Boolean> = _isComposing.asStateFlow()
-
-    private val _selectedCandidateIndex = MutableStateFlow(-1)
-    val selectedCandidateIndex: StateFlow<Int> = _selectedCandidateIndex.asStateFlow()
 
     /**
      * Generation source. Lives on the companion so it survives
@@ -164,7 +161,6 @@ class ComposingManager(
         _rawInput.value = ""
         _displayText.value = ""
         _isComposing.value = false
-        _selectedCandidateIndex.value = -1
         sharedGeneration.incrementAndGet()
     }
 
@@ -916,7 +912,7 @@ class ComposingManager(
         transition: RustEngineBridge.ComposingTransition,
         ic: InputConnection,
     ) {
-        // Write order: raw → display → isComposing → selectedCandidateIndex
+        // Write order: raw → display → isComposing
         // (mirrors iOS @Observable apply() — see CROSS-PLATFORM PAIR note above).
         // Per-field StateFlows emit ONLY when the assigned value differs from
         // the current `.value` (MutableStateFlow compares + skips), so any
@@ -927,7 +923,6 @@ class ComposingManager(
         _rawInput.value = transition.rawInput
         _displayText.value = transition.displayText
         _isComposing.value = transition.isComposing
-        _selectedCandidateIndex.value = transition.selectedCandidateIndex
         for (effect in transition.effects) {
             logger.tdebug("ComposingDelegate") {
                 "[COMMIT] fn=applyTransition effect=${effect.describeKind()}"

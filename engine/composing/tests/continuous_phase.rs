@@ -187,7 +187,6 @@ fn final_commit_exits_to_idle_emits_word_selected() {
         ],
     );
     assert!(!resp.is_composing);
-    assert_eq!(resp.selected_candidate_index, -1);
     assert_eq!(e.snapshot_state().phase, Phase::Idle);
 
     let Kind::NextWordWordSelected(nw) = resp.effect[3].kind.as_ref().unwrap() else {

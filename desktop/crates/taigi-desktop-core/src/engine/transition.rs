@@ -61,7 +61,6 @@ pub struct ComposingTransition {
     /// The rendered composition, with tone diacritics (what the user reads).
     pub display_text: String,
     pub effects: Vec<Effect>,
-    pub selected_candidate_index: i32,
     pub is_composing: bool,
 }
 
@@ -72,7 +71,6 @@ impl ComposingTransition {
             raw_input: preedit.raw_input,
             display_text: preedit.display_text,
             effects: response.effect.iter().filter_map(Effect::decode).collect(),
-            selected_candidate_index: response.selected_candidate_index,
             is_composing: response.is_composing,
         }
     }
@@ -270,7 +268,6 @@ mod tests {
                 },
                 WireEffect { kind: None },
             ],
-            selected_candidate_index: 0,
             is_composing: true,
             continuous: None,
         };

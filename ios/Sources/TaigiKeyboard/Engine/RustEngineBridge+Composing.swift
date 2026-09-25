@@ -50,14 +50,12 @@ public extension RustEngineBridge {
         public let rawInput: String
         public let displayText: String
         public let effects: [Effect]
-        public let selectedCandidateIndex: Int
         public let isComposing: Bool
 
         public static let noop = ComposingTransition(
             rawInput: "",
             displayText: "",
             effects: [],
-            selectedCandidateIndex: -1,
             isComposing: false,
         )
     }
@@ -167,8 +165,8 @@ public extension RustEngineBridge {
     ///   inventory installed, no FST hits, or `position != 0`).
     /// - non-empty → candidates returned in score-desc order.
     ///
-    /// `transition` carries the engine snapshot (preedit / `selectedCandidateIndex`
-    /// / `isComposing`); FetchAtPos is read-only so its `effects` is empty.
+    /// `transition` carries the engine snapshot (preedit / `isComposing`);
+    /// FetchAtPos is read-only so its `effects` is empty.
     ///
     /// `isBridgeFailure` distinguishes "the engine returned Idle" (legit
     /// generation-mismatch reset; `transition` reflects the new Idle state,
@@ -657,7 +655,6 @@ public extension RustEngineBridge {
             rawInput: proto.preedit.rawInput,
             displayText: proto.preedit.displayText,
             effects: effects,
-            selectedCandidateIndex: Int(proto.selectedCandidateIndex),
             isComposing: proto.isComposing,
         )
     }

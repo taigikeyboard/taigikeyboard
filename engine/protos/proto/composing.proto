@@ -17,7 +17,7 @@ option java_multiple_files = true;
 //
 // Mirrors the iOS `ComposingState.Intent` / Android `ComposingState.Intent`
 // case set 1:1 pre-migration. The Rust crate `engine/composing` owns the
-// state (`Phase::Idle | Composing { raw }` + `selected_candidate_index`)
+// state (`Phase::Idle | Composing { raw } | Continuous { .. }`)
 // inside a singleton `Mutex<Engine>` held by `EngineHandle`.
 //
 // Naming convention: `oneof method` matches the Phonetics/Lexicon dispatch
@@ -63,8 +63,7 @@ message ComposingRequest {
   }
 }
 
-// Begin a fresh composition buffer with `text`. Caret resets;
-// `selected_candidate_index` set to 0.
+// Begin a fresh composition buffer with `text`. Caret resets.
 message Start { string text = 1; }
 
 // Append a single character to the buffer. Idle → behaves as Start.
@@ -74,9 +73,7 @@ message Append { string char = 1; }
 // synthesize hyphen strings on the wire.
 message AppendHyphen {}
 
-// TPS auto-correct: replace the last raw-input character. Intentionally
-// preserves `selected_candidate_index` (correction on top of an in-progress
-// selection, not a fresh composition step).
+// TPS auto-correct: replace the last raw-input character.
 message ReplaceLast { string replacement = 1; }
 
 // Delete one grapheme. Empties → Idle. iOS emits
@@ -338,9 +335,14 @@ message ComposingResponse {
     uint32 caret_utf16  = 3;
   }
 
+  // Tag 3 was `selected_candidate_index` — always `is_composing ? 0 : -1`
+  // once `SetSelectedCandidateIndex` was removed; candidate highlight is
+  // platform-owned. Removed 2026-09-25.
+  reserved 3;
+  reserved "selected_candidate_index";
+
   Preedit preedit                = 1;
   repeated Effect effect         = 2;  // ordered side effects; prost preserves order
-  int32 selected_candidate_index = 3;  // -1 idle, 0 fresh, preserved on ReplaceLast
   bool is_composing              = 4;  // mirrors `state.isComposing`
 
   // v3.5.8 Phase 6 — continuous-input candidate carrier. Populated only by

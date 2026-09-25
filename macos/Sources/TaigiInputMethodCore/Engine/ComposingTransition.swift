@@ -44,7 +44,6 @@ struct ComposingTransition: Equatable, Sendable {
     /// The rendered composition, with tone diacritics (what the user reads).
     let displayText: String
     let effects: [Effect]
-    let selectedCandidateIndex: Int
     let isComposing: Bool
 }
 

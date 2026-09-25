@@ -405,31 +405,10 @@ extension ActionHandler {
         armAutoSpaceSwap()
     }
 
-    /// The auto-space verdict for Return on a HIGHLIGHTED candidate, which
-    /// commits the suggestion's own `text` verbatim rather than the
-    /// mode-formatted document string the tap path builds
-    /// (`ComposingManager.confirmSelectedCandidate`). So the question is which
-    /// script that one string is, and the candidate's own fields answer it —
-    /// never the output mode, which would space a 漢字 commit in a
-    /// romanization-led list and refuse one in a 漢字-led list.
-    func highlightedCandidateWroteRomanization(_ suggestion: AutocompleteSuggestion) -> Bool {
-        // A §42 split cell says which script it is outright.
-        if let cellScript = CandidateCellScript.marker(for: suggestion) {
-            return cellScript != CandidateCellScript.hanji
-        }
-        let (_, hanzi) = parseRomanAndHanzi(
-            from: suggestion,
-            isNextWord: false,
-            effectiveSwapped: isTPSLayout || settings.isTranslateSwapped,
-        )
-        guard let hanzi, !hanzi.isEmpty else { return true }
-        return suggestion.text != hanzi
-    }
-
     /// Whether the layout in use composes romanization — TL and POJ do, TPS
     /// composes Bopomofo, which takes no word spacing. The verdict for every
     /// commit that writes the composition AS TYPED (the raw-input candidate,
-    /// Return on the first slot), none of which goes through a candidate's
+    /// Return while composing), none of which goes through a candidate's
     /// rendering.
     // CROSS-PLATFORM INVARIANT — one name on all four platforms: android
     // `rawPreeditWritesRomanization`, macOS/Windows

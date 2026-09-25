@@ -517,7 +517,6 @@ private fun synthComposing(proto: ComposingResponse): RustEngineBridge.Composing
         rawInput = proto.preedit.rawInput,
         displayText = proto.preedit.displayText,
         effects = effects,
-        selectedCandidateIndex = proto.selectedCandidateIndex,
         isComposing = proto.isComposing,
     )
 }

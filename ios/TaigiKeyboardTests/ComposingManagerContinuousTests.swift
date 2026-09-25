@@ -204,7 +204,6 @@ final class ComposingManagerContinuousTests: XCTestCase {
 
         XCTAssertFalse(manager.isComposing, "Full-commit must exit to Idle")
         XCTAssertEqual(manager.rawInput, "")
-        XCTAssertEqual(manager.selectedCandidateIndex, -1)
         XCTAssertTrue(outcome.didCommit, "Full-commit emits CommitTextReplacingPreedit")
         XCTAssertTrue(outcome.didFinalCommit, "Full-commit exits Continuous → didFinalCommit")
     }

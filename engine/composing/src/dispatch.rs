@@ -575,8 +575,8 @@ fn raw_to_proto_candidate(c: RawCandidate) -> CandidateMessage {
     }
 }
 
-/// `snapshot` already has the right `preedit` / `effect` / `is_composing` /
-/// `selected_candidate_index` for `Phase::Continuous`; only the continuous
+/// `snapshot` already has the right `preedit` / `effect` / `is_composing`
+/// for `Phase::Continuous`; only the continuous
 /// carrier needs population.
 fn with_continuous(
     mut snapshot: ComposingResponse,

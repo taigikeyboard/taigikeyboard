@@ -49,16 +49,6 @@ public interface ComposingResponseOrBuilder extends
 
   /**
    * <pre>
-   * -1 idle, 0 fresh, preserved on ReplaceLast
-   * </pre>
-   *
-   * <code>int32 selected_candidate_index = 3;</code>
-   * @return The selectedCandidateIndex.
-   */
-  int getSelectedCandidateIndex();
-
-  /**
-   * <pre>
    * mirrors `state.isComposing`
    * </pre>
    *

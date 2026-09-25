@@ -3,7 +3,7 @@ import XCTest
 
 /// Tests for `ComposingManager` — the iOS platform wrapper over
 /// `ComposingState`. Focus:
-/// - Published mirror (isComposing / rawInput / composingText / selectedCandidateIndex),
+/// - Published mirror (isComposing / rawInput / composingText),
 /// - Delegate call order via the platform-neutral `Effect` enum,
 /// - Public API routing to the right intents.
 ///
@@ -64,7 +64,6 @@ final class ComposingManagerTests: XCTestCase {
         XCTAssertFalse(manager.isComposing)
         XCTAssertEqual(manager.rawInput, "")
         XCTAssertEqual(manager.composingText, "")
-        XCTAssertEqual(manager.selectedCandidateIndex, -1)
         XCTAssertTrue(spy.effects.isEmpty)
     }
 
@@ -75,7 +74,6 @@ final class ComposingManagerTests: XCTestCase {
 
         XCTAssertTrue(manager.isComposing)
         XCTAssertEqual(manager.rawInput, "a")
-        XCTAssertEqual(manager.selectedCandidateIndex, 0)
         XCTAssertEqual(spy.effects, [
             .updatePreedit(manager.composingText),
             .performAutocomplete,
@@ -93,14 +91,13 @@ final class ComposingManagerTests: XCTestCase {
         ])
     }
 
-    func testAppendCharacter_whenComposing_appendsAndResetsSelectedIndex() {
+    func testAppendCharacter_whenComposing_appendsToRawInput() {
         manager.startComposing(with: "a")
         spy.effects.removeAll()
 
         manager.appendCharacter("b")
 
         XCTAssertEqual(manager.rawInput, "ab")
-        XCTAssertEqual(manager.selectedCandidateIndex, 0)
         XCTAssertEqual(spy.effects, [
             .updatePreedit(manager.composingText),
             .performAutocomplete,
@@ -117,9 +114,8 @@ final class ComposingManagerTests: XCTestCase {
 
         XCTAssertEqual(manager.rawInput, "ac")
         XCTAssertTrue(manager.isComposing)
-        // Contract asserted in ComposingStateTests: selectedCandidateIndex
-        // is preserved across replaceLast. At wrapper level we only verify
-        // the effect list matches what the engine emitted.
+        // At wrapper level we only verify the effect list matches what the
+        // engine emitted.
         XCTAssertEqual(spy.effects, [
             .updatePreedit(manager.composingText),
             .performAutocomplete,
@@ -168,7 +164,6 @@ final class ComposingManagerTests: XCTestCase {
 
         XCTAssertFalse(manager.isComposing)
         XCTAssertEqual(manager.rawInput, "")
-        XCTAssertEqual(manager.selectedCandidateIndex, -1)
         // v3.5.8 Continuous: the single composing char lives in the PREEDIT,
         // never the document, so deleting it clears the preedit + exits to Idle
         // with NO DeleteBackwardFromDocument; the terminal effect is
@@ -198,7 +193,6 @@ final class ComposingManagerTests: XCTestCase {
         manager.commitComposition()
 
         XCTAssertFalse(manager.isComposing)
-        XCTAssertEqual(manager.selectedCandidateIndex, -1)
         // v3.5.8 Phase 7B: startComposing auto-promotes to Phase::Continuous;
         // `commitComposition` routes through CommitRaw, which under Continuous
         // commits `derived_display(pending)` and fires the terminal
@@ -225,7 +219,6 @@ final class ComposingManagerTests: XCTestCase {
         manager.commitRawInput()
 
         XCTAssertFalse(manager.isComposing)
-        XCTAssertEqual(manager.selectedCandidateIndex, -1)
         // v3.5.8 Phase 9 Item 3 (2026-05-13): engine handles Continuous
         // CommitRaw natively now — commits `derived_display(pending)` and
         // fires `NextWordWordSelected` (matches commit_continuous final-
@@ -246,7 +239,7 @@ final class ComposingManagerTests: XCTestCase {
         XCTAssertTrue(spy.effects.isEmpty)
     }
 
-    // MARK: - selectSuggestion / confirmSelectedCandidate
+    // MARK: - selectSuggestion
 
     func testSelectSuggestion_whenComposing_commitsAtomically() {
         manager.startComposing(with: "a")
@@ -255,7 +248,6 @@ final class ComposingManagerTests: XCTestCase {
         manager.selectSuggestion(text: "picked")
 
         XCTAssertFalse(manager.isComposing)
-        XCTAssertEqual(manager.selectedCandidateIndex, -1)
         // SelectSuggestion under Continuous commits the text + exits, with a
         // terminal NextWordClearForNewComposing (matches engine/composing/tests/
         // continuous_phase.rs::select_suggestion_under_continuous_commits_text_and_exits).
@@ -288,7 +280,6 @@ final class ComposingManagerTests: XCTestCase {
         manager.commitPreeditThenInsertExternal("😀")
 
         XCTAssertFalse(manager.isComposing)
-        XCTAssertEqual(manager.selectedCandidateIndex, -1)
         // Under Continuous the pending derived + external commit atomically,
         // then NextWordClearForNewComposing (matches engine/composing/tests/
         // continuous_phase.rs::commit_preedit_then_insert_external_under_continuous_combines_pending_and_external).
@@ -318,38 +309,6 @@ final class ComposingManagerTests: XCTestCase {
         XCTAssertTrue(spy.effects.isEmpty)
     }
 
-    func testConfirmSelectedCandidate_whenIndexValid_selectsAndReturnsTrue() {
-        manager.startComposing(with: "a")
-        spy.effects.removeAll()
-
-        // selectedCandidateIndex defaults to 0 after startComposing, so
-        // availableTexts[0] is what confirm picks.
-        let confirmed = manager.confirmSelectedCandidate(availableTexts: ["zero", "one"])
-
-        XCTAssertTrue(confirmed)
-        XCTAssertFalse(manager.isComposing)
-        XCTAssertTrue(spy.effects.contains(.commitTextReplacingPreedit("zero")))
-    }
-
-    func testConfirmSelectedCandidate_whenIndexOutOfRange_returnsFalseAndDoesNothing() {
-        manager.startComposing(with: "a")
-        spy.effects.removeAll()
-
-        // Index 0 is past the end of an empty availableTexts.
-        let confirmed = manager.confirmSelectedCandidate(availableTexts: [])
-
-        XCTAssertFalse(confirmed)
-        XCTAssertTrue(manager.isComposing)
-        XCTAssertTrue(spy.effects.isEmpty)
-    }
-
-    func testConfirmSelectedCandidate_whenIdle_returnsFalse() {
-        let confirmed = manager.confirmSelectedCandidate(availableTexts: ["only"])
-
-        XCTAssertFalse(confirmed)
-        XCTAssertTrue(spy.effects.isEmpty)
-    }
-
     // MARK: - reset
 
     /// INVARIANT_composing_clear_preedit_does_not_commit — the wrapper must
@@ -366,7 +325,6 @@ final class ComposingManagerTests: XCTestCase {
         XCTAssertFalse(manager.isComposing)
         XCTAssertEqual(manager.rawInput, "")
         XCTAssertEqual(manager.composingText, "")
-        XCTAssertEqual(manager.selectedCandidateIndex, -1)
         // Under Continuous, reset exits to Idle with the composing clear pair +
         // a terminal NextWordClearForNewComposing (matches engine/composing/tests/
         // continuous_phase.rs::reset_under_continuous_emits_nextword_clear_in_addition_to_composing_pair).

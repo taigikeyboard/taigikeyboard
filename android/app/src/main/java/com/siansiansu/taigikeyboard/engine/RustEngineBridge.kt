@@ -288,7 +288,6 @@ object RustEngineBridge {
         val rawInput: String,
         val displayText: String,
         val effects: List<Effect>,
-        val selectedCandidateIndex: Int,
         val isComposing: Boolean,
     ) {
         sealed class Effect {
@@ -358,7 +357,6 @@ object RustEngineBridge {
                 rawInput = "",
                 displayText = "",
                 effects = emptyList(),
-                selectedCandidateIndex = -1,
                 isComposing = false,
             )
         }
@@ -461,8 +459,8 @@ object RustEngineBridge {
      *   inventory installed, no FST hits, or `position != 0`).
      * - non-empty → candidates returned in score-desc order.
      *
-     * `transition` carries the engine snapshot (preedit / `selectedCandidateIndex`
-     * / `isComposing`); FetchAtPos is read-only so its `effects` is empty.
+     * `transition` carries the engine snapshot (preedit / `isComposing`);
+     * FetchAtPos is read-only so its `effects` is empty.
      *
      * `isBridgeFailure` distinguishes "the engine returned Idle" (legit
      * generation-mismatch reset; `transition` reflects the new Idle state,

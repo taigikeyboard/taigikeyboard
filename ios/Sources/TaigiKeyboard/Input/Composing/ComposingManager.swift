@@ -1,5 +1,5 @@
 // iOS composing manager — thin wrapper between the Rust composing engine and KeyboardKit / SwiftUI.
-// Engine state (phase / rawInput / selectedCandidateIndex) lives in Rust; this only mirrors it and dispatches effects.
+// Engine state (phase / rawInput) lives in Rust; this only mirrors it and dispatches effects.
 
 import Foundation
 import Observation
@@ -17,7 +17,7 @@ protocol ComposingContextSink: AnyObject {
 /// (`engine/composing` crate, accessed through
 /// `RustEngineBridge.composing*` methods).
 ///
-/// Engine state (phase + raw input + selectedCandidateIndex) lives inside
+/// Engine state (phase + raw input) lives inside
 /// the Rust singleton `EngineHandle`; this wrapper:
 /// - mirrors the latest response into Observation-tracked properties for SwiftUI,
 /// - dispatches the bridge-emitted `Effect[]` through `ComposingDelegate`
@@ -35,7 +35,6 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
     public private(set) var isComposing: Bool = false
     public private(set) var composingText: String = ""
     public private(set) var rawInput: String = ""
-    public private(set) var selectedCandidateIndex: Int = -1
 
     // MARK: - Lifecycle Generation
 
@@ -134,7 +133,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         promoteToContinuousIfEligible(settings: settings)
     }
 
-    /// TPS auto-correct — preserves `selectedCandidateIndex`.
+    /// TPS auto-correct — swaps the last raw-input character in place.
     public func replaceLastCharacter(with replacement: String) {
         logger.debug("[COMPOSE] fn=replaceLastCharacter replacement='\(replacement)'")
         let settings = settingsProvider.current
@@ -612,18 +611,6 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         ))
     }
 
-    /// Commit the currently-selected candidate, given the visible candidate
-    /// strings. KK-side callers pass `suggestions.map(\.text)`.
-    public func confirmSelectedCandidate(availableTexts: [String]) -> Bool {
-        logger.debug("[COMPOSE] fn=confirmSelectedCandidate index=\(selectedCandidateIndex) count=\(availableTexts.count)")
-        guard isComposing,
-              selectedCandidateIndex >= 0,
-              selectedCandidateIndex < availableTexts.count
-        else { return false }
-        selectSuggestion(text: availableTexts[selectedCandidateIndex])
-        return true
-    }
-
     // Clears the composition without committing it.
     public func reset() {
         logger.debug("[COMPOSE] fn=reset")
@@ -650,9 +637,6 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         }
         if !transition.effects.isEmpty, composingText != transition.displayText {
             composingText = transition.displayText
-        }
-        if selectedCandidateIndex != transition.selectedCandidateIndex {
-            selectedCandidateIndex = transition.selectedCandidateIndex
         }
 
         // Phase 2 — execute platform effects in proto-list order.

@@ -124,7 +124,7 @@ extension CandidateView.ItemStyle {
     ) -> Color {
         // State priority, identical for every theme: a real press wins with the dark pressed look;
         // then the first candidate takes the light highlight even while selected, because while
-        // typing the engine pins `selectedCandidateIndex` to 0 so it is always "selected" yet must
+        // typing, the first candidate is always selected, yet it must
         // still read as a hint; other selected candidates (hardware navigation) take pressed; else idle.
         // A gradient theme overrides the neutral colors with its derived ones.
         if isPressed, let pressedThemeColor {

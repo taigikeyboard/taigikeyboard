@@ -71,7 +71,6 @@ fn intent_start() {
     .expect("start dispatches");
     assert!(resp.is_composing);
     assert_eq!(resp.preedit.as_ref().unwrap().raw_input, "a");
-    assert_eq!(resp.selected_candidate_index, 0);
 }
 
 #[test]
@@ -159,7 +158,6 @@ fn intent_commit_derived_returns_to_idle() {
     )
     .unwrap();
     assert!(!resp.is_composing);
-    assert_eq!(resp.selected_candidate_index, -1);
 }
 
 #[test]
@@ -251,7 +249,6 @@ fn intent_reset_returns_to_idle() {
     .unwrap();
     let resp = dispatch::handle(&req(Method::Reset(Reset {})), &mut engine, &config_tl()).unwrap();
     assert!(!resp.is_composing);
-    assert_eq!(resp.selected_candidate_index, -1);
 }
 
 #[test]
@@ -319,7 +316,6 @@ fn intent_telex_tone_key_writes_the_digit_and_renders_the_mark() {
     let preedit = resp.preedit.unwrap();
     assert_eq!(preedit.raw_input, "te2");
     assert_eq!(preedit.display_text, "té");
-    assert_eq!(resp.selected_candidate_index, 0);
 }
 
 #[test]
@@ -438,14 +434,6 @@ fn intent_telex_under_continuous_keeps_nailed_segments() {
     let resp = telex(&mut engine, "d", &config_tl());
     assert!(resp.effect.is_empty());
     assert_eq!(nailed_texts(&engine), vec!["珠"]);
-}
-
-#[test]
-fn intent_telex_edit_resets_selection() {
-    let mut engine = Engine::new();
-    append(&mut engine, "te", &config_tl());
-    let resp = telex(&mut engine, "v", &config_tl());
-    assert_eq!(resp.selected_candidate_index, 0);
 }
 
 #[test]

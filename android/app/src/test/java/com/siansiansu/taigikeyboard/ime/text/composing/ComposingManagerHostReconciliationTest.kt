@@ -66,7 +66,6 @@ class ComposingManagerHostReconciliationTest {
             rawInput = display,
             displayText = display,
             effects = listOf(Effect.UpdatePreedit(display)),
-            selectedCandidateIndex = -1,
             isComposing = true,
         )
 
@@ -199,7 +198,6 @@ class ComposingManagerHostReconciliationTest {
                 rawInput = "",
                 displayText = "",
                 effects = listOf(Effect.CommitTextReplacingPreedit("A")),
-                selectedCandidateIndex = -1,
                 isComposing = false,
             ),
             FakeHost("a").ic,

@@ -367,7 +367,6 @@ extension RustEngineBridge {
             rawInput: response.preedit.rawInput,
             displayText: response.preedit.displayText,
             effects: response.effect.compactMap(decodeEffect),
-            selectedCandidateIndex: Int(response.selectedCandidateIndex),
             isComposing: response.isComposing,
         )
     }
