@@ -63,9 +63,11 @@ required_protoc="${runtime_pin#4.}"
 actual_protoc="$(protoc --version | awk '{print $2}')"
 
 # The committed gencode must already agree with the pin; if it does not, the
-# repo is inconsistent and regenerating would hide it.
+# repo is inconsistent and regenerating would hide it. The one exception is a
+# pin bump: with a local protoc that matches the NEW pin, regenerating is
+# exactly what brings the gencode back in line.
 sample_java="$JAVA_PROTO_DIR/Start.java"
-if [[ -f "$sample_java" ]]; then
+if [[ -f "$sample_java" && "$actual_protoc" != "$required_protoc" ]]; then
     committed_gencode="$(sed -n 's|^// Protobuf Java Version: \(.*\)$|\1|p' "$sample_java" | head -1)"
     if [[ -n "$committed_gencode" && "$committed_gencode" != "$runtime_pin" ]]; then
         echo "error: committed Java gencode is $committed_gencode but $GRADLE_FILE pins protobuf-javalite:$runtime_pin." >&2

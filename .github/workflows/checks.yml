@@ -58,8 +58,8 @@ env:
   # The Java bindings' compiler — must equal the protobuf-javalite pin
   # (android/app/build.gradle.kts), which gen-platform-protos.sh --java-only
   # enforces. Not engine.yml's 36.1: that one only feeds prost.
-  PROTOC_JAVA_VERSION: "36.0"
-  PROTOC_JAVA_SHA256: bc8211ce760bd43ee21ddc145d6d9dbaeeabae205267a79d9054a240e367d4b4
+  PROTOC_JAVA_VERSION: "36.2"
+  PROTOC_JAVA_SHA256: 121f6c7afe1d4d0e3ea6aab9432038599250134cbf4474cb1167d2c7decd4278
 
 jobs:
   e2e-analyzer:
@@ -147,7 +147,7 @@ jobs:
           bash engine/scripts/gen-platform-protos.sh --java-only
           if [ -n "$(git status --porcelain -- "$java_dir")" ]; then
             git status --short -- "$java_dir"
-            echo "::error::Java protobuf bindings are stale — run \`make protos\` (protoc 36.0) and commit the result."
+            echo "::error::Java protobuf bindings are stale — run \`make protos\` (protoc 36.2) and commit the result."
             exit 1
           fi
 
