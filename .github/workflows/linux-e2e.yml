@@ -9,9 +9,9 @@ name: Linux e2e
 # as the `linux-e2e-<distro>` artifact. The shipped packages are never traced
 # (PR3a); their own install check lives in linux-build.yml.
 #
-# USER 2026-09-25: schedule only (「全部都改成排程執行」) — no pull_request
+# USER 2026-09-25: schedule only ("switch everything to scheduled runs") — no pull_request
 # trigger. The whole distribution matrix runs nightly (USER 2026-09-24:
-# 台灣凌晨 3:00 = 19:00 UTC) and on demand. A scheduled failure mails whoever
+# 03:00 Taiwan time = 19:00 UTC) and on demand. A scheduled failure mails whoever
 # last edited the cron.
 on:
   schedule:

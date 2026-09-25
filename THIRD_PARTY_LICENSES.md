@@ -41,7 +41,7 @@ files (`Iansui-Regular`, `jf-openhuninn-2.1`, `GenYoGothic2TW-R`,
 verbatim from `androidx.compose.material:material-icons-extended` to drop the
 transitive dependency.
 
-The Font Awesome path data draws the 關於 page's sponsor, website, GitHub, Discord
+The Font Awesome path data draws the About page's sponsor, website, GitHub, Discord
 and email links on macOS and Windows. Both files carry the attribution comment
 Font Awesome ships in its SVGs, which is the credit CC BY 4.0 asks for; the
 paths were rewritten as absolute commands and scaled to a 16-unit height, and

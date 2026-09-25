@@ -17,7 +17,7 @@
       "values": { "hanji": "PhahTaigi", "tailo": "PhahTaigi", "poj": "PhahTaigi", "en": "PhahTaigi", "ja": "PhahTaigi" }
     },
     "tpsLayout": {
-      "comment": "Layout name: the Taiwanese Phonetic Symbols (方音符號) keyboard.",
+      "comment": "Layout name: the Taiwanese Phonetic Symbols (TPS) keyboard.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "方音符號齒盤", "tailo": "Hong-im-hû-hō khí-puânn", "poj": "Hong-im-hû-hō khí-pôaⁿ", "en": "Phonetic Symbols", "ja": "方音符号" }
     },

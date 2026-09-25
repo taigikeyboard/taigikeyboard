@@ -21,9 +21,9 @@ on:
   # what ships).
   release:
     types: [published]
-  # USER 2026-09-25: schedule, not per pull request (「將linux build也改成排程,
-  # 減少mr等待的時間」), like linux-e2e.yml. Nightly at 台灣凌晨 2:30 (18:30 UTC),
-  # half an hour before the e2e run; a failure mails whoever last edited the
+  # USER 2026-09-25: schedule, not per pull request ("make the linux build
+  # scheduled too, to cut MR wait time"), like linux-e2e.yml. Nightly at
+  # 02:30 Taiwan time (18:30 UTC), half an hour before the e2e run; a failure mails whoever last edited the
   # cron. Before merging a Linux change, `make linux-check` locally or a manual
   # dispatch of this workflow.
   schedule:

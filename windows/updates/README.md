@@ -9,7 +9,7 @@ read by `desktop/crates/taigi-desktop-update` (the check)
 and acted on by `windows/crates/taigi-windows-update` (download + install).
 `version` is compared against the running settings exe's version (the
 workspace's); when the manifest is
-strictly newer, the 一般 pane offers the update: the copy downloads
+strictly newer, the General pane offers the update: the copy downloads
 `packageURL` itself, verifies it, and — on a second press — opens the
 installer. Where it cannot (a manifest without a `packageURL` or without its
 `packageSHA256`, nowhere to stage) and from the toast, the browser opens
@@ -92,7 +92,7 @@ with no download, which notifies nobody.
 Roadmap W9: the installer's per-user scheduled task runs
 `TaigiKeyboardSettings.exe --check-updates` (headless: due ⇒ fetch, record,
 toast once per version); the settings window checks when overdue at launch;
-檢查更新 in the 一般 pane and the lang-bar menu check on demand; the DLL only
+Check for Updates in the General pane and the lang-bar menu check on demand; the DLL only
 reads the recorded pending manifest. `updateNextCheckMs` in `settings.json`
 is stamped BEFORE each fetch, so a hanging server is asked once a day, not
 once a launch.

@@ -91,7 +91,7 @@
       }
     },
     "settings": {
-      "comment": "Generic Settings label: main-app bottom-nav tab title + page title (mobile), smartbar settings button a11y label (extension). Merged 2026-09-20 from keyboard.settings / nav.tabSettings. The desktop menu row is desktop.menuSettings (台語齒盤設定) since 2026-09-25 — one menu on three desktops.",
+      "comment": "Generic Settings label: main-app bottom-nav tab title + page title (mobile), smartbar settings button a11y label (extension). Merged 2026-09-20 from keyboard.settings / nav.tabSettings. The desktop menu row is desktop.menuSettings (TaigiKeyboard Settings) since 2026-09-25 — one menu on three desktops.",
       "scope": {
         "platforms": [
           "android",
@@ -213,7 +213,7 @@
       }
     },
     "other": {
-      "comment": "Generic Other: home section header above the FAQ / other list (mobile), 快速齒 pane third block's header — the switches and the windows a key raises (desktop). Merged 2026-09-20 from home.faq / desktop.shortcutSectionOther.",
+      "comment": "Generic Other: home section header above the FAQ / other list (mobile), Shortcuts pane third block's header — the switches and the windows a key raises (desktop). Merged 2026-09-20 from home.faq / desktop.shortcutSectionOther.",
       "scope": {
         "platforms": [
           "android",

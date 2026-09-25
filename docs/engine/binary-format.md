@@ -232,11 +232,11 @@ bit  4  taihoa       (台華線頂對照典)
 bit  5  taijit       (台日大辭典)
 bit  6  kungge       (台語工藝詞庫)
 bit  7  stti         (學科術語辭典)
-bit  8  khpoo        (腔口補充資料)
-bit  9  khiin        (在來字)              ← filtered by exclusion layer
-bit 10  dev          (詞庫增補檔案 — user-toggleable, default on)
+bit  8  khpoo        (accent supplement data)
+bit  9  khiin        (Conventional Characters) ← filtered by exclusion layer
+bit 10  dev          (Supplementary Word List — user-toggleable, default on)
 bit 11  lkk          (LKK漢羅合用建議用字)
-bit 12  is_variant   (異用字)              ← filtered by exclusion layer
+bit 12  is_variant   (Variant Characters)      ← filtered by exclusion layer
 bits 13–15  reserved
 ```
 
@@ -258,9 +258,9 @@ Layer 4 — Source OR match (on the EFFECTIVE bitmask):
     elif (effective & enabled_mask) != 0                                 → accept
     else                                                                 → reject
 ```
-dev (bit 10, 詞庫增補檔案) rides `enabled_mask` like any other source
+dev (bit 10, Supplementary Word List) rides `enabled_mask` like any other source
 (default on, user-toggleable). It used to be an unconditional `|| DEV_BIT`
-floor in Layer 4; the 詞庫增補檔案 toggle made it a normal source.
+floor in Layer 4; the Supplementary Word List toggle made it a normal source.
 
 The same `effective_source_bitmask` is emitted as the candidate's
 `source_bitmask` so a multi-source survivor ranks by its other source's tier,
@@ -284,7 +284,7 @@ Note: association filter does **not** apply variant/khiin exclusions (those bits
 | `allEnabled` | property | `allEnabled()` | 10 sources: kautian, taigitv, kungge, itaigi, taijit, taihoa, sitbut, stti, khpoo, **lkk** |
 | `allAssociationSourcesEnabled` | property | `allAssociationSourcesEnabled()` | 9 sources: same minus **lkk** |
 
-Excludes `variant`, `khiin` from "all" — those are exclusion flags, not main sources. `dev` (詞庫增補檔案) is a user-toggleable source (default on), carried in the source-OR like the other sources.
+Excludes `variant`, `khiin` from "all" — those are exclusion flags, not main sources. `dev` (Supplementary Word List) is a user-toggleable source (default on), carried in the source-OR like the other sources.
 
 ### 4.5 `kautian_subtag` (v3) + wire subcollection-enable bits
 
@@ -295,11 +295,11 @@ test is a single AND:
 
 ```
 subcollection bit layout (12 bits):
-  bit  0      main         (主條目 / headword)
-  bits 1..=10 accent[0..9] (語音差異 — config.yaml dialect_columns order:
+  bit  0      main         (headword)
+  bits 1..=10 accent[0..9] (accent variants — config.yaml dialect_columns order:
                             0 鹿港 1 三峽 2 臺北 3 宜蘭 4 臺南 5 高雄
                             6 金門 7 馬公 8 新竹 9 臺中)
-  bit  11     name         (姓名附錄 — 名 + 姓)
+  bit  11     name         (name appendix — given + family names)
   bits 12-15  reserved (record subtag masks these off on read)
 ```
 

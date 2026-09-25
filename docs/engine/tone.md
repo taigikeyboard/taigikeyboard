@@ -94,7 +94,7 @@ POJ ↔ TL display conversion: `phonetics::api::poj_display_to_tl_display` / `tl
 | Bridge surface (Android) | `engine/RustEngineBridge.kt` + `CaseTransformBridge.kt` |
 | Flick tone UI mapping (left=2, top=3, right=5, bottom=7, long-press=8) | iOS `FlickDirection` (UI only; tone math via Rust) |
 
-For per-pub-item descriptions in 台灣華語, see `migration-inventory.csv` (filter `area=phonetics`).
+For per-pub-item descriptions in Taiwanese Mandarin, see `migration-inventory.csv` (filter `area=phonetics`).
 
 ---
 

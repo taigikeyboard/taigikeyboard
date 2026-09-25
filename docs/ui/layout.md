@@ -67,7 +67,7 @@
 ### Symbolic (Advanced Symbols)
 
 - Row 1: Programming brackets
-- Row 2: Book title marks (書名號)
+- Row 2: Book title marks
 - Row 3: Currency/special
 - Row 4: Math symbols
 

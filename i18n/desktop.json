@@ -22,7 +22,7 @@
       }
     },
     "shortcutSectionCandidateSelection": {
-      "comment": "快捷鍵 pane, first block's header: the keys that move through the candidate window.",
+      "comment": "Shortcuts pane, first block's header: the keys that move through the candidate window.",
       "scope": {
         "platforms": [
           "macos",
@@ -42,7 +42,7 @@
       }
     },
     "shortcutSectionOutput": {
-      "comment": "快捷鍵 pane, second block's header: the keys that end a composition into the document, and the switch for which script is written. 輸出 rather than 拍字 (USER 2026-09-10) — the block is about what reaches the document, not about the typing itself.",
+      "comment": "Shortcuts pane, second block's header: the keys that end a composition into the document, and the switch for which script is written. 輸出 rather than 拍字 (USER 2026-09-10) — the block is about what reaches the document, not about the typing itself.",
       "scope": {
         "platforms": [
           "macos",
@@ -102,7 +102,7 @@
       }
     },
     "shortcutCycleCandidateDisplayMode": {
-      "comment": "Shortcut-recorder row: the hotkey that cycles 候選詞顯示 through 漢羅對應 → 漢羅濫 → 羅馬字 (the picker order). Authored whole, like its siblings.",
+      "comment": "Shortcut-recorder row: the hotkey that cycles Candidate Display through Hanji–Romanization Pairing → Hanji with Romanization → Romanization Only (the picker order). Authored whole, like its siblings.",
       "scope": {
         "platforms": [
           "macos",
@@ -162,7 +162,7 @@
       }
     },
     "shortcutMoveComposingCaret": {
-      "comment": "Read-only row under the composing keys on the 快速齒 pane: the fixed chord that moves the caret inside the romanization being typed (macOS ⌥←/⌥→, Windows Ctrl+←/→). Not recordable (USER 2026-09-09: 這個功能可以顯示在快速齒,但我不打算讓使用者更改). Authored whole, like its siblings.",
+      "comment": "Read-only row under the composing keys on the Shortcuts pane: the fixed chord that moves the caret inside the romanization being typed (macOS ⌥←/⌥→, Windows Ctrl+←/→). Not recordable (USER 2026-09-09: \"this feature can be shown on Shortcuts, but I don't plan to let users change it\"). Authored whole, like its siblings.",
       "scope": {
         "platforms": [
           "macos",
@@ -182,7 +182,7 @@
       }
     },
     "shortcutFlipPunctuationWidth": {
-      "comment": "Read-only row after the commit rows on the 快速齒 pane: Ctrl on a punctuation key types it in the other width once (half-width in 漢字 mode, full-width in 羅馬字 mode) without switching the mode (USER 2026-09-20). Taiwanese says 全角／半角, not 全形／半形 (USER 2026-09-20). Fixed like shortcutMoveComposingCaret; the value column lists sample chords (macOS ⌃, ⌃. ⌃;, Windows Ctrl+, Ctrl+. Ctrl+;). Authored whole, like its siblings.",
+      "comment": "Read-only row after the commit rows on the Shortcuts pane: Ctrl on a punctuation key types it in the other width once (half-width in Hanji mode, full-width in romanization mode) without switching the mode (USER 2026-09-20). Taiwanese says 全角／半角, not 全形／半形 (USER 2026-09-20). Fixed like shortcutMoveComposingCaret; the value column lists sample chords (macOS ⌃, ⌃. ⌃;, Windows Ctrl+, Ctrl+. Ctrl+;). Authored whole, like its siblings.",
       "scope": {
         "platforms": [
           "macos",
@@ -202,7 +202,7 @@
       }
     },
     "shortcutSelectCandidateSlot": {
-      "comment": "Read-only row under the candidate movers on the 快速齒 pane: the bare slot keys that pick a candidate straight off the visible page (QWDFZXVY; under Standard, 123456789 under Telex — follows the 聲調拍法 picker on the 一般 pane, so nothing to record). The ⇧ twin of the same keys is the shortcutCommitAlternateScript read-only row (USER 2026-09-20). Authored whole, like its siblings.",
+      "comment": "Read-only row under the candidate movers on the Shortcuts pane: the bare slot keys that pick a candidate straight off the visible page (QWDFZXVY; under Standard, 123456789 under Telex — follows the Tone Keys picker on the General pane, so nothing to record). The ⇧ twin of the same keys is the shortcutCommitAlternateScript read-only row (USER 2026-09-20). Authored whole, like its siblings.",
       "scope": {
         "platforms": [
           "macos",
@@ -222,7 +222,7 @@
       }
     },
     "shortcutNavigateCandidates": {
-      "comment": "Read-only row under the slot-key row on the 快速齒 pane: the fixed navigation keys that move the highlight through the candidate window (arrows, Page Up / Page Down); what ↓ does follows the window layout. Fixed tier, no binding can shadow it (USER 2026-09-20). Authored whole, like its siblings.",
+      "comment": "Read-only row under the slot-key row on the Shortcuts pane: the fixed navigation keys that move the highlight through the candidate window (arrows, Page Up / Page Down); what ↓ does follows the window layout. Fixed tier, no binding can shadow it (USER 2026-09-20). Authored whole, like its siblings.",
       "scope": {
         "platforms": [
           "macos",
@@ -242,7 +242,7 @@
       }
     },
     "shortcutCancelComposing": {
-      "comment": "Read-only row after the commit rows on the 快速齒 pane: Escape drops the romanization being typed without writing anything to the document — the third way out beside 確定齒 and 輸出當咧拍的字. Fixed tier, not recordable (USER 2026-09-20: 刪除當咧拍的字). Authored whole, like its siblings.",
+      "comment": "Read-only row after the commit rows on the Shortcuts pane: Escape drops the romanization being typed without writing anything to the document — the third way out beside Confirm Key and Output What You Are Typing. Fixed tier, not recordable (USER 2026-09-20: \"Delete What You Are Typing\"). Authored whole, like its siblings.",
       "scope": {
         "platforms": [
           "macos",
@@ -285,7 +285,7 @@
       }
     },
     "telexGuideInitial": {
-      "comment": "Telex guide row meaning for z: the unaspirated affricate initial it spells, written for the romanization in use — `ts` under TL, `ch` under POJ. {initial} is that spelling, so the row shows only the letters (USER 2026-09-11: no 聲母 label).",
+      "comment": "Telex guide row meaning for z: the unaspirated affricate initial it spells, written for the romanization in use — `ts` under TL, `ch` under POJ. {initial} is that spelling, so the row shows only the letters (USER 2026-09-11: no initial label).",
       "scope": {
         "platforms": [
           "macos",
@@ -553,7 +553,7 @@
       }
     },
     "progressWorking": {
-      "comment": "Label under the spinner while a 詞庫 page runs any blocking job (save, delete, export, import). Desktop-only: the mobile apps have no blocking overlay.",
+      "comment": "Label under the spinner while a Dictionary page runs any blocking job (save, delete, export, import). Desktop-only: the mobile apps have no blocking overlay.",
       "scope": {
         "platforms": [
           "macos",
@@ -633,7 +633,7 @@
       }
     },
     "candidateWindowLayout": {
-      "comment": "Picker label in the 一般 pane: which shape the candidate window takes (horizontal row / vertical list / expandable grid).",
+      "comment": "Picker label in the General pane: which shape the candidate window takes (horizontal row / vertical list / expandable grid).",
       "scope": {
         "platforms": [
           "macos",
@@ -733,7 +733,7 @@
       }
     },
     "candidateAppearanceLight": {
-      "comment": "Caption under the light-mode thumbnail in the 外觀 pane's appearance selector, mirroring System Settings' Appearance row.",
+      "comment": "Caption under the light-mode thumbnail in the Appearance pane's appearance selector, mirroring System Settings' Appearance row.",
       "scope": {
         "platforms": [
           "macos",
@@ -753,7 +753,7 @@
       }
     },
     "candidateAppearanceDark": {
-      "comment": "Caption under the dark-mode thumbnail in the 外觀 pane's appearance selector, mirroring System Settings' Appearance row.",
+      "comment": "Caption under the dark-mode thumbnail in the Appearance pane's appearance selector, mirroring System Settings' Appearance row.",
       "scope": {
         "platforms": [
           "macos",
@@ -993,7 +993,7 @@
       }
     },
     "actionCommitAlternateScript": {
-      "comment": "Shortcut row: commit the highlighted candidate in the other script (漢羅). Also the label of the read-only row after it on the 快速齒 pane — Shift on a candidate slot key commits that slot in the other script (macOS ⇧QWDFZXVY; / ⇧123456789, Windows Shift+QWDFZXVY; / Shift+123456789, following the tone scheme; not recordable, USER 2026-09-10). One label for both: the key column already tells Space from the slot chords (USER 2026-09-10), so a second key held the same fact twice (merged 2026-09-20).",
+      "comment": "Shortcut row: commit the highlighted candidate in the other script (Hanji / romanization). Also the label of the read-only row after it on the Shortcuts pane — Shift on a candidate slot key commits that slot in the other script (macOS ⇧QWDFZXVY; / ⇧123456789, Windows Shift+QWDFZXVY; / Shift+123456789, following the tone scheme; not recordable, USER 2026-09-10). One label for both: the key column already tells Space from the slot chords (USER 2026-09-10), so a second key held the same fact twice (merged 2026-09-20).",
       "scope": {
         "platforms": [
           "macos",
@@ -1093,7 +1093,7 @@
       }
     },
     "copyrightLine": {
-      "comment": "關於 page footer: authorship line beside the sponsor link. Same in every language — a personal name carries no translation. The year is a literal, updated by hand at release time.",
+      "comment": "About page footer: authorship line beside the sponsor link. Same in every language — a personal name carries no translation. The year is a literal, updated by hand at release time.",
       "scope": {
         "platforms": [
           "macos",
@@ -1113,7 +1113,7 @@
       }
     },
     "aboutIntroProject": {
-      "comment": "關於 page, first line: what the project is. Two short paragraphs in all (USER 2026-09-20 「說明文字太多太長了」). Hanji authored by the USER 2026-09-20 (revised same day: paid-features + education-groups lines); tailo / poj generated 2026-09-20.",
+      "comment": "About page, first line: what the project is. Two short paragraphs in all (USER 2026-09-20: \"the description text is too much and too long\"). Hanji authored by the USER 2026-09-20 (revised same day: paid-features + education-groups lines); tailo / poj generated 2026-09-20.",
       "scope": {
         "platforms": [
           "macos",
@@ -1133,7 +1133,7 @@
       }
     },
     "aboutIntroMaintainer": {
-      "comment": "關於 page, second line: one maintainer, the hope. Hanji authored by the USER 2026-09-20 (revised same day: paid-features + education-groups lines); tailo / poj generated 2026-09-20.",
+      "comment": "About page, second line: one maintainer, the hope. Hanji authored by the USER 2026-09-20 (revised same day: paid-features + education-groups lines); tailo / poj generated 2026-09-20.",
       "scope": {
         "platforms": [
           "macos",
@@ -1153,7 +1153,7 @@
       }
     },
     "sponsorLink": {
-      "comment": "關於 page: the first link card, out to the ECPay donation page (USER 2026-09-20: a row like the links under it, not a button).",
+      "comment": "About page: the first link card, out to the ECPay donation page (USER 2026-09-20: a row like the links under it, not a button).",
       "scope": {
         "platforms": [
           "macos",
@@ -1173,7 +1173,7 @@
       }
     },
     "websiteLink": {
-      "comment": "關於 page: title of the website link card. The host name itself — same in every language.",
+      "comment": "About page: title of the website link card. The host name itself — same in every language.",
       "scope": {
         "platforms": [
           "macos",
@@ -1193,7 +1193,7 @@
       }
     },
     "githubLink": {
-      "comment": "關於 page footer: tooltip + accessibility name of the GitHub icon link. A product name — same in every language.",
+      "comment": "About page footer: tooltip + accessibility name of the GitHub icon link. A product name — same in every language.",
       "scope": {
         "platforms": [
           "macos",
@@ -1213,7 +1213,7 @@
       }
     },
     "discordLink": {
-      "comment": "關於 page footer: tooltip + accessibility name of the Discord icon link. A product name — same in every language.",
+      "comment": "About page footer: tooltip + accessibility name of the Discord icon link. A product name — same in every language.",
       "scope": {
         "platforms": [
           "macos",
@@ -1233,7 +1233,7 @@
       }
     },
     "emailLink": {
-      "comment": "關於 page footer: tooltip + accessibility name of the email icon link. The address itself — same in every language.",
+      "comment": "About page footer: tooltip + accessibility name of the email icon link. The address itself — same in every language.",
       "scope": {
         "platforms": [
           "macos",
@@ -1253,7 +1253,7 @@
       }
     },
     "updateCheckNow": {
-      "comment": "Button in the Settings 一般 pane that checks for an update immediately, next to the installed version, and the input-source menu row that does the same.",
+      "comment": "Button in the Settings General pane that checks for an update immediately, next to the installed version, and the input-source menu row that does the same.",
       "scope": {
         "platforms": [
           "macos",
@@ -1273,7 +1273,7 @@
       }
     },
     "updateCurrentVersionLabel": {
-      "comment": "Settings 一般 pane: the installed version, shown beside the check button. Wording mirrors home.json `version`.",
+      "comment": "Settings General pane: the installed version, shown beside the check button. Wording mirrors home.json `version`.",
       "scope": {
         "platforms": [
           "macos",
@@ -1316,7 +1316,7 @@
       }
     },
     "updateAvailableMessage": {
-      "comment": "The one sentence announcing a downloadable version, on both surfaces that announce it: the manual-check sheet and the system notification. The installed version is not repeated and the reader is not told to click — a notification is what it is (USER 2026-08-28: 用字精簡清楚即可).",
+      "comment": "The one sentence announcing a downloadable version, on both surfaces that announce it: the manual-check sheet and the system notification. The installed version is not repeated and the reader is not told to click — a notification is what it is (USER 2026-08-28: \"concise, clear wording is enough\").",
       "scope": {
         "platforms": [
           "macos",
@@ -1475,7 +1475,7 @@
       }
     },
     "updatePendingVersionLabel": {
-      "comment": "Settings 一般 pane row shown while a newer version is known but not installed. The surface that stays accurate with no network and after a missed notification.",
+      "comment": "Settings General pane row shown while a newer version is known but not installed. The surface that stays accurate with no network and after a missed notification.",
       "scope": {
         "platforms": [
           "macos",
@@ -1498,7 +1498,7 @@
       }
     },
     "updateNotificationsOffNote": {
-      "comment": "Settings 一般 pane row shown when notifications are refused. Says what turning them on gets you rather than what is currently lost (USER 2026-08-24: 「改為比較正面」), and leads out to where it is changed. The key name still describes when the row appears, not what it says.",
+      "comment": "Settings General pane row shown when notifications are refused. Says what turning them on gets you rather than what is currently lost (USER 2026-08-24: \"make it more positive\"), and leads out to where it is changed. The key name still describes when the row appears, not what it says.",
       "scope": {
         "platforms": [
           "macos"
@@ -1516,7 +1516,7 @@
       }
     },
     "updateOpenNotificationSettings": {
-      "comment": "Settings 一般 pane link out to the System Settings notifications pane, beside the notifications-off note.",
+      "comment": "Settings General pane link out to the System Settings notifications pane, beside the notifications-off note.",
       "scope": {
         "platforms": [
           "macos"
@@ -1534,7 +1534,7 @@
       }
     },
     "updateDownloadAndInstallAction": {
-      "comment": "Settings 一般 pane: fetches the update package in the app, replacing the trip to the download page. Shown only when the manifest names a package and this build can pin its signer.",
+      "comment": "Settings General pane: fetches the update package in the app, replacing the trip to the download page. Shown only when the manifest names a package and this build can pin its signer.",
       "scope": {
         "platforms": [
           "macos",
@@ -1554,7 +1554,7 @@
       }
     },
     "updateInstallAction": {
-      "comment": "Settings 一般 pane: opens the downloaded package in Installer.app. The user's second press — arrival never launches anything by itself.",
+      "comment": "Settings General pane: opens the downloaded package in Installer.app. The user's second press — arrival never launches anything by itself.",
       "scope": {
         "platforms": [
           "macos",
@@ -1574,7 +1574,7 @@
       }
     },
     "updateRetryAction": {
-      "comment": "Settings 一般 pane: tries a failed update download again.",
+      "comment": "Settings General pane: tries a failed update download again.",
       "scope": {
         "platforms": [
           "macos",
@@ -1594,7 +1594,7 @@
       }
     },
     "updateInstallFailedNote": {
-      "comment": "Settings 一般 pane: the update could not be installed — download, package verification, or launching the installer failed. Retryable; the retry button says what to do, and updateCheckFailedMessage already carries the network advice.",
+      "comment": "Settings General pane: the update could not be installed — download, package verification, or launching the installer failed. Retryable; the retry button says what to do, and updateCheckFailedMessage already carries the network advice.",
       "scope": {
         "platforms": [
           "macos",
@@ -1614,7 +1614,7 @@
       }
     },
     "clearLearningRecords": {
-      "comment": "Destructive row in the 詞庫 pane: deletes the frequency AND association records in one go. Acts on click, with no confirmation (USER 2026-08-25). macOS has no per-record management UI, so this is the only way to discard what the keyboard learned.",
+      "comment": "Destructive row in the Dictionary pane: deletes the frequency AND association records in one go. Acts on click, with no confirmation (USER 2026-08-25). macOS has no per-record management UI, so this is the only way to discard what the keyboard learned.",
       "scope": {
         "platforms": [
           "macos",
@@ -1634,7 +1634,7 @@
       }
     },
     "clearLearningRecordsDone": {
-      "comment": "Alert title after the 刪除學習紀錄 row finishes.",
+      "comment": "Alert title after the Delete Learning Records row finishes.",
       "scope": {
         "platforms": [
           "macos",
@@ -1654,7 +1654,7 @@
       }
     },
     "clearLearningRecordsFailed": {
-      "comment": "Alert title when 刪除學習紀錄 could not empty a table. The store's own diagnostic follows as the body.",
+      "comment": "Alert title when Delete Learning Records could not empty a table. The store's own diagnostic follows as the body.",
       "scope": {
         "platforms": [
           "macos",
@@ -1789,7 +1789,7 @@
       }
     },
     "customFontAlreadyInstalled": {
-      "comment": "字型管理 receipt shown when the user imports a font file whose face this computer already has; the import is dropped and the installed row is selected instead.",
+      "comment": "Manage Typefaces receipt shown when the user imports a font file whose face this computer already has; the import is dropped and the installed row is selected instead.",
       "scope": {
         "platforms": [
           "macos",
@@ -1849,7 +1849,7 @@
       }
     },
     "aboutTab": {
-      "comment": "Input-source menu row and settings window title: the 關於 page, reachable only from the menu — no sidebar row.",
+      "comment": "Input-source menu row and settings window title: the About page, reachable only from the menu — no sidebar row.",
       "scope": {
         "platforms": [
           "macos",
@@ -1869,7 +1869,7 @@
       }
     },
     "menuSettings": {
-      "comment": "Input-method menu row that opens the settings window, on all three desktops (USER 2026-09-24: menus identical incl. i18n). Names the keyboard because Fcitx5 lists its own 輸入法設定 in the same menu (Mozc: 「Mozc 設定」); wording from a Discord report 2026-09-24.",
+      "comment": "Input-method menu row that opens the settings window, on all three desktops (USER 2026-09-24: menus identical incl. i18n). Names the keyboard because Fcitx5 lists its own input-method settings row in the same menu (Mozc: 「Mozc 設定」); wording from a Discord report 2026-09-24.",
       "scope": {
         "platforms": [
           "macos",

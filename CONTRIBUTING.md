@@ -78,9 +78,9 @@ and check against the `taigi-converter/` submodule, which is the canonical
 converter. A plausible-looking rule that is wrong will silently corrupt the
 dictionary index.
 
-Note that a Taiwanese word is identified by the **pair** (漢字, romanization),
+Note that a Taiwanese word is identified by the **pair** (Hanji, romanization),
 never by either alone — 重/tîng and 重/tāng are different words, and so are two
-different 漢字 sharing a reading. Anything that deduplicates, looks up, ranks,
+different Hanji sharing a reading. Anything that deduplicates, looks up, ranks,
 or merges entries must key on the pair.
 
 ## Commits and pull requests

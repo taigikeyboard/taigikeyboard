@@ -9,7 +9,7 @@
 ## Summary
 
 - iOS/Android main app UI design specifications
-- 5-Tab structure: Home (頭頁), Theme (主題), Layout (佈局), Dictionary (詞庫), Settings (設定)
+- 5-Tab structure: Home, Theme, Layout, Dictionary, Settings
 - Supports Light/Dark Mode (iOS)
 
 ---
@@ -20,11 +20,11 @@ Tab order is fixed by iOS `App/Tabs/TabType.swift` (`home = 0 … settings = 4`)
 
 | Tab | iOS (`ios/Sources/TaigiKeyboard/App/Tabs/`) | Android (`ui/tabs/`) |
 |-----|-----|---------|
-| Home (頭頁) | `Home/HomeTab.swift` | `home/HomeScreen.kt` |
-| Theme (主題) | `Theme/ThemeTab.swift` (+ `ThemePickerView`, `ThemeEditorView`) | `theme/ThemePickerScreen.kt` + `ThemeEditorScreen.kt` |
-| Layout (佈局) | `Layout/LayoutTab.swift` | `layout/LayoutScreen.kt` |
-| Dictionary (詞庫) | `Dictionary/DictionaryTab.swift` | `dictionary/DictionarySettingsScreen.kt` |
-| Settings (設定) | `Settings/SettingsTab.swift` | `settings/InputSettingsScreen.kt` |
+| Home | `Home/HomeTab.swift` | `home/HomeScreen.kt` |
+| Theme | `Theme/ThemeTab.swift` (+ `ThemePickerView`, `ThemeEditorView`) | `theme/ThemePickerScreen.kt` + `ThemeEditorScreen.kt` |
+| Layout | `Layout/LayoutTab.swift` | `layout/LayoutScreen.kt` |
+| Dictionary | `Dictionary/DictionaryTab.swift` | `dictionary/DictionarySettingsScreen.kt` |
+| Settings | `Settings/SettingsTab.swift` | `settings/InputSettingsScreen.kt` |
 
 iOS tab container: `App/ContentView.swift` (`TabView`). Android uses Jetpack Compose screens (not Fragments); tab container: `ui/tabs/MainSettingsScreen.kt` (Material3 `NavigationBar`) mounted by `settings/SettingsMainActivity.kt`. The Theme tab is documented in [theme.md](theme.md).
 
@@ -115,7 +115,7 @@ The Dictionary tab expanded from basic dictionary settings to full data manageme
 | Custom Dictionary | `CustomDictionaryView.swift` | `CustomDictionaryScreen.kt` | CRUD, import/export |
 | Data Management | `DataManagementView.swift` | `DataManagementScreen.kt` | Backup/restore |
 
-Previous Debug screens (`DebugView`, `DebugActivity`) were removed and replaced by these production views. The 詞頻紀錄 / 詞關聯紀錄 viewer pages (list, recording toggle, CSV import/export, clear) were removed 2026-09-22 to declutter the tab; both records stay always on and travel only through the `.taigi` backup.
+Previous Debug screens (`DebugView`, `DebugActivity`) were removed and replaced by these production views. The word-frequency / word-association record viewer pages (list, recording toggle, CSV import/export, clear) were removed 2026-09-22 to declutter the tab; both records stay always on and travel only through the `.taigi` backup.
 
 ---
 

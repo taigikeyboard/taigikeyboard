@@ -20,11 +20,11 @@ read 2026-09-04):
 
 | | Unsigned (today) | Signed (when a certificate exists) |
 |---|---|---|
-| Download | "Windows protected your PC" — 其他資訊 → 仍要執行. Reputation restarts from zero **every version**: an unsigned file cannot inherit any. Enterprise policy can remove the "run anyway" choice | Also warns while the file is new — an OV or EV certificate does NOT buy a bypass, and has not for years — but reputation can then carry across versions on the same certificate |
+| Download | "Windows protected your PC" — More info → Run anyway. Reputation restarts from zero **every version**: an unsigned file cannot inherit any. Enterprise policy can remove the "run anyway" choice | Also warns while the file is new — an OV or EV certificate does NOT buy a bypass, and has not for years — but reputation can then carry across versions on the same certificate |
 | Win11 Smart App Control | Blocks execution outright unless the file has positive reputation | Same rule, but signing is how reputation accrues |
 | Install | Works; a TSF text service needs no signature | Same |
-| Update check, toast, 一般 pane row | Work | Work |
-| Update action | 下載安裝 → 安裝, in-app — admitted by the manifest's `packageSHA256` | Same, and the package's Authenticode signature is checked as well |
+| Update check, toast, General pane row | Work | Work |
+| Update action | Download and Install → Install, in-app — admitted by the manifest's `packageSHA256` | Same, and the package's Authenticode signature is checked as well |
 
 The in-app install is NOT gated by the running copy's signature. What admits
 a package is `taigi-windows-update::verify::admit`: the published SHA-256

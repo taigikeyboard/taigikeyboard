@@ -9,13 +9,13 @@
 
 ## Goal
 
-USER 2026-09-24: 「我需要一個end-to-end的自動化測試系統,能夠讓AI開啟模擬機測試輸入，並且分析debug log評估bug,效能等issue,debug log只在測試模式可見,因為輸入法在正式環境不適合發送任何log,for全平台,包含linux各個發行版本」
+USER 2026-09-24: "I need an end-to-end automated test system that lets AI open an emulator to test typing and analyse the debug log to assess bugs, performance and other issues; the debug log is visible only in test mode, because an input method should not send any log in production; for all platforms, including every linux distribution"
 
 1. An AI agent starts a simulator / emulator / VM / container, installs a **test build** of the IME, types real key sequences into a real text field, and reads back the committed text.
 2. The test build writes a **structured trace** (JSON Lines). An analyzer turns trace + expectations into a report: wrong commit, engine errors / panics, latency per operation, memory.
 3. **The trace exists only in test builds.** Release artifacts contain no trace code and write no trace file — enforced by build-script and CI checks (marker string + feature graph), not by a runtime switch. The one exception is swift-bridge's always-present `e2e_trace_open` stub, which returns false (bridge items cannot be cfg-gated, same as `panic_for_test`).
 4. Every platform: iOS, Android, macOS, Windows, Linux (Fcitx5 + IBus) on every packaged distribution (`.deb` Ubuntu / Debian, `.rpm` Fedora, `.pkg.tar.zst` Arch).
-5. **Real desktop sessions beside CI.** USER 2026-09-24: 「除了CI上執行的e2e以外,我希望能夠真實在linux VM,macos,windows開啟模擬器測試」. The headless Xvfb run (CI + `make e2e PLATFORM=linux`) stays; the desktop drivers type into the logged-in session of: both Linux VMs (UTM GNOME Wayland + IBus, VirtualBox KDE X11 + Fcitx5). Windows: USER 2026-09-24 「skip windows」 — no Windows e2e driver. macOS: USER 2026-09-24 「skip mac, macos我自己手動測試就好」 — no macOS e2e driver; macOS stays manual dogfood. USER decisions 2026-09-24: both Linux VMs; a screenshot per checkpoint is kept as evidence in the run dir, never asserted on.
+5. **Real desktop sessions beside CI.** USER 2026-09-24: "besides the e2e run on CI, I want to be able to really open emulators for tests on the linux VM, macos and windows". The headless Xvfb run (CI + `make e2e PLATFORM=linux`) stays; the desktop drivers type into the logged-in session of: both Linux VMs (UTM GNOME Wayland + IBus, VirtualBox KDE X11 + Fcitx5). Windows: USER 2026-09-24 「skip windows」 — no Windows e2e driver. macOS: USER 2026-09-24: "skip mac, I'll just test macos manually myself" — no macOS e2e driver; macOS stays manual dogfood. USER decisions 2026-09-24: both Linux VMs; a screenshot per checkpoint is kept as evidence in the run dir, never asserted on.
 
 ## Today (grounded in code)
 
@@ -78,7 +78,7 @@ The trace file lives in the platform's app sandbox (iOS extension container or A
 
 #### Trace schema (Codex revisions)
 
-`schema_version`; run / session / step IDs; engine `request.id` + `generation` (`engine/protos/proto/envelope.proto:136`); PID / TID; monotonic clock per process + a wall-clock anchor for cross-process alignment. Separate events for: key injected (driver), key received (IME), engine request / response, preedit / selection / effects, candidate list (`(漢字, canonical-TL)` identity per CLAUDE.md #6), commit call, **text observed by the host** (key-to-commit latency ends here), stale / dropped / cancelled, timeout / crash, trace flush status. Header records build id, dictionary version, settings snapshot, learning-data baseline. Memory samples name metric, PID, unit. Perf runs use the release profile plus the trace feature, and one run measures tracing overhead. Budgets are calibrated per device, not fixed (the iOS 64 MB cap is the one hard ceiling).
+`schema_version`; run / session / step IDs; engine `request.id` + `generation` (`engine/protos/proto/envelope.proto:136`); PID / TID; monotonic clock per process + a wall-clock anchor for cross-process alignment. Separate events for: key injected (driver), key received (IME), engine request / response, preedit / selection / effects, candidate list (`(Hanji, canonical-TL)` identity per CLAUDE.md #6), commit call, **text observed by the host** (key-to-commit latency ends here), stale / dropped / cancelled, timeout / crash, trace flush status. Header records build id, dictionary version, settings snapshot, learning-data baseline. Memory samples name metric, PID, unit. Perf runs use the release profile plus the trace feature, and one run measures tracing overhead. Budgets are calibrated per device, not fixed (the iOS 64 MB cap is the one hard ceiling).
 
 ### D3 — Drivers
 
@@ -129,16 +129,16 @@ PR1/PR2 of the first draft were over the 500-LOC cap (Codex) — split below.
 | PR3a | Linux: release zero-log (`taigi_linux_platform::install_debug_logger`, Fcitx5 `NDEBUG` macros), `e2e-trace` through `taigi-linux-core` / `-ffi` / `-ibus`, platform events (`key` / `preedit` / `commit` / `candidates` / `session_end`), `make build E2E=1` + package refusal + release guard | Merged #165 `34ae8d27` 2026-09-24 |
 | PR3b | Linux: driver `tools/e2e/linux/driver.py` (Xvfb + D-Bus + Fcitx5 / IBus + GTK 3 host + xdotool, test-mode build in a private prefix), `make e2e PLATFORM=linux` → UTM VM (`tools/e2e/linux/run.sh`), CI `linux-e2e.yml` (Ubuntu 24.04 runner), `/e2e` skill | Merged #166 `26c03a34` 2026-09-24 (VM + CI 6/6 PASS) |
 | PR3c | Linux desktop sessions: `make e2e PLATFORM=linux-desktop` (`tools/e2e/linux-desktop/run.sh`, `tools/e2e/linux/desktop.py`, `uinput.py`) drives both VMs' logged-in sessions. Framework swap (spike + Codex pre-review 2026-09-24, CONFIRM with revisions): IBus = `systemctl --user set-environment IBUS_COMPONENT_PATH` (system components minus ours + the test component, whose `<exec>` sets `IBUS_ADDRESS` then the scenario's private XDG dirs) + private `XDG_CACHE_HOME` + unit restart; Fcitx5 = original daemon's argv + environ saved, test daemon `--replace` with the prefix addon dirs and private XDG dirs. A 0600 restore marker is written before anything changes; every run restores a leftover one first. First runs 2026-09-24: GNOME 3/3 + KDE 3/3 PASS, both restored; VBox runs in NEM mode (VBS holds VT-x) → own calibrated budget in `e2e/budgets.json` | Merged #169 `1fde108f` 2026-09-24 |
-| PR4 | Linux: CI matrix Ubuntu 24.04 / Debian 13 / Fedora 44 / Arch × {Fcitx5, IBus}, each container building `make install E2E=1` from source against its own libraries (packages are never traced — PR3a; the shipped packages keep their `install-check` job). `linux-e2e.yml` becomes one container matrix (`linux-e2e-<distro>` artifacts; deps `tools/e2e/linux/ci-deps.sh`). USER 2026-09-24: PRs run Ubuntu only, the full matrix runs nightly 19:00 UTC (台灣 03:00) + on dispatch. First full runs: Ubuntu / Debian / Arch × both frameworks and Fedora × Fcitx5 PASS; **Fedora × IBus skipped** — its ibus-daemon lists only the system xkb engines, never the test component (`IBUS_COMPONENT_PATH` replaces the search path, `ibus/src/ibusregistry.c:262-286`; waiting for the daemon's address file did not help). USER 2026-09-24: skip it here, root-cause it in its own round | Merged #173 `6559488c` 2026-09-24 |
-| PR5 | macOS: `-DE2E_TRACE` events, CGEvent driver + host app | Dropped — USER 2026-09-24 「skip mac, macos我自己手動測試就好」 (would need a traced xcframework, a renamed E2E bundle beside the dev install, Swift platform events over a new FFI, a TIS + CGEvent driver and an Accessibility grant) |
+| PR4 | Linux: CI matrix Ubuntu 24.04 / Debian 13 / Fedora 44 / Arch × {Fcitx5, IBus}, each container building `make install E2E=1` from source against its own libraries (packages are never traced — PR3a; the shipped packages keep their `install-check` job). `linux-e2e.yml` becomes one container matrix (`linux-e2e-<distro>` artifacts; deps `tools/e2e/linux/ci-deps.sh`). USER 2026-09-24: PRs run Ubuntu only, the full matrix runs nightly 19:00 UTC (Taiwan 03:00) + on dispatch. First full runs: Ubuntu / Debian / Arch × both frameworks and Fedora × Fcitx5 PASS; **Fedora × IBus skipped** — its ibus-daemon lists only the system xkb engines, never the test component (`IBUS_COMPONENT_PATH` replaces the search path, `ibus/src/ibusregistry.c:262-286`; waiting for the daemon's address file did not help). USER 2026-09-24: skip it here, root-cause it in its own round | Merged #173 `6559488c` 2026-09-24 |
+| PR5 | macOS: `-DE2E_TRACE` events, CGEvent driver + host app | Dropped — USER 2026-09-24: "skip mac, I'll just test macos manually myself" (would need a traced xcframework, a renamed E2E bundle beside the dev install, Swift platform events over a new FFI, a TIS + CGEvent driver and an Accessibility grant) |
 | PR6 | Windows: TSF events, `/IT` interactive-session `SendInput` driver over `ssh win` | Dropped — USER 2026-09-24 「skip windows」, after PR6a's first box build hit `os error 4551` (Windows application control blocked a build binary). Unmerged branch `feat/e2e-windows-trace` deleted 2026-09-24 (USER) |
-| PR7 | Android: `e2e` build type, geometry manifest, adb tap driver, e2e AVD | Not planned — USER 2026-09-24 「PR7,8不需要,我暫時可以手動測試」 |
-| PR8 | iOS: `E2E_TRACE` events in the extension, geometry manifest, XCUITest driver | Not planned — USER 2026-09-24 「PR7,8不需要,我暫時可以手動測試」 |
-| PR9 | More scenarios (USER 2026-09-25 「ok,plan包含更多情境的測試」): 10 from S68 / S69 / S70 / S73 — multi-pick commits, Enter after a pick, backspace + re-pick, learned phrase keeps the separator kind, POJ, Caps Lock; `capslock` key name (the driver releases the lock after the scenario — the display outlives it). Not reachable with today's steps: S1 (no concrete I/O), S2 (desktop has no TPS mode), S62 (`kikhilai` offers no single 記 cell), settings beyond romanization / output, custom-entry seeding, highlight / paging | Merged #192 `ca4ff0f8` 2026-09-25; UTM VM 26/26 PASS |
+| PR7 | Android: `e2e` build type, geometry manifest, adb tap driver, e2e AVD | Not planned — USER 2026-09-24: "PR7,8 aren't needed; I can test manually for now" |
+| PR8 | iOS: `E2E_TRACE` events in the extension, geometry manifest, XCUITest driver | Not planned — USER 2026-09-24: "PR7,8 aren't needed; I can test manually for now" |
+| PR9 | More scenarios (USER 2026-09-25: "ok, plan tests covering more scenarios"): 10 from S68 / S69 / S70 / S73 — multi-pick commits, Enter after a pick, backspace + re-pick, learned phrase keeps the separator kind, POJ, Caps Lock; `capslock` key name (the driver releases the lock after the scenario — the display outlives it). Not reachable with today's steps: S1 (no concrete I/O), S2 (desktop has no TPS mode), S62 (`kikhilai` offers no single 記 cell), settings beyond romanization / output, custom-entry seeding, highlight / paging | Merged #192 `ca4ff0f8` 2026-09-25; UTM VM 26/26 PASS |
 
 Each platform PR adds its row to `/e2e` and its budgets; PR sizes 200–500 LOC.
 
-## Best practices alignment (最佳實踐對齊)
+## Best practices alignment
 
 | Mainstream practice | Source | This plan |
 |---|---|---|
@@ -146,7 +146,7 @@ Each platform PR adds its row to `/e2e` and its budgets; PR sizes 200–500 LOC.
 | Headless IME test harness driving key events into an input context | `references/fcitx5/test/testquickphrase.cpp:36-57` (`testfrontend` `keyEvent` + `pushCommitExpectation`) | D3 Linux: same idea, but through a real X11 client so packaging + addon loading are exercised too |
 | Debug-only logging compiled out of release | existing `DebugLogger.swift:3`, `AndroidLoggerBackend.kt:31`, `taigi-windows-platform/src/lib.rs:268` | D2 extends the same compile-time rule to the trace |
 
-Rules: `~/.claude/rules/planning.md` (roadmap + memory, grounded, PR sizing); `diagnosis-discipline.md` (an e2e failure is an observed failure → normal bugfix pre-gate); `code-review-rules.md` §9 (quantitative perf gate adopted here because the USER asked for 效能 analysis).
+Rules: `~/.claude/rules/planning.md` (roadmap + memory, grounded, PR sizing); `diagnosis-discipline.md` (an e2e failure is an observed failure → normal bugfix pre-gate); `code-review-rules.md` §9 (quantitative perf gate adopted here because the USER asked for performance analysis).
 
 ### Deliberately not adopted
 
@@ -158,8 +158,8 @@ Rules: `~/.claude/rules/planning.md` (roadmap + memory, grounded, PR sizing); `d
 
 ## USER decisions (2026-09-24)
 
-USER 2026-09-24: 「Ios我晚點加、windows如果關機就skip，其他go」
+USER 2026-09-24: "I'll add iOS later; skip windows if it's powered off; the rest go"
 
 1. iOS: the USER adds an XCUITest target in Xcode later; PR8 waits for it.
 2. Windows: the driver probes the box first; powered off, unreachable or locked console → the run reports `skipped` with the reason, never a failure.
-3. Linux CI matrix: runs on PRs touching `linux/`, `engine/` or `e2e/`, plus `workflow_dispatch`. Superseded USER 2026-09-25 「全部都改成排程執行」: no PR trigger; full matrix nightly 19:00 UTC + `workflow_dispatch` only.
+3. Linux CI matrix: runs on PRs touching `linux/`, `engine/` or `e2e/`, plus `workflow_dispatch`. Superseded USER 2026-09-25: "switch everything to scheduled runs": no PR trigger; full matrix nightly 19:00 UTC + `workflow_dispatch` only.

@@ -11,7 +11,7 @@ appearance, race, religion, or sexual identity and orientation.
 This project exists to help people write Taiwanese. Contributors come to it
 with very different backgrounds — native speakers, learners, linguists,
 programmers, and people who are several of those at once — and with different
-opinions about romanization, orthography, and which 漢字 is the right one.
+opinions about romanization, orthography, and which Hanji is the right one.
 Disagreement about that is the work. Contempt for the person you disagree with
 is not.
 

@@ -24,7 +24,7 @@ Clone with `--recurse-submodules`, or run `git submodule update --init --recursi
 
 The dictionary artifacts are committed, once, at `dictionaries/` — all four platforms package that directory the same way the typefaces are (Android through an `assets` source dir, iOS through an Xcode synchronized folder, macOS and Windows by copying it), so nothing has to be staged before a build.
 
-They stay committed at all because that is the USER's standing instruction (2026-09-07: 「dictionary/ folder 都不要碰」), not a technical limit; `make dict` does reproduce them from a clean checkout: `dictionary/build.sh` writes them into `dictionary/output/`, where the four shipped files are untracked scratch (`dictionary.csv` and `corpus_total_freq.txt` there stay tracked), and `dictionary/build/deploy.sh` then copies them to `dictionaries/`.
+They stay committed at all because that is the USER's standing instruction (2026-09-07: "do not touch the dictionary/ folder at all"), not a technical limit; `make dict` does reproduce them from a clean checkout: `dictionary/build.sh` writes them into `dictionary/output/`, where the four shipped files are untracked scratch (`dictionary.csv` and `corpus_total_freq.txt` there stay tracked), and `dictionary/build/deploy.sh` then copies them to `dictionaries/`.
 
 ## One pass per machine
 

@@ -8,7 +8,7 @@
 
 ## Summary
 
-- Theme picker (v3.6.2, 主題 tab): built-in theme families + up to 5 saved custom themes — see § Theme Picker below
+- Theme picker (v3.6.2, Theme tab): built-in theme families + up to 5 saved custom themes — see § Theme Picker below
 - Keys keep the platform's standard subtle key shadow by default; a custom theme can set its own key-shadow intensity (0 = flat … 4)
 - Font is a global keyboard setting (Settings tab), not part of a theme
 - iOS: Light/Dark Mode; Android: Light/Dark/Auto Mode
@@ -18,7 +18,7 @@
 
 ## Theme Picker (v3.6.2, current state)
 
-Shipped in v3.6.2 (`changelog/mobile-v3.6.2.md`) as the 主題 tab of the main app (tab order in [app-ui.md](app-ui.md)).
+Shipped in v3.6.2 (`changelog/mobile-v3.6.2.md`) as the Theme tab of the main app (tab order in [app-ui.md](app-ui.md)).
 
 ### Built-in catalog
 
@@ -26,23 +26,23 @@ Three key-style **families** over one shared set of 7 colours (`ios/Sources/Taig
 
 | Family | Key rendering |
 |---|---|
-| 經典 (classic) | filled keys |
-| 框線 (framed) | transparent keys + 1pt outline |
-| 簡潔 (clean) | transparent keys, no outline |
+| Filled | filled keys |
+| Outlined | transparent keys + 1pt outline |
+| Borderless | transparent keys, no outline |
 
-Colours per family: 預設 (adaptive, follows light/dark), five light-only soft gradients (櫻花 / 金煌 / 海風 / 翠青 / 藤紫), and 暗眠山貓 (Catppuccin Mocha, dark-only). The active theme paints every keyboard surface (keyboard, candidate strip, expanded candidate overlay, symbol / layout / settings overlays).
+Colours per family: Default (adaptive, follows light/dark), five light-only soft gradients (Sakura / Gold / Sea Breeze / Jade / Wisteria), and Catppuccin (Catppuccin Mocha, dark-only). The active theme paints every keyboard surface (keyboard, candidate strip, expanded candidate overlay, symbol / layout / settings overlays).
 
 ### Custom themes
 
 `Create New…` on the custom shelf opens the editor (`App/Tabs/Theme/ThemeEditorView.swift` + `ThemeEditorViewModel.swift`; Android `ui/tabs/theme/ThemeEditorScreen.kt` hosted by `settings/ThemeEditorActivity.kt`). A custom theme captures one `ThemeAppearance` bundle (`Settings/KeyboardThemeModels.swift`, Android `ime/core/ThemeAppearance.kt`): the background surface + four role colours (`KeyboardColorSettings`), the five size scalars, and `keyShadowIntensity`. Up to `UserThemeStore.maxUserThemes = 5` (`Settings/UserThemeStore.swift`; Android `ime/core/UserThemeStore.kt` `MAX_USER_THEMES`). A live keyboard preview (`KeyboardPreviewPanel.swift` / `ThemePreviewEnvironment.swift`) is pinned in the editor.
 
-**Editor order** (USER 2026-09-19, three sections = three surfaces; both platforms): **背景** — segmented 純色 / 漸層 / 照片, then the solid colour row, or the 起點色 / 終點色 rows (no 方向 row — the direction is the pointer on the pinned preview), or the 選擇照片 / 更換照片 picker row + a 淡化 slider · **按鍵** — 一般揤鈕色水 · 特殊揤鈕色水 · 揤鈕文字 · 圓角 · 邊粗幼 · 陰影 · 齒盤懸度 · 揤鈕字大細 · **候選詞** — 候選詞文字 · 候選詞大細 · 恢復預設設定 · pinned preview. The candidate bar has no colour of its own: it is the same surface as the keyboard.
+**Editor order** (USER 2026-09-19, three sections = three surfaces; both platforms): **Background** — segmented Solid / Gradient / Photo, then the solid colour row, or the Start Color / End Color rows (no Direction row — the direction is the pointer on the pinned preview), or the Choose Photo / Change Photo picker row + a Fade slider · **Keys** — Normal Key Fill · Special Key Fill · Key Text · Key Corner Radius · Key Border Width · Key Shadow · Keyboard Height · Key Font Size · **Candidate Bar** — Candidate Text · Candidate Text Size · Reset to Defaults · pinned preview. The candidate bar has no colour of its own: it is the same surface as the keyboard.
 
-**Scheme-invariant user themes** (USER 2026-09-19). A new custom theme starts from `UserThemeSeed` (background `0xD4D5DD`, key text `0x000000`, normal fill `0xFFFFFF`, special fill `0xABB1BA`, candidate text `0x000000`; a CROSS-PLATFORM INVARIANT mirrored in Android `UserThemeSeed`), so every role is concrete and the theme renders identically in light and dark mode. `UserThemeStore.load()` (iOS) / `UserTheme.fromJson` (Android) fills any `nil` role of an older saved theme from the same seed (no migration write). Each colour row's reset arrow restores the seed value; 恢復預設設定 restores the whole seed. The `default` buffer and built-in themes keep `nil` = adaptive.
+**Scheme-invariant user themes** (USER 2026-09-19). A new custom theme starts from `UserThemeSeed` (background `0xD4D5DD`, key text `0x000000`, normal fill `0xFFFFFF`, special fill `0xABB1BA`, candidate text `0x000000`; a CROSS-PLATFORM INVARIANT mirrored in Android `UserThemeSeed`), so every role is concrete and the theme renders identically in light and dark mode. `UserThemeStore.load()` (iOS) / `UserTheme.fromJson` (Android) fills any `nil` role of an older saved theme from the same seed (no migration write). Each colour row's reset arrow restores the seed value; Reset to Defaults restores the whole seed. The `default` buffer and built-in themes keep `nil` = adaptive.
 
 ### Background surface
 
-`KeyboardColorSettings.background: ThemeBackground?` is the ONE field that paints the keyboard + candidate-bar surface (`Settings/KeyboardColorSettings.swift`; Android `ime/core/KeyboardColorSettings.kt` sealed `ThemeBackground`). `nil` = adaptive (KeyboardKit's dynamic background, Liquid Glass eligible; Android `?keyboard_bgColor` — the 經典 預設 head only).
+`KeyboardColorSettings.background: ThemeBackground?` is the ONE field that paints the keyboard + candidate-bar surface (`Settings/KeyboardColorSettings.swift`; Android `ime/core/KeyboardColorSettings.kt` sealed `ThemeBackground`). `nil` = adaptive (KeyboardKit's dynamic background, Liquid Glass eligible; Android `?keyboard_bgColor` — the Filled Default head only).
 
 | Case | JSON | Render (iOS) | Render (Android) |
 |---|---|---|---|
@@ -50,7 +50,7 @@ Colours per family: 預設 (adaptive, follows light/dark), five light-only soft 
 | `.gradient(ThemeGradient)` | `{"type":"gradient","stops":[…],"angle":180}` | `ThemeBackgroundSurface` paints a `LinearGradient` from `ThemeGradient.unitPoints`; candidate bar `.clear`; expanded overlay repaints the same gradient; panel backdrops pass a `KeyboardSurfaceSlice` so the gradient's points are remapped into panel space (`ThemeGradient.unitPoints(in:)`) |
 | `.image(ThemeImageBackground)` | `{"type":"image","file":"<uuid>.jpg","dim":0.35}` | `ThemeBackgroundSurface` draws the photo in a `Canvas` (aspect-fill over the whole keyboard, `ThemeImageBackground.coverRect`, then the panel's slice), saturation ×0.7, then a tone overlay (white when the key text is dark, black otherwise) at `dim` (0…0.8). Photos live in the App Group `theme_images/<uuid>.jpg` (`ThemeImageStore`: downscaled to a 1280 px long edge, JPEG 0.85, backup-excluded; `SharedSettings.sweepThemeImages` removes files no saved theme references after every theme mutation); the extension decodes through `ThemeImageCache` (NSCache, 3 photos). Picked via `PhotosPicker` (no library permission). | a `PaintDrawable` shader built from the same unit points on `text_input_content`; Compose overlays / preview / card use `Modifier.themeBackground` → `ThemeGradient.brush` (unit points over the full keyboard, shifted by the panel's top inset) |
 
-`ThemeGradient.angle` follows the CSS / Figma convention: `0` = bottom→top, `90` = left→right, `180` = top→bottom (`defaultAngle`, used by every built-in gradient theme), clockwise. `unitPoints` normalises the direction vector by its larger component so the diagonals (the 45° presets) run corner to corner. **Setting the angle** (both platforms; iOS `App/Tabs/Theme/GradientDirectionControl.swift`, Android `ui/tabs/theme/GradientDirectionControl.kt`): while the background kind is 漸層, `GradientDirectionOverlay` covers the editor's live preview: dragging a finger sets the angle to the direction from the preview's centre to the finger (`GradientDirectionDrag.angle`), snapping to the nearest 45° preset (`ThemeGradient.presetStep` / `PRESET_STEP`) within ±6° with a haptic tick, else a whole degree; an 8 pt/dp dead zone at the centre is ignored. The overlay draws the axis + arrowhead (white on a dark halo) and is the whole control — no 方向 row (USER 2026-09-19: seeing the pointer is enough); for VoiceOver / TalkBack the overlay is one adjustable element (label 方向, value in degrees) stepping through the presets. The direction math (`direction(degrees:)` / `degrees(of:)`) lives on `ThemeGradient` and is shared with `unitPoints`. Decoding is legacy-compatible: an old `backgroundColor` becomes `.solid`, an old `backgroundGradient` (≥2 stops) becomes `.gradient` at `defaultAngle`, an old `candidateBackgroundColor` is ignored, and an unknown `type` degrades to `nil`. Encoding writes only `background`.
+`ThemeGradient.angle` follows the CSS / Figma convention: `0` = bottom→top, `90` = left→right, `180` = top→bottom (`defaultAngle`, used by every built-in gradient theme), clockwise. `unitPoints` normalises the direction vector by its larger component so the diagonals (the 45° presets) run corner to corner. **Setting the angle** (both platforms; iOS `App/Tabs/Theme/GradientDirectionControl.swift`, Android `ui/tabs/theme/GradientDirectionControl.kt`): while the background kind is Gradient, `GradientDirectionOverlay` covers the editor's live preview: dragging a finger sets the angle to the direction from the preview's centre to the finger (`GradientDirectionDrag.angle`), snapping to the nearest 45° preset (`ThemeGradient.presetStep` / `PRESET_STEP`) within ±6° with a haptic tick, else a whole degree; an 8 pt/dp dead zone at the centre is ignored. The overlay draws the axis + arrowhead (white on a dark halo) and is the whole control — no Direction row (USER 2026-09-19: seeing the pointer is enough); for VoiceOver / TalkBack the overlay is one adjustable element (label Direction, value in degrees) stepping through the presets. The direction math (`direction(degrees:)` / `degrees(of:)`) lives on `ThemeGradient` and is shared with `unitPoints`. Decoding is legacy-compatible: an old `backgroundColor` becomes `.solid`, an old `backgroundGradient` (≥2 stops) becomes `.gradient` at `defaultAngle`, an old `candidateBackgroundColor` is ignored, and an unknown `type` degrades to `nil`. Encoding writes only `background`.
 
 ### Key shadow
 
