@@ -214,14 +214,20 @@ final class NextWordController {
     private func dispatchPredictionQuery(word: String, roman: String, generation: UInt64, nowMs: Int64) {
         logger.debug("[TRIGGER] querying for word='\(word)' gen=\(generation)")
 
+        // Dictionary toggles snapshot at query start, before the SQL await —
+        // the bundled lookup answers for the settings the query began under.
+        let toggles = RustEngineBridge.DictionaryToggles(from: settingsProvider.current)
         Task { @MainActor [nextWordService] in
-            let raw = await nextWordService.predict(word: word, roman: roman)
-            handleQueryResult(raw: raw, queryGeneration: generation, nowMs: nowMs)
+            let userRows = await nextWordService.userRows(word: word, roman: roman)
+            handleQueryResult(
+                word: word, userRows: userRows, toggles: toggles,
+                queryGeneration: generation, nowMs: nowMs,
+            )
         }
     }
 
-    /// Resolve an async prediction query. Pushes raw rows back through
-    /// `nextwordFilter` so the Rust engine merges + scores + sorts + truncates
+    /// Resolve an async prediction query. `nextwordPredictNext` adds the
+    /// bundled rows for `word`, then merges + scores + sorts + truncates
     /// + drops on stale generation. Renders the resulting `NextWordEnginePrediction`s
     /// then pushes the new `is_showing` value back into engine state via
     /// `nextwordSetIsShowing` — required so subsequent
@@ -229,13 +235,17 @@ final class NextWordController {
     /// paths can emit `clearPredictionsUI` when there is UI to clear.
     @MainActor
     private func handleQueryResult(
-        raw: [RustEngineBridge.NextWordRawRow],
+        word: String,
+        userRows: [RustEngineBridge.NextWordRawRow],
+        toggles: RustEngineBridge.DictionaryToggles,
         queryGeneration: UInt64,
         nowMs: Int64,
     ) {
         let settings = settingsProvider.current
-        let filterResult = RustEngineBridge.nextwordFilter(
-            raw: raw,
+        let filterResult = RustEngineBridge.nextwordPredictNext(
+            word: word,
+            userRows: userRows,
+            toggles: toggles,
             queryGeneration: queryGeneration,
             nowMs: nowMs,
             limit: 30,

@@ -106,14 +106,6 @@ object RustEngineBridge {
         val sourceBitmask: UInt?,
     )
 
-    /** Bridge-synthesized companion to proto `LexiconAssocEntry`. */
-    data class LexiconAssocEntry(
-        val previousWord: String,
-        val candidateWord: String,
-        val candidateTl: String,
-        val count: UInt,
-    )
-
     /** Engine install diagnostic counts (for dogfood logging). */
     data class LexiconInstallStats(
         val dictionaryRecordCount: ULong,

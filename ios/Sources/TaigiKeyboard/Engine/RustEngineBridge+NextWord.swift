@@ -80,8 +80,8 @@ public extension RustEngineBridge {
         public let wasStale: Bool
     }
 
-    /// Pre-merge un-scored row from the platform `NextWordService.predict`
-    /// SQL pipeline. Crosses the bridge to the Rust filter step.
+    /// Pre-merge un-scored row from the platform `NextWordService.userRows`
+    /// SQL pipeline. Crosses the bridge as a `PredictNext.user_rows` entry.
     struct NextWordRawRow: Equatable {
         public enum Source { case dict, user }
 
@@ -261,10 +261,16 @@ public extension RustEngineBridge {
         )
     }
 
-    // MARK: - Filter
+    // MARK: - Predict
 
-    static func nextwordFilter(
-        raw: [NextWordRawRow],
+    /// One next-word query: the engine looks up the bundled bigrams for the
+    /// last character of `word` (sources from `toggles`), merges them with
+    /// `userRows` — kept in their SQL order — and scores, sorts, limits and
+    /// shapes the result. A stale `queryGeneration` returns `wasStale`.
+    static func nextwordPredictNext(
+        word: String,
+        userRows: [NextWordRawRow],
+        toggles: DictionaryToggles,
         queryGeneration: UInt64,
         nowMs: Int64,
         limit: Int32,
@@ -274,8 +280,10 @@ public extension RustEngineBridge {
         hyphenlessRoman: Bool = false,
         generation: UInt64,
     ) -> NextWordFilterResult {
-        var payload = Taigi_Engine_FilterPredictions()
-        payload.raw = raw.map { row in
+        var payload = Taigi_Engine_PredictNext()
+        payload.word = word
+        payload.toggles = dictionaryTogglesProto(toggles)
+        payload.userRows = userRows.map { row in
             var p = Taigi_Engine_RawNextWordPrediction()
             p.hanzi = row.hanzi
             p.tl = row.tl
@@ -289,8 +297,8 @@ public extension RustEngineBridge {
         payload.limit = limit
 
         guard let resp = nextwordDispatch(
-            method: .filterPredictions(payload),
-            op: "nextwordFilter",
+            method: .predictNext(payload),
+            op: "nextwordPredictNext",
             generation: generation,
             config: nextwordConfig(
                 mode: mode,
@@ -302,7 +310,7 @@ public extension RustEngineBridge {
             return NextWordFilterResult(predictions: [], wasStale: false)
         }
         guard case let .filter(filter)? = resp.result else {
-            recordFailure(op: "nextwordFilter", message: "missing filter result")
+            recordFailure(op: "nextwordPredictNext", message: "missing filter result")
             return NextWordFilterResult(predictions: [], wasStale: false)
         }
         let predictions = filter.predictions.map { p in
@@ -329,8 +337,8 @@ public extension RustEngineBridge {
     /// Build an `AppConfig` populated for the NextWord engine. iOS bridge
     /// always sets `platform_id = .ios`; tone toggles default to false (the
     /// NextWord engine does not read them, but the field is required).
-    // `candidateDisplayMode` and `hyphenlessRoman` ride only `nextwordFilter` — the sole nextword reader of
-    // fields 9 / 10 (mirrors Android); `nextwordFilter` MUST pass the live settings; the other entry points
+    // `candidateDisplayMode` and `hyphenlessRoman` ride only `nextwordPredictNext` — the sole nextword reader of
+    // fields 9 / 10 (mirrors Android); `nextwordPredictNext` MUST pass the live settings; the other entry points
     // leave the defaults.
     private static func nextwordConfig(
         mode: InputMode,

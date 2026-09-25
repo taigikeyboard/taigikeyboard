@@ -88,25 +88,6 @@ public interface LexiconRequestOrBuilder extends
 
   /**
    * <pre>
-   * bundled bigram
-   * </pre>
-   *
-   * <code>.taigi.engine.AssocLookupRequest assoc_lookup = 15;</code>
-   * @return Whether the assocLookup field is set.
-   */
-  boolean hasAssocLookup();
-  /**
-   * <pre>
-   * bundled bigram
-   * </pre>
-   *
-   * <code>.taigi.engine.AssocLookupRequest assoc_lookup = 15;</code>
-   * @return The assocLookup.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.AssocLookupRequest getAssocLookup();
-
-  /**
-   * <pre>
    * v3.5.7 Tab3 short-circuit
    * </pre>
    *

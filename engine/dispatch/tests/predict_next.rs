@@ -120,6 +120,18 @@ fn bundled_rows_join_learned_rows_when_sources_enabled() {
     assert!(predictions.len() <= 30);
 }
 
+// INVARIANT_NEXTWORD_LOOKUP_KEY_LAST_GRAPHEME: 𣍐 (U+2334D) is one key, so
+// 𣍐使 in the dictionary predicts 使 after a word ending in 𣍐.
+#[test]
+fn supplementary_plane_hanji_is_one_lookup_key() {
+    if !lexicon_ready() {
+        return;
+    }
+    let predictions = predict("袂𣍐", all_sources(true));
+    let hanzi = hanzi_of(&predictions);
+    assert!(hanzi.contains(&"使"), "bundled 𣍐→使 expected, got {hanzi:?}");
+}
+
 #[test]
 fn disabled_sources_leave_only_learned_rows() {
     if !lexicon_ready() {

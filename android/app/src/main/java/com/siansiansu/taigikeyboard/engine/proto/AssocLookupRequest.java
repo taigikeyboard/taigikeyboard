@@ -8,14 +8,13 @@ package com.siansiansu.taigikeyboard.engine.proto;
 /**
  * <pre>
  * `AssocLookupRequest` is the bundled-bigram lookup against `association.bin`
- * (TKWA). Called by the platform NextWord services (iOS `NextWordService.swift`
- * / Android `NextWordService.kt`) through their respective bridges
- * (`RustEngineBridge.lexiconAssocLookup` / `LexiconBridge.assocLookup`).
+ * (TKWA), the input of `lexicon::api::assoc_lookup`. Not a wire method: only
+ * engine/dispatch calls it, expanding nextword `PredictNext`
+ * (`engine/dispatch/src/predict.rs`).
  *
  * **Crate isolation invariant**: the Rust `engine/nextword` crate stays
  * independent of `engine/lexicon`. NextWord never imports or calls into
- * lexicon directly — the platform owns the cross-domain wiring (audit
- * goal-1 cross-module isolation).
+ * lexicon directly — engine/dispatch owns the cross-domain wiring.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.AssocLookupRequest}
@@ -241,14 +240,13 @@ public  final class AssocLookupRequest extends
   /**
    * <pre>
    * `AssocLookupRequest` is the bundled-bigram lookup against `association.bin`
-   * (TKWA). Called by the platform NextWord services (iOS `NextWordService.swift`
-   * / Android `NextWordService.kt`) through their respective bridges
-   * (`RustEngineBridge.lexiconAssocLookup` / `LexiconBridge.assocLookup`).
+   * (TKWA), the input of `lexicon::api::assoc_lookup`. Not a wire method: only
+   * engine/dispatch calls it, expanding nextword `PredictNext`
+   * (`engine/dispatch/src/predict.rs`).
    *
    * **Crate isolation invariant**: the Rust `engine/nextword` crate stays
    * independent of `engine/lexicon`. NextWord never imports or calls into
-   * lexicon directly — the platform owns the cross-domain wiring (audit
-   * goal-1 cross-module isolation).
+   * lexicon directly — engine/dispatch owns the cross-domain wiring.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.AssocLookupRequest}

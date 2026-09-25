@@ -28,9 +28,7 @@ enum CompositionRoot {
     static let learnedPhraseService: LearnedPhraseService = .init(
         repository: learnedPhraseRepository,
     )
-    static let nextWordService: NextWordService = .init(
-        settingsProvider: SharedSettings.shared,
-    )
+    static let nextWordService: NextWordService = .init()
 
     // MARK: - Composite services
 

@@ -285,7 +285,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
 
     func testFilter_userOutranksDictAtEqualCount() {
         let gen = currentGen()
-        let result = RustEngineBridge.nextwordFilter(
+        let result = predictWithoutBundledRows(
             raw: [
                 row(hanzi: "好", tl: "hó", count: 100, source: .dict),
                 row(hanzi: "早", tl: "tsá", count: 1, lastUsedMs: 1000, source: .user),
@@ -302,7 +302,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
 
     func testFilter_dictAndUserMergeSumScores() {
         let gen = currentGen()
-        let result = RustEngineBridge.nextwordFilter(
+        let result = predictWithoutBundledRows(
             raw: [
                 row(hanzi: "好", tl: "hó", count: 5, source: .dict),
                 row(hanzi: "好", tl: "hó", count: 1, lastUsedMs: 1000, source: .user),
@@ -326,7 +326,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
 
     func testFilter_emptyTLDroppedInRomanMode() {
         let gen = currentGen()
-        let result = RustEngineBridge.nextwordFilter(
+        let result = predictWithoutBundledRows(
             raw: [
                 row(hanzi: "好", tl: "hó", count: 5, source: .dict),
                 row(hanzi: "安", tl: "", count: 5, source: .dict),
@@ -343,7 +343,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
 
     func testFilter_emptyTLKeptInHanjiMode() {
         let gen = currentGen()
-        let result = RustEngineBridge.nextwordFilter(
+        let result = predictWithoutBundledRows(
             raw: [
                 row(hanzi: "好", tl: "hó", count: 5, source: .dict),
                 row(hanzi: "安", tl: "", count: 5, source: .dict),
@@ -359,7 +359,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
 
     func testFilter_pojModeEmitsPojRoman() {
         let gen = currentGen()
-        let result = RustEngineBridge.nextwordFilter(
+        let result = predictWithoutBundledRows(
             raw: [row(hanzi: "好", tl: "tsiok", count: 5, source: .dict)],
             queryGeneration: gen,
             nowMs: 1000,
@@ -376,7 +376,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
 
     func testFilter_staleQueryGenerationReturnsWasStale() {
         let gen = currentGen()
-        let result = RustEngineBridge.nextwordFilter(
+        let result = predictWithoutBundledRows(
             raw: [row(hanzi: "好", tl: "hó", count: 5, source: .dict)],
             queryGeneration: gen &- 1, // mismatch
             nowMs: 1000,
@@ -393,7 +393,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         let raw = (0 ..< 10).map { i in
             row(hanzi: "X\(i)", tl: "x\(i)", count: Int64(i + 1), source: .dict)
         }
-        let result = RustEngineBridge.nextwordFilter(
+        let result = predictWithoutBundledRows(
             raw: raw,
             queryGeneration: gen,
             nowMs: 1000,
@@ -412,7 +412,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
     /// row ("tâi-gí") for the same hanzi, so 台語 surfaces once.
     func testFilter_collapsesRawVariantIntoCanonical() {
         let gen = currentGen()
-        let result = RustEngineBridge.nextwordFilter(
+        let result = predictWithoutBundledRows(
             raw: [
                 row(hanzi: "台語", tl: "tâi-gí", count: 5, lastUsedMs: 1000, source: .user),
                 row(hanzi: "台語", tl: "taigi", count: 3, lastUsedMs: 1000, source: .user),
@@ -432,7 +432,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
     /// both carry tone marks, so the collapse leaves all readings intact.
     func testFilter_preservesDistinctPolyphones() {
         let gen = currentGen()
-        let result = RustEngineBridge.nextwordFilter(
+        let result = predictWithoutBundledRows(
             raw: [
                 row(hanzi: "重", tl: "tāng", count: 5, source: .dict),
                 row(hanzi: "重", tl: "tàng", count: 4, source: .dict),
@@ -522,6 +522,48 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             translateSwapped: false,
             generation: envelopeGen,
         ).currentGeneration
+    }
+
+    /// Every bundled association source off, so `nextwordPredictNext` adds no
+    /// `association.bin` rows and `raw` alone reaches the engine filter.
+    private static let noBundledSources: RustEngineBridge.DictionaryToggles = {
+        var settings = StubEngineSettings()
+        settings.isMoeDictEnabled = false
+        settings.isNewwordDictEnabled = false
+        settings.isITaigiDictEnabled = false
+        settings.isTaiwanPlantDictEnabled = false
+        settings.isTaiHuaDictEnabled = false
+        settings.isTaiwanJapanDictEnabled = false
+        settings.isKunggeDictEnabled = false
+        settings.isSttiDictEnabled = false
+        settings.isKhpooDictEnabled = false
+        return RustEngineBridge.DictionaryToggles(from: settings)
+    }()
+
+    /// The engine filter step (score, merge, sort, limit, stale drop) over
+    /// `raw` exactly, through `nextwordPredictNext`.
+    private func predictWithoutBundledRows(
+        raw: [RustEngineBridge.NextWordRawRow],
+        queryGeneration: UInt64,
+        nowMs: Int64,
+        limit: Int32,
+        mode: InputMode,
+        translateSwapped: Bool,
+        generation: UInt64,
+    ) -> RustEngineBridge.NextWordFilterResult {
+        RustEngineBridge.nextwordPredictNext(
+            // Any non-empty word: with every bundled source off it only
+            // gates the query (an empty word predicts nothing).
+            word: "早",
+            userRows: raw,
+            toggles: Self.noBundledSources,
+            queryGeneration: queryGeneration,
+            nowMs: nowMs,
+            limit: limit,
+            mode: mode,
+            translateSwapped: translateSwapped,
+            generation: generation,
+        )
     }
 
     private func row(

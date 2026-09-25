@@ -1,13 +1,13 @@
 //! Dispatch: route every `LexiconRequest.method` oneof variant to the
 //! per-method API — the read-path variants
-//! (Install/Search/SearchWithSources/SearchByHanzi/AssocLookup), the
+//! (Install/Search/SearchWithSources/SearchByHanzi), the
 //! IsHanzi predicate, and the v3.5.8
 //! DictionaryFilters variant.
 
 use protos::engine::lexicon_request::Method;
 use protos::engine::lexicon_response::Result as LexResult;
 use protos::engine::{
-    AssocLookupRequest, DictionaryFiltersRequest, InstallRequest, IsHanziRequest, LexiconResponse,
+    DictionaryFiltersRequest, InstallRequest, IsHanziRequest, LexiconResponse,
     SearchByHanziRequest, SearchRequest, SearchWithSourcesRequest,
 };
 
@@ -44,13 +44,6 @@ pub fn handle_search_by_hanzi(req: SearchByHanziRequest) -> Result<LexiconRespon
     })
 }
 
-pub fn handle_assoc_lookup(req: AssocLookupRequest) -> Result<LexiconResponse, LexiconError> {
-    let resp = api::assoc_lookup(req)?;
-    Ok(LexiconResponse {
-        result: Some(LexResult::AssocLookupResult(resp)),
-    })
-}
-
 pub fn handle_is_hanzi(req: IsHanziRequest) -> Result<LexiconResponse, LexiconError> {
     let resp = api::is_hanzi(req)?;
     Ok(LexiconResponse {
@@ -74,7 +67,6 @@ pub fn handle(method: Method) -> Result<LexiconResponse, LexiconError> {
         Method::Search(req) => handle_search(req),
         Method::SearchWithSources(req) => handle_search_with_sources(req),
         Method::SearchByHanzi(req) => handle_search_by_hanzi(req),
-        Method::AssocLookup(req) => handle_assoc_lookup(req),
         Method::IsHanzi(req) => handle_is_hanzi(req),
         Method::DictionaryFilters(req) => handle_dictionary_filters(req),
     }

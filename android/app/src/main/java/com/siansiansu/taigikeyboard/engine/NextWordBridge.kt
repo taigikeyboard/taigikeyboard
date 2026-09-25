@@ -1,4 +1,4 @@
-// NextWord ops — extensions on RustEngineBridge (decide intents + filter),
+// NextWord ops — extensions on RustEngineBridge (decide intents + predict),
 // mirroring iOS RustEngineBridge+NextWord.swift over a JNI roundtrip; nested types stay in RustEngineBridge.
 
 package com.siansiansu.taigikeyboard.engine
@@ -179,12 +179,15 @@ fun RustEngineBridge.nextwordUpdateLastSelectedWord(
 }
 
 // endregion
-// region Filter
+// region Predict
 
-// Platform SQL supplies the raw dict + user prediction rows; Rust does score+merge+sort+limit.
+// Platform SQL supplies the learned rows (best evidence first); the engine adds the bundled rows
+// for the last character of [word], then scores, merges, sorts, limits and shapes.
 // A queryGeneration that no longer matches currentGeneration returns wasStale=true — caller drops the result.
-fun RustEngineBridge.nextwordFilter(
-    raw: List<RustEngineBridge.NextWordRawRow>,
+fun RustEngineBridge.nextwordPredictNext(
+    word: String,
+    userRows: List<RustEngineBridge.NextWordRawRow>,
+    toggles: RustEngineBridge.DictionaryToggles,
     queryGeneration: Long,
     nowMs: Long,
     limit: Int,
@@ -194,13 +197,15 @@ fun RustEngineBridge.nextwordFilter(
     candidateDisplayMode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
     hyphenlessRoman: Boolean = false,
 ): RustEngineBridge.NextWordFilterResult {
-    val builder = com.siansiansu.taigikeyboard.engine.proto.FilterPredictions
+    val builder = com.siansiansu.taigikeyboard.engine.proto.PredictNext
         .newBuilder()
+        .setWord(word)
+        .setToggles(dictionaryTogglesProto(toggles))
         .setQueryGeneration(queryGeneration)
         .setNowMs(nowMs)
         .setLimit(limit)
-    for (row in raw) {
-        builder.addRaw(
+    for (row in userRows) {
+        builder.addUserRows(
             com.siansiansu.taigikeyboard.engine.proto.RawNextWordPrediction
                 .newBuilder()
                 .setHanzi(row.hanzi)
@@ -216,16 +221,16 @@ fun RustEngineBridge.nextwordFilter(
         )
     }
     val resp = nextwordDispatch(
-        methodSetter = { it.filterPredictions = builder.build() },
-        op = "nextwordFilter",
+        methodSetter = { it.predictNext = builder.build() },
+        op = "nextwordPredictNext",
         generation = generation,
-        // Fields 9 / 10 ride only the filter request — the sole nextword reader
+        // Fields 9 / 10 ride only the predict request — the sole nextword reader
         // (`nextword/src/filter.rs` collapses same-roman predictions under ROMAN_ONLY
         // and shapes `text` hyphenless under 無連字符).
         config = nextwordConfig(mode, translateSwapped, candidateDisplayMode, hyphenlessRoman),
     ) ?: return RustEngineBridge.NextWordFilterResult(emptyList(), wasStale = false)
     if (!resp.hasFilter()) {
-        RustEngineBridge.recordFailure("nextwordFilter", "missing filter result")
+        RustEngineBridge.recordFailure("nextwordPredictNext", "missing filter result")
         return RustEngineBridge.NextWordFilterResult(emptyList(), wasStale = false)
     }
     val filter = resp.filter

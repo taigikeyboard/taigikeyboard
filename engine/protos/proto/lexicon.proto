@@ -29,15 +29,16 @@ message LexiconRequest {
   // Tag 10 was `process_candidates` (legacy linear ranking, no production
   // caller since v3.5.8; removed).
   // Tag 16 was `classify_input` (no production caller; removed 2026-09-25).
-  reserved 10, 16;
-  reserved "process_candidates", "classify_input";
+  // Tag 15 was `assoc_lookup`; the bundled bigram lookup now runs inside
+  // engine/dispatch for nextword `PredictNext` (2026-09-25).
+  reserved 10, 15, 16;
+  reserved "process_candidates", "classify_input", "assoc_lookup";
 
   oneof method {
     InstallRequest            install               = 11;  // lexicon read-path
     SearchRequest             search                = 12;  // autocomplete entry
     SearchWithSourcesRequest  search_with_sources   = 13;  // Tab3 multi-source
     SearchByHanziRequest      search_by_hanzi       = 14;  // Tab3 hanzi prefix
-    AssocLookupRequest        assoc_lookup          = 15;  // bundled bigram
     IsHanziRequest            is_hanzi              = 17;  // v3.5.7 Tab3 short-circuit
     DictionaryFiltersRequest  dictionary_filters    = 18;  // v3.5.8 toggles → bitmasks + enabled codes
   }
@@ -139,14 +140,13 @@ message SearchByHanziRequest {
 }
 
 // `AssocLookupRequest` is the bundled-bigram lookup against `association.bin`
-// (TKWA). Called by the platform NextWord services (iOS `NextWordService.swift`
-// / Android `NextWordService.kt`) through their respective bridges
-// (`RustEngineBridge.lexiconAssocLookup` / `LexiconBridge.assocLookup`).
+// (TKWA), the input of `lexicon::api::assoc_lookup`. Not a wire method: only
+// engine/dispatch calls it, expanding nextword `PredictNext`
+// (`engine/dispatch/src/predict.rs`).
 //
 // **Crate isolation invariant**: the Rust `engine/nextword` crate stays
 // independent of `engine/lexicon`. NextWord never imports or calls into
-// lexicon directly — the platform owns the cross-domain wiring (audit
-// goal-1 cross-module isolation).
+// lexicon directly — engine/dispatch owns the cross-domain wiring.
 message AssocLookupRequest {
   string previous_word           = 1;
   uint32 limit                   = 2;
@@ -189,8 +189,8 @@ message DictionaryFiltersRequest {
 //   `AssocLookupRequest.enabled_sources_bitmask`. Equals `u32::MAX` when
 //   ALL 9 association sources are enabled (preserves the documented
 //   sentinel shortcut at `lexicon.proto:166-173`); otherwise equals the
-//   association mask (bits 0-8). Platform NextWord callers forward
-//   directly without re-branching.
+//   association mask (bits 0-8). engine/dispatch `PredictNext` computes it
+//   itself from the toggles; platforms no longer forward it.
 // - `enabled_source_codes` lists every `DictionarySourceCode` whose source
 //   the user has toggled on. `DEV` + `CUSTOM` are always present
 //   (non-toggleable). Platforms decode via explicit switch/map into their
@@ -207,15 +207,14 @@ message DictionaryFiltersResponse {
 // =========================================================================
 
 message LexiconResponse {
-  reserved 10, 16;
-  reserved "process_candidates_result", "classify_input_result";
+  reserved 10, 15, 16;
+  reserved "process_candidates_result", "classify_input_result", "assoc_lookup_result";
 
   oneof result {
     InstallResponse            install_result              = 11;
     SearchResponse             search_result               = 12;
     SearchWithSourcesResponse  search_with_sources_result  = 13;
     SearchByHanziResponse      search_by_hanzi_result      = 14;
-    AssocLookupResponse        assoc_lookup_result         = 15;
     IsHanziResponse            is_hanzi_result             = 17;
     DictionaryFiltersResponse  dictionary_filters_result   = 18;
   }
@@ -247,9 +246,8 @@ message SearchByHanziResponse {
   repeated TaigiWord rows = 1;
 }
 
-// `AssocLookupResponse.entries` is a vector of bundled bigram entries. The
-// platform NextWord services rank/filter further; the engine just emits
-// the raw matches.
+// `AssocLookupResponse.entries` is a vector of bundled bigram entries; the
+// nextword filter ranks them after engine/dispatch tags them SOURCE_DICT.
 message AssocLookupResponse {
   repeated LexiconAssocEntry entries = 1;
 }

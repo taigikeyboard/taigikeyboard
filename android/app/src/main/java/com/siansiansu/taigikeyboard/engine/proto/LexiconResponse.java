@@ -24,7 +24,6 @@ public  final class LexiconResponse extends
     SEARCH_RESULT(12),
     SEARCH_WITH_SOURCES_RESULT(13),
     SEARCH_BY_HANZI_RESULT(14),
-    ASSOC_LOOKUP_RESULT(15),
     IS_HANZI_RESULT(17),
     DICTIONARY_FILTERS_RESULT(18),
     RESULT_NOT_SET(0);
@@ -46,7 +45,6 @@ public  final class LexiconResponse extends
         case 12: return SEARCH_RESULT;
         case 13: return SEARCH_WITH_SOURCES_RESULT;
         case 14: return SEARCH_BY_HANZI_RESULT;
-        case 15: return ASSOC_LOOKUP_RESULT;
         case 17: return IS_HANZI_RESULT;
         case 18: return DICTIONARY_FILTERS_RESULT;
         case 0: return RESULT_NOT_SET;
@@ -265,56 +263,6 @@ public  final class LexiconResponse extends
    */
   private void clearSearchByHanziResult() {
     if (resultCase_ == 14) {
-      resultCase_ = 0;
-      result_ = null;
-    }
-  }
-
-  public static final int ASSOC_LOOKUP_RESULT_FIELD_NUMBER = 15;
-  /**
-   * <code>.taigi.engine.AssocLookupResponse assoc_lookup_result = 15;</code>
-   */
-  @java.lang.Override
-  public boolean hasAssocLookupResult() {
-    return resultCase_ == 15;
-  }
-  /**
-   * <code>.taigi.engine.AssocLookupResponse assoc_lookup_result = 15;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.AssocLookupResponse getAssocLookupResult() {
-    if (resultCase_ == 15) {
-       return (com.siansiansu.taigikeyboard.engine.proto.AssocLookupResponse) result_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.AssocLookupResponse.getDefaultInstance();
-  }
-  /**
-   * <code>.taigi.engine.AssocLookupResponse assoc_lookup_result = 15;</code>
-   */
-  private void setAssocLookupResult(com.siansiansu.taigikeyboard.engine.proto.AssocLookupResponse value) {
-    java.util.Objects.requireNonNull(value);
-    result_ = value;
-    resultCase_ = 15;
-  }
-  /**
-   * <code>.taigi.engine.AssocLookupResponse assoc_lookup_result = 15;</code>
-   */
-  private void mergeAssocLookupResult(com.siansiansu.taigikeyboard.engine.proto.AssocLookupResponse value) {
-    java.util.Objects.requireNonNull(value);
-    if (resultCase_ == 15 &&
-        result_ != com.siansiansu.taigikeyboard.engine.proto.AssocLookupResponse.getDefaultInstance()) {
-      result_ = com.siansiansu.taigikeyboard.engine.proto.AssocLookupResponse.newBuilder((com.siansiansu.taigikeyboard.engine.proto.AssocLookupResponse) result_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      result_ = value;
-    }
-    resultCase_ = 15;
-  }
-  /**
-   * <code>.taigi.engine.AssocLookupResponse assoc_lookup_result = 15;</code>
-   */
-  private void clearAssocLookupResult() {
-    if (resultCase_ == 15) {
       resultCase_ = 0;
       result_ = null;
     }
@@ -722,54 +670,6 @@ public  final class LexiconResponse extends
     }
 
     /**
-     * <code>.taigi.engine.AssocLookupResponse assoc_lookup_result = 15;</code>
-     */
-    @java.lang.Override
-    public boolean hasAssocLookupResult() {
-      return instance.hasAssocLookupResult();
-    }
-    /**
-     * <code>.taigi.engine.AssocLookupResponse assoc_lookup_result = 15;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.AssocLookupResponse getAssocLookupResult() {
-      return instance.getAssocLookupResult();
-    }
-    /**
-     * <code>.taigi.engine.AssocLookupResponse assoc_lookup_result = 15;</code>
-     */
-    public Builder setAssocLookupResult(com.siansiansu.taigikeyboard.engine.proto.AssocLookupResponse value) {
-      copyOnWrite();
-      instance.setAssocLookupResult(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.AssocLookupResponse assoc_lookup_result = 15;</code>
-     */
-    public Builder setAssocLookupResult(
-        com.siansiansu.taigikeyboard.engine.proto.AssocLookupResponse.Builder builderForValue) {
-      copyOnWrite();
-      instance.setAssocLookupResult(builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.AssocLookupResponse assoc_lookup_result = 15;</code>
-     */
-    public Builder mergeAssocLookupResult(com.siansiansu.taigikeyboard.engine.proto.AssocLookupResponse value) {
-      copyOnWrite();
-      instance.mergeAssocLookupResult(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.AssocLookupResponse assoc_lookup_result = 15;</code>
-     */
-    public Builder clearAssocLookupResult() {
-      copyOnWrite();
-      instance.clearAssocLookupResult();
-      return this;
-    }
-
-    /**
      * <code>.taigi.engine.IsHanziResponse is_hanzi_result = 17;</code>
      */
     @java.lang.Override
@@ -887,13 +787,12 @@ public  final class LexiconResponse extends
             com.siansiansu.taigikeyboard.engine.proto.SearchResponse.class,
             com.siansiansu.taigikeyboard.engine.proto.SearchWithSourcesResponse.class,
             com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponse.class,
-            com.siansiansu.taigikeyboard.engine.proto.AssocLookupResponse.class,
             com.siansiansu.taigikeyboard.engine.proto.IsHanziResponse.class,
             com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersResponse.class,
           };
           java.lang.String info =
-              "\u0000\u0007\u0001\u0000\u000b\u0012\u0007\u0000\u0000\u0000\u000b<\u0000\f<\u0000" +
-              "\r<\u0000\u000e<\u0000\u000f<\u0000\u0011<\u0000\u0012<\u0000";
+              "\u0000\u0006\u0001\u0000\u000b\u0012\u0006\u0000\u0000\u0000\u000b<\u0000\f<\u0000" +
+              "\r<\u0000\u000e<\u0000\u0011<\u0000\u0012<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {
