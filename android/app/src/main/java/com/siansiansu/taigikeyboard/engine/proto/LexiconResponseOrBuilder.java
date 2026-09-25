@@ -11,17 +11,6 @@ public interface LexiconResponseOrBuilder extends
     com.google.protobuf.MessageLiteOrBuilder {
 
   /**
-   * <code>.taigi.engine.ProcessCandidatesResponse process_candidates_result = 10;</code>
-   * @return Whether the processCandidatesResult field is set.
-   */
-  boolean hasProcessCandidatesResult();
-  /**
-   * <code>.taigi.engine.ProcessCandidatesResponse process_candidates_result = 10;</code>
-   * @return The processCandidatesResult.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesResponse getProcessCandidatesResult();
-
-  /**
    * <code>.taigi.engine.InstallResponse install_result = 11;</code>
    * @return Whether the installResult field is set.
    */

@@ -20,7 +20,6 @@ public  final class LexiconResponse extends
   private java.lang.Object result_;
   public enum ResultCase
       implements com.google.protobuf.AbstractMessageLite.InternalOneOfEnum {
-    PROCESS_CANDIDATES_RESULT(10),
     INSTALL_RESULT(11),
     SEARCH_RESULT(12),
     SEARCH_WITH_SOURCES_RESULT(13),
@@ -44,7 +43,6 @@ public  final class LexiconResponse extends
 
     public static ResultCase forNumber(int value) {
       switch (value) {
-        case 10: return PROCESS_CANDIDATES_RESULT;
         case 11: return INSTALL_RESULT;
         case 12: return SEARCH_RESULT;
         case 13: return SEARCH_WITH_SOURCES_RESULT;
@@ -72,56 +70,6 @@ public  final class LexiconResponse extends
   private void clearResult() {
     resultCase_ = 0;
     result_ = null;
-  }
-
-  public static final int PROCESS_CANDIDATES_RESULT_FIELD_NUMBER = 10;
-  /**
-   * <code>.taigi.engine.ProcessCandidatesResponse process_candidates_result = 10;</code>
-   */
-  @java.lang.Override
-  public boolean hasProcessCandidatesResult() {
-    return resultCase_ == 10;
-  }
-  /**
-   * <code>.taigi.engine.ProcessCandidatesResponse process_candidates_result = 10;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesResponse getProcessCandidatesResult() {
-    if (resultCase_ == 10) {
-       return (com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesResponse) result_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesResponse.getDefaultInstance();
-  }
-  /**
-   * <code>.taigi.engine.ProcessCandidatesResponse process_candidates_result = 10;</code>
-   */
-  private void setProcessCandidatesResult(com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesResponse value) {
-    java.util.Objects.requireNonNull(value);
-    result_ = value;
-    resultCase_ = 10;
-  }
-  /**
-   * <code>.taigi.engine.ProcessCandidatesResponse process_candidates_result = 10;</code>
-   */
-  private void mergeProcessCandidatesResult(com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesResponse value) {
-    java.util.Objects.requireNonNull(value);
-    if (resultCase_ == 10 &&
-        result_ != com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesResponse.getDefaultInstance()) {
-      result_ = com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesResponse.newBuilder((com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesResponse) result_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      result_ = value;
-    }
-    resultCase_ = 10;
-  }
-  /**
-   * <code>.taigi.engine.ProcessCandidatesResponse process_candidates_result = 10;</code>
-   */
-  private void clearProcessCandidatesResult() {
-    if (resultCase_ == 10) {
-      resultCase_ = 0;
-      result_ = null;
-    }
   }
 
   public static final int INSTALL_RESULT_FIELD_NUMBER = 11;
@@ -634,54 +582,6 @@ public  final class LexiconResponse extends
 
 
     /**
-     * <code>.taigi.engine.ProcessCandidatesResponse process_candidates_result = 10;</code>
-     */
-    @java.lang.Override
-    public boolean hasProcessCandidatesResult() {
-      return instance.hasProcessCandidatesResult();
-    }
-    /**
-     * <code>.taigi.engine.ProcessCandidatesResponse process_candidates_result = 10;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesResponse getProcessCandidatesResult() {
-      return instance.getProcessCandidatesResult();
-    }
-    /**
-     * <code>.taigi.engine.ProcessCandidatesResponse process_candidates_result = 10;</code>
-     */
-    public Builder setProcessCandidatesResult(com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesResponse value) {
-      copyOnWrite();
-      instance.setProcessCandidatesResult(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.ProcessCandidatesResponse process_candidates_result = 10;</code>
-     */
-    public Builder setProcessCandidatesResult(
-        com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesResponse.Builder builderForValue) {
-      copyOnWrite();
-      instance.setProcessCandidatesResult(builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.ProcessCandidatesResponse process_candidates_result = 10;</code>
-     */
-    public Builder mergeProcessCandidatesResult(com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesResponse value) {
-      copyOnWrite();
-      instance.mergeProcessCandidatesResult(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.ProcessCandidatesResponse process_candidates_result = 10;</code>
-     */
-    public Builder clearProcessCandidatesResult() {
-      copyOnWrite();
-      instance.clearProcessCandidatesResult();
-      return this;
-    }
-
-    /**
      * <code>.taigi.engine.InstallResponse install_result = 11;</code>
      */
     @java.lang.Override
@@ -1083,7 +983,6 @@ public  final class LexiconResponse extends
           java.lang.Object[] objects = new java.lang.Object[] {
             "result_",
             "resultCase_",
-            com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesResponse.class,
             com.siansiansu.taigikeyboard.engine.proto.InstallResponse.class,
             com.siansiansu.taigikeyboard.engine.proto.SearchResponse.class,
             com.siansiansu.taigikeyboard.engine.proto.SearchWithSourcesResponse.class,
@@ -1094,8 +993,8 @@ public  final class LexiconResponse extends
             com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersResponse.class,
           };
           java.lang.String info =
-              "\u0000\t\u0001\u0000\n\u0012\t\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f<\u0000\r" +
-              "<\u0000\u000e<\u0000\u000f<\u0000\u0010<\u0000\u0011<\u0000\u0012<\u0000";
+              "\u0000\b\u0001\u0000\u000b\u0012\b\u0000\u0000\u0000\u000b<\u0000\f<\u0000\r<\u0000" +
+              "\u000e<\u0000\u000f<\u0000\u0010<\u0000\u0011<\u0000\u0012<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

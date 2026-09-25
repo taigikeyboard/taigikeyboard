@@ -4,9 +4,9 @@ import Foundation
 
 // Pure logic, Foundation-only. Eligible for cross-platform extraction.
 
-/// Per-word frequency snapshot consumed by ranking. Marshalled to
-/// `Taigi_Engine_FrequencyEntry` inside `RustEngineBridge.processCandidates`
-/// for `engine/ranking/src/score.rs::calculate_score`.
+/// Per-word frequency snapshot consumed by ranking. `FrequencyRow` rows
+/// are marshalled to `Taigi_Engine_FrequencyEntry` for the Continuous
+/// `FetchAtPos` fetch (`engine/ranking/src/score.rs::build_frequency_map`).
 ///
 /// Hoisted out of `UserFrequencyRepository` so the bridge marshalling code
 /// depends on this Foundation-only value type rather than an iOS-only

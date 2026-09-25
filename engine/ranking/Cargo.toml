@@ -10,7 +10,4 @@ publish = false
 workspace = true
 
 [dependencies]
-phonetics = { workspace = true }
 protos = { workspace = true }
-unicode-normalization = { workspace = true }
-unicode-properties = { workspace = true }

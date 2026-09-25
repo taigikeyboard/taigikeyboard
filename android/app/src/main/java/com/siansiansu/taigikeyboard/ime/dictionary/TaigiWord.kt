@@ -12,8 +12,6 @@ package com.siansiansu.taigikeyboard.ime.dictionary
  * @property lengthScore Dictionary frequency score used for ranking; higher is more common.
  * @property sourceBitmask u16 source-dictionary bitmask from `dictionary.bin`,
  *   `null` for non-dictionary sources (custom dict, autocomplete, spell-check).
- *   Consumed by `engine/ranking/src/score.rs::tier_numerator` through
- *   `RustEngineBridge.processCandidates`.
  *
  * Compose stability contract — declared stable in
  * `android/app/compose_compiler_config.conf` so `CandidateCell(word:

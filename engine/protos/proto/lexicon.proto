@@ -5,10 +5,10 @@ package taigi.engine;
 option java_package = "com.siansiansu.taigikeyboard.engine.proto";
 option java_multiple_files = true;
 
-// Lexicon module — candidate ranking, dedup, scoring, sorting.
+// Lexicon module — dictionary install, search, association lookup, input
+// classification and dictionary-filter resolution.
 //
-// Single op `process_candidates` lives in LexiconRequest.method oneof.
-// Pattern mirrors PhoneticsRequest.method oneof so the top-level dispatcher
+// Ops live in the LexiconRequest.method oneof. Pattern mirrors PhoneticsRequest.method oneof so the top-level dispatcher
 // (engine::dispatch) routes by Request.payload tag and then per-module
 // dispatch routes by oneof method.
 //
@@ -27,8 +27,12 @@ option java_multiple_files = true;
 // =========================================================================
 
 message LexiconRequest {
+  // Tag 10 was `process_candidates` (legacy linear ranking, no production
+  // caller since v3.5.8; removed).
+  reserved 10;
+  reserved "process_candidates";
+
   oneof method {
-    ProcessCandidatesRequest  process_candidates    = 10;  // ranking
     InstallRequest            install               = 11;  // lexicon read-path
     SearchRequest             search                = 12;  // autocomplete entry
     SearchWithSourcesRequest  search_with_sources   = 13;  // Tab3 multi-source
@@ -43,42 +47,6 @@ message LexiconRequest {
 // =========================================================================
 // Request payloads
 // =========================================================================
-
-// `ProcessCandidatesRequest` is the merged-list ranking pipeline:
-// remove_duplicates → calculate_score per candidate → sort_by_score →
-// (optional) remove_display_duplicates if `tps_dedup_enabled`.
-//
-// Replaces both platforms' inline `LexiconService` calls into
-// `CandidateProcessor.removeDuplicates`, `sortByScore`, and (TPS-gated)
-// `removeDisplayDuplicates`.
-//
-// `tps_dedup_enabled` is platform-decided (iOS `inputMode == .tps`,
-// Android `settings?.inputMode == "tps"`); audit § 3 confirms identical
-// semantics today. Engine does not derive it from `input_mode`.
-//
-// `include_breakdown` toggles per-candidate ScoreBreakdown serialization
-// for #if DEBUG logging on iOS / Android. Off in release builds for zero
-// per-call serialization overhead.
-//
-// `now_ms` is caller-supplied to keep ranking deterministic in tests.
-message ProcessCandidatesRequest {
-  repeated TaigiWord raw = 1;
-  string normalized_input = 2;
-  bool tps_dedup_enabled = 4;
-  repeated FrequencyEntry freq = 5;
-  int64 now_ms = 6;
-  bool include_breakdown = 7;
-  // `merge_order_only = true` skips score + sort and returns the
-  // dedup result directly in input (merged) order. Replaces iOS
-  // `LexiconService` cold-start fallback that previously used Swift
-  // `CandidateProcessor.removeDuplicates` + `removeDisplayDuplicates`.
-  // Output `breakdown` is always empty when this flag is set —
-  // there is no scoring to break down. `now_ms` and `freq` are
-  // ignored. `tps_dedup_enabled` still gates the display dedup pass
-  // (must run AFTER the engine dedup, same ordering invariant as
-  // the score path).
-  bool merge_order_only = 8;
-}
 
 // `InstallRequest` is the (idempotent) lexicon read-path bootstrap. The
 // platform passes absolute Bundle / filesDir paths; engine opens mmap'd
@@ -251,8 +219,10 @@ message DictionaryFiltersResponse {
 // =========================================================================
 
 message LexiconResponse {
+  reserved 10;
+  reserved "process_candidates_result";
+
   oneof result {
-    ProcessCandidatesResponse  process_candidates_result   = 10;
     InstallResponse            install_result              = 11;
     SearchResponse             search_result               = 12;
     SearchWithSourcesResponse  search_with_sources_result  = 13;
@@ -267,17 +237,6 @@ message LexiconResponse {
 // =========================================================================
 // Response payloads
 // =========================================================================
-
-// `ProcessCandidatesResponse.ranked` is the dedup → score → sort →
-// (TPS-gated) display-dedup pipeline output.
-//
-// `breakdown` is populated only when the request had
-// `include_breakdown = true`; when populated, `breakdown[i]` corresponds
-// to `ranked[i]` so platform-side debug formatters can pair them.
-message ProcessCandidatesResponse {
-  repeated TaigiWord ranked = 1;
-  repeated ScoreBreakdown breakdown = 2;
-}
 
 // `InstallResponse` carries diagnostic counts. Platform diagnostic surfaces
 // log these to confirm install success.
@@ -330,14 +289,12 @@ message IsHanziResponse {
 
 // `TaigiWord` mirrors iOS `Lexicon/Models/TaigiWord.swift` /
 // Android `ime/dictionary/TaigiWord.kt`. `id` is the dictionary row id;
-// `length_score` is the dictionary frequency / length proxy used as the
-// `baseFreqScore` cold-start signal. `source_bitmask` is the
-// `dictionary/common/source_bits.py` bitmask consumed by the
-// SOURCE_TIERS first-match-wins multiplier.
+// `length_score` is the dictionary frequency / length proxy.
+// `source_bitmask` is the `dictionary/common/source_bits.py` bitmask.
 //
 // Optional fields use proto3 `optional` so platforms can distinguish
 // "field absent" from "scalar default" — important for `length_score`
-// where 0 is a meaningful zero-score signal vs absent (use default tier).
+// where 0 is a meaningful zero-score signal vs absent.
 message TaigiWord {
   int64 id = 1;
   string roman = 2;
@@ -367,20 +324,6 @@ message FrequencyEntry {
   uint32 count = 2;
   int64 last_used_ms = 3;
   string canonical_tl = 4;
-}
-
-// `ScoreBreakdown` is the single source of truth for both ranking math
-// and debug logging — total = sum of the six fields. The pre-Path-G iOS
-// `CandidateProcessor.ScoreBreakdown` and Android
-// `CandidateProcessor.ScoreBreakdown` mirrors are gone (Android deleted
-// PR #192; iOS retains only an unrelated 4-LOC residual).
-message ScoreBreakdown {
-  int32 user_freq_score = 1;
-  int32 recency_bonus = 2;
-  int32 exact_bonus = 3;
-  int32 completion_penalty = 4;
-  int32 closeness_bonus = 5;
-  int32 base_freq_score = 6;
 }
 
 // `LexiconAssocEntry` is one bundled bigram tuple — `previous_word` /

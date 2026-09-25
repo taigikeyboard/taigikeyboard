@@ -102,7 +102,7 @@ Side processes: Preferences app, Phrase Editor, Updater. None talk to the IME ov
 - **Learned-bigram weight is an explicit constant** (`LearnedBigramScore() = 0.0` = log10(1)) with the measurement that rejected weakening it recorded in the comment (weaker first pick: +11% manual selections, no held-out gain). "Users rely on one correction sticking."
 - Reload races are handled explicitly: a row dropped in memory must not come back when `loadConfig()` re-reads tables mid-save; eviction on `setCapacity` sheds immediately rather than waiting for inserts.
 
-**Where we stand**: `user_frequency(count, last_used)` with `USER_FREQ_CAP=100`, recency +200 within one hour (`docs/engine/sort.md`, `engine/ranking/src/score.rs`); next-word booster in `engine/nextword`. macOS learning tables already self-trim (`LearningCapacity` 20000 / 50000 rows, least-used-first; `docs/architecture/macos-roadmap.md` § Settings pane roster). No context-keyed override tier.
+**Where we stand**: `user_frequency(count, last_used)` keyed by `(word, tl)`, saturating boost + exponential decay (`docs/engine/sort.md`, `engine/ranking/src/score.rs`); next-word booster in `engine/nextword`. macOS learning tables already self-trim (`LearningCapacity` 20000 / 50000 rows, least-used-first; `docs/architecture/macos-roadmap.md` § Settings pane roster). No context-keyed override tier.
 
 **Takeaways**:
 - **Eviction policy**: ours is count-based least-used-first; ChiaKey's adds a recency tiebreak inside each count bucket and shows how to keep it O(1). Same idea; the bucket structure is the only refinement, and only matters if trim cost ever shows up.

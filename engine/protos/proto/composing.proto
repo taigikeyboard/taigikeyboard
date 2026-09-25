@@ -5,8 +5,7 @@ package taigi.engine;
 // v3.5.8 Phase 9.3a — Continuous-input ranking gained access to the
 // per-candidate `user_frequency.db` snapshot; the request payload reuses
 // the canonical `taigi.engine.FrequencyEntry` defined in `lexicon.proto`
-// (already used by `ProcessCandidatesRequest.freq`) instead of declaring
-// a second wire-incompatible cousin. This is the only cross-file import
+// instead of declaring a second wire-incompatible cousin. This is the only cross-file import
 // inside composing.proto; lexicon.proto does NOT import composing.proto,
 // so the dependency edge is one-way and cycle-free.
 import "lexicon.proto";

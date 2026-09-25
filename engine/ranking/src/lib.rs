@@ -1,33 +1,20 @@
-//! Lexicon ranking — candidate dedup, scoring, sorting.
+//! Continuous-input ranking primitives — source rank, user-frequency
+//! boost + decay, `(display_text, canonical_tl)` frequency map, and the
+//! dictionary-derived score.
 //!
-//! Pure-CPU stateless RPC. No I/O, no time reads inside the crate (caller
-//! supplies `now_ms`), no logging on the hot path. Public entry point is
-//! [`process_candidates`]; implementation modules are crate-private.
+//! Pure-CPU, stateless. No I/O, no time reads inside the crate (caller
+//! supplies `now_ms`), no logging on the hot path. Consumed by
+//! `lexicon::continuous` and `composing`; the implementation module is
+//! crate-private.
 //!
-//! # Cross-platform invariants
-//!
-//! Single source of truth for the score / dedup / sort math. The Android
-//! `CandidateProcessor.kt` mirror was deleted via PR #192 (v3.5.3 Path G);
-//! iOS retains only a 4-LOC residual (`capitalize` 1-line bridge +
-//! `startsWithRomanLetter` predicate, see
-//! `migration-inventory.csv` row for `CandidateProcessor.swift`). Both
-//! production paths route through this crate via FFI.
-//!
-//! Score formula constants (`USER_FREQ_CAP=100`, `USER_FREQ_WEIGHT=100`,
-//! `RECENCY_WINDOW_MS=3_600_000`, `RECENCY_BONUS=200`, `EXACT_BONUS=100`,
-//! `COMPLETION_PENALTY=-1000`, `CLOSENESS_WEIGHT=500`,
-//! `BASE_FREQ_DIVISOR=10`, `SOURCE_TIERS`, `TIER_DENOMINATOR=10`) are
-//! pinned here and were verified byte-identical across platforms at the
-//! v3.5.2 ranking-slice audit (`docs/engine/sort.md` documents the behaviour).
+//! Constants (`BOOST_ALPHA`, `MAX_BOOST`, `USER_WEIGHT_DECAY_TAU_MS`,
+//! `CONTINUOUS_DEFAULT_SOURCE_RANK`) are the cross-platform single source
+//! of truth — platforms never redefine them.
 
-mod dedup;
-mod process;
 mod score;
-mod sort;
 
-pub use process::process_candidates;
 pub use score::{
     build_frequency_map, calculate_continuous_score, decayed_user_weight_delta, source_tier_rank,
     user_freq_boost, FrequencyData, FrequencyMap, BOOST_ALPHA, CONTINUOUS_DEFAULT_SOURCE_RANK,
-    MAX_BOOST, RECENCY_WINDOW_MS, USER_WEIGHT_DECAY_TAU_MS,
+    MAX_BOOST, USER_WEIGHT_DECAY_TAU_MS,
 };

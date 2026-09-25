@@ -69,7 +69,6 @@ graph TD
     wincore["taigi-desktop-core<br/>(desktop/ workspace, shared by windows/ + linux/)"] --> dispatch
     dispatch --> composing
     dispatch --> lexicon
-    dispatch --> ranking
     dispatch --> nextword
     dispatch --> phonetics
     composing --> lexicon
@@ -78,7 +77,6 @@ graph TD
     lexicon --> ranking
     lexicon --> phonetics
     lexicon --> mmaphost["mmap-host"]
-    ranking --> phonetics
     nextword --> phonetics
 
     classDef adapter fill:#e8f0fe,stroke:#4285f4;
@@ -158,14 +156,14 @@ The FFI boundary is a single `process_request_bytes` entrypoint per adapter; the
 |---|---|---|
 | Input dispatch | `Actions/ActionHandler.swift` (+ `+KeyActions`, `+CustomActions`): case conversion by `keyboardCase`; punctuation confirms the composition first; letters / digits enter composing | — |
 | Composing wrapper | `Input/Composing/ComposingManager.swift` + `ComposingDelegate.swift` (three-phase apply of the engine `Effect` list onto `UITextDocumentProxy`; `rawInput` / `composingText` snapshot) | `engine/composing` |
-| Candidate fetch | `Autocomplete/Services/TaigiAutocompleteService.swift` — `classifyInput` → continuous `FetchAtPos` (engine-only since v3.5.8) → `transformSuggestion` case pass | `engine/lexicon` → `engine/ranking` (`process_candidates`: dedup + score + sort) |
+| Candidate fetch | `Autocomplete/Services/TaigiAutocompleteService.swift` — `classifyInput` → continuous `FetchAtPos` (engine-only since v3.5.8) → `transformSuggestion` case pass | `engine/composing` → `engine/lexicon::continuous` (dedup + sort) → `engine/ranking` (score, user weight) |
 | Bridge | `Engine/RustEngineBridge.swift` + `RustEngineBridge+{Composing,Lexicon,Phonetics,CaseTransform,NextWord}.swift`; `SwiftLoggerSink.swift`, `RustVec+UInt8.swift` | `engine/dispatch` via `engine/swift-ffi` |
 | Display | KeyboardKit smartbar; `Autocomplete/Views/CandidateButtonView.swift`; overlays `Overlays/{Symbol,Settings,Layout}SelectionOverlay.swift`, `ExpandedCandidateOverlay.swift` | — |
 | Selection | `Actions/ActionHandler+Suggestions.swift` → `ComposingManager.selectSuggestion()` → frequency record → NextWord intent | `engine/composing` (`CommitContinuous`) |
 | NextWord glue | `NextWord/NextWordController.swift` (timer, `@MainActor`, generation counter) + `NextWord/Services/NextWordService.swift` (SQLite) | `engine/nextword` (`decide`, `nextwordFilter`) |
 | Settings | `Settings/SharedSettings.swift` + `SettingsKey.swift` (live-read `EngineSettingsProvider`) | `AppConfig` per request |
 
-Engine search ownership on the fetch step: `lexicon::classify_input` → `lexicon::key_normalizer` (calls `phonetics::normalize_input`) → `lexicon::prefix_index::PrefixIndex` (fst scan) → `lexicon::dictionary_reader::DictionaryReader` + `Filter` (rowid → record, source bitmask) → `ranking::process_candidates`.
+Engine search ownership on the fetch step: `lexicon::classify_input` → `lexicon::key_normalizer` (calls `phonetics::normalize_input`) → `lexicon::prefix_index::PrefixIndex` (fst scan) → `lexicon::dictionary_reader::DictionaryReader` + `Filter` (rowid → record, source bitmask) → `lexicon::continuous` sort key (`ranking` score + user weight).
 
 ### 4.2 Same chain on the other platforms
 

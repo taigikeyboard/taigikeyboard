@@ -39,7 +39,7 @@ Current runtime crates — dependency edges flow **one way, top → bottom** (th
 ┌─ domain ──────────────────┴─────────────────────────────────┐
 │  composing → lexicon, ranking, phonetics                     │
 │  lexicon   → ranking, phonetics, mmap-host                   │
-│  ranking   → phonetics                                       │
+│  ranking   → (protos only)                                   │
 │  nextword  → phonetics                                       │
 └───────────────────────────┬─────────────────────────────────┘
                             │ depends ↓
