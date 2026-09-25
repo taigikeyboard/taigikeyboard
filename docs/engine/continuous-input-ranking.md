@@ -60,13 +60,13 @@ User of a Continuous-input IME types whole phrases and expects phrase-level matc
 |---|---|---|
 | Syllabifier BFS | [`engine/composing/src/syllabifier/tl.rs:49-84`](../../engine/composing/src/syllabifier/tl.rs) | For `taiuantaigi`, produces endings `{3, 6, 9, 11}` (cap = 8 syllables) |
 | Key construction | [`engine/composing/src/dispatch.rs:181-207`](../../engine/composing/src/dispatch.rs) `build_keys_tl` | Strips ASCII tone digits + lowercases + prepends `tl:` → 4 fused-toneless keys |
-| Span-local FST fetch | [`engine/lexicon/src/continuous/mod.rs:205-242`](../../engine/lexicon/src/continuous/) `fetch_candidates_for_keys` | `prefix_index.lookup_exact` per key + filter + NaN-safe descending sort |
+| Span-local FST fetch | [`engine/lexicon/src/continuous/mod.rs`](../../engine/lexicon/src/continuous/mod.rs) `fetch_candidates_for_keys` | `prefix_index.lookup_exact` per key + filter + NaN-safe descending sort |
 | Score formula | [`engine/ranking/src/score.rs:178-181`](../../engine/ranking/src/score.rs) `calculate_continuous_score` | `freq × (1.0 + 0.1 × max(0, syllable_count − 1)) × user_freq_boost` |
 | Mid-commit | [`engine/composing/src/transition.rs:613-679`](../../engine/composing/src/transition.rs) `commit_continuous` | Slices `raw[consumed_bytes..]`, emits 4 effects (commit + preedit + NextWord + autocomplete) |
 | Final commit | same fn, `new_pending.is_empty()` branch | `exit_to_idle` + `NextWordWordSelected(trigger_prediction=true)` |
 | Frequency record | iOS [`ActionHandler+Suggestions.swift:81-83`](../../ios/Sources/TaigiKeyboard/Actions/ActionHandler+Suggestions.swift) / Android [`CandidateClickHandler.kt:345-349`](../../android/app/src/main/java/com/siansiansu/taigikeyboard/ime/text/smartbar/CandidateClickHandler.kt) | Writes `displayText` to `user_frequency.db` on every successful commit |
 
-**Status**: every stage above was implemented and tested at audit time. Since v3.5.8 the fetch is `fetch_candidates_for_keys_with_barriers` taking a `ContinuousFetchCtx` ([`engine/lexicon/src/continuous/mod.rs:337`](../../engine/lexicon/src/continuous/), entry at `:667`), and `user_freq_boost` is derived per candidate from the platform-supplied `freq_map` in `record_to_candidate` (`continuous/candidate.rs::record_to_candidate`) and `custom_entry_to_candidate` (`continuous/candidate.rs::custom_entry_to_candidate`) via `ranking::user_freq_boost` ([`engine/ranking/src/score.rs:242`](../../engine/ranking/src/score.rs)); `calculate_continuous_score` is at `score.rs:469`.
+**Status**: every stage above was implemented and tested at audit time. Since v3.5.8 the fetch is `fetch_candidates_for_keys_with_barriers` taking a `ContinuousFetchCtx` ([`engine/lexicon/src/continuous/mod.rs`](../../engine/lexicon/src/continuous/mod.rs) `ContinuousFetchCtx`), and `user_freq_boost` is derived per candidate from the platform-supplied `freq_map` in `record_to_candidate` (`continuous/candidate.rs::record_to_candidate`) and `custom_entry_to_candidate` (`continuous/candidate.rs::custom_entry_to_candidate`) via `ranking::user_freq_boost` ([`engine/ranking/src/score.rs:242`](../../engine/ranking/src/score.rs)); `calculate_continuous_score` is at `score.rs:469`.
 
 ### 2.2 Generated keys for `taiuantaigi`
 
@@ -136,7 +136,7 @@ This is a **secondary concern** — the formula gap is the dominant problem, and
 At audit time `fetch_via_lexicon` (then in `engine/composing/src/dispatch.rs`) called `fetch_candidates_for_keys` with a `user_freq_boost = 1.0` literal. That literal no longer exists. Today the boost is derived inside the lexicon from the platform-supplied frequency snapshot:
 
 ```rust
-// engine/lexicon/src/continuous/mod.rs:1245-1251 (record_to_candidate)
+// engine/lexicon/src/continuous/candidate.rs::record_to_candidate
 let user_weight = freq_map.get(&display_text, &canonical_tl).user_weight(now_ms);
 let score = calculate_continuous_score(frequency, syllable_count);
 ```

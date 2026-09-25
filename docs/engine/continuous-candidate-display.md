@@ -69,7 +69,7 @@ pub struct DictionaryRecord {
 The TL romanization is dropped at `record_to_candidate`:
 
 ```rust
-// engine/lexicon/src/continuous/mod.rs:412-416
+// engine/lexicon/src/continuous/candidate.rs::record_to_candidate
 let mode = derive_mode(hanzi.as_deref());
 let display_text = hanzi.unwrap_or(tl);  // ← `tl` consumed here; roman lost forever
 let freq_data = freq_map.get(&display_text).copied().unwrap_or_default();
@@ -78,7 +78,7 @@ let freq_data = freq_map.get(&display_text).copied().unwrap_or_default();
 `RawCandidate` keeps only `display_text`:
 
 ```rust
-// engine/lexicon/src/continuous/mod.rs:164-219 (excerpt)
+// engine/lexicon/src/continuous/mod.rs::RawCandidate (excerpt)
 pub struct RawCandidate {
     pub consumed_span: (u32, u32),
     pub syllable_count: u8,
