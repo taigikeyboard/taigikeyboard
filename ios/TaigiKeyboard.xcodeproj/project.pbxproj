@@ -1012,7 +1012,7 @@
 			repositoryURL = "https://github.com/KeyboardKit/KeyboardKit.git";
 			requirement = {
 				kind = versionRange;
-				maximumVersion = 11.0.0;
+				maximumVersion = 15.10.0;
 				minimumVersion = 10.9.0;
 			};
 		};
