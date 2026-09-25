@@ -232,25 +232,6 @@
         "ja": "「キーボードを追加」「フルアクセスを許可」をタップ"
       }
     },
-    "userGuide": {
-      "comment": "Home resource link: the project website introduction.",
-      "scope": {
-        "platforms": [
-          "android",
-          "ios"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "網站紹介",
-        "tailo": "Bāng-tsām siāu-kài",
-        "poj": "Bāng-chām siāu-kài",
-        "en": "Project Website",
-        "ja": "プロジェクトのサイト"
-      }
-    },
     "rateUs": {
       "comment": "Home resource link: rate the app on the store.",
       "scope": {

@@ -236,8 +236,6 @@ object L10n {
         @Composable get() = stringRes(StringKey.HOME_SETUP_GUIDE_STEP1_SETTINGS)
     val homeSetupGuideStep2AddKeyboard: String
         @Composable get() = stringRes(StringKey.HOME_SETUP_GUIDE_STEP2_ADD_KEYBOARD)
-    val homeUserGuide: String
-        @Composable get() = stringRes(StringKey.HOME_USER_GUIDE)
     val homeRateUs: String
         @Composable get() = stringRes(StringKey.HOME_RATE_US)
     val homeAboutKeyboard: String

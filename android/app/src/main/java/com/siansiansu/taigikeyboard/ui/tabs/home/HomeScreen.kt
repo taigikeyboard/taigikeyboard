@@ -141,13 +141,6 @@ fun HomeScreen(
             SettingsCard {
                 NavigationRow(
                     icon = painterResource(R.drawable.ic_open_in_new),
-                    label = L10n.homeUserGuide,
-                    labelColor = linkBlue,
-                    onClick = { onUrlClick("https://www.taigikeyboard.tw/") },
-                )
-                SettingsDivider(Modifier.padding(horizontal = 16.dp))
-                NavigationRow(
-                    icon = painterResource(R.drawable.ic_open_in_new),
                     label = L10n.homePrivacyPolicy,
                     labelColor = linkBlue,
                     onClick = { onUrlClick("https://taigikeyboard.tw/privacypolicy.html") },

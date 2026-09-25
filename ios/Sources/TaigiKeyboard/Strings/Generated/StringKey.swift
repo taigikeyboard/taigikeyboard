@@ -117,7 +117,6 @@ enum StringKey: String {
     case homeSetupGuideGoToSettings = "i18n_home_setupGuideGoToSettings"
     case homeSetupGuideStep1Settings = "i18n_home_setupGuideStep1Settings"
     case homeSetupGuideStep2AddKeyboard = "i18n_home_setupGuideStep2AddKeyboard"
-    case homeUserGuide = "i18n_home_userGuide"
     case homeRateUs = "i18n_home_rateUs"
     case homeAboutKeyboard = "i18n_home_aboutKeyboard"
     case homeAboutIntroProject = "i18n_home_aboutIntroProject"

@@ -118,7 +118,6 @@
     <string name="i18n_home_setupGuideGoToSettings">Open Settings</string>
     <string name="i18n_home_setupGuideStep1Settings">Tap \"Keyboards\"</string>
     <string name="i18n_home_setupGuideStep2AddKeyboard">Tap \"Add keyboard\" and \"Allow Full Access\"</string>
-    <string name="i18n_home_userGuide">Project Website</string>
     <string name="i18n_home_rateUs">Rate Us</string>
     <string name="i18n_home_aboutKeyboard">About the Keyboard</string>
     <string name="i18n_home_aboutIntroProject">TaigiKeyboard is a free, open-source Taiwanese input method — free forever, with no ads and no paid features ever. Everyday users, teachers, schools and Taiwanese-language education groups are all free to use it. The hope is that using and teaching Taiwanese comes with no extra burden.</string>
