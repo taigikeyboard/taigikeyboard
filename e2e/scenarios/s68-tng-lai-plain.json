@@ -1,0 +1,11 @@
+{
+  "id": "s68-tng-lai-plain",
+  "source": "dogfood-checklist.md S68 (USER 2026-09-22): `tng-lai` two picks → `tńg-lâi` — the plain hyphen is kept as typed, not turned into `--`.",
+  "settings": { "romanization": "tl", "continuous_input": true, "output": "roman" },
+  "steps": [
+    { "type": "text", "value": "tng-lai" },
+    { "type": "pick", "hanji": "轉", "tl": "tńg" },
+    { "type": "pick", "hanji": "來", "tl": "lâi" }
+  ],
+  "expect": { "committed": "tńg-lâi" }
+}

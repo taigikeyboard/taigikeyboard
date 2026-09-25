@@ -1,0 +1,9 @@
+{
+  "id": "s73-pangtanglai-control",
+  "source": "dogfood-checklist.md S73 negative control (USER 2026-09-22): `pangtanglai` (nothing typed) → 放重利 reads `pàng tāng-lāi` exactly as before.",
+  "settings": { "romanization": "tl", "continuous_input": true },
+  "steps": [
+    { "type": "text", "value": "pangtanglai" }
+  ],
+  "expect": { "first_hanji_candidate": { "hanji": "放重利", "tl": "pàng tāng-lāi" } }
+}

@@ -1,0 +1,9 @@
+{
+  "id": "s69-khi-ah-poj",
+  "source": "dogfood-checklist.md S69 (USER 2026-09-22): POJ `khi--ah` → same as TL, first hanji candidate 去矣 reads `khì--ah`.",
+  "settings": { "romanization": "poj", "continuous_input": true },
+  "steps": [
+    { "type": "text", "value": "khi--ah" }
+  ],
+  "expect": { "first_hanji_candidate": { "hanji": "去矣", "tl": "khì--ah" } }
+}

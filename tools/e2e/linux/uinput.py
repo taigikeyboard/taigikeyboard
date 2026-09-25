@@ -6,7 +6,7 @@ Runs as root (`sudo -n python3 uinput.py`; /dev/uinput is root-only). Reads
 one command per line on stdin and answers `ok` once the keys are sent:
 
   text <characters>   US-layout characters, Shift added for the upper row
-  key <name>          enter / space / backspace / escape / tab / 0–9
+  key <name>          enter / space / backspace / escape / tab / capslock / 0–9
 """
 
 from __future__ import annotations
