@@ -129,7 +129,10 @@ fn supplementary_plane_hanji_is_one_lookup_key() {
     }
     let predictions = predict("袂𣍐", all_sources(true));
     let hanzi = hanzi_of(&predictions);
-    assert!(hanzi.contains(&"使"), "bundled 𣍐→使 expected, got {hanzi:?}");
+    assert!(
+        hanzi.contains(&"使"),
+        "bundled 𣍐→使 expected, got {hanzi:?}"
+    );
 }
 
 #[test]
