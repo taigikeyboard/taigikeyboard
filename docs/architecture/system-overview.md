@@ -46,7 +46,7 @@ graph TB
     domains -. mmap read-only .-> artifacts
 ```
 
-User-writable state stays **native SQLite on each platform** (`status=wont_migrate`): `user_frequency.db` (schema v2), `user_association.db` (v6, `CROSS-PLATFORM INVARIANT` on all four), `custom_dictionary.db` (v3; Android keeps its own `DATABASE_VERSION` namespace — portability D5). iOS/macOS via `SQLite3`, Android via the platform SQLite, Windows via `rusqlite` in `taigi-desktop-storage`. Details: [`data-artifacts-portability.md`](data-artifacts-portability.md) §4–8.
+User-writable state stays **native SQLite on each platform** (`status=wont_migrate`): `user_frequency.db` (schema v2), `user_association.db` (v6, `CROSS-PLATFORM INVARIANT` on all four), `custom_dictionary.db` (v3; Android keeps its own `DATABASE_VERSION` namespace — portability D5), `learned_phrases.db` (§50, own store). iOS/macOS via `SQLite3`, Android via the platform SQLite, Windows and Linux via `rusqlite` in `taigi-desktop-storage`. Details: [`data-artifacts-portability.md`](data-artifacts-portability.md) §4–8.
 
 | Platform | Shell | Engine hop | Candidate UI | Settings UI | Dogfood gate |
 |---|---|---|---|---|---|

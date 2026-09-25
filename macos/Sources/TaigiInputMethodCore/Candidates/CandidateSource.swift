@@ -7,7 +7,7 @@ import Foundation
 /// against a presentation of some other fetch would commit the wrong word, so
 /// every window index comes back through `resolve`.
 /// CROSS-PLATFORM INVARIANT — mirrors the Windows
-/// `taigi-windows-core/src/composing/presentation.rs` `CandidateSource`.
+/// `taigi-desktop-core/src/composing/presentation.rs` `CandidateSource`.
 struct CandidateSource: Equatable, Sendable {
     /// The fetched list, in the engine's order — what a commit hands back to
     /// the engine, and what a display change presents again
