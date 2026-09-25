@@ -1,0 +1,11 @@
+{
+  "id": "s68-tng-lai-two-picks",
+  "source": "dogfood-checklist.md S68 (USER 2026-09-22, observed `tng--lai` two picks → `tng-lai`); 教典 #323 「伊昨昏三更半暝才轉來。」: pick 轉 then 來 → commits `tńg--lâi`.",
+  "settings": { "romanization": "tl", "continuous_input": true, "output": "roman" },
+  "steps": [
+    { "type": "text", "value": "tng--lai" },
+    { "type": "pick", "hanji": "轉", "tl": "tńg" },
+    { "type": "pick", "hanji": "來", "tl": "lâi" }
+  ],
+  "expect": { "committed": "tńg--lâi" }
+}

@@ -26,7 +26,7 @@ TRACE_MARKER = "TAIGI_E2E_TRACE_V1"
 
 STEP_TYPES = {"text", "key", "pick"}
 # Platform-neutral key names; each driver translates them to its own keys.
-KEY_NAMES = {"enter", "space", "backspace", "escape", *"0123456789"}
+KEY_NAMES = {"enter", "space", "backspace", "escape", "capslock", *"0123456789"}
 EXPECT_KEYS = {"committed", "first_hanji_candidate"}
 
 # A p95 counts as a regression only past both bounds, so tiny ops' noise and

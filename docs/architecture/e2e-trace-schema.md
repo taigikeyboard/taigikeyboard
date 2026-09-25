@@ -98,7 +98,7 @@ Still planned, specified by the PR that first writes them: memory sample, key-ge
 |---|---|
 | `id`, `source` | identity; where the expectation comes from |
 | `settings` | intent-level settings (`romanization`, `continuous_input`, `output`); each driver maps them to its platform's store |
-| `steps` | `text` (type these characters), `key` (a platform-neutral name: `enter`, `space`, `backspace`, `escape`, `0`–`9`; each driver translates it), `pick` (select the hanji candidate showing this `tl`, and this `hanji` when given). A driver maps each step to real input — hardware keys or taps — and never sets text directly |
+| `steps` | `text` (type these characters), `key` (a platform-neutral name: `enter`, `space`, `backspace`, `escape`, `capslock`, `0`–`9`; each driver translates it, and a driver leaves Caps Lock off after a scenario that toggled it), `pick` (select the hanji candidate showing this `tl`, and this `hanji` when given). A driver maps each step to real input — hardware keys or taps — and never sets text directly |
 | `expect.committed` | the exact text the host field holds at the end |
 | `expect.first_hanji_candidate` | `{tl[, hanji]}` of the first hanji candidate in the last `candidates` event — `hanji` only when the source names one (never taken from a run) |
 

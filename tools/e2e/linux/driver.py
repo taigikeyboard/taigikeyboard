@@ -18,6 +18,7 @@ step ever sets text directly.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import os
 import shutil
@@ -35,7 +36,7 @@ HOST_SCRIPT = Path(__file__).with_name("host.py")
 TRACE_RELATIVE_PATH = Path("taigikeyboard") / "e2e-trace.jsonl"
 INPUT_METHOD_NAME = "taigikeyboard"
 # X keysym names for the scenario's platform-neutral key names.
-KEYSYMS = {"enter": "Return", "space": "space", "backspace": "BackSpace", "escape": "Escape"}
+KEYSYMS = {"enter": "Return", "space": "space", "backspace": "BackSpace", "escape": "Escape", "capslock": "Caps_Lock"}
 # IBus / Fcitx5 release bit (`linux/fcitx5/src/engine.cpp` statesFor); a
 # release is traced as a `key` event too, and only presses are counted.
 RELEASE_MASK = 1 << 30
@@ -143,6 +144,7 @@ class Session:
         self.framework_log = work / "framework.log"
         self.reader = TraceReader(self.trace)
         self.keys_sent = 0
+        self.caps_lock_on = False
         self.processes: list[subprocess.Popen] = []
         self.host: subprocess.Popen | None = None
         self.last_ibus_listing = ""
@@ -263,6 +265,10 @@ class Session:
         return self.host_out.read_text(encoding="utf-8") if self.host_out.exists() else ""
 
     def stop(self) -> None:
+        # The display's lock state outlives the scenario; the next one starts unlocked.
+        if self.caps_lock_on:
+            with contextlib.suppress(ScenarioError, subprocess.SubprocessError, OSError):
+                self.send_key("capslock")
         for process in reversed(self.processes):
             if process.poll() is None:
                 process.terminate()
@@ -289,6 +295,8 @@ def drive(new_session, scenario: dict, out: Path) -> dict:
                     session.send_text(step["value"])
                 elif step["type"] == "key":
                     session.send_key(step["value"])
+                    if step["value"] == "capslock":
+                        session.caps_lock_on = not session.caps_lock_on
                 elif step["type"] == "pick":
                     session.pick(step)
                 session.checkpoint(index)

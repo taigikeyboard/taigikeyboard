@@ -1,0 +1,17 @@
+{
+  "id": "s68-backspace-repick",
+  "source": "dogfood-checklist.md S68 negative control (USER 2026-09-22): `tng--lai-khi`, pick 轉 then 來, backspace ×4 clears `-khi`, one more pops 來, pick 來 → `tńg--lâi`.",
+  "settings": { "romanization": "tl", "continuous_input": true, "output": "roman" },
+  "steps": [
+    { "type": "text", "value": "tng--lai-khi" },
+    { "type": "pick", "hanji": "轉", "tl": "tńg" },
+    { "type": "pick", "hanji": "來", "tl": "lâi" },
+    { "type": "key", "value": "backspace" },
+    { "type": "key", "value": "backspace" },
+    { "type": "key", "value": "backspace" },
+    { "type": "key", "value": "backspace" },
+    { "type": "key", "value": "backspace" },
+    { "type": "pick", "hanji": "來", "tl": "lâi" }
+  ],
+  "expect": { "committed": "tńg--lâi" }
+}

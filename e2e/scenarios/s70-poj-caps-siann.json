@@ -1,0 +1,11 @@
+{
+  "id": "s70-poj-caps-siann",
+  "source": "dogfood-checklist.md S70 (USER 2026-09-22, 「大本字時 ⁿ 轉做 ᴺ」 default ON): POJ, Caps Lock, `siann5` → the 城 candidate reads `SIÂᴺ`, Enter commits `SIÂᴺ`.",
+  "settings": { "romanization": "poj", "continuous_input": true },
+  "steps": [
+    { "type": "key", "value": "capslock" },
+    { "type": "text", "value": "siann5" },
+    { "type": "key", "value": "enter" }
+  ],
+  "expect": { "committed": "SIÂᴺ" }
+}

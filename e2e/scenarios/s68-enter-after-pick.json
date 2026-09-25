@@ -1,0 +1,11 @@
+{
+  "id": "s68-enter-after-pick",
+  "source": "dogfood-checklist.md S68 negative control (USER 2026-09-22): Enter after picking 轉 over `tng--lai` commits `tńg--lai`.",
+  "settings": { "romanization": "tl", "continuous_input": true, "output": "roman" },
+  "steps": [
+    { "type": "text", "value": "tng--lai" },
+    { "type": "pick", "hanji": "轉", "tl": "tńg" },
+    { "type": "key", "value": "enter" }
+  ],
+  "expect": { "committed": "tńg--lai" }
+}

@@ -1,0 +1,12 @@
+{
+  "id": "s68-lai-ah-learned",
+  "source": "dogfood-checklist.md S68 learning (USER 2026-09-22); 教典 #111 「我今仔入門，電話就來矣。」: `lai--ah`, pick 來 then 矣; then `laiah` → 來矣 leads and reads `lâi--ah`.",
+  "settings": { "romanization": "tl", "continuous_input": true, "output": "roman" },
+  "steps": [
+    { "type": "text", "value": "lai--ah" },
+    { "type": "pick", "hanji": "來", "tl": "lâi" },
+    { "type": "pick", "hanji": "矣", "tl": "ah" },
+    { "type": "text", "value": "laiah" }
+  ],
+  "expect": { "first_hanji_candidate": { "hanji": "來矣", "tl": "lâi--ah" } }
+}

@@ -1,0 +1,11 @@
+{
+  "id": "s73-caps",
+  "source": "dogfood-checklist.md S73 (USER 2026-09-22): Caps Lock `PANG-TANG-LAI` → 放重利 `PÀNG-TĀNG-LĀI`, picked under 羅馬字 output it commits that form.",
+  "settings": { "romanization": "tl", "continuous_input": true, "output": "roman" },
+  "steps": [
+    { "type": "key", "value": "capslock" },
+    { "type": "text", "value": "pang-tang-lai" },
+    { "type": "pick", "hanji": "放重利", "tl": "PÀNG-TĀNG-LĀI" }
+  ],
+  "expect": { "committed": "PÀNG-TĀNG-LĀI" }
+}

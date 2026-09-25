@@ -1,0 +1,12 @@
+{
+  "id": "s68-lai-triple-ah-learned",
+  "source": "dogfood-checklist.md S68 negative control (USER 2026-09-22): `lai---ah` two picks → later `laiah` reads `lâi--ah` (learning keeps the kind).",
+  "settings": { "romanization": "tl", "continuous_input": true, "output": "roman" },
+  "steps": [
+    { "type": "text", "value": "lai---ah" },
+    { "type": "pick", "hanji": "來", "tl": "lâi" },
+    { "type": "pick", "hanji": "矣", "tl": "ah" },
+    { "type": "text", "value": "laiah" }
+  ],
+  "expect": { "first_hanji_candidate": { "hanji": "來矣", "tl": "lâi--ah" } }
+}

@@ -134,6 +134,7 @@ PR1/PR2 of the first draft were over the 500-LOC cap (Codex) — split below.
 | PR6 | Windows: TSF events, `/IT` interactive-session `SendInput` driver over `ssh win` | Dropped — USER 2026-09-24 「skip windows」, after PR6a's first box build hit `os error 4551` (Windows application control blocked a build binary). Unmerged branch `feat/e2e-windows-trace` deleted 2026-09-24 (USER) |
 | PR7 | Android: `e2e` build type, geometry manifest, adb tap driver, e2e AVD | Not planned — USER 2026-09-24 「PR7,8不需要,我暫時可以手動測試」 |
 | PR8 | iOS: `E2E_TRACE` events in the extension, geometry manifest, XCUITest driver | Not planned — USER 2026-09-24 「PR7,8不需要,我暫時可以手動測試」 |
+| PR9 | More scenarios (USER 2026-09-25 「ok,plan包含更多情境的測試」): 10 from S68 / S69 / S70 / S73 — multi-pick commits, Enter after a pick, backspace + re-pick, learned phrase keeps the separator kind, POJ, Caps Lock; `capslock` key name (the driver releases the lock after the scenario — the display outlives it). Not reachable with today's steps: S1 (no concrete I/O), S2 (desktop has no TPS mode), S62 (`kikhilai` offers no single 記 cell), settings beyond romanization / output, custom-entry seeding, highlight / paging | In progress (`test/e2e-more-scenarios`); UTM VM 26/26 PASS |
 
 Each platform PR adds its row to `/e2e` and its budgets; PR sizes 200–500 LOC.
 
