@@ -74,10 +74,6 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             name: "frequencyRecordingEnabled",
             defaultValue: EngineSettings.defaults.isFrequencyRecordingEnabled,
         )
-        static let isAssociationRecordingEnabled = SettingsKey(
-            name: "associationRecordingEnabled",
-            defaultValue: EngineSettings.defaults.isAssociationRecordingEnabled,
-        )
         static let isCustomDictEnabled = SettingsKey(
             name: "customDictEnabled",
             defaultValue: EngineSettings.defaults.isCustomDictEnabled,
@@ -380,7 +376,6 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             isHyphenlessRomanEnabled: bool(Keys.isHyphenlessRomanEnabled),
             isNasalMarkerUppercaseEnabled: bool(Keys.isNasalMarkerUppercaseEnabled),
             isFrequencyRecordingEnabled: bool(Keys.isFrequencyRecordingEnabled),
-            isAssociationRecordingEnabled: bool(Keys.isAssociationRecordingEnabled),
             isCustomDictEnabled: bool(Keys.isCustomDictEnabled),
             dictionarySources: dictionarySources,
         )

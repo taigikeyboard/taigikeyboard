@@ -93,7 +93,6 @@ class NextWordHandler(
             nowMs = System.currentTimeMillis(),
             mode = settings.inputMode.toEngineInputMode(),
             translateSwapped = settings.isTranslateSwapped,
-            associationRecordingEnabled = settings.isAssociationRecordingEnabled,
             generation = envelopeGen,
         )
         applyDecideResult(result)
@@ -114,7 +113,6 @@ class NextWordHandler(
                 System.currentTimeMillis(),
                 settings.inputMode.toEngineInputMode(),
                 settings.isTranslateSwapped,
-                settings.isAssociationRecordingEnabled,
                 envelopeGen,
             ),
             isUiAlreadyCleared = true,
@@ -135,7 +133,6 @@ class NextWordHandler(
                 showing,
                 mode = settings.inputMode.toEngineInputMode(),
                 translateSwapped = settings.isTranslateSwapped,
-                associationRecordingEnabled = settings.isAssociationRecordingEnabled,
                 generation = envelopeGen,
             ),
         )
@@ -173,7 +170,6 @@ class NextWordHandler(
                     nowMs = nowMs,
                     mode = settings.inputMode.toEngineInputMode(),
                     translateSwapped = settings.isTranslateSwapped,
-                    associationRecordingEnabled = settings.isAssociationRecordingEnabled,
                     generation = envelopeGen,
                 ),
             )
@@ -188,7 +184,6 @@ class NextWordHandler(
                 nowMs = nowMs,
                 mode = settings.inputMode.toEngineInputMode(),
                 translateSwapped = settings.isTranslateSwapped,
-                associationRecordingEnabled = settings.isAssociationRecordingEnabled,
                 generation = envelopeGen,
             ),
         )
@@ -220,7 +215,6 @@ class NextWordHandler(
                 nowMs = System.currentTimeMillis(),
                 mode = settings.inputMode.toEngineInputMode(),
                 translateSwapped = settings.isTranslateSwapped,
-                associationRecordingEnabled = settings.isAssociationRecordingEnabled,
                 generation = envelopeGen,
             ),
         )
@@ -249,7 +243,6 @@ class NextWordHandler(
                 nowMs = System.currentTimeMillis(),
                 mode = settings.inputMode.toEngineInputMode(),
                 translateSwapped = settings.isTranslateSwapped,
-                associationRecordingEnabled = settings.isAssociationRecordingEnabled,
                 generation = envelopeGen,
             ),
         )
@@ -278,7 +271,6 @@ class NextWordHandler(
                     nowMs = nowMs,
                     mode = settings.inputMode.toEngineInputMode(),
                     translateSwapped = settings.isTranslateSwapped,
-                    associationRecordingEnabled = settings.isAssociationRecordingEnabled,
                     generation = envelopeGen,
                 ),
             )
@@ -292,7 +284,6 @@ class NextWordHandler(
                 nowMs = nowMs,
                 mode = settings.inputMode.toEngineInputMode(),
                 translateSwapped = settings.isTranslateSwapped,
-                associationRecordingEnabled = settings.isAssociationRecordingEnabled,
                 generation = envelopeGen,
             ),
         )
@@ -426,7 +417,6 @@ class NextWordHandler(
             limit = 30,
             mode = settings.inputMode.toEngineInputMode(),
             translateSwapped = settings.isTranslateSwapped,
-            associationRecordingEnabled = settings.isAssociationRecordingEnabled,
             generation = envelopeGen,
             candidateDisplayMode = settings.candidateDisplayMode,
             hyphenlessRoman = settings.isHyphenlessRomanEnabled,
@@ -451,7 +441,6 @@ class NextWordHandler(
                 nowShowing,
                 mode = settings.inputMode.toEngineInputMode(),
                 translateSwapped = settings.isTranslateSwapped,
-                associationRecordingEnabled = settings.isAssociationRecordingEnabled,
                 generation = envelopeGen,
             ),
         )
@@ -483,7 +472,6 @@ class NextWordHandler(
                 nowMs = System.currentTimeMillis(),
                 mode = settings.inputMode.toEngineInputMode(),
                 translateSwapped = settings.isTranslateSwapped,
-                associationRecordingEnabled = settings.isAssociationRecordingEnabled,
                 generation = envelopeGen,
             ),
         )

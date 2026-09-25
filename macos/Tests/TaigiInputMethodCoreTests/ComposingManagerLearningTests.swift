@@ -201,18 +201,6 @@ final class ComposingManagerLearningTests: XCTestCase {
         )
     }
 
-    func testWithAssociationRecordingOff_twoCommitsLearnNothing() throws {
-        let manager = try makeManager(
-            settingsProvider: StubEngineSettingsProvider(associationRecording: false),
-        )
-        let executor = RecordingEffectExecutor()
-
-        _ = try commitWholeBuffer("tai", manager, executing: executor)
-        _ = try commitWholeBuffer("gi", manager, executing: executor)
-
-        XCTAssertEqual(try XCTUnwrap(stores.association.allRows()), [])
-    }
-
     /// Sentence-end punctuation typed straight into the host ends the context,
     /// which is what stops the last word of one sentence being learned as the
     /// predecessor of the first word of the next.

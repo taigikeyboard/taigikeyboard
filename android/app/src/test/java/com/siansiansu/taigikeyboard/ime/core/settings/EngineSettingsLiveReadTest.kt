@@ -76,7 +76,6 @@ class EngineSettingsLiveReadTest {
         var isOutputBothScripts: Boolean = false,
         var isLiteralRomanCandidateEnabled: Boolean = true,
         var isHyphenlessRomanEnabled: Boolean = false,
-        var isAssociationRecordingEnabled: Boolean = false,
         var pojMarkerOptions: PojMarkerOptions =
             PojMarkerOptions(
                 isDoubleTapOOEnabled = false,
@@ -125,7 +124,6 @@ class EngineSettingsLiveReadTest {
         override val isOutputBothScripts: Boolean get() = backing.isOutputBothScripts
         override val isLiteralRomanCandidateEnabled: Boolean get() = backing.isLiteralRomanCandidateEnabled
         override val isHyphenlessRomanEnabled: Boolean get() = backing.isHyphenlessRomanEnabled
-        override val isAssociationRecordingEnabled: Boolean get() = backing.isAssociationRecordingEnabled
         override val pojMarkerOptions: PojMarkerOptions get() = backing.pojMarkerOptions
         override val isCustomDictEnabled: Boolean get() = backing.isCustomDictEnabled
         override val isTpsOrMappedToER: Boolean get() = backing.isTpsOrMappedToER

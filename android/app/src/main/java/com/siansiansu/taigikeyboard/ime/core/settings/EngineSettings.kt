@@ -62,8 +62,6 @@ interface EngineSettings {
      */
     val isOutputBothScripts: Boolean
 
-    val isAssociationRecordingEnabled: Boolean
-
     // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/EngineSettings.swift:isLiteralRomanCandidateEnabled.
     // Drift causes silent divergence (one platform shows the §34 candidate, the other does not).
 

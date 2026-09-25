@@ -127,18 +127,19 @@ final class RetiredSettingsCleanupTests: XCTestCase {
         )
     }
 
-    /// The learning toggles went with the 詞頻紀錄 / 詞關聯紀錄 panes. This one
-    /// is a behaviour fix, not hygiene: the engine still reads both keys, so a
-    /// stored `false` would keep learning off with no UI left to turn it on.
+    /// The learning toggles went with the 詞頻紀錄 / 詞關聯紀錄 panes. The
+    /// frequency half is a behaviour fix, not hygiene: the engine still reads
+    /// that key, so a stored `false` would keep learning off with no UI left
+    /// to turn it on. The association key is no longer read at all (recording
+    /// is unconditional), so it is simply swept.
     func testStoredFalseOnTheRetiredRecordingToggles_returnsThemToOn() {
         userDefaults.set(false, forKey: SettingsStore.Keys.isFrequencyRecordingEnabled.name)
-        userDefaults.set(false, forKey: SettingsStore.Keys.isAssociationRecordingEnabled.name)
+        userDefaults.set(false, forKey: "associationRecordingEnabled")
 
         RetiredSettingsCleanup.run(userDefaults: userDefaults)
 
-        let settings = SettingsStore(userDefaults: userDefaults).current
-        XCTAssertTrue(settings.isFrequencyRecordingEnabled)
-        XCTAssertTrue(settings.isAssociationRecordingEnabled)
+        XCTAssertTrue(SettingsStore(userDefaults: userDefaults).current.isFrequencyRecordingEnabled)
+        XCTAssertNil(userDefaults.object(forKey: "associationRecordingEnabled"))
     }
 
     func testSelectionOnAnyRetiredPane_fallsBackToTheDefault() {

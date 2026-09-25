@@ -416,7 +416,8 @@ itself is unchanged — iOS and Android still read and write it.
 
 `RetiredSettingsCleanup` sweeps a stored selection pointing at one of the three
 retired panes, and clears the two recording toggles they carried so a stored
-`false` cannot outlive the UI that set it.
+`false` cannot outlive the UI that set it (the association toggle is no longer
+read at all since 2026-09-25; the sweep keeps stale defaults tidy).
 
 ## User-gated open items
 

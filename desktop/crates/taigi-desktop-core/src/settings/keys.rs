@@ -57,10 +57,12 @@ pub const IS_FREQUENCY_RECORDING_ENABLED: SettingsKey<bool> = SettingsKey::new(
     "frequencyRecordingEnabled",
     ENGINE_DEFAULTS.is_frequency_recording_enabled,
 );
-pub const IS_ASSOCIATION_RECORDING_ENABLED: SettingsKey<bool> = SettingsKey::new(
-    "associationRecordingEnabled",
-    ENGINE_DEFAULTS.is_association_recording_enabled,
-);
+// RETIRED 2026-09-25: `associationRecordingEnabled`. The engine dropped
+// `AppConfig.is_association_recording_enabled` — association recording is
+// always on. No desktop UI ever wrote the key, but a hand-edited `false` may
+// still sit in an existing `settings.json` (kept as an unknown key, now
+// inert), so the spelling is permanently reserved: a future feature must use a
+// NEW key rather than inherit that value.
 pub const IS_CUSTOM_DICT_ENABLED: SettingsKey<bool> =
     SettingsKey::new("customDictEnabled", ENGINE_DEFAULTS.is_custom_dict_enabled);
 

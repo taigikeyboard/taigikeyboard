@@ -209,7 +209,6 @@ enum TestFixtures {
         bothScripts: Bool = false,
         candidateDisplayMode: CandidateDisplayMode = .sideBySide,
         frequencyRecording: Bool = true,
-        associationRecording: Bool = true,
         customDict: Bool = true,
         dictionarySources: DictionarySourceToggles = .defaults,
     ) -> EngineSettings {
@@ -225,7 +224,6 @@ enum TestFixtures {
             isHyphenlessRomanEnabled: false,
             isNasalMarkerUppercaseEnabled: true,
             isFrequencyRecordingEnabled: frequencyRecording,
-            isAssociationRecordingEnabled: associationRecording,
             isCustomDictEnabled: customDict,
             dictionarySources: dictionarySources,
         )
@@ -649,7 +647,6 @@ final class StubEngineSettingsProvider: EngineSettingsProvider {
         bothScripts: Bool = false,
         candidateDisplayMode: CandidateDisplayMode = .sideBySide,
         frequencyRecording: Bool = true,
-        associationRecording: Bool = true,
         customDict: Bool = true,
         dictionarySources: DictionarySourceToggles = .defaults,
     ) {
@@ -659,7 +656,6 @@ final class StubEngineSettingsProvider: EngineSettingsProvider {
             bothScripts: bothScripts,
             candidateDisplayMode: candidateDisplayMode,
             frequencyRecording: frequencyRecording,
-            associationRecording: associationRecording,
             customDict: customDict,
             dictionarySources: dictionarySources,
         )

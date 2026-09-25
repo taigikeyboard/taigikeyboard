@@ -219,32 +219,6 @@ public  final class AppConfig extends
     isTranslateSwapped_ = false;
   }
 
-  public static final int IS_ASSOCIATION_RECORDING_ENABLED_FIELD_NUMBER = 6;
-  private boolean isAssociationRecordingEnabled_;
-  /**
-   * <code>bool is_association_recording_enabled = 6;</code>
-   * @return The isAssociationRecordingEnabled.
-   */
-  @java.lang.Override
-  public boolean getIsAssociationRecordingEnabled() {
-    return isAssociationRecordingEnabled_;
-  }
-  /**
-   * <code>bool is_association_recording_enabled = 6;</code>
-   * @param value The isAssociationRecordingEnabled to set.
-   */
-  private void setIsAssociationRecordingEnabled(boolean value) {
-
-    isAssociationRecordingEnabled_ = value;
-  }
-  /**
-   * <code>bool is_association_recording_enabled = 6;</code>
-   */
-  private void clearIsAssociationRecordingEnabled() {
-
-    isAssociationRecordingEnabled_ = false;
-  }
-
   public static final int PLATFORM_ID_FIELD_NUMBER = 7;
   private int platformId_;
   /**
@@ -718,34 +692,6 @@ public  final class AppConfig extends
     }
 
     /**
-     * <code>bool is_association_recording_enabled = 6;</code>
-     * @return The isAssociationRecordingEnabled.
-     */
-    @java.lang.Override
-    public boolean getIsAssociationRecordingEnabled() {
-      return instance.getIsAssociationRecordingEnabled();
-    }
-    /**
-     * <code>bool is_association_recording_enabled = 6;</code>
-     * @param value The isAssociationRecordingEnabled to set.
-     * @return This builder for chaining.
-     */
-    public Builder setIsAssociationRecordingEnabled(boolean value) {
-      copyOnWrite();
-      instance.setIsAssociationRecordingEnabled(value);
-      return this;
-    }
-    /**
-     * <code>bool is_association_recording_enabled = 6;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearIsAssociationRecordingEnabled() {
-      copyOnWrite();
-      instance.clearIsAssociationRecordingEnabled();
-      return this;
-    }
-
-    /**
      * <code>.taigi.engine.Platform platform_id = 7;</code>
      * @return The enum numeric value on the wire for platformId.
      */
@@ -944,7 +890,6 @@ public  final class AppConfig extends
             "ooDoubletapEnabled_",
             "nnDoubletapEnabled_",
             "isTranslateSwapped_",
-            "isAssociationRecordingEnabled_",
             "platformId_",
             "outputBothScripts_",
             "candidateDisplayMode_",
@@ -952,9 +897,8 @@ public  final class AppConfig extends
             "forceLowercaseNasalMarker_",
           };
           java.lang.String info =
-              "\u0000\u000b\u0000\u0000\u0001\u000b\u000b\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
-              "\u0003\u0007\u0004\u0007\u0005\u0007\u0006\u0007\u0007\f\b\u0007\t\f\n\u0007\u000b" +
-              "\u0007";
+              "\u0000\n\u0000\u0000\u0001\u000b\n\u0000\u0000\u0000\u0001\u0208\u0002\u0208\u0003" +
+              "\u0007\u0004\u0007\u0005\u0007\u0007\f\b\u0007\t\f\n\u0007\u000b\u0007";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

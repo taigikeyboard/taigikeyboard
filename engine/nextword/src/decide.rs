@@ -68,7 +68,7 @@ pub(crate) fn apply(
             text,
             roman,
             now_ms,
-        } => decide_update_last_selected_word(state, text, roman, now_ms, config),
+        } => decide_update_last_selected_word(state, text, roman, now_ms),
         Intent::SetIsShowing { is_showing } => decide_set_is_showing(state, is_showing),
     })
 }
@@ -104,31 +104,29 @@ fn decide_word_selected(
 
     let mut effects: Vec<NextWordEffect> = Vec::new();
 
-    if config.is_association_recording_enabled {
-        if let Some(prev_word) = state.last_selected_word.clone() {
-            if should_record_association(state, now_ms) {
-                effects.push(NextWordEffect {
-                    kind: Some(next_word_effect::Kind::RecordAssociation(
-                        RecordAssociation {
-                            pair: Some(AssociationPair {
-                                prev: prev_word,
-                                prev_tl: prev_tl.clone(),
-                                next: text.clone(),
-                                next_tl: text_tl.clone(),
-                            }),
-                        },
-                    )),
-                });
-            }
-        }
-        let compound = compound_association_pairs(&text, &text_tl);
-        if !compound.is_empty() {
+    if let Some(prev_word) = state.last_selected_word.clone() {
+        if should_record_association(state, now_ms) {
             effects.push(NextWordEffect {
-                kind: Some(next_word_effect::Kind::RecordCompoundAssociations(
-                    RecordCompoundAssociations { pairs: compound },
+                kind: Some(next_word_effect::Kind::RecordAssociation(
+                    RecordAssociation {
+                        pair: Some(AssociationPair {
+                            prev: prev_word,
+                            prev_tl: prev_tl.clone(),
+                            next: text.clone(),
+                            next_tl: text_tl.clone(),
+                        }),
+                    },
                 )),
             });
         }
+    }
+    let compound = compound_association_pairs(&text, &text_tl);
+    if !compound.is_empty() {
+        effects.push(NextWordEffect {
+            kind: Some(next_word_effect::Kind::RecordCompoundAssociations(
+                RecordCompoundAssociations { pairs: compound },
+            )),
+        });
     }
 
     effects.push(NextWordEffect {
@@ -231,7 +229,6 @@ fn decide_update_last_selected_word(
     text: String,
     roman: String,
     now_ms: i64,
-    config: &AppConfig,
 ) -> DecideResult {
     if text.is_empty() {
         return result_unchanged(state);
@@ -249,15 +246,13 @@ fn decide_update_last_selected_word(
     let roman_tl = phonetics::api::poj_display_to_tl_display(roman_to_convert);
 
     let mut effects: Vec<NextWordEffect> = Vec::new();
-    if config.is_association_recording_enabled {
-        let compound = compound_association_pairs(&text, &roman_tl);
-        if !compound.is_empty() {
-            effects.push(NextWordEffect {
-                kind: Some(next_word_effect::Kind::RecordCompoundAssociations(
-                    RecordCompoundAssociations { pairs: compound },
-                )),
-            });
-        }
+    let compound = compound_association_pairs(&text, &roman_tl);
+    if !compound.is_empty() {
+        effects.push(NextWordEffect {
+            kind: Some(next_word_effect::Kind::RecordCompoundAssociations(
+                RecordCompoundAssociations { pairs: compound },
+            )),
+        });
     }
 
     state.last_selected_word = Some(text);
@@ -396,14 +391,13 @@ fn result_unchanged(state: &PersistedState) -> DecideResult {
 mod tests {
     use super::*;
 
-    fn config(platform: Platform, association_enabled: bool, translate_swapped: bool) -> AppConfig {
+    fn config(platform: Platform, translate_swapped: bool) -> AppConfig {
         AppConfig {
             tone_mode: String::new(),
             input_mode: "tl".to_owned(),
             oo_doubletap_enabled: false,
             nn_doubletap_enabled: false,
             is_translate_swapped: translate_swapped,
-            is_association_recording_enabled: association_enabled,
             platform_id: platform as i32,
             output_both_scripts: false,
             candidate_display_mode: 0,
@@ -412,8 +406,8 @@ mod tests {
         }
     }
 
-    fn ios_config(association_enabled: bool, translate_swapped: bool) -> AppConfig {
-        config(Platform::Ios, association_enabled, translate_swapped)
+    fn ios_config(translate_swapped: bool) -> AppConfig {
+        config(Platform::Ios, translate_swapped)
     }
 
     /// Every recorded compound pair in `result`, or `None` when it recorded no
@@ -446,7 +440,7 @@ mod tests {
 
     #[test]
     fn unspecified_platform_returns_invalid_platform() {
-        let config = config(Platform::Unspecified, true, false);
+        let config = config(Platform::Unspecified, false);
         let mut state = PersistedState::default();
         let err = apply(&mut state, Intent::ResetFull { now_ms: 0 }, &config).unwrap_err();
         assert!(matches!(err, NextWordError::InvalidPlatform));
@@ -482,7 +476,7 @@ mod tests {
                 last_char: "好".to_owned(),
                 now_ms: 1_500,
             },
-            &ios_config(true, false),
+            &ios_config(false),
         )
         .unwrap();
         for effect in &result.effects {
@@ -514,7 +508,7 @@ mod tests {
                 trigger_prediction: true,
                 now_ms: 1_000,
             },
-            &ios_config(true, false),
+            &ios_config(false),
         )
         .unwrap();
         assert_eq!(state.last_selected_word, None);
@@ -670,7 +664,7 @@ mod tests {
                     trigger_prediction: false,
                     now_ms: 1_000,
                 },
-                &config(platform, true, false),
+                &config(platform, false),
             )
             .unwrap();
             let pairs = compound_pairs(&result).unwrap_or_default();
@@ -686,7 +680,7 @@ mod tests {
         // mid-commit UpdateLastSelectedWord may split it into tâi → gí.
         for intent in both_entry_points("tâi-gí") {
             let mut state = PersistedState::default();
-            let result = apply(&mut state, intent, &ios_config(true, false)).unwrap();
+            let result = apply(&mut state, intent, &ios_config(false)).unwrap();
             assert!(
                 compound_pairs(&result).is_none(),
                 "a 連字 compound is one word",
@@ -703,7 +697,7 @@ mod tests {
         for text in ["\u{02c6} \u{02c7}", ", ;"] {
             for intent in both_entry_points(text) {
                 let mut state = PersistedState::default();
-                let result = apply(&mut state, intent, &ios_config(true, false)).unwrap();
+                let result = apply(&mut state, intent, &ios_config(false)).unwrap();
                 assert!(
                     compound_pairs(&result).is_none(),
                     "{text:?} is marks only — nothing to learn",
@@ -736,7 +730,7 @@ mod tests {
                 trigger_prediction: false,
                 now_ms: 1_000,
             },
-            &config(Platform::Macos, true, false),
+            &config(Platform::Macos, false),
         )
         .unwrap();
         assert_eq!(state.last_selected_word, None);
@@ -755,7 +749,7 @@ mod tests {
         assert!(apply(
             &mut state,
             Intent::SetIsShowing { is_showing: false },
-            &config(Platform::Linux, true, false),
+            &config(Platform::Linux, false),
         )
         .is_ok());
     }
@@ -770,7 +764,7 @@ mod tests {
             apply(
                 &mut state,
                 Intent::SetIsShowing { is_showing: false },
-                &config(Platform::Windows, true, false),
+                &config(Platform::Windows, false),
             )
             .is_ok(),
             "PLATFORM_WINDOWS must not read as PLATFORM_UNSPECIFIED",
@@ -784,7 +778,7 @@ mod tests {
             apply(
                 &mut state,
                 Intent::SetIsShowing { is_showing: false },
-                &config(Platform::Macos, true, false),
+                &config(Platform::Macos, false),
             )
             .is_ok(),
             "PLATFORM_MACOS must not read as PLATFORM_UNSPECIFIED",
@@ -804,7 +798,7 @@ mod tests {
                 roman: "tsá-an".to_owned(),
                 now_ms: 1_000,
             },
-            &config(Platform::Android, true, false),
+            &config(Platform::Android, false),
         )
         .unwrap();
         assert_eq!(
@@ -838,7 +832,7 @@ mod tests {
                 is_showing: true,
                 ..PersistedState::default()
             };
-            apply(&mut state, intent.clone(), &ios_config(true, false)).unwrap();
+            apply(&mut state, intent.clone(), &ios_config(false)).unwrap();
             assert!(
                 state.current_generation > 1,
                 "intent {:?} should bump generation",
@@ -856,7 +850,7 @@ mod tests {
         let _ = apply(
             &mut state,
             Intent::ResetFull { now_ms: 1_000 },
-            &ios_config(true, false),
+            &ios_config(false),
         )
         .unwrap();
         assert_eq!(state.current_generation, 0, "wrapping_add expected");
@@ -878,7 +872,7 @@ mod tests {
                 trigger_prediction: true,
                 now_ms: 1_000,
             },
-            &ios_config(true, true), // is_translate_swapped = true
+            &ios_config(true), // is_translate_swapped = true
         )
         .unwrap();
         assert_eq!(state.current_generation, 5, "no-op must not bump");
@@ -902,7 +896,7 @@ mod tests {
                 trigger_prediction: true,
                 now_ms: 5_000,
             },
-            &ios_config(true, false),
+            &ios_config(false),
         )
         .unwrap();
         let has_record = result
@@ -929,7 +923,7 @@ mod tests {
                 trigger_prediction: true,
                 now_ms: 20_000,
             },
-            &ios_config(true, false),
+            &ios_config(false),
         )
         .unwrap();
         let has_record = result
@@ -949,7 +943,7 @@ mod tests {
         let result = apply(
             &mut state,
             Intent::SetIsShowing { is_showing: true },
-            &ios_config(true, false),
+            &ios_config(false),
         )
         .unwrap();
         assert!(state.is_showing, "is_showing flipped to true");
@@ -966,13 +960,13 @@ mod tests {
         apply(
             &mut state,
             Intent::SetIsShowing { is_showing: true },
-            &ios_config(true, false),
+            &ios_config(false),
         )
         .unwrap();
         let result = apply(
             &mut state,
             Intent::ClearForNewComposing { now_ms: 1_000 },
-            &ios_config(true, false),
+            &ios_config(false),
         )
         .unwrap();
         assert!(matches!(
@@ -991,7 +985,7 @@ mod tests {
         let result = apply(
             &mut state,
             Intent::ClearForNewComposing { now_ms: 1_000 },
-            &ios_config(true, false),
+            &ios_config(false),
         )
         .unwrap();
         assert!(!state.is_showing);
@@ -1006,7 +1000,7 @@ mod tests {
         let result = apply(
             &mut state,
             Intent::ClearForNewComposing { now_ms: 2_000 },
-            &ios_config(true, false),
+            &ios_config(false),
         )
         .unwrap();
         assert!(result.effects.is_empty());

@@ -411,17 +411,6 @@ fn nextword_learning_records_the_pair_within_the_window() {
         "{:?}",
         second.effects
     );
-    let off = EngineSettings {
-        is_association_recording_enabled: false,
-        ..EngineSettings::default()
-    };
-    let third =
-        engine::nextword_word_selected("文", "bûn", 3_000, &off, generation).expect("third");
-    assert!(
-        third.effects.is_empty(),
-        "recording switch gates the effect: {:?}",
-        third.effects
-    );
 }
 
 #[test]

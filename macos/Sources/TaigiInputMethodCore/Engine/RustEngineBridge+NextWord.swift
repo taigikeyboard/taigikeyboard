@@ -114,14 +114,11 @@ extension RustEngineBridge {
         return input
     }
 
-    /// `appConfig` plus the two fields the decide table reads: the swap flag
-    /// (which suppresses recording for raw-romanization commits) and the
-    /// recording switch itself, which is what the user's 記錄詞語關聯 setting
-    /// turns off (`decide.rs:109`, `:130`).
+    /// `appConfig` plus the field the decide table reads: the swap flag, which
+    /// suppresses recording for raw-romanization commits (`decide.rs:86`).
     private static func nextwordConfig(_ settings: EngineSettings) -> Taigi_Engine_AppConfig {
         var config = appConfig(settings)
         config.isTranslateSwapped = settings.isTranslateSwapped
-        config.isAssociationRecordingEnabled = settings.isAssociationRecordingEnabled
         return config
     }
 

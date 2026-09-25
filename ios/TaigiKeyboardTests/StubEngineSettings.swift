@@ -7,7 +7,6 @@ struct StubEngineSettings: EngineSettings {
     var isTranslateSwapped = false
     var isOutputBothScripts = false
     var candidateDisplayMode: CandidateDisplayMode = .sideBySide
-    var isAssociationRecordingEnabled = true
     var isLiteralRomanCandidateEnabled = true
     var isHyphenlessRomanEnabled = false
     var pojMarkerOptions = PojMarkerOptions(

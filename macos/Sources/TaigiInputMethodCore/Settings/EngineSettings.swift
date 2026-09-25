@@ -178,19 +178,6 @@ struct EngineSettings: Equatable, Sendable {
     /// which defaults it ON. Drift changes whether a fresh install learns.
     let isFrequencyRecordingEnabled: Bool
 
-    /// Whether a commit records which word followed which. Sent to the engine as
-    /// `AppConfig.is_association_recording_enabled`, which is what gates the
-    /// `RecordAssociation` effects in `engine/nextword/src/decide.rs:130`.
-    ///
-    /// The gate is on emitting the effect, not on tracking the context: the
-    /// engine still remembers the last committed word while this is off, so a
-    /// word committed with it off can become the predecessor of one committed
-    /// within ten seconds of switching it back on. That is the engine's
-    /// behaviour on all three platforms, not something macOS introduces here.
-    /// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift:49,
-    /// which defaults it ON.
-    let isAssociationRecordingEnabled: Bool
-
     /// Whether the user's own dictionary contributes candidates. Gates the
     /// lookup itself, not just the display: with it off nothing is read from
     /// `custom_dictionary.db` and `FetchAtPos.custom_entries` goes out empty.
@@ -225,7 +212,6 @@ struct EngineSettings: Equatable, Sendable {
             isHyphenlessRomanEnabled: false,
             isNasalMarkerUppercaseEnabled: true,
             isFrequencyRecordingEnabled: true,
-            isAssociationRecordingEnabled: true,
             isCustomDictEnabled: true,
             dictionarySources: .defaults,
         )
