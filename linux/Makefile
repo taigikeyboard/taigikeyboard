@@ -23,6 +23,36 @@ CROSS_CARGO := $(shell command -v cargo-zigbuild >/dev/null 2>&1 && echo "cargo 
 # Where `make install` puts things; a package build passes DESTDIR.
 PREFIX ?= /usr
 DESTDIR ?=
+# Each distribution places three things its own way: the IBus engine (where
+# its own ibus-chewing / ibus-anthy packages put theirs), the bundled
+# typefaces and the licence texts (its packaging guideline) (docs/architecture/linux-release.md § Paths per distribution).
+# `rpm` / `arch` pass their LAYOUT; the default is the FHS / Debian one, which
+# the `.deb` and a source install share.
+LAYOUT ?= debian
+# The notices every layout carries: attribution, the third-party inventory,
+# the typefaces' OFL and the dictionary's per-source terms. Debian folds them
+# into its one `copyright` file; Fedora also ships the Apache text, which Arch
+# (its `licenses` package) and Debian (common-licenses) already hold.
+LICENSE_TEXTS := ../NOTICE ../THIRD_PARTY_LICENSES.md ../fonts/OFL-1.1.txt ../dictionary/LICENSE
+ifeq ($(LAYOUT),debian)
+  LIBEXECDIR := $(PREFIX)/libexec
+  FONTDIR_TTF := $(PREFIX)/share/fonts/truetype/taigikeyboard
+  FONTDIR_OTF := $(PREFIX)/share/fonts/opentype/taigikeyboard
+  LICENSEDIR := $(PREFIX)/share/doc/taigikeyboard
+else ifeq ($(LAYOUT),fedora)
+  LIBEXECDIR := $(PREFIX)/libexec
+  FONTDIR_TTF := $(PREFIX)/share/fonts/taigikeyboard
+  FONTDIR_OTF := $(FONTDIR_TTF)
+  LICENSEDIR := $(PREFIX)/share/licenses/taigikeyboard
+  LICENSE_TEXTS += ../LICENSE
+else ifeq ($(LAYOUT),arch)
+  LIBEXECDIR := $(PREFIX)/lib/ibus
+  FONTDIR_TTF := $(PREFIX)/share/fonts/taigikeyboard
+  FONTDIR_OTF := $(FONTDIR_TTF)
+  LICENSEDIR := $(PREFIX)/share/licenses/taigikeyboard
+else
+  $(error LAYOUT must be debian, fedora or arch, not '$(LAYOUT)')
+endif
 VERSION := $(shell grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
 # E2E=1 builds the test-mode binaries: engine + platform trace on
 # (docs/architecture/e2e-trace-schema.md). They are never packaged — deb /
@@ -121,13 +151,13 @@ build-fcitx5: build
 
 # The component XML with this PREFIX rendered in (`<exec>` / `<setup>`).
 component: data/taigikeyboard.xml.in
-	sed -e 's#@PREFIX@#$(PREFIX)#g' -e 's#@VERSION@#$(VERSION)#g' $< > target/taigikeyboard.xml
+	sed -e 's#@PREFIX@#$(PREFIX)#g' -e 's#@LIBEXECDIR@#$(LIBEXECDIR)#g' -e 's#@VERSION@#$(VERSION)#g' $< > target/taigikeyboard.xml
 
 # The install layout the engine resolves at runtime
 # (`taigi-linux-platform::paths::InstallLayout`); the PREFIX must match the
 # one the binaries were built with (`TAIGIKEYBOARD_PREFIX`, default /usr).
 install: build component install-fcitx5
-	install -Dm755 target/release/ibus-engine-taigikeyboard $(DESTDIR)$(PREFIX)/libexec/ibus-engine-taigikeyboard
+	install -Dm755 target/release/ibus-engine-taigikeyboard $(DESTDIR)$(LIBEXECDIR)/ibus-engine-taigikeyboard
 	install -Dm755 target/release/taigikeyboard-settings $(DESTDIR)$(PREFIX)/bin/taigikeyboard-settings
 	install -Dm644 target/taigikeyboard.xml $(DESTDIR)$(PREFIX)/share/ibus/component/taigikeyboard.xml
 	install -d $(DESTDIR)$(PREFIX)/share/taigikeyboard/dictionaries
@@ -137,11 +167,24 @@ install: build component install-fcitx5
 	  install -Dm644 data/icons/hicolor/$${size}x$${size}/apps/taigikeyboard.png $(DESTDIR)$(PREFIX)/share/icons/hicolor/$${size}x$${size}/apps/taigikeyboard.png || exit 1; \
 	done
 	# The bundled typefaces (the ones macOS and Windows ship), as fontconfig
-	# fallbacks for the Han characters the desktop's fonts lack (roadmap L4),
-	# split by format the Debian way; users pick them in Fcitx5 / IBus (L7).
-	install -Dm644 -t $(DESTDIR)$(PREFIX)/share/fonts/truetype/taigikeyboard ../fonts/font/*.ttf
-	install -Dm644 -t $(DESTDIR)$(PREFIX)/share/fonts/opentype/taigikeyboard ../fonts/font/*.otf
-	install -Dm644 ../fonts/OFL-1.1.txt $(DESTDIR)$(PREFIX)/share/doc/taigikeyboard/fonts-OFL-1.1.txt
+	# fallbacks for the Han characters the desktop's fonts lack (roadmap L4);
+	# users pick them in Fcitx5 / IBus (L7).
+	install -Dm644 -t $(DESTDIR)$(FONTDIR_TTF) ../fonts/font/*.ttf
+	install -Dm644 -t $(DESTDIR)$(FONTDIR_OTF) ../fonts/font/*.otf
+ifeq ($(LAYOUT),debian)
+	# Debian Policy §12.5: one `copyright` file, every non-common licence
+	# verbatim; Apache-2.0 is named in the header (common-licenses).
+	install -d $(DESTDIR)$(LICENSEDIR)
+	{ cat packaging/copyright-header; for f in $(LICENSE_TEXTS); do \
+	    printf '\n%s\n%s\n\n' '========================================================================' "$${f#../}"; cat "$$f"; \
+	  done; } > $(DESTDIR)$(LICENSEDIR)/copyright
+else
+	# One file per text, named after its repo path (fonts/OFL-1.1.txt →
+	# fonts-OFL-1.1.txt), so the two `LICENSE`s stay apart.
+	for f in $(LICENSE_TEXTS); do \
+	  name="$${f#../}"; install -Dm644 "$$f" "$(DESTDIR)$(LICENSEDIR)/$${name//\//-}" || exit 1; \
+	done
+endif
 	# A package gets its cache rebuilt by fontconfig's dpkg trigger; a direct
 	# install into the live system rebuilds it here. Never for a staging root.
 	$(if $(DESTDIR),,-fc-cache $(PREFIX)/share/fonts)
@@ -152,7 +195,7 @@ install-fcitx5: build-fcitx5
 	DESTDIR=$(DESTDIR) cmake --install $(FCITX5_BUILD_DIR)
 
 uninstall:
-	rm -f $(DESTDIR)$(PREFIX)/libexec/ibus-engine-taigikeyboard
+	rm -f $(DESTDIR)$(LIBEXECDIR)/ibus-engine-taigikeyboard
 	rm -f $(DESTDIR)$(PREFIX)/bin/taigikeyboard-settings
 	rm -f $(DESTDIR)$(PREFIX)/lib/fcitx5/libtaigikeyboard.so $(DESTDIR)$(PREFIX)/lib/*/fcitx5/libtaigikeyboard.so
 	rm -f $(DESTDIR)$(PREFIX)/share/fcitx5/inputmethod/taigikeyboard.conf $(DESTDIR)$(PREFIX)/share/fcitx5/addon/taigikeyboard.conf
@@ -160,8 +203,8 @@ uninstall:
 	rm -rf $(DESTDIR)$(PREFIX)/share/taigikeyboard
 	rm -f $(DESTDIR)$(PREFIX)/share/applications/tw.taigikeyboard.Settings.desktop
 	rm -f $(DESTDIR)$(PREFIX)/share/icons/hicolor/*/apps/taigikeyboard.png
-	rm -rf $(DESTDIR)$(PREFIX)/share/fonts/truetype/taigikeyboard $(DESTDIR)$(PREFIX)/share/fonts/opentype/taigikeyboard
-	rm -rf $(DESTDIR)$(PREFIX)/share/doc/taigikeyboard
+	rm -rf $(DESTDIR)$(FONTDIR_TTF) $(DESTDIR)$(FONTDIR_OTF)
+	rm -rf $(DESTDIR)$(LICENSEDIR)
 	$(if $(DESTDIR),,-fc-cache $(PREFIX)/share/fonts)
 	@echo "removed; ~/.config/taigikeyboard, ~/.local/share/taigikeyboard and ~/.local/share/fonts/taigikeyboard are kept"
 
@@ -180,7 +223,7 @@ DEB_FILE := target/taigikeyboard_$(VERSION)_amd64.deb
 deb:
 	$(refuse_e2e)
 	rm -rf target/deb
-	$(MAKE) install PREFIX=/usr DESTDIR=$(CURDIR)/$(DEB_ROOT)
+	$(MAKE) install PREFIX=/usr LAYOUT=debian DESTDIR=$(CURDIR)/$(DEB_ROOT)
 	install -d $(DEB_ROOT)/DEBIAN target/deb/debian
 	# dpkg-shlibdeps wants a SOURCE-style debian/control beside what it scans
 	# (a Source stanza, then the package); the shipped control is the binary
@@ -195,11 +238,12 @@ deb:
 	dpkg-deb --info $(DEB_FILE)
 	@echo "built $(DEB_FILE)"
 
-# Stage the one install layout under $(1)/root and render template $(2) into
-# $(3) with the version and that root — shared by `rpm` and `arch`.
+# Stage the install, in distribution layout $(4), under $(1)/root and render
+# template $(2) into $(3) with the version and that root — shared by `rpm`
+# and `arch`.
 define stage_and_render
 	rm -rf $(1)
-	$(MAKE) install PREFIX=/usr DESTDIR=$(CURDIR)/$(1)/root
+	$(MAKE) install PREFIX=/usr LAYOUT=$(4) DESTDIR=$(CURDIR)/$(1)/root
 	sed -e 's#@VERSION@#$(VERSION)#g' -e 's#@STAGEROOT@#$(CURDIR)/$(1)/root#g' $(2) > $(3)
 endef
 
@@ -210,7 +254,7 @@ RPM_DIR := target/rpm
 RPM_FILE := target/taigikeyboard-$(VERSION)-1.x86_64.rpm
 rpm:
 	$(refuse_e2e)
-	$(call stage_and_render,$(RPM_DIR),packaging/taigikeyboard.spec.in,$(RPM_DIR)/taigikeyboard.spec)
+	$(call stage_and_render,$(RPM_DIR),packaging/taigikeyboard.spec.in,$(RPM_DIR)/taigikeyboard.spec,fedora)
 	rpmbuild -bb --define "_topdir $(CURDIR)/$(RPM_DIR)" $(RPM_DIR)/taigikeyboard.spec
 	cp $(RPM_DIR)/RPMS/x86_64/taigikeyboard-$(VERSION)-1.x86_64.rpm $(RPM_FILE)
 	rpm -qip $(RPM_FILE)
@@ -222,7 +266,7 @@ ARCH_DIR := target/arch
 ARCH_FILE := target/taigikeyboard-$(VERSION)-1-x86_64.pkg.tar.zst
 arch:
 	$(refuse_e2e)
-	$(call stage_and_render,$(ARCH_DIR),packaging/PKGBUILD.in,$(ARCH_DIR)/PKGBUILD)
+	$(call stage_and_render,$(ARCH_DIR),packaging/PKGBUILD.in,$(ARCH_DIR)/PKGBUILD,arch)
 	cd $(ARCH_DIR) && PKGDEST=$(CURDIR)/target PKGEXT=.pkg.tar.zst makepkg --force --nodeps
 	test -f $(ARCH_FILE)
 	pacman -Qip $(ARCH_FILE)

@@ -90,7 +90,9 @@ pub fn data_directory() -> Option<PathBuf> {
     UserDirectories::resolve().map(|directories| directories.data)
 }
 
-/// Where the read-only assets and the sibling binary are, for one prefix.
+/// Where the read-only assets and the settings window are, for one prefix.
+/// The IBus engine's directory is per distribution (linux/Makefile LAYOUT)
+/// and only the component XML names it.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct InstallLayout {
     prefix: PathBuf,
@@ -123,19 +125,11 @@ impl InstallLayout {
     pub fn settings_binary(&self) -> PathBuf {
         self.prefix.join("bin").join(SETTINGS_BINARY_NAME)
     }
-
-    /// `<prefix>/libexec/ibus-engine-taigikeyboard` — what the component
-    /// XML's `<exec>` names.
-    pub fn engine_binary(&self) -> PathBuf {
-        self.prefix.join("libexec").join(ENGINE_BINARY_NAME)
-    }
 }
 
 /// The settings window's binary name (the Linux spelling of
 /// `taigi_desktop_core::settings::launch::SETTINGS_EXE_NAME`).
 pub const SETTINGS_BINARY_NAME: &str = "taigikeyboard-settings";
-/// The engine's binary name.
-pub const ENGINE_BINARY_NAME: &str = "ibus-engine-taigikeyboard";
 
 /// The dictionaries: `$TAIGIKEYBOARD_DATA_DIR/dictionaries` when the
 /// override is set (a development tree), else the shipped prefix.
@@ -209,7 +203,7 @@ mod tests {
     }
 
     #[test]
-    fn the_shipped_layout_puts_assets_under_share_and_binaries_under_bin_and_libexec() {
+    fn the_shipped_layout_puts_assets_under_share_and_the_settings_window_under_bin() {
         let layout = InstallLayout::new("/usr/local");
         assert_eq!(
             layout.dictionaries_directory(),
@@ -218,10 +212,6 @@ mod tests {
         assert_eq!(
             layout.settings_binary(),
             PathBuf::from("/usr/local/bin/taigikeyboard-settings")
-        );
-        assert_eq!(
-            layout.engine_binary(),
-            PathBuf::from("/usr/local/libexec/ibus-engine-taigikeyboard")
         );
     }
 

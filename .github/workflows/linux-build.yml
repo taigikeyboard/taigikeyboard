@@ -180,7 +180,7 @@ jobs:
                       fcitx5/libtaigikeyboard.so usr/share/fcitx5/addon/taigikeyboard.conf \
                       usr/share/fcitx5/inputmethod/taigikeyboard.conf usr/share/ibus/component/taigikeyboard.xml \
                       usr/share/taigikeyboard/dictionaries/dictionary.fst usr/share/applications/tw.taigikeyboard.Settings.desktop \
-                      usr/share/icons/hicolor/48x48/apps/taigikeyboard.png; do
+                      usr/share/icons/hicolor/48x48/apps/taigikeyboard.png usr/share/doc/taigikeyboard/copyright; do
             grep -q "$path" "$RUNNER_TEMP/deb-contents.txt" || { echo "::error::$path missing from the .deb"; exit 1; }
           done
           # The control fields, not only the file name: the package a user
@@ -339,6 +339,8 @@ jobs:
               DEBIAN_FRONTEND=noninteractive apt-get install -y ./taigikeyboard_*_amd64.deb
               fcitx5 ibus dbus-daemon dbus-bin xvfb x11-xkb-utils
             addon: /usr/lib/x86_64-linux-gnu/fcitx5/libtaigikeyboard.so
+            engine: /usr/libexec/ibus-engine-taigikeyboard
+            license: /usr/share/doc/taigikeyboard/copyright
           - distro: fedora
             image: fedora:44
             artifact: linux-rpm
@@ -346,6 +348,8 @@ jobs:
               dnf install -y ./taigikeyboard-*.x86_64.rpm fcitx5 ibus dbus-daemon dbus-tools
               xorg-x11-server-Xvfb setxkbmap
             addon: /usr/lib64/fcitx5/libtaigikeyboard.so
+            engine: /usr/libexec/ibus-engine-taigikeyboard
+            license: /usr/share/licenses/taigikeyboard/fonts-OFL-1.1.txt
           - distro: arch
             image: archlinux:latest
             artifact: linux-arch
@@ -354,6 +358,8 @@ jobs:
               pacman -U --noconfirm ./taigikeyboard-*-x86_64.pkg.tar.zst &&
               pacman -S --noconfirm --needed ibus dbus xorg-server-xvfb xorg-setxkbmap
             addon: /usr/lib/fcitx5/libtaigikeyboard.so
+            engine: /usr/lib/ibus/ibus-engine-taigikeyboard
+            license: /usr/share/licenses/taigikeyboard/fonts-OFL-1.1.txt
     steps:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -378,15 +384,20 @@ jobs:
         shell: bash
         env:
           ADDON: ${{ matrix.addon }}
+          ENGINE: ${{ matrix.engine }}
+          LICENSE_FILE: ${{ matrix.license }}
         run: |
           set -eu
-          for path in /usr/libexec/ibus-engine-taigikeyboard /usr/bin/taigikeyboard-settings "$ADDON" \
+          # The engine and licence paths differ per distribution layout
+          # (linux/Makefile LAYOUT); the component XML must name the former.
+          grep -q "<exec>$ENGINE --ibus</exec>" /usr/share/ibus/component/taigikeyboard.xml || { echo "::error::component <exec> does not name $ENGINE"; exit 1; }
+          for path in "$ENGINE" /usr/bin/taigikeyboard-settings "$ADDON" "$LICENSE_FILE" \
                       /usr/share/fcitx5/addon/taigikeyboard.conf /usr/share/fcitx5/inputmethod/taigikeyboard.conf \
                       /usr/share/ibus/component/taigikeyboard.xml /usr/share/taigikeyboard/dictionaries/dictionary.fst \
                       /usr/share/applications/tw.taigikeyboard.Settings.desktop; do
             test -e "$path" || { echo "::error::$path missing after install"; exit 1; }
           done
-          for elf in /usr/libexec/ibus-engine-taigikeyboard /usr/bin/taigikeyboard-settings "$ADDON"; do
+          for elf in "$ENGINE" /usr/bin/taigikeyboard-settings "$ADDON"; do
             # ldd itself must succeed: a failure (bad ELF) would otherwise
             # read as "nothing missing".
             libs="$(ldd "$elf" 2>&1)" || { echo "$libs"; echo "::error::ldd failed on $elf"; exit 1; }

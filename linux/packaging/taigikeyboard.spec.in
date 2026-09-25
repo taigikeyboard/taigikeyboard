@@ -1,7 +1,7 @@
 # The Fedora package (`make -C linux rpm`): the same staged `make install`
-# root the `.deb` packs, never a second build inside rpmbuild — one install
-# layout for every format. `@VERSION@` / `@STAGEROOT@` are rendered by the
-# Makefile. Runtime `Requires` for the linked libraries come from rpm's own
+# recipe the `.deb` packs, staged with LAYOUT=fedora (Fedora's own paths for
+# the engine, fonts and licences), never a second build inside rpmbuild.
+# `@VERSION@` / `@STAGEROOT@` are rendered by the Makefile. Runtime `Requires` for the linked libraries come from rpm's own
 # ELF scan (the dpkg-shlibdeps of this format); only the framework alternative
 # and fontconfig (it caches the bundled typefaces) are named.
 Name:           taigikeyboard
@@ -10,7 +10,8 @@ Version:        @VERSION@
 # (`scripts/lib/desktop-release.sh` LINUX_RPM_ASSET).
 Release:        1
 Summary:        Taiwanese (Tâi-gí) input method — Fcitx5 addon and IBus engine
-License:        Apache-2.0 AND OFL-1.1
+# The dictionary data keeps per-source terms (dictionary/LICENSE).
+License:        Apache-2.0 AND OFL-1.1 AND LicenseRef-taigikeyboard-dictionary
 URL:            https://taigikeyboard.tw
 ExclusiveArch:  x86_64
 Requires:       (fcitx5 or ibus)
@@ -40,10 +41,11 @@ cp -a @STAGEROOT@/. %{buildroot}/
 %{_datadir}/taigikeyboard/
 %{_datadir}/applications/tw.taigikeyboard.Settings.desktop
 %{_datadir}/icons/hicolor/*/apps/taigikeyboard.png
-# Fedora's base packages own neither parent: without these a removal would
-# leave them behind unowned.
-%dir %{_datadir}/fonts/truetype
-%dir %{_datadir}/fonts/opentype
-%{_datadir}/fonts/truetype/taigikeyboard/
-%{_datadir}/fonts/opentype/taigikeyboard/
-%{_docdir}/taigikeyboard/
+%{_datadir}/fonts/taigikeyboard/
+# Already installed by `make install` (LAYOUT=fedora); %license only marks them.
+%dir %{_defaultlicensedir}/taigikeyboard
+%license %{_defaultlicensedir}/taigikeyboard/LICENSE
+%license %{_defaultlicensedir}/taigikeyboard/NOTICE
+%license %{_defaultlicensedir}/taigikeyboard/THIRD_PARTY_LICENSES.md
+%license %{_defaultlicensedir}/taigikeyboard/fonts-OFL-1.1.txt
+%license %{_defaultlicensedir}/taigikeyboard/dictionary-LICENSE
