@@ -86,10 +86,6 @@ pub(crate) fn apply(
             _ => commit_preedit_then_insert_external(state, text, config),
         },
         Intent::Reset => reset(state, config),
-        Intent::SetSelectedCandidateIndex { index } => {
-            set_selected_candidate_index(state, index, config)
-        }
-        Intent::QueryState => snapshot(state, config),
         Intent::EnterContinuous => enter_continuous(state, config),
         // FetchAtPos is a read-only query that needs lexicon state; the
         // dispatcher short-circuits before reaching `apply`. Reaching
@@ -655,16 +651,7 @@ fn reset(state: &mut EngineState, config: &AppConfig) -> ComposingResponse {
     }
 }
 
-fn set_selected_candidate_index(
-    state: &mut EngineState,
-    index: i32,
-    config: &AppConfig,
-) -> ComposingResponse {
-    state.selected_candidate_index = index;
-    snapshot(state, config)
-}
-
-fn snapshot(state: &EngineState, config: &AppConfig) -> ComposingResponse {
+pub(crate) fn snapshot(state: &EngineState, config: &AppConfig) -> ComposingResponse {
     let (preedit, is_composing) = match &state.phase {
         Phase::Idle => (Preedit::default(), false),
         Phase::Composing { raw, caret } => (

@@ -49,14 +49,14 @@ The merged shape (`engine/protos/proto/envelope.proto`):
 ```protobuf
 syntax = "proto3";
 
-message Command {
-  Request request = 1;
-  Response response = 2;
-}
-
 message Request {
+  // Tag 2 was `CommandType type` — never read (routing uses the `payload`
+  // oneof); removed 2026-09-25 together with `enum CommandType` and the
+  // unused `message Command` wrapper.
+  reserved 2;
+  reserved "type";
+
   uint32 id = 1;                       // client correlation; echoed in Response.id
-  CommandType type = 2;
   AppConfig config_snapshot = 3;       // per-request live snapshot — see §6
   uint64 generation = 4;               // platform-supplied — see §5
   oneof payload {
@@ -80,15 +80,6 @@ message Response {
     CaseResponse case_transform = 14;
   }
 }
-
-enum CommandType {
-  CMD_UNSPECIFIED = 0;
-  CMD_PHONETICS = 1;
-  CMD_COMPOSING = 2;
-  CMD_LEXICON = 3;
-  CMD_NEXTWORD = 4;
-  CMD_CASE = 5;
-}
 ```
 
 > **Field name `case_transform` (not `case`)**: `case` is a Swift keyword;
@@ -98,7 +89,7 @@ enum CommandType {
 
 - **`id`** prevents ordering races when the platform fires intent N+1 before N's response arrives. khiin-rs uses the same pattern (`references/khiin-rs/README.md:149-152` — "Clients should tag each Request with an id").
 - **`generation`** — see §5.
-- **`oneof payload`** — each slice gets its own message; new slices extend without breaking change.
+- **`oneof payload`** — each slice gets its own message; new slices extend without breaking change. The payload tag is the only routing key (`engine/dispatch`); there is no separate command-type discriminator.
 
 ---
 
@@ -124,7 +115,7 @@ This lifts the existing platform-side mechanism (iOS G5-impl + Android A5-impl, 
 - Enforces `docs/architecture/behavioral-invariants.md:295-299` (§11 settings live-read invariant) at the FFI level.
 - Mirrors `EngineSettings` live-read on iOS (`docs/architecture/ios-exemplar.md` §3) and Android (`docs/architecture/ios-exemplar.md` §9.2).
 
-`CMD_SET_CONFIG` (the khiin-rs equivalent at `references/khiin-rs/khiin/src/engine.rs:296`) is OPTIONAL platform warmup / compat command. It MUST NOT replace the per-request snapshot; the per-request snapshot is the authoritative source for every operation.
+A khiin-rs-style `CMD_SET_CONFIG` (`references/khiin-rs/khiin/src/engine.rs:296`) does not exist here; if one is ever added as an OPTIONAL platform warmup / compat command, it MUST NOT replace the per-request snapshot — the per-request snapshot is the authoritative source for every operation.
 
 ---
 
@@ -180,21 +171,35 @@ message PhoneticsResponse {
 
 ## 8. Composing slice — AS-IMPLEMENTED (v3.5.4)
 
-> **Status**: AS-IMPLEMENTED post v3.5.4. The proto landed in `engine/protos/proto/composing.proto`; envelope tag 11 + `CMD_COMPOSING = 2` were unreserved. Field naming uses `oneof method` (Phonetics convention). Two methods were added beyond the original §8 design draft: `SetSelectedCandidateIndex` (UI-driven candidate-bar tap mutator) and `QueryState` (pure read replacing the platform `manager.isComposingText` getter). Plus `is_composing` boolean on `ComposingResponse` so the platform stops shadowing engine state.
+> **Status**: AS-IMPLEMENTED post v3.5.4. The proto landed in `engine/protos/proto/composing.proto`; envelope tag 11 was unreserved. Field naming uses `oneof method` (Phonetics convention). `is_composing` boolean on `ComposingResponse` lets the platform stop shadowing engine state. Two methods added beyond the original design draft — `SetSelectedCandidateIndex` (tag 20) and `QueryState` (tag 21) — never gained a production caller and were removed 2026-09-25 (tags reserved). The request surface is now 16 ops: 10 text-input mutators (10s), 4 continuous-input ops (30s, v3.5.8), 2 desktop editing keys (40s). The sketch below shows the current oneof; per-message fields and comments live in the canonical `.proto`.
 
 ```protobuf
 message ComposingRequest {
-  oneof intent {
-    Start start = 1;                                           // begin new buffer; caret reset
-    Append append = 2;                                         // if idle, acts as Start
-    AppendHyphen append_hyphen = 3;                            // alias for Append("-")
-    ReplaceLast replace_last = 4;                              // TPS auto-correct; preserves selectedCandidateIndex
-    DeleteBackward delete_backward = 5;
-    CommitDerived commit_derived = 6;                          // commit tone-marked form
-    CommitRaw commit_raw = 7;                                  // commit literal raw input (e.g. English passthrough)
-    SelectSuggestion select_suggestion = 8;                    // commit platform-resolved suggestion text
-    CommitPreeditThenInsertExternal commit_preedit_then_insert_external = 9;  // atomic emoji/paste insertion
-    Reset reset = 10;                                          // teardown / mode switch
+  reserved 20, 21;
+  reserved "set_selected_candidate_index", "query_state";
+
+  oneof method {
+    // --- Text-input mutators (10s) ---
+    Start start = 10;                                          // begin new buffer; caret reset
+    Append append = 11;                                        // if idle, acts as Start
+    AppendHyphen append_hyphen = 12;                           // alias for Append("-")
+    ReplaceLast replace_last = 13;                             // TPS auto-correct; preserves selected_candidate_index
+    DeleteBackward delete_backward = 14;
+    CommitDerived commit_derived = 15;                         // commit tone-marked form
+    CommitRaw commit_raw = 16;                                 // commit literal raw input (e.g. English passthrough)
+    SelectSuggestion select_suggestion = 17;                   // commit platform-resolved suggestion text
+    CommitPreeditThenInsertExternal commit_preedit_then_insert_external = 18;  // atomic emoji/paste insertion
+    Reset reset = 19;                                          // teardown / mode switch
+
+    // --- Continuous-input ops (30s, v3.5.8) ---
+    EnterContinuous enter_continuous = 30;
+    FetchAtPos fetch_at_pos = 31;                              // read-only candidate fetch
+    CommitContinuous commit_continuous = 32;
+    ResetContinuous reset_continuous = 33;
+
+    // --- Desktop editing keys (40s) ---
+    TelexKey telex_key = 40;
+    MoveCaret move_caret = 41;
   }
 }
 
@@ -217,6 +222,8 @@ message ComposingResponse {
   Preedit preedit = 1;
   repeated Effect effect = 2;          // ordered side effects for platform to interpret
   int32 selected_candidate_index = 3;  // -1 idle; 0 fresh composition; preserved on ReplaceLast
+  bool is_composing = 4;
+  optional ContinuousResponse continuous = 5;  // FetchAtPos only
 }
 
 message Effect {
@@ -319,7 +326,7 @@ message CaseResponse {
 - Bytes vs string vs repeated for candidate lists (perf measurement needed).
 - Streaming responses for incremental candidate updates (vs full snapshot).
 - Whether NextWord generation ownership migrates from platform to Rust.
-- UI-driven candidate selection (e.g. candidate-bar tap, arrow-key navigation) currently mutates `selectedCandidateIndex` directly via the platform-side `setSelectedCandidateIndex` mutator (`ComposingState.swift:69-77`), bypassing `apply(Intent, ...)`. A wire intent (`SetSelectedCandidateIndex { index }`) lands when navigation-bar interaction is integrated into the Rust composing slice — decided when navigation-bar interaction moves into the Rust composing slice.
+- UI-driven candidate selection (e.g. candidate-bar tap, arrow-key navigation) stays platform-side. A `SetSelectedCandidateIndex` wire op existed but no platform ever called it; it was removed 2026-09-25 (tag 20 reserved). The engine still echoes `selected_candidate_index` on every `ComposingResponse`.
 
 ---
 

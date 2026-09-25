@@ -15,15 +15,6 @@ option java_multiple_files = true;
 // references/khiin-rs/khiin/src/engine.rs:57 — see
 // docs/engine/rust-core-proto.md §3-§4.
 
-enum CommandType {
-  CMD_UNSPECIFIED = 0;
-  CMD_PHONETICS = 1;
-  CMD_COMPOSING = 2;
-  CMD_LEXICON = 3;
-  CMD_NEXTWORD = 4;
-  CMD_CASE = 5;
-}
-
 enum ErrorCode {
   OK = 0;
   FAIL_PARSE = 1;
@@ -135,8 +126,12 @@ message AppConfig {
 }
 
 message Request {
+  // Tag 2 was `CommandType type` — never read by the engine (routing uses the
+  // `payload` oneof); removed 2026-09-25.
+  reserved 2;
+  reserved "type";
+
   uint32 id = 1;
-  CommandType type = 2;
   AppConfig config_snapshot = 3;
   uint64 generation = 4;
   oneof payload {
@@ -159,9 +154,4 @@ message Response {
     NextWordResponse nextword = 13;
     CaseResponse case_transform = 14;
   }
-}
-
-message Command {
-  Request request = 1;
-  Response response = 2;
 }

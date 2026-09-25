@@ -130,36 +130,6 @@ public interface ComposingRequestOrBuilder extends
 
   /**
    * <pre>
-   * --- UI-driven ops (20s) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.SetSelectedCandidateIndex set_selected_candidate_index = 20;</code>
-   * @return Whether the setSelectedCandidateIndex field is set.
-   */
-  boolean hasSetSelectedCandidateIndex();
-  /**
-   * <pre>
-   * --- UI-driven ops (20s) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.SetSelectedCandidateIndex set_selected_candidate_index = 20;</code>
-   * @return The setSelectedCandidateIndex.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.SetSelectedCandidateIndex getSetSelectedCandidateIndex();
-
-  /**
-   * <code>.taigi.engine.QueryState query_state = 21;</code>
-   * @return Whether the queryState field is set.
-   */
-  boolean hasQueryState();
-  /**
-   * <code>.taigi.engine.QueryState query_state = 21;</code>
-   * @return The queryState.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.QueryState getQueryState();
-
-  /**
-   * <pre>
    * --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
    * </pre>
    *

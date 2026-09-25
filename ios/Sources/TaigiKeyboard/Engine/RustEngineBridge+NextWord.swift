@@ -100,13 +100,6 @@ public extension RustEngineBridge {
         }
     }
 
-    /// Engine-state read for the NextWord executor.
-    struct NextWordStateSnapshot: Equatable {
-        public let lastSelectedWord: String?
-        public let isShowing: Bool
-        public let currentGeneration: UInt64
-    }
-
     // MARK: - Decide intents (6)
 
     /// v3.5.8 Phase 4 — continuous-input mid-commit handshake. Updates
@@ -282,7 +275,7 @@ public extension RustEngineBridge {
         )
     }
 
-    // MARK: - Filter / Boost / QueryState
+    // MARK: - Filter
 
     static func nextwordFilter(
         raw: [NextWordRawRow],
@@ -338,67 +331,6 @@ public extension RustEngineBridge {
             )
         }
         return NextWordFilterResult(predictions: predictions, wasStale: filter.wasStale)
-    }
-
-    static func nextwordBoostCandidates(
-        words: [String],
-        predictedFirstChars: Set<String>,
-        mode: InputMode,
-        translateSwapped: Bool,
-        associationRecordingEnabled: Bool,
-        generation: UInt64,
-    ) -> [String] {
-        var payload = Taigi_Engine_BoostCandidates()
-        payload.words = words
-        payload.predictedFirstChars = Array(predictedFirstChars)
-
-        guard let resp = nextwordDispatch(
-            method: .boostCandidates(payload),
-            op: "nextwordBoostCandidates",
-            generation: generation,
-            config: nextwordConfig(
-                mode: mode,
-                translateSwapped: translateSwapped,
-                associationRecordingEnabled: associationRecordingEnabled,
-            ),
-        ) else {
-            return words
-        }
-        guard case let .boost(boost)? = resp.result else {
-            recordFailure(op: "nextwordBoostCandidates", message: "missing boost result")
-            return words
-        }
-        return boost.words
-    }
-
-    static func nextwordQueryState(
-        mode: InputMode,
-        translateSwapped: Bool,
-        associationRecordingEnabled: Bool,
-        generation: UInt64,
-    ) -> NextWordStateSnapshot {
-        let payload = Taigi_Engine_NextWordQueryState()
-        guard let resp = nextwordDispatch(
-            method: .queryState(payload),
-            op: "nextwordQueryState",
-            generation: generation,
-            config: nextwordConfig(
-                mode: mode,
-                translateSwapped: translateSwapped,
-                associationRecordingEnabled: associationRecordingEnabled,
-            ),
-        ) else {
-            return NextWordStateSnapshot(lastSelectedWord: nil, isShowing: false, currentGeneration: 0)
-        }
-        guard case let .stateSnapshot(snapshot)? = resp.result else {
-            recordFailure(op: "nextwordQueryState", message: "missing state snapshot")
-            return NextWordStateSnapshot(lastSelectedWord: nil, isShowing: false, currentGeneration: 0)
-        }
-        return NextWordStateSnapshot(
-            lastSelectedWord: snapshot.lastSelectedWord.isEmpty ? nil : snapshot.lastSelectedWord,
-            isShowing: snapshot.isShowing,
-            currentGeneration: snapshot.currentGeneration,
-        )
     }
 
     // MARK: - Private helpers

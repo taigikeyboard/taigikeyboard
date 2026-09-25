@@ -25,9 +25,15 @@ option java_multiple_files = true;
 // state invalidation. See nextword-engine-boundary.md §3 + §13.6.
 
 message NextWordRequest {
-  // Tag layout: state-mutating intents in 10s, pure post-query helpers in 20s,
-  // pure reads in 30s. Spacing keeps each family self-contained — adding a new
-  // mutator never disturbs filter/boost/query tags, and vice versa.
+  // Tag layout: state-mutating intents in 10s, pure post-query helpers in 20s.
+  // Spacing keeps each family self-contained — adding a new mutator never
+  // disturbs the filter tag, and vice versa.
+  //
+  // Tags 21 (`boost_candidates`) and 30 (`query_state`) had no production
+  // caller and were removed 2026-09-25.
+  reserved 21, 30;
+  reserved "boost_candidates", "query_state";
+
   oneof method {
     // --- State-mutating intents (10s) — return DecideResult ---
     WordSelected         word_selected           = 10;
@@ -57,14 +63,6 @@ message NextWordRequest {
     // Pure post-query filter+merge+sort+limit — return FilterResult
     // (handles stale-gen drop).
     FilterPredictions    filter_predictions      = 20;
-
-    // Stateless candidate reorder helper (NextWord-derived first-char set).
-    // Pure function; engine state untouched. Routes through standard
-    // EngineHandle::handle path (brief mutex acquire — no observable cost).
-    BoostCandidates      boost_candidates        = 21;
-
-    // --- Pure reads (30s) — return StateSnapshot ---
-    NextWordQueryState   query_state             = 30;
   }
 }
 
@@ -152,14 +150,6 @@ message FilterPredictions {
   int32                           limit             = 4;  // post-merge truncation; 30 default if 0
 }
 
-// Stateless candidate-reorder helper; engine state untouched.
-message BoostCandidates {
-  repeated string words                  = 1;
-  repeated string predicted_first_chars  = 2;
-}
-
-message NextWordQueryState {}
-
 // Pre-merge un-scored row tagged by source. Platform NextWordService.predict
 // returns these directly post-v3.5.5; Rust filter does merge + score.
 message RawNextWordPrediction {
@@ -177,11 +167,12 @@ enum Source {
 }
 
 message NextWordResponse {
+  reserved 3, 4;
+  reserved "boost", "state_snapshot";
+
   oneof result {
     DecideResult   decide          = 1;
     FilterResult   filter          = 2;
-    BoostResult    boost           = 3;
-    StateSnapshot  state_snapshot  = 4;
   }
 }
 
@@ -198,16 +189,6 @@ message DecideResult {
 message FilterResult {
   repeated EnginePrediction predictions = 1;  // empty if was_stale
   bool                       was_stale  = 2;  // generation mismatch — late result
-}
-
-message BoostResult {
-  repeated string words = 1;  // boosted partition first, rest preserves original order
-}
-
-message StateSnapshot {
-  string  last_selected_word  = 1;  // "" == nil
-  bool    is_showing          = 2;
-  uint64  current_generation  = 3;
 }
 
 // UI-ready prediction value — mirrors iOS EnginePrediction.swift +

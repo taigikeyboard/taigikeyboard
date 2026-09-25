@@ -25,7 +25,6 @@ final class EngineFfiSmokeTests: XCTestCase {
 
         var request = Taigi_Engine_Request()
         request.id = 42
-        request.type = .cmdPhonetics
         request.configSnapshot = config
         request.phonetics = phonetics
 

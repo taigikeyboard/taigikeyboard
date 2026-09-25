@@ -617,22 +617,10 @@ fn delete_backward_under_continuous_with_empty_state_exits_to_idle() {
     assert_eq!(e.snapshot_state().phase, Phase::Idle);
 }
 
-// ---- SetSelectedCandidateIndex / QueryState under Continuous -----
+// ---- Snapshot under Continuous -----
 
 #[test]
-fn set_selected_candidate_index_under_continuous_keeps_phase() {
-    let mut e = engine_in_continuous("tsua");
-    let resp = e.apply(Intent::SetSelectedCandidateIndex { index: 3 }, &config_tl());
-    assert!(resp.effect.is_empty());
-    assert_eq!(resp.selected_candidate_index, 3);
-    let Phase::Continuous { raw, .. } = e.snapshot_state().phase else {
-        panic!();
-    };
-    assert_eq!(raw, "tsua");
-}
-
-#[test]
-fn query_state_under_continuous_raw_input_pending_only_display_text_whole_composition() {
+fn snapshot_under_continuous_raw_input_pending_only_display_text_whole_composition() {
     let mut e = engine_in_continuous("tsuagua");
     e.apply(
         Intent::CommitContinuous {
@@ -645,7 +633,7 @@ fn query_state_under_continuous_raw_input_pending_only_display_text_whole_compos
         },
         &config_tl(),
     );
-    let resp = e.apply(Intent::QueryState, &config_tl());
+    let resp = e.snapshot(&config_tl());
     assert!(resp.effect.is_empty());
     let preedit = resp.preedit.expect("preedit");
     // Model B: raw_input is still the pending tail only (NOT nailed.raw +

@@ -333,26 +333,14 @@ final class ComposingManagerTests: XCTestCase {
 
     func testConfirmSelectedCandidate_whenIndexOutOfRange_returnsFalseAndDoesNothing() {
         manager.startComposing(with: "a")
-        manager.setSelectedCandidateIndex(5) // past the end of availableTexts
         spy.effects.removeAll()
 
-        let confirmed = manager.confirmSelectedCandidate(availableTexts: ["only"])
+        // Index 0 is past the end of an empty availableTexts.
+        let confirmed = manager.confirmSelectedCandidate(availableTexts: [])
 
         XCTAssertFalse(confirmed)
         XCTAssertTrue(manager.isComposing)
         XCTAssertTrue(spy.effects.isEmpty)
-    }
-
-    func testSetSelectedCandidateIndex_updatesWrapperAndEngineTogether() {
-        manager.startComposing(with: "a")
-        manager.setSelectedCandidateIndex(2)
-        spy.effects.removeAll()
-
-        // replaceLast preserves the current index, so the engine's 2 must
-        // round-trip through the wrapper mirror.
-        manager.replaceLastCharacter(with: "b")
-
-        XCTAssertEqual(manager.selectedCandidateIndex, 2)
     }
 
     func testConfirmSelectedCandidate_whenIdle_returnsFalse() {

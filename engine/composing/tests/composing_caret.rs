@@ -48,19 +48,14 @@ fn caret_of(engine: &Engine) -> usize {
 }
 
 #[test]
-fn move_caret_steps_one_char_emits_only_update_preedit_and_keeps_selection() {
+fn move_caret_steps_one_char_emits_only_update_preedit() {
     // trace: "ka2" → display "ká" (k, á). Start puts the caret at 3 (end);
     // the display caret is the end, 2 units.
     let mut engine = start("ka2");
-    engine.apply(Intent::SetSelectedCandidateIndex { index: 2 }, &config_tl());
 
     // ← : caret 3 → 2 (before the digit). Display: k→1, a matches á→2; 2.
     let resp = move_caret(&mut engine, CaretDirection::Left);
     assert_eq!(kinds(&resp), vec!["UpdatePreedit"]);
-    assert_eq!(
-        resp.selected_candidate_index, 2,
-        "selection survives a move"
-    );
     assert!(resp.is_composing);
     assert_eq!(caret_of(&engine), 2);
     let p = preedit(&resp);
@@ -158,12 +153,10 @@ fn delete_backward_removes_the_char_before_the_caret_and_stops_at_the_start() {
 }
 
 #[test]
-fn replace_last_swaps_the_char_before_the_caret_and_keeps_the_selection() {
+fn replace_last_swaps_the_char_before_the_caret() {
     // "tai" caret 2 (after "ta"), ReplaceLast "o": drop a → "ti" caret 1,
-    // insert o → "toi" caret 2. Selection index untouched (TPS auto-correct
-    // contract).
+    // insert o → "toi" caret 2.
     let mut engine = start("tai");
-    engine.apply(Intent::SetSelectedCandidateIndex { index: 1 }, &config_tl());
     move_caret(&mut engine, CaretDirection::Left);
     let resp = engine.apply(
         Intent::ReplaceLast {
@@ -172,7 +165,6 @@ fn replace_last_swaps_the_char_before_the_caret_and_keeps_the_selection() {
         &config_tl(),
     );
     assert_eq!(preedit(&resp).raw_input, "toi");
-    assert_eq!(resp.selected_candidate_index, 1);
     assert_eq!(caret_of(&engine), 2);
 }
 

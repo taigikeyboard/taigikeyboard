@@ -3,10 +3,8 @@
 //! up in `EngineHandle::handle`.
 
 use crate::api::{Engine, Intent, NextWordError};
-use crate::booster;
 use protos::engine::{
-    next_word_request, next_word_response, AppConfig, BoostResult, NextWordRequest,
-    NextWordResponse,
+    next_word_request, next_word_response, AppConfig, NextWordRequest, NextWordResponse,
 };
 
 /// Decode the proto request method into a typed `Intent`. Returns
@@ -86,11 +84,6 @@ fn decode_intent(req: &NextWordRequest) -> Result<DecodedRequest, NextWordError>
             now_ms: m.now_ms,
             limit: m.limit,
         },
-        Method::BoostCandidates(m) => DecodedRequest::Boost {
-            words: m.words,
-            predicted_first_chars: m.predicted_first_chars,
-        },
-        Method::QueryState(_) => DecodedRequest::QueryState,
     })
 }
 
@@ -102,17 +95,10 @@ enum DecodedRequest {
         now_ms: i64,
         limit: i32,
     },
-    Boost {
-        words: Vec<String>,
-        predicted_first_chars: Vec<String>,
-    },
-    QueryState,
 }
 
 /// Pure dispatch entry: decode the proto request and route to the matching
-/// engine method. `BoostCandidates` is stateless — runs without entering
-/// the decide / filter paths. `QueryState` is also stateless (read-only
-/// snapshot). Other methods route through the engine state machine.
+/// engine method (decide intents or the post-query filter).
 pub fn handle(
     req: &NextWordRequest,
     engine: &mut Engine,
@@ -133,14 +119,6 @@ pub fn handle(
             let filter = engine.filter(raw, query_generation, now_ms, limit, config)?;
             next_word_response::Result::Filter(filter)
         }
-        DecodedRequest::Boost {
-            words,
-            predicted_first_chars,
-        } => {
-            let words = booster::boost_words(words, predicted_first_chars);
-            next_word_response::Result::Boost(BoostResult { words })
-        }
-        DecodedRequest::QueryState => next_word_response::Result::StateSnapshot(engine.snapshot()),
     };
     Ok(NextWordResponse {
         result: Some(result),

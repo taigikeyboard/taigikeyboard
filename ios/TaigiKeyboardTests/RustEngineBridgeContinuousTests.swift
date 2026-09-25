@@ -291,14 +291,15 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
         _ = RustEngineBridge.composingStart(
             "tsua", settings: settings, generation: envelopeGen,
         )
-        _ = RustEngineBridge.composingEnterContinuous(
+        let before = RustEngineBridge.composingEnterContinuous(
             settings: settings, generation: envelopeGen,
         )
-        let before = RustEngineBridge.composingQueryState(generation: envelopeGen)
         _ = RustEngineBridge.composingFetchAtPos(
             settings: settings, generation: envelopeGen,
         )
-        let after = RustEngineBridge.composingQueryState(generation: envelopeGen)
+        let after = RustEngineBridge.composingFetchAtPos(
+            settings: settings, generation: envelopeGen,
+        ).transition
         XCTAssertEqual(before.rawInput, after.rawInput, "rawInput must not change across FetchAtPos")
         XCTAssertEqual(before.isComposing, after.isComposing, "isComposing must not change")
         XCTAssertEqual(

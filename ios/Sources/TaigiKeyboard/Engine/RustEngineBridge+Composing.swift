@@ -3,7 +3,7 @@ import SwiftProtobuf
 
 // MARK: - RustEngineBridge Composing surface
 
-/// Composing slice extension for `RustEngineBridge`. Holds 12 composing
+/// Composing slice extension for `RustEngineBridge`. Holds 10 composing
 /// ops + 4 continuous-input ops (v3.5.8 Phase 6) + their synthesized value
 /// types (`ComposingTransition` / `CandidateMode` / `ContinuousCandidate` /
 /// `ContinuousFetchResult`) + the composing-specific dispatch helpers
@@ -193,7 +193,7 @@ public extension RustEngineBridge {
         )
     }
 
-    // MARK: Composing slice (12 ops)
+    // MARK: Composing slice (10 ops)
 
     internal static func composingStart(
         _ text: String,
@@ -329,29 +329,6 @@ public extension RustEngineBridge {
         composingDispatch(
             method: .reset(Taigi_Engine_Reset()),
             op: "composingReset",
-            generation: generation,
-            config: nil,
-        )
-    }
-
-    static func composingSetSelectedCandidateIndex(
-        _ index: Int,
-        generation: UInt64,
-    ) -> ComposingTransition {
-        var payload = Taigi_Engine_SetSelectedCandidateIndex()
-        payload.index = Int32(index)
-        return composingDispatch(
-            method: .setSelectedCandidateIndex(payload),
-            op: "composingSetSelectedCandidateIndex",
-            generation: generation,
-            config: nil,
-        )
-    }
-
-    static func composingQueryState(generation: UInt64) -> ComposingTransition {
-        composingDispatch(
-            method: .queryState(Taigi_Engine_QueryState()),
-            op: "composingQueryState",
             generation: generation,
             config: nil,
         )
@@ -512,8 +489,8 @@ public extension RustEngineBridge {
     /// so a nail and the keystroke after it must agree on the prefix
     /// (the 2026-05-18 "commit entry points only" split left 漢字優先
     /// showing `台 gi` while typing after `台`; desktop closed the same
-    /// drift in #31, S37). Only `Reset` / `SetSelectedCandidateIndex` /
-    /// `QueryState`, which carry no config, stay outside.
+    /// drift in #31, S37). Only `Reset`, which carries no config, stays
+    /// outside.
     // `candidateDisplayMode` (proto field 9) travels with the pair: under 羅馬字 the callers already
     // pass the DERIVED `(false, false)` pair, and FetchAtPos uses the mode to collapse same-roman rows.
     // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/engine/RustEngineBridge.kt continuousAppConfig.

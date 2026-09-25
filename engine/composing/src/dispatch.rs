@@ -60,10 +60,6 @@ pub fn decode_intent(req: &ComposingRequest) -> Result<Intent, ComposingError> {
             Intent::CommitPreeditThenInsertExternal { text: m.text }
         }
         Method::Reset(_) => Intent::Reset,
-        Method::SetSelectedCandidateIndex(m) => {
-            Intent::SetSelectedCandidateIndex { index: m.index }
-        }
-        Method::QueryState(_) => Intent::QueryState,
         Method::EnterContinuous(_) => Intent::EnterContinuous,
         Method::FetchAtPos(m) => Intent::FetchAtPos {
             position: m.position,
@@ -99,7 +95,7 @@ pub fn decode_intent(req: &ComposingRequest) -> Result<Intent, ComposingError> {
 /// layer up in `EngineHandle::handle` (`handle.rs`); this fn is the
 /// in-process Rust API also used directly by the workspace tests.
 ///
-/// Read-only intents (`FetchAtPos`, `QueryState`) are short-circuited via
+/// The read-only intent (`FetchAtPos`) is short-circuited via
 /// [`query`] (not `engine.apply`) so the pure transition table stays free
 /// of lexicon access. See module docs.
 pub fn handle(
@@ -128,7 +124,6 @@ pub fn apply(intent: Intent, engine: &mut Engine, config: &AppConfig) -> Composi
 /// programming error.
 pub fn query(intent: &Intent, engine: &Engine, config: &AppConfig) -> ComposingResponse {
     match intent {
-        Intent::QueryState => engine.snapshot(config),
         Intent::FetchAtPos {
             position,
             frequency_entries,

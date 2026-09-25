@@ -316,10 +316,10 @@ Pure-state tests runnable without simulator; the last two require iOS + Android 
 
 ### 13.3 Clock injection — full path
 
-`NextWordEngine` takes `nowMs: Long` on every decision entry point. For the prediction-filter path, the clock also reaches the scoring function inside `NextWordService.predict(...)`:
+The engine takes `nowMs` on every decision entry point (`DecisionInput.now_ms`). For the prediction-filter path, the clock also reaches the user-row decay scoring, which runs in Rust `FilterPredictions` (`engine/nextword/src/scorer.rs`):
 
 - Executor reads `System.currentTimeMillis()` once per intent entry, stores it in `NextWordDecisionInput.nowMs`.
-- Executor passes the same `nowMs` into `nextWord.predict(word, roman, settings, nowMs)` — `NextWordService.predict` stops reading the clock internally (line 270 deleted) and uses the supplied value for `calculateUserScore(count, lastUsedMs, nowMs)` / `calculateDecay(lastUsedMs, nowMs)`.
+- `NextWordService.predict(word, roman, settings)` returns un-scored raw rows and takes no clock (its unused `nowMs` parameter was removed 2026-09-25). The executor carries the same intent `nowMs` into `handleQueryResult` → `RustEngineBridge.nextwordFilter` (`FilterPredictions.now_ms`), where the user-row decay is scored.
 - Result: the engine and the prediction query use ONE consistent `nowMs` per intent — no 1–2 ms drift between "should record association?" check and user-row decay scoring.
 
 Engine-side forbidden calls (per `.claude/rules/android-guidelines.md` §1 criterion 3): `System.currentTimeMillis()`, `SystemClock.*`, `Instant.now()`. Note: `kotlinx.coroutines.delay` (top-level suspend function) is also forbidden inside the engine — all scheduling lives in the platform executor.
@@ -396,7 +396,7 @@ A5-impl adds the following Android files to the roster (mirroring §8 iOS column
 | `NextWord/NextWordOutcome.swift` | `ime/core/nextword/NextWordOutcome.kt` *(new — holds `NextWordIntent`, `NextWordPersistedState`, `NextWordDecisionInput`, `NextWordOutcome`, `Effect` types)* | Yes |
 | `NextWord/RawNextWordPrediction.swift` | `ime/core/nextword/RawNextWordPrediction.kt` *(new)* | Yes |
 | `NextWord/NextWordController.swift` (platform executor) | `ime/text/smartbar/NextWordHandler.kt` (reduced wrapper) | No — platform executor. |
-| `NextWord/Services/NextWordService.swift` (Prediction → DTO mapping) | `ime/dictionary/NextWordService.kt` (`predict` now returns `List<RawNextWordPrediction>` directly; the pre-A5 nested `NextWordService.Prediction` DTO is deleted. `nowMs: Long` added to the `predict` signature per §13.3) | No — SQLite + file manager. |
+| `NextWord/Services/NextWordService.swift` (Prediction → DTO mapping) | `ime/dictionary/NextWordService.kt` (`predict` now returns raw rows directly; the pre-A5 nested `NextWordService.Prediction` DTO is deleted. The clock goes to `nextwordFilter`, not `predict` — §13.3) | No — SQLite + file manager. |
 
 **Post-A5-impl state (2026-04-20)**: the four new files ship the `// region Shared-Core Candidate` header inline — landing them without the header would have required reformatting them again in A8-sweep. The `// CROSS-PLATFORM INVARIANT` comments on `ASSOCIATION_TIMEOUT_MS` + `CONTEXT_TIMEOUT_MS` also land in A5-impl (§13.7 below). A8-sweep remains responsible for retro-fitting markers on pre-existing files that A5 did not touch, and for the broader §5.3 surface audit (CandidateProcessor scoring constants, any additional §11 divergence comments).
 

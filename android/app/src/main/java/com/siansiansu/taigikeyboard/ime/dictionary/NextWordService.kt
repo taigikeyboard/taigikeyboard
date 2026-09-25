@@ -232,19 +232,15 @@ class NextWordService(
      * [RustEngineBridge.nextwordFilter] which scores (dict via
      * `DICT_WEIGHT`; user via decay+learning math), merges by
      * `(hanzi, tl)`, sorts desc by score, applies limit, and shapes per
-     * display rules.
-     *
-     * [nowMs] still threads through for log-decay parity (the caller
-     * forwards it on to `nextwordFilter`'s `now_ms` so the
-     * `shouldRecordAssociation` clock and the user-row decay scoring see
-     * ONE consistent "now" per intent — `nextword-engine-boundary.md` §13.3).
+     * display rules. The caller forwards its intent `nowMs` straight to
+     * `nextwordFilter` so the association clock and the user-row decay see
+     * ONE consistent "now" per intent (`nextword-engine-boundary.md` §13.3).
      */
     suspend fun predict(
         word: String,
         roman: String = "",
         limit: Int = DEFAULT_LIMIT,
         settings: EngineSettings,
-        @Suppress("UNUSED_PARAMETER") nowMs: Long,
     ): List<RustEngineBridge.NextWordRawRow> =
         withContext(Dispatchers.IO) {
             if (word.isEmpty()) {

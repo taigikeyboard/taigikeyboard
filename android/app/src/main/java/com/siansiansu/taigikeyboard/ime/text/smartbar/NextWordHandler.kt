@@ -399,7 +399,6 @@ class NextWordHandler(
                 word = word,
                 roman = roman,
                 settings = settingsProvider.current,
-                nowMs = nowMs,
             )
             withContext(Dispatchers.Main) {
                 handleQueryResult(raw = raw, queryGeneration = queryGeneration, nowMs = nowMs)

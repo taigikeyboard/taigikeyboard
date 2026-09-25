@@ -1,10 +1,9 @@
 //! Next-word slice of the engine bridge: the learning intents the desktop
-//! sends, which is three of the engine's nine. Port of
+//! sends, which is three of the engine's eight. Port of
 //! `RustEngineBridge+NextWord.swift`.
 //!
 //! The desktop learns but does not predict, so the whole read half —
-//! `FilterPredictions`, `BoostCandidates`, `NextWordQueryState`,
-//! `SetIsShowing` — has no caller and is not wrapped. `Backspace` and
+//! `FilterPredictions`, `SetIsShowing` — has no caller and is not wrapped. `Backspace` and
 //! `ContextTimeoutFired` are absent too: recording is already fenced by a
 //! strict 10-second window inside the engine (`decide.rs:306-312`), so with
 //! no predictions on screen a fired timeout changes nothing observable.

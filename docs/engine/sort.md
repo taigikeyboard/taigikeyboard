@@ -57,8 +57,7 @@ Ranking math lives in Rust `engine/ranking` (since v3.5.2). Frequency storage st
 
 | Method | Description |
 |--------|-------------|
-| `recordUsage(word)` | On selection: count+1, last_used=now |
-| `frequencyData(word)` | Get single word frequency data |
+| `recordUsage(word, tl)` | On selection: count+1, last_used=now for the `(word, tl)` pair |
 | `frequencyDataBatch(words)` | Batch get frequency data |
 
 ---

@@ -158,47 +158,5 @@ public interface NextWordRequestOrBuilder extends
    */
   com.siansiansu.taigikeyboard.engine.proto.FilterPredictions getFilterPredictions();
 
-  /**
-   * <pre>
-   * Stateless candidate reorder helper (NextWord-derived first-char set).
-   * Pure function; engine state untouched. Routes through standard
-   * EngineHandle::handle path (brief mutex acquire — no observable cost).
-   * </pre>
-   *
-   * <code>.taigi.engine.BoostCandidates boost_candidates = 21;</code>
-   * @return Whether the boostCandidates field is set.
-   */
-  boolean hasBoostCandidates();
-  /**
-   * <pre>
-   * Stateless candidate reorder helper (NextWord-derived first-char set).
-   * Pure function; engine state untouched. Routes through standard
-   * EngineHandle::handle path (brief mutex acquire — no observable cost).
-   * </pre>
-   *
-   * <code>.taigi.engine.BoostCandidates boost_candidates = 21;</code>
-   * @return The boostCandidates.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.BoostCandidates getBoostCandidates();
-
-  /**
-   * <pre>
-   * --- Pure reads (30s) — return StateSnapshot ---
-   * </pre>
-   *
-   * <code>.taigi.engine.NextWordQueryState query_state = 30;</code>
-   * @return Whether the queryState field is set.
-   */
-  boolean hasQueryState();
-  /**
-   * <pre>
-   * --- Pure reads (30s) — return StateSnapshot ---
-   * </pre>
-   *
-   * <code>.taigi.engine.NextWordQueryState query_state = 30;</code>
-   * @return The queryState.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.NextWordQueryState getQueryState();
-
   public com.siansiansu.taigikeyboard.engine.proto.NextWordRequest.MethodCase getMethodCase();
 }

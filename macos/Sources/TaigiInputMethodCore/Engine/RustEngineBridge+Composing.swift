@@ -10,7 +10,7 @@ import Foundation
 ///   character on a Mac keyboard rather than a dedicated key as it is on iOS.
 /// - `ReplaceLast` is skipped because it exists for TPS auto-correct, and macOS
 ///   ships TL and POJ only.
-/// - `CommitDerived`, `QueryState` and `ResetContinuous` have no caller here:
+/// - `CommitDerived` and `ResetContinuous` have no caller here:
 ///   `Reset` already covers aborting a continuous composition
 ///   (`transition.rs:554`).
 /// - `Start` is absent because `Append` enters `Phase::Composing` from Idle by
@@ -23,16 +23,10 @@ import Foundation
 ///   `台北台北大學`. Selecting a candidate is `CommitContinuous` (span-local),
 ///   and Return is `CommitRaw` (the whole marked region) — between them nothing
 ///   is left for it to do.
-/// - `SetSelectedCandidateIndex` is deliberately absent for good. Nothing in
-///   the engine reads `state.selected_candidate_index` — it is stored, echoed
-///   back in snapshots and reset, and no branch in `dispatch.rs` consults it
-///   (`transition.rs:576-582`). The highlight therefore lives entirely in the
-///   platform's own candidate model, which is where candidate navigation
-///   belongs permanently (`.claude/rules/cross-platform-alignment.md` §5.1).
-///   NAMED CROSS-PLATFORM DIVERGENCE (§3, intentional): iOS does send it,
-///   because its SwiftUI candidate strip renders from the mirrored index
-///   (`ios/…/Views/CandidateSuggestionsRow.swift:80`). Same observable
-///   behaviour, one less round-trip per arrow key.
+/// - Candidate navigation lives entirely in the platform's own candidate
+///   model (`.claude/rules/cross-platform-alignment.md` §4.1); the engine's
+///   `SetSelectedCandidateIndex` op had no caller on any platform and was
+///   removed 2026-09-25.
 ///
 /// Every op answers `nil` when the round-trip itself failed, which is a
 /// different thing from the engine answering that it is idle. A failed call

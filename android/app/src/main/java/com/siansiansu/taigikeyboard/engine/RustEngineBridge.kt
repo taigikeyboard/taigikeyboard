@@ -25,8 +25,8 @@ import com.siansiansu.taigikeyboard.engine.proto.CandidateDisplayMode as ProtoCa
  * ops are extension functions on it, one file per slice (mirrors iOS
  * `RustEngineBridge+<Slice>.swift`):
  * - `PhoneticsBridge.kt` — phonetics core + derivation + TPS + tone-variations cache
- * - `ComposingBridge.kt` — composing slice (12) + continuous-input (4)
- * - `NextWordBridge.kt` — NextWord slice (9)
+ * - `ComposingBridge.kt` — composing slice (10) + continuous-input (4)
+ * - `NextWordBridge.kt` — NextWord slice (7 decide intents + filter)
  * - `LexiconBridge.kt` — lexicon read path
  * - `CaseTransformBridge.kt` — per-char/per-word case operations
  * Callers outside this package import each extension by name
@@ -627,13 +627,6 @@ object RustEngineBridge {
         enum class Source { DICT, USER }
     }
 
-    /** Engine-state read for executor lookup. */
-    data class NextWordStateSnapshot(
-        val lastSelectedWord: String?,
-        val isShowing: Boolean,
-        val currentGeneration: Long,
-    )
-
     // endregion
     // region Diagnostics (Codex v2 §8 / v3 §7 / v4 §5)
 
@@ -852,8 +845,8 @@ object RustEngineBridge {
      * so a nail and the keystroke after it must agree on the prefix
      * (the 2026-05-18 "commit entry points only" split left 漢字優先
      * showing `台 gi` while typing after `台`; desktop closed the same
-     * drift in #31, S37). Only `Reset` / `SetSelectedCandidateIndex` /
-     * `QueryState`, which carry no config, stay outside.
+     * drift in #31, S37). Only `Reset`, which carries no config, stays
+     * outside.
      *
      * CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Engine/RustEngineBridge.swift continuousAppConfig.
      * Drift causes silent divergence (hanji-first spurious word-boundary spaces).

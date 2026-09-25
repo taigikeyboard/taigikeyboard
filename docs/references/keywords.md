@@ -14,7 +14,7 @@ Engine state machine lives in Rust `engine/composing` (since v3.5.4). Platform s
 | **rawInput** | Numeric-tone ASCII preedit (e.g. `gua2`) — drives lexicon search-key | Rust `composing::Phase::Composing { raw }` |
 | **composingText** | Derived display text (e.g. `guá`) — Rust applies tone marks per `AppConfig.input_mode` | Rust `composing::derived` |
 | **ComposingState** | `Phase::Idle` or `Phase::Composing { raw }` + `selected_candidate_index` | Rust `composing::EngineState` |
-| **Intent** | 12 input intents (Start / Append / AppendHyphen / ReplaceLast / DeleteBackward / CommitDerived / CommitRaw / SelectSuggestion / CommitPreeditThenInsertExternal / Reset / SetSelectedCandidateIndex / QueryState) | Rust `composing::Intent` |
+| **Intent** | Input intents: 10 text-input (Start / Append / AppendHyphen / ReplaceLast / DeleteBackward / CommitDerived / CommitRaw / SelectSuggestion / CommitPreeditThenInsertExternal / Reset), 4 continuous-input (EnterContinuous / FetchAtPos / CommitContinuous / ResetContinuous), 2 desktop editing keys (TelexKey / MoveCaret) | Rust `composing::Intent` |
 | **Effect** | Platform-neutral effect enum (updatePreedit / clearPreeditWithoutCommit / commitTextReplacingPreedit / deleteBackwardFromDocument / resetAutocomplete / performAutocomplete / resetAutocompleteContext) | Rust `composing::transition` |
 | **commitComposition** | Effect interpreter inserts derived text + clears preedit | iOS `ComposingDelegate.execute(_:)` / Android `ComposingDelegate` |
 | **markedText** | iOS inline composition display via `setMarkedText` | iOS `KeyboardViewController.setMarkedText()` |
@@ -25,7 +25,6 @@ Engine state machine lives in Rust `engine/composing` (since v3.5.4). Platform s
 | **Suggestion** | A candidate word (text + title + subtitle + metadata) | iOS `Autocomplete.Suggestion` / Android `CandidateAdapter` |
 | **InputType** | Proto enum `Hanzi` / `RomanWithTone` / `RomanNoTone`, carried on `SearchRequest.input_type` (the `ClassifyInput` op was removed 2026-09-25) | `engine/protos/proto/lexicon.proto` |
 | **composingTextSuggestion** | Position 0 candidate — always the current composing text | iOS `createComposingTextSuggestion()` |
-| **contextBoost** | Promote candidates matching bigram predictions from last selected word | Rust `nextword::booster` |
 | **phraseSuggestion** | Learned phrase candidates inserted at position 1 | Rust `lexicon::assoc_lookup` |
 | **searchKey** | fst lookup key (`tl:` / `poj:` / `hanzi:` prefix + normalized form) | Rust `lexicon::key_normalizer::build` |
 

@@ -65,9 +65,6 @@ public nonisolated struct Taigi_Engine_NextWordRequest: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  /// Tag layout: state-mutating intents in 10s, pure post-query helpers in 20s,
-  /// pure reads in 30s. Spacing keeps each family self-contained — adding a new
-  /// mutator never disturbs filter/boost/query tags, and vice versa.
   public var method: Taigi_Engine_NextWordRequest.OneOf_Method? = nil
 
   /// --- State-mutating intents (10s) — return DecideResult ---
@@ -152,31 +149,8 @@ public nonisolated struct Taigi_Engine_NextWordRequest: Sendable {
     set {method = .filterPredictions(newValue)}
   }
 
-  /// Stateless candidate reorder helper (NextWord-derived first-char set).
-  /// Pure function; engine state untouched. Routes through standard
-  /// EngineHandle::handle path (brief mutex acquire — no observable cost).
-  public var boostCandidates: Taigi_Engine_BoostCandidates {
-    get {
-      if case .boostCandidates(let v)? = method {return v}
-      return Taigi_Engine_BoostCandidates()
-    }
-    set {method = .boostCandidates(newValue)}
-  }
-
-  /// --- Pure reads (30s) — return StateSnapshot ---
-  public var queryState: Taigi_Engine_NextWordQueryState {
-    get {
-      if case .queryState(let v)? = method {return v}
-      return Taigi_Engine_NextWordQueryState()
-    }
-    set {method = .queryState(newValue)}
-  }
-
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  /// Tag layout: state-mutating intents in 10s, pure post-query helpers in 20s,
-  /// pure reads in 30s. Spacing keeps each family self-contained — adding a new
-  /// mutator never disturbs filter/boost/query tags, and vice versa.
   public nonisolated enum OneOf_Method: Equatable, Sendable {
     /// --- State-mutating intents (10s) — return DecideResult ---
     case wordSelected(Taigi_Engine_WordSelected)
@@ -204,12 +178,6 @@ public nonisolated struct Taigi_Engine_NextWordRequest: Sendable {
     /// Pure post-query filter+merge+sort+limit — return FilterResult
     /// (handles stale-gen drop).
     case filterPredictions(Taigi_Engine_FilterPredictions)
-    /// Stateless candidate reorder helper (NextWord-derived first-char set).
-    /// Pure function; engine state untouched. Routes through standard
-    /// EngineHandle::handle path (brief mutex acquire — no observable cost).
-    case boostCandidates(Taigi_Engine_BoostCandidates)
-    /// --- Pure reads (30s) — return StateSnapshot ---
-    case queryState(Taigi_Engine_NextWordQueryState)
 
   }
 
@@ -439,31 +407,6 @@ public nonisolated struct Taigi_Engine_FilterPredictions: Sendable {
   public init() {}
 }
 
-/// Stateless candidate-reorder helper; engine state untouched.
-public nonisolated struct Taigi_Engine_BoostCandidates: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var words: [String] = []
-
-  public var predictedFirstChars: [String] = []
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public nonisolated struct Taigi_Engine_NextWordQueryState: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
 /// Pre-merge un-scored row tagged by source. Platform NextWordService.predict
 /// returns these directly post-v3.5.5; Rust filter does merge + score.
 public nonisolated struct Taigi_Engine_RawNextWordPrediction: Sendable {
@@ -509,29 +452,11 @@ public nonisolated struct Taigi_Engine_NextWordResponse: Sendable {
     set {result = .filter(newValue)}
   }
 
-  public var boost: Taigi_Engine_BoostResult {
-    get {
-      if case .boost(let v)? = result {return v}
-      return Taigi_Engine_BoostResult()
-    }
-    set {result = .boost(newValue)}
-  }
-
-  public var stateSnapshot: Taigi_Engine_StateSnapshot {
-    get {
-      if case .stateSnapshot(let v)? = result {return v}
-      return Taigi_Engine_StateSnapshot()
-    }
-    set {result = .stateSnapshot(newValue)}
-  }
-
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public nonisolated enum OneOf_Result: Equatable, Sendable {
     case decide(Taigi_Engine_DecideResult)
     case filter(Taigi_Engine_FilterResult)
-    case boost(Taigi_Engine_BoostResult)
-    case stateSnapshot(Taigi_Engine_StateSnapshot)
 
   }
 
@@ -570,36 +495,6 @@ public nonisolated struct Taigi_Engine_FilterResult: Sendable {
 
   /// generation mismatch — late result
   public var wasStale: Bool = false
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public nonisolated struct Taigi_Engine_BoostResult: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  /// boosted partition first, rest preserves original order
-  public var words: [String] = []
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public nonisolated struct Taigi_Engine_StateSnapshot: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  /// "" == nil
-  public var lastSelectedWord: String = String()
-
-  public var isShowing: Bool = false
-
-  public var currentGeneration: UInt64 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -824,7 +719,7 @@ nonisolated extension Taigi_Engine_Source: SwiftProtobuf._ProtoNameProviding {
 
 nonisolated extension Taigi_Engine_NextWordRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".NextWordRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}word_selected\0\u{1}backspace\0\u{3}context_timeout_fired\0\u{3}clear_for_new_composing\0\u{3}reset_full\0\u{3}update_last_selected_word\0\u{3}set_is_showing\0\u{4}\u{4}filter_predictions\0\u{3}boost_candidates\0\u{4}\u{9}query_state\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}word_selected\0\u{1}backspace\0\u{3}context_timeout_fired\0\u{3}clear_for_new_composing\0\u{3}reset_full\0\u{3}update_last_selected_word\0\u{3}set_is_showing\0\u{4}\u{4}filter_predictions\0\u{b}boost_candidates\0\u{b}query_state\0\u{c}\u{15}\u{1}\u{c}\u{1e}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -936,32 +831,6 @@ nonisolated extension Taigi_Engine_NextWordRequest: SwiftProtobuf.Message, Swift
           self.method = .filterPredictions(v)
         }
       }()
-      case 21: try {
-        var v: Taigi_Engine_BoostCandidates?
-        var hadOneofValue = false
-        if let current = self.method {
-          hadOneofValue = true
-          if case .boostCandidates(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.method = .boostCandidates(v)
-        }
-      }()
-      case 30: try {
-        var v: Taigi_Engine_NextWordQueryState?
-        var hadOneofValue = false
-        if let current = self.method {
-          hadOneofValue = true
-          if case .queryState(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.method = .queryState(v)
-        }
-      }()
       default: break
       }
     }
@@ -1004,14 +873,6 @@ nonisolated extension Taigi_Engine_NextWordRequest: SwiftProtobuf.Message, Swift
     case .filterPredictions?: try {
       guard case .filterPredictions(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 20)
-    }()
-    case .boostCandidates?: try {
-      guard case .boostCandidates(let v)? = self.method else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 21)
-    }()
-    case .queryState?: try {
-      guard case .queryState(let v)? = self.method else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 30)
     }()
     case nil: break
     }
@@ -1369,60 +1230,6 @@ nonisolated extension Taigi_Engine_FilterPredictions: SwiftProtobuf.Message, Swi
   }
 }
 
-nonisolated extension Taigi_Engine_BoostCandidates: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".BoostCandidates"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}words\0\u{3}predicted_first_chars\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeRepeatedStringField(value: &self.words) }()
-      case 2: try { try decoder.decodeRepeatedStringField(value: &self.predictedFirstChars) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.words.isEmpty {
-      try visitor.visitRepeatedStringField(value: self.words, fieldNumber: 1)
-    }
-    if !self.predictedFirstChars.isEmpty {
-      try visitor.visitRepeatedStringField(value: self.predictedFirstChars, fieldNumber: 2)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Taigi_Engine_BoostCandidates, rhs: Taigi_Engine_BoostCandidates) -> Bool {
-    if lhs.words != rhs.words {return false}
-    if lhs.predictedFirstChars != rhs.predictedFirstChars {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Taigi_Engine_NextWordQueryState: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".NextWordQueryState"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    // Load everything into unknown fields
-    while try decoder.nextFieldNumber() != nil {}
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Taigi_Engine_NextWordQueryState, rhs: Taigi_Engine_NextWordQueryState) -> Bool {
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
 nonisolated extension Taigi_Engine_RawNextWordPrediction: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".RawNextWordPrediction"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}hanzi\0\u{1}tl\0\u{1}count\0\u{3}last_used_ms\0\u{1}source\0")
@@ -1475,7 +1282,7 @@ nonisolated extension Taigi_Engine_RawNextWordPrediction: SwiftProtobuf.Message,
 
 nonisolated extension Taigi_Engine_NextWordResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".NextWordResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}decide\0\u{1}filter\0\u{1}boost\0\u{3}state_snapshot\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}decide\0\u{1}filter\0\u{b}boost\0\u{b}state_snapshot\0\u{c}\u{3}\u{1}\u{c}\u{4}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1509,32 +1316,6 @@ nonisolated extension Taigi_Engine_NextWordResponse: SwiftProtobuf.Message, Swif
           self.result = .filter(v)
         }
       }()
-      case 3: try {
-        var v: Taigi_Engine_BoostResult?
-        var hadOneofValue = false
-        if let current = self.result {
-          hadOneofValue = true
-          if case .boost(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.result = .boost(v)
-        }
-      }()
-      case 4: try {
-        var v: Taigi_Engine_StateSnapshot?
-        var hadOneofValue = false
-        if let current = self.result {
-          hadOneofValue = true
-          if case .stateSnapshot(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.result = .stateSnapshot(v)
-        }
-      }()
       default: break
       }
     }
@@ -1553,14 +1334,6 @@ nonisolated extension Taigi_Engine_NextWordResponse: SwiftProtobuf.Message, Swif
     case .filter?: try {
       guard case .filter(let v)? = self.result else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
-    }()
-    case .boost?: try {
-      guard case .boost(let v)? = self.result else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
-    }()
-    case .stateSnapshot?: try {
-      guard case .stateSnapshot(let v)? = self.result else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
     }()
     case nil: break
     }
@@ -1649,76 +1422,6 @@ nonisolated extension Taigi_Engine_FilterResult: SwiftProtobuf.Message, SwiftPro
   public static func ==(lhs: Taigi_Engine_FilterResult, rhs: Taigi_Engine_FilterResult) -> Bool {
     if lhs.predictions != rhs.predictions {return false}
     if lhs.wasStale != rhs.wasStale {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Taigi_Engine_BoostResult: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".BoostResult"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}words\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeRepeatedStringField(value: &self.words) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.words.isEmpty {
-      try visitor.visitRepeatedStringField(value: self.words, fieldNumber: 1)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Taigi_Engine_BoostResult, rhs: Taigi_Engine_BoostResult) -> Bool {
-    if lhs.words != rhs.words {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Taigi_Engine_StateSnapshot: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".StateSnapshot"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}last_selected_word\0\u{3}is_showing\0\u{3}current_generation\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.lastSelectedWord) }()
-      case 2: try { try decoder.decodeSingularBoolField(value: &self.isShowing) }()
-      case 3: try { try decoder.decodeSingularUInt64Field(value: &self.currentGeneration) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.lastSelectedWord.isEmpty {
-      try visitor.visitSingularStringField(value: self.lastSelectedWord, fieldNumber: 1)
-    }
-    if self.isShowing != false {
-      try visitor.visitSingularBoolField(value: self.isShowing, fieldNumber: 2)
-    }
-    if self.currentGeneration != 0 {
-      try visitor.visitSingularUInt64Field(value: self.currentGeneration, fieldNumber: 3)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Taigi_Engine_StateSnapshot, rhs: Taigi_Engine_StateSnapshot) -> Bool {
-    if lhs.lastSelectedWord != rhs.lastSelectedWord {return false}
-    if lhs.isShowing != rhs.isShowing {return false}
-    if lhs.currentGeneration != rhs.currentGeneration {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

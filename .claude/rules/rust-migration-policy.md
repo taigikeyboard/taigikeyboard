@@ -19,7 +19,7 @@ Every Rust slice must satisfy ALL four:
 3. **Single responsibility naming.** File name = role (`trie.rs` not `util.rs`); function name = action verb (`lookup_prefix` not `process`); variable name = content (`row_ids` not `result`). One file / function / variable = one thing.
 4. **Idiomatic file organization.** Defer to Rust convention: tests live inline via `#[cfg(test)] mod tests { }`. Files split by sub-concern (cohesion-driven), NOT by line count. **No hard LOC cap**. Use length as a smell signal — "does this file actually own one concern?" — not a blocker. A 650-LOC file with one concern + cohesive tests reads better than 2 files with `#[path]` indirection.
 
-Examples already aligned: `engine/nextword/{lib,api,dispatch,handle,decide,filter,scorer,booster}.rs` — 8 files for 1 crate, each owning one concern. `engine/composing/{lib,api,dispatch,handle,transition,derived,continuous,shadow}.rs` — same pattern, 8 files. Platform-side bridge files split by slice too (`RustEngineBridge+<Slice>.swift`).
+Examples already aligned: `engine/nextword/{lib,api,dispatch,handle,decide,filter,scorer}.rs` — 7 files for 1 crate, each owning one concern. `engine/composing/{lib,api,dispatch,handle,transition,derived,continuous,shadow}.rs` — same pattern, 8 files. Platform-side bridge files split by slice too (`RustEngineBridge+<Slice>.swift`).
 
 ## 2. No slice toggles
 

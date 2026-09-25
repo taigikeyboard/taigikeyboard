@@ -1,4 +1,4 @@
-// NextWord ops — 9 extensions on RustEngineBridge (6 decide intents + filter + boost + queryState),
+// NextWord ops — extensions on RustEngineBridge (decide intents + filter),
 // mirroring iOS RustEngineBridge+NextWord.swift over a JNI roundtrip; nested types stay in RustEngineBridge.
 
 package com.siansiansu.taigikeyboard.engine
@@ -186,7 +186,7 @@ fun RustEngineBridge.nextwordUpdateLastSelectedWord(
 }
 
 // endregion
-// region Filter / Boost / QueryState
+// region Filter
 
 // Platform SQL supplies the raw dict + user prediction rows; Rust does score+merge+sort+limit.
 // A queryGeneration that no longer matches currentGeneration returns wasStale=true — caller drops the result.
@@ -247,60 +247,6 @@ fun RustEngineBridge.nextwordFilter(
         )
     }
     return RustEngineBridge.NextWordFilterResult(predictions = predictions, wasStale = filter.wasStale)
-}
-
-// Autocomplete context booster: candidates whose first char is in the predicted set float up.
-fun RustEngineBridge.nextwordBoostCandidates(
-    words: List<String>,
-    predictedFirstChars: Set<String>,
-    mode: InputMode,
-    translateSwapped: Boolean,
-    associationRecordingEnabled: Boolean,
-    generation: Long,
-): List<String> {
-    val payload = com.siansiansu.taigikeyboard.engine.proto.BoostCandidates
-        .newBuilder()
-        .addAllWords(words)
-        .addAllPredictedFirstChars(predictedFirstChars)
-        .build()
-    val resp = nextwordDispatch(
-        methodSetter = { it.boostCandidates = payload },
-        op = "nextwordBoostCandidates",
-        generation = generation,
-        config = nextwordConfig(mode, translateSwapped, associationRecordingEnabled),
-    ) ?: return words
-    if (!resp.hasBoost()) {
-        RustEngineBridge.recordFailure("nextwordBoostCandidates", "missing boost result")
-        return words
-    }
-    return resp.boost.wordsList.toList()
-}
-
-fun RustEngineBridge.nextwordQueryState(
-    mode: InputMode,
-    translateSwapped: Boolean,
-    associationRecordingEnabled: Boolean,
-    generation: Long,
-): RustEngineBridge.NextWordStateSnapshot {
-    val payload = com.siansiansu.taigikeyboard.engine.proto.NextWordQueryState
-        .newBuilder()
-        .build()
-    val resp = nextwordDispatch(
-        methodSetter = { it.queryState = payload },
-        op = "nextwordQueryState",
-        generation = generation,
-        config = nextwordConfig(mode, translateSwapped, associationRecordingEnabled),
-    ) ?: return RustEngineBridge.NextWordStateSnapshot(null, false, 0L)
-    if (!resp.hasStateSnapshot()) {
-        RustEngineBridge.recordFailure("nextwordQueryState", "missing state snapshot")
-        return RustEngineBridge.NextWordStateSnapshot(null, false, 0L)
-    }
-    val s = resp.stateSnapshot
-    return RustEngineBridge.NextWordStateSnapshot(
-        lastSelectedWord = if (s.lastSelectedWord.isEmpty()) null else s.lastSelectedWord,
-        isShowing = s.isShowing,
-        currentGeneration = s.currentGeneration,
-    )
 }
 
 // endregion

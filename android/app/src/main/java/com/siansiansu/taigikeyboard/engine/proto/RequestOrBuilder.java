@@ -17,17 +17,6 @@ public interface RequestOrBuilder extends
   int getId();
 
   /**
-   * <code>.taigi.engine.CommandType type = 2;</code>
-   * @return The enum numeric value on the wire for type.
-   */
-  int getTypeValue();
-  /**
-   * <code>.taigi.engine.CommandType type = 2;</code>
-   * @return The type.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.CommandType getType();
-
-  /**
    * <code>.taigi.engine.AppConfig config_snapshot = 3;</code>
    * @return Whether the configSnapshot field is set.
    */
