@@ -84,12 +84,12 @@
     "gradientStartColor": {
       "comment": "Theme editor color-row label: the gradient's first stop.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "起點色", "tailo": "Khí-tiám sik", "poj": "Khí-tiám sek", "en": "Start Color", "ja": "開始色" }
+      "values": { "hanji": "開始", "tailo": "Khai-sí", "poj": "Khai-sí", "en": "Start", "ja": "開始" }
     },
     "gradientEndColor": {
       "comment": "Theme editor color-row label: the gradient's last stop.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "終點色", "tailo": "Tsiong-tiám sik", "poj": "Chiong-tiám sek", "en": "End Color", "ja": "終了色" }
+      "values": { "hanji": "結束", "tailo": "Kiat-sok", "poj": "Kiat-sok", "en": "End", "ja": "終了" }
     },
     "backgroundTypePhoto": {
       "comment": "Theme editor background type (segmented picker): a photo from the user's library.",

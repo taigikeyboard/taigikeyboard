@@ -4022,13 +4022,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "End Color"
+            "value": "End"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "終了色"
+            "value": "終了"
           }
         }
       }
@@ -4040,13 +4040,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Start Color"
+            "value": "Start"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "開始色"
+            "value": "開始"
           }
         }
       }
