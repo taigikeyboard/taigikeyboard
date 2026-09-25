@@ -220,8 +220,8 @@
     <string name="i18n_theme_backgroundSection">背景</string>
     <string name="i18n_theme_backgroundTypeSolid">純色</string>
     <string name="i18n_theme_backgroundTypeGradient">漸層</string>
-    <string name="i18n_theme_gradientStartColor">起點色</string>
-    <string name="i18n_theme_gradientEndColor">終點色</string>
+    <string name="i18n_theme_gradientStartColor">開始</string>
+    <string name="i18n_theme_gradientEndColor">結束</string>
     <string name="i18n_theme_backgroundTypePhoto">照片</string>
     <string name="i18n_theme_photoPick">選擇照片</string>
     <string name="i18n_theme_photoChange">更換照片</string>
