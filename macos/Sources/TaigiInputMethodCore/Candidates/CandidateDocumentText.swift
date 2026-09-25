@@ -36,7 +36,7 @@ enum CandidateDocumentText {
     /// 我欲去 does not), so its gate has to answer for the string this commit
     /// actually writes. Deriving that verdict from the output mode instead is
     /// only ever an approximation, and it is wrong for a candidate with no
-    /// Hanji: the 字面羅馬字 candidate (§34), an out-of-vocabulary name, a
+    /// Hanji: the literal romanization candidate (§34), an out-of-vocabulary name, a
     /// romanization-only custom entry all write their romanization whatever
     /// the mode leads with. Asking the branch that built the string is how the
     /// two cannot disagree.
@@ -52,7 +52,7 @@ enum CandidateDocumentText {
         }
 
         if settings.isOutputBothScripts {
-            // 括號標註 writes the pair, so the romanization IS in the document
+            // Annotate in Brackets writes the pair, so the romanization IS in the document
             // whichever half leads.
             let text = settings.isTranslateSwapped
                 ? "\(hanji) (\(candidate.roman))"
@@ -65,21 +65,21 @@ enum CandidateDocumentText {
     }
 
     /// The script `text(for:settings:)` does NOT lead with — what Space
-    /// commits, so 漢羅 (Han characters and romanization mixed in one
+    /// commits, so mixed script (Han characters and romanization mixed in one
     /// sentence) costs one key per word and the mode never moves. Read off
     /// the same settings the cell was built from, so Space writes exactly the
     /// script the user can see offered beside the highlighted one;
     /// `isOutputBothScripts` is not read — it says how to show a candidate
     /// carrying BOTH scripts, and this asks for the other one BY ITSELF.
     ///
-    /// Verbatim, hyphens included: 298 dictionary entries write the 輕聲 `--`
+    /// Verbatim, hyphens included: 298 dictionary entries write the neutral-tone `--`
     /// into the hanji field (`交--人`, MOE orthography, pinned by §21/S8) and
-    /// the 漢羅 mixed entries (`紅kì-kì`) carry the romanized half's own
+    /// the mixed-script entries (`紅kì-kì`) carry the romanized half's own
     /// hyphen — stripping either would be this layer second-guessing the
     /// dictionary.
     ///
     /// nil for a one-script candidate (the §34 literal, an out-of-vocabulary
-    /// name) and under a display with no Hanji on screen (羅馬字): the
+    /// name) and under a display with no Hanji on screen (Romanization Only): the
     /// romanization again would make Space a slower Return, and Hanji the
     /// user never saw would be worse.
     /// The alternate is one script by itself, never the bracketed pair, so

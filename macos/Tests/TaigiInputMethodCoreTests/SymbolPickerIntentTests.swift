@@ -59,7 +59,7 @@ final class SymbolPickerIntentTests: XCTestCase {
     }
 
     /// The user's own rows are honoured: paging on `[` / `]` and ⇥, and
-    /// Return confirms. Space — the 漢羅 key on the bar — confirms too, since
+    /// Return confirms. Space — the Hanji/romanization key on the bar — confirms too, since
     /// a symbol has no other script to commit.
     func testTheBoundRows_pageAndConfirm() {
         XCTAssertEqual(intent("\t", isNamedSpecialKey: true), .navigate(.nextCandidate))

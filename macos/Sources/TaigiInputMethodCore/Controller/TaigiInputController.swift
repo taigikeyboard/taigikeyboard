@@ -143,7 +143,7 @@ public final class TaigiInputController: IMKInputController {
     var displayLanguageOverride: DisplayLanguageStore?
 
     /// How a menu doorway puts the settings window up, and the update checker
-    /// the 檢查更新 row drives. Both injectable for the same reason
+    /// the Check for Updates row drives. Both injectable for the same reason
     /// `displayLanguageOverride` above is, and `nil` means production: a test
     /// that drove the shipped pair would order a real window in front of
     /// whoever is running it, and reach the network.
@@ -170,7 +170,7 @@ public final class TaigiInputController: IMKInputController {
     /// that wrote romanization earned its space, so the swap does not re-ask
     /// what the space was for. That is a FACT about a commit that already
     /// happened — the word in front of the caret does not become Hanji because
-    /// the user changed the display mode afterwards. Only 自動空白 itself is
+    /// the user changed the display mode afterwards. Only Auto-Space itself is
     /// re-read live at swap time, because turning the feature off should stop
     /// it.
     private var armedAutoSpaceCaret: Int?
@@ -189,13 +189,13 @@ public final class TaigiInputController: IMKInputController {
     @MainActor
     private weak var lastClient: (any IMKTextInput)?
 
-    /// KVO on the 候選詞顯示 key so an open bar is fetched again when the 外觀
+    /// KVO on the Candidate Display key so an open bar is fetched again when the Appearance
     /// pane (or `defaults write`) changes it; armed in `activateServer`,
     /// released in `endSession` — the shortcut target's lifetime.
     @MainActor
     private var displayModeObservation: AnyObject?
 
-    /// KVO on the 候選窗 key, armed and released with `displayModeObservation`:
+    /// KVO on the Show Candidate Window key, armed and released with `displayModeObservation`:
     /// a flip mid-composition takes an open window down (off) or fetches
     /// one for the composition as it stands (on), rather than waiting for
     /// the next keystroke to notice — the window and the setting must not
@@ -208,7 +208,7 @@ public final class TaigiInputController: IMKInputController {
     /// Keydown only — the default, restated rather than left implicit so a
     /// future edit meets the cost of widening it before paying it.
     ///
-    /// It carried `flagsChanged` too until 2026-08-26, for a solo-Shift 英數
+    /// It carried `flagsChanged` too until 2026-08-26, for a solo-Shift English (ABC)
     /// toggle this input method no longer implements — it has no English mode
     /// at all now (USER): a Mac switches input sources with ⌘Space, and
     /// switching hands the user the real ABC source rather than a
@@ -405,7 +405,7 @@ public final class TaigiInputController: IMKInputController {
             language.syncFromSettings()
 
             // A row for a global shortcut may claim a key equivalent because it
-            // IS a shortcut: an entry in the registry the 快捷鍵 pane records,
+            // IS a shortcut: an entry in the registry the Shortcuts pane records,
             // whose chord carries modifiers no composition types. Read live, so
             // the row prints whatever the user last recorded on it. (No
             // composing key can ever claim one — the agent proved unable to
@@ -433,12 +433,12 @@ public final class TaigiInputController: IMKInputController {
             }
 
             // The global shortcuts a click can stand in for (USER 2026-09-19):
-            // the two switches, each under the name the 快捷鍵 pane gives it,
+            // the two switches, each under the name the Shortcuts pane gives it,
             // so the menu is where a user looks up what they last recorded.
-            // Not the 漢羅對調 swap — its default is the bare backtick, which
+            // Not the Hanji/romanization swap — its default is the bare backtick, which
             // the rule above would never print; not the symbol picker, which
             // needs the caret a click has no hold of; and not the Telex guide
-            // (USER 2026-09-20: 「極少人使用」).
+            // (USER 2026-09-20: "very few people use it").
             let shortcuts = [
                 shortcutRow(
                     .toggleRomanization,
@@ -456,7 +456,7 @@ public final class TaigiInputController: IMKInputController {
             // once those were retired the five rows were five names for one
             // window. What is left is the window itself, opening wherever the
             // user left it — naming the panes is the sidebar's job. Named
-            // 台語齒盤設定, as on Windows and Linux (USER 2026-09-24: the three
+            // TaigiKeyboard Settings, as on Windows and Linux (USER 2026-09-24: the three
             // desktops' menus identical, i18n included; the shared row list is
             // `taigi_desktop_core::keys::MENU`).
             let settings = shortcutRow(
@@ -472,9 +472,9 @@ public final class TaigiInputController: IMKInputController {
                 label: language.string(.desktopUpdateCheckNow),
                 action: #selector(checkForUpdates(_:)),
             )
-            // The one doorway to the 關於 page: it has no sidebar row (USER
+            // The one doorway to the About page: it has no sidebar row (USER
             // 2026-09-20), so the menu is where it is found. No chord, as
-            // for 檢查更新.
+            // for Check for Updates.
             let about = InputSourceMenuRow(
                 label: language.string(.desktopAboutTab),
                 action: #selector(showAbout(_:)),
@@ -488,7 +488,7 @@ public final class TaigiInputController: IMKInputController {
     /// for a `preferences.nib` (`IMKInputController.h:165-170`); this package is
     /// built by SwiftPM and has no nib to find.
     ///
-    /// What the menu's 設定 row sends, since 2026-08-26: the header promises
+    /// What the menu's Settings row sends, since 2026-08-26: the header promises
     /// that a row whose action IS `showPreferences:` routes here
     /// (`IMKInputController.h:165-170`), which is the selector the system
     /// reserves for this exact command — so a second one of our own would be
@@ -528,7 +528,7 @@ public final class TaigiInputController: IMKInputController {
     /// document (`UpdateNotificationOffer`), so that cost is paid on their
     /// click rather than seconds later when the network happens to answer.
     ///
-    /// 一般 because that is the pane the update state lives on
+    /// General because that is the pane the update state lives on
     /// (`GeneralSettingsView`), so the outcome has somewhere to land.
     @objc
     private func checkForUpdates(_: Any!) {
@@ -540,7 +540,7 @@ public final class TaigiInputController: IMKInputController {
         }
     }
 
-    /// The settings window on the 關於 page, the only pane the sidebar does
+    /// The settings window on the About page, the only pane the sidebar does
     /// not list.
     @objc
     private func showAbout(_: Any!) {
@@ -592,9 +592,9 @@ public final class TaigiInputController: IMKInputController {
     /// setting has one behaviour regardless of which surface changed it. What
     /// happens to the candidate bar follows what the setting invalidates: a
     /// romanization switch changes what a fetch would return, so its bar comes
-    /// down (same rule as `switchInputMode(to:)`); the 漢羅 swap changes only
+    /// down (same rule as `switchInputMode(to:)`); the Hanji/romanization swap changes only
     /// how the same candidates display, so its bar stays and re-renders; the
-    /// 候選詞顯示 cycle changes which candidates exist, so its bar stays and is
+    /// Candidate Display cycle changes which candidates exist, so its bar stays and is
     /// fetched again.
     @MainActor
     func performShortcutAction(_ action: ShortcutAction) {
@@ -620,14 +620,14 @@ public final class TaigiInputController: IMKInputController {
             switchInputMode(to: settings.inputMode == .tl ? .poj : .tl)
         case .toggleTranslateSwapped:
             // Inert under romanization-only — silently, no flash (USER
-            // 2026-09-01, Q11; see `allowsSwapToggle`). Under 合用 the chord
+            // 2026-09-01, Q11; see `allowsSwapToggle`). Under Hanji with Romanization the chord
             // flips only the punctuation width (`isFullWidthPunctuation`).
             guard settings.current.candidateDisplayMode.allowsSwapToggle else { return }
             // The bar STAYS: the SWAP changes how a candidate displays and
             // commits, never which candidates exist, so the list on screen is
             // still the right one — re-rendered, selection kept. Dismissing
             // here read as the window vanishing (real device, 2026-08-21).
-            // (The 候選詞顯示 picker is the setting that DOES change which
+            // (The Candidate Display picker is the setting that DOES change which
             // candidates exist — see `refetchCandidatesForDisplayModeChange`.)
             settings.storedIsTranslateSwapped.toggle()
             rerenderCandidatesForDisplayChange()
@@ -635,7 +635,7 @@ public final class TaigiInputController: IMKInputController {
             // Never inert: every mode has a next one. Only the setting is
             // written here — the open bar is re-fetched by the observation
             // `activateServer` armed on this key, which is the one path the
-            // 外觀 pane's write already takes (`refetchCandidatesForDisplayModeChange`).
+            // Appearance pane's write already takes (`refetchCandidatesForDisplayModeChange`).
             // That observation hops to the main actor, so the flash below
             // lands one turn BEFORE the bar changes shape; a second, in-line
             // re-fetch would run the same fetch twice.
@@ -809,7 +809,7 @@ public final class TaigiInputController: IMKInputController {
             // character rides the same single mutation as the commit. Both
             // rewrites CAN fire here: this path commits the preedit as typed,
             // which is romanization under every mode, while the full-width map
-            // still answers to the output mode — so 漢字 mode + 自動空白 gets
+            // still answers to the output mode — so Hanji mode + Auto-Space gets
             // `taigi？ `. The full-width map reading the mode rather than the
             // committed string is a separate approximation, untouched here.
             let isWidthFlip = ComposingKeyIntent.widthFlipCharacter(key) != nil
@@ -840,9 +840,9 @@ public final class TaigiInputController: IMKInputController {
             // host — one of the two pass-through keys this input method
             // consumes.
             //
-            // Read BEFORE the full-width map, and since the 漢羅 key that
+            // Read BEFORE the full-width map, and since the Hanji/romanization key that
             // ordering decides a real case rather than an impossible one: in
-            // 漢字 mode Space writes a romanization and arms a space, and the
+            // Hanji mode Space writes a romanization and arms a space, and the
             // `?` that follows matches both rules. The swap wins, and should —
             // the word in front of the caret is romanization, which reads as
             // Latin text and takes Latin punctuation, whatever the mode would
@@ -851,7 +851,7 @@ public final class TaigiInputController: IMKInputController {
             //
             // The width-flip chord is the exception to that ordering: the user
             // named the width, so the swap attaches the glyph they asked for
-            // (`guá ` + `⌃,` in 羅馬字 mode → `guá， `).
+            // (`guá ` + `⌃,` in romanization mode → `guá， `).
             guard let typed = ComposingKeyIntent.documentText(of: key) else { return false }
             let isWidthFlip = ComposingKeyIntent.widthFlipCharacter(key) != nil
             let punctuation = documentPunctuation(typed, isWidthFlip: isWidthFlip)
@@ -882,15 +882,15 @@ public final class TaigiInputController: IMKInputController {
             return false
         case .commitHighlightedCandidate:
             // The window is authoritative for which absolute index its selection
-            // is on. The cell's own script: under 漢羅濫 that is the Hanji for
-            // a 漢字 cell and the romanization for a 羅馬字 cell.
+            // is on. The cell's own script: under Hanji with Romanization that is the Hanji for
+            // a Hanji cell and the romanization for a romanization cell.
             commitPresented(
                 at: candidatePresenter.selectedCandidateIndex(ownedBy: sessionToken),
                 flip: false,
                 from: manager, client: client, executing: executor,
             )
         case .commitAlternateScript:
-            // The 漢羅 key: same candidate the highlight is on, written in the
+            // The Hanji/romanization key: same candidate the highlight is on, written in the
             // script the cell does NOT stand for. A candidate that has only one
             // answers `.ignored` inside the commit, so the key is consumed and
             // nothing happens — the same answer `⌃7` gets on a page with no
@@ -925,7 +925,7 @@ public final class TaigiInputController: IMKInputController {
     /// Announces a mode the user just switched into, through the injected
     /// recorder in tests and the shared HUD in production.
     ///
-    /// The romanization switch and the 候選詞顯示 cycle. The 英數 toggle raised
+    /// The romanization switch and the Candidate Display cycle. The English (ABC) toggle raised
     /// this too, until this input method stopped having an English mode
     /// (USER 2026-08-26). Switching input sources is the system's business
     /// and it draws its own indicator; a second one of ours over it would be
@@ -985,11 +985,11 @@ public final class TaigiInputController: IMKInputController {
             //
             // The commit's own verdict is carried into the gate rather than
             // re-derived here: spacing is a property of ROMANIZATION, and both
-            // the 漢羅 key and a candidate with no Hanji write a script the
+            // the Hanji/romanization key and a candidate with no Hanji write a script the
             // output mode alone would name wrong (`AutoSpacePolicy
             // .isGateActive`). So the answer follows the document — a
-            // romanization written in 漢字 mode is spaced, a hanji written in
-            // 羅馬字 mode is not — and 自動空白 OFF still means no space
+            // romanization written in Hanji mode is spaced, a hanji written in
+            // romanization mode is not — and Auto-Space OFF still means no space
             // anywhere (USER 2026-08-25).
             appendAutoSpace(
                 afterCommit: commit?.text,
@@ -1092,9 +1092,9 @@ public final class TaigiInputController: IMKInputController {
         )
     }
 
-    /// Fetches the candidates again after a 候選詞顯示 change and repaints the
+    /// Fetches the candidates again after a Candidate Display change and repaints the
     /// bar in place. Unlike the swap, this setting changes WHICH candidates
-    /// exist — under 羅馬字 the engine collapses same-roman rows (§44) — so a
+    /// exist — under Romanization Only the engine collapses same-roman rows (§44) — so a
     /// repaint of the old fetch would keep the duplicates on screen.
     /// Through `updateCells`, like the swap: the KVO path has no client to ask
     /// for a caret rectangle, and the window is already anchored. The bar goes
@@ -1112,7 +1112,7 @@ public final class TaigiInputController: IMKInputController {
         updateCellsInPlace()
     }
 
-    /// Brings the window into line with the 候選窗 setting the 一般 pane (or
+    /// Brings the window into line with the Show Candidate Window setting the General pane (or
     /// `defaults write`) just flipped, for a composition that is running.
     ///
     /// Off takes the list and the window down together (`dismissCandidates`)
@@ -1183,7 +1183,7 @@ public final class TaigiInputController: IMKInputController {
 
     /// Shows the whole table anchored to the caret — one list, in file
     /// order, so the first pick is the symbol itself (USER 2026-09-09: a
-    /// category to choose first 「會造成使用者的體驗中斷」) — and records the
+    /// category to choose first "it would interrupt the user's flow") — and records the
     /// picker as open.
     ///
     /// The list goes up over a PLACEHOLDER marked region — one underlined
@@ -1194,12 +1194,12 @@ public final class TaigiInputController: IMKInputController {
     /// the real key event to the page unless marked text was present around
     /// the input method's turn, so with nothing marked the arrows walked the
     /// list AND moved the page's caret, and Return picked the symbol AND
-    /// submitted the message (USER report 2026-09-18, 「揤↑↓←→了後拍字的位會
-    /// 家己走去，而且揤「Enter」拍袂出來」). vChewing keeps the same
+    /// submitted the message (USER report 2026-09-18: "after pressing ↑↓←→ the
+    /// typing position wanders off by itself, and pressing Enter types nothing"). vChewing keeps the same
     /// placeholder for the same list — `.ofSymbolTable` with nothing typed
     /// (`IMEStateParsed4Darwin.swift:256-266`, `InputSession_HandleStates.swift:58-64`:
-    /// 「避免 inline display 為空導致 IMK 誤判 composition 已結束、將 keyboard
-    /// event 洩漏給客體應用」).
+    /// "keep the inline display from being empty, so IMK does not misjudge the
+    /// composition as ended and leak the keyboard event to the client app").
     ///
     /// Not over a selection: marked text replaces the selection the way
     /// typing does (`NSTextInputClient.setMarkedText`), and clearing it on
@@ -1351,7 +1351,7 @@ public final class TaigiInputController: IMKInputController {
     ///
     /// The EFFECTIVE width (`current`), not the stored swap: a romanization-
     /// only display writes romanization, and romanization takes half-width
-    /// marks; under 合用 the stored swap still picks the width even though the
+    /// marks; under Hanji with Romanization the stored swap still picks the width even though the
     /// candidate projection is forced hanji-first.
     @MainActor
     private func documentPunctuation(_ text: String, isWidthFlip: Bool) -> String? {
@@ -1364,7 +1364,7 @@ public final class TaigiInputController: IMKInputController {
 
     // MARK: - Auto-space
 
-    /// The gate every auto-space site reads — 自動空白 live, so a toggle
+    /// The gate every auto-space site reads — Auto-Space live, so a toggle
     /// flipped in the settings window applies to the very next commit, and
     /// `wroteRomanization` from whatever resolved the string this commit wrote.
     ///
@@ -1439,7 +1439,7 @@ public final class TaigiInputController: IMKInputController {
         client: IMKTextInput,
         manager: ComposingManager,
     ) -> Bool {
-        // 自動空白 is re-read against the setting as it stands NOW,
+        // Auto-Space is re-read against the setting as it stands NOW,
         // deliberately: switching the feature off invalidates the space it
         // left behind, and the key maps or passes through instead
         // (`AutoSpaceControllerTests.testTheToggleFlippedOffAfterTheCommit…`).

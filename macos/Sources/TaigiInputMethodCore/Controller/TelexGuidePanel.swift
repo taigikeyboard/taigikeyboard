@@ -4,8 +4,8 @@ import AppKit
 
 /// One row of the guide: the key and what it does.
 ///
-/// Two columns, no examples and no dismiss hint (USER 2026-09-09: 「不要多餘的
-/// 說明文字…不需要範例,不需要說明如何 exit」). What the affricate keys spell
+/// Two columns, no examples and no dismiss hint (USER 2026-09-09: "no extra
+/// explanatory text… no examples, no explaining how to exit"). What the affricate keys spell
 /// still has to follow the romanization in use, so `z` carries its spelling —
 /// `ts` under TL, `ch` under POJ — inside the meaning itself.
 private struct TelexGuideRow {
@@ -31,7 +31,7 @@ private struct TelexGuideRow {
 }
 
 /// The Telex key table as a card the user can glance at while typing
-/// (USER 2026-09-09): the same legend used to sit under the 聲調拍法 picker,
+/// (USER 2026-09-09): the same legend used to sit under the Tone Keys picker,
 /// in a settings pane the user is not looking at when they forget which
 /// letter is tone 7. Raised by the `showTelexGuide` chord, which fires from
 /// anywhere, and dismissed by the very next key — Escape is swallowed, every

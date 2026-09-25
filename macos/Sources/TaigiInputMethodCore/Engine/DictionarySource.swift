@@ -21,11 +21,11 @@ enum DictionarySource: String, CaseIterable, Sendable {
     case taijit // 台日大辭典
     case kungge // 台語工藝詞庫
     case stti // 學科術語辭典
-    case khpoo // 腔口補充資料
+    case khpoo // Accent Variations
     case khiin // 在來字
     case lkk // LKK 漢羅合用建議用字
-    case dev // 詞庫增補檔案
-    case custom // 自訂詞庫
+    case dev // Supplementary Word List
+    case custom // Custom Dictionary
 }
 
 /// Reads the per-record source bitmask the engine returns with a search row.
@@ -36,7 +36,7 @@ enum LexiconBitmask {
     /// ios/Sources/TaigiKeyboard/Lexicon/Utils/LexiconBitmask.swift:20-27 and
     /// the Android `LexiconBitmask`. Drift silently mislabels every result.
     ///
-    /// Bit 12 (異用字) is deliberately absent: it marks a record as a variant
+    /// Bit 12 (variant characters) is deliberately absent: it marks a record as a variant
     /// spelling rather than naming a dictionary, and it has never been a badge.
     /// Bits above it are the kautian subcollection wire region, which describes
     /// the QUERY rather than the row, and are ignored here for the same reason.

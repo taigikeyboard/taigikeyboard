@@ -59,13 +59,13 @@ enum ComposingAction: String, CaseIterable, Sendable {
     /// maps `.down` and `.nextCandidate` to the same move), so the most
     /// reachable key on the keyboard was spending itself on a duplicate.
     ///
-    /// What it buys is the 漢羅 sentence. `我ê名` in 漢字 mode used to be
+    /// What it buys is the mixed-script sentence. `我ê名` in Hanji mode used to be
     /// Return, then `` ` `` to flip the whole input method to romanization,
     /// Return, `` ` `` to flip back, then Return — three actions for the one
     /// romanized word. It is now Return / Space / Return.
     ///
     /// Mode-relative and self-inverting, which is what makes it one key rather
-    /// than the pair of pinned 直接送出漢字 / 直接送出羅馬字 actions removed in
+    /// than the pair of pinned Commit Hanji Directly / Commit Romanization Directly actions removed in
     /// #609: there is nothing to remember about which key writes which script.
     /// rime-phah-taibun binds the same gesture the same way, on `\`
     /// (`references/rime-phah-taibun/lua/phah_taibun_commit.lua:264`).

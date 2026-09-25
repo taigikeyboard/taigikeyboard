@@ -1,14 +1,14 @@
-// The 快捷鍵 pane: every key the user can put an action on, in three blocks.
+// The Shortcuts pane: every key the user can put an action on, in three blocks.
 
 import AppKit
 import KeyboardShortcuts
 import SwiftUI
 
-/// The 快捷鍵 pane of the settings window.
+/// The Shortcuts pane of the settings window.
 ///
-/// Three blocks, by what a key DOES: 選字, the keys that move through the
-/// candidates; 輸出, the keys that end the composition into the document; and
-/// 其他, the switches and the windows a key raises. Titled since 2026-09-10 (USER) — the blocks shipped
+/// Three blocks, by what a key DOES: Candidate Selection, the keys that move through the
+/// candidates; Output, the keys that end the composition into the document; and
+/// Other, the switches and the windows a key raises. Titled since 2026-09-10 (USER) — the blocks shipped
 /// headerless the same day, and a header is what tells a reader which of the
 /// three a key they are hunting for lives in.
 ///
@@ -23,7 +23,7 @@ import SwiftUI
 /// One CONTROL too, since 2026-08-26: every row is a `ShortcutKeyRecorder`.
 /// The global rows were `KeyboardShortcuts.Recorder` until then, and it beeps
 /// at any modifier-less key before validation of ours can run
-/// (`RecorderCocoa.swift:404-410`) — so 漢羅代先 could not be moved to a bare
+/// (`RecorderCocoa.swift:404-410`) — so the Hanji/romanization swap could not be moved to a bare
 /// `z` even though it SHIPS on a bare backtick (USER, real device). What the
 /// two tiers still differ in is where the recorded key is written and what
 /// each refuses on top of the shared gate, which is what `onRecord` and
@@ -53,7 +53,7 @@ struct ShortcutSettingsView: View {
             // the roster itself.
             //
             // The candidate-slot keys have no RECORDER row on this pane: they
-            // follow from the 聲調拍法 picker on the 一般 pane
+            // follow from the Tone Keys picker on the General pane
             // (`ToneInputScheme`), so the two halves of the key contract
             // cannot be set apart. They are shown read-only below.
             Section {
@@ -63,7 +63,7 @@ struct ShortcutSettingsView: View {
 
                 // Shown, not recordable (USER 2026-09-20): the bare slot keys
                 // pick a candidate off the visible page, and which keys they
-                // are follows the 聲調拍法 picker (`ToneInputScheme.slotKeySet`)
+                // are follows the Tone Keys picker (`ToneInputScheme.slotKeySet`)
                 // — so the row follows it too. First of the fixed rows because
                 // it is the main way through the bar; its ⇧ twin sits with the
                 // commit rows below.
@@ -93,13 +93,13 @@ struct ShortcutSettingsView: View {
                 }
 
                 // Shown, not recordable (USER 2026-09-10): ⇧ on a slot key is
-                // the 漢羅 commit aimed at that slot, and the slot keys follow
+                // the Hanji/romanization commit aimed at that slot, and the slot keys follow
                 // the tone scheme — so the row follows it too, and there is
                 // nothing to record. After the commit rows, because it is one.
                 fixedRow(.desktopActionCommitAlternateScript, Self.shiftedSlotKeysLabel(bindings.slotKeySet))
 
                 // Shown, not recordable (USER 2026-09-20): ⌃ on a punctuation
-                // key types it in the other width once, whatever the 漢羅
+                // key types it in the other width once, whatever the Hanji/romanization
                 // mode would have typed (`ComposingKeyIntent.widthFlipCharacter`).
                 // Here because it writes into the document; three sample
                 // chords, since the row stands for every key of the map.
@@ -118,7 +118,7 @@ struct ShortcutSettingsView: View {
             // these have in common is that none of them needs a composition
             // running — which is also why they are the roster that holds a
             // chord in the global registry, though the block is drawn on what
-            // they DO. Not on their modifiers: 漢羅對調 ships on a bare
+            // they DO. Not on their modifiers: the Hanji/romanization swap ships on a bare
             // backtick, so ⌃⌘ names no boundary here. Nor on dispatch: the
             // symbol picker is on this list and registers no Carbon hotkey
             // (`ShortcutAction.firesFromTheKeyPath`).

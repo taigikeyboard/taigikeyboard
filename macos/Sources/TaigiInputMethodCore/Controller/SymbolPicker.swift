@@ -28,7 +28,7 @@ enum SymbolPickerIntent: Equatable, Sendable {
     /// on the paging and confirm rows (`ComposingKeyBindings`) — so a user who
     /// moved paging to ⌥Return pages the picker with it too. Only the
     /// bar-specific outcomes differ: there is no other script to commit, so
-    /// the 漢羅 key confirms like Return, and the literal-commit key has no
+    /// the Hanji/romanization key confirms like Return, and the literal-commit key has no
     /// literal to write, so it falls through.
     static func intent(for key: KeyEventSnapshot, bindings: ComposingKeyBindings) -> SymbolPickerIntent {
         let modifiers = key.modifiers.intersection(.deviceIndependentFlagsMask)

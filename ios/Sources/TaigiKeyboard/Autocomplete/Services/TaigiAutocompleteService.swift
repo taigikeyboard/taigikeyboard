@@ -3,7 +3,7 @@
 import Foundation
 import KeyboardKit
 
-/// §42 漢羅濫 split-cell wire vocabulary — shared by the builder
+/// §42 Hanji with Romanization split-cell wire vocabulary — shared by the builder
 /// (`buildContinuousSuggestions`), the render/commit guard
 /// (`CandidateCellHelper.suggestionToHandle`), and the commit resolver
 /// (`ActionHandler.markedCellCommit`). Values mirror Android
@@ -11,12 +11,12 @@ import KeyboardKit
 enum CandidateCellScript {
     /// `additionalInfo` key carrying the cell's script marker.
     static let infoKey = "cellScript"
-    /// Marker value: the cell shows and commits the 漢字.
+    /// Marker value: the cell shows and commits the Hanji.
     static let hanji = "hanji"
     /// Marker value: the cell shows and commits the bare roman.
     static let roman = "roman"
     /// `additionalInfo` key on a hanji cell carrying the roman it appends
-    /// under 括號標註 (`漢字 (羅馬字)`).
+    /// under Annotate in Brackets (`Hanji (romanization)`).
     static let bracketRomanKey = "roman"
 
     /// The §42 marker this suggestion commits by, or `nil` when it is not a
@@ -39,13 +39,13 @@ enum CandidateCellScript {
     }
 }
 
-/// Whether the candidate strip renders 漢羅濫 split cells: the picker is set
-/// to 漢羅濫 and the layout is not TPS (TPS is hanji-first by construction and
+/// Whether the candidate strip renders Hanji with Romanization split cells: the picker is set
+/// to Hanji with Romanization and the layout is not TPS (TPS is hanji-first by construction and
 /// ignores the picker). Read per fetch, never snapshotted, so a settings change
 /// takes effect on the next keystroke.
 // CROSS-PLATFORM INVARIANT — mirrors android/.../composing/TaigiAutocompleteService.kt
 // `shouldSplitCombinedCells`. Drift causes silent divergence (one platform still
-// splitting under TPS, or not splitting under 漢羅濫).
+// splitting under TPS, or not splitting under Hanji with Romanization).
 func shouldSplitCombinedCells(
     keyboardLayoutType: KeyboardLayoutType,
     candidateDisplayMode: CandidateDisplayMode,
@@ -53,14 +53,14 @@ func shouldSplitCombinedCells(
     keyboardLayoutType != .tps && candidateDisplayMode == .combined
 }
 
-/// The 漢羅濫 split (§42): each item becomes a 漢字 cell (when `hanji` is
-/// non-empty) then a 羅馬字 cell (when `roman` is non-nil), neither with a
+/// The Hanji with Romanization split (§42): each item becomes a Hanji cell (when `hanji` is
+/// non-empty) then a romanization cell (when `roman` is non-nil), neither with a
 /// subtitle, each carrying its `CandidateCellScript` marker on top of the
 /// item's `sidechannels` (the hanji cell also carries the roman under
-/// `bracketRomanKey` for 括號標註). Each script dedupes on the text its cell
+/// `bracketRomanKey` for Annotate in Brackets). Each script dedupes on the text its cell
 /// shows, first-seen wins — a one-script cell carries nothing that could tell
-/// it from an earlier cell reading the same (USER 2026-09-03 「相同的漢字 or
-/// 羅馬字不能重複出現」). The Continuous and NextWord builders differ only in
+/// it from an earlier cell reading the same (USER 2026-09-03: "the same Hanji or
+/// romanization must not appear twice"). The Continuous and NextWord builders differ only in
 /// the three projections.
 // CROSS-PLATFORM INVARIANT — mirrors android/.../composing/TaigiAutocompleteService.kt splitIntoSingleScriptCells
 // and the desktop PresentedCandidate split. Drift causes silent divergence (cell order or dedupe survivor differs on one platform).
@@ -157,7 +157,7 @@ class TaigiAutocompleteService: KeyboardKit.AutocompleteService {
             return AutocompleteResult(inputText: text, suggestions: [])
         }
         let candidates = continuousFetcher?.fetchContinuousCandidates() ?? []
-        // §42 漢羅濫 splits cells at the builder below; TPS ignores the picker
+        // §42 Hanji with Romanization splits cells at the builder below; TPS ignores the picker
         // (hanji-first by construction), so a TPS layout never splits
         // regardless of the stored mode. Mirrors Android's
         // `splitCombinedCellsProvider`.
@@ -233,12 +233,12 @@ class TaigiAutocompleteService: KeyboardKit.AutocompleteService {
     /// `displayText`), so the builder trusts both fields as
     /// non-empty-when-meaningful.
     ///
-    /// §42 漢羅濫 (`splitCombinedCells == true`): each hanji-bearing
+    /// §42 Hanji with Romanization (`splitCombinedCells == true`): each hanji-bearing
     /// candidate is emitted as TWO adjacent single-script suggestions — a
-    /// 漢字 cell then its 羅馬字 cell, neither with a subtitle. The
+    /// Hanji cell then its romanization cell, neither with a subtitle. The
     /// `additionalInfo["cellScript"]` marker ("hanji" | "roman") says what the
     /// cell shows and commits; the SEMANTIC sidechannels (`displayText`,
-    /// `canonicalTl`, spans) are copied verbatim onto BOTH cells so 詞頻 /
+    /// `canonicalTl`, spans) are copied verbatim onto BOTH cells so frequency /
     /// NextWord identity never moves.
     ///
     /// BOTH scripts dedupe on the TEXT THE CELL SHOWS, in fetched order,
@@ -246,11 +246,11 @@ class TaigiAutocompleteService: KeyboardKit.AutocompleteService {
     /// `tsia̍h`; 重/tîng and 重/tāng draw ONE 重 cell and keep both roman
     /// cells). A one-script cell carries nothing that could tell it from an
     /// earlier cell reading the same, so a second one is a defect, not a
-    /// second offer (USER 2026-09-03 「相同的漢字 or 羅馬字不能重複出現」); 漢字
+    /// second offer (USER 2026-09-03: "the same Hanji or romanization must not appear twice"); Hanji
     /// cells were exempt until then on Core Principle #7 grounds. The two
-    /// scripts keep separate keys. Split OFF (the default — 並排 / 羅馬字 / TPS
+    /// scripts keep separate keys. Split OFF (the default — Hanji–Romanization Pairing / Romanization Only / TPS
     /// all resolve to `false` at the caller) emits the un-split shape
-    /// byte-identically — 並排's subtitle tells 重/tîng from 重/tāng.
+    /// byte-identically — Hanji–Romanization Pairing's subtitle tells 重/tîng from 重/tāng.
     func buildContinuousSuggestions(
         from candidates: [RustEngineBridge.ContinuousCandidate],
         splitCombinedCells: Bool = false,
@@ -267,7 +267,7 @@ class TaigiAutocompleteService: KeyboardKit.AutocompleteService {
         )
     }
 
-    /// The un-split dual-script suggestion every non-濫 mode emits (today's shape).
+    /// The un-split dual-script suggestion every non-Hanji-with-Romanization mode emits (today's shape).
     private func dualScriptSuggestion(
         for c: RustEngineBridge.ContinuousCandidate,
     ) -> AutocompleteSuggestion {

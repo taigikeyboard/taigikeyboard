@@ -60,7 +60,7 @@ public class ActionHandler: StandardKeyboardActionHandler {
     }
 
     /// True when the space in front of the caret is one this handler wrote and
-    /// 自動空白 is still on. The setting is read live so switching the feature
+    /// Auto-Space is still on. The setting is read live so switching the feature
     /// off stops the swap; the provenance is the consumed arm.
     /// The stored flag is read first: it is false for almost every keystroke,
     /// which keeps the App-Group defaults read off the common path.
@@ -247,7 +247,7 @@ extension ActionHandler: AutocompleteContextUpdater {
     /// engine's `RustEngineBridge.NextWordEnginePrediction` touches
     /// KeyboardKit types.
     func setNextWordPredictions(_ predictions: [RustEngineBridge.NextWordEnginePrediction]) {
-        // §42 漢羅濫 splits prediction cells like the Continuous list; TPS is
+        // §42 Hanji with Romanization splits prediction cells like the Continuous list; TPS is
         // hanji-first and ignores the picker. Live-read so a picker change
         // applies to the next prediction list.
         let splitCombinedCells = shouldSplitCombinedCells(
@@ -258,13 +258,13 @@ extension ActionHandler: AutocompleteContextUpdater {
             Self.predictionSuggestions(predictions, splitCombinedCells: splitCombinedCells)
     }
 
-    /// NextWord prediction cells. 漢羅濫 (`splitCombinedCells`, §42):
+    /// NextWord prediction cells. Hanji with Romanization (`splitCombinedCells`, §42):
     /// `splitIntoSingleScriptCells` — a prediction with romanization becomes a
-    /// 漢字 cell then a 羅馬字 cell sharing the prediction's identity; a
-    /// hanji-only prediction (`subtitle == nil`) lists its 漢字 cell alone.
+    /// Hanji cell then a romanization cell sharing the prediction's identity; a
+    /// hanji-only prediction (`subtitle == nil`) lists its Hanji cell alone.
     /// Every other mode emits one dual-script suggestion per prediction.
     // CROSS-PLATFORM INVARIANT — mirrors android/.../smartbar/NextWordController.kt buildPredictionWords.
-    // Drift causes silent divergence (one platform's 漢羅濫 predictions render hanji-led).
+    // Drift causes silent divergence (one platform's Hanji with Romanization predictions render hanji-led).
     static func predictionSuggestions(
         _ predictions: [RustEngineBridge.NextWordEnginePrediction],
         splitCombinedCells: Bool,

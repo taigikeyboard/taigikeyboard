@@ -19,7 +19,7 @@ import Foundation
 /// canonical statement of why. A picker for it could not be symmetric: below
 /// macOS 26 there is no `NSGlassEffectView` to raise a window to Tahoe, so the
 /// only override it could honour anywhere was dropping a macOS 26 window back
-/// to Sequoia. The 外觀 pane's accent-colour swatch was retired on its own
+/// to Sequoia. The Appearance pane's accent-colour swatch was retired on its own
 /// reasoning — see `CandidateAccentColor`.
 enum CandidateWindowStyle: Sendable {
     case sequoia

@@ -6,7 +6,7 @@ import XCTest
 ///
 /// Pins `INVARIANT_USER_DATA_EXCLUDED_FROM_OS_BACKUP`
 /// (`docs/architecture/behavioral-invariants.md` §29): every DB opened through
-/// `SQLiteConnectionManager` (詞頻 / 詞關聯 / 自訂詞) is marked
+/// `SQLiteConnectionManager` (frequency / association / custom word) is marked
 /// `isExcludedFromBackup = true` right after open, so learned/authored typing
 /// data is kept out of iCloud automatic backup. Cross-device portability is the
 /// manual `.taigi` export only (R7 product decision).

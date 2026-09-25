@@ -54,7 +54,7 @@ final class DictionarySearchService: @unchecked Sendable {
     /// Search the user's enabled dictionaries for `query`.
     ///
     /// Hanzi queries use the CJK path; roman queries also consult the user's
-    /// custom dictionary. Results are sorted with kautian (教育部) first, then
+    /// custom dictionary. Results are sorted with kautian (MOE) first, then
     /// by frequency; custom-dict hits lead the list. Awaits Trie readiness so
     /// searches arriving during the bootstrap window don't return empty.
     func search(
@@ -156,7 +156,7 @@ final class DictionarySearchService: @unchecked Sendable {
         }
     }
 
-    /// Kautian (教育部) results first, then descending frequency.
+    /// Kautian (MOE) results first, then descending frequency.
     private func sortByMoeThenFrequency(_ results: [DictionarySearchResult]) -> [DictionarySearchResult] {
         results.sorted { a, b in
             let aMoe = a.sources.contains(.kautian)

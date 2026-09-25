@@ -38,7 +38,7 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
     // MARK: - The chord
 
     /// One list, the whole table, so the first pick is a symbol (USER
-    /// 2026-09-09: a category to choose first 「會造成使用者的體驗中斷」).
+    /// 2026-09-09: a category to choose first "it would interrupt the user's flow").
     func testTheChord_opensTheWholeTable_anchoredAtTheCaret() throws {
         let session = try makeSession()
 
@@ -295,7 +295,7 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
     }
 
     /// A pick is what the user chose, not what the full-width map would
-    /// make of the key that typed it: `()` stays `()` under 漢字優先 too.
+    /// make of the key that typed it: `()` stays `()` under Hanji-first too.
     func testAPick_bypassesTheFullWidthMap() throws {
         let session = try makeSession()
         session.controller.settings.storedIsTranslateSwapped = true
@@ -464,7 +464,7 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
 
     // MARK: - Recents
 
-    /// A pick leads the next list (USER 2026-09-19 「依照最近輸入排序」), from
+    /// A pick leads the next list (USER 2026-09-19: "sort by most recently typed"), from
     /// the store — a new controller over the same defaults sees it too —
     /// and the rest of the table keeps its order behind it.
     func testAPick_leadsTheNextOpening_andOutlivesTheController() throws {

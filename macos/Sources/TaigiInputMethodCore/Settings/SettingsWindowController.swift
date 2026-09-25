@@ -22,7 +22,7 @@ final class SettingsWindowController {
     /// where they left it instead of a fresh one in the middle of the screen.
     private var window: NSWindow?
 
-    /// Keeps the window's light/dark override following the 外觀 setting.
+    /// Keeps the window's light/dark override following the Appearance setting.
     /// A window-level fact, so it is owned here with the rest of them —
     /// the split controller owns what is inside the window, not its chrome.
     private var appearanceObservation: AnyObject?
@@ -155,7 +155,7 @@ final class SettingsWindowController {
         return window
     }
 
-    /// Puts the 外觀 setting on the window: 淺色 / 深色 force it, 自動 leaves
+    /// Puts the Appearance setting on the window: Light / Dark force it, Automatic leaves
     /// it nil, which is an `NSWindow` resolving against the system.
     static func applyAppearance(to window: NSWindow) {
         let appearance = SettingsStore().appearanceMode.forcedAppearance

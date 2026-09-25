@@ -6,7 +6,7 @@
 /// call site, and because "the other one" is resolved from the output settings
 /// — this says WHICH RELATIVE script, never which absolute one. That is the
 /// difference from the per-action forced rendering removed in #609, where each
-/// shortcut pinned 漢字 or 羅馬字 outright and the user had to remember which
+/// shortcut pinned Hanji or romanization outright and the user had to remember which
 /// key was which.
 enum CandidateScript: Equatable, Sendable {
     /// What the output settings lead with — what Return writes.
@@ -16,7 +16,7 @@ enum CandidateScript: Equatable, Sendable {
 
     /// The other script of the same candidate. Space on a presented cell
     /// commits this relative to the CELL's own script (`PresentedCandidate`):
-    /// under 漢羅濫 a romanization cell is already `.alternate`, so Space on
+    /// under Hanji with Romanization a romanization cell is already `.alternate`, so Space on
     /// it comes back round to the Hanji.
     var flipped: CandidateScript {
         switch self {

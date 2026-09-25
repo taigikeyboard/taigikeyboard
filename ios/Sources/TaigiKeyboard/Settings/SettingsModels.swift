@@ -58,13 +58,13 @@ enum FontType: String, CaseIterable, Codable {
 
 // MARK: - Candidate Display Mode
 
-/// How TL/POJ candidate cells render (host 拍字設定 + in-keyboard settings overlay).
+/// How TL/POJ candidate cells render (host Typing + in-keyboard settings overlay).
 ///
 /// `sideBySide` = today's title/subtitle pair (the swap flag decides which
 /// script leads). `romanOnly` = the cell shows only the romanization and the
 /// derived swap / both-scripts pair reads `false` (see `SharedSettings`).
 /// `combined` = each hanji-bearing candidate splits into adjacent single-script
-/// 漢字 / 羅馬字 cells (no subtitle) and a tap commits that cell's script; the
+/// Hanji / romanization cells (no subtitle) and a tap commits that cell's script; the
 /// derived swap projects `true` as a compatibility projection (see `SharedSettings`).
 /// TPS ignores the mode. Raw values are the cross-platform storage contract
 /// (Android `CandidateDisplayMode.storageValue`, desktop `SettingsStore`).
@@ -76,7 +76,7 @@ public enum CandidateDisplayMode: String, CaseIterable, Codable {
     case romanOnly
 
     /// Whether the cell shows any Hanji — `false` only under `.romanOnly`. Gates
-    /// the effective 括號標註 flag and that setting's enabled state.
+    /// the effective Annotate in Brackets flag and that setting's enabled state.
     var showsHanji: Bool {
         self != .romanOnly
     }
@@ -84,8 +84,8 @@ public enum CandidateDisplayMode: String, CaseIterable, Codable {
     /// Whether the 文/A key is shown (bottom row + expanded overlay) and its
     /// tap writes the stored swap — exactly where Hanji is on screen. Under
     /// `.combined` the cells are split per script, so the key only picks the
-    /// punctuation width (USER 2026-09-13 「漢羅濫需要有 isTranslateSwapped
-    /// 的按鈕」); `.romanOnly` hides it and the stored swap waits for the way back.
+    /// punctuation width (USER 2026-09-13: "Hanji with Romanization needs an
+    /// isTranslateSwapped button"); `.romanOnly` hides it and the stored swap waits for the way back.
     var allowsSwapToggle: Bool {
         showsHanji
     }
@@ -98,23 +98,23 @@ public enum CandidateDisplayMode: String, CaseIterable, Codable {
     /// Hanji to lead with.
     // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/core/settings/CandidateDisplayMode.kt effectiveTranslateSwapped,
     // macos/Sources/TaigiInputMethodCore/Settings/EngineSettings.swift, desktop/crates/taigi-desktop-core/src/settings/engine_settings.rs.
-    // Drift causes silent divergence (one platform commits roman under 合用, or hanji under 羅馬字).
+    // Drift causes silent divergence (one platform commits roman under Hanji with Romanization, or hanji under Romanization Only).
     func effectiveTranslateSwapped(stored: Bool) -> Bool {
         self == .combined || (stored && showsHanji)
     }
 
     /// Whether the character / symbol layouts type full-width punctuation
     /// (`，。` over `,.`) for a stored swap flag — the stored flag masked like
-    /// 括號標註, NOT the candidate projection above, which `.combined` forces on
+    /// Annotate in Brackets, NOT the candidate projection above, which `.combined` forces on
     /// while 文/A still picks the width. TPS ignores it (`LayoutConverter`).
     /// Mirrored on android / macos / windows beside `effectiveOutputBothScripts`.
     func effectiveFullWidthPunctuation(stored: Bool) -> Bool {
         stored && showsHanji
     }
 
-    /// Effective 括號標註 for a stored flag — off only where there is no Hanji
-    /// to bracket; `.combined` keeps it for 漢字-cell commits (`漢字 (羅馬字)`,
-    /// today's swapped output) — a 羅馬字 cell ignores it.
+    /// Effective Annotate in Brackets for a stored flag — off only where there is no Hanji
+    /// to bracket; `.combined` keeps it for Hanji-cell commits (`Hanji (romanization)`,
+    /// today's swapped output) — a romanization cell ignores it.
     func effectiveOutputBothScripts(stored: Bool) -> Bool {
         stored && showsHanji
     }

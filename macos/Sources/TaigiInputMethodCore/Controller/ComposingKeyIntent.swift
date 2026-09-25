@@ -162,7 +162,7 @@ enum ComposingKeyIntent: Equatable {
     /// Commit the highlighted candidate in the script the output settings do
     /// NOT lead with, leaving the settings alone.
     ///
-    /// The 漢羅 key. Taiwanese is written with Han characters and romanization
+    /// The Hanji/romanization key. Taiwanese is written with Han characters and romanization
     /// mixed inside one sentence, and which words a person romanizes is
     /// personal — so the choice belongs to the word being typed, not to a mode
     /// the user has to flip in and out of for it (`CandidateDocumentText
@@ -171,9 +171,9 @@ enum ComposingKeyIntent: Equatable {
     /// Commit the candidate in this slot of the visible page, counting from
     /// zero — what the slot keys address (`CandidateSlotKeySet`: the bare
     /// letters under Standard, the bare digits under Telex). With `flip`, in
-    /// the script the cell does NOT stand for — the 漢羅 key aimed at a slot
+    /// the script the cell does NOT stand for — the Hanji/romanization key aimed at a slot
     /// instead of at the highlight, which is what ⇧ on the same key asks
-    /// (USER 2026-09-10): one chord reaches a 漢羅 word the arrows would
+    /// (USER 2026-09-10): one chord reaches a mixed-script word the arrows would
     /// otherwise have to walk to first.
     case selectCandidateSlot(Int, flip: Bool)
 
@@ -193,7 +193,7 @@ enum ComposingKeyIntent: Equatable {
     /// them is a list that can drift apart.
     static let hostChords: NSEvent.ModifierFlags = [.command, .control, .option]
 
-    /// The modifier under which ← / → step the composing caret. The 快速齒
+    /// The modifier under which ← / → step the composing caret. The Shortcuts
     /// pane draws its read-only row from this same value, so the row cannot
     /// drift from the key the classifier reads.
     static let caretChordModifiers: NSEvent.ModifierFlags = [.option]
@@ -235,7 +235,7 @@ enum ComposingKeyIntent: Equatable {
         // The caret inside the composition, on ⌥← / ⌥→ — the host's own
         // "jump a word" chord, and the one chord that is neither a candidate
         // key (the bare arrows) nor one macOS takes first (⌃← is Mission
-        // Control). Fixed, not recordable, shown read-only on the 快速齒 pane
+        // Control). Fixed, not recordable, shown read-only on the Shortcuts pane
         // (USER 2026-09-09). Compared on the four chording modifiers alone:
         // an arrow always carries `.function`, and `.numericPad` says how the
         // key was reached, not which key it is. Exactly ⌥: ⌥⇧← stays the
@@ -281,7 +281,7 @@ enum ComposingKeyIntent: Equatable {
         // the full flag set would make a keypad `3` miss the slot under Telex
         // and quietly commit the composition instead. Any chording modifier
         // makes the key miss, so `⌃3` keeps falling through to the host guard
-        // below — except exactly ⇧, which aims the 漢羅 key at the slot
+        // below — except exactly ⇧, which aims the Hanji/romanization key at the slot
         // (`CandidateSlotKeySet.shiftedSlot(for:)`).
         if isShowingCandidates {
             if let slot = bindings.slotKeySet.slot(for: key) {
@@ -414,7 +414,7 @@ enum ComposingKeyIntent: Equatable {
 
     /// The modifier that types a punctuation key in the other width, once —
     /// the 新注音 / Microsoft IME gesture (`Ctrl+,` → `，`). Fixed, not
-    /// recordable, shown read-only on the 快速齒 pane like the caret chord.
+    /// recordable, shown read-only on the Shortcuts pane like the caret chord.
     static let widthFlipModifiers: NSEvent.ModifierFlags = [.control]
 
     /// The punctuation key under a width-flip chord, or nil when `key` is not

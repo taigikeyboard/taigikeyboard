@@ -10,7 +10,7 @@ import SQLite3
 /// `SQLiteConnectionManager.execute`).
 ///
 /// **R5 identity = `(word, tl)` pair (Core Principle #7)**: a frequency
-/// row is keyed by display text AND its canonical-TL reading, so 一字多音
+/// row is keyed by display text AND its canonical-TL reading, so polyphonic Hanji
 /// (重/tîng vs 重/tāng) keep separate counts. Pre-R5 rows carry `tl = ''`
 /// (the migration backfill); the engine treats `tl == ''` as a tolerant
 /// fallback bucket all readings consult until each is re-learned.

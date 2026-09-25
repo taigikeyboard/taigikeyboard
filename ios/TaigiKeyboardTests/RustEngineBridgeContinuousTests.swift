@@ -223,7 +223,7 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
 
     /// The keystroke after a nail re-renders the nailed prefix from the
     /// request's own settings, so every op builds its config from the same
-    /// snapshot. Under 漢字優先 (`isTranslateSwapped`, no both-scripts) the
+    /// snapshot. Under Hanji-first (`isTranslateSwapped`, no both-scripts) the
     /// prefix has no word-boundary space: `台` + `bak` reads `台bak`, never
     /// `台 bak` (desktop #31 / S37).
     func testAppendAfterNail_HanjiFirst_KeepsPrefixUnspaced() {

@@ -1,4 +1,4 @@
-// The two-column CSV the 自訂詞庫 page reads and writes.
+// The two-column CSV the Custom Dictionary page reads and writes.
 
 @testable import TaigiInputMethodCore
 import XCTest

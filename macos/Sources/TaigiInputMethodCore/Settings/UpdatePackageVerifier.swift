@@ -269,7 +269,7 @@ enum UpdatePackageVerifier {
     /// How long either tool gets. Both answer in milliseconds on a real
     /// package; the bound exists because the input is a file that arrived over
     /// the network, and a malformed archive must not be able to park this work
-    /// forever — which would leave the pane stuck on 咧下載… with no way back.
+    /// forever — which would leave the pane stuck on Downloading… with no way back.
     private static let toolTimeout: TimeInterval = 60
 
     /// Runs a tool and collects what it wrote, or nil if it could not be

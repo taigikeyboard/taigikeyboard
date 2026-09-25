@@ -280,7 +280,7 @@ final class ComposingKeyIntentTests: XCTestCase {
         XCTAssertEqual(try intent("z"), .input("z"))
     }
 
-    /// Space writes the highlighted candidate in the OTHER script — the 漢羅
+    /// Space writes the highlighted candidate in the OTHER script — the Hanji/romanization
     /// key (`ComposingAction.commitAlternateScript`). It walked the candidates
     /// until 2026-08-25, which every layout's arrows already did.
     func testSpace_commitsTheOtherScriptOnlyWhileTheBarIsUp() throws {

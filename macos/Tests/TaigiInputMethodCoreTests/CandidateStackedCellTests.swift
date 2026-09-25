@@ -144,7 +144,7 @@ final class CandidateStackedCellTests: XCTestCase {
     private static let twoScriptCells = [cell, CandidateCellContent(text: "候", annotation: nil)]
 
     /// The row-shaped layouts drop to the one-line height when no cell in the
-    /// list carries an annotation — 羅馬字, or 漢羅合用's one-script cells — and
+    /// list carries an annotation — Romanization Only, or Hanji with Romanization's one-script cells — and
     /// come back to two lines the moment one does (USER 2026-09-02). Through
     /// the two entry points the shared panel hands cells over by, `layout`
     /// and `rerender`, so a mode change under an open window reflows it. The
@@ -189,7 +189,7 @@ final class CandidateStackedCellTests: XCTestCase {
     /// The empty-annotation case keeps the cell's FRAME — a page of cells of
     /// two different heights would not line up — while the line it does carry
     /// centres in it rather than sitting on the upper line of a pair
-    /// (USER 2026-09-09; the §34 literal cell under 漢羅對應 has no second
+    /// (USER 2026-09-09; the §34 literal cell under Hanji–Romanization Pairing has no second
     /// script to align with). `testStackedOneScriptCell_centresItsSingleLine`
     /// pins the centring itself.
     func testStackedCell_keepsBothLinesInsideItsFrameAtEverySize() {
@@ -232,8 +232,8 @@ final class CandidateStackedCellTests: XCTestCase {
     /// A stacked cell with only one script centres that line in the cell,
     /// while an annotated cell of the same size keeps the pair centred as a
     /// block — so the single line sits LOWER than the upper line of a pair
-    /// (USER 2026-09-09: the §34 literal cell under 漢羅對應 is the user's own
-    /// typing, not half of a 漢字/羅馬字 pair).
+    /// (USER 2026-09-09: the §34 literal cell under Hanji–Romanization Pairing is the user's own
+    /// typing, not half of a Hanji/romanization pair).
     func testStackedOneScriptCell_centresItsSingleLine() {
         let metrics = TestFixtures.defaultCandidateMetrics.arranged(.stacked)
         let frame = NSRect(

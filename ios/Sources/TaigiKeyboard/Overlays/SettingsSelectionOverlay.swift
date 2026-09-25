@@ -52,7 +52,7 @@ struct SettingsSelectionOverlay: View {
         self.onCandidateDisplayModeChange = onCandidateDisplayModeChange
         let s = SharedSettings.shared
         _candidateDisplayMode = State(initialValue: s.candidateDisplayMode)
-        // Toggle binds the STORED flag: it keeps showing the user's choice while disabled under 羅馬字.
+        // Toggle binds the STORED flag: it keeps showing the user's choice while disabled under Romanization Only.
         _isOutputBothScripts = State(initialValue: s.storedIsOutputBothScripts)
         _literalRomanCandidateEnabled = State(initialValue: s.isLiteralRomanCandidateEnabled)
         _autoCapitalizationEnabled = State(
@@ -87,7 +87,7 @@ struct SettingsSelectionOverlay: View {
                     settingsToggle(lang.string(.settingsOutputBothScripts), isOn: $isOutputBothScripts, icon: SettingsIcons.isOutputBothScripts) {
                         SharedSettings.shared.storedIsOutputBothScripts = $0
                     }
-                    // 括號標註 is meaningless without hanji; stored value stays untouched.
+                    // Annotate in Brackets is meaningless without hanji; stored value stays untouched.
                     .disabled(!candidateDisplayMode.showsHanji)
                     settingsToggle(lang.string(.settingsLiteralRomanCandidate), isOn: $literalRomanCandidateEnabled, icon: SettingsIcons.literalRomanCandidate) {
                         SharedSettings.shared.isLiteralRomanCandidateEnabled = $0
@@ -234,7 +234,7 @@ struct SettingsSelectionOverlay: View {
 
     // MARK: - Auto-dismiss
 
-    // After a setting changes, collapses the overlay after 0.3s if 自動收合工具列 is enabled.
+    // After a setting changes, collapses the overlay after 0.3s if Collapse Toolbar After Selection is enabled.
     private func autoDismissIfNeeded() {
         guard isReady, SharedSettings.shared.isToolbarAutoCollapse else { return }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {

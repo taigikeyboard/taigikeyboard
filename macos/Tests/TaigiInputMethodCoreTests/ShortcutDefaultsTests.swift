@@ -4,7 +4,7 @@ import KeyboardShortcuts
 @testable import TaigiInputMethodCore
 import XCTest
 
-/// The 快速齒 pane's Restore Defaults button hands the user the shipped state
+/// The Shortcuts pane's Restore Defaults button hands the user the shipped state
 /// and runs no conflict resolution afterwards, which is only safe while the
 /// three tiers' defaults hold no chord in common. That property is pinned here
 /// rather than defended at run time: a resolver would quietly empty one of the

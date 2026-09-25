@@ -3,9 +3,9 @@
 @testable import TaigiInputMethodCore
 import XCTest
 
-/// With the 詞頻紀錄 and 詞關聯紀錄 panes gone, these are the only promises the
+/// With the Frequency Records and Association Records panes gone, these are the only promises the
 /// product still makes about learned data: it cannot grow without bound
-/// (`LearningCapacity`), and the store call behind the 一般 pane's one
+/// (`LearningCapacity`), and the store call behind the General pane's one
 /// destructive button empties it (`deleteAll`).
 ///
 /// The bound is asserted through each store's real `record` path rather than
@@ -160,7 +160,7 @@ final class LearningCapacityTests: XCTestCase {
         XCTAssertEqual(stores.association.allRows(), [])
     }
 
-    /// Clearing one learning table must leave the others alone. The 一般 pane
+    /// Clearing one learning table must leave the others alone. The General pane
     /// clears both learning stores, but it does so with two separate calls, and
     /// the custom dictionary is never in scope of either.
     func testClearingOneStore_leavesTheOthersAlone() async throws {

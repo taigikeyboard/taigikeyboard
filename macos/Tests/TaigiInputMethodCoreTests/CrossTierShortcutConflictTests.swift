@@ -72,7 +72,7 @@ final class CrossTierShortcutConflictTests: XCTestCase {
     }
 
     func testTheBacktick_bridges() throws {
-        // The shipped 漢羅對調 default, and a chord the composing recorder
+        // The shipped Hanji/romanization swap default, and a chord the composing recorder
         // accepts — the collision that needs no exotic user.
         let chord = try XCTUnwrap(ShortcutConflicts.composingChord(
             occupiedBy: KeyboardShortcuts.Shortcut(.backtick),

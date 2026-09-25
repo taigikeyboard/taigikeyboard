@@ -67,7 +67,7 @@ final class CandidateItemView: NSView {
     /// text centres across the whole cell rather than stepping around the key
     /// column the other cells align on (USER 2026-09-09). It draws NO fill of
     /// its own: a tint was tried on 2026-09-09 and taken back out the same day
-    /// (USER: 「背景底色強調效果不好,恢復第一個位置的背景底色」).
+    /// (USER: "the background-tint emphasis looks bad, restore the first slot's background").
     var isLiteralCell = false {
         didSet {
             guard isLiteralCell != oldValue else { return }
@@ -113,7 +113,7 @@ final class CandidateItemView: NSView {
     /// they take the second line's height back when the cell has only one
     /// script, so the line it does carry sits in the MIDDLE of the cell rather
     /// than on the upper line of a pair (USER 2026-09-09, for the §34 literal
-    /// cell under 漢羅對應). The cell's own height is untouched, so the row
+    /// cell under Hanji–Romanization Pairing). The cell's own height is untouched, so the row
     /// still lines up.
     private var stackedLineGapConstraint: NSLayoutConstraint?
     private var stackedAnnotationHeightConstraint: NSLayoutConstraint?
@@ -299,7 +299,7 @@ final class CandidateItemView: NSView {
         // line, so its rows stay aligned — but it gives the empty line's
         // height back, so the one script it does carry centres in the cell
         // instead of sitting on the upper line (USER 2026-09-09: the §34
-        // literal cell under 漢羅對應 carries no pair to align with). Only the
+        // literal cell under Hanji–Romanization Pairing carries no pair to align with). Only the
         // inline slot has width to give back.
         let hasAnnotation = cell.annotation != nil
         annotationGapConstraint?.constant = hasAnnotation ? metrics.candidateAnnotationGap : 0

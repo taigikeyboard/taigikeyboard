@@ -40,7 +40,7 @@ enum CandidateSlotKeySet: CaseIterable, Sendable {
         )
     }
 
-    /// The slot `key` names with exactly ⇧ held — the 漢羅 commit aimed at a
+    /// The slot `key` names with exactly ⇧ held — the Hanji/romanization commit aimed at a
     /// slot (`ComposingKeyIntent.selectCandidateSlot(_:flip:)`), or nil.
     ///
     /// Resolved off the key CODE for the digits and `;`, because AppKit's
@@ -237,8 +237,8 @@ struct ComposingKeyBindings: Sendable, Equatable {
     /// user cleared gets its key back; a row holding a pool chord the user
     /// recorded there keeps it, and the emptied commit row stays empty — the
     /// last recording wins here as everywhere else on the pane (USER
-    /// 2026-09-19: Enter recorded on 迒模式輸出 used to be handed straight back
-    /// to 確定齒). A composition still ends on an unbound Return: it commits
+    /// 2026-09-19: Enter recorded on Output the Other Script used to be handed straight back
+    /// to Confirm Key). A composition still ends on an unbound Return: it commits
     /// before passing through to the host (`ComposingKeyIntent.hostKey`).
     private static func restoreUnbound(in resolved: inout [ComposingAction: ComposingKeyChord]) {
         let refilled = ComposingAction.allCases.filter(ComposingAction.refilledFromDefault.contains)

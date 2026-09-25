@@ -26,8 +26,8 @@ struct CandidateWindowContent: Equatable, Sendable {
     let slotKeySet: CandidateSlotKeySet
 
     /// Whether the first cell is the §34 literal, which takes no key — the
-    /// keys start on the cell after it (USER 2026-09-09
-    /// 「候選詞選字鍵從第2個位置開始,第一個位置不需要有選字鍵」). False leaves every
+    /// keys start on the cell after it (USER 2026-09-09:
+    /// "selection keys start at the 2nd slot; the first slot needs no key"). False leaves every
     /// cell keyed. Carried with the cells for the same reason `slotKeySet`
     /// is: which cell the keys start on is a fact about THIS list.
     let leadCellIsUnkeyed: Bool
@@ -107,11 +107,11 @@ protocol CandidatePresenter {
     )
 
     /// Replaces every cell's content in place — the same candidate list under
-    /// a new rendering (the 漢羅對調 flip) — keeping the window up, its anchor,
+    /// a new rendering (the Hanji/romanization flip) — keeping the window up, its anchor,
     /// and the selection on the same absolute index. A no-op unless `owner`
     /// owns a visible, non-empty window.
     ///
-    /// Takes the whole `CandidateWindowContent`, as `show` does: the 候選詞顯示
+    /// Takes the whole `CandidateWindowContent`, as `show` does: the Candidate Display
     /// refetch this path also serves re-presents a DIFFERENT list, so which
     /// cell the keys start on is set from the new one rather than left as the
     /// last `show` found it.

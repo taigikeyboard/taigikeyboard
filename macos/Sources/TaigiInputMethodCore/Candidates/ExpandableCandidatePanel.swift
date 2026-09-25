@@ -191,7 +191,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
         return rebuildCollapsed()
     }
 
-    /// Same list, new rendering (the 漢羅對調 swap). The window lays out for
+    /// Same list, new rendering (the Hanji/romanization swap). The window lays out for
     /// the new widths and comes back in the mode it was already in.
     ///
     /// The mode is remembered rather than re-derived from the selection: a

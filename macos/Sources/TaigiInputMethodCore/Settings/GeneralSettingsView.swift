@@ -1,9 +1,9 @@
-// The 一般 pane: romanization system, output script, display language, and updates.
+// The General pane: romanization system, output script, display language, and updates.
 
 import AppKit
 import SwiftUI
 
-/// The 一般 pane of the settings window.
+/// The General pane of the settings window.
 ///
 /// Bound with `@AppStorage` rather than through `SettingsStore`, so the form
 /// re-renders when a value is changed from outside it — the input-source menu's
@@ -12,16 +12,16 @@ import SwiftUI
 /// from the store's descriptors, so the form and the engine cannot disagree
 /// about either.
 ///
-/// The two learning switches are gone, along with the 詞頻紀錄 and 詞關聯紀錄
+/// The two learning switches are gone, along with the Frequency Records and Association Records
 /// panes that carried them: the records are always on, they are bounded by
 /// `LearningCapacity`, and the product decision (USER 2026-08-24) is that they
 /// are not the user's to administer. The one destructive verb — clear both at
-/// once — lives beside the custom dictionary's own clear button on the 自訂詞庫
+/// once — lives beside the custom dictionary's own clear button on the Custom Dictionary
 /// pane, so every "throw away what is stored" action is in one place.
 ///
-/// 全形標點 (漢羅對調 output) is not a switch either: it is always on (USER
+/// Full-width Punctuation (Hanji/romanization swap output) is not a switch either: it is always on (USER
 /// 2026-08-24), because CJK output takes CJK punctuation. It never had a state
-/// worth administering. Shift 切換英數 was retired the same day for the same
+/// worth administering. Shift-to-English was retired the same day for the same
 /// reason, and the feature itself went on 2026-08-26: this input method has no
 /// English mode, because a Mac already switches input sources with ⌘Space.
 ///
@@ -77,17 +77,17 @@ struct GeneralSettingsView: View {
 
     private var settingsForm: some View {
         Form {
-            // One group, no sub-groups (USER 2026-09-18 「不要分組」), in the
+            // One group, no sub-groups (USER 2026-09-18: "no grouping"), in the
             // order the typing pipeline runs (USER 2026-09-21): what is typed
             // and how its tones are spelled, then the candidate window and
             // its content, then what a commit writes and its shape, then the
             // app's language.
             Section {
-                // A pop-up like the 輸出文字 row below, not a radio group: System
+                // A pop-up like the Output Script row below, not a radio group: System
                 // Settings states a small mutually-exclusive choice with a
                 // pop-up, and two shapes for two adjacent N-of-1 rows read as
-                // a difference that means something. 輸入文字 / 輸出文字 name
-                // the pair (USER 2026-09-18); mobile keeps 輸入模式, whose
+                // a difference that means something. Input Script / Output Script name
+                // the pair (USER 2026-09-18); mobile keeps Input Mode, whose
                 // picker also holds TPS.
                 Picker(language.string(.settingsInputScript), selection: $inputMode) {
                     Text(language.string(.settingsTlMode)).tag(InputMode.tl)
@@ -97,7 +97,7 @@ struct GeneralSettingsView: View {
                 // Which keys type a tone is a fact about how the syllable is
                 // spelled, not a shortcut (USER 2026-09-08), and the slot
                 // keys follow from it rather than being chosen on the
-                // shortcut pane. Under 輸入文字 because both say what the
+                // shortcut pane. Under Input Script because both say what the
                 // user types.
                 Picker(language.string(.settingsToneInputScheme), selection: $toneInputScheme) {
                     Text(language.string(.settingsToneSchemeStandard)).tag(ToneInputScheme.standard)
@@ -106,7 +106,7 @@ struct GeneralSettingsView: View {
 
                 // S33 (USER 2026-09-08): off means no window at all — the
                 // user types romanization and Space / Return write it as
-                // typed. Directly above 顯示當咧拍的字, which describes the
+                // typed. Directly above Show Typed Text First, which describes the
                 // window's content and so reads as its sub-option; that row
                 // stays enabled with the window off (one plain switch, no
                 // greyed-out state to explain).
@@ -119,8 +119,8 @@ struct GeneralSettingsView: View {
                 // Which script a commit writes (USER 2026-09-18): the same
                 // stored swap the `` ` `` shortcut toggles, so the two never
                 // disagree. Disabled exactly where the shortcut is inert —
-                // 候選詞顯示 = 羅馬字 shows no Hanji to lead with
-                // (`allowsSwapToggle`); under 漢羅濫 both scripts are on
+                // Candidate Display = Romanization Only shows no Hanji to lead with
+                // (`allowsSwapToggle`); under Hanji with Romanization both scripts are on
                 // screen and this only picks the punctuation width, as the
                 // shortcut does there.
                 Picker(language.string(.settingsOutputScript), selection: $isTranslateSwapped) {
@@ -129,11 +129,11 @@ struct GeneralSettingsView: View {
                 }
                 .disabled(!candidateDisplayMode.allowsSwapToggle)
 
-                // 無連字符 (§49), directly under 輸出文字 — it describes that
+                // No Hyphens (§49), directly under Output Script — it describes that
                 // output's shape.
                 Toggle(language.string(.settingsHyphenlessRoman), isOn: $isHyphenlessRomanEnabled)
 
-                // ⁿ大本字 (§53): the other switch that shapes the output's
+                // ⁿ becomes ᴺ in capitals (§53): the other switch that shapes the output's
                 // romanization.
                 Toggle(language.string(.settingsNasalMarkerUppercase), isOn: $isNasalMarkerUppercaseEnabled)
 
@@ -166,7 +166,7 @@ struct GeneralSettingsView: View {
                 // macOS Software Update has the same single-row shape.
                 //
                 // The daily check still runs, so a release that is pulled stops
-                // being offered on its own, and the input-source menu's 檢查更新
+                // being offered on its own, and the input-source menu's Check for Updates
                 // row is still there to force one.
                 if let pending = UpdateChecker.shared.pendingUpdate {
                     pendingUpdateRow(for: pending)
@@ -187,7 +187,7 @@ struct GeneralSettingsView: View {
                 }
             }
 
-            // Its own section, at the end, drawn the way the 外觀 and 快捷鍵
+            // Its own section, at the end, drawn the way the Appearance and Shortcuts
             // panes draw theirs: it acts on every setting above it — not on
             // the update row, which holds no setting of the user's to restore.
             Section {
@@ -209,7 +209,7 @@ struct GeneralSettingsView: View {
     /// Its trailing control is whatever the user's next move is, and the second
     /// line appears only when something went wrong. The two-press shape is
     /// deliberate and lives in `UpdateInstallation`: a finished download turns
-    /// this button into 安裝 rather than opening Installer.app on its own, so
+    /// this button into Install rather than opening Installer.app on its own, so
     /// nothing takes the focus away from a document the user may have gone back
     /// to typing in.
     private func pendingUpdateRow(for pending: UpdateManifest) -> some View {

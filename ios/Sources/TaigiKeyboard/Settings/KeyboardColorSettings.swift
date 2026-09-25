@@ -89,7 +89,7 @@ struct ThemeGradient: Codable, Equatable {
     }
 
     /// The first vertical gradient a user sees when switching a solid background to
-    /// 漸層: the solid color running into a lighter tint of itself.
+    /// Gradient: the solid color running into a lighter tint of itself.
     static func seeded(from solid: CodableColor) -> ThemeGradient {
         ThemeGradient(stops: [solid, solid.lightened(towardWhite: seedLightenFactor)])
     }
@@ -168,7 +168,7 @@ struct KeyboardSurfaceSlice: Equatable {
 /// A photo as the keyboard surface: `file` is the JPEG's name inside the App Group
 /// `ThemeImageStore` directory (written by the host app, read by the extension), `dim`
 /// the opacity of the tone overlay laid over the desaturated photo so keys stay readable
-/// (USER 2026-09-19 「圖片彩度不能太搶眼」). The overlay is white when the key text is
+/// (USER 2026-09-19: "the photo's saturation must not be too loud"). The overlay is white when the key text is
 /// dark and black otherwise.
 // CROSS-PLATFORM INVARIANT — mirrors android .../ime/core/KeyboardColorSettings.kt ThemeImageBackground
 // (same JSON fields, `saturation`, `dimRange`, `defaultDim`). Drift causes silent divergence.
@@ -217,7 +217,7 @@ struct ThemeImageBackground: Codable, Equatable {
 /// candidate bar is the same surface: a solid background colours both, a gradient
 /// or photo paints once behind both (the bar goes transparent). `nil` on
 /// `KeyboardColorSettings.background` means "adaptive" (KeyboardKit's dynamic
-/// background + Liquid Glass) and is reserved for the 經典 預設 head. Rendering
+/// background + Liquid Glass) and is reserved for the Filled Default head. Rendering
 /// lives in `ThemeBackgroundSurface`.
 ///
 /// JSON: `{"type":"solid","color":{…}}` / `{"type":"gradient","stops":[…],"angle":180}` /
@@ -229,7 +229,7 @@ enum ThemeBackground: Codable, Equatable {
     case gradient(ThemeGradient)
     case image(ThemeImageBackground)
 
-    /// The JSON discriminator, also the editor's 純色 / 漸層 / 照片 segmented choice.
+    /// The JSON discriminator, also the editor's Solid / Gradient / Photo segmented choice.
     enum Kind: String, Codable, CaseIterable {
         case solid, gradient, image
     }

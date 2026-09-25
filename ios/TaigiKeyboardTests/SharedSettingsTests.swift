@@ -293,7 +293,7 @@ final class SharedSettingsTests: XCTestCase {
         XCTAssertEqual(snap.keyShadowIntensity, 0)
     }
 
-    // MARK: - Candidate display mode (漢羅對應 / 羅馬字) — stored vs derived split
+    // MARK: - Candidate display mode (Hanji–Romanization Pairing / Romanization Only) — stored vs derived split
 
     /// Under `.romanOnly` the derived swap / both-scripts pair reads `false`
     /// while the stored flags keep the user's `true`; leaving the mode
@@ -326,7 +326,7 @@ final class SharedSettingsTests: XCTestCase {
     }
 
     /// `.combined` projects the pair as swapped (cell leads with hanji, commit
-    /// writes hanji) without writing the stored flag; 括號標註 keeps its stored
+    /// writes hanji) without writing the stored flag; Annotate in Brackets keeps its stored
     /// value; leaving the mode restores the stored pair.
     func test_candidateDisplayMode_combined_projectsSwappedWithoutOverwritingStoredFlags() {
         settings.storedIsTranslateSwapped = false
@@ -339,7 +339,7 @@ final class SharedSettingsTests: XCTestCase {
         XCTAssertFalse(settings.storedIsTranslateSwapped, "stored swap must survive the mode")
         XCTAssertEqual(defaults.object(forKey: "isTranslateSwapped") as? Bool, false, "raw key untouched")
 
-        // 括號標註 stays as stored: the bracket form `漢字 (羅馬字)` applies under 合用.
+        // Annotate in Brackets stays as stored: the bracket form `Hanji (romanization)` applies under Hanji with Romanization.
         settings.storedIsOutputBothScripts = true
         XCTAssertTrue(settings.isOutputBothScripts, "stored both-scripts survives the projection")
 
@@ -358,7 +358,7 @@ final class SharedSettingsTests: XCTestCase {
         XCTAssertFalse(CandidateDisplayMode.romanOnly.effectiveTranslateSwapped(stored: true))
         XCTAssertFalse(CandidateDisplayMode.romanOnly.effectiveOutputBothScripts(stored: true))
         XCTAssertTrue(CandidateDisplayMode.combined.effectiveOutputBothScripts(stored: true))
-        // Punctuation width follows the STORED swap under 並排 / 漢羅濫, never under 羅馬字.
+        // Punctuation width follows the STORED swap under Hanji–Romanization Pairing / Hanji with Romanization, never under Romanization Only.
         XCTAssertFalse(CandidateDisplayMode.combined.effectiveFullWidthPunctuation(stored: false))
         XCTAssertTrue(CandidateDisplayMode.combined.effectiveFullWidthPunctuation(stored: true))
         XCTAssertFalse(CandidateDisplayMode.romanOnly.effectiveFullWidthPunctuation(stored: true))

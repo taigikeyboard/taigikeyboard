@@ -46,11 +46,11 @@ struct CandidateSuggestionsRow: View {
     /// English (En-mode) suggestions render through KeyboardKit's own autocomplete
     /// toolbar, which paints item text with a system-adaptive color that ignores the
     /// active app theme — so on a themed gradient the words night-flip (white on a light
-    /// gradient in system dark mode, dark on the 暗眠山貓 dark gradient in light mode).
+    /// gradient in system dark mode, dark on the Catppuccin dark gradient in light mode).
     /// Push the theme's candidate text role into the toolbar item style so En-mode words
     /// match the Taigi candidates. The toolbar re-applies its `style.item` to every item,
     /// so the toolbar-level style (NOT `.autocompleteToolbarItemStyle`, which the toolbar
-    /// overrides) is the lever that wins. `candidateTextColor` nil (預設 adaptive) keeps
+    /// overrides) is the lever that wins. `candidateTextColor` nil (Default adaptive) keeps
     /// `theme.primaryTextColor` == `Color(.label)`, preserving the prior adaptive behavior.
     /// Mirrors Android's role-first `EnglishCandidateCell` (#425).
     private var englishCandidateToolbarStyle: AutocompleteToolbarStyle {
@@ -64,7 +64,7 @@ struct CandidateSuggestionsRow: View {
         // §42: whether any cell in the strip renders a subtitle — computed ONCE
         // per render here (not per cell) and passed down so single-line cells
         // only reserve the second line when the content actually has one
-        // (mixed 並排 lists keep rows aligned; 羅馬字 / 漢羅濫 / TPS content
+        // (mixed Hanji–Romanization Pairing lists keep rows aligned; Romanization Only / Hanji with Romanization / TPS content
         // is one line tall).
         let contentHasSubtitles = CandidateCellHelper.contentHasSubtitles(
             suggestions,

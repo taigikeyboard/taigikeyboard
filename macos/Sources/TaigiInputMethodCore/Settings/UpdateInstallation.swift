@@ -12,7 +12,7 @@ import Foundation
 /// resign, and IMK would commit their half-typed word into the document
 /// (`TaigiInputController.finishComposition`) — the same hazard that keeps the
 /// automatic check to a notification. So arrival never launches anything: it
-/// only turns the pane's button into 安裝, and the second press is the user
+/// only turns the pane's button into Install, and the second press is the user
 /// saying now is a good time. Nothing here is silent, and nothing needs a
 /// password only because the package is home-domain (`release-app.sh`:
 /// `enable_currentUserHome`, `auth="none"`) — it installs into
@@ -223,7 +223,7 @@ final class UpdateInstallation {
     /// The file goes whether or not this download is still the current one. A
     /// failed attempt is never opened, and nothing afterwards remembers where it
     /// sat — `downloadFailed` and `packageRejected` carry no URL, so a later
-    /// `reset` could not find it either. Without this, every press of 閣試一擺
+    /// `reset` could not find it either. Without this, every press of Try Again
     /// would leave its directory behind for the rest of a run, and this process
     /// lives for weeks.
     private func fail(_ failure: Offer, for download: Int, discarding package: URL?) {

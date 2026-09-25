@@ -1,22 +1,22 @@
 // Static built-in theme table: three key-style families over one shared set of 7 colors.
-// Transparent keys (框線 / 簡潔) set normalKeyFill/specialKeyFill to clear so the keyboard background
-// shows through. The 5 gradients are light-only, 暗眠山貓 is dark-only, 預設 stays adaptive (bg/text
+// Transparent keys (Outlined / Borderless) set normalKeyFill/specialKeyFill to clear so the keyboard background
+// shows through. The 5 gradients are light-only, Catppuccin is dark-only, Default stays adaptive (bg/text
 // left nil so the renderer resolves them from the system colorScheme).
 
 import Foundation
 
 /// One built-in theme family — a section header (`title`) plus its variant
 /// themes, shown as a horizontal shelf in the theme picker. The three families
-/// (經典 / 框線 / 簡潔) are a key-STYLE axis over one shared set of 7 colors.
+/// (Filled / Outlined / Borderless) are a key-STYLE axis over one shared set of 7 colors.
 struct BuiltInThemeFamily: Equatable {
     let titleKey: StringKey
     let themes: [BuiltInTheme]
 }
 
 /// The app-bundled, read-only theme catalog. Three key-style families, each with
-/// the same 7 colors (adaptive 預設 + 5 light-only gradients + 1 dark-only 暗眠山貓).
-/// 經典 keeps filled keys; 框線 / 簡潔 make keys transparent (background shows
-/// through), 框線 adding an outline.
+/// the same 7 colors (adaptive Default + 5 light-only gradients + 1 dark-only Catppuccin).
+/// Filled keeps filled keys; Outlined / Borderless make keys transparent (background shows
+/// through), Outlined adding an outline.
 enum BuiltInThemes {
     /// Shelf order shown to the user (after `Default`, before user themes).
     static let families: [BuiltInThemeFamily] = [
@@ -39,7 +39,7 @@ enum BuiltInThemes {
     /// The per-family key-style axis. All three families share one set of colors;
     /// only the key rendering differs.
     private enum KeyStyle {
-        case classic // filled keys (white over a gradient, adaptive for 預設)
+        case classic // filled keys (white over a gradient, adaptive for Default)
         case framed // transparent keys + outline border
         case clean // transparent keys, no border
 
@@ -53,7 +53,7 @@ enum BuiltInThemes {
             self == .framed
         }
 
-        /// id prefix per family — 經典 keeps the legacy `standard*` ids.
+        /// id prefix per family — Filled keeps the legacy `standard*` ids.
         var idPrefix: String {
             switch self {
             case .classic: "standard"
@@ -66,14 +66,14 @@ enum BuiltInThemes {
     // MARK: - Shared colors
 
     /// One of the 7 shared color identities. `gradient == nil` is the adaptive
-    /// 預設 head; the next 5 are soft light single-hue gradients; the last is the
-    /// dark-only 暗眠山貓 (Catppuccin Mocha) gradient (`isDarkPalette`), which lands
+    /// Default head; the next 5 are soft light single-hue gradients; the last is the
+    /// dark-only Catppuccin (Catppuccin Mocha) gradient (`isDarkPalette`), which lands
     /// in the `dark` variant slot with light text over a dark gradient.
     private struct BaseColor {
         let key: String
         let displayNameKey: StringKey
         let gradient: (top: UInt32, bottom: UInt32)?
-        /// Dark palette (e.g. 暗眠山貓/Catppuccin): light text over a dark gradient,
+        /// Dark palette (e.g. Catppuccin): light text over a dark gradient,
         /// with a dark neutral key fill; builds into the `dark` variant slot
         /// (`light` nil) so it stays dark regardless of system scheme.
         var isDarkPalette: Bool = false
@@ -87,7 +87,7 @@ enum BuiltInThemes {
         BaseColor(key: "blue", displayNameKey: .themePaletteBlue, gradient: (0xBFD2EA, 0xDCE2EC)),
         BaseColor(key: "green", displayNameKey: .themePaletteGreen, gradient: (0xC3D8C8, 0xDCE5DD)),
         BaseColor(key: "purple", displayNameKey: .themePalettePurple, gradient: (0xCDC4E4, 0xDEDAEA)),
-        // 暗眠山貓 = Catppuccin Mocha: Base→Mantle background (darker than keys), Surface0 keys, Text glyphs.
+        // Catppuccin = Catppuccin Mocha: Base→Mantle background (darker than keys), Surface0 keys, Text glyphs.
         BaseColor(key: "catppuccin", displayNameKey: .themePaletteCatppuccin, gradient: (0x1E1E2E, 0x181825), isDarkPalette: true),
     ]
 
@@ -105,10 +105,10 @@ enum BuiltInThemes {
 
     // MARK: - Builders
 
-    /// Builds the 7 themes for one key-style family. The 經典 head keeps the
+    /// Builds the 7 themes for one key-style family. The Filled head keeps the
     /// `ThemeId.default` sentinel (so reset shows it selected); framed / clean use
     /// `framedDefault` / `cleanDefault` ids. A light theme builds into the `light`
-    /// slot (`dark` nil); a dark theme (暗眠山貓) builds into the `dark` slot
+    /// slot (`dark` nil); a dark theme (Catppuccin) builds into the `dark` slot
     /// (`light` nil) — mirror-symmetric. Preview slots mirror the family id prefix;
     /// missing assets fall back to a neutral placeholder until screenshots ship.
     private static func familyThemes(_ style: KeyStyle) -> [BuiltInTheme] {
@@ -133,8 +133,8 @@ enum BuiltInThemes {
         }
     }
 
-    /// Resolves the color palette for one (color, key-style) pair. 經典 預設 stays
-    /// fully adaptive (`nil`); framed / clean 預設 carry only transparent key fills
+    /// Resolves the color palette for one (color, key-style) pair. Filled Default stays
+    /// fully adaptive (`nil`); framed / clean Default carry only transparent key fills
     /// so the adaptive background/text still show through and adapt to dark mode.
     private static func colors(for base: BaseColor, style: KeyStyle) -> KeyboardColorSettings? {
         if let gradient = base.gradient {
@@ -142,7 +142,7 @@ enum BuiltInThemes {
             let neutralFill = base.isDarkPalette ? darkKeyFill : lightKeyFill
             return gradientColors(top: gradient.top, bottom: gradient.bottom, keyText: keyText, neutralFill: neutralFill, transparentKeys: style.hasTransparentKeys)
         }
-        guard style.hasTransparentKeys else { return nil } // 經典 預設 = adaptive
+        guard style.hasTransparentKeys else { return nil } // Filled Default = adaptive
         var colors = KeyboardColorSettings()
         colors.normalKeyFillColor = CodableColor(.clear)
         colors.specialKeyFillColor = CodableColor(.clear)
@@ -151,7 +151,7 @@ enum BuiltInThemes {
 
     /// One scheme variant for a gradient color: the vertical 2-stop background
     /// gradient + key/candidate text (`keyText`). Keys are either the neutral fill
-    /// (`neutralFill`, 經典) or transparent so the gradient shows through (框線 / 簡潔).
+    /// (`neutralFill`, Filled) or transparent so the gradient shows through (Outlined / Borderless).
     /// The gradient owns the whole surface — the candidate bar is made transparent in
     /// `TaigiKeyboardView.candidateStyle`.
     private static func gradientColors(top: UInt32, bottom: UInt32, keyText: UInt32, neutralFill: UInt32, transparentKeys: Bool) -> KeyboardColorSettings {

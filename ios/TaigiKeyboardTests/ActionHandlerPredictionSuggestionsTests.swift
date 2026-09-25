@@ -1,6 +1,6 @@
 // Pins the NextWord prediction cell shape `ActionHandler.predictionSuggestions`
-// emits per 候選詞顯示 mode (§42, USER 2026-09-12: 濫 lists both scripts of a
-// prediction, 羅馬字 the roman alone, 並排 today's dual-script cell). Android
+// emits per Candidate Display mode (§42, USER 2026-09-12: Hanji with Romanization lists both scripts of a
+// prediction, Romanization Only the roman alone, Hanji–Romanization Pairing today's dual-script cell). Android
 // parity: `NextWordController.buildPredictionWords`.
 
 import KeyboardKit
@@ -26,9 +26,9 @@ final class ActionHandlerPredictionSuggestionsTests: XCTestCase {
     private var predictions: [RustEngineBridge.NextWordEnginePrediction] {
         [
             prediction(text: "tsia̍h", subtitle: "食", hanzi: "食"),
-            // 同音異字 — same roman, different hanji.
+            // Homophones — same roman, different hanji.
             prediction(text: "tsia̍h", subtitle: "𤆬", hanzi: "𤆬"),
-            // 一字多音 — same hanji, different roman.
+            // Polyphonic Hanji — same hanji, different roman.
             prediction(text: "tîng", subtitle: "重", hanzi: "重"),
             prediction(text: "tāng", subtitle: "重", hanzi: "重"),
             // Hanji-only prediction (engine shaped no roman).
@@ -58,7 +58,7 @@ final class ActionHandlerPredictionSuggestionsTests: XCTestCase {
         XCTAssertEqual(shown, [
             "hanji:食",
             "roman:tsia̍h",
-            // 𤆬's roman cell reads like 食's → collapsed; its 漢字 cell stays.
+            // 𤆬's roman cell reads like 食's → collapsed; its Hanji cell stays.
             "hanji:𤆬",
             "hanji:重",
             "roman:tîng",

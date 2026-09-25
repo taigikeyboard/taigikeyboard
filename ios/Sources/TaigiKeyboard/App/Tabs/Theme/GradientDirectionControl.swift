@@ -51,7 +51,7 @@ enum GradientDirectionDrag {
 /// swallows the preview keys' touches, draws the current direction as an axis
 /// through the centre with an arrowhead at the gradient's end, and writes every
 /// drag position through `GradientDirectionDrag` into `angle`. Snapping into a
-/// preset clicks. The pointer is the whole control (USER 2026-09-19: no 方向 row —
+/// preset clicks. The pointer is the whole control (USER 2026-09-19: no Direction row —
 /// seeing the pointer is enough); for VoiceOver it is one adjustable element
 /// labelled `label` that steps through the 45° presets.
 struct GradientDirectionOverlay: View {

@@ -157,7 +157,7 @@ final class ThemeResolverTests: XCTestCase {
         XCTAssertEqual(resolved.keyShadowIntensity, 0)
     }
 
-    // trace: a 框線 family theme (id "framedBlue") carries keyBorderWidth=1.0 ON TOP
+    // trace: an Outlined family theme (id "framedBlue") carries keyBorderWidth=1.0 ON TOP
     // of factory sizes; other scalars stay factory.
     func testResolved_framedFamily_carriesKeyBorderWidth() {
         let resolved = ThemeResolver.resolved(
@@ -171,7 +171,7 @@ final class ThemeResolverTests: XCTestCase {
         XCTAssertEqual(resolved.keyCornerRadius, ThemeAppearance.default.keyCornerRadius, "other scalars stay factory")
     }
 
-    // trace: 經典 / 簡潔 family themes keep the factory border (0)
+    // trace: Filled / Borderless family themes keep the factory border (0)
     func testResolved_classicAndCleanFamilies_keepFactoryKeyBorderWidth() {
         for id in ["standardBlue", "cleanBlue"] {
             let resolved = ThemeResolver.resolved(

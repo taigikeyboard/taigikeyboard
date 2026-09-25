@@ -18,7 +18,7 @@ import AppKit
 /// Asked with the question and nothing else. It used to carry a body as well,
 /// following `references/MacishType/macos/MacishType/NotificationManager.swift:150-166`
 /// — a bare system prompt with no reason attached is the one people decline —
-/// but the reason was already the question: 「有新版本的時陣通知你?」 says what
+/// but the reason was already the question: "Get notified about new versions?" says what
 /// arrives and when, and a second line restating it explained nothing. The
 /// sentence about nothing typed being sent went with it (USER 2026-08-28):
 /// this asks for permission to post a notification, and answering a privacy

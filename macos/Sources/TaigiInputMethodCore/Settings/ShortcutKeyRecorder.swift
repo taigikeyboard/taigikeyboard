@@ -5,7 +5,7 @@ import Carbon.HIToolbox
 import KeyboardShortcuts
 import SwiftUI
 
-/// One key press, in both the forms the 快捷鍵 pane's two registries store.
+/// One key press, in both the forms the Shortcuts pane's two registries store.
 ///
 /// The composing registry stores the CHARACTER a key types unmodified; the
 /// global one stores a Carbon key CODE. A press yields both at once, and only
@@ -66,7 +66,7 @@ enum GlobalShortcutPolicy {
         // So: only a chord that CARRIES a chording modifier is judged, which
         // is the shape a real system shortcut has — and never a chord one of
         // this app's own actions ships on, because a default the app hands out
-        // has to be recordable or 恢復預設設定 would produce a row the recorder
+        // has to be recordable or Reset to Defaults would produce a row the recorder
         // itself rejects.
         guard !key.chord.modifiers.isDisjoint(with: [.command, .control, .option]) else { return nil }
         guard !isAShippedDefault(shortcut) else { return nil }
@@ -88,7 +88,7 @@ enum GlobalShortcutPolicy {
 /// Both tiers, since 2026-08-26. The global rows used
 /// `KeyboardShortcuts.Recorder` until then, and it refuses a modifier-less key
 /// outright — `RecorderCocoa.swift:404-410` beeps and swallows the event
-/// before any validation of ours runs — so a user could not put 漢羅代先 on a
+/// before any validation of ours runs — so a user could not put the Hanji/romanization swap on a
 /// bare `z` even though the action SHIPS on a bare backtick (USER 2026-08-26,
 /// real device). One field for both tiers also keeps every row on the pane
 /// looking alike, which is what lets the pane group its rows by what a key
@@ -419,9 +419,9 @@ final class ShortcutKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
         // and over, each time re-running conflict resolution.
         guard !event.isARepeat else { return nil }
 
-        // Tab is recorded, not walked: it is the shipped key of 後一个候選
+        // Tab is recorded, not walked: it is the shipped key of Next Candidate
         // (`ComposingAction.nextCandidate`), and a field that let it move the
-        // focus instead would leave 恢復預設設定 — which resets every row — as
+        // focus instead would leave Reset to Defaults — which resets every row — as
         // the only way to put it back (USER 2026-09-19). Escape and a click
         // outside the field remain the ways to leave one.
         let modifiers = event.modifierFlags.intersection([.command, .control, .option, .shift])
@@ -490,7 +490,7 @@ enum ShortcutKeyDisplay {
         "\r": "↩",
         "\t": "⇥",
         // Never recorded (`ComposingKeyChord` refuses them); drawn for the
-        // fixed rows of the 快速齒 pane — the composing caret, the candidate
+        // fixed rows of the Shortcuts pane — the composing caret, the candidate
         // navigation keys and the cancel key.
         String(UnicodeScalar(NSLeftArrowFunctionKey)!): "←",
         String(UnicodeScalar(NSRightArrowFunctionKey)!): "→",

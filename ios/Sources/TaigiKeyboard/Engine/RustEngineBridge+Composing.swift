@@ -387,7 +387,7 @@ public extension RustEngineBridge {
         // sends). Default `0` = proto3-absent sentinel → engine all-on,
         // preserving pre-PR-9.6 behaviour for callers (incl. tests).
         enabledSourcesBitmask: UInt32 = 0,
-        // §34/S22 — invert of the 顯示當咧拍的字 setting. Default `false` = show
+        // §34/S22 — invert of the Show Typed Text First setting. Default `false` = show
         // (proto3-absent sentinel → engine prepends the literal-roman
         // candidate, the pre-toggle always-on behaviour for callers/tests).
         literalRomanCandidateDisabled: Bool = false,
@@ -483,11 +483,11 @@ public extension RustEngineBridge {
     /// commits: `Append` / `DeleteBackward` after a nail re-render the
     /// nailed prefix through `combined_display(nailed, raw, config)` too,
     /// so a nail and the keystroke after it must agree on the prefix
-    /// (the 2026-05-18 "commit entry points only" split left 漢字優先
+    /// (the 2026-05-18 "commit entry points only" split left Hanji-first
     /// showing `台 gi` while typing after `台`; desktop closed the same
     /// drift in #31, S37). Only `Reset`, which carries no config, stays
     /// outside.
-    // `candidateDisplayMode` (proto field 9) travels with the pair: under 羅馬字 the callers already
+    // `candidateDisplayMode` (proto field 9) travels with the pair: under Romanization Only the callers already
     // pass the DERIVED `(false, false)` pair, and FetchAtPos uses the mode to collapse same-roman rows.
     // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/engine/RustEngineBridge.kt continuousAppConfig.
     // Drift causes silent divergence (hanji-first spurious word-boundary spaces).

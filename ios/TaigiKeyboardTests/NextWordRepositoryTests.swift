@@ -69,7 +69,7 @@ final class NextWordRepositoryTests: XCTestCase {
         XCTAssertEqual(rows.map(\.hanzi), ["飯"])
     }
 
-    /// §24 — v6 stores the two readings of a 一字多音 previous word separately
+    /// §24 — v6 stores the two readings of a polyphonic Hanji previous word separately
     /// and the Hanji-only lookup returns BOTH. The engine keeps only the first
     /// user row per predicted `(hanzi, tl)`, so this query's job is to put the
     /// right one first: the reading actually being typed, ahead of the other

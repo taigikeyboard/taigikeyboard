@@ -4,7 +4,7 @@ import Foundation
 
 /// The last few picks, most recent first — the front of the picker's list,
 /// so a symbol used a moment ago is on the first page under the first slot
-/// keys (USER 2026-09-19: 「符號選單能夠依照最近輸入排序」). One page, not
+/// keys (USER 2026-09-19: "the symbol menu should sort by most recently typed"). One page, not
 /// the whole table: past `capacity` a symbol falls back to its file place,
 /// so the brackets stay together and the rest of the list keeps its order.
 ///

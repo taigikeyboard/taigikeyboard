@@ -1,4 +1,4 @@
-// 自訂詞庫: the words the user added themselves.
+// Custom Dictionary: the words the user added themselves.
 
 import SwiftUI
 import UniformTypeIdentifiers
@@ -220,7 +220,7 @@ final class CustomDictionaryPageModel {
 struct CustomDictionaryPage: View {
     @Environment(DisplayLanguageStore.self) private var language
 
-    /// Needed only by the 刪除學習紀錄 row; the entries list reads
+    /// Needed only by the Delete Learning Records row; the entries list reads
     /// `stores.customDictionary` through its own model.
     private let stores: UserDataStores
 

@@ -148,7 +148,7 @@ enum NextWordRepository {
     /// `prev_word` (Hanji) is the only lookup key — matching the bundled
     /// `association.bin` (Hanji-only prev key). A non-empty `prev_tl` that
     /// differs from the query `roman` (e.g. a bigram learned under the other
-    /// reading of a 一字多音 Hanji, or a pre-v3.6.1 raw `taigi` where a
+    /// reading of a polyphonic Hanji, or a pre-v3.6.1 raw `taigi` where a
     /// normal commit stored canonical `tâi-gí`) is still recalled — it ranks
     /// after exact and empty matches but is never dropped.
     ///

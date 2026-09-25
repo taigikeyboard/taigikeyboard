@@ -2,11 +2,11 @@ import SQLite3
 @testable import TaigiKeyboard
 import XCTest
 
-/// v3.6.1 R5 — `user_frequency.db` `(漢字, canonical-TL)` pair-key identity.
+/// v3.6.1 R5 — `user_frequency.db` `(Hanji, canonical-TL)` pair-key identity.
 ///
 /// Pins `INVARIANT_USER_FREQ_PAIR_KEY` (`docs/architecture/behavioral-invariants.md`
 /// §28): frequency is keyed by the `(word, tl)` PAIR (Core Principle #7), so
-/// 一字多音 (重/tîng vs 重/tāng) keep separate counts. Pre-R5 rows carry
+/// polyphonic Hanji (重/tîng vs 重/tāng) keep separate counts. Pre-R5 rows carry
 /// `tl == ""` and the migration backfills them as the legacy fallback bucket.
 ///
 /// Exercises the real repository write→batch-read + the schema rebuild

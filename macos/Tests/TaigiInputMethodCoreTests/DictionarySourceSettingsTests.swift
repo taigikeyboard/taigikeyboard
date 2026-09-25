@@ -99,7 +99,7 @@ final class DictionarySourceSettingsTests: XCTestCase {
         XCTAssertFalse(sources.khiin)
     }
 
-    /// Every subcollection ships on: 腔調 are opt-out, not opt-in.
+    /// Every subcollection ships on: accents are opt-out, not opt-in.
     func testFreshInstall_hasEveryKautianSubcollectionOn() {
         let subcollections = makeStore().current.dictionarySources.kautianSubcollections
 

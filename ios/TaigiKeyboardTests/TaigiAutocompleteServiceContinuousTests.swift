@@ -344,10 +344,10 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
         XCTAssertNil(subtitle, "TPS never shows a subtitle")
     }
 
-    // MARK: - §42 漢羅濫 split cells
+    // MARK: - §42 Hanji with Romanization split cells
 
-    /// Under 濫 a hanji-bearing candidate becomes TWO adjacent single-script
-    /// cells — 漢字 then 羅馬字, neither with a subtitle — and the SEMANTIC
+    /// Under Hanji with Romanization a hanji-bearing candidate becomes TWO adjacent single-script
+    /// cells — Hanji then romanization, neither with a subtitle — and the SEMANTIC
     /// sidechannels (identity + engine offsets) are copied verbatim onto both.
     func testCombined_HanjiBearingCandidate_SplitsIntoHanjiThenRomanCell() {
         let candidates = [
@@ -462,7 +462,7 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
     }
 
     /// 重/tîng and 重/tāng are two words (Core Principle #7) but draw the SAME
-    /// 漢字 cell, so 濫 lists 重 once and keeps both roman cells — the losing
+    /// Hanji cell, so Hanji with Romanization lists 重 once and keeps both roman cells — the losing
     /// reading stays reachable through its own romanization.
     func testCombined_SameHanjiTwoReadings_IsOneHanjiCellTwoRomanCells() {
         let candidates = [
@@ -479,7 +479,7 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
         XCTAssertEqual(result[2].additionalInfo[CandidateCellScript.infoKey], CandidateCellScript.roman)
     }
 
-    /// Split OFF (並排 / 羅馬字 / TPS all resolve to `splitCombinedCells =
+    /// Split OFF (Hanji–Romanization Pairing / Romanization Only / TPS all resolve to `splitCombinedCells =
     /// false` at the provider) emits today's un-split shape byte-identically —
     /// the default parameter and explicit `false` agree field-for-field, with
     /// no `cellScript` marker. Mirrors Android's "S27 combined split OFF" pin.
@@ -506,9 +506,9 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
 
     // MARK: - Split gate (which mode / layout splits at all)
 
-    /// §42 濫 split gate: 漢羅濫 + non-TPS splits, everything else does not.
+    /// §42 Hanji with Romanization split gate: Hanji with Romanization + non-TPS splits, everything else does not.
     /// Pins the polarity of the TPS clause (an inverted condition would split
-    /// under TPS and stop splitting under 漢羅濫). Mirrors Android
+    /// under TPS and stop splitting under Hanji with Romanization). Mirrors Android
     /// `split gate is combined mode outside TPS only`.
     func testSplitGate_isCombinedModeOutsideTPSOnly() {
         XCTAssertTrue(shouldSplitCombinedCells(keyboardLayoutType: .phahTaigi, candidateDisplayMode: .combined))

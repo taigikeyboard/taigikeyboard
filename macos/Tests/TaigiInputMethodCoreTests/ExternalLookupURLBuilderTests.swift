@@ -23,7 +23,7 @@ final class ExternalLookupURLBuilderTests: XCTestCase {
         XCTAssertEqual(ExternalLookupURLBuilder.digitToneForm("gua2"), "gua2")
     }
 
-    /// Every syllable is converted, and the 連字 between them survives —
+    /// Every syllable is converted, and the hyphen between them survives —
     /// the sites index the hyphenated form.
     func testEverySyllableIsConvertedAndHyphensSurvive() {
         XCTAssertEqual(ExternalLookupURLBuilder.digitToneForm("tâi-gí"), "tai5-gi2")

@@ -25,7 +25,7 @@ enum CustomDictionaryCSVError: Error, CustomStringConvertible {
     }
 }
 
-/// The `roman,hanzi` CSV the 自訂詞庫 page reads and writes.
+/// The `roman,hanzi` CSV the Custom Dictionary page reads and writes.
 ///
 /// Uses the shared `UserDataCSV` quoting rather than a parser of its own. iOS
 /// has a private second parser here that does NOT unescape doubled quotes, so
@@ -44,7 +44,7 @@ enum CustomDictionaryCSV {
 
     /// Parses `csv` into rows, or explains why it could not.
     ///
-    /// A row needs a romanization; the 漢字 column may be empty, because a
+    /// A row needs a romanization; the Hanji column may be empty, because a
     /// romanization-only entry is legitimate. Rows the parser cannot use are
     /// dropped rather than failing the file — a hand-edited CSV with one bad
     /// line should import the rest — but a file that is entirely unusable is

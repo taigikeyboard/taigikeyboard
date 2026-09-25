@@ -133,7 +133,7 @@ final class ShortcutKeyRecorderTests: XCTestCase {
 /// field rather than `KeyboardShortcuts.Recorder`.
 ///
 /// The bug this replaced: the library beeps at every modifier-less key before
-/// any validation of ours runs (`RecorderCocoa.swift:404-410`), so 漢羅代先
+/// any validation of ours runs (`RecorderCocoa.swift:404-410`), so the Hanji/romanization swap
 /// could not be moved onto a bare `z` — while SHIPPING on a bare backtick
 /// (USER 2026-08-26, real device).
 @MainActor
@@ -205,7 +205,7 @@ final class GlobalShortcutPolicyTests: XCTestCase {
         XCTAssertNil(GlobalShortcutPolicy.rejection(for: recorded))
     }
 
-    /// Every chord this app hands out has to be recordable, or 恢復預設設定
+    /// Every chord this app hands out has to be recordable, or Reset to Defaults
     /// would leave a row the recorder itself refuses. That is not hypothetical:
     /// `CopySymbolicHotKeys` reported ⌃⌘S — the settings doorway's own default
     /// — as an enabled system shortcut on the development Mac.
@@ -224,7 +224,7 @@ final class GlobalShortcutPolicyTests: XCTestCase {
 
     /// A bare key is never judged against the system table: that table's
     /// "enabled" entries included bare `a`, `s`, `f`, `q` and the bare backtick
-    /// this app ships 漢羅代先 on (probe, 2026-08-26). They are slots, not
+    /// this app ships the Hanji/romanization swap on (probe, 2026-08-26). They are slots, not
     /// shortcuts a user could name, and refusing them would rebuild the one-way
     /// door this recorder exists to remove. Punctuation here because every
     /// letter is a typing key since Telex claimed the free eight (2026-09-08)

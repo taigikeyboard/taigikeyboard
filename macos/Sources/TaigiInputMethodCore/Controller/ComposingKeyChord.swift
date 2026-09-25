@@ -37,7 +37,7 @@ struct ComposingKeyChord: Hashable, Sendable {
         cancelKey,
     ])
 
-    /// The six keys of the fixed navigation contract, in the order the 快速齒
+    /// The six keys of the fixed navigation contract, in the order the Shortcuts
     /// pane draws them: the arrows, then the paging keys.
     ///
     /// `compactMap` rather than a `?? " "` fallback: a scalar that failed to
@@ -126,7 +126,7 @@ struct ComposingKeyChord: Hashable, Sendable {
     }
 
     /// The `;` key, refused under Shift for the same reason as the number
-    /// row: it is the ninth slot key, and `⇧;` aims the 漢羅 commit at it
+    /// row: it is the ninth slot key, and `⇧;` aims the Hanji/romanization commit at it
     /// (`CandidateSlotKeySet.shiftedSlot(for:)`) even though a US layout
     /// types `:` for it.
     static let semicolonKeyCode = UInt16(kVK_ANSI_Semicolon)

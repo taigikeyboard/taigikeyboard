@@ -261,7 +261,7 @@ extension ActionHandler {
 
             // Auto-space follows what the commit WROTE, not the output mode:
             // a raw commit is romanization in TL/POJ and Bopomofo in TPS. The
-            // hyphen check runs on the committed string, so a 連字 the user is
+            // hyphen check runs on the committed string, so a hyphen the user is
             // continuing suppresses the space.
             appendAutoSpaceIfEarned(
                 documentText: capturedRawInput,

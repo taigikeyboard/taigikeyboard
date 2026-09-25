@@ -2,8 +2,8 @@
 
 import AppKit
 
-/// The app's light/dark choice, mirroring the 外觀 row of System Settings'
-/// Appearance pane: 淺色, 深色, or 自動 — follow the system, which is what
+/// The app's light/dark choice, mirroring the Appearance row of System Settings'
+/// Appearance pane: Light, Dark, or Auto — follow the system, which is what
 /// every window did before this setting existed and what a fresh install
 /// keeps.
 ///

@@ -9,8 +9,8 @@ import Foundation
 /// `ActionHandler+KeyActions.swift`, behavioral-invariants.md §23): a committed
 /// word gets a trailing space; a trailing hyphen — a syllable the user is
 /// about to continue — suppresses it; a commit that put HANJI in the document
-/// turns the feature off unless 括號標註 keeps the romanization in the output.
-/// macOS retired the 括號標註 toggle (`RetiredSettingsCleanup` pins it false),
+/// turns the feature off unless Annotate in Brackets keeps the romanization in the output.
+/// macOS retired the Annotate in Brackets toggle (`RetiredSettingsCleanup` pins it false),
 /// so that branch of the gate never fires here today — it is kept because it IS
 /// the iOS formula, and a second spelling of the gate is how the platforms
 /// drift.
@@ -20,10 +20,10 @@ enum AutoSpacePolicy {
     ///
     /// `wroteRomanization` rather than the output mode. Spacing is a property
     /// of romanization — `guá beh khì` needs the gaps, 我欲去 does not — and
-    /// until the 漢羅 key existed the mode was an exact proxy for it, because
+    /// until the Hanji/romanization key existed the mode was an exact proxy for it, because
     /// the mode was the only thing deciding what got written. Space commits the
     /// script the mode does NOT lead with, and a candidate with no Hanji (the
-    /// §34 字面羅馬字, an out-of-vocabulary name) writes its romanization under
+    /// §34 literal romanization, an out-of-vocabulary name) writes its romanization under
     /// every mode, so the proxy disagrees with the document in both
     /// directions. The verdict comes from whatever resolved the string:
     /// `CandidateDocumentText.resolved` for a candidate,
@@ -39,7 +39,7 @@ enum AutoSpacePolicy {
     /// A `switch` over a two-case enum rather than `true`, so that adding a
     /// non-romanized layout (TPS composes Bopomofo, which takes no spacing —
     /// see the iOS `keyboardLayoutType` gate) fails to compile here instead of
-    /// silently spacing 注音.
+    /// silently spacing Zhuyin.
     static func rawPreeditWritesRomanization(inputMode: InputMode) -> Bool {
         switch inputMode {
         case .tl, .poj: true

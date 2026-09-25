@@ -178,7 +178,7 @@ final class CandidateIndexLabelTests: XCTestCase {
         assertDigitsMatchSlots(in: panel)
     }
 
-    /// The 漢羅 swap re-renders every cell against the same list. The digits
+    /// The Hanji/romanization swap re-renders every cell against the same list. The digits
     /// belong to the POSITIONS, so they must survive it unmoved.
     func testEveryLayout_keepsItsDigitsThroughARerender() {
         let swapped = Self.cells.map {

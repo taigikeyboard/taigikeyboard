@@ -14,7 +14,7 @@ import XCTest
 /// though the shipped default is hanji-first (2026-09-18). In BOTH domains,
 /// for the reason on `withTranslateSwapped`: `.standard` here for the shared
 /// coordinator, the scratch store in `makeSession` for the controller. The
-/// 漢字優先 cases opt in on top, as they always did.
+/// Hanji-first cases opt in on top, as they always did.
 @MainActor
 final class AutoSpaceControllerTests: XCTestCase {
     override func setUp() {
@@ -66,7 +66,7 @@ final class AutoSpaceControllerTests: XCTestCase {
 
     /// Return on a fresh bar commits the §34 one-script literal, which is a
     /// romanization under EVERY mode — there is no Hanji on that candidate to
-    /// lead with. So it is spaced in 漢字優先 too: the gate follows the
+    /// lead with. So it is spaced in Hanji-first too: the gate follows the
     /// document, not the mode (the direction the old mode proxy refused).
     func testReturnOnTheLiteral_isSpacedUnderEveryMode() throws {
         for swapped in [false, true] {
@@ -258,12 +258,12 @@ final class AutoSpaceControllerTests: XCTestCase {
         XCTAssertNotEqual(session.client.insertedTexts.last, " ")
     }
 
-    // MARK: - The 漢羅 key
+    // MARK: - The Hanji/romanization key
 
     /// Auto-space follows the DOCUMENT, not the output mode: spacing is a
     /// property of romanization (`guá beh khì` needs the gaps, 我欲去 does
-    /// not), and the 漢羅 key is the one commit whose script disagrees with the
-    /// mode. So 漢字 mode writing a romanization is spaced — the direction the
+    /// not), and the Hanji/romanization key is the one commit whose script disagrees with the
+    /// mode. So Hanji mode writing a romanization is spaced — the direction the
     /// old mode-read would have refused (USER 2026-08-25).
     func testAlternateCommitOfARomanization_earnsItsSpace() throws {
         try withTranslateSwapped(true) {
@@ -296,7 +296,7 @@ final class AutoSpaceControllerTests: XCTestCase {
         XCTAssertEqual(session.client.insertedTexts, [cell.annotation], "the hanji, unspaced")
     }
 
-    /// The toggle still outranks everything: OFF means no space from the 漢羅
+    /// The toggle still outranks everything: OFF means no space from the Hanji/romanization
     /// key either, in the direction that would otherwise earn one.
     func testAlternateCommit_withTheToggleOff_takesNoSpace() throws {
         let session = try composedSession {
@@ -313,9 +313,9 @@ final class AutoSpaceControllerTests: XCTestCase {
         XCTAssertEqual(session.client.insertedTexts, [cell.annotation], "the romanization, unspaced")
     }
 
-    /// The punctuation swap has to follow it. The space the 漢羅 key wrote is
+    /// The punctuation swap has to follow it. The space the Hanji/romanization key wrote is
     /// this controller's, so `?` must swap with it (`我ê? `) — re-reading the
-    /// gate under the OUTPUT MODE instead would refuse, because 漢字 mode says
+    /// gate under the OUTPUT MODE instead would refuse, because Hanji mode says
     /// no commit earns a space, and the one that just did would be denied its
     /// own. What the armed script is stored for.
     func testTheSwapFollowsASpaceTheAlternateCommitWrote() throws {
@@ -341,7 +341,7 @@ final class AutoSpaceControllerTests: XCTestCase {
     /// A mode change does NOT invalidate an armed space, deliberately: what
     /// the previous commit put in front of the caret is a fact, and a
     /// romanization does not become Hanji because the user switched displays
-    /// afterwards. Only 自動空白 itself is re-read live
+    /// afterwards. Only Auto-Space itself is re-read live
     /// (`testTheToggleFlippedOffAfterTheCommit_declinesTheSwap`).
     func testTheSwapSurvivesAModeFlipUnderAnAlternateArmedSpace() throws {
         let session = try withTranslateSwappedSession()
@@ -355,7 +355,7 @@ final class AutoSpaceControllerTests: XCTestCase {
         XCTAssertEqual(session.client.insertedTexts, ["? "])
     }
 
-    /// And the precedence the 漢羅 key newly makes reachable: in 漢字 mode a
+    /// And the precedence the Hanji/romanization key newly makes reachable: in Hanji mode a
     /// Space-written romanization arms a space, so the `?` that follows matches
     /// BOTH the auto-space swap and the full-width map. The swap wins and the
     /// punctuation stays half-width — the word in front of the caret is
@@ -373,9 +373,9 @@ final class AutoSpaceControllerTests: XCTestCase {
         )
     }
 
-    // MARK: - 漢羅合用: the gate follows the cell's script
+    // MARK: - Hanji with Romanization: the gate follows the cell's script
 
-    /// Under 合用 a candidate is a Hanji cell and a romanization cell, and the
+    /// Under Hanji with Romanization a candidate is a Hanji cell and a romanization cell, and the
     /// script a commit resolves to is the CELL's, flipped for Space — the one
     /// value the commit and this gate both read. Space on the Hanji cell
     /// writes the romanization, which is spaced.
@@ -440,7 +440,7 @@ final class AutoSpaceControllerTests: XCTestCase {
         }
     }
 
-    /// 漢羅濫 forces the swap on, so the mode proxy called every `.primary`
+    /// Hanji with Romanization forces the swap on, so the mode proxy called every `.primary`
     /// cell a hanji commit — including §34's literal, which has no hanji to
     /// commit. Both romanization cells of one list must agree: the literal at
     /// slot 0 and the dictionary candidate's own romanization cell write the
@@ -503,7 +503,7 @@ final class AutoSpaceControllerTests: XCTestCase {
         return session
     }
 
-    /// A 漢字優先 session where Space has committed the romanization and its
+    /// A Hanji-first session where Space has committed the romanization and its
     /// auto space is armed — the state both armed-alternate cases start from.
     ///
     /// The swap flag has to outlive the returned session, so it is written

@@ -69,10 +69,10 @@ final class ShortcutActionsTests: XCTestCase {
     /// rather than the R this had until 2026-08-25 (USER): a switch reached
     /// for all day is muscle memory by the second day, so what is left to
     /// optimise is travel — ⌃, ⌘ and C are all bottom row, while R is two rows
-    /// up with the pinky still anchored. The 漢羅 swap sits on the bare
+    /// up with the pinky still anchored. The Hanji/romanization swap sits on the bare
     /// backtick, the classic Taiwanese-IME function key — no TL or POJ
     /// syllable is spelled with it, and the hotkey is armed only while a Taigi
-    /// session holds the engine (USER 2026-08-21). The 候選詞顯示 cycle is
+    /// session holds the engine (USER 2026-08-21). The Candidate Display cycle is
     /// ⌃⌘H — H for Hàn-Lô, in the same ⌃⌘ family; the chord the swap gave up
     /// on 2026-08-21, free again once `ShortcutDefaultMigration` moved those
     /// installs (USER 2026-09-02).
@@ -142,11 +142,11 @@ final class ShortcutActionsTests: XCTestCase {
     /// panes the menu bar already lists by name).
     /// One ⌃⌘S doorway replaced them — a command reached for rarely, so a
     /// mnemonic pays — and the switch moved to ⌃⌘C, where a command reached
-    /// for all day wants the hand to stay on the bottom row. The 候選詞顯示
+    /// for all day wants the hand to stay on the bottom row. The Candidate Display
     /// cycle joined on ⌃⌘H (USER 2026-09-02) and the symbol picker on ⌃⌘,
     /// (USER 2026-09-09; why not the backtick is on its `Name`). The Telex
     /// guide is ⌃⌘/ — the key help lives on. Row order since 2026-09-21
-    /// (USER): the switches in the 一般 pane's order, the windows used while
+    /// (USER): the switches in the General pane's order, the windows used while
     /// typing, the settings doorway last.
     func testTheGlobalRoster_isOneDoorwayThreeSwitchesThePickerAndTheGuide() {
         XCTAssertEqual(

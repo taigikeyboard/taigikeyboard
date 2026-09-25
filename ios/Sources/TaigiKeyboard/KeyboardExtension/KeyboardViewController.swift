@@ -45,7 +45,7 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
     /// Colors / font / corner already update in place via `TaigiKeyboardView`.
     var lastResolvedKeyHeightScale: Double?
 
-    /// Previous 候選詞顯示 mode. The 文/A key's presence is baked into the
+    /// Previous Candidate Display mode. The 文/A key's presence is baked into the
     /// layout; a host-app change re-renders through the keyboard context in
     /// `syncSettings()` (the in-keyboard picker already goes through it).
     var lastCandidateDisplayMode: CandidateDisplayMode?
@@ -153,7 +153,7 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
             },
             onCandidateDisplayModeChange: { [unowned self] mode in
                 state.keyboardContext.candidateDisplayMode = mode
-                // Not display-only: under 羅馬字 the ENGINE collapses same-roman
+                // Not display-only: under Romanization Only the ENGINE collapses same-roman
                 // rows (§44), so the open list is fetched again, not repainted.
                 performAutocomplete()
             },

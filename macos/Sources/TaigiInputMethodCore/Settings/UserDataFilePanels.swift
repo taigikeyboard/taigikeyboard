@@ -3,7 +3,7 @@
 import AppKit
 import UniformTypeIdentifiers
 
-/// The open and save panels the 詞庫 pages put in front of the settings
+/// The open and save panels the Dictionary pages put in front of the settings
 /// window.
 ///
 /// Sheets on a named window, never free-standing panels: a free-standing panel

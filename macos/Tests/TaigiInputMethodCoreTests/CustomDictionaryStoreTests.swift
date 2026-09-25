@@ -141,7 +141,7 @@ final class CustomDictionaryStoreTests: XCTestCase {
     }
 
     /// A romanization-only entry is legitimate: the engine reads the absent
-    /// 漢字 as "render the romanization".
+    /// Hanji as "render the romanization".
     func testAnEntryWithNoHanzi_isStored() async throws {
         let store = try makeStore()
 
@@ -207,7 +207,7 @@ final class CustomDictionaryStoreTests: XCTestCase {
         XCTAssertEqual(storedCount, 2)
     }
 
-    /// Two rows sharing a romanization but not a 漢字 are two words, and both
+    /// Two rows sharing a romanization but not a Hanji are two words, and both
     /// are imported — the raw pair is what an import dedupes on, matching iOS
     /// and Android.
     func testImport_keepsTwoHanziUnderOneRomanization() async throws {
@@ -257,7 +257,7 @@ final class CustomDictionaryStoreTests: XCTestCase {
         XCTAssertEqual(result, CustomDictionaryImportResult(imported: 2, skipped: 1))
     }
 
-    /// A romanization is derived once however many 漢字 share it, and a
+    /// A romanization is derived once however many Hanji share it, and a
     /// derivation that fails does so before the first row is written.
     func testImport_derivesEachRomanizationOnce() async throws {
         let derivedRomans = DerivationRecorder()

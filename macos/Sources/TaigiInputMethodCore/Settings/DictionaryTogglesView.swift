@@ -84,7 +84,7 @@ struct DictionaryTogglesView: View {
                 .padding(.leading, Metrics.subcollectionIndent)
                 // Disabled, not cleared: the master switch says whether this
                 // dictionary is searched at all, and turning it back on has to
-                // return the 腔口 the user had chosen rather than all of them.
+                // return the accents the user had chosen rather than all of them.
                 .disabled(!isKautianEnabled)
 
                 Toggle(language.string(.commonNewwordDict), isOn: $isTaigitvEnabled)
@@ -113,7 +113,7 @@ struct DictionaryTogglesView: View {
                 Text(language.string(.dictionarySupplementSectionTitle))
             }
 
-            // Its own section, at the end, drawn the way the 快捷鍵 and 外觀
+            // Its own section, at the end, drawn the way the Shortcuts and Appearance
             // panes draw theirs: it acts on every toggle above it rather than
             // on any one of them.
             Section {
@@ -123,7 +123,7 @@ struct DictionaryTogglesView: View {
         .formStyle(.grouped)
     }
 
-    /// Puts every source and 腔口 toggle back to what a fresh install searches.
+    /// Puts every source and accent toggle back to what a fresh install searches.
     ///
     /// The `@AppStorage` bindings above repaint on their own: removing a key is
     /// a `UserDefaults` change like any other, and each binding falls back to

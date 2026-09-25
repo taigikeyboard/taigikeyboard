@@ -246,14 +246,14 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         // SAME settings snapshot + SAME `compute_filters` bridge the Tab3
         // browse path uses (`DictionarySearchService.search`), so keyboard
         // candidates honour the same 12 source toggles + kautian
-        // subcollection (腔調/姓名) toggles. Computed once and shared by
+        // subcollection (accent/surname) toggles. Computed once and shared by
         // both fetch phases (the result depends only on `settings`, stable
         // for this synchronous fetch — mirrors `customEntries`).
         let enabledSourcesBitmask = RustEngineBridge.lexiconDictionaryFilters(
             toggles: RustEngineBridge.DictionaryToggles(from: settings),
         ).dictionaryFilterBitmask
 
-        // §34/S22 — invert the 顯示當咧拍的字 setting into the engine's
+        // §34/S22 — invert the Show Typed Text First setting into the engine's
         // `disabled` wire flag. Computed once from the same snapshot and
         // shared by both fetch phases so a mid-fetch settings change cannot
         // make the two phases disagree (mirrors `enabledSourcesBitmask`).
@@ -411,7 +411,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
 
     /// §50 — learned phrases whose derived key EQUALS the raw buffer's query
     /// key (`LearnedPhraseRepository.matchesSync`), as
-    /// `FetchAtPos.learned_entries`; not gated by 啟用自訂詞庫 (manual rows
+    /// `FetchAtPos.learned_entries`; not gated by Enable Custom Dictionary (manual rows
     /// only) — learning is always on.
     private func buildLearnedEntries(
         queryKey q: CustomSearchKey?,

@@ -68,7 +68,7 @@ enum DisplayLanguage: String, CaseIterable {
     /// (lowercased ISO 639). Pure + injectable for tests — never reads `Locale` itself; the store passes
     /// the device subtag in. `ja*` → Japanese, `en*` → English, anything else (incl. `zh*` / absent) →
     /// Hanji. Taiwanese Hanji is the neutral default so a Chinese-locale (or any non-ja/en) device reads
-    /// the UI in 漢字, not English.
+    /// the UI in Hanji, not English.
     /// CROSS-PLATFORM INVARIANT (INVARIANT_DISPLAY_LANGUAGE_AUTOMATIC_RESOLUTION) — mirrors iOS +
     /// android `resolveAutomatic`.
     static func resolveAutomatic(_ deviceLanguageSubtag: String) -> DisplayLanguage {

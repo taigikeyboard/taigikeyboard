@@ -1,4 +1,4 @@
-// What the 自訂詞庫 list actually asks the database for.
+// What the Custom Dictionary list actually asks the database for.
 
 @testable import TaigiInputMethodCore
 import XCTest
@@ -7,7 +7,7 @@ import XCTest
 /// read: a 30000-row dictionary read whole to show a screenful is a cost paid
 /// on every keystroke in the filter box.
 ///
-/// The 詞頻 and 詞關聯 halves of this file went with their pages — those stores
+/// The frequency and association halves of this file went with their pages — those stores
 /// no longer answer list queries at all.
 final class CustomDictionaryListQueryTests: XCTestCase {
     private var stores: UserDataStores!

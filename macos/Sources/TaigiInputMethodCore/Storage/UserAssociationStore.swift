@@ -3,7 +3,7 @@
 import Foundation
 
 /// A learned bigram. Both halves carry their canonical TL because a Taiwanese
-/// word is the `(漢字, canonical TL)` pair (`CLAUDE.md` Core Principle #7) —
+/// word is the `(Hanji, canonical TL)` pair (`CLAUDE.md` Core Principle #7) —
 /// 重/tîng followed by 複 is not the same observation as 重/tāng followed by 複.
 struct AssociationPair: Hashable, Sendable {
     let previous: String
@@ -174,7 +174,7 @@ final class UserAssociationStore: @unchecked Sendable {
     // MARK: - Schema
 
     /// The unique key carries `prev_tl` because a Taiwanese word is the
-    /// `(漢字, canonical TL)` pair (`CLAUDE.md` Core Principle #7) on the
+    /// `(Hanji, canonical TL)` pair (`CLAUDE.md` Core Principle #7) on the
     /// bigram's PREVIOUS side as well as its next: without it, 重/tîng → 複 and
     /// 重/tāng → 複 collapse into one row whose `prev_tl` is whichever was
     /// written last, and the read side ranks on `prev_tl`, so the merged row

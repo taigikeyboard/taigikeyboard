@@ -8,8 +8,8 @@ import XCTest
 /// `(candidate, script)` a commit needs.
 @MainActor
 final class CandidateSourceTests: XCTestCase {
-    /// Under 合用 a Hanji candidate is two adjacent cells sharing ONE
-    /// candidate: the 漢字 cell commits `.primary`, the 羅馬字 cell
+    /// Under Hanji with Romanization a Hanji candidate is two adjacent cells sharing ONE
+    /// candidate: the Hanji cell commits `.primary`, the romanization cell
     /// `.alternate`, and `flip` — what Space asks for — answers the other
     /// script of the same candidate. Past the list there is nothing to commit.
     func testResolve_underCombined_answersEachCellsOwnScriptAndFlipTheOther() throws {

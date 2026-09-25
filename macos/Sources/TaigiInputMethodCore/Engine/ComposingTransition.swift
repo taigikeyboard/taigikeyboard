@@ -73,7 +73,7 @@ enum CandidateMode: Equatable, Sendable {
 ///
 /// The span offsets are byte offsets into the raw buffer the engine holds, and
 /// `canonicalTl` is the identity romanization (Core Principle #7 keys a word on
-/// the `(漢字, canonical TL)` pair). Both must be round-tripped back to the
+/// the `(Hanji, canonical TL)` pair). Both must be round-tripped back to the
 /// engine verbatim on commit: recomputing either from `displayText` would key
 /// the user's frequency and association data under a different word.
 struct ContinuousCandidate: Equatable, Sendable {

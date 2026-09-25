@@ -28,7 +28,7 @@ final class ComposingKeyBindingsTests: XCTestCase {
     }
 
     /// Bare punctuation outside the typing keys is what a user has free to
-    /// bind bare — the backtick 漢羅對調 shipped on, and its neighbours.
+    /// bind bare — the backtick Hanji/romanization swap shipped on, and its neighbours.
     func testBarePunctuation_canBeRecordedBare() throws {
         for key in ["`", "[", "]", "'", ","] {
             let chord = try ComposingKeyChord.make(key: key, modifiers: []).get()
@@ -160,7 +160,7 @@ final class ComposingKeyBindingsTests: XCTestCase {
     /// The keys a user arriving from the system Zhuyin input method already
     /// knows. Two places that keyboard cannot be matched: it picks candidates
     /// with bare digits, which are tone markers here, and it walks the list
-    /// with Space, which here writes the other script — the 漢羅 key, which a
+    /// with Space, which here writes the other script — the Hanji/romanization key, which a
     /// Mandarin keyboard has no equivalent of. Walking moved to ⇥, pairing with
     /// the ⇧⇥ that already walked back.
     func testDefaults_followTheSystemZhuyinKeyboard() throws {
@@ -221,7 +221,7 @@ final class ComposingKeyBindingsTests: XCTestCase {
 
     /// The upgrade case for the 2026-08-25 move: an install where the user had
     /// deliberately RECORDED Space on `nextCandidate` keeps it there, and the
-    /// new 漢羅 action arrives empty rather than taking a key out from under
+    /// new Hanji/romanization action arrives empty rather than taking a key out from under
     /// them. The provenance rule already says this — a recorded chord outranks
     /// a default landing on top of it — and this pins that it covers the move.
     func testAUserWhoRecordedSpaceOnWalking_keepsIt() throws {
@@ -280,8 +280,8 @@ final class ComposingKeyBindingsTests: XCTestCase {
         }
     }
 
-    /// The reported failure (USER 2026-09-19): Enter recorded on 迒模式輸出 was
-    /// handed straight back to 確定. The emptied commit row takes the pair's
+    /// The reported failure (USER 2026-09-19): Enter recorded on Output the Other Script was
+    /// handed straight back to Confirm. The emptied commit row takes the pair's
     /// OTHER default if that one is free, and stays empty when it is not.
     func testARowRecordedOntoACommitDefault_keepsIt() throws {
         // trace: alternate=Return (recorded) > confirm=Return (default) →

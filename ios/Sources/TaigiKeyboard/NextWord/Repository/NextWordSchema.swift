@@ -57,7 +57,7 @@ enum NextWordSchema {
     // MARK: - Private
 
     /// The v6 table. The UNIQUE key carries `prev_tl` because a Taiwanese word
-    /// is the `(漢字, canonical TL)` pair (`CLAUDE.md` Core Principle #7) on the
+    /// is the `(Hanji, canonical TL)` pair (`CLAUDE.md` Core Principle #7) on the
     /// bigram's PREVIOUS side as well as its next: 重/tîng → 複 and 重/tāng → 複
     /// are two observations, not one. See `behavioral-invariants.md` §24.
     private static func createTables(db: OpaquePointer) throws {

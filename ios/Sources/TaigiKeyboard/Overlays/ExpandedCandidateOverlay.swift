@@ -1,4 +1,4 @@
-// Expanded candidate overlay — wrapping candidate grid, paging, and the 漢字 / 羅馬字 toggle (hidden under TPS and single-script display modes).
+// Expanded candidate overlay — wrapping candidate grid, paging, and the Hanji / romanization toggle (hidden under TPS and single-script display modes).
 
 import KeyboardKit
 import SwiftUI
@@ -89,7 +89,7 @@ struct ExpandedCandidateOverlay: View {
         // §42: whether any cell in the grid renders a subtitle — computed ONCE
         // per render here (not per cell) and passed down so single-line cells
         // only reserve the second line when the content actually has one
-        // (mixed 並排 lists keep rows aligned; 羅馬字 / 漢羅濫 / TPS content
+        // (mixed Hanji–Romanization Pairing lists keep rows aligned; Romanization Only / Hanji with Romanization / TPS content
         // is one line tall).
         let contentHasSubtitles = CandidateCellHelper.contentHasSubtitles(
             suggestions,
@@ -186,8 +186,8 @@ struct ExpandedCandidateOverlay: View {
                     },
                 )
 
-                // No 文/A under TPS (always hanzi, always full-width) or 羅馬字
-                // (always half-width); under 漢羅濫 it flips punctuation width.
+                // No 文/A under TPS (always hanzi, always full-width) or Romanization Only
+                // (always half-width); under Hanji with Romanization it flips punctuation width.
                 if !isTPSLayout, candidateDisplayMode.allowsSwapToggle {
                     ExpandedCandidateControlButton(
                         iconName: "translate",

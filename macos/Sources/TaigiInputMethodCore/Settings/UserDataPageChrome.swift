@@ -1,4 +1,4 @@
-// The parts the 詞庫 page is built from: a filter box, an import/export pair,
+// The parts the Dictionary page is built from: a filter box, an import/export pair,
 // a destructive clear, and somewhere for a failure to appear.
 
 import SwiftUI
@@ -157,7 +157,7 @@ private struct UserDataPageChrome: ViewModifier {
                 }
             }
             // The page's ONE alert. A second `.alert` further down the same
-            // chain does not stack — SwiftUI keeps one, and the 刪除學習紀錄
+            // chain does not stack — SwiftUI keeps one, and the Delete Learning Records
             // receipt was the one it dropped (USER 2026-08-26: no message
             // appeared). Every page message goes through here now.
             .alert(item: $message) { message in
@@ -187,7 +187,7 @@ extension View {
     }
 }
 
-/// The box the 自訂詞庫 pane types into, above its rows.
+/// The box the Custom Dictionary pane types into, above its rows.
 ///
 /// An `NSSearchField` (`SearchField`) rather than a text field: what it does
 /// is search, and the magnifier and the clear button are how macOS says so.
@@ -201,8 +201,8 @@ struct UserDataFilterField: View {
     }
 }
 
-/// The 自訂詞庫 page's CSV pair and its delete-everything row. Its one caller
-/// since the 詞頻 / 詞關聯 pages were removed, kept a separate view because the
+/// The Custom Dictionary page's CSV pair and its delete-everything row. Its one caller
+/// since the frequency / association pages were removed, kept a separate view because the
 /// page it serves is already long enough without three more rows inline.
 ///
 /// The delete acts on the click, with nothing to confirm (USER 2026-08-25):
@@ -227,8 +227,8 @@ struct UserDataActionsSection: View {
             // button; a `Button` alone in a form row sits leading, in the
             // column the pane's LABELS occupy, and these rows have no label.
             //
-            // 匯入 first (USER): the pair ends on the button nearest the
-            // trailing edge, and 匯出 is the one that ends in a file panel the
+            // Import first (USER): the pair ends on the button nearest the
+            // trailing edge, and Export is the one that ends in a file panel the
             // user then does something with.
             //
             // The clear stays a full-width centred `WideActionRow`: it is not
@@ -243,7 +243,7 @@ struct UserDataActionsSection: View {
     }
 }
 
-/// Every number a managed list is drawn to — the tables of 自訂詞庫 and 自訂字型
+/// Every number a managed list is drawn to — the tables of Custom Dictionary and custom typefaces
 /// alike, so two lists of the same kind are the same size.
 ///
 /// Approximate by nature: AppKit owns a table's real row metrics. The direction
@@ -264,7 +264,7 @@ enum UserDataListMetrics {
 }
 
 /// The `n / N` readout and the two arrows a paged list puts at the trailing
-/// end of its `UserDataListControls` (自訂詞庫, 字型管理).
+/// end of its `UserDataListControls` (Custom Dictionary, Manage Typefaces).
 ///
 /// A list is paged rather than scrolled because a fixed-height `Table` inside
 /// a `Form` is one scroll view inside another, and the inner one does not

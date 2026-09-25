@@ -1,4 +1,4 @@
-// Pins the §42 漢羅濫 marked-cell commit resolver (`ActionHandler.markedCellCommit`)
+// Pins the §42 Hanji with Romanization marked-cell commit resolver (`ActionHandler.markedCellCommit`)
 // and the shared auto-space verdict: a split cell's document text comes from the
 // `cellScript` marker + info fields, never from `parseRomanAndHanzi`; a defective
 // marker is declined by `CandidateCellScript.marker` so the render guard and the
@@ -47,7 +47,7 @@ final class ActionHandlerMarkedCellCommitTests: XCTestCase {
         XCTAssertTrue(result.wroteRomanization, "roman commit drives the auto-space gate")
     }
 
-    /// 括號標註 ON without a roman to bracket commits the bare 漢字 — never
+    /// Annotate in Brackets ON without a roman to bracket commits the bare Hanji — never
     /// `台語 ()`. Mirrors Android `hanjiCell_bracketsOn_missingRoman_commitsHanjiAlone`.
     func testHanjiCell_bracketsOn_missingRoman_commitsHanjiAlone() {
         for roman in [nil, ""] {

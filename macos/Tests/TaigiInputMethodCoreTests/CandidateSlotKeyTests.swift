@@ -79,7 +79,7 @@ final class CandidateSlotKeyTests: XCTestCase {
     }
 
     /// Caps Lock is a latched state, not a held chord: the letter still picks.
-    /// Shift is the 漢羅 chord on the same key: ⇧Q commits slot 0 in the
+    /// Shift is the Hanji/romanization chord on the same key: ⇧Q commits slot 0 in the
     /// other script (USER 2026-09-10), so the capital no longer reaches the
     /// composition while the bar is up.
     func testALetter_underCapsLock_stillPicks_andShiftedFlipsTheScript() {
@@ -87,7 +87,7 @@ final class CandidateSlotKeyTests: XCTestCase {
         XCTAssertEqual(intent(snapshot("Q", modifiers: .shift)), .selectCandidateSlot(0, flip: true))
     }
 
-    // MARK: - ⇧ on a slot key: the 漢羅 commit aimed at the slot
+    // MARK: - ⇧ on a slot key: the Hanji/romanization commit aimed at the slot
 
     /// `⇧;` as a US layout reports it: `:` in both character fields, and the
     /// `;` only in the key code.
@@ -236,7 +236,7 @@ final class CandidateSlotKeyTests: XCTestCase {
         XCTAssertEqual(try ComposingKeyChord.make(snapshot("#", modifiers: .shift)).get().key, "#")
     }
 
-    /// `⇧;` is refused the same way: it is the ninth slot key's 漢羅 chord,
+    /// `⇧;` is refused the same way: it is the ninth slot key's Hanji/romanization chord,
     /// and a US layout types `:` for it. A `:` reached without that key
     /// still records.
     func testAShiftedSemicolon_isRefusedAsTheSlotKeyItIs() throws {
