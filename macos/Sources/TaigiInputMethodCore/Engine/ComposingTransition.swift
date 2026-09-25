@@ -48,7 +48,7 @@ struct ComposingTransition: Equatable, Sendable {
 }
 
 /// MOE-aligned candidate-type discriminator, derived in Rust
-/// (`engine/lexicon/src/continuous.rs::derive_mode`). Platforms read it and
+/// (`engine/lexicon/src/continuous/mod.rs::derive_mode`). Platforms read it and
 /// never recompute it — sniffing the display text would be a second, drifting
 /// implementation of the same rule.
 enum CandidateMode: Equatable, Sendable {

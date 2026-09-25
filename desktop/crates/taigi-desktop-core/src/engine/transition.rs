@@ -116,7 +116,7 @@ impl Effect {
 }
 
 /// MOE-aligned candidate-type discriminator, derived in Rust
-/// (`engine/lexicon/src/continuous.rs::derive_mode`). Read, never recomputed.
+/// (`engine/lexicon/src/continuous/mod.rs::derive_mode`). Read, never recomputed.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CandidateMode {
     /// The wire carried no mode, or one this build does not know. Means

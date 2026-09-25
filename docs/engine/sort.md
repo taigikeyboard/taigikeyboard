@@ -46,7 +46,7 @@ Ranking math lives in Rust `engine/ranking` (since v3.5.2). Frequency storage st
 | Item | Location |
 |------|----------|
 | Frequency map + boost / decay | Rust `engine/ranking/src/score.rs` (`build_frequency_map`, `FrequencyMap`, `user_freq_boost`, `decayed_user_weight_delta`) |
-| Candidate sort | Rust `engine/lexicon/src/continuous.rs` (Continuous `FetchAtPos`) |
+| Candidate sort | Rust `engine/lexicon/src/continuous/` (Continuous `FetchAtPos`) |
 | iOS frequency service (SQLite) | `Lexicon/Services/UserFrequencyService.swift` + `Lexicon/Database/UserFrequencyRepository.swift` |
 | Android frequency service (SQLite) | `ime/text/composing/UserFrequencyService.kt` |
 | Bridge | `FrequencyEntry` rows built by `ComposingManager.buildFrequencyEntries` (iOS) / `RustEngineBridge.frequencyRowsToProtoEntries` (Android), sent with `FetchAtPos` |

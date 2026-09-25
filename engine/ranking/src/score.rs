@@ -270,7 +270,7 @@ pub fn decayed_user_weight_delta(count: u32, now_ms: i64, last_used_ms: i64) -> 
 /// `u32 → i32` saturation is a no-op for any realistic platform count
 /// (selections are bounded by user actions), and the boost itself
 /// saturates at [`MAX_BOOST`] regardless of the converted count's
-/// magnitude. See `engine/lexicon/src/continuous.rs::record_to_candidate`.
+/// magnitude. See `engine/lexicon/src/continuous/candidate.rs::record_to_candidate`.
 pub fn build_frequency_map(entries: &[protos::engine::FrequencyEntry]) -> FrequencyMap {
     let mut map = FrequencyMap::with_capacity(entries.len());
     for entry in entries {

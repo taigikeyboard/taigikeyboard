@@ -4,7 +4,7 @@
 > **Keywords**: `Continuous`, `Ranking`, `phrase-priority`, `language-model`, `user_freq_boost`, `taiuantaigi`
 > **Related**: [composing.md](composing.md), [sort.md](sort.md), [binary-format.md](binary-format.md)
 > **Status**: Resolved. The whole-sentence lattice + min-cost walker and user-frequency decay shipped in v3.5.8 (see [`changelog/mobile-v3.5.8.md`](../../changelog/mobile-v3.5.8.md) § Engine and §8 below). §1–§3 record the pre-fix gap as audited 2026-05-11 during v3.5.8 Phase 9.
-> **Live ranking authority**: the module docs of [`engine/lexicon/src/continuous.rs`](../../engine/lexicon/src/continuous.rs) (span-local fetch, `ContinuousFetchCtx`, `SortKey` ordering) and `engine/composing/src/lattice/` (walker cost model). When this document and those module docs disagree, the module docs win.
+> **Live ranking authority**: the module docs of [`engine/lexicon/src/continuous/`](../../engine/lexicon/src/continuous/) (span-local fetch, `ContinuousFetchCtx`, `SortKey` ordering) and `engine/composing/src/lattice/` (walker cost model). When this document and those module docs disagree, the module docs win.
 
 ---
 
@@ -17,7 +17,7 @@
 - Expected (mainstream IME, MOE Tâi-gí, Rime, Google Pinyin behavior): full-buffer phrase 「臺灣台語」 / 「台灣台語」 surfaces in the first 1–3 candidate slots.
 - Actual: 「台」 (`freq=31281`, `syll=1`) ranks #1; 「臺灣台語」 (`freq=12`, `syll=4`) ranks **near last** (`score = 12 × 1.3 = 15.6` vs `台 score = 31281`).
 
-This document records the gap and its evidence chain (§1–§4), the mainstream comparison that shaped the fix (§5–§7), and the shipped resolution (§8 STATUS callout: lattice S1–S9). The live implementation is described by the `engine/lexicon/src/continuous.rs` module docs, not by §2–§3 below.
+This document records the gap and its evidence chain (§1–§4), the mainstream comparison that shaped the fix (§5–§7), and the shipped resolution (§8 STATUS callout: lattice S1–S9). The live implementation is described by the `engine/lexicon/src/continuous/` module docs, not by §2–§3 below.
 
 ---
 
@@ -60,13 +60,13 @@ User of a Continuous-input IME types whole phrases and expects phrase-level matc
 |---|---|---|
 | Syllabifier BFS | [`engine/composing/src/syllabifier/tl.rs:49-84`](../../engine/composing/src/syllabifier/tl.rs) | For `taiuantaigi`, produces endings `{3, 6, 9, 11}` (cap = 8 syllables) |
 | Key construction | [`engine/composing/src/dispatch.rs:181-207`](../../engine/composing/src/dispatch.rs) `build_keys_tl` | Strips ASCII tone digits + lowercases + prepends `tl:` → 4 fused-toneless keys |
-| Span-local FST fetch | [`engine/lexicon/src/continuous.rs:193-230`](../../engine/lexicon/src/continuous.rs) `fetch_candidates_for_keys` | `prefix_index.lookup_exact` per key + filter + NaN-safe descending sort |
+| Span-local FST fetch | [`engine/lexicon/src/continuous/mod.rs:205-242`](../../engine/lexicon/src/continuous/) `fetch_candidates_for_keys` | `prefix_index.lookup_exact` per key + filter + NaN-safe descending sort |
 | Score formula | [`engine/ranking/src/score.rs:178-181`](../../engine/ranking/src/score.rs) `calculate_continuous_score` | `freq × (1.0 + 0.1 × max(0, syllable_count − 1)) × user_freq_boost` |
 | Mid-commit | [`engine/composing/src/transition.rs:613-679`](../../engine/composing/src/transition.rs) `commit_continuous` | Slices `raw[consumed_bytes..]`, emits 4 effects (commit + preedit + NextWord + autocomplete) |
 | Final commit | same fn, `new_pending.is_empty()` branch | `exit_to_idle` + `NextWordWordSelected(trigger_prediction=true)` |
 | Frequency record | iOS [`ActionHandler+Suggestions.swift:81-83`](../../ios/Sources/TaigiKeyboard/Actions/ActionHandler+Suggestions.swift) / Android [`CandidateClickHandler.kt:345-349`](../../android/app/src/main/java/com/siansiansu/taigikeyboard/ime/text/smartbar/CandidateClickHandler.kt) | Writes `displayText` to `user_frequency.db` on every successful commit |
 
-**Status**: every stage above was implemented and tested at audit time. Since v3.5.8 the fetch is `fetch_candidates_for_keys_with_barriers` taking a `ContinuousFetchCtx` ([`engine/lexicon/src/continuous.rs:325`](../../engine/lexicon/src/continuous.rs), entry at `:667`), and `user_freq_boost` is derived per candidate from the platform-supplied `freq_map` in `record_to_candidate` (`continuous.rs:1651-1657`) and `custom_entry_to_candidate` (`continuous.rs:1750-1756`) via `ranking::user_freq_boost` ([`engine/ranking/src/score.rs:242`](../../engine/ranking/src/score.rs)); `calculate_continuous_score` is at `score.rs:469`.
+**Status**: every stage above was implemented and tested at audit time. Since v3.5.8 the fetch is `fetch_candidates_for_keys_with_barriers` taking a `ContinuousFetchCtx` ([`engine/lexicon/src/continuous/mod.rs:337`](../../engine/lexicon/src/continuous/), entry at `:667`), and `user_freq_boost` is derived per candidate from the platform-supplied `freq_map` in `record_to_candidate` (`continuous/candidate.rs::record_to_candidate`) and `custom_entry_to_candidate` (`continuous/candidate.rs::custom_entry_to_candidate`) via `ranking::user_freq_boost` ([`engine/ranking/src/score.rs:242`](../../engine/ranking/src/score.rs)); `calculate_continuous_score` is at `score.rs:469`.
 
 ### 2.2 Generated keys for `taiuantaigi`
 
@@ -136,14 +136,14 @@ This is a **secondary concern** — the formula gap is the dominant problem, and
 At audit time `fetch_via_lexicon` (then in `engine/composing/src/dispatch.rs`) called `fetch_candidates_for_keys` with a `user_freq_boost = 1.0` literal. That literal no longer exists. Today the boost is derived inside the lexicon from the platform-supplied frequency snapshot:
 
 ```rust
-// engine/lexicon/src/continuous.rs:1651-1657 (record_to_candidate)
+// engine/lexicon/src/continuous/mod.rs:1245-1251 (record_to_candidate)
 let user_weight = freq_map.get(&display_text, &canonical_tl).user_weight(now_ms);
 let score = calculate_continuous_score(frequency, syllable_count);
 ```
 
 `user_weight` (2026-09-14) is the leading user dimension of the `SortKey` **and** of the walker's per-edge homophone pick (`best_candidate_for_key_with_barriers`): any selected word outranks every never-selected homophone whatever the dictionary frequency, and the edge's segmentation cost uses `EdgeBest::span_frequency` (the key's max frequency) rather than the picked word's own. It replaced the binary 1-hour `recency_rank` and the ×5-capped `user_freq_boost` inside `score` (now purely dictionary-derived, so the same signal is not carried twice) as the only user signal in the edge pick — under those, 更新 (freq 1) could never take slot 0 from 敬神 (freq 25) (`kingsin` USER bug 2026-09-14; khiin-rs `select_conversions.sql` `order by u.n desc, c.weight desc`, McBopomofo `UserOverrideModel`). Consequence: an exact score tie at the edge pick now falls to `source_rank` before FST rowid, the same order the span-local list already used (production `kap`: slot 0 洽 → 甲).
 
-`freq_map` / `now_ms` arrive through `ContinuousFetchCtx` (`continuous.rs:325-338`), keyed by the `(display_text, canonical_tl)` pair (Core Principle #6). The pre-fix mechanism is kept below for the audit trail.
+`freq_map` / `now_ms` arrive through `ContinuousFetchCtx` (`continuous/mod.rs::ContinuousFetchCtx`), keyed by the `(display_text, canonical_tl)` pair (Core Principle #6). The pre-fix mechanism is kept below for the audit trail.
 
 At audit time this meant **`user_frequency.db` was not consulted during Continuous candidate fetch**. The lexicon (non-Continuous) path did read user frequency via the legacy additive `calculate_score` (removed 2026-09-25); only Continuous skipped it. The platform side records frequency on every commit (§2.1, last row), but the recorded data has no read path back into Continuous ranking — repeated user selection of 「臺灣台語」 has zero effect on the next Continuous fetch's ranking.
 
@@ -397,7 +397,7 @@ Recorded 2026-05-11 to prevent re-discovery in future sessions; several were ans
 | `docs/architecture/behavioral-invariants.md` | §11 live-read settings (relevant for Q2 above) |
 | `.claude/rules/cross-platform-alignment.md` | §3a CROSS-PLATFORM INVARIANT (relevant if ranking constants get tuned per platform — they must not) |
 | `.claude/rules/rust-ffi-safety.md` | §2 domain↔proto boundary (relevant if `FetchAtPos` proto evolves) |
-| [`engine/lexicon/src/continuous.rs`](../../engine/lexicon/src/continuous.rs) module docs | Live ranking authority: `ContinuousFetchCtx`, `SortKey`, `user_freq_boost` derivation |
+| [`engine/lexicon/src/continuous/`](../../engine/lexicon/src/continuous/) module docs | Live ranking authority: `ContinuousFetchCtx`, `SortKey`, `user_freq_boost` derivation |
 | `references/moe_taigi_apk/decompiled/sources/moe/taigi/TailoJNI.java` | MOE native ranking entry point |
 | `references/moe_taigi_apk/decompiled/sources/android/moe/taiwanese/taigi/data/local/model/CandidateModel.java` | MOE per-candidate metadata schema |
 | `references/khiin-rs/khiin/src/data/segmenter.rs:122` | Khiin segmentation cost formula |

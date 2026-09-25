@@ -40,7 +40,7 @@ User input → key-level adjust → shadow/lattice → tps: key → FST lookup
   ㄉㄧㄠˊ  → phonetics::tps_adjust → composing → tps:ㄉㄧㄠˊ → dictionary hit
 ```
 
-Under `InputMode::Tps` the buffer stays Bopomofo end to end: `composing::shadow::mode_key_prefix` (`engine/composing/src/shadow.rs:22-28`) selects the `tps` family, and the lexicon fetch (`engine/lexicon/src/continuous.rs`) looks the key up in `dictionary.fst` populated at build time by `dictionary/build/create_fst.py`. The legacy per-syllable `phonetics::tps_to_tl` fold into `tl:` keys was retired in v3.5.9 D / C-3b (`engine/composing/src/continuous.rs:334-340`); `tps_to_tl` now serves only `phonetics::tps_adjust` syllable validation (`engine/phonetics/src/tps_adjust.rs:179-180`).
+Under `InputMode::Tps` the buffer stays Bopomofo end to end: `composing::shadow::mode_key_prefix` (`engine/composing/src/shadow.rs:22-28`) selects the `tps` family, and the lexicon fetch (`engine/lexicon/src/continuous/`) looks the key up in `dictionary.fst` populated at build time by `dictionary/build/create_fst.py`. The legacy per-syllable `phonetics::tps_to_tl` fold into `tl:` keys was retired in v3.5.9 D / C-3b (`engine/composing/src/continuous.rs:334-340`); `tps_to_tl` now serves only `phonetics::tps_adjust` syllable validation (`engine/phonetics/src/tps_adjust.rs:179-180`).
 
 ---
 

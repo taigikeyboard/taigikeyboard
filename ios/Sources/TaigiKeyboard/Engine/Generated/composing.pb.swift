@@ -63,7 +63,7 @@ public nonisolated enum Taigi_Engine_CaretDirection: SwiftProtobuf.Enum, Swift.C
 /// v3.5.8 Phase 9.2 — candidate-type discriminator. MOE `VocType`
 /// (`VT_HANT` / `VT_TAILO` / `VT_MIXED`) is the cite. Derived in Rust
 /// from `DictionaryRecord.hanzi` presence + NFKD-normalized Latin-letter
-/// detection; see `engine/lexicon/src/continuous.rs::derive_mode`.
+/// detection; see `engine/lexicon/src/continuous/mod.rs::derive_mode`.
 ///
 /// Metadata-only: this field does NOT enter the `SortKey` tie-break
 /// in v3.5.8 (per `docs/releases/v3.5.8/plan.md` § Phase 9 R2 Q3.a — "reserve rank
@@ -812,7 +812,7 @@ public nonisolated struct Taigi_Engine_ContinuousResponse: Sendable {
 }
 
 /// v3.5.8 Phase 6 — single span-local continuous candidate. Wire mirror of
-/// `lexicon::RawCandidate` (`engine/lexicon/src/continuous.rs:84-124`).
+/// `lexicon::RawCandidate` (`engine/lexicon/src/continuous/`).
 ///
 /// `consumed_span` is encoded as two scalar fields rather than a nested
 /// message to keep wire overhead low. `consumed_span_start` /
@@ -825,7 +825,7 @@ public nonisolated struct Taigi_Engine_ContinuousResponse: Sendable {
 /// `Phase::Continuous { raw }` (or its preedit mirror) on commit.
 ///
 /// `form` is currently always `1` (FORM_NOTONE; see
-/// `engine/lexicon/src/continuous.rs:78`); reserved for hanzi (0) /
+/// `engine/lexicon/src/continuous/`); reserved for hanzi (0) /
 /// numeric (2) / abbrev (3) when proto-side carriers exist.
 ///
 /// `mode` (Phase 9.2) is the MOE-aligned candidate-type discriminator;

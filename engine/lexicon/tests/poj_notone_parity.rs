@@ -29,7 +29,7 @@ use std::path::PathBuf;
 
 /// Runtime derivation — byte-identical to the body of
 /// `matches_continuous_poj_toneless_key + derive_poj_notone_for_match`
-/// in `engine/lexicon/src/continuous.rs`. Re-implemented here (not
+/// in `engine/lexicon/src/continuous/`. Re-implemented here (not
 /// exposed via `pub`) so a refactor of the guard cannot quietly drift
 /// from the parity contract under test.
 fn derive_poj_notone_runtime(tl_display: &str) -> String {

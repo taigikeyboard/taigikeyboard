@@ -57,7 +57,7 @@ fn ctx<'a>(
     // v3.5.9 B-4 — `mode` default is `Tl`; this test file pins TL
     // fixtures (every key starts with `tl:` in this suite). POJ-mode
     // canonicalization behavior is exercised by the inline tests in
-    // `engine/lexicon/src/continuous.rs::item12_custom_dedupe_tests`
+    // `engine/lexicon/src/continuous/candidate.rs::item12_custom_dedupe_tests`
     // and the cross-mode parity tests in
     // `engine/phonetics/tests/canonical_tl_form.rs`.
     ContinuousFetchCtx {
@@ -477,8 +477,8 @@ fn out_of_range_endings_silently_skipped() {
 // builds the boost internally via `ranking::user_freq_boost(count)`,
 // which always returns a finite value in `[1.0, MAX_BOOST]`. The
 // `NonNanF32` defense inside `SortKey` is still pinned by
-// `nan_score_is_coerced_to_minimum_not_panic` in `continuous.rs
-// sort_key_tests`.
+// `nan_score_is_coerced_to_minimum_not_panic` in
+// `continuous/sort_key.rs` `sort_key_tests`.
 
 #[test]
 fn numeric_tone_input_strips_to_fused_toneless_key() {

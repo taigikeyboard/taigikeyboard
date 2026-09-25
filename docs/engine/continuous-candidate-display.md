@@ -69,7 +69,7 @@ pub struct DictionaryRecord {
 The TL romanization is dropped at `record_to_candidate`:
 
 ```rust
-// engine/lexicon/src/continuous.rs:400-404
+// engine/lexicon/src/continuous/mod.rs:412-416
 let mode = derive_mode(hanzi.as_deref());
 let display_text = hanzi.unwrap_or(tl);  // ← `tl` consumed here; roman lost forever
 let freq_data = freq_map.get(&display_text).copied().unwrap_or_default();
@@ -78,7 +78,7 @@ let freq_data = freq_map.get(&display_text).copied().unwrap_or_default();
 `RawCandidate` keeps only `display_text`:
 
 ```rust
-// engine/lexicon/src/continuous.rs:152-207 (excerpt)
+// engine/lexicon/src/continuous/mod.rs:164-219 (excerpt)
 pub struct RawCandidate {
     pub consumed_span: (u32, u32),
     pub syllable_count: u8,
@@ -210,7 +210,7 @@ The new fields are **display-only** sidechannels. The engine remains authoritati
 ### 4.3 Rust changes
 
 ```rust
-// engine/lexicon/src/continuous.rs
+// engine/lexicon/src/continuous/
 pub struct RawCandidate {
     // ... existing fields
     pub display_text: String,
@@ -422,7 +422,7 @@ proto3 additive change — new fields default to empty when absent.
 
 | Test | Location | Asserts |
 |---|---|---|
-| `record_to_candidate_populates_roman_and_hanji` | `engine/lexicon/src/continuous.rs` (mod test) | HANT/TAILO/MIXED records → correct `roman` + `hanji` |
+| `record_to_candidate_populates_roman_and_hanji` | `engine/lexicon/src/continuous/` (mod test) | HANT/TAILO/MIXED records → correct `roman` + `hanji` |
 | `raw_to_proto_candidate_propagates_roman_hanji` | `engine/composing/src/dispatch.rs` (mod test) | All three modes round-trip |
 | `derive_mode_consistent_with_hanji_presence` | existing (no change) | Verify mode/hanji invariant: `hanji.is_none() ⇔ mode == TAILO` |
 
@@ -586,7 +586,7 @@ Per [`.claude/rules/cross-platform-alignment.md`](../../.claude/rules/cross-plat
 | Step | Files | LOC est. |
 |---|---|---|
 | 1. Proto schema | `engine/protos/proto/composing.proto` + regen `.pb.swift` + `.java` | ~10 + auto-regen |
-| 2. Rust `RawCandidate` + `record_to_candidate` | `engine/lexicon/src/continuous.rs` | ~20 + 2 new unit tests |
+| 2. Rust `RawCandidate` + `record_to_candidate` | `engine/lexicon/src/continuous/` | ~20 + 2 new unit tests |
 | 3. Rust `raw_to_proto_candidate` | `engine/composing/src/dispatch.rs` | ~5 + 1 propagation test |
 | 4. iOS `ContinuousCandidate` + decode | `ios/.../Engine/RustEngineBridge.swift` (struct + `composingFetchDispatch` decode) | ~15 + 1 bridge wire test |
 | 5. iOS `buildContinuousSuggestions` | `ios/.../Autocomplete/Services/TaigiAutocompleteService.swift` | ~5 + 2 service-level tests |
@@ -604,7 +604,7 @@ Per [`.claude/rules/cross-platform-alignment.md`](../../.claude/rules/cross-plat
 
 - **2026-05-11 (day)**: §1-14 display fix drafted from dogfood findings.
 - **2026-05-11 (night)**: §15 added per user pivot — eliminate platform-side lexicon fallback; engine becomes single source of candidates (MOE `tutgInputLine` analog). All work scoped to v3.5.8 (USER 2026-05-11: 「v3.5.8 的版本就是連續打字的版本,修復到我滿意為止」).
-- **Complete (v3.5.8)**: Codex pre-impl consult on §9 + §15.7 done; display fix (§1-14, Items 5–6) and fallback retire (§15, Items 7–13) implemented and shipped — [`changelog/mobile-v3.5.8.md`](../../changelog/mobile-v3.5.8.md) § Shared / § Engine. Later changes are tracked in commit messages and the module docs of `engine/lexicon/src/continuous.rs` / `engine/composing/src/continuous.rs`, not by retroactive edits here.
+- **Complete (v3.5.8)**: Codex pre-impl consult on §9 + §15.7 done; display fix (§1-14, Items 5–6) and fallback retire (§15, Items 7–13) implemented and shipped — [`changelog/mobile-v3.5.8.md`](../../changelog/mobile-v3.5.8.md) § Shared / § Engine. Later changes are tracked in commit messages and the module docs of `engine/lexicon/src/continuous/` / `engine/composing/src/continuous.rs`, not by retroactive edits here.
 
 ---
 
