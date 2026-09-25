@@ -81,9 +81,6 @@ char *taigi_runtime_mode_label(const TaigiRuntime *runtime);
  * symbol the IBus shell shows; freed with taigi_string_free. Null on a
  * panic. */
 char *taigi_runtime_mode_symbol(const TaigiRuntime *runtime);
-/* An input context activated: spawns the automatic daily update check when
- * it is due (settings binary, no window). Returns at once. */
-void taigi_runtime_activated(const TaigiRuntime *runtime);
 /* Opens the settings window where the user left it (the framework's
  * configure button). false when the binary could not be started. */
 bool taigi_open_settings(void);

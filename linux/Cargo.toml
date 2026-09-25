@@ -31,10 +31,6 @@ dispatch = { path = "../engine/dispatch" }
 protos = { path = "../engine/protos" }
 taigi-desktop-core = { path = "../desktop/crates/taigi-desktop-core" }
 taigi-desktop-storage = { path = "../desktop/crates/taigi-desktop-storage" }
-# The update check (manifest + HTTPS, native TLS = the distribution's
-# OpenSSL). Only the settings binary links it; the engine processes read the
-# schedule from `taigi-desktop-core` and never load a TLS stack.
-taigi-desktop-update = { path = "../desktop/crates/taigi-desktop-update" }
 taigi-linux-platform = { path = "crates/taigi-linux-platform" }
 taigi-linux-core = { path = "crates/taigi-linux-core" }
 log = "0.4"

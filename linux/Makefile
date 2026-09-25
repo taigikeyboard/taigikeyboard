@@ -119,13 +119,9 @@ build-fcitx5: build
 		-DTAIGI_FFI_LIB=$(CURDIR)/target/release/libtaigi_linux_ffi.a
 	cmake --build $(FCITX5_BUILD_DIR) --parallel
 
-# The component XML with this PREFIX rendered in (`<exec>` / `<setup>`), and
-# the settings binary's D-Bus service file: a desktop notification's click
-# reaches the application by D-Bus activation after the process that posted
-# it has exited (roadmap L10).
-component: data/taigikeyboard.xml.in data/tw.taigikeyboard.Settings.service.in
-	sed -e 's#@PREFIX@#$(PREFIX)#g' -e 's#@VERSION@#$(VERSION)#g' data/taigikeyboard.xml.in > target/taigikeyboard.xml
-	sed -e 's#@PREFIX@#$(PREFIX)#g' data/tw.taigikeyboard.Settings.service.in > target/tw.taigikeyboard.Settings.service
+# The component XML with this PREFIX rendered in (`<exec>` / `<setup>`).
+component: data/taigikeyboard.xml.in
+	sed -e 's#@PREFIX@#$(PREFIX)#g' -e 's#@VERSION@#$(VERSION)#g' $< > target/taigikeyboard.xml
 
 # The install layout the engine resolves at runtime
 # (`taigi-linux-platform::paths::InstallLayout`); the PREFIX must match the
@@ -137,7 +133,6 @@ install: build component install-fcitx5
 	install -d $(DESTDIR)$(PREFIX)/share/taigikeyboard/dictionaries
 	install -m644 ../dictionaries/dictionary.fst ../dictionaries/dictionary.bin ../dictionaries/association.bin ../dictionaries/syllables.fst $(DESTDIR)$(PREFIX)/share/taigikeyboard/dictionaries/
 	install -Dm644 data/tw.taigikeyboard.Settings.desktop $(DESTDIR)$(PREFIX)/share/applications/tw.taigikeyboard.Settings.desktop
-	install -Dm644 target/tw.taigikeyboard.Settings.service $(DESTDIR)$(PREFIX)/share/dbus-1/services/tw.taigikeyboard.Settings.service
 	for size in 16 22 24 32 48 64 128 256; do \
 	  install -Dm644 data/icons/hicolor/$${size}x$${size}/apps/taigikeyboard.png $(DESTDIR)$(PREFIX)/share/icons/hicolor/$${size}x$${size}/apps/taigikeyboard.png || exit 1; \
 	done
@@ -164,7 +159,6 @@ uninstall:
 	rm -f $(DESTDIR)$(PREFIX)/share/ibus/component/taigikeyboard.xml
 	rm -rf $(DESTDIR)$(PREFIX)/share/taigikeyboard
 	rm -f $(DESTDIR)$(PREFIX)/share/applications/tw.taigikeyboard.Settings.desktop
-	rm -f $(DESTDIR)$(PREFIX)/share/dbus-1/services/tw.taigikeyboard.Settings.service
 	rm -f $(DESTDIR)$(PREFIX)/share/icons/hicolor/*/apps/taigikeyboard.png
 	rm -rf $(DESTDIR)$(PREFIX)/share/fonts/truetype/taigikeyboard $(DESTDIR)$(PREFIX)/share/fonts/opentype/taigikeyboard
 	rm -rf $(DESTDIR)$(PREFIX)/share/doc/taigikeyboard

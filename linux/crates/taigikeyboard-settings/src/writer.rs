@@ -28,30 +28,21 @@ pub struct SettingsWriter {
     write_failure: Option<String>,
 }
 
-/// The user's `settings.json`, its directory created if missing; the reason
-/// there is none (logged) otherwise.
-pub fn settings_store() -> Result<SettingsFileStore, String> {
-    let Some(directories) = UserDirectories::resolve() else {
-        log::error!("settings.no_user_directories");
-        return Err(NO_DIRECTORIES_DETAIL.to_owned());
-    };
-    match created(directories.config) {
-        Ok(directory) => Ok(SettingsFileStore::new(&directory)),
-        Err(error) => {
-            log::error!("settings.no_config_directory error={error}");
-            Err(error.to_string())
-        }
-    }
-}
-
 impl SettingsWriter {
     /// Over the user's configuration directory, or read-only when there is
     /// none or it cannot be created — with the real reason as the banner's
     /// detail.
     pub fn at_launch() -> Self {
-        match settings_store() {
-            Ok(store) => Self::new(store),
-            Err(detail) => Self::read_only(detail),
+        let Some(directories) = UserDirectories::resolve() else {
+            log::error!("settings.no_user_directories");
+            return Self::read_only(NO_DIRECTORIES_DETAIL.to_owned());
+        };
+        match created(directories.config) {
+            Ok(directory) => Self::new(SettingsFileStore::new(&directory)),
+            Err(error) => {
+                log::error!("settings.no_config_directory error={error}");
+                Self::read_only(error.to_string())
+            }
         }
     }
 

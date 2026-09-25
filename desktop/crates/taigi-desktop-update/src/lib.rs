@@ -1,4 +1,5 @@
-//! The update check the Windows and Linux settings windows share: the
+//! The update check the Windows settings window runs (Linux has none: the
+//! distribution's package manager updates an input method): the
 //! published manifest and its version, what a check concludes and leaves in
 //! `settings.json`, and the network behind two traits with a `ureq`
 //! implementation. Port of the macOS `UpdateChecker`; the schedule lives in

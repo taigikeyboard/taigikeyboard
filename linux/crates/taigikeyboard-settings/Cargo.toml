@@ -19,7 +19,6 @@ path = "src/main.rs"
 [dependencies]
 taigi-desktop-core.workspace = true
 taigi-desktop-storage.workspace = true
-taigi-desktop-update.workspace = true
 taigi-linux-platform.workspace = true
 gtk.workspace = true
 adw.workspace = true

@@ -26,6 +26,8 @@ kautian subcollections (腔調 + 姓名附錄 toggles + 語音差異 詞級擴�
 
 **Status**: Phase 0 `bfc79a53`, phase 1 #175, phase 2 site #20 MERGED; phase 3 #176, phase 4 #177, phase 5 #178 MERGED 2026-09-25 — round complete; dogfood S77 pending. Project memory `project_linux_update_check.md`.
 
+**Linux half reversed 2026-09-25** (before any release shipped it): USER 「for desktop,只有macos,windows需要檢查更新功能,linux不需要，可以整個拿掉」, after a Linux packager's review (an input method is a system package; an update nag works against the distribution). Phases 3 and 5 are removed whole (`refactor/linux-drop-update-check`); phase 1's shared crate and phase 4's shared menu stay — Linux skips the 檢查更新 row. Site `appcast/linux.json` (phase 2) is removed in the site repository. `linux-roadmap.md` L10 records the current design; the section below is the historical record.
+
 USER 2026-09-24: 「下一個round安排linux檢查更新」; 「我希望macos,windows,linux的選單內容都一致,包含i18n」. Round-start decisions (USER 2026-09-24): manual check **and** automatic notification; check logic lifted into a shared `desktop/` crate; one `appcast/linux.json` naming only the download page; widen 台語齒盤設定 to macOS + Windows this round. Reverses `docs/architecture/linux-roadmap.md` L10, whose premise ("packages are updated by the package manager") is false: `.deb` / `.rpm` / Arch packages ship only as GitHub release assets (no apt repository, COPR or AUR).
 
 #### Today (grounded in code)

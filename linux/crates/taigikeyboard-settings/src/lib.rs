@@ -7,7 +7,6 @@ pub mod pages;
 pub mod presentation;
 pub mod recorder;
 pub mod search;
-pub mod updates;
 pub mod user_data;
 pub mod window;
 pub mod writer;
@@ -23,17 +22,13 @@ use window::SettingsWindow;
 /// forwards a second launch's command line to the first, roadmap L8).
 pub const APPLICATION_ID: &str = "tw.taigikeyboard.Settings";
 
-type WindowSlot = Rc<RefCell<Option<Rc<SettingsWindow>>>>;
-
 /// Runs the application to its exit code.
 pub fn run() -> gtk::glib::ExitCode {
     let application = adw::Application::builder()
         .application_id(APPLICATION_ID)
         .flags(gio::ApplicationFlags::HANDLES_COMMAND_LINE)
         .build();
-    let window: WindowSlot = Rc::new(RefCell::new(None));
-
-    let slot = Rc::clone(&window);
+    let window: Rc<RefCell<Option<Rc<SettingsWindow>>>> = Rc::new(RefCell::new(None));
     application.connect_command_line(move |application, command_line| {
         let arguments: Vec<String> = command_line
             .arguments()
@@ -51,76 +46,40 @@ pub fn run() -> gtk::glib::ExitCode {
                 return gtk::glib::ExitCode::from(2);
             }
         };
-        // The engine's daily spawn: no window, the check and at most one
-        // notification, then the process ends (unless a window is open).
-        if launch.check_updates {
-            updates::check_in_background(application);
-            return gtk::glib::ExitCode::SUCCESS;
-        }
-        let shell = present(application, &slot, launch.pane);
-        // The panel menu's 檢查更新 (`launcher::check_for_updates`): the
-        // window on 一般, then the manual check and its alert over it.
-        if launch.check_now {
-            updates::check_manually(&shell);
-        }
+        // The first launch builds the window; a later one (the menu row
+        // pressed again, another `--pane`) re-activates it on that pane —
+        // the Windows single-instance mutex's contract, native here.
+        let existing = window.borrow().clone();
+        let shell = match existing {
+            Some(shell) => shell,
+            None => {
+                // The window's own icon: the hicolor `taigikeyboard`, not one
+                // named after the application id (which is not installed).
+                gtk::Window::set_default_icon_name("taigikeyboard");
+                let writer = writer::SettingsWriter::at_launch();
+                // The stores follow the settings: no user directory, no
+                // learning data either (the banner says so).
+                let stores = if writer.is_read_only() {
+                    Err("HOME / XDG_DATA_HOME".to_owned())
+                } else {
+                    user_data::open_at_launch()
+                };
+                let shell = SettingsWindow::build(application, writer, stores);
+                *window.borrow_mut() = Some(Rc::clone(&shell));
+                shell
+            }
+        };
+        let pane = launch.pane.unwrap_or_else(|| {
+            shell
+                .writer()
+                .borrow()
+                .document()
+                .choice(&keys::SELECTED_SETTINGS_PANE)
+        });
+        shell.show(pane);
         gtk::glib::ExitCode::SUCCESS
     });
-
-    // Activation with no command line: the notification's action through
-    // D-Bus (`--gapplication-service`, the installed service file), and a
-    // plain `Activate` from a launcher that uses D-Bus.
-    let slot = Rc::clone(&window);
-    let show_updates = gio::ActionEntry::builder(updates::SHOW_UPDATES_ACTION)
-        .activate(move |application: &adw::Application, _, _| {
-            present(application, &slot, Some(SettingsPane::General));
-        })
-        .build();
-    application.add_action_entries([show_updates]);
-    let slot = Rc::clone(&window);
-    application.connect_activate(move |application| {
-        present(application, &slot, None);
-    });
     application.run()
-}
-
-/// The window on `pane` (or wherever the user left it): the first call
-/// builds it, a later one (the menu row pressed again, another `--pane`)
-/// re-activates it — the Windows single-instance mutex's contract, native
-/// here.
-fn present(
-    application: &adw::Application,
-    slot: &WindowSlot,
-    pane: Option<SettingsPane>,
-) -> Rc<SettingsWindow> {
-    let existing = slot.borrow().clone();
-    let shell = match existing {
-        Some(shell) => shell,
-        None => {
-            // The window's own icon: the hicolor `taigikeyboard`, not one
-            // named after the application id (which is not installed).
-            gtk::Window::set_default_icon_name("taigikeyboard");
-            let writer = writer::SettingsWriter::at_launch();
-            // The stores follow the settings: no user directory, no
-            // learning data either (the banner says so).
-            let stores = if writer.is_read_only() {
-                Err("HOME / XDG_DATA_HOME".to_owned())
-            } else {
-                user_data::open_at_launch()
-            };
-            let shell = SettingsWindow::build(application, writer, stores);
-            *slot.borrow_mut() = Some(Rc::clone(&shell));
-            shell
-        }
-    };
-    let pane = pane.unwrap_or_else(|| {
-        shell
-            .writer()
-            .borrow()
-            .document()
-            .choice(&keys::SELECTED_SETTINGS_PANE)
-    });
-    shell.show(pane);
-    shell
 }
 
 /// The panes the sidebar lists on Linux, in order: the Mac's roster minus

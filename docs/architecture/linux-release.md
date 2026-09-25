@@ -126,31 +126,24 @@ Publishing stays a person's (`desktop-release.md`). No signing: a `.deb`
 downloaded from the project page is verified by its `.sha256`, as the unsigned
 Windows channel is; an apt repository with its own key is outside this slice.
 
-## Update check
+## No in-app update
 
-No repository serves these packages, so the settings window checks for updates
-itself (`linux-roadmap.md` L10): the shared `taigi-desktop-update` check reads
-`https://taigikeyboard.tw/appcast/linux.json`, which the website renders from
-`_data/linux_release.json` — the `.deb`'s data — as `version` + `downloadPageURL`
-(the release page listing all three formats) and no package: there is no in-app
-install, a package needs root. The announcement (`scripts/announce-release.sh`)
-writes `_data/linux_release.json`, `_data/linux_rpm_release.json` and
+Linux packages are updated by the package manager (`linux-roadmap.md` L10):
+an input method is a system package, and one that checks for its own updates
+works against the distribution that packages it. The input method checks for
+nothing, manually or automatically; the 一般 pane shows the running version
+and a 去下載 link to taigikeyboard.tw, the panel menu has no 檢查更新 row, the
+`update*` settings keys stay unwritten and `taigi-desktop-update` is not linked
+(no TLS stack in the package). The announcement (`scripts/announce-release.sh`)
+still writes `_data/linux_release.json`, `_data/linux_rpm_release.json` and
 `_data/linux_arch_release.json` (version, download URL, `sha256`, release page)
-in the same website commit as the other two — the landing page's Linux buttons
-read them — and waits for the live Linux appcast when the `.deb` is on the
-release. A release missing one format leaves that file on its previous version,
-so the site splits the Linux button into three only when all three name the
-same tag; a release without the `.deb` leaves the appcast where it was. The
+in the same website commit as the other two — the landing page's Linux
+buttons read them — but there is no appcast and nothing to poll. A release
+missing one format leaves that file on its previous version, so the site
+splits the Linux button into three only when all three name the same tag. The
 website shows that button only while its `enable_linux_download` is `true`;
 that switch hides the entry point, not the asset, which is public the moment
 the release is published.
-
-Nothing installed polls on a timer: the input method, on the first activation
-past the day's due time, spawns `taigikeyboard-settings --check-updates`, which
-checks with no window and posts one desktop notification per version
-(`linux-roadmap.md` L10). The package ships the settings binary's D-Bus service
-file (`share/dbus-1/services/tw.taigikeyboard.Settings.service`) so the
-notification's click opens the window after that process has exited.
 
 ## Installing by hand
 

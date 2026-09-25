@@ -16,9 +16,7 @@ use std::ptr;
 use std::sync::Arc;
 use taigi_desktop_core::composing::ContextToken;
 use taigi_desktop_core::keys::CandidateNavigation;
-use taigi_linux_core::{
-    chrome, session, update_trigger, Emit, EngineState, LookupTableContent, MenuItem, Runtime,
-};
+use taigi_linux_core::{chrome, session, Emit, EngineState, LookupTableContent, MenuItem, Runtime};
 use taigi_linux_platform::{open_settings, RawKeyEvent};
 
 /// One process-wide runtime (settings, stores, lexicon, coordinator).
@@ -221,23 +219,6 @@ pub unsafe extern "C" fn taigi_runtime_mode_symbol(runtime: *const TaigiRuntime)
     guarded("taigi_runtime_mode_symbol", ptr::null_mut(), || {
         c_string(chrome::mode_symbol(&runtime.inner)).into_raw()
     })
-}
-
-/// An input context activated (Fcitx5 `Engine::activate`): the automatic
-/// daily update check spawns here when it is due (`update_trigger`).
-///
-/// # Safety
-/// `runtime` is a live runtime.
-#[no_mangle]
-pub unsafe extern "C" fn taigi_runtime_activated(runtime: *const TaigiRuntime) {
-    if runtime.is_null() {
-        return;
-    }
-    // SAFETY: non-null and, by contract, a live runtime.
-    let runtime = unsafe { &*runtime };
-    guarded("taigi_runtime_activated", (), || {
-        update_trigger::on_activate(&runtime.inner);
-    });
 }
 
 /// Opens the settings window where the user left it — the framework's own

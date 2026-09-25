@@ -11,7 +11,7 @@ pub struct ManualOutcome {
     pub outcome: Outcome,
     /// Whether the first button downloads and installs in-app (the manifest
     /// named a package and there is somewhere to stage it) or opens the
-    /// download page. Always `false` on Linux, which has no in-app install.
+    /// download page.
     pub installs_in_app: bool,
 }
 

@@ -1,5 +1,5 @@
 //! The daily check with no window (`--check-updates`: the Windows scheduled
-//! task, the Linux engine's spawn), as one sequence over the settings file:
+//! task), as one sequence over the settings file:
 //! claim the due window, fetch, then record the outcome the way a window
 //! would and claim the once-per-version announcement. Two locked updates
 //! around the fetch, so two launches in the same window fetch once and

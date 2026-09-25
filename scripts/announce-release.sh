@@ -19,8 +19,8 @@
 #      has to be the one the URL actually serves
 #   3. write every platform's `_data/*_release.json` into the website repository
 #      in one commit
-#   4. wait until each live appcast serves what was written (macOS, Windows,
-#      Linux — the last from the `.deb`'s data)
+#   4. wait until each live appcast serves what was written (macOS, Windows —
+#      Linux has no appcast)
 #
 # It runs anywhere with `gh`, `curl` and `python3` — everything it needs is on
 # the release. Re-running it after a failure is the intended recovery.
@@ -150,7 +150,7 @@ print(json.dumps(release, indent=2))
 }
 
 declare -a site_files=()
-declare -a macos_manifest_fields=() windows_manifest_fields=() linux_manifest_fields=()
+declare -a macos_manifest_fields=() windows_manifest_fields=()
 
 # Each platform's results are bound as soon as they are produced: the fetch
 # reports through globals, and two calls sharing them must not depend on order.
@@ -168,10 +168,8 @@ if fetch_platform_asset Windows "$WINDOWS_ASSET"; then
     )
 fi
 
-# One triple per format: platform label, asset name, site data path. The
-# `.deb`'s data is what `appcast/linux.json` renders (version + release page,
-# no package: Linux has no in-app install), so only it has a manifest to wait
-# for.
+# No manifest to wait for: nothing installed polls for a Linux package.
+# One triple per format: platform label, asset name, site data path.
 for linux_format in \
     "Linux|$LINUX_ASSET|$LINUX_SITE_PATH" \
     "Fedora|$LINUX_RPM_ASSET|$LINUX_RPM_SITE_PATH" \
@@ -179,8 +177,6 @@ for linux_format in \
     IFS='|' read -r label asset site_path <<< "$linux_format"
     if fetch_platform_asset "$label" "$asset"; then
         site_files+=("$site_path" "$(site_release_json "$ASSET_URL" "$ASSET_SHA256")")
-        [[ "$site_path" != "$LINUX_SITE_PATH" ]] ||
-            linux_manifest_fields=("version=$SHORT_VERSION" "downloadPageURL=$RELEASE_PAGE_URL")
     fi
 done
 
@@ -199,8 +195,6 @@ commit_site_files "chore: desktop release -> $SHORT_VERSION (${announced_platfor
     wait_for_manifest "$MACOS_MANIFEST_URL" "${macos_manifest_fields[@]}"
 [[ ${#windows_manifest_fields[@]} -eq 0 ]] ||
     wait_for_manifest "$WINDOWS_MANIFEST_URL" "${windows_manifest_fields[@]}"
-[[ ${#linux_manifest_fields[@]} -eq 0 ]] ||
-    wait_for_manifest "$LINUX_MANIFEST_URL" "${linux_manifest_fields[@]}"
 
 echo ""
 echo "✓ announced $SHORT_VERSION for ${announced_platforms[*]}"

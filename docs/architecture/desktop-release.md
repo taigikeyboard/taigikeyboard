@@ -18,7 +18,7 @@ A desktop release happens in two halves with a manual test between them, and
 | Stage a patch | `make desktop-patch PLATFORM=macos\|windows\|linux` (this Mac) | The same run for ONE platform: its installers only, on a draft of their own version. Without macOS, the script creates the empty draft on this commit first, since the hosted attach steps only join one |
 | **Test** | the maintainer | Open the draft's page — a draft is visible in the web UI to anyone who can write the repository — download the three assets, install, use them |
 | **Publish** | the maintainer | **Publish release** on that same page (or `gh release edit desktop-<version> --draft=false`). This is what creates the tag |
-| Announce | **automatic** — publishing fires `.github/workflows/announce-release.yml` | Proves each download is anonymously reachable, writes every `_data/*_release.json` in one commit, waits for the live macOS, Windows and Linux appcasts (each only when its installer is on the release). `make desktop-announce` is the same script, for a re-run |
+| Announce | **automatic** — publishing fires `.github/workflows/announce-release.yml` | Proves each download is anonymously reachable, writes every `_data/*_release.json` in one commit, waits for the live macOS and Windows appcasts (Linux has none). `make desktop-announce` is the same script, for a re-run |
 
 ### Version numbers: full releases and patches
 

@@ -1,6 +1,6 @@
 [package]
 name = "taigi-desktop-update"
-description = "The desktop update check shared by the Windows and Linux settings windows: manifest, check outcome, HTTPS transport — port of the macOS UpdateChecker"
+description = "The desktop update check the Windows settings window runs: manifest, check outcome, HTTPS transport — port of the macOS UpdateChecker"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
