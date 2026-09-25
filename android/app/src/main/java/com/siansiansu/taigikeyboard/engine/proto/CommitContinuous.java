@@ -402,8 +402,8 @@ public  final class CommitContinuous extends
    * <pre>
    * Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
    * whenever the picked candidate carries hanji regardless of which script
-   * the document received (identity = the `(漢字, canonical-TL)` pair, Core
-   * Principle #6; a 漢羅濫 roman cell commits the same candidate). Wire-absent
+   * the document received (identity = the `(Hanji, canonical-TL)` pair, Core
+   * Principle #6; a Hanji with Romanization roman cell commits the same candidate). Wire-absent
    * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
    * and for legacy callers; a composition with any hanji-less segment is
    * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
@@ -422,8 +422,8 @@ public  final class CommitContinuous extends
    * <pre>
    * Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
    * whenever the picked candidate carries hanji regardless of which script
-   * the document received (identity = the `(漢字, canonical-TL)` pair, Core
-   * Principle #6; a 漢羅濫 roman cell commits the same candidate). Wire-absent
+   * the document received (identity = the `(Hanji, canonical-TL)` pair, Core
+   * Principle #6; a Hanji with Romanization roman cell commits the same candidate). Wire-absent
    * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
    * and for legacy callers; a composition with any hanji-less segment is
    * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
@@ -442,8 +442,8 @@ public  final class CommitContinuous extends
    * <pre>
    * Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
    * whenever the picked candidate carries hanji regardless of which script
-   * the document received (identity = the `(漢字, canonical-TL)` pair, Core
-   * Principle #6; a 漢羅濫 roman cell commits the same candidate). Wire-absent
+   * the document received (identity = the `(Hanji, canonical-TL)` pair, Core
+   * Principle #6; a Hanji with Romanization roman cell commits the same candidate). Wire-absent
    * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
    * and for legacy callers; a composition with any hanji-less segment is
    * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
@@ -463,8 +463,8 @@ public  final class CommitContinuous extends
    * <pre>
    * Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
    * whenever the picked candidate carries hanji regardless of which script
-   * the document received (identity = the `(漢字, canonical-TL)` pair, Core
-   * Principle #6; a 漢羅濫 roman cell commits the same candidate). Wire-absent
+   * the document received (identity = the `(Hanji, canonical-TL)` pair, Core
+   * Principle #6; a Hanji with Romanization roman cell commits the same candidate). Wire-absent
    * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
    * and for legacy callers; a composition with any hanji-less segment is
    * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
@@ -485,8 +485,8 @@ public  final class CommitContinuous extends
    * <pre>
    * Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
    * whenever the picked candidate carries hanji regardless of which script
-   * the document received (identity = the `(漢字, canonical-TL)` pair, Core
-   * Principle #6; a 漢羅濫 roman cell commits the same candidate). Wire-absent
+   * the document received (identity = the `(Hanji, canonical-TL)` pair, Core
+   * Principle #6; a Hanji with Romanization roman cell commits the same candidate). Wire-absent
    * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
    * and for legacy callers; a composition with any hanji-less segment is
    * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
@@ -504,8 +504,8 @@ public  final class CommitContinuous extends
    * <pre>
    * Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
    * whenever the picked candidate carries hanji regardless of which script
-   * the document received (identity = the `(漢字, canonical-TL)` pair, Core
-   * Principle #6; a 漢羅濫 roman cell commits the same candidate). Wire-absent
+   * the document received (identity = the `(Hanji, canonical-TL)` pair, Core
+   * Principle #6; a Hanji with Romanization roman cell commits the same candidate). Wire-absent
    * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
    * and for legacy callers; a composition with any hanji-less segment is
    * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
@@ -1009,8 +1009,8 @@ public  final class CommitContinuous extends
      * <pre>
      * Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
      * whenever the picked candidate carries hanji regardless of which script
-     * the document received (identity = the `(漢字, canonical-TL)` pair, Core
-     * Principle #6; a 漢羅濫 roman cell commits the same candidate). Wire-absent
+     * the document received (identity = the `(Hanji, canonical-TL)` pair, Core
+     * Principle #6; a Hanji with Romanization roman cell commits the same candidate). Wire-absent
      * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
      * and for legacy callers; a composition with any hanji-less segment is
      * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
@@ -1029,8 +1029,8 @@ public  final class CommitContinuous extends
      * <pre>
      * Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
      * whenever the picked candidate carries hanji regardless of which script
-     * the document received (identity = the `(漢字, canonical-TL)` pair, Core
-     * Principle #6; a 漢羅濫 roman cell commits the same candidate). Wire-absent
+     * the document received (identity = the `(Hanji, canonical-TL)` pair, Core
+     * Principle #6; a Hanji with Romanization roman cell commits the same candidate). Wire-absent
      * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
      * and for legacy callers; a composition with any hanji-less segment is
      * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
@@ -1049,8 +1049,8 @@ public  final class CommitContinuous extends
      * <pre>
      * Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
      * whenever the picked candidate carries hanji regardless of which script
-     * the document received (identity = the `(漢字, canonical-TL)` pair, Core
-     * Principle #6; a 漢羅濫 roman cell commits the same candidate). Wire-absent
+     * the document received (identity = the `(Hanji, canonical-TL)` pair, Core
+     * Principle #6; a Hanji with Romanization roman cell commits the same candidate). Wire-absent
      * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
      * and for legacy callers; a composition with any hanji-less segment is
      * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
@@ -1070,8 +1070,8 @@ public  final class CommitContinuous extends
      * <pre>
      * Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
      * whenever the picked candidate carries hanji regardless of which script
-     * the document received (identity = the `(漢字, canonical-TL)` pair, Core
-     * Principle #6; a 漢羅濫 roman cell commits the same candidate). Wire-absent
+     * the document received (identity = the `(Hanji, canonical-TL)` pair, Core
+     * Principle #6; a Hanji with Romanization roman cell commits the same candidate). Wire-absent
      * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
      * and for legacy callers; a composition with any hanji-less segment is
      * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
@@ -1093,8 +1093,8 @@ public  final class CommitContinuous extends
      * <pre>
      * Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
      * whenever the picked candidate carries hanji regardless of which script
-     * the document received (identity = the `(漢字, canonical-TL)` pair, Core
-     * Principle #6; a 漢羅濫 roman cell commits the same candidate). Wire-absent
+     * the document received (identity = the `(Hanji, canonical-TL)` pair, Core
+     * Principle #6; a Hanji with Romanization roman cell commits the same candidate). Wire-absent
      * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
      * and for legacy callers; a composition with any hanji-less segment is
      * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
@@ -1114,8 +1114,8 @@ public  final class CommitContinuous extends
      * <pre>
      * Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
      * whenever the picked candidate carries hanji regardless of which script
-     * the document received (identity = the `(漢字, canonical-TL)` pair, Core
-     * Principle #6; a 漢羅濫 roman cell commits the same candidate). Wire-absent
+     * the document received (identity = the `(Hanji, canonical-TL)` pair, Core
+     * Principle #6; a Hanji with Romanization roman cell commits the same candidate). Wire-absent
      * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
      * and for legacy callers; a composition with any hanji-less segment is
      * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20

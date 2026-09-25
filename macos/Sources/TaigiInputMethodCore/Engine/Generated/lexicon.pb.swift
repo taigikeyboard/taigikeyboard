@@ -750,7 +750,7 @@ public nonisolated struct Taigi_Engine_TaigiWord: Sendable {
 /// canonical_tl)` PAIR (Core Principle #7). `canonical_tl` is the
 /// candidate's canonical-TL reading, snapshotted BEFORE the POJ-render
 /// pass (= `RawCandidate.canonical_tl`). One `display_text` (e.g. 重) now
-/// carries one entry PER reading (重/tîng vs 重/tāng), so 一字多音 keep
+/// carries one entry PER reading (重/tîng vs 重/tāng), so polyphonic characters keep
 /// separate frequency buckets. `canonical_tl == ""` is the LEGACY sentinel
 /// for pre-R5 rows / old-backup imports the platform could not re-key; the
 /// engine treats it as a tolerant fallback bucket consulted by ALL readings
@@ -875,25 +875,25 @@ public nonisolated struct Taigi_Engine_DictionaryToggles: @unchecked Sendable {
     set {_uniqueStorage()._khpoo = newValue}
   }
 
-  /// 異用字 (filter bit 12)
+  /// Variant Characters (異用字, filter bit 12)
   public var variant: Bool {
     get {_storage._variant}
     set {_uniqueStorage()._variant = newValue}
   }
 
-  /// 在來字 (filter bit 9)
+  /// Conventional Characters (在來字, filter bit 9)
   public var khiin: Bool {
     get {_storage._khiin}
     set {_uniqueStorage()._khiin = newValue}
   }
 
-  /// LKK漢羅合用建議用字
+  /// LKK Han-Lo Recommended Characters
   public var lkk: Bool {
     get {_storage._lkk}
     set {_uniqueStorage()._lkk = newValue}
   }
 
-  /// 開發者補充辭典 (詞庫增補檔案, filter bit 10) — default on, now toggleable
+  /// developer supplement (Supplementary Word List, filter bit 10) — default on, now toggleable
   public var dev: Bool {
     get {_storage._dev}
     set {_uniqueStorage()._dev = newValue}
@@ -918,7 +918,7 @@ public nonisolated struct Taigi_Engine_DictionaryToggles: @unchecked Sendable {
 }
 
 /// `KautianSubcollToggles` is the per-subcollection enable state for the
-/// kautian source (Phase 3). The main subcollection (主條目 / headword) is
+/// kautian source (Phase 3). The main subcollection (main entry / headword) is
 /// NOT a field — it is always on whenever the kautian master toggle is on,
 /// so `compute_filters` sets its subtag bit unconditionally when this
 /// message is present. Field tags map to the kautian subtag bit positions:
@@ -931,37 +931,37 @@ public nonisolated struct Taigi_Engine_KautianSubcollToggles: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  /// 鹿港偏泉腔 (subtag bit 1)
+  /// Lukang (Quanzhou-leaning) (subtag bit 1)
   public var accentLukang: Bool = false
 
-  /// 三峽偏泉腔 (subtag bit 2)
+  /// Sansia (Quanzhou-leaning) (subtag bit 2)
   public var accentSansia: Bool = false
 
-  /// 臺北偏泉腔 (subtag bit 3)
+  /// Taipei (Quanzhou-leaning) (subtag bit 3)
   public var accentTaipak: Bool = false
 
-  /// 宜蘭偏漳腔 (subtag bit 4)
+  /// Yilan (Zhangzhou-leaning) (subtag bit 4)
   public var accentGilan: Bool = false
 
-  /// 臺南混合腔 (subtag bit 5)
+  /// Tainan (Mixed) (subtag bit 5)
   public var accentTainan: Bool = false
 
-  /// 高雄混合腔 (subtag bit 6)
+  /// Kaohsiung (Mixed) (subtag bit 6)
   public var accentKaohsiung: Bool = false
 
-  /// 金門偏泉腔 (subtag bit 7)
+  /// Kinmen (Quanzhou-leaning) (subtag bit 7)
   public var accentKinmen: Bool = false
 
-  /// 馬公偏泉腔 (subtag bit 8)
+  /// Makung (Quanzhou-leaning) (subtag bit 8)
   public var accentMakung: Bool = false
 
-  /// 新竹偏泉腔 (subtag bit 9)
+  /// Hsinchu (Quanzhou-leaning) (subtag bit 9)
   public var accentSintik: Bool = false
 
-  /// 臺中偏漳腔 (subtag bit 10)
+  /// Taichung (Zhangzhou-leaning) (subtag bit 10)
   public var accentTaichung: Bool = false
 
-  /// 姓名附錄 名+姓 (subtag bit 11)
+  /// Surname Appendix, 名+姓 (subtag bit 11)
   public var nameAppendix: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()

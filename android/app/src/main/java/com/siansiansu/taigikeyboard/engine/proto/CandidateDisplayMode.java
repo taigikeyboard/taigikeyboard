@@ -33,13 +33,13 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * (`hit (彼)` — space wanted) since both set `is_translate_swapped = true`;
  * the separator predicate needs this second flag (continuous-input-ranking
  * §10.2 segmented-spacing contract; Codex pre-impl 2026-05-18).
- * How a candidate cell renders the (漢字, 羅馬字) pair. Read by
+ * How a candidate cell renders the (Hanji, romanization) pair. Read by
  * exactly two engine sites, both display-tier dedupes: the continuous
  * `FetchAtPos` post-literal pass (`composing::dispatch`) and the NextWord
  * prediction pass (`nextword::filter`). `UNSPECIFIED` (proto3 default, every
  * un-wired build) and any unknown value mean SIDE_BY_SIDE — legacy behaviour;
  * normalise through `AppConfig::is_roman_only_display`, never compare the raw
- * i32 at a call site. COMBINED (one label `漢字 羅馬字`, hanji
+ * i32 at a call site. COMBINED (one label `Hanji romanization`, hanji
  * commits) has NO engine reader — a combined cell is still distinct by
  * (hanji, roman); the platforms send `is_translate_swapped = true` for it.
  * </pre>

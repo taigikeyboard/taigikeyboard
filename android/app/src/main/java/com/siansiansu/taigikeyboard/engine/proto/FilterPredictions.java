@@ -18,7 +18,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * ONE user contribution is accepted — the FIRST. Under the v6
  * user_association key, one predicted word can be backed by several stored
  * rows differing in the previous word's reading, and summing them would give
- * it several LEARNING_BONUS terms for being 一字多音 rather than for being
+ * it several LEARNING_BONUS terms for being polyphonic rather than for being
  * well-learned (behavioral-invariants.md §24).
  *
  * THEREFORE `raw` IS PRIORITY-ORDERED, NOT A SET. Callers MUST deliver user
@@ -343,7 +343,7 @@ public  final class FilterPredictions extends
    * ONE user contribution is accepted — the FIRST. Under the v6
    * user_association key, one predicted word can be backed by several stored
    * rows differing in the previous word's reading, and summing them would give
-   * it several LEARNING_BONUS terms for being 一字多音 rather than for being
+   * it several LEARNING_BONUS terms for being polyphonic rather than for being
    * well-learned (behavioral-invariants.md §24).
    *
    * THEREFORE `raw` IS PRIORITY-ORDERED, NOT A SET. Callers MUST deliver user

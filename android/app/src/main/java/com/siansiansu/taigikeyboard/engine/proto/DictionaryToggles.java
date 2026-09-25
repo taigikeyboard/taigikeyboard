@@ -381,7 +381,7 @@ public  final class DictionaryToggles extends
   private boolean variant_;
   /**
    * <pre>
-   * 異用字 (filter bit 12)
+   * Variant Characters (異用字, filter bit 12)
    * </pre>
    *
    * <code>bool variant = 10;</code>
@@ -393,7 +393,7 @@ public  final class DictionaryToggles extends
   }
   /**
    * <pre>
-   * 異用字 (filter bit 12)
+   * Variant Characters (異用字, filter bit 12)
    * </pre>
    *
    * <code>bool variant = 10;</code>
@@ -405,7 +405,7 @@ public  final class DictionaryToggles extends
   }
   /**
    * <pre>
-   * 異用字 (filter bit 12)
+   * Variant Characters (異用字, filter bit 12)
    * </pre>
    *
    * <code>bool variant = 10;</code>
@@ -419,7 +419,7 @@ public  final class DictionaryToggles extends
   private boolean khiin_;
   /**
    * <pre>
-   * 在來字 (filter bit 9)
+   * Conventional Characters (在來字, filter bit 9)
    * </pre>
    *
    * <code>bool khiin = 11;</code>
@@ -431,7 +431,7 @@ public  final class DictionaryToggles extends
   }
   /**
    * <pre>
-   * 在來字 (filter bit 9)
+   * Conventional Characters (在來字, filter bit 9)
    * </pre>
    *
    * <code>bool khiin = 11;</code>
@@ -443,7 +443,7 @@ public  final class DictionaryToggles extends
   }
   /**
    * <pre>
-   * 在來字 (filter bit 9)
+   * Conventional Characters (在來字, filter bit 9)
    * </pre>
    *
    * <code>bool khiin = 11;</code>
@@ -457,7 +457,7 @@ public  final class DictionaryToggles extends
   private boolean lkk_;
   /**
    * <pre>
-   * LKK漢羅合用建議用字
+   * LKK Han-Lo Recommended Characters
    * </pre>
    *
    * <code>bool lkk = 12;</code>
@@ -469,7 +469,7 @@ public  final class DictionaryToggles extends
   }
   /**
    * <pre>
-   * LKK漢羅合用建議用字
+   * LKK Han-Lo Recommended Characters
    * </pre>
    *
    * <code>bool lkk = 12;</code>
@@ -481,7 +481,7 @@ public  final class DictionaryToggles extends
   }
   /**
    * <pre>
-   * LKK漢羅合用建議用字
+   * LKK Han-Lo Recommended Characters
    * </pre>
    *
    * <code>bool lkk = 12;</code>
@@ -495,7 +495,7 @@ public  final class DictionaryToggles extends
   private boolean dev_;
   /**
    * <pre>
-   * 開發者補充辭典 (詞庫增補檔案, filter bit 10) — default on, now toggleable
+   * developer supplement (Supplementary Word List, filter bit 10) — default on, now toggleable
    * </pre>
    *
    * <code>bool dev = 14;</code>
@@ -507,7 +507,7 @@ public  final class DictionaryToggles extends
   }
   /**
    * <pre>
-   * 開發者補充辭典 (詞庫增補檔案, filter bit 10) — default on, now toggleable
+   * developer supplement (Supplementary Word List, filter bit 10) — default on, now toggleable
    * </pre>
    *
    * <code>bool dev = 14;</code>
@@ -519,7 +519,7 @@ public  final class DictionaryToggles extends
   }
   /**
    * <pre>
-   * 開發者補充辭典 (詞庫增補檔案, filter bit 10) — default on, now toggleable
+   * developer supplement (Supplementary Word List, filter bit 10) — default on, now toggleable
    * </pre>
    *
    * <code>bool dev = 14;</code>
@@ -1078,7 +1078,7 @@ public  final class DictionaryToggles extends
 
     /**
      * <pre>
-     * 異用字 (filter bit 12)
+     * Variant Characters (異用字, filter bit 12)
      * </pre>
      *
      * <code>bool variant = 10;</code>
@@ -1090,7 +1090,7 @@ public  final class DictionaryToggles extends
     }
     /**
      * <pre>
-     * 異用字 (filter bit 12)
+     * Variant Characters (異用字, filter bit 12)
      * </pre>
      *
      * <code>bool variant = 10;</code>
@@ -1104,7 +1104,7 @@ public  final class DictionaryToggles extends
     }
     /**
      * <pre>
-     * 異用字 (filter bit 12)
+     * Variant Characters (異用字, filter bit 12)
      * </pre>
      *
      * <code>bool variant = 10;</code>
@@ -1118,7 +1118,7 @@ public  final class DictionaryToggles extends
 
     /**
      * <pre>
-     * 在來字 (filter bit 9)
+     * Conventional Characters (在來字, filter bit 9)
      * </pre>
      *
      * <code>bool khiin = 11;</code>
@@ -1130,7 +1130,7 @@ public  final class DictionaryToggles extends
     }
     /**
      * <pre>
-     * 在來字 (filter bit 9)
+     * Conventional Characters (在來字, filter bit 9)
      * </pre>
      *
      * <code>bool khiin = 11;</code>
@@ -1144,7 +1144,7 @@ public  final class DictionaryToggles extends
     }
     /**
      * <pre>
-     * 在來字 (filter bit 9)
+     * Conventional Characters (在來字, filter bit 9)
      * </pre>
      *
      * <code>bool khiin = 11;</code>
@@ -1158,7 +1158,7 @@ public  final class DictionaryToggles extends
 
     /**
      * <pre>
-     * LKK漢羅合用建議用字
+     * LKK Han-Lo Recommended Characters
      * </pre>
      *
      * <code>bool lkk = 12;</code>
@@ -1170,7 +1170,7 @@ public  final class DictionaryToggles extends
     }
     /**
      * <pre>
-     * LKK漢羅合用建議用字
+     * LKK Han-Lo Recommended Characters
      * </pre>
      *
      * <code>bool lkk = 12;</code>
@@ -1184,7 +1184,7 @@ public  final class DictionaryToggles extends
     }
     /**
      * <pre>
-     * LKK漢羅合用建議用字
+     * LKK Han-Lo Recommended Characters
      * </pre>
      *
      * <code>bool lkk = 12;</code>
@@ -1198,7 +1198,7 @@ public  final class DictionaryToggles extends
 
     /**
      * <pre>
-     * 開發者補充辭典 (詞庫增補檔案, filter bit 10) — default on, now toggleable
+     * developer supplement (Supplementary Word List, filter bit 10) — default on, now toggleable
      * </pre>
      *
      * <code>bool dev = 14;</code>
@@ -1210,7 +1210,7 @@ public  final class DictionaryToggles extends
     }
     /**
      * <pre>
-     * 開發者補充辭典 (詞庫增補檔案, filter bit 10) — default on, now toggleable
+     * developer supplement (Supplementary Word List, filter bit 10) — default on, now toggleable
      * </pre>
      *
      * <code>bool dev = 14;</code>
@@ -1224,7 +1224,7 @@ public  final class DictionaryToggles extends
     }
     /**
      * <pre>
-     * 開發者補充辭典 (詞庫增補檔案, filter bit 10) — default on, now toggleable
+     * developer supplement (Supplementary Word List, filter bit 10) — default on, now toggleable
      * </pre>
      *
      * <code>bool dev = 14;</code>

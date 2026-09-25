@@ -7,7 +7,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * One auto-learned phrase (§50): the `(漢字, canonical-TL)` pair the user
+ * One auto-learned phrase (§50): the `(Hanji, canonical-TL)` pair the user
  * once composed segment by segment in continuous input and committed
  * (`Effect.phrase_learned`). Both fields are canonical (hanji as committed,
  * TL as the dictionary would spell it, khinsiann `--` kept), so the engine
@@ -206,7 +206,7 @@ public  final class LearnedEntry extends
 
   /**
    * <pre>
-   * One auto-learned phrase (§50): the `(漢字, canonical-TL)` pair the user
+   * One auto-learned phrase (§50): the `(Hanji, canonical-TL)` pair the user
    * once composed segment by segment in continuous input and committed
    * (`Effect.phrase_learned`). Both fields are canonical (hanji as committed,
    * TL as the dictionary would spell it, khinsiann `--` kept), so the engine
