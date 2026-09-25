@@ -464,10 +464,8 @@ object L10n {
         @Composable get() = stringRes(StringKey.THEME_COLOR_KEYBOARD_BACKGROUND)
     val themeColorKeyText: String
         @Composable get() = stringRes(StringKey.THEME_COLOR_KEY_TEXT)
-    val themeColorNormalKeyFill: String
-        @Composable get() = stringRes(StringKey.THEME_COLOR_NORMAL_KEY_FILL)
-    val themeColorSpecialKeyFill: String
-        @Composable get() = stringRes(StringKey.THEME_COLOR_SPECIAL_KEY_FILL)
+    val themeColorKeyFill: String
+        @Composable get() = stringRes(StringKey.THEME_COLOR_KEY_FILL)
     val themeColorCandidateText: String
         @Composable get() = stringRes(StringKey.THEME_COLOR_CANDIDATE_TEXT)
     val themeKeyHeight: String

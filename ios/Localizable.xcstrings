@@ -3745,6 +3745,24 @@
         }
       }
     },
+    "i18n_theme_colorKeyFill": {
+      "comment": "Theme editor color-row label: the fill color of every key (letter and special keys share it).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Key Fill"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キーの色"
+          }
+        }
+      }
+    },
     "i18n_theme_colorKeySection": {
       "comment": "Theme editor section header: the key-surface group (key colors + sizing).",
       "extractionState": "manual",
@@ -3795,42 +3813,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "キーボード背景"
-          }
-        }
-      }
-    },
-    "i18n_theme_colorNormalKeyFill": {
-      "comment": "Theme editor color-row label: the fill color of normal (letter) keys.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Normal Key Fill"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "通常キーの色"
-          }
-        }
-      }
-    },
-    "i18n_theme_colorSpecialKeyFill": {
-      "comment": "Theme editor color-row label: the fill color of special (function) keys.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Special Key Fill"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "特殊キーの色"
           }
         }
       }

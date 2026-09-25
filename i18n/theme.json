@@ -141,15 +141,10 @@
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
       "values": { "hanji": "揤鈕文字", "tailo": "Tshi̍h-liú bûn-jī", "poj": "Chhi̍h-liú bûn-jī", "en": "Key Text", "ja": "キー文字" }
     },
-    "colorNormalKeyFill": {
-      "comment": "Theme editor color-row label: the fill color of normal (letter) keys.",
+    "colorKeyFill": {
+      "comment": "Theme editor color-row label: the fill color of every key (letter and special keys share it).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "一般揤鈕色水", "tailo": "It-puann tshi̍h-liú sik-tsuí", "poj": "It-poaⁿ chhi̍h-liú sek-chúi", "en": "Normal Key Fill", "ja": "通常キーの色" }
-    },
-    "colorSpecialKeyFill": {
-      "comment": "Theme editor color-row label: the fill color of special (function) keys.",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "特殊揤鈕色水", "tailo": "Ti̍k-sû tshi̍h-liú sik-tsuí", "poj": "Te̍k-sû chhi̍h-liú sek-chúi", "en": "Special Key Fill", "ja": "特殊キーの色" }
+      "values": { "hanji": "揤鈕色水", "tailo": "Tshi̍h-liú sik-tsuí", "poj": "Chhi̍h-liú sek-chúi", "en": "Key Fill", "ja": "キーの色" }
     },
     "colorCandidateText": {
       "comment": "Theme editor color-row label: the candidate text color.",

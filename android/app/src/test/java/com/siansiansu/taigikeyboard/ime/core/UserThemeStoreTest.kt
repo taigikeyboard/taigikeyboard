@@ -132,8 +132,8 @@ class UserThemeStoreTest {
 
         assertEquals(0xFF112233.toInt(), loaded.appearance.colors.keyTextColor)
         assertEquals(UserThemeSeed.BACKGROUND, loaded.appearance.colors.background)
-        assertEquals(UserThemeSeed.NORMAL_KEY_FILL, loaded.appearance.colors.normalKeyFillColor)
-        assertEquals(UserThemeSeed.SPECIAL_KEY_FILL, loaded.appearance.colors.specialKeyFillColor)
+        assertEquals(UserThemeSeed.KEY_FILL, loaded.appearance.colors.normalKeyFillColor)
+        assertEquals(UserThemeSeed.KEY_FILL, loaded.appearance.colors.specialKeyFillColor)
         assertEquals(UserThemeSeed.CANDIDATE_TEXT, loaded.appearance.colors.candidateTextColor)
         assertEquals("load never writes back", UserTheme.encodeList(listOf(t)), memory.json)
     }

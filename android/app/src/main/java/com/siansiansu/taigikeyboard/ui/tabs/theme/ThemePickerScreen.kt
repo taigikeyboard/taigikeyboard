@@ -460,7 +460,7 @@ private fun CreateNewThemeCard(onClick: () -> Unit) {
 @Composable
 private fun CustomThemeButtonPreview(appearance: ThemeAppearance) {
     val colors = appearance.colors
-    val keyFill = Color(colors.normalKeyFillColor ?: UserThemeSeed.NORMAL_KEY_FILL)
+    val keyFill = Color(colors.normalKeyFillColor ?: UserThemeSeed.KEY_FILL)
     val keyText = Color(colors.keyTextColor ?: UserThemeSeed.KEY_TEXT)
     val cornerShape = RoundedCornerShape(appearance.keyCornerRadius.dp)
     val borderWidth = appearance.keyBorderWidth

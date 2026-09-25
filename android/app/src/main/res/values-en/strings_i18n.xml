@@ -232,8 +232,7 @@
     <string name="i18n_theme_candidateSection">Candidate Bar</string>
     <string name="i18n_theme_colorKeyboardBackground">Keyboard Background</string>
     <string name="i18n_theme_colorKeyText">Key Text</string>
-    <string name="i18n_theme_colorNormalKeyFill">Normal Key Fill</string>
-    <string name="i18n_theme_colorSpecialKeyFill">Special Key Fill</string>
+    <string name="i18n_theme_colorKeyFill">Key Fill</string>
     <string name="i18n_theme_colorCandidateText">Candidate Text</string>
     <string name="i18n_theme_keyHeight">Keyboard Height</string>
     <string name="i18n_theme_keyFontSize">Key Font Size</string>
