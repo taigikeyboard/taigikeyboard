@@ -34,15 +34,4 @@ final class EngineIntegrationTests: XCTestCase {
         let result = RustEngineBridge.normalizeInput("t\u{00E2}i-g\u{00ED}")
         XCTAssertEqual(result, "tai5gi2")
     }
-
-    // MARK: - B. Tone Mark Round-Trip (POJ mode cross-component)
-
-    func testToneMarkRoundTrip_pojMode() {
-        let toggles = PojMarkerOptions(isDoubleTapOOEnabled: false, isDoubleTapNNEnabled: false, isNasalMarkerUppercaseEnabled: true)
-        let marked = RustEngineBridge.normalizeTone("ka2", mode: .poj, toggles: toggles)
-        XCTAssertEqual(marked, "k\u{00E1}") // ká (same for simple vowel)
-
-        let restored = RustEngineBridge.restoreTone(marked)
-        XCTAssertEqual(restored, "ka")
-    }
 }

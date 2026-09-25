@@ -12,8 +12,8 @@
 
 use phonetics::api::parse_input_mode;
 use phonetics::case_transform::{
-    capitalize_candidate, full_uppercase_tone_string, lowercase_tone_char, transform_input_case,
-    transform_suggestion, uppercase_tone_char, LetterCase,
+    full_uppercase_tone_string, lowercase_tone_char, transform_input_case, transform_suggestion,
+    uppercase_tone_char, LetterCase,
 };
 use protos::engine::case_request::Method;
 use protos::engine::{AppConfig, CaseRequest, CaseResponse, CaseStringResult};
@@ -28,9 +28,6 @@ pub(crate) fn handle(request: &CaseRequest, config: &AppConfig) -> Option<CaseRe
         Method::LowercaseToneChar(req) => lowercase_tone_char(&req.input, mode),
         Method::TransformInputCase(req) => {
             transform_input_case(&req.text, proto_to_letter_case(req.letter_case()), mode)
-        }
-        Method::CapitalizeCandidate(req) => {
-            capitalize_candidate(&req.text, &req.input, req.auto_cap_enabled, mode)
         }
         Method::TransformSuggestion(req) => transform_suggestion(
             &req.original_text,
@@ -71,8 +68,8 @@ fn proto_to_letter_case(proto: protos::engine::LetterCase) -> LetterCase {
 mod tests {
     use super::*;
     use protos::engine::{
-        CapitalizeCandidate, FullUppercaseToneString, LowercaseToneChar, TransformInputCase,
-        TransformSuggestion, UppercaseToneChar,
+        FullUppercaseToneString, LowercaseToneChar, TransformInputCase, TransformSuggestion,
+        UppercaseToneChar,
     };
 
     fn config_for(mode: &str) -> AppConfig {
@@ -131,19 +128,6 @@ mod tests {
         };
         let resp = handle(&req, &config_for("tl")).expect("response present");
         assert_eq!(unwrap_string(resp), "TSH");
-    }
-
-    #[test]
-    fn dispatch_capitalize_candidate_input_uppercase() {
-        let req = CaseRequest {
-            method: Some(Method::CapitalizeCandidate(CapitalizeCandidate {
-                text: "tâi-gí".to_string(),
-                input: "Tai".to_string(),
-                auto_cap_enabled: true,
-            })),
-        };
-        let resp = handle(&req, &config_for("poj")).expect("response present");
-        assert_eq!(unwrap_string(resp), "Tâi-gí");
     }
 
     #[test]

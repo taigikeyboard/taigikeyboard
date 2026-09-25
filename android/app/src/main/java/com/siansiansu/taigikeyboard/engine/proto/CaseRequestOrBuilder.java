@@ -71,17 +71,6 @@ public interface CaseRequestOrBuilder extends
   com.siansiansu.taigikeyboard.engine.proto.TransformInputCase getTransformInputCase();
 
   /**
-   * <code>.taigi.engine.CapitalizeCandidate capitalize_candidate = 21;</code>
-   * @return Whether the capitalizeCandidate field is set.
-   */
-  boolean hasCapitalizeCandidate();
-  /**
-   * <code>.taigi.engine.CapitalizeCandidate capitalize_candidate = 21;</code>
-   * @return The capitalizeCandidate.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.CapitalizeCandidate getCapitalizeCandidate();
-
-  /**
    * <code>.taigi.engine.TransformSuggestion transform_suggestion = 22;</code>
    * @return Whether the transformSuggestion field is set.
    */

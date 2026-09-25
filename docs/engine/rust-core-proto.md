@@ -130,21 +130,26 @@ This lifts the existing platform-side mechanism (iOS G5-impl + Android A5-impl, 
 
 ## 7. Phonetics slice — AS-IMPLEMENTED (PR #186 + PR #187)
 
-The merged D9.4 shape uses an `oneof method` dispatch with 15 ops grouped into 3 families. Canonical source: `engine/protos/proto/phonetics.proto`. Sketch:
+The merged D9.4 shape uses an `oneof method` dispatch, now 14 ops grouped into 3 families (four ops with no production caller — `NormalizeTone`, `NormalizeToTl`, `RestoreTone`, `ContainsTps` — were removed 2026-09-25, tags reserved). Canonical source: `engine/protos/proto/phonetics.proto`. Sketch:
 
 ```protobuf
 message PhoneticsRequest {
+  // Retired ops with no production caller (removed 2026-09-25).
+  reserved 10, 14, 16, 30;
+  reserved "normalize_tone", "normalize_to_tl", "restore_tone", "contains_tps";
+
   oneof method {
-    // Phonetics core (8 ops): NormalizeTone, StripTone, PojToTl, TlToPoj,
-    // NormalizeToTl, NormalizeInput, RestoreTone, GetToneVariations.
-    NormalizeTone normalize_tone = 10;
+    // Phonetics core (6 ops): StripTone, PojToTl, TlToPoj,
+    // NormalizeInput, GetToneVariations, NfdPreprocessForLookup.
+    StripTone strip_tone = 11;
     // ... (see phonetics.proto for full list)
 
-    // Derivation (2 ops): DeriveNotone, DeriveAbbrev.
+    // Derivation (4 ops): DeriveNotone, DeriveAbbrev,
+    // DeriveCustomSearchKeys, DeriveCustomQueryKey.
     DeriveNotone derive_notone = 20;
-    DeriveAbbrev derive_abbrev = 21;
+    // ...
 
-    // TPS (5 ops): ContainsTps, TlNumericToTps, TlDisplayToTps,
+    // TPS (4 ops): TlNumericToTps, TlDisplayToTps,
     // IsTpsToneMark, TpsInputAdjust.
     TpsInputAdjust tps_input_adjust = 35;
     // ...
@@ -152,22 +157,23 @@ message PhoneticsRequest {
 }
 
 message PhoneticsResponse {
+  reserved 12;  // optional_string_result (RestoreTone only)
   oneof result {
     StringResult string_result = 10;
     StripToneResult strip_tone_result = 11;
-    OptionalStringResult optional_string_result = 12;
     BoolResult bool_result = 13;
     ToneVariationsResult tone_variations_result = 14;
     TpsAdjustResult tps_adjust_result = 15;
+    CustomSearchKeysResult custom_search_keys_result = 16;
   }
 }
 ```
 
 - **Per-op payload type** rather than a flat `string input` — lets each op carry its natural shape (e.g. `TpsInputAdjust` takes `incoming` + `raw_input`; `TlNumericToTps` takes `text` + `or_maps_to_er`).
-- **`oneof result`** with 6 result shapes covers all 15 ops: most ops return `StringResult`; `StripTone` returns the `(bare, tone)` pair; nullable-string ops use `OptionalStringResult`; `IsTpsToneMark` / `ContainsTps` use `BoolResult`; `GetToneVariations` uses `ToneVariationsResult` (callout init-bulk-pull); `TpsInputAdjust` uses `TpsAdjustResult` carrying the adjusted char + optional `replace_last` instruction.
-- Pure, stateless. Settings consulted via `AppConfig.input_mode` / `oo_doubletap_enabled` / `nn_doubletap_enabled` from §6 (no engine-side caching).
+- **`oneof result`** with 6 result shapes covers all 14 ops: most ops return `StringResult`; `StripTone` returns the `(bare, tone)` pair; `DeriveCustomSearchKeys` / `DeriveCustomQueryKey` use `CustomSearchKeysResult`; `IsTpsToneMark` uses `BoolResult`; the top-level `OptionalStringResult` arm (tag 12) was reserved when `RestoreTone` was removed — the message survives only inside `TpsAdjustResult`; `GetToneVariations` uses `ToneVariationsResult` (callout init-bulk-pull); `TpsInputAdjust` uses `TpsAdjustResult` carrying the adjusted char + optional `replace_last` instruction.
+- Pure, stateless. Every op is a function of its payload alone — `phonetics::dispatch::handle(req)` takes no `AppConfig` (the settings-reading `NormalizeTone` op was removed 2026-09-25; `phonetics::api::normalize_tone` is now called in-process by `composing::derived`).
 - Replaces both platforms' `PhoneticsConverter.swift` / `TaigiPhonetics.kt` + `InputNormalizer` + `ToneRestoration` + `TPSConverter` + `TPSAdjustmentBundle` entry points.
-- **Two ops were removed mid-flight** (`AdjustNasalMarkerCase`, `NfdPreprocess`): originally callers reverted to platform-side helpers (`ToneUtilities.adjustNasalMarkerCase` / `TaigiUnicode.nfdPreprocessed`) for Android JVM unit-test compatibility. **(Obsolete after v3.5.3 follow-up — see `feedback_path_g_delete_mirrors.md`.)** Path G deleted the platform mirrors + their JVM unit tests; `Method::NormalizeTone` applies `adjust_nasal_marker_case` in-band as part of the normalize pipeline; `Method::NfdPreprocessForLookup` exposes the Rust helper directly. The Rust phonetics crate is now the sole owner of both algorithms.
+- **Two ops were removed mid-flight** (`AdjustNasalMarkerCase`, `NfdPreprocess`): originally callers reverted to platform-side helpers (`ToneUtilities.adjustNasalMarkerCase` / `TaigiUnicode.nfdPreprocessed`) for Android JVM unit-test compatibility. **(Obsolete after v3.5.3 follow-up — see `feedback_path_g_delete_mirrors.md`.)** Path G deleted the platform mirrors + their JVM unit tests; `phonetics::api::normalize_tone` applies `adjust_nasal_marker_case` in-band as part of the normalize pipeline; `Method::NfdPreprocessForLookup` exposes the Rust helper directly. The Rust phonetics crate is now the sole owner of both algorithms.
 - Thread-safe by construction (no mutable state). The unified `Mutex<Engine>` wrap from `ffi-safety.md` §3 keeps the FFI contract uniform across slices.
 
 ---
@@ -261,12 +267,15 @@ Canonical source: `engine/protos/proto/case.proto`. Own file (NOT a `lexicon.pro
 
 ```protobuf
 message CaseRequest {
+  // Tag 21 was `capitalize_candidate` (no production caller; removed 2026-09-25).
+  reserved 21;
+  reserved "capitalize_candidate";
+
   oneof method {
     UppercaseToneChar       uppercase_tone_char        = 10;
     FullUppercaseToneString full_uppercase_tone_string = 11;
     LowercaseToneChar       lowercase_tone_char        = 12;
     TransformInputCase      transform_input_case       = 20;
-    CapitalizeCandidate     capitalize_candidate       = 21;
     TransformSuggestion     transform_suggestion       = 22;
   }
 }

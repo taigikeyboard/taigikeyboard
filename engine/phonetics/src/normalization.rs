@@ -52,8 +52,7 @@ pub fn normalize_input(input: &str) -> String {
 }
 
 /// True if `text` (after NFD) contains any combining tone mark recognised by
-/// `COMBINING_TO_TONE_NUM`. Used by `normalize_input` (default-tone heuristic)
-/// and `lexicon::classification::classify_input` (input-class precedence).
+/// `COMBINING_TO_TONE_NUM`. Used by `normalize_input` (default-tone heuristic).
 pub fn has_tone_marks(text: &str) -> bool {
     text.nfd().any(is_combining_tone_mark)
 }
@@ -138,31 +137,6 @@ pub fn taigi_unicode_base_form(input: &str) -> String {
     let with_nasal = input.replace(['\u{207f}', '\u{1d3a}'], "nn");
     let decomposed: String = with_nasal.nfd().collect();
     decomposed.replace('\u{0358}', "o")
-}
-
-// ===========================================================================
-// ToneRestoration
-// ===========================================================================
-
-/// `Method::RestoreTone` — find the LAST combining tone mark in NFD-decomposed
-/// `text`, remove it, and NFC-recompose. Returns `None` if no tone mark
-/// found. Replaces both platforms' `ToneRestoration.restore`.
-pub(crate) fn restore_tone(text: &str) -> Option<String> {
-    if text.is_empty() {
-        return None;
-    }
-    let decomposed: Vec<char> = text.nfd().collect();
-    for i in (0..decomposed.len()).rev() {
-        if is_combining_tone_mark(decomposed[i]) {
-            let restored: String = decomposed
-                .iter()
-                .enumerate()
-                .filter_map(|(j, c)| if j == i { None } else { Some(*c) })
-                .collect();
-            return Some(restored.nfc().collect::<String>());
-        }
-    }
-    None
 }
 
 #[cfg(test)]

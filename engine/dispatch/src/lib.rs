@@ -98,20 +98,18 @@ fn run(bytes: &[u8]) -> Response {
     };
 
     match payload {
-        request::Payload::Phonetics(phon_req) => {
-            match phonetics::dispatch::handle(&phon_req, &config) {
-                Ok(phon_resp) => Response {
-                    id,
-                    error: ErrorCode::Ok as i32,
-                    generation,
-                    payload: Some(response::Payload::Phonetics(phon_resp)),
-                },
-                Err(err) => {
-                    log::warn!("phonetics dispatch failed (id={id}): {err}");
-                    error_response(id, phonetics_error_code(&err), generation)
-                }
+        request::Payload::Phonetics(phon_req) => match phonetics::dispatch::handle(&phon_req) {
+            Ok(phon_resp) => Response {
+                id,
+                error: ErrorCode::Ok as i32,
+                generation,
+                payload: Some(response::Payload::Phonetics(phon_resp)),
+            },
+            Err(err) => {
+                log::warn!("phonetics dispatch failed (id={id}): {err}");
+                error_response(id, phonetics_error_code(&err), generation)
             }
-        }
+        },
         request::Payload::Composing(comp_req) => {
             match composing::EngineHandle::instance().handle(&comp_req, &config, generation) {
                 Ok(comp_resp) => Response {

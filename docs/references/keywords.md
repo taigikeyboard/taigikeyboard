@@ -23,21 +23,20 @@ Engine state machine lives in Rust `engine/composing` (since v3.5.4). Platform s
 | Keyword | Definition | Owner |
 |---------|-----------|-------|
 | **Suggestion** | A candidate word (text + title + subtitle + metadata) | iOS `Autocomplete.Suggestion` / Android `CandidateAdapter` |
-| **InputType** | Classification: `Hanzi` / `RomanWithTone` / `RomanNoTone`. Engine returns `(input_type, search_key)` | Rust `lexicon::classification::classify_input` |
+| **InputType** | Proto enum `Hanzi` / `RomanWithTone` / `RomanNoTone`, carried on `SearchRequest.input_type` (the `ClassifyInput` op was removed 2026-09-25) | `engine/protos/proto/lexicon.proto` |
 | **composingTextSuggestion** | Position 0 candidate — always the current composing text | iOS `createComposingTextSuggestion()` |
 | **contextBoost** | Promote candidates matching bigram predictions from last selected word | Rust `nextword::booster` |
 | **phraseSuggestion** | Learned phrase candidates inserted at position 1 | Rust `lexicon::assoc_lookup` |
 | **searchKey** | fst lookup key (`tl:` / `poj:` / `hanzi:` prefix + normalized form) | Rust `lexicon::key_normalizer::build` |
 
 ### 3. Tone Engine (`engine/tone.md`)
-All tone logic lives in Rust `engine/phonetics` (since v3.5.1). Bridge surface: `RustEngineBridge.normalizeTone` / `restoreTone` / etc.
+All tone logic lives in Rust `engine/phonetics` (since v3.5.1). Bridge surface: `RustEngineBridge+Phonetics.swift` / `PhoneticsBridge.kt` (`stripTone`, `pojToTl`, `tlToPoj`, …); preedit tone rendering runs inside composing ops.
 
 | Keyword | Definition | Owner |
 |---------|-----------|-------|
 | **numericTone** | Tone as digit suffix: 1-9 (1,4 = no diacritic) | Rust `phonetics::tables::COMBINING_TO_TONE_NUM` |
 | **toneMarks** | Unicode diacritics: á(2), à(3), â(5), ā(7), a̍(8) | Rust `phonetics::api::to_tone_marks` |
 | **tonePosition** | Vowel receiving the diacritic (TL vs POJ rules differ) | Rust `phonetics::poj::to_poj` / `phonetics::tl::to_tl` |
-| **toneRestoration** | Re-apply tone after backspace deletes a diacritic | Rust `phonetics::normalization::restore_tone` |
 
 ### 4. Dictionary & Lexicon (`engine/binary-format.md`, `engine/sort.md`)
 fst prefix index (replaced MARISA in v3.5.6) + dictionary/association mmap readers all live in Rust `engine/lexicon`.

@@ -36,9 +36,6 @@ class EngineSettingsLiveReadTest {
         backing.inputMode = "tl"
         assertEquals("inputMode reflects live mutation", "tl", provider.current.inputMode)
 
-        backing.isAutoCap = true
-        assertEquals("isAutoCap reflects live mutation", true, provider.current.isAutoCap)
-
         backing.isCustomDictEnabled = true
         assertEquals(
             "isCustomDictEnabled reflects live mutation",
@@ -74,7 +71,6 @@ class EngineSettingsLiveReadTest {
      */
     private class MutableBacking(
         var inputMode: String = "tl",
-        var isAutoCap: Boolean = false,
         var candidateDisplayMode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
         var isTranslateSwapped: Boolean = false,
         var isOutputBothScripts: Boolean = false,
@@ -124,7 +120,6 @@ class EngineSettingsLiveReadTest {
         private val backing: MutableBacking,
     ) : EngineSettings {
         override val inputMode: String get() = backing.inputMode
-        override val isAutoCap: Boolean get() = backing.isAutoCap
         override val candidateDisplayMode: CandidateDisplayMode get() = backing.candidateDisplayMode
         override val isTranslateSwapped: Boolean get() = backing.isTranslateSwapped
         override val isOutputBothScripts: Boolean get() = backing.isOutputBothScripts

@@ -1,14 +1,14 @@
 //! Dispatch: route every `LexiconRequest.method` oneof variant to the
 //! per-method API — the read-path variants
 //! (Install/Search/SearchWithSources/SearchByHanzi/AssocLookup), the
-//! classification variants (ClassifyInput/IsHanzi), and the v3.5.8
+//! IsHanzi predicate, and the v3.5.8
 //! DictionaryFilters variant.
 
 use protos::engine::lexicon_request::Method;
 use protos::engine::lexicon_response::Result as LexResult;
 use protos::engine::{
-    AssocLookupRequest, ClassifyInputRequest, DictionaryFiltersRequest, InstallRequest,
-    IsHanziRequest, LexiconResponse, SearchByHanziRequest, SearchRequest, SearchWithSourcesRequest,
+    AssocLookupRequest, DictionaryFiltersRequest, InstallRequest, IsHanziRequest, LexiconResponse,
+    SearchByHanziRequest, SearchRequest, SearchWithSourcesRequest,
 };
 
 use crate::api;
@@ -51,13 +51,6 @@ pub fn handle_assoc_lookup(req: AssocLookupRequest) -> Result<LexiconResponse, L
     })
 }
 
-pub fn handle_classify_input(req: ClassifyInputRequest) -> Result<LexiconResponse, LexiconError> {
-    let resp = api::classify_input(req)?;
-    Ok(LexiconResponse {
-        result: Some(LexResult::ClassifyInputResult(resp)),
-    })
-}
-
 pub fn handle_is_hanzi(req: IsHanziRequest) -> Result<LexiconResponse, LexiconError> {
     let resp = api::is_hanzi(req)?;
     Ok(LexiconResponse {
@@ -82,7 +75,6 @@ pub fn handle(method: Method) -> Result<LexiconResponse, LexiconError> {
         Method::SearchWithSources(req) => handle_search_with_sources(req),
         Method::SearchByHanzi(req) => handle_search_by_hanzi(req),
         Method::AssocLookup(req) => handle_assoc_lookup(req),
-        Method::ClassifyInput(req) => handle_classify_input(req),
         Method::IsHanzi(req) => handle_is_hanzi(req),
         Method::DictionaryFilters(req) => handle_dictionary_filters(req),
     }

@@ -53,7 +53,7 @@
 
 **Why**: the engine freely rewrites the same syllable across both scripts for UI display and dictionary lookup. Any lossy step silently rewrites user data.
 
-**Scope**: Rust `engine/phonetics` (`syllable.rs`, `tl.rs`, `poj.rs`, `api::poj_display_to_tl_display` / `tl_display_to_poj_display`). Bridged via `RustEngineBridge.pojToTl` / `tlToPoj` / `normalizeToTl`.
+**Scope**: Rust `engine/phonetics` (`syllable.rs`, `tl.rs`, `poj.rs`, `api::poj_display_to_tl_display` / `tl_display_to_poj_display`). Bridged via `RustEngineBridge.pojToTl` / `tlToPoj`. The `NormalizeToTl` op (no production caller) was removed 2026-09-25; `phonetics::normalize_to_tl` stays Rust-internal.
 
 **Corner cases that must hold**:
 - Tone 1 and tone 4 with no trailing digit round-trip (numeric tone preserved only during composition, not in display forms).
@@ -95,12 +95,12 @@
 
 **Why**: TPS mode shares the same candidate/scoring pipeline as POJ/TL via `InputNormalizer`. Divergent TPS conversion between platforms means the same keystroke shows different candidates.
 
-**Scope**: Rust `engine/phonetics::tps` + `tps_adjust` + `api` (since v3.5.1 PR #186). Bridged via `RustEngineBridge.tlNumericToTPS` / `tlDisplayToTPS` / `tpsInputAdjust` / `containsTPS` / `isTPSToneMark`. The TPS → TL direction (`phonetics::tps_to_tl`) is Rust-internal only — consumed by `composing::continuous` for per-span TPS→TL conversion during continuous input. No FFI surface after the dead-surface cleanup (2026-05-04); C-1 (v3.5.9 D) additionally retired the `lexicon::classify_input` consumer when the `tps:` FST family went live. iOS / Android `TPS*.swift` / `.kt` files were deleted under Path G.
+**Scope**: Rust `engine/phonetics::tps` + `tps_adjust` + `api` (since v3.5.1 PR #186). Bridged via `RustEngineBridge.tlNumericToTPS` / `tlDisplayToTPS` / `tpsInputAdjust` / `isTPSToneMark`. The `ContainsTps` op (no production caller) was removed 2026-09-25; `phonetics::api::contains_tps` stays Rust-internal (composing / custom search / nextword). The TPS → TL direction (`phonetics::tps_to_tl`) is Rust-internal only — consumed by `composing::continuous` for per-span TPS→TL conversion during continuous input. No FFI surface after the dead-surface cleanup (2026-05-04); C-1 (v3.5.9 D) additionally retired the `lexicon::classify_input` consumer when the `tps:` FST family went live. iOS / Android `TPS*.swift` / `.kt` files were deleted under Path G.
 
 **Corner cases**:
 - `TPSInputAdjuster` reorders initial/medial/final before conversion; round-trip must account for adjuster output, not raw keystrokes.
 - Tone digits on TPS syllables pass through unchanged.
-- `containsTPS` must return `false` for any pure Roman input (no false positives on ASCII-only strings).
+- `phonetics::api::contains_tps` must return `false` for any pure Roman input (no false positives on ASCII-only strings).
 
 **Test labels**:
 - `INVARIANT_tps_to_tl_roundtrip`
@@ -206,14 +206,13 @@ Live candidate ranking is the Continuous `FetchAtPos` path: lexicographic sort k
 
 ## 9. Case transformation
 
-**Invariant**: `CaseTransformer.capitalizeCandidate(text, basedOn:input:isAutoCapitalizationEnabled:inputMode:)` is platform-neutral. Given the same inputs, iOS and Android emit byte-identical output. The function does not read global settings — callers forward `isAutoCap` and `inputMode` explicitly.
+**Invariant**: case transformation (`transform_input_case`, `transform_suggestion`) is platform-neutral. Given the same inputs, iOS and Android emit byte-identical output. The functions do not read global settings — callers forward `inputMode` explicitly.
 
 **Why**: candidate capitalization is visible on every keystroke. Divergence means the keyboard feels inconsistent between devices.
 
-**Scope**: Rust `engine/phonetics::case_transform::capitalize_candidate` + `transform_input_case` (canonical, since case-transform slice / PR #205). Bridged via `RustEngineBridge.capitalizeCandidate` and `RustEngineBridge.transformInputCase`. Platform `CaseTransformer.{swift,kt}` deleted under Path G.
+**Scope**: Rust `engine/phonetics::case_transform::transform_input_case` + `transform_suggestion` (canonical, since case-transform slice / PR #205). Bridged via `RustEngineBridge.transformInputCase` / `transformSuggestionCase`. Platform `CaseTransformer.{swift,kt}` deleted under Path G. The `CapitalizeCandidate` op (no production caller) was removed 2026-09-25.
 
 **Corner cases**:
-- Leading-uppercase input (`"G"`) with `isAutoCap = false` still applies case per `inputMode` rules.
 - Uppercase TPS syllables do not exist; `inputMode == .tps` → no-op.
 - `.english` mode passes through without romanization-specific adjustments.
 - **Candidate casing only raises letters** (`phonetics::case_transform::raise_case`, behind the continuous `recase_roman` pass and the mobile `transform_suggestion`): CapsLock → all upper, shifted first key → first letter upper, plain lowercase → the roman **as stored**. A custom entry keeps its own capitals: `klsi` / `Klsi` → `Keng-lâm Su-īⁿ`, `KLSI` → `KENG-LÂM SU-Īᴺ` (user report 2026-09-19; marker per §53). Only the keystroke path `transform_input_case` lowercases. The POJ render (`recase_tl_as_poj_display`, step 5) re-raises **per `-` / space token with `match_case`**, never from a whole-string `LetterCase`: the rewriter title-cases each token and can shrink it (`NN` → `ⁿ`), and the stored `ⁿ` is an alphabetic lowercase char that made a whole-string read call a Caps Lock `KENG-LÂM SU-Īⁿ` "title case" (`Keng-Lâm Su-Īᴺ`) and a mixed `KENG-lâm` `Keng-lâm` (retro Codex review of #89, 2026-09-22; `engine/composing/tests/nasal_marker_case.rs::caps_lock_keeps_a_custom_entry_with_a_nasal_marker_all_caps_in_poj_mode`).
@@ -368,9 +367,9 @@ The prior platform-layer parity tests (iOS `LexiconServiceHanziGuardTests.swift`
 
 ## 15. Lexicon — input classification (v3.5.7)
 
-**Added**: 2026-05-02 (v3.5.7 classification slice + Tab3 hanzi-range parity correction). Codex sandwich rounds 1+2 + post-draft APPROVED. Implementation in Rust `engine/lexicon::classification::{classify_input, is_hanzi, contains_numeric_tone}`.
+**Added**: 2026-05-02 (v3.5.7 classification slice + Tab3 hanzi-range parity correction). Codex sandwich rounds 1+2 + post-draft APPROVED. Implementation in Rust `engine/lexicon::classification::is_hanzi`.
 
-This umbrella label has four named subcases. Same `raw` string ⇒ same `(InputType, search_key)` tuple regardless of input mode, settings, or platform.
+**2026-09-25**: the `ClassifyInput` op had no production caller and was removed with `classify_input` / `contains_numeric_tone`; `NUMERIC_TONE_SET`, `PRECEDENCE` and `SEARCH_KEY` are **retired** (their tests deleted). Only `HANZI_RANGE` remains live. The proto `InputType` enum stays (used by `SearchRequest.input_type`).
 
 ### `INVARIANT_LEX_INPUT_CLASSIFICATION_HANZI_RANGE`
 
@@ -387,32 +386,14 @@ Extensions F/G/H/I/J are **explicitly excluded** at this slice. Future expansion
 
 **Tab3 parity correction**: pre-v3.5.7, Android `DictionarySearchViewModel.kt:97` used `query.any { it.code in 0x4E00..0x9FFF || it.code in 0x3400..0x4DBF || it.code in 0x20000..0x2A6DF }`. Kotlin `Char.code` is a 16-bit UTF-16 code unit (0–65535), so the `0x20000..0x2A6DF` clause was unreachable; effective coverage was Unified + A only. v3.5.7 routes both platforms' Tab3 through the canonical Rust 6-range check (`LexiconBridge.isHanzi` / `RustEngineBridge.isHanzi`).
 
-### `INVARIANT_LEX_INPUT_CLASSIFICATION_NUMERIC_TONE_SET`
+### Retired 2026-09-25: `NUMERIC_TONE_SET` / `PRECEDENCE` / `SEARCH_KEY`
 
-`contains_numeric_tone(text)` returns `true` iff `text` contains at least one ASCII digit in `{'2','3','5','6','7','8','9'}`. Digits `'0'`, `'1'`, `'4'` are NOT numeric tone markers.
-
-**ASCII-only is intentional, parity correction toward this invariant**: pre-v3.5.7, iOS used Swift `Character.isNumber` (Unicode general category N\* — includes full-width digits, Roman numerals, vulgar fractions) and Android used Kotlin `Char.isDigit()` (category Nd — includes full-width digits but not Roman numerals). The two platforms were therefore not aligned on edge inputs, and both had a subtle bug: their `!= '1' / '4' / '0'` exclusion checks compared against ASCII literals, so full-width `１` / `４` / `０` were not excluded and would be misclassified as tone markers. v3.5.7 collapses both platforms onto the ASCII-only contract above. Realistic Taigi IME input only ever produces ASCII tone digits (no IME flips into full-width digit mode for romanization typing), so the contracted set has no observable user impact. Filed under the `cross-platform-alignment.md` §1 "refactor surfaces existing divergence — correct toward documented invariant" allowance; surfaced by Codex on PR #202 (r3176669106) and explicitly accepted.
-
-### `INVARIANT_LEX_INPUT_CLASSIFICATION_PRECEDENCE`
-
-`classify_input(raw)` resolves `InputType` via short-circuit precedence:
-
-1. `is_hanzi(raw)` ⇒ `InputType.Hanzi`
-2. `phonetics::has_tone_marks(raw)` ⇒ `InputType.RomanWithTone`
-3. `contains_numeric_tone(raw)` ⇒ `InputType.RomanWithTone`
-4. otherwise ⇒ `InputType.RomanNoTone`
-
-### `INVARIANT_LEX_INPUT_CLASSIFICATION_SEARCH_KEY`
-
-`classify_input(raw).search_key == raw` (identity passthrough) for every input.
-
-**History**: pre-C-1 this field carried `phonetics::tps_to_tl(raw)` when `contains_tps(raw)` was true, so the platform could feed a TL-form key into a `tl:`-only FST. C-1 (v3.5.9 D = TPS 三索引) gave TPS its own `tps:` FST family populated by C-0, so the `SearchRequest{input_mode=Tps}` path now hits TPS keys directly via `key_normalizer::build` and no per-keystroke pre-conversion is required. The `search_key` field is kept on the wire for backward compatibility but is now a verbatim echo of `raw`.
+Removed with `classify_input` / `contains_numeric_tone` (no production caller). Explicit-tone handling in the continuous path is pinned by §17.
 
 ### Tests
 
-- **Rust engine unit** — `engine/lexicon/src/classification.rs::tests` covers all four subcases (28 tests).
-- **iOS** — bridge round-trip exercised through `RustEngineBridge.classifyInput` (called by `TaigiAutocompleteService` continuous path) end-to-end on real keystrokes; future explicit invariant test deferred.
-- **Android** — same posture as iOS; `LexiconBridge.classifyInput` tested via `TaigiAutocompleteService` end-to-end on real device.
+- **Rust engine unit** — `engine/lexicon/src/classification.rs::tests` covers `HANZI_RANGE` (13 tests).
+- **iOS / Android** — Tab3 routes through `RustEngineBridge.isHanzi` / `LexiconBridge.isHanzi`; no platform-side range check.
 
 ---
 
@@ -440,7 +421,7 @@ This is a **conditional** contract, NOT "always filter": absent tone ⇒ all ton
 
 **Scope**: TL and POJ only. **English** has no tone semantics (a trailing digit is not a tone) and keeps the toneless strip. **TPS** tones are Bopomofo scalars, not ASCII digits, so TPS always takes the toneless branch (out of this slice). The selection rule `composing::shadow::fst_body_for_span` (→ `span_is_fully_toned_ascii`, the `([a-z]+digit)+` grammar) is applied at all three continuous key-build sites: `left_anchored_keys_and_restrictions` (span-local), `build_partial_prefix_key` (Step 4b / empty-keys partial), and the walker edge (`fetch_walker_slot0_inner`). The walker's **custom-dictionary** override stays toneless-keyed (custom matching is tone-insensitive by design). Engine is the single source — iOS / Android inherit via FFI; there is no platform-side tone filtering.
 
-**Relationship to §15**: §15 (`INVARIANT_LEX_INPUT_CLASSIFICATION_NUMERIC_TONE_SET`) defines whether input *carries* a tone; §17 pins what that tone must *do* to the continuous candidate set. The bug lived in the gap between the two — input was classified `RomanWithTone`, but the candidate lookup ignored the tone.
+**Relationship to §15**: §15's retired `NUMERIC_TONE_SET` subcase used to define whether input *carries* a tone; §17 pins what that tone must *do* to the continuous candidate set, and is now the only live contract for it (tone detection is `span_is_fully_toned_ascii`). The original bug lived in the gap between the two — input was classified `RomanWithTone`, but the candidate lookup ignored the tone.
 
 **Tests**:
 - **Rust engine** — `engine/composing/tests/continuous_explicit_tone.rs`: `explicit_tone_filters_to_typed_tone` (`tsua2` → 紙 only, not 蛇; symmetric `tsua5` → 蛇 only) + `toneless_input_still_surfaces_all_tones` (`tsua` → both). Case 3: `engine/composing/tests/continuous_partial_tone.rs` (`ting5sik` → 程式 only across span-local / walker slot 0 / partial-prefix `ting5s` / both custom paths, with 程式 the least-frequent row and 豬 / 鎮 / 是 as strict-prefix controls) + `lexicon::continuous::typed_tone_pin_tests` (the walk itself: partial, reverse partial, fully toned, prefix, nasal-`oo` alias, misalignment). Unit: `engine/composing/src/shadow.rs::tests` pin `span_is_fully_toned_ascii` / `fst_body_for_span` / `span_key` tone pins / `whole_buffer_tone_pin` / the partial-prefix tone policy. Golden `tl_numeric_single` / `tl_numeric_multi` (`engine/composing/tests/golden_fetch_at_pos.rs`) freeze the toned-key wire vector (fixture emits toned `tl:<tl_num>` / `poj:<poj_num>` keys for production parity).
@@ -718,7 +699,7 @@ Three axes, deliberately decoupled:
 - **FST search** (`canonicalize_poj_shadow`): TL / English / TPS use the encoding-only `TL_ENCODING_RULES` (POJ-glyph→ASCII, no spelling fold); POJ stays glyph-only. The nasal-`oo` fold `oonn→onn` was removed from that list in 2026-09 — at whole-buffer scope it fired across a syllable seam and lost real keys; see §45. The TL special finals `eng` [ɛŋ] / `ek` (real TL finals, `knowledge/taigi-phonetics-reference.md` §3.2.6) are never collapsed to `ing`/`ik`.
 - **Cross-mode identity** (詞頻 `user_frequency.db` + 聯想 NextWord) — **UNCHANGED, stays canonical** so learning is mode-independent (USER: critical feature). Keyed on `canonical_tl_form` + the platform's `CommitContinuous.canonical_text` / `association_tl` sidechannels, which are SEPARATE proto fields from the committed `display_text`. So the literal display does NOT affect cross-mode freq/next-word: POJ `goa` and TL `gua` both key the canonical `guá`. `canonical_tl_form(Tl)` drops only `eng→ing`/`ek→ik` (keeps `ch`/`oa`/`oe` so a POJ-form custom entry `góa` still keys `guá` cross-mode, B-4 / R2 / R5); `canonical_tl_form(Poj)` keeps the full fold.
 
-The legacy `normalize_to_tl` / `NORMALIZE_TO_TL_RULES` (POJ→TL canonicalization, cross-system `rewrite_token`, `to_tone_number`, FST inventory build, `NormalizeToTl` dispatch) is **byte-identical** — unchanged. English / TPS composing is identity (early-return). The English search path is literal too (`hello` is not reinterpreted as Taigi).
+The legacy `normalize_to_tl` / `NORMALIZE_TO_TL_RULES` (POJ→TL canonicalization, cross-system `rewrite_token`, `to_tone_number`, FST inventory build) is **byte-identical** — unchanged. English / TPS composing is identity (early-return). The English search path is literal too (`hello` is not reinterpreted as Taigi).
 
 - **Removed behaviour (intentional, USER-signed-off 2026-06-05)**: the v3.5.8 Phase 9 Item-9 *TL* POJ-display recovery — pasting POJ **diacritic** text (`pe̍h-ōe-jī`, `chóa`) in TL mode no longer folds `oe→ue` / `ch→ts` to match a TL dict key. Only pasted diacritic POJ was affected (normal ASCII typing was already literal via the ASCII fast-path).
 - **Known secondary-surface gap (follow-up)**: a continuous **OOV-synth candidate** (no dict match) tapped in **POJ** mode still goes through `recase_tl_as_poj_display` (`composing/src/continuous.rs` Step 5), so the strip + a TAP-commit of that synth can still show a converted spelling (`ting`→`teng`). The preedit and the Enter/Space final-commit are literal; only tapping the OOV synth row in POJ converts. Fixing it cleanly needs distinguishing the user-input synth from dict/custom/TAILO candidates in the shared recase (S9/S13 machinery) — tracked for a focused follow-up.
@@ -1229,7 +1210,7 @@ USER 2026-09-22: 「for POJ 鼻化音ⁿ，有兩種寫法，大寫跟小寫…�
 - **Key label follows the switch** (mobile): the POJ `nn` key and Android's literal `ⁿ` long-press cell show `ᴺ` under shift / Caps Lock only while the switch is ON — iOS `ButtonTextProvider.characterText` (labels never touch the engine); Android `KeyContent.computeKeyLetter` maps the `nn` key to `ⁿ` and lets `KeyLabelCaseCache` → the case ops apply the rule. The `nn` key still inserts ASCII `nn` / `NN`, the engine composes the marker.
 - **Unchanged**: lowercase typing (`siann5` → `siâⁿ`); the double-tap folds; TL / TPS / English output; the identity keys of every dictionary / custom / learned row. The §34 literal keeps its WYSIWYG `display_text` (§34), so a hanji-less literal picked under Caps Lock records `SIAᴺ` or `SIAⁿ` as shown — the same way typed case already forks that key today.
 
-**Tests**: `engine/phonetics/tests/normalize_tone_nasal_case.rs` (`normalize_tone_lowercase_nasal_marker_*`), `engine/composing/tests/nasal_marker_case.rs` (Caps Lock default `SIAᴺ` literal + candidate, forced `SIAⁿ`, compound `SIAⁿ-IM`, lowercase control, TL custom row follows the rule, 羅馬字 literal / dictionary collapse), `engine/phonetics/src/case_transform.rs` (`apply_nasal_marker_case_*`), `engine/dispatch/src/case.rs` (`dispatch_lowercase_nasal_marker_*`), `ios/TaigiKeyboardTests/RustEngineBridgeTests.swift` (`test_op_normalizeTone_POJ_nasalMarkerFollowsTheSwitch`), `desktop/crates/taigi-desktop-core/src/engine/bridge.rs` + `settings/document.rs` (`nasal_marker_uppercase_*`), `macos/Tests/.../SettingsStoreTests.swift`.
+**Tests**: `engine/phonetics/tests/normalize_tone_nasal_case.rs` (`normalize_tone_lowercase_nasal_marker_*`), `engine/composing/tests/nasal_marker_case.rs` (Caps Lock default `SIAᴺ` literal + candidate, forced `SIAⁿ`, compound `SIAⁿ-IM`, lowercase control, TL custom row follows the rule, 羅馬字 literal / dictionary collapse), `engine/phonetics/src/case_transform.rs` (`apply_nasal_marker_case_*`), `engine/dispatch/src/case.rs` (`dispatch_lowercase_nasal_marker_*`), `desktop/crates/taigi-desktop-core/src/engine/bridge.rs` + `settings/document.rs` (`nasal_marker_uppercase_*`), `macos/Tests/.../SettingsStoreTests.swift`.
 
 ## §54 — Every composing request renders under the settings it carries
 

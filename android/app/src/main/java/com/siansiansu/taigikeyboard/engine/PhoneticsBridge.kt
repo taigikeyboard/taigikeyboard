@@ -1,12 +1,10 @@
-// Phonetics + Derivation + TPS ops — 15 extensions on RustEngineBridge + the toneVariations cache.
+// Phonetics + Derivation + TPS ops — extensions on RustEngineBridge + the toneVariations cache.
 // Mirrors iOS RustEngineBridge+Phonetics.swift (TPS merged into same file per simplify decision).
 // Sends through RustEngineBridge.dispatch(op) { … } — shared JNI hop, exception boundary, recordFailure sink.
 
 package com.siansiansu.taigikeyboard.engine
 
-import com.siansiansu.taigikeyboard.engine.proto.AppConfig
 import com.siansiansu.taigikeyboard.engine.proto.BoolResult
-import com.siansiansu.taigikeyboard.engine.proto.ContainsTps
 import com.siansiansu.taigikeyboard.engine.proto.CustomSearchKeysResult
 import com.siansiansu.taigikeyboard.engine.proto.DeriveAbbrev
 import com.siansiansu.taigikeyboard.engine.proto.DeriveCustomQueryKey
@@ -16,13 +14,9 @@ import com.siansiansu.taigikeyboard.engine.proto.GetToneVariations
 import com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark
 import com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup
 import com.siansiansu.taigikeyboard.engine.proto.NormalizeInput
-import com.siansiansu.taigikeyboard.engine.proto.NormalizeToTl
-import com.siansiansu.taigikeyboard.engine.proto.NormalizeTone
-import com.siansiansu.taigikeyboard.engine.proto.OptionalStringResult
 import com.siansiansu.taigikeyboard.engine.proto.PhoneticsRequest
 import com.siansiansu.taigikeyboard.engine.proto.PhoneticsResponse
 import com.siansiansu.taigikeyboard.engine.proto.PojToTl
-import com.siansiansu.taigikeyboard.engine.proto.RestoreTone
 import com.siansiansu.taigikeyboard.engine.proto.StringResult
 import com.siansiansu.taigikeyboard.engine.proto.StripTone
 import com.siansiansu.taigikeyboard.engine.proto.StripToneResult
@@ -34,31 +28,12 @@ import com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult
 import com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 
-// region Phonetics core (8 ops)
-
-/**
- * `Method::NormalizeTone` — input + AppConfig.input_mode + PojMarkerOptions →
- * tone-marked string. `mode` and `toggles` are mandatory (no default)
- * to enforce the live-read invariant per Codex v2 §7.
- */
-fun RustEngineBridge.normalizeTone(
-    input: String,
-    mode: NormalizeMode,
-    toggles: PojMarkerOptionsCarrier,
-): String {
-    val payload = NormalizeTone.newBuilder().setInput(input).build()
-    return stringDispatch(
-        methodSetter = { it.normalizeTone = payload },
-        input = input,
-        op = "normalizeTone",
-        config = RustEngineBridge.appConfig(mode, toggles),
-    )
-}
+// region Phonetics core (6 ops)
 
 // Strips the syllable's tone combining mark; tone is "" when the syllable has none.
 fun RustEngineBridge.stripTone(input: String): StripToneOutcome {
     val payload = StripTone.newBuilder().setInput(input).build()
-    val resp = phoneticsDispatch({ it.stripTone = payload }, "stripTone", null)
+    val resp = phoneticsDispatch({ it.stripTone = payload }, "stripTone")
         ?: return StripToneOutcome(input, "")
     if (!resp.hasStripToneResult()) {
         RustEngineBridge.recordFailure("stripTone", "missing StripToneResult")
@@ -70,24 +45,19 @@ fun RustEngineBridge.stripTone(input: String): StripToneOutcome {
 
 fun RustEngineBridge.pojToTl(input: String): String {
     val payload = PojToTl.newBuilder().setInput(input).build()
-    return stringDispatch({ it.pojToTl = payload }, input, "pojToTl", null)
+    return stringDispatch({ it.pojToTl = payload }, input, "pojToTl")
 }
 
 fun RustEngineBridge.tlToPoj(input: String): String {
     val payload = TlToPoj.newBuilder().setInput(input).build()
-    return stringDispatch({ it.tlToPoj = payload }, input, "tlToPoj", null)
-}
-
-fun RustEngineBridge.normalizeToTl(input: String): String {
-    val payload = NormalizeToTl.newBuilder().setInput(input).build()
-    return stringDispatch({ it.normalizeToTl = payload }, input, "normalizeToTl", null)
+    return stringDispatch({ it.tlToPoj = payload }, input, "tlToPoj")
 }
 
 // Full NormalizeInput pipeline down to a trie-query key: TPS preprocess, lowercase, syllable split,
 // nasal / o͘ prep, checked-ending inference.
 fun RustEngineBridge.normalizeInput(input: String): String {
     val payload = NormalizeInput.newBuilder().setInput(input).build()
-    return stringDispatch({ it.normalizeInput = payload }, input, "normalizeInput", null)
+    return stringDispatch({ it.normalizeInput = payload }, input, "normalizeInput")
 }
 
 /**
@@ -103,20 +73,7 @@ fun RustEngineBridge.nfdPreprocessForLookup(input: String): String {
         { it.nfdPreprocessForLookup = payload },
         input,
         "nfdPreprocessForLookup",
-        null,
     )
-}
-
-// Backspace path: drops the last NFD tone mark and recomposes; null when there is no mark.
-fun RustEngineBridge.restoreTone(text: String): String? {
-    val payload = RestoreTone.newBuilder().setText(text).build()
-    val resp = phoneticsDispatch({ it.restoreTone = payload }, "restoreTone", null) ?: return null
-    if (!resp.hasOptionalStringResult()) {
-        RustEngineBridge.recordFailure("restoreTone", "missing OptionalStringResult")
-        return null
-    }
-    val r: OptionalStringResult = resp.optionalStringResult
-    return if (r.present) r.output else null
 }
 
 /**
@@ -132,7 +89,7 @@ internal object PhoneticsBridge {
      */
     val toneVariations: ToneVariationsCache by lazy {
         val payload = GetToneVariations.newBuilder().build()
-        val resp = phoneticsDispatch({ it.getToneVariations = payload }, "getToneVariations", null)
+        val resp = phoneticsDispatch({ it.getToneVariations = payload }, "getToneVariations")
         if (resp == null || !resp.hasToneVariationsResult()) {
             RustEngineBridge.recordFailure("getToneVariations", "missing ToneVariationsResult")
             ToneVariationsCache(emptyMap(), emptyMap())
@@ -152,13 +109,13 @@ internal object PhoneticsBridge {
 // Custom-dictionary search key: toneless form used for toneless prefix search.
 fun RustEngineBridge.deriveNotone(roman: String): String {
     val payload = DeriveNotone.newBuilder().setRoman(roman).build()
-    return stringDispatch({ it.deriveNotone = payload }, roman, "deriveNotone", null)
+    return stringDispatch({ it.deriveNotone = payload }, roman, "deriveNotone")
 }
 
 // Custom-dictionary search key: per-syllable initials (split on hyphen/space); "" for a single syllable.
 fun RustEngineBridge.deriveAbbrev(roman: String): String {
     val payload = DeriveAbbrev.newBuilder().setRoman(roman).build()
-    return stringDispatch({ it.deriveAbbrev = payload }, roman, "deriveAbbrev", null)
+    return stringDispatch({ it.deriveAbbrev = payload }, roman, "deriveAbbrev")
 }
 
 /**
@@ -206,13 +163,7 @@ private fun customSearchInputMode(mode: InputMode): String =
     }
 
 // endregion
-// region TPS (5 ops)
-
-// Composing's derived display uses this to skip POJ/TL tone conversion.
-fun RustEngineBridge.containsTps(text: String): Boolean {
-    val payload = ContainsTps.newBuilder().setText(text).build()
-    return boolDispatch({ it.containsTps = payload }, "containsTps")
-}
+// region TPS (4 ops)
 
 // orMapsToER selects the er/or variant mapping.
 fun RustEngineBridge.tlNumericToTps(
@@ -224,7 +175,7 @@ fun RustEngineBridge.tlNumericToTps(
         .setText(text)
         .setOrMapsToEr(orMapsToER)
         .build()
-    return stringDispatch({ it.tlNumericToTps = payload }, text, "tlNumericToTps", null)
+    return stringDispatch({ it.tlNumericToTps = payload }, text, "tlNumericToTps")
 }
 
 fun RustEngineBridge.tlDisplayToTps(
@@ -236,7 +187,7 @@ fun RustEngineBridge.tlDisplayToTps(
         .setText(text)
         .setOrMapsToEr(orMapsToER)
         .build()
-    return stringDispatch({ it.tlDisplayToTps = payload }, text, "tlDisplayToTps", null)
+    return stringDispatch({ it.tlDisplayToTps = payload }, text, "tlDisplayToTps")
 }
 
 fun RustEngineBridge.isTpsToneMark(char: Char): Boolean {
@@ -254,7 +205,7 @@ fun RustEngineBridge.tpsInputAdjust(
         .setIncoming(incoming)
         .setRawInput(rawInput)
         .build()
-    val resp = phoneticsDispatch({ it.tpsInputAdjust = payload }, "tpsInputAdjust", null)
+    val resp = phoneticsDispatch({ it.tpsInputAdjust = payload }, "tpsInputAdjust")
         ?: return TpsAdjustOutcome(incoming, null)
     if (!resp.hasTpsAdjustResult()) {
         RustEngineBridge.recordFailure("tpsInputAdjust", "missing TpsAdjustResult")
@@ -271,16 +222,12 @@ fun RustEngineBridge.tpsInputAdjust(
 private inline fun phoneticsDispatch(
     methodSetter: (PhoneticsRequest.Builder) -> Unit,
     op: String,
-    config: AppConfig?,
 ): PhoneticsResponse? {
     val phoneticsBuilder = PhoneticsRequest.newBuilder()
     methodSetter(phoneticsBuilder)
     val phoneticsRequest = phoneticsBuilder.build()
     val response = RustEngineBridge.dispatch(op) {
         setPhonetics(phoneticsRequest)
-        if (config != null) {
-            configSnapshot = config
-        }
     } ?: return null
     if (!response.hasPhonetics()) {
         RustEngineBridge.recordFailure(op, "missing phonetics payload")
@@ -293,9 +240,8 @@ private inline fun stringDispatch(
     methodSetter: (PhoneticsRequest.Builder) -> Unit,
     input: String,
     op: String,
-    config: AppConfig?,
 ): String {
-    val resp = phoneticsDispatch(methodSetter, op, config) ?: return input
+    val resp = phoneticsDispatch(methodSetter, op) ?: return input
     if (!resp.hasStringResult()) {
         RustEngineBridge.recordFailure(op, "expected StringResult")
         return input
@@ -308,7 +254,7 @@ private inline fun boolDispatch(
     methodSetter: (PhoneticsRequest.Builder) -> Unit,
     op: String,
 ): Boolean {
-    val resp = phoneticsDispatch(methodSetter, op, null) ?: return false
+    val resp = phoneticsDispatch(methodSetter, op) ?: return false
     if (!resp.hasBoolResult()) {
         RustEngineBridge.recordFailure(op, "expected BoolResult")
         return false
@@ -326,7 +272,7 @@ private inline fun customSearchKeys(
     methodSetter: (PhoneticsRequest.Builder) -> Unit,
     op: String,
 ): List<CustomSearchKey> {
-    val resp = phoneticsDispatch(methodSetter, op, null) ?: return emptyList()
+    val resp = phoneticsDispatch(methodSetter, op) ?: return emptyList()
     if (!resp.hasCustomSearchKeysResult()) {
         RustEngineBridge.recordFailure(op, "expected CustomSearchKeysResult")
         return emptyList()

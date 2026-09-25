@@ -155,8 +155,8 @@ fn convert_nasal_double_n(input: &str) -> String {
 }
 
 /// Full normalize-tone chain: parse mode → POJ doubletap preprocessing →
-/// tone-mark application → nasal-marker case adjustment. The `Method::NormalizeTone`
-/// dispatch arm and `composing::derived` both call this directly. Plan §3.2a.
+/// tone-mark application → nasal-marker case adjustment. `composing::derived`
+/// calls this directly. Plan §3.2a.
 ///
 /// The last step is [`apply_nasal_marker_case`] — a rewrite, not a skip:
 /// `to_tone_marks` → `convert_syllable` → `match_case` already writes `ᴺ`

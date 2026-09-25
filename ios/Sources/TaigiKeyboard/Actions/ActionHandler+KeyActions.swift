@@ -20,9 +20,8 @@ extension ActionHandler {
 
         // Unified case transformation. Adapter: KK's Keyboard.KeyboardCase →
         // RustEngineBridge.CaseTransformLetterCase. `autoCap` is read for
-        // logging but not passed to `transformInputCase` — the legacy
-        // `CaseTransformer.transformForInput` ignored the flag too;
-        // auto-cap is consumed by `capitalizeCandidate` instead.
+        // logging only — `transformInputCase` ignores it, as the legacy
+        // `CaseTransformer.transformForInput` did.
         let processedChar = RustEngineBridge.transformInputCase(
             char,
             letterCase: currentCase.asLetterCase,

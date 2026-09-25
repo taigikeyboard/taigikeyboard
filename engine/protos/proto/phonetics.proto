@@ -8,7 +8,7 @@ option java_multiple_files = true;
 // Phonetics module — POJ ↔ TL ↔ TPS spelling conversion, tone representation,
 // syllable structure, Unicode normalization, phonological auto-correct.
 //
-// 17 ops live in PhoneticsRequest.intent oneof; each op returns its natural
+// 14 ops live in PhoneticsRequest.method oneof; each op returns its natural
 // shape via PhoneticsResponse.result oneof. Pattern mirrors iOS Composing
 // `oneof method` design + khiin-rs single-entry-point dispatch.
 //
@@ -21,15 +21,16 @@ option java_multiple_files = true;
 // =========================================================================
 
 message PhoneticsRequest {
+  // Retired ops with no production caller (removed 2026-09-25).
+  reserved 10, 14, 16, 30;
+  reserved "normalize_tone", "normalize_to_tl", "restore_tone", "contains_tps";
+
   oneof method {
-    // --- Phonetics core (8 ops) ---
-    NormalizeTone normalize_tone = 10;
+    // --- Phonetics core (6 ops) ---
     StripTone strip_tone = 11;
     PojToTl poj_to_tl = 12;
     TlToPoj tl_to_poj = 13;
-    NormalizeToTl normalize_to_tl = 14;
     NormalizeInput normalize_input = 15;
-    RestoreTone restore_tone = 16;
     GetToneVariations get_tone_variations = 18;
     NfdPreprocessForLookup nfd_preprocess_for_lookup = 19;
 
@@ -39,8 +40,7 @@ message PhoneticsRequest {
     DeriveCustomSearchKeys derive_custom_search_keys = 22;
     DeriveCustomQueryKey derive_custom_query_key = 23;
 
-    // --- TPS (5 ops) ---
-    ContainsTps contains_tps = 30;
+    // --- TPS (4 ops) ---
     TlNumericToTps tl_numeric_to_tps = 32;
     TlDisplayToTps tl_display_to_tps = 33;
     IsTpsToneMark is_tps_tone_mark = 34;
@@ -52,25 +52,15 @@ message PhoneticsRequest {
 // Phonetics core request payloads
 // =========================================================================
 
-// `NormalizeTone` reads `AppConfig.input_mode` (POJ / TL) and
-// `AppConfig.oo_doubletap_enabled` / `nn_doubletap_enabled` from envelope's
-// per-request `config_snapshot`. Engine never caches settings.
-message NormalizeTone { string input = 1; }
 message StripTone { string input = 1; }
 message PojToTl { string input = 1; }
 message TlToPoj { string input = 1; }
-message NormalizeToTl { string input = 1; }
 
 // `NormalizeInput` is the full pipeline that produces a trie-query key:
 // TPS preprocess (if input contains TPS) → per-syllable diacritic→digit →
 // checked-ending heuristic for default tone (1 vs 4). Replaces both
 // platforms' `InputNormalizer.normalize`.
 message NormalizeInput { string input = 1; }
-
-// `RestoreTone` removes the LAST combining tone mark from `text` and NFC
-// recomposes. Returns absent if no tone mark found. Replaces both
-// platforms' `ToneRestoration.restore`.
-message RestoreTone { string text = 1; }
 
 // `GetToneVariations` is the init-bulk-pull op for callout tone variation
 // tables. Returns POJ + TL maps in one response. Caller caches once at
@@ -140,8 +130,6 @@ message DeriveCustomQueryKey {
 // TPS request payloads
 // =========================================================================
 
-message ContainsTps { string text = 1; }
-
 // `TlNumericToTps` input is numeric tone form (e.g. "hoo2"). Replaces
 // iOS `TLToTPS.convert` / Android `TPSConverter.toTPS`.
 message TlNumericToTps {
@@ -175,10 +163,15 @@ message TpsInputAdjust {
 // =========================================================================
 
 message PhoneticsResponse {
+  // Tag 12 was the top-level `optional_string_result` (only `RestoreTone`
+  // returned it; removed 2026-09-25). `OptionalStringResult` stays as the
+  // `TpsAdjustResult.replace_last` field type.
+  reserved 12;
+  reserved "optional_string_result";
+
   oneof result {
     StringResult string_result = 10;
     StripToneResult strip_tone_result = 11;
-    OptionalStringResult optional_string_result = 12;
     BoolResult bool_result = 13;
     ToneVariationsResult tone_variations_result = 14;
     TpsAdjustResult tps_adjust_result = 15;

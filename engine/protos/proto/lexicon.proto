@@ -17,10 +17,9 @@ option java_multiple_files = true;
 //   per audit § 3 (Android does not have these in CandidateProcessor;
 //   moving them to Rust would change Android behavior)
 //
-// v3.5.7 added `classify_input` + `is_hanzi` for IME autocomplete classifier
-// and Tab3 hanzi short-circuit. Tab3 parity correction in same slice —
-// Android `DictionarySearchViewModel.kt:97` previously used Kotlin `Char.code`
-// (16-bit), missing CJK Extensions B/C/D/E.
+// v3.5.7 added `is_hanzi` for the Tab3 hanzi short-circuit. Tab3 parity
+// correction in same slice — Android `DictionarySearchViewModel.kt:97`
+// previously used Kotlin `Char.code` (16-bit), missing CJK Extensions B/C/D/E.
 
 // =========================================================================
 // Request envelope
@@ -29,8 +28,9 @@ option java_multiple_files = true;
 message LexiconRequest {
   // Tag 10 was `process_candidates` (legacy linear ranking, no production
   // caller since v3.5.8; removed).
-  reserved 10;
-  reserved "process_candidates";
+  // Tag 16 was `classify_input` (no production caller; removed 2026-09-25).
+  reserved 10, 16;
+  reserved "process_candidates", "classify_input";
 
   oneof method {
     InstallRequest            install               = 11;  // lexicon read-path
@@ -38,7 +38,6 @@ message LexiconRequest {
     SearchWithSourcesRequest  search_with_sources   = 13;  // Tab3 multi-source
     SearchByHanziRequest      search_by_hanzi       = 14;  // Tab3 hanzi prefix
     AssocLookupRequest        assoc_lookup          = 15;  // bundled bigram
-    ClassifyInputRequest      classify_input        = 16;  // v3.5.7 IME classifier
     IsHanziRequest            is_hanzi              = 17;  // v3.5.7 Tab3 short-circuit
     DictionaryFiltersRequest  dictionary_filters    = 18;  // v3.5.8 toggles → bitmasks + enabled codes
   }
@@ -160,17 +159,6 @@ message AssocLookupRequest {
   uint32 enabled_sources_bitmask = 3;
 }
 
-// `ClassifyInputRequest` is the IME autocomplete classifier entry. The engine
-// resolves `(InputType, search_key)` in a single FFI call. The platform-side
-// per-keystroke classifier shells it superseded were retired in v3.5.8 Item 13
-// together with the platform lexicon fallback (the Continuous engine dispatch
-// now owns classification end-to-end).
-//
-// `mode` is intentionally absent: classification is mode-independent.
-message ClassifyInputRequest {
-  string raw = 1;
-}
-
 // `IsHanziRequest` is the low-level CJK predicate used by Tab3 search to
 // short-circuit hanzi queries. Tab3 needs the predicate without paying the
 // search_key build cost. See INVARIANT_LEX_INPUT_CLASSIFICATION_HANZI_RANGE.
@@ -219,8 +207,8 @@ message DictionaryFiltersResponse {
 // =========================================================================
 
 message LexiconResponse {
-  reserved 10;
-  reserved "process_candidates_result";
+  reserved 10, 16;
+  reserved "process_candidates_result", "classify_input_result";
 
   oneof result {
     InstallResponse            install_result              = 11;
@@ -228,7 +216,6 @@ message LexiconResponse {
     SearchWithSourcesResponse  search_with_sources_result  = 13;
     SearchByHanziResponse      search_by_hanzi_result      = 14;
     AssocLookupResponse        assoc_lookup_result         = 15;
-    ClassifyInputResponse      classify_input_result       = 16;
     IsHanziResponse            is_hanzi_result             = 17;
     DictionaryFiltersResponse  dictionary_filters_result   = 18;
   }
@@ -265,18 +252,6 @@ message SearchByHanziResponse {
 // the raw matches.
 message AssocLookupResponse {
   repeated LexiconAssocEntry entries = 1;
-}
-
-// `ClassifyInputResponse` carries the classifier output. `input_type` resolves
-// via short-circuit precedence (hanzi → tone-marked → numeric-tone →
-// no-tone). `search_key` mirrors the raw input verbatim — C-1 retired the
-// per-keystroke TPS→TL conversion now that the lexicon `tps:` FST family
-// is hit directly via `SearchRequest{input_mode=Tps}`. See
-// INVARIANT_LEX_INPUT_CLASSIFICATION_PRECEDENCE +
-// INVARIANT_LEX_INPUT_CLASSIFICATION_SEARCH_KEY.
-message ClassifyInputResponse {
-  InputType input_type = 1;
-  string    search_key = 2;
 }
 
 message IsHanziResponse {

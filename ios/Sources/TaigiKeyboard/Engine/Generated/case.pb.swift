@@ -110,14 +110,6 @@ public nonisolated struct Taigi_Engine_CaseRequest: Sendable {
     set {method = .transformInputCase(newValue)}
   }
 
-  public var capitalizeCandidate: Taigi_Engine_CapitalizeCandidate {
-    get {
-      if case .capitalizeCandidate(let v)? = method {return v}
-      return Taigi_Engine_CapitalizeCandidate()
-    }
-    set {method = .capitalizeCandidate(newValue)}
-  }
-
   public var transformSuggestion: Taigi_Engine_TransformSuggestion {
     get {
       if case .transformSuggestion(let v)? = method {return v}
@@ -135,7 +127,6 @@ public nonisolated struct Taigi_Engine_CaseRequest: Sendable {
     case lowercaseToneChar(Taigi_Engine_LowercaseToneChar)
     /// --- Per-string compound transforms ---
     case transformInputCase(Taigi_Engine_TransformInputCase)
-    case capitalizeCandidate(Taigi_Engine_CapitalizeCandidate)
     case transformSuggestion(Taigi_Engine_TransformSuggestion)
 
   }
@@ -202,25 +193,6 @@ public nonisolated struct Taigi_Engine_TransformInputCase: Sendable {
   public var text: String = String()
 
   public var letterCase: Taigi_Engine_LetterCase = .unspecified
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-/// `CapitalizeCandidate` gates on `auto_cap_enabled` + `input` first char's
-/// case. If both true, the candidate's first letter is uppercased via tone
-/// tables; otherwise returned as-is. Matches `CaseTransformer.capitalizeCandidate`.
-public nonisolated struct Taigi_Engine_CapitalizeCandidate: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var text: String = String()
-
-  public var input: String = String()
-
-  public var autoCapEnabled: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -303,7 +275,7 @@ nonisolated extension Taigi_Engine_LetterCase: SwiftProtobuf._ProtoNameProviding
 
 nonisolated extension Taigi_Engine_CaseRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CaseRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}uppercase_tone_char\0\u{3}full_uppercase_tone_string\0\u{3}lowercase_tone_char\0\u{4}\u{8}transform_input_case\0\u{3}capitalize_candidate\0\u{3}transform_suggestion\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}uppercase_tone_char\0\u{3}full_uppercase_tone_string\0\u{3}lowercase_tone_char\0\u{4}\u{8}transform_input_case\0\u{4}\u{2}transform_suggestion\0\u{b}capitalize_candidate\0\u{c}\u{15}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -363,19 +335,6 @@ nonisolated extension Taigi_Engine_CaseRequest: SwiftProtobuf.Message, SwiftProt
           self.method = .transformInputCase(v)
         }
       }()
-      case 21: try {
-        var v: Taigi_Engine_CapitalizeCandidate?
-        var hadOneofValue = false
-        if let current = self.method {
-          hadOneofValue = true
-          if case .capitalizeCandidate(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.method = .capitalizeCandidate(v)
-        }
-      }()
       case 22: try {
         var v: Taigi_Engine_TransformSuggestion?
         var hadOneofValue = false
@@ -415,10 +374,6 @@ nonisolated extension Taigi_Engine_CaseRequest: SwiftProtobuf.Message, SwiftProt
     case .transformInputCase?: try {
       guard case .transformInputCase(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 20)
-    }()
-    case .capitalizeCandidate?: try {
-      guard case .capitalizeCandidate(let v)? = self.method else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 21)
     }()
     case .transformSuggestion?: try {
       guard case .transformSuggestion(let v)? = self.method else { preconditionFailure() }
@@ -556,46 +511,6 @@ nonisolated extension Taigi_Engine_TransformInputCase: SwiftProtobuf.Message, Sw
   public static func ==(lhs: Taigi_Engine_TransformInputCase, rhs: Taigi_Engine_TransformInputCase) -> Bool {
     if lhs.text != rhs.text {return false}
     if lhs.letterCase != rhs.letterCase {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Taigi_Engine_CapitalizeCandidate: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".CapitalizeCandidate"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0\u{1}input\0\u{3}auto_cap_enabled\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.text) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.input) }()
-      case 3: try { try decoder.decodeSingularBoolField(value: &self.autoCapEnabled) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.text.isEmpty {
-      try visitor.visitSingularStringField(value: self.text, fieldNumber: 1)
-    }
-    if !self.input.isEmpty {
-      try visitor.visitSingularStringField(value: self.input, fieldNumber: 2)
-    }
-    if self.autoCapEnabled != false {
-      try visitor.visitSingularBoolField(value: self.autoCapEnabled, fieldNumber: 3)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Taigi_Engine_CapitalizeCandidate, rhs: Taigi_Engine_CapitalizeCandidate) -> Bool {
-    if lhs.text != rhs.text {return false}
-    if lhs.input != rhs.input {return false}
-    if lhs.autoCapEnabled != rhs.autoCapEnabled {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

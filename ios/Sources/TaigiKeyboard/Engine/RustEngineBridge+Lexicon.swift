@@ -104,8 +104,7 @@ public extension RustEngineBridge {
     /// `lexiconAssocLookup(enabledSourcesBitmask:)`.
     ///
     /// `internal` (not `public`) because `enabledSources` references the
-    /// internal `DictionarySource` enum; matches `ClassificationResult`'s
-    /// pattern below.
+    /// internal `DictionarySource` enum.
     internal struct DictionaryFilters: Equatable {
         let dictionaryFilterBitmask: UInt32
         // `UInt32.max` sentinel when all 9 assoc sources are on, matching the proto shortcut.
@@ -251,39 +250,6 @@ public extension RustEngineBridge {
         }
     }
 
-    // MARK: - Classification (v3.5.7)
-
-    /// Classifier output — pairs the resolved `InputType` with the
-    /// engine-built `searchKey`. C-1 (v3.5.9 D) retired the TPS→TL
-    /// pre-conversion; `searchKey` is now an identity passthrough of the
-    /// raw input. The `tps:` FST family is queried directly via
-    /// `SearchRequest{input_mode=.tps}`.
-    internal struct ClassificationResult: Equatable {
-        let inputType: InputType
-        let searchKey: String
-    }
-
-    /// Classify `rawInput` into `(InputType, searchKey)`. Single FFI hop —
-    /// `lexicon::classify_input` keeps tone / TPS detection inside Rust,
-    /// replacing the platform-side per-keystroke ladder that previously
-    /// chained multiple phonetics ops per keypress. See
-    /// `INVARIANT_LEX_INPUT_CLASSIFICATION_PRECEDENCE`.
-    internal static func classifyInput(_ raw: String) -> ClassificationResult {
-        var payload = Taigi_Engine_ClassifyInputRequest()
-        payload.raw = raw
-        guard let resp = lexiconDispatch(method: .classifyInput(payload), op: "classifyInput") else {
-            return ClassificationResult(inputType: .romanWithoutTone, searchKey: raw)
-        }
-        guard case let .classifyInputResult(r)? = resp.result else {
-            recordFailure(op: "classifyInput", message: "missing classify_input result")
-            return ClassificationResult(inputType: .romanWithoutTone, searchKey: raw)
-        }
-        return ClassificationResult(
-            inputType: platformInputType(from: r.inputType),
-            searchKey: r.searchKey,
-        )
-    }
-
     /// Resolve user's 12-toggle dictionary preferences into ready-to-send
     /// filter bitmasks + enabled-source set. Single FFI hop replaces the
     /// pre-v3.5.8 verbatim-mirrored `EnabledDictionaries` bit math.
@@ -368,21 +334,6 @@ public extension RustEngineBridge {
             lengthScore: proto.hasLengthScore ? proto.lengthScore : nil,
             sourceBitmask: proto.hasSourceBitmask ? proto.sourceBitmask : nil,
         )
-    }
-
-    /// Map `Taigi_Engine_InputType` to the platform `InputType` enum.
-    /// Unspecified / unrecognised values fall back to `.romanWithoutTone`
-    /// (matches the safe-fallback contract of `lexiconDispatch` errors).
-    /// Mirrors Android `LexiconBridge.platformInputType` —
-    /// must drift together.
-    private static func platformInputType(from proto: Taigi_Engine_InputType) -> InputType {
-        switch proto {
-        case .hanzi: .hanzi
-        case .romanWithTone: .romanWithTone
-        case .romanNoTone: .romanWithoutTone
-        case .unspecified, .UNRECOGNIZED:
-            .romanWithoutTone
-        }
     }
 
     /// Fallback only for platform/Rust binary skew where method 18 is absent.
@@ -543,8 +494,7 @@ public extension RustEngineBridge {
 
     /// Lexicon envelope dispatch — encode → FFI roundtrip → decode the
     /// `LexiconResponse` payload. Used by every lexicon method in this
-    /// file (search / assoc / classify-input / dictionary-filters /
-    /// isHanzi). No `AppConfig` snapshot needed — lexicon ops
+    /// file (search / assoc / dictionary-filters / isHanzi). No `AppConfig` snapshot needed — lexicon ops
     /// read no live config.
     private static func lexiconDispatch(
         method: Taigi_Engine_LexiconRequest.OneOf_Method,

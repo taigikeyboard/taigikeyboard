@@ -1,6 +1,6 @@
 // Settings persistence facade shared by the app and the keyboard extension, backed by App Group
-// UserDefaults; a few fields proxy to KeyboardKit's own KeyboardSettings.store. Implements both
-// KeyboardEnvironment (writable from the UI) and EngineSettings/EngineSettingsProvider (engine live-read).
+// UserDefaults. Implements both KeyboardEnvironment (writable from the UI) and
+// EngineSettings/EngineSettingsProvider (engine live-read).
 
 import Foundation
 import KeyboardKit
@@ -701,23 +701,9 @@ final class SharedSettings {
 
 // MARK: - EngineSettings Conformance
 
-/// SharedSettings bridges the engine's settings needs to two stores:
-/// its own `UserDefaults` (App Group container) for app-owned settings,
-/// and `KeyboardSettings.store` (KeyboardKit-owned) for the shift-state
-/// / auto-capitalization toggle. Engine-layer code cannot touch
-/// `KeyboardSettings.store` directly (no `import KeyboardKit` allowed),
-/// so this conformance bridges the two behind one protocol.
+/// SharedSettings bridges the engine's settings needs to its own
+/// `UserDefaults` (App Group container) behind one protocol.
 extension SharedSettings: EngineSettings {
-    /// Mirrors KeyboardKit's `isAutocapitalizationEnabled` setting so
-    /// engine-layer code (e.g. candidate capitalization via
-    /// `RustEngineBridge.capitalizeCandidate`) can read it through
-    /// `EngineSettings` without importing KeyboardKit.
-    var isAutoCap: Bool {
-        KeyboardSettings.store.bool(
-            forKey: "com.keyboardkit.settings.keyboard.isAutocapitalizationEnabled",
-        )
-    }
-
     /// Live-reads the three underlying booleans per call, matching the
     /// `EngineSettingsProvider.current` live-read contract.
     var pojMarkerOptions: PojMarkerOptions {

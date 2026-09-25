@@ -24,21 +24,21 @@ import com.siansiansu.taigikeyboard.engine.proto.CandidateDisplayMode as ProtoCa
  * state, the [AppConfig] factories and every nested DTO type. The per-slice
  * ops are extension functions on it, one file per slice (mirrors iOS
  * `RustEngineBridge+<Slice>.swift`):
- * - `PhoneticsBridge.kt` — phonetics core (8) + derivation (2) + TPS (5) + tone-variations cache
+ * - `PhoneticsBridge.kt` — phonetics core + derivation + TPS + tone-variations cache
  * - `ComposingBridge.kt` — composing slice (12) + continuous-input (4)
  * - `NextWordBridge.kt` — NextWord slice (9)
- * - `LexiconBridge.kt` — lexicon read path + ranking pipeline
+ * - `LexiconBridge.kt` — lexicon read path
  * - `CaseTransformBridge.kt` — per-char/per-word case operations
  * Callers outside this package import each extension by name
- * (`import com.siansiansu.taigikeyboard.engine.normalizeTone`).
+ * (`import com.siansiansu.taigikeyboard.engine.normalizeInput`).
  *
  * Every slice sends through [dispatch] — one request-id allocator, one
  * JNI hop, one `try/Throwable` boundary (a JNI throw or a parse failure
  * never escapes into the IME keystroke path), one [recordFailure] sink.
  * Slices keep only their own payload check.
  *
- * Per Codex v2 §7: `normalizeTone` requires `PojMarkerOptions` mandatory
- * parameter — no `PojMarkerOptions(true, true, true)` silent default.
+ * Per Codex v2 §7: every op that needs `PojMarkerOptions` takes it as a
+ * mandatory parameter — no `PojMarkerOptions(true, true, true)` silent default.
  *
  * Per Codex v2 §8 + v3 §7 + v4 §5: error visibility is hardened. Failures
  * increment a counter and append a structured [DiagnosticsEntry] to a
@@ -892,7 +892,7 @@ object RustEngineBridge {
 // Public DTOs (Kotlin doesn't allow named-tuple returns; using data classes)
 // =========================================================================
 
-/** `Method::NormalizeTone` mode parameter. Mirrors iOS `InputMode` minus `.tps` */
+/** Engine `AppConfig.input_mode` value. Mirrors iOS `InputMode` minus `.tps` */
 enum class NormalizeMode { POJ, TL, ENGLISH }
 
 /**

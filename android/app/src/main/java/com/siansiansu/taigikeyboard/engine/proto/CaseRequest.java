@@ -24,7 +24,6 @@ public  final class CaseRequest extends
     FULL_UPPERCASE_TONE_STRING(11),
     LOWERCASE_TONE_CHAR(12),
     TRANSFORM_INPUT_CASE(20),
-    CAPITALIZE_CANDIDATE(21),
     TRANSFORM_SUGGESTION(22),
     METHOD_NOT_SET(0);
     private final int value;
@@ -45,7 +44,6 @@ public  final class CaseRequest extends
         case 11: return FULL_UPPERCASE_TONE_STRING;
         case 12: return LOWERCASE_TONE_CHAR;
         case 20: return TRANSFORM_INPUT_CASE;
-        case 21: return CAPITALIZE_CANDIDATE;
         case 22: return TRANSFORM_SUGGESTION;
         case 0: return METHOD_NOT_SET;
         default: return null;
@@ -303,56 +301,6 @@ public  final class CaseRequest extends
    */
   private void clearTransformInputCase() {
     if (methodCase_ == 20) {
-      methodCase_ = 0;
-      method_ = null;
-    }
-  }
-
-  public static final int CAPITALIZE_CANDIDATE_FIELD_NUMBER = 21;
-  /**
-   * <code>.taigi.engine.CapitalizeCandidate capitalize_candidate = 21;</code>
-   */
-  @java.lang.Override
-  public boolean hasCapitalizeCandidate() {
-    return methodCase_ == 21;
-  }
-  /**
-   * <code>.taigi.engine.CapitalizeCandidate capitalize_candidate = 21;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.CapitalizeCandidate getCapitalizeCandidate() {
-    if (methodCase_ == 21) {
-       return (com.siansiansu.taigikeyboard.engine.proto.CapitalizeCandidate) method_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.CapitalizeCandidate.getDefaultInstance();
-  }
-  /**
-   * <code>.taigi.engine.CapitalizeCandidate capitalize_candidate = 21;</code>
-   */
-  private void setCapitalizeCandidate(com.siansiansu.taigikeyboard.engine.proto.CapitalizeCandidate value) {
-    java.util.Objects.requireNonNull(value);
-    method_ = value;
-    methodCase_ = 21;
-  }
-  /**
-   * <code>.taigi.engine.CapitalizeCandidate capitalize_candidate = 21;</code>
-   */
-  private void mergeCapitalizeCandidate(com.siansiansu.taigikeyboard.engine.proto.CapitalizeCandidate value) {
-    java.util.Objects.requireNonNull(value);
-    if (methodCase_ == 21 &&
-        method_ != com.siansiansu.taigikeyboard.engine.proto.CapitalizeCandidate.getDefaultInstance()) {
-      method_ = com.siansiansu.taigikeyboard.engine.proto.CapitalizeCandidate.newBuilder((com.siansiansu.taigikeyboard.engine.proto.CapitalizeCandidate) method_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      method_ = value;
-    }
-    methodCase_ = 21;
-  }
-  /**
-   * <code>.taigi.engine.CapitalizeCandidate capitalize_candidate = 21;</code>
-   */
-  private void clearCapitalizeCandidate() {
-    if (methodCase_ == 21) {
       methodCase_ = 0;
       method_ = null;
     }
@@ -758,54 +706,6 @@ public  final class CaseRequest extends
     }
 
     /**
-     * <code>.taigi.engine.CapitalizeCandidate capitalize_candidate = 21;</code>
-     */
-    @java.lang.Override
-    public boolean hasCapitalizeCandidate() {
-      return instance.hasCapitalizeCandidate();
-    }
-    /**
-     * <code>.taigi.engine.CapitalizeCandidate capitalize_candidate = 21;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.CapitalizeCandidate getCapitalizeCandidate() {
-      return instance.getCapitalizeCandidate();
-    }
-    /**
-     * <code>.taigi.engine.CapitalizeCandidate capitalize_candidate = 21;</code>
-     */
-    public Builder setCapitalizeCandidate(com.siansiansu.taigikeyboard.engine.proto.CapitalizeCandidate value) {
-      copyOnWrite();
-      instance.setCapitalizeCandidate(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.CapitalizeCandidate capitalize_candidate = 21;</code>
-     */
-    public Builder setCapitalizeCandidate(
-        com.siansiansu.taigikeyboard.engine.proto.CapitalizeCandidate.Builder builderForValue) {
-      copyOnWrite();
-      instance.setCapitalizeCandidate(builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.CapitalizeCandidate capitalize_candidate = 21;</code>
-     */
-    public Builder mergeCapitalizeCandidate(com.siansiansu.taigikeyboard.engine.proto.CapitalizeCandidate value) {
-      copyOnWrite();
-      instance.mergeCapitalizeCandidate(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.CapitalizeCandidate capitalize_candidate = 21;</code>
-     */
-    public Builder clearCapitalizeCandidate() {
-      copyOnWrite();
-      instance.clearCapitalizeCandidate();
-      return this;
-    }
-
-    /**
      * <code>.taigi.engine.TransformSuggestion transform_suggestion = 22;</code>
      */
     @java.lang.Override
@@ -875,12 +775,11 @@ public  final class CaseRequest extends
             com.siansiansu.taigikeyboard.engine.proto.FullUppercaseToneString.class,
             com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar.class,
             com.siansiansu.taigikeyboard.engine.proto.TransformInputCase.class,
-            com.siansiansu.taigikeyboard.engine.proto.CapitalizeCandidate.class,
             com.siansiansu.taigikeyboard.engine.proto.TransformSuggestion.class,
           };
           java.lang.String info =
-              "\u0000\u0006\u0001\u0000\n\u0016\u0006\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f" +
-              "<\u0000\u0014<\u0000\u0015<\u0000\u0016<\u0000";
+              "\u0000\u0005\u0001\u0000\n\u0016\u0005\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f" +
+              "<\u0000\u0014<\u0000\u0016<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

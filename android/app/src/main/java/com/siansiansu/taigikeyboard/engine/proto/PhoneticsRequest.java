@@ -20,20 +20,16 @@ public  final class PhoneticsRequest extends
   private java.lang.Object method_;
   public enum MethodCase
       implements com.google.protobuf.AbstractMessageLite.InternalOneOfEnum {
-    NORMALIZE_TONE(10),
     STRIP_TONE(11),
     POJ_TO_TL(12),
     TL_TO_POJ(13),
-    NORMALIZE_TO_TL(14),
     NORMALIZE_INPUT(15),
-    RESTORE_TONE(16),
     GET_TONE_VARIATIONS(18),
     NFD_PREPROCESS_FOR_LOOKUP(19),
     DERIVE_NOTONE(20),
     DERIVE_ABBREV(21),
     DERIVE_CUSTOM_SEARCH_KEYS(22),
     DERIVE_CUSTOM_QUERY_KEY(23),
-    CONTAINS_TPS(30),
     TL_NUMERIC_TO_TPS(32),
     TL_DISPLAY_TO_TPS(33),
     IS_TPS_TONE_MARK(34),
@@ -53,20 +49,16 @@ public  final class PhoneticsRequest extends
 
     public static MethodCase forNumber(int value) {
       switch (value) {
-        case 10: return NORMALIZE_TONE;
         case 11: return STRIP_TONE;
         case 12: return POJ_TO_TL;
         case 13: return TL_TO_POJ;
-        case 14: return NORMALIZE_TO_TL;
         case 15: return NORMALIZE_INPUT;
-        case 16: return RESTORE_TONE;
         case 18: return GET_TONE_VARIATIONS;
         case 19: return NFD_PREPROCESS_FOR_LOOKUP;
         case 20: return DERIVE_NOTONE;
         case 21: return DERIVE_ABBREV;
         case 22: return DERIVE_CUSTOM_SEARCH_KEYS;
         case 23: return DERIVE_CUSTOM_QUERY_KEY;
-        case 30: return CONTAINS_TPS;
         case 32: return TL_NUMERIC_TO_TPS;
         case 33: return TL_DISPLAY_TO_TPS;
         case 34: return IS_TPS_TONE_MARK;
@@ -92,78 +84,12 @@ public  final class PhoneticsRequest extends
     method_ = null;
   }
 
-  public static final int NORMALIZE_TONE_FIELD_NUMBER = 10;
-  /**
-   * <pre>
-   * --- Phonetics core (8 ops) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.NormalizeTone normalize_tone = 10;</code>
-   */
-  @java.lang.Override
-  public boolean hasNormalizeTone() {
-    return methodCase_ == 10;
-  }
-  /**
-   * <pre>
-   * --- Phonetics core (8 ops) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.NormalizeTone normalize_tone = 10;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.NormalizeTone getNormalizeTone() {
-    if (methodCase_ == 10) {
-       return (com.siansiansu.taigikeyboard.engine.proto.NormalizeTone) method_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.NormalizeTone.getDefaultInstance();
-  }
-  /**
-   * <pre>
-   * --- Phonetics core (8 ops) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.NormalizeTone normalize_tone = 10;</code>
-   */
-  private void setNormalizeTone(com.siansiansu.taigikeyboard.engine.proto.NormalizeTone value) {
-    java.util.Objects.requireNonNull(value);
-    method_ = value;
-    methodCase_ = 10;
-  }
-  /**
-   * <pre>
-   * --- Phonetics core (8 ops) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.NormalizeTone normalize_tone = 10;</code>
-   */
-  private void mergeNormalizeTone(com.siansiansu.taigikeyboard.engine.proto.NormalizeTone value) {
-    java.util.Objects.requireNonNull(value);
-    if (methodCase_ == 10 &&
-        method_ != com.siansiansu.taigikeyboard.engine.proto.NormalizeTone.getDefaultInstance()) {
-      method_ = com.siansiansu.taigikeyboard.engine.proto.NormalizeTone.newBuilder((com.siansiansu.taigikeyboard.engine.proto.NormalizeTone) method_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      method_ = value;
-    }
-    methodCase_ = 10;
-  }
-  /**
-   * <pre>
-   * --- Phonetics core (8 ops) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.NormalizeTone normalize_tone = 10;</code>
-   */
-  private void clearNormalizeTone() {
-    if (methodCase_ == 10) {
-      methodCase_ = 0;
-      method_ = null;
-    }
-  }
-
   public static final int STRIP_TONE_FIELD_NUMBER = 11;
   /**
+   * <pre>
+   * --- Phonetics core (6 ops) ---
+   * </pre>
+   *
    * <code>.taigi.engine.StripTone strip_tone = 11;</code>
    */
   @java.lang.Override
@@ -171,6 +97,10 @@ public  final class PhoneticsRequest extends
     return methodCase_ == 11;
   }
   /**
+   * <pre>
+   * --- Phonetics core (6 ops) ---
+   * </pre>
+   *
    * <code>.taigi.engine.StripTone strip_tone = 11;</code>
    */
   @java.lang.Override
@@ -181,6 +111,10 @@ public  final class PhoneticsRequest extends
     return com.siansiansu.taigikeyboard.engine.proto.StripTone.getDefaultInstance();
   }
   /**
+   * <pre>
+   * --- Phonetics core (6 ops) ---
+   * </pre>
+   *
    * <code>.taigi.engine.StripTone strip_tone = 11;</code>
    */
   private void setStripTone(com.siansiansu.taigikeyboard.engine.proto.StripTone value) {
@@ -189,6 +123,10 @@ public  final class PhoneticsRequest extends
     methodCase_ = 11;
   }
   /**
+   * <pre>
+   * --- Phonetics core (6 ops) ---
+   * </pre>
+   *
    * <code>.taigi.engine.StripTone strip_tone = 11;</code>
    */
   private void mergeStripTone(com.siansiansu.taigikeyboard.engine.proto.StripTone value) {
@@ -203,6 +141,10 @@ public  final class PhoneticsRequest extends
     methodCase_ = 11;
   }
   /**
+   * <pre>
+   * --- Phonetics core (6 ops) ---
+   * </pre>
+   *
    * <code>.taigi.engine.StripTone strip_tone = 11;</code>
    */
   private void clearStripTone() {
@@ -312,56 +254,6 @@ public  final class PhoneticsRequest extends
     }
   }
 
-  public static final int NORMALIZE_TO_TL_FIELD_NUMBER = 14;
-  /**
-   * <code>.taigi.engine.NormalizeToTl normalize_to_tl = 14;</code>
-   */
-  @java.lang.Override
-  public boolean hasNormalizeToTl() {
-    return methodCase_ == 14;
-  }
-  /**
-   * <code>.taigi.engine.NormalizeToTl normalize_to_tl = 14;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.NormalizeToTl getNormalizeToTl() {
-    if (methodCase_ == 14) {
-       return (com.siansiansu.taigikeyboard.engine.proto.NormalizeToTl) method_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.NormalizeToTl.getDefaultInstance();
-  }
-  /**
-   * <code>.taigi.engine.NormalizeToTl normalize_to_tl = 14;</code>
-   */
-  private void setNormalizeToTl(com.siansiansu.taigikeyboard.engine.proto.NormalizeToTl value) {
-    java.util.Objects.requireNonNull(value);
-    method_ = value;
-    methodCase_ = 14;
-  }
-  /**
-   * <code>.taigi.engine.NormalizeToTl normalize_to_tl = 14;</code>
-   */
-  private void mergeNormalizeToTl(com.siansiansu.taigikeyboard.engine.proto.NormalizeToTl value) {
-    java.util.Objects.requireNonNull(value);
-    if (methodCase_ == 14 &&
-        method_ != com.siansiansu.taigikeyboard.engine.proto.NormalizeToTl.getDefaultInstance()) {
-      method_ = com.siansiansu.taigikeyboard.engine.proto.NormalizeToTl.newBuilder((com.siansiansu.taigikeyboard.engine.proto.NormalizeToTl) method_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      method_ = value;
-    }
-    methodCase_ = 14;
-  }
-  /**
-   * <code>.taigi.engine.NormalizeToTl normalize_to_tl = 14;</code>
-   */
-  private void clearNormalizeToTl() {
-    if (methodCase_ == 14) {
-      methodCase_ = 0;
-      method_ = null;
-    }
-  }
-
   public static final int NORMALIZE_INPUT_FIELD_NUMBER = 15;
   /**
    * <code>.taigi.engine.NormalizeInput normalize_input = 15;</code>
@@ -407,56 +299,6 @@ public  final class PhoneticsRequest extends
    */
   private void clearNormalizeInput() {
     if (methodCase_ == 15) {
-      methodCase_ = 0;
-      method_ = null;
-    }
-  }
-
-  public static final int RESTORE_TONE_FIELD_NUMBER = 16;
-  /**
-   * <code>.taigi.engine.RestoreTone restore_tone = 16;</code>
-   */
-  @java.lang.Override
-  public boolean hasRestoreTone() {
-    return methodCase_ == 16;
-  }
-  /**
-   * <code>.taigi.engine.RestoreTone restore_tone = 16;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.RestoreTone getRestoreTone() {
-    if (methodCase_ == 16) {
-       return (com.siansiansu.taigikeyboard.engine.proto.RestoreTone) method_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.RestoreTone.getDefaultInstance();
-  }
-  /**
-   * <code>.taigi.engine.RestoreTone restore_tone = 16;</code>
-   */
-  private void setRestoreTone(com.siansiansu.taigikeyboard.engine.proto.RestoreTone value) {
-    java.util.Objects.requireNonNull(value);
-    method_ = value;
-    methodCase_ = 16;
-  }
-  /**
-   * <code>.taigi.engine.RestoreTone restore_tone = 16;</code>
-   */
-  private void mergeRestoreTone(com.siansiansu.taigikeyboard.engine.proto.RestoreTone value) {
-    java.util.Objects.requireNonNull(value);
-    if (methodCase_ == 16 &&
-        method_ != com.siansiansu.taigikeyboard.engine.proto.RestoreTone.getDefaultInstance()) {
-      method_ = com.siansiansu.taigikeyboard.engine.proto.RestoreTone.newBuilder((com.siansiansu.taigikeyboard.engine.proto.RestoreTone) method_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      method_ = value;
-    }
-    methodCase_ = 16;
-  }
-  /**
-   * <code>.taigi.engine.RestoreTone restore_tone = 16;</code>
-   */
-  private void clearRestoreTone() {
-    if (methodCase_ == 16) {
       methodCase_ = 0;
       method_ = null;
     }
@@ -782,78 +624,12 @@ public  final class PhoneticsRequest extends
     }
   }
 
-  public static final int CONTAINS_TPS_FIELD_NUMBER = 30;
-  /**
-   * <pre>
-   * --- TPS (5 ops) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.ContainsTps contains_tps = 30;</code>
-   */
-  @java.lang.Override
-  public boolean hasContainsTps() {
-    return methodCase_ == 30;
-  }
-  /**
-   * <pre>
-   * --- TPS (5 ops) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.ContainsTps contains_tps = 30;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.ContainsTps getContainsTps() {
-    if (methodCase_ == 30) {
-       return (com.siansiansu.taigikeyboard.engine.proto.ContainsTps) method_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.ContainsTps.getDefaultInstance();
-  }
-  /**
-   * <pre>
-   * --- TPS (5 ops) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.ContainsTps contains_tps = 30;</code>
-   */
-  private void setContainsTps(com.siansiansu.taigikeyboard.engine.proto.ContainsTps value) {
-    java.util.Objects.requireNonNull(value);
-    method_ = value;
-    methodCase_ = 30;
-  }
-  /**
-   * <pre>
-   * --- TPS (5 ops) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.ContainsTps contains_tps = 30;</code>
-   */
-  private void mergeContainsTps(com.siansiansu.taigikeyboard.engine.proto.ContainsTps value) {
-    java.util.Objects.requireNonNull(value);
-    if (methodCase_ == 30 &&
-        method_ != com.siansiansu.taigikeyboard.engine.proto.ContainsTps.getDefaultInstance()) {
-      method_ = com.siansiansu.taigikeyboard.engine.proto.ContainsTps.newBuilder((com.siansiansu.taigikeyboard.engine.proto.ContainsTps) method_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      method_ = value;
-    }
-    methodCase_ = 30;
-  }
-  /**
-   * <pre>
-   * --- TPS (5 ops) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.ContainsTps contains_tps = 30;</code>
-   */
-  private void clearContainsTps() {
-    if (methodCase_ == 30) {
-      methodCase_ = 0;
-      method_ = null;
-    }
-  }
-
   public static final int TL_NUMERIC_TO_TPS_FIELD_NUMBER = 32;
   /**
+   * <pre>
+   * --- TPS (4 ops) ---
+   * </pre>
+   *
    * <code>.taigi.engine.TlNumericToTps tl_numeric_to_tps = 32;</code>
    */
   @java.lang.Override
@@ -861,6 +637,10 @@ public  final class PhoneticsRequest extends
     return methodCase_ == 32;
   }
   /**
+   * <pre>
+   * --- TPS (4 ops) ---
+   * </pre>
+   *
    * <code>.taigi.engine.TlNumericToTps tl_numeric_to_tps = 32;</code>
    */
   @java.lang.Override
@@ -871,6 +651,10 @@ public  final class PhoneticsRequest extends
     return com.siansiansu.taigikeyboard.engine.proto.TlNumericToTps.getDefaultInstance();
   }
   /**
+   * <pre>
+   * --- TPS (4 ops) ---
+   * </pre>
+   *
    * <code>.taigi.engine.TlNumericToTps tl_numeric_to_tps = 32;</code>
    */
   private void setTlNumericToTps(com.siansiansu.taigikeyboard.engine.proto.TlNumericToTps value) {
@@ -879,6 +663,10 @@ public  final class PhoneticsRequest extends
     methodCase_ = 32;
   }
   /**
+   * <pre>
+   * --- TPS (4 ops) ---
+   * </pre>
+   *
    * <code>.taigi.engine.TlNumericToTps tl_numeric_to_tps = 32;</code>
    */
   private void mergeTlNumericToTps(com.siansiansu.taigikeyboard.engine.proto.TlNumericToTps value) {
@@ -893,6 +681,10 @@ public  final class PhoneticsRequest extends
     methodCase_ = 32;
   }
   /**
+   * <pre>
+   * --- TPS (4 ops) ---
+   * </pre>
+   *
    * <code>.taigi.engine.TlNumericToTps tl_numeric_to_tps = 32;</code>
    */
   private void clearTlNumericToTps() {
@@ -1163,77 +955,9 @@ public  final class PhoneticsRequest extends
 
     /**
      * <pre>
-     * --- Phonetics core (8 ops) ---
+     * --- Phonetics core (6 ops) ---
      * </pre>
      *
-     * <code>.taigi.engine.NormalizeTone normalize_tone = 10;</code>
-     */
-    @java.lang.Override
-    public boolean hasNormalizeTone() {
-      return instance.hasNormalizeTone();
-    }
-    /**
-     * <pre>
-     * --- Phonetics core (8 ops) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.NormalizeTone normalize_tone = 10;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.NormalizeTone getNormalizeTone() {
-      return instance.getNormalizeTone();
-    }
-    /**
-     * <pre>
-     * --- Phonetics core (8 ops) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.NormalizeTone normalize_tone = 10;</code>
-     */
-    public Builder setNormalizeTone(com.siansiansu.taigikeyboard.engine.proto.NormalizeTone value) {
-      copyOnWrite();
-      instance.setNormalizeTone(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * --- Phonetics core (8 ops) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.NormalizeTone normalize_tone = 10;</code>
-     */
-    public Builder setNormalizeTone(
-        com.siansiansu.taigikeyboard.engine.proto.NormalizeTone.Builder builderForValue) {
-      copyOnWrite();
-      instance.setNormalizeTone(builderForValue.build());
-      return this;
-    }
-    /**
-     * <pre>
-     * --- Phonetics core (8 ops) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.NormalizeTone normalize_tone = 10;</code>
-     */
-    public Builder mergeNormalizeTone(com.siansiansu.taigikeyboard.engine.proto.NormalizeTone value) {
-      copyOnWrite();
-      instance.mergeNormalizeTone(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * --- Phonetics core (8 ops) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.NormalizeTone normalize_tone = 10;</code>
-     */
-    public Builder clearNormalizeTone() {
-      copyOnWrite();
-      instance.clearNormalizeTone();
-      return this;
-    }
-
-    /**
      * <code>.taigi.engine.StripTone strip_tone = 11;</code>
      */
     @java.lang.Override
@@ -1241,6 +965,10 @@ public  final class PhoneticsRequest extends
       return instance.hasStripTone();
     }
     /**
+     * <pre>
+     * --- Phonetics core (6 ops) ---
+     * </pre>
+     *
      * <code>.taigi.engine.StripTone strip_tone = 11;</code>
      */
     @java.lang.Override
@@ -1248,6 +976,10 @@ public  final class PhoneticsRequest extends
       return instance.getStripTone();
     }
     /**
+     * <pre>
+     * --- Phonetics core (6 ops) ---
+     * </pre>
+     *
      * <code>.taigi.engine.StripTone strip_tone = 11;</code>
      */
     public Builder setStripTone(com.siansiansu.taigikeyboard.engine.proto.StripTone value) {
@@ -1256,6 +988,10 @@ public  final class PhoneticsRequest extends
       return this;
     }
     /**
+     * <pre>
+     * --- Phonetics core (6 ops) ---
+     * </pre>
+     *
      * <code>.taigi.engine.StripTone strip_tone = 11;</code>
      */
     public Builder setStripTone(
@@ -1265,6 +1001,10 @@ public  final class PhoneticsRequest extends
       return this;
     }
     /**
+     * <pre>
+     * --- Phonetics core (6 ops) ---
+     * </pre>
+     *
      * <code>.taigi.engine.StripTone strip_tone = 11;</code>
      */
     public Builder mergeStripTone(com.siansiansu.taigikeyboard.engine.proto.StripTone value) {
@@ -1273,6 +1013,10 @@ public  final class PhoneticsRequest extends
       return this;
     }
     /**
+     * <pre>
+     * --- Phonetics core (6 ops) ---
+     * </pre>
+     *
      * <code>.taigi.engine.StripTone strip_tone = 11;</code>
      */
     public Builder clearStripTone() {
@@ -1378,54 +1122,6 @@ public  final class PhoneticsRequest extends
     }
 
     /**
-     * <code>.taigi.engine.NormalizeToTl normalize_to_tl = 14;</code>
-     */
-    @java.lang.Override
-    public boolean hasNormalizeToTl() {
-      return instance.hasNormalizeToTl();
-    }
-    /**
-     * <code>.taigi.engine.NormalizeToTl normalize_to_tl = 14;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.NormalizeToTl getNormalizeToTl() {
-      return instance.getNormalizeToTl();
-    }
-    /**
-     * <code>.taigi.engine.NormalizeToTl normalize_to_tl = 14;</code>
-     */
-    public Builder setNormalizeToTl(com.siansiansu.taigikeyboard.engine.proto.NormalizeToTl value) {
-      copyOnWrite();
-      instance.setNormalizeToTl(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.NormalizeToTl normalize_to_tl = 14;</code>
-     */
-    public Builder setNormalizeToTl(
-        com.siansiansu.taigikeyboard.engine.proto.NormalizeToTl.Builder builderForValue) {
-      copyOnWrite();
-      instance.setNormalizeToTl(builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.NormalizeToTl normalize_to_tl = 14;</code>
-     */
-    public Builder mergeNormalizeToTl(com.siansiansu.taigikeyboard.engine.proto.NormalizeToTl value) {
-      copyOnWrite();
-      instance.mergeNormalizeToTl(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.NormalizeToTl normalize_to_tl = 14;</code>
-     */
-    public Builder clearNormalizeToTl() {
-      copyOnWrite();
-      instance.clearNormalizeToTl();
-      return this;
-    }
-
-    /**
      * <code>.taigi.engine.NormalizeInput normalize_input = 15;</code>
      */
     @java.lang.Override
@@ -1470,54 +1166,6 @@ public  final class PhoneticsRequest extends
     public Builder clearNormalizeInput() {
       copyOnWrite();
       instance.clearNormalizeInput();
-      return this;
-    }
-
-    /**
-     * <code>.taigi.engine.RestoreTone restore_tone = 16;</code>
-     */
-    @java.lang.Override
-    public boolean hasRestoreTone() {
-      return instance.hasRestoreTone();
-    }
-    /**
-     * <code>.taigi.engine.RestoreTone restore_tone = 16;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.RestoreTone getRestoreTone() {
-      return instance.getRestoreTone();
-    }
-    /**
-     * <code>.taigi.engine.RestoreTone restore_tone = 16;</code>
-     */
-    public Builder setRestoreTone(com.siansiansu.taigikeyboard.engine.proto.RestoreTone value) {
-      copyOnWrite();
-      instance.setRestoreTone(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.RestoreTone restore_tone = 16;</code>
-     */
-    public Builder setRestoreTone(
-        com.siansiansu.taigikeyboard.engine.proto.RestoreTone.Builder builderForValue) {
-      copyOnWrite();
-      instance.setRestoreTone(builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.RestoreTone restore_tone = 16;</code>
-     */
-    public Builder mergeRestoreTone(com.siansiansu.taigikeyboard.engine.proto.RestoreTone value) {
-      copyOnWrite();
-      instance.mergeRestoreTone(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.RestoreTone restore_tone = 16;</code>
-     */
-    public Builder clearRestoreTone() {
-      copyOnWrite();
-      instance.clearRestoreTone();
       return this;
     }
 
@@ -1835,77 +1483,9 @@ public  final class PhoneticsRequest extends
 
     /**
      * <pre>
-     * --- TPS (5 ops) ---
+     * --- TPS (4 ops) ---
      * </pre>
      *
-     * <code>.taigi.engine.ContainsTps contains_tps = 30;</code>
-     */
-    @java.lang.Override
-    public boolean hasContainsTps() {
-      return instance.hasContainsTps();
-    }
-    /**
-     * <pre>
-     * --- TPS (5 ops) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.ContainsTps contains_tps = 30;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.ContainsTps getContainsTps() {
-      return instance.getContainsTps();
-    }
-    /**
-     * <pre>
-     * --- TPS (5 ops) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.ContainsTps contains_tps = 30;</code>
-     */
-    public Builder setContainsTps(com.siansiansu.taigikeyboard.engine.proto.ContainsTps value) {
-      copyOnWrite();
-      instance.setContainsTps(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * --- TPS (5 ops) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.ContainsTps contains_tps = 30;</code>
-     */
-    public Builder setContainsTps(
-        com.siansiansu.taigikeyboard.engine.proto.ContainsTps.Builder builderForValue) {
-      copyOnWrite();
-      instance.setContainsTps(builderForValue.build());
-      return this;
-    }
-    /**
-     * <pre>
-     * --- TPS (5 ops) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.ContainsTps contains_tps = 30;</code>
-     */
-    public Builder mergeContainsTps(com.siansiansu.taigikeyboard.engine.proto.ContainsTps value) {
-      copyOnWrite();
-      instance.mergeContainsTps(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * --- TPS (5 ops) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.ContainsTps contains_tps = 30;</code>
-     */
-    public Builder clearContainsTps() {
-      copyOnWrite();
-      instance.clearContainsTps();
-      return this;
-    }
-
-    /**
      * <code>.taigi.engine.TlNumericToTps tl_numeric_to_tps = 32;</code>
      */
     @java.lang.Override
@@ -1913,6 +1493,10 @@ public  final class PhoneticsRequest extends
       return instance.hasTlNumericToTps();
     }
     /**
+     * <pre>
+     * --- TPS (4 ops) ---
+     * </pre>
+     *
      * <code>.taigi.engine.TlNumericToTps tl_numeric_to_tps = 32;</code>
      */
     @java.lang.Override
@@ -1920,6 +1504,10 @@ public  final class PhoneticsRequest extends
       return instance.getTlNumericToTps();
     }
     /**
+     * <pre>
+     * --- TPS (4 ops) ---
+     * </pre>
+     *
      * <code>.taigi.engine.TlNumericToTps tl_numeric_to_tps = 32;</code>
      */
     public Builder setTlNumericToTps(com.siansiansu.taigikeyboard.engine.proto.TlNumericToTps value) {
@@ -1928,6 +1516,10 @@ public  final class PhoneticsRequest extends
       return this;
     }
     /**
+     * <pre>
+     * --- TPS (4 ops) ---
+     * </pre>
+     *
      * <code>.taigi.engine.TlNumericToTps tl_numeric_to_tps = 32;</code>
      */
     public Builder setTlNumericToTps(
@@ -1937,6 +1529,10 @@ public  final class PhoneticsRequest extends
       return this;
     }
     /**
+     * <pre>
+     * --- TPS (4 ops) ---
+     * </pre>
+     *
      * <code>.taigi.engine.TlNumericToTps tl_numeric_to_tps = 32;</code>
      */
     public Builder mergeTlNumericToTps(com.siansiansu.taigikeyboard.engine.proto.TlNumericToTps value) {
@@ -1945,6 +1541,10 @@ public  final class PhoneticsRequest extends
       return this;
     }
     /**
+     * <pre>
+     * --- TPS (4 ops) ---
+     * </pre>
+     *
      * <code>.taigi.engine.TlNumericToTps tl_numeric_to_tps = 32;</code>
      */
     public Builder clearTlNumericToTps() {
@@ -2115,30 +1715,25 @@ public  final class PhoneticsRequest extends
           java.lang.Object[] objects = new java.lang.Object[] {
             "method_",
             "methodCase_",
-            com.siansiansu.taigikeyboard.engine.proto.NormalizeTone.class,
             com.siansiansu.taigikeyboard.engine.proto.StripTone.class,
             com.siansiansu.taigikeyboard.engine.proto.PojToTl.class,
             com.siansiansu.taigikeyboard.engine.proto.TlToPoj.class,
-            com.siansiansu.taigikeyboard.engine.proto.NormalizeToTl.class,
             com.siansiansu.taigikeyboard.engine.proto.NormalizeInput.class,
-            com.siansiansu.taigikeyboard.engine.proto.RestoreTone.class,
             com.siansiansu.taigikeyboard.engine.proto.GetToneVariations.class,
             com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup.class,
             com.siansiansu.taigikeyboard.engine.proto.DeriveNotone.class,
             com.siansiansu.taigikeyboard.engine.proto.DeriveAbbrev.class,
             com.siansiansu.taigikeyboard.engine.proto.DeriveCustomSearchKeys.class,
             com.siansiansu.taigikeyboard.engine.proto.DeriveCustomQueryKey.class,
-            com.siansiansu.taigikeyboard.engine.proto.ContainsTps.class,
             com.siansiansu.taigikeyboard.engine.proto.TlNumericToTps.class,
             com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps.class,
             com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark.class,
             com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust.class,
           };
           java.lang.String info =
-              "\u0000\u0012\u0001\u0000\n#\u0012\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f<\u0000" +
-              "\r<\u0000\u000e<\u0000\u000f<\u0000\u0010<\u0000\u0012<\u0000\u0013<\u0000\u0014" +
-              "<\u0000\u0015<\u0000\u0016<\u0000\u0017<\u0000\u001e<\u0000 <\u0000!<\u0000\"<\u0000" +
-              "#<\u0000";
+              "\u0000\u000e\u0001\u0000\u000b#\u000e\u0000\u0000\u0000\u000b<\u0000\f<\u0000\r<" +
+              "\u0000\u000f<\u0000\u0012<\u0000\u0013<\u0000\u0014<\u0000\u0015<\u0000\u0016<\u0000" +
+              "\u0017<\u0000 <\u0000!<\u0000\"<\u0000#<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

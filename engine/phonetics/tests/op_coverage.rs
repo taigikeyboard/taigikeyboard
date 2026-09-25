@@ -4,15 +4,15 @@
 //! coverage for the TPS input adjuster and NBSP-as-non-delimiter for
 //! `derive_abbrev`.
 
+use phonetics::api::normalize_tone;
 use phonetics::dispatch::handle;
 use protos::engine::phonetics_request::Method;
 use protos::engine::phonetics_response::Result as PhonResult;
 use protos::engine::{
-    AppConfig, BoolResult, ContainsTps, DeriveAbbrev, DeriveNotone, GetToneVariations,
-    IsTpsToneMark, NfdPreprocessForLookup, NormalizeInput, NormalizeToTl, NormalizeTone,
-    OptionalStringResult, PhoneticsRequest, PhoneticsResponse, PojToTl, RestoreTone, StringResult,
-    StripTone, StripToneResult, TlDisplayToTps, TlNumericToTps, TlToPoj, ToneVariationsResult,
-    TpsAdjustResult, TpsInputAdjust,
+    AppConfig, BoolResult, DeriveAbbrev, DeriveNotone, GetToneVariations, IsTpsToneMark,
+    NfdPreprocessForLookup, NormalizeInput, PhoneticsRequest, PhoneticsResponse, PojToTl,
+    StringResult, StripTone, StripToneResult, TlDisplayToTps, TlNumericToTps, TlToPoj,
+    ToneVariationsResult, TpsAdjustResult, TpsInputAdjust,
 };
 
 // ---------------- helpers ----------------
@@ -24,11 +24,11 @@ use protos::engine::{
 // from the phonetics crate would invert the production dependency
 // graph.
 
-fn run(method: Method, config: AppConfig) -> PhoneticsResponse {
+fn run(method: Method) -> PhoneticsResponse {
     let req = PhoneticsRequest {
         method: Some(method),
     };
-    handle(&req, &config).expect("dispatch handle should succeed")
+    handle(&req).expect("dispatch handle should succeed")
 }
 
 fn ok_phon(resp: &PhoneticsResponse) -> &PhonResult {
@@ -49,18 +49,6 @@ fn bool_result(resp: &PhoneticsResponse) -> bool {
         panic!("expected BoolResult");
     };
     *value
-}
-
-fn opt_result(resp: &PhoneticsResponse) -> Option<String> {
-    let PhonResult::OptionalStringResult(OptionalStringResult { output, present }) = ok_phon(resp)
-    else {
-        panic!("expected OptionalStringResult");
-    };
-    if *present {
-        Some(output.clone())
-    } else {
-        None
-    }
 }
 
 fn strip_result(resp: &PhoneticsResponse) -> (String, String) {
@@ -131,15 +119,12 @@ fn poj_config(oo: bool, nn: bool) -> AppConfig {
 // Phonetics core
 // ============================================================
 
+// `api::normalize_tone` — live via `composing::derived`; the retired
+// `NormalizeTone` op no longer carries it, so these call it directly.
+
 #[test]
 fn normalize_tone_tl_basic() {
-    let resp = run(
-        Method::NormalizeTone(NormalizeTone {
-            input: "ho2".to_string(),
-        }),
-        tl_config(),
-    );
-    let out = string_result(&resp);
+    let out = normalize_tone("ho2", &tl_config());
     // Tone digit 2 → diacritic on vowel; exact NFC form matches existing
     // to_tone_marks behavior.
     assert!(
@@ -154,13 +139,7 @@ fn normalize_tone_poj_oo_doubletap_enabled() {
     // No tone digit so to_tone_marks is a no-op; only the doubletap
     // preprocessor's transformation is observable. With toggle ON, "hoo"
     // becomes "ho͘".
-    let resp = run(
-        Method::NormalizeTone(NormalizeTone {
-            input: "hoo".to_string(),
-        }),
-        poj_config(true, false),
-    );
-    let out = string_result(&resp);
+    let out = normalize_tone("hoo", &poj_config(true, false));
     assert!(out.contains('\u{0358}'), "expected o͘ (U+0358): {out:?}");
 }
 
@@ -168,25 +147,13 @@ fn normalize_tone_poj_oo_doubletap_enabled() {
 fn normalize_tone_poj_oo_doubletap_disabled() {
     // Same input, toggle OFF — preprocessor is a no-op so "oo" remains
     // literal and U+0358 is absent.
-    let resp = run(
-        Method::NormalizeTone(NormalizeTone {
-            input: "hoo".to_string(),
-        }),
-        poj_config(false, false),
-    );
-    let out = string_result(&resp);
+    let out = normalize_tone("hoo", &poj_config(false, false));
     assert!(!out.contains('\u{0358}'), "no preprocess; got {out:?}");
 }
 
 #[test]
 fn normalize_tone_poj_nn_doubletap_enabled() {
-    let resp = run(
-        Method::NormalizeTone(NormalizeTone {
-            input: "ann2".to_string(),
-        }),
-        poj_config(false, true),
-    );
-    let out = string_result(&resp);
+    let out = normalize_tone("ann2", &poj_config(false, true));
     // Vowel + nn → vowel + ⁿ (U+207F).
     assert!(out.contains('\u{207f}'), "expected ⁿ (U+207F): {out:?}");
 }
@@ -209,13 +176,8 @@ fn normalize_tone_poj_both_doubletaps_fold_independently() {
         ("honn", "ho\u{207f}"),
         ("ann", "a\u{207f}"),
     ] {
-        let resp = run(
-            Method::NormalizeTone(NormalizeTone {
-                input: input.to_string(),
-            }),
-            poj_config(true, true),
-        );
-        assert_eq!(string_result(&resp), expected, "input {input:?}");
+        let out = normalize_tone(input, &poj_config(true, true));
+        assert_eq!(out, expected, "input {input:?}");
     }
 }
 
@@ -231,25 +193,15 @@ fn normalize_tone_poj_doubletap_folds_uppercase() {
         ("Hoonn", "Ho\u{0358}\u{207f}"),
         ("hooNN", "ho\u{0358}\u{207f}"),
     ] {
-        let resp = run(
-            Method::NormalizeTone(NormalizeTone {
-                input: input.to_string(),
-            }),
-            poj_config(true, true),
-        );
-        assert_eq!(string_result(&resp), expected, "input {input:?}");
+        let out = normalize_tone(input, &poj_config(true, true));
+        assert_eq!(out, expected, "input {input:?}");
     }
     // A shift between the two taps still folds: the pair is matched
     // case-insensitively and the FIRST tap decides the letter's case.
     // trace: "hoOnn" -> nn fold -> "hoOⁿ" -> oo fold pairs o+O, first tap
     //        lowercase -> "ho͘ⁿ" -> case pass sees `o` -> "ho͘ⁿ"
-    let resp = run(
-        Method::NormalizeTone(NormalizeTone {
-            input: "hoOnn".to_string(),
-        }),
-        poj_config(true, true),
-    );
-    assert_eq!(string_result(&resp), "ho\u{0358}\u{207f}");
+    let out = normalize_tone("hoOnn", &poj_config(true, true));
+    assert_eq!(out, "ho\u{0358}\u{207f}");
 }
 
 #[test]
@@ -275,13 +227,8 @@ fn normalize_tone_poj_oo_doubletap_pairs_in_one_pass() {
         // Odd run: the trailing unpaired `o` is left alone.
         ("hooo", "ho\u{0358}o"),
     ] {
-        let resp = run(
-            Method::NormalizeTone(NormalizeTone {
-                input: input.to_string(),
-            }),
-            poj_config(true, false),
-        );
-        assert_eq!(string_result(&resp), expected, "input {input:?}");
+        let out = normalize_tone(input, &poj_config(true, false));
+        assert_eq!(out, expected, "input {input:?}");
     }
 }
 
@@ -289,39 +236,21 @@ fn normalize_tone_poj_oo_doubletap_pairs_in_one_pass() {
 fn normalize_tone_poj_doubletap_toggles_stay_independent() {
     // Each toggle alone still does exactly its own rewrite and nothing else —
     // the reorder must not make one imply the other.
-    let resp = run(
-        Method::NormalizeTone(NormalizeTone {
-            input: "hoonn".to_string(),
-        }),
-        poj_config(false, true),
-    );
-    assert_eq!(string_result(&resp), "hoo\u{207f}", "nn only");
+    let out = normalize_tone("hoonn", &poj_config(false, true));
+    assert_eq!(out, "hoo\u{207f}", "nn only");
 
-    let resp = run(
-        Method::NormalizeTone(NormalizeTone {
-            input: "hoonn".to_string(),
-        }),
-        poj_config(true, false),
-    );
-    assert_eq!(string_result(&resp), "ho\u{0358}nn", "oo only");
+    let out = normalize_tone("hoonn", &poj_config(true, false));
+    assert_eq!(out, "ho\u{0358}nn", "oo only");
 
-    let resp = run(
-        Method::NormalizeTone(NormalizeTone {
-            input: "hoonn".to_string(),
-        }),
-        poj_config(false, false),
-    );
-    assert_eq!(string_result(&resp), "hoonn", "neither");
+    let out = normalize_tone("hoonn", &poj_config(false, false));
+    assert_eq!(out, "hoonn", "neither");
 }
 
 #[test]
 fn strip_tone_returns_bare_and_tone() {
-    let resp = run(
-        Method::StripTone(StripTone {
-            input: "hó".to_string(),
-        }),
-        tl_config(),
-    );
+    let resp = run(Method::StripTone(StripTone {
+        input: "hó".to_string(),
+    }));
     let (bare, tone) = strip_result(&resp);
     assert_eq!(bare, "ho");
     assert_eq!(tone, "2");
@@ -329,24 +258,18 @@ fn strip_tone_returns_bare_and_tone() {
 
 #[test]
 fn poj_to_tl_display_round_trip() {
-    let resp = run(
-        Method::PojToTl(PojToTl {
-            input: "ho͘".to_string(),
-        }),
-        tl_config(),
-    );
+    let resp = run(Method::PojToTl(PojToTl {
+        input: "ho͘".to_string(),
+    }));
     let out = string_result(&resp);
     assert!(out.contains("hoo"), "POJ o͘ should map to TL oo: {out:?}");
 }
 
 #[test]
 fn tl_to_poj_display_round_trip() {
-    let resp = run(
-        Method::TlToPoj(TlToPoj {
-            input: "hoo".to_string(),
-        }),
-        tl_config(),
-    );
+    let resp = run(Method::TlToPoj(TlToPoj {
+        input: "hoo".to_string(),
+    }));
     let out = string_result(&resp);
     assert!(
         out.contains('\u{0358}'),
@@ -355,79 +278,35 @@ fn tl_to_poj_display_round_trip() {
 }
 
 #[test]
-fn normalize_to_tl_passes_input_through_normalizer() {
-    let resp = run(
-        Method::NormalizeToTl(NormalizeToTl {
-            input: "hoo".to_string(),
-        }),
-        tl_config(),
-    );
-    let out = string_result(&resp);
-    assert_eq!(out, "hoo");
-}
-
-#[test]
 fn normalize_input_extracts_tone_from_diacritic() {
-    let resp = run(
-        Method::NormalizeInput(NormalizeInput {
-            input: "hó".to_string(),
-        }),
-        tl_config(),
-    );
+    let resp = run(Method::NormalizeInput(NormalizeInput {
+        input: "hó".to_string(),
+    }));
     let out = string_result(&resp);
     assert_eq!(out, "ho2");
 }
 
 #[test]
 fn normalize_input_handles_hyphenated_syllables() {
-    let resp = run(
-        Method::NormalizeInput(NormalizeInput {
-            input: "gâu-tsá".to_string(),
-        }),
-        tl_config(),
-    );
+    let resp = run(Method::NormalizeInput(NormalizeInput {
+        input: "gâu-tsá".to_string(),
+    }));
     let out = string_result(&resp);
     assert!(out.contains("gau5") && out.contains("tsa2"), "got {out:?}");
 }
 
 #[test]
 fn normalize_input_keeps_existing_tone_digit() {
-    let resp = run(
-        Method::NormalizeInput(NormalizeInput {
-            input: "ho2".to_string(),
-        }),
-        tl_config(),
-    );
+    let resp = run(Method::NormalizeInput(NormalizeInput {
+        input: "ho2".to_string(),
+    }));
     let out = string_result(&resp);
     assert_eq!(out, "ho2");
 }
 
 #[test]
-fn restore_tone_returns_text_without_last_diacritic() {
-    let resp = run(
-        Method::RestoreTone(RestoreTone {
-            text: "hó".to_string(),
-        }),
-        tl_config(),
-    );
-    let out = opt_result(&resp);
-    assert_eq!(out, Some("ho".to_string()));
-}
-
-#[test]
-fn restore_tone_returns_none_when_no_tone_mark() {
-    let resp = run(
-        Method::RestoreTone(RestoreTone {
-            text: "ho".to_string(),
-        }),
-        tl_config(),
-    );
-    assert_eq!(opt_result(&resp), None);
-}
-
-#[test]
 fn get_tone_variations_returns_both_modes() {
-    let resp = run(Method::GetToneVariations(GetToneVariations {}), tl_config());
+    let resp = run(Method::GetToneVariations(GetToneVariations {}));
     let result = tone_variations_result(&resp);
     assert!(!result.poj_variations.is_empty(), "POJ map non-empty");
     assert!(!result.tl_variations.is_empty(), "TL map non-empty");
@@ -440,23 +319,17 @@ fn get_tone_variations_returns_both_modes() {
 
 #[test]
 fn nfd_preprocess_for_lookup_collapses_o_dot() {
-    let resp = run(
-        Method::NfdPreprocessForLookup(NfdPreprocessForLookup {
-            input: "ho\u{0358}".to_string(),
-        }),
-        tl_config(),
-    );
+    let resp = run(Method::NfdPreprocessForLookup(NfdPreprocessForLookup {
+        input: "ho\u{0358}".to_string(),
+    }));
     assert_eq!(string_result(&resp), "hoo");
 }
 
 #[test]
 fn nfd_preprocess_for_lookup_substitutes_nasal_marker() {
-    let resp = run(
-        Method::NfdPreprocessForLookup(NfdPreprocessForLookup {
-            input: "sa\u{207f}".to_string(),
-        }),
-        tl_config(),
-    );
+    let resp = run(Method::NfdPreprocessForLookup(NfdPreprocessForLookup {
+        input: "sa\u{207f}".to_string(),
+    }));
     assert_eq!(string_result(&resp), "sann");
 }
 
@@ -466,56 +339,41 @@ fn nfd_preprocess_for_lookup_substitutes_nasal_marker() {
 
 #[test]
 fn derive_notone_strips_diacritics_digits_hyphens_spaces() {
-    let resp = run(
-        Method::DeriveNotone(DeriveNotone {
-            roman: "Gâu-tsá 2".to_string(),
-        }),
-        tl_config(),
-    );
+    let resp = run(Method::DeriveNotone(DeriveNotone {
+        roman: "Gâu-tsá 2".to_string(),
+    }));
     assert_eq!(string_result(&resp), "gautsa");
 }
 
 #[test]
 fn derive_notone_converts_nasal_marker_to_nn() {
-    let resp = run(
-        Method::DeriveNotone(DeriveNotone {
-            roman: "siu\u{207f}".to_string(),
-        }),
-        tl_config(),
-    );
+    let resp = run(Method::DeriveNotone(DeriveNotone {
+        roman: "siu\u{207f}".to_string(),
+    }));
     assert_eq!(string_result(&resp), "siunn");
 }
 
 #[test]
 fn derive_abbrev_returns_first_char_per_syllable() {
-    let resp = run(
-        Method::DeriveAbbrev(DeriveAbbrev {
-            roman: "gâu-tsá".to_string(),
-        }),
-        tl_config(),
-    );
+    let resp = run(Method::DeriveAbbrev(DeriveAbbrev {
+        roman: "gâu-tsá".to_string(),
+    }));
     assert_eq!(string_result(&resp), "gt");
 }
 
 #[test]
 fn derive_abbrev_returns_empty_on_single_syllable() {
-    let resp = run(
-        Method::DeriveAbbrev(DeriveAbbrev {
-            roman: "hó".to_string(),
-        }),
-        tl_config(),
-    );
+    let resp = run(Method::DeriveAbbrev(DeriveAbbrev {
+        roman: "hó".to_string(),
+    }));
     assert_eq!(string_result(&resp), "");
 }
 
 #[test]
 fn derive_abbrev_splits_on_ascii_whitespace_and_hyphen() {
-    let resp = run(
-        Method::DeriveAbbrev(DeriveAbbrev {
-            roman: "a\tb\nc d-e".to_string(),
-        }),
-        tl_config(),
-    );
+    let resp = run(Method::DeriveAbbrev(DeriveAbbrev {
+        roman: "a\tb\nc d-e".to_string(),
+    }));
     assert_eq!(string_result(&resp), "abcde");
 }
 
@@ -525,12 +383,9 @@ fn derive_abbrev_splits_on_ascii_whitespace_and_hyphen() {
 /// avoids splitting U+00A0.
 #[test]
 fn derive_abbrev_does_not_split_on_nbsp() {
-    let resp = run(
-        Method::DeriveAbbrev(DeriveAbbrev {
-            roman: "a\u{00A0}b".to_string(),
-        }),
-        tl_config(),
-    );
+    let resp = run(Method::DeriveAbbrev(DeriveAbbrev {
+        roman: "a\u{00A0}b".to_string(),
+    }));
     // NBSP is not a delimiter, so "a\u{00A0}b" is a single syllable → "" abbrev.
     assert_eq!(string_result(&resp), "");
 }
@@ -539,37 +394,25 @@ fn derive_abbrev_does_not_split_on_nbsp() {
 // TPS
 // ============================================================
 
+// `api::contains_tps` — live via composing / custom_search / nextword; the
+// retired `ContainsTps` op no longer carries it, so these call it directly.
+
 #[test]
 fn contains_tps_true_for_zhuyin() {
-    let resp = run(
-        Method::ContainsTps(ContainsTps {
-            text: "ㄉㄧㄠ".to_string(),
-        }),
-        tl_config(),
-    );
-    assert!(bool_result(&resp));
+    assert!(phonetics::api::contains_tps("ㄉㄧㄠ"));
 }
 
 #[test]
 fn contains_tps_false_for_latin() {
-    let resp = run(
-        Method::ContainsTps(ContainsTps {
-            text: "tiau".to_string(),
-        }),
-        tl_config(),
-    );
-    assert!(!bool_result(&resp));
+    assert!(!phonetics::api::contains_tps("tiau"));
 }
 
 #[test]
 fn tl_numeric_to_tps_basic() {
-    let resp = run(
-        Method::TlNumericToTps(TlNumericToTps {
-            text: "tiau5".to_string(),
-            or_maps_to_er: false,
-        }),
-        tl_config(),
-    );
+    let resp = run(Method::TlNumericToTps(TlNumericToTps {
+        text: "tiau5".to_string(),
+        or_maps_to_er: false,
+    }));
     let out = string_result(&resp);
     assert!(
         !out.is_empty(),
@@ -579,13 +422,10 @@ fn tl_numeric_to_tps_basic() {
 
 #[test]
 fn tl_display_to_tps_uses_display_form() {
-    let resp = run(
-        Method::TlDisplayToTps(TlDisplayToTps {
-            text: "tiâu".to_string(),
-            or_maps_to_er: false,
-        }),
-        tl_config(),
-    );
+    let resp = run(Method::TlDisplayToTps(TlDisplayToTps {
+        text: "tiâu".to_string(),
+        or_maps_to_er: false,
+    }));
     let out = string_result(&resp);
     assert!(
         !out.is_empty(),
@@ -598,13 +438,10 @@ fn tl_display_to_tps_uses_display_form() {
 /// `TLToTPS.convert`.
 #[test]
 fn tl_numeric_to_tps_or_default_uses_o_vowel() {
-    let resp = run(
-        Method::TlNumericToTps(TlNumericToTps {
-            text: "kor1".to_string(),
-            or_maps_to_er: false,
-        }),
-        tl_config(),
-    );
+    let resp = run(Method::TlNumericToTps(TlNumericToTps {
+        text: "kor1".to_string(),
+        or_maps_to_er: false,
+    }));
     let out = string_result(&resp);
     assert!(
         out.contains('\u{311b}'),
@@ -620,13 +457,10 @@ fn tl_numeric_to_tps_or_default_uses_o_vowel() {
 /// matching iOS `orMapsToER=true`.
 #[test]
 fn tl_numeric_to_tps_or_maps_to_er_when_enabled() {
-    let resp = run(
-        Method::TlNumericToTps(TlNumericToTps {
-            text: "kor1".to_string(),
-            or_maps_to_er: true,
-        }),
-        tl_config(),
-    );
+    let resp = run(Method::TlNumericToTps(TlNumericToTps {
+        text: "kor1".to_string(),
+        or_maps_to_er: true,
+    }));
     let out = string_result(&resp);
     assert!(
         out.contains('\u{311c}'),
@@ -642,13 +476,10 @@ fn tl_numeric_to_tps_or_maps_to_er_when_enabled() {
 /// space, matching iOS `joined(separator: " ")` / Android `joinToString(" ")`.
 #[test]
 fn tl_numeric_to_tps_preserves_syllable_boundaries() {
-    let resp = run(
-        Method::TlNumericToTps(TlNumericToTps {
-            text: "gua2-gua2".to_string(),
-            or_maps_to_er: false,
-        }),
-        tl_config(),
-    );
+    let resp = run(Method::TlNumericToTps(TlNumericToTps {
+        text: "gua2-gua2".to_string(),
+        or_maps_to_er: false,
+    }));
     let out = string_result(&resp);
     let space_count = out.matches(' ').count();
     assert_eq!(
@@ -661,13 +492,10 @@ fn tl_numeric_to_tps_preserves_syllable_boundaries() {
 /// double spaces — empty tokens are filtered before joining.
 #[test]
 fn tl_numeric_to_tps_handles_repeated_hyphen_without_double_space() {
-    let resp = run(
-        Method::TlNumericToTps(TlNumericToTps {
-            text: "gua2--gua2".to_string(),
-            or_maps_to_er: false,
-        }),
-        tl_config(),
-    );
+    let resp = run(Method::TlNumericToTps(TlNumericToTps {
+        text: "gua2--gua2".to_string(),
+        or_maps_to_er: false,
+    }));
     let out = string_result(&resp);
     assert!(
         !out.contains("  "),
@@ -684,13 +512,10 @@ fn tl_numeric_to_tps_handles_repeated_hyphen_without_double_space() {
 /// also apply there.
 #[test]
 fn tl_display_to_tps_preserves_syllable_boundaries() {
-    let resp = run(
-        Method::TlDisplayToTps(TlDisplayToTps {
-            text: "guá-guá".to_string(),
-            or_maps_to_er: false,
-        }),
-        tl_config(),
-    );
+    let resp = run(Method::TlDisplayToTps(TlDisplayToTps {
+        text: "guá-guá".to_string(),
+        or_maps_to_er: false,
+    }));
     let out = string_result(&resp);
     assert_eq!(
         out.matches(' ').count(),
@@ -701,47 +526,35 @@ fn tl_display_to_tps_preserves_syllable_boundaries() {
 
 #[test]
 fn is_tps_tone_mark_true_for_acute() {
-    let resp = run(
-        Method::IsTpsToneMark(IsTpsToneMark {
-            char: "\u{02ca}".to_string(),
-        }),
-        tl_config(),
-    );
+    let resp = run(Method::IsTpsToneMark(IsTpsToneMark {
+        char: "\u{02ca}".to_string(),
+    }));
     assert!(bool_result(&resp));
 }
 
 #[test]
 fn is_tps_tone_mark_false_for_letter() {
-    let resp = run(
-        Method::IsTpsToneMark(IsTpsToneMark {
-            char: "a".to_string(),
-        }),
-        tl_config(),
-    );
+    let resp = run(Method::IsTpsToneMark(IsTpsToneMark {
+        char: "a".to_string(),
+    }));
     assert!(!bool_result(&resp));
 }
 
 #[test]
 fn is_tps_tone_mark_false_for_empty() {
-    let resp = run(
-        Method::IsTpsToneMark(IsTpsToneMark {
-            char: String::new(),
-        }),
-        tl_config(),
-    );
+    let resp = run(Method::IsTpsToneMark(IsTpsToneMark {
+        char: String::new(),
+    }));
     assert!(!bool_result(&resp));
 }
 
 // ---- TpsInputAdjust branch coverage (mirrors commit-1 platform fixtures)
 
 fn tps_adjust(incoming: &str, raw: &str) -> (String, Option<String>) {
-    let resp = run(
-        Method::TpsInputAdjust(TpsInputAdjust {
-            incoming: incoming.to_string(),
-            raw_input: raw.to_string(),
-        }),
-        tl_config(),
-    );
+    let resp = run(Method::TpsInputAdjust(TpsInputAdjust {
+        incoming: incoming.to_string(),
+        raw_input: raw.to_string(),
+    }));
     tps_adjust_result(&resp)
 }
 
