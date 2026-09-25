@@ -16,6 +16,7 @@ import com.siansiansu.taigikeyboard.ime.core.db.vacuumBestEffort
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
+import com.siansiansu.taigikeyboard.ime.text.keyboard.lastGrapheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -247,7 +248,7 @@ class NextWordService(
                 return@withContext emptyList()
             }
 
-            val lastChar = word.last().toString()
+            val lastChar = lastGrapheme(word)
 
             ensureInitialized()
 

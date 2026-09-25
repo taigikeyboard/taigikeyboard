@@ -131,6 +131,18 @@ class TextInputKeyHandlerTest {
         assertEquals(2, lastGraphemeLength("é"))
     }
 
+    // INVARIANT_NEXTWORD_LOOKUP_KEY_LAST_GRAPHEME — the next-word bundled
+    // lookup key and the backspace re-predict key. 𣍐 (U+2334D) is a UTF-16
+    // surrogate pair; `String.last()` used to return its low half alone.
+    // Mirrors iOS `NextWordRepositoryTests` (Swift `String.last`).
+    @Test
+    fun `INVARIANT nextword lookup key keeps a supplementary Hanji whole`() {
+        assertEquals("𣍐", lastGrapheme("𣍐"))
+        assertEquals("𣍐", lastGrapheme("袂𣍐"))
+        assertEquals("安", lastGrapheme("早安"))
+        assertEquals("", lastGrapheme(""))
+    }
+
     // resolveBackspaceDeletion is the editor-capability dispatch table. InputType
     // constants inline as primitives, so this runs on plain JVM without an
     // InputConnection mock; the IC calls that apply each action are

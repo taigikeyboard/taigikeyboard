@@ -104,9 +104,7 @@ final class NextWordService: @unchecked Sendable {
         roman: String = "",
         limit: Int = Constants.defaultLimit,
     ) async -> [RustEngineBridge.NextWordRawRow] {
-        guard !word.isEmpty else { return [] }
-        guard let last = word.last else { return [] }
-        let lastChar = String(last)
+        guard let lastChar = Self.bundledLookupKey(for: word) else { return [] }
 
         logger.debug("[PREDICT][ENTRY] word='\(word)' lastChar='\(lastChar)'")
 
@@ -119,6 +117,14 @@ final class NextWordService: @unchecked Sendable {
         logger.debug("[PREDICT][USER] userRows added=\(rows.count - dictCount) total=\(rows.count) for word='\(word)'")
 
         return rows
+    }
+
+    /// The `association.bin` key for `word`: its last user-perceived character,
+    /// whole (a supplementary-plane Hanji like 𣍐 stays one key); nil when empty.
+    /// CROSS-PLATFORM INVARIANT — mirrors Android `lastGrapheme`
+    /// (`ime/text/keyboard/TextInputKeyHandler.kt`). Drift causes silent divergence.
+    static func bundledLookupKey(for word: String) -> String? {
+        word.last.map(String.init)
     }
 
     // MARK: - Public API: Recording

@@ -20,6 +20,7 @@ import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.dictionary.NextWordService
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import com.siansiansu.taigikeyboard.ime.text.composing.splitIntoSingleScriptCells
+import com.siansiansu.taigikeyboard.ime.text.keyboard.lastGrapheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -280,7 +281,7 @@ class NextWordHandler(
         }
         applyDecideResult(
             RustEngineBridge.nextwordBackspace(
-                lastChar = trimmed.last().toString(),
+                lastChar = lastGrapheme(trimmed),
                 nowMs = nowMs,
                 mode = settings.inputMode.toEngineInputMode(),
                 translateSwapped = settings.isTranslateSwapped,
