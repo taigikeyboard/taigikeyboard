@@ -50,6 +50,23 @@ fn uppercase_first_only(s: &str) -> String {
     }
 }
 
+/// Insert a two-letter base (`oo`, `ng`) under three keys: lowercase (`oo`),
+/// Shift (`Oo`, first letter upper) and Caps Lock (`OO`, all upper).
+fn insert_digraph(
+    mapping: &mut HashMap<String, Vec<String>>,
+    base: &str,
+    suffix: &str,
+    is_tl: bool,
+) {
+    let variations = build_variations(base, suffix, is_tl);
+    let shift_key = uppercase_first_only(&format!("{base}{suffix}"));
+    let shift_variations = variations.iter().map(|s| uppercase_first_only(s)).collect();
+    let caps_variations = variations.iter().map(|s| s.to_uppercase()).collect();
+    mapping.insert(format!("{base}{suffix}").to_uppercase(), caps_variations);
+    mapping.insert(shift_key, shift_variations);
+    mapping.insert(format!("{base}{suffix}"), variations);
+}
+
 fn build_mode_map(is_tl: bool) -> HashMap<String, ToneVariationList> {
     let mut mapping: HashMap<String, Vec<String>> = HashMap::new();
 
@@ -63,14 +80,7 @@ fn build_mode_map(is_tl: bool) -> HashMap<String, ToneVariationList> {
 
     if is_tl {
         // TL: oo (double o, tone mark on first o).
-        // `Oo` = Shift (first letter upper), `OO` = Caps Lock (all upper).
-        let variations = build_variations("o", "o", true);
-        let upper_variations: Vec<String> =
-            variations.iter().map(|s| uppercase_first_only(s)).collect();
-        let caps_variations: Vec<String> = variations.iter().map(|s| s.to_uppercase()).collect();
-        mapping.insert("oo".to_string(), variations);
-        mapping.insert("Oo".to_string(), upper_variations);
-        mapping.insert("OO".to_string(), caps_variations);
+        insert_digraph(&mut mapping, "o", "o", is_tl);
     } else {
         // POJ: o͘ = o + combining dot above right (U+0358).
         let suffix = "\u{0358}";
@@ -92,14 +102,8 @@ fn build_mode_map(is_tl: bool) -> HashMap<String, ToneVariationList> {
         upper_entry.extend(upper_variations);
     }
 
-    // ng — tone mark on n, g is suffix. `Ng` = Shift, `NG` = Caps Lock.
-    let variations = build_variations("n", "g", is_tl);
-    let upper_variations: Vec<String> =
-        variations.iter().map(|s| uppercase_first_only(s)).collect();
-    let caps_variations: Vec<String> = variations.iter().map(|s| s.to_uppercase()).collect();
-    mapping.insert("ng".to_string(), variations);
-    mapping.insert("Ng".to_string(), upper_variations);
-    mapping.insert("NG".to_string(), caps_variations);
+    // ng — tone mark on n, g is suffix.
+    insert_digraph(&mut mapping, "n", "g", is_tl);
 
     // POJ + TL: append "ⁿ" (U+207F) to existing "n" entry.
     let n_entry = mapping.entry("n".to_string()).or_default();
