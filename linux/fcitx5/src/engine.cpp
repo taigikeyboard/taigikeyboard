@@ -372,7 +372,6 @@ void Engine::refreshMenu(InputContext &ic) {
 
 void Engine::activate(const InputMethodEntry & /*entry*/, InputContextEvent &event) {
     refreshMenu(*event.inputContext());
-    taigi_runtime_activated(runtime_);
 }
 
 void Engine::deactivate(const InputMethodEntry &entry, InputContextEvent &event) {

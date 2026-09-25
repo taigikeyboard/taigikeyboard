@@ -39,7 +39,6 @@ cp -a @STAGEROOT@/. %{buildroot}/
 %{_datadir}/ibus/component/taigikeyboard.xml
 %{_datadir}/taigikeyboard/
 %{_datadir}/applications/tw.taigikeyboard.Settings.desktop
-%{_datadir}/dbus-1/services/tw.taigikeyboard.Settings.service
 %{_datadir}/icons/hicolor/*/apps/taigikeyboard.png
 # Fedora's base packages own neither parent: without these a removal would
 # leave them behind unowned.

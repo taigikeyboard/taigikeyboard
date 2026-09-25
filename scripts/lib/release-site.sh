@@ -14,15 +14,13 @@ SITE_REPOSITORY="taigikeyboard/taigikeyboard.github.io"
 # manifest URLs are compiled into every shipped copy, so they never move.
 MACOS_SITE_PATH="_data/macos_release.json"
 WINDOWS_SITE_PATH="_data/windows_release.json"
-# The Linux manifest is rendered from the `.deb`'s data file; the `.rpm` and
-# Arch files feed only the download buttons (docs/architecture/linux-release.md
-# § Update check).
+# Linux has site data but no manifest: a `.deb` is not updated in place
+# (docs/architecture/linux-release.md § No in-app update).
 LINUX_SITE_PATH="_data/linux_release.json"
 LINUX_RPM_SITE_PATH="_data/linux_rpm_release.json"
 LINUX_ARCH_SITE_PATH="_data/linux_arch_release.json"
 MACOS_MANIFEST_URL="https://taigikeyboard.tw/appcast/macos.json"
 WINDOWS_MANIFEST_URL="https://taigikeyboard.tw/appcast/windows.json"
-LINUX_MANIFEST_URL="https://taigikeyboard.tw/appcast/linux.json"
 
 # -q must come first: it is what stops curl reading ~/.curlrc, which could
 # otherwise switch on the netrc that --netrc-file disables here. Together they

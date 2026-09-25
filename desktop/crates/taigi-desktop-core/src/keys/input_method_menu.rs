@@ -19,7 +19,9 @@ pub enum MenuCommand {
     Shortcut(ShortcutAction),
     /// The settings window, wherever the user left it.
     OpenSettings,
-    /// The manual update check, in the settings window on 一般.
+    /// The manual update check, in the settings window on 一般. macOS and
+    /// Windows only: Linux draws no row for it — the distribution's package
+    /// manager updates an input method (USER 2026-09-25).
     CheckForUpdates,
     /// The 關於 page — it has no sidebar row (USER 2026-09-20), so the menu
     /// is its one doorway.

@@ -63,7 +63,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            ibus dbus-daemon xvfb libgtk-4-dev libadwaita-1-dev libssl-dev pkg-config \
+            ibus dbus-daemon xvfb libgtk-4-dev libadwaita-1-dev pkg-config \
             fcitx5 fcitx5-modules-dev extra-cmake-modules cmake ninja-build dpkg-dev desktop-file-utils
 
       - name: Install protoc ${{ env.PROTOC_VERSION }}
@@ -180,8 +180,7 @@ jobs:
                       fcitx5/libtaigikeyboard.so usr/share/fcitx5/addon/taigikeyboard.conf \
                       usr/share/fcitx5/inputmethod/taigikeyboard.conf usr/share/ibus/component/taigikeyboard.xml \
                       usr/share/taigikeyboard/dictionaries/dictionary.fst usr/share/applications/tw.taigikeyboard.Settings.desktop \
-                      usr/share/icons/hicolor/48x48/apps/taigikeyboard.png \
-                      usr/share/dbus-1/services/tw.taigikeyboard.Settings.service; do
+                      usr/share/icons/hicolor/48x48/apps/taigikeyboard.png; do
             grep -q "$path" "$RUNNER_TEMP/deb-contents.txt" || { echo "::error::$path missing from the .deb"; exit 1; }
           done
           # The control fields, not only the file name: the package a user
@@ -237,7 +236,7 @@ jobs:
         run: |
           dnf install -y --setopt=install_weak_deps=False \
             git gcc gcc-c++ make cmake ninja-build extra-cmake-modules fcitx5-devel \
-            gtk4-devel libadwaita-devel openssl-devel pkgconf-pkg-config rpm-build unzip findutils
+            gtk4-devel libadwaita-devel pkgconf-pkg-config rpm-build unzip findutils
 
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Install protoc ${{ env.PROTOC_VERSION }}
@@ -286,7 +285,7 @@ jobs:
       - name: Install build dependencies
         run: |
           pacman -Syu --noconfirm --needed \
-            base-devel git cmake ninja extra-cmake-modules fcitx5 gtk4 libadwaita openssl pkgconf unzip rustup
+            base-devel git cmake ninja extra-cmake-modules fcitx5 gtk4 libadwaita pkgconf unzip rustup
 
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Install protoc ${{ env.PROTOC_VERSION }}
@@ -384,8 +383,7 @@ jobs:
           for path in /usr/libexec/ibus-engine-taigikeyboard /usr/bin/taigikeyboard-settings "$ADDON" \
                       /usr/share/fcitx5/addon/taigikeyboard.conf /usr/share/fcitx5/inputmethod/taigikeyboard.conf \
                       /usr/share/ibus/component/taigikeyboard.xml /usr/share/taigikeyboard/dictionaries/dictionary.fst \
-                      /usr/share/applications/tw.taigikeyboard.Settings.desktop \
-                      /usr/share/dbus-1/services/tw.taigikeyboard.Settings.service; do
+                      /usr/share/applications/tw.taigikeyboard.Settings.desktop; do
             test -e "$path" || { echo "::error::$path missing after install"; exit 1; }
           done
           for elf in /usr/libexec/ibus-engine-taigikeyboard /usr/bin/taigikeyboard-settings "$ADDON"; do

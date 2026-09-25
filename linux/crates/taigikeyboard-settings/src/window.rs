@@ -60,8 +60,6 @@ pub struct SettingsWindow {
     /// The field button whose row records: focus moving anywhere else ends
     /// the recording (the Mac's field losing first responder).
     recording_field: RefCell<Option<gtk::Widget>>,
-    /// A manual update check is in flight (`updates::check_manually`).
-    checking_updates: Cell<bool>,
 }
 
 impl SettingsWindow {
@@ -138,7 +136,6 @@ impl SettingsWindow {
             current: Cell::new(SettingsPane::General),
             recorder: RefCell::new(Recorder::default()),
             recording_field: RefCell::new(None),
-            checking_updates: Cell::new(false),
         });
         shell.build_pages();
         shell.apply_chrome();
@@ -179,16 +176,6 @@ impl SettingsWindow {
 
     pub fn job_slot(&self) -> &JobSlot {
         &self.job_slot
-    }
-
-    pub fn is_checking_updates(&self) -> bool {
-        self.checking_updates.get()
-    }
-
-    /// The flag lives outside the document, so it repaints the rows itself.
-    pub fn set_checking_updates(self: &Rc<Self>, is_checking: bool) {
-        self.checking_updates.set(is_checking);
-        self.refresh_pages();
     }
 
     /// A transient notice: what a page has to tell the user after a job
@@ -622,17 +609,5 @@ impl Shell {
 
     pub fn window(&self) -> Option<adw::ApplicationWindow> {
         self.0.upgrade().map(|shell| shell.window().clone())
-    }
-
-    pub fn is_checking_updates(&self) -> bool {
-        self.0
-            .upgrade()
-            .is_some_and(|shell| shell.is_checking_updates())
-    }
-
-    pub fn press_update(&self) {
-        if let Some(shell) = self.0.upgrade() {
-            crate::updates::press(&shell);
-        }
     }
 }

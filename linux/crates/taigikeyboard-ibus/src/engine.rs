@@ -14,7 +14,7 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::Arc;
 use taigi_desktop_core::composing::ContextToken;
 use taigi_desktop_core::keys::CandidateNavigation;
-use taigi_linux_core::{chrome, update_trigger, MenuItem, Runtime};
+use taigi_linux_core::{chrome, MenuItem, Runtime};
 use taigi_linux_core::{session, EngineState};
 use taigi_linux_core::{Emit, LookupTableContent};
 use taigi_linux_platform::RawKeyEvent;
@@ -295,7 +295,6 @@ impl Engine {
     async fn focus_in(&self, #[zbus(signal_emitter)] emitter: SignalEmitter<'_>) {
         log::debug!("engine.focus_in token={:?}", self.token);
         self.register_menu(&emitter).await;
-        update_trigger::on_activate(&self.runtime);
     }
 
     async fn focus_in_id(&self, _object_path: String, _client: String) {}
@@ -320,7 +319,6 @@ impl Engine {
     async fn enable(&self, #[zbus(signal_emitter)] emitter: SignalEmitter<'_>) {
         log::debug!("engine.enable token={:?}", self.token);
         self.register_menu(&emitter).await;
-        update_trigger::on_activate(&self.runtime);
     }
 
     async fn disable(&mut self, #[zbus(signal_emitter)] emitter: SignalEmitter<'_>) {

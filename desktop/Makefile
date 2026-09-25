@@ -1,6 +1,6 @@
 # Dev loop for the desktop-shared crates (`taigi-desktop-core`,
 # `taigi-desktop-storage`, `taigi-desktop-update`): the pure Rust the Windows and Linux input methods
-# both link. Everything here runs natively on any host — no cross target, no
+# link (the update check: Windows only). Everything here runs natively on any host — no cross target, no
 # OS handle. The shells' own gates (`make windows-check`, `make linux-check`)
 # compile these crates for their targets through the graph.
 #

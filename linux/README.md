@@ -47,16 +47,16 @@ repository root):
 
 ```sh
 # Ubuntu / Debian
-sudo apt-get install ibus dbus-daemon xvfb libgtk-4-dev libadwaita-1-dev libssl-dev pkg-config \
+sudo apt-get install ibus dbus-daemon xvfb libgtk-4-dev libadwaita-1-dev pkg-config \
   fcitx5 fcitx5-modules-dev extra-cmake-modules cmake ninja-build dpkg-dev desktop-file-utils
 
 # Fedora
 sudo dnf install git gcc gcc-c++ make cmake ninja-build extra-cmake-modules fcitx5-devel \
-  gtk4-devel libadwaita-devel openssl-devel pkgconf-pkg-config rpm-build unzip findutils
+  gtk4-devel libadwaita-devel pkgconf-pkg-config rpm-build unzip findutils
 
 # Arch
 sudo pacman -S --needed base-devel git cmake ninja extra-cmake-modules fcitx5 gtk4 \
-  libadwaita openssl pkgconf unzip rustup
+  libadwaita pkgconf unzip rustup
 ```
 
 `xvfb`, `dbus-daemon` and `ibus` are only for the smoke tests; `dpkg-dev`,

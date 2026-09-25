@@ -14,7 +14,7 @@ pub mod locale;
 pub mod paths;
 
 pub use key_translation::{snapshot, KeyState, RawKeyEvent};
-pub use launcher::{check_for_updates, check_for_updates_in_background, open_settings, open_url};
+pub use launcher::{open_settings, open_url};
 pub use locale::system_locale;
 pub use paths::{
     config_directory, data_directory, dictionaries_directory, install_prefix, settings_binary,

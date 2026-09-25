@@ -6,8 +6,7 @@
 use crate::paths::settings_binary;
 use std::path::Path;
 use std::process::{Command, Stdio};
-use taigi_desktop_core::settings::launch::{CHECK_NOW_FLAG, CHECK_UPDATES_FLAG, PANE_FLAG};
-use taigi_desktop_core::settings::{SettingChoice, SettingsPane};
+use taigi_desktop_core::settings::launch::PANE_FLAG;
 
 /// Spawns the settings window, on `pane` (the persisted raw spelling of a
 /// `SettingsPane`) or wherever the user left it. Detached: no pipe, no wait —
@@ -19,35 +18,10 @@ pub fn open_settings(pane: Option<&str>) -> bool {
 }
 
 pub fn open_settings_at(binary: &Path, pane: Option<&str>) -> bool {
-    match pane {
-        Some(pane) => spawn_settings(binary, &[PANE_FLAG, pane]),
-        None => spawn_settings(binary, &[]),
-    }
-}
-
-/// The menu's 檢查更新: the window on 一般, running the manual check there
-/// (Windows `settings_launcher::check_for_updates`).
-pub fn check_for_updates() -> bool {
-    check_for_updates_at(&settings_binary())
-}
-
-pub fn check_for_updates_at(binary: &Path) -> bool {
-    spawn_settings(
-        binary,
-        &[PANE_FLAG, SettingsPane::General.raw(), CHECK_NOW_FLAG],
-    )
-}
-
-/// The automatic daily check (roadmap L10): the settings binary with no
-/// window, `--check-updates` — it claims the due window, fetches, and posts
-/// a desktop notification for a version not announced before.
-pub fn check_for_updates_in_background() -> bool {
-    spawn_settings(&settings_binary(), &[CHECK_UPDATES_FLAG])
-}
-
-fn spawn_settings(binary: &Path, arguments: &[&str]) -> bool {
     let mut command = Command::new(binary);
-    command.args(arguments);
+    if let Some(pane) = pane {
+        command.arg(PANE_FLAG).arg(pane);
+    }
     spawn_detached(command, "settings")
 }
 
@@ -67,11 +41,9 @@ fn spawn_detached(mut command: Command, what: &str) -> bool {
         .stderr(Stdio::null());
     match command.spawn() {
         Ok(mut child) => {
-            // Reaped on its own thread, for every launch (the settings
-            // window and `xdg-open` too, which were left unreaped before the
-            // daily check): the engine and the Fcitx5 daemon live for the
-            // whole session, and a child never waited on stays a zombie
-            // until they exit.
+            // Reaped on its own thread: the engine and the Fcitx5 daemon
+            // live for the whole session, and a child never waited on stays
+            // a zombie until they exit.
             let reaped = std::thread::Builder::new()
                 .name("taigi-reap".to_owned())
                 .spawn(move || {
@@ -102,8 +74,5 @@ mod tests {
             Path::new("/nonexistent/taigikeyboard-settings"),
             Some("general")
         ));
-        assert!(!check_for_updates_at(Path::new(
-            "/nonexistent/taigikeyboard-settings"
-        )));
     }
 }

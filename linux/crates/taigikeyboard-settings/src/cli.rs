@@ -1,7 +1,6 @@
 //! The command line the engine spawns this window with (`settings::launch`,
-//! one contract for both sides): which pane to open on, and whether to run
-//! the manual update check on arrival. The flags with no Linux behaviour
-//! are refused with a readable error rather than ignored (roadmap L8).
+//! one contract for both sides): which pane to open on. The Windows-only
+//! flags are refused with a readable error rather than ignored (roadmap L8).
 
 use std::fmt;
 use taigi_desktop_core::settings::launch::{
@@ -13,10 +12,6 @@ use taigi_desktop_core::settings::{SettingChoice, SettingsPane};
 pub struct LaunchOptions {
     /// `--pane <raw>`; an unknown raw value is ignored (the stored pane wins).
     pub pane: Option<SettingsPane>,
-    /// `--check-now`: the panel menu's 檢查更新.
-    pub check_now: bool,
-    /// `--check-updates`: the engine's daily spawn — no window.
-    pub check_updates: bool,
 }
 
 /// A flag this platform has no behaviour for.
@@ -27,7 +22,7 @@ impl fmt::Display for UnsupportedFlag {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "`{}` is not supported on Linux; only `{PANE_FLAG} <pane>`, `{CHECK_NOW_FLAG}` and `{CHECK_UPDATES_FLAG}` are accepted",
+            "`{}` is not supported on Linux (updates are the package manager's); only `{PANE_FLAG} <pane>` is accepted",
             self.0
         )
     }
@@ -46,9 +41,7 @@ impl LaunchOptions {
                         .next()
                         .and_then(|raw| SettingsPane::from_raw(&raw));
                 }
-                CHECK_NOW_FLAG => options.check_now = true,
-                CHECK_UPDATES_FLAG => options.check_updates = true,
-                PREWARM_FLAG => {
+                CHECK_NOW_FLAG | CHECK_UPDATES_FLAG | PREWARM_FLAG => {
                     return Err(UnsupportedFlag(argument));
                 }
                 other => log::warn!("cli.unknown_argument argument={other}"),
@@ -79,28 +72,11 @@ mod tests {
     }
 
     #[test]
-    fn the_menu_check_arrives_on_general() {
-        // trace: launcher::check_for_updates() spawns
-        // `--pane general --check-now`.
-        let options = parse(&["--pane", "general", "--check-now"]).unwrap();
-        assert_eq!(options.pane, Some(SettingsPane::General));
-        assert!(options.check_now);
-        assert!(!parse(&["--pane", "about"]).unwrap().check_now);
-    }
-
-    #[test]
-    fn the_background_check_is_its_own_launch() {
-        // trace: launcher::check_for_updates_in_background() spawns
-        // `--check-updates`.
-        let options = parse(&["--check-updates"]).unwrap();
-        assert!(options.check_updates);
-        assert!(!options.check_now);
-    }
-
-    #[test]
-    fn the_flag_without_linux_behaviour_is_refused_by_name() {
-        let error = parse(&["--prewarm"]).unwrap_err();
-        assert_eq!(error, UnsupportedFlag("--prewarm".into()));
-        assert!(error.to_string().contains("--prewarm"));
+    fn the_windows_only_flags_are_refused_by_name() {
+        let error = parse(&["--check-now"]).unwrap_err();
+        assert_eq!(error, UnsupportedFlag("--check-now".into()));
+        assert!(error.to_string().contains("--check-now"));
+        assert!(parse(&["--prewarm"]).is_err());
+        assert!(parse(&["--check-updates"]).is_err());
     }
 }

@@ -2,17 +2,14 @@
 //! switches, output script and its shape, auto-space, display language;
 //! then the version row and the reset row. Port of `GeneralSettingsView.swift`
 //! in the Windows pane's row order (USER 2026-09-21: the typing pipeline's).
-//! The version row is the update row (roadmap L10): 檢查更新 beside the
-//! running version, or the known update and 去下載 in its place.
+//! No update check (roadmap L10): the version row links to the download page.
 
 use super::PageContext;
-use crate::presentation::display_language_label;
-use crate::updates::INSTALLED_VERSION;
+use crate::presentation::{display_language_label, WEBSITE_URL};
 use adw::prelude::*;
 use taigi_desktop_core::keys::ToneInputScheme;
 use taigi_desktop_core::settings::{keys, InputMode, SettingChoice, SettingsDocument};
 use taigi_desktop_core::strings::{DisplayLanguage, StringKey};
-use taigi_desktop_update::checker;
 
 /// The 輸出 pop-up's roster: the stored swap as the two scripts it picks
 /// between, Hanji (the default) first.
@@ -98,8 +95,29 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
     );
     page.add(&group);
 
+    // The running version and the download page (roadmap L10): the
+    // package manager updates the input method, so this row only says
+    // which build this is and where the others are.
     let version_group = adw::PreferencesGroup::new();
-    version_group.add(&update_row(&mut context));
+    let version_row = adw::ActionRow::builder()
+        .title(context.strings.format(
+            StringKey::DesktopUpdateCurrentVersionLabel,
+            &[&env!("CARGO_PKG_VERSION")],
+        ))
+        .build();
+    let download = gtk::Button::builder()
+        .label(
+            context
+                .strings
+                .resolve(StringKey::DesktopUpdateDownloadAction),
+        )
+        .valign(gtk::Align::Center)
+        .build();
+    let shell = context.shell.clone();
+    download.connect_clicked(move |_| shell.open_url(WEBSITE_URL));
+    version_row.add_suffix(&download);
+    version_row.set_activatable_widget(Some(&download));
+    version_group.add(&version_row);
     page.add(&version_group);
 
     // Keeps the display language (#118: a reset must not switch the UI
@@ -120,48 +138,4 @@ fn output_script_label(is_hanji: bool) -> StringKey {
     } else {
         StringKey::SettingsOutputScriptRoman
     }
-}
-
-/// One row, never two (`GeneralSettingsView.swift:89-117`): a known update
-/// replaces the version-and-check row rather than sitting under it, and its
-/// button is the user's next move — 去下載 to the manifest's page (no
-/// in-app install on Linux), else 檢查更新, insensitive with a spinner while
-/// a check is in flight.
-fn update_row(context: &mut PageContext<'_>) -> adw::ActionRow {
-    let row = adw::ActionRow::new();
-    let button = gtk::Button::builder().valign(gtk::Align::Center).build();
-    let spinner = gtk::Spinner::new();
-    row.add_suffix(&spinner);
-    row.add_suffix(&button);
-    row.set_activatable_widget(Some(&button));
-    let shell = context.shell.clone();
-    button.connect_clicked(move |_| shell.press_update());
-    let strings = *context.strings;
-    let refreshed = row.clone();
-    let shell = context.shell.clone();
-    let follow = move |document: &SettingsDocument| {
-        let is_checking = shell.is_checking_updates();
-        match checker::pending_update(document, INSTALLED_VERSION) {
-            Some(manifest) => {
-                refreshed.set_title(&strings.format(
-                    StringKey::DesktopUpdatePendingVersionLabel,
-                    &[&manifest.version],
-                ));
-                button.set_label(strings.resolve(StringKey::DesktopUpdateDownloadAction));
-            }
-            None => {
-                refreshed.set_title(&strings.format(
-                    StringKey::DesktopUpdateCurrentVersionLabel,
-                    &[&INSTALLED_VERSION],
-                ));
-                button.set_label(strings.resolve(StringKey::DesktopUpdateCheckNow));
-            }
-        }
-        button.set_sensitive(!is_checking);
-        spinner.set_spinning(is_checking);
-        spinner.set_visible(is_checking);
-    };
-    follow(context.document);
-    context.on_refresh(follow);
-    row
 }

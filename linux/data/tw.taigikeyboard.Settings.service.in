@@ -1,3 +1,0 @@
-[D-BUS Service]
-Name=tw.taigikeyboard.Settings
-Exec=@PREFIX@/bin/taigikeyboard-settings --gapplication-service

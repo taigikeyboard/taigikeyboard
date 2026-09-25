@@ -1,8 +1,8 @@
 //! The Windows half of updates: the download, verification and two-stage
 //! install offer, port of the macOS `UpdateInstallation` /
 //! `UpdatePackageVerifier` (roadmap W9), plus the toast. The check itself —
-//! manifest, outcome, transport — is `taigi-desktop-update`, shared with
-//! Linux; the schedule is `taigi_desktop_core::settings::update_schedule`.
+//! manifest, outcome, transport — is `taigi-desktop-update`; the schedule is
+//! `taigi_desktop_core::settings::update_schedule`.
 //! The Windows-only parts (Authenticode, VERSIONINFO, the toast) live in
 //! their own modules with host stubs.
 //!

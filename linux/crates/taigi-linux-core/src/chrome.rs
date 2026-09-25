@@ -21,12 +21,10 @@ use taigi_desktop_core::keys::{
 use taigi_desktop_core::settings::{keys, InputMode, SettingsDocument};
 use taigi_desktop_core::strings::StringKey;
 use taigi_desktop_core::symbols::SymbolTable;
-use taigi_linux_platform::{check_for_updates, open_settings};
+use taigi_linux_platform::open_settings;
 
 /// The menu row that opens the settings window on the last pane.
 pub const MENU_SETTINGS: &str = "settings";
-/// The menu row that runs the manual update check in the settings window.
-pub const MENU_CHECK_UPDATES: &str = "check-updates";
 /// The menu row that opens the settings window on 關於.
 pub const MENU_ABOUT: &str = "about";
 
@@ -46,30 +44,32 @@ pub enum MenuItem {
 
 /// The rows every desktop shares (`taigi_desktop_core::keys::MENU`: the
 /// two switches, 台語齒盤設定 — Fcitx5 lists its own 輸入法設定 in the same
-/// menu — then 檢查更新 and 關於), each with its Linux id.
+/// menu — then 關於), each with its Linux id. No 檢查更新: the distribution's
+/// package manager updates an input method (USER 2026-09-25).
 pub fn menu_items(runtime: &Runtime) -> Vec<MenuItem> {
     let settings = runtime.settings.current();
     menu_rows(&runtime.strings(), &settings)
         .into_iter()
-        .map(|row| match row {
-            Some(row) => MenuItem::Action {
-                id: menu_id(row.command),
+        .filter_map(|row| match row {
+            Some(row) => Some(MenuItem::Action {
+                id: menu_id(row.command)?,
                 title: row.title,
                 detail: row.chord,
-            },
-            None => MenuItem::Separator,
+            }),
+            None => Some(MenuItem::Separator),
         })
         .collect()
 }
 
 /// A command's row id — what `activate_menu` takes back. A shortcut row is
-/// its action's persisted raw spelling.
-fn menu_id(command: MenuCommand) -> &'static str {
+/// its action's persisted raw spelling; `None` for the one command Linux has
+/// no row for.
+fn menu_id(command: MenuCommand) -> Option<&'static str> {
     match command {
-        MenuCommand::Shortcut(action) => action.raw(),
-        MenuCommand::OpenSettings => MENU_SETTINGS,
-        MenuCommand::CheckForUpdates => MENU_CHECK_UPDATES,
-        MenuCommand::About => MENU_ABOUT,
+        MenuCommand::Shortcut(action) => Some(action.raw()),
+        MenuCommand::OpenSettings => Some(MENU_SETTINGS),
+        MenuCommand::CheckForUpdates => None,
+        MenuCommand::About => Some(MENU_ABOUT),
     }
 }
 
@@ -112,21 +112,17 @@ pub fn activate_menu(
     let command = MENU
         .into_iter()
         .flatten()
-        .find(|command| menu_id(*command) == id);
+        .find(|command| menu_id(*command) == Some(id));
     match command {
         Some(MenuCommand::Shortcut(action)) => perform_global(runtime, token, state, action),
         Some(MenuCommand::OpenSettings) => {
             perform_global(runtime, token, state, ShortcutAction::OpenLastSettingsPane)
         }
-        Some(MenuCommand::CheckForUpdates) => {
-            check_for_updates();
-            Vec::new()
-        }
         Some(MenuCommand::About) => {
             open_settings(Some("about"));
             Vec::new()
         }
-        None => {
+        Some(MenuCommand::CheckForUpdates) | None => {
             log::warn!("menu.unknown_row id={id}");
             Vec::new()
         }
@@ -520,7 +516,6 @@ mod tests {
                 "-",
                 MENU_SETTINGS,
                 "-",
-                MENU_CHECK_UPDATES,
                 MENU_ABOUT
             ]
         );

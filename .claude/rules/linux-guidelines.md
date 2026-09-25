@@ -73,5 +73,5 @@ record: `docs/architecture/linux-roadmap.md`.
 - `settings.json` = `$XDG_CONFIG_HOME/taigikeyboard/`; databases = `$XDG_DATA_HOME/taigikeyboard/`;
   dictionaries = `${prefix}/share/taigikeyboard/dictionaries` (`TAIGIKEYBOARD_PREFIX` at build,
   `TAIGIKEYBOARD_DATA_DIR` at runtime for a dev tree). Never the working directory.
-- Update check = shared `taigi-desktop-update` against `appcast/linux.json`, linked by the settings binary only (never the IBus engine / Fcitx5 `.so`); the action is the download page, never an in-app install; the daily check is spawned by the engine on activation (`update_trigger`), never a timer or systemd unit (roadmap L10).
+- No update check on Linux, manual or automatic, and no build flag for one — the distribution's package manager updates an input method (USER 2026-09-25, roadmap L10). Never link `taigi-desktop-update`; the `update*` keys stay unwritten. Do not re-propose.
 - Release / package / tag actions are USER-gated (`~/.claude/rules/diagnosis-discipline.md`).
