@@ -58,7 +58,7 @@ class TaigiKeyboard : LifecycleInputMethodService() {
 
     /**
      * IME-lifecycle coroutine scope cancelled in [onDestroy]. Exposed so
-     * engine wrappers (e.g. [com.siansiansu.taigikeyboard.ime.text.smartbar.NextWordHandler])
+     * engine wrappers (e.g. [com.siansiansu.taigikeyboard.ime.text.smartbar.NextWordController])
      * can launch work that must NOT outlive the input-method service.
      * Marked `internal` to keep the visibility narrow — do not leak the
      * scope outside the app module.

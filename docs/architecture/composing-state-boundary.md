@@ -244,7 +244,7 @@ Android wrapper's `execute(Effect)` implements §2.2 table column 3 verbatim. Ad
 iOS §2.4 uses `@Published` guarded-inequality writes to batch UI updates inside one synchronous call. Android equivalent:
 
 - Wrapper does NOT expose a `StateFlow<ComposingState>`; the executor interprets `Effect` synchronously, same flow as iOS Phase 1 / Phase 2 split.
-- Existing callbacks (`onUpdateCandidates`, `onClearCandidates` style — see `NextWordHandler`) stay function types. No migration to `StateFlow` in A4-impl.
+- Existing callbacks (`onUpdateCandidates`, `onClearCandidates` style — see `NextWordController`) stay function types. No migration to `StateFlow` in A4-impl.
 - If Compose UI later needs observability, a `StateFlow` wrapper can be layered on top without changing the `Effect` contract. Out of scope for A4-impl.
 
 Reason: adding `StateFlow` inside the executor would force every `Effect` list into an async recomposition cycle, breaking iOS §2.4's "single synchronous call" property.

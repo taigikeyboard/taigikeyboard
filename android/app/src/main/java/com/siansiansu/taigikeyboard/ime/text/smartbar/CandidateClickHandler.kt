@@ -117,7 +117,7 @@ class CandidateClickHandler(
 
             if (isEnglishSuggestion) {
                 val textBeforeCursor = ic.getTextBeforeCursor(100, 0)?.toString() ?: ""
-                val currentWord = NextWordHandler.extractCurrentWord(textBeforeCursor)
+                val currentWord = NextWordController.extractCurrentWord(textBeforeCursor)
                 if (currentWord.isNotEmpty()) {
                     ic.deleteSurroundingText(currentWord.length, 0)
                 }
@@ -204,7 +204,7 @@ class CandidateClickHandler(
             val ic = taigikeyboard.currentInputConnection ?: return
 
             val textBeforeCursor = ic.getTextBeforeCursor(100, 0)?.toString() ?: ""
-            val currentWord = NextWordHandler.extractCurrentWord(textBeforeCursor)
+            val currentWord = NextWordController.extractCurrentWord(textBeforeCursor)
 
             if (currentWord.isNotEmpty()) {
                 ic.deleteSurroundingText(currentWord.length, 0)

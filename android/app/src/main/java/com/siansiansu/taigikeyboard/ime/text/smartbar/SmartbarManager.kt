@@ -103,8 +103,8 @@ class SmartbarManager(
 
     // --- Delegated handlers ---
 
-    private val nextWordHandler =
-        NextWordHandler(
+    private val nextWordController =
+        NextWordController(
             // Use the IME-lifecycle scope so the context-timeout `delay` job
             // is cancelled in `TaigiKeyboard.onDestroy`. A7 also cancels
             // SmartbarManager's own scope in `onDestroy`, but the 30 s
@@ -168,7 +168,7 @@ class SmartbarManager(
             toolbarManager.activeContainer = value
         }
 
-    fun isShowingNextWordCandidates(): Boolean = nextWordHandler.isShowingNextWordCandidates()
+    fun isShowingNextWordCandidates(): Boolean = nextWordController.isShowingNextWordCandidates()
 
     fun handleNextWordPrediction(
         displayText: String,
@@ -176,16 +176,16 @@ class SmartbarManager(
         roman: String,
         hanzi: String? = null,
         rawInput: String = "",
-    ) = nextWordHandler.handleNextWordPrediction(displayText, committedText, roman, hanzi, rawInput)
+    ) = nextWordController.handleNextWordPrediction(displayText, committedText, roman, hanzi, rawInput)
 
-    fun updateLastSelectedWord(word: String) = nextWordHandler.updateLastSelectedWord(word)
+    fun updateLastSelectedWord(word: String) = nextWordController.updateLastSelectedWord(word)
 
-    fun handleBackspaceForNextWord(textBeforeCursor: String) = nextWordHandler.handleBackspaceForNextWord(textBeforeCursor)
+    fun handleBackspaceForNextWord(textBeforeCursor: String) = nextWordController.handleBackspaceForNextWord(textBeforeCursor)
 
     /**
      * Dispatch a NextWord-shaped composing-engine Effect
      * (`NextWordUpdateLastSelectedWord` / `NextWordWordSelected` /
-     * `NextWordClearForNewComposing`) to the underlying [NextWordHandler].
+     * `NextWordClearForNewComposing`) to the underlying [NextWordController].
      * Wired into [com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager]
      * via the [com.siansiansu.taigikeyboard.ime.text.composing.NextWordEffectRouter]
      * constructor parameter.
@@ -197,7 +197,7 @@ class SmartbarManager(
     fun dispatchComposingNextWordEffect(effect: com.siansiansu.taigikeyboard.engine.RustEngineBridge.ComposingTransition.Effect) {
         when (effect) {
             is com.siansiansu.taigikeyboard.engine.RustEngineBridge.ComposingTransition.Effect.NextWordUpdateLastSelectedWord -> {
-                nextWordHandler.updateLastSelectedWord(
+                nextWordController.updateLastSelectedWord(
                     word = effect.text,
                     roman = effect.roman.ifEmpty { effect.text },
                 )
@@ -208,7 +208,7 @@ class SmartbarManager(
                 // engine's `transition.rs:644-653` emits `true` today but the
                 // bridge contract is "verbatim" so a future false must not be
                 // silently overridden.
-                nextWordHandler.handleEngineWordSelected(
+                nextWordController.handleEngineWordSelected(
                     text = effect.text,
                     roman = effect.roman.ifEmpty { effect.text },
                     triggerPrediction = effect.triggerPrediction,
@@ -226,10 +226,10 @@ class SmartbarManager(
                 // PerformAutocomplete (engine/composing/tests/continuous_phase.rs)
                 // while Taigi composing candidates are still active; an
                 // unconditional candidate wipe would cause visible flicker.
-                if (nextWordHandler.isShowingNextWordCandidates()) {
+                if (nextWordController.isShowingNextWordCandidates()) {
                     clearCandidates()
                 } else {
-                    nextWordHandler.clearNextWordState()
+                    nextWordController.clearNextWordState()
                 }
             }
 
@@ -253,7 +253,7 @@ class SmartbarManager(
         }
     }
 
-    fun getLastSelectedWord(): String? = nextWordHandler.getLastSelectedWord()
+    fun getLastSelectedWord(): String? = nextWordController.getLastSelectedWord()
 
     fun collapseToolbarIfOpen() = toolbarManager.collapseToolbarIfOpen()
 
@@ -432,7 +432,7 @@ class SmartbarManager(
         this.isComposingEnabled = isComposingEnabled
 
         // Reset NextWord context (switching input fields)
-        nextWordHandler.resetContext()
+        nextWordController.resetContext()
 
         // Initialize cache
         refreshScriptFlagCache()
@@ -495,7 +495,7 @@ class SmartbarManager(
 
         currentSuggestions = transformedSuggestions
         hasCandidates = true
-        nextWordHandler.setShowingNextWord(isNextWord)
+        nextWordController.setShowingNextWord(isNextWord)
 
         // Switch to candidates view (but don't force-switch from toolbar)
         if (activeContainer != SmartbarContainer.CANDIDATES &&
@@ -597,7 +597,7 @@ class SmartbarManager(
 
         currentSuggestions = emptyList()
         hasCandidates = false
-        nextWordHandler.clearNextWordState()
+        nextWordController.clearNextWordState()
 
         if (activeContainer == SmartbarContainer.CANDIDATES ||
             activeContainer == SmartbarContainer.ENGLISH_CANDIDATES
@@ -678,7 +678,7 @@ class SmartbarManager(
 
         currentSuggestions = suggestions.take(3)
         hasCandidates = true
-        nextWordHandler.clearNextWordState()
+        nextWordController.clearNextWordState()
 
         if (activeContainer != SmartbarContainer.ENGLISH_CANDIDATES) {
             activeContainer = SmartbarContainer.ENGLISH_CANDIDATES

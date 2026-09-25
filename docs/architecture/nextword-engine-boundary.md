@@ -1,8 +1,8 @@
 # NextWord Engine / Platform Boundary
 
-> **Type**: Reference (contract) · **Section numbering**: renumbered? no — gaps are intentional. §3, §5, §13.3, §13.5, §13.6, §13.10 are cited by code (`engine/protos/proto/nextword.proto`, generated `nextword.pb.swift` / `*.java`, `NextWordService.kt`, `SmartbarManager.kt`, `NextWordHandler.kt`, `RustEngineBridge.kt`, `RustEngineBridge+NextWord.swift`), §2.4 / §3 by `../engine/rust-core-proto.md`, §13.3 by `../engine/nextword.md`; their numbers are frozen. The pre-Rust design sections (§1, §8, §9, §11) were removed 2026-09-13 and their numbers are not reused.
+> **Type**: Reference (contract) · **Section numbering**: renumbered? no — gaps are intentional. §3, §5, §13.3, §13.5, §13.6, §13.10 are cited by code (`engine/protos/proto/nextword.proto`, generated `nextword.pb.swift` / `*.java`, `NextWordService.kt`, `SmartbarManager.kt`, `NextWordController.kt`, `RustEngineBridge.kt`, `RustEngineBridge+NextWord.swift`), §2.4 / §3 by `../engine/rust-core-proto.md`, §13.3 by `../engine/nextword.md`; their numbers are frozen. The pre-Rust design sections (§1, §8, §9, §11) were removed 2026-09-13 and their numbers are not reused.
 
-**What this doc is**: the contract between the next-word state machine — Rust `engine/nextword` since v3.5.5 (Path G, old #198; `NextWordEngine.swift` / `.kt` were deleted) — and each platform's executor: iOS `NextWord/NextWordController.swift` (Timer, `@MainActor`, generation counter) + `NextWord/Services/NextWordService.swift` (SQLite); Android `ime/text/smartbar/NextWordHandler.kt` + `ime/dictionary/NextWordService.kt` (§13); macOS `NextWord/NextWordLearner.swift` (write-and-rank, no prediction surface — `macos-roadmap.md` D7); Windows `taigi-desktop-core::engine::nextword` + `taigi-desktop-storage::association`. The crate owns validation, the record / reset / predict decision, scoring + filtering (`engine/nextword/src/scorer.rs`, constants pinned by `behavioral-invariants.md` §7–§8) and the generation guard; the executors own the clock, the context-timeout timer, the main-thread hop, the settings snapshot and the user-association store. Platform-neutral learning decisions are `behavioral-invariants.md` §40. Originally authored 2026-04-19 as the Phase I G5 design (Codex + Gemini reviewed).
+**What this doc is**: the contract between the next-word state machine — Rust `engine/nextword` since v3.5.5 (Path G, old #198; `NextWordEngine.swift` / `.kt` were deleted) — and each platform's executor: iOS `NextWord/NextWordController.swift` (Timer, `@MainActor`, generation counter) + `NextWord/Services/NextWordService.swift` (SQLite); Android `ime/text/smartbar/NextWordController.kt` + `ime/dictionary/NextWordService.kt` (§13); macOS `NextWord/NextWordLearner.swift` (write-and-rank, no prediction surface — `macos-roadmap.md` D7); Windows `taigi-desktop-core::engine::nextword` + `taigi-desktop-storage::association`. The crate owns validation, the record / reset / predict decision, scoring + filtering (`engine/nextword/src/scorer.rs`, constants pinned by `behavioral-invariants.md` §7–§8) and the generation guard; the executors own the clock, the context-timeout timer, the main-thread hop, the settings snapshot and the user-association store. Platform-neutral learning decisions are `behavioral-invariants.md` §40. Originally authored 2026-04-19 as the Phase I G5 design (Codex + Gemini reviewed).
 
 ---
 
@@ -293,7 +293,7 @@ Pure-state tests runnable without simulator; the last two require iOS + Android 
 
 ### 13.1 Current Android state (pre-A5-impl)
 
-`android/app/.../ime/text/smartbar/NextWordHandler.kt`:
+`android/app/.../ime/text/smartbar/NextWordController.kt`:
 
 - Constructor-injected `CoroutineScope` (supplied by `SmartbarManager` at line 50 as `CoroutineScope(SupervisorJob() + Dispatchers.Main)`). Note: `SmartbarManager.onDestroy()` does NOT cancel this scope today — A5-impl MUST either inherit from `TaigiKeyboard.serviceScope` (cancelled in IME `onDestroy`) or add explicit cancellation in the wrapper's teardown path.
 - Reads `System.currentTimeMillis()` inline at `handleNextWordPrediction` (line 64), `updateLastSelectedWord` (line 187), and `handleBackspaceForNextWord` (line 222).
@@ -384,7 +384,7 @@ sealed class Effect {
 }
 ```
 
-Executor runs the pairs sequentially inside a single `scope.launch { pairs.forEach { nextWord.recordAssociation(...) } }` — same shape as today's loop (NextWordHandler lines 107–119). Sequential ordering is mandatory: parallel coroutines would race on the SQLite `UNIQUE(prev_word, next_word, next_tl)` constraint declared in `NextWordService.kt`'s `user_association` table.
+Executor runs the pairs sequentially inside a single `scope.launch { pairs.forEach { nextWord.recordAssociation(...) } }` — same shape as today's loop (NextWordController lines 107–119). Sequential ordering is mandatory: parallel coroutines would race on the SQLite `UNIQUE(prev_word, next_word, next_tl)` constraint declared in `NextWordService.kt`'s `user_association` table.
 
 ### 13.10 Shared-core candidate roster delta (Android-side)
 
@@ -395,7 +395,7 @@ A5-impl adds the following Android files to the roster (mirroring §8 iOS column
 | `NextWord/NextWordEngine.swift` | `ime/core/nextword/NextWordEngine.kt` *(new)* | Yes |
 | `NextWord/NextWordOutcome.swift` | `ime/core/nextword/NextWordOutcome.kt` *(new — holds `NextWordIntent`, `NextWordPersistedState`, `NextWordDecisionInput`, `NextWordOutcome`, `Effect` types)* | Yes |
 | `NextWord/RawNextWordPrediction.swift` | `ime/core/nextword/RawNextWordPrediction.kt` *(new)* | Yes |
-| `NextWord/NextWordController.swift` (platform executor) | `ime/text/smartbar/NextWordHandler.kt` (reduced wrapper) | No — platform executor. |
+| `NextWord/NextWordController.swift` (platform executor) | `ime/text/smartbar/NextWordController.kt` (reduced wrapper) | No — platform executor. |
 | `NextWord/Services/NextWordService.swift` (Prediction → DTO mapping) | `ime/dictionary/NextWordService.kt` (`userRows` returns learned raw rows; the bundled rows are added engine-side by `PredictNext` (R3, 2026-09-25). The clock goes to `nextwordPredictNext`, not `userRows` — §13.3) | No — SQLite + file manager. |
 
 **Post-A5-impl state (2026-04-20)**: the four new files ship the `// region Shared-Core Candidate` header inline — landing them without the header would have required reformatting them again in A8-sweep. The `// CROSS-PLATFORM INVARIANT` comments on `ASSOCIATION_TIMEOUT_MS` + `CONTEXT_TIMEOUT_MS` also land in A5-impl (§13.7 below). A8-sweep remains responsible for retro-fitting markers on pre-existing files that A5 did not touch, and for the broader §5.3 surface audit (CandidateProcessor scoring constants, any additional §11 divergence comments).

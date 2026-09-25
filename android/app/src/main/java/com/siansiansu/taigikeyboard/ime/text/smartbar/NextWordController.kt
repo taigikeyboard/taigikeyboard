@@ -46,7 +46,7 @@ import kotlinx.coroutines.withContext
  * [CandidateClickHandler] do not change. Mirrors iOS
  * `NextWord/NextWordController.swift`.
  */
-class NextWordHandler(
+class NextWordController(
     private val scope: CoroutineScope,
     private val settingsProvider: EngineSettingsProvider,
     private val nextWord: NextWordService,
@@ -484,7 +484,7 @@ class NextWordHandler(
     // endregion
 
     companion object {
-        private const val TAG = "NextWordHandler"
+        private const val TAG = "NextWordController"
 
         /**
          * Mirrors `engine/nextword/src/decide.rs` `CONTEXT_TIMEOUT_MS = 30_000`.

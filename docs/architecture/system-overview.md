@@ -174,7 +174,7 @@ Engine search ownership on the fetch step: `lexicon::key_normalizer` (calls `pho
 | Candidate fetch | `ime/text/composing/TaigiAutocompleteService.kt`; `LexiconService.kt` for the dictionary tab only | `Engine/RustEngineBridge+Lexicon.swift` | `taigi-desktop-core::engine::lexicon` |
 | Display | `ime/text/smartbar/` (Compose smartbar, `CandidateStripState.kt`) | `Candidates/` (`CandidatePresenter` seam, horizontal / vertical / expandable panels) | `tsf/src/ui/candidate_window.rs`, `candidate_list_element.rs`, `render.rs` |
 | Selection | `ime/text/smartbar/CandidateClickHandler.kt` | slot keys (`CandidateSlotKeySet`) + Space | slot keys + Space |
-| NextWord glue | `ime/text/smartbar/NextWordHandler.kt` + `ime/dictionary/NextWordService.kt` | `NextWord/NextWordLearner.swift` (write-and-rank, no prediction surface — roadmap D7) | `taigi-desktop-core::engine::nextword` + `taigi-desktop-storage::association` |
+| NextWord glue | `ime/text/smartbar/NextWordController.kt` + `ime/dictionary/NextWordService.kt` | `NextWord/NextWordLearner.swift` (write-and-rank, no prediction surface — roadmap D7) | `taigi-desktop-core::engine::nextword` + `taigi-desktop-storage::association` |
 | Settings | `ime/core/PrefHelper.kt` (DataStore) + `ime/core/settings/EngineSettings.kt` | `Settings/SettingsStore.swift` (UserDefaults) | `taigi-desktop-core::settings` (`keys.rs`) + `taigi-desktop-storage::settings_file` |
 
 State machine on every platform: `[Idle] ─ input ─▶ [Composing]`, leaving via candidate select / Space / Enter / delete-to-empty; semantics pinned in `behavioral-invariants.md` §13.
