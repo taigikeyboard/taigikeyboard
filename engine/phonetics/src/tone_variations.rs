@@ -50,6 +50,23 @@ fn uppercase_first_only(s: &str) -> String {
     }
 }
 
+/// Insert a two-letter base (`oo`, `ng`) under three keys: lowercase (`oo`),
+/// Shift (`Oo`, first letter upper) and Caps Lock (`OO`, all upper).
+fn insert_digraph(
+    mapping: &mut HashMap<String, Vec<String>>,
+    base: &str,
+    suffix: &str,
+    is_tl: bool,
+) {
+    let variations = build_variations(base, suffix, is_tl);
+    let shift_key = uppercase_first_only(&format!("{base}{suffix}"));
+    let shift_variations = variations.iter().map(|s| uppercase_first_only(s)).collect();
+    let caps_variations = variations.iter().map(|s| s.to_uppercase()).collect();
+    mapping.insert(format!("{base}{suffix}").to_uppercase(), caps_variations);
+    mapping.insert(shift_key, shift_variations);
+    mapping.insert(format!("{base}{suffix}"), variations);
+}
+
 fn build_mode_map(is_tl: bool) -> HashMap<String, ToneVariationList> {
     let mut mapping: HashMap<String, Vec<String>> = HashMap::new();
 
@@ -63,11 +80,7 @@ fn build_mode_map(is_tl: bool) -> HashMap<String, ToneVariationList> {
 
     if is_tl {
         // TL: oo (double o, tone mark on first o).
-        let variations = build_variations("o", "o", true);
-        let upper_variations: Vec<String> =
-            variations.iter().map(|s| uppercase_first_only(s)).collect();
-        mapping.insert("oo".to_string(), variations);
-        mapping.insert("Oo".to_string(), upper_variations);
+        insert_digraph(&mut mapping, "o", "o", is_tl);
     } else {
         // POJ: o͘ = o + combining dot above right (U+0358).
         let suffix = "\u{0358}";
@@ -90,11 +103,7 @@ fn build_mode_map(is_tl: bool) -> HashMap<String, ToneVariationList> {
     }
 
     // ng — tone mark on n, g is suffix.
-    let variations = build_variations("n", "g", is_tl);
-    let upper_variations: Vec<String> =
-        variations.iter().map(|s| uppercase_first_only(s)).collect();
-    mapping.insert("ng".to_string(), variations);
-    mapping.insert("Ng".to_string(), upper_variations);
+    insert_digraph(&mut mapping, "n", "g", is_tl);
 
     // POJ + TL: append "ⁿ" (U+207F) to existing "n" entry.
     let n_entry = mapping.entry("n".to_string()).or_default();
@@ -118,5 +127,38 @@ pub(crate) fn build() -> ToneVariationsResult {
     ToneVariationsResult {
         poj_variations,
         tl_variations,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn variations(map: &HashMap<String, ToneVariationList>, key: &str) -> Vec<String> {
+        map.get(key)
+            .unwrap_or_else(|| panic!("no callout entry for {key:?}"))
+            .variations
+            .clone()
+    }
+
+    #[test]
+    fn tl_oo_callouts_shift_first_letter_caps_lock_all_letters() {
+        let tl = build_mode_map(true);
+        // trace: build_variations("o","o") tone 2 → "o"+U+0301+"o" → NFC "óo"
+        assert_eq!(variations(&tl, "oo")[0], "óo");
+        assert_eq!(variations(&tl, "Oo")[0], "Óo");
+        assert_eq!(variations(&tl, "OO")[0], "ÓO");
+        assert_eq!(variations(&tl, "OO").len(), variations(&tl, "oo").len());
+    }
+
+    #[test]
+    fn ng_callouts_shift_first_letter_caps_lock_all_letters_both_modes() {
+        for is_tl in [true, false] {
+            let map = build_mode_map(is_tl);
+            // trace: build_variations("n","g") tone 2 → "n"+U+0301+"g" → NFC "ńg"
+            assert_eq!(variations(&map, "ng")[0], "ńg");
+            assert_eq!(variations(&map, "Ng")[0], "Ńg");
+            assert_eq!(variations(&map, "NG")[0], "ŃG");
+        }
     }
 }
