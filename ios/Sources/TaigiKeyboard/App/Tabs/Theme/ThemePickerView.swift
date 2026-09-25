@@ -5,7 +5,7 @@ import SwiftUI
 ///
 /// - **Custom Themes** — the user's saved themes (apply / edit / delete via a
 ///   per-card menu) plus a `Create New…` card (hidden at the cap). These show a
-///   live button preview (background + a styled centered key).
+///   live background preview (the theme surface, no sample key).
 /// - **Filled / Outlined / Borderless** — one shelf per built-in key-style family
 ///   (`BuiltInThemes.families`). All three carry the SAME 7 colors (Default + 5 light
 ///   gradients + dark Catppuccin); they differ only in key style (Filled = filled keys, Outlined =
@@ -226,14 +226,14 @@ private struct ThemeCardAction: Identifiable {
 }
 
 /// A theme cell: a preview (screenshot when `previewImageName` is set, else a
-/// live custom-theme button preview) + a title with a selection checkmark + an
+/// live custom-theme background preview) + a title with a selection checkmark + an
 /// optional `…` action menu (user themes only). Tapping the preview applies the theme.
 private struct ThemeGalleryCard: View {
     let title: String
     /// Full appearance for the live custom-theme preview; `nil` for built-in cards
     /// (they render via `previewImageName` and never reach the live preview).
     var appearance: ThemeAppearance?
-    /// Screenshot asset name; `nil` → render the live custom-theme button preview.
+    /// Screenshot asset name; `nil` → render the live custom-theme background preview.
     let previewImageName: String?
     let isSelected: Bool
     let onTap: () -> Void
@@ -301,7 +301,7 @@ private struct ThemeGalleryCard: View {
     /// Preview content: the screenshot asset (filling the aspect box) when
     /// `previewImageName` is set and the asset exists; a neutral placeholder when
     /// the asset is missing (scaffold stage); otherwise the live custom-theme
-    /// button preview (background + one styled centered key).
+    /// background preview.
     @ViewBuilder
     private var preview: some View {
         if let previewImageName {
@@ -313,7 +313,7 @@ private struct ThemeGalleryCard: View {
                 ThemeScreenshotPlaceholder(title: title)
             }
         } else {
-            CustomThemeButtonPreview(appearance: appearance ?? .default)
+            CustomThemeBackgroundPreview(appearance: appearance ?? .default)
         }
     }
 }
@@ -342,54 +342,16 @@ private struct ThemeScreenshotPlaceholder: View {
     }
 }
 
-// MARK: - Custom-theme button preview
+// MARK: - Custom-theme background preview
 
-/// A custom-theme card preview: the theme background with one large centered key
-/// that applies the theme's full button style — fill, text glyph, corner radius,
-/// border, and shadow — so the saved theme's distinctive key look reads at a
-/// glance (the old colors-only swatch hid radius / border / shadow). Border and
-/// shadow mirror the real keyboard (`TaigiKeyboardView`): a black stroke and a
-/// soft drop shadow sized by `keyShadowIntensity`. User themes are seeded on
-/// load, so a nil role only occurs for a malformed entry and falls back to the seed.
-private struct CustomThemeButtonPreview: View {
+/// A custom-theme card preview: the theme background alone (same surface view as the
+/// keyboard root, `TaigiKeyboardView`) — no sample key, so the selection checkmark sits
+/// on the bare surface like a built-in card's (USER 2026-09-26). User themes are seeded
+/// on load, so a nil background only occurs for a malformed entry and falls back to the seed.
+private struct CustomThemeBackgroundPreview: View {
     let appearance: ThemeAppearance
 
-    /// Sample glyph on the key face — a Taigi romanization letter with a tone mark.
-    private static let sampleGlyph = "â"
-    private static let keyWidth: CGFloat = 104
-    private static let keyHeight: CGFloat = 64
-    private static let glyphBaseSize: CGFloat = 32
-
     var body: some View {
-        let colors = appearance.colors
-        let keyFill = (colors.normalKeyFillColor ?? UserThemeSeed.keyFill).color
-        let keyText = (colors.keyTextColor ?? UserThemeSeed.keyText).color
-        let cornerRadius = CGFloat(appearance.keyCornerRadius)
-        let borderWidth = CGFloat(appearance.keyBorderWidth)
-        let shadow = CGFloat(appearance.keyShadowIntensity)
-
-        RoundedRectangle(cornerRadius: cornerRadius)
-            .fill(keyFill)
-            .overlay {
-                if borderWidth > 0 {
-                    // Border follows the key text color (mirrors the real keyboard's
-                    // role-first border), so the preview matches the live Outlined look.
-                    RoundedRectangle(cornerRadius: cornerRadius)
-                        .strokeBorder(keyText, lineWidth: borderWidth)
-                }
-            }
-            .overlay {
-                Text(Self.sampleGlyph)
-                    .font(AppStyle.appFont(size: Self.glyphBaseSize * CGFloat(appearance.keyFontSizeScale)))
-                    .foregroundColor(keyText)
-            }
-            .frame(width: Self.keyWidth, height: Self.keyHeight)
-            // shadow == 0 → radius 0 + opacity 0 = no shadow (flat themes).
-            .shadow(color: .black.opacity(shadow > 0 ? 0.3 : 0), radius: shadow, y: shadow / 2)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            // Same surface view as the keyboard root (`TaigiKeyboardView`).
-            .background {
-                ThemeBackgroundSurface(surface: colors.surface ?? ThemeSurface(background: UserThemeSeed.background, dimsTowardWhite: true)).equatable()
-            }
+        ThemeBackgroundSurface(surface: appearance.colors.surface ?? ThemeSurface(background: UserThemeSeed.background, dimsTowardWhite: true)).equatable()
     }
 }
