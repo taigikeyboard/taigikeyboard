@@ -23,25 +23,42 @@ Three x86_64 packages, each with its `.sha256`, attached to the
 The floor is the settings window's GTK 4.12 / libadwaita 1.5: Ubuntu 22.04 and
 Debian 12 ship older ones and are not targeted. Flatpak / Snap / AppImage are
 not offered — an IME's addon and engine have to be registered with the host's
-Fcitx5 / IBus, which a sandboxed or self-contained bundle cannot do. No AUR
-entry: that needs a maintainer account and is a separate decision.
+Fcitx5 / IBus, which a sandboxed or self-contained bundle cannot do. The
+AUR `taigikeyboard` split packages (`fcitx5-` / `ibus-taigikeyboard`) are
+community-maintained, built from the tagged source; this project does not
+maintain them.
 
-All three are packed from the SAME staged `make install PREFIX=/usr` root —
-no second build inside rpmbuild or makepkg. The Fcitx5 addon lands in each
-distribution's own library dir through CMake's `GNUInstallDirs`
-(`lib/x86_64-linux-gnu`, `lib64`, `lib`); every other path is identical.
-`/usr/libexec` on Arch departs from its packaging guideline (`/usr/lib`),
-accepted to keep one layout; the component XML names the absolute path.
-One package holds both shells, the way `fcitx5-chewing` and
-`ibus-chewing` come from one source:
+All three are packed from the SAME `make install PREFIX=/usr` recipe into a
+staging root — no second build inside rpmbuild or makepkg. One package holds
+both shells (Debian and Fedora pick the framework through `fcitx5 | ibus`;
+pacman has no alternatives, so Arch requires `fcitx5`). Shared paths:
 
 | Path | What |
 |---|---|
-| `/usr/lib/<multiarch>/fcitx5/libtaigikeyboard.so` + `/usr/share/fcitx5/{addon,inputmethod}/taigikeyboard.conf` | The Fcitx5 addon (primary) and its registration (`Library=export:libtaigikeyboard` → that file) |
-| `/usr/libexec/ibus-engine-taigikeyboard` + `/usr/share/ibus/component/taigikeyboard.xml` | The IBus engine (second) and its component registration |
+| `/usr/lib/<multiarch>/fcitx5/libtaigikeyboard.so` + `/usr/share/fcitx5/{addon,inputmethod}/taigikeyboard.conf` | The Fcitx5 addon (primary) and its registration (`Library=export:libtaigikeyboard` → that file); the library dir is each distribution's own through CMake's `GNUInstallDirs` (`lib/x86_64-linux-gnu`, `lib64`, `lib`) |
+| `/usr/share/ibus/component/taigikeyboard.xml` | The IBus engine's component registration; its `<exec>` is rendered from the same `LIBEXECDIR` the engine is installed under |
 | `/usr/bin/taigikeyboard-settings` + `/usr/share/applications/tw.taigikeyboard.Settings.desktop` + `/usr/share/icons/hicolor/*/apps/taigikeyboard.png` | The GTK 4 / libadwaita settings window, its launcher entry and icon |
 | `/usr/share/taigikeyboard/dictionaries/*` | The dictionary artifacts the engine reads at first key |
-| `/usr/share/fonts/{truetype,opentype}/taigikeyboard/*` + `/usr/share/doc/taigikeyboard/fonts-OFL-1.1.txt` | The four bundled typefaces (the macOS / Windows set) as fontconfig fallbacks; fontconfig's dpkg trigger rebuilds the cache (roadmap L4) |
+
+### Paths per distribution
+
+Three things follow each distribution's packaging guideline, selected by
+`make install LAYOUT=debian|fedora|arch` (`linux/Makefile`; `debian` is the
+default and what a source install uses):
+
+| | Debian / Ubuntu (`.deb`) | Fedora (`.rpm`) | Arch |
+|---|---|---|---|
+| IBus engine (a helper only `ibus-daemon` runs) | `/usr/libexec/ibus-engine-taigikeyboard` | `/usr/libexec/taigikeyboard/ibus-engine-taigikeyboard` | `/usr/lib/taigikeyboard/ibus-engine-taigikeyboard` |
+| The four bundled typefaces (fontconfig fallbacks, roadmap L4) | `/usr/share/fonts/{truetype,opentype}/taigikeyboard/` | `/usr/share/fonts/taigikeyboard/` | `/usr/share/fonts/taigikeyboard/` |
+| Licence texts | `/usr/share/doc/taigikeyboard/copyright`: header (Apache-2.0 → `/usr/share/common-licenses`) + NOTICE + `THIRD_PARTY_LICENSES.md` + OFL + `dictionary/LICENSE` | `/usr/share/licenses/taigikeyboard/`: `LICENSE`, `NOTICE`, `THIRD_PARTY_LICENSES.md`, `fonts-OFL-1.1.txt`, `dictionary-LICENSE` (`%license`) | Same directory and files minus `LICENSE` (Apache-2.0 is in the `licenses` package) |
+| Guideline | Policy §12.5 (`copyright`), FHS 3.0 (`/usr/libexec`), Fonts/PackagingPolicy | Packaging Guidelines (`%{_libexecdir}/%{name}`, `%license`), Fonts Policy | Arch package guidelines ("Avoid `/usr/libexec`… use `/usr/lib/$pkgname`"), font package guidelines |
+
+Fedora's Fonts Policy also discourages typefaces bundled inside an
+application package; they stay bundled (USER 2026-09-25), so `𧉟` never
+renders as tofu, with only the path following the guideline. Moving the
+engine is a file move within one package: an upgrade replaces the file and
+the component XML together; IBus reads the new `<exec>` at its next start
+(`ibus restart` or a new session), as after any upgrade.
 
 `Depends: fcitx5 | ibus, fontconfig` (its dpkg trigger caches the bundled typefaces) plus what the three binaries link, versioned, from
 `dpkg-shlibdeps` at pack time (`linux/packaging/control.in`, `@SHLIBS@`) — GTK
@@ -58,7 +75,7 @@ User data is never in the package: `~/.config/taigikeyboard/settings.json` and
 
 `make -C linux deb` on a Linux machine (or the CI runner):
 
-1. `make install PREFIX=/usr DESTDIR=target/deb/root` — the ONE install
+1. `make install PREFIX=/usr LAYOUT=debian DESTDIR=target/deb/root` — the ONE install
    layout, so the package and a source install cannot drift (both shells,
    the registration files, the dictionaries, the desktop entry, the icons).
 2. `packaging/control.in` rendered with the version from `linux/Cargo.toml`

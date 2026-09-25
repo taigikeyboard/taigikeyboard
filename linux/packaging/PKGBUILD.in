@@ -1,7 +1,8 @@
 # The Arch package (`make -C linux arch`): the same staged `make install`
-# root the `.deb` packs, never a second build inside makepkg — one install
-# layout for every format. `@VERSION@` / `@STAGEROOT@` are rendered by the
-# Makefile. pacman has no alternative dependencies: fcitx5 is required (the
+# recipe the `.deb` packs, staged with LAYOUT=arch (engine in
+# /usr/lib/taigikeyboard, fonts and custom licences under their package
+# directories), never a second build inside makepkg. `@VERSION@` /
+# `@STAGEROOT@` are rendered by the Makefile. pacman has no alternative dependencies: fcitx5 is required (the
 # addon links libFcitx5Core, which only the fcitx5 package provides; Fcitx5 is
 # the primary shell), IBus is optional.
 pkgname=taigikeyboard
@@ -10,7 +11,9 @@ pkgrel=1
 pkgdesc='Taiwanese (Tâi-gí) input method — Fcitx5 addon and IBus engine'
 arch=('x86_64')
 url='https://taigikeyboard.tw'
-license=('Apache-2.0' 'OFL-1.1')
+# Apache-2.0 comes from the `licenses` package; the OFL and the dictionary's
+# per-source terms (dictionary/LICENSE) are in /usr/share/licenses/taigikeyboard.
+license=('Apache-2.0' 'OFL-1.1' 'LicenseRef-taigikeyboard-dictionary')
 depends=('glibc' 'gcc-libs' 'glib2' 'gtk4' 'libadwaita' 'fontconfig' 'fcitx5')
 optdepends=('ibus: IBus input method framework')
 # Prebuilt release binaries (`strip = true` in the release profile).

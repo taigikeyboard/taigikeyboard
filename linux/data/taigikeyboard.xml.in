@@ -2,13 +2,15 @@
 <!--
   The IBus component registration for Taigi Keyboard. Installed as
   @PREFIX@/share/ibus/component/taigikeyboard.xml (linux/Makefile renders
-  @PREFIX@ and @VERSION@); ibus-daemon reads the directory at start and
-  spawns <exec> on demand. Design record: docs/architecture/linux-roadmap.md L1.
+  @PREFIX@, @LIBEXECDIR@ and @VERSION@ — @LIBEXECDIR@ is the same variable the
+  engine is installed under, per distribution layout); ibus-daemon reads the
+  directory at start and spawns <exec> on demand. Design record:
+  docs/architecture/linux-roadmap.md L1.
 -->
 <component>
   <name>org.freedesktop.IBus.TaigiKeyboard</name>
   <description>Taigi Keyboard input method engine</description>
-  <exec>@PREFIX@/libexec/ibus-engine-taigikeyboard --ibus</exec>
+  <exec>@LIBEXECDIR@/ibus-engine-taigikeyboard --ibus</exec>
   <version>@VERSION@</version>
   <author>Taigi Keyboard</author>
   <license>Apache-2.0</license>

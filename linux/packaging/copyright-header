@@ -1,0 +1,14 @@
+Taigi Keyboard (台語齒盤) — copyright and licence information
+
+Upstream source: https://github.com/taigikeyboard/taigikeyboard
+Contact: Taigi Keyboard <info@taigikeyboard.tw>
+
+The program is licensed under the Apache License, Version 2.0. On Debian
+systems the full text of that licence is in
+/usr/share/common-licenses/Apache-2.0.
+
+Not everything in this package is under that licence. Below, in order: the
+NOTICE (attribution), the third-party inventory, the SIL Open Font License
+1.1 that covers the bundled typefaces in /usr/share/fonts/*/taigikeyboard/,
+and the per-source terms of the dictionary data in
+/usr/share/taigikeyboard/dictionaries/.
