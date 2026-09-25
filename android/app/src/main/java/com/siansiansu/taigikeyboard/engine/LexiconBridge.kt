@@ -122,20 +122,17 @@ fun RustEngineBridge.dictionaryFilters(toggles: RustEngineBridge.DictionaryToggl
         .newBuilder()
         .setToggles(dictionaryTogglesProto(toggles))
         .build()
-    // Binary skew fallback: when method 18 dispatch fails (e.g. Kotlin
-    // updated but Rust .so not rebuilt) but methods 12-17 still work,
-    // the dev-only fallback would silently strip user-enabled dictionaries.
-    // Mirror Rust `engine/lexicon/src/dictionary_filters.rs::compute_filters`
-    // here so search call paths continue to honor user toggles.
-    // Codex PR #210 r3182714295.
+    // The bit layout belongs to Rust (`compute_filters`); no platform
+    // mirror. `lexiconDispatch` records its own failures.
     val resp = lexiconDispatch(LexiconRequest.newBuilder().setDictionaryFilters(payload).build(), "dictionaryFilters")
-    if (resp == null || !resp.hasDictionaryFiltersResult()) {
-        return platformFallbackFilters(toggles)
+        ?: return RustEngineBridge.DictionaryFilters.ALL_SOURCES_ENABLED
+    if (!resp.hasDictionaryFiltersResult()) {
+        RustEngineBridge.recordFailure("dictionaryFilters", "missing dictionary_filters result")
+        return RustEngineBridge.DictionaryFilters.ALL_SOURCES_ENABLED
     }
     val r = resp.dictionaryFiltersResult
     return RustEngineBridge.DictionaryFilters(
         dictionaryFilterBitmask = r.dictionaryFilterBitmask.toUInt(),
-        assocLookupBitmask = r.assocLookupBitmask.toUInt(),
         enabledSources = r.enabledSourceCodesList
             .mapNotNull(::platformDictionarySource)
             .toSet(),
@@ -191,113 +188,6 @@ fun RustEngineBridge.isHanzi(text: String): Boolean {
     if (!resp.hasIsHanziResult()) return false
     return resp.isHanziResult.isHanzi
 }
-
-/**
- * Fallback only for platform/Rust binary skew where method 18 is absent.
- * Rust `engine/lexicon/src/dictionary_filters.rs::compute_filters` is
- * authoritative; keep this bit layout in sync with
- * `engine/protos/proto/lexicon.proto`. Bit positions pinned by the
- * 6 inline Rust golden tests. Mirrors iOS
- * `RustEngineBridge.platformFallbackFilters` — must drift together.
- */
-private fun platformFallbackFilters(toggles: RustEngineBridge.DictionaryToggles): RustEngineBridge.DictionaryFilters {
-    var dictMask = 0u
-    if (toggles.kautian) dictMask = dictMask or (1u shl 0)
-    if (toggles.taigitv) dictMask = dictMask or (1u shl 1)
-    if (toggles.itaigi) dictMask = dictMask or (1u shl 2)
-    if (toggles.sitbut) dictMask = dictMask or (1u shl 3)
-    if (toggles.taihoa) dictMask = dictMask or (1u shl 4)
-    if (toggles.taijit) dictMask = dictMask or (1u shl 5)
-    if (toggles.kungge) dictMask = dictMask or (1u shl 6)
-    if (toggles.stti) dictMask = dictMask or (1u shl 7)
-    if (toggles.khpoo) dictMask = dictMask or (1u shl 8)
-    if (toggles.khiin) dictMask = dictMask or (1u shl 9)
-    if (toggles.dev) dictMask = dictMask or (1u shl 10)
-    if (toggles.lkk) dictMask = dictMask or (1u shl 11)
-    if (toggles.variant) dictMask = dictMask or (1u shl 12)
-    dictMask = dictMask or encodeKautianSubcollWire(toggles)
-
-    val allAssocOn = toggles.kautian &&
-        toggles.taigitv &&
-        toggles.itaigi &&
-        toggles.sitbut &&
-        toggles.taihoa &&
-        toggles.taijit &&
-        toggles.kungge &&
-        toggles.stti &&
-        toggles.khpoo
-    val assocMask: UInt = if (allAssocOn) UInt.MAX_VALUE else (dictMask and 0x1FFu)
-
-    val enabled = mutableSetOf(DictionarySource.CUSTOM)
-    if (toggles.dev) enabled.add(DictionarySource.DEV)
-    if (toggles.kautian) enabled.add(DictionarySource.KAUTIAN)
-    if (toggles.taigitv) enabled.add(DictionarySource.TAIGITV)
-    if (toggles.itaigi) enabled.add(DictionarySource.ITAIGI)
-    if (toggles.sitbut) enabled.add(DictionarySource.SITBUT)
-    if (toggles.taihoa) enabled.add(DictionarySource.TAIHOA)
-    if (toggles.taijit) enabled.add(DictionarySource.TAIJIT)
-    if (toggles.kungge) enabled.add(DictionarySource.KUNGGE)
-    if (toggles.stti) enabled.add(DictionarySource.STTI)
-    if (toggles.khpoo) enabled.add(DictionarySource.KHPOO)
-    if (toggles.khiin) enabled.add(DictionarySource.KHIIN)
-    if (toggles.lkk) enabled.add(DictionarySource.LKK)
-    return RustEngineBridge.DictionaryFilters(
-        dictionaryFilterBitmask = dictMask,
-        assocLookupBitmask = assocMask,
-        enabledSources = enabled,
-    )
-}
-
-/**
- * kautian subcollection wire ENCODE — fallback-only mirror of Rust
- * `engine/lexicon/src/dictionary_filters.rs::encode_kautian_subcoll_wire`.
- * Returns the wire high region (bit 13 active + bits 14..=25 enable mask)
- * when the kautian master is on; `0` otherwise (kautian rows drop via the
- * source-OR anyway). Keeps fallback behaviour identical to the engine so a
- * binary-skew session does not silently revert subcollection toggles. The
- * `main` subtag bit is set unconditionally when the master is on (主條目 is
- * not a user toggle). Mirrors iOS `RustEngineBridge.encodeKautianSubcollWire`.
- *
- * Pure top-level function (no `RustEngineBridge` receiver) so the JVM unit
- * test `KautianSubcollWireEncodeTest` can call it without triggering
- * `System.loadLibrary("rust_taigi")`.
- *
- * CROSS-PLATFORM INVARIANT — bit positions mirror
- * `engine/lexicon/src/dictionary_reader.rs` (`KAUTIAN_SUBTAG_*` /
- * `WIRE_KAUTIAN_SUBCOLL_*`). Drift causes silent subcollection-filter divergence.
- */
-internal fun encodeKautianSubcollWire(toggles: RustEngineBridge.DictionaryToggles): UInt {
-    if (!toggles.kautian) return 0u
-    val sub = toggles.kautianSubcoll
-    // Accent order MUST match config.yaml `dialect_columns` (subtag bit = 1 + index).
-    val accents = listOf(
-        sub.lukang,
-        sub.sansia,
-        sub.taipak,
-        sub.gilan,
-        sub.tainan,
-        sub.kaohsiung,
-        sub.kinmen,
-        sub.makung,
-        sub.sintik,
-        sub.taichung,
-    )
-    var subtag = 1 shl KAUTIAN_SUBTAG_MAIN_BIT // main always on when master on
-    accents.forEachIndexed { index, enabled ->
-        if (enabled) subtag = subtag or (1 shl (KAUTIAN_SUBTAG_ACCENT_SHIFT + index))
-    }
-    if (sub.nameAppendix) subtag = subtag or (1 shl KAUTIAN_SUBTAG_NAME_BIT)
-    return WIRE_KAUTIAN_SUBCOLL_ACTIVE_BIT or (subtag.toUInt() shl WIRE_KAUTIAN_SUBCOLL_SHIFT)
-}
-
-// kautian subtag bit layout (mirrors Rust dictionary_reader.rs KAUTIAN_SUBTAG_*).
-private const val KAUTIAN_SUBTAG_MAIN_BIT = 0
-private const val KAUTIAN_SUBTAG_ACCENT_SHIFT = 1
-private const val KAUTIAN_SUBTAG_NAME_BIT = 11
-
-// wire high region (mirrors Rust dictionary_reader.rs WIRE_KAUTIAN_SUBCOLL_*).
-private val WIRE_KAUTIAN_SUBCOLL_ACTIVE_BIT: UInt = 1u shl 13
-private const val WIRE_KAUTIAN_SUBCOLL_SHIFT = 14
 
 /**
  * Map proto `DictionarySourceCode` to the platform `DictionarySource`

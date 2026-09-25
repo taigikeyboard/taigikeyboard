@@ -200,20 +200,29 @@ object RustEngineBridge {
     }
 
     /**
-     * Output of `dictionaryFilters` — ready-to-send bitmasks plus the
+     * Output of `dictionaryFilters` — ready-to-send bitmask plus the
      * decoded enabled-source set for Dictionary tab retag. Replaces verbatim
      * platform `EnabledDictionaries` bit math (deleted in v3.5.8 slice).
-     *
-     * `assocLookupBitmask` carries the `UInt.MAX_VALUE` sentinel when all 9
-     * association sources are on — preserves the documented
-     * `lexicon.proto:166-173` shortcut. Caller forwards directly to
-     * `assocLookup(enabledSourcesBitmask = ...)`.
      */
     data class DictionaryFilters(
         val dictionaryFilterBitmask: UInt,
-        val assocLookupBitmask: UInt,
         val enabledSources: Set<DictionarySource>,
-    )
+    ) {
+        companion object {
+            /**
+             * What a failed resolve degrades to: every source on. `UInt.MAX_VALUE`
+             * is the engine's "filter disabled" sentinel on both the search path
+             * (`dictionary_reader.rs::Filter::from_enabled_bitmask`) and the
+             * composing path. Fail-open on purpose — a wider candidate list is
+             * recoverable, an empty one looks like a broken keyboard. Mirrors iOS
+             * `RustEngineBridge.DictionaryFilters.allSourcesEnabled`.
+             */
+            val ALL_SOURCES_ENABLED = DictionaryFilters(
+                dictionaryFilterBitmask = UInt.MAX_VALUE,
+                enabledSources = DictionarySource.entries.toSet(),
+            )
+        }
+    }
 
     /**
      * R5 (#7): marshal `(word, tl)` pair-key rows into proto `FrequencyEntry`
