@@ -12,7 +12,7 @@ public interface KautianSubcollTogglesOrBuilder extends
 
   /**
    * <pre>
-   * 鹿港偏泉腔 (subtag bit 1)
+   * Lukang (Quanzhou-leaning) (subtag bit 1)
    * </pre>
    *
    * <code>bool accent_lukang = 1;</code>
@@ -22,7 +22,7 @@ public interface KautianSubcollTogglesOrBuilder extends
 
   /**
    * <pre>
-   * 三峽偏泉腔 (subtag bit 2)
+   * Sansia (Quanzhou-leaning) (subtag bit 2)
    * </pre>
    *
    * <code>bool accent_sansia = 2;</code>
@@ -32,7 +32,7 @@ public interface KautianSubcollTogglesOrBuilder extends
 
   /**
    * <pre>
-   * 臺北偏泉腔 (subtag bit 3)
+   * Taipei (Quanzhou-leaning) (subtag bit 3)
    * </pre>
    *
    * <code>bool accent_taipak = 3;</code>
@@ -42,7 +42,7 @@ public interface KautianSubcollTogglesOrBuilder extends
 
   /**
    * <pre>
-   * 宜蘭偏漳腔 (subtag bit 4)
+   * Yilan (Zhangzhou-leaning) (subtag bit 4)
    * </pre>
    *
    * <code>bool accent_gilan = 4;</code>
@@ -52,7 +52,7 @@ public interface KautianSubcollTogglesOrBuilder extends
 
   /**
    * <pre>
-   * 臺南混合腔 (subtag bit 5)
+   * Tainan (Mixed) (subtag bit 5)
    * </pre>
    *
    * <code>bool accent_tainan = 5;</code>
@@ -62,7 +62,7 @@ public interface KautianSubcollTogglesOrBuilder extends
 
   /**
    * <pre>
-   * 高雄混合腔 (subtag bit 6)
+   * Kaohsiung (Mixed) (subtag bit 6)
    * </pre>
    *
    * <code>bool accent_kaohsiung = 6;</code>
@@ -72,7 +72,7 @@ public interface KautianSubcollTogglesOrBuilder extends
 
   /**
    * <pre>
-   * 金門偏泉腔 (subtag bit 7)
+   * Kinmen (Quanzhou-leaning) (subtag bit 7)
    * </pre>
    *
    * <code>bool accent_kinmen = 7;</code>
@@ -82,7 +82,7 @@ public interface KautianSubcollTogglesOrBuilder extends
 
   /**
    * <pre>
-   * 馬公偏泉腔 (subtag bit 8)
+   * Makung (Quanzhou-leaning) (subtag bit 8)
    * </pre>
    *
    * <code>bool accent_makung = 8;</code>
@@ -92,7 +92,7 @@ public interface KautianSubcollTogglesOrBuilder extends
 
   /**
    * <pre>
-   * 新竹偏泉腔 (subtag bit 9)
+   * Hsinchu (Quanzhou-leaning) (subtag bit 9)
    * </pre>
    *
    * <code>bool accent_sintik = 9;</code>
@@ -102,7 +102,7 @@ public interface KautianSubcollTogglesOrBuilder extends
 
   /**
    * <pre>
-   * 臺中偏漳腔 (subtag bit 10)
+   * Taichung (Zhangzhou-leaning) (subtag bit 10)
    * </pre>
    *
    * <code>bool accent_taichung = 10;</code>
@@ -112,7 +112,7 @@ public interface KautianSubcollTogglesOrBuilder extends
 
   /**
    * <pre>
-   * 姓名附錄 名+姓 (subtag bit 11)
+   * Surname Appendix, 名+姓 (subtag bit 11)
    * </pre>
    *
    * <code>bool name_appendix = 11;</code>

@@ -154,13 +154,13 @@ public nonisolated enum Taigi_Engine_Platform: SwiftProtobuf.Enum, Swift.CaseIte
 /// (`hit (彼)` — space wanted) since both set `is_translate_swapped = true`;
 /// the separator predicate needs this second flag (continuous-input-ranking
 /// §10.2 segmented-spacing contract; Codex pre-impl 2026-05-18).
-/// How a candidate cell renders the (漢字, 羅馬字) pair. Read by
+/// How a candidate cell renders the (Hanji, romanization) pair. Read by
 /// exactly two engine sites, both display-tier dedupes: the continuous
 /// `FetchAtPos` post-literal pass (`composing::dispatch`) and the NextWord
 /// prediction pass (`nextword::filter`). `UNSPECIFIED` (proto3 default, every
 /// un-wired build) and any unknown value mean SIDE_BY_SIDE — legacy behaviour;
 /// normalise through `AppConfig::is_roman_only_display`, never compare the raw
-/// i32 at a call site. COMBINED (one label `漢字 羅馬字`, hanji
+/// i32 at a call site. COMBINED (one label `Hanji romanization`, hanji
 /// commits) has NO engine reader — a combined cell is still distinct by
 /// (hanji, roman); the platforms send `is_translate_swapped = true` for it.
 public nonisolated enum Taigi_Engine_CandidateDisplayMode: SwiftProtobuf.Enum, Swift.CaseIterable {
@@ -205,16 +205,16 @@ public nonisolated enum Taigi_Engine_CandidateDisplayMode: SwiftProtobuf.Enum, S
 
 }
 
-/// 2026-09-01 added `candidate_display_mode`: 羅馬字 cells hide the hanji, so
-/// rows that differ only in hanji (同音異字 食/𤆬 tsia̍h) become visible
+/// 2026-09-01 added `candidate_display_mode`: Romanization Only cells hide the hanji, so
+/// rows that differ only in hanji (homophones 食/𤆬 tsia̍h) become visible
 /// duplicates that only the engine can collapse consistently for four
 /// platforms. Set on the BASE config (every request) — composing AND nextword
 /// read it; the other request families ignore it. Platforms keep sending the
 /// derived `is_translate_swapped` / `output_both_scripts` pair (both `false`
-/// under 羅馬字) so spacing / recording semantics need no new reader.
+/// under Romanization Only) so spacing / recording semantics need no new reader.
 ///
-/// 2026-09-20 added `hyphenless_roman` (無連字符, USER): the rendered
-/// romanization drops the inter-syllable `-` and writes the 輕聲 marker `--`
+/// 2026-09-20 added `hyphenless_roman` (No Hyphens, USER): the rendered
+/// romanization drops the inter-syllable `-` and writes the neutral-tone marker `--`
 /// as `·` U+00B7 (`tâi-uân` → `tâiuân`, `hōo--guá` → `hōo·guá`). Rendering
 /// only — `phonetics::api::hyphenless_display` is applied to the candidate
 /// `roman` (`composing::dispatch`), the prediction `text`
@@ -225,7 +225,7 @@ public nonisolated enum Taigi_Engine_CandidateDisplayMode: SwiftProtobuf.Enum, S
 /// `"tl"` / `"poj"` and the platform re-splits `roman` on `-` for bopomofo),
 /// exactly as it folds TPS into `is_translate_swapped`.
 ///
-/// 2026-09-22 added `force_lowercase_nasal_marker` (ⁿ大本字 OFF, USER): the
+/// 2026-09-22 added `force_lowercase_nasal_marker` (ⁿ becomes ᴺ in capitals OFF, USER): the
 /// POJ nasal marker is always `ⁿ` U+207F, never `ᴺ` U+1D3A (Caps Lock
 /// `SIANN5` → `SIÂⁿ`). Inverted so the proto default keeps PR #102 (the
 /// marker follows the preceding letter's case). Rendering only

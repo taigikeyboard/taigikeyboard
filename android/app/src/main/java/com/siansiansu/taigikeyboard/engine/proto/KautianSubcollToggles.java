@@ -8,7 +8,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
 /**
  * <pre>
  * `KautianSubcollToggles` is the per-subcollection enable state for the
- * kautian source (Phase 3). The main subcollection (主條目 / headword) is
+ * kautian source (Phase 3). The main subcollection (main entry / headword) is
  * NOT a field — it is always on whenever the kautian master toggle is on,
  * so `compute_filters` sets its subtag bit unconditionally when this
  * message is present. Field tags map to the kautian subtag bit positions:
@@ -32,7 +32,7 @@ public  final class KautianSubcollToggles extends
   private boolean accentLukang_;
   /**
    * <pre>
-   * 鹿港偏泉腔 (subtag bit 1)
+   * Lukang (Quanzhou-leaning) (subtag bit 1)
    * </pre>
    *
    * <code>bool accent_lukang = 1;</code>
@@ -44,7 +44,7 @@ public  final class KautianSubcollToggles extends
   }
   /**
    * <pre>
-   * 鹿港偏泉腔 (subtag bit 1)
+   * Lukang (Quanzhou-leaning) (subtag bit 1)
    * </pre>
    *
    * <code>bool accent_lukang = 1;</code>
@@ -56,7 +56,7 @@ public  final class KautianSubcollToggles extends
   }
   /**
    * <pre>
-   * 鹿港偏泉腔 (subtag bit 1)
+   * Lukang (Quanzhou-leaning) (subtag bit 1)
    * </pre>
    *
    * <code>bool accent_lukang = 1;</code>
@@ -70,7 +70,7 @@ public  final class KautianSubcollToggles extends
   private boolean accentSansia_;
   /**
    * <pre>
-   * 三峽偏泉腔 (subtag bit 2)
+   * Sansia (Quanzhou-leaning) (subtag bit 2)
    * </pre>
    *
    * <code>bool accent_sansia = 2;</code>
@@ -82,7 +82,7 @@ public  final class KautianSubcollToggles extends
   }
   /**
    * <pre>
-   * 三峽偏泉腔 (subtag bit 2)
+   * Sansia (Quanzhou-leaning) (subtag bit 2)
    * </pre>
    *
    * <code>bool accent_sansia = 2;</code>
@@ -94,7 +94,7 @@ public  final class KautianSubcollToggles extends
   }
   /**
    * <pre>
-   * 三峽偏泉腔 (subtag bit 2)
+   * Sansia (Quanzhou-leaning) (subtag bit 2)
    * </pre>
    *
    * <code>bool accent_sansia = 2;</code>
@@ -108,7 +108,7 @@ public  final class KautianSubcollToggles extends
   private boolean accentTaipak_;
   /**
    * <pre>
-   * 臺北偏泉腔 (subtag bit 3)
+   * Taipei (Quanzhou-leaning) (subtag bit 3)
    * </pre>
    *
    * <code>bool accent_taipak = 3;</code>
@@ -120,7 +120,7 @@ public  final class KautianSubcollToggles extends
   }
   /**
    * <pre>
-   * 臺北偏泉腔 (subtag bit 3)
+   * Taipei (Quanzhou-leaning) (subtag bit 3)
    * </pre>
    *
    * <code>bool accent_taipak = 3;</code>
@@ -132,7 +132,7 @@ public  final class KautianSubcollToggles extends
   }
   /**
    * <pre>
-   * 臺北偏泉腔 (subtag bit 3)
+   * Taipei (Quanzhou-leaning) (subtag bit 3)
    * </pre>
    *
    * <code>bool accent_taipak = 3;</code>
@@ -146,7 +146,7 @@ public  final class KautianSubcollToggles extends
   private boolean accentGilan_;
   /**
    * <pre>
-   * 宜蘭偏漳腔 (subtag bit 4)
+   * Yilan (Zhangzhou-leaning) (subtag bit 4)
    * </pre>
    *
    * <code>bool accent_gilan = 4;</code>
@@ -158,7 +158,7 @@ public  final class KautianSubcollToggles extends
   }
   /**
    * <pre>
-   * 宜蘭偏漳腔 (subtag bit 4)
+   * Yilan (Zhangzhou-leaning) (subtag bit 4)
    * </pre>
    *
    * <code>bool accent_gilan = 4;</code>
@@ -170,7 +170,7 @@ public  final class KautianSubcollToggles extends
   }
   /**
    * <pre>
-   * 宜蘭偏漳腔 (subtag bit 4)
+   * Yilan (Zhangzhou-leaning) (subtag bit 4)
    * </pre>
    *
    * <code>bool accent_gilan = 4;</code>
@@ -184,7 +184,7 @@ public  final class KautianSubcollToggles extends
   private boolean accentTainan_;
   /**
    * <pre>
-   * 臺南混合腔 (subtag bit 5)
+   * Tainan (Mixed) (subtag bit 5)
    * </pre>
    *
    * <code>bool accent_tainan = 5;</code>
@@ -196,7 +196,7 @@ public  final class KautianSubcollToggles extends
   }
   /**
    * <pre>
-   * 臺南混合腔 (subtag bit 5)
+   * Tainan (Mixed) (subtag bit 5)
    * </pre>
    *
    * <code>bool accent_tainan = 5;</code>
@@ -208,7 +208,7 @@ public  final class KautianSubcollToggles extends
   }
   /**
    * <pre>
-   * 臺南混合腔 (subtag bit 5)
+   * Tainan (Mixed) (subtag bit 5)
    * </pre>
    *
    * <code>bool accent_tainan = 5;</code>
@@ -222,7 +222,7 @@ public  final class KautianSubcollToggles extends
   private boolean accentKaohsiung_;
   /**
    * <pre>
-   * 高雄混合腔 (subtag bit 6)
+   * Kaohsiung (Mixed) (subtag bit 6)
    * </pre>
    *
    * <code>bool accent_kaohsiung = 6;</code>
@@ -234,7 +234,7 @@ public  final class KautianSubcollToggles extends
   }
   /**
    * <pre>
-   * 高雄混合腔 (subtag bit 6)
+   * Kaohsiung (Mixed) (subtag bit 6)
    * </pre>
    *
    * <code>bool accent_kaohsiung = 6;</code>
@@ -246,7 +246,7 @@ public  final class KautianSubcollToggles extends
   }
   /**
    * <pre>
-   * 高雄混合腔 (subtag bit 6)
+   * Kaohsiung (Mixed) (subtag bit 6)
    * </pre>
    *
    * <code>bool accent_kaohsiung = 6;</code>
@@ -260,7 +260,7 @@ public  final class KautianSubcollToggles extends
   private boolean accentKinmen_;
   /**
    * <pre>
-   * 金門偏泉腔 (subtag bit 7)
+   * Kinmen (Quanzhou-leaning) (subtag bit 7)
    * </pre>
    *
    * <code>bool accent_kinmen = 7;</code>
@@ -272,7 +272,7 @@ public  final class KautianSubcollToggles extends
   }
   /**
    * <pre>
-   * 金門偏泉腔 (subtag bit 7)
+   * Kinmen (Quanzhou-leaning) (subtag bit 7)
    * </pre>
    *
    * <code>bool accent_kinmen = 7;</code>
@@ -284,7 +284,7 @@ public  final class KautianSubcollToggles extends
   }
   /**
    * <pre>
-   * 金門偏泉腔 (subtag bit 7)
+   * Kinmen (Quanzhou-leaning) (subtag bit 7)
    * </pre>
    *
    * <code>bool accent_kinmen = 7;</code>
@@ -298,7 +298,7 @@ public  final class KautianSubcollToggles extends
   private boolean accentMakung_;
   /**
    * <pre>
-   * 馬公偏泉腔 (subtag bit 8)
+   * Makung (Quanzhou-leaning) (subtag bit 8)
    * </pre>
    *
    * <code>bool accent_makung = 8;</code>
@@ -310,7 +310,7 @@ public  final class KautianSubcollToggles extends
   }
   /**
    * <pre>
-   * 馬公偏泉腔 (subtag bit 8)
+   * Makung (Quanzhou-leaning) (subtag bit 8)
    * </pre>
    *
    * <code>bool accent_makung = 8;</code>
@@ -322,7 +322,7 @@ public  final class KautianSubcollToggles extends
   }
   /**
    * <pre>
-   * 馬公偏泉腔 (subtag bit 8)
+   * Makung (Quanzhou-leaning) (subtag bit 8)
    * </pre>
    *
    * <code>bool accent_makung = 8;</code>
@@ -336,7 +336,7 @@ public  final class KautianSubcollToggles extends
   private boolean accentSintik_;
   /**
    * <pre>
-   * 新竹偏泉腔 (subtag bit 9)
+   * Hsinchu (Quanzhou-leaning) (subtag bit 9)
    * </pre>
    *
    * <code>bool accent_sintik = 9;</code>
@@ -348,7 +348,7 @@ public  final class KautianSubcollToggles extends
   }
   /**
    * <pre>
-   * 新竹偏泉腔 (subtag bit 9)
+   * Hsinchu (Quanzhou-leaning) (subtag bit 9)
    * </pre>
    *
    * <code>bool accent_sintik = 9;</code>
@@ -360,7 +360,7 @@ public  final class KautianSubcollToggles extends
   }
   /**
    * <pre>
-   * 新竹偏泉腔 (subtag bit 9)
+   * Hsinchu (Quanzhou-leaning) (subtag bit 9)
    * </pre>
    *
    * <code>bool accent_sintik = 9;</code>
@@ -374,7 +374,7 @@ public  final class KautianSubcollToggles extends
   private boolean accentTaichung_;
   /**
    * <pre>
-   * 臺中偏漳腔 (subtag bit 10)
+   * Taichung (Zhangzhou-leaning) (subtag bit 10)
    * </pre>
    *
    * <code>bool accent_taichung = 10;</code>
@@ -386,7 +386,7 @@ public  final class KautianSubcollToggles extends
   }
   /**
    * <pre>
-   * 臺中偏漳腔 (subtag bit 10)
+   * Taichung (Zhangzhou-leaning) (subtag bit 10)
    * </pre>
    *
    * <code>bool accent_taichung = 10;</code>
@@ -398,7 +398,7 @@ public  final class KautianSubcollToggles extends
   }
   /**
    * <pre>
-   * 臺中偏漳腔 (subtag bit 10)
+   * Taichung (Zhangzhou-leaning) (subtag bit 10)
    * </pre>
    *
    * <code>bool accent_taichung = 10;</code>
@@ -412,7 +412,7 @@ public  final class KautianSubcollToggles extends
   private boolean nameAppendix_;
   /**
    * <pre>
-   * 姓名附錄 名+姓 (subtag bit 11)
+   * Surname Appendix, 名+姓 (subtag bit 11)
    * </pre>
    *
    * <code>bool name_appendix = 11;</code>
@@ -424,7 +424,7 @@ public  final class KautianSubcollToggles extends
   }
   /**
    * <pre>
-   * 姓名附錄 名+姓 (subtag bit 11)
+   * Surname Appendix, 名+姓 (subtag bit 11)
    * </pre>
    *
    * <code>bool name_appendix = 11;</code>
@@ -436,7 +436,7 @@ public  final class KautianSubcollToggles extends
   }
   /**
    * <pre>
-   * 姓名附錄 名+姓 (subtag bit 11)
+   * Surname Appendix, 名+姓 (subtag bit 11)
    * </pre>
    *
    * <code>bool name_appendix = 11;</code>
@@ -532,7 +532,7 @@ public  final class KautianSubcollToggles extends
   /**
    * <pre>
    * `KautianSubcollToggles` is the per-subcollection enable state for the
-   * kautian source (Phase 3). The main subcollection (主條目 / headword) is
+   * kautian source (Phase 3). The main subcollection (main entry / headword) is
    * NOT a field — it is always on whenever the kautian master toggle is on,
    * so `compute_filters` sets its subtag bit unconditionally when this
    * message is present. Field tags map to the kautian subtag bit positions:
@@ -557,7 +557,7 @@ public  final class KautianSubcollToggles extends
 
     /**
      * <pre>
-     * 鹿港偏泉腔 (subtag bit 1)
+     * Lukang (Quanzhou-leaning) (subtag bit 1)
      * </pre>
      *
      * <code>bool accent_lukang = 1;</code>
@@ -569,7 +569,7 @@ public  final class KautianSubcollToggles extends
     }
     /**
      * <pre>
-     * 鹿港偏泉腔 (subtag bit 1)
+     * Lukang (Quanzhou-leaning) (subtag bit 1)
      * </pre>
      *
      * <code>bool accent_lukang = 1;</code>
@@ -583,7 +583,7 @@ public  final class KautianSubcollToggles extends
     }
     /**
      * <pre>
-     * 鹿港偏泉腔 (subtag bit 1)
+     * Lukang (Quanzhou-leaning) (subtag bit 1)
      * </pre>
      *
      * <code>bool accent_lukang = 1;</code>
@@ -597,7 +597,7 @@ public  final class KautianSubcollToggles extends
 
     /**
      * <pre>
-     * 三峽偏泉腔 (subtag bit 2)
+     * Sansia (Quanzhou-leaning) (subtag bit 2)
      * </pre>
      *
      * <code>bool accent_sansia = 2;</code>
@@ -609,7 +609,7 @@ public  final class KautianSubcollToggles extends
     }
     /**
      * <pre>
-     * 三峽偏泉腔 (subtag bit 2)
+     * Sansia (Quanzhou-leaning) (subtag bit 2)
      * </pre>
      *
      * <code>bool accent_sansia = 2;</code>
@@ -623,7 +623,7 @@ public  final class KautianSubcollToggles extends
     }
     /**
      * <pre>
-     * 三峽偏泉腔 (subtag bit 2)
+     * Sansia (Quanzhou-leaning) (subtag bit 2)
      * </pre>
      *
      * <code>bool accent_sansia = 2;</code>
@@ -637,7 +637,7 @@ public  final class KautianSubcollToggles extends
 
     /**
      * <pre>
-     * 臺北偏泉腔 (subtag bit 3)
+     * Taipei (Quanzhou-leaning) (subtag bit 3)
      * </pre>
      *
      * <code>bool accent_taipak = 3;</code>
@@ -649,7 +649,7 @@ public  final class KautianSubcollToggles extends
     }
     /**
      * <pre>
-     * 臺北偏泉腔 (subtag bit 3)
+     * Taipei (Quanzhou-leaning) (subtag bit 3)
      * </pre>
      *
      * <code>bool accent_taipak = 3;</code>
@@ -663,7 +663,7 @@ public  final class KautianSubcollToggles extends
     }
     /**
      * <pre>
-     * 臺北偏泉腔 (subtag bit 3)
+     * Taipei (Quanzhou-leaning) (subtag bit 3)
      * </pre>
      *
      * <code>bool accent_taipak = 3;</code>
@@ -677,7 +677,7 @@ public  final class KautianSubcollToggles extends
 
     /**
      * <pre>
-     * 宜蘭偏漳腔 (subtag bit 4)
+     * Yilan (Zhangzhou-leaning) (subtag bit 4)
      * </pre>
      *
      * <code>bool accent_gilan = 4;</code>
@@ -689,7 +689,7 @@ public  final class KautianSubcollToggles extends
     }
     /**
      * <pre>
-     * 宜蘭偏漳腔 (subtag bit 4)
+     * Yilan (Zhangzhou-leaning) (subtag bit 4)
      * </pre>
      *
      * <code>bool accent_gilan = 4;</code>
@@ -703,7 +703,7 @@ public  final class KautianSubcollToggles extends
     }
     /**
      * <pre>
-     * 宜蘭偏漳腔 (subtag bit 4)
+     * Yilan (Zhangzhou-leaning) (subtag bit 4)
      * </pre>
      *
      * <code>bool accent_gilan = 4;</code>
@@ -717,7 +717,7 @@ public  final class KautianSubcollToggles extends
 
     /**
      * <pre>
-     * 臺南混合腔 (subtag bit 5)
+     * Tainan (Mixed) (subtag bit 5)
      * </pre>
      *
      * <code>bool accent_tainan = 5;</code>
@@ -729,7 +729,7 @@ public  final class KautianSubcollToggles extends
     }
     /**
      * <pre>
-     * 臺南混合腔 (subtag bit 5)
+     * Tainan (Mixed) (subtag bit 5)
      * </pre>
      *
      * <code>bool accent_tainan = 5;</code>
@@ -743,7 +743,7 @@ public  final class KautianSubcollToggles extends
     }
     /**
      * <pre>
-     * 臺南混合腔 (subtag bit 5)
+     * Tainan (Mixed) (subtag bit 5)
      * </pre>
      *
      * <code>bool accent_tainan = 5;</code>
@@ -757,7 +757,7 @@ public  final class KautianSubcollToggles extends
 
     /**
      * <pre>
-     * 高雄混合腔 (subtag bit 6)
+     * Kaohsiung (Mixed) (subtag bit 6)
      * </pre>
      *
      * <code>bool accent_kaohsiung = 6;</code>
@@ -769,7 +769,7 @@ public  final class KautianSubcollToggles extends
     }
     /**
      * <pre>
-     * 高雄混合腔 (subtag bit 6)
+     * Kaohsiung (Mixed) (subtag bit 6)
      * </pre>
      *
      * <code>bool accent_kaohsiung = 6;</code>
@@ -783,7 +783,7 @@ public  final class KautianSubcollToggles extends
     }
     /**
      * <pre>
-     * 高雄混合腔 (subtag bit 6)
+     * Kaohsiung (Mixed) (subtag bit 6)
      * </pre>
      *
      * <code>bool accent_kaohsiung = 6;</code>
@@ -797,7 +797,7 @@ public  final class KautianSubcollToggles extends
 
     /**
      * <pre>
-     * 金門偏泉腔 (subtag bit 7)
+     * Kinmen (Quanzhou-leaning) (subtag bit 7)
      * </pre>
      *
      * <code>bool accent_kinmen = 7;</code>
@@ -809,7 +809,7 @@ public  final class KautianSubcollToggles extends
     }
     /**
      * <pre>
-     * 金門偏泉腔 (subtag bit 7)
+     * Kinmen (Quanzhou-leaning) (subtag bit 7)
      * </pre>
      *
      * <code>bool accent_kinmen = 7;</code>
@@ -823,7 +823,7 @@ public  final class KautianSubcollToggles extends
     }
     /**
      * <pre>
-     * 金門偏泉腔 (subtag bit 7)
+     * Kinmen (Quanzhou-leaning) (subtag bit 7)
      * </pre>
      *
      * <code>bool accent_kinmen = 7;</code>
@@ -837,7 +837,7 @@ public  final class KautianSubcollToggles extends
 
     /**
      * <pre>
-     * 馬公偏泉腔 (subtag bit 8)
+     * Makung (Quanzhou-leaning) (subtag bit 8)
      * </pre>
      *
      * <code>bool accent_makung = 8;</code>
@@ -849,7 +849,7 @@ public  final class KautianSubcollToggles extends
     }
     /**
      * <pre>
-     * 馬公偏泉腔 (subtag bit 8)
+     * Makung (Quanzhou-leaning) (subtag bit 8)
      * </pre>
      *
      * <code>bool accent_makung = 8;</code>
@@ -863,7 +863,7 @@ public  final class KautianSubcollToggles extends
     }
     /**
      * <pre>
-     * 馬公偏泉腔 (subtag bit 8)
+     * Makung (Quanzhou-leaning) (subtag bit 8)
      * </pre>
      *
      * <code>bool accent_makung = 8;</code>
@@ -877,7 +877,7 @@ public  final class KautianSubcollToggles extends
 
     /**
      * <pre>
-     * 新竹偏泉腔 (subtag bit 9)
+     * Hsinchu (Quanzhou-leaning) (subtag bit 9)
      * </pre>
      *
      * <code>bool accent_sintik = 9;</code>
@@ -889,7 +889,7 @@ public  final class KautianSubcollToggles extends
     }
     /**
      * <pre>
-     * 新竹偏泉腔 (subtag bit 9)
+     * Hsinchu (Quanzhou-leaning) (subtag bit 9)
      * </pre>
      *
      * <code>bool accent_sintik = 9;</code>
@@ -903,7 +903,7 @@ public  final class KautianSubcollToggles extends
     }
     /**
      * <pre>
-     * 新竹偏泉腔 (subtag bit 9)
+     * Hsinchu (Quanzhou-leaning) (subtag bit 9)
      * </pre>
      *
      * <code>bool accent_sintik = 9;</code>
@@ -917,7 +917,7 @@ public  final class KautianSubcollToggles extends
 
     /**
      * <pre>
-     * 臺中偏漳腔 (subtag bit 10)
+     * Taichung (Zhangzhou-leaning) (subtag bit 10)
      * </pre>
      *
      * <code>bool accent_taichung = 10;</code>
@@ -929,7 +929,7 @@ public  final class KautianSubcollToggles extends
     }
     /**
      * <pre>
-     * 臺中偏漳腔 (subtag bit 10)
+     * Taichung (Zhangzhou-leaning) (subtag bit 10)
      * </pre>
      *
      * <code>bool accent_taichung = 10;</code>
@@ -943,7 +943,7 @@ public  final class KautianSubcollToggles extends
     }
     /**
      * <pre>
-     * 臺中偏漳腔 (subtag bit 10)
+     * Taichung (Zhangzhou-leaning) (subtag bit 10)
      * </pre>
      *
      * <code>bool accent_taichung = 10;</code>
@@ -957,7 +957,7 @@ public  final class KautianSubcollToggles extends
 
     /**
      * <pre>
-     * 姓名附錄 名+姓 (subtag bit 11)
+     * Surname Appendix, 名+姓 (subtag bit 11)
      * </pre>
      *
      * <code>bool name_appendix = 11;</code>
@@ -969,7 +969,7 @@ public  final class KautianSubcollToggles extends
     }
     /**
      * <pre>
-     * 姓名附錄 名+姓 (subtag bit 11)
+     * Surname Appendix, 名+姓 (subtag bit 11)
      * </pre>
      *
      * <code>bool name_appendix = 11;</code>
@@ -983,7 +983,7 @@ public  final class KautianSubcollToggles extends
     }
     /**
      * <pre>
-     * 姓名附錄 名+姓 (subtag bit 11)
+     * Surname Appendix, 名+姓 (subtag bit 11)
      * </pre>
      *
      * <code>bool name_appendix = 11;</code>

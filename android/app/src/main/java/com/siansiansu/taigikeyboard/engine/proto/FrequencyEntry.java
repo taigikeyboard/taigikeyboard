@@ -16,7 +16,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * canonical_tl)` PAIR (Core Principle #7). `canonical_tl` is the
  * candidate's canonical-TL reading, snapshotted BEFORE the POJ-render
  * pass (= `RawCandidate.canonical_tl`). One `display_text` (e.g. 重) now
- * carries one entry PER reading (重/tîng vs 重/tāng), so 一字多音 keep
+ * carries one entry PER reading (重/tîng vs 重/tāng), so polyphonic characters keep
  * separate frequency buckets. `canonical_tl == ""` is the LEGACY sentinel
  * for pre-R5 rows / old-backup imports the platform could not re-key; the
  * engine treats it as a tolerant fallback bucket consulted by ALL readings
@@ -277,7 +277,7 @@ public  final class FrequencyEntry extends
    * canonical_tl)` PAIR (Core Principle #7). `canonical_tl` is the
    * candidate's canonical-TL reading, snapshotted BEFORE the POJ-render
    * pass (= `RawCandidate.canonical_tl`). One `display_text` (e.g. 重) now
-   * carries one entry PER reading (重/tîng vs 重/tāng), so 一字多音 keep
+   * carries one entry PER reading (重/tîng vs 重/tāng), so polyphonic characters keep
    * separate frequency buckets. `canonical_tl == ""` is the LEGACY sentinel
    * for pre-R5 rows / old-backup imports the platform could not re-key; the
    * engine treats it as a tolerant fallback bucket consulted by ALL readings

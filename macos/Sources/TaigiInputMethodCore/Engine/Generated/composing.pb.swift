@@ -472,7 +472,7 @@ public nonisolated struct Taigi_Engine_EnterContinuous: Sendable {
 ///
 /// PR-9.6 — `enabled_sources_bitmask` carries the user's dictionary
 /// source-toggle state so keyboard continuous candidates honour the SAME
-/// 12 source toggles + kautian subcollection (10 腔調 accents + 姓名 name
+/// 12 source toggles + kautian subcollection (10 dialect accents + surname/name
 /// appendix) toggles the Tab3 browse path already applies. Same wire
 /// layout as `SearchRequest.enabled_sources_bitmask` (sources/variant
 /// bits 0-12 + kautian subcollection high region bits 13-25), produced by
@@ -492,7 +492,7 @@ public nonisolated struct Taigi_Engine_EnterContinuous: Sendable {
 ///
 /// §34 / S22 — `literal_roman_candidate_disabled` gates the always-on
 /// preedit-literal roman candidate (the `derived_display` WYSIWYG row that
-/// `handle_fetch_at_pos` prepends at index 0 in TL/POJ so 漢羅 mixing commits
+/// `handle_fetch_at_pos` prepends at index 0 in TL/POJ so Hanji-romanization mixing commits
 /// the romanization in one tap). It does NOT suppress roman-only / OOV-synth
 /// candidates that `assemble_candidates` produces naturally — only the §34
 /// forced prepend.
@@ -501,7 +501,7 @@ public nonisolated struct Taigi_Engine_EnterContinuous: Sendable {
 /// idiom above): proto3 default `false` means "show" (= pre-toggle always-on
 /// behaviour), so older / un-wired builds and proto-decoded fixtures keep the
 /// candidate. The platform sends `true` only when the user turns the
-/// 顯示當咧拍的字 setting OFF. Platform settings stay positive and ship ON on
+/// Show Typed Text First setting OFF. Platform settings stay positive and ship ON on
 /// all four platforms (`isLiteralRomanCandidateEnabled` iOS / macOS,
 /// `literalRomanCandidateEnabled` Android, `is_literal_roman_candidate_enabled`
 /// Windows); the platform sets `disabled = !enabled` — mobile in
@@ -535,7 +535,7 @@ public nonisolated struct Taigi_Engine_FetchAtPos: Sendable {
   public init() {}
 }
 
-/// One auto-learned phrase (§50): the `(漢字, canonical-TL)` pair the user
+/// One auto-learned phrase (§50): the `(Hanji, canonical-TL)` pair the user
 /// once composed segment by segment in continuous input and committed
 /// (`Effect.phrase_learned`). Both fields are canonical (hanji as committed,
 /// TL as the dictionary would spell it, khinsiann `--` kept), so the engine
@@ -640,8 +640,8 @@ public nonisolated struct Taigi_Engine_CommitContinuous: Sendable {
 
   /// Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
   /// whenever the picked candidate carries hanji regardless of which script
-  /// the document received (identity = the `(漢字, canonical-TL)` pair, Core
-  /// Principle #6; a 漢羅濫 roman cell commits the same candidate). Wire-absent
+  /// the document received (identity = the `(Hanji, canonical-TL)` pair, Core
+  /// Principle #6; a Hanji with Romanization roman cell commits the same candidate). Wire-absent
   /// for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
   /// and for legacy callers; a composition with any hanji-less segment is
   /// never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20

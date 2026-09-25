@@ -53,7 +53,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
  *
  * PR-9.6 — `enabled_sources_bitmask` carries the user's dictionary
  * source-toggle state so keyboard continuous candidates honour the SAME
- * 12 source toggles + kautian subcollection (10 腔調 accents + 姓名 name
+ * 12 source toggles + kautian subcollection (10 dialect accents + surname/name
  * appendix) toggles the Tab3 browse path already applies. Same wire
  * layout as `SearchRequest.enabled_sources_bitmask` (sources/variant
  * bits 0-12 + kautian subcollection high region bits 13-25), produced by
@@ -73,7 +73,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
  *
  * §34 / S22 — `literal_roman_candidate_disabled` gates the always-on
  * preedit-literal roman candidate (the `derived_display` WYSIWYG row that
- * `handle_fetch_at_pos` prepends at index 0 in TL/POJ so 漢羅 mixing commits
+ * `handle_fetch_at_pos` prepends at index 0 in TL/POJ so Hanji-romanization mixing commits
  * the romanization in one tap). It does NOT suppress roman-only / OOV-synth
  * candidates that `assemble_candidates` produces naturally — only the §34
  * forced prepend.
@@ -82,7 +82,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * idiom above): proto3 default `false` means "show" (= pre-toggle always-on
  * behaviour), so older / un-wired builds and proto-decoded fixtures keep the
  * candidate. The platform sends `true` only when the user turns the
- * 顯示當咧拍的字 setting OFF. Platform settings stay positive and ship ON on
+ * Show Typed Text First setting OFF. Platform settings stay positive and ship ON on
  * all four platforms (`isLiteralRomanCandidateEnabled` iOS / macOS,
  * `literalRomanCandidateEnabled` Android, `is_literal_roman_candidate_enabled`
  * Windows); the platform sets `disabled = !enabled` — mobile in
@@ -703,7 +703,7 @@ public  final class FetchAtPos extends
    *
    * PR-9.6 — `enabled_sources_bitmask` carries the user's dictionary
    * source-toggle state so keyboard continuous candidates honour the SAME
-   * 12 source toggles + kautian subcollection (10 腔調 accents + 姓名 name
+   * 12 source toggles + kautian subcollection (10 dialect accents + surname/name
    * appendix) toggles the Tab3 browse path already applies. Same wire
    * layout as `SearchRequest.enabled_sources_bitmask` (sources/variant
    * bits 0-12 + kautian subcollection high region bits 13-25), produced by
@@ -723,7 +723,7 @@ public  final class FetchAtPos extends
    *
    * §34 / S22 — `literal_roman_candidate_disabled` gates the always-on
    * preedit-literal roman candidate (the `derived_display` WYSIWYG row that
-   * `handle_fetch_at_pos` prepends at index 0 in TL/POJ so 漢羅 mixing commits
+   * `handle_fetch_at_pos` prepends at index 0 in TL/POJ so Hanji-romanization mixing commits
    * the romanization in one tap). It does NOT suppress roman-only / OOV-synth
    * candidates that `assemble_candidates` produces naturally — only the §34
    * forced prepend.
@@ -732,7 +732,7 @@ public  final class FetchAtPos extends
    * idiom above): proto3 default `false` means "show" (= pre-toggle always-on
    * behaviour), so older / un-wired builds and proto-decoded fixtures keep the
    * candidate. The platform sends `true` only when the user turns the
-   * 顯示當咧拍的字 setting OFF. Platform settings stay positive and ship ON on
+   * Show Typed Text First setting OFF. Platform settings stay positive and ship ON on
    * all four platforms (`isLiteralRomanCandidateEnabled` iOS / macOS,
    * `literalRomanCandidateEnabled` Android, `is_literal_roman_candidate_enabled`
    * Windows); the platform sets `disabled = !enabled` — mobile in
