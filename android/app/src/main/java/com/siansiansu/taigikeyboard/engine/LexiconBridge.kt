@@ -3,11 +3,10 @@
 // NextWord persistence is out of scope; only the bundled `association.bin` read-only half goes
 // through here. Sends through `RustEngineBridge.dispatch` (shared request-id counter, JNI hop,
 // exception boundary and `recordFailure` sink). DTOs live on `RustEngineBridge` (`LexiconRow`,
-// `LexiconAssocEntry`, `LexiconInstallStats`, `LexiconInputMode`, `DictionaryToggles`, `DictionaryFilters`).
+// `LexiconInstallStats`, `LexiconInputMode`, `DictionaryToggles`, `DictionaryFilters`).
 
 package com.siansiansu.taigikeyboard.engine
 
-import com.siansiansu.taigikeyboard.engine.proto.AssocLookupRequest
 import com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersRequest
 import com.siansiansu.taigikeyboard.engine.proto.DictionarySourceCode
 import com.siansiansu.taigikeyboard.engine.proto.InputMode
@@ -107,33 +106,6 @@ fun RustEngineBridge.searchByHanzi(
     return resp.searchByHanziResult.rowsList.map(::taigiWordToRow)
 }
 
-/**
- * Bundled-bigram lookup. Called by `NextWordService.predict` for dict rows.
- */
-fun RustEngineBridge.assocLookup(
-    previousWord: String,
-    limit: UInt,
-    enabledSourcesBitmask: UInt,
-): List<RustEngineBridge.LexiconAssocEntry> {
-    val payload = AssocLookupRequest
-        .newBuilder()
-        .setPreviousWord(previousWord)
-        .setLimit(limit.toInt())
-        .setEnabledSourcesBitmask(enabledSourcesBitmask.toInt())
-        .build()
-    val resp = lexiconDispatch(LexiconRequest.newBuilder().setAssocLookup(payload).build(), "assocLookup")
-        ?: return emptyList()
-    if (!resp.hasAssocLookupResult()) return emptyList()
-    return resp.assocLookupResult.entriesList.map { e ->
-        RustEngineBridge.LexiconAssocEntry(
-            previousWord = e.previousWord,
-            candidateWord = e.candidateWord,
-            candidateTl = e.candidateTl,
-            count = e.count.toUInt(),
-        )
-    }
-}
-
 // endregion
 // region Classification (v3.5.7)
 
@@ -146,7 +118,33 @@ fun RustEngineBridge.assocLookup(
  * resolving again inside the Dictionary tab's badge filter would split the snapshot.
  */
 fun RustEngineBridge.dictionaryFilters(toggles: RustEngineBridge.DictionaryToggles): RustEngineBridge.DictionaryFilters {
-    val protoToggles = ProtoDictionaryToggles
+    val payload = DictionaryFiltersRequest
+        .newBuilder()
+        .setToggles(dictionaryTogglesProto(toggles))
+        .build()
+    // Binary skew fallback: when method 18 dispatch fails (e.g. Kotlin
+    // updated but Rust .so not rebuilt) but methods 12-17 still work,
+    // the dev-only fallback would silently strip user-enabled dictionaries.
+    // Mirror Rust `engine/lexicon/src/dictionary_filters.rs::compute_filters`
+    // here so search call paths continue to honor user toggles.
+    // Codex PR #210 r3182714295.
+    val resp = lexiconDispatch(LexiconRequest.newBuilder().setDictionaryFilters(payload).build(), "dictionaryFilters")
+    if (resp == null || !resp.hasDictionaryFiltersResult()) {
+        return platformFallbackFilters(toggles)
+    }
+    val r = resp.dictionaryFiltersResult
+    return RustEngineBridge.DictionaryFilters(
+        dictionaryFilterBitmask = r.dictionaryFilterBitmask.toUInt(),
+        assocLookupBitmask = r.assocLookupBitmask.toUInt(),
+        enabledSources = r.enabledSourceCodesList
+            .mapNotNull(::platformDictionarySource)
+            .toSet(),
+    )
+}
+
+/** Proto form of the user's dictionary toggles, shared by [dictionaryFilters] and `nextwordPredictNext`. */
+internal fun dictionaryTogglesProto(toggles: RustEngineBridge.DictionaryToggles): ProtoDictionaryToggles =
+    ProtoDictionaryToggles
         .newBuilder()
         .setKautian(toggles.kautian)
         .setTaigitv(toggles.taigitv)
@@ -180,29 +178,6 @@ fun RustEngineBridge.dictionaryFilters(toggles: RustEngineBridge.DictionaryToggl
                 .setNameAppendix(toggles.kautianSubcoll.nameAppendix)
                 .build(),
         ).build()
-    val payload = DictionaryFiltersRequest
-        .newBuilder()
-        .setToggles(protoToggles)
-        .build()
-    // Binary skew fallback: when method 18 dispatch fails (e.g. Kotlin
-    // updated but Rust .so not rebuilt) but methods 12-17 still work,
-    // the dev-only fallback would silently strip user-enabled dictionaries.
-    // Mirror Rust `engine/lexicon/src/dictionary_filters.rs::compute_filters`
-    // here so search/assoc call paths continue to honor user toggles.
-    // Codex PR #210 r3182714295.
-    val resp = lexiconDispatch(LexiconRequest.newBuilder().setDictionaryFilters(payload).build(), "dictionaryFilters")
-    if (resp == null || !resp.hasDictionaryFiltersResult()) {
-        return platformFallbackFilters(toggles)
-    }
-    val r = resp.dictionaryFiltersResult
-    return RustEngineBridge.DictionaryFilters(
-        dictionaryFilterBitmask = r.dictionaryFilterBitmask.toUInt(),
-        assocLookupBitmask = r.assocLookupBitmask.toUInt(),
-        enabledSources = r.enabledSourceCodesList
-            .mapNotNull(::platformDictionarySource)
-            .toSet(),
-    )
-}
 
 /**
  * Dictionary tab short-circuit predicate. True iff `text` contains any CJK

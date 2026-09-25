@@ -7,9 +7,8 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * `AssocLookupResponse.entries` is a vector of bundled bigram entries. The
- * platform NextWord services rank/filter further; the engine just emits
- * the raw matches.
+ * `AssocLookupResponse.entries` is a vector of bundled bigram entries; the
+ * nextword filter ranks them after engine/dispatch tags them SOURCE_DICT.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.AssocLookupResponse}
@@ -202,9 +201,8 @@ public  final class AssocLookupResponse extends
 
   /**
    * <pre>
-   * `AssocLookupResponse.entries` is a vector of bundled bigram entries. The
-   * platform NextWord services rank/filter further; the engine just emits
-   * the raw matches.
+   * `AssocLookupResponse.entries` is a vector of bundled bigram entries; the
+   * nextword filter ranks them after engine/dispatch tags them SOURCE_DICT.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.AssocLookupResponse}

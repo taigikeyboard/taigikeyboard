@@ -248,15 +248,6 @@ public nonisolated struct Taigi_Engine_LexiconRequest: Sendable {
     set {method = .searchByHanzi(newValue)}
   }
 
-  /// bundled bigram
-  public var assocLookup: Taigi_Engine_AssocLookupRequest {
-    get {
-      if case .assocLookup(let v)? = method {return v}
-      return Taigi_Engine_AssocLookupRequest()
-    }
-    set {method = .assocLookup(newValue)}
-  }
-
   /// v3.5.7 Tab3 short-circuit
   public var isHanzi: Taigi_Engine_IsHanziRequest {
     get {
@@ -286,8 +277,6 @@ public nonisolated struct Taigi_Engine_LexiconRequest: Sendable {
     case searchWithSources(Taigi_Engine_SearchWithSourcesRequest)
     /// Tab3 hanzi prefix
     case searchByHanzi(Taigi_Engine_SearchByHanziRequest)
-    /// bundled bigram
-    case assocLookup(Taigi_Engine_AssocLookupRequest)
     /// v3.5.7 Tab3 short-circuit
     case isHanzi(Taigi_Engine_IsHanziRequest)
     /// v3.5.8 toggles → bitmasks + enabled codes
@@ -441,14 +430,13 @@ public nonisolated struct Taigi_Engine_SearchByHanziRequest: Sendable {
 }
 
 /// `AssocLookupRequest` is the bundled-bigram lookup against `association.bin`
-/// (TKWA). Called by the platform NextWord services (iOS `NextWordService.swift`
-/// / Android `NextWordService.kt`) through their respective bridges
-/// (`RustEngineBridge.lexiconAssocLookup` / `LexiconBridge.assocLookup`).
+/// (TKWA), the input of `lexicon::api::assoc_lookup`. Not a wire method: only
+/// engine/dispatch calls it, expanding nextword `PredictNext`
+/// (`engine/dispatch/src/predict.rs`).
 ///
 /// **Crate isolation invariant**: the Rust `engine/nextword` crate stays
 /// independent of `engine/lexicon`. NextWord never imports or calls into
-/// lexicon directly — the platform owns the cross-domain wiring (audit
-/// goal-1 cross-module isolation).
+/// lexicon directly — engine/dispatch owns the cross-domain wiring.
 public nonisolated struct Taigi_Engine_AssocLookupRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -526,8 +514,8 @@ public nonisolated struct Taigi_Engine_DictionaryFiltersRequest: Sendable {
 ///   `AssocLookupRequest.enabled_sources_bitmask`. Equals `u32::MAX` when
 ///   ALL 9 association sources are enabled (preserves the documented
 ///   sentinel shortcut at `lexicon.proto:166-173`); otherwise equals the
-///   association mask (bits 0-8). Platform NextWord callers forward
-///   directly without re-branching.
+///   association mask (bits 0-8). engine/dispatch `PredictNext` computes it
+///   itself from the toggles; platforms no longer forward it.
 /// - `enabled_source_codes` lists every `DictionarySourceCode` whose source
 ///   the user has toggled on. `DEV` + `CUSTOM` are always present
 ///   (non-toggleable). Platforms decode via explicit switch/map into their
@@ -588,14 +576,6 @@ public nonisolated struct Taigi_Engine_LexiconResponse: Sendable {
     set {result = .searchByHanziResult(newValue)}
   }
 
-  public var assocLookupResult: Taigi_Engine_AssocLookupResponse {
-    get {
-      if case .assocLookupResult(let v)? = result {return v}
-      return Taigi_Engine_AssocLookupResponse()
-    }
-    set {result = .assocLookupResult(newValue)}
-  }
-
   public var isHanziResult: Taigi_Engine_IsHanziResponse {
     get {
       if case .isHanziResult(let v)? = result {return v}
@@ -619,7 +599,6 @@ public nonisolated struct Taigi_Engine_LexiconResponse: Sendable {
     case searchResult(Taigi_Engine_SearchResponse)
     case searchWithSourcesResult(Taigi_Engine_SearchWithSourcesResponse)
     case searchByHanziResult(Taigi_Engine_SearchByHanziResponse)
-    case assocLookupResult(Taigi_Engine_AssocLookupResponse)
     case isHanziResult(Taigi_Engine_IsHanziResponse)
     case dictionaryFiltersResult(Taigi_Engine_DictionaryFiltersResponse)
 
@@ -683,9 +662,8 @@ public nonisolated struct Taigi_Engine_SearchByHanziResponse: Sendable {
   public init() {}
 }
 
-/// `AssocLookupResponse.entries` is a vector of bundled bigram entries. The
-/// platform NextWord services rank/filter further; the engine just emits
-/// the raw matches.
+/// `AssocLookupResponse.entries` is a vector of bundled bigram entries; the
+/// nextword filter ranks them after engine/dispatch tags them SOURCE_DICT.
 public nonisolated struct Taigi_Engine_AssocLookupResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -1009,7 +987,7 @@ nonisolated extension Taigi_Engine_DictionarySourceCode: SwiftProtobuf._ProtoNam
 
 nonisolated extension Taigi_Engine_LexiconRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".LexiconRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\u{b}install\0\u{1}search\0\u{3}search_with_sources\0\u{3}search_by_hanzi\0\u{3}assoc_lookup\0\u{4}\u{2}is_hanzi\0\u{3}dictionary_filters\0\u{b}process_candidates\0\u{b}classify_input\0\u{c}\u{a}\u{1}\u{c}\u{10}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\u{b}install\0\u{1}search\0\u{3}search_with_sources\0\u{3}search_by_hanzi\0\u{4}\u{3}is_hanzi\0\u{3}dictionary_filters\0\u{b}process_candidates\0\u{b}classify_input\0\u{b}assoc_lookup\0\u{c}\u{a}\u{1}\u{c}\u{f}\u{1}\u{c}\u{10}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1069,19 +1047,6 @@ nonisolated extension Taigi_Engine_LexiconRequest: SwiftProtobuf.Message, SwiftP
           self.method = .searchByHanzi(v)
         }
       }()
-      case 15: try {
-        var v: Taigi_Engine_AssocLookupRequest?
-        var hadOneofValue = false
-        if let current = self.method {
-          hadOneofValue = true
-          if case .assocLookup(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.method = .assocLookup(v)
-        }
-      }()
       case 17: try {
         var v: Taigi_Engine_IsHanziRequest?
         var hadOneofValue = false
@@ -1134,10 +1099,6 @@ nonisolated extension Taigi_Engine_LexiconRequest: SwiftProtobuf.Message, SwiftP
     case .searchByHanzi?: try {
       guard case .searchByHanzi(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 14)
-    }()
-    case .assocLookup?: try {
-      guard case .assocLookup(let v)? = self.method else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 15)
     }()
     case .isHanzi?: try {
       guard case .isHanzi(let v)? = self.method else { preconditionFailure() }
@@ -1500,7 +1461,7 @@ nonisolated extension Taigi_Engine_DictionaryFiltersResponse: SwiftProtobuf.Mess
 
 nonisolated extension Taigi_Engine_LexiconResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".LexiconResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{b}install_result\0\u{3}search_result\0\u{3}search_with_sources_result\0\u{3}search_by_hanzi_result\0\u{3}assoc_lookup_result\0\u{4}\u{2}is_hanzi_result\0\u{3}dictionary_filters_result\0\u{b}process_candidates_result\0\u{b}classify_input_result\0\u{c}\u{a}\u{1}\u{c}\u{10}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{b}install_result\0\u{3}search_result\0\u{3}search_with_sources_result\0\u{3}search_by_hanzi_result\0\u{4}\u{3}is_hanzi_result\0\u{3}dictionary_filters_result\0\u{b}process_candidates_result\0\u{b}classify_input_result\0\u{b}assoc_lookup_result\0\u{c}\u{a}\u{1}\u{c}\u{f}\u{1}\u{c}\u{10}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1560,19 +1521,6 @@ nonisolated extension Taigi_Engine_LexiconResponse: SwiftProtobuf.Message, Swift
           self.result = .searchByHanziResult(v)
         }
       }()
-      case 15: try {
-        var v: Taigi_Engine_AssocLookupResponse?
-        var hadOneofValue = false
-        if let current = self.result {
-          hadOneofValue = true
-          if case .assocLookupResult(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.result = .assocLookupResult(v)
-        }
-      }()
       case 17: try {
         var v: Taigi_Engine_IsHanziResponse?
         var hadOneofValue = false
@@ -1625,10 +1573,6 @@ nonisolated extension Taigi_Engine_LexiconResponse: SwiftProtobuf.Message, Swift
     case .searchByHanziResult?: try {
       guard case .searchByHanziResult(let v)? = self.result else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 14)
-    }()
-    case .assocLookupResult?: try {
-      guard case .assocLookupResult(let v)? = self.result else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 15)
     }()
     case .isHanziResult?: try {
       guard case .isHanziResult(let v)? = self.result else { preconditionFailure() }

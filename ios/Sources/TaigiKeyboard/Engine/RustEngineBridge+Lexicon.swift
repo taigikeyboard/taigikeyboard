@@ -22,15 +22,6 @@ public extension RustEngineBridge {
         public let sourceBitmask: UInt32?
     }
 
-    /// Bridge-synthesized companion to proto `LexiconAssocEntry`. Consumed
-    /// by iOS `NextWordService` for bundled bigram lookups.
-    struct LexiconAssocEntry: Equatable {
-        public let previousWord: String
-        public let candidateWord: String
-        public let candidateTl: String
-        public let count: UInt32
-    }
-
     /// Engine install diagnostic counts, surfaced for dogfood-time
     /// inspection through `RustEngineBridge.diagnostics()` callers.
     struct LexiconInstallStats: Equatable {
@@ -222,34 +213,6 @@ public extension RustEngineBridge {
         return r.rows.map(taigiWordToRow)
     }
 
-    /// Bundled-bigram lookup. Called by `NextWordService` after the
-    /// commit 10 rewire (replaces direct `AssociationBinaryReader.lookup`).
-    static func lexiconAssocLookup(
-        previousWord: String,
-        limit: UInt32,
-        enabledSourcesBitmask: UInt32,
-    ) -> [LexiconAssocEntry] {
-        var payload = Taigi_Engine_AssocLookupRequest()
-        payload.previousWord = previousWord
-        payload.limit = limit
-        payload.enabledSourcesBitmask = enabledSourcesBitmask
-        guard let resp = lexiconDispatch(method: .assocLookup(payload), op: "lexiconAssocLookup") else {
-            return []
-        }
-        guard case let .assocLookupResult(r)? = resp.result else {
-            recordFailure(op: "lexiconAssocLookup", message: "missing result")
-            return []
-        }
-        return r.entries.map { entry in
-            LexiconAssocEntry(
-                previousWord: entry.previousWord,
-                candidateWord: entry.candidateWord,
-                candidateTl: entry.candidateTl,
-                count: entry.count,
-            )
-        }
-    }
-
     /// Resolve user's 12-toggle dictionary preferences into ready-to-send
     /// filter bitmasks + enabled-source set. Single FFI hop replaces the
     /// pre-v3.5.8 verbatim-mirrored `EnabledDictionaries` bit math.
@@ -257,6 +220,31 @@ public extension RustEngineBridge {
     /// Call ONCE per query and pass the result down the search pipeline;
     /// re-resolving inside `fetchSystemResults` would split the snapshot.
     internal static func lexiconDictionaryFilters(toggles: DictionaryToggles) -> DictionaryFilters {
+        var payload = Taigi_Engine_DictionaryFiltersRequest()
+        payload.toggles = dictionaryTogglesProto(toggles)
+        // Binary skew fallback: when method 18 dispatch fails (e.g. Swift
+        // updated but xcframework not rebuilt) but methods 12-17 still work,
+        // the dev-only fallback would silently strip user-enabled dictionaries.
+        // Mirror Rust `engine/lexicon/src/dictionary_filters.rs::compute_filters`
+        // here so search call paths continue to honor user toggles.
+        // Codex PR #210 r3182714295.
+        guard let resp = lexiconDispatch(method: .dictionaryFilters(payload), op: "lexiconDictionaryFilters") else {
+            return platformFallbackFilters(toggles: toggles)
+        }
+        guard case let .dictionaryFiltersResult(r)? = resp.result else {
+            recordFailure(op: "lexiconDictionaryFilters", message: "missing dictionary_filters result")
+            return platformFallbackFilters(toggles: toggles)
+        }
+        return DictionaryFilters(
+            dictionaryFilterBitmask: r.dictionaryFilterBitmask,
+            assocLookupBitmask: r.assocLookupBitmask,
+            enabledSources: Set(r.enabledSourceCodes.compactMap(platformDictionarySource(from:))),
+        )
+    }
+
+    /// Proto form of the user's dictionary toggles, shared by
+    /// `lexiconDictionaryFilters` and `nextwordPredictNext`.
+    static func dictionaryTogglesProto(_ toggles: DictionaryToggles) -> Taigi_Engine_DictionaryToggles {
         var togglesProto = Taigi_Engine_DictionaryToggles()
         togglesProto.kautian = toggles.kautian
         togglesProto.taigitv = toggles.taigitv
@@ -286,26 +274,7 @@ public extension RustEngineBridge {
         subcollProto.accentTaichung = toggles.kautianSubcoll.taichung
         subcollProto.nameAppendix = toggles.kautianSubcoll.nameAppendix
         togglesProto.kautianSubcoll = subcollProto
-        var payload = Taigi_Engine_DictionaryFiltersRequest()
-        payload.toggles = togglesProto
-        // Binary skew fallback: when method 18 dispatch fails (e.g. Swift
-        // updated but xcframework not rebuilt) but methods 12-17 still work,
-        // the dev-only fallback would silently strip user-enabled dictionaries.
-        // Mirror Rust `engine/lexicon/src/dictionary_filters.rs::compute_filters`
-        // here so search/assoc call paths continue to honor user toggles.
-        // Codex PR #210 r3182714295.
-        guard let resp = lexiconDispatch(method: .dictionaryFilters(payload), op: "lexiconDictionaryFilters") else {
-            return platformFallbackFilters(toggles: toggles)
-        }
-        guard case let .dictionaryFiltersResult(r)? = resp.result else {
-            recordFailure(op: "lexiconDictionaryFilters", message: "missing dictionary_filters result")
-            return platformFallbackFilters(toggles: toggles)
-        }
-        return DictionaryFilters(
-            dictionaryFilterBitmask: r.dictionaryFilterBitmask,
-            assocLookupBitmask: r.assocLookupBitmask,
-            enabledSources: Set(r.enabledSourceCodes.compactMap(platformDictionarySource(from:))),
-        )
+        return togglesProto
     }
 
     /// Tab3 short-circuit predicate. True iff `text` contains any CJK

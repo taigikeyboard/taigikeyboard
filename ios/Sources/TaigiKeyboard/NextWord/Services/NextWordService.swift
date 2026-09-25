@@ -3,16 +3,13 @@ import SQLite3
 
 /// NextWord next-word prediction service (facade).
 ///
-/// Predicts with an adjacent-word bigram model: selecting 早安 queries on 安.
-///
-/// Data sources:
-/// - `association.bin` (binary mmap): dictionary associations (cold start)
-/// - `user_association.db`: user-learned associations (personalized)
+/// Owns `user_association.db`, the user-learned half of next-word prediction.
+/// The bundled `association.bin` half, scoring, merging and shaping run in the
+/// engine: the caller hands `userRows(word:roman:)` to
+/// `RustEngineBridge.nextwordPredictNext`.
 ///
 /// The facade owns the public API, concurrency state, capacity policy and wiring; `NextWordSchema`
-/// owns the schema and `NextWordRepository` the CRUD. Scoring / merging / sorting / truncation moved
-/// to the Rust `engine/nextword/` filter step (post-v3.5.5): `predict()` returns unsorted
-/// `[NextWordRawRow]` and the caller runs `RustEngineBridge.nextwordFilter`.
+/// owns the schema and `NextWordRepository` the CRUD.
 final class NextWordService: @unchecked Sendable {
     // MARK: - Constants (capacity policy)
 
@@ -54,11 +51,7 @@ final class NextWordService: @unchecked Sendable {
 
     // MARK: - Properties
 
-    /// Bundled-bigram lookups go through `RustEngineBridge.lexiconAssocLookup`.
-    /// `userConnectionManager` only owns the mutable `user_association.db`
-    /// SQLite half (write path).
     private let userConnectionManager: SQLiteConnectionManager
-    private let settingsProvider: EngineSettingsProvider
     private let logger = DebugLogger(category: "NextWordService")
 
     /// Lock protecting mutable state (`_recordCounter`, `_tableCreationTask`).
@@ -74,11 +67,7 @@ final class NextWordService: @unchecked Sendable {
 
     // MARK: - Initialization
 
-    init(
-        settingsProvider: EngineSettingsProvider = SharedSettings.shared,
-    ) {
-        self.settingsProvider = settingsProvider
-
+    init() {
         userConnectionManager = SQLiteConnectionManager(
             databasePath: Self.getUserDatabasePath,
             queueLabel: "com.siansiansu.taigikeyboard.nextword.user",
@@ -88,43 +77,35 @@ final class NextWordService: @unchecked Sendable {
 
     // MARK: - Public API: Prediction
 
-    /// Predict raw rows for the next-word bigram bridge.
-    ///
-    /// Post-v3.5.5: returns un-merged un-scored rows tagged by source. The
-    /// caller passes them to `RustEngineBridge.nextwordFilter` which scores
-    /// (dict via DICT_WEIGHT; user via decay+learning math), merges by
-    /// `(hanzi, tl)`, sorts desc by score, applies limit, and shapes per
-    /// display rules.
-    ///
-    /// Mixed bigram model:
-    /// - Dict layer: look up by last character → single-char predictions.
-    /// - User layer: look up by full word → full-word predictions.
-    func predict(
+    /// Learned rows following `word`, tagged `.user`, best evidence first —
+    /// the order `nextwordPredictNext` must receive them in (§24). Over-fetches
+    /// `limit * 2` so the engine's `(hanzi, tl)` merge keeps `limit` survivors.
+    /// An empty `word` predicts nothing.
+    func userRows(
         word: String,
         roman: String = "",
         limit: Int = Constants.defaultLimit,
     ) async -> [RustEngineBridge.NextWordRawRow] {
-        guard let lastChar = Self.bundledLookupKey(for: word) else { return [] }
-
-        logger.debug("[PREDICT][ENTRY] word='\(word)' lastChar='\(lastChar)'")
-
-        var rows: [RustEngineBridge.NextWordRawRow] = []
-        await collectDictAssociations(lastChar: lastChar, limit: limit, rows: &rows)
-        logger.debug("[PREDICT][DICT] dictRows.count=\(rows.count) for lastChar='\(lastChar)'")
-
-        let dictCount = rows.count
-        await collectUserAssociations(word: word, roman: roman, limit: limit, rows: &rows)
-        logger.debug("[PREDICT][USER] userRows added=\(rows.count - dictCount) total=\(rows.count) for word='\(word)'")
-
-        return rows
-    }
-
-    /// The `association.bin` key for `word`: its last user-perceived character,
-    /// whole (a supplementary-plane Hanji like 𣍐 stays one key); nil when empty.
-    /// CROSS-PLATFORM INVARIANT — mirrors Android `lastGrapheme`
-    /// (`ime/text/keyboard/TextInputKeyHandler.kt`). Drift causes silent divergence.
-    static func bundledLookupKey(for word: String) -> String? {
-        word.last.map(String.init)
+        guard !word.isEmpty else { return [] }
+        do {
+            try await ensureUserTablesCreated()
+            let userRows = try await userConnectionManager.execute { db in
+                NextWordRepository.fetchUserRows(db: db, word: word, roman: roman, limit: limit * 2)
+            }
+            logger.debug("[PREDICT][USER] rows=\(userRows.count) for word='\(word)'")
+            return userRows.map { row in
+                RustEngineBridge.NextWordRawRow(
+                    hanzi: row.hanzi,
+                    tl: row.tl,
+                    count: Int64(row.count),
+                    lastUsedMs: row.lastUsedMs,
+                    source: .user,
+                )
+            }
+        } catch {
+            logger.error("[USER] Query failed: \(error.localizedDescription)")
+            return []
+        }
     }
 
     // MARK: - Public API: Recording
@@ -251,82 +232,6 @@ final class NextWordService: @unchecked Sendable {
         let path = try Self.getUserDatabasePath()
         if FileManager.default.fileExists(atPath: path) {
             try FileManager.default.removeItem(atPath: path)
-        }
-    }
-
-    // MARK: - Prediction Pipeline
-
-    /// Dict-side raw rows — reads from `association.bin` mmap, applies the
-    /// user's enabled-dictionary bitmask filter, returns un-scored rows
-    /// tagged `.dict`. `lastUsedMs = 0` since dict entries have no
-    /// last-used timestamp; the Rust filter ignores it for `.dict` source.
-    ///
-    /// Over-fetches `limit * 2` so the Rust filter has slack to merge
-    /// `(hanzi, tl)` collisions across dict + user without dropping below
-    /// the caller's requested limit (Codex post-impl P2-1).
-    private func collectDictAssociations(
-        lastChar: String,
-        limit: Int,
-        rows: inout [RustEngineBridge.NextWordRawRow],
-    ) async {
-        // Bridge call into engine/lexicon — engine applies the 1-layer source
-        // filter (low 9 bits of bitmask) internally per audit §4. Over-fetch
-        // limit*2 for merge-slack (Codex post-impl P2-1 carry-over from
-        // v3.5.5 NextWord slice). `assocLookupBitmask` is engine-resolved
-        // (`UInt32.max` sentinel when all 9 sources on, else exact mask) —
-        // pre-v3.5.8 the platform branched on `allAssociationSourcesEnabled`.
-        let toggles = RustEngineBridge.DictionaryToggles(from: settingsProvider.current)
-        let bitmask = RustEngineBridge.lexiconDictionaryFilters(toggles: toggles).assocLookupBitmask
-        let entries = RustEngineBridge.lexiconAssocLookup(
-            previousWord: lastChar,
-            limit: UInt32(limit * 2),
-            enabledSourcesBitmask: bitmask,
-        )
-
-        for entry in entries {
-            // Engine's `assoc_lookup` carries both candidate_word (hanzi) +
-            // candidate_tl (TL) per bundled bigram; the platform NextWord
-            // pipeline needs both to reconstruct the prediction row.
-            rows.append(RustEngineBridge.NextWordRawRow(
-                hanzi: entry.candidateWord,
-                tl: entry.candidateTl,
-                count: Int64(entry.count),
-                lastUsedMs: 0,
-                source: .dict,
-            ))
-        }
-    }
-
-    /// User-side raw rows — reads from `user_association.db`, returns
-    /// un-scored rows tagged `.user` so the Rust filter can apply
-    /// `calculateUserScore` (decay + learning bonus) at filter time.
-    ///
-    /// Over-fetches `limit * 2` for the same merge-slack reason as
-    /// `collectDictAssociations` (Codex post-impl P2-1).
-    private func collectUserAssociations(
-        word: String,
-        roman: String,
-        limit: Int,
-        rows: inout [RustEngineBridge.NextWordRawRow],
-    ) async {
-        do {
-            try await ensureUserTablesCreated()
-
-            let userRows = try await userConnectionManager.execute { db in
-                NextWordRepository.fetchUserRows(db: db, word: word, roman: roman, limit: limit * 2)
-            }
-
-            for row in userRows {
-                rows.append(RustEngineBridge.NextWordRawRow(
-                    hanzi: row.hanzi,
-                    tl: row.tl,
-                    count: Int64(row.count),
-                    lastUsedMs: row.lastUsedMs,
-                    source: .user,
-                ))
-            }
-        } catch {
-            logger.error("[USER] Query failed: \(error.localizedDescription)")
         }
     }
 

@@ -16,8 +16,8 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * `AssocLookupRequest.enabled_sources_bitmask`. Equals `u32::MAX` when
  * ALL 9 association sources are enabled (preserves the documented
  * sentinel shortcut at `lexicon.proto:166-173`); otherwise equals the
- * association mask (bits 0-8). Platform NextWord callers forward
- * directly without re-branching.
+ * association mask (bits 0-8). engine/dispatch `PredictNext` computes it
+ * itself from the toggles; platforms no longer forward it.
  * - `enabled_source_codes` lists every `DictionarySourceCode` whose source
  * the user has toggled on. `DEV` + `CUSTOM` are always present
  * (non-toggleable). Platforms decode via explicit switch/map into their
@@ -315,8 +315,8 @@ public  final class DictionaryFiltersResponse extends
    * `AssocLookupRequest.enabled_sources_bitmask`. Equals `u32::MAX` when
    * ALL 9 association sources are enabled (preserves the documented
    * sentinel shortcut at `lexicon.proto:166-173`); otherwise equals the
-   * association mask (bits 0-8). Platform NextWord callers forward
-   * directly without re-branching.
+   * association mask (bits 0-8). engine/dispatch `PredictNext` computes it
+   * itself from the toggles; platforms no longer forward it.
    * - `enabled_source_codes` lists every `DictionarySourceCode` whose source
    * the user has toggled on. `DEV` + `CUSTOM` are always present
    * (non-toggleable). Platforms decode via explicit switch/map into their

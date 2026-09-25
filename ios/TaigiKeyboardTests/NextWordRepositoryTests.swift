@@ -143,17 +143,6 @@ final class NextWordRepositoryTests: XCTestCase {
         XCTAssertEqual(Set(rows.map(\.tl)), ["tāng", "tîng"])
     }
 
-    // MARK: - Bundled lookup key (INVARIANT_NEXTWORD_LOOKUP_KEY_LAST_GRAPHEME)
-
-    // 𣍐 (U+2334D) is a UTF-16 surrogate pair; the key must be the whole
-    // character. Mirrors Android `TextInputKeyHandlerTest`.
-    func testINVARIANT_nextwordLookupKey_keepsSupplementaryHanjiWhole() {
-        XCTAssertEqual(NextWordService.bundledLookupKey(for: "𣍐"), "𣍐")
-        XCTAssertEqual(NextWordService.bundledLookupKey(for: "袂𣍐"), "𣍐")
-        XCTAssertEqual(NextWordService.bundledLookupKey(for: "早安"), "安")
-        XCTAssertNil(NextWordService.bundledLookupKey(for: ""))
-    }
-
     // MARK: - Helpers
 
     private func exec(_ sql: String) {

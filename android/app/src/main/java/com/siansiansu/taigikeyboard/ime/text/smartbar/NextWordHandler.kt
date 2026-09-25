@@ -8,7 +8,7 @@ import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.engine.nextwordBackspace
 import com.siansiansu.taigikeyboard.engine.nextwordClearForNewComposing
 import com.siansiansu.taigikeyboard.engine.nextwordContextTimeoutFired
-import com.siansiansu.taigikeyboard.engine.nextwordFilter
+import com.siansiansu.taigikeyboard.engine.nextwordPredictNext
 import com.siansiansu.taigikeyboard.engine.nextwordResetFull
 import com.siansiansu.taigikeyboard.engine.nextwordSetIsShowing
 import com.siansiansu.taigikeyboard.engine.nextwordUpdateLastSelectedWord
@@ -375,7 +375,7 @@ class NextWordHandler(
 
     /**
      * Dispatch the async prediction query. [nowMs] from the effect is reused
-     * verbatim on the predict() call so the association-window check (Rust
+     * verbatim on the engine call so the association-window check (Rust
      * side) and user-row decay scoring (filter step) see ONE consistent
      * "now" per intent — `nextword-engine-boundary.md` §13.3.
      */
@@ -386,33 +386,36 @@ class NextWordHandler(
         nowMs: Long,
     ) {
         logger.debug(TAG) { "[NEXTWORD] Query gen=$queryGeneration word='$word' roman='$roman'" }
+        // Dictionary toggles snapshot at query start, before the SQL / lexicon-ready
+        // suspension — the bundled lookup answers for the settings the query began under.
+        val toggles = RustEngineBridge.DictionaryToggles.from(settingsProvider.current)
         scope.launch {
-            val raw = nextWord.predict(
-                word = word,
-                roman = roman,
-                settings = settingsProvider.current,
-            )
+            val userRows = nextWord.userRows(word = word, roman = roman)
             withContext(Dispatchers.Main) {
-                handleQueryResult(raw = raw, queryGeneration = queryGeneration, nowMs = nowMs)
+                handleQueryResult(word = word, userRows = userRows, toggles = toggles, queryGeneration = queryGeneration, nowMs = nowMs)
             }
         }
     }
 
     /**
-     * Resolve an async prediction query. Pushes raw rows back through
-     * [RustEngineBridge.nextwordFilter] for score+merge+sort+limit + stale
+     * Resolve an async prediction query. [RustEngineBridge.nextwordPredictNext]
+     * adds the bundled rows for [word], then score+merge+sort+limit + stale
      * generation drop. Renders the result, then pushes the new visibility
      * back to engine state via `nextwordSetIsShowing` so downstream
      * clear/reset paths can emit `ClearPredictionsUI` correctly.
      */
     private fun handleQueryResult(
-        raw: List<RustEngineBridge.NextWordRawRow>,
+        word: String,
+        userRows: List<RustEngineBridge.NextWordRawRow>,
+        toggles: RustEngineBridge.DictionaryToggles,
         queryGeneration: Long,
         nowMs: Long,
     ) {
         val settings = settingsProvider.current
-        val filterResult = RustEngineBridge.nextwordFilter(
-            raw = raw,
+        val filterResult = RustEngineBridge.nextwordPredictNext(
+            word = word,
+            userRows = userRows,
+            toggles = toggles,
             queryGeneration = queryGeneration,
             nowMs = nowMs,
             limit = 30,

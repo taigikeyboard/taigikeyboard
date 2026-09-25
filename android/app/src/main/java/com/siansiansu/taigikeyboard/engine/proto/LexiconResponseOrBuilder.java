@@ -55,17 +55,6 @@ public interface LexiconResponseOrBuilder extends
   com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponse getSearchByHanziResult();
 
   /**
-   * <code>.taigi.engine.AssocLookupResponse assoc_lookup_result = 15;</code>
-   * @return Whether the assocLookupResult field is set.
-   */
-  boolean hasAssocLookupResult();
-  /**
-   * <code>.taigi.engine.AssocLookupResponse assoc_lookup_result = 15;</code>
-   * @return The assocLookupResult.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.AssocLookupResponse getAssocLookupResult();
-
-  /**
    * <code>.taigi.engine.IsHanziResponse is_hanzi_result = 17;</code>
    * @return Whether the isHanziResult field is set.
    */

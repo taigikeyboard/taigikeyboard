@@ -27,7 +27,7 @@ final class BackupServiceCustomDictionaryTests: XCTestCase {
         backup = BackupService(
             customDictionaryService: CustomDictionaryService(repository: repository),
             userFrequencyRepository: UserFrequencyRepository(),
-            nextWordService: NextWordService(settingsProvider: SharedSettings.shared),
+            nextWordService: NextWordService(),
         )
     }
 

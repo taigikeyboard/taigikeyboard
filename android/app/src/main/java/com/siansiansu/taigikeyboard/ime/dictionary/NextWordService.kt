@@ -1,5 +1,5 @@
-// Bigram lookup routes through Rust lexicon::assoc_lookup; this file only handles
-// the SQLite write path and startup prep. Mirrors iOS NextWord/Services/NextWordService.swift.
+// Owns user_association.db, the learned half of next-word prediction; the bundled half runs in the
+// engine (`nextwordPredictNext`). Mirrors iOS NextWord/Services/NextWordService.swift.
 
 package com.siansiansu.taigikeyboard.ime.dictionary
 
@@ -8,15 +8,11 @@ import android.database.sqlite.SQLiteDatabase
 import androidx.core.database.sqlite.transaction
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
-import com.siansiansu.taigikeyboard.engine.assocLookup
-import com.siansiansu.taigikeyboard.engine.dictionaryFilters
 import com.siansiansu.taigikeyboard.ime.core.db.rowCount
 import com.siansiansu.taigikeyboard.ime.core.db.upsert
 import com.siansiansu.taigikeyboard.ime.core.db.vacuumBestEffort
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
-import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
-import com.siansiansu.taigikeyboard.ime.text.keyboard.lastGrapheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -64,11 +60,6 @@ class NextWordService(
          * Matches iOS `NextWordService.Constants.defaultLimit`.
          */
         const val DEFAULT_LIMIT: Int = 30
-        //
-        // Scoring + merge-by-(hanzi, tl) live in `engine/nextword/src/{scorer,filter}.rs`
-        // post-v3.5.5. The platform `predict()` returns un-scored rows tagged
-        // by `Source`; the caller routes them through
-        // `RustEngineBridge.nextwordFilter` for the score+merge+sort+limit step.
 
         // User-association capacity (prevents unbounded DB growth)
         private const val MAX_USER_ASSOCIATIONS = 50_000
@@ -225,133 +216,73 @@ class NextWordService(
     // ------------------------------------------------------------------ //
 
     /**
-     * Predict raw rows for the next-word bigram bridge.
+     * Learned rows following [word], tagged `SOURCE_USER`, best evidence
+     * first — the order [RustEngineBridge.nextwordPredictNext] must receive
+     * them in (§24). Over-fetches `limit * 2` so the engine's `(hanzi, tl)`
+     * merge keeps `limit` survivors. An empty [word] predicts nothing.
      *
-     * Post-v3.5.5: returns un-merged un-scored rows tagged by source
-     * (`SOURCE_DICT` from `association.bin` mmap, `SOURCE_USER` from
-     * `user_association.db`). The caller passes them to
-     * [RustEngineBridge.nextwordFilter] which scores (dict via
-     * `DICT_WEIGHT`; user via decay+learning math), merges by
-     * `(hanzi, tl)`, sorts desc by score, applies limit, and shapes per
-     * display rules. The caller forwards its intent `nowMs` straight to
-     * `nextwordFilter` so the association clock and the user-row decay see
-     * ONE consistent "now" per intent (`nextword-engine-boundary.md` §13.3).
+     * Waits for the lexicon install first so the engine's bundled lookup in
+     * the same query sees `association.bin`; a failed install still returns
+     * the learned rows (the lookup then yields none).
      */
-    suspend fun predict(
+    suspend fun userRows(
         word: String,
         roman: String = "",
         limit: Int = DEFAULT_LIMIT,
-        settings: EngineSettings,
     ): List<RustEngineBridge.NextWordRawRow> =
         withContext(Dispatchers.IO) {
             if (word.isEmpty()) {
                 return@withContext emptyList()
             }
 
-            val lastChar = lastGrapheme(word)
-
             ensureInitialized()
-
-            val rows = mutableListOf<RustEngineBridge.NextWordRawRow>()
-
-            // 1. Dictionary associations — un-scored rows tagged SOURCE_DICT.
-            // Over-fetch limit * 2 so the Rust filter has slack to merge
-            // (hanzi, tl) collisions across dict + user without dropping
-            // below the caller's requested limit (Codex post-impl P2-1).
-            // Cold-start gate around assocLookup only — user-DB paths below
-            // don't need the lexicon engine (Codex r3173440132). If install
-            // hasn't completed (or failed), skip dict rows and let user
-            // associations still surface.
-            val lexiconReady = com.siansiansu.taigikeyboard.ime.core.CompositionRoot
+            com.siansiansu.taigikeyboard.ime.core.CompositionRoot
                 .shared(appContext)
                 .awaitLexiconReady()
-            if (lexiconReady) {
-                try {
-                    logger.debug(TAG) { "[PREDICT] Dict query: prev_word='$lastChar'" }
-                    // Engine applies the 1-layer source filter (low 9 bits of
-                    // bitmask) per audit §4. Over-fetch limit * 2 so the Rust
-                    // filter step has slack to merge (hanzi, tl) collisions
-                    // across dict + user without dropping below the caller's
-                    // requested limit. `assocLookupBitmask` is engine-resolved
-                    // (`UInt.MAX_VALUE` sentinel when all 9 sources on, else
-                    // exact mask) — pre-v3.5.8 the platform branched on
-                    // `allAssociationSourcesEnabled`.
-                    val toggles = RustEngineBridge
-                        .DictionaryToggles
-                        .from(settings)
-                    val bitmask = RustEngineBridge
-                        .dictionaryFilters(toggles)
-                        .assocLookupBitmask
-                    val entries = RustEngineBridge.assocLookup(
-                        previousWord = lastChar,
-                        limit = (limit * 2).toUInt(),
-                        enabledSourcesBitmask = bitmask,
-                    )
-                    for (entry in entries) {
+
+            val db = userDatabase ?: return@withContext emptyList()
+            val rows = mutableListOf<RustEngineBridge.NextWordRawRow>()
+            try {
+                // CROSS-PLATFORM INVARIANT — mirrors
+                // ios/Sources/TaigiKeyboard/NextWord/Repository/NextWordRepository.swift
+                // fetchUserRows. prev_word (Hanji) is the only lookup key;
+                // prev_tl is a ranking signal (exact > empty > mismatch),
+                // NOT a hard filter, so a mismatched non-empty prev_tl
+                // (the other reading of a 一字多音 Hanji, or a pre-v3.6.1
+                // raw form) is still recalled. Drift causes silent
+                // divergence. Pins behavioral-invariants.md §24.
+                //
+                // ROW ORDER IS LOAD-BEARING. v6 stores 重/tîng → 複 and
+                // 重/tāng → 複 separately, so a Hanji-only lookup can return
+                // several rows predicting the SAME word. The engine keeps
+                // only the FIRST user row per predicted (hanzi, tl)
+                // (engine/nextword/src/filter.rs) rather than summing their
+                // scores, so this ORDER BY is what decides which reading's
+                // evidence is used. Nothing between this cursor and the
+                // engine may reorder these rows.
+                logger.debug(TAG) { "[PREDICT] User query: prev_word='$word', prev_tl='$roman'" }
+                // Over-fetch limit * 2 — merge slack (Codex post-impl P2-1).
+                val cursor = db.rawQuery(USER_PREDICT_SQL, arrayOf(word, roman, (limit * 2).toString()))
+                cursor.use {
+                    while (it.moveToNext()) {
+                        val nextWord = it.getString(0) ?: continue
+                        val nextTl = it.getString(1) ?: ""
+                        val count = it.getInt(2)
+                        val lastUsedMs = it.getLong(3)
                         rows.add(
                             RustEngineBridge.NextWordRawRow(
-                                hanzi = entry.candidateWord,
-                                tl = entry.candidateTl,
-                                count = entry.count.toLong(),
-                                lastUsedMs = 0L,
-                                source = RustEngineBridge.NextWordRawRow.Source.DICT,
+                                hanzi = nextWord,
+                                tl = nextTl,
+                                count = count.toLong(),
+                                lastUsedMs = lastUsedMs,
+                                source = RustEngineBridge.NextWordRawRow.Source.USER,
                             ),
                         )
                     }
-                    logger.debug(TAG) { "[PREDICT] Dict: ${entries.size} entries (bridge)" }
-                } catch (e: Exception) {
-                    logger.e(TAG, "[PREDICT] Dict query failed", e)
                 }
-            } else {
-                logger.debug(TAG) { "[PREDICT] Dict skipped — lexicon not ready" }
-            }
-
-            // 2. User associations — un-scored rows tagged SOURCE_USER.
-            val dictCount = rows.size
-            userDatabase?.let { db ->
-                try {
-                    // CROSS-PLATFORM INVARIANT — mirrors
-                    // ios/Sources/TaigiKeyboard/NextWord/Repository/NextWordRepository.swift
-                    // fetchUserRows. prev_word (Hanji) is the only lookup key;
-                    // prev_tl is a ranking signal (exact > empty > mismatch),
-                    // NOT a hard filter, so a mismatched non-empty prev_tl
-                    // (the other reading of a 一字多音 Hanji, or a pre-v3.6.1
-                    // raw form) is still recalled. Drift causes silent
-                    // divergence. Pins behavioral-invariants.md §24.
-                    //
-                    // ROW ORDER IS LOAD-BEARING. v6 stores 重/tîng → 複 and
-                    // 重/tāng → 複 separately, so a Hanji-only lookup can return
-                    // several rows predicting the SAME word. The engine keeps
-                    // only the FIRST user row per predicted (hanzi, tl)
-                    // (engine/nextword/src/filter.rs) rather than summing their
-                    // scores, so this ORDER BY is what decides which reading's
-                    // evidence is used. Nothing between this cursor and the
-                    // engine may reorder these rows.
-                    logger.debug(TAG) { "[PREDICT] User query: prev_word='$word', prev_tl='$roman'" }
-                    // Over-fetch limit * 2 — same merge-slack reason as the
-                    // dict path above (Codex post-impl P2-1).
-                    val cursor = db.rawQuery(USER_PREDICT_SQL, arrayOf(word, roman, (limit * 2).toString()))
-                    cursor.use {
-                        while (it.moveToNext()) {
-                            val nextWord = it.getString(0) ?: continue
-                            val nextTl = it.getString(1) ?: ""
-                            val count = it.getInt(2)
-                            val lastUsedMs = it.getLong(3)
-                            rows.add(
-                                RustEngineBridge.NextWordRawRow(
-                                    hanzi = nextWord,
-                                    tl = nextTl,
-                                    count = count.toLong(),
-                                    lastUsedMs = lastUsedMs,
-                                    source = RustEngineBridge.NextWordRawRow.Source.USER,
-                                ),
-                            )
-                        }
-                    }
-                    logger.debug(TAG) { "[PREDICT] User: ${rows.size - dictCount} new rows (total ${rows.size})" }
-                } catch (e: Exception) {
-                    logger.e(TAG, "[PREDICT] User query failed", e)
-                }
+                logger.debug(TAG) { "[PREDICT] User: ${rows.size} rows" }
+            } catch (e: Exception) {
+                logger.e(TAG, "[PREDICT] User query failed", e)
             }
 
             rows
