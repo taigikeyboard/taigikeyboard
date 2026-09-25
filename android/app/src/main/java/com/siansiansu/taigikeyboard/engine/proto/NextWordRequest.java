@@ -28,6 +28,7 @@ public  final class NextWordRequest extends
     UPDATE_LAST_SELECTED_WORD(15),
     SET_IS_SHOWING(16),
     FILTER_PREDICTIONS(20),
+    PREDICT_NEXT(22),
     METHOD_NOT_SET(0);
     private final int value;
     private MethodCase(int value) {
@@ -51,6 +52,7 @@ public  final class NextWordRequest extends
         case 15: return UPDATE_LAST_SELECTED_WORD;
         case 16: return SET_IS_SHOWING;
         case 20: return FILTER_PREDICTIONS;
+        case 22: return PREDICT_NEXT;
         case 0: return METHOD_NOT_SET;
         default: return null;
       }
@@ -617,6 +619,86 @@ public  final class NextWordRequest extends
    */
   private void clearFilterPredictions() {
     if (methodCase_ == 20) {
+      methodCase_ = 0;
+      method_ = null;
+    }
+  }
+
+  public static final int PREDICT_NEXT_FIELD_NUMBER = 22;
+  /**
+   * <pre>
+   * Whole prediction query — bundled lookup + filter in one call. Expanded
+   * into FilterPredictions by engine/dispatch (nextword cannot see lexicon);
+   * returns FilterResult.
+   * </pre>
+   *
+   * <code>.taigi.engine.PredictNext predict_next = 22;</code>
+   */
+  @java.lang.Override
+  public boolean hasPredictNext() {
+    return methodCase_ == 22;
+  }
+  /**
+   * <pre>
+   * Whole prediction query — bundled lookup + filter in one call. Expanded
+   * into FilterPredictions by engine/dispatch (nextword cannot see lexicon);
+   * returns FilterResult.
+   * </pre>
+   *
+   * <code>.taigi.engine.PredictNext predict_next = 22;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.PredictNext getPredictNext() {
+    if (methodCase_ == 22) {
+       return (com.siansiansu.taigikeyboard.engine.proto.PredictNext) method_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.PredictNext.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * Whole prediction query — bundled lookup + filter in one call. Expanded
+   * into FilterPredictions by engine/dispatch (nextword cannot see lexicon);
+   * returns FilterResult.
+   * </pre>
+   *
+   * <code>.taigi.engine.PredictNext predict_next = 22;</code>
+   */
+  private void setPredictNext(com.siansiansu.taigikeyboard.engine.proto.PredictNext value) {
+    java.util.Objects.requireNonNull(value);
+    method_ = value;
+    methodCase_ = 22;
+  }
+  /**
+   * <pre>
+   * Whole prediction query — bundled lookup + filter in one call. Expanded
+   * into FilterPredictions by engine/dispatch (nextword cannot see lexicon);
+   * returns FilterResult.
+   * </pre>
+   *
+   * <code>.taigi.engine.PredictNext predict_next = 22;</code>
+   */
+  private void mergePredictNext(com.siansiansu.taigikeyboard.engine.proto.PredictNext value) {
+    java.util.Objects.requireNonNull(value);
+    if (methodCase_ == 22 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.PredictNext.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.PredictNext.newBuilder((com.siansiansu.taigikeyboard.engine.proto.PredictNext) method_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      method_ = value;
+    }
+    methodCase_ = 22;
+  }
+  /**
+   * <pre>
+   * Whole prediction query — bundled lookup + filter in one call. Expanded
+   * into FilterPredictions by engine/dispatch (nextword cannot see lexicon);
+   * returns FilterResult.
+   * </pre>
+   *
+   * <code>.taigi.engine.PredictNext predict_next = 22;</code>
+   */
+  private void clearPredictNext() {
+    if (methodCase_ == 22) {
       methodCase_ = 0;
       method_ = null;
     }
@@ -1295,6 +1377,90 @@ public  final class NextWordRequest extends
       return this;
     }
 
+    /**
+     * <pre>
+     * Whole prediction query — bundled lookup + filter in one call. Expanded
+     * into FilterPredictions by engine/dispatch (nextword cannot see lexicon);
+     * returns FilterResult.
+     * </pre>
+     *
+     * <code>.taigi.engine.PredictNext predict_next = 22;</code>
+     */
+    @java.lang.Override
+    public boolean hasPredictNext() {
+      return instance.hasPredictNext();
+    }
+    /**
+     * <pre>
+     * Whole prediction query — bundled lookup + filter in one call. Expanded
+     * into FilterPredictions by engine/dispatch (nextword cannot see lexicon);
+     * returns FilterResult.
+     * </pre>
+     *
+     * <code>.taigi.engine.PredictNext predict_next = 22;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.PredictNext getPredictNext() {
+      return instance.getPredictNext();
+    }
+    /**
+     * <pre>
+     * Whole prediction query — bundled lookup + filter in one call. Expanded
+     * into FilterPredictions by engine/dispatch (nextword cannot see lexicon);
+     * returns FilterResult.
+     * </pre>
+     *
+     * <code>.taigi.engine.PredictNext predict_next = 22;</code>
+     */
+    public Builder setPredictNext(com.siansiansu.taigikeyboard.engine.proto.PredictNext value) {
+      copyOnWrite();
+      instance.setPredictNext(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Whole prediction query — bundled lookup + filter in one call. Expanded
+     * into FilterPredictions by engine/dispatch (nextword cannot see lexicon);
+     * returns FilterResult.
+     * </pre>
+     *
+     * <code>.taigi.engine.PredictNext predict_next = 22;</code>
+     */
+    public Builder setPredictNext(
+        com.siansiansu.taigikeyboard.engine.proto.PredictNext.Builder builderForValue) {
+      copyOnWrite();
+      instance.setPredictNext(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * Whole prediction query — bundled lookup + filter in one call. Expanded
+     * into FilterPredictions by engine/dispatch (nextword cannot see lexicon);
+     * returns FilterResult.
+     * </pre>
+     *
+     * <code>.taigi.engine.PredictNext predict_next = 22;</code>
+     */
+    public Builder mergePredictNext(com.siansiansu.taigikeyboard.engine.proto.PredictNext value) {
+      copyOnWrite();
+      instance.mergePredictNext(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Whole prediction query — bundled lookup + filter in one call. Expanded
+     * into FilterPredictions by engine/dispatch (nextword cannot see lexicon);
+     * returns FilterResult.
+     * </pre>
+     *
+     * <code>.taigi.engine.PredictNext predict_next = 22;</code>
+     */
+    public Builder clearPredictNext() {
+      copyOnWrite();
+      instance.clearPredictNext();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.NextWordRequest)
   }
   @java.lang.Override
@@ -1321,10 +1487,11 @@ public  final class NextWordRequest extends
             com.siansiansu.taigikeyboard.engine.proto.UpdateLastSelectedWord.class,
             com.siansiansu.taigikeyboard.engine.proto.SetIsShowing.class,
             com.siansiansu.taigikeyboard.engine.proto.FilterPredictions.class,
+            com.siansiansu.taigikeyboard.engine.proto.PredictNext.class,
           };
           java.lang.String info =
-              "\u0000\b\u0001\u0000\n\u0014\b\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f<\u0000\r" +
-              "<\u0000\u000e<\u0000\u000f<\u0000\u0010<\u0000\u0014<\u0000";
+              "\u0000\t\u0001\u0000\n\u0016\t\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f<\u0000\r" +
+              "<\u0000\u000e<\u0000\u000f<\u0000\u0010<\u0000\u0014<\u0000\u0016<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

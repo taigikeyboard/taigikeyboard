@@ -54,7 +54,7 @@ mod syllable;
 | Layer | Type vocabulary | Visibility |
 |---|---|---|
 | `phonetics`, `lexicon`, `composing`, `nextword` (domain) | **Dispatch façade** takes / returns `protos::engine::*` directly. Native-Rust helpers (CLI / test convenience functions) may exist alongside but never grow into a parallel mirror tier. | Implementation modules `mod`-private; one or two `pub mod` façades; `pub use` only for genuine cross-crate symbols. |
-| `engine/dispatch` | Single `process_request(&[u8]) -> Vec<u8>`. Decodes once, routes by `Request.payload` variant to the matching domain crate, encodes once. | Pure routing — no proto↔proto translation. |
+| `engine/dispatch` | Single `process_request(&[u8]) -> Vec<u8>`. Decodes once, routes by `Request.payload` variant to the matching domain crate, encodes once. | Pure routing — no proto↔proto translation, except cross-domain composition only `dispatch` can do (`predict.rs` expands nextword `PredictNext` with a lexicon lookup into `FilterPredictions`). |
 | `swift-ffi`, `android-jni` | Bytes in, bytes out across the FFI seam. `catch_unwind` per §1. | Calls `dispatch::process_request` directly. |
 
 **What this rule excludes.** Native-Rust input/output structs that mirror proto messages, `From<NativeFoo> for protos::engine::Foo` impls, separate per-op entry points in dispatch (`dispatch::process_phonetics`, `dispatch::process_ranking`, …) — all banned. They show up in candidate refactors and they are always extra work for no end-user benefit.

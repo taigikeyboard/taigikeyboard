@@ -61,6 +61,17 @@ pub(crate) enum Intent {
     SetIsShowing { is_showing: bool },
 }
 
+/// Predictions returned when a request's `limit` is 0 or negative.
+pub const DEFAULT_PREDICTION_LIMIT: usize = 30;
+
+/// A request's `limit` as a prediction count; `<= 0` means the default.
+pub fn effective_prediction_limit(limit: i32) -> usize {
+    usize::try_from(limit)
+        .ok()
+        .filter(|&count| count > 0)
+        .unwrap_or(DEFAULT_PREDICTION_LIMIT)
+}
+
 /// Engine errors surface as `ErrorCode::FailInvariant` at the FFI seam.
 #[derive(Debug, Error)]
 pub enum NextWordError {
@@ -72,6 +83,10 @@ pub enum NextWordError {
     InvalidSource,
     #[error("invalid Platform on AppConfig")]
     InvalidPlatform,
+    /// `PredictNext` needs the bundled lookup, which only `engine/dispatch`
+    /// can run; it rewrites the request to `FilterPredictions` first.
+    #[error("PredictNext must be expanded by engine/dispatch")]
+    UnexpandedPredictNext,
 }
 
 /// State machine. Held inside `Mutex<Engine>` at the FFI boundary.

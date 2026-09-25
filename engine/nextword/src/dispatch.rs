@@ -84,6 +84,7 @@ fn decode_intent(req: &NextWordRequest) -> Result<DecodedRequest, NextWordError>
             now_ms: m.now_ms,
             limit: m.limit,
         },
+        Method::PredictNext(_) => return Err(NextWordError::UnexpandedPredictNext),
     })
 }
 
