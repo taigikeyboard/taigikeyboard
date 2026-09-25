@@ -74,7 +74,7 @@
     "backgroundTypeSolid": {
       "comment": "Theme editor background type (segmented picker): one flat color.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "純色", "tailo": "Sûn-sik", "poj": "Sûn-sek", "en": "Solid", "ja": "単色" }
+      "values": { "hanji": "孤色", "tailo": "Koo-sik", "poj": "Ko͘-sek", "en": "Solid", "ja": "単色" }
     },
     "backgroundTypeGradient": {
       "comment": "Theme editor background type (segmented picker): a two-color linear gradient.",
