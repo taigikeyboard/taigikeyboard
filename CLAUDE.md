@@ -39,7 +39,7 @@ Path-scoped rules load themselves; these do not:
 |---|---|
 | adding / renaming / deleting an `i18n/*.json` key from platform code | `.claude/rules/i18n.md` |
 | a real-device dogfood pass, or citing an `Sn` item | `docs/architecture/dogfood-checklist.md`; draw test sentences from `corpus/README.md` |
-| a 最佳實踐對齊 section, or any segmentation / lattice / ranking / next-word / continuous-input design | `docs/references/mainstream-ime-comparison.md` — never re-explore `references/` from scratch |
+| a Best practices alignment section, or any segmentation / lattice / ranking / next-word / continuous-input design | `docs/references/mainstream-ime-comparison.md` — never re-explore `references/` from scratch |
 | a framework/OS API call (KeyboardKit, `UITextDocumentProxy`, `InputMethodService`, Compose, DataStore) | `.claude/rules/doc-lookup.md` — verify via `find-docs` first, never from model memory |
 
 ## Build & Test
