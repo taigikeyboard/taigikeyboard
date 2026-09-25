@@ -111,9 +111,7 @@ message Reset {}
 message EnterContinuous {}
 
 // v3.5.8 Phase 6 — Pure read: returns the candidate list for the current
-// `Phase::Continuous { raw }` starting at byte offset `position` (always
-// `0` in v3.5.8; field reserved for future partial-fetch capability and
-// validated to `0` today). The engine routes the raw buffer through
+// `Phase::Continuous { raw }` (the whole buffer). The engine routes the raw buffer through
 // mode-specific key builders in `composing::dispatch` — TL/POJ via
 // `build_keys_tl` (which since Phase 9 Item 8 includes a hyphen-shadow
 // pre-pass so `tâi-uân` etc. produce the same `tl:<toneless>` keys as
@@ -193,7 +191,9 @@ message EnterContinuous {}
 // Windows); the platform sets `disabled = !enabled` — mobile in
 // `ComposingManager`, desktop in the engine bridge.
 message FetchAtPos {
-  uint32 position                          = 1;
+  // Was `uint32 position` — always 0, never a partial fetch.
+  reserved 1;
+  reserved "position";
   repeated FrequencyEntry frequency_entries = 2;
   int64 now_ms                             = 3;
   repeated CustomDictEntry custom_entries  = 4;

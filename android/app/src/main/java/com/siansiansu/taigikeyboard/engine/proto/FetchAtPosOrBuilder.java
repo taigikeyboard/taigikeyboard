@@ -11,12 +11,6 @@ public interface FetchAtPosOrBuilder extends
     com.google.protobuf.MessageLiteOrBuilder {
 
   /**
-   * <code>uint32 position = 1;</code>
-   * @return The position.
-   */
-  int getPosition();
-
-  /**
    * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
    */
   java.util.List<com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry>

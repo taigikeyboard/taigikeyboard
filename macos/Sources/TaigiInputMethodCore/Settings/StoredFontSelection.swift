@@ -14,7 +14,7 @@ import Foundation
 /// with nothing beside it, or a stale companion beside a bundled face.
 ///
 /// Mirrors `StoredFontSelection` in
-/// `windows/crates/taigi-windows-core/src/settings/font_selection.rs`. What is
+/// `desktop/crates/taigi-desktop-core/src/settings/font_selection.rs`. What is
 /// NOT here is turning the value into something drawable: that needs the font
 /// library and Core Text, and lives with `SettingsStore.candidateFontSelection`.
 enum StoredFontSelection: Hashable {

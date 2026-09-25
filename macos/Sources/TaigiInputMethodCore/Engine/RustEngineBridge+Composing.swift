@@ -234,11 +234,10 @@ extension RustEngineBridge {
         learnedEntries: [LearnedPhraseRow] = [],
     ) -> ContinuousFetchResult? {
         var fetch = Taigi_Engine_FetchAtPos()
-        fetch.position = 0
         // §34/S22 — positive platform setting → inverted proto disable gate
         // (the field's own comment carries why), so 顯示當咧拍的字 ON leaves the
         // preedit literal leading the list and Return commits what was typed.
-        // CROSS-PLATFORM INVARIANT — mirrors windows/crates/taigi-windows-core/src/engine/composing.rs
+        // CROSS-PLATFORM INVARIANT — mirrors desktop/crates/taigi-desktop-core/src/engine/composing.rs
         // `fetch_at_pos`, which inverts the same setting onto the same field.
         fetch.literalRomanCandidateDisabled = !settings.isLiteralRomanCandidateEnabled
         fetch.frequencyEntries = frequencyRows.map(frequencyEntry)

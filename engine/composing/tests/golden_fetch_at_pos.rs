@@ -518,7 +518,6 @@ fn run_case(c: &Case) -> String {
         &cfg,
         c.raw,
         FetchAtPos {
-            position: 0,
             frequency_entries: c.freq.clone(),
             now_ms: c.now_ms,
             custom_entries: c.custom.clone(),

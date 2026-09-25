@@ -427,9 +427,7 @@ public nonisolated struct Taigi_Engine_EnterContinuous: Sendable {
 }
 
 /// v3.5.8 Phase 6 — Pure read: returns the candidate list for the current
-/// `Phase::Continuous { raw }` starting at byte offset `position` (always
-/// `0` in v3.5.8; field reserved for future partial-fetch capability and
-/// validated to `0` today). The engine routes the raw buffer through
+/// `Phase::Continuous { raw }` (the whole buffer). The engine routes the raw buffer through
 /// mode-specific key builders in `composing::dispatch` — TL/POJ via
 /// `build_keys_tl` (which since Phase 9 Item 8 includes a hyphen-shadow
 /// pre-pass so `tâi-uân` etc. produce the same `tl:<toneless>` keys as
@@ -512,8 +510,6 @@ public nonisolated struct Taigi_Engine_FetchAtPos: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
-
-  public var position: UInt32 = 0
 
   public var frequencyEntries: [Taigi_Engine_FrequencyEntry] = []
 
@@ -1771,7 +1767,7 @@ nonisolated extension Taigi_Engine_EnterContinuous: SwiftProtobuf.Message, Swift
 
 nonisolated extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".FetchAtPos"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}position\0\u{3}frequency_entries\0\u{3}now_ms\0\u{3}custom_entries\0\u{3}enabled_sources_bitmask\0\u{3}literal_roman_candidate_disabled\0\u{3}learned_entries\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{2}frequency_entries\0\u{3}now_ms\0\u{3}custom_entries\0\u{3}enabled_sources_bitmask\0\u{3}literal_roman_candidate_disabled\0\u{3}learned_entries\0\u{b}position\0\u{c}\u{1}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1779,7 +1775,6 @@ nonisolated extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProto
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularUInt32Field(value: &self.position) }()
       case 2: try { try decoder.decodeRepeatedMessageField(value: &self.frequencyEntries) }()
       case 3: try { try decoder.decodeSingularInt64Field(value: &self.nowMs) }()
       case 4: try { try decoder.decodeRepeatedMessageField(value: &self.customEntries) }()
@@ -1792,9 +1787,6 @@ nonisolated extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProto
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if self.position != 0 {
-      try visitor.visitSingularUInt32Field(value: self.position, fieldNumber: 1)
-    }
     if !self.frequencyEntries.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.frequencyEntries, fieldNumber: 2)
     }
@@ -1817,7 +1809,6 @@ nonisolated extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProto
   }
 
   public static func ==(lhs: Taigi_Engine_FetchAtPos, rhs: Taigi_Engine_FetchAtPos) -> Bool {
-    if lhs.position != rhs.position {return false}
     if lhs.frequencyEntries != rhs.frequencyEntries {return false}
     if lhs.nowMs != rhs.nowMs {return false}
     if lhs.customEntries != rhs.customEntries {return false}
