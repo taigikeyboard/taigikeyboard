@@ -5,10 +5,10 @@
 
 [tools]
 # Must equal the libprotoc that emits the pinned protobuf-javalite runtime
-# (android/app/build.gradle.kts: 4.36.0 <-> 36.0). engine/scripts/gen-platform-protos.sh
+# (android/app/build.gradle.kts: 4.36.2 <-> 36.2). engine/scripts/gen-platform-protos.sh
 # skips binding regeneration on any other version. CI installs 36.1 for the Rust
 # (prost) builds only, which accept either.
-protoc = "36.0"
+protoc = "36.2"
 # Recorded in .gitleaks-scanned; an incremental scan refuses any other version.
 gitleaks = "8.30.1"
 # The version .github/workflows/checks.yml lints with.

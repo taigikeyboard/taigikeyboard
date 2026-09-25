@@ -236,7 +236,7 @@ dependencies {
     // query). Android's SQLiteDatabase is unavailable in JVM unit tests
     // (testOptions.unitTests.isReturnDefaultValues = true), so exercise the
     // exact production SQL string against an in-memory JDBC DB instead.
-    testImplementation("org.xerial:sqlite-jdbc:3.53.2.1")
+    testImplementation("org.xerial:sqlite-jdbc:3.53.4.0")
     // Real org.json for JVM unit tests — Android's bundled org.json is stubbed
     // (testOptions.unitTests.isReturnDefaultValues = true), so theme/color JSON
     // round-trip tests need the actual implementation on the test classpath.
@@ -246,11 +246,11 @@ dependencies {
     // Runtime must be >= the `protoc` that emitted the committed gencode; a
     // NEWER runtime over older gencode is supported, the reverse is not. Lite
     // gencode does not self-validate the runtime version, so a too-old runtime
-    // surfaces as a compile error on symbols it lacks. 4.36.0 pairs with the
-    // local `libprotoc 36.0` so the next proto regeneration lands on a
+    // surfaces as a compile error on symbols it lacks. 4.36.2 pairs with the
+    // local `libprotoc 36.2` so the next proto regeneration lands on a
     // matching runtime — when regenerating with a newer protoc, bump this in
     // the same commit.
-    implementation("com.google.protobuf:protobuf-javalite:4.36.0")
+    implementation("com.google.protobuf:protobuf-javalite:4.36.2")
     androidTestImplementation("androidx.test:runner:1.7.0")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
 }

@@ -46,13 +46,13 @@ mise install        # protoc, gitleaks, swiftformat, uv
 ```
 
 Without [mise](https://mise.jdx.dev), install the same versions by hand. The
-one that matters is **protoc 36.0**: it must match `protobuf-javalite` in
-`android/app/build.gradle.kts` (javalite `4.36.0` is emitted by libprotoc
-`36.0`). With any other protoc, `make protos` skips the Android Java and iOS
+one that matters is **protoc 36.2**: it must match `protobuf-javalite` in
+`android/app/build.gradle.kts` (javalite `4.36.2` is emitted by libprotoc
+`36.2`). With any other protoc, `make protos` skips the Android Java and iOS
 Swift binding regeneration and prints `protoc version drift — SKIPPING platform
 proto regeneration` (the macOS Swift bindings are still regenerated). The
 committed bindings stay valid, so the rest of the build still runs; you only
-need 36.0 to change a `.proto` file.
+need 36.2 to change a `.proto` file.
 
 Per platform, on top of that:
 
@@ -101,7 +101,7 @@ Notes:
 - The Android JVM unit tests do not load the native library, so
   `:app:testDebugUnitTest` runs without it; installing or running the app does
   need it. The Swift and Java protobuf bindings are committed, so only a
-  `.proto` change needs them regenerated (protoc 36.0, § 2). The engine's own
+  `.proto` change needs them regenerated (protoc 36.2, § 2). The engine's own
   Rust build always needs protoc.
 - iOS signing: the project names the maintainer's development team. Pick your
   own team under *Signing & Capabilities* for a device build, and leave that
@@ -119,7 +119,7 @@ against the old engine and pass for the wrong reason:
 | Your change touches | Run before platform tests |
 | --- | --- |
 | `engine/` (Rust, `Cargo.toml`) | the platform's native build from § 4 (`make ios-libs` / `android-libs` / `macos-libs`; `make build` on macOS does all of them) |
-| a `.proto` file | `make protos` first (protoc 36.0), then as above |
+| a `.proto` file | `make protos` first (protoc 36.2), then as above |
 | `dictionary/` | `make dict`, then as above |
 | platform-only Swift / Kotlin, docs | nothing |
 
@@ -129,7 +129,7 @@ Details and timings: [`architecture/build-artifacts.md`](architecture/build-arti
 
 | Message | Cause | Fix |
 | --- | --- | --- |
-| `protoc version drift — SKIPPING platform proto regeneration` | protoc is not 36.0 | `mise install`, or install protoc 36.0; harmless unless you changed a `.proto` |
+| `protoc version drift — SKIPPING platform proto regeneration` | protoc is not 36.2 | `mise install`, or install protoc 36.2; harmless unless you changed a `.proto` |
 | `protoc-gen-swift not found` | swift-protobuf missing | `brew install swift-protobuf` |
 | `cargo-ndk not found` | Android native build without cargo-ndk | `cargo install cargo-ndk --locked` |
 | `gitleaks is not installed` | `make scan-secrets` / the hook without gitleaks | `mise install`, or install gitleaks 8.30.1 — the version `.gitleaks-scanned` records |

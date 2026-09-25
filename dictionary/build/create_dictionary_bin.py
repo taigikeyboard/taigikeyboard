@@ -105,7 +105,7 @@ def compute_corpus_stats(csv_path: Path) -> tuple[int, int]:
 
     Why raw, not the `load_dictionary_records()` filtered universe:
     `CORPUS_TOTAL_FREQ` is intentionally documented as "Σ frequency over
-    every row of dictionary.csv (159 034 entries)" — Codex pre-impl
+    every row of dictionary.csv" — Codex pre-impl
     S5 Q4 = option a (2026-05-17): a checked-in constant + documented
     provenance, not a runtime-summed denominator. A4 only verifies the
     constant matches its documented semantic; it does not change which

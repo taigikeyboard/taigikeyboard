@@ -35,7 +35,7 @@ build:
 
 # Regenerate the committed Swift (iOS + macOS) and Java protobuf bindings from
 # engine/protos/proto/, then drop the protos crate's build cache so the next
-# native build recompiles it. Needs protoc 36.0 and protoc-gen-swift; with any
+# native build recompiles it. Needs protoc 36.2 and protoc-gen-swift; with any
 # other protoc the binding step is skipped with a warning (gen-platform-protos.sh).
 protos:
 	@echo "==> Regenerating platform proto (Swift + Java)"
@@ -306,7 +306,7 @@ help:
 	@echo "  make test               cargo test --workspace (engine, includes doctests)"
 	@echo "  make test-crate CRATE=<name>  cargo test for one engine crate"
 	@echo "  make doc                Build rustdoc HTML for the engine workspace and open it"
-	@echo "  make protos             Regenerate the committed Swift + Java protobuf bindings (protoc 36.0)"
+	@echo "  make protos             Regenerate the committed Swift + Java protobuf bindings (protoc 36.2)"
 	@echo "  make ios-libs           Engine xcframework for iOS (macOS host)"
 	@echo "  make android-libs       Engine jniLibs for Android (cargo-ndk + NDK)"
 	@echo "  make macos-libs         Engine xcframework for the macOS input method (macOS host)"

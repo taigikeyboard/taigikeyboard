@@ -1,5 +1,5 @@
 # Exact versions the pipeline and its tests are verified against
 # (.github/workflows/python.yml). Bump deliberately, then run `make dict`.
-pandas==3.0.2
+pandas==3.0.6
 odfpy==1.4.1
 pyyaml==6.0.3
