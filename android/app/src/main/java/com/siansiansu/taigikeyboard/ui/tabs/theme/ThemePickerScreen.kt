@@ -7,7 +7,6 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
@@ -50,7 +49,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
@@ -59,7 +57,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
@@ -223,7 +220,7 @@ private fun CustomThemeShelf(
                         ThemeCardAction(L10n.commonEdit) { onEdit(theme) },
                         ThemeCardAction(L10n.commonDelete, isDestructive = true) { onDelete(theme) },
                     ),
-                preview = { CustomThemeButtonPreview(theme.appearance) },
+                preview = { CustomThemeBackgroundPreview(theme.appearance) },
             )
             if (index < userThemes.size - 1) {
                 Spacer(Modifier.width(THEME_CARD_SPACING))
@@ -280,7 +277,7 @@ private data class ThemeCardAction(
 )
 
 // A theme card: a tappable preview (built-in screenshot/placeholder or the live
-// custom-theme button preview) with the shared selection overlay, plus a title row
+// custom-theme background preview) with the shared selection overlay, plus a title row
 // carrying an optional overflow menu (custom themes only). The tap-to-apply target
 // is the preview only — the title row (and its menu) is excluded, so opening the
 // menu never applies the theme.
@@ -452,50 +449,20 @@ private fun CreateNewThemeCard(onClick: () -> Unit) {
     }
 }
 
-// A custom-theme card preview: the theme background (solid, gradient or photo, same surface
-// painting as the keyboard) with one large centered key applying the theme's full
-// button style — fill, glyph, corner radius, border, and shadow — so the saved key
-// look reads at a glance. User themes are seeded at decode, so a null role only occurs
-// for a malformed entry and falls back to the seed. Mirrors iOS CustomThemeButtonPreview.
+// A custom-theme card preview: the theme background alone (solid, gradient or photo, same
+// surface painting as the keyboard) — no sample key, so the selection checkmark sits on the
+// bare surface like a built-in card's (USER 2026-09-26). User themes are seeded at decode, so
+// a null background only occurs for a malformed entry and falls back to the seed. Mirrors iOS
+// CustomThemeBackgroundPreview.
 @Composable
-private fun CustomThemeButtonPreview(appearance: ThemeAppearance) {
-    val colors = appearance.colors
-    val keyFill = Color(colors.normalKeyFillColor ?: UserThemeSeed.KEY_FILL)
-    val keyText = Color(colors.keyTextColor ?: UserThemeSeed.KEY_TEXT)
-    val cornerShape = RoundedCornerShape(appearance.keyCornerRadius.dp)
-    val borderWidth = appearance.keyBorderWidth
-    val shadow = appearance.keyShadowIntensity
-
+private fun CustomThemeBackgroundPreview(appearance: ThemeAppearance) {
     Box(
         modifier =
             Modifier
                 .fillMaxSize()
-                .themeBackground(colors.surface, fallback = Color(UserThemeSeed.SOLID_COLOR)),
-        contentAlignment = Alignment.Center,
-    ) {
-        Box(
-            modifier =
-                Modifier
-                    .size(width = 88.dp, height = 54.dp)
-                    .let { if (shadow > 0f) it.shadow(shadow.dp, cornerShape, clip = false) else it }
-                    .background(keyFill, cornerShape)
-                    // Border follows the key text color (mirrors the real keyboard's
-                    // role-first border) so the preview matches the live Outlined look.
-                    .let { if (borderWidth > 0f) it.border(borderWidth.dp, keyText, cornerShape) else it },
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = CUSTOM_PREVIEW_GLYPH,
-                color = keyText,
-                fontSize = (CUSTOM_PREVIEW_GLYPH_BASE_SP * appearance.keyFontSizeScale).sp,
-            )
-        }
-    }
+                .themeBackground(appearance.colors.surface, fallback = Color(UserThemeSeed.SOLID_COLOR)),
+    )
 }
-
-// Sample glyph on the preview key — a Taigi romanization letter with a tone mark.
-private const val CUSTOM_PREVIEW_GLYPH = "â"
-private const val CUSTOM_PREVIEW_GLYPH_BASE_SP = 26f
 
 // Maps a built-in theme's previewImageName to its bundled screenshot drawable, or
 // null when none ships (scaffold → neutral placeholder). Explicit when — never
