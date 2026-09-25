@@ -42,7 +42,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .customDictionary: .dictionaryCustomDictionary
         case .dictionarySources: .desktopDictionarySourcesLink
         case .fontManagement: .desktopFontManagementTab
-        case .about: .desktopAboutTab
+        case .about: .homeAboutKeyboard
         }
     }
 

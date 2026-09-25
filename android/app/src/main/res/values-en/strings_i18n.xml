@@ -120,9 +120,15 @@
     <string name="i18n_home_setupGuideStep2AddKeyboard">Tap \"Add keyboard\" and \"Allow Full Access\"</string>
     <string name="i18n_home_userGuide">Project Website</string>
     <string name="i18n_home_rateUs">Rate Us</string>
-    <string name="i18n_home_aboutDeveloper">About</string>
+    <string name="i18n_home_aboutKeyboard">About the Keyboard</string>
+    <string name="i18n_home_aboutIntroProject">TaigiKeyboard is a free, open-source Taiwanese input method — free forever, with no ads and no paid features ever. Everyday users, teachers, schools and Taiwanese-language education groups are all free to use it. The hope is that using and teaching Taiwanese comes with no extra burden.</string>
+    <string name="i18n_home_aboutIntroMaintainer">This project is developed and maintained by one person, in the hours outside a day job. I hope to keep it going, so that everyone who wants to type in their mother tongue can do so with ease.</string>
+    <string name="i18n_home_websiteLink">taigikeyboard.tw</string>
+    <string name="i18n_home_githubLink">GitHub</string>
+    <string name="i18n_home_discordLink">Discord</string>
+    <string name="i18n_home_emailLink">info@taigikeyboard.tw</string>
+    <string name="i18n_home_copyrightLine">© 2026 Bîn-hiân</string>
     <string name="i18n_home_privacyPolicy">Privacy Policy</string>
-    <string name="i18n_home_freePromise">TaigiKeyboard will remain free and will not add paid features. I want everyone who wishes to learn or write Taiwanese to be able to use it without cost.</string>
     <string name="i18n_home_version">Current Version</string>
     <string name="i18n_home_copyrightNotice">Acknowledgements</string>
     <string name="i18n_home_viewLicense">License</string>

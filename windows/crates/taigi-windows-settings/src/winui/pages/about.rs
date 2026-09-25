@@ -35,8 +35,8 @@ pub fn view(
     // title already names the page. Leading-aligned like the cards under
     // it (USER 2026-09-20: "left-align the copy").
     let introduction = cards::frame(StackPanel::new().spacing(PARAGRAPH_SPACING).children((
-        paragraph(strings.resolve(StringKey::DesktopAboutIntroProject)),
-        paragraph(strings.resolve(StringKey::DesktopAboutIntroMaintainer)),
+        paragraph(strings.resolve(StringKey::HomeAboutIntroProject)),
+        paragraph(strings.resolve(StringKey::HomeAboutIntroMaintainer)),
     )));
     View::fragment((
         introduction,
@@ -55,35 +55,35 @@ pub fn view(
                 strings,
                 context,
                 FontAwesomeGlyph::Globe,
-                StringKey::DesktopWebsiteLink,
+                StringKey::HomeWebsiteLink,
                 WEBSITE_URL,
             ),
             link_row(
                 strings,
                 context,
                 FontAwesomeGlyph::Github,
-                StringKey::DesktopGithubLink,
+                StringKey::HomeGithubLink,
                 GITHUB_URL,
             ),
             link_row(
                 strings,
                 context,
                 FontAwesomeGlyph::Discord,
-                StringKey::DesktopDiscordLink,
+                StringKey::HomeDiscordLink,
                 DISCORD_URL,
             ),
             link_row(
                 strings,
                 context,
                 FontAwesomeGlyph::Envelope,
-                StringKey::DesktopEmailLink,
+                StringKey::HomeEmailLink,
                 EMAIL_URL,
             ),
         ]),
         // Fine print on the ground under the last card: neither a setting
         // nor a link.
         TextBlock::new()
-            .text(strings.resolve(StringKey::DesktopCopyrightLine))
+            .text(strings.resolve(StringKey::HomeCopyrightLine))
             .font_size(CAPTION_FONT_SIZE)
             .horizontal_alignment(HorizontalAlignment::Center)
             .margin(Thickness::new(0.0, FOOTER_GAP, 0.0, 0.0))

@@ -476,7 +476,7 @@ public final class TaigiInputController: IMKInputController {
             // 2026-09-20), so the menu is where it is found. No chord, as
             // for Check for Updates.
             let about = InputSourceMenuRow(
-                label: language.string(.desktopAboutTab),
+                label: language.string(.homeAboutKeyboard),
                 action: #selector(showAbout(_:)),
             )
             return [shortcuts, [settings], [checkForUpdates, about]]

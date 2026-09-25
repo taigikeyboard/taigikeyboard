@@ -240,12 +240,24 @@ object L10n {
         @Composable get() = stringRes(StringKey.HOME_USER_GUIDE)
     val homeRateUs: String
         @Composable get() = stringRes(StringKey.HOME_RATE_US)
-    val homeAboutDeveloper: String
-        @Composable get() = stringRes(StringKey.HOME_ABOUT_DEVELOPER)
+    val homeAboutKeyboard: String
+        @Composable get() = stringRes(StringKey.HOME_ABOUT_KEYBOARD)
+    val homeAboutIntroProject: String
+        @Composable get() = stringRes(StringKey.HOME_ABOUT_INTRO_PROJECT)
+    val homeAboutIntroMaintainer: String
+        @Composable get() = stringRes(StringKey.HOME_ABOUT_INTRO_MAINTAINER)
+    val homeWebsiteLink: String
+        @Composable get() = stringRes(StringKey.HOME_WEBSITE_LINK)
+    val homeGithubLink: String
+        @Composable get() = stringRes(StringKey.HOME_GITHUB_LINK)
+    val homeDiscordLink: String
+        @Composable get() = stringRes(StringKey.HOME_DISCORD_LINK)
+    val homeEmailLink: String
+        @Composable get() = stringRes(StringKey.HOME_EMAIL_LINK)
+    val homeCopyrightLine: String
+        @Composable get() = stringRes(StringKey.HOME_COPYRIGHT_LINE)
     val homePrivacyPolicy: String
         @Composable get() = stringRes(StringKey.HOME_PRIVACY_POLICY)
-    val homeFreePromise: String
-        @Composable get() = stringRes(StringKey.HOME_FREE_PROMISE)
     val homeVersion: String
         @Composable get() = stringRes(StringKey.HOME_VERSION)
     val homeCopyrightNotice: String

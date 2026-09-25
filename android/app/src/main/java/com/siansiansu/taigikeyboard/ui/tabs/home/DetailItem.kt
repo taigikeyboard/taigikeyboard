@@ -36,6 +36,10 @@ sealed interface DetailItem {
         @param:DrawableRes val iconResId: Int,
         val url: String,
     ) : DetailItem
+
+    data class Footnote(
+        val text: String,
+    ) : DetailItem
 }
 
 internal fun buildDetailItems(
@@ -44,7 +48,7 @@ internal fun buildDetailItems(
     contentKeys: Array<String>,
 ): List<DetailItem> =
     when (contentType) {
-        ContentType.ABOUT_DEVELOPER -> buildAboutDeveloperItems(resolver)
+        ContentType.ABOUT_DEVELOPER -> buildAboutKeyboardItems(resolver)
         else -> buildGenericItems(resolver, contentKeys)
     }
 
@@ -109,19 +113,27 @@ internal fun getTextByKey(
     key: String,
 ): String? =
     when (key) {
-        ContentType.KEY_ABOUT_DEVELOPER -> resolver.resolve(StringKey.HOME_ABOUT_DEVELOPER)
+        ContentType.KEY_ABOUT_DEVELOPER -> resolver.resolve(StringKey.HOME_ABOUT_KEYBOARD)
         else -> null
     }
 
-private fun buildAboutDeveloperItems(resolver: StringResolver): List<DetailItem> =
+// The desktop About links without the desktop sponsor link: Google Play has no
+// Billing exemption for an individual's donations (USER 2026-09-26).
+private val aboutLinks =
     listOf(
-        DetailItem.Paragraph(resolver.resolve(StringKey.HOME_FREE_PROMISE)),
-        DetailItem.ExternalLink(
-            resolver.resolve(StringKey.COMMON_VIEW_WEBSITE),
-            R.drawable.ic_open_in_new,
-            "https://www.taigikeyboard.tw/",
-        ),
+        Triple(StringKey.HOME_WEBSITE_LINK, R.drawable.ic_globe, "https://taigikeyboard.tw"),
+        Triple(StringKey.HOME_GITHUB_LINK, R.drawable.ic_github, "https://github.com/taigikeyboard"),
+        Triple(StringKey.HOME_DISCORD_LINK, R.drawable.ic_discord, "https://discord.gg/kXhtQfWvK"),
+        Triple(StringKey.HOME_EMAIL_LINK, R.drawable.ic_email, "mailto:info@taigikeyboard.tw"),
     )
+
+private fun buildAboutKeyboardItems(resolver: StringResolver): List<DetailItem> =
+    listOf(
+        DetailItem.Paragraph(resolver.resolve(StringKey.HOME_ABOUT_INTRO_PROJECT)),
+        DetailItem.Paragraph(resolver.resolve(StringKey.HOME_ABOUT_INTRO_MAINTAINER)),
+    ) +
+        aboutLinks.map { (key, icon, url) -> DetailItem.ExternalLink(resolver.resolve(key), icon, url) } +
+        DetailItem.Footnote(resolver.resolve(StringKey.HOME_COPYRIGHT_LINE))
 
 private fun buildGenericItems(
     resolver: StringResolver,

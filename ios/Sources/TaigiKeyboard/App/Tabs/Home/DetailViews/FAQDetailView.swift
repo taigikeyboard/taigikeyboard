@@ -73,7 +73,7 @@ struct FAQDetailView: View {
         case "setup_guide":
             SetupGuideView(viewModel: viewModel)
         case "about_developer":
-            AboutDeveloperView()
+            AboutKeyboardView()
         default:
             EmptyView()
         }
