@@ -130,7 +130,7 @@ Engine state machine + decision tables + scoring all live in Rust `engine/nextwo
 | iOS bridge | `Engine/RustEngineBridge+NextWord.swift` |
 | Android bridge | `engine/RustEngineBridge.kt` |
 | iOS platform executor | `NextWord/NextWordController.swift` (Timer, DispatchQueue.main, @MainActor) |
-| Android platform executor | `ime/text/smartbar/NextWordHandler.kt`, `ime/dictionary/NextWordService.kt` |
+| Android platform executor | `ime/text/smartbar/NextWordController.kt`, `ime/dictionary/NextWordService.kt` |
 
 ---
 
