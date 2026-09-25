@@ -1,6 +1,6 @@
 # TaigiKeyboard 台語齒盤
 
-A Taiwanese input method for iOS, Android, macOS, Windows, and Linux. Romanization input in POJ, TL and TPS, Hanji, tone marks, autocomplete, and cross-system Romanization conversion.
+A Taiwanese input method for iOS, Android, macOS, Windows, and Linux.
 
 ![iOS 17+](https://img.shields.io/badge/iOS-17%2B-blue)
 ![Android 9+](https://img.shields.io/badge/Android-9%2B-green)
@@ -9,14 +9,6 @@ A Taiwanese input method for iOS, Android, macOS, Windows, and Linux. Romanizati
 ![Linux Fcitx5 | IBus](https://img.shields.io/badge/Linux-Fcitx5%20%7C%20IBus-orange)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue)](LICENSE)
 
-## Why
-
-Taiwanese is spoken by millions of people, but typing support is still fragmented across platforms. Major operating systems provide mature input methods for Mandarin Chinese, while Taiwanese users often have to rely on third-party tools or workarounds, especially for romanization and mixed Hanji and Romanization text.
-
-There are already several Taiwanese input methods available, but they usually focus on a specific platform, romanization system, or input style.
-
-This project tries to provide a more consistent experience across iOS, Android, macOS, Windows, and Linux. It supports Taiwanese Romanization, Pe̍h-ōe-jī, and Taiwanese Phonetic Symbols, as well as Hanji and mixed Hanji and Romanization input. It also supports continuous multi-syllable typing, so users do not need to enter words one syllable at a time.
-
 ## Download
 
 | Platform | Where |
@@ -24,73 +16,45 @@ This project tries to provide a more consistent experience across iOS, Android, 
 | iOS / iPadOS | [App Store](https://apps.apple.com/app/id6751871806) |
 | Android | [Google Play](https://play.google.com/store/apps/details?id=com.siansiansu.taigikeyboard) |
 | macOS / Windows | [taigikeyboard.tw](https://taigikeyboard.tw) |
-| Linux (`.deb`, `.rpm`, Arch package; Fcitx5 or IBus) | [GitHub releases](https://github.com/taigikeyboard/taigikeyboard/releases) |
+| Linux (`.deb`, `.rpm`, Arch; Fcitx5 or IBus) | [GitHub Releases](https://github.com/taigikeyboard/taigikeyboard/releases) |
 
 ## Features
 
-- Romanization input: POJ, TL, TPS
-- Hanji input via romanization
-- Tone marks, tone numbers, tone variation
+- Romanization input in POJ, TL, and TPS
+- Hanji and mixed Hanji–Romanization output
+- Continuous multi-syllable typing
+- Tone marks, tone numbers, and tone variation
 - Autocomplete and next-word prediction
-- Custom dictionary and user frequency learning
+- Custom dictionary and frequency learning
 - Lossless TL ↔ POJ ↔ TPS conversion
 
-## Architecture
+## How it works
 
-All five platforms share a Rust core. Algorithms for phonetics, composing, lexicon, ranking, next-word and dispatch live in `engine/`. Platform code is thin glue: Swift on iOS and macOS via swift-bridge, Kotlin on Android via JNI, Rust all the way down on Windows, and on Linux a C++ Fcitx5 addon over a Rust C ABI beside a pure-Rust IBus engine. Protobuf carries payloads across the FFI boundary.
+One Rust engine (`engine/`) holds phonetics, composing, lexicon, and ranking. Each platform is a thin shell over it:
 
 | Path | Stack |
 | --- | --- |
-| `engine/` | Rust workspace; xcframework for iOS, JNI `.so` for Android on arm64-v8a and armeabi-v7a |
 | `ios/` | Swift + KeyboardKit |
-| `android/` | Kotlin + Jetpack Compose UI; FlorisBoard-derived view hierarchy |
-| `macos/` | Swift + InputMethodKit; SwiftPM |
-| `windows/` | Rust + Text Services Framework; Inno Setup installer |
-| `linux/` | Fcitx5 addon (C++ over a Rust C ABI) + IBus engine (Rust, zbus) + GTK 4 / libadwaita settings; `.deb` / `.rpm` / Arch |
-| `desktop/` | The pure Rust crates Windows and Linux share (settings model, composing orchestration, storage) |
-| `dictionary/` | Source data + FST/mmap build pipeline (Python) |
-| `dictionaries/` | The built dictionary artifacts every platform packages (`.bin`, `.fst`), written by `make dict` |
-| `taigi-converter/` | Canonical TL/POJ/TPS converter, a git submodule |
+| `android/` | Kotlin + Jetpack Compose |
+| `macos/` | Swift + InputMethodKit |
+| `windows/` | Rust + Text Services Framework |
+| `linux/` | Fcitx5 addon (C++) and IBus engine (Rust) |
+| `desktop/` | Rust crates shared by Windows and Linux |
+| `dictionary/` | Dictionary sources and build pipeline |
 
-Supporting directories:
+## Building
 
-| Path | Contents |
-| --- | --- |
-| `i18n/` | UI string sources; `make i18n` generates each platform's resources from them |
-| `fonts/` | Bundled fonts (OFL-1.1) |
-| `symbols/` | The desktop symbol picker's table |
-| `taigi-emojis/` | Emoji data generator (its own uv project) |
-| `knowledge/` | TL / POJ / TPS phonetics reference — the source of truth for romanization rules |
-| `docs/` | Architecture, engine and UI docs, reports, roadmap |
-| `e2e/`, `tools/e2e/` | End-to-end scenarios and budgets; the drivers and analyzer |
-| `tools/` | Developer tools: i18n codegen, release notes, desktop icon and Windows helpers |
-| `scripts/` | Release, announcement, secret-scan and reference-sync scripts |
-| `changelog/` | Per-release changelogs (`CHANGELOG.md` is the index) |
-| `corpus/` | Real Taiwanese sentences for manual testing, a git submodule; never a build input |
+See [`docs/BUILDING.md`](docs/BUILDING.md). Clone with `--recurse-submodules`, then run `make build` once.
 
-## Documentation
+## Contributing
 
-- [`docs/BUILDING.md`](docs/BUILDING.md): prerequisites, and how to build and test each platform
-- `docs/README.md`: engine, UI, architecture index
-- `knowledge/taigi-phonetics-reference.md`: TL/POJ/TPS cross-reference
-- `.claude/rules/`: per-platform style guides, security rules, AI workflow
-- `CHANGELOG.md`: release history
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — build, test, and submit changes
+- [`docs/README.md`](docs/README.md) — architecture and engine docs
+- [`SECURITY.md`](SECURITY.md) — vulnerability reporting and data handling
+- [`CHANGELOG.md`](CHANGELOG.md) — release history
 
 ## License
 
-Source code is released under the [Apache License, Version 2.0](LICENSE).
+Source code: [Apache License 2.0](LICENSE).
 
-**The dictionary data is not.** Each of the fourteen sources keeps its own
-terms — CC0, CC BY, CC BY-SA, CC BY-ND, CC BY-NC-SA, 開放政府資料授權條款, and
-a few still unverified. One (`taijit`) carries a NonCommercial term, and because the compiled
-dictionary shipped inside every application package merges all sources into one
-inseparable index, **that compiled dictionary must be treated as
-non-commercial**. See [`dictionary/LICENSE`](dictionary/LICENSE) for the
-per-source table and the attribution every build owes.
-
-Fonts, vendored code, and bundled third-party data are inventoried in
-[`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md).
-
-- [`CONTRIBUTING.md`](CONTRIBUTING.md) — how to build, test, and submit changes
-- [`SECURITY.md`](SECURITY.md) — vulnerability reporting and what this software does with user data
-- [`docs/CODE_SIGNING_POLICY.md`](docs/CODE_SIGNING_POLICY.md) — who may release a signed binary, and how to verify one
+**Dictionary data is not Apache-licensed.** Each source keeps its own terms, and one carries a NonCommercial clause, so the compiled dictionary shipped in every app is non-commercial. See [`dictionary/LICENSE`](dictionary/LICENSE) for per-source terms and required attribution, and [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md) for fonts and vendored code. Code signing: [`docs/CODE_SIGNING_POLICY.md`](docs/CODE_SIGNING_POLICY.md).
