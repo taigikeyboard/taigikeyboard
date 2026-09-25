@@ -174,7 +174,7 @@ Possible splits: `xi + an` (Xi'an) or `xian` (先)
 
 ---
 
-## Taigi Keyboard Application Suggestions
+## TaigiKeyboard Application Suggestions
 
 ### P0 - Immediately Usable
 

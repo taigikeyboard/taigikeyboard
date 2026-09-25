@@ -1,6 +1,6 @@
 # Code signing policy
 
-Who may release a signed Taigi Keyboard binary, what gets signed, and what a
+Who may release a signed TaigiKeyboard binary, what gets signed, and what a
 user can verify for themselves.
 
 ## Current signing status
@@ -22,7 +22,7 @@ and requests a release, the **Reviewer** who reviews what goes into the source
 tree and the artifact built from it, and the **Approver** who approves the
 release itself.
 
-Taigi Keyboard is maintained by one person, who therefore holds all three:
+TaigiKeyboard is maintained by one person, who therefore holds all three:
 
 | Role | Who |
 | --- | --- |
@@ -85,7 +85,7 @@ certificate.
 
 ## What the software does
 
-Taigi Keyboard is an input method. It converts what the user types into
+TaigiKeyboard is an input method. It converts what the user types into
 Taiwanese text, entirely on-device.
 
 - No keystroke, and no text, leaves the device.
@@ -141,7 +141,7 @@ carries a signature of its own.
 
 An Authenticode certificate costs a few hundred US dollars a year, and the free
 programme for open source projects requires the whole product — including the
-data it bundles — to be open source. Taigi Keyboard bundles Taiwanese-language
+data it bundles — to be open source. TaigiKeyboard bundles Taiwanese-language
 dictionary data whose sources carry their own, non-open-source terms, so that
 route is closed. Signing may be revisited; until then this page describes what
 a user can verify instead.

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Generates dist/emoji.json — the single emoji source of truth for the iOS + Android
-# Taigi keyboard. Backbone = Unicode emoji-test.txt (order, groups, names, version, and
+# TaigiKeyboard. Backbone = Unicode emoji-test.txt (order, groups, names, version, and
 # skin-tone variations folded into their base); keywords from CLDR (en + zh-Hant) plus a
 # hand-maintained Taigi overlay in src/overrides.tsv.
 
@@ -17,7 +17,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = REPO_ROOT / "data"
 OVERRIDES_PATH = REPO_ROOT / "src" / "overrides.tsv"
 
-# Canonical output — the single emoji source of truth. Consumers (the Taigi keyboard iOS +
+# Canonical output — the single emoji source of truth. Consumers (TaigiKeyboard iOS +
 # Android apps) read this file directly; the drift-guard test fails if the committed copy is stale.
 OUTPUT_PATH = REPO_ROOT / "dist" / "emoji.json"
 

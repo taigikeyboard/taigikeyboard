@@ -1,4 +1,4 @@
-# Taigi Keyboard — Roadmap
+# TaigiKeyboard — Roadmap
 
 > **Type**: Planning (forward-looking)
 > **Keywords**: `roadmap`, `planning`, `released versions`, `release trains`

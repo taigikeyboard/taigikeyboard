@@ -90,7 +90,7 @@ fun segment(input: String, syllableFreq: Map<String, Int>): List<String> {
 
 ---
 
-## Taigi Keyboard Application Suggestions
+## TaigiKeyboard Application Suggestions
 
 ### P0 - Immediately Usable
 

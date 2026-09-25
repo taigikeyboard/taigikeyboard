@@ -3,7 +3,7 @@
 import KeyboardKit
 import SwiftUI
 
-/// Taigi Keyboard app entry point.
+/// TaigiKeyboard app entry point.
 ///
 /// `init` installs, in order: LoggerFactory, the RustEngineBridge log sink (idempotent), the
 /// Lexicon engine (this process's fst + dictionary binaries), the KeyboardKit App Group store

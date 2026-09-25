@@ -1970,7 +1970,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Taigi Keyboard will remain free and will not add paid features. I want everyone who wishes to learn or write Taiwanese to be able to use it without cost."
+            "value": "TaigiKeyboard will remain free and will not add paid features. I want everyone who wishes to learn or write Taiwanese to be able to use it without cost."
           }
         },
         "ja": {
@@ -2168,7 +2168,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Once done, restart the app you are using. Then, wherever you can type, press and hold the globe icon to switch to Taigi Keyboard."
+            "value": "Once done, restart the app you are using. Then, wherever you can type, press and hold the globe icon to switch to TaigiKeyboard."
           }
         },
         "ja": {
@@ -2258,7 +2258,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "\"Allow Full Access\" lets the keyboard share settings and usage data with the app. Taigi Keyboard does not send what you type over the network."
+            "value": "\"Allow Full Access\" lets the keyboard share settings and usage data with the app. TaigiKeyboard does not send what you type over the network."
           }
         },
         "ja": {

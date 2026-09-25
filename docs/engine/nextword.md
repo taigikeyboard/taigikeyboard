@@ -171,7 +171,7 @@ fun onWordSelected(word: String) {
 
 ### 3. Comparison
 
-| | librime-predict | Taigi Keyboard |
+| | librime-predict | TaigiKeyboard |
 |--|-----------------|----------------|
 | Storage | DoubleArray Trie (mmap, read-only) | Burntsushi fst + binary mmap (dict) + SQLite (user) |
 | User learning | None | Yes |

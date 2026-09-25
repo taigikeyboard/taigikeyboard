@@ -1,7 +1,7 @@
 Package: taigikeyboard
 Version: @VERSION@
 Architecture: amd64
-Maintainer: Taigi Keyboard <info@taigikeyboard.tw>
+Maintainer: TaigiKeyboard <info@taigikeyboard.tw>
 Section: utils
 Priority: optional
 Homepage: https://taigikeyboard.tw

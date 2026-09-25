@@ -19,7 +19,7 @@
             "hanji": "台語齒盤有 4 種拍字方式：「白話字」、「台羅」、「方音符號」佮「英文」，佇齒盤面頂工具列通切換。",
             "tailo": "Tâi-gí khí-puânn ū 4 tsíng phah-jī hong-sik:\"pe̍h-uē-jī\",\"tâi-lô\",\"hong-im-hû-hō\" kah\"ing-bûn\", tī khí-puânn bīn-tíng kang-khū-lia̍t thang tshiat-uānn.",
             "poj": "Tâi-gí khí-pôaⁿ ū 4 chéng phah-jī hong-sek:\"pe̍h-ōe-jī\",\"tâi-lô\",\"hong-im-hû-hō\" kah\"eng-bûn\", tī khí-pôaⁿ bīn-téng kang-khū-lia̍t thang chhiat-ōaⁿ.",
-            "en": "Taigi Keyboard has 4 input methods: Pe̍h-ōe-jī, Tâi-lô, Taiwanese Phonetic Symbols, and English. You can switch between them on the toolbar at the top of the keyboard.",
+            "en": "TaigiKeyboard has 4 input methods: Pe̍h-ōe-jī, Tâi-lô, Taiwanese Phonetic Symbols, and English. You can switch between them on the toolbar at the top of the keyboard.",
             "ja": "台語キーボードには「白話字」「台羅」「方音符号」「英語」の4つの入力方式があり、キーボード上部のツールバーで切り替えられます。"
           },
           "attachment": {
@@ -178,7 +178,7 @@
             "hanji": "【聲調 1、4 愛拍出來】教育部輸入法免拍第 1 聲佮第 4 聲，台語齒盤雖然嘛會使免拍，但是若有拍聲調，結果會較準。以「phang 芳」這个字做例，拍 phang1 會正確揣第一聲 ê 字，若干焦拍 phang，會出現誠濟結果。",
             "tailo": "[ Siann-tiāu 1,4 ài phah-tshut lâi] Kàu-io̍k-pōo su-ji̍p-hoat bián phah tē 1 siann kah tē 4 siann, tâi-gí khí-puânn sui-jiân mā ē-sái bián phah, tān-sī nā-ū phah siann-tiāu, kiat-kó ē khah tsún. Í\"phang phang\" tsit ê jī tsò lē, phah phang1 ē tsìng-khak tshuē tē-it siann ê jī, jio̍k-kan ta phah phang, ē tshut-hiān tsiânn-tsē kiat-kó.",
             "poj": "[ Siaⁿ-tiāu 1,4 ài phah-chhut lâi] Kàu-io̍k-pō͘ su-ji̍p-hoat bián phah tē 1 siaⁿ kah tē 4 siaⁿ, tâi-gí khí-pôaⁿ sui-jiân mā ē-sái bián phah, tān-sī nā-ū phah siaⁿ-tiāu, kiat-kó ē khah chún. Í\"phang phang\" chit ê jī chò lē, phah phang1 ē chèng-khak chhōe tē-it siaⁿ ê jī, jio̍k-kan ta phah phang, ē chhut-hiān chiâⁿ-chē kiat-kó.",
-            "en": "[Type out tones 1 and 4] The Ministry of Education input method lets you skip the 1st and 4th tones. Taigi Keyboard also lets you skip them, but typing the tone gives more accurate results. Take “phang 芳” for example: typing phang1 correctly finds the 1st-tone character, whereas typing just phang returns many results.",
+            "en": "[Type out tones 1 and 4] The Ministry of Education input method lets you skip the 1st and 4th tones. TaigiKeyboard also lets you skip them, but typing the tone gives more accurate results. Take “phang 芳” for example: typing phang1 correctly finds the 1st-tone character, whereas typing just phang returns many results.",
             "ja": "【第1声・第4声も入力する】教育部の入力法では第1声と第4声を省略できます。台語キーボードでも省略できますが、声調を入力すると結果がより正確になります。「phang 芳」を例にすると、phang1 と打てば第1声の字が正しく見つかりますが、phang だけだと多くの結果が出ます。"
           },
           "attachment": {
@@ -690,7 +690,7 @@
             "hanji": "自訂詞、詞頻佮詞關聯紀錄攏儉佇你的裝置內底，台語齒盤袂共內容送去網路。刣掉 App 可能會刣掉這寡資料，換機進前請先備份。",
             "tailo": "Tsū-tīng-sû, sû pîn kah sû kuan-liân kì-lio̍k lóng khiām tī lí ê tsong-tì lāi-té, tâi-gí khí-puânn buē kā luē-iông sàng khì bāng-lōo. Thâi-tiāu App khó-lîng ē thâi-tiāu tsit kuá tsu-liāu, uānn ki tsìn-tsîng tshiánn sian pī-hūn.",
             "poj": "Chū-tēng-sû, sû pîn kah sû koan-liân kì-lio̍k lóng khiām tī lí ê chong-tì lāi-té, tâi-gí khí-pôaⁿ bōe kā lōe-iông sàng khì bāng-lō͘. Thâi-tiāu App khó-lêng ē thâi-tiāu chit kóa chu-liāu, ōaⁿ ki chìn-chêng chhiáⁿ sian pī-hūn.",
-            "en": "Custom words, frequency records, and association records stay on your device. Taigi Keyboard does not send their contents over the network. Deleting the app may remove this data, so back it up before changing phones.",
+            "en": "Custom words, frequency records, and association records stay on your device. TaigiKeyboard does not send their contents over the network. Deleting the app may remove this data, so back it up before changing phones.",
             "ja": "カスタム単語、単語頻度、単語連携の記録は端末内に保存され、ネットワークには送信されません。アプリを削除すると失われる場合があるため、機種変更の前にバックアップしてください。"
           },
           "attachment": {
@@ -766,7 +766,7 @@
             "hanji": "這个轉換器佮台語齒盤用相仝 ê 核心，所以轉換 ê 結果佮齒盤拍出來 ê 攏仝款。若拍字 ê 時陣對聲調抑是拼法有問題，嘛會使去網站比較看覓。",
             "tailo": "Tsit ê tsuán-uānn khì kah tâi-gí khí-puânn iōng sio-kâng ê hi̍k-sim, sóo-í tsuán-uānn ê kiat-kó kah khí-puânn phah-tshut lâi ê láng kāng-khuán. Nā phah-jī ê sî-sūn tuì siann-tiāu ah-sī ping-huat ū-būn-tê, mā ē-sái khì bāng-tsām pí-kàu khuànn-māi.",
             "poj": "Chit ê choán-ōaⁿ khì kah tâi-gí khí-pôaⁿ iōng sio-kâng ê he̍k-sim, só͘-í choán-ōaⁿ ê kiat-kó kah khí-pôaⁿ phah-chhut lâi ê láng kāng-khoán. Nā phah-jī ê sî-sūn tùi siaⁿ-tiāu ah-sī peng-hoat ū-būn-tê, mā ē-sái khì bāng-chām pí-kàu khòaⁿ-māi.",
-            "en": "This converter uses the same core as Taigi Keyboard, so the conversion results match what the keyboard produces. If you have a question about a tone or spelling while typing, you can compare on the website.",
+            "en": "This converter uses the same core as TaigiKeyboard, so the conversion results match what the keyboard produces. If you have a question about a tone or spelling while typing, you can compare on the website.",
             "ja": "このコンバーターは台語キーボードと同じコアを使っているため、変換結果はキーボードで打ったものと同じです。入力中に声調や綴りに疑問があれば、サイトで照らし合わせることもできます。"
           }
         },

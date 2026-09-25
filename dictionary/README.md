@@ -1,6 +1,6 @@
 # dictionary/
 
-Taigi Keyboard's dictionary data pipeline. Builds the runtime artefacts
+TaigiKeyboard's dictionary data pipeline. Builds the runtime artefacts
 (`dictionary.bin` / `dictionary.fst` / `association.bin`) that both iOS
 and Android consume. Each binary is generated directly from the canonical
 `dictionary.csv` — no SQLite intermediates (removed in v3.5.6 part 2).

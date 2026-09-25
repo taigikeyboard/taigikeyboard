@@ -1,5 +1,5 @@
 /*
- * The Fcitx5 shell of Taigi Keyboard: an InputMethodEngineV3 that hands
+ * The Fcitx5 shell of TaigiKeyboard: an InputMethodEngineV3 that hands
  * every key to the Rust core through the C ABI (taigikeyboard.h) and
  * replays the reply into the input context — client preedit, commit,
  * delete-surrounding, candidate list. It composes nothing itself: the same

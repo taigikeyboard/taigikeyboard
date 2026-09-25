@@ -303,7 +303,7 @@ enum GeneratedStrings {
         .desktopCustomFontRemoveFailed: "Could not delete",
         .desktopFontManagementTab: "Manage Typefaces",
         .desktopAboutTab: "About the Keyboard",
-        .desktopMenuSettings: "Taigi Keyboard Settings",
+        .desktopMenuSettings: "TaigiKeyboard Settings",
         .dictionaryCustomDictionary: "Custom Dictionary",
         .dictionaryCustomDictEnabled: "Enable Custom Dictionary",
         .dictionaryVariantDictionary: "Variant Characters",

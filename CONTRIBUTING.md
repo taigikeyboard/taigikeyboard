@@ -1,6 +1,6 @@
 # Contributing
 
-Taigi Keyboard is a Taiwanese input method for iOS, Android,
+TaigiKeyboard is a Taiwanese input method for iOS, Android,
 macOS, Windows, and Linux, built on a shared Rust engine.
 
 Write to the project in Taiwanese, Mandarin, or English — whichever you are

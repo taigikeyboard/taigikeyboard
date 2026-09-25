@@ -1,6 +1,6 @@
 # Third-party licences
 
-Taigi Keyboard's own source code is licensed under the Apache License,
+TaigiKeyboard's own source code is licensed under the Apache License,
 Version 2.0 (`LICENSE`). This file inventories everything in this repository —
 and everything shipped inside a released application package — that is **not**
 covered by that licence.

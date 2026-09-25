@@ -1,6 +1,6 @@
 [Addon]
 Name=台語齒盤
-Comment=Taigi Keyboard (Tâi-gí TL / POJ) for Fcitx5
+Comment=TaigiKeyboard (Tâi-gí TL / POJ) for Fcitx5
 Category=InputMethod
 Version=@PROJECT_VERSION@
 Library=export:libtaigikeyboard

@@ -124,7 +124,7 @@ private val DarkColorScheme =
     )
 
 /**
- * Taigi Keyboard theme
+ * TaigiKeyboard theme
  *
  * Uses fixed brand colors aligned with iOS (no dynamic color).
  *
