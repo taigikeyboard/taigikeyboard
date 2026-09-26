@@ -92,7 +92,6 @@ One-off snapshots ordered chronologically. Specs cited by engine code (`v358-ref
 
 | File | Description | Status |
 |------|-------------|--------|
-| `reports/2026-04-18-dynamic-font-download-plan.md` | Forward-looking feature plan | Plan |
 | `reports/2026-05-18-v358-refactor-design-spec.md` | v3.5.9 refactor implementation design spec (S0/A2/A1) | Historical |
 | `reports/2026-05-20-triple-index-eval.md` | Triple index (POJ+TL+TPS first-class lattice) feasibility eval | Historical |
 | `reports/2026-05-20-v359-b-plan.md` | v3.5.9-B dual-index (POJ first-class lattice) plan (Codex-converged v3) | Historical |
