@@ -123,8 +123,11 @@ struct ThemePhotoImage<Content: View, Placeholder: View>: View {
             }
         }
         .task(id: "\(file)|\(variant)") {
-            guard ThemeImageCache.shared.cached(file, variant) == nil,
-                  let image = await ThemeImageCache.shared.load(file, variant) else { return }
+            // Always record the image, even on a cache hit: another site (the editor preview's
+            // background) may have filled the cache after this body rendered the placeholder,
+            // and a cache write alone never re-renders this view — the editor's photo drag
+            // overlay stayed missing until an unrelated edit. `load` returns a hit at once.
+            guard let image = await ThemeImageCache.shared.load(file, variant) else { return }
             loaded = Loaded(file: file, variant: variant, image: image)
         }
     }
