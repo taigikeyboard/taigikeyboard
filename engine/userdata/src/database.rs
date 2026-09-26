@@ -144,6 +144,14 @@ impl UserDataDatabase {
     /// settings window importing while the TIP records. Only the writer
     /// connection carries it; the reader's is zero.
     const WRITER_BUSY_TIMEOUT: Duration = Duration::from_millis(250);
+    /// The writer's wait while the file opens and is taken over — never on a
+    /// key path (a background open, or a page request that waits for it). Two
+    /// processes sharing one container (the iOS app and its keyboard) can
+    /// both be opening the same file on a first launch; a failed open leaves
+    /// the store closed for the process's life, so the second one waits out
+    /// the first one's takeover rather than giving up after 250 ms.
+    /// The open puts the normal wait back once it is done.
+    const OPEN_BUSY_TIMEOUT: Duration = Duration::from_secs(10);
     /// Queued jobs the worker may fall behind by before writes are dropped.
     /// A keystroke queues one; 256 is seconds of typing against a stalled
     /// disk, after which forgetting a count is the right degrade.
@@ -242,7 +250,7 @@ impl UserDataDatabase {
                 | OpenFlags::SQLITE_OPEN_CREATE
                 | OpenFlags::SQLITE_OPEN_NO_MUTEX,
         )?;
-        writer.busy_timeout(Self::WRITER_BUSY_TIMEOUT)?;
+        writer.busy_timeout(Self::OPEN_BUSY_TIMEOUT)?;
         let version = user_version(&writer)?;
         if version > schema.max_known_version {
             return Err(UserDataDatabaseError::FutureVersion(
@@ -264,6 +272,9 @@ impl UserDataDatabase {
         if !taken_over && schema.marks_takeover_on_open {
             mark_taken_over(&writer)?;
         }
+        // The open is over: from here on another process's lock is waited
+        // out briefly.
+        writer.busy_timeout(Self::WRITER_BUSY_TIMEOUT)?;
         let read_only = Connection::open_with_flags(
             path,
             OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
@@ -378,6 +389,24 @@ impl UserDataDatabase {
             }),
             Err(_) => Err(UserDataDatabaseError::WorkerGone(name.to_owned()).into()),
         }
+    }
+
+    /// For a takeover that runs after the open (the custom dictionary's key
+    /// re-derivation): the open's long lock wait while `taking_over`, the
+    /// normal one after. A store that never opened has nothing to set.
+    pub(crate) fn wait_long_for_locks(&self, taking_over: bool) {
+        if !self.is_ready() {
+            return;
+        }
+        let timeout = if taking_over {
+            Self::OPEN_BUSY_TIMEOUT
+        } else {
+            Self::WRITER_BUSY_TIMEOUT
+        };
+        self.perform::<_, UserDataDatabaseError>(move |connection| {
+            Ok(connection.busy_timeout(timeout)?)
+        })
+        .ok();
     }
 
     /// Lets every job queued so far land first, so a caller counting rows

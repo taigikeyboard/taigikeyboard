@@ -400,12 +400,16 @@ impl CustomDictionaryStore {
     /// `perform`), so never on a UI thread or a store worker. A failure is
     /// logged and the store stays usable.
     pub fn finish_takeover(&self) {
+        // The re-derivation is part of the takeover: another process taking
+        // over the same file is waited out as long as the open waits.
+        self.database.wait_long_for_locks(true);
         if let Err(error) = self.rederive_search_keys_if_needed() {
             log::error!("custom_dictionary.rederive_failed error={error}");
         }
         if let Err(error) = self.seed_if_empty() {
             log::error!("custom_dictionary.seed_failed error={error}");
         }
+        self.database.wait_long_for_locks(false);
     }
 
     /// Writes the seed entries, but only into a dictionary nobody has
