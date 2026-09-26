@@ -19,7 +19,7 @@ Each rule is tagged with one or more of `[R]`, `[S]`, `[A]`.
 Cargo workspace with one crate per concern. Models khiin-rs (`references/khiin-rs/Cargo.toml`) with deliberate deviations. Full crate list lives in `docs/architecture/system-overview.md`; the runtime dependency graph + layering invariant in §1a below.
 
 - **`phonetics`** — pure POJ/TL/TPS / Unicode / tone, no I/O, zero platform dependencies, portable to any Rust target. Corresponds to `knowledge/` reference content + `taigi-converter/` behavior.
-- **Domain crates** (`composing`, `lexicon`, `ranking`, `nextword`) own the state machines, candidate scoring, and next-word prediction. Dependency direction per §1a.
+- **Domain crates** (`composing`, `lexicon`, `ranking`, `nextword`, `userdata`) own the state machines, candidate scoring, and next-word prediction. Dependency direction per §1a.
 - **FFI crates** (`android-jni`, `swift-ffi`) are **thin** — protobuf in / protobuf out / `catch_unwind`. No domain logic. Each crate's `lib.rs` should be < 300 LOC.
 - Depend via `workspace.dependencies` in root `Cargo.toml` with pinned versions. Workspace-internal deps use relative paths (`phonetics = { path = "./phonetics" }`).
 
@@ -41,6 +41,7 @@ Current runtime crates — dependency edges flow **one way, top → bottom** (th
 │  lexicon   → ranking, phonetics, mmap-host                   │
 │  ranking   → (protos only)                                   │
 │  nextword  → phonetics                                       │
+│  userdata  → phonetics  (SQLite user stores, `sqlite` feat.) │
 └───────────────────────────┬─────────────────────────────────┘
                             │ depends ↓
 ┌─ leaf / shared kernel ────┴─────────────────────────────────┐
@@ -52,8 +53,8 @@ Current runtime crates — dependency edges flow **one way, top → bottom** (th
 
 **Dependency-direction invariant** — a crate may depend only on crates in its own layer or below:
 
-- **Forbidden upward edges**: no domain crate (`phonetics` / `ranking` / `lexicon` / `nextword` / `composing`) may depend on `dispatch` or an FFI crate; the leaf layer (`phonetics` / `protos` / `mmap-host`) may depend on nothing above itself.
-- **`dispatch` is the only orchestrator** — the single crate allowed to reference every domain. FFI crates (`swift-ffi` / `android-jni`) see only `dispatch` + `protos`.
+- **Forbidden upward edges**: no domain crate (`phonetics` / `ranking` / `lexicon` / `nextword` / `composing` / `userdata`) may depend on `dispatch` or an FFI crate; the leaf layer (`phonetics` / `protos` / `mmap-host`) may depend on nothing above itself.
+- **`dispatch` is the only orchestrator** — the single crate allowed to reference every domain. FFI crates (`swift-ffi` / `android-jni`) see only `dispatch` + `protos`. Outside this workspace, `taigi-desktop-core` also takes `userdata` (row types + store traits, no `sqlite` feature) — temporary until user-data-engine-roadmap P5, when the desktop reaches the stores through `dispatch` like every other shell.
 - **Cargo enforces acyclicity at build time** (a cycle fails to compile) — that is the hard backstop. This layering rule is the *soft* guide that stops the graph degrading into flat all-depends-on-all while still technically acyclic.
 - **New crate / new edge**: place it so the arrow still points down. If a domain crate appears to need something currently in `dispatch`, that is an inversion — push the shared piece **down** into `phonetics` / `protos`, never add an upward edge (mirrors `~/.claude/rules/planning.md` § No redundant fallback — keep data flow one-direction).
 

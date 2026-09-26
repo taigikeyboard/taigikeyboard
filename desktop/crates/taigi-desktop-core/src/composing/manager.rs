@@ -9,19 +9,20 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
+use super::clock::Clock;
 use super::document_text::{
     document_text, resolved_alternate, resolved_commit, CandidateScript, ResolvedCommit,
 };
 use super::learner::NextWordLearner;
 use super::outcomes::{CandidateCommitOutcome, CandidateFetchOutcome};
 use super::presentation::{leads_with_literal_roman, presentation, PresentedCandidate};
-use super::stores::{Clock, CustomDictionarySource, FrequencySource, LearnedPhraseSource};
 use crate::engine::{
     self, CommitContinuousArgs, ComposingTransition, ContinuousCandidate, CustomEntry,
     CustomSearchKey, Effect, FetchArgs, FrequencyRow, LearnedPhrase,
 };
 use crate::keys::CaretDirection;
 use crate::settings::{EngineSettings, SettingsProvider};
+use userdata::{CustomDictionarySource, FrequencySource, LearnedPhraseSource};
 
 /// Writes the engine's document effects into the client that is currently
 /// focused. Learning handshakes never reach it — the manager routes them to

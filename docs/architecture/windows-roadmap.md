@@ -90,7 +90,7 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   CHANGES — split the shell-independent code by dependency class**, so the host-native
   test and MSVC-check promises hold: `taigi-desktop-core` (pure models, composing
   orchestration, proto bridge, candidate geometry, shortcut semantics, settings model;
-  `unsafe_code = forbid`, no C deps), `taigi-desktop-storage` (rusqlite stores,
+  `unsafe_code = forbid`, no C deps), `taigi-desktop-storage` (rusqlite stores — in engine `userdata` since user-data-engine-roadmap P1,
   settings file store, CSV), `taigi-windows-update` (download, Authenticode, toast; the manifest + check moved to `desktop/crates/taigi-desktop-update` on 2026-09-24 for Linux),
   `taigi-windows-tsf` (cdylib `TaigiKeyboard.dll`, `unsafe` with `// SAFETY:` per
   `rust-ffi-safety.md` §3), `taigi-windows-settings` (bin `TaigiKeyboardSettings.exe`).

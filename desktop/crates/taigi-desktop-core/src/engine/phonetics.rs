@@ -1,41 +1,20 @@
-//! Phonetics slice of the engine bridge: the search keys a custom-dictionary
-//! entry is stored under, the one a query is looked up by, and the small
-//! conversions the dictionary pages need. Port of
+//! Phonetics slice of the engine bridge: the search key a custom-dictionary
+//! query is looked up by, and the small conversions the dictionary pages need
+//! (the keys an entry is stored under are derived in-process by engine
+//! `userdata`). Port of
 //! `RustEngineBridge+Phonetics.swift`.
 
 use protos::engine::{
     phonetics_request, phonetics_response, request, response, DeriveCustomQueryKey,
-    DeriveCustomSearchKeys, NfdPreprocessForLookup, PhoneticsRequest, PhoneticsResponse, PojToTl,
-    StripTone, TlToPoj,
+    NfdPreprocessForLookup, PhoneticsRequest, PhoneticsResponse, PojToTl, StripTone, TlToPoj,
 };
 
 use super::bridge::{record_failure, roundtrip};
 use crate::settings::InputMode;
 
-/// One way a custom-dictionary entry can be found. `family` is the
-/// romanization system (`tl` / `poj` / `tps`), `form` how much of the reading
-/// it carries (`num` / `notone` / `abbrev`), `key` the fused string both
-/// sides match on. The engine owns all three vocabularies — the platform
-/// stores what it is given and asks for the query key through the same op.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct CustomSearchKey {
-    pub family: String,
-    pub form: String,
-    pub key: String,
-}
-
-/// Every key a stored entry should be findable under, so a word added while
-/// typing TL is still found by someone typing POJ. `None` = round-trip
-/// failed; `Some(empty)` = the roman produced no searchable key, which the
-/// store treats as a refusal rather than writing an unreachable row.
-pub fn derive_custom_search_keys(roman: &str) -> Option<Vec<CustomSearchKey>> {
-    custom_search_keys(
-        phonetics_request::Method::DeriveCustomSearchKeys(DeriveCustomSearchKeys {
-            roman: roman.to_owned(),
-        }),
-        "deriveCustomSearchKeys",
-    )
-}
+// Moved to the engine `userdata` crate (user-data-engine-roadmap P1);
+// re-exported here until the desktop switch (P5).
+pub use userdata::CustomSearchKey;
 
 /// The single key the user's current input should be looked up by. The
 /// family is decided by the engine, not by the mode alone. `None` = nothing

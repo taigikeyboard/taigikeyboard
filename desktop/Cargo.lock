@@ -853,6 +853,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
+ "userdata",
 ]
 
 [[package]]
@@ -860,12 +861,11 @@ name = "taigi-desktop-storage"
 version = "3.6.10"
 dependencies = [
  "log",
- "rusqlite",
  "serde_json",
  "taigi-desktop-core",
  "tempfile",
  "thiserror",
- "uuid",
+ "userdata",
 ]
 
 [[package]]
@@ -961,6 +961,17 @@ dependencies = [
  "http",
  "httparse",
  "log",
+]
+
+[[package]]
+name = "userdata"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "phonetics",
+ "rusqlite",
+ "thiserror",
+ "uuid",
 ]
 
 [[package]]

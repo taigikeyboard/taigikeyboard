@@ -1,97 +1,31 @@
-//! What the input method keeps on disk for the user: the learning
-//! databases (`user_frequency.db`, `user_association.db`, `learned_phrases.db`),
-//! the user's own `custom_dictionary.db` and `settings.json`, in the
-//! directory each desktop platform hands in (`%APPDATA%\TaigiKeyboard` on
-//! Windows, the XDG config / data directories on Linux).
+//! What the desktop input methods keep on disk beyond the engine's user-data
+//! stores: `settings.json`, the user's copied-in fonts, and the directory
+//! each desktop platform hands in (`%APPDATA%\TaigiKeyboard` on Windows, the
+//! XDG config / data directories on Linux).
 //!
-//! Port of `macos/Sources/TaigiInputMethodCore/Storage/` over rusqlite. The
-//! SQL is byte-identical to the macOS stores (which mirror iOS / Android), so
-//! a `.taigi` export or a hand-copied database means the same thing on every
-//! platform. User-writable SQLite stays platform-native by policy
-//! (`.claude/rules/rust-migration-policy.md` §6). Roadmap W2 / W10; PR4.
+//! The learning databases and the custom dictionary moved to the engine
+//! `userdata` crate (`docs/architecture/user-data-engine-roadmap.md` P1); they
+//! are re-exported here so the Windows and Linux shells keep their imports
+//! until the desktop switch (P5).
 //!
 //! Host-testable: nothing here touches a Windows API, so the tests run on
 //! the Mac against temporary directories. Only `directory::user_data_directory`
 //! reads `%APPDATA%`, and it is a pure environment lookup.
 
-mod association;
-mod capacity;
-mod csv;
-mod custom_dictionary;
-mod database;
 mod directory;
 mod font_library;
-mod frequency;
-mod learned_phrases;
 mod settings_file;
-mod timestamp;
 
-pub use association::{AssociationRow, UserAssociationStore};
-pub use capacity::LearningCapacity;
-pub use csv::{CustomDictionaryCSV, CustomDictionaryCSVError, UserDataCSV};
-pub use custom_dictionary::{
-    CustomDictionaryError, CustomDictionaryIdentity, CustomDictionaryImportResult,
-    CustomDictionaryRow, CustomDictionaryStore, SearchKeyDeriver,
-};
-pub use database::{immediate_transaction, UserDataDatabase, UserDataDatabaseError};
 pub use directory::{created, user_data_directory, DirectoryError, APPLICATION_FOLDER_NAME};
 pub use font_library::{
     copy_in, fonts_directory, remove_stored, sanitized_stem, stored_file_names, ImportError,
     ALLOWED_EXTENSIONS, FONTS_FOLDER_NAME, MAX_FILE_SIZE,
 };
-pub use frequency::UserFrequencyStore;
-pub use learned_phrases::{LearnedPhraseRow, LearnedPhraseStore};
 pub use settings_file::{LiveSettings, SettingsFileError, SettingsFileStore};
-pub use timestamp::utc_timestamp_now;
-
-use std::path::PathBuf;
-use std::sync::Arc;
-
-/// The user-data stores, constructed against one directory and opened
-/// together. Separate files rather than tables in one database, matching iOS
-/// and Android: different capacity policies, very different write rates, and
-/// a user clearing one kind of data keeps the others.
-pub struct UserDataStores {
-    pub frequency: Arc<UserFrequencyStore>,
-    pub association: Arc<UserAssociationStore>,
-    pub custom_dictionary: Arc<CustomDictionaryStore>,
-    pub learned_phrases: Arc<LearnedPhraseStore>,
-}
-
-impl UserDataStores {
-    /// Stores over `directory`, using the engine's own search-key derivation
-    /// for the custom dictionary. Nothing is opened yet.
-    pub fn new(directory: PathBuf) -> Self {
-        let derive_search_keys: SearchKeyDeriver =
-            Arc::new(taigi_desktop_core::engine::derive_custom_search_keys);
-        Self {
-            frequency: Arc::new(UserFrequencyStore::new(
-                directory.clone(),
-                UserFrequencyStore::shipped_capacity(),
-            )),
-            association: Arc::new(UserAssociationStore::new(
-                directory.clone(),
-                UserAssociationStore::shipped_capacity(),
-            )),
-            custom_dictionary: Arc::new(CustomDictionaryStore::new(
-                directory.clone(),
-                Arc::clone(&derive_search_keys),
-                CustomDictionaryStore::MAX_ENTRIES,
-            )),
-            learned_phrases: Arc::new(LearnedPhraseStore::new(
-                directory,
-                derive_search_keys,
-                LearnedPhraseStore::MAX_ENTRIES,
-            )),
-        }
-    }
-
-    /// Opens all of them, off the calling thread. Safe to call more than
-    /// once — each store opens its file exactly once.
-    pub fn open(&self) {
-        self.frequency.open();
-        self.association.open();
-        self.custom_dictionary.open();
-        self.learned_phrases.open();
-    }
-}
+pub use userdata::{
+    immediate_transaction, utc_timestamp_now, AssociationRow, CustomDictionaryCSV,
+    CustomDictionaryCSVError, CustomDictionaryError, CustomDictionaryIdentity,
+    CustomDictionaryImportResult, CustomDictionaryRow, CustomDictionaryStore, LearnedPhraseRow,
+    LearnedPhraseStore, LearningCapacity, SearchKeyDeriver, UserAssociationStore, UserDataCSV,
+    UserDataDatabase, UserDataDatabaseError, UserDataStores, UserFrequencyStore,
+};

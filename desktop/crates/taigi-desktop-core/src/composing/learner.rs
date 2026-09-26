@@ -5,9 +5,10 @@
 //! — and this only carries the answer to the store
 //! (`INVARIANT_NEXTWORD_LEARNING_DECISION_CONTRACT`, invariants §40).
 
-use super::stores::{AssociationSink, Clock};
+use super::clock::Clock;
 use crate::engine::{self, NextWordEffect, NextWordOutcome};
 use crate::settings::EngineSettings;
+use userdata::AssociationSink;
 
 pub struct NextWordLearner {
     store: Box<dyn AssociationSink>,

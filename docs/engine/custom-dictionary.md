@@ -33,7 +33,7 @@ Example: `roman="gâu-tsá"` → `notone="gautsa"` → `abbrev="gt"`
 
 ## Storage
 
-**Database**: `custom_dictionary.db` on all four platforms (iOS: App Group shared container; Android: app-private storage; macOS: `~/Library/Application Support/<bundle id>/` via `macos/Sources/TaigiInputMethodCore/Storage/CustomDictionaryStore.swift`; Windows: `%APPDATA%\TaigiKeyboard` via `desktop/crates/taigi-desktop-storage/src/custom_dictionary.rs`, a byte-identical SQL port of the macOS store)
+**Database**: `custom_dictionary.db` on all four platforms (iOS: App Group shared container; Android: app-private storage; macOS: `~/Library/Application Support/<bundle id>/` via `macos/Sources/TaigiInputMethodCore/Storage/CustomDictionaryStore.swift`; Windows + Linux: `%APPDATA%\TaigiKeyboard` / XDG via `engine/userdata/src/custom_dictionary.rs`, a byte-identical SQL port of the macOS store, engine-owned per `docs/architecture/user-data-engine-roadmap.md`)
 
 ```sql
 CREATE TABLE custom_dictionary (

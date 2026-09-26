@@ -1600,6 +1600,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
+ "userdata",
 ]
 
 [[package]]
@@ -1607,11 +1608,10 @@ name = "taigi-desktop-storage"
 version = "3.6.10"
 dependencies = [
  "log",
- "rusqlite",
  "serde_json",
  "taigi-desktop-core",
  "thiserror",
- "uuid",
+ "userdata",
 ]
 
 [[package]]
@@ -1826,6 +1826,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5fd4f6878c9cb28d874b009da9e8d183b5abc80117c40bbd187a1fde336be6e8"
 dependencies = [
  "tinyvec",
+]
+
+[[package]]
+name = "userdata"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "phonetics",
+ "rusqlite",
+ "thiserror",
+ "uuid",
 ]
 
 [[package]]
