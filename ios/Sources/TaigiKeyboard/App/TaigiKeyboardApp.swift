@@ -24,6 +24,15 @@ struct TaigiKeyboardApp: App {
         // DebugLogger. Idempotent. Mirrors Android `Application.onCreate`.
         RustEngineBridge.install()
 
+        // The user's data, which the engine owns (user-data-engine-roadmap
+        // P7b) — the same App Group files the keyboard opens. Never from the
+        // test process, which runs inside this app (`TEST_HOST`): the engine
+        // opens once per process, and every later fetch in the run would rank
+        // with the simulator's real data.
+        if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil {
+            UserDataOpening.open(in: SharedSettings.sharedContainerURL)
+        }
+
         // Install the Rust shared-core lexicon engine state for the main
         // app (Dictionary tab uses bundled fst + dict.bin reads). Idempotent
         // — extension calls the same install separately at viewDidLoad.
@@ -46,11 +55,6 @@ struct TaigiKeyboardApp: App {
         navAppearance.titleTextAttributes = [.font: inlineFont]
         UINavigationBar.appearance().standardAppearance = navAppearance
         UINavigationBar.appearance().scrollEdgeAppearance = navAppearance
-
-        // Seed custom dictionary default entries on first install only
-        Task {
-            try? await CompositionRoot.customDictionaryService.seedDefaultEntryIfEmpty()
-        }
     }
 
     /// Install the Rust shared-core lexicon engine for the main app

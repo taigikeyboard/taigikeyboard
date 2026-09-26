@@ -50,8 +50,8 @@ public extension RustEngineBridge {
     }
 
     /// Bigram association pair surfaced through `RecordAssociation` /
-    /// `RecordCompoundAssociations` effects. Consumed by
-    /// `NextWordService.recordAssociation`.
+    /// `RecordCompoundAssociations` effects. The engine records the pairs
+    /// itself (roadmap P7b); iOS ignores these effects until P9 retires them.
     struct NextWordAssociationPair: Equatable {
         public let prev: String
         public let prevTl: String
@@ -78,26 +78,6 @@ public extension RustEngineBridge {
     struct NextWordFilterResult: Equatable {
         public let predictions: [NextWordEnginePrediction]
         public let wasStale: Bool
-    }
-
-    /// Pre-merge un-scored row from the platform `NextWordService.userRows`
-    /// SQL pipeline. Crosses the bridge as a `PredictNext.user_rows` entry.
-    struct NextWordRawRow: Equatable {
-        public enum Source { case dict, user }
-
-        public let hanzi: String
-        public let tl: String
-        public let count: Int64
-        public let lastUsedMs: Int64
-        public let source: Source
-
-        public init(hanzi: String, tl: String, count: Int64, lastUsedMs: Int64, source: Source) {
-            self.hanzi = hanzi
-            self.tl = tl
-            self.count = count
-            self.lastUsedMs = lastUsedMs
-            self.source = source
-        }
     }
 
     // MARK: - Decide intents (6)
@@ -263,13 +243,13 @@ public extension RustEngineBridge {
 
     // MARK: - Predict
 
-    /// One next-word query: the engine looks up the bundled bigrams for the
-    /// last character of `word` (sources from `toggles`), merges them with
-    /// `userRows` — kept in their SQL order — and scores, sorts, limits and
-    /// shapes the result. A stale `queryGeneration` returns `wasStale`.
+    /// One next-word query: the engine reads the learned bigrams for `word` /
+    /// `roman` from its own `user_association.db` (§24 tiers, roadmap P7b),
+    /// looks up the bundled bigrams for the last character of `word` (sources
+    /// from `toggles`), and scores, sorts, limits and shapes the result. A stale `queryGeneration` returns `wasStale`.
     static func nextwordPredictNext(
         word: String,
-        userRows: [NextWordRawRow],
+        roman: String,
         toggles: DictionaryToggles,
         queryGeneration: UInt64,
         nowMs: Int64,
@@ -282,16 +262,8 @@ public extension RustEngineBridge {
     ) -> NextWordFilterResult {
         var payload = Taigi_Engine_PredictNext()
         payload.word = word
+        payload.roman = roman
         payload.toggles = dictionaryTogglesProto(toggles)
-        payload.userRows = userRows.map { row in
-            var p = Taigi_Engine_RawNextWordPrediction()
-            p.hanzi = row.hanzi
-            p.tl = row.tl
-            p.count = row.count
-            p.lastUsedMs = row.lastUsedMs
-            p.source = row.source == .dict ? .dict : .user
-            return p
-        }
         payload.queryGeneration = queryGeneration
         payload.nowMs = nowMs
         payload.limit = limit

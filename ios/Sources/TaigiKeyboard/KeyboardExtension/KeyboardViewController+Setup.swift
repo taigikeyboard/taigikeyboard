@@ -108,61 +108,12 @@ extension KeyboardViewController {
         // 4. Connect TaigiAutocompleteService with handler (requires handler already created)
         wireTaigiAutocompleteProviders(from: services.autocompleteService, to: handler)
 
-        // 5. Best-effort warmup of the two SYNCHRONOUS eager-empty hot-path
-        //    user-data DBs that `fetchContinuousCandidates` reads:
-        //    `user_frequency.db` (boost — `UserFrequencyService.frequencyDataBatch`)
-        //    and `custom_dictionary.db` (custom candidates —
-        //    `CustomDictionaryRepository.searchSync`). Both readers return `[]`
-        //    until their connection is open and NEVER lazy-open (the Continuous
-        //    fetch is synchronous and must not block on an async DB open), so
-        //    without an eager warmup here a fresh session would ignore them
-        //    indefinitely until the user committed something. NextWord's
-        //    `user_association.db` is intentionally NOT warmed here — its reads
-        //    are async and lazy-init per query (`ensureUserTablesCreated`).
-        //    A future third synchronous eager-empty reader MUST be warmed here.
-        //
-        //    Fire-and-forget — `fetchContinuousCandidates` keeps its
-        //    `isConnected()` cold-start guard for the race window before these
-        //    Tasks land. Warning log on failure is intentional for
-        //    observability (Codex PR #265 r3216760651 post-impl R5).
-        //
-        //    The custom_dictionary.db warmup is UNGATED (not behind
-        //    `isCustomDictEnabled`): the lookup is already gated in
-        //    `ComposingManager.buildCustomEntries`, and an ungated warmup keeps
-        //    the connection ready for a live settings toggle (enable in the
-        //    host app → works in an already-running extension, no relaunch).
-        //    Regression guard: PR #279 (Item 13) deleted the old
-        //    `LexiconService` fallback that lazy-opened this DB but only kept
-        //    the user-freq warmup, so custom-dict candidates silently vanished
-        //    from the keyboard (behavioral-invariants.md §26).
-        //    §50 learned_phrases.db joins for the same reason: its per-keystroke
-        //    read is synchronous and answers `[]` until the connection is open.
-        let userFrequencyService = CompositionRoot.userFrequencyService
-        let customDictionaryRepository = CompositionRoot.customDictionaryRepository
-        let learnedPhraseService = CompositionRoot.learnedPhraseService
-        warmDatabase("User frequency") { try await userFrequencyService.ensureInitialized() }
-        warmDatabase("Custom dictionary") { try await customDictionaryRepository.ensureInitialized() }
-        warmDatabase("Learned phrases") { try await learnedPhraseService.ensureInitialized() }
-
-        // 6. Initialize tracking vars so syncSettings() doesn't false-trigger on first call
+        // 5. Initialize tracking vars so syncSettings() doesn't false-trigger on first call
         lastInputMode = keyboardSettings.inputMode
         lastKeyboardLayoutType = keyboardSettings.keyboardLayoutType
         lastResolvedKeyHeightScale = keyboardSettings
             .resolvedAppearance(for: state.keyboardContext.colorScheme).keyHeightScale
         lastCandidateDisplayMode = state.keyboardContext.candidateDisplayMode
-    }
-
-    /// One fire-and-forget open + schema pass per user-data DB; a failure is
-    /// logged (observability, Codex PR #265 r3216760651 post-impl R5), never surfaced.
-    private func warmDatabase(_ name: StaticString, _ open: @escaping @Sendable () async throws -> Void) {
-        Task {
-            do {
-                try await open()
-                setupLogger.info("[INIT] \(name) DB warmed")
-            } catch {
-                setupLogger.warning("[INIT] \(name) DB warmup failed: \(error.localizedDescription)")
-            }
-        }
     }
 
     /// Called at initial setup and from syncSettings() when input mode changes.

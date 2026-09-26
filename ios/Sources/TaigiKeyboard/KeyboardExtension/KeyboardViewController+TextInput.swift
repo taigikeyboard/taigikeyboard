@@ -73,10 +73,12 @@ extension KeyboardViewController {
             // matching `nextwordClearForNewComposing` intent. Do NOT route
             // to `resetAndClearUI()` (that maps to `nextwordResetFull`).
             actionHandler?.nextWordController.clearDisplay()
-        case let .phraseLearned(hanji, canonicalTl):
-            // §50 — the engine decided the composition was a phrase; the
-            // platform owns the store (same routing as the nextword writes).
-            actionHandler?.learnPhrase(hanji: hanji, canonicalTl: canonicalTl)
+        case .phraseLearned:
+            // §50 — the engine decided the composition was a phrase and,
+            // with the user data open, already wrote it to
+            // `learned_phrases.db`; nothing is left for this side (roadmap
+            // P7b; the effect retires in P9, U9).
+            break
         }
     }
 

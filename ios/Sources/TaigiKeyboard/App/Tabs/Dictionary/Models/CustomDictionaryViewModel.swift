@@ -11,14 +11,14 @@ final class CustomDictionaryViewModel: ObservableObject {
     @Published var isLoading = true
     @Published var isCustomDictEnabled: Bool
 
-    private let service: CustomDictionaryService
+    private let userData: any UserDataClient
     private let settings: SharedSettings
 
     init(
-        service: CustomDictionaryService = CompositionRoot.customDictionaryService,
+        userData: any UserDataClient = CompositionRoot.userData,
         settings: SharedSettings = .shared,
     ) {
-        self.service = service
+        self.userData = userData
         self.settings = settings
         isCustomDictEnabled = settings.isCustomDictEnabled
     }
@@ -30,7 +30,7 @@ final class CustomDictionaryViewModel: ObservableObject {
 
     func load() async {
         do {
-            entries = try await service.fetchAll()
+            entries = try await userData.listAll()
         } catch {
             entries = []
         }
@@ -38,26 +38,25 @@ final class CustomDictionaryViewModel: ObservableObject {
     }
 
     func save(_ entry: CustomDictionaryEntry) async {
-        try? await service.save(entry)
+        try? await userData.save(entry)
         await load()
     }
 
     func delete(id: String) async {
-        try? await service.delete(id: id)
+        try? await userData.delete(id: id)
         await load()
     }
 
     func deleteAll() async {
-        try? await service.deleteAll()
+        try? await userData.deleteAll()
         await load()
     }
 
     func exportCSV() async throws -> String {
-        try await service.exportCSV()
+        try await String(decoding: userData.exportCSV(), as: UTF8.self)
     }
 
     func importFile(url: URL) async throws -> (imported: Int, skipped: Int) {
-        let result = try await service.importFromFile(url: url)
-        return (imported: result.imported, skipped: result.skipped)
+        try await userData.importCSV(url: url)
     }
 }

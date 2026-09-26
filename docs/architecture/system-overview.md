@@ -46,7 +46,7 @@ graph TB
     domains -. mmap read-only .-> artifacts
 ```
 
-User-writable state is four SQLite files, **owned by the engine crate `userdata`** on macOS, Windows and Linux (`rusqlite`, [`user-data-engine-roadmap.md`](user-data-engine-roadmap.md) P5–P6) and still native on iOS (`SQLite3`) and Android (the platform SQLite) until they switch (P7–P8): `user_frequency.db` (schema v2), `user_association.db` (v6, `CROSS-PLATFORM INVARIANT` on all four), `custom_dictionary.db` (v3; Android keeps its own `DATABASE_VERSION` namespace — portability D5), `learned_phrases.db` (§50, own store). Details: [`data-artifacts-portability.md`](data-artifacts-portability.md) §4–8.
+User-writable state is four SQLite files, **owned by the engine crate `userdata`** on every platform (`rusqlite`, [`user-data-engine-roadmap.md`](user-data-engine-roadmap.md) P5–P8): `user_frequency.db` (schema v2), `user_association.db` (v6, `CROSS-PLATFORM INVARIANT` on all four), `custom_dictionary.db` (v3; Android keeps its own `DATABASE_VERSION` namespace — portability D5), `learned_phrases.db` (§50, own store). Details: [`data-artifacts-portability.md`](data-artifacts-portability.md) §4–8.
 
 | Platform | Shell | Engine hop | Candidate UI | Settings UI | Dogfood gate |
 |---|---|---|---|---|---|
@@ -128,7 +128,7 @@ flowchart TD
 
 ## 4. Request data-flow (one keystroke)
 
-Every platform runs the same loop: **input dispatch → composing (engine) → candidate fetch (engine) → display → selection → commit + learning**. The engine owns the state machine and the ranking; the platform owns the text-field binding, the candidate surface, the timers and — on the phones, until they switch (roadmap P7–P8) — the SQLite stores.
+Every platform runs the same loop: **input dispatch → composing (engine) → candidate fetch (engine) → display → selection → commit + learning**. The engine owns the state machine and the ranking; the platform owns the text-field binding, the candidate surface and the timers; the engine owns the user's data too.
 
 ```mermaid
 sequenceDiagram

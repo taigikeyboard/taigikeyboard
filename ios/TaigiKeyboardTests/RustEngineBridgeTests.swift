@@ -34,16 +34,8 @@ final class RustEngineBridgeTests: XCTestCase {
         XCTAssertEqual(result.tone, "2")
     }
 
-    func test_op_pojToTl_canonical() {
-        XCTAssertEqual(RustEngineBridge.pojToTl("góa"), "guá")
-    }
-
     func test_op_tlToPoj_canonical() {
         XCTAssertEqual(RustEngineBridge.tlToPoj("guá"), "góa")
-    }
-
-    func test_op_normalizeInput_extractsToneFromDiacritic() {
-        XCTAssertEqual(RustEngineBridge.normalizeInput("hó"), "ho2")
     }
 
     func test_op_toneVariations_lazyCache_returnsBothModes() {
@@ -54,16 +46,6 @@ final class RustEngineBridgeTests: XCTestCase {
         XCTAssertNotNil(cache.poj["a"])
         XCTAssertNotNil(cache.tl["oo"])
         XCTAssertNotNil(cache.poj["o\u{0358}"])
-    }
-
-    // MARK: - Derivation (2 ops)
-
-    func test_op_deriveNotone_stripsDiacriticsDigitsHyphensSpaces() {
-        XCTAssertEqual(RustEngineBridge.deriveNotone("Gâu-tsá 2"), "gautsa")
-    }
-
-    func test_op_deriveAbbrev_returnsFirstCharPerSyllable() {
-        XCTAssertEqual(RustEngineBridge.deriveAbbrev("gâu-tsá"), "gt")
     }
 
     // MARK: - TPS (4 ops)

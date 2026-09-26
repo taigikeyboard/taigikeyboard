@@ -215,13 +215,7 @@ struct CustomDictionaryView: View {
         guard !trimmedRoman.isEmpty, !trimmedHanzi.isEmpty else { return }
 
         let entry = if let existing = editingEntry {
-            CustomDictionaryEntry(
-                id: existing.id,
-                roman: trimmedRoman,
-                hanzi: trimmedHanzi,
-                createdAt: existing.createdAt,
-                updatedAt: Date(),
-            )
+            CustomDictionaryEntry(id: existing.id, roman: trimmedRoman, hanzi: trimmedHanzi)
         } else {
             CustomDictionaryEntry(roman: trimmedRoman, hanzi: trimmedHanzi)
         }

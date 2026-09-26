@@ -87,7 +87,7 @@ Engine-layer files import Foundation only (plus SwiftProtobuf in `Engine/`) so t
 - No `KeyboardKit`, `UIKit`, `SwiftUI`, `Combine` imports.
 - No global singletons from outside the layer (no `SharedSettings.shared`, `KeyboardSettings.store`, `DictionaryRepository.shared` in pure-logic code) — dependencies are injected so tests can stub them.
 - No direct `FileManager`, App Group container paths, or network — callers inject the data.
-- SQLite3 C API through `SQLiteConnectionManager` is allowed — SQLite is a build dep, not a platform framework.
+- No SQLite: the user's data is the engine's (`engine/userdata`, `docs/architecture/user-data-engine-roadmap.md` P7b), reached through `RustEngineBridge+UserData.swift` / `UserDataClient`.
 
 ### Adapter layer
 
@@ -130,7 +130,7 @@ If an Engine-layer file appears to need KeyboardKit, the file is in the **wrong 
 
 - File name matches the primary type it defines (`LexiconService.swift` → `public final class LexiconService`).
 - One public type per file when reasonable; nested helper types OK if they support the primary type.
-- Avoid generic suffixes: `Manager`, `Helper`, `Util`, `Utils`, `Handler` are discouraged unless they map to a concrete, well-scoped responsibility (e.g., `SQLiteConnectionManager` is a literal connection owner — OK).
+- Avoid generic suffixes: `Manager`, `Helper`, `Util`, `Utils`, `Handler` are discouraged unless they map to a concrete, well-scoped responsibility (e.g., a `…Manager` that is a literal owner of one resource — OK).
 
 ### Folders
 

@@ -11,7 +11,7 @@ import XCTest
 /// Exhaustive invariant coverage lives in `engine/nextword/src/*` Rust
 /// tests; this file is the iOS-side boundary check that the bridge
 /// surface, AppConfig population, and synthesized value types behave the
-/// way `NextWordController` / `NextWordService` /
+/// way `NextWordController` /
 /// `TaigiAutocompleteService` expect after the swap.
 ///
 /// Cross-language tolerance 1e-7 per Codex v1 P2 (Rust f64 ↔ Swift Double
@@ -281,170 +281,28 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         XCTAssertEqual(result.currentGeneration, baselineGen &+ 1)
     }
 
-    // MARK: - Filter: scoring + ordering
+    // MARK: - Predict: stale drop
 
-    func testFilter_userOutranksDictAtEqualCount() {
+    /// The scoring, merging and ordering of predictions — the learned rows the
+    /// engine reads itself (user-data-engine-roadmap P7b) and the bundled ones
+    /// — are pinned by Rust (`engine/nextword/src/filter.rs`, `scorer.rs`,
+    /// `engine/dispatch/tests/user_data_reads.rs`); this pins the bridge's
+    /// decode of a stale answer.
+    func testPredict_staleQueryGenerationReturnsWasStale() {
         let gen = currentGen()
-        let result = predictWithoutBundledRows(
-            raw: [
-                row(hanzi: "好", tl: "hó", count: 100, source: .dict),
-                row(hanzi: "早", tl: "tsá", count: 1, lastUsedMs: 1000, source: .user),
-            ],
-            queryGeneration: gen,
-            nowMs: 1000,
-            limit: 10,
-            mode: .tl, translateSwapped: false,
-            generation: envelopeGen,
-        )
-        XCTAssertFalse(result.wasStale)
-        XCTAssertEqual(result.predictions.first?.hanzi, "早", "user entry must outrank dict via learningBonus")
-    }
-
-    func testFilter_dictAndUserMergeSumScores() {
-        let gen = currentGen()
-        let result = predictWithoutBundledRows(
-            raw: [
-                row(hanzi: "好", tl: "hó", count: 5, source: .dict),
-                row(hanzi: "好", tl: "hó", count: 1, lastUsedMs: 1000, source: .user),
-            ],
-            queryGeneration: gen,
-            nowMs: 1000,
-            limit: 10,
-            mode: .tl, translateSwapped: false,
-            generation: envelopeGen,
-        )
-        XCTAssertEqual(result.predictions.count, 1, "(好, hó) merges across sources")
-        // Score = scoreDict(5) + calculateUserScore(1, lastUsedMs=now, nowMs=now)
-        //       = 5*1 + (1*50*1 + 300) = 355.
-        let expected = 5.0 + (1.0 * 50.0 + 300.0)
-        XCTAssertEqual(
-            result.predictions[0].score, expected,
-            accuracy: Self.parityTolerance,
-            "merged score must equal sum of dict + user contributions",
-        )
-    }
-
-    func testFilter_emptyTLDroppedInRomanMode() {
-        let gen = currentGen()
-        let result = predictWithoutBundledRows(
-            raw: [
-                row(hanzi: "好", tl: "hó", count: 5, source: .dict),
-                row(hanzi: "安", tl: "", count: 5, source: .dict),
-            ],
-            queryGeneration: gen,
-            nowMs: 1000,
-            limit: 10,
-            mode: .tl, translateSwapped: false,
-            generation: envelopeGen,
-        )
-        XCTAssertEqual(result.predictions.count, 1)
-        XCTAssertEqual(result.predictions[0].hanzi, "好")
-    }
-
-    func testFilter_emptyTLKeptInHanjiMode() {
-        let gen = currentGen()
-        let result = predictWithoutBundledRows(
-            raw: [
-                row(hanzi: "好", tl: "hó", count: 5, source: .dict),
-                row(hanzi: "安", tl: "", count: 5, source: .dict),
-            ],
-            queryGeneration: gen,
-            nowMs: 1000,
-            limit: 10,
-            mode: .tl, translateSwapped: true,
-            generation: envelopeGen,
-        )
-        XCTAssertEqual(result.predictions.count, 2)
-    }
-
-    func testFilter_pojModeEmitsPojRoman() {
-        let gen = currentGen()
-        let result = predictWithoutBundledRows(
-            raw: [row(hanzi: "好", tl: "tsiok", count: 5, source: .dict)],
-            queryGeneration: gen,
-            nowMs: 1000,
-            limit: 10,
-            mode: .poj, translateSwapped: false,
-            generation: envelopeGen,
-        )
-        XCTAssertEqual(result.predictions.count, 1)
-        // tl_display_to_poj_display("tsiok") → "chiok"; the assertion guards the
-        // commit-path bug fix that made `NextWordEnginePrediction.text` mode-correct.
-        XCTAssertEqual(result.predictions[0].text, "chiok")
-        XCTAssertEqual(result.predictions[0].tl, "tsiok")
-    }
-
-    func testFilter_staleQueryGenerationReturnsWasStale() {
-        let gen = currentGen()
-        let result = predictWithoutBundledRows(
-            raw: [row(hanzi: "好", tl: "hó", count: 5, source: .dict)],
+        let result = RustEngineBridge.nextwordPredictNext(
+            word: "早",
+            roman: "tsá",
+            toggles: Self.noBundledSources,
             queryGeneration: gen &- 1, // mismatch
             nowMs: 1000,
             limit: 10,
-            mode: .tl, translateSwapped: false,
+            mode: .tl,
+            translateSwapped: false,
             generation: envelopeGen,
         )
         XCTAssertTrue(result.wasStale)
         XCTAssertTrue(result.predictions.isEmpty)
-    }
-
-    func testFilter_limitTruncates() {
-        let gen = currentGen()
-        let raw = (0 ..< 10).map { i in
-            row(hanzi: "X\(i)", tl: "x\(i)", count: Int64(i + 1), source: .dict)
-        }
-        let result = predictWithoutBundledRows(
-            raw: raw,
-            queryGeneration: gen,
-            nowMs: 1000,
-            limit: 3,
-            mode: .tl, translateSwapped: false,
-            generation: envelopeGen,
-        )
-        XCTAssertEqual(result.predictions.count, 3)
-    }
-
-    // MARK: - Read-layer reading-variant collapse (v3.6.1 R1)
-
-    /// INVARIANT_NEXTWORD_READ_LAYER_DEDUP — iOS-side parity for
-    /// `engine/nextword/src/filter.rs::collapse_reading_variants`. A raw
-    /// continuous next_tl ("taigi") folds into the canonical tone-marked
-    /// row ("tâi-gí") for the same hanzi, so 台語 surfaces once.
-    func testFilter_collapsesRawVariantIntoCanonical() {
-        let gen = currentGen()
-        let result = predictWithoutBundledRows(
-            raw: [
-                row(hanzi: "台語", tl: "tâi-gí", count: 5, lastUsedMs: 1000, source: .user),
-                row(hanzi: "台語", tl: "taigi", count: 3, lastUsedMs: 1000, source: .user),
-            ],
-            queryGeneration: gen,
-            nowMs: 1000,
-            limit: 10,
-            mode: .tl, translateSwapped: false,
-            generation: envelopeGen,
-        )
-        XCTAssertEqual(result.predictions.count, 1, "raw variant folds into canonical (台語 once)")
-        XCTAssertEqual(result.predictions.first?.tl, "tâi-gí", "canonical tone-marked row kept")
-    }
-
-    /// INVARIANT_NEXTWORD_READ_LAYER_DEDUP — genuine polyphonic Hanji (Core Principle
-    /// #7) is preserved: 重/tāng + 重/tàng share the toneless key `tang` but
-    /// both carry tone marks, so the collapse leaves all readings intact.
-    func testFilter_preservesDistinctPolyphones() {
-        let gen = currentGen()
-        let result = predictWithoutBundledRows(
-            raw: [
-                row(hanzi: "重", tl: "tāng", count: 5, source: .dict),
-                row(hanzi: "重", tl: "tàng", count: 4, source: .dict),
-                row(hanzi: "重", tl: "tang", count: 3, source: .dict),
-            ],
-            queryGeneration: gen,
-            nowMs: 1000,
-            limit: 10,
-            mode: .tl, translateSwapped: false,
-            generation: envelopeGen,
-        )
-        XCTAssertEqual(result.predictions.count, 3, "distinct polyphones must not collapse")
     }
 
     // MARK: - Helpers
@@ -525,7 +383,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
     }
 
     /// Every bundled association source off, so `nextwordPredictNext` adds no
-    /// `association.bin` rows and `raw` alone reaches the engine filter.
+    /// `association.bin` rows.
     private static let noBundledSources: RustEngineBridge.DictionaryToggles = {
         var settings = StubEngineSettings()
         settings.isMoeDictEnabled = false
@@ -539,44 +397,4 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         settings.isKhpooDictEnabled = false
         return RustEngineBridge.DictionaryToggles(from: settings)
     }()
-
-    /// The engine filter step (score, merge, sort, limit, stale drop) over
-    /// `raw` exactly, through `nextwordPredictNext`.
-    private func predictWithoutBundledRows(
-        raw: [RustEngineBridge.NextWordRawRow],
-        queryGeneration: UInt64,
-        nowMs: Int64,
-        limit: Int32,
-        mode: InputMode,
-        translateSwapped: Bool,
-        generation: UInt64,
-    ) -> RustEngineBridge.NextWordFilterResult {
-        RustEngineBridge.nextwordPredictNext(
-            // Any non-empty word: with every bundled source off it only
-            // gates the query (an empty word predicts nothing).
-            word: "早",
-            userRows: raw,
-            toggles: Self.noBundledSources,
-            queryGeneration: queryGeneration,
-            nowMs: nowMs,
-            limit: limit,
-            mode: mode,
-            translateSwapped: translateSwapped,
-            generation: generation,
-        )
-    }
-
-    private func row(
-        hanzi: String,
-        tl: String,
-        count: Int64,
-        lastUsedMs: Int64 = 0,
-        source: RustEngineBridge.NextWordRawRow.Source,
-    ) -> RustEngineBridge.NextWordRawRow {
-        RustEngineBridge.NextWordRawRow(
-            hanzi: hanzi, tl: tl,
-            count: count, lastUsedMs: lastUsedMs,
-            source: source,
-        )
-    }
 }

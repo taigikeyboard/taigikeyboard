@@ -14,14 +14,6 @@ struct ResolvedCommit {
 }
 
 extension ActionHandler {
-    /// §50 — the engine's `Effect.PhraseLearned`, into `learned_phrases.db`.
-    /// Always on (USER 2026-09-20: no toggle).
-    func learnPhrase(hanji: String, canonicalTl: String) {
-        CompositionRoot.learnedPhraseService.recordLearnedPhrase(hanzi: hanji, canonicalTl: canonicalTl)
-    }
-}
-
-extension ActionHandler {
     // MARK: - Suggestion Selection
 
     func handleSuggestionSelection(_ suggestion: AutocompleteSuggestion) {
@@ -162,22 +154,18 @@ extension ActionHandler {
                 syllableCount: syllableCount,
             )
             // Per-segment frequency learning mirrors the lexicon path: every
-            // successful commit records, mid OR final. Engine effects don't
-            // call into `UserFrequencyService`; ranking learning lives at the
-            // platform boundary. Sidechannel `displayText` (not view-rewritten
-            // suggestion.text) ensures frequency tracks what the engine
-            // committed, not the TPS surface form (PR #257 r3214912627).
+            // successful commit records, mid OR final — plus §50 touch-on-use
+            // for a learned phrase picked as one candidate (`hanji`; a no-op
+            // for any other row). The engine keeps both (roadmap P7b).
+            // Sidechannel `displayText` (not view-rewritten suggestion.text)
+            // ensures frequency tracks what the engine committed, not the
+            // TPS surface form (PR #257 r3214912627).
             // R5 pair-key (#7): record `(displayText, canonical TL)` so
             // polyphonic Hanji keep separate frequency buckets. `associationTl` is
             // the canonical-TL sidechannel already extracted above (the same
             // reading NextWord learns); empty only on wire skew / TPS-OOV.
             if didCommit {
-                CompositionRoot.userFrequencyService.recordUsage(for: displayText, tl: associationTl)
-            }
-            // §50 touch-on-use: a learned phrase picked as one candidate stays
-            // ahead of the learned-row eviction line (no-op for any other row).
-            if didCommit, let hanji {
-                CompositionRoot.learnedPhraseService.recordLearnedPick(hanzi: hanji, canonicalTl: associationTl)
+                CompositionRoot.usageRecorder.record(Usage(displayText: displayText, canonicalTl: associationTl, hanji: hanji))
             }
             // Auto-space only on FINAL commit (entire buffer consumed; engine
             // exits Continuous → Idle). Mid-commits keep composing more
@@ -228,7 +216,7 @@ extension ActionHandler {
             // sidechannel; empty (legacy bucket) for a NextWord prediction
             // that carries no canonical TL.
             let canonicalTl = suggestion.additionalInfo["canonicalTl"] ?? ""
-            CompositionRoot.userFrequencyService.recordUsage(for: displayText, tl: canonicalTl)
+            CompositionRoot.usageRecorder.record(Usage(displayText: displayText, canonicalTl: canonicalTl))
 
             logger.debug("[SELECT] suggestion.text='\(suggestion.text)' subtitle='\(suggestion.subtitle ?? "nil")' additionalInfo=\(suggestion.additionalInfo.description)")
             logger.debug("[SELECT] parsed roman='\(roman)' hanzi='\(hanzi ?? "nil")' displayText='\(displayText)'")

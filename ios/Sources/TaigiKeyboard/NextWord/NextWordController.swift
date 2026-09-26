@@ -6,7 +6,7 @@ import Foundation
 /// controller is the iOS-side platform executor:
 /// - serializes intents through `RustEngineBridge.nextword*`,
 /// - interprets the returned `NextWordDecideResult.Effect` list against
-///   platform resources (Timer, SQLite service, main-thread UI callbacks),
+///   platform resources (Timer, main-thread UI callbacks),
 /// - caches `isShowing` echoed back from the engine for
 ///   sync read access by `ActionHandler`,
 /// - pushes UI visibility back into the engine via `nextwordSetIsShowing`
@@ -26,15 +26,10 @@ final class NextWordController {
     // MARK: - Dependencies
 
     private let settingsProvider: EngineSettingsProvider
-    private let nextWordService: NextWordService
     weak var contextUpdater: AutocompleteContextUpdater?
 
-    init(
-        settingsProvider: EngineSettingsProvider = SharedSettings.shared,
-        nextWordService: NextWordService = CompositionRoot.nextWordService,
-    ) {
+    init(settingsProvider: EngineSettingsProvider = SharedSettings.shared) {
         self.settingsProvider = settingsProvider
-        self.nextWordService = nextWordService
     }
 
     // MARK: - Cached state (echoed from Rust)
@@ -172,10 +167,11 @@ final class NextWordController {
             startContextTimeoutTimer(afterMs: afterMs)
         case .cancelContextTimeout:
             stopContextTimeoutTimer()
-        case let .recordAssociation(pair):
-            recordAssociation(pair)
-        case let .recordCompoundAssociations(pairs):
-            recordCompoundAssociations(pairs)
+        // The engine wrote the bigrams into `user_association.db` itself and
+        // leaves these out of its answer once the user data is open (roadmap
+        // P3c / P7b); the cases stay until the effects are retired (U9, P9).
+        case .recordAssociation, .recordCompoundAssociations:
+            break
         case let .queryPredictions(word, roman, generation, nowMs):
             dispatchPredictionQuery(word: word, roman: roman, generation: generation, nowMs: nowMs)
         case .clearPredictionsUI:
@@ -183,78 +179,55 @@ final class NextWordController {
         }
     }
 
-    // MARK: - Service I/O
-
-    private func recordAssociation(_ pair: RustEngineBridge.NextWordAssociationPair) {
-        Task { [nextWordService] in
-            await nextWordService.recordAssociation(
-                prev: pair.prev,
-                prevTl: pair.prevTl,
-                nextHanzi: pair.next,
-                nextTl: pair.nextTl,
-            )
-        }
-    }
-
-    /// Loop sequentially to avoid races on the SQLite UNIQUE constraint
-    /// `(prev_word, prev_tl, next_word, next_tl)`.
-    private func recordCompoundAssociations(_ pairs: [RustEngineBridge.NextWordAssociationPair]) {
-        Task { [nextWordService] in
-            for pair in pairs {
-                await nextWordService.recordAssociation(
-                    prev: pair.prev,
-                    prevTl: pair.prevTl,
-                    nextHanzi: pair.next,
-                    nextTl: pair.nextTl,
-                )
-            }
-        }
-    }
+    // MARK: - Predictions
 
     private func dispatchPredictionQuery(word: String, roman: String, generation: UInt64, nowMs: Int64) {
         logger.debug("[TRIGGER] querying for word='\(word)' gen=\(generation)")
 
-        // Dictionary toggles snapshot at query start, before the SQL await —
-        // the bundled lookup answers for the settings the query began under.
-        let toggles = RustEngineBridge.DictionaryToggles(from: settingsProvider.current)
-        Task { @MainActor [nextWordService] in
-            let userRows = await nextWordService.userRows(word: word, roman: roman)
-            handleQueryResult(
-                word: word, userRows: userRows, toggles: toggles,
-                queryGeneration: generation, nowMs: nowMs,
-            )
+        // One settings snapshot at query start — the bundled lookup and the
+        // rendering answer for the settings the query began under.
+        let settings = settingsProvider.current
+        let toggles = RustEngineBridge.DictionaryToggles(from: settings)
+        // A `@MainActor` hop so the render lands after the effect loop that
+        // queued it, as it always has.
+        Task { @MainActor in
+            let envelope = envelopeGen
+            // Off the main thread: the engine reads the learned rows from its
+            // own `user_association.db` inside this call (roadmap P7b).
+            let filterResult = await Task.detached {
+                RustEngineBridge.nextwordPredictNext(
+                    word: word,
+                    roman: roman,
+                    toggles: toggles,
+                    queryGeneration: generation,
+                    nowMs: nowMs,
+                    limit: 30,
+                    mode: settings.inputMode,
+                    translateSwapped: settings.isTranslateSwapped,
+                    candidateDisplayMode: settings.candidateDisplayMode,
+                    hyphenlessRoman: settings.isHyphenlessRomanEnabled,
+                    generation: envelope,
+                )
+            }.value
+            // A context change meanwhile makes this answer another context's.
+            guard envelope == envelopeGen else { return }
+            handleQueryResult(filterResult, queryGeneration: generation, settings: settings)
         }
     }
 
-    /// Resolve an async prediction query. `nextwordPredictNext` adds the
-    /// bundled rows for `word`, then merges + scores + sorts + truncates
-    /// + drops on stale generation. Renders the resulting `NextWordEnginePrediction`s
-    /// then pushes the new `is_showing` value back into engine state via
+    /// Render an async prediction query's answer — `nextwordPredictNext` read
+    /// the learned rows and added the bundled rows for the word, then merged +
+    /// scored + sorted + truncated + dropped on stale generation — then push
+    /// the new `is_showing` value back into engine state via
     /// `nextwordSetIsShowing` — required so subsequent
     /// `ClearForNewComposing` / sentence-end / context-timeout / `ResetFull`
     /// paths can emit `clearPredictionsUI` when there is UI to clear.
     @MainActor
     private func handleQueryResult(
-        word: String,
-        userRows: [RustEngineBridge.NextWordRawRow],
-        toggles: RustEngineBridge.DictionaryToggles,
+        _ filterResult: RustEngineBridge.NextWordFilterResult,
         queryGeneration: UInt64,
-        nowMs: Int64,
+        settings: EngineSettings,
     ) {
-        let settings = settingsProvider.current
-        let filterResult = RustEngineBridge.nextwordPredictNext(
-            word: word,
-            userRows: userRows,
-            toggles: toggles,
-            queryGeneration: queryGeneration,
-            nowMs: nowMs,
-            limit: 30,
-            mode: settings.inputMode,
-            translateSwapped: settings.isTranslateSwapped,
-            candidateDisplayMode: settings.candidateDisplayMode,
-            hyphenlessRoman: settings.isHyphenlessRomanEnabled,
-            generation: envelopeGen,
-        )
         if filterResult.wasStale {
             logger.debug("[TRIGGER] dropping stale result gen=\(queryGeneration)")
             return

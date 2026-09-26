@@ -15,40 +15,26 @@ final class DataManagementViewModel: ObservableObject {
 
     @Published var isProcessing = false
 
-    private let service: BackupService
+    private let userData: any UserDataClient
 
-    init(service: BackupService = CompositionRoot.backupService) {
-        self.service = service
+    init(userData: any UserDataClient = CompositionRoot.userData) {
+        self.userData = userData
     }
 
     func exportBackup() async throws -> BackupExportPayload {
         isProcessing = true
         defer { isProcessing = false }
-        let data = try await service.exportAll()
+        let data = try await userData.exportBackup(appVersion: Bundle.main.shortVersion)
         return BackupExportPayload(
             data: data,
             filename: "taigi_backup_\(Self.formattedDate()).taigi",
         )
     }
 
-    func importBackup(url: URL) async throws -> BackupService.ImportResult {
+    func importBackup(url: URL) async throws -> BackupImportResult {
         isProcessing = true
         defer { isProcessing = false }
-        let data = try await Self.readFileData(from: url)
-        return try await service.importAll(from: data)
-    }
-
-    /// Read file off the main actor so a large import doesn't block UI.
-    private static func readFileData(from url: URL) async throws -> Data {
-        try await Task.detached(priority: .userInitiated) {
-            let accessing = url.startAccessingSecurityScopedResource()
-            defer {
-                if accessing {
-                    url.stopAccessingSecurityScopedResource()
-                }
-            }
-            return try Data(contentsOf: url)
-        }.value
+        return try await userData.importBackup(url: url)
     }
 
     private static func formattedDate() -> String {
