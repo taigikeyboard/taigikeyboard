@@ -22,8 +22,8 @@ import com.siansiansu.taigikeyboard.ime.core.ThemeSurface
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
+import com.siansiansu.taigikeyboard.ime.theme.KeyboardMaterialTheme
 import com.siansiansu.taigikeyboard.typeface.TypefaceLoader
-import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 
 /**
  * Candidate overlay view — expanded candidate grid over the keyboard.
@@ -103,7 +103,7 @@ class CandidateOverlayView : FrameLayout {
         )
 
         composeView?.setContent {
-            TaigiKeyboardTheme {
+            KeyboardMaterialTheme {
                 val resetKey by resetTrigger
                 val suggestions = suggestionsState.value
                 val isTranslateSwapped = translateSwappedState.value

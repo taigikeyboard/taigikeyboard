@@ -1,4 +1,4 @@
-// IME root Composable — applies TaigiKeyboardTheme, resolves navbar insets (via declarative
+// IME root Composable — applies KeyboardMaterialTheme, resolves navbar insets (via declarative
 // WindowInsets, avoiding the project_ime_window_arch.md dismiss-bug path), solves per-key
 // geometry, pushes keyHeightFactor to the smartbar, and mounts KeyboardLayout for the current mode.
 
@@ -24,14 +24,14 @@ import androidx.compose.ui.unit.Dp
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.popup.PopupHost
 import com.siansiansu.taigikeyboard.ime.text.key.KeyVariation
-import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
+import com.siansiansu.taigikeyboard.ime.theme.KeyboardMaterialTheme
 import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Top-level keyboard body Composable hosted by `TextInputManager` inside the
  * IME root ComposeView. Owns four responsibilities:
  *
- * 1. Apply [TaigiKeyboardTheme] — Material3 theme wrapper required for all
+ * 1. Apply [KeyboardMaterialTheme] — Material3 theme wrapper required for all
  *    Compose subtrees in this codebase (Phase A/B/C convention).
  * 2. Resolve the bottom inset padding that used to live in
  *    `TaigiKeyboard.onCreateInputView`'s `setOnApplyWindowInsetsListener`
@@ -60,7 +60,7 @@ fun KeyboardImeRoot(
     val activeLayout = uiState.layouts[uiState.activeMode]
     val appearance = uiState.appearance
 
-    TaigiKeyboardTheme {
+    KeyboardMaterialTheme {
         Box(
             modifier = Modifier
                 .fillMaxWidth()

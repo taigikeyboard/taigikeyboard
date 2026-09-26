@@ -6,8 +6,10 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
+import android.content.res.Resources
 import android.media.AudioManager
 import android.os.*
+import android.view.ContextThemeWrapper
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.CursorAnchorInfo
@@ -258,6 +260,15 @@ class TaigiKeyboard : LifecycleInputMethodService() {
             }
         }
 
+        // A theme switch while the input view exists (e.g. the keyboard is up during a pick):
+        // flip between the forced-light and system render modes right away. Before the first
+        // input view, onCreateInputView syncs instead.
+        serviceScope.launch {
+            prefs.observeSelectedThemeId().collect {
+                if (inputView != null && syncForcedLight()) rebuildInputView()
+            }
+        }
+
         setTheme(R.style.KeyboardTheme)
 
         AppVersionTracker.updateVersionOnInstallAndLastUse(this, prefs)
@@ -281,10 +292,46 @@ class TaigiKeyboard : LifecycleInputMethodService() {
         mediaInputManager.onCreate()
     }
 
+    /**
+     * Light-configured resources + theme while a user theme is active, else null (system
+     * appearance). A user theme is a light theme (USER 2026-09-26): no keyboard color may follow
+     * night mode, so every `?attr`, night-qualified resource, `getColorFromAttr(ime|view.context)`
+     * and [isKeyboardNightMode] read resolves the light values through [getResources] / [getTheme].
+     */
+    private var forcedLightContext: Context? = null
+
+    override fun getResources(): Resources = forcedLightContext?.resources ?: super.getResources()
+
+    override fun getTheme(): Resources.Theme = forcedLightContext?.theme ?: super.getTheme()
+
+    private fun lightContext(config: Configuration): Context {
+        val light =
+            Configuration(config).apply {
+                uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or Configuration.UI_MODE_NIGHT_NO
+            }
+        return ContextThemeWrapper(createConfigurationContext(light), R.style.KeyboardTheme)
+    }
+
+    /** Syncs [forcedLightContext] with the selected theme; true when the render mode flipped. */
+    private fun syncForcedLight(): Boolean {
+        val wantsLight = ThemeId.isUserTheme(prefs.selectedThemeId)
+        if (wantsLight == (forcedLightContext != null)) return false
+        forcedLightContext = if (wantsLight) lightContext(super.getResources().configuration) else null
+        return true
+    }
+
+    /** Rebuilds the input view for the current render mode (night flip or forced-light flip). */
+    private fun rebuildInputView() {
+        // Navigation bar color must update before the input view is rebuilt.
+        getWindow().getWindow()?.let { navbarManager.updateNavigationBar(it, this) }
+        onCreateInputView()?.let { setInputView(it) }
+    }
+
     @SuppressLint("InflateParams")
     override fun onCreateInputView(): View? {
         compositionRoot.logger.i(TAG, "onCreateInputView()")
 
+        syncForcedLight()
         baseContext.setTheme(R.style.KeyboardTheme)
 
         // Assign before manager.onCreateInputView() — managers read `inputView` directly.
@@ -360,6 +407,10 @@ class TaigiKeyboard : LifecycleInputMethodService() {
     ) {
         currentInputConnection?.requestCursorUpdates(InputConnection.CURSOR_UPDATE_MONITOR)
 
+        // A theme picked in settings while the IME was alive: switch between the forced-light
+        // and system render modes before this input shows.
+        if (syncForcedLight()) rebuildInputView()
+
         super.onStartInputView(info, restarting)
         clearAutoSpaceArm()
         textInputManager.onStartInputView(info, restarting)
@@ -395,13 +446,14 @@ class TaigiKeyboard : LifecycleInputMethodService() {
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
-        // Handle theme change when system dark mode changes
-        val uiModeChanged = (newConfig.diff(resources.configuration) and Configuration.UI_MODE_NIGHT_MASK) != 0
-        if (uiModeChanged) {
-            // Navigation bar color must update before the input view is rebuilt.
-            getWindow().getWindow()?.let { navbarManager.updateNavigationBar(it, this) }
-            onCreateInputView()?.let { setInputView(it) }
-        }
+        // Compare against the real configuration: the forced-light resources never change uiMode.
+        val uiModeChanged = (newConfig.diff(super.getResources().configuration) and Configuration.UI_MODE_NIGHT_MASK) != 0
+        // Keep the forced-light resources in step with every other config axis (density, locale, …).
+        if (forcedLightContext != null) forcedLightContext = lightContext(newConfig)
+        // Handle theme change when system dark mode changes. Under a user theme the rebuild is
+        // visually a no-op but re-seeds every Compose LocalConfiguration from the light resources
+        // (the window's config dispatch pushes the real night uiMode into existing ComposeViews).
+        if (uiModeChanged) rebuildInputView()
 
         super.onConfigurationChanged(newConfig)
         textInputManager.onConfigurationChanged(newConfig)

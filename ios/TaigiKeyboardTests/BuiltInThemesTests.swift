@@ -266,6 +266,13 @@ final class BuiltInThemesTests: XCTestCase {
         XCTAssertEqual(adaptive.foregroundColor, KeyboardCalloutStyle.standard.foregroundColor)
     }
 
+    // trace: user-theme id = UUID string → forced .light; default sentinel / built-in id → nil (system).
+    func testForcedColorScheme_userThemeIsLight() {
+        XCTAssertEqual(ThemeId.forcedColorScheme(for: UUID().uuidString), .light)
+        XCTAssertNil(ThemeId.forcedColorScheme(for: ThemeId.default))
+        XCTAssertNil(ThemeId.forcedColorScheme(for: "standardPink"))
+    }
+
     // trace: a dark-only theme (light == nil) → .light request falls back to the dark variant
     func testColorsForScheme_darkOnlyFallsBackToDark() {
         let darkColors = makeColors(hex: 0x112233)

@@ -3,13 +3,19 @@ package com.siansiansu.taigikeyboard.ime.media.emoji
 import android.content.Context
 import android.util.AttributeSet
 import android.widget.FrameLayout
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import com.siansiansu.taigikeyboard.ime.core.KeyboardColorSettings
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
-import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
+import com.siansiansu.taigikeyboard.ime.core.ThemeAppearanceCache
+import com.siansiansu.taigikeyboard.ime.core.isKeyboardNightMode
+import com.siansiansu.taigikeyboard.ime.theme.KeyboardMaterialTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.async
@@ -62,24 +68,26 @@ class EmojiKeyboardView : FrameLayout {
                     }.await()
 
             composeView?.setContent {
-                TaigiKeyboardTheme {
-                    val preferredSkinTone by preferencesManager.getPreferredSkinTone().collectAsState(
-                        initial = com.siansiansu.taigikeyboard.ime.keyboard.EmojiSkinTone.DEFAULT,
-                    )
+                KeyboardMaterialTheme {
+                    ThemedEmojiColors(themeColors()) {
+                        val preferredSkinTone by preferencesManager.getPreferredSkinTone().collectAsState(
+                            initial = com.siansiansu.taigikeyboard.ime.keyboard.EmojiSkinTone.DEFAULT,
+                        )
 
-                    EmojiPaletteView(
-                        fullEmojiMappings = layouts,
-                        preferredSkinTone = preferredSkinTone,
-                        onEmojiClick = { emojiKeyData ->
-                            taigikeyboard.mediaInputManager.sendEmojiKeyPress(emojiKeyData)
-                        },
-                        onSkinToneSelected = { skinTone ->
-                            mainScope.launch {
-                                preferencesManager.setPreferredSkinTone(skinTone)
-                            }
-                        },
-                        modifier = Modifier,
-                    )
+                        EmojiPaletteView(
+                            fullEmojiMappings = layouts,
+                            preferredSkinTone = preferredSkinTone,
+                            onEmojiClick = { emojiKeyData ->
+                                taigikeyboard.mediaInputManager.sendEmojiKeyPress(emojiKeyData)
+                            },
+                            onSkinToneSelected = { skinTone ->
+                                mainScope.launch {
+                                    preferencesManager.setPreferredSkinTone(skinTone)
+                                }
+                            },
+                            modifier = Modifier,
+                        )
+                    }
                 }
             }
         }
@@ -91,4 +99,35 @@ class EmojiKeyboardView : FrameLayout {
         mainScope.cancel()
         composeView = null
     }
+
+    /** The active theme's colors, resolved on attach (the panel is recomposed per attach). */
+    private fun themeColors(): KeyboardColorSettings = ThemeAppearanceCache(taigikeyboard.prefs).resolve(isKeyboardNightMode(context)).colors
+}
+
+/**
+ * Applies the keyboard theme to the emoji palette: a themed keyboard (custom surface, painted
+ * behind the media panel by [com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardThemeSurfaceController])
+ * gets a transparent palette container, key-text glyph / tab / indicator colors and the key fill
+ * for the variants popup. The adaptive default keeps the Material3 scheme unchanged.
+ */
+@Composable
+private fun ThemedEmojiColors(
+    colors: KeyboardColorSettings,
+    content: @Composable () -> Unit,
+) {
+    if (colors.surface == null) return content()
+    val base = MaterialTheme.colorScheme
+    val foreground = colors.keyTextColor?.let { Color(it) }
+    MaterialTheme(
+        colorScheme =
+            base.copy(
+                surface = Color.Transparent,
+                onSurface = foreground ?: base.onSurface,
+                onSurfaceVariant = foreground ?: base.onSurfaceVariant,
+                primary = foreground ?: base.primary,
+                surfaceVariant = colors.fixedKeyFill?.let { Color(it) } ?: base.surfaceVariant,
+            ),
+        typography = MaterialTheme.typography,
+        content = content,
+    )
 }

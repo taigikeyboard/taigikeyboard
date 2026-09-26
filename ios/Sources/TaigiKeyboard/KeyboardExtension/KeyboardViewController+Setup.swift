@@ -152,6 +152,8 @@ extension KeyboardViewController {
     /// @AppStorage didSet doesn't fire for changes from an external process,
     /// so this is triggered via UserDefaults.didChangeNotification.
     func syncSettings() {
+        // A theme switch can flip the forced appearance; apply it before anything re-renders.
+        applyForcedInterfaceStyle()
         var needsAutocompleteReset = false
 
         // Check if input mode changed; if so, recreate AutocompleteService

@@ -1,5 +1,6 @@
 package com.siansiansu.taigikeyboard.ime.text.keyboard
 
+import android.content.res.ColorStateList
 import android.graphics.LinearGradient
 import android.graphics.Shader
 import android.graphics.drawable.ColorDrawable
@@ -7,6 +8,8 @@ import android.graphics.drawable.Drawable
 import android.graphics.drawable.PaintDrawable
 import android.graphics.drawable.ShapeDrawable
 import android.view.ViewGroup
+import android.widget.Button
+import android.widget.ImageButton
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.InputView
@@ -23,11 +26,12 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 /**
- * Applies the View-layer side of a resolved theme. The theme background (solid or
- * gradient) is painted ONCE on the common parent (`text_input_content`, which spans
- * the candidate bar through the keyboard body and is scoped to text input — the
- * media/emoji panel is a `ViewFlipper` sibling, so it is unaffected). The smartbar
- * chrome is then made transparent so the surface shows continuously.
+ * Applies the View-layer side of a resolved theme. The theme background (solid,
+ * gradient or photo) is painted on each [SURFACE_TARGETS] view: `text_input_content`
+ * (spans the candidate bar through the keyboard body, one continuous fill) and
+ * `media_input` (the emoji panel, a `ViewFlipper` sibling — USER 2026-09-26: the emoji
+ * panel applies the theme too). The smartbar chrome is then made transparent so the
+ * surface shows continuously, and the emoji bottom bar takes the key text color.
  *
  * The adaptive default clears the drawable (back to the parent's `?keyboard_bgColor`)
  * and restores the attr-backed chrome, so the default path is visually unchanged.
@@ -46,6 +50,8 @@ internal class KeyboardThemeSurfaceController(
     private var hasApplied = false
     private var generation = 0
     private var photoJob: Job? = null
+    private var photoJobGeneration = -1
+    private var mediaBarDefaults: Pair<ColorStateList, ColorStateList?>? = null
 
     fun apply(colors: KeyboardColorSettings) {
         // apply() runs on every keyboard show; only re-allocate the drawable when the
@@ -56,13 +62,28 @@ internal class KeyboardThemeSurfaceController(
             applied = surface
             generation++
             photoJob?.cancel()
-            setSurfaceDrawable(surface?.let { drawable(it) })
+            setSurfaceDrawable { surface?.let { drawable(it) } }
         }
         inputView.findViewById<SmartbarView>(R.id.smartbar)?.applyThemeSurface(colors)
+        applyMediaBarForeground(colors)
     }
 
-    private fun setSurfaceDrawable(drawable: Drawable?) {
-        inputView.findViewById<ViewGroup>(R.id.text_input_content)?.background = drawable
+    /** Paints each surface target with its own drawable instance (bounds are per view). */
+    private fun setSurfaceDrawable(drawable: () -> Drawable?) {
+        for (id in SURFACE_TARGETS) inputView.findViewById<ViewGroup>(id)?.background = drawable()
+    }
+
+    /**
+     * The emoji panel's bottom bar (ABC + backspace) takes the key text color on a themed surface,
+     * else the colors its layout declares (captured on first apply).
+     */
+    private fun applyMediaBarForeground(colors: KeyboardColorSettings) {
+        val abc = inputView.findViewById<Button>(R.id.media_input_switch_to_text_input_button) ?: return
+        val backspace = inputView.findViewById<ImageButton>(R.id.media_input_backspace_button) ?: return
+        val defaults = mediaBarDefaults ?: (abc.textColors to backspace.imageTintList).also { mediaBarDefaults = it }
+        val foreground = colors.keyTextColor?.takeIf { colors.surface != null }?.let { ColorStateList.valueOf(it) }
+        abc.setTextColor(foreground ?: defaults.first)
+        backspace.imageTintList = foreground ?: defaults.second
     }
 
     private fun drawable(surface: ThemeSurface): Drawable =
@@ -83,10 +104,13 @@ internal class KeyboardThemeSurfaceController(
         val images = CompositionRoot.shared(inputView.context).themeImages
         images.cached(photo.file, ThemeImageVariant.FULL)?.let { return ThemeImageDrawable(it, photo, dimsTowardWhite) }
         val requested = generation
+        // One decode per surface change, though every surface target asks for a drawable.
+        if (photoJobGeneration == requested) return ColorDrawable(UserThemeSeed.SOLID_COLOR)
+        photoJobGeneration = requested
         photoJob =
             scope.launch {
                 val bitmap = images.load(photo.file, ThemeImageVariant.FULL) ?: return@launch
-                if (requested == generation) setSurfaceDrawable(ThemeImageDrawable(bitmap, photo, dimsTowardWhite))
+                if (requested == generation) setSurfaceDrawable { ThemeImageDrawable(bitmap, photo, dimsTowardWhite) }
             }
         return ColorDrawable(UserThemeSeed.SOLID_COLOR)
     }
@@ -119,4 +143,9 @@ internal class KeyboardThemeSurfaceController(
                     }
                 }
         }
+
+    private companion object {
+        /** Views that paint the theme surface (text input + emoji panel). */
+        val SURFACE_TARGETS = intArrayOf(R.id.text_input_content, R.id.media_input)
+    }
 }

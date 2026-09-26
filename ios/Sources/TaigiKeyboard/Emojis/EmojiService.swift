@@ -61,5 +61,10 @@ private struct EmojiViewRepresentable: UIViewRepresentable {
         emojiView
     }
 
-    func updateUIView(_: EmojiView, context _: Context) {}
+    /// A themed keyboard (custom surface) shows its surface through the emoji keyboard: the root
+    /// `ThemeBackgroundSurface` paints behind it, so ISEmojiView's own background goes clear.
+    /// The adaptive default keeps ISEmojiView's `.secondarySystemBackground`.
+    func updateUIView(_ view: EmojiView, context: Context) {
+        view.backgroundColor = context.environment.candidateTheme.surface == nil ? .secondarySystemBackground : .clear
+    }
 }

@@ -17,7 +17,7 @@ import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
-import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
+import com.siansiansu.taigikeyboard.ime.theme.KeyboardMaterialTheme
 
 /**
  * Symbol selection overlay view.
@@ -75,7 +75,7 @@ class SymbolSelectionOverlayView : FrameLayout {
         )
 
         composeView?.setContent {
-            TaigiKeyboardTheme {
+            KeyboardMaterialTheme {
                 val trigger by refreshTrigger
                 // i18n live-switch: the IME (same process) follows the SAME DataStore tag the host
                 // writes, so a host-side change recomposes this overlay live (no IME service restart).
