@@ -12,13 +12,21 @@ e2e_reachable() {
 
 e2e_sync() {
     local ssh_cmd=$1 host=$2
-    # macOS openrsync ignores --delete under --relative: clear the small trees
-    # whose deletions matter (a removed scenario must not keep running).
-    $ssh_cmd "$host" "mkdir -p $E2E_REMOTE/src && rm -rf $E2E_REMOTE/src/e2e $E2E_REMOTE/src/tools"
-    # Only what `make -C linux install` reads; `target/` stays on the VM so the
-    # next run builds incrementally.
-    (cd "$E2E_REPO_ROOT" && rsync -a -e "$ssh_cmd" --delete --relative --exclude 'target/' --exclude '.git' --exclude 'e2e/runs/' \
-        engine desktop linux dictionaries i18n fonts symbols tools e2e "$host:$E2E_REMOTE/src/")
+    # Only what `make -C linux install` reads (the `../` inputs of
+    # linux/Makefile, licence texts included) plus the harness. `target/`
+    # stays on the VM so the next run builds incrementally.
+    local trees=(engine desktop linux dictionaries i18n fonts symbols tools e2e)
+    local files=(LICENSE NOTICE THIRD_PARTY_LICENSES.md dictionary/LICENSE)
+    $ssh_cmd "$host" "mkdir -p $E2E_REMOTE/src/dictionary"
+    # One rsync per tree rather than one `--relative` call: macOS openrsync
+    # ignores --delete under --relative, and a file removed here (a retired
+    # scenario, a moved source) must leave the VM too.
+    local tree
+    for tree in "${trees[@]}"; do
+        (cd "$E2E_REPO_ROOT" && rsync -a -e "$ssh_cmd" --delete --exclude 'target/' --exclude '.git' --exclude '/runs/' \
+            "$tree/" "$host:$E2E_REMOTE/src/$tree/")
+    done
+    (cd "$E2E_REPO_ROOT" && rsync -a -e "$ssh_cmd" --relative "${files[@]}" "$host:$E2E_REMOTE/src/")
 }
 
 e2e_build() {
