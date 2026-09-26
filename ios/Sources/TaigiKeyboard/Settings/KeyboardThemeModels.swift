@@ -16,6 +16,13 @@ enum ThemeId {
     static func isUserTheme(_ id: String) -> Bool {
         UUID(uuidString: id) != nil
     }
+
+    /// The appearance the keyboard renders `id` in regardless of the system: a user theme is a
+    /// light theme (USER 2026-09-26), so no color may follow dark mode; nil = follow the system.
+    // CROSS-PLATFORM INVARIANT — mirrors android TaigiKeyboard.syncForcedLight (user theme ⇒ NIGHT_NO).
+    static func forcedColorScheme(for id: String) -> ColorScheme? {
+        isUserTheme(id) ? .light : nil
+    }
 }
 
 // MARK: - Built-in theme

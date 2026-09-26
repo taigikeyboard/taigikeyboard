@@ -16,7 +16,7 @@ import com.siansiansu.taigikeyboard.i18n.ProvideDisplayLanguage
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
-import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
+import com.siansiansu.taigikeyboard.ime.theme.KeyboardMaterialTheme
 
 /**
  * Settings selection overlay view.
@@ -74,7 +74,7 @@ class SettingsSelectionOverlayView : FrameLayout {
         // Compose content instead of resurrecting a `getInstance()` reach.
         val prefs = (context as TaigiKeyboard).prefs
         composeView?.setContent {
-            TaigiKeyboardTheme {
+            KeyboardMaterialTheme {
                 val trigger by refreshTrigger
                 // i18n live-switch: the IME (same process) follows the SAME DataStore tag the host
                 // writes, so a host-side change recomposes this overlay live (no IME service restart).

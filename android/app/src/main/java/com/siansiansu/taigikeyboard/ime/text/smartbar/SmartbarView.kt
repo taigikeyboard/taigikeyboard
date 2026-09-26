@@ -18,8 +18,8 @@ import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.KeyboardColorSettings
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
+import com.siansiansu.taigikeyboard.ime.theme.KeyboardMaterialTheme
 import com.siansiansu.taigikeyboard.ime.theme.getColorFromAttr
-import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 
 /** Smartbar view: Compose-rendered Taigi + English candidate strips, number row, toolbar containers. */
 class SmartbarView : LinearLayout {
@@ -101,7 +101,7 @@ class SmartbarView : LinearLayout {
         candidatesComposeView?.apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
             setContent {
-                TaigiKeyboardTheme {
+                KeyboardMaterialTheme {
                     val state by smartbarManager.candidateStripState
                         .collectAsStateWithLifecycle()
                     TaigiCandidateStrip(
@@ -116,7 +116,7 @@ class SmartbarView : LinearLayout {
         englishCandidatesComposeView?.apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
             setContent {
-                TaigiKeyboardTheme {
+                KeyboardMaterialTheme {
                     val state by smartbarManager.candidateStripState
                         .collectAsStateWithLifecycle()
                     EnglishCandidateStrip(

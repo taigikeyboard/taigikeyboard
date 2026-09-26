@@ -25,9 +25,9 @@ import com.siansiansu.taigikeyboard.ime.text.keyboard.AnchorSide
 import com.siansiansu.taigikeyboard.ime.text.keyboard.ExtendedPopupGeometryInput
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardLayoutSolver
 import com.siansiansu.taigikeyboard.ime.text.keyboard.PopupDimensionsInput
+import com.siansiansu.taigikeyboard.ime.theme.KeyboardMaterialTheme
 import com.siansiansu.taigikeyboard.ime.theme.getColorFromAttr
 import com.siansiansu.taigikeyboard.typeface.TypefaceLoader
-import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -126,7 +126,7 @@ class KeyPopupManager(
             // the IME lifecycle instead so dismiss/show only re-attaches the view.
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                TaigiKeyboardTheme {
+                KeyboardMaterialTheme {
                     // Popups compose in a SEPARATE PopupWindow tree from the keyboard body, so they
                     // need their own ProvideDisplayLanguage scope — KeyPopupBox resolves its a11y
                     // contentDescription via stringRes, which crashes without LocalStringResolver in

@@ -111,6 +111,25 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
         setupKeyboardCaseProtection()
     }
 
+    override func viewWillAppear(_ animated: Bool) {
+        // Before KeyboardKit syncs its context, so the first frame already renders in the
+        // theme's forced appearance.
+        applyForcedInterfaceStyle()
+        super.viewWillAppear(animated)
+    }
+
+    /// Renders a user theme in light mode whatever the system appearance
+    /// (`ThemeId.forcedColorScheme`). The override flows into the controller's trait collection,
+    /// which KeyboardKit syncs into `keyboardContext.colorScheme`, so SwiftUI, UIKit subviews
+    /// (emoji keyboard, menus, toggles) and asset-catalog colors all resolve light.
+    func applyForcedInterfaceStyle() {
+        let style = ThemeId.forcedColorScheme(for: SharedSettings.shared.selectedThemeId)
+            .map(UIUserInterfaceStyle.init) ?? .unspecified
+        if overrideUserInterfaceStyle != style {
+            overrideUserInterfaceStyle = style
+        }
+    }
+
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
 

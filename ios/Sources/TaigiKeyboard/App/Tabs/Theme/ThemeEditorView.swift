@@ -20,7 +20,6 @@ import SwiftUI
 /// Save persists via the view model and auto-applies; back/pop discards.
 struct ThemeEditorView: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var colorScheme
     @Environment(DisplayLanguageStore.self) private var lang
     @StateObject private var viewModel: ThemeEditorViewModel
     @State private var showsCapAlert = false
@@ -117,7 +116,8 @@ struct ThemeEditorView: View {
             KeyboardPreviewPanel(
                 appearance: viewModel.appearance,
                 appliesThemeShadow: true,
-                colorScheme: colorScheme,
+                // A user theme renders light whatever the system appearance, as on the keyboard.
+                colorScheme: .light,
             )
             .overlay {
                 if viewModel.backgroundKind == .gradient {
