@@ -3,10 +3,10 @@
 
 use crate::capacity::LearningCapacity;
 use crate::database::{UserDataDatabase, UserDataDatabaseError};
+use crate::stores::FrequencySource;
+use crate::types::FrequencyRow;
 use rusqlite::{params, params_from_iter, Connection};
 use std::path::PathBuf;
-use taigi_desktop_core::composing::FrequencySource;
-use taigi_desktop_core::engine::FrequencyRow;
 
 const TABLE_NAME: &str = "user_frequency";
 const SCHEMA_VERSION: i64 = 2;

@@ -1,0 +1,34 @@
+[package]
+name = "userdata"
+description = "The user's data on disk: learning databases and custom dictionary, engine-owned (rust-migration-policy §6)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+# `sqlite` = the stores themselves (rusqlite with bundled C SQLite). Without it
+# only the row types and store traits build, which keeps a build of
+# `taigi-desktop-core` without the storage crate C-free, so the Windows msvc
+# target can be `cargo check`ed from macOS (windows/Makefile `check-msvc`,
+# windows-roadmap W1/W13; user-data-engine-roadmap U11).
+[features]
+default = ["sqlite"]
+sqlite = ["dep:rusqlite", "dep:uuid"]
+
+[dependencies]
+phonetics = { workspace = true }
+rusqlite = { workspace = true, optional = true }
+uuid = { workspace = true, optional = true }
+log = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+
+[[test]]
+name = "stores"
+required-features = ["sqlite"]

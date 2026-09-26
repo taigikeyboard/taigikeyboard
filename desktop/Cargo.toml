@@ -33,16 +33,13 @@ publish = false
 # calls; `protos` gives the prost types the envelope is built from.
 dispatch = { path = "../engine/dispatch" }
 protos = { path = "../engine/protos" }
+# The user-data stores, engine-owned (rust-migration-policy §6).
+userdata = { path = "../engine/userdata", default-features = false }
 prost = "0.14"
 log = "0.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
-# `bundled` compiles SQLite in: no system library to find on a user's machine,
-# one version everywhere, and the same WAL / UPSERT capability floor on every
-# desktop the input method runs on.
-rusqlite = { version = "0.40", features = ["bundled"] }
-uuid = { version = "1", features = ["v4"] }
 tempfile = "3"
 # HTTPS through the system TLS stack (schannel on Windows; the macOS host's
 # Security framework for the native tests). `transport.rs` selects

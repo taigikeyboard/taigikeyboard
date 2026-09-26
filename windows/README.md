@@ -10,7 +10,7 @@ input method. Design record and phase table:
 | Crate | Kind | Role |
 |---|---|---|
 | `../desktop/crates/taigi-desktop-core` | lib, `unsafe_code = forbid`, no C deps (own workspace, shared with Linux since 2026-09-22) | Everything that does not need a Win32 handle: settings model, engine bridge, composing orchestration, key classifier, candidate geometry, shortcuts, strings. Tested natively on any host (`make -C desktop test`). |
-| `../desktop/crates/taigi-desktop-storage` (PR4) | lib (own workspace, shared with Linux) | rusqlite user stores, settings file, CSV. |
+| `../desktop/crates/taigi-desktop-storage` (PR4) | lib (own workspace, shared with Linux) | settings file, user fonts; re-exports the rusqlite user stores and CSV from engine `userdata` (user-data-engine-roadmap P1). |
 | `crates/taigi-windows-tsf` (PR5a) | cdylib `TaigiKeyboard.dll`, the ONE crate with `unsafe` | DLL exports, registration, the `TextService` COM object (sinks, tray button + menu, settings reload, context identity), per-process runtime. Not host-testable: `make check-dll` links it under mingw and checks the export table. |
 | `crates/taigi-windows-platform` (PR7) | lib, the few Win32 calls both binaries need | locale, `ShellExecuteW`, beep, single-instance mutex, local date, debug logger; host stubs so the exe tests natively. |
 | `crates/taigi-windows-update` (PR9) | lib | update download (`ureq` over schannel), Authenticode + VERSIONINFO verification, toast; the manifest + checker are `../desktop/crates/taigi-desktop-update`. |

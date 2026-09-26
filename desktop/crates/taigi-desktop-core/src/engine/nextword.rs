@@ -16,15 +16,9 @@ use protos::engine::{
 use super::bridge::{nextword_config, record_failure, roundtrip};
 use crate::settings::EngineSettings;
 
-/// One learned bigram. `previous_tl` / `next_tl` are canonical TL — the
-/// identity axis of Core Principle #7.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct AssociationPair {
-    pub previous: String,
-    pub previous_tl: String,
-    pub next: String,
-    pub next_tl: String,
-}
+// Moved to the engine `userdata` crate (user-data-engine-roadmap P1);
+// re-exported here until the desktop switch (P5).
+pub use userdata::AssociationPair;
 
 /// What one learning intent asked the platform to write. Only the recording
 /// effects are represented; the engine's other four are about a prediction

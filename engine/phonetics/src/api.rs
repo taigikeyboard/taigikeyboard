@@ -504,6 +504,12 @@ pub fn toneless_reading_key(roman: &str) -> String {
     crate::derivation::derive_notone(roman)
 }
 
+// In-process twins of the `DeriveCustomSearchKeys` / `DeriveCustomQueryKey`
+// ops, for the engine's own user-data stores (`userdata`).
+pub use crate::custom_search::{
+    derive_custom_query_key, derive_custom_search_keys, CustomSearchKey,
+};
+
 /// The syllables of a canonical TL string — `-` inside a word, ` ` between
 /// the words of a multi-word entry (`iā sī`); an empty piece (the khinsiann
 /// `--`) is not a syllable. The one tokenizer `tps` already keys records by.
