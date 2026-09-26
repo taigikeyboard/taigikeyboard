@@ -400,7 +400,9 @@ public nonisolated struct Taigi_Engine_UserDataResponse: Sendable {
   public init() {}
 }
 
-/// Opens the stores for this process, once. Absolute file paths: one
+/// Opens the stores for this process, once. Every other request but
+/// `RecordUsage` waits until the open has finished (a page must not read a
+/// dictionary still being taken over). Absolute file paths: one
 /// directory everywhere except Android, whose `user_association.db` lives in
 /// `filesDir`. The stores are in use from the moment this is handled: a pick
 /// or a learned phrase reported meanwhile queues behind the open, a fetch
@@ -427,6 +429,13 @@ public nonisolated struct Taigi_Engine_OpenUserData: Sendable {
   public var journal: Taigi_Engine_UserDataJournal = .wal
 
   public var inBackground: Bool = false
+
+  /// The one directory the files live in, under the names every platform
+  /// shares (`user_frequency.db`, `user_association.db`,
+  /// `custom_dictionary.db`, `learned_phrases.db`). A non-empty `*_path`
+  /// above overrides its own file — Android's `user_association.db` in
+  /// `filesDir`. Without it, all four paths are required.
+  public var directory: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -474,7 +483,9 @@ public nonisolated struct Taigi_Engine_ResetUserData: Sendable {
   public init() {}
 }
 
-/// Rows removed per store (0 for a store not selected).
+/// Rows removed per store (0 for a store not selected, or one that failed).
+/// Every selected store is attempted: one that cannot be emptied is no
+/// reason to leave the others full.
 public nonisolated struct Taigi_Engine_UserDataReset: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -487,6 +498,11 @@ public nonisolated struct Taigi_Engine_UserDataReset: Sendable {
   public var customDictionaryRemoved: Int64 = 0
 
   public var learnedPhrasesRemoved: Int64 = 0
+
+  /// One line per selected store that could not be emptied, naming its file
+  /// (`user_frequency: <error>`) — English, for a diagnostic. Empty when
+  /// every selected store was emptied.
+  public var failures: [String] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -597,6 +613,11 @@ public nonisolated struct Taigi_Engine_CustomEntries: Sendable {
   /// the words `filter` matches, for paging
   public var matchingTotal: UInt32 = 0
 
+  /// The offset these entries start at: the request's, pulled back to the
+  /// last page's when the matches shrank under it (a delete on the last
+  /// page), so one request always answers a page that exists.
+  public var offset: UInt32 = 0
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -644,6 +665,10 @@ public nonisolated struct Taigi_Engine_CustomEntrySaved: Sendable {
   public var hasEntry: Bool {self._entry != nil}
   /// Clears the value of `entry`. Subsequent reads from it will return its default value.
   public mutating func clearEntry() {self._entry = nil}
+
+  /// The refusal in English, for an alert's diagnostic line
+  /// (`custom dictionary is full (max 30000 entries)`); empty when saved.
+  public var detail: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -702,6 +727,10 @@ public nonisolated struct Taigi_Engine_CustomCsvImported: Sendable {
   public var imported: UInt32 = 0
 
   public var skipped: UInt32 = 0
+
+  /// The refusal in English, for an alert's diagnostic line
+  /// (`file holds more than 30000 entries`); empty when imported.
+  public var detail: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1287,7 +1316,7 @@ nonisolated extension Taigi_Engine_UserDataResponse: SwiftProtobuf.Message, Swif
 
 nonisolated extension Taigi_Engine_OpenUserData: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".OpenUserData"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}frequency_path\0\u{3}association_path\0\u{3}custom_dictionary_path\0\u{3}learned_phrases_path\0\u{1}journal\0\u{3}in_background\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}frequency_path\0\u{3}association_path\0\u{3}custom_dictionary_path\0\u{3}learned_phrases_path\0\u{1}journal\0\u{3}in_background\0\u{1}directory\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1301,6 +1330,7 @@ nonisolated extension Taigi_Engine_OpenUserData: SwiftProtobuf.Message, SwiftPro
       case 4: try { try decoder.decodeSingularStringField(value: &self.learnedPhrasesPath) }()
       case 5: try { try decoder.decodeSingularEnumField(value: &self.journal) }()
       case 6: try { try decoder.decodeSingularBoolField(value: &self.inBackground) }()
+      case 7: try { try decoder.decodeSingularStringField(value: &self.directory) }()
       default: break
       }
     }
@@ -1325,6 +1355,9 @@ nonisolated extension Taigi_Engine_OpenUserData: SwiftProtobuf.Message, SwiftPro
     if self.inBackground != false {
       try visitor.visitSingularBoolField(value: self.inBackground, fieldNumber: 6)
     }
+    if !self.directory.isEmpty {
+      try visitor.visitSingularStringField(value: self.directory, fieldNumber: 7)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1335,6 +1368,7 @@ nonisolated extension Taigi_Engine_OpenUserData: SwiftProtobuf.Message, SwiftPro
     if lhs.learnedPhrasesPath != rhs.learnedPhrasesPath {return false}
     if lhs.journal != rhs.journal {return false}
     if lhs.inBackground != rhs.inBackground {return false}
+    if lhs.directory != rhs.directory {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1432,7 +1466,7 @@ nonisolated extension Taigi_Engine_ResetUserData: SwiftProtobuf.Message, SwiftPr
 
 nonisolated extension Taigi_Engine_UserDataReset: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".UserDataReset"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}frequency_removed\0\u{3}association_removed\0\u{3}custom_dictionary_removed\0\u{3}learned_phrases_removed\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}frequency_removed\0\u{3}association_removed\0\u{3}custom_dictionary_removed\0\u{3}learned_phrases_removed\0\u{1}failures\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1444,6 +1478,7 @@ nonisolated extension Taigi_Engine_UserDataReset: SwiftProtobuf.Message, SwiftPr
       case 2: try { try decoder.decodeSingularInt64Field(value: &self.associationRemoved) }()
       case 3: try { try decoder.decodeSingularInt64Field(value: &self.customDictionaryRemoved) }()
       case 4: try { try decoder.decodeSingularInt64Field(value: &self.learnedPhrasesRemoved) }()
+      case 5: try { try decoder.decodeRepeatedStringField(value: &self.failures) }()
       default: break
       }
     }
@@ -1462,6 +1497,9 @@ nonisolated extension Taigi_Engine_UserDataReset: SwiftProtobuf.Message, SwiftPr
     if self.learnedPhrasesRemoved != 0 {
       try visitor.visitSingularInt64Field(value: self.learnedPhrasesRemoved, fieldNumber: 4)
     }
+    if !self.failures.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.failures, fieldNumber: 5)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1470,6 +1508,7 @@ nonisolated extension Taigi_Engine_UserDataReset: SwiftProtobuf.Message, SwiftPr
     if lhs.associationRemoved != rhs.associationRemoved {return false}
     if lhs.customDictionaryRemoved != rhs.customDictionaryRemoved {return false}
     if lhs.learnedPhrasesRemoved != rhs.learnedPhrasesRemoved {return false}
+    if lhs.failures != rhs.failures {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1635,7 +1674,7 @@ nonisolated extension Taigi_Engine_ListCustomEntries: SwiftProtobuf.Message, Swi
 
 nonisolated extension Taigi_Engine_CustomEntries: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CustomEntries"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entries\0\u{1}total\0\u{3}matching_total\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entries\0\u{1}total\0\u{3}matching_total\0\u{1}offset\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1646,6 +1685,7 @@ nonisolated extension Taigi_Engine_CustomEntries: SwiftProtobuf.Message, SwiftPr
       case 1: try { try decoder.decodeRepeatedMessageField(value: &self.entries) }()
       case 2: try { try decoder.decodeSingularUInt32Field(value: &self.total) }()
       case 3: try { try decoder.decodeSingularUInt32Field(value: &self.matchingTotal) }()
+      case 4: try { try decoder.decodeSingularUInt32Field(value: &self.offset) }()
       default: break
       }
     }
@@ -1661,6 +1701,9 @@ nonisolated extension Taigi_Engine_CustomEntries: SwiftProtobuf.Message, SwiftPr
     if self.matchingTotal != 0 {
       try visitor.visitSingularUInt32Field(value: self.matchingTotal, fieldNumber: 3)
     }
+    if self.offset != 0 {
+      try visitor.visitSingularUInt32Field(value: self.offset, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1668,6 +1711,7 @@ nonisolated extension Taigi_Engine_CustomEntries: SwiftProtobuf.Message, SwiftPr
     if lhs.entries != rhs.entries {return false}
     if lhs.total != rhs.total {return false}
     if lhs.matchingTotal != rhs.matchingTotal {return false}
+    if lhs.offset != rhs.offset {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1719,7 +1763,7 @@ nonisolated extension Taigi_Engine_SaveCustomEntry: SwiftProtobuf.Message, Swift
 
 nonisolated extension Taigi_Engine_CustomEntrySaved: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CustomEntrySaved"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}refusal\0\u{1}entry\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}refusal\0\u{1}entry\0\u{1}detail\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1729,6 +1773,7 @@ nonisolated extension Taigi_Engine_CustomEntrySaved: SwiftProtobuf.Message, Swif
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularEnumField(value: &self.refusal) }()
       case 2: try { try decoder.decodeSingularMessageField(value: &self._entry) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.detail) }()
       default: break
       }
     }
@@ -1745,12 +1790,16 @@ nonisolated extension Taigi_Engine_CustomEntrySaved: SwiftProtobuf.Message, Swif
     try { if let v = self._entry {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
     } }()
+    if !self.detail.isEmpty {
+      try visitor.visitSingularStringField(value: self.detail, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Taigi_Engine_CustomEntrySaved, rhs: Taigi_Engine_CustomEntrySaved) -> Bool {
     if lhs.refusal != rhs.refusal {return false}
     if lhs._entry != rhs._entry {return false}
+    if lhs.detail != rhs.detail {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1848,7 +1897,7 @@ nonisolated extension Taigi_Engine_ImportCustomCsv: SwiftProtobuf.Message, Swift
 
 nonisolated extension Taigi_Engine_CustomCsvImported: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CustomCsvImported"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}refusal\0\u{1}imported\0\u{1}skipped\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}refusal\0\u{1}imported\0\u{1}skipped\0\u{1}detail\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1859,6 +1908,7 @@ nonisolated extension Taigi_Engine_CustomCsvImported: SwiftProtobuf.Message, Swi
       case 1: try { try decoder.decodeSingularEnumField(value: &self.refusal) }()
       case 2: try { try decoder.decodeSingularUInt32Field(value: &self.imported) }()
       case 3: try { try decoder.decodeSingularUInt32Field(value: &self.skipped) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.detail) }()
       default: break
       }
     }
@@ -1874,6 +1924,9 @@ nonisolated extension Taigi_Engine_CustomCsvImported: SwiftProtobuf.Message, Swi
     if self.skipped != 0 {
       try visitor.visitSingularUInt32Field(value: self.skipped, fieldNumber: 3)
     }
+    if !self.detail.isEmpty {
+      try visitor.visitSingularStringField(value: self.detail, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1881,6 +1934,7 @@ nonisolated extension Taigi_Engine_CustomCsvImported: SwiftProtobuf.Message, Swi
     if lhs.refusal != rhs.refusal {return false}
     if lhs.imported != rhs.imported {return false}
     if lhs.skipped != rhs.skipped {return false}
+    if lhs.detail != rhs.detail {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

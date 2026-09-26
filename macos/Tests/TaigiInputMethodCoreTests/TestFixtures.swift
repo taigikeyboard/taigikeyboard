@@ -239,39 +239,6 @@ enum TestFixtures {
         )
     }
 
-    /// The user-data stores over a scratch directory, open and ready.
-    ///
-    /// Real SQLite rather than a double: the whole of what these types do is
-    /// SQL, and a double would only prove that the fake behaves like the fake.
-    static func makeUserDataStores() throws -> UserDataStores {
-        let directory = try scratchDirectory()
-        let stores = UserDataStores(directory: { directory })
-        stores.open()
-        waitUntilReady(stores)
-        return stores
-    }
-
-    /// Spins the run loop until every store has opened. Opening is
-    /// asynchronous by design — a keystroke must never wait on it — so a case
-    /// that asserts on stored rows has to wait here instead.
-    static func waitUntilReady(
-        _ stores: UserDataStores,
-        timeout: TimeInterval = 5,
-        file: StaticString = #filePath,
-        line: UInt = #line,
-    ) {
-        let opened = spinRunLoop(
-            until: {
-                stores.frequency.isReady && stores.association.isReady
-                    && stores.customDictionary.isReady && stores.learnedPhrases.isReady
-            },
-            timeout: timeout,
-        )
-        if !opened {
-            XCTFail("the learning stores did not open within \(timeout)s", file: file, line: line)
-        }
-    }
-
     /// A display-language store pinned to `language`, over the caller's own defaults suite.
     ///
     /// Every case that asserts on localized chrome needs one: the shared store reads the machine's
@@ -291,11 +258,7 @@ enum TestFixtures {
     }
 
     /// Runs the current run loop until `condition` holds, and answers whether
-    /// it did before `timeout`.
-    ///
-    /// The learning stores do their work on their own queue and answer through
-    /// state a test can only poll, so every case that asserts on what they
-    /// stored needs this shape — once, here, rather than once per suite.
+    /// it did before `timeout` — for state a case can only poll.
     static func spinRunLoop(
         until condition: () -> Bool,
         timeout: TimeInterval = 5,
@@ -308,60 +271,40 @@ enum TestFixtures {
         return true
     }
 
-    /// The rows `read` answers once it answers `expected` of them — a store
-    /// write is queued, and this is how a case sees it land.
-    static func waitFor<Row>(
-        untilCountIs expected: Int,
-        timeout: TimeInterval = 5,
-        file: StaticString = #filePath,
-        line: UInt = #line,
-        _ read: () -> [Row]?,
-    ) throws -> [Row] {
-        let arrived = spinRunLoop(until: { read()?.count == expected }, timeout: timeout)
-        guard arrived else {
-            XCTFail("the store never reported \(expected) rows within \(timeout)s", file: file, line: line)
-            return []
-        }
-        return try XCTUnwrap(read(), file: file, line: line)
-    }
-
-    /// A manager wired to scratch stores unless a case supplies its own.
+    /// A manager whose learning is recorded in memory unless a case supplies
+    /// its own recorders.
     ///
     /// The production initializer takes no defaults on purpose — the shipped
-    /// stores write to the user's home directory. Defaulting HERE is the
+    /// recorder counts into the user's real data. Defaulting HERE is the
     /// opposite hazard and the safe one: a case that forgets to say where its
-    /// learning goes gets a directory that is thrown away, never the user's.
+    /// learning goes gets a recorder that is thrown away. This process never
+    /// opens the engine's user data: the handle is process-wide, and an open
+    /// here would reach every later fetch in the run.
     @MainActor
     static func makeComposingManager(
         settingsProvider: EngineSettingsProvider = StubEngineSettingsProvider(),
-        stores: UserDataStores? = nil,
+        usage: RecordingUsageRecorder = RecordingUsageRecorder(),
+        associations: RecordingAssociationSink = RecordingAssociationSink(),
         startingGeneration: UInt64,
     ) throws -> ComposingManager {
-        let stores = try stores ?? makeUserDataStores()
-        return ComposingManager(
+        ComposingManager(
             settingsProvider: settingsProvider,
-            frequencyStore: stores.frequency,
-            customDictionaryStore: stores.customDictionary,
-            learnedPhraseStore: stores.learnedPhrases,
-            nextWordLearner: NextWordLearner(store: stores.association),
+            usageRecorder: usage,
+            nextWordLearner: NextWordLearner(sink: associations),
             startingGeneration: startingGeneration,
         )
     }
 
-    /// A coordinator of its own, over scratch stores and an unused generation.
+    /// A coordinator of its own, over in-memory recorders and an unused
+    /// generation.
     ///
     /// Never `ComposingSessionCoordinator.shared`: that one is process-wide,
     /// guards process-wide engine state, and in the shipped app arms the real
     /// Carbon hotkeys through `AppDelegate`'s availability callback.
     @MainActor
     static func makeCoordinator() throws -> ComposingSessionCoordinator {
-        let stores = try makeUserDataStores()
-        return try ComposingSessionCoordinator(
-            composingManager: makeComposingManager(
-                stores: stores,
-                startingGeneration: generationCounter.next(),
-            ),
-            learningStores: stores,
+        try ComposingSessionCoordinator(
+            composingManager: makeComposingManager(startingGeneration: generationCounter.next()),
         )
     }
 

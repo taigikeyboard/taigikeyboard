@@ -156,8 +156,8 @@ struct SettingsSidebarView: View {
 /// held open for a caller that does not exist; relisting the pane adds it back
 /// where it is needed.
 struct SettingsDetailView: View {
-    /// The stores the dictionary pages read and write.
-    let stores: UserDataStores
+    /// What the dictionary pages read and write through.
+    let userData: any UserDataClient
 
     @AppStorage(SettingsStore.Keys.selectedSettingsPane.name)
     private var selectedPane = SettingsStore.Keys.selectedSettingsPane.defaultValue
@@ -173,7 +173,7 @@ struct SettingsDetailView: View {
         case .shortcuts:
             ShortcutSettingsView()
         case .customDictionary:
-            CustomDictionaryPage(stores: stores)
+            CustomDictionaryPage(client: userData)
         case .dictionarySources:
             DictionaryTogglesView()
         case .fontManagement:

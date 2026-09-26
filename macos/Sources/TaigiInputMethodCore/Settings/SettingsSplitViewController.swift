@@ -27,7 +27,7 @@ final class SettingsSplitViewController: NSSplitViewController {
     /// controller; the observation ends when it is released.
     private var paneObservation: AnyObject?
 
-    init(stores: UserDataStores, language: DisplayLanguageStore) {
+    init(userData: any UserDataClient, language: DisplayLanguageStore) {
         self.language = language
         super.init(nibName: nil, bundle: nil)
 
@@ -46,7 +46,7 @@ final class SettingsSplitViewController: NSSplitViewController {
         addSplitViewItem(sidebarItem)
 
         let detail = NSHostingController(
-            rootView: SettingsDetailView(stores: stores).environment(language),
+            rootView: SettingsDetailView(userData: userData).environment(language),
         )
         // No thickness of its own: it takes what the window's fixed width
         // leaves after the sidebar and the divider, and pinning a second rigid

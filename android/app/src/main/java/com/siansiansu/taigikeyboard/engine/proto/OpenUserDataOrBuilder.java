@@ -74,4 +74,32 @@ public interface OpenUserDataOrBuilder extends
    * @return The inBackground.
    */
   boolean getInBackground();
+
+  /**
+   * <pre>
+   * The one directory the files live in, under the names every platform
+   * shares (`user_frequency.db`, `user_association.db`,
+   * `custom_dictionary.db`, `learned_phrases.db`). A non-empty `*_path`
+   * above overrides its own file — Android's `user_association.db` in
+   * `filesDir`. Without it, all four paths are required.
+   * </pre>
+   *
+   * <code>string directory = 7;</code>
+   * @return The directory.
+   */
+  java.lang.String getDirectory();
+  /**
+   * <pre>
+   * The one directory the files live in, under the names every platform
+   * shares (`user_frequency.db`, `user_association.db`,
+   * `custom_dictionary.db`, `learned_phrases.db`). A non-empty `*_path`
+   * above overrides its own file — Android's `user_association.db` in
+   * `filesDir`. Without it, all four paths are required.
+   * </pre>
+   *
+   * <code>string directory = 7;</code>
+   * @return The bytes for directory.
+   */
+  com.google.protobuf.ByteString
+      getDirectoryBytes();
 }

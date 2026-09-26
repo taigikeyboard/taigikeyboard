@@ -7,7 +7,9 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * Opens the stores for this process, once. Absolute file paths: one
+ * Opens the stores for this process, once. Every other request but
+ * `RecordUsage` waits until the open has finished (a page must not read a
+ * dictionary still being taken over). Absolute file paths: one
  * directory everywhere except Android, whose `user_association.db` lives in
  * `filesDir`. The stores are in use from the moment this is handled: a pick
  * or a learned phrase reported meanwhile queues behind the open, a fetch
@@ -33,6 +35,7 @@ public  final class OpenUserData extends
     associationPath_ = "";
     customDictionaryPath_ = "";
     learnedPhrasesPath_ = "";
+    directory_ = "";
   }
   public static final int FREQUENCY_PATH_FIELD_NUMBER = 1;
   private java.lang.String frequencyPath_;
@@ -291,6 +294,93 @@ public  final class OpenUserData extends
     inBackground_ = false;
   }
 
+  public static final int DIRECTORY_FIELD_NUMBER = 7;
+  private java.lang.String directory_;
+  /**
+   * <pre>
+   * The one directory the files live in, under the names every platform
+   * shares (`user_frequency.db`, `user_association.db`,
+   * `custom_dictionary.db`, `learned_phrases.db`). A non-empty `*_path`
+   * above overrides its own file — Android's `user_association.db` in
+   * `filesDir`. Without it, all four paths are required.
+   * </pre>
+   *
+   * <code>string directory = 7;</code>
+   * @return The directory.
+   */
+  @java.lang.Override
+  public java.lang.String getDirectory() {
+    return directory_;
+  }
+  /**
+   * <pre>
+   * The one directory the files live in, under the names every platform
+   * shares (`user_frequency.db`, `user_association.db`,
+   * `custom_dictionary.db`, `learned_phrases.db`). A non-empty `*_path`
+   * above overrides its own file — Android's `user_association.db` in
+   * `filesDir`. Without it, all four paths are required.
+   * </pre>
+   *
+   * <code>string directory = 7;</code>
+   * @return The bytes for directory.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getDirectoryBytes() {
+    return com.google.protobuf.ByteString.copyFromUtf8(directory_);
+  }
+  /**
+   * <pre>
+   * The one directory the files live in, under the names every platform
+   * shares (`user_frequency.db`, `user_association.db`,
+   * `custom_dictionary.db`, `learned_phrases.db`). A non-empty `*_path`
+   * above overrides its own file — Android's `user_association.db` in
+   * `filesDir`. Without it, all four paths are required.
+   * </pre>
+   *
+   * <code>string directory = 7;</code>
+   * @param value The directory to set.
+   */
+  private void setDirectory(
+      java.lang.String value) {
+    java.util.Objects.requireNonNull(value);
+
+    directory_ = value;
+  }
+  /**
+   * <pre>
+   * The one directory the files live in, under the names every platform
+   * shares (`user_frequency.db`, `user_association.db`,
+   * `custom_dictionary.db`, `learned_phrases.db`). A non-empty `*_path`
+   * above overrides its own file — Android's `user_association.db` in
+   * `filesDir`. Without it, all four paths are required.
+   * </pre>
+   *
+   * <code>string directory = 7;</code>
+   */
+  private void clearDirectory() {
+
+    directory_ = getDefaultInstance().getDirectory();
+  }
+  /**
+   * <pre>
+   * The one directory the files live in, under the names every platform
+   * shares (`user_frequency.db`, `user_association.db`,
+   * `custom_dictionary.db`, `learned_phrases.db`). A non-empty `*_path`
+   * above overrides its own file — Android's `user_association.db` in
+   * `filesDir`. Without it, all four paths are required.
+   * </pre>
+   *
+   * <code>string directory = 7;</code>
+   * @param value The bytes for directory to set.
+   */
+  private void setDirectoryBytes(
+      com.google.protobuf.ByteString value) {
+    checkByteStringIsUtf8(value);
+    directory_ = value.toStringUtf8();
+
+  }
+
   public static com.siansiansu.taigikeyboard.engine.proto.OpenUserData parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -376,7 +466,9 @@ public  final class OpenUserData extends
 
   /**
    * <pre>
-   * Opens the stores for this process, once. Absolute file paths: one
+   * Opens the stores for this process, once. Every other request but
+   * `RecordUsage` waits until the open has finished (a page must not read a
+   * dictionary still being taken over). Absolute file paths: one
    * directory everywhere except Android, whose `user_association.db` lives in
    * `filesDir`. The stores are in use from the moment this is handled: a pick
    * or a learned phrase reported meanwhile queues behind the open, a fetch
@@ -673,6 +765,95 @@ public  final class OpenUserData extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The one directory the files live in, under the names every platform
+     * shares (`user_frequency.db`, `user_association.db`,
+     * `custom_dictionary.db`, `learned_phrases.db`). A non-empty `*_path`
+     * above overrides its own file — Android's `user_association.db` in
+     * `filesDir`. Without it, all four paths are required.
+     * </pre>
+     *
+     * <code>string directory = 7;</code>
+     * @return The directory.
+     */
+    @java.lang.Override
+    public java.lang.String getDirectory() {
+      return instance.getDirectory();
+    }
+    /**
+     * <pre>
+     * The one directory the files live in, under the names every platform
+     * shares (`user_frequency.db`, `user_association.db`,
+     * `custom_dictionary.db`, `learned_phrases.db`). A non-empty `*_path`
+     * above overrides its own file — Android's `user_association.db` in
+     * `filesDir`. Without it, all four paths are required.
+     * </pre>
+     *
+     * <code>string directory = 7;</code>
+     * @return The bytes for directory.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getDirectoryBytes() {
+      return instance.getDirectoryBytes();
+    }
+    /**
+     * <pre>
+     * The one directory the files live in, under the names every platform
+     * shares (`user_frequency.db`, `user_association.db`,
+     * `custom_dictionary.db`, `learned_phrases.db`). A non-empty `*_path`
+     * above overrides its own file — Android's `user_association.db` in
+     * `filesDir`. Without it, all four paths are required.
+     * </pre>
+     *
+     * <code>string directory = 7;</code>
+     * @param value The directory to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDirectory(
+        java.lang.String value) {
+      copyOnWrite();
+      instance.setDirectory(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The one directory the files live in, under the names every platform
+     * shares (`user_frequency.db`, `user_association.db`,
+     * `custom_dictionary.db`, `learned_phrases.db`). A non-empty `*_path`
+     * above overrides its own file — Android's `user_association.db` in
+     * `filesDir`. Without it, all four paths are required.
+     * </pre>
+     *
+     * <code>string directory = 7;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearDirectory() {
+      copyOnWrite();
+      instance.clearDirectory();
+      return this;
+    }
+    /**
+     * <pre>
+     * The one directory the files live in, under the names every platform
+     * shares (`user_frequency.db`, `user_association.db`,
+     * `custom_dictionary.db`, `learned_phrases.db`). A non-empty `*_path`
+     * above overrides its own file — Android's `user_association.db` in
+     * `filesDir`. Without it, all four paths are required.
+     * </pre>
+     *
+     * <code>string directory = 7;</code>
+     * @param value The bytes for directory to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDirectoryBytes(
+        com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.setDirectoryBytes(value);
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.OpenUserData)
   }
   @java.lang.Override
@@ -695,10 +876,11 @@ public  final class OpenUserData extends
             "learnedPhrasesPath_",
             "journal_",
             "inBackground_",
+            "directory_",
           };
           java.lang.String info =
-              "\u0000\u0006\u0000\u0000\u0001\u0006\u0006\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
-              "\u0003\u0208\u0004\u0208\u0005\f\u0006\u0007";
+              "\u0000\u0007\u0000\u0000\u0001\u0007\u0007\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
+              "\u0003\u0208\u0004\u0208\u0005\f\u0006\u0007\u0007\u0208";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

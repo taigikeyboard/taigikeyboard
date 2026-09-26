@@ -10,7 +10,6 @@ use protos::engine::{
     request, response, user_data_request, user_data_response, OpenUserData, RecordUsage,
     UserDataJournal, UserDataOpened, UserDataRequest,
 };
-use userdata::UserDataPaths;
 
 use super::bridge::{record_failure, roundtrip};
 
@@ -20,16 +19,12 @@ use super::bridge::{record_failure, roundtrip};
 /// the open) and finishes opening — the first takeover's re-derivation
 /// included — on a thread of its own. The answer is readiness as of now.
 pub fn open(directory: &Path) -> Option<UserDataOpened> {
-    let paths = UserDataPaths::in_directory(directory);
-    let path = |path: &Path| path.display().to_string();
     let answer = user_data(
         user_data_request::Method::Open(OpenUserData {
-            frequency_path: path(&paths.frequency),
-            association_path: path(&paths.association),
-            custom_dictionary_path: path(&paths.custom_dictionary),
-            learned_phrases_path: path(&paths.learned_phrases),
+            directory: directory.display().to_string(),
             journal: UserDataJournal::Wal as i32,
             in_background: true,
+            ..OpenUserData::default()
         }),
         "userDataOpen",
     )?;

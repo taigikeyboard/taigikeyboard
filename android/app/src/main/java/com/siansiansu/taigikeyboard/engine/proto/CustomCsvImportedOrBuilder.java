@@ -32,4 +32,26 @@ public interface CustomCsvImportedOrBuilder extends
    * @return The skipped.
    */
   int getSkipped();
+
+  /**
+   * <pre>
+   * The refusal in English, for an alert's diagnostic line
+   * (`file holds more than 30000 entries`); empty when imported.
+   * </pre>
+   *
+   * <code>string detail = 4;</code>
+   * @return The detail.
+   */
+  java.lang.String getDetail();
+  /**
+   * <pre>
+   * The refusal in English, for an alert's diagnostic line
+   * (`file holds more than 30000 entries`); empty when imported.
+   * </pre>
+   *
+   * <code>string detail = 4;</code>
+   * @return The bytes for detail.
+   */
+  com.google.protobuf.ByteString
+      getDetailBytes();
 }

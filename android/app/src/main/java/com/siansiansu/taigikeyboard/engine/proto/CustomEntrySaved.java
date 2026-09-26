@@ -15,6 +15,7 @@ public  final class CustomEntrySaved extends
     // @@protoc_insertion_point(message_implements:taigi.engine.CustomEntrySaved)
     CustomEntrySavedOrBuilder {
   private CustomEntrySaved() {
+    detail_ = "";
   }
   private int bitField0_;
   public static final int REFUSAL_FIELD_NUMBER = 1;
@@ -125,6 +126,78 @@ public  final class CustomEntrySaved extends
   private void clearEntry() {
     entry_ = null;
     bitField0_ = (bitField0_ & ~0x00000001);
+  }
+
+  public static final int DETAIL_FIELD_NUMBER = 3;
+  private java.lang.String detail_;
+  /**
+   * <pre>
+   * The refusal in English, for an alert's diagnostic line
+   * (`custom dictionary is full (max 30000 entries)`); empty when saved.
+   * </pre>
+   *
+   * <code>string detail = 3;</code>
+   * @return The detail.
+   */
+  @java.lang.Override
+  public java.lang.String getDetail() {
+    return detail_;
+  }
+  /**
+   * <pre>
+   * The refusal in English, for an alert's diagnostic line
+   * (`custom dictionary is full (max 30000 entries)`); empty when saved.
+   * </pre>
+   *
+   * <code>string detail = 3;</code>
+   * @return The bytes for detail.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getDetailBytes() {
+    return com.google.protobuf.ByteString.copyFromUtf8(detail_);
+  }
+  /**
+   * <pre>
+   * The refusal in English, for an alert's diagnostic line
+   * (`custom dictionary is full (max 30000 entries)`); empty when saved.
+   * </pre>
+   *
+   * <code>string detail = 3;</code>
+   * @param value The detail to set.
+   */
+  private void setDetail(
+      java.lang.String value) {
+    java.util.Objects.requireNonNull(value);
+
+    detail_ = value;
+  }
+  /**
+   * <pre>
+   * The refusal in English, for an alert's diagnostic line
+   * (`custom dictionary is full (max 30000 entries)`); empty when saved.
+   * </pre>
+   *
+   * <code>string detail = 3;</code>
+   */
+  private void clearDetail() {
+
+    detail_ = getDefaultInstance().getDetail();
+  }
+  /**
+   * <pre>
+   * The refusal in English, for an alert's diagnostic line
+   * (`custom dictionary is full (max 30000 entries)`); empty when saved.
+   * </pre>
+   *
+   * <code>string detail = 3;</code>
+   * @param value The bytes for detail to set.
+   */
+  private void setDetailBytes(
+      com.google.protobuf.ByteString value) {
+    checkByteStringIsUtf8(value);
+    detail_ = value.toStringUtf8();
+
   }
 
   public static com.siansiansu.taigikeyboard.engine.proto.CustomEntrySaved parseFrom(
@@ -342,6 +415,80 @@ public  final class CustomEntrySaved extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The refusal in English, for an alert's diagnostic line
+     * (`custom dictionary is full (max 30000 entries)`); empty when saved.
+     * </pre>
+     *
+     * <code>string detail = 3;</code>
+     * @return The detail.
+     */
+    @java.lang.Override
+    public java.lang.String getDetail() {
+      return instance.getDetail();
+    }
+    /**
+     * <pre>
+     * The refusal in English, for an alert's diagnostic line
+     * (`custom dictionary is full (max 30000 entries)`); empty when saved.
+     * </pre>
+     *
+     * <code>string detail = 3;</code>
+     * @return The bytes for detail.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getDetailBytes() {
+      return instance.getDetailBytes();
+    }
+    /**
+     * <pre>
+     * The refusal in English, for an alert's diagnostic line
+     * (`custom dictionary is full (max 30000 entries)`); empty when saved.
+     * </pre>
+     *
+     * <code>string detail = 3;</code>
+     * @param value The detail to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDetail(
+        java.lang.String value) {
+      copyOnWrite();
+      instance.setDetail(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The refusal in English, for an alert's diagnostic line
+     * (`custom dictionary is full (max 30000 entries)`); empty when saved.
+     * </pre>
+     *
+     * <code>string detail = 3;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearDetail() {
+      copyOnWrite();
+      instance.clearDetail();
+      return this;
+    }
+    /**
+     * <pre>
+     * The refusal in English, for an alert's diagnostic line
+     * (`custom dictionary is full (max 30000 entries)`); empty when saved.
+     * </pre>
+     *
+     * <code>string detail = 3;</code>
+     * @param value The bytes for detail to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDetailBytes(
+        com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.setDetailBytes(value);
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.CustomEntrySaved)
   }
   @java.lang.Override
@@ -361,10 +508,11 @@ public  final class CustomEntrySaved extends
             "bitField0_",
             "refusal_",
             "entry_",
+            "detail_",
           };
           java.lang.String info =
-              "\u0000\u0002\u0000\u0001\u0001\u0002\u0002\u0000\u0000\u0000\u0001\f\u0002\u1009" +
-              "\u0000";
+              "\u0000\u0003\u0000\u0001\u0001\u0003\u0003\u0000\u0000\u0000\u0001\f\u0002\u1009" +
+              "\u0000\u0003\u0208";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

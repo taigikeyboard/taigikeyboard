@@ -44,7 +44,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // before it finishes ranks without the user's history — one keystroke
         // ordered as it would be on a fresh install, which is why this runs at
         // launch rather than lazily on the first commit.
-        ComposingSessionCoordinator.shared.openUserDataStores()
+        ComposingSessionCoordinator.openUserData()
 
         // At launch rather than with the settings window: this is process-wide
         // AppKit configuration, and the menu has to exist before any window of

@@ -1,25 +1,24 @@
-// What a commit teaches the two learning stores, end to end through the engine.
+// What a commit reports for learning, end to end through the engine.
 
 @testable import TaigiInputMethodCore
 import XCTest
 
-/// Drives real compositions against the real engine and asserts on the rows
-/// that end up in SQLite. Everything here needs the engine artefacts to be
+/// Drives real compositions against the real engine and asserts on what the
+/// manager reports: the picks it counts and the bigrams a next-word answer
+/// carries. The engine never opens the user data in this process, so the
+/// bigrams still arrive in the answer (roadmap U9); what the engine stores
+/// from them is its own tests'. Everything here needs the engine artefacts to be
 /// current — the next-word intents are rejected outright by an engine built
 /// before `PLATFORM_MACOS` existed.
 @MainActor
 final class ComposingManagerLearningTests: XCTestCase {
-    private var stores: UserDataStores!
+    /// Fresh per case: XCTest makes a new instance for every test method.
+    private let usage = RecordingUsageRecorder()
+    private let associations = RecordingAssociationSink()
 
     override func setUpWithError() throws {
         try super.setUpWithError()
         InstalledLexicon.installOnce()
-        stores = try TestFixtures.makeUserDataStores()
-    }
-
-    override func tearDown() {
-        stores = nil
-        super.tearDown()
     }
 
     // MARK: - Frequency
@@ -31,16 +30,10 @@ final class ComposingManagerLearningTests: XCTestCase {
 
         _ = manager.commitCandidate(candidate, executing: executor)
 
-        let rows = try XCTUnwrap(stores.frequency.rows(forWords: [candidate.displayText]))
         XCTAssertEqual(
-            rows.map { FrequencyRow(word: $0.word, tl: $0.tl, count: $0.count, lastUsedMillis: 0) },
-            [FrequencyRow(
-                word: candidate.displayText,
-                tl: candidate.canonicalTl,
-                count: 1,
-                lastUsedMillis: 0,
-            )],
-            "the row is keyed by the (display text, canonical TL) pair the ranker looks it up by",
+            usage.recorded,
+            [expectedUsage(of: candidate)],
+            "the pick is counted under the (display text, canonical TL) pair the ranker looks it up by",
         )
     }
 
@@ -56,20 +49,14 @@ final class ComposingManagerLearningTests: XCTestCase {
 
         _ = manager.commitCandidate(candidate, script: .alternate, executing: executor)
 
-        let rows = try XCTUnwrap(stores.frequency.rows(forWords: [candidate.displayText]))
         XCTAssertEqual(
-            rows.map { FrequencyRow(word: $0.word, tl: $0.tl, count: $0.count, lastUsedMillis: 0) },
-            [FrequencyRow(
-                word: candidate.displayText,
-                tl: candidate.canonicalTl,
-                count: 1,
-                lastUsedMillis: 0,
-            )],
+            usage.recorded,
+            [expectedUsage(of: candidate)],
             "the identity is the pair, never the rendering that reached the document",
         )
     }
 
-    func testCommitCandidate_withRecordingOff_learnsNothing() throws {
+    func testCommitCandidate_withRecordingOff_tellsTheEngineNotToCount() throws {
         let manager = try makeManager(
             settingsProvider: StubEngineSettingsProvider(frequencyRecording: false),
         )
@@ -79,59 +66,11 @@ final class ComposingManagerLearningTests: XCTestCase {
         _ = manager.commitCandidate(candidate, executing: executor)
 
         XCTAssertEqual(
-            try XCTUnwrap(stores.frequency.rows(forWords: [candidate.displayText])),
-            [],
-            "the setting gates the write, not the boost — an off switch that still recorded "
-                + "would keep changing the ranking of everything typed while it was off",
-        )
-    }
-
-    /// The boost is the whole point of the second fetch: a candidate the user
-    /// keeps choosing has to climb past the ones it used to trail.
-    ///
-    /// Measured against a rival rather than against index 0, because index 0 is
-    /// not part of the ranking: the walker prepends its own best segmentation
-    /// there explicitly and it takes no part in the sort
-    /// (`engine/composing/src/continuous.rs:110-116`). Asserting "the boosted
-    /// candidate is first now" would be asserting that a boost can displace
-    /// something the sort never touches.
-    func testFetchCandidates_aRepeatedlyCommittedCandidateOvertakesTheOneAboveIt() throws {
-        let manager = try makeManager()
-        let executor = RecordingEffectExecutor()
-
-        let before = try compose("taigi", manager, executing: executor)
-        let ranked = Array(before.dropFirst())
-        // The last two rather than the first two: candidates covering more of
-        // the buffer outrank shorter ones by a margin no usage count is meant
-        // to close, so a pair straddling that boundary would be asking the
-        // boost to do something it must not. Two neighbours in the tail cover
-        // the same span, which is where usage is the deciding term.
-        XCTAssertGreaterThanOrEqual(ranked.count, 2, "the fixture needs at least two ranked candidates")
-        let rival = try XCTUnwrap(ranked.dropLast().last)
-        let promoted = try XCTUnwrap(ranked.last)
-        XCTAssertEqual(
-            rival.consumedSpanEnd,
-            promoted.consumedSpanEnd,
-            "the pair has to cover the same span, or the comparison is about coverage not usage",
-        )
-
-        for _ in 0 ..< 20 {
-            stores.frequency.record(word: promoted.displayText, tl: promoted.canonicalTl)
-        }
-
-        manager.cancelComposition(executing: executor)
-        let after = try compose("taigi", manager, executing: executor)
-
-        XCTAssertLessThan(
-            try XCTUnwrap(after.firstIndex(matching: promoted), "a boosted candidate stays in the list"),
-            try XCTUnwrap(after.firstIndex(matching: rival)),
-            "usage the user built up has to reach the ranking — if this fails the second "
-                + "fetch is not carrying the frequency rows",
-        )
-        XCTAssertEqual(
-            after.first?.displayText,
-            before.first?.displayText,
-            "the walker's own pick leads the list whatever the user has learned",
+            usage.recorded,
+            [expectedUsage(of: candidate, frequencyRecording: false)],
+            "the setting gates the count, not the boost — an off switch that still counted "
+                + "would keep changing the ranking of everything typed while it was off; the "
+                + "pick is still reported so a learned phrase taken whole is touched",
         )
     }
 
@@ -144,11 +83,10 @@ final class ComposingManagerLearningTests: XCTestCase {
         let first = try commitWholeBuffer("tai", manager, executing: executor)
         let second = try commitWholeBuffer("gi", manager, executing: executor)
 
-        let rows = try XCTUnwrap(stores.association.allRows())
         XCTAssertEqual(
-            rows.map { "\($0.pair.previous)→\($0.pair.next)" },
+            associations.pairs.map { "\($0.previous)→\($0.next)" },
             ["\(first.displayText)→\(second.displayText)"],
-            "the engine decided this pair was worth learning; the manager's job is to store it",
+            "the engine decided this pair was worth learning; the manager's job is to hand it on",
         )
     }
 
@@ -164,9 +102,8 @@ final class ComposingManagerLearningTests: XCTestCase {
         let second = try composeAndTakeWholeBufferCandidate(manager, executing: executor, "gi")
         _ = manager.commitCandidate(second, script: .alternate, executing: executor)
 
-        let rows = try XCTUnwrap(stores.association.allRows())
         XCTAssertEqual(
-            rows.map { "\($0.pair.previous)→\($0.pair.next)" },
+            associations.pairs.map { "\($0.previous)→\($0.next)" },
             ["\(first.displayText)→\(second.displayText)"],
             "the pair is the identity pair, whichever script the document got",
         )
@@ -196,7 +133,7 @@ final class ComposingManagerLearningTests: XCTestCase {
         XCTAssertEqual(outcome, .ignored)
         XCTAssertNil(commit, "a commit that wrote nothing earns no auto space")
         XCTAssertEqual(
-            try XCTUnwrap(stores.frequency.rows(forWords: [romanOnly.displayText])), [],
+            usage.recorded, [],
             "a commit that wrote nothing teaches nothing",
         )
     }
@@ -213,7 +150,7 @@ final class ComposingManagerLearningTests: XCTestCase {
         _ = try commitWholeBuffer("gi", manager, executing: executor)
 
         XCTAssertEqual(
-            try XCTUnwrap(stores.association.allRows()),
+            associations.pairs,
             [],
             "the context was reset, so the second commit had no predecessor to pair with",
         )
@@ -228,7 +165,7 @@ final class ComposingManagerLearningTests: XCTestCase {
         _ = try commitWholeBuffer("gi", manager, executing: executor)
 
         XCTAssertEqual(
-            try XCTUnwrap(stores.association.allRows()).count,
+            associations.pairs.count,
             1,
             "a comma is noise, not the end of a sentence — the context survives it",
         )
@@ -245,9 +182,8 @@ final class ComposingManagerLearningTests: XCTestCase {
         manager.noteCharacterTypedOutsideComposition("x")
         _ = try commitWholeBuffer("gi", manager, executing: executor)
 
-        let rows = try XCTUnwrap(stores.association.allRows())
-        XCTAssertEqual(rows.count, 1)
-        XCTAssertNotEqual(rows.first?.pair.previous, "x")
+        XCTAssertEqual(associations.pairs.count, 1)
+        XCTAssertNotEqual(associations.pairs.first?.previous, "x")
     }
 
     func testANewSession_forgetsTheContextFromTheOldOne() throws {
@@ -260,7 +196,7 @@ final class ComposingManagerLearningTests: XCTestCase {
         manager.startNewSession()
         _ = try commitWholeBuffer("gi", manager, executing: executor)
 
-        XCTAssertEqual(try XCTUnwrap(stores.association.allRows()), [])
+        XCTAssertEqual(associations.pairs, [])
     }
 
     /// Punctuation typed while a composition is running does NOT go through the
@@ -283,7 +219,7 @@ final class ComposingManagerLearningTests: XCTestCase {
         _ = try commitWholeBuffer("gi", manager, executing: executor)
 
         XCTAssertEqual(
-            try XCTUnwrap(stores.association.allRows()),
+            associations.pairs,
             [],
             "under-learning one pair is the safe half; pairing 台 with the word after the "
                 + "full stop would be learning something the user never typed",
@@ -293,9 +229,9 @@ final class ComposingManagerLearningTests: XCTestCase {
     // MARK: - Mirror
 
     /// The fetch response carries the authoritative composition state, and a
-    /// fetch that reports the engine idle means the composition is gone. Before
-    /// the two-phase fetch landed, that answer was dropped and the mirror went
-    /// on claiming a composition the engine no longer had.
+    /// fetch that reports the engine idle means the composition is gone. A fetch
+    /// that dropped that answer would leave the mirror claiming a composition
+    /// the engine no longer had.
     func testFetchCandidates_afterTheEngineWasResetUnderneathIt_updatesTheMirror() throws {
         let manager = try makeManager()
         let executor = RecordingEffectExecutor()
@@ -305,7 +241,6 @@ final class ComposingManagerLearningTests: XCTestCase {
         // Resets the engine to Idle without going through the manager, which is
         // what a generation change does in production.
         let other = try TestFixtures.makeComposingManager(
-            stores: stores,
             startingGeneration: TestFixtures.generationCounter.next(),
         )
         other.append("t", executing: RecordingEffectExecutor())
@@ -318,47 +253,6 @@ final class ComposingManagerLearningTests: XCTestCase {
         )
     }
 
-    // MARK: - Learned phrases (§50)
-
-    /// 我 + 來 typed as one buffer and picked one segment at a time: the
-    /// mid-commit learns nothing, the last one hands the joined pair to the
-    /// learned-phrase store, and the store recalls it under the buffer's
-    /// key. mirrors windows/.../tests/composing_manager.rs (§50).
-    func testACompositionOfHanjiPicks_isLearnedOnceTheLastSegmentCommits() throws {
-        let manager = try makeManager()
-        let executor = RecordingEffectExecutor()
-        let key = try queryKey("gualai")
-        let candidates = try compose("gualai", manager, executing: executor)
-        let gua = try XCTUnwrap(candidates.first { $0.hanji == "我" }, "no 我 offered for 'gualai'")
-        XCTAssertEqual(manager.commitCandidate(gua, executing: executor).outcome, .nailed)
-        XCTAssertTrue(
-            stores.learnedPhrases.rows(matching: key).isEmpty,
-            "a mid-commit learns nothing",
-        )
-
-        guard case let .found(rest) = manager.fetchCandidates() else { return XCTFail("no candidates after 我") }
-        let lai = try XCTUnwrap(rest.first { $0.hanji == "來" }, "no 來 offered for the rest")
-        XCTAssertEqual(manager.commitCandidate(lai, executing: executor).outcome, .finalized)
-
-        // Learned as the hanji pair even though the document got the roman
-        // rendering — identity is `(hanji, canonical TL)`, not what was written.
-        let learned = stores.learnedPhrases.rows(matching: key)
-        XCTAssertEqual(learned.map(\.hanzi), ["我來"], "the store learned the joined pair under the buffer's key")
-        XCTAssertTrue(
-            stores.customDictionary.rows(matching: key).isEmpty,
-            "the custom dictionary is untouched — learned phrases are learning data, not the user's words",
-        )
-    }
-
-    /// The key the keystroke path derives for the typed buffer, so the
-    /// assertion reads the store the way the ranker does.
-    private func queryKey(_ rawInput: String) throws -> CustomSearchKey {
-        try XCTUnwrap(
-            RustEngineBridge.deriveCustomQueryKey(input: rawInput, mode: .tl),
-            "no query key for '\(rawInput)'",
-        )
-    }
-
     // MARK: - Helpers
 
     private func makeManager(
@@ -366,8 +260,20 @@ final class ComposingManagerLearningTests: XCTestCase {
     ) throws -> ComposingManager {
         try TestFixtures.makeComposingManager(
             settingsProvider: settingsProvider,
-            stores: stores,
+            usage: usage,
+            associations: associations,
             startingGeneration: TestFixtures.generationCounter.next(),
+        )
+    }
+
+    /// What committing `candidate` whole reports: the identity pair, its Hanji
+    /// for the learned-phrase touch, and the recording setting.
+    private func expectedUsage(of candidate: ContinuousCandidate, frequencyRecording: Bool = true) -> Usage {
+        Usage(
+            displayText: candidate.displayText,
+            canonicalTl: candidate.canonicalTl,
+            hanji: candidate.hanji,
+            isFrequencyRecordingEnabled: frequencyRecording,
         )
     }
 
@@ -421,18 +327,5 @@ final class ComposingManagerLearningTests: XCTestCase {
         )
         _ = manager.commitCandidate(candidate, executing: executor)
         return candidate
-    }
-}
-
-private extension [ContinuousCandidate] {
-    /// Where `candidate` sits in this list, matched on what identifies it rather
-    /// than on the whole value: `score` is exactly what a boost changes, so a
-    /// plain equality search would report a promoted candidate as missing.
-    func firstIndex(matching candidate: ContinuousCandidate) -> Int? {
-        firstIndex {
-            $0.displayText == candidate.displayText
-                && $0.canonicalTl == candidate.canonicalTl
-                && $0.consumedSpanEnd == candidate.consumedSpanEnd
-        }
     }
 }

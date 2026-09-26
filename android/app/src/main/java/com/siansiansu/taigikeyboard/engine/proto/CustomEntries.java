@@ -187,6 +187,50 @@ public  final class CustomEntries extends
     matchingTotal_ = 0;
   }
 
+  public static final int OFFSET_FIELD_NUMBER = 4;
+  private int offset_;
+  /**
+   * <pre>
+   * The offset these entries start at: the request's, pulled back to the
+   * last page's when the matches shrank under it (a delete on the last
+   * page), so one request always answers a page that exists.
+   * </pre>
+   *
+   * <code>uint32 offset = 4;</code>
+   * @return The offset.
+   */
+  @java.lang.Override
+  public int getOffset() {
+    return offset_;
+  }
+  /**
+   * <pre>
+   * The offset these entries start at: the request's, pulled back to the
+   * last page's when the matches shrank under it (a delete on the last
+   * page), so one request always answers a page that exists.
+   * </pre>
+   *
+   * <code>uint32 offset = 4;</code>
+   * @param value The offset to set.
+   */
+  private void setOffset(int value) {
+
+    offset_ = value;
+  }
+  /**
+   * <pre>
+   * The offset these entries start at: the request's, pulled back to the
+   * last page's when the matches shrank under it (a delete on the last
+   * page), so one request always answers a page that exists.
+   * </pre>
+   *
+   * <code>uint32 offset = 4;</code>
+   */
+  private void clearOffset() {
+
+    offset_ = 0;
+  }
+
   public static com.siansiansu.taigikeyboard.engine.proto.CustomEntries parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -466,6 +510,52 @@ public  final class CustomEntries extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The offset these entries start at: the request's, pulled back to the
+     * last page's when the matches shrank under it (a delete on the last
+     * page), so one request always answers a page that exists.
+     * </pre>
+     *
+     * <code>uint32 offset = 4;</code>
+     * @return The offset.
+     */
+    @java.lang.Override
+    public int getOffset() {
+      return instance.getOffset();
+    }
+    /**
+     * <pre>
+     * The offset these entries start at: the request's, pulled back to the
+     * last page's when the matches shrank under it (a delete on the last
+     * page), so one request always answers a page that exists.
+     * </pre>
+     *
+     * <code>uint32 offset = 4;</code>
+     * @param value The offset to set.
+     * @return This builder for chaining.
+     */
+    public Builder setOffset(int value) {
+      copyOnWrite();
+      instance.setOffset(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The offset these entries start at: the request's, pulled back to the
+     * last page's when the matches shrank under it (a delete on the last
+     * page), so one request always answers a page that exists.
+     * </pre>
+     *
+     * <code>uint32 offset = 4;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearOffset() {
+      copyOnWrite();
+      instance.clearOffset();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.CustomEntries)
   }
   @java.lang.Override
@@ -486,10 +576,11 @@ public  final class CustomEntries extends
             com.siansiansu.taigikeyboard.engine.proto.CustomDictionaryEntry.class,
             "total_",
             "matchingTotal_",
+            "offset_",
           };
           java.lang.String info =
-              "\u0000\u0003\u0000\u0000\u0001\u0003\u0003\u0000\u0001\u0000\u0001\u001b\u0002\u000b" +
-              "\u0003\u000b";
+              "\u0000\u0004\u0000\u0000\u0001\u0004\u0004\u0000\u0001\u0000\u0001\u001b\u0002\u000b" +
+              "\u0003\u000b\u0004\u000b";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

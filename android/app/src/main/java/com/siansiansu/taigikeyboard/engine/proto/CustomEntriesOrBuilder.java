@@ -43,4 +43,16 @@ public interface CustomEntriesOrBuilder extends
    * @return The matchingTotal.
    */
   int getMatchingTotal();
+
+  /**
+   * <pre>
+   * The offset these entries start at: the request's, pulled back to the
+   * last page's when the matches shrank under it (a delete on the last
+   * page), so one request always answers a page that exists.
+   * </pre>
+   *
+   * <code>uint32 offset = 4;</code>
+   * @return The offset.
+   */
+  int getOffset();
 }

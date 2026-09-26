@@ -35,9 +35,7 @@ final class ComposingManager {
     private(set) var displayText = ""
 
     private let settingsProvider: EngineSettingsProvider
-    private let frequencyStore: UserFrequencyStore
-    private let customDictionaryStore: CustomDictionaryStore
-    private let learnedPhraseStore: LearnedPhraseStore
+    private let usageRecorder: any UsageRecorder
     private let nextWordLearner: NextWordLearner
     private static let logger = DebugLogger(category: "ComposingManager")
 
@@ -51,24 +49,20 @@ final class ComposingManager {
     /// The default starts at 1 because 0 is the generation an unset proto field
     /// carries; keeping them apart means a request that forgot to set one
     /// cannot be mistaken for a request from the first session.
-    /// `settingsProvider`, `frequencyStore` and `nextWordLearner` have no
+    /// `settingsProvider`, `usageRecorder` and `nextWordLearner` have no
     /// defaults on purpose: the shipped ones read the user's real
-    /// `UserDefaults` and write to the databases under their home directory,
+    /// `UserDefaults` and count into the engine's stores of the user's data,
     /// and a defaulted parameter is how a test — or a second production path
     /// added later — would silently end up driving the engine from settings it
     /// never meant to read, or teaching the user's own store from a fixture.
     init(
         settingsProvider: EngineSettingsProvider,
-        frequencyStore: UserFrequencyStore,
-        customDictionaryStore: CustomDictionaryStore,
-        learnedPhraseStore: LearnedPhraseStore,
+        usageRecorder: any UsageRecorder,
         nextWordLearner: NextWordLearner,
         startingGeneration: UInt64 = 1,
     ) {
         self.settingsProvider = settingsProvider
-        self.frequencyStore = frequencyStore
-        self.customDictionaryStore = customDictionaryStore
-        self.learnedPhraseStore = learnedPhraseStore
+        self.usageRecorder = usageRecorder
         self.nextWordLearner = nextWordLearner
         currentGeneration = startingGeneration
     }
@@ -258,111 +252,31 @@ final class ComposingManager {
     /// Reads the candidates for the composition as it currently stands, ranked
     /// against what the user has committed before.
     ///
-    /// Two fetches, because the boost has to be looked up by candidate and the
-    /// candidates are not known until the engine has answered once. The first
-    /// fetch is neutral and discovers the keys; the second re-ranks with the
-    /// counts those keys carry. Both go out under the same generation and the
-    /// same settings snapshot, so the two answers describe one composition
-    /// under one set of rules.
+    /// One fetch: the engine reads the user's own data itself — the counts,
+    /// the custom dictionary (unless the setting turns it off) and the learned
+    /// phrases — and ranks in the same call
+    /// (`docs/architecture/user-data-engine-roadmap.md` P6).
     ///
     /// Sent under the composition's existing generation because the query is
     /// read-only: bumping the generation would reset the engine before the
     /// query ran (`engine/composing/src/handle.rs:61-66`).
     ///
-    /// Every way this can fall short degrades to the neutral ranking rather
-    /// than to no candidates: a store that is not open yet, a store that
-    /// answers nothing, a second round-trip that fails. The one case that does
-    /// NOT degrade that way is the second fetch succeeding but reporting the
-    /// engine idle — that answer is newer than the first one, so returning the
-    /// first fetch's candidates would put a list on screen for a composition
-    /// the engine has already dropped.
+    /// The answer carries the authoritative composition state, so it is
+    /// mirrored whatever it says — an idle answer means the composition is
+    /// gone, and the mirror must not go on claiming it.
     func fetchCandidates() -> CandidateFetchOutcome {
         let settings = settingsProvider.current
-        let generation = currentGeneration
-        // Resolved once from this one snapshot and handed to both phases. The
-        // source toggles and the custom-dictionary matches both change what
-        // the engine may return, so letting the two phases resolve them
-        // separately would let a settings change land between them and rank
-        // half a composition under each set of rules.
-        let enabledSourcesBitmask = RustEngineBridge
-            .enabledSourcesBitmask(for: settings.dictionarySources)
-        // One query key serves both user-row sources (one FFI derive per
-        // keystroke); `nil` = empty / residue-only buffer.
-        let queryKey = !rawInput.isEmpty
-            ? RustEngineBridge.deriveCustomQueryKey(input: rawInput, mode: settings.inputMode)
-            : nil
-        let customEntries = customDictionaryMatches(queryKey: queryKey, settings: settings)
-        let learnedEntries = learnedPhraseMatches(queryKey: queryKey)
-
-        guard let neutral = RustEngineBridge.composingFetchAtPos(
+        guard let fetched = RustEngineBridge.composingFetchAtPos(
             settings: settings,
-            generation: generation,
-            enabledSourcesBitmask: enabledSourcesBitmask,
-            customEntries: customEntries,
-            learnedEntries: learnedEntries,
+            generation: currentGeneration,
+            nowMs: Int64(Date().timeIntervalSince1970 * 1000),
+            enabledSourcesBitmask: RustEngineBridge
+                .enabledSourcesBitmask(for: settings.dictionarySources),
         ) else { return .unavailable }
 
-        guard let neutralCandidates = neutral.candidates else {
-            mirror(neutral.transition)
-            return .notComposing
-        }
-        guard !neutralCandidates.isEmpty,
-              let rows = frequencyRows(for: neutralCandidates),
-              !rows.isEmpty
-        else {
-            mirror(neutral.transition)
-            return .found(neutralCandidates)
-        }
-
-        guard let boosted = RustEngineBridge.composingFetchAtPos(
-            settings: settings,
-            generation: generation,
-            frequencyRows: rows,
-            nowMs: Self.nowMs(),
-            enabledSourcesBitmask: enabledSourcesBitmask,
-            customEntries: customEntries,
-            learnedEntries: learnedEntries,
-        ) else {
-            mirror(neutral.transition)
-            return .found(neutralCandidates)
-        }
-
-        mirror(boosted.transition)
-        guard let boostedCandidates = boosted.candidates else { return .notComposing }
-        return .found(boostedCandidates)
-    }
-
-    /// The learned rows for the candidates on offer, or `nil` when there is
-    /// nothing to look them up with. Deduped by the key the engine ranks on, so
-    /// a list holding one Hanji under two readings asks about it once.
-    private func frequencyRows(
-        for candidates: [ContinuousCandidate],
-    ) -> [FrequencyRow]? {
-        var seen = Set<String>()
-        let keys = candidates.map(\.displayText).filter { seen.insert($0).inserted }
-        return frequencyStore.rows(forWords: keys)
-    }
-
-    private static func nowMs() -> Int64 {
-        Int64(Date().timeIntervalSince1970 * 1000)
-    }
-
-    /// The user's own dictionary's matches for what is being typed.
-    ///
-    /// With the setting off nothing is read at all — the gate is on the lookup,
-    /// not on the display, so a disabled custom dictionary costs no SQLite read
-    /// per keystroke.
-    private func customDictionaryMatches(queryKey: CustomSearchKey?, settings: EngineSettings) -> [CustomDictionaryRow] {
-        guard settings.isCustomDictEnabled, let queryKey else { return [] }
-        return customDictionaryStore.rows(matching: queryKey)
-    }
-
-    /// §50 — the learned phrases whose key EQUALS what is being typed. Not
-    /// gated by the custom-dictionary toggle (manual rows') — learning is
-    /// always on (USER 2026-09-20: no toggle).
-    private func learnedPhraseMatches(queryKey: CustomSearchKey?) -> [LearnedPhraseRow] {
-        guard let queryKey else { return [] }
-        return learnedPhraseStore.rows(matching: queryKey)
+        mirror(fetched.transition)
+        guard let candidates = fetched.candidates else { return .notComposing }
+        return .found(candidates)
     }
 
     /// What committing `candidate` would write into the document, under the
@@ -515,14 +429,15 @@ final class ComposingManager {
     ) {
         switch outcome {
         case .nailed, .finalized:
-            if settings.isFrequencyRecordingEnabled {
-                frequencyStore.record(word: candidate.displayText, tl: candidate.canonicalTl)
-            }
-            // §50 touch-on-use: a learned phrase picked as one candidate stays
-            // ahead of the eviction line (no-op for any other row).
-            if let hanji = candidate.hanji, !hanji.isEmpty {
-                learnedPhraseStore.touchPhrase(hanzi: hanji, canonicalTl: candidate.canonicalTl)
-            }
+            // The setting gates the count only; the engine still touches a
+            // learned phrase picked whole (§50 touch-on-use — learning is
+            // always on).
+            usageRecorder.record(Usage(
+                displayText: candidate.displayText,
+                canonicalTl: candidate.canonicalTl,
+                hanji: candidate.hanji,
+                isFrequencyRecordingEnabled: settings.isFrequencyRecordingEnabled,
+            ))
         case .ignored, .unavailable:
             break
         }
@@ -593,10 +508,11 @@ final class ComposingManager {
                 // exactly what must survive: forwarding it would spend a
                 // round-trip to bump a generation nothing reads.
                 break
-            case let .phraseLearned(hanji, canonicalTl):
-                // §50 — the engine decided the composition was a phrase;
-                // into `learned_phrases.db`. Always on.
-                learnedPhraseStore.learnPhrase(hanzi: hanji, canonicalTl: canonicalTl)
+            case .phraseLearned:
+                // §50 — the engine decided the composition was a phrase and,
+                // with the user data open, already wrote it to
+                // `learned_phrases.db`; nothing is left for this side.
+                break
             // Listed rather than defaulted: an effect added to the engine later
             // has to be classified here, and a `default` would quietly file it
             // under "write it into the user's document".

@@ -40,31 +40,19 @@ protocol ShortcutActionTarget: AnyObject {
 @MainActor
 final class ComposingSessionCoordinator {
     /// Process-wide, because the engine state it guards is — and the one place
-    /// the shipped composition is assembled, which is why the settings store and
-    /// the two learning stores are named here rather than defaulted into
-    /// `ComposingManager`.
+    /// the shipped composition is assembled, which is why the settings store,
+    /// the usage recorder and the learner's sink are named here rather than
+    /// defaulted into `ComposingManager`.
     static let shared = ComposingSessionCoordinator(
         composingManager: ComposingManager(
             settingsProvider: SettingsStore(),
-            frequencyStore: shippedStores.frequency,
-            customDictionaryStore: shippedStores.customDictionary,
-            learnedPhraseStore: shippedStores.learnedPhrases,
-            nextWordLearner: NextWordLearner(store: shippedStores.association),
+            usageRecorder: EngineUsageRecorder(),
+            nextWordLearner: NextWordLearner(sink: EngineOwnedAssociations()),
         ),
-        learningStores: shippedStores,
     )
-
-    /// The stores the shipped composition writes to. Named once so `shared` can
-    /// both hand them to the manager and expose them for `AppDelegate` to open.
-    private static let shippedStores = UserDataStores(directory: UserDataDirectory.standard)
 
     private let composingManager: ComposingManager
 
-    /// The user's three databases. Exposed because the Dictionary settings pages
-    /// read and write the same files the composition does, and a second set of
-    /// store objects over the same paths would mean two serial queues racing
-    /// for one connection each.
-    let userDataStores: UserDataStores
     private var currentOwner: ComposingSessionToken?
     private static let logger = DebugLogger(category: "SessionCoordinator")
 
@@ -85,34 +73,21 @@ final class ComposingSessionCoordinator {
     /// registers Carbon hotkeys in the test runner.
     var shortcutAvailabilityDidChange: ((Bool) -> Void)?
 
-    init(composingManager: ComposingManager, learningStores: UserDataStores) {
+    init(composingManager: ComposingManager) {
         self.composingManager = composingManager
-        userDataStores = learningStores
     }
 
-    /// Opens the learning databases. Called once at launch: the first
-    /// composition of a session would otherwise rank without the user's
-    /// history while the files were still being opened.
-    func openUserDataStores() {
-        userDataStores.open()
-        // After the open, and deliberately not awaited: the seed is what a
-        // brand-new install finds in Dictionary management, and a first keystroke typed
-        // before it lands simply does not match the two seeded words yet.
-        let customDictionary = userDataStores.customDictionary
-        Task {
-            do {
-                // Before the seed: a store written by an older build carries
-                // search keys the current derivation would not produce, and an
-                // entry is findable only under the keys on disk.
-                try await customDictionary.rederiveSearchKeysIfNeeded()
-            } catch {
-                Self.logger.error("custom dictionary key re-derivation failed: \(error)")
-            }
-            do {
-                try await customDictionary.seedIfEmpty()
-            } catch {
-                Self.logger.error("custom dictionary seed failed: \(error)")
-            }
+    /// Tells the engine to open the user's data — the counts, bigrams, custom
+    /// dictionary and learned phrases it owns (user-data-engine-roadmap P6).
+    /// Called once at launch: the first composition of a session would
+    /// otherwise rank without the user's history. Returns at once; the engine
+    /// finishes opening — a first launch's takeover of the files this input
+    /// method wrote itself included — on a thread of its own.
+    static func openUserData() {
+        do {
+            try RustEngineBridge.userDataOpen(directory: UserDataDirectory.standard())
+        } catch {
+            logger.error("user data directory unavailable: \(error)")
         }
     }
 

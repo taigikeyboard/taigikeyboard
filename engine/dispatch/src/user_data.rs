@@ -95,57 +95,74 @@ impl UserDataHandle {
         &self,
         request: &UserDataRequest,
     ) -> Result<UserDataResponse, UserDataError> {
-        let result = match request.method.as_ref() {
-            Some(user_data_request::Method::Open(open)) => {
+        let method = request
+            .method
+            .as_ref()
+            .ok_or(UserDataError::Invalid("user-data request has no method"))?;
+        let result = match method {
+            user_data_request::Method::Open(open) => {
                 user_data_response::Result::Opened(self.open(open)?)
             }
-            Some(user_data_request::Method::Reset(reset)) => {
-                user_data_response::Result::Reset(self.reset(reset)?)
-            }
-            Some(user_data_request::Method::RecordUsage(usage)) => {
+            user_data_request::Method::RecordUsage(usage) => {
                 self.record_usage(usage)?;
                 user_data_response::Result::UsageRecorded(UsageRecorded {})
             }
-            Some(user_data_request::Method::ListCustomEntries(list)) => {
-                user_data_response::Result::CustomEntries(self.list_custom_entries(list)?)
+            page => Self::handle_page(self.settled_stores()?, page)?,
+        };
+        Ok(UserDataResponse {
+            result: Some(result),
+        })
+    }
+
+    /// A page's request — everything but the open and the key path's
+    /// `RecordUsage` — answered from stores that have finished opening.
+    fn handle_page(
+        stores: &UserDataStores,
+        method: &user_data_request::Method,
+    ) -> Result<user_data_response::Result, UserDataError> {
+        use user_data_request::Method;
+        use user_data_response::Result as Answer;
+        Ok(match method {
+            Method::Reset(reset) => Answer::Reset(Self::reset(stores, reset)?),
+            Method::ListCustomEntries(list) => {
+                Answer::CustomEntries(Self::list_custom_entries(stores, list)?)
             }
-            Some(user_data_request::Method::SaveCustomEntry(save)) => {
-                user_data_response::Result::CustomEntrySaved(self.save_custom_entry(save)?)
+            Method::SaveCustomEntry(save) => {
+                Answer::CustomEntrySaved(Self::save_custom_entry(stores, save)?)
             }
-            Some(user_data_request::Method::DeleteCustomEntry(delete)) => {
-                let removed = self
-                    .opened_stores()?
+            Method::DeleteCustomEntry(delete) => {
+                let removed = stores
                     .custom_dictionary
                     .delete(&delete.id)
                     .map_err(store_error)?;
-                user_data_response::Result::CustomEntryDeleted(CustomEntryDeleted { removed })
+                Answer::CustomEntryDeleted(CustomEntryDeleted { removed })
             }
-            Some(user_data_request::Method::ImportCustomCsv(import)) => {
-                user_data_response::Result::CustomCsvImported(self.import_custom_csv(import)?)
+            Method::ImportCustomCsv(import) => {
+                Answer::CustomCsvImported(Self::import_custom_csv(stores, import)?)
             }
-            Some(user_data_request::Method::ExportCustomCsv(_)) => {
-                user_data_response::Result::CustomCsvExported(self.export_custom_csv()?)
+            Method::ExportCustomCsv(_) => {
+                Answer::CustomCsvExported(Self::export_custom_csv(stores)?)
             }
-            Some(user_data_request::Method::ExportBackup(export)) => {
+            Method::ExportBackup(export) => {
                 let backup = userdata::export_backup(
-                    self.opened_stores()?,
+                    stores,
                     &export.platform,
                     &export.app_version,
                     userdata::unix_seconds_now(),
                 )
                 .map_err(store_error)?;
-                user_data_response::Result::BackupExported(BackupExported { backup })
+                Answer::BackupExported(BackupExported { backup })
             }
-            Some(user_data_request::Method::ImportBackup(import)) => {
-                user_data_response::Result::BackupImported(self.import_backup(import)?)
+            Method::ImportBackup(import) => {
+                Answer::BackupImported(Self::import_backup(stores, import)?)
             }
-            Some(user_data_request::Method::SearchCustomEntries(search)) => {
-                user_data_response::Result::CustomEntryMatches(self.search_custom_entries(search)?)
+            Method::SearchCustomEntries(search) => {
+                Answer::CustomEntryMatches(Self::search_custom_entries(stores, search)?)
             }
-            None => return Err(UserDataError::Invalid("user-data request has no method")),
-        };
-        Ok(UserDataResponse {
-            result: Some(result),
+            // Answered by `handle` before a page request is looked at.
+            Method::Open(_) | Method::RecordUsage(_) => {
+                return Err(UserDataError::Invalid("not a page request"));
+            }
         })
     }
 
@@ -156,12 +173,7 @@ impl UserDataHandle {
     }
 
     fn open(&self, open: &OpenUserData) -> Result<UserDataOpened, UserDataError> {
-        let paths = UserDataPaths {
-            frequency: absolute(&open.frequency_path)?,
-            association: absolute(&open.association_path)?,
-            custom_dictionary: absolute(&open.custom_dictionary_path)?,
-            learned_phrases: absolute(&open.learned_phrases_path)?,
-        };
+        let paths = requested_paths(open)?;
         let journal = journal(open.journal());
         // The stores are published before they finish opening: from here on
         // a write queues behind the open on its store's worker and a read
@@ -199,19 +211,34 @@ impl UserDataHandle {
         Ok(readiness(&opened.stores))
     }
 
-    /// The open stores, or the refusal a request before the open gets.
+    /// The open stores, or the refusal a request before the open gets. Never
+    /// blocks: for `RecordUsage`, sent from the key path, whose write queues
+    /// behind the open.
     fn opened_stores(&self) -> Result<&UserDataStores, UserDataError> {
         self.stores()
             .ok_or(UserDataError::Invalid("user data is not open yet"))
     }
 
+    /// The open stores once they have finished opening — for the pages'
+    /// requests (`handle_page`), which run off the key path and must not read or edit a
+    /// custom dictionary still being taken over, re-derived or seeded by a
+    /// background open. Waits for that open, or finishes it here.
+    fn settled_stores(&self) -> Result<&UserDataStores, UserDataError> {
+        let opened = self
+            .opened
+            .get()
+            .ok_or(UserDataError::Invalid("user data is not open yet"))?;
+        finish_open(&opened.stores, &opened.initialized);
+        Ok(&opened.stores)
+    }
+
     /// The dictionary search's lookup: the query's key, prefix-matched as
     /// the keyboard matches it. A query that derives no key matches nothing.
     fn search_custom_entries(
-        &self,
+        stores: &UserDataStores,
         search: &SearchCustomEntries,
     ) -> Result<CustomEntryMatches, UserDataError> {
-        let dictionary = &self.opened_stores()?.custom_dictionary;
+        let dictionary = &stores.custom_dictionary;
         let entries = userdata::derive_custom_query_key(&search.query, &search.input_mode)
             .map(|key| {
                 CustomDictionaryStore::rows_matching(dictionary, &key, search.limit as usize)
@@ -223,13 +250,10 @@ impl UserDataHandle {
     }
 
     fn list_custom_entries(
-        &self,
+        stores: &UserDataStores,
         list: &ListCustomEntries,
     ) -> Result<CustomEntries, UserDataError> {
-        let dictionary = &self.opened_stores()?.custom_dictionary;
-        let entries = dictionary
-            .rows(&list.filter, list.limit as usize, list.offset as usize)
-            .map_err(store_error)?;
+        let dictionary = &stores.custom_dictionary;
         let total = dictionary.count().map_err(store_error)?;
         let matching_total = if list.filter.trim().is_empty() {
             total
@@ -238,24 +262,40 @@ impl UserDataHandle {
                 .count_matching(&list.filter)
                 .map_err(store_error)?
         };
+        // Pulled back to the last page that exists: the matches can shrink
+        // under the page a platform is on (a delete on the last page).
+        let limit = list.limit as usize;
+        let last_page = matching_total.saturating_sub(1) / limit.max(1) * limit;
+        let offset = (list.offset as usize).min(last_page);
+        let entries = dictionary
+            .rows(&list.filter, limit, offset)
+            .map_err(store_error)?;
         Ok(CustomEntries {
             entries: entries.iter().map(custom_dictionary_entry).collect(),
             total: u32::try_from(total).unwrap_or(u32::MAX),
             matching_total: u32::try_from(matching_total).unwrap_or(u32::MAX),
+            offset: u32::try_from(offset).unwrap_or(u32::MAX),
         })
     }
 
     /// A new word (no `id`) or an edit. What the user can be told is a
     /// refusal in the answer; only a store failure is an error.
-    fn save_custom_entry(&self, save: &SaveCustomEntry) -> Result<CustomEntrySaved, UserDataError> {
-        let dictionary = &self.opened_stores()?.custom_dictionary;
-        let refused = |refusal: CustomDictionaryRefusal| CustomEntrySaved {
+    fn save_custom_entry(
+        stores: &UserDataStores,
+        save: &SaveCustomEntry,
+    ) -> Result<CustomEntrySaved, UserDataError> {
+        let dictionary = &stores.custom_dictionary;
+        let refused = |refusal: CustomDictionaryRefusal, detail: String| CustomEntrySaved {
             refusal: refusal as i32,
             entry: None,
+            detail,
         };
         let roman = save.roman.trim();
         if roman.is_empty() {
-            return Ok(refused(CustomDictionaryRefusal::EmptyRoman));
+            return Ok(refused(
+                CustomDictionaryRefusal::EmptyRoman,
+                "an entry needs a romanization".into(),
+            ));
         }
         let hanzi = save.hanzi.trim();
         let row = match save.id.as_deref() {
@@ -264,7 +304,7 @@ impl UserDataHandle {
         };
         if let Err(error) = dictionary.upsert(&row) {
             return match refusal(&error) {
-                Some(refusal) => Ok(refused(refusal)),
+                Some(refusal) => Ok(refused(refusal, error.to_string())),
                 None => Err(store_error(error)),
             };
         }
@@ -273,16 +313,18 @@ impl UserDataHandle {
         Ok(CustomEntrySaved {
             refusal: CustomDictionaryRefusal::None as i32,
             entry: stored.as_ref().map(custom_dictionary_entry),
+            detail: String::new(),
         })
     }
 
     fn import_custom_csv(
-        &self,
+        stores: &UserDataStores,
         import: &ImportCustomCsv,
     ) -> Result<CustomCsvImported, UserDataError> {
-        let dictionary = &self.opened_stores()?.custom_dictionary;
-        let refused = |refusal: CustomDictionaryRefusal| CustomCsvImported {
+        let dictionary = &stores.custom_dictionary;
+        let refused = |refusal: CustomDictionaryRefusal, detail: String| CustomCsvImported {
             refusal: refusal as i32,
+            detail,
             ..CustomCsvImported::default()
         };
         let rows = match CustomDictionaryCSV::decode_bytes(
@@ -292,7 +334,7 @@ impl UserDataHandle {
             Ok(rows) => rows,
             Err(error) => {
                 return match csv_refusal(&error) {
-                    Some(refusal) => Ok(refused(refusal)),
+                    Some(refusal) => Ok(refused(refusal, error.to_string())),
                     None => Err(store_error(error)),
                 }
             }
@@ -302,20 +344,24 @@ impl UserDataHandle {
                 refusal: CustomDictionaryRefusal::None as i32,
                 imported: u32::try_from(result.imported).unwrap_or(u32::MAX),
                 skipped: u32::try_from(result.skipped).unwrap_or(u32::MAX),
+                detail: String::new(),
             }),
             Err(error) => match refusal(&error) {
-                Some(refusal) => Ok(refused(refusal)),
+                Some(refusal) => Ok(refused(refusal, error.to_string())),
                 None => Err(store_error(error)),
             },
         }
     }
 
-    fn import_backup(&self, import: &ImportBackup) -> Result<BackupImported, UserDataError> {
+    fn import_backup(
+        stores: &UserDataStores,
+        import: &ImportBackup,
+    ) -> Result<BackupImported, UserDataError> {
         let refused = |refusal: BackupRefusal| BackupImported {
             refusal: refusal as i32,
             ..BackupImported::default()
         };
-        match userdata::import_backup(self.opened_stores()?, &import.backup) {
+        match userdata::import_backup(stores, &import.backup) {
             Ok(merged) => Ok(BackupImported {
                 refusal: BackupRefusal::None as i32,
                 custom_dictionary: u32::try_from(merged.custom_dictionary).unwrap_or(u32::MAX),
@@ -330,12 +376,8 @@ impl UserDataHandle {
         }
     }
 
-    fn export_custom_csv(&self) -> Result<CustomCsvExported, UserDataError> {
-        let rows = self
-            .opened_stores()?
-            .custom_dictionary
-            .all_rows()
-            .map_err(store_error)?;
+    fn export_custom_csv(stores: &UserDataStores) -> Result<CustomCsvExported, UserDataError> {
+        let rows = stores.custom_dictionary.all_rows().map_err(store_error)?;
         Ok(CustomCsvExported {
             csv: CustomDictionaryCSV::encode(&rows).into_bytes(),
         })
@@ -361,7 +403,10 @@ impl UserDataHandle {
         Ok(())
     }
 
-    fn reset(&self, reset: &ResetUserData) -> Result<UserDataReset, UserDataError> {
+    fn reset(
+        stores: &UserDataStores,
+        reset: &ResetUserData,
+    ) -> Result<UserDataReset, UserDataError> {
         if !(reset.frequency
             || reset.association
             || reset.custom_dictionary
@@ -369,21 +414,35 @@ impl UserDataHandle {
         {
             return Err(UserDataError::Invalid("reset selects no store"));
         }
-        let stores = self.opened_stores()?;
         let mut removed = UserDataReset::default();
         if reset.frequency {
-            removed.frequency_removed = stores.frequency.delete_all().map_err(store_error)?;
+            removed.frequency_removed = emptied(
+                "user_frequency",
+                stores.frequency.delete_all(),
+                &mut removed.failures,
+            );
         }
         if reset.association {
-            removed.association_removed = stores.association.delete_all().map_err(store_error)?;
+            removed.association_removed = emptied(
+                "user_association",
+                stores.association.delete_all(),
+                &mut removed.failures,
+            );
         }
         if reset.custom_dictionary {
-            let count = stores.custom_dictionary.delete_all().map_err(store_error)?;
+            let count = emptied(
+                "custom_dictionary",
+                stores.custom_dictionary.delete_all(),
+                &mut removed.failures,
+            );
             removed.custom_dictionary_removed = i64::try_from(count).unwrap_or(i64::MAX);
         }
         if reset.learned_phrases {
-            removed.learned_phrases_removed =
-                stores.learned_phrases.delete_all().map_err(store_error)?;
+            removed.learned_phrases_removed = emptied(
+                "learned_phrases",
+                stores.learned_phrases.delete_all(),
+                &mut removed.failures,
+            );
         }
         Ok(removed)
     }
@@ -677,6 +736,21 @@ fn csv_refusal(error: &CustomDictionaryCSVError) -> Option<CustomDictionaryRefus
     }
 }
 
+/// One store emptied by a reset, or its failure noted for the answer and
+/// the log — a store that cannot be emptied is no reason to leave the
+/// others full.
+fn emptied<T: Default>(
+    store: &str,
+    result: Result<T, impl Display>,
+    failures: &mut Vec<String>,
+) -> T {
+    result.unwrap_or_else(|error| {
+        log::error!("user_data.reset_failed store={store} error={error}");
+        failures.push(format!("{store}: {error}"));
+        T::default()
+    })
+}
+
 /// Waits for every store to open and finishes the custom dictionary's
 /// takeover, once per process.
 fn finish_open(stores: &UserDataStores, initialized: &Once) {
@@ -695,6 +769,34 @@ fn finish_open(stores: &UserDataStores, initialized: &Once) {
 
 fn store_error(error: impl Display) -> UserDataError {
     UserDataError::Store(error.to_string())
+}
+
+/// The files `open` names: its directory under the shared names, each
+/// non-empty per-file path overriding its own; without a directory, all four
+/// paths.
+fn requested_paths(open: &OpenUserData) -> Result<UserDataPaths, UserDataError> {
+    let file = |path: &str, in_directory: Option<&PathBuf>| match in_directory {
+        Some(default) if path.is_empty() => Ok(default.clone()),
+        _ => absolute(path),
+    };
+    let shared = (!open.directory.is_empty())
+        .then(|| absolute(&open.directory).map(|directory| UserDataPaths::in_directory(&directory)))
+        .transpose()?;
+    Ok(UserDataPaths {
+        frequency: file(&open.frequency_path, shared.as_ref().map(|p| &p.frequency))?,
+        association: file(
+            &open.association_path,
+            shared.as_ref().map(|p| &p.association),
+        )?,
+        custom_dictionary: file(
+            &open.custom_dictionary_path,
+            shared.as_ref().map(|p| &p.custom_dictionary),
+        )?,
+        learned_phrases: file(
+            &open.learned_phrases_path,
+            shared.as_ref().map(|p| &p.learned_phrases),
+        )?,
+    })
 }
 
 fn absolute(path: &str) -> Result<PathBuf, UserDataError> {
@@ -738,7 +840,7 @@ mod tests {
                 custom_dictionary_path: paths.custom_dictionary.display().to_string(),
                 learned_phrases_path: paths.learned_phrases.display().to_string(),
                 journal: UserDataJournal::Delete as i32,
-                in_background: false,
+                ..OpenUserData::default()
             })),
         }
     }
@@ -841,6 +943,7 @@ mod tests {
             Some(user_data_response::Result::Reset(reset)) => {
                 assert_eq!(reset.frequency_removed, 1);
                 assert_eq!(reset.custom_dictionary_removed, 0);
+                assert!(reset.failures.is_empty());
             }
             other => panic!("expected Reset, got {other:?}"),
         }
@@ -863,6 +966,8 @@ mod tests {
                 .unwrap_err(),
             UserDataError::Invalid("user data is not open yet")
         );
+        let directory = tempfile::tempdir().unwrap();
+        handle.handle(&open_request(directory.path())).unwrap();
         assert_eq!(
             handle
                 .handle(&reset_request(ResetUserData::default()))
@@ -1028,6 +1133,53 @@ mod tests {
     }
 
     #[test]
+    fn a_page_past_the_end_answers_the_last_page_that_exists() {
+        let directory = tempfile::tempdir().unwrap();
+        let handle = UserDataHandle::new();
+        handle.handle(&open_request(directory.path())).unwrap();
+        // trace: two seeds + one added = 3 matches; pages of 2 start at 0, 2.
+        save(&handle, None, "tâi-uân", "台灣");
+
+        let answer = match call(
+            &handle,
+            user_data_request::Method::ListCustomEntries(ListCustomEntries {
+                filter: String::new(),
+                limit: 2,
+                offset: 10,
+            }),
+        ) {
+            user_data_response::Result::CustomEntries(entries) => entries,
+            other => panic!("expected entries, got {other:?}"),
+        };
+        assert_eq!(answer.offset, 2);
+        assert_eq!(answer.entries.len(), 1);
+        assert_eq!(answer.matching_total, 3);
+    }
+
+    #[test]
+    fn a_directory_names_the_same_files_as_the_four_paths() {
+        let directory = tempfile::tempdir().unwrap();
+        let handle = UserDataHandle::new();
+        handle.handle(&open_request(directory.path())).unwrap();
+
+        let by_directory = UserDataRequest {
+            method: Some(user_data_request::Method::Open(OpenUserData {
+                directory: directory.path().display().to_string(),
+                journal: UserDataJournal::Delete as i32,
+                ..OpenUserData::default()
+            })),
+        };
+        assert!(
+            handle.handle(&by_directory).is_ok(),
+            "a repeat at the same files is answered, not refused as other paths"
+        );
+        assert!(
+            save(&handle, None, "  ", "空").detail == "an entry needs a romanization",
+            "a refusal carries its alert line"
+        );
+    }
+
+    #[test]
     fn a_csv_round_trips_and_an_unusable_file_is_refused_with_its_reason() {
         let directory = tempfile::tempdir().unwrap();
         let handle = UserDataHandle::new();
@@ -1053,9 +1205,11 @@ mod tests {
             import(&handle, &[0xff, 0xfe, 0x00]).refusal(),
             CustomDictionaryRefusal::NotUtf8
         );
+        let unusable = import(&handle, b"just one column\n");
+        assert_eq!(unusable.refusal(), CustomDictionaryRefusal::NoUsableRows);
         assert_eq!(
-            import(&handle, b"just one column\n").refusal(),
-            CustomDictionaryRefusal::NoUsableRows
+            unusable.detail, "no usable rows in the file",
+            "the alert's line"
         );
         let huge = vec![b'a'; 5 * 1024 * 1024 + 1];
         assert_eq!(
@@ -1132,6 +1286,8 @@ mod tests {
             }),
         );
 
+        // A page request waits for the open to finish: the seeds are there.
+        assert_eq!(list(&handle, "").total, 2, "seeded before the page reads");
         let stores = handle.stores().unwrap();
         let rows = stores.frequency.all_rows().unwrap_or_default();
         assert_eq!(rows.len(), 1, "counted once the open landed");

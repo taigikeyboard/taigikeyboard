@@ -65,47 +65,54 @@ final class CustomDictionaryPageModel {
     }
 
     /// Which load the rows on screen came from. A query runs off the main
-    /// actor and cannot be cancelled once it is on the store's queue, so a
+    /// actor and cannot be cancelled once it is in the engine, so a
     /// load started under an older filter can still come back after a newer
     /// one has — and would put rows on screen that do not match what is in the
     /// box. The newest load wins by number, not by arrival.
     private var loadGeneration = 0
 
-    private let store: CustomDictionaryStore
+    private let client: any UserDataClient
 
-    init(store: CustomDictionaryStore) {
-        self.store = store
+    /// The page's engine requests, one at a time and off the main actor. A
+    /// queue of its own rather than a detached task per request: a request
+    /// can wait on SQLite — or, right after launch, on the engine finishing
+    /// the takeover of the old files — and that wait must not hold a thread
+    /// of the shared pool the rest of the process runs its tasks on.
+    private static let requests = DispatchQueue(label: "CustomDictionaryPageModel.requests")
+
+    init(client: any UserDataClient) {
+        self.client = client
     }
 
-    /// Reloads the page on screen, first pulling it back inside the list if
-    /// the list shrank under it — a delete on the last page, or a filter that
-    /// now matches less. Nothing else clamps `page`, so this is the one place
-    /// it cannot point past the end.
+    /// Runs one engine request on `requests`: each is a synchronous
+    /// round-trip, and this window must not freeze while it runs.
+    private func run<Value: Sendable>(
+        _ request: @escaping @Sendable (any UserDataClient) throws -> Value,
+    ) async throws -> Value {
+        let client = client
+        return try await withCheckedThrowingContinuation { continuation in
+            Self.requests.async {
+                continuation.resume(with: Result { try request(client) })
+            }
+        }
+    }
+
+    /// Reloads the page on screen. The engine pulls a page the list shrank
+    /// under — a delete on the last page, or a filter that now matches less —
+    /// back to the last one that exists, and says which page it answered.
     func load() async {
         loadGeneration += 1
         let generation = loadGeneration
-        // Snapshotted, not read twice: the two queries below straddle an await
-        // apiece, and a keystroke landing between them would count one list and
-        // fetch a page of another — the generation has not advanced yet, so
-        // nothing downstream would catch it.
-        let filter = filter
+        let (filter, offset) = (filter, page * Self.pageSize)
         do {
-            let matches = try await store.count(filter: filter)
+            let listing = try await run {
+                try $0.list(filter: filter, limit: Self.pageSize, offset: offset)
+            }
             guard generation == loadGeneration else { return }
-            matchCount = matches
-            page = min(page, pageCount - 1)
-            let loaded = try await store.rows(
-                filter: filter,
-                limit: Self.pageSize,
-                offset: page * Self.pageSize,
-            )
-            // Only when a filter narrows the list: with no filter the two
-            // counts ask the same question, and paging would run a second
-            // `COUNT(*)` over 17000 rows to be told what it already knows.
-            let total = filter.isEmpty ? matches : try await store.count()
-            guard generation == loadGeneration else { return }
-            rows = loaded
-            totalCount = total
+            page = listing.offset / Self.pageSize
+            matchCount = listing.matchingTotal
+            rows = listing.rows
+            totalCount = listing.total
         } catch {
             // Same guard on the way out: a failure from a load the user has
             // already typed past must not raise an alert over the list that
@@ -126,24 +133,25 @@ final class CustomDictionaryPageModel {
     }
 
     func save(_ row: CustomDictionaryRow) async {
-        await perform(.desktopProgressWorking) { try await self.store.upsert(row) }
+        await perform(.desktopProgressWorking) { try await self.run { try $0.save(row) } }
     }
 
     func delete(_ row: CustomDictionaryRow) async {
-        await perform(.desktopProgressWorking) { _ = try await self.store.delete(id: row.id) }
+        let id = row.id
+        await perform(.desktopProgressWorking) { try await self.run { try $0.delete(id: id) } }
     }
 
     func deleteAll() async {
-        await perform(.desktopProgressWorking) { _ = try await self.store.deleteAll() }
+        await perform(.desktopProgressWorking) { try await self.run { try $0.deleteAll() } }
     }
 
     func exportCSV(in window: NSWindow) async {
         guard beginWork(.desktopProgressWorking) else { return }
         defer { activity = .idle }
         do {
-            let csv = try await CustomDictionaryCSV.encode(store.allRows())
+            let csv = try await run { try $0.exportCSV() }
             _ = try await UserDataFilePanels.write(
-                Data(csv.utf8),
+                csv,
                 suggestedName: UserDataFilePanels.exportFileName(
                     prefix: "taigi_custom_dictionary",
                     extension: "csv",
@@ -168,16 +176,10 @@ final class CustomDictionaryPageModel {
             in: window,
         ) else { return }
         do {
-            // Off the main actor: reading and parsing up to 5 MB of CSV
+            // Off the main actor: reading and importing up to 5 MB of CSV
             // there would freeze the very window that is showing the progress
             // spinner for it.
-            let rows = try await Task.detached {
-                try CustomDictionaryCSV.decodeFile(
-                    at: url,
-                    entryLimit: CustomDictionaryStore.maxEntries,
-                )
-            }.value
-            let result = try await store.batchImport(rows)
+            let result = try await run { try $0.importCSV(at: url) }
             message = .imported(result.imported, skipped: result.skipped)
             await load()
         } catch {
@@ -205,6 +207,28 @@ final class CustomDictionaryPageModel {
         return true
     }
 
+    /// Empties the three learning stores — counts, bigrams, learned phrases.
+    ///
+    /// One request: the engine attempts every store even when an earlier one
+    /// fails — a store that cannot be reached is no reason to leave the others
+    /// full — and the alert reports the failure, one line naming each store
+    /// that could not be emptied, rather than claiming the records are gone.
+    ///
+    /// Reported through the page's own message channel rather than an alert of
+    /// its own: two `.alert` modifiers on one chain do not stack, and this was
+    /// the receipt SwiftUI dropped. It is the whole of what the user is told —
+    /// these records have no visible surface, so unlike the custom-dictionary
+    /// clear (whose table simply empties) there is nothing else to read the
+    /// result off.
+    func clearLearningRecords() async {
+        do {
+            try await run { try $0.clearLearningRecords() }
+            message = .done(.desktopClearLearningRecordsDone)
+        } catch {
+            message = .failure(.desktopClearLearningRecordsFailed, error)
+        }
+    }
+
     private func perform(_ label: StringKey, _ body: () async throws -> Void) async {
         guard beginWork(label) else { return }
         defer { activity = .idle }
@@ -220,10 +244,6 @@ final class CustomDictionaryPageModel {
 struct CustomDictionaryPage: View {
     @Environment(DisplayLanguageStore.self) private var language
 
-    /// Needed only by the Delete Learning Records row; the entries list reads
-    /// `stores.customDictionary` through its own model.
-    private let stores: UserDataStores
-
     @State private var model: CustomDictionaryPageModel
     @State private var editing: CustomDictionaryRow?
 
@@ -233,9 +253,8 @@ struct CustomDictionaryPage: View {
     @AppStorage(SettingsStore.Keys.isCustomDictEnabled.name)
     private var isCustomDictEnabled = SettingsStore.Keys.isCustomDictEnabled.defaultValue
 
-    init(stores: UserDataStores) {
-        self.stores = stores
-        _model = State(initialValue: CustomDictionaryPageModel(store: stores.customDictionary))
+    init(client: any UserDataClient) {
+        _model = State(initialValue: CustomDictionaryPageModel(client: client))
     }
 
     var body: some View {
@@ -268,7 +287,7 @@ struct CustomDictionaryPage: View {
 
             Section {
                 WideActionRow(titleKey: .desktopClearLearningRecords, role: .destructive) {
-                    Task { await deleteLearningRecords() }
+                    Task { await model.clearLearningRecords() }
                 }
             }
         }
@@ -280,45 +299,6 @@ struct CustomDictionaryPage: View {
             }
         }
         .userDataPageChrome(activity: model.activity, message: $model.message)
-    }
-
-    /// Deletes the three learning tables.
-    ///
-    /// Three calls rather than one transaction: they are separate database
-    /// files, so there is no transaction that could span them. Each is
-    /// attempted even when an earlier one fails — a store that cannot be
-    /// reached is no reason to leave the others full — and the alert reports
-    /// the failure rather than claiming the records are gone.
-    ///
-    /// The diagnostic names its table, because a bare SQLite string cannot say
-    /// which of the three could not be emptied.
-    ///
-    /// Reported through the page's own message channel rather than an alert of
-    /// its own: two `.alert` modifiers on one chain do not stack, and this was
-    /// the receipt SwiftUI dropped. It is the whole of what the user is told —
-    /// these records have no visible surface, so unlike the custom-dictionary
-    /// clear (whose table simply empties) there is nothing else to read the
-    /// result off.
-    private func deleteLearningRecords() async {
-        var failures: [String] = []
-        do {
-            _ = try await stores.frequency.deleteAll()
-        } catch {
-            failures.append("user_frequency: \(error)")
-        }
-        do {
-            _ = try await stores.association.deleteAll()
-        } catch {
-            failures.append("user_association: \(error)")
-        }
-        do {
-            _ = try await stores.learnedPhrases.deleteAll()
-        } catch {
-            failures.append("learned_phrases: \(error)")
-        }
-        model.message = failures.isEmpty
-            ? .done(.desktopClearLearningRecordsDone)
-            : .failure(.desktopClearLearningRecordsFailed, diagnostic: failures.joined(separator: "\n"))
     }
 
     /// The entries, as the table macOS states a list of records with: click
@@ -491,7 +471,6 @@ struct CustomDictionaryEntrySheet: View {
                     var edited = original
                     edited.roman = roman.trimmingCharacters(in: .whitespacesAndNewlines)
                     edited.hanzi = hanzi.trimmingCharacters(in: .whitespacesAndNewlines)
-                    edited.updatedAt = Date()
                     onSave(edited)
                     dismiss()
                 }

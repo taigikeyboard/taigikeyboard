@@ -2,19 +2,21 @@
 
 import Foundation
 
-/// Sits between the composing path and `user_association.db`.
+/// Sends the commit handshakes the next-word engine learns from.
 ///
 /// The engine decides WHAT is worth learning — whether the 10-second window is
 /// still open, how a compound word splits, whether the text is noise at all
-/// (`engine/nextword/src/decide.rs`) — and this type only carries the answer to
-/// the store. Splitting or filtering here would be a second copy of a decision
-/// that has to match iOS and Android, and that decision is deliberately one
-/// rule rather than three: `INVARIANT_NEXTWORD_LEARNING_DECISION_CONTRACT`
+/// (`engine/nextword/src/decide.rs`) and, with the user data open, writes it
+/// into `user_association.db` itself; this type only reports the commits and
+/// hands any bigram the answer still carries to its `AssociationSink`.
+/// Splitting or filtering here would be a second copy of a decision that has
+/// to match iOS and Android, and that decision is deliberately one rule
+/// rather than three: `INVARIANT_NEXTWORD_LEARNING_DECISION_CONTRACT`
 /// (`docs/architecture/behavioral-invariants.md` §40) makes the learning rules
 /// depend on the writing system, never on the platform.
 @MainActor
 final class NextWordLearner {
-    private let store: UserAssociationStore
+    private let sink: any AssociationSink
     private let now: @Sendable () -> Int64
     private static let logger = DebugLogger(category: "NextWordLearner")
 
@@ -22,10 +24,10 @@ final class NextWordLearner {
     ///   engine's association window is a comparison against this clock, and a
     ///   test that cannot move it can only ever exercise one side of it.
     init(
-        store: UserAssociationStore,
+        sink: any AssociationSink,
         now: @escaping @Sendable () -> Int64 = { Int64(Date().timeIntervalSince1970 * 1000) },
     ) {
-        self.store = store
+        self.sink = sink
         self.now = now
     }
 
@@ -74,10 +76,10 @@ final class NextWordLearner {
             switch effect {
             case let .recordAssociation(pair):
                 Self.logger.debug("recordAssociation")
-                store.record([pair])
+                sink.record([pair])
             case let .recordCompoundAssociations(pairs):
                 Self.logger.debug("recordCompoundAssociations count=\(pairs.count)")
-                store.record(pairs)
+                sink.record(pairs)
             }
         }
     }

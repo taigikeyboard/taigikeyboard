@@ -54,7 +54,9 @@ enum UserDataJournal {
   USER_DATA_JOURNAL_DELETE = 1;
 }
 
-// Opens the stores for this process, once. Absolute file paths: one
+// Opens the stores for this process, once. Every other request but
+// `RecordUsage` waits until the open has finished (a page must not read a
+// dictionary still being taken over). Absolute file paths: one
 // directory everywhere except Android, whose `user_association.db` lives in
 // `filesDir`. The stores are in use from the moment this is handled: a pick
 // or a learned phrase reported meanwhile queues behind the open, a fetch
@@ -72,6 +74,12 @@ message OpenUserData {
   string learned_phrases_path = 4;
   UserDataJournal journal = 5;
   bool in_background = 6;
+  // The one directory the files live in, under the names every platform
+  // shares (`user_frequency.db`, `user_association.db`,
+  // `custom_dictionary.db`, `learned_phrases.db`). A non-empty `*_path`
+  // above overrides its own file — Android's `user_association.db` in
+  // `filesDir`. Without it, all four paths are required.
+  string directory = 7;
 }
 
 // Which stores are ready. A store that is not — a file from a later build,
@@ -93,12 +101,18 @@ message ResetUserData {
   bool learned_phrases = 4;
 }
 
-// Rows removed per store (0 for a store not selected).
+// Rows removed per store (0 for a store not selected, or one that failed).
+// Every selected store is attempted: one that cannot be emptied is no
+// reason to leave the others full.
 message UserDataReset {
   int64 frequency_removed = 1;
   int64 association_removed = 2;
   int64 custom_dictionary_removed = 3;
   int64 learned_phrases_removed = 4;
+  // One line per selected store that could not be emptied, naming its file
+  // (`user_frequency: <error>`) — English, for a diagnostic. Empty when
+  // every selected store was emptied.
+  repeated string failures = 5;
 }
 
 // The user committed a candidate or picked a prediction — one frequency
@@ -170,6 +184,10 @@ message CustomEntries {
   repeated CustomDictionaryEntry entries = 1;
   uint32 total = 2;           // every stored word
   uint32 matching_total = 3;  // the words `filter` matches, for paging
+  // The offset these entries start at: the request's, pulled back to the
+  // last page's when the matches shrank under it (a delete on the last
+  // page), so one request always answers a page that exists.
+  uint32 offset = 4;
 }
 
 // Adds a word, or edits the one with `id`.
@@ -183,6 +201,9 @@ message CustomEntrySaved {
   CustomDictionaryRefusal refusal = 1;
   // The stored row; absent when refused.
   optional CustomDictionaryEntry entry = 2;
+  // The refusal in English, for an alert's diagnostic line
+  // (`custom dictionary is full (max 30000 entries)`); empty when saved.
+  string detail = 3;
 }
 
 message DeleteCustomEntry { string id = 1; }
@@ -199,6 +220,9 @@ message CustomCsvImported {
   CustomDictionaryRefusal refusal = 1;
   uint32 imported = 2;
   uint32 skipped = 3;
+  // The refusal in English, for an alert's diagnostic line
+  // (`file holds more than 30000 entries`); empty when imported.
+  string detail = 4;
 }
 
 // A dictionary search looks entries up the way the keyboard does — by the

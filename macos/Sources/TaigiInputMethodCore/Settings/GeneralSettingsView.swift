@@ -14,7 +14,7 @@ import SwiftUI
 ///
 /// The two learning switches are gone, along with the Frequency Records and Association Records
 /// panes that carried them: the records are always on, they are bounded by
-/// `LearningCapacity`, and the product decision (USER 2026-08-24) is that they
+/// the engine's store capacities, and the product decision (USER 2026-08-24) is that they
 /// are not the user's to administer. The one destructive verb — clear both at
 /// once — lives beside the custom dictionary's own clear button on the Custom Dictionary
 /// pane, so every "throw away what is stored" action is in one place.

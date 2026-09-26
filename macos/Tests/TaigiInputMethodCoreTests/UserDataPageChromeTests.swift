@@ -91,9 +91,8 @@ final class UserDataPageDoneMessageTests: XCTestCase {
 /// import started while the first is still parsing behind a closed file panel.
 @MainActor
 final class CustomDictionaryWorkSlotTests: XCTestCase {
-    private func makeModel() throws -> CustomDictionaryPageModel {
-        let directory = try TestFixtures.scratchDirectory()
-        return CustomDictionaryPageModel(store: CustomDictionaryStore(directory: { directory }))
+    private func makeModel() -> CustomDictionaryPageModel {
+        CustomDictionaryPageModel(client: FakeUserDataClient())
     }
 
     /// A symbol name that stops resolving renders a blank rectangle and says
@@ -105,7 +104,7 @@ final class CustomDictionaryWorkSlotTests: XCTestCase {
     }
 
     func testBeginWork_refusesASecondClaimWhileTheFirstIsHeld() throws {
-        let model = try makeModel()
+        let model = makeModel()
 
         XCTAssertTrue(model.beginWork(.desktopProgressWorking))
         XCTAssertFalse(
@@ -118,7 +117,7 @@ final class CustomDictionaryWorkSlotTests: XCTestCase {
     /// A real action, start to finish: it takes the slot on the way in and
     /// gives it back on the way out, whether the store answered or failed.
     func testAnAction_leavesTheSlotFreeWhenItEnds() async throws {
-        let model = try makeModel()
+        let model = makeModel()
 
         await model.deleteAll()
 
@@ -128,7 +127,7 @@ final class CustomDictionaryWorkSlotTests: XCTestCase {
 
     /// And an action that arrives while the slot is held does not run at all.
     func testAnAction_doesNothingWhileAnotherHoldsTheSlot() async throws {
-        let model = try makeModel()
+        let model = makeModel()
         XCTAssertTrue(model.beginWork(.desktopProgressWorking))
 
         await model.deleteAll()
@@ -149,11 +148,9 @@ final class CustomDictionaryWorkSlotTests: XCTestCase {
 /// has neither problem.
 @MainActor
 final class CustomDictionaryPagingTests: XCTestCase {
-    /// Through `makeUserDataStores`, which OPENS the databases — a store built
-    /// straight from a directory answers every query with "not open", which is
-    /// enough for the work-slot cases above and useless here.
-    private func makeModel() throws -> CustomDictionaryPageModel {
-        try CustomDictionaryPageModel(store: TestFixtures.makeUserDataStores().customDictionary)
+    /// Over an in-memory dictionary that pages the way the engine does.
+    private func makeModel() -> CustomDictionaryPageModel {
+        CustomDictionaryPageModel(client: FakeUserDataClient())
     }
 
     private func seed(_ model: CustomDictionaryPageModel, count: Int) async {
@@ -167,7 +164,7 @@ final class CustomDictionaryPagingTests: XCTestCase {
     /// a list whose last few rows had no page would be rows the user cannot
     /// reach, which is the bug this replaced.
     func testPageCount_coversTheRemainder() async throws {
-        let model = try makeModel()
+        let model = makeModel()
         let size = CustomDictionaryPageModel.pageSize
 
         await seed(model, count: size + 1)
@@ -180,7 +177,7 @@ final class CustomDictionaryPagingTests: XCTestCase {
     /// An empty dictionary still reads as one page, not as a pager with
     /// nothing in it.
     func testAnEmptyDictionary_isOnePage() async throws {
-        let model = try makeModel()
+        let model = makeModel()
 
         await model.load()
 
@@ -190,7 +187,7 @@ final class CustomDictionaryPagingTests: XCTestCase {
     }
 
     func testPagingForward_showsTheNextRowsAndStopsAtTheEnd() async throws {
-        let model = try makeModel()
+        let model = makeModel()
         let size = CustomDictionaryPageModel.pageSize
         await seed(model, count: size + 2)
         let firstPage = Set(model.rows.map(\.id))
@@ -211,7 +208,7 @@ final class CustomDictionaryPagingTests: XCTestCase {
     /// last page, or a filter that now matches less. Nothing else clamps the
     /// page, so a load that did not would show an empty table with no way back.
     func testAPageThatOutlivesItsRows_isPulledBackIntoTheList() async throws {
-        let model = try makeModel()
+        let model = makeModel()
         let size = CustomDictionaryPageModel.pageSize
         await seed(model, count: size + 1)
         await model.pageForward()
@@ -226,7 +223,7 @@ final class CustomDictionaryPagingTests: XCTestCase {
     /// A new filter is a new list, so the pages it had before are pages of
     /// something else.
     func testLoadingAfterAFilterChange_startsAtPageOne() async throws {
-        let model = try makeModel()
+        let model = makeModel()
         await seed(model, count: CustomDictionaryPageModel.pageSize + 1)
         await model.pageForward()
 

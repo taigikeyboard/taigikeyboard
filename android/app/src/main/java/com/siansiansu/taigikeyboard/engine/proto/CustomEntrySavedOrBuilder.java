@@ -39,4 +39,26 @@ public interface CustomEntrySavedOrBuilder extends
    * @return The entry.
    */
   com.siansiansu.taigikeyboard.engine.proto.CustomDictionaryEntry getEntry();
+
+  /**
+   * <pre>
+   * The refusal in English, for an alert's diagnostic line
+   * (`custom dictionary is full (max 30000 entries)`); empty when saved.
+   * </pre>
+   *
+   * <code>string detail = 3;</code>
+   * @return The detail.
+   */
+  java.lang.String getDetail();
+  /**
+   * <pre>
+   * The refusal in English, for an alert's diagnostic line
+   * (`custom dictionary is full (max 30000 entries)`); empty when saved.
+   * </pre>
+   *
+   * <code>string detail = 3;</code>
+   * @return The bytes for detail.
+   */
+  com.google.protobuf.ByteString
+      getDetailBytes();
 }

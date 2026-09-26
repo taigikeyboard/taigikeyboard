@@ -42,7 +42,7 @@ pub fn open_user_data(paths: &UserDataPaths) {
                 custom_dictionary_path: paths.custom_dictionary.display().to_string(),
                 learned_phrases_path: paths.learned_phrases.display().to_string(),
                 journal: UserDataJournal::Delete as i32,
-                in_background: false,
+                ..OpenUserData::default()
             })),
         }),
     );
