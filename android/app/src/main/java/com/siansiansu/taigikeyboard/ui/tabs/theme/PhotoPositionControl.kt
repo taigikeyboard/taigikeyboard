@@ -30,6 +30,7 @@ import com.siansiansu.taigikeyboard.ime.core.SurfaceRect
 import com.siansiansu.taigikeyboard.ime.core.ThemeImageBackground
 import kotlin.math.min
 import kotlin.math.roundToInt
+import kotlin.math.sqrt
 
 // The theme editor's photo position control: the drag / pinch surface over the live preview and
 // the finger -> focus / zoom math behind it. Mirrors iOS PhotoPositionControl.swift.
@@ -141,6 +142,11 @@ private val HEAD_LENGTH = 10.dp
 
 /** Half the arrow length as a fraction of the preview's shorter side. */
 private const val HALF_LENGTH_FRACTION = 0.25f
+
+/** The zoom hint's gap radius and tip radius, as fractions of the half length. */
+private const val ZOOM_HINT_INNER_FRACTION = 0.35f
+private const val ZOOM_HINT_OUTER_FRACTION = 0.85f
+private val ZOOM_HINT_DIRECTION = Offset(1f, 1f) / sqrt(2f)
 private val HALO_COLOR = Color.Black.copy(alpha = 0.6f)
 
 /**
@@ -232,8 +238,10 @@ fun PhotoPositionOverlay(
 
 /**
  * A double-headed arrow through the centre along each of [axes] (a cross when both, nothing when
- * neither). Its own composable on stable inputs so a drag (which changes the photo, not the axes)
- * skips the redraw. Mirrors iOS PhotoPositionArrow.
+ * neither), plus a shorter diagonal ↖↘ arrow — the "expand" hint that the photo also pinches —
+ * drawn every time, since zoom is always possible. The diagonal leaves a gap at the centre so the
+ * move cross stays readable. Its own composable on stable inputs so a drag (which changes the
+ * photo, not the axes) skips the redraw. Mirrors iOS PhotoPositionArrow.
  */
 @Composable
 private fun PhotoPositionArrow(
@@ -241,16 +249,22 @@ private fun PhotoPositionArrow(
     modifier: Modifier,
 ) {
     Canvas(modifier) {
-        if (axes.horizontal) drawPositionArrow(Orientation.Horizontal)
-        if (axes.vertical) drawPositionArrow(Orientation.Vertical)
+        val halfLength = min(size.width, size.height) * HALF_LENGTH_FRACTION
+        if (axes.horizontal) drawPositionArrow(Offset(1f, 0f), inner = 0f, outer = halfLength)
+        if (axes.vertical) drawPositionArrow(Offset(0f, 1f), inner = 0f, outer = halfLength)
+        drawPositionArrow(ZOOM_HINT_DIRECTION, inner = halfLength * ZOOM_HINT_INNER_FRACTION, outer = halfLength * ZOOM_HINT_OUTER_FRACTION)
     }
 }
 
-// White on a dark halo reads on any photo: every stroke is drawn twice, halo first.
-private fun DrawScope.drawPositionArrow(axis: Orientation) {
-    val halfLength = min(size.width, size.height) * HALF_LENGTH_FRACTION
-    val along = if (axis == Orientation.Horizontal) Offset(1f, 0f) else Offset(0f, 1f)
-    val across = Offset(along.y, along.x)
+// A double-headed arrow along the unit vector [along]: on each side of the centre a shaft from
+// radius [inner] out to the tip at radius [outer]. White on a dark halo reads on any photo: every
+// stroke is drawn twice, halo first.
+private fun DrawScope.drawPositionArrow(
+    along: Offset,
+    inner: Float,
+    outer: Float,
+) {
+    val across = Offset(-along.y, along.x)
     val headLengthPx = HEAD_LENGTH.toPx()
     val strokeWidthPx = STROKE_WIDTH.toPx()
     val haloWidthPx = HALO_WIDTH.toPx()
@@ -258,8 +272,8 @@ private fun DrawScope.drawPositionArrow(axis: Orientation) {
     for ((color, width) in listOf(HALO_COLOR to strokeWidthPx + haloWidthPx * 2, Color.White to strokeWidthPx)) {
         for (sign in listOf(1f, -1f)) {
             val direction = along * sign
-            val tip = center + direction * halfLength
-            drawLine(color, center, tip, strokeWidth = width, cap = StrokeCap.Round)
+            val tip = center + direction * outer
+            drawLine(color, center + direction * inner, tip, strokeWidth = width, cap = StrokeCap.Round)
             // Arrowhead: two strokes swept back from the tip at 45°.
             for (side in listOf(1f, -1f)) {
                 drawLine(color, tip, tip - (direction - across * side) * headLengthPx, strokeWidth = width, cap = StrokeCap.Round)

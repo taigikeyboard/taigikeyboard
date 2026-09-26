@@ -168,8 +168,10 @@ private struct PhotoPositionAccessibility: ViewModifier {
 }
 
 /// A double-headed arrow through the centre along each of `axes` (a cross when both, nothing
-/// when neither). `Equatable` on the axes alone so edits to other controls (which re-render
-/// the whole editor body) skip the redraw.
+/// when neither), plus a shorter diagonal ↖↘ arrow — the "expand" hint that the photo also
+/// pinches — drawn every time, since zoom is always possible. The diagonal leaves a gap at the
+/// centre so the move cross stays readable. `Equatable` on the axes alone so edits to other
+/// controls (which re-render the whole editor body) skip the redraw.
 private struct PhotoPositionArrow: View, Equatable {
     let axes: Axis.Set
 
@@ -177,6 +179,9 @@ private struct PhotoPositionArrow: View, Equatable {
     private static let headLength: CGFloat = 10
     /// Half the arrow length as a fraction of the preview's shorter side.
     private static let halfLengthFraction: CGFloat = 0.25
+    /// The zoom hint's gap radius and tip radius, as fractions of `halfLength`.
+    private static let zoomHintInnerFraction: CGFloat = 0.35
+    private static let zoomHintOuterFraction: CGFloat = 0.85
 
     var body: some View {
         Canvas { context, size in
@@ -184,23 +189,29 @@ private struct PhotoPositionArrow: View, Equatable {
             let halfLength = min(size.width, size.height) * Self.halfLengthFraction
             var path = Path()
             if axes.contains(.horizontal) {
-                Self.addArrow(to: &path, center: center, halfLength: halfLength, along: CGVector(dx: 1, dy: 0))
+                Self.addArrow(to: &path, center: center, along: CGVector(dx: 1, dy: 0), from: 0, to: halfLength)
             }
             if axes.contains(.vertical) {
-                Self.addArrow(to: &path, center: center, halfLength: halfLength, along: CGVector(dx: 0, dy: 1))
+                Self.addArrow(to: &path, center: center, along: CGVector(dx: 0, dy: 1), from: 0, to: halfLength)
             }
+            Self.addArrow(
+                to: &path, center: center, along: CGVector(dx: 1 / 2.0.squareRoot(), dy: 1 / 2.0.squareRoot()),
+                from: halfLength * Self.zoomHintInnerFraction, to: halfLength * Self.zoomHintOuterFraction,
+            )
             // White on a dark halo reads on any photo.
             context.addFilter(.shadow(color: .black.opacity(0.6), radius: 2))
             context.stroke(path, with: .color(.white), style: StrokeStyle(lineWidth: Self.strokeWidth, lineCap: .round))
         }
     }
 
-    /// A double-headed arrow through `center` along the unit vector `along`.
-    private static func addArrow(to path: inout Path, center: CGPoint, halfLength: CGFloat, along: CGVector) {
-        let across = CGVector(dx: along.dy, dy: along.dx)
+    /// A double-headed arrow along the unit vector `along`: on each side of `center` a shaft
+    /// from radius `inner` out to the tip at radius `outer`.
+    private static func addArrow(to path: inout Path, center: CGPoint, along: CGVector, from inner: CGFloat, to outer: CGFloat) {
+        let across = CGVector(dx: -along.dy, dy: along.dx)
         for sign in [1.0, -1.0] {
-            let tip = CGPoint(x: center.x + along.dx * halfLength * sign, y: center.y + along.dy * halfLength * sign)
-            path.move(to: center)
+            let start = CGPoint(x: center.x + along.dx * inner * sign, y: center.y + along.dy * inner * sign)
+            let tip = CGPoint(x: center.x + along.dx * outer * sign, y: center.y + along.dy * outer * sign)
+            path.move(to: start)
             path.addLine(to: tip)
             // Arrowhead: two strokes swept back from the tip at 45°.
             for side in [1.0, -1.0] {
