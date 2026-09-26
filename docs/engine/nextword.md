@@ -37,12 +37,13 @@
 
 ```sql
 CREATE TABLE user_association (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     prev_word TEXT NOT NULL,   -- Previous word (full word, hanzi)
     prev_tl TEXT DEFAULT '',   -- Previous word TL (added in v4)
     next_word TEXT NOT NULL,   -- Next word (full word, hanzi)
-    next_tl TEXT,              -- Next word TL
+    next_tl TEXT DEFAULT '',   -- Next word TL
     count INTEGER DEFAULT 1,
-    last_used TIMESTAMP,
+    last_used TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(prev_word, prev_tl, next_word, next_tl)
 );
 CREATE INDEX idx_user_prev_word_tl ON user_association(prev_word, prev_tl);

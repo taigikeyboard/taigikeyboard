@@ -292,8 +292,8 @@ pub(crate) fn compound_association_pairs(display_text: &str, roman: &str) -> Vec
     // word), so a TPS payload has no boundary to learn across. Detected from
     // Bopomofo content because `AppConfig.input_mode` never says `"tps"` here:
     // every platform folds TPS into `"tl"` / `"poj"` when it builds the
-    // NextWord config (`ios/…/RustEngineBridge+NextWord.swift:401`,
-    // `android/…/NextWordBridge.kt:300-305`). Content upgrading the mode is the
+    // NextWord config (iOS `RustEngineBridge+NextWord.swift` `nextwordConfig`,
+    // Android `InputMode.engineInputMode()`). Content upgrading the mode is the
     // established shape (`composing/src/dispatch.rs:187-212`), not a workaround.
     if phonetics::contains_tps(display_text) || phonetics::contains_tps(roman) {
         return Vec::new();

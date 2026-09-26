@@ -100,7 +100,9 @@ final class ShortcutKeyRecorderTests: XCTestCase {
 
         let turn = expectation(description: "next runloop turn")
         DispatchQueue.main.async { turn.fulfill() }
-        wait(for: [turn], timeout: 1)
+        // Generous: the turn is what is asserted, not its speed — a loaded
+        // machine (parallel builds) took over 1 s to reach it.
+        wait(for: [turn], timeout: 10)
 
         XCTAssertTrue(field.canBecomeKeyView, "the user's own click or Tab must land")
     }

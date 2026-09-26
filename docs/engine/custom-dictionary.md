@@ -173,7 +173,7 @@ id: "default-tsiah-pa-bue",  roman: "tsia̍h-pá--buē",  hanzi: "食飽未"
 |--------|--------|--------|
 | Priority | Highest (shown first) | Normal |
 | ID marker | `-2` | `≥ 0` (row ID) |
-| Frequency tracking | Not tracked | `user_frequency.db` (engine `UserFrequencyStore`) |
+| Frequency tracking | `user_frequency.db`, like any pick — keyed by the `(display_text, canonical_tl)` pair, ranks custom rows among themselves (`lexicon::custom_entry_to_candidate` `user_weight`) | `user_frequency.db` (engine `UserFrequencyStore`) |
 | Search method | Prefix (roman/notone/abbrev) | Trie-based |
 | Segmentation | Raw input (unsegmented) | Segmented input |
 
