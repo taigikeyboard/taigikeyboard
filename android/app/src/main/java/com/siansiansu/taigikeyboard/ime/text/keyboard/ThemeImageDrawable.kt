@@ -46,6 +46,7 @@ internal class ThemeImageDrawable(
                 bounds = SurfaceRect(bounds.left.toFloat(), bounds.top.toFloat(), bounds.width().toFloat(), bounds.height().toFloat()),
                 focusX = photo.focusX,
                 focusY = photo.focusY,
+                zoom = photo.zoom,
             )
         destination.set(cover.left, cover.top, cover.left + cover.width, cover.top + cover.height)
     }

@@ -232,6 +232,8 @@
     <string name="i18n_theme_photoChange">Change Photo</string>
     <string name="i18n_theme_photoDim">Fade</string>
     <string name="i18n_theme_photoPosition">Position</string>
+    <string name="i18n_theme_photoHintMove">Move</string>
+    <string name="i18n_theme_photoHintZoom">Zoom</string>
     <string name="i18n_theme_gradientDirection">Direction</string>
     <string name="i18n_theme_colorKeySection">Keys</string>
     <string name="i18n_theme_candidateSection">Candidate Bar</string>

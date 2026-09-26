@@ -116,6 +116,16 @@
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
       "values": { "hanji": "位置", "tailo": "Uī-tì", "poj": "Ūi-tì", "en": "Position", "ja": "位置" }
     },
+    "photoHintMove": {
+      "comment": "Theme editor: label beside the move icon in the transient gesture hint over the photo preview (drag to move the photo). Fades out on first touch.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "徙位", "tailo": "Suá-uī", "poj": "Sóa-ūi", "en": "Move", "ja": "移動" }
+    },
+    "photoHintZoom": {
+      "comment": "Theme editor: label beside the pinch icon in the transient gesture hint over the photo preview (pinch to zoom the photo). Fades out on first touch.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "放大", "tailo": "Hòng-tuā", "poj": "Hòng-tōa", "en": "Zoom", "ja": "拡大" }
+    },
     "gradientDirection": {
       "comment": "Gradient direction: the VoiceOver / TalkBack label of the drag pointer over the theme editor preview (no visible row on either platform).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },

@@ -34,7 +34,7 @@ struct ThemeBackgroundSurface: View, Equatable {
                 if let slice {
                     ThemeImageSlice(uiImage: uiImage, image: image, tone: tone, slice: slice)
                 } else {
-                    FocusedPhotoFill(image: Image(uiImage: uiImage), focus: image.focus)
+                    FocusedPhotoFill(image: Image(uiImage: uiImage), focus: image.focus, zoom: image.zoom)
                         .overlay(tone.opacity(image.dim))
                 }
             } placeholder: {
@@ -51,13 +51,16 @@ struct ThemeBackgroundSurface: View, Equatable {
 }
 
 /// `image` aspect-filled and desaturated over this view and clipped to it, placed where
-/// `ThemeImageBackground.coverRect` puts it for `focus`: a fractional alignment guide on
-/// both the surface and the photo lines up the surface's `focus` point with the photo's,
-/// so the photo's left edge lands at `(surface − photo) × focus.x` (same for y). Plain
-/// `Image` layout, no oversized frame + `.offset` (#429).
+/// `ThemeImageBackground.coverRect` puts it for `focus` and `zoom`: a fractional alignment
+/// guide on both the surface and the photo lines up the surface's `focus` point with the
+/// photo's, so the photo's left edge lands at `(surface − photo) × focus.x` (same for y).
+/// `zoom` scales the photo about that shared point, which keeps it fixed, so the zoomed
+/// left edge lands at `(surface − photo × zoom) × focus.x` — `coverRect`'s. Plain `Image`
+/// layout plus a render transform, no oversized frame + `.offset` (#429).
 struct FocusedPhotoFill: View {
     let image: Image
     let focus: CGPoint
+    let zoom: CGFloat
 
     var body: some View {
         Color.clear
@@ -68,6 +71,7 @@ struct FocusedPhotoFill: View {
                     .resizable()
                     .scaledToFill()
                     .saturation(ThemeImageBackground.saturation)
+                    .scaleEffect(zoom, anchor: UnitPoint(x: focus.x, y: focus.y))
                     .alignmentGuide(HorizontalAlignment.photoFocus) { $0.width * focus.x }
                     .alignmentGuide(VerticalAlignment.photoFocus) { $0.height * focus.y }
             }
@@ -107,7 +111,7 @@ private struct ThemeImageSlice: View {
     var body: some View {
         Canvas(rendersAsynchronously: false) { context, size in
             let bounds = CGRect(origin: .zero, size: size)
-            let photoRect = ThemeImageBackground.coverRect(imageSize: uiImage.size, in: slice.keyboardRect(width: size.width), focus: image.focus)
+            let photoRect = ThemeImageBackground.coverRect(imageSize: uiImage.size, in: slice.keyboardRect(width: size.width), focus: image.focus, zoom: image.zoom)
             var photo = context
             photo.addFilter(.saturation(ThemeImageBackground.saturation))
             photo.draw(Image(uiImage: uiImage), in: photoRect)
