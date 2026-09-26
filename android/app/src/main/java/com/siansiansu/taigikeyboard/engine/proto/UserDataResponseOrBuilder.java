@@ -32,5 +32,16 @@ public interface UserDataResponseOrBuilder extends
    */
   com.siansiansu.taigikeyboard.engine.proto.UserDataReset getReset();
 
+  /**
+   * <code>.taigi.engine.UsageRecorded usage_recorded = 3;</code>
+   * @return Whether the usageRecorded field is set.
+   */
+  boolean hasUsageRecorded();
+  /**
+   * <code>.taigi.engine.UsageRecorded usage_recorded = 3;</code>
+   * @return The usageRecorded.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.UsageRecorded getUsageRecorded();
+
   public com.siansiansu.taigikeyboard.engine.proto.UserDataResponse.ResultCase getResultCase();
 }
