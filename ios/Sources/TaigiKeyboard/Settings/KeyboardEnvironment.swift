@@ -36,6 +36,8 @@ protocol KeyboardEnvironment: AnyObject {
     // Global setting, not per-theme: read directly by call sites with no per-render snapshot.
     var fontType: FontType { get }
     var keyboardLayoutType: KeyboardLayoutType { get }
+    // Live read (not in the snapshot): a toolbar pick re-renders through KeyboardContext.objectWillChange.
+    var oneHandedMode: OneHandedMode { get }
 
     /// App Group `UserDefaults` used as the notification filter for
     /// `UserDefaults.didChangeNotification`. The controller observes changes

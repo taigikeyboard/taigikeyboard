@@ -5,6 +5,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import androidx.core.view.children
 import com.siansiansu.taigikeyboard.R
+import com.siansiansu.taigikeyboard.i18n.StringResolver
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
@@ -15,6 +16,7 @@ import com.siansiansu.taigikeyboard.ime.core.logging.TraceId
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
+import com.siansiansu.taigikeyboard.ime.core.settings.OneHandedMode
 import com.siansiansu.taigikeyboard.ime.dictionary.SuggestionCaseTransformer
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import com.siansiansu.taigikeyboard.ime.text.TextInputManager
@@ -52,6 +54,8 @@ class SmartbarManager(
     var symbolSelectionOverlayView: SymbolSelectionOverlayView? = null
         private set
     var settingsSelectionOverlayView: SettingsSelectionOverlayView? = null
+        private set
+    var oneHandedMenuOverlayView: OneHandedMenuOverlayView? = null
         private set
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -127,6 +131,7 @@ class SmartbarManager(
             layoutSelectionOverlayViewProvider = { layoutSelectionOverlayView },
             symbolSelectionOverlayViewProvider = { symbolSelectionOverlayView },
             settingsSelectionOverlayViewProvider = { settingsSelectionOverlayView },
+            oneHandedMenuOverlayViewProvider = { oneHandedMenuOverlayView },
             onInputModeChanged = { mode ->
                 when (mode) {
                     "emoji" -> taigikeyboard.setActiveInput(R.id.media_input)
@@ -252,6 +257,10 @@ class SmartbarManager(
 
     fun collapseToolbarIfOpen() = toolbarManager.collapseToolbarIfOpen()
 
+    fun selectOneHandedMode(mode: OneHandedMode) = toolbarManager.selectOneHandedMode(mode)
+
+    fun refreshKeyboardButton(resolver: StringResolver) = toolbarManager.refreshKeyboardButton(resolver)
+
     val preferredContainer: SmartbarContainer get() = toolbarManager.preferredContainer
 
     // --- Number row ---
@@ -359,6 +368,12 @@ class SmartbarManager(
             taigikeyboard.beginInputEvent()
             taigikeyboard.currentInputConnection?.commitText(symbol, 1)
         }
+    }
+
+    fun registerOneHandedMenuOverlayView(overlayView: OneHandedMenuOverlayView) {
+        oneHandedMenuOverlayView = overlayView
+        overlayView.onSelectMode = { mode -> toolbarManager.selectOneHandedMode(mode) }
+        overlayView.onSelectDismiss = { toolbarManager.selectDismissToolbarAction() }
     }
 
     fun registerSettingsSelectionOverlayView(overlayView: SettingsSelectionOverlayView) {

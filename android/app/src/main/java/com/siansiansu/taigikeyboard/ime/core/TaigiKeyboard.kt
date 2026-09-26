@@ -256,7 +256,9 @@ class TaigiKeyboard : LifecycleInputMethodService() {
         // the flow tag so it reflects the just-selected language.
         serviceScope.launch {
             prefs.observeDisplayLanguage().collect { tag ->
-                inputView?.applyAccessibilityStrings(displayLanguageResolver(tag))
+                val resolver = displayLanguageResolver(tag)
+                inputView?.applyAccessibilityStrings(resolver)
+                smartbarManager.refreshKeyboardButton(resolver)
             }
         }
 

@@ -59,4 +59,12 @@
         android:elevation="8dp"
         android:visibility="gone" />
 
+    <!-- One-handed mode callout: long-press of the toolbar keyboard button; transparent full cover, tap outside closes -->
+    <com.siansiansu.taigikeyboard.ime.text.smartbar.OneHandedMenuOverlayView
+        android:id="@+id/one_handed_menu_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:elevation="8dp"
+        android:visibility="gone" />
+
 </FrameLayout>

@@ -2539,6 +2539,96 @@
         }
       }
     },
+    "i18n_keyboard_oneHandedLeft": {
+      "comment": "One-handed mode callout item: keys dock to the left edge. TL/POJ from the bundled dictionary (倒手 tò-tshiú).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Left hand"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "左手"
+          }
+        }
+      }
+    },
+    "i18n_keyboard_oneHandedMode": {
+      "comment": "Name of the one-handed mode callout opened by long-pressing the toolbar keyboard button; also its a11y long-press action name. TL/POJ from the bundled dictionary (單手 tuann-tshiú) + 輸入模式 spelling.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "One-handed mode"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "片手モード"
+          }
+        }
+      }
+    },
+    "i18n_keyboard_oneHandedOff": {
+      "comment": "One-handed mode side-panel restore button a11y label: back to the full-width keyboard. TL/POJ from the bundled dictionary (一般 it-puann).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Normal"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通常"
+          }
+        }
+      }
+    },
+    "i18n_keyboard_oneHandedRight": {
+      "comment": "One-handed mode callout item: keys dock to the right edge. TL/POJ from the bundled dictionary (正手 tsiànn-tshiú).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Right hand"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右手"
+          }
+        }
+      }
+    },
+    "i18n_keyboard_oneHandedSwapSide": {
+      "comment": "One-handed mode side-panel button a11y label: move the docked keys to the other edge. TL/POJ from the bundled dictionary (換爿 uānn-pîng).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Switch side"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "反対側へ移動"
+          }
+        }
+      }
+    },
     "i18n_keyboard_switchInputMethod": {
       "comment": "Smartbar toolbar globe button a11y label (opens the system input-method picker). Android via InputView.applyAccessibilityStrings; iOS via DisplayLanguageStore in ToolShortcutsToolbar.",
       "extractionState": "manual",
@@ -4400,13 +4490,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fade"
+            "value": "Transparency"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "淡くする"
+            "value": "透明度"
           }
         }
       }

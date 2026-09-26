@@ -87,6 +87,9 @@ final class SharedSettings {
 
     private static let isTpsOrMappedToERKey: SettingsKey<Bool> = .bool("tpsOrMapsToER", default: true)
     private static let isToolbarAutoCollapseKey: SettingsKey<Bool> = .bool("toolbarAutoCollapse", default: true)
+    // Raw strings shared with Android (`keyboard__one_handed_mode` / `keyboard__toolbar_keyboard_action`).
+    private static let oneHandedModeKey: SettingsKey<OneHandedMode> = .rawRep("oneHandedMode", default: .off)
+    private static let keyboardToolbarActionKey: SettingsKey<KeyboardToolbarAction> = .rawRep("keyboardToolbarAction", default: .dismiss)
 
     /// Globe key has a device-dependent default (`DeviceCapabilities.prefersGlobeKeyByDefault`)
     /// so the getter is hand-written; the descriptor is reused for writes
@@ -445,6 +448,20 @@ final class SharedSettings {
         set { userDefaults.set(newValue, for: Self.isToolbarAutoCollapseKey) }
     }
 
+    // MARK: - One-handed mode
+
+    /// Key area docked to one edge at 80% width (`.off` = full width).
+    var oneHandedMode: OneHandedMode {
+        get { userDefaults.value(for: Self.oneHandedModeKey) }
+        set { userDefaults.set(newValue, for: Self.oneHandedModeKey) }
+    }
+
+    /// Most recent pick of the toolbar keyboard button's long-press callout; drives its icon + tap.
+    var keyboardToolbarAction: KeyboardToolbarAction {
+        get { userDefaults.value(for: Self.keyboardToolbarActionKey) }
+        set { userDefaults.set(newValue, for: Self.keyboardToolbarActionKey) }
+    }
+
     // MARK: - Globe Key
 
     /// Globe key toggle. Default depends on device type for backward compatibility:
@@ -667,6 +684,8 @@ final class SharedSettings {
         isKautianNameAppendixEnabled = true
         // Toolbar
         isToolbarAutoCollapse = true
+        oneHandedMode = .off
+        keyboardToolbarAction = .dismiss
         // Globe key: remove stored value so device-based default takes effect
         userDefaults.remove(Self.isGlobeKeyEnabledKey)
         // TPS

@@ -21,6 +21,7 @@ internal class ImeKeyEventDispatcher(
     private val prefs: PrefHelper,
     private val capsStateManager: CapsStateManager,
     private val composeHostProvider: () -> View?,
+    private val keyAreaOffsetXProvider: () -> Int,
     private val onDispatchKeyPress: (KeyData) -> Unit,
 ) : KeyEventDispatcher {
     private val locationScratch = IntArray(2)
@@ -51,7 +52,7 @@ internal class ImeKeyEventDispatcher(
         // starts at [0, 0] so the pre-mount path resolves to window origin
         // (legacy behaviour).
         composeHostProvider()?.getLocationInWindow(locationScratch)
-        val anchorTopXInWindow = locationScratch[0] + bounds.visible.left
+        val anchorTopXInWindow = locationScratch[0] + keyAreaOffsetXProvider() + bounds.visible.left
         val anchorTopYInWindow = locationScratch[1] + bounds.visible.top
 
         val isLandscape = taigikeyboard.resources.configuration.orientation ==

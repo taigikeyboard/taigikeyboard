@@ -2,20 +2,23 @@ import KeyboardKit
 import SwiftUI
 
 /// Tool-shortcut toolbar above the candidate row: an always-visible `+` toggle plus, when expanded,
-/// nine equal-width buttons (4 input modes + symbol / layout / globe / dismiss / settings).
+/// nine equal-width buttons (4 input modes + symbol / layout / globe / keyboard / settings).
 struct ToolShortcutsToolbar: View {
     @Binding var isExpanded: Bool
     let currentInputMode: InputMode
     let onInputModeChange: (InputMode) -> Void
     let onSymbolTap: () -> Void
     let onLayoutTap: () -> Void
-    let onDismissKeyboard: () -> Void
+    let keyboardToolbarAction: KeyboardToolbarAction
+    let onKeyboardButtonTap: () -> Void
+    let onKeyboardButtonLongPress: () -> Void
     let onSettingsTap: () -> Void
 
     @Environment(\.candidateTheme) private var theme
     // Resolves smartbar a11y labels under the picker's display language (mirrors Android
     // InputView.applyAccessibilityStrings). Reading lang.string(_:) in body registers the live-switch.
     @Environment(DisplayLanguageStore.self) private var lang
+    @State private var isKeyboardButtonPressed = false
 
     var body: some View {
         HStack(spacing: 0) {
@@ -70,11 +73,7 @@ struct ToolShortcutsToolbar: View {
 
             globeButton
 
-            ToolShortcutButton(
-                systemName: "keyboard.chevron.compact.down",
-                accessibilityLabel: lang.string(.keyboardDismissKeyboard),
-                action: onDismissKeyboard,
-            )
+            keyboardButton
 
             ToolShortcutButton(
                 systemName: "gearshape",
@@ -120,11 +119,49 @@ struct ToolShortcutsToolbar: View {
         .accessibilityLabel(lang.string(.keyboardSwitchInputMethod))
         .accessibilityHint(lang.string(.keyboardSwitchInputMethodHint))
     }
+
+    /// Keyboard button — tap: the last callout pick (dismiss / toggle a one-handed side),
+    /// long-press: the one-handed callout. Plain gestures instead of `Button` so the
+    /// long-press does not also fire the tap.
+    private var keyboardButton: some View {
+        ToolShortcutIcon(systemName: keyboardToolbarAction.systemImageName)
+            .modifier(ToolShortcutPressFeedback(isPressed: isKeyboardButtonPressed))
+            .onTapGesture(perform: onKeyboardButtonTap)
+            .onLongPressGesture(
+                minimumDuration: 0.4,
+                perform: onKeyboardButtonLongPress,
+                onPressingChanged: { isKeyboardButtonPressed = $0 },
+            )
+            .frame(maxWidth: .infinity)
+            .accessibilityElement()
+            .accessibilityAddTraits(.isButton)
+            .accessibilityLabel(lang.string(keyboardToolbarAction.labelKey))
+            .accessibilityAction(named: lang.string(.keyboardOneHandedMode), onKeyboardButtonLongPress)
+    }
+}
+
+extension KeyboardToolbarAction {
+    /// SF Symbol shared by the toolbar button and its callout cell.
+    var systemImageName: String {
+        switch self {
+        case .dismiss: "keyboard.chevron.compact.down"
+        case .left: "keyboard.onehanded.left"
+        case .right: "keyboard.onehanded.right"
+        }
+    }
+
+    var labelKey: StringKey {
+        switch self {
+        case .dismiss: .keyboardDismissKeyboard
+        case .left: .keyboardOneHandedLeft
+        case .right: .keyboardOneHandedRight
+        }
+    }
 }
 
 // MARK: - Icon shortcut button
 
-/// Shared template for the symbol / layout / dismiss-keyboard / settings icon buttons.
+/// Shared template for the symbol / layout / settings icon buttons.
 private struct ToolShortcutButton: View {
     let systemName: String
     let accessibilityLabel: String
@@ -142,7 +179,7 @@ private struct ToolShortcutButton: View {
     }
 }
 
-/// Shared icon layout so `ToolShortcutButton` and the globe `NextKeyboardButton` look identical.
+/// Shared icon layout so `ToolShortcutButton`, the globe `NextKeyboardButton` and the keyboard button look identical.
 private struct ToolShortcutIcon: View {
     let systemName: String
 
@@ -163,8 +200,18 @@ private struct ToolShortcutIcon: View {
 private struct ToolShortcutButtonStyle: SwiftUI.ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .opacity(configuration.isPressed ? 0.5 : 1.0)
-            .scaleEffect(configuration.isPressed ? 0.85 : 1.0)
-            .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
+            .modifier(ToolShortcutPressFeedback(isPressed: configuration.isPressed))
+    }
+}
+
+/// Shared press look for `ToolShortcutButtonStyle` and the gesture-driven keyboard button.
+private struct ToolShortcutPressFeedback: ViewModifier {
+    let isPressed: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(isPressed ? 0.5 : 1.0)
+            .scaleEffect(isPressed ? 0.85 : 1.0)
+            .animation(.easeInOut(duration: 0.1), value: isPressed)
     }
 }

@@ -120,6 +120,11 @@ class KeyTouchCoordinator(
      *  visual pressed state without re-querying the coordinator. */
     var onPressedKeyChanged: ((Long?) -> Unit)? = null
 
+    /** X offset of the key area inside the keyboard ComposeView, reported by `KeyboardImeRoot`:
+     *  non-zero while one-handed RIGHT puts the side panel before the keys. [KeyBounds] stay
+     *  key-area-local (hit test + popup clamp); only the popup's window anchor adds it. */
+    var keyAreaOffsetX: Int = 0
+
     fun updateBounds(
         newBounds: List<KeyBounds>,
         keyboardWidth: Int,

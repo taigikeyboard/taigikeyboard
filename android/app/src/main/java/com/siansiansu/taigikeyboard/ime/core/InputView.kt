@@ -91,6 +91,9 @@ class InputView : FrameLayout {
      * The Compose candidate/symbol/layout overlays follow the picker through
      * `ProvideDisplayLanguage`; this is the imperative counterpart for the
      * non-Compose smartbar/media buttons.
+     *
+     * The toolbar keyboard button is not here: its label follows its action
+     * (`ToolbarManager.refreshKeyboardButton`).
      */
     fun applyAccessibilityStrings(resolver: StringResolver) {
         fun setDescription(
@@ -103,7 +106,6 @@ class InputView : FrameLayout {
         setDescription(R.id.toolbar_symbol_button, StringKey.KEYBOARD_SYMBOL_PANEL)
         setDescription(R.id.toolbar_layout_button, StringKey.KEYBOARD_SWITCH_LAYOUT)
         setDescription(R.id.toolbar_globe_button, StringKey.KEYBOARD_SWITCH_INPUT_METHOD)
-        setDescription(R.id.toolbar_dismiss_button, StringKey.KEYBOARD_DISMISS_KEYBOARD)
         setDescription(R.id.toolbar_settings_button, StringKey.COMMON_SETTINGS)
         setDescription(R.id.expand_toggle_button, StringKey.KEYBOARD_EXPAND_CANDIDATES)
         setDescription(R.id.media_input_backspace_button, StringKey.COMMON_DELETE)
