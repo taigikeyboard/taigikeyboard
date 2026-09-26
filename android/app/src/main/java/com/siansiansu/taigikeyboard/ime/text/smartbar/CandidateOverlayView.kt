@@ -62,6 +62,11 @@ class CandidateOverlayView : FrameLayout {
     // gradient in system dark mode instead of flipping white via the night attrs.
     private val candidateTextColorState = mutableStateOf<Int?>(null)
 
+    // First-candidate + pressed cell tints (ARGB), resolved by SmartbarManager.currentDisplay()
+    // so the overlay matches the strip under every theme.
+    private val firstCandidateColorState = mutableIntStateOf(0)
+    private val pressedColorState = mutableIntStateOf(0)
+
     // Bumped on each show() only: re-arms click protection + resets scroll/page (NOT on updateSuggestions).
     private val resetTrigger = mutableIntStateOf(0)
 
@@ -127,6 +132,8 @@ class CandidateOverlayView : FrameLayout {
                         resetKey = resetKey,
                         surface = surfaceState.value,
                         candidateTextColor = candidateTextColorState.value,
+                        firstCandidateColor = firstCandidateColorState.intValue,
+                        pressedColor = pressedColorState.intValue,
                         onSuggestionSelected = { word, index -> onSuggestionSelected?.invoke(word, index) },
                         onCollapse = {
                             hide()
@@ -152,12 +159,16 @@ class CandidateOverlayView : FrameLayout {
      * @param keyboardHeight total keyboard height (overlay covers the full keyboard incl. smartbar)
      * @param surface the resolved theme surface, or null for the adaptive default
      * @param candidateTextColor resolved theme candidate text color (ARGB), or null for the adaptive default
+     * @param firstCandidateColor resolved first-candidate cell background (ARGB)
+     * @param pressedColor resolved pressed cell background (ARGB)
      */
     fun show(
         suggestions: List<TaigiWord>,
         keyboardHeight: Int,
         surface: ThemeSurface?,
         candidateTextColor: Int?,
+        firstCandidateColor: Int,
+        pressedColor: Int,
     ) {
         if (isShowing) return
         if (suggestions.isEmpty()) return
@@ -168,6 +179,8 @@ class CandidateOverlayView : FrameLayout {
         candidateDisplayModeState.value = prefs.candidateDisplayMode
         surfaceState.value = surface
         candidateTextColorState.value = candidateTextColor
+        firstCandidateColorState.intValue = firstCandidateColor
+        pressedColorState.intValue = pressedColor
 
         if (keyboardHeight > 0) {
             layoutParams = (layoutParams as? FrameLayout.LayoutParams)?.apply {

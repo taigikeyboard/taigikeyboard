@@ -17,6 +17,7 @@ import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.i18n.ProvideDisplayLanguage
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
+import com.siansiansu.taigikeyboard.ime.core.ThemeAppearanceCache
 import com.siansiansu.taigikeyboard.ime.core.isKeyboardNightMode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
@@ -80,6 +81,10 @@ class KeyPopupManager(
      *  theme-attr lookups + typeface load stop running on each touch-down. */
     private var cachedDisplayKey: DisplayKey? = null
     private var cachedDisplay: PopupDisplayParams? = null
+
+    /** Resolves the active theme so a fixed-palette theme paints the popup from its own
+     *  key fill + key text instead of the night-qualified popup attrs. */
+    private val themeCache by lazy { ThemeAppearanceCache(ime.prefs) }
 
     override val isShowingPopup: Boolean
         get() = _previewState.value is PreviewState.Visible
@@ -199,27 +204,36 @@ class KeyPopupManager(
      */
     private fun displayParams(): PopupDisplayParams {
         val config = ime.resources.configuration
+        val isNightMode = isKeyboardNightMode(ime)
+        val colors = themeCache.resolve(isNightMode).colors
+        val fixedKeyFill = colors.fixedKeyFill
         val key = DisplayKey(
-            isNightMode = isKeyboardNightMode(ime),
+            isNightMode = isNightMode,
+            fixedKeyFill = fixedKeyFill,
+            // Read only under a fixed fill (the gate guarantees it is non-null there).
+            fixedKeyText = fixedKeyFill?.let { colors.keyTextColor },
             fontType = ime.prefs.fontType,
             densityDpi = config.densityDpi,
             fontScale = config.fontScale,
         )
         val cached = cachedDisplay
         if (cached != null && key == cachedDisplayKey) return cached
-        return resolveDisplayParams().also {
+        return resolveDisplayParams(key.fixedKeyFill, key.fixedKeyText).also {
             cachedDisplayKey = key
             cachedDisplay = it
         }
     }
 
-    private fun resolveDisplayParams(): PopupDisplayParams {
+    private fun resolveDisplayParams(
+        fixedKeyFill: Int?,
+        fixedKeyText: Int?,
+    ): PopupDisplayParams {
         val res = ime.resources
         val density = res.displayMetrics.density
         val prefs: PrefHelper = ime.prefs
         return PopupDisplayParams(
-            fgColorArgb = getColorFromAttr(ime, R.attr.key_popup_fgColor),
-            bgColorArgb = getColorFromAttr(ime, R.attr.key_popup_bgColor),
+            fgColorArgb = fixedKeyText ?: getColorFromAttr(ime, R.attr.key_popup_fgColor),
+            bgColorArgb = fixedKeyFill ?: getColorFromAttr(ime, R.attr.key_popup_bgColor),
             extBgColorArgb = getColorFromAttr(ime, R.attr.key_popup_extended_bgColor),
             extBgColorActiveArgb = getColorFromAttr(ime, R.attr.key_popup_extended_bgColorActive),
             shadowColorArgb = getColorFromAttr(ime, R.attr.key_popup_extended_shadowColor),
@@ -475,11 +489,13 @@ class KeyPopupManager(
     override fun dismissAllPopups() = hide()
 
     /** The [resolveDisplayParams] inputs that can change at runtime today (night-mode
-     *  theme variant, font pref, dp/sp scaling); equality drives the re-resolve gate.
-     *  The theme style itself is fixed (`R.style.KeyboardTheme`) and the popup dimens
-     *  have no qualifier variants, so neither needs a key field. */
+     *  theme variant, the fixed-palette popup colors, font pref, dp/sp scaling); equality
+     *  drives the re-resolve gate. The theme style itself is fixed (`R.style.KeyboardTheme`)
+     *  and the popup dimens have no qualifier variants, so neither needs a key field. */
     private data class DisplayKey(
         val isNightMode: Boolean,
+        val fixedKeyFill: Int?,
+        val fixedKeyText: Int?,
         val fontType: String,
         val densityDpi: Int,
         val fontScale: Float,

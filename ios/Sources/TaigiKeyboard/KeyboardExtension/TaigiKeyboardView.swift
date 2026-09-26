@@ -417,7 +417,7 @@ struct TaigiKeyboardView: View {
             return style
         }
         .keyboardCalloutActions(TaigiCallouts.taigiCalloutActions)
-        .keyboardCalloutStyle(calloutStyle)
+        .keyboardCalloutStyle(calloutStyle.themed(by: p.settings.colorSettings))
     }
 
     /// The colorScheme the emoji-switch key's content should render in, so KeyboardKit's

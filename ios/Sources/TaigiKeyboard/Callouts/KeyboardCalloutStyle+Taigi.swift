@@ -17,4 +17,16 @@ extension KeyboardCalloutStyle {
             inputItemFont: KeyboardFont.custom(fontName, size: 32, weight: .light),
         )
     }
+
+    /// Paints the callout from a fixed-palette theme's key fill + key text, so a light
+    /// palette's callout stays light in system dark mode (KeyboardKit's default
+    /// `.keyboardButtonBackground` / `.primary` follow the system appearance). Adaptive
+    /// themes (`fixedKeyFill` nil) keep KeyboardKit's colors.
+    func themed(by colors: KeyboardColorSettings) -> KeyboardCalloutStyle {
+        guard let fill = colors.fixedKeyFill, let text = colors.keyTextColor else { return self }
+        var style = self
+        style.backgroundColor = fill.color
+        style.foregroundColor = text.color
+        return style
+    }
 }
