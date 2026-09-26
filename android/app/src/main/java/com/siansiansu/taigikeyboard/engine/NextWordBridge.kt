@@ -10,7 +10,6 @@ import com.siansiansu.taigikeyboard.engine.proto.DecisionInput
 import com.siansiansu.taigikeyboard.engine.proto.NextWordRequest
 import com.siansiansu.taigikeyboard.engine.proto.NextWordResponse
 import com.siansiansu.taigikeyboard.engine.proto.Platform
-import com.siansiansu.taigikeyboard.engine.proto.Source
 import com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 
@@ -181,12 +180,13 @@ fun RustEngineBridge.nextwordUpdateLastSelectedWord(
 // endregion
 // region Predict
 
-// Platform SQL supplies the learned rows (best evidence first); the engine adds the bundled rows
-// for the last character of [word], then scores, merges, sorts, limits and shapes.
+// The engine reads the learned rows for [word] / [roman] from its own `user_association.db`
+// (§24 tiers, roadmap P8b), adds the bundled rows for the last character of [word], then
+// scores, merges, sorts, limits and shapes.
 // A queryGeneration that no longer matches currentGeneration returns wasStale=true — caller drops the result.
 fun RustEngineBridge.nextwordPredictNext(
     word: String,
-    userRows: List<RustEngineBridge.NextWordRawRow>,
+    roman: String,
     toggles: RustEngineBridge.DictionaryToggles,
     queryGeneration: Long,
     nowMs: Long,
@@ -200,26 +200,11 @@ fun RustEngineBridge.nextwordPredictNext(
     val builder = com.siansiansu.taigikeyboard.engine.proto.PredictNext
         .newBuilder()
         .setWord(word)
+        .setRoman(roman)
         .setToggles(dictionaryTogglesProto(toggles))
         .setQueryGeneration(queryGeneration)
         .setNowMs(nowMs)
         .setLimit(limit)
-    for (row in userRows) {
-        builder.addUserRows(
-            com.siansiansu.taigikeyboard.engine.proto.RawNextWordPrediction
-                .newBuilder()
-                .setHanzi(row.hanzi)
-                .setTl(row.tl)
-                .setCount(row.count)
-                .setLastUsedMs(row.lastUsedMs)
-                .setSource(
-                    when (row.source) {
-                        RustEngineBridge.NextWordRawRow.Source.DICT -> Source.SOURCE_DICT
-                        RustEngineBridge.NextWordRawRow.Source.USER -> Source.SOURCE_USER
-                    },
-                ).build(),
-        )
-    }
     val resp = nextwordDispatch(
         methodSetter = { it.predictNext = builder.build() },
         op = "nextwordPredictNext",
@@ -263,13 +248,8 @@ private fun nextwordConfig(
 ): AppConfig =
     AppConfig
         .newBuilder()
-        .setInputMode(
-            when (mode) {
-                InputMode.POJ -> "poj"
-                InputMode.TL -> "tl"
-                InputMode.ENGLISH -> "english"
-            },
-        ).setOoDoubletapEnabled(false)
+        .setInputMode(mode.engineInputMode())
+        .setOoDoubletapEnabled(false)
         .setNnDoubletapEnabled(false)
         .setCandidateDisplayMode(candidateDisplayMode.toProto())
         .setHyphenlessRoman(hyphenlessRoman)

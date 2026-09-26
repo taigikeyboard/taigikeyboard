@@ -1,5 +1,5 @@
-// Manual DI composition root (no Hilt) — holds stateful engine services (Lexicon / NextWord /
-// Backup / CustomDictionary / UserFrequency / Logger) shared by the IME service, Settings
+// Manual DI composition root (no Hilt) — holds stateful engine services (Lexicon / user data /
+// Logger) shared by the IME service, Settings
 // Activity, and Compose screens. Owned by TaigiKeyboardApplication; IME-internal managers
 // (TextInputManager / SmartbarManager) live and die with the IME service, so they are
 // deliberately built in TaigiKeyboard.onCreate instead.
@@ -9,12 +9,9 @@ package com.siansiansu.taigikeyboard.ime.core
 import android.content.Context
 import com.siansiansu.taigikeyboard.ime.core.logging.AndroidLoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
-import com.siansiansu.taigikeyboard.ime.dictionary.BackupService
-import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryService
-import com.siansiansu.taigikeyboard.ime.dictionary.LearnedPhraseService
+import com.siansiansu.taigikeyboard.ime.dictionary.EngineUserDataClient
 import com.siansiansu.taigikeyboard.ime.dictionary.LexiconService
-import com.siansiansu.taigikeyboard.ime.dictionary.NextWordService
-import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
+import com.siansiansu.taigikeyboard.ime.dictionary.UserDataClient
 
 /**
  * Service-graph composition root.
@@ -36,12 +33,10 @@ class CompositionRoot private constructor(
     appContext: Context,
 ) {
     val logger: LoggerBackend = AndroidLoggerBackend()
-    val customDict: CustomDictionaryService = CustomDictionaryService(appContext, logger)
-    val learnedPhrases: LearnedPhraseService = LearnedPhraseService(appContext, logger)
-    val userFreq: UserFrequencyService = UserFrequencyService(appContext, logger)
-    val nextWord: NextWordService = NextWordService(appContext, logger)
     val lexicon: LexiconService = LexiconService(appContext, logger)
-    val backup: BackupService = BackupService(logger, customDict, userFreq, nextWord)
+
+    /** The user's data — counts, bigrams, custom dictionary, learned phrases — which the engine owns (roadmap P8b). */
+    val userData: UserDataClient = EngineUserDataClient
 
     /** Decoded theme photos (custom-theme photo background), over the app-private photo store. */
     val themeImages: ThemeImageCache = ThemeImageCache(ThemeImageStore.forApp(appContext))

@@ -15,15 +15,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
-import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryService
-import java.util.UUID
+import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryWord
 
 // Dialog for adding or editing a custom dictionary entry
 @Composable
 internal fun EditEntryDialog(
-    entry: CustomDictionaryService.Entry?,
+    entry: CustomDictionaryWord?,
     onDismiss: () -> Unit,
-    onSave: (CustomDictionaryService.Entry) -> Unit,
+    onSave: (CustomDictionaryWord) -> Unit,
 ) {
     var roman by remember(entry) { mutableStateOf(entry?.roman ?: "") }
     var hanzi by remember(entry) { mutableStateOf(entry?.hanzi ?: "") }
@@ -61,11 +60,8 @@ internal fun EditEntryDialog(
             TextButton(
                 onClick = {
                     val saved =
-                        CustomDictionaryService.Entry(
-                            id = entry?.id ?: UUID.randomUUID().toString(),
-                            roman = roman.trim(),
-                            hanzi = hanzi.trim(),
-                        )
+                        entry?.copy(roman = roman.trim(), hanzi = hanzi.trim())
+                            ?: CustomDictionaryWord(roman = roman.trim(), hanzi = hanzi.trim())
                     onSave(saved)
                 },
                 enabled = canSave,

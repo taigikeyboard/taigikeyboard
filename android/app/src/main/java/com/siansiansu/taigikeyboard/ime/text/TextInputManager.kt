@@ -350,20 +350,6 @@ class TextInputManager(
             // owned NextWordController.
             nextWordRouter = { effect -> smartbarManager.dispatchComposingNextWordEffect(effect) },
             logger = taigikeyboard.compositionRoot.logger,
-            // User-frequency snapshot source for the
-            // Continuous-input two-phase fetch. Mirrors iOS
-            // `ComposingManager(userFrequencyService:
-            // CompositionRoot.userFrequencyService)`.
-            userFrequencyService = taigikeyboard.compositionRoot.userFreq,
-            // v3.5.8 Phase 9 Item 12 — `custom_dictionary.db`
-            // source for the Continuous fetch. Same shared
-            // instance the legacy lexicon path uses. Mirrors
-            // iOS `ComposingManager(customDictionaryRepository:
-            // CompositionRoot.customDictionaryRepository)`.
-            customDictionaryService = taigikeyboard.compositionRoot.customDict,
-            // §50 `learned_phrases.db` — mirrors iOS
-            // `ComposingManager(learnedPhraseRepository:)`.
-            learnedPhraseService = taigikeyboard.compositionRoot.learnedPhrases,
         )
 
     override fun onFinishInputView(finishingInput: Boolean) {

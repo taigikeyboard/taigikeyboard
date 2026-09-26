@@ -49,6 +49,15 @@ if ! command -v cargo-ndk >/dev/null 2>&1; then
     exit 1
 fi
 
+# One NDK for the build and the checks after it: exported so cargo-ndk links
+# with the toolchain whose llvm-readelf inspects the result.
+export ANDROID_NDK_HOME="${ANDROID_NDK_HOME:-${ANDROID_HOME:-$HOME/Library/Android/sdk}/ndk/$(ls "${ANDROID_HOME:-$HOME/Library/Android/sdk}/ndk" 2>/dev/null | sort -V | tail -1)}"
+READELF="$(ls "$ANDROID_NDK_HOME"/toolchains/llvm/prebuilt/*/bin/llvm-readelf 2>/dev/null | head -1)"
+if [[ -z "$READELF" ]]; then
+    echo "error: no llvm-readelf under ANDROID_NDK_HOME=$ANDROID_NDK_HOME" >&2
+    exit 1
+fi
+
 cd "$ENGINE_DIR"
 mkdir -p "$JNI_LIBS_ROOT"
 
@@ -84,6 +93,18 @@ for abi in "${ABIS[@]}"; do
     fi
     if [[ $DEV -eq 0 && $symbol_present -eq 1 ]]; then
         echo "error: panicForTest symbol present in $abi release .so — panic-injector feature leaked" >&2
+        exit 1
+    fi
+done
+
+# 16 KB pages: Android 15+ devices may run with them, and Play requires every
+# 64-bit library to load there (developer.android.com/guide/practices/page-sizes).
+# The NDK links at 16 KB by default; this keeps it so as C code (the engine's
+# bundled SQLite) joins the link. 32-bit ABIs are exempt.
+arm64_so="$JNI_LIBS_ROOT/arm64-v8a/librust_taigi.so"
+for align in $("$READELF" -lW "$arm64_so" | awk '$1 == "LOAD" {print $NF}'); do
+    if (( align < 16384 )); then
+        echo "error: $arm64_so has a LOAD segment aligned at $align, below 16 KB" >&2
         exit 1
     fi
 done

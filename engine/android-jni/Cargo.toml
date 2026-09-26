@@ -20,12 +20,17 @@ name = "rust_taigi"
 crate-type = ["cdylib"]
 
 [features]
+# Android is this crate's only consumer and always ships the user-data stores
+# (docs/architecture/user-data-engine-roadmap.md P8b).
+default = ["user-data"]
 # Dev-only: exposes `Java_..._panicForTest` so platform tests can drive T1.
 # Release builds omit this feature; the post-build `nm` check in
 # `engine/scripts/build-android-libs.sh` asserts the symbol is absent.
 panic-injector = []
 # Test-build-only engine trace — docs/architecture/e2e-trace-schema.md.
 e2e-trace = ["dispatch/e2e-trace"]
+# The engine-owned user-data stores (bundled SQLite).
+user-data = ["dispatch/user-data"]
 
 [dependencies]
 dispatch = { workspace = true }

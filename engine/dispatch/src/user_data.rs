@@ -262,9 +262,13 @@ impl UserDataHandle {
                 .count_matching(&list.filter)
                 .map_err(store_error)?
         };
+        // 0 = every match: a platform listing the whole dictionary asks once.
+        let limit = match list.limit {
+            0 => usize::MAX,
+            limit => limit as usize,
+        };
         // Pulled back to the last page that exists: the matches can shrink
         // under the page a platform is on (a delete on the last page).
-        let limit = list.limit as usize;
         let last_page = matching_total.saturating_sub(1) / limit.max(1) * limit;
         let offset = (list.offset as usize).min(last_page);
         let entries = dictionary
@@ -1154,6 +1158,19 @@ mod tests {
         assert_eq!(answer.offset, 2);
         assert_eq!(answer.entries.len(), 1);
         assert_eq!(answer.matching_total, 3);
+
+        let everything = match call(
+            &handle,
+            user_data_request::Method::ListCustomEntries(ListCustomEntries {
+                filter: String::new(),
+                limit: 0,
+                offset: 0,
+            }),
+        ) {
+            user_data_response::Result::CustomEntries(entries) => entries,
+            other => panic!("expected entries, got {other:?}"),
+        };
+        assert_eq!(everything.entries.len(), 3, "limit 0 lists every match");
     }
 
     #[test]

@@ -6,8 +6,6 @@ package com.siansiansu.taigikeyboard.engine
 import com.siansiansu.taigikeyboard.engine.proto.AppConfig
 import com.siansiansu.taigikeyboard.engine.proto.ComposingRequest
 import com.siansiansu.taigikeyboard.engine.proto.ComposingResponse
-import com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry
-import com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry
 import com.siansiansu.taigikeyboard.ime.core.logging.tdebug
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
 
@@ -213,33 +211,18 @@ fun RustEngineBridge.composingEnterContinuous(
  * is read-only and bumping generation would reset engine state before
  * the fetch (`engine/composing/src/dispatch.rs:103-160`).
  *
- * `frequencyEntries` + `nowMs` are the v3.5.8 Phase 9.3a/9.3c plumb for
- * `user_freq_boost` + `SortKey.recency_rank`. Caller pre-filters entries
- * to candidate-relevant `displayTextKey`s (`hanji ?? roman`) — see
- * `engine/protos/proto/composing.proto:144-148`. Defaults `emptyList()`
- * + `0L` reproduce the PR-9.2 neutral-boost behaviour (`user_freq_boost
- * = 1.0`, `recency_rank = 1` everywhere); the platform plumb is
- * responsible for populating real values via a two-phase fetch
- * (`ComposingManager.fetchContinuousCandidates`). Mirrors iOS
- * `RustEngineBridge.composingFetchAtPos` PR-9.3b.
- *
- * v3.5.8 Phase 9 Item 12 — `customEntries` carries the platform's
- * `custom_dictionary.db` matches (raw stored `(roman, hanji)`
- * columns; DB stays native). Default `emptyList()` = no custom
- * matches / feature off — backward-compatible no-op. The engine
- * synthesizes a full-buffer candidate per entry and dedupes
- * `(roman, hanji)` against the FST hits (custom wins the
- * collision). Mirrors iOS `RustEngineBridge.composingFetchAtPos`.
+ * The user's own data is not among the arguments: the engine reads its
+ * stores itself and ranks in the same call
+ * (`docs/architecture/user-data-engine-roadmap.md` P8b). `nowMs` is the
+ * clock its recency ranking reads. Mirrors macOS
+ * `RustEngineBridge.composingFetchAtPos`.
  */
 fun RustEngineBridge.composingFetchAtPos(
-    // Built once by the caller (`RustEngineBridge.continuousAppConfig`) so the
-    // two fetch phases and the SQLite hops between them render under one
-    // snapshot of the live settings.
+    // Built once by the caller (`RustEngineBridge.continuousAppConfig`) from
+    // one snapshot of the live settings.
     config: AppConfig,
     generation: Long,
-    frequencyEntries: List<FrequencyEntry> = emptyList(),
-    nowMs: Long = 0L,
-    customEntries: List<CustomDictEntry> = emptyList(),
+    nowMs: Long,
     // PR-9.6 — dictionary source-toggle bitmask (same one Tab3 browse
     // sends). Default `0u` = proto3-absent sentinel → engine all-on,
     // preserving pre-PR-9.6 behaviour for callers (incl. tests).
@@ -248,19 +231,16 @@ fun RustEngineBridge.composingFetchAtPos(
     // (proto3-absent sentinel → engine prepends the literal-roman
     // candidate, the pre-toggle always-on behaviour for callers/tests).
     literalRomanCandidateDisabled: Boolean = false,
-    // §50 — learned phrases whose whole-buffer key equals the raw buffer
-    // (`LearnedPhraseService.matches`). Default empty = feature
-    // off / nothing learned.
-    learnedEntries: List<com.siansiansu.taigikeyboard.engine.proto.LearnedEntry> = emptyList(),
-): RustEngineBridge.ContinuousFetchResult {
+    // Invert of the Enable Custom Dictionary setting: the engine reads the
+    // user's dictionary only with it on. Default `false` = read it.
+    customDictionaryDisabled: Boolean = false,
+): List<RustEngineBridge.ContinuousCandidate> {
     val payload = com.siansiansu.taigikeyboard.engine.proto.FetchAtPos
         .newBuilder()
-        .addAllFrequencyEntries(frequencyEntries)
         .setNowMs(nowMs)
-        .addAllCustomEntries(customEntries)
         .setEnabledSourcesBitmask(enabledSourcesBitmask.toInt())
         .setLiteralRomanCandidateDisabled(literalRomanCandidateDisabled)
-        .addAllLearnedEntries(learnedEntries)
+        .setCustomDictionaryDisabled(customDictionaryDisabled)
         .build()
     return composingFetchDispatch(
         methodSetter = { it.fetchAtPos = payload },
@@ -384,23 +364,24 @@ private inline fun composingDispatch(
 }
 
 /**
- * Phase 6 FetchAtPos dispatcher. Synthesizes both the standard
- * [RustEngineBridge.ComposingTransition] (for engine snapshot mirroring)
- * and the [RustEngineBridge.ContinuousFetchResult.candidates] tri-state
- * read off `ComposingResponse.continuous`.
+ * Phase 6 FetchAtPos dispatcher: the candidates read off
+ * `ComposingResponse.continuous`. Empty when the round-trip failed, when
+ * `Phase::Continuous` was not active (the carrier absent — e.g. a generation
+ * a `bumpGeneration` has since replaced), or when nothing matched: each is
+ * "no candidates this frame".
  */
 private inline fun composingFetchDispatch(
     methodSetter: (ComposingRequest.Builder) -> Unit,
     op: String,
     generation: Long,
     config: AppConfig?,
-): RustEngineBridge.ContinuousFetchResult {
+): List<RustEngineBridge.ContinuousCandidate> {
     val payload = composingProtoRoundtrip(methodSetter, op, generation, config)
-        ?: return RustEngineBridge.ContinuousFetchResult.NOOP
+        ?: return emptyList()
     // FetchAtPos is read-only: the response carries no effects and the
     // platform mirrors nothing from it, so only the candidate carrier is
     // decoded (no `synthComposing` walk per fetch).
-    val candidates: List<RustEngineBridge.ContinuousCandidate>? = if (payload.hasContinuous()) {
+    val candidates: List<RustEngineBridge.ContinuousCandidate> = if (payload.hasContinuous()) {
         payload.continuous.candidatesList.map { msg ->
             // v3.5.8 Phase 9 Item 5 — `hanji` is proto3 `optional`;
             // protobuf-javalite exposes presence via `hasHanji()`.
@@ -430,16 +411,13 @@ private inline fun composingFetchDispatch(
             )
         }
     } else {
-        null
+        emptyList()
     }
     RustEngineBridge.backend.tdebug("RustEngineBridge") {
-        val count = candidates?.size ?: -1
+        val count = candidates.size
         "[FFI<-] fn=composingFetchDispatch op=$op candidates=$count"
     }
-    return RustEngineBridge.ContinuousFetchResult(
-        candidates = candidates,
-        isBridgeFailure = false,
-    )
+    return candidates
 }
 
 private fun synthComposing(proto: ComposingResponse): RustEngineBridge.ComposingTransition {

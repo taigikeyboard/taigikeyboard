@@ -70,9 +70,9 @@ object DefaultComposingDelegate : ComposingDelegate {
             }
 
             is RustEngineBridge.ComposingTransition.Effect.PhraseLearned -> {
-                // Learned phrases (§50): not a document effect — the tap
-                // handler reads it off `CommitContinuousResult.learnedPhrase`
-                // and writes the store (`CandidateClickHandler`).
+                // Learned phrases (§50): not a document effect — the engine
+                // wrote the phrase to `learned_phrases.db` itself and, with
+                // the user data open, leaves this out of its answer (roadmap P8b).
                 Unit
             }
         }
@@ -83,7 +83,7 @@ object DefaultComposingDelegate : ComposingDelegate {
  * Sibling of [ComposingDelegate] for v3.5.8 Phase 4 NextWord-shaped Effects
  * (`NextWordUpdateLastSelectedWord` / `NextWordWordSelected` /
  * `NextWordClearForNewComposing`). Decoupled because these targets are
- * `NextWordController` / `NextWordService`, not [InputConnection].
+ * `NextWordController`, not [InputConnection].
  *
  * [ComposingManager.applyTransition] dispatches each NextWord-shaped Effect
  * here in proto-list order, sandwiched alongside [DefaultComposingDelegate]

@@ -1,22 +1,15 @@
-// Phonetics + Derivation + TPS ops — extensions on RustEngineBridge + the toneVariations cache.
+// Phonetics + TPS ops — extensions on RustEngineBridge + the toneVariations cache.
 // Mirrors iOS RustEngineBridge+Phonetics.swift (TPS merged into same file per simplify decision).
 // Sends through RustEngineBridge.dispatch(op) { … } — shared JNI hop, exception boundary, recordFailure sink.
 
 package com.siansiansu.taigikeyboard.engine
 
 import com.siansiansu.taigikeyboard.engine.proto.BoolResult
-import com.siansiansu.taigikeyboard.engine.proto.CustomSearchKeysResult
-import com.siansiansu.taigikeyboard.engine.proto.DeriveAbbrev
-import com.siansiansu.taigikeyboard.engine.proto.DeriveCustomQueryKey
-import com.siansiansu.taigikeyboard.engine.proto.DeriveCustomSearchKeys
-import com.siansiansu.taigikeyboard.engine.proto.DeriveNotone
 import com.siansiansu.taigikeyboard.engine.proto.GetToneVariations
 import com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark
 import com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup
-import com.siansiansu.taigikeyboard.engine.proto.NormalizeInput
 import com.siansiansu.taigikeyboard.engine.proto.PhoneticsRequest
 import com.siansiansu.taigikeyboard.engine.proto.PhoneticsResponse
-import com.siansiansu.taigikeyboard.engine.proto.PojToTl
 import com.siansiansu.taigikeyboard.engine.proto.StringResult
 import com.siansiansu.taigikeyboard.engine.proto.StripTone
 import com.siansiansu.taigikeyboard.engine.proto.StripToneResult
@@ -26,7 +19,6 @@ import com.siansiansu.taigikeyboard.engine.proto.TlToPoj
 import com.siansiansu.taigikeyboard.engine.proto.ToneVariationsResult
 import com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult
 import com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust
-import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 
 // region Phonetics core (6 ops)
 
@@ -43,28 +35,15 @@ fun RustEngineBridge.stripTone(input: String): StripToneOutcome {
     return StripToneOutcome(r.bare, r.tone)
 }
 
-fun RustEngineBridge.pojToTl(input: String): String {
-    val payload = PojToTl.newBuilder().setInput(input).build()
-    return stringDispatch({ it.pojToTl = payload }, input, "pojToTl")
-}
-
 fun RustEngineBridge.tlToPoj(input: String): String {
     val payload = TlToPoj.newBuilder().setInput(input).build()
     return stringDispatch({ it.tlToPoj = payload }, input, "tlToPoj")
 }
 
-// Full NormalizeInput pipeline down to a trie-query key: TPS preprocess, lowercase, syllable split,
-// nasal / o͘ prep, checked-ending inference.
-fun RustEngineBridge.normalizeInput(input: String): String {
-    val payload = NormalizeInput.newBuilder().setInput(input).build()
-    return stringDispatch({ it.normalizeInput = payload }, input, "normalizeInput")
-}
-
 /**
  * Replaces platform `TaigiUnicode.nfdPreprocessed(...)`. Lookup-side
  * NFD prep used by `ExternalLookupURLBuilder` before tone stripping.
- * Distinct semantics from [normalizeInput] — this preserves tone
- * diacritics; only nasal markers (ⁿ / ᴺ → "nn") and standalone
+ * It preserves tone diacritics; only nasal markers (ⁿ / ᴺ → "nn") and standalone
  * `\u{0358}` → `o` are rewritten.
  */
 fun RustEngineBridge.nfdPreprocessForLookup(input: String): String {
@@ -102,65 +81,6 @@ internal object PhoneticsBridge {
         }
     }
 }
-
-// endregion
-// region Derivation (2 ops)
-
-// Custom-dictionary search key: toneless form used for toneless prefix search.
-fun RustEngineBridge.deriveNotone(roman: String): String {
-    val payload = DeriveNotone.newBuilder().setRoman(roman).build()
-    return stringDispatch({ it.deriveNotone = payload }, roman, "deriveNotone")
-}
-
-// Custom-dictionary search key: per-syllable initials (split on hyphen/space); "" for a single syllable.
-fun RustEngineBridge.deriveAbbrev(roman: String): String {
-    val payload = DeriveAbbrev.newBuilder().setRoman(roman).build()
-    return stringDispatch({ it.deriveAbbrev = payload }, roman, "deriveAbbrev")
-}
-
-/**
- * `Method::DeriveCustomSearchKeys` — WRITE side (v3.6.1 R3). Full
- * {tl, poj, tps} × {num, notone, abbrev} (+ TPS er/or variant) bundle for
- * a stored custom-dict roman, materialized into the `custom_search_key`
- * side table. Empty on FFI failure / residue-only input.
- */
-fun RustEngineBridge.deriveCustomSearchKeys(roman: String): List<CustomSearchKey> {
-    val payload = DeriveCustomSearchKeys.newBuilder().setRoman(roman).build()
-    return customSearchKeys({ it.deriveCustomSearchKeys = payload }, "deriveCustomSearchKeys")
-}
-
-/**
- * `Method::DeriveCustomQueryKey` — READ side (v3.6.1 R3). Single
- * family-native key for the current raw `input` + settings `mode`. TPS
- * collapses to "tl" through [InputMode], so the engine upgrades the family
- * to TPS via `contains_tps(raw)` instead. `null` for residue-only / empty
- * input or FFI failure.
- */
-fun RustEngineBridge.deriveCustomQueryKey(
-    input: String,
-    mode: InputMode,
-): CustomSearchKey? {
-    val payload = DeriveCustomQueryKey
-        .newBuilder()
-        .setInput(input)
-        .setInputMode(customSearchInputMode(mode))
-        .build()
-    return customSearchKeys({ it.deriveCustomQueryKey = payload }, "deriveCustomQueryKey").firstOrNull()
-}
-
-/**
- * Map the platform [InputMode] to the engine `input_mode` string. Android's
- * enum has no TPS case (`"tps"` settings collapses to `TL` upstream via
- * `InputMode.fromPrefString`); the engine upgrades to the TPS family via
- * `contains_tps` on the raw input. Mirrors iOS
- * `RustEngineBridge+Phonetics.swift` `customSearchInputMode`.
- */
-private fun customSearchInputMode(mode: InputMode): String =
-    when (mode) {
-        InputMode.POJ -> "poj"
-        InputMode.ENGLISH -> "english"
-        InputMode.TL -> "tl"
-    }
 
 // endregion
 // region TPS (4 ops)
@@ -261,24 +181,6 @@ private inline fun boolDispatch(
     }
     val r: BoolResult = resp.boolResult
     return r.value
-}
-
-/**
- * Shared decode for the two custom-dict search-key ops — both return a
- * `CustomSearchKeysResult` (the write op a full bundle, the query op 0/1).
- * Mirrors iOS `RustEngineBridge+Phonetics.swift` `customSearchKeys`.
- */
-private inline fun customSearchKeys(
-    methodSetter: (PhoneticsRequest.Builder) -> Unit,
-    op: String,
-): List<CustomSearchKey> {
-    val resp = phoneticsDispatch(methodSetter, op) ?: return emptyList()
-    if (!resp.hasCustomSearchKeysResult()) {
-        RustEngineBridge.recordFailure(op, "expected CustomSearchKeysResult")
-        return emptyList()
-    }
-    val r: CustomSearchKeysResult = resp.customSearchKeysResult
-    return r.keysList.map { CustomSearchKey(family = it.family, form = it.form, key = it.key) }
 }
 
 // endregion

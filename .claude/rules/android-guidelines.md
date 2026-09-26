@@ -115,24 +115,11 @@ When a receiver class already exposes a member function `fun X(...)`, a top-leve
 - More generally: when adding an inline extension with lazy evaluation semantics alongside an eager member, the extension needs a different name. A compile check after definition is faster than guessing.
 - Same caveat applies to extension properties shadowing member properties.
 
-## 8a. SQLite capability baseline = the version `minSdk` bundles `[A]`
+## 8a. User-data SQLite is the engine's `[A]`
 
-Android's SQLite ships **with the OS**, not with the app (`android.database.sqlite.*` — the project uses no bundled driver). So the usable SQL dialect is fixed by `minSdk`: unsupported syntax fails at `prepare` time as a runtime `SQLiteException`, on a device the CI never runs on, and every user-data write site catches-and-logs so it fails silently in release. The JVM unit test `SqliteDialectCeilingTest` (`android/app/src/test/.../ime/core/db/`) scans every `src/main` string literal for the constructs listed below — the two lists are maintained together. It catches the listed syntax, not every 3.22 incompatibility; the pair test below runs the production SQL on the JVM's newer SQLite, so device dogfood on Android 9 remains the only true parse check.
+The four user-data stores (`user_frequency.db`, `user_association.db`, `custom_dictionary.db`, `learned_phrases.db`) are opened, migrated and written by the engine's bundled SQLite (`engine/userdata`, `docs/architecture/user-data-engine-roadmap.md` P8b); Android reaches them only through `engine/UserDataBridge.kt` / `ime/dictionary/UserDataClient.kt`, and `TaigiKeyboardApplication.onCreate` opens them. So the app runs no SQL of its own and the OS SQLite's `minSdk` dialect ceiling (3.22 at `minSdk` 28) no longer applies to them.
 
-| `minSdk` | Android | Bundled SQLite |
-|---|---|---|
-| **28** (current) | **9** | **3.22** |
-| 30 | 11 | 3.28 |
-
-**Currently available** (≤ 3.22): table-valued pragmas — `pragma_table_info(…)` (3.16) · CTEs (3.8.3) · `INSERT OR IGNORE` / `OR REPLACE` · `MAX(a, b)` scalar.
-
-**Unavailable** at 3.22: `ON CONFLICT … DO UPDATE` (UPSERT, 3.24) · window functions — `ROW_NUMBER`, `OVER()`, `PARTITION BY` (3.25) · `RENAME COLUMN` (3.25) · `NULLS FIRST/LAST`, `FILTER` (3.30) · generated columns (3.31) · `IIF()` (3.32) · `RETURNING`, `DROP COLUMN`, `MATERIALIZED` (3.35) · `STRICT` tables (3.37).
-
-**Upsert pattern**: `upsert(update, insert, args)` in `ime/core/db/SqliteMaintenance.kt` — `UPDATE … WHERE <unique key>`, then `INSERT OR IGNORE …` only when the UPDATE matched no row; the caller holds the transaction (`db.transaction {}`). Both statements bind one arg tuple, so write the INSERT column list in the UPDATE's bind order. Equivalent to UPSERT given the UNIQUE / PRIMARY KEY on the key; the UPDATE keeps `created_at` and the rowid. `SqliteUpsertPairTest` pins the semantics on the production DDL + pair strings. Sites: `NextWordService`, `UserFrequencyService`, `CustomDictionaryService.executeUpsert`, `LearnedPhraseService`.
-
-Before using SQL syntax you are not certain of, check its version against [SQLite's release history](https://www.sqlite.org/changes.html) and the table above. Raising `minSdk` raises the ceiling — update this section and the test in the same PR.
-
-Keep `minSdk` at 28: Android 9 users must stay able to install, so UPSERT stays unavailable.
+Never open these files with `android.database.sqlite` (or any other SQLite): two SQLite copies in one process lock independently and can corrupt a file both hold (roadmap U2 / U6). A new store or query belongs in the engine.
 
 ## 9. Gradle files editable by Claude `[B]`
 
