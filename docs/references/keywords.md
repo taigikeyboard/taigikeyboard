@@ -77,7 +77,7 @@ NextWord state machine lives in Rust `engine/nextword` (since v3.5.5). Platform 
 | **notone** | Toneless romanization for prefix matching (e.g. `"lí hó"` → `"liho"`) | Rust `phonetics` `derive_notone` |
 | **abbrev** | Leading-spelling-unit abbreviation (§46) for quick lookup (e.g. `"lí hó"` → `"lh"`) | Rust `phonetics::derive_abbrev` |
 | **batchImport** | CSV import with deduplication by `roman\|hanzi` key | engine op `ImportCustomCsv` → `CustomDictionaryStore::batch_import` |
-| **customWordMarker** | Custom entries use `id = -2` to distinguish from system dictionary | `LexiconService.search()` |
+| **customWordMarker** | Custom entries use `id = -2` to distinguish from system dictionary | iOS `DictionarySearchResult.customDictMarkerId`; Android `DictionarySearchViewModel.kt`, `SuggestionCaseTransformer.kt` |
 
 ### 8. Diagnostics (`engine/diagnostics.md`)
 | Keyword | Definition | Key Class/Method |
