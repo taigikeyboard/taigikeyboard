@@ -1,0 +1,7 @@
+New: One-handed mode — long-press the toolbar keyboard button.
+New: Photo backgrounds and gradient direction for custom themes.
+New: The keyboard learns phrases you build pick by pick and offers them whole.
+New: No Hyphens setting, and ⁿ becomes ᴺ in capitals.
+Changed: Hanji is now the default output; Android 9 and 10 are supported again.
+Fixed: typed tone digits, capitals and the - or -- you type now land as typed.
+Fixed: custom themes stay light in dark mode.
