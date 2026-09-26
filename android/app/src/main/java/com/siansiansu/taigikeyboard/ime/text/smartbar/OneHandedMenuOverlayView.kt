@@ -115,8 +115,9 @@ class OneHandedMenuOverlayView : FrameLayout {
 }
 
 /**
- * Dismiss / Left / Normal / Right. The current one-handed mode is highlighted; Dismiss never is
- * (it is an action, not a mode). Mirrors iOS `OneHandedModeCallout`.
+ * Dismiss / Left / Right. The docked side is highlighted (none at full width); Dismiss never is.
+ * No Normal item: the toolbar-button tap or the side panel's restore returns to full width.
+ * Mirrors iOS `OneHandedModeCallout`.
  */
 @Composable
 private fun OneHandedMenuContent(
@@ -144,7 +145,6 @@ private fun OneHandedMenuContent(
         ) {
             MenuCell(KeyboardToolbarAction.DISMISS.iconRes, L10n.keyboardDismissKeyboard, appearance, isSelected = false, onSelectDismiss)
             ModeCell(OneHandedMode.LEFT, KeyboardToolbarAction.LEFT.iconRes, L10n.keyboardOneHandedLeft, currentMode, appearance, onSelectMode)
-            ModeCell(OneHandedMode.OFF, R.drawable.ic_keyboard, L10n.keyboardOneHandedOff, currentMode, appearance, onSelectMode)
             ModeCell(OneHandedMode.RIGHT, KeyboardToolbarAction.RIGHT.iconRes, L10n.keyboardOneHandedRight, currentMode, appearance, onSelectMode)
         }
     }

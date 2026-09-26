@@ -3,8 +3,9 @@
 import KeyboardKit
 import SwiftUI
 
-/// Long-press callout of the toolbar keyboard button: Dismiss / Left / Normal / Right.
-/// The current one-handed mode is highlighted; Dismiss never is (it is an action, not a mode).
+/// Long-press callout of the toolbar keyboard button: Dismiss / Left / Right. The docked side is
+/// highlighted (none at full width); Dismiss never is. No Normal item: a tap on the toolbar button
+/// or the side panel's restore button already returns to full width.
 /// Mirrors Android `OneHandedMenuContent`.
 struct OneHandedModeCallout: View {
     let currentMode: OneHandedMode
@@ -24,7 +25,6 @@ struct OneHandedModeCallout: View {
                 action: onSelectDismiss,
             )
             modeCell(.left, systemName: KeyboardToolbarAction.left.systemImageName, labelKey: .keyboardOneHandedLeft)
-            modeCell(.off, systemName: "keyboard", labelKey: .keyboardOneHandedOff)
             modeCell(.right, systemName: KeyboardToolbarAction.right.systemImageName, labelKey: .keyboardOneHandedRight)
         }
         .padding(6)

@@ -2576,7 +2576,7 @@
       }
     },
     "i18n_keyboard_oneHandedOff": {
-      "comment": "One-handed mode callout item and side-panel button: back to the full-width keyboard. TL/POJ from the bundled dictionary (一般 it-puann).",
+      "comment": "One-handed mode side-panel restore button a11y label: back to the full-width keyboard. TL/POJ from the bundled dictionary (一般 it-puann).",
       "extractionState": "manual",
       "localizations": {
         "en": {

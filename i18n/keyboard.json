@@ -57,7 +57,7 @@
       "values": { "hanji": "正手", "tailo": "Tsiànn-tshiú", "poj": "Chiàⁿ-chhiú", "en": "Right hand", "ja": "右手" }
     },
     "oneHandedOff": {
-      "comment": "One-handed mode callout item and side-panel button: back to the full-width keyboard. TL/POJ from the bundled dictionary (一般 it-puann).",
+      "comment": "One-handed mode side-panel restore button a11y label: back to the full-width keyboard. TL/POJ from the bundled dictionary (一般 it-puann).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["extension"] },
       "values": { "hanji": "一般", "tailo": "It-puann", "poj": "It-poaⁿ", "en": "Normal", "ja": "通常" }
     },
