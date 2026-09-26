@@ -99,7 +99,8 @@ final class ThemeImageCache {
 
 /// Shows `content` with the decoded theme photo, or `placeholder` until it is decoded (or
 /// when the file is missing). A cache hit renders the photo on the first frame; a miss
-/// loads it off the main actor and swaps it in.
+/// loads it off the main actor and swaps it in. `placeholder` must be a real view (e.g.
+/// `Color.clear`), never `EmptyView`: an empty body may never start the `.task` that loads.
 struct ThemePhotoImage<Content: View, Placeholder: View>: View {
     let file: String
     let variant: ThemeImageVariant
@@ -125,8 +126,7 @@ struct ThemePhotoImage<Content: View, Placeholder: View>: View {
         .task(id: "\(file)|\(variant)") {
             // Always record the image, even on a cache hit: another site (the editor preview's
             // background) may have filled the cache after this body rendered the placeholder,
-            // and a cache write alone never re-renders this view — the editor's photo drag
-            // overlay stayed missing until an unrelated edit. `load` returns a hit at once.
+            // and a cache write alone never re-renders this view. `load` returns a hit at once.
             guard let image = await ThemeImageCache.shared.load(file, variant) else { return }
             loaded = Loaded(file: file, variant: variant, image: image)
         }

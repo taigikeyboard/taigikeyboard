@@ -132,7 +132,10 @@ struct ThemeEditorView: View {
                             photo: photo,
                         )
                     } placeholder: {
-                        EmptyView()
+                        // A real view, not EmptyView: inside `.overlay` an empty body yields no
+                        // node, so ThemePhotoImage's `.task` never starts and the drag overlay
+                        // stayed missing after a pick until an unrelated edit re-rendered it.
+                        Color.clear
                     }
                 }
             }
