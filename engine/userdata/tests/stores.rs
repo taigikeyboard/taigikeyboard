@@ -855,3 +855,31 @@ fn a_romanization_only_entry_is_stored_and_found_and_the_seeds_carry_their_ids()
     );
     assert_eq!(seeded[0].created_at.len(), 19, "yyyy-MM-dd HH:mm:ss");
 }
+
+#[test]
+fn predictions_read_the_exact_reading_first_then_untagged_then_the_others() {
+    // trace: §24 tiers — prev_tl = query (0), '' (1), other (2); within a
+    // tier count DESC. 重/tāng → 複 has the highest count but the wrong
+    // reading, so it ranks last for a tîng query, and is still returned.
+    let directory = scratch();
+    let store = UserAssociationStore::new(
+        paths(&directory).association,
+        JournalMode::Wal,
+        UserAssociationStore::shipped_capacity(),
+    );
+    store.open_blocking();
+    for _ in 0..3 {
+        store.record(&[pair("重", "tāng", "量", "liōng")]);
+    }
+    store.record(&[pair("重", "", "要", "iàu")]);
+    store.record(&[pair("重", "tîng", "複", "hok")]);
+    store.all_rows(); // flush the queued writes
+
+    let rows = store.rows_following("重", "tîng", 10).unwrap();
+
+    let order: Vec<&str> = rows.iter().map(|row| row.next.as_str()).collect();
+    assert_eq!(order, vec!["複", "要", "量"]);
+    assert_eq!(rows[2].count, 3);
+    assert!(rows[0].last_used_ms > 0);
+    assert_eq!(store.rows_following("重", "tîng", 1).unwrap().len(), 1);
+}

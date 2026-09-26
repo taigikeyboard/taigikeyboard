@@ -456,6 +456,12 @@ public nonisolated struct Taigi_Engine_PredictNext: Sendable {
   /// 30 default if 0
   public var limit: Int32 = 0
 
+  /// The committed word's canonical TL — the `prev_tl` tier key of the user
+  /// rows' order (§24). Read only once the engine owns the user data
+  /// (`UserDataRequest.open`; user-data-engine-roadmap P3b): it then reads
+  /// `user_association.db` itself and ignores `user_rows`.
+  public var roman: String = String()
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -1305,7 +1311,7 @@ nonisolated extension Taigi_Engine_FilterPredictions: SwiftProtobuf.Message, Swi
 
 nonisolated extension Taigi_Engine_PredictNext: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PredictNext"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}word\0\u{3}user_rows\0\u{1}toggles\0\u{3}query_generation\0\u{3}now_ms\0\u{1}limit\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}word\0\u{3}user_rows\0\u{1}toggles\0\u{3}query_generation\0\u{3}now_ms\0\u{1}limit\0\u{1}roman\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1319,6 +1325,7 @@ nonisolated extension Taigi_Engine_PredictNext: SwiftProtobuf.Message, SwiftProt
       case 4: try { try decoder.decodeSingularUInt64Field(value: &self.queryGeneration) }()
       case 5: try { try decoder.decodeSingularInt64Field(value: &self.nowMs) }()
       case 6: try { try decoder.decodeSingularInt32Field(value: &self.limit) }()
+      case 7: try { try decoder.decodeSingularStringField(value: &self.roman) }()
       default: break
       }
     }
@@ -1347,6 +1354,9 @@ nonisolated extension Taigi_Engine_PredictNext: SwiftProtobuf.Message, SwiftProt
     if self.limit != 0 {
       try visitor.visitSingularInt32Field(value: self.limit, fieldNumber: 6)
     }
+    if !self.roman.isEmpty {
+      try visitor.visitSingularStringField(value: self.roman, fieldNumber: 7)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1357,6 +1367,7 @@ nonisolated extension Taigi_Engine_PredictNext: SwiftProtobuf.Message, SwiftProt
     if lhs.queryGeneration != rhs.queryGeneration {return false}
     if lhs.nowMs != rhs.nowMs {return false}
     if lhs.limit != rhs.limit {return false}
+    if lhs.roman != rhs.roman {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

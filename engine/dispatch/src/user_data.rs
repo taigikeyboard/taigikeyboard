@@ -3,15 +3,23 @@
 //! is the engine's (`.claude/rules/rust-migration-policy.md` §6); where the
 //! files live is the platform's. Plan: `docs/architecture/user-data-engine-roadmap.md`.
 
+use std::collections::HashSet;
 use std::fmt::Display;
 use std::path::PathBuf;
 use std::sync::OnceLock;
 
+use composing::api::ComposingError;
 use protos::engine::{
-    response, user_data_request, user_data_response, ErrorCode, OpenUserData, ResetUserData,
-    Response, UserDataJournal, UserDataOpened, UserDataRequest, UserDataReset, UserDataResponse,
+    composing_request, next_word_request, response, user_data_request, user_data_response,
+    AppConfig, ComposingRequest, ComposingResponse, CustomDictEntry, ErrorCode, FetchAtPos,
+    FrequencyEntry, LearnedEntry, NextWordRequest, OpenUserData, RawNextWordPrediction,
+    ResetUserData, Response, Source, UserDataJournal, UserDataOpened, UserDataRequest,
+    UserDataReset, UserDataResponse,
 };
-use userdata::{JournalMode, UserDataPaths, UserDataStores};
+use userdata::{
+    CustomDictionarySource, CustomEntry, FollowingRow, FrequencyRow, JournalMode, LearnedPhrase,
+    LearnedPhraseSource, UserDataPaths, UserDataStores,
+};
 
 /// Why a user-data request did nothing.
 #[derive(Debug, PartialEq, Eq)]
@@ -158,6 +166,188 @@ impl UserDataHandle {
                 stores.learned_phrases.delete_all().map_err(store_error)?;
         }
         Ok(removed)
+    }
+}
+
+/// A composing request, answered from the engine's own user data once the
+/// platform opened it. `FetchAtPos` then runs the two passes every platform
+/// ran over the FFI (roadmap P3b, brainstorm R5) — in-process: the custom
+/// and learned rows for the pending buffer, a neutral fetch that discovers
+/// the candidates, their frequency rows, and a re-ranked fetch. The rows a
+/// platform still sends are replaced, never merged (U9). Every other
+/// request, and every request before the open, goes straight to composing.
+pub(crate) fn handle_composing(
+    request: &ComposingRequest,
+    config: &AppConfig,
+    generation: u64,
+) -> Result<ComposingResponse, ComposingError> {
+    let composing = composing::EngineHandle::instance();
+    let (Some(stores), Some(composing_request::Method::FetchAtPos(sent))) =
+        (UserDataHandle::instance().stores(), request.method.as_ref())
+    else {
+        return composing.handle(request, config, generation);
+    };
+    // The platform's settings for this fetch; its rows are dropped (U9).
+    let mut fetch = FetchAtPos {
+        now_ms: sent.now_ms,
+        enabled_sources_bitmask: sent.enabled_sources_bitmask,
+        literal_roman_candidate_disabled: sent.literal_roman_candidate_disabled,
+        custom_dictionary_disabled: sent.custom_dictionary_disabled,
+        ..FetchAtPos::default()
+    };
+    // The buffer can grow between reading it and fetching (the main thread
+    // keeps typing while a worker fetches): rows chosen for one buffer must
+    // not rank another, so a fetch that answers for a different buffer is
+    // redone once with that buffer's rows.
+    let mut neutral = None;
+    for _ in 0..2 {
+        // A stale generation answers the idle snapshot inside `handle`.
+        let Some(raw) = composing.pending_raw(generation) else {
+            return composing.handle(request, config, generation);
+        };
+        (fetch.custom_entries, fetch.learned_entries) = user_rows(stores, &raw, config, &fetch);
+        let answer = composing.handle(&fetch_request(&fetch), config, generation)?;
+        let answered_for = answer.preedit.as_ref().map(|p| p.raw_input.as_str());
+        let current = answered_for.unwrap_or("") == raw;
+        neutral = Some(answer);
+        if current {
+            break;
+        }
+    }
+    let neutral = neutral.expect("the loop fetches at least once");
+    let Some(frequency_entries) = frequency_entries(stores, &neutral) else {
+        return Ok(neutral);
+    };
+    fetch.frequency_entries = frequency_entries;
+    // A failed re-rank keeps the neutral answer, as the platforms did.
+    Ok(composing
+        .handle(&fetch_request(&fetch), config, generation)
+        .unwrap_or(neutral))
+}
+
+/// The custom-dictionary rows (unless the user turned the dictionary off)
+/// and the learned phrases for `raw`, keyed the way the platforms keyed them.
+fn user_rows(
+    stores: &UserDataStores,
+    raw: &str,
+    config: &AppConfig,
+    fetch: &FetchAtPos,
+) -> (Vec<CustomDictEntry>, Vec<LearnedEntry>) {
+    let Some(key) = (!raw.is_empty())
+        .then(|| userdata::derive_custom_query_key(raw, &config.input_mode))
+        .flatten()
+    else {
+        return (Vec::new(), Vec::new());
+    };
+    let custom = if fetch.custom_dictionary_disabled {
+        Vec::new()
+    } else {
+        CustomDictionarySource::rows_matching(
+            &stores.custom_dictionary,
+            &key.family,
+            &key.form,
+            &key.key,
+        )
+        .iter()
+        .map(custom_dict_entry)
+        .collect()
+    };
+    let learned = LearnedPhraseSource::rows_matching(
+        &stores.learned_phrases,
+        &key.family,
+        &key.form,
+        &key.key,
+    )
+    .iter()
+    .map(learned_entry)
+    .collect();
+    (custom, learned)
+}
+
+/// The learned counts for the candidates `neutral` offers, deduped by the
+/// key the engine ranks on; `None` when there is nothing to re-rank with.
+fn frequency_entries(
+    stores: &UserDataStores,
+    neutral: &ComposingResponse,
+) -> Option<Vec<FrequencyEntry>> {
+    let mut seen = HashSet::new();
+    let words: Vec<String> = neutral
+        .continuous
+        .iter()
+        .flat_map(|continuous| &continuous.candidates)
+        .map(|candidate| candidate.display_text.as_str())
+        .filter(|word| seen.insert(*word))
+        .map(str::to_owned)
+        .collect();
+    if words.is_empty() {
+        return None;
+    }
+    let rows = stores.frequency.rows_for_words(&words)?;
+    (!rows.is_empty()).then(|| rows.iter().map(frequency_entry).collect())
+}
+
+fn fetch_request(fetch: &FetchAtPos) -> ComposingRequest {
+    ComposingRequest {
+        method: Some(composing_request::Method::FetchAtPos(fetch.clone())),
+    }
+}
+
+/// A next-word request with its user rows read from the engine's own
+/// `user_association.db` once the platform opened it — replacing, never
+/// merging, whatever `PredictNext.user_rows` a platform still sends (U9).
+/// Over-fetches twice the prediction limit, as the platforms did, so the
+/// `(hanzi, tl)` merge never leaves fewer than `limit` survivors.
+pub(crate) fn with_user_rows(mut request: NextWordRequest) -> NextWordRequest {
+    let Some(stores) = UserDataHandle::instance().stores() else {
+        return request;
+    };
+    if let Some(next_word_request::Method::PredictNext(predict)) = request.method.as_mut() {
+        let limit = nextword::api::effective_prediction_limit(predict.limit) * 2;
+        predict.user_rows = stores
+            .association
+            .rows_following(&predict.word, &predict.roman, limit)
+            .unwrap_or_default()
+            .iter()
+            .map(user_prediction)
+            .collect();
+    }
+    request
+}
+
+// The row → wire forms, as the platforms marshalled them.
+
+/// A count past `u32` saturates; a negative one (never written) reads as 0.
+fn frequency_entry(row: &FrequencyRow) -> FrequencyEntry {
+    FrequencyEntry {
+        display_text_key: row.word.clone(),
+        count: u32::try_from(row.count.max(0)).unwrap_or(u32::MAX),
+        last_used_ms: row.last_used_ms,
+        canonical_tl: row.tl.clone(),
+    }
+}
+
+/// An empty stored hanzi is a romanization-only entry: an ABSENT wire field.
+fn custom_dict_entry(row: &CustomEntry) -> CustomDictEntry {
+    CustomDictEntry {
+        roman: row.roman.clone(),
+        hanji: (!row.hanzi.is_empty()).then(|| row.hanzi.clone()),
+    }
+}
+
+fn learned_entry(phrase: &LearnedPhrase) -> LearnedEntry {
+    LearnedEntry {
+        hanji: phrase.hanzi.clone(),
+        canonical_tl: phrase.canonical_tl.clone(),
+    }
+}
+
+fn user_prediction(row: &FollowingRow) -> RawNextWordPrediction {
+    RawNextWordPrediction {
+        hanzi: row.next.clone(),
+        tl: row.next_tl.clone(),
+        count: row.count,
+        last_used_ms: row.last_used_ms,
+        source: Source::User as i32,
     }
 }
 

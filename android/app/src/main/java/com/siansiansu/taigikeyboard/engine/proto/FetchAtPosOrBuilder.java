@@ -99,4 +99,19 @@ public interface FetchAtPosOrBuilder extends
    * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
    */
   int getLearnedEntriesCount();
+
+  /**
+   * <pre>
+   * The user's "use my custom dictionary" setting, OFF — read only once the
+   * engine owns the user data (`UserDataRequest.open`; user-data-engine-
+   * roadmap P3b): the engine then reads `custom_dictionary.db` itself and
+   * ignores fields 2 / 4 / 7, so the platform can no longer express the
+   * setting by sending no rows. Negative like field 6, so an un-wired
+   * build keeps the dictionary on.
+   * </pre>
+   *
+   * <code>bool custom_dictionary_disabled = 8;</code>
+   * @return The customDictionaryDisabled.
+   */
+  boolean getCustomDictionaryDisabled();
 }

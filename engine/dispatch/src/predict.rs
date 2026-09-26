@@ -106,6 +106,7 @@ mod tests {
             query_generation: 3,
             now_ms: 99,
             limit: 30,
+            roman: String::new(),
         }
     }
 

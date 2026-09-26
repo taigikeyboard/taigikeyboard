@@ -49,6 +49,7 @@ fn decode_fetch_at_pos_idle_returns_no_continuous_carrier() {
             custom_entries: vec![],
             enabled_sources_bitmask: 0,
             literal_roman_candidate_disabled: false,
+            custom_dictionary_disabled: false,
             learned_entries: vec![],
         })),
         &mut engine,
@@ -95,6 +96,7 @@ fn decode_fetch_at_pos_continuous_lexicon_unavailable_returns_empty_carrier() {
             // lexicon, which is orthogonal to "lexicon NotInitialized yields no
             // DICT candidates". Doubles as OFF-gate coverage.
             literal_roman_candidate_disabled: true,
+            custom_dictionary_disabled: false,
             learned_entries: vec![],
         })),
         &mut engine,
@@ -139,6 +141,7 @@ fn fetch_at_pos_literal_roman_toggle_gates_index0_prepend() {
                 custom_entries: vec![],
                 enabled_sources_bitmask: 0,
                 literal_roman_candidate_disabled: disabled,
+                custom_dictionary_disabled: false,
                 learned_entries: vec![],
             })),
             &mut engine,
@@ -219,6 +222,7 @@ fn decode_fetch_at_pos_hanzi_buffer_returns_empty_carrier() {
             custom_entries: vec![],
             enabled_sources_bitmask: 0,
             literal_roman_candidate_disabled: false,
+            custom_dictionary_disabled: false,
             learned_entries: vec![],
         })),
         &mut engine,
@@ -266,6 +270,7 @@ fn decode_fetch_at_pos_mixed_hanzi_buffer_returns_empty_carrier() {
             custom_entries: vec![],
             enabled_sources_bitmask: 0,
             literal_roman_candidate_disabled: false,
+            custom_dictionary_disabled: false,
             learned_entries: vec![],
         })),
         &mut engine,
@@ -575,6 +580,7 @@ fn fetch_at_pos_carries_user_freq_snapshot_through_decode() {
             // user-freq snapshot threading + empty-when-lexicon-absent, and the
             // bare literal candidate (added regardless of lexicon) is noise here.
             literal_roman_candidate_disabled: true,
+            custom_dictionary_disabled: false,
             learned_entries: vec![],
         })),
         &mut engine,

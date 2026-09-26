@@ -62,22 +62,9 @@ impl EngineHandle {
     ) -> Result<ComposingResponse, ComposingError> {
         let intent = dispatch::decode_intent(req)?;
         if intent.is_read_only() {
-            // Lock-free fast reject for the common stale case …
-            if self.last_generation.load(Ordering::Acquire) != generation {
+            // A stale read answers the idle snapshot (module doc).
+            let Some(snapshot) = self.read_at(generation, Engine::clone) else {
                 return Ok(Engine::idle_snapshot(config));
-            }
-            let snapshot = {
-                let engine = self
-                    .composing
-                    .lock()
-                    .expect("composing engine mutex poisoned");
-                // … re-checked under the mutex: a mutating request may have
-                // moved the engine to a newer generation between the load
-                // and the lock, and that state must not be answered as ours.
-                if self.last_generation.load(Ordering::Acquire) != generation {
-                    return Ok(Engine::idle_snapshot(config));
-                }
-                engine.clone()
             };
             return Ok(dispatch::query(&intent, &snapshot, config));
         }
@@ -92,8 +79,34 @@ impl EngineHandle {
         }
         Ok(dispatch::apply(intent, &mut engine, config))
     }
-}
 
+    /// The pending raw buffer — `Preedit.raw_input`, what a user-data lookup
+    /// keys on — or `None` when `generation` is stale. Lets the engine's own
+    /// `FetchAtPos` read the user-data stores before the fetch the rows ride
+    /// (user-data-engine-roadmap P3b).
+    pub fn pending_raw(&self, generation: u64) -> Option<String> {
+        self.read_at(generation, |engine| engine.pending_raw().to_owned())
+    }
+
+    /// Runs `read` on the engine as of `generation`, or answers `None` when a
+    /// mutating request has moved the engine on. A lock-free fast reject for
+    /// the common stale case, re-checked under the mutex: a newer generation
+    /// may land between the load and the lock, and that state must not be
+    /// answered as ours.
+    fn read_at<T>(&self, generation: u64, read: impl FnOnce(&Engine) -> T) -> Option<T> {
+        if self.last_generation.load(Ordering::Acquire) != generation {
+            return None;
+        }
+        let engine = self
+            .composing
+            .lock()
+            .expect("composing engine mutex poisoned");
+        if self.last_generation.load(Ordering::Acquire) != generation {
+            return None;
+        }
+        Some(read(&engine))
+    }
+}
 impl Default for EngineHandle {
     fn default() -> Self {
         Self::new()
