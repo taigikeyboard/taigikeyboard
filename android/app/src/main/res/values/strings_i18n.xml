@@ -230,7 +230,7 @@
     <string name="i18n_theme_backgroundTypePhoto">相片</string>
     <string name="i18n_theme_photoPick">選擇相片</string>
     <string name="i18n_theme_photoChange">更換相片</string>
-    <string name="i18n_theme_photoDim">淡化</string>
+    <string name="i18n_theme_photoDim">透明度</string>
     <string name="i18n_theme_photoPosition">位置</string>
     <string name="i18n_theme_photoHintMove">徙位</string>
     <string name="i18n_theme_photoHintZoom">放大</string>
