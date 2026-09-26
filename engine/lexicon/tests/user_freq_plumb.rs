@@ -5,7 +5,7 @@
 //! `docs/engine/continuous-input-ranking.md`:
 //!
 //! - `score` stays purely dictionary-derived (2026-09-14): a matching
-//!   `FrequencyEntry` never changes it; the user signal lives only in
+//!   frequency row never changes it; the user signal lives only in
 //!   `user_weight`.
 //! - `user_weight` saturates at `ranking::MAX_BOOST − 1` — 100 selections
 //!   weigh the same as 40, defending against stale-dominance.
@@ -14,8 +14,8 @@
 //!   any selected word, still `> 0.0` past the old 1-hour window, and
 //!   `0.0` for never-used entries.
 //! - Cold-start (empty map + `now_ms = 0`) reproduces pre-9.3a
-//!   behaviour byte-identically — backward-compatible with PR-9.2
-//!   platform builds that have not wired user-frequency snapshots.
+//!   behaviour byte-identically — a user with no frequency rows ranks
+//!   exactly as the dictionary does.
 //! - Clock skew (`now_ms < last_used_ms`) and `now_ms = 0` fall through
 //!   to `user_weight = 0.0` so a misbehaving platform clock cannot
 //!   falsely promote stale entries.
@@ -32,10 +32,7 @@ use lexicon::dictionary_reader::DictionaryReader;
 use lexicon::prefix_index::PrefixIndex;
 use lexicon::ContinuousFetchCtx;
 use phonetics::InputMode;
-use protos::engine::FrequencyEntry;
-use ranking::{
-    build_frequency_map, FrequencyMap, BOOST_ALPHA, MAX_BOOST, USER_WEIGHT_DECAY_TAU_MS,
-};
+use ranking::{FrequencyMap, BOOST_ALPHA, MAX_BOOST, USER_WEIGHT_DECAY_TAU_MS};
 
 /// Length of the retired binary 1-hour recency window (epoch-ms). The
 /// tests below pin that a selection older than it still counts.
@@ -71,7 +68,9 @@ fn ctx<'a>(
 }
 
 mod common;
-use common::{build_tkdb_v3, fetch_candidates_for_endings, write_temp};
+use common::{
+    build_tkdb_v3, fetch_candidates_for_endings, frequency_map, write_temp, FrequencyFixture,
+};
 
 struct Row<'a> {
     toneless_key: &'a str,
@@ -152,7 +151,7 @@ fn selections_leave_score_untouched_and_raise_user_weight() {
 
     // 10 fresh selections → score unchanged, user_weight = 10 × 0.1.
     let now_ms = 1_700_000_000_000_i64;
-    let map_ten = build_frequency_map(&[FrequencyEntry {
+    let map_ten = frequency_map(&[FrequencyFixture {
         display_text_key: "台".into(),
         count: 10,
         last_used_ms: now_ms,
@@ -184,7 +183,7 @@ fn user_weight_saturates_when_count_high() {
         }],
     );
     let now_ms = 1_700_000_000_000_i64;
-    let map = build_frequency_map(&[FrequencyEntry {
+    let map = frequency_map(&[FrequencyFixture {
         display_text_key: "台".into(),
         count: 100,
         last_used_ms: now_ms,
@@ -223,7 +222,7 @@ fn user_weight_is_one_selection_delta_when_just_selected() {
     );
     let now_ms = 1_700_000_000_000_i64;
     let last_used_ms = now_ms - 1_000; // 1 second ago.
-    let map = build_frequency_map(&[FrequencyEntry {
+    let map = frequency_map(&[FrequencyFixture {
         display_text_key: "台".into(),
         count: 1,
         last_used_ms,
@@ -257,7 +256,7 @@ fn user_weight_persists_past_the_old_one_hour_window() {
     // Past the retired 1-hour recency window: the selection must still
     // count (the 2026-09-14 bug — 更新 sank below 警訊 after one hour).
     let last_used_ms = now_ms - RETIRED_RECENCY_WINDOW_MS;
-    let map = build_frequency_map(&[FrequencyEntry {
+    let map = frequency_map(&[FrequencyFixture {
         display_text_key: "台".into(),
         count: 1,
         last_used_ms,
@@ -292,7 +291,7 @@ fn user_weight_zero_when_clock_skew_now_before_last_used() {
     );
     let last_used_ms = 1_700_000_000_000_i64;
     let now_ms = last_used_ms - 5_000; // 5 seconds before recorded selection.
-    let map = build_frequency_map(&[FrequencyEntry {
+    let map = frequency_map(&[FrequencyFixture {
         display_text_key: "台".into(),
         count: 1,
         last_used_ms,
@@ -324,7 +323,7 @@ fn user_weight_zero_when_now_ms_is_zero() {
             freq: 100,
         }],
     );
-    let map = build_frequency_map(&[FrequencyEntry {
+    let map = frequency_map(&[FrequencyFixture {
         display_text_key: "台".into(),
         count: 1,
         last_used_ms: 1_700_000_000_000,
@@ -371,7 +370,7 @@ fn selected_candidate_outranks_never_selected_within_same_tier_and_coverage() {
     );
     let now_ms = 1_700_000_000_000_i64;
     // 「代」 selected 5 minutes ago → recent. 「台」 has no entry → stale.
-    let map = build_frequency_map(&[FrequencyEntry {
+    let map = frequency_map(&[FrequencyFixture {
         display_text_key: "代".into(),
         count: 1,
         last_used_ms: now_ms - 5 * 60 * 1_000,
@@ -422,7 +421,7 @@ fn rare_selected_homophone_outranks_common_never_selected_after_hours() {
         ],
     );
     let now_ms = 1_700_000_000_000_i64;
-    let map = build_frequency_map(&[FrequencyEntry {
+    let map = frequency_map(&[FrequencyFixture {
         display_text_key: "更新".into(),
         count: 1,
         last_used_ms: now_ms - 2 * RETIRED_RECENCY_WINDOW_MS,
@@ -512,7 +511,7 @@ fn empty_freq_map_with_zero_now_matches_pre_9_3a_behaviour() {
 
 #[test]
 fn mismatched_display_text_key_leaves_score_neutral() {
-    // Codex post-impl P3 #3: a `FrequencyEntry` whose `display_text_key`
+    // Codex post-impl P3 #3: a frequency row whose `display_text_key`
     // does NOT match any fetched candidate's `display_text` must leave
     // every candidate at the cold-start neutral baseline. Pins the
     // contract that `record_to_candidate` only applies the weight when
@@ -528,7 +527,7 @@ fn mismatched_display_text_key_leaves_score_neutral() {
         }],
     );
     // Entry exists but for a different display text.
-    let map = build_frequency_map(&[FrequencyEntry {
+    let map = frequency_map(&[FrequencyFixture {
         display_text_key: "完全不一樣".into(),
         count: 50,
         last_used_ms: 1_700_000_000_000,
@@ -551,7 +550,7 @@ fn mismatched_display_text_key_leaves_score_neutral() {
 fn duplicate_keys_in_freq_map_apply_last_write_winner_to_candidate() {
     // Codex post-impl P3 #3: integration-level pin for the duplicate-
     // key last-write-wins policy documented at
-    // `ranking::build_frequency_map`. Two entries for the same display
+    // `ranking::FrequencyMap`. Two entries for the same display
     // text — the latter (`count = 7`) must win and reach
     // `record_to_candidate`: user_weight = 7 × 0.1 (fresh).
     let (prefix_index, dict) = build_fixture(
@@ -564,14 +563,14 @@ fn duplicate_keys_in_freq_map_apply_last_write_winner_to_candidate() {
             freq: 100,
         }],
     );
-    let map = build_frequency_map(&[
-        FrequencyEntry {
+    let map = frequency_map(&[
+        FrequencyFixture {
             display_text_key: "台".into(),
             count: 1, // would yield user_weight 0.1
             last_used_ms: 1_700_000_000_000,
             canonical_tl: String::new(),
         },
-        FrequencyEntry {
+        FrequencyFixture {
             display_text_key: "台".into(),
             count: 7, // last-write-winner: user_weight 0.7
             last_used_ms: 1_700_000_001_000,
@@ -627,7 +626,7 @@ fn taiuantaigi_phrase_keeps_slot_one_when_selected() {
         ],
     );
     let now_ms = 1_700_000_000_000_i64;
-    let map = build_frequency_map(&[FrequencyEntry {
+    let map = frequency_map(&[FrequencyFixture {
         display_text_key: "臺灣台語".into(),
         count: 3,
         last_used_ms: now_ms - 30_000, // 30 seconds ago.

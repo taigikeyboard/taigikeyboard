@@ -1,8 +1,8 @@
 //! The engine reading its own user data (user-data-engine-roadmap P3b):
-//! once the platform opens the stores, a `FetchAtPos` / `PredictNext` that
-//! carries no rows answers exactly what the platform path answered when it
-//! sent the same rows itself. Its own process: the user-data handle is
-//! process-wide.
+//! once the platform opens the stores, a `FetchAtPos` answers exactly what
+//! composing answers for the same rows handed to it directly, and a
+//! `PredictNext` that carries no rows what the platform path answered when it
+//! sent them itself. Its own process: the user-data handle is process-wide.
 #![cfg(feature = "user-data")]
 
 mod common;
@@ -10,13 +10,14 @@ mod common;
 use common::{open_user_data, tl_config};
 use std::path::PathBuf;
 
+use composing::{Intent, UserRows};
 use lexicon::{EngineHandle as LexiconHandle, LexiconPaths};
 use protos::engine::{
     composing_request, next_word_request, next_word_response, request, response, Append,
-    ComposingRequest, ContinuousResponse, CustomDictEntry, DictionaryToggles, EnginePrediction,
-    EnterContinuous, FetchAtPos, FrequencyEntry, LearnedEntry, NextWordRequest, PredictNext,
-    RawNextWordPrediction, Response, Source,
+    ComposingRequest, ContinuousResponse, DictionaryToggles, EnginePrediction, EnterContinuous,
+    FetchAtPos, NextWordRequest, PredictNext, RawNextWordPrediction, Response, Source,
 };
+use ranking::{FrequencyData, FrequencyMap};
 use userdata::{
     AssociationPair, CustomDictionaryRow, CustomDictionarySource, JournalMode, LearnedPhraseSource,
     UserDataPaths, UserDataStores,
@@ -107,7 +108,7 @@ fn predict(roman: &str, user_rows: Vec<RawNextWordPrediction>) -> Vec<EnginePred
 }
 
 #[test]
-fn engine_reads_answer_what_the_platform_rows_answered() {
+fn engine_reads_answer_what_the_same_rows_answer() {
     if !lexicon_ready() {
         return;
     }
@@ -152,50 +153,51 @@ fn engine_reads_answer_what_the_platform_rows_answered() {
     stores.learned_phrases.all_rows();
     stores.association.all_rows();
 
-    // What the platform sent before the engine owned the data.
+    // The same rows, handed to composing directly.
     let key = userdata::derive_custom_query_key("tsiah", "tl").unwrap();
-    let platform_fetch = FetchAtPos {
-        frequency_entries: stores
-            .frequency
-            .rows_for_words(std::slice::from_ref(&boosted.display_text))
-            .unwrap()
-            .into_iter()
-            .map(|row| FrequencyEntry {
-                display_text_key: row.word,
-                count: u32::try_from(row.count).unwrap(),
+    let frequency: FrequencyMap = stores
+        .frequency
+        .rows_for_words(std::slice::from_ref(&boosted.display_text))
+        .unwrap()
+        .into_iter()
+        .map(|row| {
+            let data = FrequencyData {
+                count: i32::try_from(row.count).unwrap(),
                 last_used_ms: row.last_used_ms,
-                canonical_tl: row.tl,
-            })
-            .collect(),
-        custom_entries: CustomDictionarySource::rows_matching(
+            };
+            (row.word, row.tl, data)
+        })
+        .collect();
+    let rows = UserRows {
+        frequency,
+        custom: CustomDictionarySource::rows_matching(
             &stores.custom_dictionary,
             &key.family,
             &key.form,
             &key.key,
         )
         .into_iter()
-        .map(|row| CustomDictEntry {
+        .map(|row| lexicon::CustomEntry {
             roman: row.roman,
             hanji: (!row.hanzi.is_empty()).then_some(row.hanzi),
         })
         .collect(),
-        learned_entries: LearnedPhraseSource::rows_matching(
+        learned: LearnedPhraseSource::rows_matching(
             &stores.learned_phrases,
             &key.family,
             &key.form,
             &key.key,
         )
         .into_iter()
-        .map(|phrase| LearnedEntry {
+        .map(|phrase| lexicon::LearnedEntry {
             hanji: phrase.hanzi,
             canonical_tl: phrase.canonical_tl,
         })
         .collect(),
-        ..FetchAtPos::default()
     };
-    assert!(!platform_fetch.frequency_entries.is_empty());
-    assert!(!platform_fetch.custom_entries.is_empty());
-    assert!(!platform_fetch.learned_entries.is_empty());
+    assert!(rows.frequency != FrequencyMap::new());
+    assert!(!rows.custom.is_empty());
+    assert!(!rows.learned.is_empty());
     let platform_rows: Vec<RawNextWordPrediction> = stores
         .association
         .rows_following("食", "tsia̍h", 60)
@@ -209,30 +211,31 @@ fn engine_reads_answer_what_the_platform_rows_answered() {
             source: Source::User as i32,
         })
         .collect();
-    let platform_candidates = fetch(platform_fetch);
+    let direct_candidates = composing::EngineHandle::instance()
+        .query(
+            &Intent::FetchAtPos {
+                now_ms: NOW_MS,
+                enabled_sources_bitmask: u32::MAX,
+                literal_roman_candidate_disabled: false,
+                user_rows: rows,
+            },
+            &tl_config(true),
+            COMPOSING_GENERATION,
+        )
+        .continuous
+        .expect("FetchAtPos answers candidates");
     let platform_predictions = predict("tsia̍h", platform_rows);
     assert_ne!(
-        platform_candidates, neutral,
+        direct_candidates, neutral,
         "the rows change the answer, or the test proves nothing"
     );
     drop(stores);
 
-    // The engine owns the data: the same requests, no rows.
+    // The engine owns the data: the requests carry no rows.
     open_user_data(&paths);
 
-    assert_eq!(fetch(FetchAtPos::default()), platform_candidates);
+    assert_eq!(fetch(FetchAtPos::default()), direct_candidates);
     assert_eq!(predict("tsia̍h", Vec::new()), platform_predictions);
-    // Rows a platform still sends are replaced, never merged (U9).
-    assert_eq!(
-        fetch(FetchAtPos {
-            custom_entries: vec![CustomDictEntry {
-                roman: "tsiah".to_owned(),
-                hanji: Some("不該出現".to_owned()),
-            }],
-            ..FetchAtPos::default()
-        }),
-        platform_candidates
-    );
     // The custom-dictionary setting, off: the engine reads no custom rows.
     let without_custom = fetch(FetchAtPos {
         custom_dictionary_disabled: true,

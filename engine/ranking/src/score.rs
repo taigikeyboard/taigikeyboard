@@ -101,22 +101,22 @@ impl FrequencyData {
 ///
 /// Internally a nested `display_text → (canonical_tl → FrequencyData)`
 /// map: the outer level lets [`get`](Self::get) borrow `&str` and the
-/// inner level expresses the tolerant fallback directly. Engine builds
-/// this once per request from the proto's `FrequencyEntry` list
-/// ([`build_frequency_map`]) and reuses it across the whole batch.
+/// inner level expresses the tolerant fallback directly. The engine builds
+/// this once per fetch from its `user_frequency.db` rows (`dispatch` crate,
+/// `user_data::frequency_map`) and reuses it across the whole batch.
 ///
 /// **Legacy `canonical_tl == ""` bucket**: pre-R5 rows / old-backup
-/// imports the platform could not re-key carry an empty `canonical_tl`.
+/// imports that could not be re-keyed carry an empty `canonical_tl`.
 /// [`get`](Self::get) consults that bucket as a tolerant fallback for ANY
 /// reading of the `display_text` whose exact `(display, tl)` entry is
 /// absent — both 重/tîng and 重/tāng inherit the old merged 重 count until
 /// each is re-learned, at which point the exact bucket shadows the legacy
-/// one. Self-healing; the platform never deletes the legacy row.
+/// one. Self-healing; the legacy row is never deleted.
 ///
 /// **Duplicate-key policy**: last-write-wins within one
-/// `(display, tl)` bucket. Platform queries return at most one row per
-/// pair (UNIQUE(word, tl)); for legacy callers, duplicates coalesce.
-#[derive(Debug, Clone, Default)]
+/// `(display, tl)` bucket. The store answers at most one row per pair
+/// (UNIQUE(word, tl)); duplicates coalesce all the same.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct FrequencyMap {
     by_display: std::collections::HashMap<String, std::collections::HashMap<String, FrequencyData>>,
 }
@@ -164,6 +164,19 @@ impl FrequencyMap {
             inner.get("")
         };
         exact.or(legacy).copied().unwrap_or_default()
+    }
+}
+
+/// `(display_text, canonical_tl, data)` rows, [`insert`](FrequencyMap::insert)ed
+/// in order — a later row for the same pair wins.
+impl FromIterator<(String, String, FrequencyData)> for FrequencyMap {
+    fn from_iter<I: IntoIterator<Item = (String, String, FrequencyData)>>(rows: I) -> Self {
+        let rows = rows.into_iter();
+        let mut map = Self::with_capacity(rows.size_hint().0);
+        for (display_text, canonical_tl, data) in rows {
+            map.insert(display_text, canonical_tl, data);
+        }
+        map
     }
 }
 
@@ -254,36 +267,6 @@ pub fn decayed_user_weight_delta(count: u32, now_ms: i64, last_used_ms: i64) -> 
     // `MAX_BOOST` (count >= 40), so `base_delta` is in `0.0..=4.0`.
     let base_delta = f64::from(user_freq_boost(count)) - 1.0;
     base_delta * decay
-}
-
-/// Build a [`FrequencyMap`] from the proto-wire `FrequencyEntry[]`.
-/// Single source of truth for the Continuous-input dispatcher in
-/// `composing/src/dispatch.rs::handle_fetch_at_pos`.
-///
-/// `entry.count: u32` is the wire type; the in-memory [`FrequencyData`]
-/// keeps `count: i32`. `u32::MAX > i32::MAX` so we saturate on
-/// conversion to prevent wrap.
-///
-/// **Continuous path note**: the boost helper [`user_freq_boost`] takes
-/// `u32`, so callers re-widen `FrequencyData.count` back via
-/// `u32::try_from(..).unwrap_or(0)` before applying the boost — the
-/// `u32 → i32` saturation is a no-op for any realistic platform count
-/// (selections are bounded by user actions), and the boost itself
-/// saturates at [`MAX_BOOST`] regardless of the converted count's
-/// magnitude. See `engine/lexicon/src/continuous/candidate.rs::record_to_candidate`.
-pub fn build_frequency_map(entries: &[protos::engine::FrequencyEntry]) -> FrequencyMap {
-    let mut map = FrequencyMap::with_capacity(entries.len());
-    for entry in entries {
-        map.insert(
-            entry.display_text_key.clone(),
-            entry.canonical_tl.clone(),
-            FrequencyData {
-                count: i32::try_from(entry.count).unwrap_or(i32::MAX),
-                last_used_ms: entry.last_used_ms,
-            },
-        );
-    }
-    map
 }
 
 /// v3.5.8 Continuous Input Phase 5 score formula:
@@ -430,44 +413,15 @@ mod tests {
     }
 
     #[test]
-    fn build_frequency_map_dedupes_duplicate_keys_last_write_wins() {
-        // Codex pre-impl risk: platform-side `user_frequency.db`
-        // sometimes ships duplicate `(display_text_key, canonical_tl)`
-        // rows. The map must coalesce silently (later entry wins).
-        let entries = vec![
-            protos::engine::FrequencyEntry {
-                display_text_key: "台".to_owned(),
-                count: 1,
-                last_used_ms: 100,
-                canonical_tl: "tâi".to_owned(),
-            },
-            protos::engine::FrequencyEntry {
-                display_text_key: "台".to_owned(),
-                count: 7,
-                last_used_ms: 700,
-                canonical_tl: "tâi".to_owned(),
-            },
-        ];
-        let map = build_frequency_map(&entries);
+    fn frequency_map_insert_is_last_write_wins() {
+        // Duplicate `(display_text, canonical_tl)` rows coalesce silently:
+        // the later one wins.
+        let mut map = FrequencyMap::new();
+        map.insert("台".to_owned(), "tâi".to_owned(), freq(1, 100));
+        map.insert("台".to_owned(), "tâi".to_owned(), freq(7, 700));
         let data = map.get("台", "tâi");
         assert_eq!(data.count, 7);
         assert_eq!(data.last_used_ms, 700);
-    }
-
-    #[test]
-    fn build_frequency_map_saturates_count_beyond_i32_max() {
-        // Wire `count: u32` is wider than the in-memory `count: i32`.
-        // Saturate at conversion to avoid sign-flip wraparound on the
-        // legacy additive formula path. The Continuous boost path is
-        // unaffected (it consumes u32 directly).
-        let entries = vec![protos::engine::FrequencyEntry {
-            display_text_key: "x".to_owned(),
-            count: u32::MAX,
-            last_used_ms: 1,
-            canonical_tl: String::new(),
-        }];
-        let map = build_frequency_map(&entries);
-        assert_eq!(map.get("x", "").count, i32::MAX);
     }
 
     #[test]

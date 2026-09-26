@@ -26,6 +26,7 @@ use protos::engine::{
 };
 
 mod common;
+use common::Fetch;
 use common::{
     build_dictionary_fst, build_syllables_fst, build_tkdb_v3, cell_with_hanji, commit_text, config,
     empty_association_bin, engine_install_lock, fetch_cells, install_lexicon, req, write_temp,
@@ -82,7 +83,7 @@ fn fetch(raw: &str, input_mode: &str, hyphenless: bool) -> Vec<Cell> {
         hyphenless_roman: hyphenless,
         ..config(input_mode)
     };
-    fetch_cells(&cfg, raw, FetchAtPos::default())
+    fetch_cells(&cfg, raw, Fetch::default())
 }
 
 #[test]

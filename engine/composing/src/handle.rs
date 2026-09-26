@@ -21,7 +21,7 @@
 //! to tens of ms) dictionary scan never blocks a concurrent main-thread
 //! `Append` / `DeleteBackward`.
 
-use crate::api::{ComposingError, Engine};
+use crate::api::{Applied, ComposingError, Engine, Intent};
 use crate::dispatch;
 use once_cell::sync::OnceCell;
 use protos::engine::{AppConfig, ComposingRequest, ComposingResponse};
@@ -60,13 +60,21 @@ impl EngineHandle {
         config: &AppConfig,
         generation: u64,
     ) -> Result<ComposingResponse, ComposingError> {
+        self.handle_learning(req, config, generation)
+            .map(|applied| applied.response)
+    }
+
+    /// [`handle`](Self::handle), with the phrase a final commit taught (§50)
+    /// — for the engine's own learned-phrase store.
+    pub fn handle_learning(
+        &self,
+        req: &ComposingRequest,
+        config: &AppConfig,
+        generation: u64,
+    ) -> Result<Applied, ComposingError> {
         let intent = dispatch::decode_intent(req)?;
         if intent.is_read_only() {
-            // A stale read answers the idle snapshot (module doc).
-            let Some(snapshot) = self.read_at(generation, Engine::clone) else {
-                return Ok(Engine::idle_snapshot(config));
-            };
-            return Ok(dispatch::query(&intent, &snapshot, config));
+            return Ok(self.query(&intent, config, generation).into());
         }
         let mut engine = self
             .composing
@@ -77,7 +85,18 @@ impl EngineHandle {
             engine.reset();
             self.last_generation.store(generation, Ordering::Release);
         }
-        Ok(dispatch::apply(intent, &mut engine, config))
+        Ok(engine.apply_learning(intent, config))
+    }
+
+    /// Answers a read-only intent (`Intent::is_read_only`) — a `FetchAtPos`
+    /// the engine built with the user's rows (`UserRows`), or one decoded
+    /// from the wire. A stale generation answers the idle snapshot (module
+    /// doc).
+    pub fn query(&self, intent: &Intent, config: &AppConfig, generation: u64) -> ComposingResponse {
+        match self.read_at(generation, Engine::clone) {
+            Some(snapshot) => dispatch::query(intent, &snapshot, config),
+            None => Engine::idle_snapshot(config),
+        }
     }
 
     /// The pending raw buffer — `Preedit.raw_input`, what a user-data lookup

@@ -18,18 +18,19 @@
 //! tests inspect `nailed` via `Engine::snapshot_state`.
 
 use crate::api::{
-    combined_display, combined_display_with_tail, nailed_prefix, CaretDirection, EngineState,
-    Intent, NailedSegment, Phase,
+    combined_display, combined_display_with_tail, nailed_prefix, Applied, CaretDirection,
+    EngineState, Intent, NailedSegment, Phase,
 };
 use crate::derived::{derived_display, display_caret_utf16, strip_tps_separator_markers};
+use lexicon::LearnedEntry;
 use protos::engine::composing_response::Preedit;
 use protos::engine::effect;
 use protos::engine::AppConfig;
 use protos::engine::{
     ClearPreeditWithoutCommit, CommitTextReplacingPreedit, ComposingResponse,
     DeleteBackwardFromDocument, Effect, NextWordClearForNewComposing,
-    NextWordUpdateLastSelectedWord, NextWordWordSelected, PerformAutocomplete, PhraseLearned,
-    ResetAutocomplete, ResetAutocompleteContext, UpdatePreedit,
+    NextWordUpdateLastSelectedWord, NextWordWordSelected, PerformAutocomplete, ResetAutocomplete,
+    ResetAutocompleteContext, UpdatePreedit,
 };
 
 /// Learned phrases (§50) — the longest composition the final commit turns
@@ -38,13 +39,10 @@ use protos::engine::{
 /// syllables is a clause, not a word.
 const MAX_LEARNED_PHRASE_SYLLABLES: usize = 6;
 
-/// Apply `intent` against `state`, mutate, return the proto response.
-pub(crate) fn apply(
-    state: &mut EngineState,
-    intent: Intent,
-    config: &AppConfig,
-) -> ComposingResponse {
-    match intent {
+/// Apply `intent` against `state`, mutate, return the proto response and
+/// the phrase a final commit taught (§50).
+pub(crate) fn apply(state: &mut EngineState, intent: Intent, config: &AppConfig) -> Applied {
+    let response = match intent {
         Intent::Start { text } => match &state.phase {
             Phase::Continuous { .. } => start_under_continuous(state, text, config),
             // §21: a leading `--` neutral-tone marker typed from Idle is a document
@@ -61,13 +59,15 @@ pub(crate) fn apply(
             }
             Phase::Continuous { .. } => append_continuous(state, ch, config),
         },
-        Intent::AppendHyphen => apply(
-            state,
-            Intent::Append {
-                ch: "-".to_string(),
-            },
-            config,
-        ),
+        Intent::AppendHyphen => {
+            return apply(
+                state,
+                Intent::Append {
+                    ch: "-".to_string(),
+                },
+                config,
+            )
+        }
         Intent::ReplaceLast { replacement } => replace_last(state, replacement, config),
         Intent::DeleteBackward => delete_backward(state, config),
         Intent::CommitDerived => match &state.phase {
@@ -101,20 +101,23 @@ pub(crate) fn apply(
             hanji,
             consumed_bytes,
             syllable_count,
-        } => commit_continuous(
-            state,
-            display_text,
-            canonical_text,
-            association_tl,
-            hanji,
-            consumed_bytes,
-            syllable_count,
-            config,
-        ),
+        } => {
+            return commit_continuous(
+                state,
+                display_text,
+                canonical_text,
+                association_tl,
+                hanji,
+                consumed_bytes,
+                syllable_count,
+                config,
+            )
+        }
         Intent::ResetContinuous => reset_continuous(state, config),
         Intent::TelexKey { key } => telex_key(state, &key, config),
         Intent::MoveCaret { direction } => move_caret(state, direction, config),
-    }
+    };
+    response.into()
 }
 
 /// `Intent::TelexKey` — edit the chunk before the caret through
@@ -800,16 +803,16 @@ fn commit_continuous(
     consumed_bytes: usize,
     syllable_count: u8,
     config: &AppConfig,
-) -> ComposingResponse {
+) -> Applied {
     let Phase::Continuous { raw, nailed, .. } = &state.phase else {
-        return noop(state, config);
+        return noop(state, config).into();
     };
     if display_text.is_empty()
         || consumed_bytes == 0
         || consumed_bytes > raw.len()
         || !raw.is_char_boundary(consumed_bytes)
     {
-        return noop(state, config);
+        return noop(state, config).into();
     }
     let canonical = if canonical_text.is_empty() {
         display_text.clone()
@@ -851,10 +854,11 @@ fn commit_continuous(
         effects.push(next_word_word_selected(canonical, next_word_roman, true));
         // Learned phrases (§50): the whole composition, if it was a
         // sequence of hanji picks, becomes one learned pair.
-        if let Some(learned) = learned_phrase(&new_nailed) {
-            effects.push(phrase_learned(learned));
-        }
-        return exit_to_idle(state, effects);
+        let learned = learned_phrase(&new_nailed);
+        return Applied {
+            response: exit_to_idle(state, effects),
+            learned,
+        };
     }
 
     // Mid-commit (Model B): stay in Continuous, NO document write — just
@@ -880,6 +884,7 @@ fn commit_continuous(
         is_composing: true,
         continuous: None,
     }
+    .into()
 }
 
 /// Continuous-mode abort — **Model B (Codex risk (ii))**. Nailed segments
@@ -1038,7 +1043,7 @@ fn next_word_word_selected(text: String, roman: String, trigger_prediction: bool
 /// the joined TL, not the segments' echoed `syllable_count`: a
 /// custom-dictionary pick reports `1` whatever its length
 /// (`lexicon::custom_entry_to_candidate`).
-fn learned_phrase(nailed: &[NailedSegment]) -> Option<PhraseLearned> {
+fn learned_phrase(nailed: &[NailedSegment]) -> Option<LearnedEntry> {
     if nailed.len() < 2 {
         return None;
     }
@@ -1056,7 +1061,7 @@ fn learned_phrase(nailed: &[NailedSegment]) -> Option<PhraseLearned> {
     if syllable_count == 0 || syllable_count > MAX_LEARNED_PHRASE_SYLLABLES {
         return None;
     }
-    Some(PhraseLearned {
+    Some(LearnedEntry {
         hanji,
         canonical_tl,
     })
@@ -1084,12 +1089,6 @@ fn canonical_separators(tl: &str) -> String {
         }
     }
     out
-}
-
-fn phrase_learned(learned: PhraseLearned) -> Effect {
-    Effect {
-        kind: Some(effect::Kind::PhraseLearned(learned)),
-    }
 }
 
 fn next_word_clear_for_new_composing() -> Effect {

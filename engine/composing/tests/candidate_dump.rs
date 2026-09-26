@@ -41,10 +41,10 @@
 use std::path::PathBuf;
 
 use lexicon::{EngineHandle as LexiconHandle, LexiconPaths};
-use protos::engine::FetchAtPos;
 
 mod common;
-use common::{config, fetch_at_pos_response};
+use common::{config, fetch_at_pos_response, Fetch, Selected};
+use lexicon::{CustomEntry, LearnedEntry};
 
 const DEFAULT_INPUTS: &str = "tai5,tai5gi2,tai,tsua,ka";
 
@@ -104,14 +104,14 @@ fn dump_continuous_candidates() {
     // DUMP_FREQ="更新:king-sin:10;羽:ú:10:7200000" — simulated
     // user_frequency rows `display:tl:count[:age_ms]`, default age 1 s.
     let now_ms: i64 = 1_800_000_000_000;
-    let freq: Vec<protos::engine::FrequencyEntry> = std::env::var("DUMP_FREQ")
+    let freq: Vec<Selected> = std::env::var("DUMP_FREQ")
         .unwrap_or_default()
         .split(';')
         .filter(|s| !s.is_empty())
         .map(|e| {
             let p: Vec<&str> = e.split(':').collect();
-            protos::engine::FrequencyEntry {
-                display_text_key: p[0].to_string(),
+            Selected {
+                hanji: p[0].to_string(),
                 canonical_tl: p[1].to_string(),
                 count: p[2].parse().unwrap(),
                 last_used_ms: p
@@ -124,20 +124,20 @@ fn dump_continuous_candidates() {
 
     // DUMP_CUSTOM="kì-khí-lâi:記起來;tâi-gí" — simulated
     // `custom_dictionary.db` rows `roman[:hanji]`.
-    let custom: Vec<protos::engine::CustomDictEntry> = env_pairs("DUMP_CUSTOM")
+    let custom: Vec<CustomEntry> = env_pairs("DUMP_CUSTOM")
         .into_iter()
-        .map(|(roman, hanji)| protos::engine::CustomDictEntry {
+        .map(|(roman, hanji)| CustomEntry {
             roman,
             hanji: (!hanji.is_empty()).then_some(hanji),
         })
         .collect();
 
     // DUMP_LEARNED="記起來:kì--khí-lâi;…" — simulated learned-phrase rows
-    // `hanji:canonical_tl` (§50), as the platform would inject them for an
-    // exact whole-buffer key match.
-    let learned: Vec<protos::engine::LearnedEntry> = env_pairs("DUMP_LEARNED")
+    // `hanji:canonical_tl` (§50), as the engine reads them for an exact
+    // whole-buffer key match.
+    let learned: Vec<LearnedEntry> = env_pairs("DUMP_LEARNED")
         .into_iter()
-        .map(|(hanji, canonical_tl)| protos::engine::LearnedEntry {
+        .map(|(hanji, canonical_tl)| LearnedEntry {
             hanji,
             canonical_tl,
         })
@@ -147,12 +147,12 @@ fn dump_continuous_candidates() {
         let resp = fetch_at_pos_response(
             &cfg,
             raw,
-            FetchAtPos {
+            Fetch {
                 enabled_sources_bitmask: bitmask,
-                frequency_entries: freq.clone(),
+                frequency: freq.clone(),
                 now_ms,
-                custom_entries: custom.clone(),
-                learned_entries: learned.clone(),
+                custom: custom.clone(),
+                learned: learned.clone(),
                 ..Default::default()
             },
         );

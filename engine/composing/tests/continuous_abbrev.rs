@@ -10,14 +10,16 @@
 //! `common::build_dictionary_fst` emits the `*_abbrev` keys like
 //! `create_fst.py` does.
 
-use protos::engine::{CandidateMessage, CustomDictEntry, FetchAtPos};
+use protos::engine::CandidateMessage;
 
 mod common;
+use common::Fetch;
 use common::{
     build_dictionary_fst, build_syllables_fst, build_tkdb_v3, config, empty_association_bin,
     engine_install_lock, fetch_at_pos_response, fetch_hanji, fetch_hanji_with_custom,
     install_lexicon, write_temp, Row,
 };
+use lexicon::CustomEntry;
 
 /// Abbreviation-only rows under `mk` beyond the ones that are also partial
 /// extensions — enough that the block would overflow the output cap.
@@ -130,14 +132,14 @@ fn install_fixture() {
 }
 
 fn fetch(raw: &str, input_mode: &str) -> Vec<CandidateMessage> {
-    fetch_at_pos_response(&config(input_mode), raw, FetchAtPos::default())
+    fetch_at_pos_response(&config(input_mode), raw, Fetch::default())
         .continuous
         .map(|c| c.candidates)
         .unwrap_or_default()
 }
 
 fn hanji(raw: &str, input_mode: &str) -> Vec<String> {
-    fetch_hanji(raw, input_mode, FetchAtPos::default())
+    fetch_hanji(raw, input_mode, Fetch::default())
 }
 
 #[test]
@@ -282,7 +284,7 @@ fn custom_entry_sharing_the_abbreviated_word_shows_once() {
     let hanji = fetch_hanji_with_custom(
         "ss",
         "tl",
-        vec![CustomDictEntry {
+        vec![CustomEntry {
             roman: "só-sî".into(),
             hanji: Some("鎖匙".into()),
         }],

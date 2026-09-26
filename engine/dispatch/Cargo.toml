@@ -16,6 +16,7 @@ phonetics = { workspace = true }
 composing = { workspace = true }
 nextword = { workspace = true }
 lexicon = { workspace = true }
+ranking = { workspace = true }
 log = { workspace = true }
 userdata = { workspace = true, optional = true }
 

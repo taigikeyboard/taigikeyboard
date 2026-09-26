@@ -20,7 +20,7 @@ pub struct CustomEntry {
 }
 
 /// One auto-learned phrase (§50): the `(Hanji, canonical-TL)` pair the user
-/// composed segment by segment. Rides `FetchAtPos.learned_entries`, a
+/// composed segment by segment. Ranked as `composing::UserRows.learned`, a
 /// competitor of the dictionary rows — never the override `CustomEntry` is.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LearnedPhrase {

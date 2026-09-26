@@ -10,4 +10,3 @@ publish = false
 workspace = true
 
 [dependencies]
-protos = { workspace = true }

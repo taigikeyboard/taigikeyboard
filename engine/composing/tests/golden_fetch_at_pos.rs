@@ -57,14 +57,13 @@
 
 use std::path::PathBuf;
 
-use protos::engine::{CustomDictEntry, FetchAtPos, FrequencyEntry};
-
 mod common;
 use common::{
     build_syllables_fst, build_tkdb_v3, config, derive_poj_notone, empty_association_bin,
     engine_install_lock, fetch_at_pos_response, fst_entry, install_lexicon, write_fst_set,
-    write_temp, Row,
+    write_temp, Fetch, Row, Selected,
 };
+use lexicon::CustomEntry;
 
 // --- golden-only fixture builder (union of every key family) ---------------
 
@@ -279,9 +278,9 @@ struct Case {
     name: &'static str,
     raw: &'static str,
     input_mode: &'static str,
-    freq: Vec<FrequencyEntry>,
+    freq: Vec<Selected>,
     now_ms: i64,
-    custom: Vec<CustomDictEntry>,
+    custom: Vec<CustomEntry>,
     // PR-9.6 — source-toggle bitmask threaded into `FetchAtPos`. `0` is
     // the proto3-absent sentinel → dispatch normalises it to `u32::MAX`
     // (all sources on), so cases left at the default reproduce the
@@ -358,7 +357,7 @@ fn matrix() -> Vec<Case> {
             input_mode: "tl",
             freq: Vec::new(),
             now_ms: 0,
-            custom: vec![CustomDictEntry {
+            custom: vec![CustomEntry {
                 roman: "tâi-gí".into(),
                 hanji: Some("台語".into()),
             }],
@@ -373,11 +372,11 @@ fn matrix() -> Vec<Case> {
             name: "user_freq_boosted",
             raw: "tai",
             input_mode: "tl",
-            freq: vec![FrequencyEntry {
-                display_text_key: "台".into(),
+            freq: vec![Selected {
+                hanji: "台".into(),
+                canonical_tl: String::new(),
                 count: 10,
                 last_used_ms: 999_999_990_000,
-                canonical_tl: String::new(),
             }],
             now_ms: 1_000_000_000_000,
             custom: Vec::new(),
@@ -453,7 +452,7 @@ fn matrix() -> Vec<Case> {
             input_mode: "poj",
             freq: Vec::new(),
             now_ms: 0,
-            custom: vec![CustomDictEntry {
+            custom: vec![CustomEntry {
                 roman: "tâi-gí-khí-pôaⁿ".into(),
                 hanji: Some("台語齒盤".into()),
             }],
@@ -517,16 +516,15 @@ fn run_case(c: &Case) -> String {
     let resp = fetch_at_pos_response(
         &cfg,
         c.raw,
-        FetchAtPos {
-            frequency_entries: c.freq.clone(),
+        Fetch {
+            frequency: c.freq.clone(),
             now_ms: c.now_ms,
-            custom_entries: c.custom.clone(),
+            custom: c.custom.clone(),
             enabled_sources_bitmask: c.enabled_sources_bitmask,
             // §34/S22: all golden cases keep the literal-roman candidate ON
             // (the toggle OFF path is covered by a focused dispatch unit test).
             literal_roman_candidate_disabled: false,
-            custom_dictionary_disabled: false,
-            learned_entries: vec![],
+            ..Default::default()
         },
     );
 

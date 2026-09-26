@@ -10,7 +10,7 @@
 //! the pure transition table. After v3.5.9 A2 the candidate-assembly
 //! 6-step seam lives in [`crate::continuous::assemble_candidates`];
 //! dispatch only handles the phase/hanzi guards, the proto →
-//! domain hoists (`mode`, `freq_map`, `custom`), and wire encoding.
+//! domain hoists (`mode`, the source bitmask sentinel), and wire encoding.
 //!
 //! The mode-aware key construction lives in `composing::continuous`
 //! per the Phase 5 module contract pinned in
@@ -22,21 +22,20 @@
 //! the same shadow → lattice path TL/POJ already walk; the legacy
 //! `build_keys_tps` `tl:`-folded path is retired).
 
-use crate::api::{CaretDirection, ComposingError, Engine, Intent, Phase};
+use crate::api::{CaretDirection, ComposingError, Engine, Intent, Phase, UserRows};
 use crate::continuous::{assemble_candidates, retain_first_by_key, roman_reading_eq};
 use crate::shadow::{
     build_shadow_lattice_with_barriers, left_anchored_keys_and_restrictions, ShadowLattice,
 };
 use lexicon::{
-    classification::is_hanzi, derive_mode, ConsumedSpan, CustomEntry, LearnedEntry, RawCandidate,
+    classification::is_hanzi, derive_mode, ConsumedSpan, LearnedEntry, RawCandidate,
     SyllableInventory, COVERAGE_KIND_FULL, FORM_NOTONE,
 };
 use phonetics::contains_tps;
 use protos::engine::{
     composing_request, AppConfig, CandidateMessage, ComposingRequest, ComposingResponse,
-    ContinuousResponse, CustomDictEntry, FrequencyEntry,
+    ContinuousResponse,
 };
-use ranking::build_frequency_map;
 
 /// Decode the proto request into a typed `Intent`. Returns `MissingMethod`
 /// when `oneof method` is empty.
@@ -61,13 +60,13 @@ pub fn decode_intent(req: &ComposingRequest) -> Result<Intent, ComposingError> {
         }
         Method::Reset(_) => Intent::Reset,
         Method::EnterContinuous(_) => Intent::EnterContinuous,
+        // The user rows are the engine's own reads (`UserRows`); a platform
+        // sends none.
         Method::FetchAtPos(m) => Intent::FetchAtPos {
-            frequency_entries: m.frequency_entries,
             now_ms: m.now_ms,
-            custom_entries: m.custom_entries,
             enabled_sources_bitmask: m.enabled_sources_bitmask,
             literal_roman_candidate_disabled: m.literal_roman_candidate_disabled,
-            learned_entries: m.learned_entries,
+            user_rows: UserRows::default(),
         },
         Method::CommitContinuous(m) => Intent::CommitContinuous {
             display_text: m.display_text,
@@ -124,18 +123,14 @@ pub fn apply(intent: Intent, engine: &mut Engine, config: &AppConfig) -> Composi
 pub fn query(intent: &Intent, engine: &Engine, config: &AppConfig) -> ComposingResponse {
     match intent {
         Intent::FetchAtPos {
-            frequency_entries,
             now_ms,
-            custom_entries,
             enabled_sources_bitmask,
             literal_roman_candidate_disabled,
-            learned_entries,
+            user_rows,
         } => handle_fetch_at_pos(
             engine,
-            frequency_entries,
             *now_ms,
-            custom_entries,
-            learned_entries,
+            user_rows,
             *enabled_sources_bitmask,
             *literal_roman_candidate_disabled,
             config,
@@ -156,15 +151,12 @@ pub fn query(intent: &Intent, engine: &Engine, config: &AppConfig) -> ComposingR
 ///
 /// v3.5.9 A2: the candidate-assembly 6-step seam lives in
 /// [`crate::continuous::assemble_candidates`]; this fn does the
-/// phase/hanzi guards, the proto→domain hoists, and the wire
+/// phase/hanzi guards, the sentinel normalisation, and the wire
 /// encoding around it.
-#[allow(clippy::too_many_arguments)]
 fn handle_fetch_at_pos(
     engine: &Engine,
-    frequency_entries: &[FrequencyEntry],
     now_ms: i64,
-    custom_entries: &[CustomDictEntry],
-    learned_entries: &[protos::engine::LearnedEntry],
+    user_rows: &UserRows,
     enabled_sources_bitmask: u32,
     literal_roman_candidate_disabled: bool,
     config: &AppConfig,
@@ -210,32 +202,16 @@ fn handle_fetch_at_pos(
     } else {
         phonetics::api::parse_input_mode(&config.input_mode)
     };
-    // Phase 9.3a: hoist proto-shaped `FrequencyEntry[]` into the
-    // domain-typed `FrequencyMap` once per fetch; `lexicon` consumes
-    // `&FrequencyMap` and stays proto-agnostic. Empty list → empty
-    // map → `user_freq_boost(0) = 1.0` for every candidate (backward
-    // -compatible with PR-9.2 platform builds that have not wired
-    // user-frequency plumbing yet).
-    let freq_map = build_frequency_map(frequency_entries);
-    // v3.5.8 Phase 9 Item 12: hoist proto-shaped `CustomDictEntry[]`
-    // into the domain-typed `CustomEntry` list once per fetch (mirror
-    // of `build_frequency_map` above); `lexicon` consumes
-    // `&[CustomEntry]` and stays proto-agnostic. Empty list = no
-    // custom matches / feature disabled → zero synthesized candidates
-    // and the `(roman, hanji)` dedupe is a no-op (backward-compatible
-    // with builds that never set `FetchAtPos.custom_entries`).
-    let custom = build_custom_entries(custom_entries);
-    // Learned phrases (§50) — same proto→domain hoist as `custom` above.
-    // Empty list = feature off / un-wired build → no learned candidates.
-    let learned = build_learned_entries(learned_entries);
+    // Learned phrases (§50): one row per reading, the most-learned
+    // separator form first.
+    let learned = first_learned_per_reading(&user_rows.learned);
     // PR-9.6 — normalise the source-toggle bitmask at the proto→domain
     // boundary: proto3 default `0` means "platform did not wire this"
     // (older / un-wired build) and maps to `u32::MAX` (legacy all-on),
     // reproducing pre-PR-9.6 behaviour where continuous candidates
     // ignored toggles. A real bitmask is never `0` because
     // `compute_filters` always sets the `dev` bit, so `0` is an
-    // unambiguous absence marker. Normalising here (mirroring the
-    // `build_frequency_map` / `build_custom_entries` hoists) keeps
+    // unambiguous absence marker. Normalising here keeps
     // `assemble_candidates` taking an already-resolved enabled bitmask —
     // no domain code has to know about the wire sentinel.
     let enabled_sources_bitmask = if enabled_sources_bitmask == 0 {
@@ -252,9 +228,9 @@ fn handle_fetch_at_pos(
     // -prefix fetchers apply the same `Filter` the Tab3 browse path uses.
     let mut candidates = assemble_candidates(
         raw,
-        &freq_map,
+        &user_rows.frequency,
         now_ms,
-        &custom,
+        &user_rows.custom,
         &learned,
         mode,
         enabled_sources_bitmask,
@@ -471,49 +447,17 @@ pub fn build_keys_tl_with_inventory(
         .keys
 }
 
-/// v3.5.8 Phase 9 Item 12 — hoist proto-shaped `CustomDictEntry[]`
-/// into the domain-typed [`CustomEntry`] list. Mirror of
-/// `ranking::build_frequency_map`'s proto→domain boundary, kept here
-/// so `lexicon` stays proto-agnostic. `roman` / `hanji` are the raw
-/// stored `custom_dictionary.db` columns the platform marshalled
-/// verbatim (NOT the legacy display-capitalized form) so the
-/// `(roman, hanji)` dedupe key collides correctly against
-/// `dict.bin`'s `DictionaryRecord.tl` / `.hanzi`. proto3 `optional
-/// hanji` absent → `None` (romanization-only entry); present (even
-/// empty) → `Some`.
-///
-/// v3.5.9 B-4 — `roman` is kept in its raw stored form here (TL or
-/// POJ display, whichever the user typed). Canonicalization to TL
-/// happens downstream at the `display_text` synthesis site only
-/// (`lexicon::custom_entry_to_candidate` →
-/// `phonetics::api::canonical_tl_form(roman, mode)`), NOT here. The
-/// lattice / FST-key matching (`composing::shadow::custom_toneless_key`)
-/// needs the user's native form to align with the mode-tagged
-/// inventory introduced by B-1 / B-2; rewriting `roman` at this seam
-/// would break that alignment for POJ-mode custom entries
-/// (Codex pre-impl BLOCK #1, 2026-05-21).
-fn build_custom_entries(entries: &[CustomDictEntry]) -> Vec<CustomEntry> {
-    entries
-        .iter()
-        .map(|e| CustomEntry {
-            roman: e.roman.clone(),
-            hanji: e.hanji.clone(),
-        })
-        .collect()
-}
-
-/// Learned phrases (§50) — hoist proto-shaped `LearnedEntry[]` into the
-/// domain-typed [`LearnedEntry`] list (mirror of [`build_custom_entries`]).
-/// Both strings are canonical already (hanji as committed, canonical TL as
-/// `Effect.PhraseLearned` emitted it) and stay as stored; the per-mode
-/// lattice key is derived at the walker (`learned_edge_key`).
+/// Learned phrases (§50) — one row per reading. Both strings are canonical
+/// already (hanji as committed, canonical TL as the engine learned it) and
+/// stay as stored; the per-mode lattice key is derived at the walker
+/// (`learned_edge_key`).
 ///
 /// The same pair learned under two typed separators (`guá-sī` / `guá--sī`)
-/// is two platform rows under `UNIQUE(hanzi, roman)`; only the first in
-/// platform order (`learn_count DESC, updated_at DESC` — the form the user
-/// composed most, then most recently) is kept, so a corrected separator
-/// wins over the slip and one slip never displaces a settled phrase.
-fn build_learned_entries(entries: &[protos::engine::LearnedEntry]) -> Vec<LearnedEntry> {
+/// is two stored rows under `UNIQUE(hanzi, roman)`; only the first in store
+/// order (`learn_count DESC, updated_at DESC` — the form the user composed
+/// most, then most recently) is kept, so a corrected separator wins over the
+/// slip and one slip never displaces a settled phrase.
+fn first_learned_per_reading(entries: &[LearnedEntry]) -> Vec<LearnedEntry> {
     let mut out: Vec<LearnedEntry> = Vec::with_capacity(entries.len());
     for e in entries
         .iter()
@@ -522,13 +466,9 @@ fn build_learned_entries(entries: &[protos::engine::LearnedEntry]) -> Vec<Learne
         let same_reading = out.iter().any(|kept| {
             kept.hanji == e.hanji && roman_reading_eq(&kept.canonical_tl, &e.canonical_tl)
         });
-        if same_reading {
-            continue;
+        if !same_reading {
+            out.push(e.clone());
         }
-        out.push(LearnedEntry {
-            hanji: e.hanji.clone(),
-            canonical_tl: e.canonical_tl.clone(),
-        });
     }
     out
 }

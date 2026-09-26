@@ -14,7 +14,7 @@
 mod score;
 
 pub use score::{
-    build_frequency_map, calculate_continuous_score, decayed_user_weight_delta, source_tier_rank,
-    user_freq_boost, FrequencyData, FrequencyMap, BOOST_ALPHA, CONTINUOUS_DEFAULT_SOURCE_RANK,
-    MAX_BOOST, USER_WEIGHT_DECAY_TAU_MS,
+    calculate_continuous_score, decayed_user_weight_delta, source_tier_rank, user_freq_boost,
+    FrequencyData, FrequencyMap, BOOST_ALPHA, CONTINUOUS_DEFAULT_SOURCE_RANK, MAX_BOOST,
+    USER_WEIGHT_DECAY_TAU_MS,
 };

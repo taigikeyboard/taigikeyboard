@@ -20,12 +20,11 @@
 //! 1, and the single syllables 經/king 9218 + 身/sin 10865 whose split
 //! undercuts a freq-1 two-syllable edge under the khiin cost model.
 
-use protos::engine::{FetchAtPos, FrequencyEntry};
-
 mod common;
 use common::{
     build_dictionary_fst_tl_toned, build_syllables_fst_tl, build_tkdb_v3, empty_association_bin,
-    engine_install_lock, fetch_hanji, install_lexicon, selected, write_temp, Row, NOW_MS,
+    engine_install_lock, fetch_hanji, install_lexicon, selected, write_temp, Fetch, Row, Selected,
+    NOW_MS,
 };
 
 const TWO_HOURS_MS: i64 = 2 * 60 * 60 * 1000;
@@ -74,12 +73,12 @@ fn install_fixture() {
 
 /// Candidate hanji in display order; the §34 literal-roman row at index 0
 /// is dropped, so index 0 here = the walker's slot 0.
-fn fetch_hanji_with_freq(raw: &str, freq: Vec<FrequencyEntry>, now_ms: i64) -> Vec<String> {
+fn fetch_hanji_with_freq(raw: &str, freq: Vec<Selected>, now_ms: i64) -> Vec<String> {
     fetch_hanji(
         raw,
         "tl",
-        FetchAtPos {
-            frequency_entries: freq,
+        Fetch {
+            frequency: freq,
             now_ms,
             ..Default::default()
         },

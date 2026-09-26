@@ -329,7 +329,7 @@ fn retain_absent_from(existing: &[RawCandidate], batch: &mut Vec<RawCandidate>) 
 /// recognize when the walker's space-joined synth is a malformed
 /// rendering of an existing full-span dict word, so the dict word's
 /// canonical separator form can take slot 0 instead, and by
-/// `dispatch::build_learned_entries` to fold the same learned pair stored
+/// `dispatch::first_learned_per_reading` to fold the same learned pair stored
 /// under two typed separators.
 pub(crate) fn roman_reading_eq(a: &str, b: &str) -> bool {
     fn is_kept(c: &char) -> bool {
@@ -1010,10 +1010,9 @@ fn fetch_walker_slot0_inner(
 /// `dispatch::handle_fetch_at_pos` before A2. See module docs for the
 /// 6-step contract and the **D1 fold** lifecycle invariant.
 ///
-/// Inputs are the proto→domain hoists from `handle_fetch_at_pos`
-/// (`mode` from `parse_input_mode` + `contains_tps` raw-buffer upgrade;
-/// `freq_map` from `ranking::build_frequency_map`; `custom` from
-/// `build_custom_entries`). Every TPS-vs-non-TPS branch derives from
+/// Inputs come from `handle_fetch_at_pos` (`mode` from `parse_input_mode`
+/// plus the `contains_tps` raw-buffer upgrade; `freq_map` / `custom` /
+/// `learned` from the fetch's `UserRows`). Every TPS-vs-non-TPS branch derives from
 /// `mode == InputMode::Tps` internally — v3.5.9 D / C-3b dropped the
 /// parallel `is_tps: bool` arg (single mode axis, no split-brain).
 /// `mode == Poj` similarly derives the POJ branch — v3.5.9 B-0c

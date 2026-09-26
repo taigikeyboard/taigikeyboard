@@ -26,7 +26,7 @@ pub struct LearnedPhraseRow {
     pub learn_count: i64,
 }
 
-/// Writes `Effect::PhraseLearned`, answers the exact whole-buffer query on
+/// Keeps the phrases final commits taught, answers the exact whole-buffer query on
 /// the keystroke path, and is wiped with the other learning data.
 pub struct LearnedPhraseStore {
     database: UserDataDatabase,
@@ -81,7 +81,7 @@ impl LearnedPhraseStore {
         self.database.open_blocking();
     }
 
-    /// Records one `Effect::PhraseLearned`: inserts the `(hanzi, canonical
+    /// Records one phrase a final commit taught: inserts the `(hanzi, canonical
     /// TL)` pair or bumps its `learn_count`, in one statement on the
     /// `(hanzi, roman)` unique constraint. A fresh row gets its keys and may
     /// evict past the cap; all in one transaction. Best-effort and off the
@@ -142,7 +142,7 @@ impl LearnedPhraseStore {
     }
 
     /// The phrases whose derived key EQUALS `query_key` — the whole typed
-    /// buffer, not a prefix — for `FetchAtPos.learned_entries`, most composed
+    /// buffer, not a prefix — for `composing::UserRows.learned`, most composed
     /// first. Empty when the store cannot answer right now. CROSS-PLATFORM
     /// INVARIANT — mirrors iOS `exactMatchSQL` / Android `EXACT_MATCH_SQL`.
     pub fn rows_matching(

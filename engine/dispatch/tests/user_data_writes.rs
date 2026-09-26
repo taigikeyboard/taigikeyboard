@@ -1,7 +1,8 @@
 //! The engine writing its own user data (user-data-engine-roadmap P3c):
 //! once the platform opens the stores, `RecordUsage` counts a pick and
-//! touches a learned phrase, and the associations the next-word engine
-//! decides are recorded by the engine itself and left out of the response.
+//! touches a learned phrase, a final commit of hanji picks is learned, and
+//! the associations the next-word engine decides are recorded by the engine
+//! itself and left out of the response.
 //! Its own process: the user-data handle is process-wide.
 #![cfg(feature = "user-data")]
 
@@ -11,10 +12,41 @@ use common::{open_user_data, tl_config};
 use std::time::{Duration, Instant};
 
 use protos::engine::{
-    next_word_effect, next_word_request, next_word_response, request, response, user_data_request,
-    DecisionInput, NextWordRequest, RecordUsage, Response, UserDataRequest, WordSelected,
+    composing_request, next_word_effect, next_word_request, next_word_response, request, response,
+    user_data_request, CommitContinuous, ComposingRequest, ComposingResponse, DecisionInput,
+    EnterContinuous, NextWordRequest, RecordUsage, Response, Start, UserDataRequest, WordSelected,
 };
 use userdata::{JournalMode, UserDataPaths, UserDataStores};
+
+/// The composing requests share one generation, so none resets the buffer.
+fn composing(method: composing_request::Method) -> ComposingResponse {
+    let response = roundtrip(
+        7,
+        request::Payload::Composing(ComposingRequest {
+            method: Some(method),
+        }),
+    );
+    match response.payload {
+        Some(response::Payload::Composing(composing)) => composing,
+        other => panic!("composing answered {other:?}"),
+    }
+}
+
+fn commit_continuous(
+    hanji: &str,
+    tl: &str,
+    consumed_bytes: u32,
+    syllable_count: u32,
+) -> composing_request::Method {
+    composing_request::Method::CommitContinuous(CommitContinuous {
+        display_text: hanji.to_owned(),
+        canonical_text: hanji.to_owned(),
+        association_tl: tl.to_owned(),
+        hanji: Some(hanji.to_owned()),
+        consumed_bytes,
+        syllable_count,
+    })
+}
 
 fn roundtrip(generation: u64, payload: request::Payload) -> Response {
     common::roundtrip(tl_config(false), generation, payload)
@@ -159,6 +191,26 @@ fn the_engine_writes_what_the_platforms_wrote() {
         .frequency
         .rows_for_words(&["做進出口".to_owned()])
         .is_some_and(|rows| rows.is_empty()));
+
+    // A final commit of hanji picks is learned into the engine's store (§50).
+    composing(composing_request::Method::Start(Start {
+        text: "kikhilai".to_owned(),
+    }));
+    composing(composing_request::Method::EnterContinuous(
+        EnterContinuous {},
+    ));
+    composing(commit_continuous("記", "kì", 2, 1));
+    let committed = composing(commit_continuous("起來", "khí-lâi", 6, 2));
+    assert!(
+        !committed.is_composing,
+        "the second pick is the final commit"
+    );
+    assert!(eventually(|| reader
+        .learned_phrases
+        .all_rows()
+        .is_some_and(|rows| rows
+            .iter()
+            .any(|row| row.hanzi == "記起來"))));
 
     // The engine records the bigram it decides on and keeps the effect.
     word_selected("食", "tsia̍h", 10_000);

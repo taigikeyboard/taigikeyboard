@@ -18,9 +18,10 @@
 //!
 //! Hermetic `LexiconHandle` install comes from `tests/common/mod.rs`.
 
-use protos::engine::{CandidateDisplayMode, FetchAtPos};
+use protos::engine::CandidateDisplayMode;
 
 mod common;
+use common::Fetch;
 use common::{
     build_dictionary_fst, build_syllables_fst, build_tkdb_v3, config_with_display_mode,
     empty_association_bin, engine_install_lock, fetch_at_pos_response, install_lexicon, write_temp,
@@ -133,7 +134,7 @@ fn fetch_with_identity(
     candidate_display_mode: i32,
 ) -> Vec<(Option<String>, String, String, String)> {
     let cfg = config_with_display_mode(input_mode, candidate_display_mode);
-    let resp = fetch_at_pos_response(&cfg, raw, FetchAtPos::default());
+    let resp = fetch_at_pos_response(&cfg, raw, Fetch::default());
     resp.continuous
         .map(|c| {
             c.candidates

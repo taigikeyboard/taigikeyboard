@@ -22,14 +22,13 @@
 //! syllable that is itself a production syllable is present as a control
 //! row and asserted on: 豬 `ti` / 鎮 `tìn` under `ting`, 是 `sī` under `sik`.
 
-use protos::engine::CustomDictEntry;
-
 mod common;
 use common::{
     build_dictionary_fst_tl_toned, build_syllables_fst_tl, build_tkdb_v3, empty_association_bin,
     engine_install_lock, fetch_hanji_with_custom as fetch_hanji_in, install_lexicon, write_temp,
     Row,
 };
+use lexicon::CustomEntry;
 
 fn fixture_rows() -> Vec<Row> {
     vec![
@@ -125,7 +124,7 @@ fn install_fixture() {
 
 /// TL-mode candidate hanji for `raw`, with `custom_dictionary.db` entries
 /// attached.
-fn fetch_hanji_with_custom(raw: &str, custom: Vec<CustomDictEntry>) -> Vec<String> {
+fn fetch_hanji_with_custom(raw: &str, custom: Vec<CustomEntry>) -> Vec<String> {
     fetch_hanji_in(raw, "tl", custom)
 }
 
@@ -269,11 +268,11 @@ fn custom_entries_answer_the_same_pin_on_both_paths() {
     // same toneless key, wrong tone FIRST: the walker must pick the first
     // ELIGIBLE entry, not filter its first-wins pick down to nothing.
     let custom = vec![
-        CustomDictEntry {
+        CustomEntry {
             roman: "tíng-sik".into(),
             hanji: Some("甲".into()),
         },
-        CustomDictEntry {
+        CustomEntry {
             roman: "tîng-sik".into(),
             hanji: Some("乙".into()),
         },

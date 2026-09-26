@@ -38,8 +38,7 @@ use lexicon::{
     PARTIAL_PREFIX_OUTPUT_CAP,
 };
 use phonetics::InputMode;
-use protos::engine::FrequencyEntry;
-use ranking::{build_frequency_map, FrequencyMap};
+use ranking::FrequencyMap;
 
 /// v3.5.9 D7 — build the shared `ContinuousFetchCtx` at a test site
 /// with explicit `freq_map` / `now_ms` / `custom`. Pins
@@ -85,7 +84,9 @@ fn ctx_neutral<'a>(
 }
 
 mod common;
-use common::{build_tkdb_v3, fetch_candidates_for_endings, write_temp};
+use common::{
+    build_tkdb_v3, fetch_candidates_for_endings, frequency_map, write_temp, FrequencyFixture,
+};
 
 /// Single dictionary fixture row: `(toneless_tl_key, hanzi, tl, syllable_count, frequency)`.
 /// `bitmask` is fixed to `1 << 11` (the `lkk` source per
@@ -1895,7 +1896,7 @@ fn best_candidate_for_key_prefers_selected_row_but_keeps_span_frequency_of_key()
         ],
     );
     let now_ms = 1_700_000_000_000_i64;
-    let map = build_frequency_map(&[FrequencyEntry {
+    let map = frequency_map(&[FrequencyFixture {
         display_text_key: "台灣".into(),
         count: 1,
         last_used_ms: now_ms - 1_000,

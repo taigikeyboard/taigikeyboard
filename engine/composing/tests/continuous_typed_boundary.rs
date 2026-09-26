@@ -15,14 +15,16 @@
 use composing::api::Engine;
 use composing::dispatch;
 use protos::engine::composing_request::Method;
-use protos::engine::{CommitContinuous, CustomDictEntry, EnterContinuous, FetchAtPos, Start};
+use protos::engine::{CommitContinuous, EnterContinuous, FetchAtPos, Start};
 
 mod common;
+use common::Fetch;
 use common::{
     build_dictionary_fst, build_syllables_fst, build_tkdb_v3, cell_with_hanji, config,
     empty_association_bin, engine_install_lock, fetch_cells, install_lexicon, req, write_temp,
     Cell, Row,
 };
+use lexicon::CustomEntry;
 
 fn fixture_rows() -> Vec<Row> {
     vec![
@@ -113,7 +115,7 @@ fn install_fixture() {
     install_lexicon(&fst_path, &dict_path, &assoc_path, &syllables_path);
 }
 
-fn fetch(raw: &str, mode: &str, fetch: FetchAtPos) -> Vec<Cell> {
+fn fetch(raw: &str, mode: &str, fetch: Fetch) -> Vec<Cell> {
     fetch_cells(&config(mode), raw, fetch)
 }
 
@@ -127,7 +129,7 @@ fn typed_hyphen_drops_the_readings_that_do_not_end_a_syllable_there() {
     install_fixture();
     for (raw, synth, khinsiann_word) in [("khi--ah", "khì--ah", true), ("khi-ah", "khì-ah", false)]
     {
-        let cells = fetch(raw, "tl", FetchAtPos::default());
+        let cells = fetch(raw, "tl", Fetch::default());
         let hanji = hanji_of(&cells);
         assert!(
             !hanji.contains(&"隙") && !hanji.contains(&"屐"),
@@ -157,10 +159,10 @@ fn typed_run_kind_selects_between_a_compound_and_a_khinsiann_reading() {
     // so the walker builds 忍 + 去 with the typed join instead.
     let _lock = engine_install_lock();
     install_fixture();
-    let cells = fetch("jim-khi", "tl", FetchAtPos::default());
+    let cells = fetch("jim-khi", "tl", Fetch::default());
     assert_eq!(cells[1].0.as_deref(), Some("忍氣"), "got {cells:?}");
     assert_eq!(cells[1].1, "jím-khì");
-    let cells = fetch("jim--khi", "tl", FetchAtPos::default());
+    let cells = fetch("jim--khi", "tl", Fetch::default());
     assert!(
         !hanji_of(&cells).contains(&"忍氣"),
         "a plain compound never answers a typed `--`; got {cells:?}"
@@ -175,7 +177,7 @@ fn no_hyphen_keeps_every_reading_of_the_key() {
     // syllable readings and the two-syllable word alike.
     let _lock = engine_install_lock();
     install_fixture();
-    let cells = fetch("khiah", "tl", FetchAtPos::default());
+    let cells = fetch("khiah", "tl", Fetch::default());
     let hanji = hanji_of(&cells);
     for expected in ["隙", "屐", "去啊"] {
         assert!(
@@ -271,7 +273,7 @@ fn oov_reading_splits_on_the_typed_hyphen_beside_a_dictionary_word() {
     // `-` (`lailai`), so the synth reads `khì-lai-lai`.
     let _lock = engine_install_lock();
     install_fixture();
-    let cells = fetch("khi-lai-lai", "tl", FetchAtPos::default());
+    let cells = fetch("khi-lai-lai", "tl", Fetch::default());
     assert!(
         cells.iter().any(|c| c.1 == "khì-lai-lai"),
         "typed joins inside the OOV run; got {cells:?}"
@@ -286,15 +288,15 @@ fn oov_reading_splits_on_the_typed_hyphen_beside_a_dictionary_word() {
 fn custom_and_capitalised_readings_answer_to_the_boundary_too() {
     let _lock = engine_install_lock();
     install_fixture();
-    let custom = |roman: &str, hanji: &str| CustomDictEntry {
+    let custom = |roman: &str, hanji: &str| CustomEntry {
         roman: roman.into(),
         hanji: Some(hanji.into()),
     };
     let cells = fetch(
         "khi--ah",
         "tl",
-        FetchAtPos {
-            custom_entries: vec![custom("Khì--ah", "去矣"), custom("Khiah", "隙")],
+        Fetch {
+            custom: vec![custom("Khì--ah", "去矣"), custom("Khiah", "隙")],
             ..Default::default()
         },
     );
@@ -317,8 +319,8 @@ fn a_custom_reading_opening_with_a_double_hyphen_needs_a_typed_double_hyphen() {
     // the run rendered once.
     let _lock = engine_install_lock();
     install_fixture();
-    let custom = FetchAtPos {
-        custom_entries: vec![CustomDictEntry {
+    let custom = Fetch {
+        custom: vec![CustomEntry {
             roman: "--ah".into(),
             hanji: Some("矣".into()),
         }],
@@ -344,7 +346,7 @@ fn a_custom_reading_opening_with_a_double_hyphen_needs_a_typed_double_hyphen() {
 fn poj_typed_hyphen_reads_the_same_boundary() {
     let _lock = engine_install_lock();
     install_fixture();
-    let cells = fetch("khi--ah", "poj", FetchAtPos::default());
+    let cells = fetch("khi--ah", "poj", Fetch::default());
     let hanji = hanji_of(&cells);
     assert!(!hanji.contains(&"隙"), "got {cells:?}");
     assert!(hanji.contains(&"去啊"), "got {cells:?}");
