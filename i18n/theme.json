@@ -109,7 +109,7 @@
     "photoDim": {
       "comment": "Theme editor slider label: how strongly the photo is toned down (a white or black overlay) so keys stay readable.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "淡化", "tailo": "Tām-huà", "poj": "Tām-hòa", "en": "Fade", "ja": "淡くする" }
+      "values": { "hanji": "透明度", "tailo": "Thàu-bîng-tōo", "poj": "Thàu-bêng-tō͘", "en": "Transparency", "ja": "透明度" }
     },
     "photoPosition": {
       "comment": "Photo position: the VoiceOver / TalkBack label of the drag surface over the theme editor preview that moves the photo (no visible row on either platform).",
