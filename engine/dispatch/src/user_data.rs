@@ -13,14 +13,17 @@ use nextword::NextWordError;
 use protos::engine::{
     composing_request, effect, next_word_effect, next_word_request, next_word_response, response,
     user_data_request, user_data_response, AppConfig, ComposingRequest, ComposingResponse,
-    CustomDictEntry, ErrorCode, FetchAtPos, FrequencyEntry, LearnedEntry, NextWordRequest,
+    CustomCsvExported, CustomCsvImported, CustomDictEntry, CustomDictionaryEntry,
+    CustomDictionaryRefusal, CustomEntries, CustomEntryDeleted, CustomEntrySaved, ErrorCode,
+    FetchAtPos, FrequencyEntry, ImportCustomCsv, LearnedEntry, ListCustomEntries, NextWordRequest,
     NextWordResponse, OpenUserData, RawNextWordPrediction, RecordUsage, ResetUserData, Response,
-    Source, UsageRecorded, UserDataJournal, UserDataOpened, UserDataRequest, UserDataReset,
-    UserDataResponse,
+    SaveCustomEntry, Source, UsageRecorded, UserDataJournal, UserDataOpened, UserDataRequest,
+    UserDataReset, UserDataResponse,
 };
 use userdata::{
-    AssociationPair, CustomDictionarySource, CustomEntry, FollowingRow, FrequencyRow, JournalMode,
-    LearnedPhrase, LearnedPhraseSource, UserDataPaths, UserDataStores,
+    AssociationPair, CustomDictionaryCSV, CustomDictionaryCSVError, CustomDictionaryError,
+    CustomDictionaryRow, CustomDictionarySource, CustomDictionaryStore, CustomEntry, FollowingRow,
+    FrequencyRow, JournalMode, LearnedPhrase, LearnedPhraseSource, UserDataPaths, UserDataStores,
 };
 
 /// Why a user-data request did nothing.
@@ -97,6 +100,26 @@ impl UserDataHandle {
                 self.record_usage(usage)?;
                 user_data_response::Result::UsageRecorded(UsageRecorded {})
             }
+            Some(user_data_request::Method::ListCustomEntries(list)) => {
+                user_data_response::Result::CustomEntries(self.list_custom_entries(list)?)
+            }
+            Some(user_data_request::Method::SaveCustomEntry(save)) => {
+                user_data_response::Result::CustomEntrySaved(self.save_custom_entry(save)?)
+            }
+            Some(user_data_request::Method::DeleteCustomEntry(delete)) => {
+                let removed = self
+                    .opened_stores()?
+                    .custom_dictionary
+                    .delete(&delete.id)
+                    .map_err(store_error)?;
+                user_data_response::Result::CustomEntryDeleted(CustomEntryDeleted { removed })
+            }
+            Some(user_data_request::Method::ImportCustomCsv(import)) => {
+                user_data_response::Result::CustomCsvImported(self.import_custom_csv(import)?)
+            }
+            Some(user_data_request::Method::ExportCustomCsv(_)) => {
+                user_data_response::Result::CustomCsvExported(self.export_custom_csv()?)
+            }
             None => return Err(UserDataError::Invalid("user-data request has no method")),
         };
         Ok(UserDataResponse {
@@ -145,12 +168,115 @@ impl UserDataHandle {
         Ok(readiness(&opened.stores))
     }
 
+    /// The open stores, or the refusal a request before the open gets.
+    fn opened_stores(&self) -> Result<&UserDataStores, UserDataError> {
+        self.stores()
+            .ok_or(UserDataError::Invalid("user data is not open yet"))
+    }
+
+    fn list_custom_entries(
+        &self,
+        list: &ListCustomEntries,
+    ) -> Result<CustomEntries, UserDataError> {
+        let dictionary = &self.opened_stores()?.custom_dictionary;
+        let entries = dictionary
+            .rows(&list.filter, list.limit as usize, list.offset as usize)
+            .map_err(store_error)?;
+        let total = dictionary.count().map_err(store_error)?;
+        let matching_total = if list.filter.trim().is_empty() {
+            total
+        } else {
+            dictionary
+                .count_matching(&list.filter)
+                .map_err(store_error)?
+        };
+        Ok(CustomEntries {
+            entries: entries.iter().map(custom_dictionary_entry).collect(),
+            total: u32::try_from(total).unwrap_or(u32::MAX),
+            matching_total: u32::try_from(matching_total).unwrap_or(u32::MAX),
+        })
+    }
+
+    /// A new word (no `id`) or an edit. What the user can be told is a
+    /// refusal in the answer; only a store failure is an error.
+    fn save_custom_entry(&self, save: &SaveCustomEntry) -> Result<CustomEntrySaved, UserDataError> {
+        let dictionary = &self.opened_stores()?.custom_dictionary;
+        let refused = |refusal: CustomDictionaryRefusal| CustomEntrySaved {
+            refusal: refusal as i32,
+            entry: None,
+        };
+        let roman = save.roman.trim();
+        if roman.is_empty() {
+            return Ok(refused(CustomDictionaryRefusal::EmptyRoman));
+        }
+        let hanzi = save.hanzi.trim();
+        let row = match save.id.as_deref() {
+            Some(id) if !id.is_empty() => CustomDictionaryRow::with_id(id, roman, hanzi),
+            _ => CustomDictionaryRow::new(roman, hanzi),
+        };
+        if let Err(error) = dictionary.upsert(&row) {
+            return match refusal(&error) {
+                Some(refusal) => Ok(refused(refusal)),
+                None => Err(store_error(error)),
+            };
+        }
+        // Read back: the store stamps the times (an edit keeps `created_at`).
+        let stored = dictionary.row(&row.id).map_err(store_error)?;
+        Ok(CustomEntrySaved {
+            refusal: CustomDictionaryRefusal::None as i32,
+            entry: stored.as_ref().map(custom_dictionary_entry),
+        })
+    }
+
+    fn import_custom_csv(
+        &self,
+        import: &ImportCustomCsv,
+    ) -> Result<CustomCsvImported, UserDataError> {
+        let dictionary = &self.opened_stores()?.custom_dictionary;
+        let refused = |refusal: CustomDictionaryRefusal| CustomCsvImported {
+            refusal: refusal as i32,
+            ..CustomCsvImported::default()
+        };
+        let rows = match CustomDictionaryCSV::decode_bytes(
+            &import.csv,
+            CustomDictionaryStore::MAX_ENTRIES,
+        ) {
+            Ok(rows) => rows,
+            Err(error) => {
+                return match csv_refusal(&error) {
+                    Some(refusal) => Ok(refused(refusal)),
+                    None => Err(store_error(error)),
+                }
+            }
+        };
+        match dictionary.batch_import(&rows) {
+            Ok(result) => Ok(CustomCsvImported {
+                refusal: CustomDictionaryRefusal::None as i32,
+                imported: u32::try_from(result.imported).unwrap_or(u32::MAX),
+                skipped: u32::try_from(result.skipped).unwrap_or(u32::MAX),
+            }),
+            Err(error) => match refusal(&error) {
+                Some(refusal) => Ok(refused(refusal)),
+                None => Err(store_error(error)),
+            },
+        }
+    }
+
+    fn export_custom_csv(&self) -> Result<CustomCsvExported, UserDataError> {
+        let rows = self
+            .opened_stores()?
+            .custom_dictionary
+            .all_rows()
+            .map_err(store_error)?;
+        Ok(CustomCsvExported {
+            csv: CustomDictionaryCSV::encode(&rows).into_bytes(),
+        })
+    }
+
     /// One commit counted and, for a Hanji pick, a learned phrase touched —
     /// what each platform's candidate / prediction tap handler did itself.
     fn record_usage(&self, usage: &RecordUsage) -> Result<(), UserDataError> {
-        let stores = self.stores().ok_or(UserDataError::Invalid(
-            "usage recorded before user data was opened",
-        ))?;
+        let stores = self.opened_stores()?;
         if usage.display_text.is_empty() {
             return Err(UserDataError::Invalid("usage without a display text"));
         }
@@ -175,9 +301,7 @@ impl UserDataHandle {
         {
             return Err(UserDataError::Invalid("reset selects no store"));
         }
-        let stores = self
-            .stores()
-            .ok_or(UserDataError::Invalid("reset before user data was opened"))?;
+        let stores = self.opened_stores()?;
         let mut removed = UserDataReset::default();
         if reset.frequency {
             removed.frequency_removed = stores.frequency.delete_all().map_err(store_error)?;
@@ -430,6 +554,16 @@ fn learned_entry(phrase: &LearnedPhrase) -> LearnedEntry {
     }
 }
 
+fn custom_dictionary_entry(row: &CustomDictionaryRow) -> CustomDictionaryEntry {
+    CustomDictionaryEntry {
+        id: row.id.clone(),
+        roman: row.roman.clone(),
+        hanzi: row.hanzi.clone(),
+        created_at: row.created_at.clone(),
+        updated_at: row.updated_at.clone(),
+    }
+}
+
 fn association_pair(pair: &protos::engine::AssociationPair) -> AssociationPair {
     AssociationPair {
         previous: pair.prev.clone(),
@@ -446,6 +580,32 @@ fn user_prediction(row: &FollowingRow) -> RawNextWordPrediction {
         count: row.count,
         last_used_ms: row.last_used_ms,
         source: Source::User as i32,
+    }
+}
+
+/// The custom-dictionary write outcomes the user can be told about; `None`
+/// for a store failure.
+fn refusal(error: &CustomDictionaryError) -> Option<CustomDictionaryRefusal> {
+    match error {
+        CustomDictionaryError::CapacityReached { .. } => Some(CustomDictionaryRefusal::Full),
+        CustomDictionaryError::SearchKeyDerivationFailed { .. } => {
+            Some(CustomDictionaryRefusal::Unsearchable)
+        }
+        CustomDictionaryError::Database(_) => None,
+    }
+}
+
+/// The CSV outcomes the user can be told about; `None` for a read failure
+/// (only a file path can fail to read, never the bytes a platform hands in).
+fn csv_refusal(error: &CustomDictionaryCSVError) -> Option<CustomDictionaryRefusal> {
+    match error {
+        CustomDictionaryCSVError::FileTooLarge { .. } => {
+            Some(CustomDictionaryRefusal::FileTooLarge)
+        }
+        CustomDictionaryCSVError::NotUtf8 => Some(CustomDictionaryRefusal::NotUtf8),
+        CustomDictionaryCSVError::NoUsableRows => Some(CustomDictionaryRefusal::NoUsableRows),
+        CustomDictionaryCSVError::TooManyRows { .. } => Some(CustomDictionaryRefusal::Full),
+        CustomDictionaryCSVError::Read(_) => None,
     }
 }
 
@@ -483,6 +643,7 @@ fn readiness(stores: &UserDataStores) -> UserDataOpened {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use protos::engine::{DeleteCustomEntry, ExportCustomCsv};
 
     fn open_request(directory: &std::path::Path) -> UserDataRequest {
         let paths = UserDataPaths::in_directory(directory);
@@ -615,7 +776,7 @@ mod tests {
                     ..ResetUserData::default()
                 }))
                 .unwrap_err(),
-            UserDataError::Invalid("reset before user data was opened")
+            UserDataError::Invalid("user data is not open yet")
         );
         assert_eq!(
             handle
@@ -658,5 +819,132 @@ mod tests {
         let learned = stores.learned_phrases.all_rows().unwrap();
         assert_eq!(learned.len(), 1);
         assert_eq!(learned[0].hanzi, "做進出口");
+    }
+
+    fn call(
+        handle: &UserDataHandle,
+        method: user_data_request::Method,
+    ) -> user_data_response::Result {
+        handle
+            .handle(&UserDataRequest {
+                method: Some(method),
+            })
+            .unwrap()
+            .result
+            .unwrap()
+    }
+
+    fn list(handle: &UserDataHandle, filter: &str) -> CustomEntries {
+        match call(
+            handle,
+            user_data_request::Method::ListCustomEntries(ListCustomEntries {
+                filter: filter.into(),
+                limit: 50,
+                offset: 0,
+            }),
+        ) {
+            user_data_response::Result::CustomEntries(entries) => entries,
+            other => panic!("expected entries, got {other:?}"),
+        }
+    }
+
+    fn save(
+        handle: &UserDataHandle,
+        id: Option<&str>,
+        roman: &str,
+        hanzi: &str,
+    ) -> CustomEntrySaved {
+        match call(
+            handle,
+            user_data_request::Method::SaveCustomEntry(SaveCustomEntry {
+                id: id.map(str::to_owned),
+                roman: roman.into(),
+                hanzi: hanzi.into(),
+            }),
+        ) {
+            user_data_response::Result::CustomEntrySaved(saved) => saved,
+            other => panic!("expected a save, got {other:?}"),
+        }
+    }
+
+    fn import(handle: &UserDataHandle, csv: &[u8]) -> CustomCsvImported {
+        match call(
+            handle,
+            user_data_request::Method::ImportCustomCsv(ImportCustomCsv { csv: csv.to_vec() }),
+        ) {
+            user_data_response::Result::CustomCsvImported(imported) => imported,
+            other => panic!("expected an import, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn the_custom_dictionary_page_adds_edits_filters_and_deletes() {
+        let directory = tempfile::tempdir().unwrap();
+        let handle = UserDataHandle::new();
+        handle.handle(&open_request(directory.path())).unwrap();
+        let seeded = list(&handle, "").total;
+
+        let added = save(&handle, None, " tâi-uân ", "台灣");
+        assert_eq!(added.refusal(), CustomDictionaryRefusal::None);
+        let entry = added.entry.expect("the stored row");
+        assert_eq!(entry.roman, "tâi-uân", "trimmed");
+        assert!(!entry.created_at.is_empty());
+
+        let edited = save(&handle, Some(&entry.id), "tâi-uân", "臺灣");
+        assert_eq!(edited.entry.unwrap().hanzi, "臺灣");
+        let filtered = list(&handle, "臺");
+        assert_eq!(filtered.entries.len(), 1);
+        assert_eq!(filtered.matching_total, 1);
+        assert_eq!(filtered.total, seeded + 1, "an edit is not a second word");
+
+        assert_eq!(
+            save(&handle, None, "  ", "空").refusal(),
+            CustomDictionaryRefusal::EmptyRoman
+        );
+        match call(
+            &handle,
+            user_data_request::Method::DeleteCustomEntry(DeleteCustomEntry { id: entry.id }),
+        ) {
+            user_data_response::Result::CustomEntryDeleted(deleted) => assert!(deleted.removed),
+            other => panic!("expected a delete, got {other:?}"),
+        }
+        assert_eq!(list(&handle, "").total, seeded);
+    }
+
+    #[test]
+    fn a_csv_round_trips_and_an_unusable_file_is_refused_with_its_reason() {
+        let directory = tempfile::tempdir().unwrap();
+        let handle = UserDataHandle::new();
+        handle.handle(&open_request(directory.path())).unwrap();
+
+        let imported = import(
+            &handle,
+            "tâi-uân,台灣\n\"say \"\"hi\"\"\",講,好\ntâi-uân,台灣\n".as_bytes(),
+        );
+        assert_eq!(imported.refusal(), CustomDictionaryRefusal::None);
+        assert_eq!(imported.imported, 2, "the file's own duplicate is skipped");
+        let exported = match call(
+            &handle,
+            user_data_request::Method::ExportCustomCsv(ExportCustomCsv {}),
+        ) {
+            user_data_response::Result::CustomCsvExported(exported) => exported.csv,
+            other => panic!("expected an export, got {other:?}"),
+        };
+        let again = import(&handle, &exported);
+        assert_eq!(again.imported, 0, "everything exported is already there");
+
+        assert_eq!(
+            import(&handle, &[0xff, 0xfe, 0x00]).refusal(),
+            CustomDictionaryRefusal::NotUtf8
+        );
+        assert_eq!(
+            import(&handle, b"just one column\n").refusal(),
+            CustomDictionaryRefusal::NoUsableRows
+        );
+        let huge = vec![b'a'; 5 * 1024 * 1024 + 1];
+        assert_eq!(
+            import(&handle, &huge).refusal(),
+            CustomDictionaryRefusal::FileTooLarge
+        );
     }
 }

@@ -43,5 +43,60 @@ public interface UserDataRequestOrBuilder extends
    */
   com.siansiansu.taigikeyboard.engine.proto.RecordUsage getRecordUsage();
 
+  /**
+   * <code>.taigi.engine.ListCustomEntries list_custom_entries = 4;</code>
+   * @return Whether the listCustomEntries field is set.
+   */
+  boolean hasListCustomEntries();
+  /**
+   * <code>.taigi.engine.ListCustomEntries list_custom_entries = 4;</code>
+   * @return The listCustomEntries.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.ListCustomEntries getListCustomEntries();
+
+  /**
+   * <code>.taigi.engine.SaveCustomEntry save_custom_entry = 5;</code>
+   * @return Whether the saveCustomEntry field is set.
+   */
+  boolean hasSaveCustomEntry();
+  /**
+   * <code>.taigi.engine.SaveCustomEntry save_custom_entry = 5;</code>
+   * @return The saveCustomEntry.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.SaveCustomEntry getSaveCustomEntry();
+
+  /**
+   * <code>.taigi.engine.DeleteCustomEntry delete_custom_entry = 6;</code>
+   * @return Whether the deleteCustomEntry field is set.
+   */
+  boolean hasDeleteCustomEntry();
+  /**
+   * <code>.taigi.engine.DeleteCustomEntry delete_custom_entry = 6;</code>
+   * @return The deleteCustomEntry.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.DeleteCustomEntry getDeleteCustomEntry();
+
+  /**
+   * <code>.taigi.engine.ImportCustomCsv import_custom_csv = 7;</code>
+   * @return Whether the importCustomCsv field is set.
+   */
+  boolean hasImportCustomCsv();
+  /**
+   * <code>.taigi.engine.ImportCustomCsv import_custom_csv = 7;</code>
+   * @return The importCustomCsv.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.ImportCustomCsv getImportCustomCsv();
+
+  /**
+   * <code>.taigi.engine.ExportCustomCsv export_custom_csv = 8;</code>
+   * @return Whether the exportCustomCsv field is set.
+   */
+  boolean hasExportCustomCsv();
+  /**
+   * <code>.taigi.engine.ExportCustomCsv export_custom_csv = 8;</code>
+   * @return The exportCustomCsv.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.ExportCustomCsv getExportCustomCsv();
+
   public com.siansiansu.taigikeyboard.engine.proto.UserDataRequest.MethodCase getMethodCase();
 }

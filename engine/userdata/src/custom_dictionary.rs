@@ -249,6 +249,23 @@ impl CustomDictionaryStore {
         })
     }
 
+    /// The stored row with `id`, times included — what an edit page shows
+    /// after a save.
+    pub fn row(&self, id: &str) -> Result<Option<CustomDictionaryRow>, CustomDictionaryError> {
+        let id = id.to_owned();
+        self.database.perform::<_, CustomDictionaryError>(move |connection| {
+            Ok(connection
+                .query_row(
+                    &format!(
+                        "SELECT id, roman, hanzi, created_at, updated_at\nFROM {TABLE_NAME}\nWHERE id = ?;"
+                    ),
+                    [id],
+                    decode_row,
+                )
+                .optional()?)
+        })
+    }
+
     pub fn count(&self) -> Result<usize, CustomDictionaryError> {
         self.database
             .perform::<_, CustomDictionaryError>(|connection| Ok(entry_count(connection)?))

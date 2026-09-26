@@ -23,6 +23,11 @@ public  final class UserDataRequest extends
     OPEN(1),
     RESET(2),
     RECORD_USAGE(3),
+    LIST_CUSTOM_ENTRIES(4),
+    SAVE_CUSTOM_ENTRY(5),
+    DELETE_CUSTOM_ENTRY(6),
+    IMPORT_CUSTOM_CSV(7),
+    EXPORT_CUSTOM_CSV(8),
     METHOD_NOT_SET(0);
     private final int value;
     private MethodCase(int value) {
@@ -41,6 +46,11 @@ public  final class UserDataRequest extends
         case 1: return OPEN;
         case 2: return RESET;
         case 3: return RECORD_USAGE;
+        case 4: return LIST_CUSTOM_ENTRIES;
+        case 5: return SAVE_CUSTOM_ENTRY;
+        case 6: return DELETE_CUSTOM_ENTRY;
+        case 7: return IMPORT_CUSTOM_CSV;
+        case 8: return EXPORT_CUSTOM_CSV;
         case 0: return METHOD_NOT_SET;
         default: return null;
       }
@@ -207,6 +217,256 @@ public  final class UserDataRequest extends
    */
   private void clearRecordUsage() {
     if (methodCase_ == 3) {
+      methodCase_ = 0;
+      method_ = null;
+    }
+  }
+
+  public static final int LIST_CUSTOM_ENTRIES_FIELD_NUMBER = 4;
+  /**
+   * <code>.taigi.engine.ListCustomEntries list_custom_entries = 4;</code>
+   */
+  @java.lang.Override
+  public boolean hasListCustomEntries() {
+    return methodCase_ == 4;
+  }
+  /**
+   * <code>.taigi.engine.ListCustomEntries list_custom_entries = 4;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.ListCustomEntries getListCustomEntries() {
+    if (methodCase_ == 4) {
+       return (com.siansiansu.taigikeyboard.engine.proto.ListCustomEntries) method_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.ListCustomEntries.getDefaultInstance();
+  }
+  /**
+   * <code>.taigi.engine.ListCustomEntries list_custom_entries = 4;</code>
+   */
+  private void setListCustomEntries(com.siansiansu.taigikeyboard.engine.proto.ListCustomEntries value) {
+    java.util.Objects.requireNonNull(value);
+    method_ = value;
+    methodCase_ = 4;
+  }
+  /**
+   * <code>.taigi.engine.ListCustomEntries list_custom_entries = 4;</code>
+   */
+  private void mergeListCustomEntries(com.siansiansu.taigikeyboard.engine.proto.ListCustomEntries value) {
+    java.util.Objects.requireNonNull(value);
+    if (methodCase_ == 4 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.ListCustomEntries.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.ListCustomEntries.newBuilder((com.siansiansu.taigikeyboard.engine.proto.ListCustomEntries) method_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      method_ = value;
+    }
+    methodCase_ = 4;
+  }
+  /**
+   * <code>.taigi.engine.ListCustomEntries list_custom_entries = 4;</code>
+   */
+  private void clearListCustomEntries() {
+    if (methodCase_ == 4) {
+      methodCase_ = 0;
+      method_ = null;
+    }
+  }
+
+  public static final int SAVE_CUSTOM_ENTRY_FIELD_NUMBER = 5;
+  /**
+   * <code>.taigi.engine.SaveCustomEntry save_custom_entry = 5;</code>
+   */
+  @java.lang.Override
+  public boolean hasSaveCustomEntry() {
+    return methodCase_ == 5;
+  }
+  /**
+   * <code>.taigi.engine.SaveCustomEntry save_custom_entry = 5;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.SaveCustomEntry getSaveCustomEntry() {
+    if (methodCase_ == 5) {
+       return (com.siansiansu.taigikeyboard.engine.proto.SaveCustomEntry) method_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.SaveCustomEntry.getDefaultInstance();
+  }
+  /**
+   * <code>.taigi.engine.SaveCustomEntry save_custom_entry = 5;</code>
+   */
+  private void setSaveCustomEntry(com.siansiansu.taigikeyboard.engine.proto.SaveCustomEntry value) {
+    java.util.Objects.requireNonNull(value);
+    method_ = value;
+    methodCase_ = 5;
+  }
+  /**
+   * <code>.taigi.engine.SaveCustomEntry save_custom_entry = 5;</code>
+   */
+  private void mergeSaveCustomEntry(com.siansiansu.taigikeyboard.engine.proto.SaveCustomEntry value) {
+    java.util.Objects.requireNonNull(value);
+    if (methodCase_ == 5 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.SaveCustomEntry.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.SaveCustomEntry.newBuilder((com.siansiansu.taigikeyboard.engine.proto.SaveCustomEntry) method_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      method_ = value;
+    }
+    methodCase_ = 5;
+  }
+  /**
+   * <code>.taigi.engine.SaveCustomEntry save_custom_entry = 5;</code>
+   */
+  private void clearSaveCustomEntry() {
+    if (methodCase_ == 5) {
+      methodCase_ = 0;
+      method_ = null;
+    }
+  }
+
+  public static final int DELETE_CUSTOM_ENTRY_FIELD_NUMBER = 6;
+  /**
+   * <code>.taigi.engine.DeleteCustomEntry delete_custom_entry = 6;</code>
+   */
+  @java.lang.Override
+  public boolean hasDeleteCustomEntry() {
+    return methodCase_ == 6;
+  }
+  /**
+   * <code>.taigi.engine.DeleteCustomEntry delete_custom_entry = 6;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.DeleteCustomEntry getDeleteCustomEntry() {
+    if (methodCase_ == 6) {
+       return (com.siansiansu.taigikeyboard.engine.proto.DeleteCustomEntry) method_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.DeleteCustomEntry.getDefaultInstance();
+  }
+  /**
+   * <code>.taigi.engine.DeleteCustomEntry delete_custom_entry = 6;</code>
+   */
+  private void setDeleteCustomEntry(com.siansiansu.taigikeyboard.engine.proto.DeleteCustomEntry value) {
+    java.util.Objects.requireNonNull(value);
+    method_ = value;
+    methodCase_ = 6;
+  }
+  /**
+   * <code>.taigi.engine.DeleteCustomEntry delete_custom_entry = 6;</code>
+   */
+  private void mergeDeleteCustomEntry(com.siansiansu.taigikeyboard.engine.proto.DeleteCustomEntry value) {
+    java.util.Objects.requireNonNull(value);
+    if (methodCase_ == 6 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.DeleteCustomEntry.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.DeleteCustomEntry.newBuilder((com.siansiansu.taigikeyboard.engine.proto.DeleteCustomEntry) method_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      method_ = value;
+    }
+    methodCase_ = 6;
+  }
+  /**
+   * <code>.taigi.engine.DeleteCustomEntry delete_custom_entry = 6;</code>
+   */
+  private void clearDeleteCustomEntry() {
+    if (methodCase_ == 6) {
+      methodCase_ = 0;
+      method_ = null;
+    }
+  }
+
+  public static final int IMPORT_CUSTOM_CSV_FIELD_NUMBER = 7;
+  /**
+   * <code>.taigi.engine.ImportCustomCsv import_custom_csv = 7;</code>
+   */
+  @java.lang.Override
+  public boolean hasImportCustomCsv() {
+    return methodCase_ == 7;
+  }
+  /**
+   * <code>.taigi.engine.ImportCustomCsv import_custom_csv = 7;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.ImportCustomCsv getImportCustomCsv() {
+    if (methodCase_ == 7) {
+       return (com.siansiansu.taigikeyboard.engine.proto.ImportCustomCsv) method_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.ImportCustomCsv.getDefaultInstance();
+  }
+  /**
+   * <code>.taigi.engine.ImportCustomCsv import_custom_csv = 7;</code>
+   */
+  private void setImportCustomCsv(com.siansiansu.taigikeyboard.engine.proto.ImportCustomCsv value) {
+    java.util.Objects.requireNonNull(value);
+    method_ = value;
+    methodCase_ = 7;
+  }
+  /**
+   * <code>.taigi.engine.ImportCustomCsv import_custom_csv = 7;</code>
+   */
+  private void mergeImportCustomCsv(com.siansiansu.taigikeyboard.engine.proto.ImportCustomCsv value) {
+    java.util.Objects.requireNonNull(value);
+    if (methodCase_ == 7 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.ImportCustomCsv.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.ImportCustomCsv.newBuilder((com.siansiansu.taigikeyboard.engine.proto.ImportCustomCsv) method_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      method_ = value;
+    }
+    methodCase_ = 7;
+  }
+  /**
+   * <code>.taigi.engine.ImportCustomCsv import_custom_csv = 7;</code>
+   */
+  private void clearImportCustomCsv() {
+    if (methodCase_ == 7) {
+      methodCase_ = 0;
+      method_ = null;
+    }
+  }
+
+  public static final int EXPORT_CUSTOM_CSV_FIELD_NUMBER = 8;
+  /**
+   * <code>.taigi.engine.ExportCustomCsv export_custom_csv = 8;</code>
+   */
+  @java.lang.Override
+  public boolean hasExportCustomCsv() {
+    return methodCase_ == 8;
+  }
+  /**
+   * <code>.taigi.engine.ExportCustomCsv export_custom_csv = 8;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.ExportCustomCsv getExportCustomCsv() {
+    if (methodCase_ == 8) {
+       return (com.siansiansu.taigikeyboard.engine.proto.ExportCustomCsv) method_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.ExportCustomCsv.getDefaultInstance();
+  }
+  /**
+   * <code>.taigi.engine.ExportCustomCsv export_custom_csv = 8;</code>
+   */
+  private void setExportCustomCsv(com.siansiansu.taigikeyboard.engine.proto.ExportCustomCsv value) {
+    java.util.Objects.requireNonNull(value);
+    method_ = value;
+    methodCase_ = 8;
+  }
+  /**
+   * <code>.taigi.engine.ExportCustomCsv export_custom_csv = 8;</code>
+   */
+  private void mergeExportCustomCsv(com.siansiansu.taigikeyboard.engine.proto.ExportCustomCsv value) {
+    java.util.Objects.requireNonNull(value);
+    if (methodCase_ == 8 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.ExportCustomCsv.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.ExportCustomCsv.newBuilder((com.siansiansu.taigikeyboard.engine.proto.ExportCustomCsv) method_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      method_ = value;
+    }
+    methodCase_ = 8;
+  }
+  /**
+   * <code>.taigi.engine.ExportCustomCsv export_custom_csv = 8;</code>
+   */
+  private void clearExportCustomCsv() {
+    if (methodCase_ == 8) {
       methodCase_ = 0;
       method_ = null;
     }
@@ -465,6 +725,246 @@ public  final class UserDataRequest extends
       return this;
     }
 
+    /**
+     * <code>.taigi.engine.ListCustomEntries list_custom_entries = 4;</code>
+     */
+    @java.lang.Override
+    public boolean hasListCustomEntries() {
+      return instance.hasListCustomEntries();
+    }
+    /**
+     * <code>.taigi.engine.ListCustomEntries list_custom_entries = 4;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.ListCustomEntries getListCustomEntries() {
+      return instance.getListCustomEntries();
+    }
+    /**
+     * <code>.taigi.engine.ListCustomEntries list_custom_entries = 4;</code>
+     */
+    public Builder setListCustomEntries(com.siansiansu.taigikeyboard.engine.proto.ListCustomEntries value) {
+      copyOnWrite();
+      instance.setListCustomEntries(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.ListCustomEntries list_custom_entries = 4;</code>
+     */
+    public Builder setListCustomEntries(
+        com.siansiansu.taigikeyboard.engine.proto.ListCustomEntries.Builder builderForValue) {
+      copyOnWrite();
+      instance.setListCustomEntries(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.ListCustomEntries list_custom_entries = 4;</code>
+     */
+    public Builder mergeListCustomEntries(com.siansiansu.taigikeyboard.engine.proto.ListCustomEntries value) {
+      copyOnWrite();
+      instance.mergeListCustomEntries(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.ListCustomEntries list_custom_entries = 4;</code>
+     */
+    public Builder clearListCustomEntries() {
+      copyOnWrite();
+      instance.clearListCustomEntries();
+      return this;
+    }
+
+    /**
+     * <code>.taigi.engine.SaveCustomEntry save_custom_entry = 5;</code>
+     */
+    @java.lang.Override
+    public boolean hasSaveCustomEntry() {
+      return instance.hasSaveCustomEntry();
+    }
+    /**
+     * <code>.taigi.engine.SaveCustomEntry save_custom_entry = 5;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.SaveCustomEntry getSaveCustomEntry() {
+      return instance.getSaveCustomEntry();
+    }
+    /**
+     * <code>.taigi.engine.SaveCustomEntry save_custom_entry = 5;</code>
+     */
+    public Builder setSaveCustomEntry(com.siansiansu.taigikeyboard.engine.proto.SaveCustomEntry value) {
+      copyOnWrite();
+      instance.setSaveCustomEntry(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.SaveCustomEntry save_custom_entry = 5;</code>
+     */
+    public Builder setSaveCustomEntry(
+        com.siansiansu.taigikeyboard.engine.proto.SaveCustomEntry.Builder builderForValue) {
+      copyOnWrite();
+      instance.setSaveCustomEntry(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.SaveCustomEntry save_custom_entry = 5;</code>
+     */
+    public Builder mergeSaveCustomEntry(com.siansiansu.taigikeyboard.engine.proto.SaveCustomEntry value) {
+      copyOnWrite();
+      instance.mergeSaveCustomEntry(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.SaveCustomEntry save_custom_entry = 5;</code>
+     */
+    public Builder clearSaveCustomEntry() {
+      copyOnWrite();
+      instance.clearSaveCustomEntry();
+      return this;
+    }
+
+    /**
+     * <code>.taigi.engine.DeleteCustomEntry delete_custom_entry = 6;</code>
+     */
+    @java.lang.Override
+    public boolean hasDeleteCustomEntry() {
+      return instance.hasDeleteCustomEntry();
+    }
+    /**
+     * <code>.taigi.engine.DeleteCustomEntry delete_custom_entry = 6;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.DeleteCustomEntry getDeleteCustomEntry() {
+      return instance.getDeleteCustomEntry();
+    }
+    /**
+     * <code>.taigi.engine.DeleteCustomEntry delete_custom_entry = 6;</code>
+     */
+    public Builder setDeleteCustomEntry(com.siansiansu.taigikeyboard.engine.proto.DeleteCustomEntry value) {
+      copyOnWrite();
+      instance.setDeleteCustomEntry(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.DeleteCustomEntry delete_custom_entry = 6;</code>
+     */
+    public Builder setDeleteCustomEntry(
+        com.siansiansu.taigikeyboard.engine.proto.DeleteCustomEntry.Builder builderForValue) {
+      copyOnWrite();
+      instance.setDeleteCustomEntry(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.DeleteCustomEntry delete_custom_entry = 6;</code>
+     */
+    public Builder mergeDeleteCustomEntry(com.siansiansu.taigikeyboard.engine.proto.DeleteCustomEntry value) {
+      copyOnWrite();
+      instance.mergeDeleteCustomEntry(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.DeleteCustomEntry delete_custom_entry = 6;</code>
+     */
+    public Builder clearDeleteCustomEntry() {
+      copyOnWrite();
+      instance.clearDeleteCustomEntry();
+      return this;
+    }
+
+    /**
+     * <code>.taigi.engine.ImportCustomCsv import_custom_csv = 7;</code>
+     */
+    @java.lang.Override
+    public boolean hasImportCustomCsv() {
+      return instance.hasImportCustomCsv();
+    }
+    /**
+     * <code>.taigi.engine.ImportCustomCsv import_custom_csv = 7;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.ImportCustomCsv getImportCustomCsv() {
+      return instance.getImportCustomCsv();
+    }
+    /**
+     * <code>.taigi.engine.ImportCustomCsv import_custom_csv = 7;</code>
+     */
+    public Builder setImportCustomCsv(com.siansiansu.taigikeyboard.engine.proto.ImportCustomCsv value) {
+      copyOnWrite();
+      instance.setImportCustomCsv(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.ImportCustomCsv import_custom_csv = 7;</code>
+     */
+    public Builder setImportCustomCsv(
+        com.siansiansu.taigikeyboard.engine.proto.ImportCustomCsv.Builder builderForValue) {
+      copyOnWrite();
+      instance.setImportCustomCsv(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.ImportCustomCsv import_custom_csv = 7;</code>
+     */
+    public Builder mergeImportCustomCsv(com.siansiansu.taigikeyboard.engine.proto.ImportCustomCsv value) {
+      copyOnWrite();
+      instance.mergeImportCustomCsv(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.ImportCustomCsv import_custom_csv = 7;</code>
+     */
+    public Builder clearImportCustomCsv() {
+      copyOnWrite();
+      instance.clearImportCustomCsv();
+      return this;
+    }
+
+    /**
+     * <code>.taigi.engine.ExportCustomCsv export_custom_csv = 8;</code>
+     */
+    @java.lang.Override
+    public boolean hasExportCustomCsv() {
+      return instance.hasExportCustomCsv();
+    }
+    /**
+     * <code>.taigi.engine.ExportCustomCsv export_custom_csv = 8;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.ExportCustomCsv getExportCustomCsv() {
+      return instance.getExportCustomCsv();
+    }
+    /**
+     * <code>.taigi.engine.ExportCustomCsv export_custom_csv = 8;</code>
+     */
+    public Builder setExportCustomCsv(com.siansiansu.taigikeyboard.engine.proto.ExportCustomCsv value) {
+      copyOnWrite();
+      instance.setExportCustomCsv(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.ExportCustomCsv export_custom_csv = 8;</code>
+     */
+    public Builder setExportCustomCsv(
+        com.siansiansu.taigikeyboard.engine.proto.ExportCustomCsv.Builder builderForValue) {
+      copyOnWrite();
+      instance.setExportCustomCsv(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.ExportCustomCsv export_custom_csv = 8;</code>
+     */
+    public Builder mergeExportCustomCsv(com.siansiansu.taigikeyboard.engine.proto.ExportCustomCsv value) {
+      copyOnWrite();
+      instance.mergeExportCustomCsv(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.ExportCustomCsv export_custom_csv = 8;</code>
+     */
+    public Builder clearExportCustomCsv() {
+      copyOnWrite();
+      instance.clearExportCustomCsv();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.UserDataRequest)
   }
   @java.lang.Override
@@ -486,10 +986,15 @@ public  final class UserDataRequest extends
             com.siansiansu.taigikeyboard.engine.proto.OpenUserData.class,
             com.siansiansu.taigikeyboard.engine.proto.ResetUserData.class,
             com.siansiansu.taigikeyboard.engine.proto.RecordUsage.class,
+            com.siansiansu.taigikeyboard.engine.proto.ListCustomEntries.class,
+            com.siansiansu.taigikeyboard.engine.proto.SaveCustomEntry.class,
+            com.siansiansu.taigikeyboard.engine.proto.DeleteCustomEntry.class,
+            com.siansiansu.taigikeyboard.engine.proto.ImportCustomCsv.class,
+            com.siansiansu.taigikeyboard.engine.proto.ExportCustomCsv.class,
           };
           java.lang.String info =
-              "\u0000\u0003\u0001\u0000\u0001\u0003\u0003\u0000\u0000\u0000\u0001<\u0000\u0002<" +
-              "\u0000\u0003<\u0000";
+              "\u0000\b\u0001\u0000\u0001\b\b\u0000\u0000\u0000\u0001<\u0000\u0002<\u0000\u0003" +
+              "<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {
