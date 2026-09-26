@@ -23,32 +23,6 @@ public interface PredictNextOrBuilder extends
       getWordBytes();
 
   /**
-   * <pre>
-   * SOURCE_USER rows
-   * </pre>
-   *
-   * <code>repeated .taigi.engine.RawNextWordPrediction user_rows = 2;</code>
-   */
-  java.util.List<com.siansiansu.taigikeyboard.engine.proto.RawNextWordPrediction>
-      getUserRowsList();
-  /**
-   * <pre>
-   * SOURCE_USER rows
-   * </pre>
-   *
-   * <code>repeated .taigi.engine.RawNextWordPrediction user_rows = 2;</code>
-   */
-  com.siansiansu.taigikeyboard.engine.proto.RawNextWordPrediction getUserRows(int index);
-  /**
-   * <pre>
-   * SOURCE_USER rows
-   * </pre>
-   *
-   * <code>repeated .taigi.engine.RawNextWordPrediction user_rows = 2;</code>
-   */
-  int getUserRowsCount();
-
-  /**
    * <code>.taigi.engine.DictionaryToggles toggles = 3;</code>
    * @return Whether the toggles field is set.
    */
@@ -84,9 +58,7 @@ public interface PredictNextOrBuilder extends
   /**
    * <pre>
    * The committed word's canonical TL — the `prev_tl` tier key of the user
-   * rows' order (§24). Read only once the engine owns the user data
-   * (`UserDataRequest.open`; user-data-engine-roadmap P3b): it then reads
-   * `user_association.db` itself and ignores `user_rows`.
+   * rows' order (§24).
    * </pre>
    *
    * <code>string roman = 7;</code>
@@ -96,9 +68,7 @@ public interface PredictNextOrBuilder extends
   /**
    * <pre>
    * The committed word's canonical TL — the `prev_tl` tier key of the user
-   * rows' order (§24). Read only once the engine owns the user data
-   * (`UserDataRequest.open`; user-data-engine-roadmap P3b): it then reads
-   * `user_association.db` itself and ignores `user_rows`.
+   * rows' order (§24).
    * </pre>
    *
    * <code>string roman = 7;</code>

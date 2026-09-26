@@ -12,9 +12,9 @@ use common::{open_user_data, tl_config};
 use std::time::{Duration, Instant};
 
 use protos::engine::{
-    composing_request, next_word_effect, next_word_request, next_word_response, request, response,
-    user_data_request, CommitContinuous, ComposingRequest, ComposingResponse, DecisionInput,
-    EnterContinuous, NextWordRequest, RecordUsage, Response, Start, UserDataRequest, WordSelected,
+    composing_request, next_word_request, next_word_response, request, response, user_data_request,
+    CommitContinuous, ComposingRequest, ComposingResponse, DecisionInput, EnterContinuous,
+    NextWordRequest, RecordUsage, Response, Start, UserDataRequest, WordSelected,
 };
 use userdata::{JournalMode, UserDataPaths, UserDataStores};
 
@@ -65,7 +65,8 @@ fn record_usage(usage: RecordUsage) -> Response {
     user_data(user_data_request::Method::RecordUsage(usage))
 }
 
-fn word_selected(text: &str, roman: &str, now_ms: i64) -> Vec<next_word_effect::Kind> {
+/// One commit handed to the next-word engine; answers its decision.
+fn word_selected(text: &str, roman: &str, now_ms: i64) {
     let response = roundtrip(
         0,
         request::Payload::Nextword(NextWordRequest {
@@ -80,11 +81,7 @@ fn word_selected(text: &str, roman: &str, now_ms: i64) -> Vec<next_word_effect::
     );
     match response.payload {
         Some(response::Payload::Nextword(nextword)) => match nextword.result {
-            Some(next_word_response::Result::Decide(decide)) => decide
-                .effects
-                .into_iter()
-                .filter_map(|effect| effect.kind)
-                .collect(),
+            Some(next_word_response::Result::Decide(_)) => {}
             other => panic!("expected a decision, got {other:?}"),
         },
         other => panic!("expected a nextword payload, got {other:?}"),
@@ -104,27 +101,14 @@ fn eventually(mut read: impl FnMut() -> bool) -> bool {
     false
 }
 
-fn is_record(kind: &next_word_effect::Kind) -> bool {
-    matches!(
-        kind,
-        next_word_effect::Kind::RecordAssociation(_)
-            | next_word_effect::Kind::RecordCompoundAssociations(_)
-    )
-}
-
 #[test]
 fn the_engine_writes_what_the_platforms_wrote() {
     let directory = tempfile::tempdir().unwrap();
     let paths = UserDataPaths::in_directory(directory.path());
 
-    // Before the open: the bigram the decision records has nowhere to go —
-    // it is not kept, and never handed to the platform.
+    // Before the open: the bigram the decision records has nowhere to go.
     word_selected("台", "tâi", 1_000);
-    let before_open = word_selected("灣", "uân", 2_000);
-    assert!(
-        !before_open.iter().any(is_record),
-        "never handed to the platform: {before_open:?}"
-    );
+    word_selected("灣", "uân", 2_000);
     assert!(!matches!(
         record_usage(RecordUsage {
             display_text: "台灣".to_owned(),
@@ -212,13 +196,9 @@ fn the_engine_writes_what_the_platforms_wrote() {
             .iter()
             .any(|row| row.hanzi == "記起來"))));
 
-    // The engine records the bigram it decides on and keeps the effect.
+    // The engine records the bigram it decides on.
     word_selected("食", "tsia̍h", 10_000);
-    let after_open = word_selected("飯", "pn̄g", 11_000);
-    assert!(
-        !after_open.iter().any(is_record),
-        "persisted by the engine, not handed to the platform: {after_open:?}"
-    );
+    word_selected("飯", "pn̄g", 11_000);
     assert!(eventually(|| reader.association.all_rows().is_some_and(
         |rows| rows
             .iter()

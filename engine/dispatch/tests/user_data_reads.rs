@@ -94,7 +94,6 @@ fn predict(roman: &str) -> Vec<EnginePrediction> {
                 query_generation: 0,
                 now_ms: NOW_MS,
                 limit: 30,
-                ..PredictNext::default()
             })),
         }),
     );

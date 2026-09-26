@@ -13,7 +13,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * composing engine emits `Effect::NextWordUpdateLastSelectedWord` and the
  * platform forwards it through this intent. Mutates `state.last_selected_word`
  * + `last_selection_time_ms` without bumping `current_generation`; no timer
- * effects; emits compound-only `RecordCompoundAssociations` effect.
+ * effects; records only a compound's own bigrams.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.UpdateLastSelectedWord}
@@ -261,7 +261,7 @@ public  final class UpdateLastSelectedWord extends
    * composing engine emits `Effect::NextWordUpdateLastSelectedWord` and the
    * platform forwards it through this intent. Mutates `state.last_selected_word`
    * + `last_selection_time_ms` without bumping `current_generation`; no timer
-   * effects; emits compound-only `RecordCompoundAssociations` effect.
+   * effects; records only a compound's own bigrams.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.UpdateLastSelectedWord}

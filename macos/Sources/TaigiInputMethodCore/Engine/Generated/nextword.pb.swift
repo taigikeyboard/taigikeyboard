@@ -111,8 +111,8 @@ public nonisolated struct Taigi_Engine_NextWordRequest: Sendable {
   /// Android-only Space-path intent (audit §5 #5). iOS wrappers never
   /// emit this; Rust engine accepts generically. Mutates
   /// last_selected_*/lastSelectionTimeMs without bumping
-  /// current_generation, no timer effects, emits compound-only
-  /// RecordCompoundAssociations effect (no prev→this bigram).
+  /// current_generation, no timer effects; records only a compound's own
+  /// bigrams (no prev→this one).
   public var updateLastSelectedWord: Taigi_Engine_UpdateLastSelectedWord {
     get {
       if case .updateLastSelectedWord(let v)? = method {return v}
@@ -172,8 +172,8 @@ public nonisolated struct Taigi_Engine_NextWordRequest: Sendable {
     /// Android-only Space-path intent (audit §5 #5). iOS wrappers never
     /// emit this; Rust engine accepts generically. Mutates
     /// last_selected_*/lastSelectionTimeMs without bumping
-    /// current_generation, no timer effects, emits compound-only
-    /// RecordCompoundAssociations effect (no prev→this bigram).
+    /// current_generation, no timer effects; records only a compound's own
+    /// bigrams (no prev→this one).
     case updateLastSelectedWord(Taigi_Engine_UpdateLastSelectedWord)
     /// Platform-driven UI visibility update. After the platform renders the
     /// result of an async predict() call (or clears it on empty result), it
@@ -341,7 +341,7 @@ public nonisolated struct Taigi_Engine_ResetFull: Sendable {
 /// composing engine emits `Effect::NextWordUpdateLastSelectedWord` and the
 /// platform forwards it through this intent. Mutates `state.last_selected_word`
 /// + `last_selection_time_ms` without bumping `current_generation`; no timer
-/// effects; emits compound-only `RecordCompoundAssociations` effect.
+/// effects; records only a compound's own bigrams.
 public nonisolated struct Taigi_Engine_UpdateLastSelectedWord: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -382,8 +382,8 @@ public nonisolated struct Taigi_Engine_SetIsShowing: Sendable {
   public init() {}
 }
 
-/// Engine-side filter+merge+sort+limit step. Platform calls this after
-/// SQLite returns raw rows — engine groups by (hanzi, tl), scores dict
+/// Engine-side filter+merge+sort+limit step (`PredictNext` expands into
+/// it with the bundled rows and the engine's own user rows) — groups by (hanzi, tl), scores dict
 /// rows via DICT_WEIGHT and user rows via decay+learning math, sorts desc
 /// by score, applies limit, then shapes via display-rule filter. On
 /// generation mismatch returns predictions=[] + was_stale=true.
@@ -397,7 +397,7 @@ public nonisolated struct Taigi_Engine_SetIsShowing: Sendable {
 /// well-learned (behavioral-invariants.md §24).
 ///
 /// THEREFORE `raw` IS PRIORITY-ORDERED, NOT A SET. Callers MUST deliver user
-/// rows best-evidence-first — the platform SQL orders them
+/// rows best-evidence-first — the store's query orders them
 /// `CASE prev_tl = query THEN 0 WHEN '' THEN 1 ELSE 2 END, count DESC,
 /// last_used DESC, id ASC` — and nothing between the SQLite cursor and this
 /// request may reorder them.
@@ -424,21 +424,16 @@ public nonisolated struct Taigi_Engine_FilterPredictions: Sendable {
 
 /// One next-word query: engine/dispatch looks up the bundled bigrams for the
 /// last character of `word` (source mask from `toggles`, 2 x limit rows),
-/// prepends them to `user_rows`, and runs FilterPredictions. An empty `word`
-/// filters nothing (no dict rows, user rows ignored). A bundled-lookup failure
-/// (lexicon not installed) drops only the dict rows.
-///
-/// `user_rows` keeps the FilterPredictions ordering contract above: the
-/// platform SQL's best-evidence-first order, never reordered.
+/// follows them with the rows its own `user_association.db` holds after
+/// `word` / `roman` (best-evidence-first, never reordered), and runs
+/// FilterPredictions. An empty `word` filters nothing. A bundled-lookup
+/// failure (lexicon not installed) drops only the dict rows.
 public nonisolated struct Taigi_Engine_PredictNext: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
   public var word: String = String()
-
-  /// SOURCE_USER rows
-  public var userRows: [Taigi_Engine_RawNextWordPrediction] = []
 
   public var toggles: Taigi_Engine_DictionaryToggles {
     get {_toggles ?? Taigi_Engine_DictionaryToggles()}
@@ -457,9 +452,7 @@ public nonisolated struct Taigi_Engine_PredictNext: Sendable {
   public var limit: Int32 = 0
 
   /// The committed word's canonical TL — the `prev_tl` tier key of the user
-  /// rows' order (§24). Read only once the engine owns the user data
-  /// (`UserDataRequest.open`; user-data-engine-roadmap P3b): it then reads
-  /// `user_association.db` itself and ignores `user_rows`.
+  /// rows' order (§24).
   public var roman: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -616,22 +609,6 @@ public nonisolated struct Taigi_Engine_NextWordEffect: Sendable {
     set {kind = .cancelContextTimeout(newValue)}
   }
 
-  public var recordAssociation: Taigi_Engine_RecordAssociation {
-    get {
-      if case .recordAssociation(let v)? = kind {return v}
-      return Taigi_Engine_RecordAssociation()
-    }
-    set {kind = .recordAssociation(newValue)}
-  }
-
-  public var recordCompoundAssociations: Taigi_Engine_RecordCompoundAssociations {
-    get {
-      if case .recordCompoundAssociations(let v)? = kind {return v}
-      return Taigi_Engine_RecordCompoundAssociations()
-    }
-    set {kind = .recordCompoundAssociations(newValue)}
-  }
-
   public var queryPredictions: Taigi_Engine_QueryPredictions {
     get {
       if case .queryPredictions(let v)? = kind {return v}
@@ -653,8 +630,6 @@ public nonisolated struct Taigi_Engine_NextWordEffect: Sendable {
   public nonisolated enum OneOf_Kind: Equatable, Sendable {
     case rescheduleContextTimeout(Taigi_Engine_RescheduleContextTimeout)
     case cancelContextTimeout(Taigi_Engine_CancelContextTimeout)
-    case recordAssociation(Taigi_Engine_RecordAssociation)
-    case recordCompoundAssociations(Taigi_Engine_RecordCompoundAssociations)
     case queryPredictions(Taigi_Engine_QueryPredictions)
     case clearPredictionsUi_p(Taigi_Engine_ClearPredictionsUI)
 
@@ -681,57 +656,6 @@ public nonisolated struct Taigi_Engine_CancelContextTimeout: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public nonisolated struct Taigi_Engine_AssociationPair: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var prev: String = String()
-
-  public var prevTl: String = String()
-
-  public var next: String = String()
-
-  public var nextTl: String = String()
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-public nonisolated struct Taigi_Engine_RecordAssociation: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var pair: Taigi_Engine_AssociationPair {
-    get {_pair ?? Taigi_Engine_AssociationPair()}
-    set {_pair = newValue}
-  }
-  /// Returns true if `pair` has been explicitly set.
-  public var hasPair: Bool {self._pair != nil}
-  /// Clears the value of `pair`. Subsequent reads from it will return its default value.
-  public mutating func clearPair() {self._pair = nil}
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-
-  fileprivate var _pair: Taigi_Engine_AssociationPair? = nil
-}
-
-public nonisolated struct Taigi_Engine_RecordCompoundAssociations: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var pairs: [Taigi_Engine_AssociationPair] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1311,7 +1235,7 @@ nonisolated extension Taigi_Engine_FilterPredictions: SwiftProtobuf.Message, Swi
 
 nonisolated extension Taigi_Engine_PredictNext: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PredictNext"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}word\0\u{3}user_rows\0\u{1}toggles\0\u{3}query_generation\0\u{3}now_ms\0\u{1}limit\0\u{1}roman\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}word\0\u{2}\u{2}toggles\0\u{3}query_generation\0\u{3}now_ms\0\u{1}limit\0\u{1}roman\0\u{b}user_rows\0\u{c}\u{2}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1320,7 +1244,6 @@ nonisolated extension Taigi_Engine_PredictNext: SwiftProtobuf.Message, SwiftProt
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.word) }()
-      case 2: try { try decoder.decodeRepeatedMessageField(value: &self.userRows) }()
       case 3: try { try decoder.decodeSingularMessageField(value: &self._toggles) }()
       case 4: try { try decoder.decodeSingularUInt64Field(value: &self.queryGeneration) }()
       case 5: try { try decoder.decodeSingularInt64Field(value: &self.nowMs) }()
@@ -1338,9 +1261,6 @@ nonisolated extension Taigi_Engine_PredictNext: SwiftProtobuf.Message, SwiftProt
     // https://github.com/apple/swift-protobuf/issues/1182
     if !self.word.isEmpty {
       try visitor.visitSingularStringField(value: self.word, fieldNumber: 1)
-    }
-    if !self.userRows.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.userRows, fieldNumber: 2)
     }
     try { if let v = self._toggles {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
@@ -1362,7 +1282,6 @@ nonisolated extension Taigi_Engine_PredictNext: SwiftProtobuf.Message, SwiftProt
 
   public static func ==(lhs: Taigi_Engine_PredictNext, rhs: Taigi_Engine_PredictNext) -> Bool {
     if lhs.word != rhs.word {return false}
-    if lhs.userRows != rhs.userRows {return false}
     if lhs._toggles != rhs._toggles {return false}
     if lhs.queryGeneration != rhs.queryGeneration {return false}
     if lhs.nowMs != rhs.nowMs {return false}
@@ -1622,7 +1541,7 @@ nonisolated extension Taigi_Engine_EnginePrediction: SwiftProtobuf.Message, Swif
 
 nonisolated extension Taigi_Engine_NextWordEffect: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".NextWordEffect"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}reschedule_context_timeout\0\u{3}cancel_context_timeout\0\u{3}record_association\0\u{3}record_compound_associations\0\u{3}query_predictions\0\u{3}clear_predictions_ui\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}reschedule_context_timeout\0\u{3}cancel_context_timeout\0\u{4}\u{3}query_predictions\0\u{3}clear_predictions_ui\0\u{b}record_association\0\u{b}record_compound_associations\0\u{c}\u{3}\u{1}\u{c}\u{4}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1654,32 +1573,6 @@ nonisolated extension Taigi_Engine_NextWordEffect: SwiftProtobuf.Message, SwiftP
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
           self.kind = .cancelContextTimeout(v)
-        }
-      }()
-      case 3: try {
-        var v: Taigi_Engine_RecordAssociation?
-        var hadOneofValue = false
-        if let current = self.kind {
-          hadOneofValue = true
-          if case .recordAssociation(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.kind = .recordAssociation(v)
-        }
-      }()
-      case 4: try {
-        var v: Taigi_Engine_RecordCompoundAssociations?
-        var hadOneofValue = false
-        if let current = self.kind {
-          hadOneofValue = true
-          if case .recordCompoundAssociations(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.kind = .recordCompoundAssociations(v)
         }
       }()
       case 5: try {
@@ -1726,14 +1619,6 @@ nonisolated extension Taigi_Engine_NextWordEffect: SwiftProtobuf.Message, SwiftP
     case .cancelContextTimeout?: try {
       guard case .cancelContextTimeout(let v)? = self.kind else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
-    }()
-    case .recordAssociation?: try {
-      guard case .recordAssociation(let v)? = self.kind else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
-    }()
-    case .recordCompoundAssociations?: try {
-      guard case .recordCompoundAssociations(let v)? = self.kind else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
     }()
     case .queryPredictions?: try {
       guard case .queryPredictions(let v)? = self.kind else { preconditionFailure() }
@@ -1799,115 +1684,6 @@ nonisolated extension Taigi_Engine_CancelContextTimeout: SwiftProtobuf.Message, 
   }
 
   public static func ==(lhs: Taigi_Engine_CancelContextTimeout, rhs: Taigi_Engine_CancelContextTimeout) -> Bool {
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Taigi_Engine_AssociationPair: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".AssociationPair"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}prev\0\u{3}prev_tl\0\u{1}next\0\u{3}next_tl\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.prev) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.prevTl) }()
-      case 3: try { try decoder.decodeSingularStringField(value: &self.next) }()
-      case 4: try { try decoder.decodeSingularStringField(value: &self.nextTl) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.prev.isEmpty {
-      try visitor.visitSingularStringField(value: self.prev, fieldNumber: 1)
-    }
-    if !self.prevTl.isEmpty {
-      try visitor.visitSingularStringField(value: self.prevTl, fieldNumber: 2)
-    }
-    if !self.next.isEmpty {
-      try visitor.visitSingularStringField(value: self.next, fieldNumber: 3)
-    }
-    if !self.nextTl.isEmpty {
-      try visitor.visitSingularStringField(value: self.nextTl, fieldNumber: 4)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Taigi_Engine_AssociationPair, rhs: Taigi_Engine_AssociationPair) -> Bool {
-    if lhs.prev != rhs.prev {return false}
-    if lhs.prevTl != rhs.prevTl {return false}
-    if lhs.next != rhs.next {return false}
-    if lhs.nextTl != rhs.nextTl {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Taigi_Engine_RecordAssociation: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".RecordAssociation"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}pair\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularMessageField(value: &self._pair) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    try { if let v = self._pair {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
-    } }()
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Taigi_Engine_RecordAssociation, rhs: Taigi_Engine_RecordAssociation) -> Bool {
-    if lhs._pair != rhs._pair {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Taigi_Engine_RecordCompoundAssociations: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".RecordCompoundAssociations"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}pairs\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.pairs) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.pairs.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.pairs, fieldNumber: 1)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Taigi_Engine_RecordCompoundAssociations, rhs: Taigi_Engine_RecordCompoundAssociations) -> Bool {
-    if lhs.pairs != rhs.pairs {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

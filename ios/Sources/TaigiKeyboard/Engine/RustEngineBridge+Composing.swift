@@ -41,10 +41,6 @@ public extension RustEngineBridge {
             /// `resetAndClearUI()` — that sends the structurally distinct
             /// `ResetFull` intent).
             case nextWordClearForNewComposing
-            /// Learned phrases (§50) — the final continuous commit was a
-            /// sequence of hanji picks; the platform upserts the
-            /// `(hanji, canonicalTl)` pair into its learned store.
-            case phraseLearned(hanji: String, canonicalTl: String)
         }
 
         public let rawInput: String
@@ -624,8 +620,6 @@ public extension RustEngineBridge {
                 )
             case .nextWordClearForNewComposing:
                 return .nextWordClearForNewComposing
-            case let .phraseLearned(m):
-                return .phraseLearned(hanji: m.hanji, canonicalTl: m.canonicalTl)
             }
         }
         return ComposingTransition(

@@ -9,12 +9,10 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * <pre>
  * One next-word query: engine/dispatch looks up the bundled bigrams for the
  * last character of `word` (source mask from `toggles`, 2 x limit rows),
- * prepends them to `user_rows`, and runs FilterPredictions. An empty `word`
- * filters nothing (no dict rows, user rows ignored). A bundled-lookup failure
- * (lexicon not installed) drops only the dict rows.
- *
- * `user_rows` keeps the FilterPredictions ordering contract above: the
- * platform SQL's best-evidence-first order, never reordered.
+ * follows them with the rows its own `user_association.db` holds after
+ * `word` / `roman` (best-evidence-first, never reordered), and runs
+ * FilterPredictions. An empty `word` filters nothing. A bundled-lookup
+ * failure (lexicon not installed) drops only the dict rows.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.PredictNext}
@@ -27,7 +25,6 @@ public  final class PredictNext extends
     PredictNextOrBuilder {
   private PredictNext() {
     word_ = "";
-    userRows_ = emptyProtobufList();
     roman_ = "";
   }
   private int bitField0_;
@@ -76,144 +73,6 @@ public  final class PredictNext extends
     checkByteStringIsUtf8(value);
     word_ = value.toStringUtf8();
 
-  }
-
-  public static final int USER_ROWS_FIELD_NUMBER = 2;
-  private com.google.protobuf.Internal.ProtobufList<com.siansiansu.taigikeyboard.engine.proto.RawNextWordPrediction> userRows_;
-  /**
-   * <pre>
-   * SOURCE_USER rows
-   * </pre>
-   *
-   * <code>repeated .taigi.engine.RawNextWordPrediction user_rows = 2;</code>
-   */
-  @java.lang.Override
-  public java.util.List<com.siansiansu.taigikeyboard.engine.proto.RawNextWordPrediction> getUserRowsList() {
-    return userRows_;
-  }
-  /**
-   * <pre>
-   * SOURCE_USER rows
-   * </pre>
-   *
-   * <code>repeated .taigi.engine.RawNextWordPrediction user_rows = 2;</code>
-   */
-  public java.util.List<? extends com.siansiansu.taigikeyboard.engine.proto.RawNextWordPredictionOrBuilder>
-      getUserRowsOrBuilderList() {
-    return userRows_;
-  }
-  /**
-   * <pre>
-   * SOURCE_USER rows
-   * </pre>
-   *
-   * <code>repeated .taigi.engine.RawNextWordPrediction user_rows = 2;</code>
-   */
-  @java.lang.Override
-  public int getUserRowsCount() {
-    return userRows_.size();
-  }
-  /**
-   * <pre>
-   * SOURCE_USER rows
-   * </pre>
-   *
-   * <code>repeated .taigi.engine.RawNextWordPrediction user_rows = 2;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.RawNextWordPrediction getUserRows(int index) {
-    return userRows_.get(index);
-  }
-  /**
-   * <pre>
-   * SOURCE_USER rows
-   * </pre>
-   *
-   * <code>repeated .taigi.engine.RawNextWordPrediction user_rows = 2;</code>
-   */
-  public com.siansiansu.taigikeyboard.engine.proto.RawNextWordPredictionOrBuilder getUserRowsOrBuilder(
-      int index) {
-    return userRows_.get(index);
-  }
-  private void ensureUserRowsIsMutable() {
-    com.google.protobuf.Internal.ProtobufList<com.siansiansu.taigikeyboard.engine.proto.RawNextWordPrediction> tmp = userRows_;
-    if (!tmp.isModifiable()) {
-      userRows_ =
-          com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
-     }
-  }
-
-  /**
-   * <pre>
-   * SOURCE_USER rows
-   * </pre>
-   *
-   * <code>repeated .taigi.engine.RawNextWordPrediction user_rows = 2;</code>
-   */
-  private void setUserRows(
-      int index, com.siansiansu.taigikeyboard.engine.proto.RawNextWordPrediction value) {
-    java.util.Objects.requireNonNull(value);
-    ensureUserRowsIsMutable();
-    userRows_.set(index, value);
-  }
-  /**
-   * <pre>
-   * SOURCE_USER rows
-   * </pre>
-   *
-   * <code>repeated .taigi.engine.RawNextWordPrediction user_rows = 2;</code>
-   */
-  private void addUserRows(com.siansiansu.taigikeyboard.engine.proto.RawNextWordPrediction value) {
-    java.util.Objects.requireNonNull(value);
-    ensureUserRowsIsMutable();
-    userRows_.add(value);
-  }
-  /**
-   * <pre>
-   * SOURCE_USER rows
-   * </pre>
-   *
-   * <code>repeated .taigi.engine.RawNextWordPrediction user_rows = 2;</code>
-   */
-  private void addUserRows(
-      int index, com.siansiansu.taigikeyboard.engine.proto.RawNextWordPrediction value) {
-    java.util.Objects.requireNonNull(value);
-    ensureUserRowsIsMutable();
-    userRows_.add(index, value);
-  }
-  /**
-   * <pre>
-   * SOURCE_USER rows
-   * </pre>
-   *
-   * <code>repeated .taigi.engine.RawNextWordPrediction user_rows = 2;</code>
-   */
-  private void addAllUserRows(
-      java.lang.Iterable<? extends com.siansiansu.taigikeyboard.engine.proto.RawNextWordPrediction> values) {
-    ensureUserRowsIsMutable();
-    com.google.protobuf.AbstractMessageLite.addAll(
-        values, userRows_);
-  }
-  /**
-   * <pre>
-   * SOURCE_USER rows
-   * </pre>
-   *
-   * <code>repeated .taigi.engine.RawNextWordPrediction user_rows = 2;</code>
-   */
-  private void clearUserRows() {
-    userRows_ = emptyProtobufList();
-  }
-  /**
-   * <pre>
-   * SOURCE_USER rows
-   * </pre>
-   *
-   * <code>repeated .taigi.engine.RawNextWordPrediction user_rows = 2;</code>
-   */
-  private void removeUserRows(int index) {
-    ensureUserRowsIsMutable();
-    userRows_.remove(index);
   }
 
   public static final int TOGGLES_FIELD_NUMBER = 3;
@@ -358,9 +217,7 @@ public  final class PredictNext extends
   /**
    * <pre>
    * The committed word's canonical TL — the `prev_tl` tier key of the user
-   * rows' order (§24). Read only once the engine owns the user data
-   * (`UserDataRequest.open`; user-data-engine-roadmap P3b): it then reads
-   * `user_association.db` itself and ignores `user_rows`.
+   * rows' order (§24).
    * </pre>
    *
    * <code>string roman = 7;</code>
@@ -373,9 +230,7 @@ public  final class PredictNext extends
   /**
    * <pre>
    * The committed word's canonical TL — the `prev_tl` tier key of the user
-   * rows' order (§24). Read only once the engine owns the user data
-   * (`UserDataRequest.open`; user-data-engine-roadmap P3b): it then reads
-   * `user_association.db` itself and ignores `user_rows`.
+   * rows' order (§24).
    * </pre>
    *
    * <code>string roman = 7;</code>
@@ -389,9 +244,7 @@ public  final class PredictNext extends
   /**
    * <pre>
    * The committed word's canonical TL — the `prev_tl` tier key of the user
-   * rows' order (§24). Read only once the engine owns the user data
-   * (`UserDataRequest.open`; user-data-engine-roadmap P3b): it then reads
-   * `user_association.db` itself and ignores `user_rows`.
+   * rows' order (§24).
    * </pre>
    *
    * <code>string roman = 7;</code>
@@ -406,9 +259,7 @@ public  final class PredictNext extends
   /**
    * <pre>
    * The committed word's canonical TL — the `prev_tl` tier key of the user
-   * rows' order (§24). Read only once the engine owns the user data
-   * (`UserDataRequest.open`; user-data-engine-roadmap P3b): it then reads
-   * `user_association.db` itself and ignores `user_rows`.
+   * rows' order (§24).
    * </pre>
    *
    * <code>string roman = 7;</code>
@@ -420,9 +271,7 @@ public  final class PredictNext extends
   /**
    * <pre>
    * The committed word's canonical TL — the `prev_tl` tier key of the user
-   * rows' order (§24). Read only once the engine owns the user data
-   * (`UserDataRequest.open`; user-data-engine-roadmap P3b): it then reads
-   * `user_association.db` itself and ignores `user_rows`.
+   * rows' order (§24).
    * </pre>
    *
    * <code>string roman = 7;</code>
@@ -522,12 +371,10 @@ public  final class PredictNext extends
    * <pre>
    * One next-word query: engine/dispatch looks up the bundled bigrams for the
    * last character of `word` (source mask from `toggles`, 2 x limit rows),
-   * prepends them to `user_rows`, and runs FilterPredictions. An empty `word`
-   * filters nothing (no dict rows, user rows ignored). A bundled-lookup failure
-   * (lexicon not installed) drops only the dict rows.
-   *
-   * `user_rows` keeps the FilterPredictions ordering contract above: the
-   * platform SQL's best-evidence-first order, never reordered.
+   * follows them with the rows its own `user_association.db` holds after
+   * `word` / `roman` (best-evidence-first, never reordered), and runs
+   * FilterPredictions. An empty `word` filters nothing. A bundled-lookup
+   * failure (lexicon not installed) drops only the dict rows.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.PredictNext}
@@ -589,156 +436,6 @@ public  final class PredictNext extends
         com.google.protobuf.ByteString value) {
       copyOnWrite();
       instance.setWordBytes(value);
-      return this;
-    }
-
-    /**
-     * <pre>
-     * SOURCE_USER rows
-     * </pre>
-     *
-     * <code>repeated .taigi.engine.RawNextWordPrediction user_rows = 2;</code>
-     */
-    @java.lang.Override
-    public java.util.List<com.siansiansu.taigikeyboard.engine.proto.RawNextWordPrediction> getUserRowsList() {
-      return java.util.Collections.unmodifiableList(
-          instance.getUserRowsList());
-    }
-    /**
-     * <pre>
-     * SOURCE_USER rows
-     * </pre>
-     *
-     * <code>repeated .taigi.engine.RawNextWordPrediction user_rows = 2;</code>
-     */
-    @java.lang.Override
-    public int getUserRowsCount() {
-      return instance.getUserRowsCount();
-    }/**
-     * <pre>
-     * SOURCE_USER rows
-     * </pre>
-     *
-     * <code>repeated .taigi.engine.RawNextWordPrediction user_rows = 2;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.RawNextWordPrediction getUserRows(int index) {
-      return instance.getUserRows(index);
-    }
-    /**
-     * <pre>
-     * SOURCE_USER rows
-     * </pre>
-     *
-     * <code>repeated .taigi.engine.RawNextWordPrediction user_rows = 2;</code>
-     */
-    public Builder setUserRows(
-        int index, com.siansiansu.taigikeyboard.engine.proto.RawNextWordPrediction value) {
-      copyOnWrite();
-      instance.setUserRows(index, value);
-      return this;
-    }
-    /**
-     * <pre>
-     * SOURCE_USER rows
-     * </pre>
-     *
-     * <code>repeated .taigi.engine.RawNextWordPrediction user_rows = 2;</code>
-     */
-    public Builder setUserRows(
-        int index, com.siansiansu.taigikeyboard.engine.proto.RawNextWordPrediction.Builder builderForValue) {
-      copyOnWrite();
-      instance.setUserRows(index,
-          builderForValue.build());
-      return this;
-    }
-    /**
-     * <pre>
-     * SOURCE_USER rows
-     * </pre>
-     *
-     * <code>repeated .taigi.engine.RawNextWordPrediction user_rows = 2;</code>
-     */
-    public Builder addUserRows(com.siansiansu.taigikeyboard.engine.proto.RawNextWordPrediction value) {
-      copyOnWrite();
-      instance.addUserRows(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * SOURCE_USER rows
-     * </pre>
-     *
-     * <code>repeated .taigi.engine.RawNextWordPrediction user_rows = 2;</code>
-     */
-    public Builder addUserRows(
-        int index, com.siansiansu.taigikeyboard.engine.proto.RawNextWordPrediction value) {
-      copyOnWrite();
-      instance.addUserRows(index, value);
-      return this;
-    }
-    /**
-     * <pre>
-     * SOURCE_USER rows
-     * </pre>
-     *
-     * <code>repeated .taigi.engine.RawNextWordPrediction user_rows = 2;</code>
-     */
-    public Builder addUserRows(
-        com.siansiansu.taigikeyboard.engine.proto.RawNextWordPrediction.Builder builderForValue) {
-      copyOnWrite();
-      instance.addUserRows(builderForValue.build());
-      return this;
-    }
-    /**
-     * <pre>
-     * SOURCE_USER rows
-     * </pre>
-     *
-     * <code>repeated .taigi.engine.RawNextWordPrediction user_rows = 2;</code>
-     */
-    public Builder addUserRows(
-        int index, com.siansiansu.taigikeyboard.engine.proto.RawNextWordPrediction.Builder builderForValue) {
-      copyOnWrite();
-      instance.addUserRows(index,
-          builderForValue.build());
-      return this;
-    }
-    /**
-     * <pre>
-     * SOURCE_USER rows
-     * </pre>
-     *
-     * <code>repeated .taigi.engine.RawNextWordPrediction user_rows = 2;</code>
-     */
-    public Builder addAllUserRows(
-        java.lang.Iterable<? extends com.siansiansu.taigikeyboard.engine.proto.RawNextWordPrediction> values) {
-      copyOnWrite();
-      instance.addAllUserRows(values);
-      return this;
-    }
-    /**
-     * <pre>
-     * SOURCE_USER rows
-     * </pre>
-     *
-     * <code>repeated .taigi.engine.RawNextWordPrediction user_rows = 2;</code>
-     */
-    public Builder clearUserRows() {
-      copyOnWrite();
-      instance.clearUserRows();
-      return this;
-    }
-    /**
-     * <pre>
-     * SOURCE_USER rows
-     * </pre>
-     *
-     * <code>repeated .taigi.engine.RawNextWordPrediction user_rows = 2;</code>
-     */
-    public Builder removeUserRows(int index) {
-      copyOnWrite();
-      instance.removeUserRows(index);
       return this;
     }
 
@@ -888,9 +585,7 @@ public  final class PredictNext extends
     /**
      * <pre>
      * The committed word's canonical TL — the `prev_tl` tier key of the user
-     * rows' order (§24). Read only once the engine owns the user data
-     * (`UserDataRequest.open`; user-data-engine-roadmap P3b): it then reads
-     * `user_association.db` itself and ignores `user_rows`.
+     * rows' order (§24).
      * </pre>
      *
      * <code>string roman = 7;</code>
@@ -903,9 +598,7 @@ public  final class PredictNext extends
     /**
      * <pre>
      * The committed word's canonical TL — the `prev_tl` tier key of the user
-     * rows' order (§24). Read only once the engine owns the user data
-     * (`UserDataRequest.open`; user-data-engine-roadmap P3b): it then reads
-     * `user_association.db` itself and ignores `user_rows`.
+     * rows' order (§24).
      * </pre>
      *
      * <code>string roman = 7;</code>
@@ -919,9 +612,7 @@ public  final class PredictNext extends
     /**
      * <pre>
      * The committed word's canonical TL — the `prev_tl` tier key of the user
-     * rows' order (§24). Read only once the engine owns the user data
-     * (`UserDataRequest.open`; user-data-engine-roadmap P3b): it then reads
-     * `user_association.db` itself and ignores `user_rows`.
+     * rows' order (§24).
      * </pre>
      *
      * <code>string roman = 7;</code>
@@ -937,9 +628,7 @@ public  final class PredictNext extends
     /**
      * <pre>
      * The committed word's canonical TL — the `prev_tl` tier key of the user
-     * rows' order (§24). Read only once the engine owns the user data
-     * (`UserDataRequest.open`; user-data-engine-roadmap P3b): it then reads
-     * `user_association.db` itself and ignores `user_rows`.
+     * rows' order (§24).
      * </pre>
      *
      * <code>string roman = 7;</code>
@@ -953,9 +642,7 @@ public  final class PredictNext extends
     /**
      * <pre>
      * The committed word's canonical TL — the `prev_tl` tier key of the user
-     * rows' order (§24). Read only once the engine owns the user data
-     * (`UserDataRequest.open`; user-data-engine-roadmap P3b): it then reads
-     * `user_association.db` itself and ignores `user_rows`.
+     * rows' order (§24).
      * </pre>
      *
      * <code>string roman = 7;</code>
@@ -987,8 +674,6 @@ public  final class PredictNext extends
           java.lang.Object[] objects = new java.lang.Object[] {
             "bitField0_",
             "word_",
-            "userRows_",
-            com.siansiansu.taigikeyboard.engine.proto.RawNextWordPrediction.class,
             "toggles_",
             "queryGeneration_",
             "nowMs_",
@@ -996,8 +681,8 @@ public  final class PredictNext extends
             "roman_",
           };
           java.lang.String info =
-              "\u0000\u0007\u0000\u0001\u0001\u0007\u0007\u0000\u0001\u0000\u0001\u0208\u0002\u001b" +
-              "\u0003\u1009\u0000\u0004\u0003\u0005\u0002\u0006\u0004\u0007\u0208";
+              "\u0000\u0006\u0000\u0001\u0001\u0007\u0006\u0000\u0000\u0000\u0001\u0208\u0003\u1009" +
+              "\u0000\u0004\u0003\u0005\u0002\u0006\u0004\u0007\u0208";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

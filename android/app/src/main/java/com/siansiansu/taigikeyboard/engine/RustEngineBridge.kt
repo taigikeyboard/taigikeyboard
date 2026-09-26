@@ -320,17 +320,6 @@ object RustEngineBridge {
              * distinct `ResetFull` intent.
              */
             object NextWordClearForNewComposing : Effect()
-
-            /**
-             * Learned phrases (§50) — the final continuous commit was a sequence
-             * of hanji picks. The engine writes the `(hanji, canonicalTl)` pair to
-             * `learned_phrases.db` itself and, with the user data open, leaves
-             * this out of its answer (roadmap P8b); decoded for the log only.
-             */
-            data class PhraseLearned(
-                val hanji: String,
-                val canonicalTl: String,
-            ) : Effect()
         }
 
         companion object {
@@ -480,14 +469,6 @@ object RustEngineBridge {
 
             object CancelContextTimeout : Effect()
 
-            data class RecordAssociation(
-                val pair: NextWordAssociationPair,
-            ) : Effect()
-
-            data class RecordCompoundAssociations(
-                val pairs: List<NextWordAssociationPair>,
-            ) : Effect()
-
             /**
              * `nowMs` is reused by the platform predict() call so the
              * association-window clock and the user-row decay scoring see
@@ -515,17 +496,6 @@ object RustEngineBridge {
             )
         }
     }
-
-    /**
-     * Bigram association pair surfaced through `RecordAssociation` /
-     * `RecordCompoundAssociations` effects.
-     */
-    data class NextWordAssociationPair(
-        val prev: String,
-        val prevTl: String,
-        val next: String,
-        val nextTl: String,
-    )
 
     /**
      * UI-ready prediction value. `subtitle` is `null` when the wire string

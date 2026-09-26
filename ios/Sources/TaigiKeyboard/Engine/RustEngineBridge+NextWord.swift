@@ -23,8 +23,6 @@ public extension RustEngineBridge {
         public enum Effect: Equatable {
             case rescheduleContextTimeout(afterMs: UInt64)
             case cancelContextTimeout
-            case recordAssociation(NextWordAssociationPair)
-            case recordCompoundAssociations([NextWordAssociationPair])
             /// `nowMs` is reused by the platform's predict() call so the
             /// engine's association-window clock and the user-row decay
             /// scoring see ONE consistent "now" per intent. Per
@@ -47,16 +45,6 @@ public extension RustEngineBridge {
             isShowing: false,
             lastSelectedWord: nil,
         )
-    }
-
-    /// Bigram association pair surfaced through `RecordAssociation` /
-    /// `RecordCompoundAssociations` effects. The engine records the pairs
-    /// itself (roadmap P7b); iOS ignores these effects until P9 retires them.
-    struct NextWordAssociationPair: Equatable {
-        public let prev: String
-        public let prevTl: String
-        public let next: String
-        public let nextTl: String
     }
 
     /// UI-ready prediction value. `subtitle` is `nil` when the wire
@@ -84,8 +72,8 @@ public extension RustEngineBridge {
 
     /// v3.5.8 Phase 4 — continuous-input mid-commit handshake. Updates
     /// `state.last_selected_word` + `last_selection_time_ms` without
-    /// bumping `current_generation`, no timer effects, emits compound-only
-    /// `RecordCompoundAssociations` effect. Pre-v3.5.8 this was Android-only;
+    /// bumping `current_generation`, no timer effects; the engine records only
+    /// a compound's own bigrams. Pre-v3.5.8 this was Android-only;
     /// the Phase 4 effect-based handshake brought iOS into the call site.
     static func nextwordUpdateLastSelectedWord(
         text: String,
@@ -393,10 +381,6 @@ public extension RustEngineBridge {
                 return .rescheduleContextTimeout(afterMs: m.afterMs)
             case .cancelContextTimeout:
                 return .cancelContextTimeout
-            case let .recordAssociation(m):
-                return .recordAssociation(synthAssociationPair(m.pair))
-            case let .recordCompoundAssociations(m):
-                return .recordCompoundAssociations(m.pairs.map(synthAssociationPair))
             case let .queryPredictions(m):
                 return .queryPredictions(word: m.word, roman: m.roman, generation: m.generation, nowMs: m.nowMs)
             case let .clearPredictionsUi_p(m):
@@ -408,15 +392,6 @@ public extension RustEngineBridge {
             currentGeneration: proto.currentGeneration,
             isShowing: proto.isShowing,
             lastSelectedWord: proto.lastSelectedWord.isEmpty ? nil : proto.lastSelectedWord,
-        )
-    }
-
-    private static func synthAssociationPair(_ proto: Taigi_Engine_AssociationPair) -> NextWordAssociationPair {
-        NextWordAssociationPair(
-            prev: proto.prev,
-            prevTl: proto.prevTl,
-            next: proto.next,
-            nextTl: proto.nextTl,
         )
     }
 }

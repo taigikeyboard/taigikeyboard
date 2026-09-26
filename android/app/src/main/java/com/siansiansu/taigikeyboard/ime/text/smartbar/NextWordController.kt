@@ -321,14 +321,6 @@ class NextWordController(
                 cancelContextTimeoutJob()
             }
 
-            // The engine wrote the bigrams into `user_association.db` itself
-            // and leaves these out of its answer once the user data is open
-            // (roadmap P3c / P8b); the arms stay until the effects are retired
-            // (roadmap U9, P9).
-            is RustEngineBridge.NextWordDecideResult.Effect.RecordAssociation,
-            is RustEngineBridge.NextWordDecideResult.Effect.RecordCompoundAssociations,
-            -> Unit
-
             is RustEngineBridge.NextWordDecideResult.Effect.QueryPredictions -> {
                 dispatchPredictionQuery(
                     word = effect.word,

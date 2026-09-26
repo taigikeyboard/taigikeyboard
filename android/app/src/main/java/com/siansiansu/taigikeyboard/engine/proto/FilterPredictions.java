@@ -7,8 +7,8 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * Engine-side filter+merge+sort+limit step. Platform calls this after
- * SQLite returns raw rows — engine groups by (hanzi, tl), scores dict
+ * Engine-side filter+merge+sort+limit step (`PredictNext` expands into
+ * it with the bundled rows and the engine's own user rows) — groups by (hanzi, tl), scores dict
  * rows via DICT_WEIGHT and user rows via decay+learning math, sorts desc
  * by score, applies limit, then shapes via display-rule filter. On
  * generation mismatch returns predictions=[] + was_stale=true.
@@ -22,7 +22,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * well-learned (behavioral-invariants.md §24).
  *
  * THEREFORE `raw` IS PRIORITY-ORDERED, NOT A SET. Callers MUST deliver user
- * rows best-evidence-first — the platform SQL orders them
+ * rows best-evidence-first — the store's query orders them
  * `CASE prev_tl = query THEN 0 WHEN '' THEN 1 ELSE 2 END, count DESC,
  * last_used DESC, id ASC` — and nothing between the SQLite cursor and this
  * request may reorder them.
@@ -332,8 +332,8 @@ public  final class FilterPredictions extends
 
   /**
    * <pre>
-   * Engine-side filter+merge+sort+limit step. Platform calls this after
-   * SQLite returns raw rows — engine groups by (hanzi, tl), scores dict
+   * Engine-side filter+merge+sort+limit step (`PredictNext` expands into
+   * it with the bundled rows and the engine's own user rows) — groups by (hanzi, tl), scores dict
    * rows via DICT_WEIGHT and user rows via decay+learning math, sorts desc
    * by score, applies limit, then shapes via display-rule filter. On
    * generation mismatch returns predictions=[] + was_stale=true.
@@ -347,7 +347,7 @@ public  final class FilterPredictions extends
    * well-learned (behavioral-invariants.md §24).
    *
    * THEREFORE `raw` IS PRIORITY-ORDERED, NOT A SET. Callers MUST deliver user
-   * rows best-evidence-first — the platform SQL orders them
+   * rows best-evidence-first — the store's query orders them
    * `CASE prev_tl = query THEN 0 WHEN '' THEN 1 ELSE 2 END, count DESC,
    * last_used DESC, id ASC` — and nothing between the SQLite cursor and this
    * request may reorder them.

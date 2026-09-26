@@ -33,10 +33,6 @@ struct ComposingTransition: Equatable, Sendable {
         /// Continuous-input abort handshake. Distinct from a full next-word
         /// reset; they are different engine intents.
         case nextWordClearForNewComposing
-        /// Learned phrases (§50) — the final continuous commit was a sequence
-        /// of hanji picks; the platform upserts the `(hanji, canonicalTl)`
-        /// pair into its learned store.
-        case phraseLearned(hanji: String, canonicalTl: String)
     }
 
     /// The keystrokes as typed, with numeric tones (the engine's search key).

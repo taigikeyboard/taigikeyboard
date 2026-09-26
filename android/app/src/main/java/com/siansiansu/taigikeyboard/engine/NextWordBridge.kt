@@ -4,7 +4,6 @@
 package com.siansiansu.taigikeyboard.engine
 
 import com.siansiansu.taigikeyboard.engine.proto.AppConfig
-import com.siansiansu.taigikeyboard.engine.proto.AssociationPair
 import com.siansiansu.taigikeyboard.engine.proto.DecideResult
 import com.siansiansu.taigikeyboard.engine.proto.DecisionInput
 import com.siansiansu.taigikeyboard.engine.proto.NextWordRequest
@@ -306,18 +305,6 @@ private fun synthDecideResult(proto: DecideResult): RustEngineBridge.NextWordDec
                 RustEngineBridge.NextWordDecideResult.Effect.CancelContextTimeout
             }
 
-            eff.hasRecordAssociation() -> {
-                RustEngineBridge.NextWordDecideResult.Effect.RecordAssociation(
-                    synthAssociationPair(eff.recordAssociation.pair),
-                )
-            }
-
-            eff.hasRecordCompoundAssociations() -> {
-                RustEngineBridge.NextWordDecideResult.Effect.RecordCompoundAssociations(
-                    eff.recordCompoundAssociations.pairsList.map(::synthAssociationPair),
-                )
-            }
-
             eff.hasQueryPredictions() -> {
                 RustEngineBridge.NextWordDecideResult.Effect.QueryPredictions(
                     word = eff.queryPredictions.word,
@@ -343,13 +330,5 @@ private fun synthDecideResult(proto: DecideResult): RustEngineBridge.NextWordDec
         lastSelectedWord = if (proto.lastSelectedWord.isEmpty()) null else proto.lastSelectedWord,
     )
 }
-
-private fun synthAssociationPair(proto: AssociationPair): RustEngineBridge.NextWordAssociationPair =
-    RustEngineBridge.NextWordAssociationPair(
-        prev = proto.prev,
-        prevTl = proto.prevTl,
-        next = proto.next,
-        nextTl = proto.nextTl,
-    )
 
 // endregion

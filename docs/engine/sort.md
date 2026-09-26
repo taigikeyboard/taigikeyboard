@@ -9,7 +9,7 @@
 ## Summary
 
 - Candidate ranking is the Continuous `FetchAtPos` sort key — see [continuous-input-ranking.md](continuous-input-ranking.md) for the formula (source rank, `calculate_continuous_score`, decayed user weight).
-- User frequency is stored platform-side (SQLite, keyed by the `(word, tl)` pair) and sent to the engine per fetch as `FrequencyEntry` rows.
+- User frequency is the engine's `user_frequency.db` (keyed by the `(word, tl)` pair); the engine reads it for each fetch itself.
 - The earlier additive score (`userFreqScore + recencyBonus + exactBonus + closenessBonus + baseFreqScore + completionPenalty`, `ProcessCandidates` op) had no production caller since v3.5.8 and was removed 2026-09-25.
 
 ---
