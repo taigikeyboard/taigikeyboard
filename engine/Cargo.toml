@@ -69,6 +69,14 @@ lto = true
 codegen-units = 1
 strip = true
 
+# Host tools (proc-macros, build scripts) are never shipped, so they are not
+# stripped: under MACOSX_DEPLOYMENT_TARGET=14.0 (engine/scripts/
+# build-macos-xcframework.sh) Xcode 27's toolchain leaves a stripped
+# proc-macro dylib unloadable ("mis-aligned LINKEDIT string pool"), failing
+# the build. The shipped libraries above stay stripped.
+[profile.release.build-override]
+strip = false
+
 # Trim local dev/test link wall by dropping full DWARF; line tables stay so
 # panic backtraces + proptest shrinking still resolve to source lines.
 # Platform xcframework/jniLibs are always release-built per scripts/, so this
