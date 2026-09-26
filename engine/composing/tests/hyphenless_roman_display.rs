@@ -8,14 +8,16 @@
 //!
 //! Hermetic `LexiconHandle` install comes from `tests/common/mod.rs`.
 
-use protos::engine::{AppConfig, CustomDictEntry, FetchAtPos};
+use protos::engine::AppConfig;
 
 mod common;
+use common::Fetch;
 use common::{
     build_dictionary_fst, build_syllables_fst, build_tkdb_v3, cell_with_hanji, config,
     empty_association_bin, engine_install_lock, fetch_cells, install_lexicon, write_temp, Cell,
     Row,
 };
+use lexicon::CustomEntry;
 
 fn fixture_rows() -> Vec<Row> {
     vec![
@@ -87,13 +89,13 @@ fn install_fixture() {
     install_lexicon(&fst_path, &dict_path, &assoc_path, &syllables_path);
 }
 
-fn fetch(raw: &str, input_mode: &str, hyphenless: bool, custom: Vec<CustomDictEntry>) -> Vec<Cell> {
+fn fetch(raw: &str, input_mode: &str, hyphenless: bool, custom: Vec<CustomEntry>) -> Vec<Cell> {
     let cfg = AppConfig {
         hyphenless_roman: hyphenless,
         ..config(input_mode)
     };
-    let fetch = FetchAtPos {
-        custom_entries: custom,
+    let fetch = Fetch {
+        custom,
         ..Default::default()
     };
     fetch_cells(&cfg, raw, fetch)
@@ -138,7 +140,7 @@ fn hyphenless_roman_applies_after_the_poj_presentation_pass() {
 fn hyphenless_roman_covers_custom_dictionary_rows() {
     let _lock = engine_install_lock();
     install_fixture();
-    let custom = vec![CustomDictEntry {
+    let custom = vec![CustomEntry {
         roman: "só-sî".into(),
         hanji: Some("鎖匙".into()),
     }];

@@ -8,14 +8,16 @@
 //!
 //! Hermetic `LexiconHandle` install comes from `tests/common/mod.rs`.
 
-use protos::engine::{AppConfig, CustomDictEntry, FetchAtPos};
+use protos::engine::AppConfig;
 
 mod common;
+use common::Fetch;
 use common::{
     build_dictionary_fst, build_syllables_fst, build_tkdb_v3, cell_with_hanji, config,
     empty_association_bin, engine_install_lock, fetch_cells, install_lexicon, write_temp, Cell,
     Row,
 };
+use lexicon::CustomEntry;
 
 fn fixture_rows() -> Vec<Row> {
     vec![
@@ -62,23 +64,23 @@ fn fetch_with_custom(
     raw: &str,
     input_mode: &str,
     force_lowercase_nasal_marker: bool,
-    custom: Vec<CustomDictEntry>,
+    custom: Vec<CustomEntry>,
 ) -> Vec<Cell> {
     let cfg = AppConfig {
         nn_doubletap_enabled: true,
         force_lowercase_nasal_marker,
         ..config(input_mode)
     };
-    let fetch = FetchAtPos {
-        custom_entries: custom,
+    let fetch = Fetch {
+        custom,
         ..Default::default()
     };
     fetch_cells(&cfg, raw, fetch)
 }
 
 /// A custom 聲 stored with the capital marker.
-fn custom_capital_siann() -> Vec<CustomDictEntry> {
-    vec![CustomDictEntry {
+fn custom_capital_siann() -> Vec<CustomEntry> {
+    vec![CustomEntry {
         roman: "SIA\u{1d3a}".into(),
         hanji: Some("聲".into()),
     }]
@@ -131,7 +133,7 @@ fn caps_lock_keeps_a_custom_entry_with_a_nasal_marker_all_caps_in_poj_mode() {
     // `Sia-Sia` … per token now. trace: custom "sia-siaⁿ" → `recase_all`
     // raises to "SIA-SIAⁿ" → POJ render title-cases "Sia-Siaⁿ" → per-token
     // `match_case` re-raises "SIA-SIAⁿ" → §53 pass → "SIA-SIAᴺ".
-    let custom = vec![CustomDictEntry {
+    let custom = vec![CustomEntry {
         roman: "sia-sia\u{207f}".into(),
         hanji: Some("聲聲".into()),
     }];
@@ -197,7 +199,7 @@ fn under_a_roman_only_display_the_literal_and_the_dictionary_row_now_read_the_sa
             force_lowercase_nasal_marker: force_lowercase,
             ..common::config_with_display_mode("poj", 2)
         };
-        let cells = fetch_cells(&cfg, "SIANN", FetchAtPos::default());
+        let cells = fetch_cells(&cfg, "SIANN", Fetch::default());
         assert_eq!(cells[0].1, expected, "force_lowercase={force_lowercase}");
         assert_eq!(cells[0].2, "聲", "the literal carries 聲's 詞頻 key");
         assert_eq!(

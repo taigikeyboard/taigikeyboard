@@ -119,6 +119,7 @@ dependencies = [
  "phonetics",
  "prost",
  "protos",
+ "ranking",
  "tempfile",
  "userdata",
 ]
@@ -693,9 +694,6 @@ dependencies = [
 [[package]]
 name = "ranking"
 version = "0.1.0"
-dependencies = [
- "protos",
-]
 
 [[package]]
 name = "regex"

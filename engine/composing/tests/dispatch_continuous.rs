@@ -44,13 +44,10 @@ fn decode_fetch_at_pos_idle_returns_no_continuous_carrier() {
     let mut engine = Engine::new();
     let resp = dispatch::handle(
         &req(Method::FetchAtPos(FetchAtPos {
-            frequency_entries: vec![],
             now_ms: 0,
-            custom_entries: vec![],
             enabled_sources_bitmask: 0,
             literal_roman_candidate_disabled: false,
-            custom_dictionary_disabled: false,
-            learned_entries: vec![],
+            ..FetchAtPos::default()
         })),
         &mut engine,
         &config_tl(),
@@ -86,9 +83,7 @@ fn decode_fetch_at_pos_continuous_lexicon_unavailable_returns_empty_carrier() {
 
     let resp = dispatch::handle(
         &req(Method::FetchAtPos(FetchAtPos {
-            frequency_entries: vec![],
             now_ms: 0,
-            custom_entries: vec![],
             enabled_sources_bitmask: 0,
             // §34/S22: disable the literal-roman prepend so this test isolates
             // the lexicon-degradation path. With it ON (default), the bare
@@ -96,8 +91,7 @@ fn decode_fetch_at_pos_continuous_lexicon_unavailable_returns_empty_carrier() {
             // lexicon, which is orthogonal to "lexicon NotInitialized yields no
             // DICT candidates". Doubles as OFF-gate coverage.
             literal_roman_candidate_disabled: true,
-            custom_dictionary_disabled: false,
-            learned_entries: vec![],
+            ..FetchAtPos::default()
         })),
         &mut engine,
         &config_tl(),
@@ -136,13 +130,10 @@ fn fetch_at_pos_literal_roman_toggle_gates_index0_prepend() {
         .unwrap();
         let resp = dispatch::handle(
             &req(Method::FetchAtPos(FetchAtPos {
-                frequency_entries: vec![],
                 now_ms: 0,
-                custom_entries: vec![],
                 enabled_sources_bitmask: 0,
                 literal_roman_candidate_disabled: disabled,
-                custom_dictionary_disabled: false,
-                learned_entries: vec![],
+                ..FetchAtPos::default()
             })),
             &mut engine,
             &config_tl(),
@@ -217,13 +208,10 @@ fn decode_fetch_at_pos_hanzi_buffer_returns_empty_carrier() {
 
     let resp = dispatch::handle(
         &req(Method::FetchAtPos(FetchAtPos {
-            frequency_entries: vec![],
             now_ms: 0,
-            custom_entries: vec![],
             enabled_sources_bitmask: 0,
             literal_roman_candidate_disabled: false,
-            custom_dictionary_disabled: false,
-            learned_entries: vec![],
+            ..FetchAtPos::default()
         })),
         &mut engine,
         &config_tl(),
@@ -265,13 +253,10 @@ fn decode_fetch_at_pos_mixed_hanzi_buffer_returns_empty_carrier() {
 
     let resp = dispatch::handle(
         &req(Method::FetchAtPos(FetchAtPos {
-            frequency_entries: vec![],
             now_ms: 0,
-            custom_entries: vec![],
             enabled_sources_bitmask: 0,
             literal_roman_candidate_disabled: false,
-            custom_dictionary_disabled: false,
-            learned_entries: vec![],
+            ..FetchAtPos::default()
         })),
         &mut engine,
         &config_tl(),
@@ -525,76 +510,4 @@ fn empty_start_then_enter_continuous_stays_idle() {
         "EnterContinuous from empty raw must NOT enter Phase::Continuous"
     );
     assert!(resp.continuous.is_none());
-}
-
-// ---- v3.5.8 Phase 9.3a — FetchAtPos plumbs user-frequency snapshot ------
-// Decode-only smoke test: confirm a `FetchAtPos` request carrying a
-// non-empty `frequency_entries` + non-zero `now_ms` round-trips through
-// `decode_intent` → `Intent::FetchAtPos` without panicking and that the
-// lexicon-unavailable degraded path still returns an empty carrier
-// (state-availability fallback, not a decode failure). The full
-// boost-amplifies-score behaviour is pinned hermetically in
-// `engine/lexicon/tests/user_freq_plumb.rs`; this test only locks the
-// composing-side decode wiring.
-
-#[test]
-fn fetch_at_pos_carries_user_freq_snapshot_through_decode() {
-    let mut engine = Engine::new();
-    dispatch::handle(
-        &req(Method::Start(protos::engine::Start {
-            text: "tsua".into(),
-        })),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
-    dispatch::handle(
-        &req(Method::EnterContinuous(EnterContinuous {})),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
-
-    let resp = dispatch::handle(
-        &req(Method::FetchAtPos(FetchAtPos {
-            frequency_entries: vec![
-                protos::engine::FrequencyEntry {
-                    display_text_key: "珠仔".into(),
-                    count: 3,
-                    last_used_ms: 1_700_000_000_000,
-                    canonical_tl: String::new(),
-                },
-                // Duplicate key exercises the `last-write-wins` policy
-                // documented at `ranking::build_frequency_map`.
-                protos::engine::FrequencyEntry {
-                    display_text_key: "珠仔".into(),
-                    count: 7,
-                    last_used_ms: 1_700_000_001_000,
-                    canonical_tl: String::new(),
-                },
-            ],
-            now_ms: 1_700_000_002_000,
-            custom_entries: vec![],
-            enabled_sources_bitmask: 0,
-            // §34/S22: disable the literal-roman prepend — this test pins
-            // user-freq snapshot threading + empty-when-lexicon-absent, and the
-            // bare literal candidate (added regardless of lexicon) is noise here.
-            literal_roman_candidate_disabled: true,
-            custom_dictionary_disabled: false,
-            learned_entries: vec![],
-        })),
-        &mut engine,
-        &config_tl(),
-    )
-    .expect("dispatch ok");
-
-    // Lexicon is not installed in this bare test process, so the
-    // candidate carrier is still empty — but the carrier MUST be
-    // present (proving the dispatcher reached `handle_fetch_at_pos`)
-    // and the decode must not have panicked on the populated payload.
-    let cont = resp.continuous.expect("continuous carrier present");
-    assert!(
-        cont.candidates.is_empty(),
-        "lexicon not installed → empty candidates, but decode succeeded"
-    );
 }

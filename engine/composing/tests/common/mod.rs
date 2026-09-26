@@ -19,16 +19,18 @@ use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
 
 use composing::api::Engine;
-use composing::dispatch;
+use composing::{dispatch, Intent, UserRows};
 use fst::SetBuilder;
-use lexicon::{EngineHandle as LexiconHandle, LexiconPaths, SyllableInventory};
+use lexicon::{
+    CustomEntry, EngineHandle as LexiconHandle, LearnedEntry, LexiconPaths, SyllableInventory,
+};
 use phonetics::{canonicalize_poj_syllable, canonicalize_syllable};
 use protos::engine::composing_request::Method;
 use protos::engine::effect::Kind;
 use protos::engine::{
-    AppConfig, ComposingRequest, ComposingResponse, CustomDictEntry, Effect, EnterContinuous,
-    FetchAtPos, FrequencyEntry, Start,
+    AppConfig, ComposingRequest, ComposingResponse, Effect, EnterContinuous, Start,
 };
+use ranking::FrequencyData;
 
 pub const SEPARATOR: u8 = 0xFF;
 const RANK_NEUTRAL_BITMASK: u16 = 1u16 << 11;
@@ -439,12 +441,58 @@ pub const NOW_MS: i64 = 1_700_000_000_000;
 
 /// One `user_frequency.db` row: `hanji` / `canonical_tl` picked `count`
 /// times, last `age_ms` before [`NOW_MS`].
-pub fn selected(hanji: &str, canonical_tl: &str, count: u32, age_ms: i64) -> FrequencyEntry {
-    FrequencyEntry {
-        display_text_key: hanji.into(),
+#[derive(Clone, Debug)]
+pub struct Selected {
+    pub hanji: String,
+    pub canonical_tl: String,
+    pub count: i32,
+    pub last_used_ms: i64,
+}
+
+pub fn selected(hanji: &str, canonical_tl: &str, count: i32, age_ms: i64) -> Selected {
+    Selected {
+        hanji: hanji.into(),
+        canonical_tl: canonical_tl.into(),
         count,
         last_used_ms: NOW_MS - age_ms,
-        canonical_tl: canonical_tl.into(),
+    }
+}
+
+/// A `FetchAtPos` as the engine runs it: the settings a platform sends plus
+/// the user rows the engine reads from its stores (`composing::UserRows`).
+#[derive(Clone, Debug, Default)]
+pub struct Fetch {
+    pub now_ms: i64,
+    pub enabled_sources_bitmask: u32,
+    pub literal_roman_candidate_disabled: bool,
+    pub frequency: Vec<Selected>,
+    pub custom: Vec<CustomEntry>,
+    pub learned: Vec<LearnedEntry>,
+}
+
+impl Fetch {
+    pub fn intent(self) -> Intent {
+        let frequency = self
+            .frequency
+            .into_iter()
+            .map(|row| {
+                let data = FrequencyData {
+                    count: row.count,
+                    last_used_ms: row.last_used_ms,
+                };
+                (row.hanji, row.canonical_tl, data)
+            })
+            .collect();
+        Intent::FetchAtPos {
+            now_ms: self.now_ms,
+            enabled_sources_bitmask: self.enabled_sources_bitmask,
+            literal_roman_candidate_disabled: self.literal_roman_candidate_disabled,
+            user_rows: UserRows {
+                frequency,
+                custom: self.custom,
+                learned: self.learned,
+            },
+        }
     }
 }
 
@@ -490,11 +538,7 @@ pub fn req(method: Method) -> ComposingRequest {
 /// `Engine` and return the `FetchAtPos` response (its `continuous` carrier is
 /// `None` when the engine never entered the continuous phase — callers that
 /// care distinguish that from an empty candidate list).
-pub fn fetch_at_pos_response(
-    config: &AppConfig,
-    raw: &str,
-    fetch: FetchAtPos,
-) -> ComposingResponse {
+pub fn fetch_at_pos_response(config: &AppConfig, raw: &str, fetch: Fetch) -> ComposingResponse {
     let mut engine = Engine::new();
     dispatch::handle(
         &req(Method::Start(Start { text: raw.into() })),
@@ -508,7 +552,7 @@ pub fn fetch_at_pos_response(
         config,
     )
     .expect("EnterContinuous");
-    dispatch::handle(&req(Method::FetchAtPos(fetch)), &mut engine, config).expect("FetchAtPos")
+    dispatch::apply(fetch.intent(), &mut engine, config)
 }
 
 /// [`fetch_at_pos_response`] under `config(input_mode)` with
@@ -518,13 +562,13 @@ pub fn fetch_at_pos_response(
 pub fn fetch_hanji_with_custom(
     raw: &str,
     input_mode: &str,
-    custom: Vec<CustomDictEntry>,
+    custom: Vec<CustomEntry>,
 ) -> Vec<String> {
     fetch_hanji(
         raw,
         input_mode,
-        FetchAtPos {
-            custom_entries: custom,
+        Fetch {
+            custom,
             ..Default::default()
         },
     )
@@ -533,7 +577,7 @@ pub fn fetch_hanji_with_custom(
 /// [`fetch_at_pos_response`] under `config(input_mode)` with an arbitrary
 /// `FetchAtPos` payload, reduced to the candidate hanji in display order
 /// (roman-only candidates — including the §34 literal at index 0 — dropped).
-pub fn fetch_hanji(raw: &str, input_mode: &str, fetch: FetchAtPos) -> Vec<String> {
+pub fn fetch_hanji(raw: &str, input_mode: &str, fetch: Fetch) -> Vec<String> {
     let resp = fetch_at_pos_response(&config(input_mode), raw, fetch);
     resp.continuous
         .map(|c| {
@@ -552,7 +596,7 @@ pub type Cell = (Option<String>, String, String, String);
 
 /// [`fetch_at_pos_response`] reduced to [`Cell`]s in display order (the §34
 /// literal included, at index 0).
-pub fn fetch_cells(config: &AppConfig, raw: &str, fetch: FetchAtPos) -> Vec<Cell> {
+pub fn fetch_cells(config: &AppConfig, raw: &str, fetch: Fetch) -> Vec<Cell> {
     fetch_at_pos_response(config, raw, fetch)
         .continuous
         .map(|c| {

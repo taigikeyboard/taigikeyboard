@@ -316,11 +316,9 @@ pub struct RawCandidate {
     pub is_custom: bool,
 }
 
-/// v3.5.8 Phase 9 Item 12 — one `custom_dictionary.db` row hoisted
-/// from `protos::engine::CustomDictEntry` (proto→domain boundary in
-/// `composing/src/dispatch.rs::build_custom_entries`). `roman` /
-/// `hanji` are the raw stored columns the platform marshalled
-/// verbatim (no display capitalization) so the engine's
+/// v3.5.8 Phase 9 Item 12 — one `custom_dictionary.db` row, as the engine
+/// reads it from its store (`composing::UserRows`). `roman` / `hanji` are
+/// the raw stored columns, verbatim (no display capitalization) so the engine's
 /// `(roman, hanji)` dedupe key collides correctly against
 /// `dict.bin`'s `DictionaryRecord.tl` / `.hanzi`. `hanji = None`
 /// is a romanization-only custom entry (mirrors
@@ -332,11 +330,10 @@ pub struct CustomEntry {
     pub hanji: Option<String>,
 }
 
-/// Learned phrases (§50) — one auto-learned `(Hanji, canonical-TL)` pair
-/// hoisted from `protos::engine::LearnedEntry` (proto→domain boundary in
-/// `composing/src/dispatch.rs::build_learned_entries`). Unlike
-/// [`CustomEntry`] both fields are canonical (the engine emitted them on
-/// `Effect.PhraseLearned`), so a learned row is ranked exactly like a
+/// Learned phrases (§50) — one auto-learned `(Hanji, canonical-TL)` pair, as
+/// the engine reads it from its store (`composing::UserRows`) and as a final
+/// commit teaches it (`composing::Applied`). Unlike [`CustomEntry`] both
+/// fields are canonical (the engine derived them), so a learned row is ranked exactly like a
 /// `dict.bin` record with no frequency and no source bits: it competes in
 /// the same [`SortKey`] pick and never overrides
 /// (`docs/architecture/behavioral-invariants.md` §50).
@@ -726,8 +723,8 @@ fn exact_candidates_for_key(
 ///
 /// `freq_map` is the user-selection snapshot keyed by the
 /// `(display_text, canonical_tl)` pair (Core Principle #7), built once
-/// per fetch by `composing/src/dispatch.rs::handle_fetch_at_pos` from
-/// `FetchAtPos.frequency_entries`. `now_ms` is the platform's
+/// per fetch from the engine's `user_frequency.db` rows
+/// (`composing::UserRows.frequency`). `now_ms` is the platform's
 /// epoch-ms wall clock at fetch time. `record_to_candidate` looks
 /// up each candidate by that pair, computes
 /// [`ranking::user_freq_boost`] (saturated at

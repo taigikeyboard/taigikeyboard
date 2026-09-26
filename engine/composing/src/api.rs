@@ -436,6 +436,46 @@ impl Default for EngineState {
     }
 }
 
+/// The user's own rows a `FetchAtPos` ranks with, for the pending buffer.
+/// The engine reads them from its user-data stores (`dispatch` crate,
+/// `user_data::handle_composing`); no platform sends them
+/// (`docs/architecture/user-data-engine-roadmap.md` P9). Empty = neutral:
+/// no boost, no custom or learned candidates.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct UserRows {
+    /// The learned counts for the candidates a neutral fetch offered, keyed
+    /// by the `(display_text, canonical_tl)` pair.
+    pub frequency: ranking::FrequencyMap,
+    /// The custom-dictionary entries matching the buffer — raw stored
+    /// `(roman, hanji)` columns. `roman` may be TL or POJ display form
+    /// (whichever the user typed, v3.5.9 B-4): the lattice / dedupe axis
+    /// treats it as raw (`shadow::custom_toneless_key` canonicalizes per
+    /// mode) and only the synthesized commit key folds it to canonical TL.
+    pub custom: Vec<lexicon::CustomEntry>,
+    /// The learned phrases (§50) matching the buffer, most-learned first —
+    /// the order decides which of two separator forms of one reading wins.
+    pub learned: Vec<lexicon::LearnedEntry>,
+}
+
+/// What a mutating intent produced: the response the platform gets, and the
+/// phrase a final commit taught (§50). The engine keeps the phrase in its own
+/// store (`dispatch` crate, `user_data::handle_composing`); it never crosses
+/// the FFI.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Applied {
+    pub response: ComposingResponse,
+    pub learned: Option<lexicon::LearnedEntry>,
+}
+
+impl From<ComposingResponse> for Applied {
+    fn from(response: ComposingResponse) -> Self {
+        Self {
+            response,
+            learned: None,
+        }
+    }
+}
+
 /// Mirrors the iOS `ComposingState.Intent` / Android `ComposingState.Intent`
 /// case set 1:1. Decoded from `protos::engine::ComposingRequest::method`
 /// inside `dispatch::handle`.
@@ -471,33 +511,11 @@ pub enum Intent {
     /// `transition.rs` only sees this variant via a defensive snapshot
     /// arm; production callers always go through dispatch.
     ///
-    /// v3.5.8 Phase 9.3a — carries the per-candidate
-    /// `user_frequency.db` snapshot (`frequency_entries`, keyed by
-    /// `display_text_key = hanji ?? roman`) and the platform wall
-    /// clock (`now_ms`, epoch-ms). Both fields are decoded verbatim
-    /// from `FetchAtPos { frequency_entries, now_ms }` and threaded
-    /// straight to `handle_fetch_at_pos`. Empty list + `now_ms = 0`
-    /// is the backward-compatible "no user-freq plumbing yet" mode
-    /// that reproduces PR-9.2 behavior (neutral 1.0 boost, rank 1
-    /// everywhere).
+    /// `now_ms` is the platform wall clock (epoch-ms) the recency ranking
+    /// reads; `user_rows` the user's own data the fetch ranks with
+    /// ([`UserRows`]) — the engine reads them from its stores, a wire
+    /// request decodes with none.
     ///
-    /// v3.5.8 Phase 9 Item 12 — `custom_entries` carries the
-    /// platform's `custom_dictionary.db` matches for the current raw
-    /// buffer (raw stored `(roman, hanji)` columns; DB stays native).
-    /// Decoded verbatim from `FetchAtPos.custom_entries` and threaded
-    /// to `handle_fetch_at_pos`, which synthesizes a full-buffer
-    /// `RawCandidate` per entry and dedupes `(roman, hanji)` against
-    /// the FST hits. Empty list = no custom matches / feature
-    /// disabled — backward-compatible no-op.
-    ///
-    /// **v3.5.9 B-4** — `roman` may legitimately be either TL or POJ
-    /// display form (whichever the user typed when storing the
-    /// entry). The engine treats it as raw on the lattice / dedupe
-    /// axis (`composing::shadow::custom_toneless_key` canonicalizes
-    /// per-mode for the FST family) and folds it through
-    /// `phonetics::api::canonical_tl_form` only when synthesizing the
-    /// `user_frequency.db` commit key (`display_text`), keeping the
-    /// commit key mode-invariant.
     /// PR-9.6 — `enabled_sources_bitmask` carries the user's dictionary
     /// source-toggle state so continuous candidates honour the same
     /// toggles as Tab3 browse. Decoded verbatim from
@@ -510,14 +528,10 @@ pub enum Intent {
     /// only the §34 forced prepend, not the natural roman candidates. Full
     /// wire/sentinel contract: the `FetchAtPos` proto comment.
     FetchAtPos {
-        frequency_entries: Vec<protos::engine::FrequencyEntry>,
         now_ms: i64,
-        custom_entries: Vec<protos::engine::CustomDictEntry>,
         enabled_sources_bitmask: u32,
         literal_roman_candidate_disabled: bool,
-        /// Learned phrases (§50) — decoded verbatim from
-        /// `FetchAtPos.learned_entries`; empty = feature off / un-wired.
-        learned_entries: Vec<protos::engine::LearnedEntry>,
+        user_rows: UserRows,
     },
     /// Nail a candidate segment in `Phase::Continuous`. The engine takes
     /// `pending[..consumed_bytes]` as the nailed segment's raw text and
@@ -614,6 +628,11 @@ impl Engine {
     /// resulting response (preedit + ordered effects + is_composing). Delegates to the pure transition table in
     /// `transition.rs`.
     pub fn apply(&mut self, intent: Intent, config: &AppConfig) -> ComposingResponse {
+        self.apply_learning(intent, config).response
+    }
+
+    /// [`apply`](Self::apply), with the phrase a final commit taught (§50).
+    pub fn apply_learning(&mut self, intent: Intent, config: &AppConfig) -> Applied {
         crate::transition::apply(&mut self.state, intent, config)
     }
 

@@ -28,7 +28,7 @@ pub trait LearnedPhraseSource: Send + Sync {
     /// The phrases whose search key under `family` / `form` EQUALS `key` —
     /// the whole buffer, never a prefix.
     fn rows_matching(&self, family: &str, form: &str, key: &str) -> Vec<LearnedPhrase>;
-    /// Records one `Effect::PhraseLearned`. Best-effort; never logs the words.
+    /// Records one phrase a final commit taught. Best-effort; never logs the words.
     fn learn_phrase(&self, hanzi: &str, canonical_tl: &str);
     /// Bumps a phrase the user just picked whole. Best-effort.
     fn touch_phrase(&self, hanzi: &str, canonical_tl: &str);

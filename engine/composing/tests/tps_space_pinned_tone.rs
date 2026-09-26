@@ -26,14 +26,14 @@
 //! key that is itself a production syllable is present as a control row
 //! (之/tsi under ㄐㄧㆵ) and asserted on.
 
-use protos::engine::{CustomDictEntry, FetchAtPos};
-
 mod common;
+use common::Fetch;
 use common::{
     build_dictionary_fst_tps, build_syllables_fst_tps, build_tkdb_v3, config,
     empty_association_bin, engine_install_lock, fetch_at_pos_response, install_lexicon, write_temp,
     Row,
 };
+use lexicon::CustomEntry;
 
 /// Three families, each minimal for one axis of the fix:
 /// - `ㄒㄧ` open rime: 詩 (si1, unmarked) vs 死 (si2) / 是 (si7). The
@@ -138,13 +138,13 @@ fn fetch_hanji(raw: &str) -> Vec<String> {
 /// `custom_toneless_key` rejects a non-Bopomofo body, and custom romans are
 /// TL / POJ. Its pin gate is symmetry for the day that changes; see the
 /// comment at that call site.)
-fn fetch_hanji_with_custom(raw: &str, custom: Vec<CustomDictEntry>) -> Vec<String> {
+fn fetch_hanji_with_custom(raw: &str, custom: Vec<CustomEntry>) -> Vec<String> {
     let cfg = config("tps");
     let resp = fetch_at_pos_response(
         &cfg,
         raw,
-        FetchAtPos {
-            custom_entries: custom,
+        Fetch {
+            custom,
             ..Default::default()
         },
     );
@@ -162,7 +162,7 @@ fn fetch_hanji_with_custom(raw: &str, custom: Vec<CustomDictEntry>) -> Vec<Strin
 /// that care about how much of the buffer a commit would eat.
 fn fetch_spans(raw: &str) -> Vec<(String, u32)> {
     let cfg = config("tps");
-    let resp = fetch_at_pos_response(&cfg, raw, FetchAtPos::default());
+    let resp = fetch_at_pos_response(&cfg, raw, Fetch::default());
     resp.continuous
         .map(|c| {
             c.candidates
@@ -314,7 +314,7 @@ fn space_pin_also_gates_custom_dictionary_entries() {
     // is appended AFTER dictionary filtering, so without its own gate the
     // "only tone 1/4" promise leaks through the custom source — `ㄒㄧ`␣
     // would still show a tone-7 entry the user did not ask for.
-    let marked = vec![CustomDictEntry {
+    let marked = vec![CustomEntry {
         roman: "sī".into(),
         hanji: Some("侍".into()),
     }];
@@ -347,7 +347,7 @@ fn space_pin_keeps_an_unmarked_custom_entry() {
     // unmarked survives. `sai` (tone 1) under `ㄙㄞ`␣ — a key the fixture
     // dictionary has no row for, so the entry can only arrive through the
     // custom path.
-    let unmarked = vec![CustomDictEntry {
+    let unmarked = vec![CustomEntry {
         roman: "sai".into(),
         hanji: Some("私".into()),
     }];
@@ -365,7 +365,7 @@ fn space_pin_gates_a_custom_stop_coda_entry() {
     install_fixture_tps();
     // Stop-coda half: tone 8 (`tsi̍t`) is marked, so `ㄐㄧㆵ`␣ must drop the
     // custom entry while the tone-4 dictionary row 這 stays.
-    let marked = vec![CustomDictEntry {
+    let marked = vec![CustomEntry {
         roman: "tsi̍t".into(),
         hanji: Some("蜀".into()),
     }];

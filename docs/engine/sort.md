@@ -41,15 +41,14 @@ Identity is the `(word, tl)` pair — `UNIQUE(word, tl)`; `tl = ''` is the legac
 
 ## Ownership
 
-Ranking math lives in Rust `engine/ranking` (since v3.5.2). Frequency storage stays platform-side SQLite (`wont_migrate`).
+Ranking math lives in Rust `engine/ranking` (since v3.5.2). Frequency storage is the engine's `user_frequency.db` (`engine/userdata`, `docs/architecture/user-data-engine-roadmap.md`).
 
 | Item | Location |
 |------|----------|
-| Frequency map + boost / decay | Rust `engine/ranking/src/score.rs` (`build_frequency_map`, `FrequencyMap`, `user_freq_boost`, `decayed_user_weight_delta`) |
+| Frequency map + boost / decay | Rust `engine/ranking/src/score.rs` (`FrequencyMap`, `user_freq_boost`, `decayed_user_weight_delta`) |
 | Candidate sort | Rust `engine/lexicon/src/continuous/` (Continuous `FetchAtPos`) |
-| iOS frequency service (SQLite) | `Lexicon/Services/UserFrequencyService.swift` + `Lexicon/Database/UserFrequencyRepository.swift` |
-| Android frequency service (SQLite) | `ime/text/composing/UserFrequencyService.kt` |
-| Bridge | `FrequencyEntry` rows built by `ComposingManager.buildFrequencyEntries` (iOS) / `RustEngineBridge.frequencyRowsToProtoEntries` (Android), sent with `FetchAtPos` |
+| Frequency store | Rust `engine/userdata` `UserFrequencyStore` (`record` on `RecordUsage`, `rows_for_words`) |
+| Rows → ranking | Rust `engine/dispatch/src/user_data.rs` `frequency_map` → `composing::UserRows.frequency` on the re-ranked `FetchAtPos`; no platform sends rows |
 
 ---
 

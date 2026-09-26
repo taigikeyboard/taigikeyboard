@@ -13,9 +13,8 @@
 //! `tests/common/mod.rs` — composing tests cannot import
 //! `lexicon/tests/common/mod.rs` (test-private).
 
-use protos::engine::FetchAtPos;
-
 mod common;
+use common::Fetch;
 use common::{
     build_dictionary_fst, build_syllables_fst, build_tkdb_v3, config, empty_association_bin,
     engine_install_lock, fetch_at_pos_response, install_lexicon, write_temp, Row,
@@ -63,7 +62,7 @@ fn install_fixture() {
 
 fn fetch(raw: &str, input_mode: &str) -> Vec<(Option<String>, String)> {
     let cfg = config(input_mode);
-    let resp = fetch_at_pos_response(&cfg, raw, FetchAtPos::default());
+    let resp = fetch_at_pos_response(&cfg, raw, Fetch::default());
     resp.continuous
         .map(|c| {
             c.candidates

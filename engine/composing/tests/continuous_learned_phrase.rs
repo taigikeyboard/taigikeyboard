@@ -4,11 +4,11 @@
 //! Two halves, pinned together here:
 //!
 //! 1. **Learning** — the final `CommitContinuous` of a composition whose
-//!    every nailed segment was a hanji pick emits `Effect.PhraseLearned`
+//!    every nailed segment was a hanji pick teaches a phrase (`Applied.learned`)
 //!    with the concatenated hanji and the `-`-joined canonical TL. Nothing
-//!    is emitted mid-commit, for a single segment, for a hanji-less
+//!    is taught mid-commit, for a single segment, for a hanji-less
 //!    segment, or past six syllables.
-//! 2. **Recall** — a `FetchAtPos.learned_entries` row whose key equals the
+//! 2. **Recall** — a `UserRows.learned` row whose key equals the
 //!    typed buffer leads the hanji candidates when the dictionary has no
 //!    word under that key, competes (and loses) against a dictionary
 //!    homophone unless `user_frequency` prefers it, dedupes against the
@@ -23,18 +23,16 @@
 use composing::api::Engine;
 use composing::{dispatch, Intent, Phase};
 use protos::engine::composing_request::Method;
-use protos::engine::effect::Kind;
-use protos::engine::{
-    CandidateMessage, CommitContinuous, ComposingResponse, CustomDictEntry, EnterContinuous,
-    FetchAtPos, LearnedEntry, PhraseLearned, Start,
-};
+use protos::engine::{CandidateMessage, CommitContinuous, EnterContinuous, FetchAtPos, Start};
 
 mod common;
+use common::Fetch;
 use common::{
     build_dictionary_fst, build_syllables_fst, build_tkdb_v3, config_tl, effect_kinds,
     empty_association_bin, engine_in_continuous, engine_install_lock, fetch_at_pos_response,
     fetch_cells, fetch_hanji, install_lexicon, req, selected, write_temp, Cell, Row, NOW_MS,
 };
+use lexicon::{CustomEntry, LearnedEntry};
 
 // ---- Learning ---------------------------------------------------------------
 
@@ -52,34 +50,27 @@ fn pick((hanji, tl, consumed_bytes, syllable_count): Pick<'_>) -> Intent {
     }
 }
 
-fn learned_effect(resp: &ComposingResponse) -> Option<PhraseLearned> {
-    resp.effect.iter().find_map(|e| match e.kind.as_ref() {
-        Some(Kind::PhraseLearned(p)) => Some(p.clone()),
-        _ => None,
-    })
-}
-
 /// Apply every pick over `raw` and return what the LAST commit learned,
 /// against the fixture lexicon: the commit and the learned reading both
 /// group words through its compound oracle (起來 is a word, 記起 is not).
-fn learn(raw: &str, picks: &[Pick<'_>]) -> Option<PhraseLearned> {
+fn learn(raw: &str, picks: &[Pick<'_>]) -> Option<LearnedEntry> {
     let _lock = engine_install_lock();
     install(&fixture_rows(), FIXTURE_SYLLABLES);
     learn_installed(raw, picks)
 }
 
 /// [`learn`] against the lexicon the caller installed under the lock.
-fn learn_installed(raw: &str, picks: &[Pick<'_>]) -> Option<PhraseLearned> {
+fn learn_installed(raw: &str, picks: &[Pick<'_>]) -> Option<LearnedEntry> {
     let mut e = engine_in_continuous(raw);
     let mut last = None;
     for p in picks {
-        last = Some(e.apply(pick(*p), &config_tl()));
+        last = Some(e.apply_learning(pick(*p), &config_tl()));
     }
-    learned_effect(last.as_ref().expect("at least one pick"))
+    last.expect("at least one pick").learned
 }
 
-fn phrase(hanji: &str, canonical_tl: &str) -> Option<PhraseLearned> {
-    Some(PhraseLearned {
+fn phrase(hanji: &str, canonical_tl: &str) -> Option<LearnedEntry> {
+    Some(LearnedEntry {
         hanji: hanji.into(),
         canonical_tl: canonical_tl.into(),
     })
@@ -90,27 +81,26 @@ fn final_commit_of_hanji_picks_learns_the_joined_phrase() {
     let _lock = engine_install_lock();
     install(&fixture_rows(), FIXTURE_SYLLABLES);
     let mut e = engine_in_continuous("kikhilai");
-    let mid = e.apply(pick((Some("記"), "kì", 2, 1)), &config_tl());
+    let mid = e.apply_learning(pick((Some("記"), "kì", 2, 1)), &config_tl());
     assert!(
-        learned_effect(&mid).is_none(),
+        mid.learned.is_none(),
         "mid-commit must not learn; got {:?}",
-        effect_kinds(&mid.effect)
+        mid.learned
     );
     assert!(matches!(e.snapshot_state().phase, Phase::Continuous { .. }));
 
-    let fin = e.apply(pick((Some("起來"), "khí-lâi", 6, 2)), &config_tl());
+    let fin = e.apply_learning(pick((Some("起來"), "khí-lâi", 6, 2)), &config_tl());
     assert_eq!(
-        effect_kinds(&fin.effect),
+        effect_kinds(&fin.response.effect),
         vec![
             "CommitTextReplacingPreedit",
             "ResetAutocomplete",
             "ResetAutocompleteContext",
             "NextWordWordSelected",
-            "PhraseLearned",
         ]
     );
     // Two words, as the commit renders them: 記 + the dictionary word 起來.
-    assert_eq!(learned_effect(&fin), phrase("記起來", "kì khí-lâi"));
+    assert_eq!(fin.learned, phrase("記起來", "kì khí-lâi"));
     assert!(matches!(e.snapshot_state().phase, Phase::Idle));
 }
 
@@ -215,16 +205,18 @@ fn dictionary_khinsiann_piece_wins_over_the_typed_separator() {
 }
 
 /// `CommitContinuous` for the candidate the platform would pick: its own
-/// `consumed_span_end` as `consumed_bytes`, every sidechannel echoed.
-fn commit(cand: &CandidateMessage) -> Method {
-    Method::CommitContinuous(CommitContinuous {
+/// `consumed_span_end` as `consumed_bytes`, every sidechannel echoed —
+/// decoded as the wire request is.
+fn commit(cand: &CandidateMessage) -> Intent {
+    let method = Method::CommitContinuous(CommitContinuous {
         display_text: cand.display_text.clone(),
         canonical_text: cand.display_text.clone(),
         association_tl: cand.canonical_tl.clone(),
         hanji: cand.hanji.clone(),
         consumed_bytes: cand.consumed_span_end,
         syllable_count: cand.syllable_count,
-    })
+    });
+    dispatch::decode_intent(&req(method)).expect("CommitContinuous decodes")
 }
 
 fn fetch_candidate(engine: &mut Engine, hanji: &str) -> CandidateMessage {
@@ -263,16 +255,16 @@ fn typed_khinsiann_survives_the_real_fetch_and_commit_path() {
 
     let ki = fetch_candidate(&mut engine, "記");
     assert_eq!(ki.consumed_span_end, 2, "記 ends before the typed run");
-    let mid = dispatch::handle(&req(commit(&ki)), &mut engine, &cfg).expect("mid-commit");
-    assert!(learned_effect(&mid).is_none());
+    let mid = engine.apply_learning(commit(&ki), &cfg);
+    assert!(mid.learned.is_none());
 
     let khilai = fetch_candidate(&mut engine, "起來");
     assert_eq!(
         khilai.consumed_span_end, 8,
         "the run folds into 起來's span"
     );
-    let fin = dispatch::handle(&req(commit(&khilai)), &mut engine, &cfg).expect("final commit");
-    assert_eq!(learned_effect(&fin), phrase("記起來", "kì--khí-lâi"));
+    let fin = engine.apply_learning(commit(&khilai), &cfg);
+    assert_eq!(fin.learned, phrase("記起來", "kì--khí-lâi"));
 }
 
 #[test]
@@ -428,9 +420,9 @@ fn learned(hanji: &str, canonical_tl: &str) -> LearnedEntry {
     }
 }
 
-fn with_learned(rows: Vec<LearnedEntry>) -> FetchAtPos {
-    FetchAtPos {
-        learned_entries: rows,
+fn with_learned(rows: Vec<LearnedEntry>) -> Fetch {
+    Fetch {
+        learned: rows,
         ..Default::default()
     }
 }
@@ -439,7 +431,7 @@ fn with_learned(rows: Vec<LearnedEntry>) -> FetchAtPos {
 fn learned_phrase_leads_when_the_dictionary_has_no_word_under_the_key() {
     let _lock = engine_install_lock();
     install(&fixture_rows(), FIXTURE_SYLLABLES);
-    let cold = fetch_hanji("kikhilai", "tl", FetchAtPos::default());
+    let cold = fetch_hanji("kikhilai", "tl", Fetch::default());
     assert_eq!(
         cold[0], "機起來",
         "cold start synthesizes the split; got {cold:?}"
@@ -601,9 +593,9 @@ fn dictionary_homophone_beats_a_learned_row_until_the_user_prefers_it() {
     let hanji = fetch_hanji(
         "kikhilai",
         "tl",
-        FetchAtPos {
-            learned_entries: vec![learned("記起來", "kì-khí-lâi")],
-            frequency_entries: vec![selected("記起來", "kì-khí-lâi", 1, 1_000)],
+        Fetch {
+            learned: vec![learned("記起來", "kì-khí-lâi")],
+            frequency: vec![selected("記起來", "kì-khí-lâi", 1, 1_000)],
             now_ms: NOW_MS,
             ..Default::default()
         },
@@ -644,12 +636,12 @@ fn manual_custom_row_outranks_a_learned_row_under_the_same_key() {
     let hanji = fetch_hanji(
         "kikhilai",
         "tl",
-        FetchAtPos {
-            custom_entries: vec![CustomDictEntry {
+        Fetch {
+            custom: vec![CustomEntry {
                 roman: "kì-khí-lâi".into(),
                 hanji: Some("既起來".into()),
             }],
-            learned_entries: vec![learned("記起來", "kì-khí-lâi")],
+            learned: vec![learned("記起來", "kì-khí-lâi")],
             ..Default::default()
         },
     );

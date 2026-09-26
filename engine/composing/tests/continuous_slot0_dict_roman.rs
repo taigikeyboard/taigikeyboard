@@ -26,9 +26,8 @@
 //!
 //! Hermetic `LexiconHandle` install comes from `tests/common/mod.rs`.
 
-use protos::engine::FetchAtPos;
-
 mod common;
+use common::Fetch;
 use common::{
     build_dictionary_fst_tl_toned, build_syllables_fst_tl, build_tkdb_v3, config_tl,
     empty_association_bin, engine_install_lock, fetch_at_pos_response, install_lexicon, write_temp,
@@ -98,7 +97,7 @@ fn install_fixture() {
 /// `assemble_candidates` and is independent of the toggle.
 fn fetch_candidates(raw: &str) -> Vec<(Option<String>, String)> {
     let cfg = config_tl();
-    let resp = fetch_at_pos_response(&cfg, raw, FetchAtPos::default());
+    let resp = fetch_at_pos_response(&cfg, raw, Fetch::default());
     resp.continuous
         .map(|c| {
             c.candidates

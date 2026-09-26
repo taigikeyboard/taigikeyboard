@@ -41,9 +41,9 @@ use std::path::PathBuf;
 use std::sync::OnceLock;
 
 use lexicon::{EngineHandle as LexiconHandle, LexiconPaths};
-use protos::engine::FetchAtPos;
 
 mod common;
+use common::Fetch;
 use common::{config, fetch_at_pos_response};
 
 // ---------------------------------------------------------------------------
@@ -104,7 +104,7 @@ fn complete_syllable_hanji_set(input: &str, mode: &str) -> BTreeSet<String> {
     let resp = fetch_at_pos_response(
         &cfg,
         input,
-        FetchAtPos {
+        Fetch {
             enabled_sources_bitmask: u32::MAX,
             literal_roman_candidate_disabled: true,
             ..Default::default()

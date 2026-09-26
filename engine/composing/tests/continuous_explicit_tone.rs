@@ -20,9 +20,8 @@
 //! `dictionary/build/create_fst.py:127-130` — without the toned keys the
 //! tone filter would have nothing to hit.
 
-use protos::engine::FetchAtPos;
-
 mod common;
+use common::Fetch;
 use common::{
     build_dictionary_fst_tl_toned, build_dictionary_fst_tps, build_syllables_fst_tl,
     build_syllables_fst_tps, build_tkdb_v3, config, empty_association_bin, engine_install_lock,
@@ -82,7 +81,7 @@ fn fetch_hanji(raw: &str) -> Vec<String> {
 /// Mode-parameterized driver shared by the TL and TPS fetch helpers.
 fn fetch_hanji_in(raw: &str, input_mode: &str) -> Vec<String> {
     let cfg = config(input_mode);
-    let resp = fetch_at_pos_response(&cfg, raw, FetchAtPos::default());
+    let resp = fetch_at_pos_response(&cfg, raw, Fetch::default());
     resp.continuous
         .map(|c| {
             c.candidates

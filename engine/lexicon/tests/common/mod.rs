@@ -258,3 +258,24 @@ pub fn hanji_of(candidates: &[lexicon::RawCandidate]) -> Vec<&str> {
         .filter_map(|c| c.hanji.as_deref())
         .collect()
 }
+
+/// One `user_frequency.db` row, as the engine ranks it.
+pub struct FrequencyFixture {
+    pub display_text_key: String,
+    pub count: i32,
+    pub last_used_ms: i64,
+    pub canonical_tl: String,
+}
+
+/// The ranking map for `rows`; a later row for the same pair wins.
+pub fn frequency_map(rows: &[FrequencyFixture]) -> ranking::FrequencyMap {
+    rows.iter()
+        .map(|row| {
+            let data = ranking::FrequencyData {
+                count: row.count,
+                last_used_ms: row.last_used_ms,
+            };
+            (row.display_text_key.clone(), row.canonical_tl.clone(), data)
+        })
+        .collect()
+}

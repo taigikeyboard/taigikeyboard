@@ -9,23 +9,25 @@ use std::path::PathBuf;
 use std::sync::{Arc, Once, OnceLock};
 
 use composing::api::ComposingError;
+use composing::{Intent, UserRows};
 use nextword::NextWordError;
 use protos::engine::{
-    composing_request, effect, next_word_effect, next_word_request, next_word_response, response,
+    composing_request, next_word_effect, next_word_request, next_word_response, response,
     user_data_request, user_data_response, AppConfig, BackupExported, BackupImported,
     BackupRefusal, ComposingRequest, ComposingResponse, CustomCsvExported, CustomCsvImported,
-    CustomDictEntry, CustomDictionaryEntry, CustomDictionaryRefusal, CustomEntries,
-    CustomEntryDeleted, CustomEntryMatches, CustomEntrySaved, ErrorCode, FetchAtPos,
-    FrequencyEntry, ImportBackup, ImportCustomCsv, LearnedEntry, ListCustomEntries,
-    NextWordRequest, NextWordResponse, OpenUserData, RawNextWordPrediction, RecordUsage,
-    ResetUserData, Response, SaveCustomEntry, SearchCustomEntries, Source, UsageRecorded,
-    UserDataJournal, UserDataOpened, UserDataRequest, UserDataReset, UserDataResponse,
+    CustomDictionaryEntry, CustomDictionaryRefusal, CustomEntries, CustomEntryDeleted,
+    CustomEntryMatches, CustomEntrySaved, ErrorCode, ImportBackup, ImportCustomCsv,
+    ListCustomEntries, NextWordRequest, NextWordResponse, OpenUserData, RawNextWordPrediction,
+    RecordUsage, ResetUserData, Response, SaveCustomEntry, SearchCustomEntries, Source,
+    UsageRecorded, UserDataJournal, UserDataOpened, UserDataRequest, UserDataReset,
+    UserDataResponse,
 };
+use ranking::{FrequencyData, FrequencyMap};
 use userdata::{
     AssociationPair, BackupError, CustomDictionaryCSV, CustomDictionaryCSVError,
     CustomDictionaryError, CustomDictionaryRow, CustomDictionarySource, CustomDictionaryStore,
-    CustomEntry, FollowingRow, FrequencyRow, JournalMode, LearnedPhrase, LearnedPhraseSource,
-    UserDataPaths, UserDataStores,
+    CustomEntry, FollowingRow, JournalMode, LearnedPhrase, LearnedPhraseSource, UserDataPaths,
+    UserDataStores,
 };
 
 /// Why a user-data request did nothing.
@@ -452,14 +454,14 @@ impl UserDataHandle {
     }
 }
 
-/// A composing request, answered from the engine's own user data once the
-/// platform opened it. `FetchAtPos` then runs the two passes every platform
-/// ran over the FFI (roadmap P3b, brainstorm R5) — in-process: the custom
-/// and learned rows for the pending buffer, a neutral fetch that discovers
-/// the candidates, their frequency rows, and a re-ranked fetch. The rows a
-/// platform still sends are replaced, never merged (U9). Every other
-/// request goes to composing, and the phrases it decides to learn are
-/// written here (P3c). Before the open, everything goes straight to composing.
+/// A composing request, answered with the engine's own user data once the
+/// platform opened it. `FetchAtPos` runs two passes in-process (roadmap
+/// P3b, brainstorm R5): the custom and learned rows for the pending buffer,
+/// a neutral fetch that discovers the candidates, their frequency rows, and
+/// a re-ranked fetch. Every other request goes to composing, and the phrase
+/// a final commit taught (§50) is written to `learned_phrases.db` here
+/// (P3c). Before the open, everything goes straight to composing and a
+/// taught phrase is not kept — nowhere to keep it.
 pub(crate) fn handle_composing(
     request: &ComposingRequest,
     config: &AppConfig,
@@ -470,30 +472,33 @@ pub(crate) fn handle_composing(
         return composing.handle(request, config, generation);
     };
     let Some(composing_request::Method::FetchAtPos(sent)) = request.method.as_ref() else {
-        let mut response = composing.handle(request, config, generation)?;
-        persist_learned_phrases(stores, &mut response);
-        return Ok(response);
+        let applied = composing.handle_learning(request, config, generation)?;
+        if let Some(learned) = applied.learned {
+            stores
+                .learned_phrases
+                .learn_phrase(&learned.hanji, &learned.canonical_tl);
+        }
+        return Ok(applied.response);
     };
-    // The platform's settings for this fetch; its rows are dropped (U9).
-    let mut fetch = FetchAtPos {
+    let fetch = |user_rows| Intent::FetchAtPos {
         now_ms: sent.now_ms,
         enabled_sources_bitmask: sent.enabled_sources_bitmask,
         literal_roman_candidate_disabled: sent.literal_roman_candidate_disabled,
-        custom_dictionary_disabled: sent.custom_dictionary_disabled,
-        ..FetchAtPos::default()
+        user_rows,
     };
     // The buffer can grow between reading it and fetching (the main thread
     // keeps typing while a worker fetches): rows chosen for one buffer must
     // not rank another, so a fetch that answers for a different buffer is
     // redone once with that buffer's rows.
+    let mut rows = UserRows::default();
     let mut neutral = None;
     for _ in 0..2 {
-        // A stale generation answers the idle snapshot inside `handle`.
+        // A stale generation answers the idle snapshot inside `query`.
         let Some(raw) = composing.pending_raw(generation) else {
-            return composing.handle(request, config, generation);
+            return Ok(composing.query(&fetch(UserRows::default()), config, generation));
         };
-        (fetch.custom_entries, fetch.learned_entries) = user_rows(stores, &raw, config, &fetch);
-        let answer = composing.handle(&fetch_request(&fetch), config, generation)?;
+        rows = buffer_rows(stores, &raw, config, sent.custom_dictionary_disabled);
+        let answer = composing.query(&fetch(rows.clone()), config, generation);
         let answered_for = answer.preedit.as_ref().map(|p| p.raw_input.as_str());
         let current = answered_for.unwrap_or("") == raw;
         neutral = Some(answer);
@@ -502,31 +507,11 @@ pub(crate) fn handle_composing(
         }
     }
     let neutral = neutral.expect("the loop fetches at least once");
-    let Some(frequency_entries) = frequency_entries(stores, &neutral) else {
+    let Some(frequency) = frequency_map(stores, &neutral) else {
         return Ok(neutral);
     };
-    fetch.frequency_entries = frequency_entries;
-    // A failed re-rank keeps the neutral answer, as the platforms did.
-    Ok(composing
-        .handle(&fetch_request(&fetch), config, generation)
-        .unwrap_or(neutral))
-}
-
-/// Writes the phrases the engine decided to learn (§50) into
-/// `learned_phrases.db` and takes their effects out of the response: "the
-/// engine decides, the platform persists" became "the engine persists" once
-/// the platform opened the stores (roadmap P3c) — a platform must not learn
-/// them a second time.
-fn persist_learned_phrases(stores: &UserDataStores, response: &mut ComposingResponse) {
-    response.effect.retain(|effect| match &effect.kind {
-        Some(effect::Kind::PhraseLearned(learned)) => {
-            stores
-                .learned_phrases
-                .learn_phrase(&learned.hanji, &learned.canonical_tl);
-            false
-        }
-        _ => true,
-    });
+    rows.frequency = frequency;
+    Ok(composing.query(&fetch(rows), config, generation))
 }
 
 /// Writes the bigrams the next-word engine decided to record into
@@ -556,20 +541,21 @@ fn persist_associations(mut response: NextWordResponse) -> NextWordResponse {
 }
 
 /// The custom-dictionary rows (unless the user turned the dictionary off)
-/// and the learned phrases for `raw`, keyed the way the platforms keyed them.
-fn user_rows(
+/// and the learned phrases for `raw`, keyed the way the platforms keyed
+/// them — no frequency rows yet.
+fn buffer_rows(
     stores: &UserDataStores,
     raw: &str,
     config: &AppConfig,
-    fetch: &FetchAtPos,
-) -> (Vec<CustomDictEntry>, Vec<LearnedEntry>) {
+    custom_dictionary_disabled: bool,
+) -> UserRows {
     let Some(key) = (!raw.is_empty())
         .then(|| userdata::derive_custom_query_key(raw, &config.input_mode))
         .flatten()
     else {
-        return (Vec::new(), Vec::new());
+        return UserRows::default();
     };
-    let custom = if fetch.custom_dictionary_disabled {
+    let custom = if custom_dictionary_disabled {
         Vec::new()
     } else {
         CustomDictionarySource::rows_matching(
@@ -579,7 +565,7 @@ fn user_rows(
             &key.key,
         )
         .iter()
-        .map(custom_dict_entry)
+        .map(custom_entry)
         .collect()
     };
     let learned = LearnedPhraseSource::rows_matching(
@@ -591,15 +577,16 @@ fn user_rows(
     .iter()
     .map(learned_entry)
     .collect();
-    (custom, learned)
+    UserRows {
+        custom,
+        learned,
+        ..UserRows::default()
+    }
 }
 
 /// The learned counts for the candidates `neutral` offers, deduped by the
 /// key the engine ranks on; `None` when there is nothing to re-rank with.
-fn frequency_entries(
-    stores: &UserDataStores,
-    neutral: &ComposingResponse,
-) -> Option<Vec<FrequencyEntry>> {
+fn frequency_map(stores: &UserDataStores, neutral: &ComposingResponse) -> Option<FrequencyMap> {
     let mut seen = HashSet::new();
     let words: Vec<String> = neutral
         .continuous
@@ -613,13 +600,26 @@ fn frequency_entries(
         return None;
     }
     let rows = stores.frequency.rows_for_words(&words)?;
-    (!rows.is_empty()).then(|| rows.iter().map(frequency_entry).collect())
+    if rows.is_empty() {
+        return None;
+    }
+    Some(
+        rows.into_iter()
+            .map(|row| {
+                let data = FrequencyData {
+                    count: ranked_count(row.count),
+                    last_used_ms: row.last_used_ms,
+                };
+                (row.word, row.tl, data)
+            })
+            .collect(),
+    )
 }
 
-fn fetch_request(fetch: &FetchAtPos) -> ComposingRequest {
-    ComposingRequest {
-        method: Some(composing_request::Method::FetchAtPos(fetch.clone())),
-    }
+/// A stored count as ranking reads it: saturated at `i32::MAX`; a negative
+/// one (never written) reads as 0.
+fn ranked_count(count: i64) -> i32 {
+    i32::try_from(count.max(0)).unwrap_or(i32::MAX)
 }
 
 /// A next-word request, with the engine's own user data once the platform
@@ -658,28 +658,18 @@ fn with_user_rows(mut request: NextWordRequest) -> NextWordRequest {
     request
 }
 
-// The row → wire forms, as the platforms marshalled them.
+// The row → engine / wire forms.
 
-/// A count past `u32` saturates; a negative one (never written) reads as 0.
-fn frequency_entry(row: &FrequencyRow) -> FrequencyEntry {
-    FrequencyEntry {
-        display_text_key: row.word.clone(),
-        count: u32::try_from(row.count.max(0)).unwrap_or(u32::MAX),
-        last_used_ms: row.last_used_ms,
-        canonical_tl: row.tl.clone(),
-    }
-}
-
-/// An empty stored hanzi is a romanization-only entry: an ABSENT wire field.
-fn custom_dict_entry(row: &CustomEntry) -> CustomDictEntry {
-    CustomDictEntry {
+/// An empty stored hanzi is a romanization-only entry.
+fn custom_entry(row: &CustomEntry) -> lexicon::CustomEntry {
+    lexicon::CustomEntry {
         roman: row.roman.clone(),
         hanji: (!row.hanzi.is_empty()).then(|| row.hanzi.clone()),
     }
 }
 
-fn learned_entry(phrase: &LearnedPhrase) -> LearnedEntry {
-    LearnedEntry {
+fn learned_entry(phrase: &LearnedPhrase) -> lexicon::LearnedEntry {
+    lexicon::LearnedEntry {
         hanji: phrase.hanzi.clone(),
         canonical_tl: phrase.canonical_tl.clone(),
     }
@@ -835,6 +825,13 @@ mod tests {
     use super::*;
     use protos::engine::{DeleteCustomEntry, ExportCustomCsv};
 
+    #[test]
+    fn a_stored_count_saturates_for_ranking() {
+        assert_eq!(ranked_count(7), 7);
+        assert_eq!(ranked_count(i64::from(i32::MAX) + 1), i32::MAX);
+        assert_eq!(ranked_count(-3), 0);
+    }
+
     fn open_request(directory: &std::path::Path) -> UserDataRequest {
         let paths = UserDataPaths::in_directory(directory);
         UserDataRequest {
@@ -978,41 +975,6 @@ mod tests {
                 .unwrap_err(),
             UserDataError::Invalid("reset selects no store")
         );
-    }
-
-    #[test]
-    fn a_learned_phrase_effect_is_written_and_left_out_of_the_response() {
-        use protos::engine::{Effect, PhraseLearned, ResetAutocomplete};
-
-        let directory = tempfile::tempdir().unwrap();
-        let handle = UserDataHandle::new();
-        handle.handle(&open_request(directory.path())).unwrap();
-        let stores = handle.stores().unwrap();
-        let mut response = ComposingResponse {
-            effect: vec![
-                Effect {
-                    kind: Some(effect::Kind::PhraseLearned(PhraseLearned {
-                        hanji: "做進出口".into(),
-                        canonical_tl: "tsò tsìn-tshut-kháu".into(),
-                    })),
-                },
-                Effect {
-                    kind: Some(effect::Kind::ResetAutocomplete(ResetAutocomplete {})),
-                },
-            ],
-            ..ComposingResponse::default()
-        };
-
-        persist_learned_phrases(stores, &mut response);
-
-        assert_eq!(response.effect.len(), 1, "the document effect stays");
-        assert!(matches!(
-            response.effect[0].kind,
-            Some(effect::Kind::ResetAutocomplete(_))
-        ));
-        let learned = stores.learned_phrases.all_rows().unwrap();
-        assert_eq!(learned.len(), 1);
-        assert_eq!(learned[0].hanzi, "做進出口");
     }
 
     fn call(
