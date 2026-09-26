@@ -230,6 +230,12 @@ impl UserDataDatabase {
         journal: JournalMode,
         schema: StoreSchema,
     ) -> Result<(Connection, Connection), UserDataDatabaseError> {
+        // The directory too: the files are the engine's, so a fresh install
+        // (Android's `databases/` before anything wrote there) must not
+        // depend on a platform having made it first.
+        if let Some(directory) = path.parent() {
+            std::fs::create_dir_all(directory)?;
+        }
         let writer = Connection::open_with_flags(
             path,
             OpenFlags::SQLITE_OPEN_READ_WRITE
