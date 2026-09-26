@@ -1,23 +1,37 @@
 package com.siansiansu.taigikeyboard.ui.tabs.theme
 
-import androidx.compose.foundation.Canvas
+import androidx.annotation.DrawableRes
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -26,11 +40,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.SurfaceRect
 import com.siansiansu.taigikeyboard.ime.core.ThemeImageBackground
-import kotlin.math.min
 import kotlin.math.roundToInt
-import kotlin.math.sqrt
 
 // The theme editor's photo position control: the drag / pinch surface over the live preview and
 // the finger -> focus / zoom math behind it. Mirrors iOS PhotoPositionControl.swift.
@@ -136,31 +149,28 @@ object PhotoPositionDrag {
         }
 }
 
-private val STROKE_WIDTH = 3.dp
-private val HALO_WIDTH = 2.dp
-private val HEAD_LENGTH = 10.dp
-
-/** Half the arrow length as a fraction of the preview's shorter side. */
-private const val HALF_LENGTH_FRACTION = 0.25f
-
-/** The zoom hint's gap radius and tip radius, as fractions of the half length. */
-private const val ZOOM_HINT_INNER_FRACTION = 0.35f
-private const val ZOOM_HINT_OUTER_FRACTION = 0.85f
-private val ZOOM_HINT_DIRECTION = Offset(1f, 1f) / sqrt(2f)
-private val HALO_COLOR = Color.Black.copy(alpha = 0.6f)
+private val HINT_ICON_SIZE = 20.dp
+private val HINT_ITEM_SPACING = 16.dp
+private val HINT_ICON_TEXT_SPACING = 6.dp
+private val HINT_HORIZONTAL_PADDING = 16.dp
+private val HINT_VERTICAL_PADDING = 10.dp
+private const val HINT_BACKGROUND_ALPHA = 0.9f
 
 /**
  * The gesture surface laid over the live preview while the background is a photo: swallows the
- * preview keys' touches, draws a double-headed arrow along each axis the photo can move, and
- * reports every gesture through [PhotoPositionDrag] to [onPhotoChange] — one finger drags (the
- * photo follows it), two fingers pinch the zoom (their pan is ignored, as on iOS). The gesture
- * accumulates into a local photo, so events that land before recomposition never read a stale
- * one. For TalkBack it is one adjustable element labelled [label] that steps the vertical (else
- * horizontal) axis. Mirrors iOS PhotoPositionOverlay.
+ * preview keys' touches and reports every gesture through [PhotoPositionDrag] to [onPhotoChange]
+ * — one finger drags (the photo follows it), two fingers pinch the zoom (their pan is ignored, as
+ * on iOS). The gesture accumulates into a local photo, so events that land before recomposition
+ * never read a stale one. Nothing is drawn while a gesture runs (the moving photo is the
+ * feedback); a [PhotoGestureHint] pill shows until the first touch and again when the photo
+ * changes. For TalkBack it is one adjustable element labelled [label] that steps the vertical
+ * (else horizontal) axis. Mirrors iOS PhotoPositionOverlay.
  */
 @Composable
 fun PhotoPositionOverlay(
     label: String,
+    moveHint: String,
+    zoomHint: String,
     imageWidth: Int,
     imageHeight: Int,
     photo: ThemeImageBackground,
@@ -175,6 +185,8 @@ fun PhotoPositionOverlay(
         val accessibilityAxis = PhotoPositionDrag.accessibilityAxis(axes)
         val currentPhoto by rememberUpdatedState(photo)
         val currentOnPhotoChange by rememberUpdatedState(onPhotoChange)
+        val hintVisible = remember { mutableStateOf(true) }
+        LaunchedEffect(photo.file) { hintVisible.value = true }
 
         Box(
             modifier =
@@ -186,6 +198,7 @@ fun PhotoPositionOverlay(
                         // pinch only zooms (iOS parity).
                         awaitEachGesture {
                             awaitFirstDown().consume()
+                            hintVisible.value = false
                             var gesturePhoto = currentPhoto
                             var previousPressed = 1
                             do {
@@ -232,52 +245,52 @@ fun PhotoPositionOverlay(
                             }
                         },
                     ),
-        ) { PhotoPositionArrow(axes, Modifier.matchParentSize()) }
+        ) {
+            AnimatedVisibility(
+                visible = hintVisible.value,
+                modifier = Modifier.align(Alignment.Center),
+                enter = fadeIn(),
+                exit = fadeOut(),
+            ) { PhotoGestureHint(moveHint, zoomHint) }
+        }
     }
 }
 
 /**
- * A double-headed arrow through the centre along each of [axes] (a cross when both, nothing when
- * neither), plus a shorter diagonal ↖↘ arrow — the "expand" hint that the photo also pinches —
- * drawn every time, since zoom is always possible. The diagonal leaves a gap at the centre so the
- * move cross stays readable. Its own composable on stable inputs so a drag (which changes the
- * photo, not the axes) skips the redraw. Mirrors iOS PhotoPositionArrow.
+ * "Move · Zoom" with the Material Symbols for each gesture (open_with, pinch) on a capsule — the
+ * transient hint over the photo preview. A plain Row, not a Surface: an M3 Surface would take the
+ * touches meant for the gesture surface underneath. Hidden from TalkBack (the surface carries the
+ * label). Mirrors iOS PhotoGestureHint.
  */
 @Composable
-private fun PhotoPositionArrow(
-    axes: PhotoAxes,
-    modifier: Modifier,
+private fun PhotoGestureHint(
+    moveLabel: String,
+    zoomLabel: String,
 ) {
-    Canvas(modifier) {
-        val halfLength = min(size.width, size.height) * HALF_LENGTH_FRACTION
-        if (axes.horizontal) drawPositionArrow(Offset(1f, 0f), inner = 0f, outer = halfLength)
-        if (axes.vertical) drawPositionArrow(Offset(0f, 1f), inner = 0f, outer = halfLength)
-        drawPositionArrow(ZOOM_HINT_DIRECTION, inner = halfLength * ZOOM_HINT_INNER_FRACTION, outer = halfLength * ZOOM_HINT_OUTER_FRACTION)
+    Row(
+        modifier =
+            Modifier
+                .clearAndSetSemantics {}
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = HINT_BACKGROUND_ALPHA), CircleShape)
+                .padding(horizontal = HINT_HORIZONTAL_PADDING, vertical = HINT_VERTICAL_PADDING),
+        horizontalArrangement = Arrangement.spacedBy(HINT_ITEM_SPACING),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        PhotoGestureHintItem(R.drawable.ic_open_with, moveLabel)
+        PhotoGestureHintItem(R.drawable.ic_pinch, zoomLabel)
     }
 }
 
-// A double-headed arrow along the unit vector [along]: on each side of the centre a shaft from
-// radius [inner] out to the tip at radius [outer]. White on a dark halo reads on any photo: every
-// stroke is drawn twice, halo first.
-private fun DrawScope.drawPositionArrow(
-    along: Offset,
-    inner: Float,
-    outer: Float,
+@Composable
+private fun PhotoGestureHintItem(
+    @DrawableRes icon: Int,
+    label: String,
 ) {
-    val across = Offset(-along.y, along.x)
-    val headLengthPx = HEAD_LENGTH.toPx()
-    val strokeWidthPx = STROKE_WIDTH.toPx()
-    val haloWidthPx = HALO_WIDTH.toPx()
-
-    for ((color, width) in listOf(HALO_COLOR to strokeWidthPx + haloWidthPx * 2, Color.White to strokeWidthPx)) {
-        for (sign in listOf(1f, -1f)) {
-            val direction = along * sign
-            val tip = center + direction * outer
-            drawLine(color, center + direction * inner, tip, strokeWidth = width, cap = StrokeCap.Round)
-            // Arrowhead: two strokes swept back from the tip at 45°.
-            for (side in listOf(1f, -1f)) {
-                drawLine(color, tip, tip - (direction - across * side) * headLengthPx, strokeWidth = width, cap = StrokeCap.Round)
-            }
-        }
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(HINT_ICON_TEXT_SPACING),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(painterResource(icon), contentDescription = null, modifier = Modifier.size(HINT_ICON_SIZE), tint = MaterialTheme.colorScheme.onSurface)
+        Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurface)
     }
 }

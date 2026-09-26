@@ -112,7 +112,8 @@ struct ThemeEditorView: View {
             // appears to squeeze it. User themes own shadow (slider 0 = flat) →
             // `appliesThemeShadow: true`. While the background is a gradient the
             // preview doubles as the direction control (drag to set the angle); while
-            // it is a photo, as the position control (drag to move, pinch to zoom the photo).
+            // it is a photo, as the position control (drag to move, pinch to zoom the photo; a
+            // gesture hint shows until the first touch).
             KeyboardPreviewPanel(
                 appearance: viewModel.appearance,
                 appliesThemeShadow: true,
@@ -128,6 +129,8 @@ struct ThemeEditorView: View {
                     ThemePhotoImage(file: photo.wrappedValue.file, variant: .full) { image in
                         PhotoPositionOverlay(
                             label: lang.string(.themePhotoPosition),
+                            moveHint: lang.string(.themePhotoHintMove),
+                            zoomHint: lang.string(.themePhotoHintZoom),
                             imageSize: image.size,
                             photo: photo,
                         )

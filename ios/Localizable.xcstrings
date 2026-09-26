@@ -4411,6 +4411,42 @@
         }
       }
     },
+    "i18n_theme_photoHintMove": {
+      "comment": "Theme editor: label beside the move icon in the transient gesture hint over the photo preview (drag to move the photo). Fades out on first touch.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移動"
+          }
+        }
+      }
+    },
+    "i18n_theme_photoHintZoom": {
+      "comment": "Theme editor: label beside the pinch icon in the transient gesture hint over the photo preview (pinch to zoom the photo). Fades out on first touch.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zoom"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拡大"
+          }
+        }
+      }
+    },
     "i18n_theme_photoPick": {
       "comment": "Theme editor row label / button: open the photo picker when no photo is set yet.",
       "extractionState": "manual",

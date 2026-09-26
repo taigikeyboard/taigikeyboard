@@ -421,7 +421,8 @@ fun ThemeEditorScreen(
             HorizontalDivider()
             // While the background is a gradient the preview doubles as the direction
             // control (drag to set the angle); while it is a photo, as the position
-            // control (drag to move, pinch to zoom the photo).
+            // control (drag to move, pinch to zoom the photo; a gesture hint shows
+            // until the first touch).
             Box {
                 KeyboardPreviewPanel(
                     prefs = prefs,
@@ -450,6 +451,8 @@ fun ThemeEditorScreen(
                     rememberThemePhoto(photo.file, ThemeImageVariant.FULL)?.let { bitmap ->
                         PhotoPositionOverlay(
                             label = L10n.themePhotoPosition,
+                            moveHint = L10n.themePhotoHintMove,
+                            zoomHint = L10n.themePhotoHintZoom,
                             imageWidth = bitmap.width,
                             imageHeight = bitmap.height,
                             photo = photo,
