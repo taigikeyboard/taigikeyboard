@@ -2,12 +2,16 @@
 //! `Storage/UserAssociationStore.swift`; SQL byte-identical.
 
 use crate::capacity::LearningCapacity;
-use crate::database::{immediate_transaction, UserDataDatabase, UserDataDatabaseError};
+use crate::database::{
+    has_column, immediate_transaction, table_exists, user_version, JournalMode, StoreSchema,
+    UserDataDatabase, UserDataDatabaseError,
+};
 use crate::stores::AssociationSink;
 use crate::types::AssociationPair;
 use rusqlite::{params, Connection};
 use std::path::PathBuf;
 
+pub(crate) const FILE_NAME: &str = "user_association.db";
 const TABLE_NAME: &str = "user_association";
 /// CROSS-PLATFORM INVARIANT — mirrors iOS `NextWordSchema.schemaVersion` and
 /// Android `NextWordService.DATABASE_VERSION`.
@@ -42,13 +46,17 @@ impl UserAssociationStore {
         )
     }
 
-    pub fn new(directory: PathBuf, capacity: LearningCapacity) -> Self {
+    pub fn new(path: PathBuf, journal: JournalMode, capacity: LearningCapacity) -> Self {
         Self {
             database: UserDataDatabase::new(
-                "user_association.db",
                 "UserAssociationStore",
-                directory,
-                apply_schema,
+                path,
+                journal,
+                StoreSchema {
+                    apply: apply_schema,
+                    max_known_version: SCHEMA_VERSION,
+                    marks_takeover_on_open: true,
+                },
             ),
             capacity,
         }
@@ -146,14 +154,93 @@ impl AssociationSink for UserAssociationStore {
     }
 }
 
-/// The unique key carries `prev_tl` because a word is the `(Hanji, canonical
-/// TL)` pair on the bigram's PREVIOUS side as well (§24). The `DROP INDEX`
-/// is the one migration: pre-convergence builds named the same index
-/// `idx_user_prev`.
+/// Converges any known shape to v6. A v6 file (this engine, macOS, the
+/// phones since v6) only re-asserts the `IF NOT EXISTS` DDL; an older one is
+/// migrated, re-created and stamped in ONE immediate transaction, so a file
+/// that says v6 always has the v6 table. Mirrors iOS
+/// `NextWordSchema.swift` `ensureTables` and Android `NextWordService.kt`
+/// `ensureUserAssocSchema`.
 fn apply_schema(connection: &Connection) -> rusqlite::Result<()> {
+    if user_version(connection)? >= SCHEMA_VERSION {
+        return create_current(connection);
+    }
+    immediate_transaction::<_, rusqlite::Error>(connection, |connection| {
+        // Another process may have migrated it between the check and the lock.
+        let version = user_version(connection)?;
+        if version < SCHEMA_VERSION {
+            migrate(connection, version)?;
+        }
+        create_current(connection)
+    })?;
+    // Refresh the planner's statistics once, after the DDL; best-effort.
+    connection.execute_batch("PRAGMA optimize;").ok();
+    Ok(())
+}
+
+/// The unique key carries `prev_tl` because a word is the `(Hanji, canonical
+/// TL)` pair on the bigram's PREVIOUS side as well (§24). `idx_user_prev` is
+/// the name pre-convergence desktop builds gave the read index.
+fn create_current(connection: &Connection) -> rusqlite::Result<()> {
+    connection.execute_batch(&table_ddl(TABLE_NAME))?;
     connection.execute_batch(&format!(
-        "CREATE TABLE IF NOT EXISTS {TABLE_NAME} (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    prev_word TEXT NOT NULL,\n    prev_tl TEXT DEFAULT '',\n    next_word TEXT NOT NULL,\n    next_tl TEXT DEFAULT '',\n    count INTEGER DEFAULT 1,\n    last_used TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    UNIQUE(prev_word, prev_tl, next_word, next_tl)\n);\nDROP INDEX IF EXISTS idx_user_prev;\nCREATE INDEX IF NOT EXISTS idx_user_prev_word_tl\n    ON {TABLE_NAME}(prev_word, prev_tl);"
+        "DROP INDEX IF EXISTS idx_user_prev;\nCREATE INDEX IF NOT EXISTS idx_user_prev_word_tl\n    ON {TABLE_NAME}(prev_word, prev_tl);"
     ))?;
     connection.pragma_update(None, "user_version", SCHEMA_VERSION)?;
     Ok(())
+}
+
+fn table_ddl(name: &str) -> String {
+    format!(
+        "CREATE TABLE IF NOT EXISTS {name} (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    prev_word TEXT NOT NULL,\n    prev_tl TEXT DEFAULT '',\n    next_word TEXT NOT NULL,\n    next_tl TEXT DEFAULT '',\n    count INTEGER DEFAULT 1,\n    last_used TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    UNIQUE(prev_word, prev_tl, next_word, next_tl)\n);"
+    )
+}
+
+/// Brings a pre-v6 table to the v6 shape, inside the caller's transaction.
+/// v2 is dropped, as both phones do: its stamp is ambiguous (Android's
+/// `migrateV0ToV2` table vs one written as v2). Any other old table that
+/// carries the columns a row needs is rebuilt with its rows; one that does
+/// not is dropped. That subsumes iOS v3–v5 and Android v0/v1 + v3–v5. The
+/// old single-column `idx_user_prev_word` goes with its table either way.
+/// NAMED DIVERGENCE (user-data-engine-roadmap U7): iOS dropped every table
+/// below v3; one that has the columns is now kept, as Android keeps v0/v1.
+fn migrate(connection: &Connection, version: i64) -> rusqlite::Result<()> {
+    if !table_exists(connection, TABLE_NAME)? {
+        return Ok(());
+    }
+    if version == 2 || !has_row_columns(connection)? {
+        connection.execute_batch(&format!("DROP TABLE {TABLE_NAME};"))
+    } else {
+        rebuild_to_v6(connection)
+    }
+}
+
+/// Rebuilds under the v6 key, every row kept. Widening a UNIQUE key cannot
+/// conflict (the old key is a strict subset), so no merge step. `id` is
+/// copied: it is the read query's final tie-break. A table without
+/// `prev_tl` / `next_tl` (v3, Android's v0/v1 ladder) gets `''`; a NULL gets
+/// `''`. Mirrors iOS / Android `rebuildToV6`.
+fn rebuild_to_v6(connection: &Connection) -> rusqlite::Result<()> {
+    let tl_column = |column: &str| -> rusqlite::Result<String> {
+        Ok(if has_column(connection, TABLE_NAME, column)? {
+            format!("COALESCE({column}, '')")
+        } else {
+            "''".to_owned()
+        })
+    };
+    let prev_tl = tl_column("prev_tl")?;
+    let next_tl = tl_column("next_tl")?;
+    connection.execute_batch(&table_ddl(&format!("{TABLE_NAME}_new")))?;
+    connection.execute_batch(&format!(
+        "INSERT INTO {TABLE_NAME}_new\n    (id, prev_word, prev_tl, next_word, next_tl, count, last_used)\nSELECT id, prev_word, {prev_tl}, next_word, {next_tl}, count, last_used\nFROM {TABLE_NAME};\nDROP TABLE {TABLE_NAME};\nALTER TABLE {TABLE_NAME}_new RENAME TO {TABLE_NAME};"
+    ))
+}
+
+/// The columns a rebuilt row is copied from.
+fn has_row_columns(connection: &Connection) -> rusqlite::Result<bool> {
+    for column in ["id", "prev_word", "next_word", "count", "last_used"] {
+        if !has_column(connection, TABLE_NAME, column)? {
+            return Ok(false);
+        }
+    }
+    Ok(true)
 }

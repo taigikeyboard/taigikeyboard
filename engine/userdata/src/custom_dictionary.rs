@@ -2,7 +2,10 @@
 //! from any romanization. Port of `Storage/CustomDictionaryStore.swift` +
 //! `CustomDictionaryRow.swift`; SQL byte-identical.
 
-use crate::database::{immediate_transaction, UserDataDatabase, UserDataDatabaseError};
+use crate::database::{
+    has_column, immediate_transaction, is_taken_over, mark_taken_over, user_version, JournalMode,
+    StoreSchema, UserDataDatabase, UserDataDatabaseError,
+};
 use crate::stores::CustomDictionarySource;
 use crate::timestamp::utc_timestamp_now;
 use crate::types::{CustomEntry, CustomSearchKey};
@@ -11,12 +14,18 @@ use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Arc;
 
+pub(crate) const FILE_NAME: &str = "custom_dictionary.db";
 const TABLE_NAME: &str = "custom_dictionary";
 const SEARCH_KEY_TABLE_NAME: &str = "custom_search_key";
 /// v4 (2026-09-18): search-key abbreviation face = leading spelling unit per
 /// syllable (`behavioral-invariants.md` §46) — `rederive_search_keys_if_needed`
 /// rebuilds every entry's keys once.
 const SCHEMA_VERSION: i64 = 4;
+/// The highest stamp any writer of this file ever used — the three platforms
+/// number one schema differently (Android `DATABASE_VERSION` 10, iOS 6,
+/// macOS / desktop 4; portability D5). Above it the file is from a later
+/// build and stays closed.
+const HIGHEST_KNOWN_VERSION: i64 = 10;
 /// One transaction per this many accepted rows, so a large import never
 /// holds the write lock for its whole run. CROSS-PLATFORM INVARIANT —
 /// mirrors iOS `CustomDictionaryRepository.swift:180`.
@@ -138,16 +147,22 @@ impl CustomDictionaryStore {
     /// `entry_limit` is injectable ONLY so a test can reach the cap without
     /// writing 30000 rows.
     pub fn new(
-        directory: PathBuf,
+        path: PathBuf,
+        journal: JournalMode,
         derive_search_keys: SearchKeyDeriver,
         entry_limit: usize,
     ) -> Self {
         Self {
             database: UserDataDatabase::new(
-                "custom_dictionary.db",
                 "CustomDictionaryStore",
-                directory,
-                apply_schema,
+                path,
+                journal,
+                StoreSchema {
+                    apply: apply_schema,
+                    max_known_version: HIGHEST_KNOWN_VERSION,
+                    // Taken over once the keys are re-derived.
+                    marks_takeover_on_open: false,
+                },
             ),
             derive_search_keys,
             entry_limit,
@@ -311,14 +326,20 @@ impl CustomDictionaryStore {
 
     /// Rebuilds every entry's search keys when the stored database predates
     /// the current derivation (v2 → v3: the POJ `o͘` / ⁿ fix; v3 → v4: the
-    /// leading-unit abbreviation face), then records the shape. An entry whose roman will not derive keeps its keys.
+    /// leading-unit abbreviation face) or the engine has not taken the file
+    /// over yet, then records the shape and the takeover. A file another
+    /// platform wrote is always re-derived once: its stamp cannot say which
+    /// derivation its keys came from (Android v7 is iOS v3 — portability D5).
+    /// The stamp only ever rises to 4, never falls: Android's 10 and iOS's 6
+    /// stay, so an older app of that platform opening the file sees no
+    /// downgrade (user-data-engine-roadmap U8). An entry whose roman will not
+    /// derive keeps its keys.
     pub fn rederive_search_keys_if_needed(&self) -> Result<(), CustomDictionaryError> {
         let stored: Option<Vec<(String, String)>> = self
             .database
             .perform::<_, CustomDictionaryError>(|connection| {
-                let version: i64 =
-                    connection.pragma_query_value(None, "user_version", |row| row.get(0))?;
-                if version >= SCHEMA_VERSION {
+                let version = user_version(connection)?;
+                if version >= SCHEMA_VERSION && is_taken_over(connection)? {
                     return Ok(None);
                 }
                 Ok(Some(entry_romans(connection)?))
@@ -350,7 +371,9 @@ impl CustomDictionaryStore {
                             replace_search_keys(connection, id, keys)?;
                         }
                     }
-                    connection.pragma_update(None, "user_version", SCHEMA_VERSION)?;
+                    let version = user_version(connection)?;
+                    connection.pragma_update(None, "user_version", version.max(SCHEMA_VERSION))?;
+                    mark_taken_over(connection)?;
                     Ok(())
                 })
             })
@@ -579,25 +602,36 @@ fn apply_schema(connection: &Connection) -> rusqlite::Result<()> {
 /// parked in this table under `origin` / `learn_count` + a partial unique
 /// index; they live in `learned_phrases.db` since 2026-09-21): the index
 /// goes, the rows the column marked as learned go with their side keys,
-/// then the two columns themselves (bundled SQLite has `DROP COLUMN`; the
-/// phones' does not, so there the columns stay inert) — after which the
-/// gate is false and this is a read-only pragma on every later open. A
-/// database that never had the shape (every released one) runs nothing but
-/// that pragma. The branch is one immediate transaction, as the IME and the
-/// settings app open the same file; every statement in it is idempotent, so
-/// two processes both taking it is harmless.
+/// then the two columns themselves (the bundled SQLite has `DROP COLUMN` on
+/// every platform, so an Android v10 file that reached v9 loses the inert
+/// pair its own 3.22 could not drop) — after which the gate is false and
+/// this is two read-only pragmas on every later open. A database that never
+/// had the shape (every released one) runs nothing else. The branch is one
+/// immediate transaction, as the IME and the settings app open the same
+/// file; every statement in it is idempotent, so two processes both taking
+/// it is harmless.
 /// mirrors macos/.../Storage/CustomDictionaryStore.swift `dropLearnedRowsIfPresent`.
 fn drop_learned_rows_if_present(connection: &Connection) -> rusqlite::Result<()> {
-    let has_origin = connection
-        .prepare(&format!("PRAGMA table_info({TABLE_NAME});"))?
-        .query_map([], |row| row.get::<_, String>(1))?
-        .any(|column| column.is_ok_and(|name| name == "origin"));
-    if !has_origin {
+    if !has_column(connection, TABLE_NAME, "origin")?
+        && !has_column(connection, TABLE_NAME, "learn_count")?
+    {
         return Ok(());
     }
     immediate_transaction::<_, rusqlite::Error>(connection, |connection| {
-        connection.execute_batch(&format!(
-            "DROP INDEX IF EXISTS idx_custom_learned_pair;\nDELETE FROM {SEARCH_KEY_TABLE_NAME} WHERE entry_id IN (SELECT id FROM {TABLE_NAME} WHERE origin = 1);\nDELETE FROM {TABLE_NAME} WHERE origin = 1;\nALTER TABLE {TABLE_NAME} DROP COLUMN learn_count;\nALTER TABLE {TABLE_NAME} DROP COLUMN origin;"
-        ))
+        // Each column checked on its own: a file can carry one without the
+        // other (a hand-edited or half-written v9), and `DROP COLUMN` on an
+        // absent column fails the whole open.
+        connection.execute_batch("DROP INDEX IF EXISTS idx_custom_learned_pair;")?;
+        if has_column(connection, TABLE_NAME, "origin")? {
+            connection.execute_batch(&format!(
+                "DELETE FROM {SEARCH_KEY_TABLE_NAME} WHERE entry_id IN (SELECT id FROM {TABLE_NAME} WHERE origin = 1);\nDELETE FROM {TABLE_NAME} WHERE origin = 1;\nALTER TABLE {TABLE_NAME} DROP COLUMN origin;"
+            ))?;
+        }
+        if has_column(connection, TABLE_NAME, "learn_count")? {
+            connection.execute_batch(&format!(
+                "ALTER TABLE {TABLE_NAME} DROP COLUMN learn_count;"
+            ))?;
+        }
+        Ok(())
     })
 }

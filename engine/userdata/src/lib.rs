@@ -46,7 +46,10 @@ pub use custom_dictionary::{
     CustomDictionaryRow, CustomDictionaryStore, SearchKeyDeriver,
 };
 #[cfg(feature = "sqlite")]
-pub use database::{immediate_transaction, UserDataDatabase, UserDataDatabaseError};
+pub use database::{
+    immediate_transaction, JournalMode, UserDataDatabase, UserDataDatabaseError,
+    TAIGI_APPLICATION_ID,
+};
 #[cfg(feature = "sqlite")]
 pub use frequency::UserFrequencyStore;
 #[cfg(feature = "sqlite")]
@@ -58,4 +61,6 @@ pub use stores::{
 pub use timestamp::utc_timestamp_now;
 pub use types::{AssociationPair, CustomEntry, CustomSearchKey, FrequencyRow, LearnedPhrase};
 #[cfg(feature = "sqlite")]
-pub use user_data_stores::{derive_custom_query_key, derive_custom_search_keys, UserDataStores};
+pub use user_data_stores::{
+    derive_custom_query_key, derive_custom_search_keys, UserDataPaths, UserDataStores,
+};

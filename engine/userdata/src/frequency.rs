@@ -2,12 +2,16 @@
 //! `Storage/UserFrequencyStore.swift`; SQL byte-identical.
 
 use crate::capacity::LearningCapacity;
-use crate::database::{UserDataDatabase, UserDataDatabaseError};
+use crate::database::{
+    has_column, immediate_transaction, table_exists, JournalMode, StoreSchema, UserDataDatabase,
+    UserDataDatabaseError,
+};
 use crate::stores::FrequencySource;
 use crate::types::FrequencyRow;
 use rusqlite::{params, params_from_iter, Connection};
 use std::path::PathBuf;
 
+pub(crate) const FILE_NAME: &str = "user_frequency.db";
 const TABLE_NAME: &str = "user_frequency";
 const SCHEMA_VERSION: i64 = 2;
 /// The columns every `FrequencyRow` read selects, next to the decoder that
@@ -40,13 +44,17 @@ impl UserFrequencyStore {
 
     /// `capacity` is a parameter so a test can hand in a small cap and watch
     /// a real `record` call prune.
-    pub fn new(directory: PathBuf, capacity: LearningCapacity) -> Self {
+    pub fn new(path: PathBuf, journal: JournalMode, capacity: LearningCapacity) -> Self {
         Self {
             database: UserDataDatabase::new(
-                "user_frequency.db",
                 "UserFrequencyStore",
-                directory,
-                apply_schema,
+                path,
+                journal,
+                StoreSchema {
+                    apply: apply_schema,
+                    max_known_version: SCHEMA_VERSION,
+                    marks_takeover_on_open: true,
+                },
             ),
             capacity,
         }
@@ -161,15 +169,50 @@ fn decode_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<FrequencyRow> {
     })
 }
 
-/// The current shape, created directly. iOS carries a migrator from a
-/// single-`word` unique key; this platform has never shipped the older
-/// shape, so there is nothing to migrate.
+/// The current shape: a pre-pair-key table rebuilt first, then created
+/// directly when absent. Stamps 2, the number iOS and Android already use.
 fn apply_schema(connection: &Connection) -> rusqlite::Result<()> {
-    connection.execute_batch(&format!(
-        "CREATE TABLE IF NOT EXISTS {TABLE_NAME} (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    word TEXT NOT NULL,\n    tl TEXT NOT NULL DEFAULT '',\n    count INTEGER DEFAULT 1,\n    last_used TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    UNIQUE(word, tl)\n);\nCREATE INDEX IF NOT EXISTS idx_count ON {TABLE_NAME}(count DESC);\nCREATE INDEX IF NOT EXISTS idx_last_used ON {TABLE_NAME}(last_used DESC);"
-    ))?;
+    migrate_to_pair_key_if_needed(connection)?;
+    connection.execute_batch(&table_ddl(TABLE_NAME))?;
     // No index on `word` alone: the UNIQUE constraint's automatic index
     // already has it as the leftmost column, so it serves `WHERE word IN`.
+    connection.execute_batch(&format!(
+        "CREATE INDEX IF NOT EXISTS idx_count ON {TABLE_NAME}(count DESC);\nCREATE INDEX IF NOT EXISTS idx_last_used ON {TABLE_NAME}(last_used DESC);"
+    ))?;
     connection.pragma_update(None, "user_version", SCHEMA_VERSION)?;
     Ok(())
+}
+
+fn table_ddl(name: &str) -> String {
+    format!(
+        "CREATE TABLE IF NOT EXISTS {name} (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    word TEXT NOT NULL,\n    tl TEXT NOT NULL DEFAULT '',\n    count INTEGER DEFAULT 1,\n    last_used TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    UNIQUE(word, tl)\n);"
+    )
+}
+
+/// Rebuilds a pre-pair-key table (inline `word UNIQUE`, no `tl` column —
+/// iOS / Android before R5) into the `(word, tl)` shape: `tl = ''` for every
+/// old row, `id` / `count` / `last_used` / `created_at` kept. SQLite cannot
+/// drop an inline UNIQUE, so create-new / copy / drop / rename in one
+/// immediate transaction (the old `idx_word` goes with the old table).
+/// Gated on the SHAPE, not `user_version`: iOS can leave a new-shape file at
+/// 0. Mirrors iOS `UserFrequencySchema.swift` `migrateToPairKeyIfNeeded` and
+/// Android `UserFrequencyService.kt` `migrateToPairKey`.
+fn migrate_to_pair_key_if_needed(connection: &Connection) -> rusqlite::Result<()> {
+    let is_pre_pair_key = |connection: &Connection| -> rusqlite::Result<bool> {
+        Ok(table_exists(connection, TABLE_NAME)? && !has_column(connection, TABLE_NAME, "tl")?)
+    };
+    if !is_pre_pair_key(connection)? {
+        return Ok(());
+    }
+    immediate_transaction::<_, rusqlite::Error>(connection, |connection| {
+        // Another process may have rebuilt it between the check and the lock.
+        if !is_pre_pair_key(connection)? {
+            return Ok(());
+        }
+        let staging = format!("{TABLE_NAME}_pairkey_migrate");
+        connection.execute_batch(&table_ddl(&staging))?;
+        connection.execute_batch(&format!(
+            "INSERT INTO {staging} (id, word, tl, count, last_used, created_at)\n    SELECT id, word, '', count, last_used, created_at FROM {TABLE_NAME};\nDROP TABLE {TABLE_NAME};\nALTER TABLE {staging} RENAME TO {TABLE_NAME};"
+        ))
+    })
 }

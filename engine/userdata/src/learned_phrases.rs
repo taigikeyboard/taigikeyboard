@@ -4,12 +4,15 @@
 //! byte-identical.
 
 use crate::custom_dictionary::SearchKeyDeriver;
-use crate::database::{immediate_transaction, UserDataDatabase, UserDataDatabaseError};
+use crate::database::{
+    immediate_transaction, JournalMode, StoreSchema, UserDataDatabase, UserDataDatabaseError,
+};
 use crate::stores::LearnedPhraseSource;
 use crate::types::{CustomSearchKey, LearnedPhrase};
 use rusqlite::{params, Connection};
 use std::path::PathBuf;
 
+pub(crate) const FILE_NAME: &str = "learned_phrases.db";
 const TABLE_NAME: &str = "learned_phrases";
 const SEARCH_KEY_TABLE_NAME: &str = "learned_search_key";
 /// `user_version` — a key-derivation change bumps it and adds a backfill step.
@@ -45,13 +48,22 @@ impl LearnedPhraseStore {
 
     /// The cap is injectable ONLY so a test can reach it without writing
     /// 2000 rows.
-    pub fn new(directory: PathBuf, derive_search_keys: SearchKeyDeriver, limit: usize) -> Self {
+    pub fn new(
+        path: PathBuf,
+        journal: JournalMode,
+        derive_search_keys: SearchKeyDeriver,
+        limit: usize,
+    ) -> Self {
         Self {
             database: UserDataDatabase::new(
-                "learned_phrases.db",
                 "LearnedPhraseStore",
-                directory,
-                apply_schema,
+                path,
+                journal,
+                StoreSchema {
+                    apply: apply_schema,
+                    max_known_version: SCHEMA_VERSION,
+                    marks_takeover_on_open: true,
+                },
             ),
             derive_search_keys,
             limit,

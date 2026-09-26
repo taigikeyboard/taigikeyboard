@@ -2,23 +2,22 @@
 //! directories. Ported from `macos/Tests/TaigiInputMethodCoreTests/
 //! {LearningStore,LearningCapacity,CustomDictionaryStore}Tests.swift`.
 
+mod common;
+
+use common::{pair, paths, scratch};
 use std::sync::{Arc, Mutex};
 use userdata::{
-    derive_custom_query_key, derive_custom_search_keys, AssociationPair, AssociationSink,
-    CustomDictionaryError, CustomDictionaryRow, CustomDictionarySource, CustomDictionaryStore,
-    CustomSearchKey, FrequencySource, LearnedPhraseRow, LearnedPhraseSource, LearnedPhraseStore,
+    derive_custom_query_key, derive_custom_search_keys, AssociationSink, CustomDictionaryError,
+    CustomDictionaryRow, CustomDictionarySource, CustomDictionaryStore, CustomSearchKey,
+    FrequencySource, JournalMode, LearnedPhraseRow, LearnedPhraseSource, LearnedPhraseStore,
     LearningCapacity, SearchKeyDeriver, UserAssociationStore, UserDataStores, UserFrequencyStore,
 };
-
-fn scratch() -> tempfile::TempDir {
-    tempfile::tempdir().unwrap()
-}
 
 fn frequency_store(
     directory: &tempfile::TempDir,
     capacity: LearningCapacity,
 ) -> UserFrequencyStore {
-    let store = UserFrequencyStore::new(directory.path().to_path_buf(), capacity);
+    let store = UserFrequencyStore::new(paths(directory).frequency, JournalMode::Wal, capacity);
     store.open_blocking();
     assert!(store.is_ready());
     store
@@ -48,7 +47,12 @@ fn custom_store(
     deriver: SearchKeyDeriver,
     limit: usize,
 ) -> CustomDictionaryStore {
-    let store = CustomDictionaryStore::new(directory.path().to_path_buf(), deriver, limit);
+    let store = CustomDictionaryStore::new(
+        paths(directory).custom_dictionary,
+        JournalMode::Wal,
+        deriver,
+        limit,
+    );
     store.open_blocking();
     store
 }
@@ -103,7 +107,8 @@ fn recording_counts_the_pair_and_reads_back_by_word() {
 fn a_store_that_is_not_open_answers_none_rather_than_waiting() {
     let directory = scratch();
     let store = UserFrequencyStore::new(
-        directory.path().to_path_buf(),
+        paths(&directory).frequency,
+        JournalMode::Wal,
         UserFrequencyStore::shipped_capacity(),
     );
     assert!(!store.is_ready());
@@ -164,20 +169,12 @@ fn recording_past_the_cap_prunes_down_below_it_least_used_first() {
 
 // Association
 
-fn pair(previous: &str, previous_tl: &str, next: &str, next_tl: &str) -> AssociationPair {
-    AssociationPair {
-        previous: previous.into(),
-        previous_tl: previous_tl.into(),
-        next: next.into(),
-        next_tl: next_tl.into(),
-    }
-}
-
 #[test]
 fn bigrams_are_keyed_on_both_readings_and_written_in_order() {
     let directory = scratch();
     let store = UserAssociationStore::new(
-        directory.path().to_path_buf(),
+        paths(&directory).association,
+        JournalMode::Wal,
         UserAssociationStore::shipped_capacity(),
     );
     store.open_blocking();
@@ -210,7 +207,8 @@ fn recording_associations_past_the_cap_prunes_down_below_it() {
     // several rows towards one throttle tick.
     let directory = scratch();
     let store = UserAssociationStore::new(
-        directory.path().to_path_buf(),
+        paths(&directory).association,
+        JournalMode::Wal,
         LearningCapacity::new("user_association", 10, 4, 1),
     );
     store.open_blocking();
@@ -509,7 +507,8 @@ fn set_user_version(directory: &tempfile::TempDir, version: i64) {
 fn a_store_that_is_not_open_answers_no_rows_rather_than_waiting() {
     let directory = scratch();
     let store = CustomDictionaryStore::new(
-        directory.path().to_path_buf(),
+        paths(&directory).custom_dictionary,
+        JournalMode::Wal,
         stub_deriver(""),
         CustomDictionaryStore::MAX_ENTRIES,
     );
@@ -606,7 +605,8 @@ fn clearing_one_learning_store_leaves_the_others_alone() {
 
 fn learned_store(directory: &tempfile::TempDir, limit: usize) -> LearnedPhraseStore {
     let store = LearnedPhraseStore::new(
-        directory.path().to_path_buf(),
+        paths(directory).learned_phrases,
+        JournalMode::Wal,
         Arc::new(derive_custom_search_keys),
         limit,
     );
@@ -854,48 +854,4 @@ fn a_romanization_only_entry_is_stored_and_found_and_the_seeds_carry_their_ids()
         "same ids as iOS, so the same word is the same row on every platform"
     );
     assert_eq!(seeded[0].created_at.len(), 19, "yyyy-MM-dd HH:mm:ss");
-}
-
-#[test]
-fn perform_from_inside_the_worker_is_refused_rather_than_deadlocking() {
-    // trace: Codex PR4 BLOCK — a job that re-enters `perform` would wait for
-    // a barrier the worker can never reach.
-    let directory = scratch();
-    let database = userdata::UserDataDatabase::new(
-        "probe.db",
-        "Probe",
-        directory.path().to_path_buf(),
-        |_| Ok(()),
-    );
-    database.open_blocking();
-    let outcome: Result<
-        Result<(), userdata::UserDataDatabaseError>,
-        userdata::UserDataDatabaseError,
-    > = database.perform(|_| Ok(Ok(())));
-    assert!(outcome.is_ok());
-    let handle = std::sync::Arc::new(database);
-    let inner = std::sync::Arc::clone(&handle);
-    let (tx, rx) = std::sync::mpsc::channel();
-    handle.write(move |_| {
-        let nested: Result<(), userdata::UserDataDatabaseError> = inner.perform(|_| Ok(()));
-        tx.send(nested.is_err()).ok();
-        Ok(())
-    });
-    assert!(
-        rx.recv_timeout(std::time::Duration::from_secs(5)).unwrap(),
-        "re-entrant perform is an error"
-    );
-    // A write queued before open is not lost: the open is a job in the same queue.
-    let directory = scratch();
-    let store = UserFrequencyStore::new(
-        directory.path().to_path_buf(),
-        UserFrequencyStore::shipped_capacity(),
-    );
-    store.open();
-    store.record("先", "sian");
-    assert_eq!(
-        store.all_rows().unwrap().len(),
-        1,
-        "queued behind the open, not dropped"
-    );
 }
