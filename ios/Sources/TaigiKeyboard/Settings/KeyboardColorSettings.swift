@@ -187,7 +187,6 @@ struct ThemeImageBackground: Codable, Equatable {
     static let defaultFocus: Double = 0.5
     static let centredFocus = CGPoint(x: defaultFocus, y: defaultFocus)
     static let zoomRange: ClosedRange<Double> = 1 ... 2
-    static let zoomStep: Double = 0.05
     static let defaultZoom: Double = 1
 
     let file: String

@@ -266,18 +266,6 @@ fun ThemeEditorScreen(
                                         defaultValue = ThemeImageBackground.DEFAULT_DIM,
                                         onValueChange = { setBackground(ThemeBackground.Image(photo.copy(dim = it))) },
                                     )
-                                    // Pinching the preview zooms too; the row makes zoom findable
-                                    // and reachable with TalkBack.
-                                    SettingsDivider(Modifier.padding(vertical = 8.dp))
-                                    SliderRow(
-                                        label = L10n.themePhotoZoom,
-                                        value = photo.zoom,
-                                        valueFrom = ThemeImageBackground.ZOOM_MIN,
-                                        valueTo = ThemeImageBackground.ZOOM_MAX,
-                                        stepSize = ThemeImageBackground.ZOOM_STEP,
-                                        defaultValue = ThemeImageBackground.DEFAULT_ZOOM,
-                                        onValueChange = { setBackground(ThemeBackground.Image(photo.withZoom(it))) },
-                                    )
                                 }
                             }
                             background is ThemeBackground.Solid ->

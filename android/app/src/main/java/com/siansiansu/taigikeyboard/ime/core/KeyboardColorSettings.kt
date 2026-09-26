@@ -163,7 +163,6 @@ data class ThemeImageBackground(
         const val DEFAULT_FOCUS = 0.5f
         const val ZOOM_MIN = 1f
         const val ZOOM_MAX = 2f
-        const val ZOOM_STEP = 0.05f
         const val DEFAULT_ZOOM = 1f
 
         /**

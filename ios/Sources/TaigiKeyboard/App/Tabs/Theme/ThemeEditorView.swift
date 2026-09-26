@@ -67,11 +67,6 @@ struct ThemeEditorView: View {
                             sliderRow(lang.string(.themePhotoDim), viewModel.photoDimBinding,
                                       ThemeImageBackground.dimRange, ThemeImageBackground.dimStep,
                                       defaultValue: ThemeImageBackground.defaultDim)
-                            // Pinching the preview zooms too; the row makes zoom findable and
-                            // reachable with VoiceOver.
-                            sliderRow(lang.string(.themePhotoZoom), viewModel.photoZoomBinding,
-                                      ThemeImageBackground.zoomRange, ThemeImageBackground.zoomStep,
-                                      defaultValue: ThemeImageBackground.defaultZoom)
                         }
                     }
                 }

@@ -4446,24 +4446,6 @@
           }
         }
       }
-    },
-    "i18n_theme_photoZoom": {
-      "comment": "Theme editor slider label: how far the photo is zoomed in (1x = just covers the keyboard, up to 2x); pinching the preview sets the same value.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zoom"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ズーム"
-          }
-        }
-      }
     }
   },
   "version": "1.0"

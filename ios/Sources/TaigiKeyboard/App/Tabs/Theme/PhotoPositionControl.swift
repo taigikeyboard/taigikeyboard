@@ -86,7 +86,7 @@ enum PhotoPositionDrag {
 /// drags (the photo follows it), two fingers pinch the zoom. A pinch freezes the drag; when
 /// it ends the drag re-bases, so a finger left down never jumps the photo. For VoiceOver it
 /// is one adjustable element labelled `label` that steps the vertical (else horizontal)
-/// axis; zoom has its own slider row. Mirrors `GradientDirectionOverlay`.
+/// axis. Mirrors `GradientDirectionOverlay`.
 struct PhotoPositionOverlay: View {
     let label: String
     /// The photo's pixel size (its aspect is all the math needs).

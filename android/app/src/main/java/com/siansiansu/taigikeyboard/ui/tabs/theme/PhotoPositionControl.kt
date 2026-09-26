@@ -150,7 +150,7 @@ private val HALO_COLOR = Color.Black.copy(alpha = 0.6f)
  * photo follows it), two fingers pinch the zoom (their pan is ignored, as on iOS). The gesture
  * accumulates into a local photo, so events that land before recomposition never read a stale
  * one. For TalkBack it is one adjustable element labelled [label] that steps the vertical (else
- * horizontal) axis; zoom has its own slider row. Mirrors iOS PhotoPositionOverlay.
+ * horizontal) axis. Mirrors iOS PhotoPositionOverlay.
  */
 @Composable
 fun PhotoPositionOverlay(
@@ -211,7 +211,7 @@ fun PhotoPositionOverlay(
                         }
                     }.then(
                         if (accessibilityAxis == null) {
-                            // Nothing to move (the zoom row covers zoom): hidden from TalkBack.
+                            // Nothing to move: hidden from TalkBack.
                             Modifier.clearAndSetSemantics {}
                         } else {
                             val axisValue = if (accessibilityAxis == Orientation.Horizontal) photo.focusX else photo.focusY

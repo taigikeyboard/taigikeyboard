@@ -129,16 +129,6 @@ final class ThemeEditorViewModel: ObservableObject {
         )
     }
 
-    var photoZoomBinding: Binding<Double> {
-        Binding(
-            get: { self.photo?.zoom ?? ThemeImageBackground.defaultZoom },
-            set: { zoom in
-                guard let photo = self.photo else { return }
-                self.setBackground(.image(photo.with(zoom: zoom)))
-            },
-        )
-    }
-
     /// The draft photo for `PhotoPositionOverlay` (which moves and zooms it), or nil while none is picked.
     var photoBinding: Binding<ThemeImageBackground>? {
         guard let photo else { return nil }
