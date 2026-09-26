@@ -29,6 +29,7 @@ mod database;
 mod frequency;
 #[cfg(feature = "sqlite")]
 mod learned_phrases;
+mod paths;
 mod stores;
 #[cfg(feature = "sqlite")]
 mod timestamp;
@@ -58,6 +59,9 @@ pub use database::{
 pub use frequency::UserFrequencyStore;
 #[cfg(feature = "sqlite")]
 pub use learned_phrases::{LearnedPhraseRow, LearnedPhraseStore};
+pub use paths::{
+    UserDataPaths, ASSOCIATION_FILE, CUSTOM_DICTIONARY_FILE, FREQUENCY_FILE, LEARNED_PHRASES_FILE,
+};
 pub use stores::{
     AssociationSink, CustomDictionarySource, FrequencySource, LearnedPhraseSource, NoStores,
 };
@@ -65,6 +69,4 @@ pub use stores::{
 pub use timestamp::{unix_seconds_now, utc_timestamp_now};
 pub use types::{AssociationPair, CustomEntry, CustomSearchKey, FrequencyRow, LearnedPhrase};
 #[cfg(feature = "sqlite")]
-pub use user_data_stores::{
-    derive_custom_query_key, derive_custom_search_keys, UserDataPaths, UserDataStores,
-};
+pub use user_data_stores::{derive_custom_query_key, derive_custom_search_keys, UserDataStores};

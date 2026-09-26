@@ -373,6 +373,7 @@ dependencies = [
  "phonetics",
  "prost",
  "protos",
+ "userdata",
 ]
 
 [[package]]
@@ -1654,7 +1655,6 @@ version = "3.6.10"
 dependencies = [
  "log",
  "taigi-desktop-core",
- "taigi-desktop-storage",
  "taigi-linux-core",
  "taigi-linux-platform",
  "thiserror",

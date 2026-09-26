@@ -18,7 +18,6 @@ e2e-trace = ["taigi-linux-core/e2e-trace"]
 
 [dependencies]
 taigi-desktop-core.workspace = true
-taigi-desktop-storage.workspace = true
 taigi-linux-platform.workspace = true
 taigi-linux-core.workspace = true
 zbus.workspace = true

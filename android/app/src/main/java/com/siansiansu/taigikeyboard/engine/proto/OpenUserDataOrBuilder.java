@@ -68,4 +68,10 @@ public interface OpenUserDataOrBuilder extends
    * @return The journal.
    */
   com.siansiansu.taigikeyboard.engine.proto.UserDataJournal getJournal();
+
+  /**
+   * <code>bool in_background = 6;</code>
+   * @return The inBackground.
+   */
+  boolean getInBackground();
 }

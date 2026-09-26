@@ -11,7 +11,6 @@ use crate::types::FrequencyRow;
 use rusqlite::{params, params_from_iter, Connection};
 use std::path::PathBuf;
 
-pub(crate) const FILE_NAME: &str = "user_frequency.db";
 const TABLE_NAME: &str = "user_frequency";
 const SCHEMA_VERSION: i64 = 2;
 /// The columns every `FrequencyRow` read selects, next to the decoder that

@@ -13,11 +13,12 @@ taigi-desktop-core.workspace = true
 taigi-desktop-storage.workspace = true
 taigi-linux-platform.workspace = true
 log.workspace = true
-dispatch = { workspace = true, optional = true }
+# The engine owns the user data here (user-data-engine-roadmap U11 / P5).
+dispatch = { workspace = true, features = ["user-data"] }
 
 [features]
 # Test-build-only trace — docs/architecture/e2e-trace-schema.md.
-e2e-trace = ["dep:dispatch", "dispatch/e2e-trace"]
+e2e-trace = ["dispatch/e2e-trace"]
 
 [dev-dependencies]
 tempfile.workspace = true

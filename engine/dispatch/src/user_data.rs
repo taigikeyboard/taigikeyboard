@@ -6,7 +6,7 @@
 use std::collections::HashSet;
 use std::fmt::Display;
 use std::path::PathBuf;
-use std::sync::OnceLock;
+use std::sync::{Arc, Once, OnceLock};
 
 use composing::api::ComposingError;
 use nextword::NextWordError;
@@ -64,7 +64,11 @@ pub(crate) fn respond(id: u32, generation: u64, request: &UserDataRequest) -> Re
 struct Opened {
     paths: UserDataPaths,
     journal: JournalMode,
-    stores: UserDataStores,
+    stores: Arc<UserDataStores>,
+    /// The open finishing — files open, custom dictionary taken over and
+    /// seeded — run once however many callers wait on it, on whichever
+    /// thread gets there first.
+    initialized: Arc<Once>,
 }
 
 /// The stores this process opened. Set once, then read without a lock: from
@@ -145,7 +149,7 @@ impl UserDataHandle {
     /// The open stores, for the engine's own reads and writes; `None` until
     /// the platform opens them. Never blocks.
     pub(crate) fn stores(&self) -> Option<&UserDataStores> {
-        self.opened.get().map(|opened| &opened.stores)
+        self.opened.get().map(|opened| &*opened.stores)
     }
 
     fn open(&self, open: &OpenUserData) -> Result<UserDataOpened, UserDataError> {
@@ -156,29 +160,38 @@ impl UserDataHandle {
             learned_phrases: absolute(&open.learned_phrases_path)?,
         };
         let journal = journal(open.journal());
-        // A second open waits for the first to finish rather than opening
-        // the same files twice.
+        // The stores are published before they finish opening: from here on
+        // a write queues behind the open on its store's worker and a read
+        // answers neutral until the file is ready, so once this call has
+        // been handled nothing a caller reports is lost.
         let opened = self.opened.get_or_init(|| {
             let stores = UserDataStores::at(paths.clone(), journal);
-            stores.open_blocking();
-            let ready = readiness(&stores);
-            log::info!(
-                "user_data.open frequency={} association={} custom_dictionary={} learned_phrases={}",
-                ready.frequency_ready,
-                ready.association_ready,
-                ready.custom_dictionary_ready,
-                ready.learned_phrases_ready
-            );
+            stores.open();
             Opened {
                 paths: paths.clone(),
                 journal,
-                stores,
+                stores: Arc::new(stores),
+                initialized: Arc::new(Once::new()),
             }
         });
         if opened.paths != paths || opened.journal != journal {
             return Err(UserDataError::Invalid(
                 "user data is already open at other paths or with another journal",
             ));
+        }
+        if open.in_background {
+            let (stores, initialized) =
+                (Arc::clone(&opened.stores), Arc::clone(&opened.initialized));
+            let spawned = std::thread::Builder::new()
+                .name("taigi-user-data-open".into())
+                .spawn(move || finish_open(&stores, &initialized));
+            if let Err(error) = spawned {
+                // No thread to spare: finish here rather than never.
+                log::error!("user_data.open_thread_failed error={error}");
+                finish_open(&opened.stores, &opened.initialized);
+            }
+        } else {
+            finish_open(&opened.stores, &opened.initialized);
         }
         Ok(readiness(&opened.stores))
     }
@@ -644,6 +657,22 @@ fn csv_refusal(error: &CustomDictionaryCSVError) -> Option<CustomDictionaryRefus
     }
 }
 
+/// Waits for every store to open and finishes the custom dictionary's
+/// takeover, once per process.
+fn finish_open(stores: &UserDataStores, initialized: &Once) {
+    initialized.call_once(|| {
+        stores.open_blocking();
+        let ready = readiness(stores);
+        log::info!(
+            "user_data.open frequency={} association={} custom_dictionary={} learned_phrases={}",
+            ready.frequency_ready,
+            ready.association_ready,
+            ready.custom_dictionary_ready,
+            ready.learned_phrases_ready
+        );
+    });
+}
+
 fn store_error(error: impl Display) -> UserDataError {
     UserDataError::Store(error.to_string())
 }
@@ -689,6 +718,7 @@ mod tests {
                 custom_dictionary_path: paths.custom_dictionary.display().to_string(),
                 learned_phrases_path: paths.learned_phrases.display().to_string(),
                 journal: UserDataJournal::Delete as i32,
+                in_background: false,
             })),
         }
     }
@@ -1027,6 +1057,36 @@ mod tests {
         assert_eq!(
             restore(br#"{"version": 0}"#.to_vec()).refusal(),
             BackupRefusal::UnsupportedVersion
+        );
+    }
+
+    #[test]
+    fn a_background_open_answers_at_once_and_loses_nothing_reported_meanwhile() {
+        let directory = tempfile::tempdir().unwrap();
+        let handle = UserDataHandle::new();
+        let mut request = open_request(directory.path());
+        if let Some(user_data_request::Method::Open(open)) = request.method.as_mut() {
+            open.in_background = true;
+        }
+
+        handle.handle(&request).unwrap();
+        // trace: the stores are published before the answer, so this pick
+        // queues behind the open on the frequency store's worker.
+        call(
+            &handle,
+            user_data_request::Method::RecordUsage(RecordUsage {
+                display_text: "台灣".into(),
+                canonical_tl: "tâi-uân".into(),
+                ..RecordUsage::default()
+            }),
+        );
+
+        let stores = handle.stores().unwrap();
+        let rows = stores.frequency.all_rows().unwrap_or_default();
+        assert_eq!(rows.len(), 1, "counted once the open landed");
+        // The background finish runs once however the next open arrives.
+        assert!(
+            opened(handle.handle(&open_request(directory.path())).unwrap()).custom_dictionary_ready
         );
     }
 }

@@ -11,7 +11,6 @@ use crate::types::AssociationPair;
 use rusqlite::{params, Connection};
 use std::path::PathBuf;
 
-pub(crate) const FILE_NAME: &str = "user_association.db";
 const TABLE_NAME: &str = "user_association";
 /// CROSS-PLATFORM INVARIANT — mirrors iOS `NextWordSchema.schemaVersion` and
 /// Android `NextWordService.DATABASE_VERSION`.

@@ -161,6 +161,7 @@ dependencies = [
  "phonetics",
  "prost",
  "protos",
+ "userdata",
 ]
 
 [[package]]
@@ -1071,6 +1072,7 @@ dependencies = [
 name = "taigi-windows-tsf"
 version = "3.6.10"
 dependencies = [
+ "dispatch",
  "log",
  "taigi-desktop-core",
  "taigi-desktop-storage",
