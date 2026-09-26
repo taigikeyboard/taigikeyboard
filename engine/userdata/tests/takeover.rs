@@ -304,6 +304,35 @@ fn pairs(store: &UserAssociationStore) -> Vec<(AssociationPair, i64)> {
 }
 
 #[test]
+fn an_ios_v4_association_table_with_its_single_column_index_is_rebuilt_too() {
+    // trace: iOS v4 (`da87856e^`, v3.4.8 – v3.6.0) = the v5 table plus
+    // `idx_user_prev_word`, which R6 later dropped; stamp 4 < 6 → the same
+    // rebuild, the index going with the old table; rows and ids survive.
+    let directory = scratch();
+    let path = paths(&directory).association;
+    build(
+        &path,
+        &IOS_ASSOCIATION_V5.replace(
+            "PRAGMA user_version = 5;",
+            "CREATE INDEX IF NOT EXISTS idx_user_prev_word ON user_association(prev_word);\nPRAGMA user_version = 4;",
+        ),
+    );
+
+    let store = association(&path);
+
+    assert_eq!(pairs(&store), vec![(pair("重", "tîng", "複", "hok"), 3)]);
+    assert_eq!(pragma(&path, "user_version"), 6);
+    let leftover: i64 = raw(&path)
+        .query_row(
+            "SELECT COUNT(*) FROM sqlite_master WHERE name = 'idx_user_prev_word';",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(leftover, 0, "the dropped index does not come back");
+}
+
+#[test]
 fn a_v5_association_table_is_rebuilt_under_the_v6_key_with_its_rows() {
     // trace: v5 → migrate → rebuild_to_v6 (prev_tl, next_tl present →
     // COALESCE); id 11 copied; the key now carries prev_tl, so 重/tāng → 複
@@ -543,9 +572,11 @@ fn a_v9_leftover_with_only_learn_count_still_opens() {
 /// macOS / Windows / Linux v4 — `macos/.../Storage/CustomDictionaryStore.swift`
 /// `applySchema` (the SQL the desktop stores ported byte-identically): no
 /// legacy derived columns, keys the engine itself derived, stamp 4.
-/// Android v3 — `CustomDictionaryService.kt` at `392d0283` (v3.4.2, the
-/// first release with the dictionary): no `roman_num`, no side table.
-const ANDROID_CUSTOM_DICTIONARY_V3: &str = "
+/// The phones' first dictionary shape — Android `CustomDictionaryService.kt`
+/// and iOS `CustomDictionaryRepository.swift` at `392d0283` (v3.4.2, the first
+/// release with the dictionary): no `roman_num`, no side table. Android
+/// stamped it 3, iOS left `user_version` at 0.
+const CUSTOM_DICTIONARY_BEFORE_ROMAN_NUM: &str = "
 CREATE TABLE custom_dictionary (
     id TEXT PRIMARY KEY,
     roman TEXT NOT NULL,
@@ -559,12 +590,11 @@ CREATE INDEX idx_custom_roman ON custom_dictionary(roman);
 CREATE INDEX idx_custom_notone ON custom_dictionary(notone);
 CREATE INDEX idx_custom_abbrev ON custom_dictionary(abbrev);
 INSERT INTO custom_dictionary (id, roman, hanzi, notone) VALUES ('E1', 'gâu-tsá', '𠢕早', 'gautsa');
-PRAGMA user_version = 3;
 ";
 
-/// Android v5 — `CustomDictionaryService.kt` at `da836ea5^` (v3.4.7 …
-/// v3.6.0): `roman_num` added, still no side table.
-const ANDROID_CUSTOM_DICTIONARY_V5: &str = "
+/// `roman_num` added, still no side table — Android v5 (`da836ea5^`, v3.4.7 …
+/// v3.6.0); iOS stamps 0 (v3.4.8 – v3.4.9) and 1 (v3.5.0 – v3.6.0).
+const CUSTOM_DICTIONARY_BEFORE_SIDE_TABLE: &str = "
 CREATE TABLE custom_dictionary (
     id TEXT PRIMARY KEY,
     roman TEXT NOT NULL,
@@ -580,52 +610,47 @@ CREATE INDEX idx_custom_notone ON custom_dictionary(notone);
 CREATE INDEX idx_custom_abbrev ON custom_dictionary(abbrev);
 CREATE INDEX idx_custom_roman_num ON custom_dictionary(roman_num);
 INSERT INTO custom_dictionary (id, roman, hanzi, notone) VALUES ('E1', 'gâu-tsá', '𠢕早', 'gautsa');
-PRAGMA user_version = 5;
 ";
 
 #[test]
-fn an_android_custom_dictionary_from_before_the_side_table_gets_one() {
-    // trace: no custom_search_key table → apply_schema creates it; the
-    // missing application_id forces re-derivation; stamp max(v, 4) — v3 → 4
-    // (Android's own numbering, the "notone regenerated" step), v5 stays 5.
-    for (sql, stamp) in [
-        (ANDROID_CUSTOM_DICTIONARY_V3, 4),
-        (ANDROID_CUSTOM_DICTIONARY_V5, 5),
+fn every_released_phone_custom_dictionary_is_re_derived_under_a_stamp_its_app_accepts() {
+    // trace: a missing application_id forces re-derivation whatever the
+    // stamp; a missing side table is created by apply_schema; the stamp
+    // becomes max(v, 4) and is never lowered — each platform's own number.
+    for (shape, stamp, expected, release) in [
+        (CUSTOM_DICTIONARY_BEFORE_ROMAN_NUM, 3, 4, "Android v3.4.2"),
+        (CUSTOM_DICTIONARY_BEFORE_ROMAN_NUM, 0, 4, "iOS v3.4.2"),
+        (
+            CUSTOM_DICTIONARY_BEFORE_SIDE_TABLE,
+            5,
+            5,
+            "Android v3.4.7 – v3.6.0",
+        ),
+        (CUSTOM_DICTIONARY_BEFORE_SIDE_TABLE, 0, 4, "iOS v3.4.8"),
+        (
+            CUSTOM_DICTIONARY_BEFORE_SIDE_TABLE,
+            1,
+            4,
+            "iOS v3.5.0 – v3.6.0",
+        ),
+        (PHONE_CUSTOM_DICTIONARY, 2, 4, "iOS v3.6.1 – v3.6.4"),
+        (PHONE_CUSTOM_DICTIONARY, 3, 4, "iOS v3.6.5 – mobile-3.6.8"),
+        (PHONE_CUSTOM_DICTIONARY, 7, 7, "Android mobile-3.6.8"),
     ] {
         let directory = scratch();
         let path = paths(&directory).custom_dictionary;
-        build(&path, sql);
+        build(&path, &format!("{shape}PRAGMA user_version = {stamp};"));
 
         let store = custom_dictionary(&path);
 
-        assert_eq!(store.count().unwrap(), 1);
+        assert_eq!(store.count().unwrap(), 1, "{release}");
         assert_eq!(
             stored_keys(&path, "E1"),
-            derive_custom_search_keys("gâu-tsá").unwrap()
+            derive_custom_search_keys("gâu-tsá").unwrap(),
+            "{release}"
         );
-        assert_eq!(pragma(&path, "user_version"), stamp);
+        assert_eq!(pragma(&path, "user_version"), expected, "{release}");
     }
-}
-
-#[test]
-fn an_android_v7_custom_dictionary_the_last_release_wrote_keeps_version_seven() {
-    // trace: mobile-3.6.8 ships DATABASE_VERSION = 7 over the side-table
-    // shape (`ce99e22c`); stale keys re-derived, stamp untouched.
-    let directory = scratch();
-    let path = paths(&directory).custom_dictionary;
-    build(
-        &path,
-        &format!("{PHONE_CUSTOM_DICTIONARY}PRAGMA user_version = 7;"),
-    );
-
-    let store = custom_dictionary(&path);
-
-    assert_eq!(store.count().unwrap(), 1);
-    assert_eq!(
-        stored_keys(&path, "E1"),
-        derive_custom_search_keys("gâu-tsá").unwrap()
-    );
-    assert_eq!(pragma(&path, "user_version"), 7);
 }
 
 const DESKTOP_CUSTOM_DICTIONARY_V4: &str = "
@@ -709,6 +734,29 @@ fn a_fresh_install_takes_no_copy_and_is_marked() {
         );
     }
     assert_eq!(pragma(&files.custom_dictionary, "user_version"), 4);
+}
+
+#[test]
+fn an_open_waits_out_another_process_taking_the_same_file_over() {
+    // trace: the iOS app and its keyboard both open the App Group files on a
+    // first launch. Another connection holds the write lock for 600 ms —
+    // past the 250 ms a keystroke-time writer waits — and the open still
+    // lands (OPEN_BUSY_TIMEOUT), instead of leaving the store closed.
+    let directory = scratch();
+    let path = paths(&directory).frequency;
+    build(&path, ANDROID_FREQUENCY_V1);
+    let holder = raw(&path);
+    holder.execute_batch("BEGIN EXCLUSIVE;").unwrap();
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(600));
+        holder.execute_batch("COMMIT;").unwrap();
+    });
+
+    let store = frequency(&path);
+    release.join().unwrap();
+
+    assert!(store.is_ready(), "the open waited for the other process");
+    assert_eq!(store.rows_for_words(&["台灣".into()]).unwrap().len(), 1);
 }
 
 #[test]
