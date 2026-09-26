@@ -67,6 +67,8 @@
                  SQLite / dictionary.bin / association.bin
 ```
 
+Since the user-data engine rounds (2026-09-26, `user-data-engine-roadmap.md`) no platform Repository layer remains for user data: the four SQLite stores (`user_frequency.db`, `user_association.db`, `custom_dictionary.db`, `learned_phrases.db`) are engine-owned (`engine/userdata`). Services and ViewModels reach them through `UserDataClient` (`UserDataRequest` ops) and picks through `UsageRecorder`; the engine reads them inside `FetchAtPos` / `PredictNext` and builds `RawNextWordPrediction` from the rows itself.
+
 **Android mapping (concrete)**:
 
 | iOS concept | Android equivalent | Concrete rule |
@@ -218,8 +220,8 @@ Sources/TaigiKeyboard/
 ├── Logging/                  # Cross-cutting: LoggerBackend
 ├── Input/                    # CharacterInputPipeline, AutoSpacePunctuation
 │   └── Composing/            # ComposingManager + ComposingDelegate (PLATFORM executor)
-├── Lexicon/                  # Models/, Utils/ (shared-core candidates) · Services/, Database/ (platform)
-├── NextWord/                 # NextWordController (PLATFORM executor) · Services/, Repository/
+├── Lexicon/                  # Models/, Utils/ (shared-core candidates) · Services/ (platform: UserDataClient, DictionarySearchService)
+├── NextWord/                 # NextWordController (PLATFORM executor)
 ├── Settings/                 # EngineSettings + provider (PURE protocols)
 └── Strings/                  # localized strings (platform)
 ```

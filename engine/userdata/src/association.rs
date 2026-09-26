@@ -11,7 +11,7 @@ use rusqlite::{params, Connection};
 use std::path::PathBuf;
 
 const TABLE_NAME: &str = "user_association";
-/// CROSS-PLATFORM INVARIANT — mirrors iOS `NextWordSchema.schemaVersion` and
+/// Ported from iOS `NextWordSchema.schemaVersion` and
 /// Android `NextWordService.DATABASE_VERSION`.
 const SCHEMA_VERSION: i64 = 6;
 const ROW_COLUMNS: &str = "prev_word, prev_tl, next_word, next_tl, count";
@@ -42,7 +42,7 @@ pub struct UserAssociationStore {
 }
 
 impl UserAssociationStore {
-    /// CROSS-PLATFORM INVARIANT — mirrors
+    /// Ported from
     /// `ios/.../NextWord/Services/NextWordService.swift:31-33`.
     pub fn shipped_capacity() -> LearningCapacity {
         LearningCapacity::new(
@@ -155,8 +155,8 @@ impl UserAssociationStore {
     /// other readings of the same Hanji — never dropped — each tier by count,
     /// recency, then `id`. The next-word filter keeps only the FIRST row per
     /// predicted `(hanzi, tl)`, so this order decides whose evidence counts,
-    /// and `ORDER BY` ranks before `LIMIT` truncates. CROSS-PLATFORM
-    /// INVARIANT — mirrors iOS `NextWordRepository.swift` `fetchUserRows` and
+    /// and `ORDER BY` ranks before `LIMIT` truncates. Ported
+    /// from iOS `NextWordRepository.swift` `fetchUserRows` and
     /// Android `NextWordService.kt` `USER_PREDICT_SQL`.
     pub fn rows_following(
         &self,
@@ -223,7 +223,7 @@ impl UserAssociationStore {
 /// Converges any known shape to v6. A v6 file (this engine, macOS, the
 /// phones since v6) only re-asserts the `IF NOT EXISTS` DDL; an older one is
 /// migrated, re-created and stamped in ONE immediate transaction, so a file
-/// that says v6 always has the v6 table. Mirrors iOS
+/// that says v6 always has the v6 table. Ported from iOS
 /// `NextWordSchema.swift` `ensureTables` and Android `NextWordService.kt`
 /// `ensureUserAssocSchema`.
 fn apply_schema(connection: &Connection) -> rusqlite::Result<()> {
@@ -284,7 +284,7 @@ fn migrate(connection: &Connection, version: i64) -> rusqlite::Result<()> {
 /// conflict (the old key is a strict subset), so no merge step. `id` is
 /// copied: it is the read query's final tie-break. A table without
 /// `prev_tl` / `next_tl` (v3, Android's v0/v1 ladder) gets `''`; a NULL gets
-/// `''`. Mirrors iOS / Android `rebuildToV6`.
+/// `''`. Ported from iOS / Android `rebuildToV6`.
 fn rebuild_to_v6(connection: &Connection) -> rusqlite::Result<()> {
     let tl_column = |column: &str| -> rusqlite::Result<String> {
         Ok(if has_column(connection, TABLE_NAME, column)? {

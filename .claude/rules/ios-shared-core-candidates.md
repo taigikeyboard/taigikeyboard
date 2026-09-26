@@ -30,11 +30,11 @@ Files that are engine-layer but **do not** qualify should begin with a one-line 
 
 ## 3. Candidate roster
 
-**Authoritative inventory: `docs/engine/migration-inventory.csv`**. Filter `status=rust_shipped` for already-migrated items, `native_keep` for platform-stays candidates, `wont_migrate` for explicit exclusions (UI / SQLite user-data / KeyboardKit wrappers / etc.). Do not re-enumerate or count here — update the CSV and point back.
+**Authoritative inventory: `docs/engine/migration-inventory.csv`**. Filter `status=rust_shipped` for already-migrated items, `native_keep` for platform-stays candidates, `wont_migrate` for explicit exclusions (UI / KeyboardKit wrappers / etc.). User-data SQLite is `rust_shipped` (`engine/userdata`, user-data engine P7b / P8b). Do not re-enumerate or count here — update the CSV and point back.
 
 ## 4. Exclusions, soft dependencies, verification
 
-`migration-inventory.csv` rows with `status=wont_migrate` enumerate the exclusions (Lexicon Database/* SQLite, Services/* glue, KeyboardKit wrappers, URL builders, App-Group / FileManager paths). Enforcement = the §1 criteria checked against the files in the live `native_keep` filter on the CSV.
+`migration-inventory.csv` rows with `status=wont_migrate` enumerate the exclusions (Services/* glue, KeyboardKit wrappers, URL builders, UI). Enforcement = the §1 criteria checked against the files in the live `native_keep` filter on the CSV.
 
 Matches inside `///` doc comments of a candidate file are informational, not violations (e.g., a doc comment stating the file does *not* use `SharedSettings.shared`).
 

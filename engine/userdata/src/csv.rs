@@ -7,7 +7,7 @@ use std::path::Path;
 /// The CSV dialect the platforms share. A SINGLE-RECORD dialect, not full
 /// RFC 4180: quoting inside a line is honoured (doubled-quote escape
 /// included), but a record is always one line, because every mirror splits
-/// on newlines before parsing. CROSS-PLATFORM INVARIANT — mirrors iOS
+/// on newlines before parsing. Ported from iOS
 /// `CSVDocument.swift` (`parseLine` / `escape`) and Android
 /// `DictionaryCsvCodec.kt`.
 pub struct UserDataCSV;
@@ -76,7 +76,7 @@ pub enum CustomDictionaryCSVError {
 pub struct CustomDictionaryCSV;
 
 impl CustomDictionaryCSV {
-    /// CROSS-PLATFORM INVARIANT — mirrors iOS `CustomDictionaryService.swift:90`.
+    /// Ported from iOS `CustomDictionaryService.swift:90`.
     pub const MAX_FILE_SIZE_BYTES: u64 = 5 * 1024 * 1024;
 
     pub fn encode(rows: &[CustomDictionaryRow]) -> String {

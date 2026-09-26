@@ -1,8 +1,8 @@
 # NextWord Engine / Platform Boundary
 
-> **Type**: Reference (contract) · **Section numbering**: renumbered? no — gaps are intentional. §3, §5, §13.3, §13.5, §13.6, §13.10 are cited by code (`engine/protos/proto/nextword.proto`, generated `nextword.pb.swift` / `*.java`, `NextWordService.kt`, `SmartbarManager.kt`, `NextWordController.kt`, `RustEngineBridge.kt`, `RustEngineBridge+NextWord.swift`), §2.4 / §3 by `../engine/rust-core-proto.md`, §13.3 by `../engine/nextword.md`; their numbers are frozen. The pre-Rust design sections (§1, §8, §9, §11) were removed 2026-09-13 and their numbers are not reused.
+> **Type**: Reference (contract) · **Section numbering**: renumbered? no — gaps are intentional. §3, §5, §13.3, §13.5, §13.6, §13.10 are cited by code (`engine/protos/proto/nextword.proto`, generated `nextword.pb.swift` / `*.java`, `SmartbarManager.kt`, `NextWordController.kt`, `RustEngineBridge.kt`, `RustEngineBridge+NextWord.swift`), §2.4 / §3 by `../engine/rust-core-proto.md`, §13.3 by `../engine/nextword.md`; their numbers are frozen. The pre-Rust design sections (§1, §8, §9, §11) were removed 2026-09-13 and their numbers are not reused.
 
-**What this doc is**: the contract between the next-word state machine — Rust `engine/nextword` since v3.5.5 (Path G, old #198; `NextWordEngine.swift` / `.kt` were deleted) — and each platform's executor: iOS `NextWord/NextWordController.swift` (Timer, `@MainActor`, generation counter) + `NextWord/Services/NextWordService.swift` (SQLite); Android `ime/text/smartbar/NextWordController.kt` + `ime/dictionary/NextWordService.kt` (§13); macOS `NextWord/NextWordLearner.swift` (write-and-rank, no prediction surface — `macos-roadmap.md` D7); Windows + Linux `taigi-desktop-core::engine::nextword` + engine `userdata::association` (user-data-engine-roadmap P1). The crate owns validation, the record / reset / predict decision, scoring + filtering (`engine/nextword/src/scorer.rs`, constants pinned by `behavioral-invariants.md` §7–§8) and the generation guard; the executors own the clock, the context-timeout timer, the main-thread hop, the settings snapshot and the user-association store. Platform-neutral learning decisions are `behavioral-invariants.md` §40. Originally authored 2026-04-19 as the Phase I G5 design (Codex + Gemini reviewed).
+**What this doc is**: the contract between the next-word state machine — Rust `engine/nextword` since v3.5.5 (Path G, old #198; `NextWordEngine.swift` / `.kt` were deleted) — and each platform's executor: iOS `NextWord/NextWordController.swift` (Timer, `@MainActor`, generation counter); Android `ime/text/smartbar/NextWordController.kt` (§13); macOS `NextWord/NextWordPort.swift` (`EngineNextWord` — handshakes only, no prediction surface — `macos-roadmap.md` D7); Windows + Linux `taigi-desktop-core` `composing/next_word.rs` (`NextWordPort` / `EngineNextWord`, same shape). The crate owns validation, the record / reset / predict decision, scoring + filtering (`engine/nextword/src/scorer.rs`, constants pinned by `behavioral-invariants.md` §7–§8) and the generation guard; `engine/dispatch` (`user_data::handle_nextword`) owns the user-association store — it reads a `PredictNext` word's learned rows from `user_association.db` and writes the bigrams a decision records (user-data-engine-roadmap P3b / P3c / P9b); the executors own the clock, the context-timeout timer, the main-thread hop and the settings snapshot, and never see a user row. Platform-neutral learning decisions are `behavioral-invariants.md` §40. Originally authored 2026-04-19 as the Phase I G5 design (Codex + Gemini reviewed).
 
 ---
 
@@ -86,6 +86,8 @@ public struct NextWordOutcome: Equatable {
 }
 ```
 
+**As built (2026-09-26)**: the two record effects are gone from the wire (`NextWordEffect` 3 / 4 reserved, user-data-engine-roadmap P9b / P9c). A decision's bigrams come back to `engine/dispatch` beside the response (`nextword::Handled.associations`, `nextword::Association`) and are written to `user_association.db` there; the executor receives only the scheduling / query / clear effects.
+
 **`generation` on `queryPredictions` and `clearPredictionsUI`** is the mechanism that eliminates the stale-prediction race. When the executor receives the async query result back, it compares the result's generation against `persistedState.currentGeneration`. A mismatch = the intent that started this query has been superseded; drop the result.
 
 ### 2.4 Prediction-result step (separate entry point) — with shared DTO
@@ -113,7 +115,9 @@ weight; elevating scoring into shared-core (so Kotlin/Rust can compute
 scores themselves from raw `count` + `lastUsedMs`) is a Phase IV-B
 follow-up on the shared-core roadmap.
 
-Service mapping: in the original G5-design sketch, `NextWordService.Prediction` → `RawNextWordPrediction` happened in `NextWordService` itself (platform side) before results cross into the engine. Both platforms simplified this at impl time — iOS G5-impl (PR #141) and Android A5-impl deleted the intermediate `NextWordService.Prediction` DTO and have `predict` return `List<RawNextWordPrediction>` (`[RawNextWordPrediction]` on iOS) directly.
+Service mapping: in the original G5-design sketch, `NextWordService.Prediction` → `RawNextWordPrediction` happened in `NextWordService` itself (platform side) before results cross into the engine. Both platforms simplified this at impl time — iOS G5-impl (PR #141) and Android A5-impl deleted the intermediate `NextWordService.Prediction` DTO and had `predict` return `List<RawNextWordPrediction>` (`[RawNextWordPrediction]` on iOS) directly.
+
+**As built (2026-09-26)**: no platform queries or converts rows any more. The executor sends `PredictNext` (`word`, `roman`, `now_ms`, `query_generation`, toggles, limit) off the main thread; `engine/dispatch` reads the word's learned rows from its own `user_association.db` (`UserAssociationStore::rows_following`, `behavioral-invariants.md` §24), adds the bundled `association.bin` rows (`predict::expand_predict_next`) and runs `FilterPredictions` in the same call. `RawNextWordPrediction` is now an engine-internal proto row (`FilterPredictions.raw`); `PredictNext.user_rows` (field 2) is reserved and both `NextWordService` classes are deleted (user-data-engine-roadmap P7b / P8b / P9b).
 
 Engine signature:
 
@@ -185,7 +189,7 @@ For `wordSelected(text, roman, requireRomanMode, triggerPrediction)`:
 | `text` empty | `[]` | unchanged |
 | `text` is noise punctuation, NOT sentence-end | `[]` | unchanged |
 | `text` is sentence-end punctuation | `[cancelContextTimeout] + [clearPredictionsUI(gen) if isShowing]` | reset to defaults + bump generation |
-| `shouldRecordAssociation(state, nowMs) && state.lastSelectedWord != nil` (recording is always on — the `is_association_recording_enabled` gate was retired 2026-09-25) | `[recordAssociation(...), recordCompoundAssociations(...)]` (append) | — |
+| `shouldRecordAssociation(state, nowMs) && state.lastSelectedWord != nil` (recording is always on — the `is_association_recording_enabled` gate was retired 2026-09-25) | records the `prev → text` pair, then the compound's internal pairs (`Decided.associations` → `Handled.associations`, written by dispatch; formerly the `recordAssociation` / `recordCompoundAssociations` effects, §2.3) | — |
 | Always (for valid text) | append `[rescheduleContextTimeout(30)]` | `lastSelectedWord/Roman = ...`, `lastSelectionTimeMs = nowMs`, bump generation |
 | `triggerPrediction == true` | append `[queryPredictions(textTl, romanTl, newGen)]` | — |
 
@@ -193,7 +197,7 @@ For `backspace(lastChar)`:
 
 - `newState.lastSelectedWord = lastChar`, `lastSelectedRoman = nil`, `lastSelectionTimeMs = nowMs`, bump generation.
 - `effects = [queryPredictions(lastChar, "", newGen)]`.
-- Critically: does **NOT** emit `recordAssociation` or `recordCompoundAssociations`. This is today's `rePredictAfterBackspace` invariant — backspace is not a word selection.
+- Critically: records **no** association (no pair, no compound pairs). This is the `rePredictAfterBackspace` invariant — backspace is not a word selection.
 
 For `contextTimeoutFired`:
 
@@ -241,7 +245,7 @@ static func compoundAssociationPairs(displayText: String, roman: String)
     -> [(prev: String, prevTl: String, next: String, nextTl: String)]
 ```
 
-Executor's `recordCompoundAssociations` effect feeds straight into a single `Task` that loops `await nextWordService.recordAssociation` in order — same sequential shape as today, preventing UNIQUE-constraint races.
+The pairs are written in order, one decision in one transaction (`UserAssociationStore::record`, called by `dispatch::user_data::handle_nextword`) — the sequential shape the executors' former `recordCompoundAssociations` loop had, preventing UNIQUE-constraint races.
 
 ---
 
@@ -260,7 +264,7 @@ Invariant §11 (engine settings are live-read) still holds at the executor level
 Pinned in `engine/nextword` tests (pure) and the platform executor tests (the last two):
 
 - `INVARIANT_nextword_association_window_strict_lt_10s` — boundary tests: 9_999 → true, 10_000 → false, negative delta → false.
-- `INVARIANT_nextword_backspace_does_not_record` — `decide(.backspace(...))` never includes `recordAssociation` or `recordCompoundAssociations` effects.
+- `INVARIANT_nextword_backspace_does_not_record` — `decide(.backspace(...))` never records an association (`decide.rs::backspace_records_no_association`: `associations` empty).
 - `INVARIANT_nextword_sentence_end_resets_context` — `decide(.wordSelected(text: "。", …))` yields `cancelContextTimeout` + clears state + bumps generation.
 - `INVARIANT_nextword_compound_pairs_are_sequential` — for `text = "a-b-c"`, `compoundAssociationPairs` returns `[(a, b), (b, c)]` in that order.
 - `INVARIANT_nextword_no_clock_read_in_engine` — static analysis / code review gate: `NextWordEngine` file must not reference `Date()`, `CFAbsoluteTimeGetCurrent`, `ProcessInfo.systemUptime`, `DispatchTime.now`.
@@ -319,14 +323,14 @@ The clock path touches both files — §13.3 covers the full path.
 The engine takes `nowMs` on every decision entry point (`DecisionInput.now_ms`). For the prediction-filter path, the clock also reaches the user-row decay scoring, which runs in Rust `FilterPredictions` (`engine/nextword/src/scorer.rs`):
 
 - Executor reads `System.currentTimeMillis()` once per intent entry, stores it in `NextWordDecisionInput.nowMs`.
-- `NextWordService.userRows(word, roman)` returns un-scored learned rows and takes no clock (its unused `nowMs` parameter was removed 2026-09-25). The executor carries the same intent `nowMs` into `handleQueryResult` → `RustEngineBridge.nextwordPredictNext` (`PredictNext.now_ms`, expanded to `FilterPredictions` by engine/dispatch), where the user-row decay is scored.
+- The executor carries the same intent `nowMs` (on the `queryPredictions` effect) into `RustEngineBridge.nextwordPredictNext` (`PredictNext.now_ms`, expanded to `FilterPredictions` by engine/dispatch), where the learned rows the engine reads from its own `user_association.db` are decay-scored. No platform reads a row or passes a clock anywhere else (the former `NextWordService.userRows` is deleted, user-data-engine-roadmap P8b).
 - Result: the engine and the prediction query use ONE consistent `nowMs` per intent — no 1–2 ms drift between "should record association?" check and user-row decay scoring.
 
 Engine-side forbidden calls (per `.claude/rules/android-guidelines.md` §1 criterion 3): `System.currentTimeMillis()`, `SystemClock.*`, `Instant.now()`. Note: `kotlinx.coroutines.delay` (top-level suspend function) is also forbidden inside the engine — all scheduling lives in the platform executor.
 
 ### 13.4 Settings access
 
-Executor reads `EngineSettingsProvider.current` once at intent entry, passes value to `NextWordEngine.decide(...)` via `NextWordDecisionInput.settings`. Prediction-filter step takes a fresh snapshot at query-resolve time (coroutine boundary after `nextWord.predict` completes), same as iOS §7. Live-read semantics from `EngineSettings.kt` are preserved — see `.claude/rules/android-guidelines.md` §6.
+Executor reads `EngineSettingsProvider.current` once at intent entry, passes value to `NextWordEngine.decide(...)` via `NextWordDecisionInput.settings`. Prediction-filter step takes a fresh snapshot inside the query coroutine (after the lexicon-ready wait, before the `nextwordPredictNext` call; the dictionary toggles are snapshotted at query start), same as iOS §7. Live-read semantics from `EngineSettings.kt` are preserved — see `.claude/rules/android-guidelines.md` §6.
 
 ### 13.5 Active context-timeout — coroutine binding
 
@@ -384,7 +388,9 @@ sealed class Effect {
 }
 ```
 
-Executor runs the pairs sequentially inside a single `scope.launch { pairs.forEach { nextWord.recordAssociation(...) } }` — same shape as today's loop (NextWordController lines 107–119). Sequential ordering is mandatory: parallel coroutines would race on the SQLite `UNIQUE(prev_word, next_word, next_tl)` constraint declared in `NextWordService.kt`'s `user_association` table.
+Executor runs the pairs sequentially inside a single `scope.launch { pairs.forEach { nextWord.recordAssociation(...) } }` — same shape as the pre-A5 loop (NextWordController lines 107–119). Sequential ordering is mandatory: parallel coroutines would race on the SQLite `UNIQUE(prev_word, next_word, next_tl)` constraint declared in `NextWordService.kt`'s `user_association` table.
+
+**Superseded (user-data-engine-roadmap P8b / P9b / P9c)**: the effect, the Kotlin `AssociationPair` and `NextWordService.kt` are gone. The engine hands the pairs to `engine/dispatch` (`nextword::Handled.associations`), which writes them in order in one transaction (`UserAssociationStore::record`, key `UNIQUE(prev_word, prev_tl, next_word, next_tl)`); the Android executor never sees them.
 
 ### 13.10 Shared-core candidate roster delta (Android-side)
 
@@ -396,7 +402,7 @@ A5-impl adds the following Android files to the roster (mirroring §8 iOS column
 | `NextWord/NextWordOutcome.swift` | `ime/core/nextword/NextWordOutcome.kt` *(new — holds `NextWordIntent`, `NextWordPersistedState`, `NextWordDecisionInput`, `NextWordOutcome`, `Effect` types)* | Yes |
 | `NextWord/RawNextWordPrediction.swift` | `ime/core/nextword/RawNextWordPrediction.kt` *(new)* | Yes |
 | `NextWord/NextWordController.swift` (platform executor) | `ime/text/smartbar/NextWordController.kt` (reduced wrapper) | No — platform executor. |
-| `NextWord/Services/NextWordService.swift` (Prediction → DTO mapping) | `ime/dictionary/NextWordService.kt` (`userRows` returns learned raw rows; the bundled rows are added engine-side by `PredictNext` (R3, 2026-09-25). The clock goes to `nextwordPredictNext`, not `userRows` — §13.3) | No — SQLite + file manager. |
+| `NextWord/Services/NextWordService.swift` (Prediction → DTO mapping) | `ime/dictionary/NextWordService.kt` — both deleted (user-data-engine-roadmap P7b / P8b): the engine reads the learned rows itself and adds the bundled rows in `PredictNext` (R3, 2026-09-25); the clock goes to `nextwordPredictNext` — §13.3 | No — SQLite + file manager (now `engine/userdata`). |
 
 **Post-A5-impl state (2026-04-20)**: the four new files ship the `// region Shared-Core Candidate` header inline — landing them without the header would have required reformatting them again in A8-sweep. The `// CROSS-PLATFORM INVARIANT` comments on `ASSOCIATION_TIMEOUT_MS` + `CONTEXT_TIMEOUT_MS` also land in A5-impl (§13.7 below). A8-sweep remains responsible for retro-fitting markers on pre-existing files that A5 did not touch, and for the broader §5.3 surface audit (CandidateProcessor scoring constants, any additional §11 divergence comments).
 

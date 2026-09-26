@@ -51,7 +51,7 @@ fst prefix index (replaced MARISA in v3.5.6) + dictionary/association mmap reade
 | **InputNormalizer** | Converts any input form to TL numeric tone format | Rust `phonetics::normalization::normalize_input` |
 | **searchKey** | Normalized key format: prefix + lowercase, no hyphens, numeric tones (e.g. `tl:gua2si7`) | Rust `lexicon::key_normalizer::build` |
 | **scoringFormula** | `userFreqScore(×100) + completionPenalty(-1000) + closenessBonus(+500) + recencyBonus(+200) + exactBonus(+100) + baseFreqScore` | Rust `ranking::score` |
-| **userFrequency** | Per-word usage count, dominates ranking. Storage stays platform SQLite (`wont_migrate`) | iOS `UserFrequencyService.swift` / Android `.kt` |
+| **userFrequency** | Per-word usage count, dominates ranking. `user_frequency.db`, engine-owned; read inside `FetchAtPos`, written by `RecordUsage` | Rust `userdata::UserFrequencyStore` |
 | **timeDecay** | Exponential decay with 1-hour recency window for ranking-side bonus | Rust `ranking::score` constants (`RECENCY_WINDOW_MS=3_600_000`) |
 
 ### 5. Segmentation — ARCHIVED (removed in v3.4.6)
@@ -65,7 +65,7 @@ NextWord state machine lives in Rust `engine/nextword` (since v3.5.5). Platform 
 | Keyword | Definition | Owner |
 |---------|-----------|-------|
 | **bigram** | Word-level prediction from association.bin (lookup by previous word) | Rust `lexicon::assoc_lookup` |
-| **userAssociation** | User-learned word associations (SQLite, `wont_migrate`) | iOS `Lexicon/Database/` / Android `ime/text/composing/UserFrequencyService.kt` |
+| **userAssociation** | User-learned word associations (`user_association.db`, engine-owned; read by `PredictNext`, written from `nextword::Handled.associations`) | Rust `userdata::UserAssociationStore` |
 | **lastSelectedWord** | Context trigger for next-word prediction | Rust `nextword::PersistedState.last_selected_word` |
 | **decayScoring** | RIME-style decay + dict/user weighting | Rust `nextword::scorer` |
 | **currentGeneration** | u64 counter that drops stale async results | Rust `nextword::PersistedState.current_generation` |
@@ -73,10 +73,10 @@ NextWord state machine lives in Rust `engine/nextword` (since v3.5.5). Platform 
 ### 7. Custom Dictionary (`engine/custom-dictionary.md`)
 | Keyword | Definition | Key Class/Method |
 |---------|-----------|-----------------|
-| **CustomDictionaryEntry** | User-defined word (roman + hanzi + derived notone/abbrev) | `CustomDictionaryEntry` |
-| **notone** | Toneless romanization for prefix matching (e.g. `"lí hó"` → `"liho"`) | `generateNotone()` |
-| **abbrev** | First-letter abbreviation for quick lookup (e.g. `"lí hó"` → `"lh"`) | `generateAbbrev()` |
-| **batchImport** | CSV import with deduplication by `roman\|hanzi` key | `batchImport()` / `importFromFile()` |
+| **CustomDictionaryEntry** | User-defined word (roman + hanzi; search keys derived into `custom_search_key`) | proto `CustomDictionaryEntry` / Rust `userdata::CustomDictionaryRow` |
+| **notone** | Toneless romanization for prefix matching (e.g. `"lí hó"` → `"liho"`) | Rust `phonetics` `derive_notone` |
+| **abbrev** | Leading-spelling-unit abbreviation (§46) for quick lookup (e.g. `"lí hó"` → `"lh"`) | Rust `phonetics::derive_abbrev` |
+| **batchImport** | CSV import with deduplication by `roman\|hanzi` key | engine op `ImportCustomCsv` → `CustomDictionaryStore::batch_import` |
 | **customWordMarker** | Custom entries use `id = -2` to distinguish from system dictionary | `LexiconService.search()` |
 
 ### 8. Diagnostics (`engine/diagnostics.md`)
@@ -97,7 +97,7 @@ NextWord state machine lives in Rust `engine/nextword` (since v3.5.5). Platform 
 ### 10. Data Management (v3.4.5+)
 | Keyword | Definition | Key Class/Method |
 |---------|-----------|-----------------|
-| **BackupService** | Export/import user data (custom dict, frequency, associations) | `BackupService` |
+| **Backup (`.taigi`)** | Export/import user data (custom dict, frequency, associations) | engine ops `ExportBackup` / `ImportBackup` → `userdata::export_backup` / `import_backup` |
 | **DataManagement** | Production UI for user data (replaced Debug screens) | `DataManagementView` / `DataManagementScreen` |
 | **DictionarySearch** | In-app dictionary search from settings (uses `RustEngineBridge.searchByHanzi` for hanzi inputs) | `DictionarySearchViewModel` |
 

@@ -53,7 +53,7 @@ Engine state is `Send + !Sync`. The platform may deliver concurrent calls (IME t
 
 ## 4. Drop discipline — explicit `shutdown` matched on both sides
 
-Every opaque handle exposes an explicit `engine_shutdown(handle)` FFI. The Rust engine type implements `Drop` with the full teardown path (close DB, flush user-frequency, drop dictionary handles). The platform side calls shutdown deterministically.
+Every opaque handle exposes an explicit `engine_shutdown(handle)` FFI. The Rust engine type implements `Drop` with the full teardown path (drop dictionary handles). The user-data SQLite stores are not part of it: they are process-wide in `dispatch` (`UserDataHandle` in `engine/dispatch/src/user_data.rs`, opened once by `OpenUserData`) and outlive any one handle. The platform side calls shutdown deterministically.
 
 The opaque handle pattern itself is defined in `.claude/rules/rust-ffi-safety.md` §4. This section adds the platform-binding contract and the test surface; it does not redefine the pattern.
 
