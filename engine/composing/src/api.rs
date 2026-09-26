@@ -600,6 +600,16 @@ impl Engine {
         crate::transition::snapshot(&self.state, config)
     }
 
+    /// The pending raw buffer as typed — `Preedit.raw_input` without
+    /// building the preedit (not [`Phase::raw_input`], which is the derived
+    /// display). Empty when idle.
+    pub fn pending_raw(&self) -> &str {
+        match &self.state.phase {
+            Phase::Idle => "",
+            Phase::Composing { raw, .. } | Phase::Continuous { raw, .. } => raw,
+        }
+    }
+
     /// Apply `intent` against the current state, mutate, and return the
     /// resulting response (preedit + ordered effects + is_composing). Delegates to the pure transition table in
     /// `transition.rs`.

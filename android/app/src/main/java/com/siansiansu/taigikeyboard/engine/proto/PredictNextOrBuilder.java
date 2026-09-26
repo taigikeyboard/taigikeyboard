@@ -80,4 +80,30 @@ public interface PredictNextOrBuilder extends
    * @return The limit.
    */
   int getLimit();
+
+  /**
+   * <pre>
+   * The committed word's canonical TL — the `prev_tl` tier key of the user
+   * rows' order (§24). Read only once the engine owns the user data
+   * (`UserDataRequest.open`; user-data-engine-roadmap P3b): it then reads
+   * `user_association.db` itself and ignores `user_rows`.
+   * </pre>
+   *
+   * <code>string roman = 7;</code>
+   * @return The roman.
+   */
+  java.lang.String getRoman();
+  /**
+   * <pre>
+   * The committed word's canonical TL — the `prev_tl` tier key of the user
+   * rows' order (§24). Read only once the engine owns the user data
+   * (`UserDataRequest.open`; user-data-engine-roadmap P3b): it then reads
+   * `user_association.db` itself and ignores `user_rows`.
+   * </pre>
+   *
+   * <code>string roman = 7;</code>
+   * @return The bytes for roman.
+   */
+  com.google.protobuf.ByteString
+      getRomanBytes();
 }

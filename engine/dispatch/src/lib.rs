@@ -114,7 +114,13 @@ fn run(bytes: &[u8]) -> Response {
             }
         },
         request::Payload::Composing(comp_req) => {
-            match composing::EngineHandle::instance().handle(&comp_req, &config, generation) {
+            // With the engine's own user data open, `FetchAtPos` reads it (U11).
+            #[cfg(feature = "user-data")]
+            let handled = user_data::handle_composing(&comp_req, &config, generation);
+            #[cfg(not(feature = "user-data"))]
+            let handled =
+                composing::EngineHandle::instance().handle(&comp_req, &config, generation);
+            match handled {
                 Ok(comp_resp) => Response {
                     id,
                     error: ErrorCode::Ok as i32,
@@ -146,6 +152,8 @@ fn run(bytes: &[u8]) -> Response {
             }
         }
         request::Payload::Nextword(nw_req) => {
+            #[cfg(feature = "user-data")]
+            let nw_req = user_data::with_user_rows(nw_req);
             let nw_req = predict::expand_predict_next(nw_req);
             match nextword::EngineHandle::instance().handle(&nw_req, &config, generation) {
                 Ok(nw_resp) => Response {

@@ -26,6 +26,15 @@ pub struct AssociationRow {
     pub count: i64,
 }
 
+/// One word learned after a previous one, as a prediction reads it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct FollowingRow {
+    pub next: String,
+    pub next_tl: String,
+    pub count: i64,
+    pub last_used_ms: i64,
+}
+
 /// Records the bigrams the engine decides are worth learning. Write-only on
 /// the desktop today (no next-word surface); what it buys is that when one
 /// lands it starts with the user's real history.
@@ -107,6 +116,40 @@ impl UserAssociationStore {
                 Ok(())
             })
         });
+    }
+
+    /// The words learned after `previous`, best evidence first, at most
+    /// `limit`; `None` when the store could not be read (not open, busy).
+    ///
+    /// **Row order is load-bearing** (behavioral-invariants §24): rows whose
+    /// `prev_tl` equals `previous_tl` first, then untagged ones, then the
+    /// other readings of the same Hanji — never dropped — each tier by count,
+    /// recency, then `id`. The next-word filter keeps only the FIRST row per
+    /// predicted `(hanzi, tl)`, so this order decides whose evidence counts,
+    /// and `ORDER BY` ranks before `LIMIT` truncates. CROSS-PLATFORM
+    /// INVARIANT — mirrors iOS `NextWordRepository.swift` `fetchUserRows` and
+    /// Android `NextWordService.kt` `USER_PREDICT_SQL`.
+    pub fn rows_following(
+        &self,
+        previous: &str,
+        previous_tl: &str,
+        limit: usize,
+    ) -> Option<Vec<FollowingRow>> {
+        let limit = i64::try_from(limit).unwrap_or(i64::MAX);
+        self.database.read(|connection| {
+            let mut statement = connection.prepare(&format!(
+                "SELECT next_word, next_tl, count, CAST(strftime('%s', last_used) AS INTEGER) * 1000\nFROM {TABLE_NAME}\nWHERE prev_word = ?1\nORDER BY\n    CASE WHEN prev_tl = ?2 THEN 0 WHEN prev_tl = '' THEN 1 ELSE 2 END,\n    count DESC, last_used DESC, id ASC\nLIMIT ?3;"
+            ))?;
+            let rows = statement.query_map(params![previous, previous_tl, limit], |row| {
+                Ok(FollowingRow {
+                    next: row.get(0)?,
+                    next_tl: row.get::<_, Option<String>>(1)?.unwrap_or_default(),
+                    count: row.get(2)?,
+                    last_used_ms: row.get::<_, Option<i64>>(3)?.unwrap_or(0),
+                })
+            })?;
+            rows.collect()
+        })
     }
 
     /// Every learned row with its count, most-used first, or `None` when

@@ -530,6 +530,14 @@ public nonisolated struct Taigi_Engine_FetchAtPos: Sendable {
   /// un-wired build → no learned candidates.
   public var learnedEntries: [Taigi_Engine_LearnedEntry] = []
 
+  /// The user's "use my custom dictionary" setting, OFF — read only once the
+  /// engine owns the user data (`UserDataRequest.open`; user-data-engine-
+  /// roadmap P3b): the engine then reads `custom_dictionary.db` itself and
+  /// ignores fields 2 / 4 / 7, so the platform can no longer express the
+  /// setting by sending no rows. Negative like field 6, so an un-wired
+  /// build keeps the dictionary on.
+  public var customDictionaryDisabled: Bool = false
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -1767,7 +1775,7 @@ nonisolated extension Taigi_Engine_EnterContinuous: SwiftProtobuf.Message, Swift
 
 nonisolated extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".FetchAtPos"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{2}frequency_entries\0\u{3}now_ms\0\u{3}custom_entries\0\u{3}enabled_sources_bitmask\0\u{3}literal_roman_candidate_disabled\0\u{3}learned_entries\0\u{b}position\0\u{c}\u{1}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{2}frequency_entries\0\u{3}now_ms\0\u{3}custom_entries\0\u{3}enabled_sources_bitmask\0\u{3}literal_roman_candidate_disabled\0\u{3}learned_entries\0\u{3}custom_dictionary_disabled\0\u{b}position\0\u{c}\u{1}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1781,6 +1789,7 @@ nonisolated extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProto
       case 5: try { try decoder.decodeSingularUInt32Field(value: &self.enabledSourcesBitmask) }()
       case 6: try { try decoder.decodeSingularBoolField(value: &self.literalRomanCandidateDisabled) }()
       case 7: try { try decoder.decodeRepeatedMessageField(value: &self.learnedEntries) }()
+      case 8: try { try decoder.decodeSingularBoolField(value: &self.customDictionaryDisabled) }()
       default: break
       }
     }
@@ -1805,6 +1814,9 @@ nonisolated extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProto
     if !self.learnedEntries.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.learnedEntries, fieldNumber: 7)
     }
+    if self.customDictionaryDisabled != false {
+      try visitor.visitSingularBoolField(value: self.customDictionaryDisabled, fieldNumber: 8)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1815,6 +1827,7 @@ nonisolated extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProto
     if lhs.enabledSourcesBitmask != rhs.enabledSourcesBitmask {return false}
     if lhs.literalRomanCandidateDisabled != rhs.literalRomanCandidateDisabled {return false}
     if lhs.learnedEntries != rhs.learnedEntries {return false}
+    if lhs.customDictionaryDisabled != rhs.customDictionaryDisabled {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

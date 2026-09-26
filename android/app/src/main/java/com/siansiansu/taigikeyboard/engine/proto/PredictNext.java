@@ -28,6 +28,7 @@ public  final class PredictNext extends
   private PredictNext() {
     word_ = "";
     userRows_ = emptyProtobufList();
+    roman_ = "";
   }
   private int bitField0_;
   public static final int WORD_FIELD_NUMBER = 1;
@@ -350,6 +351,88 @@ public  final class PredictNext extends
   private void clearLimit() {
 
     limit_ = 0;
+  }
+
+  public static final int ROMAN_FIELD_NUMBER = 7;
+  private java.lang.String roman_;
+  /**
+   * <pre>
+   * The committed word's canonical TL — the `prev_tl` tier key of the user
+   * rows' order (§24). Read only once the engine owns the user data
+   * (`UserDataRequest.open`; user-data-engine-roadmap P3b): it then reads
+   * `user_association.db` itself and ignores `user_rows`.
+   * </pre>
+   *
+   * <code>string roman = 7;</code>
+   * @return The roman.
+   */
+  @java.lang.Override
+  public java.lang.String getRoman() {
+    return roman_;
+  }
+  /**
+   * <pre>
+   * The committed word's canonical TL — the `prev_tl` tier key of the user
+   * rows' order (§24). Read only once the engine owns the user data
+   * (`UserDataRequest.open`; user-data-engine-roadmap P3b): it then reads
+   * `user_association.db` itself and ignores `user_rows`.
+   * </pre>
+   *
+   * <code>string roman = 7;</code>
+   * @return The bytes for roman.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getRomanBytes() {
+    return com.google.protobuf.ByteString.copyFromUtf8(roman_);
+  }
+  /**
+   * <pre>
+   * The committed word's canonical TL — the `prev_tl` tier key of the user
+   * rows' order (§24). Read only once the engine owns the user data
+   * (`UserDataRequest.open`; user-data-engine-roadmap P3b): it then reads
+   * `user_association.db` itself and ignores `user_rows`.
+   * </pre>
+   *
+   * <code>string roman = 7;</code>
+   * @param value The roman to set.
+   */
+  private void setRoman(
+      java.lang.String value) {
+    java.util.Objects.requireNonNull(value);
+
+    roman_ = value;
+  }
+  /**
+   * <pre>
+   * The committed word's canonical TL — the `prev_tl` tier key of the user
+   * rows' order (§24). Read only once the engine owns the user data
+   * (`UserDataRequest.open`; user-data-engine-roadmap P3b): it then reads
+   * `user_association.db` itself and ignores `user_rows`.
+   * </pre>
+   *
+   * <code>string roman = 7;</code>
+   */
+  private void clearRoman() {
+
+    roman_ = getDefaultInstance().getRoman();
+  }
+  /**
+   * <pre>
+   * The committed word's canonical TL — the `prev_tl` tier key of the user
+   * rows' order (§24). Read only once the engine owns the user data
+   * (`UserDataRequest.open`; user-data-engine-roadmap P3b): it then reads
+   * `user_association.db` itself and ignores `user_rows`.
+   * </pre>
+   *
+   * <code>string roman = 7;</code>
+   * @param value The bytes for roman to set.
+   */
+  private void setRomanBytes(
+      com.google.protobuf.ByteString value) {
+    checkByteStringIsUtf8(value);
+    roman_ = value.toStringUtf8();
+
   }
 
   public static com.siansiansu.taigikeyboard.engine.proto.PredictNext parseFrom(
@@ -802,6 +885,90 @@ public  final class PredictNext extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The committed word's canonical TL — the `prev_tl` tier key of the user
+     * rows' order (§24). Read only once the engine owns the user data
+     * (`UserDataRequest.open`; user-data-engine-roadmap P3b): it then reads
+     * `user_association.db` itself and ignores `user_rows`.
+     * </pre>
+     *
+     * <code>string roman = 7;</code>
+     * @return The roman.
+     */
+    @java.lang.Override
+    public java.lang.String getRoman() {
+      return instance.getRoman();
+    }
+    /**
+     * <pre>
+     * The committed word's canonical TL — the `prev_tl` tier key of the user
+     * rows' order (§24). Read only once the engine owns the user data
+     * (`UserDataRequest.open`; user-data-engine-roadmap P3b): it then reads
+     * `user_association.db` itself and ignores `user_rows`.
+     * </pre>
+     *
+     * <code>string roman = 7;</code>
+     * @return The bytes for roman.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getRomanBytes() {
+      return instance.getRomanBytes();
+    }
+    /**
+     * <pre>
+     * The committed word's canonical TL — the `prev_tl` tier key of the user
+     * rows' order (§24). Read only once the engine owns the user data
+     * (`UserDataRequest.open`; user-data-engine-roadmap P3b): it then reads
+     * `user_association.db` itself and ignores `user_rows`.
+     * </pre>
+     *
+     * <code>string roman = 7;</code>
+     * @param value The roman to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRoman(
+        java.lang.String value) {
+      copyOnWrite();
+      instance.setRoman(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The committed word's canonical TL — the `prev_tl` tier key of the user
+     * rows' order (§24). Read only once the engine owns the user data
+     * (`UserDataRequest.open`; user-data-engine-roadmap P3b): it then reads
+     * `user_association.db` itself and ignores `user_rows`.
+     * </pre>
+     *
+     * <code>string roman = 7;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRoman() {
+      copyOnWrite();
+      instance.clearRoman();
+      return this;
+    }
+    /**
+     * <pre>
+     * The committed word's canonical TL — the `prev_tl` tier key of the user
+     * rows' order (§24). Read only once the engine owns the user data
+     * (`UserDataRequest.open`; user-data-engine-roadmap P3b): it then reads
+     * `user_association.db` itself and ignores `user_rows`.
+     * </pre>
+     *
+     * <code>string roman = 7;</code>
+     * @param value The bytes for roman to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRomanBytes(
+        com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.setRomanBytes(value);
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.PredictNext)
   }
   @java.lang.Override
@@ -826,10 +993,11 @@ public  final class PredictNext extends
             "queryGeneration_",
             "nowMs_",
             "limit_",
+            "roman_",
           };
           java.lang.String info =
-              "\u0000\u0006\u0000\u0001\u0001\u0006\u0006\u0000\u0001\u0000\u0001\u0208\u0002\u001b" +
-              "\u0003\u1009\u0000\u0004\u0003\u0005\u0002\u0006\u0004";
+              "\u0000\u0007\u0000\u0001\u0001\u0007\u0007\u0000\u0001\u0000\u0001\u0208\u0002\u001b" +
+              "\u0003\u1009\u0000\u0004\u0003\u0005\u0002\u0006\u0004\u0007\u0208";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

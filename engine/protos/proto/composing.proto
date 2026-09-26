@@ -207,6 +207,13 @@ message FetchAtPos {
   // rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
   // un-wired build → no learned candidates.
   repeated LearnedEntry learned_entries    = 7;
+  // The user's "use my custom dictionary" setting, OFF — read only once the
+  // engine owns the user data (`UserDataRequest.open`; user-data-engine-
+  // roadmap P3b): the engine then reads `custom_dictionary.db` itself and
+  // ignores fields 2 / 4 / 7, so the platform can no longer express the
+  // setting by sending no rows. Negative like field 6, so an un-wired
+  // build keeps the dictionary on.
+  bool custom_dictionary_disabled          = 8;
 }
 
 // One auto-learned phrase (§50): the `(Hanji, canonical-TL)` pair the user

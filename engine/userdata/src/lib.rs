@@ -35,7 +35,7 @@ mod types;
 mod user_data_stores;
 
 #[cfg(feature = "sqlite")]
-pub use association::{AssociationRow, UserAssociationStore};
+pub use association::{AssociationRow, FollowingRow, UserAssociationStore};
 #[cfg(feature = "sqlite")]
 pub use capacity::LearningCapacity;
 #[cfg(feature = "sqlite")]

@@ -84,6 +84,7 @@ fn predict(word: &str, toggles: DictionaryToggles) -> Vec<EnginePrediction> {
                 query_generation: 0,
                 now_ms: 0,
                 limit: 30,
+                roman: String::new(),
             })),
         })),
     };
