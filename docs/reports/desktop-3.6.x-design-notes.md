@@ -9,7 +9,7 @@
 ## Summary
 
 - Verbatim design bodies of the seven desktop sections that shipped in 3.6.8 and were collapsed out of `docs/roadmap.md` on 2026-09-13 (custom fonts appended the same day). Frozen: do not edit; the roadmap keeps status + commit + pending dogfood per item.
-- The Telex tone-1/4 follow-up is NOT here — it is still a live design and stays in the roadmap.
+- The Telex tone-1/4 follow-up is NOT here — it shipped (#98) and its design is in `2026-09-26-shipped-roadmap-design-notes.md`.
 
 ---
 

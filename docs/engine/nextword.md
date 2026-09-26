@@ -1,7 +1,7 @@
 # NextWord Prediction
 
 > **Type**: Feature
-> **Keywords**: `NextWord`, `Bigram`, `WordAssociation`, `UserLearning`, `nextword crate`
+> **Keywords**: `NextWord`, `Bigram`, `user_association`, `PredictNext`, `nextword crate`
 > **Related**: continuous-candidate-display.md, sort.md, architecture/nextword-engine-boundary.md, binary-format.md
 
 ---

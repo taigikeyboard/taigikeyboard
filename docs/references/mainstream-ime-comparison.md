@@ -68,7 +68,7 @@ If you are working on… → read these in order.
 
 ### Segmentation / lattice (DP, DAG, Viterbi)
 
-1. **`McBopomofo/algorithm.md`** — clearest pedagogical write-up (ReadingGrid, Spans, topological-sort relaxation). Required reading before touching `engine/composing/src/walker/`.
+1. **`McBopomofo/algorithm.md`** — clearest pedagogical write-up (ReadingGrid, Spans, topological-sort relaxation). Required reading before touching `engine/composing/src/lattice/walker.rs`.
 2. **`khiin-rs/khiin/src/data/segmenter.rs`** — word-level DP cost function. Already mirrored in our roadmap Phase 9 user_freq_boost work.
 3. **`librime/src/rime/algo/syllabifier.cc`** — DAG construction with prism (double-array trie). Industry baseline.
 4. **`mozc/src/converter/immutable_converter.cc` + `lattice.cc` + `nbest_generator.cc`** — full connection-cost **Viterbi** + N-best. The "do it properly" end of the spectrum; read when justifying whether a Taigi slice needs a real connection matrix or the cheaper topological-sort relaxation (McBopomofo) / our walker suffices.
@@ -266,7 +266,7 @@ If you are working on… → read these in order.
   - **User-phrase epsilon boost** (`McBopomofoLM.cpp:120`): single-syllable user phrases get `topScore + 1e-9` — solves the exact "user word always wins over multi-syllable phrase" bug we hit in v3.5.6.
   - **`fscale = 2.7`** length weighting in `frequency_builder.py` — empirical multiplier for "long words deserve a boost". Reference for any future Taigi DP cost-function tuning.
 - **Where to look**:
-  - `algorithm.md` — MANDATORY READ before touching `engine/composing/src/walker/`
+  - `algorithm.md` — MANDATORY READ before touching `engine/composing/src/lattice/walker.rs`
   - `Source/Engine/gramambular2/reading_grid.cpp:51 (insertReading), :134 (Relax), :166 (TopologicalSort), :216 (walk), :417 (update)`
   - `Source/Engine/McBopomofoLM.cpp:81 (getUnigrams), :120 (epsilon boost), :234 (filterAndTransformUnigrams)`
   - `Source/Engine/ParselessLM.{h,cc}` + `ParselessPhraseDB.{h,cc}` — memory-mapped binary-search dict (alternative to MARISA-trie)
