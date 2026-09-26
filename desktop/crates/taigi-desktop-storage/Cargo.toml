@@ -1,6 +1,6 @@
 [package]
 name = "taigi-desktop-storage"
-description = "User data on disk for the desktop input methods (Windows, Linux): the learning databases, the custom dictionary and the settings file"
+description = "Desktop-only data on disk (Windows, Linux): settings file, user fonts, data directory; re-exports the engine user-data stores"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -13,11 +13,10 @@ crate-type = ["rlib"]
 
 [dependencies]
 taigi-desktop-core.workspace = true
-rusqlite.workspace = true
+userdata = { workspace = true, features = ["sqlite"] }
 serde_json.workspace = true
 log.workspace = true
 thiserror.workspace = true
-uuid.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

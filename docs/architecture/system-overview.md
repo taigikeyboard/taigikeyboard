@@ -46,7 +46,7 @@ graph TB
     domains -. mmap read-only .-> artifacts
 ```
 
-User-writable state stays **native SQLite on each platform** (`status=wont_migrate`): `user_frequency.db` (schema v2), `user_association.db` (v6, `CROSS-PLATFORM INVARIANT` on all four), `custom_dictionary.db` (v3; Android keeps its own `DATABASE_VERSION` namespace — portability D5), `learned_phrases.db` (§50, own store). iOS/macOS via `SQLite3`, Android via the platform SQLite, Windows and Linux via `rusqlite` in `taigi-desktop-storage`. Details: [`data-artifacts-portability.md`](data-artifacts-portability.md) §4–8.
+User-writable state is **native SQLite on each platform** today, moving into the engine crate `userdata` per [`user-data-engine-roadmap.md`](user-data-engine-roadmap.md) (P1 moved the Windows + Linux stores there): `user_frequency.db` (schema v2), `user_association.db` (v6, `CROSS-PLATFORM INVARIANT` on all four), `custom_dictionary.db` (v3; Android keeps its own `DATABASE_VERSION` namespace — portability D5), `learned_phrases.db` (§50, own store). iOS/macOS via `SQLite3`, Android via the platform SQLite, Windows and Linux via `rusqlite` in engine `userdata` (re-exported by `taigi-desktop-storage`). Details: [`data-artifacts-portability.md`](data-artifacts-portability.md) §4–8.
 
 | Platform | Shell | Engine hop | Candidate UI | Settings UI | Dogfood gate |
 |---|---|---|---|---|---|
@@ -60,13 +60,15 @@ User-writable state stays **native SQLite on each platform** (`status=wont_migra
 
 ## 2. Engine crate dependency graph
 
-Eleven-member Cargo workspace (`engine/Cargo.toml`). Edges point **caller → callee** and flow one way only — the dependency-direction invariant is enforced per `.claude/rules/rust-best-practices.md` §1a. The `desktop/` workspace (the pure crates Windows and Linux share, `linux-roadmap.md` L2) and the `windows/` / `linux/` shell workspaces sit *above* this graph: `taigi-desktop-core` depends on `dispatch` + `protos` by path and is not a member (the shells need `unsafe` for COM; the engine workspace is `unsafe_code = "forbid"`).
+Twelve-member Cargo workspace (`engine/Cargo.toml`). Edges point **caller → callee** and flow one way only — the dependency-direction invariant is enforced per `.claude/rules/rust-best-practices.md` §1a. The `desktop/` workspace (the pure crates Windows and Linux share, `linux-roadmap.md` L2) and the `windows/` / `linux/` shell workspaces sit *above* this graph: `taigi-desktop-core` depends on `dispatch` + `protos` by path and is not a member (the shells need `unsafe` for COM; the engine workspace is `unsafe_code = "forbid"`).
 
 ```mermaid
 graph TD
     swiftffi["swift-ffi<br/>iOS + macOS staticlib"] --> dispatch
     androidjni["android-jni<br/>Android cdylib"] --> dispatch
     wincore["taigi-desktop-core<br/>(desktop/ workspace, shared by windows/ + linux/)"] --> dispatch
+    wincore -.->|"types + traits only"| userdata
+    wstorage["taigi-desktop-storage<br/>(desktop/ workspace)"] --> userdata
     dispatch --> composing
     dispatch --> lexicon
     dispatch --> nextword
@@ -78,14 +80,15 @@ graph TD
     lexicon --> phonetics
     lexicon --> mmaphost["mmap-host"]
     nextword --> phonetics
+    userdata --> phonetics
 
     classDef adapter fill:#e8f0fe,stroke:#4285f4;
     classDef leaf fill:#e6f4ea,stroke:#34a853;
-    class swiftffi,androidjni,wincore adapter;
+    class swiftffi,androidjni,wincore,wstorage adapter;
     class phonetics,mmaphost leaf;
 ```
 
-Omitted for readability: **`protos`** (prost-generated message types; every crate depends on it — the true leaf); **`mmap-host`** (the single `unsafe` mmap carve-out, used only by `lexicon`); external crates (`swift-bridge` / `jni` in the adapters, `fst` in `lexicon` + `fst-builder`, `memmap2` in `mmap-host`); **`build-helpers/fst-builder`** (offline tool producing `dictionary.fst` / `syllables.fst`). Layers: **adapters** (`swift-ffi`, `android-jni`, `taigi-desktop-core`) → **use-case** (`dispatch`) → **domain** (`composing`, `lexicon`, `ranking`, `nextword`) → **leaf kernel** (`phonetics`, `protos`, `mmap-host`).
+Omitted for readability: **`protos`** (prost-generated message types; every crate depends on it — the true leaf); **`mmap-host`** (the single `unsafe` mmap carve-out, used only by `lexicon`); external crates (`swift-bridge` / `jni` in the adapters, `fst` in `lexicon` + `fst-builder`, `memmap2` in `mmap-host`, `rusqlite` (bundled SQLite) in `userdata` behind its default `sqlite` feature — `taigi-desktop-core` takes only the row types and store traits, so a build without `taigi-desktop-storage` stays C-free); **`build-helpers/fst-builder`** (offline tool producing `dictionary.fst` / `syllables.fst`). Layers: **adapters** (`swift-ffi`, `android-jni`, `taigi-desktop-core`) → **use-case** (`dispatch`) → **domain** (`composing`, `lexicon`, `ranking`, `nextword`, `userdata`) → **leaf kernel** (`phonetics`, `protos`, `mmap-host`).
 
 ---
 

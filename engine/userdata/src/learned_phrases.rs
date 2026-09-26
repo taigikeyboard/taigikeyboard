@@ -5,10 +5,10 @@
 
 use crate::custom_dictionary::SearchKeyDeriver;
 use crate::database::{immediate_transaction, UserDataDatabase, UserDataDatabaseError};
+use crate::stores::LearnedPhraseSource;
+use crate::types::{CustomSearchKey, LearnedPhrase};
 use rusqlite::{params, Connection};
 use std::path::PathBuf;
-use taigi_desktop_core::composing::LearnedPhraseSource;
-use taigi_desktop_core::engine::{CustomSearchKey, LearnedPhrase};
 
 const TABLE_NAME: &str = "learned_phrases";
 const SEARCH_KEY_TABLE_NAME: &str = "learned_search_key";

@@ -2,7 +2,7 @@
 
 > **Type**: Planning (design record + PR table; becomes Reference once shipped)
 > **Keywords**: `user data`, `SQLite`, `rusqlite`, `user_frequency`, `user_association`, `custom_dictionary`, `learned_phrases`, `.taigi`, `migration`, `engine`
-> **Status**: Phase 0 (this document) — 2026-09-26. No phase implemented.
+> **Status**: Phase 0 merged #219 (2026-09-26); P1 in progress.
 > **Session memory**: project memory `project_user_data_engine.md` (Claude auto-memory)
 > **Supersedes**: the "user-data SQLite stays platform-native" rule (`.claude/rules/rust-migration-policy.md` §6, rewritten 2026-09-26) and every `wont_migrate` row for the four stores in `docs/engine/migration-inventory.csv`
 
@@ -73,7 +73,7 @@ Each is a symptom of four implementations; each is fixed once by the engine stor
 
 ## Design (Codex ANALYSIS-ONLY pre-review 2026-09-26 applied)
 
-**U1 — One engine crate `engine/userdata`.** Moved from `taigi-desktop-storage`: `database`, `capacity`, `frequency`, `association`, `custom_dictionary`, `learned_phrases`, `csv`, `timestamp`. The row types and store traits move down from `taigi-desktop-core` (`composing/stores.rs:8-41`, `engine/composing.rs:30-52`, `engine/nextword.rs:22`, `engine/phonetics.rs:21`); the search-key deriver becomes a direct call into `phonetics`. `directory.rs`, `settings_file.rs`, `font_library.rs` stay in `desktop/`. New dependencies: rusqlite (bundled), uuid (custom-dictionary ids). rusqlite 0.40.2 / libsqlite3-sys 0.38.2 declare no `rust-version`; the engine stays on 1.86 unless the moved code needs newer syntax (checked in P1, not assumed). No `unsafe` in the moved code; the workspace `forbid` holds.
+**U1 — One engine crate `engine/userdata`.** Moved from `taigi-desktop-storage`: `database`, `capacity`, `frequency`, `association`, `custom_dictionary`, `learned_phrases`, `csv`, `timestamp`. The row types and store traits move down from `taigi-desktop-core` (`composing/stores.rs:8-41`, `engine/composing.rs:30-52`, `engine/nextword.rs:22`, `engine/phonetics.rs:21`); the search-key deriver becomes a direct call into `phonetics`. The injectable `SearchKeyDeriver` seam (an `Option`-returning closure built for the proto round-trip) stays through P1 so the moved store bodies are byte-identical; P4 drops it and the stores call `phonetics` directly. `directory.rs`, `settings_file.rs`, `font_library.rs` stay in `desktop/`. New dependencies: rusqlite (bundled), uuid (custom-dictionary ids). rusqlite 0.40.2 / libsqlite3-sys 0.38.2 declare no `rust-version`; the engine stays on 1.86 unless the moved code needs newer syntax (checked in P1, not assumed). No `unsafe` in the moved code; the workspace `forbid` holds.
 
 **U2 — SQLite: rusqlite `bundled` on every platform.** One SQLite version and dialect everywhere, which also removes Android's 3.22 ceiling. On Apple the process then carries a second SQLite beside the system `libsqlite3`; that is safe only while no file is opened by both copies, so a platform switches all four stores in one PR (U6) and native code never opens these files again. The iOS keyboard extension's cost (binary size, memory — note iOS pins `cache_size=10000`) is measured by an on-device spike before the iOS phase.
 
@@ -93,14 +93,16 @@ Each is a symptom of four implementations; each is fixed once by the engine stor
 
 **U10 — Admin surface.** Custom-dictionary CRUD, CSV codec and search-key management are engine ops. `.taigi` is an engine codec (export → bytes, import ← bytes, format v2 compatible both ways, learned phrases still excluded per §50); file pickers, share sheets and UI stay on the platform. The frequency-recording setting stays a platform setting passed with the commit op; learned-phrase recording stays always-on.
 
+**U11 — The stores sit behind a `sqlite` feature; the types and traits do not.** `windows/Makefile` `check-msvc` must keep `cargo check`ing the msvc target from macOS for the crates it lists (`taigi-windows-platform`, `taigi-windows-update`, both over `taigi-desktop-core`) (verified 2026-09-26: bundled SQLite's build script fails there, `stdlib.h` not found). `userdata`'s default `sqlite` feature carries rusqlite + uuid and the stores; `desktop-core` takes the crate with `default-features = false` (row types, store traits, the search-key deriver), `taigi-desktop-storage` turns `sqlite` on. Cargo unifies features per build, so a build that also selects `taigi-desktop-storage` compiles SQLite for `desktop-core`'s copy too — exactly as before P1, when storage carried rusqlite; only builds without storage (the `check-msvc` roster) stay C-free. P3 meets the same constraint: once `dispatch` reads the stores, `desktop-core → dispatch` would pull SQLite in, so P3 either gates the store path in `dispatch` behind the same feature or narrows `check-msvc` — decided in P3's pre-review, not here.
+
 ---
 
 ## Phases
 
 | # | PR | Type | Content | Status |
 |---|---|---|---|---|
-| 0 | admin | docs | this roadmap; `rust-migration-policy.md` §6 rewritten; project memory | In progress |
-| 1 | `refactor(engine): move user-data stores into engine/userdata` | Refactor — Windows/Linux behaviour freeze | U1 extraction; `taigi-desktop-storage` keeps desktop-only modules and re-uses the engine crate; `refactor-reviewer` + `/code-review` | Pending |
+| 0 | admin | docs | this roadmap; `rust-migration-policy.md` §6 rewritten; project memory | Merged #219 `7a1af073` |
+| 1 | `refactor(engine): move user-data stores into engine/userdata` | Refactor — Windows/Linux behaviour freeze | U1 extraction; `taigi-desktop-storage` keeps desktop-only modules and re-uses the engine crate; `refactor-reviewer` + `/code-review` | In progress |
 | 2 | `feat(engine): user-data lifecycle and migration` | Feature (engine) | `UserDataRequest` `Open` / `Reset`; U3 journal parameter + busy timeout; U4 writer; U7 migrator + pre-migration copy + fixtures; U8 downgrade matrix written | Pending |
 | 3 | `feat(engine): engine reads and writes user data` | Feature (engine) | `FetchAtPos` reads frequency / custom / learned itself (one call — brainstorm R5); `PredictNext` reads user rows (§24 order); engine persists association, learned phrase, frequency (setting-gated) on commit; U9 compat | Pending |
 | 4 | `feat(engine): custom dictionary and backup codec ops` | Feature (engine) | U10 CRUD, CSV (fixes drift 3), `.taigi` v2 codec (fixes drift 6 where the format allows) | Pending |

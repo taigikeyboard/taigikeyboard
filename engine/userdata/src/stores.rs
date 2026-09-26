@@ -1,9 +1,9 @@
-//! The seams the composing path reads and writes through. The storage crate
-//! implements them over SQLite; tests implement them in memory. `Send + Sync`
-//! because the one manager per process lives behind a mutex a TSF host may
-//! reach from several thread managers (roadmap W3).
+//! The seams the composing path reads and writes through. The stores in this
+//! crate implement them over SQLite; tests implement them in memory. `Send +
+//! Sync` because the one manager per process lives behind a mutex a TSF host
+//! may reach from several thread managers (windows-roadmap W3).
 
-use crate::engine::{AssociationPair, CustomEntry, FrequencyRow, LearnedPhrase};
+use crate::types::{AssociationPair, CustomEntry, FrequencyRow, LearnedPhrase};
 
 /// `user_frequency.db`, as the keystroke path sees it.
 pub trait FrequencySource: Send + Sync {
@@ -38,27 +38,6 @@ pub trait LearnedPhraseSource: Send + Sync {
 pub trait AssociationSink: Send + Sync {
     /// Writes the learned bigrams. Best-effort; never logs the words.
     fn record(&self, pairs: &[AssociationPair]);
-}
-
-/// Milliseconds since the Unix epoch. Injectable because the engine's
-/// association window is a comparison against this clock, and a test that
-/// cannot move it can only ever exercise one side of it.
-pub trait Clock: Send + Sync {
-    fn now_ms(&self) -> i64;
-}
-
-/// The wall clock.
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SystemClock;
-
-impl Clock for SystemClock {
-    fn now_ms(&self) -> i64 {
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map_or(0, |elapsed| {
-                i64::try_from(elapsed.as_millis()).unwrap_or(i64::MAX)
-            })
-    }
 }
 
 // A shared store is the store: the shell hands one `Arc` to the manager and

@@ -11,6 +11,7 @@ members = [
     "build-helpers/fst-builder",
     "mmap-host",
     "lexicon",
+    "userdata",
 ]
 resolver = "2"
 
@@ -45,6 +46,12 @@ fst = "0.4"
 memmap2 = "0.9"
 mmap-host = { path = "./mmap-host" }
 lexicon = { path = "./lexicon" }
+userdata = { path = "./userdata" }
+# User-data stores (userdata): one SQLite build and dialect on every platform,
+# which also lifts Android's minSdk 3.22 ceiling (user-data-engine-roadmap U2).
+rusqlite = { version = "0.40", features = ["bundled"] }
+uuid = { version = "1", features = ["v4"] }
+tempfile = "3"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

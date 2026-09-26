@@ -25,31 +25,9 @@ use super::bridge::{continuous_app_config, record_failure, roundtrip};
 use super::transition::{ComposingTransition, ContinuousCandidate, ContinuousFetchResult};
 use crate::settings::EngineSettings;
 
-/// One learned frequency row, as the store hands it over.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct FrequencyRow {
-    pub word: String,
-    pub tl: String,
-    pub count: i64,
-    pub last_used_ms: i64,
-}
-
-/// One custom-dictionary row, the raw stored columns (`CustomDictEntry`).
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct CustomEntry {
-    pub roman: String,
-    /// Empty = romanization-only entry; mapped to an ABSENT wire field.
-    pub hanzi: String,
-}
-
-/// One auto-learned phrase (§50): the `(Hanji, canonical-TL)` pair the user
-/// composed segment by segment. Rides `FetchAtPos.learned_entries`, a
-/// competitor of the dictionary rows — never the override `CustomEntry` is.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct LearnedPhrase {
-    pub hanzi: String,
-    pub canonical_tl: String,
-}
+// The store rows moved to the engine `userdata` crate (user-data-engine-roadmap
+// P1); re-exported here until the desktop switch (P5) drops the old paths.
+pub use userdata::{CustomEntry, FrequencyRow, LearnedPhrase};
 
 /// Appends one typed character to the raw buffer.
 ///

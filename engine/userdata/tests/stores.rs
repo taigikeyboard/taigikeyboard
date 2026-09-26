@@ -3,17 +3,11 @@
 //! {LearningStore,LearningCapacity,CustomDictionaryStore}Tests.swift`.
 
 use std::sync::{Arc, Mutex};
-use taigi_desktop_core::composing::{
-    AssociationSink, CustomDictionarySource, FrequencySource, LearnedPhraseSource,
-};
-use taigi_desktop_core::engine::{
-    derive_custom_query_key, derive_custom_search_keys, AssociationPair, CustomSearchKey,
-};
-use taigi_desktop_core::settings::InputMode;
-use taigi_desktop_storage::{
-    CustomDictionaryError, CustomDictionaryRow, CustomDictionaryStore, LearnedPhraseRow,
-    LearnedPhraseStore, LearningCapacity, SearchKeyDeriver, UserAssociationStore, UserDataStores,
-    UserFrequencyStore,
+use userdata::{
+    derive_custom_query_key, derive_custom_search_keys, AssociationPair, AssociationSink,
+    CustomDictionaryError, CustomDictionaryRow, CustomDictionarySource, CustomDictionaryStore,
+    CustomSearchKey, FrequencySource, LearnedPhraseRow, LearnedPhraseSource, LearnedPhraseStore,
+    LearningCapacity, SearchKeyDeriver, UserAssociationStore, UserDataStores, UserFrequencyStore,
 };
 
 fn scratch() -> tempfile::TempDir {
@@ -530,13 +524,13 @@ fn the_engine_derivation_finds_a_poj_entry_typed_as_tl() {
     let stores = UserDataStores::new(directory.path().to_path_buf());
     stores.custom_dictionary.open_blocking();
     stores.custom_dictionary.seed_if_empty().unwrap();
-    let query = derive_custom_query_key("tsiahpa", InputMode::Tl).expect("a query key");
+    let query = derive_custom_query_key("tsiahpa", "tl").expect("a query key");
     // The `Arc` also implements the trait (its keystroke-path shape); the
     // inherent, row-returning method is named explicitly.
     let found = CustomDictionaryStore::rows_matching(&stores.custom_dictionary, &query, 20);
     assert_eq!(hanzi_of(&found), ["食飽未"]);
     assert!(derive_custom_search_keys("gâu-tsá").is_some_and(|keys| !keys.is_empty()));
-    let poj_query = derive_custom_query_key("chiahpa", InputMode::Poj).expect("a POJ query key");
+    let poj_query = derive_custom_query_key("chiahpa", "poj").expect("a POJ query key");
     assert_eq!(
         hanzi_of(&CustomDictionaryStore::rows_matching(
             &stores.custom_dictionary,
@@ -621,7 +615,7 @@ fn learned_store(directory: &tempfile::TempDir, limit: usize) -> LearnedPhraseSt
     store
 }
 
-fn learned_matches(store: &LearnedPhraseStore, input: &str, mode: InputMode) -> Vec<String> {
+fn learned_matches(store: &LearnedPhraseStore, input: &str, mode: &str) -> Vec<String> {
     // Learning is queued behind the writer; `all_rows` is the barrier.
     store.all_rows();
     let key = derive_custom_query_key(input, mode).expect("query key");
@@ -647,24 +641,15 @@ fn learning_the_same_pair_twice_is_one_row_with_count_two_found_by_the_whole_buf
             learn_count: 2,
         }]
     );
-    assert_eq!(
-        learned_matches(&store, "kikhilai", InputMode::Tl),
-        ["記起來"]
-    );
-    assert_eq!(
-        learned_matches(&store, "ki3khi2lai5", InputMode::Tl),
-        ["記起來"]
-    );
-    assert_eq!(
-        learned_matches(&store, "kikhilai", InputMode::Poj),
-        ["記起來"]
-    );
+    assert_eq!(learned_matches(&store, "kikhilai", "tl"), ["記起來"]);
+    assert_eq!(learned_matches(&store, "ki3khi2lai5", "tl"), ["記起來"]);
+    assert_eq!(learned_matches(&store, "kikhilai", "poj"), ["記起來"]);
     assert!(
-        learned_matches(&store, "kikhi", InputMode::Tl).is_empty(),
+        learned_matches(&store, "kikhi", "tl").is_empty(),
         "a prefix must not match"
     );
     assert!(
-        learned_matches(&store, "kikhilaia", InputMode::Tl).is_empty(),
+        learned_matches(&store, "kikhilaia", "tl").is_empty(),
         "a longer buffer must not match"
     );
 }
@@ -687,7 +672,7 @@ fn touching_bumps_a_known_pair_and_ignores_an_unknown_one_most_composed_first() 
         [("記起來", 2), ("機起來", 1)]
     );
     assert_eq!(
-        learned_matches(&store, "kikhilai", InputMode::Tl),
+        learned_matches(&store, "kikhilai", "tl"),
         ["記起來", "機起來"]
     );
 }
@@ -712,7 +697,7 @@ fn learning_past_the_cap_evicts_the_fewest_composed_row_and_its_keys_never_the_n
         "su1"
     };
     assert!(
-        learned_matches(&store, evicted, InputMode::Tl).is_empty(),
+        learned_matches(&store, evicted, "tl").is_empty(),
         "the evicted row's keys are gone"
     );
 }
@@ -724,12 +709,9 @@ fn wiping_learned_phrases_clears_rows_and_keys_and_the_store_learns_again() {
     store.learn_phrase("記起來", "kì--khí-lâi");
     assert_eq!(store.delete_all().unwrap(), 1);
     assert!(store.all_rows().unwrap().is_empty());
-    assert!(learned_matches(&store, "kikhilai", InputMode::Tl).is_empty());
+    assert!(learned_matches(&store, "kikhilai", "tl").is_empty());
     store.learn_phrase("記起來", "kì--khí-lâi");
-    assert_eq!(
-        learned_matches(&store, "kikhilai", InputMode::Tl),
-        ["記起來"]
-    );
+    assert_eq!(learned_matches(&store, "kikhilai", "tl"), ["記起來"]);
 }
 
 #[test]
@@ -879,7 +861,7 @@ fn perform_from_inside_the_worker_is_refused_rather_than_deadlocking() {
     // trace: Codex PR4 BLOCK — a job that re-enters `perform` would wait for
     // a barrier the worker can never reach.
     let directory = scratch();
-    let database = taigi_desktop_storage::UserDataDatabase::new(
+    let database = userdata::UserDataDatabase::new(
         "probe.db",
         "Probe",
         directory.path().to_path_buf(),
@@ -887,16 +869,15 @@ fn perform_from_inside_the_worker_is_refused_rather_than_deadlocking() {
     );
     database.open_blocking();
     let outcome: Result<
-        Result<(), taigi_desktop_storage::UserDataDatabaseError>,
-        taigi_desktop_storage::UserDataDatabaseError,
+        Result<(), userdata::UserDataDatabaseError>,
+        userdata::UserDataDatabaseError,
     > = database.perform(|_| Ok(Ok(())));
     assert!(outcome.is_ok());
     let handle = std::sync::Arc::new(database);
     let inner = std::sync::Arc::clone(&handle);
     let (tx, rx) = std::sync::mpsc::channel();
     handle.write(move |_| {
-        let nested: Result<(), taigi_desktop_storage::UserDataDatabaseError> =
-            inner.perform(|_| Ok(()));
+        let nested: Result<(), userdata::UserDataDatabaseError> = inner.perform(|_| Ok(()));
         tx.send(nested.is_err()).ok();
         Ok(())
     });

@@ -43,14 +43,14 @@ const FORM_ABBREV: &str = "abbrev";
 /// One materialized search key. `family` / `form` are stable string tags
 /// shared with the SQLite side table; `key` is the fused family-native search
 /// string. Native struct (dispatch maps it to the proto `CustomSearchKey`).
-pub(crate) struct CustomSearchKey {
+pub struct CustomSearchKey {
     pub family: &'static str,
     pub form: &'static str,
     pub key: String,
 }
 
 /// WRITE side — full search-key bundle for a stored custom-dict roman.
-pub(crate) fn derive_custom_search_keys(roman: &str) -> Vec<CustomSearchKey> {
+pub fn derive_custom_search_keys(roman: &str) -> Vec<CustomSearchKey> {
     if roman.trim().is_empty() {
         return Vec::new();
     }
@@ -74,7 +74,7 @@ pub(crate) fn derive_custom_search_keys(roman: &str) -> Vec<CustomSearchKey> {
 
 /// READ side — single family-native key for the current input + mode. `None`
 /// for empty / residue-only input.
-pub(crate) fn derive_custom_query_key(input: &str, input_mode: &str) -> Option<CustomSearchKey> {
+pub fn derive_custom_query_key(input: &str, input_mode: &str) -> Option<CustomSearchKey> {
     if input.trim().is_empty() {
         return None;
     }
