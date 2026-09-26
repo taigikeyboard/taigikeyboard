@@ -12,6 +12,7 @@ fn main() -> Result<()> {
             "proto/lexicon.proto",
             "proto/nextword.proto",
             "proto/case.proto",
+            "proto/user_data.proto",
         ],
         &["proto"],
     )?;

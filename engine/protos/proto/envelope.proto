@@ -7,6 +7,7 @@ import "composing.proto";
 import "lexicon.proto";
 import "nextword.proto";
 import "case.proto";
+import "user_data.proto";
 
 option java_package = "com.siansiansu.taigikeyboard.engine.proto";
 option java_multiple_files = true;
@@ -143,6 +144,7 @@ message Request {
     LexiconRequest lexicon = 12;
     NextWordRequest nextword = 13;
     CaseRequest case_transform = 14;
+    UserDataRequest user_data = 15;
   }
 }
 
@@ -156,5 +158,6 @@ message Response {
     LexiconResponse lexicon = 12;
     NextWordResponse nextword = 13;
     CaseResponse case_transform = 14;
+    UserDataResponse user_data = 15;
   }
 }

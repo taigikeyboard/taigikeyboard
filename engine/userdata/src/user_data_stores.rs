@@ -110,4 +110,22 @@ impl UserDataStores {
         self.custom_dictionary.open();
         self.learned_phrases.open();
     }
+
+    /// Opens all of them and finishes the custom dictionary's takeover —
+    /// its search keys re-derived, the seed entries written into an
+    /// untouched dictionary — before returning, so a caller learns which
+    /// stores are ready. Blocks: never on a UI thread or a store worker.
+    /// A failure is logged and leaves that store as it is; the others go on.
+    pub fn open_blocking(&self) {
+        // All four start opening on their own workers first, so the waits
+        // below overlap instead of running one file after another.
+        self.open();
+        self.frequency.open_blocking();
+        self.association.open_blocking();
+        self.learned_phrases.open_blocking();
+        self.custom_dictionary.open_blocking();
+        if self.custom_dictionary.is_ready() {
+            self.custom_dictionary.finish_takeover();
+        }
+    }
 }

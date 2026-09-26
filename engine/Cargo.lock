@@ -119,6 +119,8 @@ dependencies = [
  "phonetics",
  "prost",
  "protos",
+ "tempfile",
+ "userdata",
 ]
 
 [[package]]

@@ -88,5 +88,16 @@ public interface RequestOrBuilder extends
    */
   com.siansiansu.taigikeyboard.engine.proto.CaseRequest getCaseTransform();
 
+  /**
+   * <code>.taigi.engine.UserDataRequest user_data = 15;</code>
+   * @return Whether the userData field is set.
+   */
+  boolean hasUserData();
+  /**
+   * <code>.taigi.engine.UserDataRequest user_data = 15;</code>
+   * @return The userData.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.UserDataRequest getUserData();
+
   public com.siansiansu.taigikeyboard.engine.proto.Request.PayloadCase getPayloadCase();
 }
