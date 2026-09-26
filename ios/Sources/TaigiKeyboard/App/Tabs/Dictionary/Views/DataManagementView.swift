@@ -4,7 +4,7 @@ import UniformTypeIdentifiers
 
 /// Backup/Restore sub-page
 /// Provides export and import of all user data, backed by
-/// `DataManagementViewModel` + `BackupService`.
+/// `DataManagementViewModel` over the engine's backup ops (`UserDataClient`).
 struct DataManagementView: View {
     @Environment(DisplayLanguageStore.self) private var lang
     @StateObject private var viewModel = DataManagementViewModel()

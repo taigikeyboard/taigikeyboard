@@ -24,8 +24,7 @@ KeyboardKit 10+ is closed-source, so its API comes from docs, not source. Look i
 
 ## Architecture Notes
 
-- **SQLite layer**: `SQLiteConnectionManager` handles connection, queue, and initialization. Repositories use raw `sqlite3_*` C API inside `connectionManager.execute { db in }` closures — this verbosity is inherent to the C API, don't add wrapper abstractions
-- **Shared constant**: `SQLiteConnectionManager.sqliteTransient` replaces inline `unsafeBitCast(-1, to: sqlite3_destructor_type.self)` — use it for all `sqlite3_bind_text` calls
+- **User data is the engine's**: the four stores (frequency, association, custom dictionary, learned phrases) live in `engine/userdata` (bundled SQLite, `docs/architecture/user-data-engine-roadmap.md` P7b). The app and the keyboard each open them once through `UserDataOpening` (App Group directory, `DELETE` journal; the keyboard only with Full Access, the app never under XCTest); pages go through `UserDataClient`, picks through `UsageRecorder`. Never open these files with `SQLite3` — two SQLite copies in one process lock independently (roadmap U2 / U6).
 
 ## Swift Naming Conventions
 

@@ -84,6 +84,14 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
         // DebugLogger. Idempotent — main app also calls this in `init`.
         RustEngineBridge.install()
 
+        // The user's data, which the engine owns (user-data-engine-roadmap
+        // P7b): first after the bridge, so no pick reaches the engine before
+        // its stores are in use. Without Full Access the keyboard cannot write
+        // the App Group container; it then ranks without the user's data.
+        if hasFullAccess {
+            UserDataOpening.open(in: SharedSettings.sharedContainerURL)
+        }
+
         // Install the lexicon engine state (fst + dictionary.bin +
         // association.bin) once at extension launch. Idempotent — calling
         // again with the same paths is a no-op observation-wise. Bundle

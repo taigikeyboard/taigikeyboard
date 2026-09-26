@@ -1,9 +1,9 @@
 import Foundation
 import SwiftProtobuf
 
-// MARK: - RustEngineBridge Phonetics + Derivation + TPS surface
+// MARK: - RustEngineBridge Phonetics + TPS surface
 
-/// Phonetics / Derivation / TPS extension for `RustEngineBridge`. Holds
+/// Phonetics / TPS extension for `RustEngineBridge`. Holds
 /// the typed phonetics methods (Codex v2 §7 review per
 /// `~/.claude/rules/round-workflow.md` § Codex review sandwich — D9.4
 /// surface) plus the lazy `toneVariations` cache and
@@ -15,7 +15,7 @@ import SwiftProtobuf
 /// helpers, so colocation keeps those helpers `private` to one file
 /// instead of widening to `internal`.
 public extension RustEngineBridge {
-    // MARK: Phonetics core (6 ops)
+    // MARK: Phonetics core (4 ops)
 
     static func stripTone(_ input: String) -> (bare: String, tone: String) {
         var payload = Taigi_Engine_StripTone()
@@ -28,32 +28,15 @@ public extension RustEngineBridge {
         return (r.bare, r.tone)
     }
 
-    static func pojToTl(_ input: String) -> String {
-        var payload = Taigi_Engine_PojToTl()
-        payload.input = input
-        return stringDispatch(method: .pojToTl(payload), input: input, op: "pojToTl")
-    }
-
     static func tlToPoj(_ input: String) -> String {
         var payload = Taigi_Engine_TlToPoj()
         payload.input = input
         return stringDispatch(method: .tlToPoj(payload), input: input, op: "tlToPoj")
     }
 
-    static func normalizeInput(_ input: String) -> String {
-        var payload = Taigi_Engine_NormalizeInput()
-        payload.input = input
-        return stringDispatch(
-            method: .normalizeInput(payload),
-            input: input,
-            op: "normalizeInput",
-        )
-    }
-
     /// Replaces platform `TaigiUnicode.nfdPreprocessed(_:)`. Lookup-side
     /// NFD prep used by `ExternalLookupURLBuilder` before tone stripping.
-    /// Distinct semantics from `normalizeInput` — this preserves tone
-    /// diacritics; only nasal markers (ⁿ / ᴺ → "nn") and standalone
+    /// It preserves tone diacritics; only nasal markers (ⁿ / ᴺ → "nn") and standalone
     /// `\u{0358}` → `o` are rewritten.
     static func nfdPreprocessForLookup(_ input: String) -> String {
         var payload = Taigi_Engine_NfdPreprocessForLookup()
@@ -79,43 +62,6 @@ public extension RustEngineBridge {
             tl: r.tlVariations.mapValues { $0.variations },
         )
     }()
-
-    // MARK: Derivation (2 ops)
-
-    static func deriveNotone(_ roman: String) -> String {
-        var payload = Taigi_Engine_DeriveNotone()
-        payload.roman = roman
-        return stringDispatch(method: .deriveNotone(payload), input: roman, op: "deriveNotone")
-    }
-
-    static func deriveAbbrev(_ roman: String) -> String {
-        var payload = Taigi_Engine_DeriveAbbrev()
-        payload.roman = roman
-        return stringDispatch(method: .deriveAbbrev(payload), input: roman, op: "deriveAbbrev")
-    }
-
-    /// `Method::DeriveCustomSearchKeys` — WRITE side (v3.6.1 R3). Full
-    /// {tl, poj, tps} × {num, notone, abbrev} (+ TPS variant) bundle for a
-    /// stored custom-dict roman. The platform materializes these into the
-    /// `custom_search_key` side table so a query in any input mode finds the
-    /// entry. Empty bundle on FFI failure / residue-only input.
-    static func deriveCustomSearchKeys(_ roman: String) -> [CustomSearchKey] {
-        var payload = Taigi_Engine_DeriveCustomSearchKeys()
-        payload.roman = roman
-        return customSearchKeys(method: .deriveCustomSearchKeys(payload), op: "deriveCustomSearchKeys")
-    }
-
-    /// `Method::DeriveCustomQueryKey` — READ side (v3.6.1 R3). Single
-    /// family-native key for the current `input` + `mode`. Effective family is
-    /// upgraded to TPS by the engine when the raw input carries Bopomofo, so
-    /// the caller passes its settings mode verbatim. `nil` for residue-only /
-    /// empty input or FFI failure.
-    static func deriveCustomQueryKey(_ input: String, mode: InputMode) -> CustomSearchKey? {
-        var payload = Taigi_Engine_DeriveCustomQueryKey()
-        payload.input = input
-        payload.inputMode = customSearchInputMode(mode)
-        return customSearchKeys(method: .deriveCustomQueryKey(payload), op: "deriveCustomQueryKey").first
-    }
 
     // MARK: TPS (4 ops)
 
@@ -215,45 +161,6 @@ public extension RustEngineBridge {
         }
         return b.value
     }
-
-    /// Shared decode for the two custom-dict search-key ops — both return a
-    /// `CustomSearchKeysResult` (the write op a full bundle, the query op 0/1).
-    private static func customSearchKeys(
-        method: Taigi_Engine_PhoneticsRequest.OneOf_Method,
-        op: String,
-    ) -> [CustomSearchKey] {
-        guard let resp = dispatch(method: method, op: op) else { return [] }
-        guard case let .customSearchKeysResult(r)? = resp.result else {
-            recordFailure(op: op, message: "expected CustomSearchKeysResult")
-            return []
-        }
-        return r.keys.map { CustomSearchKey(family: $0.family, form: $0.form, key: $0.key) }
-    }
-
-    /// Map the platform `InputMode` to the engine `input_mode` string. TPS maps
-    /// to "tl" because TPS is a layout, not an engine mode — the engine upgrades
-    /// to the TPS family via `contains_tps` on the raw input (mirrors
-    /// `RustEngineBridge.appConfig`).
-    private static func customSearchInputMode(_ mode: InputMode) -> String {
-        switch mode {
-        case .poj: "poj"
-        case .english: "english"
-        case .tl, .tps: "tl"
-        }
-    }
-}
-
-// MARK: - CustomSearchKey
-
-/// One custom-dictionary cross-mode search key (v3.6.1 R3). Mirrors the proto
-/// `CustomSearchKey`: `family` ∈ {tl, poj, tps}, `form` ∈ {num, notone,
-/// abbrev}, `key` the fused family-native search string. Written to the
-/// `custom_search_key` side table; the query op returns one to match against
-/// it. Pure value type (no KeyboardKit / UIKit).
-public struct CustomSearchKey: Equatable, Sendable {
-    public let family: String
-    public let form: String
-    public let key: String
 }
 
 // MARK: - ToneVariationsCache

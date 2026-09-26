@@ -74,6 +74,7 @@ final class ComposingManagerContinuousTests: XCTestCase {
         let result = RustEngineBridge.composingFetchAtPos(
             settings: settings,
             generation: 1, // ComposingManager's default currentGeneration
+            nowMs: 0,
         )
         XCTAssertNotNil(
             result.candidates,
@@ -87,6 +88,7 @@ final class ComposingManagerContinuousTests: XCTestCase {
         let result = RustEngineBridge.composingFetchAtPos(
             settings: settings,
             generation: 1,
+            nowMs: 0,
         )
         XCTAssertNotNil(
             result.candidates,
@@ -101,6 +103,7 @@ final class ComposingManagerContinuousTests: XCTestCase {
         let result = RustEngineBridge.composingFetchAtPos(
             settings: settings,
             generation: 1,
+            nowMs: 0,
         )
         XCTAssertNotNil(
             result.candidates,
@@ -115,6 +118,7 @@ final class ComposingManagerContinuousTests: XCTestCase {
         let result = RustEngineBridge.composingFetchAtPos(
             settings: settings,
             generation: 1,
+            nowMs: 0,
         )
         XCTAssertNotNil(
             result.candidates,
@@ -124,16 +128,12 @@ final class ComposingManagerContinuousTests: XCTestCase {
 
     // MARK: - fetchContinuousCandidates
 
-    /// `fetchContinuousCandidates` is a two-phase wrapper over
-    /// `composingFetchAtPos` (Phase 9.3b): a neutral fetch learns candidate
-    /// `displayText` keys, then `user_frequency.db` is batch-queried and a
-    /// populated fetch re-ranks. Unit tests skip phase 2 because (a) the
-    /// lexicon FST is not installed in this process so phase 1 returns an
-    /// empty candidate carrier, and (b) `CompositionRoot.userFrequencyService`
-    /// is unopened in this test harness so the cold-start guard short-circuits
-    /// even if phase 1 ever produced hits. The bridge wire shape for the
-    /// populated path is pinned in `RustEngineBridgeContinuousTests`; the
-    /// boost arithmetic is pinned in `engine/lexicon/tests/user_freq_plumb.rs`.
+    /// `fetchContinuousCandidates` is one `composingFetchAtPos`: the engine
+    /// reads the user's data itself (user-data-engine-roadmap P7b). In this
+    /// process the lexicon FST is not installed, so the carrier is empty, and
+    /// the user data is never opened, so ranking is neutral. The bridge wire
+    /// shape is pinned in `RustEngineBridgeContinuousTests`; the ranking with
+    /// the user's data in `engine/dispatch/tests/user_data_reads.rs`.
     ///
     /// On Idle the engine returns nil candidates → wrapper exposes []. The
     /// caller (TaigiAutocompleteService) cannot distinguish "not Continuous" from

@@ -147,7 +147,7 @@ jobs:
         with:
           workspaces: engine
 
-      - name: shipped feature graphs (no e2e-trace; iOS without user-data)
+      - name: shipped feature graph has no e2e-trace
         working-directory: engine
         run: |
           set -euo pipefail
@@ -160,13 +160,6 @@ jobs:
           done
           # Positive control: the grep sees the feature when it IS on.
           cargo tree -e features -i dispatch -p android-jni --features e2e-trace | grep -q 'dispatch feature "e2e-trace"'
-          # The iOS keyboard extension builds swift-ffi without features and
-          # must stay without the engine's SQLite until it switches
-          # (user-data-engine-roadmap P7); only the macOS script turns it on.
-          if cargo tree -e features -i dispatch -p swift-ffi | grep -q 'dispatch feature "user-data"'; then
-            echo "::error::swift-ffi enables dispatch/user-data by default"; exit 1
-          fi
-          cargo tree -e features -i dispatch -p swift-ffi --features user-data | grep -q 'dispatch feature "user-data"'
 
       - name: release build carries the marker only when traced
         working-directory: engine

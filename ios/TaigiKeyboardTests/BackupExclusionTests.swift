@@ -1,94 +1,62 @@
-import SQLite3
 @testable import TaigiKeyboard
 import XCTest
 
 /// v3.6.1 R7 — user-data DBs are excluded from OS / iCloud automatic backup.
 ///
 /// Pins `INVARIANT_USER_DATA_EXCLUDED_FROM_OS_BACKUP`
-/// (`docs/architecture/behavioral-invariants.md` §29): every DB opened through
-/// `SQLiteConnectionManager` (frequency / association / custom word) is marked
-/// `isExcludedFromBackup = true` right after open, so learned/authored typing
-/// data is kept out of iCloud automatic backup. Cross-device portability is the
-/// manual `.taigi` export only (R7 product decision).
+/// (`docs/architecture/behavioral-invariants.md` §29): every file the engine
+/// keeps for the user — the four stores and the `<file>.pre-engine` copies its
+/// takeover leaves (user-data-engine-roadmap P7b) — is marked
+/// `isExcludedFromBackup = true`, so learned/authored typing data is kept out
+/// of iCloud automatic backup. Cross-device portability is the manual `.taigi`
+/// export only (R7 product decision).
 ///
-/// `isExcludedFromBackup` is a system directive, not a hard guarantee; this test
-/// pins that the attribute is *marked*, which is the observable contract. The
-/// injection is centralized in `SQLiteConnectionManager.connect()`, so testing
-/// the manager once covers all three user-data DBs.
+/// `isExcludedFromBackup` is a system directive, not a hard guarantee; this
+/// test pins that the attribute is *marked*, which is the observable contract.
+/// Files on disk stand in for the engine's: this process never opens the
+/// user data (the engine opens once per process).
 final class BackupExclusionTests: XCTestCase {
-    private var dbPath: String!
+    private var directory: URL!
 
     override func setUpWithError() throws {
         try super.setUpWithError()
-        dbPath = NSTemporaryDirectory()
-            .appending("backup_exclusion_\(UUID().uuidString).db")
+        directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("backup_exclusion_\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     }
 
     override func tearDownWithError() throws {
-        for suffix in ["", "-wal", "-shm", "-journal"] where dbPath != nil {
-            let path = dbPath! + suffix
-            if FileManager.default.fileExists(atPath: path) {
-                try? FileManager.default.removeItem(atPath: path)
-            }
-        }
-        dbPath = nil
+        try? FileManager.default.removeItem(at: directory)
+        directory = nil
         try super.tearDownWithError()
     }
 
-    private func makeManager() -> SQLiteConnectionManager {
-        let path = dbPath!
-        return SQLiteConnectionManager(
-            databasePath: { path },
-            queueLabel: "test.backup.exclusion.\(UUID().uuidString)",
-            loggerCategory: "BackupExclusionTests",
-        )
+    private func isExcludedFromBackup(_ name: String) throws -> Bool? {
+        try directory.appendingPathComponent(name)
+            .resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup
     }
 
-    private func isExcludedFromBackup(at path: String) throws -> Bool? {
-        let url = URL(fileURLWithPath: path)
-        return try url.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup
+    /// Every store file and every pre-takeover copy on disk is marked; a legacy
+    /// file without the attribute (a pre-R7 install) is backfilled.
+    func test_INVARIANT_USER_DATA_EXCLUDED_FROM_OS_BACKUP_everyStoreAndCopyIsMarked() throws {
+        let names = RustEngineBridge.userDataFileNames.flatMap { [$0, "\($0).pre-engine"] }
+        XCTAssertEqual(names.count, 8, "four stores, each with its takeover copy")
+        for name in names {
+            FileManager.default.createFile(atPath: directory.appendingPathComponent(name).path, contents: Data())
+            XCTAssertNotEqual(try isExcludedFromBackup(name), true, "precondition: \(name) not yet excluded")
+        }
+
+        UserDataOpening.excludeFromBackup(in: directory)
+
+        for name in names {
+            XCTAssertEqual(try isExcludedFromBackup(name), true, "\(name) must be excluded from backup")
+        }
     }
 
-    /// A freshly created DB file is marked excluded from backup immediately after
-    /// the first successful open.
-    func test_INVARIANT_USER_DATA_EXCLUDED_FROM_OS_BACKUP_freshDatabaseIsMarked() async throws {
-        let manager = makeManager()
-        try await manager.ensureInitialized(flags: SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE)
+    /// A file the engine has not written yet is skipped, not created.
+    func test_aMissingFileIsNotCreated() {
+        UserDataOpening.excludeFromBackup(in: directory)
 
-        XCTAssertTrue(
-            FileManager.default.fileExists(atPath: dbPath!),
-            "open with SQLITE_OPEN_CREATE must have created the DB file",
-        )
-        XCTAssertEqual(
-            try isExcludedFromBackup(at: dbPath!), true,
-            "a freshly opened user-data DB must be marked isExcludedFromBackup",
-        )
-    }
-
-    /// An existing-install DB (file already on disk WITHOUT the attribute, e.g. a
-    /// pre-R7 upgrade) gets the attribute set on the next open — the exclusion is
-    /// applied on every connect, not only at file creation.
-    func test_INVARIANT_USER_DATA_EXCLUDED_FROM_OS_BACKUP_existingDatabaseIsBackfilled() async throws {
-        // Simulate a pre-R7 install: create the DB file via a bare open, with no
-        // backup-exclusion attribute set.
-        var bareConnection: OpaquePointer?
-        XCTAssertEqual(
-            sqlite3_open_v2(dbPath!, &bareConnection, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nil),
-            SQLITE_OK,
-            "precondition: bare open creates the legacy DB file",
-        )
-        sqlite3_close(bareConnection)
-        XCTAssertNotEqual(
-            try isExcludedFromBackup(at: dbPath!), true,
-            "precondition: legacy file is not yet excluded from backup",
-        )
-
-        let manager = makeManager()
-        try await manager.ensureInitialized(flags: SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE)
-
-        XCTAssertEqual(
-            try isExcludedFromBackup(at: dbPath!), true,
-            "opening an existing legacy DB must backfill the exclusion attribute",
-        )
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: directory.path), [])
     }
 }

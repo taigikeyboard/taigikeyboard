@@ -20,16 +20,17 @@ name = "rust_taigi"
 crate-type = ["staticlib"]
 
 [features]
+# Both Apple consumers — the iOS app + keyboard and the macOS input method —
+# ship the user-data stores (docs/architecture/user-data-engine-roadmap.md
+# P6 / P7b).
+default = ["user-data"]
 # Dev-only: exposes `panic_for_test()` so platform tests can drive T1.
 # Release builds omit this feature; the post-build `nm` check in
 # `engine/scripts/build-xcframework.sh` asserts the symbol is absent.
 panic-injector = []
 # Test-build-only engine trace — docs/architecture/e2e-trace-schema.md.
 e2e-trace = ["dispatch/e2e-trace"]
-# The engine-owned user-data stores (bundled SQLite). Only the macOS build
-# turns it on (`engine/scripts/build-macos-xcframework.sh`); the iOS
-# keyboard extension stays without it until it switches
-# (`docs/architecture/user-data-engine-roadmap.md` P7).
+# The engine-owned user-data stores (bundled SQLite).
 user-data = ["dispatch/user-data"]
 
 [dependencies]

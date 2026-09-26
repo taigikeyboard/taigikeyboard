@@ -15,38 +15,18 @@ import Foundation
 final class DictionarySearchService: @unchecked Sendable {
     // MARK: - Dependencies
 
-    private let customDictionaryRepository: CustomDictionaryRepository
+    private let userData: any UserDataClient
     private let settingsProvider: EngineSettingsProvider
     private let logger = DebugLogger(category: "DictionarySearchService")
 
     // MARK: - Init
 
     init(
-        customDictionaryRepository: CustomDictionaryRepository = CompositionRoot.customDictionaryRepository,
+        userData: any UserDataClient = CompositionRoot.userData,
         settingsProvider: EngineSettingsProvider = SharedSettings.shared,
     ) {
-        self.customDictionaryRepository = customDictionaryRepository
+        self.userData = userData
         self.settingsProvider = settingsProvider
-        // Lexicon engine state (fst + dictionary.bin + association.bin) is
-        // installed once at extension launch via `RustEngineBridge.lexiconInstall(...)`.
-        // The Tab3 host process invokes the same bridge call from its
-        // composition root; reinstalling is idempotent.
-        bootstrapCustomDictionary()
-    }
-
-    /// Eagerly open the custom-dictionary DB when the injected settings enable
-    /// it, so `searchSync` has a live connection the moment a search arrives.
-    /// Failures are logged and left to graceful degradation at lookup time.
-    private func bootstrapCustomDictionary() {
-        guard settingsProvider.current.isCustomDictEnabled else { return }
-        Task { [customDictionaryRepository, logger] in
-            do {
-                try await customDictionaryRepository.ensureInitialized()
-                logger.info("[INIT] Custom dictionary initialized")
-            } catch {
-                logger.warning("[INIT] Custom dictionary init failed: \(error.localizedDescription)")
-            }
-        }
     }
 
     // MARK: - Public API
@@ -81,7 +61,7 @@ final class DictionarySearchService: @unchecked Sendable {
             limit: limit,
             filterBitmask: filters.dictionaryFilterBitmask,
         )
-        let customResults = isCJK ? [] : lookupCustomDictionary(query: query)
+        let customResults = isCJK ? [] : await lookupCustomDictionary(query: query)
 
         let prepared = sortByMoeThenFrequency(systemResults)
             .map { retagSources($0, enabled: filters.enabledSources) }
@@ -134,16 +114,13 @@ final class DictionarySearchService: @unchecked Sendable {
         }
     }
 
-    private func lookupCustomDictionary(query: String) -> [DictionarySearchResult] {
-        guard settingsProvider.current.isCustomDictEnabled,
-              let q = CustomDictionaryDerivation.queryKey(for: query, mode: settingsProvider.current.inputMode)
-        else { return [] }
-        let entries = customDictionaryRepository.searchSync(
-            family: q.family,
-            form: q.form,
-            key: q.key,
-            limit: 20,
-        )
+    /// The user's own words for `query`, found the way the keyboard finds
+    /// them — by the key the query derives, prefix-matched
+    /// (`SearchCustomEntries`, roadmap P7b).
+    private func lookupCustomDictionary(query: String) async -> [DictionarySearchResult] {
+        let settings = settingsProvider.current
+        guard settings.isCustomDictEnabled else { return [] }
+        let entries = await userData.search(query: query, mode: settings.inputMode, limit: 20)
         return entries.map { entry in
             DictionarySearchResult(
                 id: DictionarySearchResult.customDictMarkerId,

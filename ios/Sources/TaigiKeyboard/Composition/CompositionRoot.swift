@@ -1,45 +1,24 @@
 import Foundation
 
 /// Production service graph, shared by the main app and the keyboard extension.
-/// Wiring order matches constructor dependencies: repositories → leaf services
-/// → composite services. `SharedSettings.shared` is referenced directly by init
-/// defaults.
+/// `SharedSettings.shared` is referenced directly by init defaults.
 ///
-/// The Rust shared-core lexicon engine owns the trie + binary readers; this
-/// type holds no engine state itself. Install happens once at process startup
-/// via `RustEngineBridge.lexiconInstall(...)` from
+/// The Rust shared-core engine owns the lexicon (the trie + binary readers)
+/// and the user's data (the four stores, `docs/architecture/user-data-engine-roadmap.md`
+/// P7b); this type holds no engine state itself. The lexicon is installed
+/// once at process startup via `RustEngineBridge.lexiconInstall(...)` from
 /// `TaigiKeyboardApp.installLexiconEngineForMainApp()` and
-/// `KeyboardViewController.installLexiconEngine()`.
+/// `KeyboardViewController.installLexiconEngine()`; the user data is opened by
+/// `UserDataOpening.open(in:)` from the same two places.
 enum CompositionRoot {
-    // MARK: - Repositories
+    /// The user's data, through the engine's ops.
+    static let userData: any UserDataClient = EngineUserDataClient()
 
-    static let userFrequencyRepository: UserFrequencyRepository = .init()
-    static let customDictionaryRepository: CustomDictionaryRepository = .init()
-    static let learnedPhraseRepository: LearnedPhraseRepository = .init()
-
-    // MARK: - Leaf services
-
-    static let userFrequencyService: UserFrequencyService = .init(
-        repository: userFrequencyRepository,
-    )
-    static let customDictionaryService: CustomDictionaryService = .init(
-        repository: customDictionaryRepository,
-    )
-    static let learnedPhraseService: LearnedPhraseService = .init(
-        repository: learnedPhraseRepository,
-    )
-    static let nextWordService: NextWordService = .init()
-
-    // MARK: - Composite services
-
-    static let backupService: BackupService = .init(
-        customDictionaryService: customDictionaryService,
-        userFrequencyRepository: userFrequencyRepository,
-        nextWordService: nextWordService,
-    )
+    /// Where a pick is counted.
+    static let usageRecorder: any UsageRecorder = EngineUsageRecorder()
 
     static let dictionarySearchService: DictionarySearchService = .init(
-        customDictionaryRepository: customDictionaryRepository,
+        userData: userData,
         settingsProvider: SharedSettings.shared,
     )
 }

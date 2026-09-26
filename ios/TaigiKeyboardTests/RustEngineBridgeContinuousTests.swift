@@ -65,6 +65,7 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
         // Phase::Idle → engine returns snapshot without `continuous` carrier.
         let result = RustEngineBridge.composingFetchAtPos(
             settings: settings, generation: envelopeGen,
+            nowMs: 0,
         )
         XCTAssertNil(result.candidates, "Idle phase must yield nil candidates (carrier absent)")
         XCTAssertFalse(result.transition.isComposing)
@@ -84,6 +85,7 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
         // snapshot without continuous carrier.
         let result = RustEngineBridge.composingFetchAtPos(
             settings: settings, generation: envelopeGen,
+            nowMs: 0,
         )
         XCTAssertNil(result.candidates, "Composing phase must yield nil candidates")
         XCTAssertTrue(result.transition.isComposing)
@@ -106,6 +108,7 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
         )
         let result = RustEngineBridge.composingFetchAtPos(
             settings: settings, generation: envelopeGen,
+            nowMs: 0,
         )
         XCTAssertNotNil(
             result.candidates,
@@ -296,9 +299,11 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
         )
         _ = RustEngineBridge.composingFetchAtPos(
             settings: settings, generation: envelopeGen,
+            nowMs: 0,
         )
         let after = RustEngineBridge.composingFetchAtPos(
             settings: settings, generation: envelopeGen,
+            nowMs: 0,
         ).transition
         XCTAssertEqual(before.rawInput, after.rawInput, "rawInput must not change across FetchAtPos")
         XCTAssertEqual(before.isComposing, after.isComposing, "isComposing must not change")
@@ -326,16 +331,15 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
         XCTAssertEqual(RustEngineBridge.CandidateMode.decode(-1), .unspecified)
     }
 
-    // MARK: - Phase 9.3b user-freq snapshot wire shape
+    // MARK: - FetchAtPos wire shape
 
-    /// Bridge-acceptance only: the v3.5.8 Phase 9.3b widening of
-    /// `composingFetchAtPos` accepts a populated `frequencyEntries` +
-    /// `nowMs` snapshot, round-trips it through the FFI envelope, and
-    /// preserves the carrier-present + read-only invariants. The actual
-    /// `user_freq_boost` / `recency_rank` ranking behaviour is pinned
-    /// hermetically by Rust in `engine/lexicon/tests/user_freq_plumb.rs`;
-    /// this test does NOT re-assert ranking math.
-    func testFetchAtPos_AcceptsFrequencyEntriesAndNowMs() {
+    /// Bridge-acceptance only: `composingFetchAtPos` carries `nowMs` and
+    /// `customDictionaryDisabled` through the FFI envelope and preserves the
+    /// carrier-present + read-only invariants. The engine reads the user's
+    /// data itself (user-data-engine-roadmap P7b) — never opened in this test
+    /// process, so the fetch ranks neutrally; the ranking math is pinned by
+    /// Rust (`engine/dispatch/tests/user_data_reads.rs`).
+    func testFetchAtPos_AcceptsNowMsAndCustomDictionaryDisabled() {
         _ = RustEngineBridge.composingStart(
             "tsua", settings: settings, generation: envelopeGen,
         )
@@ -343,16 +347,11 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
             settings: settings, generation: envelopeGen,
         )
 
-        var entry = Taigi_Engine_FrequencyEntry()
-        entry.displayTextKey = "珠仔"
-        entry.count = 7
-        entry.lastUsedMs = 1_700_000_000_000
-
         let result = RustEngineBridge.composingFetchAtPos(
             settings: settings,
             generation: envelopeGen,
-            frequencyEntries: [entry],
             nowMs: 1_700_000_001_000,
+            customDictionaryDisabled: true,
         )
 
         // Carrier present proves the dispatcher reached
@@ -368,7 +367,7 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
         // FetchAtPos read-only contract holds regardless of snapshot payload.
         XCTAssertTrue(
             result.transition.effects.isEmpty,
-            "FetchAtPos with user-freq snapshot is still read-only; effects must be empty",
+            "FetchAtPos is read-only; effects must be empty",
         )
         XCTAssertFalse(
             result.isBridgeFailure,
@@ -376,9 +375,8 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
         )
     }
 
-    /// Default-parameter call site continues to compile + behave identically
-    /// to PR-9.2. Pins the API surface against accidental removal of the
-    /// `[]` / `0` defaults (which the platform 7B call sites rely on).
+    /// The optional parameters keep their proto3-absent defaults (sources
+    /// all on, literal shown, custom dictionary read).
     func testFetchAtPos_DefaultParameters_PreserveNeutralBehavior() {
         _ = RustEngineBridge.composingStart(
             "tsua", settings: settings, generation: envelopeGen,
@@ -389,13 +387,14 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
 
         let result = RustEngineBridge.composingFetchAtPos(
             settings: settings, generation: envelopeGen,
+            nowMs: 0,
         )
         XCTAssertNotNil(result.candidates, "Default-parameter call must still reach Continuous")
         XCTAssertTrue(result.transition.effects.isEmpty)
         XCTAssertFalse(result.isBridgeFailure)
     }
 
-    // MARK: - Phase 9.3b isBridgeFailure flag
+    // MARK: - isBridgeFailure flag
 
     /// Static `.noop` is the only producer of `isBridgeFailure == true`.
     /// Pins the invariant that a successful round-trip — including an

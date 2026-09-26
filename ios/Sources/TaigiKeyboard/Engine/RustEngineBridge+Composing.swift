@@ -175,9 +175,9 @@ public extension RustEngineBridge {
     /// is synthesized and `apply()`-ing it would clobber the mirror with
     /// false state). Set `true` only on the `composingFetchDispatch` early-
     /// return path via `ContinuousFetchResult.noop`; every successful
-    /// dispatch sets `false`. Phase 9.3b plumb relies on this to fall back
-    /// to phase-1 candidates on a transient phase-2 FFI failure rather
-    /// than dropping suggestions and resetting state. Codex PR #265
+    /// dispatch sets `false`. `ComposingManager.fetchContinuousCandidates`
+    /// relies on this to leave the mirror untouched on a failed round-trip.
+    /// Codex PR #265
     /// r3216857164.
     struct ContinuousFetchResult: Equatable {
         public let transition: ComposingTransition
@@ -356,33 +356,15 @@ public extension RustEngineBridge {
     /// is read-only and bumping generation would reset engine state before
     /// the fetch (`engine/composing/src/dispatch.rs:103-160`).
     ///
-    /// `frequencyEntries` + `nowMs` are the v3.5.8 Phase 9.3a/9.3b plumb for
-    /// `user_freq_boost` + `SortKey.recency_rank`. Caller pre-filters entries
-    /// to candidate-relevant `displayTextKey`s (`hanji ?? roman`) — see
-    /// `engine/protos/proto/composing.proto:144-148`. Defaults `[]` + `0`
-    /// reproduce the PR-9.2 neutral-boost behaviour (`user_freq_boost = 1.0`,
-    /// `recency_rank = 1` everywhere); the platform plumb is responsible for
-    /// populating real values via a two-phase fetch (`ComposingManager
-    /// .fetchContinuousCandidates`).
-    //
-    /// v3.5.8 Phase 9 Item 12 — `customEntries` carries the platform's
-    /// `custom_dictionary.db` matches (raw stored `(roman, hanji)`
-    /// columns; DB stays native). Default `[]` = no custom matches /
-    /// feature off — backward-compatible no-op. The engine synthesizes
-    /// a full-buffer candidate per entry and dedupes `(roman, hanji)`
-    /// against the FST hits (custom wins the collision).
-    ///
-    /// v3.5.9 B-4 — `roman` may be either TL or POJ display form
-    /// (whichever the user typed when storing). The engine treats it
-    /// raw on the lattice / dedupe axis and folds it to canonical TL
-    /// only when synthesizing the `user_frequency.db` commit key,
-    /// keeping that key mode-invariant across TL/POJ.
+    /// The user's own data is not among the arguments: the engine reads its
+    /// stores itself and ranks in the same call
+    /// (`docs/architecture/user-data-engine-roadmap.md` P7b). `nowMs` is the
+    /// clock its recency ranking reads. Mirrors macOS
+    /// `RustEngineBridge.composingFetchAtPos`.
     internal static func composingFetchAtPos(
         settings: EngineSettings,
         generation: UInt64,
-        frequencyEntries: [Taigi_Engine_FrequencyEntry] = [],
-        nowMs: Int64 = 0,
-        customEntries: [Taigi_Engine_CustomDictEntry] = [],
+        nowMs: Int64,
         // PR-9.6 — dictionary source-toggle bitmask (same one Tab3 browse
         // sends). Default `0` = proto3-absent sentinel → engine all-on,
         // preserving pre-PR-9.6 behaviour for callers (incl. tests).
@@ -391,18 +373,15 @@ public extension RustEngineBridge {
         // (proto3-absent sentinel → engine prepends the literal-roman
         // candidate, the pre-toggle always-on behaviour for callers/tests).
         literalRomanCandidateDisabled: Bool = false,
-        // §50 — learned phrases whose whole-buffer key equals the raw buffer
-        // (`LearnedPhraseRepository.matchesSync`). Default `[]` =
-        // feature off / nothing learned.
-        learnedEntries: [Taigi_Engine_LearnedEntry] = [],
+        // Invert of the Enable Custom Dictionary setting: the engine reads the
+        // user's dictionary only with it on. Default `false` = read it.
+        customDictionaryDisabled: Bool = false,
     ) -> ContinuousFetchResult {
         var payload = Taigi_Engine_FetchAtPos()
-        payload.frequencyEntries = frequencyEntries
         payload.nowMs = nowMs
-        payload.customEntries = customEntries
         payload.enabledSourcesBitmask = enabledSourcesBitmask
         payload.literalRomanCandidateDisabled = literalRomanCandidateDisabled
-        payload.learnedEntries = learnedEntries
+        payload.customDictionaryDisabled = customDictionaryDisabled
         return composingFetchDispatch(
             method: .fetchAtPos(payload),
             op: "composingFetchAtPos",

@@ -8,10 +8,6 @@ struct HomeTab: View {
     @ObservedObject var viewModel: SetupGuideViewModel
     @Environment(DisplayLanguageStore.self) private var lang
 
-    private var appVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
-    }
-
     var body: some View {
         NavigationStack {
             Form {
@@ -93,7 +89,7 @@ struct HomeTab: View {
                     HStack {
                         Label(lang.string(.homeVersion), systemImage: "info.circle")
                         Spacer()
-                        Text(appVersion)
+                        Text(Bundle.main.shortVersion)
                             .foregroundColor(.secondary)
                     }
                 }

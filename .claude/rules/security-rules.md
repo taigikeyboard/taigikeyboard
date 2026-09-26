@@ -41,7 +41,7 @@ All logging must be guarded so that **no log output appears in production/releas
 - All queries must use **parameterized binding** (`?` placeholders + `sqlite3_bind_*` / `rawQuery` with args)
 - Never use string interpolation for values in SQL: `WHERE name = '\(column)'` is forbidden
 - DDL statements (ALTER TABLE, CREATE INDEX) that require dynamic identifiers must validate against a **hardcoded whitelist** before interpolation
-- iOS: Use `SQLiteConnectionManager.sqliteTransient` for all `sqlite3_bind_text` destructor parameters
+- Every platform's user-data SQL is the engine's (`engine/userdata`, rusqlite `params!` binding)
 
 ## Network
 

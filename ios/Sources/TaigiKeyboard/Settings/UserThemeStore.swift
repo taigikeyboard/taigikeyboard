@@ -94,7 +94,7 @@ final class UserThemeStore {
 extension URL {
     /// Marks the file or directory excluded from OS backup (best-effort). User data — theme
     /// JSON, theme photos — is excluded like the user-data databases
-    /// (`SQLiteConnectionManager`), see `behavioral-invariants.md` §29.
+    /// (`UserDataOpening`), see `behavioral-invariants.md` §29.
     func excludeFromBackup() {
         var url = self
         var resourceValues = URLResourceValues()

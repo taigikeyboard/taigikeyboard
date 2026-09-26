@@ -28,20 +28,17 @@ enum SettingsResetCoordinator {
         resetKeyboardKitDefaults()
     }
 
-    /// Delete user-owned learning data (frequency + next-word association +
-    /// learned phrases). Each deletion is attempted independently; failures
-    /// are logged, never thrown, so a partial failure still clears what it can.
+    /// Empty user-owned learning data (frequency + next-word association +
+    /// learned phrases) in place — the engine's stores (roadmap P7b). The
+    /// engine attempts every store even when one fails, so a partial failure
+    /// still clears what it can; failures are logged, never thrown.
     static func resetAllUserData() {
-        do {
-            try CompositionRoot.userFrequencyRepository.deleteDatabase()
-        } catch {
-            logger.error("Failed to delete frequency database: \(error)")
+        Task {
+            do {
+                try await CompositionRoot.userData.clearLearningRecords()
+            } catch {
+                logger.error("Failed to clear learning records: \(error)")
+            }
         }
-        do {
-            try CompositionRoot.nextWordService.deleteUserDatabase()
-        } catch {
-            logger.error("Failed to delete association database: \(error)")
-        }
-        CompositionRoot.learnedPhraseService.deleteAll()
     }
 }

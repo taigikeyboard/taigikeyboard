@@ -35,29 +35,27 @@ Read each file at both refs with `git show <ref>:<path>`; for code that may move
 
 ### 1. SQLite user-data schema versions
 
-These four DBs persist on-device and migrate forward via `PRAGMA user_version`. A bump on one platform needs a matching migration on the other; the numbers need not be equal.
+These four DBs persist on-device and migrate forward via `PRAGMA user_version`. The engine owns them on every platform (`docs/architecture/user-data-engine-roadmap.md`), so one constant per store serves both trains:
 
-| DB | Android + desktop constant (engine) | iOS constant |
-|---|---|---|
-| 自訂詞 custom dict | `engine/userdata/src/custom_dictionary.rs` `SCHEMA_VERSION` | `Lexicon/Database/CustomDictionarySchema.swift` `schemaVersion` |
-| 詞關聯 association | `engine/userdata/src/association.rs` `SCHEMA_VERSION` | `NextWord/Repository/NextWordSchema.swift` `schemaVersion` |
-| 詞頻 frequency | `engine/userdata/src/frequency.rs` `SCHEMA_VERSION` | `Lexicon/Database/UserFrequencySchema.swift` `pairKeySchemaVersion` |
-| 自造詞 learned phrases | `engine/userdata/src/learned_phrases.rs` `SCHEMA_VERSION` | `Lexicon/Database/LearnedPhraseSchema.swift` `schemaVersion` |
+| DB | Constant (engine) |
+|---|---|
+| 自訂詞 custom dict | `engine/userdata/src/custom_dictionary.rs` `SCHEMA_VERSION` (+ `HIGHEST_KNOWN_VERSION`) |
+| 詞關聯 association | `engine/userdata/src/association.rs` `SCHEMA_VERSION` |
+| 詞頻 frequency | `engine/userdata/src/frequency.rs` `SCHEMA_VERSION` |
+| 自造詞 learned phrases | `engine/userdata/src/learned_phrases.rs` `SCHEMA_VERSION` |
 
-For each: compare the constant at `<base>` vs `<target>`.
+For each: compare the constant at `<base>` vs `<target>`. The engine takes over a file a platform's older build wrote and never lowers that platform's stamp (U7 / U8); `engine/userdata/tests/takeover.rs` holds a fixture for every released shape on every platform.
 
-The engine owns the stores on Android, macOS, Windows and Linux (`docs/architecture/user-data-engine-roadmap.md`): its constants serve both trains. It takes over a file a platform wrote and never lowers that platform's stamp (U7 / U8); a bump there must keep `engine/userdata/tests/takeover.rs` green for every released shape.
-
-- **Unchanged** → no migration runs on upgrade (the `current >= target → return` guard short-circuits). SAFE.
+- **Unchanged** → no migration runs on upgrade. SAFE.
 - **Bumped** → a migration MUST exist and be:
-  - **forward-only + idempotent** — guarded by the engine's shape-detecting migrators (`engine/userdata`) / `currentVersion < schemaVersion` gate (iOS), ALTER/backfill unconditional inside the guard so a half-migrated DB re-runs clean.
-  - **non-destructive** — verify it does not `DROP`/recreate a table that holds user rows without backfill (a `v<N` full-rebuild branch is acceptable ONLY for pre-feature versions that had no user data of that shape — confirm against the migration body).
-  - **iOS↔Android aligned** — a bump on one platform with no matching bump on the other is a divergence (`NextWordSchema.swift` carries a `mirrors Android's DATABASE_VERSION` comment). Flag it.
+  - **forward-only + idempotent** — the engine's shape-detecting migrators (`engine/userdata`) run inside one transaction, so a half-migrated DB re-runs clean.
+  - **non-destructive** — verify it does not `DROP`/recreate a table that holds user rows without backfill (a full-rebuild branch is acceptable ONLY for pre-feature shapes that had no user data of that shape — confirm against the migration body).
+  - **every released shape still taken over** — `takeover.rs` green; a shape the bump cannot read is a data loss.
   - Bumped with no migration body, or a destructive one → **BLOCKING**.
 
 ### 2. `.taigi` backup format
 
-Engine `engine/userdata/src/backup.rs` — `BACKUP_VERSION` (write version) + the `version < 1` refusal (accept floor); Android, macOS, Windows and Linux export through it. iOS counterpart: `ios/Sources/TaigiKeyboard/Lexicon/Services/BackupService.swift`.
+Engine `engine/userdata/src/backup.rs` — `BACKUP_VERSION` (write version) + the `version < 1` refusal (accept floor); every platform exports and restores through it.
 
 - Write version bumped but accept-floor unchanged → new app still reads old backups. SAFE for the upgrade path (the cross-device concern — old app reading a *new* backup — is a separate downgrade case; note it but it is not an upgrade blocker).
 - **Accept-floor raised** (`>= M` with M increased) → a user's existing/exported backup at an older version now **rejects on import** → BLOCKING for restore.
