@@ -25,6 +25,7 @@ public  final class Response extends
     LEXICON(12),
     NEXTWORD(13),
     CASE_TRANSFORM(14),
+    USER_DATA(15),
     PAYLOAD_NOT_SET(0);
     private final int value;
     private PayloadCase(int value) {
@@ -45,6 +46,7 @@ public  final class Response extends
         case 12: return LEXICON;
         case 13: return NEXTWORD;
         case 14: return CASE_TRANSFORM;
+        case 15: return USER_DATA;
         case 0: return PAYLOAD_NOT_SET;
         default: return null;
       }
@@ -406,6 +408,56 @@ public  final class Response extends
    */
   private void clearCaseTransform() {
     if (payloadCase_ == 14) {
+      payloadCase_ = 0;
+      payload_ = null;
+    }
+  }
+
+  public static final int USER_DATA_FIELD_NUMBER = 15;
+  /**
+   * <code>.taigi.engine.UserDataResponse user_data = 15;</code>
+   */
+  @java.lang.Override
+  public boolean hasUserData() {
+    return payloadCase_ == 15;
+  }
+  /**
+   * <code>.taigi.engine.UserDataResponse user_data = 15;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.UserDataResponse getUserData() {
+    if (payloadCase_ == 15) {
+       return (com.siansiansu.taigikeyboard.engine.proto.UserDataResponse) payload_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.UserDataResponse.getDefaultInstance();
+  }
+  /**
+   * <code>.taigi.engine.UserDataResponse user_data = 15;</code>
+   */
+  private void setUserData(com.siansiansu.taigikeyboard.engine.proto.UserDataResponse value) {
+    java.util.Objects.requireNonNull(value);
+    payload_ = value;
+    payloadCase_ = 15;
+  }
+  /**
+   * <code>.taigi.engine.UserDataResponse user_data = 15;</code>
+   */
+  private void mergeUserData(com.siansiansu.taigikeyboard.engine.proto.UserDataResponse value) {
+    java.util.Objects.requireNonNull(value);
+    if (payloadCase_ == 15 &&
+        payload_ != com.siansiansu.taigikeyboard.engine.proto.UserDataResponse.getDefaultInstance()) {
+      payload_ = com.siansiansu.taigikeyboard.engine.proto.UserDataResponse.newBuilder((com.siansiansu.taigikeyboard.engine.proto.UserDataResponse) payload_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      payload_ = value;
+    }
+    payloadCase_ = 15;
+  }
+  /**
+   * <code>.taigi.engine.UserDataResponse user_data = 15;</code>
+   */
+  private void clearUserData() {
+    if (payloadCase_ == 15) {
       payloadCase_ = 0;
       payload_ = null;
     }
@@ -863,6 +915,54 @@ public  final class Response extends
       return this;
     }
 
+    /**
+     * <code>.taigi.engine.UserDataResponse user_data = 15;</code>
+     */
+    @java.lang.Override
+    public boolean hasUserData() {
+      return instance.hasUserData();
+    }
+    /**
+     * <code>.taigi.engine.UserDataResponse user_data = 15;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.UserDataResponse getUserData() {
+      return instance.getUserData();
+    }
+    /**
+     * <code>.taigi.engine.UserDataResponse user_data = 15;</code>
+     */
+    public Builder setUserData(com.siansiansu.taigikeyboard.engine.proto.UserDataResponse value) {
+      copyOnWrite();
+      instance.setUserData(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.UserDataResponse user_data = 15;</code>
+     */
+    public Builder setUserData(
+        com.siansiansu.taigikeyboard.engine.proto.UserDataResponse.Builder builderForValue) {
+      copyOnWrite();
+      instance.setUserData(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.UserDataResponse user_data = 15;</code>
+     */
+    public Builder mergeUserData(com.siansiansu.taigikeyboard.engine.proto.UserDataResponse value) {
+      copyOnWrite();
+      instance.mergeUserData(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.UserDataResponse user_data = 15;</code>
+     */
+    public Builder clearUserData() {
+      copyOnWrite();
+      instance.clearUserData();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.Response)
   }
   @java.lang.Override
@@ -889,10 +989,11 @@ public  final class Response extends
             com.siansiansu.taigikeyboard.engine.proto.LexiconResponse.class,
             com.siansiansu.taigikeyboard.engine.proto.NextWordResponse.class,
             com.siansiansu.taigikeyboard.engine.proto.CaseResponse.class,
+            com.siansiansu.taigikeyboard.engine.proto.UserDataResponse.class,
           };
           java.lang.String info =
-              "\u0000\b\u0001\u0000\u0001\u000e\b\u0000\u0000\u0000\u0001\u000b\u0002\f\u0003\u0003" +
-              "\n<\u0000\u000b<\u0000\f<\u0000\r<\u0000\u000e<\u0000";
+              "\u0000\t\u0001\u0000\u0001\u000f\t\u0000\u0000\u0000\u0001\u000b\u0002\f\u0003\u0003" +
+              "\n<\u0000\u000b<\u0000\f<\u0000\r<\u0000\u000e<\u0000\u000f<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

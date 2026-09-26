@@ -22,6 +22,8 @@ mod case;
 mod predict;
 #[cfg(feature = "e2e-trace")]
 pub mod trace;
+#[cfg(feature = "user-data")]
+mod user_data;
 
 /// Maximum accepted size of an FFI request byte buffer. Phonetics inputs
 /// from the IME are kilobytes at worst; 2 MB is generous slack for proto
@@ -170,6 +172,17 @@ fn run(bytes: &[u8]) -> Response {
                 error_response(id, ErrorCode::FailInvariant, generation)
             }
         },
+        #[cfg(feature = "user-data")]
+        request::Payload::UserData(user_data_req) => {
+            user_data::respond(id, generation, &user_data_req)
+        }
+        // Built without the `user-data` feature: a platform that has not
+        // switched to the engine's stores yet (user-data-engine-roadmap U11).
+        #[cfg(not(feature = "user-data"))]
+        request::Payload::UserData(_) => {
+            log::warn!("user-data request on a build without the user-data feature (id={id})");
+            error_response(id, ErrorCode::FailInvariant, generation)
+        }
     }
 }
 

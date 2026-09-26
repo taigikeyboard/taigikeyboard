@@ -379,6 +379,19 @@ impl CustomDictionaryStore {
             })
     }
 
+    /// What every launch runs once the file is open: the takeover's key
+    /// re-derivation, then the seed entries. Blocks (both go through
+    /// `perform`), so never on a UI thread or a store worker. A failure is
+    /// logged and the store stays usable.
+    pub fn finish_takeover(&self) {
+        if let Err(error) = self.rederive_search_keys_if_needed() {
+            log::error!("custom_dictionary.rederive_failed error={error}");
+        }
+        if let Err(error) = self.seed_if_empty() {
+            log::error!("custom_dictionary.seed_failed error={error}");
+        }
+    }
+
     /// Writes the seed entries, but only into a dictionary nobody has
     /// touched — deleting one seed and relaunching must not bring it back.
     pub fn seed_if_empty(&self) -> Result<(), CustomDictionaryError> {

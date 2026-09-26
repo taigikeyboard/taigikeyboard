@@ -330,6 +330,14 @@ public nonisolated struct Taigi_Engine_Request: @unchecked Sendable {
     set {_uniqueStorage()._payload = .caseTransform(newValue)}
   }
 
+  public var userData: Taigi_Engine_UserDataRequest {
+    get {
+      if case .userData(let v)? = _storage._payload {return v}
+      return Taigi_Engine_UserDataRequest()
+    }
+    set {_uniqueStorage()._payload = .userData(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public nonisolated enum OneOf_Payload: Equatable, Sendable {
@@ -338,6 +346,7 @@ public nonisolated struct Taigi_Engine_Request: @unchecked Sendable {
     case lexicon(Taigi_Engine_LexiconRequest)
     case nextword(Taigi_Engine_NextWordRequest)
     case caseTransform(Taigi_Engine_CaseRequest)
+    case userData(Taigi_Engine_UserDataRequest)
 
   }
 
@@ -399,6 +408,14 @@ public nonisolated struct Taigi_Engine_Response: Sendable {
     set {payload = .caseTransform(newValue)}
   }
 
+  public var userData: Taigi_Engine_UserDataResponse {
+    get {
+      if case .userData(let v)? = payload {return v}
+      return Taigi_Engine_UserDataResponse()
+    }
+    set {payload = .userData(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public nonisolated enum OneOf_Payload: Equatable, Sendable {
@@ -407,6 +424,7 @@ public nonisolated struct Taigi_Engine_Response: Sendable {
     case lexicon(Taigi_Engine_LexiconResponse)
     case nextword(Taigi_Engine_NextWordResponse)
     case caseTransform(Taigi_Engine_CaseResponse)
+    case userData(Taigi_Engine_UserDataResponse)
 
   }
 
@@ -506,7 +524,7 @@ nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtob
 
 nonisolated extension Taigi_Engine_Request: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Request"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{4}\u{2}config_snapshot\0\u{1}generation\0\u{2}\u{6}phonetics\0\u{1}composing\0\u{1}lexicon\0\u{1}nextword\0\u{3}case_transform\0\u{b}type\0\u{c}\u{2}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{4}\u{2}config_snapshot\0\u{1}generation\0\u{2}\u{6}phonetics\0\u{1}composing\0\u{1}lexicon\0\u{1}nextword\0\u{3}case_transform\0\u{3}user_data\0\u{b}type\0\u{c}\u{2}\u{1}")
 
   fileprivate class _StorageClass {
     var _id: UInt32 = 0
@@ -613,6 +631,19 @@ nonisolated extension Taigi_Engine_Request: SwiftProtobuf.Message, SwiftProtobuf
             _storage._payload = .caseTransform(v)
           }
         }()
+        case 15: try {
+          var v: Taigi_Engine_UserDataRequest?
+          var hadOneofValue = false
+          if let current = _storage._payload {
+            hadOneofValue = true
+            if case .userData(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._payload = .userData(v)
+          }
+        }()
         default: break
         }
       }
@@ -655,6 +686,10 @@ nonisolated extension Taigi_Engine_Request: SwiftProtobuf.Message, SwiftProtobuf
         guard case .caseTransform(let v)? = _storage._payload else { preconditionFailure() }
         try visitor.visitSingularMessageField(value: v, fieldNumber: 14)
       }()
+      case .userData?: try {
+        guard case .userData(let v)? = _storage._payload else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 15)
+      }()
       case nil: break
       }
     }
@@ -681,7 +716,7 @@ nonisolated extension Taigi_Engine_Request: SwiftProtobuf.Message, SwiftProtobuf
 
 nonisolated extension Taigi_Engine_Response: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Response"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}error\0\u{1}generation\0\u{2}\u{7}phonetics\0\u{1}composing\0\u{1}lexicon\0\u{1}nextword\0\u{3}case_transform\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}error\0\u{1}generation\0\u{2}\u{7}phonetics\0\u{1}composing\0\u{1}lexicon\0\u{1}nextword\0\u{3}case_transform\0\u{3}user_data\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -757,6 +792,19 @@ nonisolated extension Taigi_Engine_Response: SwiftProtobuf.Message, SwiftProtobu
           self.payload = .caseTransform(v)
         }
       }()
+      case 15: try {
+        var v: Taigi_Engine_UserDataResponse?
+        var hadOneofValue = false
+        if let current = self.payload {
+          hadOneofValue = true
+          if case .userData(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.payload = .userData(v)
+        }
+      }()
       default: break
       }
     }
@@ -796,6 +844,10 @@ nonisolated extension Taigi_Engine_Response: SwiftProtobuf.Message, SwiftProtobu
     case .caseTransform?: try {
       guard case .caseTransform(let v)? = self.payload else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 14)
+    }()
+    case .userData?: try {
+      guard case .userData(let v)? = self.payload else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 15)
     }()
     case nil: break
     }

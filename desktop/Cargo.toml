@@ -31,7 +31,9 @@ publish = false
 [workspace.dependencies]
 # Engine crates, by path. `dispatch` is the one entry point a desktop shell
 # calls; `protos` gives the prost types the envelope is built from.
-dispatch = { path = "../engine/dispatch" }
+# `default-features = false`: no user-data stores (SQLite) through dispatch until
+# this platform switches (user-data-engine-roadmap U11).
+dispatch = { path = "../engine/dispatch", default-features = false }
 protos = { path = "../engine/protos" }
 # The user-data stores, engine-owned (rust-migration-policy §6).
 userdata = { path = "../engine/userdata", default-features = false }

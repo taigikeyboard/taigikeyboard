@@ -88,5 +88,16 @@ public interface ResponseOrBuilder extends
    */
   com.siansiansu.taigikeyboard.engine.proto.CaseResponse getCaseTransform();
 
+  /**
+   * <code>.taigi.engine.UserDataResponse user_data = 15;</code>
+   * @return Whether the userData field is set.
+   */
+  boolean hasUserData();
+  /**
+   * <code>.taigi.engine.UserDataResponse user_data = 15;</code>
+   * @return The userData.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.UserDataResponse getUserData();
+
   public com.siansiansu.taigikeyboard.engine.proto.Response.PayloadCase getPayloadCase();
 }

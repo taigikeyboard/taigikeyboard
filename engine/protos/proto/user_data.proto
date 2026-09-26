@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+package taigi.engine;
+
+option java_package = "com.siansiansu.taigikeyboard.engine.proto";
+option java_multiple_files = true;
+
+// User-data module — the four SQLite stores the engine owns
+// (`.claude/rules/rust-migration-policy.md` §6; plan and status in
+// `docs/architecture/user-data-engine-roadmap.md`). The platform decides
+// WHERE each file lives and how it journals; everything about WHAT is in
+// them (schema, migration, capacity, reset) is the engine's.
+//
+// Handled only when the engine is built with `dispatch`'s `user-data`
+// feature; without it every request answers `FAIL_INVARIANT`.
+
+message UserDataRequest {
+  oneof method {
+    OpenUserData open = 1;
+    ResetUserData reset = 2;
+  }
+}
+
+message UserDataResponse {
+  oneof result {
+    UserDataOpened opened = 1;
+    UserDataReset reset = 2;
+  }
+}
+
+// How the files journal — a platform choice (roadmap U3): WAL on the
+// desktop, DELETE on iOS (App Group files shared by the app and its
+// keyboard extension, excluded from backup without sidecars).
+enum UserDataJournal {
+  USER_DATA_JOURNAL_WAL = 0;
+  USER_DATA_JOURNAL_DELETE = 1;
+}
+
+// Opens the stores for this process, once. Absolute file paths: one
+// directory everywhere except Android, whose `user_association.db` lives in
+// `filesDir`. Synchronous — every store is open, taken over (roadmap U7) and
+// the custom dictionary re-derived and seeded before the answer — so call it
+// off the main thread. A repeat with the same paths answers the stores'
+// current readiness; different paths are refused.
+message OpenUserData {
+  string frequency_path = 1;
+  string association_path = 2;
+  string custom_dictionary_path = 3;
+  string learned_phrases_path = 4;
+  UserDataJournal journal = 5;
+}
+
+// Which stores are ready. A store that is not — a file from a later build,
+// a disk error — stays closed and ranks neutrally; the engine logs why.
+message UserDataOpened {
+  bool frequency_ready = 1;
+  bool association_ready = 2;
+  bool custom_dictionary_ready = 3;
+  bool learned_phrases_ready = 4;
+}
+
+// Empties the selected stores, in place (`DELETE`, never a file unlink —
+// another process may hold the file). The platforms clear different sets
+// today, so the caller names them; an empty selection is refused.
+message ResetUserData {
+  bool frequency = 1;
+  bool association = 2;
+  bool custom_dictionary = 3;
+  bool learned_phrases = 4;
+}
+
+// Rows removed per store (0 for a store not selected).
+message UserDataReset {
+  int64 frequency_removed = 1;
+  int64 association_removed = 2;
+  int64 custom_dictionary_removed = 3;
+  int64 learned_phrases_removed = 4;
+}

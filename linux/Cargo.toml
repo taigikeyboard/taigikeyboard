@@ -27,7 +27,9 @@ publish = false
 
 [workspace.dependencies]
 tempfile = "3"
-dispatch = { path = "../engine/dispatch" }
+# `default-features = false`: no user-data stores (SQLite) through dispatch until
+# this platform switches (user-data-engine-roadmap U11).
+dispatch = { path = "../engine/dispatch", default-features = false }
 protos = { path = "../engine/protos" }
 taigi-desktop-core = { path = "../desktop/crates/taigi-desktop-core" }
 taigi-desktop-storage = { path = "../desktop/crates/taigi-desktop-storage" }

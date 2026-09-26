@@ -23,14 +23,7 @@ pub fn open_at_launch(directory: PathBuf, is_read_only: bool) -> UserDataStores 
     let custom_dictionary = Arc::clone(&stores.custom_dictionary);
     std::thread::Builder::new()
         .name("taigi-custom-dictionary-launch".into())
-        .spawn(move || {
-            if let Err(error) = custom_dictionary.rederive_search_keys_if_needed() {
-                log::error!("custom_dictionary.rederive_failed error={error}");
-            }
-            if let Err(error) = custom_dictionary.seed_if_empty() {
-                log::error!("custom_dictionary.seed_failed error={error}");
-            }
-        })
+        .spawn(move || custom_dictionary.finish_takeover())
         .ok();
     stores
 }

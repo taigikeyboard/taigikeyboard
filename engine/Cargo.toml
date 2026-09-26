@@ -37,7 +37,9 @@ composing = { path = "./composing" }
 nextword = { path = "./nextword" }
 protos = { path = "./protos" }
 ranking = { path = "./ranking" }
-dispatch = { path = "./dispatch" }
+# `default-features = false`: the adapters link the user-data stores (SQLite)
+# only when their platform turns `dispatch/user-data` on (user-data-engine-roadmap U11).
+dispatch = { path = "./dispatch", default-features = false }
 indexmap = "2"
 swift-bridge = "0.1"
 swift-bridge-build = "0.1"

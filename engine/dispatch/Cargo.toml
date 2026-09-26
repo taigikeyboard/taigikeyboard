@@ -17,7 +17,18 @@ composing = { workspace = true }
 nextword = { workspace = true }
 lexicon = { workspace = true }
 log = { workspace = true }
+userdata = { workspace = true, optional = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
 
 [features]
+# The engine-owned user-data stores (`src/user_data.rs`; bundled SQLite).
+# On by default so `cargo test -p dispatch` covers it, but every workspace
+# declares `dispatch` with `default-features = false`: an adapter links
+# SQLite only once its platform switches to the engine's stores and turns
+# this on (user-data-engine-roadmap U11).
+default = ["user-data"]
+user-data = ["dep:userdata"]
 # Test-build-only JSONL trace (`src/trace.rs`) — docs/architecture/e2e-trace-schema.md.
 e2e-trace = []
