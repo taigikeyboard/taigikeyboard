@@ -82,15 +82,15 @@ Procedure when slice swaps `PlatformHelper.x()` → `RustEngineBridge.x()`:
 
 Out of scope (still platform-owned): UI layer / KeyboardKit / FlorisBoard adapter, IME lifecycle, settings storage backends, logging sinks, URL semantics in URL builders.
 
-## 6. User-data SQLite stays platform-native
+## 6. User-data SQLite is engine-owned
 
-Do NOT propose moving user-writable SQLite to Rust shared core:
+The engine owns the four user-writable stores; the platform supplies only the directory (iOS App Group container, Android app storage, macOS Application Support, `%APPDATA%` / XDG) and the UI:
 
 - `user_association.db` (NextWord user-learned bigrams)
 - `user_frequency.db` (per-word selection frequency)
 - `custom_dictionary.db` (user-added entries)
 - `learned_phrases.db` (engine-learned phrases from consecutive picks)
 
-User-write data volume is small + non-urgent; platform-native SQLite integrates with Android backup APIs, iOS App Group / iCloud KeyValueStore, encryption hooks, debugger tooling. Cross-platform schema parity is already maintained at the service layer. Revisit ONLY if a concrete cross-platform schema-evolution need appears (e.g. shared backup format requiring identical serialization).
+Schema, migrations, pragmas, capacity / eviction, reset, CSV and `.taigi` serialization are written once in Rust. New platform code never opens these files with a native SQLite API. Migration plan and status: `docs/architecture/user-data-engine-roadmap.md`.
 
-This rule overrides the default "every SQLite call site is a shared-core candidate" instinct.
+Reversed 2026-09-26 (USER: "moving the shared implementation into the engine is what makes sense; it keeps the implementation consistent"). The former "stays platform-native" rule cited Android backup APIs, iOS App Group / iCloud KeyValueStore, encryption hooks and service-layer parity; the 2026-09-26 audit found none in use (Android `allowBackup="false"`, no iCloud KVS, no file protection / SQLCipher, App Group is only a path) and the four hand-written implementations had drifted (three custom-dictionary version namespaces, three journal modes, file-unlink wipes, per-platform CSV bugs). Until the roadmap's last phase merges, a platform not yet migrated keeps its native store; do not add features to a native store — land them in the engine store.

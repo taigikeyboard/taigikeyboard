@@ -56,6 +56,7 @@
 | `architecture/windows-roadmap.md` | Windows desktop IME (TSF in Rust over the shared engine, macOS UX parity) — design W1–W17, PR table, reference alignment, dogfood run-book; shipped desktop v3.6.7/v3.6.8 | Reference |
 | `architecture/linux-roadmap.md` | Linux desktop IME (Fcitx5 addon primary + IBus engine second over one Rust core, GTK 4 / libadwaita settings window over the shared `desktop/` crates) — design L1–L13, PR table, named divergences, dogfood run-book | Planning |
 | `architecture/e2e-testing-roadmap.md` | End-to-end test system — AI-driven simulator / emulator / VM / container runs, test-build-only JSONL trace, analyzer for bugs + perf, per-platform drivers, capability spike results, PR table | Planning |
+| `architecture/user-data-engine-roadmap.md` | The four user-data SQLite stores move from four platform implementations into one engine crate (`engine/userdata`) — audit of today's stores and their drift, design U1–U10, PR table, reference alignment | Planning |
 | `architecture/e2e-trace-schema.md` | Test-build-only JSONL trace contract — how it stays out of release, `trace_open` / `engine_request` / `engine_panic` / `adapter_reject` events | Reference |
 | `architecture/linux-release.md` | The Linux half of a desktop release: the `.deb` (both shells, dictionaries, settings window), how `make -C linux deb` and `linux-build.yml` build and attach it, no in-app update | Reference |
 | `architecture/windows-release.md` | Windows installer (Inno Setup), Authenticode signing, and web-distributed installer workflow | Active |

@@ -3,7 +3,7 @@
 > **Type**: Planning (forward-looking)
 > **Keywords**: `roadmap`, `planning`, `released versions`, `release trains`
 > **Status**: Active
-> **Last updated**: 2026-09-22 (learned phrases own store PR-A–D MERGED 2026-09-21, dogfood S62 pending; CI lint gate green again #136 — `cargo fmt` engine + windows, `swiftformat ios macos`; 2026-09-20 learned phrases PR1–PR4 MERGED; mobile custom theme background round A–D merged, dogfood S54/S55 pending; desktop 3.6.x sections collapsed into `docs/reports/desktop-3.6.x-design-notes.md`; repository-size record retired — rationale + timings in `docs/architecture/build-artifacts.md`; released-versions index through mobile / desktop 3.6.8)
+> **Last updated**: 2026-09-26 (user data in the engine — Phase 0 roadmap; 2026-09-22: learned phrases own store PR-A–D MERGED 2026-09-21, dogfood S62 pending; CI lint gate green again #136 — `cargo fmt` engine + windows, `swiftformat ios macos`; 2026-09-20 learned phrases PR1–PR4 MERGED; mobile custom theme background round A–D merged, dogfood S54/S55 pending; desktop 3.6.x sections collapsed into `docs/reports/desktop-3.6.x-design-notes.md`; repository-size record retired — rationale + timings in `docs/architecture/build-artifacts.md`; released-versions index through mobile / desktop 3.6.8)
 
 ---
 
@@ -17,6 +17,14 @@
 ---
 
 ## Active / In-flight items
+
+### User data in the engine (USER-scoped 2026-09-26)
+
+**Status**: Phase 0 (roadmap + `rust-migration-policy.md` §6 rewrite) 2026-09-26; no phase implemented. Design, audit and PR table: [`architecture/user-data-engine-roadmap.md`](architecture/user-data-engine-roadmap.md). Project memory `project_user_data_engine.md`.
+
+USER 2026-09-26: "moving the shared implementation into the engine is what makes sense; it keeps the implementation consistent". The four user-data SQLite stores (`user_frequency`, `user_association`, `custom_dictionary`, `learned_phrases`) move from four platform implementations into one engine crate, starting from the Rust stores Windows and Linux already run; each platform then switches all four stores at once. Also removes the two-call candidate fetch (brainstorm R5).
+
+---
 
 kautian subcollections (accent + Surname Appendix toggles + pronunciation-difference word-level extension) — 5 phases MERGED, shipped **v3.6.0** (#354-#358).
 

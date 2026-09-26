@@ -3,7 +3,7 @@
 Snapshot of how the data artifacts that back the IME are produced, stored, and consumed on iOS and Android (§1–§7) and on macOS / Windows (§8), plus the decision register. Not a design doc for the Rust side — an inventory of constraints.
 
 - **Originally authored**: 2026-04-19 as Phase I G10 deliverable.
-- **Current state**: dictionary read path is now in Rust `engine/lexicon` (since v3.5.6); SQLite user-data stays platform-side permanently (`status=wont_migrate` per `migration-inventory.csv`).
+- **Current state**: dictionary read path is now in Rust `engine/lexicon` (since v3.5.6); SQLite user-data is native on each platform today (`status=wont_migrate` per `migration-inventory.csv`) and moves into the engine per `user-data-engine-roadmap.md` (USER 2026-09-26; §4–8 describe the native stores until that roadmap's cleanup phase).
 - **Scope**: shipped and runtime artifacts whose byte layout or schema crosses platforms. UI assets (keyboard layouts, fonts, images), persisted preferences (`SharedSettings` / DataStore blobs), and logs are out of scope.
 
 ## Summary
@@ -264,7 +264,7 @@ Dictionary updates today: `dictionary.fst` + `dictionary.bin` + `association.bin
 
 1. The two binary artifacts with a header (`dictionary.bin`, `association.bin`) carry a matching `build_ts` — both are the CRC-32 of the same `output/dictionary.csv` (`dictionary/build/common.py::build_id`).
 2. `dictionary.fst` has **no timestamp or version in its bytes** — the format is a raw Burntsushi fst. Today the three artifacts' cohesion relies entirely on the build script producing all three in the same run; readers cannot detect a stale fst paired with fresh bins (see `binary-format.md` §5.1 no-checksum acknowledgement).
-3. User-writable SQLite databases (`user_frequency.db`, `user_association.db`, `custom_dictionary.db`, `learned_phrases.db`) are per-install and must not be shipped as read-only assets. They stay native (`status=wont_migrate`) per `.claude/rules/rust-migration-policy.md` §6.
+3. User-writable SQLite databases (`user_frequency.db`, `user_association.db`, `custom_dictionary.db`, `learned_phrases.db`) are per-install and must not be shipped as read-only assets. They are engine-owned per `.claude/rules/rust-migration-policy.md` §6 (rewritten 2026-09-26); migration status in `user-data-engine-roadmap.md`.
 4. Schema migrations run on first open after an app update; the delivery mechanism does not modify these files directly.
 
 Distribution-channel design (OTA vs app-bundle) is out of scope for this audit.
@@ -279,7 +279,7 @@ Distribution-channel design (OTA vs app-bundle) is out of scope for this audit.
 | D2 | `dictionary.bin` + `association.bin` UTF-8 error policy | **Resolved** — Rust readers in `engine/lexicon` follow the platform "hanzi-optional, tl-required" contract; invalid records return `null`/`None`. |
 | D3 | `dictionary.bin` + `association.bin` version-bump policy | **Resolved** — `dictionary.bin` is at `version: u32 = 2` (v3.5.8 Phase 1, added `syllable_count`); `association.bin` remains at `version: u32 = 1`. Rust readers reject mismatch at open time, with `dictionary.bin` v1 surfacing an explicit `v1→v2` rebuild message. |
 | D4 | Lift bitmask semantics to single shared-core enum | **Resolved** — bitmask constants now live in Rust `engine/lexicon` (`KHIIN_BIT`, `VARIANT_BIT`; the unread `DEV_BIT` was dropped 2026-09-05). Platform `EnabledDictionaries` DTOs mirror the layout for UI toggles only. |
-| D5 | `custom_dictionary` version-namespace unification | **Open** — both platforms keep native SQLite (`wont_migrate`); unification only matters if a future Rust slice ever owns custom-dict writes (no plan to do so). |
+| D5 | `custom_dictionary` version-namespace unification | **Open — now required**: the engine will own custom-dictionary writes (`user-data-engine-roadmap.md` U7); resolved there by shape-detecting migration across the Android, iOS and macOS / desktop namespaces. |
 | D6 | Lift `CustomDictionaryDerivation` to shared core | **Resolved** — `rust_shipped` in `migration-inventory.csv` (v3.5.1 D9.4 phonetics slice): `generateNotone` / `generateAbbrev` / `generateRomanNum` delegate to `engine/phonetics/src/derivation.rs` via `RustEngineBridge.derive*`; the Swift / Kotlin files remain as thin bridges (iOS keeps a 5-line `searchPrefix` dispatcher). |
 | D7 | Cross-artifact cohesion check for the shipped trio | **Open** — see `binary-format.md` §5.1 (no checksum acknowledgement); revisit only if OTA delivery ships. |
 
