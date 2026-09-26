@@ -117,7 +117,7 @@ impl ComposingEffectExecutor for Recorder {
             // delete there would eat a real character.
             Effect::DeleteBackwardFromDocument => {}
             // No autocomplete surface; the learning handshakes never reach
-            // an executor (`ComposingManager` routes them to the learner).
+            // an executor (`ComposingManager` reports them to next word).
             Effect::ResetAutocomplete
             | Effect::PerformAutocomplete
             | Effect::ResetAutocompleteContext

@@ -62,9 +62,7 @@ pub use learned_phrases::{LearnedPhraseRow, LearnedPhraseStore};
 pub use paths::{
     UserDataPaths, ASSOCIATION_FILE, CUSTOM_DICTIONARY_FILE, FREQUENCY_FILE, LEARNED_PHRASES_FILE,
 };
-pub use stores::{
-    AssociationSink, CustomDictionarySource, FrequencySource, LearnedPhraseSource, NoStores,
-};
+pub use stores::{CustomDictionarySource, FrequencySource, LearnedPhraseSource};
 #[cfg(feature = "sqlite")]
 pub use timestamp::{unix_seconds_now, utc_timestamp_now};
 pub use types::{AssociationPair, CustomEntry, CustomSearchKey, FrequencyRow, LearnedPhrase};

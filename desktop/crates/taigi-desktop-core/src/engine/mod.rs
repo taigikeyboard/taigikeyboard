@@ -28,7 +28,7 @@ pub use lexicon::{
 pub use nextword::{
     reset_full as nextword_reset_full,
     update_last_selected_word as nextword_update_last_selected_word,
-    word_selected as nextword_word_selected, AssociationPair, NextWordEffect, NextWordOutcome,
+    word_selected as nextword_word_selected,
 };
 pub use phonetics::{
     derive_custom_query_key, nfd_preprocess_for_lookup, poj_to_tl, strip_tone, tl_to_poj,

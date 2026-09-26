@@ -1,8 +1,8 @@
 //! The engine reading its own user data (user-data-engine-roadmap P3b):
 //! once the platform opens the stores, a `FetchAtPos` answers exactly what
 //! composing answers for the same rows handed to it directly, and a
-//! `PredictNext` that carries no rows what the platform path answered when it
-//! sent them itself. Its own process: the user-data handle is process-wide.
+//! `PredictNext` ranks the bigram the store learned — and nothing else
+//! changes. Its own process: the user-data handle is process-wide.
 #![cfg(feature = "user-data")]
 
 mod common;
@@ -15,7 +15,7 @@ use lexicon::{EngineHandle as LexiconHandle, LexiconPaths};
 use protos::engine::{
     composing_request, next_word_request, next_word_response, request, response, Append,
     ComposingRequest, ContinuousResponse, DictionaryToggles, EnginePrediction, EnterContinuous,
-    FetchAtPos, NextWordRequest, PredictNext, RawNextWordPrediction, Response, Source,
+    FetchAtPos, NextWordRequest, PredictNext, Response,
 };
 use ranking::{FrequencyData, FrequencyMap};
 use userdata::{
@@ -80,14 +80,13 @@ fn fetch(fetch: FetchAtPos) -> ContinuousResponse {
     }
 }
 
-fn predict(roman: &str, user_rows: Vec<RawNextWordPrediction>) -> Vec<EnginePrediction> {
+fn predict(roman: &str) -> Vec<EnginePrediction> {
     let response = roundtrip(
         0,
         request::Payload::Nextword(NextWordRequest {
             method: Some(next_word_request::Method::PredictNext(PredictNext {
                 word: "食".to_owned(),
                 roman: roman.to_owned(),
-                user_rows,
                 toggles: Some(DictionaryToggles {
                     kautian: true,
                     ..DictionaryToggles::default()
@@ -95,6 +94,7 @@ fn predict(roman: &str, user_rows: Vec<RawNextWordPrediction>) -> Vec<EnginePred
                 query_generation: 0,
                 now_ms: NOW_MS,
                 limit: 30,
+                ..PredictNext::default()
             })),
         }),
     );
@@ -198,19 +198,6 @@ fn engine_reads_answer_what_the_same_rows_answer() {
     assert!(rows.frequency != FrequencyMap::new());
     assert!(!rows.custom.is_empty());
     assert!(!rows.learned.is_empty());
-    let platform_rows: Vec<RawNextWordPrediction> = stores
-        .association
-        .rows_following("食", "tsia̍h", 60)
-        .unwrap()
-        .into_iter()
-        .map(|row| RawNextWordPrediction {
-            hanzi: row.next,
-            tl: row.next_tl,
-            count: row.count,
-            last_used_ms: row.last_used_ms,
-            source: Source::User as i32,
-        })
-        .collect();
     let direct_candidates = composing::EngineHandle::instance()
         .query(
             &Intent::FetchAtPos {
@@ -224,7 +211,7 @@ fn engine_reads_answer_what_the_same_rows_answer() {
         )
         .continuous
         .expect("FetchAtPos answers candidates");
-    let platform_predictions = predict("tsia̍h", platform_rows);
+    let bundled_only = predict("tsia̍h");
     assert_ne!(
         direct_candidates, neutral,
         "the rows change the answer, or the test proves nothing"
@@ -235,7 +222,26 @@ fn engine_reads_answer_what_the_same_rows_answer() {
     open_user_data(&paths);
 
     assert_eq!(fetch(FetchAtPos::default()), direct_candidates);
-    assert_eq!(predict("tsia̍h", Vec::new()), platform_predictions);
+    // 食 → 飯 / pn̄g, the one bigram the store holds, is boosted; every
+    // other prediction stays as the bundled rows ranked it.
+    let learned = predict("tsia̍h");
+    let is_learned = |p: &&EnginePrediction| p.hanzi == "飯" && p.tl == "pn̄g";
+    let score_of = |predictions: &[EnginePrediction]| {
+        predictions
+            .iter()
+            .find(is_learned)
+            .expect("飯 / pn̄g predicted")
+            .score
+    };
+    assert!(score_of(&learned) > score_of(&bundled_only));
+    let others = |predictions: &[EnginePrediction]| {
+        predictions
+            .iter()
+            .filter(|p| !is_learned(p))
+            .cloned()
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(others(&learned), others(&bundled_only));
     // The custom-dictionary setting, off: the engine reads no custom rows.
     let without_custom = fetch(FetchAtPos {
         custom_dictionary_disabled: true,

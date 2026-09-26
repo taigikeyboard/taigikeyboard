@@ -158,7 +158,7 @@ fn run(bytes: &[u8]) -> Response {
             let handled = user_data::handle_nextword(nw_req, &config, generation);
             #[cfg(not(feature = "user-data"))]
             let handled = nextword::EngineHandle::instance().handle(
-                &predict::expand_predict_next(nw_req),
+                &predict::expand_predict_next(nw_req, Vec::new()),
                 &config,
                 generation,
             );

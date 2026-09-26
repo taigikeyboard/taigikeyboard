@@ -390,7 +390,7 @@ impl ComposingEffectExecutor for CompositionEditor<'_> {
                 // a document character would eat a real host character.
                 Effect::DeleteBackwardFromDocument => Ok(()),
                 // No autocomplete surface; the learning handshakes never reach
-                // an executor (`ComposingManager` routes them to the learner).
+                // an executor (`ComposingManager` reports them to next word).
                 Effect::ResetAutocomplete
                 | Effect::PerformAutocomplete
                 | Effect::ResetAutocompleteContext

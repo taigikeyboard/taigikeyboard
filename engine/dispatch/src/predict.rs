@@ -9,26 +9,35 @@ use protos::engine::{
 /// merge with user rows never leaves fewer than `limit` survivors.
 const BUNDLED_OVERFETCH_FACTOR: usize = 2;
 
-/// Rewrites `PredictNext` into the `FilterPredictions` it stands for; every
-/// other method passes through untouched. Runs before the nextword handle
-/// takes its locks, so the lexicon read never nests inside them.
-pub(crate) fn expand_predict_next(request: NextWordRequest) -> NextWordRequest {
+/// Rewrites `PredictNext` into the `FilterPredictions` it stands for, the
+/// bundled rows followed by `user_rows` (the engine's own, in store order);
+/// every other method passes through untouched. Runs before the nextword
+/// handle takes its locks, so the lexicon read never nests inside them.
+pub(crate) fn expand_predict_next(
+    request: NextWordRequest,
+    user_rows: Vec<RawNextWordPrediction>,
+) -> NextWordRequest {
     match request.method {
         Some(Method::PredictNext(predict)) => NextWordRequest {
-            method: Some(Method::FilterPredictions(filter_request(predict))),
+            method: Some(Method::FilterPredictions(filter_request(
+                predict, user_rows,
+            ))),
         },
         _ => request,
     }
 }
 
-fn filter_request(predict: PredictNext) -> FilterPredictions {
+fn filter_request(
+    predict: PredictNext,
+    user_rows: Vec<RawNextWordPrediction>,
+) -> FilterPredictions {
     let raw = match predict.word.chars().last() {
         // An empty word predicts nothing — the platforms returned no rows at
         // all, learned ones included, before this op existed.
         None => Vec::new(),
         Some(last_character) => {
             let mut raw = bundled_rows(last_character, predict.toggles, predict.limit);
-            raw.extend(predict.user_rows);
+            raw.extend(user_rows);
             raw
         }
     };
@@ -98,22 +107,27 @@ mod tests {
         }
     }
 
-    fn predict_next(word: &str, user_rows: Vec<RawNextWordPrediction>) -> PredictNext {
+    fn predict_next(word: &str) -> PredictNext {
         PredictNext {
             word: word.to_owned(),
-            user_rows,
             toggles: None,
             query_generation: 3,
             now_ms: 99,
             limit: 30,
-            roman: String::new(),
+            ..PredictNext::default()
         }
     }
 
-    fn expanded_filter(predict: PredictNext) -> FilterPredictions {
-        let expanded = expand_predict_next(NextWordRequest {
-            method: Some(Method::PredictNext(predict)),
-        });
+    fn expanded_filter(
+        predict: PredictNext,
+        user_rows: Vec<RawNextWordPrediction>,
+    ) -> FilterPredictions {
+        let expanded = expand_predict_next(
+            NextWordRequest {
+                method: Some(Method::PredictNext(predict)),
+            },
+            user_rows,
+        );
         let Some(Method::FilterPredictions(filter)) = expanded.method else {
             panic!("PredictNext must expand to FilterPredictions, got {expanded:?}");
         };
@@ -122,7 +136,7 @@ mod tests {
 
     #[test]
     fn empty_word_filters_no_rows_even_with_user_rows() {
-        let filter = expanded_filter(predict_next("", vec![user_row("好", 5)]));
+        let filter = expanded_filter(predict_next(""), vec![user_row("好", 5)]);
         assert!(filter.raw.is_empty());
         assert_eq!(filter.query_generation, 3);
         assert_eq!(filter.now_ms, 99);
@@ -135,7 +149,7 @@ mod tests {
     #[test]
     fn bundled_lookup_failure_keeps_user_rows_in_order() {
         let rows = vec![user_row("好", 5), user_row("食", 9)];
-        let filter = expanded_filter(predict_next("早安", rows.clone()));
+        let filter = expanded_filter(predict_next("早安"), rows.clone());
         assert_eq!(filter.raw, rows);
     }
 
@@ -144,7 +158,10 @@ mod tests {
         let filter_request = NextWordRequest {
             method: Some(Method::FilterPredictions(FilterPredictions::default())),
         };
-        assert_eq!(expand_predict_next(filter_request.clone()), filter_request);
+        assert_eq!(
+            expand_predict_next(filter_request.clone(), Vec::new()),
+            filter_request
+        );
     }
 
     // Through the FFI entry point: the expanded request reaches the nextword
@@ -161,7 +178,7 @@ mod tests {
             payload: Some(request::Payload::Nextword(NextWordRequest {
                 method: Some(Method::PredictNext(PredictNext {
                     query_generation: u64::MAX,
-                    ..predict_next("早安", vec![user_row("好", 5)])
+                    ..predict_next("早安")
                 })),
             })),
         };

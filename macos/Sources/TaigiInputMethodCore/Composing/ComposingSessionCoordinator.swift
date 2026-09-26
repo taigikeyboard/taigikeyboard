@@ -47,7 +47,7 @@ final class ComposingSessionCoordinator {
         composingManager: ComposingManager(
             settingsProvider: SettingsStore(),
             usageRecorder: EngineUsageRecorder(),
-            nextWordLearner: NextWordLearner(sink: EngineOwnedAssociations()),
+            nextWord: EngineNextWord(),
         ),
     )
 

@@ -12,7 +12,7 @@ use super::clock::Clock;
 use super::document_text::{
     document_text, resolved_alternate, resolved_commit, CandidateScript, ResolvedCommit,
 };
-use super::learner::NextWordLearner;
+use super::next_word::NextWordPort;
 use super::outcomes::{CandidateCommitOutcome, CandidateFetchOutcome};
 use super::presentation::{leads_with_literal_roman, presentation, PresentedCandidate};
 use super::usage::{Usage, UsageRecorder};
@@ -23,8 +23,8 @@ use crate::keys::CaretDirection;
 use crate::settings::{EngineSettings, SettingsProvider};
 
 /// Writes the engine's document effects into the client that is currently
-/// focused. Learning handshakes never reach it — the manager routes them to
-/// the learner, because they write to a database rather than a document.
+/// focused. Learning handshakes never reach it — the manager reports them to
+/// the next-word port, because they write to a database rather than a document.
 pub trait ComposingEffectExecutor {
     fn execute(&mut self, effect: &Effect);
 }
@@ -41,7 +41,8 @@ pub struct ComposingManager {
     settings: Arc<dyn SettingsProvider>,
     /// Where picks are counted; the engine reads the user's data itself.
     usage: Box<dyn UsageRecorder>,
-    learner: NextWordLearner,
+    /// Where the next-word handshakes go, stamped with `clock`.
+    next_word: Box<dyn NextWordPort>,
     clock: Box<dyn Clock>,
     /// Unique across everything that talks to the engine in this process:
     /// the engine keeps one composition per process and drops it whenever the
@@ -57,7 +58,7 @@ impl ComposingManager {
     pub fn new(
         settings: Arc<dyn SettingsProvider>,
         usage: Box<dyn UsageRecorder>,
-        learner: NextWordLearner,
+        next_word: Box<dyn NextWordPort>,
         clock: Box<dyn Clock>,
         starting_generation: u64,
     ) -> Self {
@@ -67,7 +68,7 @@ impl ComposingManager {
             display_text: String::new(),
             settings,
             usage,
-            learner,
+            next_word,
             clock,
             current_generation: starting_generation,
         }
@@ -107,8 +108,11 @@ impl ComposingManager {
         // usually a change of application, and carrying the context across
         // would learn the last word typed in a chat window as the predecessor
         // of the first word typed in a terminal.
-        self.learner
-            .forget_context(&self.current_settings(), self.current_generation);
+        self.next_word.forget_context(
+            self.clock.now_ms(),
+            &self.current_settings(),
+            self.current_generation,
+        );
     }
 
     /// A character reached the host without going through a composition.
@@ -123,9 +127,10 @@ impl ComposingManager {
         {
             return;
         }
-        self.learner.word_selected(
+        self.next_word.word_selected(
             character,
             "",
+            self.clock.now_ms(),
             &self.current_settings(),
             self.current_generation,
         );
@@ -206,14 +211,14 @@ impl ComposingManager {
             engine::commit_preedit_then_insert_external(text, &settings, self.current_generation);
         let committed = Self::committed_text(transition.as_ref());
         self.apply(transition, executor);
-        // The one commit path the engine does not describe to the learner: it
+        // The one commit path the engine does not describe to next word: it
         // emits `NextWordClearForNewComposing` and no `NextWordWordSelected`
         // (`transition.rs:769-780`). If the context were left alone, the NEXT
         // commit would pair itself with whatever was committed BEFORE this one.
         // Dropping the context under-learns one pair rather than learning a
         // wrong one.
-        self.learner
-            .forget_context(&settings, self.current_generation);
+        self.next_word
+            .forget_context(self.clock.now_ms(), &settings, self.current_generation);
         committed
     }
 
@@ -399,12 +404,22 @@ impl ComposingManager {
                 // the executor keeps its one job and the generation stays out
                 // of the effect path.
                 Effect::NextWordWordSelected { text, roman, .. } => {
-                    self.learner
-                        .word_selected(text, roman, &settings, self.current_generation);
+                    self.next_word.word_selected(
+                        text,
+                        roman,
+                        self.clock.now_ms(),
+                        &settings,
+                        self.current_generation,
+                    );
                 }
                 Effect::NextWordUpdateLastSelectedWord { text, roman } => {
-                    self.learner
-                        .segment_nailed(text, roman, &settings, self.current_generation);
+                    self.next_word.segment_nailed(
+                        text,
+                        roman,
+                        self.clock.now_ms(),
+                        &settings,
+                        self.current_generation,
+                    );
                 }
                 // Hides predictions while keeping the context. The desktop
                 // shows no predictions, so there is nothing to hide and the

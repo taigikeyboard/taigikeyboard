@@ -298,32 +298,6 @@ fn commit_preedit_then_insert_external_is_one_effect() {
 }
 
 #[test]
-fn nextword_learning_records_the_pair_within_the_window() {
-    let _engine = engine();
-    let settings = EngineSettings::default();
-    let generation = fresh_generation();
-    engine::nextword_reset_full(0, &settings, generation).expect("reset");
-    let first =
-        engine::nextword_word_selected("台", "tâi", 1_000, &settings, generation).expect("first");
-    assert!(
-        first.effects.is_empty(),
-        "no predecessor yet: {:?}",
-        first.effects
-    );
-    let second =
-        engine::nextword_word_selected("語", "gí", 2_000, &settings, generation).expect("second");
-    assert!(
-        second.effects.iter().any(|effect| matches!(
-            effect,
-            engine::NextWordEffect::RecordAssociation(pair)
-                if pair.previous == "台" && pair.previous_tl == "tâi" && pair.next == "語" && pair.next_tl == "gí"
-        )),
-        "{:?}",
-        second.effects
-    );
-}
-
-#[test]
 fn all_sources_off_resolves_to_the_non_zero_sentinel() {
     let _engine = engine();
     let mut sources = EngineSettings::default().dictionary_sources;

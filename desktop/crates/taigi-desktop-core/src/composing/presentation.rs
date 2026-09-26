@@ -179,7 +179,7 @@ impl CandidateSource {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::composing::{NextWordLearner, NoStores, NoUsage, SystemClock};
+    use crate::composing::{EngineNextWord, NoUsage, SystemClock};
     use crate::engine::test_support::candidate;
     use crate::settings::{keys, SettingsDocument, StaticSettingsProvider};
     use std::sync::Arc;
@@ -284,7 +284,7 @@ mod tests {
         ComposingManager::new(
             Arc::new(StaticSettingsProvider::new(document)),
             Box::new(NoUsage),
-            NextWordLearner::new(Box::new(NoStores), Box::new(SystemClock)),
+            Box::new(EngineNextWord),
             Box::new(SystemClock),
             1,
         )
@@ -297,7 +297,7 @@ mod tests {
         ComposingManager::new(
             Arc::new(StaticSettingsProvider::new(document)),
             Box::new(NoUsage),
-            NextWordLearner::new(Box::new(NoStores), Box::new(SystemClock)),
+            Box::new(EngineNextWord),
             Box::new(SystemClock),
             1,
         )

@@ -5,34 +5,20 @@
 //! The desktop learns but does not predict, so the whole read half —
 //! `FilterPredictions`, `SetIsShowing` — has no caller and is not wrapped. `Backspace` and
 //! `ContextTimeoutFired` are absent too: recording is already fenced by a
-//! strict 10-second window inside the engine (`decide.rs:306-312`), so with
+//! strict 10-second window inside the engine (`decide.rs` `should_record_association`), so with
 //! no predictions on screen a fired timeout changes nothing observable.
+//!
+//! The desktop acts on none of the answer's effects: the engine records the
+//! bigrams it decides on itself (user-data-engine-roadmap P9b), and the rest
+//! are about a prediction UI the desktop does not have.
 
 use protos::engine::{
-    next_word_effect, next_word_request, next_word_response, request, response, DecisionInput,
-    NextWordEffect as WireEffect, NextWordRequest, ResetFull, UpdateLastSelectedWord, WordSelected,
+    next_word_request, next_word_response, request, response, DecisionInput, NextWordRequest,
+    ResetFull, UpdateLastSelectedWord, WordSelected,
 };
 
 use super::bridge::{nextword_config, record_failure, roundtrip};
 use crate::settings::EngineSettings;
-
-// Moved to the engine `userdata` crate (user-data-engine-roadmap P1);
-// re-exported here until the desktop switch (P5).
-pub use userdata::AssociationPair;
-
-/// What one learning intent asked the platform to write. Only the recording
-/// effects are represented; the engine's other four are about a prediction
-/// UI the desktop does not have.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum NextWordEffect {
-    RecordAssociation(AssociationPair),
-    RecordCompoundAssociations(Vec<AssociationPair>),
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct NextWordOutcome {
-    pub effects: Vec<NextWordEffect>,
-}
 
 /// The user committed `text`, read as `roman`. `trigger_prediction` is forced
 /// `false` rather than forwarded from the composing effect: the flag only
@@ -44,7 +30,7 @@ pub fn word_selected(
     now_ms: i64,
     settings: &EngineSettings,
     generation: u64,
-) -> Option<NextWordOutcome> {
+) {
     decide(
         next_word_request::Method::WordSelected(WordSelected {
             text: text.to_owned(),
@@ -70,7 +56,7 @@ pub fn update_last_selected_word(
     now_ms: i64,
     settings: &EngineSettings,
     generation: u64,
-) -> Option<NextWordOutcome> {
+) {
     decide(
         next_word_request::Method::UpdateLastSelectedWord(UpdateLastSelectedWord {
             text: text.to_owned(),
@@ -86,11 +72,7 @@ pub fn update_last_selected_word(
 /// Forgets the current context outright. Sent when the composition session
 /// changes hands, so the last word typed in one application cannot be
 /// learned as the predecessor of the first word typed in the next.
-pub fn reset_full(
-    now_ms: i64,
-    settings: &EngineSettings,
-    generation: u64,
-) -> Option<NextWordOutcome> {
+pub fn reset_full(now_ms: i64, settings: &EngineSettings, generation: u64) {
     decide(
         next_word_request::Method::ResetFull(ResetFull {
             input: Some(DecisionInput { now_ms }),
@@ -101,100 +83,19 @@ pub fn reset_full(
     )
 }
 
-fn decide(
-    method: next_word_request::Method,
-    op: &str,
-    settings: &EngineSettings,
-    generation: u64,
-) -> Option<NextWordOutcome> {
+fn decide(method: next_word_request::Method, op: &str, settings: &EngineSettings, generation: u64) {
     let payload = request::Payload::Nextword(NextWordRequest {
         method: Some(method),
     });
-    let response = match roundtrip(payload, op, generation, Some(nextword_config(settings)))? {
-        response::Payload::Nextword(response) => response,
-        other => {
-            record_failure(op, &format!("expected a nextword payload, got {other:?}"));
-            return None;
-        }
+    let Some(response) = roundtrip(payload, op, generation, Some(nextword_config(settings))) else {
+        return;
     };
-    match response.result {
-        Some(next_word_response::Result::Decide(result)) => Some(NextWordOutcome {
-            effects: result.effects.iter().filter_map(decode_effect).collect(),
-        }),
-        _ => {
-            record_failure(op, "expected a decide result");
-            None
+    match response {
+        response::Payload::Nextword(response) => {
+            if !matches!(response.result, Some(next_word_response::Result::Decide(_))) {
+                record_failure(op, "expected a decide result");
+            }
         }
-    }
-}
-
-/// `None` for an effect this platform has nothing to do with. Exhaustive on
-/// purpose: a next-word effect added to the engine later has to be classified
-/// here rather than silently ignored.
-fn decode_effect(effect: &WireEffect) -> Option<NextWordEffect> {
-    match effect.kind.as_ref()? {
-        next_word_effect::Kind::RecordAssociation(payload) => payload
-            .pair
-            .as_ref()
-            .map(|pair| NextWordEffect::RecordAssociation(decode_pair(pair))),
-        next_word_effect::Kind::RecordCompoundAssociations(payload) => {
-            Some(NextWordEffect::RecordCompoundAssociations(
-                payload.pairs.iter().map(decode_pair).collect(),
-            ))
-        }
-        // The desktop runs no context timer — see this file's header.
-        next_word_effect::Kind::RescheduleContextTimeout(_)
-        | next_word_effect::Kind::CancelContextTimeout(_) => None,
-        // Neither is reachable: queries need `trigger_prediction`, always
-        // false here, and a UI clear needs `is_showing`, never set true.
-        next_word_effect::Kind::QueryPredictions(_)
-        | next_word_effect::Kind::ClearPredictionsUi(_) => None,
-    }
-}
-
-fn decode_pair(pair: &protos::engine::AssociationPair) -> AssociationPair {
-    AssociationPair {
-        previous: pair.prev.clone(),
-        previous_tl: pair.prev_tl.clone(),
-        next: pair.next.clone(),
-        next_tl: pair.next_tl.clone(),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use protos::engine::{CancelContextTimeout, RecordAssociation};
-
-    #[test]
-    fn only_recording_effects_survive_decoding() {
-        let record = WireEffect {
-            kind: Some(next_word_effect::Kind::RecordAssociation(
-                RecordAssociation {
-                    pair: Some(protos::engine::AssociationPair {
-                        prev: "台".into(),
-                        prev_tl: "tâi".into(),
-                        next: "語".into(),
-                        next_tl: "gí".into(),
-                    }),
-                },
-            )),
-        };
-        let timer = WireEffect {
-            kind: Some(next_word_effect::Kind::CancelContextTimeout(
-                CancelContextTimeout {},
-            )),
-        };
-        assert_eq!(
-            decode_effect(&record),
-            Some(NextWordEffect::RecordAssociation(AssociationPair {
-                previous: "台".into(),
-                previous_tl: "tâi".into(),
-                next: "語".into(),
-                next_tl: "gí".into(),
-            }))
-        );
-        assert_eq!(decode_effect(&timer), None);
-        assert_eq!(decode_effect(&WireEffect { kind: None }), None);
+        other => record_failure(op, &format!("expected a nextword payload, got {other:?}")),
     }
 }

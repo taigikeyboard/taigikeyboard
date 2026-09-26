@@ -4,17 +4,16 @@
 import XCTest
 
 /// Drives real compositions against the real engine and asserts on what the
-/// manager reports: the picks it counts and the bigrams a next-word answer
-/// carries. The engine never opens the user data in this process, so the
-/// bigrams still arrive in the answer (roadmap U9); what the engine stores
-/// from them is its own tests'. Everything here needs the engine artefacts to be
+/// manager reports: the picks it counts and the next-word handshakes. What the
+/// engine learns from a handshake — the window, noise, sentence ends — and
+/// stores is its own tests' (`engine/nextword/src/decide.rs`). Everything here needs the engine artefacts to be
 /// current — the next-word intents are rejected outright by an engine built
 /// before `PLATFORM_MACOS` existed.
 @MainActor
 final class ComposingManagerLearningTests: XCTestCase {
     /// Fresh per case: XCTest makes a new instance for every test method.
     private let usage = RecordingUsageRecorder()
-    private let associations = RecordingAssociationSink()
+    private let nextWord = RecordingNextWordPort()
 
     override func setUpWithError() throws {
         try super.setUpWithError()
@@ -74,9 +73,9 @@ final class ComposingManagerLearningTests: XCTestCase {
         )
     }
 
-    // MARK: - Association
+    // MARK: - Next word
 
-    func testTwoCommitsInARow_learnTheBigramBetweenThem() throws {
+    func testTwoCommitsInARow_reportBothUnderTheirIdentity() throws {
         let manager = try makeManager()
         let executor = RecordingEffectExecutor()
 
@@ -84,9 +83,12 @@ final class ComposingManagerLearningTests: XCTestCase {
         let second = try commitWholeBuffer("gi", manager, executing: executor)
 
         XCTAssertEqual(
-            associations.pairs.map { "\($0.previous)→\($0.next)" },
-            ["\(first.displayText)→\(second.displayText)"],
-            "the engine decided this pair was worth learning; the manager's job is to hand it on",
+            nextWord.handshakes,
+            [
+                .selected(text: first.displayText, roman: first.canonicalTl),
+                .selected(text: second.displayText, roman: second.canonicalTl),
+            ],
+            "the manager reports each commit; the engine decides the pair between them",
         )
     }
 
@@ -94,7 +96,7 @@ final class ComposingManagerLearningTests: XCTestCase {
     /// routinely have one half written in each. The pair must still be learnt
     /// under the identity, not under whichever rendering reached the document —
     /// otherwise `我 ê` learnt in mixed script would never predict `ê` again.
-    func testABigramWithOneHalfInTheOtherScript_learnsTheSamePair() throws {
+    func testABigramWithOneHalfInTheOtherScript_reportsTheSameIdentity() throws {
         let manager = try makeManager()
         let executor = RecordingEffectExecutor()
 
@@ -103,9 +105,12 @@ final class ComposingManagerLearningTests: XCTestCase {
         _ = manager.commitCandidate(second, script: .alternate, executing: executor)
 
         XCTAssertEqual(
-            associations.pairs.map { "\($0.previous)→\($0.next)" },
-            ["\(first.displayText)→\(second.displayText)"],
-            "the pair is the identity pair, whichever script the document got",
+            nextWord.handshakes,
+            [
+                .selected(text: first.displayText, roman: first.canonicalTl),
+                .selected(text: second.displayText, roman: second.canonicalTl),
+            ],
+            "the identity pair is reported, whichever script the document got",
         )
     }
 
@@ -138,37 +143,30 @@ final class ComposingManagerLearningTests: XCTestCase {
         )
     }
 
-    /// Sentence-end punctuation typed straight into the host ends the context,
-    /// which is what stops the last word of one sentence being learned as the
-    /// predecessor of the first word of the next.
-    func testAFullStopBetweenTwoCommits_breaksTheBigram() throws {
+    /// Sentence-end punctuation typed straight into the host is reported: the
+    /// engine ends the context on it, which is what stops the last word of one
+    /// sentence being learned as the predecessor of the first word of the next.
+    func testAFullStopBetweenTwoCommits_isReportedBetweenThem() throws {
         let manager = try makeManager()
         let executor = RecordingEffectExecutor()
 
-        _ = try commitWholeBuffer("tai", manager, executing: executor)
+        let first = try commitWholeBuffer("tai", manager, executing: executor)
         manager.noteCharacterTypedOutsideComposition("。")
-        _ = try commitWholeBuffer("gi", manager, executing: executor)
+        let second = try commitWholeBuffer("gi", manager, executing: executor)
 
-        XCTAssertEqual(
-            associations.pairs,
-            [],
-            "the context was reset, so the second commit had no predecessor to pair with",
-        )
+        XCTAssertEqual(nextWord.reported, [first.displayText, "。", second.displayText])
     }
 
-    func testACommaBetweenTwoCommits_leavesTheBigramIntact() throws {
+    func testACommaBetweenTwoCommits_isReportedBetweenThem() throws {
         let manager = try makeManager()
         let executor = RecordingEffectExecutor()
 
-        _ = try commitWholeBuffer("tai", manager, executing: executor)
+        let first = try commitWholeBuffer("tai", manager, executing: executor)
         manager.noteCharacterTypedOutsideComposition("、")
-        _ = try commitWholeBuffer("gi", manager, executing: executor)
+        let second = try commitWholeBuffer("gi", manager, executing: executor)
 
-        XCTAssertEqual(
-            associations.pairs.count,
-            1,
-            "a comma is noise, not the end of a sentence — the context survives it",
-        )
+        // A comma is noise, so the engine keeps the context across it.
+        XCTAssertEqual(nextWord.reported, [first.displayText, "、", second.displayText])
     }
 
     func testALetterTypedOutsideAComposition_isNotTreatedAsAWord() throws {
@@ -182,21 +180,20 @@ final class ComposingManagerLearningTests: XCTestCase {
         manager.noteCharacterTypedOutsideComposition("x")
         _ = try commitWholeBuffer("gi", manager, executing: executor)
 
-        XCTAssertEqual(associations.pairs.count, 1)
-        XCTAssertNotEqual(associations.pairs.first?.previous, "x")
+        XCTAssertFalse(nextWord.reported.contains("x"), "\(nextWord.reported)")
     }
 
     func testANewSession_forgetsTheContextFromTheOldOne() throws {
         let manager = try makeManager()
         let executor = RecordingEffectExecutor()
 
-        _ = try commitWholeBuffer("tai", manager, executing: executor)
+        let first = try commitWholeBuffer("tai", manager, executing: executor)
         // A session change is usually a change of application: what was typed in
         // the last one must not seed what is typed in the next.
         manager.startNewSession()
-        _ = try commitWholeBuffer("gi", manager, executing: executor)
+        let second = try commitWholeBuffer("gi", manager, executing: executor)
 
-        XCTAssertEqual(associations.pairs, [])
+        XCTAssertEqual(nextWord.reported, [first.displayText, "∅", second.displayText])
     }
 
     /// Punctuation typed while a composition is running does NOT go through the
@@ -211,16 +208,16 @@ final class ComposingManagerLearningTests: XCTestCase {
         let manager = try makeManager()
         let executor = RecordingEffectExecutor()
 
-        _ = try commitWholeBuffer("tai", manager, executing: executor)
+        let first = try commitWholeBuffer("tai", manager, executing: executor)
         for character in "gi" {
             manager.append(String(character), executing: executor)
         }
         manager.commitComposition(thenInsert: "。", executing: executor)
-        _ = try commitWholeBuffer("gi", manager, executing: executor)
+        let second = try commitWholeBuffer("gi", manager, executing: executor)
 
         XCTAssertEqual(
-            associations.pairs,
-            [],
+            nextWord.reported,
+            [first.displayText, "∅", second.displayText],
             "under-learning one pair is the safe half; pairing 台 with the word after the "
                 + "full stop would be learning something the user never typed",
         )
@@ -261,7 +258,7 @@ final class ComposingManagerLearningTests: XCTestCase {
         try TestFixtures.makeComposingManager(
             settingsProvider: settingsProvider,
             usage: usage,
-            associations: associations,
+            nextWord: nextWord,
             startingGeneration: TestFixtures.generationCounter.next(),
         )
     }

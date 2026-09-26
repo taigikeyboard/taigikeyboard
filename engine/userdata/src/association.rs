@@ -6,7 +6,6 @@ use crate::database::{
     has_column, immediate_transaction, table_exists, user_version, JournalMode, StoreSchema,
     UserDataDatabase, UserDataDatabaseError,
 };
-use crate::stores::AssociationSink;
 use crate::types::AssociationPair;
 use rusqlite::{params, Connection};
 use std::path::PathBuf;
@@ -218,12 +217,6 @@ impl UserAssociationStore {
             connection.execute("VACUUM;", []).ok();
             Ok(existing)
         })
-    }
-}
-
-impl AssociationSink for UserAssociationStore {
-    fn record(&self, pairs: &[AssociationPair]) {
-        UserAssociationStore::record(self, pairs);
     }
 }
 

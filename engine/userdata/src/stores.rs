@@ -3,7 +3,7 @@
 //! Sync` because the one manager per process lives behind a mutex a TSF host
 //! may reach from several thread managers (windows-roadmap W3).
 
-use crate::types::{AssociationPair, CustomEntry, FrequencyRow, LearnedPhrase};
+use crate::types::{CustomEntry, FrequencyRow, LearnedPhrase};
 
 /// `user_frequency.db`, as the keystroke path sees it.
 pub trait FrequencySource: Send + Sync {
@@ -34,12 +34,6 @@ pub trait LearnedPhraseSource: Send + Sync {
     fn touch_phrase(&self, hanzi: &str, canonical_tl: &str);
 }
 
-/// `user_association.db`'s write side.
-pub trait AssociationSink: Send + Sync {
-    /// Writes the learned bigrams. Best-effort; never logs the words.
-    fn record(&self, pairs: &[AssociationPair]);
-}
-
 // A shared store is the store: the shell hands one `Arc` to the manager and
 // keeps another for the settings window's pages.
 impl<T: FrequencySource + ?Sized> FrequencySource for std::sync::Arc<T> {
@@ -68,41 +62,4 @@ impl<T: LearnedPhraseSource + ?Sized> LearnedPhraseSource for std::sync::Arc<T> 
     fn touch_phrase(&self, hanzi: &str, canonical_tl: &str) {
         (**self).touch_phrase(hanzi, canonical_tl);
     }
-}
-
-impl<T: AssociationSink + ?Sized> AssociationSink for std::sync::Arc<T> {
-    fn record(&self, pairs: &[AssociationPair]) {
-        (**self).record(pairs);
-    }
-}
-
-/// A store that holds nothing and learns nothing — what a host process that
-/// cannot reach `%APPDATA%` (an AppContainer) runs with, and what tests use
-/// when learning is not the point.
-#[derive(Clone, Copy, Debug, Default)]
-pub struct NoStores;
-
-impl FrequencySource for NoStores {
-    fn rows_for_words(&self, _words: &[String]) -> Option<Vec<FrequencyRow>> {
-        None
-    }
-    fn record(&self, _word: &str, _tl: &str) {}
-}
-
-impl CustomDictionarySource for NoStores {
-    fn rows_matching(&self, _family: &str, _form: &str, _key: &str) -> Vec<CustomEntry> {
-        Vec::new()
-    }
-}
-
-impl LearnedPhraseSource for NoStores {
-    fn rows_matching(&self, _family: &str, _form: &str, _key: &str) -> Vec<LearnedPhrase> {
-        Vec::new()
-    }
-    fn learn_phrase(&self, _hanzi: &str, _canonical_tl: &str) {}
-    fn touch_phrase(&self, _hanzi: &str, _canonical_tl: &str) {}
-}
-
-impl AssociationSink for NoStores {
-    fn record(&self, _pairs: &[AssociationPair]) {}
 }

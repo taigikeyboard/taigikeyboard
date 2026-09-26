@@ -3,7 +3,9 @@
 //! / boost lives in submodules; this module is the stable surface that
 //! `dispatch.rs` and external crates consume.
 
-use protos::engine::{AppConfig, DecideResult, FilterResult, RawNextWordPrediction};
+use protos::engine::{
+    AppConfig, DecideResult, FilterResult, NextWordResponse, RawNextWordPrediction,
+};
 use thiserror::Error;
 
 /// Long-lived state the engine mutates. Mirrors iOS
@@ -61,6 +63,43 @@ pub(crate) enum Intent {
     SetIsShowing { is_showing: bool },
 }
 
+/// One `prev → next` bigram a commit decided to record, each side the
+/// `(Hanji, canonical-TL)` pair it was committed as (§40). The engine keeps
+/// it in its own `user_association.db` (`dispatch` crate,
+/// `user_data::handle_nextword`); it never crosses the FFI.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Association {
+    pub prev: String,
+    pub prev_tl: String,
+    pub next: String,
+    pub next_tl: String,
+}
+
+/// A handled request: the response the platform gets, and the bigrams a
+/// decision recorded, in commit order (the `prev → this` pair first, then
+/// a compound's internal pairs).
+#[derive(Clone, Debug, PartialEq)]
+pub struct Handled {
+    pub response: NextWordResponse,
+    pub associations: Vec<Association>,
+}
+
+/// A decision, with the bigrams it recorded ([`Handled::associations`]).
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct Decided {
+    pub result: DecideResult,
+    pub associations: Vec<Association>,
+}
+
+impl From<DecideResult> for Decided {
+    fn from(result: DecideResult) -> Self {
+        Self {
+            result,
+            associations: Vec::new(),
+        }
+    }
+}
+
 /// Predictions returned when a request's `limit` is 0 or negative.
 pub const DEFAULT_PREDICTION_LIMIT: usize = 30;
 
@@ -110,8 +149,8 @@ impl Engine {
         &mut self,
         intent: Intent,
         config: &AppConfig,
-    ) -> Result<DecideResult, NextWordError> {
-        crate::decide::apply(&mut self.state, intent, config)
+    ) -> Result<Decided, NextWordError> {
+        crate::decide::decide(&mut self.state, intent, config)
     }
 
     /// Score + merge + sort + limit raw rows. Generation-mismatch path
