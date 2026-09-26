@@ -101,6 +101,32 @@ impl UserFrequencyStore {
         });
     }
 
+    /// Merges a backup's counts: a `(word, tl)` already stored keeps the
+    /// larger count, and every imported row counts as used now — the phones'
+    /// `.taigi` merge (iOS `UserFrequencyRepository.batchImportMerge`). One
+    /// transaction, then the cap, so no reader sees the table over it.
+    /// Answers how many rows were merged.
+    pub fn import_merge(
+        &self,
+        rows: Vec<(String, String, i64)>,
+    ) -> Result<usize, UserDataDatabaseError> {
+        let capacity = self.capacity_for_writer();
+        self.database.perform(move |connection| {
+            immediate_transaction::<_, UserDataDatabaseError>(connection, |connection| {
+                let mut statement = connection.prepare(&format!(
+                    "INSERT INTO {TABLE_NAME} (word, tl, count, last_used)\nVALUES (?, ?, ?, CURRENT_TIMESTAMP)\nON CONFLICT(word, tl) DO UPDATE SET\n    count = MAX(count, excluded.count),\n    last_used = CURRENT_TIMESTAMP;"
+                ))?;
+                let mut merged = 0;
+                for (word, tl, count) in rows.iter().filter(|(word, ..)| !word.is_empty()) {
+                    statement.execute(params![word, tl, count])?;
+                    merged += 1;
+                }
+                capacity.enforce(connection)?;
+                Ok(merged)
+            })
+        })
+    }
+
     fn capacity_for_writer(&self) -> LearningCapacity {
         self.capacity.detached()
     }

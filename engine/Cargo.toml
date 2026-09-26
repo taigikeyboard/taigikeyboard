@@ -53,6 +53,9 @@ userdata = { path = "./userdata" }
 # which also lifts Android's minSdk 3.22 ceiling (user-data-engine-roadmap U2).
 rusqlite = { version = "0.40", features = ["bundled"] }
 uuid = { version = "1", features = ["v4"] }
+# The `.taigi` backup codec (userdata `backup`).
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 tempfile = "3"
 
 [workspace.lints.rust]

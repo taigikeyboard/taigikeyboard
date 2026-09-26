@@ -17,12 +17,14 @@ workspace = true
 # windows-roadmap W1/W13; user-data-engine-roadmap U11).
 [features]
 default = ["sqlite"]
-sqlite = ["dep:rusqlite", "dep:uuid"]
+sqlite = ["dep:rusqlite", "dep:uuid", "dep:serde", "dep:serde_json"]
 
 [dependencies]
 phonetics = { workspace = true }
 rusqlite = { workspace = true, optional = true }
 uuid = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
 log = { workspace = true }
 thiserror = { workspace = true }
 
@@ -35,4 +37,8 @@ required-features = ["sqlite"]
 
 [[test]]
 name = "takeover"
+required-features = ["sqlite"]
+
+[[test]]
+name = "backup"
 required-features = ["sqlite"]

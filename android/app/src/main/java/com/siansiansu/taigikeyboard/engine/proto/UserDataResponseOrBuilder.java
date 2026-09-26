@@ -98,5 +98,27 @@ public interface UserDataResponseOrBuilder extends
    */
   com.siansiansu.taigikeyboard.engine.proto.CustomCsvExported getCustomCsvExported();
 
+  /**
+   * <code>.taigi.engine.BackupExported backup_exported = 9;</code>
+   * @return Whether the backupExported field is set.
+   */
+  boolean hasBackupExported();
+  /**
+   * <code>.taigi.engine.BackupExported backup_exported = 9;</code>
+   * @return The backupExported.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.BackupExported getBackupExported();
+
+  /**
+   * <code>.taigi.engine.BackupImported backup_imported = 10;</code>
+   * @return Whether the backupImported field is set.
+   */
+  boolean hasBackupImported();
+  /**
+   * <code>.taigi.engine.BackupImported backup_imported = 10;</code>
+   * @return The backupImported.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.BackupImported getBackupImported();
+
   public com.siansiansu.taigikeyboard.engine.proto.UserDataResponse.ResultCase getResultCase();
 }

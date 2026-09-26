@@ -16,6 +16,8 @@
 #[cfg(feature = "sqlite")]
 mod association;
 #[cfg(feature = "sqlite")]
+mod backup;
+#[cfg(feature = "sqlite")]
 mod capacity;
 #[cfg(feature = "sqlite")]
 mod csv;
@@ -36,6 +38,8 @@ mod user_data_stores;
 
 #[cfg(feature = "sqlite")]
 pub use association::{AssociationRow, FollowingRow, UserAssociationStore};
+#[cfg(feature = "sqlite")]
+pub use backup::{export_backup, import_backup, BackupError, BackupImported, BACKUP_VERSION};
 #[cfg(feature = "sqlite")]
 pub use capacity::LearningCapacity;
 #[cfg(feature = "sqlite")]
@@ -58,7 +62,7 @@ pub use stores::{
     AssociationSink, CustomDictionarySource, FrequencySource, LearnedPhraseSource, NoStores,
 };
 #[cfg(feature = "sqlite")]
-pub use timestamp::utc_timestamp_now;
+pub use timestamp::{unix_seconds_now, utc_timestamp_now};
 pub use types::{AssociationPair, CustomEntry, CustomSearchKey, FrequencyRow, LearnedPhrase};
 #[cfg(feature = "sqlite")]
 pub use user_data_stores::{

@@ -442,6 +442,18 @@ impl CustomDictionaryStore {
         if rows.len() > limit {
             return Err(CustomDictionaryError::CapacityReached { limit });
         }
+        self.import_until_full(rows)
+    }
+
+    /// Imports rows until the dictionary is full, however many the source
+    /// holds — a `.taigi` restore, which (as Android's did) fills the space
+    /// left rather than refusing a large backup. Stored and repeated rows
+    /// are skipped as in [`Self::batch_import`].
+    pub fn import_until_full(
+        &self,
+        rows: &[CustomDictionaryRow],
+    ) -> Result<CustomDictionaryImportResult, CustomDictionaryError> {
+        let limit = self.entry_limit;
         if rows.is_empty() {
             return Ok(CustomDictionaryImportResult {
                 imported: 0,

@@ -24,6 +24,8 @@ message UserDataRequest {
     DeleteCustomEntry delete_custom_entry = 6;
     ImportCustomCsv import_custom_csv = 7;
     ExportCustomCsv export_custom_csv = 8;
+    ExportBackup export_backup = 9;
+    ImportBackup import_backup = 10;
   }
 }
 
@@ -37,6 +39,8 @@ message UserDataResponse {
     CustomEntryDeleted custom_entry_deleted = 6;
     CustomCsvImported custom_csv_imported = 7;
     CustomCsvExported custom_csv_exported = 8;
+    BackupExported backup_exported = 9;
+    BackupImported backup_imported = 10;
   }
 }
 
@@ -193,3 +197,41 @@ message ExportCustomCsv {}
 
 // The whole dictionary as `roman,hanzi` lines, for the platform to save.
 message CustomCsvExported { bytes csv = 1; }
+
+// ---- The `.taigi` backup (roadmap P4b) ----
+//
+// Version 2, the JSON iOS and Android already exchange: the custom
+// dictionary, frequency counts and learned bigrams — never learned phrases
+// (§50). The platform picks the file and shares it; the engine writes and
+// reads its bytes.
+
+// `platform` / `app_version` name the writer in the file (`ios`,
+// `android`, `macos`, `windows`, `linux`).
+message ExportBackup {
+  string platform = 1;
+  string app_version = 2;
+}
+
+message BackupExported { bytes backup = 1; }
+
+// Restores a `.taigi` file's bytes, merging with what is stored: custom
+// words already there are skipped and the import stops at the dictionary's
+// cap; counts keep the larger of the two; bigram readings are normalized
+// to TL. Old and cross-platform backups are read leniently.
+message ImportBackup { bytes backup = 1; }
+
+enum BackupRefusal {
+  BACKUP_REFUSAL_NONE = 0;
+  // Not a `.taigi` file (not JSON of that shape).
+  BACKUP_REFUSAL_UNREADABLE = 1;
+  // `version` below 1.
+  BACKUP_REFUSAL_UNSUPPORTED_VERSION = 2;
+}
+
+// Rows merged per store; all 0 when refused.
+message BackupImported {
+  BackupRefusal refusal = 1;
+  uint32 custom_dictionary = 2;
+  uint32 frequency = 3;
+  uint32 association = 4;
+}
