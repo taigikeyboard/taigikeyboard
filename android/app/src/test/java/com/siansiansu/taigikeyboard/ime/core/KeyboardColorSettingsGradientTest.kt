@@ -47,4 +47,41 @@ class KeyboardColorSettingsGradientTest {
         // lighten by 0 keeps RGB but still forces opaque alpha.
         assertEquals(0xFF112233.toInt(), lightenedArgb(0x00112233, 0.0))
     }
+
+    // trace: user-theme seed = solid D4D5DD surface, key text 000000, key fill FFFFFF →
+    //   fixedKeyFill FFFFFF; no gradient → tints (FFFFFF, FFFFFF deepened ×0.65:
+    //   255×0.65 = 165.75 → 165 = A5) = (FFFFFF, A5A5A5). Night-mode free. Mirrors iOS.
+    @Test
+    fun candidateTints_userThemeUsesKeyFill() {
+        val seed = UserThemeSeed.colors
+        assertEquals(0xFFFFFFFF.toInt(), seed.fixedKeyFill)
+        assertEquals(0xFFFFFFFF.toInt() to 0xFFA5A5A5.toInt(), seed.candidateTints)
+    }
+
+    // trace: gradient first stop E6C2D0 wins over the key fill → (F2E0E7, 957E87), as before.
+    @Test
+    fun candidateTints_gradientUsesFirstStop() {
+        val colors =
+            KeyboardColorSettings(
+                background = ThemeBackground.Gradient(ThemeGradient(listOf(0xFFE6C2D0.toInt(), 0xFFFFFFFF.toInt()))),
+                keyTextColor = 0xFF1C1C1E.toInt(),
+            ).withKeyFill(0xFFFFFFFF.toInt())
+        assertEquals(0xFFF2E0E7.toInt() to 0xFF957E87.toInt(), colors.candidateTints)
+    }
+
+    // trace: fixedKeyFill gate = custom surface + visible fill + key text.
+    //   Default (all null) → null; transparent fill, no surface → null;
+    //   gradient with transparent fill (Outlined/Borderless) → null, tints still from the stop.
+    @Test
+    fun fixedKeyFill_onlyForConcreteKeyPalettes() {
+        assertNull(KeyboardColorSettings().fixedKeyFill)
+        assertNull(KeyboardColorSettings().candidateTints)
+        assertNull(KeyboardColorSettings().withKeyFill(0x00000000).fixedKeyFill)
+        val clearOnGradient =
+            KeyboardColorSettings(
+                background = ThemeBackground.Gradient(ThemeGradient(listOf(0xFFE6C2D0.toInt(), 0xFFFFFFFF.toInt()))),
+                keyTextColor = 0xFF1C1C1E.toInt(),
+            ).withKeyFill(0x00000000)
+        assertNull(clearOnGradient.fixedKeyFill)
+    }
 }

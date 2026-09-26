@@ -5,15 +5,11 @@ import android.widget.Button
 import android.widget.LinearLayout
 import androidx.core.view.children
 import com.siansiansu.taigikeyboard.R
-import com.siansiansu.taigikeyboard.ime.core.CANDIDATE_HIGHLIGHT_LIGHTEN_FACTOR
-import com.siansiansu.taigikeyboard.ime.core.CANDIDATE_PRESSED_DEEPEN_FACTOR
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.core.ThemeAppearanceCache
-import com.siansiansu.taigikeyboard.ime.core.deepenedArgb
 import com.siansiansu.taigikeyboard.ime.core.isKeyboardNightMode
-import com.siansiansu.taigikeyboard.ime.core.lightenedArgb
 import com.siansiansu.taigikeyboard.ime.core.logging.TraceContext
 import com.siansiansu.taigikeyboard.ime.core.logging.TraceId
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
@@ -650,12 +646,17 @@ class SmartbarManager(
 
         // Resolve the active theme once so the overlay paints the theme surface
         // (continuous with the keyboard) instead of the flat `?smartbar_bgColor` chrome.
+        // The first-candidate + pressed tints come from currentDisplay() so strip and
+        // overlay share one resolution.
         val colorSettings = themeCache.resolve(isKeyboardNightMode(taigikeyboard.context)).colors
+        val display = currentDisplay()
         overlay.show(
             currentSuggestions,
             keyboardHeight,
             colorSettings.surface,
             colorSettings.candidateTextColor,
+            display.themeKeyBgColor,
+            display.themePressedHighlightColor,
         )
     }
 
@@ -705,9 +706,10 @@ class SmartbarManager(
         val height =
             smartbarView?.height?.takeIf { it > 0 }
                 ?: context.resources.getDimension(R.dimen.smartbar_height).toInt()
-        // Gradient themes tint first-candidate + pressed with the theme hue (deepened first stop);
-        // flat themes keep the neutral key_bgColor / semiTransparentColor attrs.
-        val gradientTop = colorSettings.backgroundGradient?.stops?.first()
+        // Themed keyboards tint first-candidate + pressed from the palette (gradient first stop,
+        // else the fixed key fill); adaptive themes keep the neutral key_bgColor /
+        // semiTransparentColor attrs.
+        val tints = colorSettings.candidateTints
         return CandidateDisplayParams(
             isTranslateSwapped = cachedIsTranslateSwapped,
             candidateDisplayMode = prefs.candidateDisplayMode,
@@ -718,12 +720,8 @@ class SmartbarManager(
             candidateTextColor = colorSettings.candidateTextColor,
             themeTitleColor = getColorFromAttr(context, R.attr.smartbar_candidate_fgColor),
             themeSubtitleColor = getColorFromAttr(context, R.attr.smartbar_candidate_subtitle_fgColor),
-            themeKeyBgColor =
-                gradientTop?.let { lightenedArgb(it, CANDIDATE_HIGHLIGHT_LIGHTEN_FACTOR) }
-                    ?: getColorFromAttr(context, R.attr.key_bgColor),
-            themePressedHighlightColor =
-                gradientTop?.let { deepenedArgb(it, CANDIDATE_PRESSED_DEEPEN_FACTOR) }
-                    ?: getColorFromAttr(context, R.attr.semiTransparentColor),
+            themeKeyBgColor = tints?.first ?: getColorFromAttr(context, R.attr.key_bgColor),
+            themePressedHighlightColor = tints?.second ?: getColorFromAttr(context, R.attr.semiTransparentColor),
             smartbarHeightPx = height,
         )
     }

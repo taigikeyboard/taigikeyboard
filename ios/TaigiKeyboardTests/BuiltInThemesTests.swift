@@ -1,3 +1,4 @@
+import KeyboardKit
 import SwiftUI
 @testable import TaigiKeyboard
 import XCTest
@@ -223,6 +224,46 @@ final class BuiltInThemesTests: XCTestCase {
         let flatTheme = CandidateTheme.resolved(candidateTextSizeScale: 1, colorSettings: .default, screenSizeClass: .phoneCompact)
         XCTAssertNil(flatTheme.firstCandidateHighlightColor, "flat theme must leave first-candidate highlight nil")
         XCTAssertNil(flatTheme.pressedCandidateColor, "flat theme must leave pressed tint nil")
+    }
+
+    // trace: user-theme seed = solid D4D5DD surface, key text 000000, key fill FFFFFF →
+    //   fixedKeyFill FFFFFF; no gradient → tints (FFFFFF, FFFFFF deepened ×0.65:
+    //   255×0.65 = 165.75 → 165 = A5) = (FFFFFF, A5A5A5). Scheme-free, so dark mode matches light.
+    func testCandidateTints_userThemeUsesKeyFill() throws {
+        let seed = UserThemeSeed.colors
+        XCTAssertEqual(seed.fixedKeyFill, CodableColor(hex: 0xFFFFFF))
+        let tints = try XCTUnwrap(seed.candidateTints)
+        XCTAssertEqual(tints.highlight, CodableColor(hex: 0xFFFFFF))
+        XCTAssertEqual(tints.pressed, CodableColor(hex: 0xA5A5A5))
+    }
+
+    // trace: fixedKeyFill gate = custom surface + visible fill + key text.
+    //   Default (all nil) → nil; Framed/Clean Default (clear fill, no surface) → nil;
+    //   gradient with clear fill (Outlined/Borderless) → nil; Filled gradient (white fill) → FFFFFF.
+    func testFixedKeyFill_onlyForConcreteKeyPalettes() {
+        XCTAssertNil(KeyboardColorSettings.default.fixedKeyFill)
+        var clearNoSurface = KeyboardColorSettings()
+        clearNoSurface.keyFillColor = CodableColor(.clear)
+        XCTAssertNil(clearNoSurface.fixedKeyFill)
+        var clearOnGradient = KeyboardColorSettings(
+            background: .gradient(ThemeGradient(stops: [CodableColor(hex: 0xE6C2D0), CodableColor(hex: 0xFFFFFF)])),
+            keyTextColor: CodableColor(hex: 0x1C1C1E),
+        )
+        clearOnGradient.keyFillColor = CodableColor(.clear)
+        XCTAssertNil(clearOnGradient.fixedKeyFill)
+        let filledGradient = BuiltInThemes.theme(id: "standardPink")!.colors(for: .light)
+        XCTAssertEqual(filledGradient.fixedKeyFill, CodableColor(hex: 0xFFFFFF))
+    }
+
+    // trace: a user theme's callout paints key fill FFFFFF + key text 000000 (not KeyboardKit's
+    // adaptive .keyboardButtonBackground / .primary); the adaptive default keeps KeyboardKit's colors.
+    func testCalloutStyle_themedByFixedPalette() {
+        let themed = KeyboardCalloutStyle.standard.themed(by: UserThemeSeed.colors)
+        XCTAssertEqual(themed.backgroundColor, CodableColor(hex: 0xFFFFFF).color)
+        XCTAssertEqual(themed.foregroundColor, CodableColor(hex: 0x000000).color)
+        let adaptive = KeyboardCalloutStyle.standard.themed(by: .default)
+        XCTAssertEqual(adaptive.backgroundColor, KeyboardCalloutStyle.standard.backgroundColor)
+        XCTAssertEqual(adaptive.foregroundColor, KeyboardCalloutStyle.standard.foregroundColor)
     }
 
     // trace: a dark-only theme (light == nil) → .light request falls back to the dark variant

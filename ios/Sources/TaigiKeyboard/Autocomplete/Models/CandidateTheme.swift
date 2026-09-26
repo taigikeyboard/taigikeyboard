@@ -28,10 +28,10 @@ struct CandidateTheme: Equatable {
     /// keyboard root) instead of inheriting the candidate strip's transparent style.
     let surface: ThemeSurface?
 
-    /// Candidate-strip first-candidate highlight + pressed tints, derived from the
-    /// gradient theme's first stop so those states match the theme hue: highlight is a
-    /// light tint (lightened toward white), pressed is darker (deepened toward black).
-    /// nil for a flat/default theme — the candidate view then keeps its neutral
+    /// Candidate-strip first-candidate highlight + pressed tints from
+    /// `KeyboardColorSettings.candidateTints` (gradient first stop, else the fixed key
+    /// fill), so a themed keyboard never picks up the system dark-mode colors.
+    /// nil for an adaptive theme — the candidate view then keeps its neutral
     /// KeyboardKit fallback (white keycap / dark pressed).
     let firstCandidateHighlightColor: Color?
     let pressedCandidateColor: Color?
@@ -59,9 +59,7 @@ struct CandidateTheme: Equatable {
         }
 
         let customTextColor = colorSettings.candidateTextColor?.color
-        // Gradient themes tint the strip's first-candidate + pressed states with a
-        // deepened version of the first stop; other themes leave these nil (neutral fallback).
-        let firstStop = colorSettings.backgroundGradient?.stops.first
+        let tints = colorSettings.candidateTints
         return CandidateTheme(
             height: baseHeight * candidateTextSizeScale + bottomPadding,
             primaryFontSize: primaryBase * candidateTextSizeScale,
@@ -69,8 +67,8 @@ struct CandidateTheme: Equatable {
             primaryTextColor: customTextColor ?? Color(.label),
             secondaryTextColor: customTextColor?.opacity(0.7) ?? Color(.secondaryLabel),
             surface: colorSettings.surface,
-            firstCandidateHighlightColor: firstStop.map { $0.lightened(towardWhite: KeyboardColorSettings.candidateHighlightLightenFactor).color },
-            pressedCandidateColor: firstStop.map { $0.deepened(by: KeyboardColorSettings.candidatePressedDeepenFactor).color },
+            firstCandidateHighlightColor: tints?.highlight.color,
+            pressedCandidateColor: tints?.pressed.color,
         )
     }
 

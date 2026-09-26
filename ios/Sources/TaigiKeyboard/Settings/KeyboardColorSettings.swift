@@ -374,6 +374,30 @@ struct KeyboardColorSettings: Equatable {
         }
     }
 
+    /// The key fill of a fixed-palette theme: a custom surface, a visible (non-transparent)
+    /// key fill and a concrete key text color — every user theme and the Filled gradient
+    /// built-ins. Callouts and the non-gradient candidate states paint from it so a light
+    /// palette stays light in system dark mode. nil = adaptive (Default families,
+    /// transparent-key gradients) → keep the system colors.
+    // CROSS-PLATFORM INVARIANT — mirrors android .../ime/core/KeyboardColorSettings.kt fixedKeyFill.
+    // Drift = callout / candidate colors differ per platform under the same theme.
+    var fixedKeyFill: CodableColor? {
+        guard background != nil, keyTextColor != nil, let fill = keyFillColor, fill.alpha > 0 else { return nil }
+        return fill
+    }
+
+    /// Candidate first-candidate highlight + pressed tints. A gradient derives both from its
+    /// first stop (highlight lightened, pressed deepened); otherwise a fixed palette uses its
+    /// key fill as the highlight and the deepened fill as pressed. nil = adaptive neutral
+    /// fallback in `CandidateView.ItemStyle.resolvedBackgroundColor`.
+    var candidateTints: (highlight: CodableColor, pressed: CodableColor)? {
+        if let top = backgroundGradient?.stops.first {
+            return (top.lightened(towardWhite: Self.candidateHighlightLightenFactor), top.deepened(by: Self.candidatePressedDeepenFactor))
+        }
+        guard let fill = fixedKeyFill else { return nil }
+        return (fill, fill.deepened(by: Self.candidatePressedDeepenFactor))
+    }
+
     /// The background gradient, or nil for a solid / photo / adaptive background. Single
     /// source for the candidate-tint derivation and the built-in theme tests.
     var backgroundGradient: ThemeGradient? {
@@ -392,7 +416,7 @@ struct KeyboardColorSettings: Equatable {
     /// hue instead of a neutral keycap color. The highlight is LIGHTENED toward white
     /// (a light tint of the hue, lighter than the gradient bar so it stays visible);
     /// the pressed state is DEEPENED toward black (a darker press feedback). A
-    /// flat/scaffold theme (no gradient) keeps the neutral KeyboardKit fallback.
+    /// non-gradient theme deepens its `fixedKeyFill` by the same pressed factor.
     // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/core/KeyboardColorSettings.kt
     // CANDIDATE_HIGHLIGHT_LIGHTEN_FACTOR / CANDIDATE_PRESSED_DEEPEN_FACTOR. Drift causes silent divergence.
     static let candidateHighlightLightenFactor: Double = 0.5

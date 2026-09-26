@@ -325,6 +325,35 @@ data class KeyboardColorSettings(
         get() = background?.let { ThemeSurface(it, isDarkArgb(keyTextColor ?: UserThemeSeed.KEY_TEXT)) }
 
     /**
+     * The key fill of a fixed-palette theme: a custom surface, a visible (non-transparent)
+     * key fill and a concrete key text color — every user theme and the Filled gradient
+     * built-ins. Key popups and the non-gradient candidate states paint from it so a light
+     * palette stays light in system dark mode. null = adaptive (Default families,
+     * transparent-key gradients) → keep the night-qualified attrs.
+     *
+     * CROSS-PLATFORM INVARIANT — mirrors iOS KeyboardColorSettings.fixedKeyFill.
+     * Drift = callout / candidate colors differ per platform under the same theme.
+     */
+    val fixedKeyFill: Int?
+        get() = normalKeyFillColor?.takeIf { background != null && keyTextColor != null && it ushr 24 != 0 }
+
+    /**
+     * Candidate first-candidate highlight + pressed tints (`first` = highlight, `second` =
+     * pressed). A gradient derives both from its first stop (highlight lightened, pressed
+     * deepened); otherwise a fixed palette uses its key fill as the highlight and the deepened
+     * fill as pressed. null = adaptive `key_bgColor` / `semiTransparentColor` attrs.
+     * Mirrors iOS `candidateTints`.
+     */
+    val candidateTints: Pair<Int, Int>?
+        get() {
+            backgroundGradient?.stops?.first()?.let {
+                return lightenedArgb(it, CANDIDATE_HIGHLIGHT_LIGHTEN_FACTOR) to
+                    deepenedArgb(it, CANDIDATE_PRESSED_DEEPEN_FACTOR)
+            }
+            return fixedKeyFill?.let { it to deepenedArgb(it, CANDIDATE_PRESSED_DEEPEN_FACTOR) }
+        }
+
+    /**
      * The user-theme key fill: one colour for letter and special keys alike
      * (USER 2026-09-26). Mirrors iOS `keyFillColor`.
      */
@@ -431,8 +460,8 @@ object UserThemeSeed {
 // Factors used to derive the candidate strip's first-candidate highlight + pressed tints from a
 // gradient theme's first stop, so those states match the theme hue instead of a neutral keycap color.
 // The highlight is LIGHTENED toward white (a light tint, lighter than the gradient bar so it stays
-// visible); the pressed state is DEEPENED toward black. A flat/scaffold theme (no gradient) keeps
-// the neutral attr-based fallback.
+// visible); the pressed state is DEEPENED toward black. A non-gradient theme deepens its
+// fixedKeyFill by the same pressed factor.
 const val CANDIDATE_HIGHLIGHT_LIGHTEN_FACTOR = 0.5
 const val CANDIDATE_PRESSED_DEEPEN_FACTOR = 0.65
 
