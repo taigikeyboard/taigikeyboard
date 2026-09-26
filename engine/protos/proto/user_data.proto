@@ -19,6 +19,11 @@ message UserDataRequest {
     OpenUserData open = 1;
     ResetUserData reset = 2;
     RecordUsage record_usage = 3;
+    ListCustomEntries list_custom_entries = 4;
+    SaveCustomEntry save_custom_entry = 5;
+    DeleteCustomEntry delete_custom_entry = 6;
+    ImportCustomCsv import_custom_csv = 7;
+    ExportCustomCsv export_custom_csv = 8;
   }
 }
 
@@ -27,6 +32,11 @@ message UserDataResponse {
     UserDataOpened opened = 1;
     UserDataReset reset = 2;
     UsageRecorded usage_recorded = 3;
+    CustomEntries custom_entries = 4;
+    CustomEntrySaved custom_entry_saved = 5;
+    CustomEntryDeleted custom_entry_deleted = 6;
+    CustomCsvImported custom_csv_imported = 7;
+    CustomCsvExported custom_csv_exported = 8;
   }
 }
 
@@ -102,3 +112,84 @@ message RecordUsage {
 }
 
 message UsageRecorded {}
+
+// ---- The custom-dictionary pages (roadmap P4) ----
+//
+// Every platform's Custom Dictionary page reads and edits the store through
+// these; "delete everything" is `ResetUserData.custom_dictionary`. What the
+// user can be told — a full dictionary, an unusable file — comes back as a
+// `CustomDictionaryRefusal`; FAIL_* codes stay for I/O the user cannot act on.
+
+enum CustomDictionaryRefusal {
+  CUSTOM_DICTIONARY_REFUSAL_NONE = 0;
+  // Already `MAX_ENTRIES` (30 000) words; editing an existing one is never
+  // refused. For an import: the file itself holds more than that.
+  CUSTOM_DICTIONARY_REFUSAL_FULL = 1;
+  // An entry needs a romanization.
+  CUSTOM_DICTIONARY_REFUSAL_EMPTY_ROMAN = 2;
+  // No search key could be derived from the romanization, so the keyboard
+  // could never find the word.
+  CUSTOM_DICTIONARY_REFUSAL_UNSEARCHABLE = 3;
+  // An import file over 5 MB.
+  CUSTOM_DICTIONARY_REFUSAL_FILE_TOO_LARGE = 4;
+  CUSTOM_DICTIONARY_REFUSAL_NOT_UTF8 = 5;
+  // Content, but not one `roman,hanzi` row.
+  CUSTOM_DICTIONARY_REFUSAL_NO_USABLE_ROWS = 6;
+}
+
+// One stored word. `created_at` / `updated_at` are UTC `yyyy-MM-dd HH:mm:ss`.
+message CustomDictionaryEntry {
+  string id = 1;
+  string roman = 2;
+  string hanzi = 3;
+  string created_at = 4;
+  string updated_at = 5;
+}
+
+// A page of the dictionary, newest edit first. `filter` matches romanization
+// or Hanji as a substring (case-insensitive ASCII); empty lists everything.
+message ListCustomEntries {
+  string filter = 1;
+  uint32 limit = 2;
+  uint32 offset = 3;
+}
+
+message CustomEntries {
+  repeated CustomDictionaryEntry entries = 1;
+  uint32 total = 2;           // every stored word
+  uint32 matching_total = 3;  // the words `filter` matches, for paging
+}
+
+// Adds a word, or edits the one with `id`.
+message SaveCustomEntry {
+  optional string id = 1;
+  string roman = 2;
+  string hanzi = 3;
+}
+
+message CustomEntrySaved {
+  CustomDictionaryRefusal refusal = 1;
+  // The stored row; absent when refused.
+  optional CustomDictionaryEntry entry = 2;
+}
+
+message DeleteCustomEntry { string id = 1; }
+
+message CustomEntryDeleted { bool removed = 1; }
+
+// A `roman,hanzi` CSV file's bytes, as the platform's file picker read them.
+// Rows already stored (same roman and Hanji) are skipped; the import stops
+// at the dictionary's cap without failing, so `imported` may be fewer than
+// the file's rows even with no refusal.
+message ImportCustomCsv { bytes csv = 1; }
+
+message CustomCsvImported {
+  CustomDictionaryRefusal refusal = 1;
+  uint32 imported = 2;
+  uint32 skipped = 3;
+}
+
+message ExportCustomCsv {}
+
+// The whole dictionary as `roman,hanzi` lines, for the platform to save.
+message CustomCsvExported { bytes csv = 1; }

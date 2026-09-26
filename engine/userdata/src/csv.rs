@@ -140,8 +140,22 @@ impl CustomDictionaryCSV {
         }
         let bytes = std::fs::read(path)
             .map_err(|error| CustomDictionaryCSVError::Read(error.to_string()))?;
-        let text = String::from_utf8(bytes).map_err(|_| CustomDictionaryCSVError::NotUtf8)?;
-        Self::decode(&text, entry_limit)
+        Self::decode_bytes(&bytes, entry_limit)
+    }
+
+    /// Parses a file's bytes the platform read for the user — the size cap
+    /// first, then UTF-8, then [`Self::decode`].
+    pub fn decode_bytes(
+        bytes: &[u8],
+        entry_limit: usize,
+    ) -> Result<Vec<CustomDictionaryRow>, CustomDictionaryCSVError> {
+        if bytes.len() as u64 > Self::MAX_FILE_SIZE_BYTES {
+            return Err(CustomDictionaryCSVError::FileTooLarge {
+                limit_bytes: Self::MAX_FILE_SIZE_BYTES,
+            });
+        }
+        let text = std::str::from_utf8(bytes).map_err(|_| CustomDictionaryCSVError::NotUtf8)?;
+        Self::decode(text, entry_limit)
     }
 }
 

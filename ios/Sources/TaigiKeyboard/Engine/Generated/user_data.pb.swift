@@ -8,6 +8,11 @@
 // For information on using the generated types, please see the documentation:
 //   https://github.com/apple/swift-protobuf/
 
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
+import Foundation
+#endif
 import SwiftProtobuf
 
 // If the compiler emits an error on this type, it is because this file
@@ -57,6 +62,72 @@ public nonisolated enum Taigi_Engine_UserDataJournal: SwiftProtobuf.Enum, Swift.
 
 }
 
+public nonisolated enum Taigi_Engine_CustomDictionaryRefusal: SwiftProtobuf.Enum, Swift.CaseIterable {
+  public typealias RawValue = Int
+  case none // = 0
+
+  /// Already `MAX_ENTRIES` (30 000) words; editing an existing one is never
+  /// refused. For an import: the file itself holds more than that.
+  case full // = 1
+
+  /// An entry needs a romanization.
+  case emptyRoman // = 2
+
+  /// No search key could be derived from the romanization, so the keyboard
+  /// could never find the word.
+  case unsearchable // = 3
+
+  /// An import file over 5 MB.
+  case fileTooLarge // = 4
+  case notUtf8 // = 5
+
+  /// Content, but not one `roman,hanzi` row.
+  case noUsableRows // = 6
+  case UNRECOGNIZED(Int)
+
+  public init() {
+    self = .none
+  }
+
+  public init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .none
+    case 1: self = .full
+    case 2: self = .emptyRoman
+    case 3: self = .unsearchable
+    case 4: self = .fileTooLarge
+    case 5: self = .notUtf8
+    case 6: self = .noUsableRows
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  public var rawValue: Int {
+    switch self {
+    case .none: return 0
+    case .full: return 1
+    case .emptyRoman: return 2
+    case .unsearchable: return 3
+    case .fileTooLarge: return 4
+    case .notUtf8: return 5
+    case .noUsableRows: return 6
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  public static let allCases: [Taigi_Engine_CustomDictionaryRefusal] = [
+    .none,
+    .full,
+    .emptyRoman,
+    .unsearchable,
+    .fileTooLarge,
+    .notUtf8,
+    .noUsableRows,
+  ]
+
+}
+
 public nonisolated struct Taigi_Engine_UserDataRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -88,12 +159,57 @@ public nonisolated struct Taigi_Engine_UserDataRequest: Sendable {
     set {method = .recordUsage(newValue)}
   }
 
+  public var listCustomEntries: Taigi_Engine_ListCustomEntries {
+    get {
+      if case .listCustomEntries(let v)? = method {return v}
+      return Taigi_Engine_ListCustomEntries()
+    }
+    set {method = .listCustomEntries(newValue)}
+  }
+
+  public var saveCustomEntry: Taigi_Engine_SaveCustomEntry {
+    get {
+      if case .saveCustomEntry(let v)? = method {return v}
+      return Taigi_Engine_SaveCustomEntry()
+    }
+    set {method = .saveCustomEntry(newValue)}
+  }
+
+  public var deleteCustomEntry: Taigi_Engine_DeleteCustomEntry {
+    get {
+      if case .deleteCustomEntry(let v)? = method {return v}
+      return Taigi_Engine_DeleteCustomEntry()
+    }
+    set {method = .deleteCustomEntry(newValue)}
+  }
+
+  public var importCustomCsv: Taigi_Engine_ImportCustomCsv {
+    get {
+      if case .importCustomCsv(let v)? = method {return v}
+      return Taigi_Engine_ImportCustomCsv()
+    }
+    set {method = .importCustomCsv(newValue)}
+  }
+
+  public var exportCustomCsv: Taigi_Engine_ExportCustomCsv {
+    get {
+      if case .exportCustomCsv(let v)? = method {return v}
+      return Taigi_Engine_ExportCustomCsv()
+    }
+    set {method = .exportCustomCsv(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public nonisolated enum OneOf_Method: Equatable, Sendable {
     case `open`(Taigi_Engine_OpenUserData)
     case reset(Taigi_Engine_ResetUserData)
     case recordUsage(Taigi_Engine_RecordUsage)
+    case listCustomEntries(Taigi_Engine_ListCustomEntries)
+    case saveCustomEntry(Taigi_Engine_SaveCustomEntry)
+    case deleteCustomEntry(Taigi_Engine_DeleteCustomEntry)
+    case importCustomCsv(Taigi_Engine_ImportCustomCsv)
+    case exportCustomCsv(Taigi_Engine_ExportCustomCsv)
 
   }
 
@@ -131,12 +247,57 @@ public nonisolated struct Taigi_Engine_UserDataResponse: Sendable {
     set {result = .usageRecorded(newValue)}
   }
 
+  public var customEntries: Taigi_Engine_CustomEntries {
+    get {
+      if case .customEntries(let v)? = result {return v}
+      return Taigi_Engine_CustomEntries()
+    }
+    set {result = .customEntries(newValue)}
+  }
+
+  public var customEntrySaved: Taigi_Engine_CustomEntrySaved {
+    get {
+      if case .customEntrySaved(let v)? = result {return v}
+      return Taigi_Engine_CustomEntrySaved()
+    }
+    set {result = .customEntrySaved(newValue)}
+  }
+
+  public var customEntryDeleted: Taigi_Engine_CustomEntryDeleted {
+    get {
+      if case .customEntryDeleted(let v)? = result {return v}
+      return Taigi_Engine_CustomEntryDeleted()
+    }
+    set {result = .customEntryDeleted(newValue)}
+  }
+
+  public var customCsvImported: Taigi_Engine_CustomCsvImported {
+    get {
+      if case .customCsvImported(let v)? = result {return v}
+      return Taigi_Engine_CustomCsvImported()
+    }
+    set {result = .customCsvImported(newValue)}
+  }
+
+  public var customCsvExported: Taigi_Engine_CustomCsvExported {
+    get {
+      if case .customCsvExported(let v)? = result {return v}
+      return Taigi_Engine_CustomCsvExported()
+    }
+    set {result = .customCsvExported(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public nonisolated enum OneOf_Result: Equatable, Sendable {
     case opened(Taigi_Engine_UserDataOpened)
     case reset(Taigi_Engine_UserDataReset)
     case usageRecorded(Taigi_Engine_UsageRecorded)
+    case customEntries(Taigi_Engine_CustomEntries)
+    case customEntrySaved(Taigi_Engine_CustomEntrySaved)
+    case customEntryDeleted(Taigi_Engine_CustomEntryDeleted)
+    case customCsvImported(Taigi_Engine_CustomCsvImported)
+    case customCsvExported(Taigi_Engine_CustomCsvExported)
 
   }
 
@@ -281,6 +442,192 @@ public nonisolated struct Taigi_Engine_UsageRecorded: Sendable {
   public init() {}
 }
 
+/// One stored word. `created_at` / `updated_at` are UTC `yyyy-MM-dd HH:mm:ss`.
+public nonisolated struct Taigi_Engine_CustomDictionaryEntry: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var id: String = String()
+
+  public var roman: String = String()
+
+  public var hanzi: String = String()
+
+  public var createdAt: String = String()
+
+  public var updatedAt: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// A page of the dictionary, newest edit first. `filter` matches romanization
+/// or Hanji as a substring (case-insensitive ASCII); empty lists everything.
+public nonisolated struct Taigi_Engine_ListCustomEntries: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var filter: String = String()
+
+  public var limit: UInt32 = 0
+
+  public var offset: UInt32 = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Taigi_Engine_CustomEntries: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var entries: [Taigi_Engine_CustomDictionaryEntry] = []
+
+  /// every stored word
+  public var total: UInt32 = 0
+
+  /// the words `filter` matches, for paging
+  public var matchingTotal: UInt32 = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// Adds a word, or edits the one with `id`.
+public nonisolated struct Taigi_Engine_SaveCustomEntry: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var id: String {
+    get {_id ?? String()}
+    set {_id = newValue}
+  }
+  /// Returns true if `id` has been explicitly set.
+  public var hasID: Bool {self._id != nil}
+  /// Clears the value of `id`. Subsequent reads from it will return its default value.
+  public mutating func clearID() {self._id = nil}
+
+  public var roman: String = String()
+
+  public var hanzi: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _id: String? = nil
+}
+
+public nonisolated struct Taigi_Engine_CustomEntrySaved: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var refusal: Taigi_Engine_CustomDictionaryRefusal = .none
+
+  /// The stored row; absent when refused.
+  public var entry: Taigi_Engine_CustomDictionaryEntry {
+    get {_entry ?? Taigi_Engine_CustomDictionaryEntry()}
+    set {_entry = newValue}
+  }
+  /// Returns true if `entry` has been explicitly set.
+  public var hasEntry: Bool {self._entry != nil}
+  /// Clears the value of `entry`. Subsequent reads from it will return its default value.
+  public mutating func clearEntry() {self._entry = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _entry: Taigi_Engine_CustomDictionaryEntry? = nil
+}
+
+public nonisolated struct Taigi_Engine_DeleteCustomEntry: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var id: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Taigi_Engine_CustomEntryDeleted: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var removed: Bool = false
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// A `roman,hanzi` CSV file's bytes, as the platform's file picker read them.
+/// Rows already stored (same roman and Hanji) are skipped; the import stops
+/// at the dictionary's cap without failing, so `imported` may be fewer than
+/// the file's rows even with no refusal.
+public nonisolated struct Taigi_Engine_ImportCustomCsv: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var csv: Data = Data()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Taigi_Engine_CustomCsvImported: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var refusal: Taigi_Engine_CustomDictionaryRefusal = .none
+
+  public var imported: UInt32 = 0
+
+  public var skipped: UInt32 = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Taigi_Engine_ExportCustomCsv: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// The whole dictionary as `roman,hanzi` lines, for the platform to save.
+public nonisolated struct Taigi_Engine_CustomCsvExported: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var csv: Data = Data()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate nonisolated let _protobuf_package = "taigi.engine"
@@ -289,9 +636,13 @@ nonisolated extension Taigi_Engine_UserDataJournal: SwiftProtobuf._ProtoNameProv
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0USER_DATA_JOURNAL_WAL\0\u{1}USER_DATA_JOURNAL_DELETE\0")
 }
 
+nonisolated extension Taigi_Engine_CustomDictionaryRefusal: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0CUSTOM_DICTIONARY_REFUSAL_NONE\0\u{1}CUSTOM_DICTIONARY_REFUSAL_FULL\0\u{1}CUSTOM_DICTIONARY_REFUSAL_EMPTY_ROMAN\0\u{1}CUSTOM_DICTIONARY_REFUSAL_UNSEARCHABLE\0\u{1}CUSTOM_DICTIONARY_REFUSAL_FILE_TOO_LARGE\0\u{1}CUSTOM_DICTIONARY_REFUSAL_NOT_UTF8\0\u{1}CUSTOM_DICTIONARY_REFUSAL_NO_USABLE_ROWS\0")
+}
+
 nonisolated extension Taigi_Engine_UserDataRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".UserDataRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}open\0\u{1}reset\0\u{3}record_usage\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}open\0\u{1}reset\0\u{3}record_usage\0\u{3}list_custom_entries\0\u{3}save_custom_entry\0\u{3}delete_custom_entry\0\u{3}import_custom_csv\0\u{3}export_custom_csv\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -338,6 +689,71 @@ nonisolated extension Taigi_Engine_UserDataRequest: SwiftProtobuf.Message, Swift
           self.method = .recordUsage(v)
         }
       }()
+      case 4: try {
+        var v: Taigi_Engine_ListCustomEntries?
+        var hadOneofValue = false
+        if let current = self.method {
+          hadOneofValue = true
+          if case .listCustomEntries(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.method = .listCustomEntries(v)
+        }
+      }()
+      case 5: try {
+        var v: Taigi_Engine_SaveCustomEntry?
+        var hadOneofValue = false
+        if let current = self.method {
+          hadOneofValue = true
+          if case .saveCustomEntry(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.method = .saveCustomEntry(v)
+        }
+      }()
+      case 6: try {
+        var v: Taigi_Engine_DeleteCustomEntry?
+        var hadOneofValue = false
+        if let current = self.method {
+          hadOneofValue = true
+          if case .deleteCustomEntry(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.method = .deleteCustomEntry(v)
+        }
+      }()
+      case 7: try {
+        var v: Taigi_Engine_ImportCustomCsv?
+        var hadOneofValue = false
+        if let current = self.method {
+          hadOneofValue = true
+          if case .importCustomCsv(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.method = .importCustomCsv(v)
+        }
+      }()
+      case 8: try {
+        var v: Taigi_Engine_ExportCustomCsv?
+        var hadOneofValue = false
+        if let current = self.method {
+          hadOneofValue = true
+          if case .exportCustomCsv(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.method = .exportCustomCsv(v)
+        }
+      }()
       default: break
       }
     }
@@ -361,6 +777,26 @@ nonisolated extension Taigi_Engine_UserDataRequest: SwiftProtobuf.Message, Swift
       guard case .recordUsage(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
     }()
+    case .listCustomEntries?: try {
+      guard case .listCustomEntries(let v)? = self.method else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+    }()
+    case .saveCustomEntry?: try {
+      guard case .saveCustomEntry(let v)? = self.method else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+    }()
+    case .deleteCustomEntry?: try {
+      guard case .deleteCustomEntry(let v)? = self.method else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
+    }()
+    case .importCustomCsv?: try {
+      guard case .importCustomCsv(let v)? = self.method else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
+    }()
+    case .exportCustomCsv?: try {
+      guard case .exportCustomCsv(let v)? = self.method else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 8)
+    }()
     case nil: break
     }
     try unknownFields.traverse(visitor: &visitor)
@@ -375,7 +811,7 @@ nonisolated extension Taigi_Engine_UserDataRequest: SwiftProtobuf.Message, Swift
 
 nonisolated extension Taigi_Engine_UserDataResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".UserDataResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}opened\0\u{1}reset\0\u{3}usage_recorded\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}opened\0\u{1}reset\0\u{3}usage_recorded\0\u{3}custom_entries\0\u{3}custom_entry_saved\0\u{3}custom_entry_deleted\0\u{3}custom_csv_imported\0\u{3}custom_csv_exported\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -422,6 +858,71 @@ nonisolated extension Taigi_Engine_UserDataResponse: SwiftProtobuf.Message, Swif
           self.result = .usageRecorded(v)
         }
       }()
+      case 4: try {
+        var v: Taigi_Engine_CustomEntries?
+        var hadOneofValue = false
+        if let current = self.result {
+          hadOneofValue = true
+          if case .customEntries(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.result = .customEntries(v)
+        }
+      }()
+      case 5: try {
+        var v: Taigi_Engine_CustomEntrySaved?
+        var hadOneofValue = false
+        if let current = self.result {
+          hadOneofValue = true
+          if case .customEntrySaved(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.result = .customEntrySaved(v)
+        }
+      }()
+      case 6: try {
+        var v: Taigi_Engine_CustomEntryDeleted?
+        var hadOneofValue = false
+        if let current = self.result {
+          hadOneofValue = true
+          if case .customEntryDeleted(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.result = .customEntryDeleted(v)
+        }
+      }()
+      case 7: try {
+        var v: Taigi_Engine_CustomCsvImported?
+        var hadOneofValue = false
+        if let current = self.result {
+          hadOneofValue = true
+          if case .customCsvImported(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.result = .customCsvImported(v)
+        }
+      }()
+      case 8: try {
+        var v: Taigi_Engine_CustomCsvExported?
+        var hadOneofValue = false
+        if let current = self.result {
+          hadOneofValue = true
+          if case .customCsvExported(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.result = .customCsvExported(v)
+        }
+      }()
       default: break
       }
     }
@@ -444,6 +945,26 @@ nonisolated extension Taigi_Engine_UserDataResponse: SwiftProtobuf.Message, Swif
     case .usageRecorded?: try {
       guard case .usageRecorded(let v)? = self.result else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    }()
+    case .customEntries?: try {
+      guard case .customEntries(let v)? = self.result else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+    }()
+    case .customEntrySaved?: try {
+      guard case .customEntrySaved(let v)? = self.result else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+    }()
+    case .customEntryDeleted?: try {
+      guard case .customEntryDeleted(let v)? = self.result else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
+    }()
+    case .customCsvImported?: try {
+      guard case .customCsvImported(let v)? = self.result else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
+    }()
+    case .customCsvExported?: try {
+      guard case .customCsvExported(let v)? = self.result else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 8)
     }()
     case nil: break
     }
@@ -705,6 +1226,398 @@ nonisolated extension Taigi_Engine_UsageRecorded: SwiftProtobuf.Message, SwiftPr
   }
 
   public static func ==(lhs: Taigi_Engine_UsageRecorded, rhs: Taigi_Engine_UsageRecorded) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_Engine_CustomDictionaryEntry: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".CustomDictionaryEntry"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}roman\0\u{1}hanzi\0\u{3}created_at\0\u{3}updated_at\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.id) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.roman) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.hanzi) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.createdAt) }()
+      case 5: try { try decoder.decodeSingularStringField(value: &self.updatedAt) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.id.isEmpty {
+      try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
+    }
+    if !self.roman.isEmpty {
+      try visitor.visitSingularStringField(value: self.roman, fieldNumber: 2)
+    }
+    if !self.hanzi.isEmpty {
+      try visitor.visitSingularStringField(value: self.hanzi, fieldNumber: 3)
+    }
+    if !self.createdAt.isEmpty {
+      try visitor.visitSingularStringField(value: self.createdAt, fieldNumber: 4)
+    }
+    if !self.updatedAt.isEmpty {
+      try visitor.visitSingularStringField(value: self.updatedAt, fieldNumber: 5)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_CustomDictionaryEntry, rhs: Taigi_Engine_CustomDictionaryEntry) -> Bool {
+    if lhs.id != rhs.id {return false}
+    if lhs.roman != rhs.roman {return false}
+    if lhs.hanzi != rhs.hanzi {return false}
+    if lhs.createdAt != rhs.createdAt {return false}
+    if lhs.updatedAt != rhs.updatedAt {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_Engine_ListCustomEntries: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ListCustomEntries"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}filter\0\u{1}limit\0\u{1}offset\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.filter) }()
+      case 2: try { try decoder.decodeSingularUInt32Field(value: &self.limit) }()
+      case 3: try { try decoder.decodeSingularUInt32Field(value: &self.offset) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.filter.isEmpty {
+      try visitor.visitSingularStringField(value: self.filter, fieldNumber: 1)
+    }
+    if self.limit != 0 {
+      try visitor.visitSingularUInt32Field(value: self.limit, fieldNumber: 2)
+    }
+    if self.offset != 0 {
+      try visitor.visitSingularUInt32Field(value: self.offset, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_ListCustomEntries, rhs: Taigi_Engine_ListCustomEntries) -> Bool {
+    if lhs.filter != rhs.filter {return false}
+    if lhs.limit != rhs.limit {return false}
+    if lhs.offset != rhs.offset {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_Engine_CustomEntries: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".CustomEntries"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entries\0\u{1}total\0\u{3}matching_total\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.entries) }()
+      case 2: try { try decoder.decodeSingularUInt32Field(value: &self.total) }()
+      case 3: try { try decoder.decodeSingularUInt32Field(value: &self.matchingTotal) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.entries.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.entries, fieldNumber: 1)
+    }
+    if self.total != 0 {
+      try visitor.visitSingularUInt32Field(value: self.total, fieldNumber: 2)
+    }
+    if self.matchingTotal != 0 {
+      try visitor.visitSingularUInt32Field(value: self.matchingTotal, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_CustomEntries, rhs: Taigi_Engine_CustomEntries) -> Bool {
+    if lhs.entries != rhs.entries {return false}
+    if lhs.total != rhs.total {return false}
+    if lhs.matchingTotal != rhs.matchingTotal {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_Engine_SaveCustomEntry: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SaveCustomEntry"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}roman\0\u{1}hanzi\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self._id) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.roman) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.hanzi) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._id {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 1)
+    } }()
+    if !self.roman.isEmpty {
+      try visitor.visitSingularStringField(value: self.roman, fieldNumber: 2)
+    }
+    if !self.hanzi.isEmpty {
+      try visitor.visitSingularStringField(value: self.hanzi, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_SaveCustomEntry, rhs: Taigi_Engine_SaveCustomEntry) -> Bool {
+    if lhs._id != rhs._id {return false}
+    if lhs.roman != rhs.roman {return false}
+    if lhs.hanzi != rhs.hanzi {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_Engine_CustomEntrySaved: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".CustomEntrySaved"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}refusal\0\u{1}entry\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.refusal) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._entry) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if self.refusal != .none {
+      try visitor.visitSingularEnumField(value: self.refusal, fieldNumber: 1)
+    }
+    try { if let v = self._entry {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_CustomEntrySaved, rhs: Taigi_Engine_CustomEntrySaved) -> Bool {
+    if lhs.refusal != rhs.refusal {return false}
+    if lhs._entry != rhs._entry {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_Engine_DeleteCustomEntry: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".DeleteCustomEntry"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.id) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.id.isEmpty {
+      try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_DeleteCustomEntry, rhs: Taigi_Engine_DeleteCustomEntry) -> Bool {
+    if lhs.id != rhs.id {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_Engine_CustomEntryDeleted: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".CustomEntryDeleted"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}removed\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularBoolField(value: &self.removed) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.removed != false {
+      try visitor.visitSingularBoolField(value: self.removed, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_CustomEntryDeleted, rhs: Taigi_Engine_CustomEntryDeleted) -> Bool {
+    if lhs.removed != rhs.removed {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_Engine_ImportCustomCsv: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ImportCustomCsv"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}csv\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularBytesField(value: &self.csv) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.csv.isEmpty {
+      try visitor.visitSingularBytesField(value: self.csv, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_ImportCustomCsv, rhs: Taigi_Engine_ImportCustomCsv) -> Bool {
+    if lhs.csv != rhs.csv {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_Engine_CustomCsvImported: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".CustomCsvImported"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}refusal\0\u{1}imported\0\u{1}skipped\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.refusal) }()
+      case 2: try { try decoder.decodeSingularUInt32Field(value: &self.imported) }()
+      case 3: try { try decoder.decodeSingularUInt32Field(value: &self.skipped) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.refusal != .none {
+      try visitor.visitSingularEnumField(value: self.refusal, fieldNumber: 1)
+    }
+    if self.imported != 0 {
+      try visitor.visitSingularUInt32Field(value: self.imported, fieldNumber: 2)
+    }
+    if self.skipped != 0 {
+      try visitor.visitSingularUInt32Field(value: self.skipped, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_CustomCsvImported, rhs: Taigi_Engine_CustomCsvImported) -> Bool {
+    if lhs.refusal != rhs.refusal {return false}
+    if lhs.imported != rhs.imported {return false}
+    if lhs.skipped != rhs.skipped {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_Engine_ExportCustomCsv: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ExportCustomCsv"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_ExportCustomCsv, rhs: Taigi_Engine_ExportCustomCsv) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_Engine_CustomCsvExported: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".CustomCsvExported"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}csv\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularBytesField(value: &self.csv) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.csv.isEmpty {
+      try visitor.visitSingularBytesField(value: self.csv, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_CustomCsvExported, rhs: Taigi_Engine_CustomCsvExported) -> Bool {
+    if lhs.csv != rhs.csv {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
