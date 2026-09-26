@@ -48,9 +48,13 @@ cd "$ENGINE_DIR"
 rm -rf "$OUT_DIR"
 mkdir -p "$OUT_DIR"
 
+# The macOS input method owns its user data through the engine (roadmap P6);
+# one argv for both cargo invocations below, so they resolve the same build.
+CARGO_FEATURES=(--features user-data)
+
 THIN_LIBS=()
 for triple in "${TARGET_TRIPLES[@]}"; do
-    cargo build --release -p swift-ffi --target "$triple"
+    cargo build --release -p swift-ffi "${CARGO_FEATURES[@]}" --target "$triple"
     thin_lib="$ENGINE_DIR/target/$triple/release/$LIB_NAME"
     # Each archive is checked before lipo rather than after: `lipo -create` is
     # happy to fatten two archives of the same architecture, and the result
@@ -79,7 +83,7 @@ e2e_trace_assert_absent "$DEVICE_LIB"
 # modulemap and Swift wrappers are a source-level interface, so one architecture
 # is the whole story — building them twice would only give them room to differ.
 BRIDGE_OUT_DIR="$(swift_bridge_find_out_dir "$ENGINE_DIR" \
-    build --release -p swift-ffi --target "$BRIDGE_TRIPLE")"
+    build --release -p swift-ffi "${CARGO_FEATURES[@]}" --target "$BRIDGE_TRIPLE")"
 
 # `set -e` already aborts on a missing file at `cp` time; this loop exists for
 # the cases `cp` accepts — an empty or never-finished swift-bridge output —

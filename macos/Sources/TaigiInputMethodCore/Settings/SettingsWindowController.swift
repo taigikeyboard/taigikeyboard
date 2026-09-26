@@ -121,7 +121,7 @@ final class SettingsWindowController {
         )
         window.titlebarAppearsTransparent = true
         let splitViewController = SettingsSplitViewController(
-            stores: ComposingSessionCoordinator.shared.userDataStores,
+            userData: EngineUserDataClient(),
             language: language,
         )
         window.contentViewController = splitViewController

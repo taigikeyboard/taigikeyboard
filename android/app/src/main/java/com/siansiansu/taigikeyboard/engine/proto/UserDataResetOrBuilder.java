@@ -33,4 +33,53 @@ public interface UserDataResetOrBuilder extends
    * @return The learnedPhrasesRemoved.
    */
   long getLearnedPhrasesRemoved();
+
+  /**
+   * <pre>
+   * One line per selected store that could not be emptied, naming its file
+   * (`user_frequency: &lt;error&gt;`) — English, for a diagnostic. Empty when
+   * every selected store was emptied.
+   * </pre>
+   *
+   * <code>repeated string failures = 5;</code>
+   * @return A list containing the failures.
+   */
+  java.util.List<java.lang.String>
+      getFailuresList();
+  /**
+   * <pre>
+   * One line per selected store that could not be emptied, naming its file
+   * (`user_frequency: &lt;error&gt;`) — English, for a diagnostic. Empty when
+   * every selected store was emptied.
+   * </pre>
+   *
+   * <code>repeated string failures = 5;</code>
+   * @return The count of failures.
+   */
+  int getFailuresCount();
+  /**
+   * <pre>
+   * One line per selected store that could not be emptied, naming its file
+   * (`user_frequency: &lt;error&gt;`) — English, for a diagnostic. Empty when
+   * every selected store was emptied.
+   * </pre>
+   *
+   * <code>repeated string failures = 5;</code>
+   * @param index The index of the element to return.
+   * @return The failures at the given index.
+   */
+  java.lang.String getFailures(int index);
+  /**
+   * <pre>
+   * One line per selected store that could not be emptied, naming its file
+   * (`user_frequency: &lt;error&gt;`) — English, for a diagnostic. Empty when
+   * every selected store was emptied.
+   * </pre>
+   *
+   * <code>repeated string failures = 5;</code>
+   * @param index The index of the element to return.
+   * @return The failures at the given index.
+   */
+  com.google.protobuf.ByteString
+      getFailuresBytes(int index);
 }

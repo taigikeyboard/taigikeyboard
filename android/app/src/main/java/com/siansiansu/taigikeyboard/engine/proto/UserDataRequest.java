@@ -30,6 +30,7 @@ public  final class UserDataRequest extends
     EXPORT_CUSTOM_CSV(8),
     EXPORT_BACKUP(9),
     IMPORT_BACKUP(10),
+    SEARCH_CUSTOM_ENTRIES(11),
     METHOD_NOT_SET(0);
     private final int value;
     private MethodCase(int value) {
@@ -55,6 +56,7 @@ public  final class UserDataRequest extends
         case 8: return EXPORT_CUSTOM_CSV;
         case 9: return EXPORT_BACKUP;
         case 10: return IMPORT_BACKUP;
+        case 11: return SEARCH_CUSTOM_ENTRIES;
         case 0: return METHOD_NOT_SET;
         default: return null;
       }
@@ -571,6 +573,56 @@ public  final class UserDataRequest extends
    */
   private void clearImportBackup() {
     if (methodCase_ == 10) {
+      methodCase_ = 0;
+      method_ = null;
+    }
+  }
+
+  public static final int SEARCH_CUSTOM_ENTRIES_FIELD_NUMBER = 11;
+  /**
+   * <code>.taigi.engine.SearchCustomEntries search_custom_entries = 11;</code>
+   */
+  @java.lang.Override
+  public boolean hasSearchCustomEntries() {
+    return methodCase_ == 11;
+  }
+  /**
+   * <code>.taigi.engine.SearchCustomEntries search_custom_entries = 11;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.SearchCustomEntries getSearchCustomEntries() {
+    if (methodCase_ == 11) {
+       return (com.siansiansu.taigikeyboard.engine.proto.SearchCustomEntries) method_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.SearchCustomEntries.getDefaultInstance();
+  }
+  /**
+   * <code>.taigi.engine.SearchCustomEntries search_custom_entries = 11;</code>
+   */
+  private void setSearchCustomEntries(com.siansiansu.taigikeyboard.engine.proto.SearchCustomEntries value) {
+    java.util.Objects.requireNonNull(value);
+    method_ = value;
+    methodCase_ = 11;
+  }
+  /**
+   * <code>.taigi.engine.SearchCustomEntries search_custom_entries = 11;</code>
+   */
+  private void mergeSearchCustomEntries(com.siansiansu.taigikeyboard.engine.proto.SearchCustomEntries value) {
+    java.util.Objects.requireNonNull(value);
+    if (methodCase_ == 11 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.SearchCustomEntries.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.SearchCustomEntries.newBuilder((com.siansiansu.taigikeyboard.engine.proto.SearchCustomEntries) method_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      method_ = value;
+    }
+    methodCase_ = 11;
+  }
+  /**
+   * <code>.taigi.engine.SearchCustomEntries search_custom_entries = 11;</code>
+   */
+  private void clearSearchCustomEntries() {
+    if (methodCase_ == 11) {
       methodCase_ = 0;
       method_ = null;
     }
@@ -1165,6 +1217,54 @@ public  final class UserDataRequest extends
       return this;
     }
 
+    /**
+     * <code>.taigi.engine.SearchCustomEntries search_custom_entries = 11;</code>
+     */
+    @java.lang.Override
+    public boolean hasSearchCustomEntries() {
+      return instance.hasSearchCustomEntries();
+    }
+    /**
+     * <code>.taigi.engine.SearchCustomEntries search_custom_entries = 11;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.SearchCustomEntries getSearchCustomEntries() {
+      return instance.getSearchCustomEntries();
+    }
+    /**
+     * <code>.taigi.engine.SearchCustomEntries search_custom_entries = 11;</code>
+     */
+    public Builder setSearchCustomEntries(com.siansiansu.taigikeyboard.engine.proto.SearchCustomEntries value) {
+      copyOnWrite();
+      instance.setSearchCustomEntries(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.SearchCustomEntries search_custom_entries = 11;</code>
+     */
+    public Builder setSearchCustomEntries(
+        com.siansiansu.taigikeyboard.engine.proto.SearchCustomEntries.Builder builderForValue) {
+      copyOnWrite();
+      instance.setSearchCustomEntries(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.SearchCustomEntries search_custom_entries = 11;</code>
+     */
+    public Builder mergeSearchCustomEntries(com.siansiansu.taigikeyboard.engine.proto.SearchCustomEntries value) {
+      copyOnWrite();
+      instance.mergeSearchCustomEntries(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.SearchCustomEntries search_custom_entries = 11;</code>
+     */
+    public Builder clearSearchCustomEntries() {
+      copyOnWrite();
+      instance.clearSearchCustomEntries();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.UserDataRequest)
   }
   @java.lang.Override
@@ -1193,11 +1293,12 @@ public  final class UserDataRequest extends
             com.siansiansu.taigikeyboard.engine.proto.ExportCustomCsv.class,
             com.siansiansu.taigikeyboard.engine.proto.ExportBackup.class,
             com.siansiansu.taigikeyboard.engine.proto.ImportBackup.class,
+            com.siansiansu.taigikeyboard.engine.proto.SearchCustomEntries.class,
           };
           java.lang.String info =
-              "\u0000\n\u0001\u0000\u0001\n\n\u0000\u0000\u0000\u0001<\u0000\u0002<\u0000\u0003" +
-              "<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000\t<\u0000\n<" +
-              "\u0000";
+              "\u0000\u000b\u0001\u0000\u0001\u000b\u000b\u0000\u0000\u0000\u0001<\u0000\u0002<" +
+              "\u0000\u0003<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000" +
+              "\t<\u0000\n<\u0000\u000b<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

@@ -46,7 +46,7 @@ These four DBs persist on-device and migrate forward via `PRAGMA user_version`. 
 
 For each: compare the constant at `<base>` vs `<target>`.
 
-Desktop train: compare `SCHEMA_VERSION` in `desktop/crates/taigi-desktop-storage/src/*.rs` (Windows + Linux) and `schemaVersion` in `macos/Sources/TaigiInputMethodCore/Storage/*Store.swift`; same forward-only / non-destructive rules.
+Desktop train: compare `SCHEMA_VERSION` in `engine/userdata/src/*.rs` (Windows, Linux and macOS — the engine owns their stores, `docs/architecture/user-data-engine-roadmap.md`); same forward-only / non-destructive rules.
 
 - **Unchanged** → no migration runs on upgrade (the `current >= target → return` guard short-circuits). SAFE.
 - **Bumped** → a migration MUST exist and be:

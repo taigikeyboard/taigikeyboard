@@ -54,14 +54,14 @@ struct DictionarySearchService: Sendable {
     /// margin the kautian-first sort reorders within.
     static let resultLimit = 20
 
-    private let customDictionaryStore: CustomDictionaryStore
+    private let userData: any UserDataClient
     private let settingsProvider: any EngineSettingsProvider
 
     init(
-        customDictionaryStore: CustomDictionaryStore,
+        userData: any UserDataClient,
         settingsProvider: any EngineSettingsProvider,
     ) {
-        self.customDictionaryStore = customDictionaryStore
+        self.userData = userData
         self.settingsProvider = settingsProvider
     }
 
@@ -197,15 +197,10 @@ struct DictionarySearchService: Sendable {
         query: String,
         settings: EngineSettings,
     ) -> [DictionarySearchResult] {
-        guard settings.isCustomDictEnabled,
-              let queryKey = RustEngineBridge.deriveCustomQueryKey(
-                  input: query,
-                  mode: settings.inputMode,
-              )
-        else { return [] }
+        guard settings.isCustomDictEnabled else { return [] }
 
-        return customDictionaryStore
-            .rows(matching: queryKey, limit: Self.resultLimit)
+        return userData
+            .search(query: query, mode: settings.inputMode, limit: Self.resultLimit)
             .map { row in
                 DictionarySearchResult(
                     id: .custom(row.id),

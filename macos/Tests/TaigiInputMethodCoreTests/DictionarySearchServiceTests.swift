@@ -3,15 +3,17 @@
 @testable import TaigiInputMethodCore
 import XCTest
 
-/// Real engine, real store: the pipeline is mostly ordering and routing, and
-/// both are only true against the dictionary the user actually has.
+/// Real engine for the bundled dictionaries, an in-memory user dictionary: the
+/// pipeline is mostly ordering and routing, and both are only true against
+/// the dictionary the user actually has. The engine's own key lookup for
+/// custom entries is its tests' (`engine/dispatch/src/user_data.rs`).
 final class DictionarySearchServiceTests: XCTestCase {
-    private var stores: UserDataStores!
+    private var userData: FakeUserDataClient!
 
     override func setUpWithError() throws {
         try super.setUpWithError()
         InstalledLexicon.installOnce()
-        stores = try TestFixtures.makeUserDataStores()
+        userData = FakeUserDataClient()
     }
 
     private func makeService(
@@ -20,7 +22,7 @@ final class DictionarySearchServiceTests: XCTestCase {
         dictionarySources: DictionarySourceToggles = .defaults,
     ) -> DictionarySearchService {
         DictionarySearchService(
-            customDictionaryStore: stores.customDictionary,
+            userData: userData,
             settingsProvider: StubEngineSettingsProvider(
                 inputMode: inputMode,
                 customDict: customDict,
@@ -56,10 +58,8 @@ final class DictionarySearchServiceTests: XCTestCase {
 
     // MARK: - The user's own dictionary
 
-    func testACustomEntry_leadsTheResults() async throws {
-        try await stores.customDictionary.upsert(
-            CustomDictionaryRow(roman: "taigi", hanzi: "我的台語"),
-        )
+    func testACustomEntry_leadsTheResults() throws {
+        try userData.save(CustomDictionaryRow(roman: "taigi", hanzi: "我的台語"))
 
         let results = makeService().search("taigi")
 
@@ -67,10 +67,8 @@ final class DictionarySearchServiceTests: XCTestCase {
         XCTAssertEqual(results.first?.sources, [.custom])
     }
 
-    func testACustomEntry_isNotFoundByAHanziQuery() async throws {
-        try await stores.customDictionary.upsert(
-            CustomDictionaryRow(roman: "taigi", hanzi: "我的台語"),
-        )
+    func testACustomEntry_isNotFoundByAHanziQuery() throws {
+        try userData.save(CustomDictionaryRow(roman: "taigi", hanzi: "我的台語"))
 
         let results = makeService().search("我的台語")
 
@@ -80,10 +78,8 @@ final class DictionarySearchServiceTests: XCTestCase {
         )
     }
 
-    func testWithTheCustomDictionaryOff_itsEntriesAreNotSearched() async throws {
-        try await stores.customDictionary.upsert(
-            CustomDictionaryRow(roman: "taigi", hanzi: "我的台語"),
-        )
+    func testWithTheCustomDictionaryOff_itsEntriesAreNotSearched() throws {
+        try userData.save(CustomDictionaryRow(roman: "taigi", hanzi: "我的台語"))
 
         let results = makeService(customDict: false).search("taigi")
 
@@ -157,10 +153,8 @@ final class DictionarySearchServiceTests: XCTestCase {
     /// there is no page on either site to send them to — and the spelling they
     /// typed it under is whichever script they were in, which is not what
     /// those sites index.
-    func testACustomRow_offersNoExternalLookup() async throws {
-        try await stores.customDictionary.upsert(
-            CustomDictionaryRow(roman: "gua", hanzi: "我的字"),
-        )
+    func testACustomRow_offersNoExternalLookup() throws {
+        try userData.save(CustomDictionaryRow(roman: "gua", hanzi: "我的字"))
 
         let customRow = try XCTUnwrap(
             makeService().search("gua").first { $0.sources == [.custom] },
@@ -186,10 +180,8 @@ final class DictionarySearchServiceTests: XCTestCase {
 
     /// The user's own dictionary is not one of the bundled sources, so it
     /// still answers when they are all off.
-    func testWithEveryDictionaryOff_theUsersOwnEntriesStillAnswer() async throws {
-        try await stores.customDictionary.upsert(
-            CustomDictionaryRow(roman: "taigi", hanzi: "我的台語"),
-        )
+    func testWithEveryDictionaryOff_theUsersOwnEntriesStillAnswer() throws {
+        try userData.save(CustomDictionaryRow(roman: "taigi", hanzi: "我的台語"))
         let results = makeService(dictionarySources: .allSourcesOff).search("taigi")
 
         XCTAssertEqual(results.map(\.hanzi), ["我的台語"])
@@ -218,9 +210,9 @@ final class DictionarySearchServiceTests: XCTestCase {
 
     /// Rows are identified per list. A single sentinel for every custom row
     /// would make two of the user's own words look like one row to SwiftUI.
-    func testEveryResultHasItsOwnIdentity() async throws {
-        try await stores.customDictionary.upsert(CustomDictionaryRow(roman: "tai", hanzi: "一"))
-        try await stores.customDictionary.upsert(CustomDictionaryRow(roman: "tai", hanzi: "二"))
+    func testEveryResultHasItsOwnIdentity() throws {
+        try userData.save(CustomDictionaryRow(roman: "tai", hanzi: "一"))
+        try userData.save(CustomDictionaryRow(roman: "tai", hanzi: "二"))
 
         let results = makeService().search("tai")
 

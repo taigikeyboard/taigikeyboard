@@ -195,43 +195,20 @@ extension RustEngineBridge {
     /// generation: a bumped generation resets the engine before the query runs
     /// (`engine/composing/src/handle.rs:61-66`).
     ///
-    /// `frequencyRows` is what the user has committed before, which the engine
-    /// turns into a per-candidate boost. Leaving it empty is not an error and
-    /// not a degraded mode: the engine reads the proto3 zero values as "rank
-    /// these without any usage history", which is the correct answer for a
-    /// fresh install and for the first fetch of any composition, before the
-    /// candidate keys to look up are even known.
-    ///
     /// `enabledSourcesBitmask` is what the user's dictionary toggles resolve to
     /// (`lexiconDictionaryFilters`). `0` is not "no sources": the engine reads
     /// it as "platform did not wire this" and searches all of them
     /// (`composing.proto:176-183`), which is the degrade a failed resolve
     /// takes.
     ///
-    /// `customEntries` is what the user's own dictionary matched for the
-    /// current raw buffer. The columns go out exactly as stored — the engine
-    /// dedupes `(roman, hanji)` against the FST hits and folds the roman to
-    /// canonical TL itself when it learns from a commit, so massaging either
-    /// here would break a key it owns.
-    ///
-    /// Both are computed once per keystroke by the caller and passed to both
-    /// fetch phases, so the neutral and boosted answers describe one
-    /// composition under one set of rules.
-    ///
-    /// `nowMs` is the clock the engine's recency ranking reads. It belongs with
-    /// the rows rather than being read inside the engine, so that both fetches
-    /// of one keystroke rank against a single instant.
+    /// The user's own data is not among the arguments: the engine reads its
+    /// stores itself and ranks in the same call (user-data-engine-roadmap P6).
+    /// `nowMs` is the clock its recency ranking reads.
     static func composingFetchAtPos(
         settings: EngineSettings,
         generation: UInt64,
-        frequencyRows: [FrequencyRow] = [],
         nowMs: Int64 = 0,
         enabledSourcesBitmask: UInt32 = 0,
-        customEntries: [CustomDictionaryRow] = [],
-        // §50 — learned phrases whose whole-buffer key equals the raw buffer
-        // (`LearnedPhraseStore.rows(matching:)`); competitors of the
-        // dictionary rows, never the override `customEntries` are.
-        learnedEntries: [LearnedPhraseRow] = [],
     ) -> ContinuousFetchResult? {
         var fetch = Taigi_Engine_FetchAtPos()
         // §34/S22 — positive platform setting → inverted proto disable gate
@@ -240,11 +217,11 @@ extension RustEngineBridge {
         // CROSS-PLATFORM INVARIANT — mirrors desktop/crates/taigi-desktop-core/src/engine/composing.rs
         // `fetch_at_pos`, which inverts the same setting onto the same field.
         fetch.literalRomanCandidateDisabled = !settings.isLiteralRomanCandidateEnabled
-        fetch.frequencyEntries = frequencyRows.map(frequencyEntry)
         fetch.nowMs = nowMs
         fetch.enabledSourcesBitmask = enabledSourcesBitmask
-        fetch.customEntries = customEntries.map(customDictEntry)
-        fetch.learnedEntries = learnedEntries.map(learnedEntry)
+        // The engine reads the user's dictionary only with this setting on.
+        // CROSS-PLATFORM INVARIANT — mirrors the desktop `fetch_at_pos`.
+        fetch.customDictionaryDisabled = !settings.isCustomDictEnabled
 
         guard let response = composingResponse(
             .fetchAtPos(fetch),
@@ -406,43 +383,6 @@ extension RustEngineBridge {
         case let .phraseLearned(payload):
             return .phraseLearned(hanji: payload.hanji, canonicalTl: payload.canonicalTl)
         }
-    }
-
-    /// One learned row on the wire. `count` is clamped rather than trusted to
-    /// fit: the column is a 64-bit SQLite integer and the field is 32-bit, and
-    /// a saturating conversion is a wrong boost where a trapping one is a
-    /// crash in the middle of a keystroke.
-    private static func frequencyEntry(_ row: FrequencyRow) -> Taigi_Engine_FrequencyEntry {
-        var entry = Taigi_Engine_FrequencyEntry()
-        entry.displayTextKey = row.word
-        entry.canonicalTl = row.tl
-        entry.count = UInt32(clamping: row.count)
-        entry.lastUsedMs = row.lastUsedMillis
-        return entry
-    }
-
-    /// One learned row (§50) on the wire — always a hanji, the engine only
-    /// ever learns hanji picks.
-    private static func learnedEntry(_ row: LearnedPhraseRow) -> Taigi_Engine_LearnedEntry {
-        var entry = Taigi_Engine_LearnedEntry()
-        entry.hanji = row.hanzi
-        entry.canonicalTl = row.canonicalTl
-        return entry
-    }
-
-    /// One custom-dictionary row on the wire.
-    ///
-    /// An empty stored hanji maps to an ABSENT `hanji` rather than an empty
-    /// string: the field is proto3-optional, and the engine reads absence as
-    /// "romanization-only entry" while an empty string would be a hanji that
-    /// renders as nothing (`composing.proto:215-218`).
-    private static func customDictEntry(_ row: CustomDictionaryRow) -> Taigi_Engine_CustomDictEntry {
-        var entry = Taigi_Engine_CustomDictEntry()
-        entry.roman = row.roman
-        if !row.hanzi.isEmpty {
-            entry.hanji = row.hanzi
-        }
-        return entry
     }
 
     private static func decodeCandidate(

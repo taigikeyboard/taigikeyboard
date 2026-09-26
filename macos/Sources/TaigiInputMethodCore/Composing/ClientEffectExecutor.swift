@@ -72,9 +72,9 @@ final class ClientEffectExecutor: ComposingEffectExecutor {
             break
 
         case .nextWordUpdateLastSelectedWord, .nextWordWordSelected, .nextWordClearForNewComposing, .phraseLearned:
-            // Never delivered: `ComposingManager` routes the learning
-            // handshakes to `NextWordLearner` instead, because they write to a
-            // database rather than to this client's document. Kept in the
+            // Never delivered: `ComposingManager` handles the learning
+            // handshakes itself (the next-word ones go to `NextWordLearner`),
+            // because none of them is about this client's document. Kept in the
             // switch so the enum stays exhaustive here too — that is what makes
             // a newly added engine effect a compile error rather than a
             // silently ignored instruction.

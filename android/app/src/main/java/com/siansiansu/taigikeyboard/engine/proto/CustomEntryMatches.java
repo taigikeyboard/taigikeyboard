@@ -6,15 +6,20 @@
 package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
- * Protobuf type {@code taigi.engine.CustomEntries}
+ * <pre>
+ * Entries whose search key starts with the query's, ordered by
+ * romanization. Empty when the query derives no key.
+ * </pre>
+ *
+ * Protobuf type {@code taigi.engine.CustomEntryMatches}
  */
 @com.google.protobuf.Generated
-public  final class CustomEntries extends
+public  final class CustomEntryMatches extends
     com.google.protobuf.GeneratedMessageLite<
-        CustomEntries, CustomEntries.Builder> implements
-    // @@protoc_insertion_point(message_implements:taigi.engine.CustomEntries)
-    CustomEntriesOrBuilder {
-  private CustomEntries() {
+        CustomEntryMatches, CustomEntryMatches.Builder> implements
+    // @@protoc_insertion_point(message_implements:taigi.engine.CustomEntryMatches)
+    CustomEntryMatchesOrBuilder {
+  private CustomEntryMatches() {
     entries_ = emptyProtobufList();
   }
   public static final int ENTRIES_FIELD_NUMBER = 1;
@@ -111,170 +116,50 @@ public  final class CustomEntries extends
     entries_.remove(index);
   }
 
-  public static final int TOTAL_FIELD_NUMBER = 2;
-  private int total_;
-  /**
-   * <pre>
-   * every stored word
-   * </pre>
-   *
-   * <code>uint32 total = 2;</code>
-   * @return The total.
-   */
-  @java.lang.Override
-  public int getTotal() {
-    return total_;
-  }
-  /**
-   * <pre>
-   * every stored word
-   * </pre>
-   *
-   * <code>uint32 total = 2;</code>
-   * @param value The total to set.
-   */
-  private void setTotal(int value) {
-
-    total_ = value;
-  }
-  /**
-   * <pre>
-   * every stored word
-   * </pre>
-   *
-   * <code>uint32 total = 2;</code>
-   */
-  private void clearTotal() {
-
-    total_ = 0;
-  }
-
-  public static final int MATCHING_TOTAL_FIELD_NUMBER = 3;
-  private int matchingTotal_;
-  /**
-   * <pre>
-   * the words `filter` matches, for paging
-   * </pre>
-   *
-   * <code>uint32 matching_total = 3;</code>
-   * @return The matchingTotal.
-   */
-  @java.lang.Override
-  public int getMatchingTotal() {
-    return matchingTotal_;
-  }
-  /**
-   * <pre>
-   * the words `filter` matches, for paging
-   * </pre>
-   *
-   * <code>uint32 matching_total = 3;</code>
-   * @param value The matchingTotal to set.
-   */
-  private void setMatchingTotal(int value) {
-
-    matchingTotal_ = value;
-  }
-  /**
-   * <pre>
-   * the words `filter` matches, for paging
-   * </pre>
-   *
-   * <code>uint32 matching_total = 3;</code>
-   */
-  private void clearMatchingTotal() {
-
-    matchingTotal_ = 0;
-  }
-
-  public static final int OFFSET_FIELD_NUMBER = 4;
-  private int offset_;
-  /**
-   * <pre>
-   * The offset these entries start at: the request's, pulled back to the
-   * last page's when the matches shrank under it (a delete on the last
-   * page), so one request always answers a page that exists.
-   * </pre>
-   *
-   * <code>uint32 offset = 4;</code>
-   * @return The offset.
-   */
-  @java.lang.Override
-  public int getOffset() {
-    return offset_;
-  }
-  /**
-   * <pre>
-   * The offset these entries start at: the request's, pulled back to the
-   * last page's when the matches shrank under it (a delete on the last
-   * page), so one request always answers a page that exists.
-   * </pre>
-   *
-   * <code>uint32 offset = 4;</code>
-   * @param value The offset to set.
-   */
-  private void setOffset(int value) {
-
-    offset_ = value;
-  }
-  /**
-   * <pre>
-   * The offset these entries start at: the request's, pulled back to the
-   * last page's when the matches shrank under it (a delete on the last
-   * page), so one request always answers a page that exists.
-   * </pre>
-   *
-   * <code>uint32 offset = 4;</code>
-   */
-  private void clearOffset() {
-
-    offset_ = 0;
-  }
-
-  public static com.siansiansu.taigikeyboard.engine.proto.CustomEntries parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.CustomEntryMatches parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.CustomEntries parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.CustomEntryMatches parseFrom(
       java.nio.ByteBuffer data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.CustomEntries parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.CustomEntryMatches parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.CustomEntries parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.CustomEntryMatches parseFrom(
       com.google.protobuf.ByteString data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.CustomEntries parseFrom(byte[] data)
+  public static com.siansiansu.taigikeyboard.engine.proto.CustomEntryMatches parseFrom(byte[] data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.CustomEntries parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.CustomEntryMatches parseFrom(
       byte[] data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.CustomEntries parseFrom(java.io.InputStream input)
+  public static com.siansiansu.taigikeyboard.engine.proto.CustomEntryMatches parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.CustomEntries parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.CustomEntryMatches parseFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -282,24 +167,24 @@ public  final class CustomEntries extends
         DEFAULT_INSTANCE, input, extensionRegistry);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.CustomEntries parseDelimitedFrom(java.io.InputStream input)
+  public static com.siansiansu.taigikeyboard.engine.proto.CustomEntryMatches parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.CustomEntries parseDelimitedFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.CustomEntryMatches parseDelimitedFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.CustomEntries parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.CustomEntryMatches parseFrom(
       com.google.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.CustomEntries parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.CustomEntryMatches parseFrom(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -310,19 +195,24 @@ public  final class CustomEntries extends
   public static Builder newBuilder() {
     return (Builder) DEFAULT_INSTANCE.createBuilder();
   }
-  public static Builder newBuilder(com.siansiansu.taigikeyboard.engine.proto.CustomEntries prototype) {
+  public static Builder newBuilder(com.siansiansu.taigikeyboard.engine.proto.CustomEntryMatches prototype) {
     return DEFAULT_INSTANCE.createBuilder(prototype);
   }
 
   /**
-   * Protobuf type {@code taigi.engine.CustomEntries}
+   * <pre>
+   * Entries whose search key starts with the query's, ordered by
+   * romanization. Empty when the query derives no key.
+   * </pre>
+   *
+   * Protobuf type {@code taigi.engine.CustomEntryMatches}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageLite.Builder<
-        com.siansiansu.taigikeyboard.engine.proto.CustomEntries, Builder> implements
-      // @@protoc_insertion_point(builder_implements:taigi.engine.CustomEntries)
-      com.siansiansu.taigikeyboard.engine.proto.CustomEntriesOrBuilder {
-    // Construct using com.siansiansu.taigikeyboard.engine.proto.CustomEntries.newBuilder()
+        com.siansiansu.taigikeyboard.engine.proto.CustomEntryMatches, Builder> implements
+      // @@protoc_insertion_point(builder_implements:taigi.engine.CustomEntryMatches)
+      com.siansiansu.taigikeyboard.engine.proto.CustomEntryMatchesOrBuilder {
+    // Construct using com.siansiansu.taigikeyboard.engine.proto.CustomEntryMatches.newBuilder()
     private Builder() {
       super(DEFAULT_INSTANCE);
     }
@@ -430,133 +320,7 @@ public  final class CustomEntries extends
       return this;
     }
 
-    /**
-     * <pre>
-     * every stored word
-     * </pre>
-     *
-     * <code>uint32 total = 2;</code>
-     * @return The total.
-     */
-    @java.lang.Override
-    public int getTotal() {
-      return instance.getTotal();
-    }
-    /**
-     * <pre>
-     * every stored word
-     * </pre>
-     *
-     * <code>uint32 total = 2;</code>
-     * @param value The total to set.
-     * @return This builder for chaining.
-     */
-    public Builder setTotal(int value) {
-      copyOnWrite();
-      instance.setTotal(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * every stored word
-     * </pre>
-     *
-     * <code>uint32 total = 2;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearTotal() {
-      copyOnWrite();
-      instance.clearTotal();
-      return this;
-    }
-
-    /**
-     * <pre>
-     * the words `filter` matches, for paging
-     * </pre>
-     *
-     * <code>uint32 matching_total = 3;</code>
-     * @return The matchingTotal.
-     */
-    @java.lang.Override
-    public int getMatchingTotal() {
-      return instance.getMatchingTotal();
-    }
-    /**
-     * <pre>
-     * the words `filter` matches, for paging
-     * </pre>
-     *
-     * <code>uint32 matching_total = 3;</code>
-     * @param value The matchingTotal to set.
-     * @return This builder for chaining.
-     */
-    public Builder setMatchingTotal(int value) {
-      copyOnWrite();
-      instance.setMatchingTotal(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * the words `filter` matches, for paging
-     * </pre>
-     *
-     * <code>uint32 matching_total = 3;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearMatchingTotal() {
-      copyOnWrite();
-      instance.clearMatchingTotal();
-      return this;
-    }
-
-    /**
-     * <pre>
-     * The offset these entries start at: the request's, pulled back to the
-     * last page's when the matches shrank under it (a delete on the last
-     * page), so one request always answers a page that exists.
-     * </pre>
-     *
-     * <code>uint32 offset = 4;</code>
-     * @return The offset.
-     */
-    @java.lang.Override
-    public int getOffset() {
-      return instance.getOffset();
-    }
-    /**
-     * <pre>
-     * The offset these entries start at: the request's, pulled back to the
-     * last page's when the matches shrank under it (a delete on the last
-     * page), so one request always answers a page that exists.
-     * </pre>
-     *
-     * <code>uint32 offset = 4;</code>
-     * @param value The offset to set.
-     * @return This builder for chaining.
-     */
-    public Builder setOffset(int value) {
-      copyOnWrite();
-      instance.setOffset(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * The offset these entries start at: the request's, pulled back to the
-     * last page's when the matches shrank under it (a delete on the last
-     * page), so one request always answers a page that exists.
-     * </pre>
-     *
-     * <code>uint32 offset = 4;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearOffset() {
-      copyOnWrite();
-      instance.clearOffset();
-      return this;
-    }
-
-    // @@protoc_insertion_point(builder_scope:taigi.engine.CustomEntries)
+    // @@protoc_insertion_point(builder_scope:taigi.engine.CustomEntryMatches)
   }
   @java.lang.Override
   @java.lang.SuppressWarnings({"ThrowNull"})
@@ -565,7 +329,7 @@ public  final class CustomEntries extends
       java.lang.Object arg0, java.lang.Object arg1) {
     switch (method) {
       case NEW_MUTABLE_INSTANCE: {
-        return new com.siansiansu.taigikeyboard.engine.proto.CustomEntries();
+        return new com.siansiansu.taigikeyboard.engine.proto.CustomEntryMatches();
       }
       case NEW_BUILDER: {
         return new Builder();
@@ -574,26 +338,22 @@ public  final class CustomEntries extends
           java.lang.Object[] objects = new java.lang.Object[] {
             "entries_",
             com.siansiansu.taigikeyboard.engine.proto.CustomDictionaryEntry.class,
-            "total_",
-            "matchingTotal_",
-            "offset_",
           };
           java.lang.String info =
-              "\u0000\u0004\u0000\u0000\u0001\u0004\u0004\u0000\u0001\u0000\u0001\u001b\u0002\u000b" +
-              "\u0003\u000b\u0004\u000b";
+              "\u0000\u0001\u0000\u0000\u0001\u0001\u0001\u0000\u0001\u0000\u0001\u001b";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {
         return DEFAULT_INSTANCE;
       }
       case GET_PARSER: {
-        com.google.protobuf.Parser<com.siansiansu.taigikeyboard.engine.proto.CustomEntries> parser = PARSER;
+        com.google.protobuf.Parser<com.siansiansu.taigikeyboard.engine.proto.CustomEntryMatches> parser = PARSER;
         if (parser == null) {
-          synchronized (com.siansiansu.taigikeyboard.engine.proto.CustomEntries.class) {
+          synchronized (com.siansiansu.taigikeyboard.engine.proto.CustomEntryMatches.class) {
             parser = PARSER;
             if (parser == null) {
               parser =
-                  new DefaultInstanceBasedParser<com.siansiansu.taigikeyboard.engine.proto.CustomEntries>(
+                  new DefaultInstanceBasedParser<com.siansiansu.taigikeyboard.engine.proto.CustomEntryMatches>(
                       DEFAULT_INSTANCE);
               PARSER = parser;
             }
@@ -613,24 +373,24 @@ public  final class CustomEntries extends
   }
 
 
-  // @@protoc_insertion_point(class_scope:taigi.engine.CustomEntries)
-  private static final com.siansiansu.taigikeyboard.engine.proto.CustomEntries DEFAULT_INSTANCE;
+  // @@protoc_insertion_point(class_scope:taigi.engine.CustomEntryMatches)
+  private static final com.siansiansu.taigikeyboard.engine.proto.CustomEntryMatches DEFAULT_INSTANCE;
   static {
-    CustomEntries defaultInstance = new CustomEntries();
+    CustomEntryMatches defaultInstance = new CustomEntryMatches();
     // New instances are implicitly immutable so no need to make
     // immutable.
     DEFAULT_INSTANCE = defaultInstance;
     com.google.protobuf.GeneratedMessageLite.registerDefaultInstance(
-      CustomEntries.class, defaultInstance);
+      CustomEntryMatches.class, defaultInstance);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.CustomEntries getDefaultInstance() {
+  public static com.siansiansu.taigikeyboard.engine.proto.CustomEntryMatches getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
-  private static volatile com.google.protobuf.Parser<CustomEntries> PARSER;
+  private static volatile com.google.protobuf.Parser<CustomEntryMatches> PARSER;
 
-  public static com.google.protobuf.Parser<CustomEntries> parser() {
+  public static com.google.protobuf.Parser<CustomEntryMatches> parser() {
     return DEFAULT_INSTANCE.getParserForType();
   }
 }

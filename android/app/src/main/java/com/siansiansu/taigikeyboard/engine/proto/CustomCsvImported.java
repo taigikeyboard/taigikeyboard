@@ -15,6 +15,7 @@ public  final class CustomCsvImported extends
     // @@protoc_insertion_point(message_implements:taigi.engine.CustomCsvImported)
     CustomCsvImportedOrBuilder {
   private CustomCsvImported() {
+    detail_ = "";
   }
   public static final int REFUSAL_FIELD_NUMBER = 1;
   private int refusal_;
@@ -109,6 +110,78 @@ public  final class CustomCsvImported extends
   private void clearSkipped() {
 
     skipped_ = 0;
+  }
+
+  public static final int DETAIL_FIELD_NUMBER = 4;
+  private java.lang.String detail_;
+  /**
+   * <pre>
+   * The refusal in English, for an alert's diagnostic line
+   * (`file holds more than 30000 entries`); empty when imported.
+   * </pre>
+   *
+   * <code>string detail = 4;</code>
+   * @return The detail.
+   */
+  @java.lang.Override
+  public java.lang.String getDetail() {
+    return detail_;
+  }
+  /**
+   * <pre>
+   * The refusal in English, for an alert's diagnostic line
+   * (`file holds more than 30000 entries`); empty when imported.
+   * </pre>
+   *
+   * <code>string detail = 4;</code>
+   * @return The bytes for detail.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getDetailBytes() {
+    return com.google.protobuf.ByteString.copyFromUtf8(detail_);
+  }
+  /**
+   * <pre>
+   * The refusal in English, for an alert's diagnostic line
+   * (`file holds more than 30000 entries`); empty when imported.
+   * </pre>
+   *
+   * <code>string detail = 4;</code>
+   * @param value The detail to set.
+   */
+  private void setDetail(
+      java.lang.String value) {
+    java.util.Objects.requireNonNull(value);
+
+    detail_ = value;
+  }
+  /**
+   * <pre>
+   * The refusal in English, for an alert's diagnostic line
+   * (`file holds more than 30000 entries`); empty when imported.
+   * </pre>
+   *
+   * <code>string detail = 4;</code>
+   */
+  private void clearDetail() {
+
+    detail_ = getDefaultInstance().getDetail();
+  }
+  /**
+   * <pre>
+   * The refusal in English, for an alert's diagnostic line
+   * (`file holds more than 30000 entries`); empty when imported.
+   * </pre>
+   *
+   * <code>string detail = 4;</code>
+   * @param value The bytes for detail to set.
+   */
+  private void setDetailBytes(
+      com.google.protobuf.ByteString value) {
+    checkByteStringIsUtf8(value);
+    detail_ = value.toStringUtf8();
+
   }
 
   public static com.siansiansu.taigikeyboard.engine.proto.CustomCsvImported parseFrom(
@@ -311,6 +384,80 @@ public  final class CustomCsvImported extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The refusal in English, for an alert's diagnostic line
+     * (`file holds more than 30000 entries`); empty when imported.
+     * </pre>
+     *
+     * <code>string detail = 4;</code>
+     * @return The detail.
+     */
+    @java.lang.Override
+    public java.lang.String getDetail() {
+      return instance.getDetail();
+    }
+    /**
+     * <pre>
+     * The refusal in English, for an alert's diagnostic line
+     * (`file holds more than 30000 entries`); empty when imported.
+     * </pre>
+     *
+     * <code>string detail = 4;</code>
+     * @return The bytes for detail.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getDetailBytes() {
+      return instance.getDetailBytes();
+    }
+    /**
+     * <pre>
+     * The refusal in English, for an alert's diagnostic line
+     * (`file holds more than 30000 entries`); empty when imported.
+     * </pre>
+     *
+     * <code>string detail = 4;</code>
+     * @param value The detail to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDetail(
+        java.lang.String value) {
+      copyOnWrite();
+      instance.setDetail(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The refusal in English, for an alert's diagnostic line
+     * (`file holds more than 30000 entries`); empty when imported.
+     * </pre>
+     *
+     * <code>string detail = 4;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearDetail() {
+      copyOnWrite();
+      instance.clearDetail();
+      return this;
+    }
+    /**
+     * <pre>
+     * The refusal in English, for an alert's diagnostic line
+     * (`file holds more than 30000 entries`); empty when imported.
+     * </pre>
+     *
+     * <code>string detail = 4;</code>
+     * @param value The bytes for detail to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDetailBytes(
+        com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.setDetailBytes(value);
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.CustomCsvImported)
   }
   @java.lang.Override
@@ -330,10 +477,11 @@ public  final class CustomCsvImported extends
             "refusal_",
             "imported_",
             "skipped_",
+            "detail_",
           };
           java.lang.String info =
-              "\u0000\u0003\u0000\u0000\u0001\u0003\u0003\u0000\u0000\u0000\u0001\f\u0002\u000b" +
-              "\u0003\u000b";
+              "\u0000\u0004\u0000\u0000\u0001\u0004\u0004\u0000\u0000\u0000\u0001\f\u0002\u000b" +
+              "\u0003\u000b\u0004\u0208";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

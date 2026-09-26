@@ -120,5 +120,16 @@ public interface UserDataRequestOrBuilder extends
    */
   com.siansiansu.taigikeyboard.engine.proto.ImportBackup getImportBackup();
 
+  /**
+   * <code>.taigi.engine.SearchCustomEntries search_custom_entries = 11;</code>
+   * @return Whether the searchCustomEntries field is set.
+   */
+  boolean hasSearchCustomEntries();
+  /**
+   * <code>.taigi.engine.SearchCustomEntries search_custom_entries = 11;</code>
+   * @return The searchCustomEntries.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.SearchCustomEntries getSearchCustomEntries();
+
   public com.siansiansu.taigikeyboard.engine.proto.UserDataRequest.MethodCase getMethodCase();
 }

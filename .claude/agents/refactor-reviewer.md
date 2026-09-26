@@ -9,7 +9,7 @@ You are reviewing refactored code in a cross-platform Taiwanese keyboard project
 
 ## Context
 
-- Locate counterparts: iOS ↔ Android by name (Glob `ios/**/<Name>.swift` ↔ `android/**/<Name>.kt`; the two trees mirror each other); macOS stores (`macos/Sources/TaigiInputMethodCore/Storage/`) mirror iOS; Windows and Linux share the `desktop/` crates
+- Locate counterparts: iOS ↔ Android by name (Glob `ios/**/<Name>.swift` ↔ `android/**/<Name>.kt`; the two trees mirror each other); the user-data stores of macOS, Windows and Linux are the engine's (`engine/userdata/`) and mirror iOS; Windows and Linux share the `desktop/` crates
 - Read `docs/references/keywords.md` for domain terminology
 - The project uses KeyboardKit (iOS) and FlorisBoard (Android)
 

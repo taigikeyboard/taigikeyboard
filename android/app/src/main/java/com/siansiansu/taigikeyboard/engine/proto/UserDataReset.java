@@ -7,7 +7,9 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * Rows removed per store (0 for a store not selected).
+ * Rows removed per store (0 for a store not selected, or one that failed).
+ * Every selected store is attempted: one that cannot be emptied is no
+ * reason to leave the others full.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.UserDataReset}
@@ -19,6 +21,7 @@ public  final class UserDataReset extends
     // @@protoc_insertion_point(message_implements:taigi.engine.UserDataReset)
     UserDataResetOrBuilder {
   private UserDataReset() {
+    failures_ = emptyProtobufList();
   }
   public static final int FREQUENCY_REMOVED_FIELD_NUMBER = 1;
   private long frequencyRemoved_;
@@ -124,6 +127,153 @@ public  final class UserDataReset extends
     learnedPhrasesRemoved_ = 0L;
   }
 
+  public static final int FAILURES_FIELD_NUMBER = 5;
+  private com.google.protobuf.Internal.ProtobufList<java.lang.String> failures_;
+  /**
+   * <pre>
+   * One line per selected store that could not be emptied, naming its file
+   * (`user_frequency: &lt;error&gt;`) — English, for a diagnostic. Empty when
+   * every selected store was emptied.
+   * </pre>
+   *
+   * <code>repeated string failures = 5;</code>
+   * @return A list containing the failures.
+   */
+  @java.lang.Override
+  public java.util.List<java.lang.String> getFailuresList() {
+    return failures_;
+  }
+  /**
+   * <pre>
+   * One line per selected store that could not be emptied, naming its file
+   * (`user_frequency: &lt;error&gt;`) — English, for a diagnostic. Empty when
+   * every selected store was emptied.
+   * </pre>
+   *
+   * <code>repeated string failures = 5;</code>
+   * @return The count of failures.
+   */
+  @java.lang.Override
+  public int getFailuresCount() {
+    return failures_.size();
+  }
+  /**
+   * <pre>
+   * One line per selected store that could not be emptied, naming its file
+   * (`user_frequency: &lt;error&gt;`) — English, for a diagnostic. Empty when
+   * every selected store was emptied.
+   * </pre>
+   *
+   * <code>repeated string failures = 5;</code>
+   * @param index The index of the element to return.
+   * @return The failures at the given index.
+   */
+  @java.lang.Override
+  public java.lang.String getFailures(int index) {
+    return failures_.get(index);
+  }
+  /**
+   * <pre>
+   * One line per selected store that could not be emptied, naming its file
+   * (`user_frequency: &lt;error&gt;`) — English, for a diagnostic. Empty when
+   * every selected store was emptied.
+   * </pre>
+   *
+   * <code>repeated string failures = 5;</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the failures at the given index.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getFailuresBytes(int index) {
+    return com.google.protobuf.ByteString.copyFromUtf8(
+        failures_.get(index));
+  }
+  private void ensureFailuresIsMutable() {
+    com.google.protobuf.Internal.ProtobufList<java.lang.String> tmp =
+        failures_;  if (!tmp.isModifiable()) {
+      failures_ =
+          com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
+     }
+  }
+  /**
+   * <pre>
+   * One line per selected store that could not be emptied, naming its file
+   * (`user_frequency: &lt;error&gt;`) — English, for a diagnostic. Empty when
+   * every selected store was emptied.
+   * </pre>
+   *
+   * <code>repeated string failures = 5;</code>
+   * @param index The index to set the value at.
+   * @param value The failures to set.
+   */
+  private void setFailures(
+      int index, java.lang.String value) {
+    java.util.Objects.requireNonNull(value);
+    ensureFailuresIsMutable();
+    failures_.set(index, value);
+  }
+  /**
+   * <pre>
+   * One line per selected store that could not be emptied, naming its file
+   * (`user_frequency: &lt;error&gt;`) — English, for a diagnostic. Empty when
+   * every selected store was emptied.
+   * </pre>
+   *
+   * <code>repeated string failures = 5;</code>
+   * @param value The failures to add.
+   */
+  private void addFailures(
+      java.lang.String value) {
+    java.util.Objects.requireNonNull(value);
+    ensureFailuresIsMutable();
+    failures_.add(value);
+  }
+  /**
+   * <pre>
+   * One line per selected store that could not be emptied, naming its file
+   * (`user_frequency: &lt;error&gt;`) — English, for a diagnostic. Empty when
+   * every selected store was emptied.
+   * </pre>
+   *
+   * <code>repeated string failures = 5;</code>
+   * @param values The failures to add.
+   */
+  private void addAllFailures(
+      java.lang.Iterable<java.lang.String> values) {
+    ensureFailuresIsMutable();
+    com.google.protobuf.AbstractMessageLite.addAll(
+        values, failures_);
+  }
+  /**
+   * <pre>
+   * One line per selected store that could not be emptied, naming its file
+   * (`user_frequency: &lt;error&gt;`) — English, for a diagnostic. Empty when
+   * every selected store was emptied.
+   * </pre>
+   *
+   * <code>repeated string failures = 5;</code>
+   */
+  private void clearFailures() {
+    failures_ = emptyProtobufList();
+  }
+  /**
+   * <pre>
+   * One line per selected store that could not be emptied, naming its file
+   * (`user_frequency: &lt;error&gt;`) — English, for a diagnostic. Empty when
+   * every selected store was emptied.
+   * </pre>
+   *
+   * <code>repeated string failures = 5;</code>
+   * @param value The bytes of the failures to add.
+   */
+  private void addFailuresBytes(
+      com.google.protobuf.ByteString value) {
+    checkByteStringIsUtf8(value);
+    ensureFailuresIsMutable();
+    failures_.add(value.toStringUtf8());
+  }
+
   public static com.siansiansu.taigikeyboard.engine.proto.UserDataReset parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -209,7 +359,9 @@ public  final class UserDataReset extends
 
   /**
    * <pre>
-   * Rows removed per store (0 for a store not selected).
+   * Rows removed per store (0 for a store not selected, or one that failed).
+   * Every selected store is attempted: one that cannot be emptied is no
+   * reason to leave the others full.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.UserDataReset}
@@ -337,6 +489,152 @@ public  final class UserDataReset extends
       return this;
     }
 
+    /**
+     * <pre>
+     * One line per selected store that could not be emptied, naming its file
+     * (`user_frequency: &lt;error&gt;`) — English, for a diagnostic. Empty when
+     * every selected store was emptied.
+     * </pre>
+     *
+     * <code>repeated string failures = 5;</code>
+     * @return A list containing the failures.
+     */
+    @java.lang.Override
+    public java.util.List<java.lang.String>
+        getFailuresList() {
+      return java.util.Collections.unmodifiableList(
+          instance.getFailuresList());
+    }
+    /**
+     * <pre>
+     * One line per selected store that could not be emptied, naming its file
+     * (`user_frequency: &lt;error&gt;`) — English, for a diagnostic. Empty when
+     * every selected store was emptied.
+     * </pre>
+     *
+     * <code>repeated string failures = 5;</code>
+     * @return The count of failures.
+     */
+    @java.lang.Override
+    public int getFailuresCount() {
+      return instance.getFailuresCount();
+    }
+    /**
+     * <pre>
+     * One line per selected store that could not be emptied, naming its file
+     * (`user_frequency: &lt;error&gt;`) — English, for a diagnostic. Empty when
+     * every selected store was emptied.
+     * </pre>
+     *
+     * <code>repeated string failures = 5;</code>
+     * @param index The index of the element to return.
+     * @return The failures at the given index.
+     */
+    @java.lang.Override
+    public java.lang.String getFailures(int index) {
+      return instance.getFailures(index);
+    }
+    /**
+     * <pre>
+     * One line per selected store that could not be emptied, naming its file
+     * (`user_frequency: &lt;error&gt;`) — English, for a diagnostic. Empty when
+     * every selected store was emptied.
+     * </pre>
+     *
+     * <code>repeated string failures = 5;</code>
+     * @param index The index of the value to return.
+     * @return The bytes of the failures at the given index.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getFailuresBytes(int index) {
+      return instance.getFailuresBytes(index);
+    }
+    /**
+     * <pre>
+     * One line per selected store that could not be emptied, naming its file
+     * (`user_frequency: &lt;error&gt;`) — English, for a diagnostic. Empty when
+     * every selected store was emptied.
+     * </pre>
+     *
+     * <code>repeated string failures = 5;</code>
+     * @param index The index to set the value at.
+     * @param value The failures to set.
+     * @return This builder for chaining.
+     */
+    public Builder setFailures(
+        int index, java.lang.String value) {
+      copyOnWrite();
+      instance.setFailures(index, value);
+      return this;
+    }
+    /**
+     * <pre>
+     * One line per selected store that could not be emptied, naming its file
+     * (`user_frequency: &lt;error&gt;`) — English, for a diagnostic. Empty when
+     * every selected store was emptied.
+     * </pre>
+     *
+     * <code>repeated string failures = 5;</code>
+     * @param value The failures to add.
+     * @return This builder for chaining.
+     */
+    public Builder addFailures(
+        java.lang.String value) {
+      copyOnWrite();
+      instance.addFailures(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * One line per selected store that could not be emptied, naming its file
+     * (`user_frequency: &lt;error&gt;`) — English, for a diagnostic. Empty when
+     * every selected store was emptied.
+     * </pre>
+     *
+     * <code>repeated string failures = 5;</code>
+     * @param values The failures to add.
+     * @return This builder for chaining.
+     */
+    public Builder addAllFailures(
+        java.lang.Iterable<java.lang.String> values) {
+      copyOnWrite();
+      instance.addAllFailures(values);
+      return this;
+    }
+    /**
+     * <pre>
+     * One line per selected store that could not be emptied, naming its file
+     * (`user_frequency: &lt;error&gt;`) — English, for a diagnostic. Empty when
+     * every selected store was emptied.
+     * </pre>
+     *
+     * <code>repeated string failures = 5;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearFailures() {
+      copyOnWrite();
+      instance.clearFailures();
+      return this;
+    }
+    /**
+     * <pre>
+     * One line per selected store that could not be emptied, naming its file
+     * (`user_frequency: &lt;error&gt;`) — English, for a diagnostic. Empty when
+     * every selected store was emptied.
+     * </pre>
+     *
+     * <code>repeated string failures = 5;</code>
+     * @param value The bytes of the failures to add.
+     * @return This builder for chaining.
+     */
+    public Builder addFailuresBytes(
+        com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.addFailuresBytes(value);
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.UserDataReset)
   }
   @java.lang.Override
@@ -357,10 +655,11 @@ public  final class UserDataReset extends
             "associationRemoved_",
             "customDictionaryRemoved_",
             "learnedPhrasesRemoved_",
+            "failures_",
           };
           java.lang.String info =
-              "\u0000\u0004\u0000\u0000\u0001\u0004\u0004\u0000\u0000\u0000\u0001\u0002\u0002\u0002" +
-              "\u0003\u0002\u0004\u0002";
+              "\u0000\u0005\u0000\u0000\u0001\u0005\u0005\u0000\u0001\u0000\u0001\u0002\u0002\u0002" +
+              "\u0003\u0002\u0004\u0002\u0005\u021a";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {
