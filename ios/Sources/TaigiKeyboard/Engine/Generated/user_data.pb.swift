@@ -384,10 +384,15 @@ public nonisolated struct Taigi_Engine_UserDataResponse: Sendable {
 
 /// Opens the stores for this process, once. Absolute file paths: one
 /// directory everywhere except Android, whose `user_association.db` lives in
-/// `filesDir`. Synchronous — every store is open, taken over (roadmap U7) and
-/// the custom dictionary re-derived and seeded before the answer — so call it
-/// off the main thread. A repeat with the same paths answers the stores'
-/// current readiness; different paths are refused.
+/// `filesDir`. The stores are in use from the moment this is handled: a pick
+/// or a learned phrase reported meanwhile queues behind the open, a fetch
+/// ranks without the user's data until it is ready. By default the answer
+/// waits until every store is open, taken over (roadmap U7) and the custom
+/// dictionary re-derived and seeded — call it off the main thread then. With
+/// `in_background` the engine finishes that on a thread of its own and
+/// answers at once (readiness as of now), which a key path can afford. A
+/// repeat with the same paths answers the stores' current readiness;
+/// different paths are refused.
 public nonisolated struct Taigi_Engine_OpenUserData: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -402,6 +407,8 @@ public nonisolated struct Taigi_Engine_OpenUserData: Sendable {
   public var learnedPhrasesPath: String = String()
 
   public var journal: Taigi_Engine_UserDataJournal = .wal
+
+  public var inBackground: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1193,7 +1200,7 @@ nonisolated extension Taigi_Engine_UserDataResponse: SwiftProtobuf.Message, Swif
 
 nonisolated extension Taigi_Engine_OpenUserData: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".OpenUserData"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}frequency_path\0\u{3}association_path\0\u{3}custom_dictionary_path\0\u{3}learned_phrases_path\0\u{1}journal\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}frequency_path\0\u{3}association_path\0\u{3}custom_dictionary_path\0\u{3}learned_phrases_path\0\u{1}journal\0\u{3}in_background\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1206,6 +1213,7 @@ nonisolated extension Taigi_Engine_OpenUserData: SwiftProtobuf.Message, SwiftPro
       case 3: try { try decoder.decodeSingularStringField(value: &self.customDictionaryPath) }()
       case 4: try { try decoder.decodeSingularStringField(value: &self.learnedPhrasesPath) }()
       case 5: try { try decoder.decodeSingularEnumField(value: &self.journal) }()
+      case 6: try { try decoder.decodeSingularBoolField(value: &self.inBackground) }()
       default: break
       }
     }
@@ -1227,6 +1235,9 @@ nonisolated extension Taigi_Engine_OpenUserData: SwiftProtobuf.Message, SwiftPro
     if self.journal != .wal {
       try visitor.visitSingularEnumField(value: self.journal, fieldNumber: 5)
     }
+    if self.inBackground != false {
+      try visitor.visitSingularBoolField(value: self.inBackground, fieldNumber: 6)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1236,6 +1247,7 @@ nonisolated extension Taigi_Engine_OpenUserData: SwiftProtobuf.Message, SwiftPro
     if lhs.customDictionaryPath != rhs.customDictionaryPath {return false}
     if lhs.learnedPhrasesPath != rhs.learnedPhrasesPath {return false}
     if lhs.journal != rhs.journal {return false}
+    if lhs.inBackground != rhs.inBackground {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -1,12 +1,12 @@
-//! The four stores opened together, where the platform keeps their files,
-//! and the in-process search-key derivation they write and query with.
+//! The four stores opened together, and the in-process search-key
+//! derivation they write and query with.
 
 use crate::types::CustomSearchKey;
 use crate::{
-    association, custom_dictionary, frequency, learned_phrases, CustomDictionaryStore, JournalMode,
-    LearnedPhraseStore, SearchKeyDeriver, UserAssociationStore, UserFrequencyStore,
+    CustomDictionaryStore, JournalMode, LearnedPhraseStore, SearchKeyDeriver, UserAssociationStore,
+    UserDataPaths, UserFrequencyStore,
 };
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 
 /// Every key a stored custom-dictionary entry or learned phrase is findable
@@ -29,29 +29,6 @@ pub fn derive_custom_search_keys(roman: &str) -> Option<Vec<CustomSearchKey>> {
 /// queries the stores with it.
 pub fn derive_custom_query_key(input: &str, input_mode: &str) -> Option<CustomSearchKey> {
     phonetics::api::derive_custom_query_key(input, input_mode).map(CustomSearchKey::from)
-}
-
-/// Where each store's file lives. The platform decides (roadmap U5): one
-/// directory everywhere except Android, whose `user_association.db` has
-/// always lived in `filesDir` beside the others' `databases/`.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct UserDataPaths {
-    pub frequency: PathBuf,
-    pub association: PathBuf,
-    pub custom_dictionary: PathBuf,
-    pub learned_phrases: PathBuf,
-}
-
-impl UserDataPaths {
-    /// All four files in `directory`, under their shared names.
-    pub fn in_directory(directory: &Path) -> Self {
-        Self {
-            frequency: directory.join(frequency::FILE_NAME),
-            association: directory.join(association::FILE_NAME),
-            custom_dictionary: directory.join(custom_dictionary::FILE_NAME),
-            learned_phrases: directory.join(learned_phrases::FILE_NAME),
-        }
-    }
 }
 
 /// The user-data stores, constructed together and opened together. Separate

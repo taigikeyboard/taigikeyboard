@@ -14,7 +14,6 @@ use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Arc;
 
-pub(crate) const FILE_NAME: &str = "custom_dictionary.db";
 const TABLE_NAME: &str = "custom_dictionary";
 const SEARCH_KEY_TABLE_NAME: &str = "custom_search_key";
 /// v4 (2026-09-18): search-key abbreviation face = leading spelling unit per

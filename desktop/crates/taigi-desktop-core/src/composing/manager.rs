@@ -6,7 +6,6 @@
 //! owns only a mirror of the last answer, which the controller reads to
 //! decide whether a key belongs to the composition or to the host.
 
-use std::collections::HashSet;
 use std::sync::Arc;
 
 use super::clock::Clock;
@@ -16,13 +15,12 @@ use super::document_text::{
 use super::learner::NextWordLearner;
 use super::outcomes::{CandidateCommitOutcome, CandidateFetchOutcome};
 use super::presentation::{leads_with_literal_roman, presentation, PresentedCandidate};
+use super::usage::{Usage, UsageRecorder};
 use crate::engine::{
-    self, CommitContinuousArgs, ComposingTransition, ContinuousCandidate, CustomEntry,
-    CustomSearchKey, Effect, FetchArgs, FrequencyRow, LearnedPhrase,
+    self, CommitContinuousArgs, ComposingTransition, ContinuousCandidate, Effect, FetchArgs,
 };
 use crate::keys::CaretDirection;
 use crate::settings::{EngineSettings, SettingsProvider};
-use userdata::{CustomDictionarySource, FrequencySource, LearnedPhraseSource};
 
 /// Writes the engine's document effects into the client that is currently
 /// focused. Learning handshakes never reach it — the manager routes them to
@@ -41,9 +39,8 @@ pub struct ComposingManager {
     /// join, and because the candidate window anchors to what is on screen.
     display_text: String,
     settings: Arc<dyn SettingsProvider>,
-    frequency: Box<dyn FrequencySource>,
-    custom_dictionary: Box<dyn CustomDictionarySource>,
-    learned_phrases: Box<dyn LearnedPhraseSource>,
+    /// Where picks are counted; the engine reads the user's data itself.
+    usage: Box<dyn UsageRecorder>,
     learner: NextWordLearner,
     clock: Box<dyn Clock>,
     /// Unique across everything that talks to the engine in this process:
@@ -54,14 +51,12 @@ pub struct ComposingManager {
 
 impl ComposingManager {
     /// `starting_generation` defaults to 1 in production because 0 is the
-    /// generation an unset proto field carries. Every store is explicit —
+    /// generation an unset proto field carries. The recorder is explicit —
     /// a defaulted parameter is how a test would silently teach the user's
     /// own database from a fixture.
     pub fn new(
         settings: Arc<dyn SettingsProvider>,
-        frequency: Box<dyn FrequencySource>,
-        custom_dictionary: Box<dyn CustomDictionarySource>,
-        learned_phrases: Box<dyn LearnedPhraseSource>,
+        usage: Box<dyn UsageRecorder>,
         learner: NextWordLearner,
         clock: Box<dyn Clock>,
         starting_generation: u64,
@@ -71,9 +66,7 @@ impl ComposingManager {
             raw_input: String::new(),
             display_text: String::new(),
             settings,
-            frequency,
-            custom_dictionary,
-            learned_phrases,
+            usage,
             learner,
             clock,
             current_generation: starting_generation,
@@ -234,110 +227,27 @@ impl ComposingManager {
     // MARK: - Candidates
 
     /// Reads the candidates for the composition as it stands, ranked against
-    /// what the user has committed before. Two fetches: the first is neutral
-    /// and discovers the keys; the second re-ranks with the counts those keys
-    /// carry. Both go out under the same generation and settings snapshot.
-    /// Every shortfall degrades to the neutral ranking — except a second
-    /// fetch that succeeds and reports the engine idle, which is newer than
-    /// the first and wins.
+    /// what the user has committed before. One fetch: the engine reads the
+    /// user's own data — frequency, custom dictionary, learned phrases —
+    /// and ranks with it itself (user-data-engine-roadmap P3b / P5).
     pub fn fetch_candidates(&mut self) -> CandidateFetchOutcome {
         let settings = self.current_settings();
-        let generation = self.current_generation;
-        // Resolved once from this one snapshot and handed to both phases.
-        let enabled_sources_bitmask = engine::enabled_sources_bitmask(&settings.dictionary_sources);
-        // One query key serves both user-row sources (one FFI derive per
-        // keystroke); `None` = empty / residue-only buffer.
-        let query_key = (!self.raw_input.is_empty())
-            .then(|| engine::derive_custom_query_key(&self.raw_input, settings.input_mode))
-            .flatten();
-        let custom_entries = self.custom_dictionary_matches(&settings, query_key.as_ref());
-        let learned_entries = self.learned_phrase_matches(query_key.as_ref());
-
-        let Some(neutral) = engine::fetch_at_pos(
+        let Some(fetched) = engine::fetch_at_pos(
             &settings,
-            generation,
+            self.current_generation,
             &FetchArgs {
-                enabled_sources_bitmask,
-                custom_entries: &custom_entries,
-                learned_entries: &learned_entries,
-                ..FetchArgs::default()
+                now_ms: self.clock.now_ms(),
+                enabled_sources_bitmask: engine::enabled_sources_bitmask(
+                    &settings.dictionary_sources,
+                ),
             },
         ) else {
             return CandidateFetchOutcome::Unavailable;
         };
-        let Some(neutral_candidates) = neutral.candidates else {
-            self.mirror(&neutral.transition);
-            return CandidateFetchOutcome::NotComposing;
-        };
-        let rows = if neutral_candidates.is_empty() {
-            None
-        } else {
-            self.frequency_rows(&neutral_candidates)
-                .filter(|rows| !rows.is_empty())
-        };
-        let Some(rows) = rows else {
-            self.mirror(&neutral.transition);
-            return CandidateFetchOutcome::Found(neutral_candidates);
-        };
-
-        let Some(boosted) = engine::fetch_at_pos(
-            &settings,
-            generation,
-            &FetchArgs {
-                frequency_rows: &rows,
-                now_ms: self.clock.now_ms(),
-                enabled_sources_bitmask,
-                custom_entries: &custom_entries,
-                learned_entries: &learned_entries,
-            },
-        ) else {
-            self.mirror(&neutral.transition);
-            return CandidateFetchOutcome::Found(neutral_candidates);
-        };
-        self.mirror(&boosted.transition);
-        match boosted.candidates {
+        self.mirror(&fetched.transition);
+        match fetched.candidates {
             Some(candidates) => CandidateFetchOutcome::Found(candidates),
             None => CandidateFetchOutcome::NotComposing,
-        }
-    }
-
-    /// The learned rows for the candidates on offer, deduped by the key the
-    /// engine ranks on.
-    fn frequency_rows(&self, candidates: &[ContinuousCandidate]) -> Option<Vec<FrequencyRow>> {
-        let mut seen = HashSet::new();
-        let keys: Vec<String> = candidates
-            .iter()
-            .map(|candidate| candidate.display_text.clone())
-            .filter(|key| seen.insert(key.clone()))
-            .collect();
-        self.frequency.rows_for_words(&keys)
-    }
-
-    /// The user's own dictionary's matches for what is being typed. With the
-    /// setting off nothing is read at all — the gate is on the lookup.
-    fn custom_dictionary_matches(
-        &self,
-        settings: &EngineSettings,
-        key: Option<&CustomSearchKey>,
-    ) -> Vec<CustomEntry> {
-        match key {
-            Some(key) if settings.is_custom_dict_enabled => {
-                self.custom_dictionary
-                    .rows_matching(&key.family, &key.form, &key.key)
-            }
-            _ => Vec::new(),
-        }
-    }
-
-    /// §50 — the learned phrases whose key EQUALS what is being typed. Not
-    /// gated by the custom-dictionary toggle (manual rows') — learning is
-    /// always on (USER 2026-09-20: no toggle).
-    fn learned_phrase_matches(&self, key: Option<&CustomSearchKey>) -> Vec<LearnedPhrase> {
-        match key {
-            Some(key) => self
-                .learned_phrases
-                .rows_matching(&key.family, &key.form, &key.key),
-            None => Vec::new(),
         }
     }
 
@@ -449,16 +359,15 @@ impl ComposingManager {
         ) {
             return;
         }
-        if settings.is_frequency_recording_enabled {
-            self.frequency
-                .record(&candidate.display_text, &candidate.canonical_tl);
-        }
-        // §50 touch-on-use: a learned phrase picked as one candidate stays
-        // ahead of the eviction line (no-op for any other row).
-        if let Some(hanji) = candidate.hanji.as_deref().filter(|h| !h.is_empty()) {
-            self.learned_phrases
-                .touch_phrase(hanji, &candidate.canonical_tl);
-        }
+        // The engine counts it (unless the setting is off) and, for a Hanji
+        // pick, keeps a learned phrase taken whole ahead of the eviction line
+        // (§50 touch-on-use).
+        self.usage.record(&Usage {
+            display_text: candidate.display_text.clone(),
+            canonical_tl: candidate.canonical_tl.clone(),
+            hanji: candidate.hanji.clone(),
+            frequency_recording_enabled: settings.is_frequency_recording_enabled,
+        });
     }
 
     /// Promotes the composition into the continuous phase, on the same call
@@ -501,12 +410,10 @@ impl ComposingManager {
                 // shows no predictions, so there is nothing to hide and the
                 // context is exactly what must survive.
                 Effect::NextWordClearForNewComposing => {}
-                // §50 — the engine decided the composition was a phrase;
-                // into `learned_phrases.db`. Always on.
-                Effect::PhraseLearned {
-                    hanji,
-                    canonical_tl,
-                } => self.learned_phrases.learn_phrase(hanji, canonical_tl),
+                // §50 — the engine decided the composition was a phrase and
+                // writes it into its own `learned_phrases.db` (it strips this
+                // effect once the stores are open; before, nothing learns).
+                Effect::PhraseLearned { .. } => {}
                 Effect::UpdatePreedit { .. }
                 | Effect::ClearPreeditWithoutCommit
                 | Effect::CommitTextReplacingPreedit(_)

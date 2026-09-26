@@ -12,9 +12,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, OnceLock};
 
 use taigi_desktop_core::dictionary_artifacts::DictionaryArtifacts;
-use taigi_desktop_core::engine::{
-    self, CommitContinuousArgs, CustomEntry, Effect, FetchArgs, FrequencyRow,
-};
+use taigi_desktop_core::engine::{self, CommitContinuousArgs, Effect, FetchArgs};
 use taigi_desktop_core::settings::{EngineSettings, InputMode};
 
 fn dictionaries_dir() -> PathBuf {
@@ -239,94 +237,6 @@ fn literal_roman_candidate_leads_the_list_under_the_shipped_defaults() {
     assert!(
         candidates[0].hanji.is_none(),
         "the literal carries one script — a commit writes the romanization"
-    );
-    engine::reset(generation);
-}
-
-#[test]
-fn frequency_rows_re_rank_the_boosted_fetch() {
-    let _engine = engine();
-    let settings = EngineSettings::default();
-    let generation = fresh_generation();
-    compose("tai", &settings, generation);
-    let neutral = engine::fetch_at_pos(&settings, generation, &FetchArgs::default())
-        .expect("fetch")
-        .candidates
-        .expect("continuous");
-    assert!(neutral.len() > 2, "{}", neutral.len());
-    // Boost the LAST candidate hard; it must move up past where it was.
-    let underdog = neutral.last().expect("non-empty").clone();
-    assert_ne!(underdog.display_text, neutral[0].display_text);
-    let rows = [FrequencyRow {
-        word: underdog.display_text.clone(),
-        tl: underdog.canonical_tl.clone(),
-        count: 1_000,
-        last_used_ms: 999_000,
-    }];
-    let boosted = engine::fetch_at_pos(
-        &settings,
-        generation,
-        &FetchArgs {
-            frequency_rows: &rows,
-            now_ms: 1_000_000,
-            ..FetchArgs::default()
-        },
-    )
-    .expect("fetch")
-    .candidates
-    .expect("continuous");
-    let boosted_index = boosted
-        .iter()
-        .position(|candidate| {
-            candidate.display_text == underdog.display_text
-                && candidate.canonical_tl == underdog.canonical_tl
-        })
-        .expect("underdog still listed");
-    let neutral_index = neutral.len() - 1;
-    assert!(
-        boosted_index < neutral_index,
-        "a learned count moves the candidate up: {neutral_index} -> {boosted_index}"
-    );
-    engine::reset(generation);
-}
-
-#[test]
-fn custom_entries_ride_the_fetch() {
-    let _engine = engine();
-    let settings = EngineSettings::default();
-    let generation = fresh_generation();
-    compose("gautsa", &settings, generation);
-    let custom = [CustomEntry {
-        roman: "gâu-tsá".into(),
-        hanzi: "𠢕早".into(),
-    }];
-    let rows = [FrequencyRow {
-        word: "𠢕早".into(),
-        tl: "gâu-tsá".into(),
-        count: 5,
-        last_used_ms: 1_000,
-    }];
-    let fetch = engine::fetch_at_pos(
-        &settings,
-        generation,
-        &FetchArgs {
-            frequency_rows: &rows,
-            now_ms: 2_000,
-            custom_entries: &custom,
-            ..FetchArgs::default()
-        },
-    )
-    .expect("fetch");
-    let candidates = fetch.candidates.expect("continuous");
-    assert!(
-        candidates
-            .iter()
-            .any(|candidate| candidate.hanji.as_deref() == Some("𠢕早")),
-        "custom entry surfaces: {:?}",
-        candidates
-            .iter()
-            .map(|c| &c.display_text)
-            .collect::<Vec<_>>()
     );
     engine::reset(generation);
 }

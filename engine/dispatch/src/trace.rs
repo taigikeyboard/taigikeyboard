@@ -171,7 +171,7 @@ fn emit(at: Instant, fields: std::fmt::Arguments<'_>) {
 
 /// `(domain, method_tag)` read straight from the request's wire bytes, so
 /// tracing costs no second decode. The domain is the `Request.payload`
-/// oneof field (`envelope.proto`, tags 10–14); every sub-request message
+/// oneof field (`envelope.proto`, tags 10–15); every sub-request message
 /// holds only its `oneof method`, so its first field number IS the method
 /// tag. The analyzer maps `(domain, tag)` to a name from `protos/proto/`.
 fn classify(bytes: &[u8]) -> (&'static str, u64) {
@@ -183,6 +183,7 @@ fn classify(bytes: &[u8]) -> (&'static str, u64) {
             12 => "lexicon",
             13 => "nextword",
             14 => "case",
+            15 => "userdata",
             _ => continue,
         };
         let method_tag = payload

@@ -1,36 +1,26 @@
 //! The per-process state every text-service instance shares: the live
-//! settings, the user-data stores, the engine's lexicon, and what this host
-//! is allowed to touch. One process may create several text services (one
-//! per thread manager); the files and the engine are one per process.
+//! settings, the directory the engine keeps the user's data in, the engine's
+//! lexicon, and what this host is allowed to touch. One process may create
+//! several text services (one per thread manager); the files and the engine
+//! are one per process.
 //!
 //! Lazy by contract (roadmap W3): `shared()` only probes paths and reads the
-//! settings file; the stores open and the lexicon loads on the first key
-//! the TIP handles (`prepare_for_first_key`, PR5b), never in `Activate`.
+//! settings file; the engine opens the user data and the lexicon loads on
+//! the first key the TIP handles (`prepare_for_first_key`, PR5b), never in
+//! `Activate`.
 
 use crate::module::install_directory;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
-use taigi_desktop_core::composing::{
-    AssociationSink, ComposingManager, ComposingSessionCoordinator, CustomDictionarySource,
-    FrequencySource, LearnedPhraseSource, NextWordLearner, NoStores, SystemClock,
-};
-
-/// The four seams the composing manager reads and writes through — the real
-/// stores, or `NoStores` in an AppContainer host that cannot reach `%APPDATA%`.
-type StoreSeams = (
-    Box<dyn FrequencySource>,
-    Box<dyn CustomDictionarySource>,
-    Box<dyn LearnedPhraseSource>,
-    Box<dyn AssociationSink>,
-);
+use taigi_desktop_core::composing::ComposingSessionCoordinator;
 use taigi_desktop_core::dictionary_artifacts::DictionaryArtifacts;
-use taigi_desktop_core::engine::{lexicon_install, LexiconInstallStats};
+use taigi_desktop_core::engine::{lexicon_install, user_data, LexiconInstallStats};
 use taigi_desktop_core::keys::ShortcutConflicts;
 use taigi_desktop_core::settings::{
     keys, SettingsDocument, SettingsProvider, StaticSettingsProvider,
 };
 use taigi_desktop_core::strings::{DisplayLanguage, StringResolver};
-use taigi_desktop_storage::{user_data_directory, LiveSettings, SettingsFileStore, UserDataStores};
+use taigi_desktop_storage::{user_data_directory, LiveSettings, SettingsFileStore};
 
 /// What this host process may touch, probed ONCE and logged once (Codex W2:
 /// an AppContainer host cannot read `%APPDATA%`; the TIP then runs on
@@ -52,7 +42,9 @@ pub struct Runtime {
     pub capability: DataCapability,
     pub settings: Arc<dyn SettingsProvider + Send + Sync>,
     settings_store: Option<SettingsFileStore>,
-    stores: Option<UserDataStores>,
+    /// Where the engine keeps the user's data; `None` in an AppContainer
+    /// host that cannot reach `%APPDATA%` — nothing is learned there.
+    data_directory: Option<PathBuf>,
     first_key: OnceLock<FirstKeySetup>,
     /// The one composing engine driver per process, keyed by context
     /// token (roadmap W3). Behind a mutex because one process may host
@@ -91,10 +83,9 @@ impl Runtime {
             Some(store) => Arc::new(LiveSettings::new(store.clone())),
             None => Arc::new(StaticSettingsProvider::new(SettingsDocument::default())),
         };
-        let stores = data_directory.map(UserDataStores::new);
         let capability = DataCapability {
             settings: settings_store.is_some(),
-            learning: stores.is_some(),
+            learning: data_directory.is_some(),
         };
         log::info!(
             "runtime.capability settings={} learning={}",
@@ -105,7 +96,7 @@ impl Runtime {
             capability,
             settings,
             settings_store,
-            stores,
+            data_directory,
             first_key: OnceLock::new(),
             coordinator: OnceLock::new(),
         }
@@ -142,56 +133,31 @@ impl Runtime {
         self.coordinator_if_built()?.try_lock().ok()
     }
 
-    /// The coordinator, built on first use over the stores this host has
-    /// (`NoStores` where it has none). `prepare_for_first_key` must have run.
+    /// The coordinator, built on first use; picks reach the engine only where
+    /// this host has a data directory. `prepare_for_first_key` must have run.
     pub fn coordinator(&self) -> &Mutex<ComposingSessionCoordinator> {
         self.coordinator.get_or_init(|| {
             let settings: Arc<dyn taigi_desktop_core::settings::SettingsProvider> =
                 Arc::clone(&self.settings) as _;
-            let (frequency, custom, learned, association): StoreSeams = match &self.stores {
-                Some(stores) => (
-                    Box::new(Arc::clone(&stores.frequency)),
-                    Box::new(Arc::clone(&stores.custom_dictionary)),
-                    Box::new(Arc::clone(&stores.learned_phrases)),
-                    Box::new(Arc::clone(&stores.association)),
-                ),
-                None => (
-                    Box::new(NoStores),
-                    Box::new(NoStores),
-                    Box::new(NoStores),
-                    Box::new(NoStores),
-                ),
-            };
-            let learner = NextWordLearner::new(association, Box::new(SystemClock));
-            let manager = ComposingManager::new(
+            Mutex::new(ComposingSessionCoordinator::for_desktop(
                 settings,
-                frequency,
-                custom,
-                learned,
-                learner,
-                Box::new(SystemClock),
-                1,
-            );
-            Mutex::new(ComposingSessionCoordinator::new(manager))
+                self.data_directory.is_some(),
+            ))
         })
     }
 
     /// Everything the first CONSUMED key needs, done once per process (never
     /// for a key merely observed — the classifier decides first, PR5b):
-    /// the lexicon installed from the install directory, the stores opened
-    /// (seed + key re-derivation queued behind the open, as on macOS
-    /// `openUserDataStores`), and the shortcut registries reconciled
-    /// (`AppDelegate.swift:56-70`). Idempotent.
+    /// the lexicon installed from the install directory, the engine told
+    /// to open the user data (it finishes on a thread of its own), and the
+    /// shortcut registries reconciled (`AppDelegate.swift:56-70`). Idempotent.
     pub fn prepare_for_first_key(&self) -> &FirstKeySetup {
         self.first_key.get_or_init(|| {
             let lexicon = self.install_lexicon();
-            if let Some(stores) = &self.stores {
-                stores.open();
-                let custom_dictionary = Arc::clone(&stores.custom_dictionary);
-                std::thread::Builder::new()
-                    .name("taigi-custom-dictionary-launch".into())
-                    .spawn(move || custom_dictionary.finish_takeover())
-                    .ok();
+            if let Some(directory) = &self.data_directory {
+                // The engine puts the stores in use before this returns and
+                // finishes opening on a thread of its own.
+                user_data::open(directory);
             }
             self.reconcile_shortcuts();
             FirstKeySetup { lexicon }

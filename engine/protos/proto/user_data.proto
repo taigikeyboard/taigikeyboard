@@ -54,16 +54,22 @@ enum UserDataJournal {
 
 // Opens the stores for this process, once. Absolute file paths: one
 // directory everywhere except Android, whose `user_association.db` lives in
-// `filesDir`. Synchronous — every store is open, taken over (roadmap U7) and
-// the custom dictionary re-derived and seeded before the answer — so call it
-// off the main thread. A repeat with the same paths answers the stores'
-// current readiness; different paths are refused.
+// `filesDir`. The stores are in use from the moment this is handled: a pick
+// or a learned phrase reported meanwhile queues behind the open, a fetch
+// ranks without the user's data until it is ready. By default the answer
+// waits until every store is open, taken over (roadmap U7) and the custom
+// dictionary re-derived and seeded — call it off the main thread then. With
+// `in_background` the engine finishes that on a thread of its own and
+// answers at once (readiness as of now), which a key path can afford. A
+// repeat with the same paths answers the stores' current readiness;
+// different paths are refused.
 message OpenUserData {
   string frequency_path = 1;
   string association_path = 2;
   string custom_dictionary_path = 3;
   string learned_phrases_path = 4;
   UserDataJournal journal = 5;
+  bool in_background = 6;
 }
 
 // Which stores are ready. A store that is not — a file from a later build,

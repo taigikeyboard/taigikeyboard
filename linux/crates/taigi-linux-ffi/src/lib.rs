@@ -19,7 +19,8 @@ use taigi_desktop_core::keys::CandidateNavigation;
 use taigi_linux_core::{chrome, session, Emit, EngineState, LookupTableContent, MenuItem, Runtime};
 use taigi_linux_platform::{open_settings, RawKeyEvent};
 
-/// One process-wide runtime (settings, stores, lexicon, coordinator).
+/// One process-wide runtime (settings, the user-data directory, lexicon,
+/// coordinator).
 pub struct TaigiRuntime {
     inner: Arc<Runtime>,
 }

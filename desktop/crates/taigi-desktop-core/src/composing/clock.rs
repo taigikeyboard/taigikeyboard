@@ -1,5 +1,4 @@
-//! The clock the composing path stamps learning with. Stays with the
-//! desktop manager; the store seams moved to the engine `userdata` crate.
+//! The clock the composing path stamps learning with.
 
 /// Milliseconds since the Unix epoch. Injectable because the engine's
 /// association window is a comparison against this clock, and a test that

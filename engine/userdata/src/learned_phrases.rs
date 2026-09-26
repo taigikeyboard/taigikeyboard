@@ -12,7 +12,6 @@ use crate::types::{CustomSearchKey, LearnedPhrase};
 use rusqlite::{params, Connection};
 use std::path::PathBuf;
 
-pub(crate) const FILE_NAME: &str = "learned_phrases.db";
 const TABLE_NAME: &str = "learned_phrases";
 const SEARCH_KEY_TABLE_NAME: &str = "learned_search_key";
 /// `user_version` — a key-derivation change bumps it and adds a backfill step.

@@ -29,7 +29,14 @@
 //! 7. The key sink's own `ITfContext` argument is the authority on which
 //!    context is typing; a late `OnSetFocus` is a hint, not the truth.
 
+use std::sync::Arc;
+
+use super::clock::SystemClock;
+use super::learner::NextWordLearner;
 use super::manager::ComposingManager;
+use super::usage::{EngineUsage, NoUsage, UsageRecorder};
+use crate::settings::SettingsProvider;
+use userdata::NoStores;
 
 /// Identity of one input context. Allocated by the shell (a counter, never a
 /// COM pointer address: a torn-down context leaves its ownership behind and
@@ -49,6 +56,27 @@ pub struct ComposingSessionCoordinator {
 }
 
 impl ComposingSessionCoordinator {
+    /// What a desktop shell runs: the engine reads, ranks and keeps the
+    /// user's data (user-data-engine-roadmap P5), so the manager reports
+    /// picks — only where the process has a data directory to keep them in
+    /// (`learns`) — and the engine records the associations it decides on
+    /// itself (`NoStores`: U9, removed in P9).
+    pub fn for_desktop(settings: Arc<dyn SettingsProvider>, learns: bool) -> Self {
+        let usage: Box<dyn UsageRecorder> = if learns {
+            Box::new(EngineUsage)
+        } else {
+            Box::new(NoUsage)
+        };
+        let learner = NextWordLearner::new(Box::new(NoStores), Box::new(SystemClock));
+        Self::new(ComposingManager::new(
+            settings,
+            usage,
+            learner,
+            Box::new(SystemClock),
+            1,
+        ))
+    }
+
     pub fn new(manager: ComposingManager) -> Self {
         Self {
             manager,

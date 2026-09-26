@@ -14,12 +14,10 @@ use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 use taigi_desktop_core::composing::{
     AssociationSink, CandidateCommitOutcome, CandidateFetchOutcome, CandidateScript, Clock,
     ComposingEffectExecutor, ComposingManager, ComposingSessionCoordinator, ContextToken,
-    CustomDictionarySource, FrequencySource, LearnedPhraseSource, NextWordLearner,
+    NextWordLearner, Usage, UsageRecorder,
 };
 use taigi_desktop_core::dictionary_artifacts::DictionaryArtifacts;
-use taigi_desktop_core::engine::{
-    self, AssociationPair, ContinuousCandidate, CustomEntry, Effect, FrequencyRow, LearnedPhrase,
-};
+use taigi_desktop_core::engine::{self, AssociationPair, ContinuousCandidate, Effect};
 use taigi_desktop_core::keys::CaretDirection;
 use taigi_desktop_core::settings::{
     keys, CandidateDisplayMode, SettingsDocument, SettingsProvider,
@@ -62,76 +60,39 @@ impl SettingsProvider for MutableSettings {
     }
 }
 
+/// What the manager handed on: each pick it reported, the bigrams the
+/// learner was asked to keep (the engine persists them in production; built
+/// without `user-data`, this engine returns the effects, so the desktop's own
+/// context rules stay testable — U9), and the clock.
 #[derive(Default)]
 struct Memory {
-    frequency: Mutex<HashMap<(String, String), i64>>,
+    usages: Mutex<Vec<Usage>>,
     associations: Mutex<Vec<AssociationPair>>,
-    custom: Mutex<Vec<CustomEntry>>,
-    /// §50 — what the manager asked the store to learn: `(hanzi, canonical_tl)`.
-    learned: Mutex<Vec<(String, String)>>,
     now_ms: Mutex<i64>,
+}
+
+impl Memory {
+    /// The picks the engine would count, per `(display text, canonical TL)`.
+    fn counted(&self) -> HashMap<(String, String), i64> {
+        let mut counted = HashMap::new();
+        for usage in self.usages.lock().unwrap().iter() {
+            if usage.frequency_recording_enabled {
+                *counted
+                    .entry((usage.display_text.clone(), usage.canonical_tl.clone()))
+                    .or_insert(0) += 1;
+            }
+        }
+        counted
+    }
 }
 
 #[derive(Clone)]
 struct Handle(Arc<Memory>);
 
-impl FrequencySource for Handle {
-    fn rows_for_words(&self, words: &[String]) -> Option<Vec<FrequencyRow>> {
-        let store = self.0.frequency.lock().unwrap();
-        Some(
-            store
-                .iter()
-                .filter(|((word, _), _)| words.contains(word))
-                .map(|((word, tl), count)| FrequencyRow {
-                    word: word.clone(),
-                    tl: tl.clone(),
-                    count: *count,
-                    last_used_ms: 1,
-                })
-                .collect(),
-        )
+impl UsageRecorder for Handle {
+    fn record(&self, usage: &Usage) {
+        self.0.usages.lock().unwrap().push(usage.clone());
     }
-    fn record(&self, word: &str, tl: &str) {
-        *self
-            .0
-            .frequency
-            .lock()
-            .unwrap()
-            .entry((word.to_owned(), tl.to_owned()))
-            .or_insert(0) += 1;
-    }
-}
-
-impl CustomDictionarySource for Handle {
-    fn rows_matching(&self, _family: &str, _form: &str, key: &str) -> Vec<CustomEntry> {
-        self.0
-            .custom
-            .lock()
-            .unwrap()
-            .iter()
-            .filter(|entry| {
-                entry
-                    .roman
-                    .to_ascii_lowercase()
-                    .starts_with(&key[..key.len().min(2)])
-            })
-            .cloned()
-            .collect()
-    }
-}
-
-impl LearnedPhraseSource for Handle {
-    fn rows_matching(&self, _family: &str, _form: &str, _key: &str) -> Vec<LearnedPhrase> {
-        Vec::new()
-    }
-    fn learn_phrase(&self, hanzi: &str, canonical_tl: &str) {
-        self.0
-            .learned
-            .lock()
-            .unwrap()
-            .push((hanzi.to_owned(), canonical_tl.to_owned()));
-    }
-    fn touch_phrase(&self, _hanzi: &str, _canonical_tl: &str) {}
 }
 
 impl AssociationSink for Handle {
@@ -195,8 +156,6 @@ fn rig() -> Rig {
     let settings = MutableSettings::default();
     let manager = ComposingManager::new(
         Arc::new(settings.clone()),
-        Box::new(handle.clone()),
-        Box::new(handle.clone()),
         Box::new(handle.clone()),
         NextWordLearner::new(Box::new(handle.clone()), Box::new(handle.clone())),
         Box::new(handle),
@@ -616,8 +575,8 @@ fn commit_candidate_after_the_composition_ended_is_ignored() {
     assert_eq!(outcome, CandidateCommitOutcome::Ignored);
     assert_eq!(committed, None);
     assert!(
-        rig.memory.frequency.lock().unwrap().is_empty(),
-        "an ignored commit learns nothing"
+        rig.memory.usages.lock().unwrap().is_empty(),
+        "an ignored commit reports nothing"
     );
 }
 
@@ -652,7 +611,7 @@ fn enter_on_a_fresh_bar_commits_the_typed_literal_in_either_mode() {
         assert_eq!(committed.as_deref(), Some("taigi"), "swapped={swapped}");
         assert!(!rig.manager.is_composing(), "swapped={swapped}");
         assert_eq!(rig.recorder.committed(), ["taigi"], "swapped={swapped}");
-        let learned = rig.memory.frequency.lock().unwrap().clone();
+        let learned = rig.memory.counted();
         assert_eq!(
             learned.keys().collect::<Vec<_>>(),
             [&("taigi".to_string(), candidates[0].canonical_tl.clone())],
@@ -715,7 +674,7 @@ fn commit_candidate_counts_the_word_under_its_reading_in_either_script() {
     rig.type_text("taigi");
     let taigi = rig.candidate("台語");
     rig.commit(&taigi, CandidateScript::Alternate);
-    let store = rig.memory.frequency.lock().unwrap();
+    let store = rig.memory.counted();
     assert_eq!(
         store.get(&("台語".to_owned(), "tâi-gí".to_owned())),
         Some(&2),
@@ -734,29 +693,15 @@ fn commit_candidate_with_recording_off_learns_nothing() {
     let taigi = rig.candidate("台語");
     let (outcome, _) = rig.commit(&taigi, CandidateScript::Primary);
     assert_eq!(outcome, CandidateCommitOutcome::Finalized);
-    assert!(rig.memory.frequency.lock().unwrap().is_empty());
-}
-
-#[test]
-fn a_repeatedly_committed_candidate_overtakes_the_one_above_it() {
-    let _lock = engine_lock();
-    let mut rig = rig();
-    rig.type_text("tai");
-    let neutral = rig.candidates();
-    let underdog = neutral.last().cloned().expect("candidates");
-    assert_ne!(underdog.display_text, neutral[0].display_text);
-    rig.memory.frequency.lock().unwrap().insert(
-        (underdog.display_text.clone(), underdog.canonical_tl.clone()),
-        500,
+    assert!(
+        rig.memory.counted().is_empty(),
+        "the setting says do not count"
     );
-    let boosted = rig.candidates();
-    let position = boosted
-        .iter()
-        .position(|c| {
-            c.display_text == underdog.display_text && c.canonical_tl == underdog.canonical_tl
-        })
-        .expect("still listed");
-    assert!(position < neutral.len() - 1, "{position}");
+    assert_eq!(
+        rig.memory.usages.lock().unwrap().len(),
+        1,
+        "the pick is still reported: a learned phrase is touched either way"
+    );
 }
 
 #[test]
@@ -858,30 +803,6 @@ fn a_new_session_and_a_mid_composition_punctuation_both_forget_the_context() {
         .any(|p| p.next == "文"));
 }
 
-#[test]
-fn custom_entries_reach_the_fetch_only_while_the_setting_is_on() {
-    let _lock = engine_lock();
-    let mut rig = rig();
-    // A pair the bundled dictionary does not carry, so its presence can only
-    // come from the custom store (𠢕早 / gâu-tsá is a real dictionary word
-    // and would surface with the setting off too).
-    rig.memory.custom.lock().unwrap().push(CustomEntry {
-        roman: "khiam-tsi".into(),
-        hanzi: "測試自訂".into(),
-    });
-    rig.type_text("khiamtsi");
-    assert!(rig
-        .candidates()
-        .iter()
-        .any(|c| c.hanji.as_deref() == Some("測試自訂")));
-    rig.settings
-        .edit(|doc| doc.set_bool(&keys::IS_CUSTOM_DICT_ENABLED, false));
-    assert!(!rig
-        .candidates()
-        .iter()
-        .any(|c| c.hanji.as_deref() == Some("測試自訂")));
-}
-
 // MARK: - ComposingSessionCoordinatorTests
 
 #[test]
@@ -920,31 +841,4 @@ fn only_the_claiming_context_can_drive_the_engine_and_handover_starts_idle() {
     coordinator.release(b);
     assert!(coordinator.manager(b).is_none());
     assert_eq!(coordinator.current_owner(), None);
-}
-
-// ---- Learned phrases (§50) ------------------------------------------------
-
-#[test]
-fn a_composition_of_hanji_picks_is_learned_once_the_last_segment_commits() {
-    let _lock = engine_lock();
-    let mut rig = rig();
-    // 我 + 來 typed as one buffer and picked one segment at a time.
-    rig.type_text("gualai");
-    let gua = rig.candidate("我");
-    let (outcome, _) = rig.commit(&gua, CandidateScript::Primary);
-    assert_eq!(outcome, CandidateCommitOutcome::Nailed);
-    assert!(
-        rig.memory.learned.lock().unwrap().is_empty(),
-        "a mid-commit learns nothing"
-    );
-    let lai = rig.candidate("來");
-    let (outcome, committed) = rig.commit(&lai, CandidateScript::Primary);
-    assert_eq!(outcome, CandidateCommitOutcome::Finalized);
-    assert_eq!(committed.as_deref(), Some("我來"));
-    assert_eq!(
-        *rig.memory.learned.lock().unwrap(),
-        // 我來 is no dictionary word: the two picks learn as two words (§50).
-        vec![("我來".to_owned(), "guá lâi".to_owned())],
-        "the store is asked to learn the joined pair"
-    );
 }

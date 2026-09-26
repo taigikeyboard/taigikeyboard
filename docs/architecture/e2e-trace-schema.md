@@ -60,7 +60,7 @@ Readers ignore fields they do not know, so adding a field is not a version bump;
 | Field | Meaning |
 |---|---|
 | `req_id`, `generation` | from the `Response` (`envelope.proto` `Request.id` / `generation`); 0 when the request did not decode |
-| `domain` | `phonetics` / `composing` / `lexicon` / `nextword` / `case` (the `Request.payload` field, tags 10–14), `none` when absent or undecodable |
+| `domain` | `phonetics` / `composing` / `lexicon` / `nextword` / `case` / `userdata` (the `Request.payload` field, tags 10–15), `none` when absent or undecodable |
 | `method_tag` | field number of the sub-request's `oneof method` (every sub-request holds only that oneof); the analyzer names it from `engine/protos/proto/*.proto` |
 | `error` | `ErrorCode` value (0 = OK) |
 | `dur_us` | decode + dispatch + encode time; excludes the trace write |

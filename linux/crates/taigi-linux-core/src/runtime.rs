@@ -1,43 +1,33 @@
 //! The per-process state every engine object shares: the live settings, the
-//! user-data stores, the engine's lexicon, and the one composing
-//! coordinator (roadmap L13). Port of `taigi-windows-tsf::runtime`, with
-//! the XDG directories in place of `%APPDATA%` and no AppContainer
-//! degradation — a Linux session without a home directory has no user to
-//! learn from, and the stores then run as `NoStores` the same way.
+//! directory the engine keeps the user's data in, the engine's lexicon, and
+//! the one composing coordinator (roadmap L13). Port of
+//! `taigi-windows-tsf::runtime`, with the XDG directories in place of
+//! `%APPDATA%` and no AppContainer degradation — a Linux session without a
+//! home directory has no user to learn from, and nothing is learned.
 //!
 //! Lazy by contract: `probe` only resolves paths and reads the settings
-//! file; the stores open and the lexicon loads on the first key an engine
-//! CONSUMES (`prepare_for_first_key`), never at `CreateEngine`.
+//! file; the engine opens the user data and the lexicon loads on the first
+//! key an engine CONSUMES (`prepare_for_first_key`), never at `CreateEngine`.
 
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
-use taigi_desktop_core::composing::{
-    AssociationSink, ComposingManager, ComposingSessionCoordinator, ContextToken,
-    CustomDictionarySource, FrequencySource, LearnedPhraseSource, NextWordLearner, NoStores,
-    SystemClock,
-};
+use taigi_desktop_core::composing::{ComposingSessionCoordinator, ContextToken};
 use taigi_desktop_core::dictionary_artifacts::DictionaryArtifacts;
-use taigi_desktop_core::engine::{lexicon_install, LexiconInstallStats};
+use taigi_desktop_core::engine::{lexicon_install, user_data, LexiconInstallStats};
 use taigi_desktop_core::keys::ShortcutConflicts;
 use taigi_desktop_core::settings::{
     keys, SettingsDocument, SettingsProvider, StaticSettingsProvider,
 };
 use taigi_desktop_core::strings::{DisplayLanguage, StringResolver};
-use taigi_desktop_storage::{created, LiveSettings, SettingsFileStore, UserDataStores};
+use taigi_desktop_storage::{created, LiveSettings, SettingsFileStore};
 use taigi_linux_platform::{dictionaries_directory, system_locale, UserDirectories};
-
-type StoreSeams = (
-    Box<dyn FrequencySource>,
-    Box<dyn CustomDictionarySource>,
-    Box<dyn LearnedPhraseSource>,
-    Box<dyn AssociationSink>,
-);
 
 pub struct Runtime {
     pub settings: Arc<dyn SettingsProvider + Send + Sync>,
     settings_store: Option<SettingsFileStore>,
-    stores: Option<UserDataStores>,
+    /// Where the engine keeps the user's data; `None` = no learning.
+    data_directory: Option<PathBuf>,
     dictionaries: PathBuf,
     first_key: OnceLock<FirstKeySetup>,
     /// The one composing engine driver per process, keyed by context token
@@ -54,17 +44,20 @@ pub struct FirstKeySetup {
 }
 
 /// A runtime over a temporary XDG tree with no dictionaries: settings are
-/// live (a file), learning stores exist, the lexicon is absent.
+/// live (a file), the lexicon is absent, and nothing is learned — the
+/// engine's user data is one per process, and several of these share a
+/// test binary.
 #[cfg(test)]
 pub(crate) fn temporary_runtime() -> (tempfile::TempDir, Runtime) {
     let directory = tempfile::tempdir().expect("tempdir");
-    let runtime = Runtime::from_directories(
+    let mut runtime = Runtime::from_directories(
         Some(UserDirectories {
             config: directory.path().join("config"),
             data: directory.path().join("data"),
         }),
         directory.path().join("no-dictionaries"),
     );
+    runtime.data_directory = None;
     (directory, runtime)
 }
 
@@ -108,17 +101,16 @@ impl Runtime {
             Some(store) => Arc::new(LiveSettings::new(store.clone())),
             None => Arc::new(StaticSettingsProvider::new(SettingsDocument::default())),
         };
-        let stores = data.map(UserDataStores::new);
         log::info!(
             "runtime.probe settings={} learning={} dictionaries={}",
             settings_store.is_some(),
-            stores.is_some(),
+            data.is_some(),
             dictionaries.display()
         );
         Self {
             settings,
             settings_store,
-            stores,
+            data_directory: data,
             dictionaries,
             first_key: OnceLock::new(),
             coordinator: OnceLock::new(),
@@ -148,54 +140,30 @@ impl Runtime {
             .unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 
-    /// The coordinator, built on first use over the stores this process
-    /// has (`NoStores` where it has none). `prepare_for_first_key` must
-    /// have run.
+    /// The coordinator, built on first use; picks reach the engine only where
+    /// this process has a data directory. `prepare_for_first_key` must have
+    /// run.
     pub fn coordinator(&self) -> &Mutex<ComposingSessionCoordinator> {
         self.coordinator.get_or_init(|| {
             let settings: Arc<dyn SettingsProvider> = Arc::clone(&self.settings) as _;
-            let (frequency, custom, learned, association): StoreSeams = match &self.stores {
-                Some(stores) => (
-                    Box::new(Arc::clone(&stores.frequency)),
-                    Box::new(Arc::clone(&stores.custom_dictionary)),
-                    Box::new(Arc::clone(&stores.learned_phrases)),
-                    Box::new(Arc::clone(&stores.association)),
-                ),
-                None => (
-                    Box::new(NoStores),
-                    Box::new(NoStores),
-                    Box::new(NoStores),
-                    Box::new(NoStores),
-                ),
-            };
-            let learner = NextWordLearner::new(association, Box::new(SystemClock));
-            let manager = ComposingManager::new(
+            Mutex::new(ComposingSessionCoordinator::for_desktop(
                 settings,
-                frequency,
-                custom,
-                learned,
-                learner,
-                Box::new(SystemClock),
-                1,
-            );
-            Mutex::new(ComposingSessionCoordinator::new(manager))
+                self.data_directory.is_some(),
+            ))
         })
     }
 
     /// Everything the first CONSUMED key needs, once per process: the
-    /// lexicon installed from the dictionaries directory, the stores
-    /// opened (seed + key re-derivation behind the open, as on macOS
-    /// `openUserDataStores`), the shortcut registries reconciled. Idempotent.
+    /// lexicon installed from the dictionaries directory, the engine told to
+    /// open the user data (it finishes on a thread of its own), the shortcut
+    /// registries reconciled. Idempotent.
     pub fn prepare_for_first_key(&self) -> &FirstKeySetup {
         self.first_key.get_or_init(|| {
             let lexicon = self.install_lexicon();
-            if let Some(stores) = &self.stores {
-                stores.open();
-                let custom_dictionary = Arc::clone(&stores.custom_dictionary);
-                std::thread::Builder::new()
-                    .name("taigi-custom-dictionary-launch".into())
-                    .spawn(move || custom_dictionary.finish_takeover())
-                    .ok();
+            if let Some(directory) = &self.data_directory {
+                // The engine puts the stores in use before this returns and
+                // finishes opening on a thread of its own.
+                user_data::open(directory);
             }
             self.reconcile_shortcuts();
             FirstKeySetup { lexicon }

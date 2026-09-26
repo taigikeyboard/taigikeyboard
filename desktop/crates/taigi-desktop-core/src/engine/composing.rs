@@ -15,8 +15,7 @@
 use protos::engine::{
     composing_request, request, response, Append, CaretDirection as WireCaretDirection,
     CommitContinuous, CommitPreeditThenInsertExternal, CommitRaw, ComposingRequest,
-    ComposingResponse, CustomDictEntry, DeleteBackward, EnterContinuous, FetchAtPos,
-    FrequencyEntry, LearnedEntry, MoveCaret, Reset, TelexKey,
+    ComposingResponse, DeleteBackward, EnterContinuous, FetchAtPos, MoveCaret, Reset, TelexKey,
 };
 
 use crate::keys::CaretDirection;
@@ -24,10 +23,6 @@ use crate::keys::CaretDirection;
 use super::bridge::{continuous_app_config, record_failure, roundtrip};
 use super::transition::{ComposingTransition, ContinuousCandidate, ContinuousFetchResult};
 use crate::settings::EngineSettings;
-
-// The store rows moved to the engine `userdata` crate (user-data-engine-roadmap
-// P1); re-exported here until the desktop switch (P5) drops the old paths.
-pub use userdata::{CustomEntry, FrequencyRow, LearnedPhrase};
 
 /// Appends one typed character to the raw buffer.
 ///
@@ -163,24 +158,16 @@ pub fn enter_continuous(settings: &EngineSettings, generation: u64) -> Option<Co
     )
 }
 
-/// What one `FetchAtPos` carries besides the settings. Computed once per
-/// keystroke by the caller and passed to BOTH fetch phases, so the neutral
-/// and boosted answers describe one composition under one set of rules.
-#[derive(Clone, Debug, Default, PartialEq)]
-pub struct FetchArgs<'a> {
-    /// What the user committed before; the engine turns it into a boost.
-    /// Empty is not degraded: "rank without usage history".
-    pub frequency_rows: &'a [FrequencyRow],
+/// What one `FetchAtPos` carries besides the settings. The user's own data
+/// is not among it: the engine reads its stores itself and ranks in one
+/// call (user-data-engine-roadmap P3b / P5).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct FetchArgs {
     /// The clock the engine's recency ranking reads.
     pub now_ms: i64,
     /// `0` is not "no sources": the engine reads it as "platform did not
     /// wire this" and searches all of them — see `lexicon::enabled_sources_bitmask`.
     pub enabled_sources_bitmask: u32,
-    /// The user's own dictionary rows matching the raw buffer, columns as
-    /// stored — the engine dedupes `(roman, hanji)` and folds to canonical TL.
-    pub custom_entries: &'a [CustomEntry],
-    /// §50 — learned phrases whose whole-buffer key equals the raw buffer.
-    pub learned_entries: &'a [LearnedPhrase],
 }
 
 /// Reads the candidates for the current continuous composition.
@@ -191,20 +178,10 @@ pub struct FetchArgs<'a> {
 pub fn fetch_at_pos(
     settings: &EngineSettings,
     generation: u64,
-    args: &FetchArgs<'_>,
+    args: &FetchArgs,
 ) -> Option<ContinuousFetchResult> {
     let fetch = FetchAtPos {
-        frequency_entries: args.frequency_rows.iter().map(frequency_entry).collect(),
         now_ms: args.now_ms,
-        custom_entries: args.custom_entries.iter().map(custom_dict_entry).collect(),
-        learned_entries: args
-            .learned_entries
-            .iter()
-            .map(|phrase| LearnedEntry {
-                hanji: phrase.hanzi.clone(),
-                canonical_tl: phrase.canonical_tl.clone(),
-            })
-            .collect(),
         enabled_sources_bitmask: args.enabled_sources_bitmask,
         // §34/S22 — positive platform setting → inverted proto disable gate
         // (the field's own comment carries why), so Show Typed Text First ON leaves the
@@ -213,10 +190,9 @@ pub fn fetch_at_pos(
         // `macos/Sources/TaigiInputMethodCore/Engine/RustEngineBridge+Composing.swift`
         // `composingFetchAtPos`, which inverts the same setting onto the same field.
         literal_roman_candidate_disabled: !settings.is_literal_roman_candidate_enabled,
-        // Read by the engine only once it owns the user data (P5 switches
-        // the desktop); until then `custom_entries` already goes out empty
-        // with the setting off.
+        // The engine reads the user's dictionary only with this setting on.
         custom_dictionary_disabled: !settings.is_custom_dict_enabled,
+        ..FetchAtPos::default()
     };
     let response = composing_response(
         composing_request::Method::FetchAtPos(fetch),
@@ -303,63 +279,5 @@ fn composing_response(
             record_failure(op, &format!("expected a composing payload, got {other:?}"));
             None
         }
-    }
-}
-
-/// One learned row on the wire. `count` is clamped rather than trusted to
-/// fit: the column is a 64-bit SQLite integer and the field is 32-bit, and a
-/// saturating conversion is a wrong boost where a trapping one is a crash in
-/// the middle of a keystroke.
-fn frequency_entry(row: &FrequencyRow) -> FrequencyEntry {
-    FrequencyEntry {
-        display_text_key: row.word.clone(),
-        count: u32::try_from(row.count.max(0)).unwrap_or(u32::MAX),
-        last_used_ms: row.last_used_ms,
-        canonical_tl: row.tl.clone(),
-    }
-}
-
-/// One custom-dictionary row on the wire. An empty stored hanzi maps to an
-/// ABSENT `hanji`: the engine reads absence as "romanization-only entry"
-/// while an empty string would be a hanji that renders as nothing.
-fn custom_dict_entry(row: &CustomEntry) -> CustomDictEntry {
-    CustomDictEntry {
-        roman: row.roman.clone(),
-        hanji: (!row.hanzi.is_empty()).then(|| row.hanzi.clone()),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn frequency_count_saturates_and_custom_hanzi_absence_is_kept() {
-        let entry = frequency_entry(&FrequencyRow {
-            word: "台".into(),
-            tl: "tâi".into(),
-            count: i64::MAX,
-            last_used_ms: 7,
-        });
-        assert_eq!(entry.count, u32::MAX);
-        assert_eq!(entry.canonical_tl, "tâi");
-        let negative = frequency_entry(&FrequencyRow {
-            word: "x".into(),
-            tl: String::new(),
-            count: -5,
-            last_used_ms: 0,
-        });
-        assert_eq!(negative.count, 0);
-
-        let roman_only = custom_dict_entry(&CustomEntry {
-            roman: "gau5-tsa2".into(),
-            hanzi: String::new(),
-        });
-        assert_eq!(roman_only.hanji, None);
-        let with_hanzi = custom_dict_entry(&CustomEntry {
-            roman: "gau5-tsa2".into(),
-            hanzi: "𠢕早".into(),
-        });
-        assert_eq!(with_hanzi.hanji.as_deref(), Some("𠢕早"));
     }
 }

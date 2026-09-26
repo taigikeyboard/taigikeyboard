@@ -179,7 +179,7 @@ impl CandidateSource {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::composing::{NextWordLearner, NoStores, SystemClock};
+    use crate::composing::{NextWordLearner, NoStores, NoUsage, SystemClock};
     use crate::engine::test_support::candidate;
     use crate::settings::{keys, SettingsDocument, StaticSettingsProvider};
     use std::sync::Arc;
@@ -283,9 +283,7 @@ mod tests {
         document.set_choice(&keys::CANDIDATE_DISPLAY_MODE, mode);
         ComposingManager::new(
             Arc::new(StaticSettingsProvider::new(document)),
-            Box::new(NoStores),
-            Box::new(NoStores),
-            Box::new(NoStores),
+            Box::new(NoUsage),
             NextWordLearner::new(Box::new(NoStores), Box::new(SystemClock)),
             Box::new(SystemClock),
             1,
@@ -298,9 +296,7 @@ mod tests {
         document.set_bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED, enabled);
         ComposingManager::new(
             Arc::new(StaticSettingsProvider::new(document)),
-            Box::new(NoStores),
-            Box::new(NoStores),
-            Box::new(NoStores),
+            Box::new(NoUsage),
             NextWordLearner::new(Box::new(NoStores), Box::new(SystemClock)),
             Box::new(SystemClock),
             1,

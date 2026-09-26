@@ -9,10 +9,15 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * <pre>
  * Opens the stores for this process, once. Absolute file paths: one
  * directory everywhere except Android, whose `user_association.db` lives in
- * `filesDir`. Synchronous — every store is open, taken over (roadmap U7) and
- * the custom dictionary re-derived and seeded before the answer — so call it
- * off the main thread. A repeat with the same paths answers the stores'
- * current readiness; different paths are refused.
+ * `filesDir`. The stores are in use from the moment this is handled: a pick
+ * or a learned phrase reported meanwhile queues behind the open, a fetch
+ * ranks without the user's data until it is ready. By default the answer
+ * waits until every store is open, taken over (roadmap U7) and the custom
+ * dictionary re-derived and seeded — call it off the main thread then. With
+ * `in_background` the engine finishes that on a thread of its own and
+ * answers at once (readiness as of now), which a key path can afford. A
+ * repeat with the same paths answers the stores' current readiness;
+ * different paths are refused.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.OpenUserData}
@@ -260,6 +265,32 @@ public  final class OpenUserData extends
     journal_ = 0;
   }
 
+  public static final int IN_BACKGROUND_FIELD_NUMBER = 6;
+  private boolean inBackground_;
+  /**
+   * <code>bool in_background = 6;</code>
+   * @return The inBackground.
+   */
+  @java.lang.Override
+  public boolean getInBackground() {
+    return inBackground_;
+  }
+  /**
+   * <code>bool in_background = 6;</code>
+   * @param value The inBackground to set.
+   */
+  private void setInBackground(boolean value) {
+
+    inBackground_ = value;
+  }
+  /**
+   * <code>bool in_background = 6;</code>
+   */
+  private void clearInBackground() {
+
+    inBackground_ = false;
+  }
+
   public static com.siansiansu.taigikeyboard.engine.proto.OpenUserData parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -347,10 +378,15 @@ public  final class OpenUserData extends
    * <pre>
    * Opens the stores for this process, once. Absolute file paths: one
    * directory everywhere except Android, whose `user_association.db` lives in
-   * `filesDir`. Synchronous — every store is open, taken over (roadmap U7) and
-   * the custom dictionary re-derived and seeded before the answer — so call it
-   * off the main thread. A repeat with the same paths answers the stores'
-   * current readiness; different paths are refused.
+   * `filesDir`. The stores are in use from the moment this is handled: a pick
+   * or a learned phrase reported meanwhile queues behind the open, a fetch
+   * ranks without the user's data until it is ready. By default the answer
+   * waits until every store is open, taken over (roadmap U7) and the custom
+   * dictionary re-derived and seeded — call it off the main thread then. With
+   * `in_background` the engine finishes that on a thread of its own and
+   * answers at once (readiness as of now), which a key path can afford. A
+   * repeat with the same paths answers the stores' current readiness;
+   * different paths are refused.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.OpenUserData}
@@ -609,6 +645,34 @@ public  final class OpenUserData extends
       return this;
     }
 
+    /**
+     * <code>bool in_background = 6;</code>
+     * @return The inBackground.
+     */
+    @java.lang.Override
+    public boolean getInBackground() {
+      return instance.getInBackground();
+    }
+    /**
+     * <code>bool in_background = 6;</code>
+     * @param value The inBackground to set.
+     * @return This builder for chaining.
+     */
+    public Builder setInBackground(boolean value) {
+      copyOnWrite();
+      instance.setInBackground(value);
+      return this;
+    }
+    /**
+     * <code>bool in_background = 6;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearInBackground() {
+      copyOnWrite();
+      instance.clearInBackground();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.OpenUserData)
   }
   @java.lang.Override
@@ -630,10 +694,11 @@ public  final class OpenUserData extends
             "customDictionaryPath_",
             "learnedPhrasesPath_",
             "journal_",
+            "inBackground_",
           };
           java.lang.String info =
-              "\u0000\u0005\u0000\u0000\u0001\u0005\u0005\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
-              "\u0003\u0208\u0004\u0208\u0005\f";
+              "\u0000\u0006\u0000\u0000\u0001\u0006\u0006\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
+              "\u0003\u0208\u0004\u0208\u0005\f\u0006\u0007";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

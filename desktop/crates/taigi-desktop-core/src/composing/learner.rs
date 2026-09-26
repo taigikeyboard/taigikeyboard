@@ -2,7 +2,10 @@
 //!
 //! The engine decides WHAT is worth learning — the 10-second window, how a
 //! compound splits, whether the text is noise (`engine/nextword/src/decide.rs`)
-//! — and this only carries the answer to the store
+//! — and records it itself once the user data is open (user-data-engine-
+//! roadmap P3c). This sends the handshakes; its sink only ever sees an effect
+//! where the engine did not keep it — the tests' engine, built without
+//! `user-data` — so production passes `NoStores` (U9, removed in P9)
 //! (`INVARIANT_NEXTWORD_LEARNING_DECISION_CONTRACT`, invariants §40).
 
 use super::clock::Clock;
