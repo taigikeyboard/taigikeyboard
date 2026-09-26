@@ -25,6 +25,7 @@ class CandidateCellTextTest {
         cellScript: String? = null,
     ) = candidateCellText(hanzi, displayRoman, isTPSLayout, mode, isTranslateSwapped, cellScript)
 
+    // INVARIANT_CANDIDATE_CELL_SHOWS_BOTH_SCRIPTS (behavioral-invariants.md §42)
     @Test
     fun sideBySide_romanLeads_hanjiSubtitle() {
         assertEquals(CandidateCellText("tâi-gí", "台語"), cell())

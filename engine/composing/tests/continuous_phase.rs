@@ -973,6 +973,7 @@ fn select_suggestion_under_continuous_with_empty_text_just_resets() {
     assert_eq!(e.snapshot_state().phase, Phase::Idle);
 }
 
+// INVARIANT_COMPOSING_EXTERNAL_INSERT_COMMITS_PREEDIT_ATOMICALLY (behavioral-invariants.md §13)
 #[test]
 fn commit_preedit_then_insert_external_under_continuous_combines_pending_and_external() {
     let mut e = engine_in_continuous("tsua");
@@ -1255,6 +1256,7 @@ fn bug1_mid_commit_marks_display_but_nextword_uses_canonical() {
     assert_eq!(nailed[0].association_tl, "tâi-uân");
 }
 
+// INVARIANT_NEXTWORD_CONTINUOUS_CANONICAL_TL (behavioral-invariants.md §25)
 #[test]
 fn bug1_final_commit_documents_display_but_word_selected_uses_canonical() {
     let mut e = engine_in_continuous("tsu");

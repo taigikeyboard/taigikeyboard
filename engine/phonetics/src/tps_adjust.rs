@@ -437,6 +437,7 @@ mod tests {
         assert_eq!(adjust_initial_key("ㄋ", "ㄒㄧ"), "ㄣ"); // sin valid
     }
 
+    // INVARIANT_TPS_NASALCODA_PHONOTACTIC_GATE (behavioral-invariants.md §32)
     #[test]
     fn nasal_after_vowel_with_impossible_coda_keeps_initial() {
         // The 龜毛 fix: a nasal whose coda would be a non-syllable stays an

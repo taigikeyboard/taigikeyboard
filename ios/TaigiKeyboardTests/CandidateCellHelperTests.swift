@@ -258,6 +258,7 @@ final class CandidateCellHelperTests: XCTestCase {
 
     // MARK: - sideBySide keeps today's arms byte-for-byte
 
+    // INVARIANT_CANDIDATE_CELL_SHOWS_BOTH_SCRIPTS (behavioral-invariants.md §42)
     func testSideBySide_default_romanTitleHanjiSubtitle() {
         let title = CandidateCellHelper.displayTitle(
             for: dual,

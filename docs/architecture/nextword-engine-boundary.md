@@ -266,8 +266,8 @@ Pinned in `engine/nextword` tests (pure) and the platform executor tests (the la
 - `INVARIANT_nextword_association_window_strict_lt_10s` — boundary tests: 9_999 → true, 10_000 → false, negative delta → false.
 - `INVARIANT_nextword_backspace_does_not_record` — `decide(.backspace(...))` never records an association (`decide.rs::backspace_records_no_association`: `associations` empty).
 - `INVARIANT_nextword_sentence_end_resets_context` — `decide(.wordSelected(text: "。", …))` yields `cancelContextTimeout` + clears state + bumps generation.
-- `INVARIANT_nextword_compound_pairs_are_sequential` — for `text = "a-b-c"`, `compoundAssociationPairs` returns `[(a, b), (b, c)]` in that order.
-- `INVARIANT_nextword_no_clock_read_in_engine` — static analysis / code review gate: `NextWordEngine` file must not reference `Date()`, `CFAbsoluteTimeGetCurrent`, `ProcessInfo.systemUptime`, `DispatchTime.now`.
+- `INVARIANT_nextword_compound_pairs_are_sequential` — for `text = "a b c"`, `compound_association_pairs` returns `[(a, b), (b, c)]` in that order (the split is on whitespace only, never on a hyphen — `split_compound`).
+- `INVARIANT_nextword_no_clock_read_in_engine` — code review gate: `engine/nextword/src` must not read a clock (`SystemTime`, `Instant::now`, `chrono::`); the platform passes `now_ms` in. No test yet.
 - `INVARIANT_nextword_prediction_filter_hides_empty_tl_in_roman_mode` — `filterPredictions` drops entries with empty `tl` when `settings.isTranslateSwapped == false`.
 - `INVARIANT_nextword_late_prediction_is_discarded` — platform-side integration test: dispatch `queryPredictions(gen=N)`, then fire `contextTimeoutFired` (bumps to N+1), then resolve the query → `setNextWordPredictions` is NOT called.
 - `INVARIANT_nextword_generation_bumps_on_invalidating_intents` — every invalidating intent produces `newState.currentGeneration > state.currentGeneration`.
@@ -351,7 +351,7 @@ Today Android lacks the iOS §3 `currentGeneration` mechanism. Late predictions 
 - Every invalidating intent bumps generation (see §3 rule).
 - `Outcome.Effect.queryPredictions(... generation: Long)` carries the bumped value; executor passes it to the coroutine issuing `nextWord.predict`.
 - On `predict` resumption, executor compares against current generation; mismatch drops the result silently.
-- A5-impl ships pure-engine tests pinning the generation-bump rule (every invalidating intent produces `newState.currentGeneration > state.currentGeneration`). The end-to-end `INVARIANT_nextword_late_prediction_is_discarded` from §10 needs a wrapper harness with a fake `NextWordService` + coroutine-test dispatcher; the `kotlinx-coroutines-test` dependency is not yet on the Android test classpath, so that wrapper-level test is **deferred to A9** per §13.11. Pre-merge gating for A5-impl is S1/S2/S3 dogfooding + the pure-engine coverage already landed.
+- A5-impl ships pure-engine tests pinning the generation-bump rule (every invalidating intent produces `newState.currentGeneration > state.currentGeneration`). The end-to-end `INVARIANT_nextword_late_prediction_is_discarded` from §10 needs a wrapper harness with a fake `NextWordService` + coroutine-test dispatcher; `kotlinx-coroutines-test` is on the Android test classpath now (`android/app/build.gradle.kts`), but the wrapper-level test still needs a seam over `RustEngineBridge` (JVM tests cannot load the JNI library) and is not written yet. Pre-merge gating for A5-impl is S1/S2/S3 dogfooding + the pure-engine coverage already landed.
 
 ### 13.7 Cross-platform invariant constants
 

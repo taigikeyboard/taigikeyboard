@@ -22,6 +22,7 @@ final class ComposingManagerLearningTests: XCTestCase {
 
     // MARK: - Frequency
 
+    // INVARIANT_USER_FREQ_PAIR_KEY (behavioral-invariants.md §28)
     func testCommitCandidate_countsTheWordUnderTheReadingItWasCommittedAs() throws {
         let manager = try makeManager()
         let executor = RecordingEffectExecutor()

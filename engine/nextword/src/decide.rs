@@ -432,6 +432,7 @@ mod tests {
         assert!(matches!(err, NextWordError::InvalidPlatform));
     }
 
+    // INVARIANT_NEXTWORD_ASSOCIATION_WINDOW_STRICT_LT_10S (nextword-engine-boundary.md §10)
     #[test]
     fn association_window_strict_lt_10s() {
         let mut state = PersistedState {
@@ -449,6 +450,7 @@ mod tests {
         assert!(!should_record_association(&state, 1_000));
     }
 
+    // INVARIANT_NEXTWORD_BACKSPACE_DOES_NOT_RECORD (nextword-engine-boundary.md §10)
     #[test]
     fn backspace_records_no_association() {
         let mut state = PersistedState {
@@ -471,6 +473,7 @@ mod tests {
         );
     }
 
+    // INVARIANT_NEXTWORD_SENTENCE_END_RESETS_CONTEXT (nextword-engine-boundary.md §10)
     #[test]
     fn sentence_end_resets_state_and_clears_predictions() {
         let mut state = PersistedState {
@@ -509,6 +512,7 @@ mod tests {
         ));
     }
 
+    // INVARIANT_NEXTWORD_COMPOUND_PAIRS_ARE_SEQUENTIAL (nextword-engine-boundary.md §10)
     #[test]
     fn compound_pairs_are_sequential() {
         let pairs = compound_association_pairs("a b c", "x y z");
@@ -620,6 +624,7 @@ mod tests {
         }
     }
 
+    // INVARIANT_NEXTWORD_LEARNING_DECISION_CONTRACT (behavioral-invariants.md §40)
     #[test]
     fn learning_decisions_do_not_depend_on_the_platform() {
         // trace: §40 — the same commit must teach the same thing everywhere.
@@ -855,6 +860,7 @@ mod tests {
         assert_eq!(state.last_selected_word, Some("早安".to_owned()));
     }
 
+    // INVARIANT_NEXTWORD_GENERATION_BUMPS_ON_INVALIDATING_INTENTS (nextword-engine-boundary.md §10)
     #[test]
     fn generation_bumps_on_invalidating_intents() {
         let invalidating = vec![

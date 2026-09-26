@@ -147,6 +147,7 @@ fn caps_lock_keeps_a_custom_entry_with_a_nasal_marker_all_caps_in_poj_mode() {
     assert_eq!(cell_with_hanji(&cells, "聲聲").1, "sia-sia\u{207f}");
 }
 
+// INVARIANT_NASAL_MARKER_CASE_FOLLOWS_THE_SWITCH (behavioral-invariants.md §53)
 #[test]
 fn force_lowercase_nasal_marker_renders_the_literal_and_every_candidate_with_a_lowercase_marker() {
     let _lock = engine_install_lock();

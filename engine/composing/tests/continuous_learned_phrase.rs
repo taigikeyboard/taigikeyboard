@@ -558,6 +558,7 @@ fn learned_phrase_matches_a_poj_typed_buffer() {
     assert_eq!(hanji[0], "車頭", "got {hanji:?}");
 }
 
+// INVARIANT_LEARNED_PHRASE_COMPETES_NEVER_OVERRIDES (behavioral-invariants.md §50)
 #[test]
 fn dictionary_homophone_beats_a_learned_row_until_the_user_prefers_it() {
     // Same key, different word: the fixture gains a real 3-syllable word

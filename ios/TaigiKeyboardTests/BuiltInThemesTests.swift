@@ -185,6 +185,7 @@ final class BuiltInThemesTests: XCTestCase {
         XCTAssertEqual(blueTop.deepened(by: KeyboardColorSettings.candidatePressedDeepenFactor), CodableColor(hex: 0x7C8898))
     }
 
+    // INVARIANT_CANDIDATE_FIRST_KEYCAP_HINT (behavioral-invariants.md §19)
     // trace: state priority is press > firstCandidate > selected. While typing, the first
     // candidate is always selected, so it is BOTH selected and first — it must show the LIGHT highlight, not the dark pressed/selection color.
     func testResolvedBackgroundColor_firstCandidateLightBeatsSelection() {

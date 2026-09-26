@@ -335,6 +335,7 @@ fn nfd_preprocess_for_lookup_substitutes_nasal_marker() {
 // Derivation
 // ============================================================
 
+// INVARIANT_NORMALIZER_STRIPS_HYPHENS_IN_NOTONE (behavioral-invariants.md §4)
 #[test]
 fn derive_notone_strips_diacritics_digits_hyphens_spaces() {
     let resp = run(Method::DeriveNotone(DeriveNotone {

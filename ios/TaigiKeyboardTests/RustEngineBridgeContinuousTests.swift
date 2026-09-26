@@ -224,6 +224,7 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
 
     // MARK: - Spacing flags ride every rendering op
 
+    // INVARIANT_EVERY_COMPOSING_OP_CARRIES_THE_RENDERING_CONFIG (behavioral-invariants.md §54)
     /// The keystroke after a nail re-renders the nailed prefix from the
     /// request's own settings, so every op builds its config from the same
     /// snapshot. Under Hanji-first (`isTranslateSwapped`, no both-scripts) the

@@ -383,6 +383,7 @@ fn suggestion_empty_roman_unchanged() {
     );
 }
 
+// INVARIANT_CASE_TRANSFORMER_IS_DETERMINISTIC (behavioral-invariants.md §9)
 #[test]
 fn suggestion_caps_lock_dominates_caps_flag() {
     // SuggestionCaseTransformerTest.kt:249-258 — when capsLock=true,

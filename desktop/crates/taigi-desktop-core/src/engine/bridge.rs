@@ -204,6 +204,7 @@ mod tests {
         assert!(nextword_config(&settings).hyphenless_roman);
     }
 
+    // INVARIANT_NASAL_MARKER_CASE_FOLLOWS_THE_SWITCH (behavioral-invariants.md §53)
     #[test]
     fn nasal_marker_uppercase_off_forces_the_lowercase_marker_through_the_base_config() {
         assert!(

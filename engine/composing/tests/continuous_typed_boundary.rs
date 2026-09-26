@@ -123,6 +123,7 @@ fn hanji_of(cells: &[Cell]) -> Vec<&str> {
     cells.iter().filter_map(|c| c.0.as_deref()).collect()
 }
 
+// INVARIANT_TYPED_HYPHEN_IS_A_SYLLABLE_BOUNDARY (behavioral-invariants.md §52)
 #[test]
 fn typed_hyphen_drops_the_readings_that_do_not_end_a_syllable_there() {
     let _lock = engine_install_lock();

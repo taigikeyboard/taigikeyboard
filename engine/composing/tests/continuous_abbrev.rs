@@ -142,6 +142,7 @@ fn hanji(raw: &str, input_mode: &str) -> Vec<String> {
     fetch_hanji(raw, input_mode, Fetch::default())
 }
 
+// INVARIANT_CONTINUOUS_WHOLE_BUFFER_ABBREV (behavioral-invariants.md §46)
 #[test]
 fn ss_surfaces_abbreviated_words_after_the_literal() {
     let _lock = engine_install_lock();

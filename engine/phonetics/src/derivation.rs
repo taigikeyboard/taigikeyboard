@@ -190,6 +190,7 @@ mod tests {
         assert_eq!(derive_abbrev(""), "");
     }
 
+    // INVARIANT_ABBREV_KEY_IS_ONE_CHAR_PER_SYLLABLE (behavioral-invariants.md §10)
     // trace: the legacy column stays first-letter (`ph` → `p`).
     #[test]
     fn derive_abbrev_first_letter_is_the_legacy_column_face() {

@@ -454,6 +454,7 @@ mod tests {
         );
     }
 
+    // INVARIANT_DESKTOP_GENERAL_PANE_OUTPUT_SCRIPT_AND_RESET (behavioral-invariants.md §48)
     #[test]
     fn reset_general_removes_the_pane_s_keys_and_nothing_else() {
         // trace: General owns the swap, the tone keys and auto-space; the

@@ -92,6 +92,7 @@ fn fetch_hanji_in(raw: &str, input_mode: &str) -> Vec<String> {
         .unwrap_or_default()
 }
 
+// INVARIANT_CONTINUOUS_EXPLICIT_TONE_FILTER (behavioral-invariants.md §17)
 #[test]
 fn explicit_tone_filters_to_typed_tone() {
     let _lock = engine_install_lock();

@@ -351,6 +351,7 @@ mod tests {
         assert_eq!(phase.raw_input(&config_tl()), "");
     }
 
+    // INVARIANT_TL_INPUT_LITERAL_NO_POJ_SPELLING_FOLD (behavioral-invariants.md §30)
     #[test]
     fn raw_input_composing_tl_is_literal_no_poj_spelling_fold() {
         // TL composing display is literal (2026-06-05): the tone mark lands
@@ -375,6 +376,7 @@ mod tests {
         assert_eq!(phase.raw_input(&config_tl()), "t\u{e9}ng");
     }
 
+    // INVARIANT_TL_INPUT_LITERAL_NO_POJ_SPELLING_FOLD (behavioral-invariants.md §30)
     #[test]
     fn raw_input_composing_poj_is_literal_no_spelling_fold() {
         // POJ composing display is ALSO literal (2026-06-05): the tone mark

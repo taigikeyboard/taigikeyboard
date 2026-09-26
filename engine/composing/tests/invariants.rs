@@ -269,6 +269,7 @@ fn invariant_commit_preedit_then_insert_empty_external_is_noop() {
 
 // ---- Reset ----
 
+// INVARIANT_COMPOSING_IDLE_TO_IDLE_IS_NOOP (behavioral-invariants.md §13)
 #[test]
 fn invariant_reset_idle_is_noop() {
     let mut engine = Engine::new();
