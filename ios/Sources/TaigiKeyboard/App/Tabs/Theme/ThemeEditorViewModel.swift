@@ -114,7 +114,7 @@ final class ThemeEditorViewModel: ObservableObject {
     }
 
     /// Makes the stored photo `file` (see `ThemeImageStore.save`) the background, keeping
-    /// the current Fade when replacing a photo; a new photo starts centred.
+    /// the current Fade when replacing a photo; a new photo starts centred and unzoomed.
     func setPhoto(file: String) {
         setBackground(.image(ThemeImageBackground(file: file, dim: photo?.dim ?? ThemeImageBackground.defaultDim)))
     }
@@ -129,7 +129,17 @@ final class ThemeEditorViewModel: ObservableObject {
         )
     }
 
-    /// The draft photo for `PhotoPositionOverlay` (which moves it), or nil while none is picked.
+    var photoZoomBinding: Binding<Double> {
+        Binding(
+            get: { self.photo?.zoom ?? ThemeImageBackground.defaultZoom },
+            set: { zoom in
+                guard let photo = self.photo else { return }
+                self.setBackground(.image(photo.with(zoom: zoom)))
+            },
+        )
+    }
+
+    /// The draft photo for `PhotoPositionOverlay` (which moves and zooms it), or nil while none is picked.
     var photoBinding: Binding<ThemeImageBackground>? {
         guard let photo else { return nil }
         return Binding(

@@ -67,6 +67,11 @@ struct ThemeEditorView: View {
                             sliderRow(lang.string(.themePhotoDim), viewModel.photoDimBinding,
                                       ThemeImageBackground.dimRange, ThemeImageBackground.dimStep,
                                       defaultValue: ThemeImageBackground.defaultDim)
+                            // Pinching the preview zooms too; the row makes zoom findable and
+                            // reachable with VoiceOver.
+                            sliderRow(lang.string(.themePhotoZoom), viewModel.photoZoomBinding,
+                                      ThemeImageBackground.zoomRange, ThemeImageBackground.zoomStep,
+                                      defaultValue: ThemeImageBackground.defaultZoom)
                         }
                     }
                 }
@@ -112,7 +117,7 @@ struct ThemeEditorView: View {
             // appears to squeeze it. User themes own shadow (slider 0 = flat) →
             // `appliesThemeShadow: true`. While the background is a gradient the
             // preview doubles as the direction control (drag to set the angle); while
-            // it is a photo, as the position control (drag to move the photo).
+            // it is a photo, as the position control (drag to move, pinch to zoom the photo).
             KeyboardPreviewPanel(
                 appearance: viewModel.appearance,
                 appliesThemeShadow: true,

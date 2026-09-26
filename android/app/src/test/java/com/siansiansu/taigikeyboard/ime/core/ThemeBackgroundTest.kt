@@ -146,11 +146,11 @@ class ThemeBackgroundTest {
     @Test
     fun coverRect_aspectFillCentred() {
         val square = SurfaceRect(0f, 0f, 100f, 100f)
-        assertEquals(SurfaceRect(-50f, 0f, 200f, 100f), ThemeImageBackground.coverRect(200f, 100f, square, CENTRE, CENTRE))
-        assertEquals(SurfaceRect(0f, -50f, 100f, 200f), ThemeImageBackground.coverRect(100f, 200f, square, CENTRE, CENTRE))
+        assertEquals(SurfaceRect(-50f, 0f, 200f, 100f), ThemeImageBackground.coverRect(200f, 100f, square, CENTRE, CENTRE, NO_ZOOM))
+        assertEquals(SurfaceRect(0f, -50f, 100f, 200f), ThemeImageBackground.coverRect(100f, 200f, square, CENTRE, CENTRE, NO_ZOOM))
         val slicedKeyboard = SurfaceRect(0f, -50f, 100f, 300f)
-        assertEquals(SurfaceRect(-100f, -50f, 300f, 300f), ThemeImageBackground.coverRect(100f, 100f, slicedKeyboard, CENTRE, CENTRE))
-        assertEquals(square, ThemeImageBackground.coverRect(0f, 0f, square, CENTRE, CENTRE))
+        assertEquals(SurfaceRect(-100f, -50f, 300f, 300f), ThemeImageBackground.coverRect(100f, 100f, slicedKeyboard, CENTRE, CENTRE, NO_ZOOM))
+        assertEquals(square, ThemeImageBackground.coverRect(0f, 0f, square, CENTRE, CENTRE, NO_ZOOM))
     }
 
     // Focus aligns the cover rect: a 2:1 photo over a 1:1 keyboard overflows 100 horizontally —
@@ -159,10 +159,34 @@ class ThemeBackgroundTest {
     @Test
     fun coverRect_focusAlignsOverflowingAxis() {
         val square = SurfaceRect(0f, 0f, 100f, 100f)
-        assertEquals(SurfaceRect(0f, 0f, 200f, 100f), ThemeImageBackground.coverRect(200f, 100f, square, focusX = 0f, focusY = 1f))
-        assertEquals(SurfaceRect(-100f, 0f, 200f, 100f), ThemeImageBackground.coverRect(200f, 100f, square, focusX = 1f, focusY = 0f))
+        assertEquals(SurfaceRect(0f, 0f, 200f, 100f), ThemeImageBackground.coverRect(200f, 100f, square, focusX = 0f, focusY = 1f, zoom = NO_ZOOM))
+        assertEquals(SurfaceRect(-100f, 0f, 200f, 100f), ThemeImageBackground.coverRect(200f, 100f, square, focusX = 1f, focusY = 0f, zoom = NO_ZOOM))
         val slicedKeyboard = SurfaceRect(0f, -50f, 100f, 300f)
-        assertEquals(SurfaceRect(-200f, -50f, 300f, 300f), ThemeImageBackground.coverRect(100f, 100f, slicedKeyboard, focusX = 1f, focusY = 0f))
+        assertEquals(SurfaceRect(-200f, -50f, 300f, 300f), ThemeImageBackground.coverRect(100f, 100f, slicedKeyboard, focusX = 1f, focusY = 0f, zoom = NO_ZOOM))
+    }
+
+    // Zoom scales the cover rect about the focus: a 2:1 photo over a 1:1 keyboard at 2x covers
+    // 400x200 — centred at ((100 - 400) / 2, (100 - 200) / 2) = (-150, -50); focus (0, 1) ->
+    // (0, 100 - 200 = -100); a 1:1 photo on the sliced 100x300 keyboard at 1.5x covers 450x450 at
+    // ((100 - 450) / 2, -50 + (300 - 450) / 2) = (-175, -125).
+    @Test
+    fun coverRect_zoomScalesAboutFocus() {
+        val square = SurfaceRect(0f, 0f, 100f, 100f)
+        assertEquals(SurfaceRect(-150f, -50f, 400f, 200f), ThemeImageBackground.coverRect(200f, 100f, square, CENTRE, CENTRE, zoom = 2f))
+        assertEquals(SurfaceRect(0f, -100f, 400f, 200f), ThemeImageBackground.coverRect(200f, 100f, square, focusX = 0f, focusY = 1f, zoom = 2f))
+        val slicedKeyboard = SurfaceRect(0f, -50f, 100f, 300f)
+        assertEquals(SurfaceRect(-175f, -125f, 450f, 450f), ThemeImageBackground.coverRect(100f, 100f, slicedKeyboard, CENTRE, CENTRE, zoom = 1.5f))
+    }
+
+    // `zoom` round-trips; absent -> 1 (old themes unzoomed); out of range clamps into 1..2.
+    @Test
+    fun imageBackground_zoomRoundTripDefaultAndClamp() {
+        val colors = KeyboardColorSettings(background = ThemeBackground.Image(ThemeImageBackground("a.jpg", zoom = 1.5f)))
+        assertEquals(colors, KeyboardColorSettings.fromJson(colors.toJson()))
+        val absent = decode("""{ "background": { "type": "image", "file": "b.jpg" } }""").background?.asImage
+        assertEquals(ThemeImageBackground.DEFAULT_ZOOM, absent?.zoom)
+        assertEquals(2f, decode("""{ "background": { "type": "image", "file": "a.jpg", "zoom": 5 } }""").background?.asImage?.zoom)
+        assertEquals(1f, decode("""{ "background": { "type": "image", "file": "a.jpg", "zoom": 0.2 } }""").background?.asImage?.zoom)
     }
 
     // `focusX` / `focusY` round-trip; absent -> 0.5 (old themes stay centred); out of range clamps into 0..1.
@@ -248,6 +272,7 @@ class ThemeBackgroundTest {
 
     private companion object {
         const val CENTRE = ThemeImageBackground.DEFAULT_FOCUS
+        const val NO_ZOOM = ThemeImageBackground.DEFAULT_ZOOM
         const val EPSILON = 1e-6f
         const val RED = 0xFFFF0000.toInt()
         const val GREEN = 0xFF00FF00.toInt()

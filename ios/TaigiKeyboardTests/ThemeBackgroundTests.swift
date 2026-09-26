@@ -164,11 +164,11 @@ final class ThemeBackgroundTests: XCTestCase {
     // a 1:2 photo fills the width and centres vertically; a panel slice keeps the whole-keyboard framing
     func testCoverRect_aspectFillCentred() {
         let square = CGRect(x: 0, y: 0, width: 100, height: 100)
-        XCTAssertEqual(ThemeImageBackground.coverRect(imageSize: CGSize(width: 200, height: 100), in: square, focus: ThemeImageBackground.centredFocus), CGRect(x: -50, y: 0, width: 200, height: 100))
-        XCTAssertEqual(ThemeImageBackground.coverRect(imageSize: CGSize(width: 100, height: 200), in: square, focus: ThemeImageBackground.centredFocus), CGRect(x: 0, y: -50, width: 100, height: 200))
+        XCTAssertEqual(ThemeImageBackground.coverRect(imageSize: CGSize(width: 200, height: 100), in: square, focus: ThemeImageBackground.centredFocus, zoom: 1), CGRect(x: -50, y: 0, width: 200, height: 100))
+        XCTAssertEqual(ThemeImageBackground.coverRect(imageSize: CGSize(width: 100, height: 200), in: square, focus: ThemeImageBackground.centredFocus, zoom: 1), CGRect(x: 0, y: -50, width: 100, height: 200))
         let slicedKeyboard = CGRect(x: 0, y: -50, width: 100, height: 300)
-        XCTAssertEqual(ThemeImageBackground.coverRect(imageSize: CGSize(width: 100, height: 100), in: slicedKeyboard, focus: ThemeImageBackground.centredFocus), CGRect(x: -100, y: -50, width: 300, height: 300))
-        XCTAssertEqual(ThemeImageBackground.coverRect(imageSize: .zero, in: square, focus: ThemeImageBackground.centredFocus), square, "degenerate image size falls back to the bounds")
+        XCTAssertEqual(ThemeImageBackground.coverRect(imageSize: CGSize(width: 100, height: 100), in: slicedKeyboard, focus: ThemeImageBackground.centredFocus, zoom: 1), CGRect(x: -100, y: -50, width: 300, height: 300))
+        XCTAssertEqual(ThemeImageBackground.coverRect(imageSize: .zero, in: square, focus: ThemeImageBackground.centredFocus, zoom: 1), square, "degenerate image size falls back to the bounds")
     }
 
     // trace: focus aligns the cover rect — a 2:1 photo over a 1:1 keyboard overflows 100 horizontally:
@@ -177,10 +177,33 @@ final class ThemeBackgroundTests: XCTestCase {
     func testCoverRect_focusAlignsOverflowingAxis() {
         let square = CGRect(x: 0, y: 0, width: 100, height: 100)
         let wide = CGSize(width: 200, height: 100)
-        XCTAssertEqual(ThemeImageBackground.coverRect(imageSize: wide, in: square, focus: CGPoint(x: 0, y: 1)), CGRect(x: 0, y: 0, width: 200, height: 100))
-        XCTAssertEqual(ThemeImageBackground.coverRect(imageSize: wide, in: square, focus: CGPoint(x: 1, y: 0)), CGRect(x: -100, y: 0, width: 200, height: 100))
+        XCTAssertEqual(ThemeImageBackground.coverRect(imageSize: wide, in: square, focus: CGPoint(x: 0, y: 1), zoom: 1), CGRect(x: 0, y: 0, width: 200, height: 100))
+        XCTAssertEqual(ThemeImageBackground.coverRect(imageSize: wide, in: square, focus: CGPoint(x: 1, y: 0), zoom: 1), CGRect(x: -100, y: 0, width: 200, height: 100))
         let slicedKeyboard = CGRect(x: 0, y: -50, width: 100, height: 300)
-        XCTAssertEqual(ThemeImageBackground.coverRect(imageSize: CGSize(width: 100, height: 100), in: slicedKeyboard, focus: CGPoint(x: 1, y: 0)), CGRect(x: -200, y: -50, width: 300, height: 300))
+        XCTAssertEqual(ThemeImageBackground.coverRect(imageSize: CGSize(width: 100, height: 100), in: slicedKeyboard, focus: CGPoint(x: 1, y: 0), zoom: 1), CGRect(x: -200, y: -50, width: 300, height: 300))
+    }
+
+    // trace: zoom scales the cover rect about the focus — a 2:1 photo over a 1:1 keyboard at 2× covers 400×200:
+    // centred at ((100 − 400) / 2, (100 − 200) / 2) = (−150, −50); focus (0, 1) → (0, 100 − 200 = −100); a 1:1 photo
+    // on the sliced 100×300 keyboard at 1.5× covers 450×450 at ((100 − 450) / 2, −50 + (300 − 450) / 2) = (−175, −125)
+    func testCoverRect_zoomScalesAboutFocus() {
+        let square = CGRect(x: 0, y: 0, width: 100, height: 100)
+        let wide = CGSize(width: 200, height: 100)
+        XCTAssertEqual(ThemeImageBackground.coverRect(imageSize: wide, in: square, focus: ThemeImageBackground.centredFocus, zoom: 2), CGRect(x: -150, y: -50, width: 400, height: 200))
+        XCTAssertEqual(ThemeImageBackground.coverRect(imageSize: wide, in: square, focus: CGPoint(x: 0, y: 1), zoom: 2), CGRect(x: 0, y: -100, width: 400, height: 200))
+        let slicedKeyboard = CGRect(x: 0, y: -50, width: 100, height: 300)
+        XCTAssertEqual(ThemeImageBackground.coverRect(imageSize: CGSize(width: 100, height: 100), in: slicedKeyboard, focus: ThemeImageBackground.centredFocus, zoom: 1.5), CGRect(x: -175, y: -125, width: 450, height: 450))
+    }
+
+    // trace: `zoom` round-trips; absent → 1 (old themes unzoomed); out of range clamps into 1…2
+    func testImageBackground_zoomRoundTripDefaultAndClamp() throws {
+        var colors = KeyboardColorSettings()
+        colors.background = .image(ThemeImageBackground(file: "a.jpg", zoom: 1.5))
+        let data = try JSONEncoder().encode(colors)
+        XCTAssertEqual(try JSONDecoder().decode(KeyboardColorSettings.self, from: data), colors)
+        XCTAssertEqual(try decode(#"{ "background": { "type": "image", "file": "b.jpg" } }"#).background?.image?.zoom, ThemeImageBackground.defaultZoom)
+        XCTAssertEqual(try decode(#"{ "background": { "type": "image", "file": "a.jpg", "zoom": 5 } }"#).background?.image?.zoom, 2)
+        XCTAssertEqual(try decode(#"{ "background": { "type": "image", "file": "a.jpg", "zoom": 0.2 } }"#).background?.image?.zoom, 1)
     }
 
     // trace: `focusX` / `focusY` round-trip; absent → 0.5 (old themes stay centred); out of range clamps into 0…1
@@ -207,7 +230,7 @@ final class ThemeBackgroundTests: XCTestCase {
             context.fill(CGRect(x: 0, y: 150, width: 100, height: 150))
         }
         func centrePixel(focusY: CGFloat) throws -> (red: UInt8, blue: UInt8) {
-            let renderer = ImageRenderer(content: FocusedPhotoFill(image: Image(uiImage: photo), focus: CGPoint(x: 0.5, y: focusY)).frame(width: 100, height: 100))
+            let renderer = ImageRenderer(content: FocusedPhotoFill(image: Image(uiImage: photo), focus: CGPoint(x: 0.5, y: focusY), zoom: 1).frame(width: 100, height: 100))
             renderer.scale = 1
             let cgImage = try XCTUnwrap(renderer.cgImage)
             var pixel = [UInt8](repeating: 0, count: 4)
@@ -225,22 +248,82 @@ final class ThemeBackgroundTests: XCTestCase {
         XCTAssertGreaterThan(Int(bottom.blue) - Int(bottom.red), 100, "focusY 1 shows the blue bottom half: \(bottom)")
     }
 
-    // trace: a 100×300 photo over a 100×100 preview covers 100×300 → overflow (0, −200), vertical axis;
-    // dragging down 50 moves the photo with the finger: 0.5 + 50 / −200 = 0.25 (more of the top shows);
-    // x never overflows so a sideways drag keeps 0.5; a long drag up clamps at 1
-    func testPhotoPositionDrag_followsFingerOnOverflowingAxis() {
+    // trace: FocusedPhotoFill zooms where coverRect says — a 100×100 photo (left half red, right half blue) over a
+    // 100×100 surface. Pixel x = 25: at 1× it is photo x 25 (red); at 2× focusX 1 the photo is 200 wide at
+    // x = 100 − 200 = −100, so pixel 25 is photo x (25 + 100) / 2 = 62.5 (blue). Pixel x = 75 at 2× focusX 0:
+    // photo x 75 / 2 = 37.5 (red), where 1× shows blue
+    @MainActor
+    func testFocusedPhotoFill_zoomsAboutFocus() throws {
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = 1
+        let photo = UIGraphicsImageRenderer(size: CGSize(width: 100, height: 100), format: format).image { context in
+            UIColor.red.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 50, height: 100))
+            UIColor.blue.setFill()
+            context.fill(CGRect(x: 50, y: 0, width: 50, height: 100))
+        }
+        func pixel(x: CGFloat, focusX: CGFloat, zoom: CGFloat) throws -> (red: UInt8, blue: UInt8) {
+            let renderer = ImageRenderer(content: FocusedPhotoFill(image: Image(uiImage: photo), focus: CGPoint(x: focusX, y: 0.5), zoom: zoom).frame(width: 100, height: 100))
+            renderer.scale = 1
+            let cgImage = try XCTUnwrap(renderer.cgImage)
+            var pixel = [UInt8](repeating: 0, count: 4)
+            let context = try XCTUnwrap(CGContext(
+                data: &pixel, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4,
+                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue,
+            ))
+            context.draw(cgImage, in: CGRect(x: -x, y: -50, width: 100, height: 100))
+            return (pixel[0], pixel[2])
+        }
+        // The fill desaturates (×0.7), so compare which channel dominates rather than pure values.
+        let unzoomed = try pixel(x: 25, focusX: 0.5, zoom: 1)
+        XCTAssertGreaterThan(Int(unzoomed.red) - Int(unzoomed.blue), 100, "1× shows red at x 25: \(unzoomed)")
+        let zoomedRight = try pixel(x: 25, focusX: 1, zoom: 2)
+        XCTAssertGreaterThan(Int(zoomedRight.blue) - Int(zoomedRight.red), 100, "2× focusX 1 shows blue at x 25: \(zoomedRight)")
+        let zoomedLeft = try pixel(x: 75, focusX: 0, zoom: 2)
+        XCTAssertGreaterThan(Int(zoomedLeft.red) - Int(zoomedLeft.blue), 100, "2× focusX 0 shows red at x 75: \(zoomedLeft)")
+    }
+
+    // trace: a 100×300 photo over a 100×100 preview covers 100×300 → overflow (0, −200), vertical only;
+    // a 200×100 photo overflows horizontally; 50×50 fits exactly; zoomed 2× the 100×300 photo covers 200×600
+    // → both axes; VoiceOver steps vertical when it moves, else horizontal, else nothing
+    func testPhotoPositionDrag_axesAreTheOverflowingOnes() {
         let tall = CGSize(width: 100, height: 300)
         let preview = CGSize(width: 100, height: 100)
         let centred = ThemeImageBackground(file: "a.jpg")
-        XCTAssertEqual(PhotoPositionDrag.axis(imageSize: tall, surface: preview), .vertical)
-        XCTAssertEqual(PhotoPositionDrag.axis(imageSize: CGSize(width: 200, height: 100), surface: preview), .horizontal)
-        XCTAssertNil(PhotoPositionDrag.axis(imageSize: CGSize(width: 50, height: 50), surface: preview), "exact fit has nothing to move")
-        let dragged = PhotoPositionDrag.dragged(centred, by: CGSize(width: 30, height: 50), along: .vertical, imageSize: tall, surface: preview)
+        XCTAssertEqual(PhotoPositionDrag.axes(centred, imageSize: tall, surface: preview), .vertical)
+        XCTAssertEqual(PhotoPositionDrag.axes(centred, imageSize: CGSize(width: 200, height: 100), surface: preview), .horizontal)
+        XCTAssertEqual(PhotoPositionDrag.axes(centred, imageSize: CGSize(width: 50, height: 50), surface: preview), [], "exact fit has nothing to move")
+        XCTAssertEqual(PhotoPositionDrag.axes(centred.with(zoom: 2), imageSize: tall, surface: preview), [.horizontal, .vertical])
+        XCTAssertEqual(PhotoPositionDrag.accessibilityAxis(of: [.horizontal, .vertical]), .vertical)
+        XCTAssertEqual(PhotoPositionDrag.accessibilityAxis(of: .horizontal), .horizontal)
+        XCTAssertNil(PhotoPositionDrag.accessibilityAxis(of: []))
+    }
+
+    // trace: dragging down 50 moves the photo with the finger: 0.5 + 50 / −200 = 0.25 (more of the top shows);
+    // x never overflows so a sideways drag keeps 0.5; a long drag up clamps at 1. Zoomed 2× the photo covers
+    // 200×600 → overflow (−100, −500): a drag of (20, 50) moves x 0.5 + 20 / −100 = 0.3, y 0.5 + 50 / −500 = 0.4
+    func testPhotoPositionDrag_followsFingerOnOverflowingAxes() {
+        let tall = CGSize(width: 100, height: 300)
+        let preview = CGSize(width: 100, height: 100)
+        let centred = ThemeImageBackground(file: "a.jpg")
+        let dragged = PhotoPositionDrag.dragged(centred, by: CGSize(width: 30, height: 50), imageSize: tall, surface: preview)
         XCTAssertEqual(dragged.focus, CGPoint(x: 0.5, y: 0.25), "only the vertical axis moves")
         XCTAssertEqual(dragged.dim, centred.dim, "Fade kept")
-        XCTAssertEqual(PhotoPositionDrag.dragged(centred, by: CGSize(width: 0, height: -1000), along: .vertical, imageSize: tall, surface: preview).focusY, 1)
+        XCTAssertEqual(PhotoPositionDrag.dragged(centred, by: CGSize(width: 0, height: -1000), imageSize: tall, surface: preview).focusY, 1)
+        let zoomed = PhotoPositionDrag.dragged(centred.with(zoom: 2), by: CGSize(width: 20, height: 50), imageSize: tall, surface: preview)
+        XCTAssertEqual(zoomed.focusX, 0.3, accuracy: 1e-9)
+        XCTAssertEqual(zoomed.focusY, 0.4, accuracy: 1e-9)
+        XCTAssertEqual(zoomed.zoom, 2, "zoom kept")
         XCTAssertEqual(PhotoPositionDrag.stepped(centred.with(focus: CGPoint(x: 0.5, y: 0.95)), along: .vertical, increment: true).focusY, 1)
         XCTAssertEqual(PhotoPositionDrag.stepped(centred, along: .horizontal, increment: false).focusX, 0.4, accuracy: 1e-9)
+    }
+
+    // trace: a pinch multiplies the zoom and keeps the focus; 1×…2× clamps
+    func testPhotoPositionDrag_pinchMultipliesZoomAndClamps() {
+        let centred = ThemeImageBackground(file: "a.jpg")
+        XCTAssertEqual(PhotoPositionDrag.zoomed(centred, by: 1.5), centred.with(zoom: 1.5))
+        XCTAssertEqual(PhotoPositionDrag.zoomed(centred.with(zoom: 1.5), by: 3).zoom, 2)
+        XCTAssertEqual(PhotoPositionDrag.zoomed(centred, by: 0.5).zoom, 1)
     }
 
     // trace: the surface pairs the background with its photo tone — dark key text → white overlay,

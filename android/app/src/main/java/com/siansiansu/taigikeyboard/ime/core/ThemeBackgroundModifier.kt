@@ -100,6 +100,7 @@ private fun Modifier.themePhoto(
                 bounds = SurfaceRect(left = 0f, top = -topInsetPx, width = size.width, height = size.height + topInsetPx),
                 focusX = photo.focusX,
                 focusY = photo.focusY,
+                zoom = photo.zoom,
             )
         val dstOffset = IntOffset(rect.left.roundToInt(), rect.top.roundToInt())
         val dstSize = IntSize(rect.width.roundToInt(), rect.height.roundToInt())

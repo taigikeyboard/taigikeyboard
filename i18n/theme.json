@@ -116,6 +116,11 @@
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
       "values": { "hanji": "位置", "tailo": "Uī-tì", "poj": "Ūi-tì", "en": "Position", "ja": "位置" }
     },
+    "photoZoom": {
+      "comment": "Theme editor slider label: how far the photo is zoomed in (1x = just covers the keyboard, up to 2x); pinching the preview sets the same value.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "放大", "tailo": "Hòng-tuā", "poj": "Hòng-tōa", "en": "Zoom", "ja": "ズーム" }
+    },
     "gradientDirection": {
       "comment": "Gradient direction: the VoiceOver / TalkBack label of the drag pointer over the theme editor preview (no visible row on either platform).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
