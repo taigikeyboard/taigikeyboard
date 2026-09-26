@@ -145,6 +145,56 @@ fn a_pre_pair_key_frequency_table_keeps_its_rows_ids_and_counts() {
     );
 }
 
+/// Android before R5 — `UserFrequencyService.kt` at `1677e862^`
+/// (`createUserFrequencyTable` + `createUserFrequencyIndexes` +
+/// `createMetadataTable`), stamped 1 by `SQLiteOpenHelper`: the iOS shape
+/// plus two indexes on the columns the rebuild copies.
+const ANDROID_FREQUENCY_V1: &str = "
+CREATE TABLE user_frequency (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    word TEXT NOT NULL UNIQUE,
+    count INTEGER DEFAULT 1,
+    last_used TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX idx_word ON user_frequency(word);
+CREATE INDEX idx_count ON user_frequency(count DESC);
+CREATE INDEX idx_last_used ON user_frequency(last_used DESC);
+CREATE TABLE IF NOT EXISTS metadata (key TEXT PRIMARY KEY, value TEXT);
+INSERT INTO metadata (key, value) VALUES ('app_version', '3.4.2');
+INSERT INTO user_frequency (id, word, count, last_used) VALUES
+    (3, '台灣', 4, '2026-01-02 03:04:05');
+PRAGMA user_version = 1;
+";
+
+#[test]
+fn an_android_v1_frequency_table_keeps_its_rows_and_its_metadata() {
+    // trace: no `tl` → rebuild; idx_count / idx_last_used go with the old
+    // table; id 3 and count 4 copied; `metadata` untouched; stamp 1 → 2.
+    let directory = scratch();
+    let path = paths(&directory).frequency;
+    build(&path, ANDROID_FREQUENCY_V1);
+
+    let store = frequency(&path);
+
+    assert!(store.is_ready());
+    let rows = store.rows_for_words(&["台灣".into()]).unwrap();
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0].count, 4);
+    assert_eq!(pragma(&path, "user_version"), 2);
+    let app_version: String = raw(&path)
+        .query_row(
+            "SELECT value FROM metadata WHERE key = 'app_version';",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(
+        app_version, "3.4.2",
+        "the old app's own table is left alone"
+    );
+}
+
 #[test]
 fn a_pair_key_frequency_table_left_at_version_zero_is_not_rebuilt() {
     // trace: iOS manages user_version by hand, so a new-shape file can sit
@@ -493,6 +543,91 @@ fn a_v9_leftover_with_only_learn_count_still_opens() {
 /// macOS / Windows / Linux v4 — `macos/.../Storage/CustomDictionaryStore.swift`
 /// `applySchema` (the SQL the desktop stores ported byte-identically): no
 /// legacy derived columns, keys the engine itself derived, stamp 4.
+/// Android v3 — `CustomDictionaryService.kt` at `392d0283` (v3.4.2, the
+/// first release with the dictionary): no `roman_num`, no side table.
+const ANDROID_CUSTOM_DICTIONARY_V3: &str = "
+CREATE TABLE custom_dictionary (
+    id TEXT PRIMARY KEY,
+    roman TEXT NOT NULL,
+    hanzi TEXT NOT NULL,
+    notone TEXT DEFAULT '',
+    abbrev TEXT DEFAULT '',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX idx_custom_roman ON custom_dictionary(roman);
+CREATE INDEX idx_custom_notone ON custom_dictionary(notone);
+CREATE INDEX idx_custom_abbrev ON custom_dictionary(abbrev);
+INSERT INTO custom_dictionary (id, roman, hanzi, notone) VALUES ('E1', 'gâu-tsá', '𠢕早', 'gautsa');
+PRAGMA user_version = 3;
+";
+
+/// Android v5 — `CustomDictionaryService.kt` at `da836ea5^` (v3.4.7 …
+/// v3.6.0): `roman_num` added, still no side table.
+const ANDROID_CUSTOM_DICTIONARY_V5: &str = "
+CREATE TABLE custom_dictionary (
+    id TEXT PRIMARY KEY,
+    roman TEXT NOT NULL,
+    hanzi TEXT NOT NULL,
+    notone TEXT DEFAULT '',
+    abbrev TEXT DEFAULT '',
+    roman_num TEXT DEFAULT '',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX idx_custom_roman ON custom_dictionary(roman);
+CREATE INDEX idx_custom_notone ON custom_dictionary(notone);
+CREATE INDEX idx_custom_abbrev ON custom_dictionary(abbrev);
+CREATE INDEX idx_custom_roman_num ON custom_dictionary(roman_num);
+INSERT INTO custom_dictionary (id, roman, hanzi, notone) VALUES ('E1', 'gâu-tsá', '𠢕早', 'gautsa');
+PRAGMA user_version = 5;
+";
+
+#[test]
+fn an_android_custom_dictionary_from_before_the_side_table_gets_one() {
+    // trace: no custom_search_key table → apply_schema creates it; the
+    // missing application_id forces re-derivation; stamp max(v, 4) — v3 → 4
+    // (Android's own numbering, the "notone regenerated" step), v5 stays 5.
+    for (sql, stamp) in [
+        (ANDROID_CUSTOM_DICTIONARY_V3, 4),
+        (ANDROID_CUSTOM_DICTIONARY_V5, 5),
+    ] {
+        let directory = scratch();
+        let path = paths(&directory).custom_dictionary;
+        build(&path, sql);
+
+        let store = custom_dictionary(&path);
+
+        assert_eq!(store.count().unwrap(), 1);
+        assert_eq!(
+            stored_keys(&path, "E1"),
+            derive_custom_search_keys("gâu-tsá").unwrap()
+        );
+        assert_eq!(pragma(&path, "user_version"), stamp);
+    }
+}
+
+#[test]
+fn an_android_v7_custom_dictionary_the_last_release_wrote_keeps_version_seven() {
+    // trace: mobile-3.6.8 ships DATABASE_VERSION = 7 over the side-table
+    // shape (`ce99e22c`); stale keys re-derived, stamp untouched.
+    let directory = scratch();
+    let path = paths(&directory).custom_dictionary;
+    build(
+        &path,
+        &format!("{PHONE_CUSTOM_DICTIONARY}PRAGMA user_version = 7;"),
+    );
+
+    let store = custom_dictionary(&path);
+
+    assert_eq!(store.count().unwrap(), 1);
+    assert_eq!(
+        stored_keys(&path, "E1"),
+        derive_custom_search_keys("gâu-tsá").unwrap()
+    );
+    assert_eq!(pragma(&path, "user_version"), 7);
+}
+
 const DESKTOP_CUSTOM_DICTIONARY_V4: &str = "
 CREATE TABLE IF NOT EXISTS custom_dictionary (
     id TEXT PRIMARY KEY,
@@ -574,6 +709,18 @@ fn a_fresh_install_takes_no_copy_and_is_marked() {
         );
     }
     assert_eq!(pragma(&files.custom_dictionary, "user_version"), 4);
+}
+
+#[test]
+fn a_fresh_install_whose_directory_does_not_exist_yet_still_opens() {
+    // Android's `databases/` exists only once something wrote there.
+    let directory = scratch();
+    let path = directory.path().join("databases").join("user_frequency.db");
+
+    let store = frequency(&path);
+
+    assert!(store.is_ready());
+    assert!(path.exists());
 }
 
 #[test]
