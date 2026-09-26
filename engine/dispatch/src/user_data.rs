@@ -15,11 +15,11 @@ use protos::engine::{
     user_data_request, user_data_response, AppConfig, BackupExported, BackupImported,
     BackupRefusal, ComposingRequest, ComposingResponse, CustomCsvExported, CustomCsvImported,
     CustomDictEntry, CustomDictionaryEntry, CustomDictionaryRefusal, CustomEntries,
-    CustomEntryDeleted, CustomEntrySaved, ErrorCode, FetchAtPos, FrequencyEntry, ImportBackup,
-    ImportCustomCsv, LearnedEntry, ListCustomEntries, NextWordRequest, NextWordResponse,
-    OpenUserData, RawNextWordPrediction, RecordUsage, ResetUserData, Response, SaveCustomEntry,
-    Source, UsageRecorded, UserDataJournal, UserDataOpened, UserDataRequest, UserDataReset,
-    UserDataResponse,
+    CustomEntryDeleted, CustomEntryMatches, CustomEntrySaved, ErrorCode, FetchAtPos,
+    FrequencyEntry, ImportBackup, ImportCustomCsv, LearnedEntry, ListCustomEntries,
+    NextWordRequest, NextWordResponse, OpenUserData, RawNextWordPrediction, RecordUsage,
+    ResetUserData, Response, SaveCustomEntry, SearchCustomEntries, Source, UsageRecorded,
+    UserDataJournal, UserDataOpened, UserDataRequest, UserDataReset, UserDataResponse,
 };
 use userdata::{
     AssociationPair, BackupError, CustomDictionaryCSV, CustomDictionaryCSVError,
@@ -139,6 +139,9 @@ impl UserDataHandle {
             Some(user_data_request::Method::ImportBackup(import)) => {
                 user_data_response::Result::BackupImported(self.import_backup(import)?)
             }
+            Some(user_data_request::Method::SearchCustomEntries(search)) => {
+                user_data_response::Result::CustomEntryMatches(self.search_custom_entries(search)?)
+            }
             None => return Err(UserDataError::Invalid("user-data request has no method")),
         };
         Ok(UserDataResponse {
@@ -200,6 +203,23 @@ impl UserDataHandle {
     fn opened_stores(&self) -> Result<&UserDataStores, UserDataError> {
         self.stores()
             .ok_or(UserDataError::Invalid("user data is not open yet"))
+    }
+
+    /// The dictionary search's lookup: the query's key, prefix-matched as
+    /// the keyboard matches it. A query that derives no key matches nothing.
+    fn search_custom_entries(
+        &self,
+        search: &SearchCustomEntries,
+    ) -> Result<CustomEntryMatches, UserDataError> {
+        let dictionary = &self.opened_stores()?.custom_dictionary;
+        let entries = userdata::derive_custom_query_key(&search.query, &search.input_mode)
+            .map(|key| {
+                CustomDictionaryStore::rows_matching(dictionary, &key, search.limit as usize)
+            })
+            .unwrap_or_default();
+        Ok(CustomEntryMatches {
+            entries: entries.iter().map(custom_dictionary_entry).collect(),
+        })
     }
 
     fn list_custom_entries(
@@ -974,6 +994,37 @@ mod tests {
             other => panic!("expected a delete, got {other:?}"),
         }
         assert_eq!(list(&handle, "").total, seeded);
+    }
+
+    fn search(handle: &UserDataHandle, query: &str) -> Vec<String> {
+        match call(
+            handle,
+            user_data_request::Method::SearchCustomEntries(SearchCustomEntries {
+                query: query.into(),
+                input_mode: "tl".into(),
+                limit: 50,
+            }),
+        ) {
+            user_data_response::Result::CustomEntryMatches(matches) => matches
+                .entries
+                .into_iter()
+                .map(|entry| entry.hanzi)
+                .collect(),
+            other => panic!("expected matches, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn a_dictionary_search_matches_by_the_typed_key_not_by_substring() {
+        let directory = tempfile::tempdir().unwrap();
+        let handle = UserDataHandle::new();
+        handle.handle(&open_request(directory.path())).unwrap();
+        save(&handle, None, "tâi-uân", "台灣");
+
+        assert_eq!(search(&handle, "taiuan"), ["台灣"]);
+        assert_eq!(search(&handle, "tai"), ["台灣"], "a prefix of the key");
+        assert!(search(&handle, "uan").is_empty(), "not a substring match");
+        assert!(search(&handle, "").is_empty(), "no key, no matches");
     }
 
     #[test]

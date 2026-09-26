@@ -120,5 +120,16 @@ public interface UserDataResponseOrBuilder extends
    */
   com.siansiansu.taigikeyboard.engine.proto.BackupImported getBackupImported();
 
+  /**
+   * <code>.taigi.engine.CustomEntryMatches custom_entry_matches = 11;</code>
+   * @return Whether the customEntryMatches field is set.
+   */
+  boolean hasCustomEntryMatches();
+  /**
+   * <code>.taigi.engine.CustomEntryMatches custom_entry_matches = 11;</code>
+   * @return The customEntryMatches.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.CustomEntryMatches getCustomEntryMatches();
+
   public com.siansiansu.taigikeyboard.engine.proto.UserDataResponse.ResultCase getResultCase();
 }

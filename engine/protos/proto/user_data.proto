@@ -26,6 +26,7 @@ message UserDataRequest {
     ExportCustomCsv export_custom_csv = 8;
     ExportBackup export_backup = 9;
     ImportBackup import_backup = 10;
+    SearchCustomEntries search_custom_entries = 11;
   }
 }
 
@@ -41,6 +42,7 @@ message UserDataResponse {
     CustomCsvExported custom_csv_exported = 8;
     BackupExported backup_exported = 9;
     BackupImported backup_imported = 10;
+    CustomEntryMatches custom_entry_matches = 11;
   }
 }
 
@@ -198,6 +200,21 @@ message CustomCsvImported {
   uint32 imported = 2;
   uint32 skipped = 3;
 }
+
+// A dictionary search looks entries up the way the keyboard does — by the
+// search key the query derives, prefix-matched — not by the page's
+// substring filter.
+message SearchCustomEntries {
+  // What the user typed into a dictionary search box.
+  string query = 1;
+  // `tl` / `poj` / `tps`, the settings input mode the query is typed in.
+  string input_mode = 2;
+  uint32 limit = 3;
+}
+
+// Entries whose search key starts with the query's, ordered by
+// romanization. Empty when the query derives no key.
+message CustomEntryMatches { repeated CustomDictionaryEntry entries = 1; }
 
 message ExportCustomCsv {}
 
