@@ -73,8 +73,7 @@ fun RustEngineBridge.userDataRecordUsage(
 }
 
 /** Empties the selected stores in place; `null` when the engine could not. */
-fun RustEngineBridge.userDataReset(reset: ResetUserData): UserDataReset? =
-    userData("userDataReset") { setReset(reset) }?.takeIf { it.hasReset() }?.reset
+fun RustEngineBridge.userDataReset(reset: ResetUserData): UserDataReset? = userData("userDataReset") { setReset(reset) }?.takeIf { it.hasReset() }?.reset
 
 fun RustEngineBridge.customDictionaryList(
     filter: String,
