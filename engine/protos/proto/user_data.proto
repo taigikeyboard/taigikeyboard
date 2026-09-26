@@ -18,6 +18,7 @@ message UserDataRequest {
   oneof method {
     OpenUserData open = 1;
     ResetUserData reset = 2;
+    RecordUsage record_usage = 3;
   }
 }
 
@@ -25,6 +26,7 @@ message UserDataResponse {
   oneof result {
     UserDataOpened opened = 1;
     UserDataReset reset = 2;
+    UsageRecorded usage_recorded = 3;
   }
 }
 
@@ -76,3 +78,27 @@ message UserDataReset {
   int64 custom_dictionary_removed = 3;
   int64 learned_phrases_removed = 4;
 }
+
+// The user committed a candidate or picked a prediction — one frequency
+// count for the `(display_text, canonical_tl)` pair, and, when the pick was
+// a learned phrase taken whole, its touch-on-use (§50). Sent exactly where
+// each platform recorded usage itself before. Queued, best-effort: the
+// answer does not wait for the write.
+//
+// The other learning writes need no op: once the stores are open the
+// engine persists what it decides itself — `Effect.phrase_learned` and
+// `NextWordEffect.record_association` / `record_compound_associations` —
+// and leaves those effects out of the response.
+message RecordUsage {
+  string display_text = 1;
+  string canonical_tl = 2;
+  // The picked candidate's Hanji, when it has one (a learned phrase can
+  // only be touched by its Hanji); absent for a Hanji-less pick.
+  optional string hanji = 3;
+  // The desktop's frequency-recording setting, OFF: no count is kept, the
+  // learned-phrase touch still is (it is learning data, always on — §50).
+  // Negative so an un-wired build records, as the phones always do.
+  bool frequency_recording_disabled = 4;
+}
+
+message UsageRecorded {}

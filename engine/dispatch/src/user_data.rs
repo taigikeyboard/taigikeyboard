@@ -9,16 +9,18 @@ use std::path::PathBuf;
 use std::sync::OnceLock;
 
 use composing::api::ComposingError;
+use nextword::NextWordError;
 use protos::engine::{
-    composing_request, next_word_request, response, user_data_request, user_data_response,
-    AppConfig, ComposingRequest, ComposingResponse, CustomDictEntry, ErrorCode, FetchAtPos,
-    FrequencyEntry, LearnedEntry, NextWordRequest, OpenUserData, RawNextWordPrediction,
-    ResetUserData, Response, Source, UserDataJournal, UserDataOpened, UserDataRequest,
-    UserDataReset, UserDataResponse,
+    composing_request, effect, next_word_effect, next_word_request, next_word_response, response,
+    user_data_request, user_data_response, AppConfig, ComposingRequest, ComposingResponse,
+    CustomDictEntry, ErrorCode, FetchAtPos, FrequencyEntry, LearnedEntry, NextWordRequest,
+    NextWordResponse, OpenUserData, RawNextWordPrediction, RecordUsage, ResetUserData, Response,
+    Source, UsageRecorded, UserDataJournal, UserDataOpened, UserDataRequest, UserDataReset,
+    UserDataResponse,
 };
 use userdata::{
-    CustomDictionarySource, CustomEntry, FollowingRow, FrequencyRow, JournalMode, LearnedPhrase,
-    LearnedPhraseSource, UserDataPaths, UserDataStores,
+    AssociationPair, CustomDictionarySource, CustomEntry, FollowingRow, FrequencyRow, JournalMode,
+    LearnedPhrase, LearnedPhraseSource, UserDataPaths, UserDataStores,
 };
 
 /// Why a user-data request did nothing.
@@ -91,6 +93,10 @@ impl UserDataHandle {
             Some(user_data_request::Method::Reset(reset)) => {
                 user_data_response::Result::Reset(self.reset(reset)?)
             }
+            Some(user_data_request::Method::RecordUsage(usage)) => {
+                self.record_usage(usage)?;
+                user_data_response::Result::UsageRecorded(UsageRecorded {})
+            }
             None => return Err(UserDataError::Invalid("user-data request has no method")),
         };
         Ok(UserDataResponse {
@@ -139,6 +145,28 @@ impl UserDataHandle {
         Ok(readiness(&opened.stores))
     }
 
+    /// One commit counted and, for a Hanji pick, a learned phrase touched —
+    /// what each platform's candidate / prediction tap handler did itself.
+    fn record_usage(&self, usage: &RecordUsage) -> Result<(), UserDataError> {
+        let stores = self.stores().ok_or(UserDataError::Invalid(
+            "usage recorded before user data was opened",
+        ))?;
+        if usage.display_text.is_empty() {
+            return Err(UserDataError::Invalid("usage without a display text"));
+        }
+        if !usage.frequency_recording_disabled {
+            stores
+                .frequency
+                .record(&usage.display_text, &usage.canonical_tl);
+        }
+        if let Some(hanji) = &usage.hanji {
+            stores
+                .learned_phrases
+                .touch_phrase(hanji, &usage.canonical_tl);
+        }
+        Ok(())
+    }
+
     fn reset(&self, reset: &ResetUserData) -> Result<UserDataReset, UserDataError> {
         if !(reset.frequency
             || reset.association
@@ -175,17 +203,21 @@ impl UserDataHandle {
 /// and learned rows for the pending buffer, a neutral fetch that discovers
 /// the candidates, their frequency rows, and a re-ranked fetch. The rows a
 /// platform still sends are replaced, never merged (U9). Every other
-/// request, and every request before the open, goes straight to composing.
+/// request goes to composing, and the phrases it decides to learn are
+/// written here (P3c). Before the open, everything goes straight to composing.
 pub(crate) fn handle_composing(
     request: &ComposingRequest,
     config: &AppConfig,
     generation: u64,
 ) -> Result<ComposingResponse, ComposingError> {
     let composing = composing::EngineHandle::instance();
-    let (Some(stores), Some(composing_request::Method::FetchAtPos(sent))) =
-        (UserDataHandle::instance().stores(), request.method.as_ref())
-    else {
+    let Some(stores) = UserDataHandle::instance().stores() else {
         return composing.handle(request, config, generation);
+    };
+    let Some(composing_request::Method::FetchAtPos(sent)) = request.method.as_ref() else {
+        let mut response = composing.handle(request, config, generation)?;
+        persist_learned_phrases(stores, &mut response);
+        return Ok(response);
     };
     // The platform's settings for this fetch; its rows are dropped (U9).
     let mut fetch = FetchAtPos {
@@ -223,6 +255,49 @@ pub(crate) fn handle_composing(
     Ok(composing
         .handle(&fetch_request(&fetch), config, generation)
         .unwrap_or(neutral))
+}
+
+/// Writes the phrases the engine decided to learn (§50) into
+/// `learned_phrases.db` and takes their effects out of the response: "the
+/// engine decides, the platform persists" became "the engine persists" once
+/// the platform opened the stores (roadmap P3c) — a platform must not learn
+/// them a second time.
+fn persist_learned_phrases(stores: &UserDataStores, response: &mut ComposingResponse) {
+    response.effect.retain(|effect| match &effect.kind {
+        Some(effect::Kind::PhraseLearned(learned)) => {
+            stores
+                .learned_phrases
+                .learn_phrase(&learned.hanji, &learned.canonical_tl);
+            false
+        }
+        _ => true,
+    });
+}
+
+/// Writes the bigrams the next-word engine decided to record into
+/// `user_association.db` — a compound word's pairs in one transaction, as
+/// the desktop did — and takes those effects out of the response (P3c).
+fn persist_associations(mut response: NextWordResponse) -> NextWordResponse {
+    let Some(stores) = UserDataHandle::instance().stores() else {
+        return response;
+    };
+    let Some(next_word_response::Result::Decide(decide)) = response.result.as_mut() else {
+        return response;
+    };
+    decide.effects.retain(|effect| {
+        let pairs: Vec<AssociationPair> = match &effect.kind {
+            Some(next_word_effect::Kind::RecordAssociation(record)) => {
+                record.pair.iter().map(association_pair).collect()
+            }
+            Some(next_word_effect::Kind::RecordCompoundAssociations(record)) => {
+                record.pairs.iter().map(association_pair).collect()
+            }
+            _ => return true,
+        };
+        stores.association.record(&pairs);
+        false
+    });
+    response
 }
 
 /// The custom-dictionary rows (unless the user turned the dictionary off)
@@ -292,12 +367,26 @@ fn fetch_request(fetch: &FetchAtPos) -> ComposingRequest {
     }
 }
 
+/// A next-word request, with the engine's own user data once the platform
+/// opened it: `PredictNext` reads its user rows from the store, and the
+/// associations the decision records are written here (P3b / P3c).
+pub(crate) fn handle_nextword(
+    request: NextWordRequest,
+    config: &AppConfig,
+    generation: u64,
+) -> Result<NextWordResponse, NextWordError> {
+    let request = crate::predict::expand_predict_next(with_user_rows(request));
+    nextword::EngineHandle::instance()
+        .handle(&request, config, generation)
+        .map(persist_associations)
+}
+
 /// A next-word request with its user rows read from the engine's own
 /// `user_association.db` once the platform opened it — replacing, never
 /// merging, whatever `PredictNext.user_rows` a platform still sends (U9).
 /// Over-fetches twice the prediction limit, as the platforms did, so the
 /// `(hanzi, tl)` merge never leaves fewer than `limit` survivors.
-pub(crate) fn with_user_rows(mut request: NextWordRequest) -> NextWordRequest {
+fn with_user_rows(mut request: NextWordRequest) -> NextWordRequest {
     let Some(stores) = UserDataHandle::instance().stores() else {
         return request;
     };
@@ -338,6 +427,15 @@ fn learned_entry(phrase: &LearnedPhrase) -> LearnedEntry {
     LearnedEntry {
         hanji: phrase.hanzi.clone(),
         canonical_tl: phrase.canonical_tl.clone(),
+    }
+}
+
+fn association_pair(pair: &protos::engine::AssociationPair) -> AssociationPair {
+    AssociationPair {
+        previous: pair.prev.clone(),
+        previous_tl: pair.prev_tl.clone(),
+        next: pair.next.clone(),
+        next_tl: pair.next_tl.clone(),
     }
 }
 
@@ -525,5 +623,40 @@ mod tests {
                 .unwrap_err(),
             UserDataError::Invalid("reset selects no store")
         );
+    }
+
+    #[test]
+    fn a_learned_phrase_effect_is_written_and_left_out_of_the_response() {
+        use protos::engine::{Effect, PhraseLearned, ResetAutocomplete};
+
+        let directory = tempfile::tempdir().unwrap();
+        let handle = UserDataHandle::new();
+        handle.handle(&open_request(directory.path())).unwrap();
+        let stores = handle.stores().unwrap();
+        let mut response = ComposingResponse {
+            effect: vec![
+                Effect {
+                    kind: Some(effect::Kind::PhraseLearned(PhraseLearned {
+                        hanji: "做進出口".into(),
+                        canonical_tl: "tsò tsìn-tshut-kháu".into(),
+                    })),
+                },
+                Effect {
+                    kind: Some(effect::Kind::ResetAutocomplete(ResetAutocomplete {})),
+                },
+            ],
+            ..ComposingResponse::default()
+        };
+
+        persist_learned_phrases(stores, &mut response);
+
+        assert_eq!(response.effect.len(), 1, "the document effect stays");
+        assert!(matches!(
+            response.effect[0].kind,
+            Some(effect::Kind::ResetAutocomplete(_))
+        ));
+        let learned = stores.learned_phrases.all_rows().unwrap();
+        assert_eq!(learned.len(), 1);
+        assert_eq!(learned[0].hanzi, "做進出口");
     }
 }

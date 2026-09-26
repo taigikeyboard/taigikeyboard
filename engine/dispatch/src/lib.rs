@@ -152,10 +152,17 @@ fn run(bytes: &[u8]) -> Response {
             }
         }
         request::Payload::Nextword(nw_req) => {
+            // With the engine's own user data open, predictions read it and
+            // the associations it decides are written (U11).
             #[cfg(feature = "user-data")]
-            let nw_req = user_data::with_user_rows(nw_req);
-            let nw_req = predict::expand_predict_next(nw_req);
-            match nextword::EngineHandle::instance().handle(&nw_req, &config, generation) {
+            let handled = user_data::handle_nextword(nw_req, &config, generation);
+            #[cfg(not(feature = "user-data"))]
+            let handled = nextword::EngineHandle::instance().handle(
+                &predict::expand_predict_next(nw_req),
+                &config,
+                generation,
+            );
+            match handled {
                 Ok(nw_resp) => Response {
                     id,
                     error: ErrorCode::Ok as i32,
