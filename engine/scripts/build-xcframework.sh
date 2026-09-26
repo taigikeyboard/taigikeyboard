@@ -29,6 +29,11 @@ OUT_DIR="$ENGINE_DIR/target/d9.2-out"
 FRAMEWORK_NAME="RustTaigi"
 LIB_NAME="librust_taigi.a"
 DEST_DIR="$REPO_ROOT/ios/RustEngine"
+# Matches the app + keyboard-extension IPHONEOS_DEPLOYMENT_TARGET in
+# ios/TaigiKeyboard.xcodeproj. Set explicitly because `cc` (bundled sqlite3 via
+# rusqlite) otherwise targets the SDK version, so the linker warns the archive
+# was built for a newer iOS than the app supports.
+export IPHONEOS_DEPLOYMENT_TARGET=17.0
 
 cd "$ENGINE_DIR"
 
