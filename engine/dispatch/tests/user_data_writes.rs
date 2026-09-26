@@ -1,8 +1,8 @@
 //! The engine writing its own user data (user-data-engine-roadmap P3c):
 //! once the platform opens the stores, `RecordUsage` counts a pick and
 //! touches a learned phrase, a final commit of hanji picks is learned, and
-//! the associations the next-word engine decides are recorded by the engine
-//! itself and left out of the response.
+//! the bigrams the next-word engine decides are recorded by the engine
+//! itself — never handed to the platform.
 //! Its own process: the user-data handle is process-wide.
 #![cfg(feature = "user-data")]
 
@@ -117,13 +117,13 @@ fn the_engine_writes_what_the_platforms_wrote() {
     let directory = tempfile::tempdir().unwrap();
     let paths = UserDataPaths::in_directory(directory.path());
 
-    // Before the open: the engine persists nothing and hands the recording
-    // effect to the platform, as today.
+    // Before the open: the bigram the decision records has nowhere to go —
+    // it is not kept, and never handed to the platform.
     word_selected("台", "tâi", 1_000);
     let before_open = word_selected("灣", "uân", 2_000);
     assert!(
-        before_open.iter().any(is_record),
-        "the decision records a bigram: {before_open:?}"
+        !before_open.iter().any(is_record),
+        "never handed to the platform: {before_open:?}"
     );
     assert!(!matches!(
         record_usage(RecordUsage {
@@ -224,4 +224,10 @@ fn the_engine_writes_what_the_platforms_wrote() {
             .iter()
             .any(|row| row.pair.previous == "食" && row.pair.next == "飯")
     )));
+    assert!(
+        reader.association.all_rows().is_some_and(|rows| !rows
+            .iter()
+            .any(|row| row.pair.previous == "台" && row.pair.next == "灣")),
+        "the bigram decided before the open is not kept"
+    );
 }

@@ -17,7 +17,7 @@ mod decide;
 mod filter;
 mod scorer;
 
-pub use api::{Engine, NextWordError};
+pub use api::{Association, Engine, Handled, NextWordError};
 pub use handle::EngineHandle;
 
 // Compile-time guarantee: `Engine` must remain `Send` so the static

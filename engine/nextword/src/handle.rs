@@ -18,7 +18,7 @@
 //! `wrapping_add(1)`; `u64::MAX + 1 = 0` is a fresh current value, NOT a
 //! reset.
 
-use crate::api::{Engine, NextWordError};
+use crate::api::{Engine, Handled, NextWordError};
 use crate::dispatch;
 use once_cell::sync::OnceCell;
 use protos::engine::{AppConfig, NextWordRequest, NextWordResponse};
@@ -55,6 +55,18 @@ impl EngineHandle {
         config: &AppConfig,
         generation: u64,
     ) -> Result<NextWordResponse, NextWordError> {
+        self.handle_recording(req, config, generation)
+            .map(|handled| handled.response)
+    }
+
+    /// [`handle`](Self::handle), with the bigrams a decision recorded — for
+    /// the engine's own association store.
+    pub fn handle_recording(
+        &self,
+        req: &NextWordRequest,
+        config: &AppConfig,
+        generation: u64,
+    ) -> Result<Handled, NextWordError> {
         let mut engine = self
             .nextword
             .lock()

@@ -1,15 +1,18 @@
-// PredictNext through `process_request` against the production lexicon: bundled rows and source toggles.
+// PredictNext through `process_request` against the production lexicon: bundled rows, source
+// toggles, and the rows the engine's own `user_association.db` holds.
+#![cfg(feature = "user-data")]
+
+mod common;
 
 use std::path::PathBuf;
-use std::sync::OnceLock;
+use std::sync::{Mutex, OnceLock, PoisonError};
 
 use lexicon::{EngineHandle as LexiconHandle, LexiconPaths};
-use prost::Message;
 use protos::engine::{
-    next_word_request::Method, next_word_response, request, response, AppConfig, DictionaryToggles,
-    EnginePrediction, NextWordRequest, Platform, PredictNext, RawNextWordPrediction, Request,
-    Response, Source,
+    next_word_request::Method, next_word_response, request, response, DictionaryToggles,
+    EnginePrediction, NextWordRequest, PredictNext,
 };
+use userdata::{AssociationPair, JournalMode, UserDataPaths, UserDataStores};
 
 fn production_artifact(name: &str) -> String {
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -54,42 +57,54 @@ fn all_sources(enabled: bool) -> DictionaryToggles {
     }
 }
 
-fn learned_row(hanzi: &str) -> RawNextWordPrediction {
-    RawNextWordPrediction {
-        hanzi: hanzi.to_owned(),
-        tl: String::new(),
-        count: 1,
-        last_used_ms: 0,
-        source: Source::User as i32,
-    }
+/// Opens the engine's user data once, with one learned bigram after each
+/// word the tests predict from: `→ 𫝛`.
+fn learned_rows_open() {
+    static DIRECTORY: OnceLock<tempfile::TempDir> = OnceLock::new();
+    DIRECTORY.get_or_init(|| {
+        let directory = tempfile::tempdir().unwrap();
+        let paths = UserDataPaths::in_directory(directory.path());
+        let stores = UserDataStores::at(paths.clone(), JournalMode::Delete);
+        stores.open_blocking();
+        for previous in ["臺台", "台"] {
+            stores.association.record(&[AssociationPair {
+                previous: previous.to_owned(),
+                previous_tl: String::new(),
+                next: "𫝛".to_owned(),
+                next_tl: String::new(),
+            }]);
+        }
+        stores.association.all_rows(); // flush the queued writes
+        drop(stores);
+        common::open_user_data(&paths);
+        directory
+    });
 }
 
 /// One PredictNext round trip. Envelope generation 0 matches the fresh
 /// nextword handle, so `query_generation: 0` is never stale.
 fn predict(word: &str, toggles: DictionaryToggles) -> Vec<EnginePrediction> {
-    let request = Request {
-        id: 1,
-        config_snapshot: Some(AppConfig {
-            platform_id: Platform::Ios as i32,
-            input_mode: "tl".to_owned(),
-            is_translate_swapped: true,
-            ..AppConfig::default()
-        }),
-        generation: 0,
-        payload: Some(request::Payload::Nextword(NextWordRequest {
+    // One prediction at a time: a store read never waits on the key path
+    // (`try_lock`), so two parallel tests would each find the other reading.
+    static ONE_AT_A_TIME: Mutex<()> = Mutex::new(());
+    let _one = ONE_AT_A_TIME.lock().unwrap_or_else(PoisonError::into_inner);
+    learned_rows_open();
+    // The store stamps its rows with the wall clock, in whole seconds.
+    let now_ms = i64::try_from(userdata::unix_seconds_now() * 1000).expect("epoch-ms fits i64");
+    let response = common::roundtrip(
+        common::tl_config(true),
+        0,
+        request::Payload::Nextword(NextWordRequest {
             method: Some(Method::PredictNext(PredictNext {
                 word: word.to_owned(),
-                user_rows: vec![learned_row("𫝛")],
                 toggles: Some(toggles),
                 query_generation: 0,
-                now_ms: 0,
+                now_ms,
                 limit: 30,
-                roman: String::new(),
+                ..PredictNext::default()
             })),
-        })),
-    };
-    let response_bytes = dispatch::process_request(&request.encode_to_vec());
-    let response = Response::decode(response_bytes.as_slice()).expect("response decodes");
+        }),
+    );
     let Some(response::Payload::Nextword(nextword)) = response.payload else {
         panic!("expected Nextword payload, got {response:?}");
     };

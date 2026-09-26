@@ -36,7 +36,7 @@ final class ComposingManager {
 
     private let settingsProvider: EngineSettingsProvider
     private let usageRecorder: any UsageRecorder
-    private let nextWordLearner: NextWordLearner
+    private let nextWord: any NextWordPort
     private static let logger = DebugLogger(category: "ComposingManager")
 
     /// Generations must be unique across everything that talks to the engine,
@@ -49,7 +49,7 @@ final class ComposingManager {
     /// The default starts at 1 because 0 is the generation an unset proto field
     /// carries; keeping them apart means a request that forgot to set one
     /// cannot be mistaken for a request from the first session.
-    /// `settingsProvider`, `usageRecorder` and `nextWordLearner` have no
+    /// `settingsProvider`, `usageRecorder` and `nextWord` have no
     /// defaults on purpose: the shipped ones read the user's real
     /// `UserDefaults` and count into the engine's stores of the user's data,
     /// and a defaulted parameter is how a test — or a second production path
@@ -58,12 +58,12 @@ final class ComposingManager {
     init(
         settingsProvider: EngineSettingsProvider,
         usageRecorder: any UsageRecorder,
-        nextWordLearner: NextWordLearner,
+        nextWord: any NextWordPort,
         startingGeneration: UInt64 = 1,
     ) {
         self.settingsProvider = settingsProvider
         self.usageRecorder = usageRecorder
-        self.nextWordLearner = nextWordLearner
+        self.nextWord = nextWord
         currentGeneration = startingGeneration
     }
 
@@ -90,7 +90,7 @@ final class ComposingManager {
         // typed in a terminal. The engine's own state resets on the new
         // generation, but only when it next receives a request under it — this
         // is what makes that happen now rather than at the next commit.
-        nextWordLearner.forgetContext(
+        nextWord.forgetContext(
             settings: settingsProvider.current,
             generation: currentGeneration,
         )
@@ -114,7 +114,7 @@ final class ComposingManager {
         guard !character.isEmpty,
               !character.contains(where: { $0.isLetter || $0.isWhitespace })
         else { return }
-        nextWordLearner.wordSelected(
+        nextWord.wordSelected(
             text: character,
             roman: "",
             settings: settingsProvider.current,
@@ -233,7 +233,7 @@ final class ComposingManager {
         // would have to supply a canonical reading for the committed
         // composition, which only the engine knows, and a guessed one is
         // written into `prev_tl` for everything that follows.
-        nextWordLearner.forgetContext(settings: settings, generation: currentGeneration)
+        nextWord.forgetContext(settings: settings, generation: currentGeneration)
         return Self.committedText(of: transition)
     }
 
@@ -489,14 +489,14 @@ final class ComposingManager {
             // the executor's one job intact and keeps the generation — which
             // only this type knows — out of the effect path.
             case let .nextWordWordSelected(text, roman, _):
-                nextWordLearner.wordSelected(
+                nextWord.wordSelected(
                     text: text,
                     roman: roman,
                     settings: settings,
                     generation: currentGeneration,
                 )
             case let .nextWordUpdateLastSelectedWord(text, roman):
-                nextWordLearner.segmentNailed(
+                nextWord.segmentNailed(
                     text: text,
                     roman: roman,
                     settings: settings,

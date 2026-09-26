@@ -7,10 +7,10 @@ mod common;
 use common::{pair, paths, scratch};
 use std::sync::{Arc, Mutex};
 use userdata::{
-    derive_custom_query_key, derive_custom_search_keys, AssociationSink, CustomDictionaryError,
-    CustomDictionaryRow, CustomDictionarySource, CustomDictionaryStore, CustomSearchKey,
-    FrequencySource, JournalMode, LearnedPhraseRow, LearnedPhraseSource, LearnedPhraseStore,
-    LearningCapacity, SearchKeyDeriver, UserAssociationStore, UserDataStores, UserFrequencyStore,
+    derive_custom_query_key, derive_custom_search_keys, CustomDictionaryError, CustomDictionaryRow,
+    CustomDictionarySource, CustomDictionaryStore, CustomSearchKey, FrequencySource, JournalMode,
+    LearnedPhraseRow, LearnedPhraseSource, LearnedPhraseStore, LearningCapacity, SearchKeyDeriver,
+    UserAssociationStore, UserDataStores, UserFrequencyStore,
 };
 
 fn frequency_store(
@@ -178,13 +178,10 @@ fn bigrams_are_keyed_on_both_readings_and_written_in_order() {
         UserAssociationStore::shipped_capacity(),
     );
     store.open_blocking();
-    AssociationSink::record(
-        &store,
-        &[
-            pair("重", "tîng", "複", "hok"),
-            pair("重", "tāng", "複", "hok"),
-        ],
-    );
+    store.record(&[
+        pair("重", "tîng", "複", "hok"),
+        pair("重", "tāng", "複", "hok"),
+    ]);
     store.record(&[
         pair("重", "tîng", "複", "hok"),
         pair("", "x", "複", "hok"),

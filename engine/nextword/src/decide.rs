@@ -11,11 +11,10 @@
 //! `UpdateLastSelectedWord` bumps `current_generation`. Wrapping add —
 //! `u64::MAX + 1 = 0` is a fresh value.
 
-use crate::api::{Intent, NextWordError, PersistedState};
+use crate::api::{Association, Decided, Intent, NextWordError, PersistedState};
 use protos::engine::{
-    next_word_effect, AppConfig, AssociationPair, CancelContextTimeout, ClearPredictionsUi,
-    DecideResult, NextWordEffect, Platform, QueryPredictions, RecordAssociation,
-    RecordCompoundAssociations, RescheduleContextTimeout,
+    next_word_effect, AppConfig, CancelContextTimeout, ClearPredictionsUi, DecideResult,
+    NextWordEffect, Platform, QueryPredictions, RescheduleContextTimeout,
 };
 
 /// Strict-`<` association window (10 s).
@@ -29,17 +28,18 @@ const CONTEXT_TIMEOUT_MS: u64 = 30_000;
 /// `NextWordEngine.swift:33`; Android `NextWordEngine.kt:42`).
 const SENTENCE_END_PUNCTUATION: &[char] = &['。', '！', '？', '.', '!', '?'];
 
-/// Apply `intent` against `state`, returning the `DecideResult`.
+/// Apply `intent` against `state`, returning the `DecideResult` and the
+/// bigrams it recorded.
 ///
 /// `platform_id` is a legacy field kept for wire compatibility and possible
 /// future routing; no rule below reads it (§40). The `Unspecified` rejection
 /// is likewise legacy — it predates the convergence and is retained only so
 /// this round changes nothing a platform can observe.
-pub(crate) fn apply(
+pub(crate) fn decide(
     state: &mut PersistedState,
     intent: Intent,
     config: &AppConfig,
-) -> Result<DecideResult, NextWordError> {
+) -> Result<Decided, NextWordError> {
     let platform = Platform::try_from(config.platform_id).unwrap_or(Platform::Unspecified);
     if platform == Platform::Unspecified {
         return Err(NextWordError::InvalidPlatform);
@@ -60,16 +60,18 @@ pub(crate) fn apply(
             now_ms,
             config,
         ),
-        Intent::Backspace { last_char, now_ms } => decide_backspace(state, last_char, now_ms),
-        Intent::ContextTimeoutFired { now_ms: _ } => reset_and_clear_predictions(state),
-        Intent::ClearForNewComposing { now_ms: _ } => decide_clear_for_new_composing(state),
-        Intent::ResetFull { now_ms: _ } => reset_and_clear_predictions(state),
+        Intent::Backspace { last_char, now_ms } => {
+            decide_backspace(state, last_char, now_ms).into()
+        }
+        Intent::ContextTimeoutFired { now_ms: _ } => reset_and_clear_predictions(state).into(),
+        Intent::ClearForNewComposing { now_ms: _ } => decide_clear_for_new_composing(state).into(),
+        Intent::ResetFull { now_ms: _ } => reset_and_clear_predictions(state).into(),
         Intent::UpdateLastSelectedWord {
             text,
             roman,
             now_ms,
         } => decide_update_last_selected_word(state, text, roman, now_ms),
-        Intent::SetIsShowing { is_showing } => decide_set_is_showing(state, is_showing),
+        Intent::SetIsShowing { is_showing } => decide_set_is_showing(state, is_showing).into(),
     })
 }
 
@@ -81,19 +83,19 @@ fn decide_word_selected(
     trigger_prediction: bool,
     now_ms: i64,
     config: &AppConfig,
-) -> DecideResult {
+) -> Decided {
     // Enter commits raw romanization only; skip entirely in Hanji mode.
     if require_roman_mode && config.is_translate_swapped {
-        return result_unchanged(state);
+        return result_unchanged(state).into();
     }
 
     // Noise text never records or predicts. Sentence-end is a subset of
     // noise: branch on it first so the reset path fires instead of no-op.
     if is_noise_text(&text) {
         if is_sentence_end_punctuation(&text) {
-            return reset_and_clear_predictions(state);
+            return reset_and_clear_predictions(state).into();
         }
-        return result_unchanged(state);
+        return result_unchanged(state).into();
     }
 
     // poj→tl is idempotent on TL input — safe for POJ and TPS alike.
@@ -102,33 +104,20 @@ fn decide_word_selected(
         state.last_selected_roman.as_deref().unwrap_or(""),
     );
 
-    let mut effects: Vec<NextWordEffect> = Vec::new();
-
+    let mut associations = Vec::new();
     if let Some(prev_word) = state.last_selected_word.clone() {
         if should_record_association(state, now_ms) {
-            effects.push(NextWordEffect {
-                kind: Some(next_word_effect::Kind::RecordAssociation(
-                    RecordAssociation {
-                        pair: Some(AssociationPair {
-                            prev: prev_word,
-                            prev_tl: prev_tl.clone(),
-                            next: text.clone(),
-                            next_tl: text_tl.clone(),
-                        }),
-                    },
-                )),
+            associations.push(Association {
+                prev: prev_word,
+                prev_tl: prev_tl.clone(),
+                next: text.clone(),
+                next_tl: text_tl.clone(),
             });
         }
     }
-    let compound = compound_association_pairs(&text, &text_tl);
-    if !compound.is_empty() {
-        effects.push(NextWordEffect {
-            kind: Some(next_word_effect::Kind::RecordCompoundAssociations(
-                RecordCompoundAssociations { pairs: compound },
-            )),
-        });
-    }
+    associations.extend(compound_association_pairs(&text, &text_tl));
 
+    let mut effects: Vec<NextWordEffect> = Vec::new();
     effects.push(NextWordEffect {
         kind: Some(next_word_effect::Kind::RescheduleContextTimeout(
             RescheduleContextTimeout {
@@ -154,7 +143,10 @@ fn decide_word_selected(
         });
     }
 
-    snapshot_into_decide_result(state, effects)
+    Decided {
+        result: snapshot_into_decide_result(state, effects),
+        associations,
+    }
 }
 
 fn decide_backspace(state: &mut PersistedState, last_char: String, now_ms: i64) -> DecideResult {
@@ -229,9 +221,9 @@ fn decide_update_last_selected_word(
     text: String,
     roman: String,
     now_ms: i64,
-) -> DecideResult {
+) -> Decided {
     if text.is_empty() {
-        return result_unchanged(state);
+        return result_unchanged(state).into();
     }
 
     // Noise neither records nor becomes context (§40) — same early return as
@@ -239,28 +231,23 @@ fn decide_update_last_selected_word(
     // association window keeps advancing across a committed punctuation mark.
     if is_noise_text(&text) {
         state.last_selection_time_ms = now_ms;
-        return result_unchanged(state);
+        return result_unchanged(state).into();
     }
 
     let roman_to_convert = if roman.is_empty() { &text } else { &roman };
     let roman_tl = phonetics::api::poj_display_to_tl_display(roman_to_convert);
 
-    let mut effects: Vec<NextWordEffect> = Vec::new();
-    let compound = compound_association_pairs(&text, &roman_tl);
-    if !compound.is_empty() {
-        effects.push(NextWordEffect {
-            kind: Some(next_word_effect::Kind::RecordCompoundAssociations(
-                RecordCompoundAssociations { pairs: compound },
-            )),
-        });
-    }
+    let associations = compound_association_pairs(&text, &roman_tl);
 
     state.last_selected_word = Some(text);
     state.last_selected_roman = Some(roman_tl);
     state.last_selection_time_ms = now_ms;
     // NO generation bump — distinguishes from WordSelected/Backspace etc.
 
-    snapshot_into_decide_result(state, effects)
+    Decided {
+        result: snapshot_into_decide_result(state, Vec::new()),
+        associations,
+    }
 }
 
 /// Platform-driven visibility sync. No effects, no generation bump —
@@ -293,9 +280,8 @@ pub(crate) fn split_compound(word: &str) -> Vec<&str> {
 }
 
 /// Build sequential bigram pairs from a compound word; order preserved so
-/// the platform executor records sequentially (parallel writes race on
-/// the SQLite UNIQUE constraint).
-pub(crate) fn compound_association_pairs(display_text: &str, roman: &str) -> Vec<AssociationPair> {
+/// the store records them in order.
+pub(crate) fn compound_association_pairs(display_text: &str, roman: &str) -> Vec<Association> {
     // No boundary, nothing to pair — and the cheapest question to ask, which
     // matters because a single-word commit is the common case.
     if !display_text.contains(char::is_whitespace) {
@@ -336,7 +322,7 @@ pub(crate) fn compound_association_pairs(display_text: &str, roman: &str) -> Vec
     parts
         .windows(2)
         .zip(roman_parts.windows(2))
-        .map(|(words, romans)| AssociationPair {
+        .map(|(words, romans)| Association {
             prev: words[0].to_owned(),
             prev_tl: romans[0].to_owned(),
             next: words[1].to_owned(),
@@ -410,13 +396,13 @@ mod tests {
         config(Platform::Ios, translate_swapped)
     }
 
-    /// Every recorded compound pair in `result`, or `None` when it recorded no
-    /// compound association at all.
-    fn compound_pairs(result: &DecideResult) -> Option<&[AssociationPair]> {
-        result.effects.iter().find_map(|e| match &e.kind {
-            Some(next_word_effect::Kind::RecordCompoundAssociations(c)) => Some(&c.pairs[..]),
-            _ => None,
-        })
+    /// [`decide`] without the recorded bigrams.
+    fn apply(
+        state: &mut PersistedState,
+        intent: Intent,
+        config: &AppConfig,
+    ) -> Result<DecideResult, NextWordError> {
+        decide(state, intent, config).map(|decided| decided.result)
     }
 
     /// The two intents that can record a compound association: the terminal
@@ -464,13 +450,13 @@ mod tests {
     }
 
     #[test]
-    fn backspace_does_not_emit_record_effects() {
+    fn backspace_records_no_association() {
         let mut state = PersistedState {
             last_selected_word: Some("早安".to_owned()),
             last_selection_time_ms: 1_000,
             ..PersistedState::default()
         };
-        let result = apply(
+        let decided = decide(
             &mut state,
             Intent::Backspace {
                 last_char: "好".to_owned(),
@@ -479,16 +465,10 @@ mod tests {
             &ios_config(false),
         )
         .unwrap();
-        for effect in &result.effects {
-            assert!(
-                !matches!(
-                    effect.kind,
-                    Some(next_word_effect::Kind::RecordAssociation(_))
-                        | Some(next_word_effect::Kind::RecordCompoundAssociations(_))
-                ),
-                "Backspace must not record associations"
-            );
-        }
+        assert!(
+            decided.associations.is_empty(),
+            "Backspace must not record associations"
+        );
     }
 
     #[test]
@@ -655,7 +635,7 @@ mod tests {
             Platform::Linux,
         ] {
             let mut state = PersistedState::default();
-            let result = apply(
+            let result = decide(
                 &mut state,
                 Intent::WordSelected {
                     text: "tâi-gí khí-puânn".to_owned(),
@@ -667,7 +647,8 @@ mod tests {
                 &config(platform, false),
             )
             .unwrap();
-            let pairs = compound_pairs(&result).unwrap_or_default();
+            // A fresh state has no predecessor, so every pair is the compound's.
+            let pairs = &result.associations;
             assert_eq!(pairs.len(), 1, "{platform:?}");
             assert_eq!(pairs[0].prev, "tâi-gí", "{platform:?}");
             assert_eq!(pairs[0].next, "khí-puânn", "{platform:?}");
@@ -680,9 +661,9 @@ mod tests {
         // mid-commit UpdateLastSelectedWord may split it into tâi → gí.
         for intent in both_entry_points("tâi-gí") {
             let mut state = PersistedState::default();
-            let result = apply(&mut state, intent, &ios_config(false)).unwrap();
+            let result = decide(&mut state, intent, &ios_config(false)).unwrap();
             assert!(
-                compound_pairs(&result).is_none(),
+                result.associations.is_empty(),
                 "a 連字 compound is one word",
             );
         }
@@ -697,9 +678,9 @@ mod tests {
         for text in ["\u{02c6} \u{02c7}", ", ;"] {
             for intent in both_entry_points(text) {
                 let mut state = PersistedState::default();
-                let result = apply(&mut state, intent, &ios_config(false)).unwrap();
+                let result = decide(&mut state, intent, &ios_config(false)).unwrap();
                 assert!(
-                    compound_pairs(&result).is_none(),
+                    result.associations.is_empty(),
                     "{text:?} is marks only — nothing to learn",
                 );
                 assert_eq!(
@@ -739,6 +720,72 @@ mod tests {
             e.kind,
             Some(next_word_effect::Kind::CancelContextTimeout(_))
         )));
+    }
+
+    #[test]
+    fn a_comma_between_two_commits_keeps_the_pair() {
+        // trace: `、` is noise but not sentence-end, so `decide_word_selected`
+        // returns unchanged — 台 stays the context; 語 at 1 500 ms is 500 ms
+        // after 台 (< 10 s), so 台 → 語 is recorded; poj→tl is idempotent on
+        // the TL readings.
+        let mut state = PersistedState {
+            last_selected_word: Some("台".to_owned()),
+            last_selected_roman: Some("tâi".to_owned()),
+            last_selection_time_ms: 1_000,
+            ..PersistedState::default()
+        };
+        let word = |text: &str, roman: &str, now_ms| Intent::WordSelected {
+            text: text.to_owned(),
+            roman: roman.to_owned(),
+            require_roman_mode: false,
+            trigger_prediction: false,
+            now_ms,
+        };
+        let comma = decide(&mut state, word("、", "", 1_200), &ios_config(false)).unwrap();
+        assert!(comma.associations.is_empty());
+        let next = decide(&mut state, word("語", "gí", 1_500), &ios_config(false)).unwrap();
+        assert_eq!(
+            next.associations,
+            vec![Association {
+                prev: "台".to_owned(),
+                prev_tl: "tâi".to_owned(),
+                next: "語".to_owned(),
+                next_tl: "gí".to_owned(),
+            }]
+        );
+    }
+
+    #[test]
+    fn a_hanji_only_commit_pairs_with_an_empty_tl() {
+        // trace: the hanzi-only suggestion path sends roman "" — poj→tl("")
+        // = "", so the pair carries `next_tl: ""` rather than a guessed one.
+        let mut state = PersistedState {
+            last_selected_word: Some("早".to_owned()),
+            last_selected_roman: Some("tsá".to_owned()),
+            last_selection_time_ms: 0,
+            ..PersistedState::default()
+        };
+        let decided = decide(
+            &mut state,
+            Intent::WordSelected {
+                text: "安".to_owned(),
+                roman: String::new(),
+                require_roman_mode: false,
+                trigger_prediction: false,
+                now_ms: 5_000,
+            },
+            &ios_config(false),
+        )
+        .unwrap();
+        assert_eq!(
+            decided.associations,
+            vec![Association {
+                prev: "早".to_owned(),
+                prev_tl: "tsá".to_owned(),
+                next: "安".to_owned(),
+                next_tl: String::new(),
+            }]
+        );
     }
 
     #[test]
@@ -887,7 +934,7 @@ mod tests {
             last_selection_time_ms: 1_000,
             ..PersistedState::default()
         };
-        let result = apply(
+        let result = decide(
             &mut state,
             Intent::WordSelected {
                 text: "安".to_owned(),
@@ -899,11 +946,16 @@ mod tests {
             &ios_config(false),
         )
         .unwrap();
-        let has_record = result
-            .effects
-            .iter()
-            .any(|e| matches!(e.kind, Some(next_word_effect::Kind::RecordAssociation(_))));
-        assert!(has_record, "should record bigram within 10 s window");
+        assert_eq!(
+            result.associations,
+            vec![Association {
+                prev: "早".to_owned(),
+                prev_tl: "tsá".to_owned(),
+                next: "安".to_owned(),
+                next_tl: "an".to_owned(),
+            }],
+            "should record bigram within 10 s window"
+        );
     }
 
     #[test]
@@ -914,7 +966,7 @@ mod tests {
             last_selection_time_ms: 0,
             ..PersistedState::default()
         };
-        let result = apply(
+        let result = decide(
             &mut state,
             Intent::WordSelected {
                 text: "安".to_owned(),
@@ -926,11 +978,10 @@ mod tests {
             &ios_config(false),
         )
         .unwrap();
-        let has_record = result
-            .effects
-            .iter()
-            .any(|e| matches!(e.kind, Some(next_word_effect::Kind::RecordAssociation(_))));
-        assert!(!has_record, "outside 10 s window must not record");
+        assert!(
+            result.associations.is_empty(),
+            "outside 10 s window must not record"
+        );
     }
 
     #[test]

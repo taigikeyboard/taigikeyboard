@@ -2,7 +2,7 @@
 //! `NextWordResponse`. Generation-mismatch envelope reset lives one layer
 //! up in `EngineHandle::handle`.
 
-use crate::api::{Engine, Intent, NextWordError};
+use crate::api::{Engine, Handled, Intent, NextWordError};
 use protos::engine::{
     next_word_request, next_word_response, AppConfig, NextWordRequest, NextWordResponse,
 };
@@ -104,12 +104,15 @@ pub fn handle(
     req: &NextWordRequest,
     engine: &mut Engine,
     config: &AppConfig,
-) -> Result<NextWordResponse, NextWordError> {
+) -> Result<Handled, NextWordError> {
     let decoded = decode_intent(req)?;
-    let result = match decoded {
+    let (result, associations) = match decoded {
         DecodedRequest::Decide(intent) => {
-            let decide = engine.apply(intent, config)?;
-            next_word_response::Result::Decide(decide)
+            let decided = engine.apply(intent, config)?;
+            (
+                next_word_response::Result::Decide(decided.result),
+                decided.associations,
+            )
         }
         DecodedRequest::Filter {
             raw,
@@ -118,10 +121,13 @@ pub fn handle(
             limit,
         } => {
             let filter = engine.filter(raw, query_generation, now_ms, limit, config)?;
-            next_word_response::Result::Filter(filter)
+            (next_word_response::Result::Filter(filter), Vec::new())
         }
     };
-    Ok(NextWordResponse {
-        result: Some(result),
+    Ok(Handled {
+        response: NextWordResponse {
+            result: Some(result),
+        },
+        associations,
     })
 }

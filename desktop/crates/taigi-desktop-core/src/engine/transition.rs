@@ -28,7 +28,7 @@ pub enum Effect {
     ResetAutocomplete,
     PerformAutocomplete,
     ResetAutocompleteContext,
-    /// Continuous-input mid-commit handshake for the next-word learner.
+    /// Continuous-input mid-commit handshake for next-word learning.
     NextWordUpdateLastSelectedWord {
         text: String,
         roman: String,

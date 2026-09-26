@@ -12,15 +12,15 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 
 use taigi_desktop_core::composing::{
-    AssociationSink, CandidateCommitOutcome, CandidateFetchOutcome, CandidateScript, Clock,
-    ComposingEffectExecutor, ComposingManager, ComposingSessionCoordinator, ContextToken,
-    NextWordLearner, Usage, UsageRecorder,
+    CandidateCommitOutcome, CandidateFetchOutcome, CandidateScript, Clock, ComposingEffectExecutor,
+    ComposingManager, ComposingSessionCoordinator, ContextToken, NextWordPort, Usage,
+    UsageRecorder,
 };
 use taigi_desktop_core::dictionary_artifacts::DictionaryArtifacts;
-use taigi_desktop_core::engine::{self, AssociationPair, ContinuousCandidate, Effect};
+use taigi_desktop_core::engine::{self, ContinuousCandidate, Effect};
 use taigi_desktop_core::keys::CaretDirection;
 use taigi_desktop_core::settings::{
-    keys, CandidateDisplayMode, SettingsDocument, SettingsProvider,
+    keys, CandidateDisplayMode, EngineSettings, SettingsDocument, SettingsProvider,
 };
 
 // MARK: - Fixtures
@@ -60,18 +60,47 @@ impl SettingsProvider for MutableSettings {
     }
 }
 
-/// What the manager handed on: each pick it reported, the bigrams the
-/// learner was asked to keep (the engine persists them in production; built
-/// without `user-data`, this engine returns the effects, so the desktop's own
-/// context rules stay testable — U9), and the clock.
+/// One next-word handshake the manager reported. What the engine learns from
+/// it — the window, noise, sentence ends, compounds — is the engine's
+/// (`engine/nextword/src/decide.rs`); when and what the manager reports is
+/// the desktop's.
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum Handshake {
+    Selected {
+        text: String,
+        roman: String,
+        now_ms: i64,
+    },
+    Nailed {
+        text: String,
+        roman: String,
+    },
+    Forgot,
+}
+
+/// What the manager handed on: each pick it reported, each next-word
+/// handshake, and the clock.
 #[derive(Default)]
 struct Memory {
     usages: Mutex<Vec<Usage>>,
-    associations: Mutex<Vec<AssociationPair>>,
+    handshakes: Mutex<Vec<Handshake>>,
     now_ms: Mutex<i64>,
 }
 
 impl Memory {
+    /// The reported texts in order, `"∅"` for a forgotten context.
+    fn reported(&self) -> Vec<String> {
+        self.handshakes
+            .lock()
+            .unwrap()
+            .iter()
+            .map(|handshake| match handshake {
+                Handshake::Selected { text, .. } | Handshake::Nailed { text, .. } => text.clone(),
+                Handshake::Forgot => "∅".to_owned(),
+            })
+            .collect()
+    }
+
     /// The picks the engine would count, per `(display text, canonical TL)`.
     fn counted(&self) -> HashMap<(String, String), i64> {
         let mut counted = HashMap::new();
@@ -95,9 +124,38 @@ impl UsageRecorder for Handle {
     }
 }
 
-impl AssociationSink for Handle {
-    fn record(&self, pairs: &[AssociationPair]) {
-        self.0.associations.lock().unwrap().extend_from_slice(pairs);
+impl NextWordPort for Handle {
+    fn word_selected(
+        &self,
+        text: &str,
+        roman: &str,
+        now_ms: i64,
+        _settings: &EngineSettings,
+        _generation: u64,
+    ) {
+        self.0.handshakes.lock().unwrap().push(Handshake::Selected {
+            text: text.to_owned(),
+            roman: roman.to_owned(),
+            now_ms,
+        });
+    }
+
+    fn segment_nailed(
+        &self,
+        text: &str,
+        roman: &str,
+        _now_ms: i64,
+        _settings: &EngineSettings,
+        _generation: u64,
+    ) {
+        self.0.handshakes.lock().unwrap().push(Handshake::Nailed {
+            text: text.to_owned(),
+            roman: roman.to_owned(),
+        });
+    }
+
+    fn forget_context(&self, _now_ms: i64, _settings: &EngineSettings, _generation: u64) {
+        self.0.handshakes.lock().unwrap().push(Handshake::Forgot);
     }
 }
 
@@ -157,7 +215,7 @@ fn rig() -> Rig {
     let manager = ComposingManager::new(
         Arc::new(settings.clone()),
         Box::new(handle.clone()),
-        NextWordLearner::new(Box::new(handle.clone()), Box::new(handle.clone())),
+        Box::new(handle.clone()),
         Box::new(handle),
         fresh_generation(),
     );
@@ -705,7 +763,7 @@ fn commit_candidate_with_recording_off_learns_nothing() {
 }
 
 #[test]
-fn two_commits_in_a_row_learn_the_bigram_and_a_full_stop_breaks_it() {
+fn two_commits_report_their_readings_and_a_full_stop_is_reported_between() {
     let _lock = engine_lock();
     let mut rig = rig();
     rig.type_text("tai5");
@@ -715,38 +773,35 @@ fn two_commits_in_a_row_learn_the_bigram_and_a_full_stop_breaks_it() {
     rig.type_text("gi2");
     let gi = rig.candidate("語");
     rig.commit(&gi, CandidateScript::Primary);
-    {
-        let pairs = rig.memory.associations.lock().unwrap();
-        assert!(
-            pairs.iter().any(|p| p.previous == "台"
-                && p.next == "語"
-                && p.previous_tl == "tâi"
-                && p.next_tl == "gí"),
-            "{pairs:?}"
-        );
-    }
-    rig.memory.associations.lock().unwrap().clear();
+    assert_eq!(
+        *rig.memory.handshakes.lock().unwrap(),
+        vec![
+            Handshake::Selected {
+                text: "台".to_owned(),
+                roman: "tâi".to_owned(),
+                now_ms: 1_000,
+            },
+            Handshake::Selected {
+                text: "語".to_owned(),
+                roman: "gí".to_owned(),
+                now_ms: 1_500,
+            },
+        ]
+    );
+    rig.memory.handshakes.lock().unwrap().clear();
 
-    // A full stop typed outside a composition ends the context.
+    // A full stop typed outside a composition is reported — the engine ends
+    // the context on it (`decide.rs` sentence-end rule).
     rig.manager.note_character_typed_outside_composition("。");
     rig.advance_clock(500);
     rig.type_text("bun5");
     let bun = rig.candidate("文");
     rig.commit(&bun, CandidateScript::Primary);
-    assert!(
-        !rig.memory
-            .associations
-            .lock()
-            .unwrap()
-            .iter()
-            .any(|p| p.next == "文"),
-        "{:?}",
-        rig.memory.associations.lock().unwrap()
-    );
+    assert_eq!(rig.memory.reported(), vec!["。", "文"]);
 }
 
 #[test]
-fn a_comma_leaves_the_bigram_intact_and_a_letter_outside_is_not_a_word() {
+fn a_comma_is_reported_and_a_letter_outside_is_not() {
     let _lock = engine_lock();
     let mut rig = rig();
     rig.type_text("tai5");
@@ -758,15 +813,8 @@ fn a_comma_leaves_the_bigram_intact_and_a_letter_outside_is_not_a_word() {
     rig.type_text("gi2");
     let gi = rig.candidate("語");
     rig.commit(&gi, CandidateScript::Primary);
-    let pairs = rig.memory.associations.lock().unwrap();
-    assert!(
-        pairs.iter().any(|p| p.previous == "台" && p.next == "語"),
-        "{pairs:?}"
-    );
-    assert!(
-        !pairs.iter().any(|p| p.previous == "x" || p.previous == ","),
-        "{pairs:?}"
-    );
+    // The engine keeps 台 as context across the comma (noise, `decide.rs`).
+    assert_eq!(rig.memory.reported(), vec!["台", ",", "語"]);
 }
 
 #[test]
@@ -780,11 +828,8 @@ fn a_new_session_and_a_mid_composition_punctuation_both_forget_the_context() {
     rig.type_text("gi2");
     let gi = rig.candidate("語");
     rig.commit(&gi, CandidateScript::Primary);
-    assert!(
-        rig.memory.associations.lock().unwrap().is_empty(),
-        "{:?}",
-        rig.memory.associations.lock().unwrap()
-    );
+    assert_eq!(rig.memory.reported(), vec!["台", "∅", "語"]);
+    rig.memory.handshakes.lock().unwrap().clear();
 
     // Punctuation committed mid-composition drops the context rather than
     // letting the next commit skip a word.
@@ -794,13 +839,7 @@ fn a_new_session_and_a_mid_composition_punctuation_both_forget_the_context() {
     rig.type_text("bun5");
     let bun = rig.candidate("文");
     rig.commit(&bun, CandidateScript::Primary);
-    assert!(!rig
-        .memory
-        .associations
-        .lock()
-        .unwrap()
-        .iter()
-        .any(|p| p.next == "文"));
+    assert_eq!(rig.memory.reported(), vec!["∅", "文"]);
 }
 
 // MARK: - ComposingSessionCoordinatorTests

@@ -14,24 +14,13 @@ import Foundation
 /// because it means macOS runs no context timer. The timeout's job is to expire
 /// a stale context so an old word stops seeding predictions; recording is
 /// already fenced by a strict 10-second window inside the engine
-/// (`engine/nextword/src/decide.rs:306-312`), so with no predictions on screen
-/// a fired timeout would change nothing an observer could see. The two timer
-/// effects are decoded and ignored rather than dropped silently.
+/// (`engine/nextword/src/decide.rs` `should_record_association`), so with no predictions on screen
+/// a fired timeout would change nothing an observer could see.
+///
+/// macOS acts on none of the answer's effects: the engine records the bigrams
+/// it decides on itself (`docs/architecture/user-data-engine-roadmap.md` P9b),
+/// and the rest are about a prediction UI macOS does not have.
 extension RustEngineBridge {
-    /// What one learning intent asked the platform to write.
-    ///
-    /// Only the recording effects are represented. The engine's other four are
-    /// about a prediction UI macOS does not have, and mapping them into cases
-    /// nothing switches on would suggest otherwise.
-    struct NextWordOutcome: Equatable {
-        enum Effect: Equatable {
-            case recordAssociation(AssociationPair)
-            case recordCompoundAssociations([AssociationPair])
-        }
-
-        let effects: [Effect]
-    }
-
     /// The user committed `text`, read as `roman`.
     ///
     /// `trigger_prediction` is forced to `false` rather than forwarded from the
@@ -48,7 +37,7 @@ extension RustEngineBridge {
         nowMs: Int64,
         settings: EngineSettings,
         generation: UInt64,
-    ) -> NextWordOutcome? {
+    ) {
         var payload = Taigi_Engine_WordSelected()
         payload.text = text
         payload.roman = roman
@@ -57,7 +46,7 @@ extension RustEngineBridge {
         payload.requireRomanMode = false
         payload.triggerPrediction = false
         payload.input = decisionInput(nowMs: nowMs)
-        return decide(
+        decide(
             .wordSelected(payload),
             op: "nextwordWordSelected",
             settings: settings,
@@ -75,12 +64,12 @@ extension RustEngineBridge {
         nowMs: Int64,
         settings: EngineSettings,
         generation: UInt64,
-    ) -> NextWordOutcome? {
+    ) {
         var payload = Taigi_Engine_UpdateLastSelectedWord()
         payload.text = text
         payload.roman = roman
         payload.input = decisionInput(nowMs: nowMs)
-        return decide(
+        decide(
             .updateLastSelectedWord(payload),
             op: "nextwordUpdateLastSelectedWord",
             settings: settings,
@@ -95,10 +84,10 @@ extension RustEngineBridge {
         nowMs: Int64,
         settings: EngineSettings,
         generation: UInt64,
-    ) -> NextWordOutcome? {
+    ) {
         var payload = Taigi_Engine_ResetFull()
         payload.input = decisionInput(nowMs: nowMs)
-        return decide(
+        decide(
             .resetFull(payload),
             op: "nextwordResetFull",
             settings: settings,
@@ -127,7 +116,7 @@ extension RustEngineBridge {
         op: String,
         settings: EngineSettings,
         generation: UInt64,
-    ) -> NextWordOutcome? {
+    ) {
         var request = Taigi_Engine_NextWordRequest()
         request.method = method
         guard let payload = roundtrip(
@@ -136,49 +125,15 @@ extension RustEngineBridge {
             generation: generation,
             config: nextwordConfig(settings),
         ) else {
-            return nil
+            return
         }
         guard case let .nextword(response) = payload else {
             recordFailure(op: op, message: "expected a nextword payload, got \(payload)")
-            return nil
+            return
         }
-        guard case let .decide(result)? = response.result else {
+        guard case .decide? = response.result else {
             recordFailure(op: op, message: "expected a decide result")
-            return nil
+            return
         }
-        return NextWordOutcome(effects: result.effects.compactMap(decodeEffect))
-    }
-
-    /// `nil` for an effect this platform has nothing to do with. The switch is
-    /// exhaustive on purpose: a next-word effect added to the engine later has
-    /// to be classified here rather than silently ignored.
-    private static func decodeEffect(
-        _ effect: Taigi_Engine_NextWordEffect,
-    ) -> NextWordOutcome.Effect? {
-        switch effect.kind {
-        case let .recordAssociation(payload):
-            .recordAssociation(decodePair(payload.pair))
-        case let .recordCompoundAssociations(payload):
-            .recordCompoundAssociations(payload.pairs.map(decodePair))
-        case .rescheduleContextTimeout, .cancelContextTimeout:
-            // macOS runs no context timer — see this file's header.
-            nil
-        case .queryPredictions, .clearPredictionsUi_p:
-            // Neither is reachable: queries need `trigger_prediction`, which is
-            // always false here, and a UI clear needs `is_showing`, which
-            // nothing on macOS ever sets true.
-            nil
-        case .none:
-            nil
-        }
-    }
-
-    private static func decodePair(_ pair: Taigi_Engine_AssociationPair) -> AssociationPair {
-        AssociationPair(
-            previous: pair.prev,
-            previousTl: pair.prevTl,
-            next: pair.next,
-            nextTl: pair.nextTl,
-        )
     }
 }

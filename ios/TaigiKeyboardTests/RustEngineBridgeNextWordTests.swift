@@ -59,67 +59,18 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         XCTAssertFalse(baseline.isShowing)
     }
 
-    // MARK: - Decide: WordSelected (records association within window)
+    // MARK: - Decide: WordSelected
 
-    func testWordSelected_recordsAssociationWithinWindow() {
+    // Which bigrams a commit records is the engine's (`engine/nextword/src/
+    // decide.rs` tests); it keeps them itself (roadmap P9b).
+    func testWordSelected_bumpsGenerationAndBecomesTheContext() {
         let primed = wordSelected(text: "早", roman: "tsá", nowMs: 0)
         XCTAssertEqual(primed.currentGeneration, baselineGen &+ 1)
         XCTAssertEqual(primed.lastSelectedWord, "早")
 
         let result = wordSelected(text: "安", roman: "an", nowMs: 5000)
         XCTAssertEqual(result.currentGeneration, baselineGen &+ 2)
-        let expected = RustEngineBridge.NextWordAssociationPair(
-            prev: "早", prevTl: "tsá", next: "安", nextTl: "an",
-        )
-        XCTAssertTrue(
-            result.effects.contains(.recordAssociation(expected)),
-            "effects=\(result.effects)",
-        )
-    }
-
-    func testWordSelected_skipsRecordOutsideWindow() {
-        _ = wordSelected(text: "早", roman: "tsá", nowMs: 0)
-        let result = wordSelected(text: "安", roman: "an", nowMs: 20000)
-        for effect in result.effects {
-            if case .recordAssociation = effect {
-                XCTFail("association at 20s should be dropped (>= 10s window)")
-            }
-        }
-    }
-
-    func testWordSelected_compoundText_emitsSequentialPairs() {
-        // INVARIANT_NEXTWORD_LEARNING_DECISION_CONTRACT (behavioral-invariants
-        // §40): whitespace is the only word boundary, so 台語齒盤 teaches one
-        // pair between its two words — not four pairs across every syllable.
-        let result = wordSelected(
-            text: "tâi-gí khí-puânn", roman: "tâi-gí khí-puânn", nowMs: 0,
-        )
-        XCTAssertEqual(compoundPairs(in: result), [
-            RustEngineBridge.NextWordAssociationPair(
-                prev: "tâi-gí", prevTl: "tâi-gí", next: "khí-puânn", nextTl: "khí-puânn",
-            ),
-        ])
-    }
-
-    func testWordSelected_untrustworthyBoundary_emitsNoCompoundPairs() {
-        // §40, the shapes that must NOT produce a pair:
-        //  - `-` is a hyphen joining the syllables of ONE word; pre-§40 iOS split
-        //    here and taught tshit → niû.
-        //  - Hanji `也是` carries no space while `iā sī` does, and padding the
-        //    short side attaches a blank TL that Core Principle #7 makes
-        //    unmatchable — so record nothing instead.
-        //  - `台語 ˆ` passes the whole-string noise gate (台語 IS word material)
-        //    but `ˆ` alone is not a word.
-        for (text, roman, why) in [
-            ("tshit-niû", "tshit-niû", "連字 compound is one word"),
-            ("tâi-gí", "tâi-gí", "連字 compound is one word"),
-            ("hōo--guá", "hōo--guá", "輕聲 compound is one word"),
-            ("也是", "iā sī", "segmentation disagreement fails closed"),
-            ("台語 \u{02c6}", "tâi-gí \u{02c6}", "a bare tone mark is not a word"),
-        ] {
-            let result = wordSelected(text: text, roman: roman, nowMs: 0)
-            XCTAssertNil(compoundPairs(in: result), "\(why): \(text) / \(roman)")
-        }
+        XCTAssertEqual(result.lastSelectedWord, "安")
     }
 
     func testWordSelected_leadingBracketOrSpace_isStillLearned() {
@@ -173,28 +124,15 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         XCTAssertTrue(sawReschedule)
     }
 
-    func testWordSelected_emptyRoman_carriesEmptyTL() {
-        // Mirrors `ActionHandler+Suggestions` hanzi-only path:
-        // associationRoman="" → nextTl="" preserved end-to-end.
-        _ = wordSelected(text: "早", roman: "tsá", nowMs: 0)
-        let result = wordSelected(text: "安", roman: "", nowMs: 5000)
-        let expected = RustEngineBridge.NextWordAssociationPair(
-            prev: "早", prevTl: "tsá", next: "安", nextTl: "",
-        )
-        XCTAssertTrue(result.effects.contains(.recordAssociation(expected)))
-    }
-
     // MARK: - Decide: Backspace
 
-    func testBackspace_emitsQueryPredictionsButNoRecord() {
+    func testBackspace_emitsQueryPredictions() {
         _ = wordSelected(text: "早", roman: "tsá", nowMs: 0)
         let result = backspace(lastChar: "安", nowMs: 100)
 
         var sawQuery = false
         for effect in result.effects {
             switch effect {
-            case .recordAssociation, .recordCompoundAssociations:
-                XCTFail("backspace must never record")
             case let .queryPredictions(word, roman, generation, _):
                 XCTAssertEqual(word, "安")
                 XCTAssertEqual(roman, "")
@@ -306,19 +244,6 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
     }
 
     // MARK: - Helpers
-
-    /// Every recorded compound pair in `result`, or nil when it recorded no
-    /// compound association at all.
-    private func compoundPairs(
-        in result: RustEngineBridge.NextWordDecideResult,
-    ) -> [RustEngineBridge.NextWordAssociationPair]? {
-        for effect in result.effects {
-            if case let .recordCompoundAssociations(pairs) = effect {
-                return pairs
-            }
-        }
-        return nil
-    }
 
     private func wordSelected(
         text: String,

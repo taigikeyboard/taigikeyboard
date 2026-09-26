@@ -12,15 +12,14 @@ use composing::api::ComposingError;
 use composing::{Intent, UserRows};
 use nextword::NextWordError;
 use protos::engine::{
-    composing_request, next_word_effect, next_word_request, next_word_response, response,
-    user_data_request, user_data_response, AppConfig, BackupExported, BackupImported,
-    BackupRefusal, ComposingRequest, ComposingResponse, CustomCsvExported, CustomCsvImported,
-    CustomDictionaryEntry, CustomDictionaryRefusal, CustomEntries, CustomEntryDeleted,
-    CustomEntryMatches, CustomEntrySaved, ErrorCode, ImportBackup, ImportCustomCsv,
-    ListCustomEntries, NextWordRequest, NextWordResponse, OpenUserData, RawNextWordPrediction,
-    RecordUsage, ResetUserData, Response, SaveCustomEntry, SearchCustomEntries, Source,
-    UsageRecorded, UserDataJournal, UserDataOpened, UserDataRequest, UserDataReset,
-    UserDataResponse,
+    composing_request, next_word_request, response, user_data_request, user_data_response,
+    AppConfig, BackupExported, BackupImported, BackupRefusal, ComposingRequest, ComposingResponse,
+    CustomCsvExported, CustomCsvImported, CustomDictionaryEntry, CustomDictionaryRefusal,
+    CustomEntries, CustomEntryDeleted, CustomEntryMatches, CustomEntrySaved, ErrorCode,
+    ImportBackup, ImportCustomCsv, ListCustomEntries, NextWordRequest, NextWordResponse,
+    OpenUserData, RawNextWordPrediction, RecordUsage, ResetUserData, Response, SaveCustomEntry,
+    SearchCustomEntries, Source, UsageRecorded, UserDataJournal, UserDataOpened, UserDataRequest,
+    UserDataReset, UserDataResponse,
 };
 use ranking::{FrequencyData, FrequencyMap};
 use userdata::{
@@ -514,32 +513,6 @@ pub(crate) fn handle_composing(
     Ok(composing.query(&fetch(rows), config, generation))
 }
 
-/// Writes the bigrams the next-word engine decided to record into
-/// `user_association.db` — a compound word's pairs in one transaction, as
-/// the desktop did — and takes those effects out of the response (P3c).
-fn persist_associations(mut response: NextWordResponse) -> NextWordResponse {
-    let Some(stores) = UserDataHandle::instance().stores() else {
-        return response;
-    };
-    let Some(next_word_response::Result::Decide(decide)) = response.result.as_mut() else {
-        return response;
-    };
-    decide.effects.retain(|effect| {
-        let pairs: Vec<AssociationPair> = match &effect.kind {
-            Some(next_word_effect::Kind::RecordAssociation(record)) => {
-                record.pair.iter().map(association_pair).collect()
-            }
-            Some(next_word_effect::Kind::RecordCompoundAssociations(record)) => {
-                record.pairs.iter().map(association_pair).collect()
-            }
-            _ => return true,
-        };
-        stores.association.record(&pairs);
-        false
-    });
-    response
-}
-
 /// The custom-dictionary rows (unless the user turned the dictionary off)
 /// and the learned phrases for `raw`, keyed the way the platforms keyed
 /// them — no frequency rows yet.
@@ -623,39 +596,50 @@ fn ranked_count(count: i64) -> i32 {
 }
 
 /// A next-word request, with the engine's own user data once the platform
-/// opened it: `PredictNext` reads its user rows from the store, and the
-/// associations the decision records are written here (P3b / P3c).
+/// opened it: `PredictNext` ranks the rows the store holds for the word, and
+/// the bigrams a decision records are written here — one decision's pairs
+/// in one transaction (P3b / P3c). Before the open, a prediction has no
+/// user rows and a recorded bigram is not kept — nowhere to keep it.
 pub(crate) fn handle_nextword(
     request: NextWordRequest,
     config: &AppConfig,
     generation: u64,
 ) -> Result<NextWordResponse, NextWordError> {
-    let request = crate::predict::expand_predict_next(with_user_rows(request));
-    nextword::EngineHandle::instance()
-        .handle(&request, config, generation)
-        .map(persist_associations)
+    let stores = UserDataHandle::instance().stores();
+    let user_rows = stores
+        .map(|stores| following_rows(stores, &request))
+        .unwrap_or_default();
+    let request = crate::predict::expand_predict_next(request, user_rows);
+    let nextword::Handled {
+        response,
+        associations,
+    } = nextword::EngineHandle::instance().handle_recording(&request, config, generation)?;
+    if let Some(stores) = stores {
+        let pairs: Vec<AssociationPair> = associations.into_iter().map(association_pair).collect();
+        stores.association.record(&pairs);
+    }
+    Ok(response)
 }
 
-/// A next-word request with its user rows read from the engine's own
-/// `user_association.db` once the platform opened it — replacing, never
-/// merging, whatever `PredictNext.user_rows` a platform still sends (U9).
-/// Over-fetches twice the prediction limit, as the platforms did, so the
-/// `(hanzi, tl)` merge never leaves fewer than `limit` survivors.
-fn with_user_rows(mut request: NextWordRequest) -> NextWordRequest {
-    let Some(stores) = UserDataHandle::instance().stores() else {
-        return request;
+/// The rows `user_association.db` holds after a `PredictNext` word; none for
+/// any other request. Over-fetches twice the prediction limit, as the
+/// platforms did, so the `(hanzi, tl)` merge never leaves fewer than `limit`
+/// survivors.
+fn following_rows(
+    stores: &UserDataStores,
+    request: &NextWordRequest,
+) -> Vec<RawNextWordPrediction> {
+    let Some(next_word_request::Method::PredictNext(predict)) = request.method.as_ref() else {
+        return Vec::new();
     };
-    if let Some(next_word_request::Method::PredictNext(predict)) = request.method.as_mut() {
-        let limit = nextword::api::effective_prediction_limit(predict.limit) * 2;
-        predict.user_rows = stores
-            .association
-            .rows_following(&predict.word, &predict.roman, limit)
-            .unwrap_or_default()
-            .iter()
-            .map(user_prediction)
-            .collect();
-    }
-    request
+    let limit = nextword::api::effective_prediction_limit(predict.limit) * 2;
+    stores
+        .association
+        .rows_following(&predict.word, &predict.roman, limit)
+        .unwrap_or_default()
+        .iter()
+        .map(user_prediction)
+        .collect()
 }
 
 // The row → engine / wire forms.
@@ -685,12 +669,12 @@ fn custom_dictionary_entry(row: &CustomDictionaryRow) -> CustomDictionaryEntry {
     }
 }
 
-fn association_pair(pair: &protos::engine::AssociationPair) -> AssociationPair {
+fn association_pair(pair: nextword::Association) -> AssociationPair {
     AssociationPair {
-        previous: pair.prev.clone(),
-        previous_tl: pair.prev_tl.clone(),
-        next: pair.next.clone(),
-        next_tl: pair.next_tl.clone(),
+        previous: pair.prev,
+        previous_tl: pair.prev_tl,
+        next: pair.next,
+        next_tl: pair.next_tl,
     }
 }
 

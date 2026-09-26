@@ -284,13 +284,13 @@ enum TestFixtures {
     static func makeComposingManager(
         settingsProvider: EngineSettingsProvider = StubEngineSettingsProvider(),
         usage: RecordingUsageRecorder = RecordingUsageRecorder(),
-        associations: RecordingAssociationSink = RecordingAssociationSink(),
+        nextWord: RecordingNextWordPort = RecordingNextWordPort(),
         startingGeneration: UInt64,
     ) throws -> ComposingManager {
         ComposingManager(
             settingsProvider: settingsProvider,
             usageRecorder: usage,
-            nextWordLearner: NextWordLearner(sink: associations),
+            nextWord: nextWord,
             startingGeneration: startingGeneration,
         )
     }
