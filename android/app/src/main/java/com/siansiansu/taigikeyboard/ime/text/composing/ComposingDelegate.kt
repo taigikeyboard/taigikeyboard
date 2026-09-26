@@ -68,13 +68,6 @@ object DefaultComposingDelegate : ComposingDelegate {
                 // a future Effect variant fails compile here.
                 Unit
             }
-
-            is RustEngineBridge.ComposingTransition.Effect.PhraseLearned -> {
-                // Learned phrases (§50): not a document effect — the engine
-                // wrote the phrase to `learned_phrases.db` itself and, with
-                // the user data open, leaves this out of its answer (roadmap P8b).
-                Unit
-            }
         }
     }
 }

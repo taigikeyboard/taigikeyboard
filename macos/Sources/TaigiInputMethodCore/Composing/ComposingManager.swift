@@ -508,11 +508,6 @@ final class ComposingManager {
                 // exactly what must survive: forwarding it would spend a
                 // round-trip to bump a generation nothing reads.
                 break
-            case .phraseLearned:
-                // §50 — the engine decided the composition was a phrase and,
-                // with the user data open, already wrote it to
-                // `learned_phrases.db`; nothing is left for this side.
-                break
             // Listed rather than defaulted: an effect added to the engine later
             // has to be classified here, and a `default` would quietly file it
             // under "write it into the user's document".

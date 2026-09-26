@@ -48,7 +48,6 @@ public  final class Effect extends
     NEXT_WORD_UPDATE_LAST_SELECTED_WORD(8),
     NEXT_WORD_WORD_SELECTED(9),
     NEXT_WORD_CLEAR_FOR_NEW_COMPOSING(10),
-    PHRASE_LEARNED(11),
     KIND_NOT_SET(0);
     private final int value;
     private KindCase(int value) {
@@ -74,7 +73,6 @@ public  final class Effect extends
         case 8: return NEXT_WORD_UPDATE_LAST_SELECTED_WORD;
         case 9: return NEXT_WORD_WORD_SELECTED;
         case 10: return NEXT_WORD_CLEAR_FOR_NEW_COMPOSING;
-        case 11: return PHRASE_LEARNED;
         case 0: return KIND_NOT_SET;
         default: return null;
       }
@@ -591,56 +589,6 @@ public  final class Effect extends
    */
   private void clearNextWordClearForNewComposing() {
     if (kindCase_ == 10) {
-      kindCase_ = 0;
-      kind_ = null;
-    }
-  }
-
-  public static final int PHRASE_LEARNED_FIELD_NUMBER = 11;
-  /**
-   * <code>.taigi.engine.PhraseLearned phrase_learned = 11;</code>
-   */
-  @java.lang.Override
-  public boolean hasPhraseLearned() {
-    return kindCase_ == 11;
-  }
-  /**
-   * <code>.taigi.engine.PhraseLearned phrase_learned = 11;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.PhraseLearned getPhraseLearned() {
-    if (kindCase_ == 11) {
-       return (com.siansiansu.taigikeyboard.engine.proto.PhraseLearned) kind_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.PhraseLearned.getDefaultInstance();
-  }
-  /**
-   * <code>.taigi.engine.PhraseLearned phrase_learned = 11;</code>
-   */
-  private void setPhraseLearned(com.siansiansu.taigikeyboard.engine.proto.PhraseLearned value) {
-    java.util.Objects.requireNonNull(value);
-    kind_ = value;
-    kindCase_ = 11;
-  }
-  /**
-   * <code>.taigi.engine.PhraseLearned phrase_learned = 11;</code>
-   */
-  private void mergePhraseLearned(com.siansiansu.taigikeyboard.engine.proto.PhraseLearned value) {
-    java.util.Objects.requireNonNull(value);
-    if (kindCase_ == 11 &&
-        kind_ != com.siansiansu.taigikeyboard.engine.proto.PhraseLearned.getDefaultInstance()) {
-      kind_ = com.siansiansu.taigikeyboard.engine.proto.PhraseLearned.newBuilder((com.siansiansu.taigikeyboard.engine.proto.PhraseLearned) kind_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      kind_ = value;
-    }
-    kindCase_ = 11;
-  }
-  /**
-   * <code>.taigi.engine.PhraseLearned phrase_learned = 11;</code>
-   */
-  private void clearPhraseLearned() {
-    if (kindCase_ == 11) {
       kindCase_ = 0;
       kind_ = null;
     }
@@ -1253,54 +1201,6 @@ public  final class Effect extends
       return this;
     }
 
-    /**
-     * <code>.taigi.engine.PhraseLearned phrase_learned = 11;</code>
-     */
-    @java.lang.Override
-    public boolean hasPhraseLearned() {
-      return instance.hasPhraseLearned();
-    }
-    /**
-     * <code>.taigi.engine.PhraseLearned phrase_learned = 11;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.PhraseLearned getPhraseLearned() {
-      return instance.getPhraseLearned();
-    }
-    /**
-     * <code>.taigi.engine.PhraseLearned phrase_learned = 11;</code>
-     */
-    public Builder setPhraseLearned(com.siansiansu.taigikeyboard.engine.proto.PhraseLearned value) {
-      copyOnWrite();
-      instance.setPhraseLearned(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.PhraseLearned phrase_learned = 11;</code>
-     */
-    public Builder setPhraseLearned(
-        com.siansiansu.taigikeyboard.engine.proto.PhraseLearned.Builder builderForValue) {
-      copyOnWrite();
-      instance.setPhraseLearned(builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.PhraseLearned phrase_learned = 11;</code>
-     */
-    public Builder mergePhraseLearned(com.siansiansu.taigikeyboard.engine.proto.PhraseLearned value) {
-      copyOnWrite();
-      instance.mergePhraseLearned(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.PhraseLearned phrase_learned = 11;</code>
-     */
-    public Builder clearPhraseLearned() {
-      copyOnWrite();
-      instance.clearPhraseLearned();
-      return this;
-    }
-
     // @@protoc_insertion_point(builder_scope:taigi.engine.Effect)
   }
   @java.lang.Override
@@ -1329,12 +1229,11 @@ public  final class Effect extends
             com.siansiansu.taigikeyboard.engine.proto.NextWordUpdateLastSelectedWord.class,
             com.siansiansu.taigikeyboard.engine.proto.NextWordWordSelected.class,
             com.siansiansu.taigikeyboard.engine.proto.NextWordClearForNewComposing.class,
-            com.siansiansu.taigikeyboard.engine.proto.PhraseLearned.class,
           };
           java.lang.String info =
-              "\u0000\u000b\u0001\u0000\u0001\u000b\u000b\u0000\u0000\u0000\u0001<\u0000\u0002<" +
-              "\u0000\u0003<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000" +
-              "\t<\u0000\n<\u0000\u000b<\u0000";
+              "\u0000\n\u0001\u0000\u0001\n\n\u0000\u0000\u0000\u0001<\u0000\u0002<\u0000\u0003" +
+              "<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000\t<\u0000\n<" +
+              "\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

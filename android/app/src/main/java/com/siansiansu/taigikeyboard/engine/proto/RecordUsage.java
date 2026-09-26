@@ -13,10 +13,9 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * each platform recorded usage itself before. Queued, best-effort: the
  * answer does not wait for the write.
  *
- * The other learning writes need no op: once the stores are open the
- * engine persists what it decides itself — `Effect.phrase_learned` and
- * `NextWordEffect.record_association` / `record_compound_associations` —
- * and leaves those effects out of the response.
+ * The other learning writes need no op: the engine persists what it
+ * decides itself — a phrase a final commit taught, the bigrams a next-word
+ * decision records — and never hands them to the platform.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.RecordUsage}
@@ -347,10 +346,9 @@ public  final class RecordUsage extends
    * each platform recorded usage itself before. Queued, best-effort: the
    * answer does not wait for the write.
    *
-   * The other learning writes need no op: once the stores are open the
-   * engine persists what it decides itself — `Effect.phrase_learned` and
-   * `NextWordEffect.record_association` / `record_compound_associations` —
-   * and leaves those effects out of the response.
+   * The other learning writes need no op: the engine persists what it
+   * decides itself — a phrase a final commit taught, the bigrams a next-word
+   * decision records — and never hands them to the platform.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.RecordUsage}

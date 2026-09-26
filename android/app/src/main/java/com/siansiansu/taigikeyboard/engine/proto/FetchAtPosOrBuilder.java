@@ -11,38 +11,10 @@ public interface FetchAtPosOrBuilder extends
     com.google.protobuf.MessageLiteOrBuilder {
 
   /**
-   * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
-   */
-  java.util.List<com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry>
-      getFrequencyEntriesList();
-  /**
-   * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
-   */
-  com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry getFrequencyEntries(int index);
-  /**
-   * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
-   */
-  int getFrequencyEntriesCount();
-
-  /**
    * <code>int64 now_ms = 3;</code>
    * @return The nowMs.
    */
   long getNowMs();
-
-  /**
-   * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
-   */
-  java.util.List<com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry>
-      getCustomEntriesList();
-  /**
-   * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
-   */
-  com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry getCustomEntries(int index);
-  /**
-   * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
-   */
-  int getCustomEntriesCount();
 
   /**
    * <code>uint32 enabled_sources_bitmask = 5;</code>
@@ -58,56 +30,9 @@ public interface FetchAtPosOrBuilder extends
 
   /**
    * <pre>
-   * Learned phrases (§50) — the platform's auto-learned rows whose
-   * whole-buffer key equals the current raw buffer (exact match, not the
-   * prefix search `custom_entries` rides). Kept apart from
-   * `custom_entries` on purpose: a manual custom row overrides the walker
-   * edge unconditionally, a learned row only COMPETES with the dictionary
-   * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
-   * un-wired build → no learned candidates.
-   * </pre>
-   *
-   * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
-   */
-  java.util.List<com.siansiansu.taigikeyboard.engine.proto.LearnedEntry>
-      getLearnedEntriesList();
-  /**
-   * <pre>
-   * Learned phrases (§50) — the platform's auto-learned rows whose
-   * whole-buffer key equals the current raw buffer (exact match, not the
-   * prefix search `custom_entries` rides). Kept apart from
-   * `custom_entries` on purpose: a manual custom row overrides the walker
-   * edge unconditionally, a learned row only COMPETES with the dictionary
-   * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
-   * un-wired build → no learned candidates.
-   * </pre>
-   *
-   * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
-   */
-  com.siansiansu.taigikeyboard.engine.proto.LearnedEntry getLearnedEntries(int index);
-  /**
-   * <pre>
-   * Learned phrases (§50) — the platform's auto-learned rows whose
-   * whole-buffer key equals the current raw buffer (exact match, not the
-   * prefix search `custom_entries` rides). Kept apart from
-   * `custom_entries` on purpose: a manual custom row overrides the walker
-   * edge unconditionally, a learned row only COMPETES with the dictionary
-   * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
-   * un-wired build → no learned candidates.
-   * </pre>
-   *
-   * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
-   */
-  int getLearnedEntriesCount();
-
-  /**
-   * <pre>
-   * The user's "use my custom dictionary" setting, OFF — read only once the
-   * engine owns the user data (`UserDataRequest.open`; user-data-engine-
-   * roadmap P3b): the engine then reads `custom_dictionary.db` itself and
-   * ignores fields 2 / 4 / 7, so the platform can no longer express the
-   * setting by sending no rows. Negative like field 6, so an un-wired
-   * build keeps the dictionary on.
+   * The user's "use my custom dictionary" setting, OFF: the engine reads no
+   * custom-dictionary rows for this fetch. Negative like field 6, so an
+   * un-wired build keeps the dictionary on.
    * </pre>
    *
    * <code>bool custom_dictionary_disabled = 8;</code>

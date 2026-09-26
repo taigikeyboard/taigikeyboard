@@ -22,8 +22,6 @@ public  final class NextWordEffect extends
       implements com.google.protobuf.AbstractMessageLite.InternalOneOfEnum {
     RESCHEDULE_CONTEXT_TIMEOUT(1),
     CANCEL_CONTEXT_TIMEOUT(2),
-    RECORD_ASSOCIATION(3),
-    RECORD_COMPOUND_ASSOCIATIONS(4),
     QUERY_PREDICTIONS(5),
     CLEAR_PREDICTIONS_UI(6),
     KIND_NOT_SET(0);
@@ -43,8 +41,6 @@ public  final class NextWordEffect extends
       switch (value) {
         case 1: return RESCHEDULE_CONTEXT_TIMEOUT;
         case 2: return CANCEL_CONTEXT_TIMEOUT;
-        case 3: return RECORD_ASSOCIATION;
-        case 4: return RECORD_COMPOUND_ASSOCIATIONS;
         case 5: return QUERY_PREDICTIONS;
         case 6: return CLEAR_PREDICTIONS_UI;
         case 0: return KIND_NOT_SET;
@@ -163,106 +159,6 @@ public  final class NextWordEffect extends
    */
   private void clearCancelContextTimeout() {
     if (kindCase_ == 2) {
-      kindCase_ = 0;
-      kind_ = null;
-    }
-  }
-
-  public static final int RECORD_ASSOCIATION_FIELD_NUMBER = 3;
-  /**
-   * <code>.taigi.engine.RecordAssociation record_association = 3;</code>
-   */
-  @java.lang.Override
-  public boolean hasRecordAssociation() {
-    return kindCase_ == 3;
-  }
-  /**
-   * <code>.taigi.engine.RecordAssociation record_association = 3;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.RecordAssociation getRecordAssociation() {
-    if (kindCase_ == 3) {
-       return (com.siansiansu.taigikeyboard.engine.proto.RecordAssociation) kind_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.RecordAssociation.getDefaultInstance();
-  }
-  /**
-   * <code>.taigi.engine.RecordAssociation record_association = 3;</code>
-   */
-  private void setRecordAssociation(com.siansiansu.taigikeyboard.engine.proto.RecordAssociation value) {
-    java.util.Objects.requireNonNull(value);
-    kind_ = value;
-    kindCase_ = 3;
-  }
-  /**
-   * <code>.taigi.engine.RecordAssociation record_association = 3;</code>
-   */
-  private void mergeRecordAssociation(com.siansiansu.taigikeyboard.engine.proto.RecordAssociation value) {
-    java.util.Objects.requireNonNull(value);
-    if (kindCase_ == 3 &&
-        kind_ != com.siansiansu.taigikeyboard.engine.proto.RecordAssociation.getDefaultInstance()) {
-      kind_ = com.siansiansu.taigikeyboard.engine.proto.RecordAssociation.newBuilder((com.siansiansu.taigikeyboard.engine.proto.RecordAssociation) kind_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      kind_ = value;
-    }
-    kindCase_ = 3;
-  }
-  /**
-   * <code>.taigi.engine.RecordAssociation record_association = 3;</code>
-   */
-  private void clearRecordAssociation() {
-    if (kindCase_ == 3) {
-      kindCase_ = 0;
-      kind_ = null;
-    }
-  }
-
-  public static final int RECORD_COMPOUND_ASSOCIATIONS_FIELD_NUMBER = 4;
-  /**
-   * <code>.taigi.engine.RecordCompoundAssociations record_compound_associations = 4;</code>
-   */
-  @java.lang.Override
-  public boolean hasRecordCompoundAssociations() {
-    return kindCase_ == 4;
-  }
-  /**
-   * <code>.taigi.engine.RecordCompoundAssociations record_compound_associations = 4;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.RecordCompoundAssociations getRecordCompoundAssociations() {
-    if (kindCase_ == 4) {
-       return (com.siansiansu.taigikeyboard.engine.proto.RecordCompoundAssociations) kind_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.RecordCompoundAssociations.getDefaultInstance();
-  }
-  /**
-   * <code>.taigi.engine.RecordCompoundAssociations record_compound_associations = 4;</code>
-   */
-  private void setRecordCompoundAssociations(com.siansiansu.taigikeyboard.engine.proto.RecordCompoundAssociations value) {
-    java.util.Objects.requireNonNull(value);
-    kind_ = value;
-    kindCase_ = 4;
-  }
-  /**
-   * <code>.taigi.engine.RecordCompoundAssociations record_compound_associations = 4;</code>
-   */
-  private void mergeRecordCompoundAssociations(com.siansiansu.taigikeyboard.engine.proto.RecordCompoundAssociations value) {
-    java.util.Objects.requireNonNull(value);
-    if (kindCase_ == 4 &&
-        kind_ != com.siansiansu.taigikeyboard.engine.proto.RecordCompoundAssociations.getDefaultInstance()) {
-      kind_ = com.siansiansu.taigikeyboard.engine.proto.RecordCompoundAssociations.newBuilder((com.siansiansu.taigikeyboard.engine.proto.RecordCompoundAssociations) kind_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      kind_ = value;
-    }
-    kindCase_ = 4;
-  }
-  /**
-   * <code>.taigi.engine.RecordCompoundAssociations record_compound_associations = 4;</code>
-   */
-  private void clearRecordCompoundAssociations() {
-    if (kindCase_ == 4) {
       kindCase_ = 0;
       kind_ = null;
     }
@@ -574,102 +470,6 @@ public  final class NextWordEffect extends
     }
 
     /**
-     * <code>.taigi.engine.RecordAssociation record_association = 3;</code>
-     */
-    @java.lang.Override
-    public boolean hasRecordAssociation() {
-      return instance.hasRecordAssociation();
-    }
-    /**
-     * <code>.taigi.engine.RecordAssociation record_association = 3;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.RecordAssociation getRecordAssociation() {
-      return instance.getRecordAssociation();
-    }
-    /**
-     * <code>.taigi.engine.RecordAssociation record_association = 3;</code>
-     */
-    public Builder setRecordAssociation(com.siansiansu.taigikeyboard.engine.proto.RecordAssociation value) {
-      copyOnWrite();
-      instance.setRecordAssociation(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.RecordAssociation record_association = 3;</code>
-     */
-    public Builder setRecordAssociation(
-        com.siansiansu.taigikeyboard.engine.proto.RecordAssociation.Builder builderForValue) {
-      copyOnWrite();
-      instance.setRecordAssociation(builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.RecordAssociation record_association = 3;</code>
-     */
-    public Builder mergeRecordAssociation(com.siansiansu.taigikeyboard.engine.proto.RecordAssociation value) {
-      copyOnWrite();
-      instance.mergeRecordAssociation(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.RecordAssociation record_association = 3;</code>
-     */
-    public Builder clearRecordAssociation() {
-      copyOnWrite();
-      instance.clearRecordAssociation();
-      return this;
-    }
-
-    /**
-     * <code>.taigi.engine.RecordCompoundAssociations record_compound_associations = 4;</code>
-     */
-    @java.lang.Override
-    public boolean hasRecordCompoundAssociations() {
-      return instance.hasRecordCompoundAssociations();
-    }
-    /**
-     * <code>.taigi.engine.RecordCompoundAssociations record_compound_associations = 4;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.RecordCompoundAssociations getRecordCompoundAssociations() {
-      return instance.getRecordCompoundAssociations();
-    }
-    /**
-     * <code>.taigi.engine.RecordCompoundAssociations record_compound_associations = 4;</code>
-     */
-    public Builder setRecordCompoundAssociations(com.siansiansu.taigikeyboard.engine.proto.RecordCompoundAssociations value) {
-      copyOnWrite();
-      instance.setRecordCompoundAssociations(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.RecordCompoundAssociations record_compound_associations = 4;</code>
-     */
-    public Builder setRecordCompoundAssociations(
-        com.siansiansu.taigikeyboard.engine.proto.RecordCompoundAssociations.Builder builderForValue) {
-      copyOnWrite();
-      instance.setRecordCompoundAssociations(builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.RecordCompoundAssociations record_compound_associations = 4;</code>
-     */
-    public Builder mergeRecordCompoundAssociations(com.siansiansu.taigikeyboard.engine.proto.RecordCompoundAssociations value) {
-      copyOnWrite();
-      instance.mergeRecordCompoundAssociations(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.RecordCompoundAssociations record_compound_associations = 4;</code>
-     */
-    public Builder clearRecordCompoundAssociations() {
-      copyOnWrite();
-      instance.clearRecordCompoundAssociations();
-      return this;
-    }
-
-    /**
      * <code>.taigi.engine.QueryPredictions query_predictions = 5;</code>
      */
     @java.lang.Override
@@ -785,14 +585,12 @@ public  final class NextWordEffect extends
             "kindCase_",
             com.siansiansu.taigikeyboard.engine.proto.RescheduleContextTimeout.class,
             com.siansiansu.taigikeyboard.engine.proto.CancelContextTimeout.class,
-            com.siansiansu.taigikeyboard.engine.proto.RecordAssociation.class,
-            com.siansiansu.taigikeyboard.engine.proto.RecordCompoundAssociations.class,
             com.siansiansu.taigikeyboard.engine.proto.QueryPredictions.class,
             com.siansiansu.taigikeyboard.engine.proto.ClearPredictionsUI.class,
           };
           java.lang.String info =
-              "\u0000\u0006\u0001\u0000\u0001\u0006\u0006\u0000\u0000\u0000\u0001<\u0000\u0002<" +
-              "\u0000\u0003<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000";
+              "\u0000\u0004\u0001\u0000\u0001\u0006\u0004\u0000\u0000\u0000\u0001<\u0000\u0002<" +
+              "\u0000\u0005<\u0000\u0006<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

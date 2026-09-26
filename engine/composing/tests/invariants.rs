@@ -32,7 +32,6 @@ fn effect_kinds(resp: &ComposingResponse) -> Vec<&'static str> {
             EffectKind::NextWordUpdateLastSelectedWord(_) => "nextWordUpdateLastSelectedWord",
             EffectKind::NextWordWordSelected(_) => "nextWordWordSelected",
             EffectKind::NextWordClearForNewComposing(_) => "nextWordClearForNewComposing",
-            EffectKind::PhraseLearned(_) => "phraseLearned",
         })
         .collect()
 }

@@ -192,7 +192,6 @@ pub fn fetch_at_pos(
         literal_roman_candidate_disabled: !settings.is_literal_roman_candidate_enabled,
         // The engine reads the user's dictionary only with this setting on.
         custom_dictionary_disabled: !settings.is_custom_dict_enabled,
-        ..FetchAtPos::default()
     };
     let response = composing_response(
         composing_request::Method::FetchAtPos(fetch),

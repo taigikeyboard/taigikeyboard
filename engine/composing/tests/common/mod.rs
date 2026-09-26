@@ -523,7 +523,6 @@ pub fn effect_kinds(effects: &[Effect]) -> Vec<&'static str> {
             Kind::NextWordUpdateLastSelectedWord(_) => "NextWordUpdateLastSelectedWord",
             Kind::NextWordWordSelected(_) => "NextWordWordSelected",
             Kind::NextWordClearForNewComposing(_) => "NextWordClearForNewComposing",
-            Kind::PhraseLearned(_) => "PhraseLearned",
         })
         .collect()
 }

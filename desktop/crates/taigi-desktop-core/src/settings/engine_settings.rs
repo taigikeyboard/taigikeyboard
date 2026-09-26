@@ -189,8 +189,8 @@ pub struct EngineSettings {
     /// Read on the write path only; the boost always applies to whatever was
     /// learned. CROSS-PLATFORM INVARIANT — `SharedSettings.swift:48` (ON).
     pub is_frequency_recording_enabled: bool,
-    /// Gates the custom-dictionary lookup itself: off means
-    /// `FetchAtPos.custom_entries` goes out empty. CROSS-PLATFORM INVARIANT —
+    /// Gates the custom-dictionary lookup itself: off means the engine reads
+    /// no custom rows (`FetchAtPos.custom_dictionary_disabled`). CROSS-PLATFORM INVARIANT —
     /// `SharedSettings.swift:51` (ON).
     pub is_custom_dict_enabled: bool,
     pub dictionary_sources: DictionarySourceToggles,

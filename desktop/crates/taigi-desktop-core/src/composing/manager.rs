@@ -425,10 +425,6 @@ impl ComposingManager {
                 // shows no predictions, so there is nothing to hide and the
                 // context is exactly what must survive.
                 Effect::NextWordClearForNewComposing => {}
-                // §50 — the engine decided the composition was a phrase and
-                // writes it into its own `learned_phrases.db` (it strips this
-                // effect once the stores are open; before, nothing learns).
-                Effect::PhraseLearned { .. } => {}
                 Effect::UpdatePreedit { .. }
                 | Effect::ClearPreeditWithoutCommit
                 | Effect::CommitTextReplacingPreedit(_)

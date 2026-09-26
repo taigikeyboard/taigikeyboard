@@ -78,8 +78,8 @@ public interface NextWordRequestOrBuilder extends
    * Android-only Space-path intent (audit §5 #5). iOS wrappers never
    * emit this; Rust engine accepts generically. Mutates
    * last_selected_*&#47;lastSelectionTimeMs without bumping
-   * current_generation, no timer effects, emits compound-only
-   * RecordCompoundAssociations effect (no prev→this bigram).
+   * current_generation, no timer effects; records only a compound's own
+   * bigrams (no prev→this one).
    * </pre>
    *
    * <code>.taigi.engine.UpdateLastSelectedWord update_last_selected_word = 15;</code>
@@ -91,8 +91,8 @@ public interface NextWordRequestOrBuilder extends
    * Android-only Space-path intent (audit §5 #5). iOS wrappers never
    * emit this; Rust engine accepts generically. Mutates
    * last_selected_*&#47;lastSelectionTimeMs without bumping
-   * current_generation, no timer effects, emits compound-only
-   * RecordCompoundAssociations effect (no prev→this bigram).
+   * current_generation, no timer effects; records only a compound's own
+   * bigrams (no prev→this one).
    * </pre>
    *
    * <code>.taigi.engine.UpdateLastSelectedWord update_last_selected_word = 15;</code>

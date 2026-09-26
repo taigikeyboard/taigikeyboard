@@ -380,8 +380,6 @@ extension RustEngineBridge {
             )
         case .nextWordClearForNewComposing:
             return .nextWordClearForNewComposing
-        case let .phraseLearned(payload):
-            return .phraseLearned(hanji: payload.hanji, canonicalTl: payload.canonicalTl)
         }
     }
 

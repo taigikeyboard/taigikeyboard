@@ -42,13 +42,6 @@ pub enum Effect {
     },
     /// Continuous-input abort handshake. Distinct from a full next-word reset.
     NextWordClearForNewComposing,
-    /// Learned phrases (§50) — the final continuous commit was a sequence of
-    /// hanji picks; the platform upserts the `(hanji, canonical_tl)` pair into
-    /// its learned store.
-    PhraseLearned {
-        hanji: String,
-        canonical_tl: String,
-    },
 }
 
 /// One engine response, decoded. `effects` is the whole reason this type
@@ -107,10 +100,6 @@ impl Effect {
                 trigger_prediction: payload.trigger_prediction,
             },
             effect::Kind::NextWordClearForNewComposing(_) => Effect::NextWordClearForNewComposing,
-            effect::Kind::PhraseLearned(payload) => Effect::PhraseLearned {
-                hanji: payload.hanji.clone(),
-                canonical_tl: payload.canonical_tl.clone(),
-            },
         })
     }
 }

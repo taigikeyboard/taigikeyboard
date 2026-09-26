@@ -33,28 +33,6 @@ public interface NextWordEffectOrBuilder extends
   com.siansiansu.taigikeyboard.engine.proto.CancelContextTimeout getCancelContextTimeout();
 
   /**
-   * <code>.taigi.engine.RecordAssociation record_association = 3;</code>
-   * @return Whether the recordAssociation field is set.
-   */
-  boolean hasRecordAssociation();
-  /**
-   * <code>.taigi.engine.RecordAssociation record_association = 3;</code>
-   * @return The recordAssociation.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.RecordAssociation getRecordAssociation();
-
-  /**
-   * <code>.taigi.engine.RecordCompoundAssociations record_compound_associations = 4;</code>
-   * @return Whether the recordCompoundAssociations field is set.
-   */
-  boolean hasRecordCompoundAssociations();
-  /**
-   * <code>.taigi.engine.RecordCompoundAssociations record_compound_associations = 4;</code>
-   * @return The recordCompoundAssociations.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.RecordCompoundAssociations getRecordCompoundAssociations();
-
-  /**
    * <code>.taigi.engine.QueryPredictions query_predictions = 5;</code>
    * @return Whether the queryPredictions field is set.
    */

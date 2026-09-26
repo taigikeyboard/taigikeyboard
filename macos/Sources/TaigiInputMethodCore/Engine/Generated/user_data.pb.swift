@@ -515,10 +515,9 @@ public nonisolated struct Taigi_Engine_UserDataReset: Sendable {
 /// each platform recorded usage itself before. Queued, best-effort: the
 /// answer does not wait for the write.
 ///
-/// The other learning writes need no op: once the stores are open the
-/// engine persists what it decides itself — `Effect.phrase_learned` and
-/// `NextWordEffect.record_association` / `record_compound_associations` —
-/// and leaves those effects out of the response.
+/// The other learning writes need no op: the engine persists what it
+/// decides itself — a phrase a final commit taught, the bigrams a next-word
+/// decision records — and never hands them to the platform.
 public nonisolated struct Taigi_Engine_RecordUsage: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for

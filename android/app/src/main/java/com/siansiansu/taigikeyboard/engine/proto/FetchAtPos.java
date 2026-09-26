@@ -17,39 +17,17 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * key)` pairs to `lexicon::fetch_candidates_for_keys`. Emits no
  * effects.
  *
- * v3.5.8 Phase 9.3a — `frequency_entries` carries the platform's
- * per-candidate `user_frequency.db` snapshot (count + last_used_ms,
- * keyed by `display_text_key` = `hanji ?? roman`). The engine builds
- * a `FrequencyMap` once per fetch, computes `user_freq_boost(count)`
- * per candidate (saturated at `MAX_BOOST = 5.0`), and derives the
- * leading `SortKey` user dimension (`RawCandidate.user_weight` =
- * `decayed_user_weight_delta`) from `count` + `now_ms − last_used_ms`.
- * Empty list = neutral 1.0 boost + weight 0.0 everywhere; backward-compatible
- * with PR-9.2 platform builds that have not yet wired the snapshot
- * (PR-9.3b plumbs iOS, PR-9.3c plumbs Android).
+ * The user's own rows — learned counts, custom-dictionary matches, learned
+ * phrases — never ride this message: the engine reads them from its
+ * user-data stores (`UserDataRequest.open`; user-data-engine-roadmap P9).
  *
  * `now_ms` is the platform's epoch-ms wall clock at fetch time
  * (iOS `Date().timeIntervalSince1970 * 1000`, Android
- * `System.currentTimeMillis()`). The engine guards against
- * `now_ms &lt;= 0`, `last_used_ms &lt;= 0`, and `now_ms &lt; last_used_ms`
- * (clock skew) by falling through to `user_weight = 0.0` for every
- * candidate — see `engine/ranking/src/score.rs::decayed_user_weight_delta`.
- *
- * v3.5.8 Phase 9 Item 12 — `custom_entries` carries the platform's
- * `custom_dictionary.db` matches for the current raw buffer. The DB
- * stays native (platform queries via the existing
- * `CustomDictionaryRepository.searchSync` / `CustomDictionaryService
- * .search` parameterized-SQL path); only the stored `(roman, hanji)`
- * columns are marshalled — NOT the legacy display-capitalized form,
- * so the engine's `(roman, hanji)` dedupe collides correctly against
- * `dict.bin` entries. The engine synthesizes a full-buffer
- * `RawCandidate` per entry (`consumed_span = (0, raw.len())`,
- * `is_custom = true` → `source_tier_rank` rank 0), merges them with
- * the FST hits, then dedupes by `(roman, hanji)` keeping the lowest
- * `source_tier_rank` (custom wins). Empty list = no custom matches /
- * feature disabled — fully backward-compatible (older builds simply
- * never set field 4). See `docs/engine/continuous-input-ranking.md`
- * §10.10 + `docs/engine/continuous-candidate-display.md` §15.
+ * `System.currentTimeMillis()`), the clock the recency ranking reads. The
+ * engine guards against `now_ms &lt;= 0`, `last_used_ms &lt;= 0`, and
+ * `now_ms &lt; last_used_ms` (clock skew) by falling through to
+ * `user_weight = 0.0` for every candidate — see
+ * `engine/ranking/src/score.rs::decayed_user_weight_delta`.
  *
  * PR-9.6 — `enabled_sources_bitmask` carries the user's dictionary
  * source-toggle state so keyboard continuous candidates honour the SAME
@@ -98,104 +76,7 @@ public  final class FetchAtPos extends
     // @@protoc_insertion_point(message_implements:taigi.engine.FetchAtPos)
     FetchAtPosOrBuilder {
   private FetchAtPos() {
-    frequencyEntries_ = emptyProtobufList();
-    customEntries_ = emptyProtobufList();
-    learnedEntries_ = emptyProtobufList();
   }
-  public static final int FREQUENCY_ENTRIES_FIELD_NUMBER = 2;
-  private com.google.protobuf.Internal.ProtobufList<com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry> frequencyEntries_;
-  /**
-   * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
-   */
-  @java.lang.Override
-  public java.util.List<com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry> getFrequencyEntriesList() {
-    return frequencyEntries_;
-  }
-  /**
-   * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
-   */
-  public java.util.List<? extends com.siansiansu.taigikeyboard.engine.proto.FrequencyEntryOrBuilder>
-      getFrequencyEntriesOrBuilderList() {
-    return frequencyEntries_;
-  }
-  /**
-   * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
-   */
-  @java.lang.Override
-  public int getFrequencyEntriesCount() {
-    return frequencyEntries_.size();
-  }
-  /**
-   * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry getFrequencyEntries(int index) {
-    return frequencyEntries_.get(index);
-  }
-  /**
-   * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
-   */
-  public com.siansiansu.taigikeyboard.engine.proto.FrequencyEntryOrBuilder getFrequencyEntriesOrBuilder(
-      int index) {
-    return frequencyEntries_.get(index);
-  }
-  private void ensureFrequencyEntriesIsMutable() {
-    com.google.protobuf.Internal.ProtobufList<com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry> tmp = frequencyEntries_;
-    if (!tmp.isModifiable()) {
-      frequencyEntries_ =
-          com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
-     }
-  }
-
-  /**
-   * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
-   */
-  private void setFrequencyEntries(
-      int index, com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry value) {
-    java.util.Objects.requireNonNull(value);
-    ensureFrequencyEntriesIsMutable();
-    frequencyEntries_.set(index, value);
-  }
-  /**
-   * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
-   */
-  private void addFrequencyEntries(com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry value) {
-    java.util.Objects.requireNonNull(value);
-    ensureFrequencyEntriesIsMutable();
-    frequencyEntries_.add(value);
-  }
-  /**
-   * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
-   */
-  private void addFrequencyEntries(
-      int index, com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry value) {
-    java.util.Objects.requireNonNull(value);
-    ensureFrequencyEntriesIsMutable();
-    frequencyEntries_.add(index, value);
-  }
-  /**
-   * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
-   */
-  private void addAllFrequencyEntries(
-      java.lang.Iterable<? extends com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry> values) {
-    ensureFrequencyEntriesIsMutable();
-    com.google.protobuf.AbstractMessageLite.addAll(
-        values, frequencyEntries_);
-  }
-  /**
-   * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
-   */
-  private void clearFrequencyEntries() {
-    frequencyEntries_ = emptyProtobufList();
-  }
-  /**
-   * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
-   */
-  private void removeFrequencyEntries(int index) {
-    ensureFrequencyEntriesIsMutable();
-    frequencyEntries_.remove(index);
-  }
-
   public static final int NOW_MS_FIELD_NUMBER = 3;
   private long nowMs_;
   /**
@@ -220,100 +101,6 @@ public  final class FetchAtPos extends
   private void clearNowMs() {
 
     nowMs_ = 0L;
-  }
-
-  public static final int CUSTOM_ENTRIES_FIELD_NUMBER = 4;
-  private com.google.protobuf.Internal.ProtobufList<com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry> customEntries_;
-  /**
-   * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
-   */
-  @java.lang.Override
-  public java.util.List<com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry> getCustomEntriesList() {
-    return customEntries_;
-  }
-  /**
-   * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
-   */
-  public java.util.List<? extends com.siansiansu.taigikeyboard.engine.proto.CustomDictEntryOrBuilder>
-      getCustomEntriesOrBuilderList() {
-    return customEntries_;
-  }
-  /**
-   * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
-   */
-  @java.lang.Override
-  public int getCustomEntriesCount() {
-    return customEntries_.size();
-  }
-  /**
-   * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry getCustomEntries(int index) {
-    return customEntries_.get(index);
-  }
-  /**
-   * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
-   */
-  public com.siansiansu.taigikeyboard.engine.proto.CustomDictEntryOrBuilder getCustomEntriesOrBuilder(
-      int index) {
-    return customEntries_.get(index);
-  }
-  private void ensureCustomEntriesIsMutable() {
-    com.google.protobuf.Internal.ProtobufList<com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry> tmp = customEntries_;
-    if (!tmp.isModifiable()) {
-      customEntries_ =
-          com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
-     }
-  }
-
-  /**
-   * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
-   */
-  private void setCustomEntries(
-      int index, com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry value) {
-    java.util.Objects.requireNonNull(value);
-    ensureCustomEntriesIsMutable();
-    customEntries_.set(index, value);
-  }
-  /**
-   * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
-   */
-  private void addCustomEntries(com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry value) {
-    java.util.Objects.requireNonNull(value);
-    ensureCustomEntriesIsMutable();
-    customEntries_.add(value);
-  }
-  /**
-   * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
-   */
-  private void addCustomEntries(
-      int index, com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry value) {
-    java.util.Objects.requireNonNull(value);
-    ensureCustomEntriesIsMutable();
-    customEntries_.add(index, value);
-  }
-  /**
-   * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
-   */
-  private void addAllCustomEntries(
-      java.lang.Iterable<? extends com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry> values) {
-    ensureCustomEntriesIsMutable();
-    com.google.protobuf.AbstractMessageLite.addAll(
-        values, customEntries_);
-  }
-  /**
-   * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
-   */
-  private void clearCustomEntries() {
-    customEntries_ = emptyProtobufList();
-  }
-  /**
-   * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
-   */
-  private void removeCustomEntries(int index) {
-    ensureCustomEntriesIsMutable();
-    customEntries_.remove(index);
   }
 
   public static final int ENABLED_SOURCES_BITMASK_FIELD_NUMBER = 5;
@@ -368,220 +155,13 @@ public  final class FetchAtPos extends
     literalRomanCandidateDisabled_ = false;
   }
 
-  public static final int LEARNED_ENTRIES_FIELD_NUMBER = 7;
-  private com.google.protobuf.Internal.ProtobufList<com.siansiansu.taigikeyboard.engine.proto.LearnedEntry> learnedEntries_;
-  /**
-   * <pre>
-   * Learned phrases (§50) — the platform's auto-learned rows whose
-   * whole-buffer key equals the current raw buffer (exact match, not the
-   * prefix search `custom_entries` rides). Kept apart from
-   * `custom_entries` on purpose: a manual custom row overrides the walker
-   * edge unconditionally, a learned row only COMPETES with the dictionary
-   * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
-   * un-wired build → no learned candidates.
-   * </pre>
-   *
-   * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
-   */
-  @java.lang.Override
-  public java.util.List<com.siansiansu.taigikeyboard.engine.proto.LearnedEntry> getLearnedEntriesList() {
-    return learnedEntries_;
-  }
-  /**
-   * <pre>
-   * Learned phrases (§50) — the platform's auto-learned rows whose
-   * whole-buffer key equals the current raw buffer (exact match, not the
-   * prefix search `custom_entries` rides). Kept apart from
-   * `custom_entries` on purpose: a manual custom row overrides the walker
-   * edge unconditionally, a learned row only COMPETES with the dictionary
-   * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
-   * un-wired build → no learned candidates.
-   * </pre>
-   *
-   * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
-   */
-  public java.util.List<? extends com.siansiansu.taigikeyboard.engine.proto.LearnedEntryOrBuilder>
-      getLearnedEntriesOrBuilderList() {
-    return learnedEntries_;
-  }
-  /**
-   * <pre>
-   * Learned phrases (§50) — the platform's auto-learned rows whose
-   * whole-buffer key equals the current raw buffer (exact match, not the
-   * prefix search `custom_entries` rides). Kept apart from
-   * `custom_entries` on purpose: a manual custom row overrides the walker
-   * edge unconditionally, a learned row only COMPETES with the dictionary
-   * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
-   * un-wired build → no learned candidates.
-   * </pre>
-   *
-   * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
-   */
-  @java.lang.Override
-  public int getLearnedEntriesCount() {
-    return learnedEntries_.size();
-  }
-  /**
-   * <pre>
-   * Learned phrases (§50) — the platform's auto-learned rows whose
-   * whole-buffer key equals the current raw buffer (exact match, not the
-   * prefix search `custom_entries` rides). Kept apart from
-   * `custom_entries` on purpose: a manual custom row overrides the walker
-   * edge unconditionally, a learned row only COMPETES with the dictionary
-   * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
-   * un-wired build → no learned candidates.
-   * </pre>
-   *
-   * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.LearnedEntry getLearnedEntries(int index) {
-    return learnedEntries_.get(index);
-  }
-  /**
-   * <pre>
-   * Learned phrases (§50) — the platform's auto-learned rows whose
-   * whole-buffer key equals the current raw buffer (exact match, not the
-   * prefix search `custom_entries` rides). Kept apart from
-   * `custom_entries` on purpose: a manual custom row overrides the walker
-   * edge unconditionally, a learned row only COMPETES with the dictionary
-   * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
-   * un-wired build → no learned candidates.
-   * </pre>
-   *
-   * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
-   */
-  public com.siansiansu.taigikeyboard.engine.proto.LearnedEntryOrBuilder getLearnedEntriesOrBuilder(
-      int index) {
-    return learnedEntries_.get(index);
-  }
-  private void ensureLearnedEntriesIsMutable() {
-    com.google.protobuf.Internal.ProtobufList<com.siansiansu.taigikeyboard.engine.proto.LearnedEntry> tmp = learnedEntries_;
-    if (!tmp.isModifiable()) {
-      learnedEntries_ =
-          com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
-     }
-  }
-
-  /**
-   * <pre>
-   * Learned phrases (§50) — the platform's auto-learned rows whose
-   * whole-buffer key equals the current raw buffer (exact match, not the
-   * prefix search `custom_entries` rides). Kept apart from
-   * `custom_entries` on purpose: a manual custom row overrides the walker
-   * edge unconditionally, a learned row only COMPETES with the dictionary
-   * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
-   * un-wired build → no learned candidates.
-   * </pre>
-   *
-   * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
-   */
-  private void setLearnedEntries(
-      int index, com.siansiansu.taigikeyboard.engine.proto.LearnedEntry value) {
-    java.util.Objects.requireNonNull(value);
-    ensureLearnedEntriesIsMutable();
-    learnedEntries_.set(index, value);
-  }
-  /**
-   * <pre>
-   * Learned phrases (§50) — the platform's auto-learned rows whose
-   * whole-buffer key equals the current raw buffer (exact match, not the
-   * prefix search `custom_entries` rides). Kept apart from
-   * `custom_entries` on purpose: a manual custom row overrides the walker
-   * edge unconditionally, a learned row only COMPETES with the dictionary
-   * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
-   * un-wired build → no learned candidates.
-   * </pre>
-   *
-   * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
-   */
-  private void addLearnedEntries(com.siansiansu.taigikeyboard.engine.proto.LearnedEntry value) {
-    java.util.Objects.requireNonNull(value);
-    ensureLearnedEntriesIsMutable();
-    learnedEntries_.add(value);
-  }
-  /**
-   * <pre>
-   * Learned phrases (§50) — the platform's auto-learned rows whose
-   * whole-buffer key equals the current raw buffer (exact match, not the
-   * prefix search `custom_entries` rides). Kept apart from
-   * `custom_entries` on purpose: a manual custom row overrides the walker
-   * edge unconditionally, a learned row only COMPETES with the dictionary
-   * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
-   * un-wired build → no learned candidates.
-   * </pre>
-   *
-   * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
-   */
-  private void addLearnedEntries(
-      int index, com.siansiansu.taigikeyboard.engine.proto.LearnedEntry value) {
-    java.util.Objects.requireNonNull(value);
-    ensureLearnedEntriesIsMutable();
-    learnedEntries_.add(index, value);
-  }
-  /**
-   * <pre>
-   * Learned phrases (§50) — the platform's auto-learned rows whose
-   * whole-buffer key equals the current raw buffer (exact match, not the
-   * prefix search `custom_entries` rides). Kept apart from
-   * `custom_entries` on purpose: a manual custom row overrides the walker
-   * edge unconditionally, a learned row only COMPETES with the dictionary
-   * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
-   * un-wired build → no learned candidates.
-   * </pre>
-   *
-   * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
-   */
-  private void addAllLearnedEntries(
-      java.lang.Iterable<? extends com.siansiansu.taigikeyboard.engine.proto.LearnedEntry> values) {
-    ensureLearnedEntriesIsMutable();
-    com.google.protobuf.AbstractMessageLite.addAll(
-        values, learnedEntries_);
-  }
-  /**
-   * <pre>
-   * Learned phrases (§50) — the platform's auto-learned rows whose
-   * whole-buffer key equals the current raw buffer (exact match, not the
-   * prefix search `custom_entries` rides). Kept apart from
-   * `custom_entries` on purpose: a manual custom row overrides the walker
-   * edge unconditionally, a learned row only COMPETES with the dictionary
-   * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
-   * un-wired build → no learned candidates.
-   * </pre>
-   *
-   * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
-   */
-  private void clearLearnedEntries() {
-    learnedEntries_ = emptyProtobufList();
-  }
-  /**
-   * <pre>
-   * Learned phrases (§50) — the platform's auto-learned rows whose
-   * whole-buffer key equals the current raw buffer (exact match, not the
-   * prefix search `custom_entries` rides). Kept apart from
-   * `custom_entries` on purpose: a manual custom row overrides the walker
-   * edge unconditionally, a learned row only COMPETES with the dictionary
-   * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
-   * un-wired build → no learned candidates.
-   * </pre>
-   *
-   * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
-   */
-  private void removeLearnedEntries(int index) {
-    ensureLearnedEntriesIsMutable();
-    learnedEntries_.remove(index);
-  }
-
   public static final int CUSTOM_DICTIONARY_DISABLED_FIELD_NUMBER = 8;
   private boolean customDictionaryDisabled_;
   /**
    * <pre>
-   * The user's "use my custom dictionary" setting, OFF — read only once the
-   * engine owns the user data (`UserDataRequest.open`; user-data-engine-
-   * roadmap P3b): the engine then reads `custom_dictionary.db` itself and
-   * ignores fields 2 / 4 / 7, so the platform can no longer express the
-   * setting by sending no rows. Negative like field 6, so an un-wired
-   * build keeps the dictionary on.
+   * The user's "use my custom dictionary" setting, OFF: the engine reads no
+   * custom-dictionary rows for this fetch. Negative like field 6, so an
+   * un-wired build keeps the dictionary on.
    * </pre>
    *
    * <code>bool custom_dictionary_disabled = 8;</code>
@@ -593,12 +173,9 @@ public  final class FetchAtPos extends
   }
   /**
    * <pre>
-   * The user's "use my custom dictionary" setting, OFF — read only once the
-   * engine owns the user data (`UserDataRequest.open`; user-data-engine-
-   * roadmap P3b): the engine then reads `custom_dictionary.db` itself and
-   * ignores fields 2 / 4 / 7, so the platform can no longer express the
-   * setting by sending no rows. Negative like field 6, so an un-wired
-   * build keeps the dictionary on.
+   * The user's "use my custom dictionary" setting, OFF: the engine reads no
+   * custom-dictionary rows for this fetch. Negative like field 6, so an
+   * un-wired build keeps the dictionary on.
    * </pre>
    *
    * <code>bool custom_dictionary_disabled = 8;</code>
@@ -610,12 +187,9 @@ public  final class FetchAtPos extends
   }
   /**
    * <pre>
-   * The user's "use my custom dictionary" setting, OFF — read only once the
-   * engine owns the user data (`UserDataRequest.open`; user-data-engine-
-   * roadmap P3b): the engine then reads `custom_dictionary.db` itself and
-   * ignores fields 2 / 4 / 7, so the platform can no longer express the
-   * setting by sending no rows. Negative like field 6, so an un-wired
-   * build keeps the dictionary on.
+   * The user's "use my custom dictionary" setting, OFF: the engine reads no
+   * custom-dictionary rows for this fetch. Negative like field 6, so an
+   * un-wired build keeps the dictionary on.
    * </pre>
    *
    * <code>bool custom_dictionary_disabled = 8;</code>
@@ -720,39 +294,17 @@ public  final class FetchAtPos extends
    * key)` pairs to `lexicon::fetch_candidates_for_keys`. Emits no
    * effects.
    *
-   * v3.5.8 Phase 9.3a — `frequency_entries` carries the platform's
-   * per-candidate `user_frequency.db` snapshot (count + last_used_ms,
-   * keyed by `display_text_key` = `hanji ?? roman`). The engine builds
-   * a `FrequencyMap` once per fetch, computes `user_freq_boost(count)`
-   * per candidate (saturated at `MAX_BOOST = 5.0`), and derives the
-   * leading `SortKey` user dimension (`RawCandidate.user_weight` =
-   * `decayed_user_weight_delta`) from `count` + `now_ms − last_used_ms`.
-   * Empty list = neutral 1.0 boost + weight 0.0 everywhere; backward-compatible
-   * with PR-9.2 platform builds that have not yet wired the snapshot
-   * (PR-9.3b plumbs iOS, PR-9.3c plumbs Android).
+   * The user's own rows — learned counts, custom-dictionary matches, learned
+   * phrases — never ride this message: the engine reads them from its
+   * user-data stores (`UserDataRequest.open`; user-data-engine-roadmap P9).
    *
    * `now_ms` is the platform's epoch-ms wall clock at fetch time
    * (iOS `Date().timeIntervalSince1970 * 1000`, Android
-   * `System.currentTimeMillis()`). The engine guards against
-   * `now_ms &lt;= 0`, `last_used_ms &lt;= 0`, and `now_ms &lt; last_used_ms`
-   * (clock skew) by falling through to `user_weight = 0.0` for every
-   * candidate — see `engine/ranking/src/score.rs::decayed_user_weight_delta`.
-   *
-   * v3.5.8 Phase 9 Item 12 — `custom_entries` carries the platform's
-   * `custom_dictionary.db` matches for the current raw buffer. The DB
-   * stays native (platform queries via the existing
-   * `CustomDictionaryRepository.searchSync` / `CustomDictionaryService
-   * .search` parameterized-SQL path); only the stored `(roman, hanji)`
-   * columns are marshalled — NOT the legacy display-capitalized form,
-   * so the engine's `(roman, hanji)` dedupe collides correctly against
-   * `dict.bin` entries. The engine synthesizes a full-buffer
-   * `RawCandidate` per entry (`consumed_span = (0, raw.len())`,
-   * `is_custom = true` → `source_tier_rank` rank 0), merges them with
-   * the FST hits, then dedupes by `(roman, hanji)` keeping the lowest
-   * `source_tier_rank` (custom wins). Empty list = no custom matches /
-   * feature disabled — fully backward-compatible (older builds simply
-   * never set field 4). See `docs/engine/continuous-input-ranking.md`
-   * §10.10 + `docs/engine/continuous-candidate-display.md` §15.
+   * `System.currentTimeMillis()`), the clock the recency ranking reads. The
+   * engine guards against `now_ms &lt;= 0`, `last_used_ms &lt;= 0`, and
+   * `now_ms &lt; last_used_ms` (clock skew) by falling through to
+   * `user_weight = 0.0` for every candidate — see
+   * `engine/ranking/src/score.rs::decayed_user_weight_delta`.
    *
    * PR-9.6 — `enabled_sources_bitmask` carries the user's dictionary
    * source-toggle state so keyboard continuous candidates honour the SAME
@@ -806,108 +358,6 @@ public  final class FetchAtPos extends
 
 
     /**
-     * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
-     */
-    @java.lang.Override
-    public java.util.List<com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry> getFrequencyEntriesList() {
-      return java.util.Collections.unmodifiableList(
-          instance.getFrequencyEntriesList());
-    }
-    /**
-     * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
-     */
-    @java.lang.Override
-    public int getFrequencyEntriesCount() {
-      return instance.getFrequencyEntriesCount();
-    }/**
-     * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry getFrequencyEntries(int index) {
-      return instance.getFrequencyEntries(index);
-    }
-    /**
-     * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
-     */
-    public Builder setFrequencyEntries(
-        int index, com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry value) {
-      copyOnWrite();
-      instance.setFrequencyEntries(index, value);
-      return this;
-    }
-    /**
-     * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
-     */
-    public Builder setFrequencyEntries(
-        int index, com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry.Builder builderForValue) {
-      copyOnWrite();
-      instance.setFrequencyEntries(index,
-          builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
-     */
-    public Builder addFrequencyEntries(com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry value) {
-      copyOnWrite();
-      instance.addFrequencyEntries(value);
-      return this;
-    }
-    /**
-     * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
-     */
-    public Builder addFrequencyEntries(
-        int index, com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry value) {
-      copyOnWrite();
-      instance.addFrequencyEntries(index, value);
-      return this;
-    }
-    /**
-     * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
-     */
-    public Builder addFrequencyEntries(
-        com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry.Builder builderForValue) {
-      copyOnWrite();
-      instance.addFrequencyEntries(builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
-     */
-    public Builder addFrequencyEntries(
-        int index, com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry.Builder builderForValue) {
-      copyOnWrite();
-      instance.addFrequencyEntries(index,
-          builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
-     */
-    public Builder addAllFrequencyEntries(
-        java.lang.Iterable<? extends com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry> values) {
-      copyOnWrite();
-      instance.addAllFrequencyEntries(values);
-      return this;
-    }
-    /**
-     * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
-     */
-    public Builder clearFrequencyEntries() {
-      copyOnWrite();
-      instance.clearFrequencyEntries();
-      return this;
-    }
-    /**
-     * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
-     */
-    public Builder removeFrequencyEntries(int index) {
-      copyOnWrite();
-      instance.removeFrequencyEntries(index);
-      return this;
-    }
-
-    /**
      * <code>int64 now_ms = 3;</code>
      * @return The nowMs.
      */
@@ -932,108 +382,6 @@ public  final class FetchAtPos extends
     public Builder clearNowMs() {
       copyOnWrite();
       instance.clearNowMs();
-      return this;
-    }
-
-    /**
-     * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
-     */
-    @java.lang.Override
-    public java.util.List<com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry> getCustomEntriesList() {
-      return java.util.Collections.unmodifiableList(
-          instance.getCustomEntriesList());
-    }
-    /**
-     * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
-     */
-    @java.lang.Override
-    public int getCustomEntriesCount() {
-      return instance.getCustomEntriesCount();
-    }/**
-     * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry getCustomEntries(int index) {
-      return instance.getCustomEntries(index);
-    }
-    /**
-     * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
-     */
-    public Builder setCustomEntries(
-        int index, com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry value) {
-      copyOnWrite();
-      instance.setCustomEntries(index, value);
-      return this;
-    }
-    /**
-     * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
-     */
-    public Builder setCustomEntries(
-        int index, com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry.Builder builderForValue) {
-      copyOnWrite();
-      instance.setCustomEntries(index,
-          builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
-     */
-    public Builder addCustomEntries(com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry value) {
-      copyOnWrite();
-      instance.addCustomEntries(value);
-      return this;
-    }
-    /**
-     * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
-     */
-    public Builder addCustomEntries(
-        int index, com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry value) {
-      copyOnWrite();
-      instance.addCustomEntries(index, value);
-      return this;
-    }
-    /**
-     * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
-     */
-    public Builder addCustomEntries(
-        com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry.Builder builderForValue) {
-      copyOnWrite();
-      instance.addCustomEntries(builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
-     */
-    public Builder addCustomEntries(
-        int index, com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry.Builder builderForValue) {
-      copyOnWrite();
-      instance.addCustomEntries(index,
-          builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
-     */
-    public Builder addAllCustomEntries(
-        java.lang.Iterable<? extends com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry> values) {
-      copyOnWrite();
-      instance.addAllCustomEntries(values);
-      return this;
-    }
-    /**
-     * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
-     */
-    public Builder clearCustomEntries() {
-      copyOnWrite();
-      instance.clearCustomEntries();
-      return this;
-    }
-    /**
-     * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
-     */
-    public Builder removeCustomEntries(int index) {
-      copyOnWrite();
-      instance.removeCustomEntries(index);
       return this;
     }
 
@@ -1095,234 +443,9 @@ public  final class FetchAtPos extends
 
     /**
      * <pre>
-     * Learned phrases (§50) — the platform's auto-learned rows whose
-     * whole-buffer key equals the current raw buffer (exact match, not the
-     * prefix search `custom_entries` rides). Kept apart from
-     * `custom_entries` on purpose: a manual custom row overrides the walker
-     * edge unconditionally, a learned row only COMPETES with the dictionary
-     * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
-     * un-wired build → no learned candidates.
-     * </pre>
-     *
-     * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
-     */
-    @java.lang.Override
-    public java.util.List<com.siansiansu.taigikeyboard.engine.proto.LearnedEntry> getLearnedEntriesList() {
-      return java.util.Collections.unmodifiableList(
-          instance.getLearnedEntriesList());
-    }
-    /**
-     * <pre>
-     * Learned phrases (§50) — the platform's auto-learned rows whose
-     * whole-buffer key equals the current raw buffer (exact match, not the
-     * prefix search `custom_entries` rides). Kept apart from
-     * `custom_entries` on purpose: a manual custom row overrides the walker
-     * edge unconditionally, a learned row only COMPETES with the dictionary
-     * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
-     * un-wired build → no learned candidates.
-     * </pre>
-     *
-     * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
-     */
-    @java.lang.Override
-    public int getLearnedEntriesCount() {
-      return instance.getLearnedEntriesCount();
-    }/**
-     * <pre>
-     * Learned phrases (§50) — the platform's auto-learned rows whose
-     * whole-buffer key equals the current raw buffer (exact match, not the
-     * prefix search `custom_entries` rides). Kept apart from
-     * `custom_entries` on purpose: a manual custom row overrides the walker
-     * edge unconditionally, a learned row only COMPETES with the dictionary
-     * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
-     * un-wired build → no learned candidates.
-     * </pre>
-     *
-     * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.LearnedEntry getLearnedEntries(int index) {
-      return instance.getLearnedEntries(index);
-    }
-    /**
-     * <pre>
-     * Learned phrases (§50) — the platform's auto-learned rows whose
-     * whole-buffer key equals the current raw buffer (exact match, not the
-     * prefix search `custom_entries` rides). Kept apart from
-     * `custom_entries` on purpose: a manual custom row overrides the walker
-     * edge unconditionally, a learned row only COMPETES with the dictionary
-     * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
-     * un-wired build → no learned candidates.
-     * </pre>
-     *
-     * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
-     */
-    public Builder setLearnedEntries(
-        int index, com.siansiansu.taigikeyboard.engine.proto.LearnedEntry value) {
-      copyOnWrite();
-      instance.setLearnedEntries(index, value);
-      return this;
-    }
-    /**
-     * <pre>
-     * Learned phrases (§50) — the platform's auto-learned rows whose
-     * whole-buffer key equals the current raw buffer (exact match, not the
-     * prefix search `custom_entries` rides). Kept apart from
-     * `custom_entries` on purpose: a manual custom row overrides the walker
-     * edge unconditionally, a learned row only COMPETES with the dictionary
-     * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
-     * un-wired build → no learned candidates.
-     * </pre>
-     *
-     * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
-     */
-    public Builder setLearnedEntries(
-        int index, com.siansiansu.taigikeyboard.engine.proto.LearnedEntry.Builder builderForValue) {
-      copyOnWrite();
-      instance.setLearnedEntries(index,
-          builderForValue.build());
-      return this;
-    }
-    /**
-     * <pre>
-     * Learned phrases (§50) — the platform's auto-learned rows whose
-     * whole-buffer key equals the current raw buffer (exact match, not the
-     * prefix search `custom_entries` rides). Kept apart from
-     * `custom_entries` on purpose: a manual custom row overrides the walker
-     * edge unconditionally, a learned row only COMPETES with the dictionary
-     * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
-     * un-wired build → no learned candidates.
-     * </pre>
-     *
-     * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
-     */
-    public Builder addLearnedEntries(com.siansiansu.taigikeyboard.engine.proto.LearnedEntry value) {
-      copyOnWrite();
-      instance.addLearnedEntries(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * Learned phrases (§50) — the platform's auto-learned rows whose
-     * whole-buffer key equals the current raw buffer (exact match, not the
-     * prefix search `custom_entries` rides). Kept apart from
-     * `custom_entries` on purpose: a manual custom row overrides the walker
-     * edge unconditionally, a learned row only COMPETES with the dictionary
-     * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
-     * un-wired build → no learned candidates.
-     * </pre>
-     *
-     * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
-     */
-    public Builder addLearnedEntries(
-        int index, com.siansiansu.taigikeyboard.engine.proto.LearnedEntry value) {
-      copyOnWrite();
-      instance.addLearnedEntries(index, value);
-      return this;
-    }
-    /**
-     * <pre>
-     * Learned phrases (§50) — the platform's auto-learned rows whose
-     * whole-buffer key equals the current raw buffer (exact match, not the
-     * prefix search `custom_entries` rides). Kept apart from
-     * `custom_entries` on purpose: a manual custom row overrides the walker
-     * edge unconditionally, a learned row only COMPETES with the dictionary
-     * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
-     * un-wired build → no learned candidates.
-     * </pre>
-     *
-     * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
-     */
-    public Builder addLearnedEntries(
-        com.siansiansu.taigikeyboard.engine.proto.LearnedEntry.Builder builderForValue) {
-      copyOnWrite();
-      instance.addLearnedEntries(builderForValue.build());
-      return this;
-    }
-    /**
-     * <pre>
-     * Learned phrases (§50) — the platform's auto-learned rows whose
-     * whole-buffer key equals the current raw buffer (exact match, not the
-     * prefix search `custom_entries` rides). Kept apart from
-     * `custom_entries` on purpose: a manual custom row overrides the walker
-     * edge unconditionally, a learned row only COMPETES with the dictionary
-     * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
-     * un-wired build → no learned candidates.
-     * </pre>
-     *
-     * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
-     */
-    public Builder addLearnedEntries(
-        int index, com.siansiansu.taigikeyboard.engine.proto.LearnedEntry.Builder builderForValue) {
-      copyOnWrite();
-      instance.addLearnedEntries(index,
-          builderForValue.build());
-      return this;
-    }
-    /**
-     * <pre>
-     * Learned phrases (§50) — the platform's auto-learned rows whose
-     * whole-buffer key equals the current raw buffer (exact match, not the
-     * prefix search `custom_entries` rides). Kept apart from
-     * `custom_entries` on purpose: a manual custom row overrides the walker
-     * edge unconditionally, a learned row only COMPETES with the dictionary
-     * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
-     * un-wired build → no learned candidates.
-     * </pre>
-     *
-     * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
-     */
-    public Builder addAllLearnedEntries(
-        java.lang.Iterable<? extends com.siansiansu.taigikeyboard.engine.proto.LearnedEntry> values) {
-      copyOnWrite();
-      instance.addAllLearnedEntries(values);
-      return this;
-    }
-    /**
-     * <pre>
-     * Learned phrases (§50) — the platform's auto-learned rows whose
-     * whole-buffer key equals the current raw buffer (exact match, not the
-     * prefix search `custom_entries` rides). Kept apart from
-     * `custom_entries` on purpose: a manual custom row overrides the walker
-     * edge unconditionally, a learned row only COMPETES with the dictionary
-     * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
-     * un-wired build → no learned candidates.
-     * </pre>
-     *
-     * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
-     */
-    public Builder clearLearnedEntries() {
-      copyOnWrite();
-      instance.clearLearnedEntries();
-      return this;
-    }
-    /**
-     * <pre>
-     * Learned phrases (§50) — the platform's auto-learned rows whose
-     * whole-buffer key equals the current raw buffer (exact match, not the
-     * prefix search `custom_entries` rides). Kept apart from
-     * `custom_entries` on purpose: a manual custom row overrides the walker
-     * edge unconditionally, a learned row only COMPETES with the dictionary
-     * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
-     * un-wired build → no learned candidates.
-     * </pre>
-     *
-     * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
-     */
-    public Builder removeLearnedEntries(int index) {
-      copyOnWrite();
-      instance.removeLearnedEntries(index);
-      return this;
-    }
-
-    /**
-     * <pre>
-     * The user's "use my custom dictionary" setting, OFF — read only once the
-     * engine owns the user data (`UserDataRequest.open`; user-data-engine-
-     * roadmap P3b): the engine then reads `custom_dictionary.db` itself and
-     * ignores fields 2 / 4 / 7, so the platform can no longer express the
-     * setting by sending no rows. Negative like field 6, so an un-wired
-     * build keeps the dictionary on.
+     * The user's "use my custom dictionary" setting, OFF: the engine reads no
+     * custom-dictionary rows for this fetch. Negative like field 6, so an
+     * un-wired build keeps the dictionary on.
      * </pre>
      *
      * <code>bool custom_dictionary_disabled = 8;</code>
@@ -1334,12 +457,9 @@ public  final class FetchAtPos extends
     }
     /**
      * <pre>
-     * The user's "use my custom dictionary" setting, OFF — read only once the
-     * engine owns the user data (`UserDataRequest.open`; user-data-engine-
-     * roadmap P3b): the engine then reads `custom_dictionary.db` itself and
-     * ignores fields 2 / 4 / 7, so the platform can no longer express the
-     * setting by sending no rows. Negative like field 6, so an un-wired
-     * build keeps the dictionary on.
+     * The user's "use my custom dictionary" setting, OFF: the engine reads no
+     * custom-dictionary rows for this fetch. Negative like field 6, so an
+     * un-wired build keeps the dictionary on.
      * </pre>
      *
      * <code>bool custom_dictionary_disabled = 8;</code>
@@ -1353,12 +473,9 @@ public  final class FetchAtPos extends
     }
     /**
      * <pre>
-     * The user's "use my custom dictionary" setting, OFF — read only once the
-     * engine owns the user data (`UserDataRequest.open`; user-data-engine-
-     * roadmap P3b): the engine then reads `custom_dictionary.db` itself and
-     * ignores fields 2 / 4 / 7, so the platform can no longer express the
-     * setting by sending no rows. Negative like field 6, so an un-wired
-     * build keeps the dictionary on.
+     * The user's "use my custom dictionary" setting, OFF: the engine reads no
+     * custom-dictionary rows for this fetch. Negative like field 6, so an
+     * un-wired build keeps the dictionary on.
      * </pre>
      *
      * <code>bool custom_dictionary_disabled = 8;</code>
@@ -1386,20 +503,14 @@ public  final class FetchAtPos extends
       }
       case BUILD_MESSAGE_INFO: {
           java.lang.Object[] objects = new java.lang.Object[] {
-            "frequencyEntries_",
-            com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry.class,
             "nowMs_",
-            "customEntries_",
-            com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry.class,
             "enabledSourcesBitmask_",
             "literalRomanCandidateDisabled_",
-            "learnedEntries_",
-            com.siansiansu.taigikeyboard.engine.proto.LearnedEntry.class,
             "customDictionaryDisabled_",
           };
           java.lang.String info =
-              "\u0000\u0007\u0000\u0000\u0002\b\u0007\u0000\u0003\u0000\u0002\u001b\u0003\u0002" +
-              "\u0004\u001b\u0005\u000b\u0006\u0007\u0007\u001b\b\u0007";
+              "\u0000\u0004\u0000\u0000\u0003\b\u0004\u0000\u0000\u0000\u0003\u0002\u0005\u000b" +
+              "\u0006\u0007\b\u0007";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

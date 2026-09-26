@@ -39,12 +39,6 @@ final class ComposingEffectDecodingTests: XCTestCase {
                 },
             )),
             makeEffect(.nextWordClearForNewComposing(Taigi_Engine_NextWordClearForNewComposing())),
-            makeEffect(.phraseLearned(
-                payload(Taigi_Engine_PhraseLearned()) {
-                    $0.hanji = "記起來"
-                    $0.canonicalTl = "kì--khí-lâi"
-                },
-            )),
         ])
 
         let transition = RustEngineBridge.decodeTransition(response)
@@ -60,7 +54,6 @@ final class ComposingEffectDecodingTests: XCTestCase {
             .nextWordUpdateLastSelectedWord(text: "台", roman: "tâi"),
             .nextWordWordSelected(text: "語", roman: "gí", triggerPrediction: true),
             .nextWordClearForNewComposing,
-            .phraseLearned(hanji: "記起來", canonicalTl: "kì--khí-lâi"),
         ])
     }
 

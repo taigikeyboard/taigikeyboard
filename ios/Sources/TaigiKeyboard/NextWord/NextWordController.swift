@@ -167,11 +167,6 @@ final class NextWordController {
             startContextTimeoutTimer(afterMs: afterMs)
         case .cancelContextTimeout:
             stopContextTimeoutTimer()
-        // The engine wrote the bigrams into `user_association.db` itself and
-        // leaves these out of its answer once the user data is open (roadmap
-        // P3c / P7b); the cases stay until the effects are retired (U9, P9).
-        case .recordAssociation, .recordCompoundAssociations:
-            break
         case let .queryPredictions(word, roman, generation, nowMs):
             dispatchPredictionQuery(word: word, roman: roman, generation: generation, nowMs: nowMs)
         case .clearPredictionsUI:

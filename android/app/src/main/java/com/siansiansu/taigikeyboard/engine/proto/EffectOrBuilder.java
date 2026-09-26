@@ -120,16 +120,5 @@ public interface EffectOrBuilder extends
    */
   com.siansiansu.taigikeyboard.engine.proto.NextWordClearForNewComposing getNextWordClearForNewComposing();
 
-  /**
-   * <code>.taigi.engine.PhraseLearned phrase_learned = 11;</code>
-   * @return Whether the phraseLearned field is set.
-   */
-  boolean hasPhraseLearned();
-  /**
-   * <code>.taigi.engine.PhraseLearned phrase_learned = 11;</code>
-   * @return The phraseLearned.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.PhraseLearned getPhraseLearned();
-
   public com.siansiansu.taigikeyboard.engine.proto.Effect.KindCase getKindCase();
 }

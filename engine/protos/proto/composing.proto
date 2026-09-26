@@ -2,14 +2,6 @@ syntax = "proto3";
 
 package taigi.engine;
 
-// v3.5.8 Phase 9.3a — Continuous-input ranking gained access to the
-// per-candidate `user_frequency.db` snapshot; the request payload reuses
-// the canonical `taigi.engine.FrequencyEntry` defined in `lexicon.proto`
-// instead of declaring a second wire-incompatible cousin. This is the only cross-file import
-// inside composing.proto; lexicon.proto does NOT import composing.proto,
-// so the dependency edge is one-way and cycle-free.
-import "lexicon.proto";
-
 option java_package = "com.siansiansu.taigikeyboard.engine.proto";
 option java_multiple_files = true;
 
@@ -120,39 +112,17 @@ message EnterContinuous {}
 // key)` pairs to `lexicon::fetch_candidates_for_keys`. Emits no
 // effects.
 //
-// v3.5.8 Phase 9.3a — `frequency_entries` carries the platform's
-// per-candidate `user_frequency.db` snapshot (count + last_used_ms,
-// keyed by `display_text_key` = `hanji ?? roman`). The engine builds
-// a `FrequencyMap` once per fetch, computes `user_freq_boost(count)`
-// per candidate (saturated at `MAX_BOOST = 5.0`), and derives the
-// leading `SortKey` user dimension (`RawCandidate.user_weight` =
-// `decayed_user_weight_delta`) from `count` + `now_ms − last_used_ms`.
-// Empty list = neutral 1.0 boost + weight 0.0 everywhere; backward-compatible
-// with PR-9.2 platform builds that have not yet wired the snapshot
-// (PR-9.3b plumbs iOS, PR-9.3c plumbs Android).
+// The user's own rows — learned counts, custom-dictionary matches, learned
+// phrases — never ride this message: the engine reads them from its
+// user-data stores (`UserDataRequest.open`; user-data-engine-roadmap P9).
 //
 // `now_ms` is the platform's epoch-ms wall clock at fetch time
 // (iOS `Date().timeIntervalSince1970 * 1000`, Android
-// `System.currentTimeMillis()`). The engine guards against
-// `now_ms <= 0`, `last_used_ms <= 0`, and `now_ms < last_used_ms`
-// (clock skew) by falling through to `user_weight = 0.0` for every
-// candidate — see `engine/ranking/src/score.rs::decayed_user_weight_delta`.
-//
-// v3.5.8 Phase 9 Item 12 — `custom_entries` carries the platform's
-// `custom_dictionary.db` matches for the current raw buffer. The DB
-// stays native (platform queries via the existing
-// `CustomDictionaryRepository.searchSync` / `CustomDictionaryService
-// .search` parameterized-SQL path); only the stored `(roman, hanji)`
-// columns are marshalled — NOT the legacy display-capitalized form,
-// so the engine's `(roman, hanji)` dedupe collides correctly against
-// `dict.bin` entries. The engine synthesizes a full-buffer
-// `RawCandidate` per entry (`consumed_span = (0, raw.len())`,
-// `is_custom = true` → `source_tier_rank` rank 0), merges them with
-// the FST hits, then dedupes by `(roman, hanji)` keeping the lowest
-// `source_tier_rank` (custom wins). Empty list = no custom matches /
-// feature disabled — fully backward-compatible (older builds simply
-// never set field 4). See `docs/engine/continuous-input-ranking.md`
-// §10.10 + `docs/engine/continuous-candidate-display.md` §15.
+// `System.currentTimeMillis()`), the clock the recency ranking reads. The
+// engine guards against `now_ms <= 0`, `last_used_ms <= 0`, and
+// `now_ms < last_used_ms` (clock skew) by falling through to
+// `user_weight = 0.0` for every candidate — see
+// `engine/ranking/src/score.rs::decayed_user_weight_delta`.
 //
 // PR-9.6 — `enabled_sources_bitmask` carries the user's dictionary
 // source-toggle state so keyboard continuous candidates honour the SAME
@@ -194,49 +164,18 @@ message FetchAtPos {
   // Was `uint32 position` — always 0, never a partial fetch.
   reserved 1;
   reserved "position";
-  repeated FrequencyEntry frequency_entries = 2;
+  // Were the platform-sent user rows (`frequency_entries`, `custom_entries`,
+  // `learned_entries`); the engine reads its own stores
+  // (user-data-engine-roadmap P9).
+  reserved 2, 4, 7;
+  reserved "frequency_entries", "custom_entries", "learned_entries";
   int64 now_ms                             = 3;
-  repeated CustomDictEntry custom_entries  = 4;
   uint32 enabled_sources_bitmask           = 5;
   bool literal_roman_candidate_disabled    = 6;
-  // Learned phrases (§50) — the platform's auto-learned rows whose
-  // whole-buffer key equals the current raw buffer (exact match, not the
-  // prefix search `custom_entries` rides). Kept apart from
-  // `custom_entries` on purpose: a manual custom row overrides the walker
-  // edge unconditionally, a learned row only COMPETES with the dictionary
-  // rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
-  // un-wired build → no learned candidates.
-  repeated LearnedEntry learned_entries    = 7;
-  // The user's "use my custom dictionary" setting, OFF — read only once the
-  // engine owns the user data (`UserDataRequest.open`; user-data-engine-
-  // roadmap P3b): the engine then reads `custom_dictionary.db` itself and
-  // ignores fields 2 / 4 / 7, so the platform can no longer express the
-  // setting by sending no rows. Negative like field 6, so an un-wired
-  // build keeps the dictionary on.
+  // The user's "use my custom dictionary" setting, OFF: the engine reads no
+  // custom-dictionary rows for this fetch. Negative like field 6, so an
+  // un-wired build keeps the dictionary on.
   bool custom_dictionary_disabled          = 8;
-}
-
-// One auto-learned phrase (§50): the `(Hanji, canonical-TL)` pair the user
-// once composed segment by segment in continuous input and committed
-// (`Effect.phrase_learned`). Both fields are canonical (hanji as committed,
-// TL as the dictionary would spell it, khinsiann `--` kept), so the engine
-// derives the lattice key and the POJ display from `canonical_tl` the way
-// it does for a `dict.bin` record.
-message LearnedEntry {
-  string hanji        = 1;
-  string canonical_tl = 2;
-}
-
-// v3.5.8 Phase 9 Item 12 — one `custom_dictionary.db` row marshalled
-// for the Continuous candidate merge. `roman` / `hanji` are the raw
-// stored columns (no platform capitalization / tone re-display) so
-// the engine's `(roman, hanji)` dedupe key matches `dict.bin`'s
-// `DictionaryRecord.tl` / `.hanzi`. `hanji` uses proto3 `optional` so
-// a romanization-only custom entry (no hanji) is distinguishable from
-// an empty string, mirroring `CandidateMessage.hanji`.
-message CustomDictEntry {
-  string roman          = 1;
-  optional string hanji = 2;
 }
 
 // v3.5.8 Phase 6 — commit a candidate segment in `Phase::Continuous`. The
@@ -476,6 +415,10 @@ message CandidateMessage {
 // `composing/handle.rs:54-58` lock-order rule — composing's `Mutex<Engine>`
 // is released before the platform makes the nextword call.
 message Effect {
+  // Was `PhraseLearned`: a learned phrase is kept by the engine itself
+  // (user-data-engine-roadmap P9a).
+  reserved 11;
+  reserved "phrase_learned";
   oneof kind {
     UpdatePreedit                  update_preedit                       = 1;
     ClearPreeditWithoutCommit      clear_preedit_without_commit         = 2;
@@ -487,7 +430,6 @@ message Effect {
     NextWordUpdateLastSelectedWord next_word_update_last_selected_word  = 8;
     NextWordWordSelected           next_word_word_selected              = 9;
     NextWordClearForNewComposing   next_word_clear_for_new_composing    = 10;
-    PhraseLearned                  phrase_learned                       = 11;
   }
 }
 
@@ -518,16 +460,3 @@ message NextWordWordSelected { string text = 1; string roman = 2; bool trigger_p
 // `ResetContinuous` / `Reset` / empty-buffer `DeleteBackward` exits
 // `Phase::Continuous` without committing.
 message NextWordClearForNewComposing {}
-
-// Learned phrases (§50) — emitted beside `NextWordWordSelected` on the
-// FINAL continuous commit when the composition was ≥ 2 nailed segments,
-// every segment was a hanji-bearing candidate pick (`CommitContinuous.hanji`
-// present) with a canonical TL, and the joined TL is ≤ 6 syllables.
-// `hanji` = the segments' hanji concatenated; `canonical_tl` = the segments'
-// canonical TL joined with `-` (a segment that already starts with the
-// khinsiann `--` keeps it). The platform upserts the pair into its learned
-// store and feeds it back through `FetchAtPos.learned_entries`. An Enter /
-// raw commit of an unpicked tail, an abort, or a backspace-unnailed segment
-// never reaches this effect. Mirrors the nextword `RecordCompoundAssociations`
-// pattern: the engine decides, the platform persists.
-message PhraseLearned { string hanji = 1; string canonical_tl = 2; }

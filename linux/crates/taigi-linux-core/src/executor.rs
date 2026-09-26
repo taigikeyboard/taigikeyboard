@@ -123,8 +123,7 @@ impl ComposingEffectExecutor for Recorder {
             | Effect::ResetAutocompleteContext
             | Effect::NextWordUpdateLastSelectedWord { .. }
             | Effect::NextWordWordSelected { .. }
-            | Effect::NextWordClearForNewComposing
-            | Effect::PhraseLearned { .. } => {}
+            | Effect::NextWordClearForNewComposing => {}
         }
     }
 }
