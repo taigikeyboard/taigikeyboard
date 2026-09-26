@@ -424,6 +424,7 @@ mod tests {
         assert_eq!(data.last_used_ms, 700);
     }
 
+    // INVARIANT_USER_FREQ_PAIR_KEY (behavioral-invariants.md §28)
     #[test]
     fn frequency_map_pair_key_separates_homograph_readings() {
         // R5 / Core Principle #7: polyphonic character — same hanji 重, two readings

@@ -268,6 +268,7 @@ final class ComposingManagerTests: XCTestCase {
 
     // MARK: - commitPreeditThenInsertExternal (emoji / clipboard path)
 
+    // INVARIANT_COMPOSING_EXTERNAL_INSERT_COMMITS_PREEDIT_ATOMICALLY (behavioral-invariants.md §13)
     func testCommitPreeditThenInsertExternal_whenComposing_commitsAtomicallyWithExternalText() {
         // Pins the iOS side of the parity fix with Android
         // `MediaInputManager.sendEmojiKeyPress`. Wrapper must emit a single

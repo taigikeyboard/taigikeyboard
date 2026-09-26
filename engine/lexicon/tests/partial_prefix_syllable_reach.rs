@@ -186,6 +186,7 @@ fn tl_rows() -> Vec<Row<'static>> {
     ]
 }
 
+// INVARIANT_CANDIDATE_SYLLABLE_REACH (behavioral-invariants.md §43)
 #[test]
 fn tl_two_syllable_input_keeps_two_syllable_extension_and_drops_three() {
     // trace: typed body `tsuisi` (6 bytes). 水手 toneless faces

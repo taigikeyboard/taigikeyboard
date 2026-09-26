@@ -407,6 +407,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         XCTAssertEqual(session.client.insertedTexts.last, firstCell.text)
     }
 
+    // INVARIANT_CANDIDATE_CELL_SHOWS_BOTH_SCRIPTS (behavioral-invariants.md §42)
     /// The window shows BOTH scripts by default, matching iOS and Android: a
     /// Taigi word is the `(Hanji, romanization)` pair, and a bar showing one of them
     /// makes different words read identically.

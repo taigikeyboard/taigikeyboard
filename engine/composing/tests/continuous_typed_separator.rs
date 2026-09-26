@@ -214,6 +214,7 @@ fn pang_tang_lai_rows() -> Vec<Row> {
     ]
 }
 
+// INVARIANT_TYPED_SEPARATOR_RENDERS_AT_EVERY_BOUNDARY (behavioral-invariants.md §55)
 #[test]
 fn typed_hyphen_replaces_the_records_space() {
     let _lock = engine_install_lock();
@@ -349,6 +350,7 @@ fn roman_cfg(hyphenless: bool) -> AppConfig {
     }
 }
 
+// INVARIANT_NAILED_JOIN_HONOURS_TYPED_RUN (behavioral-invariants.md §51)
 #[test]
 fn two_picks_commit_the_typed_run_between_them() {
     let _lock = engine_install_lock();

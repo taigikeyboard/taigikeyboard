@@ -279,6 +279,7 @@ fn editing_the_romanization_drops_the_old_keys_and_deleting_removes_the_entry() 
     assert!(store.rows_matching(&query_key("goa", "tl"), 20).is_empty());
 }
 
+// INVARIANT_CUSTOM_DICT_CAPACITY (behavioral-invariants.md §27)
 #[test]
 fn the_capacity_refuses_a_new_entry_but_never_an_edit() {
     let directory = scratch();
@@ -513,6 +514,7 @@ fn a_store_that_is_not_open_answers_no_rows_rather_than_waiting() {
     assert!(store.count().is_err());
 }
 
+// INVARIANT_CUSTOM_DICT_CROSS_MODE (behavioral-invariants.md §26)
 #[test]
 fn the_engine_derivation_finds_a_poj_entry_typed_as_tl() {
     // The real seam: keys from the engine, query key from the engine.
@@ -853,6 +855,7 @@ fn a_romanization_only_entry_is_stored_and_found_and_the_seeds_carry_their_ids()
     assert_eq!(seeded[0].created_at.len(), 19, "yyyy-MM-dd HH:mm:ss");
 }
 
+// INVARIANT_NEXTWORD_PREV_HANJI_LOOKUP (behavioral-invariants.md §24)
 #[test]
 fn predictions_read_the_exact_reading_first_then_untagged_then_the_others() {
     // trace: §24 tiers — prev_tl = query (0), '' (1), other (2); within a

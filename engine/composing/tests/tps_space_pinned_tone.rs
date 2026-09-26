@@ -178,6 +178,7 @@ fn tps(tl: &str) -> String {
     phonetics::tps_num_from_tl(tl)
 }
 
+// INVARIANT_TPS_SPACE_PINS_UNMARKED_TONE (behavioral-invariants.md §41)
 #[test]
 fn space_pins_tone_one_on_open_rime() {
     let _lock = engine_install_lock();
@@ -212,6 +213,7 @@ fn no_space_still_surfaces_every_tone_on_open_rime() {
     }
 }
 
+// INVARIANT_TPS_SPACE_PINS_UNMARKED_TONE (behavioral-invariants.md §41)
 #[test]
 fn space_pins_tone_four_on_stop_coda() {
     let _lock = engine_install_lock();

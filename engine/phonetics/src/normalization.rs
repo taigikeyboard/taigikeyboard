@@ -148,6 +148,7 @@ mod tests {
     // both ranking and Method::NfdPreprocessForLookup. Test cases
     // preserved verbatim from the original ranking-side module.
 
+    // INVARIANT_POJ_NASAL_TO_NN_SUBSTITUTION (behavioral-invariants.md §2)
     #[test]
     fn nasal_marker_superscript_n_becomes_nn() {
         assert_eq!(taigi_unicode_base_form("sa\u{207f}"), "sann");
@@ -158,6 +159,7 @@ mod tests {
         assert_eq!(taigi_unicode_base_form("sa\u{1d3a}"), "sann");
     }
 
+    // INVARIANT_O_DOT_COMBINING_COLLAPSE (behavioral-invariants.md §2)
     #[test]
     fn poj_o_dot_collapses_to_oo() {
         // "ho͘" — o + U+0358. After NFD it stays as `o\u{0358}` (no further
@@ -176,6 +178,7 @@ mod tests {
         assert_eq!(result, expected);
     }
 
+    // INVARIANT_NFD_PREPROCESSED_PLATFORM_PARITY (behavioral-invariants.md §2)
     #[test]
     fn no_special_chars_preserves_nfd_decompose() {
         // Plain "tâi-gí" with NFC accents: NFD decomposes the diacritics.

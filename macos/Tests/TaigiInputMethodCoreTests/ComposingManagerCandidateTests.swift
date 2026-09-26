@@ -155,6 +155,7 @@ final class ComposingManagerCandidateTests: XCTestCase {
         )
     }
 
+    // INVARIANT_EVERY_COMPOSING_OP_CARRIES_THE_RENDERING_CONFIG (behavioral-invariants.md §54)
     /// Under hanji-first the nailed prefix takes no separator, and the
     /// keystroke after the nail renders it the same way — with the base
     /// config it used to re-render `台 gi` (found by the composing-caret

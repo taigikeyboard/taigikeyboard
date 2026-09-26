@@ -558,6 +558,7 @@ mod tests {
         assert_eq!(result.predictions.len(), 2);
     }
 
+    // INVARIANT_NEXTWORD_LATE_PREDICTION_IS_DISCARDED (nextword-engine-boundary.md §10)
     #[test]
     fn stale_query_generation_returns_was_stale() {
         let state = PersistedState {
@@ -682,6 +683,7 @@ mod tests {
         assert!(matches!(result, Err(NextWordError::InvalidSource)));
     }
 
+    // INVARIANT_NEXTWORD_PREDICTION_FILTER_HIDES_EMPTY_TL_IN_ROMAN_MODE (nextword-engine-boundary.md §10)
     #[test]
     fn empty_roman_dropped_in_roman_mode() {
         let state = PersistedState::default();

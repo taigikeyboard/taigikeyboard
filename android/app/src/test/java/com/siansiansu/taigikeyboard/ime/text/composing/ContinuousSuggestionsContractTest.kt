@@ -135,6 +135,7 @@ class ContinuousSuggestionsContractTest {
         assertEquals("珠仔", second.additionalInfo[MetadataKeys.DISPLAY_TEXT])
     }
 
+    // INVARIANT_NEXTWORD_CONTINUOUS_CANONICAL_TL (behavioral-invariants.md §25)
     @Test
     fun `R2 canonical TL identity rides CANONICAL_TL sidechannel, independent of display roman`() {
         // R2: the canonical TL identity rides `CANONICAL_TL` so the click

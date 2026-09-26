@@ -73,6 +73,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         XCTAssertEqual(result.lastSelectedWord, "安")
     }
 
+    // INVARIANT_NEXTWORD_LEARNING_DECISION_CONTRACT (behavioral-invariants.md §40)
     func testWordSelected_leadingBracketOrSpace_isStillLearned() {
         // §40: noise is "no lexical base anywhere", not "first character is
         // punctuation" — the old iOS rule discarded both of these whole.
@@ -221,6 +222,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
 
     // MARK: - Predict: stale drop
 
+    // INVARIANT_NEXTWORD_LATE_PREDICTION_IS_DISCARDED (nextword-engine-boundary.md §10)
     /// The scoring, merging and ordering of predictions — the learned rows the
     /// engine reads itself (user-data-engine-roadmap P7b) and the bundled ones
     /// — are pinned by Rust (`engine/nextword/src/filter.rs`, `scorer.rs`,

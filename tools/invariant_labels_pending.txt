@@ -1,0 +1,33 @@
+# Documented INVARIANT labels that no test names yet — the baseline
+# tools/invariant_labels.py accepts. It only shrinks: a label that gains a test
+# must leave this file (the gate fails until it does), and a new label never
+# joins it — name it in the test that pins it instead.
+#
+# label  # why there is no test yet
+
+# A test can be written as the code stands.
+tps_to_tl_roundtrip  # engine property test over TPS syllables
+tl_to_tps_roundtrip  # engine property test over numeric TL
+tps_adjuster_is_idempotent  # engine property test over tps_adjust::adjust
+input_normalizer_is_mode_agnostic  # engine test: diacritic / numeric / Bopomofo input, one key
+nextword_no_clock_read_in_engine  # engine source scan for clock reads
+keyboard_locale_neutral_tag  # iOS Info.plist + Android method.xml file checks
+nav_tab_titles_follow_picker  # iOS TabType test; Android needs the tab list out of SettingsMainActivity
+keyboard_long_press_delay_unchanged  # Android JVM: constants + pref default
+keyboard_navbar_dismiss_bug_stays_resolved  # Android source lint, like MainSourceTree.kt
+
+# Needs production code pulled out of MotionEvent / Handler / Compose / PopupWindow, a test seam, or a device.
+keyboard_*  # family pointer (behavioral-invariants.md §16) to the Android keyboard-body labels below
+keyboard_popup_hide_*  # family pointer (callouts.md) to the two popup-hide labels below
+keyboard_touch_hit_box_matches_visible_bounds  # hit-box math inline in the Compose measure pass
+keyboard_popup_drag_select_tracks_pointer  # index math needs a MotionEvent
+keyboard_multi_touch_first_pointer_cancels  # MotionEvent state machine
+keyboard_navbar_inset_padding_factor  # two inline copies; needs one pure function
+keyboard_action_cancel_unconditional_cleanup  # MotionEvent / Handler
+keyboard_popup_hide_clears_anchor  # KeyPopupManager owns PopupWindows
+keyboard_popup_hide_dismisses_preview_window  # real PopupWindow — device only
+keyboard_press_starts_only_on_down  # MotionEvent state machine
+keyboard_register_input_view_main_thread_setup  # InputMethodService lifecycle — androidTest only
+keyboard_body_layout_published_before_compose_mount  # Compose setContent ordering — androidTest only
+keypress_feedback_app_toggle_gate  # iOS feedback is KeyboardKit's (device); Android gate inline in KeyPressVibrator
+nextword_rescheduling_leaks_no_timer  # needs a timer hook (iOS) / RustEngineBridge seam (Android)

@@ -342,6 +342,7 @@ fn move_caret_then_append_inserts_where_the_caret_is() {
     );
 }
 
+// INVARIANT_EVERY_COMPOSING_OP_CARRIES_THE_RENDERING_CONFIG (behavioral-invariants.md §54)
 /// Under hanji-first a nailed prefix takes no separator before the pending
 /// tail (`台gi`), and every op after the nail — a caret move, a keystroke —
 /// renders it the same way: the caret walks the tail (after `g` = 2,
@@ -722,6 +723,7 @@ fn alternate_on_a_single_script_candidate_commits_nothing() {
 
 // MARK: - ComposingManagerLearningTests
 
+// INVARIANT_USER_FREQ_PAIR_KEY (behavioral-invariants.md §28)
 #[test]
 fn commit_candidate_counts_the_word_under_its_reading_in_either_script() {
     let _lock = engine_lock();

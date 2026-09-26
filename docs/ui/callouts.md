@@ -97,5 +97,4 @@ So `layout → symbol → POJ/TL tone`. TPS/MOE punctuation overrides symbols; s
 ## See also
 
 - `engine/tone.md` (tone normalize/restore), `engine/tps.md` (TPS/MOE layout callouts source).
-- `architecture/keyboard-body-invariants-android.md` (popup touch + geometry invariants).
-- `architecture/behavioral-invariants.md` (`INVARIANT_keyboard_popup_hide_*`).
+- `architecture/keyboard-body-invariants-android.md` (popup touch + geometry invariants, `INVARIANT_keyboard_popup_hide_*`).

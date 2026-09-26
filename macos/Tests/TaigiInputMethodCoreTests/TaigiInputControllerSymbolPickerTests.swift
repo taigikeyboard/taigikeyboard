@@ -70,6 +70,7 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
         XCTAssertEqual(session.client.caretRectQueries, [0], "the placeholder's own index")
     }
 
+    // INVARIANT_MACOS_SYMBOL_PICKER_PLACEHOLDER_MARKED_TEXT (behavioral-invariants.md §47)
     /// What the user had is what they keep: the placeholder sits in the
     /// document only while the list is up, a pick replaces it, and Escape
     /// takes it out again — nothing else in the line moves.

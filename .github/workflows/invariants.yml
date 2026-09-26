@@ -1,0 +1,52 @@
+name: INVARIANT labels
+
+# Every INVARIANT label a living doc names is named in a test, or sits in the
+# shrinking baseline (tools/invariant_labels_pending.txt;
+# .claude/rules/cross-platform-alignment.md §3a). Reads files only; seconds.
+# Its own workflow so a Rust / Kotlin / Swift test edit does not rerun Checks.
+on:
+  pull_request:
+    paths:
+      - 'docs/architecture/**'
+      - 'docs/engine/**'
+      - 'docs/ui/**'
+      - '.claude/rules/**'
+      - 'tools/invariant_labels*'
+      - '**/*.rs'
+      - '**/*.kt'
+      - '**/*.swift'
+      - '.github/workflows/invariants.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'docs/architecture/**'
+      - 'docs/engine/**'
+      - 'docs/ui/**'
+      - '.claude/rules/**'
+      - 'tools/invariant_labels*'
+      - '**/*.rs'
+      - '**/*.kt'
+      - '**/*.swift'
+      - '.github/workflows/invariants.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: invariants-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  labels:
+    name: INVARIANT labels named in tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Gate unit tests
+        working-directory: tools
+        run: python3 -m unittest invariant_labels_test
+
+      - name: Every documented label is named in a test
+        run: python3 tools/invariant_labels.py

@@ -71,7 +71,7 @@
 
 ## 2. Unicode — NFD preprocessing
 
-**Invariant**: `TaigiUnicode.nfdPreprocessed(s)` produces the same byte sequence on iOS (Swift `decomposedStringWithCanonicalMapping`) and Android (Kotlin `Normalizer.Form.NFD`) for every input that the keyboard may see — POJ nasal marker substitution, NFD decomposition, and `o͘` collapse to `o`.
+**Invariant**: `phonetics::normalization::taigi_unicode_base_form(s)` is the one NFD preprocessing every platform reaches (through the bridge), so the byte sequence is identical on every platform for every input the keyboard may see — POJ nasal marker substitution, NFD decomposition, and `o͘` collapse to `o`.
 
 **Why**: downstream consumers (Rust `ranking::score::roman_to_base`, `phonetics::normalization::normalize_input`, the custom-dictionary search keys `phonetics::custom_search`) depend on the output being identical across platforms. A divergent one-character preprocessing bug silently changes every dedup key, every score calculation, and every fst lookup.
 
@@ -111,7 +111,7 @@
 
 ## 4. Input normalization — mode-agnostic numeric tones
 
-**Invariant**: `phonetics::normalization::normalize_input(rawInput)` always emits a `notone`- or `roman_num`-style key (lowercase, hyphens collapsed, diacritics stripped, tones expressed as trailing digits) regardless of the user's input mode (`.poj`, `.tl`, `.tps`, `.english`). The output is the primary fst lookup key.
+**Invariant**: `phonetics::normalization::normalize_input(rawInput)` always emits a numeric key (lowercase, hyphens and spaces dropped, diacritics stripped, tones expressed as trailing digits) regardless of the user's input mode (`.poj`, `.tl`, `.tps`, `.english`). The output is the primary fst lookup key.
 
 **Why**: the fst is stored in a single canonical form; any mode-dependent drift in the key changes which candidates appear.
 
@@ -119,12 +119,12 @@
 
 **Corner cases**:
 - POJ-specific tone marks (`á`, `ê`, `ō`, etc.) normalize to trailing digits.
-- Explicit user hyphens are preserved in the `roman_num` variant and stripped in the `notone` variant — two keys for two indexes.
+- Explicit user hyphens are dropped: `normalize_input` splits on `-` / space and concatenates; the `notone` derivation strips them too. (The `roman_num` key that kept them is no longer read or written, §10.)
+- Live TPS lookup keys go through `lexicon::key_normalizer` (`normalize_tps_key_body`), not `normalize_input`.
 - Empty input returns empty output (never a sentinel character).
 
 **Test labels**:
 - `INVARIANT_input_normalizer_is_mode_agnostic`
-- `INVARIANT_normalizer_preserves_hyphens_in_roman_num`
 - `INVARIANT_normalizer_strips_hyphens_in_notone`
 
 ---
@@ -144,7 +144,7 @@ Reversing or merging these two passes changes ordering. Running display dedup be
 - Continuous `FetchAtPos` production path (current dogfood) — Rust `engine/composing::continuous::dedupe_display_hanji_for_tps`, gated on `mode == InputMode::Tps` in `assemble_candidates`. Runs after the walker slot-0 prepend + POJ presentation pass. Two `dict.bin` rows sharing the toneless TPS key (e.g. `灣/uan` + `灣/uân` at `tps:ㄨㄢ`) survive the pre-sort `(roman, hanji, consumed_span)` dedupe — distinct romanization is a legitimate TL/POJ UI signal — and only collapse here, where the TPS UI hides romanization entirely.
 - **Candidate Display = Romanization Only (§44) is the mirror-image display pass for the OTHER script**, `composing::dispatch::dedupe_display_roman`, keyed on the **rendered roman alone** (the span left the key 2026-09-03, see §44), TL/POJ only. It runs in `dispatch::handle_fetch_at_pos` AFTER the §34 literal prepend — deliberately NOT beside the TPS pass inside `assemble_candidates`, because the literal is inserted later and a pass there would leave `台/tâi` standing next to the bare literal `tâi` as two identical cells. Consequence for the clause above: under Romanization Only an entry without hanji (the §34 literal, a roman-only custom entry) DOES participate in the collapse — it is first-seen (inserted at index 0) and therefore the survivor; "entries without hanzi are always kept" stays true for the TPS pass only. Both display passes keep the ordering rule: after sort, first-seen wins.
 
-The legacy linear pipeline (`ranking::dedup` + `ranking::process_candidates`, bridged as `RustEngineBridge.processCandidates`) had no production caller since v3.5.8 and was removed 2026-09-25 with its `INVARIANT_engine_dedup_*` / `INVARIANT_display_dedup_*` tests.
+The legacy linear pipeline (`ranking::dedup` + `ranking::process_candidates`, bridged as `RustEngineBridge.processCandidates`) had no production caller since v3.5.8 and was removed 2026-09-25 with its engine-dedup / display-dedup invariant tests (labels retired).
 
 **Test labels**:
 - `dedupe_display_hanji_for_tps_collapses_same_hanji_same_span` + `tps_input_collapses_duplicate_hanji` (continuous `FetchAtPos` path, `engine/composing/tests/tps_display_dedup.rs`)
@@ -220,7 +220,8 @@ Live candidate ranking is the Continuous `FetchAtPos` path: lexicographic sort k
 
 **Test labels**:
 - `INVARIANT_case_transformer_is_deterministic`
-- `INVARIANT_case_transformer_honors_auto_cap_flag`
+
+The former auto-cap-flag label is retired: the engine API takes no auto-cap flag (`case_transform.rs` accepts only `LetterCase` + `InputMode`); platforms read auto-cap for logging only.
 
 ---
 
@@ -289,8 +290,8 @@ Live candidate ranking is the Continuous `FetchAtPos` path: lexicographic sort k
 
 **Extended invariant — `INVARIANT_composing_external_insert_commits_preedit_atomically`**: external insertion surfaces (emoji palette, clipboard paste) MUST commit the active Taigi preedit together with the external text in a single atomic document write — never a `finishComposingText` + `commitText(external)` pair (silent double-commit on Android) nor a bare `insertText(external)` while marked text is live (stale preedit on iOS).
 
-- Pure-state pin: `ComposingStateTest`/`ComposingStateTests` — idle path emits plain insert, composing path emits `CommitTextReplacingPreedit(derived + external)` + `ResetAutocomplete` + `ResetAutocompleteContext`, empty-text path is a no-op.
-- Binding pin: Android `ComposingManagerTest` — single `commitText` call, zero `finishComposingText`; iOS `ComposingManagerTests` — mirrored via `DelegateSpy` effect ordering.
+- Pure-state pin: Rust `engine/composing/tests/continuous_phase.rs` (`commit_preedit_then_insert_external_under_continuous_combines_pending_and_external`) + `tests/invariants.rs` (`invariant_commit_preedit_then_insert_*`) — idle path emits plain insert, composing path emits `CommitTextReplacingPreedit(derived + external)` + `ResetAutocomplete` + `ResetAutocompleteContext`, empty-text path is a no-op.
+- Binding pin: iOS `ComposingManagerTests.testCommitPreeditThenInsertExternal_whenComposing_commitsAtomicallyWithExternalText` (`DelegateSpy` effect ordering). Android: no JVM test since the platform `ComposingManagerTest` was retired with the JNI move — to be added over the recording host in `ComposingManagerHostReconciliationTest` (single `commitText`, zero `finishComposingText`).
 - Closed path: `ime/media/MediaInputManager.kt` `sendEmojiKeyPress()` (Android) + `KeyboardExtension/KeyboardViewController+EmojiDelegate.swift` `emojiDidSelect(_:)` (iOS) — both route through `ComposingManager.commitPreeditThenInsertExternal(...)` as of PR #162 (2026-04-21).
 
 **Extended invariant — `INVARIANT_composing_external_region_clear_discards_state`**: when the host editor no longer holds the composing region the IME wrote, the IME binding MUST zero its internal composing state (raw buffer + cached derived display) without issuing any `InputConnection` call. A stale `state.isComposing` or `cachedDerivedDisplay` would let a later commit / reset re-insert preedit text at the new cursor position.
@@ -305,9 +306,9 @@ Live candidate ranking is the Continuous `FetchAtPos` path: lexicographic sort k
 - The `deleteBackward` empty-raw path routes through `reset(ic)` on Android; the same zero-then-finish ordering applies.
 
 **Test labels**:
-- `INVARIANT_composing_clear_preedit_does_not_commit` — `ComposingManagerTest` (Android binding, composing-aware path via `reset(ic)` / `startComposing` / `deleteBackward` empty-raw) + `ComposingManagerTest.clearHostComposingRegion zeros then finishes without committing` + `… with null ic is noop` (Android binding, bare-IC fallback path via `TextInputManager.resetComposingText`) + `ComposingManagerTests.testReset_whenComposing_returnsToIdleWithoutInserting` (iOS wrapper, engine-level pin).
-- `INVARIANT_composing_reset_when_idle_is_noop` — `ComposingManagerTest` (Android) + `ComposingManagerTests.testReset_whenIdle_emitsNoEffects` (iOS wrapper).
-- `INVARIANT_composing_idle_to_idle_is_noop` — `ComposingStateTests.testReset_whenIdle_emitsEmptyEffects` (pure engine, iOS).
+- `INVARIANT_composing_clear_preedit_does_not_commit` — iOS `ComposingManagerTests` (wrapper). Android binding: no JVM test (the platform `ComposingManagerTest` was retired); the zero-then-finish order is pinned only in `ComposingDelegate.kt` / `TextInputKeyHandler.kt` comments and dogfood.
+- `INVARIANT_composing_reset_when_idle_is_noop` — `ComposingManagerTests.testReset_whenIdle_emitsNoEffects` (iOS wrapper). Android: no JVM test (see above).
+- `INVARIANT_composing_idle_to_idle_is_noop` — `engine/composing/tests/invariants.rs::invariant_reset_idle_is_noop` (pure engine; the iOS `ComposingStateTests` case was ported there).
 - `INVARIANT_composing_external_region_clear_discards_state` — Android `ComposingManagerHostReconciliationTest`. iOS N/A (floating marked text — no in-document region for host to clear externally).
 
 **Cross-references**:
@@ -400,7 +401,7 @@ Removed with `classify_input` / `contains_numeric_tone` (no production caller). 
 
 ## 16. Keyboard body — touch + popup + window insets (Android Compose body)
 
-**Moved 2026-05-26 →** [`keyboard-body-invariants-android.md`](keyboard-body-invariants-android.md) — 11 `INVARIANT_keyboard_*` labels (Android-only by design; iOS keyboard is a separate KeyboardKit contract). Kotlin source comments referencing the labels are unchanged; see the extracted file for the full list.
+**Moved 2026-05-26 →** [`keyboard-body-invariants-android.md`](keyboard-body-invariants-android.md) — 12 `INVARIANT_keyboard_*` labels (Android-only by design; iOS keyboard is a separate KeyboardKit contract). Kotlin source comments referencing the labels are unchanged; see the extracted file for the full list.
 
 ---
 
@@ -473,7 +474,7 @@ The first candidate (engine ranker top, index 0) in **both** the candidate strip
   - Android: `R.attr.key_bgColor` — `CandidateDisplayParams.themeKeyBgColor` (strip), `CandidateOverlayColors.firstCandidateBackground` (overlay).
   - iOS: `Color.keyboardButtonBackground` (non-Liquid-Glass); `keyboardButtonBackgroundLiquid(for:).opacity(0.4)` (Liquid Glass — kept below the pressed/selected 0.6 so the state hierarchy stays legible).
 - **Keying** — literal index 0 (strip: enumerated index; overlay: `RowItem.originalIndex == 0`). NOT the `isComposingText` metadata — that path is dead (no producer since the v3.5.8 continuous redesign removed the composing-text cell).
-- **Precedence** — the pressed background wins over the first-candidate hint (and, on iOS, the selected background too; Android candidate cells have no selected-candidate visual state, only pressed).
+- **Precedence** — the pressed background wins over the first-candidate hint. On iOS the order is pressed > first candidate > selected (`CandidateViewStyle.resolvedBackgroundColor`): the first candidate is always selected while typing and must still read as the hint. Android candidate cells have no selected-candidate visual state, only pressed.
 
 **Why**: the ranker top is the default-commit candidate; a keycap-color fill signals it without a separate selection cursor. Removed in PR #267 (2026-05-13 "no visual distinction" rule), restored 2026-06-01 per USER — the hint aids continuous-input dogfooding. Dashed-border affordances (the old iOS/Android slot-0 style) are **deliberately not used**: every surveyed highlighting IME (Rime family — trime / Hamster / librime concept) uses a filled background, none use a border. FlorisBoard / aiongtaigi-sushi do not distinguish the first candidate at all, so they are not the model here.
 
@@ -481,7 +482,7 @@ The first candidate (engine ranker top, index 0) in **both** the candidate strip
 - iOS — `CandidateViewStyle.resolvedBackgroundColor(isFirstCandidate:)` ← `CandidateButtonView` (strip) + `ExpandedCandidateGridCell` (overlay).
 - Android — `SmartbarCandidateStrip.CandidateCell` (strip) + `CandidateOverlayContent.CandidateCell` (overlay).
 
-**Tests**: pure visual styling — no automated render assertion (Compose / SwiftUI render pins are heavy + brittle; per `code-review-rules.md §9` the gate is qualitative dogfood). Pinned by the **S6 dogfood checklist** item in `.claude/rules/taigi-incidents.md` § Qualitative perf gate.
+**Tests**: iOS `BuiltInThemesTests.testResolvedBackgroundColor_firstCandidateLightBeatsSelection` pins the colour precedence; Android has no test (the colour choice is inline in the composables). No render assertion on either platform (Compose / SwiftUI render pins are heavy + brittle; per `code-review-rules.md §9` the gate is qualitative dogfood). Pinned by the **S6 dogfood checklist** item in `.claude/rules/taigi-incidents.md` § Qualitative perf gate.
 
 ---
 

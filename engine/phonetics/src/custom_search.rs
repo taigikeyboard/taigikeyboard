@@ -282,6 +282,7 @@ mod tests {
         );
     }
 
+    // INVARIANT_CUSTOM_DERIVATION_MATCHES_INPUT_NORMALIZER (behavioral-invariants.md §10)
     // trace: roman="chia̍h" (POJ display, tone 8). tl num = to_tone_number(
     // "tsia̍h") fused = "tsiah8"; user typing TL numeric "tsiah8" hits it.
     #[test]

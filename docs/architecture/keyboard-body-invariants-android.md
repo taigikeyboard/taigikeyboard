@@ -23,6 +23,7 @@
 9. [`INVARIANT_keyboard_popup_hide_dismisses_preview_window`](#invariant_keyboard_popup_hide_dismisses_preview_window)
 10. [`INVARIANT_keyboard_press_starts_only_on_down`](#invariant_keyboard_press_starts_only_on_down)
 11. [`INVARIANT_keyboard_register_input_view_main_thread_setup`](#invariant_keyboard_register_input_view_main_thread_setup)
+12. [`INVARIANT_keyboard_body_layout_published_before_compose_mount`](#invariant_keyboard_body_layout_published_before_compose_mount)
 
 ---
 

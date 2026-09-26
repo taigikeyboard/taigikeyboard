@@ -36,6 +36,7 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(makeStore().current, EngineSettings.defaults)
     }
 
+    // INVARIANT_HANJI_FIRST_DEFAULT (behavioral-invariants.md §48)
     /// Hanji-first out of the box (USER 2026-09-18): with nothing stored a
     /// commit writes the hanji, and the punctuation width derived from the
     /// swap under Hanji–Romanization Pairing follows it.
@@ -46,6 +47,7 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertNil(userDefaults.object(forKey: SettingsStore.Keys.isTranslateSwapped.name))
     }
 
+    // INVARIANT_DESKTOP_GENERAL_PANE_OUTPUT_SCRIPT_AND_RESET (behavioral-invariants.md §48)
     /// The General pane's reset button: every row the pane draws goes back, and
     /// nothing the pane does not draw — Appearance's keys, the update bookkeeping —
     /// moves. Removed, not written, like the other resets.

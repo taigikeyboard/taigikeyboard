@@ -104,6 +104,7 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
         XCTAssertEqual(result[1].additionalInfo["displayText"], "珠仔")
     }
 
+    // INVARIANT_NEXTWORD_CONTINUOUS_CANONICAL_TL (behavioral-invariants.md §25)
     func testCanonicalTlSidechannelCarriesIdentityTl() {
         // R2: the canonical TL identity rides `additionalInfo["canonicalTl"]`
         // so the tap path can forward it as `commitContinuous(associationTl:)`.
