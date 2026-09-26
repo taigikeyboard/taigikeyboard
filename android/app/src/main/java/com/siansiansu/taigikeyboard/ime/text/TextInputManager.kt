@@ -127,6 +127,7 @@ class TextInputManager(
                 prefs = prefs,
                 capsStateManager = capsStateManager,
                 composeHostProvider = { composeHost },
+                keyAreaOffsetXProvider = { coordinator.keyAreaOffsetX },
                 onDispatchKeyPress = { data -> sendKeyPress(data) },
             ),
         )
@@ -225,6 +226,8 @@ class TextInputManager(
             onHeightFactorChanged = { factor ->
                 smartbarManager.smartbarView?.setHeightFactor(factor)
             },
+            prefs = prefs,
+            onOneHandedModeSelected = { mode -> smartbarManager.selectOneHandedMode(mode) },
         )
 
         themeSurface = KeyboardThemeSurfaceController(inputView, scope = this)
@@ -252,6 +255,12 @@ class TextInputManager(
                 R.id.settings_selection_overlay,
             )
         smartbarManager.registerSettingsSelectionOverlayView(settingsOverlay)
+
+        val oneHandedMenuOverlay =
+            inputView.findViewById<com.siansiansu.taigikeyboard.ime.text.smartbar.OneHandedMenuOverlayView>(
+                R.id.one_handed_menu_overlay,
+            )
+        smartbarManager.registerOneHandedMenuOverlayView(oneHandedMenuOverlay)
 
         textViewGroup?.post {
             measureAndUpdateKeyboardHeight()

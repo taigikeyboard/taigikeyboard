@@ -1,10 +1,17 @@
 package com.siansiansu.taigikeyboard.ime.text.smartbar
 
 import android.view.View
+import androidx.annotation.DrawableRes
 import com.siansiansu.taigikeyboard.R
+import com.siansiansu.taigikeyboard.i18n.DisplayLanguage
+import com.siansiansu.taigikeyboard.i18n.StringResolver
+import com.siansiansu.taigikeyboard.i18n.buildStringResolver
+import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
+import com.siansiansu.taigikeyboard.ime.core.settings.KeyboardToolbarAction
+import com.siansiansu.taigikeyboard.ime.core.settings.OneHandedMode
 
 /**
  * Manages toolbar UI interactions extracted from SmartbarManager.
@@ -20,6 +27,7 @@ class ToolbarManager(
     private val layoutSelectionOverlayViewProvider: () -> LayoutSelectionOverlayView?,
     private val symbolSelectionOverlayViewProvider: () -> SymbolSelectionOverlayView?,
     private val settingsSelectionOverlayViewProvider: () -> SettingsSelectionOverlayView?,
+    private val oneHandedMenuOverlayViewProvider: () -> OneHandedMenuOverlayView?,
     private val onInputModeChanged: (String) -> Unit,
     private val onLayoutSelected: (String) -> Unit,
     private val getKeyboardHeight: () -> Int,
@@ -50,6 +58,7 @@ class ToolbarManager(
     fun collapseToolbarIfOpen() {
         symbolSelectionOverlayViewProvider()?.hide()
         settingsSelectionOverlayViewProvider()?.hide()
+        oneHandedMenuOverlayViewProvider()?.hide()
         if (activeContainer == SmartbarContainer.TOOLBAR) {
             animateContainerSlide(SmartbarContainer.TOOLBAR, containerBeforeToolbar, expanding = false)
             animateToggleRotation(45f, 0f)
@@ -66,6 +75,7 @@ class ToolbarManager(
             layoutSelectionOverlayViewProvider()?.hide()
             symbolSelectionOverlayViewProvider()?.hide()
             settingsSelectionOverlayViewProvider()?.hide()
+            oneHandedMenuOverlayViewProvider()?.hide()
 
             if (activeContainer == SmartbarContainer.TOOLBAR) {
                 // × → + : collapse toolbar, restore previous container
@@ -90,10 +100,16 @@ class ToolbarManager(
             showSymbolSelection()
         }
 
-        // Dismiss keyboard button
-        smartbarView.findViewById<View>(R.id.toolbar_dismiss_button)?.setOnClickListener {
-            onInputModeChanged("hide_self")
+        // Keyboard button: tap = last callout pick (dismiss / toggle a one-handed side),
+        // long-press = one-handed callout. Returning true keeps the release from also clicking.
+        smartbarView.findViewById<View>(R.id.toolbar_dismiss_button)?.apply {
+            setOnClickListener { performKeyboardToolbarAction() }
+            setOnLongClickListener {
+                showOneHandedMenu()
+                true
+            }
         }
+        refreshKeyboardButton()
 
         // Globe button: open system IME picker
         smartbarView.findViewById<View>(R.id.toolbar_globe_button)?.setOnClickListener {
@@ -177,9 +193,7 @@ class ToolbarManager(
             overlay.hide()
             return
         }
-        candidateOverlayViewProvider()?.hide()
-        symbolSelectionOverlayViewProvider()?.hide()
-        settingsSelectionOverlayViewProvider()?.hide()
+        hideOtherPanels(keep = overlay)
         overlay.show(getKeyboardHeight())
     }
 
@@ -192,9 +206,7 @@ class ToolbarManager(
             overlay.hide()
             return
         }
-        candidateOverlayViewProvider()?.hide()
-        layoutSelectionOverlayViewProvider()?.hide()
-        settingsSelectionOverlayViewProvider()?.hide()
+        hideOtherPanels(keep = overlay)
         overlay.show(getKeyboardHeight())
     }
 
@@ -207,10 +219,73 @@ class ToolbarManager(
             overlay.hide()
             return
         }
-        candidateOverlayViewProvider()?.hide()
-        layoutSelectionOverlayViewProvider()?.hide()
-        symbolSelectionOverlayViewProvider()?.hide()
+        hideOtherPanels(keep = overlay)
         overlay.show(getKeyboardHeight())
+    }
+
+    /**
+     * Keyboard-button tap: dismiss, or toggle the remembered one-handed side on / off.
+     * Mirrors iOS `KeyboardContext.performKeyboardToolbarAction`.
+     */
+    private fun performKeyboardToolbarAction() {
+        oneHandedMenuOverlayViewProvider()?.hide()
+        val nextMode = prefs.keyboardToolbarAction.tapResult(prefs.oneHandedMode)
+        if (nextMode == null) {
+            onInputModeChanged("hide_self")
+        } else {
+            prefs.oneHandedMode = nextMode
+        }
+    }
+
+    private fun showOneHandedMenu() {
+        val overlay = oneHandedMenuOverlayViewProvider() ?: return
+        hideOtherPanels(keep = overlay)
+        overlay.show(prefs.oneHandedMode)
+    }
+
+    /** Hides the candidate overlay and every toolbar panel except [keep], which is about to open. */
+    private fun hideOtherPanels(keep: View) {
+        candidateOverlayViewProvider()?.hide()
+        layoutSelectionOverlayViewProvider()?.takeIf { it !== keep }?.hide()
+        symbolSelectionOverlayViewProvider()?.takeIf { it !== keep }?.hide()
+        settingsSelectionOverlayViewProvider()?.takeIf { it !== keep }?.hide()
+        oneHandedMenuOverlayViewProvider()?.takeIf { it !== keep }?.hide()
+    }
+
+    /**
+     * Callout / side-panel pick of a mode. A side also becomes the keyboard button's action;
+     * OFF leaves it unchanged. Mirrors iOS `KeyboardContext.selectOneHandedMode`.
+     */
+    fun selectOneHandedMode(mode: OneHandedMode) {
+        oneHandedMenuOverlayViewProvider()?.hide()
+        prefs.oneHandedMode = mode
+        val action = KeyboardToolbarAction.forMode(mode) ?: return
+        if (prefs.keyboardToolbarAction != action) {
+            prefs.keyboardToolbarAction = action
+            refreshKeyboardButton()
+        }
+    }
+
+    /** Callout pick of Dismiss: it becomes the keyboard button's action, then the keyboard hides. */
+    fun selectDismissToolbarAction() {
+        oneHandedMenuOverlayViewProvider()?.hide()
+        prefs.keyboardToolbarAction = KeyboardToolbarAction.DISMISS
+        refreshKeyboardButton()
+        onInputModeChanged("hide_self")
+    }
+
+    /**
+     * Icon + a11y label of the keyboard button follow its action. [resolver] defaults to the
+     * persisted display language; a display-language change passes the just-selected one.
+     */
+    fun refreshKeyboardButton(
+        resolver: StringResolver? = null,
+    ) {
+        val button = smartbarViewProvider()?.findViewById<android.widget.ImageView>(R.id.toolbar_dismiss_button) ?: return
+        val action = prefs.keyboardToolbarAction
+        val labels = resolver ?: buildStringResolver(button.context, DisplayLanguage.fromTag(prefs.displayLanguageTag))
+        button.setImageResource(action.iconRes)
+        button.contentDescription = labels.resolve(action.labelKey)
     }
 
     val preferredContainer: SmartbarContainer
@@ -318,3 +393,21 @@ class ToolbarManager(
         private const val TAG = "ToolbarManager"
     }
 }
+
+/** Keyboard-button icon per action; also the callout cell icons. Mirrors iOS `KeyboardToolbarAction.systemImageName`. */
+@get:DrawableRes
+internal val KeyboardToolbarAction.iconRes: Int
+    get() =
+        when (this) {
+            KeyboardToolbarAction.DISMISS -> R.drawable.ic_keyboard_hide
+            KeyboardToolbarAction.LEFT -> R.drawable.ic_keyboard_onehanded_left
+            KeyboardToolbarAction.RIGHT -> R.drawable.ic_keyboard_onehanded_right
+        }
+
+private val KeyboardToolbarAction.labelKey: StringKey
+    get() =
+        when (this) {
+            KeyboardToolbarAction.DISMISS -> StringKey.KEYBOARD_DISMISS_KEYBOARD
+            KeyboardToolbarAction.LEFT -> StringKey.KEYBOARD_ONE_HANDED_LEFT
+            KeyboardToolbarAction.RIGHT -> StringKey.KEYBOARD_ONE_HANDED_RIGHT
+        }

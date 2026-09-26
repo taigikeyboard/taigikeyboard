@@ -298,6 +298,16 @@ object L10n {
         @Composable get() = stringRes(StringKey.KEYBOARD_SWITCH_INPUT_METHOD)
     val keyboardDismissKeyboard: String
         @Composable get() = stringRes(StringKey.KEYBOARD_DISMISS_KEYBOARD)
+    val keyboardOneHandedMode: String
+        @Composable get() = stringRes(StringKey.KEYBOARD_ONE_HANDED_MODE)
+    val keyboardOneHandedLeft: String
+        @Composable get() = stringRes(StringKey.KEYBOARD_ONE_HANDED_LEFT)
+    val keyboardOneHandedRight: String
+        @Composable get() = stringRes(StringKey.KEYBOARD_ONE_HANDED_RIGHT)
+    val keyboardOneHandedOff: String
+        @Composable get() = stringRes(StringKey.KEYBOARD_ONE_HANDED_OFF)
+    val keyboardOneHandedSwapSide: String
+        @Composable get() = stringRes(StringKey.KEYBOARD_ONE_HANDED_SWAP_SIDE)
     val layoutRomanizationKeyboard: String
         @Composable get() = stringRes(StringKey.LAYOUT_ROMANIZATION_KEYBOARD)
     val layoutStandardLayout: String

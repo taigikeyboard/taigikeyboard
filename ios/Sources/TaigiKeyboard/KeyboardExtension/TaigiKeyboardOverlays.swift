@@ -2,8 +2,8 @@ import KeyboardKit
 import SwiftUI
 
 extension View {
-    /// Mount all four keyboard-extension overlays (expanded candidates + layout /
-    /// symbol / settings panels) on top of the host view.
+    /// Mount the keyboard-extension overlays (expanded candidates + layout / symbol /
+    /// settings panels + one-handed callout) on top of the host view.
     ///
     /// The parent view retains ownership of `CandidateExpandState` and
     /// `OverlayPanelState`, plus any `onChange` handlers that bridge to state
@@ -24,6 +24,10 @@ extension View {
         orMapsToER: Bool,
         onSymbolInsert: @escaping (String) -> Void,
         onOpenSettingsApp: @escaping () -> Void,
+        oneHandedMode: OneHandedMode,
+        oneHandedCalloutStyle: KeyboardCalloutStyle,
+        onSelectOneHandedMode: @escaping (OneHandedMode) -> Void,
+        onSelectDismissKeyboard: @escaping () -> Void,
     ) -> some View {
         overlay(
             Group {
@@ -88,5 +92,23 @@ extension View {
             },
             alignment: .topLeading,
         )
+        .overlay(alignment: .topTrailing) {
+            if panels.wrappedValue.isOneHandedMenuExpanded {
+                // Transparent full-cover backdrop: a tap anywhere outside the callout closes it.
+                // The callout drops down over the keys — the extension cannot draw above its top edge.
+                ZStack(alignment: .topTrailing) {
+                    Color.black.opacity(0.001)
+                        .onTapGesture { panels.wrappedValue.isOneHandedMenuExpanded = false }
+                    OneHandedModeCallout(
+                        currentMode: oneHandedMode,
+                        style: oneHandedCalloutStyle,
+                        onSelectMode: onSelectOneHandedMode,
+                        onSelectDismiss: onSelectDismissKeyboard,
+                    )
+                    .padding(.top, candidateTheme.height)
+                    .padding(.trailing, 8)
+                }
+            }
+        }
     }
 }

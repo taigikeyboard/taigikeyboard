@@ -15,7 +15,10 @@ struct CandidateView: View {
     let onSettingsTap: () -> Void
     let onLayoutTap: () -> Void
     let onSymbolTap: () -> Void
-    let onDismissKeyboard: () -> Void
+    /// Toolbar keyboard button: the icon follows [keyboardToolbarAction]; long-press opens the one-handed callout.
+    let keyboardToolbarAction: KeyboardToolbarAction
+    let onKeyboardButtonTap: () -> Void
+    let onKeyboardButtonLongPress: () -> Void
     let currentInputMode: InputMode
     let onInputModeChange: (InputMode) -> Void
     let englishAutocompleteView: AnyView?
@@ -48,7 +51,9 @@ struct CandidateView: View {
                 onInputModeChange: onInputModeChange,
                 onSymbolTap: onSymbolTap,
                 onLayoutTap: onLayoutTap,
-                onDismissKeyboard: onDismissKeyboard,
+                keyboardToolbarAction: keyboardToolbarAction,
+                onKeyboardButtonTap: onKeyboardButtonTap,
+                onKeyboardButtonLongPress: onKeyboardButtonLongPress,
                 onSettingsTap: onSettingsTap,
             )
 

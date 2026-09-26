@@ -40,6 +40,31 @@
       "comment": "Smartbar toolbar dismiss button a11y label (hides the keyboard). Android via InputView.applyAccessibilityStrings; iOS via DisplayLanguageStore in ToolShortcutsToolbar.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["extension"] },
       "values": { "hanji": "收合齒盤", "tailo": "Siu-ha̍p khí-puânn", "poj": "Siu-ha̍p khí-pôaⁿ", "en": "Hide keyboard", "ja": "キーボードを閉じる" }
+    },
+    "oneHandedMode": {
+      "comment": "Name of the one-handed mode callout opened by long-pressing the toolbar keyboard button; also its a11y long-press action name. TL/POJ from the bundled dictionary (單手 tuann-tshiú) + 輸入模式 spelling.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["extension"] },
+      "values": { "hanji": "單手模式", "tailo": "Tuann-tshiú bôo-sik", "poj": "Toaⁿ-chhiú bô͘-sek", "en": "One-handed mode", "ja": "片手モード" }
+    },
+    "oneHandedLeft": {
+      "comment": "One-handed mode callout item: keys dock to the left edge. TL/POJ from the bundled dictionary (倒手 tò-tshiú).",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["extension"] },
+      "values": { "hanji": "倒手", "tailo": "Tò-tshiú", "poj": "Tò-chhiú", "en": "Left hand", "ja": "左手" }
+    },
+    "oneHandedRight": {
+      "comment": "One-handed mode callout item: keys dock to the right edge. TL/POJ from the bundled dictionary (正手 tsiànn-tshiú).",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["extension"] },
+      "values": { "hanji": "正手", "tailo": "Tsiànn-tshiú", "poj": "Chiàⁿ-chhiú", "en": "Right hand", "ja": "右手" }
+    },
+    "oneHandedOff": {
+      "comment": "One-handed mode callout item and side-panel button: back to the full-width keyboard. TL/POJ from the bundled dictionary (一般 it-puann).",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["extension"] },
+      "values": { "hanji": "一般", "tailo": "It-puann", "poj": "It-poaⁿ", "en": "Normal", "ja": "通常" }
+    },
+    "oneHandedSwapSide": {
+      "comment": "One-handed mode side-panel button a11y label: move the docked keys to the other edge. TL/POJ from the bundled dictionary (換爿 uānn-pîng).",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["extension"] },
+      "values": { "hanji": "換爿", "tailo": "Uānn-pîng", "poj": "Ōaⁿ-pêng", "en": "Switch side", "ja": "反対側へ移動" }
     }
   }
 }

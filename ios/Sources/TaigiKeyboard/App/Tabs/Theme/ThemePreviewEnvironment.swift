@@ -59,6 +59,11 @@ final class ThemePreviewEnvironment: KeyboardEnvironment {
         base.fontType
     }
 
+    /// The preview always shows the full-width keyboard.
+    var oneHandedMode: OneHandedMode {
+        .off
+    }
+
     var keyboardLayoutType: KeyboardLayoutType {
         base.keyboardLayoutType
     }

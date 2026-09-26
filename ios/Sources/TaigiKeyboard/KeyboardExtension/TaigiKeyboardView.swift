@@ -120,6 +120,7 @@ struct TaigiKeyboardView: View {
         let useLiquidGlassBg = keyboardContext.isLiquidGlassEnabled && colors.background == nil
         let isTPSLayout = p.settings.keyboardLayoutType == .tps
         let orMapsToER = p.settings.isTpsOrMappedToER
+        let oneHandedMode = settings.oneHandedMode
 
         keyboardWithOverlays(
             p: p,
@@ -131,6 +132,7 @@ struct TaigiKeyboardView: View {
             candidateTheme: theme,
             isTPSLayout: isTPSLayout,
             orMapsToER: orMapsToER,
+            oneHandedMode: oneHandedMode,
         )
         .candidateTheme(theme)
         .keyboardToolbarStyle(
@@ -206,6 +208,7 @@ struct TaigiKeyboardView: View {
         candidateTheme: CandidateTheme,
         isTPSLayout: Bool,
         orMapsToER: Bool,
+        oneHandedMode: OneHandedMode,
     ) -> some View {
         coreKeyboard(
             p: p,
@@ -216,6 +219,7 @@ struct TaigiKeyboardView: View {
             candidateStyle: candidateStyle,
             isTPSLayout: isTPSLayout,
             orMapsToER: orMapsToER,
+            oneHandedMode: oneHandedMode,
         )
         .withKeyboardOverlays(
             panels: $panels,
@@ -237,6 +241,17 @@ struct TaigiKeyboardView: View {
             },
             onOpenSettingsApp: { [unowned services] in
                 services.actionHandler.handle(.settings)
+            },
+            oneHandedMode: oneHandedMode,
+            oneHandedCalloutStyle: calloutStyle.themed(by: p.settings.colorSettings),
+            onSelectOneHandedMode: { [keyboardContext] mode in
+                panels.isOneHandedMenuExpanded = false
+                keyboardContext.selectOneHandedMode(mode)
+            },
+            onSelectDismissKeyboard: { [keyboardContext, unowned services] in
+                panels.closeAll()
+                keyboardContext.selectDismissToolbarAction()
+                services.actionHandler.handle(.dismissKeyboard)
             },
         )
         .onChange(of: expandState.isExpanded) { _, isExpanded in
@@ -268,6 +283,7 @@ struct TaigiKeyboardView: View {
         candidateStyle: CandidateView.Style,
         isTPSLayout: Bool,
         orMapsToER: Bool,
+        oneHandedMode: OneHandedMode,
     ) -> some View {
         // KeyboardKit 10: uses layout: and services: parameters
         KeyboardView(
@@ -351,9 +367,17 @@ struct TaigiKeyboardView: View {
                             panels.isSymbolExpanded = true
                         }
                     },
-                    onDismissKeyboard: {
+                    keyboardToolbarAction: keyboardContext.keyboardToolbarAction,
+                    onKeyboardButtonTap: {
                         panels.closeAll()
-                        services.actionHandler.handle(.dismissKeyboard)
+                        if keyboardContext.performKeyboardToolbarAction() {
+                            services.actionHandler.handle(.dismissKeyboard)
+                        }
+                    },
+                    onKeyboardButtonLongPress: {
+                        panels.closeAll()
+                        expandState.collapse()
+                        panels.isOneHandedMenuExpanded = true
                     },
                     currentInputMode: currentInputMode,
                     onInputModeChange: { newMode in
@@ -418,6 +442,27 @@ struct TaigiKeyboardView: View {
         }
         .keyboardCalloutActions(TaigiCallouts.taigiCalloutActions)
         .keyboardCalloutStyle(calloutStyle.themed(by: p.settings.colorSettings))
+        // KeyboardKit docking narrows only the key rows to 80% and aligns them to the edge;
+        // the toolbar (candidate bar) stays full width. API: View.keyboardDockEdge(_:).
+        .keyboardDockEdge(oneHandedMode.dockEdge)
+        .overlay {
+            if oneHandedMode != .off, keyboardContext.keyboardType != .emojis {
+                oneHandedSidePanel(mode: oneHandedMode)
+            }
+        }
+    }
+
+    /// Side panel in the 20% gap KeyboardKit leaves beside the docked keys, key-area high.
+    private func oneHandedSidePanel(mode: OneHandedMode) -> some View {
+        GeometryReader { geo in
+            OneHandedSidePanel(
+                mode: mode,
+                onSwapSide: { keyboardContext.selectOneHandedMode(mode.flipped) },
+                onRestore: { keyboardContext.selectOneHandedMode(.off) },
+            )
+            .frame(width: geo.size.width * (1 - OneHandedMode.keyAreaFraction), height: layout.totalHeight)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: mode == .left ? .bottomTrailing : .bottomLeading)
+        }
     }
 
     /// The colorScheme the emoji-switch key's content should render in, so KeyboardKit's

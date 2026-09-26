@@ -149,6 +149,11 @@
     <string name="i18n_keyboard_switchLayout">Switch layout</string>
     <string name="i18n_keyboard_switchInputMethod">Switch input method</string>
     <string name="i18n_keyboard_dismissKeyboard">Hide keyboard</string>
+    <string name="i18n_keyboard_oneHandedMode">One-handed mode</string>
+    <string name="i18n_keyboard_oneHandedLeft">Left hand</string>
+    <string name="i18n_keyboard_oneHandedRight">Right hand</string>
+    <string name="i18n_keyboard_oneHandedOff">Normal</string>
+    <string name="i18n_keyboard_oneHandedSwapSide">Switch side</string>
     <string name="i18n_layout_romanizationKeyboard">Romanization Keyboards</string>
     <string name="i18n_layout_standardLayout">Lohankha</string>
     <string name="i18n_layout_phahTaigiLayout">PhahTaigi</string>

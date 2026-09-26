@@ -16,6 +16,8 @@ import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettingsProvider
+import com.siansiansu.taigikeyboard.ime.core.settings.KeyboardToolbarAction
+import com.siansiansu.taigikeyboard.ime.core.settings.OneHandedMode
 import com.siansiansu.taigikeyboard.ime.core.settings.PojMarkerOptions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -335,6 +337,20 @@ class PrefHelper(
                 cached(PreferenceKeys.CANDIDATE_DISPLAY_MODE, CandidateDisplayMode.SIDE_BY_SIDE.storageValue),
             )
         set(value) = updateCacheAndPersist(PreferenceKeys.CANDIDATE_DISPLAY_MODE, value.storageValue)
+
+    // One-handed mode: key area docked to one edge (OFF = full width). No reset entry needed —
+    // `resetToDefaults` clears the store and an absent value reads OFF / DISMISS.
+    var oneHandedMode: OneHandedMode
+        get() = OneHandedMode.fromStorage(cached(PreferenceKeys.ONE_HANDED_MODE, OneHandedMode.OFF.storageValue))
+        set(value) = updateCacheAndPersist(PreferenceKeys.ONE_HANDED_MODE, value.storageValue)
+
+    // Most recent pick of the toolbar keyboard button's long-press callout; drives its icon + tap.
+    var keyboardToolbarAction: KeyboardToolbarAction
+        get() =
+            KeyboardToolbarAction.fromStorage(
+                cached(PreferenceKeys.KEYBOARD_TOOLBAR_ACTION, KeyboardToolbarAction.DISMISS.storageValue),
+            )
+        set(value) = updateCacheAndPersist(PreferenceKeys.KEYBOARD_TOOLBAR_ACTION, value.storageValue)
 
     // App UI display language tag (i18n). Default = system (Automatic) — fresh install follows device OS locale.
     var displayLanguageTag: String by preference(PreferenceKeys.DISPLAY_LANGUAGE, DisplayLanguage.DEFAULT_TAG)
@@ -739,6 +755,12 @@ class PrefHelper(
     fun observeCandidateDisplayMode(): Flow<CandidateDisplayMode> =
         dataStore.data
             .map { prefs -> CandidateDisplayMode.fromStorage(prefs[PreferenceKeys.CANDIDATE_DISPLAY_MODE]) }
+            .distinctUntilChanged()
+
+    /** Observes the one-handed mode as a Flow; the keyboard body narrows / docks on each change. */
+    fun observeOneHandedMode(): Flow<OneHandedMode> =
+        dataStore.data
+            .map { prefs -> OneHandedMode.fromStorage(prefs[PreferenceKeys.ONE_HANDED_MODE]) }
             .distinctUntilChanged()
 
     /**

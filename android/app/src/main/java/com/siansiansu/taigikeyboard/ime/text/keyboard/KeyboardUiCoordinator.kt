@@ -6,7 +6,9 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.InputView
+import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.Subtype
+import com.siansiansu.taigikeyboard.ime.core.settings.OneHandedMode
 import com.siansiansu.taigikeyboard.ime.popup.KeyPopupManager
 import com.siansiansu.taigikeyboard.ime.text.key.KeyVariation
 import com.siansiansu.taigikeyboard.ime.text.layout.LayoutManager
@@ -70,6 +72,8 @@ internal class KeyboardUiCoordinator(
         coordinator: KeyTouchCoordinator,
         popupHost: KeyPopupManager,
         onHeightFactorChanged: (Float) -> Unit,
+        prefs: PrefHelper,
+        onOneHandedModeSelected: (OneHandedMode) -> Unit,
     ): View? {
         val container = inputView.findViewById<ViewGroup>(R.id.text_input_content) ?: return null
         val placeholder = inputView.findViewById<View>(R.id.keyboard_compose_host)
@@ -86,6 +90,8 @@ internal class KeyboardUiCoordinator(
                     coordinator = coordinator,
                     popupHost = popupHost,
                     onHeightFactorChanged = onHeightFactorChanged,
+                    prefs = prefs,
+                    onOneHandedModeSelected = onOneHandedModeSelected,
                 )
             }
         }

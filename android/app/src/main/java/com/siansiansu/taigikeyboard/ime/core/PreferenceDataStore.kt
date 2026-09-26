@@ -52,6 +52,10 @@ object PreferenceKeys {
     val INPUT_MODE_BEFORE_TPS = stringPreferencesKey("keyboard__input_mode_before_tps")
     val LAYOUT_BEFORE_TPS = stringPreferencesKey("keyboard__layout_before_tps")
     val TOOLBAR_AUTO_COLLAPSE = booleanPreferencesKey("keyboard__toolbar_auto_collapse")
+
+    // Raw values = OneHandedMode / KeyboardToolbarAction storageValue (shared with iOS).
+    val ONE_HANDED_MODE = stringPreferencesKey("keyboard__one_handed_mode")
+    val KEYBOARD_TOOLBAR_ACTION = stringPreferencesKey("keyboard__toolbar_keyboard_action")
     val GLOBE_KEY_ENABLED = booleanPreferencesKey("keyboard__globe_key_enabled")
     val SOUND_FEEDBACK_ENABLED = booleanPreferencesKey("keyboard__sound_feedback_enabled")
     val VIBRATION_FEEDBACK_ENABLED = booleanPreferencesKey("keyboard__vibration_feedback_enabled")
