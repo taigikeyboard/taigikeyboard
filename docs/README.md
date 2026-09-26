@@ -31,7 +31,7 @@
 | `engine/sort.md` | Candidate ranking — Rust `engine/ranking` | Active |
 | `engine/nextword.md` | Next-word prediction — Rust `engine/nextword` | Active |
 | `engine/tps.md` | TPS Taiwanese Phonetic Symbols (方音符號) — Rust `engine/phonetics::tps` | Active |
-| `engine/custom-dictionary.md` | User-defined dictionary (CRUD, CSV import/export) — platform SQLite | Active |
+| `engine/custom-dictionary.md` | User-defined dictionary (CRUD, CSV import/export) — engine-owned SQLite (`engine/userdata`) | Active |
 | `engine/diagnostics.md` | Device-info collection for bug reporting | Active |
 | `engine/syllabifier.md` | Syllable parse primitive + `SyllableInventory` (`syllables.fst`) + lattice consumption | Active |
 
@@ -56,7 +56,7 @@
 | `architecture/windows-roadmap.md` | Windows desktop IME (TSF in Rust over the shared engine, macOS UX parity) — design W1–W17, PR table, reference alignment, dogfood run-book; shipped desktop v3.6.7/v3.6.8 | Reference |
 | `architecture/linux-roadmap.md` | Linux desktop IME (Fcitx5 addon primary + IBus engine second over one Rust core, GTK 4 / libadwaita settings window over the shared `desktop/` crates) — design L1–L13, PR table, named divergences, dogfood run-book | Planning |
 | `architecture/e2e-testing-roadmap.md` | End-to-end test system — AI-driven simulator / emulator / VM / container runs, test-build-only JSONL trace, analyzer for bugs + perf, per-platform drivers, capability spike results, PR table | Planning |
-| `architecture/user-data-engine-roadmap.md` | The four user-data SQLite stores move from four platform implementations into one engine crate (`engine/userdata`) — audit of today's stores and their drift, design U1–U10, PR table, reference alignment | Planning |
+| `architecture/user-data-engine-roadmap.md` | The four user-data SQLite stores moved from four platform implementations into one engine crate (`engine/userdata`) — audit of today's stores and their drift, design U1–U10, PR table, reference alignment | Done |
 | `architecture/e2e-trace-schema.md` | Test-build-only JSONL trace contract — how it stays out of release, `trace_open` / `engine_request` / `engine_panic` / `adapter_reject` events | Reference |
 | `architecture/linux-release.md` | The Linux half of a desktop release: the `.deb` (both shells, dictionaries, settings window), how `make -C linux deb` and `linux-build.yml` build and attach it, no in-app update | Reference |
 | `architecture/windows-release.md` | Windows installer (Inno Setup), Authenticode signing, and web-distributed installer workflow | Active |
@@ -189,10 +189,10 @@ Authoritative ownership map (Rust crate vs platform glue) — see `engine/migrat
 | `Tone` | Tone-mark conversion + nasal-marker | `engine/phonetics` | no direct bridge — applied inside composing ops (`engine/composing`) |
 | `CaseTransform` | Per-char + per-string case mapping (POJ/TL aware) | `engine/phonetics::case_transform` | `RustEngineBridge+CaseTransform.swift` / `CaseTransformBridge.kt` |
 | `NextWord` | Bigram association lookup + decay scoring + ranking | `engine/nextword` (+ `engine/lexicon::assoc_lookup`) | `NextWordController.swift` / `NextWordController.kt` (timer/threading) |
-| `UserFrequency` | Per-word usage tracking (count + lastUsed) — `wont_migrate` | — | `UserFrequencyService.swift` / `.kt` (SQLite, native-only) |
+| `UserFrequency` | Per-word usage tracking (count + lastUsed) | `engine/userdata` (read in `FetchAtPos`, written by `RecordUsage`) | `UsageRecorder.swift` / `UsageRecorder.kt` (picks → `RecordUsage`) |
 | ~~`Segmentation`~~ | ~~Syllable segmentation~~ (removed v3.4.6) | — | — |
 | `Layout` | Keyboard layout | — | `CustomLayoutService.swift` / `LayoutManager.kt` |
 | `Theme` | Theme & styling | — | `Styling/Providers/` / `themes.xml` + `PrefHelper.kt` |
-| `CustomDictionary` | User-defined dictionary CRUD — `wont_migrate` | — | `CustomDictionaryRepository.swift` / `CustomDictionaryService.kt` (SQLite) |
+| `CustomDictionary` | User-defined dictionary CRUD, CSV, `.taigi` backup | `engine/userdata` (`UserDataRequest` ops) | `UserDataClient.swift` / `UserDataClient.kt` |
 | `Diagnostics` | Device info for bug reports | — | `DiagnosticService.swift` / `DiagnosticService.kt` |
 | `FFI` | Bytes-in / bytes-out engine entrypoint | `engine/dispatch` + `engine/swift-ffi` + `engine/android-jni` | `RustEngineBridge.process_request_bytes` (both platforms) |

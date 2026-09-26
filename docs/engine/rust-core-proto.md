@@ -316,7 +316,7 @@ message CaseResponse {
   - No platform text-region types (`NSRange`, `ExtractedText`, `TextPosition`).
 - **No candidate ids in the Composing slice.** `SelectSuggestion` carries text the platform already resolved.
 - **No Lexicon / NextWord proto** in this document. This includes prediction queries, prediction results, and candidate-list updates.
-- **No SQLite I/O proto.** User-data DB stays platform-side permanently per `.claude/rules/rust-migration-policy.md` § User-data SQLite stays platform-native and the criteria in `.claude/rules/ios-shared-core-candidates.md` §1 (no DB / App Group / FileManager / file-system access in candidates). Excluded files appear with `status=wont_migrate` in `migration-inventory.csv` (`Lexicon/Database/*Repository.swift`, `SQLiteConnectionManager.swift`, `NextWord/Repository/*`, etc.).
+- **No SQLite I/O proto in this document.** User-data SQLite is engine-owned per `.claude/rules/rust-migration-policy.md` §6 (`engine/userdata`); its ops are the separate `UserDataRequest` domain (`engine/protos/proto/user_data.proto`, `docs/architecture/user-data-engine-roadmap.md`) — typed ops, never paths or raw SQL beyond `OpenUserData`. The former platform stores (`Lexicon/Database/*Repository.swift`, `SQLiteConnectionManager.swift`, `NextWord/Repository/*`, etc.) were deleted and appear with `status=rust_shipped` in `migration-inventory.csv`.
 - **No UniFFI signature.** Protobuf-first per the roadmap revision.
 
 ---

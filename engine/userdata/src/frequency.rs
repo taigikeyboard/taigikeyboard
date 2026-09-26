@@ -30,7 +30,7 @@ pub struct UserFrequencyStore {
 }
 
 impl UserFrequencyStore {
-    /// CROSS-PLATFORM INVARIANT — mirrors
+    /// Ported from
     /// `ios/.../Lexicon/Database/UserFrequencyPruner.swift:26-38`.
     pub fn shipped_capacity() -> LearningCapacity {
         LearningCapacity::new(
@@ -220,7 +220,7 @@ fn table_ddl(name: &str) -> String {
 /// drop an inline UNIQUE, so create-new / copy / drop / rename in one
 /// immediate transaction (the old `idx_word` goes with the old table).
 /// Gated on the SHAPE, not `user_version`: iOS can leave a new-shape file at
-/// 0. Mirrors iOS `UserFrequencySchema.swift` `migrateToPairKeyIfNeeded` and
+/// 0. Ported from iOS `UserFrequencySchema.swift` `migrateToPairKeyIfNeeded` and
 /// Android `UserFrequencyService.kt` `migrateToPairKey`.
 fn migrate_to_pair_key_if_needed(connection: &Connection) -> rusqlite::Result<()> {
     let is_pre_pair_key = |connection: &Connection| -> rusqlite::Result<bool> {

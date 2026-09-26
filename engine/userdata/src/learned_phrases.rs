@@ -36,8 +36,8 @@ pub struct LearnedPhraseStore {
 
 impl LearnedPhraseStore {
     /// Rows kept; past it the fewest-composed, then least recently touched,
-    /// row goes (ChiaKey's policy) so a learn never fails. CROSS-PLATFORM
-    /// INVARIANT — mirrors iOS `LearnedPhraseRepository.maxEntries` /
+    /// row goes (ChiaKey's policy) so a learn never fails. Ported
+    /// from iOS `LearnedPhraseRepository.maxEntries` /
     /// Android `LearnedPhraseService.MAX_ENTRIES`.
     pub const MAX_ENTRIES: usize = 2_000;
     /// Largest `learn_count` a row can carry.
@@ -143,8 +143,8 @@ impl LearnedPhraseStore {
 
     /// The phrases whose derived key EQUALS `query_key` — the whole typed
     /// buffer, not a prefix — for `composing::UserRows.learned`, most composed
-    /// first. Empty when the store cannot answer right now. CROSS-PLATFORM
-    /// INVARIANT — mirrors iOS `exactMatchSQL` / Android `EXACT_MATCH_SQL`.
+    /// first. Empty when the store cannot answer right now. Ported
+    /// from iOS `exactMatchSQL` / Android `EXACT_MATCH_SQL`.
     pub fn rows_matching(
         &self,
         query_key: &CustomSearchKey,
@@ -253,8 +253,8 @@ fn write_search_keys(
 /// whatever its timestamp ties with). A cheap `COUNT(*)` first — under the
 /// cap the ordered walk never runs. Keys first, so the subquery still
 /// resolves against the intact main table; `OFFSET cap - 1` selects exactly
-/// the rows past the cap once the kept row is set aside. CROSS-PLATFORM
-/// INVARIANT — mirrors iOS `evictPastCap` / Android `PAST_CAP_SQL`.
+/// the rows past the cap once the kept row is set aside. Ported
+/// from iOS `evictPastCap` / Android `PAST_CAP_SQL`.
 fn evict_past_cap(connection: &Connection, cap: usize, kept_id: i64) -> rusqlite::Result<()> {
     let count: i64 =
         connection.query_row(&format!("SELECT COUNT(*) FROM {TABLE_NAME};"), [], |row| {
@@ -278,7 +278,7 @@ fn evict_past_cap(connection: &Connection, cap: usize, kept_id: i64) -> rusqlite
     Ok(())
 }
 
-/// The current shape, created directly. CROSS-PLATFORM INVARIANT — mirrors
+/// The current shape, created directly. Ported from
 /// iOS `LearnedPhraseSchema` / Android `LearnedPhraseService` DDL.
 fn apply_schema(connection: &Connection) -> rusqlite::Result<()> {
     connection.execute_batch(&format!(

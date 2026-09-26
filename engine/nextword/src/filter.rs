@@ -1,7 +1,7 @@
-//! Filter+merge+score+sort+limit pipeline. Mirrors the iOS / Android
-//! `NextWordService.predict` post-processing currently inlined inside the
-//! platform service. Post-v3.5.5 the platform returns un-merged un-scored
-//! rows tagged by `Source`, and this module owns scoring + merging +
+//! Filter+merge+score+sort+limit pipeline over un-merged, un-scored rows
+//! tagged by `Source` (the bundled ones and the engine's own
+//! `user_association.db` rows, `PredictNext` expansion in `dispatch`); this
+//! module owns scoring + merging +
 //! sorting + truncation + display-rule shaping.
 //!
 //! Generation-mismatch path returns `was_stale=true` with empty
@@ -79,10 +79,10 @@ pub(crate) fn filter(
                 // user rows differ only in `prev_tl`; `RawNextWordPrediction`
                 // does not carry it. The rule it enforces is the broader one
                 // stated above, which is why `raw` is a PRIORITY-ORDERED list
-                // rather than a set: the first user row wins, and the platform
-                // SQL is what puts the best evidence first. See the
-                // `CROSS-PLATFORM INVARIANT` note on iOS `fetchUserRows` /
-                // Android `predict`, and `nextword.proto::FilterPredictions`.
+                // rather than a set: the first user row wins, and the store's
+                // query puts the best evidence first
+                // (`userdata::UserAssociationStore::rows_following`, §24; see
+                // `nextword.proto::FilterPredictions`).
                 if is_user && existing.has_user_score {
                     return;
                 }

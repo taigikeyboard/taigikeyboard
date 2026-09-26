@@ -46,7 +46,7 @@ graph TB
     domains -. mmap read-only .-> artifacts
 ```
 
-User-writable state is four SQLite files, **owned by the engine crate `userdata`** on every platform (`rusqlite`, [`user-data-engine-roadmap.md`](user-data-engine-roadmap.md) P5–P8): `user_frequency.db` (schema v2), `user_association.db` (v6, `CROSS-PLATFORM INVARIANT` on all four), `custom_dictionary.db` (v3; Android keeps its own `DATABASE_VERSION` namespace — portability D5), `learned_phrases.db` (§50, own store). Details: [`data-artifacts-portability.md`](data-artifacts-portability.md) §4–8.
+User-writable state is four SQLite files, **owned by the engine crate `userdata`** on every platform (`rusqlite`, [`user-data-engine-roadmap.md`](user-data-engine-roadmap.md) P5–P9): `user_frequency.db` (schema v2), `user_association.db` (v6), `custom_dictionary.db` (stamped ≥ 4; the engine takes over every released platform shape by shape — portability D5, resolved), `learned_phrases.db` (§50, own store). The platforms name the files and send the picks; the engine reads, ranks and writes. Details: [`data-artifacts-portability.md`](data-artifacts-portability.md) §4–8.
 
 | Platform | Shell | Engine hop | Candidate UI | Settings UI | Dogfood gate |
 |---|---|---|---|---|---|
@@ -163,7 +163,7 @@ The FFI boundary is a single `process_request_bytes` entrypoint per adapter; the
 | Bridge | `Engine/RustEngineBridge.swift` + `RustEngineBridge+{Composing,Lexicon,Phonetics,CaseTransform,NextWord}.swift`; `SwiftLoggerSink.swift`, `RustVec+UInt8.swift` | `engine/dispatch` via `engine/swift-ffi` |
 | Display | KeyboardKit smartbar; `Autocomplete/Views/CandidateButtonView.swift`; overlays `Overlays/{Symbol,Settings,Layout}SelectionOverlay.swift`, `ExpandedCandidateOverlay.swift` | — |
 | Selection | `Actions/ActionHandler+Suggestions.swift` → `ComposingManager.selectSuggestion()` → frequency record → NextWord intent | `engine/composing` (`CommitContinuous`) |
-| NextWord glue | `NextWord/NextWordController.swift` (timer, `@MainActor`, generation counter) + `NextWord/Services/NextWordService.swift` (SQLite) | `engine/nextword` (`decide`, filter) + `engine/dispatch` `PredictNext` (bundled lookup) via `nextwordPredictNext` |
+| NextWord glue | `NextWord/NextWordController.swift` (timer, `@MainActor`, generation counter; the engine reads and writes `user_association.db` itself) | `engine/nextword` (`decide`, filter) + `engine/dispatch` `PredictNext` (bundled lookup) via `nextwordPredictNext` |
 | Settings | `Settings/SharedSettings.swift` + `SettingsKey.swift` (live-read `EngineSettingsProvider`) | `AppConfig` per request |
 
 Engine search ownership on the fetch step: `lexicon::key_normalizer` (calls `phonetics::normalize_input`) → `lexicon::prefix_index::PrefixIndex` (fst scan) → `lexicon::dictionary_reader::DictionaryReader` + `Filter` (rowid → record, source bitmask) → `lexicon::continuous` sort key (`ranking` score + user weight).

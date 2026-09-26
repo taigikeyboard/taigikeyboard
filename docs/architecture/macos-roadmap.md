@@ -204,7 +204,12 @@ Phase-0 plan and project memory `project_macos_ime.md` (Claude auto-memory).
   `FetchAtPos.custom_entries` — zero new FFI. CSV via NSOpen/SavePanel.
   Backup-exclusion policy decided at PR12: inside Time Machine scope. Seed parity with iOS: two
   default entries (`gâu-tsá/𠢕早`, `tsia̍h-pá--buē/食飽未`). Re-activated
-  2026-08-17 as PR11 (store) + PR12 (UI).
+  2026-08-17 as PR11 (store) + PR12 (UI). **Superseded 2026-09-26** (kept as
+  the decision of record): the store moved into the engine (`engine/userdata`,
+  `user-data-engine-roadmap.md` P6) — macOS sends `OpenUserData` at launch
+  (`ComposingSessionCoordinator.openUserData`), the engine reads the entries
+  itself inside `FetchAtPos` (`custom_entries` is `reserved`), and the Custom
+  Dictionary page goes through `Settings/UserDataClient.swift`.
 - **D7 User freq / nextword** — **CLOSED at PR8a+PR9 (#528)**. PR3–PR7 ran the
   FetchAtPos carrier's neutral phase only, with `platform_id = 0`, which was
   safe because the only validator is nextword
@@ -231,6 +236,13 @@ Phase-0 plan and project memory `project_macos_ime.md` (Claude auto-memory).
   - Learning databases are NOT excluded from Time Machine, unlike the iOS
     backup exclusion (`behavioral-invariants.md` §29): that decision was about
     user data leaving the device through iCloud.
+  - **Superseded 2026-09-26** (storage only; the decide arms above stand):
+    both learning databases are the engine's (`engine/userdata`,
+    `user-data-engine-roadmap.md` P6 / P9b). Picks reach `user_frequency.db`
+    through `UsageRecorder` (`EngineUsageRecorder` → `RecordUsage`); the
+    engine writes the associations its decisions record, and the manager
+    only reports handshakes through `NextWord/NextWordPort.swift`
+    (`EngineNextWord`). iOS and Android reached the v6 association shape too.
 - **D8 Dictionary artifacts** — read from the repo-root `dictionaries/` (read-only)
   at bundle time with fail-fast existence/non-empty validation. That directory is
   the single committed copy all four platforms package from; `dictionary/build/deploy.sh`

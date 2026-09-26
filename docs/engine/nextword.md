@@ -9,9 +9,9 @@
 ## Summary
 
 - Predicts next possible word after a candidate commit.
-- Hybrid: dictionary bigram (`association.bin`, read-only mmap, byte-identical cross-platform) + user learning (`user_association.db`, SQLite, `wont_migrate`).
+- Hybrid: dictionary bigram (`association.bin`, read-only mmap, byte-identical cross-platform) + user learning (`user_association.db`, SQLite, engine-owned in `engine/userdata`).
 - Decay-weighted scoring with generation-tagged async queries.
-- User associations capped at 50,000 entries (platform-side enforcement).
+- User associations capped at 50,000 entries (engine-side enforcement, `UserAssociationStore::shipped_capacity`).
 - Engine state machine + scoring lives in Rust `engine/nextword` (since v3.5.5 / PR #198).
 
 ---
@@ -52,7 +52,7 @@ CREATE INDEX idx_user_prev_word_tl ON user_association(prev_word, prev_tl);
 - v0 → v3: `UNIQUE(prev_word, next_word)` → `UNIQUE(prev_word, next_word, next_tl)` (drop + recreate)
 - v3 → v4: `ALTER TABLE ... ADD COLUMN prev_tl TEXT DEFAULT ''` + new index
 - v4 → v5: dropped the redundant single-column `idx_user_prev_word`
-- **→ v6**: `prev_tl` joins the UNIQUE key, so the two readings of a polyphonic previous word stay separate observations (`behavioral-invariants.md` §24). One convergent rebuild replaces the per-version ladder on both platforms: create-new / copy preserving `id` / drop / rename, reading `pragma_table_info` for the columns actually present rather than inferring them from the version stamp.
+- **→ v6**: `prev_tl` joins the UNIQUE key, so the two readings of a polyphonic previous word stay separate observations (`behavioral-invariants.md` §24). One convergent rebuild replaces the per-version ladder (today the engine takeover in `engine/userdata/src/association.rs`): create-new / copy preserving `id` / drop / rename, reading `pragma_table_info` for the columns actually present rather than inferring them from the version stamp.
 
 ---
 
@@ -117,7 +117,7 @@ Characters not recorded as associations:
 
 ## Ownership
 
-Engine state machine + decision tables + scoring all live in Rust `engine/nextword`. Platform side handles timer / threading / SQLite reads + user-association writes.
+Engine state machine + decision tables + scoring all live in Rust `engine/nextword`. The engine also reads `user_association.db` for `PredictNext` and writes the bigrams a decision records (`nextword::Handled.associations`, persisted in `engine/dispatch/src/user_data.rs`). Platform side handles timer / threading.
 
 | Component | Location |
 |-----------|----------|
@@ -126,11 +126,11 @@ Engine state machine + decision tables + scoring all live in Rust `engine/nextwo
 | Decide / filter / score | Rust `engine/nextword/src/{decide,filter,scorer}.rs` |
 | Generation guard (drops stale async results) | Rust `nextword::PersistedState.current_generation` |
 | Bigram source (read-only) | `association.bin` via Rust `engine/lexicon::assoc_lookup` |
-| User association source | `user_association.db` SQLite, platform-side (`wont_migrate`) — iOS `UserFrequencyService.swift` / Android `UserFrequencyService.kt` |
+| User association source | `user_association.db` via Rust `userdata::UserAssociationStore` (`rows_following` read, `record` write), wired in `engine/dispatch/src/user_data.rs` `handle_nextword` |
 | iOS bridge | `Engine/RustEngineBridge+NextWord.swift` |
 | Android bridge | `engine/RustEngineBridge.kt` |
 | iOS platform executor | `NextWord/NextWordController.swift` (Timer, DispatchQueue.main, @MainActor) |
-| Android platform executor | `ime/text/smartbar/NextWordController.kt`, `ime/dictionary/NextWordService.kt` |
+| Android platform executor | `ime/text/smartbar/NextWordController.kt` |
 
 ---
 

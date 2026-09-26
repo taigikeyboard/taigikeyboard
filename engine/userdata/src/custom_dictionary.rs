@@ -26,8 +26,8 @@ const SCHEMA_VERSION: i64 = 4;
 /// build and stays closed.
 const HIGHEST_KNOWN_VERSION: i64 = 10;
 /// One transaction per this many accepted rows, so a large import never
-/// holds the write lock for its whole run. CROSS-PLATFORM INVARIANT —
-/// mirrors iOS `CustomDictionaryRepository.swift:180`.
+/// holds the write lock for its whole run. Ported from
+/// iOS `CustomDictionaryRepository.swift:180`.
 const IMPORT_CHUNK_SIZE: usize = 500;
 
 /// How a stored roman becomes the keys it is findable under. Injected so a
@@ -127,7 +127,7 @@ pub struct CustomDictionaryStore {
 }
 
 impl CustomDictionaryStore {
-    /// CROSS-PLATFORM INVARIANT — mirrors iOS
+    /// Ported from iOS
     /// `CustomDictionaryCapacityPolicy.swift:18` and Android `MAX_ENTRIES`.
     pub const MAX_ENTRIES: usize = 30_000;
     /// What the keystroke path is handed — the iOS call site's 20.
@@ -186,8 +186,8 @@ impl CustomDictionaryStore {
     /// Synchronous and best-effort: a store that is not open answers `[]`
     /// rather than making the keystroke wait. `form IN (?, 'abbrev')` lets
     /// an abbreviation row satisfy a query in the same family; `DISTINCT`
-    /// because one entry owns several side rows. CROSS-PLATFORM INVARIANT —
-    /// mirrors iOS `CustomDictionaryRepository.swift:332-367`.
+    /// because one entry owns several side rows. Ported from
+    /// iOS `CustomDictionaryRepository.swift:332-367`.
     pub fn rows_matching(
         &self,
         query_key: &CustomSearchKey,

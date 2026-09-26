@@ -9,7 +9,7 @@
 ## Summary
 
 - User-defined dictionary entries (romanization + hanzi pairs)
-- CRUD operations with SQLite storage
+- CRUD operations with SQLite storage, owned by the engine (`engine/userdata`) on every platform
 - CSV import/export
 - Integrated into autocomplete with highest priority (before system dictionary)
 
@@ -22,52 +22,56 @@
 | `id` | String (UUID) | Unique identifier |
 | `roman` | String | Romanization in the user's native form (TL or POJ display, whichever the user typed when saving). The engine treats it raw on the lattice axis; the freq-key commit value is canonicalized to TL at synthesis time (`phonetics::api::canonical_tl_form`, v3.5.9 B-4). |
 | `hanzi` | String | Chinese/Taiwanese characters |
-| `notone` | String | Derived: toneless form for matching |
-| `abbrev` | String | Derived: first letter of each syllable (min 2 syllables) |
+| search keys | `custom_search_key` rows | Derived per entry by the engine: TL / POJ / TPS families × tone-number / toneless / abbreviation forms (`engine/phonetics/src/custom_search.rs`) |
 | `createdAt` | Timestamp | Creation time (UTC) |
 | `updatedAt` | Timestamp | Last update time |
 
-Example: `roman="gâu-tsá"` → `notone="gautsa"` → `abbrev="gt"`
+Example: `roman="gâu-tsá"` → toneless key `gautsa`, abbreviation key `gt`
 
 ---
 
 ## Storage
 
-**Database**: `custom_dictionary.db` on all four platforms (iOS: App Group shared container; Android: app-private storage; macOS: `~/Library/Application Support/<bundle id>/`; Windows + Linux: `%APPDATA%\TaigiKeyboard` / XDG — on all three through `engine/userdata/src/custom_dictionary.rs`, engine-owned per `docs/architecture/user-data-engine-roadmap.md`)
+**Database**: `custom_dictionary.db` on every platform (iOS: App Group shared container; Android: app-private `databases/`; macOS: `~/Library/Application Support/<bundle id>/`; Windows + Linux: `%APPDATA%\TaigiKeyboard` / XDG), opened and owned by the engine — `engine/userdata/src/custom_dictionary.rs`, per `docs/architecture/user-data-engine-roadmap.md`. Platforms pass only the directory (`OpenUserData`).
 
 ```sql
 CREATE TABLE custom_dictionary (
     id              TEXT PRIMARY KEY,
     roman           TEXT NOT NULL,
     hanzi           TEXT NOT NULL,
-    notone          TEXT DEFAULT '',           -- derived
-    abbrev          TEXT DEFAULT '',           -- derived
-    roman_num       TEXT DEFAULT '',           -- derived (v3.6.1-R3)
     created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
 CREATE INDEX idx_custom_roman ON custom_dictionary(roman);
-CREATE INDEX idx_custom_notone ON custom_dictionary(notone);
-CREATE INDEX idx_custom_abbrev ON custom_dictionary(abbrev);
-CREATE INDEX idx_custom_roman_num ON custom_dictionary(roman_num);
+
+CREATE TABLE custom_search_key (
+    entry_id TEXT NOT NULL,
+    family   TEXT NOT NULL,
+    form     TEXT NOT NULL,
+    key      TEXT NOT NULL
+);
+CREATE INDEX idx_csk_lookup ON custom_search_key(family, form, key);
+CREATE INDEX idx_csk_entry ON custom_search_key(entry_id);
 ```
 
-A `custom_search_key` side table backs cross-input-mode (three-index TL / POJ / TPS) lookup — see `CustomDictionarySchema.swift` (iOS) / `CustomDictionaryService.kt` (Android) for its DDL.
+The `custom_search_key` side table backs cross-input-mode (three-index TL / POJ / TPS) lookup. A file taken over from an iOS / Android release keeps its legacy `notone` / `abbrev` / `roman_num` columns (roadmap U7 / U8); the engine neither reads nor writes them.
 
 ---
 
 ## CRUD Operations
 
-| Operation | iOS (`CustomDictionaryRepository`) | Android (`CustomDictionaryService`) |
-|-----------|-----|---------|
-| Create/Update | `upsert(_ entry)` async | `save(entry)` suspend |
-| Read all | `fetchAll()` async | `fetchAll()` suspend |
-| Search | `searchSync(family:, form:, key:, limit:)` | `search(family, form, key, limit)` suspend |
-| Delete one | `delete(id:)` async | `delete(id)` suspend |
-| Delete all | `deleteAll()` async | `deleteAll()` suspend |
-| Count | `count()` async | `totalCount()` sync |
-| Batch import | `batchImport(_ entries:)` async | (via loop) |
+Engine ops (`UserDataRequest`, `engine/protos/proto/user_data.proto`), reached through each platform's `UserDataClient` (iOS `Lexicon/Services/UserDataClient.swift`, Android `ime/dictionary/UserDataClient.kt`, macOS `Settings/UserDataClient.swift`):
+
+| Operation | Engine op | iOS / Android `UserDataClient` |
+|-----------|-----------|-----|
+| Create/Update | `SaveCustomEntry` | `save` |
+| Read all / page | `ListCustomEntries` (page + `total` + `matching_total`) | `listAll` |
+| Search | `SearchCustomEntries` | `search` |
+| Delete one | `DeleteCustomEntry` | `delete` |
+| Delete all | `ResetUserData.custom_dictionary` | `deleteAll` |
+| CSV import / export | `ImportCustomCsv` / `ExportCustomCsv` | `importCSV` / `exportCSV` (Android `importCsv` / `exportCsv`) |
+
+Refusals (full, empty roman, unsearchable, file too large, not UTF-8, no usable rows) come back as `CustomDictionaryRefusal`.
 
 ---
 
@@ -95,12 +99,13 @@ CSV is **custom-dictionary-only**. For whole-user-data backup see `.taigi` below
 
 ## `.taigi` Backup (whole user data)
 
-A `.taigi` file is a single plain-text **JSON** document carrying **all three** user-writable SQLite DBs in one container — `custom_dictionary.db`, `user_frequency.db`, `user_association.db`. It is the **only** cross-device user-data path (the three DBs are excluded from OS auto-backup — behavioral-invariants.md §29).
+A `.taigi` file is a single plain-text **JSON** document carrying **three** user-writable SQLite DBs in one container — `custom_dictionary.db`, `user_frequency.db`, `user_association.db` (`learned_phrases.db` is excluded, §50). It is the **only** cross-device user-data path on the phones (their DBs are excluded from OS auto-backup — behavioral-invariants.md §29).
 
 | File | Responsibility |
 |------|----------------|
-| iOS `Lexicon/Services/BackupService.swift` (+ `BackupDocument.swift`) | export/import + `BackupData` Codable schema; `UTType.taigiBackup` = `tw.taigikeyboard.backup` |
-| Android `ime/dictionary/BackupService.kt` | export/import via `org.json` |
+| engine `engine/userdata/src/backup.rs` (ops `ExportBackup` / `ImportBackup`) | the one encoder / decoder |
+| iOS `App/Tabs/Dictionary/Utilities/BackupDocument.swift` + `UserDataClient.exportBackup` / `importBackup` | file document; `UTType.taigiBackup` = `tw.taigikeyboard.backup` |
+| Android `ui/tabs/dictionary/DataManagementViewModel.kt` + `UserDataClient.exportBackup` / `importBackup` | file picker / share, bytes to the engine |
 
 ### Format
 
@@ -112,11 +117,11 @@ A `.taigi` file is a single plain-text **JSON** document carrying **all three** 
 ### Import semantics — **merge, never replace**
 
 - Custom dictionary: adds non-duplicates only (dedup by `roman\thanzi`).
-- Frequency + association: **higher-count-wins** merge. Associations are normalized POJ→canonical-TL (`RustEngineBridge.pojToTl`) so cross-platform backups round-trip.
+- Frequency + association: **higher-count-wins** merge. Readings are normalized POJ→canonical-TL in the engine so cross-platform backups round-trip; capacity is enforced after the import.
 
 The format is **round-trip compatible across platforms** (same schema, same v2, both tolerate missing `tl`).
 
-> ⚠ **Row-cap divergence (backup path)**: when a restore crosses the 30000-row custom-dict cap, **Android grandfather-stops** (partial restore, no throw) but **iOS aborts the whole custom-dict import** (per-entry `save()` throws out of `importCustomDictionary`). Reachable only at ~30000 existing rows. iOS *CSV* import grandfather-stops correctly — only the iOS *backup* path aborts. Documented at behavioral-invariants.md §27; aligning iOS is a separate parity round.
+> **Row cap (30000)**: a `.taigi` restore fills the space left and stops (`CustomDictionaryStore::import_until_full`, Android's former rule, now every platform); a CSV whose own row count exceeds the cap is refused before anything is written (`batch_import`). The earlier iOS backup-path abort (behavioral-invariants.md §27) went with the native store.
 
 ---
 
@@ -124,27 +129,29 @@ The format is **round-trip compatible across platforms** (same schema, same v2, 
 
 Custom entries have **highest priority** — shown before system dictionary results.
 
-**Flow** (both platforms):
-1. `LexiconService.search()` calls custom dictionary search with raw (unsegmented) input
-2. Results converted to `TaigiWord` with `id = -2` marker
-3. System dictionary queried separately
+**Flow** (every platform, inside one `FetchAtPos`):
+1. `engine/dispatch/src/user_data.rs` (`buffer_rows`) derives the query key from the raw (unsegmented) pending buffer (`derive_custom_query_key`) and reads the matching custom rows — skipped when `FetchAtPos.custom_dictionary_disabled` — plus the learned phrases
+2. The rows reach composing as `composing::UserRows`
+3. System dictionary queried in the same fetch
 4. Merge: custom words first, then system words, deduplicated
 
-**Search uses three indexes**: roman prefix, notone prefix, abbrev prefix
+**Search**: key prefix over `custom_search_key` in the query's family (tone-number or toneless form, plus the abbreviation form)
 
 ---
 
 ## Derived Field Generation
 
-### `generateNotone(roman)` → String
-1. Lowercase → NFD → remove combining marks + digits + hyphens + spaces → NFC
+Search keys are derived in the engine (`engine/phonetics/src/custom_search.rs` `derive_custom_search_keys`, over `derivation.rs`) whenever an entry is saved or imported, and re-derived once when a file is taken over (`rederive_search_keys_if_needed`).
+
+### Toneless key (`derive_notone`)
+1. Lowercase → base form (ⁿ / ᴺ → `nn`, `o͘` → `o`) → NFD → remove combining marks + digits + hyphens + spaces → NFC
 
 Example: `"gâu-tsá"` → `"gautsa"`
 
-### `generateAbbrev(roman)` → String
-1. Split by `-` or space
+### Abbreviation key (`derive_abbrev`)
+1. Split by `-` or whitespace
 2. Return `""` if < 2 syllables
-3. Take first char of each syllable, strip diacritics
+3. Take the leading spelling unit of each syllable (§46), strip diacritics
 
 Example: `"gâu-tsá"` → `"gt"`
 
@@ -152,7 +159,7 @@ Example: `"gâu-tsá"` → `"gt"`
 
 ## Default Entries
 
-Both platforms seed if empty:
+The engine seeds an empty dictionary on open (`CustomDictionaryStore::seed_if_empty`, every platform):
 ```
 id: "default-gau-tsa",       roman: "gâu-tsá",        hanzi: "𠢕早"
 id: "default-tsiah-pa-bue",  roman: "tsia̍h-pá--buē",  hanzi: "食飽未"
@@ -166,7 +173,7 @@ id: "default-tsiah-pa-bue",  roman: "tsia̍h-pá--buē",  hanzi: "食飽未"
 |--------|--------|--------|
 | Priority | Highest (shown first) | Normal |
 | ID marker | `-2` | `≥ 0` (row ID) |
-| Frequency tracking | Not tracked | Via UserFrequencyService |
+| Frequency tracking | Not tracked | `user_frequency.db` (engine `UserFrequencyStore`) |
 | Search method | Prefix (roman/notone/abbrev) | Trie-based |
 | Segmentation | Raw input (unsegmented) | Segmented input |
 
@@ -190,8 +197,8 @@ id: "default-tsiah-pa-bue",  roman: "tsia̍h-pá--buē",  hanzi: "食飽未"
 
 | Function | iOS | Android |
 |----------|-----|---------|
-| Service | `CustomDictionaryRepository.swift` | `CustomDictionaryService.kt` |
-| Entry model | `CustomDictionaryEntry.swift` | nested `Entry` in `CustomDictionaryService.kt` |
+| Service | `UserDataClient.swift` (engine ops) | `UserDataClient.kt` (engine ops) |
+| Entry model | `CustomDictionaryEntry.swift` | `CustomDictionaryWord` in `UserDataClient.kt` |
 | List view | `CustomDictionaryView.swift` | `CustomDictionaryScreen.kt` |
 | Edit view | (inline alert in `CustomDictionaryView.swift`) | (inline dialog) |
 | Localization | `i18n/dictionary.json` → `StringKey.dictionary*` (resolver) | `i18n/dictionary.json` → `L10n` / `StringKey` |
