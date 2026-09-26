@@ -1835,6 +1835,8 @@ dependencies = [
  "log",
  "phonetics",
  "rusqlite",
+ "serde",
+ "serde_json",
  "thiserror",
  "uuid",
 ]

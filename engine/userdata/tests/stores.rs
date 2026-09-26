@@ -883,3 +883,35 @@ fn predictions_read_the_exact_reading_first_then_untagged_then_the_others() {
     assert!(rows[0].last_used_ms > 0);
     assert_eq!(store.rows_following("重", "tîng", 1).unwrap().len(), 1);
 }
+
+#[test]
+fn a_restore_fills_the_room_left_past_duplicates() {
+    // trace: import_until_full — the stored row and the file's repeat are
+    // skipped without using up the cap, so the later new rows still land
+    // until the dictionary holds `limit`; the rest are skipped, no refusal.
+    let directory = scratch();
+    let store = custom_store(&directory, stub_deriver(""), 3);
+    store.upsert(&CustomDictionaryRow::new("a", "甲")).unwrap();
+
+    let rows: Vec<CustomDictionaryRow> = [
+        ("a", "甲"),
+        ("a", "甲"),
+        ("b", "乙"),
+        ("c", "丙"),
+        ("d", "丁"),
+    ]
+    .iter()
+    .map(|(roman, hanzi)| CustomDictionaryRow::new(roman, hanzi))
+    .collect();
+    let result = store.import_until_full(&rows).unwrap();
+
+    assert_eq!(result.imported, 2);
+    assert_eq!(store.count().unwrap(), 3);
+    assert!(
+        matches!(
+            store.batch_import(&rows),
+            Err(CustomDictionaryError::CapacityReached { .. })
+        ),
+        "a CSV over the cap is still refused whole"
+    );
+}

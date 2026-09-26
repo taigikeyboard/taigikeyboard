@@ -98,5 +98,27 @@ public interface UserDataRequestOrBuilder extends
    */
   com.siansiansu.taigikeyboard.engine.proto.ExportCustomCsv getExportCustomCsv();
 
+  /**
+   * <code>.taigi.engine.ExportBackup export_backup = 9;</code>
+   * @return Whether the exportBackup field is set.
+   */
+  boolean hasExportBackup();
+  /**
+   * <code>.taigi.engine.ExportBackup export_backup = 9;</code>
+   * @return The exportBackup.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.ExportBackup getExportBackup();
+
+  /**
+   * <code>.taigi.engine.ImportBackup import_backup = 10;</code>
+   * @return Whether the importBackup field is set.
+   */
+  boolean hasImportBackup();
+  /**
+   * <code>.taigi.engine.ImportBackup import_backup = 10;</code>
+   * @return The importBackup.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.ImportBackup getImportBackup();
+
   public com.siansiansu.taigikeyboard.engine.proto.UserDataRequest.MethodCase getMethodCase();
 }

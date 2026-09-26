@@ -28,6 +28,8 @@ public  final class UserDataResponse extends
     CUSTOM_ENTRY_DELETED(6),
     CUSTOM_CSV_IMPORTED(7),
     CUSTOM_CSV_EXPORTED(8),
+    BACKUP_EXPORTED(9),
+    BACKUP_IMPORTED(10),
     RESULT_NOT_SET(0);
     private final int value;
     private ResultCase(int value) {
@@ -51,6 +53,8 @@ public  final class UserDataResponse extends
         case 6: return CUSTOM_ENTRY_DELETED;
         case 7: return CUSTOM_CSV_IMPORTED;
         case 8: return CUSTOM_CSV_EXPORTED;
+        case 9: return BACKUP_EXPORTED;
+        case 10: return BACKUP_IMPORTED;
         case 0: return RESULT_NOT_SET;
         default: return null;
       }
@@ -467,6 +471,106 @@ public  final class UserDataResponse extends
    */
   private void clearCustomCsvExported() {
     if (resultCase_ == 8) {
+      resultCase_ = 0;
+      result_ = null;
+    }
+  }
+
+  public static final int BACKUP_EXPORTED_FIELD_NUMBER = 9;
+  /**
+   * <code>.taigi.engine.BackupExported backup_exported = 9;</code>
+   */
+  @java.lang.Override
+  public boolean hasBackupExported() {
+    return resultCase_ == 9;
+  }
+  /**
+   * <code>.taigi.engine.BackupExported backup_exported = 9;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.BackupExported getBackupExported() {
+    if (resultCase_ == 9) {
+       return (com.siansiansu.taigikeyboard.engine.proto.BackupExported) result_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.BackupExported.getDefaultInstance();
+  }
+  /**
+   * <code>.taigi.engine.BackupExported backup_exported = 9;</code>
+   */
+  private void setBackupExported(com.siansiansu.taigikeyboard.engine.proto.BackupExported value) {
+    java.util.Objects.requireNonNull(value);
+    result_ = value;
+    resultCase_ = 9;
+  }
+  /**
+   * <code>.taigi.engine.BackupExported backup_exported = 9;</code>
+   */
+  private void mergeBackupExported(com.siansiansu.taigikeyboard.engine.proto.BackupExported value) {
+    java.util.Objects.requireNonNull(value);
+    if (resultCase_ == 9 &&
+        result_ != com.siansiansu.taigikeyboard.engine.proto.BackupExported.getDefaultInstance()) {
+      result_ = com.siansiansu.taigikeyboard.engine.proto.BackupExported.newBuilder((com.siansiansu.taigikeyboard.engine.proto.BackupExported) result_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      result_ = value;
+    }
+    resultCase_ = 9;
+  }
+  /**
+   * <code>.taigi.engine.BackupExported backup_exported = 9;</code>
+   */
+  private void clearBackupExported() {
+    if (resultCase_ == 9) {
+      resultCase_ = 0;
+      result_ = null;
+    }
+  }
+
+  public static final int BACKUP_IMPORTED_FIELD_NUMBER = 10;
+  /**
+   * <code>.taigi.engine.BackupImported backup_imported = 10;</code>
+   */
+  @java.lang.Override
+  public boolean hasBackupImported() {
+    return resultCase_ == 10;
+  }
+  /**
+   * <code>.taigi.engine.BackupImported backup_imported = 10;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.BackupImported getBackupImported() {
+    if (resultCase_ == 10) {
+       return (com.siansiansu.taigikeyboard.engine.proto.BackupImported) result_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.BackupImported.getDefaultInstance();
+  }
+  /**
+   * <code>.taigi.engine.BackupImported backup_imported = 10;</code>
+   */
+  private void setBackupImported(com.siansiansu.taigikeyboard.engine.proto.BackupImported value) {
+    java.util.Objects.requireNonNull(value);
+    result_ = value;
+    resultCase_ = 10;
+  }
+  /**
+   * <code>.taigi.engine.BackupImported backup_imported = 10;</code>
+   */
+  private void mergeBackupImported(com.siansiansu.taigikeyboard.engine.proto.BackupImported value) {
+    java.util.Objects.requireNonNull(value);
+    if (resultCase_ == 10 &&
+        result_ != com.siansiansu.taigikeyboard.engine.proto.BackupImported.getDefaultInstance()) {
+      result_ = com.siansiansu.taigikeyboard.engine.proto.BackupImported.newBuilder((com.siansiansu.taigikeyboard.engine.proto.BackupImported) result_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      result_ = value;
+    }
+    resultCase_ = 10;
+  }
+  /**
+   * <code>.taigi.engine.BackupImported backup_imported = 10;</code>
+   */
+  private void clearBackupImported() {
+    if (resultCase_ == 10) {
       resultCase_ = 0;
       result_ = null;
     }
@@ -965,6 +1069,102 @@ public  final class UserDataResponse extends
       return this;
     }
 
+    /**
+     * <code>.taigi.engine.BackupExported backup_exported = 9;</code>
+     */
+    @java.lang.Override
+    public boolean hasBackupExported() {
+      return instance.hasBackupExported();
+    }
+    /**
+     * <code>.taigi.engine.BackupExported backup_exported = 9;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.BackupExported getBackupExported() {
+      return instance.getBackupExported();
+    }
+    /**
+     * <code>.taigi.engine.BackupExported backup_exported = 9;</code>
+     */
+    public Builder setBackupExported(com.siansiansu.taigikeyboard.engine.proto.BackupExported value) {
+      copyOnWrite();
+      instance.setBackupExported(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.BackupExported backup_exported = 9;</code>
+     */
+    public Builder setBackupExported(
+        com.siansiansu.taigikeyboard.engine.proto.BackupExported.Builder builderForValue) {
+      copyOnWrite();
+      instance.setBackupExported(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.BackupExported backup_exported = 9;</code>
+     */
+    public Builder mergeBackupExported(com.siansiansu.taigikeyboard.engine.proto.BackupExported value) {
+      copyOnWrite();
+      instance.mergeBackupExported(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.BackupExported backup_exported = 9;</code>
+     */
+    public Builder clearBackupExported() {
+      copyOnWrite();
+      instance.clearBackupExported();
+      return this;
+    }
+
+    /**
+     * <code>.taigi.engine.BackupImported backup_imported = 10;</code>
+     */
+    @java.lang.Override
+    public boolean hasBackupImported() {
+      return instance.hasBackupImported();
+    }
+    /**
+     * <code>.taigi.engine.BackupImported backup_imported = 10;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.BackupImported getBackupImported() {
+      return instance.getBackupImported();
+    }
+    /**
+     * <code>.taigi.engine.BackupImported backup_imported = 10;</code>
+     */
+    public Builder setBackupImported(com.siansiansu.taigikeyboard.engine.proto.BackupImported value) {
+      copyOnWrite();
+      instance.setBackupImported(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.BackupImported backup_imported = 10;</code>
+     */
+    public Builder setBackupImported(
+        com.siansiansu.taigikeyboard.engine.proto.BackupImported.Builder builderForValue) {
+      copyOnWrite();
+      instance.setBackupImported(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.BackupImported backup_imported = 10;</code>
+     */
+    public Builder mergeBackupImported(com.siansiansu.taigikeyboard.engine.proto.BackupImported value) {
+      copyOnWrite();
+      instance.mergeBackupImported(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.BackupImported backup_imported = 10;</code>
+     */
+    public Builder clearBackupImported() {
+      copyOnWrite();
+      instance.clearBackupImported();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.UserDataResponse)
   }
   @java.lang.Override
@@ -991,10 +1191,13 @@ public  final class UserDataResponse extends
             com.siansiansu.taigikeyboard.engine.proto.CustomEntryDeleted.class,
             com.siansiansu.taigikeyboard.engine.proto.CustomCsvImported.class,
             com.siansiansu.taigikeyboard.engine.proto.CustomCsvExported.class,
+            com.siansiansu.taigikeyboard.engine.proto.BackupExported.class,
+            com.siansiansu.taigikeyboard.engine.proto.BackupImported.class,
           };
           java.lang.String info =
-              "\u0000\b\u0001\u0000\u0001\b\b\u0000\u0000\u0000\u0001<\u0000\u0002<\u0000\u0003" +
-              "<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000";
+              "\u0000\n\u0001\u0000\u0001\n\n\u0000\u0000\u0000\u0001<\u0000\u0002<\u0000\u0003" +
+              "<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000\t<\u0000\n<" +
+              "\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

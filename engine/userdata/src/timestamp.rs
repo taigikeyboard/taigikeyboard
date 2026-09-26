@@ -7,10 +7,28 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Now, as `yyyy-MM-dd HH:mm:ss` in UTC.
 pub fn utc_timestamp_now() -> String {
-    let seconds = SystemTime::now()
+    format_utc_timestamp(unix_seconds_now())
+}
+
+/// Seconds since the Unix epoch, now (0 on a clock set before 1970).
+pub fn unix_seconds_now() -> u64 {
+    SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .map_or(0, |elapsed| elapsed.as_secs());
-    format_utc_timestamp(seconds)
+        .map_or(0, |elapsed| elapsed.as_secs())
+}
+
+/// `seconds` since the Unix epoch as RFC 3339 UTC, `yyyy-MM-ddTHH:mm:ssZ` —
+/// the `.taigi` `exportedAt` both phones wrote.
+pub fn format_rfc3339_utc(seconds: u64) -> String {
+    let days = (seconds / 86_400) as i64;
+    let remainder = seconds % 86_400;
+    let (year, month, day) = civil_from_days(days);
+    format!(
+        "{year:04}-{month:02}-{day:02}T{:02}:{:02}:{:02}Z",
+        remainder / 3600,
+        (remainder % 3600) / 60,
+        remainder % 60
+    )
 }
 
 /// `seconds` since the Unix epoch as `yyyy-MM-dd HH:mm:ss`. Proleptic

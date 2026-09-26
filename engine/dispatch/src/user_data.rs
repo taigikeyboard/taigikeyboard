@@ -12,18 +12,20 @@ use composing::api::ComposingError;
 use nextword::NextWordError;
 use protos::engine::{
     composing_request, effect, next_word_effect, next_word_request, next_word_response, response,
-    user_data_request, user_data_response, AppConfig, ComposingRequest, ComposingResponse,
-    CustomCsvExported, CustomCsvImported, CustomDictEntry, CustomDictionaryEntry,
-    CustomDictionaryRefusal, CustomEntries, CustomEntryDeleted, CustomEntrySaved, ErrorCode,
-    FetchAtPos, FrequencyEntry, ImportCustomCsv, LearnedEntry, ListCustomEntries, NextWordRequest,
-    NextWordResponse, OpenUserData, RawNextWordPrediction, RecordUsage, ResetUserData, Response,
-    SaveCustomEntry, Source, UsageRecorded, UserDataJournal, UserDataOpened, UserDataRequest,
-    UserDataReset, UserDataResponse,
+    user_data_request, user_data_response, AppConfig, BackupExported, BackupImported,
+    BackupRefusal, ComposingRequest, ComposingResponse, CustomCsvExported, CustomCsvImported,
+    CustomDictEntry, CustomDictionaryEntry, CustomDictionaryRefusal, CustomEntries,
+    CustomEntryDeleted, CustomEntrySaved, ErrorCode, FetchAtPos, FrequencyEntry, ImportBackup,
+    ImportCustomCsv, LearnedEntry, ListCustomEntries, NextWordRequest, NextWordResponse,
+    OpenUserData, RawNextWordPrediction, RecordUsage, ResetUserData, Response, SaveCustomEntry,
+    Source, UsageRecorded, UserDataJournal, UserDataOpened, UserDataRequest, UserDataReset,
+    UserDataResponse,
 };
 use userdata::{
-    AssociationPair, CustomDictionaryCSV, CustomDictionaryCSVError, CustomDictionaryError,
-    CustomDictionaryRow, CustomDictionarySource, CustomDictionaryStore, CustomEntry, FollowingRow,
-    FrequencyRow, JournalMode, LearnedPhrase, LearnedPhraseSource, UserDataPaths, UserDataStores,
+    AssociationPair, BackupError, CustomDictionaryCSV, CustomDictionaryCSVError,
+    CustomDictionaryError, CustomDictionaryRow, CustomDictionarySource, CustomDictionaryStore,
+    CustomEntry, FollowingRow, FrequencyRow, JournalMode, LearnedPhrase, LearnedPhraseSource,
+    UserDataPaths, UserDataStores,
 };
 
 /// Why a user-data request did nothing.
@@ -119,6 +121,19 @@ impl UserDataHandle {
             }
             Some(user_data_request::Method::ExportCustomCsv(_)) => {
                 user_data_response::Result::CustomCsvExported(self.export_custom_csv()?)
+            }
+            Some(user_data_request::Method::ExportBackup(export)) => {
+                let backup = userdata::export_backup(
+                    self.opened_stores()?,
+                    &export.platform,
+                    &export.app_version,
+                    userdata::unix_seconds_now(),
+                )
+                .map_err(store_error)?;
+                user_data_response::Result::BackupExported(BackupExported { backup })
+            }
+            Some(user_data_request::Method::ImportBackup(import)) => {
+                user_data_response::Result::BackupImported(self.import_backup(import)?)
             }
             None => return Err(UserDataError::Invalid("user-data request has no method")),
         };
@@ -259,6 +274,26 @@ impl UserDataHandle {
                 Some(refusal) => Ok(refused(refusal)),
                 None => Err(store_error(error)),
             },
+        }
+    }
+
+    fn import_backup(&self, import: &ImportBackup) -> Result<BackupImported, UserDataError> {
+        let refused = |refusal: BackupRefusal| BackupImported {
+            refusal: refusal as i32,
+            ..BackupImported::default()
+        };
+        match userdata::import_backup(self.opened_stores()?, &import.backup) {
+            Ok(merged) => Ok(BackupImported {
+                refusal: BackupRefusal::None as i32,
+                custom_dictionary: u32::try_from(merged.custom_dictionary).unwrap_or(u32::MAX),
+                frequency: u32::try_from(merged.frequency).unwrap_or(u32::MAX),
+                association: u32::try_from(merged.association).unwrap_or(u32::MAX),
+            }),
+            Err(BackupError::Unreadable(_)) => Ok(refused(BackupRefusal::Unreadable)),
+            Err(BackupError::UnsupportedVersion(_)) => {
+                Ok(refused(BackupRefusal::UnsupportedVersion))
+            }
+            Err(error @ BackupError::Store(_)) => Err(store_error(error)),
         }
     }
 
@@ -945,6 +980,53 @@ mod tests {
         assert_eq!(
             import(&handle, &huge).refusal(),
             CustomDictionaryRefusal::FileTooLarge
+        );
+    }
+
+    #[test]
+    fn a_backup_exported_through_the_op_restores_through_it() {
+        use protos::engine::ExportBackup;
+
+        let source_directory = tempfile::tempdir().unwrap();
+        let source = UserDataHandle::new();
+        source
+            .handle(&open_request(source_directory.path()))
+            .unwrap();
+        save(&source, None, "tâi-uân", "台灣");
+        let backup = match call(
+            &source,
+            user_data_request::Method::ExportBackup(ExportBackup {
+                platform: "linux".into(),
+                app_version: "3.6.10".into(),
+            }),
+        ) {
+            user_data_response::Result::BackupExported(exported) => exported.backup,
+            other => panic!("expected a backup, got {other:?}"),
+        };
+
+        let target_directory = tempfile::tempdir().unwrap();
+        let target = UserDataHandle::new();
+        target
+            .handle(&open_request(target_directory.path()))
+            .unwrap();
+        let restore = |bytes: Vec<u8>| match call(
+            &target,
+            user_data_request::Method::ImportBackup(ImportBackup { backup: bytes }),
+        ) {
+            user_data_response::Result::BackupImported(imported) => imported,
+            other => panic!("expected an import, got {other:?}"),
+        };
+        let imported = restore(backup);
+        assert_eq!(imported.refusal(), BackupRefusal::None);
+        assert_eq!(
+            imported.custom_dictionary, 1,
+            "the seeds were there already"
+        );
+        assert_eq!(list(&target, "台灣").matching_total, 1);
+        assert_eq!(restore(b"{".to_vec()).refusal(), BackupRefusal::Unreadable);
+        assert_eq!(
+            restore(br#"{"version": 0}"#.to_vec()).refusal(),
+            BackupRefusal::UnsupportedVersion
         );
     }
 }

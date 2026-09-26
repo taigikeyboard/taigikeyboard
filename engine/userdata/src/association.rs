@@ -118,6 +118,37 @@ impl UserAssociationStore {
         });
     }
 
+    /// Merges a backup's bigrams: a pair already stored keeps the larger
+    /// count, every imported one counts as used now — the phones' `.taigi`
+    /// merge (iOS `NextWordRepository.batchImportAssociations`). One
+    /// transaction, then the cap. Answers how many pairs were merged.
+    pub fn import_merge(&self, rows: Vec<AssociationRow>) -> Result<usize, UserDataDatabaseError> {
+        let capacity = self.capacity.detached();
+        self.database.perform(move |connection| {
+            immediate_transaction::<_, UserDataDatabaseError>(connection, |connection| {
+                let mut statement = connection.prepare(&format!(
+                    "INSERT INTO {TABLE_NAME}\n    (prev_word, prev_tl, next_word, next_tl, count, last_used)\nVALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)\nON CONFLICT(prev_word, prev_tl, next_word, next_tl) DO UPDATE SET\n    count = MAX(count, excluded.count),\n    last_used = CURRENT_TIMESTAMP;"
+                ))?;
+                let mut merged = 0;
+                for AssociationRow { pair, count } in rows
+                    .iter()
+                    .filter(|row| !row.pair.previous.is_empty() && !row.pair.next.is_empty())
+                {
+                    statement.execute(params![
+                        pair.previous,
+                        pair.previous_tl,
+                        pair.next,
+                        pair.next_tl,
+                        count
+                    ])?;
+                    merged += 1;
+                }
+                capacity.enforce(connection)?;
+                Ok(merged)
+            })
+        })
+    }
+
     /// The words learned after `previous`, best evidence first, at most
     /// `limit`; `None` when the store could not be read (not open, busy).
     ///
