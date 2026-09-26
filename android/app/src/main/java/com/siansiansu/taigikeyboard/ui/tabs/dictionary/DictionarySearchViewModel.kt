@@ -11,7 +11,6 @@ import com.siansiansu.taigikeyboard.ime.core.Outcome
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
-import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryDerivation
 import com.siansiansu.taigikeyboard.ime.dictionary.DictionarySearchResult
 import com.siansiansu.taigikeyboard.ime.dictionary.DictionarySource
 import kotlinx.coroutines.FlowPreview
@@ -160,22 +159,12 @@ class DictionarySearchViewModel(
     ): List<DictionarySearchResult> {
         if (isCJK) return emptyList()
         return try {
-            // v3.6.1 R3 — derive the family-native query key from the raw query +
-            // the ACTUAL current input mode (`prefs.inputMode` incl. "tps", not
-            // the non-POJ→TL collapse the rest of `performSearch` uses). `null`
-            // key (residue-only input) → no custom matches.
-            val queryKey =
-                CustomDictionaryDerivation.deriveCustomQueryKey(
-                    query,
-                    InputMode.fromPrefString(prefs.inputMode),
-                ) ?: return emptyList()
-            root.customDict
-                .search(
-                    family = queryKey.family,
-                    form = queryKey.form,
-                    key = queryKey.key,
-                    limit = SEARCH_RESULT_LIMIT,
-                ).map { entry ->
+            // The engine derives the family-native query key from the raw
+            // query + the settings input mode and prefix-matches it, the way
+            // the keyboard finds the words (`SearchCustomEntries`, roadmap P8b).
+            root.userData
+                .search(query = query, inputMode = prefs.inputMode, limit = SEARCH_RESULT_LIMIT)
+                .map { entry ->
                     DictionarySearchResult(
                         id = -2,
                         roman = entry.roman,

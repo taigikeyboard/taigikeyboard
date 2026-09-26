@@ -9,6 +9,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * <pre>
  * A page of the dictionary, newest edit first. `filter` matches romanization
  * or Hanji as a substring (case-insensitive ASCII); empty lists everything.
+ * `limit` 0 lists every match.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.ListCustomEntries}
@@ -208,6 +209,7 @@ public  final class ListCustomEntries extends
    * <pre>
    * A page of the dictionary, newest edit first. `filter` matches romanization
    * or Hanji as a substring (case-insensitive ASCII); empty lists everything.
+   * `limit` 0 lists every match.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.ListCustomEntries}

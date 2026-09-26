@@ -3,6 +3,7 @@ package com.siansiansu.taigikeyboard
 import android.app.Application
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.engine.lexiconInstall
+import com.siansiansu.taigikeyboard.engine.userDataOpen
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.dictionary.DictionaryConstants
@@ -23,7 +24,7 @@ class TaigiKeyboardApplication : Application() {
 
     // Process-lifetime scope — never cancelled. Used only for fire-and-forget
     // work that must NOT be tied to an IME service lifecycle (prefs migration
-    // survives cold IME starts; custom-dict seed runs at most once).
+    // survives cold IME starts).
     val applicationScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onCreate() {
@@ -38,38 +39,27 @@ class TaigiKeyboardApplication : Application() {
         // `LoggerBackend` the rest of the app uses.
         RustEngineBridge.install(compositionRoot.logger)
 
+        // The user's data, which the engine owns (roadmap P8b): the first
+        // thing after the bridge, so no pick, keystroke or settings screen
+        // reaches the engine before its stores are in use. Returns at once —
+        // the engine finishes opening (a first launch's takeover of the files
+        // the old services wrote, re-derivation and seeding included) on a
+        // thread of its own. Where Android has always kept the files:
+        // `databases/`, and `user_association.db` in `filesDir`.
+        RustEngineBridge.userDataOpen(
+            directory = getDatabasePath("user_frequency.db").parentFile ?: filesDir,
+            associationFile = File(filesDir, "user_association.db"),
+        )
+
         // Deferred boot work — kept off the Application.onCreate main thread
         // per the 2026-04 Android state audit §A7 (keep Application.onCreate cheap).
-        // Services are idempotent, so a duplicate call from a legacy caller
-        // would be harmless during the A7 migration window.
         applicationScope.launch {
             prefs.migrateFromSharedPreferences()
-        }
-        applicationScope.launch {
-            compositionRoot.customDict.seedDefaultEntryIfEmpty()
         }
         // Copy bundled assets to filesDir then install the Rust shared-core
         // lexicon engine. Idempotent.
         applicationScope.launch {
             installLexiconEngine()
-        }
-        // Best-effort warmup of `user_frequency.db` so the Continuous-input
-        // fetch path can apply persisted boost as early as possible. The
-        // Continuous fetch path never lazy-inits the freq DB itself, so
-        // without this warmup a fresh session would ignore
-        // `user_frequency.db` indefinitely until the user committed
-        // something. Fire-and-forget — `ComposingManager
-        // .fetchContinuousCandidates` keeps an `isConnected()` cold-start
-        // guard for the race window before this Task lands. Mirrors iOS
-        // `setupCoreServices`'s `ensureInitialized` Task.
-        applicationScope.launch {
-            val tag = "UserFreqWarmup"
-            try {
-                compositionRoot.userFreq.ensureInitialized()
-                compositionRoot.logger.i(tag, "[INIT] User frequency DB warmed")
-            } catch (e: Exception) {
-                compositionRoot.logger.w(tag, "[INIT] User frequency DB warmup failed", e)
-            }
         }
     }
 

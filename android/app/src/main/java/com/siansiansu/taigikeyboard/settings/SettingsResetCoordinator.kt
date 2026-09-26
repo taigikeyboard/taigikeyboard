@@ -11,20 +11,15 @@ import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 // - resetAllUserData(root): destructive — wipes user frequency, next-word and
 //   learned-phrase data.
 //
-// Android divergence from iOS (deferred parity): iOS wraps each destructive
-// deletion in its own do/try/catch with per-op logging, so a partial failure
-// still clears what it can. Android preserves pre-PR single try/catch at the
-// caller boundary — the inner services already log and swallow their own DB
-// exceptions, so only an exception that escapes (e.g. DataStore I/O from
-// resetAll) skips subsequent operations.
+// The engine owns the stores (roadmap P8b) and attempts every one, so a
+// partial failure still clears what it can; one that could not be emptied
+// surfaces as an exception, reported by the caller's single try/catch.
 object SettingsResetCoordinator {
     suspend fun resetAll(prefs: PrefHelper) {
         prefs.resetToDefaults()
     }
 
     suspend fun resetAllUserData(root: CompositionRoot) {
-        root.userFreq.deleteDatabase()
-        root.nextWord.clearAllAssociations()
-        root.learnedPhrases.deleteAll()
+        root.userData.clearLearningRecords()
     }
 }

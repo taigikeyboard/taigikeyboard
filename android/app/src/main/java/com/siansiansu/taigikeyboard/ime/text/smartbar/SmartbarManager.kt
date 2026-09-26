@@ -22,6 +22,7 @@ import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.dictionary.SuggestionCaseTransformer
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import com.siansiansu.taigikeyboard.ime.text.TextInputManager
+import com.siansiansu.taigikeyboard.ime.text.composing.EngineUsageRecorder
 import com.siansiansu.taigikeyboard.ime.text.composing.shouldSplitCombinedCells
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardMode
@@ -112,7 +113,7 @@ class SmartbarManager(
             // semantics match iOS (`nextword-engine-boundary.md` §13.5).
             scope = taigikeyboard.serviceScope,
             settingsProvider = taigikeyboard.prefs,
-            nextWord = compositionRoot.nextWord,
+            awaitLexiconReady = compositionRoot::awaitLexiconReady,
             logger = compositionRoot.logger,
             onUpdateCandidates = { updateCandidates(it) },
             onClearCandidates = { clearCandidates() },
@@ -144,11 +145,9 @@ class SmartbarManager(
 
     private val candidateClickHandler =
         CandidateClickHandler(
-            scope = scope,
             prefs = prefs,
             taigikeyboard = taigikeyboard,
-            userFreq = compositionRoot.userFreq,
-            learnedPhrases = compositionRoot.learnedPhrases,
+            usage = EngineUsageRecorder,
             getCurrentSuggestions = { currentSuggestions },
             getIsTranslateSwapped = { cachedIsTranslateSwapped },
             getOutputBothScripts = { cachedOutputBothScripts },

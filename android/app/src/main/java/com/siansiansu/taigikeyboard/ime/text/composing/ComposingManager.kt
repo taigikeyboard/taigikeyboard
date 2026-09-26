@@ -25,16 +25,10 @@ import com.siansiansu.taigikeyboard.engine.composingResetContinuous
 import com.siansiansu.taigikeyboard.engine.composingSelectSuggestion
 import com.siansiansu.taigikeyboard.engine.composingStart
 import com.siansiansu.taigikeyboard.engine.dictionaryFilters
-import com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry
-import com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.NullLoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.tdebug
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettingsProvider
-import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryDerivation
-import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryService
-import com.siansiansu.taigikeyboard.ime.dictionary.LearnedPhraseService
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -71,29 +65,6 @@ class ComposingManager(
     private val delegate: ComposingDelegate = DefaultComposingDelegate,
     private val nextWordRouter: NextWordEffectRouter = NoopNextWordEffectRouter,
     private val logger: LoggerBackend = NullLoggerBackend,
-    /**
-     * User-frequency snapshot source for the Continuous-input two-phase
-     * fetch. `null` keeps unit-test + Preview construction compiling
-     * unchanged (the orchestrator falls through to the neutral phase-1
-     * list, exactly mirroring the cold-start branch). The runtime call
-     * site (`TextInputManager` keyboard-mode swap) always passes
-     * `CompositionRoot.userFreq`. Mirrors iOS `ComposingManager.swift`
-     * `userFrequencyService` default-arg shape.
-     */
-    private val userFrequencyService: UserFrequencyService? = null,
-    /**
-     * v3.5.8 Phase 9 Item 12 — `custom_dictionary.db` access for the
-     * Continuous fetch. Same service the legacy lexicon path uses
-     * (`LexiconService.lookupCustomDictionary`). `null` keeps unit-test
-     * + Preview construction compiling unchanged (custom merge simply
-     * yields no entries, identical to the feature-disabled branch).
-     * The runtime call site passes the shared service. DB stays native
-     * (`feedback_user_data_sqlite_stays_native`). Mirrors iOS
-     * `ComposingManager.swift` `customDictionaryRepository`.
-     */
-    private val customDictionaryService: CustomDictionaryService? = null,
-    /** §50 `learned_phrases.db` for `FetchAtPos.learned_entries`; `null` = none (tests / Preview). */
-    private val learnedPhraseService: LearnedPhraseService? = null,
 ) {
     // Engine-mirror state: 3 MutableStateFlow, public read-only StateFlow surface; sync getters read `.value`.
     // CROSS-PLATFORM PAIR — mirrors iOS `ComposingManager.swift` @Observable mirror.
@@ -426,271 +397,46 @@ class ComposingManager(
      * cannot distinguish these cases. Graceful degrade is OK because the
      * lexicon path handles the same input via its own search.
      *
-     * Two-phase fetch closes Gap B (`docs/engine/
-     * continuous-input-ranking.md` §3.2) by feeding the engine's
-     * `user_freq_boost` + `SortKey.recency_rank` axes:
-     * 1. Neutral fetch (empty `frequency_entries`, `now_ms = 0`) discovers
-     *    candidate `displayText` keys — Android cannot know them up-front.
-     * 2. Batch query `user_frequency.db WHERE word IN (...)` for those keys.
-     * 3. Populated fetch on the same `currentGeneration` snapshot re-ranks
-     *    the candidate set with `user_freq_boost(count)` saturated at
-     *    `MAX_BOOST = 5.0` per `engine/ranking/src/score.rs`.
+     * One fetch: the engine reads the user's own data itself — the counts,
+     * the custom dictionary (unless the setting turns it off) and the learned
+     * phrases — and ranks in the same call
+     * (`docs/architecture/user-data-engine-roadmap.md` P8b). `nowMs` is the
+     * clock its recency ranking reads. An FFI failure, or an answer for a
+     * generation a `bumpGeneration` has since replaced (an Idle snapshot, no
+     * carrier), is "no candidates this frame".
      *
-     * `currentGeneration` is captured once so a `bumpGeneration()` between
-     * the two FFI calls cannot corrupt the populated fetch — engine resets
-     * to Idle on generation mismatch (`engine/composing/src/handle.rs:61-66`)
-     * and we surface that as the documented "no candidates this frame"
-     * degrade rather than an inconsistent boost. The phase-2 `transition`
-     * already reflects the Idle reset; returning the phase-1 list would
-     * render stale candidates against the new context, so we return `[]`
-     * instead. Mirrors iOS PR #265 Codex Q5 / R2.
-     *
-     * Bridge-failure handling distinguishes "engine returned Idle" (legit
-     * reset; apply Idle transition + return `[]`) from "FFI roundtrip
-     * failed" (transient encode/decode/non-OK; engine state unchanged —
-     * apply phase-1 transition + return phase-1 candidates). Without the
-     * `isBridgeFailure` flag both scenarios collapse to a `NOOP` transition
-     * + `null` candidates, and applying `NOOP` clobbers the mirror with
-     * false Idle state. Phase-1 FFI failure short-circuits the whole
-     * frame; phase-2 FFI failure degrades to neutral-ranked phase-1
-     * results. Mirrors iOS PR #265 r3216857164.
-     *
-     * Cold-start: when `user_frequency.db` has not yet been opened (the
-     * race window between `TaigiKeyboardApplication.onCreate`'s best-effort
-     * `ensureInitialized` launch and that Task completing), skip phase 2
-     * and return the neutral list — engine produced neutral-boost ranking
-     * on the phase-1 response. Also covers
-     * `userFrequencyService == null` (tests / Preview construction).
-     *
-     * CROSS-PLATFORM INVARIANT — mirrors
-     * `ios/Sources/TaigiKeyboard/Input/Composing/ComposingManager.swift:232`.
-     * Drift causes silent divergence in the ranking the user sees after
-     * their first selection of a phrase.
+     * CROSS-PLATFORM INVARIANT — mirrors macOS
+     * `macos/Sources/TaigiInputMethodCore/Composing/ComposingManager.swift`
+     * `fetchCandidates`.
      *
      * Android divergence (intentional, per `.claude/rules/cross-platform-alignment.md`
-     * §3): iOS runs both phases synchronously on the main thread and mirrors
-     * the fetch snapshot into its state; Android runs this whole function on
-     * `Dispatchers.Default` (`CandidateUpdateCoordinator`) so the dictionary
-     * scan never blocks a keystroke, and mirrors nothing — `FetchAtPos` is
-     * read-only in the engine (no effects, no state change), so there is no
-     * transition to apply; the coordinator validates [stateToken] before
-     * publishing. Same observable behaviour, different threading model.
+     * §3): the Apple platforms run the fetch on the main thread and mirror
+     * its snapshot; Android runs this function on `Dispatchers.Default`
+     * (`CandidateUpdateCoordinator`) so the dictionary scan never blocks a
+     * keystroke, and mirrors nothing — `FetchAtPos` is read-only in the
+     * engine (no effects, no state change), so there is no transition to
+     * apply; the coordinator validates [stateToken] before publishing. Same
+     * observable behaviour, different threading model.
      *
      * Thread-agnostic: touches only `StateFlow` / atomic state, the volatile
      * prefs cache behind [settingsProvider], and the JNI bridge (the engine
-     * serialises internally). Never touches `InputConnection`. Settings are
-     * captured once into an immutable [ContinuousFetchSettings] so the two
-     * fetch phases and the SQLite hops in between see one snapshot even if
-     * the user flips a toggle mid-fetch.
+     * serialises internally). Never touches `InputConnection`.
      */
     suspend fun fetchContinuousCandidates(): List<RustEngineBridge.ContinuousCandidate> {
-        val fetch = captureFetchSettings()
-        val token = stateToken()
-
-        // v3.5.8 Phase 9 Item 12 — query `custom_dictionary.db` once
-        // for the current raw buffer; the same `customEntries` feeds
-        // both fetch phases (the result depends only on the raw
-        // buffer, stable across the two FFI calls). `buildCustomEntries`
-        // suspends on `Dispatchers.IO` and drops its rows if the state
-        // token moved during that await (Codex post-impl 2026-05-15 P2).
-        // One family-native query key serves both user-row sources (one FFI
-        // derive per keystroke); `null` = empty / residue-only buffer.
-        val queryKey = token.rawInput?.takeIf { it.isNotEmpty() }?.let { raw ->
-            CustomDictionaryDerivation.deriveCustomQueryKey(
-                raw,
-                com.siansiansu.taigikeyboard.ime.core.settings.InputMode
-                    .fromPrefString(fetch.inputMode),
-            )
-        }
-        val customEntries = buildCustomEntries(token, fetch, queryKey)
-        // §50 — learned phrases keyed to the WHOLE raw buffer (exact, not
-        // prefix), shared by both phases like `customEntries`.
-        val learnedEntries = buildLearnedEntries(token, queryKey)
-
-        // Phase 1: neutral fetch to learn candidate displayText keys.
-        val neutral = RustEngineBridge.composingFetchAtPos(
-            config = fetch.config,
-            generation = token.generation,
-            customEntries = customEntries,
-            enabledSourcesBitmask = fetch.enabledSourcesBitmask,
-            literalRomanCandidateDisabled = fetch.literalRomanCandidateDisabled,
-            learnedEntries = learnedEntries,
+        val settings = settingsProvider.current
+        return RustEngineBridge.composingFetchAtPos(
+            config = RustEngineBridge.continuousAppConfig(settings),
+            generation = currentGeneration,
+            nowMs = System.currentTimeMillis(),
+            // PR-9.6 — the dictionary source-toggle bitmask the Tab3 browse path
+            // sends too (12 source toggles + kautian subcollections).
+            enabledSourcesBitmask = RustEngineBridge
+                .dictionaryFilters(RustEngineBridge.DictionaryToggles.from(settings))
+                .dictionaryFilterBitmask,
+            // §34/S22 — invert of the Show Typed Text First setting.
+            literalRomanCandidateDisabled = !settings.isLiteralRomanCandidateEnabled,
+            customDictionaryDisabled = !settings.isCustomDictEnabled,
         )
-        // Phase-1 FFI failure or empty carrier → "no candidates this frame".
-        // Nothing to mirror: a matching-generation fetch echoes the state the
-        // keystroke already wrote, and a stale-generation fetch answers with
-        // an Idle snapshot that the coordinator's publish guard drops.
-        val neutralCandidates = neutral.candidates
-        if (neutral.isBridgeFailure || neutralCandidates.isNullOrEmpty()) {
-            return emptyList()
-        }
-
-        // Cold-start (or no service injected): user_frequency.db not yet
-        // open. Skip phase 2 — engine already produced neutral-boost
-        // ranking on the phase-1 response.
-        val userFreq = userFrequencyService
-        if (userFreq == null || !userFreq.isConnected()) {
-            return neutralCandidates
-        }
-
-        // Phase 2: populated fetch with the user-frequency snapshot.
-        // `buildFrequencyEntries` runs the SQL inside the service's own
-        // `Dispatchers.IO` block, then resumes on the caller's worker
-        // context before the second FFI call.
-        val entries = buildFrequencyEntries(neutralCandidates, userFreq)
-        val nowMs = System.currentTimeMillis()
-        val boosted = RustEngineBridge.composingFetchAtPos(
-            config = fetch.config,
-            generation = token.generation,
-            frequencyEntries = entries,
-            nowMs = nowMs,
-            customEntries = customEntries,
-            enabledSourcesBitmask = fetch.enabledSourcesBitmask,
-            literalRomanCandidateDisabled = fetch.literalRomanCandidateDisabled,
-            learnedEntries = learnedEntries,
-        )
-        // Phase-2 FFI failure: the request never reached the engine —
-        // degrade to the neutral-ranked phase-1 list instead of dropping
-        // the frame. Mirrors iOS PR #265 r3216857164.
-        if (boosted.isBridgeFailure) {
-            return neutralCandidates
-        }
-        // Engine determinism: same `Phase::Continuous { raw }` returns the
-        // same candidate set. A `null` phase-2 carrier with `isBridgeFailure
-        // == false` means a `bumpGeneration` raced in between: the engine
-        // answered the stale generation with an Idle snapshot, so phase-1's
-        // list belongs to the old context. Surface as "no candidates this
-        // frame" instead. Mirrors iOS PR #265 Codex pre/post-impl Q5/R2.
-        return boosted.candidates ?: emptyList()
-    }
-
-    /**
-     * Marshal the per-candidate `user_frequency.db` snapshot into the proto
-     * `FrequencyEntry` list required by `FetchAtPos`. Dedupes by
-     * `displayText` (engine's `display_text_key` = `hanji ?? roman`) so a
-     * candidate list with the same hanji twice (different roman) issues
-     * only one SQL placeholder; the engine's `build_frequency_map` is
-     * last-write-wins on duplicates either way (`engine/ranking/src/
-     * score.rs::build_frequency_map`). Only entries present in the DB are
-     * marshalled — missing rows mean "no user usage yet" and the engine
-     * applies `user_freq_boost(0) = 1.0` neutral. Mirrors iOS
-     * `ComposingManager.swift:308 buildFrequencyEntries`. Proto marshaling
-     * delegates to `RustEngineBridge.frequencyRowsToProtoEntries` (single
-     * `count` clamp + field-naming source of truth).
-     */
-    private suspend fun buildFrequencyEntries(
-        candidates: List<RustEngineBridge.ContinuousCandidate>,
-        userFreq: UserFrequencyService,
-    ): List<FrequencyEntry> {
-        // R5 pair-key (#7): query by display text (dedup'd), get back one
-        // ROW per `(word, tl)` reading + the legacy `tl == ""` bucket, and
-        // marshal each as a `FrequencyEntry` carrying `canonicalTl` so the
-        // engine can build a `(display_text, canonical_tl)`-keyed map.
-        val uniqueKeys = candidates.map { it.displayText }.distinct()
-        val rows = userFreq.frequencyDataBatch(uniqueKeys)
-        return RustEngineBridge.frequencyRowsToProtoEntries(rows)
-    }
-
-    /**
-     * v3.5.8 Phase 9 Item 12 — query `custom_dictionary.db` for the
-     * current raw buffer and marshal matches into the proto
-     * `CustomDictEntry` list carried by `FetchAtPos`. The engine owns
-     * the merge + `(roman, hanji)` dedupe + ranking (spec G3 —
-     * platform never re-ranks); this only fetches + marshals.
-     *
-     * v3.6.1 R3 — derives the single family-native query key via
-     * `CustomDictionaryDerivation.deriveCustomQueryKey(rawInput, mode)`
-     * and runs the cross-mode `custom_search_key` JOIN query
-     * (`CustomDictionaryService.search`). **Marshals the RAW stored
-     * `(roman, hanzi)` columns** — NOT a display-massaged form — so the
-     * engine's `(roman, hanji)` dedupe key collides correctly against
-     * `dict.bin`'s `DictionaryRecord.tl` / `.hanzi` (Codex pre-impl
-     * 2026-05-15). The stored roman may be TL or POJ display form
-     * (whichever the user typed) — v3.5.9 B-4 leaves it raw on the
-     * lattice axis here and only folds it to canonical TL inside the
-     * engine when synthesizing the `user_frequency.db` commit key.
-     * Empty stored hanzi → proto-absent `hanji` (romanization-only
-     * entry → engine derives `CandidateMode.Tailo`).
-     *
-     * CROSS-PLATFORM INVARIANT — the query-key derivation + side-table
-     * query mirror iOS `CustomDictionaryDerivation.deriveCustomQueryKey`
-     * + `CustomDictionaryRepository` query. Drift causes silent
-     * custom-match divergence between platforms
-     * (.claude/rules/cross-platform-alignment.md §3a).
-     *
-     * `null` service (tests / Preview), disabled feature, or `null`
-     * query key (residue-only input) → empty list, identical to the
-     * no-custom engine path. Runs its SQLite hop inside
-     * `CustomDictionaryService.search`'s own `Dispatchers.IO`; resumes
-     * on the caller context before the FFI.
-     */
-    private suspend fun buildCustomEntries(
-        token: StateToken,
-        fetch: ContinuousFetchSettings,
-        // v3.6.1 R3 — the single family-native query key derived from the
-        // raw buffer + settings input mode (`InputMode.fromPrefString`
-        // collapses "tps" → TL; the engine upgrades to the TPS family via
-        // `contains_tps` on the raw input). `null` = no matches.
-        queryKey: com.siansiansu.taigikeyboard.engine.CustomSearchKey?,
-    ): List<CustomDictEntry> {
-        val service = customDictionaryService ?: return emptyList()
-        if (!fetch.isCustomDictEnabled || queryKey == null) return emptyList()
-        return try {
-            val rows = service.search(family = queryKey.family, form = queryKey.form, key = queryKey.key, limit = 20)
-            // v3.5.8 Phase 9 Item 12 — await-race guard (Codex post-impl
-            // 2026-05-15 P2). `service.search` suspends on `Dispatchers
-            // .IO`; a keystroke landing during that await moves the state
-            // token, so these rows belong to a stale prefix — inject
-            // nothing rather than wrong candidates; the racing keystroke's
-            // own fetch produces the correct custom set.
-            if (stateToken() != token) {
-                return emptyList()
-            }
-            rows.map { entry ->
-                val builder = CustomDictEntry.newBuilder().setRoman(entry.roman)
-                if (entry.hanzi.isNotEmpty()) {
-                    builder.setHanji(entry.hanzi)
-                }
-                builder.build()
-            }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            logger.w(TAG, "[CONTINUOUS] custom dict query failed: ${e.message}", e)
-            emptyList()
-        }
-    }
-
-    /**
-     * §50 — learned phrases whose derived key EQUALS the raw buffer's query
-     * key (`LearnedPhraseService.matches`), as `FetchAtPos.learned_entries`;
-     * not gated by Enable Custom Dictionary (manual rows only) — learning is always on.
-     * Same await-race guard as [buildCustomEntries].
-     */
-    private suspend fun buildLearnedEntries(
-        token: StateToken,
-        queryKey: com.siansiansu.taigikeyboard.engine.CustomSearchKey?,
-    ): List<com.siansiansu.taigikeyboard.engine.proto.LearnedEntry> {
-        val service = learnedPhraseService ?: return emptyList()
-        if (queryKey == null) return emptyList()
-        return try {
-            val rows = service.matches(family = queryKey.family, form = queryKey.form, key = queryKey.key)
-            if (stateToken() != token) {
-                return emptyList()
-            }
-            rows.map { phrase ->
-                com.siansiansu.taigikeyboard.engine.proto.LearnedEntry
-                    .newBuilder()
-                    .setHanji(phrase.hanzi)
-                    .setCanonicalTl(phrase.canonicalTl)
-                    .build()
-            }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            logger.w(TAG, "[CONTINUOUS] learned phrase query failed: ${e.message}", e)
-            emptyList()
-        }
     }
 
     // v3.5.8 Phase 9 Bug 1 (Option A): `displayText` is the swap/TPS/both-
@@ -763,13 +509,6 @@ class ComposingManager(
         // generation-mismatch race, unchanged guarantee).
         val didCommit = hasCommitText || hasNail
         val didFinalCommit = hasCommitText && !transition.isComposing
-        // §50 — surfaced to the tap handler, which owns the store write
-        // (same seam as word-frequency / NextWord learning), while the effect itself
-        // still flows through the delegate like every other effect.
-        val learnedPhrase =
-            transition.effects
-                .filterIsInstance<RustEngineBridge.ComposingTransition.Effect.PhraseLearned>()
-                .firstOrNull()
         selfCommitInProgress = true
         try {
             applyTransition(transition, ic)
@@ -779,7 +518,6 @@ class ComposingManager(
         return RustEngineBridge.CommitContinuousResult(
             didCommit = didCommit,
             didFinalCommit = didFinalCommit,
-            learnedPhrase = learnedPhrase,
         )
     }
 
@@ -946,41 +684,6 @@ class ComposingManager(
                 }
             }
         }
-    }
-
-    /**
-     * Immutable per-fetch settings snapshot. `EngineSettingsProvider.current`
-     * is a live view (every getter re-reads the prefs cache), so both fetch
-     * phases and the custom-dictionary query read from this value instead —
-     * a toggle flipped mid-fetch cannot make the phases disagree.
-     */
-    private class ContinuousFetchSettings(
-        val inputMode: String,
-        // The rendering config both fetch phases send (`continuousAppConfig`).
-        val config: com.siansiansu.taigikeyboard.engine.proto.AppConfig,
-        // PR-9.6 — same dictionary source-toggle bitmask + same
-        // `dictionaryFilters` bridge the Tab3 browse path uses, so keyboard
-        // candidates honour the 12 source toggles + kautian subcollection
-        // (accent / surname) toggles.
-        val enabledSourcesBitmask: UInt,
-        // §34/S22 — invert of the Show Typed Text First setting (engine wire flag).
-        val literalRomanCandidateDisabled: Boolean,
-        val isCustomDictEnabled: Boolean,
-    )
-
-    private fun captureFetchSettings(): ContinuousFetchSettings {
-        val settings = settingsProvider.current
-        val inputMode = settings.inputMode
-        return ContinuousFetchSettings(
-            inputMode = inputMode,
-            config = RustEngineBridge.continuousAppConfig(settings),
-            enabledSourcesBitmask = RustEngineBridge
-                .dictionaryFilters(
-                    RustEngineBridge.DictionaryToggles.from(settings),
-                ).dictionaryFilterBitmask,
-            literalRomanCandidateDisabled = !settings.isLiteralRomanCandidateEnabled,
-            isCustomDictEnabled = settings.isCustomDictEnabled,
-        )
     }
 }
 

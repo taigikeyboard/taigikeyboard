@@ -1,6 +1,6 @@
 // NextWord platform executor — Android wiring into the Rust nextword crate (since v3.5.5).
 // Decisions/state live in Rust; this file handles intent serialization, Effect interpretation
-// (timeout / NextWordService I/O / UI callback), and caches lastSelectedWord/isShowing from engine.
+// (timeout / UI callback), and caches lastSelectedWord/isShowing from engine.
 
 package com.siansiansu.taigikeyboard.ime.text.smartbar
 
@@ -15,9 +15,9 @@ import com.siansiansu.taigikeyboard.engine.nextwordUpdateLastSelectedWord
 import com.siansiansu.taigikeyboard.engine.nextwordWordSelected
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
+import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettingsProvider
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
-import com.siansiansu.taigikeyboard.ime.dictionary.NextWordService
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import com.siansiansu.taigikeyboard.ime.text.composing.splitIntoSingleScriptCells
 import com.siansiansu.taigikeyboard.ime.text.keyboard.lastGrapheme
@@ -35,7 +35,8 @@ import kotlinx.coroutines.withContext
  * handler is the Android-side platform executor:
  * - serializes intents through `RustEngineBridge.nextword*`,
  * - interprets the returned `NextWordDecideResult.Effect` list against
- *   coroutine-scheduled timeout, `NextWordService` I/O, UI callbacks,
+ *   coroutine-scheduled timeout and UI callbacks (the engine keeps the
+ *   learned bigrams and reads them for predictions itself — roadmap P8b),
  * - caches `lastSelectedWord` / `isShowing` echoed back from the engine so
  *   `SmartbarManager` / `CandidateClickHandler` reads stay synchronous,
  * - pushes UI visibility back into the engine via `nextwordSetIsShowing`
@@ -49,7 +50,9 @@ import kotlinx.coroutines.withContext
 class NextWordController(
     private val scope: CoroutineScope,
     private val settingsProvider: EngineSettingsProvider,
-    private val nextWord: NextWordService,
+    // Predictions wait for the bundled lexicon (`CompositionRoot.awaitLexiconReady`):
+    // `association.bin` answers the same query. `false` = install failed; predict anyway.
+    private val awaitLexiconReady: suspend () -> Boolean,
     private val logger: LoggerBackend,
     private val onUpdateCandidates: (List<TaigiWord>) -> Unit,
     private val onClearCandidates: () -> Unit,
@@ -318,13 +321,13 @@ class NextWordController(
                 cancelContextTimeoutJob()
             }
 
-            is RustEngineBridge.NextWordDecideResult.Effect.RecordAssociation -> {
-                recordAssociationAsync(effect.pair)
-            }
-
-            is RustEngineBridge.NextWordDecideResult.Effect.RecordCompoundAssociations -> {
-                recordCompoundAssociationsAsync(effect.pairs)
-            }
+            // The engine wrote the bigrams into `user_association.db` itself
+            // and leaves these out of its answer once the user data is open
+            // (roadmap P3c / P8b); the arms stay until the effects are retired
+            // (roadmap U9, P9).
+            is RustEngineBridge.NextWordDecideResult.Effect.RecordAssociation,
+            is RustEngineBridge.NextWordDecideResult.Effect.RecordCompoundAssociations,
+            -> Unit
 
             is RustEngineBridge.NextWordDecideResult.Effect.QueryPredictions -> {
                 dispatchPredictionQuery(
@@ -342,37 +345,6 @@ class NextWordController(
         }
     }
 
-    private fun recordAssociationAsync(pair: RustEngineBridge.NextWordAssociationPair) {
-        scope.launch {
-            nextWord.recordAssociation(
-                prev = pair.prev,
-                prevTl = pair.prevTl,
-                nextHanzi = pair.next,
-                nextTl = pair.nextTl,
-            )
-            logger.debug(TAG) { "[NEXTWORD] Record: '${pair.prev}(${pair.prevTl})' → '${pair.next}'" }
-        }
-    }
-
-    /**
-     * Loop sequentially in one coroutine to avoid races on the SQLite
-     * UNIQUE constraint `(prev_word, prev_tl, next_word, next_tl)`.
-     */
-    private fun recordCompoundAssociationsAsync(pairs: List<RustEngineBridge.NextWordAssociationPair>) {
-        if (pairs.isEmpty()) return
-        scope.launch {
-            for (pair in pairs) {
-                nextWord.recordAssociation(
-                    prev = pair.prev,
-                    prevTl = pair.prevTl,
-                    nextHanzi = pair.next,
-                    nextTl = pair.nextTl,
-                )
-                logger.debug(TAG) { "[NEXTWORD] Record compound: '${pair.prev}' → '${pair.next}'" }
-            }
-        }
-    }
-
     /**
      * Dispatch the async prediction query. [nowMs] from the effect is reused
      * verbatim on the engine call so the association-window check (Rust
@@ -386,45 +358,50 @@ class NextWordController(
         nowMs: Long,
     ) {
         logger.debug(TAG) { "[NEXTWORD] Query gen=$queryGeneration word='$word' roman='$roman'" }
-        // Dictionary toggles snapshot at query start, before the SQL / lexicon-ready
+        // Dictionary toggles snapshot at query start, before the lexicon-ready
         // suspension — the bundled lookup answers for the settings the query began under.
         val toggles = RustEngineBridge.DictionaryToggles.from(settingsProvider.current)
         scope.launch {
-            val userRows = nextWord.userRows(word = word, roman = roman)
-            withContext(Dispatchers.Main) {
-                handleQueryResult(word = word, userRows = userRows, toggles = toggles, queryGeneration = queryGeneration, nowMs = nowMs)
-            }
+            awaitLexiconReady()
+            // Snapshotted on Main, where every other intent reads them.
+            val settings = settingsProvider.current
+            val generation = envelopeGen
+            // Off Main: the engine reads the learned rows from its own
+            // `user_association.db` inside this call (roadmap P8b).
+            val filterResult =
+                withContext(Dispatchers.IO) {
+                    RustEngineBridge.nextwordPredictNext(
+                        word = word,
+                        roman = roman,
+                        toggles = toggles,
+                        queryGeneration = queryGeneration,
+                        nowMs = nowMs,
+                        limit = 30,
+                        mode = settings.inputMode.toEngineInputMode(),
+                        translateSwapped = settings.isTranslateSwapped,
+                        generation = generation,
+                        candidateDisplayMode = settings.candidateDisplayMode,
+                        hyphenlessRoman = settings.isHyphenlessRomanEnabled,
+                    )
+                }
+            // A context change meanwhile makes this answer another context's.
+            if (generation != envelopeGen) return@launch
+            handleQueryResult(filterResult, queryGeneration, settings)
         }
     }
 
     /**
-     * Resolve an async prediction query. [RustEngineBridge.nextwordPredictNext]
-     * adds the bundled rows for [word], then score+merge+sort+limit + stale
-     * generation drop. Renders the result, then pushes the new visibility
-     * back to engine state via `nextwordSetIsShowing` so downstream
-     * clear/reset paths can emit `ClearPredictionsUI` correctly.
+     * Render an async prediction query's answer — [RustEngineBridge.nextwordPredictNext]
+     * read the learned rows and added the bundled rows, then score+merge+sort+limit +
+     * stale generation drop — then push the new visibility back to engine state via
+     * `nextwordSetIsShowing` so downstream clear/reset paths can emit
+     * `ClearPredictionsUI` correctly. On Main.
      */
     private fun handleQueryResult(
-        word: String,
-        userRows: List<RustEngineBridge.NextWordRawRow>,
-        toggles: RustEngineBridge.DictionaryToggles,
+        filterResult: RustEngineBridge.NextWordFilterResult,
         queryGeneration: Long,
-        nowMs: Long,
+        settings: EngineSettings,
     ) {
-        val settings = settingsProvider.current
-        val filterResult = RustEngineBridge.nextwordPredictNext(
-            word = word,
-            userRows = userRows,
-            toggles = toggles,
-            queryGeneration = queryGeneration,
-            nowMs = nowMs,
-            limit = 30,
-            mode = settings.inputMode.toEngineInputMode(),
-            translateSwapped = settings.isTranslateSwapped,
-            generation = envelopeGen,
-            candidateDisplayMode = settings.candidateDisplayMode,
-            hyphenlessRoman = settings.isHyphenlessRomanEnabled,
-        )
         if (filterResult.wasStale) {
             logger.debug(TAG) { "[NEXTWORD] Drop stale result gen=$queryGeneration" }
             return

@@ -32,10 +32,10 @@ android {
 
     defaultConfig {
         applicationId = "com.siansiansu.taigikeyboard"
-        // Android 9+. Fixes the SQLite dialect ceiling at 3.22 — see
-        // .claude/rules/android-guidelines.md §8a (rule + SqliteDialectCeilingTest
-        // gate). Was 30 from 2026-08-17 (#532) to 2026-09-19, lowered back after
-        // an Android 9 user could no longer install from Play.
+        // Android 9+, so Android 9 users can still install from Play. Was 30
+        // from 2026-08-17 (#532) to 2026-09-19, lowered back after an Android 9
+        // user could no longer install. User-data SQL is the engine's bundled
+        // SQLite, not the OS one (.claude/rules/android-guidelines.md §8a).
         minSdk = 28
         targetSdk = 36
         // versionCode = Unix epoch minutes — auto-monotonic, never collides
@@ -232,11 +232,6 @@ dependencies {
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
-    // Pure-JVM SQLite for SQL-structure tests (the custom-dict cross-mode JOIN
-    // query). Android's SQLiteDatabase is unavailable in JVM unit tests
-    // (testOptions.unitTests.isReturnDefaultValues = true), so exercise the
-    // exact production SQL string against an in-memory JDBC DB instead.
-    testImplementation("org.xerial:sqlite-jdbc:3.53.4.0")
     // Real org.json for JVM unit tests — Android's bundled org.json is stubbed
     // (testOptions.unitTests.isReturnDefaultValues = true), so theme/color JSON
     // round-trip tests need the actual implementation on the test classpath.
@@ -269,7 +264,6 @@ val topTenCandidateClassPatterns =
         "com/siansiansu/taigikeyboard/ime/dictionary/TPSConverter*.class",
         "com/siansiansu/taigikeyboard/ime/dictionary/TaigiUnicode*.class",
         "com/siansiansu/taigikeyboard/ime/core/nextword/NextWordScorer*.class",
-        "com/siansiansu/taigikeyboard/ime/dictionary/CustomDictionaryDerivation*.class",
     )
 
 tasks.register<JacocoReport>("jacocoTestReport") {

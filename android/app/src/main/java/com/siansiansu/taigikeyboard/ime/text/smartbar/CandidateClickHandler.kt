@@ -11,9 +11,8 @@ import com.siansiansu.taigikeyboard.ime.core.logging.TraceContext
 import com.siansiansu.taigikeyboard.ime.core.logging.TraceId
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
-import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
+import com.siansiansu.taigikeyboard.ime.text.composing.Usage
+import com.siansiansu.taigikeyboard.ime.text.composing.UsageRecorder
 
 /**
  * Handles candidate click events extracted from SmartbarManager.
@@ -22,11 +21,9 @@ import kotlinx.coroutines.launch
  * and overlay suggestion selection with proper text output formatting.
  */
 class CandidateClickHandler(
-    private val scope: CoroutineScope,
     private val prefs: PrefHelper,
     private val taigikeyboard: TaigiKeyboard,
-    private val userFreq: UserFrequencyService,
-    private val learnedPhrases: com.siansiansu.taigikeyboard.ime.dictionary.LearnedPhraseService,
+    private val usage: UsageRecorder,
     private val getCurrentSuggestions: () -> List<TaigiWord>,
     private val getIsTranslateSwapped: () -> Boolean,
     private val getOutputBothScripts: () -> Boolean,
@@ -139,9 +136,7 @@ class CandidateClickHandler(
             // metadata sidechannel keeps multi-reading Hanji in separate buckets; "" only
             // on wire skew / TPS-OOV / English rows.
             val canonicalTl = selectedWord.additionalInfo[TaigiWord.MetadataKeys.CANONICAL_TL] ?: ""
-            scope.launch {
-                userFreq.recordUsage(selectedWord.displayText, canonicalTl)
-            }
+            usage.record(Usage(selectedWord.displayText, canonicalTl))
 
             // NextWord learns the canonical reading, not the rendered `roman`
             // (No Hyphens strips its hyphens, §49) — mirrors iOS
@@ -259,9 +254,7 @@ class CandidateClickHandler(
         // R5 pair-key (#7): canonical-TL reading from the metadata
         // sidechannel; "" only on wire skew / TPS-OOV / English rows.
         val canonicalTl = word.additionalInfo[TaigiWord.MetadataKeys.CANONICAL_TL] ?: ""
-        scope.launch {
-            userFreq.recordUsage(word.displayText, canonicalTl)
-        }
+        usage.record(Usage(word.displayText, canonicalTl))
 
         // NextWord learns the canonical reading (§49) — see the strip path above.
         onNextWordPrediction(
@@ -373,25 +366,15 @@ class CandidateClickHandler(
             "[CONTINUOUS] commit displayText='$displayText' didCommit=${result.didCommit} didFinalCommit=${result.didFinalCommit}"
         }
 
-        // Per-segment frequency on every successful commit (mid OR final).
-        // Stale taps (didCommit=false) skip — engine had silently reset to Idle
-        // so we'd be polluting UserFrequencyService with non-events.
-        // R5 pair-key (#7): reuse the `associationTl` canonical-TL sidechannel
-        // already resolved above (same reading NextWord learns).
+        // Per-segment frequency on every successful commit (mid OR final),
+        // plus §50 touch-on-use for a learned row picked whole (`hanji`; a
+        // no-op for any other row). Stale taps (didCommit=false) skip — the
+        // engine had silently reset to Idle, so these are non-events. R5
+        // pair-key (#7): the `associationTl` canonical-TL sidechannel resolved
+        // above (same reading NextWord learns). The phrase the engine just
+        // learned is its own write (roadmap P8b).
         if (result.didCommit) {
-            scope.launch {
-                userFreq.recordUsage(displayText, associationTl)
-            }
-        }
-        // §50 — both learned-store writes: the phrase the engine just
-        // learned, and the touch-on-use bump for a learned row picked whole
-        // (no-op for any other row). Always on (USER 2026-09-20: no toggle).
-        val learned = result.learnedPhrase
-        if (result.didCommit && (learned != null || hanji != null)) {
-            scope.launch {
-                learned?.let { learnedPhrases.learnPhrase(it.hanji, it.canonicalTl) }
-                if (hanji != null) learnedPhrases.touchPhrase(hanji, associationTl)
-            }
+            usage.record(Usage(displayText, associationTl, hanji))
         }
 
         // Mid-commit: engine stays in Continuous with a fresh pending span,

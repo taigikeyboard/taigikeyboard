@@ -42,9 +42,9 @@ class DataManagementActivity : ComponentActivity() {
             uri ?: return@registerForActivityResult
             lifecycleScope.launch {
                 try {
-                    viewModel.exportBackup { json ->
+                    viewModel.exportBackup { backup ->
                         withContext(Dispatchers.IO) {
-                            contentResolver.openOutputStream(uri)?.use { it.write(json.toByteArray(Charsets.UTF_8)) }
+                            contentResolver.openOutputStream(uri)?.use { it.write(backup) }
                         }
                     }
                     Toast

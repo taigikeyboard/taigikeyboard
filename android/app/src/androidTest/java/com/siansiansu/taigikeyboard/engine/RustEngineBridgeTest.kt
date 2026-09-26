@@ -43,16 +43,8 @@ class RustEngineBridgeTest {
         assertEquals("2", outcome.tone)
     }
 
-    @Test fun op_pojToTl_canonical() {
-        assertEquals("guá", RustEngineBridge.pojToTl("góa"))
-    }
-
     @Test fun op_tlToPoj_canonical() {
         assertEquals("góa", RustEngineBridge.tlToPoj("guá"))
-    }
-
-    @Test fun op_normalizeInput_extractsToneFromDiacritic() {
-        assertEquals("ho2", RustEngineBridge.normalizeInput("hó"))
     }
 
     @Test fun op_toneVariations_lazyCache_returnsBothModes() {
@@ -63,17 +55,6 @@ class RustEngineBridgeTest {
         assertNotNull(cache.poj["a"])
         assertNotNull(cache.tl["oo"])
         assertNotNull(cache.poj["o͘"])
-    }
-
-    // endregion
-    // region Derivation (2 ops)
-
-    @Test fun op_deriveNotone_strips() {
-        assertEquals("gautsa", RustEngineBridge.deriveNotone("Gâu-tsá 2"))
-    }
-
-    @Test fun op_deriveAbbrev_returnsFirstCharPerSyllable() {
-        assertEquals("gt", RustEngineBridge.deriveAbbrev("gâu-tsá"))
     }
 
     // endregion

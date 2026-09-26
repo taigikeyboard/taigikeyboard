@@ -29,7 +29,7 @@ Give each agent the scope, its recipe and the § 3 verification rules; ask for `
 
 **R-dead · dead surface.** For every `oneof method` entry in `engine/protos/proto/*.proto`: engine dispatch arm → platform bridge function → **production** callers (outside tests, outside the bridge file, outside generated code). No production caller on any platform = dead. Same walk for proto fields (set by nobody or read by nobody), bridge functions, public Swift/Kotlin types, settings keys still plumbed after their UI was removed, unused parameters.
 
-**R-twin · platform twins.** Diff the same responsibility across twins: iOS↔Android by file name (`NextWordService.swift`↔`.kt`, `ComposingManager`, `*Bridge`), macOS stores ↔ iOS stores, Windows↔Linux over `desktop/crates`. Flag (a) logic both sides implement that could live once in the engine, (b) twins that already drifted. For every drift, record **whether a user can observe it** (§ 3.2).
+**R-twin · platform twins.** Diff the same responsibility across twins: iOS↔Android by file name (`ComposingManager`, `NextWordController`, `*Bridge`), iOS user-data stores ↔ the engine's (`engine/userdata`), Windows↔Linux over `desktop/crates`. Flag (a) logic both sides implement that could live once in the engine, (b) twins that already drifted. For every drift, record **whether a user can observe it** (§ 3.2).
 
 **R-fallback · redundant paths.** `~/.claude/rules/planning.md` § No redundant fallback: a second path that re-implements the primary (e.g. a platform mirror of engine bit math), "A fails → B" in data flow, legacy code kept for a caller that no longer exists.
 

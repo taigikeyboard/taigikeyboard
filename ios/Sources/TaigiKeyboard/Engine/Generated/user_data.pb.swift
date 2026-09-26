@@ -584,6 +584,7 @@ public nonisolated struct Taigi_Engine_CustomDictionaryEntry: Sendable {
 
 /// A page of the dictionary, newest edit first. `filter` matches romanization
 /// or Hanji as a substring (case-insensitive ASCII); empty lists everything.
+/// `limit` 0 lists every match.
 public nonisolated struct Taigi_Engine_ListCustomEntries: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for

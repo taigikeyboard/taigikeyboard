@@ -51,11 +51,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.siansiansu.taigikeyboard.R
+import com.siansiansu.taigikeyboard.engine.proto.CustomDictionaryRefusal
 import com.siansiansu.taigikeyboard.i18n.LocalStringResolver
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.i18n.generated.dictionaryImportResult
-import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryService
+import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryWord
+import com.siansiansu.taigikeyboard.ime.dictionary.UserDataException
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
 import com.siansiansu.taigikeyboard.ui.components.ConfirmationDialog
 import com.siansiansu.taigikeyboard.ui.components.FileDownload
@@ -94,7 +96,7 @@ fun CustomDictionaryScreen(
     val isCustomDictEnabled by viewModel.isCustomDictEnabled.collectAsStateWithLifecycle()
 
     var showEditDialog by remember { mutableStateOf(false) }
-    var editingEntry by remember { mutableStateOf<CustomDictionaryService.Entry?>(null) }
+    var editingEntry by remember { mutableStateOf<CustomDictionaryWord?>(null) }
     var showDeleteAllDialog by remember { mutableStateOf(false) }
     var showResultDialog by remember { mutableStateOf(false) }
     var resultMessage by remember { mutableStateOf("") }
@@ -130,10 +132,14 @@ fun CustomDictionaryScreen(
                     showResultDialog = true
                 } catch (e: Exception) {
                     resultMessage =
-                        when {
-                            e.message == "fileTooLarge" -> stringResolver.resolve(StringKey.DICTIONARY_FILE_TOO_LARGE)
-                            e.message == "tooManyEntries" -> stringResolver.resolve(StringKey.DICTIONARY_TOO_MANY_ENTRIES)
-                            e.message?.contains("格式") == true -> stringResolver.resolve(StringKey.DICTIONARY_INVALID_C_S_V_FORMAT)
+                        when ((e as? UserDataException.Refused)?.refusal) {
+                            CustomDictionaryRefusal.CUSTOM_DICTIONARY_REFUSAL_FILE_TOO_LARGE ->
+                                stringResolver.resolve(StringKey.DICTIONARY_FILE_TOO_LARGE)
+                            CustomDictionaryRefusal.CUSTOM_DICTIONARY_REFUSAL_FULL ->
+                                stringResolver.resolve(StringKey.DICTIONARY_TOO_MANY_ENTRIES)
+                            CustomDictionaryRefusal.CUSTOM_DICTIONARY_REFUSAL_NO_USABLE_ROWS,
+                            CustomDictionaryRefusal.CUSTOM_DICTIONARY_REFUSAL_NOT_UTF8,
+                            -> stringResolver.resolve(StringKey.DICTIONARY_INVALID_C_S_V_FORMAT)
                             else -> e.localizedMessage ?: stringResolver.resolve(StringKey.COMMON_IMPORT_FAILED)
                         }
                     showResultDialog = true
@@ -152,7 +158,7 @@ fun CustomDictionaryScreen(
                     val csv = viewModel.exportCSV()
                     withContext(Dispatchers.IO) {
                         context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                            outputStream.write(csv.toByteArray(Charsets.UTF_8))
+                            outputStream.write(csv)
                         }
                     }
                     resultMessage = stringResolver.resolve(StringKey.DICTIONARY_EXPORT_SUCCESS)
