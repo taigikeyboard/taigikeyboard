@@ -149,7 +149,7 @@ private fun OneHandedMenuContent(
                 .align(Alignment.TopEnd)
                 .padding(top = dimensionResource(R.dimen.smartbar_height), end = 8.dp)
                 .shadow(6.dp, shape)
-                .background(appearance.solidBackground, shape)
+                .background(appearance.calloutFill, shape)
                 .padding(6.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
@@ -179,7 +179,7 @@ private fun MenuCell(
     onClick: () -> Unit,
 ) {
     // Same selected-chip look as the toolbar mode buttons: accent fill, white content.
-    val contentColor = if (isSelected) Color.White else appearance.foreground
+    val contentColor = if (isSelected) Color.White else appearance.calloutForeground
     Column(
         modifier = Modifier
             .defaultMinSize(minWidth = 56.dp, minHeight = 56.dp)

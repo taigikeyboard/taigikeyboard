@@ -28,12 +28,18 @@ import com.siansiansu.taigikeyboard.ime.core.isKeyboardNightMode
  * keeps the chrome accent. Paint with `Modifier.themeBackground(surface, solidBackground,
  * topInsetPx)` — [rememberSmartbarInsetPx] for the panels mounted below the smartbar, 0 for the
  * candidate overlay that spans the full keyboard.
+ *
+ * [calloutFill] / [calloutForeground] paint a popup that floats over the keys (the one-handed
+ * menu): a fixed key palette uses its key fill + key text, like the key long-press popup;
+ * otherwise the panel [solidBackground] / [foreground].
  */
 data class KeyboardOverlayAppearance(
     val solidBackground: Color,
     val surface: ThemeSurface?,
     val foreground: Color,
     val accent: Color,
+    val calloutFill: Color,
+    val calloutForeground: Color,
 )
 
 /**
@@ -55,11 +61,19 @@ fun rememberKeyboardOverlayAppearance(
     val cache = remember(prefs) { ThemeAppearanceCache(prefs) }
     return remember(refreshKey, context, chrome, cache) {
         val colors = cache.resolve(isKeyboardNightMode(context)).colors
+        val foreground = colors.candidateTextColor?.let { Color(it) } ?: chrome.foreground
+        // CROSS-PLATFORM INVARIANT — mirrors iOS Callouts/KeyboardCalloutStyle+Taigi.swift themed(by:):
+        // key fill + key text together, or neither.
+        val keyFill = colors.fixedKeyFill
+        val keyText = colors.keyTextColor
+        val keyPalette = if (keyFill != null && keyText != null) Color(keyFill) to Color(keyText) else null
         KeyboardOverlayAppearance(
             solidBackground = chrome.background,
             surface = colors.surface,
-            foreground = colors.candidateTextColor?.let { Color(it) } ?: chrome.foreground,
+            foreground = foreground,
             accent = chrome.accent,
+            calloutFill = keyPalette?.first ?: chrome.background,
+            calloutForeground = keyPalette?.second ?: foreground,
         )
     }
 }
