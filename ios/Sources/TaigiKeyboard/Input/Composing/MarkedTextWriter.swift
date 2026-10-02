@@ -9,6 +9,9 @@ import UIKit
 /// insert follows in the same turn (issue #352). Replacing the marked text and
 /// then unmarking it is Apple's documented commit flow for custom keyboards.
 final class MarkedTextWriter {
+    /// A stale `true` is harmless — replacing and unmarking with no marked
+    /// region inserts at the caret — while a stale `false` brings the bug
+    /// back, so only the writer's own calls ever clear it.
     private(set) var hasMarkedText = false
 
     /// Show `text` as the whole marked region, caret at its end. **Model B**:
@@ -38,11 +41,6 @@ final class MarkedTextWriter {
         }
         update(text, on: proxy)
         proxy.unmarkText()
-        hasMarkedText = false
-    }
-
-    /// The host field changed: any marked region belonged to the old field.
-    func forget() {
         hasMarkedText = false
     }
 }

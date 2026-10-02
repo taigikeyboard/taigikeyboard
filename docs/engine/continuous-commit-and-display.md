@@ -185,7 +185,7 @@ The split is bound to the engine-side dispatch branch in [`engine/composing/src/
 | Swap/TPS/both-scripts segment formatting (γ, Bug 1) | `parseRomanAndHanji` + `formatOutputText` (shared with legacy branch) → `commitContinuous(displayText:canonicalText:)` | legacy `bracketRoman` + when-expr → `commitContinuous(displayText, canonicalText, …)` |
 | Canonical key wire | `CommitContinuous.canonical_text` (= sidechannel `displayText`) | `CommitContinuous.canonical_text` (= `TaigiWord.MetadataKeys.DISPLAY_TEXT`) |
 | Mid-commit (nail) | One `UpdatePreedit(whole composition)` → `setMarkedText(combined, caret=end)`. **No `insertText`.** | One `UpdatePreedit(whole composition)` → `setComposingText(combined, 1)`. **No `commitText`.** |
-| Hard finalize (Enter / final-commit / external) | One `CommitTextReplacingPreedit(whole composition)` → `clearMarkedText()` + `insertText` | One `CommitTextReplacingPreedit(whole composition)` → `commitText(combined, 1)` |
+| Hard finalize (Enter / final-commit / external) | One `CommitTextReplacingPreedit(whole composition)` → `setMarkedText(combined, caret=end)` + `unmarkText()` (`MarkedTextWriter.commit`, issue #352) | One `CommitTextReplacingPreedit(whole composition)` → `commitText(combined, 1)` |
 
 `docs/contributing/cross-platform-alignment.md` §3a applies: I1–I4 hold identically on both platforms.
 

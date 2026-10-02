@@ -76,16 +76,6 @@ final class MarkedTextWriterTests: XCTestCase {
         ])
     }
 
-    func testForget_afterFieldSwitch_insertsAtCaret() {
-        writer.update("taigi", on: proxy)
-        proxy.calls.removeAll()
-
-        writer.forget()
-        writer.commit("，", on: proxy)
-
-        XCTAssertEqual(proxy.calls, [.insert("，")])
-    }
-
     func testUpdate_caretCountsUTF16Units() {
         // trace: "𪜶" is U+2A736 — one Character, two UTF-16 units.
         writer.update("𪜶", on: proxy)

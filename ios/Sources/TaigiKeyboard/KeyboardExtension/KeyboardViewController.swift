@@ -238,7 +238,6 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
             return
         }
         lastTextInputID = id
-        markedText.forget()
         // Real input-field switch — hard-abort the continuous composition
         // (Model B: nailed segments were never in the document, so the
         // generation bump cleanly discards them; `continuous-input-
