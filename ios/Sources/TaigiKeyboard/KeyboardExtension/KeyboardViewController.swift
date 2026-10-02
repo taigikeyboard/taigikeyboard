@@ -55,6 +55,9 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
     /// SDK's broken `documentIdentifier` UUID bridge.
     private var lastTextInputID: ObjectIdentifier?
 
+    /// The composition's marked region in the host (issue #352).
+    let markedText = MarkedTextWriter()
+
     var emojiService: EmojiService {
         if emojiServiceStorage == nil {
             emojiServiceStorage = EmojiService()
@@ -235,6 +238,7 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
             return
         }
         lastTextInputID = id
+        markedText.forget()
         // Real input-field switch — hard-abort the continuous composition
         // (Model B: nailed segments were never in the document, so the
         // generation bump cleanly discards them; `continuous-input-

@@ -34,7 +34,7 @@ extension KeyboardViewController {
         if let handler = actionHandler {
             handler.composingManager.reset()
         }
-        clearMarkedText()
+        markedText.clear(on: textDocumentProxy)
         state.autocompleteContext.reset()
     }
 }

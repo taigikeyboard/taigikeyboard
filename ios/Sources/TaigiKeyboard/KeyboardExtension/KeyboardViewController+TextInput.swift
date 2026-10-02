@@ -34,15 +34,13 @@ extension KeyboardViewController {
         }())
         switch effect {
         case let .updatePreedit(text):
-            setMarkedText(text)
+            markedText.update(text, on: textDocumentProxy)
         case .clearPreeditWithoutCommit:
-            clearMarkedText()
+            markedText.clear(on: textDocumentProxy)
         case let .commitTextReplacingPreedit(text):
-            // Clear marked text first so the commit replaces the preedit
-            // region atomically from the user's perspective (Android
-            // achieves this via `commitText(text, 1)`).
-            clearMarkedText()
-            textDocumentProxy.insertText(text)
+            // Replaces the preedit region atomically from the user's
+            // perspective (Android achieves this via `commitText(text, 1)`).
+            markedText.commit(text, on: textDocumentProxy)
         case .clearCandidates:
             resetAutocomplete()
         case .refreshCandidates:
@@ -69,23 +67,5 @@ extension KeyboardViewController {
             // to `resetAndClearUI()` (that maps to `nextwordResetAll`).
             actionHandler?.nextWordController.clearDisplay()
         }
-    }
-
-    /// Set marked (composing) text with the caret placed at the end.
-    /// Used by `.updatePreedit(_)`. **Model B**: `text` is the whole
-    /// composition (`Σ nailed.display_text` + derived pending tail); the
-    /// host renders it as one marked region until a hard finalize. The
-    /// caret sits at the end of the combined string.
-    func setMarkedText(_ text: String) {
-        textDocumentProxy.setMarkedText(text, selectedRange: NSRange(location: text.utf16.count, length: 0))
-    }
-
-    /// Clear marked text + unmark (two steps required by UITextInput).
-    /// Used by `.clearPreeditWithoutCommit` and `.commitTextReplacingPreedit`.
-    /// **Model B**: this clears the **whole** composition region (nailed +
-    /// pending) — nailed segments were never literal document text.
-    func clearMarkedText() {
-        textDocumentProxy.setMarkedText("", selectedRange: NSRange(location: 0, length: 0))
-        textDocumentProxy.unmarkText()
     }
 }
