@@ -84,6 +84,15 @@ enum TestFixtures {
         try XCTUnwrap(RegisteredFace.installedFamilies(excluding: []).first, "this Mac reports no installed families")
     }
 
+    /// An installed family with more than one weight, and its weights — taken
+    /// from the live list for the same reason.
+    static func anyFamilyWithWeights() throws -> (family: String, faces: [RegisteredFace.Face]) {
+        let found = RegisteredFace.installedFamilies(excluding: []).lazy
+            .map { (family: $0, faces: RegisteredFace.faces(ofFamily: $0)) }
+            .first { $0.faces.count > 1 }
+        return try XCTUnwrap(found, "this Mac reports no installed family with more than one weight")
+    }
+
     /// Activates the bundled typefaces for this process, and answers which
     /// files failed to.
     ///

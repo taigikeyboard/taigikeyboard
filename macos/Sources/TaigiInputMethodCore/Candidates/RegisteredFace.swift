@@ -22,10 +22,21 @@ import CoreText
 enum RegisteredFace {
     /// What a face is asked for by. A PostScript name is one face; a family
     /// name is answered with its upright regular member, or whichever member
-    /// it has when there is no such one.
+    /// it has when there is no such one; a family and a style name is that
+    /// one member ("Bold", "W3").
     enum Query: Hashable {
         case postScript(String)
         case family(String)
+        case face(family: String, style: String)
+    }
+
+    /// One weight of an installed family, as the typeface pane offers it.
+    struct Face: Hashable {
+        /// The style name the face declares, as Core Text reports it
+        /// unlocalized — what the pane shows and `installedFontFace` stores.
+        let style: String
+        /// `kCTFontWeightTrait`, -1…1: what the weights are ordered by.
+        let weight: CGFloat
     }
 
     /// Whether a face carrying `postScriptName` is registered — in this
@@ -90,6 +101,51 @@ enum RegisteredFace {
             .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
     }
 
+    /// The weights of `family` registered right now — upright, normal-width
+    /// faces only, so every one is a WEIGHT of the family rather than an
+    /// italic or a condensed cut — lightest first, one per style name (a
+    /// family naming two such faces alike is malformed; the lighter is kept,
+    /// so a stored name always means the same face). Empty when nothing is
+    /// registered under `family`.
+    ///
+    /// Read for the selected family only, when the pane shows it — not
+    /// memoized: it is one match per pick, never on the path to a keystroke.
+    static func faces(ofFamily family: String) -> [Face] {
+        let query = CTFontDescriptorCreateWithAttributes([kCTFontFamilyNameAttribute: family] as CFDictionary)
+        guard let matches = CTFontDescriptorCreateMatchingFontDescriptors(
+            query, Set([kCTFontFamilyNameAttribute]) as CFSet,
+        ) as? [CTFontDescriptor] else { return [] }
+        let sloped = CTFontSymbolicTraits.traitItalic.rawValue
+        let widened = CTFontSymbolicTraits.traitCondensed.rawValue | CTFontSymbolicTraits.traitExpanded.rawValue
+        var seenStyles = Set<String>()
+        return matches
+            .compactMap { descriptor -> Face? in
+                guard CTFontDescriptorCopyAttribute(descriptor, kCTFontFamilyNameAttribute) as? String == family,
+                      let style = CTFontDescriptorCopyAttribute(descriptor, kCTFontStyleNameAttribute) as? String,
+                      let traits = CTFontDescriptorCopyAttribute(descriptor, kCTFontTraitsAttribute) as? [CFString: Any]
+                else { return nil }
+                let trait = { (key: CFString) in (traits[key] as? NSNumber)?.doubleValue ?? 0 }
+                let symbolic = (traits[kCTFontSymbolicTrait] as? NSNumber)?.uint32Value ?? 0
+                guard trait(kCTFontSlantTrait) == 0, trait(kCTFontWidthTrait) == 0,
+                      symbolic & (sloped | widened) == 0
+                else { return nil }
+                return Face(style: style, weight: trait(kCTFontWeightTrait))
+            }
+            // Name breaks a tie (Hiragino Sans W8 and W9 share a weight), so
+            // the order — and the face a duplicate name keeps — is stable.
+            .sorted { ($0.weight, $0.style) < ($1.weight, $1.style) }
+            .filter { seenStyles.insert($0.style).inserted }
+    }
+
+    /// The style name of the face `family` draws in when no weight was picked
+    /// — the `.family` match the candidate window then asks for — or nil
+    /// because nothing is registered under `family`.
+    static func defaultStyle(ofFamily family: String) -> String? {
+        descriptor(for: .family(family)).flatMap {
+            CTFontDescriptorCopyAttribute($0, kCTFontStyleNameAttribute) as? String
+        }
+    }
+
     /// Drops what was resolved, because the registration list has moved.
     ///
     /// Called by `CustomFontLibrary.withdraw`, and by `FontRegistryObserver`
@@ -116,7 +172,14 @@ enum RegisteredFace {
         }
         let matched: CTFontDescriptor? = switch query {
         case let .postScript(name):
-            matchedDescriptor(attributes: [kCTFontNameAttribute: name], verifying: kCTFontNameAttribute, equals: name)
+            matchedDescriptor(attributes: [kCTFontNameAttribute: name], verifying: [kCTFontNameAttribute: name])
+        case let .face(family, style):
+            // Both mandatory and both checked: a style of ANOTHER family, or
+            // another style of this one, is not the face that was picked.
+            matchedDescriptor(
+                attributes: [kCTFontFamilyNameAttribute: family, kCTFontStyleNameAttribute: style],
+                verifying: [kCTFontFamilyNameAttribute: family, kCTFontStyleNameAttribute: style],
+            )
         case let .family(family):
             // Only the family is mandatory; the traits steer the match toward
             // the face a picker row means when it names a family.
@@ -129,8 +192,7 @@ enum RegisteredFace {
                         kCTFontSymbolicTrait: 0,
                     ] as [CFString: Any],
                 ],
-                verifying: kCTFontFamilyNameAttribute,
-                equals: family,
+                verifying: [kCTFontFamilyNameAttribute: family],
             )
         }
         if let matched {
@@ -139,19 +201,19 @@ enum RegisteredFace {
         return matched
     }
 
-    /// One descriptor match with `key` mandatory, refused unless the match
-    /// carries `expected` under `key`.
+    /// One descriptor match with every key of `expected` mandatory, refused
+    /// unless the match carries each expected value under its key.
     ///
     /// Checked rather than trusted: matching SUBSTITUTES when nothing carries
     /// the value, the same way `NSFont(name:)` does, and a substituted face is
     /// not the one that was asked for — a family name asked for as a
     /// PostScript name matches `Menlo-Regular` for `Menlo`, and is refused.
     private static func matchedDescriptor(
-        attributes: [CFString: Any], verifying key: CFString, equals expected: String,
+        attributes: [CFString: Any], verifying expected: [CFString: String],
     ) -> CTFontDescriptor? {
         let query = CTFontDescriptorCreateWithAttributes(attributes as CFDictionary)
-        guard let matched = CTFontDescriptorCreateMatchingFontDescriptor(query, Set([key]) as CFSet),
-              CTFontDescriptorCopyAttribute(matched, key) as? String == expected
+        guard let matched = CTFontDescriptorCreateMatchingFontDescriptor(query, Set(expected.keys) as CFSet),
+              expected.allSatisfy({ CTFontDescriptorCopyAttribute(matched, $0.key) as? String == $0.value })
         else { return nil }
         return matched
     }

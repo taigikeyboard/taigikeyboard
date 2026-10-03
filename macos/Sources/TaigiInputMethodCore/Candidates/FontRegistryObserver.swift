@@ -12,7 +12,7 @@ import CoreText
 /// candidate panels whose cells were built in them. A typeface installed or
 /// removed in Font Book moves the list without touching any selection value —
 /// a family the OS REPLACED under the same name in particular keeps
-/// `CandidateFontSelection.installed(family:)` equal to itself, so the metrics
+/// `CandidateFontSelection.installed(family:face:)` equal to itself, so the metrics
 /// comparison in `CandidatePanel.panel(for:)` would go on serving cells set in
 /// the old face. All three are dropped together rather than per family: the
 /// notification is rare, one panel rebuild on the next show is what it costs,
@@ -30,12 +30,17 @@ enum FontRegistryObserver {
     /// this process's registrations, the distributed one for Font Book's.
     private static let centers: [NotificationCenter] = [.default, DistributedNotificationCenter.default()]
 
-    /// One notification per change from either centre — what a view that
-    /// lists the families re-reads on (`FontManagementPage`).
+    /// One event per change from either centre, sent once the caches are
+    /// dropped — what a view that lists the families or a family's weights
+    /// re-reads on (`FontManagementPage`). After, not with, the notification:
+    /// the drop runs a turn later (`install`), and a view re-reading before it
+    /// would be answered from the memo it is about to lose — the default face
+    /// of a family Font Book just changed, say.
     static var registrationListMoved: AnyPublisher<Void, Never> {
-        Publishers.MergeMany(centers.map { $0.publisher(for: notificationName).map { _ in () } })
-            .eraseToAnyPublisher()
+        cachesDropped.eraseToAnyPublisher()
     }
+
+    private static let cachesDropped = PassthroughSubject<Void, Never>()
 
     /// Starts observing for the life of the process. Called once, at launch
     /// (`AppDelegate`).
@@ -56,5 +61,6 @@ enum FontRegistryObserver {
         for panel in CandidatePanel.allInstances {
             panel.forgetCachedPanels()
         }
+        cachesDropped.send()
     }
 }

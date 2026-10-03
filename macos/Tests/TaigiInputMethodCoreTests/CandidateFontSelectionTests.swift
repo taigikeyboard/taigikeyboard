@@ -103,6 +103,62 @@ final class CandidateFontSelectionTests: XCTestCase {
         XCTAssertEqual(filtered, filtered.sorted { $0.localizedStandardCompare($1) == .orderedAscending })
     }
 
+    /// A family's weights are its upright, normal-width faces, lightest first,
+    /// one per style — each one a face of that family, at that style.
+    func testAFamilysWeights_areUprightNormalWidthFacesLightestFirst() throws {
+        let (family, faces) = try TestFixtures.anyFamilyWithWeights()
+
+        XCTAssertEqual(faces.map(\.weight), faces.map(\.weight).sorted())
+        XCTAssertEqual(Set(faces.map(\.style)).count, faces.count)
+        for face in faces {
+            let font = try XCTUnwrap(
+                CandidateFontSelection.installed(family: family, face: face.style).faceQuery
+                    .flatMap { RegisteredFace.font($0, ofSize: 20) },
+            )
+            let traits = NSFontManager.shared.traits(of: font)
+            XCTAssertEqual(font.familyName, family)
+            XCTAssertFalse(traits.contains(.italicFontMask), "\(face.style) is not upright")
+            XCTAssertFalse(traits.contains(.condensedFontMask), "\(face.style) is condensed")
+        }
+    }
+
+    /// A picked weight draws in that face; a style the family does not have is
+    /// refused rather than substituted with another of its faces.
+    func testAPickedWeight_drawsInThatFace_andAnUnknownStyleIsRefused() throws {
+        let (family, faces) = try TestFixtures.anyFamilyWithWeights()
+        let lightest = try XCTUnwrap(faces.first)
+        let heaviest = try XCTUnwrap(faces.last)
+
+        let light = CandidateFontSelection.installed(family: family, face: lightest.style).font(ofSize: 20)
+        let heavy = CandidateFontSelection.installed(family: family, face: heaviest.style).font(ofSize: 20)
+
+        XCTAssertNotEqual(light.fontName, heavy.fontName)
+        XCTAssertFalse(RegisteredFace.isRegistered(.face(family: family, style: "No Such Style 4f9a")))
+    }
+
+    /// Two weights of one family are two metrics values, so the panel cache
+    /// rebuilds rather than serving cells set in the other weight.
+    func testMetrics_differBetweenTwoWeightsOfOneFamily_soThePanelsRebuild() throws {
+        let (family, faces) = try TestFixtures.anyFamilyWithWeights()
+
+        let first = CandidateMetrics(size: .standard, fontSelection: .installed(family: family, face: faces[0].style))
+        let second = CandidateMetrics(size: .standard, fontSelection: .installed(family: family, face: faces[1].style))
+
+        XCTAssertNotEqual(first, second)
+    }
+
+    /// With no weight picked the family draws its `.family` match, and that
+    /// is the style the pane shows selected.
+    func testTheDefaultStyle_isTheFaceAFamilyDrawsWithNoWeightPicked() throws {
+        let (family, _) = try TestFixtures.anyFamilyWithWeights()
+
+        let drawn = CandidateFontSelection.installed(family: family).font(ofSize: 20)
+        let defaultStyle = try XCTUnwrap(RegisteredFace.defaultStyle(ofFamily: family))
+        let named = try XCTUnwrap(RegisteredFace.font(.face(family: family, style: defaultStyle), ofSize: 20))
+
+        XCTAssertEqual(drawn.fontName, named.fontName)
+    }
+
     /// The inline row measures an installed face's line box like a custom one:
     /// neither carries the bundled roster's fits-the-row guarantee.
     func testInlineHeight_isMeasuredForAnInstalledFace() throws {

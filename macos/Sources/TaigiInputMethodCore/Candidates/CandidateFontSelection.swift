@@ -20,8 +20,11 @@ enum CandidateFontSelection: Hashable, Sendable {
     case custom(CustomFont)
     /// A family the OS has installed, by the name it reports. Nothing is
     /// copied or registered for it: the OS is the authority on whether it
-    /// exists, the way the library's directory is for a custom font.
-    case installed(family: String)
+    /// exists, the way the library's directory is for a custom font. `face`
+    /// is the weight's style name, "" for the family's default face — two
+    /// weights are two values, so the panel and column-floor caches keep them
+    /// apart.
+    case installed(family: String, face: String = "")
 
     /// What a fresh install renders in.
     static let `default` = Self.builtIn(.system)
@@ -45,7 +48,7 @@ enum CandidateFontSelection: Hashable, Sendable {
         switch self {
         case let .builtIn(choice): choice.postScriptName.map(RegisteredFace.Query.postScript)
         case let .custom(font): .postScript(font.postScriptName)
-        case let .installed(family): .family(family)
+        case let .installed(family, face): face.isEmpty ? .family(family) : .face(family: family, style: face)
         }
     }
 

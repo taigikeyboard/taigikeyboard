@@ -326,6 +326,17 @@ final class SettingsStore: @unchecked Sendable {
             defaultValue: "",
         )
 
+        /// Which weight of `installedFontFamily` the candidate window is set
+        /// in, by the face's style name ("Light", "Bold", "W3"). Read only
+        /// beside an installed family; "" is the family's default face — what
+        /// every installed selection drew before this key existed. Local like
+        /// the family. Mirrors `INSTALLED_FONT_FACE` in desktop-core's
+        /// `settings/keys.rs`.
+        static let installedFontFace = SettingsKey(
+            name: "installedFontFace",
+            defaultValue: "",
+        )
+
         /// Which keys type a tone, and so which keys pick a candidate
         /// (`ToneInputScheme`). macOS-only: the phone keyboards have a tone
         /// row of their own and no slot keys, so the default is desktop-core's
@@ -399,12 +410,13 @@ final class SettingsStore: @unchecked Sendable {
         choice(Keys.candidateSize)
     }
 
-    /// The typeface selection as stored, decoded from its three keys.
+    /// The typeface selection as stored, decoded from its four keys.
     var storedFontSelection: StoredFontSelection {
         StoredFontSelection(
             fontType: userDefaults.string(forKey: Keys.fontType.name) ?? Keys.fontType.defaultValue.rawValue,
             customFontFile: userDefaults.string(forKey: Keys.customFontFile.name) ?? "",
             installedFontFamily: userDefaults.string(forKey: Keys.installedFontFamily.name) ?? "",
+            installedFontFace: userDefaults.string(forKey: Keys.installedFontFace.name) ?? "",
         )
     }
 
@@ -431,9 +443,14 @@ final class SettingsStore: @unchecked Sendable {
         case let .customFile(fileName):
             guard let font = CustomFontLibrary.shared.activatedFont(fileName: fileName) else { return .default }
             return .custom(font)
-        case let .installedFamily(family):
+        case let .installedFamily(family, face):
             guard RegisteredFace.isRegistered(.family(family)) else { return .default }
-            return .installed(family: family)
+            // A weight the family no longer has draws its default face, the
+            // preference kept — the family is there, so it is not missing.
+            guard face.isEmpty || RegisteredFace.isRegistered(.face(family: family, style: face)) else {
+                return .installed(family: family, face: "")
+            }
+            return .installed(family: family, face: face)
         }
     }
 

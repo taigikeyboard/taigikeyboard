@@ -475,6 +475,35 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(makeStore().candidateFontSelection, .installed(family: family))
     }
 
+    /// A picked weight the family has reads as that weight.
+    @MainActor
+    func testStoredInstalled_withAWeightTheFamilyHas_readsAsThatWeight() throws {
+        let (family, faces) = try TestFixtures.anyFamilyWithWeights()
+        let style = try XCTUnwrap(faces.last).style
+        userDefaults.set(CandidateFontSelection.installedRawValue, forKey: SettingsStore.Keys.fontType.name)
+        userDefaults.set(family, forKey: SettingsStore.Keys.installedFontFamily.name)
+        userDefaults.set(style, forKey: SettingsStore.Keys.installedFontFace.name)
+
+        XCTAssertEqual(makeStore().candidateFontSelection, .installed(family: family, face: style))
+    }
+
+    /// A weight the family no longer has draws the family's default face — the
+    /// family is there, so it is not the system font — and the preference
+    /// stays, since a reinstall may bring the weight back.
+    @MainActor
+    func testStoredInstalled_withAWeightTheFamilyLacks_readsAsItsDefaultFace_andLeavesThePreferenceAlone() throws {
+        let family = try TestFixtures.anyInstalledFamily()
+        userDefaults.set(CandidateFontSelection.installedRawValue, forKey: SettingsStore.Keys.fontType.name)
+        userDefaults.set(family, forKey: SettingsStore.Keys.installedFontFamily.name)
+        userDefaults.set("No Such Style 4f9a", forKey: SettingsStore.Keys.installedFontFace.name)
+
+        XCTAssertEqual(makeStore().candidateFontSelection, .installed(family: family))
+        XCTAssertEqual(
+            userDefaults.string(forKey: SettingsStore.Keys.installedFontFace.name),
+            "No Such Style 4f9a",
+        )
+    }
+
     /// `installed` is outside the roster like `custom`, so a family the OS no
     /// longer has falls to the system font the same way — and the preference
     /// stays, since a reinstall may bring the family back.

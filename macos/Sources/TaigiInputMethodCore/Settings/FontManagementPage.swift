@@ -55,8 +55,15 @@ struct FontManagementPage: View {
     @AppStorage(SettingsStore.Keys.installedFontFamily.name)
     private var installedFontFamily = SettingsStore.Keys.installedFontFamily.defaultValue
 
+    @AppStorage(SettingsStore.Keys.installedFontFace.name)
+    private var installedFontFace = SettingsStore.Keys.installedFontFace.defaultValue
+
     @State private var customFonts: [CustomFont] = []
     @State private var installedFamilies: [String] = []
+    /// The weights of the stored installed family, and the style it draws in
+    /// with none picked — read for that family only (`reloadFaces`).
+    @State private var faces: [RegisteredFace.Face] = []
+    @State private var defaultFaceStyle: String?
     @State private var filter = ""
     /// Which page of the filtered rows is on screen, zero-based. Clamped when
     /// read: the rows under it change with the filter and with what the OS
@@ -81,7 +88,8 @@ struct FontManagementPage: View {
         let pageCount = max(1, (matchingRows.count + Self.pageSize - 1) / Self.pageSize)
         let currentPage = min(page, pageCount - 1)
         let visibleRows = Array(matchingRows.dropFirst(currentPage * Self.pageSize).prefix(Self.pageSize))
-        let selectedRow = rows.first { $0.stored == stored }
+        // One row per family: the stored family's row at whichever weight.
+        let selectedRow = rows.first { $0.stored.isSameTypeface(as: stored) }
         let visibleSelectedRow = visibleRows.contains { $0.id == selectedRow?.id } ? selectedRow : nil
         Form {
             Section {
@@ -117,11 +125,17 @@ struct FontManagementPage: View {
                     )
                 }
             }
+            if case let .installedFamily(family, face) = stored, faces.count > 1 {
+                Section {
+                    weightPicker(family: family, face: face)
+                }
+            }
         }
         .formStyle(.grouped)
         // A new search starts from its first page; the old page number was
         // about rows that may no longer match.
         .onChange(of: filter) { page = 0 }
+        .onChange(of: installedFontFamily) { reloadFaces() }
         .onAppear(perform: reload)
         .onReceive(FontRegistryObserver.registrationListMoved) { reload() }
         .userDataPageChrome(activity: .idle, message: $message)
@@ -158,6 +172,32 @@ struct FontManagementPage: View {
         }
     }
 
+    /// Which weight of the selected installed family the candidate window is
+    /// set in — a second choice beside the table's one row per family, shown
+    /// only while that family has more than one (Discord report 2026-09-28).
+    ///
+    /// Shows the stored weight, or — with none picked, or one the family no
+    /// longer has — the face the candidate window then draws, so the pop-up
+    /// never claims a weight that is not on screen; blank when that face is
+    /// not one it offers. Setting the shown weight again writes nothing, so a
+    /// "" preference is not turned into an explicit one by the pop-up itself.
+    private func weightPicker(family: String, face: String) -> some View {
+        let styles = faces.map(\.style)
+        let shown = styles.contains(face) ? face : defaultFaceStyle.flatMap { styles.contains($0) ? $0 : nil }
+        return Picker(language.string(.desktopFontWeight), selection: Binding(
+            get: { shown },
+            set: { newValue in
+                guard let newValue, newValue != shown else { return }
+                stored = .installedFamily(family, face: newValue)
+            },
+        )) {
+            // The names the font declares — its own words, not translated.
+            ForEach(styles, id: \.self) { style in
+                Text(style).tag(Optional(style))
+            }
+        }
+    }
+
     /// The bundled roster first, in the order the four platforms share, then
     /// what the user added, then what the OS has — a list that reads as "what
     /// ships", "what I added" and "what my Mac has", rather than one sorted
@@ -176,19 +216,21 @@ struct FontManagementPage: View {
             }
     }
 
-    /// The three stored keys, read and written as one (`StoredFontSelection`),
+    /// The four stored keys, read and written as one (`StoredFontSelection`),
     /// so a row can never leave `fontType` naming a custom or installed
     /// typeface with nothing beside it.
     private var stored: StoredFontSelection {
         get {
             StoredFontSelection(
-                fontType: fontTypeRawValue, customFontFile: customFontFile, installedFontFamily: installedFontFamily,
+                fontType: fontTypeRawValue, customFontFile: customFontFile,
+                installedFontFamily: installedFontFamily, installedFontFace: installedFontFace,
             )
         }
         nonmutating set {
             fontTypeRawValue = newValue.fontType
             customFontFile = newValue.customFontFile
             installedFontFamily = newValue.installedFontFamily
+            installedFontFace = newValue.installedFontFace
         }
     }
 
@@ -304,6 +346,20 @@ struct FontManagementPage: View {
         installedFamilies = RegisteredFace.installedFamilies(
             excluding: Self.bundledFamilies.union(CustomFontLibrary.shared.registeredFamilies()),
         )
+        reloadFaces()
+    }
+
+    /// Re-reads the weights of the stored family when it is an installed one
+    /// — on appear, on every registration change (a weight installed or
+    /// removed in Font Book), and when another family is picked.
+    private func reloadFaces() {
+        guard case let .installedFamily(family, _) = stored else {
+            faces = []
+            defaultFaceStyle = nil
+            return
+        }
+        faces = RegisteredFace.faces(ofFamily: family)
+        defaultFaceStyle = RegisteredFace.defaultStyle(ofFamily: family)
     }
 
     /// The families of the bundled roster — registered at launch and never
