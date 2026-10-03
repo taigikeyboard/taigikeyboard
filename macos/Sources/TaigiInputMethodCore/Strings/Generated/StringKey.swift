@@ -108,6 +108,7 @@ enum StringKey: String {
     case desktopCustomFontAlreadyInstalled = "i18n_desktop_customFontAlreadyInstalled"
     case desktopCustomFontRemoveFailed = "i18n_desktop_customFontRemoveFailed"
     case desktopFontManagementTab = "i18n_desktop_fontManagementTab"
+    case desktopFontWeight = "i18n_desktop_fontWeight"
     case desktopMenuSettings = "i18n_desktop_menuSettings"
     case dictionaryCustomDictionary = "i18n_dictionary_customDictionary"
     case dictionaryCustomDictEnabled = "i18n_dictionary_customDictEnabled"

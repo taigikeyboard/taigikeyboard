@@ -1688,6 +1688,25 @@
         "ja": "フォント管理"
       }
     },
+    "fontWeight": {
+      "comment": "Manage Typefaces pane: label of the pop-up that picks which weight (Light, Regular, Bold…) of the selected installed font family the candidate window is set in. Shown only for a family with more than one weight. The pop-up's items are the face names the font itself declares, not translated.",
+      "scope": {
+        "platforms": [
+          "macos",
+          "windows"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "字重",
+        "tailo": "Jī-tāng",
+        "poj": "Jī-tāng",
+        "en": "Weight",
+        "ja": "ウェイト"
+      }
+    },
     "menuSettings": {
       "comment": "Input-method menu row that opens the settings window, on all three desktops (USER 2026-09-24: menus identical incl. i18n). Names the keyboard because Fcitx5 lists its own input-method settings row in the same menu (Mozc: 「Mozc 設定」); wording from a Discord report 2026-09-24.",
       "scope": {

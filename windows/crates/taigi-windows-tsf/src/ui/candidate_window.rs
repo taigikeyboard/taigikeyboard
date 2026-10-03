@@ -345,10 +345,11 @@ impl CandidateWindow {
                     CandidateFontSelection::Custom(id)
                 }),
             // An installed family the OS no longer has falls back the same
-            // way a missing custom file does, preference kept.
-            StoredFontSelection::Installed(family) => self
+            // way a missing custom file does, preference kept. A weight the
+            // family no longer has draws its default face, preference kept too.
+            StoredFontSelection::Installed { family, face } => self
                 .factory
-                .installed_font_id(&family)
+                .installed_font_id(&family, &face)
                 .map_or(CandidateFontSelection::default(), |id| {
                     CandidateFontSelection::Installed(id)
                 }),

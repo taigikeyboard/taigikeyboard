@@ -377,7 +377,7 @@ impl SettingsWindow {
             pages::learning_records::ensure_loaded(&mut self.learning_records, context);
         }
         if self.pane == SettingsPane::FontManagement {
-            pages::font_management::on_enter(&mut self.font_management);
+            pages::font_management::on_enter(&mut self.font_management, self.settings.document());
         }
     }
 
@@ -627,6 +627,7 @@ impl Component for SettingsWindow {
                         message: alert,
                     },
                 );
+                pages::font_management::sync_faces(font_management, settings.document());
             }
             Message::CustomDictionary(message) => {
                 pages::custom_dictionary::update(

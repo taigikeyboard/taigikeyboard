@@ -14,6 +14,7 @@ use taigi_desktop_core::candidates::{FontSpec, TextMeasurer};
 use taigi_desktop_core::settings::{
     CandidateFontChoice, CandidateFontSelection, CustomFontId, InstalledFontId, SettingChoice,
 };
+use taigi_windows_platform::font_file;
 use windows::core::{Interface, Result, BOOL, PCWSTR};
 use windows::Win32::Foundation::{D2DERR_RECREATE_TARGET, HANDLE, HWND, WAIT_TIMEOUT};
 use windows::Win32::Graphics::Direct2D::Common::{
@@ -29,7 +30,7 @@ use windows::Win32::Graphics::DirectWrite::{
     DWriteCreateFactory, IDWriteFactory3, IDWriteFontCollection, IDWriteFontCollection1,
     IDWriteFontCollection3, IDWriteFontSetBuilder1, IDWriteInlineObject, IDWriteTextFormat,
     IDWriteTextLayout, DWRITE_FACTORY_TYPE_SHARED, DWRITE_FONT_STRETCH_NORMAL,
-    DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_LINE_METRICS,
+    DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_WEIGHT, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_LINE_METRICS,
     DWRITE_PARAGRAPH_ALIGNMENT_CENTER, DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_TEXT_METRICS,
     DWRITE_TRIMMING, DWRITE_TRIMMING_GRANULARITY_CHARACTER, DWRITE_WORD_WRAPPING_NO_WRAP,
 };
@@ -47,8 +48,10 @@ const SYSTEM_FONT_FAMILY: &str = "Segoe UI Variable Text";
 const LEGACY_SYSTEM_FONT_FAMILY: &str = "Segoe UI";
 const LOCALE: &str = "zh-TW";
 
-/// The collection a text format is created against, and the family it asks
-/// for — for a bundled face, one the user added, one the OS has, or none.
+/// The collection a text format is created against, the family it asks for
+/// and the weight — for a bundled face, one the user added, one the OS has,
+/// or none. Only an installed family has a weight to pick; every other face is
+/// the one weight its file carries, asked for as normal.
 ///
 /// A face that cannot be produced answers with the system family and no
 /// collection, which is the honest fallback the bundled roster already had:
@@ -57,8 +60,8 @@ impl RenderFactory {
     fn face_of(
         &self,
         selection: CandidateFontSelection,
-    ) -> (Option<IDWriteFontCollection>, String) {
-        match selection {
+    ) -> (Option<IDWriteFontCollection>, String, DWRITE_FONT_WEIGHT) {
+        let (collection, family) = match selection {
             CandidateFontSelection::BuiltIn(choice) => {
                 let collection: Option<IDWriteFontCollection> = self
                     .private_fonts
@@ -91,17 +94,24 @@ impl RenderFactory {
                     fonts.as_ref(),
                 ) {
                     (Some(font), Some(fonts)) => {
-                        (fonts.collection.cast().ok(), font.family.clone())
+                        return (
+                            fonts.collection.cast().ok(),
+                            font.family.clone(),
+                            font.weight,
+                        );
                     }
                     _ => (None, self.system_family.to_owned()),
                 }
             }
-        }
+        };
+        (collection, family, DWRITE_FONT_WEIGHT_NORMAL)
     }
 
-    /// The id `family` draws under while the OS has it, or `None` because it
-    /// does not — or because the name is not one DirectWrite can be asked
-    /// for (it comes out of `settings.json`, which anything can write).
+    /// The id `family` at `face` draws under while the OS has the family, or
+    /// `None` because it does not — or because the name is not one DirectWrite
+    /// can be asked for (it comes out of `settings.json`, which anything can
+    /// write). `face` is the stored weight's face name; "" — or a face the
+    /// family no longer has — draws the family as it always drew, at normal.
     ///
     /// Called at the top of every candidate window, like `custom_font_id`. The
     /// system collection is re-fetched when DirectWrite says it expired — a
@@ -112,16 +122,16 @@ impl RenderFactory {
     /// family AND per collection generation, for the same reason
     /// `CustomFontId` is per loaded resource. The custom face, if one was
     /// loaded, is let go: the selection is not it any more.
-    pub fn installed_font_id(&self, family: &str) -> Option<InstalledFontId> {
+    pub fn installed_font_id(&self, family: &str, face: &str) -> Option<InstalledFontId> {
         self.forget_custom_font();
-        let id = self.resolve_installed_font(family);
+        let id = self.resolve_installed_font(family, face);
         if id.is_none() {
             self.forget_installed_font();
         }
         id
     }
 
-    fn resolve_installed_font(&self, family: &str) -> Option<InstalledFontId> {
+    fn resolve_installed_font(&self, family: &str, face: &str) -> Option<InstalledFontId> {
         if self.refresh_system_fonts_if_expired() {
             // Unconditionally, not only when an installed family was resolved:
             // a selection that was already falling back has formats cached
@@ -130,22 +140,31 @@ impl RenderFactory {
             self.drop_font_caches();
         }
         // Verified against this very collection already: the usual answer.
+        // The face is part of the match — the id is what the format cache is
+        // keyed on, so another weight of the same family needs a new one.
         if let Some(resolved) = self.installed_font.borrow().as_ref() {
-            if resolved.family == family {
+            if resolved.family == family && resolved.face == face {
                 return Some(resolved.id);
             }
         }
-        {
+        let weight = {
             let fonts = self.system_fonts.borrow();
-            if !collection_has_family(&fonts.as_ref()?.collection, family) {
-                return None;
-            }
-        }
+            let faces = font_file::faces_in(&fonts.as_ref()?.collection, family)?;
+            // No weight picked, or one the family no longer has: asked for as
+            // normal, exactly as before weights could be picked, and
+            // DirectWrite's own matching settles the face — the one the
+            // settings pane shows selected (`FamilyFaces::default_face`).
+            faces.named(face).map_or(DWRITE_FONT_WEIGHT_NORMAL, |face| {
+                DWRITE_FONT_WEIGHT(face.weight)
+            })
+        };
         let id = InstalledFontId(self.next_installed_font_id.get().wrapping_add(1));
         self.next_installed_font_id.set(id.0);
         *self.installed_font.borrow_mut() = Some(ResolvedInstalledFont {
             id,
             family: family.to_owned(),
+            face: face.to_owned(),
+            weight,
         });
         self.drop_font_caches();
         Some(id)
@@ -425,6 +444,11 @@ struct ResolvedInstalledFont {
     /// The family a text format asks for. Out of `settings.json`: display it,
     /// never log it.
     family: String,
+    /// The stored face name this was resolved for — "" for the default face.
+    /// Out of `settings.json` too.
+    face: String,
+    /// The weight `face` drew as in this collection.
+    weight: DWRITE_FONT_WEIGHT,
 }
 
 /// One typeface out of the user's library, loaded.
@@ -528,14 +552,14 @@ impl RenderFactory {
         if let Some(format) = self.formats.borrow().get(&key) {
             return Ok(format.clone());
         }
-        let (collection, family_name) = self.face_of(font.selection);
+        let (collection, family_name, weight) = self.face_of(font.selection);
         let family = to_wide_nul(&family_name);
         // SAFETY: valid NUL-terminated strings; the collection is ours or none.
         let format = unsafe {
             self.dwrite.CreateTextFormat(
                 PCWSTR(family.as_ptr()),
                 collection.as_ref(),
-                DWRITE_FONT_WEIGHT_NORMAL,
+                weight,
                 DWRITE_FONT_STYLE_NORMAL,
                 DWRITE_FONT_STRETCH_NORMAL,
                 font.size,

@@ -88,6 +88,82 @@ pub fn system_families() -> Result<Vec<String>, FontFileError> {
     }
 }
 
+/// One weight of an installed family, as the Manage Typefaces pane offers it
+/// and the candidate window draws it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct FamilyFace {
+    /// The face name the family declares for it (`FAMILY_NAME_LOCALE`, else
+    /// its first) — what the pane shows and `installedFontFace` stores.
+    pub name: String,
+    /// `DWRITE_FONT_WEIGHT`, 1–999: what a text format asks for.
+    pub weight: i32,
+}
+
+/// The weights of one installed family, and which of them it draws in when no
+/// weight was picked.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct FamilyFaces {
+    /// Upright, normal-width and real (not simulated) faces only, so every one
+    /// is a WEIGHT of the family rather than an italic or a condensed cut —
+    /// lightest first, one per name (`ordered_faces`).
+    pub faces: Vec<FamilyFace>,
+    /// The name of the face DirectWrite matches for `DWRITE_FONT_WEIGHT_NORMAL`
+    /// — what a family with no weight picked has always drawn in, because that
+    /// is what the candidate window asks for then. Not necessarily one of
+    /// `faces` (a family whose normal match is condensed, say).
+    pub default_face: Option<String>,
+}
+
+impl FamilyFaces {
+    /// The face called `name`, when the family has it. "" names none.
+    pub fn named(&self, name: &str) -> Option<&FamilyFace> {
+        self.faces
+            .iter()
+            .find(|face| !name.is_empty() && face.name == name)
+    }
+
+    /// What the pane shows selected for the stored `name`: that face, or —
+    /// for "" (no weight picked) or a face the family no longer has — the one
+    /// the candidate window then draws (`default_face`). `None` when that is
+    /// not one of `faces`.
+    pub fn shown(&self, name: &str) -> Option<&FamilyFace> {
+        self.named(name).or_else(|| {
+            let default = self.default_face.as_deref()?;
+            self.faces.iter().find(|face| face.name == default)
+        })
+    }
+}
+
+/// The weights of `family` the OS has installed (`FamilyFaces`); empty when
+/// the OS has no such family.
+///
+/// What the Manage Typefaces pane offers for the selected installed family;
+/// the candidate window reads the same list out of its own collection
+/// (`faces_in`), so the two agree on what a stored name means.
+pub fn system_family_faces(family: &str) -> Result<FamilyFaces, FontFileError> {
+    #[cfg(windows)]
+    {
+        imp::system_family_faces(family)
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = family;
+        Err(FontFileError::NotAFont)
+    }
+}
+
+/// `faces` in weight order, one per name.
+///
+/// A family that names two upright, normal-width faces alike is malformed
+/// (OpenType requires subfamily names to be unique in a family); the lighter
+/// one is kept so a stored name always means the same face.
+pub fn ordered_faces(mut faces: Vec<FamilyFace>) -> Vec<FamilyFace> {
+    faces.sort_by_key(|face| face.weight);
+    let mut seen = std::collections::HashSet::new();
+    faces.retain(|face| seen.insert(face.name.clone()));
+    faces
+}
+
 /// The locale a family is named in for storage, display and lookup alike.
 ///
 /// One rule for every reader: the name `inspect` reads out of a file, the
@@ -99,18 +175,19 @@ pub fn system_families() -> Result<Vec<String>, FontFileError> {
 pub const FAMILY_NAME_LOCALE: &str = "en-us";
 
 #[cfg(windows)]
-pub use imp::{load, system_collection};
+pub use imp::{faces_in, load, system_collection};
 
 #[cfg(windows)]
 mod imp {
-    use super::{FontFaceInfo, FontFileError};
+    use super::{FamilyFace, FamilyFaces, FontFaceInfo, FontFileError};
     use std::path::Path;
     use windows::core::{Interface, BOOL, PCWSTR, PWSTR};
     use windows::Win32::Graphics::DirectWrite::{
         DWriteCreateFactory, IDWriteFactory3, IDWriteFontCollection1, IDWriteFontFamily,
         IDWriteFontFile, IDWriteFontSetBuilder1, IDWriteLocalizedStrings,
         DWRITE_FACTORY_TYPE_ISOLATED, DWRITE_FACTORY_TYPE_SHARED, DWRITE_FONT_FACE_TYPE_UNKNOWN,
-        DWRITE_FONT_FILE_TYPE_UNKNOWN,
+        DWRITE_FONT_FILE_TYPE_UNKNOWN, DWRITE_FONT_SIMULATIONS_NONE, DWRITE_FONT_STRETCH_NORMAL,
+        DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_WEIGHT_NORMAL,
     };
 
     /// The file's family as a collection of its own, plus its name.
@@ -188,11 +265,103 @@ mod imp {
         Ok(families)
     }
 
+    pub fn system_family_faces(family: &str) -> Result<FamilyFaces, FontFileError> {
+        // SHARED for the reason `system_families` is; nothing built here
+        // escapes either.
+        // SAFETY: plain factory creation on the calling thread.
+        let factory: IDWriteFactory3 =
+            unsafe { DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED) }.map_err(refused)?;
+        let collection = system_collection(&factory, true)?;
+        Ok(faces_in(&collection, family).unwrap_or_default())
+    }
+
+    /// `family`'s weights in `collection` (`super::system_family_faces`), or
+    /// `None` because the collection has no such family — the one lookup that
+    /// both checks the family and reads it.
+    /// A name with an embedded NUL is not one DirectWrite can be asked for —
+    /// it would be truncated into some other, valid name — so it is no family.
+    pub fn faces_in(collection: &IDWriteFontCollection1, family: &str) -> Option<FamilyFaces> {
+        if family.is_empty() || family.contains('\0') {
+            return None;
+        }
+        let name = super::to_wide_nul(family);
+        let mut index = 0_u32;
+        let mut exists = BOOL(0);
+        // SAFETY: a live NUL-terminated name and two live out-parameters.
+        let found =
+            unsafe { collection.FindFamilyName(PCWSTR(name.as_ptr()), &mut index, &mut exists) }
+                .is_ok()
+                && exists.as_bool();
+        if !found {
+            return None;
+        }
+        // SAFETY: `index` is the one `FindFamilyName` just answered with.
+        let Ok(family) = (unsafe { collection.GetFontFamily(index) }) else {
+            return None;
+        };
+        let family: &IDWriteFontFamily = &family;
+        // SAFETY: the family is live; the call only reads its count.
+        let count = unsafe { family.GetFontCount() };
+        let mut faces = Vec::with_capacity(count as usize);
+        for index in 0..count {
+            // SAFETY: `index` is inside the count read above.
+            let Ok(font) = (unsafe { family.GetFont(index) }) else {
+                continue;
+            };
+            // SAFETY: plain property reads on a live font.
+            let is_weight_of_family = unsafe {
+                font.GetStyle() == DWRITE_FONT_STYLE_NORMAL
+                    && font.GetStretch() == DWRITE_FONT_STRETCH_NORMAL
+                    && font.GetSimulations() == DWRITE_FONT_SIMULATIONS_NONE
+            };
+            if !is_weight_of_family {
+                continue;
+            }
+            // A face with no readable name is skipped rather than failing the
+            // list: nothing could store or show it.
+            // SAFETY: the font is live and owns the strings it hands back.
+            let Ok(names) = (unsafe { font.GetFaceNames() }) else {
+                continue;
+            };
+            if let Ok(name) = name_in_locale(&names) {
+                // SAFETY: a plain property read on a live font.
+                let weight = unsafe { font.GetWeight() }.0;
+                faces.push(FamilyFace { name, weight });
+            }
+        }
+        // The very request the candidate window makes with no weight picked
+        // (`ui::render::format_with`), so the face named here is the one it
+        // draws — DirectWrite's own weight/stretch/style distance, not a rule
+        // of ours that could pick a neighbour.
+        // SAFETY: the family is live; the call only matches among its fonts.
+        let default_face = unsafe {
+            family.GetFirstMatchingFont(
+                DWRITE_FONT_WEIGHT_NORMAL,
+                DWRITE_FONT_STRETCH_NORMAL,
+                DWRITE_FONT_STYLE_NORMAL,
+            )
+        }
+        .ok()
+        // SAFETY: the font is live and owns the strings it hands back.
+        .and_then(|font| unsafe { font.GetFaceNames() }.ok())
+        .and_then(|names| name_in_locale(&names).ok());
+        Some(FamilyFaces {
+            faces: super::ordered_faces(faces),
+            default_face,
+        })
+    }
+
     /// The name a family goes by everywhere in this program
     /// (`FAMILY_NAME_LOCALE`, else its first).
     pub(super) fn family_name_of(family: &IDWriteFontFamily) -> Result<String, FontFileError> {
         // SAFETY: the family is live and owns the strings it hands back.
         let names = unsafe { family.GetFamilyNames() }.map_err(refused)?;
+        name_in_locale(&names)
+    }
+
+    /// `names` in `FAMILY_NAME_LOCALE`, else its first — the one rule for a
+    /// family's name and a face's name alike.
+    fn name_in_locale(names: &IDWriteLocalizedStrings) -> Result<String, FontFileError> {
         let locale = super::to_wide_nul(super::FAMILY_NAME_LOCALE);
         let mut index = 0_u32;
         let mut exists = BOOL(0);
@@ -201,7 +370,7 @@ mod imp {
             unsafe { names.FindLocaleName(PCWSTR(locale.as_ptr()), &mut index, &mut exists) }
                 .is_ok()
                 && exists.as_bool();
-        localized_string(&names, if found { index } else { 0 })
+        localized_string(names, if found { index } else { 0 })
     }
 
     fn file_reference(
@@ -317,6 +486,68 @@ mod imp {
 #[cfg(windows)]
 fn to_wide_nul(text: &str) -> Vec<u16> {
     text.encode_utf16().chain(std::iter::once(0)).collect()
+}
+
+#[cfg(test)]
+mod face_tests {
+    use super::*;
+
+    fn face(name: &str, weight: i32) -> FamilyFace {
+        FamilyFace {
+            name: name.to_owned(),
+            weight,
+        }
+    }
+
+    fn light_regular_bold(default_face: Option<&str>) -> FamilyFaces {
+        FamilyFaces {
+            faces: vec![face("Light", 300), face("Regular", 400), face("Bold", 700)],
+            default_face: default_face.map(str::to_owned),
+        }
+    }
+
+    #[test]
+    fn faces_are_ordered_lightest_first_one_per_name() {
+        let faces = ordered_faces(vec![
+            face("Bold", 700),
+            face("Light", 300),
+            face("Regular", 400),
+            face("Bold", 800),
+        ]);
+
+        assert_eq!(
+            faces,
+            vec![face("Light", 300), face("Regular", 400), face("Bold", 700)],
+        );
+    }
+
+    #[test]
+    fn a_named_face_is_shown_as_itself() {
+        let faces = light_regular_bold(Some("Regular"));
+
+        assert_eq!(faces.named("Bold"), Some(&face("Bold", 700)));
+        assert_eq!(faces.shown("Bold"), Some(&face("Bold", 700)));
+    }
+
+    /// No weight picked, or one the family no longer has, shows the face
+    /// DirectWrite matches for normal — whichever weight that is.
+    #[test]
+    fn no_name_or_a_missing_one_shows_the_default_face() {
+        let faces = light_regular_bold(Some("Light"));
+
+        assert_eq!(faces.named(""), None);
+        assert_eq!(faces.shown(""), Some(&face("Light", 300)));
+        assert_eq!(faces.named("Black"), None);
+        assert_eq!(faces.shown("Black"), Some(&face("Light", 300)));
+    }
+
+    /// A default match that is not one of the offered weights shows none
+    /// selected rather than a neighbour that does not draw.
+    #[test]
+    fn a_default_face_outside_the_offered_weights_shows_none() {
+        assert_eq!(light_regular_bold(Some("Condensed")).shown(""), None);
+        assert_eq!(light_regular_bold(None).shown(""), None);
+    }
 }
 
 /// The collection `load` answers with has to survive being drawn: the caller's

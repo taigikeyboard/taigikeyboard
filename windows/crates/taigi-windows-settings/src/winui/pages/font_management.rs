@@ -18,6 +18,10 @@
 //! selected instead (USER 2026-09-11: "pop up a notice and jump to that typeface"); `−` is
 //! disabled on the bundled and installed rows — only a typeface the user added
 //! can leave the list.
+//!
+//! The list holds one row per family. Which WEIGHT of an installed family is a
+//! second, separate choice: a pop-up card under the list, shown only while the
+//! selected family has more than one (Discord report 2026-09-28).
 
 use super::super::cards;
 use super::super::list_pager::{self, icon_button};
@@ -26,13 +30,14 @@ use super::super::window::{Message as WindowMessage, SettingsWindow};
 use crate::presentation::strings_for;
 use crate::winui::file_dialog;
 use taigi_desktop_core::settings::presentation::PageMessage;
+use taigi_desktop_core::settings::SettingsDocument;
 use taigi_desktop_core::settings::{
     set_stored_font_selection, stored_font_selection, CandidateFontChoice, SettingChoice,
     StoredFontSelection,
 };
 use taigi_desktop_core::strings::{StringKey, StringResolver};
 use taigi_desktop_storage::{self as storage, SettingsWriter};
-use taigi_windows_platform::font_file;
+use taigi_windows_platform::font_file::{self, FamilyFace, FamilyFaces};
 use unicode_normalization::UnicodeNormalization;
 use windows_reactor::*;
 
@@ -95,6 +100,9 @@ pub struct FontManagementModel {
     /// Which rows the list on screen holds, so the selection index reaches
     /// XAML a render after the row it names does (`list_selection`).
     settled: SettledRows,
+    /// The weights of the stored installed family, with the family they are
+    /// of, as the last read found them (`sync_faces`).
+    faces: Option<(String, FamilyFaces)>,
 }
 
 impl FontManagementModel {
@@ -120,7 +128,7 @@ impl FontManagementModel {
         }
         self.installed_families
             .get(index - self.custom_fonts.len())
-            .map(|family| StoredFontSelection::Installed(family.name.clone()))
+            .map(|family| StoredFontSelection::installed_family(family.name.clone()))
     }
 
     /// The row `index` as the list shows it.
@@ -131,7 +139,7 @@ impl FontManagementModel {
             // The stored file's name — text the user chose: shown, never
             // trusted.
             StoredFontSelection::Custom(file_name) => displayed_name(file_name).to_owned(),
-            StoredFontSelection::Installed(family) => family.clone(),
+            StoredFontSelection::Installed { family, .. } => family.clone(),
         };
         Some(Row { title, selection })
     }
@@ -201,9 +209,10 @@ impl FontManagementModel {
     /// would hide it.
     fn show(&mut self, selection: &StoredFontSelection) {
         self.filter.clear();
-        if let Some(index) = (0..self.row_count())
-            .find(|&index| self.selection_at(index).as_ref() == Some(selection))
-        {
+        if let Some(index) = (0..self.row_count()).find(|&index| {
+            self.selection_at(index)
+                .is_some_and(|row| row.is_same_typeface(selection))
+        }) {
             self.page = index / PAGE_SIZE;
         }
     }
@@ -212,6 +221,55 @@ impl FontManagementModel {
         self.installed_families
             .iter()
             .any(|installed| installed.name == family)
+    }
+
+    /// The stored family's weights and which one the pop-up shows — the stored
+    /// face, or for "" or a face it no longer has the one the candidate window
+    /// then draws (`FamilyFaces::shown`) — none selected when that is not one
+    /// of the weights. `None` unless an installed family with more than one
+    /// weight is stored.
+    fn weight_choice(
+        &self,
+        stored: &StoredFontSelection,
+    ) -> Option<(&[FamilyFace], Option<usize>)> {
+        let StoredFontSelection::Installed { family, face } = stored else {
+            return None;
+        };
+        let faces = self
+            .faces_of(family)
+            .filter(|faces| faces.faces.len() > 1)?;
+        let shown = faces
+            .shown(face)
+            .and_then(|shown| faces.faces.iter().position(|candidate| candidate == shown));
+
+        Some((&faces.faces, shown))
+    }
+
+    /// What picking weight `index` stores, or `None` when it is the weight
+    /// already shown — the pop-up echoing the index this pane set, which must
+    /// not turn a "" (default face) preference into an explicit one.
+    fn face_selection(
+        &self,
+        stored: &StoredFontSelection,
+        index: usize,
+    ) -> Option<StoredFontSelection> {
+        let (faces, shown) = self.weight_choice(stored)?;
+        let StoredFontSelection::Installed { family, .. } = stored else {
+            return None;
+        };
+        let picked = faces.get(index).filter(|_| Some(index) != shown)?;
+        Some(StoredFontSelection::Installed {
+            family: family.clone(),
+            face: picked.name.clone(),
+        })
+    }
+
+    /// `family`'s weights, when the last read was of that family.
+    fn faces_of(&self, family: &str) -> Option<&FamilyFaces> {
+        self.faces
+            .as_ref()
+            .filter(|(of, _)| of == family)
+            .map(|(_, faces)| faces)
     }
 }
 
@@ -229,7 +287,7 @@ impl Row {
         match &self.selection {
             StoredFontSelection::BuiltIn(choice) => format!("builtIn.{}", choice.raw()),
             StoredFontSelection::Custom(file_name) => format!("custom.{file_name}"),
-            StoredFontSelection::Installed(family) => format!("installed.{family}"),
+            StoredFontSelection::Installed { family, .. } => format!("installed.{family}"),
         }
     }
 }
@@ -246,6 +304,9 @@ pub enum Message {
     /// The list's selection moved: the row's index, or `None` when the list
     /// cleared it (which writes nothing — a typeface is always in use).
     Select(Option<usize>),
+    /// The weight pop-up's selection moved: an index into the stored
+    /// family's faces, or `None` when it cleared it (which writes nothing).
+    SelectFace(Option<usize>),
     Add,
     Remove,
     /// The search box's text moved.
@@ -269,9 +330,31 @@ pub struct PageEnvironment<'a> {
 /// and enumerating the OS's are not free, and a user who never opens this pane
 /// should never pay for them, which is the same reason the DLL loads only the
 /// SELECTED typeface.
-pub fn on_enter(model: &mut FontManagementModel) {
+pub fn on_enter(model: &mut FontManagementModel, document: &SettingsDocument) {
     reload_installed(model);
     reload_custom(model);
+    model.faces = None;
+    sync_faces(model, document);
+}
+
+/// Reads the weights of the stored family when it is an installed one the
+/// last read was not of — called after every message, so a newly selected
+/// family brings its weights with it. Only the SELECTED family's: reading
+/// every family's faces would be the enumeration `on_enter` is careful to
+/// keep cheap. A failed read lists none, and the pop-up stays hidden.
+pub fn sync_faces(model: &mut FontManagementModel, document: &SettingsDocument) {
+    let StoredFontSelection::Installed { family, .. } = stored_font_selection(document) else {
+        model.faces = None;
+        return;
+    };
+    if model.faces_of(&family).is_some() {
+        return;
+    }
+    let faces = font_file::system_family_faces(&family).unwrap_or_else(|error| {
+        log::warn!("fonts.family_faces_unavailable error={error}");
+        FamilyFaces::default()
+    });
+    model.faces = Some((family, faces));
 }
 
 pub fn update(model: &mut FontManagementModel, message: Message, environment: PageEnvironment<'_>) {
@@ -296,7 +379,15 @@ pub fn update(model: &mut FontManagementModel, message: Message, environment: Pa
                     .update(|document| set_stored_font_selection(document, &row.selection));
             }
         }
-        Message::Select(None) => {}
+        Message::Select(None) | Message::SelectFace(None) => {}
+        Message::SelectFace(Some(index)) => {
+            let stored = stored_font_selection(environment.settings.document());
+            if let Some(selection) = model.face_selection(&stored, index) {
+                environment
+                    .settings
+                    .update(|document| set_stored_font_selection(document, &selection));
+            }
+        }
         Message::Add => add(model, environment),
         Message::Remove => remove(model, environment),
         Message::FilterChanged(filter) => {
@@ -338,7 +429,7 @@ fn add(model: &mut FontManagementModel, environment: PageEnvironment<'_>) {
             return;
         }
     };
-    if matches!(selection, StoredFontSelection::Installed(_)) {
+    if matches!(selection, StoredFontSelection::Installed { .. }) {
         *environment.message = Some(PageMessage::Done(
             StringKey::DesktopCustomFontAlreadyInstalled,
         ));
@@ -371,7 +462,7 @@ fn take_in(
     if model.has_installed(&info.family_name) {
         storage::remove_stored(&directory, &stored)
             .map_err(|removal| format!("the copy could not be removed: {removal}"))?;
-        return Ok(StoredFontSelection::Installed(info.family_name));
+        return Ok(StoredFontSelection::installed_family(info.family_name));
     }
     Ok(StoredFontSelection::Custom(stored))
 }
@@ -470,7 +561,9 @@ pub fn view(
     } = model.visible_rows(strings);
     // Over the VISIBLE rows: the stored selection stays put while the search
     // or the pager hides its row, and the list then shows no selection.
-    let selected = rows.iter().position(|row| row.selection == stored);
+    let selected = rows
+        .iter()
+        .position(|row| row.selection.is_same_typeface(&stored));
     let is_enabled = !window.is_read_only();
     let can_remove = is_enabled && model.removable_custom_file(&stored, strings).is_some();
     let items = rows
@@ -502,41 +595,67 @@ pub fn view(
         context,
         |rows| WindowMessage::FontManagement(Message::RowsApplied(rows)),
     );
-    View::fragment((cards::frame(View::fragment((
-        missing_note(model, &stored, strings),
-        TextBox::new()
-            .text(model.filter.clone())
-            .is_enabled(is_enabled)
-            .placeholder_text(strings.resolve(StringKey::DictionarySearchPlaceholder))
-            .margin(Thickness::new(0.0, 0.0, 0.0, list_pager::CONTROL_GAP))
-            .on_text_changed(
-                context
-                    .callback(|text| WindowMessage::FontManagement(Message::FilterChanged(text))),
-            ),
-        list,
-        list_pager::bar(
-            (
-                icon_button(
-                    list_pager::ADD_GLYPH,
-                    strings.resolve(StringKey::DesktopCustomFontAdd),
-                    is_enabled,
-                    context.callback(|()| WindowMessage::FontManagement(Message::Add)),
+    View::fragment((
+        cards::frame(View::fragment((
+            missing_note(model, &stored, strings),
+            TextBox::new()
+                .text(model.filter.clone())
+                .is_enabled(is_enabled)
+                .placeholder_text(strings.resolve(StringKey::DictionarySearchPlaceholder))
+                .margin(Thickness::new(0.0, 0.0, 0.0, list_pager::CONTROL_GAP))
+                .on_text_changed(
+                    context.callback(|text| {
+                        WindowMessage::FontManagement(Message::FilterChanged(text))
+                    }),
                 ),
-                icon_button(
-                    list_pager::REMOVE_GLYPH,
-                    strings.resolve(StringKey::CommonDelete),
-                    can_remove,
-                    context.callback(|()| WindowMessage::FontManagement(Message::Remove)),
+            list,
+            list_pager::bar(
+                (
+                    icon_button(
+                        list_pager::ADD_GLYPH,
+                        strings.resolve(StringKey::DesktopCustomFontAdd),
+                        is_enabled,
+                        context.callback(|()| WindowMessage::FontManagement(Message::Add)),
+                    ),
+                    icon_button(
+                        list_pager::REMOVE_GLYPH,
+                        strings.resolve(StringKey::CommonDelete),
+                        can_remove,
+                        context.callback(|()| WindowMessage::FontManagement(Message::Remove)),
+                    ),
                 ),
+                page,
+                page_count,
+                is_enabled,
+                strings,
+                context,
+                |page| WindowMessage::FontManagement(Message::ShowPage(page)),
             ),
-            page,
-            page_count,
-            is_enabled,
-            strings,
-            context,
-            |page| WindowMessage::FontManagement(Message::ShowPage(page)),
-        ),
-    ))),))
+        ))),
+        weight_row(model, &stored, is_enabled, strings, context),
+    ))
+}
+
+/// The pop-up of the selected installed family's weights, or nothing while
+/// the selection has no weight to pick (`FontManagementModel::weight_choice`).
+fn weight_row(
+    model: &FontManagementModel,
+    stored: &StoredFontSelection,
+    is_enabled: bool,
+    strings: &StringResolver,
+    context: &mut ViewContext<SettingsWindow>,
+) -> View {
+    let Some((faces, shown)) = model.weight_choice(stored) else {
+        return View::empty();
+    };
+    cards::choice_row(
+        strings.resolve(StringKey::DesktopFontWeight),
+        // The names the font declares — its own words, not translated.
+        faces.iter().map(|face| face.name.clone()).collect(),
+        shown,
+        is_enabled,
+        context.callback(|index| WindowMessage::FontManagement(Message::SelectFace(index))),
+    )
 }
 
 /// The selected typeface's file is gone or stopped being one this Windows can
@@ -555,7 +674,7 @@ fn missing_note(
             .custom_fonts
             .iter()
             .any(|font| &font.file_name == file_name),
-        StoredFontSelection::Installed(family) => !model.has_installed(family),
+        StoredFontSelection::Installed { family, .. } => !model.has_installed(family),
     };
     if !is_missing {
         return View::empty();
@@ -710,10 +829,7 @@ mod tests {
             Some("mine.ttf".to_owned())
         );
         assert_eq!(
-            model.removable_custom_file(
-                &StoredFontSelection::Installed("Arial".to_owned()),
-                &strings
-            ),
+            model.removable_custom_file(&StoredFontSelection::installed_family("Arial"), &strings),
             None,
         );
         assert_eq!(
@@ -792,6 +908,122 @@ mod tests {
         assert!(visible.rows.is_empty());
     }
 
+    fn face(name: &str, weight: i32) -> FamilyFace {
+        FamilyFace {
+            name: name.to_owned(),
+            weight,
+        }
+    }
+
+    fn arial_with_weights() -> FontManagementModel {
+        FontManagementModel {
+            installed_families: installed(&["Arial"]),
+            faces: Some((
+                "Arial".to_owned(),
+                FamilyFaces {
+                    faces: vec![face("Light", 300), face("Regular", 400), face("Bold", 700)],
+                    default_face: Some("Regular".to_owned()),
+                },
+            )),
+            ..FontManagementModel::default()
+        }
+    }
+
+    fn arial_at(face: &str) -> StoredFontSelection {
+        StoredFontSelection::Installed {
+            family: "Arial".to_owned(),
+            face: face.to_owned(),
+        }
+    }
+
+    /// The family's row stays the selected one at any weight, and no
+    /// "missing" note shows for a weight that is there.
+    #[test]
+    fn a_family_at_another_weight_keeps_its_row_selected() {
+        let model = arial_with_weights();
+        let stored = arial_at("Bold");
+
+        let row = all_rows(&model)
+            .into_iter()
+            .position(|row| row.selection.is_same_typeface(&stored));
+
+        assert_eq!(row, Some(CandidateFontChoice::ALL.len()));
+    }
+
+    /// No weight picked shows the default face; a picked one shows itself; a
+    /// weight the family no longer has shows the default face, as it draws.
+    #[test]
+    fn the_weight_pop_up_shows_what_the_candidate_window_draws() {
+        let model = arial_with_weights();
+
+        let shown = |face| {
+            model
+                .weight_choice(&arial_at(face))
+                .and_then(|(_, index)| index)
+        };
+
+        assert_eq!(shown(""), Some(1));
+        assert_eq!(shown("Bold"), Some(2));
+        assert_eq!(shown("Black"), Some(1));
+    }
+
+    /// Picking another weight stores it; the pop-up echoing the weight it
+    /// already shows stores nothing, so "" is never rewritten behind the
+    /// user's back.
+    #[test]
+    fn picking_a_weight_stores_it_and_an_echo_stores_nothing() {
+        let model = arial_with_weights();
+
+        assert_eq!(
+            model.face_selection(&arial_at(""), 2),
+            Some(arial_at("Bold"))
+        );
+        assert_eq!(model.face_selection(&arial_at(""), 1), None);
+        assert_eq!(model.face_selection(&arial_at("Bold"), 2), None);
+        assert_eq!(model.face_selection(&arial_at(""), 9), None);
+    }
+
+    /// A family whose normal match is none of the offered weights shows none
+    /// selected — not a neighbour it does not draw — and any pick stores.
+    #[test]
+    fn a_default_match_outside_the_weights_shows_none_and_any_pick_stores() {
+        let mut model = arial_with_weights();
+        if let Some((_, faces)) = model.faces.as_mut() {
+            faces.default_face = Some("Condensed".to_owned());
+        }
+
+        assert_eq!(
+            model.weight_choice(&arial_at("")).map(|(_, index)| index),
+            Some(None),
+        );
+        assert_eq!(
+            model.face_selection(&arial_at(""), 1),
+            Some(arial_at("Regular"))
+        );
+    }
+
+    /// No pop-up for a family with one weight, for weights read for another
+    /// family, or for any other kind of typeface.
+    #[test]
+    fn the_weight_pop_up_needs_an_installed_family_with_weights() {
+        let mut model = arial_with_weights();
+        assert!(model
+            .weight_choice(&StoredFontSelection::installed_family("Verdana"))
+            .is_none());
+        assert!(model
+            .weight_choice(&StoredFontSelection::BuiltIn(CandidateFontChoice::Iansui))
+            .is_none());
+
+        model.faces = Some((
+            "Arial".to_owned(),
+            FamilyFaces {
+                faces: vec![face("Regular", 400)],
+                default_face: Some("Regular".to_owned()),
+            },
+        ));
+        assert!(model.weight_choice(&arial_at("")).is_none());
+    }
+
     /// Sending the user to a row clears the search and turns to its page.
     #[test]
     fn show_clears_the_search_and_turns_to_the_rows_page() {
@@ -802,7 +1034,7 @@ mod tests {
             ..FontManagementModel::default()
         };
 
-        model.show(&StoredFontSelection::Installed("Family 16".to_owned()));
+        model.show(&StoredFontSelection::installed_family("Family 16"));
 
         assert_eq!(model.filter, "");
         assert_eq!(

@@ -219,6 +219,15 @@ pub const CUSTOM_FONT_FILE: SettingsKey<&'static str> = SettingsKey::new("custom
 pub const INSTALLED_FONT_FAMILY: SettingsKey<&'static str> =
     SettingsKey::new("installedFontFamily", "");
 
+/// Which weight of `installedFontFamily` the candidate window is set in, by
+/// the face name the OS reports for it ("Light", "Bold", "W3"). Read only
+/// beside an installed family; "" is the family's default face — what every
+/// installed selection drew before this key existed. Desktop-only and local
+/// like the family. macOS keeps a Swift twin: `SettingsStore.swift`'s
+/// `installedFontFace`.
+pub const INSTALLED_FONT_FACE: SettingsKey<&'static str> =
+    SettingsKey::new("installedFontFace", "");
+
 /// Which keys type a tone, and so which keys pick a candidate
 /// (`ToneInputScheme`). Desktop-only: the phone keyboards have a tone row of
 /// their own and no slot keys, so the default is owned by the key contract
