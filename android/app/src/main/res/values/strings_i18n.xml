@@ -107,6 +107,7 @@
     <string name="i18n_dictionary_sttiTag">學科術語</string>
     <string name="i18n_dictionary_lkkTag">漢羅合用</string>
     <string name="i18n_dictionary_clearLearningRecords">刪除學習紀錄</string>
+    <string name="i18n_dictionary_clearLearningRecordsMessage">確定欲刪除所有學習紀錄？袂影響自訂詞。</string>
     <string name="i18n_dictionary_clearLearningRecordsDone">學習紀錄已經刪掉</string>
     <string name="i18n_dictionary_clearLearningRecordsFailed">學習紀錄刪失敗</string>
     <string name="i18n_dictionary_learningRecords">學習紀錄</string>

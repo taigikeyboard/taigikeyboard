@@ -2,10 +2,10 @@
 //
 // The Custom Dictionary page's shape (`CustomDictionaryPage.swift`) over the
 // engine's learning stores: a kind and an order picker over a filter, a paged
-// table, a count sheet and `−`. Nothing is added here by hand — a word the
-// user wants is a custom word, so a listed row's word can be filed there (Add
-// to Custom Dictionary) — and no wipe: Delete Learning Records stays on Custom
-// Dictionary.
+// table, a count sheet and `−`, then Delete Learning Records, which empties
+// every learning store whichever kind is on screen. Nothing is added here by
+// hand — a word the user wants is a custom word, so a listed row's word can be
+// filed there (Add to Custom Dictionary).
 // Design: `docs/architecture/learning-records-page-roadmap.md`.
 
 import SwiftUI
@@ -56,6 +56,11 @@ final class LearningRecordsPageModel {
     }
 
     var message: UserDataPageMessage?
+
+    /// Delete Learning Records is waiting on its confirmation; the dialog's
+    /// Cancel, Escape and dismissal set this back to false. Asked first for
+    /// Custom Dictionary's Delete All reason (`isConfirmingDeleteAll`).
+    var isConfirmingClearAll = false
 
     /// The table's selection, held by the list so a load drops it once its
     /// row is off screen (`UserDataPagedList.selectedID`).
@@ -130,17 +135,58 @@ final class LearningRecordsPageModel {
         }
     }
 
+    /// Asks before Delete Learning Records runs. Nothing to ask while the
+    /// page is busy — it could not start anyway.
+    func askClearAll() {
+        guard !activity.isWorking else { return }
+        isConfirmingClearAll = true
+    }
+
+    /// Runs Delete Learning Records once confirmed, at most once. The flag is
+    /// taken synchronously, before the dialog's dismissal writes false through
+    /// its binding (`CustomDictionaryPageModel.confirmDeleteAll`). The
+    /// returned task is what a test awaits.
+    @discardableResult
+    func confirmClearAll() -> Task<Void, Never>? {
+        guard isConfirmingClearAll else { return nil }
+        isConfirmingClearAll = false
+        return Task { await clearAll() }
+    }
+
+    /// Empties every learning store — word frequency, learned phrases, and the
+    /// next-word association no page lists — in one request: the engine
+    /// attempts each even when an earlier one fails, and the alert reports the
+    /// failure rather than claiming the records are gone. The list reloads
+    /// either way, as desktop-core's `clear_all_job` asks.
+    func clearAll() async {
+        await perform(
+            receipt: .done(.dictionaryClearLearningRecordsDone),
+            failure: .dictionaryClearLearningRecordsFailed,
+        ) {
+            try $0.clearLearningRecords()
+            return true
+        }
+    }
+
+    /// Claims the page's one work slot (`CustomDictionaryPageModel.beginWork`).
+    /// Internal so a test can hold the slot and see a write refused.
+    func beginWork() -> Bool {
+        activity.begin(.desktopProgressWorking)
+    }
+
     /// Runs one write and reloads, whatever it answered: the row moved, went,
     /// or was never there. A row already gone — deleted elsewhere, evicted,
     /// its id taken by another word — is said, not reported as a failure; a
-    /// write that landed says `receipt`, when it has one.
+    /// write that landed says `receipt`, when it has one, and one that failed
+    /// is titled `failure`.
     /// One write at a time, as on Custom Dictionary
     /// (`CustomDictionaryPageModel.beginWork`).
     private func perform(
         receipt: UserDataPageMessage? = nil,
+        failure: StringKey = .dictionaryLearningRecordsWriteFailed,
         _ write: @escaping @Sendable (any UserDataClient) throws -> Bool,
     ) async {
-        guard activity.begin(.desktopProgressWorking) else { return }
+        guard beginWork() else { return }
         defer { activity = .idle }
         do {
             if try await UserDataRequests.run(on: client, write) == false {
@@ -149,7 +195,7 @@ final class LearningRecordsPageModel {
                 message = receipt
             }
         } catch {
-            message = .failure(.dictionaryLearningRecordsWriteFailed, error)
+            message = .failure(failure, error)
         }
         await load()
     }
@@ -210,8 +256,28 @@ struct LearningRecordsPage: View {
                         .foregroundStyle(.secondary)
                 }
             }
+
+            Section {
+                WideActionRow(titleKey: .dictionaryClearLearningRecords, role: .destructive) {
+                    model.askClearAll()
+                }
+            }
         }
         .formStyle(.grouped)
+        // A confirmation dialog, not a second `.alert`: the chrome's alert is
+        // the page's one alert (`CustomDictionaryPage`). Delete is the
+        // destructive button; Cancel, Escape and a dismissal leave the stores
+        // alone.
+        .confirmationDialog(
+            language.string(.dictionaryClearLearningRecords),
+            isPresented: $model.isConfirmingClearAll,
+            titleVisibility: .visible,
+        ) {
+            Button(language.string(.commonDelete), role: .destructive) { model.confirmClearAll() }
+            Button(language.string(.commonCancel), role: .cancel) {}
+        } message: {
+            Text(language.string(.dictionaryClearLearningRecordsMessage))
+        }
         .reloadWhenFilterSettles(model.filter) { await model.loadFirstPage() }
         .onChange(of: model.kind) { showFromFirstPage() }
         .onChange(of: model.order) { showFromFirstPage() }

@@ -8,7 +8,7 @@
 //! Design: `docs/architecture/learning-records-page-roadmap.md`.
 
 use super::listing::{self, JobOutcome, ListedRow, LoadRequest, PAGE_SIZE};
-use super::presentation::PageMessage;
+use super::presentation::{Confirmation, PageMessage};
 use crate::engine::user_data::{
     self, LearningRecord, LearningRecordKind, LearningRecordOrder, LearningRecordPage,
     UserDataError,
@@ -92,12 +92,17 @@ pub fn set_count_job(record: LearningRecord, count: i64) -> JobOutcome {
     applied(
         user_data::set_learning_record_count(record, count).map(|stored| stored.is_some()),
         None,
+        LearningRecord::WRITE_FAILED,
     )
 }
 
 /// Forgets `record`; the keyboard learns it again on the next pick.
 pub fn delete_job(record: LearningRecord) -> JobOutcome {
-    applied(user_data::delete_learning_record(record), None)
+    applied(
+        user_data::delete_learning_record(record),
+        None,
+        LearningRecord::WRITE_FAILED,
+    )
 }
 
 /// Makes `record`'s word a custom word; the receipt says where it went — the
@@ -107,18 +112,43 @@ pub fn add_to_custom_dictionary_job(record: LearningRecord) -> JobOutcome {
     applied(
         user_data::add_learning_record_to_custom_dictionary(record).map(|()| true),
         Some(StringKey::DictionaryLearningRecordsAddedToCustomDictionary),
+        LearningRecord::WRITE_FAILED,
+    )
+}
+
+/// Delete Learning Records asks first (`Confirmation` says why); the line
+/// under the title says the custom words stay.
+pub const CLEAR_ALL: Confirmation = Confirmation {
+    title: StringKey::DictionaryClearLearningRecords,
+    message: StringKey::DictionaryClearLearningRecordsMessage,
+};
+
+/// Empties every learning table — word frequency, learned phrases, and the
+/// next-word association no page lists — whichever kind is on screen. Three
+/// files, no transaction that could span them; the engine attempts each even
+/// when an earlier one fails, and the notice reports rather than claims. The
+/// list reloads either way: what it shows is what the stores still hold.
+pub fn clear_all_job() -> JobOutcome {
+    applied(
+        user_data::clear_learning_records().map(|()| true),
+        Some(StringKey::DictionaryClearLearningRecordsDone),
+        StringKey::DictionaryClearLearningRecordsFailed,
     )
 }
 
 /// Every write reloads: the row was added, went, or was never there. A write
-/// that landed says `receipt`, when it has one; a row already gone (deleted
-/// elsewhere, evicted, its id taken by another word) is said, not reported
-/// as a failure.
-fn applied(result: Result<bool, UserDataError>, receipt: Option<StringKey>) -> JobOutcome {
+/// that landed says `receipt`, when it has one, and one that failed is
+/// titled `failure`; a row already gone (deleted elsewhere, evicted, its id
+/// taken by another word) is said, not reported as a failure.
+fn applied(
+    result: Result<bool, UserDataError>,
+    receipt: Option<StringKey>,
+    failure: StringKey,
+) -> JobOutcome {
     let message = match result {
         Ok(true) => receipt.map(PageMessage::Done),
         Ok(false) => Some(PageMessage::Done(StringKey::DictionaryLearningRecordGone)),
-        Err(error) => Some(PageMessage::failure(LearningRecord::WRITE_FAILED, error)),
+        Err(error) => Some(PageMessage::failure(failure, error)),
     };
     JobOutcome {
         message,
@@ -216,7 +246,8 @@ mod tests {
         assert_eq!(
             applied(
                 Ok(true),
-                Some(StringKey::DictionaryLearningRecordsAddedToCustomDictionary)
+                Some(StringKey::DictionaryLearningRecordsAddedToCustomDictionary),
+                LearningRecord::WRITE_FAILED,
             ),
             JobOutcome {
                 message: Some(PageMessage::Done(
@@ -231,6 +262,7 @@ mod tests {
                 detail: "custom dictionary is full (max 30000 entries)".to_owned(),
             }),
             Some(StringKey::DictionaryLearningRecordsAddedToCustomDictionary),
+            LearningRecord::WRITE_FAILED,
         );
         assert!(refused.is_reload_wanted);
         assert_eq!(
@@ -243,21 +275,55 @@ mod tests {
     }
 
     #[test]
+    fn delete_learning_records_reloads_whether_or_not_every_store_emptied() {
+        let done = applied(
+            Ok(true),
+            Some(StringKey::DictionaryClearLearningRecordsDone),
+            StringKey::DictionaryClearLearningRecordsFailed,
+        );
+        assert_eq!(
+            done,
+            JobOutcome {
+                message: Some(PageMessage::Done(
+                    StringKey::DictionaryClearLearningRecordsDone
+                )),
+                is_reload_wanted: true,
+            }
+        );
+        // A store that could not be emptied is reported; the list still
+        // reloads to what the others now hold.
+        let failed = applied(
+            Err(UserDataError::EngineUnavailable("resetUserData")),
+            Some(StringKey::DictionaryClearLearningRecordsDone),
+            StringKey::DictionaryClearLearningRecordsFailed,
+        );
+        assert!(failed.is_reload_wanted);
+        assert!(matches!(
+            failed.message,
+            Some(PageMessage::Failure {
+                title: StringKey::DictionaryClearLearningRecordsFailed,
+                ..
+            })
+        ));
+    }
+
+    #[test]
     fn a_write_reloads_and_says_a_missing_row_without_calling_it_a_failure() {
         assert_eq!(
-            applied(Ok(true), None),
+            applied(Ok(true), None, LearningRecord::WRITE_FAILED),
             JobOutcome {
                 message: None,
                 is_reload_wanted: true
             }
         );
         assert_eq!(
-            applied(Ok(false), None).message,
+            applied(Ok(false), None, LearningRecord::WRITE_FAILED).message,
             Some(PageMessage::Done(StringKey::DictionaryLearningRecordGone))
         );
         let failed = applied(
             Err(UserDataError::EngineUnavailable("learningRecordDelete")),
             None,
+            LearningRecord::WRITE_FAILED,
         );
         assert!(failed.is_reload_wanted);
         assert!(matches!(

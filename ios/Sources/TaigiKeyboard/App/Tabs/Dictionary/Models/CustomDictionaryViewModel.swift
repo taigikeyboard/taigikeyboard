@@ -52,12 +52,6 @@ final class CustomDictionaryViewModel: ObservableObject {
         await load()
     }
 
-    /// Empties the learning stores (frequency, association, learned phrases);
-    /// the custom words stay, so the list needs no reload.
-    func clearLearningRecords() async throws {
-        try await userData.clearLearningRecords()
-    }
-
     func exportCSV() async throws -> String {
         try await String(decoding: userData.exportCSV(), as: UTF8.self)
     }

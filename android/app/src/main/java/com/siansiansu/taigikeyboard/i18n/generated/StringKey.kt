@@ -114,6 +114,7 @@ enum class StringKey(
     DICTIONARY_STTI_TAG(R.string.i18n_dictionary_sttiTag),
     DICTIONARY_LKK_TAG(R.string.i18n_dictionary_lkkTag),
     DICTIONARY_CLEAR_LEARNING_RECORDS(R.string.i18n_dictionary_clearLearningRecords),
+    DICTIONARY_CLEAR_LEARNING_RECORDS_MESSAGE(R.string.i18n_dictionary_clearLearningRecordsMessage),
     DICTIONARY_CLEAR_LEARNING_RECORDS_DONE(R.string.i18n_dictionary_clearLearningRecordsDone),
     DICTIONARY_CLEAR_LEARNING_RECORDS_FAILED(R.string.i18n_dictionary_clearLearningRecordsFailed),
     DICTIONARY_LEARNING_RECORDS(R.string.i18n_dictionary_learningRecords),

@@ -107,6 +107,7 @@
     <string name="i18n_dictionary_sttiTag">学術用語</string>
     <string name="i18n_dictionary_lkkTag">漢羅併用</string>
     <string name="i18n_dictionary_clearLearningRecords">学習記録を削除</string>
+    <string name="i18n_dictionary_clearLearningRecordsMessage">すべての学習記録を削除しますか？カスタム単語には影響しません。</string>
     <string name="i18n_dictionary_clearLearningRecordsDone">学習記録を消去しました</string>
     <string name="i18n_dictionary_clearLearningRecordsFailed">学習記録を消去できませんでした</string>
     <string name="i18n_dictionary_learningRecords">学習記録</string>

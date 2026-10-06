@@ -106,6 +106,7 @@ enum StringKey: String {
     case dictionarySttiTag = "i18n_dictionary_sttiTag"
     case dictionaryLkkTag = "i18n_dictionary_lkkTag"
     case dictionaryClearLearningRecords = "i18n_dictionary_clearLearningRecords"
+    case dictionaryClearLearningRecordsMessage = "i18n_dictionary_clearLearningRecordsMessage"
     case dictionaryClearLearningRecordsDone = "i18n_dictionary_clearLearningRecordsDone"
     case dictionaryClearLearningRecordsFailed = "i18n_dictionary_clearLearningRecordsFailed"
     case dictionaryLearningRecords = "i18n_dictionary_learningRecords"

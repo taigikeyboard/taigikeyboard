@@ -3,9 +3,9 @@
 //! learning stores: a kind picker (word frequency, phrases) and an order
 //! picker over a filter, rows fetched one PAGE at a time (10), a list whose
 //! selection drives the edit-count / delete pair — plus Add to Custom
-//! Dictionary — and the pager under it. No add — a word
-//! the user wants is a custom word — and no wipe here: the one destructive
-//! verb for every learning record stays on Custom Dictionary.
+//! Dictionary — and the pager under it, then Delete Learning Records under
+//! the card: it empties every learning store, whichever kind is on screen,
+//! and asks first. No add — a word the user wants is a custom word.
 //!
 //! The listing rules and every job body are
 //! `taigi_desktop_core::settings::learning_records`'s, shared with the
@@ -26,8 +26,8 @@ use taigi_desktop_core::engine::user_data::{
     LearningRecord, LearningRecordKind, LearningRecordOrder, LearningRecordPage,
 };
 use taigi_desktop_core::settings::learning_records::{
-    add_to_custom_dictionary_job, count_note, delete_job, fetch, last_used_label, order_label,
-    set_count_job, whole_count, Listing, KINDS, MAX_COUNT, ORDERS,
+    add_to_custom_dictionary_job, clear_all_job, count_note, delete_job, fetch, last_used_label,
+    order_label, set_count_job, whole_count, Listing, CLEAR_ALL, KINDS, MAX_COUNT, ORDERS,
 };
 use taigi_desktop_core::settings::listing::{JobOutcome, JobState, LoadLanded, FILTER_SETTLE};
 use taigi_desktop_core::settings::presentation::PageMessage;
@@ -67,6 +67,10 @@ pub enum Message {
     /// The count field's value; `None` while it is cleared.
     CountChanged(Option<f64>),
     CountDialogClosed(ContentDialogResult),
+    /// Delete Learning Records asking for its confirmation (`Confirmation`
+    /// says why it asks).
+    AskClearAll,
+    ConfirmClosed(ContentDialogResult),
     JobFinished(u64, Box<JobOutcome>),
     /// The job at this generation has run long enough to say so.
     ShowBusy(u64),
@@ -92,6 +96,8 @@ pub struct LearningRecordsModel {
     /// XAML a render after the rows it counts do (`list_selection`).
     settled: SettledRows,
     editing: Option<EditingCount>,
+    /// Delete Learning Records is waiting on its dialog.
+    is_confirming_clear_all: bool,
     /// The page's one work slot: the job it waits on, and whether the
     /// overlay shows.
     job: JobState,
@@ -107,6 +113,7 @@ impl Default for LearningRecordsModel {
             is_first_load_requested: false,
             settled: SettledRows::default(),
             editing: None,
+            is_confirming_clear_all: false,
             job: JobState::default(),
         }
     }
@@ -188,6 +195,10 @@ pub fn update(
             }
         }
         Message::Edit => {
+            // One dialog at a time (`dialog`).
+            if model.is_confirming_clear_all {
+                return;
+            }
             if let Some(row) = model.listing.selected_row() {
                 model.editing = Some(EditingCount {
                     count: Some(row.count.max(1) as f64),
@@ -225,6 +236,21 @@ pub fn update(
                 return;
             };
             begin_job(model, context, move || set_count_job(record, count));
+        }
+        Message::AskClearAll => {
+            // Nothing to ask while a count is open or a job holds the slot
+            // — the clear could not start anyway.
+            if model.editing.is_none() && !model.job.is_running() {
+                model.is_confirming_clear_all = true;
+            }
+        }
+        Message::ConfirmClosed(result) => {
+            let was_confirming = std::mem::take(&mut model.is_confirming_clear_all);
+            // The primary button is the destructive one; Escape, the close
+            // button and a dismissal all leave the stores alone.
+            if was_confirming && result == ContentDialogResult::Primary {
+                begin_job(model, context, clear_all_job);
+            }
         }
         Message::JobFinished(generation, outcome) => {
             if !model.job.finish(generation) {
@@ -360,6 +386,14 @@ pub fn view(
                     .callback(|text| WindowMessage::LearningRecords(Message::FilterChanged(text))),
             ),
         record_table(model, strings, context, is_enabled),
+        cards::section_gap(),
+        cards::action_row(
+            strings.resolve(StringKey::DictionaryClearLearningRecords),
+            strings.resolve(StringKey::CommonDelete),
+            true,
+            is_enabled,
+            context.callback(|()| WindowMessage::LearningRecords(Message::AskClearAll)),
+        ),
         list_pager::busy_overlay(
             model
                 .job
@@ -367,8 +401,29 @@ pub fn view(
                 .then_some(StringKey::DesktopProgressWorking),
             strings,
         ),
-        count_dialog(model, strings, context),
+        dialog(model, strings, context),
     ))
+}
+
+/// The one dialog the page can have up. A count is being edited or Delete
+/// Learning Records is being confirmed — never both: each verb refuses while
+/// the other's dialog is up (`update`).
+fn dialog(
+    model: &LearningRecordsModel,
+    strings: &StringResolver,
+    context: &mut ViewContext<SettingsWindow>,
+) -> View {
+    if model.editing.is_some() {
+        return count_dialog(model, strings, context);
+    }
+    if !model.is_confirming_clear_all {
+        return View::empty();
+    }
+    list_pager::confirm_dialog(
+        CLEAR_ALL,
+        strings,
+        context.callback(|result| WindowMessage::LearningRecords(Message::ConfirmClosed(result))),
+    )
 }
 
 /// One row's cells, or the header's, on the table's four columns.

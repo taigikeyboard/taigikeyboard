@@ -214,7 +214,7 @@ struct UserDataFilterField: View {
 /// page it serves is already long enough without three more rows inline.
 ///
 /// `onDelete` asks rather than deletes: the page confirms it first
-/// (`CustomDictionaryConfirmation`).
+/// (`CustomDictionaryPageModel.isConfirmingDeleteAll`).
 struct UserDataActionsSection: View {
     @Environment(DisplayLanguageStore.self) private var language
 

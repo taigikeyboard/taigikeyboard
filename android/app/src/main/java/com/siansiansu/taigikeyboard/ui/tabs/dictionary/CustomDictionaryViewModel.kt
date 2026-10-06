@@ -75,13 +75,6 @@ class CustomDictionaryViewModel(
         }
     }
 
-    /**
-     * Empties the learning stores (frequency, association, learned phrases);
-     * the custom words stay, so the list needs no reload. Throws
-     * [UserDataException] for the screen to report.
-     */
-    suspend fun clearLearningRecords() = userData.clearLearningRecords()
-
     suspend fun exportCSV(): ByteArray = userData.exportCsv()
 
     /**

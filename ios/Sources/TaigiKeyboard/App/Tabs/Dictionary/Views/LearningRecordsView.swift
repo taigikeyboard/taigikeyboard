@@ -5,8 +5,9 @@ import SwiftUI
 /// What the keyboard learned from the user's picks, in the order picked: edit
 /// one row's count, swipe to delete one row, swipe a row the other way to
 /// add its word to the custom dictionary. No add by hand (a word
-/// the user wants is a custom word) and no wipe — Delete Learning Records
-/// stays on the Custom Dictionary page.
+/// the user wants is a custom word) and no wipe here — Delete Learning
+/// Records empties every kind, so it sits on the subpage above
+/// (`LearningRecordsMenuView`).
 struct LearningRecordsView: View {
     @Environment(DisplayLanguageStore.self) private var lang
     @StateObject private var viewModel: LearningRecordsViewModel

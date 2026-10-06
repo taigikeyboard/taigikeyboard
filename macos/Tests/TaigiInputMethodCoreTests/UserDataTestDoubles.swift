@@ -92,8 +92,18 @@ final class FakeUserDataClient: UserDataClient, @unchecked Sendable {
         lock.withLock { learningRecordClears }
     }
 
+    /// Set to make every clear fail, as a store that cannot be emptied does.
+    var failsLearningRecordClears = false
+
+    /// Empties every learning store, as the engine's reset does.
     func clearLearningRecords() throws {
-        lock.withLock { learningRecordClears += 1 }
+        if failsLearningRecordClears {
+            throw UserDataClientError.engineUnavailable(op: "resetUserData")
+        }
+        lock.withLock {
+            learningRecordClears += 1
+            learningRecords = []
+        }
     }
 
     // MARK: - Learning records

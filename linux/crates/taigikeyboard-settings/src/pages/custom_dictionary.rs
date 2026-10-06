@@ -2,8 +2,7 @@
 //! `CustomDictionaryPage.swift` / the Windows `custom_dictionary.rs`: rows
 //! fetched one PAGE at a time (10), a filter that reloads once it settles,
 //! a list whose selection drives the add / edit / delete trio, the pager
-//! under it, CSV import / export, delete all, and the one destructive verb
-//! for the learning records.
+//! under it, CSV import / export, and delete all.
 //!
 //! The listing rules and every job body are
 //! `taigi_desktop_core::settings::custom_dictionary`'s, shared with the
@@ -18,7 +17,10 @@
 //! selection is the keyboard-reachable way (the Windows shape). The empty
 //! list says so in words.
 
-use super::{append_pager, busy_indicator, icon_button, remove_rows, table_line, PageContext};
+use super::{
+    append_pager, busy_indicator, confirm, destructive_row, icon_button, remove_rows, table_line,
+    PageContext,
+};
 use crate::jobs;
 use crate::window::{JobSlot, Shell};
 use adw::prelude::*;
@@ -27,8 +29,8 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use taigi_desktop_core::engine::user_data::CustomDictionaryEntry;
 use taigi_desktop_core::settings::custom_dictionary::{
-    clear_learning_records_job, delete_all_job, delete_entry_job, export_file_name, export_job,
-    fetch, import_job, save_entry_job, Confirm, Listing,
+    delete_all_job, delete_entry_job, export_file_name, export_job, fetch, import_job,
+    save_entry_job, Listing, DELETE_ALL,
 };
 use taigi_desktop_core::settings::keys;
 use taigi_desktop_core::settings::listing::{
@@ -165,8 +167,8 @@ impl CustomDictionaryPage {
         entries.add(&verbs);
         page.add(&entries);
 
-        // Import / export, then the two destructive verbs, each its own
-        // group (as on the other desktops).
+        // Import / export, then Delete All in its own group (as on the
+        // other desktops).
         let csv = adw::PreferencesGroup::new();
         let import = action_row(
             &csv,
@@ -186,13 +188,6 @@ impl CustomDictionaryPage {
             strings.resolve(StringKey::CommonDelete),
         );
         page.add(&delete_all_group);
-        let clear_group = adw::PreferencesGroup::new();
-        let clear = destructive_row(
-            &clear_group,
-            strings.resolve(StringKey::DictionaryClearLearningRecords),
-            strings.resolve(StringKey::CommonDelete),
-        );
-        page.add(&clear_group);
 
         let controls: Vec<gtk::Widget> = vec![
             filter.clone().upcast(),
@@ -200,7 +195,6 @@ impl CustomDictionaryPage {
             import.clone().upcast(),
             export.clone().upcast(),
             delete_all.clone().upcast(),
-            clear.clone().upcast(),
         ];
         let this = Rc::new(Self {
             shell: context.shell.clone(),
@@ -223,7 +217,7 @@ impl CustomDictionaryPage {
                 controls,
             },
         });
-        this.connect(&add, &import, &export, &delete_all, &clear);
+        this.connect(&add, &import, &export, &delete_all);
         this.render();
         this
     }
@@ -234,7 +228,6 @@ impl CustomDictionaryPage {
         import: &adw::ActionRow,
         export: &adw::ActionRow,
         delete_all: &gtk::Button,
-        clear: &gtk::Button,
     ) {
         let weak = Rc::downgrade(self);
         // `changed`, not `search-changed`: the latter is GTK's own 150 ms
@@ -334,13 +327,7 @@ impl CustomDictionaryPage {
         let weak = Rc::downgrade(self);
         delete_all.connect_clicked(move |_| {
             if let Some(page) = weak.upgrade() {
-                page.ask(Confirm::DeleteAll);
-            }
-        });
-        let weak = Rc::downgrade(self);
-        clear.connect_clicked(move |_| {
-            if let Some(page) = weak.upgrade() {
-                page.ask(Confirm::ClearLearningRecords);
+                page.ask_delete_all();
             }
         });
     }
@@ -509,34 +496,17 @@ impl CustomDictionaryPage {
         dialog.present(self.shell.window().as_ref());
     }
 
-    /// A destructive command asks first: the primary button is the
-    /// destructive one; Escape, the close button and a dismissal all leave
-    /// the store alone.
-    fn ask(self: &Rc<Self>, confirm: Confirm) {
+    /// Delete All asks first (`Confirmation` says why).
+    fn ask_delete_all(self: &Rc<Self>) {
         if self.job_slot.is_taken() {
             return;
         }
-        let strings = self.strings;
-        let dialog = adw::AlertDialog::new(
-            Some(strings.resolve(confirm.title_key())),
-            confirm.message_key().map(|key| strings.resolve(key)),
-        );
-        dialog.add_response("cancel", strings.resolve(StringKey::CommonCancel));
-        dialog.add_response("delete", strings.resolve(StringKey::CommonDelete));
-        dialog.set_response_appearance("delete", adw::ResponseAppearance::Destructive);
-        dialog.set_close_response("cancel");
         let weak = Rc::downgrade(self);
-        dialog.connect_response(None, move |_, response| {
-            if response != "delete" {
-                return;
+        confirm(&self.shell, self.strings, DELETE_ALL, move || {
+            if let Some(page) = weak.upgrade() {
+                page.begin_job(delete_all_job);
             }
-            let Some(page) = weak.upgrade() else { return };
-            page.begin_job(match confirm {
-                Confirm::DeleteAll => delete_all_job,
-                Confirm::ClearLearningRecords => clear_learning_records_job,
-            });
         });
-        dialog.present(self.shell.window().as_ref());
     }
 
     fn export(self: &Rc<Self>) {
@@ -685,20 +655,6 @@ fn action_row(group: &adw::PreferencesGroup, title: &str, icon: &str) -> adw::Ac
     row.add_suffix(&gtk::Image::from_icon_name(icon));
     group.add(&row);
     row
-}
-
-/// A row whose button empties a store; the button is the destructive one.
-fn destructive_row(group: &adw::PreferencesGroup, title: &str, verb: &str) -> gtk::Button {
-    let button = gtk::Button::builder()
-        .label(verb)
-        .valign(gtk::Align::Center)
-        .css_classes(["destructive-action"])
-        .build();
-    let row = adw::ActionRow::builder().title(title).build();
-    row.add_suffix(&button);
-    row.set_activatable_widget(Some(&button));
-    group.add(&row);
-    button
 }
 
 /// `YYYY-MM-DD` in local time for the export's suggested name.

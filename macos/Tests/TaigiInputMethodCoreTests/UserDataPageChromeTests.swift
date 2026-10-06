@@ -139,131 +139,88 @@ final class CustomDictionaryWorkSlotTests: XCTestCase {
     }
 }
 
-/// The two commands that empty a store ask first, as on Windows and Linux
-/// (desktop-core `Confirm`): only Delete runs them; Cancel, Escape and a
-/// dismissal — all of which set `confirming` back to nil — run nothing.
+/// Delete All asks first, as on Windows and Linux (desktop-core
+/// `Confirmation`): only Delete runs it; Cancel, Escape and a dismissal — all
+/// of which set `isConfirmingDeleteAll` back to false — run nothing.
 @MainActor
-final class CustomDictionaryConfirmationTests: XCTestCase {
-    private var client = FakeUserDataClient()
-
+final class CustomDictionaryDeleteAllConfirmationTests: XCTestCase {
     private func makeModel(rows: Int = 0) async -> CustomDictionaryPageModel {
-        client = FakeUserDataClient()
-        let model = CustomDictionaryPageModel(client: client)
+        let model = CustomDictionaryPageModel(client: FakeUserDataClient())
         for index in 0 ..< rows {
             await model.save(CustomDictionaryRow(roman: "row\(index)", hanji: "字\(index)"))
         }
         return model
     }
 
-    func testTheWording_matchesDesktop() {
-        XCTAssertEqual(CustomDictionaryConfirmation.deleteAll.titleKey, .dictionaryDeleteAll)
-        XCTAssertEqual(CustomDictionaryConfirmation.deleteAll.messageKey, .dictionaryDeleteAllMessage)
-        XCTAssertEqual(CustomDictionaryConfirmation.clearLearningRecords.titleKey, .dictionaryClearLearningRecords)
-        XCTAssertNil(CustomDictionaryConfirmation.clearLearningRecords.messageKey)
-    }
-
     func testAsking_runsNothing() async {
         let model = await makeModel(rows: 2)
 
-        model.ask(.deleteAll)
+        model.askDeleteAll()
 
-        XCTAssertEqual(model.confirming, .deleteAll)
+        XCTAssertTrue(model.isConfirmingDeleteAll)
         XCTAssertEqual(model.list.matchCount, 2)
         XCTAssertEqual(model.activity, .idle)
     }
 
-    func testConfirmingDeleteAll_emptiesTheDictionary() async {
+    func testConfirming_emptiesTheDictionary() async {
         let model = await makeModel(rows: 2)
 
-        model.ask(.deleteAll)
-        await model.confirm()?.value
+        model.askDeleteAll()
+        await model.confirmDeleteAll()?.value
 
-        XCTAssertNil(model.confirming)
+        XCTAssertFalse(model.isConfirmingDeleteAll)
         XCTAssertEqual(model.list.matchCount, 0)
         XCTAssertEqual(model.activity, .idle)
     }
 
-    func testConfirmingClearLearningRecords_clearsThemOnceAndReportsIt() async {
-        let model = await makeModel()
-
-        model.ask(.clearLearningRecords)
-        await model.confirm()?.value
-
-        XCTAssertEqual(client.learningRecordClearCount, 1)
-        XCTAssertEqual(model.message, .done(.dictionaryClearLearningRecordsDone))
-        XCTAssertEqual(model.activity, .idle, "the clear gives its slot back")
-    }
-
-    /// Cancel is the dialog writing nil through its binding; nothing is left
-    /// for Delete to run.
+    /// Cancel is the dialog writing false through its binding; nothing is
+    /// left for Delete to run.
     func testCancelling_runsNothing() async {
         let model = await makeModel(rows: 2)
 
-        for command in [CustomDictionaryConfirmation.deleteAll, .clearLearningRecords] {
-            model.ask(command)
-            model.confirming = nil
-
-            XCTAssertNil(model.confirm(), "nothing pending once cancelled")
-        }
+        model.askDeleteAll()
+        model.isConfirmingDeleteAll = false
+        XCTAssertNil(model.confirmDeleteAll(), "nothing pending once cancelled")
         await model.load()
 
         XCTAssertEqual(model.list.matchCount, 2)
-        XCTAssertEqual(client.learningRecordClearCount, 0)
-        XCTAssertNil(model.message)
     }
 
     /// The command is taken when Delete is clicked, so the dismissal that
-    /// follows it cannot take it away.
+    /// follows it cannot take it away — and it runs once however often
+    /// Delete is answered.
     func testConfirming_takesTheCommandBeforeTheDialogDismisses() async {
         let model = await makeModel(rows: 1)
 
-        model.ask(.deleteAll)
-        let run = model.confirm()
-        model.confirming = nil
+        model.askDeleteAll()
+        let run = model.confirmDeleteAll()
+        model.isConfirmingDeleteAll = false
+        XCTAssertNil(model.confirmDeleteAll(), "already taken")
         await run?.value
 
         XCTAssertEqual(model.list.matchCount, 0)
-    }
-
-    /// One question at a time: a second ask leaves the first one standing,
-    /// and Delete runs it once however often it is answered.
-    func testAPendingCommand_isNeitherReplacedNorRunTwice() async {
-        let model = await makeModel()
-
-        model.ask(.clearLearningRecords)
-        model.ask(.deleteAll)
-        XCTAssertEqual(model.confirming, .clearLearningRecords)
-
-        let first = model.confirm()
-        XCTAssertNil(model.confirm(), "already taken")
-        await first?.value
-
-        XCTAssertEqual(client.learningRecordClearCount, 1)
     }
 
     func testABusyPage_doesNotAsk() async {
         let model = await makeModel()
         XCTAssertTrue(model.beginWork(.desktopProgressWorking))
 
-        model.ask(.deleteAll)
+        model.askDeleteAll()
 
-        XCTAssertNil(model.confirming)
+        XCTAssertFalse(model.isConfirmingDeleteAll)
     }
 
     /// Something took the slot after the dialog went up: the confirmed
     /// command is refused, and leaves the slot with its holder.
     func testAConfirmedCommand_doesNothingWhileAnotherHoldsTheSlot() async {
-        for command in [CustomDictionaryConfirmation.deleteAll, .clearLearningRecords] {
-            let model = await makeModel(rows: 1)
+        let model = await makeModel(rows: 1)
 
-            model.ask(command)
-            XCTAssertTrue(model.beginWork(.desktopProgressWorking))
-            await model.confirm()?.value
+        model.askDeleteAll()
+        XCTAssertTrue(model.beginWork(.desktopProgressWorking))
+        await model.confirmDeleteAll()?.value
 
-            XCTAssertEqual(model.activity, .working(.desktopProgressWorking), "\(command)")
-            XCTAssertEqual(model.list.matchCount, 1, "\(command)")
-            XCTAssertEqual(client.learningRecordClearCount, 0, "\(command)")
-        }
+        XCTAssertEqual(model.activity, .working(.desktopProgressWorking))
+        XCTAssertEqual(model.list.matchCount, 1)
     }
 }
 

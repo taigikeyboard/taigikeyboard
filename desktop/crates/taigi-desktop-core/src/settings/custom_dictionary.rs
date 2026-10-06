@@ -1,47 +1,23 @@
 //! The Custom Dictionary pane's model, shared by both settings windows: the
 //! list (`listing.rs`, shared with Learning Records), the destructive
-//! commands that ask first, and what each job answers. The shells own the widgets, the timers, and the work slot a job
+//! command that asks first, and what each job answers. The shells own the widgets, the timers, and the work slot a job
 //! runs in — Windows holds one per page, Linux one per window so an outcome
 //! outlives a page rebuilt under it. macOS keeps a Swift twin:
 //! `CustomDictionaryPageModel` in `CustomDictionaryPage.swift`.
 
 use super::listing::{self, JobOutcome, ListedRow, LoadRequest, PAGE_SIZE};
-use super::presentation::PageMessage;
+use super::presentation::{Confirmation, PageMessage};
 use crate::engine::user_data::{
     self, CustomDictionaryEntry, CustomDictionaryPage, CustomDictionaryRefusal, UserDataError,
 };
 use crate::strings::StringKey;
 use std::path::Path;
 
-/// A command that empties a store, waiting on its confirmation.
-///
-/// Confirmed rather than run on the press, on all three desktops: the
-/// button that runs it is one row among the pane's, so the press is easy
-/// to make by accident, and there is no undo — the ✎ / − verbs act on one
-/// row, these two empty a table.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Confirm {
-    DeleteAll,
-    ClearLearningRecords,
-}
-
-impl Confirm {
-    pub fn title_key(self) -> StringKey {
-        match self {
-            Self::DeleteAll => StringKey::DictionaryDeleteAll,
-            Self::ClearLearningRecords => StringKey::DictionaryClearLearningRecords,
-        }
-    }
-
-    /// The question under the title. `ClearLearningRecords` has none
-    /// authored, and its title already asks it.
-    pub fn message_key(self) -> Option<StringKey> {
-        match self {
-            Self::DeleteAll => Some(StringKey::DictionaryDeleteAllMessage),
-            Self::ClearLearningRecords => None,
-        }
-    }
-}
+/// Delete All asks first (`Confirmation` says why).
+pub const DELETE_ALL: Confirmation = Confirmation {
+    title: StringKey::DictionaryDeleteAll,
+    message: StringKey::DictionaryDeleteAllMessage,
+};
 
 /// A write answers with nothing but its failure, and asks for a reload
 /// either way.
@@ -101,24 +77,6 @@ pub fn export_job(
         message: outcome
             .err()
             .map(|error| PageMessage::failure(StringKey::CommonExportFailed, error)),
-        is_reload_wanted: false,
-    }
-}
-
-/// Empties the three learning tables — three files, no transaction that
-/// could span them; the engine attempts each even when an earlier one
-/// fails, and the notice reports rather than claims. The custom dictionary
-/// is untouched, so nothing reloads.
-pub fn clear_learning_records_job() -> JobOutcome {
-    let message = match user_data::clear_learning_records() {
-        Ok(()) => PageMessage::Done(StringKey::DictionaryClearLearningRecordsDone),
-        Err(error) => PageMessage::Failure {
-            title: StringKey::DictionaryClearLearningRecordsFailed,
-            detail: error.to_string(),
-        },
-    };
-    JobOutcome {
-        message: Some(message),
         is_reload_wanted: false,
     }
 }
@@ -287,23 +245,6 @@ mod tests {
                 is_reload_wanted: false,
             }
         );
-    }
-
-    #[test]
-    fn both_destructive_commands_are_confirmed_and_only_one_asks_a_question() {
-        assert_eq!(
-            Confirm::DeleteAll.title_key(),
-            StringKey::DictionaryDeleteAll
-        );
-        assert_eq!(
-            Confirm::DeleteAll.message_key(),
-            Some(StringKey::DictionaryDeleteAllMessage)
-        );
-        assert_eq!(
-            Confirm::ClearLearningRecords.title_key(),
-            StringKey::DictionaryClearLearningRecords
-        );
-        assert_eq!(Confirm::ClearLearningRecords.message_key(), None);
     }
 
     #[test]

@@ -118,6 +118,20 @@ impl PageMessage {
     }
 }
 
+/// The dialog a command that empties a store asks first: its title, and the
+/// line under it saying what goes and what stays.
+///
+/// Confirmed rather than run on the press, on all three desktops: the
+/// button that runs it is one row among the pane's, so the press is easy
+/// to make by accident, and there is no undo — the ✎ / − verbs act on one
+/// row, these empty a table. The primary button is the destructive one
+/// (`CommonDelete`); Escape, Cancel and a dismissal leave the store alone.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Confirmation {
+    pub title: StringKey,
+    pub message: StringKey,
+}
+
 #[cfg(test)]
 mod tests {
     use super::super::keys;

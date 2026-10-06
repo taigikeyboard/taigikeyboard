@@ -14,8 +14,6 @@ struct CustomDictionaryView: View {
     @State private var romanInput = ""
     @State private var hanjiInput = ""
     @State private var showDeleteAllAlert = false
-    @State private var showClearLearningRecordsAlert = false
-    @State private var clearLearningRecordsResult: ClearLearningRecordsResult?
 
     // Case-insensitive substring match on roman/hanji; with no query, cap at 100 rows so the list stays smooth.
     private var filteredEntries: [CustomDictionaryEntry] {
@@ -96,15 +94,6 @@ struct CustomDictionaryView: View {
                         Text(lang.string(.dictionaryDeleteAll))
                     }
                     .disabled(importExport.isImporting)
-                }
-
-                // Delete learning records (custom words are kept)
-                Section {
-                    Button(role: .destructive) {
-                        showClearLearningRecordsAlert = true
-                    } label: {
-                        Text(lang.string(.dictionaryClearLearningRecords))
-                    }
                 }
 
                 // Privacy warning
@@ -205,30 +194,6 @@ struct CustomDictionaryView: View {
         } message: {
             Text(lang.string(.dictionaryDeleteAllMessage))
         }
-        .alert(lang.string(.dictionaryClearLearningRecords), isPresented: $showClearLearningRecordsAlert) {
-            Button(lang.string(.commonCancel), role: .cancel) {}
-            Button(lang.string(.commonDelete), role: .destructive) {
-                clearLearningRecords()
-            }
-        }
-        .alert(
-            clearLearningRecordsResult.map { lang.string($0.titleKey) } ?? "",
-            isPresented: Binding(
-                get: { clearLearningRecordsResult != nil },
-                set: {
-                    if !$0 {
-                        clearLearningRecordsResult = nil
-                    }
-                },
-            ),
-            presenting: clearLearningRecordsResult,
-        ) { _ in
-            Button(lang.string(.commonOk), role: .cancel) {}
-        } message: { result in
-            if case let .failed(detail) = result {
-                Text(detail)
-            }
-        }
         .task {
             await viewModel.load()
         }
@@ -250,17 +215,6 @@ struct CustomDictionaryView: View {
         Task { await viewModel.save(entry) }
     }
 
-    private func clearLearningRecords() {
-        Task {
-            do {
-                try await viewModel.clearLearningRecords()
-                clearLearningRecordsResult = .done
-            } catch {
-                clearLearningRecordsResult = .failed(detail: error.localizedDescription)
-            }
-        }
-    }
-
     private func handleImport(_ result: Result<[URL], Error>) {
         importExport.handleFileImport(
             result,
@@ -279,20 +233,6 @@ struct CustomDictionaryView: View {
             return error.localizedDescription
         }
         return lang.string(key)
-    }
-}
-
-/// What Delete Learning Records reports back: the store's own diagnostic
-/// follows a failure, as on desktop.
-private enum ClearLearningRecordsResult {
-    case done
-    case failed(detail: String)
-
-    var titleKey: StringKey {
-        switch self {
-        case .done: .dictionaryClearLearningRecordsDone
-        case .failed: .dictionaryClearLearningRecordsFailed
-        }
     }
 }
 

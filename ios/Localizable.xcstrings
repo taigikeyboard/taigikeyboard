@@ -614,7 +614,7 @@
       }
     },
     "i18n_dictionary_clearLearningRecords": {
-      "comment": "Destructive row at the bottom of the Custom Dictionary page: deletes every learning record (word frequency, next-word association, learned phrases) in one go; custom words are kept. Every platform confirms first, with this as the dialog title.",
+      "comment": "Destructive row at the bottom of the Learning Records page (desktop) / subpage (mobile): deletes every learning record (word frequency, next-word association, learned phrases) in one go; custom words are kept. Every platform confirms first, with this as the dialog title.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -663,6 +663,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "学習記録を消去できませんでした"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_clearLearningRecordsMessage": {
+      "comment": "Confirmation dialog body for Delete Learning Records: every learning record goes, the custom words stay.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete all learning records? Custom words are unaffected."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべての学習記録を削除しますか？カスタム単語には影響しません。"
           }
         }
       }

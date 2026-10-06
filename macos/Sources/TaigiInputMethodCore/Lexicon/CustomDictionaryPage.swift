@@ -3,33 +3,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// A command that empties a store, waiting on its confirmation — the Swift
-/// twin of desktop-core's `Confirm` (`settings/custom_dictionary.rs`).
-///
-/// Confirmed rather than run on the click (USER 2026-10-02): the row that
-/// runs it is one among the pane's, so the click is easy to make by
-/// accident, and there is no undo — `−` acts on one row, these empty a table.
-enum CustomDictionaryConfirmation {
-    case deleteAll
-    case clearLearningRecords
-
-    var titleKey: StringKey {
-        switch self {
-        case .deleteAll: .dictionaryDeleteAll
-        case .clearLearningRecords: .dictionaryClearLearningRecords
-        }
-    }
-
-    /// The question under the title. `clearLearningRecords` has none
-    /// authored, and its title already asks it.
-    var messageKey: StringKey? {
-        switch self {
-        case .deleteAll: .dictionaryDeleteAllMessage
-        case .clearLearningRecords: nil
-        }
-    }
-}
-
 /// Reads and writes the custom dictionary on behalf of the page, one page of
 /// rows at a time (`UserDataPagedList`).
 @MainActor
@@ -57,9 +30,14 @@ final class CustomDictionaryPageModel {
         set { list.selectedID = newValue }
     }
 
-    /// The destructive command the page is asking about, or nil. The dialog's
-    /// Cancel, Escape and dismissal all just set this back to nil.
-    var confirming: CustomDictionaryConfirmation?
+    /// Delete All is waiting on its confirmation. The dialog's Cancel, Escape
+    /// and dismissal all just set this back to false.
+    ///
+    /// Confirmed rather than run on the click (USER 2026-10-02), as on Windows
+    /// and Linux (desktop-core `Confirmation`): the row that runs it is one
+    /// among the pane's, so the click is easy to make by accident, and there
+    /// is no undo — `−` acts on one row, this empties the table.
+    var isConfirmingDeleteAll = false
 
     func pageBackward() async {
         guard list.step(by: -1) else { return }
@@ -114,29 +92,23 @@ final class CustomDictionaryPageModel {
         await perform(.desktopProgressWorking) { try await UserDataRequests.run(on: self.client) { try $0.deleteAll() } }
     }
 
-    /// Asks before `command` runs. Nothing to ask while the page is busy —
-    /// the command could not start anyway — or while it is already asking.
-    func ask(_ command: CustomDictionaryConfirmation) {
-        guard !activity.isWorking, confirming == nil else { return }
-        confirming = command
+    /// Asks before Delete All runs. Nothing to ask while the page is busy —
+    /// it could not start anyway.
+    func askDeleteAll() {
+        guard !activity.isWorking else { return }
+        isConfirmingDeleteAll = true
     }
 
-    /// Runs the command being asked about, once.
+    /// Runs Delete All once confirmed, at most once.
     ///
-    /// The command is taken synchronously, before the dialog's dismissal
-    /// writes nil through its binding — a `Task` that read `confirming` only
-    /// once it started would find it already gone. The returned task is what
-    /// a test awaits.
+    /// The flag is taken synchronously, before the dialog's dismissal writes
+    /// false through its binding — a `Task` that read it only once it started
+    /// would find it already gone. The returned task is what a test awaits.
     @discardableResult
-    func confirm() -> Task<Void, Never>? {
-        guard let command = confirming else { return nil }
-        confirming = nil
-        return Task {
-            switch command {
-            case .deleteAll: await deleteAll()
-            case .clearLearningRecords: await clearLearningRecords()
-            }
-        }
+    func confirmDeleteAll() -> Task<Void, Never>? {
+        guard isConfirmingDeleteAll else { return nil }
+        isConfirmingDeleteAll = false
+        return Task { await deleteAll() }
     }
 
     func exportCSV(in window: NSWindow) async {
@@ -207,32 +179,6 @@ final class CustomDictionaryPageModel {
         activity.begin(label)
     }
 
-    /// Empties the three learning stores — counts, bigrams, learned phrases.
-    ///
-    /// One request: the engine attempts every store even when an earlier one
-    /// fails — a store that cannot be reached is no reason to leave the others
-    /// full — and the alert reports the failure, one line naming each store
-    /// that could not be emptied, rather than claiming the records are gone.
-    ///
-    /// Reported through the page's own message channel rather than an alert of
-    /// its own: two `.alert` modifiers on one chain do not stack, and this was
-    /// the receipt SwiftUI dropped. It is the whole of what this page tells
-    /// the user — unlike the custom-dictionary clear, whose table simply
-    /// empties, nothing on this page changes to read the result off.
-    ///
-    /// Takes the page's work slot like every other store write, so it cannot
-    /// overlap an import or a delete started after its dialog was answered.
-    func clearLearningRecords() async {
-        guard beginWork(.desktopProgressWorking) else { return }
-        defer { activity = .idle }
-        do {
-            try await UserDataRequests.run(on: client) { try $0.clearLearningRecords() }
-            message = .done(.dictionaryClearLearningRecordsDone)
-        } catch {
-            message = .failure(.dictionaryClearLearningRecordsFailed, error)
-        }
-    }
-
     /// Runs one write and reloads, whatever it answered, as desktop-core's
     /// `write_outcome` does: the list on screen is what the store holds even
     /// after a failure. A reload that fails too replaces the write's alert
@@ -286,32 +232,23 @@ struct CustomDictionaryPage: View {
                 deleteTitle: .dictionaryDeleteAll,
                 onExport: { Task { await UserDataFilePanels.withSettingsWindow(model.exportCSV) } },
                 onImport: { Task { await UserDataFilePanels.withSettingsWindow(model.importCSV) } },
-                onDelete: { model.ask(.deleteAll) },
+                onDelete: { model.askDeleteAll() },
             )
-
-            Section {
-                WideActionRow(titleKey: .dictionaryClearLearningRecords, role: .destructive) {
-                    model.ask(.clearLearningRecords)
-                }
-            }
         }
         .formStyle(.grouped)
         // A confirmation dialog, not a second `.alert`: the chrome's alert
         // is the page's one alert, and two on one chain do not stack
         // (`UserDataPageChrome`). Delete is the destructive button; Cancel,
-        // Escape and a dismissal all leave the stores alone.
+        // Escape and a dismissal all leave the store alone.
         .confirmationDialog(
-            language.string(model.confirming?.titleKey ?? .dictionaryDeleteAll),
-            isPresented: isConfirming,
+            language.string(.dictionaryDeleteAll),
+            isPresented: $model.isConfirmingDeleteAll,
             titleVisibility: .visible,
-            presenting: model.confirming,
-        ) { _ in
-            Button(language.string(.commonDelete), role: .destructive) { model.confirm() }
+        ) {
+            Button(language.string(.commonDelete), role: .destructive) { model.confirmDeleteAll() }
             Button(language.string(.commonCancel), role: .cancel) {}
-        } message: { command in
-            if let messageKey = command.messageKey {
-                Text(language.string(messageKey))
-            }
+        } message: {
+            Text(language.string(.dictionaryDeleteAllMessage))
         }
         .reloadWhenFilterSettles(model.filter) { await model.loadFirstPage() }
         .sheet(item: $editing) { row in
@@ -415,16 +352,6 @@ struct CustomDictionaryPage: View {
                 onForward: { Task { await model.pageForward() } },
             )
         }
-    }
-
-    /// Whether a destructive command is being asked about; the dialog closing
-    /// any way at all clears it.
-    private var isConfirming: Binding<Bool> {
-        Binding(
-            get: { model.confirming != nil },
-            // A presentation binding is only ever written false.
-            set: { _ in model.confirming = nil },
-        )
     }
 
     private func row(for id: CustomDictionaryRow.ID?) -> CustomDictionaryRow? {

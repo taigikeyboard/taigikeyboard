@@ -268,6 +268,81 @@ final class LearningRecordsPageTests: XCTestCase {
         XCTAssertEqual(LearningRecordsPageModel.lastUsedLabel(1_759_449_600_000, timeZone: utc), "2025-10-03")
         XCTAssertEqual(LearningRecordsPageModel.lastUsedLabel(0, timeZone: utc), "")
     }
+
+    // MARK: - Delete Learning Records
+
+    /// Asking runs nothing; Delete empties every store — whichever kind is on
+    /// screen — says so, and reloads to the empty list.
+    func testConfirmingClearAll_emptiesEveryStoreAndReloads() async throws {
+        let (model, client) = makeModel([record(.frequency, id: 1), record(.learnedPhrase, id: 2)])
+        await model.load()
+
+        model.askClearAll()
+        XCTAssertTrue(model.isConfirmingClearAll)
+        XCTAssertEqual(client.learningRecordClearCount, 0, "asking runs nothing")
+        await model.confirmClearAll()?.value
+
+        XCTAssertFalse(model.isConfirmingClearAll)
+        XCTAssertEqual(client.learningRecordClearCount, 1)
+        XCTAssertEqual(model.message, .done(.dictionaryClearLearningRecordsDone))
+        XCTAssertTrue(model.list.rows.isEmpty, "the list reloaded")
+        XCTAssertEqual(model.activity, .idle, "the clear gives its slot back")
+        model.kind = .learnedPhrase
+        await model.load()
+        XCTAssertTrue(model.list.rows.isEmpty, "the other kind went too")
+    }
+
+    func testAFailedClearAll_isReportedAndStillReloads() async throws {
+        let (model, client) = makeModel([record(.frequency, id: 1)])
+        client.failsLearningRecordClears = true
+
+        model.askClearAll()
+        await model.confirmClearAll()?.value
+
+        guard case .failure(.dictionaryClearLearningRecordsFailed, _)? = model.message else {
+            return XCTFail("expected the clear-failed alert, got \(String(describing: model.message))")
+        }
+        XCTAssertEqual(model.list.rows.map(\.id), [1], "reloaded to what the store still holds")
+    }
+
+    /// Cancel is the dialog writing false through its binding; the flag is
+    /// taken when Delete is clicked, so it runs once however often answered.
+    func testClearAll_runsOnlyOnceConfirmedAndOnlyOnce() async throws {
+        let (model, client) = makeModel([record(.frequency, id: 1)])
+
+        model.askClearAll()
+        model.isConfirmingClearAll = false
+        XCTAssertNil(model.confirmClearAll(), "nothing pending once cancelled")
+
+        model.askClearAll()
+        let run = model.confirmClearAll()
+        XCTAssertNil(model.confirmClearAll(), "already taken")
+        await run?.value
+
+        XCTAssertEqual(client.learningRecordClearCount, 1)
+    }
+
+    func testABusyPage_doesNotAskToClearAll() throws {
+        let (model, _) = makeModel([])
+        XCTAssertTrue(model.beginWork())
+
+        model.askClearAll()
+
+        XCTAssertFalse(model.isConfirmingClearAll)
+    }
+
+    /// Something took the slot after the dialog went up: the confirmed clear
+    /// is refused, and leaves the slot with its holder.
+    func testAConfirmedClearAll_doesNothingWhileAnotherHoldsTheSlot() async throws {
+        let (model, client) = makeModel([record(.frequency, id: 1)])
+
+        model.askClearAll()
+        XCTAssertTrue(model.beginWork())
+        await model.confirmClearAll()?.value
+
+        XCTAssertEqual(client.learningRecordClearCount, 0)
+        XCTAssertEqual(model.activity, .working(.desktopProgressWorking))
+    }
 }
 
 /// The paged list both user-data pages keep: a load started before another

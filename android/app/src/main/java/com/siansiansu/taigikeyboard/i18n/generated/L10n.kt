@@ -214,6 +214,8 @@ object L10n {
         @Composable get() = stringRes(StringKey.DICTIONARY_LKK_TAG)
     val dictionaryClearLearningRecords: String
         @Composable get() = stringRes(StringKey.DICTIONARY_CLEAR_LEARNING_RECORDS)
+    val dictionaryClearLearningRecordsMessage: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_CLEAR_LEARNING_RECORDS_MESSAGE)
     val dictionaryClearLearningRecordsDone: String
         @Composable get() = stringRes(StringKey.DICTIONARY_CLEAR_LEARNING_RECORDS_DONE)
     val dictionaryClearLearningRecordsFailed: String

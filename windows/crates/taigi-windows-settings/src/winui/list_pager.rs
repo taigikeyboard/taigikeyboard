@@ -9,13 +9,15 @@
 //!
 //! Also what every paged user-data page (Custom Dictionary, Learning
 //! Records) shares around the bar: the table metrics, the busy overlay and
-//! empty state, and how a load or a job runs off the UI thread.
+//! empty state, the dialog a command that empties a store asks first, and
+//! how a load or a job runs off the UI thread.
 
 use super::cards;
 use super::window::{Message as WindowMessage, SettingsWindow};
 use taigi_desktop_core::settings::listing::{
     JobOutcome, JobState, ListedRow, LOAD_DID_NOT_FINISH, OVERLAY_DELAY,
 };
+use taigi_desktop_core::settings::presentation::Confirmation;
 use taigi_desktop_core::strings::{StringKey, StringResolver};
 use windows_reactor::*;
 
@@ -162,6 +164,27 @@ pub fn busy_overlay(label: Option<StringKey>, strings: &StringResolver) -> View 
                     .vertical_alignment(VerticalAlignment::Center),
             )),
     )
+}
+
+/// The question before a command that empties a store (`Confirmation`):
+/// Delete is the primary button, so only `ContentDialogResult::Primary`
+/// runs the command.
+pub fn confirm_dialog(
+    confirmation: Confirmation,
+    strings: &StringResolver,
+    on_closed: Callback<ContentDialogResult>,
+) -> View {
+    ContentDialog::new()
+        .title(strings.resolve(confirmation.title))
+        .primary_button_text(strings.resolve(StringKey::CommonDelete))
+        .close_button_text(strings.resolve(StringKey::CommonCancel))
+        .is_open(true)
+        .on_closed(on_closed)
+        .content(
+            TextBlock::new()
+                .text(strings.resolve(confirmation.message))
+                .text_wrapping(TextWrapping::Wrap),
+        )
 }
 
 /// What a list with no rows says (`Listing::empty_state_key`), laid OVER

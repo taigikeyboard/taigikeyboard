@@ -69,8 +69,6 @@ import com.siansiansu.taigikeyboard.ui.components.SettingInfoButton
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
 import com.siansiansu.taigikeyboard.ui.components.SwitchRow
-import com.siansiansu.taigikeyboard.ui.components.resultMessage
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -99,7 +97,6 @@ fun CustomDictionaryScreen(
     var showEditDialog by remember { mutableStateOf(false) }
     var editingEntry by remember { mutableStateOf<CustomDictionaryWord?>(null) }
     var showDeleteAllDialog by remember { mutableStateOf(false) }
-    var showClearLearningRecordsDialog by remember { mutableStateOf(false) }
     var showResultDialog by remember { mutableStateOf(false) }
     var resultMessage by remember { mutableStateOf("") }
     var filterText by remember { mutableStateOf("") }
@@ -293,18 +290,6 @@ fun CustomDictionaryScreen(
                     }
                 }
 
-                // Delete learning records (custom words are kept)
-                item {
-                    Spacer(Modifier.height(16.dp))
-                    SettingsCard {
-                        ActionRow(
-                            label = L10n.dictionaryClearLearningRecords,
-                            onClick = { showClearLearningRecordsDialog = true },
-                            textColor = MaterialTheme.colorScheme.error,
-                        )
-                    }
-                }
-
                 // Privacy warning
                 item {
                     Spacer(Modifier.height(16.dp))
@@ -420,32 +405,6 @@ fun CustomDictionaryScreen(
                 viewModel.deleteAll()
             },
             onDismiss = { showDeleteAllDialog = false },
-        )
-    }
-
-    // Delete learning records confirmation — the title asks the question, as on desktop
-    if (showClearLearningRecordsDialog) {
-        ConfirmationDialog(
-            title = L10n.dictionaryClearLearningRecords,
-            message = null,
-            confirmLabel = L10n.commonDelete,
-            dismissLabel = L10n.commonCancel,
-            onConfirm = {
-                showClearLearningRecordsDialog = false
-                scope.launch {
-                    resultMessage =
-                        try {
-                            viewModel.clearLearningRecords()
-                            stringResolver.resolve(StringKey.DICTIONARY_CLEAR_LEARNING_RECORDS_DONE)
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            resultMessage(stringResolver.resolve(StringKey.DICTIONARY_CLEAR_LEARNING_RECORDS_FAILED), e.message)
-                        }
-                    showResultDialog = true
-                }
-            },
-            onDismiss = { showClearLearningRecordsDialog = false },
         )
     }
 

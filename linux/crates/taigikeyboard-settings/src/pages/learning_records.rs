@@ -3,17 +3,20 @@
 //! learning stores: a kind picker (word frequency, phrases) and an order
 //! picker over a filter, rows fetched one PAGE at a time (10), a list whose
 //! selection drives the edit-count / add-to-custom-dictionary / delete
-//! verbs, and the pager under it. No add — a word the user wants is a
-//! custom word, which a listed row's word can become here — and no wipe here:
-//! the one destructive verb for every learning record stays on Custom
-//! Dictionary.
+//! verbs, and the pager under it, then Delete Learning Records in its own
+//! group: it empties every learning store, whichever kind is on screen, and
+//! asks first. No add — a word the user wants is a custom word, which a
+//! listed row's word can become here.
 //!
 //! The listing rules and every job body are
 //! `taigi_desktop_core::settings::learning_records`'s, shared with the
 //! Windows pane; this file draws them and runs them, off the UI thread, in
 //! the window's one work slot (`JobSlot`) — as Custom Dictionary does.
 
-use super::{append_pager, busy_indicator, icon_button, remove_rows, table_line, PageContext};
+use super::{
+    append_pager, busy_indicator, confirm, destructive_row, icon_button, remove_rows, table_line,
+    PageContext,
+};
 use crate::jobs;
 use crate::window::{JobSlot, Shell};
 use adw::prelude::*;
@@ -24,8 +27,8 @@ use taigi_desktop_core::engine::user_data::{
     LearningRecord, LearningRecordKind, LearningRecordOrder,
 };
 use taigi_desktop_core::settings::learning_records::{
-    add_to_custom_dictionary_job, count_note, delete_job, fetch, last_used_label, order_label,
-    set_count_job, Listing, KINDS, MAX_COUNT, ORDERS,
+    add_to_custom_dictionary_job, clear_all_job, count_note, delete_job, fetch, last_used_label,
+    order_label, set_count_job, Listing, CLEAR_ALL, KINDS, MAX_COUNT, ORDERS,
 };
 use taigi_desktop_core::settings::listing::{
     JobOutcome, JobState, LoadLanded, FILTER_SETTLE, LOAD_DID_NOT_FINISH, OVERLAY_DELAY,
@@ -175,10 +178,19 @@ impl LearningRecordsPage {
         entries.add(&verbs);
         page.add(&entries);
 
+        let clear_group = adw::PreferencesGroup::new();
+        let clear = destructive_row(
+            &clear_group,
+            strings.resolve(StringKey::DictionaryClearLearningRecords),
+            strings.resolve(StringKey::CommonDelete),
+        );
+        page.add(&clear_group);
+
         let controls: Vec<gtk::Widget> = vec![
             kind.clone().upcast(),
             order.clone().upcast(),
             filter.clone().upcast(),
+            clear.clone().upcast(),
         ];
         let this = Rc::new(Self {
             shell: context.shell.clone(),
@@ -206,7 +218,7 @@ impl LearningRecordsPage {
                 controls,
             },
         });
-        this.connect(&kind, &order, &filter);
+        this.connect(&kind, &order, &filter, &clear);
         this.render();
         this
     }
@@ -216,6 +228,7 @@ impl LearningRecordsPage {
         kind: &adw::ComboRow,
         order: &adw::ComboRow,
         filter: &gtk::SearchEntry,
+        clear: &gtk::Button,
     ) {
         let weak = Rc::downgrade(self);
         kind.connect_selected_notify(move |row| {
@@ -298,6 +311,25 @@ impl LearningRecordsPage {
         self.widgets.next.connect_clicked(move |_| {
             if let Some(page) = weak.upgrade() {
                 page.step_page(1);
+            }
+        });
+        let weak = Rc::downgrade(self);
+        clear.connect_clicked(move |_| {
+            if let Some(page) = weak.upgrade() {
+                page.ask_clear_all();
+            }
+        });
+    }
+
+    /// Delete Learning Records asks first (`Confirmation` says why).
+    fn ask_clear_all(self: &Rc<Self>) {
+        if self.job_slot.is_taken() {
+            return;
+        }
+        let weak = Rc::downgrade(self);
+        confirm(&self.shell, self.strings, CLEAR_ALL, move || {
+            if let Some(page) = weak.upgrade() {
+                page.begin_job(clear_all_job);
             }
         });
     }
