@@ -4,7 +4,8 @@
 
 use crate::common::{pair, paths, scratch};
 use userdata::{
-    export_backup, import_backup, BackupError, JournalMode, UserDataStores, BACKUP_VERSION,
+    export_backup, import_backup, BackupError, CustomDictionaryRow, JournalMode, UserDataStores,
+    BACKUP_VERSION,
 };
 
 fn stores(directory: &tempfile::TempDir) -> UserDataStores {
@@ -80,13 +81,16 @@ fn an_ios_backup_restores_and_skips_learned_rows() {
 fn an_android_backup_restores_leniently() {
     let directory = scratch();
     let stores = stores(&directory);
-    let seeded = stores.custom_dictionary.count().unwrap();
+    stores
+        .custom_dictionary
+        .upsert(&CustomDictionaryRow::new("gâu-tsá", "𠢕早"))
+        .unwrap();
 
     let imported = import_backup(&stores, ANDROID_BACKUP.as_bytes()).unwrap();
 
-    // 𠢕早 is a seed entry already there; the Hanji-less row is skipped.
+    // 𠢕早 is already there; the Hanji-less row is skipped.
     assert_eq!(imported.custom_dictionary, 0);
-    assert_eq!(stores.custom_dictionary.count().unwrap(), seeded);
+    assert_eq!(stores.custom_dictionary.count().unwrap(), 1);
     let rows = stores
         .frequency
         .rows_for_words(&["食飯".to_owned()])

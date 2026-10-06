@@ -18,8 +18,8 @@ struct Opened {
     paths: UserDataPaths,
     journal: JournalMode,
     stores: Arc<UserDataStores>,
-    /// The open finishing — files open, custom dictionary taken over and
-    /// seeded — run once however many callers wait on it, on whichever
+    /// The open finishing — files open, custom dictionary taken over — run
+    /// once however many callers wait on it, on whichever
     /// thread gets there first.
     initialized: Arc<Once>,
 }
@@ -120,8 +120,8 @@ impl UserDataHandle {
 
     /// The open stores once they have finished opening — for the pages'
     /// requests (`requests.rs::handle_page`), which run off the key path and must
-    /// not read or edit a custom dictionary still being taken over, re-derived or
-    /// seeded by a background open. Waits for that open, or finishes it here.
+    /// not read or edit a custom dictionary still being taken over or re-derived
+    /// by a background open. Waits for that open, or finishes it here.
     fn settled_stores(&self) -> Result<&UserDataStores, RequestError> {
         let opened = self
             .opened
@@ -197,7 +197,7 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn open_readies_every_store_and_seeds_the_custom_dictionary() {
+    fn open_readies_every_store_and_leaves_the_custom_dictionary_empty() {
         let directory = tempfile::tempdir().unwrap();
         let handle = UserDataHandle::new();
 
@@ -210,8 +210,8 @@ pub(crate) mod tests {
         assert!(stores.learned_phrases.is_ready());
         assert_eq!(
             stores.custom_dictionary.count().unwrap(),
-            2,
-            "seeded before the answer"
+            0,
+            "a fresh install starts with no custom words"
         );
     }
 

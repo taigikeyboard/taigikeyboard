@@ -131,15 +131,6 @@ impl CustomDictionaryStore {
     /// What the keystroke path is handed — the iOS call site's 20.
     pub const KEYSTROKE_LIMIT: usize = 20;
 
-    /// What a fresh install can find before the user has added anything.
-    /// Ids included, so the same word is the same row on every platform.
-    pub fn seed_entries() -> [CustomDictionaryRow; 2] {
-        [
-            CustomDictionaryRow::with_id("default-gau-tsa", "gâu-tsá", "𠢕早"),
-            CustomDictionaryRow::with_id("default-tsiah-pa-bue", "tsia̍h-pá--buē", "食飽未"),
-        ]
-    }
-
     /// `entry_limit` is injectable ONLY so a test can reach the cap without
     /// writing 30000 rows.
     pub fn new(
@@ -418,9 +409,9 @@ impl CustomDictionaryStore {
     }
 
     /// What every launch runs once the file is open: the takeover's key
-    /// re-derivation, then the seed entries. Blocks (both go through
-    /// `perform`), so never on a UI thread or a store worker. A failure is
-    /// logged and the store stays usable.
+    /// re-derivation. Blocks (it goes through `perform`), so never on a UI
+    /// thread or a store worker. A failure is logged and the store stays
+    /// usable.
     pub fn finish_takeover(&self) {
         // The re-derivation is part of the takeover: another process taking
         // over the same file is waited out as long as the open waits.
@@ -428,31 +419,7 @@ impl CustomDictionaryStore {
         if let Err(error) = self.rederive_search_keys_if_needed() {
             log::error!("custom_dictionary.rederive_failed error={error}");
         }
-        if let Err(error) = self.seed_if_empty() {
-            log::error!("custom_dictionary.seed_failed error={error}");
-        }
         self.database.wait_long_for_locks(false);
-    }
-
-    /// Writes the seed entries, but only into a dictionary nobody has
-    /// touched — deleting one seed and relaunching must not bring it back.
-    pub fn seed_if_empty(&self) -> Result<(), CustomDictionaryError> {
-        let seeds: Vec<(CustomDictionaryRow, Vec<CustomSearchKey>)> = Self::seed_entries()
-            .into_iter()
-            .map(|row| self.derived_keys(&row.roman).map(|keys| (row, keys)))
-            .collect::<Result<_, _>>()?;
-        self.database
-            .perform::<_, CustomDictionaryError>(move |connection| {
-                immediate_transaction(connection, |connection| {
-                    if entry_count(connection)? != 0 {
-                        return Ok(());
-                    }
-                    for (row, keys) in &seeds {
-                        write_row(connection, row, keys)?;
-                    }
-                    Ok(())
-                })
-            })
     }
 
     /// Imports parsed rows, skipping the ones already stored and stopping at

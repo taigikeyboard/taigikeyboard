@@ -386,26 +386,6 @@ fn listing_pages_filters_and_counts_with_one_predicate() {
 }
 
 #[test]
-fn seeds_land_only_in_an_untouched_dictionary() {
-    // trace: `CustomDictionaryStore::seed_if_empty` + `seed_entries`.
-    let directory = scratch();
-    let store = custom_store(
-        &directory,
-        stub_deriver(""),
-        CustomDictionaryStore::MAX_ENTRIES,
-    );
-    store.seed_if_empty().unwrap();
-    assert_eq!(store.count().unwrap(), 2);
-    assert!(store.delete("default-gau-tsa").unwrap());
-    store.seed_if_empty().unwrap();
-    assert_eq!(
-        store.count().unwrap(),
-        1,
-        "deleting one seed and relaunching must not bring it back"
-    );
-}
-
-#[test]
 fn batch_import_skips_duplicates_stops_at_the_cap_and_refuses_an_oversize_file() {
     // trace: `CustomDictionaryStore::batch_import` (`custom_dictionary.rs`).
     let directory = scratch();
@@ -556,7 +536,12 @@ fn the_engine_derivation_finds_a_poj_entry_typed_as_tl() {
     let directory = scratch();
     let stores = UserDataStores::new(directory.path().to_path_buf());
     stores.custom_dictionary.open_blocking();
-    stores.custom_dictionary.seed_if_empty().unwrap();
+    for (roman, hanji) in [("gâu-tsá", "𠢕早"), ("tsia̍h-pá--buē", "食飽未")] {
+        stores
+            .custom_dictionary
+            .upsert(&CustomDictionaryRow::new(roman, hanji))
+            .unwrap();
+    }
     let query = derive_custom_query_key("tsiahpa", "tl").expect("a query key");
     let found = stores.custom_dictionary.rows_matching(&query, 20);
     assert_eq!(hanji_of(&found), ["食飽未"]);
@@ -621,11 +606,14 @@ fn clearing_one_learning_store_leaves_the_others_alone() {
     stores.learned_phrases.open_blocking();
     stores.frequency.record("字", "ji");
     stores.association.record(&[pair("字", "ji", "典", "tian")]);
-    stores.custom_dictionary.seed_if_empty().unwrap();
+    stores
+        .custom_dictionary
+        .upsert(&CustomDictionaryRow::new("gâu-tsá", "𠢕早"))
+        .unwrap();
     stores.learned_phrases.learn_phrase("記起來", "kì--khí-lâi");
     assert_eq!(stores.association.delete_all().unwrap(), 1);
     assert_eq!(stores.frequency.all_rows().unwrap().len(), 1);
-    assert_eq!(stores.custom_dictionary.count().unwrap(), 2);
+    assert_eq!(stores.custom_dictionary.count().unwrap(), 1);
     assert_eq!(stores.learned_phrases.all_rows().unwrap().len(), 1);
 }
 
@@ -854,7 +842,7 @@ fn an_import_whose_derivation_fails_writes_nothing() {
 }
 
 #[test]
-fn a_romanization_only_entry_is_stored_and_found_and_the_seeds_carry_their_ids() {
+fn a_romanization_only_entry_is_stored_and_found() {
     let directory = scratch();
     let store = custom_store(
         &directory,
@@ -867,22 +855,11 @@ fn a_romanization_only_entry_is_stored_and_found_and_the_seeds_carry_their_ids()
     let found = store.rows_matching(&query_key("tsiah", "tl"), 20);
     assert_eq!(found.len(), 1);
     assert_eq!(found[0].hanji, "", "an empty 漢字 column is legitimate");
-    store.delete_all().unwrap();
-    store.seed_if_empty().unwrap();
-    let mut seeded = store.all_rows().unwrap();
-    seeded.sort_by(|a, b| a.id.cmp(&b.id));
     assert_eq!(
-        seeded
-            .iter()
-            .map(|r| (r.id.as_str(), r.roman.as_str(), r.hanji.as_str()))
-            .collect::<Vec<_>>(),
-        [
-            ("default-gau-tsa", "gâu-tsá", "𠢕早"),
-            ("default-tsiah-pa-bue", "tsia̍h-pá--buē", "食飽未")
-        ],
-        "same ids as iOS, so the same word is the same row on every platform"
+        store.all_rows().unwrap()[0].created_at.len(),
+        19,
+        "yyyy-MM-dd HH:mm:ss"
     );
-    assert_eq!(seeded[0].created_at.len(), 19, "yyyy-MM-dd HH:mm:ss");
 }
 
 // INVARIANT_NEXTWORD_PREV_HANJI_LOOKUP (behavioral-invariants.md §24)

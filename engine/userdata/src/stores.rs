@@ -76,9 +76,8 @@ impl UserDataStores {
     }
 
     /// Opens all of them and finishes the custom dictionary's takeover —
-    /// its search keys re-derived, the seed entries written into an
-    /// untouched dictionary — before returning, so a caller learns which
-    /// stores are ready. Blocks: never on a UI thread or a store worker.
+    /// its search keys re-derived — before returning, so a caller learns
+    /// which stores are ready. Blocks: never on a UI thread or a store worker.
     /// A failure is logged and leaves that store as it is; the others go on.
     pub fn open_blocking(&self) {
         // All four start opening on their own workers first, so the waits

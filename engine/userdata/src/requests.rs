@@ -520,6 +520,7 @@ mod tests {
         handle.handle(&open_request(directory.path())).unwrap();
         let stores = handle.stores().unwrap();
         stores.frequency.record("台", "tâi");
+        save(&handle, None, "tâi-uân", "台灣");
 
         let response = handle
             .handle(&reset_request(ResetUserData {
@@ -538,7 +539,7 @@ mod tests {
         }
         assert_eq!(
             stores.custom_dictionary.count().unwrap(),
-            2,
+            1,
             "not selected, kept"
         );
     }
@@ -970,8 +971,10 @@ mod tests {
         let directory = tempfile::tempdir().unwrap();
         let handle = UserDataHandle::new();
         handle.handle(&open_request(directory.path())).unwrap();
-        // trace: two seeds + one added = 3 matches; pages of 2 start at 0, 2.
+        // trace: three added = 3 matches; pages of 2 start at 0, 2.
         save(&handle, None, "tâi-uân", "台灣");
+        save(&handle, None, "gâu-tsá", "𠢕早");
+        save(&handle, None, "tsia̍h-pá--buē", "食飽未");
 
         let answer = match call(
             &handle,
@@ -1099,10 +1102,7 @@ mod tests {
         };
         let imported = restore(backup);
         assert_eq!(imported.refusal(), BackupRefusal::None);
-        assert_eq!(
-            imported.custom_dictionary, 1,
-            "the seeds were there already"
-        );
+        assert_eq!(imported.custom_dictionary, 1);
         assert_eq!(list(&target, "台灣").matching_total, 1);
         assert_eq!(restore(b"{".to_vec()).refusal(), BackupRefusal::Unreadable);
         assert_eq!(
@@ -1132,8 +1132,12 @@ mod tests {
             }),
         );
 
-        // A page request waits for the open to finish: the seeds are there.
-        assert_eq!(list(&handle, "").total, 2, "seeded before the page reads");
+        // A page request waits for the open to finish.
+        assert_eq!(
+            list(&handle, "").total,
+            0,
+            "an empty dictionary, read once open"
+        );
         let stores = handle.stores().unwrap();
         let rows = stores.frequency.all_rows().unwrap_or_default();
         assert_eq!(rows.len(), 1, "counted once the open landed");

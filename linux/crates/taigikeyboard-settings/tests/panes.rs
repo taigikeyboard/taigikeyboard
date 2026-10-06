@@ -49,8 +49,7 @@ fn main() -> ExitCode {
     let directory = tempfile::tempdir().expect("a temp directory");
     let store = SettingsFileStore::new(directory.path());
     // The engine's user data is process-wide, so this one directory serves
-    // every window below; the open seeds the custom dictionary, which the
-    // custom-dictionary check empties before it counts.
+    // every window below; the custom dictionary starts empty.
     assert!(
         user_data::open(directory.path(), DESKTOP_PLATFORM),
         "the engine opens its stores"
@@ -291,9 +290,6 @@ fn the_kautian_expander_switch_writes_its_key(window: &Rc<SettingsWindow>) {
 /// the UI thread and lands on the main context — pumped here until it does
 /// — and the list then shows both.
 fn the_custom_dictionary_lists_what_the_store_holds(window: &Rc<SettingsWindow>) {
-    // The open seeded the dictionary (the two example words); the count
-    // below is of what this test saves.
-    user_data::delete_all_custom_entries().expect("empty the seeded dictionary");
     user_data::save_custom_entry("", "tsia̍h-pn̄g", "食飯").expect("save");
     user_data::save_custom_entry("", "lim-tê", "啉茶").expect("save");
     let document = window.writer().borrow().document().clone();

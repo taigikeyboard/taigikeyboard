@@ -159,11 +159,7 @@ Example: `"gâu-tsá"` → `"gt"`
 
 ## Default Entries
 
-The engine seeds an empty dictionary on open (`CustomDictionaryStore::seed_if_empty`, every platform):
-```
-id: "default-gau-tsa",       roman: "gâu-tsá",        hanzi: "𠢕早"
-id: "default-tsiah-pa-bue",  roman: "tsia̍h-pá--buē",  hanzi: "食飽未"
-```
+None. A fresh install starts with an empty custom dictionary on every platform. Entries an earlier version seeded (ids `default-gau-tsa`, `default-tsiah-pa-bue`) stay until the user deletes them — they are user data now.
 
 ---
 

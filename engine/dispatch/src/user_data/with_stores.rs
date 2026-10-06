@@ -324,7 +324,7 @@ mod tests {
         // trace: 21 custom rows `tâi-uân` / 台灣0..20 and 6 learned phrases
         // `tâi-uân` / 台灣0..5 all key `taiuan` (tl); raw "taiuan" prefix-
         // matches the custom rows (KEYSTROKE_LIMIT 20) and equals the learned
-        // key (KEYSTROKE_LIMIT 5). The seeds (gâu-tsá, tsia̍h-pá--buē) miss.
+        // key (KEYSTROKE_LIMIT 5).
         let directory = tempfile::tempdir().unwrap();
         let stores = UserDataStores::at(
             userdata::UserDataPaths::in_directory(directory.path()),
