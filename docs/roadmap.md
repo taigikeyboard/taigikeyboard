@@ -18,7 +18,7 @@
 
 ## Active / In-flight items
 
-- **E1 P5 — corpus picks the word too** (opened by the maintainer 2026-10-08, "do A and B together"): P0–P4 MERGED (#458, #460, #461, #462, #463, #465) made the walker *segment* on one corpus probability (`dictionary.bin` v4 `walker_cost`, α 10; `kau3siu7` → 教授, dev TL full tone 81.4 → 86.4 % exact). P5a: each edge's word is picked by `walker_cost` (`kausiu` → 教授, `kap` → 佮) — in progress. P5b: the candidate list sorts by `walker_cost` — after P5a merges. Dogfood S116 / S117. Design: [`architecture/unified-word-frequency-roadmap.md`](architecture/unified-word-frequency-roadmap.md) §6.
+- **E1 P5 — corpus picks the word too** (opened by the maintainer 2026-10-08, "do A and B together"): P0–P4 MERGED (#458, #460, #461, #462, #463, #465) made the walker *segment* on one corpus probability (`dictionary.bin` v4 `walker_cost`, α 10; `kau3siu7` → 教授, dev TL full tone 81.4 → 86.4 % exact). P5a MERGED #466: each edge's word is picked by `walker_cost` (`kausiu` → 教授, `kap` → 佮; dev 79.9 → 84.9 % exact). P5b: the candidate list and the dictionary search page sort by `walker_cost` — next. Dogfood S116 / S117 / S118. Design: [`architecture/unified-word-frequency-roadmap.md`](architecture/unified-word-frequency-roadmap.md) §6.
 
 Everything else scoped through 2026-10-05 has merged (see Closed phases). Pending dogfood: `docs/architecture/dogfood-checklist.md`.
 
