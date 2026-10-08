@@ -216,8 +216,8 @@ pub(crate) const WALKER_SINGLE_SYLLABLE_USER_DELTA_SCALE: f64 = 0.0;
 /// E1 P3): `2_000` made a custom entry a strong **multi-syllable phrase**
 /// competitor — it beats a split into the two cheapest single characters
 /// — without elevating it to a top single character. The rule tests in
-/// [`tests`] pin both sides on today's costs. **Dogfood-tunable**; P4 of
-/// the E1 roadmap calibrates it on the `calib` split.
+/// [`tests`] pin both sides on today's costs. **Dogfood-tunable**; E1 P4
+/// kept it — the gold set has no user entries to calibrate it on.
 pub(crate) const USER_ENTRY_EFFECTIVE_COUNT: f64 = 2_000.0;
 
 /// `walker_cost` (milli-nats) of a user entry: the walker model's price

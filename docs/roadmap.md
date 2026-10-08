@@ -18,7 +18,7 @@
 
 ## Active / In-flight items
 
-- **E1 — unified word frequency for the walker** (planned 2026-10-08): `kau3siu7` puts the composition 到受 at slot 0 over the dictionary word 教授 because the walker's edge cost mixes character counts with word counts. The walker gets one probability per `(hanji, TL)` from the segmented corpus (`word_unigrams.tsv`); the candidate-list sort is unchanged. P0–P4 + P2b corpus refresh (P5 maintainer-gated, not opened; P0–P3 merged). Design + status: [`architecture/unified-word-frequency-roadmap.md`](architecture/unified-word-frequency-roadmap.md).
+- **E1 — unified word frequency for the walker** (planned 2026-10-08): `kau3siu7` puts the composition 到受 at slot 0 over the dictionary word 教授 because the walker's edge cost mixes character counts with word counts. The walker gets one probability per `(hanji, TL)` from the segmented corpus (`word_unigrams.tsv`); the candidate-list sort is unchanged. P0–P4 + P2b corpus refresh (P5 maintainer-gated, not opened; P0–P3 merged, P4 in review). Design + status: [`architecture/unified-word-frequency-roadmap.md`](architecture/unified-word-frequency-roadmap.md).
 
 Everything else scoped through 2026-10-05 has merged (see Closed phases). Pending dogfood: `docs/architecture/dogfood-checklist.md`.
 

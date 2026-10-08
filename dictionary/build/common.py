@@ -20,8 +20,9 @@ SHARED_DATA_DIR = BASE_DIR / "shared" / "data"
 # Segmented corpus word counts (`build.corpus_bigrams`); the walker model's input.
 UNIGRAMS_TSV = SHARED_DATA_DIR / "word_unigrams.tsv"
 # Walker model smoothing α (`build.walker_lm`); here because `build_id` hashes it.
-# Provisional 10 (P1 exposure: 68 dictionary words broken vs 1,059 at α 0.5, while
-# `calib` phrases score the same at 0.5–10); P4 calibrates it on the calib split.
+# E1 P4 (2026-10-08) kept 10 after an engine grid over {0.5, 2, 10, 50}: best on dev
+# and calib across all eight input variants (50 gains ~1 full-tone item, loses every
+# toneless one) — docs/reports/2026-10-08-e1-p4-calibration.md.
 WALKER_ALPHA = 10.0
 
 # Build scripts live under dictionary/build/; importing common.* requires
