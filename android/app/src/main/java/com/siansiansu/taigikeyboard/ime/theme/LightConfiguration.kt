@@ -3,8 +3,12 @@ package com.siansiansu.taigikeyboard.ime.theme
 import android.content.res.Configuration
 
 // A user theme renders light whatever the system night mode: the IME (TaigiKeyboard.lightContext)
-// and the theme editor preview (KeyboardPreviewPanel) both resolve resources under this copy.
-fun Configuration.withNightModeOff(): Configuration =
+// resolves resources under this copy.
+fun Configuration.withNightModeOff(): Configuration = withNightMode(isNightMode = false)
+
+// A copy of this configuration pinned to night ([isNightMode]) or day, whatever the system says.
+fun Configuration.withNightMode(isNightMode: Boolean): Configuration =
     Configuration(this).apply {
-        uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or Configuration.UI_MODE_NIGHT_NO
+        val nightBits = if (isNightMode) Configuration.UI_MODE_NIGHT_YES else Configuration.UI_MODE_NIGHT_NO
+        uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or nightBits
     }

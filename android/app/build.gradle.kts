@@ -209,6 +209,8 @@ dependencies {
     implementation("androidx.compose.material:material-icons-core")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
+    // PreviewAssetGeneratorTest renders KeyboardPreviewPanel with a Compose test rule.
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 
     implementation("com.squareup.moshi:moshi-kotlin:1.15.2")
 
@@ -235,4 +237,6 @@ dependencies {
     implementation("com.google.protobuf:protobuf-javalite:4.36.2")
     androidTestImplementation("androidx.test:runner:1.7.0")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
+    androidTestImplementation(composeBom)
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
 }

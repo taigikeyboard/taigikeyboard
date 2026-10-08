@@ -52,12 +52,13 @@ import com.siansiansu.taigikeyboard.ime.theme.KeyboardColorSettings
 import com.siansiansu.taigikeyboard.ime.theme.ThemeAppearance
 import com.siansiansu.taigikeyboard.ime.theme.getColorFromAttr
 import com.siansiansu.taigikeyboard.ime.theme.themeBackground
-import com.siansiansu.taigikeyboard.ime.theme.withNightModeOff
+import com.siansiansu.taigikeyboard.ime.theme.withNightMode
 import com.siansiansu.taigikeyboard.typeface.TypefaceLoader
 
-// Live keyboard preview panel with candidate bar for the user-theme editor. Always rendered light:
-// a user theme ignores system night mode, as on the keyboard (TaigiKeyboard.syncForcedLight).
-// Mirrors iOS KeyboardPreviewPanel `colorScheme: .light`.
+// Live keyboard preview panel with candidate bar. The user-theme editor renders it light (the default):
+// a user theme ignores system night mode, as on the keyboard (TaigiKeyboard.syncForcedLight). The
+// preview-asset generator (PreviewAssetGeneratorTest) passes [isNightMode] for the night screenshots of
+// adaptive themes. Mirrors iOS KeyboardPreviewPanel `colorScheme`.
 
 @Composable
 fun KeyboardPreviewPanel(
@@ -74,7 +75,8 @@ fun KeyboardPreviewPanel(
     // saved key look. The Layout-tab appearance editor omits it (it has no shadow
     // control) and stays flat.
     keyShadowIntensity: Float = ThemeAppearance.DEFAULT_KEY_SHADOW_INTENSITY,
-) = ForcedLightConfiguration {
+    isNightMode: Boolean = false,
+) = FixedNightModeConfiguration(isNightMode) {
     // The theme surface (solid / gradient / photo) is painted once behind candidate row + keys, as
     // the IME paints it on `text_input_content`; both children stay transparent over it.
     val isDarkTheme = isSystemInDarkTheme()
@@ -217,17 +219,20 @@ private val sampleCandidates =
         SampleCandidate("gîm-á", "砛仔"),
     )
 
-// Renders [content] under a night-mode-off configuration so theme attrs and isSystemInDarkTheme()
-// resolve light (LocalResources derives from LocalContext).
+// Renders [content] under a configuration pinned to [isNightMode] so theme attrs and
+// isSystemInDarkTheme() resolve that way (LocalResources derives from LocalContext).
 @Composable
-private fun ForcedLightConfiguration(content: @Composable () -> Unit) {
+private fun FixedNightModeConfiguration(
+    isNightMode: Boolean,
+    content: @Composable () -> Unit,
+) {
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
-    val lightConfiguration = remember(configuration) { configuration.withNightModeOff() }
-    val lightContext = remember(context, lightConfiguration) { context.createConfigurationContext(lightConfiguration) }
+    val pinnedConfiguration = remember(configuration, isNightMode) { configuration.withNightMode(isNightMode) }
+    val pinnedContext = remember(context, pinnedConfiguration) { context.createConfigurationContext(pinnedConfiguration) }
     CompositionLocalProvider(
-        LocalContext provides lightContext,
-        LocalConfiguration provides lightConfiguration,
+        LocalContext provides pinnedContext,
+        LocalConfiguration provides pinnedConfiguration,
         content = content,
     )
 }
