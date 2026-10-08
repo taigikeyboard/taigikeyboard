@@ -139,11 +139,11 @@ enum ThemeEditorRoute: Hashable {
 
 /// Shared dimensions for every card so the theme shelves line up with the Layout
 /// page. `width` matches `LayoutOptionCard.cardWidth`; `previewAspectRatio`
-/// matches the `layout_*_preview` assets (585×369) so theme screenshots render
-/// at the identical size.
-private enum ThemeCardMetrics {
+/// matches the generated `*_preview` assets (720×454, `PreviewAssetGeneratorTests`)
+/// so theme screenshots render at the identical size.
+enum ThemeCardMetrics {
     static let width: CGFloat = 240
-    static let previewAspectRatio: CGFloat = 585.0 / 369.0
+    static let previewAspectRatio: CGFloat = 720.0 / 454.0
     static let cardSpacing: CGFloat = 12
 }
 

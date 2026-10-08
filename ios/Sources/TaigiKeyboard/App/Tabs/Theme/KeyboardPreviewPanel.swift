@@ -15,6 +15,10 @@ struct KeyboardPreviewPanel: View {
     /// default theme (keeps KeyboardKit's standard shadow, matching the keyboard).
     let appliesThemeShadow: Bool
     let colorScheme: ColorScheme
+    /// `false` in the theme editor (it has no system backdrop to show through); the
+    /// preview-asset generator passes `true` and paints the backdrop itself, so an
+    /// adaptive theme draws as on the real keyboard.
+    var isLiquidGlassEnabled = false
 
     @State private var previewState = KeyboardState()
     @State private var composingManager = ComposingManager()
@@ -51,7 +55,7 @@ struct KeyboardPreviewPanel: View {
 
     private func configurePreviewContext() {
         let ctx = previewState.keyboardContext
-        ctx.isLiquidGlassEnabled = false
+        ctx.isLiquidGlassEnabled = isLiquidGlassEnabled
         ctx.screenSize = UIScreen.main.bounds.size
         ctx.colorScheme = colorScheme
         previewState.autocompleteContext.suggestionsFromService = [
