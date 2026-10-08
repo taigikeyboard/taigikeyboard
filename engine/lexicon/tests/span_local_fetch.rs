@@ -131,6 +131,16 @@ fn build_fixture_costed(
     name: &str,
     rows: &[(u16, u16, &Row<'_>)],
 ) -> (PrefixIndex, DictionaryReader) {
+    build_fixture_costed_in_family(name, b"tl:", rows)
+}
+
+/// [`build_fixture_costed`] under another FST key family (`b"tps:"`), the
+/// row's `toneless_key` being that family's key body.
+fn build_fixture_costed_in_family(
+    name: &str,
+    family: &[u8],
+    rows: &[(u16, u16, &Row<'_>)],
+) -> (PrefixIndex, DictionaryReader) {
     // 1. dict.bin v4.
     let dict_rows: Vec<TkdbRow<'_>> = rows
         .iter()
@@ -148,12 +158,13 @@ fn build_fixture_costed(
     let dict_path = write_temp(&format!("phase5-{name}.dict.bin"), &dict_bytes);
     let dict = DictionaryReader::open(&dict_path).expect("dict.bin opens");
 
-    // 2. dictionary.fst — `tl:<key> + 0xFF + rowid` entries (`write_fst_set`
-    // sorts them into the ascending byte order the builder needs).
+    // 2. dictionary.fst — `<family><key> + 0xFF + rowid` entries
+    // (`write_fst_set` sorts them into the ascending byte order the builder
+    // needs).
     let mut fst_keys: Vec<Vec<u8>> = Vec::new();
     for (idx, (_, _, r)) in rows.iter().enumerate() {
         let rowid = (idx + 1) as u32;
-        fst_keys.push(fst_entry(b"tl:", r.toneless_key, rowid));
+        fst_keys.push(fst_entry(family, r.toneless_key, rowid));
     }
     let fst_path = write_fst_set(&format!("{name}.fst"), fst_keys);
     let prefix_index = PrefixIndex::open(&fst_path).expect("dictionary.fst opens");
@@ -1849,7 +1860,9 @@ fn best_candidate_for_key_breaks_score_tie_by_source_rank_like_the_list() {
     // `source_rank` before FST rowid — production `kap` 洽/甲 (both 4927):
     // the old strict-`>` score compare kept the first rowid 洽, the list
     // led with kautian 甲, and the user saw slot 0 disagree with the list.
-    // Now both say 甲. (Fixture uses the taigitv bit: the kautian bit is
+    // Both said 甲 then; since E1 P5a the corpus cost decides production
+    // `kap` (佮), and this equal-cost fixture pins the tie only. (Fixture
+    // uses the taigitv bit: the kautian bit is
     // dropped from the effective bitmask when a row has no kautian
     // subtag, which `build_fixture_costed` never sets.)
     const TAIGITV_BIT: u16 = 1 << 1;
@@ -1939,10 +1952,10 @@ fn best_candidate_for_key_prefers_selected_row_but_keeps_span_walker_cost_of_key
 }
 
 #[test]
-fn best_candidate_for_key_prices_on_min_walker_cost_not_max_frequency() {
-    // E1 D3: the edge's word follows the dictionary order (臺灣, the
-    // higher frequency) while its cost is the cheapest corpus price under
-    // the key (台灣) — the two disagree on purpose here.
+fn best_candidate_for_key_picks_the_corpus_cheapest_word_over_the_frequent_one() {
+    // E1 P5a: the edge's word is the cheapest corpus price under the key
+    // (台灣), not the higher dictionary frequency (臺灣), and the edge is
+    // priced on that same min (D3).
     let taiuan_frequent = Row {
         toneless_key: "taiuan",
         hanji: "臺灣",
@@ -1973,14 +1986,15 @@ fn best_candidate_for_key_prices_on_min_walker_cost_not_max_frequency() {
         &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     )
     .expect("key has dict hits");
-    assert_eq!(best.candidate.display_text, "臺灣");
+    assert_eq!(best.candidate.display_text, "台灣");
     assert_eq!(best.span_walker_cost, 6_000);
 }
 
 #[test]
 fn best_candidate_for_key_min_cost_skips_rows_the_filters_drop() {
-    // E1 D3: the min runs over the rows that pass the source and tone-pin
-    // filters only — a dropped row lends the edge no cost.
+    // E1 D3 / P5a: the min and the pick run over the rows that pass the
+    // source and tone-pin filters only — a dropped row lends the edge
+    // neither its cost nor its word.
     const TAIGITV_BIT: u16 = 1 << 1;
     const RANK_NEUTRAL_BIT: u16 = 1 << 11;
     let si_cheap = Row {
@@ -2006,15 +2020,15 @@ fn best_candidate_for_key_min_cost_skips_rows_the_filters_drop() {
     );
     let freq_map = FrequencyMap::new();
     let edge = |ctx: &ContinuousFetchCtx<'_>, tone_pin: &TonePin| {
-        best_candidate_for_key_with_barriers("tl:si", &[], tone_pin, (0, 2), &[], ctx)
-            .expect("key has dict hits")
-            .span_walker_cost
+        let best = best_candidate_for_key_with_barriers("tl:si", &[], tone_pin, (0, 2), &[], ctx)
+            .expect("key has dict hits");
+        (best.span_walker_cost, best.candidate.display_text)
     };
     let all_sources = ctx_neutral(&freq_map, &prefix_index, &dict);
     assert_eq!(
         edge(&all_sources, &TonePin::None),
-        4_000,
-        "toneless key borrows the cheapest tone"
+        (4_000, "是".to_owned()),
+        "toneless key takes the cheapest tone's word"
     );
     let without_taigitv = ContinuousFetchCtx {
         enabled_sources_bitmask: u32::from(RANK_NEUTRAL_BIT),
@@ -2022,7 +2036,7 @@ fn best_candidate_for_key_min_cost_skips_rows_the_filters_drop() {
     };
     assert_eq!(
         edge(&without_taigitv, &TonePin::None),
-        9_000,
+        (9_000, "死".to_owned()),
         "source toggled off"
     );
     let si2 = TonePin::TypedTones {
@@ -2033,9 +2047,61 @@ fn best_candidate_for_key_min_cost_skips_rows_the_filters_drop() {
     };
     assert_eq!(
         edge(&all_sources, &si2),
-        9_000,
+        (9_000, "死".to_owned()),
         "typed tone stops the borrowing"
     );
+}
+
+#[test]
+fn best_candidate_for_key_tps_picks_the_cheapest_admitted_reading() {
+    // E1 P5a over the §35 TPS readings: `ㄎㆦㆻㄫ` admits the literal-closer
+    // khok|ng reading (1 substitution) and khoo|kng (2). The corpus cost
+    // picks khoo|kng though the other row has the higher frequency and sits
+    // first in reading order; a typed separator after ㆻ (Final-only slot)
+    // drops khoo|kng, which then lends the edge neither word nor cost.
+    // Hanji are fixture labels.
+    let khok_ng = Row {
+        toneless_key: "ㄎㆦㆻㆭ",
+        hanji: "殼黃",
+        tl: "khok-n̂g",
+        syll: 2,
+        freq: 100,
+    };
+    let khoo_kng = Row {
+        toneless_key: "ㄎㆦㄍㆭ",
+        hanji: "箍卷",
+        tl: "khoo-kǹg",
+        syll: 2,
+        freq: 1,
+    };
+    let (prefix_index, dict) = build_fixture_costed_in_family(
+        "e1-p5a-tps-readings",
+        b"tps:",
+        &[
+            (1u16 << 11, 9_000, &khok_ng),
+            (1u16 << 11, 6_000, &khoo_kng),
+        ],
+    );
+    let freq_map = FrequencyMap::new();
+    let tps_ctx = ContinuousFetchCtx {
+        mode: InputMode::Tps,
+        ..ctx_neutral(&freq_map, &prefix_index, &dict)
+    };
+    let edge = |final_only: &[usize]| {
+        let best = best_candidate_for_key_with_barriers(
+            "tps:ㄎㆦㆻㄫ",
+            final_only,
+            &TonePin::None,
+            (0, 12),
+            &[],
+            &tps_ctx,
+        )
+        .expect("key has dict hits");
+        (best.candidate.display_text, best.span_walker_cost)
+    };
+    assert_eq!(edge(&[]), ("箍卷".to_owned(), 6_000));
+    let final_only_khok = "tps:ㄎㆦㆻㄫ".find('ㆻ').expect("ㆻ in the key");
+    assert_eq!(edge(&[final_only_khok]), ("殼黃".to_owned(), 9_000));
 }
 
 #[test]

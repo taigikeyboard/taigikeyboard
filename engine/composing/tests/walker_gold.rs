@@ -397,8 +397,10 @@ fn walker_gold_metrics() {
 
 /// Plan D3: the homophone the engine shows for each multi-homophone fully
 /// toned key, typed alone — the first whole-key candidate that is one of the
-/// key's words. Written to `edge_picks.tsv` for `tools.walker_gold d3` and the
-/// offline simulator.
+/// key's words (`pick`), and slot 0's hanji as displayed (`slot0`; it may be
+/// a split path, or a §22-promoted row). Written to `edge_picks.tsv` for
+/// `tools.walker_gold d3`, the offline simulator, and slot-0 before / after
+/// counts.
 #[test]
 #[ignore = "E1 edge-pick screen — run with --ignored after `tools.walker_gold resolve`"]
 fn walker_edge_picks() {
@@ -406,12 +408,13 @@ fn walker_edge_picks() {
         return;
     }
     let (_, keys) = read_tsv(&output_dir().join("edge_keys.tsv"));
-    let mut rows = vec!["key\tsources\tpick".to_string()];
+    let mut rows = vec!["key\tsources\tpick\tslot0".to_string()];
     for (sources, bitmask) in [("default", default_sources_bitmask()), ("all", u32::MAX)] {
         for key_row in &keys {
             let key = &key_row["key"];
             let homophones: BTreeSet<&str> = key_row["homophones"].split('|').collect();
-            let pick = candidates_for("tl", key, bitmask)
+            let candidates = candidates_for("tl", key, bitmask);
+            let pick = candidates
                 .iter()
                 .find(|c| {
                     c.consumed_span_end == key.len() as u32
@@ -419,7 +422,8 @@ fn walker_edge_picks() {
                 })
                 .map(plain_hanji)
                 .unwrap_or_default();
-            rows.push(format!("{key}\t{sources}\t{pick}"));
+            let slot0 = candidates.first().map(plain_hanji).unwrap_or_default();
+            rows.push(format!("{key}\t{sources}\t{pick}\t{slot0}"));
         }
     }
     std::fs::write(output_dir().join("edge_picks.tsv"), rows.join("\n") + "\n")

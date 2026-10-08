@@ -1048,10 +1048,11 @@ pub fn fetch_partial_prefix_candidates_unbounded(
 }
 
 /// v3.5.8 S2 — single best dictionary candidate for one exact FST
-/// key. Returns the [`CandidateSortKey`]-first [`record_to_candidate`] over
-/// `prefix_index.lookup_exact(key)` (user-selected word before
-/// dictionary frequency; NaN coerced low via `CandidateSortKey`; ties keep
-/// the first FST rowid for determinism) together with the key's
+/// key. Returns the [`record_to_candidate`] over
+/// `prefix_index.lookup_exact(key)` that [`pick_edge_word`] chooses
+/// (user-selected word, then the corpus `walker_cost`, then the dictionary
+/// score; NaN coerced low via `CandidateSortKey`; ties keep the first
+/// inserted row for determinism) together with the key's
 /// min walker cost ([`EdgeBest::span_walker_cost`]), or `None` when the
 /// key has no dict hit. PR-9.6 — the walker reads the
 /// SAME `ctx.enabled_sources_bitmask` filter the span-local path
@@ -1090,7 +1091,7 @@ pub fn best_candidate_for_key_with_barriers(
     // `span_walker_cost` is the dictionary's own minimum — learned rows
     // join the pick below but carry no corpus probability.
     let mut span_walker_cost = WALKER_COST_UNPRICED;
-    let mut homophones: Vec<RawCandidate> = Vec::new();
+    let mut homophones: Vec<(RawCandidate, u16)> = Vec::new();
     exact_candidates_for_key(
         key,
         tps_final_only,
@@ -1100,23 +1101,27 @@ pub fn best_candidate_for_key_with_barriers(
         ctx,
         |cand, walker_cost| {
             span_walker_cost = span_walker_cost.min(walker_cost);
-            homophones.push(cand);
+            homophones.push((cand, walker_cost));
         },
     );
     // Learned phrases (§50) — the caller matched these rows to this edge's
-    // key; they join the SAME pick with `frequency = 0` (score 0, default
-    // source rank), so a dictionary homophone wins unless the user's
-    // `user_frequency` says otherwise, and the learned row is the edge only
-    // when the dictionary has nothing under the key. The caller caps the
-    // edge's `span_walker_cost` for segmentation.
+    // key; they join the SAME pick with no corpus cost
+    // ([`WALKER_COST_UNPRICED`]) and `frequency = 0`, so a dictionary
+    // homophone wins unless the user's `user_frequency` or the previous
+    // word's context says otherwise, and the learned row is the edge when
+    // the dictionary has nothing under the key. The caller caps the edge's
+    // `span_walker_cost` for segmentation.
     for entry in learned {
-        homophones.push(learned_entry_to_candidate(
-            entry,
-            consumed_span,
-            ctx.freq_map,
-            ctx.now_ms,
-            ctx.context,
-            COVERAGE_KIND_FULL,
+        homophones.push((
+            learned_entry_to_candidate(
+                entry,
+                consumed_span,
+                ctx.freq_map,
+                ctx.now_ms,
+                ctx.context,
+                COVERAGE_KIND_FULL,
+            ),
+            WALKER_COST_UNPRICED,
         ));
     }
     let candidate = pick_edge_word(homophones, consumed_span.1, ctx.context.is_empty())?;
@@ -1126,11 +1131,14 @@ pub fn best_candidate_for_key_with_barriers(
     })
 }
 
-/// The edge's word among its homophones: the same `CandidateSortKey` order as the
-/// span-local list so slot 0 and the list agree. Every homophone shares
-/// `coverage_kind` / `consumed_span`, so `raw_len = consumed_span.1` pins
-/// `tier` equal and only the user-weight / context / score / freq / source
-/// dims decide; the insertion index breaks a full tie (first FST rowid).
+/// The edge's word among its homophones, each paired with its `dict.bin`
+/// `walker_cost`: the `CandidateSortKey` with the corpus dimension set
+/// (E1 P5a) — a selected word first, then a context hit, then the word the
+/// corpus writes most, with the dictionary score / freq / source dims only
+/// breaking an equal cost. The span-local list leaves the corpus dimension
+/// unset, so it can order the same homophones differently. Every homophone
+/// shares `coverage_kind` / `consumed_span`, so `raw_len = consumed_span.1`
+/// pins `tier` equal; the insertion index breaks a full tie.
 ///
 /// With a previous-word context (§56) the pick may change the WORD but never
 /// the edge's COST, so segmentation is frozen: the context-free winner is
@@ -1140,29 +1148,36 @@ pub fn best_candidate_for_key_with_barriers(
 /// and `EdgeBest::span_walker_cost` is the key min regardless of the pick —
 /// which are the pick's only inputs to `lattice::edge_cost`.
 fn pick_edge_word(
-    homophones: Vec<RawCandidate>,
+    homophones: Vec<(RawCandidate, u16)>,
     raw_len: u32,
     context_free: bool,
 ) -> Option<RawCandidate> {
+    let edge_key = |i: usize, (cand, walker_cost): &(RawCandidate, u16), with_context: bool| {
+        let facts = cand.rank_facts();
+        let key = if with_context {
+            CandidateSortKey::new(&facts, raw_len, i as u32)
+        } else {
+            CandidateSortKey::without_context(&facts, raw_len, i as u32)
+        };
+        key.with_walker_cost(*walker_cost)
+    };
     let (baseline_index, syllable_count) = homophones
         .iter()
         .enumerate()
-        .min_by_key(|(i, cand)| {
-            CandidateSortKey::without_context(&cand.rank_facts(), raw_len, *i as u32)
-        })
-        .map(|(i, cand)| (i, cand.syllable_count))?;
+        .min_by_key(|(i, homophone)| edge_key(*i, homophone, false))
+        .map(|(i, (cand, _))| (i, cand.syllable_count))?;
     let index = if context_free {
         baseline_index
     } else {
         homophones
             .iter()
             .enumerate()
-            .filter(|(_, cand)| cand.syllable_count == syllable_count)
-            .min_by_key(|(i, cand)| CandidateSortKey::new(&cand.rank_facts(), raw_len, *i as u32))
+            .filter(|(_, (cand, _))| cand.syllable_count == syllable_count)
+            .min_by_key(|(i, homophone)| edge_key(*i, homophone, true))
             .map(|(i, _)| i)
             .unwrap_or(baseline_index)
     };
-    homophones.into_iter().nth(index)
+    homophones.into_iter().nth(index).map(|(cand, _)| cand)
 }
 
 /// The words [`best_candidate_for_key_with_barriers`] picks the edge's word
@@ -1197,7 +1212,8 @@ pub fn homophone_words_for_key(
 #[derive(Debug)]
 pub struct EdgeBest {
     /// The homophone the user sees for this edge — user-selected word
-    /// first, then dictionary frequency (the [`CandidateSortKey`] order).
+    /// first, then the previous word's context, then the corpus
+    /// `walker_cost` ([`pick_edge_word`]).
     pub candidate: RawCandidate,
     /// Lowest `dict.bin` `walker_cost` among the key's homophones that
     /// pass the edge's source / tone-pin / barrier filters — not the
@@ -1904,12 +1920,87 @@ mod edge_word_pick_tests {
         }
     }
 
-    fn picked(homophones: Vec<RawCandidate>, context_free: bool) -> Option<String> {
+    /// A typical seen word's corpus cost; the tests that do not exercise the
+    /// corpus dimension give every homophone this one.
+    const EQUAL_COST: u16 = 7_000;
+
+    fn picked_costed(homophones: Vec<(RawCandidate, u16)>, context_free: bool) -> Option<String> {
         pick_edge_word(homophones, 3, context_free).map(|c| c.display_text)
     }
 
+    fn picked(homophones: Vec<RawCandidate>, context_free: bool) -> Option<String> {
+        let costed = homophones.into_iter().map(|c| (c, EQUAL_COST)).collect();
+        picked_costed(costed, context_free)
+    }
+
+    // E1 P5a: the word the corpus writes most fills the edge, whatever the
+    // dictionary frequency (production `koh`: 擱 and 閣 share frequency
+    // 29,890; `kap`: 甲 outranks 佮 on source rank).
+    #[test]
+    fn corpus_cost_takes_the_word_over_frequency() {
+        let key = vec![
+            (homophone("擱", 29_890, 1, 0.0, CONTEXT_RANK_NONE), 9_000),
+            (homophone("閣", 29_890, 1, 0.0, CONTEXT_RANK_NONE), 6_000),
+            (homophone("故", 40_000, 1, 0.0, CONTEXT_RANK_NONE), 8_000),
+        ];
+        assert_eq!(picked_costed(key, true).as_deref(), Some("閣"));
+    }
+
+    // E1 P5a: an equal cost (corpus-unseen words share one smoothed cost)
+    // leaves the pick to the dictionary score, as before P5a.
+    #[test]
+    fn equal_cost_falls_to_the_dictionary_score() {
+        let key = vec![
+            (homophone("狗巢", 25, 2, 0.0, CONTEXT_RANK_NONE), 13_180),
+            (homophone("狗岫", 50, 2, 0.0, CONTEXT_RANK_NONE), 13_180),
+        ];
+        assert_eq!(picked_costed(key, true).as_deref(), Some("狗岫"));
+    }
+
+    // A selected word still leads the corpus: user weight is the first
+    // dimension of the pick.
+    #[test]
+    fn selected_word_beats_the_corpus_choice() {
+        let key = vec![
+            (homophone("教授", 10, 2, 0.0, CONTEXT_RANK_NONE), 7_000),
+            (homophone("狗岫", 25, 2, 0.2, CONTEXT_RANK_NONE), 13_180),
+        ];
+        assert_eq!(picked_costed(key, true).as_deref(), Some("狗岫"));
+    }
+
+    // Learned phrases (§50) carry no corpus cost: a dictionary homophone
+    // wins unless the user's weight or the previous word's context favours
+    // the learned row, and a learned row alone is the edge.
+    #[test]
+    fn learned_row_competes_through_user_weight_and_context_only() {
+        let dictionary = || (homophone("這", 1000, 1, 0.0, CONTEXT_RANK_NONE), 7_000);
+        let learned = |user_weight, context_rank| {
+            (
+                homophone("姊", 0, 1, user_weight, context_rank),
+                WALKER_COST_UNPRICED,
+            )
+        };
+        assert_eq!(
+            picked_costed(vec![learned(0.0, CONTEXT_RANK_NONE), dictionary()], true).as_deref(),
+            Some("這")
+        );
+        assert_eq!(
+            picked_costed(vec![dictionary(), learned(0.3, CONTEXT_RANK_NONE)], true).as_deref(),
+            Some("姊")
+        );
+        assert_eq!(
+            picked_costed(vec![dictionary(), learned(0.0, CONTEXT_RANK_USER)], false).as_deref(),
+            Some("姊")
+        );
+        assert_eq!(
+            picked_costed(vec![learned(0.0, CONTEXT_RANK_NONE)], true).as_deref(),
+            Some("姊")
+        );
+    }
+
     // INVARIANT_CONTINUOUS_CONTEXT_RERANK (§56): a context hit takes the
-    // edge's word; the context-free pick is today's frequency order.
+    // edge's word; with every corpus cost equal here, the context-free pick
+    // is the frequency order.
     #[test]
     fn context_hit_takes_the_word() {
         let key = || {
@@ -1943,6 +2034,29 @@ mod edge_word_pick_tests {
             homophone("濟", 100, 1, 0.5, CONTEXT_RANK_USER),
         ];
         assert_eq!(picked(hit_among_equals, false).as_deref(), Some("濟"));
+    }
+
+    // INVARIANT_CONTINUOUS_CONTEXT_RERANK with corpus costs: the context-free
+    // winner is now the cheapest word, and the contextual pick keeps its
+    // `syllable_count` and `user_weight` — with `span_walker_cost` taken
+    // over the key regardless of the pick, every `lattice::edge_cost` input
+    // is the same with and without the context.
+    #[test]
+    fn context_hit_keeps_the_corpus_winners_cost_inputs() {
+        let key = || {
+            vec![
+                (homophone("這", 1000, 1, 0.0, CONTEXT_RANK_NONE), 7_000),
+                (homophone("這兜", 10, 2, 0.0, CONTEXT_RANK_NONE), 5_000),
+                (homophone("濟", 100, 1, 0.0, CONTEXT_RANK_USER), 9_000),
+                (homophone("姊妹", 1, 2, 0.0, CONTEXT_RANK_BUNDLED), 12_000),
+            ]
+        };
+        let context_free = pick_edge_word(key(), 3, true).expect("a word");
+        let contextual = pick_edge_word(key(), 3, false).expect("a word");
+        assert_eq!(context_free.display_text, "這兜");
+        assert_eq!(contextual.display_text, "姊妹");
+        assert_eq!(contextual.syllable_count, context_free.syllable_count);
+        assert_eq!(contextual.user_weight, context_free.user_weight);
     }
 
     #[test]
