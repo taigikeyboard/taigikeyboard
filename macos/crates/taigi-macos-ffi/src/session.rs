@@ -1119,7 +1119,7 @@ mod tests {
 
     /// Under TPS the picker commits the composition as shown even over a
     /// highlight: a pick would only nail a word and keep composing (Hanji
-    /// conversion H6). trace, read by running: ㄍㄚˋ → 假, no space.
+    /// conversion H6). trace, read by running: ㄍㄚˋ → 絞 (E1 P5a corpus pick), no space.
     #[test]
     fn under_tps_the_picker_commits_the_composition_as_shown() {
         let (_engine, shell) = engine_shell();
@@ -1131,7 +1131,7 @@ mod tests {
         assert!(!shown_list(&typist.key(down, no_list())).cells.is_empty());
         let reply = typist.commit_for_symbol_picker(list(Some(0)));
         assert!(!reply.handled && !reply.is_composing);
-        assert_eq!(effects(&reply), vec![insert("假"), closed()]);
+        assert_eq!(effects(&reply), vec![insert("絞"), closed()]);
     }
 
     /// No highlight: the composition as typed, spaced under TL
@@ -1410,7 +1410,7 @@ mod tests {
 
     /// Hanji conversion on macOS: `e` `8` `4` (ㄍㄚˋ) is marked converted; a
     /// plain ← steps the caret over the word; ⇧Return writes the glyphs.
-    /// trace, read by running: ㄍㄚˋ → 假.
+    /// trace, read by running: ㄍㄚˋ → 絞 (E1 P5a corpus pick: 絞/ká 66 > 假/ká 25).
     #[test]
     fn under_tps_a_closed_reading_is_marked_converted_and_shift_return_writes_the_glyphs() {
         let (_engine, shell) = engine_shell();
@@ -1418,11 +1418,11 @@ mod tests {
         typist.key(typed("e"), no_list());
         typist.key(typed("8"), no_list());
         let reply = typist.key(typed("4"), no_list());
-        assert_eq!(effects(&reply), vec![marked("假", 1), flashed(0, 3)]);
+        assert_eq!(effects(&reply), vec![marked("絞", 1), flashed(0, 3)]);
         let left = chord("\u{F702}", FUNCTION | NUMERIC_PAD, Some(LEFT_ARROW));
         let stepped = typist.key(left, no_list());
         assert!(stepped.handled && stepped.is_composing);
-        assert_eq!(effects(&stepped), vec![marked("假", 0)]);
+        assert_eq!(effects(&stepped), vec![marked("絞", 0)]);
         let shift_enter = typist.key(chord("\r", SHIFT, Some(CARRIAGE_RETURN)), no_list());
         assert!(shift_enter.handled && !shift_enter.is_composing);
         assert_eq!(effects(&shift_enter).first(), Some(&insert("ㄍㄚˋ")));
@@ -1538,13 +1538,13 @@ mod tests {
         let down = chord("\u{F701}", FUNCTION | NUMERIC_PAD, Some(0xF701));
         assert!(!shown_list(&typist.key(down, no_list())).cells.is_empty());
         // trace: KEYS `4` = ˋ (U+02CB, tone 2); after ㄚ the adjuster keeps it,
-        // and the closed reading shows converted (read by running: 假).
+        // and the closed reading shows converted (read by running: 絞).
         let over_list = typist.tps_keyboard_press("\u{02cb}", list(Some(0)));
         assert!(over_list.handled && over_list.is_composing);
         // The flash comes before the window goes, as the executor runs them.
         assert_eq!(
             effects(&over_list),
-            vec![marked("假", 1), flashed(0, 3), closed()]
+            vec![marked("絞", 1), flashed(0, 3), closed()]
         );
     }
 

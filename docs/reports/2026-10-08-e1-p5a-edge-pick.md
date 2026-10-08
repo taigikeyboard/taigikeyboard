@@ -71,6 +71,7 @@ Examples (default sources): `kap4` 甲 → 佮, `kak4` 覺 → 角, `kui1` 規 �
 - `lexicon` unit (`edge_word_pick_tests`): corpus cost over frequency, equal cost falls to the score, a selected word beats the corpus choice, learned rows in four cases, and the context pick keeps the corpus winner's cost inputs.
 - `lexicon/tests/span_local_fetch.rs`: the cheaper word is picked over the more frequent one (the D3 test, rewritten); a filtered row lends the edge neither its word nor its cost; TPS picks the cheapest admitted substituted reading, and a Final-only barrier removes it. The two integration tests fail on `main`.
 - `composing/tests/walker_fixed_inputs_prod.rs`: `kausiu` → 教授 (on `main`: 狗岫).
+- Desktop TPS conversion characterisation tests (`linux/crates/taigi-linux-core/tests/session_characterisation.rs`, `macos/crates/taigi-macos-ffi/src/session.rs`, read by running): ㄍㄚˋ now converts to 絞 (was 假); the tone pin keeps the `ká` rows only, and the corpus has 絞/ká 66 against 假/ká 25.
 - S0 golden (`UPDATE_GOLDEN=1 … golden_fetch_at_pos`): no diff. The hermetic fixtures derive `walker_cost` monotonically from their frequency, so the corpus order equals the old order there.
 
 ## 5. Commands
