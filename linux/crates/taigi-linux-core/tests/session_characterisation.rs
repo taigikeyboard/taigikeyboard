@@ -497,7 +497,7 @@ fn tps_opens_the_table_on_demand_and_the_number_row_picks() {
 
 /// Hanji conversion on Linux: `e` `8` `4` (ㄍㄚˋ) shows converted; plain ←
 /// steps the caret over the word; Shift+Enter writes the glyphs, Enter the
-/// Hanji. trace, read by running: ㄍㄚˋ → 假.
+/// Hanji. trace, read by running: ㄍㄚˋ → 絞 (E1 P5a corpus pick: 絞/ká 66 > 假/ká 25).
 #[test]
 fn tps_converts_a_closed_reading_and_the_commit_keys_part_ways() {
     const LEFT: u32 = 0xff51;
@@ -510,14 +510,14 @@ fn tps_converts_a_closed_reading_and_the_commit_keys_part_ways() {
     assert_eq!(
         typed,
         [Emit::Preedit {
-            text: "假".to_owned(),
+            text: "絞".to_owned(),
             caret: 1
         }]
     );
     assert_eq!(
         session.press(LEFT),
         [Emit::Preedit {
-            text: "假".to_owned(),
+            text: "絞".to_owned(),
             caret: 0
         }]
     );
@@ -527,5 +527,5 @@ fn tps_converts_a_closed_reading_and_the_commit_keys_part_ways() {
     session.press('e' as u32);
     session.press('8' as u32);
     session.press('4' as u32);
-    assert_eq!(session.press(RETURN), [Emit::ClearPreedit, commit("假")]);
+    assert_eq!(session.press(RETURN), [Emit::ClearPreedit, commit("絞")]);
 }

@@ -817,11 +817,11 @@ pub(crate) fn walk_buffer(
         // `ctx.enabled_sources_bitmask`.
         // Learned phrases (§50) — the rows keyed to this edge, filtered by
         // the same tone pin a custom row answers to. They enter the
-        // dictionary's own `CandidateSortKey` pick; when any is present the edge is
-        // priced at most at `CUSTOM_EDGE_COST` so the span the user once
-        // composed as one word keeps winning the segmentation (the #69
-        // span-vs-word decoupling: "is this span a word" is the cap,
-        // "which word" is the pick).
+        // dictionary's own edge pick (`lexicon::pick_edge_word`); when any
+        // is present the edge is priced at most at `CUSTOM_EDGE_COST` so the
+        // span the user once composed as one word keeps winning the
+        // segmentation (the #69 span-vs-word decoupling: "is this span a
+        // word" is the cap, "which word" is the pick).
         let learned_for_edge: Vec<&LearnedEntry> = learned_map
             .get(custom_key.as_str())
             .into_iter()
@@ -846,7 +846,7 @@ pub(crate) fn walk_buffer(
                 } else {
                     span_walker_cost.min(crate::lattice::CUSTOM_EDGE_COST)
                 };
-                // Word = the user's pick (`CandidateSortKey` order). Cost =
+                // Word = the edge pick (user weight, context, corpus cost). Cost =
                 // `span_walker_cost` (key min) so a rarer preferred
                 // homophone does not lose the segmentation; the S3
                 // path discount reads the pick's own `user_weight`.
