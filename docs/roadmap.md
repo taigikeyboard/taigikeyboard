@@ -18,7 +18,7 @@
 
 ## Active / In-flight items
 
-- **E1 P5 — corpus picks the word too** (opened by the maintainer 2026-10-08, "do A and B together"): P0–P4 MERGED (#458, #460, #461, #462, #463, #465) made the walker *segment* on one corpus probability (`dictionary.bin` v4 `walker_cost`, α 10; `kau3siu7` → 教授, dev TL full tone 81.4 → 86.4 % exact). P5a MERGED #466: each edge's word is picked by `walker_cost` (`kausiu` → 教授, `kap` → 佮; dev 79.9 → 84.9 % exact). P5b: the candidate list and the dictionary search page sort by `walker_cost` — next. Dogfood S116 / S117 / S118. Design: [`architecture/unified-word-frequency-roadmap.md`](architecture/unified-word-frequency-roadmap.md) §6.
+- **E1 P5 — corpus picks the word too** (opened by the maintainer 2026-10-08, "do A and B together"): P0–P4 MERGED (#458, #460, #461, #462, #463, #465) made the walker *segment* on one corpus probability (`dictionary.bin` v4 `walker_cost`, α 10; `kau3siu7` → 教授, dev TL full tone 81.4 → 86.4 % exact). P5a MERGED #466: each edge's word is picked by `walker_cost` (`kausiu` → 教授, `kap` → 佮; dev 79.9 → 84.9 % exact). P5b PR #468: the candidate list and the dictionary search page sort by `walker_cost` (slot 0 unchanged; `frequency` retirement → § Open candidates). Dogfood S116 / S117 / S118 / S119. Design: [`architecture/unified-word-frequency-roadmap.md`](architecture/unified-word-frequency-roadmap.md) §6.
 
 Everything else scoped through 2026-10-05 has merged (see Closed phases). Pending dogfood: `docs/architecture/dogfood-checklist.md`.
 
@@ -73,6 +73,12 @@ One line each; the linked section holds the design, the measurements and the ope
 | Item | Status | Where |
 |---|---|---|
 | SignPath Foundation code-signing application | rejected 2026-10-02; USER will reapply later — keep `CODE_SIGNING_POLICY.md` + `windows-build.yml` provenance build | [`go-public-checklist.md`](go-public-checklist.md), [`CODE_SIGNING_POLICY.md`](CODE_SIGNING_POLICY.md) |
+
+**Engine and dictionary**
+
+| Item | Status | Where |
+|---|---|---|
+| Retire the old dictionary `frequency` after E1 | Recorded, not started — maintainer 2026-10-08: "record it in the roadmap, handle it when there is time". Still read: the equal-cost tie-break (`CandidateSortKey` −score / −freq; ~69 % of rows are corpus-unseen and share one cost), the search-page tie-break, `association.bin` dictionary-derived counts (`associations.py`), CSV / FST row order + duplicate max-aggregation (`merge_csv.py`), the `dict.bin` u32 field, `CandidateMessage.score`. Steps: pick a replacement tie-break for unseen words, a count source for the association rows, then the format bump. Related: proto `TaigiWord.length_score` has no reader since P5b; a custom twin of a dictionary word carries no corpus cost (sorts below its priced homophone in the list) | [`reports/2026-10-08-e1-p5b-list-sort.md`](reports/2026-10-08-e1-p5b-list-sort.md) §5 |
 
 **Not to re-propose** (USER-closed): `zh-TW` README, xcconfig signing, Android Gradle proto plugin, dictionary-source licensing follow-up, romanization spelling correction, corpus expansion P1b incl. the TAT application, a full TL / POJ / en / ja proofreading pass of the app UI (fix reported typos per incident instead), `$` sentence-start opener (its `association.bin` data is removed in its own PR), smart-suggestion techniques outside the bigram model (3, 5, 6, 9, 10, 11 incl. the Android `IME_FLAG_NO_PERSONALIZED_LEARNING` gap), Windows candidate-window paint latency and UIA exposure (USER 2026-10-02: "remove"); converted-romanization commit on Enter (`suann2ting3` → `suán-tìng`), TL mode (臺羅模式) tone key commits without a candidate window, and mobile predictions after Space (USER 2026-10-02: "remove"); bigram P6 walker term / P7 hanji-only sources / D7 two-word context; e2e drivers for macOS, Windows, Android, iOS; invariant-label PR2; naming batch C (persisted names stay frozen); shared Swift package for macOS + iOS (open-source round 10, USER 2026-10-04: close — see § Closed phases).
 
