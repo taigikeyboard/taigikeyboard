@@ -33,10 +33,10 @@ struct LayoutSelectionOverlay: View {
                 layoutSection(
                     header: lang.string(.layoutRomanizationKeyboard),
                     layouts: [
-                        (.phahTaigi, lang.string(.layoutPhahTaigiLayout), "layout_phahtaigi_preview"),
-                        (.qwerty, lang.string(.layoutStandardLayout), "layout_standard_preview"),
-                        (.moe1, lang.string(.layoutMoe1Layout), "layout_moe1_preview"),
-                        (.moe2, lang.string(.layoutMoe2Layout), "layout_moe2_preview"),
+                        (.phahTaigi, lang.string(.layoutPhahTaigiLayout)),
+                        (.qwerty, lang.string(.layoutStandardLayout)),
+                        (.moe1, lang.string(.layoutMoe1Layout)),
+                        (.moe2, lang.string(.layoutMoe2Layout)),
                     ],
                 )
 
@@ -44,7 +44,7 @@ struct LayoutSelectionOverlay: View {
                 layoutSection(
                     header: lang.string(.settingsTpsMode),
                     layouts: [
-                        (.tps, lang.string(.layoutTpsLayout), "layout_tps_preview"),
+                        (.tps, lang.string(.layoutTpsLayout)),
                     ],
                 )
             }
@@ -63,7 +63,7 @@ struct LayoutSelectionOverlay: View {
 
     private func layoutSection(
         header: String,
-        layouts: [(KeyboardLayoutType, String, String?)],
+        layouts: [(KeyboardLayoutType, String)],
     ) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             KeyboardOverlaySectionHeader(title: header)
@@ -71,10 +71,10 @@ struct LayoutSelectionOverlay: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
-                    ForEach(layouts, id: \.0) { layoutType, name, imageName in
+                    ForEach(layouts, id: \.0) { layoutType, name in
                         LayoutCard(
                             name: name,
-                            previewImageName: imageName,
+                            previewImageName: layoutType.previewImageName,
                             isSelected: selectedLayout == layoutType,
                             action: { selectLayout(layoutType) },
                         )

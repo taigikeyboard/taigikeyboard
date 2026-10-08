@@ -10,8 +10,8 @@ struct LayoutTab: View {
     private let settings = SharedSettings.shared
 
     // Title element is a StringKey, resolved at render via `lang` so the layout name live-switches.
-    private static let tpsEntry: (KeyboardLayoutType, StringKey, String, String?, Bool) =
-        (.tps, .layoutTpsLayout, "layout_tps_preview", nil, false)
+    private static let tpsEntry: (KeyboardLayoutType, StringKey, String?, Bool) =
+        (.tps, .layoutTpsLayout, nil, false)
 
     init() {
         _selectedLayout = State(initialValue: SharedSettings.shared.keyboardLayoutType)
@@ -25,10 +25,10 @@ struct LayoutTab: View {
                     layoutSection(
                         header: .layoutRomanizationKeyboard,
                         layouts: [
-                            (.phahTaigi, .layoutPhahTaigiLayout, "layout_phahtaigi_preview", nil, false),
-                            (.qwerty, .layoutStandardLayout, "layout_standard_preview", nil, false),
-                            (.moe1, .layoutMoe1Layout, "layout_moe1_preview", nil, false),
-                            (.moe2, .layoutMoe2Layout, "layout_moe2_preview", nil, false),
+                            (.phahTaigi, .layoutPhahTaigiLayout, nil, false),
+                            (.qwerty, .layoutStandardLayout, nil, false),
+                            (.moe1, .layoutMoe1Layout, nil, false),
+                            (.moe2, .layoutMoe2Layout, nil, false),
                         ],
                     )
 
@@ -51,7 +51,7 @@ struct LayoutTab: View {
 
     private func layoutSection(
         header: StringKey,
-        layouts: [(KeyboardLayoutType, StringKey, String, String?, Bool)],
+        layouts: [(KeyboardLayoutType, StringKey, String?, Bool)],
     ) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(lang.string(header))
@@ -61,11 +61,11 @@ struct LayoutTab: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
-                    ForEach(layouts, id: \.0) { layoutType, titleKey, imageName, subtitleText, isDisabled in
+                    ForEach(layouts, id: \.0) { layoutType, titleKey, subtitleText, isDisabled in
                         LayoutOptionCard(
                             title: lang.string(titleKey),
                             subtitle: subtitleText.map(\.self),
-                            previewImageName: imageName,
+                            previewImageName: layoutType.previewImageName,
                             isSelected: selectedLayout == layoutType,
                             isDisabled: isDisabled,
                             action: {
