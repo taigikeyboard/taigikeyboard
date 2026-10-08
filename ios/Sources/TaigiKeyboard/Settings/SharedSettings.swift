@@ -261,6 +261,8 @@ final class SharedSettings {
     /// separate slice.
     func setKeyboardLayoutType(_ newLayout: KeyboardLayoutType) {
         let oldLayout = keyboardLayoutType
+        // Read before the layout write: while the layout is still TPS this is the backup.
+        let modeAfterLeavingTps = romanizationInputMode
         userDefaults.set(newLayout, for: Self.keyboardLayoutTypeKey)
 
         if newLayout == .tps, oldLayout != .tps {
@@ -270,8 +272,15 @@ final class SharedSettings {
                 userDefaults.set(.tps, for: Self.inputModeKey)
             }
         } else if newLayout != .tps, oldLayout == .tps {
-            userDefaults.set(inputModeBeforeTps, for: Self.inputModeKey)
+            userDefaults.set(modeAfterLeavingTps, for: Self.inputModeKey)
         }
+    }
+
+    /// The input mode after selecting a non-TPS layout: the live mode, or — while the layout is
+    /// TPS — the backup `setKeyboardLayoutType(_:)` restores (it writes this value). Any mode,
+    /// English included.
+    var romanizationInputMode: InputMode {
+        keyboardLayoutType == .tps ? inputModeBeforeTps : inputMode
     }
 
     /// Stores the inputMode before switching to TPS, so it can be restored when leaving TPS

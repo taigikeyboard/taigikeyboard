@@ -77,10 +77,20 @@ internal object TpsCascade {
                 put(PreferenceKeys.INPUT_MODE, "tps")
             } else if (newValue != "tps" && oldValue == "tps") {
                 // Exit: unconditional restore — mirrors HEAD~1 + iOS PR-1 deliberate asymmetry.
-                put(PreferenceKeys.INPUT_MODE, inputModeBeforeTps)
+                put(PreferenceKeys.INPUT_MODE, inputModeAfterRomanizationLayout(oldValue, currentInputMode, inputModeBeforeTps))
             }
             put(PreferenceKeys.KEYBOARD_LAYOUT_TYPE, newValue)
         }
+
+    /**
+     * The input mode after writing any non-TPS layout: the backup when leaving TPS (the value
+     * [forKeyboardLayoutType] restores, unconditionally), else the live mode.
+     */
+    fun inputModeAfterRomanizationLayout(
+        oldLayout: String,
+        currentInputMode: String,
+        inputModeBeforeTps: String,
+    ): String = if (oldLayout == "tps") inputModeBeforeTps else currentInputMode
 
     /**
      * Computes ONE write plan for a layout write followed by an input-mode write (a Layout-tab

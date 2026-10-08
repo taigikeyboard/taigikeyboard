@@ -52,7 +52,7 @@ internal data class LayoutChoice(
 ) {
     @get:DrawableRes
     val previewRes: Int
-        get() = option.pojPreviewRes.takeIf { script == LayoutScript.POJ } ?: option.previewRes
+        get() = option.previewRes(script?.inputMode ?: LayoutScript.TL.inputMode)
 
     // A script card is selected only in its own input mode (English or TPS selects neither);
     // a layout-only card follows the stored layout.

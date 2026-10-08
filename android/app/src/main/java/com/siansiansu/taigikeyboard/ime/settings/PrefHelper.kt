@@ -393,6 +393,12 @@ class PrefHelper(
     private val inputModeBeforeTps: String
         get() = cached(PreferenceKeys.INPUT_MODE_BEFORE_TPS, "tl")
 
+    // The input mode after selecting a non-TPS layout: the live mode, or — while the layout is
+    // TPS — the mode [applyKeyboardLayoutType] restores on leaving it. Any mode, English included.
+    // Mirrors iOS SharedSettings.romanizationInputMode.
+    val romanizationInputMode: String
+        get() = TpsCascade.inputModeAfterRomanizationLayout(keyboardLayoutType, inputMode, inputModeBeforeTps)
+
     // Stores the layout before switching to TPS, so it can be restored when leaving TPS.
     // Same delegate-free rationale as [inputModeBeforeTps] — written only via the unified batch.
     private val layoutBeforeTps: String

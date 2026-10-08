@@ -16,7 +16,12 @@ data class KeyboardLayoutOption(
     // (LayoutManager picks `*_poj` in POJ mode); null when one table serves both scripts.
     // Mirrors iOS KeyboardLayoutType.pojPreviewImageName.
     @param:DrawableRes val pojPreviewRes: Int? = null,
-)
+) {
+    // The screenshot of the key table this layout shows in [inputMode]: the POJ table in "poj"
+    // when it differs, else the TL one. Mirrors iOS KeyboardLayoutType.previewImageName(for:).
+    @DrawableRes
+    fun previewRes(inputMode: String): Int = pojPreviewRes.takeIf { inputMode == "poj" } ?: previewRes
+}
 
 object KeyboardLayoutOptions {
     // Section 1 — romanization keyboards (matches iOS LayoutTab / LayoutSelectionOverlay).

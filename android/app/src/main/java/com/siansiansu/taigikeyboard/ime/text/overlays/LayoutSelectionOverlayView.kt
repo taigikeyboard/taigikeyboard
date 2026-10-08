@@ -88,6 +88,7 @@ class LayoutSelectionOverlayView : FrameLayout {
                     LayoutOverlayContent(
                         appearance = rememberKeyboardOverlayAppearance(prefs, trigger),
                         selectedKey = remember(trigger) { prefs.keyboardLayoutType },
+                        previewInputMode = remember(trigger) { prefs.romanizationInputMode },
                         resetKey = trigger,
                         onLayoutSelected = { key ->
                             // Persist BEFORE notifying so onKeyboardLayoutTypeChanged sees the new pref.

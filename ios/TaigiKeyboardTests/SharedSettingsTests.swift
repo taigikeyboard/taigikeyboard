@@ -135,6 +135,44 @@ final class SharedSettingsTests: XCTestCase {
         XCTAssertEqual(settings.inputMode, .poj, "Layout-side exit is unguarded (HEAD~1 parity)")
     }
 
+    // MARK: - romanizationInputMode (layout overlay preview)
+
+    func test_romanizationInputMode_matchesModeAfterPickingRomanizationLayout() {
+        // Each case: arrange a state, read the prediction, pick MOE1, compare with the live mode.
+        let arrangements: [(String, (SharedSettings, UserDefaults) -> Void)] = [
+            ("default tl", { _, _ in }),
+            ("poj", { settings, _ in settings.setInputMode(.poj) }),
+            ("english", { settings, _ in settings.setInputMode(.english) }),
+            ("TPS layout card from poj", { settings, _ in
+                settings.setInputMode(.poj)
+                settings.setKeyboardLayoutType(.tps)
+            }),
+            ("toolbar TPS keeps the older backup", { settings, _ in
+                settings.setInputMode(.poj)
+                settings.setKeyboardLayoutType(.tps) // backup = poj
+                settings.setKeyboardLayoutType(.qwerty) // restores poj
+                settings.setInputMode(.tl)
+                settings.setInputMode(.tps) // input side: backup stays poj
+            }),
+            ("stale: TPS layout, tl mode, poj backup", { _, defaults in
+                defaults.set(KeyboardLayoutType.tps.rawValue, forKey: "keyboardLayoutType")
+                defaults.set(InputMode.poj.rawValue, forKey: "inputModeBeforeTps")
+            }),
+        ]
+        for (name, arrange) in arrangements {
+            let suite = "SharedSettingsTests.romanization.\(UUID().uuidString)"
+            let caseDefaults = UserDefaults(suiteName: suite)!
+            defer { caseDefaults.removePersistentDomain(forName: suite) }
+            let caseSettings = SharedSettings(userDefaults: caseDefaults)
+            arrange(caseSettings, caseDefaults)
+
+            let predicted = caseSettings.romanizationInputMode
+            caseSettings.setKeyboardLayoutType(.moe1)
+
+            XCTAssertEqual(predicted, caseSettings.inputMode, name)
+        }
+    }
+
     // MARK: - Idempotency
 
     func test_setInputMode_sameValue_isNoOpForPairedField() {

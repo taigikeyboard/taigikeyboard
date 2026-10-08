@@ -42,6 +42,15 @@ final class LayoutChoiceTests: XCTestCase {
         XCTAssertEqual(LayoutChoice(layout: .phahTaigi, script: nil).previewImageName, "layout_phahtaigi_preview")
     }
 
+    func testKeyboardLayoutType_previewImageNameForMode_pojOnlyWhereTableDiffers() {
+        XCTAssertEqual(KeyboardLayoutType.qwerty.previewImageName(for: .poj), "layout_standard_poj_preview")
+        XCTAssertEqual(KeyboardLayoutType.moe2.previewImageName(for: .poj), "layout_moe2_poj_preview")
+        XCTAssertEqual(KeyboardLayoutType.moe2.previewImageName(for: .tl), "layout_moe2_preview")
+        XCTAssertEqual(KeyboardLayoutType.tps.previewImageName(for: .poj), "layout_tps_preview")
+        XCTAssertEqual(KeyboardLayoutType.phahTaigi.previewImageName(for: .poj), "layout_phahtaigi_preview")
+        XCTAssertEqual(KeyboardLayoutType.moe1.previewImageName(for: .english), "layout_moe1_preview")
+    }
+
     func testLayoutChoice_isSelected_scriptCardsNeedTheirOwnMode() {
         let cases: [(LayoutChoice, KeyboardLayoutType, InputMode, Bool)] = [
             (LayoutChoice(layout: .qwerty, script: .tl), .qwerty, .tl, true),

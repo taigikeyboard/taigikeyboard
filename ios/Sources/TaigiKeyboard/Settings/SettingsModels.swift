@@ -198,4 +198,10 @@ enum KeyboardLayoutType: String, CaseIterable {
         case .phahTaigi, .tps: nil
         }
     }
+
+    /// The card screenshot of the key table this layout shows in `inputMode`: the POJ table in
+    /// `.poj` when it differs, else the TL one (English and TPS fall back to it).
+    func previewImageName(for inputMode: InputMode) -> String {
+        inputMode == .poj ? pojPreviewImageName ?? previewImageName : previewImageName
+    }
 }
