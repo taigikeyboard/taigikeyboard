@@ -14,11 +14,15 @@ import XCTest
 final class PreviewAssetGeneratorTests: XCTestCase {
     private static let assetsDirectoryEnvironmentKey = "PREVIEW_ASSETS_DIR"
 
-    /// The width at which the key area alone (no candidate bar) fills the card aspect.
-    private static let renderWidth: CGFloat = 366
+    /// The width at which the card aspect holds the key area with even top / bottom margins
+    /// (the keyboard's own bottom inset) and no candidate bar.
+    private static let renderWidth: CGFloat = 372
     private static let renderScale: CGFloat = 3
     /// Taller than any keyboard, so the first layout pass is never height-bound.
     private static let initialWindowHeight: CGFloat = 600
+    /// Room under the bottom row, matching the inset above the top row (KeyboardKit's vertical
+    /// key inset); the fitting height ends flush with the bottom row.
+    private static let bottomInset: CGFloat = 4.5
     /// The `ThemeCardMetrics` card at @3x (720×454).
     private static let outputSize = CGSize(
         width: ThemeCardMetrics.width * renderScale,
@@ -167,13 +171,13 @@ final class PreviewAssetGeneratorTests: XCTestCase {
         window.rootViewController = host
         window.isHidden = false
         defer { window.isHidden = true }
-        // Measure only once the window is up: before that the keyboard context is not configured
-        // yet and the fitting height comes out short, clipping the bottom row.
-        let fittingSize = host.sizeThatFits(in: CGSize(width: renderWidth, height: .greatestFiniteMagnitude))
-        window.frame = CGRect(x: 0, y: 0, width: renderWidth, height: fittingSize.height)
-        host.view.frame = window.bounds
-        // Let `onAppear` configure the preview context and SwiftUI settle before capture.
+        // Measure only after `onAppear` has configured the preview context and SwiftUI settled:
+        // measured earlier, the height comes out short and drops the inset below the bottom row.
         RunLoop.main.run(until: Date().addingTimeInterval(1.0))
+        let fittingSize = host.sizeThatFits(in: CGSize(width: renderWidth, height: .greatestFiniteMagnitude))
+        window.frame = CGRect(x: 0, y: 0, width: renderWidth, height: fittingSize.height + bottomInset)
+        host.view.frame = window.bounds
+        RunLoop.main.run(until: Date().addingTimeInterval(0.2))
         host.view.layoutIfNeeded()
 
         let bounds = host.view.bounds
