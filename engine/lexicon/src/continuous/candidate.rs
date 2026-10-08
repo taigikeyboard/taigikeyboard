@@ -13,7 +13,7 @@ use crate::dictionary_reader::{DictionaryRecord, WALKER_COST_UNPRICED};
 
 /// Shared tail of every continuous fetch: merge `custom_dictionary.db`
 /// hits into the dictionary candidates `out`, collapse duplicates equal on
-/// `(hanji, span)` and on `roman` or `canonical_tl` (word identity), then apply the nine-dimension [`CandidateSortKey`](ranking::CandidateSortKey) sort.
+/// `(hanji, span)` and on `roman` or `canonical_tl` (word identity), then apply the [`CandidateSortKey`](ranking::CandidateSortKey) sort.
 /// `coverage_kind` is stamped on the custom synths — `COVERAGE_KIND_FULL`
 /// on the exact path, `COVERAGE_KIND_PARTIAL_PREFIX` on the partial-prefix
 /// path so §15.5's "partial-prefix ranks strictly below full-syllable" rule
@@ -45,8 +45,8 @@ use crate::dictionary_reader::{DictionaryRecord, WALKER_COST_UNPRICED};
 /// so the only realistic duplicate is custom-vs-`dict.bin` sharing a
 /// hanji and a roman or `canonical_tl` identity. MUST run BEFORE the `CandidateSortKey` sort: the winner is
 /// the lowest `source_tier_rank` survivor (custom rank 0 beats any
-/// `dict.bin` tier), which is NOT what the full 9-dim sort would pick (it
-/// weighs `score`/`freq` ahead of `source_rank`, so a high-freq `dict.bin`
+/// `dict.bin` tier), which is NOT what the full sort would pick (it
+/// weighs `walker_cost` / `score` / `freq` ahead of `source_rank`, so a `dict.bin`
 /// duplicate could otherwise mask the user's custom entry). `(reading,
 /// hanji)` is the dual key (Codex pre-impl D1) so reading variants of
 /// the same hanji are preserved (spellings of one reading collapse); S2 extends it with `consumed_span` (Codex
@@ -121,7 +121,7 @@ pub(super) fn record_to_candidate(
         hanji,
         tl,
         kautian_subtag: _,
-        walker_cost: _,
+        walker_cost,
     } = record;
     // EFFECTIVE bitmask (kautian bit dropped when its subcollection is
     // disabled) drives `source_tier_rank` so a multi-source survivor ranks by
@@ -161,6 +161,7 @@ pub(super) fn record_to_candidate(
         score,
         form: FORM_NOTONE,
         frequency,
+        walker_cost,
         bitmask,
         script_kind,
         user_weight,
@@ -261,6 +262,7 @@ pub(super) fn custom_entry_to_candidate(
         score,
         form: FORM_NOTONE,
         frequency: 0,
+        walker_cost: WALKER_COST_UNPRICED,
         // No `dict.bin` source bits; rank is forced to 0 via
         // `is_custom = true` in `CandidateSortKey::new` /
         // `dedupe_by_roman_hanji_span` (`source_tier_rank` short-circuits).
@@ -500,6 +502,7 @@ mod item12_custom_dedupe_tests {
             score: 1.0,
             form: FORM_NOTONE,
             frequency: 100,
+            walker_cost: WALKER_COST_UNPRICED,
             bitmask,
             script_kind: derive_script_kind(hanji),
             user_weight: 0.0,

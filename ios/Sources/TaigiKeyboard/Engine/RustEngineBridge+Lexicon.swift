@@ -18,7 +18,6 @@ public extension RustEngineBridge {
         public let id: Int64
         public let roman: String
         public let hanji: String?
-        public let lengthScore: Int32?
         /// The dictionaries the record belongs to, in the engine's
         /// (source-bit) order — the order the badges are drawn in.
         let sources: [DictionarySource]
@@ -266,7 +265,6 @@ public extension RustEngineBridge {
             id: proto.id,
             roman: proto.roman,
             hanji: proto.hasHanji ? proto.hanji : nil,
-            lengthScore: proto.hasLengthScore ? proto.lengthScore : nil,
             sources: proto.sources.compactMap(platformDictionarySource(from:)),
         )
     }

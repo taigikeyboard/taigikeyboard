@@ -1,6 +1,6 @@
-//! Continuous candidate ordering: the [`CandidateSortKey`] (nine dimensions
-//! for the list, a tenth — corpus cost — for the walker's edge pick), the
-//! [`CandidateRankFacts`] it reads, and its NaN-safe score wrapper.
+//! Continuous candidate ordering: the ten-dimension [`CandidateSortKey`] the
+//! candidate list and the walker's edge pick share, the [`CandidateRankFacts`]
+//! it reads, and its NaN-safe score wrapper.
 
 use std::cmp::Reverse;
 
@@ -20,6 +20,9 @@ pub struct CandidateRankFacts {
     pub user_weight: f64,
     /// `CONTEXT_RANK_*` — previous-word continuation layer.
     pub context_rank: u8,
+    /// `dict.bin` corpus cost (`−ln p`, milli-nats); [`WALKER_COST_UNPRICED`]
+    /// for a candidate the corpus does not price (custom, learned, synthesized).
+    pub walker_cost: u16,
     /// [`crate::calculate_continuous_score`].
     pub score: f32,
     /// Raw dictionary frequency.
@@ -30,7 +33,12 @@ pub struct CandidateRankFacts {
     pub is_custom: bool,
 }
 
-/// The nine-dimension [`CandidateSortKey`] sort every continuous fetch
+/// [`CandidateRankFacts::walker_cost`] of a candidate the corpus does not price
+/// (custom, learned, synthesized): it sorts after every priced candidate of
+/// its tier unless user weight or the context lifts it (E1 P5b).
+pub const WALKER_COST_UNPRICED: u16 = u16::MAX;
+
+/// The [`CandidateSortKey`] sort every continuous fetch
 /// ends with. `stable_idx` is the pre-sort element position, stamped via
 /// `enumerate()` BEFORE the sort rather than inside the key extractor so
 /// it stays the caller's insertion order.
@@ -55,7 +63,7 @@ pub fn sort_by_candidate_key<T>(
 
 // v3.5.8 Phase 9.1 — CandidateSortKey
 //
-// Encodes the nine-dimension lexicographic sort policy pinned in
+// Encodes the lexicographic sort policy pinned in
 // `docs/releases/v3.5.8/plan.md` § Phase 9 (+ whole-sentence lattice + walker S8). Field
 // order in this struct matches `#[derive(Ord)]`'s lexicographic
 // comparison; `Reverse<T>` flips individual dimensions whose policy
@@ -65,8 +73,8 @@ pub fn sort_by_candidate_key<T>(
 // Order: coverage_kind, tier, -user_weight, context_rank, walker_cost, -score,
 // -freq, -coverage, source_rank, stable_idx. Bigram P5 (§56) added
 // `context_rank` between `-user_weight` and `-score`; E1 P5a added
-// `walker_cost` below it, set only by the walker's edge pick
-// ([`CandidateSortKey::with_walker_cost`]). S8 moved `-coverage` from
+// `walker_cost` below it for the walker's edge pick, and P5b made the
+// candidate list read it too, so the list and slot 0 share one scale. S8 moved `-coverage` from
 // dim 3 (above score) down to dim 6 (a weak tiebreak below
 // score/freq): the slot-0 whole-sentence walker now owns phrase
 // priority, so longest-coverage-first inside a tier only buried the
@@ -101,15 +109,14 @@ pub struct CandidateSortKey {
     /// never-selected one; above `score` so the context is more than a
     /// tie-break. All-`CONTEXT_RANK_NONE` (no context) changes nothing.
     context_rank: u8,
-    /// Ascending: the candidate's `dict.bin` `walker_cost` (corpus `−ln p`,
-    /// milli-nats) — the walker's edge pick prefers the word the corpus
-    /// writes most (E1 P5a, `docs/architecture/unified-word-frequency-roadmap.md`).
-    /// `None` for every candidate unless [`with_walker_cost`](Self::with_walker_cost)
-    /// set it — the comparison does not use the corpus dimension, so the
-    /// span-local list sorts as before. Equal costs
-    /// (corpus-unseen words share one smoothed cost; nearby counts round to
-    /// one milli-nat) fall to `score` and the dimensions below.
-    walker_cost: Option<u16>,
+    /// Ascending: [`CandidateRankFacts::walker_cost`] — the word the corpus
+    /// writes most first, in the list and in the walker's edge pick alike
+    /// (E1 P5a / P5b, `docs/architecture/unified-word-frequency-roadmap.md`).
+    /// Equal costs (corpus-unseen words share one smoothed cost; nearby counts
+    /// round to one milli-nat) fall to `score` and the dimensions below. An
+    /// unpriced candidate (custom, learned) sorts after every priced one
+    /// unless a dimension above decides.
+    walker_cost: u16,
     /// Descending: higher `freq × syll_bias × boost` wins.
     neg_score: Reverse<NonNanF64>,
     /// Descending: raw freq as a secondary tie-break independent of
@@ -150,7 +157,7 @@ impl CandidateSortKey {
             tier,
             neg_user_weight: Reverse(NonNanF64::new(facts.user_weight)),
             context_rank: facts.context_rank,
-            walker_cost: None,
+            walker_cost: facts.walker_cost,
             neg_score: Reverse(NonNanF64::new(f64::from(facts.score))),
             neg_freq: Reverse(facts.frequency),
             neg_coverage: Reverse(coverage_bytes),
@@ -165,16 +172,6 @@ impl CandidateSortKey {
         Self {
             context_rank: CONTEXT_RANK_NONE,
             ..Self::new(facts, raw_len, stable_idx)
-        }
-    }
-
-    /// The key with the corpus dimension set — the walker's edge pick
-    /// (`lexicon::pick_edge_word`) orders homophones by `walker_cost` below
-    /// user weight and context, above the dictionary score.
-    pub fn with_walker_cost(self, walker_cost: u16) -> Self {
-        Self {
-            walker_cost: Some(walker_cost),
-            ..self
         }
     }
 }
@@ -229,10 +226,15 @@ mod tests {
     /// Kautian source bit (1 << 0) — source rank 1.
     const KAUTIAN_BIT: u16 = 1 << 0;
 
+    /// The cost every corpus-unseen word shares at α 10 — one value for
+    /// every fixture, so tests of the other dimensions see a cost tie.
+    const UNSEEN_WALKER_COST: u16 = 13_181;
+
     /// Convenience builder so each test only specifies the dimensions
     /// it exercises. Fields not exercised default to neutral values:
     /// `bitmask = 0` (→ source rank = default = 5), `user_weight = 0.0`
-    /// (never selected = the cold-start default), no context.
+    /// (never selected = the cold-start default), no context, the shared
+    /// unseen corpus cost.
     fn cand(
         span_start: u32,
         span_end: u32,
@@ -256,6 +258,7 @@ mod tests {
             consumed_span: (span_start, span_end),
             user_weight,
             context_rank: CONTEXT_RANK_NONE,
+            walker_cost: UNSEEN_WALKER_COST,
             score,
             frequency,
             bitmask,
@@ -434,34 +437,58 @@ mod tests {
         );
     }
 
-    // E1 P5a: the edge pick's corpus dimension beats the dictionary score,
-    // sits below user weight and context, and is neutral unless set.
+    fn cand_with_cost(score: f32, walker_cost: u16) -> CandidateRankFacts {
+        CandidateRankFacts {
+            walker_cost,
+            ..cand(0, 3, score, score as u32, 0)
+        }
+    }
+
+    // E1 P5a / P5b: the corpus dimension beats the dictionary score and sits
+    // below user weight and context.
     #[test]
     fn walker_cost_beats_score_below_user_weight_and_context() {
         let raw_len: u32 = 3;
-        let frequent = cand(0, 3, 1000.0, 1000, 0);
-        let corpus_common = cand(0, 3, 10.0, 10, 0);
-        assert!(
-            key(&corpus_common, raw_len, 1).with_walker_cost(5_000)
-                < key(&frequent, raw_len, 0).with_walker_cost(9_000)
-        );
-        let selected = cand_with_user_weight(0, 3, 1.0, 1, 0, 0.1);
-        assert!(
-            key(&selected, raw_len, 2).with_walker_cost(13_000)
-                < key(&corpus_common, raw_len, 1).with_walker_cost(5_000)
-        );
-        let context_hit = cand_with_context(1.0, CONTEXT_RANK_BUNDLED);
-        assert!(
-            key(&context_hit, raw_len, 3).with_walker_cost(13_000)
-                < key(&corpus_common, raw_len, 1).with_walker_cost(5_000)
-        );
-        // Equal cost → the score decides, as without the dimension.
-        assert!(
-            key(&frequent, raw_len, 0).with_walker_cost(5_000)
-                < key(&corpus_common, raw_len, 1).with_walker_cost(5_000)
-        );
-        // Unset (the list): the score order is untouched.
-        assert!(key(&frequent, raw_len, 0) < key(&corpus_common, raw_len, 1));
+        let frequent = cand_with_cost(1000.0, 9_000);
+        let corpus_common = cand_with_cost(10.0, 5_000);
+        assert!(key(&corpus_common, raw_len, 1) < key(&frequent, raw_len, 0));
+        let selected = CandidateRankFacts {
+            user_weight: 0.1,
+            ..cand_with_cost(1.0, 13_000)
+        };
+        assert!(key(&selected, raw_len, 2) < key(&corpus_common, raw_len, 1));
+        let context_hit = CandidateRankFacts {
+            context_rank: CONTEXT_RANK_BUNDLED,
+            ..cand_with_cost(1.0, 13_000)
+        };
+        assert!(key(&context_hit, raw_len, 3) < key(&corpus_common, raw_len, 1));
+        // Equal cost → the score decides.
+        let corpus_equal = cand_with_cost(10.0, 9_000);
+        assert!(key(&frequent, raw_len, 0) < key(&corpus_equal, raw_len, 1));
+    }
+
+    // E1 P5b: an unpriced candidate (custom, learned) follows every priced
+    // one in its tier — custom's source rank 0 sits below the cost — unless
+    // the user selected it or the context names it.
+    #[test]
+    fn unpriced_candidate_follows_priced_unless_selected_or_in_context() {
+        let raw_len: u32 = 3;
+        let unseen = cand_with_cost(1.0, UNSEEN_WALKER_COST);
+        let custom = CandidateRankFacts {
+            is_custom: true,
+            ..cand_with_cost(0.0, WALKER_COST_UNPRICED)
+        };
+        assert!(key(&unseen, raw_len, 1) < key(&custom, raw_len, 0));
+        let selected_custom = CandidateRankFacts {
+            user_weight: 0.1,
+            ..custom
+        };
+        assert!(key(&selected_custom, raw_len, 0) < key(&unseen, raw_len, 1));
+        let context_custom = CandidateRankFacts {
+            context_rank: CONTEXT_RANK_USER,
+            ..custom
+        };
+        assert!(key(&context_custom, raw_len, 0) < key(&unseen, raw_len, 1));
     }
 
     #[test]

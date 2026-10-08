@@ -45,9 +45,9 @@
 //!
 //! # Ordering
 //!
-//! Returned candidates are sorted by the 9-dimensional `CandidateSortKey`
-//! documented at [`fetch_candidates_for_keys_with_barriers`];
-//! `calculate_continuous_score` provides only one of those dimensions.
+//! Returned candidates are sorted by the `CandidateSortKey` documented at
+//! [`fetch_candidates_for_keys_with_barriers`]; the corpus `walker_cost` and
+//! `calculate_continuous_score` provide two of its dimensions.
 //! Within-tier ties keep insertion order (`endings` order, then
 //! `prefix_index` rowid order — `lookup_exact` is deterministic per
 //! build). The comparator coerces `NaN` scores to `f64::MIN` so even a
@@ -267,6 +267,13 @@ pub struct RawCandidate {
     /// `DictionaryRecord::frequency` for candidates produced by
     /// `fetch_candidates_for_keys_with_barriers`.
     pub frequency: u32,
+    /// The record's `dict.bin` `walker_cost` (corpus `−ln p`, milli-nats) —
+    /// the [`CandidateSortKey`] dimension above `score` that the list and the
+    /// walker's edge pick share (E1 P5b). [`WALKER_COST_UNPRICED`] for a
+    /// candidate the corpus does not price: custom, learned, the walker's
+    /// slot-0 synth, the literal roman row. Internal — NOT emitted on
+    /// `CandidateMessage`.
+    pub walker_cost: u16,
     /// Dictionary source bitmask copied verbatim from
     /// [`DictionaryRecord::bitmask`](crate::dictionary_reader::DictionaryRecord::bitmask). Used by the v3.5.8 Phase 9.1
     /// `CandidateSortKey` to derive `source_tier_rank` at sort time per
@@ -329,6 +336,7 @@ impl RawCandidate {
             consumed_span: self.consumed_span,
             user_weight: self.user_weight,
             context_rank: self.context_rank,
+            walker_cost: self.walker_cost,
             score: self.score,
             frequency: self.frequency,
             bitmask: self.bitmask,
@@ -660,8 +668,8 @@ fn reading_passes_space_pin(tps_body: &str, reading: &str) -> bool {
 }
 
 /// Every dictionary candidate for one exact continuous key, in FST rowid
-/// order, handed to `sink` one at a time together with its record's
-/// `walker_cost`. The single visitor the span-local fetch
+/// order, handed to `sink` one at a time (each carries its record's
+/// `walker_cost`). The single visitor the span-local fetch
 /// ([`fetch_candidates_for_keys_with_barriers`], collects all) and the
 /// walker edge provider ([`best_candidate_for_key_with_barriers`], keeps
 /// the min cost) share, so the two layers cannot drift on which rows qualify —
@@ -692,7 +700,7 @@ fn exact_candidates_for_key(
     consumed_span: ConsumedSpan,
     filter: &Filter,
     ctx: &ContinuousFetchCtx<'_>,
-    mut sink: impl FnMut(RawCandidate, u16),
+    mut sink: impl FnMut(RawCandidate),
 ) {
     for_each_exact_reading(
         ctx.prefix_index,
@@ -716,19 +724,15 @@ fn exact_candidates_for_key(
                 record.kautian_subtag,
                 filter,
             );
-            let walker_cost = record.walker_cost;
-            sink(
-                record_to_candidate(
-                    record,
-                    effective,
-                    consumed_span,
-                    ctx.freq_map,
-                    ctx.now_ms,
-                    ctx.context,
-                    COVERAGE_KIND_FULL,
-                ),
-                walker_cost,
-            );
+            sink(record_to_candidate(
+                record,
+                effective,
+                consumed_span,
+                ctx.freq_map,
+                ctx.now_ms,
+                ctx.context,
+                COVERAGE_KIND_FULL,
+            ));
         },
     );
 }
@@ -752,9 +756,12 @@ fn exact_candidates_for_key(
 /// `docs/releases/v3.5.8/plan.md` § Phase 9 sort_key formula:
 ///
 /// ```text
-/// (coverage_kind, tier, -user_weight, context_rank, -adjusted_score,
-///  -freq, -coverage_bytes, source_tier_rank, stable_idx)
+/// (coverage_kind, tier, -user_weight, context_rank, walker_cost,
+///  -adjusted_score, -freq, -coverage_bytes, source_tier_rank, stable_idx)
 /// ```
+///
+/// E1 P5b: `walker_cost` (the record's corpus cost) orders the list on the
+/// walker's scale; `-adjusted_score` / `-freq` break an equal cost.
 ///
 /// v3.5.8 whole-sentence lattice + walker S8: `-coverage_bytes` was relocated
 /// from dim 3 to dim 6 (below `-adjusted_score` / `-freq`). With the
@@ -822,7 +829,7 @@ pub fn fetch_candidates_for_keys_with_barriers(
         // digits / §41 space-closed TPS tail). A short or empty slice
         // means "no pin", the legacy all-tones shape.
         let tone_pin = tone_pins.get(key_index).unwrap_or(&TonePin::None);
-        exact_candidates_for_key(key, final_only, tone_pin, *span, &filter, ctx, |cand, _| {
+        exact_candidates_for_key(key, final_only, tone_pin, *span, &filter, ctx, |cand| {
             out.push(cand)
         });
     }
@@ -851,7 +858,7 @@ pub fn fetch_candidates_for_keys_with_barriers(
 /// 4. Build candidates with `coverage_kind = COVERAGE_KIND_PARTIAL_PREFIX`
 ///    and `consumed_span = key.0` (caller pins `(0, raw.len())` per
 ///    Q15.4 — partial-prefix candidates always final-commit).
-/// 5. Sort via the same nine-dimension [`CandidateSortKey`]; the leading
+/// 5. Sort via the same [`CandidateSortKey`]; the leading
 ///    `coverage_kind` dim is `1` here so the whole batch ranks below
 ///    any concurrent full-syllable hits if a caller ever merges them
 ///    (this fn produces partial-prefix candidates only).
@@ -1091,7 +1098,7 @@ pub fn best_candidate_for_key_with_barriers(
     // `span_walker_cost` is the dictionary's own minimum — learned rows
     // join the pick below but carry no corpus probability.
     let mut span_walker_cost = WALKER_COST_UNPRICED;
-    let mut homophones: Vec<(RawCandidate, u16)> = Vec::new();
+    let mut homophones: Vec<RawCandidate> = Vec::new();
     exact_candidates_for_key(
         key,
         tps_final_only,
@@ -1099,9 +1106,9 @@ pub fn best_candidate_for_key_with_barriers(
         consumed_span,
         &filter,
         ctx,
-        |cand, walker_cost| {
-            span_walker_cost = span_walker_cost.min(walker_cost);
-            homophones.push((cand, walker_cost));
+        |cand| {
+            span_walker_cost = span_walker_cost.min(cand.walker_cost);
+            homophones.push(cand);
         },
     );
     // Learned phrases (§50) — the caller matched these rows to this edge's
@@ -1112,16 +1119,13 @@ pub fn best_candidate_for_key_with_barriers(
     // the dictionary has nothing under the key. The caller caps the edge's
     // `span_walker_cost` for segmentation.
     for entry in learned {
-        homophones.push((
-            learned_entry_to_candidate(
-                entry,
-                consumed_span,
-                ctx.freq_map,
-                ctx.now_ms,
-                ctx.context,
-                COVERAGE_KIND_FULL,
-            ),
-            WALKER_COST_UNPRICED,
+        homophones.push(learned_entry_to_candidate(
+            entry,
+            consumed_span,
+            ctx.freq_map,
+            ctx.now_ms,
+            ctx.context,
+            COVERAGE_KIND_FULL,
         ));
     }
     let candidate = pick_edge_word(homophones, consumed_span.1, ctx.context.is_empty())?;
@@ -1131,12 +1135,10 @@ pub fn best_candidate_for_key_with_barriers(
     })
 }
 
-/// The edge's word among its homophones, each paired with its `dict.bin`
-/// `walker_cost`: the `CandidateSortKey` with the corpus dimension set
-/// (E1 P5a) — a selected word first, then a context hit, then the word the
-/// corpus writes most, with the dictionary score / freq / source dims only
-/// breaking an equal cost. The span-local list leaves the corpus dimension
-/// unset, so it can order the same homophones differently. Every homophone
+/// The edge's word among its homophones: the [`CandidateSortKey`] the
+/// candidate list sorts by (E1 P5a / P5b) — a selected word first, then a
+/// context hit, then the word the corpus writes most (`walker_cost`), with the
+/// dictionary score / freq / source dims only breaking an equal cost. Every homophone
 /// shares `coverage_kind` / `consumed_span`, so `raw_len = consumed_span.1`
 /// pins `tier` equal; the insertion index breaks a full tie.
 ///
@@ -1148,36 +1150,35 @@ pub fn best_candidate_for_key_with_barriers(
 /// and `EdgeBest::span_walker_cost` is the key min regardless of the pick —
 /// which are the pick's only inputs to `lattice::edge_cost`.
 fn pick_edge_word(
-    homophones: Vec<(RawCandidate, u16)>,
+    homophones: Vec<RawCandidate>,
     raw_len: u32,
     context_free: bool,
 ) -> Option<RawCandidate> {
-    let edge_key = |i: usize, (cand, walker_cost): &(RawCandidate, u16), with_context: bool| {
+    let edge_key = |i: usize, cand: &RawCandidate, with_context: bool| {
         let facts = cand.rank_facts();
-        let key = if with_context {
+        if with_context {
             CandidateSortKey::new(&facts, raw_len, i as u32)
         } else {
             CandidateSortKey::without_context(&facts, raw_len, i as u32)
-        };
-        key.with_walker_cost(*walker_cost)
+        }
     };
     let (baseline_index, syllable_count) = homophones
         .iter()
         .enumerate()
         .min_by_key(|(i, homophone)| edge_key(*i, homophone, false))
-        .map(|(i, (cand, _))| (i, cand.syllable_count))?;
+        .map(|(i, cand)| (i, cand.syllable_count))?;
     let index = if context_free {
         baseline_index
     } else {
         homophones
             .iter()
             .enumerate()
-            .filter(|(_, (cand, _))| cand.syllable_count == syllable_count)
+            .filter(|(_, cand)| cand.syllable_count == syllable_count)
             .min_by_key(|(i, homophone)| edge_key(*i, homophone, true))
             .map(|(i, _)| i)
             .unwrap_or(baseline_index)
     };
-    homophones.into_iter().nth(index).map(|(cand, _)| cand)
+    homophones.into_iter().nth(index)
 }
 
 /// The words [`best_candidate_for_key_with_barriers`] picks the edge's word
@@ -1201,7 +1202,7 @@ pub fn homophone_words_for_key(
         consumed_span,
         &filter,
         ctx,
-        |cand, _| words.push(cand.display_text),
+        |cand| words.push(cand.display_text),
     );
     words
 }
@@ -1911,6 +1912,7 @@ mod edge_word_pick_tests {
             score: frequency as f32,
             form: FORM_NOTONE,
             frequency,
+            walker_cost: EQUAL_COST,
             bitmask: 0,
             script_kind: CandidateScriptKind::Hant,
             user_weight,
@@ -1924,13 +1926,15 @@ mod edge_word_pick_tests {
     /// corpus dimension give every homophone this one.
     const EQUAL_COST: u16 = 7_000;
 
-    fn picked_costed(homophones: Vec<(RawCandidate, u16)>, context_free: bool) -> Option<String> {
-        pick_edge_word(homophones, 3, context_free).map(|c| c.display_text)
+    fn costed(candidate: RawCandidate, walker_cost: u16) -> RawCandidate {
+        RawCandidate {
+            walker_cost,
+            ..candidate
+        }
     }
 
     fn picked(homophones: Vec<RawCandidate>, context_free: bool) -> Option<String> {
-        let costed = homophones.into_iter().map(|c| (c, EQUAL_COST)).collect();
-        picked_costed(costed, context_free)
+        pick_edge_word(homophones, 3, context_free).map(|c| c.display_text)
     }
 
     // E1 P5a: the word the corpus writes most fills the edge, whatever the
@@ -1939,11 +1943,11 @@ mod edge_word_pick_tests {
     #[test]
     fn corpus_cost_takes_the_word_over_frequency() {
         let key = vec![
-            (homophone("擱", 29_890, 1, 0.0, CONTEXT_RANK_NONE), 9_000),
-            (homophone("閣", 29_890, 1, 0.0, CONTEXT_RANK_NONE), 6_000),
-            (homophone("故", 40_000, 1, 0.0, CONTEXT_RANK_NONE), 8_000),
+            costed(homophone("擱", 29_890, 1, 0.0, CONTEXT_RANK_NONE), 9_000),
+            costed(homophone("閣", 29_890, 1, 0.0, CONTEXT_RANK_NONE), 6_000),
+            costed(homophone("故", 40_000, 1, 0.0, CONTEXT_RANK_NONE), 8_000),
         ];
-        assert_eq!(picked_costed(key, true).as_deref(), Some("閣"));
+        assert_eq!(picked(key, true).as_deref(), Some("閣"));
     }
 
     // E1 P5a: an equal cost (corpus-unseen words share one smoothed cost)
@@ -1951,10 +1955,10 @@ mod edge_word_pick_tests {
     #[test]
     fn equal_cost_falls_to_the_dictionary_score() {
         let key = vec![
-            (homophone("狗巢", 25, 2, 0.0, CONTEXT_RANK_NONE), 13_180),
-            (homophone("狗岫", 50, 2, 0.0, CONTEXT_RANK_NONE), 13_180),
+            costed(homophone("狗巢", 25, 2, 0.0, CONTEXT_RANK_NONE), 13_180),
+            costed(homophone("狗岫", 50, 2, 0.0, CONTEXT_RANK_NONE), 13_180),
         ];
-        assert_eq!(picked_costed(key, true).as_deref(), Some("狗岫"));
+        assert_eq!(picked(key, true).as_deref(), Some("狗岫"));
     }
 
     // A selected word still leads the corpus: user weight is the first
@@ -1962,10 +1966,10 @@ mod edge_word_pick_tests {
     #[test]
     fn selected_word_beats_the_corpus_choice() {
         let key = vec![
-            (homophone("教授", 10, 2, 0.0, CONTEXT_RANK_NONE), 7_000),
-            (homophone("狗岫", 25, 2, 0.2, CONTEXT_RANK_NONE), 13_180),
+            costed(homophone("教授", 10, 2, 0.0, CONTEXT_RANK_NONE), 7_000),
+            costed(homophone("狗岫", 25, 2, 0.2, CONTEXT_RANK_NONE), 13_180),
         ];
-        assert_eq!(picked_costed(key, true).as_deref(), Some("狗岫"));
+        assert_eq!(picked(key, true).as_deref(), Some("狗岫"));
     }
 
     // Learned phrases (§50) carry no corpus cost: a dictionary homophone
@@ -1973,27 +1977,27 @@ mod edge_word_pick_tests {
     // the learned row, and a learned row alone is the edge.
     #[test]
     fn learned_row_competes_through_user_weight_and_context_only() {
-        let dictionary = || (homophone("這", 1000, 1, 0.0, CONTEXT_RANK_NONE), 7_000);
+        let dictionary = || costed(homophone("這", 1000, 1, 0.0, CONTEXT_RANK_NONE), 7_000);
         let learned = |user_weight, context_rank| {
-            (
+            costed(
                 homophone("姊", 0, 1, user_weight, context_rank),
                 WALKER_COST_UNPRICED,
             )
         };
         assert_eq!(
-            picked_costed(vec![learned(0.0, CONTEXT_RANK_NONE), dictionary()], true).as_deref(),
+            picked(vec![learned(0.0, CONTEXT_RANK_NONE), dictionary()], true).as_deref(),
             Some("這")
         );
         assert_eq!(
-            picked_costed(vec![dictionary(), learned(0.3, CONTEXT_RANK_NONE)], true).as_deref(),
+            picked(vec![dictionary(), learned(0.3, CONTEXT_RANK_NONE)], true).as_deref(),
             Some("姊")
         );
         assert_eq!(
-            picked_costed(vec![dictionary(), learned(0.0, CONTEXT_RANK_USER)], false).as_deref(),
+            picked(vec![dictionary(), learned(0.0, CONTEXT_RANK_USER)], false).as_deref(),
             Some("姊")
         );
         assert_eq!(
-            picked_costed(vec![learned(0.0, CONTEXT_RANK_NONE)], true).as_deref(),
+            picked(vec![learned(0.0, CONTEXT_RANK_NONE)], true).as_deref(),
             Some("姊")
         );
     }
@@ -2045,10 +2049,10 @@ mod edge_word_pick_tests {
     fn context_hit_keeps_the_corpus_winners_cost_inputs() {
         let key = || {
             vec![
-                (homophone("這", 1000, 1, 0.0, CONTEXT_RANK_NONE), 7_000),
-                (homophone("這兜", 10, 2, 0.0, CONTEXT_RANK_NONE), 5_000),
-                (homophone("濟", 100, 1, 0.0, CONTEXT_RANK_USER), 9_000),
-                (homophone("姊妹", 1, 2, 0.0, CONTEXT_RANK_BUNDLED), 12_000),
+                costed(homophone("這", 1000, 1, 0.0, CONTEXT_RANK_NONE), 7_000),
+                costed(homophone("這兜", 10, 2, 0.0, CONTEXT_RANK_NONE), 5_000),
+                costed(homophone("濟", 100, 1, 0.0, CONTEXT_RANK_USER), 9_000),
+                costed(homophone("姊妹", 1, 2, 0.0, CONTEXT_RANK_BUNDLED), 12_000),
             ]
         };
         let context_free = pick_edge_word(key(), 3, true).expect("a word");

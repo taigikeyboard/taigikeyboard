@@ -9,7 +9,6 @@ struct DictionarySearchResult {
     let roman: String // Display form (POJ or TL based on user setting)
     let tl: String // Raw TL from database (for external lookup URLs)
     let hanji: String?
-    let frequency: Int
     let sources: [DictionarySource]
 
     /// Chhoe Taigi dictionary lookup URL for this result's TL form.

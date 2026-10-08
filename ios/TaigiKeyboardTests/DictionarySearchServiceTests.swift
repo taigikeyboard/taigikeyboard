@@ -4,8 +4,8 @@ import XCTest
 /// Dictionary search policy pins, mirrored by Android
 /// `DictionarySearchServiceTest`. The lexicon and the custom dictionary are
 /// fakes, so only the platform-side policy is observed: the custom-dictionary
-/// toggle gates search as it gates the keyboard, and the TPS layout searches
-/// the `tps:` family.
+/// toggle gates search as it gates the keyboard, system rows keep the engine's
+/// order, and the TPS layout searches the `tps:` family.
 final class DictionarySearchServiceTests: XCTestCase {
     private final class FakeLexicon: LexiconClient, @unchecked Sendable {
         private let rows: [RustEngineBridge.LexiconRow]
@@ -65,7 +65,7 @@ final class DictionarySearchServiceTests: XCTestCase {
     }
 
     private let myWord = CustomDictionaryEntry(roman: "taigi", hanji: "我的台語")
-    private let kautianRow = RustEngineBridge.LexiconRow(id: 1, roman: "tâi-gí", hanji: "台語", lengthScore: 10, sources: [.kautian])
+    private let kautianRow = RustEngineBridge.LexiconRow(id: 1, roman: "tâi-gí", hanji: "台語", sources: [.kautian])
 
     private func makeService(
         settings: StubEngineSettings = StubEngineSettings(),
@@ -99,6 +99,20 @@ final class DictionarySearchServiceTests: XCTestCase {
         XCTAssertEqual(results.first?.id, DictionarySearchResult.customDictMarkerId)
         XCTAssertEqual(results.last?.sources, [.kautian])
         XCTAssertEqual(results.count, 2)
+    }
+
+    // CROSS-PLATFORM INVARIANT — mirrors Android `system rows keep the engine order`:
+    // the engine owns the search order (E1 P5b), so a MOE row the engine listed last stays last.
+    func testSystemRows_keepTheEngineOrder() async throws {
+        let rows = [
+            RustEngineBridge.LexiconRow(id: 2, roman: "tâi-gí", hanji: "台語", sources: [.taigitv]),
+            RustEngineBridge.LexiconRow(id: 3, roman: "tāi-ki", hanji: "代記", sources: [.taigitv]),
+            kautianRow,
+        ]
+
+        let results = try await makeService(lexicon: FakeLexicon(rows: rows), userData: FakeUserData(entries: [])).search(query: "taigi")
+
+        XCTAssertEqual(results.map(\.id), [2, 3, 1])
     }
 
     func testAHanjiQuery_takesTheHanjiPathAndNeverConsultsTheCustomDictionary() async throws {

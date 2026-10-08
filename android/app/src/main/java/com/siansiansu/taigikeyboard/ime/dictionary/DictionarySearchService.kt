@@ -74,7 +74,8 @@ class DictionarySearchService(
         val customResults = if (isCJK) emptyList() else lookupCustomDictionary(query, limit)
         logger.debug(TAG) { "[SEARCH] custom dictionary returned ${customResults.size} results" }
 
-        val prepared = sortByMoeThenFrequency(systemResults).map { retagSources(it, filters.enabledSources) }
+        // System rows keep the engine's order (corpus order, MOE rows first — `lexicon::search`).
+        val prepared = systemResults.map { retagSources(it, filters.enabledSources) }
         return customResults + prepared
     }
 
@@ -99,7 +100,6 @@ class DictionarySearchService(
                         roman = entry.roman,
                         tl = entry.roman,
                         hanji = entry.hanji,
-                        frequency = Int.MAX_VALUE,
                         sources = listOf(DictionarySource.CUSTOM),
                     )
                 }
@@ -108,13 +108,6 @@ class DictionarySearchService(
             emptyList()
         }
     }
-
-    /** Kautian (MOE) results first, then descending frequency. */
-    private fun sortByMoeThenFrequency(results: List<DictionarySearchResult>): List<DictionarySearchResult> =
-        results.sortedWith(
-            compareByDescending<DictionarySearchResult> { DictionarySource.KAUTIAN in it.sources }
-                .thenByDescending { it.frequency },
-        )
 
     /**
      * Drop source tags the user has disabled so badges reflect current toggles.

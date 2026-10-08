@@ -10,7 +10,7 @@ the production engine.
 
 Usage (from dictionary/):
   PYTHONPATH=. python3 -m tools.walker_gold select     # rewrite the gold file (needs corpus/taigi-corpus too)
-  PYTHONPATH=. python3 -m tools.walker_gold resolve    # pointers → resolved.tsv + edge_keys.tsv
+  PYTHONPATH=. python3 -m tools.walker_gold resolve    # pointers → resolved.tsv + word_inputs.tsv + edge_keys.tsv
   cargo test … --test prod walker_gold -- --ignored     # engine metrics + edge_picks.tsv (see walker_gold.rs)
   PYTHONPATH=. python3 -m tools.walker_gold d3         # runtime edge pick vs corpus winner (plan D3)
   PYTHONPATH=. python3 -m tools.walker_gold simulate   # pre-P3 vs A2 cost over the resolved items
@@ -50,6 +50,7 @@ REPO_DIR = BASE_DIR.parent
 GOLD_TSV = REPO_DIR / "engine" / "composing" / "tests" / "data" / "walker_gold.tsv"
 OUTPUT_DIR = REPO_DIR / "engine" / "target" / "walker_gold"
 RESOLVED_TSV = OUTPUT_DIR / "resolved.tsv"
+WORD_INPUTS_TSV = OUTPUT_DIR / "word_inputs.tsv"
 EDGE_KEYS_TSV = OUTPUT_DIR / "edge_keys.tsv"
 EDGE_PICKS_TSV = OUTPUT_DIR / "edge_picks.tsv"
 EXAMPLE_SENTENCES = TAIGI_TYPING_ARTICLES.parent / "exampleSentences.js"
@@ -437,6 +438,16 @@ def resolve(args: argparse.Namespace) -> int:
         )
     write_tsv(RESOLVED_TSV, header, rows)
     print(f"resolved {len(rows)} items → {RESOLVED_TSV}; skipped {len(skipped)}")
+    # Each gold word typed alone: walker_gold.rs ranks it in the candidate list (E1 P5b).
+    word_rows = []
+    for r in resolved:
+        for index, row in enumerate(r.rows):
+            inputs = Resolved(r.item, [row]).inputs()
+            word_rows.append(
+                [r.item.id, r.item.split, r.item.category, str(index), row.plain_hanji, *(inputs[v] for v in INPUT_VARIANTS)]
+            )
+    write_tsv(WORD_INPUTS_TSV, ["id", "split", "category", "word", "hanji", *INPUT_VARIANTS], word_rows)
+    print(f"{len(word_rows)} gold words → {WORD_INPUTS_TSV}")
     for item, reason in skipped:
         print(f"  skipped {item.id}: {reason}")
     # Every fully toned key with competing hanji: walker_gold.rs asks the engine which one it picks.

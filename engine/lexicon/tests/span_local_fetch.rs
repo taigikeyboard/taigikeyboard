@@ -1140,9 +1140,9 @@ fn partial_prefix_engine_path_surfaces_lookup_prefix_hits() {
         assert_eq!(c.consumed_span, (0, 1));
     }
 
-    // Within the partial bucket, the existing 9-dim CandidateSortKey policy
-    // still applies — higher dict-freq wins on the `-neg_freq` dim
-    // even after coverage_kind tied to 1.
+    // Within the partial bucket the CandidateSortKey policy still applies —
+    // the fixture costs derive from frequency, so the higher-freq row is the
+    // cheaper one and wins even after coverage_kind tied to 1.
     assert_eq!(out[0].display_text, "我", "higher-freq partial wins");
 }
 
@@ -1951,32 +1951,48 @@ fn best_candidate_for_key_prefers_selected_row_but_keeps_span_walker_cost_of_key
     );
 }
 
+/// `tl:taiuan` with 臺灣 (cost 9,000, frequency 5,000), 台灣 (cost 6,000,
+/// frequency 100) and `extra` `(hanji, frequency, walker_cost)` rows — the
+/// corpus cost and the frequency disagree on purpose.
+fn taiuan_homophones(
+    name: &str,
+    extra: &[(&'static str, u32, u16)],
+) -> (PrefixIndex, DictionaryReader) {
+    let rows: Vec<(u16, Row<'_>)> = [("臺灣", 5000, 9_000), ("台灣", 100, 6_000)]
+        .iter()
+        .chain(extra)
+        .map(|&(hanji, freq, walker_cost)| {
+            let row = Row {
+                toneless_key: "taiuan",
+                hanji,
+                tl: "tâi-uân",
+                syll: 2,
+                freq,
+            };
+            (walker_cost, row)
+        })
+        .collect();
+    let costed: Vec<(u16, u16, &Row<'_>)> = rows
+        .iter()
+        .map(|(walker_cost, row)| (1u16 << 11, *walker_cost, row))
+        .collect();
+    build_fixture_costed(name, &costed)
+}
+
+fn taiuan_list(ctx: &ContinuousFetchCtx<'_>) -> Vec<(String, bool)> {
+    let keys: Vec<(ConsumedSpan, String)> = vec![((0, 6), "tl:taiuan".to_owned())];
+    fetch_candidates_for_keys_with_barriers(&keys, &[], &[], 6, ctx)
+        .into_iter()
+        .map(|c| (c.display_text, c.is_custom))
+        .collect()
+}
+
 #[test]
 fn best_candidate_for_key_picks_the_corpus_cheapest_word_over_the_frequent_one() {
     // E1 P5a: the edge's word is the cheapest corpus price under the key
     // (台灣), not the higher dictionary frequency (臺灣), and the edge is
     // priced on that same min (D3).
-    let taiuan_frequent = Row {
-        toneless_key: "taiuan",
-        hanji: "臺灣",
-        tl: "tâi-uân",
-        syll: 2,
-        freq: 5000,
-    };
-    let taiuan_cheap = Row {
-        toneless_key: "taiuan",
-        hanji: "台灣",
-        tl: "tâi-uân",
-        syll: 2,
-        freq: 100,
-    };
-    let (prefix_index, dict) = build_fixture_costed(
-        "e1-d3-min-cost",
-        &[
-            (1u16 << 11, 9_000, &taiuan_frequent),
-            (1u16 << 11, 6_000, &taiuan_cheap),
-        ],
-    );
+    let (prefix_index, dict) = taiuan_homophones("e1-d3-min-cost", &[]);
     let best = best_candidate_for_key_with_barriers(
         "tl:taiuan",
         &[],
@@ -1988,6 +2004,124 @@ fn best_candidate_for_key_picks_the_corpus_cheapest_word_over_the_frequent_one()
     .expect("key has dict hits");
     assert_eq!(best.candidate.display_text, "台灣");
     assert_eq!(best.span_walker_cost, 6_000);
+}
+
+#[test]
+fn list_orders_by_corpus_cost_and_leads_with_the_edge_pick() {
+    // E1 P5b: the list sorts on the edge pick's scale — corpus cost first,
+    // frequency only breaking an equal cost — so its head is the walker's
+    // word; a custom entry carries no corpus cost and follows the priced rows.
+    // trace: 台灣 6000 < 臺灣 9000 (freq 5000) = 台員 9000 (freq 4000) < custom.
+    let (prefix_index, dict) = taiuan_homophones("e1-p5b-list-cost", &[("台員", 4000, 9_000)]);
+    let custom = vec![CustomEntry {
+        roman: "tâi-uân".to_owned(),
+        hanji: Some("大灣".to_owned()),
+    }];
+    let user_frequency = FrequencyMap::new();
+    let ctx = ctx(&user_frequency, 0, &custom, &prefix_index, &dict);
+    let list: Vec<String> = taiuan_list(&ctx)
+        .into_iter()
+        .map(|(word, _)| word)
+        .collect();
+    assert_eq!(list, ["台灣", "臺灣", "台員", "大灣"]);
+    let best =
+        best_candidate_for_key_with_barriers("tl:taiuan", &[], &TonePin::None, (0, 6), &[], &ctx)
+            .expect("key has dict hits");
+    assert_eq!(best.candidate.display_text, list[0]);
+}
+
+#[test]
+fn list_custom_twin_of_the_cheapest_word_follows_the_priced_homophone() {
+    // E1 P5b: a custom entry that collides with 台灣 replaces the dictionary
+    // row (custom wins the dedupe) and carries no corpus cost, so the priced
+    // 臺灣 now leads; the walker's custom edge override still puts the user's
+    // word at slot 0 (composing, untouched here).
+    let (prefix_index, dict) = taiuan_homophones("e1-p5b-custom-twin", &[]);
+    let custom = vec![CustomEntry {
+        roman: "tâi-uân".to_owned(),
+        hanji: Some("台灣".to_owned()),
+    }];
+    let user_frequency = FrequencyMap::new();
+    let ctx = ctx(&user_frequency, 0, &custom, &prefix_index, &dict);
+    assert_eq!(
+        taiuan_list(&ctx),
+        [("臺灣".to_owned(), false), ("台灣".to_owned(), true)]
+    );
+}
+
+#[test]
+fn list_context_hit_leads_the_corpus_order() {
+    // E1 P5b / §56: the previous word's continuation sits above the corpus
+    // cost — 臺灣 (cost 9,000) as a bundled continuation leads 台灣 (6,000).
+    let (prefix_index, dict) = taiuan_homophones("e1-p5b-context", &[]);
+    let mut context = ranking::ContextRanks::new();
+    context.insert(
+        "臺灣".to_owned(),
+        "tâi-uân".to_owned(),
+        ranking::CONTEXT_RANK_BUNDLED,
+    );
+    let user_frequency = FrequencyMap::new();
+    let ctx = ContinuousFetchCtx {
+        context: &context,
+        ..ctx_neutral(&user_frequency, &prefix_index, &dict)
+    };
+    assert_eq!(
+        taiuan_list(&ctx),
+        [("臺灣".to_owned(), false), ("台灣".to_owned(), false)]
+    );
+    assert_eq!(
+        taiuan_list(&ctx_neutral(&user_frequency, &prefix_index, &dict)),
+        [("台灣".to_owned(), false), ("臺灣".to_owned(), false)]
+    );
+}
+
+#[test]
+fn list_partial_spans_of_mixed_length_follow_the_corpus_cost() {
+    // E1 P5b: inside the partial tier spans of different lengths compare on
+    // the corpus cost alone, coverage only breaking an equal cost — the
+    // cheaper two-syllable 台灣 leads the one-syllable 台 whose frequency is
+    // higher, and the cheaper 台 leads the rarer 台灣 under the other costs.
+    let rows = |taiuan_cost, tai_cost| {
+        let tai = Row {
+            toneless_key: "tai",
+            hanji: "台",
+            tl: "tâi",
+            syll: 1,
+            freq: 31_281,
+        };
+        let taiuan = Row {
+            toneless_key: "taiuan",
+            hanji: "台灣",
+            tl: "tâi-uân",
+            syll: 2,
+            freq: 1_379,
+        };
+        build_fixture_costed(
+            &format!("e1-p5b-mixed-{taiuan_cost}"),
+            &[
+                (1u16 << 11, tai_cost, &tai),
+                (1u16 << 11, taiuan_cost, &taiuan),
+            ],
+        )
+    };
+    let keys: Vec<(ConsumedSpan, String)> = vec![
+        ((0, 3), "tl:tai".to_owned()),
+        ((0, 6), "tl:taiuan".to_owned()),
+    ];
+    let user_frequency = FrequencyMap::new();
+    for (taiuan_cost, tai_cost, expected) in [
+        (6_900, 8_000, ["台灣", "台"]),
+        (9_000, 8_000, ["台", "台灣"]),
+    ] {
+        let (prefix_index, dict) = rows(taiuan_cost, tai_cost);
+        let ctx = ctx_neutral(&user_frequency, &prefix_index, &dict);
+        // raw_len 10 (`taiuanlang`): both spans are tier 1.
+        let list: Vec<String> = fetch_candidates_for_keys_with_barriers(&keys, &[], &[], 10, &ctx)
+            .into_iter()
+            .map(|c| c.display_text)
+            .collect();
+        assert_eq!(list, expected, "台灣 {taiuan_cost} vs 台 {tai_cost}");
+    }
 }
 
 #[test]

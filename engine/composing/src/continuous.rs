@@ -86,7 +86,7 @@ use lexicon::{
     ConsumedSpan, ContinuousFetchCtx, CustomEntry, EngineHandle as LexiconHandle, LearnedEntry,
     RawCandidate, SyllableInventory, COVERAGE_KIND_FULL, FORM_NOTONE, PARTIAL_PREFIX_OUTPUT_CAP,
 };
-use ranking::FrequencyMap;
+use ranking::{FrequencyMap, WALKER_COST_UNPRICED};
 
 // ============================================================================
 // D3 honest type — walker result struct names `cost`
@@ -920,7 +920,7 @@ pub(crate) fn walk_buffer(
                     dict_hit: false,
                     // S6: a synthesized OOV roman edge is not custom.
                     is_custom: false,
-                    walker_cost: lexicon::dictionary_reader::WALKER_COST_UNPRICED,
+                    walker_cost: WALKER_COST_UNPRICED,
                     syllable_count,
                     toneless_len,
                     user_weight_delta: 0.0,
@@ -1369,6 +1369,7 @@ pub(crate) fn assemble_candidates(
                             form: FORM_NOTONE,
                             // walker-N/A; slot 0 explicit prepend.
                             frequency: 0,
+                            walker_cost: WALKER_COST_UNPRICED,
                             bitmask: 0,
                             script_kind: slot0.script_kind,
                             user_weight: slot0.user_weight,
@@ -1868,6 +1869,7 @@ mod tests {
             score: 0.0,
             form: FORM_NOTONE,
             frequency: 0,
+            walker_cost: WALKER_COST_UNPRICED,
             bitmask: 0,
             script_kind: lexicon::CandidateScriptKind::Hant,
             user_weight: 0.0,
@@ -1896,6 +1898,7 @@ mod tests {
                 score: 0.0,
                 form: FORM_NOTONE,
                 frequency: 0,
+                walker_cost: WALKER_COST_UNPRICED,
                 bitmask: 0,
                 script_kind: lexicon::CandidateScriptKind::Tailo,
                 user_weight: 0.0,
@@ -1944,6 +1947,7 @@ mod tests {
                 score: 0.0,
                 form: FORM_NOTONE,
                 frequency: 0,
+                walker_cost: WALKER_COST_UNPRICED,
                 bitmask: 0,
                 script_kind: lexicon::CandidateScriptKind::Tailo,
                 user_weight: 0.0,
@@ -1974,6 +1978,7 @@ mod tests {
                 score: 0.0,
                 form: FORM_NOTONE,
                 frequency: 0,
+                walker_cost: WALKER_COST_UNPRICED,
                 bitmask: 0,
                 script_kind: lexicon::CandidateScriptKind::Tailo,
                 user_weight: 0.0,
@@ -2008,6 +2013,7 @@ mod tests {
                 score: 0.0,
                 form: FORM_NOTONE,
                 frequency: 0,
+                walker_cost: WALKER_COST_UNPRICED,
                 bitmask: 0,
                 script_kind: lexicon::CandidateScriptKind::Tailo,
                 user_weight: 0.0,

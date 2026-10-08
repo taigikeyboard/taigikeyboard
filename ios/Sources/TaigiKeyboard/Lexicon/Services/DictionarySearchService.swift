@@ -50,9 +50,10 @@ final class DictionarySearchService: @unchecked Sendable {
     /// Search the user's enabled dictionaries for `query`.
     ///
     /// Hanji queries use the CJK path; roman queries also consult the user's
-    /// custom dictionary. Results are sorted with kautian (MOE) first, then
-    /// by frequency; custom-dict hits lead the list. Awaits Trie readiness so
-    /// searches arriving during the bootstrap window don't return empty.
+    /// custom dictionary. System rows keep the engine's order (corpus order,
+    /// MOE rows first — `lexicon::search`); custom-dict hits lead the list.
+    /// Awaits Trie readiness so searches arriving during the bootstrap window
+    /// don't return empty.
     func search(
         query: String,
         limit: Int = 20,
@@ -79,8 +80,7 @@ final class DictionarySearchService: @unchecked Sendable {
         )
         let customResults = isCJK ? [] : await lookupCustomDictionary(query: query, limit: limit)
 
-        let prepared = sortByMoeThenFrequency(systemResults)
-            .map { retagSources($0, enabled: filters.enabledSources) }
+        let prepared = systemResults.map { retagSources($0, enabled: filters.enabledSources) }
 
         return customResults + prepared
     }
@@ -116,7 +116,6 @@ final class DictionarySearchService: @unchecked Sendable {
                 roman: roman,
                 tl: row.roman,
                 hanji: row.hanji,
-                frequency: row.lengthScore.map(Int.init) ?? 0,
                 sources: row.sources,
             )
         }
@@ -135,21 +134,8 @@ final class DictionarySearchService: @unchecked Sendable {
                 roman: entry.roman,
                 tl: entry.roman,
                 hanji: entry.hanji,
-                frequency: Int.max,
                 sources: [.custom],
             )
-        }
-    }
-
-    /// Kautian (MOE) results first, then descending frequency.
-    private func sortByMoeThenFrequency(_ results: [DictionarySearchResult]) -> [DictionarySearchResult] {
-        results.sorted { a, b in
-            let aMoe = a.sources.contains(.kautian)
-            let bMoe = b.sources.contains(.kautian)
-            if aMoe != bMoe {
-                return aMoe
-            }
-            return a.frequency > b.frequency
         }
     }
 
@@ -164,7 +150,6 @@ final class DictionarySearchService: @unchecked Sendable {
             roman: result.roman,
             tl: result.tl,
             hanji: result.hanji,
-            frequency: result.frequency,
             sources: result.sources.filter { enabled.contains($0) },
         )
     }
