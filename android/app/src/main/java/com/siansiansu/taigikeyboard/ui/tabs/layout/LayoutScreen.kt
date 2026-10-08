@@ -47,34 +47,15 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
-import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.i18n.stringRes
 import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
+import com.siansiansu.taigikeyboard.ime.text.layout.KeyboardLayoutOption
+import com.siansiansu.taigikeyboard.ime.text.layout.KeyboardLayoutOptions
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 import com.siansiansu.taigikeyboard.ui.theme.SectionHeader
 
 // Layout tab main screen: keyboard layout selection
-
-private data class LayoutOption(
-    val key: String,
-    val labelKey: StringKey,
-    @param:DrawableRes val previewRes: Int,
-)
-
-private val romanizationLayouts =
-    listOf(
-        LayoutOption("phahTaigi", StringKey.LAYOUT_PHAH_TAIGI_LAYOUT, R.drawable.layout_phahtaigi_preview),
-        LayoutOption("qwerty", StringKey.LAYOUT_STANDARD_LAYOUT, R.drawable.layout_standard_preview),
-        LayoutOption("moe1", StringKey.LAYOUT_MOE1_LAYOUT, R.drawable.layout_moe1_preview),
-        LayoutOption("moe2", StringKey.LAYOUT_MOE2_LAYOUT, R.drawable.layout_moe2_preview),
-    )
-
-private val phoneticLayouts =
-    listOf(
-        LayoutOption("tps", StringKey.LAYOUT_TPS_LAYOUT, R.drawable.layout_tps_preview),
-    )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -116,7 +97,7 @@ fun LayoutScreen(prefs: PrefHelper) {
         ) {
             LayoutSection(
                 title = L10n.layoutRomanizationKeyboard,
-                layouts = romanizationLayouts,
+                layouts = KeyboardLayoutOptions.romanization,
                 selectedLayout = selectedLayout,
                 onLayoutSelected = { prefs.keyboardLayoutType = it },
                 horizontalScroll = true,
@@ -126,7 +107,7 @@ fun LayoutScreen(prefs: PrefHelper) {
 
             LayoutSection(
                 title = L10n.settingsTpsMode,
-                layouts = phoneticLayouts,
+                layouts = KeyboardLayoutOptions.phonetic,
                 selectedLayout = selectedLayout,
                 onLayoutSelected = { prefs.keyboardLayoutType = it },
             )
@@ -137,7 +118,7 @@ fun LayoutScreen(prefs: PrefHelper) {
 @Composable
 private fun LayoutSection(
     title: String,
-    layouts: List<LayoutOption>,
+    layouts: List<KeyboardLayoutOption>,
     selectedLayout: String,
     onLayoutSelected: (String) -> Unit,
     horizontalScroll: Boolean = false,

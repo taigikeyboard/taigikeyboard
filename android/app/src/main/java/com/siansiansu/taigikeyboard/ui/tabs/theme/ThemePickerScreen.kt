@@ -85,12 +85,13 @@ import com.siansiansu.taigikeyboard.ui.theme.SectionHeader
 
 // Card metrics — 200.dp matches LayoutCard so the theme tab lines up with the layout
 // tab in-app (intentional divergence from iOS 240pt). The 585/395 aspect matches the
-// Android keyboard screenshot proportion (theme_*_preview assets), which is taller than
-// iOS's 585/369 — the Android keyboard is taller, so the card follows the Android
+// generated Android keyboard screenshots (theme_*_preview + layout_*_preview; PreviewAssetGeneratorTest
+// renders them at this width x 4 and this aspect), taller than
+// iOS's 720/454 — the Android keyboard is taller, so the card follows the Android
 // keyboard shape rather than the iOS card slot (intentional cross-platform divergence:
 // forcing iOS 585/369 here clipped the screenshots' top tone-mark row).
-private const val THEME_CARD_WIDTH_DP = 200
-private const val THEME_PREVIEW_ASPECT = 585f / 395f
+internal const val THEME_CARD_WIDTH_DP = 200
+internal const val THEME_PREVIEW_ASPECT = 585f / 395f
 private val THEME_CARD_SPACING = 12.dp
 
 /**
@@ -470,15 +471,16 @@ private fun CustomThemeBackgroundPreview(appearance: ThemeAppearance) {
 // resources.getIdentifier, which the resource shrinker can't track. The Default
 // (adaptive) reuses the phahtaigi layout screenshot (light + night buckets), so its
 // card adapts to dark mode like the theme does. The 5 gradient themes (Sakura/Gold/Sea Breeze/Jade/
-// Wisteria) are light-only, so a single drawable-xxhdpi asset serves both light and dark.
-// Mirrors iOS UIImage(named: previewImageName) in ThemePickerView.swift — except iOS
-// byte-copies phahtaigi into a name-keyed theme_standard_preview imageset, while this
-// ID-keyed map points Default straight at R.drawable.layout_phahtaigi_preview (no copy).
+// Wisteria) are light-only, so a single drawable-xxxhdpi asset serves both light and dark.
+// Mirrors iOS UIImage(named: previewImageName) in ThemePickerView.swift — except iOS ships a
+// name-keyed theme_standard_preview imageset, while this map points Default straight at
+// R.drawable.layout_phahtaigi_preview. PreviewAssetGeneratorTest renders every drawable this
+// map names.
 // Outlined / Borderless families ship their own screenshots: theme_framed_preview /
 // theme_clean_preview carry light + night buckets (adaptive Default); the 5 gradient
 // theme_framed*_preview / theme_clean*_preview are light-only single bucket.
 @DrawableRes
-private fun builtInThemePreviewRes(previewImageName: String?): Int? =
+internal fun builtInThemePreviewRes(previewImageName: String?): Int? =
     when (previewImageName) {
         "theme_standard_preview" -> R.drawable.layout_phahtaigi_preview
         "theme_standardPink_preview" -> R.drawable.theme_standardpink_preview
@@ -504,7 +506,7 @@ private fun builtInThemePreviewRes(previewImageName: String?): Int? =
         else -> null
     }
 
-// Built-in card preview: the bundled screenshot (585x369) when supplied, else a
+// Built-in card preview: the bundled screenshot when supplied, else a
 // neutral placeholder fixed to the card aspect so cards never change height once
 // screenshots land.
 @Composable

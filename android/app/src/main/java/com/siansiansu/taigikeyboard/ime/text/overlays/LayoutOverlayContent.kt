@@ -4,7 +4,6 @@
 
 package com.siansiansu.taigikeyboard.ime.text.overlays
 
-import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -46,32 +45,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
-import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.i18n.stringRes
+import com.siansiansu.taigikeyboard.ime.text.layout.KeyboardLayoutOption
+import com.siansiansu.taigikeyboard.ime.text.layout.KeyboardLayoutOptions
 import com.siansiansu.taigikeyboard.ime.theme.themeBackground
-
-private data class LayoutOption(
-    val key: String,
-    val labelKey: StringKey,
-    @DrawableRes val previewRes: Int,
-)
-
-// Section 1 — romanization keyboards (matches iOS LayoutSelectionOverlay).
-private val RomanizationLayouts =
-    listOf(
-        LayoutOption("phahTaigi", StringKey.LAYOUT_PHAH_TAIGI_LAYOUT, R.drawable.layout_phahtaigi_preview),
-        LayoutOption("qwerty", StringKey.LAYOUT_STANDARD_LAYOUT, R.drawable.layout_standard_preview),
-        LayoutOption("moe1", StringKey.LAYOUT_MOE1_LAYOUT, R.drawable.layout_moe1_preview),
-        LayoutOption("moe2", StringKey.LAYOUT_MOE2_LAYOUT, R.drawable.layout_moe2_preview),
-    )
-
-// Section 2 — Taigi phonetic keyboards.
-private val PhoneticLayouts =
-    listOf(
-        LayoutOption("tps", StringKey.LAYOUT_TPS_LAYOUT, R.drawable.layout_tps_preview),
-    )
 
 private val CardWidth = 120.dp
 private val CardSpacing = 12.dp
@@ -123,10 +101,10 @@ fun LayoutOverlayContent(
                 .padding(top = 10.dp, bottom = 4.dp),
     ) {
         SectionHeader(L10n.layoutRomanizationKeyboard, appearance.foreground, topPadding = 0.dp)
-        LayoutCardRow(RomanizationLayouts, activeKey, appearance, onSelect)
+        LayoutCardRow(KeyboardLayoutOptions.romanization, activeKey, appearance, onSelect)
 
         SectionHeader(L10n.settingsTpsMode, appearance.foreground, topPadding = 12.dp)
-        LayoutCardRow(PhoneticLayouts, activeKey, appearance, onSelect)
+        LayoutCardRow(KeyboardLayoutOptions.phonetic, activeKey, appearance, onSelect)
     }
 }
 
@@ -150,7 +128,7 @@ private fun SectionHeader(
 
 @Composable
 private fun LayoutCardRow(
-    options: List<LayoutOption>,
+    options: List<KeyboardLayoutOption>,
     activeKey: String,
     appearance: KeyboardOverlayAppearance,
     onSelect: (String) -> Unit,
@@ -176,7 +154,7 @@ private fun LayoutCardRow(
 
 @Composable
 private fun LayoutCard(
-    option: LayoutOption,
+    option: KeyboardLayoutOption,
     isSelected: Boolean,
     appearance: KeyboardOverlayAppearance,
     onClick: () -> Unit,
