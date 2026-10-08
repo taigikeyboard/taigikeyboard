@@ -19,7 +19,7 @@ members = [
 ]
 
 [workspace.package]
-version = "3.6.14"
+version = "3.7.0"
 edition = "2021"
 rust-version = "1.95"  # windows-reactor's floor (W17); the box runs 1.98
 license = "Apache-2.0"
