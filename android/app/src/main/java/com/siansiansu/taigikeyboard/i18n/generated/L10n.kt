@@ -354,6 +354,14 @@ object L10n {
         @Composable get() = stringRes(StringKey.KEYBOARD_ONE_HANDED_SWAP_SIDE)
     val layoutRomanizationKeyboard: String
         @Composable get() = stringRes(StringKey.LAYOUT_ROMANIZATION_KEYBOARD)
+    val layoutCustomLayoutsSection: String
+        @Composable get() = stringRes(StringKey.LAYOUT_CUSTOM_LAYOUTS_SECTION)
+    val layoutCreateNewLayout: String
+        @Composable get() = stringRes(StringKey.LAYOUT_CREATE_NEW_LAYOUT)
+    val layoutComingSoon: String
+        @Composable get() = stringRes(StringKey.LAYOUT_COMING_SOON)
+    val layoutCommonLayoutsSection: String
+        @Composable get() = stringRes(StringKey.LAYOUT_COMMON_LAYOUTS_SECTION)
     val layoutStandardLayout: String
         @Composable get() = stringRes(StringKey.LAYOUT_STANDARD_LAYOUT)
     val layoutPhahTaigiLayout: String

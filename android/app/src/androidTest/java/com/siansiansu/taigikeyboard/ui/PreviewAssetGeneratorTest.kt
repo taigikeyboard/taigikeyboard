@@ -24,9 +24,9 @@ import com.siansiansu.taigikeyboard.ime.text.layout.KeyboardLayoutOptions
 import com.siansiansu.taigikeyboard.ime.theme.BuiltInThemes
 import com.siansiansu.taigikeyboard.ime.theme.ThemeId
 import com.siansiansu.taigikeyboard.ime.theme.ThemeResolver
+import com.siansiansu.taigikeyboard.ui.components.GALLERY_CARD_WIDTH_DP
+import com.siansiansu.taigikeyboard.ui.components.GALLERY_PREVIEW_ASPECT
 import com.siansiansu.taigikeyboard.ui.tabs.layout.KeyboardPreviewPanel
-import com.siansiansu.taigikeyboard.ui.tabs.theme.THEME_CARD_WIDTH_DP
-import com.siansiansu.taigikeyboard.ui.tabs.theme.THEME_PREVIEW_ASPECT
 import com.siansiansu.taigikeyboard.ui.tabs.theme.builtInThemePreviewRes
 import org.junit.Assume.assumeTrue
 import org.junit.Rule
@@ -53,6 +53,8 @@ class PreviewAssetGeneratorTest {
         @param:DrawableRes val previewRes: Int,
         val themeId: String,
         val layoutKey: String,
+        // Set on every job with the layout, so a POJ card's mode never carries into the next job.
+        val inputMode: String,
         val isNightMode: Boolean,
         // The resource bucket: a night copy only for an adaptive theme.
         val bucket: String,
@@ -72,13 +74,13 @@ class PreviewAssetGeneratorTest {
         // A Compose test rule takes one setContent per test: each job swaps the state, and key()
         // rebuilds the panel so nothing remembered carries over between jobs.
         var currentJob by mutableStateOf(jobs.first())
-        prefs.keyboardLayoutType = currentJob.layoutKey
+        prefs.setKeyboardLayoutAndInputMode(currentJob.layoutKey, currentJob.inputMode)
         composeRule.setContent {
             key(currentJob) { PreviewCapture(prefs, currentJob) }
         }
         for (job in jobs) {
-            // LayoutManager reads the layout (and TPS's input mode) from prefs, not from the job.
-            prefs.keyboardLayoutType = job.layoutKey
+            // LayoutManager reads the layout and input mode from prefs, not from the job.
+            prefs.setKeyboardLayoutAndInputMode(job.layoutKey, job.inputMode)
             composeRule.runOnUiThread { currentJob = job }
             composeRule.waitForIdle()
             val capture = composeRule.onNodeWithTag(CAPTURE_TAG).captureToImage().asAndroidBitmap()
@@ -116,7 +118,9 @@ class PreviewAssetGeneratorTest {
     private fun renderJobs(): List<RenderJob> {
         val layoutJobs =
             (KeyboardLayoutOptions.romanization + KeyboardLayoutOptions.phonetic).flatMap { option ->
-                adaptiveJobs(option.previewRes, ThemeId.DEFAULT, option.key)
+                val inputMode = if (option.key == TPS_LAYOUT) TPS_LAYOUT else TL_MODE
+                adaptiveJobs(option.previewRes, ThemeId.DEFAULT, option.key, inputMode) +
+                    option.pojPreviewRes?.let { adaptiveJobs(it, ThemeId.DEFAULT, option.key, POJ_MODE) }.orEmpty()
             }
         val themeJobs =
             BuiltInThemes.all.flatMap { theme ->
@@ -126,10 +130,10 @@ class PreviewAssetGeneratorTest {
                     }
                 val isAdaptive = theme.colors(isDark = false).surface == null
                 if (isAdaptive) {
-                    adaptiveJobs(previewRes, theme.id, THEME_CARD_LAYOUT)
+                    adaptiveJobs(previewRes, theme.id, THEME_CARD_LAYOUT, TL_MODE)
                 } else {
                     // A fixed palette looks the same in both modes; a dark-only one renders night.
-                    listOf(RenderJob(previewRes, theme.id, THEME_CARD_LAYOUT, theme.light == null, DAY_BUCKET))
+                    listOf(RenderJob(previewRes, theme.id, THEME_CARD_LAYOUT, TL_MODE, theme.light == null, DAY_BUCKET))
                 }
             }
         return (layoutJobs + themeJobs).distinctBy { it.previewRes to it.bucket }
@@ -139,15 +143,16 @@ class PreviewAssetGeneratorTest {
         @DrawableRes previewRes: Int,
         themeId: String,
         layoutKey: String,
+        inputMode: String,
     ): List<RenderJob> =
         listOf(
-            RenderJob(previewRes, themeId, layoutKey, isNightMode = false, bucket = DAY_BUCKET),
-            RenderJob(previewRes, themeId, layoutKey, isNightMode = true, bucket = NIGHT_BUCKET),
+            RenderJob(previewRes, themeId, layoutKey, inputMode, isNightMode = false, bucket = DAY_BUCKET),
+            RenderJob(previewRes, themeId, layoutKey, inputMode, isNightMode = true, bucket = NIGHT_BUCKET),
         )
 
     // Bottom-anchored crop to the card aspect (drops the candidate row), scaled to the card size.
     private fun cropKeyArea(capture: Bitmap): Bitmap {
-        val cropHeight = (capture.width / THEME_PREVIEW_ASPECT).roundToInt()
+        val cropHeight = (capture.width / GALLERY_PREVIEW_ASPECT).roundToInt()
         val cropped = Bitmap.createBitmap(capture, 0, capture.height - cropHeight, capture.width, cropHeight)
         return Bitmap.createScaledBitmap(cropped, OUTPUT_WIDTH_PX, OUTPUT_HEIGHT_PX, true)
     }
@@ -170,14 +175,17 @@ class PreviewAssetGeneratorTest {
         const val OUTPUT_DIRECTORY = "previews"
         const val CAPTURE_TAG = "previewCapture"
         const val THEME_CARD_LAYOUT = "phahTaigi"
+        const val TPS_LAYOUT = "tps"
+        const val TL_MODE = "tl"
+        const val POJ_MODE = "poj"
         const val DAY_BUCKET = "drawable-xxxhdpi"
         const val NIGHT_BUCKET = "drawable-night-xxxhdpi"
 
         // The width at which the card aspect holds the key area alone (no candidate row).
         const val RENDER_WIDTH_DP = 350
 
-        // The theme / layout card (THEME_CARD_WIDTH_DP wide) at xxxhdpi (4x).
-        const val OUTPUT_WIDTH_PX = THEME_CARD_WIDTH_DP * 4
-        val OUTPUT_HEIGHT_PX = (OUTPUT_WIDTH_PX / THEME_PREVIEW_ASPECT).roundToInt()
+        // The theme / layout card (GALLERY_CARD_WIDTH_DP wide) at xxxhdpi (4x).
+        const val OUTPUT_WIDTH_PX = GALLERY_CARD_WIDTH_DP * 4
+        val OUTPUT_HEIGHT_PX = (OUTPUT_WIDTH_PX / GALLERY_PREVIEW_ASPECT).roundToInt()
     }
 }

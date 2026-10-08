@@ -266,4 +266,59 @@ class TpsCascadeTest {
         assertNull("idempotent TPS layout write — no inputMode cascade", writes[PreferenceKeys.INPUT_MODE])
         assertNull(writes[PreferenceKeys.INPUT_MODE_BEFORE_TPS])
     }
+
+    // ------------------------------------------------------------------ //
+    // forLayoutAndInputMode — Layout-tab script card, one transaction
+    // ------------------------------------------------------------------ //
+
+    @Test
+    fun forLayoutAndInputMode_leavingTpsViaPojCard_cardModeWins() {
+        // trace: layout tps→qwerty restores INPUT_MODE=tl; then forInputMode(poj, old=tl) writes poj.
+        val writes =
+            TpsCascade.forLayoutAndInputMode(
+                newLayout = "qwerty",
+                newInputMode = "poj",
+                oldLayout = "tps",
+                oldInputMode = "tps",
+                inputModeBeforeTps = "tl",
+                layoutBeforeTps = "phahTaigi",
+            )
+        assertEquals("qwerty", writes[PreferenceKeys.KEYBOARD_LAYOUT_TYPE])
+        assertEquals("poj", writes[PreferenceKeys.INPUT_MODE])
+    }
+
+    @Test
+    fun forLayoutAndInputMode_englishToTlCard_switchesMode() {
+        val writes =
+            TpsCascade.forLayoutAndInputMode(
+                newLayout = "moe1",
+                newInputMode = "tl",
+                oldLayout = "phahTaigi",
+                oldInputMode = "english",
+                inputModeBeforeTps = "tl",
+                layoutBeforeTps = "phahTaigi",
+            )
+        assertEquals("moe1", writes[PreferenceKeys.KEYBOARD_LAYOUT_TYPE])
+        assertEquals("tl", writes[PreferenceKeys.INPUT_MODE])
+        assertNull(writes[PreferenceKeys.INPUT_MODE_BEFORE_TPS])
+        assertNull(writes[PreferenceKeys.LAYOUT_BEFORE_TPS])
+    }
+
+    @Test
+    fun forLayoutAndInputMode_tpsCardWithTpsMode_entersTps() {
+        // The preview generator's TPS job: same end state as the layout setter alone.
+        val writes =
+            TpsCascade.forLayoutAndInputMode(
+                newLayout = "tps",
+                newInputMode = "tps",
+                oldLayout = "qwerty",
+                oldInputMode = "poj",
+                inputModeBeforeTps = "tl",
+                layoutBeforeTps = "phahTaigi",
+            )
+        assertEquals("tps", writes[PreferenceKeys.KEYBOARD_LAYOUT_TYPE])
+        assertEquals("tps", writes[PreferenceKeys.INPUT_MODE])
+        assertEquals("poj", writes[PreferenceKeys.INPUT_MODE_BEFORE_TPS])
+        assertNull("layout already tps — no LAYOUT_BEFORE_TPS overwrite", writes[PreferenceKeys.LAYOUT_BEFORE_TPS])
+    }
 }

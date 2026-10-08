@@ -1,68 +1,102 @@
 package com.siansiansu.taigikeyboard.ui.tabs.layout
 
 import androidx.annotation.DrawableRes
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
+import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.i18n.stringRes
 import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
 import com.siansiansu.taigikeyboard.ime.text.layout.KeyboardLayoutOption
 import com.siansiansu.taigikeyboard.ime.text.layout.KeyboardLayoutOptions
+import com.siansiansu.taigikeyboard.ui.components.GalleryCard
+import com.siansiansu.taigikeyboard.ui.components.GalleryCreateCard
+import com.siansiansu.taigikeyboard.ui.components.GalleryScreenshot
+import com.siansiansu.taigikeyboard.ui.components.GalleryShelf
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
-import com.siansiansu.taigikeyboard.ui.theme.SectionHeader
 
-// Layout tab main screen: keyboard layout selection
+// Layout tab main screen: shelves of layout cards (shared gallery chrome with the Theme tab) —
+// Custom Layouts (a create card, not available yet), Universal (one key table for both scripts),
+// Tâi-lô and Pe̍h-ōe-jī (the layouts whose POJ keys differ, once per script), Phonetic Symbols.
+// A Tâi-lô / Pe̍h-ōe-jī card applies its layout and switches the input mode to that script.
+// Mirrors iOS LayoutTab.
+
+// The script of a Tâi-lô / Pe̍h-ōe-jī shelf card, as its stored input mode.
+internal enum class LayoutScript(
+    val inputMode: String,
+) {
+    TL("tl"),
+    POJ("poj"),
+}
+
+// One Layout-tab card: a layout plus, on the Tâi-lô / Pe̍h-ōe-jī shelves, the script it applies
+// (null: the card writes the layout only).
+internal data class LayoutChoice(
+    val option: KeyboardLayoutOption,
+    val script: LayoutScript?,
+) {
+    @get:DrawableRes
+    val previewRes: Int
+        get() = option.pojPreviewRes.takeIf { script == LayoutScript.POJ } ?: option.previewRes
+
+    // A script card is selected only in its own input mode (English or TPS selects neither);
+    // a layout-only card follows the stored layout.
+    fun isSelected(
+        layout: String,
+        inputMode: String,
+    ): Boolean = layout == option.key && (script == null || inputMode == script.inputMode)
+}
+
+internal data class LayoutShelf(
+    val titleKey: StringKey,
+    val choices: List<LayoutChoice>,
+)
+
+internal val layoutShelves: List<LayoutShelf> =
+    KeyboardLayoutOptions.romanization.partition { it.pojPreviewRes == null }.let { (universal, perScript) ->
+        listOf(
+            LayoutShelf(StringKey.LAYOUT_COMMON_LAYOUTS_SECTION, universal.map { LayoutChoice(it, null) }),
+            LayoutShelf(StringKey.SETTINGS_TL_MODE, perScript.map { LayoutChoice(it, LayoutScript.TL) }),
+            LayoutShelf(StringKey.SETTINGS_POJ_MODE, perScript.map { LayoutChoice(it, LayoutScript.POJ) }),
+            LayoutShelf(StringKey.SETTINGS_TPS_MODE, KeyboardLayoutOptions.phonetic.map { LayoutChoice(it, null) }),
+        )
+    }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LayoutScreen(prefs: PrefHelper) {
     val selectedLayout by prefs
         .observeKeyboardLayoutType()
-        .collectAsState(initial = prefs.keyboardLayoutType)
+        .collectAsStateWithLifecycle(initialValue = prefs.keyboardLayoutType)
+    val inputMode by prefs
+        .observeInputMode()
+        .collectAsStateWithLifecycle(initialValue = prefs.inputMode)
+
+    val selectChoice: (LayoutChoice) -> Unit = { choice ->
+        if (!choice.isSelected(selectedLayout, inputMode)) {
+            val script = choice.script
+            if (script == null) {
+                prefs.keyboardLayoutType = choice.option.key
+            } else {
+                prefs.setKeyboardLayoutAndInputMode(choice.option.key, script.inputMode)
+            }
+        }
+    }
 
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
@@ -94,151 +128,29 @@ fun LayoutScreen(prefs: PrefHelper) {
                     .padding(innerPadding)
                     .verticalScroll(rememberScrollState())
                     .padding(bottom = AppStyle.scrollContentBottomPadding),
+            verticalArrangement = Arrangement.spacedBy(AppStyle.sectionSpacing),
         ) {
-            LayoutSection(
-                title = L10n.layoutRomanizationKeyboard,
-                layouts = KeyboardLayoutOptions.romanization,
-                selectedLayout = selectedLayout,
-                onLayoutSelected = { prefs.keyboardLayoutType = it },
-                horizontalScroll = true,
-            )
-
-            Spacer(Modifier.height(24.dp))
-
-            LayoutSection(
-                title = L10n.settingsTpsMode,
-                layouts = KeyboardLayoutOptions.phonetic,
-                selectedLayout = selectedLayout,
-                onLayoutSelected = { prefs.keyboardLayoutType = it },
-            )
-        }
-    }
-}
-
-@Composable
-private fun LayoutSection(
-    title: String,
-    layouts: List<KeyboardLayoutOption>,
-    selectedLayout: String,
-    onLayoutSelected: (String) -> Unit,
-    horizontalScroll: Boolean = false,
-) {
-    SectionHeader(title)
-    val scrollModifier =
-        if (horizontalScroll) {
-            Modifier.horizontalScroll(rememberScrollState())
-        } else {
-            Modifier
-        }
-    Row(
-        modifier =
-            scrollModifier
-                .padding(horizontal = 20.dp),
-    ) {
-        layouts.forEachIndexed { index, layout ->
-            LayoutCard(
-                label = stringRes(layout.labelKey),
-                previewRes = layout.previewRes,
-                isSelected = selectedLayout == layout.key,
-                onClick = {
-                    if (selectedLayout != layout.key) {
-                        onLayoutSelected(layout.key)
-                    }
-                },
-            )
-            if (index < layouts.size - 1) {
-                Spacer(Modifier.width(12.dp))
-            }
-        }
-    }
-}
-
-@Composable
-private fun LayoutCard(
-    label: String,
-    @DrawableRes previewRes: Int,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-) {
-    val checkmarkScale by animateFloatAsState(
-        targetValue = if (isSelected) 1f else 0f,
-        animationSpec =
-            spring(
-                dampingRatio = Spring.DampingRatioMediumBouncy,
-                stiffness = Spring.StiffnessMedium,
-            ),
-        label = "checkmarkScale",
-    )
-    val overlayAlpha by animateFloatAsState(
-        targetValue = if (isSelected) 1f else 0f,
-        label = "overlayAlpha",
-    )
-
-    Column(
-        modifier =
-            Modifier
-                .width(200.dp)
-                .clickable(onClick = onClick),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Surface(
-            shape = RoundedCornerShape(10.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            border =
-                if (isSelected) {
-                    BorderStroke(2.5.dp, MaterialTheme.colorScheme.primary)
-                } else {
-                    null
-                },
-        ) {
-            Box {
-                Image(
-                    painter = painterResource(previewRes),
-                    contentDescription = label,
-                    modifier = Modifier.fillMaxWidth(),
-                    contentScale = ContentScale.FillWidth,
+            GalleryShelf(L10n.layoutCustomLayoutsSection) {
+                GalleryCreateCard(
+                    title = L10n.layoutCreateNewLayout,
+                    onClick = null,
+                    comingSoonBadge = L10n.layoutComingSoon,
                 )
+            }
 
-                if (overlayAlpha > 0f) {
-                    Box(
-                        modifier =
-                            Modifier
-                                .matchParentSize()
-                                .alpha(overlayAlpha)
-                                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.25f)),
-                    )
-                }
-
-                if (checkmarkScale > 0f) {
-                    Box(
-                        modifier =
-                            Modifier
-                                .align(Alignment.Center)
-                                .scale(checkmarkScale)
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = null,
-                            modifier = Modifier.size(AppStyle.smallIconSize),
-                            tint = MaterialTheme.colorScheme.onPrimary,
+            layoutShelves.forEach { shelf ->
+                GalleryShelf(stringRes(shelf.titleKey)) {
+                    shelf.choices.forEach { choice ->
+                        val title = stringRes(choice.option.labelKey)
+                        GalleryCard(
+                            title = title,
+                            isSelected = choice.isSelected(selectedLayout, inputMode),
+                            onClick = { selectChoice(choice) },
+                            preview = { GalleryScreenshot(previewRes = choice.previewRes, title = title) },
                         )
                     }
                 }
             }
         }
-
-        Spacer(Modifier.height(6.dp))
-
-        Text(
-            text = label,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.labelLarge,
-        )
     }
 }

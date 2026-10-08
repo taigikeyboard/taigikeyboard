@@ -175,4 +175,27 @@ enum KeyboardLayoutType: String, CaseIterable {
         case .moe2: "layout_moe2_preview"
         }
     }
+
+    // Resolved at the call site via the environment store (same reactive
+    // pattern as `FontType.displayNameKey`).
+    var displayNameKey: StringKey {
+        switch self {
+        case .phahTaigi: .layoutPhahTaigiLayout
+        case .qwerty: .layoutStandardLayout
+        case .tps: .layoutTpsLayout
+        case .moe1: .layoutMoe1Layout
+        case .moe2: .layoutMoe2Layout
+        }
+    }
+
+    /// Card screenshot of the POJ key table, for a layout whose POJ keys differ from its TL keys
+    /// (`CustomLayoutService.selectAlphabeticLayout`); nil when one table serves both scripts.
+    var pojPreviewImageName: String? {
+        switch self {
+        case .qwerty: "layout_standard_poj_preview"
+        case .moe1: "layout_moe1_poj_preview"
+        case .moe2: "layout_moe2_poj_preview"
+        case .phahTaigi, .tps: nil
+        }
+    }
 }

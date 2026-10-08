@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// The theme tab root: a gallery of horizontal shelves (mirrors the Layout page
-/// layout — 240pt cards with screenshot previews, horizontal scroll).
+/// The theme tab root: a gallery of horizontal shelves (`GalleryShelf`, shared with the Layout
+/// tab — 240pt cards with screenshot previews, horizontal scroll).
 ///
 /// - **Custom Themes** — the user's saved themes (apply / edit / delete via a
 ///   per-card menu) plus a `Create New…` card (hidden at the cap). These show a
@@ -28,15 +28,13 @@ struct ThemePickerView: View {
 
     @Environment(DisplayLanguageStore.self) private var lang
 
-    private let shelfSpacing: CGFloat = 28
-
     var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: shelfSpacing) {
+            LazyVStack(alignment: .leading, spacing: GalleryCardMetrics.shelfSpacing) {
                 // Custom Themes: user's saved themes + Create New.
-                ThemeShelf(title: lang.string(.themeCustomThemesSection)) {
+                GalleryShelf(title: lang.string(.themeCustomThemesSection)) {
                     if userThemes.count < UserThemeStore.maxUserThemes {
-                        CreateNewThemeCard { editorRoute = .create }
+                        GalleryCreateCard(title: lang.string(.themeCreateNewTheme)) { editorRoute = .create }
                     }
                     ForEach(userThemes) { theme in
                         ThemeGalleryCard(
@@ -57,7 +55,7 @@ struct ThemePickerView: View {
                 // Built-in families: one horizontal shelf each (Standard / Swifty / Minimal …).
                 // The Standard family's first card is the app default (id == ThemeId.default).
                 ForEach(BuiltInThemes.families, id: \.titleKey) { family in
-                    ThemeShelf(title: lang.string(family.titleKey)) {
+                    GalleryShelf(title: lang.string(family.titleKey)) {
                         ForEach(family.themes, id: \.id) { theme in
                             ThemeGalleryCard(
                                 title: lang.string(theme.displayNameKey),
@@ -135,86 +133,6 @@ enum ThemeEditorRoute: Hashable {
     }
 }
 
-// MARK: - Card metrics
-
-/// Shared dimensions for every card so the theme shelves line up with the Layout
-/// page. `width` matches `LayoutOptionCard.cardWidth`; `previewAspectRatio`
-/// matches the generated `*_preview` assets (720×454, `PreviewAssetGeneratorTests`)
-/// so theme screenshots render at the identical size.
-enum ThemeCardMetrics {
-    static let width: CGFloat = 240
-    static let previewAspectRatio: CGFloat = 720.0 / 454.0
-    static let cardSpacing: CGFloat = 12
-}
-
-// MARK: - Shelf
-
-/// One shelf: a gray section header above a horizontally scrolling row of cards
-/// (mirrors the Layout page's `layoutSection`).
-private struct ThemeShelf<Content: View>: View {
-    let title: String
-    @ViewBuilder let content: Content
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(AppStyle.sectionHeaderFont)
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, AppStyle.horizontalPadding)
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(alignment: .top, spacing: ThemeCardMetrics.cardSpacing) {
-                    content
-                }
-                .padding(.horizontal, AppStyle.horizontalPadding)
-            }
-        }
-    }
-}
-
-// MARK: - Create New card
-
-/// The leading card on the Custom Themes shelf: a gray panel with a centered
-/// "+" glyph. Tapping opens the theme editor for a new theme.
-private struct CreateNewThemeCard: View {
-    let onTap: () -> Void
-
-    @Environment(DisplayLanguageStore.self) private var lang
-
-    private let plusGlyphSize: CGFloat = 28
-
-    var body: some View {
-        Button(action: onTap) {
-            VStack(alignment: .leading, spacing: 6) {
-                // Color.clear sets the aspect-ratio box; the panel is overlaid to fill it.
-                Color.clear
-                    .aspectRatio(ThemeCardMetrics.previewAspectRatio, contentMode: .fit)
-                    .overlay(
-                        ZStack {
-                            RoundedRectangle(cornerRadius: AppStyle.previewCornerRadius)
-                                .fill(Color(.systemGray4))
-
-                            Image(latinSystemName: "plus")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: plusGlyphSize, height: plusGlyphSize)
-                                .foregroundColor(.primary)
-                        },
-                    )
-                    .frame(width: ThemeCardMetrics.width)
-
-                Text(lang.string(.themeCreateNewTheme))
-                    .font(AppStyle.captionFont)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
-                    .lineLimit(1)
-            }
-            .frame(width: ThemeCardMetrics.width, alignment: .leading)
-        }
-        .buttonStyle(.plain)
-    }
-}
-
 // MARK: - Theme gallery card
 
 /// A trailing-menu action for a theme card (apply / edit / delete).
@@ -225,9 +143,9 @@ private struct ThemeCardAction: Identifiable {
     let action: () -> Void
 }
 
-/// A theme cell: a preview (screenshot when `previewImageName` is set, else a
-/// live custom-theme background preview) + a title with a selection checkmark + an
-/// optional `…` action menu (user themes only). Tapping the preview applies the theme.
+/// A theme cell (`GalleryCard`): a preview (screenshot when `previewImageName` is set, else a
+/// live custom-theme background preview) + a title + an optional `…` action menu (user themes
+/// only). Tapping the preview applies the theme.
 private struct ThemeGalleryCard: View {
     let title: String
     /// Full appearance for the live custom-theme preview; `nil` for built-in cards
@@ -240,105 +158,25 @@ private struct ThemeGalleryCard: View {
     let actions: [ThemeCardAction]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Button(action: onTap) {
-                // Color.clear sets the aspect-ratio box (same ratio as the Layout
-                // assets); the preview is overlaid to fill it. Selection marker mirrors
-                // LayoutOptionCard: a dimming mask + a blue circle checkmark over the
-                // preview, plus a blue stroke when selected (no border otherwise).
-                Color.clear
-                    .aspectRatio(ThemeCardMetrics.previewAspectRatio, contentMode: .fit)
-                    .overlay(preview)
-                    .overlay {
-                        if isSelected {
-                            RoundedRectangle(cornerRadius: AppStyle.previewCornerRadius)
-                                .fill(Color.black.opacity(0.25))
-                            Circle()
-                                .fill(AppStyle.accentBlue)
-                                .frame(width: 36, height: 36)
-                                .overlay(
-                                    Image(latinSystemName: "checkmark")
-                                        .font(AppStyle.appFont(size: 16).bold())
-                                        .foregroundColor(.white),
-                                )
-                        }
-                    }
-                    .clipShape(RoundedRectangle(cornerRadius: AppStyle.previewCornerRadius))
-                    .frame(width: ThemeCardMetrics.width)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: AppStyle.previewCornerRadius)
-                            .stroke(isSelected ? AppStyle.accentBlue : Color.clear, lineWidth: 2.5),
-                    )
+        GalleryCard(title: title, isSelected: isSelected, onTap: onTap) {
+            if let previewImageName {
+                GalleryScreenshot(imageName: previewImageName, title: title)
+            } else {
+                CustomThemeBackgroundPreview(appearance: appearance ?? .default)
             }
-            .buttonStyle(.plain)
-
-            HStack(spacing: 4) {
-                Text(title)
-                    .font(AppStyle.captionFont)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
-                    .lineLimit(1)
-
-                Spacer(minLength: 0)
-
-                if !actions.isEmpty {
-                    Menu {
-                        ForEach(actions) { action in
-                            Button(action.title, role: action.role, action: action.action)
-                        }
-                    } label: {
-                        Image(latinSystemName: "ellipsis")
-                            .foregroundColor(.secondary)
-                            .frame(width: 28, height: 28)
+        } accessory: {
+            if !actions.isEmpty {
+                Menu {
+                    ForEach(actions) { action in
+                        Button(action.title, role: action.role, action: action.action)
                     }
+                } label: {
+                    Image(latinSystemName: "ellipsis")
+                        .foregroundColor(.secondary)
+                        .frame(width: 28, height: 28)
                 }
             }
-            .frame(width: ThemeCardMetrics.width)
         }
-        .frame(width: ThemeCardMetrics.width, alignment: .leading)
-    }
-
-    /// Preview content: the screenshot asset (filling the aspect box) when
-    /// `previewImageName` is set and the asset exists; a neutral placeholder when
-    /// the asset is missing (scaffold stage); otherwise the live custom-theme
-    /// background preview.
-    @ViewBuilder
-    private var preview: some View {
-        if let previewImageName {
-            if let uiImage = UIImage(named: previewImageName) {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            } else {
-                ThemeScreenshotPlaceholder(title: title)
-            }
-        } else {
-            CustomThemeBackgroundPreview(appearance: appearance ?? .default)
-        }
-    }
-}
-
-// MARK: - Screenshot placeholder
-
-/// Neutral fallback for a built-in card whose screenshot asset is not yet added
-/// (scaffold stage) — mirrors the Layout page's missing-image fallback.
-private struct ThemeScreenshotPlaceholder: View {
-    let title: String
-
-    var body: some View {
-        Rectangle()
-            .fill(Color(.tertiarySystemBackground))
-            .overlay(
-                VStack(spacing: 6) {
-                    Image(latinSystemName: "keyboard")
-                        .font(AppStyle.appFont(size: 28))
-                        .foregroundColor(.secondary)
-                    Text(title)
-                        .font(AppStyle.captionFont)
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                },
-            )
     }
 }
 

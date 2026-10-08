@@ -6,6 +6,26 @@
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "羅馬字齒盤", "tailo": "Lô-má-jī khí-puânn", "poj": "Lô-má-jī khí-pôaⁿ", "en": "Romanization Keyboards", "ja": "ローマ字キーボード" }
     },
+    "customLayoutsSection": {
+      "comment": "Section header above the custom-layout shelf on the Layout tab (create card, not available yet).",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "自訂佈局", "tailo": "Tsū-tīng pòo-kio̍k", "poj": "Chū-tēng pò͘-kio̍k", "en": "Custom Layouts", "ja": "カスタム配列" }
+    },
+    "createNewLayout": {
+      "comment": "Label + content description for the create-new-layout card on the custom-layout shelf.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "新佈局…", "tailo": "Sin pòo-kio̍k...", "poj": "Sin pò͘-kio̍k...", "en": "New Layout…", "ja": "新しい配列…" }
+    },
+    "comingSoon": {
+      "comment": "Badge over a Layout-tab card whose feature is not available yet (the create-new-layout card).",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "準備中", "tailo": "Tsún-pī-tiong", "poj": "Chún-pī-tiong", "en": "Coming Soon", "ja": "近日公開" }
+    },
+    "commonLayoutsSection": {
+      "comment": "Section header on the Layout tab for layouts whose keys are the same in Tâi-lô and Pe̍h-ōe-jī.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "通用", "tailo": "Thong-iōng", "poj": "Thong-iōng", "en": "Universal", "ja": "共通" }
+    },
     "standardLayout": {
       "comment": "Layout name: the standard QWERTY-style romanization layout (Lohankha).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
