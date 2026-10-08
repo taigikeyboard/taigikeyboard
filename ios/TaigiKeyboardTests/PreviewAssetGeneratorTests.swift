@@ -159,6 +159,9 @@ final class PreviewAssetGeneratorTests: XCTestCase {
         let isDark = colorScheme == .dark
         let host = UIHostingController(rootView: panel)
         host.view.backgroundColor = isDark ? darkBackdrop : lightBackdrop
+        // Deliberately the scene-less (iOS 26-deprecated) init: a `UIWindow(windowScene:)` takes
+        // the device safe area, which shifts the keyboard down and clips the bottom row
+        // (`safeAreaRegions = []` on the host does not undo it).
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: renderWidth, height: initialWindowHeight))
         window.overrideUserInterfaceStyle = isDark ? .dark : .light
         window.rootViewController = host
