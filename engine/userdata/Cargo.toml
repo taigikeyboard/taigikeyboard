@@ -14,6 +14,10 @@ workspace = true
 
 # Always links bundled C SQLite; the one gate on that linkage is
 # `dispatch/user-data`, the only edge to this crate (user-data-engine-roadmap U11).
+[lib]
+# No runnable doc examples (doc fences are `text`); skip the rustdoc pass.
+doctest = false
+
 [dependencies]
 phonetics = { workspace = true }
 # The `UserDataRequest` façade (`handle` / `dispatch`).

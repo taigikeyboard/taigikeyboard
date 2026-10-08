@@ -8,6 +8,10 @@ publish = false
 # One test binary per concern (tests/it.rs etc.), not one per tests/*.rs.
 autotests = false
 
+[lib]
+# No runnable doc examples (doc fences are `text`); skip the rustdoc pass.
+doctest = false
+
 [dependencies]
 prost = { workspace = true }
 fst = { workspace = true }
