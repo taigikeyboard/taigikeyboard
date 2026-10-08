@@ -317,17 +317,19 @@ impl RenderFactory {
     }
 }
 
-/// Family names as the bundled files declare them (what a text format asks
-/// for). Mirrors macOS's PostScript names on the same files. `System` is
-/// not one of them — it is whatever this Windows carries, which only
-/// [`system_family`] knows.
+/// Family names as the bundled files declare them — the typographic family
+/// (name ID 16) DirectWrite's collection answers to, which is what a text
+/// format asks for. NOT the PostScript names macOS asks for: `GenYoMin2TW`
+/// names no family, and a family the collection lacks draws in DirectWrite's
+/// fallback without any error. `System` is not one of them — it is whatever
+/// this Windows carries, which only [`system_family`] knows.
 fn bundled_family_name(choice: CandidateFontChoice) -> Option<&'static str> {
     Some(match choice {
         CandidateFontChoice::System => return None,
         CandidateFontChoice::OpenHuninn => "jf-openhuninn-2.1",
         CandidateFontChoice::Iansui => "Iansui",
-        CandidateFontChoice::GenYoMin => "GenYoMin2TW",
-        CandidateFontChoice::GenYoGothic => "GenYoGothic2TW",
+        CandidateFontChoice::GenYoMin => "GenYoMin2 TW",
+        CandidateFontChoice::GenYoGothic => "GenYoGothic2 TW",
     })
 }
 
@@ -406,14 +408,23 @@ struct SystemFonts {
 /// rather than optional: every Windows this installs on has it
 /// (`MinVersion=10.0.17763`, Inno), and a collection whose staleness cannot
 /// be asked about would have to be re-fetched on every show.
+///
+/// Fetched WITHOUT the immediate update check: asked with `checkForUpdates`
+/// set, `IDWriteFactory3::GetSystemFontCollection` answers a collection whose
+/// expiration event is null (observed on Windows 11, 2026-10-08), and that
+/// rejected the whole collection — every installed family and weight drew in
+/// the system face. Unchecked, changes are still detected while the font
+/// cache service runs, with some latency, and reported through the very
+/// event this keeps.
 fn fetch_system_fonts(dwrite: &IDWriteFactory3) -> Option<SystemFonts> {
-    let collection = taigi_windows_platform::font_file::system_collection(dwrite, true)
+    let collection = taigi_windows_platform::font_file::system_collection(dwrite, false)
         .map_err(|error| log::warn!("fonts.system_collection_unavailable error={error}"))
         .ok()?;
     let newer: IDWriteFontCollection3 = collection.cast().ok()?;
     // SAFETY: the collection is live; the handle it answers with is its own.
     let expiration = unsafe { newer.GetExpirationEvent() };
     if expiration.is_invalid() {
+        log::warn!("fonts.system_collection_without_expiration_event");
         return None;
     }
     Some(SystemFonts {
@@ -684,7 +695,12 @@ fn system_family(collection: Option<&IDWriteFontCollection1>) -> &'static str {
 /// The bundled faces that exist, as one collection. Missing folder or no
 /// face at all → `None`.
 fn load_private_fonts(dwrite: &IDWriteFactory3) -> Option<PrivateFonts> {
-    let directory = install_directory()?.join(FONTS_DIR_NAME);
+    load_private_fonts_from(dwrite, &install_directory()?.join(FONTS_DIR_NAME))
+}
+
+/// [`load_private_fonts`] over `directory` — split out so a test can load
+/// the repository's own copy of the files.
+fn load_private_fonts_from(dwrite: &IDWriteFactory3, directory: &Path) -> Option<PrivateFonts> {
     // SAFETY: DWrite objects on the calling thread; every path is a live
     // NUL-terminated buffer for its call.
     unsafe {
@@ -788,5 +804,61 @@ impl Surface {
                 Err(error) => Err(error.code() == D2DERR_RECREATE_TARGET),
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The repository's copy of the bundled files — the one every installer stages.
+    fn repository_fonts() -> PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../assets/fonts/font")
+    }
+
+    fn shared_factory() -> IDWriteFactory3 {
+        // SAFETY: plain factory creation on the test thread.
+        unsafe { DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED) }.expect("a shared factory")
+    }
+
+    #[test]
+    fn every_bundled_family_name_is_one_its_file_declares() {
+        // Declared first so it outlives the collection made from it.
+        let dwrite = shared_factory();
+        let fonts =
+            load_private_fonts_from(&dwrite, &repository_fonts()).expect("the bundled files load");
+        for choice in CandidateFontChoice::ALL {
+            let Some(family) = bundled_family_name(*choice) else {
+                continue;
+            };
+            assert!(
+                fonts.loaded.contains(choice),
+                "{choice:?}: its file did not load"
+            );
+            assert!(
+                collection_has_family(&fonts.collection, family),
+                "{choice:?}: no family {family:?} in its file"
+            );
+        }
+    }
+
+    #[test]
+    fn the_system_collection_comes_with_its_expiration_event() {
+        let dwrite = shared_factory();
+        assert!(fetch_system_fonts(&dwrite).is_some());
+    }
+
+    #[test]
+    fn an_installed_family_resolves_at_the_picked_weight() {
+        let factory = RenderFactory::new().expect("a render factory");
+        let id = factory
+            .installed_font_id("Segoe UI", "Bold")
+            .expect("Segoe UI ships with every Windows");
+        let (collection, family, weight) = factory.face_of(CandidateFontSelection::Installed(id));
+        assert!(collection.is_some());
+        assert_eq!(family, "Segoe UI");
+        // trace: faces_in("Segoe UI") lists ("Bold", 700) on the dev box — the
+        // weight the face itself reports (`IDWriteFont::GetWeight`).
+        assert_eq!(weight, DWRITE_FONT_WEIGHT(700));
     }
 }

@@ -24,9 +24,10 @@ copyright lines below were read out of each font's own `name` table.
 
 The four files live once, at `assets/fonts/font/`, and all four platforms package that
 one copy. The file names follow Android's resource-naming rules so its `res/`
-merge can read the shared directory unchanged; the PostScript names inside the
-files (`Iansui-Regular`, `jf-openhuninn-2.1`, `GenYoGothic2TW-R`,
-`GenYoMin2TW-R`) are what iOS, macOS and Windows ask for at runtime.
+merge can read the shared directory unchanged; iOS and macOS ask for the PostScript names inside
+the files (`Iansui-Regular`, `jf-openhuninn-2.1`, `GenYoGothic2TW-R`,
+`GenYoMin2TW-R`); Windows asks DirectWrite for their family names (`Iansui`,
+`jf-openhuninn-2.1`, `GenYoGothic2 TW`, `GenYoMin2 TW`).
 
 ## Vendored source
 
