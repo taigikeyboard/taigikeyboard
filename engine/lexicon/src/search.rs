@@ -15,7 +15,7 @@ use indexmap::IndexSet;
 use phonetics::{abbrev_family_key, KeyFamily, HANJI_KEY_PREFIX};
 
 use crate::association_reader::{word_key, AssociationFilter, AssociationReader};
-use crate::dictionary_reader::{DictionaryReader, DictionaryRecord, Filter};
+use crate::dictionary_reader::{DictionaryReader, DictionaryRecord, Filter, KAUTIAN_BIT};
 use crate::error::LexiconError;
 use crate::prefix_index::PrefixIndex;
 
@@ -27,10 +27,19 @@ pub struct SearchRow {
     pub id: i64,
     pub roman: String,
     pub hanji: Option<String>,
-    // Sort score; reuses the raw frequency value.
+    // The record's raw dictionary frequency; no platform orders on it since
+    // the engine owns the search order (E1 P5b).
     pub length_score: Option<i32>,
     // Source bitmask, so the platform can tag the source.
     pub source_bitmask: Option<u32>,
+}
+
+impl SearchRow {
+    // From the MOE dictionary (Kautian), by the effective source bitmask.
+    fn is_kautian(&self) -> bool {
+        self.source_bitmask
+            .is_some_and(|bitmask| bitmask & u32::from(KAUTIAN_BIT) != 0)
+    }
 }
 
 /// One bundled bigram continuation — what `api::lookup_associations` returns.
@@ -131,12 +140,15 @@ pub fn search_by_hanji(
     ))
 }
 
-/// Filter rowids through `passesFilter`, then sort by `frequency` descending,
-/// then take `limit`. Mirrors iOS `DictionaryRepository.lookupRowIds` +
-/// platform sort step (see audit §3 — frequency-desc sort happens INSIDE
-/// the repository today; this slice consolidates both into the engine).
-/// Pinned by `INVARIANT_LEX_FREQUENCY_SORT` (parity test added in commit 7
-/// follow-up).
+/// The Dictionary Search page's order, owned here for every platform: filter
+/// the rowids through `passes_filter`, sort by corpus `walker_cost` ascending
+/// (the scale the candidate list and slot 0 use, E1 P5b) with the old
+/// `frequency` descending and then rowid insertion order breaking an equal
+/// cost, take `limit`, then move the MOE (Kautian) rows ahead of the rest,
+/// keeping each group's order. Kautian goes first after the cut, so the
+/// `limit` rows are the corpus's top rows whatever their source. Kautian is
+/// read from the EFFECTIVE bitmask, so a row whose Kautian subcollection is
+/// disabled does not jump the queue.
 fn collect_filtered_sorted(
     rowids: IndexSet<u32>,
     dict: &DictionaryReader,
@@ -153,12 +165,10 @@ fn collect_filtered_sorted(
             staged.push((rowid, record));
         }
     }
-    // Stable sort by frequency descending. Tied scores fall back to
-    // insertion order (IndexSet rowid order preserved by `sort_by_key`).
-    staged.sort_by_key(|entry| std::cmp::Reverse(entry.1.frequency));
-    let limit_usize = limit as usize;
-    staged.truncate(limit_usize);
-    staged
+    // Stable sort: an equal (cost, frequency) keeps the IndexSet rowid order.
+    staged.sort_by_key(|(_, record)| (record.walker_cost, std::cmp::Reverse(record.frequency)));
+    staged.truncate(limit as usize);
+    let mut rows: Vec<SearchRow> = staged
         .into_iter()
         .map(|(rowid, record)| {
             // Emit the EFFECTIVE source bitmask (kautian bit dropped when its
@@ -171,7 +181,9 @@ fn collect_filtered_sorted(
             );
             record_to_row(rowid, record, effective)
         })
-        .collect()
+        .collect();
+    rows.sort_by_key(|row| !row.is_kautian());
+    rows
 }
 
 // NextWord bigram lookup for a committed word: its word key `hanji\u{1}tl`

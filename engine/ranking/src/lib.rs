@@ -21,4 +21,6 @@ pub use score::{
     FrequencyData, FrequencyMap, BOOST_ALPHA, CONTINUOUS_DEFAULT_SOURCE_RANK, MAX_BOOST,
     USER_WEIGHT_DECAY_TAU_MS,
 };
-pub use sort_key::{sort_by_candidate_key, CandidateRankFacts, CandidateSortKey};
+pub use sort_key::{
+    sort_by_candidate_key, CandidateRankFacts, CandidateSortKey, WALKER_COST_UNPRICED,
+};

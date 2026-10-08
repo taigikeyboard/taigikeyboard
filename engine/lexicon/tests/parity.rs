@@ -10,7 +10,10 @@
 use std::path::PathBuf;
 
 use lexicon::association_reader::AssociationReader;
-use lexicon::dictionary_reader::{DictionaryReader, Filter};
+use lexicon::dictionary_reader::{
+    DictionaryReader, Filter, KAUTIAN_BIT, KAUTIAN_SUBTAG_ACCENT_SHIFT, KAUTIAN_SUBTAG_MAIN_BIT,
+    WIRE_KAUTIAN_SUBCOLL_ACTIVE_BIT, WIRE_KAUTIAN_SUBCOLL_SHIFT,
+};
 use lexicon::prefix_index::PrefixIndex;
 use lexicon::search::{self, SearchParams};
 use lexicon::LexiconError;
@@ -187,6 +190,90 @@ fn tps_input_mode_hits_tps_family_through_search() {
         vec![1],
         "TPS input must hit the tps: family rowid only, not the tl: distractor",
     );
+}
+
+const TAIGITV: u16 = 1 << 1;
+/// Kautian subtag bits: the main dictionary, and the first accent subcollection.
+const SUBTAG_MAIN: u16 = 1 << KAUTIAN_SUBTAG_MAIN_BIT;
+const SUBTAG_ACCENT: u16 = 1 << KAUTIAN_SUBTAG_ACCENT_SHIFT;
+
+/// Search fixture: every row under `tl:kap`, rowid = position + 1, each with
+/// `(bitmask, kautian_subtag, frequency, walker_cost, hanji)`.
+fn kap_search(rows: &[(u16, u16, u32, u16, &str)], enabled: u32, limit: u32) -> Vec<String> {
+    let pairs: Vec<(&str, u32)> = (1..=rows.len() as u32).map(|id| ("tl:kap", id)).collect();
+    let index = PrefixIndex::open(&write_synthetic_fst("kap-search.fst", &pairs)).expect("fst");
+    let dict_rows: Vec<test_support::TkdbRow<'_>> = rows
+        .iter()
+        .map(
+            |&(bitmask, subtag, frequency, walker_cost, hanji)| test_support::TkdbRow {
+                bitmask,
+                frequency,
+                syllable_count: Some(1),
+                kautian_subtag: Some(subtag),
+                walker_cost: Some(walker_cost),
+                hanji,
+                tl: "kap",
+            },
+        )
+        .collect();
+    let bytes = test_support::build_tkdb(b"TKDB", 4, &dict_rows);
+    let dict = DictionaryReader::open(&write_temp("kap-search.bin", &bytes)).expect("dict");
+    let params = SearchParams {
+        input: "kap".to_string(),
+        family: KeyFamily::Tl,
+        limit,
+        enabled_sources_bitmask: enabled,
+    };
+    search::search(&params, &index, &dict)
+        .expect("search runs")
+        .into_iter()
+        .map(|row| row.hanji.unwrap_or_default())
+        .collect()
+}
+
+/// E1 P5b: the search page lists by corpus cost (the candidate list's scale),
+/// the old frequency breaking an equal cost, cuts at `limit`, then puts MOE
+/// rows first — so a Kautian row past the cut stays out.
+#[test]
+fn search_orders_by_corpus_cost_then_kautian_first_after_the_limit() {
+    // trace: cost order 佮 5000, 甲 9000, 蛤 13000 (freq 300), 敆 13000 (freq 1),
+    // 合 14000 → limit 4 drops 合 → Kautian 敆 moves first.
+    let rows = [
+        (TAIGITV, 0, 5_000, 9_000, "甲"),
+        (TAIGITV, 0, 10, 5_000, "佮"),
+        (KAUTIAN_BIT, SUBTAG_MAIN, 1, 13_000, "敆"),
+        (TAIGITV, 0, 300, 13_000, "蛤"),
+        (KAUTIAN_BIT, SUBTAG_MAIN, 50, 14_000, "合"),
+    ];
+    assert_eq!(kap_search(&rows, u32::MAX, 4), ["敆", "佮", "甲", "蛤"]);
+}
+
+/// An equal cost and frequency keeps the rowid (FST) order.
+#[test]
+fn search_keeps_rowid_order_on_an_equal_cost_and_frequency() {
+    let rows = [
+        (TAIGITV, 0, 50, 13_181, "蛤"),
+        (TAIGITV, 0, 50, 13_181, "敆"),
+        (TAIGITV, 0, 50, 13_181, "合"),
+    ];
+    assert_eq!(kap_search(&rows, u32::MAX, 10), ["蛤", "敆", "合"]);
+}
+
+/// A row whose Kautian subcollection is off counts by its other sources: the
+/// MOE-first move reads the effective bitmask.
+#[test]
+fn search_moves_only_effective_kautian_rows_first() {
+    // trace: subcollection gate on, main subtag only → 佮 (Kautian accent +
+    // TAIGITV) keeps TAIGITV alone; cost order 佮, 甲, 合 → 合 first.
+    let enabled = 0x1FFF
+        | WIRE_KAUTIAN_SUBCOLL_ACTIVE_BIT
+        | (u32::from(SUBTAG_MAIN) << WIRE_KAUTIAN_SUBCOLL_SHIFT);
+    let rows = [
+        (KAUTIAN_BIT | TAIGITV, SUBTAG_ACCENT, 10, 5_000, "佮"),
+        (TAIGITV, 0, 5_000, 9_000, "甲"),
+        (KAUTIAN_BIT, SUBTAG_MAIN, 50, 13_000, "合"),
+    ];
+    assert_eq!(kap_search(&rows, enabled, 10), ["合", "佮", "甲"]);
 }
 
 /// Tone-8 standalone `U+02D9` from the platform keyboard is substituted

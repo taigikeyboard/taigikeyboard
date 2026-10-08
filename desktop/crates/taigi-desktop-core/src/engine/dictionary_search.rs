@@ -6,7 +6,7 @@
 use super::user_data::search_custom_entries;
 use super::{
     chhoe_url, dictionary_filters, is_hanji, moe_url, search_by_hanji, search_with_sources,
-    tl_to_poj, DictionarySource, LexiconRow, ALL_SOURCES_ENABLED_SEARCH_BITMASK,
+    tl_to_poj, DictionarySource, ALL_SOURCES_ENABLED_SEARCH_BITMASK,
 };
 use crate::settings::{keys, InputMode, SettingsDocument};
 
@@ -70,7 +70,8 @@ pub fn search(query: &str, settings: &SettingsDocument) -> Vec<DictionarySearchR
     } else {
         search_with_sources(query, mode, RESULT_LIMIT, sources_bitmask)
     };
-    let system: Vec<DictionarySearchResult> = LexiconRow::sorted_for_search(rows)
+    // The engine owns the order (corpus order, MOE rows first — `lexicon::search`).
+    let system: Vec<DictionarySearchResult> = rows
         .into_iter()
         .map(|row| {
             let mut sources = row.sources;

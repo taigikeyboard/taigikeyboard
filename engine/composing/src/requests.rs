@@ -33,6 +33,7 @@ use protos::engine::{
     composing_request, AppConfig, CandidateMessage, CommitScript as WireCommitScript,
     ComposingRequest, ComposingResponse, ContinuousResponse, DictionarySourceToggles, FetchAtPos,
 };
+use ranking::WALKER_COST_UNPRICED;
 
 /// Decode the proto request into a typed `Intent`. Returns `MissingMethod`
 /// when `oneof method` is empty.
@@ -394,6 +395,7 @@ fn literal_roman_candidate(
         score: 0.0,
         form: FORM_NOTONE,
         frequency: 0,
+        walker_cost: WALKER_COST_UNPRICED,
         bitmask: 0,
         script_kind: derive_script_kind(None),
         user_weight: 0.0,
@@ -545,6 +547,7 @@ mod tests {
             score: 1.5,
             form: FORM_NOTONE,
             frequency: 12,
+            walker_cost: WALKER_COST_UNPRICED,
             bitmask: 0,
             script_kind: lexicon::CandidateScriptKind::Hant,
             user_weight: 0.0,
@@ -572,6 +575,7 @@ mod tests {
             score: 0.5,
             form: FORM_NOTONE,
             frequency: 3,
+            walker_cost: WALKER_COST_UNPRICED,
             bitmask: 0,
             script_kind: lexicon::CandidateScriptKind::Tailo,
             user_weight: 0.0,
@@ -603,6 +607,7 @@ mod tests {
                 score: 1.0,
                 form: FORM_NOTONE,
                 frequency: 1,
+                walker_cost: WALKER_COST_UNPRICED,
                 bitmask: 0,
                 script_kind: lexicon::CandidateScriptKind::Hant,
                 user_weight: 0.0,

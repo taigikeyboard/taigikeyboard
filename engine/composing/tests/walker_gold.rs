@@ -1,8 +1,9 @@
 //! E1 walker gold-set harness: types every resolved gold item through the
 //! production engine and reports slot-0, word-boundary and top-k metrics per
-//! split × category × input variant, and records which homophone the engine
-//! picks for every multi-homophone key
-//! (`docs/architecture/unified-word-frequency-roadmap.md` §5).
+//! split × category × input variant, ranks each gold word typed alone in the
+//! candidate list, and records which homophone the engine picks for every
+//! multi-homophone key (`docs/architecture/unified-word-frequency-roadmap.md`
+//! §5).
 //!
 //! `#[ignore]`d; it needs the production artifacts and the files
 //! `dictionary/tools/walker_gold.py resolve` writes from the corpus submodule
@@ -17,7 +18,12 @@
 //! is read once, at the end of P4, and then prints aggregates only) ·
 //! `GOLD_FAILURES=1` lists every miss outside `final` · `GOLD_OUT=<path>` writes
 //! the aggregate table as TSV · `GOLD_SLOT0_OUT=<path>` writes each non-`final`
-//! item's slot 0 per variant (`tools.walker_gold simulate --engine-slot0`).
+//! item's slot 0 per variant (`tools.walker_gold simulate --engine-slot0`; its
+//! `shown` column, hanji plus displayed roman, is for diffing two engines).
+//!
+//! Env for `walker_gold_word_ranks` (reads `word_inputs.tsv`): `GOLD_SPLITS`
+//! (`final` never read) · `GOLD_WORD_OUT=<path>` writes the aggregate table ·
+//! `GOLD_WORD_RANKS_OUT=<path>` every word's rank per variant.
 //!
 //! Word boundaries are read from slot 0's displayed roman (one word per
 //! space-separated run): what the user sees. The §22 promotion shows one
@@ -43,6 +49,11 @@ const WORD_SEPARATOR: char = '+';
 const TYPED_SEPARATOR_VARIANT: &str = "tl_hyphen";
 /// Columns of `resolved.tsv` before the input variants.
 const ITEM_COLUMNS: usize = 7;
+/// Columns of `word_inputs.tsv` before the input variants.
+const WORD_COLUMNS: usize = 5;
+/// A word's list rank at or past this counts as "not found" — deep enough
+/// that a list reorder below the first page still moves the mean.
+const WORD_RANK_CAP: usize = 20;
 
 fn output_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../target/walker_gold")
@@ -204,11 +215,7 @@ fn score(
     let gold_text = item.words.concat();
     let is_acceptable =
         |hanji: &str| hanji == gold_text || item.extra_accepted.iter().any(|a| a == hanji);
-    let rank = candidates
-        .iter()
-        .take(TOP_K)
-        .position(|c| c.consumed_span_end == whole_buffer && is_acceptable(&plain_hanji(c)))
-        .unwrap_or(TOP_K);
+    let rank = whole_buffer_rank(candidates, raw, TOP_K, is_acceptable);
     let Some(slot0) = candidates.first() else {
         return Outcome {
             is_exact: false,
@@ -289,6 +296,89 @@ impl Tally {
     }
 }
 
+/// List ranks of gold words typed alone (`walker_gold_word_ranks`).
+#[derive(Default)]
+struct WordRankTally {
+    words: usize,
+    at_slot0: usize,
+    top_k: usize,
+    rank_sum: usize,
+}
+
+impl WordRankTally {
+    fn add(&mut self, rank: usize) {
+        self.words += 1;
+        self.at_slot0 += usize::from(rank == 0);
+        self.top_k += usize::from(rank < TOP_K);
+        self.rank_sum += rank;
+    }
+
+    fn row(&self) -> String {
+        let n = self.words.max(1) as f64;
+        format!(
+            "{}\t{:.1}\t{:.1}\t{:.2}",
+            self.words,
+            100.0 * self.at_slot0 as f64 / n,
+            100.0 * self.top_k as f64 / n,
+            self.rank_sum as f64 / n,
+        )
+    }
+}
+
+/// Position of the first whole-buffer candidate whose hanji `is_wanted`,
+/// looking at the first `cap` candidates; `cap` when none is.
+fn whole_buffer_rank(
+    candidates: &[CandidateMessage],
+    raw: &str,
+    cap: usize,
+    is_wanted: impl Fn(&str) -> bool,
+) -> usize {
+    candidates
+        .iter()
+        .take(cap)
+        .position(|c| c.consumed_span_end == raw.len() as u32 && is_wanted(&plain_hanji(c)))
+        .unwrap_or(cap)
+}
+
+/// The splits named by `GOLD_SPLITS` (default [`DEFAULT_SPLITS`]); `final`
+/// is kept only when `include_held_out`.
+fn gold_splits(include_held_out: bool) -> BTreeSet<String> {
+    std::env::var("GOLD_SPLITS")
+        .unwrap_or_else(|_| DEFAULT_SPLITS.to_string())
+        .split(',')
+        .filter(|split| include_held_out || *split != HELD_OUT_SPLIT)
+        .map(str::to_string)
+        .collect()
+}
+
+/// `tl_toneless` → `tl`.
+fn variant_mode(variant: &str) -> &str {
+    variant
+        .split('_')
+        .next()
+        .expect("variant has a mode prefix")
+}
+
+/// Prints `header` + one row per tally, and writes them to `` when set.
+fn emit_table<T>(
+    header: &str,
+    tallies: &BTreeMap<String, T>,
+    row: impl Fn(&T) -> String,
+    env_var: &str,
+) {
+    let mut table = vec![header.to_string()];
+    table.extend(
+        tallies
+            .iter()
+            .map(|(key, tally)| format!("{key}\t{}", row(tally))),
+    );
+    println!("{}", table.join("\n"));
+    if let Ok(out) = std::env::var(env_var) {
+        std::fs::write(&out, table.join("\n") + "\n")
+            .unwrap_or_else(|e| panic!("write {env_var}: {e}"));
+    }
+}
+
 fn candidates_for(mode: &str, raw: &str, enabled_sources_bitmask: u32) -> Vec<CandidateMessage> {
     let response = fetch_at_pos_response(
         &config(mode),
@@ -324,26 +414,18 @@ fn walker_gold_metrics() {
     if !inputs_ready("resolved.tsv") {
         return;
     }
-    let splits: BTreeSet<String> = std::env::var("GOLD_SPLITS")
-        .unwrap_or_else(|_| DEFAULT_SPLITS.to_string())
-        .split(',')
-        .map(str::to_string)
-        .collect();
+    let splits = gold_splits(true);
     let show_failures = std::env::var("GOLD_FAILURES").is_ok_and(|v| v == "1");
     let bitmask = default_sources_bitmask();
     let mut tallies: BTreeMap<String, Tally> = BTreeMap::new();
-    let mut slot0_rows = vec!["id\tvariant\tslot0\tword_syllables".to_string()];
+    let mut slot0_rows = vec!["id\tvariant\tslot0\tword_syllables\tshown".to_string()];
     for item in read_gold()
         .iter()
         .filter(|item| splits.contains(&item.split))
     {
         let is_listed = item.split != HELD_OUT_SPLIT;
         for (variant, raw) in &item.inputs {
-            let mode = variant
-                .split('_')
-                .next()
-                .expect("variant has a mode prefix");
-            let candidates = candidates_for(mode, raw, bitmask);
+            let candidates = candidates_for(variant_mode(variant), raw, bitmask);
             let outcome = score(item, raw, &candidates, variant != TYPED_SEPARATOR_VARIANT);
             for key in [
                 format!("{}\tall\tall", item.split),
@@ -362,10 +444,11 @@ fn walker_gold_metrics() {
                 .map(usize::to_string)
                 .collect();
             slot0_rows.push(format!(
-                "{}\t{variant}\t{}\t{}",
+                "{}\t{variant}\t{}\t{}\t{}",
                 item.id,
                 outcome.slot0_hanji,
-                lengths.join(",")
+                lengths.join(","),
+                outcome.slot0,
             ));
             if show_failures && !outcome.is_exact {
                 println!(
@@ -379,19 +462,64 @@ fn walker_gold_metrics() {
             }
         }
     }
-    let header = "split\tcategory\tvariant\tn\texact%\tsegmented%\tboundary_f1\ttop5%\tmean_rank";
-    let mut table = vec![header.to_string()];
-    table.extend(
-        tallies
-            .iter()
-            .map(|(key, tally)| format!("{key}\t{}", tally.row())),
+    emit_table(
+        "split\tcategory\tvariant\tn\texact%\tsegmented%\tboundary_f1\ttop5%\tmean_rank",
+        &tallies,
+        Tally::row,
+        "GOLD_OUT",
     );
-    println!("{}", table.join("\n"));
     if let Ok(out) = std::env::var("GOLD_SLOT0_OUT") {
         std::fs::write(&out, slot0_rows.join("\n") + "\n").expect("write GOLD_SLOT0_OUT");
     }
-    if let Ok(out) = std::env::var("GOLD_OUT") {
-        std::fs::write(&out, table.join("\n") + "\n").expect("write GOLD_OUT");
+}
+
+/// E1 P5b: each gold word typed alone, ranked in the candidate list — the
+/// list order a user corrects slot 0 from, which `walker_gold_metrics` cannot
+/// see (a sentence has one whole-buffer row, slot 0). Rank = position of the
+/// first whole-buffer candidate showing the gold hanji, capped at
+/// [`WORD_RANK_CAP`]. Same splits as `walker_gold_metrics`; `GOLD_WORD_OUT`
+/// writes the aggregate table, `GOLD_WORD_RANKS_OUT` every word's rank per
+/// variant for a before / after diff.
+#[test]
+#[ignore = "E1 list-rank harness — run with --ignored after `tools.walker_gold resolve`"]
+fn walker_gold_word_ranks() {
+    if !inputs_ready("word_inputs.tsv") {
+        return;
+    }
+    let splits = gold_splits(false);
+    let (header, words) = read_tsv(&output_dir().join("word_inputs.tsv"));
+    let variants = &header[WORD_COLUMNS..];
+    let bitmask = default_sources_bitmask();
+    let mut tallies: BTreeMap<String, WordRankTally> = BTreeMap::new();
+    let mut rank_rows = vec!["id\tword\tvariant\thanji\trank".to_string()];
+    for word in words.iter().filter(|word| splits.contains(&word["split"])) {
+        for variant in variants {
+            let raw = &word[variant];
+            let candidates = candidates_for(variant_mode(variant), raw, bitmask);
+            let rank = whole_buffer_rank(&candidates, raw, WORD_RANK_CAP, |hanji| {
+                hanji == word["hanji"]
+            });
+            for key in [
+                format!("{}\tall\tall", word["split"]),
+                format!("{}\tall\t{variant}", word["split"]),
+                format!("{}\t{}\tall", word["split"], word["category"]),
+            ] {
+                tallies.entry(key).or_default().add(rank);
+            }
+            rank_rows.push(format!(
+                "{}\t{}\t{variant}\t{}\t{rank}",
+                word["id"], word["word"], word["hanji"]
+            ));
+        }
+    }
+    emit_table(
+        "split\tcategory\tvariant\tn\tslot0%\ttop5%\tmean_rank",
+        &tallies,
+        WordRankTally::row,
+        "GOLD_WORD_OUT",
+    );
+    if let Ok(out) = std::env::var("GOLD_WORD_RANKS_OUT") {
+        std::fs::write(&out, rank_rows.join("\n") + "\n").expect("write GOLD_WORD_RANKS_OUT");
     }
 }
 

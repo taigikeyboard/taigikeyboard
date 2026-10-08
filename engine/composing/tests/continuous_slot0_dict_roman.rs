@@ -28,11 +28,11 @@
 
 use crate::common::Fetch;
 use crate::common::{
-    build_dictionary_fst_tl_toned, build_syllables_fst_tl, build_tkdb_v4, config_tl,
-    empty_association_bin, fetch_at_pos_response, fetch_cells, install_lexicon, selected, Row,
-    NOW_MS,
+    build_dictionary_fst_tl_toned, build_syllables_fst_tl, build_tkdb_v4, build_tkdb_v4_costed,
+    config_tl, empty_association_bin, fetch_at_pos_response, fetch_cells, install_lexicon,
+    selected, Row, NOW_MS,
 };
-use test_support::{engine_install_lock, write_temp};
+use test_support::{engine_install_lock, walker_cost_from_fixture_frequency, write_temp};
 
 /// 予我/hōo--guá (neutral tone, freq 16) + 戶外/hōo-guā (hyphen, freq 25) collide on
 /// `tl_notone = hoogua`. 予/hōo + 我/guá are high-freq single chars so the
@@ -77,7 +77,11 @@ fn fixture_rows() -> Vec<Row> {
 }
 
 fn install_rows(rows: &[Row], syllables: &[&str]) {
-    let dict_path = write_temp("dictionary.bin", &build_tkdb_v4(rows));
+    install_rows_with_dictionary(rows, &build_tkdb_v4(rows), syllables);
+}
+
+fn install_rows_with_dictionary(rows: &[Row], dictionary: &[u8], syllables: &[&str]) {
+    let dict_path = write_temp("dictionary.bin", dictionary);
     let fst_path = build_dictionary_fst_tl_toned(rows);
     let association_path = write_temp("association.bin", &empty_association_bin());
     let syllables_path = build_syllables_fst_tl(syllables);
@@ -246,4 +250,44 @@ fn slot0_follows_the_selected_separator_form() {
         tshutlai_romans(picked_khinsiann),
         ["tshut--lâi", "tshut-lâi"]
     );
+}
+
+/// 予我 in two separator forms with explicit corpus costs that disagree with
+/// their frequencies: `hōo-guá` (freq 10, cost 15,000) is the corpus's
+/// spelling, `hōo--guá` (freq 16, cost 15,300) the frequent one. Both cost more
+/// than a freq-25 word (13,127), which already loses to the 予 + 我 split
+/// (`fixture_rows`' singles at freq 80,000), so slot 0 is the split synth
+/// `hōo guá` and the promote picks a dictionary form.
+fn install_corpus_separator_fixture() {
+    let mut rows = fixture_rows();
+    rows.retain(|row| row.hanji != "戶外");
+    rows.push(Row {
+        toneless_key: "hoogua",
+        hanji: "予我",
+        tl: "hōo-guá",
+        syll: 2,
+        freq: 10,
+    });
+    let dictionary = build_tkdb_v4_costed(&rows, |row| match row.tl {
+        "hōo--guá" => 15_300,
+        "hōo-guá" => 15_000,
+        _ => walker_cost_from_fixture_frequency(row.freq),
+    });
+    install_rows_with_dictionary(&rows, &dictionary, &["hoo7", "gua2"]);
+}
+
+#[test]
+fn slot0_promotes_the_separator_form_the_corpus_writes() {
+    let _lock = engine_install_lock();
+    install_corpus_separator_fixture();
+    // E1 P5b: the promote takes the first same-reading row of the sorted
+    // list, and the list now sorts on the corpus cost — so slot 0 shows the
+    // corpus's `hōo-guá`, not the more frequent `hōo--guá`.
+    let cands = fetch_candidates("hoogua");
+    let romans: Vec<&str> = cands
+        .iter()
+        .filter(|(hanji, _)| hanji.as_deref() == Some("予我"))
+        .map(|(_, roman)| roman.as_str())
+        .collect();
+    assert_eq!(romans, ["hōo-guá", "hōo--guá"], "got {cands:?}");
 }

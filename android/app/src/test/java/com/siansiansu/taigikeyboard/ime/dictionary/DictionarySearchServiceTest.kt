@@ -78,9 +78,8 @@ class DictionarySearchServiceTest {
     private fun row(
         id: Int,
         roman: String,
-        frequency: Int,
         vararg sources: DictionarySource,
-    ) = DictionarySearchResult(id = id, roman = roman, tl = roman, hanji = "字", frequency = frequency, sources = sources.toList())
+    ) = DictionarySearchResult(id = id, roman = roman, tl = roman, hanji = "字", sources = sources.toList())
 
     private val myWord = CustomDictionaryWord(roman = "taigi", hanji = "我的台語")
 
@@ -107,7 +106,7 @@ class DictionarySearchServiceTest {
     @Test
     fun `custom dictionary on - its entries lead the system rows`() =
         runTest {
-            val lexicon = FakeLexicon(listOf(row(1, "tâi-gí", 10, DictionarySource.KAUTIAN)))
+            val lexicon = FakeLexicon(listOf(row(1, "tâi-gí", DictionarySource.KAUTIAN)))
 
             val results = service(lexicon = lexicon).search("taigi")
 
@@ -151,14 +150,16 @@ class DictionarySearchServiceTest {
         assertEquals(RustEngineBridge.LexiconInputMode.POJ, DictionarySearchService.lexiconMode("garbage"))
     }
 
+    // CROSS-PLATFORM INVARIANT — mirrors iOS DictionarySearchServiceTests
+    // `testSystemRows_keepTheEngineOrder`: the engine owns the search order (E1 P5b).
     @Test
-    fun `kautian rows come first and badges drop the disabled sources`() =
+    fun `system rows keep the engine order and badges drop the disabled sources`() =
         runTest {
             val lexicon =
                 FakeLexicon(
                     listOf(
-                        row(1, "a", 100, DictionarySource.TAIGITV),
-                        row(2, "b", 1, DictionarySource.KAUTIAN, DictionarySource.TAIGITV),
+                        row(1, "a", DictionarySource.TAIGITV),
+                        row(2, "b", DictionarySource.KAUTIAN, DictionarySource.TAIGITV),
                     ),
                 )
 
@@ -166,7 +167,7 @@ class DictionarySearchServiceTest {
                 service(StubEngineSettings(isMoeDictEnabled = false), lexicon = lexicon, userData = FakeUserData(emptyList()))
                     .search("x")
 
-            assertEquals(listOf(2, 1), results.map { it.id })
-            assertEquals("the disabled kautian badge is dropped", listOf(DictionarySource.TAIGITV), results.first().sources)
+            assertEquals(listOf(1, 2), results.map { it.id })
+            assertEquals("the disabled kautian badge is dropped", listOf(DictionarySource.TAIGITV), results.last().sources)
         }
 }

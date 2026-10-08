@@ -42,7 +42,7 @@ use test_support::write_temp;
 #[test]
 fn fused_toneless_key_retrieves_single_and_multi_syllable_entries() {
     // Frequencies kept realistic and non-zero so the post-lookup
-    // frequency-desc sort in `search::collect_filtered_sorted` runs against
+    // corpus-cost sort in `search::collect_filtered_sorted` runs against
     // sensible inputs. Assertion is membership + exact set size — an
     // exact+prefix dedup regression that returned duplicates would inflate
     // the set and trip the size check.

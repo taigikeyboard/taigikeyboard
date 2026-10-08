@@ -31,8 +31,8 @@ const RECORD_FIXED_PREFIX: usize = 13;
 
 /// `DictionaryRecord::walker_cost` of a record that is not a dictionary word
 /// (a learned phrase): no corpus probability, so the walker's user-entry cost
-/// cap prices it (E1 plan D2).
-pub const WALKER_COST_UNPRICED: u16 = u16::MAX;
+/// cap prices it (E1 plan D2). Defined by the sort that orders on it.
+pub use ranking::WALKER_COST_UNPRICED;
 
 /// Bit positions for the 12-source bitmask. Mirrors
 /// `dictionary/common/source_bits.py::SOURCE_BITS` (positions 0-11) +

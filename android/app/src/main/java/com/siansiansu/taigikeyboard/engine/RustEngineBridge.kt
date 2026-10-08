@@ -95,7 +95,6 @@ object RustEngineBridge {
         val id: Long,
         val roman: String,
         val hanji: String?,
-        val lengthScore: Int?,
         /** The dictionaries the record belongs to, in the engine's (source-bit) order — the badge order. */
         val sources: List<DictionarySource>,
     )

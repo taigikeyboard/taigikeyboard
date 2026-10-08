@@ -134,7 +134,6 @@ class LexiconService(
                     roman = roman,
                     tl = row.roman,
                     hanji = row.hanji,
-                    frequency = row.lengthScore ?: 0,
                     sources = row.sources,
                 )
             }.take(limit)

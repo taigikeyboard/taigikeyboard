@@ -54,6 +54,12 @@ pub struct Row {
 /// provenance (subtag 0) and the walker cost its frequency had before E1
 /// ([`walker_cost_from_fixture_frequency`]).
 pub fn build_tkdb_v4(rows: &[Row]) -> Vec<u8> {
+    build_tkdb_v4_costed(rows, |row| walker_cost_from_fixture_frequency(row.freq))
+}
+
+/// [`build_tkdb_v4`] with each row's walker cost from `walker_cost`, for
+/// fixtures where the corpus cost and the frequency disagree on purpose.
+pub fn build_tkdb_v4_costed(rows: &[Row], walker_cost: impl Fn(&Row) -> u16) -> Vec<u8> {
     let tkdb_rows: Vec<TkdbRow<'_>> = rows
         .iter()
         .map(|row| TkdbRow {
@@ -61,7 +67,7 @@ pub fn build_tkdb_v4(rows: &[Row]) -> Vec<u8> {
             frequency: row.freq,
             syllable_count: Some(row.syll),
             kautian_subtag: Some(0),
-            walker_cost: Some(walker_cost_from_fixture_frequency(row.freq)),
+            walker_cost: Some(walker_cost(row)),
             hanji: row.hanji,
             tl: row.tl,
         })
