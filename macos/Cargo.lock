@@ -725,7 +725,7 @@ dependencies = [
 
 [[package]]
 name = "taigi-desktop-core"
-version = "3.6.13"
+version = "3.6.14"
 dependencies = [
  "dispatch",
  "log",
@@ -738,7 +738,7 @@ dependencies = [
 
 [[package]]
 name = "taigi-macos-ffi"
-version = "3.6.13"
+version = "3.6.14"
 dependencies = [
  "dispatch",
  "log",
