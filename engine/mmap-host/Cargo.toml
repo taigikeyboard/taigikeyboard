@@ -6,6 +6,10 @@ rust-version.workspace = true
 license.workspace = true
 publish = false
 
+[lib]
+# No runnable doc examples (doc fences are `text`); skip the rustdoc pass.
+doctest = false
+
 [dependencies]
 memmap2 = { workspace = true }
 thiserror = { workspace = true }

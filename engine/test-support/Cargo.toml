@@ -13,5 +13,9 @@ publish = false
 [lints]
 workspace = true
 
+[lib]
+# No runnable doc examples (doc fences are `text`); skip the rustdoc pass.
+doctest = false
+
 [dependencies]
 fst = { workspace = true }

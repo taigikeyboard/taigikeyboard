@@ -22,6 +22,8 @@ name = "rust_taigi"
 # exists once in that process (docs/architecture/macos-desktop-core-roadmap.md D1;
 # the `linux/crates/taigi-linux-ffi` shape).
 crate-type = ["staticlib", "rlib"]
+# No runnable doc examples (doc fences are `text`); skip the rustdoc pass.
+doctest = false
 
 [features]
 # Both Apple consumers — the iOS app + keyboard and the macOS input method —
