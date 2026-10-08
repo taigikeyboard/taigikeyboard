@@ -2,7 +2,7 @@
 
 > **Type**: Planning (multi-PR roadmap)
 > **Keywords**: `walker`, `edge_cost`, `word_unigrams`, `segmentation`, `slot 0`, `gold set`
-> **Status**: Complete 2026-10-08 (P0–P4 merged; P5 maintainer-gated, not opened) — direction approved by the maintainer 2026-10-08 ("proceed with your recommendation"); revised after the Codex pre-impl review (REVISE, 8 changes folded in)
+> **Status**: P0–P4 merged 2026-10-08; P5 opened by the maintainer 2026-10-08 as P5a (edge pick, in progress) + P5b (candidate-list sort) — direction approved by the maintainer 2026-10-08 ("proceed with your recommendation"); revised after the Codex pre-impl review (REVISE, 8 changes folded in)
 > **Last updated**: 2026-10-08
 
 Release scope and timing are the maintainer's call; nothing here is assigned to a release.
@@ -87,7 +87,7 @@ Why not (a) "price on the pick's own value": the pick follows the old order, not
 
 What (c) does not promise: each edge's word is unchanged, but a different winning path can still change the slot-0 hanji (that is the fix).
 
-(b) "pick the edge word by corpus probability" changes the orthography of thousands of keys (擱→閣, 卜→欲 with variants enabled) — a product decision, kept as an unopened, maintainer-gated P5.
+(b) "pick the edge word by corpus probability" changes the orthography of thousands of keys (擱→閣, 卜→欲 with variants enabled) — a product decision, kept as a maintainer-gated P5 — opened 2026-10-08 (§6 P5a / P5b, §8 item 4).
 
 **Toneless / partial-tone caveat**: (c) over a toneless key takes the cheapest admissible reading across tones, so a rare reading can borrow a common reading's segmentation strength. P1 measures it as its own stratum.
 
@@ -141,7 +141,8 @@ Typing items are "source contribution excluded" (the `taigi_typing` column is ou
 | **P2b** | Subsegment tie-break (the committed counts were current — [report](../reports/2026-10-08-e1-p2b-subsegment-tiebreak.md)): `corpus_bigrams` counts twice — pass 1 counts in-vocabulary tokens only; pass 2 breaks fewest-piece ties by the lowest summed quantised cost under the frozen pass-1 model (`SUBSEGMENT_ALPHA` 10, fixed apart from the walker's α), first split found on an exact tie — so the old frequency no longer steers the counts; `word_unigrams.tsv` + `word_bigrams.tsv` regenerated together; `association.bin` diff reviewed + mobile next-word / context dogfood (S116); `simulate` / `exposure` re-run | ~150 + data | **yes** — mobile next-word + composing context (association.bin) | Merged #462 |
 | **P3** | `edge_cost` on `walker_cost` (D2); `EdgeBest` carries min `walker_cost`, handed over by the dictionary visitor with each row (D3; no `RawCandidate` field — Codex pre-impl); one cost cap for custom / learned / selected; `CUSTOM_EDGE_COST` re-anchored and checked on dev; retire `CORPUS_TOTAL_FREQ`, `corpus_total_freq.txt`, the two skips and the BUILDING note; hermetic fixtures keep their pre-E1 cost; fixed regression tests; S0 golden diff reviewed line by line; `continuous-input-ranking.md`, `cost.rs` head | ~500 | **yes** — segmentation / slot 0 | Merged #463 `6f95344c` — [report](../reports/2026-10-08-e1-p3-walker-cost.md) |
 | **P4** | Calibration on `calib`: α ∈ {0.5, 2, 10, 50} (corrected P1 numbers, [corrections](../reports/2026-10-08-e1-walker-baseline-corrections.md): at α 0.5 A2 splits 1,059 dictionary words that win their key today; at α 10, 68), `CUSTOM_EDGE_COST`, the user-delta scale (0.0 kept unless calib shows otherwise), length exponents (changed only with a calib win); one `final` read; report | ~150 + report | constants only | Merged #465 `4ba40f21` — every constant kept (α 10 best on the engine grid) — [report](../reports/2026-10-08-e1-p4-calibration.md) |
-| P5 (maintainer-gated) | D3 (b): walker edge pick by corpus probability → slot-0 orthography | ~250 | **yes** — orthography | Not opened |
+| **P5a** | D3 (b): the word that fills each walker edge (`EdgeBest.candidate`, `engine/lexicon/src/continuous/mod.rs`) is picked by `walker_cost`; user weight and context rank still lead, custom / learned overrides unchanged; tie-break among unseen words (one shared unseen cost) is a rule of the pick, not a fallback; fixed regression `kausiu` → 教授; S0 golden diff reviewed; slot-0 orthography change counted (`tools.walker_gold d3`); report + dogfood | ~250 | **yes** — slot-0 orthography (佮/洽, 閣/擱, 欲/卜) | In progress — branch `feat/e1-p5a-edge-pick-by-corpus` after maintainer approval |
+| **P5b** | Candidate-list sort (`CandidateSortKey` score / freq, `engine/ranking/src/sort_key.rs`) on `walker_cost`, so the list and slot 0 use one scale; coverage kind → tier → user weight → context rank order unchanged; a retirement plan for the old `frequency` (dict.bin field, `dictionary/common/frequency.py`, `khiin_frequency.csv`) goes to the maintainer if no reader is left; whether the dictionary search page is in scope is a maintainer question | ~250 | **yes** — candidate-list order | Pending P5a merge (separate session) |
 
 Every phase from P2 on: `make dict` → `make build`, refreshed artifacts committed; post-PR gate per touched platform via `tools/test_select.py`. P3 / P4 dogfood: one mobile + one desktop platform, clean install, the fixed inputs plus TL / POJ / TPS, mobile context cases, and the iOS keyboard-extension memory check (no new full-dictionary runtime map — `walker_cost` is read from the mmapped record like `frequency`; long input and repeated mode switches show no growth).
 
@@ -160,12 +161,14 @@ Rules: `~/.claude/rules/planning.md` (roadmap + memory, grounded, P0 admin) · `
 
 The maintainer, 2026-10-08, after the plain-language summary: "proceed with your recommendation". Recorded as:
 
-1. **D3** — (c) for P3; (b) stays an unopened, maintainer-gated P5.
+1. **D3** — (c) for P3; (b) stays an unopened, maintainer-gated P5 (opened 2026-10-08, item 4).
 2. **Gold judgement** — the excerpt's own hanji is the automatic first answer; Claude drafts alternatives, the maintainer reviews the `variant` and `phrase` rows.
 3. **Corpus weighting** — raw sum of the 8 non-held-out sources; revisited only if calib shows a domain skew (P4).
+4. **P5 opened** — the maintainer, 2026-10-08, after `kausiu` / `kau-siu` showed 狗岫 at slot 0 (教授 4th): "do A and B together" — A = the edge word pick by corpus (P5a), B = the candidate-list sort by corpus (P5b). P5a ships first; P5b opens after P5a merges.
 
 ## 9. Review log
 
+- 2026-10-08 P5 opened: trigger on `main` `86bf1fa2` (`candidate_dump`, TL) — `kau3siu7` → 教授 at slot 0, but `kausiu` / `kau-siu` → 狗岫 (教授 4th); `kap` → 甲, `koh` → 擱, `beh` → 卜. Mechanism: P3 prices the edge on the cheapest homophone's `walker_cost` (D3 (c)), while the word that fills it is still `EdgeBest.candidate` by `CandidateSortKey` on the mixed-scale `frequency` (狗岫 25 = the two-syllable default, 教授 10 from khiin; corpus 1 vs 246). Split into P5a / P5b (§6).
 - 2026-10-08 P4 ([report](../reports/2026-10-08-e1-p4-calibration.md)): the simulator (TL full tone only) favoured α 50 and the maintainer approved it; the engine grid over all eight input variants then showed α 50 losing every toneless variant, and the maintainer chose "keep α 10". Every constant stays as P3 shipped it; calibrations that touch every input variant run the engine harness on all eight before choosing.
 - 2026-10-08 P3 (Codex pre-impl, ANALYSIS-ONLY: REVISE, folded in): `CUSTOM_EDGE_COST` anchored as the model price of a 2,000-count word (7,878 milli-nats; one-syllable bound holds for len ≤ 23); the dictionary visitor hands each row's `walker_cost` to the sink instead of a `RawCandidate` field; hermetic fixtures derive their cost from the pre-E1 formula (`test_support::walker_cost_from_fixture_frequency`) plus explicit-cost fixtures where cost and frequency disagree, filter-before-min and tone-pin tests; the simulator's old model is frozen as `pre-p3` and its engine-agreement check compares A2 at the shipped α. Numbers: [P3 report](../reports/2026-10-08-e1-p3-walker-cost.md).
 - 2026-10-08 P2b (Codex pre-impl, ANALYSIS-ONLY: REVISE, folded in): regeneration on `main` was byte-identical, so the P1 "stale counts" reading was wrong (`tok:in-vocab` leaves out `romanized-mapped`; [report](../reports/2026-10-08-e1-p2b-subsegment-tiebreak.md) §Summary) and the maintainer approved the slimmed phase; tie-break α fixed apart from the walker's α; the held-out rule shared through `walker_lm.model_from_counts`; two passes, no cache; per-source token totals asserted unchanged; `association.bin` reviewed for set changes too, because composing context ranks read it.
