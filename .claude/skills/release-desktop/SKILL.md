@@ -1,6 +1,7 @@
 ---
 name: release-desktop
 description: Prepare a DESKTOP release (macOS + Windows + Linux, one shared version) of the version already in the tree - changelog, rebuild, commit, and stage the installers on an unpublished draft; stops before publishing. Optional args: a patch platform (`macos` / `windows` / `linux`) or a release base. Mobile train (iOS + Android) is `release-mobile`.
+disable-model-invocation: true
 ---
 
 # Release Desktop
@@ -160,7 +161,7 @@ sources. Its outputs are committed, and rebuilding them produces byte-different
 would put noise in the release commit.
 
 ```bash
-RELEASE_VERSION=<target> make dict   # only if dictionary/ sources moved
+RELEASE_VERSION=v<target> make dict   # only if dictionary/ sources moved; takes vX.Y.Z
 ```
 
 Commit whatever the rebuild changed before staging: staging refuses a dirty

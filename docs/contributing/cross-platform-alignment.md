@@ -1,6 +1,6 @@
 # Cross-Platform Alignment Rules
 
-Prevent iOS and Android implementations from diverging in ways that make shared-core (Rust) maintenance harder. Every pure-logic candidate lives in Rust; the rules below govern every PR: invariants must stay aligned across iOS / Android / engine, and intentional divergence must be documented.
+Prevent iOS and Android implementations from diverging in ways that make shared-core (Rust) maintenance harder. Logic every platform needs lives in the engine; the rules below govern every PR: invariants must stay aligned across iOS / Android / engine, and intentional divergence must be documented.
 
 References: `docs/engine/migration-inventory.csv` for the live Rust / native ownership inventory · `docs/architecture/behavioral-invariants.md` for observable-behavior contracts · `docs/contributing/ios-guidelines.md` / `docs/contributing/android-guidelines.md` for platform idioms.
 
@@ -79,14 +79,9 @@ Platform-specific comment syntax (Swift `// MARK:` vs Kotlin `// region`) lives 
 
 ### 3b. Verify alleged divergence before asserting it
 
-Before writing any "iOS does X, Android does Y" sentence in an audit / invariant spec / divergence report, **grep the actual source files for inline alignment comments**:
+Before writing any "iOS does X, Android does Y" sentence in an audit / invariant spec / divergence report, **grep the actual source files, case-insensitively, for inline alignment comments**: `(matches|mirrors) (the )?(iOS|Android)` and `CROSS-PLATFORM INVARIANT`.
 
-- `// matches iOS`
-- `// matches Android`
-- `// CROSS-PLATFORM INVARIANT`
-- `// mirrors iOS` / `// mirrors Android`
-
-Treat matching comments as authoritative signal that the original author intended parity — divergence in observable behavior is then a **bug**, not a design decision. When using an Explore agent for a summary read, explicitly ask the agent to report any `// matches …` comments in the flagged files.
+Treat matching comments as authoritative signal that the original author intended parity — divergence in observable behavior is then a **bug**, not a design decision. When using an Explore agent for a summary read, explicitly ask the agent to report any `Mirrors …` / `matches …` comments in the flagged files.
 
 ## 4. Out of scope for this rule
 

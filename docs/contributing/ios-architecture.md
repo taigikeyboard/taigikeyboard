@@ -166,8 +166,6 @@ Every file that satisfies the criteria begins with:
 // Pure logic, Foundation-only. Eligible for cross-platform extraction.
 ```
 
-Engine-layer files that do **not** qualify begin with a one-line `// NOTE: Not shared-core — <reason>` comment so the audit state stays visible at the top of the file.
-
 ### Roster
 
 Authoritative inventory: `docs/engine/migration-inventory.csv` — `rust_shipped` for migrated items, `native_keep` for platform-stays candidates, `wont_migrate` for explicit exclusions (Services glue, KeyboardKit wrappers, URL builders, UI). Do not re-enumerate or count here — update the CSV.

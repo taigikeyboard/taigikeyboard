@@ -10,7 +10,7 @@ Answer one question: **what in the tree costs maintenance without paying for it,
 
 Output is a report; the maintainer decides which rounds open. Never write "deferred", "post-vX" or "known limitation".
 
-Worked example of the finished product: `docs/reports/2026-09-30-audit-all.md` §1–5.
+Earlier `docs/reports/*-audit-*.md` reports illustrate the § 4 shape; their findings, length and round order belong to that run.
 
 ## 1. Scope → surfaces
 
@@ -43,7 +43,7 @@ Give each agent the scope, its recipe and the § 3 verification rules; ask for `
 2. **Drift is only a finding when observable.** Trace each "iOS does X, Android does Y" to an input a user can type. Most alleged drifts turn out unreachable (the dictionary has no such word, the engine never emits the value, the branch is dead). Unreachable drift = dead-code cleanup, not a parity round.
 3. **High-severity rows are verified by hand** (grep / Read in the main session) and marked **verified**; the rest carry the agent's `file:line` and "re-grep before quoting".
 4. **LOC estimates exclude generated code** and are marked `~`.
-5. Follow `docs/contributing/cross-platform-alignment.md` §3b: an inline `// matches iOS` / `CROSS-PLATFORM INVARIANT` comment means intended parity — divergence there is a bug candidate, reported as such.
+5. Follow `docs/contributing/cross-platform-alignment.md` §3b: an inline `Mirrors iOS` / `matches Android` / `CROSS-PLATFORM INVARIANT` comment means intended parity — divergence there is a bug candidate, reported as such.
 
 ## 4. Report
 

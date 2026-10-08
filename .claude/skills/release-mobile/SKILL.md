@@ -1,6 +1,7 @@
 ---
 name: release-mobile
 description: Prepare a MOBILE release (iOS + Android, one shared version) of the version already in the tree - changelog, store What's New text, rebuild, commit, tag `mobile-<version>`; never uploads or submits. Optional arg: a release base. Desktop train (macOS + Windows + Linux) is `release-desktop`.
+disable-model-invocation: true
 ---
 
 # Release Mobile

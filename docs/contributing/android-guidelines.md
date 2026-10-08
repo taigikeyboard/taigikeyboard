@@ -31,8 +31,6 @@ Every candidate file begins with:
 // endregion
 ```
 
-Engine-layer files that deliberately do **not** qualify begin with `// NOTE: Not shared-core — <reason>` so audit state is visible at file head.
-
 ### Kotlin-to-Rust shape preferences
 
 - Values → `data class` (maps to Rust struct).
@@ -83,7 +81,7 @@ Generic Kotlin idioms (`val` over `var`, sealed hierarchies, data classes, corou
 Structured concurrency and dispatcher choice follow the Kotlin coroutines guide; every coroutine's parent scope is one of the lifecycle scopes in §4. Project-specific rules:
 
 - Cancel before reschedule — if a new request supersedes an old one, cancel the old `Job` first (see `CandidateUpdateCoordinator.kt` for the working pattern).
-- **IME thread rule**: every `InputConnection` call runs on `Dispatchers.Main.immediate`. The platform executor (`ComposingManager`, `NextWordController`-equivalent) is the thread gate; shared-core code stays thread-agnostic.
+- **IME thread rule**: every `InputConnection` call runs on `Dispatchers.Main.immediate`. The platform executor (`ComposingManager`, `NextWordController`) is the thread gate; shared-core code stays thread-agnostic.
 
 ## 6. DataStore + settings access `[B]` `[R]`
 
