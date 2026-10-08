@@ -18,9 +18,7 @@
 
 ## Active / In-flight items
 
-- **E1 P5 — corpus picks the word too** (opened by the maintainer 2026-10-08, "do A and B together"): P0–P4 MERGED (#458, #460, #461, #462, #463, #465) made the walker *segment* on one corpus probability (`dictionary.bin` v4 `walker_cost`, α 10; `kau3siu7` → 教授, dev TL full tone 81.4 → 86.4 % exact). P5a MERGED #466: each edge's word is picked by `walker_cost` (`kausiu` → 教授, `kap` → 佮; dev 79.9 → 84.9 % exact). P5b PR #468: the candidate list and the dictionary search page sort by `walker_cost` (slot 0 unchanged; `frequency` retirement → § Open candidates). Dogfood S116 / S117 / S118 / S119. Design: [`architecture/unified-word-frequency-roadmap.md`](architecture/unified-word-frequency-roadmap.md) §6.
-
-Everything else scoped through 2026-10-05 has merged (see Closed phases). Pending dogfood: `docs/architecture/dogfood-checklist.md`.
+Nothing in flight: everything scoped through 2026-10-08 has merged (see Closed phases). Pending dogfood: `docs/architecture/dogfood-checklist.md`.
 
 ---
 
@@ -94,6 +92,7 @@ Apply to every change regardless of release:
 
 ## Closed phases / shipped audits
 
+- **E1 unified word frequency** — COMPLETE 2026-10-08: P0–P4 (#458, #460, #461, #462, #463, #465) put the walker's segmentation on one corpus probability (`dictionary.bin` v4 `walker_cost`, α 10); P5a (#466) picks each edge's word by it; P5b (#468) sorts the candidate list and the dictionary search page by it (engine-owned search order; platform re-sorts deleted). Dogfood S116–S119; `frequency` retirement → § Open candidates. Design: [`architecture/unified-word-frequency-roadmap.md`](architecture/unified-word-frequency-roadmap.md).
 - **Desktop TPS — Hanji conversion in the preedit** (arm B of U8) — COMPLETE 2026-10-05: H-P1–H-P5 MERGED (#398, #401, #402, #403, #404). Under TPS the preedit shows the predicted Hanji and ↓ opens the candidates of the word at the caret; TL and POJ unchanged. Invariant §59, dogfood S94 / S95. Design: [`architecture/desktop-tps-hanji-conversion-roadmap.md`](architecture/desktop-tps-hanji-conversion-roadmap.md).
 - **iOS top-level folder renames** — branch `refactor/ios-folder-renames` (2026-10-04): `Composition/` → `ServiceGraph/`, `Autocomplete/` → `Candidates/`, theme files `Settings/` → `Theme/`, `DebugLogger.swift` → `Logging/`; the maintainer re-pointed the synced groups in Xcode. Source: [`reports/2026-09-30-audit-all.md`](reports/2026-09-30-audit-all.md) Appendix F.
 - **Fedora × IBus e2e** — branch `fix/fedora-ibus-e2e`: the nightly matrix runs all eight cells again. Two stacked causes: Fedora's rpm writes a system registry cache that ibus-daemon's default `--cache auto` takes before reading `IBUS_COMPONENT_PATH` (the driver now passes `--cache none`), and the engine's socket-file lookup skipped an empty `/etc/machine-id` where libibus keeps it (`taigikeyboard-ibus` `bus.rs` now mirrors `ibus_get_local_machine_id`). Detail: [`architecture/e2e-testing-roadmap.md`](architecture/e2e-testing-roadmap.md) § PR table PR4.
