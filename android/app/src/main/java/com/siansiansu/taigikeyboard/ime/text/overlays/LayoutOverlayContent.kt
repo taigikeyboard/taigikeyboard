@@ -4,6 +4,7 @@
 
 package com.siansiansu.taigikeyboard.ime.text.overlays
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -67,6 +68,8 @@ private const val SelectedScrimAlpha = 0.25f
  * @param appearance user keyboard overlay colors — gradient backdrop + role-first foreground +
  *   chrome accent (cards honor these, not the M3 brand palette).
  * @param selectedKey the currently active layout key (re-read from prefs on each overlay show()).
+ * @param previewInputMode the mode the romanization cards render in once picked (a snapshot per
+ *   show() — the toolbar's mode switch closes this overlay), so a POJ user sees the POJ keys.
  * @param resetKey bumped on each overlay show() — re-seeds the local selection to [selectedKey].
  * @param onLayoutSelected invoked with the tapped layout key.
  */
@@ -74,6 +77,7 @@ private const val SelectedScrimAlpha = 0.25f
 fun LayoutOverlayContent(
     appearance: KeyboardOverlayAppearance,
     selectedKey: String,
+    previewInputMode: String,
     resetKey: Int,
     onLayoutSelected: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -101,10 +105,10 @@ fun LayoutOverlayContent(
                 .padding(top = 10.dp, bottom = 4.dp),
     ) {
         SectionHeader(L10n.layoutRomanizationKeyboard, appearance.foreground, topPadding = 0.dp)
-        LayoutCardRow(KeyboardLayoutOptions.romanization, activeKey, appearance, onSelect)
+        LayoutCardRow(KeyboardLayoutOptions.romanization, activeKey, previewInputMode, appearance, onSelect)
 
         SectionHeader(L10n.settingsTpsMode, appearance.foreground, topPadding = 12.dp)
-        LayoutCardRow(KeyboardLayoutOptions.phonetic, activeKey, appearance, onSelect)
+        LayoutCardRow(KeyboardLayoutOptions.phonetic, activeKey, previewInputMode, appearance, onSelect)
     }
 }
 
@@ -130,6 +134,7 @@ private fun SectionHeader(
 private fun LayoutCardRow(
     options: List<KeyboardLayoutOption>,
     activeKey: String,
+    previewInputMode: String,
     appearance: KeyboardOverlayAppearance,
     onSelect: (String) -> Unit,
 ) {
@@ -144,6 +149,7 @@ private fun LayoutCardRow(
         options.forEach { option ->
             LayoutCard(
                 option = option,
+                previewRes = option.previewRes(previewInputMode),
                 isSelected = option.key == activeKey,
                 appearance = appearance,
                 onClick = { onSelect(option.key) },
@@ -155,6 +161,7 @@ private fun LayoutCardRow(
 @Composable
 private fun LayoutCard(
     option: KeyboardLayoutOption,
+    @DrawableRes previewRes: Int,
     isSelected: Boolean,
     appearance: KeyboardOverlayAppearance,
     onClick: () -> Unit,
@@ -175,7 +182,7 @@ private fun LayoutCard(
         ) {
             Box {
                 Image(
-                    painter = painterResource(option.previewRes),
+                    painter = painterResource(previewRes),
                     contentDescription = label,
                     // FillWidth mirrors the legacy ImageView FIT_CENTER + adjustViewBounds: pin
                     // width to the card, let height follow the preview's aspect ratio.

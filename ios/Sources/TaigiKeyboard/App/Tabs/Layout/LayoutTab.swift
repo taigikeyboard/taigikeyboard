@@ -99,7 +99,7 @@ struct LayoutChoice: Hashable {
     }()
 
     var previewImageName: String {
-        script == .poj ? layout.pojPreviewImageName ?? layout.previewImageName : layout.previewImageName
+        layout.previewImageName(for: script?.inputMode ?? .tl)
     }
 
     /// A script card is selected only in its own input mode (English or TPS selects neither);

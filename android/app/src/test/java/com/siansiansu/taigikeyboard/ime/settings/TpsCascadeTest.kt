@@ -321,4 +321,19 @@ class TpsCascadeTest {
         assertEquals("poj", writes[PreferenceKeys.INPUT_MODE_BEFORE_TPS])
         assertNull("layout already tps — no LAYOUT_BEFORE_TPS overwrite", writes[PreferenceKeys.LAYOUT_BEFORE_TPS])
     }
+
+    // ------------------------------------------------------------------ //
+    // inputModeAfterRomanizationLayout — layout overlay preview mode
+    // ------------------------------------------------------------------ //
+
+    @Test
+    fun inputModeAfterRomanizationLayout_staleTpsLayout_usesBackup() {
+        // Toolbar-entered TPS leaves an older backup; the layout-side exit restores it anyway.
+        assertEquals("poj", TpsCascade.inputModeAfterRomanizationLayout("tps", "tl", "poj"))
+    }
+
+    @Test
+    fun inputModeAfterRomanizationLayout_nonTpsLayout_keepsLiveMode() {
+        assertEquals("english", TpsCascade.inputModeAfterRomanizationLayout("qwerty", "english", "poj"))
+    }
 }

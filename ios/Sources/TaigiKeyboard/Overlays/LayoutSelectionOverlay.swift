@@ -10,6 +10,9 @@ struct LayoutSelectionOverlay: View {
     let onDismiss: () -> Void
 
     @State private var selectedLayout: KeyboardLayoutType
+    /// The mode the romanization cards render in once picked, so a POJ user sees the POJ keys.
+    /// A snapshot is enough: the toolbar's mode switch closes this panel.
+    @State private var previewInputMode: InputMode
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.candidateTheme) private var theme
     @Environment(DisplayLanguageStore.self) private var lang
@@ -18,6 +21,7 @@ struct LayoutSelectionOverlay: View {
         self.isExpanded = isExpanded
         self.onDismiss = onDismiss
         _selectedLayout = State(initialValue: SharedSettings.shared.keyboardLayoutType)
+        _previewInputMode = State(initialValue: SharedSettings.shared.romanizationInputMode)
     }
 
     var body: some View {
@@ -56,6 +60,7 @@ struct LayoutSelectionOverlay: View {
             // Reliable re-sync point for the App-Group display-language tag (host may change it).
             lang.syncFromSettings()
             selectedLayout = SharedSettings.shared.keyboardLayoutType
+            previewInputMode = SharedSettings.shared.romanizationInputMode
         }
     }
 
@@ -74,7 +79,7 @@ struct LayoutSelectionOverlay: View {
                     ForEach(layouts, id: \.0) { layoutType, name in
                         LayoutCard(
                             name: name,
-                            previewImageName: layoutType.previewImageName,
+                            previewImageName: layoutType.previewImageName(for: previewInputMode),
                             isSelected: selectedLayout == layoutType,
                             action: { selectLayout(layoutType) },
                         )
