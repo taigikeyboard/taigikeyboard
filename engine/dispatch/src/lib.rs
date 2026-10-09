@@ -353,7 +353,6 @@ mod tests {
                     protos::engine::RecordUsage {
                         display_text: "台灣".into(),
                         canonical_tl: "tâi-uân".into(),
-                        ..protos::engine::RecordUsage::default()
                     },
                 )),
             },

@@ -1103,7 +1103,6 @@ mod tests {
             user_data_request::Method::RecordUsage(RecordUsage {
                 display_text: "台灣".into(),
                 canonical_tl: "tâi-uân".into(),
-                ..RecordUsage::default()
             }),
         );
 
