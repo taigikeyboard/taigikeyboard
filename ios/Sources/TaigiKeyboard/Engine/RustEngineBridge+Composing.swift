@@ -3,9 +3,9 @@ import SwiftProtobuf
 
 // MARK: - RustEngineBridge Composing surface
 
-/// Composing slice extension for `RustEngineBridge`. Holds 10 composing
-/// ops + 4 continuous-input ops (v3.5.8 Phase 6) + their synthesized value
-/// types (`ComposingTransition` / `CandidateScriptKind` / `ContinuousCandidate` /
+/// Composing slice extension for `RustEngineBridge`. Holds the composing
+/// and continuous-input ops (v3.5.8 Phase 6) + their synthesized value
+/// types (`ComposingTransition` / `ContinuousCandidate` /
 /// `ContinuousPick` / `ContinuousCommitResult` / `ContinuousFetchResult`) +
 /// the composing-specific dispatch helpers
 /// (`composingProtoRoundtrip` / `composingDispatch` / `composingFetchDispatch`
@@ -63,56 +63,18 @@ public extension RustEngineBridge {
         )
     }
 
-    /// MOE-aligned candidate-type discriminator. Wire mirror of
-    /// `protos::engine::CandidateScriptKind` (Phase 9.2). Engine derives in
-    /// Rust from `DictionaryRecord.hanji` presence + NFKD-normalized
-    /// Latin-letter detection (`engine/lexicon/src/continuous/
-    /// derive_script_kind`); platforms read but never recompute (no
-    /// display-text sniffing — that would parallel-implement the
-    /// derive and violate `docs/contributing/cross-platform-alignment.md`).
-    ///
-    /// Metadata-only in v3.5.8 — does NOT enter the engine's `CandidateSortKey`
-    /// tie-break (per `docs/releases/v3.5.8/plan.md` § Phase 9 R2 Q3.a). `.unspecified`
-    /// is the proto3 default and means "unknown carrier — old engine or
-    /// dropped field"; it is never emitted by the current Rust engine.
-    /// Platforms must treat `.unspecified` as "ignore it" rather than
-    /// falling back to any local classification.
-    enum CandidateScriptKind: Equatable {
-        case unspecified
-        case hant
-        case tailo
-        case mixed
-
-        /// Decode the wire integer (`CandidateMessage.scriptKind.rawValue`)
-        /// produced by SwiftProtobuf. Unrecognized values (forward-compat
-        /// from a newer engine) collapse to `.unspecified` so the
-        /// platform never crashes on a binding mismatch.
-        static func decode(_ wire: Int) -> CandidateScriptKind {
-            switch wire {
-            case 1: .hant
-            case 2: .tailo
-            case 3: .mixed
-            default: .unspecified
-            }
-        }
-    }
-
     /// Single span-local continuous-input candidate. Wire mirror of
-    /// `protos::engine::CandidateMessage` (Phase 6 + 9.2 `script_kind`).
+    /// `protos::engine::CandidateMessage` (Phase 6).
     ///
-    /// `consumedSpanStart` / `consumedSpanEnd` are byte offsets into the
-    /// **original raw user input** stored in `Phase::Continuous { raw }` —
-    /// TL/POJ users → ASCII bytes, TPS users → Bopomofo bytes. Platform UI
-    /// slices `pending[start..<end]` on commit. `form` is currently always 1
-    /// (FORM_NOTONE). `scriptKind` is the Phase 9.2 carrier; metadata-only.
+    /// `consumedSpanEnd` is a byte offset into the **original raw user
+    /// input** stored in `Phase::Continuous { raw }` — TL/POJ users → ASCII
+    /// bytes, TPS users → Bopomofo bytes. The pick sends it back as
+    /// `consumedBytes` so the engine knows how much of the pending buffer
+    /// the commit consumes.
     struct ContinuousCandidate: Equatable {
-        public let consumedSpanStart: UInt32
         public let consumedSpanEnd: UInt32
         public let syllableCount: UInt32
         public let displayText: String
-        public let score: Float
-        public let form: UInt32
-        public let scriptKind: CandidateScriptKind
         /// v3.5.8 Phase 9 Item 5 — display-romanization sidechannel for
         /// dual-line cell render. Always non-empty for dictionary-
         /// sourced candidates; the engine renders it for the active
@@ -122,7 +84,7 @@ public extension RustEngineBridge {
         public let roman: String
         /// v3.5.8 Phase 9 Item 5 — hanji display sidechannel. `nil`
         /// iff the proto3 `optional string hanji` was absent on the
-        /// wire (TAILO candidate). Present-empty is treated as
+        /// wire (roman-only candidate). Present-empty is treated as
         /// present (engine never emits `Some("")` today; defensive).
         public let hanji: String?
         /// v3.6.1 R2 — canonical TL identity sidechannel
@@ -136,24 +98,16 @@ public extension RustEngineBridge {
         public let canonicalTl: String
 
         public init(
-            consumedSpanStart: UInt32,
             consumedSpanEnd: UInt32,
             syllableCount: UInt32,
             displayText: String,
-            score: Float,
-            form: UInt32,
-            scriptKind: CandidateScriptKind,
             roman: String,
             hanji: String?,
             canonicalTl: String,
         ) {
-            self.consumedSpanStart = consumedSpanStart
             self.consumedSpanEnd = consumedSpanEnd
             self.syllableCount = syllableCount
             self.displayText = displayText
-            self.score = score
-            self.form = form
-            self.scriptKind = scriptKind
             self.roman = roman
             self.hanji = hanji
             self.canonicalTl = canonicalTl
@@ -350,23 +304,6 @@ public extension RustEngineBridge {
         composingDispatch(
             method: .commitRaw(Taigi_Engine_CommitRaw()),
             op: "composingCommitRaw",
-            generation: generation,
-            config: continuousAppConfig(settings),
-        )
-    }
-
-    // The engine prepends `nailed_prefix(nailed, config)` to `text`; Idle
-    // ignores the request.
-    internal static func composingSelectCandidate(
-        _ text: String,
-        settings: EngineSettings,
-        generation: UInt64,
-    ) -> ComposingTransition {
-        var payload = Taigi_Engine_SelectCandidate()
-        payload.text = text
-        return composingDispatch(
-            method: .selectCandidate(payload),
-            op: "composingSelectCandidate",
             generation: generation,
             config: continuousAppConfig(settings),
         )
@@ -588,25 +525,14 @@ public extension RustEngineBridge {
                 // SwiftProtobuf exposes presence via `hasHanji`. Map
                 // absent → `nil` (NOT empty string) so the bridge
                 // struct's `hanji: String?` carries the wire-absent
-                // distinction faithfully (TAILO candidate).
-                //
-                // Defensive `roman` fallback per
-                // `docs/engine/continuous-candidate-display.md` §7 +
-                // Codex pre-impl F4 verdict A: if `msg.roman` is
-                // empty (old-Rust-new-platform wire skew, or proto
-                // regen skipped), fall back to `displayText` so the
-                // Item 6 dual-line render does not show a blank title
-                // row. Bundled releases never hit this branch.
-                let roman = msg.roman.isEmpty ? msg.displayText : msg.roman
-                return ContinuousCandidate(
-                    consumedSpanStart: msg.consumedSpanStart,
+                // distinction faithfully (roman-only candidate). `roman` is
+                // never empty: dictionary rows carry it, a custom entry cannot
+                // be saved without one, the literal is the typed text.
+                ContinuousCandidate(
                     consumedSpanEnd: msg.consumedSpanEnd,
                     syllableCount: msg.syllableCount,
                     displayText: msg.displayText,
-                    score: msg.score,
-                    form: msg.form,
-                    scriptKind: CandidateScriptKind.decode(msg.scriptKind.rawValue),
-                    roman: roman,
+                    roman: msg.roman,
                     hanji: msg.hasHanji ? msg.hanji : nil,
                     canonicalTl: msg.canonicalTl,
                 )

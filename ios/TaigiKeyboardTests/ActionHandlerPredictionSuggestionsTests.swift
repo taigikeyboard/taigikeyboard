@@ -78,7 +78,6 @@ final class ActionHandlerPredictionSuggestionsTests: XCTestCase {
         for suggestion in suggestions {
             XCTAssertEqual(suggestion.additionalInfo["isNextWord"], "true")
             XCTAssertEqual(suggestion.additionalInfo["hanzi"], "重")
-            XCTAssertEqual(suggestion.additionalInfo["tl"], "tāng")
             XCTAssertEqual(suggestion.additionalInfo["canonicalTl"], "tāng")
             XCTAssertEqual(suggestion.additionalInfo["displayText"], "重")
         }

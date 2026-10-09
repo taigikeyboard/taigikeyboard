@@ -108,44 +108,17 @@ impl Effect {
     }
 }
 
-/// MOE-aligned candidate-type discriminator, derived in Rust
-/// (`engine/lexicon/src/continuous/mod.rs::derive_script_kind`). Read, never recomputed.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum CandidateScriptKind {
-    /// The wire carried no script kind, or one this build does not know. Means
-    /// "ignore it", never "guess it locally".
-    Unspecified,
-    Hant,
-    Tailo,
-    Mixed,
-}
-
-impl CandidateScriptKind {
-    pub fn decode(wire: i32) -> Self {
-        match wire {
-            1 => Self::Hant,
-            2 => Self::Tailo,
-            3 => Self::Mixed,
-            _ => Self::Unspecified,
-        }
-    }
-}
-
 /// One span-local continuous-input candidate.
 ///
-/// The span offsets are byte offsets into the raw buffer the engine holds,
+/// `consumed_span_end` is a byte offset into the raw buffer the engine holds,
 /// and `canonical_tl` is the identity romanization (Core Principle #7 keys a
 /// word on the `(Hanji, canonical TL)` pair). Both must be round-tripped back
 /// to the engine verbatim on commit.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ContinuousCandidate {
-    pub consumed_span_start: u32,
     pub consumed_span_end: u32,
     pub syllable_count: u32,
     pub display_text: String,
-    pub score: f32,
-    pub form: u32,
-    pub script_kind: CandidateScriptKind,
     /// Display romanization for the candidate cell — POJ-rendered in POJ
     /// mode. Not an identity key; that is `canonical_tl`.
     pub roman: String,
@@ -160,13 +133,9 @@ pub struct ContinuousCandidate {
 impl ContinuousCandidate {
     pub(super) fn decode(message: &CandidateMessage) -> Self {
         Self {
-            consumed_span_start: message.consumed_span_start,
             consumed_span_end: message.consumed_span_end,
             syllable_count: message.syllable_count,
             display_text: message.display_text.clone(),
-            score: message.score,
-            form: message.form,
-            script_kind: CandidateScriptKind::decode(message.script_kind),
             roman: message.roman.clone(),
             hanji: message.hanji.clone(),
             canonical_tl: message.canonical_tl.clone(),
@@ -220,13 +189,9 @@ pub(crate) mod test_support {
     /// other field defaulted.
     pub fn candidate(roman: &str, hanji: Option<&str>, span_end: u32) -> ContinuousCandidate {
         ContinuousCandidate {
-            consumed_span_start: 0,
             consumed_span_end: span_end,
             syllable_count: 1,
             display_text: hanji.unwrap_or(roman).to_owned(),
-            score: 0.0,
-            form: 1,
-            script_kind: CandidateScriptKind::Unspecified,
             roman: roman.to_owned(),
             hanji: hanji.map(str::to_owned),
             canonical_tl: roman.to_owned(),
@@ -377,26 +342,22 @@ mod tests {
     }
 
     #[test]
-    fn absent_hanji_is_roman_only_and_unknown_mode_is_unspecified() {
+    fn absent_hanji_is_roman_only() {
         let message = CandidateMessage {
             display_text: "tâi".into(),
             roman: "tâi".into(),
             hanji: None,
-            script_kind: 99,
             ..Default::default()
         };
         let candidate = ContinuousCandidate::decode(&message);
         assert!(candidate.is_roman_only());
-        assert_eq!(candidate.script_kind, CandidateScriptKind::Unspecified);
         let with_hanji = ContinuousCandidate::decode(&CandidateMessage {
             hanji: Some(String::new()),
-            script_kind: 1,
             ..message
         });
         assert!(
             !with_hanji.is_roman_only(),
             "an empty hanji is present, not absent"
         );
-        assert_eq!(with_hanji.script_kind, CandidateScriptKind::Hant);
     }
 }

@@ -3,8 +3,7 @@
 //!
 //! This is a subset of the engine's intents, on purpose: `AppendHyphen` is an alias for `Append("-")`,
 //! `ReplaceLast` is TPS-only, `Start` is unnecessary (`Append` begins the
-//! composition from Idle), `SelectCandidate` double-counts the nailed
-//! prefix under `Phase::Continuous` so the literal commit is `CommitRaw`.
+//! composition from Idle), and the literal commit is `CommitRaw`.
 //! Candidate navigation is a permanent platform-side concern
 //! (`cross-platform-alignment.md` §4.1).
 //!

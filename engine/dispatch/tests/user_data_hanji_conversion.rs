@@ -76,8 +76,7 @@ fn a_picked_word_ranks_the_walks_after_it() {
     let other = listed
         .into_iter()
         .find(|row| {
-            row.consumed_span_start == 0
-                && row.consumed_span_end as usize == raw.len()
+            row.consumed_span_end as usize == raw.len()
                 && row.hanji.as_deref().is_some_and(|hanji| hanji != neutral)
         })
         .expect("a homophone of the walker's word");

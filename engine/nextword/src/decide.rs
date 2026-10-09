@@ -337,9 +337,9 @@ pub(crate) fn compound_association_pairs(display_text: &str, roman: &str) -> Vec
     // (§31 `INVARIANT_TPS_SPACE_SOFT_SEPARATOR` — `ㄍㄠ` ␣ `ㄉㄞ` is 交代, one
     // word), so a TPS payload has no boundary to learn across. Detected from
     // Bopomofo content, not `AppConfig.input_mode`: the payload, not the
-    // layout, is what carries the §31 space, and a pre-R6 platform sent TPS
-    // as `"tl"`. Content upgrading the mode is the established shape
-    // (`composing::requests` `handle_fetch_at_pos`), not a workaround.
+    // layout, is what carries the §31 space. Content upgrading the mode is
+    // the established shape (`composing::requests` `handle_fetch_at_pos`),
+    // not a workaround.
     if phonetics::contains_tps(display_text) || phonetics::contains_tps(roman) {
         return Vec::new();
     }

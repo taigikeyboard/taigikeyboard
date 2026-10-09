@@ -49,11 +49,9 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * itself (`AppConfig::renders_hanji_first` / `rendered_syllable_joiner` in
  * `engine/protos/src/lib.rs`), so `is_hanji_first` and
  * `syllable_separator` are the Candidate-Display-projected stored values
- * WITHOUT the TPS fold. A platform may still send the pre-R6 wire (`"tl"`
- * plus the TPS-folded swap / separator) — composing renders both
- * identically. Nextword's empty-romanization drop and Enter skip read the
- * swap as sent, not folded; today every platform sends nextword the stored
- * swap, so moving to `"tps"` changes nothing there.
+ * WITHOUT the TPS fold. The engine ships inside each app, so
+ * `input_mode = "tps"` is the only TPS wire. Nextword's empty-romanization
+ * drop and Enter skip read the swap as sent, not folded.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.AppConfig}
@@ -367,7 +365,8 @@ public  final class AppConfig extends
   private boolean tpsOrMapsToEr_;
   /**
    * <pre>
-   * TPS or→er dialect switch; no engine reader yet.
+   * TPS or→er dialect switch; read by the TPS commit rendering
+   * (`engine/composing/src/commit_text.rs`).
    * </pre>
    *
    * <code>bool tps_or_maps_to_er = 12;</code>
@@ -379,7 +378,8 @@ public  final class AppConfig extends
   }
   /**
    * <pre>
-   * TPS or→er dialect switch; no engine reader yet.
+   * TPS or→er dialect switch; read by the TPS commit rendering
+   * (`engine/composing/src/commit_text.rs`).
    * </pre>
    *
    * <code>bool tps_or_maps_to_er = 12;</code>
@@ -391,7 +391,8 @@ public  final class AppConfig extends
   }
   /**
    * <pre>
-   * TPS or→er dialect switch; no engine reader yet.
+   * TPS or→er dialect switch; read by the TPS commit rendering
+   * (`engine/composing/src/commit_text.rs`).
    * </pre>
    *
    * <code>bool tps_or_maps_to_er = 12;</code>
@@ -406,7 +407,9 @@ public  final class AppConfig extends
   /**
    * <pre>
    * Present = the preedit of a TPS buffer shows the converted Hanji
-   * (`HanjiConversion`). Absent on every platform today.
+   * (`HanjiConversion`). Desktop-core sets it
+   * (`desktop/crates/taigi-desktop-core/src/engine/bridge.rs`); read by
+   * `engine/composing/src/conversion.rs`.
    * </pre>
    *
    * <code>.taigi.engine.HanjiConversion hanji_conversion = 13;</code>
@@ -418,7 +421,9 @@ public  final class AppConfig extends
   /**
    * <pre>
    * Present = the preedit of a TPS buffer shows the converted Hanji
-   * (`HanjiConversion`). Absent on every platform today.
+   * (`HanjiConversion`). Desktop-core sets it
+   * (`desktop/crates/taigi-desktop-core/src/engine/bridge.rs`); read by
+   * `engine/composing/src/conversion.rs`.
    * </pre>
    *
    * <code>.taigi.engine.HanjiConversion hanji_conversion = 13;</code>
@@ -430,7 +435,9 @@ public  final class AppConfig extends
   /**
    * <pre>
    * Present = the preedit of a TPS buffer shows the converted Hanji
-   * (`HanjiConversion`). Absent on every platform today.
+   * (`HanjiConversion`). Desktop-core sets it
+   * (`desktop/crates/taigi-desktop-core/src/engine/bridge.rs`); read by
+   * `engine/composing/src/conversion.rs`.
    * </pre>
    *
    * <code>.taigi.engine.HanjiConversion hanji_conversion = 13;</code>
@@ -443,7 +450,9 @@ public  final class AppConfig extends
   /**
    * <pre>
    * Present = the preedit of a TPS buffer shows the converted Hanji
-   * (`HanjiConversion`). Absent on every platform today.
+   * (`HanjiConversion`). Desktop-core sets it
+   * (`desktop/crates/taigi-desktop-core/src/engine/bridge.rs`); read by
+   * `engine/composing/src/conversion.rs`.
    * </pre>
    *
    * <code>.taigi.engine.HanjiConversion hanji_conversion = 13;</code>
@@ -463,7 +472,9 @@ public  final class AppConfig extends
   /**
    * <pre>
    * Present = the preedit of a TPS buffer shows the converted Hanji
-   * (`HanjiConversion`). Absent on every platform today.
+   * (`HanjiConversion`). Desktop-core sets it
+   * (`desktop/crates/taigi-desktop-core/src/engine/bridge.rs`); read by
+   * `engine/composing/src/conversion.rs`.
    * </pre>
    *
    * <code>.taigi.engine.HanjiConversion hanji_conversion = 13;</code>
@@ -663,11 +674,9 @@ public  final class AppConfig extends
    * itself (`AppConfig::renders_hanji_first` / `rendered_syllable_joiner` in
    * `engine/protos/src/lib.rs`), so `is_hanji_first` and
    * `syllable_separator` are the Candidate-Display-projected stored values
-   * WITHOUT the TPS fold. A platform may still send the pre-R6 wire (`"tl"`
-   * plus the TPS-folded swap / separator) — composing renders both
-   * identically. Nextword's empty-romanization drop and Enter skip read the
-   * swap as sent, not folded; today every platform sends nextword the stored
-   * swap, so moving to `"tps"` changes nothing there.
+   * WITHOUT the TPS fold. The engine ships inside each app, so
+   * `input_mode = "tps"` is the only TPS wire. Nextword's empty-romanization
+   * drop and Enter skip read the swap as sent, not folded.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.AppConfig}
@@ -1000,7 +1009,8 @@ public  final class AppConfig extends
 
     /**
      * <pre>
-     * TPS or→er dialect switch; no engine reader yet.
+     * TPS or→er dialect switch; read by the TPS commit rendering
+     * (`engine/composing/src/commit_text.rs`).
      * </pre>
      *
      * <code>bool tps_or_maps_to_er = 12;</code>
@@ -1012,7 +1022,8 @@ public  final class AppConfig extends
     }
     /**
      * <pre>
-     * TPS or→er dialect switch; no engine reader yet.
+     * TPS or→er dialect switch; read by the TPS commit rendering
+     * (`engine/composing/src/commit_text.rs`).
      * </pre>
      *
      * <code>bool tps_or_maps_to_er = 12;</code>
@@ -1026,7 +1037,8 @@ public  final class AppConfig extends
     }
     /**
      * <pre>
-     * TPS or→er dialect switch; no engine reader yet.
+     * TPS or→er dialect switch; read by the TPS commit rendering
+     * (`engine/composing/src/commit_text.rs`).
      * </pre>
      *
      * <code>bool tps_or_maps_to_er = 12;</code>
@@ -1041,7 +1053,9 @@ public  final class AppConfig extends
     /**
      * <pre>
      * Present = the preedit of a TPS buffer shows the converted Hanji
-     * (`HanjiConversion`). Absent on every platform today.
+     * (`HanjiConversion`). Desktop-core sets it
+     * (`desktop/crates/taigi-desktop-core/src/engine/bridge.rs`); read by
+     * `engine/composing/src/conversion.rs`.
      * </pre>
      *
      * <code>.taigi.engine.HanjiConversion hanji_conversion = 13;</code>
@@ -1053,7 +1067,9 @@ public  final class AppConfig extends
     /**
      * <pre>
      * Present = the preedit of a TPS buffer shows the converted Hanji
-     * (`HanjiConversion`). Absent on every platform today.
+     * (`HanjiConversion`). Desktop-core sets it
+     * (`desktop/crates/taigi-desktop-core/src/engine/bridge.rs`); read by
+     * `engine/composing/src/conversion.rs`.
      * </pre>
      *
      * <code>.taigi.engine.HanjiConversion hanji_conversion = 13;</code>
@@ -1065,7 +1081,9 @@ public  final class AppConfig extends
     /**
      * <pre>
      * Present = the preedit of a TPS buffer shows the converted Hanji
-     * (`HanjiConversion`). Absent on every platform today.
+     * (`HanjiConversion`). Desktop-core sets it
+     * (`desktop/crates/taigi-desktop-core/src/engine/bridge.rs`); read by
+     * `engine/composing/src/conversion.rs`.
      * </pre>
      *
      * <code>.taigi.engine.HanjiConversion hanji_conversion = 13;</code>
@@ -1078,7 +1096,9 @@ public  final class AppConfig extends
     /**
      * <pre>
      * Present = the preedit of a TPS buffer shows the converted Hanji
-     * (`HanjiConversion`). Absent on every platform today.
+     * (`HanjiConversion`). Desktop-core sets it
+     * (`desktop/crates/taigi-desktop-core/src/engine/bridge.rs`); read by
+     * `engine/composing/src/conversion.rs`.
      * </pre>
      *
      * <code>.taigi.engine.HanjiConversion hanji_conversion = 13;</code>
@@ -1092,7 +1112,9 @@ public  final class AppConfig extends
     /**
      * <pre>
      * Present = the preedit of a TPS buffer shows the converted Hanji
-     * (`HanjiConversion`). Absent on every platform today.
+     * (`HanjiConversion`). Desktop-core sets it
+     * (`desktop/crates/taigi-desktop-core/src/engine/bridge.rs`); read by
+     * `engine/composing/src/conversion.rs`.
      * </pre>
      *
      * <code>.taigi.engine.HanjiConversion hanji_conversion = 13;</code>
@@ -1105,7 +1127,9 @@ public  final class AppConfig extends
     /**
      * <pre>
      * Present = the preedit of a TPS buffer shows the converted Hanji
-     * (`HanjiConversion`). Absent on every platform today.
+     * (`HanjiConversion`). Desktop-core sets it
+     * (`desktop/crates/taigi-desktop-core/src/engine/bridge.rs`); read by
+     * `engine/composing/src/conversion.rs`.
      * </pre>
      *
      * <code>.taigi.engine.HanjiConversion hanji_conversion = 13;</code>

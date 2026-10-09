@@ -6,8 +6,7 @@ use ranking::{
 };
 
 use super::{
-    derive_script_kind, ConsumedSpan, ContinuousFetchCtx, CustomEntry, LearnedEntry, RawCandidate,
-    FORM_NOTONE,
+    ConsumedSpan, ContinuousFetchCtx, CustomEntry, LearnedEntry, RawCandidate, FORM_NOTONE,
 };
 use crate::dictionary_reader::{DictionaryRecord, WALKER_COST_UNPRICED};
 
@@ -127,7 +126,6 @@ pub(super) fn record_to_candidate(
     // disabled) drives `source_tier_rank` so a multi-source survivor ranks by
     // its other source's tier, not kautian's (DD6 ranking-weight drop).
     let bitmask = effective_bitmask;
-    let script_kind = derive_script_kind(hanji.as_deref());
     // Phase 9 Item 5: `roman` = `tl` alongside `display_text`. `hanji`
     // mirrors `DictionaryRecord.hanji` verbatim so the proto3 `optional`
     // field can preserve the absent-vs-empty distinction. R2 identity
@@ -163,7 +161,6 @@ pub(super) fn record_to_candidate(
         frequency,
         walker_cost,
         bitmask,
-        script_kind,
         user_weight,
         context_rank,
         coverage_kind,
@@ -204,7 +201,6 @@ pub(super) fn record_to_candidate(
 ///   `user_frequency.db` write key collides with the same word coming
 ///   from `dict.bin` (which writes `record.tl`, already canonical TL).
 ///   Identical wire contract to [`record_to_candidate`] across modes.
-/// - `script_kind = derive_script_kind(hanji)` — TAILO when `hanji` is `None`.
 /// - user-frequency boost / recency are applied identically to
 ///   `dict.bin` candidates (custom entries can also be user-selected).
 pub(super) fn custom_entry_to_candidate(
@@ -218,7 +214,6 @@ pub(super) fn custom_entry_to_candidate(
 ) -> RawCandidate {
     let roman = entry.roman.clone();
     let hanji = entry.hanji.clone();
-    let script_kind = derive_script_kind(hanji.as_deref());
     // v3.5.9 B-4 — `display_text` is the platform's
     // `user_frequency.db` commit key. When `hanji` is absent the
     // fallback is the roman, which may have been stored in the user's
@@ -267,7 +262,6 @@ pub(super) fn custom_entry_to_candidate(
         // `is_custom = true` in `CandidateSortKey::new` /
         // `dedupe_by_roman_hanji_span` (`source_tier_rank` short-circuits).
         bitmask: 0,
-        script_kind,
         user_weight,
         context_rank,
         coverage_kind,
@@ -394,10 +388,10 @@ mod record_to_candidate_carrier_tests {
     //! v3.5.8 Phase 9 Item 5 — `record_to_candidate` populates the
     //! `roman` + `hanji` sidechannels alongside `display_text` so the
     //! proto3 wire carries both for dual-line UI render. These tests
-    //! pin the field-population rule across the three `CandidateScriptKind`
-    //! axes (HANT / TAILO / MIXED).
+    //! pin the field-population rule for Hanji, roman-only and mixed-script
+    //! records.
     use super::*;
-    use crate::continuous::{CandidateScriptKind, COVERAGE_KIND_FULL};
+    use crate::continuous::COVERAGE_KIND_FULL;
 
     fn record(tl: &str, hanji: Option<&str>) -> DictionaryRecord {
         DictionaryRecord {
@@ -429,7 +423,6 @@ mod record_to_candidate_carrier_tests {
         // is the hanji. This is what the platform round-trips into the
         // NextWord association as `next_tl`/`prev_tl`.
         assert_eq!(cand.canonical_tl, "tâi-uân");
-        assert_eq!(cand.script_kind, CandidateScriptKind::Hant);
     }
 
     #[test]
@@ -449,7 +442,6 @@ mod record_to_candidate_carrier_tests {
         assert_eq!(cand.roman, "tāi");
         assert_eq!(cand.hanji, None);
         assert_eq!(cand.display_text, "tāi");
-        assert_eq!(cand.script_kind, CandidateScriptKind::Tailo);
     }
 
     #[test]
@@ -469,7 +461,6 @@ mod record_to_candidate_carrier_tests {
         assert_eq!(cand.roman, "hip-siòng");
         assert_eq!(cand.hanji.as_deref(), Some("hip相"));
         assert_eq!(cand.display_text, "hip相");
-        assert_eq!(cand.script_kind, CandidateScriptKind::Mixed);
     }
 }
 
@@ -483,9 +474,7 @@ mod item12_custom_dedupe_tests {
     //! rank 0). Spec: `docs/engine/continuous-commit-and-display.md`
     //! §10.10.
     use super::*;
-    use crate::continuous::{
-        CandidateScriptKind, COVERAGE_KIND_FULL, COVERAGE_KIND_PARTIAL_PREFIX,
-    };
+    use crate::continuous::{COVERAGE_KIND_FULL, COVERAGE_KIND_PARTIAL_PREFIX};
     use ranking::{CandidateSortKey, CONTEXT_RANK_NONE};
 
     /// Minimal non-custom `dict.bin`-shaped candidate. `bitmask` picks
@@ -504,7 +493,6 @@ mod item12_custom_dedupe_tests {
             frequency: 100,
             walker_cost: WALKER_COST_UNPRICED,
             bitmask,
-            script_kind: derive_script_kind(hanji),
             user_weight: 0.0,
             context_rank: CONTEXT_RANK_NONE,
             coverage_kind: COVERAGE_KIND_FULL,
@@ -515,7 +503,7 @@ mod item12_custom_dedupe_tests {
     #[test]
     fn custom_entry_to_candidate_hant_shape() {
         // D3 + D4: full-buffer span, freq 0, syll 1, is_custom true,
-        // coverage_kind passed through, display = hanji, script kind HANT.
+        // coverage_kind passed through, display = hanji.
         // `input_mode = Tl` for hanji-present cases — canonicalize
         // path doesn't execute (hanji is always preferred).
         let c = custom_entry_to_candidate(
@@ -541,7 +529,6 @@ mod item12_custom_dedupe_tests {
         // hanji-PRESENT custom entries too — `(hanji, canonical-TL)` is
         // the word identity, NOT gated on hanji absence.
         assert_eq!(c.canonical_tl, "tâi-gí");
-        assert_eq!(c.script_kind, CandidateScriptKind::Hant);
         assert_eq!(c.coverage_kind, COVERAGE_KIND_FULL);
     }
 
@@ -566,7 +553,6 @@ mod item12_custom_dedupe_tests {
         );
         assert_eq!(c.display_text, "gu\u{00e1}");
         assert_eq!(c.hanji, None);
-        assert_eq!(c.script_kind, CandidateScriptKind::Tailo);
         assert_eq!(c.coverage_kind, COVERAGE_KIND_PARTIAL_PREFIX);
         assert!(c.is_custom);
     }

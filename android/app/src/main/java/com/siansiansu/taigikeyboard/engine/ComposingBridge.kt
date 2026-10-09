@@ -1,4 +1,4 @@
-// Composing + Continuous-input ops (10 composing, 4 continuous) — extensions on RustEngineBridge mirroring
+// Composing + Continuous-input ops — extensions on RustEngineBridge mirroring
 // iOS RustEngineBridge+Composing.swift via the shared JNI roundtrip; nested types stay in RustEngineBridge.
 
 package com.siansiansu.taigikeyboard.engine
@@ -106,25 +106,6 @@ fun RustEngineBridge.composingCommitRaw(
     return composingDispatch(
         methodSetter = { it.commitRaw = payload },
         op = "composingCommitRaw",
-        generation = generation,
-        config = continuousAppConfig(settings),
-    )
-}
-
-// The engine prepends `nailed_prefix(nailed, config)` to `text`; Idle
-// ignores the request.
-fun RustEngineBridge.composingSelectCandidate(
-    text: String,
-    settings: EngineSettings,
-    generation: Long,
-): RustEngineBridge.ComposingTransition {
-    val payload = com.siansiansu.taigikeyboard.engine.proto.SelectCandidate
-        .newBuilder()
-        .setText(text)
-        .build()
-    return composingDispatch(
-        methodSetter = { it.selectCandidate = payload },
-        op = "composingSelectCandidate",
         generation = generation,
         config = continuousAppConfig(settings),
     )
@@ -315,25 +296,12 @@ private inline fun composingFetchDispatch(
             // protobuf-javalite exposes presence via `hasHanji()`.
             // Map absent → `null` (NOT empty string) so the
             // bridge data class's `hanji: String?` carries the
-            // wire-absent distinction faithfully (TAILO candidate).
-            //
-            // Defensive `roman` fallback per
-            // `docs/engine/continuous-candidate-display.md` §7 +
-            // Codex pre-impl F4 verdict A: if `msg.roman` is
-            // empty (old-Rust-new-platform wire skew, or proto
-            // regen skipped), fall back to `displayText` so the
-            // Item 6 dual-line render does not show a blank title
-            // row. Bundled releases never hit this branch.
-            val roman = if (msg.roman.isEmpty()) msg.displayText else msg.roman
+            // wire-absent distinction faithfully (hanji-less candidate).
             RustEngineBridge.ContinuousCandidate(
-                consumedSpanStart = msg.consumedSpanStart,
                 consumedSpanEnd = msg.consumedSpanEnd,
                 syllableCount = msg.syllableCount,
                 displayText = msg.displayText,
-                score = msg.score,
-                form = msg.form,
-                scriptKind = RustEngineBridge.CandidateScriptKind.decode(msg.scriptKindValue),
-                roman = roman,
+                roman = msg.roman,
                 hanji = if (msg.hasHanji()) msg.hanji else null,
                 canonicalTl = msg.canonicalTl,
             )

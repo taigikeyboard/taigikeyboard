@@ -45,15 +45,10 @@ fn list(engine: &mut Engine, config: &AppConfig) -> Vec<CandidateMessage> {
     list_with(engine, Fetch::default(), config)
 }
 
-fn spans_and_hanji(candidates: &[CandidateMessage]) -> Vec<((u32, u32), Option<String>)> {
+fn spans_and_hanji(candidates: &[CandidateMessage]) -> Vec<(u32, Option<String>)> {
     candidates
         .iter()
-        .map(|c| {
-            (
-                (c.consumed_span_start, c.consumed_span_end),
-                c.hanji.clone(),
-            )
-        })
+        .map(|c| (c.consumed_span_end, c.hanji.clone()))
         .collect()
 }
 
@@ -84,17 +79,14 @@ fn the_list_is_the_word_before_the_caret() {
     assert_eq!(engine.word_list_start(&config), Some(8));
     assert_eq!(
         spans_and_hanji(&list(&mut engine, &config)),
-        vec![
-            ((8, 15), Some("詩".to_string())),
-            ((8, 15), Some("絲".to_string())),
-        ]
+        vec![(15, Some("詩".to_string())), (15, Some("絲".to_string()))]
     );
 
     step(&mut engine, CaretDirection::Left, &config);
     assert_eq!(engine.word_list_start(&config), Some(0));
     assert_eq!(
         spans_and_hanji(&list(&mut engine, &config)),
-        vec![((0, 8), Some("死".to_string()))]
+        vec![(8, Some("死".to_string()))]
     );
     // At the start of the tail the list is the first word's.
     step(&mut engine, CaretDirection::Left, &config);
@@ -112,10 +104,6 @@ fn an_open_reading_before_the_caret_lists_its_own_words() {
     assert_eq!(display(&response), "死ㄒㄧ");
     assert_eq!(engine.word_list_start(&config), Some(8));
     let listed = list(&mut engine, &config);
-    assert!(
-        listed.iter().all(|c| c.consumed_span_start == 8),
-        "{listed:?}"
-    );
     let hanji: Vec<_> = listed.iter().filter_map(|c| c.hanji.as_deref()).collect();
     for word in ["是", "死", "詩", "絲"] {
         assert!(hanji.contains(&word), "{word} in {hanji:?}");
@@ -132,7 +120,7 @@ fn without_the_conversion_the_list_is_the_whole_tails() {
     let (mut engine, _) = composing_engine("ㄒㄧˋㄒㄧ ", &config);
     assert_eq!(engine.word_list_start(&config), None);
     let whole = spans_and_hanji(&list(&mut engine, &config));
-    assert_eq!(whole[0], ((0, 15), Some("死詩".to_string())));
+    assert_eq!(whole[0], (15, Some("死詩".to_string())));
 }
 
 // A pick that leaves only a tone mark pending still belongs to a TPS
@@ -736,7 +724,7 @@ fn the_words_list_puts_longer_words_first() {
     let unconverted = crate::common::config("tps");
     let (mut plain, _) = composing_engine("ㄍㄧㄣ ㄚˋㆢㄧㆵ˙ㄒㄧˋ", &unconverted);
     let whole = spans_and_hanji(&list_with(&mut plain, fetch(), &unconverted));
-    let position = |rows: &[((u32, u32), Option<String>)], hanji: &str| {
+    let position = |rows: &[(u32, Option<String>)], hanji: &str| {
         rows.iter()
             .position(|(_, h)| h.as_deref() == Some(hanji))
             .unwrap_or_else(|| panic!("{hanji} in {rows:?}"))
@@ -745,7 +733,7 @@ fn the_words_list_puts_longer_words_first() {
         position(&whole, "今") < position(&whole, "今仔日"),
         "{whole:?}"
     );
-    assert_eq!(word[0], ((0, 26), Some("今仔日".to_string())));
+    assert_eq!(word[0], (26, Some("今仔日".to_string())));
     assert!(
         position(&word, "今仔日") < position(&word, "今"),
         "{word:?}"

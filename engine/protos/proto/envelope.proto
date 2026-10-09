@@ -140,11 +140,9 @@ enum SyllableSeparator {
 // itself (`AppConfig::renders_hanji_first` / `rendered_syllable_joiner` in
 // `engine/protos/src/lib.rs`), so `is_hanji_first` and
 // `syllable_separator` are the Candidate-Display-projected stored values
-// WITHOUT the TPS fold. A platform may still send the pre-R6 wire (`"tl"`
-// plus the TPS-folded swap / separator) — composing renders both
-// identically. Nextword's empty-romanization drop and Enter skip read the
-// swap as sent, not folded; today every platform sends nextword the stored
-// swap, so moving to `"tps"` changes nothing there.
+// WITHOUT the TPS fold. The engine ships inside each app, so
+// `input_mode = "tps"` is the only TPS wire. Nextword's empty-romanization
+// drop and Enter skip read the swap as sent, not folded.
 message AppConfig {
   // Tag 1 was `tone_mode` (set by nobody, read by nobody; removed 2026-09-30).
   reserved 1, 6, 10;
@@ -160,10 +158,13 @@ message AppConfig {
   bool output_both_scripts = 8;
   CandidateDisplayMode candidate_display_mode = 9;
   bool force_lowercase_nasal_marker = 11;
-  // TPS or→er dialect switch; no engine reader yet.
+  // TPS or→er dialect switch; read by the TPS commit rendering
+  // (`engine/composing/src/commit_text.rs`).
   bool tps_or_maps_to_er = 12;
   // Present = the preedit of a TPS buffer shows the converted Hanji
-  // (`HanjiConversion`). Absent on every platform today.
+  // (`HanjiConversion`). Desktop-core sets it
+  // (`desktop/crates/taigi-desktop-core/src/engine/bridge.rs`); read by
+  // `engine/composing/src/conversion.rs`.
   HanjiConversion hanji_conversion = 13;
   // Syllable Separator as stored, without the TPS fold.
   SyllableSeparator syllable_separator = 14;

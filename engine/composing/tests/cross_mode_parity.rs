@@ -97,9 +97,7 @@ fn complete_syllable_hanji_set(input: &str, mode: &str) -> BTreeSet<String> {
         .map(|c| c.candidates)
         .unwrap_or_default()
         .into_iter()
-        .filter(|c| {
-            c.consumed_span_start == 0 && c.consumed_span_end == raw_len && c.syllable_count == 1
-        })
+        .filter(|c| c.consumed_span_end == raw_len && c.syllable_count == 1)
         .filter_map(|c| c.hanji)
         .collect()
 }

@@ -11,12 +11,6 @@ public interface CandidateMessageOrBuilder extends
     com.google.protobuf.MessageLiteOrBuilder {
 
   /**
-   * <code>uint32 consumed_span_start = 1;</code>
-   * @return The consumedSpanStart.
-   */
-  int getConsumedSpanStart();
-
-  /**
    * <code>uint32 consumed_span_end = 2;</code>
    * @return The consumedSpanEnd.
    */
@@ -39,29 +33,6 @@ public interface CandidateMessageOrBuilder extends
    */
   com.google.protobuf.ByteString
       getDisplayTextBytes();
-
-  /**
-   * <code>float score = 5;</code>
-   * @return The score.
-   */
-  float getScore();
-
-  /**
-   * <code>uint32 form = 6;</code>
-   * @return The form.
-   */
-  int getForm();
-
-  /**
-   * <code>.taigi.engine.CandidateScriptKind script_kind = 7;</code>
-   * @return The enum numeric value on the wire for scriptKind.
-   */
-  int getScriptKindValue();
-  /**
-   * <code>.taigi.engine.CandidateScriptKind script_kind = 7;</code>
-   * @return The scriptKind.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.CandidateScriptKind getScriptKind();
 
   /**
    * <code>string roman = 8;</code>

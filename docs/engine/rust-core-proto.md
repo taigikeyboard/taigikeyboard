@@ -172,12 +172,14 @@ message PhoneticsResponse {
 
 ## 8. Composing slice — AS-IMPLEMENTED (v3.5.4)
 
-> **Status**: AS-IMPLEMENTED post v3.5.4. The proto landed in `engine/protos/proto/composing.proto`; envelope tag 11 was unreserved. Field naming uses `oneof method` (Phonetics convention). `is_composing` boolean on `ComposingResponse` lets the platform stop shadowing engine state. Two methods added beyond the original design draft — `SetSelectedCandidateIndex` (tag 20) and `QueryState` (tag 21) — never gained a production caller and were removed 2026-09-25 (tags reserved). The request surface is now 16 ops: 10 text-input mutators (10s), 4 continuous-input ops (30s, v3.5.8), 2 desktop editing keys (40s). The sketch below shows the current oneof; per-message fields and comments live in the canonical `.proto`.
+> **Status**: AS-IMPLEMENTED post v3.5.4. The proto landed in `engine/protos/proto/composing.proto`; envelope tag 11 was unreserved. Field naming uses `oneof method` (Phonetics convention). `is_composing` boolean on `ComposingResponse` lets the platform stop shadowing engine state. Two methods added beyond the original design draft — `SetSelectedCandidateIndex` (tag 20) and `QueryState` (tag 21) — never gained a production caller and were removed 2026-09-25 (tags reserved). The request surface is now 15 ops: 8 text-input mutators (10s), 2 continuous-input ops (30s, v3.5.8), 5 desktop key ops (40s); `SelectCandidate` (tag 17, platform-resolved suggestion text) had no platform sender and was removed 2026-10-09 (round A1a), tag reserved. The sketch below shows the current oneof; per-message fields and comments live in the canonical `.proto`.
 
 ```protobuf
 message ComposingRequest {
   reserved 20, 21;
   reserved "set_selected_candidate_index", "query_state";
+  reserved 17;
+  reserved "select_candidate";
 
   oneof method {
     // --- Text-input mutators (10s) ---
@@ -187,7 +189,6 @@ message ComposingRequest {
     ReplaceLast replace_last = 13;                             // TPS auto-correct
     DeleteBackward delete_backward = 14;
     CommitRaw commit_raw = 16;                                 // commit literal raw input (e.g. English passthrough)
-    SelectCandidate select_candidate = 17;                   // commit platform-resolved suggestion text
     CommitPreeditThenInsertExternal commit_preedit_then_insert_external = 18;  // atomic emoji/paste insertion
     Reset reset = 19;                                          // teardown / mode switch
 
@@ -199,6 +200,8 @@ message ComposingRequest {
     TelexKey telex_key = 40;
     MoveCaret move_caret = 41;
     TpsKey tps_key = 42;                                       // one TPS key at the caret: adjust + replace + insert, or the Space separator
+    CommitAsShown commit_as_shown = 43;
+    CommitAsTyped commit_as_typed = 44;
   }
 }
 
@@ -208,7 +211,6 @@ message AppendHyphen {}
 message ReplaceLast { string replacement = 1; }
 message DeleteBackward {}
 message CommitRaw {}
-message SelectCandidate { string text = 1; }
 message CommitPreeditThenInsertExternal { string text = 1; }
 message Reset {}
 
@@ -311,7 +313,7 @@ message CaseResponse {
   - Candidate navigation ownership stays platform-side. `references/khiin-rs/protos/src/command.proto:114-117` validates this pattern: "App should decide how to show and navigate candidates".
   - No layout, styling, KeyboardKit, FlorisBoard types.
   - No platform text-region types (`NSRange`, `ExtractedText`, `TextPosition`).
-- **No candidate ids in the Composing slice.** `SelectCandidate` carries text the platform already resolved.
+- **No candidate ids in the Composing slice.** A pick is `CommitContinuous` naming `consumed_bytes` + a `script`; the engine resolves the text itself (the `SelectCandidate(text)` op that carried platform-resolved text was removed 2026-10-09 (round A1a)).
 - **No Lexicon / NextWord proto** in this document. This includes prediction queries, prediction results, and candidate-list updates.
 - **No SQLite I/O proto in this document.** User-data SQLite is engine-owned per `docs/contributing/rust-migration-policy.md` §6 (`engine/userdata`); its ops are the separate `UserDataRequest` domain (`engine/protos/proto/user_data.proto`, `docs/architecture/user-data-engine-roadmap.md`) — typed ops, never paths or raw SQL beyond `OpenUserData`. The former platform stores (`Lexicon/Database/*Repository.swift`, `SQLiteConnectionManager.swift`, `NextWord/Repository/*`, etc.) were deleted and appear with `status=rust_shipped` in `migration-inventory.csv`.
 - **No UniFFI signature.** Protobuf-first per the roadmap revision.
@@ -337,4 +339,4 @@ message CaseResponse {
 - `docs/architecture/behavioral-invariants.md:295-309` (§11 settings live-read)
 - `docs/architecture/nextword-engine-boundary.md` §2, §2.4, §3 — generation counter ownership
 - `docs/architecture/composing-state-boundary.md` §11.10 — Android `Effect` divergences
-- `engine/protos/proto/composing.proto` `message SelectCandidate { string text = 1; }` — the `select_candidate` shape (historical: iOS `ComposingState.swift:47-49` `selectCandidate(String)`, file deleted)
+- `engine/protos/proto/composing.proto` — `select_candidate` (tag 17) reserved; the op committed platform-resolved text and was removed 2026-10-09 (round A1a) (historical: iOS `ComposingState.swift:47-49` `selectCandidate(String)`, file deleted)

@@ -14,8 +14,9 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * (iOS `HostTextWriter`; `insertText` only when nothing is marked). An iOS
  * commit and the literals the same event writes after it reach the host as
  * one write (`INVARIANT_composing_host_commit_one_write_per_event`). Autocomplete-control effects (`ClearCandidates` /
- * `RefreshCandidates` / `ResetCandidateContext`) route to the platform
- * autocomplete subsystem (stays platform-side until v3.5.5 NextWord slice).
+ * `RefreshCandidates` / `ResetCandidateContext`) route to the platform's
+ * candidate strip; the NextWord ranking they refresh runs in the engine
+ * (`engine/nextword`).
  *
  * `NextWord*` effects (tags 8/9/10) are Phase 4 continuous-input handshake.
  * The platform FFI shim translates each to a `NextWordRequest` and dispatches
@@ -636,8 +637,9 @@ public  final class Effect extends
    * (iOS `HostTextWriter`; `insertText` only when nothing is marked). An iOS
    * commit and the literals the same event writes after it reach the host as
    * one write (`INVARIANT_composing_host_commit_one_write_per_event`). Autocomplete-control effects (`ClearCandidates` /
-   * `RefreshCandidates` / `ResetCandidateContext`) route to the platform
-   * autocomplete subsystem (stays platform-side until v3.5.5 NextWord slice).
+   * `RefreshCandidates` / `ResetCandidateContext`) route to the platform's
+   * candidate strip; the NextWord ranking they refresh runs in the engine
+   * (`engine/nextword`).
    *
    * `NextWord*` effects (tags 8/9/10) are Phase 4 continuous-input handshake.
    * The platform FFI shim translates each to a `NextWordRequest` and dispatches

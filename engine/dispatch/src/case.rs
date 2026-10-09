@@ -143,8 +143,8 @@ mod tests {
         assert_eq!(unwrap_string(resp), "\u{207f}");
     }
 
-    /// R6: the TPS layout (`"tps"`) cases with the TL tables, exactly as the
-    /// pre-R6 wire (`"tl"`) did — every op, including `a̋`, which only TL maps.
+    /// The TPS layout (`"tps"`) cases with the TL tables, exactly as `"tl"`
+    /// does — every op, including `a̋`, which only TL maps.
     #[test]
     fn dispatch_tps_layout_cases_like_tl() {
         let letter_case = protos::engine::LetterCase::CapsLocked as i32;

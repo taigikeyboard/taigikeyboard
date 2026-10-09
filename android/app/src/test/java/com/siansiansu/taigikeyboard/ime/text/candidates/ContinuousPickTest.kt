@@ -23,13 +23,9 @@ class ContinuousPickTest {
         roman: String,
         hanji: String?,
     ) = RustEngineBridge.ContinuousCandidate(
-        consumedSpanStart = 0,
         consumedSpanEnd = 7,
         syllableCount = 2,
         displayText = hanji ?: roman,
-        score = 0f,
-        form = 1,
-        scriptKind = if (hanji == null) RustEngineBridge.CandidateScriptKind.TAILO else RustEngineBridge.CandidateScriptKind.HANT,
         roman = roman,
         hanji = hanji,
         canonicalTl = "tâi-gí",

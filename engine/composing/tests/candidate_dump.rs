@@ -158,11 +158,9 @@ fn dump_continuous_candidates() {
         );
         for (i, cand) in candidates.iter().enumerate() {
             println!(
-                "  [{i:>3}] span=({},{}) syll={} score={:<12} roman={:<16} hanji={}",
-                cand.consumed_span_start,
+                "  [{i:>3}] end={} syll={} roman={:<16} hanji={}",
                 cand.consumed_span_end,
                 cand.syllable_count,
-                cand.score,
                 cand.roman,
                 cand.hanji.as_deref().unwrap_or(""),
             );

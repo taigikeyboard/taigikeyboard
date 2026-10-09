@@ -36,7 +36,7 @@
 | `appendCharacter` | Append character, update dual-state |
 | `deleteBackward` | Delete character, handle tone restoration |
 | `commitComposition` | Confirm composition, output text |
-| `selectCandidate` | Select candidate, replace composition |
+| `commitContinuous` | Pick a candidate: nail a prefix or commit the composition |
 
 ### appendCharacter Flow
 
@@ -85,10 +85,10 @@ Composing engine state machine lives in Rust `engine/composing` (since v3.5.4 / 
 | State machine (`Phase × Intent → (state', Effect[])`) | Rust `engine/composing` (`api.rs`, `transition.rs`, `derived.rs`) |
 | FFI singleton + generation guard | Rust `engine/composing::EngineHandle` (read-only intents never reset — see below) |
 | Tone-mark application + POJ doubletap (`oo→o͘`, `nn→ⁿ`) | Rust `engine/phonetics` |
-| iOS bridge (9 text-input + 2 continuous-input ops) | `Engine/RustEngineBridge+Composing.swift` (composingStart / Append / AppendHyphen / ReplaceLast / DeleteBackward / CommitRaw / SelectCandidate / CommitPreeditThenInsertExternal / Reset + FetchAtPos / CommitContinuous) — one engine call per keystroke (R12) |
+| iOS bridge (8 text-input + 2 continuous-input ops) | `Engine/RustEngineBridge+Composing.swift` (composingStart / Append / AppendHyphen / ReplaceLast / DeleteBackward / CommitRaw / CommitPreeditThenInsertExternal / Reset + FetchAtPos / CommitContinuous; SelectCandidate removed 2026-10-09 (round A1a)) — one engine call per keystroke (R12) |
 | iOS platform wrapper | `Input/Composing/ComposingManager.swift` (Observation + KeyboardKit context wiring) |
 | iOS effect interpreter | `Input/Composing/ComposingDelegate.swift` (`UITextDocumentProxy`) |
-| Android bridge | `engine/ComposingBridge.kt` (same 9 + 2 ops) |
+| Android bridge | `engine/ComposingBridge.kt` (same 8 + 2 ops) |
 | Android platform wrapper | `ime/text/composing/ComposingManager.kt` |
 | Android effect interpreter | `ime/text/composing/ComposingDelegate.kt` (`InputConnection`; **must zero composing region via `setComposingText("", 1)` before `finishComposingText()`** to honor `clearPreeditWithoutCommit` semantics) |
 

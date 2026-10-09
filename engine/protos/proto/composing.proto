@@ -38,6 +38,10 @@ message ComposingRequest {
   // `reset`.
   reserved 15, 30, 33;
   reserved "commit_derived", "enter_continuous", "reset_continuous";
+  // Tag 17 (`select_candidate`) committed a platform-resolved suggestion
+  // text; no platform sent it (removed 2026-10-09, round A1a).
+  reserved 17;
+  reserved "select_candidate";
 
   oneof method {
     // --- Text-input mutators (10s) ---
@@ -47,7 +51,6 @@ message ComposingRequest {
     ReplaceLast                     replace_last                         = 13;
     DeleteBackward                  delete_backward                      = 14;
     CommitRaw                       commit_raw                           = 16;
-    SelectCandidate                 select_candidate                     = 17;
     CommitPreeditThenInsertExternal commit_preedit_then_insert_external  = 18;
     Reset                           reset                                = 19;
 
@@ -87,10 +90,6 @@ message DeleteBackward {}
 // Enter: commit the whole composition (nailed segments + the derived
 // pending tail, TPS separator markers dropped) to the document.
 message CommitRaw {}
-
-// Commit the supplied platform-resolved suggestion text, atomically
-// replacing the current preedit.
-message SelectCandidate { string text = 1; }
 
 // Commit the current preedit (if any) and atomically insert externally
 // supplied text in one document write. Non-Taigi input surfaces (emoji
@@ -408,45 +407,17 @@ message ContinuousResponse {
   repeated CandidateMessage candidates = 1;
 }
 
-// v3.5.8 Phase 9.2 — candidate-type discriminator. MOE `VocType`
-// (`VT_HANT` / `VT_TAILO` / `VT_MIXED`) is the cite. Derived in Rust
-// from `DictionaryRecord.hanji` presence + NFKD-normalized Latin-letter
-// detection; see `engine/lexicon/src/continuous/mod.rs::derive_script_kind`.
-//
-// Metadata-only: this field does NOT enter the `CandidateSortKey` tie-break
-// in v3.5.8 (per `docs/releases/v3.5.8/plan.md` § Phase 9 R2 Q3.a — "reserve rank
-// use until real collisions are measured"). It is orthogonal to the
-// existing `form` axis (toneless / numeric / hanji / abbrev).
-//
-// `UNSPECIFIED = 0` is the proto3 default and never emitted by Rust;
-// platforms must treat `UNSPECIFIED` as "unknown carrier — fall back
-// to display-text sniff" rather than as HANT.
-enum CandidateScriptKind {
-  CANDIDATE_SCRIPT_KIND_UNSPECIFIED = 0;
-  CANDIDATE_SCRIPT_KIND_HANT        = 1;
-  CANDIDATE_SCRIPT_KIND_TAILO       = 2;
-  CANDIDATE_SCRIPT_KIND_MIXED       = 3;
-}
-
 // v3.5.8 Phase 6 — single span-local continuous candidate. Wire mirror of
 // `lexicon::RawCandidate` (`engine/lexicon/src/continuous/`).
 //
-// `consumed_span` is encoded as two scalar fields rather than a nested
-// message to keep wire overhead low. `consumed_span_start` /
-// `consumed_span_end` are byte offsets in the **original raw user
+// `consumed_span_end` is a byte offset in the **original raw user
 // input** stored in `Phase::Continuous { raw }` — not in any canonical
 // TL transform. TL / POJ users → ASCII bytes; TPS users → Bopomofo
 // bytes (Phase 6 dispatcher converts TPS spans to canonical TL FST
 // keys for lookup but emits the span back in the user-facing TPS byte
-// space). Platform UI slices `pending[start..end]` off
-// `Phase::Continuous { raw }` (or its preedit mirror) on commit.
-//
-// `form` is currently always `1` (FORM_NOTONE; see
-// `engine/lexicon/src/continuous/`); reserved for hanji (0) /
-// numeric (2) / abbrev (3) when proto-side carriers exist.
-//
-// `script_kind` (Phase 9.2) is the MOE-aligned candidate-type discriminator;
-// see `CandidateScriptKind` above.
+// space). The platform sends it back as `CommitContinuous.consumed_bytes`;
+// where the listed word starts is the engine's own knowledge
+// (`composing::conversion::word_list_start`).
 //
 // v3.5.8 Phase 9 Item 5 — `roman` + `hanji` are display-only
 // sidechannels added so platform UI can build dual-line cells
@@ -456,7 +427,10 @@ enum CandidateScriptKind {
 // (= `hanji.unwrap_or(roman)`; under a single-script display the §34
 // literal carries the identity of the same-roman dictionary row it
 // absorbed — `composing::requests::adopt_collapsed_dict_identity`);
-// `roman` and `hanji` are NEVER read for commit. `roman` is the display romanization for the active
+// `roman` and `hanji` are display sidechannels: a Continuous pick sends
+// them back inside `CommitContinuous`, and the engine resolves the committed
+// text from the pick's scripts under the live settings (`commit_text.rs`).
+// `roman` is the display romanization for the active
 // input mode — the underlying `DictionaryRecord.tl` by default, or
 // POJ-display (`oo`→`o͘`, `nn`→`ⁿ`, …) when
 // `AppConfig.input_mode = poj` (engine-rendered, mirroring the
@@ -467,13 +441,16 @@ enum CandidateScriptKind {
 // rationale; the companion `(canonical_tl, hanji, consumed_span)` dedupe is
 // `lexicon::continuous::candidate::dedupe_by_roman_hanji_span`.
 message CandidateMessage {
-  uint32         consumed_span_start = 1;
+  // Tags 1 (`consumed_span_start`), 5 (`score`) and 6 (`form`) had no
+  // platform reader; the engine keeps those values internal. Tag 7
+  // (`script_kind`, with its `CandidateScriptKind` enum) existed only to
+  // fill the wire and went with its derivation (removed 2026-10-09, round
+  // A1a).
+  reserved 1, 5, 6, 7;
+  reserved "consumed_span_start", "score", "form", "script_kind";
   uint32         consumed_span_end   = 2;
   uint32         syllable_count      = 3;
   string         display_text        = 4;
-  float          score               = 5;
-  uint32         form                = 6;
-  CandidateScriptKind script_kind       = 7;
   string         roman               = 8;
   optional string hanji              = 9;
   // v3.6.1 R2 — canonical TL romanization (identity sidechannel). Unlike
@@ -501,8 +478,9 @@ message CandidateMessage {
 // (iOS `HostTextWriter`; `insertText` only when nothing is marked). An iOS
 // commit and the literals the same event writes after it reach the host as
 // one write (`INVARIANT_composing_host_commit_one_write_per_event`). Autocomplete-control effects (`ClearCandidates` /
-// `RefreshCandidates` / `ResetCandidateContext`) route to the platform
-// autocomplete subsystem (stays platform-side until v3.5.5 NextWord slice).
+// `RefreshCandidates` / `ResetCandidateContext`) route to the platform's
+// candidate strip; the NextWord ranking they refresh runs in the engine
+// (`engine/nextword`).
 //
 // `NextWord*` effects (tags 8/9/10) are Phase 4 continuous-input handshake.
 // The platform FFI shim translates each to a `NextWordRequest` and dispatches

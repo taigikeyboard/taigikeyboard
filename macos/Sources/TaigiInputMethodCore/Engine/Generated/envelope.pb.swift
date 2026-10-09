@@ -293,11 +293,9 @@ public nonisolated enum Taigi_Engine_SyllableSeparator: SwiftProtobuf.Enum, Swif
 /// itself (`AppConfig::renders_hanji_first` / `rendered_syllable_joiner` in
 /// `engine/protos/src/lib.rs`), so `is_hanji_first` and
 /// `syllable_separator` are the Candidate-Display-projected stored values
-/// WITHOUT the TPS fold. A platform may still send the pre-R6 wire (`"tl"`
-/// plus the TPS-folded swap / separator) — composing renders both
-/// identically. Nextword's empty-romanization drop and Enter skip read the
-/// swap as sent, not folded; today every platform sends nextword the stored
-/// swap, so moving to `"tps"` changes nothing there.
+/// WITHOUT the TPS fold. The engine ships inside each app, so
+/// `input_mode = "tps"` is the only TPS wire. Nextword's empty-romanization
+/// drop and Enter skip read the swap as sent, not folded.
 public nonisolated struct Taigi_Engine_AppConfig: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -321,11 +319,14 @@ public nonisolated struct Taigi_Engine_AppConfig: Sendable {
 
   public var forceLowercaseNasalMarker: Bool = false
 
-  /// TPS or→er dialect switch; no engine reader yet.
+  /// TPS or→er dialect switch; read by the TPS commit rendering
+  /// (`engine/composing/src/commit_text.rs`).
   public var tpsOrMapsToEr: Bool = false
 
   /// Present = the preedit of a TPS buffer shows the converted Hanji
-  /// (`HanjiConversion`). Absent on every platform today.
+  /// (`HanjiConversion`). Desktop-core sets it
+  /// (`desktop/crates/taigi-desktop-core/src/engine/bridge.rs`); read by
+  /// `engine/composing/src/conversion.rs`.
   public var hanjiConversion: Taigi_Engine_HanjiConversion {
     get {_hanjiConversion ?? Taigi_Engine_HanjiConversion()}
     set {_hanjiConversion = newValue}

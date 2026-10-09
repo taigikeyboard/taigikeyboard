@@ -687,12 +687,11 @@ fn snapshot_under_continuous_raw_input_pending_only_display_text_whole_compositi
 
 // ---- Continuous-phase routing of legacy text-bearing Intents -----
 //
-// Per Codex post-impl finding #3, the three Intents that carry user text
-// (`Start`, `SelectCandidate`, `CommitPreeditThenInsertExternal`) under
+// Per Codex post-impl finding #3, the two Intents that carry user text
+// (`Start`, `CommitPreeditThenInsertExternal`) under
 // Continuous must NOT silently drop the text. Under **Model B** they drop
 // continuous state and route the text through a sane equivalent: `Start`
-// becomes "abort continuous + begin fresh Composing"; `SelectCandidate`
-// becomes "commit Σ nailed.display_text + text"; `CommitPreeditThenInsert
+// becomes "abort continuous + begin fresh Composing"; `CommitPreeditThenInsert
 // External` becomes "commit Σ nailed.display_text + pending derived +
 // external atomically" (nailed segments were never in the document, so
 // they ride the single commit). `CommitRaw` (Enter) commits the
@@ -1018,51 +1017,6 @@ fn commit_raw_under_continuous_tps_hides_the_separator_marker() {
     );
 }
 
-#[test]
-fn select_candidate_under_continuous_commits_text_and_exits() {
-    let mut e = engine_in_continuous("tsua");
-    let resp = e.apply(
-        Intent::SelectCandidate {
-            text: "紙".to_string(),
-        },
-        &config_tl(),
-    );
-    assert_kinds(
-        &resp.effect,
-        [
-            "CommitTextReplacingPreedit",
-            "ClearCandidates",
-            "ResetCandidateContext",
-            "NextWordClearForNewComposing",
-        ],
-    );
-    let Kind::CommitTextReplacingPreedit(commit) = resp.effect[0].kind.as_ref().unwrap() else {
-        unreachable!();
-    };
-    assert_eq!(commit.text, "紙");
-    assert_eq!(e.snapshot_state().phase, Phase::Idle);
-}
-
-#[test]
-fn select_candidate_under_continuous_with_empty_text_just_resets() {
-    let mut e = engine_in_continuous("tsua");
-    let resp = e.apply(
-        Intent::SelectCandidate {
-            text: String::new(),
-        },
-        &config_tl(),
-    );
-    assert_kinds(
-        &resp.effect,
-        [
-            "ClearPreeditWithoutCommit",
-            "ClearCandidates",
-            "NextWordClearForNewComposing",
-        ],
-    );
-    assert_eq!(e.snapshot_state().phase, Phase::Idle);
-}
-
 // INVARIANT_COMPOSING_EXTERNAL_INSERT_COMMITS_PREEDIT_ATOMICALLY (behavioral-invariants.md §13)
 #[test]
 fn commit_preedit_then_insert_external_under_continuous_combines_pending_and_external() {
@@ -1106,46 +1060,6 @@ fn commit_preedit_then_insert_external_under_continuous_with_empty_external_is_n
 // ---- Model B: text-bearing Intents with a NAILED prefix ----------
 // Codex post-impl P2: the zero-nailed cases above don't exercise the
 // Model-B "Σ nailed.display_text + …" combine. These pin §10.8 #9.
-
-#[test]
-fn select_candidate_under_continuous_with_nailed_prefix_commits_combined() {
-    // Nail "珠" (raw "tsu") leaving pending "a", then SelectCandidate.
-    let mut e = engine_in_continuous("tsua");
-    e.apply(
-        Intent::CommitContinuous {
-            canonical_text: "珠".to_string(),
-            association_tl: String::new(),
-            hanji: None,
-            consumed_bytes: 3,
-            syllable_count: 1,
-            script: Some(CommitScript::Roman),
-            roman: "珠".to_string(),
-        },
-        &config_tl(),
-    );
-    let resp = e.apply(
-        Intent::SelectCandidate {
-            text: "紙".to_string(),
-        },
-        &config_tl(),
-    );
-    assert_kinds(
-        &resp.effect,
-        [
-            "CommitTextReplacingPreedit",
-            "ClearCandidates",
-            "ResetCandidateContext",
-            "NextWordClearForNewComposing",
-        ],
-    );
-    let Kind::CommitTextReplacingPreedit(commit) = resp.effect[0].kind.as_ref().unwrap() else {
-        unreachable!();
-    };
-    // Model B: Σ nailed.display_text ("珠") + text ("紙"). The nailed
-    // prefix was never in the document, so it rides this single commit.
-    assert_eq!(commit.text, "珠紙");
-    assert_eq!(e.snapshot_state().phase, Phase::Idle);
-}
 
 #[test]
 fn commit_preedit_then_insert_external_with_nailed_prefix_combines_all() {

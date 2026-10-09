@@ -33,13 +33,9 @@ class TaigiAutocompleteServiceTest {
         syllableCount: Int = 1,
     ): RustEngineBridge.ContinuousCandidate =
         RustEngineBridge.ContinuousCandidate(
-            consumedSpanStart = 0,
             consumedSpanEnd = consumedSpanEnd,
             syllableCount = syllableCount,
             displayText = displayText,
-            score = 1.0f,
-            form = 1,
-            scriptKind = RustEngineBridge.CandidateScriptKind.HANT,
             roman = displayText,
             hanji = null,
             canonicalTl = displayText,

@@ -29,8 +29,7 @@ The Swift sketches in §2.1–§2.4 are the original design notation; the state 
 │  ComposingState (Foundation-only, shared-core candidate)             │
 │  - enum Phase { idle, composing(raw) }                               │
 │  - Intent API: start, append, appendHyphen, replaceLast,             │
-│    deleteBackward, commit (→ either composition or raw),             │
-│    selectCandidate(text), reset                                     │
+│    deleteBackward, commit (→ either composition or raw), reset       │
 │  - Pure derivation: derivedDisplay(raw, mode, toneToggles)           │
 │    via TPSTables.containsTPS / ToneConverter                         │
 │  - Emits Transition values with a platform-neutral Effect list       │
@@ -118,16 +117,17 @@ effects: [
 ]
 ```
 
-`apply(.selectCandidate(text))` returns:
+`apply(.commitRaw)` (Enter; `transition.rs` `commit_raw_continuous` → `finalize_effects`) returns — the `selectCandidate(text)` op that shared this shape was removed 2026-10-09 (round A1a):
 
 ```
 Transition(
   newPhase: .idle,
   newSelectedIndex: -1,
   effects: [
-    .commitTextReplacingPreedit(text),  // one atomic effect; no separate clear-then-insert
+    .commitTextReplacingPreedit(combined),  // one atomic effect; no separate clear-then-insert
     .clearCandidates,
     .resetCandidateContext,
+    .nextWordWordSelected(...),             // single terminal word selection (§40)
   ],
   derivedDisplay: ""
 )
@@ -212,7 +212,6 @@ Observable Android ↔ iOS divergence today:
 | `deleteBackward` empty-raw path | `reset(ic)` → `ic.setComposingText("", 1)` + `ic.finishComposingText()` | Yes — pre-zero owned by `reset(ic)`. |
 | `reset(ic)` called directly (external, e.g. input-mode switch, session end with pending preedit) | `ic.setComposingText("", 1)` + `ic.finishComposingText()` | Yes — corrected by parity PR (see §11.6). |
 | `commitComposition(ic)` | sync fallback derive + `ic.setComposingText(composingText, 1)` + `ic.finishComposingText()` | Intended commit path — pre-zero not applicable. The fast/slow split against an externally cleared region (§11.10 divergence #3) no longer surfaces the stale-commit bug: `TextInputManager.onUpdateSelection` → `ComposingManager.onExternalComposingRegionCleared()` zeroes internal state before any later commit runs. |
-| `selectCandidate(text, ic)` | `ic.setComposingText(suggestion, 1)` + `ic.finishComposingText()` | Equivalent to `commitTextReplacingPreedit` — atomic replace. |
 | `TextInputManager.resetComposingText()` bare-IC fallback (new-editor session start — a same-editor `restarting=true` keeps the manager and reconciles instead, DELETE / ENTER non-composing, NUMERIC-PHONE key) | delegates to top-level `clearHostComposingRegion(ic)` → `ic.setComposingText("", 1)` + `ic.finishComposingText()` | Yes — corrected by parity PR (see §11.6). |
 
 `reset(ic)` is the canonical owner of the zero-then-finish sequence for composing-aware sites; external callers and the `deleteBackward` empty-raw path now route through it. Bare-`InputConnection` fallback sites in `TextInputManager` (where `composingManager` is null or the current keyboard mode bypasses composing) delegate to the sibling top-level helper `clearHostComposingRegion(ic)` so the zero-then-finish invariant holds at every IC-layer clear site. Pinned by `INVARIANT_composing_clear_preedit_does_not_commit` (see `behavioral-invariants.md` §13).

@@ -326,64 +326,18 @@ object RustEngineBridge {
     }
 
     /**
-     * MOE-aligned candidate-type discriminator. Wire mirror of
-     * `protos::engine::CandidateScriptKind` (Phase 9.2). Engine derives in Rust
-     * from `DictionaryRecord.hanji` presence + NFKD-normalized Latin-letter
-     * detection (`engine/lexicon/src/continuous/mod.rs::derive_script_kind`); the
-     * platform reads but never recomputes (no display-text sniffing —
-     * that would parallel-implement the derive and violate
-     * `docs/contributing/cross-platform-alignment.md`).
-     *
-     * Metadata-only in v3.5.8 — does NOT enter the engine's `CandidateSortKey`
-     * tie-break (per `docs/releases/v3.5.8/plan.md` § Phase 9 R2 Q3.a). `UNSPECIFIED`
-     * is the proto3 default and means "unknown carrier — old engine or
-     * dropped field"; never emitted by the current Rust engine.
-     * Platforms must treat `UNSPECIFIED` as "ignore it" rather than
-     * falling back to any local classification.
-     */
-    enum class CandidateScriptKind {
-        UNSPECIFIED,
-        HANT,
-        TAILO,
-        MIXED,
-        ;
-
-        companion object {
-            /**
-             * Decode the wire integer (`CandidateMessage.getScriptKindValue()`)
-             * produced by protobuf-javalite. Unrecognized values
-             * (forward-compat from a newer engine) collapse to `UNSPECIFIED`
-             * so the platform never crashes on a binding mismatch.
-             */
-            fun decode(wire: Int): CandidateScriptKind =
-                when (wire) {
-                    1 -> HANT
-                    2 -> TAILO
-                    3 -> MIXED
-                    else -> UNSPECIFIED
-                }
-        }
-    }
-
-    /**
      * Single span-local continuous-input candidate. Wire mirror of
-     * `protos::engine::CandidateMessage` (Phase 6 + 9.2 `script_kind`).
+     * `protos::engine::CandidateMessage` (Phase 6).
      *
-     * `consumedSpanStart` / `consumedSpanEnd` are byte offsets into the
-     * **original raw user input** stored in `Phase::Continuous { raw }` —
-     * TL/POJ users → ASCII bytes, TPS users → Bopomofo bytes. Platform UI
-     * slices `pending` from `start` to `end` on commit. `form` is currently
-     * always 1 (FORM_NOTONE). `scriptKind` is the Phase 9.2 carrier;
-     * metadata-only.
+     * `consumedSpanEnd` is a byte offset into the **original raw user input**
+     * stored in `Phase::Continuous { raw }` — TL/POJ users → ASCII bytes, TPS
+     * users → Bopomofo bytes. The tap path hands it back as `consumedBytes`
+     * so the engine drops that many bytes from `pending` on commit.
      */
     data class ContinuousCandidate(
-        val consumedSpanStart: Int,
         val consumedSpanEnd: Int,
         val syllableCount: Int,
         val displayText: String,
-        val score: Float,
-        val form: Int,
-        val scriptKind: CandidateScriptKind,
         /**
          * v3.5.8 Phase 9 Item 5 — display-romanization sidechannel for
          * dual-line cell render. Always non-empty for dictionary-

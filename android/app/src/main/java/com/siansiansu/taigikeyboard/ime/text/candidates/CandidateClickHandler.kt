@@ -70,44 +70,18 @@ class CandidateClickHandler(
             // ComposingManager NextWordEffectRouter routes — onNextWordPrediction
             // is intentionally NOT called from the continuous branch to avoid
             // double-firing predictions.
-            if (selectedWord.additionalInfo[TaigiWord.MetadataKeys.IS_CONTINUOUS] == "true" && composingManager != null) {
-                handleContinuousCandidateClick(selectedWord, ic, composingManager)
+            if (selectedWord.additionalInfo[TaigiWord.MetadataKeys.IS_CONTINUOUS] == "true") {
+                // No composing manager (field became composing-ineligible under a
+                // stale strip) → drop the tap, as iOS drops a pick it cannot route.
+                val manager = composingManager ?: return@withTrace
+                handleContinuousCandidateClick(selectedWord, ic, manager)
                 return@withTrace
             }
 
-            val isEnglishSuggestion = selectedWord.id <= -100
-            val isNextWordPrediction = selectedWord.id < 0 && !isEnglishSuggestion
-
-            val cachedIsHanjiFirst = getIsHanjiFirst()
-            val cachedOutputBothScripts = getOutputBothScripts()
-            val isTPSLayout = prefs.isTpsLayout
-            val effectiveSwapped = isTPSLayout || cachedIsHanjiFirst
-
-            val resolved =
-                if (isEnglishSuggestion) {
-                    // An English word IS Latin text, so it takes the spacing.
-                    ResolvedCommit(selectedWord.roman, wroteRomanization = true)
-                } else {
-                    resolveTaigiCommit(selectedWord, isTPSLayout, effectiveSwapped, cachedOutputBothScripts)
-                }
-            val textToCommit = resolved.text
-
-            if (logger.isDebugEnabled) {
-                logger.d(
-                    TAG,
-                    "[CLICK] id=${selectedWord.id}, roman='${selectedWord.roman}', hanji='${selectedWord.hanji}'",
-                )
-                logger.d(
-                    TAG,
-                    "[CLICK] isHanjiFirst=$cachedIsHanjiFirst, effectiveSwapped=$effectiveSwapped, outputBothScripts=$cachedOutputBothScripts",
-                )
-                logger.d(
-                    TAG,
-                    "[CLICK] textToCommit='$textToCommit', isNextWord=$isNextWordPrediction, isEnglish=$isEnglishSuggestion",
-                )
-            }
-
-            if (isEnglishSuggestion) {
+            if (selectedWord.id <= -100) {
+                // An English word IS Latin text, so it takes the spacing.
+                val textToCommit = selectedWord.roman
+                logger.debug(TAG) { "[ENGLISH-CLICK] id=${selectedWord.id}, text='$textToCommit'" }
                 val textBeforeCursor = ic.getTextBeforeCursor(100, 0)?.toString() ?: ""
                 val currentWord = NextWordController.extractCurrentWord(textBeforeCursor)
                 if (currentWord.isNotEmpty()) {
@@ -116,27 +90,15 @@ class CandidateClickHandler(
                 ic.commitText(textToCommit, 1)
                 onClearCandidates()
                 logger.debug(TAG) { "[ENGLISH-CLICK] Replaced '$currentWord' with '$textToCommit'" }
-            } else if (isNextWordPrediction) {
-                logger.debug(TAG) { "[NEXTWORD-CLICK] BEFORE commitText: text='$textToCommit', ic=$ic" }
-                val result = ic.commitText(textToCommit, 1)
-                composingManager?.reset(ic)
-                logger.debug(TAG) { "[NEXTWORD-CLICK] AFTER commitText: result=$result" }
-            } else {
-                composingManager?.selectCandidate(textToCommit, ic)
+                appendAutoSpaceIfEarned(taigikeyboard, ic, textToCommit, true)
+                recordCommittedWord(selectedWord)
+                return@withTrace
             }
 
-            appendAutoSpaceIfEarned(taigikeyboard, ic, textToCommit, resolved.wroteRomanization)
-
-            // R5 pair-key (#7): the candidate's canonical-TL reading from the
-            // metadata sidechannel keeps multi-reading Hanji in separate buckets; "" only
-            // on wire skew / TPS-OOV / English rows.
-            val canonicalTl = selectedWord.additionalInfo[TaigiWord.MetadataKeys.CANONICAL_TL] ?: ""
-            usage.record(Usage(selectedWord.displayText, canonicalTl))
-
-            // NextWord learns the canonical reading, not the rendered `roman`
-            // (the Syllable Separator rewrites its hyphens, §49) — mirrors iOS
-            // ActionHandler+Suggestions.swift `associationRoman` (`additionalInfo["tl"]`).
-            onNextWordPrediction(selectedWord.displayText, canonicalTl.ifEmpty { selectedWord.roman })
+            // A NextWord prediction (`id < 0`): the only other word the strip
+            // carries (`TaigiAutocompleteService` produces Continuous cells,
+            // `NextWordController` the predictions).
+            commitNextWordPrediction(selectedWord, ic, composingManager)
         }
     }
 
@@ -211,44 +173,54 @@ class CandidateClickHandler(
         val ic = taigikeyboard.currentInputConnection ?: return
         val composingManager = getComposingManager()
 
-        // Continuous-input branch routes BEFORE the sentinel-id branches.
-        // Overlay taps on Continuous candidates must go through commitContinuous
-        // with the consumedBytes / syllableCount sidechannel; the default
-        // selectCandidate path would commit displayText only and mis-align
-        // the engine pending buffer.
-        if (word.additionalInfo[TaigiWord.MetadataKeys.IS_CONTINUOUS] == "true" && composingManager != null) {
-            handleContinuousCandidateClick(word, ic, composingManager)
+        // Continuous-input branch routes BEFORE the NextWord path. Overlay taps
+        // on Continuous candidates must go through commitContinuous with the
+        // consumedBytes / syllableCount sidechannel; a plain commitText would
+        // write displayText only and mis-align the engine pending buffer.
+        if (word.additionalInfo[TaigiWord.MetadataKeys.IS_CONTINUOUS] == "true") {
+            val manager = composingManager ?: return
+            handleContinuousCandidateClick(word, ic, manager)
             return
         }
 
-        val isNextWordPred = word.id < 0
-        val cachedIsHanjiFirst = getIsHanjiFirst()
-        val cachedOutputBothScripts = getOutputBothScripts()
-        val isTPSLayout = prefs.isTpsLayout
-        val effectiveSwapped = isTPSLayout || cachedIsHanjiFirst
-
-        val resolved = resolveTaigiCommit(word, isTPSLayout, effectiveSwapped, cachedOutputBothScripts)
-        val textToCommit = resolved.text
-
-        if (isNextWordPred) {
-            ic.commitText(textToCommit, 1)
-            composingManager?.reset(ic)
-            logger.debug(TAG) { "[OVERLAY] NextWord commitText: '$textToCommit'" }
-        } else {
-            composingManager?.selectCandidate(textToCommit, ic)
-        }
-
-        appendAutoSpaceIfEarned(taigikeyboard, ic, textToCommit, resolved.wroteRomanization)
-
-        // R5 pair-key (#7): canonical-TL reading from the metadata
-        // sidechannel; "" only on wire skew / TPS-OOV / English rows.
-        val canonicalTl = word.additionalInfo[TaigiWord.MetadataKeys.CANONICAL_TL] ?: ""
-        usage.record(Usage(word.displayText, canonicalTl))
-
-        // NextWord learns the canonical reading (§49) — see the strip path above.
-        onNextWordPrediction(word.displayText, canonicalTl.ifEmpty { word.roman })
+        // A NextWord prediction (`id < 0`): the only non-Continuous word the
+        // overlay carries.
+        commitNextWordPrediction(word, ic, composingManager)
 
         logger.debug(TAG) { "[OVERLAY] Selected suggestion: ${word.displayText} at index $index" }
+    }
+
+    /**
+     * One NextWord prediction tap, strip or expanded overlay: the
+     * platform-resolved text is committed, the composition reset, auto-space
+     * judged, usage counted and the pair learned.
+     */
+    private fun commitNextWordPrediction(
+        word: TaigiWord,
+        ic: android.view.inputmethod.InputConnection,
+        composingManager: com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager?,
+    ) {
+        val isTPSLayout = prefs.isTpsLayout
+        val resolved = resolveTaigiCommit(word, isTPSLayout, isTPSLayout || getIsHanjiFirst(), getOutputBothScripts())
+        val textToCommit = resolved.text
+        logger.debug(TAG) { "[NEXTWORD-CLICK] id=${word.id}, roman='${word.roman}', hanji='${word.hanji}', text='$textToCommit'" }
+        ic.commitText(textToCommit, 1)
+        composingManager?.reset(ic)
+        appendAutoSpaceIfEarned(taigikeyboard, ic, textToCommit, resolved.wroteRomanization)
+        recordCommittedWord(word)
+    }
+
+    /** Usage count + NextWord learning for a committed non-Continuous word. */
+    private fun recordCommittedWord(word: TaigiWord) {
+        // R5 pair-key (#7): the canonical-TL reading from the metadata sidechannel
+        // keeps multi-reading Hanji in separate buckets; "" only on TPS-OOV /
+        // English rows.
+        val canonicalTl = word.additionalInfo[TaigiWord.MetadataKeys.CANONICAL_TL] ?: ""
+        usage.record(Usage(word.displayText, canonicalTl))
+        // NextWord learns the canonical reading, not the rendered `roman` (the
+        // Syllable Separator rewrites its hyphens, §49); iOS learns from the
+        // same sidechannel.
+        onNextWordPrediction(word.displayText, canonicalTl.ifEmpty { word.roman })
     }
 
     /**
@@ -263,7 +235,7 @@ class CandidateClickHandler(
      *
      * `DISPLAY_TEXT`, `CONSUMED_BYTES`, and `SYLLABLE_COUNT` are
      * strict-required (Item 4 fork F2=A); missing or unparseable → drop the
-     * tap. No fallback to `selectCandidate(text)` — would lose
+     * tap. No fallback to a plain commit of the text — would lose
      * `consumedBytes` and corrupt `Phase::Continuous { raw }` byte alignment.
      */
     private fun handleContinuousCandidateClick(
@@ -416,8 +388,8 @@ internal fun continuousPick(word: TaigiWord): RustEngineBridge.ContinuousPick? {
         script = commitScript(word),
         roman = word.roman,
         canonicalText = canonicalText,
-        // Absent only on wire skew → "" → the engine falls back to the raw
-        // committed slice for NextWord.
+        // Absent only when the pick carries no reading (TPS-OOV) → "" → the
+        // engine uses the raw committed slice for NextWord.
         associationTl = info[TaigiWord.MetadataKeys.CANONICAL_TL] ?: "",
         // §50 — the pick's hanji (identity, not the committed script): the
         // engine learns a composition only when every segment carried one.

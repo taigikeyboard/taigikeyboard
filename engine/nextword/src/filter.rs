@@ -1102,8 +1102,8 @@ mod tests {
         assert_eq!(shaped.predictions[0].tl, "tâi-uân");
     }
 
-    /// R6: the TPS layout as `"tps"` with the stored flags shapes exactly what
-    /// the pre-R6 wire (`"tl"`, the separator folded to Hyphen, the stored swap) shaped:
+    /// The TPS layout as `"tps"` with the stored flags shapes exactly what
+    /// `"tl"` with the separator folded to Hyphen and the stored swap shapes:
     /// TL text, hyphens kept, and the empty-roman drop still reading the
     /// stored swap.
     #[test]

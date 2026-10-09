@@ -172,24 +172,6 @@ fn invariant_commit_raw_idle_is_noop() {
     assert!(resp.effect.is_empty());
 }
 
-// ---- SelectCandidate ----
-
-#[test]
-fn invariant_select_candidate_commits_supplied_text() {
-    let mut engine = Engine::new();
-    engine.apply(Intent::Start { text: "a".into() }, &config_tl());
-    let resp = engine.apply(Intent::SelectCandidate { text: "好".into() }, &config_tl());
-    assert_eq!(commit_text(&resp).as_deref(), Some("好"));
-    assert!(!resp.is_composing);
-}
-
-#[test]
-fn invariant_select_candidate_idle_is_noop() {
-    let mut engine = Engine::new();
-    let resp = engine.apply(Intent::SelectCandidate { text: "好".into() }, &config_tl());
-    assert!(resp.effect.is_empty());
-}
-
 // ---- CommitPreeditThenInsertExternal ----
 
 #[test]

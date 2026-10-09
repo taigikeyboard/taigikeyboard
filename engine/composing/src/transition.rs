@@ -104,12 +104,6 @@ pub(crate) fn apply(
         Intent::ReplaceLast { replacement } => replace_last(state, replacement, config, frequency),
         Intent::DeleteBackward => delete_backward(state, config, frequency),
         Intent::CommitRaw => commit_raw(state, config),
-        Intent::SelectCandidate { text } => match &state.phase {
-            Phase::Continuous { nailed, .. } => {
-                select_candidate_under_continuous(state, nailed.clone(), text, config)
-            }
-            Phase::Idle => noop(state, config),
-        },
         Intent::CommitPreeditThenInsertExternal { text } => match &state.phase {
             Phase::Continuous { .. } => {
                 commit_preedit_then_insert_external_under_continuous(state, text, config)
@@ -882,32 +876,6 @@ fn start_under_continuous(
         effect: effects,
         ..resp
     }
-}
-
-/// `Intent::SelectCandidate { text }` arriving while in `Phase::Continuous`.
-/// Codex post-impl finding #3: silently dropping `text` would lose user
-/// selection. **Model B**: the nailed prefix is in the marked region (not
-/// the document), so committing `text` alone would lose it. Commit the
-/// whole composition with the pending tail replaced by `text` —
-/// `Σ nailed[i].display_text + text` — in one `CommitTextReplacingPreedit`,
-/// preserving the net-document parity the pre-Model-B behavior had
-/// (nailed-in-doc + text). Then exit Continuous.
-fn select_candidate_under_continuous(
-    state: &mut EngineState,
-    nailed: Vec<NailedSegment>,
-    text: String,
-    config: &AppConfig,
-) -> ComposingResponse {
-    if text.is_empty() {
-        // Empty suggestion: drop continuous state without inserting. Mirrors
-        // SelectCandidate-on-Idle being a no-op.
-        return reset(state, config);
-    }
-    let mut combined = nailed_prefix(&nailed, config);
-    combined.push_str(&text);
-    let mut effects = finalize_effects(combined);
-    effects.push(next_word_clear_for_new_composing());
-    exit_to_idle(state, effects)
 }
 
 /// `Intent::CommitPreeditThenInsertExternal { text }` under Continuous.

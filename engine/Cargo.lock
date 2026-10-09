@@ -398,7 +398,6 @@ dependencies = [
  "ranking",
  "test-support",
  "thiserror",
- "unicode-normalization",
 ]
 
 [[package]]

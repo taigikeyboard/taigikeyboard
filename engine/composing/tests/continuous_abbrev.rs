@@ -156,7 +156,7 @@ fn ss_surfaces_abbreviated_words_after_the_literal() {
     assert_eq!(hanji("ss", "tl"), vec!["先生", "鎖匙"], "{cands:?}");
     let sosi = &cands[2];
     assert_eq!(sosi.roman, "só-sî");
-    assert_eq!((sosi.consumed_span_start, sosi.consumed_span_end), (0, 2));
+    assert_eq!(sosi.consumed_span_end, 2);
 }
 
 #[test]
@@ -200,10 +200,7 @@ fn span_local_branch_dedupes_partial_overlap_before_capping() {
         .iter()
         .find(|c| c.hanji.as_deref() == Some("物件"))
         .expect("物件 via the span-local branch");
-    assert_eq!(
-        (mihkiann.consumed_span_start, mihkiann.consumed_span_end),
-        (0, 2)
-    );
+    assert_eq!(mihkiann.consumed_span_end, 2);
     assert_eq!(mihkiann.syllable_count, 2, "record's own syllable count");
 }
 
@@ -263,11 +260,7 @@ fn tps_initials_match_the_tps_abbreviation() {
         .iter()
         .find(|c| c.hanji.as_deref() == Some("鎖匙"))
         .unwrap_or_else(|| panic!("鎖匙 via tps:ㄙㄒ; got {cands:?}"));
-    assert_eq!(
-        (sosi.consumed_span_start, sosi.consumed_span_end),
-        (0, 6),
-        "TPS span is UTF-8 bytes"
-    );
+    assert_eq!(sosi.consumed_span_end, 6, "TPS span is UTF-8 bytes");
     // A tone mark on the tail disqualifies the buffer.
     assert!(!hanji("ㄙㄒˊ", "tps").iter().any(|h| h == "鎖匙"));
 }

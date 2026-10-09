@@ -41,24 +41,17 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
     }
 
     private func makeCandidate(
-        consumedSpanStart: UInt32 = 0,
         consumedSpanEnd: UInt32,
         syllableCount: UInt32 = 1,
         displayText: String,
-        score: Float = 1.0,
-        scriptKind: RustEngineBridge.CandidateScriptKind = .hant,
         roman: String? = nil,
         hanji: String? = nil,
         canonicalTl: String? = nil,
     ) -> RustEngineBridge.ContinuousCandidate {
         RustEngineBridge.ContinuousCandidate(
-            consumedSpanStart: consumedSpanStart,
             consumedSpanEnd: consumedSpanEnd,
             syllableCount: syllableCount,
             displayText: displayText,
-            score: score,
-            form: 1,
-            scriptKind: scriptKind,
             roman: roman ?? displayText,
             hanji: hanji,
             canonicalTl: canonicalTl ?? roman ?? displayText,
@@ -87,7 +80,7 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
     func testContinuousCandidatesCarryExactMetadataKeyStrings() {
         let candidates = [
             makeCandidate(consumedSpanEnd: 4, syllableCount: 1, displayText: "tsua"),
-            makeCandidate(consumedSpanEnd: 7, syllableCount: 2, displayText: "珠仔", score: 0.5),
+            makeCandidate(consumedSpanEnd: 7, syllableCount: 2, displayText: "珠仔"),
         ]
         let result = service.buildContinuousSuggestions(from: candidates)
 
@@ -123,10 +116,10 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
 
     func testConsumedBytesUsesConsumedSpanEnd() {
         // Engine spans are byte-relative-to-pending-buffer; commit consumes
-        // bytes [start, end). The consumer needs `end` to know how many
+        // bytes up to `end`. The consumer needs `end` to know how many
         // bytes to drop from pending. Mid-commit candidate.
         let candidates = [
-            makeCandidate(consumedSpanStart: 3, consumedSpanEnd: 7, displayText: "uan"),
+            makeCandidate(consumedSpanEnd: 7, displayText: "uan"),
         ]
         let result = service.buildContinuousSuggestions(from: candidates)
         XCTAssertEqual(result[0].additionalInfo["consumedBytes"], "7")
@@ -165,7 +158,6 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
                 consumedSpanEnd: 7,
                 syllableCount: 2,
                 displayText: "臺灣",
-                scriptKind: .hant,
                 roman: "tâi-uân",
                 hanji: "臺灣",
             ),
@@ -199,7 +191,6 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
                 consumedSpanEnd: 7,
                 syllableCount: 2,
                 displayText: "臺灣",
-                scriptKind: .hant,
                 roman: "tâi-uân",
                 hanji: "臺灣",
             ),
@@ -220,7 +211,6 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
                 consumedSpanEnd: 4,
                 syllableCount: 1,
                 displayText: "tāi",
-                scriptKind: .tailo,
                 roman: "tāi",
                 hanji: nil,
             ),
@@ -232,8 +222,7 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
         XCTAssertEqual(result[0].additionalInfo["displayText"], "tāi")
     }
 
-    /// MIXED candidate (hanji contains Latin letters, per
-    /// `derive_script_kind` NFKD scan in `engine/lexicon/src/continuous/`).
+    /// Candidate whose hanji contains Latin letters.
     /// Renders dual-line the same way HANT does.
     func testItem6_MIXEDCandidate_DualLine() {
         let candidates = [
@@ -241,7 +230,6 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
                 consumedSpanEnd: 9,
                 syllableCount: 2,
                 displayText: "hip相",
-                scriptKind: .mixed,
                 roman: "hip-siòng",
                 hanji: "hip相",
             ),
@@ -264,7 +252,6 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
                 consumedSpanEnd: 4,
                 syllableCount: 1,
                 displayText: "tāi",
-                scriptKind: .tailo,
                 roman: "tāi",
                 hanji: "",
             ),
@@ -290,7 +277,6 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
                 consumedSpanEnd: 7,
                 syllableCount: 2,
                 displayText: "臺灣",
-                scriptKind: .hant,
                 roman: "tâi-uân",
                 hanji: "臺灣",
             ),
@@ -322,7 +308,6 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
                 consumedSpanEnd: 7,
                 syllableCount: 2,
                 displayText: "臺灣",
-                scriptKind: .hant,
                 roman: "tâi-uân",
                 hanji: "臺灣",
             ),
@@ -356,7 +341,6 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
                 consumedSpanEnd: 7,
                 syllableCount: 2,
                 displayText: "台語",
-                scriptKind: .hant,
                 roman: "tâi-gí",
                 hanji: "台語",
                 canonicalTl: "tâi-gí",
@@ -396,7 +380,7 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
 
     func testCombined_HanjiLessCandidate_EmitsSingleRomanCell() {
         let candidates = [
-            makeCandidate(consumedSpanEnd: 4, displayText: "tāi", scriptKind: .tailo, roman: "tāi", hanji: nil),
+            makeCandidate(consumedSpanEnd: 4, displayText: "tāi", roman: "tāi", hanji: nil),
         ]
         let result = service.buildContinuousSuggestions(
             from: candidates,
@@ -414,8 +398,8 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
     /// roman cell beside the first.
     func testCombined_RomanCellDedupe_FirstSeenWins_DistinctHanjiCellsStay() {
         let candidates = [
-            makeCandidate(consumedSpanEnd: 5, displayText: "食", scriptKind: .hant, roman: "tsia̍h", hanji: "食"),
-            makeCandidate(consumedSpanEnd: 5, displayText: "𤆬", scriptKind: .hant, roman: "tsia̍h", hanji: "𤆬"),
+            makeCandidate(consumedSpanEnd: 5, displayText: "食", roman: "tsia̍h", hanji: "食"),
+            makeCandidate(consumedSpanEnd: 5, displayText: "𤆬", roman: "tsia̍h", hanji: "𤆬"),
         ]
         let result = service.buildContinuousSuggestions(
             from: candidates,
@@ -429,8 +413,8 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
     /// same-roman dict row's roman cell.
     func testCombined_LiteralAbsorbsSameRoman() {
         let candidates = [
-            makeCandidate(consumedSpanEnd: 3, displayText: "tâi", scriptKind: .tailo, roman: "tâi", hanji: nil),
-            makeCandidate(consumedSpanEnd: 3, displayText: "台", scriptKind: .hant, roman: "tâi", hanji: "台"),
+            makeCandidate(consumedSpanEnd: 3, displayText: "tâi", roman: "tâi", hanji: nil),
+            makeCandidate(consumedSpanEnd: 3, displayText: "台", roman: "tâi", hanji: "台"),
         ]
         let result = service.buildContinuousSuggestions(
             from: candidates,
@@ -445,8 +429,8 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
     /// apart on screen (USER 2026-09-03).
     func testCombined_SameTextDifferentSpan_IsOneCell() {
         let candidates = [
-            makeCandidate(consumedSpanEnd: 3, displayText: "tâi", scriptKind: .tailo, roman: "tâi", hanji: nil),
-            makeCandidate(consumedSpanEnd: 7, displayText: "tâi", scriptKind: .tailo, roman: "tâi", hanji: nil),
+            makeCandidate(consumedSpanEnd: 3, displayText: "tâi", roman: "tâi", hanji: nil),
+            makeCandidate(consumedSpanEnd: 7, displayText: "tâi", roman: "tâi", hanji: nil),
         ]
         let result = service.buildContinuousSuggestions(
             from: candidates,
@@ -455,8 +439,8 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
         XCTAssertEqual(result.count, 1, "same rendered roman → one cell, span is not part of the key")
 
         let hanji = [
-            makeCandidate(consumedSpanEnd: 5, displayText: "食", scriptKind: .hant, roman: "tsia̍h", hanji: "食"),
-            makeCandidate(consumedSpanEnd: 6, displayText: "食", scriptKind: .hant, roman: "tsia̍h8", hanji: "食"),
+            makeCandidate(consumedSpanEnd: 5, displayText: "食", roman: "tsia̍h", hanji: "食"),
+            makeCandidate(consumedSpanEnd: 6, displayText: "食", roman: "tsia̍h8", hanji: "食"),
         ]
         let hanjiResult = service.buildContinuousSuggestions(from: hanji, splitCombinedCells: true)
         XCTAssertEqual(hanjiResult.map(\.text), ["食", "tsia̍h", "tsia̍h8"], "one 食 cell; the second roman still differs")
@@ -467,8 +451,8 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
     /// reading stays reachable through its own romanization.
     func testCombined_SameHanjiTwoReadings_IsOneHanjiCellTwoRomanCells() {
         let candidates = [
-            makeCandidate(consumedSpanEnd: 5, displayText: "重", scriptKind: .hant, roman: "tîng", hanji: "重", canonicalTl: "tîng"),
-            makeCandidate(consumedSpanEnd: 5, displayText: "重", scriptKind: .hant, roman: "tāng", hanji: "重", canonicalTl: "tāng"),
+            makeCandidate(consumedSpanEnd: 5, displayText: "重", roman: "tîng", hanji: "重", canonicalTl: "tîng"),
+            makeCandidate(consumedSpanEnd: 5, displayText: "重", roman: "tāng", hanji: "重", canonicalTl: "tāng"),
         ]
         let result = service.buildContinuousSuggestions(
             from: candidates,
@@ -490,7 +474,6 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
                 consumedSpanEnd: 7,
                 syllableCount: 2,
                 displayText: "臺灣",
-                scriptKind: .hant,
                 roman: "tâi-uân",
                 hanji: "臺灣",
             ),

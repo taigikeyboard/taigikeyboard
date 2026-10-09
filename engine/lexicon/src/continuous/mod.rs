@@ -60,7 +60,6 @@
 //! `engine/lexicon/tests/common/mod.rs`.
 
 use phonetics::{KeyFamily, HANJI_KEY_PREFIX};
-use unicode_normalization::UnicodeNormalization;
 
 use crate::dictionary_reader::{DictionaryReader, Filter, WALKER_COST_UNPRICED};
 use crate::prefix_index::PrefixIndex;
@@ -138,69 +137,6 @@ pub const PARTIAL_PREFIX_HYDRATE_CAP: usize = 500;
 /// byte-sort prefix. Matches the legacy `LexiconService` per-request
 /// output size to keep the candidate strip visually stable.
 pub const PARTIAL_PREFIX_OUTPUT_CAP: usize = 30;
-
-/// MOE-aligned candidate-type discriminator (`VocType` analog). Carried
-/// on every [`RawCandidate`] and wire-encoded onto
-/// `protos::taigi::engine::CandidateMessage.script_kind` (Phase 9.2). Derived
-/// from `DictionaryRecord.hanji` presence + NFKD-normalized Latin-letter
-/// detection by [`derive_script_kind`]; never emitted as
-/// [`CandidateScriptKind::Unspecified`] from Rust.
-///
-/// **Metadata-only in v3.5.8 Phase 9.2** — does NOT enter the nine-
-/// dimension [`CandidateSortKey`] tie-break (per `docs/releases/v3.5.8/plan.md` § Phase 9 R2
-/// Q3.a "reserve rank use until real collisions are measured"). The
-/// existing `form` axis remains orthogonal (toneless / numeric / hanji
-/// / abbrev) and unaffected.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(u8)]
-pub enum CandidateScriptKind {
-    /// Proto3 default — Rust never emits this; platforms reading the
-    /// wire treat it as "unknown carrier, ignore" rather than HANT.
-    Unspecified = 0,
-    /// Hanji-only display (no Latin letters after NFKD normalization).
-    Hant = 1,
-    /// Roman/romanization-only display — `DictionaryRecord.hanji` was
-    /// `None`, so `display_text` fell back to the TL field.
-    Tailo = 2,
-    /// Hanji display containing at least one Latin letter after NFKD
-    /// (e.g. `iáu未`, `ê早`, `屎î`, hypothetical fullwidth `Ａ字`).
-    Mixed = 3,
-}
-
-impl CandidateScriptKind {
-    /// Wire-format integer matching `protos::CandidateScriptKind`'s prost
-    /// representation. Kept as a method so a future reshuffle of the
-    /// proto enum values would fail this cast at compile time via the
-    /// `as u32` discriminant.
-    pub const fn to_proto_i32(self) -> i32 {
-        self as i32
-    }
-}
-
-/// Derive the [`CandidateScriptKind`] for a dictionary record. `hanji.is_none()`
-/// is the only TAILO path; otherwise the hanji string is NFKD-normalized
-/// (folding `ê` → `e` + combining circumflex and `Ａ` → `A`) and any
-/// resulting ASCII alphabetic codepoint flips the candidate to MIXED.
-/// Digits / punctuation / kana / private-use glyphs alone do NOT flip
-/// MIXED — the intent is "Roman letters inside the hanji display",
-/// matching MOE `VT_MIXED` for entries like `台BAR`.
-///
-/// **Single source of truth for `CandidateScriptKind`.** `record_to_candidate`,
-/// `custom_entry_to_candidate`, and the v3.5.8 S2 whole-sentence
-/// walker's slot-0 synthesis (`composing::continuous::fetch_walker_slot0_inner`)
-/// all derive `script_kind` through this fn so `CandidateMessage.script_kind` is
-/// classified identically for span-local, custom, and synthesized
-/// full-buffer candidates (Codex PR #285 P2, 2026-05-16 — a hand-rolled
-/// `hanji.is_some()` binary in the synth path mis-emitted HANT for
-/// mixed-script paths like `…hip相`). `pub` so `composing` reuses the
-/// wire-visible classification instead of duplicating the NFKD rule.
-pub fn derive_script_kind(hanji: Option<&str>) -> CandidateScriptKind {
-    match hanji {
-        None => CandidateScriptKind::Tailo,
-        Some(text) if text.nfkd().any(|c| c.is_ascii_alphabetic()) => CandidateScriptKind::Mixed,
-        Some(_) => CandidateScriptKind::Hant,
-    }
-}
 
 /// One span-local candidate. Mirrors the 5-field shape pinned by
 /// `docs/releases/v3.5.8/plan.md` § Phase 5 — Each Candidate carries (5-field shape).
@@ -281,10 +217,6 @@ pub struct RawCandidate {
     /// re-reading the dictionary record) lets the sort be a pure
     /// function of the returned `RawCandidate` vector.
     pub bitmask: u16,
-    /// MOE-aligned candidate-type discriminator (HANT / TAILO / MIXED).
-    /// Derived by [`derive_script_kind`] from `DictionaryRecord.hanji`.
-    /// Metadata-only in Phase 9.2 — not consulted by [`CandidateSortKey`].
-    pub script_kind: CandidateScriptKind,
     /// Time-decayed user-selection weight for this candidate's
     /// `(display_text, canonical_tl)` pair
     /// ([`ranking::FrequencyData::user_weight`]; `0.0` = never selected,
@@ -352,8 +284,7 @@ impl RawCandidate {
 /// `(canonical_tl, hanji)` dedupe key collides correctly against
 /// `dict.bin`'s `DictionaryRecord.tl` / `.hanji`. `hanji = None`
 /// is a romanization-only custom entry (mirrors
-/// `DictionaryRecord.hanji` / `RawCandidate.hanji` `Option` semantics
-/// — drives [`derive_script_kind`] → `CandidateScriptKind::Tailo`).
+/// `DictionaryRecord.hanji` / `RawCandidate.hanji` `Option` semantics).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CustomEntry {
     pub roman: String,
@@ -1496,162 +1427,6 @@ impl<'a> SyllableReach<'a> {
 }
 
 #[cfg(test)]
-mod mode_derive_tests {
-    //! Hermetic unit tests for the v3.5.8 Phase 9.2 `CandidateScriptKind`
-    //! derive (`derive_script_kind`). Covers the four classification axes
-    //! Codex co-decided 2026-05-11:
-    //!
-    //! 1. `hanji.is_none()` → TAILO
-    //! 2. Plain-ASCII Latin in hanji → MIXED
-    //! 3. NFC-composed Latin (e.g. `ê`) in hanji → MIXED via NFKD
-    //! 4. Fullwidth Latin (e.g. `Ａ`) in hanji → MIXED via NFKD
-    //! 5. Pure CJK → HANT
-    //! 6. Digits / punctuation alone do NOT flip MIXED
-    use super::*;
-
-    #[test]
-    fn no_hanji_means_tailo() {
-        // Roman-only entries (`hanji = None`, `display_text` falls back
-        // to the TL field).
-        assert_eq!(derive_script_kind(None), CandidateScriptKind::Tailo);
-    }
-
-    #[test]
-    fn pure_cjk_is_hant() {
-        // Canonical hanji-only display.
-        assert_eq!(
-            derive_script_kind(Some("臺灣台語")),
-            CandidateScriptKind::Hant
-        );
-        assert_eq!(derive_script_kind(Some("珠仔")), CandidateScriptKind::Hant);
-        assert_eq!(derive_script_kind(Some("台")), CandidateScriptKind::Hant);
-    }
-
-    #[test]
-    fn plain_ascii_latin_in_hanji_is_mixed() {
-        // Real dictionary entries: `hip相`, `iah是`, `ing暗`. The first
-        // Latin codepoint is plain ASCII so it would flip MIXED even
-        // without NFKD; this test pins the easy path.
-        assert_eq!(
-            derive_script_kind(Some("hip相")),
-            CandidateScriptKind::Mixed
-        );
-        assert_eq!(
-            derive_script_kind(Some("iah是")),
-            CandidateScriptKind::Mixed
-        );
-        assert_eq!(
-            derive_script_kind(Some("ing暗")),
-            CandidateScriptKind::Mixed
-        );
-        // Hypothetical "台BAR" — Codex Q-F3 example.
-        assert_eq!(
-            derive_script_kind(Some("台BAR")),
-            CandidateScriptKind::Mixed
-        );
-    }
-
-    #[test]
-    fn s2_synth_concatenated_hanji_is_mixed_when_any_edge_has_latin() {
-        // v3.5.8 S2 (Codex PR #285 P2): the whole-sentence walker
-        // synthesizes the slot-0 hanji by concatenating each edge's
-        // hanji and classifies the WHOLE joined string through this
-        // fn (`composing::continuous::fetch_walker_slot0_inner`). A Latin
-        // letter in a NON-first segment (e.g. path `臺灣` + `hip相`)
-        // must still flip MIXED — equivalent to the per-edge OR and
-        // matching how a single multi-syllable record would classify.
-        assert_eq!(
-            derive_script_kind(Some("臺灣hip相")),
-            CandidateScriptKind::Mixed
-        );
-        // All-CJK concatenation stays HANT (the common phrase path).
-        assert_eq!(
-            derive_script_kind(Some("臺灣台語")),
-            CandidateScriptKind::Hant
-        );
-    }
-
-    #[test]
-    fn composed_latin_in_hanji_is_mixed_via_nfkd() {
-        // Real entries `ê早` (line 22953 of dictionary.csv), `ē得`
-        // (22960), `屎î` (42037). The Latin codepoint is NFC-composed
-        // (e.g. `ê` = U+00EA, NOT `e` + combining circumflex), so
-        // `is_ascii_alphabetic` on the original chars would miss it.
-        // NFKD decomposes to base ASCII `e` / `i` + combining mark.
-        assert_eq!(derive_script_kind(Some("ê早")), CandidateScriptKind::Mixed);
-        assert_eq!(derive_script_kind(Some("ē得")), CandidateScriptKind::Mixed);
-        assert_eq!(derive_script_kind(Some("屎î")), CandidateScriptKind::Mixed);
-    }
-
-    #[test]
-    fn fullwidth_latin_in_hanji_is_mixed_via_nfkd() {
-        // Theoretical: U+FF21..U+FF3A fullwidth Latin folds to ASCII
-        // under NFKD (NOT NFD). Pins the "K/D normalization, not just
-        // D" choice from Codex F3-c.
-        assert_eq!(derive_script_kind(Some("Ａ字")), CandidateScriptKind::Mixed);
-        assert_eq!(derive_script_kind(Some("字Ｚ")), CandidateScriptKind::Mixed);
-    }
-
-    #[test]
-    fn digits_or_punctuation_alone_stay_hant() {
-        // F3-d: `123` is HANT (no Latin LETTERS). `3Q` is MIXED via the
-        // `Q`. Punctuation likewise does not flip MIXED.
-        assert_eq!(derive_script_kind(Some("123")), CandidateScriptKind::Hant);
-        assert_eq!(derive_script_kind(Some("3Q")), CandidateScriptKind::Mixed);
-        assert_eq!(derive_script_kind(Some("。、")), CandidateScriptKind::Hant);
-    }
-
-    #[test]
-    fn empty_hanji_string_stays_hant() {
-        // Defensive: `hanji = Some("")` (shouldn't happen but the
-        // contract is "any Some without Latin letters = HANT", and an
-        // empty NFKD iterator finds no ASCII alphabetic codepoint).
-        assert_eq!(derive_script_kind(Some("")), CandidateScriptKind::Hant);
-    }
-
-    #[test]
-    fn proto_wire_value_matches_enum_discriminant() {
-        // The proto enum (`CandidateScriptKind` in composing.proto) uses
-        // exactly UNSPECIFIED=0, HANT=1, TAILO=2, MIXED=3. The cast
-        // here pins the wire integers so a future reshuffle of the
-        // Rust `repr(u8)` discriminants would fail this test.
-        assert_eq!(CandidateScriptKind::Unspecified.to_proto_i32(), 0);
-        assert_eq!(CandidateScriptKind::Hant.to_proto_i32(), 1);
-        assert_eq!(CandidateScriptKind::Tailo.to_proto_i32(), 2);
-        assert_eq!(CandidateScriptKind::Mixed.to_proto_i32(), 3);
-    }
-
-    #[test]
-    fn local_enum_matches_prost_generated_proto_enum() {
-        // Cross-pin: the local `CandidateScriptKind` (in this crate) must agree
-        // byte-for-byte with `protos::engine::CandidateScriptKind` (prost-
-        // generated from `engine/protos/proto/composing.proto`). If the
-        // proto definition is reshuffled the cast in
-        // `raw_to_proto_candidate` (which feeds prost via `i32`) would
-        // silently misroute; this test fails first.
-        //
-        // Per Codex post-impl finding #2 (P3, 2026-05-11).
-        use protos::engine::CandidateScriptKind as ProtoCandidateScriptKind;
-        assert_eq!(
-            CandidateScriptKind::Unspecified.to_proto_i32(),
-            ProtoCandidateScriptKind::Unspecified as i32
-        );
-        assert_eq!(
-            CandidateScriptKind::Hant.to_proto_i32(),
-            ProtoCandidateScriptKind::Hant as i32
-        );
-        assert_eq!(
-            CandidateScriptKind::Tailo.to_proto_i32(),
-            ProtoCandidateScriptKind::Tailo as i32
-        );
-        assert_eq!(
-            CandidateScriptKind::Mixed.to_proto_i32(),
-            ProtoCandidateScriptKind::Mixed as i32
-        );
-    }
-}
-
-#[cfg(test)]
 mod typed_tone_pin_tests {
     use super::{reading_passes_typed_tones, TonePin, TypedBoundary};
     use phonetics::InputMode::{self, Poj, Tl};
@@ -1914,7 +1689,6 @@ mod edge_word_pick_tests {
             frequency,
             walker_cost: EQUAL_COST,
             bitmask: 0,
-            script_kind: CandidateScriptKind::Hant,
             user_weight,
             context_rank,
             coverage_kind: COVERAGE_KIND_FULL,

@@ -7,8 +7,8 @@ import XCTest
 /// Scope: Swift-side decode the engine cannot see — the `candidates` nil
 /// branch of `ContinuousFetchResult`, the partial-consume NextWord effect,
 /// the engine-resolved commit (`earnsAutoSpace`, `ContinuousPick.request`),
-/// spacing flags, `CandidateScriptKind` / wire-schema decode, the bridge-failure
-/// flag. Phase transitions, fetch, reset and stale-generation behaviour are
+/// spacing flags, the bridge-failure flag. Phase transitions, fetch, reset
+/// and stale-generation behaviour are
 /// engine tests (`engine/composing/tests/continuous_phase.rs`,
 /// `dispatch_continuous.rs`, `continuous_commit_resolution.rs`); the
 /// manager-level flow is `ComposingManagerContinuousTests`.
@@ -172,28 +172,6 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
         XCTAssertEqual(bopomofo, "ㄉㄞˊ")
         XCTAssertEqual(result.outcome, .finalized(earnsAutoSpace: false))
         XCTAssertTrue(result.transition.effects.contains(.commitTextReplacingPreedit(bopomofo)), "\(result.transition.effects)")
-    }
-
-    // MARK: - Phase 9.2 mode carrier
-
-    /// Decode mapping from `Taigi_Engine_CandidateScriptKind` (wire integer) to
-    /// the Swift `RustEngineBridge.CandidateScriptKind` enum. Pins the four
-    /// wire values (UNSPECIFIED=0, HANT=1, TAILO=2, MIXED=3) so a future
-    /// proto reshuffle would fail this test before reaching the UI layer.
-    func testCandidateScriptKindDecode_AllWireValues() {
-        XCTAssertEqual(RustEngineBridge.CandidateScriptKind.decode(0), .unspecified)
-        XCTAssertEqual(RustEngineBridge.CandidateScriptKind.decode(1), .hant)
-        XCTAssertEqual(RustEngineBridge.CandidateScriptKind.decode(2), .tailo)
-        XCTAssertEqual(RustEngineBridge.CandidateScriptKind.decode(3), .mixed)
-    }
-
-    /// Forward-compat: a wire value the platform binding doesn't recognize
-    /// (e.g. a newer engine added a fourth variant) must collapse to
-    /// `.unspecified` rather than crash or randomly map. Pins F8 of the
-    /// Codex pre-impl decision matrix.
-    func testCandidateScriptKindDecode_UnknownWireValueFallsBackToUnspecified() {
-        XCTAssertEqual(RustEngineBridge.CandidateScriptKind.decode(99), .unspecified)
-        XCTAssertEqual(RustEngineBridge.CandidateScriptKind.decode(-1), .unspecified)
     }
 
     // MARK: - Dictionary toggles

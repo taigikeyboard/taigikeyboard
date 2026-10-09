@@ -25,12 +25,12 @@
 //!    `consumed_span`; presentation `roman` only —`display_text` / `hanji`
 //!    untouched).
 //! 4. `fetch_walker_slot0_inner(..) → Some(slot0)`: span-aware
-//!    retain-dedupe on `(hanji, consumed_span)` + identity or recased roman, then `insert(0,
-//!    raw_to_proto_slot0(slot0))`. The walker returns a [`WalkerSlot0`] —
-//!    **D3 honest type** — and the seam converts to `RawCandidate` with
-//!    `score = -(slot0.cost as f32)` (the negated-cost bridge IS the wire
-//!    contract, `CandidateMessage.score` proto field 5;
-//!    `frequency`/`bitmask` are walker-N/A and stay `0`).
+//!    retain-dedupe on `(hanji, consumed_span)` + identity or recased roman, then
+//!    `insert(0, ..)`. The walker returns a [`WalkerSlot0`] — **D3 honest
+//!    type** — and the seam converts to `RawCandidate` with
+//!    `score = -(slot0.cost as f32)` (engine-internal and informational: slot
+//!    0 is an explicit prepend, never sort-compared; `frequency`/`bitmask`
+//!    are walker-N/A and stay `0`).
 //!
 //!    **Step 4b — whole-input prefix-extension scan (else-branch only).**
 //!    After the walker slot-0 prepend, run
@@ -80,11 +80,11 @@ use crate::shadow::{
     greedy_longest_syllabification, span_min_syllable_count, strip_tones_for_mode,
 };
 use lexicon::{
-    best_candidate_for_key_with_barriers, derive_script_kind,
-    fetch_candidates_for_keys_with_barriers, fetch_partial_prefix_candidates,
-    fetch_partial_prefix_candidates_unbounded, homophone_words_for_key, CandidateScriptKind,
-    ConsumedSpan, ContinuousFetchCtx, CustomEntry, EngineHandle as LexiconHandle, LearnedEntry,
-    RawCandidate, SyllableInventory, COVERAGE_KIND_FULL, FORM_NOTONE, PARTIAL_PREFIX_OUTPUT_CAP,
+    best_candidate_for_key_with_barriers, fetch_candidates_for_keys_with_barriers,
+    fetch_partial_prefix_candidates, fetch_partial_prefix_candidates_unbounded,
+    homophone_words_for_key, ConsumedSpan, ContinuousFetchCtx, CustomEntry,
+    EngineHandle as LexiconHandle, LearnedEntry, RawCandidate, SyllableInventory,
+    COVERAGE_KIND_FULL, FORM_NOTONE, PARTIAL_PREFIX_OUTPUT_CAP,
 };
 use ranking::{FrequencyMap, WALKER_COST_UNPRICED};
 
@@ -95,9 +95,9 @@ use ranking::{FrequencyMap, WALKER_COST_UNPRICED};
 /// v3.5.9 A2 (D3 honest type) — the slot-0 walker's native result.
 ///
 /// `cost` is the min-cost objective the walker optimizes (`lower-better`);
-/// the seam in [`assemble_candidates`] converts to the wire `RawCandidate`
-/// with `score = -(cost as f32)` (preserving the proto field 5 contract on
-/// `CandidateMessage`). `frequency` / `bitmask` are walker-N/A and stamped
+/// the seam in [`assemble_candidates`] converts to a `RawCandidate` with
+/// `score = -(cost as f32)` (engine-internal, higher-better like every other
+/// candidate's score). `frequency` / `bitmask` are walker-N/A and stamped
 /// `0` at the seam — slot 0 is an explicit prepend, never sort-compared,
 /// so they are informational only. `form` is stamped `FORM_NOTONE` at the
 /// seam (walker always emits the toneless representation).
@@ -112,7 +112,6 @@ pub(crate) struct WalkerSlot0 {
     /// computed ONCE here from the synth `roman` (the single point that
     /// knows the fold rule) so the seam reads it instead of re-folding.
     pub canonical_tl: String,
-    pub script_kind: CandidateScriptKind,
     pub user_weight: f64,
     pub coverage_kind: u8,
     pub is_custom: bool,
@@ -937,7 +936,7 @@ pub(crate) fn walk_buffer(
 /// opener, the state `as_ref()?` guards, AND the `build_shadow_lattice_with_barriers`
 /// call (now built ONCE in the seam under **D1 fold** and passed in).
 /// Returns [`WalkerSlot0`] (D3 honest type): `cost` named explicitly;
-/// the seam converts to wire via `score = -(cost as f32)`.
+/// the seam converts it to `RawCandidate.score = -(cost as f32)`.
 ///
 /// v3.5.9 B-0c — `mode: phonetics::InputMode` replaces the prior
 /// `is_poj: bool` (Codex pre-impl SHOULD 2026-05-21 + 2026-05-20 enum
@@ -1090,22 +1089,9 @@ fn fetch_walker_slot0_inner(
     // R5 pair-key (#7): walker synth keyed by (display_text,
     // canonical_tl); `get` returns the neutral default on a miss.
     let user_weight = edge_user_weight_delta(freq_map, now_ms, &display_text, &canonical_tl);
-    // Classify via the lexicon single-source-of-truth so the
-    // synth's `CandidateMessage.script_kind` matches span-local / custom
-    // candidates exactly — including MIXED when the concatenated
-    // hanji contains a Latin letter (e.g. a path through `…hip相`).
-    // Codex PR #285 P2: the earlier `hanji.is_some()` binary
-    // mis-emitted HANT for mixed-script full-buffer paths, breaking
-    // platform dual-line render parity with regular candidates.
-    let script_kind = derive_script_kind(hanji.as_deref());
     Some(WalkerSlot0 {
-        // S5: `path.cost` is a min-cost (lower = better) total.
-        // The seam converts to wire `score = -(cost as f32)`
-        // (`CandidateMessage` proto field 5) preserving the
-        // higher-better wire monotonic ordering. Slot 0 is an
-        // explicit prepend so the wire value is informational only
-        // (never sort-compared), but the bridge IS the contract —
-        // do not "fix" the sign.
+        // S5: `path.cost` is a min-cost (lower = better) total; the seam
+        // negates it into `RawCandidate.score` (see `WalkerSlot0`).
         cost: path.cost,
         consumed_span,
         syllable_count,
@@ -1113,7 +1099,6 @@ fn fetch_walker_slot0_inner(
         roman,
         hanji,
         canonical_tl,
-        script_kind,
         user_weight,
         coverage_kind: COVERAGE_KIND_FULL,
         // v3.5.8 S6 (Codex pre-impl S6 Q4): provenance truth — a
@@ -1363,15 +1348,13 @@ pub(crate) fn assemble_candidates(
                             roman: slot0.roman,
                             hanji: slot0.hanji,
                             canonical_tl: slot0.canonical_tl,
-                            // D3 honest conversion: wire `score`
-                            // (proto field 5) = negated min-cost.
+                            // D3 honest conversion: `score` = negated min-cost.
                             score: -(slot0.cost as f32),
                             form: FORM_NOTONE,
                             // walker-N/A; slot 0 explicit prepend.
                             frequency: 0,
                             walker_cost: WALKER_COST_UNPRICED,
                             bitmask: 0,
-                            script_kind: slot0.script_kind,
                             user_weight: slot0.user_weight,
                             context_rank: ranking::CONTEXT_RANK_NONE,
                             coverage_kind: slot0.coverage_kind,
@@ -1871,7 +1854,6 @@ mod tests {
             frequency: 0,
             walker_cost: WALKER_COST_UNPRICED,
             bitmask: 0,
-            script_kind: lexicon::CandidateScriptKind::Hant,
             user_weight: 0.0,
             context_rank: ranking::CONTEXT_RANK_NONE,
             coverage_kind: COVERAGE_KIND_FULL,
@@ -1900,7 +1882,6 @@ mod tests {
                 frequency: 0,
                 walker_cost: WALKER_COST_UNPRICED,
                 bitmask: 0,
-                script_kind: lexicon::CandidateScriptKind::Tailo,
                 user_weight: 0.0,
                 context_rank: ranking::CONTEXT_RANK_NONE,
                 coverage_kind: COVERAGE_KIND_FULL,
@@ -1949,7 +1930,6 @@ mod tests {
                 frequency: 0,
                 walker_cost: WALKER_COST_UNPRICED,
                 bitmask: 0,
-                script_kind: lexicon::CandidateScriptKind::Tailo,
                 user_weight: 0.0,
                 context_rank: ranking::CONTEXT_RANK_NONE,
                 coverage_kind: COVERAGE_KIND_FULL,
@@ -1980,7 +1960,6 @@ mod tests {
                 frequency: 0,
                 walker_cost: WALKER_COST_UNPRICED,
                 bitmask: 0,
-                script_kind: lexicon::CandidateScriptKind::Tailo,
                 user_weight: 0.0,
                 context_rank: ranking::CONTEXT_RANK_NONE,
                 coverage_kind: COVERAGE_KIND_FULL,
@@ -2015,7 +1994,6 @@ mod tests {
                 frequency: 0,
                 walker_cost: WALKER_COST_UNPRICED,
                 bitmask: 0,
-                script_kind: lexicon::CandidateScriptKind::Tailo,
                 user_weight: 0.0,
                 context_rank: ranking::CONTEXT_RANK_NONE,
                 coverage_kind: COVERAGE_KIND_FULL,
