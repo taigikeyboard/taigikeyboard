@@ -1,6 +1,6 @@
 //! The Dictionary Sources pane's roster, shared by both settings windows:
 //! which toggle each row writes and what it is called, in the order the pane
-//! lists them — MOE's eleven subcollections under its own switch, the other
+//! lists them — MOE's twelve subcollections under its own switch, the other
 //! MOE dictionaries, the other sources, the supplements. macOS keeps a Swift
 //! twin: `DictionaryTogglesView.swift`.
 
@@ -8,7 +8,11 @@ use super::{keys, SettingsKey};
 use crate::strings::StringKey;
 
 /// The MOE dictionary subcollections, in the pane's order.
-pub const KAUTIAN_SUBCOLLECTIONS: [(SettingsKey<bool>, StringKey); 11] = [
+pub const KAUTIAN_SUBCOLLECTIONS: [(SettingsKey<bool>, StringKey); 12] = [
+    (
+        keys::IS_KAUTIAN_ALT_READING_ENABLED,
+        StringKey::DictionaryKautianAltReading,
+    ),
     (
         keys::IS_KAUTIAN_ACCENT_LUKANG_ENABLED,
         StringKey::DictionaryKautianAccentLukang,

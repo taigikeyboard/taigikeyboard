@@ -173,6 +173,7 @@ internal fun dictionaryTogglesProto(toggles: RustEngineBridge.DictionaryToggles)
                 .setAccentSintik(toggles.kautianSubcoll.sintik)
                 .setAccentTaichung(toggles.kautianSubcoll.taichung)
                 .setNameAppendix(toggles.kautianSubcoll.nameAppendix)
+                .setAltReading(toggles.kautianSubcoll.altReading)
                 .build(),
         ).build()
 

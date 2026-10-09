@@ -433,11 +433,13 @@ pub struct KautianSubcollections {
     pub accent_sintik: bool,
     pub accent_taichung: bool,
     pub name_appendix: bool,
+    pub alt_reading: bool,
 }
 
 impl KautianSubcollections {
     /// CROSS-PLATFORM INVARIANT — every subcollection defaults ON
-    /// (`ios/.../SharedSettings.swift`, the `kautianAccent*` / `kautianNameAppendix` keys).
+    /// (`ios/.../SharedSettings.swift`, the `kautianAccent*` / `kautianNameAppendix` /
+    /// `kautianAltReading` keys).
     pub const DEFAULT: Self = Self {
         accent_lukang: true,
         accent_sansia: true,
@@ -450,6 +452,7 @@ impl KautianSubcollections {
         accent_sintik: true,
         accent_taichung: true,
         name_appendix: true,
+        alt_reading: true,
     };
 }
 

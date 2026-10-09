@@ -83,4 +83,5 @@ protocol EngineSettings {
     var isKautianAccentSintikEnabled: Bool { get }
     var isKautianAccentTaichungEnabled: Bool { get }
     var isKautianNameAppendixEnabled: Bool { get }
+    var isKautianAltReadingEnabled: Bool { get }
 }

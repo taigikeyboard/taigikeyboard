@@ -874,6 +874,28 @@
         "ja": "姓名付録"
       }
     },
+    "kautianAltReading": {
+      "comment": "MOE dictionary sub-source: the alternative readings (又唸作) of a headword.",
+      "scope": {
+        "platforms": [
+          "android",
+          "ios",
+          "macos",
+          "windows",
+          "linux"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "又唸作",
+        "tailo": "Iū liām-tsò",
+        "poj": "Iū liām-chò",
+        "en": "Alternative Readings",
+        "ja": "別の読み方"
+      }
+    },
     "searchPlaceholder": {
       "comment": "Search-field placeholder in the dictionary browser, and the filter box on the macOS Custom Dictionary pane.",
       "scope": {

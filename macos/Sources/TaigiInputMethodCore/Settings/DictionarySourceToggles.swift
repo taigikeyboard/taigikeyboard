@@ -43,7 +43,7 @@ struct DictionarySourceToggles: Sendable {
 
     /// Always populated, never absent: the engine reads an absent
     /// subcollection message as "legacy all-on" and skips the gate entirely
-    /// (`lexicon.proto:452-454`). macOS ships all eleven toggles, so it must
+    /// (`lexicon.proto:452-454`). macOS ships all twelve toggles, so it must
     /// always ask for the gate to run.
     let kautianSubcollections: KautianSubcollections
 
@@ -62,6 +62,7 @@ struct DictionarySourceToggles: Sendable {
         let accentSintik: Bool
         let accentTaichung: Bool
         let nameAppendix: Bool
+        let altReading: Bool
 
         /// CROSS-PLATFORM INVARIANT — every subcollection defaults ON, mirroring
         /// ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift:74-84.
@@ -78,6 +79,7 @@ struct DictionarySourceToggles: Sendable {
             accentSintik: true,
             accentTaichung: true,
             nameAppendix: true,
+            altReading: true,
         )
     }
 

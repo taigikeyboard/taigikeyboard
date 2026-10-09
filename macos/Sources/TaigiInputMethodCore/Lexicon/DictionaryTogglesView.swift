@@ -63,12 +63,15 @@ struct DictionaryTogglesView: View {
     private var isTaichungEnabled = SettingsStore.Keys.isKautianAccentTaichungEnabled.defaultValue
     @AppStorage(SettingsStore.Keys.isKautianNameAppendixEnabled.name)
     private var isNameAppendixEnabled = SettingsStore.Keys.isKautianNameAppendixEnabled.defaultValue
+    @AppStorage(SettingsStore.Keys.isKautianAltReadingEnabled.name)
+    private var isAltReadingEnabled = SettingsStore.Keys.isKautianAltReadingEnabled.defaultValue
 
     var body: some View {
         Form {
             Section {
                 Toggle(language.string(.commonMoeDict), isOn: $isKautianEnabled)
                 Group {
+                    Toggle(language.string(.dictionaryKautianAltReading), isOn: $isAltReadingEnabled)
                     Toggle(language.string(.dictionaryKautianAccentLukang), isOn: $isLukangEnabled)
                     Toggle(language.string(.dictionaryKautianAccentSansia), isOn: $isSansiaEnabled)
                     Toggle(language.string(.dictionaryKautianAccentTaipak), isOn: $isTaipakEnabled)

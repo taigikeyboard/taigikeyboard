@@ -44,8 +44,10 @@ stage_options:
       - 新竹偏泉腔
       - 臺中偏漳腔
     # kautian subcollection provenance (Phase 1) — which sheets seed
-    # kautian_main vs kautian_name. dialect_sheet above seeds the accent mask.
-    main_sheets: [詞目.csv, 又唸作.csv, 合音唸作.csv, 俗唸作.csv, 詞彙比較.csv]
+    # kautian_main / kautian_alt_reading / kautian_name. dialect_sheet above
+    # seeds the accent mask.
+    main_sheets: [詞目.csv, 合音唸作.csv, 俗唸作.csv, 詞彙比較.csv]
+    alt_reading_sheets: [又唸作.csv]
     name_sheets: [名.csv, 姓.csv]
 
   merge:

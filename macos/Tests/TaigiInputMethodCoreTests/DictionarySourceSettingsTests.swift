@@ -1,4 +1,4 @@
-// The 24 dictionary toggles: their stored names and their fresh-install
+// The 25 dictionary toggles: their stored names and their fresh-install
 // values.
 
 @testable import TaigiInputMethodCore
@@ -22,7 +22,7 @@ final class DictionarySourceSettingsTests: XCTestCase {
             "kautianAccentTainanEnabled", "kautianAccentKaohsiungEnabled",
             "kautianAccentKinmenEnabled", "kautianAccentMakungEnabled",
             "kautianAccentSintikEnabled", "kautianAccentTaichungEnabled",
-            "kautianNameAppendixEnabled",
+            "kautianNameAppendixEnabled", "kautianAltReadingEnabled",
         ]
 
         let actual: Set<String> = [
@@ -51,6 +51,7 @@ final class DictionarySourceSettingsTests: XCTestCase {
             SettingsStore.Keys.isKautianAccentSintikEnabled.name,
             SettingsStore.Keys.isKautianAccentTaichungEnabled.name,
             SettingsStore.Keys.isKautianNameAppendixEnabled.name,
+            SettingsStore.Keys.isKautianAltReadingEnabled.name,
         ]
 
         XCTAssertEqual(actual, expected)
@@ -91,7 +92,7 @@ final class DictionarySourceSettingsTests: XCTestCase {
             Keys.isKautianAccentTainanEnabled, Keys.isKautianAccentKaohsiungEnabled,
             Keys.isKautianAccentKinmenEnabled, Keys.isKautianAccentMakungEnabled,
             Keys.isKautianAccentSintikEnabled, Keys.isKautianAccentTaichungEnabled,
-            Keys.isKautianNameAppendixEnabled,
+            Keys.isKautianNameAppendixEnabled, Keys.isKautianAltReadingEnabled,
         ]
 
         for key in subcollections {

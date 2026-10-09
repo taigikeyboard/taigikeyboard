@@ -74,6 +74,7 @@
     <string name="i18n_dictionary_kautianAccentSintik">Hsinchu (Quanzhou-leaning)</string>
     <string name="i18n_dictionary_kautianAccentTaichung">Taichung (Zhangzhou-leaning)</string>
     <string name="i18n_dictionary_kautianNameAppendix">Surname Appendix</string>
+    <string name="i18n_dictionary_kautianAltReading">Alternative Readings</string>
     <string name="i18n_dictionary_searchPlaceholder">Type to search</string>
     <string name="i18n_dictionary_noResults">No results</string>
     <string name="i18n_dictionary_lookupChhoe">ChhoeTaigi Dictionary</string>

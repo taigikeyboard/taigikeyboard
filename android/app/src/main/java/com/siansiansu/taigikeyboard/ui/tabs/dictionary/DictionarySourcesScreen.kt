@@ -75,7 +75,8 @@ fun DictionarySourcesScreen(
     var devEnabled by remember { mutableStateOf(prefs.devDictEnabled) }
 
     // kautian subcollections (nested under MOE master, greyed when MOE off — DD7).
-    // Order mirrors config.yaml dialect_columns.
+    // Alternative Readings first, then the accents in config.yaml dialect_columns order.
+    var kautianAltReadingEnabled by remember { mutableStateOf(prefs.kautianAltReadingEnabled) }
     var kautianLukangEnabled by remember { mutableStateOf(prefs.kautianAccentLukangEnabled) }
     var kautianSansiaEnabled by remember { mutableStateOf(prefs.kautianAccentSansiaEnabled) }
     var kautianTaipakEnabled by remember { mutableStateOf(prefs.kautianAccentTaipakEnabled) }
@@ -136,11 +137,16 @@ fun DictionarySourcesScreen(
                         },
                     )
                     // kautian subcollections — nested under the MOE master,
-                    // greyed when the master is off (DD7). Order mirrors
-                    // config.yaml dialect_columns. Title-only rows via
+                    // greyed when the master is off (DD7). Alternative Readings
+                    // first, then the accents in config.yaml dialect_columns
+                    // order. Title-only rows via
                     // DictionarySubToggleRow; each writes its own pref + state.
                     val kautianSubcollRows: List<Triple<String, Boolean, (Boolean) -> Unit>> =
                         listOf(
+                            Triple(L10n.dictionaryKautianAltReading, kautianAltReadingEnabled) { on ->
+                                kautianAltReadingEnabled = on
+                                prefs.kautianAltReadingEnabled = on
+                            },
                             Triple(L10n.dictionaryKautianAccentLukang, kautianLukangEnabled) { on ->
                                 kautianLukangEnabled = on
                                 prefs.kautianAccentLukangEnabled = on

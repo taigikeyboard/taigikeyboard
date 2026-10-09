@@ -25,14 +25,14 @@ from pathlib import Path
 
 import pandas as pd
 
-from common.kautian_provenance import COL_ACCENT_MASK, COL_MAIN, COL_NAME
+from common.kautian_provenance import COL_ACCENT_MASK, COL_ALT_READING, COL_MAIN, COL_NAME
 from common.source_bits import DICT_BIN_COLUMNS, encode_kautian_subtag
 
 # kautian subcollection provenance columns (Phase 1 output). Present on every
 # row of a freshly-built dictionary.csv (merge_csv fills 0/False for non-kautian
 # rows); the loader defaults a missing column to "no provenance" but fails loud
 # if kautian rows exist without them (stale CSV — `make dict` not re-run).
-_PROVENANCE_COLUMNS = (COL_MAIN, COL_ACCENT_MASK, COL_NAME)
+_PROVENANCE_COLUMNS = (COL_MAIN, COL_ACCENT_MASK, COL_NAME, COL_ALT_READING)
 
 REQUIRED_COLUMNS = (
     "hanzi", "tl", "frequency",
@@ -82,7 +82,8 @@ class DictionaryRecord:
     syllable_count: int
     # kautian subcollection provenance packed into a u16 (dictionary.bin v3).
     # 0 for every non-kautian row. Layout (`source_bits.encode_kautian_subtag`):
-    # bit 0 = has_main, bits 1..=10 = accent_mask, bit 11 = has_name.
+    # bit 0 = has_main, bits 1..=10 = accent_mask, bit 11 = has_name,
+    # bit 12 = has_alt_reading.
     kautian_subtag: int
 
     def source_dict(self) -> dict[str, bool]:
@@ -122,6 +123,7 @@ def _kautian_subtag(row) -> int:
         has_main=_as_bool(row[COL_MAIN]),
         accent_mask=accent_mask,
         has_name=_as_bool(row[COL_NAME]),
+        has_alt_reading=_as_bool(row[COL_ALT_READING]),
     )
 
 

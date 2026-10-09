@@ -74,6 +74,7 @@
     <string name="i18n_dictionary_kautianAccentSintik">新竹（泉州寄り）</string>
     <string name="i18n_dictionary_kautianAccentTaichung">台中（漳州寄り）</string>
     <string name="i18n_dictionary_kautianNameAppendix">姓名付録</string>
+    <string name="i18n_dictionary_kautianAltReading">別の読み方</string>
     <string name="i18n_dictionary_searchPlaceholder">入力して検索</string>
     <string name="i18n_dictionary_noResults">結果がありません</string>
     <string name="i18n_dictionary_lookupChhoe">ChhoeTaigi 辞典</string>

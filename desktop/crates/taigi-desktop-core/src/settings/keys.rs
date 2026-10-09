@@ -150,6 +150,8 @@ pub const IS_KAUTIAN_ACCENT_TAICHUNG_ENABLED: SettingsKey<bool> =
     SettingsKey::new("kautianAccentTaichungEnabled", SUBCOLL.accent_taichung);
 pub const IS_KAUTIAN_NAME_APPENDIX_ENABLED: SettingsKey<bool> =
     SettingsKey::new("kautianNameAppendixEnabled", SUBCOLL.name_appendix);
+pub const IS_KAUTIAN_ALT_READING_ENABLED: SettingsKey<bool> =
+    SettingsKey::new("kautianAltReadingEnabled", SUBCOLL.alt_reading);
 
 /// The app UI display language, as a `DisplayLanguage` tag. The roster owns
 /// the default: the composing engine never reads which language the UI is in.
@@ -298,9 +300,9 @@ pub const APPEARANCE_KEYS: [&str; 4] = [
     CANDIDATE_SIZE.name,
 ];
 
-/// The 13 source toggles + 11 subcollection toggles the Dictionary Sources pane's reset
+/// The 13 source toggles + 12 subcollection toggles the Dictionary Sources pane's reset
 /// removes (`SettingsStore.swift` `resetDictionarySources` is the macOS twin).
-pub const DICTIONARY_SOURCE_KEYS: [&str; 24] = [
+pub const DICTIONARY_SOURCE_KEYS: [&str; 25] = [
     IS_KAUTIAN_ENABLED.name,
     IS_TAIGITV_ENABLED.name,
     IS_ITAIGI_ENABLED.name,
@@ -325,6 +327,7 @@ pub const DICTIONARY_SOURCE_KEYS: [&str; 24] = [
     IS_KAUTIAN_ACCENT_SINTIK_ENABLED.name,
     IS_KAUTIAN_ACCENT_TAICHUNG_ENABLED.name,
     IS_KAUTIAN_NAME_APPENDIX_ENABLED.name,
+    IS_KAUTIAN_ALT_READING_ENABLED.name,
 ];
 
 #[cfg(test)]

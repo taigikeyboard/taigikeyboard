@@ -1,8 +1,8 @@
 """Tests for kautian subcollection provenance (Phase 1).
 
 Covers the membership-map builders (accent bitset / name set), the
-`apply_provenance` join logic (esp. DD6: a headword that is also an accent or
-name reading keeps `kautian_main=True`), and the cross-source OR aggregation
+`apply_provenance` join logic (esp. DD6: a headword that is also an
+alt-reading, accent or name reading keeps `kautian_main=True`), and the cross-source OR aggregation
 used by `build/merge_csv.py`.
 
 `build_*` helpers normalize readings via the taigi-converter bridge (started
@@ -18,6 +18,7 @@ from build.merge_csv import _or_mask_agg
 from common.cleanup import normalize_roman
 from common.kautian_provenance import (
     COL_ACCENT_MASK,
+    COL_ALT_READING,
     COL_MAIN,
     COL_NAME,
     apply_provenance,
@@ -110,7 +111,11 @@ def test_apply_provenance_bracketed_headword_overlapping_name_stays_main():
     # so it survives when the Surname Appendix toggle is off (DD6).
     df = pd.DataFrame({"hanzi": ["八"], "tl": ["pat"]})
     out = apply_provenance(
-        df, accent_map={}, name_set={("八", "pat")}, main_set={("八", "pat")}
+        df,
+        accent_map={},
+        name_set={("八", "pat")},
+        main_set={("八", "pat")},
+        alt_reading_set=set(),
     )
     assert out.loc[0, COL_MAIN]
     assert out.loc[0, COL_NAME]
@@ -126,7 +131,7 @@ def test_apply_provenance_main_independent_of_accent_dd6():
             "tl": ["pueh", "peh", "tsia̍h", "kiu", "ông"],
         }
     )
-    out = apply_provenance(df, accent_map, name_set, main_set)
+    out = apply_provenance(df, accent_map, name_set, main_set, alt_reading_set=set())
 
     # 八/pueh: headword AND accent → stays main (DD6).
     assert out.loc[0, COL_MAIN]
@@ -150,6 +155,28 @@ def test_apply_provenance_main_independent_of_accent_dd6():
     assert out.loc[4, COL_MAIN]
     assert out.loc[4, COL_ACCENT_MASK] == 0
     assert not out.loc[4, COL_NAME]
+
+
+def test_apply_provenance_alt_reading_dd6():
+    # 一概/it-kài: 又唸作-only → alt-reading, not a headword, so the
+    # Alternative Readings toggle hides it. 人員/lîn-guân: 又唸作 reading that
+    # is also a headword reading → stays main (DD6), never hidden by the toggle.
+    df = pd.DataFrame(
+        {"hanzi": ["一概", "人員", "人員"], "tl": ["it-kài", "lîn-guân", "jîn-uân"]}
+    )
+    out = apply_provenance(
+        df,
+        accent_map={},
+        name_set=set(),
+        main_set={("人員", "lîn-guân"), ("人員", "jîn-uân")},
+        alt_reading_set={("一概", "it-kài"), ("人員", "lîn-guân")},
+    )
+    assert out.loc[0, COL_ALT_READING]
+    assert not out.loc[0, COL_MAIN]
+    assert out.loc[1, COL_ALT_READING]
+    assert out.loc[1, COL_MAIN]
+    assert not out.loc[2, COL_ALT_READING]
+    assert out.loc[2, COL_MAIN]
 
 
 def test_or_mask_agg_unions_across_nan():

@@ -46,6 +46,7 @@ from common.cleanup import hanzi_chars
 from common.kautian_provenance import (
     ACCENT_COLUMN_COUNT,
     COL_ACCENT_MASK,
+    COL_ALT_READING,
     COL_MAIN,
     COL_NAME,
     ProvenanceKey,
@@ -200,7 +201,7 @@ def apply_word_accent_generation(
 ) -> tuple[pd.DataFrame, WordGenReport]:
     """Append word-level accent variant rows to a cleaned kautian DataFrame.
 
-    For every multi-char `kautian_main` row, generate per-accent readings
+    For every multi-char `kautian_main` or `kautian_alt_reading` row, generate per-accent readings
     (`generate_variants_for_word`), validate POJ-convertibility (`poj_convertible`
     is cached per reading), then either OR the accent mask into an existing
     `(hanzi, tl)` row or append a new row inheriting the base `frequency`
@@ -221,10 +222,10 @@ def apply_word_accent_generation(
     new_rows: dict[ProvenanceKey, dict] = {}
     poj_cache: dict[str, bool] = {}
 
-    # One vectorized extraction of the main rows (avoids ~tens-of-thousands of
+    # One vectorized extraction of the base rows (avoids ~tens-of-thousands of
     # per-row df.loc Series builds); each record is a plain dict we copy on emit.
-    main_mask = df[COL_MAIN].fillna(False).astype(bool)
-    for base_row in df.loc[main_mask].to_dict("records"):
+    base_mask = df[[COL_MAIN, COL_ALT_READING]].fillna(False).astype(bool).any(axis=1)
+    for base_row in df.loc[base_mask].to_dict("records"):
         hanzi = str(base_row["hanzi"])
         base_tl = str(base_row["tl"])
         report.main_rows_scanned += 1
@@ -258,6 +259,7 @@ def apply_word_accent_generation(
                 new_row = dict(base_row)
                 new_row["tl"] = reading
                 new_row[COL_MAIN] = False
+                new_row[COL_ALT_READING] = False
                 new_row[COL_ACCENT_MASK] = mask
                 new_row[COL_NAME] = False
                 new_rows[key] = new_row

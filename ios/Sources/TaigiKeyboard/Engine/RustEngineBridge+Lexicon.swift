@@ -75,6 +75,7 @@ public extension RustEngineBridge {
             public let sintik: Bool
             public let taichung: Bool
             public let nameAppendix: Bool
+            public let altReading: Bool
         }
     }
 
@@ -237,6 +238,7 @@ public extension RustEngineBridge {
         subcollProto.accentSintik = toggles.kautianSubcoll.sintik
         subcollProto.accentTaichung = toggles.kautianSubcoll.taichung
         subcollProto.nameAppendix = toggles.kautianSubcoll.nameAppendix
+        subcollProto.altReading = toggles.kautianSubcoll.altReading
         togglesProto.kautianSubcollections = subcollProto
         return togglesProto
     }
@@ -354,6 +356,7 @@ extension RustEngineBridge.DictionaryToggles {
                 sintik: settings.isKautianAccentSintikEnabled,
                 taichung: settings.isKautianAccentTaichungEnabled,
                 nameAppendix: settings.isKautianNameAppendixEnabled,
+                altReading: settings.isKautianAltReadingEnabled,
             ),
         )
     }

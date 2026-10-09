@@ -35,7 +35,7 @@ Binary format (version 4, little-endian):
 
   kautian_subtag bit layout (u16; 0 for every non-kautian row):
     0=has_main  1..=10=accent_mask (10 dialect columns)  11=has_name
-    12-15=reserved
+    12=has_alt_reading  13-15=reserved
 
   v1 → v2 (v3.5.8 Phase 1): added per-record `syllable_count` u8 between
   `tl_len` and the `hanzi` payload.

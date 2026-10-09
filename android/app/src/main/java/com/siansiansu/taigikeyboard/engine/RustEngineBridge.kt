@@ -157,6 +157,7 @@ object RustEngineBridge {
             val sintik: Boolean,
             val taichung: Boolean,
             val nameAppendix: Boolean,
+            val altReading: Boolean,
         )
 
         companion object {
@@ -187,6 +188,7 @@ object RustEngineBridge {
                         sintik = settings.isKautianAccentSintikEnabled,
                         taichung = settings.isKautianAccentTaichungEnabled,
                         nameAppendix = settings.isKautianNameAppendixEnabled,
+                        altReading = settings.isKautianAltReadingEnabled,
                     ),
                 )
         }

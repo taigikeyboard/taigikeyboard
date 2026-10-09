@@ -1,5 +1,5 @@
 //! The Dictionary Sources pane: which dictionaries the engine draws from, in three
-//! groups — MOE, the others, the supplements — with the MOE dictionary's eleven
+//! groups — MOE, the others, the supplements — with the MOE dictionary's twelve
 //! subcollections stepped in under it, always visible and greyed while the MOE dictionary
 //! is off (the Mac's and Windows' shape; roadmap PR7; port of
 //! `DictionaryTogglesView.swift` and the Windows `dictionary_sources.rs`).
@@ -25,9 +25,9 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
                 .resolve(StringKey::DictionaryMoeSectionTitle),
         )
         .build();
-    // The MOE dictionary first, its eleven accents stepped in under it: disabled, not cleared,
-    // while the MOE dictionary is off — the choices come back with it
-    // (`DictionaryTogglesView.swift` indents the same eleven under the same
+    // The MOE dictionary first, its twelve subcollections stepped in under it: disabled, not
+    // cleared, while the MOE dictionary is off — the choices come back with it
+    // (`DictionaryTogglesView.swift` indents the same twelve under the same
     // master toggle; the Windows card greys them the same way).
     context.switch_row(&moe, StringKey::CommonMoeDict, keys::IS_KAUTIAN_ENABLED);
     let is_kautian_enabled = context.document.bool(&keys::IS_KAUTIAN_ENABLED);

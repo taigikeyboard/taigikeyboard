@@ -151,8 +151,9 @@ public  final class SearchWithSourcesRequest extends
    *
    * kautian subcollections (binary v3): the HIGH region carries the user's
    * per-subcollection enable bits — bit 13 = active sentinel (0 ⇒ engine skips
-   * subcollection gating = all on, the legacy/pre-UI default), bits 14..=25 =
-   * enable mask (main | accent[10] | name, same layout as the record subtag).
+   * subcollection gating = all on, the legacy/pre-UI default), bits 14..=26 =
+   * enable mask (main | accent[10] | name | alt_reading, same layout as the
+   * record subtag).
    * ENCODE (Phase 3): `compute_filters` sets these from `DictionarySourceToggles
    * .kautian_subcollections` when present; a caller that leaves the sub-message absent
    * keeps bit 13 clear = legacy all-on. Decode: `Filter::from_enabled_bitmask`
@@ -177,8 +178,9 @@ public  final class SearchWithSourcesRequest extends
    *
    * kautian subcollections (binary v3): the HIGH region carries the user's
    * per-subcollection enable bits — bit 13 = active sentinel (0 ⇒ engine skips
-   * subcollection gating = all on, the legacy/pre-UI default), bits 14..=25 =
-   * enable mask (main | accent[10] | name, same layout as the record subtag).
+   * subcollection gating = all on, the legacy/pre-UI default), bits 14..=26 =
+   * enable mask (main | accent[10] | name | alt_reading, same layout as the
+   * record subtag).
    * ENCODE (Phase 3): `compute_filters` sets these from `DictionarySourceToggles
    * .kautian_subcollections` when present; a caller that leaves the sub-message absent
    * keeps bit 13 clear = legacy all-on. Decode: `Filter::from_enabled_bitmask`
@@ -203,8 +205,9 @@ public  final class SearchWithSourcesRequest extends
    *
    * kautian subcollections (binary v3): the HIGH region carries the user's
    * per-subcollection enable bits — bit 13 = active sentinel (0 ⇒ engine skips
-   * subcollection gating = all on, the legacy/pre-UI default), bits 14..=25 =
-   * enable mask (main | accent[10] | name, same layout as the record subtag).
+   * subcollection gating = all on, the legacy/pre-UI default), bits 14..=26 =
+   * enable mask (main | accent[10] | name | alt_reading, same layout as the
+   * record subtag).
    * ENCODE (Phase 3): `compute_filters` sets these from `DictionarySourceToggles
    * .kautian_subcollections` when present; a caller that leaves the sub-message absent
    * keeps bit 13 clear = legacy all-on. Decode: `Filter::from_enabled_bitmask`
@@ -456,8 +459,9 @@ public  final class SearchWithSourcesRequest extends
      *
      * kautian subcollections (binary v3): the HIGH region carries the user's
      * per-subcollection enable bits — bit 13 = active sentinel (0 ⇒ engine skips
-     * subcollection gating = all on, the legacy/pre-UI default), bits 14..=25 =
-     * enable mask (main | accent[10] | name, same layout as the record subtag).
+     * subcollection gating = all on, the legacy/pre-UI default), bits 14..=26 =
+     * enable mask (main | accent[10] | name | alt_reading, same layout as the
+     * record subtag).
      * ENCODE (Phase 3): `compute_filters` sets these from `DictionarySourceToggles
      * .kautian_subcollections` when present; a caller that leaves the sub-message absent
      * keeps bit 13 clear = legacy all-on. Decode: `Filter::from_enabled_bitmask`
@@ -482,8 +486,9 @@ public  final class SearchWithSourcesRequest extends
      *
      * kautian subcollections (binary v3): the HIGH region carries the user's
      * per-subcollection enable bits — bit 13 = active sentinel (0 ⇒ engine skips
-     * subcollection gating = all on, the legacy/pre-UI default), bits 14..=25 =
-     * enable mask (main | accent[10] | name, same layout as the record subtag).
+     * subcollection gating = all on, the legacy/pre-UI default), bits 14..=26 =
+     * enable mask (main | accent[10] | name | alt_reading, same layout as the
+     * record subtag).
      * ENCODE (Phase 3): `compute_filters` sets these from `DictionarySourceToggles
      * .kautian_subcollections` when present; a caller that leaves the sub-message absent
      * keeps bit 13 clear = legacy all-on. Decode: `Filter::from_enabled_bitmask`
@@ -510,8 +515,9 @@ public  final class SearchWithSourcesRequest extends
      *
      * kautian subcollections (binary v3): the HIGH region carries the user's
      * per-subcollection enable bits — bit 13 = active sentinel (0 ⇒ engine skips
-     * subcollection gating = all on, the legacy/pre-UI default), bits 14..=25 =
-     * enable mask (main | accent[10] | name, same layout as the record subtag).
+     * subcollection gating = all on, the legacy/pre-UI default), bits 14..=26 =
+     * enable mask (main | accent[10] | name | alt_reading, same layout as the
+     * record subtag).
      * ENCODE (Phase 3): `compute_filters` sets these from `DictionarySourceToggles
      * .kautian_subcollections` when present; a caller that leaves the sub-message absent
      * keeps bit 13 clear = legacy all-on. Decode: `Filter::from_enabled_bitmask`

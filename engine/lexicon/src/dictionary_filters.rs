@@ -16,9 +16,9 @@
 //! ```
 
 use crate::dictionary_reader::{
-    KAUTIAN_SUBTAG_ACCENT_COUNT, KAUTIAN_SUBTAG_ACCENT_SHIFT, KAUTIAN_SUBTAG_MAIN_BIT,
-    KAUTIAN_SUBTAG_NAME_BIT, WIRE_KAUTIAN_SUBCOLL_ACTIVE_BIT, WIRE_KAUTIAN_SUBCOLL_MASK,
-    WIRE_KAUTIAN_SUBCOLL_SHIFT,
+    KAUTIAN_SUBTAG_ACCENT_COUNT, KAUTIAN_SUBTAG_ACCENT_SHIFT, KAUTIAN_SUBTAG_ALT_READING_BIT,
+    KAUTIAN_SUBTAG_MAIN_BIT, KAUTIAN_SUBTAG_NAME_BIT, WIRE_KAUTIAN_SUBCOLL_ACTIVE_BIT,
+    WIRE_KAUTIAN_SUBCOLL_MASK, WIRE_KAUTIAN_SUBCOLL_SHIFT,
 };
 use protos::engine::{DictionaryFiltersResponse, DictionarySourceCode, DictionarySourceToggles};
 use DictionarySourceCode as C;
@@ -64,7 +64,7 @@ pub(crate) fn compute_filters(toggles: &DictionarySourceToggles) -> DictionaryFi
 }
 
 /// Full `dictionary.bin` filter bitmask: source/variant bits 0-12 plus the
-/// kautian subcollection wire high region (bit 13 active + bits 14..=25 enable
+/// kautian subcollection wire high region (bit 13 active + bits 14..=26 enable
 /// mask) when the subcollection toggles are present.
 pub fn dictionary_filter_bitmask(t: &DictionarySourceToggles) -> u32 {
     let mut mask = toggled_bits(&SOURCES, t);
@@ -76,7 +76,7 @@ pub fn dictionary_filter_bitmask(t: &DictionarySourceToggles) -> u32 {
 }
 
 /// Encode the user's kautian subcollection enable state into the wire high
-/// region: bit 13 (active sentinel) + bits 14..=25 (12-bit enable mask, same
+/// region: bit 13 (active sentinel) + bits 14..=26 (13-bit enable mask, same
 /// layout as the record subtag). Returns 0 — leaving the engine in legacy
 /// all-on mode (zero behaviour change, DD5) — when EITHER the subcollection
 /// sub-message is absent (a platform whose UI is not wired yet, NextWord) OR
@@ -115,6 +115,9 @@ fn encode_kautian_subcoll_wire(t: &DictionarySourceToggles) -> u32 {
     }
     if sub.name_appendix {
         subtag |= 1 << KAUTIAN_SUBTAG_NAME_BIT;
+    }
+    if sub.alt_reading {
+        subtag |= 1 << KAUTIAN_SUBTAG_ALT_READING_BIT;
     }
     WIRE_KAUTIAN_SUBCOLL_ACTIVE_BIT
         | ((u32::from(subtag) & WIRE_KAUTIAN_SUBCOLL_MASK) << WIRE_KAUTIAN_SUBCOLL_SHIFT)
@@ -175,7 +178,7 @@ mod tests {
     use crate::dictionary_reader::KAUTIAN_SUBTAG_USED_MASK;
     use protos::engine::KautianSubcollectionToggles;
 
-    /// Bits 13..=25 of the wire mask (active sentinel + 12-bit enable mask).
+    /// Bits 13..=26 of the wire mask (active sentinel + 13-bit enable mask).
     /// Low bits 0-12 are the source/variant region, asserted separately.
     const WIRE_HIGH_REGION: u32 = !0x1FFF;
 
@@ -196,6 +199,7 @@ mod tests {
             accent_sintik: true,
             accent_taichung: true,
             name_appendix: true,
+            alt_reading: true,
         }
     }
 
@@ -335,7 +339,7 @@ mod tests {
         assert_eq!(mask & 0x1FFF, 0x1FFF, "low source/variant region unchanged");
     }
 
-    /// Present + every subcollection on ⇒ active bit + full 12-bit enable mask.
+    /// Present + every subcollection on ⇒ active bit + full 13-bit enable mask.
     #[test]
     fn subcoll_present_all_on_sets_full_wire() {
         let mut t = all_off();
@@ -350,7 +354,7 @@ mod tests {
     }
 
     /// Present + every nested toggle off ⇒ main still on (not a user
-    /// toggle), accent + name bits clear.
+    /// toggle), accent + name + alt-reading bits clear.
     #[test]
     fn subcoll_present_all_off_keeps_main() {
         let mut t = all_off();
@@ -376,11 +380,12 @@ mod tests {
     }
 
     /// Each accent toggle maps to subtag bit (1 + config.yaml index); name to
-    /// bit 11. Verifies the ENCODE order matches `dialect_columns`.
+    /// bit 11, alt-reading to bit 12. Verifies the ENCODE order matches
+    /// `dialect_columns`.
     #[test]
     fn subcoll_accent_bit_positions_match_dialect_order() {
         type AccentCase = (fn(&mut KautianSubcollectionToggles), u16);
-        let cases: [AccentCase; 11] = [
+        let cases: [AccentCase; 12] = [
             (|s| s.accent_lukang = true, 1),
             (|s| s.accent_sansia = true, 2),
             (|s| s.accent_taipak = true, 3),
@@ -392,6 +397,7 @@ mod tests {
             (|s| s.accent_sintik = true, 9),
             (|s| s.accent_taichung = true, 10),
             (|s| s.name_appendix = true, KAUTIAN_SUBTAG_NAME_BIT),
+            (|s| s.alt_reading = true, KAUTIAN_SUBTAG_ALT_READING_BIT),
         ];
         for (set, subtag_bit) in cases {
             let mut sub = KautianSubcollectionToggles::default();

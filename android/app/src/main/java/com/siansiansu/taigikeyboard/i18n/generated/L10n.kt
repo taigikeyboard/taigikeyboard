@@ -150,6 +150,8 @@ object L10n {
         @Composable get() = stringRes(StringKey.DICTIONARY_KAUTIAN_ACCENT_TAICHUNG)
     val dictionaryKautianNameAppendix: String
         @Composable get() = stringRes(StringKey.DICTIONARY_KAUTIAN_NAME_APPENDIX)
+    val dictionaryKautianAltReading: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_KAUTIAN_ALT_READING)
     val dictionarySearchPlaceholder: String
         @Composable get() = stringRes(StringKey.DICTIONARY_SEARCH_PLACEHOLDER)
     val dictionaryNoResults: String

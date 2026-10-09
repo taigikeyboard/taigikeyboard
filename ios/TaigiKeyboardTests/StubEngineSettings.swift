@@ -40,6 +40,7 @@ struct StubEngineSettings: EngineSettings {
     var isKautianAccentSintikEnabled = true
     var isKautianAccentTaichungEnabled = true
     var isKautianNameAppendixEnabled = true
+    var isKautianAltReadingEnabled = true
 }
 
 /// A provider whose `current` is the one stub it was built with. Mirrors Android
