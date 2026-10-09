@@ -24,7 +24,7 @@ Each PR 200–500 LOC. Pre-gates per `~/.claude/rules/round-workflow.md`; Codex 
 |---|---|---|---|---|
 | H | Docs drift — `linux-release.md` High row, then Appendix D Med + Low | admin lane, direct to main | — | Done 2026-10-09 (direct to main; 50 rows: 48 fixed, `theme.md:80` refuted — KeyboardKit colour exists, `macos-desktop-core-roadmap.md:3` not a status cell) |
 | A1a | Dead wire, composing / lexicon: `CandidateMessage` 1/5/6/7 + `script_kind` chain, `tps_wire_equivalence.rs` + pre-R6 comments, `SelectCandidate(text)` (producer trace done), empty-`roman` `displayText` fallbacks ×2, stale proto comments; tags `reserved`, `make protos` | refactor · Codex pre-impl done 2026-10-09 · `refactor-reviewer` | 1 | Merged #473 `3662407e` 2026-10-09 |
-| A1b | Dead wire, phonetics / userdata / nextword / envelope (+ engine-internal dead values `RawCandidate.form`, `WalkerSlot0.cost`): `TlNumericToTps`, `LearningRecordKind.ASSOCIATION` + `previous_*`, `platform_id` reader + desktop `platform` threading, `length_score`, `EnginePrediction.score`, `UserDataReset.*_removed`, `created_at` / `updated_at`, `RecordUsage.hanji`, `Response.generation`, dead phonetics helpers, duplicate TPS tone-mark predicate, backup `origin` skip | refactor · freeze list · `refactor-reviewer` | 1 | Pending |
+| A1b | Dead wire, phonetics / userdata / nextword / envelope (+ engine-internal dead values `RawCandidate.form`, `WalkerSlot0.cost`): `TlNumericToTps`, `LearningRecordKind.ASSOCIATION` + `previous_*`, `platform_id` reader + desktop `platform` threading, `length_score`, `EnginePrediction.score`, `UserDataReset.*_removed`, `created_at` / `updated_at`, `RecordUsage.hanji`, `Response.generation`, dead phonetics helpers, duplicate TPS tone-mark predicate, backup `origin` skip | refactor · freeze list · `refactor-reviewer` | 1 | Merged #475 `5da9f411` 2026-10-09 |
 | A2 | Platform dead code: iOS `isRawInput`, iOS `TaigiWord.swift`, `diagnostics()` rings ×3 (log line stays), dead members, test-only `pub`, unused parameters, macOS never-shipped cleanup keys, R12 KDocs, stale code comments (`source_bits.py`, `AppStyle.swift:51`, `cost.rs:105`) | refactor · Codex pre-impl done 2026-10-09 · `refactor-reviewer` | 1 | Pending |
 | A3 | 19 over-scoped i18n keys (20 `scope.platforms` removals) + `test_select_test.py` wired into `python.yml` | refactor · i18n gate on every platform | 1 | Pending |
 | B1 | `parity(mobile)`: Custom Dictionary list over `ListCustomEntries` filter / limit / offset + paging; client filter and 100-row cap deleted | parity · intended behaviour = engine + desktop · lockstep iOS + Android | 1 | Pending |
@@ -49,7 +49,7 @@ Each PR 200–500 LOC. Pre-gates per `~/.claude/rules/round-workflow.md`; Codex 
 | G3 | iOS: Platform-layer `SharedSettings.shared` consumers injected; `ActionHandler` deps injected; `UsageRecorder` concrete in `Lexicon/Services`; Engine-layer purity | refactor · `refactor-reviewer` · after #471 | 1 | Pending |
 | G4 | Mobile Learning Records view models (one listing call); English current-word split, last-used date, count rule aligned | refactor + parity · maintainer confirms decisions 7–8 | 1–2 | Pending |
 
-Active PR pointer: A1b — branch `refactor/a1b-dead-engine-wire`, PR pending.
+Active PR pointer: none (next: A2 on a new branch).
 
 ## Best practices alignment
 
