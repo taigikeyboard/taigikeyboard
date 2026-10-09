@@ -7,15 +7,15 @@
 /// `taigi_linux_platform::DESKTOP_PLATFORM`).
 ///
 /// It selects, each beside the rule it parametrises:
-/// - the engine's `platform_id` (`engine/bridge.rs`);
 /// - the user-data journal (`engine/user_data.rs`);
 /// - the caret-chord modifier (`keys/intent.rs`);
 /// - the chord grammar — modifier letters, reserved keys, the case fold of
 ///   a chord key, how a chord reads on screen (`keys/chord.rs`,
 ///   `keys/shortcut_labels.rs`).
 ///
-/// Windows and Linux share every rule but the engine `platform_id`; MacOS
-/// carries the macOS input method's own (`macos/Sources/TaigiInputMethodCore`).
+/// Windows and Linux share every rule; MacOS carries the macOS input
+/// method's own (`macos/Sources/TaigiInputMethodCore`). The engine itself is
+/// never told which desktop is calling.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum DesktopPlatform {
     Windows,

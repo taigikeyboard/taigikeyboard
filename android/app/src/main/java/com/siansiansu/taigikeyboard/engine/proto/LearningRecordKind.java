@@ -27,14 +27,6 @@ public enum LearningRecordKind
    * <code>LEARNING_RECORD_KIND_LEARNED_PHRASE = 1;</code>
    */
   LEARNING_RECORD_KIND_LEARNED_PHRASE(1),
-  /**
-   * <pre>
-   * Which word followed which — next-word predictions.
-   * </pre>
-   *
-   * <code>LEARNING_RECORD_KIND_ASSOCIATION = 2;</code>
-   */
-  LEARNING_RECORD_KIND_ASSOCIATION(2),
   UNRECOGNIZED(-1),
   ;
 
@@ -54,14 +46,6 @@ public enum LearningRecordKind
    * <code>LEARNING_RECORD_KIND_LEARNED_PHRASE = 1;</code>
    */
   public static final int LEARNING_RECORD_KIND_LEARNED_PHRASE_VALUE = 1;
-  /**
-   * <pre>
-   * Which word followed which — next-word predictions.
-   * </pre>
-   *
-   * <code>LEARNING_RECORD_KIND_ASSOCIATION = 2;</code>
-   */
-  public static final int LEARNING_RECORD_KIND_ASSOCIATION_VALUE = 2;
 
 
   @java.lang.Override
@@ -86,7 +70,6 @@ public enum LearningRecordKind
     switch (value) {
       case 0: return LEARNING_RECORD_KIND_FREQUENCY;
       case 1: return LEARNING_RECORD_KIND_LEARNED_PHRASE;
-      case 2: return LEARNING_RECORD_KIND_ASSOCIATION;
       default: return null;
     }
   }

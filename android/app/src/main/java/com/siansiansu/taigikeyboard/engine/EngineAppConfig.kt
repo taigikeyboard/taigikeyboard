@@ -4,7 +4,6 @@
 package com.siansiansu.taigikeyboard.engine
 
 import com.siansiansu.taigikeyboard.engine.proto.AppConfig
-import com.siansiansu.taigikeyboard.engine.proto.Platform
 import com.siansiansu.taigikeyboard.ime.settings.CandidateDisplayMode
 import com.siansiansu.taigikeyboard.ime.settings.EngineSettings
 import com.siansiansu.taigikeyboard.ime.settings.InputMode
@@ -15,7 +14,7 @@ import com.siansiansu.taigikeyboard.engine.proto.SyllableSeparator as ProtoSylla
 
 /**
  * The one [AppConfig] builder: every request the Android bridges send carries
- * a config built here, so `platform_id` is set once. Composing passes the live
+ * a config built here. Composing passes the live
  * settings ([continuousAppConfig]), nextword the swap (plus the display fields
  * on its predict request), case transform the nasal-marker switch; a field a
  * request family does not read keeps its proto default. `pojMarkers == null`
@@ -41,7 +40,6 @@ internal fun appConfig(
 ): AppConfig =
     AppConfig
         .newBuilder()
-        .setPlatformId(Platform.PLATFORM_ANDROID)
         .setInputMode(inputMode)
         .apply {
             if (pojMarkers != null) {

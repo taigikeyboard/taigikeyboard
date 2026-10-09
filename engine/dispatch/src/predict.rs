@@ -81,9 +81,7 @@ fn bundled_rows(
 mod tests {
     use super::*;
     use prost::Message;
-    use protos::engine::{
-        next_word_response, request, response, AppConfig, Platform, Request, Response,
-    };
+    use protos::engine::{next_word_response, request, response, Request, Response};
 
     fn user_row(hanji: &str, count: i64) -> RawNextWordPrediction {
         RawNextWordPrediction {
@@ -158,10 +156,7 @@ mod tests {
     fn predict_next_via_process_request_drops_stale_generation() {
         let request = Request {
             id: 5,
-            config_snapshot: Some(AppConfig {
-                platform_id: Platform::Ios as i32,
-                ..AppConfig::default()
-            }),
+            config_snapshot: None,
             generation: 424_242,
             payload: Some(request::Payload::Nextword(NextWordRequest {
                 method: Some(Method::PredictNext(PredictNext {

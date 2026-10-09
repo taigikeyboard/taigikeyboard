@@ -61,11 +61,11 @@ fn process_request_bytes(bytes: &[u8]) -> Vec<u8> {
             // may be wire-valid; the engine invariant violated is "request
             // size ≤ MAX_REQUEST_BYTES". Adding FAIL_SIZE would renumber proto
             // reserved fields.
-            return encode_error(0, ErrorCode::FailInvariant, 0);
+            return encode_error(ErrorCode::FailInvariant);
         }
         dispatch::process_request(bytes)
     }))
-    .unwrap_or_else(|_| encode_error(0, ErrorCode::FailInternal, 0))
+    .unwrap_or_else(|_| encode_error(ErrorCode::FailInternal))
 }
 
 fn install_logger_sink(sink: ffi::SwiftLoggerSink) {
@@ -126,10 +126,10 @@ fn panic_for_test() -> Vec<u8> {
             // Release xcframework no-ops: returns a benign error sentinel. The
             // test target builds the dev xcframework with `--features
             // panic-injector` so T1 actually panics inside the catch boundary.
-            encode_error(0, ErrorCode::FailInvariant, 0)
+            encode_error(ErrorCode::FailInvariant)
         }
     }))
-    .unwrap_or_else(|_| encode_error(0, ErrorCode::FailInternal, 0))
+    .unwrap_or_else(|_| encode_error(ErrorCode::FailInternal))
 }
 
 #[cfg(feature = "e2e-trace")]

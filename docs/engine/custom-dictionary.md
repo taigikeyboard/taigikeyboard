@@ -23,8 +23,8 @@
 | `roman` | String | Romanization in the user's native form (TL or POJ display, whichever the user typed when saving). The engine treats it raw on the lattice axis; the freq-key commit value is canonicalized to TL at synthesis time (`phonetics::api::canonical_tl_form`, v3.5.9 B-4). |
 | `hanzi` | String | Chinese/Taiwanese characters |
 | search keys | `custom_search_key` rows | Derived per entry by the engine: TL / POJ / TPS families × tone-number / toneless / abbreviation forms (`engine/phonetics/src/custom_search.rs`) |
-| `createdAt` | Timestamp | Creation time (UTC) |
-| `updatedAt` | Timestamp | Last update time |
+| `created_at` | Timestamp | Creation time (UTC) — DB column only; the `CustomDictionaryEntry.created_at` wire field was removed 2026-10-09 (round A1b), tag 4 reserved |
+| `updated_at` | Timestamp | Last update time — DB column only; the `CustomDictionaryEntry.updated_at` wire field was removed 2026-10-09 (round A1b), tag 5 reserved |
 
 Example: `roman="gâu-tsá"` → toneless key `gautsa`, abbreviation key `gt`
 

@@ -13,13 +13,12 @@ use common::{open_user_data, production_lexicon_ready};
 use protos::engine::{
     composing_request, request, response, AppConfig, CommitAsShown, CommitContinuous,
     CommitOutcome, CommitScript, ComposingRequest, ComposingResponse, FetchAtPos, HanjiConversion,
-    Platform, Reset, Start,
+    Reset, Start,
 };
 
 /// The desktop TPS config, asking for the conversion.
 fn tps_converting() -> AppConfig {
     AppConfig {
-        platform_id: Platform::Macos as i32,
         input_mode: "tps".to_owned(),
         hanji_conversion: Some(HanjiConversion { toggles: None }),
         ..AppConfig::default()

@@ -35,7 +35,6 @@ use std::sync::Arc;
 use super::clock::SystemClock;
 use super::manager::ComposingManager;
 use super::next_word::EngineNextWord;
-use crate::platform::DesktopPlatform;
 use crate::settings::SettingsProvider;
 
 /// Identity of one input context. Allocated by the shell (a counter, never a
@@ -60,12 +59,11 @@ impl ComposingSessionCoordinator {
     /// user's data (user-data-engine-roadmap P5) — it counts the picks and
     /// records the associations it decides on itself, wherever the process
     /// opened a data directory for it (R5).
-    pub fn for_desktop(settings: Arc<dyn SettingsProvider>, platform: DesktopPlatform) -> Self {
+    pub fn for_desktop(settings: Arc<dyn SettingsProvider>) -> Self {
         Self::new(ComposingManager::new(
             settings,
-            Box::new(EngineNextWord { platform }),
+            Box::new(EngineNextWord),
             Box::new(SystemClock),
-            platform,
             1,
         ))
     }

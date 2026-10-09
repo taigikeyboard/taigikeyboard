@@ -233,9 +233,8 @@ message FilterResult {
 }
 
 // UI-ready prediction value — mirrors iOS EnginePrediction.swift +
-// Android EnginePrediction.kt. Android consumes `score` for
-// TaigiWord.lengthScore; iOS ignores it (iOS bridge presentation
-// rule documented in nextword-engine-boundary.md §13.10).
+// Android EnginePrediction.kt (iOS bridge presentation rule documented in
+// nextword-engine-boundary.md §13.10).
 message EnginePrediction {
   string text     = 1;
   // "" == nil (Optional on iOS, nullable on Android). Filter contract
@@ -247,7 +246,7 @@ message EnginePrediction {
   string tl       = 4;
   // Merged score: min(dict_sum, DICT_SCORE_CAP 250) + user_sum, the sums
   // taken over the (hanji, tl) merge and the reading-variant fold
-  // (behavioral-invariants §8). Android maps to TaigiWord.lengthScore.
+  // (behavioral-invariants §8). Test seam only; no platform reads it.
   double score    = 5;
 }
 

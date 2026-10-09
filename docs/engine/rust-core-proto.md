@@ -71,7 +71,7 @@ message Request {
 message Response {
   uint32 id = 1;                       // echoes Request.id
   ErrorCode error = 2;
-  uint64 generation = 3;               // echoes Request.generation
+  reserved 3;                          // generation — echoed Request.generation; removed 2026-10-09 (round A1b)
   oneof payload {
     PhoneticsResponse phonetics = 10;
     ComposingResponse composing = 11;
@@ -100,7 +100,7 @@ Authoritative ownership of `currentGeneration` lives in the **platform engine ex
 For the first-slice proto, `generation` is purely an **FFI correlation / stale-response field**:
 
 - Platform supplies the current generation in `Request.generation`.
-- Rust echoes it back in `Response.generation` without mutation.
+- Rust does not echo it: `Response.generation` (tag 3) was removed 2026-10-09 (round A1b) — no platform read it back; the e2e trace logs the decoded request's value (`docs/architecture/e2e-trace-schema.md`).
 - **Phonetics slice** does not consult or mutate `generation` — it is stateless.
 - **Composing slice** carries it through transitions but does not bump it. Bumping is a NextWord concern (platform side).
 
@@ -121,7 +121,7 @@ A khiin-rs-style `CMD_SET_CONFIG` (`references/khiin-rs/khiin/src/engine.rs:296`
 
 ## 7. Phonetics slice — AS-IMPLEMENTED (PR #186 + PR #187)
 
-The merged D9.4 shape uses an `oneof method` dispatch, now 8 ops grouped into 3 families (ten ops with no production caller were removed — `NormalizeTone`, `NormalizeToTl`, `RestoreTone`, `ContainsTps` on 2026-09-25; `PojToTl`, `NormalizeInput`, `DeriveNotone`, `DeriveAbbrev`, `DeriveCustomSearchKeys`, `DeriveCustomQueryKey` on 2026-09-30 — tags reserved; `StripTone` and `NfdPreprocessForLookup`, the URL builders' two steps, were folded into `ExternalLookupDigitForm` on 2026-10-04). Canonical source: `engine/protos/proto/phonetics.proto`. Sketch:
+The merged D9.4 shape uses an `oneof method` dispatch, now 7 ops grouped into 3 families (eleven ops with no production caller were removed — `NormalizeTone`, `NormalizeToTl`, `RestoreTone`, `ContainsTps` on 2026-09-25; `PojToTl`, `NormalizeInput`, `DeriveNotone`, `DeriveAbbrev`, `DeriveCustomSearchKeys`, `DeriveCustomQueryKey` on 2026-09-30 — tags reserved; `StripTone` and `NfdPreprocessForLookup`, the URL builders' two steps, were folded into `ExternalLookupDigitForm` on 2026-10-04; `TlNumericToTps` on 2026-10-09, round A1b — tag 32 reserved, `phonetics::api::tl_numeric_to_tps` stays Rust-internal under `tl_display_to_tps`). Canonical source: `engine/protos/proto/phonetics.proto`. Sketch:
 
 ```protobuf
 message PhoneticsRequest {
@@ -132,6 +132,8 @@ message PhoneticsRequest {
       "derive_custom_search_keys", "derive_custom_query_key";
   reserved 11, 19;
   reserved "strip_tone", "nfd_preprocess_for_lookup";
+  reserved 32;
+  reserved "tl_numeric_to_tps";
 
   oneof method {
     // Phonetics core (2 ops): TlToPoj, GetToneVariations.
@@ -139,7 +141,7 @@ message PhoneticsRequest {
     // ... (see phonetics.proto for full list)
 
 
-    // TPS (4 ops): TlNumericToTps, TlDisplayToTps,
+    // TPS (3 ops): TlDisplayToTps,
     // IsTpsToneMark, TpsInputAdjust.
     TpsInputAdjust tps_input_adjust = 35;
     // ...
@@ -161,8 +163,8 @@ message PhoneticsResponse {
 }
 ```
 
-- **Per-op payload type** rather than a flat `string input` — lets each op carry its natural shape (e.g. `TpsInputAdjust` takes `incoming` + `raw_input`; `TlNumericToTps` takes `text` + `or_maps_to_er`).
-- **`oneof result`** with 4 result shapes covers all 8 ops: most ops return `StringResult`; `IsTpsToneMark` and `IsAttachingPunctuation` use `BoolResult`; the `StripToneResult` arm (tag 11) was reserved with `StripTone` on 2026-10-04; the `CustomSearchKeysResult` arm (tag 16) was reserved with `DeriveCustomQueryKey` on 2026-09-30; the top-level `OptionalStringResult` arm (tag 12) was reserved when `RestoreTone` was removed — the message survives only inside `TpsAdjustResult`; `GetToneVariations` uses `ToneVariationsResult` (callout init-bulk-pull); `TpsInputAdjust` uses `TpsAdjustResult` carrying the adjusted char + optional `replace_last` instruction.
+- **Per-op payload type** rather than a flat `string input` — lets each op carry its natural shape (e.g. `TpsInputAdjust` takes `incoming` + `raw_input`; `TlDisplayToTps` takes `text` + `or_maps_to_er`).
+- **`oneof result`** with 4 result shapes covers all 7 ops: most ops return `StringResult`; `IsTpsToneMark` and `IsAttachingPunctuation` use `BoolResult`; the `StripToneResult` arm (tag 11) was reserved with `StripTone` on 2026-10-04; the `CustomSearchKeysResult` arm (tag 16) was reserved with `DeriveCustomQueryKey` on 2026-09-30; the top-level `OptionalStringResult` arm (tag 12) was reserved when `RestoreTone` was removed — the message survives only inside `TpsAdjustResult`; `GetToneVariations` uses `ToneVariationsResult` (callout init-bulk-pull); `TpsInputAdjust` uses `TpsAdjustResult` carrying the adjusted char + optional `replace_last` instruction.
 - Pure, stateless. Every op is a function of its payload alone — `phonetics::requests::handle(req)` takes no `AppConfig` (the settings-reading `NormalizeTone` op was removed 2026-09-25; `phonetics::api::normalize_tone` is now called in-process by `composing::derived`).
 - Replaces both platforms' `PhoneticsConverter.swift` / `TaigiPhonetics.kt` + `InputNormalizer` + `ToneRestoration` + `TPSConverter` + `TPSAdjustmentBundle` entry points.
 - **Two ops were removed mid-flight** (`AdjustNasalMarkerCase`, `NfdPreprocess`): originally callers reverted to platform-side helpers (`ToneUtilities.adjustNasalMarkerCase` / `TaigiUnicode.nfdPreprocessed`) for Android JVM unit-test compatibility. **(Obsolete after the v3.5.3 follow-up, which deleted platform mirrors outright instead of keeping them for JVM tests.)** Path G deleted the platform mirrors + their JVM unit tests; `phonetics::api::normalize_tone` applies `adjust_nasal_marker_case` in-band as part of the normalize pipeline; `Method::ExternalLookupDigitForm` runs the Rust helper inside the whole digit-tone fold (the standalone `NfdPreprocessForLookup` op went with it on 2026-10-04). The Rust phonetics crate is now the sole owner of both algorithms.

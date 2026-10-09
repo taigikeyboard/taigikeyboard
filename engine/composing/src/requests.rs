@@ -27,7 +27,7 @@ use crate::continuous::{assemble_candidates, retain_first_by_key, roman_reading_
 use crate::derived::buffer_input_mode;
 use lexicon::{
     classification::is_hanji, ConsumedSpan, LearnedEntry, RawCandidate, SyllableInventory,
-    COVERAGE_KIND_FULL, FORM_NOTONE,
+    COVERAGE_KIND_FULL,
 };
 use protos::engine::{
     composing_request, AppConfig, CandidateMessage, CommitScript as WireCommitScript,
@@ -392,7 +392,6 @@ fn literal_roman_candidate(
         hanji: None,
         canonical_tl,
         score: 0.0,
-        form: FORM_NOTONE,
         frequency: 0,
         walker_cost: WALKER_COST_UNPRICED,
         bitmask: 0,
@@ -514,7 +513,6 @@ mod tests {
     //! the `Engine` + lexicon singletons.
 
     use super::*;
-    use lexicon::FORM_NOTONE;
 
     #[test]
     fn clamp_syllable_count_saturates() {
@@ -539,7 +537,6 @@ mod tests {
             hanji: Some("臺灣".to_owned()),
             canonical_tl: "tâi-uân".to_owned(),
             score: 1.5,
-            form: FORM_NOTONE,
             frequency: 12,
             walker_cost: WALKER_COST_UNPRICED,
             bitmask: 0,
@@ -566,7 +563,6 @@ mod tests {
             hanji: None,
             canonical_tl: "tāi".to_owned(),
             score: 0.5,
-            form: FORM_NOTONE,
             frequency: 3,
             walker_cost: WALKER_COST_UNPRICED,
             bitmask: 0,
@@ -597,7 +593,6 @@ mod tests {
                 hanji: hanji.map(str::to_owned),
                 canonical_tl: roman.to_owned(),
                 score: 1.0,
-                form: FORM_NOTONE,
                 frequency: 1,
                 walker_cost: WALKER_COST_UNPRICED,
                 bitmask: 0,
@@ -636,7 +631,6 @@ mod tests {
             oo_doubletap_enabled: false,
             nn_doubletap_enabled: false,
             is_hanji_first: false,
-            platform_id: 0,
             output_both_scripts: false,
             candidate_display_mode: 0,
             syllable_separator: 0,

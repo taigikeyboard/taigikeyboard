@@ -44,7 +44,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
  *
  * 2026-09-30 (R6) `input_mode` accepts `"tps"` as a real mode, and
  * `tps_or_maps_to_er` carries the TPS or→er dialect choice (the same flag
- * `TlNumericToTps` / `TlDisplayToTps` take as `or_maps_to_er`). Under
+ * `TlDisplayToTps` takes as `or_maps_to_er`). Under
  * `"tps"` the engine composes with the TL tables and applies the TPS fold
  * itself (`AppConfig::renders_hanji_first` / `rendered_syllable_joiner` in
  * `engine/protos/src/lib.rs`), so `is_hanji_first` and
@@ -221,49 +221,6 @@ public  final class AppConfig extends
   private void clearIsHanjiFirst() {
 
     isHanjiFirst_ = false;
-  }
-
-  public static final int PLATFORM_ID_FIELD_NUMBER = 7;
-  private int platformId_;
-  /**
-   * <code>.taigi.engine.Platform platform_id = 7;</code>
-   * @return The enum numeric value on the wire for platformId.
-   */
-  @java.lang.Override
-  public int getPlatformIdValue() {
-    return platformId_;
-  }
-  /**
-   * <code>.taigi.engine.Platform platform_id = 7;</code>
-   * @return The platformId.
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.Platform getPlatformId() {
-    com.siansiansu.taigikeyboard.engine.proto.Platform result = com.siansiansu.taigikeyboard.engine.proto.Platform.forNumber(platformId_);
-    return result == null ? com.siansiansu.taigikeyboard.engine.proto.Platform.UNRECOGNIZED : result;
-  }
-  /**
-   * <code>.taigi.engine.Platform platform_id = 7;</code>
-   * @param value The enum numeric value on the wire for platformId to set.
-   */
-  private void setPlatformIdValue(int value) {
-      platformId_ = value;
-  }
-  /**
-   * <code>.taigi.engine.Platform platform_id = 7;</code>
-   * @param value The platformId to set.
-   * @throws IllegalArgumentException if UNRECOGNIZED is provided.
-   */
-  private void setPlatformId(com.siansiansu.taigikeyboard.engine.proto.Platform value) {
-    platformId_ = value.getNumber();
-
-  }
-  /**
-   * <code>.taigi.engine.Platform platform_id = 7;</code>
-   */
-  private void clearPlatformId() {
-
-    platformId_ = 0;
   }
 
   public static final int OUTPUT_BOTH_SCRIPTS_FIELD_NUMBER = 8;
@@ -669,7 +626,7 @@ public  final class AppConfig extends
    *
    * 2026-09-30 (R6) `input_mode` accepts `"tps"` as a real mode, and
    * `tps_or_maps_to_er` carries the TPS or→er dialect choice (the same flag
-   * `TlNumericToTps` / `TlDisplayToTps` take as `or_maps_to_er`). Under
+   * `TlDisplayToTps` takes as `or_maps_to_er`). Under
    * `"tps"` the engine composes with the TL tables and applies the TPS fold
    * itself (`AppConfig::renders_hanji_first` / `rendered_syllable_joiner` in
    * `engine/protos/src/lib.rs`), so `is_hanji_first` and
@@ -854,53 +811,6 @@ public  final class AppConfig extends
     public Builder clearIsHanjiFirst() {
       copyOnWrite();
       instance.clearIsHanjiFirst();
-      return this;
-    }
-
-    /**
-     * <code>.taigi.engine.Platform platform_id = 7;</code>
-     * @return The enum numeric value on the wire for platformId.
-     */
-    @java.lang.Override
-    public int getPlatformIdValue() {
-      return instance.getPlatformIdValue();
-    }
-    /**
-     * <code>.taigi.engine.Platform platform_id = 7;</code>
-     * @param value The platformId to set.
-     * @throws IllegalArgumentException if UNRECOGNIZED is provided.
-     * @return This builder for chaining.
-     */
-    public Builder setPlatformIdValue(int value) {
-      copyOnWrite();
-      instance.setPlatformIdValue(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.Platform platform_id = 7;</code>
-     * @return The platformId.
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.Platform getPlatformId() {
-      return instance.getPlatformId();
-    }
-    /**
-     * <code>.taigi.engine.Platform platform_id = 7;</code>
-     * @param value The enum numeric value on the wire for platformId to set.
-     * @return This builder for chaining.
-     */
-    public Builder setPlatformId(com.siansiansu.taigikeyboard.engine.proto.Platform value) {
-      copyOnWrite();
-      instance.setPlatformId(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.Platform platform_id = 7;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearPlatformId() {
-      copyOnWrite();
-      instance.clearPlatformId();
       return this;
     }
 
@@ -1227,7 +1137,6 @@ public  final class AppConfig extends
             "ooDoubletapEnabled_",
             "nnDoubletapEnabled_",
             "isHanjiFirst_",
-            "platformId_",
             "outputBothScripts_",
             "candidateDisplayMode_",
             "forceLowercaseNasalMarker_",
@@ -1236,9 +1145,8 @@ public  final class AppConfig extends
             "syllableSeparator_",
           };
           java.lang.String info =
-              "\u0000\u000b\u0000\u0001\u0002\u000e\u000b\u0000\u0000\u0000\u0002\u0208\u0003\u0007" +
-              "\u0004\u0007\u0005\u0007\u0007\f\b\u0007\t\f\u000b\u0007\f\u0007\r\u1009\u0000\u000e" +
-              "\f";
+              "\u0000\n\u0000\u0001\u0002\u000e\n\u0000\u0000\u0000\u0002\u0208\u0003\u0007\u0004" +
+              "\u0007\u0005\u0007\b\u0007\t\f\u000b\u0007\f\u0007\r\u1009\u0000\u000e\f";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

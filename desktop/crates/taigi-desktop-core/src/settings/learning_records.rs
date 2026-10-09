@@ -29,9 +29,7 @@ impl ListedRow for LearningRecord {
     }
 }
 
-/// The kinds the desktop lists with their labels, in picker order. No
-/// next-word association: the desktop predicts no next word, so those rows
-/// rank nothing here.
+/// The kinds the desktop lists with their labels, in picker order.
 pub const KINDS: [(LearningRecordKind, StringKey); 2] = [
     (
         LearningRecordKind::Frequency,

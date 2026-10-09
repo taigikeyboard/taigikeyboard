@@ -7,7 +7,6 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * Rows removed per store (0 for a store not selected, or one that failed).
  * Every selected store is attempted: one that cannot be emptied is no
  * reason to leave the others full.
  * </pre>
@@ -23,110 +22,6 @@ public  final class UserDataReset extends
   private UserDataReset() {
     failures_ = emptyProtobufList();
   }
-  public static final int FREQUENCY_REMOVED_FIELD_NUMBER = 1;
-  private long frequencyRemoved_;
-  /**
-   * <code>int64 frequency_removed = 1;</code>
-   * @return The frequencyRemoved.
-   */
-  @java.lang.Override
-  public long getFrequencyRemoved() {
-    return frequencyRemoved_;
-  }
-  /**
-   * <code>int64 frequency_removed = 1;</code>
-   * @param value The frequencyRemoved to set.
-   */
-  private void setFrequencyRemoved(long value) {
-
-    frequencyRemoved_ = value;
-  }
-  /**
-   * <code>int64 frequency_removed = 1;</code>
-   */
-  private void clearFrequencyRemoved() {
-
-    frequencyRemoved_ = 0L;
-  }
-
-  public static final int ASSOCIATION_REMOVED_FIELD_NUMBER = 2;
-  private long associationRemoved_;
-  /**
-   * <code>int64 association_removed = 2;</code>
-   * @return The associationRemoved.
-   */
-  @java.lang.Override
-  public long getAssociationRemoved() {
-    return associationRemoved_;
-  }
-  /**
-   * <code>int64 association_removed = 2;</code>
-   * @param value The associationRemoved to set.
-   */
-  private void setAssociationRemoved(long value) {
-
-    associationRemoved_ = value;
-  }
-  /**
-   * <code>int64 association_removed = 2;</code>
-   */
-  private void clearAssociationRemoved() {
-
-    associationRemoved_ = 0L;
-  }
-
-  public static final int CUSTOM_DICTIONARY_REMOVED_FIELD_NUMBER = 3;
-  private long customDictionaryRemoved_;
-  /**
-   * <code>int64 custom_dictionary_removed = 3;</code>
-   * @return The customDictionaryRemoved.
-   */
-  @java.lang.Override
-  public long getCustomDictionaryRemoved() {
-    return customDictionaryRemoved_;
-  }
-  /**
-   * <code>int64 custom_dictionary_removed = 3;</code>
-   * @param value The customDictionaryRemoved to set.
-   */
-  private void setCustomDictionaryRemoved(long value) {
-
-    customDictionaryRemoved_ = value;
-  }
-  /**
-   * <code>int64 custom_dictionary_removed = 3;</code>
-   */
-  private void clearCustomDictionaryRemoved() {
-
-    customDictionaryRemoved_ = 0L;
-  }
-
-  public static final int LEARNED_PHRASES_REMOVED_FIELD_NUMBER = 4;
-  private long learnedPhrasesRemoved_;
-  /**
-   * <code>int64 learned_phrases_removed = 4;</code>
-   * @return The learnedPhrasesRemoved.
-   */
-  @java.lang.Override
-  public long getLearnedPhrasesRemoved() {
-    return learnedPhrasesRemoved_;
-  }
-  /**
-   * <code>int64 learned_phrases_removed = 4;</code>
-   * @param value The learnedPhrasesRemoved to set.
-   */
-  private void setLearnedPhrasesRemoved(long value) {
-
-    learnedPhrasesRemoved_ = value;
-  }
-  /**
-   * <code>int64 learned_phrases_removed = 4;</code>
-   */
-  private void clearLearnedPhrasesRemoved() {
-
-    learnedPhrasesRemoved_ = 0L;
-  }
-
   public static final int FAILURES_FIELD_NUMBER = 5;
   private com.google.protobuf.Internal.ProtobufList<java.lang.String> failures_;
   /**
@@ -359,7 +254,6 @@ public  final class UserDataReset extends
 
   /**
    * <pre>
-   * Rows removed per store (0 for a store not selected, or one that failed).
    * Every selected store is attempted: one that cannot be emptied is no
    * reason to leave the others full.
    * </pre>
@@ -376,118 +270,6 @@ public  final class UserDataReset extends
       super(DEFAULT_INSTANCE);
     }
 
-
-    /**
-     * <code>int64 frequency_removed = 1;</code>
-     * @return The frequencyRemoved.
-     */
-    @java.lang.Override
-    public long getFrequencyRemoved() {
-      return instance.getFrequencyRemoved();
-    }
-    /**
-     * <code>int64 frequency_removed = 1;</code>
-     * @param value The frequencyRemoved to set.
-     * @return This builder for chaining.
-     */
-    public Builder setFrequencyRemoved(long value) {
-      copyOnWrite();
-      instance.setFrequencyRemoved(value);
-      return this;
-    }
-    /**
-     * <code>int64 frequency_removed = 1;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearFrequencyRemoved() {
-      copyOnWrite();
-      instance.clearFrequencyRemoved();
-      return this;
-    }
-
-    /**
-     * <code>int64 association_removed = 2;</code>
-     * @return The associationRemoved.
-     */
-    @java.lang.Override
-    public long getAssociationRemoved() {
-      return instance.getAssociationRemoved();
-    }
-    /**
-     * <code>int64 association_removed = 2;</code>
-     * @param value The associationRemoved to set.
-     * @return This builder for chaining.
-     */
-    public Builder setAssociationRemoved(long value) {
-      copyOnWrite();
-      instance.setAssociationRemoved(value);
-      return this;
-    }
-    /**
-     * <code>int64 association_removed = 2;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearAssociationRemoved() {
-      copyOnWrite();
-      instance.clearAssociationRemoved();
-      return this;
-    }
-
-    /**
-     * <code>int64 custom_dictionary_removed = 3;</code>
-     * @return The customDictionaryRemoved.
-     */
-    @java.lang.Override
-    public long getCustomDictionaryRemoved() {
-      return instance.getCustomDictionaryRemoved();
-    }
-    /**
-     * <code>int64 custom_dictionary_removed = 3;</code>
-     * @param value The customDictionaryRemoved to set.
-     * @return This builder for chaining.
-     */
-    public Builder setCustomDictionaryRemoved(long value) {
-      copyOnWrite();
-      instance.setCustomDictionaryRemoved(value);
-      return this;
-    }
-    /**
-     * <code>int64 custom_dictionary_removed = 3;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearCustomDictionaryRemoved() {
-      copyOnWrite();
-      instance.clearCustomDictionaryRemoved();
-      return this;
-    }
-
-    /**
-     * <code>int64 learned_phrases_removed = 4;</code>
-     * @return The learnedPhrasesRemoved.
-     */
-    @java.lang.Override
-    public long getLearnedPhrasesRemoved() {
-      return instance.getLearnedPhrasesRemoved();
-    }
-    /**
-     * <code>int64 learned_phrases_removed = 4;</code>
-     * @param value The learnedPhrasesRemoved to set.
-     * @return This builder for chaining.
-     */
-    public Builder setLearnedPhrasesRemoved(long value) {
-      copyOnWrite();
-      instance.setLearnedPhrasesRemoved(value);
-      return this;
-    }
-    /**
-     * <code>int64 learned_phrases_removed = 4;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearLearnedPhrasesRemoved() {
-      copyOnWrite();
-      instance.clearLearnedPhrasesRemoved();
-      return this;
-    }
 
     /**
      * <pre>
@@ -651,15 +433,10 @@ public  final class UserDataReset extends
       }
       case BUILD_MESSAGE_INFO: {
           java.lang.Object[] objects = new java.lang.Object[] {
-            "frequencyRemoved_",
-            "associationRemoved_",
-            "customDictionaryRemoved_",
-            "learnedPhrasesRemoved_",
             "failures_",
           };
           java.lang.String info =
-              "\u0000\u0005\u0000\u0000\u0001\u0005\u0005\u0000\u0001\u0000\u0001\u0002\u0002\u0002" +
-              "\u0003\u0002\u0004\u0002\u0005\u021a";
+              "\u0000\u0001\u0000\u0000\u0005\u0005\u0001\u0000\u0001\u0000\u0005\u021a";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

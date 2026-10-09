@@ -20,13 +20,11 @@ class PredictionWordsBuilderTest {
         subtitle: String?,
         hanji: String,
         tl: String = text,
-        score: Double = 1.0,
     ) = RustEngineBridge.NextWordEnginePrediction(
         text = text,
         subtitle = subtitle,
         hanji = hanji,
         tl = tl,
-        score = score,
     )
 
     private val predictions =

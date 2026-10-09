@@ -139,7 +139,6 @@ fn search_row_to_taigi_word(row: SearchRow) -> TaigiWord {
         id: row.id,
         roman: row.roman,
         hanji: row.hanji,
-        length_score: row.length_score,
         sources: source_codes(row.source_bitmask.unwrap_or(0))
             .into_iter()
             .map(|code| code as i32)

@@ -45,28 +45,4 @@ public interface CustomDictionaryEntryOrBuilder extends
    */
   com.google.protobuf.ByteString
       getHanjiBytes();
-
-  /**
-   * <code>string created_at = 4;</code>
-   * @return The createdAt.
-   */
-  java.lang.String getCreatedAt();
-  /**
-   * <code>string created_at = 4;</code>
-   * @return The bytes for createdAt.
-   */
-  com.google.protobuf.ByteString
-      getCreatedAtBytes();
-
-  /**
-   * <code>string updated_at = 5;</code>
-   * @return The updatedAt.
-   */
-  java.lang.String getUpdatedAt();
-  /**
-   * <code>string updated_at = 5;</code>
-   * @return The bytes for updatedAt.
-   */
-  com.google.protobuf.ByteString
-      getUpdatedAtBytes();
 }

@@ -53,10 +53,9 @@ pub use syllable::{
 pub use tl::to_tl;
 pub use tps::{
     canonicalize_tps_syllable, fold_tps_glyph_alias, from_zhuyin as tps_to_tl, is_tps_char,
-    is_tps_initial, is_tps_tone_mark, is_tps_vowel_material, normalize_tps_lookup_scalar,
-    to_zhuyin as tl_numeric_token_to_tps, tps_abbrev_from_tl, tps_notone_from_tl,
-    tps_notone_or_variant, tps_notone_prefix_boundary_tone, tps_notone_syllable_ends_from_tl,
-    tps_num_from_tl, tps_num_syllable_ends_from_tl,
+    is_tps_tone_mark, normalize_tps_lookup_scalar, to_zhuyin as tl_numeric_token_to_tps,
+    tps_abbrev_from_tl, tps_notone_from_tl, tps_notone_or_variant, tps_notone_prefix_boundary_tone,
+    tps_notone_syllable_ends_from_tl, tps_num_from_tl, tps_num_syllable_ends_from_tl,
 };
-pub use tps_adjust::{adjust as tps_input_adjust, defold_coda_to_initial};
+pub use tps_adjust::adjust as tps_input_adjust;
 pub use tps_ambiguity::{tps_ambiguity_family, TpsFamilyMember, TpsGlyphRole};

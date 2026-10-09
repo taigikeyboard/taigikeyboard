@@ -8,8 +8,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
 /**
  * <pre>
  * One learned row. `id` is the store's row id: a handle for a row a page
- * already listed, never the word's identity (that is `(text, tl)`, with the
- * previous pair for an association).
+ * already listed, never the word's identity (that is `(text, tl)`).
  * </pre>
  *
  * Protobuf type {@code taigi.engine.LearningRecord}
@@ -23,8 +22,6 @@ public  final class LearningRecord extends
   private LearningRecord() {
     text_ = "";
     tl_ = "";
-    previousText_ = "";
-    previousTl_ = "";
   }
   public static final int KIND_FIELD_NUMBER = 1;
   private int kind_;
@@ -99,7 +96,7 @@ public  final class LearningRecord extends
   private java.lang.String text_;
   /**
    * <pre>
-   * The word / the phrase's Hanji / the association's next word.
+   * The word / the phrase's Hanji.
    * </pre>
    *
    * <code>string text = 3;</code>
@@ -111,7 +108,7 @@ public  final class LearningRecord extends
   }
   /**
    * <pre>
-   * The word / the phrase's Hanji / the association's next word.
+   * The word / the phrase's Hanji.
    * </pre>
    *
    * <code>string text = 3;</code>
@@ -124,7 +121,7 @@ public  final class LearningRecord extends
   }
   /**
    * <pre>
-   * The word / the phrase's Hanji / the association's next word.
+   * The word / the phrase's Hanji.
    * </pre>
    *
    * <code>string text = 3;</code>
@@ -138,7 +135,7 @@ public  final class LearningRecord extends
   }
   /**
    * <pre>
-   * The word / the phrase's Hanji / the association's next word.
+   * The word / the phrase's Hanji.
    * </pre>
    *
    * <code>string text = 3;</code>
@@ -149,7 +146,7 @@ public  final class LearningRecord extends
   }
   /**
    * <pre>
-   * The word / the phrase's Hanji / the association's next word.
+   * The word / the phrase's Hanji.
    * </pre>
    *
    * <code>string text = 3;</code>
@@ -226,120 +223,6 @@ public  final class LearningRecord extends
       com.google.protobuf.ByteString value) {
     checkByteStringIsUtf8(value);
     tl_ = value.toStringUtf8();
-
-  }
-
-  public static final int PREVIOUS_TEXT_FIELD_NUMBER = 5;
-  private java.lang.String previousText_;
-  /**
-   * <pre>
-   * Association only: the word `text` followed, and its TL.
-   * </pre>
-   *
-   * <code>string previous_text = 5;</code>
-   * @return The previousText.
-   */
-  @java.lang.Override
-  public java.lang.String getPreviousText() {
-    return previousText_;
-  }
-  /**
-   * <pre>
-   * Association only: the word `text` followed, and its TL.
-   * </pre>
-   *
-   * <code>string previous_text = 5;</code>
-   * @return The bytes for previousText.
-   */
-  @java.lang.Override
-  public com.google.protobuf.ByteString
-      getPreviousTextBytes() {
-    return com.google.protobuf.ByteString.copyFromUtf8(previousText_);
-  }
-  /**
-   * <pre>
-   * Association only: the word `text` followed, and its TL.
-   * </pre>
-   *
-   * <code>string previous_text = 5;</code>
-   * @param value The previousText to set.
-   */
-  private void setPreviousText(
-      java.lang.String value) {
-    java.util.Objects.requireNonNull(value);
-
-    previousText_ = value;
-  }
-  /**
-   * <pre>
-   * Association only: the word `text` followed, and its TL.
-   * </pre>
-   *
-   * <code>string previous_text = 5;</code>
-   */
-  private void clearPreviousText() {
-
-    previousText_ = getDefaultInstance().getPreviousText();
-  }
-  /**
-   * <pre>
-   * Association only: the word `text` followed, and its TL.
-   * </pre>
-   *
-   * <code>string previous_text = 5;</code>
-   * @param value The bytes for previousText to set.
-   */
-  private void setPreviousTextBytes(
-      com.google.protobuf.ByteString value) {
-    checkByteStringIsUtf8(value);
-    previousText_ = value.toStringUtf8();
-
-  }
-
-  public static final int PREVIOUS_TL_FIELD_NUMBER = 6;
-  private java.lang.String previousTl_;
-  /**
-   * <code>string previous_tl = 6;</code>
-   * @return The previousTl.
-   */
-  @java.lang.Override
-  public java.lang.String getPreviousTl() {
-    return previousTl_;
-  }
-  /**
-   * <code>string previous_tl = 6;</code>
-   * @return The bytes for previousTl.
-   */
-  @java.lang.Override
-  public com.google.protobuf.ByteString
-      getPreviousTlBytes() {
-    return com.google.protobuf.ByteString.copyFromUtf8(previousTl_);
-  }
-  /**
-   * <code>string previous_tl = 6;</code>
-   * @param value The previousTl to set.
-   */
-  private void setPreviousTl(
-      java.lang.String value) {
-    java.util.Objects.requireNonNull(value);
-
-    previousTl_ = value;
-  }
-  /**
-   * <code>string previous_tl = 6;</code>
-   */
-  private void clearPreviousTl() {
-
-    previousTl_ = getDefaultInstance().getPreviousTl();
-  }
-  /**
-   * <code>string previous_tl = 6;</code>
-   * @param value The bytes for previousTl to set.
-   */
-  private void setPreviousTlBytes(
-      com.google.protobuf.ByteString value) {
-    checkByteStringIsUtf8(value);
-    previousTl_ = value.toStringUtf8();
 
   }
 
@@ -543,8 +426,7 @@ public  final class LearningRecord extends
   /**
    * <pre>
    * One learned row. `id` is the store's row id: a handle for a row a page
-   * already listed, never the word's identity (that is `(text, tl)`, with the
-   * previous pair for an association).
+   * already listed, never the word's identity (that is `(text, tl)`).
    * </pre>
    *
    * Protobuf type {@code taigi.engine.LearningRecord}
@@ -637,7 +519,7 @@ public  final class LearningRecord extends
 
     /**
      * <pre>
-     * The word / the phrase's Hanji / the association's next word.
+     * The word / the phrase's Hanji.
      * </pre>
      *
      * <code>string text = 3;</code>
@@ -649,7 +531,7 @@ public  final class LearningRecord extends
     }
     /**
      * <pre>
-     * The word / the phrase's Hanji / the association's next word.
+     * The word / the phrase's Hanji.
      * </pre>
      *
      * <code>string text = 3;</code>
@@ -662,7 +544,7 @@ public  final class LearningRecord extends
     }
     /**
      * <pre>
-     * The word / the phrase's Hanji / the association's next word.
+     * The word / the phrase's Hanji.
      * </pre>
      *
      * <code>string text = 3;</code>
@@ -677,7 +559,7 @@ public  final class LearningRecord extends
     }
     /**
      * <pre>
-     * The word / the phrase's Hanji / the association's next word.
+     * The word / the phrase's Hanji.
      * </pre>
      *
      * <code>string text = 3;</code>
@@ -690,7 +572,7 @@ public  final class LearningRecord extends
     }
     /**
      * <pre>
-     * The word / the phrase's Hanji / the association's next word.
+     * The word / the phrase's Hanji.
      * </pre>
      *
      * <code>string text = 3;</code>
@@ -770,124 +652,6 @@ public  final class LearningRecord extends
         com.google.protobuf.ByteString value) {
       copyOnWrite();
       instance.setTlBytes(value);
-      return this;
-    }
-
-    /**
-     * <pre>
-     * Association only: the word `text` followed, and its TL.
-     * </pre>
-     *
-     * <code>string previous_text = 5;</code>
-     * @return The previousText.
-     */
-    @java.lang.Override
-    public java.lang.String getPreviousText() {
-      return instance.getPreviousText();
-    }
-    /**
-     * <pre>
-     * Association only: the word `text` followed, and its TL.
-     * </pre>
-     *
-     * <code>string previous_text = 5;</code>
-     * @return The bytes for previousText.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getPreviousTextBytes() {
-      return instance.getPreviousTextBytes();
-    }
-    /**
-     * <pre>
-     * Association only: the word `text` followed, and its TL.
-     * </pre>
-     *
-     * <code>string previous_text = 5;</code>
-     * @param value The previousText to set.
-     * @return This builder for chaining.
-     */
-    public Builder setPreviousText(
-        java.lang.String value) {
-      copyOnWrite();
-      instance.setPreviousText(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * Association only: the word `text` followed, and its TL.
-     * </pre>
-     *
-     * <code>string previous_text = 5;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearPreviousText() {
-      copyOnWrite();
-      instance.clearPreviousText();
-      return this;
-    }
-    /**
-     * <pre>
-     * Association only: the word `text` followed, and its TL.
-     * </pre>
-     *
-     * <code>string previous_text = 5;</code>
-     * @param value The bytes for previousText to set.
-     * @return This builder for chaining.
-     */
-    public Builder setPreviousTextBytes(
-        com.google.protobuf.ByteString value) {
-      copyOnWrite();
-      instance.setPreviousTextBytes(value);
-      return this;
-    }
-
-    /**
-     * <code>string previous_tl = 6;</code>
-     * @return The previousTl.
-     */
-    @java.lang.Override
-    public java.lang.String getPreviousTl() {
-      return instance.getPreviousTl();
-    }
-    /**
-     * <code>string previous_tl = 6;</code>
-     * @return The bytes for previousTl.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getPreviousTlBytes() {
-      return instance.getPreviousTlBytes();
-    }
-    /**
-     * <code>string previous_tl = 6;</code>
-     * @param value The previousTl to set.
-     * @return This builder for chaining.
-     */
-    public Builder setPreviousTl(
-        java.lang.String value) {
-      copyOnWrite();
-      instance.setPreviousTl(value);
-      return this;
-    }
-    /**
-     * <code>string previous_tl = 6;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearPreviousTl() {
-      copyOnWrite();
-      instance.clearPreviousTl();
-      return this;
-    }
-    /**
-     * <code>string previous_tl = 6;</code>
-     * @param value The bytes for previousTl to set.
-     * @return This builder for chaining.
-     */
-    public Builder setPreviousTlBytes(
-        com.google.protobuf.ByteString value) {
-      copyOnWrite();
-      instance.setPreviousTlBytes(value);
       return this;
     }
 
@@ -1031,15 +795,13 @@ public  final class LearningRecord extends
             "id_",
             "text_",
             "tl_",
-            "previousText_",
-            "previousTl_",
             "count_",
             "lastUsedMs_",
             "canAddToCustomDictionary_",
           };
           java.lang.String info =
-              "\u0000\t\u0000\u0000\u0001\t\t\u0000\u0000\u0000\u0001\f\u0002\u0002\u0003\u0208" +
-              "\u0004\u0208\u0005\u0208\u0006\u0208\u0007\u0002\b\u0002\t\u0007";
+              "\u0000\u0007\u0000\u0000\u0001\t\u0007\u0000\u0000\u0000\u0001\f\u0002\u0002\u0003" +
+              "\u0208\u0004\u0208\u0007\u0002\b\u0002\t\u0007";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

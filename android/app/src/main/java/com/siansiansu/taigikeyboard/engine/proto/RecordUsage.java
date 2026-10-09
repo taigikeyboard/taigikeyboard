@@ -8,8 +8,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
 /**
  * <pre>
  * The user committed a candidate or picked a prediction — one frequency
- * count for the `(display_text, canonical_tl)` pair, and, when the pick was
- * a learned phrase taken whole, its touch-on-use (§50). Sent exactly where
+ * count for the `(display_text, canonical_tl)` pair. Sent exactly where
  * each platform recorded usage itself before. Queued, best-effort: the
  * answer does not wait for the write.
  *
@@ -29,9 +28,7 @@ public  final class RecordUsage extends
   private RecordUsage() {
     displayText_ = "";
     canonicalTl_ = "";
-    hanji_ = "";
   }
-  private int bitField0_;
   public static final int DISPLAY_TEXT_FIELD_NUMBER = 1;
   private java.lang.String displayText_;
   /**
@@ -126,91 +123,6 @@ public  final class RecordUsage extends
 
   }
 
-  public static final int HANJI_FIELD_NUMBER = 3;
-  private java.lang.String hanji_;
-  /**
-   * <pre>
-   * The picked candidate's Hanji, when it has one (a learned phrase can
-   * only be touched by its Hanji); absent for a Hanji-less pick.
-   * </pre>
-   *
-   * <code>optional string hanji = 3;</code>
-   * @return Whether the hanji field is set.
-   */
-  @java.lang.Override
-  public boolean hasHanji() {
-    return ((bitField0_ & 0x00000001) != 0);
-  }
-  /**
-   * <pre>
-   * The picked candidate's Hanji, when it has one (a learned phrase can
-   * only be touched by its Hanji); absent for a Hanji-less pick.
-   * </pre>
-   *
-   * <code>optional string hanji = 3;</code>
-   * @return The hanji.
-   */
-  @java.lang.Override
-  public java.lang.String getHanji() {
-    return hanji_;
-  }
-  /**
-   * <pre>
-   * The picked candidate's Hanji, when it has one (a learned phrase can
-   * only be touched by its Hanji); absent for a Hanji-less pick.
-   * </pre>
-   *
-   * <code>optional string hanji = 3;</code>
-   * @return The bytes for hanji.
-   */
-  @java.lang.Override
-  public com.google.protobuf.ByteString
-      getHanjiBytes() {
-    return com.google.protobuf.ByteString.copyFromUtf8(hanji_);
-  }
-  /**
-   * <pre>
-   * The picked candidate's Hanji, when it has one (a learned phrase can
-   * only be touched by its Hanji); absent for a Hanji-less pick.
-   * </pre>
-   *
-   * <code>optional string hanji = 3;</code>
-   * @param value The hanji to set.
-   */
-  private void setHanji(
-      java.lang.String value) {
-    java.util.Objects.requireNonNull(value);
-    bitField0_ |= 0x00000001;
-    hanji_ = value;
-  }
-  /**
-   * <pre>
-   * The picked candidate's Hanji, when it has one (a learned phrase can
-   * only be touched by its Hanji); absent for a Hanji-less pick.
-   * </pre>
-   *
-   * <code>optional string hanji = 3;</code>
-   */
-  private void clearHanji() {
-    bitField0_ = (bitField0_ & ~0x00000001);
-    hanji_ = getDefaultInstance().getHanji();
-  }
-  /**
-   * <pre>
-   * The picked candidate's Hanji, when it has one (a learned phrase can
-   * only be touched by its Hanji); absent for a Hanji-less pick.
-   * </pre>
-   *
-   * <code>optional string hanji = 3;</code>
-   * @param value The bytes for hanji to set.
-   */
-  private void setHanjiBytes(
-      com.google.protobuf.ByteString value) {
-    checkByteStringIsUtf8(value);
-    hanji_ = value.toStringUtf8();
-    bitField0_ |= 0x00000001;
-  }
-
   public static com.siansiansu.taigikeyboard.engine.proto.RecordUsage parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -297,8 +209,7 @@ public  final class RecordUsage extends
   /**
    * <pre>
    * The user committed a candidate or picked a prediction — one frequency
-   * count for the `(display_text, canonical_tl)` pair, and, when the pick was
-   * a learned phrase taken whole, its touch-on-use (§50). Sent exactly where
+   * count for the `(display_text, canonical_tl)` pair. Sent exactly where
    * each platform recorded usage itself before. Queued, best-effort: the
    * answer does not wait for the write.
    *
@@ -418,93 +329,6 @@ public  final class RecordUsage extends
       return this;
     }
 
-    /**
-     * <pre>
-     * The picked candidate's Hanji, when it has one (a learned phrase can
-     * only be touched by its Hanji); absent for a Hanji-less pick.
-     * </pre>
-     *
-     * <code>optional string hanji = 3;</code>
-     * @return Whether the hanji field is set.
-     */
-    @java.lang.Override
-    public boolean hasHanji() {
-      return instance.hasHanji();
-    }
-    /**
-     * <pre>
-     * The picked candidate's Hanji, when it has one (a learned phrase can
-     * only be touched by its Hanji); absent for a Hanji-less pick.
-     * </pre>
-     *
-     * <code>optional string hanji = 3;</code>
-     * @return The hanji.
-     */
-    @java.lang.Override
-    public java.lang.String getHanji() {
-      return instance.getHanji();
-    }
-    /**
-     * <pre>
-     * The picked candidate's Hanji, when it has one (a learned phrase can
-     * only be touched by its Hanji); absent for a Hanji-less pick.
-     * </pre>
-     *
-     * <code>optional string hanji = 3;</code>
-     * @return The bytes for hanji.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getHanjiBytes() {
-      return instance.getHanjiBytes();
-    }
-    /**
-     * <pre>
-     * The picked candidate's Hanji, when it has one (a learned phrase can
-     * only be touched by its Hanji); absent for a Hanji-less pick.
-     * </pre>
-     *
-     * <code>optional string hanji = 3;</code>
-     * @param value The hanji to set.
-     * @return This builder for chaining.
-     */
-    public Builder setHanji(
-        java.lang.String value) {
-      copyOnWrite();
-      instance.setHanji(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * The picked candidate's Hanji, when it has one (a learned phrase can
-     * only be touched by its Hanji); absent for a Hanji-less pick.
-     * </pre>
-     *
-     * <code>optional string hanji = 3;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearHanji() {
-      copyOnWrite();
-      instance.clearHanji();
-      return this;
-    }
-    /**
-     * <pre>
-     * The picked candidate's Hanji, when it has one (a learned phrase can
-     * only be touched by its Hanji); absent for a Hanji-less pick.
-     * </pre>
-     *
-     * <code>optional string hanji = 3;</code>
-     * @param value The bytes for hanji to set.
-     * @return This builder for chaining.
-     */
-    public Builder setHanjiBytes(
-        com.google.protobuf.ByteString value) {
-      copyOnWrite();
-      instance.setHanjiBytes(value);
-      return this;
-    }
-
     // @@protoc_insertion_point(builder_scope:taigi.engine.RecordUsage)
   }
   @java.lang.Override
@@ -521,14 +345,12 @@ public  final class RecordUsage extends
       }
       case BUILD_MESSAGE_INFO: {
           java.lang.Object[] objects = new java.lang.Object[] {
-            "bitField0_",
             "displayText_",
             "canonicalTl_",
-            "hanji_",
           };
           java.lang.String info =
-              "\u0000\u0003\u0000\u0001\u0001\u0003\u0003\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
-              "\u0003\u1208\u0000";
+              "\u0000\u0002\u0000\u0000\u0001\u0002\u0002\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
+              "";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

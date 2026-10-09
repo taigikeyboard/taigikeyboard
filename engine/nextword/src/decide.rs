@@ -1,8 +1,7 @@
 //! Pure decide table. Every rule here is platform-neutral: what a commit
 //! teaches NextWord depends on the writing system it is written in, never on
 //! which OS produced it, so iOS, Android, and macOS learn the same thing from
-//! the same commit. `AppConfig.platform_id` is still validated as caller
-//! metadata but no longer selects behavior — see
+//! the same commit; no request names its platform — see
 //! `docs/architecture/behavioral-invariants.md`
 //! §40 `INVARIANT_NEXTWORD_LEARNING_DECISION_CONTRACT`, which also records why
 //! the three rules it used to branch on were drift rather than design.
@@ -11,10 +10,10 @@
 //! `current_generation` (`UpdateLastSelectedWord` mutates nothing, §40).
 //! Wrapping add — `u64::MAX + 1 = 0` is a fresh value.
 
-use crate::api::{Association, Decided, Intent, NextWordError, PersistedState};
+use crate::api::{Association, Decided, Intent, PersistedState};
 use protos::engine::{
     next_word_effect, AppConfig, CancelContextTimeout, ClearPredictionsUi, CommittedWord,
-    DecideResult, NextWordEffect, Platform, QueryPredictions, RescheduleContextTimeout,
+    DecideResult, NextWordEffect, QueryPredictions, RescheduleContextTimeout,
 };
 
 /// Strict-`<` association window (10 s).
@@ -34,21 +33,8 @@ const CONTEXT_BREAK_PUNCTUATION: &[char] = &[
 
 /// Apply `intent` against `state`, returning the `DecideResult` and the
 /// bigrams it recorded.
-///
-/// `platform_id` is a legacy field kept for wire compatibility and possible
-/// future routing; no rule below reads it (§40). The `Unspecified` rejection
-/// is likewise legacy — it predates the convergence and is retained only so
-/// this round changes nothing a platform can observe.
-pub(crate) fn decide(
-    state: &mut PersistedState,
-    intent: Intent,
-    config: &AppConfig,
-) -> Result<Decided, NextWordError> {
-    let platform = Platform::try_from(config.platform_id).unwrap_or(Platform::Unspecified);
-    if platform == Platform::Unspecified {
-        return Err(NextWordError::InvalidPlatform);
-    }
-    Ok(match intent {
+pub(crate) fn decide(state: &mut PersistedState, intent: Intent, config: &AppConfig) -> Decided {
+    match intent {
         Intent::WordSelected {
             text,
             roman,
@@ -81,7 +67,7 @@ pub(crate) fn decide(
         Intent::SetPredictionsVisible { visible } => {
             decide_set_predictions_visible(state, visible).into()
         }
-    })
+    }
 }
 
 /// A `WordSelected` intent's payload.
@@ -423,13 +409,12 @@ fn result_unchanged(state: &PersistedState) -> DecideResult {
 mod tests {
     use super::*;
 
-    fn config(platform: Platform, hanji_first: bool) -> AppConfig {
+    fn config(hanji_first: bool) -> AppConfig {
         AppConfig {
             input_mode: "tl".to_owned(),
             oo_doubletap_enabled: false,
             nn_doubletap_enabled: false,
             is_hanji_first: hanji_first,
-            platform_id: platform as i32,
             output_both_scripts: false,
             candidate_display_mode: 0,
             syllable_separator: 0,
@@ -439,17 +424,9 @@ mod tests {
         }
     }
 
-    fn ios_config(hanji_first: bool) -> AppConfig {
-        config(Platform::Ios, hanji_first)
-    }
-
     /// [`decide`] without the recorded bigrams.
-    fn apply(
-        state: &mut PersistedState,
-        intent: Intent,
-        config: &AppConfig,
-    ) -> Result<DecideResult, NextWordError> {
-        decide(state, intent, config).map(|decided| decided.result)
+    fn apply(state: &mut PersistedState, intent: Intent, config: &AppConfig) -> DecideResult {
+        decide(state, intent, config).result
     }
 
     /// The two places a commit can record a compound association: its
@@ -536,9 +513,8 @@ mod tests {
                 vec![committed("欲", "beh"), committed("食", "tsia̍h")],
                 9_999,
             ),
-            &ios_config(true),
-        )
-        .unwrap();
+            &config(true),
+        );
         assert_eq!(
             pairs(&decided),
             vec!["我/guá→欲/beh", "欲/beh→食/tsia̍h", "食/tsia̍h→飯/pn̄g"]
@@ -561,9 +537,8 @@ mod tests {
                 vec![committed("欲", "beh"), committed("食", "tsia̍h")],
                 10_000,
             ),
-            &ios_config(true),
-        )
-        .unwrap();
+            &config(true),
+        );
         assert_eq!(pairs(&decided), vec!["欲/beh→食/tsia̍h", "食/tsia̍h→飯/pn̄g"]);
     }
 
@@ -579,9 +554,8 @@ mod tests {
                 vec![committed("好", "hó"), committed("好", "hó")],
                 1_000,
             ),
-            &ios_config(true),
-        )
-        .unwrap();
+            &config(true),
+        );
         assert_eq!(pairs(&decided), vec!["好/hó→好/hó", "好/hó→好/hó"]);
     }
 
@@ -605,9 +579,8 @@ mod tests {
                 ],
                 1_000,
             ),
-            &ios_config(true),
-        )
-        .unwrap();
+            &config(true),
+        );
         assert_eq!(pairs(&decided), vec!["我/guá→欲/beh"]);
         assert_eq!(state.last_selected_word.as_deref(), Some("飯"));
     }
@@ -625,9 +598,8 @@ mod tests {
                 vec![committed("欲", "beh"), committed("食", "tsia̍h")],
                 1_000,
             ),
-            &ios_config(true),
-        )
-        .unwrap();
+            &config(true),
+        );
         assert_eq!(pairs(&decided), vec!["我/guá→欲/beh", "欲/beh→食/tsia̍h"]);
         assert_eq!(state.last_selected_word, None);
         assert_eq!(state.last_selected_roman, None);
@@ -656,9 +628,8 @@ mod tests {
             let decided = decide(
                 &mut state,
                 commit(mark, "", Vec::new(), 1_000),
-                &ios_config(false),
-            )
-            .unwrap();
+                &config(false),
+            );
             assert!(decided.associations.is_empty(), "{mark:?}");
             assert_eq!(state.last_selected_word, None, "{mark:?}");
             assert_eq!(state.last_selected_roman, None, "{mark:?}");
@@ -678,9 +649,8 @@ mod tests {
             let next = decide(
                 &mut state,
                 commit("語", "gí", Vec::new(), 1_500),
-                &ios_config(false),
-            )
-            .unwrap();
+                &config(false),
+            );
             assert!(next.associations.is_empty(), "{mark:?}");
 
             // Inside a commit: 我→欲, the mark drops 欲, 食 → 飯.
@@ -697,9 +667,8 @@ mod tests {
                     ],
                     1_000,
                 ),
-                &ios_config(true),
-            )
-            .unwrap();
+                &config(true),
+            );
             assert_eq!(
                 pairs(&decided),
                 vec!["我/guá→欲/beh", "食/tsia̍h→飯/pn̄g"],
@@ -716,9 +685,8 @@ mod tests {
         let decided = decide(
             &mut state,
             commit("★", "", vec![committed("欲", "beh")], 1_000),
-            &ios_config(true),
-        )
-        .unwrap();
+            &config(true),
+        );
         assert_eq!(pairs(&decided), vec!["我/guá→欲/beh"]);
         assert_eq!(state.last_selected_word.as_deref(), Some("欲"));
         assert_eq!(state.last_selected_roman.as_deref(), Some("beh"));
@@ -740,19 +708,10 @@ mod tests {
         let decided = decide(
             &mut state,
             commit("，", "，", vec![committed("。", "。")], 1_000),
-            &ios_config(true),
-        )
-        .unwrap();
+            &config(true),
+        );
         assert!(decided.associations.is_empty());
         assert_eq!(state.last_selected_word, None);
-    }
-
-    #[test]
-    fn unspecified_platform_returns_invalid_platform() {
-        let config = config(Platform::Unspecified, false);
-        let mut state = PersistedState::default();
-        let err = apply(&mut state, Intent::ResetAll { now_ms: 0 }, &config).unwrap_err();
-        assert!(matches!(err, NextWordError::InvalidPlatform));
     }
 
     // INVARIANT_NEXTWORD_ASSOCIATION_WINDOW_STRICT_LT_10S (nextword-engine-boundary.md §10)
@@ -787,9 +746,8 @@ mod tests {
                 last_char: "好".to_owned(),
                 now_ms: 1_500,
             },
-            &ios_config(false),
-        )
-        .unwrap();
+            &config(false),
+        );
         assert!(
             decided.associations.is_empty(),
             "Backspace must not record associations"
@@ -815,9 +773,8 @@ mod tests {
                 preceding: Vec::new(),
                 now_ms: 1_000,
             },
-            &ios_config(false),
-        )
-        .unwrap();
+            &config(false),
+        );
         assert_eq!(state.last_selected_word, None);
         assert!(!state.predictions_visible);
         assert_eq!(state.current_generation, 6);
@@ -955,34 +912,26 @@ mod tests {
         // `tâi-gí khí-puânn` is the case the three platforms used to answer
         // three different ways: iOS split on `-` into `tâi` / `gí khí` /
         // `puânn` (a "part" with a space in it), Android into four syllables,
-        // macOS into the two words. Now all three give the two words.
-        for platform in [
-            Platform::Ios,
-            Platform::Android,
-            Platform::Macos,
-            Platform::Windows,
-            Platform::Linux,
-        ] {
-            let mut state = PersistedState::default();
-            let result = decide(
-                &mut state,
-                Intent::WordSelected {
-                    text: "tâi-gí khí-puânn".to_owned(),
-                    roman: "tâi-gí khí-puânn".to_owned(),
-                    require_roman_mode: false,
-                    trigger_prediction: false,
-                    preceding: Vec::new(),
-                    now_ms: 1_000,
-                },
-                &config(platform, false),
-            )
-            .unwrap();
-            // A fresh state has no predecessor, so every pair is the compound's.
-            let pairs = &result.associations;
-            assert_eq!(pairs.len(), 1, "{platform:?}");
-            assert_eq!(pairs[0].previous, "tâi-gí", "{platform:?}");
-            assert_eq!(pairs[0].next, "khí-puânn", "{platform:?}");
-        }
+        // macOS into the two words. Now all give the two words — and since
+        // 2026-10-09 no request can even name its platform.
+        let mut state = PersistedState::default();
+        let result = decide(
+            &mut state,
+            Intent::WordSelected {
+                text: "tâi-gí khí-puânn".to_owned(),
+                roman: "tâi-gí khí-puânn".to_owned(),
+                require_roman_mode: false,
+                trigger_prediction: false,
+                preceding: Vec::new(),
+                now_ms: 1_000,
+            },
+            &config(false),
+        );
+        // A fresh state has no predecessor, so every pair is the compound's.
+        let pairs = &result.associations;
+        assert_eq!(pairs.len(), 1);
+        assert_eq!(pairs[0].previous, "tâi-gí");
+        assert_eq!(pairs[0].next, "khí-puânn");
     }
 
     #[test]
@@ -991,7 +940,7 @@ mod tests {
         // mid-commit UpdateLastSelectedWord may split it into tâi → gí.
         for intent in both_word_positions("tâi-gí") {
             let mut state = PersistedState::default();
-            let result = decide(&mut state, intent, &ios_config(false)).unwrap();
+            let result = decide(&mut state, intent, &config(false));
             assert!(
                 result.associations.is_empty(),
                 "a 連字 compound is one word",
@@ -1008,7 +957,7 @@ mod tests {
         for text in ["\u{02c6} \u{02c7}", ", ;"] {
             for intent in both_word_positions(text) {
                 let mut state = PersistedState::default();
-                let result = decide(&mut state, intent, &ios_config(false)).unwrap();
+                let result = decide(&mut state, intent, &config(false));
                 assert!(
                     result.associations.is_empty(),
                     "{text:?} is marks only — nothing to learn",
@@ -1042,9 +991,8 @@ mod tests {
                 preceding: Vec::new(),
                 now_ms: 1_000,
             },
-            &config(Platform::Macos, false),
-        )
-        .unwrap();
+            &config(false),
+        );
         assert_eq!(state.last_selected_word, None);
         assert_eq!(state.current_generation, 4);
         assert!(result.effects.iter().any(|e| matches!(
@@ -1073,9 +1021,8 @@ mod tests {
                 preceding: Vec::new(),
                 now_ms: 5_000,
             },
-            &ios_config(false),
-        )
-        .unwrap();
+            &config(false),
+        );
         assert_eq!(
             decided.associations,
             vec![Association {
@@ -1084,50 +1031,6 @@ mod tests {
                 next: "安".to_owned(),
                 next_tl: String::new(),
             }]
-        );
-    }
-
-    #[test]
-    fn linux_platform_id_passes_validation() {
-        // trace: `PLATFORM_LINUX = 5` decodes to `Platform::Linux`; same gate
-        // as the Windows case below.
-        let mut state = PersistedState::default();
-        assert!(apply(
-            &mut state,
-            Intent::SetPredictionsVisible { visible: false },
-            &config(Platform::Linux, false),
-        )
-        .is_ok());
-    }
-
-    #[test]
-    fn windows_platform_id_passes_validation() {
-        // trace: `PLATFORM_WINDOWS = 4` decodes to `Platform::Windows`, so the
-        // UNSPECIFIED gate at the top of `apply` must let it through exactly
-        // like the three older platforms.
-        let mut state = PersistedState::default();
-        assert!(
-            apply(
-                &mut state,
-                Intent::SetPredictionsVisible { visible: false },
-                &config(Platform::Windows, false),
-            )
-            .is_ok(),
-            "PLATFORM_WINDOWS must not read as PLATFORM_UNSPECIFIED",
-        );
-    }
-
-    #[test]
-    fn macos_platform_id_passes_validation() {
-        let mut state = PersistedState::default();
-        assert!(
-            apply(
-                &mut state,
-                Intent::SetPredictionsVisible { visible: false },
-                &config(Platform::Macos, false),
-            )
-            .is_ok(),
-            "PLATFORM_MACOS must not read as PLATFORM_UNSPECIFIED",
         );
     }
 
@@ -1148,9 +1051,8 @@ mod tests {
                 roman: "tsá-an tâi-uân".to_owned(),
                 now_ms: 5_000,
             },
-            &config(Platform::Android, false),
-        )
-        .unwrap();
+            &config(false),
+        );
         assert!(decided.associations.is_empty());
         assert_eq!(state.current_generation, 7);
         assert_eq!(state.last_selected_word.as_deref(), Some("我"));
@@ -1158,15 +1060,13 @@ mod tests {
         let _ = decide(
             &mut state,
             Intent::ClearForNewComposing { now_ms: 6_000 },
-            &config(Platform::Android, false),
-        )
-        .unwrap();
+            &config(false),
+        );
         let next = decide(
             &mut state,
             commit("好", "hó", Vec::new(), 10_000),
-            &ios_config(true),
-        )
-        .unwrap();
+            &config(true),
+        );
         assert!(next.associations.is_empty(), "我's window closed at 10 s");
     }
 
@@ -1196,7 +1096,7 @@ mod tests {
                 predictions_visible: true,
                 ..PersistedState::default()
             };
-            apply(&mut state, intent.clone(), &ios_config(false)).unwrap();
+            apply(&mut state, intent.clone(), &config(false));
             assert!(
                 state.current_generation > 1,
                 "intent {:?} should bump generation",
@@ -1214,9 +1114,8 @@ mod tests {
         let _ = apply(
             &mut state,
             Intent::ResetAll { now_ms: 1_000 },
-            &ios_config(false),
-        )
-        .unwrap();
+            &config(false),
+        );
         assert_eq!(state.current_generation, 0, "wrapping_add expected");
     }
 
@@ -1237,9 +1136,8 @@ mod tests {
                 preceding: Vec::new(),
                 now_ms: 1_000,
             },
-            &ios_config(true), // is_hanji_first = true
-        )
-        .unwrap();
+            &config(true), // is_hanji_first = true
+        );
         assert_eq!(state.current_generation, 5, "no-op must not bump");
         assert!(result.effects.is_empty());
     }
@@ -1262,9 +1160,8 @@ mod tests {
                 preceding: Vec::new(),
                 now_ms: 5_000,
             },
-            &ios_config(false),
-        )
-        .unwrap();
+            &config(false),
+        );
         assert_eq!(
             result.associations,
             vec![Association {
@@ -1293,9 +1190,8 @@ mod tests {
                 vec![committed("蔣經國", "tsiúnn-keng-kok")],
                 1_000,
             ),
-            &ios_config(false),
-        )
-        .unwrap();
+            &config(false),
+        );
         assert_eq!(
             pairs(&decided),
             vec![
@@ -1309,9 +1205,8 @@ mod tests {
         let next = decide(
             &mut state,
             commit("人", "lâng", Vec::new(), 2_000),
-            &ios_config(false),
-        )
-        .unwrap();
+            &config(false),
+        );
         assert_eq!(pairs(&next), vec!["德國簫/tek-kok-siau→人/lâng"]);
     }
 
@@ -1330,9 +1225,8 @@ mod tests {
         let decided = decide(
             &mut state,
             commit("多謝！", "to-siā!", Vec::new(), 1_000),
-            &ios_config(true),
-        )
-        .unwrap();
+            &config(true),
+        );
         assert_eq!(pairs(&decided), vec!["我/guá→多謝！/to-siā!"]);
         assert_eq!(state.last_selected_word.as_deref(), Some("多謝！"));
     }
@@ -1355,9 +1249,8 @@ mod tests {
                 preceding: Vec::new(),
                 now_ms: 20_000,
             },
-            &ios_config(false),
-        )
-        .unwrap();
+            &config(false),
+        );
         assert!(
             result.associations.is_empty(),
             "outside 10 s window must not record"
@@ -1374,9 +1267,8 @@ mod tests {
         let result = apply(
             &mut state,
             Intent::SetPredictionsVisible { visible: true },
-            &ios_config(false),
-        )
-        .unwrap();
+            &config(false),
+        );
         assert!(
             state.predictions_visible,
             "predictions_visible flipped to true"
@@ -1394,15 +1286,13 @@ mod tests {
         apply(
             &mut state,
             Intent::SetPredictionsVisible { visible: true },
-            &ios_config(false),
-        )
-        .unwrap();
+            &config(false),
+        );
         let result = apply(
             &mut state,
             Intent::ClearForNewComposing { now_ms: 1_000 },
-            &ios_config(false),
-        )
-        .unwrap();
+            &config(false),
+        );
         assert!(matches!(
             result.effects[0].kind,
             Some(next_word_effect::Kind::ClearPredictionsUi(_))
@@ -1419,9 +1309,8 @@ mod tests {
         let result = apply(
             &mut state,
             Intent::ClearForNewComposing { now_ms: 1_000 },
-            &ios_config(false),
-        )
-        .unwrap();
+            &config(false),
+        );
         assert!(!state.predictions_visible);
         assert_eq!(state.current_generation, 4);
         assert!(matches!(
@@ -1434,9 +1323,8 @@ mod tests {
         let result = apply(
             &mut state,
             Intent::ClearForNewComposing { now_ms: 2_000 },
-            &ios_config(false),
-        )
-        .unwrap();
+            &config(false),
+        );
         assert!(result.effects.is_empty());
     }
 }

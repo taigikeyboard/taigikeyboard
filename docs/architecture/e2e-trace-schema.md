@@ -59,7 +59,8 @@ Readers ignore fields they do not know, so adding a field is not a version bump;
 
 | Field | Meaning |
 |---|---|
-| `req_id`, `generation` | from the `Response` (`envelope.proto` `Request.id` / `generation`); 0 when the request did not decode |
+| `req_id` | `Response.id` (echoes `envelope.proto` `Request.id`); 0 when the request did not decode |
+| `generation` | `Request.generation` read straight from the request bytes (field 4), so a request that did not decode still logs whatever the field held — 0 when absent (`Response.generation`, the former echo, was removed 2026-10-09 (round A1b)) |
 | `domain` | `phonetics` / `composing` / `lexicon` / `nextword` / `case` / `userdata` (the `Request.payload` field, tags 10–15), `none` when absent or undecodable |
 | `method_tag` | field number of the sub-request's `oneof method` (every sub-request holds only that oneof); the analyzer names it from `engine/protos/proto/*.proto` |
 | `error` | `ErrorCode` value (0 = OK) |

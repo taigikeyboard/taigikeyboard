@@ -13,7 +13,7 @@
 //! - `api`, `syllable`, `tps`, `poj`, `tl`, `tables`, `case_adjust`
 //!   provide the foundational helpers reused here.
 
-use crate::api::{tl_display_to_poj_display, tl_display_to_tps, tl_numeric_to_tps, PhoneticsError};
+use crate::api::{tl_display_to_poj_display, tl_display_to_tps, PhoneticsError};
 use crate::tone_variations;
 use crate::tps_adjust;
 use protos::engine::phonetics_request::Method;
@@ -44,9 +44,6 @@ pub fn handle(req: &PhoneticsRequest) -> Result<PhoneticsResponse, PhoneticsErro
         Method::GetToneVariations(_) => PhonResult::ToneVariationsResult(tone_variations::build()),
 
         // --- TPS ---
-        Method::TlNumericToTps(payload) => PhonResult::StringResult(StringResult {
-            output: tl_numeric_to_tps(&payload.text, payload.or_maps_to_er),
-        }),
         Method::TlDisplayToTps(payload) => PhonResult::StringResult(StringResult {
             output: tl_display_to_tps(&payload.text, payload.or_maps_to_er),
         }),

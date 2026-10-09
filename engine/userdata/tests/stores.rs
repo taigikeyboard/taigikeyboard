@@ -98,7 +98,7 @@ fn recording_counts_the_pair_and_reads_back_by_word() {
         .unwrap();
     assert_eq!(by_word.len(), 2);
     assert_eq!(store.rows_for_words(&[]).unwrap().len(), 0);
-    assert_eq!(store.delete_all().unwrap(), 2);
+    store.delete_all().unwrap();
     assert!(store.all_rows().unwrap().is_empty());
 }
 
@@ -194,7 +194,8 @@ fn bigrams_are_keyed_on_both_readings_and_written_in_order() {
     );
     assert_eq!(rows[0].pair.previous_tl, "tîng");
     assert_eq!(rows[0].count, 2);
-    assert_eq!(store.delete_all().unwrap(), 2);
+    store.delete_all().unwrap();
+    assert!(store.all_rows().unwrap().is_empty());
 }
 
 #[test]
@@ -381,7 +382,7 @@ fn listing_pages_filters_and_counts_with_one_predicate() {
         "blank filter = everything"
     );
     assert_eq!(store.all_rows().unwrap().len(), 4);
-    assert_eq!(store.delete_all().unwrap(), 4);
+    store.delete_all().unwrap();
     assert_eq!(store.count().unwrap(), 0);
 }
 
@@ -611,7 +612,8 @@ fn clearing_one_learning_store_leaves_the_others_alone() {
         .upsert(&CustomDictionaryRow::new("gâu-tsá", "𠢕早"))
         .unwrap();
     stores.learned_phrases.learn_phrase("記起來", "kì--khí-lâi");
-    assert_eq!(stores.association.delete_all().unwrap(), 1);
+    stores.association.delete_all().unwrap();
+    assert!(stores.association.all_rows().unwrap().is_empty());
     assert_eq!(stores.frequency.all_rows().unwrap().len(), 1);
     assert_eq!(stores.custom_dictionary.count().unwrap(), 1);
     assert_eq!(stores.learned_phrases.all_rows().unwrap().len(), 1);
@@ -724,7 +726,7 @@ fn wiping_learned_phrases_clears_rows_and_keys_and_the_store_learns_again() {
     let directory = scratch();
     let store = learned_store(&directory, LearnedPhraseStore::MAX_ENTRIES);
     store.learn_phrase("記起來", "kì--khí-lâi");
-    assert_eq!(store.delete_all().unwrap(), 1);
+    store.delete_all().unwrap();
     assert!(store.all_rows().unwrap().is_empty());
     assert!(learned_matches(&store, "kikhilai", "tl").is_empty());
     store.learn_phrase("記起來", "kì--khí-lâi");

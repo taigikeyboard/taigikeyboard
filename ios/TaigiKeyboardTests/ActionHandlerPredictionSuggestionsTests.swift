@@ -19,7 +19,6 @@ final class ActionHandlerPredictionSuggestionsTests: XCTestCase {
             subtitle: subtitle,
             hanji: hanji,
             tl: tl ?? text,
-            score: 1.0,
         )
     }
 

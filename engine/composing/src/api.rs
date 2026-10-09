@@ -886,7 +886,6 @@ mod tests {
             oo_doubletap_enabled: false,
             nn_doubletap_enabled: false,
             is_hanji_first: swapped,
-            platform_id: 0,
             output_both_scripts: both,
             candidate_display_mode: 0,
             syllable_separator: 0,

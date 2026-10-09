@@ -285,7 +285,7 @@ fn shape_prediction(m: MergedRow, config: &AppConfig) -> Option<EnginePrediction
 #[cfg(test)]
 mod tests {
     use super::*;
-    use protos::engine::{CandidateDisplayMode, Platform, SyllableSeparator};
+    use protos::engine::{CandidateDisplayMode, SyllableSeparator};
 
     fn config_tl_mode_hanji_first(swapped: bool) -> AppConfig {
         AppConfig {
@@ -293,7 +293,6 @@ mod tests {
             oo_doubletap_enabled: false,
             nn_doubletap_enabled: false,
             is_hanji_first: swapped,
-            platform_id: Platform::Ios as i32,
             output_both_scripts: false,
             candidate_display_mode: 0,
             syllable_separator: 0,
@@ -309,7 +308,6 @@ mod tests {
             oo_doubletap_enabled: false,
             nn_doubletap_enabled: false,
             is_hanji_first: false,
-            platform_id: Platform::Ios as i32,
             output_both_scripts: false,
             candidate_display_mode: 0,
             syllable_separator: 0,

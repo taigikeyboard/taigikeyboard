@@ -267,7 +267,7 @@ impl log::Log for PlatformLogger {
 /// Encode `code` as a `Response`, allocate a `JByteArray`, and return the raw
 /// `jbyteArray`. Used inside `with_env` closures.
 fn encode_error_to_jarray(env: &mut Env<'_>, code: ErrorCode) -> jni::errors::Result<jbyteArray> {
-    let buf = encode_error(0, code, 0);
+    let buf = encode_error(code);
     Ok(env.byte_array_from_slice(&buf)?.into_raw())
 }
 

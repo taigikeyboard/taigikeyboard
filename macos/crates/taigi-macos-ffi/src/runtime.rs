@@ -27,8 +27,8 @@ use crate::session::Session;
 use crate::settings::{self, SnapshotSettings};
 
 /// Which desktop this is: every desktop-core rule that differs per desktop
-/// is handed it (roadmap D6) — `platform_id = macos` on every engine
-/// request, the `DELETE` user-data journal, the Mac chord grammar.
+/// is handed it (roadmap D6) — the `DELETE` user-data journal, the Mac
+/// chord grammar.
 pub(crate) const DESKTOP_PLATFORM: DesktopPlatform = DesktopPlatform::MacOS;
 
 /// Why a request was refused; the seam answers FAIL_INVARIANT.
@@ -205,9 +205,8 @@ mod tests {
     use taigi_desktop_core::settings::{InputMode, SettingChoice, SettingsProvider};
 
     /// trace: the request's fields reach RuntimeParts as given; the platform
-    /// is MacOS (engine `platform_id = macos` — desktop-core
-    /// `engine/bridge.rs` `wire_platform`; journal DELETE —
-    /// `engine/user_data.rs` `each_desktop_opens_its_stores_under_its_own_journal`).
+    /// is MacOS (journal DELETE — desktop-core `engine/user_data.rs`
+    /// `each_desktop_opens_its_stores_under_its_own_journal`).
     #[test]
     fn configure_builds_the_runtime_from_the_request() {
         let shell = Shell::default();

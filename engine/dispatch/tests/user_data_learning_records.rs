@@ -55,7 +55,6 @@ fn a_counted_pick_is_listed_edited_and_deleted_over_the_wire() {
         RecordUsage {
             display_text: "台灣".into(),
             canonical_tl: "tâi-uân".into(),
-            hanji: Some("台灣".into()),
         },
     )));
 

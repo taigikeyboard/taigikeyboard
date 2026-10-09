@@ -137,32 +137,6 @@ public  final class Response extends
     error_ = 0;
   }
 
-  public static final int GENERATION_FIELD_NUMBER = 3;
-  private long generation_;
-  /**
-   * <code>uint64 generation = 3;</code>
-   * @return The generation.
-   */
-  @java.lang.Override
-  public long getGeneration() {
-    return generation_;
-  }
-  /**
-   * <code>uint64 generation = 3;</code>
-   * @param value The generation to set.
-   */
-  private void setGeneration(long value) {
-
-    generation_ = value;
-  }
-  /**
-   * <code>uint64 generation = 3;</code>
-   */
-  private void clearGeneration() {
-
-    generation_ = 0L;
-  }
-
   public static final int PHONETICS_FIELD_NUMBER = 10;
   /**
    * <code>.taigi.engine.PhoneticsResponse phonetics = 10;</code>
@@ -648,34 +622,6 @@ public  final class Response extends
     }
 
     /**
-     * <code>uint64 generation = 3;</code>
-     * @return The generation.
-     */
-    @java.lang.Override
-    public long getGeneration() {
-      return instance.getGeneration();
-    }
-    /**
-     * <code>uint64 generation = 3;</code>
-     * @param value The generation to set.
-     * @return This builder for chaining.
-     */
-    public Builder setGeneration(long value) {
-      copyOnWrite();
-      instance.setGeneration(value);
-      return this;
-    }
-    /**
-     * <code>uint64 generation = 3;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearGeneration() {
-      copyOnWrite();
-      instance.clearGeneration();
-      return this;
-    }
-
-    /**
      * <code>.taigi.engine.PhoneticsResponse phonetics = 10;</code>
      */
     @java.lang.Override
@@ -983,7 +929,6 @@ public  final class Response extends
             "payloadCase_",
             "id_",
             "error_",
-            "generation_",
             com.siansiansu.taigikeyboard.engine.proto.PhoneticsResponse.class,
             com.siansiansu.taigikeyboard.engine.proto.ComposingResponse.class,
             com.siansiansu.taigikeyboard.engine.proto.LexiconResponse.class,
@@ -992,8 +937,8 @@ public  final class Response extends
             com.siansiansu.taigikeyboard.engine.proto.UserDataResponse.class,
           };
           java.lang.String info =
-              "\u0000\t\u0001\u0000\u0001\u000f\t\u0000\u0000\u0000\u0001\u000b\u0002\f\u0003\u0003" +
-              "\n<\u0000\u000b<\u0000\f<\u0000\r<\u0000\u000e<\u0000\u000f<\u0000";
+              "\u0000\b\u0001\u0000\u0001\u000f\b\u0000\u0000\u0000\u0001\u000b\u0002\f\n<\u0000" +
+              "\u000b<\u0000\f<\u0000\r<\u0000\u000e<\u0000\u000f<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

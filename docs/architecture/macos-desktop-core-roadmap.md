@@ -2,7 +2,7 @@
 
 > **Type**: Planning (multi-PR refactor)
 > **Keywords**: `macOS`, `desktop-core`, `refactor`, `FFI`, `behaviour oracle`, `parity`
-> **Status**: complete 2026-10-03 — scope and design decisions taken 2026-10-02 (§ Decisions); P1 merged #342, P2 merged #343, P3 merged #344, P4 merged #345, P5 merged #346, P6 merged #347, P7 merged #349, P8 merged #350, P9 merged #351, P10 merged #353, P11 merged #354–#359, P12 merged #360, P13 merged #361, P13b merged #362, P14 merged #364 (E8 parity #363 first), P15 merged #365
+> **Status**: complete 2026-10-03 — scope and design decisions taken 2026-10-02 (§ Decisions); P1 merged #342, P2 merged #343, P3 merged #344, P4 merged #345, P5 merged #346, P6 merged #347, P7 merged #349, P8 merged #350, P9 merged #351, P10 merged #353, P11 merged #354–#359, P12 merged #360, P13 merged #361, P13b merged #362, P14 merged #364 (E8 parity #363 first), P15 merged #365. 2026-10-09 (round A1b): `AppConfig.platform_id` left the wire, so `DesktopPlatform` no longer selects an engine `platform_id` — C1 below and the P6 test / § Properties item 4 are history
 > **Source**: `docs/reports/2026-09-30-audit-all.md` §2 ("macOS re-implements what `desktop/crates` already has") and §5.2; measured inventory `docs/reports/2026-10-02-macos-desktop-core-inventory.md` (frozen on `e330cd30`)
 > **Session memory**: project memory `project_macos_desktop_core.md` (Claude auto-memory)
 

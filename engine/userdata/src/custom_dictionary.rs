@@ -338,21 +338,19 @@ impl CustomDictionaryStore {
             })
     }
 
-    /// Empties the dictionary and reports how many entries went.
-    pub fn delete_all(&self) -> Result<usize, CustomDictionaryError> {
+    /// Empties the dictionary.
+    pub fn delete_all(&self) -> Result<(), CustomDictionaryError> {
         self.database
             .perform::<_, CustomDictionaryError>(|connection| {
-                let removed =
-                    immediate_transaction::<_, CustomDictionaryError>(connection, |connection| {
-                        let existing = entry_count(connection)?;
-                        connection.execute(&format!("DELETE FROM {TABLE_NAME};"), [])?;
-                        connection.execute(&format!("DELETE FROM {SEARCH_KEY_TABLE_NAME};"), [])?;
-                        Ok(existing)
-                    })?;
+                immediate_transaction::<_, CustomDictionaryError>(connection, |connection| {
+                    connection.execute(&format!("DELETE FROM {TABLE_NAME};"), [])?;
+                    connection.execute(&format!("DELETE FROM {SEARCH_KEY_TABLE_NAME};"), [])?;
+                    Ok(())
+                })?;
                 // Outside the transaction, best-effort: a file that stays large
                 // is not a failed clear.
                 connection.execute("VACUUM;", []).ok();
-                Ok(removed)
+                Ok(())
             })
     }
 

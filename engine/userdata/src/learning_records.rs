@@ -1,7 +1,8 @@
 //! The Learning Records page's SQL: list one kind of learned row, correct a
-//! row's count, forget a row. One shape over the three learning tables;
-//! each store describes its own table with a [`Table`] beside its schema
-//! and keeps its learning, ranking and eviction SQL.
+//! row's count, forget a row. One shape over the two learning tables the
+//! pages list (the bigram store has no page); each store describes its own
+//! table with a [`Table`] beside its schema and keeps its learning, ranking
+//! and eviction SQL.
 //!
 //! Design: `docs/architecture/learning-records-page-roadmap.md` § Engine.
 
@@ -25,8 +26,8 @@ const MAX_COUNT: i64 = 1_000_000;
 pub(crate) struct Table {
     pub(crate) name: &'static str,
     /// The columns that say which word a row is, in [`LearningRecord`]
-    /// order: text, TL, and for an association the previous text and TL.
-    pub(crate) identity: &'static [&'static str],
+    /// order: text, TL.
+    pub(crate) identity: [&'static str; 2],
     pub(crate) count: &'static str,
     pub(crate) last_used: &'static str,
     /// What else the store deletes with the row whose `id` this is, inside
@@ -35,21 +36,14 @@ pub(crate) struct Table {
 }
 
 impl Table {
-    /// The columns [`decode`] reads. A NULL TL (an old association row)
-    /// lists as `''`; a time SQLite cannot parse lists as 0.
+    /// The columns [`decode`] reads. The identity columns are `NOT NULL` in
+    /// both tables; a NULL count lists as 0, as does a time SQLite cannot
+    /// parse.
     fn columns(&self) -> String {
-        let identity = |index: usize| match self.identity.get(index) {
-            Some(column) => format!("COALESCE({column}, '')"),
-            None => "''".to_owned(),
-        };
+        let [text, tl] = self.identity;
         format!(
-            "id, {}, {}, {}, {}, COALESCE({}, 0), COALESCE(CAST(strftime('%s', {}) AS INTEGER) * 1000, 0)",
-            identity(0),
-            identity(1),
-            identity(2),
-            identity(3),
-            self.count,
-            self.last_used,
+            "id, {text}, {tl}, COALESCE({}, 0), COALESCE(CAST(strftime('%s', {}) AS INTEGER) * 1000, 0)",
+            self.count, self.last_used,
         )
     }
 
@@ -82,19 +76,15 @@ impl Table {
     /// reuses a deleted id, and a stale dialog must not edit the phrase
     /// that took it.
     fn guard(&self, record: &LearningRecord) -> (String, Vec<Value>) {
-        let listed = [
-            &record.text,
-            &record.tl,
-            &record.previous_text,
-            &record.previous_tl,
-        ];
-        let mut clause = "id = ?".to_owned();
-        let mut values = vec![Value::from(record.id)];
-        for (column, value) in self.identity.iter().zip(listed) {
-            clause.push_str(&format!(" AND COALESCE({column}, '') = ?"));
-            values.push(Value::from(value.clone()));
-        }
-        (clause, values)
+        let [text, tl] = self.identity;
+        (
+            format!("id = ? AND {text} = ? AND {tl} = ?"),
+            vec![
+                Value::from(record.id),
+                Value::from(record.text.clone()),
+                Value::from(record.tl.clone()),
+            ],
+        )
     }
 }
 
@@ -111,10 +101,6 @@ fn target(
             &crate::learned_phrases::LEARNING_TABLE,
             &stores.learned_phrases.database,
         ),
-        LearningRecordKind::Association => (
-            &crate::association::LEARNING_TABLE,
-            &stores.association.database,
-        ),
     }
 }
 
@@ -123,26 +109,20 @@ fn decode(kind: LearningRecordKind, row: &rusqlite::Row<'_>) -> rusqlite::Result
     Ok(LearningRecord {
         kind: kind as i32,
         id: row.get(0)?,
-        can_add_to_custom_dictionary: can_add_to_custom_dictionary(kind, &text),
+        can_add_to_custom_dictionary: can_add_to_custom_dictionary(&text),
         text,
         tl: row.get(2)?,
-        previous_text: row.get(3)?,
-        previous_tl: row.get(4)?,
-        count: row.get(5)?,
-        last_used_ms: row.get(6)?,
+        count: row.get(3)?,
+        last_used_ms: row.get(4)?,
     })
 }
 
-/// Whether Add to Custom Dictionary takes this row: a learned phrase or a
-/// word-frequency row whose text holds Hanji; a romanization pick has no
-/// Hanji to file. Any syllable count: a one-syllable custom word (是 / sī)
-/// takes its toneless key in continuous input as any custom word does, and
-/// that is the user's choice to make.
-pub(crate) fn can_add_to_custom_dictionary(kind: LearningRecordKind, text: &str) -> bool {
-    matches!(
-        kind,
-        LearningRecordKind::LearnedPhrase | LearningRecordKind::Frequency
-    ) && phonetics::api::is_hanji(text)
+/// Whether Add to Custom Dictionary takes this row: one whose text holds
+/// Hanji; a romanization pick has no Hanji to file. Any syllable count: a
+/// one-syllable custom word (是 / sī) takes its toneless key in continuous
+/// input as any custom word does, and that is the user's choice to make.
+pub(crate) fn can_add_to_custom_dictionary(text: &str) -> bool {
+    phonetics::api::is_hanji(text)
 }
 
 /// One page of `kind`, with the totals, read from one snapshot. `filter` is
@@ -184,7 +164,7 @@ pub(crate) fn list(
                     order = table.order_clause(order),
                 ))?;
                 let rows = statement.query_map(params_from_iter(pattern.as_ref()), |row| {
-                    Ok((decode(kind, row)?, row.get(7)?, row.get(8)?))
+                    Ok((decode(kind, row)?, row.get(5)?, row.get(6)?))
                 })?;
                 rows.collect()
             };
@@ -267,12 +247,11 @@ pub(crate) fn delete(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{AssociationPair, JournalMode, UserDataPaths};
+    use crate::{JournalMode, UserDataPaths};
     use phonetics::api::derive_custom_query_key;
 
     const FREQUENCY: LearningRecordKind = LearningRecordKind::Frequency;
     const PHRASE: LearningRecordKind = LearningRecordKind::LearnedPhrase;
-    const ASSOCIATION: LearningRecordKind = LearningRecordKind::Association;
     const MOST_USED: LearningRecordOrder = LearningRecordOrder::MostUsed;
     // trace: 2026-01-01T00:00:00Z = 1767225600 s.
     const NEW_YEAR_2026_MS: i64 = 1_767_225_600_000;
@@ -362,9 +341,10 @@ mod tests {
                 ("食飯", "tsia̍h-pn̄g", 1)
             ]
         );
-        assert!(listed.records.iter().all(|record| {
-            record.last_used_ms > 0 && record.previous_text.is_empty() && record.kind() == FREQUENCY
-        }));
+        assert!(listed
+            .records
+            .iter()
+            .all(|record| record.last_used_ms > 0 && record.kind() == FREQUENCY));
 
         let by_hanji = filtered(&stores, FREQUENCY, " 重 ");
         assert_eq!((by_hanji.total, by_hanji.matching_total), (4, 2));
@@ -512,54 +492,6 @@ mod tests {
         });
         assert_eq!(orphaned, 0);
         assert_eq!(texts(&all(&stores, PHRASE)), ["啉茶"]);
-    }
-
-    #[test]
-    fn association_rows_carry_both_words_and_match_on_either() {
-        let directory = tempfile::tempdir().unwrap();
-        let stores = open(directory.path());
-        let pair = |previous: &str, previous_tl: &str, next: &str, next_tl: &str| AssociationPair {
-            previous: previous.into(),
-            previous_tl: previous_tl.into(),
-            next: next.into(),
-            next_tl: next_tl.into(),
-        };
-        stores.association.record(&[
-            pair("我", "guá", "食飯", "tsia̍h-pn̄g"),
-            pair("我", "guá", "食飯", "tsia̍h-pn̄g"),
-            pair("食飯", "tsia̍h-pn̄g", "矣", "ah"),
-        ]);
-        // An old row whose TL columns are NULL.
-        sql(&stores.association.database, |connection| {
-            connection.execute(
-                "INSERT INTO user_association (prev_word, prev_tl, next_word, next_tl, count) VALUES ('你', NULL, '好', NULL, 1);",
-                [],
-            )
-        });
-
-        let rows = all(&stores, ASSOCIATION);
-        assert_eq!(rows.len(), 3);
-        assert_eq!(
-            (rows[0].previous_text.as_str(), rows[0].previous_tl.as_str()),
-            ("我", "guá")
-        );
-        assert_eq!((rows[0].text.as_str(), rows[0].count), ("食飯", 2));
-        assert_eq!(filtered(&stores, ASSOCIATION, "食飯").matching_total, 2);
-
-        let untagged = rows.iter().find(|record| record.text == "好").unwrap();
-        assert_eq!(
-            (untagged.tl.as_str(), untagged.previous_tl.as_str()),
-            ("", "")
-        );
-        assert_eq!(set(&stores, untagged, 4).unwrap().count, 4);
-        assert!(remove(&stores, untagged));
-
-        // The guard is the whole pair: the same next word after another
-        // previous word is another row.
-        let mut wrong_previous = rows[0].clone();
-        wrong_previous.previous_text = "你".into();
-        assert!(!remove(&stores, &wrong_previous));
-        assert_eq!(all(&stores, ASSOCIATION).len(), 2);
     }
 
     #[test]

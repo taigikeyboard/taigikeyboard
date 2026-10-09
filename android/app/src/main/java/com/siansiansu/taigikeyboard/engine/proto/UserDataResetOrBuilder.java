@@ -11,30 +11,6 @@ public interface UserDataResetOrBuilder extends
     com.google.protobuf.MessageLiteOrBuilder {
 
   /**
-   * <code>int64 frequency_removed = 1;</code>
-   * @return The frequencyRemoved.
-   */
-  long getFrequencyRemoved();
-
-  /**
-   * <code>int64 association_removed = 2;</code>
-   * @return The associationRemoved.
-   */
-  long getAssociationRemoved();
-
-  /**
-   * <code>int64 custom_dictionary_removed = 3;</code>
-   * @return The customDictionaryRemoved.
-   */
-  long getCustomDictionaryRemoved();
-
-  /**
-   * <code>int64 learned_phrases_removed = 4;</code>
-   * @return The learnedPhrasesRemoved.
-   */
-  long getLearnedPhrasesRemoved();
-
-  /**
    * <pre>
    * One line per selected store that could not be emptied, naming its file
    * (`user_frequency: &lt;error&gt;`) — English, for a diagnostic. Empty when

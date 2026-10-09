@@ -2,14 +2,13 @@
 
 use prost::Message;
 use protos::engine::{
-    request, response, user_data_request, AppConfig, OpenUserData, Platform, Request, Response,
+    request, response, user_data_request, AppConfig, OpenUserData, Request, Response,
     UserDataJournal, UserDataRequest,
 };
 
-/// An iOS TL request config; `swapped` is `is_hanji_first`.
+/// A TL request config; `swapped` is `is_hanji_first`.
 pub fn tl_config(swapped: bool) -> AppConfig {
     AppConfig {
-        platform_id: Platform::Ios as i32,
         input_mode: "tl".to_owned(),
         is_hanji_first: swapped,
         ..AppConfig::default()

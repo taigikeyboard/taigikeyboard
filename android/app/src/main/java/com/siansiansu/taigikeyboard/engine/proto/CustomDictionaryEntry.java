@@ -7,7 +7,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * One stored word. `created_at` / `updated_at` are UTC `yyyy-MM-dd HH:mm:ss`.
+ * One stored word.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.CustomDictionaryEntry}
@@ -22,8 +22,6 @@ public  final class CustomDictionaryEntry extends
     id_ = "";
     roman_ = "";
     hanji_ = "";
-    createdAt_ = "";
-    updatedAt_ = "";
   }
   public static final int ID_FIELD_NUMBER = 1;
   private java.lang.String id_;
@@ -166,100 +164,6 @@ public  final class CustomDictionaryEntry extends
 
   }
 
-  public static final int CREATED_AT_FIELD_NUMBER = 4;
-  private java.lang.String createdAt_;
-  /**
-   * <code>string created_at = 4;</code>
-   * @return The createdAt.
-   */
-  @java.lang.Override
-  public java.lang.String getCreatedAt() {
-    return createdAt_;
-  }
-  /**
-   * <code>string created_at = 4;</code>
-   * @return The bytes for createdAt.
-   */
-  @java.lang.Override
-  public com.google.protobuf.ByteString
-      getCreatedAtBytes() {
-    return com.google.protobuf.ByteString.copyFromUtf8(createdAt_);
-  }
-  /**
-   * <code>string created_at = 4;</code>
-   * @param value The createdAt to set.
-   */
-  private void setCreatedAt(
-      java.lang.String value) {
-    java.util.Objects.requireNonNull(value);
-
-    createdAt_ = value;
-  }
-  /**
-   * <code>string created_at = 4;</code>
-   */
-  private void clearCreatedAt() {
-
-    createdAt_ = getDefaultInstance().getCreatedAt();
-  }
-  /**
-   * <code>string created_at = 4;</code>
-   * @param value The bytes for createdAt to set.
-   */
-  private void setCreatedAtBytes(
-      com.google.protobuf.ByteString value) {
-    checkByteStringIsUtf8(value);
-    createdAt_ = value.toStringUtf8();
-
-  }
-
-  public static final int UPDATED_AT_FIELD_NUMBER = 5;
-  private java.lang.String updatedAt_;
-  /**
-   * <code>string updated_at = 5;</code>
-   * @return The updatedAt.
-   */
-  @java.lang.Override
-  public java.lang.String getUpdatedAt() {
-    return updatedAt_;
-  }
-  /**
-   * <code>string updated_at = 5;</code>
-   * @return The bytes for updatedAt.
-   */
-  @java.lang.Override
-  public com.google.protobuf.ByteString
-      getUpdatedAtBytes() {
-    return com.google.protobuf.ByteString.copyFromUtf8(updatedAt_);
-  }
-  /**
-   * <code>string updated_at = 5;</code>
-   * @param value The updatedAt to set.
-   */
-  private void setUpdatedAt(
-      java.lang.String value) {
-    java.util.Objects.requireNonNull(value);
-
-    updatedAt_ = value;
-  }
-  /**
-   * <code>string updated_at = 5;</code>
-   */
-  private void clearUpdatedAt() {
-
-    updatedAt_ = getDefaultInstance().getUpdatedAt();
-  }
-  /**
-   * <code>string updated_at = 5;</code>
-   * @param value The bytes for updatedAt to set.
-   */
-  private void setUpdatedAtBytes(
-      com.google.protobuf.ByteString value) {
-    checkByteStringIsUtf8(value);
-    updatedAt_ = value.toStringUtf8();
-
-  }
-
   public static com.siansiansu.taigikeyboard.engine.proto.CustomDictionaryEntry parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -345,7 +249,7 @@ public  final class CustomDictionaryEntry extends
 
   /**
    * <pre>
-   * One stored word. `created_at` / `updated_at` are UTC `yyyy-MM-dd HH:mm:ss`.
+   * One stored word.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.CustomDictionaryEntry}
@@ -508,104 +412,6 @@ public  final class CustomDictionaryEntry extends
       return this;
     }
 
-    /**
-     * <code>string created_at = 4;</code>
-     * @return The createdAt.
-     */
-    @java.lang.Override
-    public java.lang.String getCreatedAt() {
-      return instance.getCreatedAt();
-    }
-    /**
-     * <code>string created_at = 4;</code>
-     * @return The bytes for createdAt.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getCreatedAtBytes() {
-      return instance.getCreatedAtBytes();
-    }
-    /**
-     * <code>string created_at = 4;</code>
-     * @param value The createdAt to set.
-     * @return This builder for chaining.
-     */
-    public Builder setCreatedAt(
-        java.lang.String value) {
-      copyOnWrite();
-      instance.setCreatedAt(value);
-      return this;
-    }
-    /**
-     * <code>string created_at = 4;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearCreatedAt() {
-      copyOnWrite();
-      instance.clearCreatedAt();
-      return this;
-    }
-    /**
-     * <code>string created_at = 4;</code>
-     * @param value The bytes for createdAt to set.
-     * @return This builder for chaining.
-     */
-    public Builder setCreatedAtBytes(
-        com.google.protobuf.ByteString value) {
-      copyOnWrite();
-      instance.setCreatedAtBytes(value);
-      return this;
-    }
-
-    /**
-     * <code>string updated_at = 5;</code>
-     * @return The updatedAt.
-     */
-    @java.lang.Override
-    public java.lang.String getUpdatedAt() {
-      return instance.getUpdatedAt();
-    }
-    /**
-     * <code>string updated_at = 5;</code>
-     * @return The bytes for updatedAt.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getUpdatedAtBytes() {
-      return instance.getUpdatedAtBytes();
-    }
-    /**
-     * <code>string updated_at = 5;</code>
-     * @param value The updatedAt to set.
-     * @return This builder for chaining.
-     */
-    public Builder setUpdatedAt(
-        java.lang.String value) {
-      copyOnWrite();
-      instance.setUpdatedAt(value);
-      return this;
-    }
-    /**
-     * <code>string updated_at = 5;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearUpdatedAt() {
-      copyOnWrite();
-      instance.clearUpdatedAt();
-      return this;
-    }
-    /**
-     * <code>string updated_at = 5;</code>
-     * @param value The bytes for updatedAt to set.
-     * @return This builder for chaining.
-     */
-    public Builder setUpdatedAtBytes(
-        com.google.protobuf.ByteString value) {
-      copyOnWrite();
-      instance.setUpdatedAtBytes(value);
-      return this;
-    }
-
     // @@protoc_insertion_point(builder_scope:taigi.engine.CustomDictionaryEntry)
   }
   @java.lang.Override
@@ -625,12 +431,10 @@ public  final class CustomDictionaryEntry extends
             "id_",
             "roman_",
             "hanji_",
-            "createdAt_",
-            "updatedAt_",
           };
           java.lang.String info =
-              "\u0000\u0005\u0000\u0000\u0001\u0005\u0005\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
-              "\u0003\u0208\u0004\u0208\u0005\u0208";
+              "\u0000\u0003\u0000\u0000\u0001\u0003\u0003\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
+              "\u0003\u0208";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

@@ -107,15 +107,13 @@ impl Default for EngineHandle {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use protos::engine::Platform;
 
-    fn ios_config() -> AppConfig {
+    fn config() -> AppConfig {
         AppConfig {
             input_mode: "tl".to_owned(),
             oo_doubletap_enabled: false,
             nn_doubletap_enabled: false,
             is_hanji_first: false,
-            platform_id: Platform::Ios as i32,
             output_both_scripts: false,
             candidate_display_mode: 0,
             syllable_separator: 0,
@@ -156,7 +154,7 @@ mod tests {
 
         // Filter the pre-reset query against the post-reset state.
         let result = engine
-            .filter(Vec::new(), pre_reset_query_gen, 0, 30, &ios_config())
+            .filter(Vec::new(), pre_reset_query_gen, 0, 30, &config())
             .expect("filter ok");
         assert!(result.was_stale, "pre-reset query must drop as stale");
     }

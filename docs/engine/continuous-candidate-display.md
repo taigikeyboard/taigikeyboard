@@ -329,7 +329,7 @@ internal fun buildContinuousSuggestionsForCandidates(
             id = index + 1,
             roman = c.roman,                                       // ← was: c.displayText
             hanji = c.hanji?.takeIf { it.isNotEmpty() },           // ← was: null
-            lengthScore = null,
+            // lengthScore: removed 2026-10-09 (round A1b) with `TaigiWord.lengthScore`
             additionalInfo = mapOf(
                 TaigiWord.MetadataKeys.IS_CONTINUOUS to "true",
                 TaigiWord.MetadataKeys.CONSUMED_BYTES to c.consumedSpanEnd.toString(),

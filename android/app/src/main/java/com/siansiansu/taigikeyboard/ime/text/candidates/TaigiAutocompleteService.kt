@@ -234,7 +234,6 @@ private fun continuousWord(
         id = id,
         roman = candidate.roman,
         hanji = hanji,
-        lengthScore = null,
         additionalInfo =
             if (cellScript == null) {
                 continuousSidechannels(candidate)

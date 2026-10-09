@@ -79,14 +79,6 @@ use toneless_match::{
     with_tps_or_variant, KeyFace,
 };
 
-/// `RawCandidate.form` discriminator. Every candidate this module emits
-/// carries the notone form: span-local keys are `<prefix>:<toneless>`
-/// bodies, and the tone-pinned (`tl_num` / `poj_num`) keys the same
-/// guards accept resolve to the same records. The other form ordinals
-/// (hanji 0 / numeric 2 / abbrev 3) are reserved for carriers the proto
-/// side does not have.
-pub const FORM_NOTONE: u8 = 1;
-
 /// v3.5.8 Phase 9 Item 10 — `RawCandidate.coverage_kind` ordinal for
 /// full-syllable hits (the pre-Item-10 path: `valid_span_endings`
 /// returned at least one ending and `fetch_candidates_for_keys_with_barriers`
@@ -194,8 +186,6 @@ pub struct RawCandidate {
     pub canonical_tl: String,
     /// Result of [`ranking::calculate_continuous_score`].
     pub score: f32,
-    /// Always [`FORM_NOTONE`] in Phase 5.
-    pub form: u8,
     /// Raw dictionary frequency before any bias / boost. Carried
     /// alongside the multiplicative `score` so the v3.5.8 Phase 9.1
     /// `CandidateSortKey` can use raw freq as an explicit tie-break dimension
@@ -1685,7 +1675,6 @@ mod edge_word_pick_tests {
             hanji: Some(hanji.to_owned()),
             canonical_tl: "tse".to_owned(),
             score: frequency as f32,
-            form: FORM_NOTONE,
             frequency,
             walker_cost: EQUAL_COST,
             bitmask: 0,

@@ -68,21 +68,22 @@ pub fn open(path: &str) -> bool {
     true
 }
 
-/// One `engine_request` event per `process_request` call. `started` is
-/// taken before decoding, so `dur_us` covers decode + dispatch + encode but
-/// not the trace write itself.
+/// One `engine_request` event per `process_request` call. `generation` is
+/// whatever the request bytes hold in `Request.generation` (0 when absent),
+/// read without decoding, so a request that failed to decode still logs it.
+/// `started` is taken before decoding, so `dur_us` covers decode + dispatch
+/// + encode but not the trace write itself.
 pub fn request(bytes: &[u8], response: &Response, resp_bytes: usize, started: Instant) {
     if !IS_OPEN.load(Ordering::Acquire) {
         return;
     }
     let dur_us = started.elapsed().as_micros();
-    let (domain, method_tag) = classify(bytes);
+    let (domain, method_tag, generation) = classify(bytes);
     emit(
         started,
         format_args!(
-            r#""event":"engine_request","req_id":{},"generation":{},"domain":"{domain}","method_tag":{method_tag},"error":{},"dur_us":{dur_us},"req_bytes":{},"resp_bytes":{resp_bytes}"#,
+            r#""event":"engine_request","req_id":{},"generation":{generation},"domain":"{domain}","method_tag":{method_tag},"error":{},"dur_us":{dur_us},"req_bytes":{},"resp_bytes":{resp_bytes}"#,
             response.id,
-            response.generation,
             response.error,
             bytes.len(),
         ),
@@ -94,7 +95,7 @@ pub fn panic(bytes: &[u8], started: Instant) {
     if !IS_OPEN.load(Ordering::Acquire) {
         return;
     }
-    let (domain, method_tag) = classify(bytes);
+    let (domain, method_tag, _) = classify(bytes);
     emit(
         started,
         format_args!(
@@ -169,15 +170,26 @@ fn emit(at: Instant, fields: std::fmt::Arguments<'_>) {
     let _ = sink.file.write_all(line.as_bytes());
 }
 
-/// `(domain, method_tag)` read straight from the request's wire bytes, so
-/// tracing costs no second decode. The domain is the `Request.payload`
-/// oneof field (`envelope.proto`, tags 10–15); every sub-request message
-/// holds only its `oneof method`, so its first field number IS the method
-/// tag. The analyzer maps `(domain, tag)` to a name from `protos/proto/`.
-fn classify(bytes: &[u8]) -> (&'static str, u64) {
+/// `(domain, method_tag, generation)` read straight from the request's wire
+/// bytes, so tracing costs no second decode. The domain is the
+/// `Request.payload` oneof field (`envelope.proto`, tags 10–15); every
+/// sub-request message holds only its `oneof method`, so its first field
+/// number IS the method tag. The analyzer maps `(domain, tag)` to a name
+/// from `protos/proto/`. `generation` is `Request.generation` (field 4; 0
+/// when absent).
+fn classify(bytes: &[u8]) -> (&'static str, u64, u64) {
     let mut buf = bytes;
-    while let Some((field, payload)) = next_field(&mut buf) {
-        let domain = match field {
+    let mut domain = "none";
+    let mut method_tag = 0;
+    let mut generation = 0;
+    while let Some((field, value)) = next_field(&mut buf) {
+        domain = match field {
+            4 => {
+                if let FieldValue::Varint(varint) = value {
+                    generation = varint;
+                }
+                continue;
+            }
             10 => "phonetics",
             11 => "composing",
             12 => "lexicon",
@@ -186,41 +198,43 @@ fn classify(bytes: &[u8]) -> (&'static str, u64) {
             15 => "userdata",
             _ => continue,
         };
-        let method_tag = payload
-            .and_then(|mut inner| next_field(&mut inner))
-            .map_or(0, |(tag, _)| tag);
-        return (domain, method_tag);
+        if let FieldValue::Bytes(mut inner) = value {
+            method_tag = next_field(&mut inner).map_or(0, |(tag, _)| tag);
+        }
     }
-    ("none", 0)
+    (domain, method_tag, generation)
+}
+
+enum FieldValue<'a> {
+    Varint(u64),
+    /// fixed64 / fixed32 — skipped, nothing traced reads one.
+    Fixed,
+    Bytes(&'a [u8]),
 }
 
 /// Hand-written rather than `prost::encoding::decode_key` /
 /// `decode_varint`: those are `#[doc(hidden)]`, outside prost's semver
 /// promise.
 ///
-/// Reads one protobuf field off the front of `buf`: its number, and its
-/// body when length-delimited. `None` at the end or on malformed input.
-fn next_field<'a>(buf: &mut &'a [u8]) -> Option<(u64, Option<&'a [u8]>)> {
+/// Reads one protobuf field off the front of `buf`: its number and value.
+/// `None` at the end or on malformed input.
+fn next_field<'a>(buf: &mut &'a [u8]) -> Option<(u64, FieldValue<'a>)> {
     let key = read_varint(buf)?;
-    let payload = match key & 7 {
-        0 => {
-            read_varint(buf)?;
-            None
-        }
-        // fixed64 / fixed32
+    let value = match key & 7 {
+        0 => FieldValue::Varint(read_varint(buf)?),
         wire_type @ (1 | 5) => {
             *buf = buf.get(if wire_type == 1 { 8 } else { 4 }..)?;
-            None
+            FieldValue::Fixed
         }
         2 => {
             let len = usize::try_from(read_varint(buf)?).ok()?;
             let body = buf.get(..len)?;
             *buf = &buf[len..];
-            Some(body)
+            FieldValue::Bytes(body)
         }
         _ => return None,
     };
-    Some((key >> 3, payload))
+    Some((key >> 3, value))
 }
 
 fn read_varint(buf: &mut &[u8]) -> Option<u64> {
@@ -256,7 +270,7 @@ mod tests {
             ..Default::default()
         }
         .encode_to_vec();
-        assert_eq!(classify(&bytes), ("composing", 11));
+        assert_eq!(classify(&bytes), ("composing", 11, 3));
     }
 
     #[test]
@@ -267,7 +281,7 @@ mod tests {
 
     #[test]
     fn classify_tolerates_empty_and_malformed_bytes() {
-        assert_eq!(classify(&[]), ("none", 0));
-        assert_eq!(classify(&[0xff, 0xff]), ("none", 0));
+        assert_eq!(classify(&[]), ("none", 0, 0));
+        assert_eq!(classify(&[0xff, 0xff]), ("none", 0, 0));
     }
 }

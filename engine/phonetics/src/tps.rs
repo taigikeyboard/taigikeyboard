@@ -70,27 +70,6 @@ pub(crate) const ZHUYIN_VOWELS: &[(&str, &str)] = &[
     ("n", "\u{3123}"),
 ];
 
-/// True when `c` is a TPS nucleus glyph that can START a syllable body
-/// after an onset — a base vowel / medial / nasalized vowel / precomposed
-/// nasal-coda final (ㄚㄧㄨㄛㆦㆤㄜㄝㆨㄞㄠ, the ㆩㆥㆪㆧㆫㆮㆯ nasalized set,
-/// and the ㆰㄢㄤㆱㆲ am/an/ang/om/ong finals). Derived from
-/// [`ZHUYIN_VOWELS`] minus the three syllabic/coda-nasal forms `ㆬ`(m) /
-/// `ㄣ`(n) / `ㆭ`(ng), which are codas, not nuclei.
-///
-/// Used by the continuous-input de-fold predicate (`composing::shadow`):
-/// a folded coda glyph is only de-folded to an onset when the FOLLOWING
-/// char is vowel material — i.e. the coda is positioned where a real
-/// onset could begin the next syllable (`ㄍㆤㆷ|ㄧㄥ`), never before a tone
-/// mark, separator, or another coda.
-pub fn is_tps_vowel_material(c: char) -> bool {
-    // The syllabic / coda nasal forms are codas, not nuclei — exclude them
-    // even though they live in `ZHUYIN_VOWELS`.
-    if matches!(c, '\u{31ac}' | '\u{3123}' | '\u{31ad}') {
-        return false;
-    }
-    ZHUYIN_VOWELS.iter().any(|(_, glyph)| glyph.starts_with(c))
-}
-
 pub(crate) const ZHUYIN_TONES: &[(&str, &str)] = &[
     ("1", " "),
     ("2", "\u{02cb}"),
@@ -202,20 +181,6 @@ pub(crate) fn is_zhuyin(text: &str) -> bool {
 /// allocate a `&str` per code point.
 pub fn is_tps_char(ch: char) -> bool {
     matches!(ch, '\u{3100}'..='\u{312f}' | '\u{31a0}'..='\u{31bf}')
-}
-
-/// True when `ch` is the leading consonant of a TPS initial. Derived
-/// from [`ZHUYIN_INITIALS`] (the first `char` of each Bopomofo value),
-/// so it tracks edits to that table with no parallel const set to keep
-/// in sync. The four `REV_INITIALS` extras (ㄐ ㄑ ㄒ ㆢ) are already the
-/// first chars of the `tsi` / `tshi` / `si` / `ji` two-symbol initials,
-/// so iterating `ZHUYIN_INITIALS` alone covers the full set.
-///
-/// Used by the composing TPS syllabifier's "next initial seen" rule to
-/// infer a tone-1 syllable boundary: an initial appearing after a
-/// nucleus has been consumed starts a new syllable.
-pub fn is_tps_initial(ch: char) -> bool {
-    ZHUYIN_INITIALS.iter().any(|(_, tps)| tps.starts_with(ch))
 }
 
 /// Standalone TPS tone marks: `\u{02c6}` ˆ tone-9, `\u{02c7}` ˇ tone-6,
@@ -574,8 +539,8 @@ pub fn tps_abbrev_from_tl(record_tl: &str) -> String {
 ///
 /// Single-token: caller pre-splits multi-token TL on `[-\s]+`. v3.5.9 D /
 /// C-5 widened to `pub` so lexicon parity tests + composing golden
-/// fixtures can emit per-syllable tone-marked TPS samples without
-/// rebuilding the `Method::TlNumericToTps` proto plumbing.
+/// fixtures can emit per-syllable tone-marked TPS samples without going
+/// through `api::tl_numeric_to_tps`'s multi-token join.
 pub fn to_zhuyin(text: &str, encode_safe: bool, or_maps_to_er: bool) -> String {
     let mut remaining: String = text.to_lowercase();
     let mut pre_punct = String::new();
@@ -932,28 +897,6 @@ mod tests {
         assert_eq!(to_zhuyin("kir1", false, true), "ㄍㆨ ");
         assert_eq!(to_zhuyin("tsinn5", false, true), "ㄐㆪˊ");
         assert_eq!(to_zhuyin("tsia2", false, true), "ㄐㄧㄚˋ");
-    }
-
-    #[test]
-    fn is_tps_vowel_material_accepts_nuclei_rejects_coda_nasals() {
-        // Base vowels / medials / nasalized vowels / precomposed nasal-coda
-        // finals are nucleus material (can follow a de-folded onset).
-        for c in [
-            'ㄚ', 'ㄧ', 'ㄨ', 'ㄛ', 'ㆦ', 'ㆤ', 'ㄞ', 'ㄠ', 'ㆩ', 'ㄢ', 'ㄤ',
-        ] {
-            assert!(is_tps_vowel_material(c), "{c} should be vowel material");
-        }
-        // The syllabic / coda nasal forms are codas, NOT nuclei.
-        for c in ['ㆬ', 'ㄣ', 'ㆭ'] {
-            assert!(
-                !is_tps_vowel_material(c),
-                "{c} (coda nasal) must be rejected"
-            );
-        }
-        // Onsets / stop codas / tone marks / space are not vowel material.
-        for c in ['ㄍ', 'ㆷ', 'ㆵ', '\u{02cb}', ' '] {
-            assert!(!is_tps_vowel_material(c), "{c} must be rejected");
-        }
     }
 
     /// `canonicalize_tps_syllable` splits a trailing tone mark off a

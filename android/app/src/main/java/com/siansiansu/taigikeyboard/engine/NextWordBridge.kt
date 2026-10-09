@@ -230,7 +230,6 @@ fun RustEngineBridge.nextwordPredictNext(
             subtitle = if (p.subtitle.isEmpty()) null else p.subtitle,
             hanji = p.hanji,
             tl = p.tl,
-            score = p.score,
         )
     }
     return RustEngineBridge.NextWordFilterResult(predictions = predictions, wasStale = filter.wasStale)

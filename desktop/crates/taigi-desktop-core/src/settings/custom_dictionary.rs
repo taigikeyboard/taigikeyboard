@@ -124,7 +124,6 @@ mod tests {
             id: id.to_owned(),
             roman: "tsia̍h".to_owned(),
             hanji: "食".to_owned(),
-            ..CustomDictionaryEntry::default()
         }
     }
 

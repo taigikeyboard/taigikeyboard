@@ -30,14 +30,17 @@ message PhoneticsRequest {
   // `external_lookup_digit_form` (removed 2026-10-04).
   reserved 11, 19;
   reserved "strip_tone", "nfd_preprocess_for_lookup";
+  // Numeric-tone TL → TPS: no platform sends numeric TL any more; the
+  // display-form op below covers every caller (removed 2026-10-09).
+  reserved 32;
+  reserved "tl_numeric_to_tps";
 
   oneof method {
     // --- Phonetics core (2 ops) ---
     TlToPoj tl_to_poj = 13;
     GetToneVariations get_tone_variations = 18;
 
-    // --- TPS (4 ops) ---
-    TlNumericToTps tl_numeric_to_tps = 32;
+    // --- TPS (3 ops) ---
     TlDisplayToTps tl_display_to_tps = 33;
     IsTpsToneMark is_tps_tone_mark = 34;
     TpsInputAdjust tps_input_adjust = 35;
@@ -74,13 +77,6 @@ message GetToneVariations {}
 // =========================================================================
 // TPS request payloads
 // =========================================================================
-
-// `TlNumericToTps` input is numeric tone form (e.g. "hoo2"). Replaces
-// iOS `TLToTPS.convert` / Android `TPSConverter.toTPS`.
-message TlNumericToTps {
-  string text = 1;
-  bool or_maps_to_er = 2;
-}
 
 // `TlDisplayToTps` input is display form with diacritics (e.g. "hóo").
 // Replaces iOS `TLToTPS.convertFromDisplay` / Android `TPSConverter.toTPSFromDisplay`.

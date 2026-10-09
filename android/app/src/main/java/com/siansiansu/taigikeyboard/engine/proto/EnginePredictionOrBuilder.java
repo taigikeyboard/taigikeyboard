@@ -76,7 +76,7 @@ public interface EnginePredictionOrBuilder extends
    * <pre>
    * Merged score: min(dict_sum, DICT_SCORE_CAP 250) + user_sum, the sums
    * taken over the (hanji, tl) merge and the reading-variant fold
-   * (behavioral-invariants §8). Android maps to TaigiWord.lengthScore.
+   * (behavioral-invariants §8). Test seam only; no platform reads it.
    * </pre>
    *
    * <code>double score = 5;</code>

@@ -109,7 +109,7 @@ pub fn handle(
     let decoded = decode_intent(req)?;
     let (result, associations) = match decoded {
         DecodedRequest::Decide(intent) => {
-            let decided = engine.apply(intent, config)?;
+            let decided = engine.apply(intent, config);
             (
                 next_word_response::Result::Decide(decided.result),
                 decided.associations,

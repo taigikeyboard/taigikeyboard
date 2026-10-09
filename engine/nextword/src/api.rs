@@ -124,8 +124,6 @@ pub enum NextWordError {
     MissingDecisionInput,
     #[error("invalid Source on RawNextWordPrediction")]
     InvalidSource,
-    #[error("invalid Platform on AppConfig")]
-    InvalidPlatform,
     /// `PredictNext` needs the bundled lookup, which only `engine/dispatch`
     /// can run; it rewrites the request to `FilterPredictions` first.
     #[error("PredictNext must be expanded by engine/dispatch")]
@@ -145,15 +143,8 @@ impl Engine {
 
     /// Apply `intent` against the current state, mutate, and return the
     /// resulting decide response (effects + new state echo). Delegates to
-    /// the pure decide table in `decide.rs`. May fail when the request
-    /// envelope's `Platform` is `Unspecified` — a legacy check, kept because
-    /// no decision reads the value any more (`behavioral-invariants.md` §40)
-    /// and dropping it would be an observable change of its own.
-    pub(crate) fn apply(
-        &mut self,
-        intent: Intent,
-        config: &AppConfig,
-    ) -> Result<Decided, NextWordError> {
+    /// the pure decide table in `decide.rs`.
+    pub(crate) fn apply(&mut self, intent: Intent, config: &AppConfig) -> Decided {
         crate::decide::decide(&mut self.state, intent, config)
     }
 

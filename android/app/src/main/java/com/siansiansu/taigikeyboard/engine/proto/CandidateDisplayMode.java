@@ -18,12 +18,14 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * preprocessing (oo→o͘, nn→ⁿ) read by `phonetics::api::normalize_tone` on the
  * composing path.
  *
- * v3.5.5 added `is_hanji_first` + `platform_id` for the NextWord
- * engine (tag 6 `is_association_recording_enabled` retired 2026-09-25 —
- * association recording is always on since the toggle left every UI).
- * `platform_id` originally branched the compound-split separator and the
- * noise-punct set; those converged to one platform-neutral contract (behavioral-invariants.md §40) and it is now
- * validated caller identity only.
+ * v3.5.5 added `is_hanji_first` for the NextWord engine (tag 6
+ * `is_association_recording_enabled` retired 2026-09-25 — association
+ * recording is always on since the toggle left every UI; tag 7
+ * `platform_id` retired 2026-10-09 — it had branched the compound-split
+ * separator and the noise-punct set until those converged to one
+ * platform-neutral contract, behavioral-invariants.md §40; after that it
+ * only validated caller identity (nextword rejected an unset platform),
+ * and A1b retires that validation).
  *
  * v3.5.8 added `output_both_scripts`: the engine's Model B continuous
  * composing-buffer join (`composing::api::nailed_prefix` /

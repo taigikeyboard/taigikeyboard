@@ -42,29 +42,18 @@ public interface PhoneticsRequestOrBuilder extends
 
   /**
    * <pre>
-   * --- TPS (4 ops) ---
+   * --- TPS (3 ops) ---
    * </pre>
    *
-   * <code>.taigi.engine.TlNumericToTps tl_numeric_to_tps = 32;</code>
-   * @return Whether the tlNumericToTps field is set.
-   */
-  boolean hasTlNumericToTps();
-  /**
-   * <pre>
-   * --- TPS (4 ops) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.TlNumericToTps tl_numeric_to_tps = 32;</code>
-   * @return The tlNumericToTps.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.TlNumericToTps getTlNumericToTps();
-
-  /**
    * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
    * @return Whether the tlDisplayToTps field is set.
    */
   boolean hasTlDisplayToTps();
   /**
+   * <pre>
+   * --- TPS (3 ops) ---
+   * </pre>
+   *
    * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
    * @return The tlDisplayToTps.
    */

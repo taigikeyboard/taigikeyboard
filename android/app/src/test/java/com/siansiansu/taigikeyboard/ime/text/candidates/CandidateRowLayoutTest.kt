@@ -11,7 +11,7 @@ import org.junit.Test
  * row wrapping has diverged from the frozen behavior.
  */
 class CandidateRowLayoutTest {
-    private fun word(index: Int): TaigiWord = TaigiWord(id = index, roman = "r$index", hanji = "h$index", lengthScore = 0)
+    private fun word(index: Int): TaigiWord = TaigiWord(id = index, roman = "r$index", hanji = "h$index")
 
     /** Each suggestion measures to a fixed width supplied by [widths] (px), keyed by id. */
     private fun pack(

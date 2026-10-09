@@ -20,7 +20,6 @@ final class RustEngineBridgeAppConfigTests: XCTestCase {
         XCTAssertFalse(config.isHanjiFirst, "the swap goes out unfolded; the engine reads tps as Hanji-first")
         XCTAssertEqual(config.syllableSeparator, .none, "the separator goes out as stored; the engine exempts tps")
         XCTAssertTrue(config.tpsOrMapsToEr, "the or→er dialect switch rides the config")
-        XCTAssertEqual(config.platformID, .ios)
     }
 
     func testContinuousAppConfig_romanizationModes_forwardEverySetting() {
@@ -50,18 +49,15 @@ final class RustEngineBridgeAppConfigTests: XCTestCase {
             XCTAssertTrue(config.nnDoubletapEnabled, "\(mode)")
             XCTAssertTrue(config.forceLowercaseNasalMarker, "\(mode): ⁿ becomes ᴺ OFF is inverted on the wire")
             XCTAssertFalse(config.tpsOrMapsToEr, "\(mode)")
-            XCTAssertEqual(config.platformID, .ios, "\(mode)")
         }
     }
 
-    /// Nextword and case transform pass only what they read; the rest keeps the proto defaults,
-    /// and `platform_id` is set on every request (nextword rejects it unset).
+    /// Nextword and case transform pass only what they read; the rest keeps the proto defaults.
     func testAppConfig_unpassedFields_keepTheProtoDefaults() {
         let config = RustEngineBridge.appConfig(mode: .tps, isHanjiFirst: true)
 
         XCTAssertEqual(config.inputMode, "tps")
         XCTAssertTrue(config.isHanjiFirst)
-        XCTAssertEqual(config.platformID, .ios)
         XCTAssertFalse(config.ooDoubletapEnabled)
         XCTAssertFalse(config.nnDoubletapEnabled)
         XCTAssertFalse(config.forceLowercaseNasalMarker)

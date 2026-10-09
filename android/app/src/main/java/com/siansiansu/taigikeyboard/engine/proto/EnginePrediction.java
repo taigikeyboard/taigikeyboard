@@ -8,9 +8,8 @@ package com.siansiansu.taigikeyboard.engine.proto;
 /**
  * <pre>
  * UI-ready prediction value — mirrors iOS EnginePrediction.swift +
- * Android EnginePrediction.kt. Android consumes `score` for
- * TaigiWord.lengthScore; iOS ignores it (iOS bridge presentation
- * rule documented in nextword-engine-boundary.md §13.10).
+ * Android EnginePrediction.kt (iOS bridge presentation rule documented in
+ * nextword-engine-boundary.md §13.10).
  * </pre>
  *
  * Protobuf type {@code taigi.engine.EnginePrediction}
@@ -256,7 +255,7 @@ public  final class EnginePrediction extends
    * <pre>
    * Merged score: min(dict_sum, DICT_SCORE_CAP 250) + user_sum, the sums
    * taken over the (hanji, tl) merge and the reading-variant fold
-   * (behavioral-invariants §8). Android maps to TaigiWord.lengthScore.
+   * (behavioral-invariants §8). Test seam only; no platform reads it.
    * </pre>
    *
    * <code>double score = 5;</code>
@@ -270,7 +269,7 @@ public  final class EnginePrediction extends
    * <pre>
    * Merged score: min(dict_sum, DICT_SCORE_CAP 250) + user_sum, the sums
    * taken over the (hanji, tl) merge and the reading-variant fold
-   * (behavioral-invariants §8). Android maps to TaigiWord.lengthScore.
+   * (behavioral-invariants §8). Test seam only; no platform reads it.
    * </pre>
    *
    * <code>double score = 5;</code>
@@ -284,7 +283,7 @@ public  final class EnginePrediction extends
    * <pre>
    * Merged score: min(dict_sum, DICT_SCORE_CAP 250) + user_sum, the sums
    * taken over the (hanji, tl) merge and the reading-variant fold
-   * (behavioral-invariants §8). Android maps to TaigiWord.lengthScore.
+   * (behavioral-invariants §8). Test seam only; no platform reads it.
    * </pre>
    *
    * <code>double score = 5;</code>
@@ -380,9 +379,8 @@ public  final class EnginePrediction extends
   /**
    * <pre>
    * UI-ready prediction value — mirrors iOS EnginePrediction.swift +
-   * Android EnginePrediction.kt. Android consumes `score` for
-   * TaigiWord.lengthScore; iOS ignores it (iOS bridge presentation
-   * rule documented in nextword-engine-boundary.md §13.10).
+   * Android EnginePrediction.kt (iOS bridge presentation rule documented in
+   * nextword-engine-boundary.md §13.10).
    * </pre>
    *
    * Protobuf type {@code taigi.engine.EnginePrediction}
@@ -633,7 +631,7 @@ public  final class EnginePrediction extends
      * <pre>
      * Merged score: min(dict_sum, DICT_SCORE_CAP 250) + user_sum, the sums
      * taken over the (hanji, tl) merge and the reading-variant fold
-     * (behavioral-invariants §8). Android maps to TaigiWord.lengthScore.
+     * (behavioral-invariants §8). Test seam only; no platform reads it.
      * </pre>
      *
      * <code>double score = 5;</code>
@@ -647,7 +645,7 @@ public  final class EnginePrediction extends
      * <pre>
      * Merged score: min(dict_sum, DICT_SCORE_CAP 250) + user_sum, the sums
      * taken over the (hanji, tl) merge and the reading-variant fold
-     * (behavioral-invariants §8). Android maps to TaigiWord.lengthScore.
+     * (behavioral-invariants §8). Test seam only; no platform reads it.
      * </pre>
      *
      * <code>double score = 5;</code>
@@ -663,7 +661,7 @@ public  final class EnginePrediction extends
      * <pre>
      * Merged score: min(dict_sum, DICT_SCORE_CAP 250) + user_sum, the sums
      * taken over the (hanji, tl) merge and the reading-variant fold
-     * (behavioral-invariants §8). Android maps to TaigiWord.lengthScore.
+     * (behavioral-invariants §8). Test seam only; no platform reads it.
      * </pre>
      *
      * <code>double score = 5;</code>

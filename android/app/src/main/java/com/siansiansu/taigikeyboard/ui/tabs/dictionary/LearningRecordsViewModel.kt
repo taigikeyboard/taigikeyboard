@@ -24,10 +24,6 @@ import java.time.ZoneId
 /** The intent extra (a [LearningRecordKind] name) naming the one kind the page lists. */
 const val LEARNING_RECORDS_KIND_ARG = "learningRecordsKind"
 
-/** Kinds the phone lists; next-word association is not one. */
-private val LEARNING_RECORDS_KINDS =
-    listOf(LearningRecordKind.LEARNING_RECORD_KIND_FREQUENCY, LearningRecordKind.LEARNING_RECORD_KIND_LEARNED_PHRASE)
-
 /** Rows per engine page. */
 internal const val LEARNING_RECORDS_PAGE_SIZE = 100
 
@@ -111,7 +107,7 @@ class LearningRecordsViewModel internal constructor(
     private var failedRead = FailedRead.LIST
 
     init {
-        require(kind in LEARNING_RECORDS_KINDS) { "Learning Records cannot list $kind" }
+        require(kind != LearningRecordKind.UNRECOGNIZED) { "Learning Records cannot list $kind" }
         reload()
     }
 
