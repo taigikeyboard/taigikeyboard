@@ -28,12 +28,6 @@ public interface ResponseOrBuilder extends
   com.siansiansu.taigikeyboard.engine.proto.ErrorCode getError();
 
   /**
-   * <code>uint64 generation = 3;</code>
-   * @return The generation.
-   */
-  long getGeneration();
-
-  /**
    * <code>.taigi.engine.PhoneticsResponse phonetics = 10;</code>
    * @return Whether the phonetics field is set.
    */

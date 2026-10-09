@@ -54,10 +54,6 @@ public extension RustEngineBridge {
         public let subtitle: String?
         public let hanji: String
         public let tl: String
-        /// Merged score. iOS does not currently consume this field
-        /// (predictions render in array order); Android maps to
-        /// `TaigiWord.lengthScore`. Kept for parity + diagnostics.
-        public let score: Double
     }
 
     /// Filter+merge+sort+limit result. `wasStale=true` indicates the
@@ -262,7 +258,6 @@ public extension RustEngineBridge {
                 subtitle: p.subtitle.isEmpty ? nil : p.subtitle,
                 hanji: p.hanji,
                 tl: p.tl,
-                score: p.score,
             )
         }
         return NextWordFilterResult(predictions: predictions, wasStale: filter.wasStale)

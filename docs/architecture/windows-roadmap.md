@@ -342,7 +342,7 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   platforms. `tools/i18n/check.py` gates the generated Rust byte-for-byte
   automatically; `windows/Makefile` runs it before build.
 - **W12 Proto** — `PLATFORM_WINDOWS = 4` in `engine/protos/proto/envelope.proto`
-  (nextword rejects `PLATFORM_UNSPECIFIED`, `engine/nextword/src/decide.rs:50-51`);
+  (nextword rejected `PLATFORM_UNSPECIFIED`; `platform_id`, the `Platform` enum and that rejection were removed 2026-10-09 (round A1b));
   `make build` regenerates the committed iOS/Android/macOS protos
   (`rust-migration-policy.md` §4 triple-touch). Its own PR (Codex: keep the mechanical
   regen apart from the i18n migration).

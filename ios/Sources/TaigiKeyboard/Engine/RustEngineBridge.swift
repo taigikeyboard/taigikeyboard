@@ -182,7 +182,7 @@ public enum RustEngineBridge {
     }
 
     /// The one `AppConfig` builder: every request this bridge sends carries a
-    /// config built here, so the mode mapping and `platform_id` exist once.
+    /// config built here, so the mode mapping exists once.
     /// Composing passes the live settings (`continuousAppConfig`), nextword
     /// the swap (plus the display fields on its predict request), case
     /// transform the nasal-marker switch; a field a request family does not
@@ -205,7 +205,6 @@ public enum RustEngineBridge {
         isTpsOrMappedToER: Bool = false,
     ) -> Taigi_Engine_AppConfig {
         var cfg = Taigi_Engine_AppConfig()
-        cfg.platformID = .ios
         // The raw values are the engine's `input_mode` strings.
         cfg.inputMode = mode.rawValue
         if let pojMarkers {

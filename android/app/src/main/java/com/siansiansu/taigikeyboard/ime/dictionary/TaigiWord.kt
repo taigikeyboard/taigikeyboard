@@ -9,7 +9,6 @@ package com.siansiansu.taigikeyboard.ime.dictionary
  * @property id Database row ID
  * @property roman Romanized form with tone marks (POJ or TL)
  * @property hanji Chinese characters representation (nullable)
- * @property lengthScore Dictionary frequency score used for ranking; higher is more common.
  *
  * Compose stability contract — declared stable in
  * `android/app/compose_compiler_config.conf` so `CandidateCell(word:
@@ -26,7 +25,6 @@ data class TaigiWord(
     val id: Int,
     val roman: String,
     val hanji: String?,
-    val lengthScore: Int?,
     /**
      * Per-cell metadata sidechannel — mirror of iOS
      * `Autocomplete.Suggestion.additionalInfo: [String: String]`. Kept as a

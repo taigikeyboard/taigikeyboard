@@ -2,7 +2,7 @@
 
 > **Type**: Reference (shipped; kept as the design record)
 > **Keywords**: `macos`, `InputMethodKit`, `IMKit`, `desktop`, `engine reuse`
-> **Status**: shipped — PR0–PR13 merged 2026-08-17; candidate-window port 2026-08-18 (D11); released in desktop v3.6.7 (first macOS + Windows desktop release) and v3.6.8 (`changelog/desktop-v3.6.7.md`, `changelog/desktop-v3.6.8.md`). Device dogfood runs as one batch per USER 2026-08-15 ("I want to wait until the desktop implementation is done before dogfooding"); the batch is still open. Release mechanics: `desktop-release.md`.
+> **Status**: shipped — PR0–PR13 merged 2026-08-17; candidate-window port 2026-08-18 (D11); released in desktop v3.6.7 (first macOS + Windows desktop release) and v3.6.8 (`changelog/desktop-v3.6.7.md`, `changelog/desktop-v3.6.8.md`). Device dogfood runs as one batch per USER 2026-08-15 ("I want to wait until the desktop implementation is done before dogfooding"); the batch is still open. Release mechanics: `desktop-release.md`. 2026-10-09 (round A1b): `AppConfig.platform_id` and `PLATFORM_MACOS` left the wire; the diagram and D7 keep the shipped-era wording.
 > **Session memory**: project memory `project_macos_ime.md` (Claude auto-memory)
 > **Plan provenance**: Phase-0 research + Codex pre-impl design review (ANALYSIS-ONLY, 2026-08-15) — FFI-reuse / SwiftPM-bundle / platform_id-deferral all confirmed; generation-ownership, proto-gen isolation, PR sizing, bundle-metadata cautions incorporated.
 

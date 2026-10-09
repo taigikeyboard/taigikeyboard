@@ -22,7 +22,6 @@ public  final class PhoneticsRequest extends
       implements com.google.protobuf.AbstractMessageLite.InternalOneOfEnum {
     TL_TO_POJ(13),
     GET_TONE_VARIATIONS(18),
-    TL_NUMERIC_TO_TPS(32),
     TL_DISPLAY_TO_TPS(33),
     IS_TPS_TONE_MARK(34),
     TPS_INPUT_ADJUST(35),
@@ -45,7 +44,6 @@ public  final class PhoneticsRequest extends
       switch (value) {
         case 13: return TL_TO_POJ;
         case 18: return GET_TONE_VARIATIONS;
-        case 32: return TL_NUMERIC_TO_TPS;
         case 33: return TL_DISPLAY_TO_TPS;
         case 34: return IS_TPS_TONE_MARK;
         case 35: return TPS_INPUT_ADJUST;
@@ -192,78 +190,12 @@ public  final class PhoneticsRequest extends
     }
   }
 
-  public static final int TL_NUMERIC_TO_TPS_FIELD_NUMBER = 32;
-  /**
-   * <pre>
-   * --- TPS (4 ops) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.TlNumericToTps tl_numeric_to_tps = 32;</code>
-   */
-  @java.lang.Override
-  public boolean hasTlNumericToTps() {
-    return methodCase_ == 32;
-  }
-  /**
-   * <pre>
-   * --- TPS (4 ops) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.TlNumericToTps tl_numeric_to_tps = 32;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.TlNumericToTps getTlNumericToTps() {
-    if (methodCase_ == 32) {
-       return (com.siansiansu.taigikeyboard.engine.proto.TlNumericToTps) method_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.TlNumericToTps.getDefaultInstance();
-  }
-  /**
-   * <pre>
-   * --- TPS (4 ops) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.TlNumericToTps tl_numeric_to_tps = 32;</code>
-   */
-  private void setTlNumericToTps(com.siansiansu.taigikeyboard.engine.proto.TlNumericToTps value) {
-    java.util.Objects.requireNonNull(value);
-    method_ = value;
-    methodCase_ = 32;
-  }
-  /**
-   * <pre>
-   * --- TPS (4 ops) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.TlNumericToTps tl_numeric_to_tps = 32;</code>
-   */
-  private void mergeTlNumericToTps(com.siansiansu.taigikeyboard.engine.proto.TlNumericToTps value) {
-    java.util.Objects.requireNonNull(value);
-    if (methodCase_ == 32 &&
-        method_ != com.siansiansu.taigikeyboard.engine.proto.TlNumericToTps.getDefaultInstance()) {
-      method_ = com.siansiansu.taigikeyboard.engine.proto.TlNumericToTps.newBuilder((com.siansiansu.taigikeyboard.engine.proto.TlNumericToTps) method_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      method_ = value;
-    }
-    methodCase_ = 32;
-  }
-  /**
-   * <pre>
-   * --- TPS (4 ops) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.TlNumericToTps tl_numeric_to_tps = 32;</code>
-   */
-  private void clearTlNumericToTps() {
-    if (methodCase_ == 32) {
-      methodCase_ = 0;
-      method_ = null;
-    }
-  }
-
   public static final int TL_DISPLAY_TO_TPS_FIELD_NUMBER = 33;
   /**
+   * <pre>
+   * --- TPS (3 ops) ---
+   * </pre>
+   *
    * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
    */
   @java.lang.Override
@@ -271,6 +203,10 @@ public  final class PhoneticsRequest extends
     return methodCase_ == 33;
   }
   /**
+   * <pre>
+   * --- TPS (3 ops) ---
+   * </pre>
+   *
    * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
    */
   @java.lang.Override
@@ -281,6 +217,10 @@ public  final class PhoneticsRequest extends
     return com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps.getDefaultInstance();
   }
   /**
+   * <pre>
+   * --- TPS (3 ops) ---
+   * </pre>
+   *
    * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
    */
   private void setTlDisplayToTps(com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps value) {
@@ -289,6 +229,10 @@ public  final class PhoneticsRequest extends
     methodCase_ = 33;
   }
   /**
+   * <pre>
+   * --- TPS (3 ops) ---
+   * </pre>
+   *
    * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
    */
   private void mergeTlDisplayToTps(com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps value) {
@@ -303,6 +247,10 @@ public  final class PhoneticsRequest extends
     methodCase_ = 33;
   }
   /**
+   * <pre>
+   * --- TPS (3 ops) ---
+   * </pre>
+   *
    * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
    */
   private void clearTlDisplayToTps() {
@@ -763,77 +711,9 @@ public  final class PhoneticsRequest extends
 
     /**
      * <pre>
-     * --- TPS (4 ops) ---
+     * --- TPS (3 ops) ---
      * </pre>
      *
-     * <code>.taigi.engine.TlNumericToTps tl_numeric_to_tps = 32;</code>
-     */
-    @java.lang.Override
-    public boolean hasTlNumericToTps() {
-      return instance.hasTlNumericToTps();
-    }
-    /**
-     * <pre>
-     * --- TPS (4 ops) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.TlNumericToTps tl_numeric_to_tps = 32;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.TlNumericToTps getTlNumericToTps() {
-      return instance.getTlNumericToTps();
-    }
-    /**
-     * <pre>
-     * --- TPS (4 ops) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.TlNumericToTps tl_numeric_to_tps = 32;</code>
-     */
-    public Builder setTlNumericToTps(com.siansiansu.taigikeyboard.engine.proto.TlNumericToTps value) {
-      copyOnWrite();
-      instance.setTlNumericToTps(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * --- TPS (4 ops) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.TlNumericToTps tl_numeric_to_tps = 32;</code>
-     */
-    public Builder setTlNumericToTps(
-        com.siansiansu.taigikeyboard.engine.proto.TlNumericToTps.Builder builderForValue) {
-      copyOnWrite();
-      instance.setTlNumericToTps(builderForValue.build());
-      return this;
-    }
-    /**
-     * <pre>
-     * --- TPS (4 ops) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.TlNumericToTps tl_numeric_to_tps = 32;</code>
-     */
-    public Builder mergeTlNumericToTps(com.siansiansu.taigikeyboard.engine.proto.TlNumericToTps value) {
-      copyOnWrite();
-      instance.mergeTlNumericToTps(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * --- TPS (4 ops) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.TlNumericToTps tl_numeric_to_tps = 32;</code>
-     */
-    public Builder clearTlNumericToTps() {
-      copyOnWrite();
-      instance.clearTlNumericToTps();
-      return this;
-    }
-
-    /**
      * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
      */
     @java.lang.Override
@@ -841,6 +721,10 @@ public  final class PhoneticsRequest extends
       return instance.hasTlDisplayToTps();
     }
     /**
+     * <pre>
+     * --- TPS (3 ops) ---
+     * </pre>
+     *
      * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
      */
     @java.lang.Override
@@ -848,6 +732,10 @@ public  final class PhoneticsRequest extends
       return instance.getTlDisplayToTps();
     }
     /**
+     * <pre>
+     * --- TPS (3 ops) ---
+     * </pre>
+     *
      * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
      */
     public Builder setTlDisplayToTps(com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps value) {
@@ -856,6 +744,10 @@ public  final class PhoneticsRequest extends
       return this;
     }
     /**
+     * <pre>
+     * --- TPS (3 ops) ---
+     * </pre>
+     *
      * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
      */
     public Builder setTlDisplayToTps(
@@ -865,6 +757,10 @@ public  final class PhoneticsRequest extends
       return this;
     }
     /**
+     * <pre>
+     * --- TPS (3 ops) ---
+     * </pre>
+     *
      * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
      */
     public Builder mergeTlDisplayToTps(com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps value) {
@@ -873,6 +769,10 @@ public  final class PhoneticsRequest extends
       return this;
     }
     /**
+     * <pre>
+     * --- TPS (3 ops) ---
+     * </pre>
+     *
      * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
      */
     public Builder clearTlDisplayToTps() {
@@ -1117,7 +1017,6 @@ public  final class PhoneticsRequest extends
             "methodCase_",
             com.siansiansu.taigikeyboard.engine.proto.TlToPoj.class,
             com.siansiansu.taigikeyboard.engine.proto.GetToneVariations.class,
-            com.siansiansu.taigikeyboard.engine.proto.TlNumericToTps.class,
             com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps.class,
             com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark.class,
             com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust.class,
@@ -1125,7 +1024,7 @@ public  final class PhoneticsRequest extends
             com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm.class,
           };
           java.lang.String info =
-              "\u0000\b\u0001\u0000\r)\b\u0000\u0000\u0000\r<\u0000\u0012<\u0000 <\u0000!<\u0000" +
+              "\u0000\u0007\u0001\u0000\r)\u0007\u0000\u0000\u0000\r<\u0000\u0012<\u0000!<\u0000" +
               "\"<\u0000#<\u0000(<\u0000)<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }

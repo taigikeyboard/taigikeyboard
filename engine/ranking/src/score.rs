@@ -105,13 +105,15 @@ impl FrequencyData {
 /// this once per fetch from its `user_frequency.db` rows (`dispatch` crate,
 /// `user_data::with_stores::frequency_map`) and reuses it across the whole batch.
 ///
-/// **Legacy `canonical_tl == ""` bucket**: pre-R5 rows / old-backup
-/// imports that could not be re-keyed carry an empty `canonical_tl`.
-/// [`get`](Self::get) consults that bucket as a tolerant fallback for ANY
-/// reading of the `display_text` whose exact `(display, tl)` entry is
-/// absent — both 重/tîng and 重/tāng inherit the old merged 重 count until
-/// each is re-learned, at which point the exact bucket shadows the legacy
-/// one. Self-healing; the legacy row is never deleted.
+/// **The `canonical_tl == ""` bucket** holds two kinds of row: legacy ones
+/// (pre-R5 rows / old-backup imports that could not be re-keyed) and
+/// current empty-reading identities — an OOV pick, or a continuous commit
+/// whose reading could not be recovered (`composing/src/continuous.rs`
+/// stamps `canonical_tl: String::new()`). [`get`](Self::get) consults it
+/// as a tolerant fallback for ANY reading of the `display_text` whose exact
+/// `(display, tl)` entry is absent — both 重/tîng and 重/tāng inherit the
+/// merged 重 count until each is re-learned, at which point the exact
+/// bucket shadows it. Self-healing; the row is never deleted.
 ///
 /// **Duplicate-key policy**: last-write-wins within one
 /// `(display, tl)` bucket. The store answers at most one row per pair

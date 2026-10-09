@@ -69,7 +69,7 @@ pub fn process_request(bytes: &[u8]) -> Vec<u8> {
         log::error!("engine dispatch panicked");
         #[cfg(feature = "e2e-trace")]
         trace::panic(bytes, started);
-        encode(&error_response(0, ErrorCode::FailInternal, 0))
+        encode(&error_response(0, ErrorCode::FailInternal))
     })
 }
 
@@ -85,7 +85,7 @@ where
     let result = catch_unwind(AssertUnwindSafe(|| encode(&dispatcher(bytes))));
     result.unwrap_or_else(|_| {
         log::error!("engine dispatch panicked");
-        encode(&error_response(0, ErrorCode::FailInternal, 0))
+        encode(&error_response(0, ErrorCode::FailInternal))
     })
 }
 
@@ -94,7 +94,7 @@ fn run(bytes: &[u8]) -> Response {
         Ok(r) => r,
         Err(e) => {
             log::warn!("engine request decode failed: {e}");
-            return error_response(0, ErrorCode::FailParse, 0);
+            return error_response(0, ErrorCode::FailParse);
         }
     };
     let id = request.id;
@@ -103,7 +103,7 @@ fn run(bytes: &[u8]) -> Response {
 
     let Some(payload) = request.payload else {
         log::warn!("engine request missing payload (id={id})");
-        return error_response(id, ErrorCode::FailInvariant, generation);
+        return error_response(id, ErrorCode::FailInvariant);
     };
 
     match payload {
@@ -111,12 +111,11 @@ fn run(bytes: &[u8]) -> Response {
             Ok(phon_resp) => Response {
                 id,
                 error: ErrorCode::Ok as i32,
-                generation,
                 payload: Some(response::Payload::Phonetics(phon_resp)),
             },
             Err(err) => {
                 log::warn!("phonetics dispatch failed (id={id}): {err}");
-                error_response(id, phonetics_error_code(&err), generation)
+                error_response(id, phonetics_error_code(&err))
             }
         },
         request::Payload::Composing(comp_req) => {
@@ -125,30 +124,28 @@ fn run(bytes: &[u8]) -> Response {
                 Ok(comp_resp) => Response {
                     id,
                     error: ErrorCode::Ok as i32,
-                    generation,
                     payload: Some(response::Payload::Composing(comp_resp)),
                 },
                 Err(err) => {
                     log::warn!("composing dispatch failed (id={id}): {err}");
-                    error_response(id, ErrorCode::FailInvariant, generation)
+                    error_response(id, ErrorCode::FailInvariant)
                 }
             }
         }
         request::Payload::Lexicon(lex_req) => {
             let Some(method) = lex_req.method else {
                 log::warn!("lexicon request missing method (id={id})");
-                return error_response(id, ErrorCode::FailInvariant, generation);
+                return error_response(id, ErrorCode::FailInvariant);
             };
             match lexicon::requests::handle(method) {
                 Ok(lex_resp) => Response {
                     id,
                     error: ErrorCode::Ok as i32,
-                    generation,
                     payload: Some(response::Payload::Lexicon(lex_resp)),
                 },
                 Err(err) => {
                     log::warn!("lexicon dispatch failed (id={id}): {err}");
-                    error_response(id, lexicon_error_code(&err), generation)
+                    error_response(id, lexicon_error_code(&err))
                 }
             }
         }
@@ -159,12 +156,11 @@ fn run(bytes: &[u8]) -> Response {
                 Ok(nw_resp) => Response {
                     id,
                     error: ErrorCode::Ok as i32,
-                    generation,
                     payload: Some(response::Payload::Nextword(nw_resp)),
                 },
                 Err(err) => {
                     log::warn!("nextword dispatch failed (id={id}): {err}");
-                    error_response(id, ErrorCode::FailInvariant, generation)
+                    error_response(id, ErrorCode::FailInvariant)
                 }
             }
         }
@@ -172,17 +168,14 @@ fn run(bytes: &[u8]) -> Response {
             Some(case_resp) => Response {
                 id,
                 error: ErrorCode::Ok as i32,
-                generation,
                 payload: Some(response::Payload::CaseTransform(case_resp)),
             },
             None => {
                 log::warn!("case request missing method (id={id})");
-                error_response(id, ErrorCode::FailInvariant, generation)
+                error_response(id, ErrorCode::FailInvariant)
             }
         },
-        request::Payload::UserData(user_data_req) => {
-            user_data::respond(id, generation, &user_data_req)
-        }
+        request::Payload::UserData(user_data_req) => user_data::respond(id, &user_data_req),
     }
 }
 
@@ -204,11 +197,12 @@ fn lexicon_error_code(err: &lexicon::LexiconError) -> ErrorCode {
     }
 }
 
-/// Encode an error-only `Response` for the FFI seams (`swift-ffi`, `android-jni`)
-/// so both crates share one definition of the empty-payload error envelope.
+/// Encode an error-only `Response` (id 0 — the request was refused before it
+/// was decoded) for the FFI seams (`swift-ffi`, `android-jni`), so both crates
+/// share one definition of the empty-payload error envelope.
 #[must_use]
-pub fn encode_error(id: u32, code: ErrorCode, generation: u64) -> Vec<u8> {
-    encode(&error_response(id, code, generation))
+pub fn encode_error(code: ErrorCode) -> Vec<u8> {
+    encode(&error_response(0, code))
 }
 
 /// Wire byte for a `log::Level` as delivered to the platform logger sinks
@@ -224,11 +218,10 @@ pub fn log_level_to_byte(level: log::Level) -> u8 {
     }
 }
 
-fn error_response(id: u32, code: ErrorCode, generation: u64) -> Response {
+fn error_response(id: u32, code: ErrorCode) -> Response {
     Response {
         id,
         error: code as i32,
-        generation,
         payload: None,
     }
 }
@@ -271,7 +264,6 @@ mod tests {
         let resp = Response::decode(resp_bytes.as_slice()).unwrap();
 
         assert_eq!(resp.id, 42);
-        assert_eq!(resp.generation, 7);
         assert_eq!(resp.error, ErrorCode::Ok as i32);
         let payload = resp.payload.expect("payload present");
         let response::Payload::Lexicon(lex_resp) = payload else {

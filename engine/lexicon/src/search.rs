@@ -27,9 +27,6 @@ pub struct SearchRow {
     pub id: i64,
     pub roman: String,
     pub hanji: Option<String>,
-    // The record's raw dictionary frequency; no platform orders on it since
-    // the engine owns the search order (E1 P5b).
-    pub length_score: Option<i32>,
     // Source bitmask, so the platform can tag the source.
     pub source_bitmask: Option<u32>,
 }
@@ -229,7 +226,6 @@ fn record_to_row(rowid: u32, record: DictionaryRecord, effective_bitmask: u16) -
         id: rowid as i64,
         roman: record.tl,
         hanji: record.hanji,
-        length_score: Some(record.frequency as i32),
         source_bitmask: Some(effective_bitmask as u32),
     }
 }

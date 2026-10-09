@@ -519,12 +519,6 @@ object RustEngineBridge {
         val subtitle: String?,
         val hanji: String,
         val tl: String,
-        /**
-         * Merged score. Android maps to `TaigiWord.lengthScore`. iOS does
-         * not currently consume this field (predictions render in array
-         * order); kept for parity + diagnostics.
-         */
-        val score: Double,
     )
 
     /**

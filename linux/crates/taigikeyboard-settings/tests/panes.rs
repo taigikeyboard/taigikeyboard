@@ -359,7 +359,6 @@ fn record_pick(word: &str, tl: &str) {
             method: Some(user_data_request::Method::RecordUsage(RecordUsage {
                 display_text: word.to_owned(),
                 canonical_tl: tl.to_owned(),
-                hanji: Some(word.to_owned()),
             })),
         })),
         ..Request::default()

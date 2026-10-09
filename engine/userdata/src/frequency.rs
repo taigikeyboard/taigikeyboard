@@ -24,7 +24,7 @@ const WORDS_PER_QUERY: usize = 500;
 /// The table as the Learning Records page reads it.
 pub(crate) const LEARNING_TABLE: crate::learning_records::Table = crate::learning_records::Table {
     name: TABLE_NAME,
-    identity: &["word", "tl"],
+    identity: ["word", "tl"],
     count: "count",
     last_used: "last_used",
     delete_dependents: None,
@@ -184,17 +184,12 @@ impl UserFrequencyStore {
         })
     }
 
-    /// Forgets everything, and reports how many rows went.
-    pub fn delete_all(&self) -> Result<i64, UserDataDatabaseError> {
+    /// Forgets everything.
+    pub fn delete_all(&self) -> Result<(), UserDataDatabaseError> {
         self.database.perform(|connection| {
-            let existing: i64 = connection.query_row(
-                &format!("SELECT COUNT(*) FROM {TABLE_NAME};"),
-                [],
-                |row| row.get(0),
-            )?;
             connection.execute(&format!("DELETE FROM {TABLE_NAME};"), [])?;
             connection.execute("VACUUM;", []).ok();
-            Ok(existing)
+            Ok(())
         })
     }
 }

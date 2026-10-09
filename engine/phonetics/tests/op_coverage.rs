@@ -9,15 +9,15 @@ use protos::engine::phonetics_request::Method;
 use protos::engine::phonetics_response::Result as PhonResult;
 use protos::engine::{
     AppConfig, BoolResult, ExternalLookupDigitForm, GetToneVariations, IsAttachingPunctuation,
-    IsTpsToneMark, PhoneticsRequest, PhoneticsResponse, StringResult, TlDisplayToTps,
-    TlNumericToTps, TlToPoj, ToneVariationsResult, TpsAdjustResult, TpsInputAdjust,
+    IsTpsToneMark, PhoneticsRequest, PhoneticsResponse, StringResult, TlDisplayToTps, TlToPoj,
+    ToneVariationsResult, TpsAdjustResult, TpsInputAdjust,
 };
 
 // ---------------- helpers ----------------
 //
 // Domain-level tests: drive `phonetics::requests::handle` directly and
 // assert against `Result<PhoneticsResponse>`. Envelope concerns
-// (`taigi.engine.Request` decoding, `Response.id`/`error`/`generation`,
+// (`taigi.engine.Request` decoding, `Response.id`/`error`,
 // panic catching) live in `engine/dispatch/tests/` — exercising them
 // from the phonetics crate would invert the production dependency
 // graph.
@@ -80,7 +80,6 @@ fn tl_config() -> AppConfig {
         oo_doubletap_enabled: false,
         nn_doubletap_enabled: false,
         is_hanji_first: false,
-        platform_id: 0,
         output_both_scripts: false,
         candidate_display_mode: 0,
         syllable_separator: 0,
@@ -96,7 +95,6 @@ fn poj_config(oo: bool, nn: bool) -> AppConfig {
         oo_doubletap_enabled: oo,
         nn_doubletap_enabled: nn,
         is_hanji_first: false,
-        platform_id: 0,
         output_both_scripts: false,
         candidate_display_mode: 0,
         syllable_separator: 0,
@@ -296,13 +294,11 @@ fn contains_tps_false_for_latin() {
     assert!(!phonetics::api::contains_tps("tiau"));
 }
 
+// `tl_numeric_to_tps` has no wire op (tag 32 reserved 2026-10-09); it is the
+// numeric half of `TlDisplayToTps`, covered here through the native API.
 #[test]
 fn tl_numeric_to_tps_basic() {
-    let resp = run(Method::TlNumericToTps(TlNumericToTps {
-        text: "tiau5".to_string(),
-        or_maps_to_er: false,
-    }));
-    let out = string_result(&resp);
+    let out = phonetics::api::tl_numeric_to_tps("tiau5", false);
     assert!(
         !out.is_empty(),
         "TL numeric → TPS should produce zhuyin: {out:?}"
@@ -327,11 +323,7 @@ fn tl_display_to_tps_uses_display_form() {
 /// `TLToTPS.convert`.
 #[test]
 fn tl_numeric_to_tps_or_default_uses_o_vowel() {
-    let resp = run(Method::TlNumericToTps(TlNumericToTps {
-        text: "kor1".to_string(),
-        or_maps_to_er: false,
-    }));
-    let out = string_result(&resp);
+    let out = phonetics::api::tl_numeric_to_tps("kor1", false);
     assert!(
         out.contains('\u{311b}'),
         "or → ㄛ when toggle off; got {out:?}"
@@ -346,11 +338,7 @@ fn tl_numeric_to_tps_or_default_uses_o_vowel() {
 /// matching iOS `orMapsToER=true`.
 #[test]
 fn tl_numeric_to_tps_or_maps_to_er_when_enabled() {
-    let resp = run(Method::TlNumericToTps(TlNumericToTps {
-        text: "kor1".to_string(),
-        or_maps_to_er: true,
-    }));
-    let out = string_result(&resp);
+    let out = phonetics::api::tl_numeric_to_tps("kor1", true);
     assert!(
         out.contains('\u{311c}'),
         "or → ㄜ when toggle on; got {out:?}"
@@ -365,11 +353,7 @@ fn tl_numeric_to_tps_or_maps_to_er_when_enabled() {
 /// space, matching iOS `joined(separator: " ")` / Android `joinToString(" ")`.
 #[test]
 fn tl_numeric_to_tps_preserves_syllable_boundaries() {
-    let resp = run(Method::TlNumericToTps(TlNumericToTps {
-        text: "gua2-gua2".to_string(),
-        or_maps_to_er: false,
-    }));
-    let out = string_result(&resp);
+    let out = phonetics::api::tl_numeric_to_tps("gua2-gua2", false);
     let space_count = out.matches(' ').count();
     assert_eq!(
         space_count, 1,
@@ -381,11 +365,7 @@ fn tl_numeric_to_tps_preserves_syllable_boundaries() {
 /// double spaces — empty tokens are filtered before joining.
 #[test]
 fn tl_numeric_to_tps_handles_repeated_hyphen_without_double_space() {
-    let resp = run(Method::TlNumericToTps(TlNumericToTps {
-        text: "gua2--gua2".to_string(),
-        or_maps_to_er: false,
-    }));
-    let out = string_result(&resp);
+    let out = phonetics::api::tl_numeric_to_tps("gua2--gua2", false);
     assert!(
         !out.contains("  "),
         "no double space across `--`; got {out:?}"

@@ -18,7 +18,6 @@ use taigi_desktop_core::composing::{
 use taigi_desktop_core::dictionary_artifacts::DictionaryArtifacts;
 use taigi_desktop_core::engine::{self, ContinuousCandidate, Effect};
 use taigi_desktop_core::keys::CaretDirection;
-use taigi_desktop_core::platform::DesktopPlatform;
 use taigi_desktop_core::settings::{
     keys, CandidateDisplayMode, EngineSettings, InputMode, SettingsDocument, SettingsProvider,
 };
@@ -191,12 +190,6 @@ struct Rig {
 }
 
 fn rig() -> Rig {
-    rig_on(DesktopPlatform::Windows)
-}
-
-/// A rig whose requests name `platform` — the ports of macOS's own suites
-/// run on `MacOS`, the `platform_id` macOS sends.
-fn rig_on(platform: DesktopPlatform) -> Rig {
     let memory = Arc::new(Memory::default());
     *memory.now_ms.lock().unwrap() = 1_000;
     let handle = Handle(Arc::clone(&memory));
@@ -205,7 +198,6 @@ fn rig_on(platform: DesktopPlatform) -> Rig {
         Arc::new(settings.clone()),
         Box::new(handle.clone()),
         Box::new(handle),
-        platform,
         fresh_generation(),
     );
     Rig {
@@ -1012,16 +1004,16 @@ fn a_new_session_and_a_mid_composition_punctuation_both_forget_the_context() {
     assert_eq!(rig.memory.reported(), vec!["∅", "文"]);
 }
 
-// MARK: - macOS ports (`DesktopPlatform::MacOS`)
+// MARK: - ported from the macOS suites
 
 /// trace: a pair with one half
 /// written in the other script is reported under the identity: each
 /// handshake carries the candidate's display text and canonical TL, whichever
 /// script reached the document.
 #[test]
-fn the_mac_reports_a_pair_written_in_two_scripts_under_its_identity() {
+fn reports_a_pair_written_in_two_scripts_under_its_identity() {
     let _lock = engine_lock();
-    let mut rig = rig_on(DesktopPlatform::MacOS);
+    let mut rig = rig();
     rig.type_text("tai5");
     let tai = rig.candidate("台");
     rig.commit(&tai, CandidateScript::Primary);
@@ -1052,27 +1044,27 @@ fn the_mac_reports_a_pair_written_in_two_scripts_under_its_identity() {
 /// generation resets the engine underneath this one; the next fetch answers
 /// "not composing" and the mirror follows it.
 #[test]
-fn the_mac_mirror_follows_a_fetch_after_the_engine_was_reset_underneath_it() {
+fn mirror_follows_a_fetch_after_the_engine_was_reset_underneath_it() {
     let _lock = engine_lock();
-    let mut rig = rig_on(DesktopPlatform::MacOS);
-    rig.type_text("taigi");
-    assert!(rig.manager.is_composing());
-    let mut other = rig_on(DesktopPlatform::MacOS);
+    let mut first = rig();
+    first.type_text("taigi");
+    assert!(first.manager.is_composing());
+    let mut other = rig();
     other.type_text("t");
     assert_eq!(
-        rig.manager.fetch_candidates(),
+        first.manager.fetch_candidates(),
         CandidateFetchOutcome::NotComposing
     );
-    assert!(!rig.manager.is_composing());
+    assert!(!first.manager.is_composing());
 }
 
 /// trace: after a nail,
 /// committing the composition writes what is shown once, nailed prefix
 /// included, never the prefix twice.
 #[test]
-fn the_mac_commits_a_nailed_composition_once() {
+fn commits_a_nailed_composition_once() {
     let _lock = engine_lock();
-    let mut rig = rig_on(DesktopPlatform::MacOS);
+    let mut rig = rig();
     rig.type_text("taigi");
     let tai = rig
         .candidates()
@@ -1099,7 +1091,7 @@ fn e5_a_mark_that_is_alphabetic_keeps_the_character_from_next_word() {
     // White_Space; `。` / `,` / U+0301 / U+0600 are neither. U+0600 is a
     // Prepend scalar, so `\u{600}a` and `\u{600} ` are one grapheme each, led
     // by a non-letter.
-    let rig = rig_on(DesktopPlatform::MacOS);
+    let rig = rig();
     for character in [
         "。\u{345}", // skipped (Swift until P11e: forwarded)
         ",\u{93E}",  // skipped (Swift until P11e: forwarded)
@@ -1121,7 +1113,7 @@ fn e5_a_mark_that_is_alphabetic_keeps_the_character_from_next_word() {
 /// Mac's per-grapheme one before P11e — the change never reached the picker.
 #[test]
 fn e5_every_bundled_symbol_reaches_next_word() {
-    let rig = rig_on(DesktopPlatform::MacOS);
+    let rig = rig();
     let table = SymbolTable::bundled().expect("the bundled table parses");
     let symbols: Vec<&str> = table.symbols().collect();
     for symbol in &symbols {
@@ -1139,7 +1131,7 @@ fn e4_a_format_character_reaches_the_next_word_gate() {
     // No engine call: the manager only hands the character to the port.
     // trace: U+200B / U+00AD / U+FEFF / U+200D are neither Alphabetic nor
     // White_Space; neither are 👩 / 💻; `x` is Alphabetic.
-    let rig = rig_on(DesktopPlatform::MacOS);
+    let rig = rig();
     for character in [
         "\u{200B}",
         "\u{AD}",
@@ -1166,7 +1158,7 @@ fn e4_a_format_character_reaches_the_next_word_gate() {
 /// `ComposingManagerCandidateTests.testCommitCandidate_writesWhatItsCellShows_andSpaceTheOtherScript`
 /// when it was deleted (roadmap P13).
 #[test]
-fn the_mac_commits_what_each_cell_shows_and_the_flip_the_other_script() {
+fn commits_what_each_cell_shows_and_the_flip_the_other_script() {
     let _lock = engine_lock();
     for (swapped, display_mode) in [
         (false, CandidateDisplayMode::SideBySide),
@@ -1184,7 +1176,7 @@ fn the_mac_commits_what_each_cell_shows_and_the_flip_the_other_script() {
             for index in 0..cell_count {
                 // A fresh composition per cell: a refused flip leaves it
                 // running.
-                let mut rig = rig_on(DesktopPlatform::MacOS);
+                let mut rig = rig();
                 rig.settings.edit(|doc| {
                     doc.set_bool(&keys::IS_HANJI_FIRST, swapped);
                     doc.set_choice(&keys::CANDIDATE_DISPLAY_MODE, display_mode);

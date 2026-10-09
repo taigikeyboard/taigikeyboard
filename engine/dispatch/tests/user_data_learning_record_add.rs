@@ -62,7 +62,6 @@ fn record_usage(word: &str, tl: &str) {
         RecordUsage {
             display_text: word.into(),
             canonical_tl: tl.into(),
-            hanji: Some(word.into()),
         },
     )));
 }

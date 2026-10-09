@@ -225,7 +225,6 @@ class CandidateUpdateCoordinator(
                     id = -100 - index,
                     roman = suggestion.text,
                     hanji = null,
-                    lengthScore = null,
                 )
             }
         } catch (e: CancellationException) {

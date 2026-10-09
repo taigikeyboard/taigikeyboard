@@ -204,7 +204,7 @@ impl UserDataHandle {
                 None => Err(store_error(error)),
             };
         }
-        // Read back: the store stamps the times (an edit keeps `created_at`).
+        // Read back: the row as the store holds it.
         let stored = dictionary.row(&row.id).map_err(store_error)?;
         Ok(CustomEntrySaved {
             refusal: CustomDictionaryRefusal::None as i32,
@@ -226,9 +226,9 @@ impl UserDataHandle {
     ) -> Result<LearningRecordAddedToCustomDictionary, RequestError> {
         // Decided again from the row's own text: the request's
         // `can_add_to_custom_dictionary` is the page's copy, not a permission.
-        if !learning_records::can_add_to_custom_dictionary(kind, &record.text) {
+        if !learning_records::can_add_to_custom_dictionary(&record.text) {
             return Err(RequestError::Invalid(
-                "only a learned phrase or frequency row with Hanji is added",
+                "only a learning record with Hanji is added",
             ));
         }
         let row = CustomDictionaryRow::new(record.tl.trim(), record.text.trim());
@@ -313,18 +313,15 @@ impl UserDataHandle {
         })
     }
 
-    /// One commit counted and, for a Hanji pick, a learned phrase touched —
-    /// what each platform's candidate / prediction tap handler did itself.
+    /// One commit counted — what each platform's candidate / prediction tap
+    /// handler did itself. A platform pick names no Hanji: the learned-phrase
+    /// touch (§50) belongs to the commits the engine resolves itself.
     pub(crate) fn record_usage(&self, usage: &RecordUsage) -> Result<(), RequestError> {
         let stores = self.opened_stores()?;
         if usage.display_text.is_empty() {
             return Err(RequestError::Invalid("usage without a display text"));
         }
-        stores.record_usage(
-            &usage.display_text,
-            &usage.canonical_tl,
-            usage.hanji.as_deref(),
-        );
+        stores.record_usage(&usage.display_text, &usage.canonical_tl, None);
         Ok(())
     }
 
@@ -339,37 +336,36 @@ impl UserDataHandle {
         {
             return Err(RequestError::Invalid("reset selects no store"));
         }
-        let mut removed = UserDataReset::default();
+        let mut failures = Vec::new();
         if reset.frequency {
-            removed.frequency_removed = emptied(
+            emptied(
                 "user_frequency",
                 stores.frequency.delete_all(),
-                &mut removed.failures,
+                &mut failures,
             );
         }
         if reset.association {
-            removed.association_removed = emptied(
+            emptied(
                 "user_association",
                 stores.association.delete_all(),
-                &mut removed.failures,
+                &mut failures,
             );
         }
         if reset.custom_dictionary {
-            let count = emptied(
+            emptied(
                 "custom_dictionary",
                 stores.custom_dictionary.delete_all(),
-                &mut removed.failures,
+                &mut failures,
             );
-            removed.custom_dictionary_removed = i64::try_from(count).unwrap_or(i64::MAX);
         }
         if reset.learned_phrases {
-            removed.learned_phrases_removed = emptied(
+            emptied(
                 "learned_phrases",
                 stores.learned_phrases.delete_all(),
-                &mut removed.failures,
+                &mut failures,
             );
         }
-        Ok(removed)
+        Ok(UserDataReset { failures })
     }
 }
 
@@ -391,8 +387,6 @@ fn custom_dictionary_entry(row: &CustomDictionaryRow) -> CustomDictionaryEntry {
         id: row.id.clone(),
         roman: row.roman.clone(),
         hanji: row.hanji.clone(),
-        created_at: row.created_at.clone(),
-        updated_at: row.updated_at.clone(),
     }
 }
 
@@ -422,16 +416,11 @@ fn csv_refusal(error: &CustomDictionaryCSVError) -> CustomDictionaryRefusal {
 /// One store emptied by a reset, or its failure noted for the answer and
 /// the log — a store that cannot be emptied is no reason to leave the
 /// others full.
-fn emptied<T: Default>(
-    store: &str,
-    result: Result<T, impl Display>,
-    failures: &mut Vec<String>,
-) -> T {
-    result.unwrap_or_else(|error| {
+fn emptied(store: &str, result: Result<(), impl Display>, failures: &mut Vec<String>) {
+    if let Err(error) = result {
         log::error!("user_data.reset_failed store={store} error={error}");
         failures.push(format!("{store}: {error}"));
-        T::default()
-    })
+    }
 }
 
 fn store_error(error: impl Display) -> RequestError {
@@ -531,12 +520,11 @@ mod tests {
 
         match response.result {
             Some(user_data_response::Result::Reset(reset)) => {
-                assert_eq!(reset.frequency_removed, 1);
-                assert_eq!(reset.custom_dictionary_removed, 0);
                 assert!(reset.failures.is_empty());
             }
             other => panic!("expected Reset, got {other:?}"),
         }
+        assert!(stores.frequency.all_rows().unwrap().is_empty());
         assert_eq!(
             stores.custom_dictionary.count().unwrap(),
             1,
@@ -633,7 +621,6 @@ mod tests {
         assert_eq!(added.refusal(), CustomDictionaryRefusal::None);
         let entry = added.entry.expect("the stored row");
         assert_eq!(entry.roman, "tâi-uân", "trimmed");
-        assert!(!entry.created_at.is_empty());
 
         let edited = save(&handle, Some(&entry.id), "tâi-uân", "臺灣");
         assert_eq!(edited.entry.unwrap().hanji, "臺灣");
@@ -899,8 +886,7 @@ mod tests {
         assert!(offered("囡仔").can_add_to_custom_dictionary);
         assert!(offered("a好").can_add_to_custom_dictionary, "mixed text");
 
-        let refusal =
-            RequestError::Invalid("only a learned phrase or frequency row with Hanji is added");
+        let refusal = RequestError::Invalid("only a learning record with Hanji is added");
         // The page's copy of the flag is not a permission.
         let forged = LearningRecord {
             can_add_to_custom_dictionary: true,
@@ -908,14 +894,6 @@ mod tests {
         };
         assert_eq!(
             add_to_custom_dictionary(&handle, forged).unwrap_err(),
-            refusal
-        );
-        let association = LearningRecord {
-            kind: LearningRecordKind::Association as i32,
-            ..offered("囡仔")
-        };
-        assert_eq!(
-            add_to_custom_dictionary(&handle, association).unwrap_err(),
             refusal
         );
         assert_eq!(list(&handle, "").total, seeded);

@@ -33,36 +33,4 @@ public interface RecordUsageOrBuilder extends
    */
   com.google.protobuf.ByteString
       getCanonicalTlBytes();
-
-  /**
-   * <pre>
-   * The picked candidate's Hanji, when it has one (a learned phrase can
-   * only be touched by its Hanji); absent for a Hanji-less pick.
-   * </pre>
-   *
-   * <code>optional string hanji = 3;</code>
-   * @return Whether the hanji field is set.
-   */
-  boolean hasHanji();
-  /**
-   * <pre>
-   * The picked candidate's Hanji, when it has one (a learned phrase can
-   * only be touched by its Hanji); absent for a Hanji-less pick.
-   * </pre>
-   *
-   * <code>optional string hanji = 3;</code>
-   * @return The hanji.
-   */
-  java.lang.String getHanji();
-  /**
-   * <pre>
-   * The picked candidate's Hanji, when it has one (a learned phrase can
-   * only be touched by its Hanji); absent for a Hanji-less pick.
-   * </pre>
-   *
-   * <code>optional string hanji = 3;</code>
-   * @return The bytes for hanji.
-   */
-  com.google.protobuf.ByteString
-      getHanjiBytes();
 }

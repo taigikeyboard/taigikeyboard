@@ -522,7 +522,6 @@ private fun predictionWord(
         id = id,
         roman = if (prediction.subtitle != null) prediction.text else "",
         hanji = prediction.hanji,
-        lengthScore = prediction.score.toInt(),
         additionalInfo =
             if (cellScript == null) mapOf(identity) else mapOf(identity, TaigiWord.MetadataKeys.CELL_SCRIPT to cellScript),
     )

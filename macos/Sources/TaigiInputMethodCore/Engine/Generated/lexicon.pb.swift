@@ -514,16 +514,14 @@ public nonisolated struct Taigi_Engine_IsHanjiResponse: Sendable {
 }
 
 /// `TaigiWord` mirrors iOS `Lexicon/Models/TaigiWord.swift` /
-/// Android `ime/dictionary/TaigiWord.kt`. `id` is the dictionary row id;
-/// `length_score` is the dictionary frequency / length proxy.
+/// Android `ime/dictionary/TaigiWord.kt`. `id` is the dictionary row id.
 /// `sources` are the dictionaries the record belongs to, in source-bit order
 /// (`dictionary/common/source_bits.py`: kautian … khiin, dev, lkk) — the
 /// order the badges are drawn in. Decoded from the record's effective source
 /// bitmask by the engine (`dictionary_filters::source_codes`); never CUSTOM.
 ///
-/// Optional fields use proto3 `optional` so platforms can distinguish
-/// "field absent" from "scalar default" — important for `length_score`
-/// where 0 is a meaningful zero-score signal vs absent.
+/// `hanji` uses proto3 `optional` so platforms can distinguish "field
+/// absent" from "scalar default".
 public nonisolated struct Taigi_Engine_TaigiWord: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -542,15 +540,6 @@ public nonisolated struct Taigi_Engine_TaigiWord: Sendable {
   /// Clears the value of `hanji`. Subsequent reads from it will return its default value.
   public mutating func clearHanji() {self._hanji = nil}
 
-  public var lengthScore: Int32 {
-    get {_lengthScore ?? 0}
-    set {_lengthScore = newValue}
-  }
-  /// Returns true if `lengthScore` has been explicitly set.
-  public var hasLengthScore: Bool {self._lengthScore != nil}
-  /// Clears the value of `lengthScore`. Subsequent reads from it will return its default value.
-  public mutating func clearLengthScore() {self._lengthScore = nil}
-
   public var sources: [Taigi_Engine_DictionarySourceCode] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -558,7 +547,6 @@ public nonisolated struct Taigi_Engine_TaigiWord: Sendable {
   public init() {}
 
   fileprivate var _hanji: String? = nil
-  fileprivate var _lengthScore: Int32? = nil
 }
 
 /// `DictionarySourceToggles` is the 12-boolean snapshot of user dictionary
@@ -1343,7 +1331,7 @@ nonisolated extension Taigi_Engine_IsHanjiResponse: SwiftProtobuf.Message, Swift
 
 nonisolated extension Taigi_Engine_TaigiWord: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".TaigiWord"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}roman\0\u{1}hanji\0\u{3}length_score\0\u{2}\u{2}sources\0\u{b}source_bitmask\0\u{c}\u{5}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}roman\0\u{1}hanji\0\u{2}\u{3}sources\0\u{b}length_score\0\u{b}source_bitmask\0\u{c}\u{4}\u{1}\u{c}\u{5}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1354,7 +1342,6 @@ nonisolated extension Taigi_Engine_TaigiWord: SwiftProtobuf.Message, SwiftProtob
       case 1: try { try decoder.decodeSingularInt64Field(value: &self.id) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.roman) }()
       case 3: try { try decoder.decodeSingularStringField(value: &self._hanji) }()
-      case 4: try { try decoder.decodeSingularInt32Field(value: &self._lengthScore) }()
       case 6: try { try decoder.decodeRepeatedEnumField(value: &self.sources) }()
       default: break
       }
@@ -1375,9 +1362,6 @@ nonisolated extension Taigi_Engine_TaigiWord: SwiftProtobuf.Message, SwiftProtob
     try { if let v = self._hanji {
       try visitor.visitSingularStringField(value: v, fieldNumber: 3)
     } }()
-    try { if let v = self._lengthScore {
-      try visitor.visitSingularInt32Field(value: v, fieldNumber: 4)
-    } }()
     if !self.sources.isEmpty {
       try visitor.visitPackedEnumField(value: self.sources, fieldNumber: 6)
     }
@@ -1388,7 +1372,6 @@ nonisolated extension Taigi_Engine_TaigiWord: SwiftProtobuf.Message, SwiftProtob
     if lhs.id != rhs.id {return false}
     if lhs.roman != rhs.roman {return false}
     if lhs._hanji != rhs._hanji {return false}
-    if lhs._lengthScore != rhs._lengthScore {return false}
     if lhs.sources != rhs.sources {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true

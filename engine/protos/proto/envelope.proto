@@ -24,27 +24,6 @@ enum ErrorCode {
   FAIL_INVARIANT = 4;
 }
 
-// Caller identity. Legacy: no engine behavior branches on it any more.
-// It existed to select the NextWord compound-split separator and noise-punct
-// set per platform; those converged to one platform-neutral contract
-// (behavioral-invariants.md §40 INVARIANT_NEXTWORD_LEARNING_DECISION_CONTRACT)
-// and nothing else in the engine reads the field.
-//
-// `nextword` still rejects PLATFORM_UNSPECIFIED with FAIL_INVARIANT, so its
-// bridges MUST populate it — but that check predates the convergence and is
-// kept only so the convergence changed nothing a platform can observe. Every
-// other slice (composing / lexicon / ranking / phonetics) accepts an unset
-// field. Removing the check, or reserving the field number, is separate
-// cleanup with its own regeneration cost.
-enum Platform {
-  PLATFORM_UNSPECIFIED = 0;
-  PLATFORM_IOS         = 1;
-  PLATFORM_ANDROID     = 2;
-  PLATFORM_MACOS       = 3;
-  PLATFORM_WINDOWS     = 4;
-  PLATFORM_LINUX       = 5;
-}
-
 // Per-request live snapshot. iOS EngineSettings / Android EngineSettings
 // shape — minimal in D9.1, expands per slice. Engine NEVER caches; live-read
 // per call per behavioral-invariants.md §11. Platform wrappers MUST pass
@@ -56,12 +35,14 @@ enum Platform {
 // preprocessing (oo→o͘, nn→ⁿ) read by `phonetics::api::normalize_tone` on the
 // composing path.
 //
-// v3.5.5 added `is_hanji_first` + `platform_id` for the NextWord
-// engine (tag 6 `is_association_recording_enabled` retired 2026-09-25 —
-// association recording is always on since the toggle left every UI).
-// `platform_id` originally branched the compound-split separator and the
-// noise-punct set; those converged to one platform-neutral contract (behavioral-invariants.md §40) and it is now
-// validated caller identity only.
+// v3.5.5 added `is_hanji_first` for the NextWord engine (tag 6
+// `is_association_recording_enabled` retired 2026-09-25 — association
+// recording is always on since the toggle left every UI; tag 7
+// `platform_id` retired 2026-10-09 — it had branched the compound-split
+// separator and the noise-punct set until those converged to one
+// platform-neutral contract, behavioral-invariants.md §40; after that it
+// only validated caller identity (nextword rejected an unset platform),
+// and A1b retires that validation).
 //
 // v3.5.8 added `output_both_scripts`: the engine's Model B continuous
 // composing-buffer join (`composing::api::nailed_prefix` /
@@ -135,7 +116,7 @@ enum SyllableSeparator {
 //
 // 2026-09-30 (R6) `input_mode` accepts `"tps"` as a real mode, and
 // `tps_or_maps_to_er` carries the TPS or→er dialect choice (the same flag
-// `TlNumericToTps` / `TlDisplayToTps` take as `or_maps_to_er`). Under
+// `TlDisplayToTps` takes as `or_maps_to_er`). Under
 // `"tps"` the engine composes with the TL tables and applies the TPS fold
 // itself (`AppConfig::renders_hanji_first` / `rendered_syllable_joiner` in
 // `engine/protos/src/lib.rs`), so `is_hanji_first` and
@@ -145,8 +126,9 @@ enum SyllableSeparator {
 // drop and Enter skip read the swap as sent, not folded.
 message AppConfig {
   // Tag 1 was `tone_mode` (set by nobody, read by nobody; removed 2026-09-30).
-  reserved 1, 6, 10;
-  reserved "tone_mode", "is_association_recording_enabled", "hyphenless_roman";
+  reserved 1, 6, 7, 10;
+  reserved "tone_mode", "is_association_recording_enabled", "platform_id",
+      "hyphenless_roman";
 
   // "tl" | "poj" | "tps" | "english".
   string input_mode = 2;
@@ -154,7 +136,6 @@ message AppConfig {
   bool nn_doubletap_enabled = 4;
   // Candidate-Display-projected Hanji-first swap, without the TPS fold.
   bool is_hanji_first = 5;
-  Platform platform_id = 7;
   bool output_both_scripts = 8;
   CandidateDisplayMode candidate_display_mode = 9;
   bool force_lowercase_nasal_marker = 11;
@@ -208,9 +189,13 @@ message Request {
 }
 
 message Response {
+  // Tag 3 echoed `Request.generation`; no platform read it back (removed
+  // 2026-10-09 — the e2e trace takes it from the request).
+  reserved 3;
+  reserved "generation";
+
   uint32 id = 1;
   ErrorCode error = 2;
-  uint64 generation = 3;
   oneof payload {
     PhoneticsResponse phonetics = 10;
     ComposingResponse composing = 11;

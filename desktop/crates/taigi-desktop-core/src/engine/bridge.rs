@@ -3,12 +3,9 @@
 use std::sync::atomic::{AtomicU32, Ordering};
 
 use prost::Message;
-use protos::engine::{
-    request, response, AppConfig, ErrorCode, HanjiConversion, Platform, Request, Response,
-};
+use protos::engine::{request, response, AppConfig, ErrorCode, HanjiConversion, Request, Response};
 
 use super::lexicon::dictionary_toggles;
-use crate::platform::DesktopPlatform;
 use crate::settings::{EngineSettings, InputMode};
 
 static LAST_REQUEST_ID: AtomicU32 = AtomicU32::new(0);
@@ -83,21 +80,8 @@ pub(super) fn record_failure(op: &str, message: &str) {
     log::error!("[{op}] {message}");
 }
 
-/// The caller identity the engine validates — no engine behaviour branches
-/// on it (envelope.proto `Platform`). Each shell passes its own desktop
-/// (`taigi-macos-ffi` `runtime.rs` passes `DesktopPlatform::MacOS`).
-fn wire_platform(platform: DesktopPlatform) -> Platform {
-    match platform {
-        DesktopPlatform::Windows => Platform::Windows,
-        DesktopPlatform::Linux => Platform::Linux,
-        DesktopPlatform::MacOS => Platform::Macos,
-    }
-}
-
 /// The one config builder. The engine holds no settings of its own; every
-/// request carries the snapshot it should be rendered under. `platform_id` is
-/// set on every request, not only the ones that read it: the next-word engine
-/// rejects the unset value outright (`engine/nextword/src/decide.rs:50-51`).
+/// request carries the snapshot it should be rendered under.
 ///
 /// Both double-tap folds are unconditional here, unlike iOS and Android where
 /// they are user settings: their on-screen keyboards have dedicated `o͘` and
@@ -111,7 +95,7 @@ fn wire_platform(platform: DesktopPlatform) -> Platform {
 /// the marker follows the case). The swap flag renders a continuous
 /// composition's nailed prefix (`docs/engine/continuous-commit-and-display.md`
 /// §10.2) and feeds the next-word decide table, where it suppresses recording
-/// for raw-romanization commits (`decide.rs:86`). Sent by every composing op
+/// for raw-romanization commits (`decide.rs` `decide_word_selected`). Sent by every composing op
 /// that renders the composition and by every next-word request, matching iOS;
 /// macOS sends this same builder's config.
 ///
@@ -119,13 +103,12 @@ fn wire_platform(platform: DesktopPlatform) -> Platform {
 /// (`desktop-tps-hanji-conversion-roadmap.md` H2), with the user's dictionary
 /// switches as its source filter: a key carries no fetch. The engine reads it
 /// only for a TPS composition, so TL and POJ requests never carry it.
-pub(super) fn app_config(settings: &EngineSettings, platform: DesktopPlatform) -> AppConfig {
+pub(super) fn app_config(settings: &EngineSettings) -> AppConfig {
     AppConfig {
         input_mode: settings.input_mode.wire().to_owned(),
         oo_doubletap_enabled: true,
         nn_doubletap_enabled: true,
         is_hanji_first: settings.is_hanji_first,
-        platform_id: wire_platform(platform) as i32,
         candidate_display_mode: settings.candidate_display_mode.wire() as i32,
         syllable_separator: settings.syllable_separator.wire() as i32,
         force_lowercase_nasal_marker: !settings.is_nasal_marker_uppercase_enabled,
@@ -140,36 +123,17 @@ pub(super) fn app_config(settings: &EngineSettings, platform: DesktopPlatform) -
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::platform::test_support::TEST_PLATFORM;
     use crate::settings::{CandidateDisplayMode, InputMode, SyllableSeparator};
     use protos::engine::CandidateDisplayMode as WireDisplayMode;
     use protos::engine::SyllableSeparator as WireSyllableSeparator;
 
-    /// The rendering tests below are not about the platform.
-    fn config(settings: &EngineSettings) -> AppConfig {
-        app_config(settings, TEST_PLATFORM)
-    }
-
     #[test]
-    fn app_config_carries_platform_and_unconditional_doubletaps() {
-        // trace: `wire_platform` maps each shell's own desktop one to one;
-        // before D6 the build target picked Linux or Windows.
+    fn app_config_carries_the_mode_and_unconditional_doubletaps() {
         let settings = EngineSettings {
             input_mode: InputMode::Poj,
             ..EngineSettings::default()
         };
-        for (platform, expected) in [
-            (DesktopPlatform::Windows, Platform::Windows),
-            (DesktopPlatform::Linux, Platform::Linux),
-            (DesktopPlatform::MacOS, Platform::Macos),
-        ] {
-            assert_eq!(
-                app_config(&settings, platform).platform_id,
-                expected as i32,
-                "{platform:?}"
-            );
-        }
-        let config = config(&settings);
+        let config = app_config(&settings);
         assert_eq!(config.input_mode, "poj");
         assert!(config.oo_doubletap_enabled && config.nn_doubletap_enabled);
         assert_eq!(
@@ -190,7 +154,7 @@ mod tests {
             candidate_display_mode: CandidateDisplayMode::Combined,
             ..EngineSettings::default()
         };
-        let continuous = config(&settings);
+        let continuous = app_config(&settings);
         assert_eq!(
             continuous.candidate_display_mode,
             WireDisplayMode::Combined as i32
@@ -205,7 +169,7 @@ mod tests {
             candidate_display_mode: CandidateDisplayMode::RomanOnly,
             ..EngineSettings::default()
         };
-        assert!(config(&settings).is_roman_only_display());
+        assert!(app_config(&settings).is_roman_only_display());
     }
 
     #[test]
@@ -220,7 +184,7 @@ mod tests {
                 ..EngineSettings::default()
             };
             assert_eq!(
-                config(&settings).syllable_separator(),
+                app_config(&settings).syllable_separator(),
                 wire,
                 "{separator:?}"
             );
@@ -231,14 +195,14 @@ mod tests {
     #[test]
     fn nasal_marker_uppercase_off_forces_the_lowercase_marker_through_the_config() {
         assert!(
-            !config(&EngineSettings::default()).force_lowercase_nasal_marker,
+            !app_config(&EngineSettings::default()).force_lowercase_nasal_marker,
             "ships ON = wire default"
         );
         let settings = EngineSettings {
             is_nasal_marker_uppercase_enabled: false,
             ..EngineSettings::default()
         };
-        assert!(config(&settings).force_lowercase_nasal_marker);
+        assert!(app_config(&settings).force_lowercase_nasal_marker);
     }
 
     #[test]
@@ -247,7 +211,7 @@ mod tests {
             is_hanji_first: true,
             ..EngineSettings::default()
         };
-        let swapped = config(&settings);
+        let swapped = app_config(&settings);
         assert!(swapped.is_hanji_first);
         assert!(
             !swapped.output_both_scripts,
@@ -257,7 +221,7 @@ mod tests {
             is_hanji_first: false,
             ..EngineSettings::default()
         };
-        assert!(!config(&roman_first).is_hanji_first);
+        assert!(!app_config(&roman_first).is_hanji_first);
     }
 
     #[test]
@@ -267,14 +231,14 @@ mod tests {
                 input_mode: mode,
                 ..EngineSettings::default()
             };
-            assert_eq!(config(&settings).hanji_conversion, None, "{mode:?}");
+            assert_eq!(app_config(&settings).hanji_conversion, None, "{mode:?}");
         }
         let mut settings = EngineSettings {
             input_mode: InputMode::Tps,
             ..EngineSettings::default()
         };
         settings.dictionary_sources.itaigi = false;
-        let toggles = config(&settings)
+        let toggles = app_config(&settings)
             .hanji_conversion
             .expect("TPS asks for the conversion")
             .toggles

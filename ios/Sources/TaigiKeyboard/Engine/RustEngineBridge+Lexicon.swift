@@ -12,8 +12,8 @@ public extension RustEngineBridge {
 
     /// Bridge-synthesized companion to the proto `TaigiWord` returned by
     /// lexicon search responses. Optional fields surface as Swift
-    /// `Optional` per proto3 `optional` semantics; consumer in
-    /// `LexiconService` converts to the platform-side `TaigiWord`.
+    /// `Optional` per proto3 `optional` semantics; `LexiconClient` hands
+    /// the rows on as they are.
     struct LexiconRow: Equatable {
         public let id: Int64
         public let roman: String

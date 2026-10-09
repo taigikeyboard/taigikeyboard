@@ -53,17 +53,6 @@ public interface AppConfigOrBuilder extends
   boolean getIsHanjiFirst();
 
   /**
-   * <code>.taigi.engine.Platform platform_id = 7;</code>
-   * @return The enum numeric value on the wire for platformId.
-   */
-  int getPlatformIdValue();
-  /**
-   * <code>.taigi.engine.Platform platform_id = 7;</code>
-   * @return The platformId.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.Platform getPlatformId();
-
-  /**
    * <code>bool output_both_scripts = 8;</code>
    * @return The outputBothScripts.
    */

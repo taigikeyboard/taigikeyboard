@@ -112,14 +112,15 @@ message ResetUserData {
   bool learned_phrases = 4;
 }
 
-// Rows removed per store (0 for a store not selected, or one that failed).
 // Every selected store is attempted: one that cannot be emptied is no
 // reason to leave the others full.
 message UserDataReset {
-  int64 frequency_removed = 1;
-  int64 association_removed = 2;
-  int64 custom_dictionary_removed = 3;
-  int64 learned_phrases_removed = 4;
+  // Tags 1–4 were the rows removed per store; no platform showed the counts
+  // (removed 2026-10-09).
+  reserved 1, 2, 3, 4;
+  reserved "frequency_removed", "association_removed", "custom_dictionary_removed",
+      "learned_phrases_removed";
+
   // One line per selected store that could not be emptied, naming its file
   // (`user_frequency: <error>`) — English, for a diagnostic. Empty when
   // every selected store was emptied.
@@ -127,8 +128,7 @@ message UserDataReset {
 }
 
 // The user committed a candidate or picked a prediction — one frequency
-// count for the `(display_text, canonical_tl)` pair, and, when the pick was
-// a learned phrase taken whole, its touch-on-use (§50). Sent exactly where
+// count for the `(display_text, canonical_tl)` pair. Sent exactly where
 // each platform recorded usage itself before. Queued, best-effort: the
 // answer does not wait for the write.
 //
@@ -138,13 +138,13 @@ message UserDataReset {
 message RecordUsage {
   string display_text = 1;
   string canonical_tl = 2;
-  // The picked candidate's Hanji, when it has one (a learned phrase can
-  // only be touched by its Hanji); absent for a Hanji-less pick.
-  optional string hanji = 3;
-  // Tag 4 was the desktop's frequency-recording toggle; no platform has a
-  // UI for it, so every pick counts (removed 2026-09-30).
-  reserved 4;
-  reserved "frequency_recording_disabled";
+  // Tag 3 was the pick's Hanji, which touched a learned phrase; the engine
+  // touches the phrase itself on the commits it resolves, so a platform
+  // pick only counts (removed 2026-10-09). Tag 4 was the desktop's
+  // frequency-recording toggle; no platform has a UI for it, so every pick
+  // counts (removed 2026-09-30).
+  reserved 3, 4;
+  reserved "hanji", "frequency_recording_disabled";
 }
 
 message UsageRecorded {}
@@ -173,13 +173,16 @@ enum CustomDictionaryRefusal {
   CUSTOM_DICTIONARY_REFUSAL_NO_USABLE_ROWS = 6;
 }
 
-// One stored word. `created_at` / `updated_at` are UTC `yyyy-MM-dd HH:mm:ss`.
+// One stored word.
 message CustomDictionaryEntry {
+  // Tags 4 / 5 were the row's `created_at` / `updated_at` stamps; no page
+  // showed them (removed 2026-10-09). The store keeps the columns.
+  reserved 4, 5;
+  reserved "created_at", "updated_at";
+
   string id = 1;
   string roman = 2;
   string hanji = 3;
-  string created_at = 4;
-  string updated_at = 5;
 }
 
 // A page of the dictionary, newest edit first. `filter` matches romanization
@@ -303,12 +306,15 @@ message BackupImported {
 // is a custom word.
 
 enum LearningRecordKind {
+  // Value 2 was the next-word association listing; no platform's page
+  // offered it (removed 2026-10-09). The bigrams stay in their store.
+  reserved 2;
+  reserved "LEARNING_RECORD_KIND_ASSOCIATION";
+
   // How often each `(word, TL)` was committed — what ranking boosts.
   LEARNING_RECORD_KIND_FREQUENCY = 0;
   // The phrases the user composed segment by segment.
   LEARNING_RECORD_KIND_LEARNED_PHRASE = 1;
-  // Which word followed which — next-word predictions.
-  LEARNING_RECORD_KIND_ASSOCIATION = 2;
 }
 
 enum LearningRecordOrder {
@@ -319,18 +325,19 @@ enum LearningRecordOrder {
 }
 
 // One learned row. `id` is the store's row id: a handle for a row a page
-// already listed, never the word's identity (that is `(text, tl)`, with the
-// previous pair for an association).
+// already listed, never the word's identity (that is `(text, tl)`).
 message LearningRecord {
+  // Tags 5 / 6 were the association row's previous word and its TL
+  // (removed with the association kind, 2026-10-09).
+  reserved 5, 6;
+  reserved "previous_text", "previous_tl";
+
   LearningRecordKind kind = 1;
   int64 id = 2;
-  // The word / the phrase's Hanji / the association's next word.
+  // The word / the phrase's Hanji.
   string text = 3;
   // Canonical TL of `text`; may be empty.
   string tl = 4;
-  // Association only: the word `text` followed, and its TL.
-  string previous_text = 5;
-  string previous_tl = 6;
   int64 count = 7;
   // Epoch milliseconds; 0 when the stored time cannot be read.
   int64 last_used_ms = 8;

@@ -66,68 +66,6 @@ public nonisolated enum Taigi_Engine_ErrorCode: SwiftProtobuf.Enum, Swift.CaseIt
 
 }
 
-/// Caller identity. Legacy: no engine behavior branches on it any more.
-/// It existed to select the NextWord compound-split separator and noise-punct
-/// set per platform; those converged to one platform-neutral contract
-/// (behavioral-invariants.md §40 INVARIANT_NEXTWORD_LEARNING_DECISION_CONTRACT)
-/// and nothing else in the engine reads the field.
-///
-/// `nextword` still rejects PLATFORM_UNSPECIFIED with FAIL_INVARIANT, so its
-/// bridges MUST populate it — but that check predates the convergence and is
-/// kept only so the convergence changed nothing a platform can observe. Every
-/// other slice (composing / lexicon / ranking / phonetics) accepts an unset
-/// field. Removing the check, or reserving the field number, is separate
-/// cleanup with its own regeneration cost.
-public nonisolated enum Taigi_Engine_Platform: SwiftProtobuf.Enum, Swift.CaseIterable {
-  public typealias RawValue = Int
-  case unspecified // = 0
-  case ios // = 1
-  case android // = 2
-  case macos // = 3
-  case windows // = 4
-  case linux // = 5
-  case UNRECOGNIZED(Int)
-
-  public init() {
-    self = .unspecified
-  }
-
-  public init?(rawValue: Int) {
-    switch rawValue {
-    case 0: self = .unspecified
-    case 1: self = .ios
-    case 2: self = .android
-    case 3: self = .macos
-    case 4: self = .windows
-    case 5: self = .linux
-    default: self = .UNRECOGNIZED(rawValue)
-    }
-  }
-
-  public var rawValue: Int {
-    switch self {
-    case .unspecified: return 0
-    case .ios: return 1
-    case .android: return 2
-    case .macos: return 3
-    case .windows: return 4
-    case .linux: return 5
-    case .UNRECOGNIZED(let i): return i
-    }
-  }
-
-  // The compiler won't synthesize support with the UNRECOGNIZED case.
-  public static let allCases: [Taigi_Engine_Platform] = [
-    .unspecified,
-    .ios,
-    .android,
-    .macos,
-    .windows,
-    .linux,
-  ]
-
-}
-
 /// Per-request live snapshot. iOS EngineSettings / Android EngineSettings
 /// shape — minimal in D9.1, expands per slice. Engine NEVER caches; live-read
 /// per call per behavioral-invariants.md §11. Platform wrappers MUST pass
@@ -139,12 +77,14 @@ public nonisolated enum Taigi_Engine_Platform: SwiftProtobuf.Enum, Swift.CaseIte
 /// preprocessing (oo→o͘, nn→ⁿ) read by `phonetics::api::normalize_tone` on the
 /// composing path.
 ///
-/// v3.5.5 added `is_hanji_first` + `platform_id` for the NextWord
-/// engine (tag 6 `is_association_recording_enabled` retired 2026-09-25 —
-/// association recording is always on since the toggle left every UI).
-/// `platform_id` originally branched the compound-split separator and the
-/// noise-punct set; those converged to one platform-neutral contract (behavioral-invariants.md §40) and it is now
-/// validated caller identity only.
+/// v3.5.5 added `is_hanji_first` for the NextWord engine (tag 6
+/// `is_association_recording_enabled` retired 2026-09-25 — association
+/// recording is always on since the toggle left every UI; tag 7
+/// `platform_id` retired 2026-10-09 — it had branched the compound-split
+/// separator and the noise-punct set until those converged to one
+/// platform-neutral contract, behavioral-invariants.md §40; after that it
+/// only validated caller identity (nextword rejected an unset platform),
+/// and A1b retires that validation).
 ///
 /// v3.5.8 added `output_both_scripts`: the engine's Model B continuous
 /// composing-buffer join (`composing::api::nailed_prefix` /
@@ -288,7 +228,7 @@ public nonisolated enum Taigi_Engine_SyllableSeparator: SwiftProtobuf.Enum, Swif
 ///
 /// 2026-09-30 (R6) `input_mode` accepts `"tps"` as a real mode, and
 /// `tps_or_maps_to_er` carries the TPS or→er dialect choice (the same flag
-/// `TlNumericToTps` / `TlDisplayToTps` take as `or_maps_to_er`). Under
+/// `TlDisplayToTps` takes as `or_maps_to_er`). Under
 /// `"tps"` the engine composes with the TL tables and applies the TPS fold
 /// itself (`AppConfig::renders_hanji_first` / `rendered_syllable_joiner` in
 /// `engine/protos/src/lib.rs`), so `is_hanji_first` and
@@ -310,8 +250,6 @@ public nonisolated struct Taigi_Engine_AppConfig: Sendable {
 
   /// Candidate-Display-projected Hanji-first swap, without the TPS fold.
   public var isHanjiFirst: Bool = false
-
-  public var platformID: Taigi_Engine_Platform = .unspecified
 
   public var outputBothScripts: Bool = false
 
@@ -484,8 +422,6 @@ public nonisolated struct Taigi_Engine_Response: Sendable {
 
   public var error: Taigi_Engine_ErrorCode = .ok
 
-  public var generation: UInt64 = 0
-
   public var payload: Taigi_Engine_Response.OneOf_Payload? = nil
 
   public var phonetics: Taigi_Engine_PhoneticsResponse {
@@ -559,10 +495,6 @@ nonisolated extension Taigi_Engine_ErrorCode: SwiftProtobuf._ProtoNameProviding 
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0OK\0\u{1}FAIL_PARSE\0\u{1}FAIL_INTERNAL\0\u{1}FAIL_IO\0\u{1}FAIL_INVARIANT\0")
 }
 
-nonisolated extension Taigi_Engine_Platform: SwiftProtobuf._ProtoNameProviding {
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0PLATFORM_UNSPECIFIED\0\u{1}PLATFORM_IOS\0\u{1}PLATFORM_ANDROID\0\u{1}PLATFORM_MACOS\0\u{1}PLATFORM_WINDOWS\0\u{1}PLATFORM_LINUX\0")
-}
-
 nonisolated extension Taigi_Engine_CandidateDisplayMode: SwiftProtobuf._ProtoNameProviding {
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0CANDIDATE_DISPLAY_MODE_UNSPECIFIED\0\u{1}CANDIDATE_DISPLAY_MODE_SIDE_BY_SIDE\0\u{1}CANDIDATE_DISPLAY_MODE_ROMAN_ONLY\0\u{1}CANDIDATE_DISPLAY_MODE_COMBINED\0")
 }
@@ -573,7 +505,7 @@ nonisolated extension Taigi_Engine_SyllableSeparator: SwiftProtobuf._ProtoNamePr
 
 nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AppConfig"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{2}input_mode\0\u{3}oo_doubletap_enabled\0\u{3}nn_doubletap_enabled\0\u{3}is_hanji_first\0\u{4}\u{2}platform_id\0\u{3}output_both_scripts\0\u{3}candidate_display_mode\0\u{4}\u{2}force_lowercase_nasal_marker\0\u{3}tps_or_maps_to_er\0\u{3}hanji_conversion\0\u{3}syllable_separator\0\u{b}tone_mode\0\u{b}is_association_recording_enabled\0\u{b}hyphenless_roman\0\u{c}\u{1}\u{1}\u{c}\u{6}\u{1}\u{c}\u{a}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{2}input_mode\0\u{3}oo_doubletap_enabled\0\u{3}nn_doubletap_enabled\0\u{3}is_hanji_first\0\u{4}\u{3}output_both_scripts\0\u{3}candidate_display_mode\0\u{4}\u{2}force_lowercase_nasal_marker\0\u{3}tps_or_maps_to_er\0\u{3}hanji_conversion\0\u{3}syllable_separator\0\u{b}tone_mode\0\u{b}is_association_recording_enabled\0\u{b}platform_id\0\u{b}hyphenless_roman\0\u{c}\u{1}\u{1}\u{c}\u{6}\u{1}\u{c}\u{7}\u{1}\u{c}\u{a}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -585,7 +517,6 @@ nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtob
       case 3: try { try decoder.decodeSingularBoolField(value: &self.ooDoubletapEnabled) }()
       case 4: try { try decoder.decodeSingularBoolField(value: &self.nnDoubletapEnabled) }()
       case 5: try { try decoder.decodeSingularBoolField(value: &self.isHanjiFirst) }()
-      case 7: try { try decoder.decodeSingularEnumField(value: &self.platformID) }()
       case 8: try { try decoder.decodeSingularBoolField(value: &self.outputBothScripts) }()
       case 9: try { try decoder.decodeSingularEnumField(value: &self.candidateDisplayMode) }()
       case 11: try { try decoder.decodeSingularBoolField(value: &self.forceLowercaseNasalMarker) }()
@@ -614,9 +545,6 @@ nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtob
     if self.isHanjiFirst != false {
       try visitor.visitSingularBoolField(value: self.isHanjiFirst, fieldNumber: 5)
     }
-    if self.platformID != .unspecified {
-      try visitor.visitSingularEnumField(value: self.platformID, fieldNumber: 7)
-    }
     if self.outputBothScripts != false {
       try visitor.visitSingularBoolField(value: self.outputBothScripts, fieldNumber: 8)
     }
@@ -643,7 +571,6 @@ nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtob
     if lhs.ooDoubletapEnabled != rhs.ooDoubletapEnabled {return false}
     if lhs.nnDoubletapEnabled != rhs.nnDoubletapEnabled {return false}
     if lhs.isHanjiFirst != rhs.isHanjiFirst {return false}
-    if lhs.platformID != rhs.platformID {return false}
     if lhs.outputBothScripts != rhs.outputBothScripts {return false}
     if lhs.candidateDisplayMode != rhs.candidateDisplayMode {return false}
     if lhs.forceLowercaseNasalMarker != rhs.forceLowercaseNasalMarker {return false}
@@ -883,7 +810,7 @@ nonisolated extension Taigi_Engine_Request: SwiftProtobuf.Message, SwiftProtobuf
 
 nonisolated extension Taigi_Engine_Response: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Response"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}error\0\u{1}generation\0\u{2}\u{7}phonetics\0\u{1}composing\0\u{1}lexicon\0\u{1}nextword\0\u{3}case_transform\0\u{3}user_data\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}error\0\u{2}\u{8}phonetics\0\u{1}composing\0\u{1}lexicon\0\u{1}nextword\0\u{3}case_transform\0\u{3}user_data\0\u{b}generation\0\u{c}\u{3}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -893,7 +820,6 @@ nonisolated extension Taigi_Engine_Response: SwiftProtobuf.Message, SwiftProtobu
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularUInt32Field(value: &self.id) }()
       case 2: try { try decoder.decodeSingularEnumField(value: &self.error) }()
-      case 3: try { try decoder.decodeSingularUInt64Field(value: &self.generation) }()
       case 10: try {
         var v: Taigi_Engine_PhoneticsResponse?
         var hadOneofValue = false
@@ -988,9 +914,6 @@ nonisolated extension Taigi_Engine_Response: SwiftProtobuf.Message, SwiftProtobu
     if self.error != .ok {
       try visitor.visitSingularEnumField(value: self.error, fieldNumber: 2)
     }
-    if self.generation != 0 {
-      try visitor.visitSingularUInt64Field(value: self.generation, fieldNumber: 3)
-    }
     switch self.payload {
     case .phonetics?: try {
       guard case .phonetics(let v)? = self.payload else { preconditionFailure() }
@@ -1024,7 +947,6 @@ nonisolated extension Taigi_Engine_Response: SwiftProtobuf.Message, SwiftProtobu
   public static func ==(lhs: Taigi_Engine_Response, rhs: Taigi_Engine_Response) -> Bool {
     if lhs.id != rhs.id {return false}
     if lhs.error != rhs.error {return false}
-    if lhs.generation != rhs.generation {return false}
     if lhs.payload != rhs.payload {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true

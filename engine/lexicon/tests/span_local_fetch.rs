@@ -31,8 +31,7 @@ use lexicon::{
     best_candidate_for_key_with_barriers, fetch_candidates_for_keys_with_barriers,
     fetch_partial_prefix_candidates, fetch_partial_prefix_candidates_unbounded, ConsumedSpan,
     ContinuousFetchCtx, CustomEntry, RawCandidate, TonePin, COVERAGE_KIND_FULL,
-    COVERAGE_KIND_PARTIAL_PREFIX, FORM_NOTONE, PARTIAL_PREFIX_HYDRATE_CAP,
-    PARTIAL_PREFIX_OUTPUT_CAP,
+    COVERAGE_KIND_PARTIAL_PREFIX, PARTIAL_PREFIX_HYDRATE_CAP, PARTIAL_PREFIX_OUTPUT_CAP,
 };
 use phonetics::InputMode;
 use ranking::FrequencyMap;
@@ -174,7 +173,7 @@ fn build_fixture_costed_in_family(
 
 /// Locate a candidate by `(display_text, consumed_span, syllable_count)`.
 /// Asserts presence; returns the matched candidate so the caller can
-/// inspect remaining fields (score, form).
+/// inspect remaining fields (score).
 fn find<'a>(
     out: &'a [RawCandidate],
     display: &str,
@@ -244,11 +243,6 @@ fn tsua_surfaces_zhi_zhuah_zhu_across_two_spans() {
     let zhi = find(&out, "紙", (0, 4), 1);
     let zhuah = find(&out, "珠仔", (0, 4), 2);
     let zhu = find(&out, "珠", (0, 3), 1);
-
-    // form is hard-coded to FORM_NOTONE for every Phase 5 candidate.
-    assert_eq!(zhi.form, FORM_NOTONE);
-    assert_eq!(zhuah.form, FORM_NOTONE);
-    assert_eq!(zhu.form, FORM_NOTONE);
 
     // Score sanity (`freq × syll_bias × user_freq_boost`, Phase 5 formula):
     //   紙   = 100 × 1.0 × 1.0 = 100.0  span=(0,4) → Tier 0 (full buffer "tsua")

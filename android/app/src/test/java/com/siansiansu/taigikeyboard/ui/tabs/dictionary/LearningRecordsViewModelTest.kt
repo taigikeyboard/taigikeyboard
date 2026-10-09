@@ -225,8 +225,8 @@ class LearningRecordsViewModelTest {
         }
 
     @Test(expected = IllegalArgumentException::class)
-    fun `next-word association is not a phone page`() {
-        viewModel(FakeLearningRecords(emptyList()), LearningRecordKind.LEARNING_RECORD_KIND_ASSOCIATION)
+    fun `an unrecognized kind is not a phone page`() {
+        viewModel(FakeLearningRecords(emptyList()), LearningRecordKind.UNRECOGNIZED)
     }
 
     @Test

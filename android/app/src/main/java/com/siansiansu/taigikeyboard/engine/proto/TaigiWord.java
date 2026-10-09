@@ -8,16 +8,14 @@ package com.siansiansu.taigikeyboard.engine.proto;
 /**
  * <pre>
  * `TaigiWord` mirrors iOS `Lexicon/Models/TaigiWord.swift` /
- * Android `ime/dictionary/TaigiWord.kt`. `id` is the dictionary row id;
- * `length_score` is the dictionary frequency / length proxy.
+ * Android `ime/dictionary/TaigiWord.kt`. `id` is the dictionary row id.
  * `sources` are the dictionaries the record belongs to, in source-bit order
  * (`dictionary/common/source_bits.py`: kautian … khiin, dev, lkk) — the
  * order the badges are drawn in. Decoded from the record's effective source
  * bitmask by the engine (`dictionary_filters::source_codes`); never CUSTOM.
  *
- * Optional fields use proto3 `optional` so platforms can distinguish
- * "field absent" from "scalar default" — important for `length_score`
- * where 0 is a meaningful zero-score signal vs absent.
+ * `hanji` uses proto3 `optional` so platforms can distinguish "field
+ * absent" from "scalar default".
  * </pre>
  *
  * Protobuf type {@code taigi.engine.TaigiWord}
@@ -160,40 +158,6 @@ public  final class TaigiWord extends
     checkByteStringIsUtf8(value);
     hanji_ = value.toStringUtf8();
     bitField0_ |= 0x00000001;
-  }
-
-  public static final int LENGTH_SCORE_FIELD_NUMBER = 4;
-  private int lengthScore_;
-  /**
-   * <code>optional int32 length_score = 4;</code>
-   * @return Whether the lengthScore field is set.
-   */
-  @java.lang.Override
-  public boolean hasLengthScore() {
-    return ((bitField0_ & 0x00000002) != 0);
-  }
-  /**
-   * <code>optional int32 length_score = 4;</code>
-   * @return The lengthScore.
-   */
-  @java.lang.Override
-  public int getLengthScore() {
-    return lengthScore_;
-  }
-  /**
-   * <code>optional int32 length_score = 4;</code>
-   * @param value The lengthScore to set.
-   */
-  private void setLengthScore(int value) {
-    bitField0_ |= 0x00000002;
-    lengthScore_ = value;
-  }
-  /**
-   * <code>optional int32 length_score = 4;</code>
-   */
-  private void clearLengthScore() {
-    bitField0_ = (bitField0_ & ~0x00000002);
-    lengthScore_ = 0;
   }
 
   public static final int SOURCES_FIELD_NUMBER = 6;
@@ -415,16 +379,14 @@ public  final class TaigiWord extends
   /**
    * <pre>
    * `TaigiWord` mirrors iOS `Lexicon/Models/TaigiWord.swift` /
-   * Android `ime/dictionary/TaigiWord.kt`. `id` is the dictionary row id;
-   * `length_score` is the dictionary frequency / length proxy.
+   * Android `ime/dictionary/TaigiWord.kt`. `id` is the dictionary row id.
    * `sources` are the dictionaries the record belongs to, in source-bit order
    * (`dictionary/common/source_bits.py`: kautian … khiin, dev, lkk) — the
    * order the badges are drawn in. Decoded from the record's effective source
    * bitmask by the engine (`dictionary_filters::source_codes`); never CUSTOM.
    *
-   * Optional fields use proto3 `optional` so platforms can distinguish
-   * "field absent" from "scalar default" — important for `length_score`
-   * where 0 is a meaningful zero-score signal vs absent.
+   * `hanji` uses proto3 `optional` so platforms can distinguish "field
+   * absent" from "scalar default".
    * </pre>
    *
    * Protobuf type {@code taigi.engine.TaigiWord}
@@ -575,42 +537,6 @@ public  final class TaigiWord extends
     }
 
     /**
-     * <code>optional int32 length_score = 4;</code>
-     * @return Whether the lengthScore field is set.
-     */
-    @java.lang.Override
-    public boolean hasLengthScore() {
-      return instance.hasLengthScore();
-    }
-    /**
-     * <code>optional int32 length_score = 4;</code>
-     * @return The lengthScore.
-     */
-    @java.lang.Override
-    public int getLengthScore() {
-      return instance.getLengthScore();
-    }
-    /**
-     * <code>optional int32 length_score = 4;</code>
-     * @param value The lengthScore to set.
-     * @return This builder for chaining.
-     */
-    public Builder setLengthScore(int value) {
-      copyOnWrite();
-      instance.setLengthScore(value);
-      return this;
-    }
-    /**
-     * <code>optional int32 length_score = 4;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearLengthScore() {
-      copyOnWrite();
-      instance.clearLengthScore();
-      return this;
-    }
-
-    /**
      * <code>repeated .taigi.engine.DictionarySourceCode sources = 6;</code>
      * @return A list containing the sources.
      */
@@ -751,12 +677,11 @@ public  final class TaigiWord extends
             "id_",
             "roman_",
             "hanji_",
-            "lengthScore_",
             "sources_",
           };
           java.lang.String info =
-              "\u0000\u0005\u0000\u0001\u0001\u0006\u0005\u0000\u0001\u0000\u0001\u0002\u0002\u0208" +
-              "\u0003\u1208\u0000\u0004\u1004\u0001\u0006,";
+              "\u0000\u0004\u0000\u0001\u0001\u0006\u0004\u0000\u0001\u0000\u0001\u0002\u0002\u0208" +
+              "\u0003\u1208\u0000\u0006,";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

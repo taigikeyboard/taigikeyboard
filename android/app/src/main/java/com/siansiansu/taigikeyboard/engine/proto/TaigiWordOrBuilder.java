@@ -46,17 +46,6 @@ public interface TaigiWordOrBuilder extends
       getHanjiBytes();
 
   /**
-   * <code>optional int32 length_score = 4;</code>
-   * @return Whether the lengthScore field is set.
-   */
-  boolean hasLengthScore();
-  /**
-   * <code>optional int32 length_score = 4;</code>
-   * @return The lengthScore.
-   */
-  int getLengthScore();
-
-  /**
    * <code>repeated .taigi.engine.DictionarySourceCode sources = 6;</code>
    * @return A list containing the sources.
    */

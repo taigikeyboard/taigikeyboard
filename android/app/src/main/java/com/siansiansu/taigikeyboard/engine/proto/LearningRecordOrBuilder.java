@@ -29,7 +29,7 @@ public interface LearningRecordOrBuilder extends
 
   /**
    * <pre>
-   * The word / the phrase's Hanji / the association's next word.
+   * The word / the phrase's Hanji.
    * </pre>
    *
    * <code>string text = 3;</code>
@@ -38,7 +38,7 @@ public interface LearningRecordOrBuilder extends
   java.lang.String getText();
   /**
    * <pre>
-   * The word / the phrase's Hanji / the association's next word.
+   * The word / the phrase's Hanji.
    * </pre>
    *
    * <code>string text = 3;</code>
@@ -66,38 +66,6 @@ public interface LearningRecordOrBuilder extends
    */
   com.google.protobuf.ByteString
       getTlBytes();
-
-  /**
-   * <pre>
-   * Association only: the word `text` followed, and its TL.
-   * </pre>
-   *
-   * <code>string previous_text = 5;</code>
-   * @return The previousText.
-   */
-  java.lang.String getPreviousText();
-  /**
-   * <pre>
-   * Association only: the word `text` followed, and its TL.
-   * </pre>
-   *
-   * <code>string previous_text = 5;</code>
-   * @return The bytes for previousText.
-   */
-  com.google.protobuf.ByteString
-      getPreviousTextBytes();
-
-  /**
-   * <code>string previous_tl = 6;</code>
-   * @return The previousTl.
-   */
-  java.lang.String getPreviousTl();
-  /**
-   * <code>string previous_tl = 6;</code>
-   * @return The bytes for previousTl.
-   */
-  com.google.protobuf.ByteString
-      getPreviousTlBytes();
 
   /**
    * <code>int64 count = 7;</code>

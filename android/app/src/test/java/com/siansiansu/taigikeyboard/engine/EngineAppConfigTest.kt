@@ -1,6 +1,5 @@
 package com.siansiansu.taigikeyboard.engine
 
-import com.siansiansu.taigikeyboard.engine.proto.Platform
 import com.siansiansu.taigikeyboard.ime.settings.CandidateDisplayMode
 import com.siansiansu.taigikeyboard.ime.settings.PojMarkerOptions
 import com.siansiansu.taigikeyboard.ime.settings.StubEngineSettings
@@ -40,7 +39,6 @@ class EngineAppConfigTest {
             config.syllableSeparator,
         )
         assertTrue("the or→er dialect switch rides the config", config.tpsOrMapsToEr)
-        assertEquals(Platform.PLATFORM_ANDROID, config.platformId)
     }
 
     @Test
@@ -70,19 +68,16 @@ class EngineAppConfigTest {
             assertTrue(mode, config.nnDoubletapEnabled)
             assertTrue("$mode: ⁿ becomes ᴺ OFF is inverted on the wire", config.forceLowercaseNasalMarker)
             assertFalse(mode, config.tpsOrMapsToEr)
-            assertEquals(mode, Platform.PLATFORM_ANDROID, config.platformId)
         }
     }
 
-    // Nextword and case transform pass only what they read; the rest keeps the proto defaults,
-    // and `platform_id` is set on every request (nextword rejects it unset).
+    // Nextword and case transform pass only what they read; the rest keeps the proto defaults.
     @Test
     fun appConfig_unpassedFields_keepTheProtoDefaults() {
         val config = appConfig("tps", isHanjiFirst = true)
 
         assertEquals("tps", config.inputMode)
         assertTrue(config.isHanjiFirst)
-        assertEquals(Platform.PLATFORM_ANDROID, config.platformId)
         assertFalse(config.ooDoubletapEnabled)
         assertFalse(config.nnDoubletapEnabled)
         assertFalse(config.forceLowercaseNasalMarker)

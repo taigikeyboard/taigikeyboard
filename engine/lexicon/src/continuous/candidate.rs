@@ -5,9 +5,7 @@ use ranking::{
     calculate_continuous_score, sort_by_candidate_key, source_tier_rank, ContextRanks, FrequencyMap,
 };
 
-use super::{
-    ConsumedSpan, ContinuousFetchCtx, CustomEntry, LearnedEntry, RawCandidate, FORM_NOTONE,
-};
+use super::{ConsumedSpan, ContinuousFetchCtx, CustomEntry, LearnedEntry, RawCandidate};
 use crate::dictionary_reader::{DictionaryRecord, WALKER_COST_UNPRICED};
 
 /// Shared tail of every continuous fetch: merge `custom_dictionary.db`
@@ -157,7 +155,6 @@ pub(super) fn record_to_candidate(
         hanji,
         canonical_tl,
         score,
-        form: FORM_NOTONE,
         frequency,
         walker_cost,
         bitmask,
@@ -255,7 +252,6 @@ pub(super) fn custom_entry_to_candidate(
         hanji,
         canonical_tl,
         score,
-        form: FORM_NOTONE,
         frequency: 0,
         walker_cost: WALKER_COST_UNPRICED,
         // No `dict.bin` source bits; rank is forced to 0 via
@@ -489,7 +485,6 @@ mod item12_custom_dedupe_tests {
             hanji: hanji.map(str::to_owned),
             canonical_tl: roman.to_owned(),
             score: 1.0,
-            form: FORM_NOTONE,
             frequency: 100,
             walker_cost: WALKER_COST_UNPRICED,
             bitmask,

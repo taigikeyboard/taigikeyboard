@@ -27,7 +27,7 @@ use userdata::{
 const _: () = assert!(crate::CUSTOM_CSV_MAX_FILE_BYTES == CustomDictionaryCSV::MAX_FILE_SIZE_BYTES);
 
 /// Answers one user-data request — the `UserData` arm of `crate::run`.
-pub(crate) fn respond(id: u32, generation: u64, request: &UserDataRequest) -> Response {
+pub(crate) fn respond(id: u32, request: &UserDataRequest) -> Response {
     let (error, payload) = match UserDataHandle::instance().handle(request) {
         Ok(answer) => (ErrorCode::Ok, Some(response::Payload::UserData(answer))),
         Err(RequestError::Invalid(reason)) => {
@@ -42,7 +42,6 @@ pub(crate) fn respond(id: u32, generation: u64, request: &UserDataRequest) -> Re
     Response {
         id,
         error: error as i32,
-        generation,
         payload,
     }
 }

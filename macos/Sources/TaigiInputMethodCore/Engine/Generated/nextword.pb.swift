@@ -577,9 +577,8 @@ public nonisolated struct Taigi_Engine_FilterResult: Sendable {
 }
 
 /// UI-ready prediction value — mirrors iOS EnginePrediction.swift +
-/// Android EnginePrediction.kt. Android consumes `score` for
-/// TaigiWord.lengthScore; iOS ignores it (iOS bridge presentation
-/// rule documented in nextword-engine-boundary.md §13.10).
+/// Android EnginePrediction.kt (iOS bridge presentation rule documented in
+/// nextword-engine-boundary.md §13.10).
 public nonisolated struct Taigi_Engine_EnginePrediction: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -599,7 +598,7 @@ public nonisolated struct Taigi_Engine_EnginePrediction: Sendable {
 
   /// Merged score: min(dict_sum, DICT_SCORE_CAP 250) + user_sum, the sums
   /// taken over the (hanji, tl) merge and the reading-variant fold
-  /// (behavioral-invariants §8). Android maps to TaigiWord.lengthScore.
+  /// (behavioral-invariants §8). Test seam only; no platform reads it.
   public var score: Double = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()

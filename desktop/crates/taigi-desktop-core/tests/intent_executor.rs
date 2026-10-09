@@ -17,7 +17,6 @@ use taigi_desktop_core::keys::{
     CandidateNavigation, CaretDirection, ComposingKeyIntent, KeyEventSnapshot, KeyModifiers,
     TpsKeyCapIndex,
 };
-use taigi_desktop_core::platform::DesktopPlatform;
 use taigi_desktop_core::settings::{keys, InputMode, SettingsDocument, StaticSettingsProvider};
 
 /// One lock, one lexicon install: the engine is one per process.
@@ -122,11 +121,8 @@ fn new_rig(is_auto_space_enabled: bool) -> Rig {
     settings.set_bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED, true);
     let manager = ComposingManager::new(
         Arc::new(StaticSettingsProvider::new(settings.clone())),
-        Box::new(EngineNextWord {
-            platform: DesktopPlatform::Windows,
-        }),
+        Box::new(EngineNextWord),
         Box::new(SystemClock),
-        DesktopPlatform::Windows,
         fresh_generation(),
     );
     Rig {
@@ -497,11 +493,8 @@ fn new_tps_rig() -> Rig {
     settings.set_choice(&keys::INPUT_MODE, InputMode::Tps);
     let manager = ComposingManager::new(
         Arc::new(StaticSettingsProvider::new(settings.clone())),
-        Box::new(EngineNextWord {
-            platform: DesktopPlatform::Windows,
-        }),
+        Box::new(EngineNextWord),
         Box::new(SystemClock),
-        DesktopPlatform::Windows,
         fresh_generation(),
     );
     Rig {

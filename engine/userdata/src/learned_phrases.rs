@@ -20,7 +20,7 @@ const SCHEMA_VERSION: i64 = 1;
 /// go with it.
 pub(crate) const LEARNING_TABLE: crate::learning_records::Table = crate::learning_records::Table {
     name: TABLE_NAME,
-    identity: &["hanzi", "roman"],
+    identity: ["hanzi", "roman"],
     count: "learn_count",
     last_used: "updated_at",
     delete_dependents: Some(delete_search_keys),
@@ -187,24 +187,18 @@ impl LearnedPhraseStore {
         })
     }
 
-    /// Forgets everything, and reports how many rows went — the learning-data
-    /// wipe, beside the frequency and association stores'. One transaction:
-    /// the keys and the rows land together, and the count taken inside it is
-    /// the number that went.
-    pub fn delete_all(&self) -> Result<i64, UserDataDatabaseError> {
+    /// Forgets everything — the learning-data wipe, beside the frequency and
+    /// association stores'. One transaction: the keys and the rows go
+    /// together.
+    pub fn delete_all(&self) -> Result<(), UserDataDatabaseError> {
         self.database.perform(|connection| {
-            let existing = immediate_transaction::<_, rusqlite::Error>(connection, |connection| {
-                let existing: i64 = connection.query_row(
-                    &format!("SELECT COUNT(*) FROM {TABLE_NAME};"),
-                    [],
-                    |row| row.get(0),
-                )?;
+            immediate_transaction::<_, rusqlite::Error>(connection, |connection| {
                 connection.execute(&format!("DELETE FROM {SEARCH_KEY_TABLE_NAME};"), [])?;
                 connection.execute(&format!("DELETE FROM {TABLE_NAME};"), [])?;
-                Ok(existing)
+                Ok(())
             })?;
             connection.execute("VACUUM;", []).ok();
-            Ok(existing)
+            Ok(())
         })
     }
 }

@@ -7,7 +7,6 @@
 //! invariants §40).
 
 use crate::engine;
-use crate::platform::DesktopPlatform;
 use crate::settings::EngineSettings;
 use protos::engine::CommittedWord;
 
@@ -39,11 +38,8 @@ pub trait NextWordPort: Send {
     fn forget_context(&self, now_ms: i64, settings: &EngineSettings, generation: u64);
 }
 
-/// The engine's next-word slice, for the desktop whose `platform_id` its
-/// requests carry.
-pub struct EngineNextWord {
-    pub platform: DesktopPlatform,
-}
+/// The engine's next-word slice.
+pub struct EngineNextWord;
 
 impl NextWordPort for EngineNextWord {
     fn word_selected(
@@ -55,15 +51,7 @@ impl NextWordPort for EngineNextWord {
         settings: &EngineSettings,
         generation: u64,
     ) {
-        engine::nextword_word_selected(
-            text,
-            roman,
-            preceding,
-            now_ms,
-            settings,
-            self.platform,
-            generation,
-        );
+        engine::nextword_word_selected(text, roman, preceding, now_ms, settings, generation);
     }
 
     fn segment_nailed(
@@ -74,17 +62,10 @@ impl NextWordPort for EngineNextWord {
         settings: &EngineSettings,
         generation: u64,
     ) {
-        engine::nextword_update_last_selected_word(
-            text,
-            roman,
-            now_ms,
-            settings,
-            self.platform,
-            generation,
-        );
+        engine::nextword_update_last_selected_word(text, roman, now_ms, settings, generation);
     }
 
     fn forget_context(&self, now_ms: i64, settings: &EngineSettings, generation: u64) {
-        engine::nextword_reset_all(now_ms, settings, self.platform, generation);
+        engine::nextword_reset_all(now_ms, settings, generation);
     }
 }

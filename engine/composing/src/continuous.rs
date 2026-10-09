@@ -26,11 +26,9 @@
 //!    untouched).
 //! 4. `fetch_walker_slot0_inner(..) → Some(slot0)`: span-aware
 //!    retain-dedupe on `(hanji, consumed_span)` + identity or recased roman, then
-//!    `insert(0, ..)`. The walker returns a [`WalkerSlot0`] — **D3 honest
-//!    type** — and the seam converts to `RawCandidate` with
-//!    `score = -(slot0.cost as f32)` (engine-internal and informational: slot
-//!    0 is an explicit prepend, never sort-compared; `frequency`/`bitmask`
-//!    are walker-N/A and stay `0`).
+//!    `insert(0, ..)`. The walker returns a [`WalkerSlot0`] and the seam
+//!    converts it to a `RawCandidate` (slot 0 is an explicit prepend, never
+//!    sort-compared, so `score` / `frequency` / `bitmask` stay `0`).
 //!
 //!    **Step 4b — whole-input prefix-extension scan (else-branch only).**
 //!    After the walker slot-0 prepend, run
@@ -84,25 +82,15 @@ use lexicon::{
     fetch_partial_prefix_candidates, fetch_partial_prefix_candidates_unbounded,
     homophone_words_for_key, ConsumedSpan, ContinuousFetchCtx, CustomEntry,
     EngineHandle as LexiconHandle, LearnedEntry, RawCandidate, SyllableInventory,
-    COVERAGE_KIND_FULL, FORM_NOTONE, PARTIAL_PREFIX_OUTPUT_CAP,
+    COVERAGE_KIND_FULL, PARTIAL_PREFIX_OUTPUT_CAP,
 };
 use ranking::{FrequencyMap, WALKER_COST_UNPRICED};
 
-// ============================================================================
-// D3 honest type — walker result struct names `cost`
-// ============================================================================
-
-/// v3.5.9 A2 (D3 honest type) — the slot-0 walker's native result.
-///
-/// `cost` is the min-cost objective the walker optimizes (`lower-better`);
-/// the seam in [`assemble_candidates`] converts to a `RawCandidate` with
-/// `score = -(cost as f32)` (engine-internal, higher-better like every other
-/// candidate's score). `frequency` / `bitmask` are walker-N/A and stamped
-/// `0` at the seam — slot 0 is an explicit prepend, never sort-compared,
-/// so they are informational only. `form` is stamped `FORM_NOTONE` at the
-/// seam (walker always emits the toneless representation).
+/// The slot-0 walker's native result. The seam in [`assemble_candidates`]
+/// converts it to a `RawCandidate`; slot 0 is an explicit prepend, never
+/// sort-compared, so the rank facts a fetched row carries (`score`,
+/// `frequency`, `bitmask`) are stamped `0` there.
 pub(crate) struct WalkerSlot0 {
-    pub cost: f64,
     pub consumed_span: ConsumedSpan,
     pub syllable_count: u8,
     pub display_text: String,
@@ -935,8 +923,7 @@ pub(crate) fn walk_buffer(
 /// `fetch_walker_slot0`'s body minus the `LexiconHandle::with_state`
 /// opener, the state `as_ref()?` guards, AND the `build_shadow_lattice_with_barriers`
 /// call (now built ONCE in the seam under **D1 fold** and passed in).
-/// Returns [`WalkerSlot0`] (D3 honest type): `cost` named explicitly;
-/// the seam converts it to `RawCandidate.score = -(cost as f32)`.
+/// Returns [`WalkerSlot0`]; the seam converts it to a `RawCandidate`.
 ///
 /// v3.5.9 B-0c — `mode: phonetics::InputMode` replaces the prior
 /// `is_poj: bool` (Codex pre-impl SHOULD 2026-05-21 + 2026-05-20 enum
@@ -1090,9 +1077,6 @@ fn fetch_walker_slot0_inner(
     // canonical_tl); `get` returns the neutral default on a miss.
     let user_weight = edge_user_weight_delta(freq_map, now_ms, &display_text, &canonical_tl);
     Some(WalkerSlot0 {
-        // S5: `path.cost` is a min-cost (lower = better) total; the seam
-        // negates it into `RawCandidate.score` (see `WalkerSlot0`).
-        cost: path.cost,
         consumed_span,
         syllable_count,
         display_text,
@@ -1324,9 +1308,6 @@ pub(crate) fn assemble_candidates(
             // `(shadow, shadow_to_raw_end, lattice, inv)` plus
             // `prefix`/`dict` from the single seam `with_state`
             // scope — no second `build_shadow_lattice_with_barriers` per fetch.
-            // A2 D3 honest type: the walker returns
-            // [`WalkerSlot0`] (cost-named); convert to wire
-            // `RawCandidate` with `score = -(cost as f32)` here.
             {
                 if let (Some(continuous_keys), Some(inv), Some(ctx)) =
                     (continuous_keys.as_ref(), inv, lex_ctx.as_ref())
@@ -1348,10 +1329,8 @@ pub(crate) fn assemble_candidates(
                             roman: slot0.roman,
                             hanji: slot0.hanji,
                             canonical_tl: slot0.canonical_tl,
-                            // D3 honest conversion: `score` = negated min-cost.
-                            score: -(slot0.cost as f32),
-                            form: FORM_NOTONE,
-                            // walker-N/A; slot 0 explicit prepend.
+                            // see `WalkerSlot0`
+                            score: 0.0,
                             frequency: 0,
                             walker_cost: WALKER_COST_UNPRICED,
                             bitmask: 0,
@@ -1850,7 +1829,6 @@ mod tests {
             hanji: Some("鵝".to_string()),
             canonical_tl: "goo".to_string(),
             score: 0.0,
-            form: FORM_NOTONE,
             frequency: 0,
             walker_cost: WALKER_COST_UNPRICED,
             bitmask: 0,
@@ -1878,7 +1856,6 @@ mod tests {
                 hanji: hanji.map(String::from),
                 canonical_tl: roman.to_string(),
                 score: 0.0,
-                form: FORM_NOTONE,
                 frequency: 0,
                 walker_cost: WALKER_COST_UNPRICED,
                 bitmask: 0,
@@ -1926,7 +1903,6 @@ mod tests {
                 hanji: hanji.map(String::from),
                 canonical_tl: roman.to_string(),
                 score: 0.0,
-                form: FORM_NOTONE,
                 frequency: 0,
                 walker_cost: WALKER_COST_UNPRICED,
                 bitmask: 0,
@@ -1956,7 +1932,6 @@ mod tests {
                 hanji: hanji.map(String::from),
                 canonical_tl: roman.to_string(),
                 score: 0.0,
-                form: FORM_NOTONE,
                 frequency: 0,
                 walker_cost: WALKER_COST_UNPRICED,
                 bitmask: 0,
@@ -1990,7 +1965,6 @@ mod tests {
                 hanji: hanji.map(String::from),
                 canonical_tl: roman.to_string(),
                 score: 0.0,
-                form: FORM_NOTONE,
                 frequency: 0,
                 walker_cost: WALKER_COST_UNPRICED,
                 bitmask: 0,

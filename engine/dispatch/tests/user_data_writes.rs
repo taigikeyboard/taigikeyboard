@@ -184,7 +184,6 @@ fn the_engine_writes_what_the_platforms_wrote() {
         record_usage(RecordUsage {
             display_text: "台灣".to_owned(),
             canonical_tl: "tâi-uân".to_owned(),
-            hanji: Some("台灣".to_owned()),
         })
         .payload,
         Some(response::Payload::UserData(_))
@@ -194,23 +193,16 @@ fn the_engine_writes_what_the_platforms_wrote() {
         .rows_for_words(&["台灣".to_owned()])
         .is_some_and(|rows| rows.len() == 1 && rows[0].tl == "tâi-uân")));
 
-    // A learned phrase picked whole is touched as well as counted (§50).
+    // A platform pick of a learned phrase counts it but does not touch it
+    // (§50): the touch belongs to the commits the engine resolves itself.
     record_usage(RecordUsage {
         display_text: "做進出口".to_owned(),
         canonical_tl: "tsò tsìn-tshut-kháu".to_owned(),
-        hanji: Some("做進出口".to_owned()),
     });
-    assert!(eventually(|| reader
-        .learned_phrases
-        .all_rows()
-        .is_some_and(|rows| rows
-            .iter()
-            .any(|row| row.learn_count == 2))));
-    // A later count landing proves the queue drained past the touch.
+    // A later count landing proves the queue drained past the pick.
     record_usage(RecordUsage {
         display_text: "台北".to_owned(),
         canonical_tl: "tâi-pak".to_owned(),
-        ..RecordUsage::default()
     });
     assert!(eventually(|| reader
         .frequency
@@ -221,7 +213,14 @@ fn the_engine_writes_what_the_platforms_wrote() {
             .frequency
             .rows_for_words(&["做進出口".to_owned()])
             .is_some_and(|rows| rows.len() == 1),
-        "the touched phrase was counted too: every pick counts"
+        "every pick counts"
+    );
+    assert!(
+        reader
+            .learned_phrases
+            .all_rows()
+            .is_some_and(|rows| rows.iter().all(|row| row.learn_count == 1)),
+        "a platform pick names no Hanji, so no phrase is touched"
     );
 
     // A final commit of hanji picks is learned into the engine's store (§50).

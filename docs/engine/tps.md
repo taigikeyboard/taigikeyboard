@@ -25,7 +25,7 @@ Since v3.5.1 (PR #186) all TPS conversion + key-level auto-adjust lives in Rust 
 | TL → TPS (display + numeric) | Rust `phonetics::api::to_tone_marks` + TPS path inside same crate |
 | Key-level auto-adjust (positional ㄇ/ㆬ + ㄫ/ㆭ/ㄥ, palatalization ㄗ→ㄐ, syllabic nasal, ㆮ/ㆯ) | Rust `phonetics::tps_adjust` |
 | Bridge — detection | `RustEngineBridge.isTPSToneMark(_)` (the `ContainsTps` op had no production caller and was removed 2026-09-25) |
-| Bridge — TL → TPS | `RustEngineBridge.tlNumericToTPS(_)` / `tlDisplayToTPS(_)` (TPS → TL stays Rust-internal — `phonetics::tps_to_tl` is consumed only by `phonetics::tps_adjust` for syllable validation; C-1 retired the `lexicon::classify_input` consumer and C-3b retired the `composing::continuous` fold; no FFI surface) |
+| Bridge — TL → TPS | `RustEngineBridge.tlDisplayToTPS(_)` (the `TlNumericToTps` op lost its last platform caller 2026-09-30 and was removed 2026-10-09 (round A1b); `phonetics::api::tl_numeric_to_tps` stays Rust-internal under `tl_display_to_tps`. TPS → TL stays Rust-internal — `phonetics::tps_to_tl` is consumed only by `phonetics::tps_adjust` for syllable validation; C-1 retired the `lexicon::classify_input` consumer and C-3b retired the `composing::continuous` fold; no FFI surface) |
 | Bridge — input adjust | `RustEngineBridge.tpsInputAdjust(incoming:rawInput:)` returning `(adjusted, replaceLast?)` |
 | iOS TPS-aware glue | `Layout/TaigiLayouts.swift` (layout def), `Settings/SharedSettings.swift` (`.tps` type), `Candidates/Views/CandidateCellHelper.swift` (candidate TPS display), `Input/CharacterInputPipeline.swift` (calls bridge) |
 | Android TPS-aware glue | `ime/text/CharacterInputPipeline.kt`, `ime/text/keyboard/TextInputKeyHandler.handleTaigiInput()`, layout JSON under `ime/text/characters/tps*.json` |
@@ -187,7 +187,6 @@ Entering tone codas (ㆴ/ㆵ/ㆻ/ㆷ) are accessed via **long-press popups**:
 ```swift
 // iOS — Engine/RustEngineBridge.swift
 RustEngineBridge.isTPSToneMark("ˋ")                // true
-RustEngineBridge.tlNumericToTPS("tiau5", orMapsToER: false)  // "ㄉㄧㄠˊ"
 RustEngineBridge.tlDisplayToTPS("guá",  orMapsToER: false)   // "ㄍㄨㄚˋ"
 
 // TPS → TL is Rust-internal only — `phonetics::tps_to_tl` is consumed by

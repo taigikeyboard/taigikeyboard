@@ -662,6 +662,5 @@ private extension Taigi_Engine_LearningRecord {
     /// The engine's identity guard: the id AND the identity columns.
     func isSameRow(as other: Self) -> Bool {
         kind == other.kind && id == other.id && text == other.text && tl == other.tl
-            && previousText == other.previousText && previousTl == other.previousTl
     }
 }

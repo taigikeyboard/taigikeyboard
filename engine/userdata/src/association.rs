@@ -16,16 +16,6 @@ const SCHEMA_VERSION: i64 = 6;
 const ROW_COLUMNS: &str = "prev_word, prev_tl, next_word, next_tl, count";
 const LIST_ORDER: &str = "count DESC, last_used DESC, prev_word ASC, next_word ASC";
 
-/// The table as the Learning Records page reads it: a row is the word that
-/// followed, then the word it followed.
-pub(crate) const LEARNING_TABLE: crate::learning_records::Table = crate::learning_records::Table {
-    name: TABLE_NAME,
-    identity: &["next_word", "next_tl", "prev_word", "prev_tl"],
-    count: "count",
-    last_used: "last_used",
-    delete_dependents: None,
-};
-
 /// One learned bigram. `previous_tl` / `next_tl` are canonical TL — the
 /// identity axis of Core Principle #7.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -222,17 +212,12 @@ impl UserAssociationStore {
         })
     }
 
-    /// Forgets every bigram, and reports how many went.
-    pub fn delete_all(&self) -> Result<i64, UserDataDatabaseError> {
+    /// Forgets every bigram.
+    pub fn delete_all(&self) -> Result<(), UserDataDatabaseError> {
         self.database.perform(|connection| {
-            let existing: i64 = connection.query_row(
-                &format!("SELECT COUNT(*) FROM {TABLE_NAME};"),
-                [],
-                |row| row.get(0),
-            )?;
             connection.execute(&format!("DELETE FROM {TABLE_NAME};"), [])?;
             connection.execute("VACUUM;", []).ok();
-            Ok(existing)
+            Ok(())
         })
     }
 }

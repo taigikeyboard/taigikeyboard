@@ -23,11 +23,10 @@ pub(crate) use with_stores::respond;
 #[cfg(not(feature = "user-data"))]
 pub(crate) fn respond(
     id: u32,
-    generation: u64,
     _request: &protos::engine::UserDataRequest,
 ) -> protos::engine::Response {
     log::warn!("user-data request on a build without the user-data feature (id={id})");
-    crate::error_response(id, protos::engine::ErrorCode::FailInvariant, generation)
+    crate::error_response(id, protos::engine::ErrorCode::FailInvariant)
 }
 
 /// A composing request — the `Composing` arm of `crate::run`.

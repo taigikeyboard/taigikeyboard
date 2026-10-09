@@ -145,10 +145,7 @@ impl DesktopRuntime {
     pub fn coordinator(&self) -> &Mutex<ComposingSessionCoordinator> {
         self.coordinator.get_or_init(|| {
             let settings: Arc<dyn SettingsProvider> = Arc::clone(&self.settings) as _;
-            Mutex::new(ComposingSessionCoordinator::for_desktop(
-                settings,
-                self.platform,
-            ))
+            Mutex::new(ComposingSessionCoordinator::for_desktop(settings))
         })
     }
 

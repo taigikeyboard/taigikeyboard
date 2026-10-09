@@ -17,20 +17,18 @@ use protos::engine::{
 };
 
 use super::bridge::{app_config, record_failure, roundtrip};
-use crate::platform::DesktopPlatform;
 use crate::settings::EngineSettings;
 
 /// The user committed `text`, read as `roman`. `trigger_prediction` is forced
 /// `false` rather than forwarded from the composing effect: the flag only
 /// decides whether the engine appends a `QueryPredictions` effect, and the
-/// desktop has nothing to answer such a query with (`decide.rs:130-180`).
+/// desktop has nothing to answer such a query with (`decide.rs` `decide_word_selected`).
 pub fn word_selected(
     text: &str,
     roman: &str,
     preceding: &[CommittedWord],
     now_ms: i64,
     settings: &EngineSettings,
-    platform: DesktopPlatform,
     generation: u64,
 ) {
     decide(
@@ -46,7 +44,6 @@ pub fn word_selected(
         }),
         "nextwordWordSelected",
         settings,
-        platform,
         generation,
     )
 }
@@ -60,7 +57,6 @@ pub fn update_last_selected_word(
     roman: &str,
     now_ms: i64,
     settings: &EngineSettings,
-    platform: DesktopPlatform,
     generation: u64,
 ) {
     decide(
@@ -71,7 +67,6 @@ pub fn update_last_selected_word(
         }),
         "nextwordUpdateLastSelectedWord",
         settings,
-        platform,
         generation,
     )
 }
@@ -79,39 +74,22 @@ pub fn update_last_selected_word(
 /// Forgets the current context outright. Sent when the composition session
 /// changes hands, so the last word typed in one application cannot be
 /// learned as the predecessor of the first word typed in the next.
-pub fn reset_all(
-    now_ms: i64,
-    settings: &EngineSettings,
-    platform: DesktopPlatform,
-    generation: u64,
-) {
+pub fn reset_all(now_ms: i64, settings: &EngineSettings, generation: u64) {
     decide(
         next_word_request::Method::ResetAll(ResetAll {
             input: Some(DecisionInput { now_ms }),
         }),
         "nextwordResetAll",
         settings,
-        platform,
         generation,
     )
 }
 
-fn decide(
-    method: next_word_request::Method,
-    op: &str,
-    settings: &EngineSettings,
-    platform: DesktopPlatform,
-    generation: u64,
-) {
+fn decide(method: next_word_request::Method, op: &str, settings: &EngineSettings, generation: u64) {
     let payload = request::Payload::Nextword(NextWordRequest {
         method: Some(method),
     });
-    let Some(response) = roundtrip(
-        payload,
-        op,
-        generation,
-        Some(app_config(settings, platform)),
-    ) else {
+    let Some(response) = roundtrip(payload, op, generation, Some(app_config(settings))) else {
         return;
     };
     match response {
