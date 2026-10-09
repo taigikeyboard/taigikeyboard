@@ -177,6 +177,10 @@
     <string name="i18n_keyboard_oneHandedOff">通常</string>
     <string name="i18n_keyboard_oneHandedSwapSide">反対側へ移動</string>
     <string name="i18n_layout_romanizationKeyboard">ローマ字キーボード</string>
+    <string name="i18n_layout_customLayoutsSection">カスタム配列</string>
+    <string name="i18n_layout_createNewLayout">新しい配列…</string>
+    <string name="i18n_layout_comingSoon">近日公開</string>
+    <string name="i18n_layout_commonLayoutsSection">共通</string>
     <string name="i18n_layout_standardLayout">Lohankha</string>
     <string name="i18n_layout_phahTaigiLayout">PhahTaigi</string>
     <string name="i18n_layout_tpsLayout">方音符号</string>

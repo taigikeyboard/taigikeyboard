@@ -12,6 +12,10 @@ data class KeyboardLayoutOption(
     val key: String,
     val labelKey: StringKey,
     @param:DrawableRes val previewRes: Int,
+    // The POJ key table's screenshot, for a layout whose POJ keys differ from its TL keys
+    // (LayoutManager picks `*_poj` in POJ mode); null when one table serves both scripts.
+    // Mirrors iOS KeyboardLayoutType.pojPreviewImageName.
+    @param:DrawableRes val pojPreviewRes: Int? = null,
 )
 
 object KeyboardLayoutOptions {
@@ -19,9 +23,14 @@ object KeyboardLayoutOptions {
     val romanization =
         listOf(
             KeyboardLayoutOption("phahTaigi", StringKey.LAYOUT_PHAH_TAIGI_LAYOUT, R.drawable.layout_phahtaigi_preview),
-            KeyboardLayoutOption("qwerty", StringKey.LAYOUT_STANDARD_LAYOUT, R.drawable.layout_standard_preview),
-            KeyboardLayoutOption("moe1", StringKey.LAYOUT_MOE1_LAYOUT, R.drawable.layout_moe1_preview),
-            KeyboardLayoutOption("moe2", StringKey.LAYOUT_MOE2_LAYOUT, R.drawable.layout_moe2_preview),
+            KeyboardLayoutOption(
+                "qwerty",
+                StringKey.LAYOUT_STANDARD_LAYOUT,
+                R.drawable.layout_standard_preview,
+                R.drawable.layout_standard_poj_preview,
+            ),
+            KeyboardLayoutOption("moe1", StringKey.LAYOUT_MOE1_LAYOUT, R.drawable.layout_moe1_preview, R.drawable.layout_moe1_poj_preview),
+            KeyboardLayoutOption("moe2", StringKey.LAYOUT_MOE2_LAYOUT, R.drawable.layout_moe2_preview, R.drawable.layout_moe2_poj_preview),
         )
 
     // Section 2 — Taigi phonetic keyboards.

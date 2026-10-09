@@ -3115,6 +3115,78 @@
         }
       }
     },
+    "i18n_layout_comingSoon": {
+      "comment": "Badge over a Layout-tab card whose feature is not available yet (the create-new-layout card).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coming Soon"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "近日公開"
+          }
+        }
+      }
+    },
+    "i18n_layout_commonLayoutsSection": {
+      "comment": "Section header on the Layout tab for layouts whose keys are the same in Tâi-lô and Pe̍h-ōe-jī.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Universal"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "共通"
+          }
+        }
+      }
+    },
+    "i18n_layout_createNewLayout": {
+      "comment": "Label + content description for the create-new-layout card on the custom-layout shelf.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New Layout…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新しい配列…"
+          }
+        }
+      }
+    },
+    "i18n_layout_customLayoutsSection": {
+      "comment": "Section header above the custom-layout shelf on the Layout tab (create card, not available yet).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Custom Layouts"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カスタム配列"
+          }
+        }
+      }
+    },
     "i18n_layout_moe1Layout": {
       "comment": "Layout name: MOE Taiwanese romanization key arrangement, variant 1.",
       "extractionState": "manual",

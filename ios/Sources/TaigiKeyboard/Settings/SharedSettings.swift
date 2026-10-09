@@ -31,9 +31,10 @@ final class SharedSettings {
     // `enableDoubleTapOO/NN`) are deliberate; renaming them silently abandons
     // the user's existing preference.
 
-    private static let inputModeKey: SettingsKey<InputMode> = .rawRep("inputMode", default: .tl)
+    // Internal (not private): the Layout tab observes these two keys through `@AppStorage`.
+    static let inputModeKey: SettingsKey<InputMode> = .rawRep("inputMode", default: .tl)
     private static let inputModeBeforeTpsKey: SettingsKey<InputMode> = .rawRep("inputModeBeforeTps", default: .tl)
-    private static let keyboardLayoutTypeKey: SettingsKey<KeyboardLayoutType> = .rawRep("keyboardLayoutType", default: .phahTaigi)
+    static let keyboardLayoutTypeKey: SettingsKey<KeyboardLayoutType> = .rawRep("keyboardLayoutType", default: .phahTaigi)
     private static let layoutBeforeTpsKey: SettingsKey<KeyboardLayoutType> = .rawRep("layoutBeforeTps", default: .phahTaigi)
     private static let fontTypeKey: SettingsKey<FontType> = .rawRep("fontType", default: .keyboardDefault)
 

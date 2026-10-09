@@ -454,6 +454,26 @@ class PrefHelper(
         }
     }
 
+    /**
+     * Writes [layout] and then [inputMode] (cascades included) in a single DataStore transaction
+     * — see [TpsCascade.forLayoutAndInputMode] for why two setters are not enough.
+     */
+    fun setKeyboardLayoutAndInputMode(
+        layout: String,
+        inputMode: String,
+    ) {
+        val writes =
+            TpsCascade.forLayoutAndInputMode(
+                newLayout = layout,
+                newInputMode = inputMode,
+                oldLayout = keyboardLayoutType,
+                oldInputMode = this.inputMode,
+                inputModeBeforeTps = inputModeBeforeTps,
+                layoutBeforeTps = layoutBeforeTps,
+            )
+        updateCacheBatchAndPersist(writes)
+    }
+
     // TPS settings
     var tpsOrMapsToER: Boolean by preference(PreferenceKeys.TPS_OR_MAPS_TO_ER, true)
 

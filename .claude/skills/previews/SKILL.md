@@ -14,7 +14,7 @@ Each platform has a generator test that renders the theme editor's live preview 
 
 Generator: `ios/TaigiKeyboardTests/PreviewAssetGeneratorTests.swift`. It overwrites every PNG that each imageset's `Contents.json` in `ios/Resources/Assets/LayoutPreviewAssets.xcassets` names, as 720×454 8-bit RGB.
 
-1. **New card?** Add its imageset first: a `<name>.imageset/` folder with `Contents.json` + a placeholder PNG named in it (copy a sibling: light+dark for adaptive, one universal image otherwise). The name must equal the layout's `KeyboardLayoutType.previewImageName` or the theme's `previewImageName`; the generator fails on any other.
+1. **New card?** Add its imageset first: a `<name>.imageset/` folder with `Contents.json` + a placeholder PNG named in it (copy a sibling: light+dark for adaptive, one universal image otherwise). The name must equal the layout's `KeyboardLayoutType.previewImageName` / `pojPreviewImageName` (rendered in POJ mode) or the theme's `previewImageName`; the generator fails on any other.
 2. **Run** on an **iPhone** simulator (it fails on iPad), alone, with parallel testing off. It clears the simulator's App Group settings while it runs and restores them afterwards.
 
    ```sh
@@ -30,7 +30,7 @@ Note: the Liquid Glass backdrop colours are generator constants sampled from iOS
 
 ## Android
 
-Generator: `android/app/src/androidTest/java/com/siansiansu/taigikeyboard/ui/PreviewAssetGeneratorTest.kt`. It renders every card `KeyboardLayoutOptions` and `builtInThemePreviewRes` (`ThemePickerScreen.kt`) name, as 800×540 PNGs for `drawable-xxxhdpi` (+ `drawable-night-xxxhdpi` for adaptive themes), into the app's `files/previews/`. A new layout needs its `KeyboardLayoutOptions` entry; a new built-in theme is picked up from `BuiltInThemes.all` and needs its `builtInThemePreviewRes` mapping (the generator fails without it). Either way add a placeholder drawable so `R.drawable` compiles.
+Generator: `android/app/src/androidTest/java/com/siansiansu/taigikeyboard/ui/PreviewAssetGeneratorTest.kt`. It renders every card `KeyboardLayoutOptions` (`previewRes`, plus `pojPreviewRes` in POJ mode) and `builtInThemePreviewRes` (`ThemePickerScreen.kt`) name, as 800×540 PNGs for `drawable-xxxhdpi` (+ `drawable-night-xxxhdpi` for adaptive themes), into the app's `files/previews/`. A new layout needs its `KeyboardLayoutOptions` entry; a new built-in theme is picked up from `BuiltInThemes.all` and needs its `builtInThemePreviewRes` mapping (the generator fails without it). Either way add a placeholder drawable so `R.drawable` compiles.
 
 1. **Device**: an **emulator only** — the run wipes the app's data. A portrait arm64 phone AVD (the APK ships ARM ABIs); boot one headless if none is up, e.g. `ANDROID_AVD_HOME=$HOME/.config/.android/avd ~/Library/Android/sdk/emulator/emulator -avd <phone AVD> -no-window -no-audio -gpu swiftshader_indirect` (background). Pin every command to it with `export ANDROID_SERIAL=emulator-5554`.
 2. **Run** (factory settings come from `pm clear`):

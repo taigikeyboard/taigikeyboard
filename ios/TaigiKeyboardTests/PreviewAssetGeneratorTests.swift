@@ -23,10 +23,10 @@ final class PreviewAssetGeneratorTests: XCTestCase {
     /// Room under the bottom row, matching the inset above the top row (KeyboardKit's vertical
     /// key inset); the fitting height ends flush with the bottom row.
     private static let bottomInset: CGFloat = 4.5
-    /// The `ThemeCardMetrics` card at @3x (720×454).
+    /// The `GalleryCardMetrics` card at @3x (720×454).
     private static let outputSize = CGSize(
-        width: ThemeCardMetrics.width * renderScale,
-        height: (ThemeCardMetrics.width * renderScale / ThemeCardMetrics.previewAspectRatio).rounded(),
+        width: GalleryCardMetrics.width * renderScale,
+        height: (GalleryCardMetrics.width * renderScale / GalleryCardMetrics.previewAspectRatio).rounded(),
     )
 
     /// The system keyboard backdrop behind Liquid Glass, sampled from iOS 27 device
@@ -44,6 +44,8 @@ final class PreviewAssetGeneratorTests: XCTestCase {
     private struct RenderTarget {
         let themeId: String
         let layout: KeyboardLayoutType
+        /// Set on every job (after the layout), so a POJ card's mode never carries into the next.
+        let inputMode: InputMode
         /// A dark-only palette (Catppuccin) renders its single universal image dark.
         let isDarkOnly: Bool
     }
@@ -82,6 +84,7 @@ final class PreviewAssetGeneratorTests: XCTestCase {
         for job in jobs {
             try autoreleasepool {
                 SharedSettings.shared.keyboardLayoutType = job.target.layout
+                SharedSettings.shared.inputMode = job.target.inputMode
                 let image = try Self.render(job)
                 try XCTUnwrap(image.pngData()).write(to: job.outputURL)
             }
@@ -131,12 +134,15 @@ final class PreviewAssetGeneratorTests: XCTestCase {
 
     private static func target(forImageset name: String) throws -> RenderTarget {
         if let layout = KeyboardLayoutType.allCases.first(where: { $0.previewImageName == name }) {
-            return RenderTarget(themeId: ThemeId.default, layout: layout, isDarkOnly: false)
+            return RenderTarget(themeId: ThemeId.default, layout: layout, inputMode: layout == .tps ? .tps : .tl, isDarkOnly: false)
+        }
+        if let layout = KeyboardLayoutType.allCases.first(where: { $0.pojPreviewImageName == name }) {
+            return RenderTarget(themeId: ThemeId.default, layout: layout, inputMode: .poj, isDarkOnly: false)
         }
         guard let theme = BuiltInThemes.all.first(where: { $0.previewImageName == name }) else {
             throw GeneratorError(description: "imageset \(name) is no layout's or built-in theme's previewImageName")
         }
-        return RenderTarget(themeId: theme.id, layout: themeCardLayout, isDarkOnly: theme.light == nil)
+        return RenderTarget(themeId: theme.id, layout: themeCardLayout, inputMode: .tl, isDarkOnly: theme.light == nil)
     }
 
     /// An explicit luminosity wins; a single universal image follows the theme's palette.

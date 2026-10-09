@@ -1,32 +1,15 @@
 package com.siansiansu.taigikeyboard.ui.tabs.theme
 
 import androidx.annotation.DrawableRes
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -36,7 +19,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -44,18 +26,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.siansiansu.taigikeyboard.R
@@ -73,8 +47,11 @@ import com.siansiansu.taigikeyboard.ime.theme.UserThemeSeed
 import com.siansiansu.taigikeyboard.ime.theme.UserThemeStore
 import com.siansiansu.taigikeyboard.ime.theme.themeBackground
 import com.siansiansu.taigikeyboard.settings.ThemeEditorActivity
+import com.siansiansu.taigikeyboard.ui.components.GalleryCard
+import com.siansiansu.taigikeyboard.ui.components.GalleryCreateCard
+import com.siansiansu.taigikeyboard.ui.components.GalleryScreenshot
+import com.siansiansu.taigikeyboard.ui.components.GalleryShelf
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
-import com.siansiansu.taigikeyboard.ui.theme.SectionHeader
 
 // Theme tab main screen: a custom-theme shelf (Create New + saved themes with an
 // apply/edit/delete menu) above one built-in shelf per key-style family (Filled /
@@ -82,17 +59,6 @@ import com.siansiansu.taigikeyboard.ui.theme.SectionHeader
 // selectedThemeId, which wakes the P2 render seam (gradient background + key shadow
 // + key border). The editor lives in ThemeEditorActivity; add/edit/delete refresh
 // this shelf reactively via observeUserThemes().
-
-// Card metrics — 200.dp matches LayoutCard so the theme tab lines up with the layout
-// tab in-app (intentional divergence from iOS 240pt). The 585/395 aspect matches the
-// generated Android keyboard screenshots (theme_*_preview + layout_*_preview; PreviewAssetGeneratorTest
-// renders them at this width x 4 and this aspect), taller than
-// iOS's 720/454 — the Android keyboard is taller, so the card follows the Android
-// keyboard shape rather than the iOS card slot (intentional cross-platform divergence:
-// forcing iOS 585/369 here clipped the screenshots' top tone-mark row).
-internal const val THEME_CARD_WIDTH_DP = 200
-internal const val THEME_PREVIEW_ASPECT = 585f / 395f
-private val THEME_CARD_SPACING = 12.dp
 
 /**
  * The selected-theme id after deleting [deletedId]: falls back to the default
@@ -160,6 +126,7 @@ fun ThemePickerScreen(prefs: PrefHelper) {
                     .padding(innerPadding)
                     .verticalScroll(rememberScrollState())
                     .padding(bottom = AppStyle.scrollContentBottomPadding),
+            verticalArrangement = Arrangement.spacedBy(AppStyle.sectionSpacing),
         ) {
             CustomThemeShelf(
                 userThemes = userThemes,
@@ -173,18 +140,14 @@ fun ThemePickerScreen(prefs: PrefHelper) {
                 },
                 onDelete = deleteTheme,
             )
-            Spacer(Modifier.height(AppStyle.sectionSpacing))
 
-            BuiltInThemes.families.forEachIndexed { index, family ->
+            BuiltInThemes.families.forEach { family ->
                 BuiltInThemeShelf(
                     title = stringRes(family.titleKey),
                     themes = family.themes,
                     selectedThemeId = selectedThemeId,
                     onThemeSelected = applyTheme,
                 )
-                if (index < BuiltInThemes.families.size - 1) {
-                    Spacer(Modifier.height(AppStyle.sectionSpacing))
-                }
             }
         }
     }
@@ -199,34 +162,27 @@ private fun CustomThemeShelf(
     onEdit: (UserTheme) -> Unit,
     onDelete: (UserTheme) -> Unit,
 ) {
-    SectionHeader(L10n.themeCustomThemesSection)
-    Row(
-        modifier =
-            Modifier
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp),
-    ) {
+    GalleryShelf(L10n.themeCustomThemesSection) {
         // Create-new card leads the shelf, hidden once the cap is reached (mirrors iOS).
         if (userThemes.size < UserThemeStore.MAX_USER_THEMES) {
-            CreateNewThemeCard(onClick = onCreateNew)
-            if (userThemes.isNotEmpty()) Spacer(Modifier.width(THEME_CARD_SPACING))
+            GalleryCreateCard(title = L10n.themeCreateNewTheme, onClick = onCreateNew)
         }
-        userThemes.forEachIndexed { index, theme ->
-            ThemeCard(
+        userThemes.forEach { theme ->
+            GalleryCard(
                 title = theme.name,
                 isSelected = selectedThemeId == theme.id,
                 onClick = { onApply(theme.id) },
-                menuActions =
-                    listOf(
-                        ThemeCardAction(L10n.themeCardMenuApply) { onApply(theme.id) },
-                        ThemeCardAction(L10n.commonEdit) { onEdit(theme) },
-                        ThemeCardAction(L10n.commonDelete, isDestructive = true) { onDelete(theme) },
-                    ),
                 preview = { CustomThemeBackgroundPreview(theme.appearance) },
+                accessory = {
+                    ThemeCardMenu(
+                        listOf(
+                            ThemeCardAction(L10n.themeCardMenuApply) { onApply(theme.id) },
+                            ThemeCardAction(L10n.commonEdit) { onEdit(theme) },
+                            ThemeCardAction(L10n.commonDelete, isDestructive = true) { onDelete(theme) },
+                        ),
+                    )
+                },
             )
-            if (index < userThemes.size - 1) {
-                Spacer(Modifier.width(THEME_CARD_SPACING))
-            }
         }
     }
 }
@@ -238,35 +194,25 @@ private fun BuiltInThemeShelf(
     selectedThemeId: String,
     onThemeSelected: (String) -> Unit,
 ) {
-    SectionHeader(title)
-    Row(
-        modifier =
-            Modifier
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp),
-    ) {
-        themes.forEachIndexed { index, theme ->
+    GalleryShelf(title) {
+        themes.forEach { theme ->
             // Resolve once for both the card title and the preview's contentDescription.
             val title = stringRes(theme.displayNameKey)
-            ThemeCard(
+            GalleryCard(
                 title = title,
                 isSelected = selectedThemeId == theme.id,
                 onClick = { onThemeSelected(theme.id) },
                 preview = {
                     // Maps theme.previewImageName to an explicit R.drawable.* (NEVER
                     // resources.getIdentifier, which the resource shrinker can't track).
-                    // Default (reuses phahtaigi) + the 5 gradient themes ship a screenshot; the
-                    // rest fall through to null → neutral placeholder. Mirrors iOS
-                    // UIImage(named:).
-                    BuiltInThemePreview(
+                    // An unmapped theme falls through to null → neutral placeholder. Mirrors
+                    // iOS UIImage(named:).
+                    GalleryScreenshot(
                         previewRes = builtInThemePreviewRes(theme.previewImageName),
                         title = title,
                     )
                 },
             )
-            if (index < themes.size - 1) {
-                Spacer(Modifier.width(THEME_CARD_SPACING))
-            }
         }
     }
 }
@@ -277,105 +223,6 @@ private data class ThemeCardAction(
     val isDestructive: Boolean = false,
     val onClick: () -> Unit,
 )
-
-// A theme card: a tappable preview (built-in screenshot/placeholder or the live
-// custom-theme background preview) with the shared selection overlay, plus a title row
-// carrying an optional overflow menu (custom themes only). The tap-to-apply target
-// is the preview only — the title row (and its menu) is excluded, so opening the
-// menu never applies the theme.
-@Composable
-private fun ThemeCard(
-    title: String,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    preview: @Composable () -> Unit,
-    menuActions: List<ThemeCardAction> = emptyList(),
-) {
-    val checkmarkScale by animateFloatAsState(
-        targetValue = if (isSelected) 1f else 0f,
-        animationSpec =
-            spring(
-                dampingRatio = Spring.DampingRatioMediumBouncy,
-                stiffness = Spring.StiffnessMedium,
-            ),
-        label = "checkmarkScale",
-    )
-    val overlayAlpha by animateFloatAsState(
-        targetValue = if (isSelected) 1f else 0f,
-        label = "overlayAlpha",
-    )
-
-    Column(
-        modifier = Modifier.width(THEME_CARD_WIDTH_DP.dp),
-    ) {
-        Surface(
-            shape = RoundedCornerShape(10.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            border =
-                if (isSelected) {
-                    BorderStroke(2.5.dp, MaterialTheme.colorScheme.primary)
-                } else {
-                    null
-                },
-            modifier = Modifier.clickable(onClick = onClick),
-        ) {
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(THEME_PREVIEW_ASPECT),
-            ) {
-                preview()
-
-                if (overlayAlpha > 0f) {
-                    Box(
-                        modifier =
-                            Modifier
-                                .matchParentSize()
-                                .alpha(overlayAlpha)
-                                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.25f)),
-                    )
-                }
-
-                if (checkmarkScale > 0f) {
-                    Box(
-                        modifier =
-                            Modifier
-                                .align(Alignment.Center)
-                                .scale(checkmarkScale)
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = null,
-                            modifier = Modifier.size(AppStyle.smallIconSize),
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                        )
-                    }
-                }
-            }
-        }
-
-        Spacer(Modifier.height(6.dp))
-
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = title,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier.weight(1f),
-            )
-            if (menuActions.isNotEmpty()) {
-                ThemeCardMenu(actions = menuActions)
-            }
-        }
-    }
-}
 
 @Composable
 private fun ThemeCardMenu(actions: List<ThemeCardAction>) {
@@ -412,45 +259,6 @@ private fun ThemeCardMenu(actions: List<ThemeCardAction>) {
     }
 }
 
-// The leading card on the custom shelf: a neutral panel with a centered "+" glyph.
-@Composable
-private fun CreateNewThemeCard(onClick: () -> Unit) {
-    Column(
-        modifier = Modifier.width(THEME_CARD_WIDTH_DP.dp),
-    ) {
-        Surface(
-            shape = RoundedCornerShape(10.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            modifier = Modifier.clickable(onClick = onClick),
-        ) {
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(THEME_PREVIEW_ASPECT),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = L10n.themeCreateNewTheme,
-                    modifier = Modifier.size(28.dp),
-                    tint = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-        }
-
-        Spacer(Modifier.height(6.dp))
-
-        Text(
-            text = L10n.themeCreateNewTheme,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.labelLarge,
-        )
-    }
-}
-
 // A custom-theme card preview: the theme background alone (solid, gradient or photo, same
 // surface painting as the keyboard) — no sample key, so the selection checkmark sits on the
 // bare surface like a built-in card's (USER 2026-09-26). User themes are seeded at decode, so
@@ -472,7 +280,7 @@ private fun CustomThemeBackgroundPreview(appearance: ThemeAppearance) {
 // (adaptive) reuses the phahtaigi layout screenshot (light + night buckets), so its
 // card adapts to dark mode like the theme does. The 5 gradient themes (Sakura/Gold/Sea Breeze/Jade/
 // Wisteria) are light-only, so a single drawable-xxxhdpi asset serves both light and dark.
-// Mirrors iOS UIImage(named: previewImageName) in ThemePickerView.swift — except iOS ships a
+// Mirrors iOS UIImage(named: previewImageName) in GalleryScreenshot (GalleryCard.swift) — except iOS ships a
 // name-keyed theme_standard_preview imageset, while this map points Default straight at
 // R.drawable.layout_phahtaigi_preview. PreviewAssetGeneratorTest renders every drawable this
 // map names.
@@ -505,45 +313,3 @@ internal fun builtInThemePreviewRes(previewImageName: String?): Int? =
         "theme_cleanCatppuccin_preview" -> R.drawable.theme_cleancatppuccin_preview
         else -> null
     }
-
-// Built-in card preview: the bundled screenshot when supplied, else a
-// neutral placeholder fixed to the card aspect so cards never change height once
-// screenshots land.
-@Composable
-private fun BuiltInThemePreview(
-    @DrawableRes previewRes: Int?,
-    title: String,
-) {
-    if (previewRes != null) {
-        Image(
-            painter = painterResource(previewRes),
-            contentDescription = title,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop,
-        )
-    } else {
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.surfaceContainerHighest),
-            contentAlignment = Alignment.Center,
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(
-                    painter = painterResource(R.drawable.keyboard_24),
-                    contentDescription = null,
-                    modifier = Modifier.size(28.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                )
-            }
-        }
-    }
-}
