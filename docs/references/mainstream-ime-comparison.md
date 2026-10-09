@@ -79,7 +79,7 @@ If you are working on… → read these in order.
 
 1. **`librime` user-dict math** — `src/rime/dict/user_dictionary.cc` for `formula_d(d, t, da, ta) = d + da * exp((ta - t)/200)`. Time-decay formula reference. See `rime-reference.md`.
 2. **`McBopomofo` epsilon boost** — `Source/Engine/McBopomofoLM.cpp:120`. Single-char user phrases get `topScore + 1e-9` so they don't always beat multi-syllable. Same problem we hit in Phase 9.4a.
-3. **`khiin-rs` bigram** — `khiin/src/data/database.rs` SQL schema for `bigrams(lgram, rgram, n)`.
+3. **`khiin-rs` bigram** — `khiin/src/db/migrations/001/up.sql` SQL schema for `bigrams(lgram, rgram, n)`.
 4. **`librime-predict`** — minimal next-word predictor (read all of `src/`, ~500 LOC).
 
 ### User adaptation / personal dict
@@ -93,7 +93,7 @@ If you are working on… → read these in order.
 
 1. **`docs/phonetics/taigi-phonetics-reference.md`** — our internal source of truth. Always first.
 2. **`khiin-rs/ji/src/lomaji.rs` + `tone.rs`** — closest match for what our Rust syllabifier does.
-3. **`rime-moetaigi/moetaigi.schema.yaml`** — TPS (Bopomofo-style) tone-mark placement. Reference for `keyboard/tps/*`.
+3. **`rime-moetaigi/rime-moetaigi/moetaigi-tsuim.schema.yaml`** — TPS (Bopomofo-style) tone-mark placement. Reference for `keyboard/tps/*`.
 4. **`McBopomofo/Source/Engine/Mandarin/`** — Bopomofo input validation. Useful as a structural mirror; phonetic rules don't transfer.
 5. 🔑 **`Tekkon/Sources/Tekkon/Tekkon_SyllableComposer.swift`** (#25) — incremental keystroke → syllable state machine. **Read before touching TPS composing**: it solves the same "this key could be the previous syllable's coda or the next syllable's onset" ambiguity as our §32/§33/S23 work (`engine/phonetics/src/tps_adjust.rs` `adjust_initial_key` / `dual_final_form`). `Tekkon_Constants.swift` holds the layout→phonabet tables; `Tekkon_PinyinTrie.swift` is the romanization→phonabet path. Read-only reference — LGPL, do **not** vendor code.
 
@@ -127,7 +127,7 @@ If you are working on… → read these in order.
 
 ### Custom keyboard layout / UI
 
-1. **`azooKey/KeyboardViews/Custard/`** — declarative grid-fit layout from JSON. See `azookey-reference.md`.
+1. **`azooKey/AzooKeyCore/Sources/KeyboardViews/Custard/`** — declarative grid-fit layout from JSON. See `azookey-reference.md`.
 2. **`CustardKit/json/howToMake.md`** — the JSON schema spec itself (Japanese-only doc).
 3. **`florisboard/lib/snygg/`** — Compose-based theming DSL for IME. Closest to what we'd want for Android theming.
 4. **`KeyboardKit-Documentation/`** — vendor SDK we run on; always consult before suspecting a KK bug.
@@ -137,7 +137,7 @@ If you are working on… → read these in order.
 ### Schema / config-driven IME
 
 1. **`librime/`** — gold standard. YAML schemas with `__include`, `__patch`, `__append`, `__merge`. We do **not** want this level of flexibility, but the YAML shape is the reference if we externalise anything.
-2. **`rime-moetaigi/moetaigi.schema.yaml`** — minimal Taigi-shaped RIME schema.
+2. **`rime-moetaigi/rime-moetaigi/moetaigi-tsuim.schema.yaml`** (+ `moetaigi.unspaced.schema.yaml`) — minimal Taigi-shaped RIME schema.
 3. **`trime/app/src/main/java/com/osfans/trime/provider/RimeDataProvider.kt` + `app/data/rime/`** — how a RIME schema/dict bundle is *deployed and exposed* on Android (submodule-vendored data + `DocumentsProvider`).
 4. **`PIME/backends.json`** — minimal registry mapping `name → command/workingDir/params` for pluggable engine backends. The whole multi-engine dispatch in ~20 lines.
 5. **`MacishType/Engines/README.md`** — `manifest.json` engine contract: declare a field → it's fixed; omit it → host auto-exposes a user control. Clean "config sets it OR user controls it" model for settings-vs-defaults seams.
@@ -159,8 +159,8 @@ If you are working on… → read these in order.
 - **What**: Japanese iOS keyboard, SwiftUI-based, ships own kana→kanji engine (`zenz-v3` neural LM in latest versions).
 - **Why we care**: Best open-source iOS keyboard reference. Dual-track layout (Flick `CustardKit` + QWERTY `UnifiedKey`), 47-action protocol, SwiftUI patterns (`@StateObject` + `@EnvironmentObject` + enum-based NavigationStack routing).
 - **Where to look**:
-  - `KeyboardViews/View/UnifiedKey/` — unified key system
-  - `KeyboardViews/Custard/` — built-in Flick layouts
+  - `AzooKeyCore/Sources/KeyboardViews/View/UnifiedKey/` — unified key system
+  - `AzooKeyCore/Sources/KeyboardViews/Custard/` — built-in Flick layouts
   - `MainApp/Setting/` — settings UI
 - **Inspiration takeaways for us**:
   - Flick five-way input → Taigi tone variations (`a → á/à/â/ā/a̍`)

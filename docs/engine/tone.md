@@ -92,7 +92,7 @@ POJ ↔ TL display conversion: `phonetics::api::poj_display_to_tl_display` / `tl
 | Tone-letter case mapping (POJ/TL aware upper/lower) | Rust `phonetics::case_transform` |
 | Bridge surface (iOS) | `Engine/RustEngineBridge+Phonetics.swift` + `RustEngineBridge+CaseTransform.swift` |
 | Bridge surface (Android) | `engine/RustEngineBridge.kt` + `CaseTransformBridge.kt` |
-| Flick tone UI mapping (left=2, top=3, right=5, bottom=7, long-press=8) | iOS `FlickDirection` (UI only; tone math via Rust) |
+| Tone-variant long-press callouts (POJ / TL tone maps) | iOS `Callouts/TaigiCallouts+Builder.swift` (`TaigiToneMaps`; UI only; tone math via Rust) |
 
 For per-pub-item descriptions in Taiwanese Mandarin, see `migration-inventory.csv` (filter `area=phonetics`).
 

@@ -17,7 +17,8 @@ Staleness is guarded automatically, not by a manual make target:
 - **macOS** — `macos/Makefile`'s `i18n-check` is a prerequisite of `build` and `test`, and
   `macos/scripts/bundle-app.sh` runs the same check itself (it invokes its own `swift build`, so
   `make bundle` / `make install` / calling the script directly are all gated).
-- **iOS** — no equivalent preBuild guard, so `release-helper` runs `make i18n` at release time to
+- **iOS** — no equivalent preBuild guard, so the `/release-mobile` skill
+  (`.claude/skills/release-mobile/SKILL.md`) runs `make i18n` at release time to
   guarantee the committed xcstrings are fresh.
 
 ## Generated artifacts (Android, R2a-1)

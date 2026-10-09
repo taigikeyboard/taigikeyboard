@@ -134,7 +134,7 @@ override func viewDidLoad() {
 public protocol EngineSettings {
     var inputMode: InputMode { get }
     var isHanjiFirst: Bool { get }
-    var toneToggles: ToneToggles { get }
+    var pojMarkerOptions: PojMarkerOptions { get }
     // … other read-only engine-visible flags
 }
 
@@ -185,13 +185,13 @@ Two instances of this pattern exist; both state machines now live in Rust (`engi
 
 ### 4.1 Composing pipeline — see `composing-state-boundary.md`
 
-- **Pure** — `engine/composing` (`ComposingState`, `ComposingTransition`, the `Effect` list); `ToneToggles` on the settings side.
-- **Platform** — `ComposingManager` (`ObservableObject`, `@Published`, owns `ComposingDelegate` implemented by `KeyboardViewController` on iOS and by an `InputConnection` wrapper on Android).
+- **Pure** — `engine/composing` (`ComposingState`, `ComposingTransition`, the `Effect` list); `PojMarkerOptions` on the settings side.
+- **Platform** — `ComposingManager` (`@Observable` class conforming to `ComposingStateProvider`, owns `ComposingDelegate` implemented by `KeyboardViewController` on iOS and by an `InputConnection` wrapper on Android).
 - **Contract** — `Effect` enum names are platform-neutral (`updatePreedit`, `clearPreeditWithoutCommit`, `commitTextReplacingPreedit`, `clearCandidates`, `refreshCandidates`, `resetCandidateContext`). iOS and Android bindings interpret the same enum. **Critical Android caveat**: `finishComposingText()` commits the composing region by default — bindings MUST zero the region via `setComposingText("", 1)` before issuing it, to honor `clearPreeditWithoutCommit` semantics. See the Effect → platform mapping table in `composing-state-boundary.md` §2.2.
 
 ### 4.2 NextWord pipeline — see `nextword-engine-boundary.md`
 
-- **Pure** — `engine/nextword` (`decide(intent, state, input) → Outcome`, `NextWordIntent` / `NextWordPersistedState` / `NextWordDecisionInput` / `NextWordOutcome` / `Outcome.Effect`), `RawNextWordPrediction` (shared DTO replacing the platform-service `Prediction` type at the engine boundary).
+- **Pure** — `engine/nextword` (`decide::decide(state, intent, config) → Decided`; crate-private `Intent` / `PersistedState` / `Decided`; on the wire `DecisionInput` / `DecideResult` / `NextWordEffect` in `nextword.proto`), `RawNextWordPrediction` (shared DTO replacing the platform-service `Prediction` type at the engine boundary).
 - **Platform** — `NextWordController` (owns `Timer`, `@MainActor` dispatch, settings snapshot, query-generation counter).
 - **Contract** — Engine never reads clock; executor supplies `nowMs`. Scheduling = effect values (`rescheduleContextTimeout(after:)`, `cancelContextTimeout`). Prediction races eliminated by `currentGeneration` on both `queryPredictions` and `clearPredictionsUI` — late query results drop on generation mismatch.
 

@@ -44,13 +44,13 @@ iOS tab container: `App/ContentView.swift` (`TabView`). Android uses Jetpack Com
 
 ## Font Sizes (Apple HIG)
 
-| Use | Size | Method |
+| Use | Size | iOS (`App/Components/AppStyle.swift`) |
 |-----|------|--------|
-| Hero Title | 34pt | `themeFontHeroTitle()` |
-| Title | 24pt | `themeFontTitle()` |
-| Headline | 18pt | `themeFontHeadline()` |
-| Body | 17pt | `themeFontBody()` |
-| Caption | 14pt | `themeFontCaption()` |
+| Navigation large title | 34pt | `AppStyle.navBarLargeTitleSize` |
+| Navigation inline title | 22pt | `AppStyle.navBarInlineTitleSize` |
+| Headline / section header | 18pt | `AppStyle.headlineFont` / `AppStyle.sectionHeaderFont` |
+| Body | 17pt | `AppStyle.bodyFont` |
+| Caption | 17pt (aligned with body) | `AppStyle.captionFont` |
 
 ---
 
@@ -121,7 +121,7 @@ Previous Debug screens (`DebugView`, `DebugActivity`) were removed and replaced 
 
 ## Localization Architecture
 
-**Shipped in v3.6.4** (`changelog/mobile-v3.6.4.md`): every app-UI string is generated from the shared JSON source. `i18n/*.json` (one namespace per file — `common`, `nav`, `home`, `layout`, `dictionary`, `settings`, `keyboard`, `symbol`, `desktop`) → `make i18n` (`tools/i18n/generate.py`) → typed accessors on each platform:
+**Shipped in v3.6.4** (`changelog/mobile-v3.6.4.md`): every app-UI string is generated from the shared JSON source. `i18n/*.json` (one namespace per file — `common`, `nav`, `home`, `layout`, `theme`, `dictionary`, `settings`, `keyboard`, `symbol`, `desktop`) → `make i18n` (`tools/i18n/generate.py`) → typed accessors on each platform:
 
 - iOS: `Strings/Generated/{StringKey,GeneratedTaigiStrings,StringResolverFormats}.swift` + `Localizable.xcstrings`; resolved at runtime by `Strings/StringResolver.swift` against `Strings/DisplayLanguageStore.swift`.
 - Android: `i18n/generated/{L10n,StringKey,GeneratedTaigiStrings,StringResolverFormats}.kt`.

@@ -19,7 +19,7 @@
 
 | State | Purpose | Example |
 |-------|---------|---------|
-| `rawInput` | Trie search (numeric tone) | `gua2` |
+| `rawInput` | fst search (numeric tone) | `gua2` |
 | `composingText` | UI display (diacritics) | `guá` |
 
 ### Why Dual-State?
@@ -48,10 +48,11 @@
 
 ### deleteBackward Flow
 
-1. Attempt tone restoration (`guá`→`gua`)
-2. Success: rawInput deletes number, composingText updates
-3. Failure: both delete last character
-4. Special: `ⁿ` corresponds to `nn` in rawInput (2 characters)
+Engine `delete_backward_continuous` (`engine/composing/src/transition.rs`) edits `raw` only; the display text is re-derived, never edited.
+
+1. Pending tail non-empty: drop the raw char before the caret (a tone digit is one raw char, so `gua2`→`gua` renders `guá`→`gua`; `nn`/`ⁿ` is two raw chars) and re-render; pending and nailed both empty → exit to Idle
+2. Pending empty, nailed non-empty: unnail the last segment — its `raw_text` becomes the new pending tail
+3. Pending and nailed empty: exit to Idle
 
 ---
 
@@ -85,9 +86,9 @@ Composing engine state machine lives in Rust `engine/composing` (since v3.5.4 / 
 | FFI singleton + generation guard | Rust `engine/composing::EngineHandle` (read-only intents never reset — see below) |
 | Tone-mark application + POJ doubletap (`oo→o͘`, `nn→ⁿ`) | Rust `engine/phonetics` |
 | iOS bridge (9 text-input + 2 continuous-input ops) | `Engine/RustEngineBridge+Composing.swift` (composingStart / Append / AppendHyphen / ReplaceLast / DeleteBackward / CommitRaw / SelectCandidate / CommitPreeditThenInsertExternal / Reset + FetchAtPos / CommitContinuous) — one engine call per keystroke (R12) |
-| iOS platform wrapper | `Input/Composing/ComposingManager.swift` (Combine + KeyboardKit context wiring) |
+| iOS platform wrapper | `Input/Composing/ComposingManager.swift` (Observation + KeyboardKit context wiring) |
 | iOS effect interpreter | `Input/Composing/ComposingDelegate.swift` (`UITextDocumentProxy`) |
-| Android bridge | `engine/ComposingBridge.kt` (same 10 + 4 ops) |
+| Android bridge | `engine/ComposingBridge.kt` (same 9 + 2 ops) |
 | Android platform wrapper | `ime/text/composing/ComposingManager.kt` |
 | Android effect interpreter | `ime/text/composing/ComposingDelegate.kt` (`InputConnection`; **must zero composing region via `setComposingText("", 1)` before `finishComposingText()`** to honor `clearPreeditWithoutCommit` semantics) |
 

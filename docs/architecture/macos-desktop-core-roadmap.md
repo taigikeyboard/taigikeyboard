@@ -179,7 +179,7 @@ One phase = one PR. Size counts added and changed lines; a deletion-only diff ma
 
 | Phase | Type | Content | Est. | Status |
 |---|---|---|---|---|
-| P0 | docs | This roadmap, the inventory report, memory | — | this commit |
+| P0 | docs | This roadmap, the inventory report, memory | — | On main |
 | P1 | refactor (macOS) | Delete the dead Dictionary Search code and what only it kept alive (report S21), with their tests. Independent of the migration; first because it shrinks the bridge the later phases touch | −874 / +7 src measured (6 files deleted, 4 trimmed), tests −4 files +1 (est. −790) | Merged #342 `766e4921` |
 | P2 | build | Spike (D1); `macos/Cargo.toml` + `taigi-macos-ffi` with a version request; one archive; staging helper; feature forwarding; release profile; toolchain file (from P3: the archive build runs in `macos/` and needs its targets); iOS staging verified; Swift smoke test; `rust-ffi-safety.md` §1.1 names the seam | ~400 | Merged #343 `338e59b2` |
 | P3 | build | Tooling (D7): test selection, `macos.yml` native job, security workflow, lint, version script, `AGENTS.md` stale-artifact row | ~250 | Merged #344 `9c8004d5` |

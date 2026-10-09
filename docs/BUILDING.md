@@ -33,7 +33,7 @@ git clone --recurse-submodules --filter=blob:none \
 ## 2. Install the tools
 
 Rust comes from [rustup](https://rustup.rs). Each Rust workspace has its own
-`rust-toolchain.toml` (`engine/`, `desktop/`, `windows/`, `linux/`), so rustup
+`rust-toolchain.toml` (`engine/`, `desktop/`, `macos/`, `windows/`, `linux/`), so rustup
 picks the channel, components and cross targets on first use.
 
 `engine/rust-toolchain.toml` lists the iOS, macOS and Android targets, so the
@@ -89,6 +89,7 @@ make hooks          # pre-commit: gitleaks + personal-data checks on staged chan
 | Windows | on Windows: [`architecture/windows-release.md`](architecture/windows-release.md); elsewhere: `make windows-check` | included in `make windows-check` |
 | Linux | on Linux: `make -C linux build` (packages: `make -C linux deb`); on macOS: `make linux-check` | included in `make linux-check` |
 | Desktop-shared crates | `make desktop-check` | included |
+| macOS Rust workspace (`macos/crates`, the archive the app links) | `make macos-rust-check` | included |
 | Dictionary | `make dict` | `python3 -m pytest tests`, run inside `dictionary/` (needs the `taigi-converter` submodule) |
 | taigi-converter | — | `npm test` in `taigi-converter/` |
 

@@ -171,15 +171,15 @@ Per-intent exceptions are expressed in the engine's `Transition.effects` list, n
 
 ## 3. Where settings enter
 
-`derivedDisplay` needs `mode: InputMode` and `toneToggles: ToneToggles`. The split has three options; the design picks **(B)**.
+`derivedDisplay` needs `mode: InputMode` and `pojMarkerOptions: PojMarkerOptions`. The split has three options; the design picks **(B)**.
 
 - **(A) Inject at construction.** Simplest, but breaks live settings changes — the user toggles POJ↔TL or the OO/NN preprocess booleans in settings and the current composition renders wrong.
-- **(B) Pass per call.** `state.apply(intent, mode: settings.current.inputMode, toneToggles: settings.current.toneToggles)`. `ComposingState` stays settings-agnostic. The wrapper is the only place that reads `EngineSettingsProvider`. *Chosen.* Preserves invariant §11 (engine settings are live-read).
+- **(B) Pass per call.** `state.apply(intent, mode: settings.current.inputMode, pojMarkerOptions: settings.current.pojMarkerOptions)`. `ComposingState` stays settings-agnostic. The wrapper is the only place that reads `EngineSettingsProvider`. *Chosen.* Preserves invariant §11 (engine settings are live-read).
 - **(C) Keep `settingsProvider` inside the pure state.** Violates Foundation-only rule (`SharedSettings.shared` default). Rejected.
 
-Implication: every `apply` call on the wrapper side threads `mode` + `toneToggles` through. Cheap — value types, no copy problem.
+Implication: every `apply` call on the wrapper side threads `mode` + `pojMarkerOptions` through. Cheap — value types, no copy problem.
 
-`ToneToggles` lives alongside `EngineSettings` so every platform's `EngineSettings` exposes the same two flags; the engine receives them on `AppConfig` per request and `phonetics::normalize_tone` reads them there — no platform-side phonetics code remains in the composing path.
+`PojMarkerOptions` lives alongside `EngineSettings` so every platform's `EngineSettings` exposes the same three flags (OO / NN double-tap, nasal-marker case); the engine receives them on `AppConfig` per request and `phonetics::normalize_tone` reads them there — no platform-side phonetics code remains in the composing path.
 
 ---
 

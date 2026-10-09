@@ -32,7 +32,7 @@
 | primaryFontSize | 20 | 21 | 20 | 23 |
 | secondaryFontSize | 15 | 16 | 15 | 17 |
 
-(`CandidateTheme` also derives `tpsPrimaryFontSize` / `tpsSecondaryFontSize` from these.)
+(`CandidateTheme.resolved` multiplies these by `candidateTextSizeScale`; there is no TPS-specific size.)
 
 ---
 

@@ -41,8 +41,8 @@ Engine state machine lives in Rust `engine/composing` (since v3.5.4). Platform s
 |---------|-----------|-------|
 | **rawInput** | Numeric-tone ASCII preedit (e.g. `gua2`) — drives lexicon search-key | Rust `composing::Phase::Continuous { raw }` (the pending tail) |
 | **composingText** | Derived display text (e.g. `guá`) — Rust applies tone marks per `AppConfig.input_mode` | Rust `composing::derived` |
-| **ComposingState** | `Phase::Idle` or `Phase::Continuous { raw, caret, nailed }` | Rust `composing::EngineState` |
-| **Intent** | Input intents: text input (Start / Append / AppendHyphen / ReplaceLast / DeleteBackward / CommitRaw / SelectCandidate / CommitPreeditThenInsertExternal / Reset), continuous input (FetchAtPos / CommitContinuous), desktop editing keys (TelexKey / MoveCaret); `CommitDerived` / `EnterContinuous` / `ResetContinuous` were removed in R12 (tags 15 / 30 / 33 reserved) | Rust `composing::Intent` |
+| **ComposingState** | `Phase::Idle` or `Phase::Continuous { raw, caret, nailed, conversion }` | Rust `composing::EngineState` |
+| **Intent** | Input intents: text input (Start / Append / AppendHyphen / ReplaceLast / DeleteBackward / CommitRaw / SelectCandidate / CommitPreeditThenInsertExternal / Reset), continuous input (FetchAtPos / CommitContinuous), desktop keys (TelexKey / MoveCaret / TpsKey / CommitAsShown / CommitAsTyped) — 16 ops in `composing.proto` `oneof method`; `CommitDerived` / `EnterContinuous` / `ResetContinuous` were removed in R12 (tags 15 / 30 / 33 reserved) | Rust `composing::Intent` |
 | **Effect** | Platform-neutral effect enum (updatePreedit / clearPreeditWithoutCommit / commitTextReplacingPreedit / clearCandidates / refreshCandidates / resetCandidateContext / nextWord*; `deleteBackwardFromDocument` was removed in R12, tag 4 reserved) | Rust `composing::transition` |
 | **commitComposition** | Effect interpreter inserts derived text + clears preedit | iOS `ComposingDelegate.execute(_:)` / Android `ComposingDelegate` |
 | **markedText** | iOS inline composition display via `setMarkedText` | iOS `HostTextWriter.update(_:)` |
@@ -50,9 +50,9 @@ Engine state machine lives in Rust `engine/composing` (since v3.5.4). Platform s
 ### 2. Autocomplete (`engine/continuous-candidate-display.md`)
 | Keyword | Definition | Owner |
 |---------|-----------|-------|
-| **Suggestion** | A candidate word (text + title + subtitle + metadata) | iOS `Autocomplete.Suggestion` / Android `CandidateAdapter` |
+| **Suggestion** | A candidate word (text + title + subtitle + metadata) | iOS KeyboardKit `AutocompleteSuggestion` (built in `Candidates/Services/TaigiAutocompleteService.swift`) / Android `ime/text/candidates/CandidateStrip.kt` composable |
 | **InputType** | Retired 2026-09-30 with the `Search` op: the proto enum, `SearchRequest` and the in-process `SearchInputType` are gone; romanization queries go through `lexicon::search::search`, hanji queries through `search_by_hanji` | `engine/lexicon/src/search.rs` |
-| **composingTextSuggestion** | Position 0 candidate — always the current composing text | iOS `createComposingTextSuggestion()` |
+| **literalRomanCandidate** | The typed-text candidate (the romanization as typed), built in the engine; `FetchAtPos.literal_roman_candidate_disabled` (§34 / S22) gates it | `engine/protos/proto/composing.proto` (`literal_roman_candidate_disabled`), `engine/composing/src/requests.rs` |
 | **phraseSuggestion** | Learned phrase candidates inserted at position 1 | Rust `lexicon::lookup_associations` |
 | **searchKey** | fst lookup key (`tl:` / `poj:` / `hanzi:` prefix + normalized form) | Rust `phonetics::KeyFamily::search_key` (`hanzi:` = `phonetics::HANJI_KEY_PREFIX`) |
 
@@ -72,15 +72,15 @@ fst prefix index (replaced MARISA in v3.5.6) + dictionary/association mmap reade
 |---------|-----------|-------|
 | **fst prefix index** | `dictionary.fst` — Burntsushi `fst` crate, stores `key → rowid` for `tl:` / `poj:` / `hanzi:` keys | Rust `lexicon::prefix_index::PrefixIndex` |
 | **prefixSearch** | Iterate keys with a given prefix, returning rowid list | Rust `lexicon::search::search` |
-| **DictionaryReader** | Binary mmap reader: rowid → `DictionaryRecord {bitmask, frequency, hanji, tl, syllable_count, kautian_subtag}` | Rust `lexicon::dictionary_reader::DictionaryReader` |
+| **DictionaryReader** | Binary mmap reader: rowid → `DictionaryRecord {bitmask, frequency, hanji, tl, syllable_count, kautian_subtag, walker_cost}` | Rust `lexicon::dictionary_reader::DictionaryReader` |
 | **AssociationReader** | Binary mmap reader: prev_word → bigram entries | Rust `lexicon::association_reader::AssociationReader` |
 | **EnabledDictionaries** | Per-source toggle + 16-bit `source_bitmask` for filter | Rust `lexicon::dictionary_filters` (`DictionarySourceToggles` → `dictionary_filter_bitmask` / `association_bitmask`; replaced the deleted iOS / Android `EnabledDictionaries` files; bitmask layout from `binary-format.md`) |
 | **bitmaskFilter** | 16-bit source bitmask replaces SQL WHERE for dictionary filtering | Rust `lexicon::dictionary_reader::Filter` |
 | **InputNormalizer** | Converts any input form to TL numeric tone format | Rust `phonetics::normalization::normalize_input` |
 | **searchKey** | Normalized key format: prefix + lowercase, no hyphens, numeric tones (e.g. `tl:gua2si7`) | Rust `phonetics::KeyFamily::search_key` |
-| **scoringFormula** | `userFreqScore(×100) + completionPenalty(-1000) + closenessBonus(+500) + recencyBonus(+200) + exactBonus(+100) + baseFreqScore` | Rust `ranking::score` |
+| **scoringFormula** | Retired additive score (removed 2026-09-25). Ranking is the lexicographic `CandidateSortKey`: `coverage_kind`, `tier`, `-user_weight`, `context_rank`, `walker_cost`, `-score`, `-frequency`, `-coverage`, `source_rank`, `stable_idx` | Rust `ranking::sort_key::CandidateSortKey` (`engine/ranking/src/sort_key.rs`) |
 | **userFrequency** | Per-word usage count, dominates ranking. `user_frequency.db`, engine-owned; read inside `FetchAtPos`, written by `RecordUsage` | Rust `userdata::UserFrequencyStore` |
-| **timeDecay** | Exponential decay with 1-hour recency window for ranking-side bonus | Rust `ranking::score` constants (`RECENCY_WINDOW_MS=3_600_000`) |
+| **timeDecay** | Exponential decay of the user weight, `exp(−age / USER_WEIGHT_DECAY_TAU_MS)` (τ = 30 days); the 1-hour `RECENCY_WINDOW_MS` bonus is retired | Rust `ranking::score::decayed_user_weight_delta` (`USER_WEIGHT_DECAY_TAU_MS`) |
 
 ### 5. Segmentation — ARCHIVED (removed in v3.4.6)
 | Keyword | Definition | Notes |
@@ -171,10 +171,10 @@ NextWord state machine lives in Rust `engine/nextword` (since v3.5.5). Platform 
 ### App Screens (Main App, not keyboard extension)
 | Keyword | Tab | Description | Key View |
 |---------|-----|-------------|----------|
-| **HomeTab** | Tab 1 | Setup guide, feature overview | `ContentView` |
-| **LayoutTab** | Tab 2 | Keyboard layout preview & selection | `LayoutSettingsView` |
-| **DictionaryTab** | Tab 3 | Dictionary management | `DictionarySettingsView` |
-| **SettingsTab** | Tab 4 | Input mode, appearance, advanced settings | `SettingsView` |
+| **HomeTab** | Tab 1 | Setup guide, feature overview | `App/Tabs/Home/HomeTab.swift` (tabs hosted by `App/ContentView.swift`) |
+| **LayoutTab** | Tab 2 | Keyboard layout preview & selection | `App/Tabs/Layout/LayoutTab.swift` |
+| **DictionaryTab** | Tab 3 | Dictionary management | `App/Tabs/Dictionary/DictionaryTab.swift` |
+| **SettingsTab** | Tab 4 | Input mode, appearance, advanced settings | `App/Tabs/Settings/SettingsTab.swift` |
 
 ### Device Adaptation (`ui/device.md`)
 | Keyword | Definition |

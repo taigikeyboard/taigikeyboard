@@ -195,8 +195,8 @@ extension View {
 
 | Directory | Content |
 |-----------|---------|
-| `KeyboardViews/` | Keyboard UI implementation |
-| `KeyboardViews/View/UnifiedKey/` | Unified key system |
-| `KeyboardViews/Custard/` | Built-in Flick layouts |
+| `AzooKeyCore/Sources/KeyboardViews/` | Keyboard UI implementation |
+| `AzooKeyCore/Sources/KeyboardViews/View/UnifiedKey/` | Unified key system |
+| `AzooKeyCore/Sources/KeyboardViews/Custard/` | Built-in Flick layouts |
 | `MainApp/` | Main application UI |
 | `MainApp/Setting/` | Settings feature |

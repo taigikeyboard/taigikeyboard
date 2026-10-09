@@ -202,7 +202,7 @@ The panel is shown only under TPS. On macOS and Windows the user's wish is one s
 
 | Phase | Type | Scope | Builds / tests | Size | Status |
 |---|---|---|---|---|---|
-| P0 | docs | This roadmap, the `roadmap.md` row | — | — | In progress |
+| P0 | docs | This roadmap, the `roadmap.md` row | — | — | On main |
 | P1 | feat (engine) | D0: `TpsKey` in `composing.proto` and `transition.rs`, tests from the mobile key sequences in `behavioral-invariants.md` §31–§33, §41 | engine; `make build` for the mobile artifacts (additive — mobile sends nothing new) | ~250 | Merged #367 `a5174ed9` |
 | P2a | feat (desktop-core, not reachable) | D2 table (`keys/tps_layout.rs`), the `Keypad` slot set, the `TpsKey` and `TlDisplayToTps` bridge calls, `ComposingManager::tps_key` (answers whether the key was taken), keypad key codes on Linux and macOS; tests only. The D4 sites need the variant and move to P2b | desktop-core, Windows, Linux, the macOS Rust seam, `make -C macos test` | ~400 | Merged #368 `07968d0a` |
 | P2b | feat (desktop-core, Windows, Linux) | D1 + D3 + D4: the variant, the classifier branch, the presentation / executor / settings sites, the exhaustive and wildcard matches with their mode labels, i18n scope. Windows and Linux type TPS from the settings picker. Switch Romanization leaves TPS for TL (`InputMode::toggled_romanization`) until P3 remembers the last romanization; the display switches and the Telex guide are inert under TPS (`ShortcutAction::is_inert_under`) | as P2a | ~550 | Merged #372 `4a47c933` |

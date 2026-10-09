@@ -243,15 +243,13 @@ message RefreshCandidates {}
 message ResetCandidateContext {}
 ```
 
-- **Intent set mirrors the platform `ComposingState.Intent`** sealed type exactly:
-  - **iOS**: `ComposingState.swift:18-60` (`Intent` enum, 10 cases).
-  - **Android**: `ime/text/composing/ComposingState.kt:47-106` (`Intent` sealed class, 10 cases).
+- **Intent set = the `oneof method` of `ComposingRequest`** in `engine/protos/proto/composing.proto` — 16 ops: 9 text-input mutators (tags 10-19), 2 continuous-input ops (31-32), 5 desktop key ops (40-44: `TelexKey`, `MoveCaret`, `TpsKey`, `CommitAsShown`, `CommitAsTyped`). Historical: it mirrored the platform `ComposingState.Intent` sealed types (iOS `ComposingState.swift`, Android `ime/text/composing/ComposingState.kt`, 10 cases each); both files were deleted when composing moved into the engine.
 - Why each intent is on the wire (not collapsed into fewer):
-  - `Start` vs `Append` — `Append` becomes `Start` when idle but the explicit `Start` is what platform code emits at composition begin (caret reset semantics differ — see iOS `case start` at `ComposingState.swift:25` and Android `data class Start` at `ComposingState.kt:49-51`).
+  - `Start` vs `Append` — `Append` becomes `Start` when idle but the explicit `Start` is what platform code emits at composition begin (caret reset semantics differ — see `message Start` in `composing.proto` and its handling in `engine/composing/src/transition.rs`).
   - `AppendHyphen` — semantic alias kept distinct so platform call-sites don't synthesize `"-"` strings on the wire.
-  - `ReplaceLast` — TPS auto-correct (`ActionHandler+KeyActions.swift:37-39` iOS, `TextInputManager.kt:850,855` Android).
+  - `ReplaceLast` — TPS auto-correct (`ActionHandler+KeyActions.swift:40` iOS, `ime/text/keyboard/TextInputKeyHandler.kt:527` Android).
   - `CommitDerived` vs `CommitRaw` — historical split (derived = tone-marked form, raw = literal numeric form). `CommitDerived` left the wire in R12 (2026-10-01, tag 15 reserved); `CommitRaw` (Enter) commits the whole derived composition, and the literal-numeric commit went with the single-segment `Composing` phase.
-  - `CommitPreeditThenInsertExternal` — emoji palette / clipboard paste atomic write (`MediaInputManager.kt:155` Android; iOS emoji delegate). Splitting into commit + insert reintroduces the silent-finish-composing race this intent was added to prevent.
+  - `CommitPreeditThenInsertExternal` — emoji palette / clipboard paste atomic write (`MediaInputManager.kt:161` Android; iOS emoji delegate). Splitting into commit + insert reintroduces the silent-finish-composing race this intent was added to prevent.
 - Mirrored the `ComposingTransition` / `Effect` shape iOS + Android had in Phase II (both files deleted when composing moved into the engine; the shape now lives in `composing.proto` `message Effect` and `engine/composing/src/transition.rs`):
   - **iOS** (historical): `ComposingTransition.swift` — full `Effect` enum.
   - **Android** (historical): `ime/text/composing/ComposingTransition.kt` — parallel sealed class shape.
@@ -339,4 +337,4 @@ message CaseResponse {
 - `docs/architecture/behavioral-invariants.md:295-309` (§11 settings live-read)
 - `docs/architecture/nextword-engine-boundary.md` §2, §2.4, §3 — generation counter ownership
 - `docs/architecture/composing-state-boundary.md` §11.10 — Android `Effect` divergences
-- `ios/Sources/TaigiKeyboard/Input/Composing/ComposingState.swift:47-49` — `selectCandidate(String)` shape
+- `engine/protos/proto/composing.proto` `message SelectCandidate { string text = 1; }` — the `select_candidate` shape (historical: iOS `ComposingState.swift:47-49` `selectCandidate(String)`, file deleted)

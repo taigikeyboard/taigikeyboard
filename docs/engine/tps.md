@@ -28,7 +28,7 @@ Since v3.5.1 (PR #186) all TPS conversion + key-level auto-adjust lives in Rust 
 | Bridge — TL → TPS | `RustEngineBridge.tlNumericToTPS(_)` / `tlDisplayToTPS(_)` (TPS → TL stays Rust-internal — `phonetics::tps_to_tl` is consumed only by `phonetics::tps_adjust` for syllable validation; C-1 retired the `lexicon::classify_input` consumer and C-3b retired the `composing::continuous` fold; no FFI surface) |
 | Bridge — input adjust | `RustEngineBridge.tpsInputAdjust(incoming:rawInput:)` returning `(adjusted, replaceLast?)` |
 | iOS TPS-aware glue | `Layout/TaigiLayouts.swift` (layout def), `Settings/SharedSettings.swift` (`.tps` type), `Candidates/Views/CandidateCellHelper.swift` (candidate TPS display), `Input/CharacterInputPipeline.swift` (calls bridge) |
-| Android TPS-aware glue | `ime/text/CharacterInputPipeline.kt`, `ime/text/TextInputManager.handleTaigiInput()`, layout JSON under `ime/text/characters/tps*.json` |
+| Android TPS-aware glue | `ime/text/CharacterInputPipeline.kt`, `ime/text/keyboard/TextInputKeyHandler.handleTaigiInput()`, layout JSON under `ime/text/characters/tps*.json` |
 
 ---
 
@@ -201,7 +201,7 @@ let r = RustEngineBridge.tpsInputAdjust(incoming: "ㄇ", rawInput: "ㄅㄚ")
 // r.adjusted = "ㆬ", r.replaceLast = nil
 ```
 
-Internally the iOS / Android `CharacterInputPipeline` calls `RustEngineBridge.tpsInputAdjust` once per keystroke from `ActionHandler+KeyActions.handleCharacterInput` (iOS) / `TextInputManager.handleTaigiInput()` (Android) — no platform-side phonetic logic remains.
+Internally the iOS / Android `CharacterInputPipeline` calls `RustEngineBridge.tpsInputAdjust` once per keystroke from `ActionHandler+KeyActions.handleCharacterInput` (iOS) / `TextInputKeyHandler.handleTaigiInput()` (Android) — no platform-side phonetic logic remains.
 
 ---
 
@@ -325,7 +325,7 @@ When the user taps ㄇ or ㄫ, `tps_adjust::adjust_initial_key()` checks the las
 | Platform | Helper | Call site |
 |----------|--------|-----------|
 | iOS | `RustEngineBridge.tpsInputAdjust` (Rust `phonetics::tps_adjust::adjust_initial_key` under the hood) | `ActionHandler+KeyActions.handleCharacterInput` |
-| Android | `RustEngineBridge.tpsInputAdjust` (Kotlin shim with same Rust backend) | `TextInputManager.handleTaigiInput()` |
+| Android | `RustEngineBridge.tpsInputAdjust` (Kotlin shim with same Rust backend) | `TextInputKeyHandler.handleTaigiInput()` |
 
 ### Syllabic Nasal Tone-Triggered Correction (v3.4.7)
 
@@ -340,38 +340,9 @@ When a tone mark follows bare ㄇ or ㄫ at syllable start, the consonant is ret
 
 ---
 
-## Font Size Adjustment
+## Font Size
 
-Phonetic symbols are visually larger than romanization, TPS mode reduces font size by 15%.
-
-### Scale Ratio
-
-| Type | Scale Ratio |
-|------|-------------|
-| Regular candidates | 0.85x |
-| Long-word candidates | 0.85x |
-
-### Implementation Location
-
-`CandidateViewModels.swift`:
-- `tpsScale = 0.85` - TPS scale ratio
-- `tpsPrimaryFontSize` - TPS title font
-- `tpsSecondaryFontSize` - TPS subtitle font
-- `tpsLongCellPrimaryFontSize` - TPS long-word title font
-- `tpsLongCellSecondaryFontSize` - TPS long-word subtitle font
-
-`CandidateCellHelper.swift`:
-- `titleFontSize(isHanjiFirst:)` - Regular candidate title
-- `subtitleFontSize(isHanjiFirst:)` - Regular candidate subtitle
-- `longCellTitleFontSize(isHanjiFirst:)` - Long-word title
-- `longCellSubtitleFontSize(isHanjiFirst:)` - Long-word subtitle
-
-### Scale Logic
-
-| isHanjiFirst | Title Scale | Subtitle Scale |
-|-------------------|-------------|----------------|
-| false (default) | Yes (displays phonetic) | No (displays hanzi) |
-| true | No (displays hanzi) | Yes (displays phonetic) |
+There is no TPS-specific candidate font sizing any more: TPS candidates use the same sizes as every other layout — iOS `CandidateTheme.primaryFontSize` / `secondaryFontSize` (`Candidates/Models/CandidateTheme.swift`, per-device base × `candidateTextSizeScale`), Android `computeCandidateFontSizes` (`ime/text/candidates/CandidateStrip.kt`). The former 0.85× TPS scale (`tpsScale` / `tps*FontSize` in `CandidateViewModels.swift`) no longer exists.
 
 ---
 
@@ -403,8 +374,8 @@ Non-palatalized affricates (ㄗ/ㄘ/ㄙ/ㆡ) followed by ㄧ or ㆪ are auto-cor
 **Implementation**: Rust `phonetics::tps_adjust::palatalization_replacement` (via `RustEngineBridge.tpsInputAdjust`).
 
 Called from:
-- iOS: `ActionHandler+CharacterInput.swift`
-- Android: `TextInputManager.handleTaigiInput()`
+- iOS: `ActionHandler+KeyActions.swift` (`handleCharacterInput`)
+- Android: `TextInputKeyHandler.handleTaigiInput()`
 
 ### Nasalized Vowel Auto-Correct
 

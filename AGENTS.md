@@ -62,6 +62,7 @@ Full setup: [`docs/BUILDING.md`](docs/BUILDING.md). **Bootstrap**: clone with `-
 | macOS | `make -C macos build` (`install` before dogfood) | `make -C macos test` |
 | Windows | `make windows-check` (host gate; TSF DLL builds only on Windows — `docs/architecture/windows-release.md`) | included |
 | Linux | `make linux-check` (host gate; `.deb` via `make -C linux deb` — `docs/architecture/linux-release.md`) | included |
+| desktop-shared / macOS Rust crates | `make desktop-check` (`desktop/`) · `make macos-rust-check` (`macos/crates`) | included |
 | taigi-converter | — | `npm test` in `taigi-converter/` |
 
 **Stale-artifact gate — run before every iOS / Android / macOS build+test** (stale binaries give false-green tests):

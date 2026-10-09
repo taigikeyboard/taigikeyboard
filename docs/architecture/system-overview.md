@@ -188,7 +188,7 @@ Engine search ownership on the fetch step: `phonetics::KeyFamily::search_key` (c
 | NextWord glue | `ime/text/nextword/NextWordController.kt` | same as Windows (write-and-rank, no prediction surface on any desktop) | `taigi-desktop-core::composing::next_word` + `engine::nextword` (the engine records into `user_association.db`) | same as Windows |
 | Settings | `ime/settings/PrefHelper.kt` (DataStore) + `ime/settings/EngineSettings.kt` | `Settings/SettingsStore.swift` (UserDefaults); each request carries the key-path settings as a snapshot (`taigi-macos-ffi` `settings.rs`) | `taigi-desktop-core::settings` (`keys.rs`) + `taigi-desktop-storage::settings_file` | same as Windows; paths from `taigi-linux-platform::paths` (XDG) |
 
-State machine on every platform: the engine's `composing::api::Phase` is `Idle` / `Composing` / `Continuous` (`engine/composing/src/api.rs`; `Continuous` also holds the nailed segments). Input leaves `Idle`; candidate select / Space / Enter / delete-to-empty return to it; semantics pinned in `behavioral-invariants.md` §13.
+State machine on every platform: the engine's `composing::api::Phase` is `Idle` / `Continuous { raw, caret, nailed, conversion }` (`engine/composing/src/api.rs`). Input leaves `Idle`; candidate select / Space / Enter / delete-to-empty return to it; semantics pinned in `behavioral-invariants.md` §13.
 
 ### Desktop keyboard layouts
 

@@ -41,7 +41,7 @@ One Rust engine (`engine/`) holds phonetics, composing, lexicon, and ranking. Ea
 | `macos/` | Swift + InputMethodKit |
 | `windows/` | Rust + Text Services Framework |
 | `linux/` | Fcitx5 addon (C++) and IBus engine (Rust) |
-| `desktop/` | Rust crates shared by Windows and Linux |
+| `desktop/` | Rust crates shared by macOS, Windows and Linux |
 | `dictionary/` | Dictionary sources and build pipeline |
 
 ## Building

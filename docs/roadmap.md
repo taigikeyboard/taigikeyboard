@@ -3,14 +3,14 @@
 > **Type**: Planning (forward-looking)
 > **Keywords**: `roadmap`, `planning`, `released versions`, `release trains`
 > **Status**: Active
-> **Last updated**: 2026-10-02 (macOS over desktop-core planned). 2026-10-01: maintainability audit follow-up complete. 2026-09-30: mobile v3.6.10 / v3.6.11 rows; bigram LM closed. 2026-09-26: Active items all merged — collapsed into Closed phases; design bodies frozen in `docs/reports/2026-09-26-shipped-roadmap-design-notes.md`
+> **Last updated**: 2026-10-09 (released-versions rows mobile v3.6.12 / v3.6.13 and desktop v3.7.0; E1 complete). 2026-10-02: macOS over desktop-core planned. 2026-10-01: maintainability audit follow-up complete. 2026-09-30: mobile v3.6.10 / v3.6.11 rows; bigram LM closed. 2026-09-26: Active items all merged — collapsed into Closed phases; design bodies frozen in `docs/reports/2026-09-26-shipped-roadmap-design-notes.md`
 
 ---
 
 ## Summary
 
 - **Forward-looking work items only.** Shipped detail lives in `docs/releases/<version>/plan.md` + `changelog/mobile-<version>.md`.
-- **Active**: E1 P5 (P5a edge pick → P5b list sort), § Active / In-flight items. Pending dogfood is tracked in `docs/architecture/dogfood-checklist.md`.
+- **Active**: nothing in flight (§ Active / In-flight items); the 2026-10-09 maintainability follow-up is proposed, not started. Pending dogfood is tracked in `docs/architecture/dogfood-checklist.md`.
 - **Open candidates**: every unfinished, parked or brainstorm item across the roadmaps and reports is listed once in § Open candidates (unscheduled), with a link to its design.
 - **Release scope / timing / tag is the maintainer's call.**
 
@@ -30,6 +30,9 @@ Newest first. Two trains since 2026-09: mobile `mobile-x.y.z` (iOS + Android) an
 
 | Version | Ship date | Release notes | Detailed plan archive |
 |---|---|---|---|
+| desktop v3.7.0 | 2026-10-09 (`desktop-3.7.0` @ `6af77493`) | [`changelog/desktop-v3.7.0.md`](../changelog/desktop-v3.7.0.md) | — (Phonetic Symbols input with Hanji conversion and the key chart on macOS / Windows / Linux; continuous input on one corpus; Learning Records page; Syllable Separator; Keyboard Layout QWERTY / Dvorak / Colemak; user data in the engine on every desktop; macOS / Windows upgrade from v3.6.9, Linux from v3.6.10) |
+| mobile v3.6.13 | 2026-10-07 (`mobile-3.6.13` @ `bd6900fc`) | [`changelog/mobile-v3.6.13.md`](../changelog/mobile-v3.6.13.md) | — (Learning Records page; Syllable Separator replaces No Hyphens; nasal-mark picker for POJ capitals; Manage Dictionaries page; settings regrouped) |
+| mobile v3.6.12 | 2026-10-01 (`mobile-3.6.12` @ `a872bdad`) | [`changelog/mobile-v3.6.12.md`](../changelog/mobile-v3.6.12.md) | — (word-level next-word suggestions; a continuous composition learned as one sequence; candidates ranked by the previous word; all dictionaries off offers no dictionary candidates) |
 | mobile v3.6.11 | 2026-09-29 (`mobile-3.6.11` @ `cb410a17`) | [`changelog/mobile-v3.6.11.md`](../changelog/mobile-v3.6.11.md) | — (Android 3.6.10 upgraders get the custom dictionary + frequency back; `association.bin` v2 word pairs; collapsible theme preview) |
 | mobile v3.6.10 | 2026-09-28 (`mobile-3.6.10` @ `1da2ebaa`, re-cut; first cut `ec5fe549` 2026-09-27) | [`changelog/mobile-v3.6.10.md`](../changelog/mobile-v3.6.10.md) | — (one-handed mode, photo theme background, learned phrases, typed separators, No Hyphens, user data in the engine; mobile skips v3.6.9) |
 | desktop v3.6.10 | 2026-09-24 (`desktop-3.6.10` @ `f6f00b47`, Linux-only patch; macOS / Windows stay on 3.6.9) | [`changelog/desktop-v3.6.10.md`](../changelog/desktop-v3.6.10.md) | — (Fcitx5 selection keys, vertical-window arrow keys, Linux Fonts pane removed) |

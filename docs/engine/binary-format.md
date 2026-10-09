@@ -422,7 +422,7 @@ The build pipeline must:
 
 | Format | Test |
 |---|---|
-| `dictionary.bin` (content count) | iOS `DictionaryContentTests` (no Android counterpart) |
+| `dictionary.bin` (record layout, `record_count` header) | Rust `engine/lexicon/tests/dictionary_reader_v4.rs` |
 | `dictionary.bin` (parser) | Rust `engine/lexicon/tests/parity.rs` |
 | `association.bin` | Rust `engine/lexicon/tests/parity.rs` (filter), `tests/association_v2.rs` (namespaces, v1 rejection) |
 | `dictionary.fst` | Rust `engine/lexicon/tests/parity.rs` (round-trip a sentinel key set) |

@@ -14,10 +14,10 @@ table: `docs/architecture/linux-roadmap.md`.
 | `crates/taigi-linux-ffi` | staticlib (the one `unsafe` crate) | The C ABI (`include/taigikeyboard.h`) the Fcitx5 addon calls: opaque runtime / engine handles, a key in, a reply of effects out. |
 | `fcitx5/` | C++ addon `libtaigikeyboard.so` (CMake) | The Fcitx5 shell: `InputMethodEngineV3` over the C ABI — client preedit, commit, candidate list, status area. Built only on Linux (`make build-fcitx5`) and in CI. |
 | `crates/taigikeyboard-ibus` | bin `ibus-engine-taigikeyboard` | The IBus shell: bus discovery, `org.freedesktop.IBus.Factory` + `Engine` objects (zbus), hand-serialised IBus wire types, replaying `taigi-linux-core`. |
-| `crates/taigikeyboard-settings` | lib + bin `taigikeyboard-settings` | The settings window (GTK 4 + libadwaita): 一般 / 外觀 / 快速齒 / 詞庫來源 / 自訂詞庫 / 關於 (+ unlisted 辭典搜尋); `tests/panes.rs` mounts the whole window. |
+| `crates/taigikeyboard-settings` | lib + bin `taigikeyboard-settings` | The settings window (GTK 4 + libadwaita): General / Appearance / Shortcuts / Dictionary Sources / Custom Dictionary / Learning Records (+ unlisted Dictionary Search and About); `tests/panes.rs` mounts the whole window. |
 | `data/taigikeyboard.xml.in` | component XML | What ibus-daemon reads to know the engine exists (`make component` renders the prefix). |
 | `data/tw.taigikeyboard.Settings.desktop`, `data/icons/` | launcher entry + hicolor icons | The settings window in the app grid; the icons are generated with the other desktops' by `tools/desktop/make-app-icon.swift`. |
-| `packaging/control.in` | Debian control | `make deb` packs the install layout with dpkg-deb (`docs/architecture/linux-release.md`). |
+| `packaging/control.in`, `packaging/taigikeyboard.spec.in`, `packaging/PKGBUILD.in` (+ `shlibdeps-control`, `copyright-header`) | Debian control, RPM spec, Arch PKGBUILD templates | `make deb` / `make rpm` / `make arch` pack the same install layout (`docs/architecture/linux-release.md`). |
 
 Behaviour oracle is `taigi-desktop-core` and its tests (`../desktop`), shared
 with macOS and Windows; the Windows port (`../windows`) is the shell-code
@@ -42,8 +42,8 @@ and an `ibus-daemon` smoke; the dogfood run-book in the roadmap owns the rest.
 ## System packages
 
 Build dependencies, as the CI jobs in `.github/workflows/linux-build.yml`
-install them (plus Rust from rustup and protoc 36.0 — `mise install` at the
-repository root):
+install them (plus Rust from rustup and protoc 36.2, the `mise.toml` pin — `mise install` at the
+repository root; CI installs 36.1 for the prost builds, which accept either):
 
 ```sh
 # Ubuntu / Debian

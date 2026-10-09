@@ -44,7 +44,7 @@ Sub-primitives:
 - `strip_tone_mark(text) -> (bare_NFC, tone_digit)` — ASCII fast-path strips a trailing `1..=9`; non-ASCII path NFD-decomposes and finds the combining mark. `0` is **not** a tone.
 - `split_initial_final(text) -> Option<(initial, final)>` — accepts only when `initial ∈ TL_INITIALS` AND `final ∈ TL_FINALS` (input must be pre-lowercased + TL-normalized).
 - `is_valid_syllable(token) -> bool` = `canonicalize_syllable(token).is_some()`.
-- `is_roman_acronym_key(body) -> bool` — true when every char is an ASCII consonant AND the body does NOT `splits_into_syllables`. The continuous partial-prefix path uses it to drop acronym surfaces; the two-condition gate deliberately keeps fused nasals (`tngtng`, `mngkng`) and syllabic-nasal singles (`m`, `ng`).
+- Acronym (all-consonant abbreviation) surfaces are no longer filtered here: abbreviation keys live in their own `*-abbrev:` key family (`phonetics::KeyFamily`, `lexicon::prefix_index`), so a `tl:` prefix scan never meets them. Fused nasals (`tngtng`, `mngkng`) and syllabic-nasal singles (`m`, `ng`) stay ordinary syllable keys.
 
 **Normalization tables (order is load-bearing):** `NORMALIZE_TO_TL_RULES` = `ch→ts, ou→oo, o͘→oo, ⁿ→nn, oa→ua, oe→ue, eng→ing, ek→ik, oonn→onn` (`oonn` after `oo`). `normalize_to_tl_keep_tl_finals` drops `eng→ing`/`ek→ik` to preserve real TL finals `eng`/`ek`. POJ variants: `NORMALIZE_TO_POJ_RULES` (per-syllable) + `NORMALIZE_TO_POJ_GLYPH_RULES` (whole-buffer glyph-only).
 

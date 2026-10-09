@@ -1,8 +1,9 @@
 # dictionary/
 
 TaigiKeyboard's dictionary data pipeline. Builds the runtime artefacts
-(`dictionary.bin` / `dictionary.fst` / `association.bin`) that both iOS
-and Android consume. Each binary is generated directly from the canonical
+(`dictionary.bin` / `dictionary.fst` / `syllables.fst` / `association.bin`)
+that every platform — iOS, Android, macOS, Windows, Linux — packages from
+the repo-root `assets/dictionaries/`. Each binary is generated directly from the canonical
 `dictionary.csv` — no SQLite intermediates (removed in v3.5.6 part 2).
 
 ## Layout
@@ -12,12 +13,14 @@ dictionary/
 ├── run.sh                     # Pipeline entry point — regenerate per-source CSVs
 ├── build.sh                   # Build entry point — produces output/ + deploys to the repo-root assets/dictionaries/
 ├── baseline.json              # Parity gate reference (compare_baseline.py verify)
+├── word-keys.tsv              # Committed (hanzi, tl) key set — build.sh step 7 rewrites it and diffs against the previous release tag's copy
 ├── requirements.txt           # Python deps
 │
 ├── pipeline/                  # Shared pipeline driver (discover_configs + run_dict)
 ├── common/                    # Stage implementations + shared helpers (source_bits, romanization, …)
 ├── build/                     # Build stage scripts (merge_csv, create_fst, create_*_bin, …)
 ├── tools/                     # Dev utilities (compare_baseline, verify_csv, query_fst)
+├── tests/                     # Pipeline unit tests (python3 -m pytest tests/)
 │
 ├── sources/                   # Per-source dictionary inputs (see sources/README.md)
 │   ├── official/{kautian,taigitv,kungge,stti}/
@@ -34,6 +37,7 @@ dictionary/
 │   ├── khiin_frequency.csv    # Khiin frequency supplement
 │   ├── word_bigrams.tsv       # Corpus cross-word pair counts (build/corpus_bigrams.py)
 │   ├── word_unigrams.tsv      # Corpus word counts (same run)
+│   ├── romanized_readings.tsv # Reading → hanji for words Han-Lo sources write in romanization (corpus_bigrams)
 │   └── khiin_conversions.csv  # Khiin conversion table
 │
 ├── output/                    # Generated build artefacts
@@ -90,15 +94,15 @@ original URLs.
 | `run.sh`                         | Thin wrapper → `python3 -m pipeline.run`                     |
 | `pipeline/run.py`                | Discover `sources/*/*/config.yaml`, run staged pipeline      |
 | `pipeline/context.py`            | `PipelineContext` threaded through every stage               |
-| `common/stages/*.py`             | Individual stage implementations (12 stages total)           |
+| `common/stages/*.py`             | Individual stage implementations (14 stages total)           |
 | `common/source_bits.py`          | Authoritative SOURCE_BITS / SOURCE_TIERS / column orders     |
 | `build/merge_csv.py`             | Merge 9 per-source CSVs + khiin/dev/lkk supplements          |
 | `build/dictionary_records.py`    | Shared loader — CSV → filtered records with rowids 1..N      |
 | `build/associations.py`          | Shared bigram + char-to-phrase generator from dictionary.csv |
 | `build/create_fst.py`            | fst prefix index from CSV (shells to engine/build-helpers/fst-builder) |
-| `build/create_{dictionary,association}_bin.py` | Binary mmap formats consumed by mobile apps |
+| `build/create_{dictionary,association}_bin.py` | Binary mmap formats the engine reads on every platform |
 | `build/verify_poj_integrity.py`  | Fatal POJ-integrity gate — halts build if `poj`/derived ≠ `convert_tl_to_poj(tl)` (+ KeSi report-only) |
-| `build/version_snapshot.py`      | Build-drop summary + `(hanzi, tl)` diff vs the previous release tag's `dictionary.csv` (read via `git show`; no snapshot file stored) |
+| `build/version_snapshot.py`      | Build-drop summary + `(hanzi, tl)` diff vs the previous release tag's `word-keys.tsv` (read via `git show`; writes the committed `word-keys.tsv`) |
 | `tools/compare_baseline.py`      | Parity gate — SHA256 + CSV-derived semantic diff vs baseline.json |
 | `tools/verify_csv.py`            | CSV character-validity + duplicate sanity checker            |
 | `tools/query_fst.py`             | Query the compiled fst prefix index (dev debug)              |
@@ -107,14 +111,17 @@ original URLs.
 
 `build.sh` step 7 (`version_snapshot`) prints a build-drop summary (raw →
 dedup → supplements → final) plus a `(hanzi, tl)`-entry diff (added / removed)
-against the **previous release tag's** `dictionary/output/dictionary.csv`. That
-CSV is already git-tracked and committed at every release tag, so the previous
-release is read straight from git (`git show <tag>:…`) — no separate snapshot
-file is stored. Full added+removed lists land in `output/version_diff.txt`
-(ephemeral, gitignored).
+against the **previous release tag**. The diff basis is the committed
+`dictionary/word-keys.tsv` — the sorted `(hanzi, tl)` key set step 7 rewrites
+on every build (3.1 MB, where the full `dictionary.csv` is 35 MB) — and the
+previous release's copy is read straight from git
+(`git show <tag>:dictionary/word-keys.tsv`), so `output/` never has to be
+committed for the diff to work. Full added+removed lists land in
+`output/version_diff.txt` (ephemeral, gitignored).
 
-Diff-base resolution is semver-aware (**3-segment `vX.Y.Z` tags only**; a
-4-segment tag like `v3.4.8.1` is ignored):
+Diff-base resolution is semver-aware (**3-segment `vX.Y.Z` / `mobile-X.Y.Z`
+tags only**; a 4-segment tag like `v3.4.8.1` is ignored, and `desktop-*` tags
+never match — the desktop train ships no dictionary of its own):
 
 ```bash
 RELEASE_VERSION=v3.6.0 ./build.sh   # diff base = newest tag strictly < v3.6.0
@@ -139,6 +146,8 @@ To inspect a previous release's full dictionary directly:
 - **Binary format reference**: `../docs/engine/binary-format.md` documents
   `dictionary.bin` / `association.bin` on-disk layout.
 - **Cross-platform invariant**: `SOURCE_BITS` + `SOURCE_TIERS` + tier
-  denominator in `common/source_bits.py` must mirror the iOS/Android
-  `DictionaryBinaryReader.{swift,kt}` and `CandidateProcessor.{swift,kt}`.
+  denominator in `common/source_bits.py` must mirror the engine —
+  `engine/lexicon/src/dictionary_filters.rs` (`SOURCES` / `source_codes`,
+  the bit → source-code decode every platform reads) and
+  `engine/ranking/src/score.rs::source_tier_rank`.
   `docs/contributing/cross-platform-alignment.md` §3a governs drift.

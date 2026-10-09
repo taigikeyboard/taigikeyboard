@@ -9,12 +9,12 @@
 ## Summary
 
 - Engine binaries (xcframeworks, `jniLibs/*.so`, platform protos) are **generated** by `make build` and gitignored.
-- The dictionary artifacts (`assets/dictionaries/`) and the typefaces (`assets/fonts/font/`) are **committed once** and packaged natively by all four platforms.
+- The dictionary artifacts (`assets/dictionaries/`) and the typefaces (`assets/fonts/font/`) are **committed once** and packaged natively by all five platforms.
 - `AGENTS.md` keeps only the bootstrap table and the stale-artifact gate; the rationale and the timings live here.
 
 ## Typefaces
 
-The typefaces are committed, once, at `assets/fonts/font/` — all four platforms package that directory (Android through a `res` source dir in `android/app/build.gradle.kts`, the other three by copying it), so nothing has to be staged before a build.
+The typefaces are committed, once, at `assets/fonts/font/` — all five platforms package that directory (Android through a `res` source dir in `android/app/build.gradle.kts`, the other four by copying it — Linux at `make -C linux install`), so nothing has to be staged before a build.
 
 ## Submodule
 
@@ -22,7 +22,7 @@ Clone with `--recurse-submodules`, or run `git submodule update --init --recursi
 
 ## Dictionary artifacts
 
-The dictionary artifacts are committed, once, at `assets/dictionaries/` — all four platforms package that directory the same way the typefaces are (Android through an `assets` source dir, iOS through an Xcode synchronized folder, macOS and Windows by copying it), so nothing has to be staged before a build.
+The dictionary artifacts are committed, once, at `assets/dictionaries/` — all five platforms package that directory the same way the typefaces are (Android through an `assets` source dir, iOS through an Xcode synchronized folder, macOS and Windows by copying it, Linux at `make -C linux install`), so nothing has to be staged before a build.
 
 They stay committed at all because that is the USER's standing instruction (2026-09-07: "do not touch the dictionary/ folder at all"), not a technical limit; `make dict` does reproduce them from a clean checkout: `dictionary/build.sh` writes them into `dictionary/output/`, where the four shipped files are untracked scratch (`dictionary.csv` and `walker_lm_stats.txt` there stay tracked), and `dictionary/build/deploy.sh` then copies them to `assets/dictionaries/`.
 

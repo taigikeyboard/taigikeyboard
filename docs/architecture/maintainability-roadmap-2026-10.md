@@ -22,7 +22,7 @@ Each PR 200–500 LOC. Pre-gates per `~/.claude/rules/round-workflow.md`; Codex 
 
 | # | Round | Type · pre-gate | PRs | Status |
 |---|---|---|---|---|
-| H | Docs drift — `linux-release.md` High row, then Appendix D Med + Low | admin lane, direct to main | — | Pending |
+| H | Docs drift — `linux-release.md` High row, then Appendix D Med + Low | admin lane, direct to main | — | Done 2026-10-09 (direct to main; 50 rows: 48 fixed, `theme.md:80` refuted — KeyboardKit colour exists, `macos-desktop-core-roadmap.md:3` not a status cell) |
 | A1a | Dead wire, composing / lexicon: `CandidateMessage` 1/5/6/7 + `script_kind` chain, pre-R6 TPS wire + `tps_wire_equivalence.rs`, `SelectCandidate(text)` (after a ≤20-line producer trace), stale proto comments; tags `reserved`, `make protos` | refactor · freeze list · `refactor-reviewer` | 1 | Pending |
 | A1b | Dead wire, phonetics / userdata / nextword / envelope: `TlNumericToTps`, `LearningRecordKind.ASSOCIATION` + `previous_*`, `platform_id` reader + desktop `platform` threading, `length_score`, `EnginePrediction.score`, `UserDataReset.*_removed`, `created_at` / `updated_at`, `RecordUsage.hanji`, `Response.generation`, dead phonetics helpers, duplicate TPS tone-mark predicate, backup `origin` skip | refactor · freeze list · `refactor-reviewer` | 1 | Pending |
 | A2 | Platform dead code: `displayText` fallback ×2, iOS `isRawInput`, iOS `TaigiWord.swift`, `diagnostics()` rings ×3 (log line stays), dead members, test-only `pub`, unused parameters, macOS never-shipped cleanup keys, R12 KDocs, `test_select_test.py` in CI, 19 i18n scope edits | refactor · sandwich skipped (delete-only) · i18n gate all platforms | 1 | Pending |
@@ -83,4 +83,4 @@ Active PR pointer: none.
 
 ## Decisions recorded while running
 
-(none yet)
+- 2026-10-09 H: `keywords.md:83` `RECENCY_WINDOW_MS` is retired (not in `cost.rs`); `data-artifacts-portability.md:96` readers expose `build_timestamp()`; `rust-core-proto.md:252` `TextInputManager.kt` exists but no longer holds the TPS path. Code-comment leftovers go to A2: `dictionary/common/source_bits.py:14-15` (`tier_numerator` / `TIER_DENOMINATOR` do not exist → `score.rs::source_tier_rank`), `AppStyle.swift:51` docstring says 14 pt while `captionSize = 17`, `cost.rs:105` stale `RECENCY_WINDOW_MS` comment.

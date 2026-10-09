@@ -125,17 +125,21 @@ That is packaging proof only; typing on a real desktop is S74.
 `.github/workflows/linux-build.yml` is the Linux half of a desktop release,
 the way `windows-build.yml` is the Windows half:
 
-- On every pull request touching `linux/**` / `desktop/**` / `engine/**` it
-  builds the package and keeps it as a workflow artifact (`linux-deb`), checks
-  the expected paths are inside it, that the addon file is the one the
-  `.conf` names, and the desktop entry (`desktop-file-validate`). Nothing
-  reaches a draft; the build job can only read.
+- It runs on a `desktop-<version>` publish, on a nightly `schedule` and on
+  `workflow_dispatch` — never per pull request: the pre-PR gate for a Linux
+  change is `make linux-check` locally (or a manual dispatch). Every run
+  builds the three packages and keeps them as workflow artifacts (`linux-deb`,
+  `linux-rpm`, `linux-arch`), checks the expected paths are inside the `.deb`,
+  that the addon file is the one the `.conf` names, and the desktop entry
+  (`desktop-file-validate`). Nothing reaches a draft; the build job can only
+  read.
 - `tools/release/stage-desktop.sh` (`make desktop-release`) dispatches it on `main`
   beside the Windows run, with the staged commit as `source_sha`, and waits;
   the `attach` job (the only one that can write) runs only with a
   `source_sha`, refuses any commit but that one, refuses a published release
-  or a draft targeting another commit, and uploads the `.deb` and its
-  `.sha256` to the `desktop-<version>` draft the macOS half created — never
+  or a draft targeting another commit, and uploads the `.deb`, the `.rpm`
+  and the Arch `.pkg.tar.zst`, each with its `.sha256`, to the
+  `desktop-<version>` draft the macOS half created — never
   over an asset already there. A dispatch from any other ref, or without
   `source_sha`, only builds. The build job also checks the package's control
   `Version` / `Architecture` and that the build rewrote nothing tracked
