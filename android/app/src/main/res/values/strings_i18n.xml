@@ -74,6 +74,7 @@
     <string name="i18n_dictionary_kautianAccentSintik">新竹偏泉腔</string>
     <string name="i18n_dictionary_kautianAccentTaichung">臺中偏漳腔</string>
     <string name="i18n_dictionary_kautianNameAppendix">姓名附錄</string>
+    <string name="i18n_dictionary_kautianAltReading">又唸作</string>
     <string name="i18n_dictionary_searchPlaceholder">揣字</string>
     <string name="i18n_dictionary_noResults">揣無結果</string>
     <string name="i18n_dictionary_lookupChhoe">ChhoeTaigi 辭典</string>

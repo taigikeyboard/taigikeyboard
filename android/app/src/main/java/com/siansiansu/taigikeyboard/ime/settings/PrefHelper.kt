@@ -543,6 +543,9 @@ class PrefHelper(
     // Name appendix defaults on (opt-out; CROSS-PLATFORM mirrors iOS SharedSettings.swift isKautianNameAppendixEnabledKey)
     var kautianNameAppendixEnabled: Boolean by preference(PreferenceKeys.KAUTIAN_NAME_APPENDIX_ENABLED, true)
 
+    // Alternative Readings (又唸作) defaults on (CROSS-PLATFORM mirrors iOS SharedSettings.swift isKautianAltReadingEnabledKey)
+    var kautianAltReadingEnabled: Boolean by preference(PreferenceKeys.KAUTIAN_ALT_READING_ENABLED, true)
+
     // Theme settings (v3.6.2)
     var selectedThemeId: String by preference(PreferenceKeys.SELECTED_THEME_ID, DEFAULT_SELECTED_THEME_ID)
 
@@ -682,6 +685,9 @@ class PrefHelper(
 
     override val isKautianNameAppendixEnabled: Boolean
         get() = kautianNameAppendixEnabled
+
+    override val isKautianAltReadingEnabled: Boolean
+        get() = kautianAltReadingEnabled
 
     /**
      * Returns `this` as [EngineSettings]. Each property access on the

@@ -45,10 +45,10 @@ pub const VARIANT_BIT: u16 = 1 << 12;
 /// record (NOT part of `bitmask`) recording which subcollections a kautian
 /// row belongs to. Mirrors
 /// `dictionary/common/source_bits.py::encode_kautian_subtag`: bit 0 = main,
-/// bits 1..=10 = accent_mask (10 dialect columns), bit 11 = name; bits 12-15
-/// reserved. Reserved bits are masked off on read so a future writer cannot
-/// corrupt the filter AND.
-pub const KAUTIAN_SUBTAG_USED_MASK: u16 = 0x0FFF;
+/// bits 1..=10 = accent_mask (10 dialect columns), bit 11 = name, bit 12 =
+/// alt_reading (又唸作); bits 13-15 reserved. Reserved bits are masked off on
+/// read so a future writer cannot corrupt the filter AND.
+pub const KAUTIAN_SUBTAG_USED_MASK: u16 = (1 << (KAUTIAN_SUBTAG_ALT_READING_BIT + 1)) - 1;
 /// Subtag bit positions (mirror `source_bits.py::KAUTIAN_SUBTAG_*`). The
 /// ENCODE side (`dictionary_filters::compute_filters`) packs the wire enable
 /// mask from these so the subcollection bit layout lives in Rust only.
@@ -56,18 +56,19 @@ pub const KAUTIAN_SUBTAG_MAIN_BIT: u16 = 0;
 pub const KAUTIAN_SUBTAG_ACCENT_SHIFT: u16 = 1;
 pub const KAUTIAN_SUBTAG_ACCENT_COUNT: usize = 10;
 pub const KAUTIAN_SUBTAG_NAME_BIT: u16 = 11;
+pub const KAUTIAN_SUBTAG_ALT_READING_BIT: u16 = 12;
 
 /// Wire layout: the user's kautian subcollection ENABLE bits ride the high
 /// region of `enabled_sources_bitmask` (u32). bit 13 = active sentinel — when
 /// 0 the engine SKIPS subcollection gating entirely (legacy / pre-UI default
-/// = all subcollections on, zero behaviour change). bits 14..=25 = enable mask
-/// in the SAME 12-bit layout as the subtag, so the filter test is one AND.
+/// = all subcollections on, zero behaviour change). bits 14..=26 = enable mask
+/// in the SAME 13-bit layout as the subtag, so the filter test is one AND.
 /// `u32::MAX` (the all-enabled sentinel) also carries bit 13 set; a real
-/// platform mask (Phase 3 `compute_filters`) sets bit 13 + the 12 bits
+/// platform mask (Phase 3 `compute_filters`) sets bit 13 + the 13 bits
 /// explicitly and MUST never equal `u32::MAX`.
 pub const WIRE_KAUTIAN_SUBCOLL_ACTIVE_BIT: u32 = 1 << 13;
 pub const WIRE_KAUTIAN_SUBCOLL_SHIFT: u32 = 14;
-pub const WIRE_KAUTIAN_SUBCOLL_MASK: u32 = 0x0FFF;
+pub const WIRE_KAUTIAN_SUBCOLL_MASK: u32 = KAUTIAN_SUBTAG_USED_MASK as u32;
 
 #[derive(Debug, Clone)]
 pub struct DictionaryRecord {
@@ -114,8 +115,8 @@ pub struct Filter {
     /// kautian subcollection filtering active (wire bit 13). False ⇒ skip the
     /// subcollection gate entirely (legacy / all-on, zero behaviour change).
     pub kautian_subcoll_active: bool,
-    /// Enabled kautian subcollections — 12-bit mask, SAME layout as the record
-    /// subtag (main | accent[10] | name).
+    /// Enabled kautian subcollections — 13-bit mask, SAME layout as the record
+    /// subtag (main | accent[10] | name | alt_reading).
     pub kautian_subcoll_mask: u16,
 }
 
@@ -238,7 +239,7 @@ impl DictionaryReader {
         pos += 1;
         // v3: kautian subcollection subtag (2 bytes). The RECORD_FIXED_PREFIX
         // bound checked above guarantees these 2 bytes are in range. Reserved
-        // bits (12-15) are masked off so they can never affect the filter AND.
+        // bits (13-15) are masked off so they can never affect the filter AND.
         let kautian_subtag =
             u16::from_le_bytes(bytes[pos..pos + 2].try_into().ok()?) & KAUTIAN_SUBTAG_USED_MASK;
         pos += 2;
@@ -278,7 +279,7 @@ impl DictionaryReader {
     /// the filter (below) and the emitted `source_bitmask` (ranking tier) at
     /// every call site. When subcollection filtering is active AND this is a
     /// kautian-source row, the kautian bit (bit 0) is CLEARED unless at least
-    /// one of the row's subcollections (main / accent / name) is enabled. Other
+    /// one of the row's subcollections (main / accent / name / alt_reading) is enabled. Other
     /// source bits are never touched, so a multi-source row stays visible via
     /// its other sources and inherits the other source's ranking tier. Rows
     /// without the kautian bit, and the legacy/all-on case (`!active`), pass
@@ -331,8 +332,8 @@ mod tests {
 
     const TAIGITV: u16 = 1 << 1;
 
-    // subtag / wire-subcoll shared 12-bit layout: bit 0 = main,
-    // bits 1..=10 = accent, bit 11 = name.
+    // subtag / wire-subcoll shared 13-bit layout: bit 0 = main,
+    // bits 1..=10 = accent, bit 11 = name, bit 12 = alt_reading.
     const SUB_MAIN: u16 = 1 << 0;
     const SUB_NAME: u16 = 1 << 11;
     fn sub_accent(i: u16) -> u16 {

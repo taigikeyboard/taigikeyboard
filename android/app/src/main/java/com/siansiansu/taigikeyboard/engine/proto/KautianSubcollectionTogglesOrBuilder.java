@@ -119,4 +119,14 @@ public interface KautianSubcollectionTogglesOrBuilder extends
    * @return The nameAppendix.
    */
   boolean getNameAppendix();
+
+  /**
+   * <pre>
+   * Alternative Readings, 又唸作 (subtag bit 12)
+   * </pre>
+   *
+   * <code>bool alt_reading = 12;</code>
+   * @return The altReading.
+   */
+  boolean getAltReading();
 }

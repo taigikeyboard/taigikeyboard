@@ -125,4 +125,5 @@ interface EngineSettings {
     val isKautianAccentSintikEnabled: Boolean
     val isKautianAccentTaichungEnabled: Boolean
     val isKautianNameAppendixEnabled: Boolean
+    val isKautianAltReadingEnabled: Boolean
 }

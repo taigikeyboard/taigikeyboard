@@ -36,7 +36,9 @@ from build.dictionary_records import REQUIRED_COLUMNS  # noqa: E402
 from common.source_bits import DICT_BIN_COLUMNS  # noqa: E402
 from common.variants import read_variant_rows  # noqa: E402
 
-DICT_COLUMNS = [*REQUIRED_COLUMNS, "kautian_main", "kautian_accent_mask", "kautian_name"]
+DICT_COLUMNS = [
+    *REQUIRED_COLUMNS, "kautian_main", "kautian_accent_mask", "kautian_name", "kautian_alt_reading",
+]
 SOURCES = ["moe_kautian", "taigi_bible_nt"]
 TSV_HEADER = ["prev_hanji", "prev_tl", "next_hanji", "next_tl", "count", *SOURCES]
 
@@ -53,6 +55,7 @@ def write_dictionary(path: Path, rows: list[tuple[str, str, str]]) -> None:
             row.update({
                 "hanzi": hanzi, "tl": tl, "frequency": 10, source: "True",
                 "kautian_main": str(source == "kautian"), "kautian_accent_mask": 0, "kautian_name": "False",
+                "kautian_alt_reading": "False",
             })
             w.writerow(row)
 

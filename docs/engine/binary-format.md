@@ -65,7 +65,9 @@ counts (e.g. `tsua` → `紙` (syll=1) vs `珠仔` (syll=2)). Range is
 Records which kautian subcollection(s) a row belongs to (main / accent[10] /
 name) so the engine filter can independently gate them while the kautian
 source bit (bit 0) stays a single badge/ranking signal. `0` for every
-non-kautian row. Layout in §4.5. Reserved bits 12-15 are masked off on read.
+non-kautian row. Layout in §4.5. Bit 12 (alt_reading, the 又唸作 sheet) was
+later taken from the reserved range without a version bump — the reader had
+always masked it off. Reserved bits 13-15 are masked off on read.
 
 **v3 → v4 (E1 unified word frequency P2)**: added per-record `walker_cost`
 u16 between `kautian_subtag` and the `hanzi` payload: the walker model's
@@ -314,17 +316,18 @@ Excludes `variant`, `khiin` from "all" — those are exclusion flags, not main s
 
 The per-record `kautian_subtag` u16 (dictionary.bin §1.1) and the user's
 subcollection-enable bits in `enabled_sources_bitmask` (the wire field on
-`SearchWithSourcesRequest` / `SearchByHanjiRequest` / continuous) share ONE 12-bit layout so the filter
+`SearchWithSourcesRequest` / `SearchByHanjiRequest` / continuous) share ONE 13-bit layout so the filter
 test is a single AND:
 
 ```
-subcollection bit layout (12 bits):
+subcollection bit layout (13 bits):
   bit  0      main         (headword)
   bits 1..=10 accent[0..9] (accent variants — config.yaml dialect_columns order:
                             0 鹿港 1 三峽 2 臺北 3 宜蘭 4 臺南 5 高雄
                             6 金門 7 馬公 8 新竹 9 臺中)
   bit  11     name         (name appendix — given + family names)
-  bits 12-15  reserved (record subtag masks these off on read)
+  bit  12     alt_reading  (alternative readings — the 又唸作 sheet)
+  bits 13-15  reserved (record subtag masks these off on read)
 ```
 
 **Storage** (`dictionary.bin` record `kautian_subtag`): which subcollections a
@@ -338,8 +341,8 @@ has enabled.
   bit  13      KAUTIAN_SUBCOLL_ACTIVE — control sentinel. 0 ⇒ engine SKIPS the
                subcollection gate entirely (legacy / pre-UI default = all on,
                zero behaviour change). A platform that has the toggles sets this.
-  bits 14..=25 subcollection enable mask, SAME 12-bit layout as the subtag.
-  bits 26-31   reserved (unknown high bits ignored for forward-compat).
+  bits 14..=26 subcollection enable mask, SAME 13-bit layout as the subtag.
+  bits 27-31   reserved (unknown high bits ignored for forward-compat).
 ```
 
 `u32::MAX` (the all-enabled sentinel) carries bit 13 + every enable bit set, so
@@ -347,13 +350,13 @@ has enabled.
 `dictionary/common/source_bits.py::encode_kautian_subtag` +
 `engine/lexicon/src/dictionary_reader.rs` (`KAUTIAN_SUBTAG_*` / `WIRE_KAUTIAN_SUBCOLL_*`).
 
-The toggle→wire ENCODE landed in Phase 3 (iOS): `compute_filters` sets bit 13 +
-the enable mask from `DictionarySourceToggles.kautian_subcollections` (a nested message —
-PRESENCE is the active sentinel). iOS always sends it (it ships the toggles);
-a caller that leaves it absent (Android until its UI phase, NextWord) keeps the
-gate off = legacy all-on. The subcollection-enable filtering applies to the
-Tab3 dictionary-browse path; the keyboard continuous path still pins
-`u32::MAX` (no per-source gating there — separate deferred plumbing).
+ENCODE: `compute_filters` sets bit 13 + the enable mask from
+`DictionarySourceToggles.kautian_subcollections` (a nested message — PRESENCE
+is the active sentinel). Every platform always sends it; a caller that leaves
+it absent keeps the gate off = legacy all-on. The same mask gates the Tab3
+dictionary-browse path and the keyboard fetch (`engine/composing/src/requests.rs`
+`source_filter_bitmask` resolves the fetch's `toggles`). NextWord filters with
+the source-only association mask, so subcollection toggles do not reach it.
 
 ---
 

@@ -41,6 +41,7 @@ struct DictionarySourcesView: View {
         var isKautianAccentSintikEnabled: Bool
         var isKautianAccentTaichungEnabled: Bool
         var isKautianNameAppendixEnabled: Bool
+        var isKautianAltReadingEnabled: Bool
 
         init(_ settings: SharedSettings) {
             isMoeDictEnabled = settings.isMoeDictEnabled
@@ -67,6 +68,7 @@ struct DictionarySourcesView: View {
             isKautianAccentSintikEnabled = settings.isKautianAccentSintikEnabled
             isKautianAccentTaichungEnabled = settings.isKautianAccentTaichungEnabled
             isKautianNameAppendixEnabled = settings.isKautianNameAppendixEnabled
+            isKautianAltReadingEnabled = settings.isKautianAltReadingEnabled
         }
     }
 
@@ -84,6 +86,9 @@ struct DictionarySourcesView: View {
                 ) { settings.isMoeDictEnabled = $0 }
                 // Kautian subcollections — nested under the master row,
                 // greyed when the MOE/kautian master is off (DD7).
+                kautianSubcollToggle(lang.string(.dictionaryKautianAltReading), isOn: $toggles.isKautianAltReadingEnabled) {
+                    settings.isKautianAltReadingEnabled = $0
+                }
                 kautianSubcollToggle(lang.string(.dictionaryKautianAccentLukang), isOn: $toggles.isKautianAccentLukangEnabled) {
                     settings.isKautianAccentLukangEnabled = $0
                 }

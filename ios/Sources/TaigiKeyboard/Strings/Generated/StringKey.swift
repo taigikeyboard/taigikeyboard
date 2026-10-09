@@ -73,6 +73,7 @@ enum StringKey: String {
     case dictionaryKautianAccentSintik = "i18n_dictionary_kautianAccentSintik"
     case dictionaryKautianAccentTaichung = "i18n_dictionary_kautianAccentTaichung"
     case dictionaryKautianNameAppendix = "i18n_dictionary_kautianNameAppendix"
+    case dictionaryKautianAltReading = "i18n_dictionary_kautianAltReading"
     case dictionarySearchPlaceholder = "i18n_dictionary_searchPlaceholder"
     case dictionaryNoResults = "i18n_dictionary_noResults"
     case dictionaryLookupChhoe = "i18n_dictionary_lookupChhoe"

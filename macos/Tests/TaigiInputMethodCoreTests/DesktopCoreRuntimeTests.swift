@@ -144,7 +144,7 @@ final class DesktopCoreRuntimeTests: XCTestCase {
             Keys.isKautianAccentTainanEnabled, Keys.isKautianAccentKaohsiungEnabled,
             Keys.isKautianAccentKinmenEnabled, Keys.isKautianAccentMakungEnabled,
             Keys.isKautianAccentSintikEnabled, Keys.isKautianAccentTaichungEnabled,
-            Keys.isKautianNameAppendixEnabled,
+            Keys.isKautianNameAppendixEnabled, Keys.isKautianAltReadingEnabled,
         ]
         var expected: [String: Taigi_DesktopShell_SettingValue.OneOf_Value?] = [
             Keys.inputMode.name: .text(Keys.inputMode.defaultValue.rawValue),

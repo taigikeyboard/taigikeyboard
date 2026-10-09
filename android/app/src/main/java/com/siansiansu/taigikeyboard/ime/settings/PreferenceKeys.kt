@@ -115,6 +115,7 @@ object PreferenceKeys {
     val KAUTIAN_ACCENT_SINTIK_ENABLED = booleanPreferencesKey("dictionary__kautian_accent_sintik_enabled")
     val KAUTIAN_ACCENT_TAICHUNG_ENABLED = booleanPreferencesKey("dictionary__kautian_accent_taichung_enabled")
     val KAUTIAN_NAME_APPENDIX_ENABLED = booleanPreferencesKey("dictionary__kautian_name_appendix_enabled")
+    val KAUTIAN_ALT_READING_ENABLED = booleanPreferencesKey("dictionary__kautian_alt_reading_enabled")
 
     // TPS settings
     val TPS_OR_MAPS_TO_ER = booleanPreferencesKey("tps__or_maps_to_er")

@@ -82,6 +82,7 @@ fn invariant_lex_v4_round_trip_kautian_subtag() {
         (0x0001, 90, 1, 0b1000_0000_0000, "姓", "senn"), // name only
         (0x0001, 80, 1, 0b0000_0000_0110, "八", "pueh"), // accent bits 0,1
         (0x0001, 70, 1, 0b1000_0000_0001, "王", "ong"), // main + name
+        (0x0001, 60, 1, 0b1_0000_0000_0000, "一概", "it-kai"), // alt_reading only
     ];
     let bytes = build_tkdb_v4_subtag(b"TKDB", rows);
     let path = write_temp("dictionary-reader-v4-subtag.bin", &bytes);
@@ -91,20 +92,21 @@ fn invariant_lex_v4_round_trip_kautian_subtag() {
     assert_eq!(reader.record(2).unwrap().kautian_subtag, 0b1000_0000_0000);
     assert_eq!(reader.record(3).unwrap().kautian_subtag, 0b0000_0000_0110);
     assert_eq!(reader.record(4).unwrap().kautian_subtag, 0b1000_0000_0001);
+    assert_eq!(reader.record(5).unwrap().kautian_subtag, 0b1_0000_0000_0000);
 }
 
 #[test]
 fn invariant_lex_v4_masks_reserved_subtag_bits_on_read() {
-    // Reserved bits 12-15 must be masked off on read so a future writer
+    // Reserved bits 13-15 must be masked off on read so a future writer
     // setting them can never corrupt the subcollection filter AND.
-    let rows: &[(u16, u32, u8, u16, &str, &str)] = &[(0x0001, 100, 1, 0xF001, "詞", "su")]; // reserved bits + main
+    let rows: &[(u16, u32, u8, u16, &str, &str)] = &[(0x0001, 100, 1, 0xE001, "詞", "su")]; // reserved bits + main
     let bytes = build_tkdb_v4_subtag(b"TKDB", rows);
     let path = write_temp("dictionary-reader-v4-reserved.bin", &bytes);
     let reader = DictionaryReader::open(&path).expect("v4 binary opens");
     assert_eq!(
         reader.record(1).unwrap().kautian_subtag,
         0x0001,
-        "reserved bits 12-15 masked off; only the main bit survives"
+        "reserved bits 13-15 masked off; only the main bit survives"
     );
 }
 

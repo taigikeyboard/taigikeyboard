@@ -208,6 +208,10 @@ final class SettingsStore: @unchecked Sendable {
             name: "kautianNameAppendixEnabled",
             defaultValue: EngineSettings.defaults.dictionarySources.kautianSubcollections.nameAppendix,
         )
+        static let isKautianAltReadingEnabled = SettingsKey(
+            name: "kautianAltReadingEnabled",
+            defaultValue: EngineSettings.defaults.dictionarySources.kautianSubcollections.altReading,
+        )
 
         /// The app UI display language, as a `DisplayLanguage` tag. The only key here whose default
         /// does not come from `EngineSettings.defaults`: which language the UI is written in is not
@@ -619,6 +623,7 @@ final class SettingsStore: @unchecked Sendable {
             Keys.isKautianAccentSintikEnabled.name,
             Keys.isKautianAccentTaichungEnabled.name,
             Keys.isKautianNameAppendixEnabled.name,
+            Keys.isKautianAltReadingEnabled.name,
         )
     }
 

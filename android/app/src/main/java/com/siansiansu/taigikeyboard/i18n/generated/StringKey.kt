@@ -81,6 +81,7 @@ enum class StringKey(
     DICTIONARY_KAUTIAN_ACCENT_SINTIK(R.string.i18n_dictionary_kautianAccentSintik),
     DICTIONARY_KAUTIAN_ACCENT_TAICHUNG(R.string.i18n_dictionary_kautianAccentTaichung),
     DICTIONARY_KAUTIAN_NAME_APPENDIX(R.string.i18n_dictionary_kautianNameAppendix),
+    DICTIONARY_KAUTIAN_ALT_READING(R.string.i18n_dictionary_kautianAltReading),
     DICTIONARY_SEARCH_PLACEHOLDER(R.string.i18n_dictionary_searchPlaceholder),
     DICTIONARY_NO_RESULTS(R.string.i18n_dictionary_noResults),
     DICTIONARY_LOOKUP_CHHOE(R.string.i18n_dictionary_lookupChhoe),

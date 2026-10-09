@@ -88,6 +88,7 @@ final class SharedSettings {
     private static let isKautianAccentSintikEnabledKey: SettingsKey<Bool> = .bool("kautianAccentSintikEnabled", default: true)
     private static let isKautianAccentTaichungEnabledKey: SettingsKey<Bool> = .bool("kautianAccentTaichungEnabled", default: true)
     private static let isKautianNameAppendixEnabledKey: SettingsKey<Bool> = .bool("kautianNameAppendixEnabled", default: true)
+    private static let isKautianAltReadingEnabledKey: SettingsKey<Bool> = .bool("kautianAltReadingEnabled", default: true)
 
     private static let isTpsOrMappedToERKey: SettingsKey<Bool> = .bool("tpsOrMapsToER", default: true)
     private static let isToolbarAutoCollapseKey: SettingsKey<Bool> = .bool("toolbarAutoCollapse", default: true)
@@ -473,6 +474,12 @@ final class SharedSettings {
         set { userDefaults.set(newValue, for: Self.isKautianNameAppendixEnabledKey) }
     }
 
+    // Alternative Readings (the 又唸作 sheet).
+    var isKautianAltReadingEnabled: Bool {
+        get { userDefaults.value(for: Self.isKautianAltReadingEnabledKey) }
+        set { userDefaults.set(newValue, for: Self.isKautianAltReadingEnabledKey) }
+    }
+
     // MARK: - Toolbar Settings
 
     /// Toolbar auto-collapse toggle (default: true = auto-collapse on composing/mode change)
@@ -705,7 +712,7 @@ final class SharedSettings {
         isKhiinEnabled = false
         isLkkDictEnabled = true
         isDevDictEnabled = true
-        // Kautian subcollections (10 accents default on; name appendix default off)
+        // Kautian subcollections (all default on)
         isKautianAccentLukangEnabled = true
         isKautianAccentSansiaEnabled = true
         isKautianAccentTaipakEnabled = true
@@ -717,6 +724,7 @@ final class SharedSettings {
         isKautianAccentSintikEnabled = true
         isKautianAccentTaichungEnabled = true
         isKautianNameAppendixEnabled = true
+        isKautianAltReadingEnabled = true
         // Toolbar
         isToolbarAutoCollapse = true
         oneHandedMode = .off

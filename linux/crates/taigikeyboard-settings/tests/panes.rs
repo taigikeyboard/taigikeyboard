@@ -258,7 +258,7 @@ fn a_recorded_press_binds_the_row(window: &Rc<SettingsWindow>) {
 }
 
 /// trace: the MOE dictionary row is the first switch on Dictionary Sources (`IS_KAUTIAN_ENABLED`,
-/// default true); the eleven accent rows after it grey out while it is off
+/// default true); the subcollection rows after it grey out while it is off
 /// and come back, still set, when it is on.
 fn the_kautian_expander_switch_writes_its_key(window: &Rc<SettingsWindow>) {
     let page = window
@@ -266,7 +266,7 @@ fn the_kautian_expander_switch_writes_its_key(window: &Rc<SettingsWindow>) {
         .expect("dictionary sources");
     let switches = find_all::<adw::SwitchRow>(&page);
     let kautian = &switches[0];
-    let lukang = &switches[1];
+    let lukang = &switches[2]; // switches[1] is Alternative Readings
     assert!(kautian.is_active() && lukang.is_sensitive());
     kautian.set_active(false);
     assert!(!window

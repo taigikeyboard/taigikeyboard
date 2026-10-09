@@ -1333,6 +1333,24 @@
         }
       }
     },
+    "i18n_dictionary_kautianAltReading": {
+      "comment": "MOE dictionary sub-source: the alternative readings (又唸作) of a headword.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alternative Readings"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "別の読み方"
+          }
+        }
+      }
+    },
     "i18n_dictionary_kautianNameAppendix": {
       "comment": "MOE dictionary sub-source: surname appendix.",
       "extractionState": "manual",

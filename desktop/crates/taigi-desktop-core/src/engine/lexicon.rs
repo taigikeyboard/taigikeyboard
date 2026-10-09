@@ -206,6 +206,7 @@ pub(crate) fn dictionary_toggles(toggles: &DictionarySourceToggles) -> WireDicti
             accent_sintik: subcollections.accent_sintik,
             accent_taichung: subcollections.accent_taichung,
             name_appendix: subcollections.name_appendix,
+            alt_reading: subcollections.alt_reading,
         }),
     }
 }
@@ -404,6 +405,7 @@ mod tests {
                     accent_sintik: _,
                     accent_taichung: _,
                     name_appendix: _,
+                    alt_reading: _,
                 },
         } = DictionarySourceToggles::DEFAULT;
         vec![
@@ -431,10 +433,11 @@ mod tests {
             subcollection!(accent_sintik),
             subcollection!(accent_taichung),
             subcollection!(name_appendix),
+            subcollection!(alt_reading),
         ]
     }
 
-    /// The 24 flags are copied field by field, and a swapped or inverted
+    /// The 25 flags are copied field by field, and a swapped or inverted
     /// pair compiles and filters the wrong dictionary: every wire field
     /// carries its own toggle's value, at the defaults and with any one
     /// toggle flipped. A subcollection read from an absent message is off,

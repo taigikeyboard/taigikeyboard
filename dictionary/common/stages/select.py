@@ -35,6 +35,7 @@ def run(ctx: PipelineContext) -> None:
     dialect_sheet: str | None = opts.get("dialect_sheet")
     dialect_columns: list[str] = opts.get("dialect_columns") or []
     main_sheets: list[str] = opts.get("main_sheets") or []
+    alt_reading_sheets: list[str] = opts.get("alt_reading_sheets") or []
     name_sheets: list[str] = opts.get("name_sheets") or []
     column_rename: dict[str, str] = {**_DEFAULT_COLUMN_RENAME, **(opts.get("column_rename") or {})}
 
@@ -45,7 +46,14 @@ def run(ctx: PipelineContext) -> None:
     sheets = ctx.current_sheets()
 
     _stash_provenance_maps(
-        ctx, sheets, dialect_sheet, dialect_columns, main_sheets, name_sheets, preserve_spaces
+        ctx,
+        sheets,
+        dialect_sheet=dialect_sheet,
+        dialect_columns=dialect_columns,
+        main_sheets=main_sheets,
+        alt_reading_sheets=alt_reading_sheets,
+        name_sheets=name_sheets,
+        preserve_spaces=preserve_spaces,
     )
     out_sheets: dict[str, pd.DataFrame] = {}
     total_rows = 0
@@ -103,6 +111,7 @@ def _stash_provenance_maps(
     dialect_sheet: str | None,
     dialect_columns: list[str],
     main_sheets: list[str],
+    alt_reading_sheets: list[str],
     name_sheets: list[str],
     preserve_spaces: bool,
 ) -> None:
@@ -115,7 +124,7 @@ def _stash_provenance_maps(
     from the raw sheets before that happens. Skips silently when no
     subcollection sheets are configured — non-kautian sources never reach this.
     """
-    if not (dialect_sheet or main_sheets or name_sheets):
+    if not (dialect_sheet or main_sheets or alt_reading_sheets or name_sheets):
         return
 
     accent_map: dict = {}
@@ -123,9 +132,19 @@ def _stash_provenance_maps(
         accent_map = build_accent_mask_map(sheets[dialect_sheet], dialect_columns, preserve_spaces)
     name_set = build_membership_set(sheets, name_sheets, preserve_spaces)
     main_set = build_membership_set(sheets, main_sheets, preserve_spaces)
+    alt_reading_set = build_membership_set(sheets, alt_reading_sheets, preserve_spaces)
 
-    ctx.set_meta(PROVENANCE_META_KEY, {"accent": accent_map, "name": name_set, "main": main_set})
+    ctx.set_meta(
+        PROVENANCE_META_KEY,
+        {
+            "accent": accent_map,
+            "name": name_set,
+            "main": main_set,
+            "alt_reading": alt_reading_set,
+        },
+    )
     ctx.logger.info(
         f"  provenance maps: accent_keys={len(accent_map)} "
-        f"name_keys={len(name_set)} main_keys={len(main_set)}"
+        f"name_keys={len(name_set)} main_keys={len(main_set)} "
+        f"alt_reading_keys={len(alt_reading_set)}"
     )

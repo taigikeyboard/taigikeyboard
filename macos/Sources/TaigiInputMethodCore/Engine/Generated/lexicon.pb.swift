@@ -294,8 +294,9 @@ public nonisolated struct Taigi_Engine_SearchWithSourcesRequest: Sendable {
   ///
   /// kautian subcollections (binary v3): the HIGH region carries the user's
   /// per-subcollection enable bits — bit 13 = active sentinel (0 ⇒ engine skips
-  /// subcollection gating = all on, the legacy/pre-UI default), bits 14..=25 =
-  /// enable mask (main | accent[10] | name, same layout as the record subtag).
+  /// subcollection gating = all on, the legacy/pre-UI default), bits 14..=26 =
+  /// enable mask (main | accent[10] | name | alt_reading, same layout as the
+  /// record subtag).
   /// ENCODE (Phase 3): `compute_filters` sets these from `DictionarySourceToggles
   /// .kautian_subcollections` when present; a caller that leaves the sub-message absent
   /// keeps bit 13 clear = legacy all-on. Decode: `Filter::from_enabled_bitmask`
@@ -683,7 +684,7 @@ public nonisolated struct Taigi_Engine_DictionarySourceToggles: @unchecked Senda
 /// so `compute_filters` sets its subtag bit unconditionally when this
 /// message is present. Field tags map to the kautian subtag bit positions:
 /// accent tag N → subtag bit N (config.yaml `dialect_columns` order), and
-/// `name_appendix` → subtag bit 11. Bit layout owner is Rust
+/// `name_appendix` → subtag bit 11, `alt_reading` → subtag bit 12. Bit layout owner is Rust
 /// `engine/lexicon/src/dictionary_reader.rs` (`KAUTIAN_SUBTAG_*`); see
 /// `docs/engine/binary-format.md` §4.5.
 public nonisolated struct Taigi_Engine_KautianSubcollectionToggles: Sendable {
@@ -723,6 +724,9 @@ public nonisolated struct Taigi_Engine_KautianSubcollectionToggles: Sendable {
 
   /// Surname Appendix, 名+姓 (subtag bit 11)
   public var nameAppendix: Bool = false
+
+  /// Alternative Readings, 又唸作 (subtag bit 12)
+  public var altReading: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1558,7 +1562,7 @@ nonisolated extension Taigi_Engine_DictionarySourceToggles: SwiftProtobuf.Messag
 
 nonisolated extension Taigi_Engine_KautianSubcollectionToggles: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".KautianSubcollectionToggles"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}accent_lukang\0\u{3}accent_sansia\0\u{3}accent_taipak\0\u{3}accent_gilan\0\u{3}accent_tainan\0\u{3}accent_kaohsiung\0\u{3}accent_kinmen\0\u{3}accent_makung\0\u{3}accent_sintik\0\u{3}accent_taichung\0\u{3}name_appendix\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}accent_lukang\0\u{3}accent_sansia\0\u{3}accent_taipak\0\u{3}accent_gilan\0\u{3}accent_tainan\0\u{3}accent_kaohsiung\0\u{3}accent_kinmen\0\u{3}accent_makung\0\u{3}accent_sintik\0\u{3}accent_taichung\0\u{3}name_appendix\0\u{3}alt_reading\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1577,6 +1581,7 @@ nonisolated extension Taigi_Engine_KautianSubcollectionToggles: SwiftProtobuf.Me
       case 9: try { try decoder.decodeSingularBoolField(value: &self.accentSintik) }()
       case 10: try { try decoder.decodeSingularBoolField(value: &self.accentTaichung) }()
       case 11: try { try decoder.decodeSingularBoolField(value: &self.nameAppendix) }()
+      case 12: try { try decoder.decodeSingularBoolField(value: &self.altReading) }()
       default: break
       }
     }
@@ -1616,6 +1621,9 @@ nonisolated extension Taigi_Engine_KautianSubcollectionToggles: SwiftProtobuf.Me
     if self.nameAppendix != false {
       try visitor.visitSingularBoolField(value: self.nameAppendix, fieldNumber: 11)
     }
+    if self.altReading != false {
+      try visitor.visitSingularBoolField(value: self.altReading, fieldNumber: 12)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1631,6 +1639,7 @@ nonisolated extension Taigi_Engine_KautianSubcollectionToggles: SwiftProtobuf.Me
     if lhs.accentSintik != rhs.accentSintik {return false}
     if lhs.accentTaichung != rhs.accentTaichung {return false}
     if lhs.nameAppendix != rhs.nameAppendix {return false}
+    if lhs.altReading != rhs.altReading {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

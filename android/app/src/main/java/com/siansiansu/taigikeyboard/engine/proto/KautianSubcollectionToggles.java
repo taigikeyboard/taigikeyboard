@@ -13,7 +13,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * so `compute_filters` sets its subtag bit unconditionally when this
  * message is present. Field tags map to the kautian subtag bit positions:
  * accent tag N → subtag bit N (config.yaml `dialect_columns` order), and
- * `name_appendix` → subtag bit 11. Bit layout owner is Rust
+ * `name_appendix` → subtag bit 11, `alt_reading` → subtag bit 12. Bit layout owner is Rust
  * `engine/lexicon/src/dictionary_reader.rs` (`KAUTIAN_SUBTAG_*`); see
  * `docs/engine/binary-format.md` §4.5.
  * </pre>
@@ -446,6 +446,44 @@ public  final class KautianSubcollectionToggles extends
     nameAppendix_ = false;
   }
 
+  public static final int ALT_READING_FIELD_NUMBER = 12;
+  private boolean altReading_;
+  /**
+   * <pre>
+   * Alternative Readings, 又唸作 (subtag bit 12)
+   * </pre>
+   *
+   * <code>bool alt_reading = 12;</code>
+   * @return The altReading.
+   */
+  @java.lang.Override
+  public boolean getAltReading() {
+    return altReading_;
+  }
+  /**
+   * <pre>
+   * Alternative Readings, 又唸作 (subtag bit 12)
+   * </pre>
+   *
+   * <code>bool alt_reading = 12;</code>
+   * @param value The altReading to set.
+   */
+  private void setAltReading(boolean value) {
+
+    altReading_ = value;
+  }
+  /**
+   * <pre>
+   * Alternative Readings, 又唸作 (subtag bit 12)
+   * </pre>
+   *
+   * <code>bool alt_reading = 12;</code>
+   */
+  private void clearAltReading() {
+
+    altReading_ = false;
+  }
+
   public static com.siansiansu.taigikeyboard.engine.proto.KautianSubcollectionToggles parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -537,7 +575,7 @@ public  final class KautianSubcollectionToggles extends
    * so `compute_filters` sets its subtag bit unconditionally when this
    * message is present. Field tags map to the kautian subtag bit positions:
    * accent tag N → subtag bit N (config.yaml `dialect_columns` order), and
-   * `name_appendix` → subtag bit 11. Bit layout owner is Rust
+   * `name_appendix` → subtag bit 11, `alt_reading` → subtag bit 12. Bit layout owner is Rust
    * `engine/lexicon/src/dictionary_reader.rs` (`KAUTIAN_SUBTAG_*`); see
    * `docs/engine/binary-format.md` §4.5.
    * </pre>
@@ -995,6 +1033,46 @@ public  final class KautianSubcollectionToggles extends
       return this;
     }
 
+    /**
+     * <pre>
+     * Alternative Readings, 又唸作 (subtag bit 12)
+     * </pre>
+     *
+     * <code>bool alt_reading = 12;</code>
+     * @return The altReading.
+     */
+    @java.lang.Override
+    public boolean getAltReading() {
+      return instance.getAltReading();
+    }
+    /**
+     * <pre>
+     * Alternative Readings, 又唸作 (subtag bit 12)
+     * </pre>
+     *
+     * <code>bool alt_reading = 12;</code>
+     * @param value The altReading to set.
+     * @return This builder for chaining.
+     */
+    public Builder setAltReading(boolean value) {
+      copyOnWrite();
+      instance.setAltReading(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Alternative Readings, 又唸作 (subtag bit 12)
+     * </pre>
+     *
+     * <code>bool alt_reading = 12;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearAltReading() {
+      copyOnWrite();
+      instance.clearAltReading();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.KautianSubcollectionToggles)
   }
   @java.lang.Override
@@ -1022,11 +1100,12 @@ public  final class KautianSubcollectionToggles extends
             "accentSintik_",
             "accentTaichung_",
             "nameAppendix_",
+            "altReading_",
           };
           java.lang.String info =
-              "\u0000\u000b\u0000\u0000\u0001\u000b\u000b\u0000\u0000\u0000\u0001\u0007\u0002\u0007" +
-              "\u0003\u0007\u0004\u0007\u0005\u0007\u0006\u0007\u0007\u0007\b\u0007\t\u0007\n\u0007" +
-              "\u000b\u0007";
+              "\u0000\f\u0000\u0000\u0001\f\f\u0000\u0000\u0000\u0001\u0007\u0002\u0007\u0003\u0007" +
+              "\u0004\u0007\u0005\u0007\u0006\u0007\u0007\u0007\b\u0007\t\u0007\n\u0007\u000b\u0007" +
+              "\f\u0007";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

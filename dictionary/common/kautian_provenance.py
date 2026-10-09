@@ -1,18 +1,19 @@
 # -*- coding: utf-8 -*-
-"""kautian subcollection provenance — accent / name / main membership maps.
+"""kautian subcollection provenance — main / alt-reading / accent / name maps.
 
-Phase 1 of the kautian subcollections feature. The kautian ODS carries three
+Phase 1 of the kautian subcollections feature. The kautian ODS carries
 gateable subcollections that the build pipeline used to flatten into one
 undifferentiated `kautian` source bit:
 
-- ``main`` — headword sheets: 詞目 / 又唸作 / 合音唸作 / 俗唸作 / 詞彙比較
+- ``main`` — headword sheets: 詞目 / 合音唸作 / 俗唸作 / 詞彙比較
+- ``alt_reading`` — the 又唸作 sheet (alternative readings of a headword)
 - ``accent_differences`` — the 語音差異 sheet, one reading per dialect column
 - ``name_appendix`` — the 名 / 姓 sheets (姓名附錄)
 
 This module builds, from the raw sheets, per-``(hanzi, normalized-reading)``
-membership and applies it to the cleaned DataFrame as three columns:
-``kautian_main`` (bool), ``kautian_accent_mask`` (10-bit int), ``kautian_name``
-(bool). The Phase 2 binary encoder consumes them; Phase 1 only emits them.
+membership and applies it to the cleaned DataFrame as four columns:
+``kautian_main`` (bool), ``kautian_alt_reading`` (bool), ``kautian_accent_mask``
+(10-bit int), ``kautian_name`` (bool). The Phase 2 binary encoder consumes them; Phase 1 only emits them.
 
 Keys use the SAME normalization the cleanup stage applies to ``tl``
 (`normalize_roman`), so the maps join onto the post-cleanup rows even when the
@@ -37,6 +38,7 @@ PROVENANCE_META_KEY = "kautian_provenance"
 
 # Emitted CSV column names (also the Phase 2 encoder input names).
 COL_MAIN = "kautian_main"
+COL_ALT_READING = "kautian_alt_reading"
 COL_ACCENT_MASK = "kautian_accent_mask"
 COL_NAME = "kautian_name"
 
@@ -132,16 +134,18 @@ def apply_provenance(
     accent_map: dict[ProvenanceKey, int],
     name_set: set[ProvenanceKey],
     main_set: set[ProvenanceKey],
+    alt_reading_set: set[ProvenanceKey],
 ) -> pd.DataFrame:
-    """Add the three provenance columns to a cleaned kautian DataFrame.
+    """Add the four provenance columns to a cleaned kautian DataFrame.
 
     `df["tl"]` is already cleanup-normalized, so it keys directly into the
-    maps. Every kautian row originates from a main / accent / name sheet, so a
-    row that is neither accent nor name is a headword by construction — hence
-    `has_main` is True for those without consulting `main_set`. `main_set` is
-    consulted only to confirm headword-ness for accent/name OVERLAP rows
-    (a reading that is both a headword and an accent/name entry). This keeps
-    DD6: such a word stays visible when its accent/name toggle is off. The
+    maps. Every kautian row originates from a main / alt-reading / accent /
+    name sheet, so a row that is none of alt-reading, accent or name is a
+    headword by construction — hence `has_main` is True for those without
+    consulting `main_set`. `main_set` is consulted only to confirm
+    headword-ness for alt-reading/accent/name OVERLAP rows (a reading that is
+    both a headword and one of those entries). This keeps DD6: such a word
+    stays visible when its alt-reading/accent/name toggle is off. The
     default-True for the non-overlap case is also fail-safe — a headword is
     never hidden by a map miss.
     """
@@ -151,13 +155,15 @@ def apply_provenance(
     )
     masks = [accent_map.get(key, 0) for key in keys]
     names = [key in name_set for key in keys]
-    # headword by construction unless it's purely an accent/name reading;
-    # main_set re-confirms headword-ness for accent/name overlaps (DD6).
+    alt_readings = [key in alt_reading_set for key in keys]
+    # headword by construction unless it's purely an alt-reading/accent/name
+    # reading; main_set re-confirms headword-ness for those overlaps (DD6).
     mains = [
-        (not mask and not name) or (key in main_set)
-        for key, mask, name in zip(keys, masks, names)
+        (not mask and not name and not alt) or (key in main_set)
+        for key, mask, name, alt in zip(keys, masks, names, alt_readings)
     ]
     df[COL_MAIN] = mains
+    df[COL_ALT_READING] = alt_readings
     df[COL_ACCENT_MASK] = masks
     df[COL_NAME] = names
     return df

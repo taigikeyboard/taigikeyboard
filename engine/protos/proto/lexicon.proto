@@ -90,8 +90,9 @@ message SearchWithSourcesRequest {
   //
   // kautian subcollections (binary v3): the HIGH region carries the user's
   // per-subcollection enable bits — bit 13 = active sentinel (0 ⇒ engine skips
-  // subcollection gating = all on, the legacy/pre-UI default), bits 14..=25 =
-  // enable mask (main | accent[10] | name, same layout as the record subtag).
+  // subcollection gating = all on, the legacy/pre-UI default), bits 14..=26 =
+  // enable mask (main | accent[10] | name | alt_reading, same layout as the
+  // record subtag).
   // ENCODE (Phase 3): `compute_filters` sets these from `DictionarySourceToggles
   // .kautian_subcollections` when present; a caller that leaves the sub-message absent
   // keeps bit 13 clear = legacy all-on. Decode: `Filter::from_enabled_bitmask`
@@ -273,7 +274,7 @@ message DictionarySourceToggles {
 // so `compute_filters` sets its subtag bit unconditionally when this
 // message is present. Field tags map to the kautian subtag bit positions:
 // accent tag N → subtag bit N (config.yaml `dialect_columns` order), and
-// `name_appendix` → subtag bit 11. Bit layout owner is Rust
+// `name_appendix` → subtag bit 11, `alt_reading` → subtag bit 12. Bit layout owner is Rust
 // `engine/lexicon/src/dictionary_reader.rs` (`KAUTIAN_SUBTAG_*`); see
 // `docs/engine/binary-format.md` §4.5.
 message KautianSubcollectionToggles {
@@ -288,6 +289,7 @@ message KautianSubcollectionToggles {
   bool accent_sintik    = 9;  // Hsinchu (Quanzhou-leaning) (subtag bit 9)
   bool accent_taichung  = 10; // Taichung (Zhangzhou-leaning) (subtag bit 10)
   bool name_appendix    = 11; // Surname Appendix, 名+姓 (subtag bit 11)
+  bool alt_reading      = 12; // Alternative Readings, 又唸作 (subtag bit 12)
 }
 
 // `DictionarySourceCode` is the wire-stable mapping for

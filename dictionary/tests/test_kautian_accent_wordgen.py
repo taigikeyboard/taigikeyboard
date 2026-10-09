@@ -23,7 +23,7 @@ from common.kautian_accent_wordgen import (
     build_char_accent_table,
     generate_variants_for_word,
 )
-from common.kautian_provenance import COL_ACCENT_MASK, COL_MAIN, COL_NAME
+from common.kautian_provenance import COL_ACCENT_MASK, COL_ALT_READING, COL_MAIN, COL_NAME
 
 # 八: pueh in Quanzhou-leaning (bits 0,1,2,6,7,8 = 455); peh in Zhangzhou-leaning/mixed (bits 3,4,5,9 = 568).
 EIGHT_TABLE = {"八": {"pueh": 455, "peh": 568}}
@@ -123,6 +123,7 @@ def _base_df() -> pd.DataFrame:
             "tl": ["pueh-jī"],
             "frequency": [777],
             COL_MAIN: [True],
+            COL_ALT_READING: [False],
             COL_ACCENT_MASK: [0],
             COL_NAME: [False],
         }
@@ -143,6 +144,24 @@ def test_apply_emits_row_with_inherited_frequency_and_flags():
     assert report.words_generating == 1
 
 
+def test_apply_alt_reading_base_generates_accent_only_row():
+    # A 又唸作-only row (alt-reading, not main) still seeds accent variants —
+    # it was a main row before the Alternative Readings toggle, so the
+    # generated set is unchanged. The generated row is accent-only.
+    base = _base_df()
+    base[COL_MAIN] = [False]
+    base[COL_ALT_READING] = [True]
+    df, report = apply_word_accent_generation(
+        base, {("八", "pueh"): 455, ("八", "peh"): 568}, _always_convertible
+    )
+    gen = df[df["tl"] == "peh-jī"]
+    assert len(gen) == 1
+    assert not bool(gen.iloc[0][COL_MAIN])
+    assert not bool(gen.iloc[0][COL_ALT_READING])
+    assert int(gen.iloc[0][COL_ACCENT_MASK]) == 568
+    assert report.rows_emitted == 1
+
+
 def test_apply_collision_ors_into_existing_row_no_duplicate():
     # An existing kautian row already carries (八字, peh-jī) as a headword
     # (main=True). The generated accent variant must OR its mask into that row,
@@ -154,6 +173,7 @@ def test_apply_collision_ors_into_existing_row_no_duplicate():
             "tl": ["pueh-jī", "peh-jī"],
             "frequency": [777, 500],
             COL_MAIN: [True, True],
+            COL_ALT_READING: [False, False],
             COL_ACCENT_MASK: [0, 0],
             COL_NAME: [False, False],
         }

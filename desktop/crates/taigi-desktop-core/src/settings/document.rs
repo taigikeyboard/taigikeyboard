@@ -375,6 +375,7 @@ impl SettingsDocument {
                 accent_sintik: self.bool(&keys::IS_KAUTIAN_ACCENT_SINTIK_ENABLED),
                 accent_taichung: self.bool(&keys::IS_KAUTIAN_ACCENT_TAICHUNG_ENABLED),
                 name_appendix: self.bool(&keys::IS_KAUTIAN_NAME_APPENDIX_ENABLED),
+                alt_reading: self.bool(&keys::IS_KAUTIAN_ALT_READING_ENABLED),
             },
         }
     }

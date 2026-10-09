@@ -41,6 +41,7 @@ internal data class StubEngineSettings(
     override var isKautianAccentSintikEnabled: Boolean = true,
     override var isKautianAccentTaichungEnabled: Boolean = true,
     override var isKautianNameAppendixEnabled: Boolean = true,
+    override var isKautianAltReadingEnabled: Boolean = true,
 ) : EngineSettings
 
 /** A provider whose `current` is the one stub it was built with. */

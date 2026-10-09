@@ -32,7 +32,7 @@ from common.frequency import load_frequency_map, get_frequency
 from common.logging_utils import setup_logging, log_header
 from common.notone import apply_or_dialect_variant, remove_tone, remove_tps_tone
 from common.romanization import to_numeric_tone
-from common.kautian_provenance import COL_ACCENT_MASK, COL_MAIN, COL_NAME
+from common.kautian_provenance import COL_ACCENT_MASK, COL_ALT_READING, COL_MAIN, COL_NAME
 from common.source_bits import MAIN_SOURCE_COLUMNS
 from common.taigi_bridge import (
     BridgeDeadError,
@@ -61,10 +61,10 @@ SCRIPT_NAME = "merge_csv"
 SOURCE_COLUMNS = MAIN_SOURCE_COLUMNS
 
 # kautian subcollection provenance columns — present only on kautian rows, so
-# cross-source dedup must UNION them (NaN for other sources). The two bool
+# cross-source dedup must UNION them (NaN for other sources). The bool
 # flags use the same "any" reducer as SOURCE_COLUMNS; the accent mask needs a
 # custom bitwise-OR. See common/kautian_provenance.py.
-KAUTIAN_PROVENANCE_FLAGS = (COL_MAIN, COL_NAME)
+KAUTIAN_PROVENANCE_FLAGS = (COL_MAIN, COL_ALT_READING, COL_NAME)
 
 
 def _or_mask_agg(series) -> int:
