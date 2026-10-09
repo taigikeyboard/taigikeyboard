@@ -199,9 +199,10 @@ desktop-patch:
 	@test -n "$(PLATFORM)" || { echo "usage: make desktop-patch PLATFORM=macos|windows|linux" >&2; exit 2; }
 	bash tools/release/stage-desktop.sh $(PLATFORM)
 
-# Announce a desktop release a person has already published: prove both
-# installers download anonymously, point the website at them, wait for the live
-# appcasts. Publishing the release runs this automatically
+# Announce a desktop release a person has already published: prove each
+# installer downloads anonymously, mirror it to dl.taigikeyboard.tw, point the
+# website at the mirror, wait for the live appcasts. Needs `aws` and the R2_*
+# credentials (docs/architecture/desktop-release.md). Publishing the release runs this automatically
 # (`.github/workflows/announce-release.yml`); this target is the same script by
 # hand, for a re-run after a failed job or an expired token.
 desktop-announce:

@@ -15,15 +15,18 @@
 #   1. refuse while the release is still a draft — a manifest naming a draft
 #      points every installed copy at a download that does not exist
 #   2. for each platform's installer on the release: download it anonymously and
-#      hash it — the digest the Windows manifest and the Linux site data publish
-#      has to be the one the URL actually serves
+#      hash it, check the staged `.sha256` receipt against it, mirror both to
+#      the R2 bucket behind dl.taigikeyboard.tw, and read the mirror back
+#      anonymously — the website names the mirror, so the digest the Windows
+#      manifest and the Linux site data publish has to be the one IT serves
 #   3. write every platform's `_data/*_release.json` into the website repository
 #      in one commit
 #   4. wait until each live appcast serves what was written (macOS, Windows —
 #      Linux has no appcast)
 #
-# It runs anywhere with `gh`, `curl` and `python3` — everything it needs is on
-# the release. Re-running it after a failure is the intended recovery.
+# It runs anywhere with `gh`, `curl`, `python3`, the AWS CLI and the three R2_*
+# credentials (`require_r2`) — everything it needs is on the release.
+# Re-running it after a failure is the intended recovery.
 
 set -euo pipefail
 
@@ -66,6 +69,7 @@ source "$REPOSITORY_DIR/tools/release/lib/release-site.sh"
 source "$REPOSITORY_DIR/tools/release/lib/desktop-release.sh"
 
 desktop_release_scratch_and_tools
+require_r2
 
 # ---------------------------------------------------------------------------
 # The release has to be published before anything is said about it.
@@ -101,7 +105,7 @@ announced_platforms=()
 # on the release; returns 1 when it is not.
 fetch_platform_asset() {
     local platform="$1" asset_name="$2"
-    local asset_url downloaded attempt
+    local asset_url downloaded
 
     if ! grep -qxF "$asset_name" <<< "$staged_assets"; then
         echo "==> $platform: no $asset_name on $DESKTOP_TAG — leaving its manifest alone"
@@ -118,18 +122,27 @@ fetch_platform_asset() {
     # repository. Whole, because the digest the Windows manifest publishes has to
     # be the one this URL serves. GitHub can take a moment to serve a freshly
     # published asset, so an unreachable one is retried.
-    for attempt in 1 2 3 4 5; do
-        anonymous_download "$asset_url" "$downloaded" && break
-        [[ $attempt -eq 5 ]] &&
-            fail "$asset_url is not anonymously reachable — is $RELEASE_REPOSITORY public, and did the publish finish?"
-        echo "  not reachable yet — retrying in 5s"
-        sleep 5
-    done
+    anonymous_download_retrying "$asset_url" "$downloaded" ||
+        fail "$asset_url is not anonymously reachable — is $RELEASE_REPOSITORY public, and did the publish finish?"
 
     ASSET_SHA256="$(release_sha256 "$downloaded")"
     [[ "$ASSET_SHA256" =~ ^[0-9a-f]{64}$ ]] || fail "cannot hash the download from $asset_url"
-    ASSET_URL="$asset_url"
     echo "  sha256 $ASSET_SHA256"
+
+    # The receipt staging wrote must name the bytes GitHub serves; it is
+    # mirrored as-is, never regenerated, so the mirror carries the staged digest.
+    # Every `|| fail` below is load-bearing: this function runs as an `if`
+    # condition, where `set -e` does not stop it.
+    local receipt="$downloaded.sha256" receipt_sha256
+    anonymous_download "$asset_url.sha256" "$receipt" ||
+        fail "$asset_url.sha256 is not anonymously reachable — staging attaches one beside every installer"
+    receipt_sha256="$(cut -d' ' -f1 "$receipt")"
+    [[ "$receipt_sha256" == "$ASSET_SHA256" ]] ||
+        fail "$asset_name.sha256 on $DESKTOP_TAG says $receipt_sha256, but the installer hashes to $ASSET_SHA256"
+
+    mirror_asset "$downloaded" "$receipt" "$asset_name" "$ASSET_SHA256"
+
+    ASSET_URL="$DOWNLOAD_BASE_URL/$asset_name"
     announced_platforms+=("$platform")
 }
 
