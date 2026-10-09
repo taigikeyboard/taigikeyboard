@@ -20,6 +20,8 @@
 
 Nothing in flight: everything scoped through 2026-10-08 has merged (see Closed phases). Pending dogfood: `docs/architecture/dogfood-checklist.md`.
 
+Proposed, not started (maintainer decides order): [`architecture/maintainability-roadmap-2026-10.md`](architecture/maintainability-roadmap-2026-10.md) — rounds H, A–G over [`reports/2026-10-09-audit-all.md`](reports/2026-10-09-audit-all.md).
+
 ---
 
 ## Released versions index
