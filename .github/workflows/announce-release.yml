@@ -5,7 +5,8 @@ name: Announce desktop release
 # `make macos-release` / `make windows-release` stage each platform's installer
 # on a DRAFT release that no user can reach. You download it, test it, and press
 # Publish. That publish fires this: it proves each installer downloads
-# anonymously, then writes the website data `appcast/{macos,windows}.json` and
+# anonymously, mirrors it to dl.taigikeyboard.tw (Cloudflare R2), then
+# writes the website data `appcast/{macos,windows}.json` and
 # the download buttons (Linux included) are rendered from, and waits until the
 # live appcasts serve it. Nothing else is left to do by hand.
 #
@@ -23,6 +24,13 @@ on:
 
 permissions:
   contents: read
+
+# Two announcements at once race on the website commit, and the loser fails;
+# queue them instead. `queue: max` keeps every waiting run — the default keeps
+# one and cancels the rest, which would skip a platform's announcement.
+concurrency:
+  group: announce-desktop-release
+  queue: max
 
 jobs:
   announce:
@@ -48,6 +56,11 @@ jobs:
           # fails and `make desktop-announce` still works from a machine with
           # `gh` logged in.
           GH_TOKEN: ${{ secrets.SITE_CONTENTS_TOKEN }}
+          # The R2 download mirror (desktop-release.md § One-time: the R2
+          # mirror); the AWS CLI it drives is preinstalled on ubuntu-latest.
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
         run: |
           if [ -n "${{ inputs.version }}" ]; then
             bash tools/release/announce-release.sh --version "${{ inputs.version }}"

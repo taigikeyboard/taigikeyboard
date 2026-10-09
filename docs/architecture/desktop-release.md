@@ -51,6 +51,7 @@ The release goes in **this** repository; only the website's own data goes to
 | What | Where | Why there |
 |---|---|---|
 | Each installer and its `.sha256` | assets on the GitHub release `desktop-<version>` **in this repository**, both platforms on one release | One desktop version is one release, beside the source it was built from: the tag names that commit, the notes are that commit's changelog. Releases lived on the website repository while this one was private and nothing served from it was anonymously reachable; it has been public since 2026-09-07. Release assets live outside git either way, so they cost no repository its size or bandwidth allowance. |
+| The download mirror: each installer and its `.sha256` | the Cloudflare R2 bucket `taigikeyboard-downloads`, served at `https://dl.taigikeyboard.tw/desktop/<asset>` — copied there by the announcement | GitHub's release-asset host crawls on some Taiwanese ISPs (HiNet measured ~40 KB/s on 2026-10-09, against ~16 MB/s from R2), so the website buttons and both appcasts name the mirror; the GitHub release stays the original it is checked against. See *One-time: the R2 mirror* and *Pruning the mirror*. |
 | `_data/{macos,windows,linux}_release.json` | committed site data in the website repository — written only by the announcement, all in one commit | The landing page's macOS download button reads it and links straight at the package, so its URL carries the version. Keeping it as data the release flow writes is what stops the page hard-coding a version, and what keeps the button off `/releases/latest` — that alias is repository-wide, and this repository's last release may be a Windows installer. |
 | `appcast/{macos,windows}.json` | **rendered** from that data by the site's own build, served from `https://taigikeyboard.tw/appcast/` | Every installed copy has its URL baked in (`UpdateChecker.publishedURL`, `manifest::PUBLISHED_URL`) and expects a fixed shape, so the manifest stays a static file on the project's own domain rather than anything GitHub serves. Rendered rather than written because two files meant two commits, and two Pages runs seconds apart deploy their own trees: see *One published fact, one committed file* in `macos/updates/README.md` for the day the manifest sat a release behind. |
 | `Casks/taigikeyboard.rb` | the `taigikeyboard/homebrew-tap` repository (`brew install --cask taigikeyboard/tap/taigikeyboard`) | Homebrew finds a tap only in a repository named `homebrew-*`. The cask names the last **published** macOS `.pkg` — never a draft or the in-tree version — and its `livecheck` counts only published releases carrying a `TaigiKeyboard-<version>.pkg` asset, so a Linux-only patch release or a `mobile-*` tag never looks like a new macOS version. The app's own update check still applies (`auto_updates true`). |
@@ -101,9 +102,12 @@ own artifact; everything above it is shared (see *Where it all lives* below).
    credentials at all** — `curl -q --netrc-file /dev/null` is what guarantees
    that; an authenticated check cannot tell a public URL from a private one,
    which is how the first version of this shipped pointing at a private
-   repository — and hashed. That hash is what the Windows manifest and the
-   Linux site data publish, so the digest each names is one the URL was
-   observed serving.
+   repository — and hashed, and its staged `.sha256` receipt is held to that
+   hash. Both are then copied to the R2 mirror and the installer is read back
+   from `https://dl.taigikeyboard.tw/desktop/<asset>`, again anonymously, and
+   must hash the same. That mirror URL is what the site data and appcasts name,
+   and the hash is what the Windows manifest and the Linux site data publish, so
+   the digest each names is one the mirror was observed serving.
 3. Every platform's data file is written to the website in **one** commit, so
    they cannot race each other's Pages deployment.
 4. Each live appcast (macOS, Windows) is polled until it serves this version **and** its package
@@ -143,12 +147,39 @@ and `make desktop-announce` from a machine with `gh` logged in does the same
 job, so a release is never blocked on it.
 
 
+### One-time: the R2 mirror
+
+The announcement uploads to the R2 bucket `taigikeyboard-downloads` through R2's
+S3-compatible API with the AWS CLI (preinstalled on `ubuntu-latest`; `brew
+install awscli` for a local run):
+
+- In the Cloudflare dashboard, R2 → Manage API tokens → **Account API token**,
+  permission **Object Read & Write**, bucket `taigikeyboard-downloads` only.
+- Stored as three secrets on `taigikeyboard/taigikeyboard`: `R2_ACCESS_KEY_ID`,
+  `R2_SECRET_ACCESS_KEY`, `R2_ACCOUNT_ID` (the id in the S3 endpoint
+  `https://<id>.r2.cloudflarestorage.com`). A local `make desktop-announce`
+  exports the same three.
+- The bucket uses the **Standard** storage class — Infrequent Access is outside
+  the free tier — and its custom domain is `dl.taigikeyboard.tw`; the `r2.dev`
+  URL stays disabled.
+
+### Pruning the mirror
+
+The announcement only adds to the bucket. Removing a superseded version is a
+manual step, after its successor is announced on every platform: a manifest an
+installed copy has already fetched, or a cached download page, can still name
+the old object, so deleting it at announce time would turn those into failed
+downloads. List what the five `_data/*_release.json` files name, and delete
+every other `desktop/` object (and its `.sha256`) with `aws s3 rm` against the
+same endpoint. GitHub keeps every release, so older versions stay downloadable
+there.
+
 ## Where it all lives
 
 | Piece | File |
 |---|---|
 | The release object: preflight, draft, tag alignment, create-or-attach, read-back | `tools/release/lib/desktop-release.sh` |
-| The website: anonymous fetches, the one-commit site write, the manifest poll | `tools/release/lib/release-site.sh` |
+| The website: anonymous fetches, the R2 mirror (`require_r2`, `r2`), the one-commit site write, the manifest poll | `tools/release/lib/release-site.sh` |
 | The announcement, run by the publish | `tools/release/announce-release.sh` + `.github/workflows/announce-release.yml` |
 | What only a Mac can say about the package | `macos/scripts/publish-release.sh` |
 | What only Windows can say about the installer | `windows/scripts/publish-release.sh` |

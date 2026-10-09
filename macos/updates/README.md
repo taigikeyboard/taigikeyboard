@@ -50,7 +50,7 @@ A release writes exactly one file over there, `_data/macos_release.json`:
 {
   "version": "3.6.6",
   "tag": "desktop-3.6.6",
-  "downloadURL": "https://github.com/taigikeyboard/taigikeyboard/releases/download/desktop-3.6.6/TaigiKeyboard-3.6.6.pkg",
+  "downloadURL": "https://dl.taigikeyboard.tw/desktop/TaigiKeyboard-3.6.6.pkg",
   "releasePageURL": "https://github.com/taigikeyboard/taigikeyboard/releases/tag/desktop-3.6.6"
 }
 ```

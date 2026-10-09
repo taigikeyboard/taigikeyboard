@@ -56,7 +56,7 @@ maintainer has published the release:
 {
   "version": "3.7.0",
   "tag": "desktop-3.7.0",
-  "downloadURL": "https://github.com/taigikeyboard/taigikeyboard/releases/download/desktop-3.7.0/TaigiKeyboard-3.7.0.exe",
+  "downloadURL": "https://dl.taigikeyboard.tw/desktop/TaigiKeyboard-3.7.0.exe",
   "sha256": "115b6d19c0a2f4e6ab8d7315f0c9e24d5b6a1f8309e7c4d25a0b3f6178e917d2",
   "releasePageURL": "https://github.com/taigikeyboard/taigikeyboard/releases/tag/desktop-3.7.0"
 }

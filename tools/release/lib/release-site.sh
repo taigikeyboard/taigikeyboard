@@ -22,6 +22,36 @@ LINUX_ARCH_SITE_PATH="_data/linux_arch_release.json"
 MACOS_MANIFEST_URL="https://taigikeyboard.tw/appcast/macos.json"
 WINDOWS_MANIFEST_URL="https://taigikeyboard.tw/appcast/windows.json"
 
+# Where users download installers from: GitHub's asset host is slow on some
+# ISPs, so the website and both appcasts name this R2 mirror instead
+# (docs/architecture/desktop-release.md § One-time: the R2 mirror).
+R2_BUCKET="taigikeyboard-downloads"
+R2_PREFIX="desktop"
+DOWNLOAD_BASE_URL="https://dl.taigikeyboard.tw/$R2_PREFIX"
+
+# Fail before anything is uploaded when the mirror cannot be written.
+require_r2() {
+    command -v aws > /dev/null || fail "the AWS CLI is required to upload to R2 (macOS: brew install awscli)"
+    local name
+    for name in R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY R2_ACCOUNT_ID; do
+        [[ -n "${!name:-}" ]] ||
+            fail "$name is not set (docs/architecture/desktop-release.md § One-time: the R2 mirror)"
+    done
+}
+
+# The AWS CLI against R2's S3-compatible endpoint, with the R2 token only:
+# nothing from ~/.aws or an inherited AWS session can leak in — a named profile
+# would fail to resolve against the emptied config, and a session token would
+# be signed into the request.
+r2() {
+    env -u AWS_PROFILE -u AWS_DEFAULT_PROFILE -u AWS_SESSION_TOKEN -u AWS_SECURITY_TOKEN \
+        AWS_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID" \
+        AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY" \
+        AWS_CONFIG_FILE=/dev/null \
+        AWS_SHARED_CREDENTIALS_FILE=/dev/null \
+        aws --endpoint-url "https://$R2_ACCOUNT_ID.r2.cloudflarestorage.com" --region auto "$@"
+}
+
 # -q must come first: it is what stops curl reading ~/.curlrc, which could
 # otherwise switch on the netrc that --netrc-file disables here. Together they
 # guarantee these requests carry no credentials, which is the entire point —
@@ -36,6 +66,36 @@ anonymous_curl() {
 # report a corrupt upload for what is really "not served yet, try again".
 anonymous_download() {
     anonymous_curl --fail --output "$2" "$1"
+}
+
+# The same, retried: a host can take a moment to serve a file it was just
+# given. The last failure names the URL; the caller says what that means.
+anonymous_download_retrying() {
+    local attempt
+    for attempt in 1 2 3 4 5; do
+        anonymous_download "$1" "$2" && return
+        [[ $attempt -eq 5 ]] && return 1
+        echo "  not reachable yet — retrying in 5s"
+        sleep 5
+    done
+}
+
+# Copy a verified installer and its staged receipt to the R2 mirror, then read
+# the installer back the way users will and hold it to the digest it was
+# verified at — the website is about to name the mirror URL, not GitHub's.
+#
+#   mirror_asset <file> <receipt file> <asset name> <sha256>
+mirror_asset() {
+    local file="$1" receipt="$2" name="$3" sha256="$4"
+    local key="s3://$R2_BUCKET/$R2_PREFIX/$name" url="$DOWNLOAD_BASE_URL/$name"
+    local mirrored="$RELEASE_TEMP_DIR/mirror-$name"
+
+    echo "  mirroring to $url"
+    r2 s3 cp --only-show-errors "$file" "$key" || fail "cannot upload $name to R2 bucket $R2_BUCKET"
+    r2 s3 cp --only-show-errors --content-type text/plain "$receipt" "$key.sha256" ||
+        fail "cannot upload $name.sha256 to R2 bucket $R2_BUCKET"
+    anonymous_download_retrying "$url" "$mirrored" || fail "$url is not anonymously reachable after the upload"
+    [[ "$(release_sha256 "$mirrored")" == "$sha256" ]] || fail "$url does not serve the bytes that were uploaded"
 }
 
 # Create or replace one or more files in the website repository, in ONE commit.
