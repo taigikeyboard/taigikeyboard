@@ -588,9 +588,6 @@ pub enum Intent {
     },
     DeleteBackward,
     CommitRaw,
-    SelectCandidate {
-        text: String,
-    },
     CommitPreeditThenInsertExternal {
         text: String,
     },

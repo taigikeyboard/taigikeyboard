@@ -26,8 +26,8 @@ use crate::api::{CaretDirection, CommitScript, ComposingError, Engine, Intent, P
 use crate::continuous::{assemble_candidates, retain_first_by_key, roman_reading_eq, ListShape};
 use crate::derived::buffer_input_mode;
 use lexicon::{
-    classification::is_hanji, derive_script_kind, ConsumedSpan, LearnedEntry, RawCandidate,
-    SyllableInventory, COVERAGE_KIND_FULL, FORM_NOTONE,
+    classification::is_hanji, ConsumedSpan, LearnedEntry, RawCandidate, SyllableInventory,
+    COVERAGE_KIND_FULL, FORM_NOTONE,
 };
 use protos::engine::{
     composing_request, AppConfig, CandidateMessage, CommitScript as WireCommitScript,
@@ -51,7 +51,6 @@ pub fn decode_intent(req: &ComposingRequest) -> Result<Intent, ComposingError> {
         },
         Method::DeleteBackward(_) => Intent::DeleteBackward,
         Method::CommitRaw(_) => Intent::CommitRaw,
-        Method::SelectCandidate(m) => Intent::SelectCandidate { text: m.text },
         Method::CommitPreeditThenInsertExternal(m) => {
             Intent::CommitPreeditThenInsertExternal { text: m.text }
         }
@@ -217,9 +216,9 @@ fn handle_fetch_at_pos(
     // the same detection `derived::derived_display` uses) makes the fetch
     // `InputMode::Tps`, whatever `input_mode` says; a Bopomofo-free buffer
     // composes under `composing_mode`, which reads the TPS layout
-    // (`"tps"`, or the pre-R6 wire's `"tl"`) as TL. So a TPS buffer that
-    // opens with `-` or a lone tone mark takes the TL tables until its
-    // first Bopomofo glyph, on either wire.
+    // (`input_mode = "tps"`, the only TPS wire — the engine ships inside
+    // each app) as TL. So a TPS buffer that opens with `-` or a lone tone
+    // mark takes the TL tables until its first Bopomofo glyph.
     //
     // Single-source mode flow into `assemble_candidates`: the seam
     // derives every TPS-gated branch from `mode == InputMode::Tps`
@@ -269,7 +268,7 @@ fn handle_fetch_at_pos(
     // = show (legacy always-on), so un-wired builds are unaffected.
     if !literal_roman_candidate_disabled {
         if let Some(mut literal) = literal_roman_candidate(raw, config, mode) {
-            // Drop a pre-existing IDENTICAL bare-roman (hanji-absent Tailo)
+            // Drop a pre-existing IDENTICAL bare-roman (hanji-absent)
             // so the literal is not duplicated; dict rows with hanji stay (a
             // `tâi`/台 dict candidate and a bare `tâi` commit differ — Codex
             // pre-impl F5).
@@ -360,7 +359,7 @@ fn adopt_collapsed_dict_identity(literal: &mut RawCandidate, candidates: &[RawCa
 ///   promoted to `InputMode::Tps` upstream); English excluded.
 /// * the preedit literal is non-empty.
 ///
-/// The candidate is roman-only (`hanji = None` → `CandidateScriptKind::Tailo`),
+/// The candidate is roman-only (`hanji = None`),
 /// with `roman ==` the preedit literal. `display_text` preserves the prior
 /// literal learning key (except the dictionary identity inherited under a
 /// single-script display — `adopt_collapsed_dict_identity`)
@@ -397,7 +396,6 @@ fn literal_roman_candidate(
         frequency: 0,
         walker_cost: WALKER_COST_UNPRICED,
         bitmask: 0,
-        script_kind: derive_script_kind(None),
         user_weight: 0.0,
         context_rank: ranking::CONTEXT_RANK_NONE,
         coverage_kind: COVERAGE_KIND_FULL,
@@ -452,19 +450,15 @@ fn first_learned_per_reading(entries: &[LearnedEntry]) -> Vec<LearnedEntry> {
 
 fn raw_to_proto_candidate(c: RawCandidate) -> CandidateMessage {
     CandidateMessage {
-        consumed_span_start: c.consumed_span.0,
         consumed_span_end: c.consumed_span.1,
         syllable_count: c.syllable_count as u32,
         display_text: c.display_text,
-        score: c.score,
-        form: c.form as u32,
-        script_kind: c.script_kind.to_proto_i32(),
         // v3.5.8 Phase 9 Item 5 — `roman` is always non-empty for a
         // dictionary-sourced candidate; it is the display romanization
         // for the active input mode (TL, or POJ-display after the
         // continuous seam's POJ presentation pass). `hanji` is a proto3
         // `optional string` so prost serializes `None` as wire-absent
-        // (distinguishes TAILO from defective empty-string emission).
+        // (distinguishes a roman-only candidate from defective empty-string emission).
         // See `docs/engine/continuous-candidate-display.md` §4.2.
         roman: c.roman,
         hanji: c.hanji,
@@ -532,8 +526,8 @@ mod tests {
     }
 
     /// v3.5.8 Phase 9 Item 5 — `raw_to_proto_candidate` must propagate
-    /// `roman` and `hanji` onto the wire. HANT records carry both;
-    /// TAILO records emit `roman` only and leave proto `hanji` as
+    /// `roman` and `hanji` onto the wire. Records with hanji carry both;
+    /// roman-only records emit `roman` only and leave proto `hanji` as
     /// `None` (proto3 `optional string` wire-absent, NOT `Some("")`).
     #[test]
     fn raw_to_proto_candidate_propagates_roman_and_some_hanji() {
@@ -549,7 +543,6 @@ mod tests {
             frequency: 12,
             walker_cost: WALKER_COST_UNPRICED,
             bitmask: 0,
-            script_kind: lexicon::CandidateScriptKind::Hant,
             user_weight: 0.0,
             context_rank: ranking::CONTEXT_RANK_NONE,
             coverage_kind: lexicon::COVERAGE_KIND_FULL,
@@ -577,7 +570,6 @@ mod tests {
             frequency: 3,
             walker_cost: WALKER_COST_UNPRICED,
             bitmask: 0,
-            script_kind: lexicon::CandidateScriptKind::Tailo,
             user_weight: 0.0,
             context_rank: ranking::CONTEXT_RANK_NONE,
             coverage_kind: lexicon::COVERAGE_KIND_FULL,
@@ -609,7 +601,6 @@ mod tests {
                 frequency: 1,
                 walker_cost: WALKER_COST_UNPRICED,
                 bitmask: 0,
-                script_kind: lexicon::CandidateScriptKind::Hant,
                 user_weight: 0.0,
                 context_rank: ranking::CONTEXT_RANK_NONE,
                 coverage_kind: lexicon::COVERAGE_KIND_FULL,
@@ -665,7 +656,7 @@ mod tests {
     #[test]
     fn literal_roman_candidate_tl_single_syllable_is_tailo_wysiwyg() {
         // Headline case: `nng7` → the literal tone-marked roman (`nn̄g`),
-        // roman-only (hanji None → Tailo), matching the preedit byte-for-byte.
+        // roman-only (hanji None), matching the preedit byte-for-byte.
         let cfg = config_tl();
         let cand = literal_roman_candidate("nng7", &cfg, phonetics::InputMode::Tl)
             .expect("nng7 must yield a literal roman candidate");
@@ -673,7 +664,6 @@ mod tests {
         assert_eq!(cand.display_text, cand.roman); // WYSIWYG: display == roman
         assert_ne!(cand.roman, "nng7"); // a tone-mark conversion happened
         assert!(cand.hanji.is_none());
-        assert_eq!(cand.script_kind, lexicon::CandidateScriptKind::Tailo);
         assert_eq!(cand.consumed_span, (0, 4));
         assert!(!cand.canonical_tl.is_empty()); // #7 identity sidechannel set
     }

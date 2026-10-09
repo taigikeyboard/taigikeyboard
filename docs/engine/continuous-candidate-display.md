@@ -92,7 +92,7 @@ pub struct RawCandidate {
 }
 ```
 
-Wire mirror is single-string too:
+Wire mirror is single-string too (the shape at the time; tags 1 / 5 / 6 / 7 were removed 2026-10-09 (round A1a) — see the note in §4):
 
 ```proto
 // engine/protos/proto/composing.proto:245-253
@@ -176,6 +176,8 @@ This is **correct** — pending preedit has no hanji yet to display. But when sl
 ## 4. Proposed Solution — Option A (wire-level dual-field carrier)
 
 > **Renamed (2026-10-01, maintainability round R10-b2)**: `CandidateMode` is now `CandidateScriptKind` (values `CANDIDATE_SCRIPT_KIND_*`, numbers unchanged) and `CandidateMessage.mode` is `script_kind` (tag 7); Rust `derive_mode` → `derive_script_kind`, platform field `mode` → `scriptKind`. The snippets in this spec keep the names they shipped with.
+>
+> **Removed 2026-10-09 (round A1a)**: `consumed_span_start` (tag 1), `score` (5), `form` (6) and `script_kind` (7) left `CandidateMessage` (tags reserved) together with the `CandidateScriptKind` enum and Rust `derive_script_kind`; no platform read them. The engine keeps `score` / `form` / the consumed-span start internally; the platform structs below lost `consumedSpanStart` / `score` / `form` / `mode` (`scriptKind`), and a roman-only candidate is now simply one whose `hanji` is absent. The snippets below show the shape as shipped.
 
 ### 4.1 Goal
 

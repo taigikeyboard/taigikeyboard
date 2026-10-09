@@ -23,7 +23,6 @@ mmap-host = { workspace = true }
 phonetics = { workspace = true }
 protos = { workspace = true }
 ranking = { workspace = true }
-unicode-normalization = { workspace = true }
 
 [dev-dependencies]
 test-support = { workspace = true }

@@ -16,13 +16,9 @@ final class ActionHandlerContinuousPickTests: XCTestCase {
 
     private func candidate(roman: String, hanji: String?) -> RustEngineBridge.ContinuousCandidate {
         RustEngineBridge.ContinuousCandidate(
-            consumedSpanStart: 0,
             consumedSpanEnd: 7,
             syllableCount: 2,
             displayText: hanji ?? roman,
-            score: 0,
-            form: 1,
-            scriptKind: hanji == nil ? .tailo : .hant,
             roman: roman,
             hanji: hanji,
             canonicalTl: "tâi-gí",
@@ -105,7 +101,7 @@ final class ActionHandlerContinuousPickTests: XCTestCase {
     }
 
     /// Strict-required metadata: a suggestion missing any of it is dropped, never committed
-    /// through `selectCandidate(text:)`.
+    /// as bare cell text.
     func testMissingMetadata_dropsTheTap() throws {
         let suggestion = try XCTUnwrap(handed([candidate(roman: "tâi-gí", hanji: "台語")]).first)
         for key in ["displayText", "roman", "consumedBytes", "syllableCount"] {

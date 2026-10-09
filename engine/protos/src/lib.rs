@@ -42,9 +42,9 @@ impl engine::AppConfig {
     }
 
     /// Whether the keyboard is on the TPS (Bopomofo) layout: `input_mode` is
-    /// `"tps"` (either spelling `phonetics::api::parse_input_mode` accepts). A
-    /// pre-R6 platform sends TPS as `"tl"` with the fold already applied to the
-    /// swap / syllable separator, which the two readers below then pass through.
+    /// `"tps"` (either spelling `phonetics::api::parse_input_mode` accepts).
+    /// The engine ships inside each app, so this is the only TPS wire; the
+    /// two readers below apply the TPS fold to the stored swap / separator.
     pub fn is_tps_layout(&self) -> bool {
         matches!(self.input_mode.as_str(), "tps" | "TPS")
     }

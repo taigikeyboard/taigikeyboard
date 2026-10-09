@@ -318,11 +318,6 @@ extension ActionHandler: AutocompleteContextUpdater {
         [
             "isNextWord": "true",
             "hanzi": prediction.hanji,
-            // Raw TL sidechannel — NOT the commit string. Consumed only
-            // by the association-recording fork in
-            // `handleSuggestionSelection` (engine's `pojToTL` needs raw
-            // roman, not the mode-shaped display `text`).
-            "tl": prediction.tl,
             // R5 pair-key (#7): canonical-TL reading for the
             // user-frequency `(displayText, canonicalTl)` write.
             // `prediction.tl` is the engine-side canonical TL (only

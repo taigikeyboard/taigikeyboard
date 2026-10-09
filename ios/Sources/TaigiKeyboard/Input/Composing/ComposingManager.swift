@@ -206,25 +206,10 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         // current composition. Route through `CommitRaw` — under Continuous
         // the engine commits `Σ nailed.display_text + derived(pending)` (the
         // whole composition) and fires the terminal NextWord; it builds the
-        // string from engine state, so there is no prefix duplication. The
-        // old `SelectCandidate(composingText)` reroute double-counted the
-        // nailed prefix once the composing buffer became the whole
-        // composition (`select_candidate_under_continuous` prepends
-        // `nailed_prefix`). `selectCandidate(candidate)` still uses
-        // SelectCandidate (bare candidate → engine prepends the nailed
-        // prefix correctly). Idle → `CommitRaw` is a no-op.
+        // string from engine state, so there is no prefix duplication.
+        // Idle → `CommitRaw` is a no-op.
         let settings = settingsProvider.current
         applyAsSelfCommit(RustEngineBridge.composingCommitRaw(
-            settings: settings,
-            generation: currentGeneration,
-        ))
-    }
-
-    public func selectCandidate(text: String) {
-        logger.debug("[COMPOSE] fn=selectCandidate len=\(text.count)")
-        let settings = settingsProvider.current
-        applyAsSelfCommit(RustEngineBridge.composingSelectCandidate(
-            text,
             settings: settings,
             generation: currentGeneration,
         ))

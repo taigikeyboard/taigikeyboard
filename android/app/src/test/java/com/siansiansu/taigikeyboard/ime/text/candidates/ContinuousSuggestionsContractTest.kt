@@ -46,25 +46,17 @@ class ContinuousSuggestionsContractTest {
      * tests override either field explicitly.
      */
     private fun cand(
-        consumedSpanStart: Int = 0,
         consumedSpanEnd: Int,
         syllableCount: Int = 1,
         displayText: String,
-        score: Float = 1.0f,
-        form: Int = 1,
-        scriptKind: RustEngineBridge.CandidateScriptKind = RustEngineBridge.CandidateScriptKind.HANT,
         roman: String? = null,
         hanji: String? = null,
         canonicalTl: String? = null,
     ): RustEngineBridge.ContinuousCandidate =
         RustEngineBridge.ContinuousCandidate(
-            consumedSpanStart = consumedSpanStart,
             consumedSpanEnd = consumedSpanEnd,
             syllableCount = syllableCount,
             displayText = displayText,
-            score = score,
-            form = form,
-            scriptKind = scriptKind,
             roman = roman ?: displayText,
             hanji = hanji,
             canonicalTl = canonicalTl ?: roman ?: displayText,
@@ -78,13 +70,9 @@ class ContinuousSuggestionsContractTest {
         // click handler routes it through `handleContinuousCandidateClick`.
         val candidates = listOf(
             cand(
-                consumedSpanStart = 0,
                 consumedSpanEnd = 4,
                 syllableCount = 1,
                 displayText = "tsua",
-                score = 1.0f,
-                form = 1,
-                scriptKind = RustEngineBridge.CandidateScriptKind.HANT,
             ),
         )
         val result = buildContinuousSuggestionsForCandidates(candidates)
@@ -100,22 +88,14 @@ class ContinuousSuggestionsContractTest {
     fun `continuous candidates carry exact metadata key strings`() {
         val candidates = listOf(
             cand(
-                consumedSpanStart = 0,
                 consumedSpanEnd = 4,
                 syllableCount = 1,
                 displayText = "tsua",
-                score = 1.0f,
-                form = 1,
-                scriptKind = RustEngineBridge.CandidateScriptKind.HANT,
             ),
             cand(
-                consumedSpanStart = 0,
                 consumedSpanEnd = 7,
                 syllableCount = 2,
                 displayText = "珠仔",
-                score = 0.5f,
-                form = 1,
-                scriptKind = RustEngineBridge.CandidateScriptKind.HANT,
             ),
         )
         val result = buildContinuousSuggestionsForCandidates(candidates)
@@ -154,19 +134,14 @@ class ContinuousSuggestionsContractTest {
     }
 
     @Test
-    fun `consumedBytes uses consumedSpanEnd not consumedSpanStart`() {
-        // Engine spans are byte-relative-to-pending-buffer; commit consumes
-        // bytes [start, end). The consumer needs `end` to know how many
-        // bytes to drop from pending. Mid-commit candidate.
+    fun `consumedBytes is consumedSpanEnd`() {
+        // Engine spans are byte-relative-to-pending-buffer; the consumer
+        // needs the span end to know how many bytes to drop from pending.
         val candidates = listOf(
             cand(
-                consumedSpanStart = 3,
                 consumedSpanEnd = 7,
                 syllableCount = 1,
                 displayText = "uan",
-                score = 1.0f,
-                form = 1,
-                scriptKind = RustEngineBridge.CandidateScriptKind.HANT,
             ),
         )
         val result = buildContinuousSuggestionsForCandidates(candidates)
@@ -180,13 +155,9 @@ class ContinuousSuggestionsContractTest {
         // the contract.
         val candidates = listOf(
             cand(
-                consumedSpanStart = 0,
                 consumedSpanEnd = 6,
                 syllableCount = 2,
                 displayText = "tâi-uân",
-                score = 1.0f,
-                form = 1,
-                scriptKind = RustEngineBridge.CandidateScriptKind.HANT,
             ),
         )
         val result = buildContinuousSuggestionsForCandidates(candidates)
@@ -213,13 +184,9 @@ class ContinuousSuggestionsContractTest {
         // authoritative commit-string carrier.
         val candidates = listOf(
             cand(
-                consumedSpanStart = 0,
                 consumedSpanEnd = 7,
                 syllableCount = 2,
                 displayText = "臺灣",
-                score = 1.0f,
-                form = 1,
-                scriptKind = RustEngineBridge.CandidateScriptKind.HANT,
                 roman = "tâi-uân",
                 hanji = "臺灣",
             ),
@@ -256,7 +223,6 @@ class ContinuousSuggestionsContractTest {
                 consumedSpanEnd = 7,
                 syllableCount = 2,
                 displayText = "臺灣",
-                scriptKind = RustEngineBridge.CandidateScriptKind.HANT,
                 roman = "tâi-uân",
                 hanji = "臺灣",
             ),
@@ -279,7 +245,6 @@ class ContinuousSuggestionsContractTest {
                 consumedSpanEnd = 4,
                 syllableCount = 1,
                 displayText = "tāi",
-                scriptKind = RustEngineBridge.CandidateScriptKind.TAILO,
                 roman = "tāi",
                 hanji = null,
             ),
@@ -291,9 +256,8 @@ class ContinuousSuggestionsContractTest {
     }
 
     /**
-     * MIXED candidate (`hanji` carries Latin letters per `derive_script_kind`
-     * NFKD scan in `engine/lexicon/src/continuous/`). Renders
-     * dual-line the same way HANT does.
+     * MIXED candidate (`hanji` carries Latin letters). Renders dual-line the
+     * same way HANT does.
      */
     @Test
     fun `Item 6 — MIXED candidate emits dual-line carrier`() {
@@ -302,7 +266,6 @@ class ContinuousSuggestionsContractTest {
                 consumedSpanEnd = 9,
                 syllableCount = 2,
                 displayText = "hip相",
-                scriptKind = RustEngineBridge.CandidateScriptKind.MIXED,
                 roman = "hip-siòng",
                 hanji = "hip相",
             ),
@@ -327,7 +290,6 @@ class ContinuousSuggestionsContractTest {
                 consumedSpanEnd = 4,
                 syllableCount = 1,
                 displayText = "tāi",
-                scriptKind = RustEngineBridge.CandidateScriptKind.TAILO,
                 roman = "tāi",
                 hanji = "",
             ),
@@ -349,13 +311,9 @@ class ContinuousSuggestionsContractTest {
         // metadata-decode failure fallthrough.
         val candidates = (0 until 5).map { i ->
             cand(
-                consumedSpanStart = 0,
                 consumedSpanEnd = 3,
                 syllableCount = 1,
                 displayText = "c$i",
-                score = 1.0f,
-                form = 1,
-                scriptKind = RustEngineBridge.CandidateScriptKind.HANT,
             )
         }
         val result = buildContinuousSuggestionsForCandidates(candidates)
@@ -377,28 +335,6 @@ class ContinuousSuggestionsContractTest {
         // zero cells, no synthetic slot-0 fallback.
         val result = buildContinuousSuggestionsForCandidates(emptyList())
         assertTrue("Empty candidates → empty suggestions", result.isEmpty())
-    }
-
-    // --- v3.5.8 Phase 9.2 — CandidateScriptKind wire decode ---
-
-    @Test
-    fun `CandidateScriptKind decode maps all four wire values`() {
-        // Pins UNSPECIFIED=0, HANT=1, TAILO=2, MIXED=3 from
-        // `engine/protos/proto/composing.proto::CandidateScriptKind`. Mirrors
-        // iOS RustEngineBridgeContinuousTests.testCandidateScriptKindDecode_AllWireValues.
-        assertEquals(RustEngineBridge.CandidateScriptKind.UNSPECIFIED, RustEngineBridge.CandidateScriptKind.decode(0))
-        assertEquals(RustEngineBridge.CandidateScriptKind.HANT, RustEngineBridge.CandidateScriptKind.decode(1))
-        assertEquals(RustEngineBridge.CandidateScriptKind.TAILO, RustEngineBridge.CandidateScriptKind.decode(2))
-        assertEquals(RustEngineBridge.CandidateScriptKind.MIXED, RustEngineBridge.CandidateScriptKind.decode(3))
-    }
-
-    @Test
-    fun `CandidateScriptKind decode falls back to UNSPECIFIED for unknown wire values`() {
-        // Forward-compat: a wire value the platform binding doesn't recognize
-        // (e.g. a newer engine added a fourth variant) must collapse to
-        // UNSPECIFIED rather than crash or randomly map. Mirrors iOS Codex F8.
-        assertEquals(RustEngineBridge.CandidateScriptKind.UNSPECIFIED, RustEngineBridge.CandidateScriptKind.decode(99))
-        assertEquals(RustEngineBridge.CandidateScriptKind.UNSPECIFIED, RustEngineBridge.CandidateScriptKind.decode(-1))
     }
 
     // --- v3.5.8 Phase 9 Item 5 — `roman` / `hanji` wire schema ---

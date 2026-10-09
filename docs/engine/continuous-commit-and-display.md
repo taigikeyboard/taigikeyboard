@@ -224,7 +224,7 @@ Minimum coverage to declare §10 closed (Model B acceptance criterion):
 6. **Final-commit commits whole composition** — nail "tsu"→珠 (pending "a"), then tap final candidate consuming "a"→仔 → one `CommitTextReplacingPreedit("珠仔")` (not "仔"), exit; single terminal `NextWordWordSelected`.
 7. **Backspace never writes/deletes document** — across pending-shrink, unnail (pop), and empty-out: assert no document delete is ever emitted in Continuous; unnail restores the popped segment's `raw_text` as pending and re-renders combined.
 8. **Abort / reset clears whole region** — with ≥1 nailed segment, `Reset` → `[ClearPreeditWithoutCommit, …]`, exit Idle, **no `CommitTextReplacingPreedit`**, all nailed dropped.
-9. **`select_candidate` / `commit_preedit_then_insert_external` under Continuous** — committed string = `Σ nailed.display_text` + (text | derived(raw)+external); with zero nailed, unchanged from legacy.
+9. **`commit_preedit_then_insert_external` under Continuous** — committed string = `Σ nailed.display_text` + derived(raw) + external; with zero nailed, unchanged from legacy (`select_candidate`, which committed `Σ nailed.display_text` + text, was removed 2026-10-09 (round A1a)).
 10. **No-nailed parity** — pure typing→Enter (no tap) commits `derived(raw)` exactly as before (combined == derived(raw) when nailed empty); translate-swapped / TPS pass-through unchanged.
 11. **Hanji line no added spaces** — HANT/MIXED multi-word `candidate[0]`: roman line has word spaces, hanji line is the exact dictionary hanzi (clarification γ; unchanged).
 

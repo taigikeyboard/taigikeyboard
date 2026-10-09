@@ -26,7 +26,6 @@ public  final class ComposingRequest extends
     REPLACE_LAST(13),
     DELETE_BACKWARD(14),
     COMMIT_RAW(16),
-    SELECT_CANDIDATE(17),
     COMMIT_PREEDIT_THEN_INSERT_EXTERNAL(18),
     RESET(19),
     FETCH_AT_POS(31),
@@ -57,7 +56,6 @@ public  final class ComposingRequest extends
         case 13: return REPLACE_LAST;
         case 14: return DELETE_BACKWARD;
         case 16: return COMMIT_RAW;
-        case 17: return SELECT_CANDIDATE;
         case 18: return COMMIT_PREEDIT_THEN_INSERT_EXTERNAL;
         case 19: return RESET;
         case 31: return FETCH_AT_POS;
@@ -403,56 +401,6 @@ public  final class ComposingRequest extends
    */
   private void clearCommitRaw() {
     if (methodCase_ == 16) {
-      methodCase_ = 0;
-      method_ = null;
-    }
-  }
-
-  public static final int SELECT_CANDIDATE_FIELD_NUMBER = 17;
-  /**
-   * <code>.taigi.engine.SelectCandidate select_candidate = 17;</code>
-   */
-  @java.lang.Override
-  public boolean hasSelectCandidate() {
-    return methodCase_ == 17;
-  }
-  /**
-   * <code>.taigi.engine.SelectCandidate select_candidate = 17;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.SelectCandidate getSelectCandidate() {
-    if (methodCase_ == 17) {
-       return (com.siansiansu.taigikeyboard.engine.proto.SelectCandidate) method_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.SelectCandidate.getDefaultInstance();
-  }
-  /**
-   * <code>.taigi.engine.SelectCandidate select_candidate = 17;</code>
-   */
-  private void setSelectCandidate(com.siansiansu.taigikeyboard.engine.proto.SelectCandidate value) {
-    java.util.Objects.requireNonNull(value);
-    method_ = value;
-    methodCase_ = 17;
-  }
-  /**
-   * <code>.taigi.engine.SelectCandidate select_candidate = 17;</code>
-   */
-  private void mergeSelectCandidate(com.siansiansu.taigikeyboard.engine.proto.SelectCandidate value) {
-    java.util.Objects.requireNonNull(value);
-    if (methodCase_ == 17 &&
-        method_ != com.siansiansu.taigikeyboard.engine.proto.SelectCandidate.getDefaultInstance()) {
-      method_ = com.siansiansu.taigikeyboard.engine.proto.SelectCandidate.newBuilder((com.siansiansu.taigikeyboard.engine.proto.SelectCandidate) method_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      method_ = value;
-    }
-    methodCase_ = 17;
-  }
-  /**
-   * <code>.taigi.engine.SelectCandidate select_candidate = 17;</code>
-   */
-  private void clearSelectCandidate() {
-    if (methodCase_ == 17) {
       methodCase_ = 0;
       method_ = null;
     }
@@ -1375,54 +1323,6 @@ public  final class ComposingRequest extends
     }
 
     /**
-     * <code>.taigi.engine.SelectCandidate select_candidate = 17;</code>
-     */
-    @java.lang.Override
-    public boolean hasSelectCandidate() {
-      return instance.hasSelectCandidate();
-    }
-    /**
-     * <code>.taigi.engine.SelectCandidate select_candidate = 17;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.SelectCandidate getSelectCandidate() {
-      return instance.getSelectCandidate();
-    }
-    /**
-     * <code>.taigi.engine.SelectCandidate select_candidate = 17;</code>
-     */
-    public Builder setSelectCandidate(com.siansiansu.taigikeyboard.engine.proto.SelectCandidate value) {
-      copyOnWrite();
-      instance.setSelectCandidate(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.SelectCandidate select_candidate = 17;</code>
-     */
-    public Builder setSelectCandidate(
-        com.siansiansu.taigikeyboard.engine.proto.SelectCandidate.Builder builderForValue) {
-      copyOnWrite();
-      instance.setSelectCandidate(builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.SelectCandidate select_candidate = 17;</code>
-     */
-    public Builder mergeSelectCandidate(com.siansiansu.taigikeyboard.engine.proto.SelectCandidate value) {
-      copyOnWrite();
-      instance.mergeSelectCandidate(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.SelectCandidate select_candidate = 17;</code>
-     */
-    public Builder clearSelectCandidate() {
-      copyOnWrite();
-      instance.clearSelectCandidate();
-      return this;
-    }
-
-    /**
      * <code>.taigi.engine.CommitPreeditThenInsertExternal commit_preedit_then_insert_external = 18;</code>
      */
     @java.lang.Override
@@ -1932,7 +1832,6 @@ public  final class ComposingRequest extends
             com.siansiansu.taigikeyboard.engine.proto.ReplaceLast.class,
             com.siansiansu.taigikeyboard.engine.proto.DeleteBackward.class,
             com.siansiansu.taigikeyboard.engine.proto.CommitRaw.class,
-            com.siansiansu.taigikeyboard.engine.proto.SelectCandidate.class,
             com.siansiansu.taigikeyboard.engine.proto.CommitPreeditThenInsertExternal.class,
             com.siansiansu.taigikeyboard.engine.proto.Reset.class,
             com.siansiansu.taigikeyboard.engine.proto.FetchAtPos.class,
@@ -1944,9 +1843,9 @@ public  final class ComposingRequest extends
             com.siansiansu.taigikeyboard.engine.proto.CommitAsTyped.class,
           };
           java.lang.String info =
-              "\u0000\u0010\u0001\u0000\n,\u0010\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f<\u0000" +
-              "\r<\u0000\u000e<\u0000\u0010<\u0000\u0011<\u0000\u0012<\u0000\u0013<\u0000\u001f" +
-              "<\u0000 <\u0000(<\u0000)<\u0000*<\u0000+<\u0000,<\u0000";
+              "\u0000\u000f\u0001\u0000\n,\u000f\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f<\u0000" +
+              "\r<\u0000\u000e<\u0000\u0010<\u0000\u0012<\u0000\u0013<\u0000\u001f<\u0000 <\u0000" +
+              "(<\u0000)<\u0000*<\u0000+<\u0000,<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

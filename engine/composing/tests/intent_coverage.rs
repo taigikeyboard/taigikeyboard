@@ -6,8 +6,7 @@ use composing::{requests, Engine, Intent};
 use protos::engine::composing_request::Method;
 use protos::engine::{
     Append, AppendHyphen, CommitContinuous, CommitPreeditThenInsertExternal, CommitRaw,
-    CommitScript as WireCommitScript, ComposingRequest, DeleteBackward, ReplaceLast, Reset,
-    SelectCandidate, Start,
+    CommitScript as WireCommitScript, ComposingRequest, DeleteBackward, ReplaceLast, Reset, Start,
 };
 
 use crate::common;
@@ -89,10 +88,6 @@ fn every_method_decodes_to_its_intent() {
             Intent::DeleteBackward,
         ),
         (Method::CommitRaw(CommitRaw {}), Intent::CommitRaw),
-        (
-            Method::SelectCandidate(SelectCandidate { text: "好".into() }),
-            Intent::SelectCandidate { text: "好".into() },
-        ),
         (
             Method::CommitPreeditThenInsertExternal(CommitPreeditThenInsertExternal {
                 text: "🎉".into(),

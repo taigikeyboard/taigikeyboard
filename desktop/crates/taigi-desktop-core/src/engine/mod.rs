@@ -34,8 +34,7 @@ pub use nextword::{
 };
 pub use phonetics::{is_attaching_punctuation, tl_display_to_tps, tl_to_poj, TPS_OR_MAPS_TO_ER};
 pub use transition::{
-    CandidateScriptKind, ComposingTransition, ContinuousCandidate, ContinuousCommitResult,
-    ContinuousFetchResult, Effect,
+    ComposingTransition, ContinuousCandidate, ContinuousCommitResult, ContinuousFetchResult, Effect,
 };
 
 #[cfg(test)]

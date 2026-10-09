@@ -9,6 +9,5 @@ mod cross_mode_parity;
 mod one_syllable_segment_prod;
 mod tps_glyph_alias;
 mod tps_hanji_conversion_prod;
-mod tps_wire_equivalence;
 mod walker_fixed_inputs_prod;
 mod walker_gold;

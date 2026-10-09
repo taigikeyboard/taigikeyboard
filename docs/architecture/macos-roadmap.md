@@ -153,7 +153,8 @@ Phase-0 plan and project memory `project_macos_ime.md` (Claude auto-memory).
   marked-region text to `SelectCandidate` instead would double-count the
   nailed prefix, since `select_candidate_under_continuous` computes
   `nailed_prefix` and then `push_str`s the argument (`transition.rs:724`):
-  `台北` nailed + `台北大學` marked → `台北台北大學`. macOS never sent
+  `台北` nailed + `台北大學` marked → `台北台北大學` (`SelectCandidate` and
+  `select_candidate_under_continuous` were removed 2026-10-09 (round A1a)). macOS never sent
   `SetSelectedCandidateIndex` (removed from the engine 2026-09-25 together
   with `ComposingResponse.selected_candidate_index`, no platform caller), and
   candidate navigation is a permanent platform-side non-goal

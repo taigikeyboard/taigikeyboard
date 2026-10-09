@@ -212,33 +212,6 @@ final class ComposingManagerTests: XCTestCase {
         XCTAssertTrue(spy.effects.isEmpty)
     }
 
-    // MARK: - selectCandidate
-
-    func testSelectCandidate_whenComposing_commitsAtomically() {
-        manager.startComposing(with: "a")
-        spy.effects.removeAll()
-
-        manager.selectCandidate(text: "picked")
-
-        XCTAssertFalse(manager.isComposing)
-        // SelectCandidate under Continuous commits the text + exits, with a
-        // terminal NextWordClearForNewComposing (matches engine/composing/tests/
-        // continuous_phase.rs::select_candidate_under_continuous_commits_text_and_exits).
-        XCTAssertEqual(spy.effects, [
-            .commitTextReplacingPreedit("picked"),
-            .clearCandidates,
-            .resetCandidateContext,
-            .nextWordClearForNewComposing,
-        ])
-    }
-
-    func testSelectCandidate_whenIdle_isNoop() {
-        manager.selectCandidate(text: "picked")
-
-        XCTAssertFalse(manager.isComposing)
-        XCTAssertTrue(spy.effects.isEmpty)
-    }
-
     // MARK: - commitPreeditThenInsertExternal (emoji / clipboard path)
 
     // INVARIANT_COMPOSING_EXTERNAL_INSERT_COMMITS_PREEDIT_ATOMICALLY (behavioral-invariants.md §13)

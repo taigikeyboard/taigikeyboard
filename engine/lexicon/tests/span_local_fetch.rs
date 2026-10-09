@@ -29,9 +29,9 @@ use lexicon::dictionary_reader::DictionaryReader;
 use lexicon::prefix_index::PrefixIndex;
 use lexicon::{
     best_candidate_for_key_with_barriers, fetch_candidates_for_keys_with_barriers,
-    fetch_partial_prefix_candidates, fetch_partial_prefix_candidates_unbounded,
-    CandidateScriptKind, ConsumedSpan, ContinuousFetchCtx, CustomEntry, RawCandidate, TonePin,
-    COVERAGE_KIND_FULL, COVERAGE_KIND_PARTIAL_PREFIX, FORM_NOTONE, PARTIAL_PREFIX_HYDRATE_CAP,
+    fetch_partial_prefix_candidates, fetch_partial_prefix_candidates_unbounded, ConsumedSpan,
+    ContinuousFetchCtx, CustomEntry, RawCandidate, TonePin, COVERAGE_KIND_FULL,
+    COVERAGE_KIND_PARTIAL_PREFIX, FORM_NOTONE, PARTIAL_PREFIX_HYDRATE_CAP,
     PARTIAL_PREFIX_OUTPUT_CAP,
 };
 use phonetics::InputMode;
@@ -249,25 +249,6 @@ fn tsua_surfaces_zhi_zhuah_zhu_across_two_spans() {
     assert_eq!(zhi.form, FORM_NOTONE);
     assert_eq!(zhuah.form, FORM_NOTONE);
     assert_eq!(zhu.form, FORM_NOTONE);
-
-    // v3.5.8 Phase 9.2: pure-CJK hanji entries derive to CandidateScriptKind::Hant
-    // end-to-end through `record_to_candidate`. Pins integration plumbing
-    // (per Codex post-impl finding #5, P3, 2026-05-11).
-    assert_eq!(
-        zhi.script_kind,
-        CandidateScriptKind::Hant,
-        "紙 must derive HANT"
-    );
-    assert_eq!(
-        zhuah.script_kind,
-        CandidateScriptKind::Hant,
-        "珠仔 must derive HANT"
-    );
-    assert_eq!(
-        zhu.script_kind,
-        CandidateScriptKind::Hant,
-        "珠 must derive HANT"
-    );
 
     // Score sanity (`freq × syll_bias × user_freq_boost`, Phase 5 formula):
     //   紙   = 100 × 1.0 × 1.0 = 100.0  span=(0,4) → Tier 0 (full buffer "tsua")
@@ -892,90 +873,6 @@ fn raw_candidate_carries_dictionary_record_bitmask_for_sort_key() {
         "bitmask must round-trip from DictionaryRecord to RawCandidate"
     );
     assert_eq!(out[0].frequency, 100, "raw freq must round-trip too");
-}
-
-// ---------------------------------------------------------------------------
-// v3.5.8 Phase 9.2 — `CandidateScriptKind` derive plumbing through fetch
-// ---------------------------------------------------------------------------
-
-#[test]
-fn mode_carrier_propagates_through_fetch_for_hant_tailo_mixed() {
-    // Integration regression for Codex post-impl finding #5 (P3, 2026-
-    // 05-11): the in-crate `derive_script_kind` unit tests pin classification,
-    // but they do not exercise the `DictionaryReader` → `RawCandidate`
-    // plumbing. This test wires three fixture rows that hit all three
-    // production-emittable `CandidateScriptKind` arms and asserts the byte
-    // identity through `record_to_candidate`.
-    //
-    // Empty `hanji` ("") drives the v2 dict.bin header's `hanzi_len = 0`,
-    // which `DictionaryReader::record` decodes as `hanji: None` → TAILO.
-    let (prefix_index, dict) = build_fixture(
-        "mode-plumb",
-        &[
-            Row {
-                toneless_key: "tai",
-                hanji: "台",
-                tl: "tâi",
-                syll: 1,
-                freq: 100,
-            },
-            Row {
-                toneless_key: "li",
-                hanji: "",
-                tl: "lí",
-                syll: 1,
-                freq: 50,
-            },
-            Row {
-                toneless_key: "iausi",
-                hanji: "iáu是",
-                tl: "iáu-sī",
-                syll: 2,
-                freq: 30,
-            },
-        ],
-    );
-
-    let hant = fetch_candidates_for_endings(
-        "tai",
-        0,
-        &[3],
-        InputMode::Tl,
-        &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
-    );
-    assert_eq!(hant.len(), 1);
-    assert_eq!(hant[0].script_kind, CandidateScriptKind::Hant);
-    assert_eq!(hant[0].display_text, "台");
-
-    let tailo = fetch_candidates_for_endings(
-        "li",
-        0,
-        &[2],
-        InputMode::Tl,
-        &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
-    );
-    assert_eq!(tailo.len(), 1);
-    assert_eq!(
-        tailo[0].script_kind,
-        CandidateScriptKind::Tailo,
-        "empty hanji (None) must derive TAILO; display_text falls back to TL"
-    );
-    assert_eq!(tailo[0].display_text, "lí");
-
-    let mixed = fetch_candidates_for_endings(
-        "iausi",
-        0,
-        &[5],
-        InputMode::Tl,
-        &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
-    );
-    assert_eq!(mixed.len(), 1);
-    assert_eq!(
-        mixed[0].script_kind,
-        CandidateScriptKind::Mixed,
-        "hanji containing Latin letter (NFKD-normalized) must derive MIXED"
-    );
-    assert_eq!(mixed[0].display_text, "iáu是");
 }
 
 #[test]

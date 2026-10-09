@@ -10,22 +10,14 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * v3.5.8 Phase 6 — single span-local continuous candidate. Wire mirror of
  * `lexicon::RawCandidate` (`engine/lexicon/src/continuous/`).
  *
- * `consumed_span` is encoded as two scalar fields rather than a nested
- * message to keep wire overhead low. `consumed_span_start` /
- * `consumed_span_end` are byte offsets in the **original raw user
+ * `consumed_span_end` is a byte offset in the **original raw user
  * input** stored in `Phase::Continuous { raw }` — not in any canonical
  * TL transform. TL / POJ users → ASCII bytes; TPS users → Bopomofo
  * bytes (Phase 6 dispatcher converts TPS spans to canonical TL FST
  * keys for lookup but emits the span back in the user-facing TPS byte
- * space). Platform UI slices `pending[start..end]` off
- * `Phase::Continuous { raw }` (or its preedit mirror) on commit.
- *
- * `form` is currently always `1` (FORM_NOTONE; see
- * `engine/lexicon/src/continuous/`); reserved for hanji (0) /
- * numeric (2) / abbrev (3) when proto-side carriers exist.
- *
- * `script_kind` (Phase 9.2) is the MOE-aligned candidate-type discriminator;
- * see `CandidateScriptKind` above.
+ * space). The platform sends it back as `CommitContinuous.consumed_bytes`;
+ * where the listed word starts is the engine's own knowledge
+ * (`composing::conversion::word_list_start`).
  *
  * v3.5.8 Phase 9 Item 5 — `roman` + `hanji` are display-only
  * sidechannels added so platform UI can build dual-line cells
@@ -35,7 +27,10 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * (= `hanji.unwrap_or(roman)`; under a single-script display the §34
  * literal carries the identity of the same-roman dictionary row it
  * absorbed — `composing::requests::adopt_collapsed_dict_identity`);
- * `roman` and `hanji` are NEVER read for commit. `roman` is the display romanization for the active
+ * `roman` and `hanji` are display sidechannels: a Continuous pick sends
+ * them back inside `CommitContinuous`, and the engine resolves the committed
+ * text from the pick's scripts under the live settings (`commit_text.rs`).
+ * `roman` is the display romanization for the active
  * input mode — the underlying `DictionaryRecord.tl` by default, or
  * POJ-display (`oo`→`o͘`, `nn`→`ⁿ`, …) when
  * `AppConfig.input_mode = poj` (engine-rendered, mirroring the
@@ -62,32 +57,6 @@ public  final class CandidateMessage extends
     canonicalTl_ = "";
   }
   private int bitField0_;
-  public static final int CONSUMED_SPAN_START_FIELD_NUMBER = 1;
-  private int consumedSpanStart_;
-  /**
-   * <code>uint32 consumed_span_start = 1;</code>
-   * @return The consumedSpanStart.
-   */
-  @java.lang.Override
-  public int getConsumedSpanStart() {
-    return consumedSpanStart_;
-  }
-  /**
-   * <code>uint32 consumed_span_start = 1;</code>
-   * @param value The consumedSpanStart to set.
-   */
-  private void setConsumedSpanStart(int value) {
-
-    consumedSpanStart_ = value;
-  }
-  /**
-   * <code>uint32 consumed_span_start = 1;</code>
-   */
-  private void clearConsumedSpanStart() {
-
-    consumedSpanStart_ = 0;
-  }
-
   public static final int CONSUMED_SPAN_END_FIELD_NUMBER = 2;
   private int consumedSpanEnd_;
   /**
@@ -185,101 +154,6 @@ public  final class CandidateMessage extends
     checkByteStringIsUtf8(value);
     displayText_ = value.toStringUtf8();
 
-  }
-
-  public static final int SCORE_FIELD_NUMBER = 5;
-  private float score_;
-  /**
-   * <code>float score = 5;</code>
-   * @return The score.
-   */
-  @java.lang.Override
-  public float getScore() {
-    return score_;
-  }
-  /**
-   * <code>float score = 5;</code>
-   * @param value The score to set.
-   */
-  private void setScore(float value) {
-
-    score_ = value;
-  }
-  /**
-   * <code>float score = 5;</code>
-   */
-  private void clearScore() {
-
-    score_ = 0F;
-  }
-
-  public static final int FORM_FIELD_NUMBER = 6;
-  private int form_;
-  /**
-   * <code>uint32 form = 6;</code>
-   * @return The form.
-   */
-  @java.lang.Override
-  public int getForm() {
-    return form_;
-  }
-  /**
-   * <code>uint32 form = 6;</code>
-   * @param value The form to set.
-   */
-  private void setForm(int value) {
-
-    form_ = value;
-  }
-  /**
-   * <code>uint32 form = 6;</code>
-   */
-  private void clearForm() {
-
-    form_ = 0;
-  }
-
-  public static final int SCRIPT_KIND_FIELD_NUMBER = 7;
-  private int scriptKind_;
-  /**
-   * <code>.taigi.engine.CandidateScriptKind script_kind = 7;</code>
-   * @return The enum numeric value on the wire for scriptKind.
-   */
-  @java.lang.Override
-  public int getScriptKindValue() {
-    return scriptKind_;
-  }
-  /**
-   * <code>.taigi.engine.CandidateScriptKind script_kind = 7;</code>
-   * @return The scriptKind.
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.CandidateScriptKind getScriptKind() {
-    com.siansiansu.taigikeyboard.engine.proto.CandidateScriptKind result = com.siansiansu.taigikeyboard.engine.proto.CandidateScriptKind.forNumber(scriptKind_);
-    return result == null ? com.siansiansu.taigikeyboard.engine.proto.CandidateScriptKind.UNRECOGNIZED : result;
-  }
-  /**
-   * <code>.taigi.engine.CandidateScriptKind script_kind = 7;</code>
-   * @param value The enum numeric value on the wire for scriptKind to set.
-   */
-  private void setScriptKindValue(int value) {
-      scriptKind_ = value;
-  }
-  /**
-   * <code>.taigi.engine.CandidateScriptKind script_kind = 7;</code>
-   * @param value The scriptKind to set.
-   * @throws IllegalArgumentException if UNRECOGNIZED is provided.
-   */
-  private void setScriptKind(com.siansiansu.taigikeyboard.engine.proto.CandidateScriptKind value) {
-    scriptKind_ = value.getNumber();
-
-  }
-  /**
-   * <code>.taigi.engine.CandidateScriptKind script_kind = 7;</code>
-   */
-  private void clearScriptKind() {
-
-    scriptKind_ = 0;
   }
 
   public static final int ROMAN_FIELD_NUMBER = 8;
@@ -609,22 +483,14 @@ public  final class CandidateMessage extends
    * v3.5.8 Phase 6 — single span-local continuous candidate. Wire mirror of
    * `lexicon::RawCandidate` (`engine/lexicon/src/continuous/`).
    *
-   * `consumed_span` is encoded as two scalar fields rather than a nested
-   * message to keep wire overhead low. `consumed_span_start` /
-   * `consumed_span_end` are byte offsets in the **original raw user
+   * `consumed_span_end` is a byte offset in the **original raw user
    * input** stored in `Phase::Continuous { raw }` — not in any canonical
    * TL transform. TL / POJ users → ASCII bytes; TPS users → Bopomofo
    * bytes (Phase 6 dispatcher converts TPS spans to canonical TL FST
    * keys for lookup but emits the span back in the user-facing TPS byte
-   * space). Platform UI slices `pending[start..end]` off
-   * `Phase::Continuous { raw }` (or its preedit mirror) on commit.
-   *
-   * `form` is currently always `1` (FORM_NOTONE; see
-   * `engine/lexicon/src/continuous/`); reserved for hanji (0) /
-   * numeric (2) / abbrev (3) when proto-side carriers exist.
-   *
-   * `script_kind` (Phase 9.2) is the MOE-aligned candidate-type discriminator;
-   * see `CandidateScriptKind` above.
+   * space). The platform sends it back as `CommitContinuous.consumed_bytes`;
+   * where the listed word starts is the engine's own knowledge
+   * (`composing::conversion::word_list_start`).
    *
    * v3.5.8 Phase 9 Item 5 — `roman` + `hanji` are display-only
    * sidechannels added so platform UI can build dual-line cells
@@ -634,7 +500,10 @@ public  final class CandidateMessage extends
    * (= `hanji.unwrap_or(roman)`; under a single-script display the §34
    * literal carries the identity of the same-roman dictionary row it
    * absorbed — `composing::requests::adopt_collapsed_dict_identity`);
-   * `roman` and `hanji` are NEVER read for commit. `roman` is the display romanization for the active
+   * `roman` and `hanji` are display sidechannels: a Continuous pick sends
+   * them back inside `CommitContinuous`, and the engine resolves the committed
+   * text from the pick's scripts under the live settings (`commit_text.rs`).
+   * `roman` is the display romanization for the active
    * input mode — the underlying `DictionaryRecord.tl` by default, or
    * POJ-display (`oo`→`o͘`, `nn`→`ⁿ`, …) when
    * `AppConfig.input_mode = poj` (engine-rendered, mirroring the
@@ -658,34 +527,6 @@ public  final class CandidateMessage extends
       super(DEFAULT_INSTANCE);
     }
 
-
-    /**
-     * <code>uint32 consumed_span_start = 1;</code>
-     * @return The consumedSpanStart.
-     */
-    @java.lang.Override
-    public int getConsumedSpanStart() {
-      return instance.getConsumedSpanStart();
-    }
-    /**
-     * <code>uint32 consumed_span_start = 1;</code>
-     * @param value The consumedSpanStart to set.
-     * @return This builder for chaining.
-     */
-    public Builder setConsumedSpanStart(int value) {
-      copyOnWrite();
-      instance.setConsumedSpanStart(value);
-      return this;
-    }
-    /**
-     * <code>uint32 consumed_span_start = 1;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearConsumedSpanStart() {
-      copyOnWrite();
-      instance.clearConsumedSpanStart();
-      return this;
-    }
 
     /**
      * <code>uint32 consumed_span_end = 2;</code>
@@ -789,109 +630,6 @@ public  final class CandidateMessage extends
         com.google.protobuf.ByteString value) {
       copyOnWrite();
       instance.setDisplayTextBytes(value);
-      return this;
-    }
-
-    /**
-     * <code>float score = 5;</code>
-     * @return The score.
-     */
-    @java.lang.Override
-    public float getScore() {
-      return instance.getScore();
-    }
-    /**
-     * <code>float score = 5;</code>
-     * @param value The score to set.
-     * @return This builder for chaining.
-     */
-    public Builder setScore(float value) {
-      copyOnWrite();
-      instance.setScore(value);
-      return this;
-    }
-    /**
-     * <code>float score = 5;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearScore() {
-      copyOnWrite();
-      instance.clearScore();
-      return this;
-    }
-
-    /**
-     * <code>uint32 form = 6;</code>
-     * @return The form.
-     */
-    @java.lang.Override
-    public int getForm() {
-      return instance.getForm();
-    }
-    /**
-     * <code>uint32 form = 6;</code>
-     * @param value The form to set.
-     * @return This builder for chaining.
-     */
-    public Builder setForm(int value) {
-      copyOnWrite();
-      instance.setForm(value);
-      return this;
-    }
-    /**
-     * <code>uint32 form = 6;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearForm() {
-      copyOnWrite();
-      instance.clearForm();
-      return this;
-    }
-
-    /**
-     * <code>.taigi.engine.CandidateScriptKind script_kind = 7;</code>
-     * @return The enum numeric value on the wire for scriptKind.
-     */
-    @java.lang.Override
-    public int getScriptKindValue() {
-      return instance.getScriptKindValue();
-    }
-    /**
-     * <code>.taigi.engine.CandidateScriptKind script_kind = 7;</code>
-     * @param value The scriptKind to set.
-     * @throws IllegalArgumentException if UNRECOGNIZED is provided.
-     * @return This builder for chaining.
-     */
-    public Builder setScriptKindValue(int value) {
-      copyOnWrite();
-      instance.setScriptKindValue(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.CandidateScriptKind script_kind = 7;</code>
-     * @return The scriptKind.
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.CandidateScriptKind getScriptKind() {
-      return instance.getScriptKind();
-    }
-    /**
-     * <code>.taigi.engine.CandidateScriptKind script_kind = 7;</code>
-     * @param value The enum numeric value on the wire for scriptKind to set.
-     * @return This builder for chaining.
-     */
-    public Builder setScriptKind(com.siansiansu.taigikeyboard.engine.proto.CandidateScriptKind value) {
-      copyOnWrite();
-      instance.setScriptKind(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.CandidateScriptKind script_kind = 7;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearScriptKind() {
-      copyOnWrite();
-      instance.clearScriptKind();
       return this;
     }
 
@@ -1157,20 +895,16 @@ public  final class CandidateMessage extends
       case BUILD_MESSAGE_INFO: {
           java.lang.Object[] objects = new java.lang.Object[] {
             "bitField0_",
-            "consumedSpanStart_",
             "consumedSpanEnd_",
             "syllableCount_",
             "displayText_",
-            "score_",
-            "form_",
-            "scriptKind_",
             "roman_",
             "hanji_",
             "canonicalTl_",
           };
           java.lang.String info =
-              "\u0000\n\u0000\u0001\u0001\n\n\u0000\u0000\u0000\u0001\u000b\u0002\u000b\u0003\u000b" +
-              "\u0004\u0208\u0005\u0001\u0006\u000b\u0007\f\b\u0208\t\u1208\u0000\n\u0208";
+              "\u0000\u0006\u0000\u0001\u0002\n\u0006\u0000\u0000\u0000\u0002\u000b\u0003\u000b" +
+              "\u0004\u0208\b\u0208\t\u1208\u0000\n\u0208";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

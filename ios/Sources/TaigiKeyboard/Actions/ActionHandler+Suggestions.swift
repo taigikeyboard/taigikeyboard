@@ -39,7 +39,7 @@ extension ActionHandler {
         // off the suggestion's metadata, never its view-rewritten `text`.
         if suggestion.additionalInfo["isContinuous"] == "true" {
             // Strict-required metadata (Item 4 fork F2=A): missing → drop the
-            // tap. Falling back to `selectCandidate(text:)` would lose
+            // tap. Committing the cell text without it would lose
             // `consumedBytes` and corrupt `Phase::Continuous { raw }` alignment.
             guard let pick = Self.continuousPick(for: suggestion) else {
                 logger.debug(
@@ -57,77 +57,67 @@ extension ActionHandler {
             return
         }
 
-        let isNextWordPrediction = suggestion.additionalInfo["isNextWord"] == "true"
-
-        if composingManager.isComposing || isNextWordPrediction {
-            let effectiveSwapped = isTPSLayout || settings.isHanjiFirst
-
-            // §42 Hanji with Romanization split prediction cells carry a `cellScript` marker
-            // (`ActionHandler.predictionSuggestions`) — the marker decides the
-            // script, exactly as on the Continuous path; identity rides the
-            // shared sidechannels, so nothing is parsed back from the cell.
-            let roman: String
-            let hanji: String?
-            let resolved: ResolvedCommit
-            if let cellScript = CandidateCellScript.marker(for: suggestion) {
-                roman = suggestion.additionalInfo["tl"] ?? ""
-                hanji = suggestion.additionalInfo["hanzi"]
-                resolved = Self.markedCellCommit(
-                    cellScript: cellScript,
-                    cellText: suggestion.text,
-                    roman: suggestion.additionalInfo[CandidateCellScript.bracketRomanKey],
-                    isOutputBothScripts: settings.isOutputBothScripts,
-                )
-            } else {
-                (roman, hanji) = Self.parseRomanAndHanji(
-                    from: suggestion,
-                    isNextWord: isNextWordPrediction,
-                    isTPSLayout: isTPSLayout,
-                    effectiveSwapped: effectiveSwapped,
-                )
-                resolved = Self.formatOutputText(
-                    roman: roman,
-                    hanji: hanji,
-                    isTPSLayout: isTPSLayout,
-                    effectiveSwapped: effectiveSwapped,
-                    isOutputBothScripts: settings.isOutputBothScripts,
-                    orMapsToER: settings.isTpsOrMappedToER,
-                )
-            }
-            let textToCommit = resolved.text
-
-            commitSuggestionText(textToCommit, isNextWord: isNextWordPrediction, suggestion: suggestion)
-
-            let displayText = suggestion.additionalInfo["displayText"] ?? hanji ?? roman
-            // R5 pair-key (#7): canonical-TL reading from the same
-            // sidechannel; empty (legacy bucket) for a NextWord prediction
-            // that carries no canonical TL.
-            let canonicalTl = suggestion.additionalInfo["canonicalTl"] ?? ""
-            CompositionRoot.usageRecorder.record(Usage(displayText: displayText, canonicalTl: canonicalTl))
-
-            logger.debug("[SELECT] suggestion.text='\(suggestion.text)' subtitle='\(suggestion.subtitle ?? "nil")' additionalInfo=\(suggestion.additionalInfo.description)")
-            logger.debug("[SELECT] parsed roman='\(roman)' hanji='\(hanji ?? "nil")' displayText='\(displayText)'")
-
-            // Romanization mode: auto-space (unless trailing hyphen).
-            // TPS mode disables auto-space (effectiveSwapped is true for TPS).
-            appendAutoSpaceIfEarned(
-                documentText: textToCommit,
-                wroteRomanization: resolved.wroteRomanization,
-            )
-
-            // NextWord learns the reading as sent, so it gets the canonical TL,
-            // never the rendered `roman` (POJ in POJ mode; a POJ → TL fold would
-            // misread TL `eng` / `ek`). Next-word candidates carry it on
-            // `additionalInfo["tl"]`, candidates on `canonicalTl`; `roman` only
-            // when that is empty (TPS-OOV, English) — mirrors Android
-            // `CandidateClickHandler` `canonicalTl.ifEmpty { roman }`.
-            let associationRoman = isNextWordPrediction
-                ? (suggestion.additionalInfo["tl"] ?? "")
-                : (canonicalTl.isEmpty ? roman : canonicalTl)
-            nextWordController.process(text: displayText, roman: associationRoman)
-        } else {
+        // Every composing-time candidate is a Continuous one (above), so what
+        // remains is a NextWord prediction tap or a plain insert.
+        guard suggestion.additionalInfo["isNextWord"] == "true" else {
             hostText.insert(suggestion.text)
+            return
         }
+
+        let effectiveSwapped = isTPSLayout || settings.isHanjiFirst
+
+        // §42 Hanji with Romanization split prediction cells carry a `cellScript` marker
+        // (`ActionHandler.predictionSuggestions`) — the marker decides the
+        // script, exactly as on the Continuous path; identity rides the
+        // shared sidechannels, so nothing is parsed back from the cell.
+        let resolved: ResolvedCommit
+        if let cellScript = CandidateCellScript.marker(for: suggestion) {
+            resolved = Self.markedCellCommit(
+                cellScript: cellScript,
+                cellText: suggestion.text,
+                roman: suggestion.additionalInfo[CandidateCellScript.bracketRomanKey],
+                isOutputBothScripts: settings.isOutputBothScripts,
+            )
+        } else {
+            let (roman, hanji) = Self.parseRomanAndHanji(
+                from: suggestion,
+                effectiveSwapped: effectiveSwapped,
+            )
+            resolved = Self.formatOutputText(
+                roman: roman,
+                hanji: hanji,
+                isTPSLayout: isTPSLayout,
+                effectiveSwapped: effectiveSwapped,
+                isOutputBothScripts: settings.isOutputBothScripts,
+                orMapsToER: settings.isTpsOrMappedToER,
+            )
+        }
+        let textToCommit = resolved.text
+
+        hostText.insert(textToCommit)
+
+        // Identity rides the prediction's sidechannels
+        // (`ActionHandler.predictionIdentity`): `displayText` and the R5
+        // pair-key (#7) canonical-TL reading that keeps multi-reading Hanji
+        // in separate buckets.
+        let displayText = suggestion.additionalInfo["displayText"] ?? ""
+        let canonicalTl = suggestion.additionalInfo["canonicalTl"] ?? ""
+        CompositionRoot.usageRecorder.record(Usage(displayText: displayText, canonicalTl: canonicalTl))
+
+        logger.debug("[SELECT] suggestion.text='\(suggestion.text)' subtitle='\(suggestion.subtitle ?? "nil")' additionalInfo=\(suggestion.additionalInfo.description)")
+        logger.debug("[SELECT] textToCommit='\(textToCommit)' displayText='\(displayText)'")
+
+        // Romanization mode: auto-space (unless trailing hyphen).
+        // TPS mode disables auto-space (effectiveSwapped is true for TPS).
+        appendAutoSpaceIfEarned(
+            documentText: textToCommit,
+            wroteRomanization: resolved.wroteRomanization,
+        )
+
+        // NextWord learns the reading as sent, so it gets the canonical TL,
+        // never the rendered `roman` (POJ in POJ mode; a POJ → TL fold would
+        // misread TL `eng` / `ek`).
+        nextWordController.process(text: displayText, roman: canonicalTl)
     }
 
     // MARK: - Suggestion Helpers
@@ -149,8 +139,8 @@ extension ActionHandler {
             script: commitScript(for: suggestion),
             roman: roman,
             canonicalText: canonicalText,
-            // Absent only on wire skew → "" → the engine falls back to the raw
-            // committed slice for NextWord.
+            // Absent only when the pick carries no reading (TPS-OOV) → "" → the
+            // engine uses the raw committed slice for NextWord.
             associationTl: info["canonicalTl"] ?? "",
             hanji: info["hanji"],
             consumedBytes: consumedBytes,
@@ -233,46 +223,28 @@ extension ActionHandler {
         "\(hanji) (\(roman))"
     }
 
-    /// Extract romanization and Hanji from suggestion based on display mode. The NextWord path
-    /// restores the fields that were swapped earlier.
+    /// Romanization + Hanji of a NextWord prediction cell.
     static func parseRomanAndHanji(
         from suggestion: AutocompleteSuggestion,
-        isNextWord: Bool,
-        isTPSLayout: Bool,
         effectiveSwapped: Bool,
     ) -> (roman: String, hanji: String?) {
-        if isNextWord {
-            // CROSS-PLATFORM INVARIANT: next-word commit string == UI display string.
-            // `suggestion.text` is mode-shaped (POJ in POJ mode, TL otherwise) by
-            // `RustEngineBridge.nextwordPredictNext` (Rust shape rule), but `CandidateCellHelper.suggestionToHandle`
-            // pre-swaps text↔subtitle in swapped/TPS modes before this handler runs —
-            // so we must mirror that swap to recover the mode-shaped roman.
-            // `additionalInfo["hanzi"]` carries hanji even for hanji-only predictions
-            // (Case B) where `subtitle == nil`. The raw-TL sidechannel on
-            // `additionalInfo["tl"]` is consumed separately at the association call
-            // site (see `handleSuggestionSelection`).
-            // Mirror: android/.../smartbar/NextWordController.kt:355-363 (TaigiWord.roman).
-            // Swapped/TPS Case B (hanji-only, no roman): `subtitle == nil` after
-            // `suggestionToHandle` (swap gate requires non-empty subtitle). Fall
-            // back to `""` so bracket-mode output stays `"Hanji ()"` — matches the
-            // pre-fix sidechannel behavior, avoids Hanji duplication.
-            let roman = effectiveSwapped
-                ? (suggestion.subtitle ?? "")
-                : suggestion.text
-            return (roman, suggestion.additionalInfo["hanzi"])
-        } else if effectiveSwapped {
-            // The swap rewrite (`suggestionToHandle`) only swaps a cell that has a
-            // hanji subtitle, so a hanji-less cell arrives with its romanization as
-            // the text and no hanji at all (§23 / §34; Android
-            // `noHanji_commitsTheRomanizationUnderEveryMode`). TPS keeps the text as
-            // hanji: the Bopomofo it commits takes no word spacing.
-            if !isTPSLayout, suggestion.subtitle?.isEmpty ?? true {
-                return (suggestion.text, nil)
-            }
-            return (suggestion.subtitle ?? suggestion.text, suggestion.text)
-        } else {
-            return (suggestion.text, suggestion.subtitle)
-        }
+        // CROSS-PLATFORM INVARIANT: next-word commit string == UI display string.
+        // `suggestion.text` is mode-shaped (POJ in POJ mode, TL otherwise) by
+        // `RustEngineBridge.nextwordPredictNext` (Rust shape rule), but `CandidateCellHelper.suggestionToHandle`
+        // pre-swaps text↔subtitle in swapped/TPS modes before this handler runs —
+        // so we must mirror that swap to recover the mode-shaped roman.
+        // `additionalInfo["hanzi"]` carries hanji even for hanji-only predictions
+        // (Case B) where `subtitle == nil`; the canonical-TL reading rides
+        // `additionalInfo["canonicalTl"]` (see `handleSuggestionSelection`).
+        // Mirror: android/.../smartbar/NextWordController.kt:355-363 (TaigiWord.roman).
+        // Swapped/TPS Case B (hanji-only, no roman): `subtitle == nil` after
+        // `suggestionToHandle` (swap gate requires non-empty subtitle). Fall
+        // back to `""` so bracket-mode output stays `"Hanji ()"` — matches the
+        // pre-fix sidechannel behavior, avoids Hanji duplication.
+        let roman = effectiveSwapped
+            ? (suggestion.subtitle ?? "")
+            : suggestion.text
+        return (roman, suggestion.additionalInfo["hanzi"])
     }
 
     /// Format output text based on display mode (roman, Hanji, or both scripts); a TPS layout
@@ -353,16 +325,5 @@ extension ActionHandler {
     /// four call sites in this file alone read it (Android: `prefs.isTpsLayout`).
     var isTPSLayout: Bool {
         settings.keyboardLayoutType == .tps
-    }
-
-    /// Commit text via proxy (NextWord) or composing manager (regular candidate).
-    /// The `suggestion` parameter is kept for future telemetry/logging use
-    /// but ComposingManager only needs the candidate text.
-    private func commitSuggestionText(_ text: String, isNextWord: Bool, suggestion _: AutocompleteSuggestion) {
-        if isNextWord {
-            hostText.insert(text)
-        } else {
-            composingManager.selectCandidate(text: text)
-        }
     }
 }
