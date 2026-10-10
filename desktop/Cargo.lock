@@ -689,7 +689,7 @@ dependencies = [
 
 [[package]]
 name = "taigi-desktop-core"
-version = "3.7.0"
+version = "3.7.1"
 dependencies = [
  "dispatch",
  "log",
@@ -703,7 +703,7 @@ dependencies = [
 
 [[package]]
 name = "taigi-desktop-storage"
-version = "3.7.0"
+version = "3.7.1"
 dependencies = [
  "log",
  "serde_json",
@@ -714,7 +714,7 @@ dependencies = [
 
 [[package]]
 name = "taigi-desktop-update"
-version = "3.7.0"
+version = "3.7.1"
 dependencies = [
  "log",
  "serde",
