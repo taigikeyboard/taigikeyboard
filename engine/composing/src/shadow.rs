@@ -539,8 +539,9 @@ pub(crate) fn left_anchored_keys_and_restrictions(
     // re-lowercases the shadow before walking.
     //
     // An end is suppressed only when it is (a) a single-syllable end, (b) not
-    // the longest single syllable, AND (c) has NO multi-syllable phrase
-    // reading — i.e. no interior edge `(m, end)` with `m > 0` reaches it. (c)
+    // the longest single syllable, (c) has NO multi-syllable phrase
+    // reading — i.e. no interior edge `(m, end)` with `m > 0` reaches it —
+    // AND (e) under TPS is not a straddled prefix (below). (c)
     // is the safety guard: a shorter span that ALSO parses as a phrase
     // (`a`+`i` ending where `ai` is a single syllable too) is a legitimate
     // different-word candidate and must survive. In practice (b)+(c) coincide
@@ -558,6 +559,19 @@ pub(crate) fn left_anchored_keys_and_restrictions(
     // typed tone, so it can never grow into a syllable: committing 也 would
     // strand it. Both halves are required; the mid-typing controls
     // (`iah`, `iakau3`) live in `tests/continuous_keys_tl_lattice.rs`.
+    //
+    // (e) TPS only — straddled prefix (user report 2026-10-10: toneless
+    // `ㄌㄧㄏㄛ` listed li̍h 裂 but never li 你, while the walker cut li | ho).
+    // A shorter single survives when one syllable leaving its end runs past
+    // the longest single's end: the longest single then ate the start of that
+    // syllable (`ㄌㄧㄏ` eats the ㄏ of `ㄏㄛ`; `ㄍㄚㄉㄚ` keeps ka beside kat;
+    // `ㄍㄧㄨㄧ` keeps ki beside kiu). A syllable typed alone (`ㄍㄚㆵ`,
+    // `ㄍㄧㄨ`) has nothing past it, so the prefix is still dropped. The
+    // shape is not TPS-specific (TL `liho` has it too); the mode gate is a
+    // product decision — TL / POJ keep (a)–(d) unchanged (maintainer
+    // 2026-10-10). Depth-1 recompute again: lattice edges leaving `end` also
+    // hold chains, which would rescue `ta` in `taigi` (`i`+`gi` runs past
+    // `tai`).
     let lowered = shadow.to_ascii_lowercase();
     // §18 recompute is barrier-aware (Codex post-impl 2026-08-19 BLOCK 2):
     // the lattice above was built with barriers, so re-deriving the
@@ -565,9 +579,7 @@ pub(crate) fn left_anchored_keys_and_restrictions(
     // "single syllable" that fuses across the user's separator (`ㄍㄚ`␣`ㄉ`
     // mid-typing: a barrier-blind recompute reads ㄍㄚㆵ as the longest
     // single and wrongly suppresses the legitimate ㄍㄚ).
-    let single_ends = crate::syllabifier::valid_span_endings_lowered_with_barriers(
-        &lowered, 0, inv, mode, 1, barriers,
-    );
+    let single_ends = valid_span_endings_lowered_with_barriers(&lowered, 0, inv, mode, 1, barriers);
     let max_single_end = single_ends.iter().copied().max();
     let has_phrase_reading = |end: usize| lattice.edges().iter().any(|&(s, e)| e == end && s > 0);
     let is_closed_dead_end = |end: usize| {
@@ -575,6 +587,12 @@ pub(crate) fn left_anchored_keys_and_restrictions(
             && remainder_has_closed_syllable(shadow, end, mode, barriers)
     };
     let survives_as_phrase = |end: usize| has_phrase_reading(end) && !is_closed_dead_end(end);
+    let is_straddled_prefix = |end: usize| {
+        matches!(mode, InputMode::Tps)
+            && valid_span_endings_lowered_with_barriers(&lowered, end, inv, mode, 1, barriers)
+                .into_iter()
+                .any(|next_end| Some(next_end) > max_single_end)
+    };
 
     let mut out = Vec::with_capacity(lattice.edges().len());
     let mut restrictions: Vec<Vec<usize>> = Vec::with_capacity(lattice.edges().len());
@@ -589,9 +607,14 @@ pub(crate) fn left_anchored_keys_and_restrictions(
             continue;
         }
         // Drop a strictly-shorter single-syllable-only prefix span (see the
-        // (a)/(b)/(c)/(d) rule above). Longest single, phrase ends, and
-        // phrase-reachable shorter spans that can still continue are kept.
-        if single_ends.contains(&end) && Some(end) != max_single_end && !survives_as_phrase(end) {
+        // (a)–(e) rule above). Longest single, phrase ends, phrase-reachable
+        // shorter spans that can still continue, and TPS straddled prefixes
+        // are kept.
+        if single_ends.contains(&end)
+            && Some(end) != max_single_end
+            && !survives_as_phrase(end)
+            && !is_straddled_prefix(end)
+        {
             continue;
         }
         // Tone-aware lookup body + §35 / §41 barrier metadata, same

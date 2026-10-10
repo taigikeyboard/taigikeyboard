@@ -357,6 +357,65 @@ fn closed_dead_end_prefix_is_suppressed_under_a_tone_mark() {
     );
 }
 
+#[test]
+fn straddled_shorter_single_survives_beside_the_longest() {
+    // §18 guard (e), user report 2026-10-10. Toneless 你好 lí-hó typed
+    // `ㄌㄧㄏㄛ`: the longest single is `ㄌㄧㄏ` (li̍h, end 9, ㄏ read as the
+    // ㆷ coda through its family); the syllable `ㄏㄛ` leaving the shorter end
+    // 6 runs to 12, past 9, so `ㄌㄧ` survives beside `ㄌㄧㄏ`. Strict-prefix
+    // syllables present: ㄌㄧ ⊂ ㄌㄧㆷ; ㄛ (what li̍h leaves) is a syllable too.
+    // The key-path fold types ㆷ instead of ㄏ; both buffers keep li.
+    let inv = build_tps_inventory(&["ㄌㄧ", "ㄌㄧㆷ", "ㄏㄛ", "ㄛ"]);
+    for typed in ["ㄌㄧㄏㄛ", "ㄌㄧㆷㄛ"] {
+        let keys = build_continuous_keys_with_inventory(typed, &inv, phonetics::InputMode::Tps);
+        let spans: Vec<(u32, u32)> = keys.iter().map(|(span, _)| *span).collect();
+        assert!(
+            spans.contains(&(0, 6)) && spans.contains(&(0, 9)),
+            "{typed}: li (0,6) must survive beside li̍h (0,9), got {keys:?}",
+        );
+    }
+
+    // `ㄍㄚㄉㄚ`: ta (ㄉㄚ, 6..12) runs past kat (ㄍㄚㆵ, end 9), so ka (end 6)
+    // survives. Strict prefixes: ㄍㄚ ⊂ ㄍㄚㆵ; ㄚ is a syllable.
+    let inv = build_tps_inventory(&["ㄍㄚ", "ㄍㄚㆵ", "ㄉㄚ", "ㄚ"]);
+    let keys = build_continuous_keys_with_inventory("ㄍㄚㄉㄚ", &inv, phonetics::InputMode::Tps);
+    assert!(
+        key_texts(&keys).contains(&"tps:ㄍㄚ".to_string()),
+        "ka must survive beside kat, got {keys:?}",
+    );
+
+    // Vowel-led: `ㄍㄧㄨㄧ` — ui (ㄨㄧ, 6..12) runs past kiu (ㄍㄧㄨ, end 9), so
+    // ki (end 6) survives. Strict prefixes: ㄍㄧ ⊂ ㄍㄧㄨ, ㄨ ⊂ ㄨㄧ; ㄧ too.
+    let inv = build_tps_inventory(&["ㄍㄧ", "ㄍㄧㄨ", "ㄨ", "ㄨㄧ", "ㄧ"]);
+    let keys = build_continuous_keys_with_inventory("ㄍㄧㄨㄧ", &inv, phonetics::InputMode::Tps);
+    assert!(
+        key_texts(&keys).contains(&"tps:ㄍㄧ".to_string()),
+        "ki must survive beside kiu, got {keys:?}",
+    );
+}
+
+#[test]
+fn longest_single_without_a_following_syllable_still_suppresses_the_prefix() {
+    // §18 guard (e) negative controls: nothing runs past the longest single,
+    // so the shorter prefix stays dropped. `ㄍㄚㆵ` is a complete kat;
+    // `ㄍㄚㄉ` mid-typing has only the next onset (ㄉ alone is no syllable);
+    // `ㄍㄧㄨ` is a complete kiu (the u after ki ends where kiu ends).
+    let inv = build_tps_inventory(&["ㄍㄚ", "ㄍㄚㆵ", "ㄉㄚ", "ㄚ"]);
+    for typed in ["ㄍㄚㆵ", "ㄍㄚㄉ"] {
+        let keys = build_continuous_keys_with_inventory(typed, &inv, phonetics::InputMode::Tps);
+        assert!(
+            !key_texts(&keys).contains(&"tps:ㄍㄚ".to_string()),
+            "{typed}: ka must stay suppressed, got {keys:?}",
+        );
+    }
+    let inv = build_tps_inventory(&["ㄍㄧ", "ㄍㄧㄨ", "ㄨ", "ㄨㄧ", "ㄧ"]);
+    let keys = build_continuous_keys_with_inventory("ㄍㄧㄨ", &inv, phonetics::InputMode::Tps);
+    assert!(
+        !key_texts(&keys).contains(&"tps:ㄍㄧ".to_string()),
+        "ㄍㄧㄨ: ki must stay suppressed, got {keys:?}",
+    );
+}
+
 // ---- Hermetic TPS SyllableInventory builder -------------------------
 // Key derivation is TPS-specific (no phonotactic gating); the FST tail is
 // `common::inventory_from_keys`. Samples are pre-stripped Bopomofo syllables (with

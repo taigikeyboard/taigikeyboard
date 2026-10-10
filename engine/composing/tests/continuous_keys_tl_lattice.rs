@@ -22,7 +22,7 @@
 
 use composing::requests::build_continuous_keys_with_inventory;
 
-use crate::common::build_inventory;
+use crate::common::{build_inventory, build_poj_inventory};
 
 fn mapped(keys: &[((u32, u32), String)]) -> Vec<((u32, u32), &str)> {
     keys.iter().map(|(s, k)| (*s, k.as_str())).collect()
@@ -91,6 +91,33 @@ fn longest_match_suppresses_shorter_single_syllable_prefix() {
         vec![((0, 3), "tl:tai")],
         "shorter single-syllable `ta` must be suppressed under longest-match",
     );
+}
+
+#[test]
+fn straddled_prefix_guard_stays_tps_only() {
+    // §18 guard (e) is TPS only (maintainer 2026-10-10: TL / POJ unchanged).
+    // `kata` against {ka, kat, ta, a}: ta runs past kat, which would rescue
+    // `ka` under TPS; TL and POJ keep dropping it.
+    let samples = ["ka1", "kat4", "ta1", "a1"];
+    for (inv, mode, family) in [
+        (build_inventory(&samples), phonetics::InputMode::Tl, "tl"),
+        (
+            build_poj_inventory(&samples),
+            phonetics::InputMode::Poj,
+            "poj",
+        ),
+    ] {
+        let keys = build_continuous_keys_with_inventory("kata", &inv, mode);
+        let texts: Vec<&str> = mapped(&keys).into_iter().map(|(_, k)| k).collect();
+        assert!(
+            texts.contains(&format!("{family}:kat").as_str()),
+            "{family}: `kat` must be keyed (the control reaches the rule), got {texts:?}",
+        );
+        assert!(
+            !texts.contains(&format!("{family}:ka").as_str()),
+            "{family}: `ka` must stay suppressed, got {texts:?}",
+        );
+    }
 }
 
 #[test]
