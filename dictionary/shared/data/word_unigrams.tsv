@@ -131,7 +131,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 一對時	tsi̍t tuì-sî	1	0	0	0	0	1	0	0	0	0
 一尾	it-bué	1	1	0	0	0	0	0	0	0	0
 一屑仔	tsi̍t-sut-á	119	9	16	22	0	19	48	1	4	0
-一工	tsi̍t-kang	153	112	0	0	0	0	40	0	0	1
+一工	tsi̍t kang	153	112	0	0	0	0	40	0	0	1
 一工到暗	tsi̍t-kang-kàu-àm	4	0	0	0	0	4	0	0	0	0
 一己	it-kí	1	1	0	0	0	0	0	0	0	0
 一帆風順	it-phâng-hong-sūn	2	0	0	1	0	0	1	0	0	0
@@ -165,7 +165,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 一旁	tsi̍t-pîng	5	0	1	4	0	0	0	0	0	0
 一族	tsi̍t-tso̍k	7	0	6	0	0	0	1	0	0	0
 一日	it-ji̍t	14	0	1	11	0	0	2	0	0	0
-一日	tsi̍t-ji̍t	305	10	81	12	0	0	196	0	6	0
+一日	tsi̍t ji̍t	305	10	81	12	0	0	196	0	6	0
 一日到暗	tsi̍t-ji̍t-kàu-àm	4	0	0	0	0	4	0	0	0	0
 一旦	it-tàn	93	22	25	24	0	2	13	0	7	0
 一時	it-sî	24	4	3	10	0	0	7	0	0	0
@@ -220,7 +220,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 一百个	tsi̍t-pah-ê	2	2	0	0	0	0	0	0	0	0
 一百八十	tsi̍t-pah-peh-tsa̍p	6	6	0	0	0	0	0	0	0	0
 一百外	tsi̍t-pah-guā	30	29	0	0	0	0	1	0	0	0
-一百空一	tsi̍t-pah-khòng-tsi̍t	1	1	0	0	0	0	0	0	0	0
+一百空一	tsi̍t-pah khòng tsi̍t	1	1	0	0	0	0	0	0	0	0
 一百箍	tsi̍t-pah-khoo	25	24	0	0	0	0	1	0	0	0
 一盡	it-tsīn	124	0	48	12	0	0	35	0	29	0
 一盤	tsi̍t-puânn	14	9	1	0	0	0	4	0	0	0
@@ -243,9 +243,9 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 一筆	tsi̍t-pit	28	27	0	0	0	0	1	0	0	0
 一等	it-tíng	36	0	15	16	0	0	5	0	0	0
 一等一	it-tíng-it	1	1	0	0	0	0	0	0	0	0
-一箍	tsi̍t-khoo	27	14	4	6	0	0	3	0	0	0
-一箍銀	tsi̍t-khoo-gîn	5	0	3	0	0	0	2	0	0	0
-一箍銀	tsi̍t-khoo-gûn	2	0	0	0	0	0	2	0	0	0
+一箍	tsi̍t khoo	27	14	4	6	0	0	3	0	0	0
+一箍銀	tsi̍t khoo gîn	5	0	3	0	0	0	2	0	0	0
+一箍銀	tsi̍t khoo gûn	2	0	0	0	0	0	2	0	0	0
 一篷人	tsi̍t-phâng-lâng	3	3	0	0	0	0	0	0	0	0
 一籠	tsi̍t-láng	8	6	0	0	0	0	2	0	0	0
 一粒	tsi̍t-lia̍p	115	38	25	0	0	0	52	0	0	0
@@ -288,7 +288,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 一路上	tsi̍t-lōo-siāng	12	12	0	0	0	0	0	0	0	0
 一路順風	tsi̍t-lōo-sūn-hong	1	0	0	1	0	0	0	0	0	0
 一身	it-sin	8	0	2	3	0	0	3	0	0	0
-一身	tsi̍t-sin	62	1	5	41	0	0	15	0	0	0
+一身	tsi̍t sin	62	1	5	41	0	0	15	0	0	0
 一軀	tsi̍t-su	3	0	2	0	0	0	1	0	0	0
 一透早	tsi̍t-thàu-tsá	1	0	0	0	0	0	1	0	0	0
 一逝	tsi̍t-tsuā	24	23	1	0	0	0	0	0	0	0
@@ -309,7 +309,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 一陣仔	tsi̍t-tsūn-á	4	4	0	0	0	0	0	0	0	0
 一陣風	tsi̍t-tsūn-hong	1	0	0	1	0	0	0	0	0	0
 一隻	tsi̍t-tsiah	226	87	23	0	0	0	112	0	4	0
-一雙	tsi̍t-siang	18	6	1	0	0	0	11	0	0	0
+一雙	tsi̍t siang	18	6	1	0	0	0	11	0	0	0
 一霎仔	tsi̍t-tia̍p-á	4	0	2	2	0	0	0	0	0	0
 一霎仔久	tsi̍t-tiap-á-kú	2	0	0	0	0	1	0	1	0	0
 一霎仔久	tsi̍t-tia̍p-á-kú	4	0	0	3	0	0	0	0	1	0
@@ -4712,7 +4712,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 兩百	nn̄g-pah	191	146	7	10	2	7	9	0	10	0
 兩百个	nn̄g-pah-ê	4	4	0	0	0	0	0	0	0	0
 兩百八	nn̄g-pah-peh	1	1	0	0	0	0	0	0	0	0
-兩百八十	nn̄g-pah-peh-tsa̍p	3	3	0	0	0	0	0	0	0	0
+兩百八十	nn̄g-pah peh-tsa̍p	3	3	0	0	0	0	0	0	0	0
 兩百外	nn̄g-pah-guā	25	25	0	0	0	0	0	0	0	0
 兩百幾	nn̄g-pah-kuí	1	1	0	0	0	0	0	0	0	0
 兩眼	lióng-gán	9	2	0	7	0	0	0	0	0	0
@@ -9595,7 +9595,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 嘛嘛吼	mà-mà-háu	6	0	0	1	1	3	0	1	0	0
 嘛是	mā sī	414	398	14	1	0	0	1	0	0	0
 嘛有	mā-ū	90	90	0	0	0	0	0	0	0	0
-嘛欲	mā beh	16	16	0	0	0	0	0	0	0	0
+嘛欲	mā-beh	16	16	0	0	0	0	0	0	0	0
 嘛欲	mā-bueh	3	3	0	0	0	0	0	0	0	0
 嘛著	mā-tio̍h	8	7	1	0	0	0	0	0	0	0
 嘩	hua	10	0	0	10	0	0	0	0	0	0
@@ -20010,7 +20010,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 掃厝	sàu-tshù	2	0	0	1	0	0	1	0	0	0
 掃土腳	sàu-thôo-kha	2	0	0	2	0	0	0	0	0	0
 掃地	sàu-tè	12	0	4	1	1	1	5	0	0	0
-掃塗跤	sàu-thôo-kha	1	1	0	0	0	0	0	0	0	0
+掃塗跤	sàu thôo-kha	1	1	0	0	0	0	0	0	0	0
 掃墓	sàu-bōng	4	0	1	3	0	0	0	0	0	0
 掃墓	sàu-bōo	4	0	0	4	0	0	0	0	0	0
 掃射	sàu-siā	3	0	0	1	0	0	2	0	0	0
@@ -20968,7 +20968,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 擇選	ti̍k-suán	6	0	2	2	0	0	2	0	0	0
 擉	ta̍k	1	0	0	1	0	0	0	0	0	0
 擉	tia̍k	3	0	0	0	0	3	0	0	0	0
-擉算盤	tia̍k-sǹg-puânn	1	0	0	0	0	1	0	0	0	0
+擉算盤	tia̍k sǹg-puânn	1	0	0	0	0	1	0	0	0	0
 擊	kik	19	5	4	3	0	0	7	0	0	0
 擊倒	kik-tó	2	1	0	0	0	0	1	0	0	0
 擊出	kik-tshut	5	0	3	1	0	0	1	0	0	0
@@ -36592,7 +36592,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 縖	hâ	14	1	1	8	0	4	0	0	0	0
 縛	pa̍k	535	40	69	164	2	17	142	0	101	0
 縛掉	pa̍k-tiāu	1	0	0	1	0	0	0	0	0	0
-縛粽	pa̍k-tsàng	6	0	0	3	0	0	3	0	0	0
+縛粽	pa̍k tsàng	6	0	0	3	0	0	3	0	0	0
 縛索仔	pa̍k-soh-á	1	1	0	0	0	0	0	0	0	0
 縛縛	pa̍k-pa̍k	3	0	1	2	0	0	0	0	0	0
 縛腳	pa̍k-kha	64	0	11	34	0	0	19	0	0	0
@@ -45284,7 +45284,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 這號	tsit-lō	25	2	0	9	0	14	0	0	0	0
 這跡	tsit-liah	8	8	0	0	0	0	0	0	0	0
 這過	tsit-kuè	5	0	0	0	0	5	0	0	0	0
-這陣	tsit tsūn	221	41	34	52	1	30	62	1	0	0
+這陣	tsit-tsūn	221	41	34	52	1	30	62	1	0	0
 這霎	tsit-tia̍p	108	0	108	0	0	0	0	0	0	0
 這馬	tsit-má	865	632	0	39	0	178	0	10	0	6
 這點仔	tsit-tiám-á	7	3	0	0	0	4	0	0	0	0

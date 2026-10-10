@@ -17500,33 +17500,35 @@ thenn-í,䖙椅,True,True,512,False,25,theⁿ-í,thenn1i2,thenn1i2,ㄊㆥㄧˋ,,
 it-tsài,一再,True,False,0,False,25,it-chài,it4tsai3,it4chai3,ㄧㆵㄗㄞ˪,,ittsai,itchai,ㄧㆵㄗㄞ,,its,ich,ㄧㄗ,,True,False
 it-hiòng,一向,True,False,0,False,25,it-hiòng,it4hiong3,it4hiong3,ㄧㆵㄏㄧㆲ˪,,ithiong,ithiong,ㄧㆵㄏㄧㆲ,,ih,ih,ㄧㄏ,,True,False
 tsi̍t-kuá,一寡,True,False,0,False,25,chi̍t-kóa,tsit8kua2,chit8koa2,ㄐㄧㆵ̇ㄍㄨㄚˋ,,tsitkua,chitkoa,ㄐㄧㆵㄍㄨㄚ,,tsk,chk,ㄐㄍ,,True,False
-tsi̍t-kang,一工,True,False,0,False,25,chi̍t-kang,tsit8kang1,chit8kang1,ㄐㄧㆵ̇ㄍㄤ,,tsitkang,chitkang,ㄐㄧㆵㄍㄤ,,tsk,chk,ㄐㄍ,,True,False
-tsi̍t-king,一弓,True,False,0,False,25,chi̍t-keng,tsit8king1,chit8keng1,ㄐㄧㆵ̇ㄍㄧㄥ,,tsitking,chitkeng,ㄐㄧㆵㄍㄧㄥ,,tsk,chk,ㄐㄍ,,True,False
-tsi̍t-kiong,一弓,True,False,0,False,25,chi̍t-kiong,tsit8kiong1,chit8kiong1,ㄐㄧㆵ̇ㄍㄧㆲ,,tsitkiong,chitkiong,ㄐㄧㆵㄍㄧㆲ,,tsk,chk,ㄐㄍ,,True,False
+tsi̍t kang,一工,True,False,0,False,25,chi̍t kang,tsit8kang1,chit8kang1,ㄐㄧㆵ̇ㄍㄤ,,tsitkang,chitkang,ㄐㄧㆵㄍㄤ,,tsk,chk,ㄐㄍ,,True,False
+tsi̍t king,一弓,True,False,0,False,25,chi̍t keng,tsit8king1,chit8keng1,ㄐㄧㆵ̇ㄍㄧㄥ,,tsitking,chitkeng,ㄐㄧㆵㄍㄧㄥ,,tsk,chk,ㄐㄍ,,True,False
+tsi̍t kiong,一弓,True,False,0,False,25,chi̍t kiong,tsit8kiong1,chit8kiong1,ㄐㄧㆵ̇ㄍㄧㆲ,,tsitkiong,chitkiong,ㄐㄧㆵㄍㄧㆲ,,tsk,chk,ㄐㄍ,,True,False
 it-lu̍t,一律,True,False,0,False,25,it-lu̍t,it4lut8,it4lut8,ㄧㆵㄌㄨㆵ̇,,itlut,itlut,ㄧㆵㄌㄨㆵ,,il,il,ㄧㄌ,,True,False
 it-sim,一心,True,False,0,False,25,it-sim,it4sim1,it4sim1,ㄧㆵㄒㄧㆬ,,itsim,itsim,ㄧㆵㄒㄧㆬ,,is,is,ㄧㄒ,,True,False
 tsi̍t hōo,一戶,True,False,0,False,25,chi̍t hō͘,tsit8hoo7,chit8hoo7,ㄐㄧㆵ̇ㄏㆦ˫,,tsithoo,chithoo,ㄐㄧㆵㄏㆦ,,tsh,chh,ㄐㄏ,,True,False
-tsi̍t-gi̍t,一日,True,False,0,False,25,chi̍t-gi̍t,tsit8git8,chit8git8,ㄐㄧㆵ̇ㆣㄧㆵ̇,,tsitgit,chitgit,ㄐㄧㆵㆣㄧㆵ,,tsg,chg,ㄐㆣ,,True,False
+tsi̍t gi̍t,一日,True,False,0,False,25,chi̍t gi̍t,tsit8git8,chit8git8,ㄐㄧㆵ̇ㆣㄧㆵ̇,,tsitgit,chitgit,ㄐㄧㆵㆣㄧㆵ,,tsg,chg,ㄐㆣ,,True,False
+tsi̍t ji̍t,一日,True,False,170,False,25,chi̍t ji̍t,tsit8jit8,chit8jit8,ㄐㄧㆵ̇ㆢㄧㆵ̇,,tsitjit,chitjit,ㄐㄧㆵㆢㄧㆵ,,tsj,chj,ㄐㆢ,,True,False
+tsi̍t li̍t,一日,True,False,69,False,25,chi̍t li̍t,tsit8lit8,chit8lit8,ㄐㄧㆵ̇ㄌㄧㆵ̇,,tsitlit,chitlit,ㄐㄧㆵㄌㄧㆵ,,tsl,chl,ㄐㄌ,,True,False
 tsi̍t-ji̍t,一日,True,False,170,False,25,chi̍t-ji̍t,tsit8jit8,chit8jit8,ㄐㄧㆵ̇ㆢㄧㆵ̇,,tsitjit,chitjit,ㄐㄧㆵㆢㄧㆵ,,tsj,chj,ㄐㆢ,,True,False
 tsi̍t-li̍t,一日,True,False,69,False,25,chi̍t-li̍t,tsit8lit8,chit8lit8,ㄐㄧㆵ̇ㄌㄧㆵ̇,,tsitlit,chitlit,ㄐㄧㆵㄌㄧㆵ,,tsl,chl,ㄐㄌ,,True,False
 tsi̍t-poo,一晡,True,False,0,False,25,chi̍t-po͘,tsit8poo1,chit8poo1,ㄐㄧㆵ̇ㄅㆦ,,tsitpoo,chitpoo,ㄐㄧㆵㄅㆦ,,tsp,chp,ㄐㄅ,,True,False
-tsi̍t-pî,一枇,True,False,0,False,25,chi̍t-pî,tsit8pi5,chit8pi5,ㄐㄧㆵ̇ㄅㄧˊ,,tsitpi,chitpi,ㄐㄧㆵㄅㄧ,,tsp,chp,ㄐㄅ,,True,False
-tsi̍t-pînn,一枇,True,False,0,False,25,chi̍t-pîⁿ,tsit8pinn5,chit8pinn5,ㄐㄧㆵ̇ㄅㆪˊ,,tsitpinn,chitpinn,ㄐㄧㆵㄅㆪ,,tsp,chp,ㄐㄅ,,True,False
+tsi̍t pî,一枇,True,False,0,False,25,chi̍t pî,tsit8pi5,chit8pi5,ㄐㄧㆵ̇ㄅㄧˊ,,tsitpi,chitpi,ㄐㄧㆵㄅㄧ,,tsp,chp,ㄐㄅ,,True,False
+tsi̍t pînn,一枇,True,False,0,False,25,chi̍t pîⁿ,tsit8pinn5,chit8pinn5,ㄐㄧㆵ̇ㄅㆪˊ,,tsitpinn,chitpinn,ㄐㄧㆵㄅㆪ,,tsp,chp,ㄐㄅ,,True,False
 tsi̍t-pue,一桮,True,False,0,False,25,chi̍t-poe,tsit8pue1,chit8poe1,ㄐㄧㆵ̇ㄅㄨㆤ,,tsitpue,chitpoe,ㄐㄧㆵㄅㄨㆤ,,tsp,chp,ㄐㄅ,,True,False
 it-kài,一概,False,True,0,False,25,it-kài,it4kai3,it4kai3,ㄧㆵㄍㄞ˪,,itkai,itkai,ㄧㆵㄍㄞ,,ik,ik,ㄧㄍ,,True,False
-tsi̍t-lóo,一櫓,True,False,0,False,25,chi̍t-ló͘,tsit8loo2,chit8loo2,ㄐㄧㆵ̇ㄌㆦˋ,,tsitloo,chitloo,ㄐㄧㆵㄌㆦ,,tsl,chl,ㄐㄌ,,True,False
+tsi̍t lóo,一櫓,True,False,0,False,25,chi̍t ló͘,tsit8loo2,chit8loo2,ㄐㄧㆵ̇ㄌㆦˋ,,tsitloo,chitloo,ㄐㄧㆵㄌㆦ,,tsl,chl,ㄐㄌ,,True,False
 it-liû,一流,True,False,0,False,25,it-liû,it4liu5,it4liu5,ㄧㆵㄌㄧㄨˊ,,itliu,itliu,ㄧㆵㄌㄧㄨ,,il,il,ㄧㄌ,,True,False
 it-phiàn,一片,True,False,0,False,25,it-phiàn,it4phian3,it4phian3,ㄧㆵㄆㄧㄢ˪,,itphian,itphian,ㄧㆵㄆㄧㄢ,,iph,iph,ㄧㄆ,,True,False
-tsi̍t-khoo,一箍,True,False,0,False,25,chi̍t-kho͘,tsit8khoo1,chit8khoo1,ㄐㄧㆵ̇ㄎㆦ,,tsitkhoo,chitkhoo,ㄐㄧㆵㄎㆦ,,tskh,chkh,ㄐㄎ,,True,False
-tsi̍t-ko,一篙,True,False,0,False,25,chi̍t-ko,tsit8ko1,chit8ko1,ㄐㄧㆵ̇ㄍㄛ,,tsitko,chitko,ㄐㄧㆵㄍㄛ,,tsk,chk,ㄐㄍ,,True,False
-tsi̍t-kor,一篙,False,False,48,False,25,chi̍t-kor,tsit8kor1,chit8kor1,ㄐㄧㆵ̇ㄍㄜ,ㄐㄧㆵ̇ㄍㄛ,tsitkor,chitkor,ㄐㄧㆵㄍㄜ,ㄐㄧㆵㄍㄛ,tsk,chk,ㄐㄍ,,True,False
+tsi̍t khoo,一箍,True,False,0,False,25,chi̍t kho͘,tsit8khoo1,chit8khoo1,ㄐㄧㆵ̇ㄎㆦ,,tsitkhoo,chitkhoo,ㄐㄧㆵㄎㆦ,,tskh,chkh,ㄐㄎ,,True,False
+tsi̍t ko,一篙,True,False,0,False,25,chi̍t ko,tsit8ko1,chit8ko1,ㄐㄧㆵ̇ㄍㄛ,,tsitko,chitko,ㄐㄧㆵㄍㄛ,,tsk,chk,ㄐㄍ,,True,False
+tsi̍t kor,一篙,False,False,48,False,25,chi̍t kor,tsit8kor1,chit8kor1,ㄐㄧㆵ̇ㄍㄜ,ㄐㄧㆵ̇ㄍㄛ,tsitkor,chitkor,ㄐㄧㆵㄍㄜ,ㄐㄧㆵㄍㄛ,tsk,chk,ㄐㄍ,,True,False
 it-kuàn,一貫,True,False,0,False,25,it-koàn,it4kuan3,it4koan3,ㄧㆵㄍㄨㄢ˪,,itkuan,itkoan,ㄧㆵㄍㄨㄢ,,ik,ik,ㄧㄍ,,True,False
 tsi̍t-lōo,一路,True,False,0,False,25,chi̍t-lō͘,tsit8loo7,chit8loo7,ㄐㄧㆵ̇ㄌㆦ˫,,tsitloo,chitloo,ㄐㄧㆵㄌㆦ,,tsl,chl,ㄐㄌ,,True,False
-tsi̍t-sian,一身,True,False,0,False,25,chi̍t-sian,tsit8sian1,chit8sian1,ㄐㄧㆵ̇ㄒㄧㄢ,,tsitsian,chitsian,ㄐㄧㆵㄒㄧㄢ,,tss,chs,ㄐㄒ,,True,False
-tsi̍t-sin,一身,True,False,0,False,25,chi̍t-sin,tsit8sin1,chit8sin1,ㄐㄧㆵ̇ㄒㄧㄣ,,tsitsin,chitsin,ㄐㄧㆵㄒㄧㄣ,,tss,chs,ㄐㄒ,,True,False
+tsi̍t sian,一身,True,False,0,False,25,chi̍t sian,tsit8sian1,chit8sian1,ㄐㄧㆵ̇ㄒㄧㄢ,,tsitsian,chitsian,ㄐㄧㆵㄒㄧㄢ,,tss,chs,ㄐㄒ,,True,False
+tsi̍t sin,一身,True,False,0,False,25,chi̍t sin,tsit8sin1,chit8sin1,ㄐㄧㆵ̇ㄒㄧㄣ,,tsitsin,chitsin,ㄐㄧㆵㄒㄧㄣ,,tss,chs,ㄐㄒ,,True,False
 tsi̍t-pinn,一邊,True,False,0,False,25,chi̍t-piⁿ,tsit8pinn1,chit8pinn1,ㄐㄧㆵ̇ㄅㆪ,,tsitpinn,chitpinn,ㄐㄧㆵㄅㆪ,,tsp,chp,ㄐㄅ,,True,False
-tsi̍t-sang,一雙,True,False,451,False,25,chi̍t-sang,tsit8sang1,chit8sang1,ㄐㄧㆵ̇ㄙㄤ,,tsitsang,chitsang,ㄐㄧㆵㄙㄤ,,tss,chs,ㄐㄙ,,True,False
-tsi̍t-siang,一雙,True,False,572,False,25,chi̍t-siang,tsit8siang1,chit8siang1,ㄐㄧㆵ̇ㄒㄧㄤ,,tsitsiang,chitsiang,ㄐㄧㆵㄒㄧㄤ,,tss,chs,ㄐㄒ,,True,False
+tsi̍t sang,一雙,True,False,451,False,25,chi̍t sang,tsit8sang1,chit8sang1,ㄐㄧㆵ̇ㄙㄤ,,tsitsang,chitsang,ㄐㄧㆵㄙㄤ,,tss,chs,ㄐㄙ,,True,False
+tsi̍t siang,一雙,True,False,572,False,25,chi̍t siang,tsit8siang1,chit8siang1,ㄐㄧㆵ̇ㄒㄧㄤ,,tsitsiang,chitsiang,ㄐㄧㆵㄒㄧㄤ,,tss,chs,ㄐㄒ,,True,False
 tsi̍t-bīn,一面,True,False,0,False,25,chi̍t-bīn,tsit8bin7,chit8bin7,ㄐㄧㆵ̇ㆠㄧㄣ˫,,tsitbin,chitbin,ㄐㄧㆵㆠㄧㄣ,,tsb,chb,ㄐㆠ,,True,False
 it-thé,一體,True,False,0,False,25,it-thé,it4the2,it4the2,ㄧㆵㄊㆤˋ,,itthe,itthe,ㄧㆵㄊㆤ,,ith,ith,ㄧㄊ,,True,False
 tsi̍t-tsuê,一齊,True,False,0,False,25,chi̍t-chôe,tsit8tsue5,chit8choe5,ㄐㄧㆵ̇ㄗㄨㆤˊ,,tsittsue,chitchoe,ㄐㄧㆵㄗㄨㆤ,,tsts,chch,ㄐㄗ,,True,False
@@ -36413,14 +36415,15 @@ tsi̍t kò ge̍h,一個月,True,False,132,False,16,chi̍t kò ge̍h,tsit8ko3geh8
 tsi̍t kò ge̍rh,一個月,False,False,67,False,16,chi̍t kò ge̍rh,tsit8ko3gerh8,chit8ko3gerh8,ㄐㄧㆵ̇ㄍㄛ˪ㆣㄜㆷ̇,ㄐㄧㆵ̇ㄍㄛ˪ㆣㄛㆷ̇,tsitkogerh,chitkogerh,ㄐㄧㆵㄍㄛㆣㄜㆷ,ㄐㄧㆵㄍㄛㆣㄛㆷ,tskg,chkg,ㄐㄍㆣ,,True,False
 tsi̍t kò gue̍h,一個月,True,False,568,False,16,chi̍t kò goe̍h,tsit8ko3gueh8,chit8ko3goeh8,ㄐㄧㆵ̇ㄍㄛ˪ㆣㄨㆤㆷ̇,,tsitkogueh,chitkogoeh,ㄐㄧㆵㄍㄛㆣㄨㆤㆷ,,tskg,chkg,ㄐㄍㆣ,,True,False
 tsi̍t kháu-tsàu,一口灶,True,False,0,False,16,chi̍t kháu-chàu,tsit8khau2tsau3,chit8khau2chau3,ㄐㄧㆵ̇ㄎㄠˋㄗㄠ˪,,tsitkhautsau,chitkhauchau,ㄐㄧㆵㄎㄠㄗㄠ,,tskhts,chkhch,ㄐㄎㄗ,,True,False
-tsi̍t-phû-sái,一垺屎,True,False,0,False,16,chi̍t-phû-sái,tsit8phu5sai2,chit8phu5sai2,ㄐㄧㆵ̇ㄆㄨˊㄙㄞˋ,,tsitphusai,chitphusai,ㄐㄧㆵㄆㄨㄙㄞ,,tsphs,chphs,ㄐㄆㄙ,,True,False
+tsi̍t phû sái,一垺屎,True,False,0,False,16,chi̍t phû sái,tsit8phu5sai2,chit8phu5sai2,ㄐㄧㆵ̇ㄆㄨˊㄙㄞˋ,,tsitphusai,chitphusai,ㄐㄧㆵㄆㄨㄙㄞ,,tsphs,chphs,ㄐㄆㄙ,,True,False
+tsi̍t pû sái,一垺屎,True,False,0,False,16,chi̍t pû sái,tsit8pu5sai2,chit8pu5sai2,ㄐㄧㆵ̇ㄅㄨˊㄙㄞˋ,,tsitpusai,chitpusai,ㄐㄧㆵㄅㄨㄙㄞ,,tsps,chps,ㄐㄅㄙ,,True,False
 tsi̍t-pû-sái,一垺屎,True,False,0,False,16,chi̍t-pû-sái,tsit8pu5sai2,chit8pu5sai2,ㄐㄧㆵ̇ㄅㄨˊㄙㄞˋ,,tsitpusai,chitpusai,ㄐㄧㆵㄅㄨㄙㄞ,,tsps,chps,ㄐㄅㄙ,,True,False
 it-iā-tsîng,一夜情,False,True,0,False,16,it-iā-chêng,it4ia7tsing5,it4ia7cheng5,ㄧㆵㄧㄚ˫ㄐㄧㄥˊ,,itiatsing,itiacheng,ㄧㆵㄧㄚㄐㄧㄥ,,iits,iich,ㄧㄧㄐ,,True,False
 tsi̍t-iā-tsîng,一夜情,True,False,0,False,16,chi̍t-iā-chêng,tsit8ia7tsing5,chit8ia7cheng5,ㄐㄧㆵ̇ㄧㄚ˫ㄐㄧㄥˊ,,tsitiatsing,chitiacheng,ㄐㄧㆵㄧㄚㄐㄧㄥ,,tsits,chich,ㄐㄧㄐ,,True,False
 tsi̍t-tuā-tui,一大堆,True,False,0,False,16,chi̍t-tōa-tui,tsit8tua7tui1,chit8toa7tui1,ㄐㄧㆵ̇ㄉㄨㄚ˫ㄉㄨㄧ,,tsittuatui,chittoatui,ㄐㄧㆵㄉㄨㄚㄉㄨㄧ,,tstt,chtt,ㄐㄉㄉ,,True,False
 tsi̍t-tuā-thua,一大拖,True,False,0,False,16,chi̍t-tōa-thoa,tsit8tua7thua1,chit8toa7thoa1,ㄐㄧㆵ̇ㄉㄨㄚ˫ㄊㄨㄚ,,tsittuathua,chittoathoa,ㄐㄧㆵㄉㄨㄚㄊㄨㄚ,,tstth,chtth,ㄐㄉㄊ,,True,False
 tsi̍t-tuā-phìnn,一大片,True,False,0,False,16,chi̍t-tōa-phìⁿ,tsit8tua7phinn3,chit8toa7phinn3,ㄐㄧㆵ̇ㄉㄨㄚ˫ㄆㆪ˪,,tsittuaphinn,chittoaphinn,ㄐㄧㆵㄉㄨㄚㄆㆪ,,tstph,chtph,ㄐㄉㄆ,,True,False
-tsi̍t-thò-sann,一套衫,True,False,0,False,16,chi̍t-thò-saⁿ,tsit8tho3sann1,chit8tho3sann1,ㄐㄧㆵ̇ㄊㄛ˪ㄙㆩ,,tsitthosann,chitthosann,ㄐㄧㆵㄊㄛㄙㆩ,,tsths,chths,ㄐㄊㄙ,,True,False
+tsi̍t thò sann,一套衫,True,False,0,False,16,chi̍t thò saⁿ,tsit8tho3sann1,chit8tho3sann1,ㄐㄧㆵ̇ㄊㄛ˪ㄙㆩ,,tsitthosann,chitthosann,ㄐㄧㆵㄊㄛㄙㆩ,,tsths,chths,ㄐㄊㄙ,,True,False
 it-jī-pênn,一字平,True,False,56,False,16,it-jī-pêⁿ,it4ji7penn5,it4ji7penn5,ㄧㆵㆢㄧ˫ㄅㆥˊ,,itjipenn,itjipenn,ㄧㆵㆢㄧㄅㆥ,,ijp,ijp,ㄧㆢㄅ,,True,False
 it-jī-pînn,一字平,True,False,130,False,16,it-jī-pîⁿ,it4ji7pinn5,it4ji7pinn5,ㄧㆵㆢㄧ˫ㄅㆪˊ,,itjipinn,itjipinn,ㄧㆵㆢㄧㄅㆪ,,ijp,ijp,ㄧㆢㄅ,,True,False
 it-lī-pînn,一字平,False,False,68,False,16,it-lī-pîⁿ,it4li7pinn5,it4li7pinn5,ㄧㆵㄌㄧ˫ㄅㆪˊ,,itlipinn,itlipinn,ㄧㆵㄌㄧㄅㆪ,,ilp,ilp,ㄧㄌㄅ,,True,False
@@ -36428,37 +36431,37 @@ it-lǐ-pînn,一字平,False,False,1,False,16,it-lǐ-pîⁿ,it4li6pinn5,it4li6pi
 tsi̍t-kuá-á,一寡仔,True,False,0,False,16,chi̍t-kóa-á,tsit8kua2a2,chit8koa2a2,ㄐㄧㆵ̇ㄍㄨㄚˋㄚˋ,,tsitkuaa,chitkoaa,ㄐㄧㆵㄍㄨㄚㄚ,,tska,chka,ㄐㄍㄚ,,True,False
 tsi̍t tuì-sî,一對時,True,False,0,False,16,chi̍t tùi-sî,tsit8tui3si5,chit8tui3si5,ㄐㄧㆵ̇ㄉㄨㄧ˪ㄒㄧˊ,,tsittuisi,chittuisi,ㄐㄧㆵㄉㄨㄧㄒㄧ,,tsts,chts,ㄐㄉㄒ,,True,False
 tsi̍t-sut-á,一屑仔,True,False,0,False,16,chi̍t-sut-á,tsit8sut4a2,chit8sut4a2,ㄐㄧㆵ̇ㄙㄨㆵㄚˋ,,tsitsuta,chitsuta,ㄐㄧㆵㄙㄨㆵㄚ,,tssa,chsa,ㄐㄙㄚ,,True,False
-tsi̍t-thiap-io̍h,一帖藥,True,False,0,False,16,chi̍t-thiap-io̍h,tsit8thiap4ioh8,chit8thiap4ioh8,ㄐㄧㆵ̇ㄊㄧㄚㆴㄧㄛㆷ̇,,tsitthiapioh,chitthiapioh,ㄐㄧㆵㄊㄧㄚㆴㄧㄛㆷ,,tsthi,chthi,ㄐㄊㄧ,,True,False
-tsi̍t-thiap-io̍rh,一帖藥,True,False,0,False,16,chi̍t-thiap-io̍rh,tsit8thiap4iorh8,chit8thiap4iorh8,ㄐㄧㆵ̇ㄊㄧㄚㆴㄧㄜㆷ̇,ㄐㄧㆵ̇ㄊㄧㄚㆴㄧㄛㆷ̇,tsitthiapiorh,chitthiapiorh,ㄐㄧㆵㄊㄧㄚㆴㄧㄜㆷ,ㄐㄧㆵㄊㄧㄚㆴㄧㄛㆷ,tsthi,chthi,ㄐㄊㄧ,,True,False
+tsi̍t thiap io̍h,一帖藥,True,False,0,False,16,chi̍t thiap io̍h,tsit8thiap4ioh8,chit8thiap4ioh8,ㄐㄧㆵ̇ㄊㄧㄚㆴㄧㄛㆷ̇,,tsitthiapioh,chitthiapioh,ㄐㄧㆵㄊㄧㄚㆴㄧㄛㆷ,,tsthi,chthi,ㄐㄊㄧ,,True,False
+tsi̍t thiap io̍rh,一帖藥,True,False,0,False,16,chi̍t thiap io̍rh,tsit8thiap4iorh8,chit8thiap4iorh8,ㄐㄧㆵ̇ㄊㄧㄚㆴㄧㄜㆷ̇,ㄐㄧㆵ̇ㄊㄧㄚㆴㄧㄛㆷ̇,tsitthiapiorh,chitthiapiorh,ㄐㄧㆵㄊㄧㄚㆴㄧㄜㆷ,ㄐㄧㆵㄊㄧㄚㆴㄧㄛㆷ,tsthi,chthi,ㄐㄊㄧ,,True,False
 tsi̍t ge̍h-ji̍t,一月日,False,False,128,False,16,chi̍t ge̍h-ji̍t,tsit8geh8jit8,chit8geh8jit8,ㄐㄧㆵ̇ㆣㆤㆷ̇ㆢㄧㆵ̇,,tsitgehjit,chitgehjit,ㄐㄧㆵㆣㆤㆷㆢㄧㆵ,,tsgj,chgj,ㄐㆣㆢ,,True,False
 tsi̍t ge̍h-li̍t,一月日,True,False,4,False,16,chi̍t ge̍h-li̍t,tsit8geh8lit8,chit8geh8lit8,ㄐㄧㆵ̇ㆣㆤㆷ̇ㄌㄧㆵ̇,,tsitgehlit,chitgehlit,ㄐㄧㆵㆣㆤㆷㄌㄧㆵ,,tsgl,chgl,ㄐㆣㄌ,,True,False
 tsi̍t ge̍rh-ji̍t,一月日,False,False,2,False,16,chi̍t ge̍rh-ji̍t,tsit8gerh8jit8,chit8gerh8jit8,ㄐㄧㆵ̇ㆣㄜㆷ̇ㆢㄧㆵ̇,ㄐㄧㆵ̇ㆣㄛㆷ̇ㆢㄧㆵ̇,tsitgerhjit,chitgerhjit,ㄐㄧㆵㆣㄜㆷㆢㄧㆵ,ㄐㄧㆵㆣㄛㆷㆢㄧㆵ,tsgj,chgj,ㄐㆣㆢ,,True,False
 tsi̍t ge̍rh-li̍t,一月日,False,False,65,False,16,chi̍t ge̍rh-li̍t,tsit8gerh8lit8,chit8gerh8lit8,ㄐㄧㆵ̇ㆣㄜㆷ̇ㄌㄧㆵ̇,ㄐㄧㆵ̇ㆣㄛㆷ̇ㄌㄧㆵ̇,tsitgerhlit,chitgerhlit,ㄐㄧㆵㆣㄜㆷㄌㄧㆵ,ㄐㄧㆵㆣㄛㆷㄌㄧㆵ,tsgl,chgl,ㄐㆣㄌ,,True,False
 tsi̍t gue̍h-ji̍t,一月日,True,False,40,False,16,chi̍t goe̍h-ji̍t,tsit8gueh8jit8,chit8goeh8jit8,ㄐㄧㆵ̇ㆣㄨㆤㆷ̇ㆢㄧㆵ̇,,tsitguehjit,chitgoehjit,ㄐㄧㆵㆣㄨㆤㆷㆢㄧㆵ,,tsgj,chgj,ㄐㆣㆢ,,True,False
-tsi̍t-ho̍k-io̍h,一服藥,True,False,0,False,16,chi̍t-ho̍k-io̍h,tsit8hok8ioh8,chit8hok8ioh8,ㄐㄧㆵ̇ㄏㆦㆻ̇ㄧㄛㆷ̇,,tsithokioh,chithokioh,ㄐㄧㆵㄏㆦㆻㄧㄛㆷ,,tshi,chhi,ㄐㄏㄧ,,True,False
-tsi̍t-tsâng-tshiū,一欉樹,True,False,0,False,16,chi̍t-châng-chhiū,tsit8tsang5tshiu7,chit8chang5chhiu7,ㄐㄧㆵ̇ㄗㄤˊㄑㄧㄨ˫,,tsittsangtshiu,chitchangchhiu,ㄐㄧㆵㄗㄤㄑㄧㄨ,,tststsh,chchchh,ㄐㄗㄑ,,True,False
-tsi̍t-tsâng-tshiūnn,一欉樹,False,False,128,False,16,chi̍t-châng-chhiūⁿ,tsit8tsang5tshiunn7,chit8chang5chhiunn7,ㄐㄧㆵ̇ㄗㄤˊㄑㄧㆫ˫,,tsittsangtshiunn,chitchangchhiunn,ㄐㄧㆵㄗㄤㄑㄧㆫ,,tststsh,chchchh,ㄐㄗㄑ,,True,False
-tsi̍t-tsâng-tshiǔ,一欉樹,True,False,0,False,16,chi̍t-châng-chhiǔ,tsit8tsang5tshiu6,chit8chang5chhiu6,ㄐㄧㆵ̇ㄗㄤˊㄑㄧㄨˇ,,tsittsangtshiu,chitchangchhiu,ㄐㄧㆵㄗㄤㄑㄧㄨ,,tststsh,chchchh,ㄐㄗㄑ,,True,False
+tsi̍t ho̍k io̍h,一服藥,True,False,0,False,16,chi̍t ho̍k io̍h,tsit8hok8ioh8,chit8hok8ioh8,ㄐㄧㆵ̇ㄏㆦㆻ̇ㄧㄛㆷ̇,,tsithokioh,chithokioh,ㄐㄧㆵㄏㆦㆻㄧㄛㆷ,,tshi,chhi,ㄐㄏㄧ,,True,False
+tsi̍t tsâng tshiū,一欉樹,True,False,0,False,16,chi̍t châng chhiū,tsit8tsang5tshiu7,chit8chang5chhiu7,ㄐㄧㆵ̇ㄗㄤˊㄑㄧㄨ˫,,tsittsangtshiu,chitchangchhiu,ㄐㄧㆵㄗㄤㄑㄧㄨ,,tststsh,chchchh,ㄐㄗㄑ,,True,False
+tsi̍t tsâng tshiūnn,一欉樹,False,False,128,False,16,chi̍t châng chhiūⁿ,tsit8tsang5tshiunn7,chit8chang5chhiunn7,ㄐㄧㆵ̇ㄗㄤˊㄑㄧㆫ˫,,tsittsangtshiunn,chitchangchhiunn,ㄐㄧㆵㄗㄤㄑㄧㆫ,,tststsh,chchchh,ㄐㄗㄑ,,True,False
+tsi̍t tsâng tshiǔ,一欉樹,True,False,0,False,16,chi̍t châng chhiǔ,tsit8tsang5tshiu6,chit8chang5chhiu6,ㄐㄧㆵ̇ㄗㄤˊㄑㄧㄨˇ,,tsittsangtshiu,chitchangchhiu,ㄐㄧㆵㄗㄤㄑㄧㄨ,,tststsh,chchchh,ㄐㄗㄑ,,True,False
 tsi̍t-pōo-tshú,一步取,True,False,0,False,16,chi̍t-pō͘-chhú,tsit8poo7tshu2,chit8poo7chhu2,ㄐㄧㆵ̇ㄅㆦ˫ㄘㄨˋ,,tsitpootshu,chitpoochhu,ㄐㄧㆵㄅㆦㄘㄨ,,tsptsh,chpchh,ㄐㄅㄘ,,True,False
 tsi̍t-pǒo-tshú,一步取,False,False,1,False,16,chi̍t-pǒ͘-chhú,tsit8poo6tshu2,chit8poo6chhu2,ㄐㄧㆵ̇ㄅㆦˇㄘㄨˋ,,tsitpootshu,chitpoochhu,ㄐㄧㆵㄅㆦㄘㄨ,,tsptsh,chpchh,ㄐㄅㄘ,,True,False
-tsi̍t-bān-kam,一瓣柑,True,False,0,False,16,chi̍t-bān-kam,tsit8ban7kam1,chit8ban7kam1,ㄐㄧㆵ̇ㆠㄢ˫ㄍㆰ,,tsitbankam,chitbankam,ㄐㄧㆵㆠㄢㄍㆰ,,tsbk,chbk,ㄐㆠㄍ,,True,False
-tsi̍t-bǎn-kam,一瓣柑,True,False,0,False,16,chi̍t-bǎn-kam,tsit8ban6kam1,chit8ban6kam1,ㄐㄧㆵ̇ㆠㄢˇㄍㆰ,,tsitbankam,chitbankam,ㄐㄧㆵㆠㄢㄍㆰ,,tsbk,chbk,ㄐㆠㄍ,,True,False
-tsi̍t-pān-kam,一瓣柑,True,False,0,False,16,chi̍t-pān-kam,tsit8pan7kam1,chit8pan7kam1,ㄐㄧㆵ̇ㄅㄢ˫ㄍㆰ,,tsitpankam,chitpankam,ㄐㄧㆵㄅㄢㄍㆰ,,tspk,chpk,ㄐㄅㄍ,,True,False
+tsi̍t bān kam,一瓣柑,True,False,0,False,16,chi̍t bān kam,tsit8ban7kam1,chit8ban7kam1,ㄐㄧㆵ̇ㆠㄢ˫ㄍㆰ,,tsitbankam,chitbankam,ㄐㄧㆵㆠㄢㄍㆰ,,tsbk,chbk,ㄐㆠㄍ,,True,False
+tsi̍t bǎn kam,一瓣柑,True,False,0,False,16,chi̍t bǎn kam,tsit8ban6kam1,chit8ban6kam1,ㄐㄧㆵ̇ㆠㄢˇㄍㆰ,,tsitbankam,chitbankam,ㄐㄧㆵㆠㄢㄍㆰ,,tsbk,chbk,ㄐㆠㄍ,,True,False
+tsi̍t pān kam,一瓣柑,True,False,0,False,16,chi̍t pān kam,tsit8pan7kam1,chit8pan7kam1,ㄐㄧㆵ̇ㄅㄢ˫ㄍㆰ,,tsitpankam,chitpankam,ㄐㄧㆵㄅㄢㄍㆰ,,tspk,chpk,ㄐㄅㄍ,,True,False
 tsi̍t kah-tsí,一甲子,True,False,0,False,16,chi̍t kah-chí,tsit8kah4tsi2,chit8kah4chi2,ㄐㄧㆵ̇ㄍㄚㆷㄐㄧˋ,,tsitkahtsi,chitkahchi,ㄐㄧㆵㄍㄚㆷㄐㄧ,,tskts,chkch,ㄐㄍㄐ,,True,False
 tsi̍t-phí-á,一疕仔,True,False,0,False,16,chi̍t-phí-á,tsit8phi2a2,chit8phi2a2,ㄐㄧㆵ̇ㄆㄧˋㄚˋ,,tsitphia,chitphia,ㄐㄧㆵㄆㄧㄚ,,tspha,chpha,ㄐㄆㄚ,,True,False
 tsi̍t-ba̍k-nih,一目𥍉,True,False,0,False,16,chi̍t-ba̍k-nih,tsit8bak8nih4,chit8bak8nih4,ㄐㄧㆵ̇ㆠㄚㆻ̇ㄋㄧㆷ,,tsitbaknih,chitbaknih,ㄐㄧㆵㆠㄚㆻㄋㄧㆷ,,tsbn,chbn,ㄐㆠㄋ,,True,False
 tsi̍t-khùn-á,一睏仔,True,False,0,False,16,chi̍t-khùn-á,tsit8khun3a2,chit8khun3a2,ㄐㄧㆵ̇ㄎㄨㄣ˪ㄚˋ,,tsitkhuna,chitkhuna,ㄐㄧㆵㄎㄨㄣㄚ,,tskha,chkha,ㄐㄎㄚ,,True,False
 tsi̍t-ha̍k-sái,一礐屎,True,False,0,False,16,chi̍t-ha̍k-sái,tsit8hak8sai2,chit8hak8sai2,ㄐㄧㆵ̇ㄏㄚㆻ̇ㄙㄞˋ,,tsithaksai,chithaksai,ㄐㄧㆵㄏㄚㆻㄙㄞ,,tshs,chhs,ㄐㄏㄙ,,True,False
 tsi̍t-khoo-lâng,一箍人,True,False,0,False,16,chi̍t-kho͘-lâng,tsit8khoo1lang5,chit8khoo1lang5,ㄐㄧㆵ̇ㄎㆦㄌㄤˊ,,tsitkhoolang,chitkhoolang,ㄐㄧㆵㄎㆦㄌㄤ,,tskhl,chkhl,ㄐㄎㄌ,,True,False
-tsi̍t-khoo-gîn,一箍銀,True,False,568,False,16,chi̍t-kho͘-gîn,tsit8khoo1gin5,chit8khoo1gin5,ㄐㄧㆵ̇ㄎㆦㆣㄧㄣˊ,,tsitkhoogin,chitkhoogin,ㄐㄧㆵㄎㆦㆣㄧㄣ,,tskhg,chkhg,ㄐㄎㆣ,,True,False
-tsi̍t-khoo-gîrn,一箍銀,True,False,2,False,16,chi̍t-kho͘-gîrn,tsit8khoo1girn5,chit8khoo1girn5,ㄐㄧㆵ̇ㄎㆦㆣㆨㄣˊ,,tsitkhoogirn,chitkhoogirn,ㄐㄧㆵㄎㆦㆣㆨㄣ,,tskhg,chkhg,ㄐㄎㆣ,,True,False
-tsi̍t-khoo-gûn,一箍銀,False,False,453,False,16,chi̍t-kho͘-gûn,tsit8khoo1gun5,chit8khoo1gun5,ㄐㄧㆵ̇ㄎㆦㆣㄨㄣˊ,,tsitkhoogun,chitkhoogun,ㄐㄧㆵㄎㆦㆣㄨㄣ,,tskhg,chkhg,ㄐㄎㆣ,,True,False
+tsi̍t khoo gîn,一箍銀,True,False,568,False,16,chi̍t kho͘ gîn,tsit8khoo1gin5,chit8khoo1gin5,ㄐㄧㆵ̇ㄎㆦㆣㄧㄣˊ,,tsitkhoogin,chitkhoogin,ㄐㄧㆵㄎㆦㆣㄧㄣ,,tskhg,chkhg,ㄐㄎㆣ,,True,False
+tsi̍t khoo gîrn,一箍銀,True,False,2,False,16,chi̍t kho͘ gîrn,tsit8khoo1girn5,chit8khoo1girn5,ㄐㄧㆵ̇ㄎㆦㆣㆨㄣˊ,,tsitkhoogirn,chitkhoogirn,ㄐㄧㆵㄎㆦㆣㆨㄣ,,tskhg,chkhg,ㄐㄎㆣ,,True,False
+tsi̍t khoo gûn,一箍銀,False,False,453,False,16,chi̍t kho͘ gûn,tsit8khoo1gun5,chit8khoo1gun5,ㄐㄧㆵ̇ㄎㆦㆣㄨㄣˊ,,tsitkhoogun,chitkhoogun,ㄐㄧㆵㄎㆦㆣㄨㄣ,,tskhg,chkhg,ㄐㄎㆣ,,True,False
 tsi̍t-si-á,一絲仔,True,False,0,False,16,chi̍t-si-á,tsit8si1a2,chit8si1a2,ㄐㄧㆵ̇ㄒㄧㄚˋ,,tsitsia,chitsia,ㄐㄧㆵㄒㄧㄚ,,tssa,chsa,ㄐㄒㄚ,,True,False
 it-puann-ti̍k,一般的,True,False,0,False,16,it-poaⁿ-te̍k,it4puann1tik8,it4poann1tek8,ㄧㆵㄅㄨㆩㄉㄧㆻ̇,,itpuanntik,itpoanntek,ㄧㆵㄅㄨㆩㄉㄧㆻ,,ipt,ipt,ㄧㄅㄉ,,True,False
-tsi̍t-su-sann,一軀衫,True,False,0,False,16,chi̍t-su-saⁿ,tsit8su1sann1,chit8su1sann1,ㄐㄧㆵ̇ㄙㄨㄙㆩ,,tsitsusann,chitsusann,ㄐㄧㆵㄙㄨㄙㆩ,,tsss,chss,ㄐㄙㄙ,,True,False
+tsi̍t su sann,一軀衫,True,False,0,False,16,chi̍t su saⁿ,tsit8su1sann1,chit8su1sann1,ㄐㄧㆵ̇ㄙㄨㄙㆩ,,tsitsusann,chitsusann,ㄐㄧㆵㄙㄨㄙㆩ,,tsss,chss,ㄐㄙㄙ,,True,False
 it-liân-tshuàn,一連串,True,False,0,False,16,it-liân-chhoàn,it4lian5tshuan3,it4lian5chhoan3,ㄧㆵㄌㄧㄢˊㄘㄨㄢ˪,,itliantshuan,itlianchhoan,ㄧㆵㄌㄧㄢㄘㄨㄢ,,iltsh,ilchh,ㄧㄌㄘ,,True,False
-tsi̍t-tsiah-gû,一隻牛,True,False,0,False,16,chi̍t-chiah-gû,tsit8tsiah4gu5,chit8chiah4gu5,ㄐㄧㆵ̇ㄐㄧㄚㆷㆣㄨˊ,,tsittsiahgu,chitchiahgu,ㄐㄧㆵㄐㄧㄚㆷㆣㄨ,,tstsg,chchg,ㄐㄐㆣ,,True,False
-tsi̍t-niá-sann,一領衫,True,False,0,False,16,chi̍t-niá-saⁿ,tsit8nia2sann1,chit8nia2sann1,ㄐㄧㆵ̇ㄋㄧㄚˋㄙㆩ,,tsitniasann,chitniasann,ㄐㄧㆵㄋㄧㄚㄙㆩ,,tsns,chns,ㄐㄋㄙ,,True,False
+tsi̍t tsiah gû,一隻牛,True,False,0,False,16,chi̍t chiah gû,tsit8tsiah4gu5,chit8chiah4gu5,ㄐㄧㆵ̇ㄐㄧㄚㆷㆣㄨˊ,,tsittsiahgu,chitchiahgu,ㄐㄧㆵㄐㄧㄚㆷㆣㄨ,,tstsg,chchg,ㄐㄐㆣ,,True,False
+tsi̍t niá sann,一領衫,True,False,0,False,16,chi̍t niá saⁿ,tsit8nia2sann1,chit8nia2sann1,ㄐㄧㆵ̇ㄋㄧㄚˋㄙㆩ,,tsitniasann,chitniasann,ㄐㄧㆵㄋㄧㄚㄙㆩ,,tsns,chns,ㄐㄋㄙ,,True,False
 tshit-tóo-khu,七堵區,True,False,0,False,16,chhit-tó͘-khu,tshit4too2khu1,chhit4too2khu1,ㄑㄧㆵㄉㆦˋㄎㄨ,,tshittookhu,chhittookhu,ㄑㄧㆵㄉㆦㄎㄨ,,tshtkh,chhtkh,ㄑㄉㄎ,,True,False
 tshit-lī-á,七字仔,True,False,68,False,16,chhit-lī-á,tshit4li7a2,chhit4li7a2,ㄑㄧㆵㄌㄧ˫ㄚˋ,,tshitlia,chhitlia,ㄑㄧㆵㄌㄧㄚ,,tshla,chhla,ㄑㄌㄚ,,True,False
 tshit-lǐ-á,七字仔,False,False,1,False,16,chhit-lǐ-á,tshit4li6a2,chhit4li6a2,ㄑㄧㆵㄌㄧˇㄚˋ,,tshitlia,chhitlia,ㄑㄧㆵㄌㄧㄚ,,tshla,chhla,ㄑㄌㄚ,,True,False
@@ -37086,7 +37089,7 @@ tsòr-lāu-lia̍t,做鬧熱,False,False,48,False,16,chòr-lāu-lia̍t,tsor3lau7l
 tsòr-nāu-jia̍t,做鬧熱,False,False,48,False,16,chòr-nāu-jia̍t,tsor3nau7jiat8,chor3nau7jiat8,ㄗㄜ˪ㄋㄠ˫ㆢㄧㄚㆵ̇,ㄗㄛ˪ㄋㄠ˫ㆢㄧㄚㆵ̇,tsornaujiat,chornaujiat,ㄗㄜㄋㄠㆢㄧㄚㆵ,ㄗㄛㄋㄠㆢㄧㄚㆵ,tsnj,chnj,ㄗㄋㆢ,,True,False
 tsòr-nāu-lia̍t,做鬧熱,False,False,48,False,16,chòr-nāu-lia̍t,tsor3nau7liat8,chor3nau7liat8,ㄗㄜ˪ㄋㄠ˫ㄌㄧㄚㆵ̇,ㄗㄛ˪ㄋㄠ˫ㄌㄧㄚㆵ̇,tsornauliat,chornauliat,ㄗㄜㄋㄠㄌㄧㄚㆵ,ㄗㄛㄋㄠㄌㄧㄚㆵ,tsnl,chnl,ㄗㄋㄌ,,True,False
 thîng-tshia-huì,停車費,True,False,0,False,16,thêng-chhia-hùi,thing5tshia1hui3,theng5chhia1hui3,ㄊㄧㄥˊㄑㄧㄚㄏㄨㄧ˪,,thingtshiahui,thengchhiahui,ㄊㄧㄥㄑㄧㄚㄏㄨㄧ,,thtshh,thchhh,ㄊㄑㄏ,,True,False
-āinn-gín-á,偝囡仔,True,False,0,False,16,āiⁿ-gín-á,ainn7gin2a2,ainn7gin2a2,ㆮ˫ㆣㄧㄣˋㄚˋ,,ainngina,ainngina,ㆮㆣㄧㄣㄚ,,aga,aga,ㆮㆣㄚ,,True,False
+āinn gín-á,偝囡仔,True,False,0,False,16,āiⁿ gín-á,ainn7gin2a2,ainn7gin2a2,ㆮ˫ㆣㄧㄣˋㄚˋ,,ainngina,ainngina,ㆮㆣㄧㄣㄚ,,aga,aga,ㆮㆣㄚ,,True,False
 kiān-pó-khah,健保卡,True,False,0,False,16,kiān-pó-khah,kian7po2khah4,kian7po2khah4,ㄍㄧㄢ˫ㄅㄛˋㄎㄚㆷ,,kianpokhah,kianpokhah,ㄍㄧㄢㄅㄛㄎㄚㆷ,,kpkh,kpkh,ㄍㄅㄎ,,True,False
 kiān-pó-khá,健保卡,False,True,0,False,16,kiān-pó-khá,kian7po2kha2,kian7po2kha2,ㄍㄧㄢ˫ㄅㄛˋㄎㄚˋ,,kianpokha,kianpokha,ㄍㄧㄢㄅㄛㄎㄚ,,kpkh,kpkh,ㄍㄅㄎ,,True,False
 kiān-pór-khah,健保卡,False,False,48,False,16,kiān-pór-khah,kian7por2khah4,kian7por2khah4,ㄍㄧㄢ˫ㄅㄜˋㄎㄚㆷ,ㄍㄧㄢ˫ㄅㄛˋㄎㄚㆷ,kianporkhah,kianporkhah,ㄍㄧㄢㄅㄜㄎㄚㆷ,ㄍㄧㄢㄅㄛㄎㄚㆷ,kpkh,kpkh,ㄍㄅㄎ,,True,False
@@ -43223,8 +43226,8 @@ tāu-hū-sua,豆腐鯊,True,False,0,False,16,tāu-hū-soa,tau7hu7sua1,tau7hu7soa
 tāu-tshài-gê,豆菜芽,True,False,0,False,16,tāu-chhài-gê,tau7tshai3ge5,tau7chhai3ge5,ㄉㄠ˫ㄘㄞ˪ㆣㆤˊ,,tautshaige,tauchhaige,ㄉㄠㄘㄞㆣㆤ,,ttshg,tchhg,ㄉㄘㆣ,,True,False
 tāu-tsiònn-thng,豆醬湯,False,False,16,False,16,tāu-chiòⁿ-thng,tau7tsionn3thng1,tau7chionn3thng1,ㄉㄠ˫ㄐㄧㆧ˪ㄊㆭ,,tautsionnthng,tauchionnthng,ㄉㄠㄐㄧㆧㄊㆭ,,ttsth,tchth,ㄉㄐㄊ,,True,False
 tāu-tsiùnn-thng,豆醬湯,True,False,0,False,16,tāu-chiùⁿ-thng,tau7tsiunn3thng1,tau7chiunn3thng1,ㄉㄠ˫ㄐㄧㆫ˪ㄊㆭ,,tautsiunnthng,tauchiunnthng,ㄉㄠㄐㄧㆫㄊㆭ,,ttsth,tchth,ㄉㄐㄊ,,True,False
-sīnn-tshài-thâu,豉菜頭,True,False,0,False,16,sīⁿ-chhài-thâu,sinn7tshai3thau5,sinn7chhai3thau5,ㄒㆪ˫ㄘㄞ˪ㄊㄠˊ,,sinntshaithau,sinnchhaithau,ㄒㆪㄘㄞㄊㄠ,,stshth,schhth,ㄒㄘㄊ,,True,False
-sǐnn-tshài-thâu,豉菜頭,True,False,0,False,16,sǐⁿ-chhài-thâu,sinn6tshai3thau5,sinn6chhai3thau5,ㄒㆪˇㄘㄞ˪ㄊㄠˊ,,sinntshaithau,sinnchhaithau,ㄒㆪㄘㄞㄊㄠ,,stshth,schhth,ㄒㄘㄊ,,True,False
+sīnn tshài-thâu,豉菜頭,True,False,0,False,16,sīⁿ chhài-thâu,sinn7tshai3thau5,sinn7chhai3thau5,ㄒㆪ˫ㄘㄞ˪ㄊㄠˊ,,sinntshaithau,sinnchhaithau,ㄒㆪㄘㄞㄊㄠ,,stshth,schhth,ㄒㄘㄊ,,True,False
+sǐnn tshài-thâu,豉菜頭,True,False,0,False,16,sǐⁿ chhài-thâu,sinn6tshai3thau5,sinn6chhai3thau5,ㄒㆪˇㄘㄞ˪ㄊㄠˊ,,sinntshaithau,sinnchhaithau,ㄒㆪㄘㄞㄊㄠ,,stshth,schhth,ㄒㄘㄊ,,True,False
 hong-guân-khu,豐原區,True,False,0,False,16,hong-goân-khu,hong1guan5khu1,hong1goan5khu1,ㄏㆲㆣㄨㄢˊㄎㄨ,,hongguankhu,honggoankhu,ㄏㆲㆣㄨㄢㄎㄨ,,hgkh,hgkh,ㄏㆣㄎ,,True,False
 hong-pênn-khe,豐坪溪,True,False,0,False,16,hong-pêⁿ-khe,hong1penn5khe1,hong1penn5khe1,ㄏㆲㄅㆥˊㄎㆤ,,hongpennkhe,hongpennkhe,ㄏㆲㄅㆥㄎㆤ,,hpkh,hpkh,ㄏㄅㄎ,,True,False
 hong-pênn-khere,豐坪溪,False,False,2,False,16,hong-pêⁿ-khere,hong1penn5khere1,hong1penn5khere1,ㄏㆲㄅㆥˊㄎㄜㆤ,ㄏㆲㄅㆥˊㄎㄛㆤ,hongpennkhere,hongpennkhere,ㄏㆲㄅㆥㄎㄜㆤ,ㄏㆲㄅㆥㄎㄛㆤ,hpkh,hpkh,ㄏㄅㄎ,,True,False
@@ -43412,7 +43415,6 @@ hù-lâu-tsuí,赴流水,True,False,0,False,16,hù-lâu-chúi,hu3lau5tsui2,hu3la
 khí-tshìn-nah,起凊凹,True,False,0,False,16,khí-chhìn-nah,khi2tshin3nah4,khi2chhin3nah4,ㄎㄧˋㄑㄧㄣ˪ㄋㄚㆷ,,khitshinnah,khichhinnah,ㄎㄧㄑㄧㄣㄋㄚㆷ,,khtshn,khchhn,ㄎㄑㄋ,,True,False
 khí-tshì-nà,起凊瘼,True,False,0,False,16,khí-chhì-nà,khi2tshi3na3,khi2chhi3na3,ㄎㄧˋㄑㄧ˪ㄋㄚ˪,,khitshina,khichhina,ㄎㄧㄑㄧㄋㄚ,,khtshn,khchhn,ㄎㄑㄋ,,True,False
 khí-tshìn-mooh,起凊瘼,False,True,0,False,16,khí-chhìn-mo͘h,khi2tshin3mooh4,khi2chhin3mooh4,ㄎㄧˋㄑㄧㄣ˪ㄇㆦㆷ,,khitshinmooh,khichhinmooh,ㄎㄧㄑㄧㄣㄇㆦㆷ,,khtshm,khchhm,ㄎㄑㄇ,,True,False
-khí-tshìn-mo̍nnh,起凊瘼,True,False,0,False,16,khí-chhìn-mo̍ⁿh,khi2tshin3monnh8,khi2chhin3monnh8,ㄎㄧˋㄑㄧㄣ˪ㄇㆧㆷ̇,,khitshinmonnh,khichhinmonnh,ㄎㄧㄑㄧㄣㄇㆧㆷ,,khtshm,khchhm,ㄎㄑㄇ,,True,False
 khí-tshìn-mo̍oh,起凊瘼,True,False,0,False,16,khí-chhìn-mo̍͘h,khi2tshin3mooh8,khi2chhin3mooh8,ㄎㄧˋㄑㄧㄣ˪ㄇㆦㆷ̇,,khitshinmooh,khichhinmooh,ㄎㄧㄑㄧㄣㄇㆦㆷ,,khtshm,khchhm,ㄎㄑㄇ,,True,False
 khí-tshìn-mòo,起凊瘼,True,False,0,False,16,khí-chhìn-mò͘,khi2tshin3moo3,khi2chhin3moo3,ㄎㄧˋㄑㄧㄣ˪ㄇㆦ˪,,khitshinmoo,khichhinmoo,ㄎㄧㄑㄧㄣㄇㆦ,,khtshm,khchhm,ㄎㄑㄇ,,True,False
 khí-tshìn-mō,起凊瘼,True,False,0,False,16,khí-chhìn-mō,khi2tshin3mo7,khi2chhin3mo7,ㄎㄧˋㄑㄧㄣ˪ㄇㄛ˫,,khitshinmo,khichhinmo,ㄎㄧㄑㄧㄣㄇㄛ,,khtshm,khchhm,ㄎㄑㄇ,,True,False
@@ -44336,7 +44338,7 @@ tian-tò-thâu,顛倒頭,True,False,0,False,16,tian-tò-thâu,tian1to3thau5,tian
 kòo-sann-tuìnn,顧三頓,False,False,8,False,16,kò͘-saⁿ-tùiⁿ,koo3sann1tuinn3,koo3sann1tuinn3,ㄍㆦ˪ㄙㆩㄉㄨㆪ˪,,koosanntuinn,koosanntuinn,ㄍㆦㄙㆩㄉㄨㆪ,,kst,kst,ㄍㄙㄉ,,True,False
 kòo-sann-tǹg,顧三頓,True,False,0,False,16,kò͘-saⁿ-tǹg,koo3sann1tng3,koo3sann1tng3,ㄍㆦ˪ㄙㆩㄉㆭ˪,,koosanntng,koosanntng,ㄍㆦㄙㆩㄉㆭ,,kst,kst,ㄍㄙㄉ,,True,False
 kòo-lâng-uàn,顧人怨,True,False,0,False,16,kò͘-lâng-oàn,koo3lang5uan3,koo3lang5oan3,ㄍㆦ˪ㄌㄤˊㄨㄢ˪,,koolanguan,koolangoan,ㄍㆦㄌㄤㄨㄢ,,klu,klo,ㄍㄌㄨ,,True,False
-kòo-gín-á,顧囡仔,True,False,0,False,16,kò͘-gín-á,koo3gin2a2,koo3gin2a2,ㄍㆦ˪ㆣㄧㄣˋㄚˋ,,koogina,koogina,ㄍㆦㆣㄧㄣㄚ,,kga,kga,ㄍㆣㄚ,,True,False
+kòo gín-á,顧囡仔,True,False,0,False,16,kò͘ gín-á,koo3gin2a2,koo3gin2a2,ㄍㆦ˪ㆣㄧㄣˋㄚˋ,,koogina,koogina,ㄍㆦㆣㄧㄣㄚ,,kga,kga,ㄍㆣㄚ,,True,False
 hián-bî-kiànn,顯微鏡,True,False,0,False,16,hián-bî-kiàⁿ,hian2bi5kiann3,hian2bi5kiann3,ㄏㄧㄢˋㆠㄧˊㄍㄧㆩ˪,,hianbikiann,hianbikiann,ㄏㄧㄢㆠㄧㄍㄧㆩ,,hbk,hbk,ㄏㆠㄍ,,True,False
 hong-tshe-lián,風吹輪,True,False,132,False,16,hong-chhe-lián,hong1tshe1lian2,hong1chhe1lian2,ㄏㆲㄘㆤㄌㄧㄢˋ,,hongtshelian,hongchhelian,ㄏㆲㄘㆤㄌㄧㄢ,,htshl,hchhl,ㄏㄘㄌ,,True,False
 hong-tsher-lián,風吹輪,False,False,67,False,16,hong-chher-lián,hong1tsher1lian2,hong1chher1lian2,ㄏㆲㄘㄜㄌㄧㄢˋ,ㄏㆲㄘㄛㄌㄧㄢˋ,hongtsherlian,hongchherlian,ㄏㆲㄘㄜㄌㄧㄢ,ㄏㆲㄘㄛㄌㄧㄢ,htshl,hchhl,ㄏㄘㄌ,,True,False
@@ -44960,8 +44962,8 @@ tsi̍t-puànn-ji̍t-á,一半日仔,True,False,170,False,12,chi̍t-pòaⁿ-ji̍t
 tsi̍t-puànn-li̍t-á,一半日仔,True,False,69,False,12,chi̍t-pòaⁿ-li̍t-á,tsit8puann3lit8a2,chit8poann3lit8a2,ㄐㄧㆵ̇ㄅㄨㆩ˪ㄌㄧㆵ̇ㄚˋ,,tsitpuannlita,chitpoannlita,ㄐㄧㆵㄅㄨㆩㄌㄧㆵㄚ,,tspla,chpla,ㄐㄅㄌㄚ,,True,False
 tsi̍t-ke-hué-á,一家伙仔,True,False,0,False,12,chi̍t-ke-hóe-á,tsit8ke1hue2a2,chit8ke1hoe2a2,ㄐㄧㆵ̇ㄍㆤㄏㄨㆤˋㄚˋ,,tsitkehuea,chitkehoea,ㄐㄧㆵㄍㆤㄏㄨㆤㄚ,,tskha,chkha,ㄐㄍㄏㄚ,,True,False
 tsi̍t-ke-hé-á,一家伙仔,True,False,0,False,12,chi̍t-ke-hé-á,tsit8ke1he2a2,chit8ke1he2a2,ㄐㄧㆵ̇ㄍㆤㄏㆤˋㄚˋ,,tsitkehea,chitkehea,ㄐㄧㆵㄍㆤㄏㆤㄚ,,tskha,chkha,ㄐㄍㄏㄚ,,True,False
-tsi̍t-thiap-io̍h-á,一帖藥仔,True,False,0,False,12,chi̍t-thiap-io̍h-á,tsit8thiap4ioh8a2,chit8thiap4ioh8a2,ㄐㄧㆵ̇ㄊㄧㄚㆴㄧㄛㆷ̇ㄚˋ,,tsitthiapioha,chitthiapioha,ㄐㄧㆵㄊㄧㄚㆴㄧㄛㆷㄚ,,tsthia,chthia,ㄐㄊㄧㄚ,,True,False
-tsi̍t-thiap-io̍rh-á,一帖藥仔,True,False,0,False,12,chi̍t-thiap-io̍rh-á,tsit8thiap4iorh8a2,chit8thiap4iorh8a2,ㄐㄧㆵ̇ㄊㄧㄚㆴㄧㄜㆷ̇ㄚˋ,ㄐㄧㆵ̇ㄊㄧㄚㆴㄧㄛㆷ̇ㄚˋ,tsitthiapiorha,chitthiapiorha,ㄐㄧㆵㄊㄧㄚㆴㄧㄜㆷㄚ,ㄐㄧㆵㄊㄧㄚㆴㄧㄛㆷㄚ,tsthia,chthia,ㄐㄊㄧㄚ,,True,False
+tsi̍t thiap io̍h-á,一帖藥仔,True,False,0,False,12,chi̍t thiap io̍h-á,tsit8thiap4ioh8a2,chit8thiap4ioh8a2,ㄐㄧㆵ̇ㄊㄧㄚㆴㄧㄛㆷ̇ㄚˋ,,tsitthiapioha,chitthiapioha,ㄐㄧㆵㄊㄧㄚㆴㄧㄛㆷㄚ,,tsthia,chthia,ㄐㄊㄧㄚ,,True,False
+tsi̍t thiap io̍rh-á,一帖藥仔,True,False,0,False,12,chi̍t thiap io̍rh-á,tsit8thiap4iorh8a2,chit8thiap4iorh8a2,ㄐㄧㆵ̇ㄊㄧㄚㆴㄧㄜㆷ̇ㄚˋ,ㄐㄧㆵ̇ㄊㄧㄚㆴㄧㄛㆷ̇ㄚˋ,tsitthiapiorha,chitthiapiorha,ㄐㄧㆵㄊㄧㄚㆴㄧㄜㆷㄚ,ㄐㄧㆵㄊㄧㄚㆴㄧㄛㆷㄚ,tsthia,chthia,ㄐㄊㄧㄚ,,True,False
 it-sim-it-ì,一心一意,True,False,0,False,12,it-sim-it-ì,it4sim1it4i3,it4sim1it4i3,ㄧㆵㄒㄧㆬㄧㆵㄧ˪,,itsimiti,itsimiti,ㄧㆵㄒㄧㆬㄧㆵㄧ,,isii,isii,ㄧㄒㄧㄧ,,True,False
 it-pit-it-tiòng,一必一中,True,False,0,False,12,it-pit-it-tiòng,it4pit4it4tiong3,it4pit4it4tiong3,ㄧㆵㄅㄧㆵㄧㆵㄉㄧㆲ˪,,itpitittiong,itpitittiong,ㄧㆵㄅㄧㆵㄧㆵㄉㄧㆲ,,ipit,ipit,ㄧㄅㄧㄉ,,True,False
 tsi̍t-ji̍t-kàu-àm,一日到暗,True,False,170,False,12,chi̍t-ji̍t-kàu-àm,tsit8jit8kau3am3,chit8jit8kau3am3,ㄐㄧㆵ̇ㆢㄧㆵ̇ㄍㄠ˪ㆰ˪,,tsitjitkauam,chitjitkauam,ㄐㄧㆵㆢㄧㆵㄍㄠㆰ,,tsjka,chjka,ㄐㆢㄍㆰ,,True,False
@@ -44974,16 +44976,16 @@ tsi̍t gue̍h-guā-ji̍t,一月外日,True,False,40,False,12,chi̍t goe̍h-gōa-
 it-bôo-it-iōnn,一模一樣,False,False,16,False,12,it-bô͘-it-iōⁿ,it4boo5it4ionn7,it4boo5it4ionn7,ㄧㆵㆠㆦˊㄧㆵㄧㆧ˫,,itbooitionn,itbooitionn,ㄧㆵㆠㆦㄧㆵㄧㆧ,,ibii,ibii,ㄧㆠㄧㄧ,,True,False
 it-bôo-it-iūnn,一模一樣,True,False,0,False,12,it-bô͘-it-iūⁿ,it4boo5it4iunn7,it4boo5it4iunn7,ㄧㆵㆠㆦˊㄧㆵㄧㆫ˫,,itbooitiunn,itbooitiunn,ㄧㆵㆠㆦㄧㆵㄧㆫ,,ibii,ibii,ㄧㆠㄧㄧ,,True,False
 it-bôo-it-iǔnn,一模一樣,False,False,1,False,12,it-bô͘-it-iǔⁿ,it4boo5it4iunn6,it4boo5it4iunn6,ㄧㆵㆠㆦˊㄧㆵㄧㆫˇ,,itbooitiunn,itbooitiunn,ㄧㆵㆠㆦㄧㆵㄧㆫ,,ibii,ibii,ㄧㆠㄧㄧ,,True,False
-tsi̍t-tsâng-tshiū-á,一欉樹仔,True,False,0,False,12,chi̍t-châng-chhiū-á,tsit8tsang5tshiu7a2,chit8chang5chhiu7a2,ㄐㄧㆵ̇ㄗㄤˊㄑㄧㄨ˫ㄚˋ,,tsittsangtshiua,chitchangchhiua,ㄐㄧㆵㄗㄤㄑㄧㄨㄚ,,tststsha,chchchha,ㄐㄗㄑㄚ,,True,False
-tsi̍t-tsâng-tshiūnn-á,一欉樹仔,False,False,128,False,12,chi̍t-châng-chhiūⁿ-á,tsit8tsang5tshiunn7a2,chit8chang5chhiunn7a2,ㄐㄧㆵ̇ㄗㄤˊㄑㄧㆫ˫ㄚˋ,,tsittsangtshiunna,chitchangchhiunna,ㄐㄧㆵㄗㄤㄑㄧㆫㄚ,,tststsha,chchchha,ㄐㄗㄑㄚ,,True,False
-tsi̍t-pān-kam-á,一瓣柑仔,True,False,0,False,12,chi̍t-pān-kam-á,tsit8pan7kam1a2,chit8pan7kam1a2,ㄐㄧㆵ̇ㄅㄢ˫ㄍㆰㄚˋ,,tsitpankama,chitpankama,ㄐㄧㆵㄅㄢㄍㆰㄚ,,tspka,chpka,ㄐㄅㄍㄚ,,True,False
+tsi̍t tsâng tshiū-á,一欉樹仔,True,False,0,False,12,chi̍t châng chhiū-á,tsit8tsang5tshiu7a2,chit8chang5chhiu7a2,ㄐㄧㆵ̇ㄗㄤˊㄑㄧㄨ˫ㄚˋ,,tsittsangtshiua,chitchangchhiua,ㄐㄧㆵㄗㄤㄑㄧㄨㄚ,,tststsha,chchchha,ㄐㄗㄑㄚ,,True,False
+tsi̍t tsâng tshiūnn-á,一欉樹仔,False,False,128,False,12,chi̍t châng chhiūⁿ-á,tsit8tsang5tshiunn7a2,chit8chang5chhiunn7a2,ㄐㄧㆵ̇ㄗㄤˊㄑㄧㆫ˫ㄚˋ,,tsittsangtshiunna,chitchangchhiunna,ㄐㄧㆵㄗㄤㄑㄧㆫㄚ,,tststsha,chchchha,ㄐㄗㄑㄚ,,True,False
+tsi̍t pān kam-á,一瓣柑仔,True,False,0,False,12,chi̍t pān kam-á,tsit8pan7kam1a2,chit8pan7kam1a2,ㄐㄧㆵ̇ㄅㄢ˫ㄍㆰㄚˋ,,tsitpankama,chitpankama,ㄐㄧㆵㄅㄢㄍㆰㄚ,,tspka,chpka,ㄐㄅㄍㄚ,,True,False
+tsi̍t-pah khòng it,一百空一,True,False,0,False,12,chi̍t-pah khòng it,tsit8pah4khong3it4,chit8pah4khong3it4,ㄐㄧㆵ̇ㄅㄚㆷㄎㆲ˪ㄧㆵ,,tsitpahkhongit,chitpahkhongit,ㄐㄧㆵㄅㄚㆷㄎㆲㄧㆵ,,tspkhi,chpkhi,ㄐㄅㄎㄧ,,True,False
+tsi̍t-pah khòng tsi̍t,一百空一,True,False,0,False,12,chi̍t-pah khòng chi̍t,tsit8pah4khong3tsit8,chit8pah4khong3chit8,ㄐㄧㆵ̇ㄅㄚㆷㄎㆲ˪ㄐㄧㆵ̇,,tsitpahkhongtsit,chitpahkhongchit,ㄐㄧㆵㄅㄚㆷㄎㆲㄐㄧㆵ,,tspkhts,chpkhch,ㄐㄅㄎㄐ,,True,False
 tsi̍t-pah khòng-it,一百空一,True,False,0,False,12,chi̍t-pah khòng-it,tsit8pah4khong3it4,chit8pah4khong3it4,ㄐㄧㆵ̇ㄅㄚㆷㄎㆲ˪ㄧㆵ,,tsitpahkhongit,chitpahkhongit,ㄐㄧㆵㄅㄚㆷㄎㆲㄧㆵ,,tspkhi,chpkhi,ㄐㄅㄎㄧ,,True,False
-tsi̍t-pah-khòng-it,一百空一,True,False,0,False,12,chi̍t-pah-khòng-it,tsit8pah4khong3it4,chit8pah4khong3it4,ㄐㄧㆵ̇ㄅㄚㆷㄎㆲ˪ㄧㆵ,,tsitpahkhongit,chitpahkhongit,ㄐㄧㆵㄅㄚㆷㄎㆲㄧㆵ,,tspkhi,chpkhi,ㄐㄅㄎㄧ,,True,False
-tsi̍t-pah-khòng-tsi̍t,一百空一,True,False,0,False,12,chi̍t-pah-khòng-chi̍t,tsit8pah4khong3tsit8,chit8pah4khong3chit8,ㄐㄧㆵ̇ㄅㄚㆷㄎㆲ˪ㄐㄧㆵ̇,,tsitpahkhongtsit,chitpahkhongchit,ㄐㄧㆵㄅㄚㆷㄎㆲㄐㄧㆵ,,tspkhts,chpkhch,ㄐㄅㄎㄐ,,True,False
 tsi̍t-ba̍k-nih-á,一目𥍉仔,True,False,0,False,12,chi̍t-ba̍k-nih-á,tsit8bak8nih4a2,chit8bak8nih4a2,ㄐㄧㆵ̇ㆠㄚㆻ̇ㄋㄧㆷㄚˋ,,tsitbakniha,chitbakniha,ㄐㄧㆵㆠㄚㆻㄋㄧㆷㄚ,,tsbna,chbna,ㄐㆠㄋㄚ,,True,False
 tsi̍t-tak-kú-á,一觸久仔,True,False,0,False,12,chi̍t-tak-kú-á,tsit8tak4ku2a2,chit8tak4ku2a2,ㄐㄧㆵ̇ㄉㄚㆻㄍㄨˋㄚˋ,,tsittakkua,chittakkua,ㄐㄧㆵㄉㄚㆻㄍㄨㄚ,,tstka,chtka,ㄐㄉㄍㄚ,,True,False
 tsi̍t-táu-kú-á,一觸久仔,False,True,0,False,12,chi̍t-táu-kú-á,tsit8tau2ku2a2,chit8tau2ku2a2,ㄐㄧㆵ̇ㄉㄠˋㄍㄨˋㄚˋ,,tsittaukua,chittaukua,ㄐㄧㆵㄉㄠㄍㄨㄚ,,tstka,chtka,ㄐㄉㄍㄚ,,True,False
-tsi̍t-tsiah-gû-á,一隻牛仔,True,False,0,False,12,chi̍t-chiah-gû-á,tsit8tsiah4gu5a2,chit8chiah4gu5a2,ㄐㄧㆵ̇ㄐㄧㄚㆷㆣㄨˊㄚˋ,,tsittsiahgua,chitchiahgua,ㄐㄧㆵㄐㄧㄚㆷㆣㄨㄚ,,tstsga,chchga,ㄐㄐㆣㄚ,,True,False
+tsi̍t tsiah gû-á,一隻牛仔,True,False,0,False,12,chi̍t chiah gû-á,tsit8tsiah4gu5a2,chit8chiah4gu5a2,ㄐㄧㆵ̇ㄐㄧㄚㆷㆣㄨˊㄚˋ,,tsittsiahgua,chitchiahgua,ㄐㄧㆵㄐㄧㄚㆷㆣㄨㄚ,,tstsga,chchga,ㄐㄐㆣㄚ,,True,False
 tsi̍t-tiap-á-kú,一霎仔久,True,False,0,False,12,chi̍t-tiap-á-kú,tsit8tiap4a2ku2,chit8tiap4a2ku2,ㄐㄧㆵ̇ㄉㄧㄚㆴㄚˋㄍㄨˋ,,tsittiapaku,chittiapaku,ㄐㄧㆵㄉㄧㄚㆴㄚㄍㄨ,,tstak,chtak,ㄐㄉㄚㄍ,,True,False
 tshit-niû-má-sinn,七娘媽生,True,False,0,False,12,chhit-niû-má-siⁿ,tshit4niu5ma2sinn1,chhit4niu5ma2sinn1,ㄑㄧㆵㄋㄧㄨˊㄇㄚˋㄒㆪ,,tshitniumasinn,chhitniumasinn,ㄑㄧㆵㄋㄧㄨㄇㄚㄒㆪ,,tshnms,chhnms,ㄑㄋㄇㄒ,,True,False
 tshit-tsá-peh-tsá,七早八早,True,False,568,False,12,chhit-chá-peh-chá,tshit4tsa2peh4tsa2,chhit4cha2peh4cha2,ㄑㄧㆵㄗㄚˋㄅㆤㆷㄗㄚˋ,,tshittsapehtsa,chhitchapehcha,ㄑㄧㆵㄗㄚㄅㆤㆷㄗㄚ,,tshtspts,chhchpch,ㄑㄗㄅㄗ,,True,False
@@ -45159,8 +45161,8 @@ tserè-sit--ê,做穡的,False,False,2,False,12,cherè-sit--ê,tsere3sit4e5,cher
 tsuè-sit--ê,做穡的,True,False,0,False,12,chòe-sit--ê,tsue3sit4e5,choe3sit4e5,ㄗㄨㆤ˪ㄒㄧㆵㆤˊ,,tsuesite,choesite,ㄗㄨㆤㄒㄧㆵㆤ,,tsse,chse,ㄗㄒㆤ,,True,False
 tsò-sit--ê,做穡的,False,False,520,False,12,chò-sit--ê,tso3sit4e5,cho3sit4e5,ㄗㄛ˪ㄒㄧㆵㆤˊ,,tsosite,chosite,ㄗㄛㄒㄧㆵㆤ,,tsse,chse,ㄗㄒㆤ,,True,False
 tsòr-sit--ê,做穡的,False,False,48,False,12,chòr-sit--ê,tsor3sit4e5,chor3sit4e5,ㄗㄜ˪ㄒㄧㆵㆤˊ,ㄗㄛ˪ㄒㄧㆵㆤˊ,tsorsite,chorsite,ㄗㄜㄒㄧㆵㆤ,ㄗㄛㄒㄧㆵㆤ,tsse,chse,ㄗㄒㆤ,,True,False
-iāng-gín--á,偝囡仔,True,False,0,False,12,iāng-gín--á,iang7gin2a2,iang7gin2a2,ㄧㄤ˫ㆣㄧㄣˋㄚˋ,,ianggina,ianggina,ㄧㄤㆣㄧㄣㄚ,,iga,iga,ㄧㆣㄚ,,True,False
-tsiāng-gín--á,偝囡仔,True,False,0,False,12,chiāng-gín--á,tsiang7gin2a2,chiang7gin2a2,ㄐㄧㄤ˫ㆣㄧㄣˋㄚˋ,,tsianggina,chianggina,ㄐㄧㄤㆣㄧㄣㄚ,,tsga,chga,ㄐㆣㄚ,,True,False
+iāng gín--á,偝囡仔,True,False,0,False,12,iāng gín--á,iang7gin2a2,iang7gin2a2,ㄧㄤ˫ㆣㄧㄣˋㄚˋ,,ianggina,ianggina,ㄧㄤㆣㄧㄣㄚ,,iga,iga,ㄧㆣㄚ,,True,False
+tsiāng gín--á,偝囡仔,True,False,0,False,12,chiāng gín--á,tsiang7gin2a2,chiang7gin2a2,ㄐㄧㄤ˫ㆣㄧㄣˋㄚˋ,,tsianggina,chianggina,ㄐㄧㄤㆣㄧㄣㄚ,,tsga,chga,ㄐㆣㄚ,,True,False
 thau-lâi-àm-khì,偷來暗去,True,False,0,False,12,thau-lâi-àm-khì,thau1lai5am3khi3,thau1lai5am3khi3,ㄊㄠㄌㄞˊㆰ˪ㄎㄧ˪,,thaulaiamkhi,thaulaiamkhi,ㄊㄠㄌㄞㆰㄎㄧ,,thlakh,thlakh,ㄊㄌㆰㄎ,,True,False
 thau-lâi-àm-khìr,偷來暗去,False,False,67,False,12,thau-lâi-àm-khìr,thau1lai5am3khir3,thau1lai5am3khir3,ㄊㄠㄌㄞˊㆰ˪ㄎㆨ˪,,thaulaiamkhir,thaulaiamkhir,ㄊㄠㄌㄞㆰㄎㆨ,,thlakh,thlakh,ㄊㄌㆰㄎ,,True,False
 thau-lâi-àm-khù,偷來暗去,False,False,132,False,12,thau-lâi-àm-khù,thau1lai5am3khu3,thau1lai5am3khu3,ㄊㄠㄌㄞˊㆰ˪ㄎㄨ˪,,thaulaiamkhu,thaulaiamkhu,ㄊㄠㄌㄞㆰㄎㄨ,,thlakh,thlakh,ㄊㄌㆰㄎ,,True,False
@@ -45202,8 +45204,8 @@ nn̄g-sann-liàn-tuínn,兩三輾轉,False,False,8,False,12,nn̄g-saⁿ-liàn-t�
 nn̄g-sann-liàn-tńg,兩三輾轉,True,False,0,False,12,nn̄g-saⁿ-liàn-tńg,nng7sann1lian3tng2,nng7sann1lian3tng2,ㄋㆭ˫ㄙㆩㄌㄧㄢ˪ㄉㆭˋ,,nngsannliantng,nngsannliantng,ㄋㆭㄙㆩㄌㄧㄢㄉㆭ,,nslt,nslt,ㄋㄙㄌㄉ,,True,False
 nn̄g-pōo-tshit-á,兩步七仔,True,False,0,False,12,nn̄g-pō͘-chhit-á,nng7poo7tshit4a2,nng7poo7chhit4a2,ㄋㆭ˫ㄅㆦ˫ㄑㄧㆵㄚˋ,,nngpootshita,nngpoochhita,ㄋㆭㄅㆦㄑㄧㆵㄚ,,nptsha,npchha,ㄋㄅㄑㄚ,,True,False
 nn̄g-pǒo-tshit-á,兩步七仔,False,False,1,False,12,nn̄g-pǒ͘-chhit-á,nng7poo6tshit4a2,nng7poo6chhit4a2,ㄋㆭ˫ㄅㆦˇㄑㄧㆵㄚˋ,,nngpootshita,nngpoochhita,ㄋㆭㄅㆦㄑㄧㆵㄚ,,nptsha,npchha,ㄋㄅㄑㄚ,,True,False
-nn̄g-pah-peh-tsa̍p,兩百八十,True,False,568,False,12,nn̄g-pah-peh-cha̍p,nng7pah4peh4tsap8,nng7pah4peh4chap8,ㄋㆭ˫ㄅㄚㆷㄅㆤㆷㄗㄚㆴ̇,,nngpahpehtsap,nngpahpehchap,ㄋㆭㄅㄚㆷㄅㆤㆷㄗㄚㆴ,,nppts,nppch,ㄋㄅㄅㄗ,,True,False
-nn̄g-pah-pueh-tsa̍p,兩百八十,True,False,455,False,12,nn̄g-pah-poeh-cha̍p,nng7pah4pueh4tsap8,nng7pah4poeh4chap8,ㄋㆭ˫ㄅㄚㆷㄅㄨㆤㆷㄗㄚㆴ̇,,nngpahpuehtsap,nngpahpoehchap,ㄋㆭㄅㄚㆷㄅㄨㆤㆷㄗㄚㆴ,,nppts,nppch,ㄋㄅㄅㄗ,,True,False
+nn̄g-pah peh-tsa̍p,兩百八十,True,False,568,False,12,nn̄g-pah peh-cha̍p,nng7pah4peh4tsap8,nng7pah4peh4chap8,ㄋㆭ˫ㄅㄚㆷㄅㆤㆷㄗㄚㆴ̇,,nngpahpehtsap,nngpahpehchap,ㄋㆭㄅㄚㆷㄅㆤㆷㄗㄚㆴ,,nppts,nppch,ㄋㄅㄅㄗ,,True,False
+nn̄g-pah pueh-tsa̍p,兩百八十,True,False,455,False,12,nn̄g-pah poeh-cha̍p,nng7pah4pueh4tsap8,nng7pah4poeh4chap8,ㄋㆭ˫ㄅㄚㆷㄅㄨㆤㆷㄗㄚㆴ̇,,nngpahpuehtsap,nngpahpoehchap,ㄋㆭㄅㄚㆷㄅㄨㆤㆷㄗㄚㆴ,,nppts,nppch,ㄋㄅㄅㄗ,,True,False
 lio̍k-huat-tsuân-su,六法全書,True,False,0,False,12,lio̍k-hoat-choân-su,liok8huat4tsuan5su1,liok8hoat4choan5su1,ㄌㄧㆦㆻ̇ㄏㄨㄚㆵㄗㄨㄢˊㄙㄨ,,liokhuattsuansu,liokhoatchoansu,ㄌㄧㆦㆻㄏㄨㄚㆵㄗㄨㄢㄙㄨ,,lhtss,lhchs,ㄌㄏㄗㄙ,,True,False
 la̍k-kha-tiān-tsng,六跤佃莊,True,False,0,False,12,la̍k-kha-tiān-chng,lak8kha1tian7tsng1,lak8kha1tian7chng1,ㄌㄚㆻ̇ㄎㄚㄉㄧㄢ˫ㄗㆭ,,lakkhatiantsng,lakkhatianchng,ㄌㄚㆻㄎㄚㄉㄧㄢㄗㆭ,,lkhtts,lkhtch,ㄌㄎㄉㄗ,,True,False
 la̍k-ku-lí-siā,六龜里社,True,False,0,False,12,la̍k-ku-lí-siā,lak8ku1li2sia7,lak8ku1li2sia7,ㄌㄚㆻ̇ㄍㄨㄌㄧˋㄒㄧㄚ˫,,lakkulisia,lakkulisia,ㄌㄚㆻㄍㄨㄌㄧㄒㄧㄚ,,lkls,lkls,ㄌㄍㄌㄒ,,True,False
@@ -46515,7 +46517,7 @@ puânn-suann-kèr-niá,盤山過嶺,False,False,67,False,12,pôaⁿ-soaⁿ-kèr-
 puânn-suann-kuè-tsuí,盤山過水,True,False,568,False,12,pôaⁿ-soaⁿ-kòe-chúi,puann5suann1kue3tsui2,poann5soann1koe3chui2,ㄅㄨㆩˊㄙㄨㆩㄍㄨㆤ˪ㄗㄨㄧˋ,,puannsuannkuetsui,poannsoannkoechui,ㄅㄨㆩㄙㄨㆩㄍㄨㆤㄗㄨㄧ,,pskts,pskch,ㄅㄙㄍㄗ,,True,False
 puânn-suann-kè-tsuí,盤山過水,True,False,132,False,12,pôaⁿ-soaⁿ-kè-chúi,puann5suann1ke3tsui2,poann5soann1ke3chui2,ㄅㄨㆩˊㄙㄨㆩㄍㆤ˪ㄗㄨㄧˋ,,puannsuannketsui,poannsoannkechui,ㄅㄨㆩㄙㄨㆩㄍㆤㄗㄨㄧ,,pskts,pskch,ㄅㄙㄍㄗ,,True,False
 puânn-suann-kèr-tsuí,盤山過水,False,False,67,False,12,pôaⁿ-soaⁿ-kèr-chúi,puann5suann1ker3tsui2,poann5soann1ker3chui2,ㄅㄨㆩˊㄙㄨㆩㄍㄜ˪ㄗㄨㄧˋ,ㄅㄨㆩˊㄙㄨㆩㄍㄛ˪ㄗㄨㄧˋ,puannsuannkertsui,poannsoannkerchui,ㄅㄨㆩㄙㄨㆩㄍㄜㄗㄨㄧ,ㄅㄨㆩㄙㄨㆩㄍㄛㄗㄨㄧ,pskts,pskch,ㄅㄙㄍㄗ,,True,False
-ba̍k-tsiu-bông-bū,目睭雺霧,True,False,0,False,12,ba̍k-chiu-bông-bū,bak8tsiu1bong5bu7,bak8chiu1bong5bu7,ㆠㄚㆻ̇ㄐㄧㄨㆠㆲˊㆠㄨ˫,,baktsiubongbu,bakchiubongbu,ㆠㄚㆻㄐㄧㄨㆠㆲㆠㄨ,,btsbb,bchbb,ㆠㄐㆠㆠ,,True,False
+ba̍k-tsiu bông-bū,目睭雺霧,True,False,0,False,12,ba̍k-chiu bông-bū,bak8tsiu1bong5bu7,bak8chiu1bong5bu7,ㆠㄚㆻ̇ㄐㄧㄨㆠㆲˊㆠㄨ˫,,baktsiubongbu,bakchiubongbu,ㆠㄚㆻㄐㄧㄨㆠㆲㆠㄨ,,btsbb,bchbb,ㆠㄐㆠㆠ,,True,False
 ba̍k-kàng-tshiu-tshàng,目降鬚聳,True,False,0,False,12,ba̍k-kàng-chhiu-chhàng,bak8kang3tshiu1tshang3,bak8kang3chhiu1chhang3,ㆠㄚㆻ̇ㄍㄤ˪ㄑㄧㄨㄘㄤ˪,,bakkangtshiutshang,bakkangchhiuchhang,ㆠㄚㆻㄍㄤㄑㄧㄨㄘㄤ,,bktshtsh,bkchhchh,ㆠㄍㄑㄘ,,True,False
 ti̍t-lí-ti̍t-lōo,直理直路,True,False,0,False,12,ti̍t-lí-ti̍t-lō͘,tit8li2tit8loo7,tit8li2tit8loo7,ㄉㄧㆵ̇ㄌㄧˋㄉㄧㆵ̇ㄌㆦ˫,,titlititloo,titlititloo,ㄉㄧㆵㄌㄧㄉㄧㆵㄌㆦ,,tltl,tltl,ㄉㄌㄉㄌ,,True,False
 ti̍t-tn̂g-ti̍t-tōo,直腸直肚,True,False,0,False,12,ti̍t-tn̂g-ti̍t-tō͘,tit8tng5tit8too7,tit8tng5tit8too7,ㄉㄧㆵ̇ㄉㆭˊㄉㄧㆵ̇ㄉㆦ˫,,tittngtittoo,tittngtittoo,ㄉㄧㆵㄉㆭㄉㄧㆵㄉㆦ,,tttt,tttt,ㄉㄉㄉㄉ,,True,False
@@ -47223,7 +47225,7 @@ thâu-pān-khinn-khue,頭汴坑溪,False,False,453,False,12,thâu-pān-khiⁿ-kh
 thâu-khah-tuā-sin,頭較大身,True,False,0,False,12,thâu-khah-tōa-sin,thau5khah4tua7sin1,thau5khah4toa7sin1,ㄊㄠˊㄎㄚㆷㄉㄨㄚ˫ㄒㄧㄣ,,thaukhahtuasin,thaukhahtoasin,ㄊㄠㄎㄚㆷㄉㄨㄚㄒㄧㄣ,,thkhts,thkhts,ㄊㄎㄉㄒ,,True,False
 thâu-bīn-tíng-pah,頭面頂百,True,False,0,False,12,thâu-bīn-téng-pah,thau5bin7ting2pah4,thau5bin7teng2pah4,ㄊㄠˊㆠㄧㄣ˫ㄉㄧㄥˋㄅㄚㆷ,,thaubintingpah,thaubintengpah,ㄊㄠㆠㄧㄣㄉㄧㄥㄅㄚㆷ,,thbtp,thbtp,ㄊㆠㄉㄅ,,True,False
 thâu-tsang-khoo-á,頭鬃箍仔,True,False,0,False,12,thâu-chang-kho͘-á,thau5tsang1khoo1a2,thau5chang1khoo1a2,ㄊㄠˊㄗㄤㄎㆦㄚˋ,,thautsangkhooa,thauchangkhooa,ㄊㄠㄗㄤㄎㆦㄚ,,thtskha,thchkha,ㄊㄗㄎㄚ,,True,False
-kòo-gín--á,顧囡仔,True,False,0,False,12,kò͘-gín--á,koo3gin2a2,koo3gin2a2,ㄍㆦ˪ㆣㄧㄣˋㄚˋ,,koogina,koogina,ㄍㆦㆣㄧㄣㄚ,,kga,kga,ㄍㆣㄚ,,True,False
+kòo gín--á,顧囡仔,True,False,0,False,12,kò͘ gín--á,koo3gin2a2,koo3gin2a2,ㄍㆦ˪ㆣㄧㄣˋㄚˋ,,koogina,koogina,ㄍㆦㆣㄧㄣㄚ,,kga,kga,ㄍㆣㄚ,,True,False
 kòo-biō--ê,顧廟的,True,False,0,False,12,kò͘-biō--ê,koo3bio7e5,koo3bio7e5,ㄍㆦ˪ㆠㄧㄛ˫ㆤˊ,,koobioe,koobioe,ㄍㆦㆠㄧㄛㆤ,,kbe,kbe,ㄍㆠㆤ,,True,False
 hong-siann-pòng-iánn,風聲嗙影,True,False,0,False,12,hong-siaⁿ-pòng-iáⁿ,hong1siann1pong3iann2,hong1siann1pong3iann2,ㄏㆲㄒㄧㆩㄅㆲ˪ㄧㆩˋ,,hongsiannpongiann,hongsiannpongiann,ㄏㆲㄒㄧㆩㄅㆲㄧㆩ,,hspi,hspi,ㄏㄒㄅㄧ,,True,False
 hong-hong-ú-ú,風風雨雨,True,False,0,False,12,hong-hong-ú-ú,hong1hong1u2u2,hong1hong1u2u2,ㄏㆲㄏㆲㄨˋㄨˋ,,honghonguu,honghonguu,ㄏㆲㄏㆲㄨㄨ,,hhuu,hhuu,ㄏㄏㄨㄨ,,True,False
