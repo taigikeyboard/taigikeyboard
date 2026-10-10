@@ -15,6 +15,10 @@ current-at-release values when cutting a dictionary refresh.
 - **Licence**: **CC BY-ND 3.0 TW** (創用CC 姓名標示-禁止改作 3.0 臺灣) — verified 2026-09-05 against the publisher's copyright notice, <https://sutian.moe.edu.tw/zh-hant/piantsip/pankhuan-singbing/>. Covers text and audio content (文字、音檔內容). **Commercial use permitted; no NonCommercial term.** This file previously recorded CC BY-NC 4.0, which was wrong. Only Hanji + romanization are taken — see `dictionary/LICENSE` for why CC BY-ND permits that.
 - **Notes**: Multi-sheet; pipeline `select`/`expand`/`merge` stages
   handle the pivoting. Largest single source (~49k rows).
+- **Update watch**: `.github/workflows/kautian-watch.yml` downloads
+  <https://sutian.moe.edu.tw/media/senn/ods/kautian.ods> every Monday and opens an
+  issue when its `content.xml` differs from the capture (MoE re-exports the file
+  daily, so the zip bytes change even when the rows do not).
 
 ### taigitv — 公視台語新詞辭庫
 - **Publisher**: 公共電視文化事業基金會 / 公視台語台 (PTS Taigi)
