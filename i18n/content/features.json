@@ -279,20 +279,20 @@
         "android": "ic_text_format"
       },
       "summary": {
-        "hanji": "「自動大本字」決定頭一个字母敢會自動變大本字。連紲揤 Shift 兩下是 Caps Lock。",
-        "tailo": "“Tsū-tōng tuā-pún-jī” kuat-tīng thâu tsi̍t ê jī-bió kám ē tsū-tōng piàn tuā-pún-jī. Liân-suà tshi̍h Shift nn̄g-ē sī Caps Lock.",
-        "poj": "“Chū-tōng tōa-pún-jī” koat-tēng thâu chi̍t ê jī-bió kám ē chū-tōng piàn tōa-pún-jī. Liân-sòa chhi̍h Shift nn̄g-ē sī Caps Lock.",
-        "en": "Auto-Capitalization decides whether the first letter is capitalized for you. Press Shift twice for Caps Lock.",
-        "ja": "「自動大文字化」は最初の字母を自動で大文字にするかを決めます。Shift を2回押すと Caps Lock です。"
+        "hanji": "「自動大本字」決定一句 ê 頭一个字母敢會自動變大本字。連紲揤 Shift 兩下是 Caps Lock。",
+        "tailo": "“Tsū-tōng tuā-pún-jī” kuat-tīng tsi̍t kù ê thâu tsi̍t ê jī-bió kám ē tsū-tōng piàn tuā-pún-jī. Liân-suà tshi̍h Shift nn̄g-ē sī Caps Lock.",
+        "poj": "“Chū-tōng tōa-pún-jī” koat-tēng chi̍t kù ê thâu chi̍t ê jī-bió kám ē chū-tōng piàn tōa-pún-jī. Liân-sòa chhi̍h Shift nn̄g-ē sī Caps Lock.",
+        "en": "Auto-Capitalization decides whether the first letter of a sentence is capitalized for you. Press Shift twice for Caps Lock.",
+        "ja": "「自動大文字化」は文頭の字母を自動で大文字にするかを決めます。Shift を2回押すと Caps Lock です。"
       },
       "paragraphs": [
         {
           "text": {
-            "hanji": "頭一个字母會自動變大本字，Shift 齒會反烏。",
-            "tailo": "Thâu tsi̍t ê jī-bió ē tsū-tōng piàn tuā-pún-jī, Shift khí ē huán-oo.",
-            "poj": "Thâu chi̍t ê jī-bió ē chū-tōng piàn tōa-pún-jī, Shift khí ē hoán-o͘.",
-            "en": "The first letter is capitalized automatically, and Shift is highlighted.",
-            "ja": "最初の字母は自動で大文字になり、Shift キーが反転表示されます。"
+            "hanji": "拍開「自動大本字」，一句 ê 頭一个字母會自動變大本字，Shift 齒會反烏。",
+            "tailo": "Phah-khui “Tsū-tōng tuā-pún-jī”, tsi̍t kù ê thâu tsi̍t ê jī-bió ē tsū-tōng piàn tuā-pún-jī, Shift khí ē huán-oo.",
+            "poj": "Phah-khui “Chū-tōng tōa-pún-jī”, chi̍t kù ê thâu chi̍t ê jī-bió ē chū-tōng piàn tōa-pún-jī, Shift khí ē hoán-o͘.",
+            "en": "With Auto-Capitalization on, the first letter of a sentence is capitalized and Shift is highlighted.",
+            "ja": "「自動大文字化」がオンのときは、文頭の字母が大文字になり、Shift キーが反転表示されます。"
           },
           "attachment": {
             "type": "image",
@@ -301,11 +301,11 @@
         },
         {
           "text": {
-            "hanji": "關掉「自動大本字」，拍出來攏是細本字；欲大本字就家己揤 Shift。",
-            "tailo": "Kuainn--tiāu “Tsū-tōng tuā-pún-jī”, phah--tshut-lâi lóng sī suè-pún-jī; beh tuā-pún-jī tō ka-kī tshi̍h Shift.",
-            "poj": "Koaiⁿ--tiāu “Chū-tōng tōa-pún-jī”, phah--chhut-lâi lóng sī sòe-pún-jī; beh tōa-pún-jī tō ka-kī chhi̍h Shift.",
-            "en": "Turn off Auto-Capitalization to type in lowercase; press Shift when you want a capital.",
-            "ja": "「自動大文字化」をオフにすると小文字で入力されます。大文字が必要なときは Shift を押します。"
+            "hanji": "關起來就攏拍細本字，欲大本字就家己揤 Shift。",
+            "tailo": "Kuainn--khí-lâi tō lóng phah suè-pún-jī, beh tuā-pún-jī tō ka-kī tshi̍h Shift.",
+            "poj": "Koaiⁿ--khí-lâi tō lóng phah sòe-pún-jī, beh tōa-pún-jī tō ka-kī chhi̍h Shift.",
+            "en": "Turn it off to type in lowercase, and press Shift when you want a capital.",
+            "ja": "オフにすると小文字で入力され、大文字にしたいときは Shift を押します。"
           },
           "attachment": {
             "type": "image",
@@ -314,15 +314,24 @@
         },
         {
           "text": {
-            "hanji": "連紲揤 Shift 兩下是 Caps Lock，閣揤一下就解除。",
-            "tailo": "Liân-suà tshi̍h Shift nn̄g-ē sī Caps Lock, koh tshi̍h tsi̍t-ē tō kái-tû.",
-            "poj": "Liân-sòa chhi̍h Shift nn̄g-ē sī Caps Lock, koh chhi̍h chi̍t-ē tō kái-tû.",
-            "en": "Press Shift twice for Caps Lock; press it again to turn it off.",
-            "ja": "Shift を2回押すと Caps Lock、もう一度押すと解除します。"
+            "hanji": "連紲揤 Shift 兩下是 Caps Lock，會一直拍大本字，閣揤一下就解除。",
+            "tailo": "Liân-suà tshi̍h Shift nn̄g-ē sī Caps Lock, ē it-ti̍t phah tuā-pún-jī, koh tshi̍h tsi̍t-ē tō kái-tû.",
+            "poj": "Liân-sòa chhi̍h Shift nn̄g-ē sī Caps Lock, ē it-ti̍t phah tōa-pún-jī, koh chhi̍h chi̍t-ē tō kái-tû.",
+            "en": "Press Shift twice for Caps Lock to keep typing in capitals. Press it once more to turn it off.",
+            "ja": "Shift を2回押すと Caps Lock になり、大文字のまま入力できます。もう一度押すと解除します。"
           },
           "attachment": {
             "type": "image",
             "name": "case_caps"
+          }
+        },
+        {
+          "text": {
+            "hanji": "白話字拍大本字 ê 時，鼻音符號預設寫做 ᴺ，像 SIÂᴺ，嘛會使換做 ⁿ。",
+            "tailo": "Pe̍h-uē-jī phah tuā-pún-jī ê sî, phīnn-im hû-hō ī-siat siá-tsò ᴺ, tshiūnn SIÂᴺ, mā ē-sái uānn-tsò ⁿ.",
+            "poj": "Pe̍h-ōe-jī phah tōa-pún-jī ê sî, phīⁿ-im hû-hō ī-siat siá-chò ᴺ, chhiūⁿ SIÂᴺ, mā ē-sái ōaⁿ-chò ⁿ.",
+            "en": "In Pe̍h-ōe-jī capitals, the nasal mark is ᴺ by default, as in SIÂᴺ. You can switch it to ⁿ.",
+            "ja": "白話字の大文字では、鼻音記号は既定で ᴺ（SIÂᴺ など）です。ⁿ に変えることもできます。"
           }
         }
       ]
