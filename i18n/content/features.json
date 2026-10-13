@@ -480,6 +480,10 @@
             "poj": "“Phah ê lô-má-jī khǹg tē-it keh” phah-khui liáu-āu, hāu-soán-sû thâu chi̍t keh tō sī lí phah ê lô-má-jī, chhi̍h chi̍t-ē tō sàng-chhut.",
             "en": "With Show Typed Text First on, the first candidate is exactly what you typed. Tap it to enter it.",
             "ja": "「入力中の文字を先頭に表示」をオンにすると、候補の先頭に入力したローマ字が表示され、タップで入力できます。"
+          },
+          "attachment": {
+            "type": "image",
+            "name": "literal_roman"
           }
         },
         {
