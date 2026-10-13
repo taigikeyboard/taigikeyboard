@@ -16,11 +16,11 @@
       "paragraphs": [
         {
           "text": {
-            "hanji": "白話字、台羅、方音符號，佇齒盤頂懸 ê 工具列切換。",
-            "tailo": "Pe̍h-uē-jī, Tâi-lô, Hong-im-hû-hō, tī khí-puânn tíng-kuân ê kang-kū-lia̍t tshiat-uānn.",
-            "poj": "Pe̍h-ōe-jī, Tâi-lô, Hong-im-hû-hō, tī khí-pôaⁿ téng-koân ê kang-kū-lia̍t chhiat-ōaⁿ.",
-            "en": "Type in Pe̍h-ōe-jī, Tâi-lô, or Taiwanese Phonetic Symbols. Switch on the toolbar above the keys.",
-            "ja": "白話字・台羅・方音符号の3つ。キーボード上部のツールバーで切り替えます。"
+            "hanji": "用齒盤頂懸 ê 工具列切換白話字、台羅佮方音符號。",
+            "tailo": "Iōng khí-puânn tíng-kuân ê kang-kū-lia̍t tshiat-uānn Pe̍h-uē-jī, Tâi-lô kah Hong-im-hû-hō.",
+            "poj": "Iōng khí-pôaⁿ téng-koân ê kang-kū-lia̍t chhiat-ōaⁿ Pe̍h-ōe-jī, Tâi-lô kah Hong-im-hû-hō.",
+            "en": "Switch between Pe̍h-ōe-jī, Tâi-lô, and Taiwanese Phonetic Symbols on the toolbar above the keys.",
+            "ja": "キーボード上部のツールバーで、白話字・台羅・方音符号を切り替えます。"
           },
           "attachment": {
             "type": "slideshow",
@@ -34,20 +34,20 @@
         },
         {
           "text": {
-            "hanji": "台羅 ê 正式名稱是教育部「臺灣台語羅馬字拼音方案」；白話字 ê 歷史較早，19 世紀就開始使用。兩種攏是羅馬字，拼法有淡薄仔無仝：「落雨」白話字寫 lo̍h-hō͘，台羅寫 lo̍h-hōo。",
-            "tailo": "Tâi-lô ê tsìng-sik miâ-tshing sī Kàu-io̍k-pōo “Tâi-uân Tâi-gí Lô-má-jī Phing-im Hong-àn”; Pe̍h-uē-jī ê li̍k-sú khah tsá, 19 sè-kí tō khai-sí sú-iōng. Nn̄g tsióng lóng sī lô-má-jī, ping-huat ū tām-po̍h-á bô kâng: “落雨” Pe̍h-uē-jī siá lo̍h-hō͘, Tâi-lô siá lo̍h-hōo.",
-            "poj": "Tâi-lô ê chèng-sek miâ-chheng sī Kàu-io̍k-pō͘ “Tâi-oân Tâi-gí Lô-má-jī Pheng-im Hong-àn”; Pe̍h-ōe-jī ê le̍k-sú khah chá, 19 sè-kí tō khai-sí sú-iōng. Nn̄g chióng lóng sī lô-má-jī, peng-hoat ū tām-po̍h-á bô kâng: “落雨” Pe̍h-ōe-jī siá lo̍h-hō͘, Tâi-lô siá lo̍h-hōo.",
-            "en": "Tâi-lô's official name is the Ministry of Education's Taiwanese Taigi Romanization System. Pe̍h-ōe-jī is older and has been in use since the 19th century. Both are romanizations with small spelling differences: 落雨 is lo̍h-hō͘ in Pe̍h-ōe-jī and lo̍h-hōo in Tâi-lô.",
-            "ja": "台羅の正式名称は教育部「臺灣台語羅馬字拼音方案」です。白話字はより歴史が古く、19世紀から使われています。どちらもローマ字で、綴りが少し異なります。「落雨」は白話字で lo̍h-hō͘、台羅で lo̍h-hōo。"
+            "hanji": "台羅是教育部公布 ê 臺灣台語羅馬字拼音方案。白話字較早，19 世紀就有人咧用。兩種攏是羅馬字，拼法有淡薄仔無仝，像落雨，白話字寫 lo̍h-hō͘，台羅寫 lo̍h-hōo。",
+            "tailo": "Tâi-lô sī Kàu-io̍k-pōo kong-pòo ê Tâi-uân Tâi-gí Lô-má-jī Phing-im Hong-àn. Pe̍h-uē-jī khah tsá, 19 sè-kí tō ū-lâng teh iōng. Nn̄g tsióng lóng sī lô-má-jī, ping-huat ū tām-po̍h-á bô kâng, tshiūnn 落雨, Pe̍h-uē-jī siá lo̍h-hō͘, Tâi-lô siá lo̍h-hōo.",
+            "poj": "Tâi-lô sī Kàu-io̍k-pō͘ kong-pò͘ ê Tâi-oân Tâi-gí Lô-má-jī Pheng-im Hong-àn. Pe̍h-ōe-jī khah chá, 19 sè-kí tō ū-lâng teh iōng. Nn̄g chióng lóng sī lô-má-jī, peng-hoat ū tām-po̍h-á bô kâng, chhiūⁿ 落雨, Pe̍h-ōe-jī siá lo̍h-hō͘, Tâi-lô siá lo̍h-hōo.",
+            "en": "Tâi-lô is the Taiwanese Taigi Romanization System published by the Ministry of Education. Pe̍h-ōe-jī is older and has been in use since the 19th century. Both are romanizations, and some spellings differ. 落雨, for example, is lo̍h-hō͘ in Pe̍h-ōe-jī and lo̍h-hōo in Tâi-lô.",
+            "ja": "台羅は教育部が定めた臺灣台語羅馬字拼音方案です。白話字はそれより古く、19世紀から使われています。どちらもローマ字ですが、綴りが少し違います。たとえば落雨は、白話字で lo̍h-hō͘、台羅で lo̍h-hōo と書きます。"
           }
         },
         {
           "text": {
-            "hanji": "方音符號是注音符號系統，毋過仝款愛學台語 ê 聲調。",
-            "tailo": "Hong-im-hû-hō sī tsù-im-hû-hō hē-thóng, m̄-koh kāng-khuán ài o̍h Tâi-gí ê siann-tiāu.",
-            "poj": "Hong-im-hû-hō sī chù-im-hû-hō hē-thóng, m̄-koh kāng-khoán ài o̍h Tâi-gí ê siaⁿ-tiāu.",
-            "en": "Phonetic Symbols is a Zhuyin system. You still need to learn Taiwanese tones.",
-            "ja": "方音符号は注音符号の体系です。ただし、台湾語の声調は覚える必要があります。"
+            "hanji": "方音符號是用注音符號拍台語，聲調嘛是愛學。",
+            "tailo": "Hong-im-hû-hō sī iōng tsù-im-hû-hō phah Tâi-gí, siann-tiāu mā sī ài o̍h.",
+            "poj": "Hong-im-hû-hō sī iōng chù-im-hû-hō phah Tâi-gí, siaⁿ-tiāu mā sī ài o̍h.",
+            "en": "Phonetic Symbols lets you type Taiwanese with Zhuyin. You still need to learn the tones.",
+            "ja": "方音符号は、注音符号で台湾語を入力する方式です。声調は覚える必要があります。"
           }
         },
         {
