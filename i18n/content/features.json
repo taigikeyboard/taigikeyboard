@@ -127,9 +127,9 @@
         },
         {
           "text": {
-            "hanji": "拍好字母才拍聲調數字，齒盤會換做聲調符號。聲調拍毋著，揤一下刪除鍵閣拍一擺就好。",
-            "tailo": "Phah hó jī-bió tsiah phah siann-tiāu sòo-jī, khí-puânn ē uānn-tsò siann-tiāu hû-hō. Siann-tiāu phah m̄-tio̍h, tshi̍h tsi̍t-ē san-tû kiān koh phah tsi̍t-pái tō hó.",
-            "poj": "Phah hó jī-bió chiah phah siaⁿ-tiāu sò͘-jī, khí-pôaⁿ ē ōaⁿ-chò siaⁿ-tiāu hû-hō. Siaⁿ-tiāu phah m̄-tio̍h, chhi̍h chi̍t-ē san-tû kiān koh phah chi̍t-pái tō hó.",
+            "hanji": "拍好字母才拍聲調數字，齒盤會換做聲調符號。聲調拍毋著，揤一下刪除齒閣拍一擺就好。",
+            "tailo": "Phah hó jī-bió tsiah phah siann-tiāu sòo-jī, khí-puânn ē uānn-tsò siann-tiāu hû-hō. Siann-tiāu phah m̄-tio̍h, tshi̍h tsi̍t-ē san-tû khí koh phah tsi̍t-pái tō hó.",
+            "poj": "Phah hó jī-bió chiah phah siaⁿ-tiāu sò͘-jī, khí-pôaⁿ ē ōaⁿ-chò siaⁿ-tiāu hû-hō. Siaⁿ-tiāu phah m̄-tio̍h, chhi̍h chi̍t-ē san-tû khí koh phah chi̍t-pái tō hó.",
             "en": "Type a tone number after the letters, and the keyboard turns it into a tone mark. If the tone is wrong, press Delete once and type it again.",
             "ja": "字母のあとに声調数字を打つと、声調記号に変わります。間違えたら削除キーを1回押して打ち直します。"
           },
@@ -179,11 +179,11 @@
         },
         {
           "text": {
-            "hanji": "ㄧ 抑是 ㆪ 頭前 ê 齒音會變顎化音：ㄗ→ㄐ、ㄘ→ㄑ、ㄙ→ㄒ、ㆡ→ㆢ。拍 ㄗㄧㄨ 會變做 ㄐㄧㄨ（就）。",
-            "tailo": "ㄧ ia̍h-sī ㆪ thâu-tsîng ê khí-im ē piàn go̍k-huà-im: ㄗ→ㄐ, ㄘ→ㄑ, ㄙ→ㄒ, ㆡ→ㆢ. Phah ㄗㄧㄨ ē piàn-tsò ㄐㄧㄨ (就).",
-            "poj": "ㄧ ia̍h-sī ㆪ thâu-chêng ê khí-im ē piàn go̍k-hòa-im: ㄗ→ㄐ, ㄘ→ㄑ, ㄙ→ㄒ, ㆡ→ㆢ. Phah ㄗㄧㄨ ē piàn-chò ㄐㄧㄨ (就).",
-            "en": "Before ㄧ or ㆪ, dental initials become palatal: ㄗ→ㄐ, ㄘ→ㄑ, ㄙ→ㄒ, ㆡ→ㆢ. ㄗㄧㄨ becomes ㄐㄧㄨ (就).",
-            "ja": "ㄧ・ㆪ の前の歯音は口蓋化音になります：ㄗ→ㄐ、ㄘ→ㄑ、ㄙ→ㄒ、ㆡ→ㆢ。ㄗㄧㄨ は ㄐㄧㄨ（就）になります。"
+            "hanji": "齒音佇 ㄧ 抑是 ㆪ 頭前會變顎化音，ㄗ、ㄘ、ㄙ、ㆡ 會變做 ㄐ、ㄑ、ㄒ、ㆢ。像拍 ㄗㄧㄨ 會變做 ㄐㄧㄨ（就）。",
+            "tailo": "Khí-im tī ㄧ ia̍h-sī ㆪ thâu-tsîng ē piàn go̍k-huà-im, ㄗ, ㄘ, ㄙ, ㆡ ē piàn-tsò ㄐ, ㄑ, ㄒ, ㆢ. Tshiūnn phah ㄗㄧㄨ ē piàn-tsò ㄐㄧㄨ (就).",
+            "poj": "Khí-im tī ㄧ ia̍h-sī ㆪ thâu-chêng ē piàn go̍k-hòa-im, ㄗ, ㄘ, ㄙ, ㆡ ē piàn-chò ㄐ, ㄑ, ㄒ, ㆢ. Chhiūⁿ phah ㄗㄧㄨ ē piàn-chò ㄐㄧㄨ (就).",
+            "en": "Before ㄧ or ㆪ, the dental initials ㄗ, ㄘ, ㄙ, and ㆡ become the palatals ㄐ, ㄑ, ㄒ, and ㆢ. Typing ㄗㄧㄨ gives ㄐㄧㄨ (就).",
+            "ja": "ㄧ・ㆪ の前では、歯音の ㄗ・ㄘ・ㄙ・ㆡ が口蓋化音の ㄐ・ㄑ・ㄒ・ㆢ になります。ㄗㄧㄨ と打つと ㄐㄧㄨ（就）になります。"
           },
           "attachment": {
             "type": "image",
@@ -192,11 +192,11 @@
         },
         {
           "text": {
-            "hanji": "仝一粒鍵，囥佇音節頭是聲母，囥佇尾是韻尾：ㄇ→ㆬ、ㄋ→ㄣ、ㄫ→ㆭ、ㄅ→ㆴ、ㄉ→ㆵ、ㄍ→ㆻ、ㄏ→ㆷ。拍 ㄙㄧㄇ 會變做 ㄒㄧㆬ（心）。",
-            "tailo": "Kāng tsi̍t lia̍p kiān, khǹg tī im-tsiat thâu sī siann-bó, khǹg tī bué sī ūn-bué: ㄇ→ㆬ, ㄋ→ㄣ, ㄫ→ㆭ, ㄅ→ㆴ, ㄉ→ㆵ, ㄍ→ㆻ, ㄏ→ㆷ. Phah ㄙㄧㄇ ē piàn-tsò ㄒㄧㆬ (心).",
-            "poj": "Kāng chi̍t lia̍p kiān, khǹg tī im-chiat thâu sī siaⁿ-bó, khǹg tī bóe sī ūn-bóe: ㄇ→ㆬ, ㄋ→ㄣ, ㄫ→ㆭ, ㄅ→ㆴ, ㄉ→ㆵ, ㄍ→ㆻ, ㄏ→ㆷ. Phah ㄙㄧㄇ ē piàn-chò ㄒㄧㆬ (心).",
-            "en": "One key works as an initial at the start of a syllable and as a final at the end: ㄇ→ㆬ, ㄋ→ㄣ, ㄫ→ㆭ, ㄅ→ㆴ, ㄉ→ㆵ, ㄍ→ㆻ, ㄏ→ㆷ. ㄙㄧㄇ becomes ㄒㄧㆬ (心).",
-            "ja": "同じキーが、音節の頭では声母、末尾では韻尾になります：ㄇ→ㆬ、ㄋ→ㄣ、ㄫ→ㆭ、ㄅ→ㆴ、ㄉ→ㆵ、ㄍ→ㆻ、ㄏ→ㆷ。ㄙㄧㄇ は ㄒㄧㆬ（心）になります。"
+            "hanji": "ㄇ、ㄋ、ㄫ 佮 ㄅ、ㄉ、ㄍ、ㄏ 若囥佇音節尾，會家己變做韻尾 ㆬ、ㄣ、ㆭ 佮 ㆴ、ㆵ、ㆻ、ㆷ。像拍 ㄙㄧㄇ 會變做 ㄒㄧㆬ（心）。",
+            "tailo": "ㄇ, ㄋ, ㄫ kah ㄅ, ㄉ, ㄍ, ㄏ nā khǹg tī im-tsiat bué, ē ka-kī piàn-tsò ūn-bué ㆬ, ㄣ, ㆭ kah ㆴ, ㆵ, ㆻ, ㆷ. Tshiūnn phah ㄙㄧㄇ ē piàn-tsò ㄒㄧㆬ (心).",
+            "poj": "ㄇ, ㄋ, ㄫ kah ㄅ, ㄉ, ㄍ, ㄏ nā khǹg tī im-chiat bóe, ē ka-kī piàn-chò ūn-bóe ㆬ, ㄣ, ㆭ kah ㆴ, ㆵ, ㆻ, ㆷ. Chhiūⁿ phah ㄙㄧㄇ ē piàn-chò ㄒㄧㆬ (心).",
+            "en": "At the end of a syllable, ㄇ, ㄋ, ㄫ and ㄅ, ㄉ, ㄍ, ㄏ turn into the finals ㆬ, ㄣ, ㆭ and ㆴ, ㆵ, ㆻ, ㆷ. Typing ㄙㄧㄇ gives ㄒㄧㆬ (心).",
+            "ja": "音節の末尾では、ㄇ・ㄋ・ㄫ と ㄅ・ㄉ・ㄍ・ㄏ が韻尾の ㆬ・ㄣ・ㆭ と ㆴ・ㆵ・ㆻ・ㆷ になります。ㄙㄧㄇ と打つと ㄒㄧㆬ（心）になります。"
           },
           "attachment": {
             "type": "image",
@@ -237,10 +237,10 @@
       "paragraphs": [
         {
           "text": {
-            "hanji": "揤空白鍵正爿 ê 切換鍵，揀送出漢字抑是羅馬字。預設是漢字；送出漢字 ê 時，標點是全形。",
-            "tailo": "Tshi̍h khang-pe̍h-kiān tsiànn-pîng ê tshiat-uānn kiān, kíng sàng-tshut hàn-jī ia̍h-sī lô-má-jī. Ī-siat sī hàn-jī; sàng-tshut hàn-jī ê sî, phiau-tiám sī tsuân-hîng.",
-            "poj": "Chhi̍h khang-pe̍h-kiān chiàⁿ-pêng ê chhiat-ōaⁿ kiān, kéng sàng-chhut hàn-jī ia̍h-sī lô-má-jī. Ī-siat sī hàn-jī; sàng-chhut hàn-jī ê sî, phiau-tiám sī choân-hêng.",
-            "en": "Press the switch key to the right of the space bar to choose between entering Hanji and romanization. Hanji is the default, with full-width punctuation.",
+            "hanji": "揤空白齒正爿 ê 切換齒，揀欲送出漢字抑是羅馬字。預設送出漢字，標點用全形。",
+            "tailo": "Tshi̍h khàng-pe̍h khí tsiànn-pîng ê tshiat-uānn khí, kíng beh sàng-tshut hàn-jī ia̍h-sī lô-má-jī. Ī-siat sàng-tshut hàn-jī, phiau-tiám iōng tsuân-hîng.",
+            "poj": "Chhi̍h khàng-pe̍h khí chiàⁿ-pêng ê chhiat-ōaⁿ khí, kéng beh sàng-chhut hàn-jī ia̍h-sī lô-má-jī. Ī-siat sàng-chhut hàn-jī, phiau-tiám iōng choân-hêng.",
+            "en": "Press the switch key to the right of the space bar to choose between entering Hanji and romanization. Hanji is the default and uses full-width punctuation.",
             "ja": "スペースキー右の切り替えキーで、漢字とローマ字のどちらを入力するか選びます。既定は漢字で、句読点は全角です。"
           },
           "attachment": {
@@ -303,9 +303,9 @@
       "paragraphs": [
         {
           "text": {
-            "hanji": "頭一个字母會自動變大本字，Shift 鍵會反烏。",
-            "tailo": "Thâu tsi̍t ê jī-bió ē tsū-tōng piàn tuā-pún-jī, Shift kiān ē huán-oo.",
-            "poj": "Thâu chi̍t ê jī-bió ē chū-tōng piàn tōa-pún-jī, Shift kiān ē hoán-o͘.",
+            "hanji": "頭一个字母會自動變大本字，Shift 齒會反烏。",
+            "tailo": "Thâu tsi̍t ê jī-bió ē tsū-tōng piàn tuā-pún-jī, Shift khí ē huán-oo.",
+            "poj": "Thâu chi̍t ê jī-bió ē chū-tōng piàn tōa-pún-jī, Shift khí ē hoán-o͘.",
             "en": "The first letter is capitalized automatically, and Shift is highlighted.",
             "ja": "最初の字母は自動で大文字になり、Shift キーが反転表示されます。"
           },
@@ -358,9 +358,9 @@
       "paragraphs": [
         {
           "text": {
-            "hanji": "揤牢工具列 ê 齒盤鍵，揀「倒手」抑是「正手」，鍵會徙去彼爿。",
-            "tailo": "Tshi̍h-tiâu kang-kū-lia̍t ê khí-puânn kiān, kíng “Tò-tshiú” ia̍h-sī “Tsiànn-tshiú”, kiān ē suá khì hit pîng.",
-            "poj": "Chhi̍h-tiâu kang-kū-lia̍t ê khí-pôaⁿ kiān, kéng “Tò-chhiú” ia̍h-sī “Chiàⁿ-chhiú”, kiān ē sóa khì hit pêng.",
+            "hanji": "揤牢工具列 ê 齒盤圖示，揀倒手抑是正手，齒盤就會徙去彼爿。",
+            "tailo": "Tshi̍h-tiâu kang-kū-lia̍t ê khí-puânn tôo-sī, kíng Tò-tshiú ia̍h-sī Tsiànn-tshiú, khí-puânn tō ē suá khì hit pîng.",
+            "poj": "Chhi̍h-tiâu kang-kū-lia̍t ê khí-pôaⁿ tô͘-sī, kéng Tò-chhiú ia̍h-sī Chiàⁿ-chhiú, khí-pôaⁿ tō ē sóa khì hit pêng.",
             "en": "Touch and hold the keyboard button on the toolbar, then choose Left hand or Right hand. The keys move to that side.",
             "ja": "ツールバーのキーボードボタンを長押しして「左手」か「右手」を選ぶと、キーがその側に寄ります。"
           },
@@ -410,9 +410,9 @@
         },
         {
           "text": {
-            "hanji": "漢羅對應：漢字佮羅馬字做伙顯示，用切換鍵決定送出佗一个。",
-            "tailo": "Hàn-Lô tuì-ìng: hàn-jī kah lô-má-jī tsò-hué hián-sī, iōng tshiat-uānn kiān kuat-tīng sàng-tshut tó tsi̍t ê.",
-            "poj": "Hàn-Lô tùi-èng: hàn-jī kah lô-má-jī chò-hóe hián-sī, iōng chhiat-ōaⁿ kiān koat-tēng sàng-chhut tó chi̍t ê.",
+            "hanji": "漢羅對應：漢字佮羅馬字做伙顯示，用切換齒決定送出佗一个。",
+            "tailo": "Hàn-Lô tuì-ìng: hàn-jī kah lô-má-jī tsò-hué hián-sī, iōng tshiat-uānn khí kuat-tīng sàng-tshut tó tsi̍t ê.",
+            "poj": "Hàn-Lô tùi-èng: hàn-jī kah lô-má-jī chò-hóe hián-sī, iōng chhiat-ōaⁿ khí koat-tēng sàng-chhut tó chi̍t ê.",
             "en": "Hanji–Romanization Pairing: Hanji and romanization appear together, and the switch key decides which one is entered.",
             "ja": "漢字とローマ字の対応：漢字とローマ字を一緒に表示し、切り替えキーでどちらを入力するか決めます。"
           },
@@ -710,9 +710,9 @@
         },
         {
           "text": {
-            "hanji": "「主題」頁會使調色水、鍵 ê 大細佮形狀，逐項攏會使恢復預設。",
-            "tailo": "“Tsú-tê” ia̍h ē-sái tiâu sik-tsuí, kiān ê tuā-sè kah hîng-tsōng, ta̍k hāng lóng ē-sái hue-ho̍k ī-siat.",
-            "poj": "“Chú-tê” ia̍h ē-sái tiâu sek-chúi, kiān ê tōa-sè kah hêng-chōng, ta̍k hāng lóng ē-sái hoe-ho̍k ī-siat.",
+            "hanji": "「主題」頁會使調色水、齒 ê 大細佮形狀，逐項攏會使恢復預設。",
+            "tailo": "“Tsú-tê” ia̍h ē-sái tiâu sik-tsuí, khí ê tuā-sè kah hîng-tsōng, ta̍k hāng lóng ē-sái hue-ho̍k ī-siat.",
+            "poj": "“Chú-tê” ia̍h ē-sái tiâu sek-chúi, khí ê tōa-sè kah hêng-chōng, ta̍k hāng lóng ē-sái hoe-ho̍k ī-siat.",
             "en": "On the Theme tab, adjust colors and the size and shape of the keys. Each setting can be reset.",
             "ja": "「テーマ」タブでは色やキーの大きさ・形を調整でき、項目ごとに既定に戻せます。"
           },
