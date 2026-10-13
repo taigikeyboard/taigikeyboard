@@ -247,9 +247,9 @@
         },
         {
           "text": {
-            "hanji": "標點嘛會綴咧換，漢字模式用全形，羅馬字模式用半形。",
-            "tailo": "Phiau-tiám mā ē tuè-leh uānn, Hàn-jī bôo-sik iōng tsuân-hîng, Lô-má-jī bôo-sik iōng puàn-hîng.",
-            "poj": "Phiau-tiám mā ē tòe-leh ōaⁿ, Hàn-jī bô͘-sek iōng choân-hêng, Lô-má-jī bô͘-sek iōng poàn-hêng.",
+            "hanji": "標點嘛會綴咧換，漢字模式用全角，羅馬字模式用半角。",
+            "tailo": "Phiau-tiám mā ē tuè-leh uānn, Hàn-jī bôo-sik iōng tsuân-kak, Lô-má-jī bôo-sik iōng puàn-kak.",
+            "poj": "Phiau-tiám mā ē tòe-leh ōaⁿ, Hàn-jī bô͘-sek iōng choân-kak, Lô-má-jī bô͘-sek iōng poàn-kak.",
             "en": "Punctuation follows along, full-width in Hanji mode and half-width in Romanization mode.",
             "ja": "句読点も一緒に切り替わり、漢字モードでは全角、ローマ字モードでは半角になります。"
           }
@@ -268,11 +268,11 @@
     {
       "id": "caseSwitch",
       "title": {
-        "hanji": "大本字",
-        "tailo": "Tuā-pún-jī",
-        "poj": "Tōa-pún-jī",
-        "en": "Capitalization",
-        "ja": "大文字"
+        "hanji": "大本字佮細本字",
+        "tailo": "Tuā-pún-jī kah suè-pún-jī",
+        "poj": "Tōa-pún-jī kah sòe-pún-jī",
+        "en": "Uppercase and Lowercase",
+        "ja": "大文字と小文字"
       },
       "icon": {
         "ios": "textformat.size",
@@ -382,11 +382,11 @@
     {
       "id": "displayModes",
       "title": {
-        "hanji": "3 種顯示",
-        "tailo": "3 tsióng hián-sī",
-        "poj": "3 chióng hián-sī",
-        "en": "Three Display Styles",
-        "ja": "3つの表示方式"
+        "hanji": "3 種候選詞顯示",
+        "tailo": "3 tsióng hāu-suán-sû hián-sī",
+        "poj": "3 chióng hāu-soán-sû hián-sī",
+        "en": "Three Candidate Styles",
+        "ja": "3つの候補表示"
       },
       "icon": {
         "ios": "rectangle.split.3x1",
@@ -585,11 +585,11 @@
     {
       "id": "dictionaries",
       "title": {
-        "hanji": "辭典",
-        "tailo": "Sû-tián",
-        "poj": "Sû-tián",
-        "en": "Dictionaries",
-        "ja": "辞書"
+        "hanji": "辭典管理佮揣詞",
+        "tailo": "Sû-tián kuán-lí kah tshuē sû",
+        "poj": "Sû-tián koán-lí kah chhōe sû",
+        "en": "Dictionaries and Search",
+        "ja": "辞書の管理と検索"
       },
       "icon": {
         "ios": "book",
