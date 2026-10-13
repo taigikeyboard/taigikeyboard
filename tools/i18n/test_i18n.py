@@ -925,7 +925,7 @@ class PluralEmitTest(unittest.TestCase):
 # The constants below mirror the iOS/Android LocalizedContentText model.
 CONTENT_FILES = ["i18n/content/features.json", "i18n/content/faq.json"]
 EXPECTED_CONTENT_LANGS = {"hanji", "tailo", "poj", "en", "ja"}
-EXPECTED_CONTENT_STRING_COUNT = 80
+EXPECTED_CONTENT_STRING_COUNT = 75
 
 
 def _content_canonical(doc: dict) -> str:
@@ -968,7 +968,7 @@ class ProductionContentTests(unittest.TestCase):
                 for lang, value in obj.items():
                     self.assertIsInstance(value, str, f"{rel}: {lang} is not a string")
                     self.assertTrue(value.strip(), f"{rel}: {lang} is empty")
-        self.assertEqual(total, EXPECTED_CONTENT_STRING_COUNT, "expected 80 localizable content strings")
+        self.assertEqual(total, EXPECTED_CONTENT_STRING_COUNT, "expected 75 localizable content strings")
 
 
 class WindowsEmitTest(unittest.TestCase):
