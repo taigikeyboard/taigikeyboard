@@ -217,11 +217,11 @@
     {
       "id": "hanloDesign",
       "title": {
-        "hanji": "漢羅合用",
-        "tailo": "Hàn-lô ha̍p-iōng",
-        "poj": "Hàn-lô ha̍p-iōng",
-        "en": "Hanji and Romanization",
-        "ja": "漢字とローマ字の併用"
+        "hanji": "漢字/羅馬字轉換齒",
+        "tailo": "Hàn-jī/Lô-má-jī tsuán-uānn khí",
+        "poj": "Hàn-jī/Lô-má-jī choán-ōaⁿ khí",
+        "en": "Hanji/Romanization Key",
+        "ja": "漢字／ローマ字切り替えキー"
       },
       "icon": {
         "ios": "text.and.command.macwindow",
@@ -237,11 +237,11 @@
       "paragraphs": [
         {
           "text": {
-            "hanji": "揤空白齒正爿 ê 切換齒，揀欲送出漢字抑是羅馬字。預設送出漢字，標點用全形。",
-            "tailo": "Tshi̍h khàng-pe̍h khí tsiànn-pîng ê tshiat-uānn khí, kíng beh sàng-tshut hàn-jī ia̍h-sī lô-má-jī. Ī-siat sàng-tshut hàn-jī, phiau-tiám iōng tsuân-hîng.",
-            "poj": "Chhi̍h khàng-pe̍h khí chiàⁿ-pêng ê chhiat-ōaⁿ khí, kéng beh sàng-chhut hàn-jī ia̍h-sī lô-má-jī. Ī-siat sàng-chhut hàn-jī, phiau-tiám iōng choân-hêng.",
-            "en": "Press the switch key to the right of the space bar to choose between entering Hanji and romanization. Hanji is the default and uses full-width punctuation.",
-            "ja": "スペースキー右の切り替えキーで、漢字とローマ字のどちらを入力するか選びます。既定は漢字で、句読点は全角です。"
+            "hanji": "空白齒正爿 ê 轉換齒，會切換送出漢字抑是羅馬字。預設送出漢字。",
+            "tailo": "Khàng-pe̍h khí tsiànn-pîng ê tsuán-uānn khí, ē tshiat-uānn sàng-tshut hàn-jī ia̍h-sī lô-má-jī. Ī-siat sàng-tshut hàn-jī.",
+            "poj": "Khàng-pe̍h khí chiàⁿ-pêng ê choán-ōaⁿ khí, ē chhiat-ōaⁿ sàng-chhut hàn-jī ia̍h-sī lô-má-jī. Ī-siat sàng-chhut hàn-jī.",
+            "en": "The key to the right of the space bar switches between entering Hanji and romanization. Hanji is the default.",
+            "ja": "スペースキー右のキーで、漢字とローマ字のどちらを入力するか切り替えます。既定は漢字です。"
           },
           "attachment": {
             "type": "slideshow",
@@ -254,11 +254,29 @@
         },
         {
           "text": {
-            "hanji": "拍開「括號標註」，兩種做伙送出，像 𠢕早 (gâu-tsá)。",
-            "tailo": "Phah-khui “Kuat-hō phiau-tsù”, nn̄g tsióng tsò-hué sàng-tshut, tshiūnn 𠢕早 (gâu-tsá).",
-            "poj": "Phah-khui “Koat-hō phiau-chù”, nn̄g chióng chò-hóe sàng-chhut, chhiūⁿ 𠢕早 (gâu-chá).",
-            "en": "Turn on Annotate in Brackets to enter both at once, like 𠢕早 (gâu-tsá).",
-            "ja": "「括弧で併記」をオンにすると、両方を一緒に入力します。例：𠢕早 (gâu-tsá)。"
+            "hanji": "標點嘛會綴咧換，漢字用全形，羅馬字用半形。",
+            "tailo": "Phiau-tiám mā ē tuè-leh uānn, hàn-jī iōng tsuân-hîng, lô-má-jī iōng puàn-hîng.",
+            "poj": "Phiau-tiám mā ē tòe-leh ōaⁿ, hàn-jī iōng choân-hêng, lô-má-jī iōng poàn-hêng.",
+            "en": "Punctuation follows along, full-width with Hanji and half-width with romanization.",
+            "ja": "句読点も一緒に切り替わり、漢字では全角、ローマ字では半角になります。"
+          }
+        },
+        {
+          "text": {
+            "hanji": "這是照 PhahTaigi 齒盤 ê 設計，予用慣勢 PhahTaigi ê 人嘛拍會順。",
+            "tailo": "Tse sī tsiàu PhahTaigi khí-puânn ê siat-kè, hōo iōng kuàn-sì PhahTaigi ê lâng mā phah ē sūn.",
+            "poj": "Che sī chiàu PhahTaigi khí-pôaⁿ ê siat-kè, hō͘ iōng koàn-sì PhahTaigi ê lâng mā phah ē sūn.",
+            "en": "This follows the design of the PhahTaigi keyboard, so people used to PhahTaigi can type the way they always have.",
+            "ja": "これは PhahTaigi キーボードの設計にならったもので、PhahTaigi に慣れた人もそのまま使えます。"
+          }
+        },
+        {
+          "text": {
+            "hanji": "拍開「括號標註」，漢字佮羅馬字會做伙送出，像台語 (Tâi-gí)。",
+            "tailo": "Phah-khui “Kuat-hō phiau-tsù”, hàn-jī kah lô-má-jī ē tsò-hué sàng-tshut, tshiūnn 台語 (Tâi-gí).",
+            "poj": "Phah-khui “Koat-hō phiau-chù”, hàn-jī kah lô-má-jī ē chò-hóe sàng-chhut, chhiūⁿ 台語 (Tâi-gí).",
+            "en": "Turn on Annotate in Brackets to enter Hanji and romanization together, like 台語 (Tâi-gí).",
+            "ja": "「括弧で併記」をオンにすると、漢字とローマ字を一緒に入力します。例：台語 (Tâi-gí)"
           },
           "attachment": {
             "type": "slideshow",
@@ -410,9 +428,9 @@
         },
         {
           "text": {
-            "hanji": "漢羅對應：漢字佮羅馬字做伙顯示，用切換齒決定送出佗一个。",
-            "tailo": "Hàn-Lô tuì-ìng: hàn-jī kah lô-má-jī tsò-hué hián-sī, iōng tshiat-uānn khí kuat-tīng sàng-tshut tó tsi̍t ê.",
-            "poj": "Hàn-Lô tùi-èng: hàn-jī kah lô-má-jī chò-hóe hián-sī, iōng chhiat-ōaⁿ khí koat-tēng sàng-chhut tó chi̍t ê.",
+            "hanji": "漢羅對應：漢字佮羅馬字做伙顯示，用轉換齒決定送出佗一个。",
+            "tailo": "Hàn-Lô tuì-ìng: hàn-jī kah lô-má-jī tsò-hué hián-sī, iōng tsuán-uānn khí kuat-tīng sàng-tshut tó tsi̍t ê.",
+            "poj": "Hàn-Lô tùi-èng: hàn-jī kah lô-má-jī chò-hóe hián-sī, iōng choán-ōaⁿ khí koat-tēng sàng-chhut tó chi̍t ê.",
             "en": "Hanji–Romanization Pairing: Hanji and romanization appear together, and the switch key decides which one is entered.",
             "ja": "漢字とローマ字の対応：漢字とローマ字を一緒に表示し、切り替えキーでどちらを入力するか決めます。"
           },
