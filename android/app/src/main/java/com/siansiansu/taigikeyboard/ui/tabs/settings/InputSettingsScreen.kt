@@ -51,7 +51,7 @@ import com.siansiansu.taigikeyboard.ui.components.SwitchRow
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 import com.siansiansu.taigikeyboard.ui.theme.SectionHeader
 
-private const val FEATURE_ID_HANLO_DESIGN = "hanloDesign"
+private const val FEATURE_ID_TYPING_SETTINGS = "typingSettings"
 private const val FEATURE_ID_CASE_SWITCH = "caseSwitch"
 private const val DIAGNOSTIC_CLIP_LABEL = "TaigiKeyboard Diagnostic"
 private const val DIAGNOSTIC_MIME_TYPE = "text/plain"
@@ -230,7 +230,7 @@ fun InputSettingsScreen(
                     SwitchRow(
                         label = L10n.settingsOutputBothScripts,
                         checked = outputBoth,
-                        infoText = featureSummary(FEATURE_ID_HANLO_DESIGN),
+                        infoText = featureSummary(FEATURE_ID_TYPING_SETTINGS),
                         enabled = candidateDisplayMode.showsHanji,
                         onCheckedChange = {
                             outputBoth = it
@@ -258,7 +258,7 @@ fun InputSettingsScreen(
                     SwitchRow(
                         label = L10n.settingsAutoSpace,
                         checked = autoSpace,
-                        infoText = featureSummary(FEATURE_ID_HANLO_DESIGN),
+                        infoText = featureSummary(FEATURE_ID_TYPING_SETTINGS),
                         onCheckedChange = {
                             autoSpace = it
                             prefs.isAutoSpaceEnabled = it

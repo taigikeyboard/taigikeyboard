@@ -132,7 +132,7 @@ struct SettingsTab: View {
                     Toggle(isOn: $isOutputBothScripts) {
                         HStack {
                             Text(lang.string(.settingsOutputBothScripts))
-                            SettingInfoButton(description: featureSummary("hanloDesign"))
+                            SettingInfoButton(description: featureSummary("typingSettings"))
                         }
                     }
                     // Annotate in Brackets is meaningless without hanji; stored value stays untouched.
@@ -167,7 +167,7 @@ struct SettingsTab: View {
                     Toggle(isOn: $autoSpaceEnabled) {
                         HStack {
                             Text(lang.string(.settingsAutoSpace))
-                            SettingInfoButton(description: featureSummary("hanloDesign"))
+                            SettingInfoButton(description: featureSummary("typingSettings"))
                         }
                     }
                     .onChange(of: autoSpaceEnabled) { _, newValue in

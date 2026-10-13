@@ -227,13 +227,6 @@
         "ios": "text.and.command.macwindow",
         "android": "ic_translate"
       },
-      "summary": {
-        "hanji": "「括號標註」共漢字佮羅馬字做伙送出。「自動插入空白」送出羅馬字了後自動加空格。",
-        "tailo": "“Kuat-hō phiau-tsù” kā hàn-jī kah lô-má-jī tsò-hué sàng-tshut. “Tsū-tōng tshah-ji̍p khàng-pe̍h” sàng-tshut lô-má-jī liáu-āu tsū-tōng ka khang-keh.",
-        "poj": "“Koat-hō phiau-chù” kā hàn-jī kah lô-má-jī chò-hóe sàng-chhut. “Chū-tōng chhah-ji̍p khàng-pe̍h” sàng-chhut lô-má-jī liáu-āu chū-tōng ka khang-keh.",
-        "en": "Annotate in Brackets enters Hanji and romanization together. Auto-Space adds a space after romanization.",
-        "ja": "「括弧で併記」は漢字とローマ字を一緒に入力します。「自動スペース」はローマ字の後にスペースを入れます。"
-      },
       "paragraphs": [
         {
           "text": {
@@ -268,32 +261,6 @@
             "poj": "Che sī chiàu PhahTaigi khí-pôaⁿ ê siat-kè, hō͘ iōng koàn-sì PhahTaigi ê lâng mā phah ē sūn.",
             "en": "This follows the design of the PhahTaigi keyboard, so people used to PhahTaigi can type the way they always have.",
             "ja": "これは PhahTaigi キーボードの設計にならったもので、PhahTaigi に慣れた人もそのまま使えます。"
-          }
-        },
-        {
-          "text": {
-            "hanji": "拍開「括號標註」，漢字佮羅馬字會做伙送出，像台語 (Tâi-gí)。",
-            "tailo": "Phah-khui “Kuat-hō phiau-tsù”, hàn-jī kah lô-má-jī ē tsò-hué sàng-tshut, tshiūnn 台語 (Tâi-gí).",
-            "poj": "Phah-khui “Koat-hō phiau-chù”, hàn-jī kah lô-má-jī ē chò-hóe sàng-chhut, chhiūⁿ 台語 (Tâi-gí).",
-            "en": "Turn on Annotate in Brackets to enter Hanji and romanization together, like 台語 (Tâi-gí).",
-            "ja": "「括弧で併記」をオンにすると、漢字とローマ字を一緒に入力します。例：台語 (Tâi-gí)"
-          },
-          "attachment": {
-            "type": "slideshow",
-            "images": [
-              "hanlo_bracket_1",
-              "hanlo_bracket_2"
-            ],
-            "interval": 1.5
-          }
-        },
-        {
-          "text": {
-            "hanji": "拍開「自動插入空白」，送出羅馬字了後會自動加空格。",
-            "tailo": "Phah-khui “Tsū-tōng tshah-ji̍p khàng-pe̍h”, sàng-tshut lô-má-jī liáu-āu ē tsū-tōng ka khang-keh.",
-            "poj": "Phah-khui “Chū-tōng chhah-ji̍p khàng-pe̍h”, sàng-chhut lô-má-jī liáu-āu ē chū-tōng ka khang-keh.",
-            "en": "Turn on Auto-Space to add a space after romanization automatically.",
-            "ja": "「自動スペース」をオンにすると、ローマ字の後に自動でスペースが入ります。"
           }
         }
       ]
@@ -472,6 +439,91 @@
             "poj": "Hàn-Lô lām kah Lô-má-jī kan-na iōng tī Pe̍h-ōe-jī kah Tâi-lô.",
             "en": "Hanji with Romanization and Romanization Only work with Pe̍h-ōe-jī and Tâi-lô.",
             "ja": "「漢字＋ローマ字」と「ローマ字のみ」は白話字と台羅で使えます。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "typingSettings",
+      "title": {
+        "hanji": "拍字設定",
+        "tailo": "Phah-jī siat-tīng",
+        "poj": "Phah-jī siat-tēng",
+        "en": "Typing Settings",
+        "ja": "入力設定"
+      },
+      "icon": {
+        "ios": "slider.horizontal.3",
+        "android": "ic_settings"
+      },
+      "summary": {
+        "hanji": "「括號標註」共漢字佮羅馬字做伙送出。「自動插入空白」送出羅馬字了後自動加空格。",
+        "tailo": "“Kuat-hō phiau-tsù” kā hàn-jī kah lô-má-jī tsò-hué sàng-tshut. “Tsū-tōng tshah-ji̍p khàng-pe̍h” sàng-tshut lô-má-jī liáu-āu tsū-tōng ka khang-keh.",
+        "poj": "“Koat-hō phiau-chù” kā hàn-jī kah lô-má-jī chò-hóe sàng-chhut. “Chū-tōng chhah-ji̍p khàng-pe̍h” sàng-chhut lô-má-jī liáu-āu chū-tōng ka khang-keh.",
+        "en": "Annotate in Brackets enters Hanji and romanization together. Auto-Space adds a space after romanization.",
+        "ja": "「括弧で併記」は漢字とローマ字を一緒に入力します。「自動スペース」はローマ字の後にスペースを入れます。"
+      },
+      "paragraphs": [
+        {
+          "text": {
+            "hanji": "「拍 ê 羅馬字囥第一格」拍開了後，候選詞頭一格就是你拍 ê 羅馬字，揤一下就送出。",
+            "tailo": "“Phah ê lô-má-jī khǹg tē-it keh” phah-khui liáu-āu, hāu-suán-sû thâu tsi̍t keh tō sī lí phah ê lô-má-jī, tshi̍h tsi̍t-ē tō sàng-tshut.",
+            "poj": "“Phah ê lô-má-jī khǹg tē-it keh” phah-khui liáu-āu, hāu-soán-sû thâu chi̍t keh tō sī lí phah ê lô-má-jī, chhi̍h chi̍t-ē tō sàng-chhut.",
+            "en": "With Show Typed Text First on, the first candidate is exactly what you typed. Tap it to enter it.",
+            "ja": "「入力中の文字を先頭に表示」をオンにすると、候補の先頭に入力したローマ字が表示され、タップで入力できます。"
+          }
+        },
+        {
+          "text": {
+            "hanji": "有 ê 詞辭典無收，揣無候選詞，這格會當直接送出羅馬字。方音符號毋免送出羅馬字，所以這个設定干焦用佇白話字佮台羅。",
+            "tailo": "Ū ê sû sû-tián bô siu, tshuē bô hāu-suán-sû, tsit keh ē-tàng ti̍t-tsiap sàng-tshut lô-má-jī. Hong-im-hû-hō m̄-bián sàng-tshut lô-má-jī, sóo-í tsit ê siat-tīng kan-na iōng tī Pe̍h-uē-jī kah Tâi-lô.",
+            "poj": "Ū ê sû sû-tián bô siu, chhōe bô hāu-soán-sû, chit keh ē-tàng ti̍t-chiap sàng-chhut lô-má-jī. Hong-im-hû-hō m̄-bián sàng-chhut lô-má-jī, só͘-í chit ê siat-tēng kan-na iōng tī Pe̍h-ōe-jī kah Tâi-lô.",
+            "en": "Some words aren't in any dictionary and never show up as candidates. This slot lets you enter them in romanization. Phonetic Symbols doesn't output romanization, so this setting applies only to Pe̍h-ōe-jī and Tâi-lô.",
+            "ja": "辞書にない語は候補に出てきません。このマスを使えば、そのままローマ字で入力できます。方音符号ではローマ字を出力しないため、この設定は白話字と台羅だけで使えます。"
+          }
+        },
+        {
+          "text": {
+            "hanji": "關起來 ê 時，嘛會使揤 Enter 送出拍 ê 羅馬字。",
+            "tailo": "Kuainn--khí-lâi ê sî, mā ē-sái tshi̍h Enter sàng-tshut phah ê lô-má-jī.",
+            "poj": "Koaiⁿ--khí-lâi ê sî, mā ē-sái chhi̍h Enter sàng-chhut phah ê lô-má-jī.",
+            "en": "When it's off, you can still press Enter to enter what you typed.",
+            "ja": "オフのときも、Enter で入力したローマ字を確定できます。"
+          }
+        },
+        {
+          "text": {
+            "hanji": "拍開「括號標註」，漢字佮羅馬字會做伙送出，像台語 (Tâi-gí)。",
+            "tailo": "Phah-khui “Kuat-hō phiau-tsù”, hàn-jī kah lô-má-jī ē tsò-hué sàng-tshut, tshiūnn 台語 (Tâi-gí).",
+            "poj": "Phah-khui “Koat-hō phiau-chù”, hàn-jī kah lô-má-jī ē chò-hóe sàng-chhut, chhiūⁿ 台語 (Tâi-gí).",
+            "en": "Turn on Annotate in Brackets to enter Hanji and romanization together, like 台語 (Tâi-gí).",
+            "ja": "「括弧で併記」をオンにすると、漢字とローマ字を一緒に入力します。例：台語 (Tâi-gí)"
+          },
+          "attachment": {
+            "type": "slideshow",
+            "images": [
+              "hanlo_bracket_1",
+              "hanlo_bracket_2"
+            ],
+            "interval": 1.5
+          }
+        },
+        {
+          "text": {
+            "hanji": "「音節分隔」會使揀連字符、空白抑是無，像 tâi-uân、tâi uân、tâiuân。",
+            "tailo": "“Im-tsiat hun-keh” ē-sái kíng liân-jī-hû, khàng-pe̍h ia̍h-sī bô, tshiūnn tâi-uân, tâi uân, tâiuân.",
+            "poj": "“Im-chiat hun-keh” ē-sái kéng liân-jī-hû, khàng-pe̍h ia̍h-sī bô, chhiūⁿ tâi-oân, tâi oân, tâioân.",
+            "en": "Syllable Separator can be a hyphen, a space, or nothing, as in tâi-uân, tâi uân, and tâiuân.",
+            "ja": "「音節の区切り」はハイフン、スペース、なしから選べます。tâi-uân、tâi uân、tâiuân のようになります。"
+          }
+        },
+        {
+          "text": {
+            "hanji": "拍開「自動插入空白」，送出羅馬字了後會自動加空格。",
+            "tailo": "Phah-khui “Tsū-tōng tshah-ji̍p khàng-pe̍h”, sàng-tshut lô-má-jī liáu-āu ē tsū-tōng ka khang-keh.",
+            "poj": "Phah-khui “Chū-tōng chhah-ji̍p khàng-pe̍h”, sàng-chhut lô-má-jī liáu-āu ē chū-tōng ka khang-keh.",
+            "en": "Turn on Auto-Space to add a space after romanization automatically.",
+            "ja": "「自動スペース」をオンにすると、ローマ字の後に自動でスペースが入ります。"
           }
         }
       ]
