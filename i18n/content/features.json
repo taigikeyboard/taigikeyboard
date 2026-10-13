@@ -217,11 +217,11 @@
     {
       "id": "hanloDesign",
       "title": {
-        "hanji": "漢字/羅馬字轉換齒",
-        "tailo": "Hàn-jī/Lô-má-jī tsuán-uānn khí",
-        "poj": "Hàn-jī/Lô-má-jī choán-ōaⁿ khí",
-        "en": "Hanji/Romanization Key",
-        "ja": "漢字／ローマ字切り替えキー"
+        "hanji": "羅馬字轉換器",
+        "tailo": "Lô-má-jī tsuán-uānn-khì",
+        "poj": "Lô-má-jī choán-ōaⁿ-khì",
+        "en": "Romanization Switch",
+        "ja": "ローマ字切り替え"
       },
       "icon": {
         "ios": "text.and.command.macwindow",
