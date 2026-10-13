@@ -64,9 +64,9 @@
     {
       "id": "romanInput",
       "title": {
-        "hanji": "6 種拍法",
-        "tailo": "6 tsióng phah-huat",
-        "poj": "6 chióng phah-hoat",
+        "hanji": "6 種拍字方式",
+        "tailo": "6 tsióng phah-jī hong-sik",
+        "poj": "6 chióng phah-jī hong-sek",
         "en": "Six Ways to Type",
         "ja": "6つの打ち方"
       },
