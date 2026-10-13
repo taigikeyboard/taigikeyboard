@@ -237,11 +237,11 @@
       "paragraphs": [
         {
           "text": {
-            "hanji": "空白齒正爿 ê 轉換齒，會切換送出漢字抑是羅馬字。預設送出漢字。",
-            "tailo": "Khàng-pe̍h khí tsiànn-pîng ê tsuán-uānn khí, ē tshiat-uānn sàng-tshut hàn-jī ia̍h-sī lô-má-jī. Ī-siat sàng-tshut hàn-jī.",
-            "poj": "Khàng-pe̍h khí chiàⁿ-pêng ê choán-ōaⁿ khí, ē chhiat-ōaⁿ sàng-chhut hàn-jī ia̍h-sī lô-má-jī. Ī-siat sàng-chhut hàn-jī.",
-            "en": "The key to the right of the space bar switches between entering Hanji and romanization. Hanji is the default.",
-            "ja": "スペースキー右のキーで、漢字とローマ字のどちらを入力するか切り替えます。既定は漢字です。"
+            "hanji": "空白齒正爿 ê 轉換齒，會切換漢字模式佮羅馬字模式。預設是漢字模式，揀候選詞會送出漢字。",
+            "tailo": "Khàng-pe̍h khí tsiànn-pîng ê tsuán-uānn khí, ē tshiat-uānn Hàn-jī bôo-sik kah Lô-má-jī bôo-sik. Ī-siat sī Hàn-jī bôo-sik, kíng hāu-suán-sû ē sàng-tshut hàn-jī.",
+            "poj": "Khàng-pe̍h khí chiàⁿ-pêng ê choán-ōaⁿ khí, ē chhiat-ōaⁿ Hàn-jī bô͘-sek kah Lô-má-jī bô͘-sek. Ī-siat sī Hàn-jī bô͘-sek, kéng hāu-soán-sû ē sàng-chhut hàn-jī.",
+            "en": "The key to the right of the space bar switches between Hanji mode and Romanization mode. Hanji mode is the default, and tapping a candidate enters Hanji.",
+            "ja": "スペースキー右のキーで、漢字モードとローマ字モードを切り替えます。既定は漢字モードで、候補を選ぶと漢字が入力されます。"
           },
           "attachment": {
             "type": "slideshow",
@@ -254,11 +254,11 @@
         },
         {
           "text": {
-            "hanji": "標點嘛會綴咧換，漢字用全形，羅馬字用半形。",
-            "tailo": "Phiau-tiám mā ē tuè-leh uānn, hàn-jī iōng tsuân-hîng, lô-má-jī iōng puàn-hîng.",
-            "poj": "Phiau-tiám mā ē tòe-leh ōaⁿ, hàn-jī iōng choân-hêng, lô-má-jī iōng poàn-hêng.",
-            "en": "Punctuation follows along, full-width with Hanji and half-width with romanization.",
-            "ja": "句読点も一緒に切り替わり、漢字では全角、ローマ字では半角になります。"
+            "hanji": "標點嘛會綴咧換，漢字模式用全形，羅馬字模式用半形。",
+            "tailo": "Phiau-tiám mā ē tuè-leh uānn, Hàn-jī bôo-sik iōng tsuân-hîng, Lô-má-jī bôo-sik iōng puàn-hîng.",
+            "poj": "Phiau-tiám mā ē tòe-leh ōaⁿ, Hàn-jī bô͘-sek iōng choân-hêng, Lô-má-jī bô͘-sek iōng poàn-hêng.",
+            "en": "Punctuation follows along, full-width in Hanji mode and half-width in Romanization mode.",
+            "ja": "句読点も一緒に切り替わり、漢字モードでは全角、ローマ字モードでは半角になります。"
           }
         },
         {
