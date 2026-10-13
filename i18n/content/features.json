@@ -77,11 +77,11 @@
       "paragraphs": [
         {
           "text": {
-            "hanji": "聲調會使拍，嘛會使無拍。音節會使拍完整，嘛會使拍一半，抑是干焦拍頭字母。tai5gi2、tai5gi、taigi、taig、tg 攏揣會著台語。",
-            "tailo": "Siann-tiāu ē-sái phah, mā ē-sái bô phah. Im-tsiat ē-sái phah uân-tsíng, mā ē-sái phah tsi̍t-puànn, ia̍h-sī kan-na phah thâu jī-bió. tai5gi2, tai5gi, taigi, taig, tg lóng tshuē ē tio̍h Tâi-gí.",
-            "poj": "Siaⁿ-tiāu ē-sái phah, mā ē-sái bô phah. Im-chiat ē-sái phah oân-chéng, mā ē-sái phah chi̍t-pòaⁿ, ia̍h-sī kan-na phah thâu jī-bió. tai5gi2, tai5gi, taigi, taig, tg lóng chhōe ē tio̍h Tâi-gí.",
-            "en": "Tones are optional. You can type a syllable in full, type part of it, or type just its first letter. tai5gi2, tai5gi, taigi, taig, and tg all find 台語.",
-            "ja": "声調は打っても打たなくてもかまいません。音節は全部打っても、途中まででも、頭文字だけでもかまいません。tai5gi2、tai5gi、taigi、taig、tg のどれでも「台語」が見つかります。"
+            "hanji": "聲調毋免拍，音節嘛會使拍一半，抑是干焦拍頭字母。tai5gi2、tai5gi、taigi、taig、tg 攏揣會著台語。",
+            "tailo": "Siann-tiāu m̄-bián phah, im-tsiat mā ē-sái phah tsi̍t-puànn, ia̍h-sī kan-na phah thâu jī-bió. tai5gi2, tai5gi, taigi, taig, tg lóng tshuē ē tio̍h Tâi-gí.",
+            "poj": "Siaⁿ-tiāu m̄-bián phah, im-chiat mā ē-sái phah chi̍t-pòaⁿ, ia̍h-sī kan-na phah thâu jī-bió. tai5gi2, tai5gi, taigi, taig, tg lóng chhōe ē tio̍h Tâi-gí.",
+            "en": "You don't have to type tones. You can also type part of a syllable, or just its first letter. tai5gi2, tai5gi, taigi, taig, and tg all find 台語.",
+            "ja": "声調は打たなくてもかまいません。音節は途中まででも、頭文字だけでも大丈夫です。tai5gi2、tai5gi、taigi、taig、tg のどれでも「台語」が見つかります。"
           },
           "attachment": {
             "type": "slideshow",
@@ -110,11 +110,11 @@
         },
         {
           "text": {
-            "hanji": "欲家己斷，就拍連字符。拍 tian 會揣著殿、展，拍 ti-an 就會揣著治安。",
-            "tailo": "Beh ka-kī tn̄g, tō phah liân-jī-hû. Phah tian ē tshuē-tio̍h 殿, 展, phah ti-an tō ē tshuē-tio̍h 治安.",
-            "poj": "Beh ka-kī tn̄g, tō phah liân-jī-hû. Phah tian ē chhōe-tio̍h 殿, 展, phah ti-an tō ē chhōe-tio̍h 治安.",
-            "en": "To split syllables yourself, type a hyphen. tian finds 殿 and 展, while ti-an finds 治安.",
-            "ja": "自分で区切るときはハイフンを打ちます。tian では殿・展が、ti-an では治安が見つかります。"
+            "hanji": "欲家己斷音節，就拍連字符。像 tian 會揣著殿佮展，拍做 ti-an 才會揣著治安。",
+            "tailo": "Beh ka-kī tn̄g im-tsiat, tō phah liân-jī-hû. Tshiūnn tian ē tshuē-tio̍h 殿 kah 展, phah-tsò ti-an tsiah ē tshuē-tio̍h 治安.",
+            "poj": "Beh ka-kī tn̄g im-chiat, tō phah liân-jī-hû. Chhiūⁿ tian ē chhōe-tio̍h 殿 kah 展, phah-chò ti-an chiah ē chhōe-tio̍h 治安.",
+            "en": "To split syllables yourself, type a hyphen. tian finds 殿 and 展, but ti-an finds 治安.",
+            "ja": "音節を自分で区切るときは、ハイフンを打ちます。tian では殿や展が出ますが、ti-an と打てば治安が見つかります。"
           },
           "attachment": {
             "type": "slideshow",
@@ -130,7 +130,7 @@
             "hanji": "拍好字母才拍聲調數字，齒盤會換做聲調符號。聲調拍毋著，揤一下刪除鍵閣拍一擺就好。",
             "tailo": "Phah hó jī-bió tsiah phah siann-tiāu sòo-jī, khí-puânn ē uānn-tsò siann-tiāu hû-hō. Siann-tiāu phah m̄-tio̍h, tshi̍h tsi̍t-ē san-tû kiān koh phah tsi̍t-pái tō hó.",
             "poj": "Phah hó jī-bió chiah phah siaⁿ-tiāu sò͘-jī, khí-pôaⁿ ē ōaⁿ-chò siaⁿ-tiāu hû-hō. Siaⁿ-tiāu phah m̄-tio̍h, chhi̍h chi̍t-ē san-tû kiān koh phah chi̍t-pái tō hó.",
-            "en": "Type a tone number after the letters, and the keyboard turns it into a tone mark. Wrong tone? Press Delete once and type it again.",
+            "en": "Type a tone number after the letters, and the keyboard turns it into a tone mark. If the tone is wrong, press Delete once and type it again.",
             "ja": "字母のあとに声調数字を打つと、声調記号に変わります。間違えたら削除キーを1回押して打ち直します。"
           },
           "attachment": {
