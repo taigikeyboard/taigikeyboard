@@ -3,11 +3,11 @@
     {
       "id": "inputModes",
       "title": {
-        "hanji": "4 種拍字方式",
-        "tailo": "4 tsíng phah-jī hong-sik",
-        "poj": "4 chéng phah-jī hong-sek",
-        "en": "4 input methods",
-        "ja": "4種類の入力方式"
+        "hanji": "3 種拍法",
+        "tailo": "3 tsióng phah-huat",
+        "poj": "3 chióng phah-hoat",
+        "en": "Three Ways to Type",
+        "ja": "3つの入力方式"
       },
       "icon": {
         "ios": "keyboard",
@@ -16,11 +16,11 @@
       "paragraphs": [
         {
           "text": {
-            "hanji": "台語齒盤有 4 種拍字方式：「白話字」、「台羅」、「方音符號」佮「英文」，佇齒盤面頂工具列通切換。",
-            "tailo": "Tâi-gí khí-puânn ū 4 tsíng phah-jī hong-sik:\"pe̍h-uē-jī\",\"tâi-lô\",\"hong-im-hû-hō\" kah\"ing-bûn\", tī khí-puânn bīn-tíng kang-khū-lia̍t thang tshiat-uānn.",
-            "poj": "Tâi-gí khí-pôaⁿ ū 4 chéng phah-jī hong-sek:\"pe̍h-ōe-jī\",\"tâi-lô\",\"hong-im-hû-hō\" kah\"eng-bûn\", tī khí-pôaⁿ bīn-téng kang-khū-lia̍t thang chhiat-ōaⁿ.",
-            "en": "TaigiKeyboard has 4 input methods: Pe̍h-ōe-jī, Tâi-lô, Taiwanese Phonetic Symbols, and English. You can switch between them on the toolbar at the top of the keyboard.",
-            "ja": "台語キーボードには「白話字」「台羅」「方音符号」「英語」の4つの入力方式があり、キーボード上部のツールバーで切り替えられます。"
+            "hanji": "白話字、台羅、方音符號，佇齒盤頂懸 ê 工具列切換。",
+            "tailo": "Pe̍h-uē-jī, Tâi-lô, Hong-im-hû-hō, tī khí-puânn tíng-kuân ê kang-kū-lia̍t tshiat-uānn.",
+            "poj": "Pe̍h-ōe-jī, Tâi-lô, Hong-im-hû-hō, tī khí-pôaⁿ téng-koân ê kang-kū-lia̍t chhiat-ōaⁿ.",
+            "en": "Type in Pe̍h-ōe-jī, Tâi-lô, or Taiwanese Phonetic Symbols. Switch on the toolbar above the keys.",
+            "ja": "白話字・台羅・方音符号の3つ。キーボード上部のツールバーで切り替えます。"
           },
           "attachment": {
             "type": "slideshow",
@@ -35,29 +35,29 @@
         },
         {
           "text": {
-            "hanji": "「白話字」（POJ）佮「台羅」（TL）攏是羅馬字，差別佇聲調符號佮部份拼法無仝款，譬論「ch」（白話字）佮「ts」（台羅），「o͘」（白話字）佮「oo」（台羅）。若已經慣勢 1 種著用彼種，無特別 ê 偏好用台羅著好，因為台羅是目前教育部 ê 正式標準。",
-            "tailo": "\"Pe̍h-uē-jī\"(POJ) kah\"tâi-lô\"(TL) lóng sī lô-má-jī, tsha-pia̍t tī siann-tiāu hû-hō kah pōo-hūn ping-huat bô-kāng-khuán, phì-lūn\"ch\"(pe̍h-uē-jī) kah\"ts\"(tâi-lô),\"o͘\"(pe̍h-uē-jī) kah\"oo\"(tâi-lô). Nā í-king kuàn-sì 1 tsíng-tio̍h iōng hit tsióng, bô ti̍k-pia̍t ê phian-hó iōng tâi-lô tio̍h hó, in-uī tâi-lô sī ba̍k-tsîng kàu-io̍k-pōo ê tsìng-sik phiau-tsún.",
-            "poj": "\"Pe̍h-ōe-jī\"(POJ) kah\"tâi-lô\"(TL) lóng sī lô-má-jī, chha-pia̍t tī siaⁿ-tiāu hû-hō kah pō͘-hūn peng-hoat bô-kāng-khoán, phì-lūn\"ch\"(pe̍h-ōe-jī) kah\"ts\"(tâi-lô),\"o͘\"(pe̍h-ōe-jī) kah\"oo\"(tâi-lô). Nā í-keng koàn-sì 1 chéng-tio̍h iōng hit chióng, bô te̍k-pia̍t ê phian-hó iōng tâi-lô tio̍h hó, in-ūi tâi-lô sī ba̍k-chêng kàu-io̍k-pō͘ ê chèng-sek phiau-chún.",
-            "en": "Both Pe̍h-ōe-jī (POJ) and Tâi-lô (TL) are romanizations; they differ in their tone marks and some spellings, e.g. “ch” (POJ) vs “ts” (TL), and “o͘” (POJ) vs “oo” (TL). If you are already used to one, use that one; with no particular preference, Tâi-lô is a good default, as it is the current official standard of the Ministry of Education.",
-            "ja": "「白話字」（POJ）と「台羅」（TL）はどちらもローマ字表記で、声調記号と一部の綴りが異なります。例えば「ch」（白話字）と「ts」（台羅）、「o͘」（白話字）と「oo」（台羅）です。すでにどちらかに慣れているならそれを、特にこだわりがなければ台羅をおすすめします。台羅は現在の教育部の正式な標準だからです。"
+            "hanji": "白話字佮台羅攏是羅馬字，拼法有淡薄仔無仝：「落雨」白話字寫 lo̍h-hō͘，台羅寫 lo̍h-hōo。毋知欲揀佗一種，就用台羅，伊是教育部 ê 標準。",
+            "tailo": "Pe̍h-uē-jī kah Tâi-lô lóng sī lô-má-jī, ping-huat ū tām-po̍h-á bô kâng: “落雨” Pe̍h-uē-jī siá lo̍h-hō͘, Tâi-lô siá lo̍h-hōo. M̄ tsai beh kíng tó tsi̍t tsióng, tō iōng Tâi-lô, i sī Kàu-io̍k-pōo ê piau-tsún.",
+            "poj": "Pe̍h-ōe-jī kah Tâi-lô lóng sī lô-má-jī, peng-hoat ū tām-po̍h-á bô kâng: “落雨” Pe̍h-ōe-jī siá lo̍h-hō͘, Tâi-lô siá lo̍h-hōo. M̄ chai beh kéng tó chi̍t chióng, tō iōng Tâi-lô, i sī Kàu-io̍k-pō͘ ê piau-chún.",
+            "en": "Pe̍h-ōe-jī and Tâi-lô are both romanizations with small spelling differences: 落雨 is lo̍h-hō͘ in Pe̍h-ōe-jī and lo̍h-hōo in Tâi-lô. Not sure which to choose? Tâi-lô is the Ministry of Education standard.",
+            "ja": "白話字と台羅はどちらもローマ字で、綴りが少し異なります。「落雨」は白話字で lo̍h-hō͘、台羅で lo̍h-hōo。迷ったら、教育部の標準である台羅を選んでください。"
           }
         },
         {
           "text": {
-            "hanji": "「方音符號」（TPS）類似注音輸入法，民間嘛有人講「台語注音」，用台語方音符號拍字，會切去使用專用齒盤佈局。拍好符號了後，齒盤會自動轉做台羅去揣字，所以辭典結果佮台羅模式仝款。",
-            "tailo": "\"Hong-im-hû-hō\"(TPS) luī-sū tsù-im-su-ji̍p huat, bîn-kan mā-ū lâng-kóng\"tâi-gí tsù-im\", iōng tâi-gí hong-im-hû-hō phah-jī, ē tshiat khì sú-iōng tsuan-iōng khí-puânn pòo-kio̍k. Phah hó hû-hō liáu-āu, khí-puânn ē tsū-tōng tńg tsò tâi-lô khì tshuē jī, sóo-í sû-tián kiat-kó kah tâi-lô bôo-sik kāng-khuán.",
-            "poj": "\"Hong-im-hû-hō\"(TPS) lūi-sū chù-im-su-ji̍p hoat, bîn-kan mā-ū lâng-kóng\"tâi-gí chù-im\", iōng tâi-gí hong-im-hû-hō phah-jī, ē chhiat khì sú-iōng choan-iōng khí-pôaⁿ pò͘-kio̍k. Phah hó hû-hō liáu-āu, khí-pôaⁿ ē chū-tōng tńg chò tâi-lô khì chhōe jī, só͘-í sû-tián kiat-kó kah tâi-lô bô͘-sek kāng-khoán.",
-            "en": "Taiwanese Phonetic Symbols (TPS) is similar to Zhuyin input, also informally called “Taiwanese Zhuyin.” You type with Taiwanese phonetic symbols on a dedicated keyboard layout. After you enter the symbols, the keyboard automatically converts them to Tâi-lô to look up characters, so the dictionary results are the same as in Tâi-lô mode.",
-            "ja": "「方音符号」（TPS）は注音入力に似ており、民間では「台語注音」とも呼ばれます。専用のキーボード配列で台湾語の方音符号を入力します。符号を入力すると、キーボードが自動的に台羅へ変換して字を検索するため、辞書の結果は台羅モードと同じです。"
+            "hanji": "方音符號有家己 ê 齒盤，拍法佮注音仝款，揣出來 ê 詞佮台羅仝款。",
+            "tailo": "Hong-im-hû-hō ū ka-kī ê khí-puânn, phah-huat kah tsù-im kāng-khuán, tshuē--tshut-lâi ê sû kah Tâi-lô kāng-khuán.",
+            "poj": "Hong-im-hû-hō ū ka-kī ê khí-pôaⁿ, phah-hoat kah chù-im kāng-khoán, chhōe--chhut-lâi ê sû kah Tâi-lô kāng-khoán.",
+            "en": "Phonetic Symbols has its own layout and works like Zhuyin. It finds the same words as Tâi-lô.",
+            "ja": "方音符号には専用のキー配列があり、注音と同じ要領で入力します。候補は台羅と同じです。"
           }
         },
         {
           "text": {
-            "hanji": "「英文」模式是一般 ê 英文齒盤，干焦基本 ê 拼音檢查爾，拍英文 ê 時陣切過來用較方便，袂觸發台語 ê 選字佮聲調功能。",
-            "tailo": "\"Ing-bûn\" bôo-sik sī it-puann ê ing-bûn khí-puânn, kan-na ki-pún ê phing-im kiám-tsa nī, phah ing-bûn ê sî-sūn tshiat kuè--lâi iōng khah hong-piān, buē tshiok-huat tâi-gí ê suán jī kah siann-tiāu kong-lîng.",
-            "poj": "\"Eng-bûn\" bô͘-sek sī it-poaⁿ ê eng-bûn khí-pôaⁿ, kan-na ki-pún ê pheng-im kiám-cha nī, phah eng-bûn ê sî-sūn chhiat kòe--lâi iōng khah hong-piān, bōe chhiok-hoat tâi-gí ê soán jī kah siaⁿ-tiāu kong-lêng.",
-            "en": "English mode is an ordinary English keyboard with only basic spell-checking. Switch to it when typing English for convenience; it will not trigger Taigi candidate selection or tone features.",
-            "ja": "「英語」モードは一般的な英語キーボードで、基本的なスペルチェックのみを行います。英語を打つときに切り替えると便利で、台湾語の候補選択や声調機能は作動しません。"
+            "hanji": "欲拍英文，工具列嘛有英文模式。",
+            "tailo": "Beh phah Ing-bûn, kang-kū-lia̍t mā ū Ing-bûn bôo-sik.",
+            "poj": "Beh phah Eng-bûn, kang-kū-lia̍t mā ū Eng-bûn bô͘-sek.",
+            "en": "To type English, switch to English on the toolbar.",
+            "ja": "英語を入力するときは、ツールバーで英語モードに切り替えます。"
           }
         }
       ]
@@ -65,11 +65,11 @@
     {
       "id": "romanInput",
       "title": {
-        "hanji": "羅馬字輸入",
-        "tailo": "Lô-má-jī su-ji̍p",
-        "poj": "Lô-má-jī su-ji̍p",
-        "en": "Romanization input",
-        "ja": "ローマ字入力"
+        "hanji": "聲調佮縮寫",
+        "tailo": "Siann-tiāu kah sok-siá",
+        "poj": "Siaⁿ-tiāu kah sok-siá",
+        "en": "Tones and Shortcuts",
+        "ja": "声調と省略入力"
       },
       "icon": {
         "ios": "textformat.abc",
@@ -78,29 +78,20 @@
       "paragraphs": [
         {
           "text": {
-            "hanji": "拍羅馬字佮拍英文仝款，先拍字母，紲落來拍聲調數字（1-8），齒盤會自動加聲調符號。譬論用 'tong' 做例：拍 '2' 變做 'tóng'（黨），拍 '5' 變做 'tông'（同），拍 '7' 變做 'tōng'（洞）。",
-            "tailo": "Phah lô-má-jī kah phah ing-bûn kāng-khuán, sian phah-jī bú, suà--lo̍h-lâi phah siann-tiāu sòo-jī(1-8), khí-puânn ē tsū-tōng ka siann-tiāu hû-hō. Phì-lūn iōng 'tong' tsò lē: phah '2' piàn-tsò 'tóng'(tóng), phah '5' piàn-tsò 'tông'(tông), phah '7' piàn-tsò 'tōng'(tōng).",
-            "poj": "Phah lô-má-jī kah phah eng-bûn kāng-khoán, sian phah-jī bú, sòa--lo̍h-lâi phah siaⁿ-tiāu sò͘-jī(1-8), khí-pôaⁿ ē chū-tōng ka siaⁿ-tiāu hû-hō. Phì-lūn iōng 'tong' chò lē: phah '2' piàn-chò 'tóng'(tóng), phah '5' piàn-chò 'tông'(tông), phah '7' piàn-chò 'tōng'(tōng).",
-            "en": "Typing romanization is like typing English: type the letters first, then the tone number (1–8), and the keyboard adds the tone mark automatically. Take 'tong' for example: typing '2' gives 'tóng' (黨), '5' gives 'tông' (同), and '7' gives 'tōng' (洞).",
-            "ja": "ローマ字の入力は英語と同じで、まず字母を打ち、続けて声調数字（1〜8）を打つと、キーボードが自動的に声調記号を付けます。例えば 'tong' の場合、'2' を打つと 'tóng'（黨）、'5' で 'tông'（同）、'7' で 'tōng'（洞）になります。"
+            "hanji": "先拍字母，才拍聲調數字 1–8，齒盤會換做聲調符號：tong2 → tóng（黨）、tong5 → tông（同）、tong7 → tōng（洞）。",
+            "tailo": "Sing phah jī-bió, tsiah phah siann-tiāu sòo-jī 1–8, khí-puânn ē uānn-tsò siann-tiāu hû-hō: tong2 → tóng (黨), tong5 → tông (同), tong7 → tōng (洞).",
+            "poj": "Seng phah jī-bió, chiah phah siaⁿ-tiāu sò͘-jī 1–8, khí-pôaⁿ ē ōaⁿ-chò siaⁿ-tiāu hû-hō: tong2 → tóng (黨), tong5 → tông (同), tong7 → tōng (洞).",
+            "en": "Type the letters, then a tone number from 1 to 8, and the keyboard adds the tone mark: tong2 → tóng (黨), tong5 → tông (同), tong7 → tōng (洞).",
+            "ja": "字母のあとに声調数字（1〜8）を打つと、声調記号に変わります：tong2 → tóng（黨）、tong5 → tông（同）、tong7 → tōng（洞）。"
           }
         },
         {
           "text": {
-            "hanji": "台語有 8 个基本聲調。第 1 聲（陰平）佮第 4 聲（陰入）無聲調符號，拍數字齒盤會直接顯示數字，袂加符號。第 4 聲佮第 8 聲是入聲，韻尾一定是 -p、-t、-k 抑是 -h，譬論 'tok'（督）佮 'to̍k'（毒）。",
-            "tailo": "Tâi-gí ū 8 ê ki-pún siann-tiāu. Tē 1 siann(im pîng) kah tē 4 siann(im ji̍p) bô-siann tiāu hû-hō, phah sòo-jī khí-puânn ē ti̍t-tsiap hián-sī sòo-jī, buē ka hû-hō. Tē 4 siann kah tē 8 siann sī ji̍p-siann, ūn-bué it-tīng sī -p,-t,-k ah-sī -h, phì-lūn 'tok'(tok) kah 'to̍k'(to̍k).",
-            "poj": "Tâi-gí ū 8 ê ki-pún siaⁿ-tiāu. Tē 1 siaⁿ(im pêng) kah tē 4 siaⁿ(im ji̍p) bô-siaⁿ tiāu hû-hō, phah sò͘-jī khí-pôaⁿ ē ti̍t-chiap hián-sī sò͘-jī, bōe ka hû-hō. Tē 4 siaⁿ kah tē 8 siaⁿ sī ji̍p-siaⁿ, ūn-bóe it-tēng sī -p,-t,-k ah-sī -h, phì-lūn 'tok'(tok) kah 'to̍k'(to̍k).",
-            "en": "Taiwanese has 8 basic tones. The 1st tone (yin-level) and 4th tone (yin-entering) have no tone mark, so typing their numbers shows the digit directly with no mark added. The 4th and 8th tones are entering tones whose coda must be -p, -t, -k, or -h, e.g. 'tok' (督) and 'to̍k' (毒).",
-            "ja": "台湾語には8つの基本声調があります。第1声（陰平）と第4声（陰入）は声調記号がなく、数字を打つとそのまま数字が表示され、記号は付きません。第4声と第8声は入声で、末子音は必ず -p、-t、-k または -h です。例えば 'tok'（督）と 'to̍k'（毒）です。"
-          }
-        },
-        {
-          "text": {
-            "hanji": "若聲調拍毋著，揤刪除揤仔會使修正：揤 1 改會先刪掉聲調符號，閣揤 1 改才會刪掉字母，所以拍毋著 ê 聲調免規个字重拍，刪除修正著好。",
-            "tailo": "Nā siann-tiāu phah m̄-tio̍h, tshi̍h san-tî tshi̍h á ē-sái siu-tsìng: tshi̍h 1 kái ē sian san tiāu siann-tiāu hû-hō, koh tshi̍h 1 kái tsiah ē san tiāu jī-bú, sóo-í phah m̄-tio̍h ê siann-tiāu bián kui-ê jī tîng-phah, san-tî siu-tsìng tio̍h hó.",
-            "poj": "Nā siaⁿ-tiāu phah m̄-tio̍h, chhi̍h san-tî chhi̍h á ē-sái siu-chèng: chhi̍h 1 kái ē sian san tiāu siaⁿ-tiāu hû-hō, koh chhi̍h 1 kái chiah ē san tiāu jī-bú, só͘-í phah m̄-tio̍h ê siaⁿ-tiāu bián kui-ê jī tîng-phah, san-tî siu-chèng tio̍h hó.",
-            "en": "If you mistype a tone, you can fix it with the delete key: pressing it once removes the tone mark first, and pressing it again removes the letter. So a wrong tone does not require retyping the whole syllable—just delete to correct it.",
-            "ja": "声調を打ち間違えたら、削除キーで直せます。1回押すとまず声調記号が消え、もう1回押すと字母が消えます。声調を間違えても字全体を打ち直す必要はなく、削除で修正できます。"
+            "hanji": "聲調拍毋著，揤一下刪除鍵，干焦提掉聲調，字母猶佇咧。",
+            "tailo": "Siann-tiāu phah m̄-tio̍h, tshi̍h tsi̍t-ē san-tû kiān, kan-na the̍h--tiāu siann-tiāu, jī-bió iáu tī-leh.",
+            "poj": "Siaⁿ-tiāu phah m̄-tio̍h, chhi̍h chi̍t-ē san-tû kiān, kan-na the̍h--tiāu siaⁿ-tiāu, jī-bió iáu tī-leh.",
+            "en": "Typed the wrong tone? Press Delete once to remove just the tone mark.",
+            "ja": "声調を間違えたら、削除キーを1回押すと声調記号だけが消えます。"
           },
           "attachment": {
             "type": "slideshow",
@@ -114,29 +105,11 @@
         },
         {
           "text": {
-            "hanji": "白話字有特殊組合：連紲拍 2 个 'o' 會變做 'o͘'，連紲拍 2 个 'n' 會變做 'ⁿ'，佇設定有開關通切。台羅免特殊處理，'oo' 佮 'nn' 直接顯示。",
-            "tailo": "Pe̍h-uē-jī ū ti̍k-sû tsoo-ha̍p: liân-suà phah 2 ê 'o' ē piàn-tsò 'o͘', liân-suà phah 2 ê 'n' ē piàn-tsò 'ⁿ', tī siat-tīng ū khai-kuan thang tshiat. Tâi-lô bián ti̍k-sû tshú-lí,'oo' kah 'nn' ti̍t-tsiap hián-sī.",
-            "poj": "Pe̍h-ōe-jī ū te̍k-sû cho͘-ha̍p: liân-sòa phah 2 ê 'o' ē piàn-chò 'o͘', liân-sòa phah 2 ê 'n' ē piàn-chò 'ⁿ', tī siat-tēng ū khai-koan thang chhiat. Tâi-lô bián te̍k-sû chhú-lí,'oo' kah 'nn' ti̍t-chiap hián-sī.",
-            "en": "Pe̍h-ōe-jī has special combinations: typing two 'o' in a row becomes 'o͘', and typing two 'n' in a row becomes 'ⁿ'; there is a toggle for this in settings. Tâi-lô needs no special handling—'oo' and 'nn' display directly.",
-            "ja": "白話字には特殊な組み合わせがあります。'o' を続けて2回打つと 'o͘' に、'n' を続けて2回打つと 'ⁿ' になります。設定に切り替えスイッチがあります。台羅では特殊な処理は不要で、'oo' と 'nn' はそのまま表示されます。"
-          }
-        },
-        {
-          "text": {
-            "hanji": "拍好羅馬字了後，齒盤會自動揣辭典，候選欄第 1 个位是你拍 ê 字，後壁 ê 是候選詞。拍字無一定愛加聲調，但是有加結果較精準。",
-            "tailo": "Phah hó lô-má-jī liáu-āu, khí-puânn ē tsū-tōng tshuē sû-tián, hāu-suán nuâ tē 1 ê uī sī lí phah ê jī, āu-piah ê sī hāu-suán sû. Phah-jī bô-it-tīng ài ka siann-tiāu, tān-sī ū ka kiat-kó khah tsing-tsún.",
-            "poj": "Phah hó lô-má-jī liáu-āu, khí-pôaⁿ ē chū-tōng chhōe sû-tián, hāu-soán nôa tē 1 ê ūi sī lí phah ê jī, āu-piah ê sī hāu-soán sû. Phah-jī bô-it-tēng ài ka siaⁿ-tiāu, tān-sī ū ka kiat-kó khah cheng-chún.",
-            "en": "After you type the romanization, the keyboard looks up the dictionary automatically. The first slot in the candidate bar is what you typed; the rest are candidate words. You do not have to add tones, but adding them makes the results more accurate.",
-            "ja": "ローマ字を入力すると、キーボードが自動的に辞書を検索します。候補欄の最初の位置は入力した文字そのもので、その後ろが候補語です。声調は必須ではありませんが、付けると結果がより正確になります。"
-          }
-        },
-        {
-          "text": {
-            "hanji": "用「gâu-tsá」（𠢕早）做例，以下拍法攏揣會著：'gau5-tsa2'（加連劃）、'gau5tsa2'（無連劃）、'gautsa'（免拍聲調）、'gt'（頭字母縮寫）。拍法愈完整，結果愈精準。",
-            "tailo": "Iōng\"gâu-tsá\"(gâu-tsá) tsò lē, í-hā phah huat láng tshuē ē tio̍h:'gau5-tsa2'(ka liân-ue̍h),'gau5tsa2'(bô liân-ue̍h),'gautsa'(bián phah siann-tiāu),'gt'(thâu-jī bú sok-siá). Phah huat jú uân-tsíng, kiat-kó jú tsing-tsún.",
-            "poj": "Iōng\"gâu-chá\"(gâu-chá) chò lē, í-hā phah hoat láng chhōe ē tio̍h:'gau5-tsa2'(ka liân-oe̍h),'gau5tsa2'(bô liân-oe̍h),'gautsa'(bián phah siaⁿ-tiāu),'gt'(thâu-jī bú sok-siá). Phah hoat jú oân-chéng, kiat-kó jú cheng-chún.",
-            "en": "Take “gâu-tsá” (𠢕早) as an example; all of these spellings will find it: 'gau5-tsa2' (with hyphen), 'gau5tsa2' (without hyphen), 'gautsa' (no tones), 'gt' (initial-letter abbreviation). The more complete the spelling, the more accurate the result.",
-            "ja": "「gâu-tsá」（𠢕早）を例にすると、次のどの打ち方でも見つかります。'gau5-tsa2'（ハイフンあり）、'gau5tsa2'（ハイフンなし）、'gautsa'（声調なし）、'gt'（頭文字の略字）。打ち方が完全なほど結果は正確になります。"
+            "hanji": "聲調會使省略，音節嘛會使干焦拍頭一字：tai5gi2、taigi、tg 攏揣會著 tâi-gí（台語）。",
+            "tailo": "Siann-tiāu ē-sái síng-lio̍k, im-tsiat mā ē-sái kan-na phah thâu tsi̍t jī: tai5gi2, taigi, tg lóng tshuē ē tio̍h tâi-gí (台語).",
+            "poj": "Siaⁿ-tiāu ē-sái séng-lio̍k, im-chiat mā ē-sái kan-na phah thâu chi̍t jī: tai5gi2, taigi, tg lóng chhōe ē tio̍h tâi-gí (台語).",
+            "en": "Tones are optional, and so are full syllables: tai5gi2, taigi, and tg all find tâi-gí (台語).",
+            "ja": "声調は省略でき、音節の頭文字だけでも入力できます。tai5gi2、taigi、tg のどれでも tâi-gí（台語）が見つかります。"
           },
           "attachment": {
             "type": "slideshow",
@@ -147,39 +120,14 @@
             ],
             "interval": 1.5
           }
-        }
-      ]
-    },
-    {
-      "id": "accuracyTips",
-      "title": {
-        "hanji": "按怎拍字拍較準",
-        "tailo": "Án-nuá phah-jī phah khah tsún",
-        "poj": "Án-nóa phah-jī phah khah chún",
-        "en": "How to type more accurately",
-        "ja": "より正確に入力するコツ"
-      },
-      "icon": {
-        "ios": "textformat.123",
-        "android": "ic_numbers"
-      },
-      "paragraphs": [
-        {
-          "text": {
-            "hanji": "拍字若愈完整，結果就愈準。譬論 gâu-tsá，若是拍 gautsa 抑是 gau5tsa2，候選詞會比干焦拍 gt 閣較準。",
-            "tailo": "Phah-jī nā jú uân-tsíng, kiat-kó tsiū jú tsún. Phì-lūn gâu-tsá, nā-sī phah gautsa ah-sī gau5tsa2, hāu-suán sû ē pí kan-na phah gt koh-khah tsún.",
-            "poj": "Phah-jī nā jú oân-chéng, kiat-kó chiū jú chún. Phì-lūn gâu-chá, nā-sī phah gautsa ah-sī gau5tsa2, hāu-soán sû ē pí kan-na phah gt koh-khah chún.",
-            "en": "The more complete your input, the more accurate the results. For gâu-tsá, for example, typing gautsa or gau5tsa2 gives more accurate candidates than just typing gt.",
-            "ja": "入力が完全なほど結果は正確になります。例えば gâu-tsá なら、gautsa や gau5tsa2 と打つほうが、gt だけより候補が正確になります。"
-          }
         },
         {
           "text": {
-            "hanji": "【聲調 1、4 愛拍出來】教育部輸入法免拍第 1 聲佮第 4 聲，台語齒盤雖然嘛會使免拍，但是若有拍聲調，結果會較準。以「phang 芳」這个字做例，拍 phang1 會正確揣第一聲 ê 字，若干焦拍 phang，會出現誠濟結果。",
-            "tailo": "[ Siann-tiāu 1,4 ài phah-tshut lâi] Kàu-io̍k-pōo su-ji̍p-hoat bián phah tē 1 siann kah tē 4 siann, tâi-gí khí-puânn sui-jiân mā ē-sái bián phah, tān-sī nā-ū phah siann-tiāu, kiat-kó ē khah tsún. Í\"phang phang\" tsit ê jī tsò lē, phah phang1 ē tsìng-khak tshuē tē-it siann ê jī, jio̍k-kan ta phah phang, ē tshut-hiān tsiânn-tsē kiat-kó.",
-            "poj": "[ Siaⁿ-tiāu 1,4 ài phah-chhut lâi] Kàu-io̍k-pō͘ su-ji̍p-hoat bián phah tē 1 siaⁿ kah tē 4 siaⁿ, tâi-gí khí-pôaⁿ sui-jiân mā ē-sái bián phah, tān-sī nā-ū phah siaⁿ-tiāu, kiat-kó ē khah chún. Í\"phang phang\" chit ê jī chò lē, phah phang1 ē chèng-khak chhōe tē-it siaⁿ ê jī, jio̍k-kan ta phah phang, ē chhut-hiān chiâⁿ-chē kiat-kó.",
-            "en": "[Type out tones 1 and 4] The Ministry of Education input method lets you skip the 1st and 4th tones. TaigiKeyboard also lets you skip them, but typing the tone gives more accurate results. Take “phang 芳” for example: typing phang1 correctly finds the 1st-tone character, whereas typing just phang returns many results.",
-            "ja": "【第1声・第4声も入力する】教育部の入力法では第1声と第4声を省略できます。台語キーボードでも省略できますが、声調を入力すると結果がより正確になります。「phang 芳」を例にすると、phang1 と打てば第1声の字が正しく見つかりますが、phang だけだと多くの結果が出ます。"
+            "hanji": "拍愈完整，候選詞愈準。第 1 聲佮第 4 聲無符號，毋過拍數字仝款有效：phang1 干焦揣第 1 聲 ê 字，像「芳」。",
+            "tailo": "Phah jú uân-tsíng, hāu-suán-sû jú tsún. Tē 1 siann kah tē 4 siann bô hû-hō, m̄-koh phah sòo-jī kāng-khuán ū-hāu: phang1 kan-na tshuē tē 1 siann ê jī, tshiūnn “芳”.",
+            "poj": "Phah jú oân-chéng, hāu-soán-sû jú chún. Tē 1 siaⁿ kah tē 4 siaⁿ bô hû-hō, m̄-koh phah sò͘-jī kāng-khoán ū-hāu: phang1 kan-na chhōe tē 1 siaⁿ ê jī, chhiūⁿ “芳”.",
+            "en": "The more you type, the better the suggestions. Tones 1 and 4 have no mark, but their numbers still help: phang1 looks only for first-tone words, such as 芳.",
+            "ja": "入力が完全なほど候補は正確になります。第1声と第4声には記号がありませんが、数字は有効です。phang1 なら「芳」など第1声の字だけを探します。"
           },
           "attachment": {
             "type": "image",
@@ -188,29 +136,63 @@
         },
         {
           "text": {
-            "hanji": "第 4 聲嘛相仝，第 4 聲韻尾一定是 -p、-t、-k、-h，若聲調數字拍出來會比無拍較準。",
-            "tailo": "Tē 4 siann mā sio-kâng, tē 4 siann-ūn bué it-tīng sī -p,-t,-k,-h, nā siann-tiāu sòo-jī phah-tshut lâi ē pí bô phah khah tsún.",
-            "poj": "Tē 4 siaⁿ mā sio-kâng, tē 4 siaⁿ-ūn bóe it-tēng sī -p,-t,-k,-h, nā siaⁿ-tiāu sò͘-jī phah-chhut lâi ē pí bô phah khah chún.",
-            "en": "The same goes for the 4th tone: its coda is always -p, -t, -k, or -h, and typing the tone number is more accurate than not.",
-            "ja": "第4声も同様で、末子音は必ず -p、-t、-k、-h です。声調数字を入力するほうが、入力しないより正確になります。"
+            "hanji": "白話字連紲拍 oo 會變做 o͘，nn 會變做 ⁿ。會使佇「設定」關掉。",
+            "tailo": "Pe̍h-uē-jī liân-suà phah oo ē piàn-tsò o͘, nn ē piàn-tsò ⁿ. Ē-sái tī “Siat-tīng” kuainn--tiāu.",
+            "poj": "Pe̍h-ōe-jī liân-sòa phah oo ē piàn-chò o͘, nn ē piàn-chò ⁿ. Ē-sái tī “Siat-tēng” koaiⁿ--tiāu.",
+            "en": "In Pe̍h-ōe-jī, typing oo gives o͘ and nn gives ⁿ. You can turn this off in Settings.",
+            "ja": "白話字では oo と続けて打つと o͘、nn で ⁿ になります。設定でオフにできます。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "tpsAutoCorrect",
+      "title": {
+        "hanji": "方音符號自動校正",
+        "tailo": "Hong-im-hû-hō tsū-tōng kàu-tsìng",
+        "poj": "Hong-im-hû-hō chū-tōng kàu-chèng",
+        "en": "Phonetic Symbol Correction",
+        "ja": "方音符号の自動補正"
+      },
+      "icon": {
+        "ios": "wand.and.stars",
+        "android": "ic_auto_fix"
+      },
+      "paragraphs": [
+        {
+          "text": {
+            "hanji": "拍方音符號 ê 時，齒盤會自動修正符號。",
+            "tailo": "Phah Hong-im-hû-hō ê sî, khí-puânn ē tsū-tōng siu-tsìng hû-hō.",
+            "poj": "Phah Hong-im-hû-hō ê sî, khí-pôaⁿ ē chū-tōng siu-chèng hû-hō.",
+            "en": "When you type Phonetic Symbols, the keyboard corrects symbols for you.",
+            "ja": "方音符号の入力中、キーボードが記号を自動で補正します。"
           }
         },
         {
           "text": {
-            "hanji": "【關掉無需要 ê 辭典】若感覺候選詞傷濟、想欲揣 ê 字攏佇後壁，會當去「詞庫管理」頁面共無需要 ê 辭典關起來。",
-            "tailo": "[ Kuainn--tiāu bô-su-iàu ê sû-tián] Nā kám-kak hāu-suán sû siunn-tse, siūnn-beh tshuē ê jī láng tī āu-piah, ē-tàng khì\"sû khòo kuán-lí\" ia̍h-bīn kā bô-su-iàu ê sû-tián kuainn--khí-lâi.",
-            "poj": "[ Koaiⁿ--tiāu bô-su-iàu ê sû-tián] Nā kám-kak hāu-soán sû siuⁿ-che, siūⁿ-beh chhōe ê jī láng tī āu-piah, ē-tàng khì\"sû khò͘ koán-lí\" ia̍h-bīn kā bô-su-iàu ê sû-tián koaiⁿ--khí-lâi.",
-            "en": "[Turn off dictionaries you don't need] If there are too many candidates and the character you want is always at the back, you can turn off unneeded dictionaries on the Dictionary Management page.",
-            "ja": "【不要な辞書をオフにする】候補が多すぎて、探している字がいつも後ろにある場合は、「辞書管理」ページで不要な辞書をオフにできます。"
+            "hanji": "ㄧ 抑是 ㆪ 頭前 ê 齒音會變顎化音：ㄗ→ㄐ、ㄘ→ㄑ、ㄙ→ㄒ、ㆡ→ㆢ。拍 ㄗㆪ 會變做 ㄐㆪ（錢）。",
+            "tailo": "ㄧ ia̍h-sī ㆪ thâu-tsîng ê khí-im ē piàn go̍k-huà-im: ㄗ→ㄐ, ㄘ→ㄑ, ㄙ→ㄒ, ㆡ→ㆢ. Phah ㄗㆪ ē piàn-tsò ㄐㆪ (錢).",
+            "poj": "ㄧ ia̍h-sī ㆪ thâu-chêng ê khí-im ē piàn go̍k-hòa-im: ㄗ→ㄐ, ㄘ→ㄑ, ㄙ→ㄒ, ㆡ→ㆢ. Phah ㄗㆪ ē piàn-chò ㄐㆪ (錢).",
+            "en": "Before ㄧ or ㆪ, dental initials become palatal: ㄗ→ㄐ, ㄘ→ㄑ, ㄙ→ㄒ, ㆡ→ㆢ. ㄗㆪ becomes ㄐㆪ (錢).",
+            "ja": "ㄧ・ㆪ の前の歯音は口蓋化音になります：ㄗ→ㄐ、ㄘ→ㄑ、ㄙ→ㄒ、ㆡ→ㆢ。ㄗㆪ は ㄐㆪ（錢）になります。"
           }
         },
         {
           "text": {
-            "hanji": "【「腔口差」開關關起來】「腔口差」收錄誠濟無仝腔口，會增加候選詞 ê 數量。若你平常時拍字干焦用通用腔，會使考慮佇「詞庫管理」頁面共「腔口差」關起來。",
-            "tailo": "[\"Khiunn-kháu tsha\" khai-kuan kuainn--khí-lâi]\"Khiunn-kháu tsha\" siu-lio̍k tsiânn-tsē bô kâng khiunn-kháu, ē tsing-ka hāu-suán sû ê sòo-liōng. Nā lí pîng-siông-sî phah-jī kan-na iōng thong-iōng khiunn, ē-sái khó-lū tī\"sû khòo kuán-lí\" ia̍h-bīn kā\"khiunn-kháu tsha\" kuainn--khí-lâi.",
-            "poj": "[\"Khiuⁿ-kháu chha\" khai-koan koaiⁿ--khí-lâi]\"Khiuⁿ-kháu chha\" siu-lio̍k chiâⁿ-chē bô kâng khiuⁿ-kháu, ē cheng-ka hāu-soán sû ê sò͘-liōng. Nā lí pêng-siông-sî phah-jī kan-na iōng thong-iōng khiuⁿ, ē-sái khó-lū tī\"sû khò͘ koán-lí\" ia̍h-bīn kā\"khiuⁿ-kháu chha\" koaiⁿ--khí-lâi.",
-            "en": "[Turn off Accent Variations] Accent Variations includes many different accents, which increases the number of candidates. If you usually type only in the common accent, consider turning off Accent Variations on the Dictionary Management page.",
-            "ja": "【「方言差」をオフにする】「方言差」は多くの異なる訛りを収録しており、候補語の数が増えます。普段は共通の発音だけで入力するなら、「辞書管理」ページで「方言差」をオフにすることを検討してください。"
+            "hanji": "仝一粒鍵，囥佇音節頭是聲母，囥佇尾是韻尾：ㄇ→ㆬ、ㄋ→ㄣ、ㄫ→ㆭ、ㄅ→ㆴ、ㄉ→ㆵ、ㄍ→ㆻ、ㄏ→ㆷ。拍 ㄙㄧㄇ 會變做 ㄒㄧㆬ（心）。",
+            "tailo": "Kāng tsi̍t lia̍p kiān, khǹg tī im-tsiat thâu sī siann-bó, khǹg tī bué sī ūn-bué: ㄇ→ㆬ, ㄋ→ㄣ, ㄫ→ㆭ, ㄅ→ㆴ, ㄉ→ㆵ, ㄍ→ㆻ, ㄏ→ㆷ. Phah ㄙㄧㄇ ē piàn-tsò ㄒㄧㆬ (心).",
+            "poj": "Kāng chi̍t lia̍p kiān, khǹg tī im-chiat thâu sī siaⁿ-bó, khǹg tī bóe sī ūn-bóe: ㄇ→ㆬ, ㄋ→ㄣ, ㄫ→ㆭ, ㄅ→ㆴ, ㄉ→ㆵ, ㄍ→ㆻ, ㄏ→ㆷ. Phah ㄙㄧㄇ ē piàn-chò ㄒㄧㆬ (心).",
+            "en": "One key works as an initial at the start of a syllable and as a final at the end: ㄇ→ㆬ, ㄋ→ㄣ, ㄫ→ㆭ, ㄅ→ㆴ, ㄉ→ㆵ, ㄍ→ㆻ, ㄏ→ㆷ. ㄙㄧㄇ becomes ㄒㄧㆬ (心).",
+            "ja": "同じキーが、音節の頭では声母、末尾では韻尾になります：ㄇ→ㆬ、ㄋ→ㄣ、ㄫ→ㆭ、ㄅ→ㆴ、ㄉ→ㆵ、ㄍ→ㆻ、ㄏ→ㆷ。ㄙㄧㄇ は ㄒㄧㆬ（心）になります。"
+          }
+        },
+        {
+          "text": {
+            "hanji": "ㄧ 後壁拍 ㆮ 會換做 ㆯ，因為台語無 iainn 這个韻。",
+            "tailo": "ㄧ āu-piah phah ㆮ ē uānn-tsò ㆯ, in-uī Tâi-gí bô iainn tsit ê ūn.",
+            "poj": "ㄧ āu-piah phah ㆮ ē ōaⁿ-chò ㆯ, in-ūi Tâi-gí bô iainn chit ê ūn.",
+            "en": "After ㄧ, ㆮ becomes ㆯ, since Taiwanese has no iainn rime.",
+            "ja": "ㄧ の後の ㆮ は ㆯ になります。台湾語には iainn という韻がないためです。"
           }
         }
       ]
@@ -218,40 +200,31 @@
     {
       "id": "hanloDesign",
       "title": {
-        "hanji": "針對漢羅合用設計",
-        "tailo": "Tsiam-tuì hàn-lô ha̍h-īng siat-kè",
-        "poj": "Chiam-tùi hàn-lô ha̍h-ēng siat-kè",
-        "en": "Designed for mixed Hanji-romanization",
-        "ja": "漢羅混用のための設計"
+        "hanji": "漢羅合用",
+        "tailo": "Hàn-lô ha̍h-īng",
+        "poj": "Hàn-lô ha̍h-ēng",
+        "en": "Hanji and Romanization",
+        "ja": "漢字とローマ字の併用"
       },
       "icon": {
         "ios": "text.and.command.macwindow",
         "android": "ic_translate"
       },
       "summary": {
-        "hanji": "「括號標註」予漢字佮羅馬字做伙輸出。「自動閬一格」佇漢羅合用 ê 時陣自動處理空格。",
-        "tailo": "\"Kuat-hō phiau-tsù\" hōo hàn-jī kah lô-má-jī tsò-hué su-tshut.\"tsū-tōng làng tsi̍t ê phāng\" tī hàn-lô ha̍h-īng ê sî-sūn tsū-tōng tshú-lí khang-keh.",
-        "poj": "\"Koat-hō phiau-chù\" hō͘ hàn-jī kah lô-má-jī chò-hóe su-chhut.\"chū-tōng làng chi̍t ê phāng\" tī hàn-lô ha̍h-ēng ê sî-sūn chū-tōng chhú-lí khang-keh.",
-        "en": "“Bracket annotation” outputs the Hanji and romanization together. “Auto-space” handles spacing automatically when mixing Hanji and romanization.",
-        "ja": "「括弧注記」は漢字とローマ字を一緒に出力します。「自動スペース」は漢羅混用のときに空白を自動で処理します。"
+        "hanji": "「括號標註」共漢字佮羅馬字做伙送出。「自動閬一格」送出羅馬字了後自動加空格。",
+        "tailo": "“Kuat-hō phiau-tsù” kā hàn-jī kah lô-má-jī tsò-hué sàng-tshut. “Tsū-tōng làng tsi̍t ê phāng” sàng-tshut lô-má-jī liáu-āu tsū-tōng ka khang-keh.",
+        "poj": "“Koat-hō phiau-chù” kā hàn-jī kah lô-má-jī chò-hóe sàng-chhut. “Chū-tōng làng chi̍t ê phāng” sàng-chhut lô-má-jī liáu-āu chū-tōng ka khang-keh.",
+        "en": "Annotate in Brackets enters Hanji and romanization together. Auto-Space adds a space after romanization.",
+        "ja": "「括弧で併記」は漢字とローマ字を一緒に入力します。「自動スペース」はローマ字の後にスペースを入れます。"
       },
       "paragraphs": [
         {
           "text": {
-            "hanji": "台語書寫有人慣勢用全漢字，有人慣勢用全羅馬字，嘛有人漢字佮羅馬字攙做伙寫，這个齒盤有特別為著無仝拍字習慣設計。",
-            "tailo": "Tâi-gí su-siá ū-lâng kuàn-sì iōng tsuân-hàn jī, ū-lâng kuàn-sì iōng tsuân lô-má-jī, mā-ū lâng hàn-jī kah lô-má-jī tsham tsò-hué siá, tsit ê khí-puânn ū ti̍k-pia̍t uī-tio̍h bô kâng phah-jī si̍p-kuàn siat-kè.",
-            "poj": "Tâi-gí su-siá ū-lâng koàn-sì iōng choân-hàn jī, ū-lâng koàn-sì iōng choân lô-má-jī, mā-ū lâng hàn-jī kah lô-má-jī chham chò-hóe siá, chit ê khí-pôaⁿ ū te̍k-pia̍t ūi-tio̍h bô kâng phah-jī si̍p-koàn siat-kè.",
-            "en": "Some people write Taiwanese in all Hanji, some in all romanization, and some mix Hanji and romanization. This keyboard is specially designed for these different writing habits.",
-            "ja": "台湾語の表記には、すべて漢字で書く人、すべてローマ字で書く人、漢字とローマ字を混ぜて書く人がいます。このキーボードはそうした異なる表記習慣のために特別に設計されています。"
-          }
-        },
-        {
-          "text": {
-            "hanji": "齒盤上尾排有 1 个「漢 / 羅」轉換揤鈕，揤著會切換漢字佮羅馬字模式。預設是羅馬字模式，揤候選詞會輸出羅馬字，漢字顯示佇下底做參考；切做「漢字優先」模式了後，揤候選詞會直接輸出漢字，羅馬字改做參考，標點嘛會自動換做全形。",
-            "tailo": "Khí-puânn siōng-bué pâi ū 1 ê\"hàn / lô\" tsuán-uānn tshi̍h-liú, tshi̍h tio̍h ē tshiat-uānn hàn-jī kah lô-má-jī bôo-sik. Ī-siat sī lô-má-jī bôo-sik, tshi̍h hāu-suán sû ē su-tshut lô-má-jī, hàn-jī hián-sī tī ē-tué tsò tsham-khó; tshiat tsò\"hàn-jī iu-sian\" bôo-sik liáu-āu, tshi̍h hāu-suán sû ē ti̍t-tsiap su-tshut hàn-jī, lô-má-jī kué-tsò tsham-khó, phiau-tiám mā ē tsū-tōng uānn-tsò tsuân hîng.",
-            "poj": "Khí-pôaⁿ siōng-bóe pâi ū 1 ê\"hàn / lô\" choán-ōaⁿ chhi̍h-liú, chhi̍h tio̍h ē chhiat-ōaⁿ hàn-jī kah lô-má-jī bô͘-sek. Ī-siat sī lô-má-jī bô͘-sek, chhi̍h hāu-soán sû ē su-chhut lô-má-jī, hàn-jī hián-sī tī ē-tóe chò chham-khó; chhiat chò\"hàn-jī iu-sian\" bô͘-sek liáu-āu, chhi̍h hāu-soán sû ē ti̍t-chiap su-chhut hàn-jī, lô-má-jī kóe-chò chham-khó, phiau-tiám mā ē chū-tōng ōaⁿ-chò choân hêng.",
-            "en": "The bottom row of the keyboard has a “漢 / 羅” toggle button that switches between Hanji and romanization modes. The default is romanization mode: tapping a candidate outputs the romanization, with the Hanji shown below for reference. After switching to “Hanji-first” mode, tapping a candidate outputs the Hanji directly, the romanization becomes the reference, and punctuation is also switched to full-width automatically.",
-            "ja": "キーボードの最下段に「漢 / 羅」切り替えボタンがあり、漢字モードとローマ字モードを切り替えます。既定はローマ字モードで、候補をタップするとローマ字が出力され、漢字は下に参考として表示されます。「漢字優先」モードに切り替えると、候補をタップすると漢字が直接出力され、ローマ字が参考に変わり、句読点も自動的に全角になります。"
+            "hanji": "揤空白鍵正爿 ê 切換鍵，揀送出漢字抑是羅馬字。預設是漢字；送出漢字 ê 時，標點是全形。",
+            "tailo": "Tshi̍h khang-pe̍h-kiān tsiànn-pîng ê tshiat-uānn kiān, kíng sàng-tshut hàn-jī ia̍h-sī lô-má-jī. Ī-siat sī hàn-jī; sàng-tshut hàn-jī ê sî, phiau-tiám sī tsuân-hîng.",
+            "poj": "Chhi̍h khang-pe̍h-kiān chiàⁿ-pêng ê chhiat-ōaⁿ kiān, kéng sàng-chhut hàn-jī ia̍h-sī lô-má-jī. Ī-siat sī hàn-jī; sàng-chhut hàn-jī ê sî, phiau-tiám sī choân-hêng.",
+            "en": "Press the switch key to the right of the space bar to choose between entering Hanji and romanization. Hanji is the default, with full-width punctuation.",
+            "ja": "スペースキー右の切り替えキーで、漢字とローマ字のどちらを入力するか選びます。既定は漢字で、句読点は全角です。"
           },
           "attachment": {
             "type": "slideshow",
@@ -264,11 +237,11 @@
         },
         {
           "text": {
-            "hanji": "「括號標註」開關切開了後，輸出 ê 時陣漢字佮羅馬字會做伙出來，免家己加註，適合予當咧學台語 ê 朋友看。",
-            "tailo": "\"Kuat-hō phiau-tsù\" khai-kuan tshiat-khui liáu-āu, su-tshut ê sî-sūn hàn-jī kah lô-má-jī ē tsò-hué tshut-lâi, bián ka-kī ke-tsù, sik-ha̍p hōo tng-teh ha̍k tâi-gí ê pîng-iú khuànn.",
-            "poj": "\"Koat-hō phiau-chù\" khai-koan chhiat-khui liáu-āu, su-chhut ê sî-sūn hàn-jī kah lô-má-jī ē chò-hóe chhut-lâi, bián ka-kī ke-chù, sek-ha̍p hō͘ tng-teh ha̍k tâi-gí ê pêng-iú khòaⁿ.",
-            "en": "After the “Bracket annotation” toggle is on, the Hanji and romanization come out together when you type, with no need to annotate them yourself—handy for friends who are learning Taiwanese.",
-            "ja": "「括弧注記」スイッチをオンにすると、出力時に漢字とローマ字が一緒に出てくるので、自分で注記する必要がありません。台湾語を学んでいる人に見せるのに便利です。"
+            "hanji": "拍開「括號標註」，兩種做伙送出，像 𠢕早 (gâu-tsá)。",
+            "tailo": "Phah-khui “Kuat-hō phiau-tsù”, nn̄g tsióng tsò-hué sàng-tshut, tshiūnn 𠢕早 (gâu-tsá).",
+            "poj": "Phah-khui “Koat-hō phiau-chù”, nn̄g chióng chò-hóe sàng-chhut, chhiūⁿ 𠢕早 (gâu-chá).",
+            "en": "Turn on Annotate in Brackets to enter both at once, like 𠢕早 (gâu-tsá).",
+            "ja": "「括弧で併記」をオンにすると、両方を一緒に入力します。例：𠢕早 (gâu-tsá)。"
           },
           "attachment": {
             "type": "slideshow",
@@ -281,11 +254,11 @@
         },
         {
           "text": {
-            "hanji": "寫漢羅合用文 ê 時陣，使用「漢 / 羅」揤鈕隨時切換，配合「自動閬一格」開關，羅馬字 ê 空格縫嘛會自動處理，免家己加空格。",
-            "tailo": "Siá hàn-lô ha̍h-īng bûn ê sî-sūn, sú-iōng\"hàn / lô\" tshi̍h-liú suî-sî tshiat-uānn, phuè-ha̍p\"tsū-tōng làng tsi̍t ê phāng\" khai-kuan, lô-má-jī ê khang-keh phāng mā ē tsū-tōng tshú-lí, bián ka-kī ka khang-keh.",
-            "poj": "Siá hàn-lô ha̍h-ēng bûn ê sî-sūn, sú-iōng\"hàn / lô\" chhi̍h-liú sûi-sî chhiat-ōaⁿ, phòe-ha̍p\"chū-tōng làng chi̍t ê phāng\" khai-koan, lô-má-jī ê khang-keh phāng mā ē chū-tōng chhú-lí, bián ka-kī ka khang-keh.",
-            "en": "When writing mixed Hanji-romanization text, use the “漢 / 羅” button to switch anytime, and with the “Auto-space” toggle the spacing around romanization is handled automatically, so you don't have to add spaces yourself.",
-            "ja": "漢羅混用の文章を書くときは、「漢 / 羅」ボタンでいつでも切り替えられます。「自動スペース」スイッチと併せると、ローマ字の空白も自動で処理され、自分で空白を入れる必要がありません。"
+            "hanji": "拍開「自動閬一格」，送出羅馬字了後會自動加空格。",
+            "tailo": "Phah-khui “Tsū-tōng làng tsi̍t ê phāng”, sàng-tshut lô-má-jī liáu-āu ē tsū-tōng ka khang-keh.",
+            "poj": "Phah-khui “Chū-tōng làng chi̍t ê phāng”, sàng-chhut lô-má-jī liáu-āu ē chū-tōng ka khang-keh.",
+            "en": "Turn on Auto-Space to add a space after romanization automatically.",
+            "ja": "「自動スペース」をオンにすると、ローマ字の後に自動でスペースが入ります。"
           }
         }
       ]
@@ -293,31 +266,31 @@
     {
       "id": "caseSwitch",
       "title": {
-        "hanji": "3 段式大本字切換",
-        "tailo": "3 tuānn sik tuā-pún-jī tshiat-uānn",
-        "poj": "3 tōaⁿ sek tōa-pún-jī chhiat-ōaⁿ",
-        "en": "Three-stage uppercase switching",
-        "ja": "3段階の大文字切り替え"
+        "hanji": "大本字",
+        "tailo": "Tuā-pún-jī",
+        "poj": "Tōa-pún-jī",
+        "en": "Capitalization",
+        "ja": "大文字"
       },
       "icon": {
         "ios": "textformat.size",
         "android": "ic_text_format"
       },
       "summary": {
-        "hanji": "「自動大本字」控制頭字母敢會自動變大本字。關起來著是細本字模式，連紲揤 Shift 2 改切做 Caps Lock。",
-        "tailo": "\"Tsū-tōng tuā-pún-jī\" khòng-tsè thâu-jī bú kám-ē tsū-tōng piàn tuā-pún-jī. Kuainn--khí-lâi tio̍h-sī suè-pún-jī bôo-sik, liân-suà tshi̍h Shift 2 kái tshiat tsò Caps Lock.",
-        "poj": "\"Chū-tōng tōa-pún-jī\" khòng-chè thâu-jī bú kám-ē chū-tōng piàn tōa-pún-jī. Koaiⁿ--khí-lâi tio̍h-sī sòe-pún-jī bô͘-sek, liân-sòa chhi̍h Shift 2 kái chhiat chò Caps Lock.",
-        "en": "“Auto-capitalize” controls whether the first letter is capitalized automatically. Turning it off gives lowercase mode; pressing Shift twice in a row switches to Caps Lock.",
-        "ja": "「自動大文字」は先頭の字母を自動で大文字にするかどうかを制御します。オフにすると小文字モードになり、Shift を続けて2回押すと Caps Lock に切り替わります。"
+        "hanji": "「自動大本字」決定頭一个字母敢會自動變大本字。連紲揤 Shift 兩下是 Caps Lock。",
+        "tailo": "“Tsū-tōng tuā-pún-jī” kuat-tīng thâu tsi̍t ê jī-bió kám ē tsū-tōng piàn tuā-pún-jī. Liân-suà tshi̍h Shift nn̄g-ē sī Caps Lock.",
+        "poj": "“Chū-tōng tōa-pún-jī” koat-tēng thâu chi̍t ê jī-bió kám ē chū-tōng piàn tōa-pún-jī. Liân-sòa chhi̍h Shift nn̄g-ē sī Caps Lock.",
+        "en": "Auto-Capitalization decides whether the first letter is capitalized for you. Press Shift twice for Caps Lock.",
+        "ja": "「自動大文字化」は最初の字母を自動で大文字にするかを決めます。Shift を2回押すと Caps Lock です。"
       },
       "paragraphs": [
         {
           "text": {
-            "hanji": "一般 ê 情形，頭 1 个字母會自動變大本字，Shift 揤鈕會反烏。若「自動大本字」有關起來，著愛家己揤 Shift，頭字才會變大本字。",
-            "tailo": "It-puann ê tsîng-hîng, thâu 1 ê jī-bú ē tsū-tōng piàn tuā-pún-jī,Shift tshi̍h-liú ē huán-oo. Nā\"tsū-tōng tuā-pún-jī\" iú-kuan khí-lâi, tio̍h-ài ka-kī tshi̍h Shift, thâu-jī tsiah ē piàn tuā-pún-jī.",
-            "poj": "It-poaⁿ ê chêng-hêng, thâu 1 ê jī-bú ē chū-tōng piàn tōa-pún-jī,Shift chhi̍h-liú ē hoán-o͘. Nā\"chū-tōng tōa-pún-jī\" iú-koan khí-lâi, tio̍h-ài ka-kī chhi̍h Shift, thâu-jī chiah ē piàn tōa-pún-jī.",
-            "en": "Normally the first letter is capitalized automatically and the Shift key is highlighted. If “Auto-capitalize” is turned off, you have to press Shift yourself for the first letter to be capitalized.",
-            "ja": "通常は先頭の字母が自動で大文字になり、Shift キーが反転します。「自動大文字」をオフにしている場合は、自分で Shift を押さないと先頭の字が大文字になりません。"
+            "hanji": "頭一个字母會自動變大本字，Shift 鍵會反烏。",
+            "tailo": "Thâu tsi̍t ê jī-bió ē tsū-tōng piàn tuā-pún-jī, Shift kiān ē huán-oo.",
+            "poj": "Thâu chi̍t ê jī-bió ē chū-tōng piàn tōa-pún-jī, Shift kiān ē hoán-o͘.",
+            "en": "The first letter is capitalized automatically, and Shift is highlighted.",
+            "ja": "最初の字母は自動で大文字になり、Shift キーが反転表示されます。"
           },
           "attachment": {
             "type": "image",
@@ -326,11 +299,11 @@
         },
         {
           "text": {
-            "hanji": "「自動大本字」開關若關起來，就是細本字模式，拍出來 ê 字攏是細本字。",
-            "tailo": "\"Tsū-tōng tuā-pún-jī\" khai-kuan nā kuainn--khí-lâi, tiō sī suè-pún-jī bôo-sik, phah-tshut lâi ê jī lóng sī suè-pún-jī.",
-            "poj": "\"Chū-tōng tōa-pún-jī\" khai-koan nā koaiⁿ--khí-lâi, tiō sī sòe-pún-jī bô͘-sek, phah-chhut lâi ê jī lóng sī sòe-pún-jī.",
-            "en": "If the “Auto-capitalize” toggle is off, you are in lowercase mode and everything you type comes out lowercase.",
-            "ja": "「自動大文字」スイッチをオフにすると小文字モードになり、入力した字はすべて小文字になります。"
+            "hanji": "關掉「自動大本字」，拍出來攏是細本字；欲大本字就家己揤 Shift。",
+            "tailo": "Kuainn--tiāu “Tsū-tōng tuā-pún-jī”, phah--tshut-lâi lóng sī suè-pún-jī; beh tuā-pún-jī tō ka-kī tshi̍h Shift.",
+            "poj": "Koaiⁿ--tiāu “Chū-tōng tōa-pún-jī”, phah--chhut-lâi lóng sī sòe-pún-jī; beh tōa-pún-jī tō ka-kī chhi̍h Shift.",
+            "en": "Turn off Auto-Capitalization to type in lowercase; press Shift when you want a capital.",
+            "ja": "「自動大文字化」をオフにすると小文字で入力されます。大文字が必要なときは Shift を押します。"
           },
           "attachment": {
             "type": "image",
@@ -339,76 +312,110 @@
         },
         {
           "text": {
-            "hanji": "連紲揤 Shift 2 改會切做 Caps Lock 模式，揤鈕變烏色，圖示嘛無仝款，這時陣拍出來 ê 字攏是大本字，閣揤 1 改才會轉去細本字。",
-            "tailo": "Liân-suà tshi̍h Shift 2 kái ē tshiat tsò Caps Lock bôo-sik, tshi̍h-liú piàn-oo sik, tôo-sī mā bô-kāng-khuán, tsit-sî-tsūn phah-tshut lâi ê jī lóng sī tuā-pún-jī, koh tshi̍h 1 kái tsiah ē tńg--khì suè-pún-jī.",
-            "poj": "Liân-sòa chhi̍h Shift 2 kái ē chhiat chò Caps Lock bô͘-sek, chhi̍h-liú piàn-o͘ sek, tô͘-sī mā bô-kāng-khoán, chit-sî-chūn phah-chhut lâi ê jī lóng sī tōa-pún-jī, koh chhi̍h 1 kái chiah ē tńg--khì sòe-pún-jī.",
-            "en": "Pressing Shift twice in a row switches to Caps Lock mode; the key turns dark and its icon changes. In this state everything you type is uppercase, and pressing it once more returns to lowercase.",
-            "ja": "Shift を続けて2回押すと Caps Lock モードに切り替わり、キーが黒くなりアイコンも変わります。この状態では入力した字がすべて大文字になり、もう1回押すと小文字に戻ります。"
+            "hanji": "連紲揤 Shift 兩下是 Caps Lock，閣揤一下就解除。",
+            "tailo": "Liân-suà tshi̍h Shift nn̄g-ē sī Caps Lock, koh tshi̍h tsi̍t-ē tō kái-tû.",
+            "poj": "Liân-sòa chhi̍h Shift nn̄g-ē sī Caps Lock, koh chhi̍h chi̍t-ē tō kái-tû.",
+            "en": "Press Shift twice for Caps Lock; press it again to turn it off.",
+            "ja": "Shift を2回押すと Caps Lock、もう一度押すと解除します。"
           },
           "attachment": {
             "type": "image",
             "name": "case_caps"
           }
+        }
+      ]
+    },
+    {
+      "id": "oneHanded",
+      "title": {
+        "hanji": "單手模式",
+        "tailo": "Tuann-tshiú bôo-sik",
+        "poj": "Toaⁿ-chhiú bô͘-sek",
+        "en": "One-Handed Mode",
+        "ja": "片手モード"
+      },
+      "icon": {
+        "ios": "keyboard.onehanded.left",
+        "android": "ic_keyboard_onehanded_left"
+      },
+      "paragraphs": [
+        {
+          "text": {
+            "hanji": "揤牢工具列 ê 齒盤鍵，揀「倒手」抑是「正手」，鍵會徙去彼爿。",
+            "tailo": "Tshi̍h-tiâu kang-kū-lia̍t ê khí-puânn kiān, kíng “Tò-tshiú” ia̍h-sī “Tsiànn-tshiú”, kiān ē suá khì hit pîng.",
+            "poj": "Chhi̍h-tiâu kang-kū-lia̍t ê khí-pôaⁿ kiān, kéng “Tò-chhiú” ia̍h-sī “Chiàⁿ-chhiú”, kiān ē sóa khì hit pêng.",
+            "en": "Touch and hold the keyboard button on the toolbar, then choose Left hand or Right hand. The keys move to that side.",
+            "ja": "ツールバーのキーボードボタンを長押しして「左手」か「右手」を選ぶと、キーがその側に寄ります。"
+          }
         },
         {
           "text": {
-            "hanji": "若連紲切換符號齒盤，大細本字有時陣會走精去，若拄著這个情形，切轉來羅馬字齒盤著會正常。",
-            "tailo": "Nā liân-suà tshiat-uānn hû-hō khí-puânn, tuā-suè-pún-jī ū-sî-tsūn ē tsáu-tsing khì, nā tú-tio̍h tsit ê tsîng-hîng, tshiat tńg--lâi lô-má-jī khí-puânn tio̍h ē tsìng-siông.",
-            "poj": "Nā liân-sòa chhiat-ōaⁿ hû-hō khí-pôaⁿ, tōa-sòe-pún-jī ū-sî-chūn ē cháu-cheng khì, nā tú-tio̍h chit ê chêng-hêng, chhiat tńg--lâi lô-má-jī khí-pôaⁿ tio̍h ē chèng-siông.",
-            "en": "If you switch to the symbol keyboard repeatedly, the upper/lowercase state can sometimes drift. If this happens, switching back to the romanization keyboard restores it.",
-            "ja": "記号キーボードへの切り替えを繰り返すと、大文字・小文字の状態がずれることがあります。その場合は、ローマ字キーボードに戻すと正常になります。"
+            "hanji": "邊仔 ê 鈕會使「換爿」，抑是轉去「一般」。",
+            "tailo": "Pinn--á ê liú ē-sái “Uānn-pîng”, ia̍h-sī tńg-khì “It-puann”.",
+            "poj": "Piⁿ--á ê liú ē-sái “Ōaⁿ-pêng”, ia̍h-sī tńg-khì “It-poaⁿ”.",
+            "en": "Use the buttons beside the keys to switch sides or return to Normal.",
+            "ja": "横のボタンで反対側へ移動したり、通常に戻したりできます。"
           }
         }
       ]
     },
     {
-      "id": "tpsAutoCorrect",
+      "id": "displayModes",
       "title": {
-        "hanji": "方音符號自動校正",
-        "tailo": "Hong-im-hû-hō tsū-tōng kàu-tsìng",
-        "poj": "Hong-im-hû-hō chū-tōng kàu-chèng",
-        "en": "Phonetic-symbol auto-correction",
-        "ja": "方音符号の自動校正"
+        "hanji": "3 種顯示",
+        "tailo": "3 tsióng hián-sī",
+        "poj": "3 chióng hián-sī",
+        "en": "Three Display Styles",
+        "ja": "3つの表示方式"
       },
       "icon": {
-        "ios": "wand.and.stars",
-        "android": "ic_auto_fix"
+        "ios": "rectangle.split.3x1",
+        "android": "ic_document"
       },
       "paragraphs": [
         {
           "text": {
-            "hanji": "方音符號模式有自動校正功能，會自動修正符號，予你拍字較緊閣較正確。",
-            "tailo": "Hong-im-hû-hō bôo-sik ū tsū-tōng kàu-tsìng kong-lîng, ē tsū-tōng siu-tsìng hû-hō, hōo-lí phah-jī khah-kín koh-khah tsìng-khak.",
-            "poj": "Hong-im-hû-hō bô͘-sek ū chū-tōng kàu-chèng kong-lêng, ē chū-tōng siu-chèng hû-hō, hō͘-lí phah-jī khah-kín koh-khah chèng-khak.",
-            "en": "Phonetic-symbol mode has auto-correction that fixes symbols automatically, so you can type faster and more accurately.",
-            "ja": "方音符号モードには自動校正機能があり、符号を自動で修正するので、より速く正確に入力できます。"
+            "hanji": "佇「設定」>「候選詞顯示」揀候選詞欲按怎顯示。",
+            "tailo": "Tī “Siat-tīng” > “Hāu-suán-sû hián-sī” kíng hāu-suán-sû beh án-tsuánn hián-sī.",
+            "poj": "Tī “Siat-tēng” > “Hāu-soán-sû hián-sī” kéng hāu-soán-sû beh án-chóaⁿ hián-sī.",
+            "en": "Choose how candidates look in Settings > Candidate Display.",
+            "ja": "候補の見え方は「設定」>「候補の表示」で選べます。"
           }
         },
         {
           "text": {
-            "hanji": "【齒音→顎化音】拍 ㄧ 或 ㆪ ê 時陣，頭前 ê 齒音會自動改做顎化音：ㄗ→ㄐ、ㄘ→ㄑ、ㄙ→ㄒ、ㆡ→ㆢ。譬論欲拍「錢 tsînn」，拍 ㄗ＋ㆪ 會自動變做 ㄐㆪ，免家己揤 ㄐ。",
-            "tailo": "[ Khí-im-> kok huà im] Phah ㄧ hi̍k ㆪ ê sî-sūn, thâu-tsîng ê khí-im ē tsū-tōng kué-tsò kok huà im:ㄗ->ㄐ,ㄘ->ㄑ,ㄙ->ㄒ,ㆡ->ㆢ. Phì-lūn beh phah\"tsînn tsînn\", phah ㄗ+ㆪ ē tsū-tōng piàn-tsò ㄐㆪ, bián ka-kī tshi̍h ㄐ.",
-            "poj": "[ Khí-im-> kok hòa im] Phah ㄧ he̍k ㆪ ê sî-sūn, thâu-chêng ê khí-im ē chū-tōng kóe-chò kok hòa im:ㄗ->ㄐ,ㄘ->ㄑ,ㄙ->ㄒ,ㆡ->ㆢ. Phì-lūn beh phah\"chîⁿ chîⁿ\", phah ㄗ+ㆪ ē chū-tōng piàn-chò ㄐㆪ, bián ka-kī chhi̍h ㄐ.",
-            "en": "[Dental → palatal] When you type ㄧ or ㆪ, the preceding dental consonant is automatically changed to a palatal one: ㄗ→ㄐ, ㄘ→ㄑ, ㄙ→ㄒ, ㆡ→ㆢ. For example, to type “錢 tsînn,” typing ㄗ + ㆪ automatically becomes ㄐㆪ, so you don't have to press ㄐ yourself.",
-            "ja": "【歯音→口蓋音】ㄧ または ㆪ を打つと、その前の歯音が自動的に口蓋音に変わります：ㄗ→ㄐ、ㄘ→ㄑ、ㄙ→ㄒ、ㆡ→ㆢ。例えば「錢 tsînn」を打つ場合、ㄗ＋ㆪ が自動的に ㄐㆪ になるので、自分で ㄐ を押す必要はありません。"
+            "hanji": "漢羅對應：漢字佮羅馬字做伙顯示，用切換鍵決定送出佗一个。",
+            "tailo": "Hàn-Lô tuì-ìng: hàn-jī kah lô-má-jī tsò-hué hián-sī, iōng tshiat-uānn kiān kuat-tīng sàng-tshut tó tsi̍t ê.",
+            "poj": "Hàn-Lô tùi-èng: hàn-jī kah lô-má-jī chò-hóe hián-sī, iōng chhiat-ōaⁿ kiān koat-tēng sàng-chhut tó chi̍t ê.",
+            "en": "Hanji–Romanization Pairing: Hanji and romanization appear together, and the switch key decides which one is entered.",
+            "ja": "漢字とローマ字の対応：漢字とローマ字を一緒に表示し、切り替えキーでどちらを入力するか決めます。"
           }
         },
         {
           "text": {
-            "hanji": "【聲母／韻尾自動切換】仝 1 粒揤鈕，佇音節頭是聲母，佇音節中間會自動變做韻尾：ㄇ→ㆬ、ㄋ→ㄣ、ㄫ→ㆭ；入聲韻尾嘛仝款：ㄅ→ㆴ、ㄉ→ㆵ、ㄍ→ㆻ、ㄏ→ㆷ。譬論拍「心 sim」，拍 ㄙ＋ㄧ＋ㄇ，尾字 ㄇ 會自動變做 ㆬ。",
-            "tailo": "[ Siann-bó/ ūn-bué tsū-tōng tshiat-uānn] Kāng 1 lia̍p tshi̍h-liú, tī im-tsiat thâu sī siann-bó, tī im-tsiat tiong-kan ē tsū-tōng piàn-tsò ūn-bué:ㄇ->ㆬ,ㄋ->ㄣ,ㄫ->ㆭ; ji̍p-siann ūn-bué mā kāng-khuán:ㄅ->ㆴ,ㄉ->ㆵ,ㄍ->ㆻ,ㄏ->ㆷ. Phì-lūn phah\"sim sim\", phah ㄙ+ㄧ+ㄇ, bué jī ㄇ ē tsū-tōng piàn-tsò ㆬ.",
-            "poj": "[ Siaⁿ-bó/ ūn-bóe chū-tōng chhiat-ōaⁿ] Kāng 1 lia̍p chhi̍h-liú, tī im-chiat thâu sī siaⁿ-bó, tī im-chiat tiong-kan ē chū-tōng piàn-chò ūn-bóe:ㄇ->ㆬ,ㄋ->ㄣ,ㄫ->ㆭ; ji̍p-siaⁿ ūn-bóe mā kāng-khoán:ㄅ->ㆴ,ㄉ->ㆵ,ㄍ->ㆻ,ㄏ->ㆷ. Phì-lūn phah\"sim sim\", phah ㄙ+ㄧ+ㄇ, bóe jī ㄇ ē chū-tōng piàn-chò ㆬ.",
-            "en": "[Initial / coda auto-switching] The same key acts as an initial at the start of a syllable and automatically becomes a coda in the middle: ㄇ→ㆬ, ㄋ→ㄣ, ㄫ→ㆭ; the entering-tone codas likewise: ㄅ→ㆴ, ㄉ→ㆵ, ㄍ→ㆻ, ㄏ→ㆷ. For example, typing “心 sim” as ㄙ＋ㄧ＋ㄇ automatically turns the final ㄇ into ㆬ.",
-            "ja": "【声母／末子音の自動切り替え】同じキーが、音節の頭では声母、音節の途中では自動的に末子音になります：ㄇ→ㆬ、ㄋ→ㄣ、ㄫ→ㆭ。入声の末子音も同様です：ㄅ→ㆴ、ㄉ→ㆵ、ㄍ→ㆻ、ㄏ→ㆷ。例えば「心 sim」を ㄙ＋ㄧ＋ㄇ と打つと、末尾の ㄇ が自動的に ㆬ になります。"
+            "hanji": "漢羅濫：漢字佮羅馬字分做兩格，揀佗一格就送出佗一種。",
+            "tailo": "Hàn-Lô lām: hàn-jī kah lô-má-jī hun-tsò nn̄g keh, kíng tó tsi̍t keh tō sàng-tshut tó tsi̍t tsióng.",
+            "poj": "Hàn-Lô lām: hàn-jī kah lô-má-jī hun-chò nn̄g keh, kéng tó chi̍t keh tō sàng-chhut tó chi̍t chióng.",
+            "en": "Hanji with Romanization: Hanji and romanization appear as separate candidates; tap either one to enter it.",
+            "ja": "漢字＋ローマ字：漢字とローマ字を別々の候補として並べ、選んだほうを入力します。"
           }
         },
         {
           "text": {
-            "hanji": "【鼻化韻自動修正】拍 ㄧ 了後揤 ㆮ（ainn），會自動改做 ㆯ（aunn），因為台語無「iainn」這个韻母，干焦「iaunn」才是正確 ê。",
-            "tailo": "[ Phīnn huà ūn tsū-tōng siu-tsìng] Phah ㄧ liáu-āu tshi̍h ㆮ(ainn), ē tsū-tōng kué-tsò ㆯ(aunn), in-uī tâi-gí bô\"iainn\" tsit ê ūn-bó, kan-na\"iaunn\" tsiah-sī tsìng-khak ê.",
-            "poj": "[ Phīⁿ hòa ūn chū-tōng siu-chèng] Phah ㄧ liáu-āu chhi̍h ㆮ(aiⁿ), ē chū-tōng kóe-chò ㆯ(auⁿ), in-ūi tâi-gí bô\"iainn\" chit ê ūn-bó, kan-na\"iauⁿ\" chiah-sī chèng-khak ê.",
-            "en": "[Nasal-rime auto-correction] After typing ㄧ, pressing ㆮ (ainn) is automatically changed to ㆯ (aunn), because Taiwanese has no rime “iainn”—only “iaunn” is correct.",
-            "ja": "【鼻音韻の自動修正】ㄧ を打った後に ㆮ（ainn）を押すと、自動的に ㆯ（aunn）に変わります。台湾語には「iainn」という韻母がなく、「iaunn」だけが正しいからです。"
+            "hanji": "羅馬字：干焦顯示羅馬字，送出羅馬字。",
+            "tailo": "Lô-má-jī: kan-na hián-sī lô-má-jī, sàng-tshut lô-má-jī.",
+            "poj": "Lô-má-jī: kan-na hián-sī lô-má-jī, sàng-chhut lô-má-jī.",
+            "en": "Romanization Only: only the romanization is shown and entered.",
+            "ja": "ローマ字のみ：ローマ字だけを表示し、入力します。"
+          }
+        },
+        {
+          "text": {
+            "hanji": "漢羅濫佮羅馬字干焦用佇白話字佮台羅。",
+            "tailo": "Hàn-Lô lām kah Lô-má-jī kan-na iōng tī Pe̍h-uē-jī kah Tâi-lô.",
+            "poj": "Hàn-Lô lām kah Lô-má-jī kan-na iōng tī Pe̍h-ōe-jī kah Tâi-lô.",
+            "en": "Hanji with Romanization and Romanization Only work with Pe̍h-ōe-jī and Tâi-lô.",
+            "ja": "「漢字＋ローマ字」と「ローマ字のみ」は白話字と台羅で使えます。"
           }
         }
       ]
@@ -417,10 +424,10 @@
       "id": "nextWord",
       "title": {
         "hanji": "連紲建議詞",
-        "tailo": "Liân-suà kiàn-gī sû",
-        "poj": "Liân-sòa kiàn-gī sû",
-        "en": "Next-word suggestions",
-        "ja": "次候補の予測"
+        "tailo": "Liân-suà kiàn-gī-sû",
+        "poj": "Liân-sòa kiàn-gī-sû",
+        "en": "Next-Word Suggestions",
+        "ja": "次の語の候補"
       },
       "icon": {
         "ios": "lightbulb.max",
@@ -429,20 +436,20 @@
       "paragraphs": [
         {
           "text": {
-            "hanji": "拍字會連紲建議，譬論講拍「𠢕」這个字，齒盤會出現連紲適合 ê 詞：「𠢕」⭢「早」⭢「gâu-tsá」，毋免逐个音節攏家己拍。",
-            "tailo": "Phah-jī ē liân-suà kiàn-gī, phì-lūn-kóng phah\"gâu\" tsit ê jī, khí-puânn ē tshut-hiān liân-suà sik-ha̍p ê sû:\"gâu\"->\"tsá\"->\"gâu-tsá\", m̄-bián ta̍k ê im-tsiat láng ka-kī phah.",
-            "poj": "Phah-jī ē liân-sòa kiàn-gī, phì-lūn-kóng phah\"gâu\" chit ê jī, khí-pôaⁿ ē chhut-hiān liân-sòa sek-ha̍p ê sû:\"gâu\"->\"chá\"->\"gâu-chá\", m̄-bián ta̍k ê im-chiat láng ka-kī phah.",
-            "en": "As you type, the keyboard keeps suggesting next words. For example, after typing “𠢕,” the keyboard offers fitting follow-up words: “𠢕” ⭢ “早” ⭢ “gâu-tsá,” so you don't have to type every syllable yourself.",
-            "ja": "入力すると、キーボードが続けて候補を提案します。例えば「𠢕」を打つと、続く適切な語が表示されます：「𠢕」⭢「早」⭢「gâu-tsá」。各音節を自分で打つ必要はありません。"
+            "hanji": "揀一个詞了後，齒盤會建議後一个：揀「𠢕」，「早」就會出現。",
+            "tailo": "Kíng tsi̍t ê sû liáu-āu, khí-puânn ē kiàn-gī āu tsi̍t ê: kíng “𠢕”, “早” tō ē tshut-hiān.",
+            "poj": "Kéng chi̍t ê sû liáu-āu, khí-pôaⁿ ē kiàn-gī āu chi̍t ê: kéng “𠢕”, “早” tō ē chhut-hiān.",
+            "en": "After you pick a word, the keyboard suggests the next one: pick 𠢕 and 早 appears.",
+            "ja": "語を選ぶと、次の語を提案します。「𠢕」を選ぶと「早」が表示されます。"
           }
         },
         {
           "text": {
-            "hanji": "詞庫無 ê 字，若拍過 1 改，後擺著會自動出現佇「連紲建議詞」，譬論拍「我想欲食飯」，以後著會記起來。",
-            "tailo": "Sû khòo bô ê jī, nā phah kuè 1 kái, āu-pái tio̍h ē tsū-tōng tshut-hiān tī\"liân-suà kiàn-gī sû\", phì-lūn phah\"guá siūnn-beh tsia̍h-pn̄g\", í-āu tio̍h ē kì--khí-lâi.",
-            "poj": "Sû khò͘ bô ê jī, nā phah kòe 1 kái, āu-pái tio̍h ē chū-tōng chhut-hiān tī\"liân-sòa kiàn-gī sû\", phì-lūn phah\"góa siūⁿ-beh chia̍h-pn̄g\", í-āu tio̍h ē kì--khí-lâi.",
-            "en": "Words not in the dictionary, once typed, will automatically appear in “Next-word suggestions” afterward. For example, after typing “我想欲食飯” once, it will be remembered.",
-            "ja": "辞書にない語でも、一度入力すると次回から自動的に「次候補」に表示されます。例えば「我想欲食飯」と入力すると、以後は記憶されます。"
+            "hanji": "辭典無 ê 詞句，拍過一擺就會記起來，後擺會出現佇建議內底。",
+            "tailo": "Sû-tián bô ê sû-kù, phah--kuè tsi̍t-pái tō ē kì--khí-lâi, āu-pái ē tshut-hiān tī kiàn-gī lāi-té.",
+            "poj": "Sû-tián bô ê sû-kù, phah--kòe chi̍t-pái tō ē kì--khí-lâi, āu-pái ē chhut-hiān tī kiàn-gī lāi-té.",
+            "en": "Phrases that aren't in the dictionaries are remembered after you type them once, and show up as suggestions next time.",
+            "ja": "辞書にない語句も、一度入力すれば覚えて、次から候補に出てきます。"
           },
           "attachment": {
             "type": "slideshow",
@@ -455,25 +462,16 @@
             ],
             "interval": 1.5
           }
-        },
-        {
-          "text": {
-            "hanji": "拍羅馬字時，空格縫佮連劃愛家己揤。若「自動閬一格」開關有切開，空格縫會自動加，免家己加。",
-            "tailo": "Phah lô-má-jī sî, khang-keh phāng kah liân-ue̍h ài ka-kī tshi̍h. Nā\"tsū-tōng làng tsi̍t ê phāng\" khai-kuan ū tshiat-khui, khang-keh phāng ē tsū-tōng ka, bián ka-kī ka.",
-            "poj": "Phah lô-má-jī sî, khang-keh phāng kah liân-oe̍h ài ka-kī chhi̍h. Nā\"chū-tōng làng chi̍t ê phāng\" khai-koan ū chhiat-khui, khang-keh phāng ē chū-tōng ka, bián ka-kī ka.",
-            "en": "When typing romanization, you have to enter spaces and hyphens yourself. If the “Auto-space” toggle is on, spaces are added automatically, so you don't have to.",
-            "ja": "ローマ字を入力するときは、空白とハイフンを自分で打つ必要があります。「自動スペース」スイッチをオンにすると、空白が自動で追加されるので、自分で入れる必要はありません。"
-          }
         }
       ]
     },
     {
-      "id": "customFont",
+      "id": "dictionaries",
       "title": {
-        "hanji": "詞庫",
-        "tailo": "Sû-khòo",
-        "poj": "Sû-khò͘",
-        "en": "Dictionary",
+        "hanji": "辭典",
+        "tailo": "Sû-tián",
+        "poj": "Sû-tián",
+        "en": "Dictionaries",
         "ja": "辞書"
       },
       "icon": {
@@ -483,114 +481,38 @@
       "paragraphs": [
         {
           "text": {
-            "hanji": "齒盤預設使用「教育部用字」詞庫，包括「教育部臺灣台語常用詞辭典」、「公視台語台台語新詞辭庫」、「教育部學科術語臺灣台語對譯」、「工藝中心臺灣台語工藝詞庫」，閣有其他辭典好選，無仝詞庫收錄 ê 字各有特色。",
-            "tailo": "Khí-puânn ī-siat sú-iōng\"kàu-io̍k-pōo iōng-jī\" sû khòo, pau-kuat\"kàu-io̍k-pōo tâi-uân-tâi-gí siâng-iōng-sû sû-tián\",\"kong-sī tâi-gí-tâi tâi-gí sin sû sî khòo\",\"kàu-io̍k-pōo ha̍k-kho su̍t-gí tâi-uân-tâi-gí tuì-i̍k\",\"kang-gē tiong-sim tâi-uân-tâi-gí kang-gē sû khòo\", koh-ū kî-thann sû-tián hó suán, bô kâng sû khòo siu-lio̍k ê jī kok ū ti̍k-sik.",
-            "poj": "Khí-pôaⁿ ī-siat sú-iōng\"kàu-io̍k-pō͘ iōng-jī\" sû khò͘, pau-koat\"kàu-io̍k-pō͘ tâi-oân-tâi-gí siâng-iōng-sû sû-tián\",\"kong-sī tâi-gí-tâi tâi-gí sin sû sî khò͘\",\"kàu-io̍k-pō͘ ha̍k-kho su̍t-gí tâi-oân-tâi-gí tùi-e̍k\",\"kang-gē tiong-sim tâi-oân-tâi-gí kang-gē sû khò͘\", koh-ū kî-thaⁿ sû-tián hó soán, bô kâng sû khò͘ siu-lio̍k ê jī kok ū te̍k-sek.",
-            "en": "By default the keyboard uses the “MOE wordings” dictionary, including the “MOE Dictionary of Frequently-Used Taiwan Taiwanese,” the “PTS Taigi Channel New-Word Lexicon,” the “MOE Academic-Term Taiwan Taiwanese Translation,” and the “National Taiwan Craft Research Center Taiwan Taiwanese Craft Lexicon,” with other dictionaries also available. Each dictionary has its own characteristic entries.",
-            "ja": "キーボードは既定で「教育部用字」辞書を使用します。これには「教育部臺灣台語常用詞辭典」「公視台語台台語新詞辭庫」「教育部學科術語臺灣台語對譯」「工藝中心臺灣台語工藝詞庫」が含まれ、他の辞書も選べます。辞書ごとに収録する字に特色があります。"
+            "hanji": "候選詞來自公開 ê 辭典。預設拍開「教育部用字」：教育部臺灣台語常用詞辭典、公視台語台台語新詞辭庫、教育部學科術語臺灣台語對譯、工藝中心臺灣台語工藝詞庫。",
+            "tailo": "Hāu-suán-sû lâi-tsū kong-khai ê sû-tián. Ī-siat phah-khui “Kàu-io̍k-pōo iōng-jī”: Kàu-io̍k-pōo tâi-uân-tâi-gí siâng-iōng-sû sû-tián, Kong-sī tâi-gí-tâi tâi-gí sin sû sî khòo, Kàu-io̍k-pōo ha̍k-kho su̍t-gí tâi-uân-tâi-gí tuì-i̍k, Kang-gē tiong-sim tâi-uân-tâi-gí kang-gē sû khòo.",
+            "poj": "Hāu-soán-sû lâi-chū kong-khai ê sû-tián. Ī-siat phah-khui “Kàu-io̍k-pō͘ iōng-jī”: Kàu-io̍k-pō͘ tâi-oân-tâi-gí siâng-iōng-sû sû-tián, Kong-sī tâi-gí-tâi tâi-gí sin sû sî khò͘, Kàu-io̍k-pō͘ ha̍k-kho su̍t-gí tâi-oân-tâi-gí tùi-e̍k, Kang-gē tiong-sim tâi-oân-tâi-gí kang-gē sû khò͘.",
+            "en": "Candidates come from public dictionaries. MOE Characters is on by default: the MOE Dictionary of Common Taiwanese Words, the PTS Taigi New-Word Lexicon, MOE Academic Subject Terminology (Taigi), and the NTCRI Taiwanese Craft Glossary.",
+            "ja": "候補は公開されている辞書から出ます。既定では「教育部の用字」がオン：教育部 台湾語常用語辞典、公視台語台 台湾語新語辞書、教育部 学術用語 台湾語対訳、工芸センター 台湾語工芸用語辞書。"
           }
         },
         {
           "text": {
-            "hanji": "若感覺候選詞傷濟，會使共無用著 ê 辭典關起來，按呢候選詞著會較少，想欲揣 ê 字會較佇頭前。",
-            "tailo": "Nā kám-kak hāu-suán sû siunn-tse, ē-sái kā bô-iōng tio̍h ê sû-tián kuainn--khí-lâi, án-ne hāu-suán sû tio̍h ē khah siàu, siūnn-beh tshuē ê jī ē khah tī thâu-tsîng.",
-            "poj": "Nā kám-kak hāu-soán sû siuⁿ-che, ē-sái kā bô-iōng tio̍h ê sû-tián koaiⁿ--khí-lâi, án-ne hāu-soán sû tio̍h ē khah siàu, siūⁿ-beh chhōe ê jī ē khah tī thâu-chêng.",
-            "en": "If there are too many candidates, you can turn off dictionaries you don't use; then there will be fewer candidates, and the character you want will be nearer the front.",
-            "ja": "候補が多すぎると感じたら、使わない辞書をオフにできます。そうすると候補が減り、探している字が前のほうに来ます。"
+            "hanji": "「詞庫」>「辭典管理」閣有 iTaigi愛台語、臺日大辭典台語譯本、台華線頂對照典、台灣植物名彙佮補充資料，逐个攏會使拍開抑是關掉。",
+            "tailo": "“Sû-khòo” > “Sû-tián kuán-lí” koh ū iTaigi ài-tâi-gí, Tâi ji̍t tuā sû-tián tâi-gí i̍k-pún, Tâi huâ suànn-tíng tuì-tsiàu tián, Tâi-uân tsi̍t-bu̍t miâ luī kah póo-tshiong tsu-liāu, ta̍k ê lóng ē-sái phah-khui ia̍h-sī kuainn--tiāu.",
+            "poj": "“Sû-khò͘” > “Sû-tián koán-lí” koh ū iTaigi ài-tâi-gí, Tâi ji̍t tōa sû-tián tâi-gí e̍k-pún, Tâi hôa sòaⁿ-téng tùi-chiàu tián, Tâi-oân chi̍t-bu̍t miâ lūi kah pó͘-chhiong chu-liāu, ta̍k ê lóng ē-sái phah-khui ia̍h-sī koaiⁿ--tiāu.",
+            "en": "Dictionary > Manage Dictionaries also offers iTaigi, the Taiwanese-Japanese Dictionary (Taigi Edition), the Taigi-Mandarin Online Cross-Reference, the Taiwan Plant Name Glossary, and supplementary data, each with its own switch.",
+            "ja": "「辞書」>「辞書の管理」には iTaigi、台日大辞典 台湾語訳、台湾語・華語オンライン対照辞典、台湾植物名彙と補足データもあり、それぞれオン・オフできます。"
           }
         },
         {
           "text": {
-            "hanji": "「詞庫」頁面嘛有「拍字揣詞」ê 功能，拍漢字抑是羅馬字攏會使揣，方便確認齒盤內底有收錄啥物詞，嘛會使連去線頂辭典查。",
-            "tailo": "\"Sû khòo\" ia̍h-bīn mā-ū\"phah-jī tshuē sû\"ê kong-lîng, phah hàn-jī ah-sī lô-má-jī lóng-ē-sài tshuē, hong-piān khak-jīn khí-puânn lāi-té ū siu-lio̍k siánn-mih sû, mā ē-sái nî khì suànn-tíng sû-tián tsa.",
-            "poj": "\"Sû khò͘\" ia̍h-bīn mā-ū\"phah-jī chhōe sû\"ê kong-lêng, phah hàn-jī ah-sī lô-má-jī lóng-ē-sài chhōe, hong-piān khak-jīn khí-pôaⁿ lāi-té ū siu-lio̍k siáⁿ-mih sû, mā ē-sái nî khì sòaⁿ-téng sû-tián cha.",
-            "en": "On the “Dictionary” page, use “Type to search” to search by Hanji or romanization. Search results can also be opened in online dictionaries.",
-            "ja": "「辞書」ページの「入力して検索」では、漢字またはローマ字で検索できます。検索結果からオンライン辞書も開けます。"
-          },
-          "attachment": {
-            "type": "image",
-            "name": "dict_search"
+            "hanji": "候選詞傷濟，就關掉無咧用 ê 辭典。「腔口差」收真濟腔口，若你干焦用一種腔，會使關掉。",
+            "tailo": "Hāu-suán-sû siunn tsē, tō kuainn--tiāu bô teh iōng ê sû-tián. “Khiunn-kháu tsha” siu tsin tsē khiunn-kháu, nā lí kan-na iōng tsi̍t tsióng khiunn, ē-sái kuainn--tiāu.",
+            "poj": "Hāu-soán-sû siuⁿ chē, tō koaiⁿ--tiāu bô teh iōng ê sû-tián. “Khiuⁿ-kháu chha” siu chin chē khiuⁿ-kháu, nā lí kan-na iōng chi̍t chióng khiuⁿ, ē-sái koaiⁿ--tiāu.",
+            "en": "Too many candidates? Turn off dictionaries you don't use. Accent Variations adds many regional forms; if you use only one accent, turn it off.",
+            "ja": "候補が多すぎるときは、使わない辞書をオフにします。「アクセント差」は多くの地域差を収録しています。一つのアクセントしか使わないならオフにできます。"
           }
         },
         {
           "text": {
-            "hanji": "辭典 ê 詞是半自動、半人工校對，若有拄著問題請回報予我知。",
-            "tailo": "Sû-tián ê sû sī puànn tsū-tōng, puànn-lâng kang kàu-tuì, nā-ū tú-tio̍h būn-tê tshiánn huê-pò hōo--guá tsai.",
-            "poj": "Sû-tián ê sû sī pòaⁿ chū-tōng, pòaⁿ-lâng kang kàu-tùi, nā-ū tú-tio̍h būn-tê chhiáⁿ hôe-pò hō͘--góa chai.",
-            "en": "The dictionary entries are proofread half-automatically and half-manually; if you run into a problem, please report it to me.",
-            "ja": "辞書の語は半自動・半手動で校正しています。問題があれば私まで報告してください。"
-          }
-        }
-      ]
-    },
-    {
-      "id": "userDict",
-      "title": {
-        "hanji": "個人化候選詞",
-        "tailo": "Kò-jîn-huà hāu-suán sû",
-        "poj": "Kò-jîn-hòa hāu-soán sû",
-        "en": "Personalized Candidates",
-        "ja": "候補のパーソナライズ"
-      },
-      "icon": {
-        "ios": "externaldrive.badge.person.crop",
-        "android": "ic_person_storage"
-      },
-      "paragraphs": [
-        {
-          "text": {
-            "hanji": "「詞頻紀錄」會記錄你揀過各詞幾擺，定定揀 ê 詞會排較頭前。白話字佮台羅共用仝一項紀錄。",
-            "tailo": "\"Sû pîn kì-lio̍k\" ē kì-lio̍k lí kíng kuè kok ê sû kuí-pái, tiānn-tiānn kíng ê sû ē pâi khah thâu-tsîng. Pe̍h-uē-jī kah tâi-lô kiōng-iōng kāng tsi̍t hāng kì-lio̍k.",
-            "poj": "\"Sû pîn kì-lio̍k\" ē kì-lio̍k lí kéng kòe kok ê sû kúi-pái, tiāⁿ-tiāⁿ kéng ê sû ē pâi khah thâu-chêng. Pe̍h-ōe-jī kah tâi-lô kiōng-iōng kāng chi̍t hāng kì-lio̍k.",
-            "en": "Frequency records count how often you select each word. Frequently selected words move toward the front of the candidate list. Pe̍h-ōe-jī and Tâi-lô share the same record.",
-            "ja": "単語頻度は、各単語を選んだ回数を記録します。よく選ぶ単語は候補リストの前方に移動します。白話字と台羅は同じ記録を共有します。"
-          }
-        },
-        {
-          "text": {
-            "hanji": "「詞關聯紀錄」會記錄詞佮詞 ê 前後關係，用來改善下一詞建議。建議詞會照目前 ê 輸入模式顯示白話字抑是台羅。",
-            "tailo": "\"Sû kuan-liân kì-lio̍k\" ē kì-lio̍k sû kah sû ê tsiân-āu kuan-hē, iōng lâi kái-siān ē tsi̍t ê sû kiàn-gī. Kiàn-gī sû ē tsiàu ba̍k-tsîng ê su-ji̍p bôo-sik hián-sī pe̍h-uē-jī ah-sī tâi-lô.",
-            "poj": "\"Sû koan-liân kì-lio̍k\" ē kì-lio̍k sû kah sû ê chiân-āu koan-hē, iōng lâi kái-siān ē chi̍t ê sû kiàn-gī. Kiàn-gī sû ē chiàu ba̍k-chêng ê su-ji̍p bô͘-sek hián-sī pe̍h-ōe-jī ah-sī tâi-lô.",
-            "en": "Association records store which words follow each other to improve next-word suggestions. Suggestions appear in Pe̍h-ōe-jī or Tâi-lô to match the current input mode.",
-            "ja": "単語連携は、単語の前後関係を記録し、次の単語の候補に利用します。候補は現在の入力モードに合わせて白話字または台羅で表示されます。"
-          },
-          "attachment": {
-            "type": "image",
-            "name": "feature_userdict"
-          }
-        },
-        {
-          "text": {
-            "hanji": "這兩種紀錄攏會當佇「詞庫」頁面查看、匯入、匯出抑是刪除，嘛會當分別關閉。",
-            "tailo": "Tsit nn̄g tsióng kì-lio̍k lóng ē-tàng tī \"sû-khòo\" ia̍h-bīn tsha-khuànn, huē-ji̍p, huē-tshut ah-sī san-tû, mā ē-tàng hun-pia̍t kuainn--khí-lâi.",
-            "poj": "Chit nn̄g chióng kì-lio̍k lóng ē-tàng tī \"sû-khò͘\" ia̍h-bīn chha-khoàⁿ, hōe-ji̍p, hōe-chhut ah-sī san-tû, mā ē-tàng hun-pia̍t koaiⁿ--khí-lâi.",
-            "en": "You can view, import, export, delete, or separately disable both types of records on the Dictionary page.",
-            "ja": "どちらの記録も「辞書」ページで確認、インポート、エクスポート、削除でき、それぞれ個別に無効化できます。"
-          }
-        }
-      ]
-    },
-    {
-      "id": "variant",
-      "title": {
-        "hanji": "異用字開關",
-        "tailo": "Ī iōng-jī khai-kuan",
-        "poj": "Ī iōng-jī khai-koan",
-        "en": "Variant-character toggle",
-        "ja": "異用字スイッチ"
-      },
-      "icon": {
-        "ios": "arrow.left.arrow.right",
-        "android": "switches_24"
-      },
-      "paragraphs": [
-        {
-          "text": {
-            "hanji": "依據教典 ê 資料標示台語異用字，譬論：「人」⭢「儂」、「生」⭢「青」。這个開關預設是關起來，有需要才開。",
-            "tailo": "I-kì kàu-tián ê tsu-liāu phiau-sī tâi-gí ī iōng-jī, phì-lūn:\"jîn\"->\"lâng\",\"sing\"->\"tshenn\". Tsit ê khai-kuan ī-siat sī kuainn--khí-lâi, ū su-iàu tsâi khui.",
-            "poj": "I-kì kàu-tián ê chu-liāu phiau-sī tâi-gí ī iōng-jī, phì-lūn:\"jîn\"->\"lâng\",\"seng\"->\"chheⁿ\". Chit ê khai-koan ī-siat sī koaiⁿ--khí-lâi, ū su-iàu châi khui.",
-            "en": "Marks Taiwanese variant characters based on data from the MOE Dictionary, e.g. “人” ⭢ “儂,” “生” ⭢ “青.” This toggle is off by default; turn it on only if needed.",
-            "ja": "教典（教育部辞典）のデータに基づいて台湾語の異用字を示します。例：「人」⭢「儂」、「生」⭢「青」。このスイッチは既定でオフで、必要なときだけオンにします。"
+            "hanji": "「異用字」會標示教典 ê 異用字，像「人」→「儂」。預設是關 ê。",
+            "tailo": "“Ī iōng-jī” ē piau-sī Kàu-tián ê ī-iōng-jī, tshiūnn “人” → “儂”. Ī-siat sī kuainn--ê.",
+            "poj": "“Ī iōng-jī” ē piau-sī Kàu-tián ê ī-iōng-jī, chhiūⁿ “人” → “儂”. Ī-siat sī koaiⁿ--ê.",
+            "en": "Variant Characters marks MOE variant forms, such as 人 → 儂. It's off by default.",
+            "ja": "「異体字」は教典の異体字を表示します（例：人 → 儂）。既定ではオフです。"
           },
           "attachment": {
             "type": "link",
@@ -606,11 +528,76 @@
         },
         {
           "text": {
-            "hanji": "因為教典異用字 ê 資料猶未齊全，有 ê 字可能無標示著，若有發現請回報予我知。",
-            "tailo": "In-uī kàu-tián ī iōng-jī ê tsu-liāu ah-buē tsiâu-tsn̂g, ū ê jī khó-lîng bô phiau-sī tio̍h, nā-ū huat-hiān tshiánn huê-pò hōo--guá tsai.",
-            "poj": "In-ūi kàu-tián ī iōng-jī ê chu-liāu ah-bōe chiâu-chn̂g, ū ê jī khó-lêng bô phiau-sī tio̍h, nā-ū hoat-hiān chhiáⁿ hôe-pò hō͘--góa chai.",
-            "en": "Because the MOE Dictionary's variant-character data is not yet complete, some characters may not be marked. If you notice any, please report them to me.",
-            "ja": "教典の異用字データはまだ完全ではないため、一部の字が示されないことがあります。お気づきの際は私まで報告してください。"
+            "hanji": "「辭典管理」頁 ê「揣字」，會使用漢字抑是羅馬字查辭典有收啥物詞。",
+            "tailo": "“Sû-tián kuán-lí” ia̍h ê “Tshuē jī”, ē-sái iōng hàn-jī ia̍h-sī lô-má-jī tshâ sû-tián ū siu siánn-mih sû.",
+            "poj": "“Sû-tián koán-lí” ia̍h ê “Chhōe jī”, ē-sái iōng hàn-jī ia̍h-sī lô-má-jī chhâ sû-tián ū siu siáⁿ-mih sû.",
+            "en": "Search in Manage Dictionaries to look up any word by Hanji or romanization.",
+            "ja": "「辞書の管理」の検索で、漢字またはローマ字から収録語を調べられます。"
+          },
+          "attachment": {
+            "type": "image",
+            "name": "dict_search"
+          }
+        },
+        {
+          "text": {
+            "hanji": "看著有問題 ê 詞，請回報。",
+            "tailo": "Khuànn-tio̍h ū būn-tê ê sû, tshiánn huê-pò.",
+            "poj": "Khòaⁿ-tio̍h ū būn-tê ê sû, chhiáⁿ hôe-pò.",
+            "en": "If a word looks wrong, please report it.",
+            "ja": "おかしな語を見つけたら、お知らせください。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "customDictionary",
+      "title": {
+        "hanji": "自訂詞庫",
+        "tailo": "Tsū-tīng-sû-khòo",
+        "poj": "Chū-tēng-sû-khò͘",
+        "en": "Custom Dictionary",
+        "ja": "カスタム辞書"
+      },
+      "icon": {
+        "ios": "text.badge.plus",
+        "android": "ic_person_storage"
+      },
+      "paragraphs": [
+        {
+          "text": {
+            "hanji": "辭典無 ê 詞，會使家己加：「詞庫」>「自訂詞庫」揤 ＋，輸入羅馬字佮漢字。",
+            "tailo": "Sû-tián bô ê sû, ē-sái ka-kī ka: “Sû-khòo” > “Tsū-tīng-sû-khòo” tshi̍h ＋, su-ji̍p lô-má-jī kah hàn-jī.",
+            "poj": "Sû-tián bô ê sû, ē-sái ka-kī ka: “Sû-khò͘” > “Chū-tēng-sû-khò͘” chhi̍h ＋, su-ji̍p lô-má-jī kah hàn-jī.",
+            "en": "Add words the dictionaries don't have: in Dictionary > Custom Dictionary, tap + and enter the romanization and the Hanji.",
+            "ja": "辞書にない語は自分で追加できます。「辞書」>「カスタム辞書」で ＋ をタップし、ローマ字と漢字を入力します。"
+          }
+        },
+        {
+          "text": {
+            "hanji": "嘛會使匯入 CSV：第 1 欄羅馬字，第 2 欄漢字，免標題。",
+            "tailo": "Mā ē-sái huē-ji̍p CSV: tē 1 nuâ lô-má-jī, tē 2 nuâ hàn-jī, bián piau-tê.",
+            "poj": "Mā ē-sái hōe-ji̍p CSV: tē 1 nôa lô-má-jī, tē 2 nôa hàn-jī, bián piau-tê.",
+            "en": "You can also import a CSV file: romanization in column 1, Hanji in column 2, no header.",
+            "ja": "CSV の読み込みもできます。1列目にローマ字、2列目に漢字。見出し行は不要です。"
+          }
+        },
+        {
+          "text": {
+            "hanji": "齒盤會記你揀過 ê 詞（詞頻紀錄）佮拍過 ê 詞句（詞句紀錄），定用 ê 會排較頭前。佇「詞庫」>「學習紀錄」會使看、改、刪除。",
+            "tailo": "Khí-puânn ē kì lí kíng--kuè ê sû (Sû-pîn kì-lio̍k) kah phah--kuè ê sû-kù (Sû-kù kì-lio̍k), tiānn iōng ê ē pâi khah thâu-tsîng. Tī “Sû-khòo” > “Ha̍k-si̍p kì-lio̍k” ē-sái khuànn, kái, san-tû.",
+            "poj": "Khí-pôaⁿ ē kì lí kéng--kòe ê sû (Sû-pîn kì-lio̍k) kah phah--kòe ê sû-kù (Sû-kù kì-lio̍k), tiāⁿ iōng ê ē pâi khah thâu-chêng. Tī “Sû-khò͘” > “Ha̍k-si̍p kì-lio̍k” ē-sái khòaⁿ, kái, san-tû.",
+            "en": "The keyboard learns the words you pick (Word Frequency) and the phrases you build (Phrases), and moves them up the list. Review, edit, or delete them in Dictionary > Learning Records.",
+            "ja": "選んだ語（単語頻度）と入力した語句（フレーズ）を学習し、よく使うものを上位に表示します。「辞書」>「学習記録」で確認・編集・削除できます。"
+          }
+        },
+        {
+          "text": {
+            "hanji": "欲共學過 ê 詞加入自訂詞庫：iOS 共彼項紀錄向正爿滑，Android 揤彼項紀錄 ê ＋。有漢字 ê 紀錄才會當加。",
+            "tailo": "Beh kā ha̍k--kuè ê sû ka-ji̍p tsū-tīng-sû-khòo: iOS kā hit hāng kì-lio̍k ǹg tsiànn-pîng ku̍t, Android tshi̍h hit hāng kì-lio̍k ê ＋. Ū hàn-jī ê kì-lio̍k tsiah ē-tàng ka.",
+            "poj": "Beh kā ha̍k--kòe ê sû ka-ji̍p chū-tēng-sû-khò͘: iOS kā hit hāng kì-lio̍k ǹg chiàⁿ-pêng ku̍t, Android chhi̍h hit hāng kì-lio̍k ê ＋. Ū hàn-jī ê kì-lio̍k chiah ē-tàng ka.",
+            "en": "To keep a learned word in your Custom Dictionary, swipe right on it on iOS, or tap + next to it on Android. Only records with Hanji can be added.",
+            "ja": "学習した語をカスタム辞書に追加するには、iOS では右にスワイプ、Android では ＋ をタップします。漢字のある記録だけ追加できます。"
           }
         }
       ]
@@ -618,11 +605,11 @@
     {
       "id": "appearance",
       "title": {
-        "hanji": "外觀設定",
-        "tailo": "Guā-kuan siat-tīng",
-        "poj": "Gōa-koan siat-tēng",
-        "en": "Appearance settings",
-        "ja": "外観設定"
+        "hanji": "字型佮外觀",
+        "tailo": "Jī-hîng kah guā-kuan",
+        "poj": "Jī-hêng kah gōa-koan",
+        "en": "Fonts and Appearance",
+        "ja": "フォントと外観"
       },
       "icon": {
         "ios": "paintbrush",
@@ -631,42 +618,24 @@
       "paragraphs": [
         {
           "text": {
-            "hanji": "會當調整齒盤 ê 字型、色水、揤鈕尺寸佮形體，效果會顯示佇下跤 ê 齒盤預覽。",
-            "tailo": "Ē-tàng tiâu-tsíng khí-puânn ê jī-hîng, sik-tsuí, tshi̍h-liú tshùn-tshioh kah hîng-thé, hāu-kó ē hián-sī tī ē-kha ê khí-puânn ī-lám.",
-            "poj": "Ē-tàng tiâu-chéng khí-pôaⁿ ê jī-hêng, sek-chúi, chhi̍h-liú chhùn-chhioh kah hêng-thé, hāu-kó ē hián-sī tī ē-kha ê khí-pôaⁿ ī-lám.",
-            "en": "Adjust the keyboard's font, colors, key dimensions, and shape. The preview below shows your changes.",
-            "ja": "キーボードのフォント、色、キーの寸法や形を調整できます。変更内容は下のプレビューに表示されます。"
+            "hanji": "字型有 5 種：系統、粉圓、芫荽、源樣明體、源樣烏體。後 4 種支援台語用字，系統字型有 ê 字顯示袂出來。佇「設定」>「字型設定」換。",
+            "tailo": "Jī-hîng ū 5 tsióng: Hē-thóng, Hún-înn, Ian-sui, Guân iūnn bîng-thé, Guân iūnn oo thé. Āu 4 tsióng tsi-uān Tâi-gí iōng-jī, hē-thóng jī-hîng ū-ê jī hián-sī buē tshut-lâi. Tī “Siat-tīng” > “Jī-hîng siat-tīng” uānn.",
+            "poj": "Jī-hêng ū 5 chióng: Hē-thóng, Hún-îⁿ, Ian-sui, Goân iūⁿ bêng-thé, Goân iūⁿ o͘ thé. Āu 4 chióng chi-oān Tâi-gí iōng-jī, hē-thóng jī-hêng ū-ê jī hián-sī bōe chhut-lâi. Tī “Siat-tēng” > “Jī-hêng siat-tēng” ōaⁿ.",
+            "en": "Choose from five fonts: System, Open Huninn, Iansui, GenYoMin, and GenYoGothic. The last four support Taiwanese characters that the system font may not show. Change it in Settings > Font.",
+            "ja": "フォントは5種類：システム、Open Huninn、Iansui、GenYoMin、GenYoGothic。後の4つは台湾語の文字に対応し、システムフォントで表示できない字も表示できます。「設定」>「フォント」で変更します。"
+          }
+        },
+        {
+          "text": {
+            "hanji": "「主題」頁會使調色水、鍵 ê 大細佮形狀，逐項攏會使恢復預設。",
+            "tailo": "“Tsú-tê” ia̍h ē-sái tiâu sik-tsuí, kiān ê tuā-sè kah hîng-tsōng, ta̍k hāng lóng ē-sái hue-ho̍k ī-siat.",
+            "poj": "“Chú-tê” ia̍h ē-sái tiâu sek-chúi, kiān ê tōa-sè kah hêng-chōng, ta̍k hāng lóng ē-sái hoe-ho̍k ī-siat.",
+            "en": "On the Theme tab, adjust colors and the size and shape of the keys. Each setting can be reset.",
+            "ja": "「テーマ」タブでは色やキーの大きさ・形を調整でき、項目ごとに既定に戻せます。"
           },
           "attachment": {
             "type": "image",
             "name": "appearance_preview"
-          }
-        },
-        {
-          "text": {
-            "hanji": "字型有 5 種通好揀：系統預設、粉圓、芫荽、源樣明體、源樣烏體。後 4 種是專門支援台語特殊字符 ê 開源字型，若揀系統預設，有 ê 漢字無法度顯示。",
-            "tailo": "Jī-hîng ū 5 tsíng thang-hó kíng: hē-thóng ī-siat, hún-înn, ian-sui, guân iūnn bîng-thé, guân iūnn oo thé. Āu 4 tsíng sī tsuan-bûn tsi-uān tâi-gí ti̍k-sû jī hû ê khai-guân jī-hîng, nā kíng hē-thóng ī-siat, ū ê hàn-jī bô-huat-tōo hián-sī.",
-            "poj": "Jī-hêng ū 5 chéng thang-hó kéng: hē-thóng ī-siat, hún-îⁿ, ian-sui, goân iūⁿ bêng-thé, goân iūⁿ o͘ thé. Āu 4 chéng sī choan-bûn chi-oān tâi-gí te̍k-sû jī hû ê khai-goân jī-hêng, nā kéng hē-thóng ī-siat, ū ê hàn-jī bô-hoat-tō͘ hián-sī.",
-            "en": "There are 5 fonts to choose from: System default, Huninn, Iansui, GenYoMin, and GenYoGothic. The latter 4 are open-source fonts that specifically support Taiwanese special characters; if you choose the system default, some Hanji may not display.",
-            "ja": "フォントは5種類から選べます：システム既定、粉圓（Huninn）、芫荽（Iansui）、源樣明體（GenYoMin）、源樣烏體（GenYoGothic）。後ろの4つは台湾語の特殊文字に対応したオープンソースフォントです。システム既定を選ぶと、一部の漢字が表示されないことがあります。"
-          }
-        },
-        {
-          "text": {
-            "hanji": "會當分別調整齒盤背景、揤鈕、文字佮候選詞列 ê 色水。每一个項目攏會當單獨恢復預設值；「恢復預設設定」會恢復全部外觀設定。",
-            "tailo": "Ē-tàng hun-pia̍t tiâu-tsíng khí-puânn puē-kíng, tshi̍h-liú, bûn-jī kah hāu-suán sû lia̍t ê sik-tsuí. Ta̍k tsi̍t ê hāng-bo̍k lóng ē-tàng tuann-to̍k hue-ho̍k ī-siat ta̍t; \"hue-ho̍k ī-siat siat-tīng\" ē hue-ho̍k tsuân-pōo guā-kuan siat-tīng.",
-            "poj": "Ē-tàng hun-pia̍t tiâu-chéng khí-pôaⁿ pōe-kéng, chhi̍h-liú, bûn-jī kah hāu-soán sû lia̍t ê sek-chúi. Ta̍k chi̍t ê hāng-bo̍k lóng ē-tàng toaⁿ-to̍k hoe-ho̍k ī-siat ta̍t; \"hoe-ho̍k ī-siat siat-tēng\" ē hoe-ho̍k choân-pō͘ gōa-koan siat-tēng.",
-            "en": "Adjust the keyboard background, keys, text, and candidate bar separately. Each control has its own reset action; “Reset to Defaults” restores the entire appearance.",
-            "ja": "キーボード背景、キー、文字、候補バーの色を個別に調整できます。各項目は個別にリセットでき、「既定値に戻す」では外観全体を元に戻します。"
-          }
-        },
-        {
-          "text": {
-            "hanji": "會當用滑桿調整齒盤、揤鈕佮候選詞 ê 尺寸佮外觀。",
-            "tailo": "Ē-tàng iōng ku̍t-kuáinn tiâu-tsíng khí-puânn, tshi̍h-liú kah hāu-suán sû ê tshùn-tshioh kah guā-kuan.",
-            "poj": "Ē-tàng iōng ku̍t-koáiⁿ tiâu-chéng khí-pôaⁿ, chhi̍h-liú kah hāu-soán sû ê chhùn-chhioh kah gōa-koan.",
-            "en": "Use the sliders to adjust the dimensions and appearance of the keyboard, keys, and candidates.",
-            "ja": "スライダーでキーボード、キー、候補の寸法や外観を調整できます。"
           }
         }
       ]
@@ -674,11 +643,11 @@
     {
       "id": "dataManagement",
       "title": {
-        "hanji": "資料管理",
-        "tailo": "Tsu-liāu kuán-lí",
-        "poj": "Chu-liāu koán-lí",
-        "en": "Data management",
-        "ja": "データ管理"
+        "hanji": "資料佮隱私",
+        "tailo": "Tsu-liāu kah ún-su",
+        "poj": "Chu-liāu kah ún-su",
+        "en": "Data and Privacy",
+        "ja": "データとプライバシー"
       },
       "icon": {
         "ios": "checkmark.shield",
@@ -687,11 +656,11 @@
       "paragraphs": [
         {
           "text": {
-            "hanji": "自訂詞、詞頻佮詞關聯紀錄攏儉佇你 ê 裝置內底，台語齒盤袂共內容送去網路。刣掉 App 可能會刣掉這寡資料，換機進前請先備份。",
-            "tailo": "Tsū-tīng-sû, sû pîn kah sû kuan-liân kì-lio̍k lóng khiām tī lí ê tsong-tì lāi-té, tâi-gí khí-puânn buē kā luē-iông sàng khì bāng-lōo. Thâi-tiāu App khó-lîng ē thâi-tiāu tsit kuá tsu-liāu, uānn ki tsìn-tsîng tshiánn sian pī-hūn.",
-            "poj": "Chū-tēng-sû, sû pîn kah sû koan-liân kì-lio̍k lóng khiām tī lí ê chong-tì lāi-té, tâi-gí khí-pôaⁿ bōe kā lōe-iông sàng khì bāng-lō͘. Thâi-tiāu App khó-lêng ē thâi-tiāu chit kóa chu-liāu, ōaⁿ ki chìn-chêng chhiáⁿ sian pī-hūn.",
-            "en": "Custom words, frequency records, and association records stay on your device. TaigiKeyboard does not send their contents over the network. Deleting the app may remove this data, so back it up before changing phones.",
-            "ja": "カスタム単語、単語頻度、単語連携の記録は端末内に保存され、ネットワークには送信されません。アプリを削除すると失われる場合があるため、機種変更の前にバックアップしてください。"
+            "hanji": "自訂詞佮學習紀錄攏囥佇手機內底，袂送去網路。",
+            "tailo": "Tsū-tīng-sû kah ha̍k-si̍p kì-lio̍k lóng khǹg tī tshiú-ki lāi-té, buē sàng khì bāng-lōo.",
+            "poj": "Chū-tēng-sû kah ha̍k-si̍p kì-lio̍k lóng khǹg tī chhiú-ki lāi-té, bōe sàng khì bāng-lō͘.",
+            "en": "Custom words and learning records stay on your phone and are never sent over the network.",
+            "ja": "カスタム語と学習記録は端末内に保存され、ネットワークには送信されません。"
           },
           "attachment": {
             "type": "image",
@@ -700,29 +669,20 @@
         },
         {
           "text": {
-            "hanji": "匯出檔案可能包含私人內容。分享進前請先檢查，刣掉電話、身分證號碼佮其他敏感資料。",
-            "tailo": "Huē-tshut tòng-àn khó-lîng pau-hâm su-jîn luē-iông. Hun-hióng tsìn-tsîng tshiánn sian kiám-tsa, thâi-tiāu tiān-uē, sin-hūn-tsìng hō-bé kah kî-thann bín-kám tsu-liāu.",
-            "poj": "Hōe-chhut tòng-àn khó-lêng pau-hâm su-jîn lōe-iông. Hun-hióng chìn-chêng chhiáⁿ sian kiám-cha, thâi-tiāu tiān-ōe, sin-hūn-chèng hō-bé kah kî-thaⁿ bín-kám chu-liāu.",
-            "en": "Exported files may contain private content. Before sharing one, remove phone numbers, ID numbers, and other sensitive data.",
-            "ja": "エクスポートしたファイルには個人的な内容が含まれる場合があります。共有する前に、電話番号、身分証番号などの機密情報を削除してください。"
+            "hanji": "刣掉 App，資料會無去。換手機進前，佇「詞庫」>「備份復原」匯出；iOS 佮 Android 攏會使匯入。",
+            "tailo": "Thâi-tiāu App, tsu-liāu ē bô--khì. Uānn tshiú-ki tsìn-tsîng, tī “Sû-khòo” > “Pī-hūn ho̍k-guân” huē-tshut; iOS kah Android lóng ē-sái huē-ji̍p.",
+            "poj": "Thâi-tiāu App, chu-liāu ē bô--khì. Ōaⁿ chhiú-ki chìn-chêng, tī “Sû-khò͘” > “Pī-hūn ho̍k-goân” hōe-chhut; iOS kah Android lóng ē-sái hōe-ji̍p.",
+            "en": "Deleting the app deletes this data. Before switching phones, export it in Dictionary > Backup and Restore; a backup imports on iOS or Android.",
+            "ja": "アプリを削除するとデータも消えます。機種変更の前に「辞書」>「バックアップと復元」で書き出してください。iOS と Android のどちらでも読み込めます。"
           }
         },
         {
           "text": {
-            "hanji": "完整備份包含自訂詞、詞頻佮詞關聯紀錄，會當佇 iOS 佮 Android 匯入。",
-            "tailo": "Uân-tsíng pī-hūn pau-hâm tsū-tīng-sû, sû pîn kah sû kuan-liân kì-lio̍k, ē-tàng tī iOS kah Android huē-ji̍p.",
-            "poj": "Oân-chéng pī-hūn pau-hâm chū-tēng-sû, sû pîn kah sû koan-liân kì-lio̍k, ē-tàng tī iOS kah Android hōe-ji̍p.",
-            "en": "A full backup contains custom words, frequency records, and association records, and can be imported on iOS or Android.",
-            "ja": "完全バックアップには、カスタム単語、単語頻度、単語連携の記録が含まれ、iOS と Android のどちらでもインポートできます。"
-          }
-        },
-        {
-          "text": {
-            "hanji": "資料有變動了後，請重新匯出備份檔案。",
-            "tailo": "Tsu-liāu ū piàn-tōng liáu-āu, tshiánn tîng-sin huē-tshut pī-hūn tòng-àn.",
-            "poj": "Chu-liāu ū piàn-tōng liáu-āu, chhiáⁿ tîng-sin hōe-chhut pī-hūn tòng-àn.",
-            "en": "Export a new backup after your data changes.",
-            "ja": "データを変更した後は、新しいバックアップを書き出してください。"
+            "hanji": "資料改過就重新匯出。分享備份檔進前，先檢查有無私人資料。",
+            "tailo": "Tsu-liāu kái--kuè tō tiông-sin huē-tshut. Hun-hióng pī-hūn tóng-àn tsìn-tsîng, sing kiám-tsa ū-bô su-jîn tsu-liāu.",
+            "poj": "Chu-liāu kái--kòe tō tiông-sin hōe-chhut. Hun-hióng pī-hūn tóng-àn chìn-chêng, seng kiám-cha ū-bô su-jîn chu-liāu.",
+            "en": "Export again after changes. Before sharing a backup, check it for private information.",
+            "ja": "データを変更したら書き出し直してください。バックアップを共有する前に、個人情報が含まれていないか確認してください。"
           }
         }
       ]
@@ -743,11 +703,11 @@
       "paragraphs": [
         {
           "text": {
-            "hanji": "「台語通用轉換器」是我做 ê 線頂家私，會使共白話字、台羅佮方音符號互相轉換，嘛會使一改共聲調數字轉做聲調符號。",
-            "tailo": "\"Tâi-gí thong-iōng tsuán-uānn khì\" sī guá tsò ê suànn-tíng ke-si, ē-sái kā pe̍h-uē-jī, tâi-lô kah hong-im-hû-hō hōo-siong tsuán-uānn, mā ē-sái tsi̍t kái kā siann-tiāu sòo-jī tńg tsò-siann tiāu hû-hō.",
-            "poj": "\"Tâi-gí thong-iōng choán-ōaⁿ khì\" sī góa chò ê sòaⁿ-téng ke-si, ē-sái kā pe̍h-ōe-jī, tâi-lô kah hong-im-hû-hō hō͘-siong choán-ōaⁿ, mā ē-sái chi̍t kái kā siaⁿ-tiāu sò͘-jī tńg chò-siaⁿ tiāu hû-hō.",
-            "en": "The “Taigi Universal Converter” is an online tool I made; it can convert between Pe̍h-ōe-jī, Tâi-lô, and Taiwanese Phonetic Symbols, and can also convert tone numbers to tone marks in one go.",
-            "ja": "「台語汎用コンバーター」は私が作ったオンラインツールで、白話字・台羅・方音符号を相互に変換でき、声調数字を声調記号へまとめて変換することもできます。"
+            "hanji": "線頂工具：白話字、台羅、方音符號互相轉換，聲調數字一擺轉做符號。",
+            "tailo": "Suànn-tíng kang-kū: Pe̍h-uē-jī, Tâi-lô, Hong-im-hû-hō hōo-siong tsuán-uānn, siann-tiāu sòo-jī tsi̍t-pái tsuán-tsò hû-hō.",
+            "poj": "Sòaⁿ-téng kang-kū: Pe̍h-ōe-jī, Tâi-lô, Hong-im-hû-hō hō͘-siong choán-ōaⁿ, siaⁿ-tiāu sò͘-jī chi̍t-pái choán-chò hû-hō.",
+            "en": "An online tool that converts between Pe̍h-ōe-jī, Tâi-lô, and Phonetic Symbols, and turns tone numbers into marks in one step.",
+            "ja": "白話字・台羅・方音符号を相互に変換し、声調数字をまとめて声調記号にするオンラインツールです。"
           },
           "attachment": {
             "type": "link",
@@ -763,20 +723,11 @@
         },
         {
           "text": {
-            "hanji": "這个轉換器佮台語齒盤用相仝 ê 核心，所以轉換 ê 結果佮齒盤拍出來 ê 攏仝款。若拍字 ê 時陣對聲調抑是拼法有問題，嘛會使去網站比較看覓。",
-            "tailo": "Tsit ê tsuán-uānn khì kah tâi-gí khí-puânn iōng sio-kâng ê hi̍k-sim, sóo-í tsuán-uānn ê kiat-kó kah khí-puânn phah-tshut lâi ê láng kāng-khuán. Nā phah-jī ê sî-sūn tuì siann-tiāu ah-sī ping-huat ū-būn-tê, mā ē-sái khì bāng-tsām pí-kàu khuànn-māi.",
-            "poj": "Chit ê choán-ōaⁿ khì kah tâi-gí khí-pôaⁿ iōng sio-kâng ê he̍k-sim, só͘-í choán-ōaⁿ ê kiat-kó kah khí-pôaⁿ phah-chhut lâi ê láng kāng-khoán. Nā phah-jī ê sî-sūn tùi siaⁿ-tiāu ah-sī peng-hoat ū-būn-tê, mā ē-sái khì bāng-chām pí-kàu khòaⁿ-māi.",
-            "en": "This converter uses the same core as TaigiKeyboard, so the conversion results match what the keyboard produces. If you have a question about a tone or spelling while typing, you can compare on the website.",
-            "ja": "このコンバーターは台語キーボードと同じコアを使っているため、変換結果はキーボードで打ったものと同じです。入力中に声調や綴りに疑問があれば、サイトで照らし合わせることもできます。"
-          }
-        },
-        {
-          "text": {
-            "hanji": "若發現轉換結果有毋著 ê 所在，請共我講，我會趕緊修理。",
-            "tailo": "Nā huat-hiān tsuán-uānn kiat-kó ū m̄-tio̍h ê sóo-tsāi, tshiánn kā-guá kóng, guá ē kuánn-kín siu-lí.",
-            "poj": "Nā hoat-hiān choán-ōaⁿ kiat-kó ū m̄-tio̍h ê só͘-chāi, chhiáⁿ kā-góa kóng, góa ē kóaⁿ-kín siu-lí.",
-            "en": "If you find anything wrong with the conversion results, please tell me and I'll fix it right away.",
-            "ja": "変換結果に誤りを見つけたら、私に教えてください。すぐに修正します。"
+            "hanji": "佮齒盤用仝一个核心，結果仝款。看著有毋著，請共我講。",
+            "tailo": "Kah khí-puânn iōng kāng tsi̍t ê hi̍k-sim, kiat-kó kāng-khuán. Khuànn-tio̍h ū m̄-tio̍h, tshiánn kā guá kóng.",
+            "poj": "Kah khí-pôaⁿ iōng kāng chi̍t ê he̍k-sim, kiat-kó kāng-khoán. Khòaⁿ-tio̍h ū m̄-tio̍h, chhiáⁿ kā góa kóng.",
+            "en": "It shares the keyboard's engine, so the results match. If something looks wrong, let me know.",
+            "ja": "キーボードと同じエンジンを使うので、結果も同じです。誤りを見つけたらお知らせください。"
           }
         }
       ]
