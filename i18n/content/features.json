@@ -27,8 +27,7 @@
             "images": [
               "input_modes_1",
               "input_modes_2",
-              "input_modes_3",
-              "input_modes_4"
+              "input_modes_3"
             ],
             "interval": 1.5
           }
@@ -170,11 +169,15 @@
         },
         {
           "text": {
-            "hanji": "ㄧ 抑是 ㆪ 頭前 ê 齒音會變顎化音：ㄗ→ㄐ、ㄘ→ㄑ、ㄙ→ㄒ、ㆡ→ㆢ。拍 ㄗㆪ 會變做 ㄐㆪ（錢）。",
-            "tailo": "ㄧ ia̍h-sī ㆪ thâu-tsîng ê khí-im ē piàn go̍k-huà-im: ㄗ→ㄐ, ㄘ→ㄑ, ㄙ→ㄒ, ㆡ→ㆢ. Phah ㄗㆪ ē piàn-tsò ㄐㆪ (錢).",
-            "poj": "ㄧ ia̍h-sī ㆪ thâu-chêng ê khí-im ē piàn go̍k-hòa-im: ㄗ→ㄐ, ㄘ→ㄑ, ㄙ→ㄒ, ㆡ→ㆢ. Phah ㄗㆪ ē piàn-chò ㄐㆪ (錢).",
-            "en": "Before ㄧ or ㆪ, dental initials become palatal: ㄗ→ㄐ, ㄘ→ㄑ, ㄙ→ㄒ, ㆡ→ㆢ. ㄗㆪ becomes ㄐㆪ (錢).",
-            "ja": "ㄧ・ㆪ の前の歯音は口蓋化音になります：ㄗ→ㄐ、ㄘ→ㄑ、ㄙ→ㄒ、ㆡ→ㆢ。ㄗㆪ は ㄐㆪ（錢）になります。"
+            "hanji": "ㄧ 抑是 ㆪ 頭前 ê 齒音會變顎化音：ㄗ→ㄐ、ㄘ→ㄑ、ㄙ→ㄒ、ㆡ→ㆢ。拍 ㄗㄧㄨ 會變做 ㄐㄧㄨ（就）。",
+            "tailo": "ㄧ ia̍h-sī ㆪ thâu-tsîng ê khí-im ē piàn go̍k-huà-im: ㄗ→ㄐ, ㄘ→ㄑ, ㄙ→ㄒ, ㆡ→ㆢ. Phah ㄗㄧㄨ ē piàn-tsò ㄐㄧㄨ (就).",
+            "poj": "ㄧ ia̍h-sī ㆪ thâu-chêng ê khí-im ē piàn go̍k-hòa-im: ㄗ→ㄐ, ㄘ→ㄑ, ㄙ→ㄒ, ㆡ→ㆢ. Phah ㄗㄧㄨ ē piàn-chò ㄐㄧㄨ (就).",
+            "en": "Before ㄧ or ㆪ, dental initials become palatal: ㄗ→ㄐ, ㄘ→ㄑ, ㄙ→ㄒ, ㆡ→ㆢ. ㄗㄧㄨ becomes ㄐㄧㄨ (就).",
+            "ja": "ㄧ・ㆪ の前の歯音は口蓋化音になります：ㄗ→ㄐ、ㄘ→ㄑ、ㄙ→ㄒ、ㆡ→ㆢ。ㄗㄧㄨ は ㄐㄧㄨ（就）になります。"
+          },
+          "attachment": {
+            "type": "image",
+            "name": "tps_correct_1"
           }
         },
         {
@@ -184,6 +187,10 @@
             "poj": "Kāng chi̍t lia̍p kiān, khǹg tī im-chiat thâu sī siaⁿ-bó, khǹg tī bóe sī ūn-bóe: ㄇ→ㆬ, ㄋ→ㄣ, ㄫ→ㆭ, ㄅ→ㆴ, ㄉ→ㆵ, ㄍ→ㆻ, ㄏ→ㆷ. Phah ㄙㄧㄇ ē piàn-chò ㄒㄧㆬ (心).",
             "en": "One key works as an initial at the start of a syllable and as a final at the end: ㄇ→ㆬ, ㄋ→ㄣ, ㄫ→ㆭ, ㄅ→ㆴ, ㄉ→ㆵ, ㄍ→ㆻ, ㄏ→ㆷ. ㄙㄧㄇ becomes ㄒㄧㆬ (心).",
             "ja": "同じキーが、音節の頭では声母、末尾では韻尾になります：ㄇ→ㆬ、ㄋ→ㄣ、ㄫ→ㆭ、ㄅ→ㆴ、ㄉ→ㆵ、ㄍ→ㆻ、ㄏ→ㆷ。ㄙㄧㄇ は ㄒㄧㆬ（心）になります。"
+          },
+          "attachment": {
+            "type": "image",
+            "name": "tps_correct_2"
           }
         },
         {
@@ -346,6 +353,15 @@
             "poj": "Chhi̍h-tiâu kang-kū-lia̍t ê khí-pôaⁿ kiān, kéng “Tò-chhiú” ia̍h-sī “Chiàⁿ-chhiú”, kiān ē sóa khì hit pêng.",
             "en": "Touch and hold the keyboard button on the toolbar, then choose Left hand or Right hand. The keys move to that side.",
             "ja": "ツールバーのキーボードボタンを長押しして「左手」か「右手」を選ぶと、キーがその側に寄ります。"
+          },
+          "attachment": {
+            "type": "slideshow",
+            "images": [
+              "one_handed_1",
+              "one_handed_2",
+              "one_handed_3"
+            ],
+            "interval": 1.5
           }
         },
         {
@@ -389,6 +405,10 @@
             "poj": "Hàn-Lô tùi-èng: hàn-jī kah lô-má-jī chò-hóe hián-sī, iōng chhiat-ōaⁿ kiān koat-tēng sàng-chhut tó chi̍t ê.",
             "en": "Hanji–Romanization Pairing: Hanji and romanization appear together, and the switch key decides which one is entered.",
             "ja": "漢字とローマ字の対応：漢字とローマ字を一緒に表示し、切り替えキーでどちらを入力するか決めます。"
+          },
+          "attachment": {
+            "type": "image",
+            "name": "display_mode_1"
           }
         },
         {
@@ -398,6 +418,10 @@
             "poj": "Hàn-Lô lām: hàn-jī kah lô-má-jī hun-chò nn̄g keh, kéng tó chi̍t keh tō sàng-chhut tó chi̍t chióng.",
             "en": "Hanji with Romanization: Hanji and romanization appear as separate candidates; tap either one to enter it.",
             "ja": "漢字＋ローマ字：漢字とローマ字を別々の候補として並べ、選んだほうを入力します。"
+          },
+          "attachment": {
+            "type": "image",
+            "name": "display_mode_2"
           }
         },
         {
@@ -407,6 +431,10 @@
             "poj": "Lô-má-jī: kan-na hián-sī lô-má-jī, sàng-chhut lô-má-jī.",
             "en": "Romanization Only: only the romanization is shown and entered.",
             "ja": "ローマ字のみ：ローマ字だけを表示し、入力します。"
+          },
+          "attachment": {
+            "type": "image",
+            "name": "display_mode_3"
           }
         },
         {
@@ -623,6 +651,17 @@
             "poj": "Jī-hêng ū 5 chióng: Hē-thóng, Hún-îⁿ, Ian-sui, Goân iūⁿ bêng-thé, Goân iūⁿ o͘ thé. Āu 4 chióng chi-oān Tâi-gí iōng-jī, hē-thóng jī-hêng ū-ê jī hián-sī bōe chhut-lâi. Tī “Siat-tēng” > “Jī-hêng siat-tēng” ōaⁿ.",
             "en": "Choose from five fonts: System, Open Huninn, Iansui, GenYoMin, and GenYoGothic. The last four support Taiwanese characters that the system font may not show. Change it in Settings > Font.",
             "ja": "フォントは5種類：システム、Open Huninn、Iansui、GenYoMin、GenYoGothic。後の4つは台湾語の文字に対応し、システムフォントで表示できない字も表示できます。「設定」>「フォント」で変更します。"
+          },
+          "attachment": {
+            "type": "slideshow",
+            "images": [
+              "font_1",
+              "font_2",
+              "font_3",
+              "font_4",
+              "font_5"
+            ],
+            "interval": 1.5
           }
         },
         {
