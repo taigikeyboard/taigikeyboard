@@ -3,11 +3,11 @@
     {
       "id": "inputModes",
       "title": {
-        "hanji": "3 種拍法",
-        "tailo": "3 tsióng phah-huat",
-        "poj": "3 chióng phah-hoat",
-        "en": "Three Ways to Type",
-        "ja": "3つの入力方式"
+        "hanji": "3 種輸入系統",
+        "tailo": "3 tsióng su-ji̍p hē-thóng",
+        "poj": "3 chióng su-ji̍p hē-thóng",
+        "en": "Three Input Systems",
+        "ja": "3つの入力システム"
       },
       "icon": {
         "ios": "keyboard",
@@ -34,20 +34,20 @@
         },
         {
           "text": {
-            "hanji": "白話字佮台羅攏是羅馬字，拼法有淡薄仔無仝：「落雨」白話字寫 lo̍h-hō͘，台羅寫 lo̍h-hōo。毋知欲揀佗一種，就用台羅，伊是教育部 ê 標準。",
-            "tailo": "Pe̍h-uē-jī kah Tâi-lô lóng sī lô-má-jī, ping-huat ū tām-po̍h-á bô kâng: “落雨” Pe̍h-uē-jī siá lo̍h-hō͘, Tâi-lô siá lo̍h-hōo. M̄ tsai beh kíng tó tsi̍t tsióng, tō iōng Tâi-lô, i sī Kàu-io̍k-pōo ê piau-tsún.",
-            "poj": "Pe̍h-ōe-jī kah Tâi-lô lóng sī lô-má-jī, peng-hoat ū tām-po̍h-á bô kâng: “落雨” Pe̍h-ōe-jī siá lo̍h-hō͘, Tâi-lô siá lo̍h-hōo. M̄ chai beh kéng tó chi̍t chióng, tō iōng Tâi-lô, i sī Kàu-io̍k-pō͘ ê piau-chún.",
-            "en": "Pe̍h-ōe-jī and Tâi-lô are both romanizations with small spelling differences: 落雨 is lo̍h-hō͘ in Pe̍h-ōe-jī and lo̍h-hōo in Tâi-lô. Not sure which to choose? Tâi-lô is the Ministry of Education standard.",
-            "ja": "白話字と台羅はどちらもローマ字で、綴りが少し異なります。「落雨」は白話字で lo̍h-hō͘、台羅で lo̍h-hōo。迷ったら、教育部の標準である台羅を選んでください。"
+            "hanji": "台羅 ê 正式名稱是教育部「臺灣台語羅馬字拼音方案」；白話字 ê 歷史較早，19 世紀就開始使用。兩種攏是羅馬字，拼法有淡薄仔無仝：「落雨」白話字寫 lo̍h-hō͘，台羅寫 lo̍h-hōo。",
+            "tailo": "Tâi-lô ê tsìng-sik miâ-tshing sī Kàu-io̍k-pōo “Tâi-uân Tâi-gí Lô-má-jī Phing-im Hong-àn”; Pe̍h-uē-jī ê li̍k-sú khah tsá, 19 sè-kí tō khai-sí sú-iōng. Nn̄g tsióng lóng sī lô-má-jī, ping-huat ū tām-po̍h-á bô kâng: “落雨” Pe̍h-uē-jī siá lo̍h-hō͘, Tâi-lô siá lo̍h-hōo.",
+            "poj": "Tâi-lô ê chèng-sek miâ-chheng sī Kàu-io̍k-pō͘ “Tâi-oân Tâi-gí Lô-má-jī Pheng-im Hong-àn”; Pe̍h-ōe-jī ê le̍k-sú khah chá, 19 sè-kí tō khai-sí sú-iōng. Nn̄g chióng lóng sī lô-má-jī, peng-hoat ū tām-po̍h-á bô kâng: “落雨” Pe̍h-ōe-jī siá lo̍h-hō͘, Tâi-lô siá lo̍h-hōo.",
+            "en": "Tâi-lô's official name is the Ministry of Education's Taiwanese Taigi Romanization System. Pe̍h-ōe-jī is older and has been in use since the 19th century. Both are romanizations with small spelling differences: 落雨 is lo̍h-hō͘ in Pe̍h-ōe-jī and lo̍h-hōo in Tâi-lô.",
+            "ja": "台羅の正式名称は教育部「臺灣台語羅馬字拼音方案」です。白話字はより歴史が古く、19世紀から使われています。どちらもローマ字で、綴りが少し異なります。「落雨」は白話字で lo̍h-hō͘、台羅で lo̍h-hōo。"
           }
         },
         {
           "text": {
-            "hanji": "方音符號有家己 ê 齒盤，拍法佮注音仝款，揣出來 ê 詞佮台羅仝款。",
-            "tailo": "Hong-im-hû-hō ū ka-kī ê khí-puânn, phah-huat kah tsù-im kāng-khuán, tshuē--tshut-lâi ê sû kah Tâi-lô kāng-khuán.",
-            "poj": "Hong-im-hû-hō ū ka-kī ê khí-pôaⁿ, phah-hoat kah chù-im kāng-khoán, chhōe--chhut-lâi ê sû kah Tâi-lô kāng-khoán.",
-            "en": "Phonetic Symbols has its own layout and works like Zhuyin. It finds the same words as Tâi-lô.",
-            "ja": "方音符号には専用のキー配列があり、注音と同じ要領で入力します。候補は台羅と同じです。"
+            "hanji": "方音符號是注音符號系統，毋過仝款愛學台語 ê 聲調。",
+            "tailo": "Hong-im-hû-hō sī tsù-im-hû-hō hē-thóng, m̄-koh kāng-khuán ài o̍h Tâi-gí ê siann-tiāu.",
+            "poj": "Hong-im-hû-hō sī chù-im-hû-hō hē-thóng, m̄-koh kāng-khoán ài o̍h Tâi-gí ê siaⁿ-tiāu.",
+            "en": "Phonetic Symbols is a Zhuyin system. You still need to learn Taiwanese tones.",
+            "ja": "方音符号は注音符号の体系です。ただし、台湾語の声調は覚える必要があります。"
           }
         },
         {
