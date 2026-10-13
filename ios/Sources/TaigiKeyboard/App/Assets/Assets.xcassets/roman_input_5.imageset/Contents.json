@@ -22,13 +22,13 @@
     },
     {
       "appearances" : [{ "appearance" : "luminosity", "value" : "light" }],
-      "filename" : "faq_tone_handling_light@3x.png",
+      "filename" : "roman_input_5_light@3x.png",
       "idiom" : "universal",
       "scale" : "3x"
     },
     {
       "appearances" : [{ "appearance" : "luminosity", "value" : "dark" }],
-      "filename" : "faq_tone_handling_dark@3x.png",
+      "filename" : "roman_input_5_dark@3x.png",
       "idiom" : "universal",
       "scale" : "3x"
     }

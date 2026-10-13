@@ -64,11 +64,11 @@
     {
       "id": "romanInput",
       "title": {
-        "hanji": "聲調佮縮寫",
-        "tailo": "Siann-tiāu kah sok-siá",
-        "poj": "Siaⁿ-tiāu kah sok-siá",
-        "en": "Tones and Shortcuts",
-        "ja": "声調と省略入力"
+        "hanji": "6 種拍法",
+        "tailo": "6 tsióng phah-huat",
+        "poj": "6 chióng phah-hoat",
+        "en": "Six Ways to Type",
+        "ja": "6つの打ち方"
       },
       "icon": {
         "ios": "textformat.abc",
@@ -77,20 +77,61 @@
       "paragraphs": [
         {
           "text": {
-            "hanji": "拍好字母，才拍聲調數字 1 到 8，齒盤會家己換做聲調符號。像 tong2 會變做 tóng，tong5 會變做 tông。",
-            "tailo": "Phah hó jī-bió, tsiah phah siann-tiāu sòo-jī 1 kàu 8, khí-puânn ē ka-kī uānn-tsò siann-tiāu hû-hō. Tshiūnn tong2 ē piàn-tsò tóng, tong5 ē piàn-tsò tông.",
-            "poj": "Phah hó jī-bió, chiah phah siaⁿ-tiāu sò͘-jī 1 kàu 8, khí-pôaⁿ ē ka-kī ōaⁿ-chò siaⁿ-tiāu hû-hō. Chhiūⁿ tong2 ē piàn-chò tóng, tong5 ē piàn-chò tông.",
-            "en": "Type the letters, then a tone number from 1 to 8, and the keyboard adds the tone mark. tong2 becomes tóng, and tong5 becomes tông.",
-            "ja": "字母を打ってから声調数字（1〜8）を打つと、声調記号に変わります。tong2 は tóng、tong5 は tông になります。"
+            "hanji": "聲調會使拍，嘛會使無拍。音節會使拍完整，嘛會使拍一半，抑是干焦拍頭字母。tai5gi2、tai5gi、taigi、taig、tg 攏揣會著台語。",
+            "tailo": "Siann-tiāu ē-sái phah, mā ē-sái bô phah. Im-tsiat ē-sái phah uân-tsíng, mā ē-sái phah tsi̍t-puànn, ia̍h-sī kan-na phah thâu jī-bió. tai5gi2, tai5gi, taigi, taig, tg lóng tshuē ē tio̍h Tâi-gí.",
+            "poj": "Siaⁿ-tiāu ē-sái phah, mā ē-sái bô phah. Im-chiat ē-sái phah oân-chéng, mā ē-sái phah chi̍t-pòaⁿ, ia̍h-sī kan-na phah thâu jī-bió. tai5gi2, tai5gi, taigi, taig, tg lóng chhōe ē tio̍h Tâi-gí.",
+            "en": "Tones are optional. You can type a syllable in full, type part of it, or type just its first letter. tai5gi2, tai5gi, taigi, taig, and tg all find 台語.",
+            "ja": "声調は打っても打たなくてもかまいません。音節は全部打っても、途中まででも、頭文字だけでもかまいません。tai5gi2、tai5gi、taigi、taig、tg のどれでも「台語」が見つかります。"
+          },
+          "attachment": {
+            "type": "slideshow",
+            "images": [
+              "roman_input_1",
+              "roman_input_2",
+              "roman_input_3",
+              "roman_input_4",
+              "roman_input_5"
+            ],
+            "interval": 1.5
           }
         },
         {
           "text": {
-            "hanji": "聲調拍毋著，揤一下刪除鍵，閣拍正確 ê 數字就好。",
-            "tailo": "Siann-tiāu phah m̄-tio̍h, tshi̍h tsi̍t-ē san-tû kiān, koh phah tsìng-khak ê sòo-jī tō hó.",
-            "poj": "Siaⁿ-tiāu phah m̄-tio̍h, chhi̍h chi̍t-ē san-tû kiān, koh phah chèng-khak ê sò͘-jī tō hó.",
-            "en": "Typed the wrong tone? Press Delete once and type the right number.",
-            "ja": "声調を間違えたら、削除キーを1回押して正しい数字を打ち直します。"
+            "hanji": "規句做伙拍嘛會使，齒盤會家己斷音節。拍 guasiunnbehtsiahpng 會揣著我想欲食飯。",
+            "tailo": "Kui kù tsò-hué phah mā ē-sái, khí-puânn ē ka-kī tn̄g im-tsiat. Phah guasiunnbehtsiahpng ē tshuē-tio̍h 我想欲食飯.",
+            "poj": "Kui kù chò-hóe phah mā ē-sái, khí-pôaⁿ ē ka-kī tn̄g im-chiat. Phah guasiunnbehtsiahpng ē chhōe-tio̍h 我想欲食飯.",
+            "en": "You can also type a whole sentence at once, and the keyboard splits the syllables. guasiunnbehtsiahpng finds 我想欲食飯.",
+            "ja": "文をまとめて打つこともでき、音節はキーボードが区切ります。guasiunnbehtsiahpng で「我想欲食飯」が見つかります。"
+          },
+          "attachment": {
+            "type": "image",
+            "name": "roman_continuous"
+          }
+        },
+        {
+          "text": {
+            "hanji": "欲家己斷，就拍連字符。拍 tian 會揣著殿、展，拍 ti-an 就會揣著治安。",
+            "tailo": "Beh ka-kī tn̄g, tō phah liân-jī-hû. Phah tian ē tshuē-tio̍h 殿, 展, phah ti-an tō ē tshuē-tio̍h 治安.",
+            "poj": "Beh ka-kī tn̄g, tō phah liân-jī-hû. Phah tian ē chhōe-tio̍h 殿, 展, phah ti-an tō ē chhōe-tio̍h 治安.",
+            "en": "To split syllables yourself, type a hyphen. tian finds 殿 and 展, while ti-an finds 治安.",
+            "ja": "自分で区切るときはハイフンを打ちます。tian では殿・展が、ti-an では治安が見つかります。"
+          },
+          "attachment": {
+            "type": "slideshow",
+            "images": [
+              "syllable_break_1",
+              "syllable_break_2"
+            ],
+            "interval": 1.5
+          }
+        },
+        {
+          "text": {
+            "hanji": "拍好字母才拍聲調數字，齒盤會換做聲調符號。聲調拍毋著，揤一下刪除鍵閣拍一擺就好。",
+            "tailo": "Phah hó jī-bió tsiah phah siann-tiāu sòo-jī, khí-puânn ē uānn-tsò siann-tiāu hû-hō. Siann-tiāu phah m̄-tio̍h, tshi̍h tsi̍t-ē san-tû kiān koh phah tsi̍t-pái tō hó.",
+            "poj": "Phah hó jī-bió chiah phah siaⁿ-tiāu sò͘-jī, khí-pôaⁿ ē ōaⁿ-chò siaⁿ-tiāu hû-hō. Siaⁿ-tiāu phah m̄-tio̍h, chhi̍h chi̍t-ē san-tû kiān koh phah chi̍t-pái tō hó.",
+            "en": "Type a tone number after the letters, and the keyboard turns it into a tone mark. Wrong tone? Press Delete once and type it again.",
+            "ja": "字母のあとに声調数字を打つと、声調記号に変わります。間違えたら削除キーを1回押して打ち直します。"
           },
           "attachment": {
             "type": "slideshow",
@@ -100,37 +141,6 @@
               "roman_tone_3"
             ],
             "interval": 1.5
-          }
-        },
-        {
-          "text": {
-            "hanji": "聲調會使無拍，嘛會使干焦拍逐字 ê 頭一个字母。拍 tai5gi2、taigi 抑是 tg，攏揣會著台語。",
-            "tailo": "Siann-tiāu ē-sái bô phah, mā ē-sái kan-na phah ta̍k jī ê thâu tsi̍t ê jī-bió. Phah tai5gi2, taigi ia̍h-sī tg, lóng tshuē ē tio̍h Tâi-gí.",
-            "poj": "Siaⁿ-tiāu ē-sái bô phah, mā ē-sái kan-na phah ta̍k jī ê thâu chi̍t ê jī-bió. Phah tai5gi2, taigi ia̍h-sī tg, lóng chhōe ē tio̍h Tâi-gí.",
-            "en": "You can leave out tones, or type only the first letter of each syllable. tai5gi2, taigi, and tg all find 台語.",
-            "ja": "声調は省略でき、各音節の頭文字だけでも入力できます。tai5gi2、taigi、tg のどれでも「台語」が見つかります。"
-          },
-          "attachment": {
-            "type": "slideshow",
-            "images": [
-              "roman_input_1",
-              "roman_input_2",
-              "roman_input_3"
-            ],
-            "interval": 1.5
-          }
-        },
-        {
-          "text": {
-            "hanji": "拍愈齊，候選詞愈準。第 1 聲佮第 4 聲無符號，毋過數字仝款有效，拍 phang1 就干焦揣第 1 聲 ê 字，像芳。",
-            "tailo": "Phah jú tsiâu, hāu-suán-sû jú tsún. Tē 1 siann kah tē 4 siann bô hû-hō, m̄-koh sòo-jī kāng-khuán ū-hāu, phah phang1 tō kan-na tshuē tē 1 siann ê jī, tshiūnn 芳.",
-            "poj": "Phah jú chiâu, hāu-soán-sû jú chún. Tē 1 siaⁿ kah tē 4 siaⁿ bô hû-hō, m̄-koh sò͘-jī kāng-khoán ū-hāu, phah phang1 tō kan-na chhōe tē 1 siaⁿ ê jī, chhiūⁿ 芳.",
-            "en": "The more you type, the better the suggestions. Tones 1 and 4 have no mark, but their numbers still help. phang1 looks only for first-tone words, such as 芳.",
-            "ja": "入力が完全なほど候補は正確になります。第1声と第4声には記号がありませんが、数字は有効です。phang1 と打てば、芳など第1声の字だけを探します。"
-          },
-          "attachment": {
-            "type": "image",
-            "name": "faq_tone_handling"
           }
         },
         {
@@ -589,7 +599,7 @@
       },
       "icon": {
         "ios": "text.badge.plus",
-        "android": "ic_person_storage"
+        "android": "ic_add"
       },
       "paragraphs": [
         {
@@ -609,21 +619,55 @@
             "en": "You can also import a CSV file: romanization in column 1, Hanji in column 2, no header.",
             "ja": "CSV の読み込みもできます。1列目にローマ字、2列目に漢字。見出し行は不要です。"
           }
-        },
+        }
+      ]
+    },
+    {
+      "id": "learningRecords",
+      "title": {
+        "hanji": "學習紀錄",
+        "tailo": "Ha̍k-si̍p kì-lio̍k",
+        "poj": "Ha̍k-si̍p kì-lio̍k",
+        "en": "Learning Records",
+        "ja": "学習記録"
+      },
+      "icon": {
+        "ios": "clock.arrow.circlepath",
+        "android": "ic_person_storage"
+      },
+      "paragraphs": [
         {
           "text": {
-            "hanji": "齒盤會記你揀過 ê 詞（詞頻紀錄）佮拍過 ê 詞句（詞句紀錄），定用 ê 會排較頭前。佇「詞庫」>「學習紀錄」會使看、改、刪除。",
-            "tailo": "Khí-puânn ē kì lí kíng--kuè ê sû (Sû-pîn kì-lio̍k) kah phah--kuè ê sû-kù (Sû-kù kì-lio̍k), tiānn iōng ê ē pâi khah thâu-tsîng. Tī “Sû-khòo” > “Ha̍k-si̍p kì-lio̍k” ē-sái khuànn, kái, san-tû.",
-            "poj": "Khí-pôaⁿ ē kì lí kéng--kòe ê sû (Sû-pîn kì-lio̍k) kah phah--kòe ê sû-kù (Sû-kù kì-lio̍k), tiāⁿ iōng ê ē pâi khah thâu-chêng. Tī “Sû-khò͘” > “Ha̍k-si̍p kì-lio̍k” ē-sái khòaⁿ, kái, san-tû.",
-            "en": "The keyboard learns the words you pick (Word Frequency) and the phrases you build (Phrases), and moves them up the list. Review, edit, or delete them in Dictionary > Learning Records.",
-            "ja": "選んだ語（単語頻度）と入力した語句（フレーズ）を学習し、よく使うものを上位に表示します。「辞書」>「学習記録」で確認・編集・削除できます。"
+            "hanji": "齒盤會記你揀過 ê 詞，嘛會記你一段一段拍出來 ê 詞句。定用 ê 會排較頭前。",
+            "tailo": "Khí-puânn ē kì lí kíng--kuè ê sû, mā ē kì lí tsi̍t tuānn tsi̍t tuānn phah--tshut-lâi ê sû-kù. Tiānn iōng ê ē pâi khah thâu-tsîng.",
+            "poj": "Khí-pôaⁿ ē kì lí kéng--kòe ê sû, mā ē kì lí chi̍t tōaⁿ chi̍t tōaⁿ phah--chhut-lâi ê sû-kù. Tiāⁿ iōng ê ē pâi khah thâu-chêng.",
+            "en": "The keyboard remembers the words you pick and the phrases you build piece by piece. The ones you use often move up the list.",
+            "ja": "選んだ語や、少しずつ組み立てた語句を覚えて、よく使うものを上位に表示します。"
           }
         },
         {
           "text": {
-            "hanji": "欲共學過 ê 詞加入自訂詞庫：iOS 共彼項紀錄向正爿滑，Android 揤彼項紀錄 ê ＋。有漢字 ê 紀錄才會當加。",
-            "tailo": "Beh kā ha̍k--kuè ê sû ka-ji̍p tsū-tīng-sû-khòo: iOS kā hit hāng kì-lio̍k ǹg tsiànn-pîng ku̍t, Android tshi̍h hit hāng kì-lio̍k ê ＋. Ū hàn-jī ê kì-lio̍k tsiah ē-tàng ka.",
-            "poj": "Beh kā ha̍k--kòe ê sû ka-ji̍p chū-tēng-sû-khò͘: iOS kā hit hāng kì-lio̍k ǹg chiàⁿ-pêng ku̍t, Android chhi̍h hit hāng kì-lio̍k ê ＋. Ū hàn-jī ê kì-lio̍k chiah ē-tàng ka.",
+            "hanji": "佇詞庫 ê 學習紀錄，會使看詞頻紀錄佮詞句紀錄，照上捷用抑是最近用排。",
+            "tailo": "Tī Sû-khòo ê Ha̍k-si̍p kì-lio̍k, ē-sái khuànn Sû-pîn kì-lio̍k kah Sû-kù kì-lio̍k, tsiàu Siōng tsia̍p iōng ia̍h-sī Tsuè-kīn iōng pâi.",
+            "poj": "Tī Sû-khò͘ ê Ha̍k-si̍p kì-lio̍k, ē-sái khòaⁿ Sû-pîn kì-lio̍k kah Sû-kù kì-lio̍k, chiàu Siōng chia̍p iōng ia̍h-sī Chòe-kīn iōng pâi.",
+            "en": "Open Learning Records on the Dictionary tab to see Word Frequency and Phrases, sorted by Most Used or Most Recent.",
+            "ja": "「辞書」タブの「学習記録」で、単語頻度とフレーズを、よく使う順か最近使った順で確認できます。"
+          }
+        },
+        {
+          "text": {
+            "hanji": "數量會使家己改，超過 40 排序就攏仝款。無愛 ê 紀錄會使刪除。",
+            "tailo": "Sòo-liōng ē-sái ka-kī kái, tshiau-kuè 40 pâi-sū tō lóng kāng-khuán. Bô ài ê kì-lio̍k ē-sái san-tû.",
+            "poj": "Sò͘-liōng ē-sái ka-kī kái, chhiau-kòe 40 pâi-sū tō lóng kāng-khoán. Bô ài ê kì-lio̍k ē-sái san-tû.",
+            "en": "You can edit a count yourself. Above 40, the order no longer changes. Delete any record you don't want.",
+            "ja": "回数は自分で変更できます。40を超えると並び順は変わりません。不要な記録は削除できます。"
+          }
+        },
+        {
+          "text": {
+            "hanji": "欲共學過 ê 詞加入自訂詞庫，iOS 共彼項紀錄向正爿滑，Android 揤彼項紀錄 ê ＋。有漢字 ê 紀錄才會當加。",
+            "tailo": "Beh kā ha̍k--kuè ê sû ka-ji̍p tsū-tīng-sû-khòo, iOS kā hit hāng kì-lio̍k ǹg tsiànn-pîng ku̍t, Android tshi̍h hit hāng kì-lio̍k ê ＋. Ū hàn-jī ê kì-lio̍k tsiah ē-tàng ka.",
+            "poj": "Beh kā ha̍k--kòe ê sû ka-ji̍p chū-tēng-sû-khò͘, iOS kā hit hāng kì-lio̍k ǹg chiàⁿ-pêng ku̍t, Android chhi̍h hit hāng kì-lio̍k ê ＋. Ū hàn-jī ê kì-lio̍k chiah ē-tàng ka.",
             "en": "To keep a learned word in your Custom Dictionary, swipe right on it on iOS, or tap + next to it on Android. Only records with Hanji can be added.",
             "ja": "学習した語をカスタム辞書に追加するには、iOS では右にスワイプ、Android では ＋ をタップします。漢字のある記録だけ追加できます。"
           }
