@@ -77,20 +77,20 @@
       "paragraphs": [
         {
           "text": {
-            "hanji": "先拍字母，才拍聲調數字 1–8，齒盤會換做聲調符號：tong2 → tóng（黨）、tong5 → tông（同）、tong7 → tōng（洞）。",
-            "tailo": "Sing phah jī-bió, tsiah phah siann-tiāu sòo-jī 1–8, khí-puânn ē uānn-tsò siann-tiāu hû-hō: tong2 → tóng (黨), tong5 → tông (同), tong7 → tōng (洞).",
-            "poj": "Seng phah jī-bió, chiah phah siaⁿ-tiāu sò͘-jī 1–8, khí-pôaⁿ ē ōaⁿ-chò siaⁿ-tiāu hû-hō: tong2 → tóng (黨), tong5 → tông (同), tong7 → tōng (洞).",
-            "en": "Type the letters, then a tone number from 1 to 8, and the keyboard adds the tone mark: tong2 → tóng (黨), tong5 → tông (同), tong7 → tōng (洞).",
-            "ja": "字母のあとに声調数字（1〜8）を打つと、声調記号に変わります：tong2 → tóng（黨）、tong5 → tông（同）、tong7 → tōng（洞）。"
+            "hanji": "拍好字母，才拍聲調數字 1 到 8，齒盤會家己換做聲調符號。像 tong2 會變做 tóng，tong5 會變做 tông。",
+            "tailo": "Phah hó jī-bió, tsiah phah siann-tiāu sòo-jī 1 kàu 8, khí-puânn ē ka-kī uānn-tsò siann-tiāu hû-hō. Tshiūnn tong2 ē piàn-tsò tóng, tong5 ē piàn-tsò tông.",
+            "poj": "Phah hó jī-bió, chiah phah siaⁿ-tiāu sò͘-jī 1 kàu 8, khí-pôaⁿ ē ka-kī ōaⁿ-chò siaⁿ-tiāu hû-hō. Chhiūⁿ tong2 ē piàn-chò tóng, tong5 ē piàn-chò tông.",
+            "en": "Type the letters, then a tone number from 1 to 8, and the keyboard adds the tone mark. tong2 becomes tóng, and tong5 becomes tông.",
+            "ja": "字母を打ってから声調数字（1〜8）を打つと、声調記号に変わります。tong2 は tóng、tong5 は tông になります。"
           }
         },
         {
           "text": {
-            "hanji": "聲調拍毋著，揤一下刪除鍵，干焦提掉聲調，字母猶佇咧。",
-            "tailo": "Siann-tiāu phah m̄-tio̍h, tshi̍h tsi̍t-ē san-tû kiān, kan-na the̍h--tiāu siann-tiāu, jī-bió iáu tī-leh.",
-            "poj": "Siaⁿ-tiāu phah m̄-tio̍h, chhi̍h chi̍t-ē san-tû kiān, kan-na the̍h--tiāu siaⁿ-tiāu, jī-bió iáu tī-leh.",
-            "en": "Typed the wrong tone? Press Delete once to remove just the tone mark.",
-            "ja": "声調を間違えたら、削除キーを1回押すと声調記号だけが消えます。"
+            "hanji": "聲調拍毋著，揤一下刪除鍵，閣拍正確 ê 數字就好。",
+            "tailo": "Siann-tiāu phah m̄-tio̍h, tshi̍h tsi̍t-ē san-tû kiān, koh phah tsìng-khak ê sòo-jī tō hó.",
+            "poj": "Siaⁿ-tiāu phah m̄-tio̍h, chhi̍h chi̍t-ē san-tû kiān, koh phah chèng-khak ê sò͘-jī tō hó.",
+            "en": "Typed the wrong tone? Press Delete once and type the right number.",
+            "ja": "声調を間違えたら、削除キーを1回押して正しい数字を打ち直します。"
           },
           "attachment": {
             "type": "slideshow",
@@ -104,11 +104,11 @@
         },
         {
           "text": {
-            "hanji": "聲調會使省略，音節嘛會使干焦拍頭一字：tai5gi2、taigi、tg 攏揣會著 tâi-gí（台語）。",
-            "tailo": "Siann-tiāu ē-sái síng-lio̍k, im-tsiat mā ē-sái kan-na phah thâu tsi̍t jī: tai5gi2, taigi, tg lóng tshuē ē tio̍h tâi-gí (台語).",
-            "poj": "Siaⁿ-tiāu ē-sái séng-lio̍k, im-chiat mā ē-sái kan-na phah thâu chi̍t jī: tai5gi2, taigi, tg lóng chhōe ē tio̍h tâi-gí (台語).",
-            "en": "Tones are optional, and so are full syllables: tai5gi2, taigi, and tg all find tâi-gí (台語).",
-            "ja": "声調は省略でき、音節の頭文字だけでも入力できます。tai5gi2、taigi、tg のどれでも tâi-gí（台語）が見つかります。"
+            "hanji": "聲調會使無拍，嘛會使干焦拍逐字 ê 頭一个字母。拍 tai5gi2、taigi 抑是 tg，攏揣會著台語。",
+            "tailo": "Siann-tiāu ē-sái bô phah, mā ē-sái kan-na phah ta̍k jī ê thâu tsi̍t ê jī-bió. Phah tai5gi2, taigi ia̍h-sī tg, lóng tshuē ē tio̍h Tâi-gí.",
+            "poj": "Siaⁿ-tiāu ē-sái bô phah, mā ē-sái kan-na phah ta̍k jī ê thâu chi̍t ê jī-bió. Phah tai5gi2, taigi ia̍h-sī tg, lóng chhōe ē tio̍h Tâi-gí.",
+            "en": "You can leave out tones, or type only the first letter of each syllable. tai5gi2, taigi, and tg all find 台語.",
+            "ja": "声調は省略でき、各音節の頭文字だけでも入力できます。tai5gi2、taigi、tg のどれでも「台語」が見つかります。"
           },
           "attachment": {
             "type": "slideshow",
@@ -122,11 +122,11 @@
         },
         {
           "text": {
-            "hanji": "拍愈完整，候選詞愈準。第 1 聲佮第 4 聲無符號，毋過拍數字仝款有效：phang1 干焦揣第 1 聲 ê 字，像「芳」。",
-            "tailo": "Phah jú uân-tsíng, hāu-suán-sû jú tsún. Tē 1 siann kah tē 4 siann bô hû-hō, m̄-koh phah sòo-jī kāng-khuán ū-hāu: phang1 kan-na tshuē tē 1 siann ê jī, tshiūnn “芳”.",
-            "poj": "Phah jú oân-chéng, hāu-soán-sû jú chún. Tē 1 siaⁿ kah tē 4 siaⁿ bô hû-hō, m̄-koh phah sò͘-jī kāng-khoán ū-hāu: phang1 kan-na chhōe tē 1 siaⁿ ê jī, chhiūⁿ “芳”.",
-            "en": "The more you type, the better the suggestions. Tones 1 and 4 have no mark, but their numbers still help: phang1 looks only for first-tone words, such as 芳.",
-            "ja": "入力が完全なほど候補は正確になります。第1声と第4声には記号がありませんが、数字は有効です。phang1 なら「芳」など第1声の字だけを探します。"
+            "hanji": "拍愈齊，候選詞愈準。第 1 聲佮第 4 聲無符號，毋過數字仝款有效，拍 phang1 就干焦揣第 1 聲 ê 字，像芳。",
+            "tailo": "Phah jú tsiâu, hāu-suán-sû jú tsún. Tē 1 siann kah tē 4 siann bô hû-hō, m̄-koh sòo-jī kāng-khuán ū-hāu, phah phang1 tō kan-na tshuē tē 1 siann ê jī, tshiūnn 芳.",
+            "poj": "Phah jú chiâu, hāu-soán-sû jú chún. Tē 1 siaⁿ kah tē 4 siaⁿ bô hû-hō, m̄-koh sò͘-jī kāng-khoán ū-hāu, phah phang1 tō kan-na chhōe tē 1 siaⁿ ê jī, chhiūⁿ 芳.",
+            "en": "The more you type, the better the suggestions. Tones 1 and 4 have no mark, but their numbers still help. phang1 looks only for first-tone words, such as 芳.",
+            "ja": "入力が完全なほど候補は正確になります。第1声と第4声には記号がありませんが、数字は有効です。phang1 と打てば、芳など第1声の字だけを探します。"
           },
           "attachment": {
             "type": "image",
@@ -135,11 +135,11 @@
         },
         {
           "text": {
-            "hanji": "白話字連紲拍 oo 會變做 o͘，nn 會變做 ⁿ。會使佇「設定」關掉。",
-            "tailo": "Pe̍h-uē-jī liân-suà phah oo ē piàn-tsò o͘, nn ē piàn-tsò ⁿ. Ē-sái tī “Siat-tīng” kuainn--tiāu.",
-            "poj": "Pe̍h-ōe-jī liân-sòa phah oo ē piàn-chò o͘, nn ē piàn-chò ⁿ. Ē-sái tī “Siat-tēng” koaiⁿ--tiāu.",
-            "en": "In Pe̍h-ōe-jī, typing oo gives o͘ and nn gives ⁿ. You can turn this off in Settings.",
-            "ja": "白話字では oo と続けて打つと o͘、nn で ⁿ になります。設定でオフにできます。"
+            "hanji": "白話字拍 oo 會變 o͘，拍 nn 會變 ⁿ。",
+            "tailo": "Pe̍h-uē-jī phah oo ē piàn o͘, phah nn ē piàn ⁿ.",
+            "poj": "Pe̍h-ōe-jī phah oo ē piàn o͘, phah nn ē piàn ⁿ.",
+            "en": "In Pe̍h-ōe-jī, oo becomes o͘ and nn becomes ⁿ.",
+            "ja": "白話字では、oo が o͘ に、nn が ⁿ になります。"
           }
         }
       ]
