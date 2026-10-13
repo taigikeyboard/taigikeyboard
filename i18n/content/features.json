@@ -268,11 +268,11 @@
     {
       "id": "caseSwitch",
       "title": {
-        "hanji": "大本字佮細本字",
-        "tailo": "Tuā-pún-jī kah suè-pún-jī",
-        "poj": "Tōa-pún-jī kah sòe-pún-jī",
-        "en": "Uppercase and Lowercase",
-        "ja": "大文字と小文字"
+        "hanji": "自動大本字",
+        "tailo": "Tsū-tōng tuā-pún-jī",
+        "poj": "Chū-tōng tōa-pún-jī",
+        "en": "Auto-Capitalization",
+        "ja": "自動大文字化"
       },
       "icon": {
         "ios": "textformat.size",
