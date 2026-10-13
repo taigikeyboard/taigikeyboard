@@ -42,9 +42,9 @@
       "values": { "hanji": "收合齒盤", "tailo": "Siu-ha̍p khí-puânn", "poj": "Siu-ha̍p khí-pôaⁿ", "en": "Hide keyboard", "ja": "キーボードを閉じる" }
     },
     "oneHandedMode": {
-      "comment": "Name of the one-handed mode callout opened by long-pressing the toolbar keyboard button; also its a11y long-press action name. TL/POJ from the bundled dictionary (單手 tuann-tshiú) + 輸入模式 spelling.",
+      "comment": "Name of the one-handed mode callout opened by long-pressing the toolbar keyboard button; also its a11y long-press action name. 孤手 koo-tshiú (maintainer: Taigi says 孤手, not 單手; 孤 koo per Kautian) + 輸入模式 spelling.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["extension"] },
-      "values": { "hanji": "單手模式", "tailo": "Tuann-tshiú bôo-sik", "poj": "Toaⁿ-chhiú bô͘-sek", "en": "One-handed mode", "ja": "片手モード" }
+      "values": { "hanji": "孤手模式", "tailo": "Koo-tshiú bôo-sik", "poj": "Ko͘-chhiú bô͘-sek", "en": "One-handed mode", "ja": "片手モード" }
     },
     "oneHandedLeft": {
       "comment": "One-handed mode callout item: keys dock to the left edge. TL/POJ from the bundled dictionary (倒手 tò-tshiú).",

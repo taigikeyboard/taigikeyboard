@@ -2972,7 +2972,7 @@
       }
     },
     "i18n_keyboard_oneHandedMode": {
-      "comment": "Name of the one-handed mode callout opened by long-pressing the toolbar keyboard button; also its a11y long-press action name. TL/POJ from the bundled dictionary (單手 tuann-tshiú) + 輸入模式 spelling.",
+      "comment": "Name of the one-handed mode callout opened by long-pressing the toolbar keyboard button; also its a11y long-press action name. 孤手 koo-tshiú (maintainer: Taigi says 孤手, not 單手; 孤 koo per Kautian) + 輸入模式 spelling.",
       "extractionState": "manual",
       "localizations": {
         "en": {

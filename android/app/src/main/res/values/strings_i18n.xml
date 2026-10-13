@@ -172,7 +172,7 @@
     <string name="i18n_keyboard_switchLayout">切換佈局</string>
     <string name="i18n_keyboard_switchInputMethod">切換輸入法</string>
     <string name="i18n_keyboard_dismissKeyboard">收合齒盤</string>
-    <string name="i18n_keyboard_oneHandedMode">單手模式</string>
+    <string name="i18n_keyboard_oneHandedMode">孤手模式</string>
     <string name="i18n_keyboard_oneHandedLeft">倒手</string>
     <string name="i18n_keyboard_oneHandedRight">正手</string>
     <string name="i18n_keyboard_oneHandedOff">一般</string>
