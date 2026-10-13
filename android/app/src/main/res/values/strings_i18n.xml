@@ -212,7 +212,7 @@
     <string name="i18n_settings_literalRomanCandidate">拍 ê 羅馬字囥第一格</string>
     <string name="i18n_settings_literalRomanCandidateInfo">候選詞列第一格顯示你拍 ê 羅馬字，點揤抑是揤 Enter 送出。關閉了後干焦會當用 Enter 送出。</string>
     <string name="i18n_settings_autoCapitalization">自動大本字</string>
-    <string name="i18n_settings_autoSpace">自動閬一格</string>
+    <string name="i18n_settings_autoSpace">自動插入空白</string>
     <string name="i18n_settings_keyboardSectionTitle">齒盤設定</string>
     <string name="i18n_settings_toolbarAutoCollapse">選字後自動收合工具列</string>
     <string name="i18n_settings_toolbarAutoCollapseInfo">予齒盤面頂空間較大。</string>

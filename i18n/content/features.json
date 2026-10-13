@@ -208,8 +208,8 @@
       "id": "hanloDesign",
       "title": {
         "hanji": "漢羅合用",
-        "tailo": "Hàn-lô ha̍h-īng",
-        "poj": "Hàn-lô ha̍h-ēng",
+        "tailo": "Hàn-lô ha̍p-iōng",
+        "poj": "Hàn-lô ha̍p-iōng",
         "en": "Hanji and Romanization",
         "ja": "漢字とローマ字の併用"
       },
@@ -218,9 +218,9 @@
         "android": "ic_translate"
       },
       "summary": {
-        "hanji": "「括號標註」共漢字佮羅馬字做伙送出。「自動閬一格」送出羅馬字了後自動加空格。",
-        "tailo": "“Kuat-hō phiau-tsù” kā hàn-jī kah lô-má-jī tsò-hué sàng-tshut. “Tsū-tōng làng tsi̍t ê phāng” sàng-tshut lô-má-jī liáu-āu tsū-tōng ka khang-keh.",
-        "poj": "“Koat-hō phiau-chù” kā hàn-jī kah lô-má-jī chò-hóe sàng-chhut. “Chū-tōng làng chi̍t ê phāng” sàng-chhut lô-má-jī liáu-āu chū-tōng ka khang-keh.",
+        "hanji": "「括號標註」共漢字佮羅馬字做伙送出。「自動插入空白」送出羅馬字了後自動加空格。",
+        "tailo": "“Kuat-hō phiau-tsù” kā hàn-jī kah lô-má-jī tsò-hué sàng-tshut. “Tsū-tōng tshah-ji̍p khàng-pe̍h” sàng-tshut lô-má-jī liáu-āu tsū-tōng ka khang-keh.",
+        "poj": "“Koat-hō phiau-chù” kā hàn-jī kah lô-má-jī chò-hóe sàng-chhut. “Chū-tōng chhah-ji̍p khàng-pe̍h” sàng-chhut lô-má-jī liáu-āu chū-tōng ka khang-keh.",
         "en": "Annotate in Brackets enters Hanji and romanization together. Auto-Space adds a space after romanization.",
         "ja": "「括弧で併記」は漢字とローマ字を一緒に入力します。「自動スペース」はローマ字の後にスペースを入れます。"
       },
@@ -261,9 +261,9 @@
         },
         {
           "text": {
-            "hanji": "拍開「自動閬一格」，送出羅馬字了後會自動加空格。",
-            "tailo": "Phah-khui “Tsū-tōng làng tsi̍t ê phāng”, sàng-tshut lô-má-jī liáu-āu ē tsū-tōng ka khang-keh.",
-            "poj": "Phah-khui “Chū-tōng làng chi̍t ê phāng”, sàng-chhut lô-má-jī liáu-āu ē chū-tōng ka khang-keh.",
+            "hanji": "拍開「自動插入空白」，送出羅馬字了後會自動加空格。",
+            "tailo": "Phah-khui “Tsū-tōng tshah-ji̍p khàng-pe̍h”, sàng-tshut lô-má-jī liáu-āu ē tsū-tōng ka khang-keh.",
+            "poj": "Phah-khui “Chū-tōng chhah-ji̍p khàng-pe̍h”, sàng-chhut lô-má-jī liáu-āu ē chū-tōng ka khang-keh.",
             "en": "Turn on Auto-Space to add a space after romanization automatically.",
             "ja": "「自動スペース」をオンにすると、ローマ字の後に自動でスペースが入ります。"
           }

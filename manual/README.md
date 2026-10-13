@@ -259,7 +259,7 @@ macOS 的符號：`⌃` control、`⌥` option、`⌘` command、`⇧` shift。
 
 ![設定的【辭典管理】頁](shots/settings-dictionarySources.png)
 
-輸入文字、聲調拍法、輸出文字、無連字符、自動閬一格、介面語言，攏佇【一般】。
+輸入文字、聲調拍法、輸出文字、無連字符、自動插入空白、介面語言，攏佇【一般】。
 
 ![設定的【一般】頁](shots/settings-general.png)
 

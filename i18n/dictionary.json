@@ -604,8 +604,8 @@
       },
       "values": {
         "hanji": "漢羅合用建議用字",
-        "tailo": "Hàn-lô ha̍h-īng kiàn-gī iōng-jī",
-        "poj": "Hàn-lô ha̍h-ēng kiàn-gī iōng-jī",
+        "tailo": "Hàn-lô ha̍p-iōng kiàn-gī iōng-jī",
+        "poj": "Hàn-lô ha̍p-iōng kiàn-gī iōng-jī",
         "en": "Han-Lo Recommended Characters",
         "ja": "漢羅併用 推奨用字"
       }
@@ -1192,8 +1192,8 @@
       },
       "values": {
         "hanji": "李江却台語文教基金會漢羅合用建議用字。",
-        "tailo": "Lí Kang Khioh tâi-gí bûn-kàu ki-kim-huē hàn-lô ha̍h-īng kiàn-gī iōng-jī.",
-        "poj": "Lí Kang Khioh tâi-gí bûn-kàu ki-kim-hōe hàn-lô ha̍h-ēng kiàn-gī iōng-jī.",
+        "tailo": "Lí Kang Khioh tâi-gí bûn-kàu ki-kim-huē hàn-lô ha̍p-iōng kiàn-gī iōng-jī.",
+        "poj": "Lí Kang Khioh tâi-gí bûn-kàu ki-kim-hōe hàn-lô ha̍p-iōng kiàn-gī iōng-jī.",
         "en": "Suggested Han-Roman mixed-script characters from the Lí Kang-Khioh Taigi Culture and Education Foundation.",
         "ja": "李江却台語文教基金会による漢字ローマ字混在表記の推奨用字。"
       }
@@ -1542,8 +1542,8 @@
       },
       "values": {
         "hanji": "漢羅合用",
-        "tailo": "Hàn-lô ha̍h-īng",
-        "poj": "Hàn-lô ha̍h-ēng",
+        "tailo": "Hàn-lô ha̍p-iōng",
+        "poj": "Hàn-lô ha̍p-iōng",
         "en": "Han-Roman",
         "ja": "漢羅併用"
       }
