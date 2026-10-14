@@ -17,7 +17,7 @@ final class CustomLayoutTests: XCTestCase {
 
     // trace: CustomLayout.trayFinals, most frequent first; they close the letters.
     private static let finals = [
-        "an", "ia", "in", "au", "ong", "ian", "un", "ai", "iu", "ann", "ang", "ui", "inn", "iau", "iong", "er", "ir",
+        "an", "ia", "in", "au", "ong", "ian", "un", "ai", "iu", "ann", "ang", "ui", "inn", "iau", "er", "ir",
     ]
 
     // trace: phahTaigi function slots 0 shift, 1 backspace, 2 numeric, 3 emoji, 4 space, …

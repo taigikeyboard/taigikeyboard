@@ -297,7 +297,7 @@ class CustomLayoutTables(
          * final contains them). iOS `CustomLayout.trayFinals`.
          */
         val TRAY_FINALS =
-            listOf("an", "ia", "in", "au", "ong", "ian", "un", "ai", "iu", "ann", "ang", "ui", "inn", "iau", "iong", "er", "ir")
+            listOf("an", "ia", "in", "au", "ong", "ian", "un", "ai", "iu", "ann", "ang", "ui", "inn", "iau", "er", "ir")
 
         /** [row] as places; consecutive TRANSLATE copies make one. */
         fun pieces(row: List<KeyData>): List<Piece> {
