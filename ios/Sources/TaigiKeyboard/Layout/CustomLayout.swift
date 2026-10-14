@@ -87,12 +87,18 @@ struct CustomLayout: Codable, Identifiable, Hashable {
 
     private static let symbolPageKeys = Array(TaigiLayouts.Numeric.iPhone.joined()).filter(\.isCharacter)
 
+    /// Finals spelled the same in TL and POJ, most frequent first (share of dictionary syllables
+    /// whose final contains them). No built-in table has them; each is a plain key.
+    private static let trayFinals = [
+        "an", "ia", "in", "au", "ong", "ian", "un", "ai", "iu", "ann", "ang", "ui", "inn", "iau", "iong", "er", "ir",
+    ]
+
     /// Letters offered in the spare tray: a–z, o͘, `-`, then every multi-letter key of the
-    /// romanization layouts (MOE2 `ph`, `tsh`, `ch` …), whatever the base.
+    /// romanization layouts (MOE2 `ph`, `tsh`, `ch` …), whatever the base, then `trayFinals`.
     private static let trayLetters: [String] = {
         let symbols = Set(symbolPageKeys.compactMap(\.characterLabel))
         let single = "abcdefghijklmnopqrstuvwxyz".map(String.init) + ["o\u{0358}", "-"]
-        return unique(single + romanizationKeys.compactMap(\.characterLabel).filter { !symbols.contains($0) })
+        return unique(single + romanizationKeys.compactMap(\.characterLabel).filter { !symbols.contains($0) } + trayFinals)
     }()
 
     /// Punctuation and symbols offered in the spare tray: the common symbol page (the 123 key).
@@ -102,7 +108,8 @@ struct CustomLayout: Codable, Identifiable, Hashable {
     /// comes first: its `(` `)` carry full-width forms that MOE1's own keys leave out (a base's
     /// own keys still win, `filledRows`).
     private static let catalog: [String: KeyDef] = Dictionary(
-        (symbolPageKeys + romanizationKeys).compactMap { key in key.characterLabel.map { ($0, key) } },
+        (symbolPageKeys + romanizationKeys + trayFinals.map { KeyDef.char($0) })
+            .compactMap { key in key.characterLabel.map { ($0, key) } },
         uniquingKeysWith: { first, _ in first },
     )
 

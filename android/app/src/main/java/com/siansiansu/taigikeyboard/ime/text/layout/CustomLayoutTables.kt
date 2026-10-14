@@ -74,7 +74,8 @@ class CustomLayoutTables(
 
     /**
      * Letters offered in the spare tray: a–z, o͘, `-`, then every multi-letter key of the romanization
-     * tables (MOE2 `ph`, `tsh`, POJ `ch` …), whatever the base. iOS `CustomLayout.trayLetters`.
+     * tables (MOE2 `ph`, `tsh`, POJ `ch` …), whatever the base, then [TRAY_FINALS]. iOS
+     * `CustomLayout.trayLetters`.
      */
     val trayLetters: List<String>
 
@@ -139,11 +140,13 @@ class CustomLayoutTables(
             }
         }
         this.tables = tables
+        // No built-in table has the finals: each is a plain key, in both widths.
+        TRAY_FINALS.forEach { addToCatalog(KeyData(0, it), KeyData(0, it)) }
         this.catalog = catalog
 
         val symbolLabels = symbolPage.flatten().map { it.label }
         val single = ('a'..'z').map(Char::toString) + listOf("o\u0358", "-")
-        trayLetters = (single + romanizationLabels.filterNot { it in symbolLabels }).distinct().filter { it in catalog }
+        trayLetters = (single + romanizationLabels.filterNot { it in symbolLabels } + TRAY_FINALS).distinct().filter { it in catalog }
         traySymbols = symbolLabels.filterNot { it in trayLetters }.distinct()
     }
 
@@ -289,6 +292,13 @@ class CustomLayoutTables(
         }
 
     private companion object {
+        /**
+         * Finals spelled the same in TL and POJ, most frequent first (share of dictionary syllables whose
+         * final contains them). iOS `CustomLayout.trayFinals`.
+         */
+        val TRAY_FINALS =
+            listOf("an", "ia", "in", "au", "ong", "ian", "un", "ai", "iu", "ann", "ang", "ui", "inn", "iau", "iong", "er", "ir")
+
         /** [row] as places; consecutive TRANSLATE copies make one. */
         fun pieces(row: List<KeyData>): List<Piece> {
             val pieces = mutableListOf<Piece>()
