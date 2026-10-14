@@ -181,7 +181,7 @@ enum TaigiLayouts {
             // Row 3: Punctuation
             [.char(":", fullWidth: "："), .char(";", fullWidth: "；"),
              .char("'", fullWidth: "、"), .char("-"), .char("—"),
-             .char("...", fullWidth: "⋯"),
+             .char("…", fullWidth: "⋯"),
              .char("$"), .char("%"), .char("#"), .char("&")],
 
             // Row 4: Most common punctuation (natural finger position)

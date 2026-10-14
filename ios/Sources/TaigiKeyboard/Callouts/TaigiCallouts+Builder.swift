@@ -12,21 +12,39 @@ public extension TaigiCallouts {
         guard case let .character(char) = params.action else {
             return KeyboardCalloutActions.english.actions(for: params.action)
         }
+        let settings = SharedSettings.shared
+        return calloutChars(
+            for: char,
+            inputMode: settings.inputMode,
+            layoutType: settings.keyboardLayoutType,
+        )?.map { .character($0) }
+    }
+
+    /// Callout characters for `char`, or nil for none.
+    // CROSS-PLATFORM INVARIANT — English mode offers symbol callouts only, as
+    // Android `LayoutManager.loadExtendedPopups` loads no Taigi popups there.
+    internal static func calloutChars(
+        for char: String,
+        inputMode: InputMode,
+        layoutType: KeyboardLayoutType,
+    ) -> [String]? {
+        if inputMode == .english {
+            return SymbolCallouts.actions[char]
+        }
 
         // Layout-specific callouts take priority over symbol/tone callouts
-        let layoutType = SharedSettings.shared.keyboardLayoutType
         switch layoutType {
         case .tps:
             if let chars = TPSCallouts.calloutChars(for: char) {
-                return chars.map { .character($0) }
+                return chars
             }
         case .moe1:
             if let actions = MOE1Callouts.actions[char] {
-                return actions.map { .character($0) }
+                return actions
             }
         case .moe2:
             if let actions = MOE2Callouts.actions[char] {
-                return actions.map { .character($0) }
+                return actions
             }
         default:
             break
@@ -35,13 +53,12 @@ public extension TaigiCallouts {
         // Symbol callouts: checked after layout-specific so TPS/MOE punctuation takes priority,
         // while symbol-only characters always get callouts regardless of layout
         if let actions = SymbolCallouts.actions[char] {
-            return actions.map { .character($0) }
+            return actions
         }
 
-        let toneMap = SharedSettings.shared.inputMode == .poj
+        let toneMap = inputMode == .poj
             ? TaigiToneMaps.poj
             : TaigiToneMaps.tl
-
-        return toneMap[char]?.map { .character($0) }
+        return toneMap[char]
     }
 }

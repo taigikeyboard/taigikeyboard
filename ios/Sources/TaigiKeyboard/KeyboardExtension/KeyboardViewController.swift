@@ -55,6 +55,11 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
     /// SDK's broken `documentIdentifier` UUID bridge.
     private var lastTextInputID: ObjectIdentifier?
 
+    /// Return key type of the field last seen by `textDidChange`. The Return icon
+    /// follows it, but it is not a published `KeyboardContext` property, so a switch
+    /// between two fields of one input type would otherwise keep the old icon.
+    private var lastReturnKeyType: UIReturnKeyType?
+
     var emojiService: EmojiService {
         if emojiServiceStorage == nil {
             emojiServiceStorage = EmojiService()
@@ -211,6 +216,13 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
     // MARK: - Text Input Change
 
     override func textDidChange(_ textInput: UITextInput?) {
+        // Ahead of the echo guard: a field switch inside the echo window
+        // (same text around the cursor) must still refresh the Return icon.
+        let returnKeyType = textDocumentProxy.returnKeyType
+        if lastReturnKeyType != returnKeyType {
+            lastReturnKeyType = returnKeyType
+            state.keyboardContext.notifyDisplayChange()
+        }
         // Our own commit's echo stays unseen — as before #352, when the commit
         // raised no callback — so neither KeyboardKit's autocomplete refresh
         // nor the reset below wipes the predictions the commit just set up.

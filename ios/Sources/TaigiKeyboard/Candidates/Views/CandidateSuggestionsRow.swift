@@ -82,15 +82,9 @@ struct CandidateSuggestionsRow: View {
         return ScrollView(.horizontal, showsIndicators: false) {
             ScrollViewReader { proxy in
                 LazyHStack(spacing: CandidateViewModels.UI.buttonSpacing) {
-                    let displaySuggestions = Array(
-                        suggestions.prefix(CandidateViewModels.UI.maxDisplayCount),
-                    )
-                    ForEach(
-                        Array(displaySuggestions.enumerated()),
-                        id: \.offset,
-                    ) { index, suggestion in
+                    ForEach(suggestions.indices, id: \.self) { index in
                         CandidateButtonView(
-                            suggestion: suggestion,
+                            suggestion: suggestions[index],
                             isHanjiFirst: isHanjiFirst,
                             candidateDisplayMode: candidateDisplayMode,
                             contentHasSubtitles: contentHasSubtitles,

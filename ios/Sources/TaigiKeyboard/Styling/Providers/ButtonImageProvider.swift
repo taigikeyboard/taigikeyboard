@@ -22,8 +22,10 @@ final class ButtonImageProvider {
         case .nextKeyboard:
             return Image(latinSystemName: "globe")
         case .primary(.return):
-            // Show newline icon when not composing; nil lets ButtonTextProvider show confirmation text
-            return keyboardContext.isComposingText ? nil : Image(latinSystemName: "arrow.turn.down.left")
+            // Composing: nil lets ButtonTextProvider show the confirmation text
+            guard !keyboardContext.isComposingText else { return nil }
+            let returnKeyType = keyboardContext.textDocumentProxy.returnKeyType
+            return Image(latinSystemName: Self.returnKeySymbolName(for: returnKeyType))
         case .settings:
             return Image(latinSystemName: "gearshape.fill")
         case let .custom(name):
@@ -44,6 +46,26 @@ final class ButtonImageProvider {
             }
         default:
             return nil
+        }
+    }
+
+    /// SF Symbol for the idle Return key, by the host field's return key type.
+    // CROSS-PLATFORM INVARIANT — aligns the return-key icon groups with Android
+    // `KeyContent.kt` `resolveEnterVisual` (done / arrow / search / send / newline).
+    static func returnKeySymbolName(for returnKeyType: UIReturnKeyType?) -> String {
+        switch returnKeyType {
+        case .done:
+            "checkmark"
+        case .go, .next, .join, .route, .continue, .emergencyCall:
+            "arrow.right"
+        case .search, .google, .yahoo:
+            "magnifyingglass"
+        case .send:
+            "paperplane"
+        case nil, .default:
+            "arrow.turn.down.left"
+        @unknown default:
+            "arrow.turn.down.left"
         }
     }
 }

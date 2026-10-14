@@ -44,7 +44,7 @@ class CustomLayoutService {
 
         switch context.keyboardType {
         case .alphabetic:
-            return selectAlphabeticLayout(settings: settings, needsGlobe: needsGlobe)
+            return selectAlphabeticLayout(settings: settings, needsGlobe: needsGlobe, inputType: context.keyboardInputType)
         case .numeric:
             return resolveLayout(withGlobe: TaigiLayouts.Numeric.withGlobe, iPhone: TaigiLayouts.Numeric.iPhone, needsGlobe: needsGlobe)
         case .symbolic:
@@ -73,15 +73,19 @@ class CustomLayoutService {
     private func selectAlphabeticLayout(
         settings: SharedSettings,
         needsGlobe: Bool,
+        inputType: Keyboard.InputType,
     ) -> [[KeyDef]] {
         let layouts = TaigiLayouts.Alphabetic.self
+        let rows: [[KeyDef]]
 
         // English mode (Apple standard English keyboard)
         if settings.inputMode == .english {
-            return resolveLayout(withGlobe: layouts.qwerty_English_withGlobe, iPhone: layouts.qwerty_English_iPhone, needsGlobe: needsGlobe)
+            rows = resolveLayout(withGlobe: layouts.qwerty_English_withGlobe, iPhone: layouts.qwerty_English_iPhone, needsGlobe: needsGlobe)
+            return Self.applyInputTypeKey(rows, inputType: inputType)
         }
 
-        // TPS mode — inputMode takes priority over keyboardLayoutType
+        // TPS mode — inputMode takes priority over keyboardLayoutType. TPS rows get no
+        // input-type key (Android `tps_halfwidth.json` has none).
         if settings.inputMode == .tps {
             return resolveLayout(withGlobe: layouts.tps_withGlobe, iPhone: layouts.tps_iPhone, needsGlobe: needsGlobe)
         }
@@ -91,25 +95,56 @@ class CustomLayoutService {
             return resolveLayout(withGlobe: layouts.tps_withGlobe, iPhone: layouts.tps_iPhone, needsGlobe: needsGlobe)
 
         case .phahTaigi:
-            return resolveLayout(withGlobe: layouts.phahTaigi_withGlobe, iPhone: layouts.phahTaigi_iPhone, needsGlobe: needsGlobe)
+            rows = resolveLayout(withGlobe: layouts.phahTaigi_withGlobe, iPhone: layouts.phahTaigi_iPhone, needsGlobe: needsGlobe)
 
         case .moe1:
-            if settings.inputMode == .poj {
-                return resolveLayout(withGlobe: layouts.moe1_POJ_withGlobe, iPhone: layouts.moe1_POJ_iPhone, needsGlobe: needsGlobe)
-            }
-            return resolveLayout(withGlobe: layouts.moe1_TL_withGlobe, iPhone: layouts.moe1_TL_iPhone, needsGlobe: needsGlobe)
+            rows = settings.inputMode == .poj
+                ? resolveLayout(withGlobe: layouts.moe1_POJ_withGlobe, iPhone: layouts.moe1_POJ_iPhone, needsGlobe: needsGlobe)
+                : resolveLayout(withGlobe: layouts.moe1_TL_withGlobe, iPhone: layouts.moe1_TL_iPhone, needsGlobe: needsGlobe)
 
         case .moe2:
-            if settings.inputMode == .poj {
-                return resolveLayout(withGlobe: layouts.moe2_POJ_withGlobe, iPhone: layouts.moe2_POJ_iPhone, needsGlobe: needsGlobe)
-            }
-            return resolveLayout(withGlobe: layouts.moe2_TL_withGlobe, iPhone: layouts.moe2_TL_iPhone, needsGlobe: needsGlobe)
+            rows = settings.inputMode == .poj
+                ? resolveLayout(withGlobe: layouts.moe2_POJ_withGlobe, iPhone: layouts.moe2_POJ_iPhone, needsGlobe: needsGlobe)
+                : resolveLayout(withGlobe: layouts.moe2_TL_withGlobe, iPhone: layouts.moe2_TL_iPhone, needsGlobe: needsGlobe)
 
         case .qwerty:
-            if settings.inputMode == .poj {
-                return resolveLayout(withGlobe: layouts.qwerty_POJ_withGlobe, iPhone: layouts.qwerty_POJ_iPhone, needsGlobe: needsGlobe)
-            }
-            return resolveLayout(withGlobe: layouts.qwerty_TL_withGlobe, iPhone: layouts.qwerty_TL_iPhone, needsGlobe: needsGlobe)
+            rows = settings.inputMode == .poj
+                ? resolveLayout(withGlobe: layouts.qwerty_POJ_withGlobe, iPhone: layouts.qwerty_POJ_iPhone, needsGlobe: needsGlobe)
+                : resolveLayout(withGlobe: layouts.qwerty_TL_withGlobe, iPhone: layouts.qwerty_TL_iPhone, needsGlobe: needsGlobe)
         }
+        return Self.applyInputTypeKey(rows, inputType: inputType)
+    }
+
+    /// Puts `@` (email field) or `/` (URL field) on the bottom row: it replaces the
+    /// `,` key where the row has one, else sits right after the emoji key. Other
+    /// input types return `rows` unchanged. The key is half-width in every mode.
+    // CROSS-PLATFORM INVARIANT — mirrors the Android `mod/*.json` bottom-row
+    // `email_address` / `uri` variants: default / english / moe2 swap `,`;
+    // moe1 / phah_taigi add the key in those fields only.
+    static func applyInputTypeKey(_ rows: [[KeyDef]], inputType: Keyboard.InputType) -> [[KeyDef]] {
+        let key: String
+        switch inputType {
+        case .emailAddress: key = "@"
+        case .url: key = "/"
+        default: return rows
+        }
+        guard var bottomRow = rows.last else { return rows }
+        var commaIndex: Int?
+        var emojiIndex: Int?
+        for (index, keyDef) in bottomRow.enumerated() {
+            switch keyDef {
+            case .char(",", _): commaIndex = index
+            case .emoji: emojiIndex = index
+            default: break
+            }
+        }
+        if let commaIndex {
+            bottomRow[commaIndex] = .char(key)
+        } else if let emojiIndex {
+            bottomRow.insert(.char(key), at: emojiIndex + 1)
+        } else {
+            return rows
+        }
+        return rows.dropLast() + [bottomRow]
     }
 }

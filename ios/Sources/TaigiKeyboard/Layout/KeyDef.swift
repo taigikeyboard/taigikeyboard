@@ -1,7 +1,7 @@
 // Keyboard key definition used by TaigiLayouts to describe each layout;
 // LayoutConverter turns [[KeyDef]] into a KeyboardKit KeyboardLayout.
 
-enum KeyDef {
+enum KeyDef: Equatable {
     // MARK: - Character keys
 
     /// `fullWidth` is the optional full-width form used when isFullWidthPunctuation.

@@ -8,7 +8,6 @@ import SwiftUI
 enum CandidateViewModels {
     enum UI {
         static let buttonSpacing: CGFloat = 14
-        static let maxDisplayCount: Int = 200
 
         static let expandedRowSpacing: CGFloat = 6
         static let expandedItemSpacing: CGFloat = 4

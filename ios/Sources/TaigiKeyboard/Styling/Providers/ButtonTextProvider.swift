@@ -72,13 +72,14 @@ final class ButtonTextProvider {
     func buttonHintText(for action: KeyboardAction) -> String? {
         let layoutType = settings.keyboardLayoutType
         guard case let .character(char) = action else { return nil }
+        // English has no layout callouts, so no hint may advertise one
+        // (mirrors `TaigiCallouts.taigiCalloutActions`).
+        guard settings.inputMode != .english else { return nil }
 
         // TPS layout: show callout variants as hint
         if layoutType == .tps {
             return tpsHintText(for: char)
         }
-
-        guard settings.inputMode != .english else { return nil }
 
         // Tone diacritics for number keys
         if let tone = toneHintText(for: char) {
