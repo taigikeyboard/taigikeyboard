@@ -203,7 +203,7 @@ struct LayoutEditorView: View {
                 .font(.system(size: 26))
                 .foregroundStyle(Color.primary)
                 .frame(width: 56, height: 60)
-                .background(LayoutKeyGrid.characterKeyColor, in: RoundedRectangle(cornerRadius: 10))
+                .background(LayoutKeyGrid.keyColor, in: RoundedRectangle(cornerRadius: 10))
                 .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
                 .position(x: boardDrag.location.x, y: boardDrag.location.y - 36)
                 .allowsHitTesting(false)

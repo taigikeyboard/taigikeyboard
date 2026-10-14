@@ -98,9 +98,7 @@ struct LayoutKeyGrid: View {
         let isRemoved = place.map { interaction?.removed.contains($0) ?? false } ?? false
         let isTarget = place != nil && (place == interaction?.highlighted || place == spareTarget)
         let shape = RoundedRectangle(cornerRadius: gap * 1.5)
-        let fill = isSelected ? Color.accentColor
-            : isRemoved ? Color.clear
-            : keyDef.isCharacter || keyDef == .space ? Self.characterKeyColor : Self.functionKeyColor
+        let fill = isSelected ? Color.accentColor : isRemoved ? Color.clear : Self.keyColor
         let face = Self.label(keyDef, isDigit: keyDef.isCharacter && place == nil)
             .opacity(isRemoved ? 0 : 1)
             .font(.system(size: fontSize))
@@ -180,7 +178,8 @@ struct LayoutKeyGrid: View {
         case .return: Image(latinSystemName: ButtonImageProvider.returnKeySymbolName(for: nil))
         case .globe: Image(latinSystemName: "globe")
         case .emoji: Image(latinSystemName: "face.smiling")
-        case .translate: Text(verbatim: "文")
+        // The keyboard's own 文/A icon in its default (outlined) state (`ButtonImageProvider`).
+        case .translate: Image(latinSystemName: "character.square")
         case .numeric: Text(verbatim: "123")
         case .symbolic: Text(verbatim: "#+=")
         case .alphabetic: Text(verbatim: "ABC")
@@ -212,8 +211,7 @@ struct LayoutKeyGrid: View {
 
     // MARK: - Colors
 
-    // System keyboard tones: light keys on a gray board, darker function keys.
+    // The default keyboard theme's tones: every key, function keys included, white on a gray board.
     private static let boardColor = Color(UIColor { $0.userInterfaceStyle == .dark ? .systemGray6 : .systemGray4 })
-    static let characterKeyColor = Color(UIColor { $0.userInterfaceStyle == .dark ? .systemGray2 : .white })
-    private static let functionKeyColor = Color(UIColor { $0.userInterfaceStyle == .dark ? .systemGray4 : .systemGray2 })
+    static let keyColor = Color(UIColor { $0.userInterfaceStyle == .dark ? .systemGray2 : .white })
 }
