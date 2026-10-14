@@ -47,6 +47,15 @@ public class ActionHandler: StandardKeyboardActionHandler {
     /// back.
     private var wasAutoSpaceArmedAtEventStart = false
 
+    /// Uptime of the plain space the previous event wrote, or nil. Event-scoped
+    /// like the arm: any other key or candidate tap in between clears it, so
+    /// `Space → Backspace → Space` never reads as a double space.
+    private var plainSpaceUptime: TimeInterval?
+    private var plainSpaceUptimeAtEventStart: TimeInterval?
+
+    // CROSS-PLATFORM INVARIANT — mirrors Android TaigiKeyboard.DOUBLE_SPACE_WINDOW_MS.
+    static let doubleSpaceWindow: TimeInterval = 0.3
+
     /// Runs one user event — a key, a backspace repeat, a candidate tap, an
     /// emoji or symbol pick — as one host write.
     ///
@@ -62,6 +71,8 @@ public class ActionHandler: StandardKeyboardActionHandler {
         }
         wasAutoSpaceArmedAtEventStart = isAutoSpaceArmed
         isAutoSpaceArmed = false
+        plainSpaceUptimeAtEventStart = plainSpaceUptime
+        plainSpaceUptime = nil
         hostText.beginEvent()
         defer {
             // The held commit is the IME's own write: keep `textWillChange`
@@ -91,6 +102,24 @@ public class ActionHandler: StandardKeyboardActionHandler {
     /// which keeps the App-Group defaults read off the common path.
     var isAutoSpaceSwapArmed: Bool {
         wasAutoSpaceArmedAtEventStart && settings.isAutoSpaceEnabled
+    }
+
+    /// Forgets any armed space and plain-space mark — a new field's document is not ours to rewrite.
+    // CROSS-PLATFORM INVARIANT — mirrors Android TaigiKeyboard.clearSpaceMarks.
+    func clearSpaceMarks() {
+        isAutoSpaceArmed = false
+        plainSpaceUptime = nil
+    }
+
+    /// Marks the space this event wrote as a plain space press — the first half of a double space.
+    func notePlainSpace() {
+        plainSpaceUptime = ProcessInfo.processInfo.systemUptime
+    }
+
+    /// Whether the event before this one was a plain space press less than `doubleSpaceWindow` ago.
+    var followsRecentPlainSpace: Bool {
+        guard let uptime = plainSpaceUptimeAtEventStart else { return false }
+        return ProcessInfo.processInfo.systemUptime - uptime < Self.doubleSpaceWindow
     }
 
     // MARK: - Action Dispatch
@@ -208,13 +237,22 @@ public class ActionHandler: StandardKeyboardActionHandler {
         return false
     }
 
-    // KeyboardKit entry for a candidate tap: English mode keeps the KK default, Taigi mode takes our path.
+    // KeyboardKit entry for a candidate tap: English mode lets KK replace the word, Taigi mode takes our path.
     override public func handle(_ suggestion: AutocompleteSuggestion) {
         // A tap is an event like any key: consume the arm first, so a commit
         // that writes no auto space leaves none for the next punctuation key.
-        // English mode: use KeyboardKit default (auto-deletes typed chars then inserts)
+        // English mode: KeyboardKit replaces the current word; the trailing space is
+        // ours, so it obeys Auto-Space and arms the punctuation swap. KK's own
+        // auto-learn has nothing to do here (`EnglishAutocompleteService.learnWord`
+        // is a no-op); the strip refreshes as after a key release.
+        // CROSS-PLATFORM INVARIANT — mirrors Android
+        // CandidateClickHandler.handleEnglishCandidateClick.
         if settings.inputMode == .english {
-            performInputEvent { super.handle(suggestion) }
+            performInputEvent {
+                keyboardContext.textDocumentProxy.insertAutocompleteSuggestion(suggestion, tryInsertSpace: false)
+                appendAutoSpaceIfEarned(documentText: suggestion.text, wroteRomanization: true)
+            }
+            keyboardController?.performAutocomplete()
             return
         }
         // Taigi mode: custom handling

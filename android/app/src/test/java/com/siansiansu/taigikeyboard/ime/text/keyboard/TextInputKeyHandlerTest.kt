@@ -1,8 +1,10 @@
 package com.siansiansu.taigikeyboard.ime.text.keyboard
 
 import android.text.InputType
+import android.view.inputmethod.EditorInfo
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -219,6 +221,8 @@ class TextInputKeyHandlerTest {
         for (ch in ('a'..'z') + ('A'..'Z')) {
             assertTrue("'$ch' spends the Shift", consumesSingleShift(ch.toString()))
         }
+        // U+10400 DESERET CAPITAL LONG I — read as a code point, as iOS reads a scalar.
+        assertTrue("supplementary-plane letter", consumesSingleShift("𐐀"))
         assertTrue("POJ o͘ key label", consumesSingleShift("o\u0358"))
     }
 
@@ -230,5 +234,47 @@ class TextInputKeyHandlerTest {
         for (s in caseless) {
             assertFalse("'$s' keeps the Shift", consumesSingleShift(s))
         }
+    }
+
+    @Test
+    fun `editorActionForEnter returns the action of an action field`() {
+        val actions =
+            listOf(
+                EditorInfo.IME_ACTION_DONE,
+                EditorInfo.IME_ACTION_GO,
+                EditorInfo.IME_ACTION_NEXT,
+                EditorInfo.IME_ACTION_PREVIOUS,
+                EditorInfo.IME_ACTION_SEARCH,
+                EditorInfo.IME_ACTION_SEND,
+            )
+        for (action in actions) {
+            assertEquals(action, editorActionForEnter(action))
+        }
+    }
+
+    @Test
+    fun `editorActionForEnter writes a newline without an action or with NO_ENTER_ACTION`() {
+        assertNull(editorActionForEnter(EditorInfo.IME_ACTION_NONE))
+        assertNull(editorActionForEnter(EditorInfo.IME_ACTION_UNSPECIFIED))
+        assertNull(editorActionForEnter(EditorInfo.IME_ACTION_SEND or EditorInfo.IME_FLAG_NO_ENTER_ACTION))
+    }
+
+    @Test
+    fun `doubleSpacePeriodReplacement earns a period after a letter number or mark`() {
+        // trace: last code point before the space — 'a' Ll, '7' Nd, 'á' Ll,
+        // 'o͘' ends in U+0358 Mn, '台' Lo, '𠢕' U+20895 Lo (surrogate pair).
+        for (text in listOf("a ", "7 ", "á ", "o͘ ", "台 ", "𠢕 ", "x𠢕 ")) {
+            assertEquals("'$text'", ". ", doubleSpacePeriodReplacement(text, isFullWidthPunctuation = false))
+            assertEquals("'$text'", "。", doubleSpacePeriodReplacement(text, isFullWidthPunctuation = true))
+        }
+    }
+
+    @Test
+    fun `doubleSpacePeriodReplacement keeps the space after punctuation whitespace or emoji`() {
+        // "😀" = U+1F600 So; "\t " ends in a tab (Cc) before the space.
+        for (text in listOf(". ", "。 ", "? ", "  ", "\t ", "\n ", "😀 ", " ", "", "a", "ab")) {
+            assertNull("'$text'", doubleSpacePeriodReplacement(text, isFullWidthPunctuation = false))
+        }
+        assertNull(doubleSpacePeriodReplacement(null, isFullWidthPunctuation = false))
     }
 }

@@ -15,15 +15,13 @@ class CapsStateManager(
     private val onInvalidateAllKeys: () -> Unit,
     private val onInvalidateCharacterKeys: () -> Unit,
 ) {
-    // Dedicated handler for caps double-tap detection — avoids interference with
-    // TextInputManager's osHandler (double-space period, etc.)
+    // Dedicated handler for caps double-tap detection.
     private val capsHandler: Handler = Handler(android.os.Looper.getMainLooper())
     var caps: Boolean = false
         private set
     var capsLock: Boolean = false
         private set
     private var hasCapsRecentlyChanged: Boolean = false
-    var hasSpaceRecentlyPressed: Boolean = false
 
     /**
      * Handle shift key press (single tap / double tap for caps lock).

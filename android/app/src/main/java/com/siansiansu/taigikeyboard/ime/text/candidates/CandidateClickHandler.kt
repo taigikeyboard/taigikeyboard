@@ -142,6 +142,7 @@ class CandidateClickHandler(
     fun handleEnglishCandidateClick(index: Int) {
         TraceContext.withTrace(TraceId.next()) {
             logger.debug(TAG) { "[INPUT] fn=handleEnglishCandidateClick gesture=candidate-tap" }
+            taigikeyboard.beginInputEvent()
 
             val currentSuggestions = getCurrentSuggestions()
             if (index >= currentSuggestions.size) return
@@ -159,6 +160,9 @@ class CandidateClickHandler(
             onClearCandidates()
 
             logger.debug(TAG) { "[ENGLISH-CLICK] Replaced '$currentWord' with '${selectedWord.roman}'" }
+            // CROSS-PLATFORM INVARIANT — mirrors iOS ActionHandler.handle(_ suggestion:)
+            // English arm: an English word takes the Auto-Space spacing and arms the swap.
+            appendAutoSpaceIfEarned(taigikeyboard, ic, selectedWord.roman, wroteRomanization = true)
         }
     }
 

@@ -3,6 +3,7 @@
 
 import Foundation
 import KeyboardKit
+import UIKit
 
 extension ActionHandler {
     // MARK: - Character Input
@@ -43,9 +44,10 @@ extension ActionHandler {
 
         logger.debug("[AUTOCAP][INPUT] processedChar='\(finalChar)'")
 
-        // English mode: insert directly, skip composing
+        // English mode: insert directly, skip composing; punctuation still swaps
+        // with an auto space a suggestion pick wrote (`hello ` + `,` → `hello, `).
         if settings.inputMode == .english {
-            hostText.insert(finalChar)
+            insertNonComposingCharacter(finalChar)
             // Reset single-shift (preserve Caps Lock)
             if keyboardContext.keyboardCase == .uppercased {
                 keyboardContext.keyboardCase = .lowercased
@@ -116,12 +118,22 @@ extension ActionHandler {
             return true
         }
 
-        // Reset single-shift (preserve Caps Lock)
-        if keyboardContext.keyboardCase == .uppercased {
+        // Reset single-shift (preserve Caps Lock) — only a cased letter spends it.
+        if keyboardContext.keyboardCase == .uppercased, Self.consumesSingleShift(finalChar) {
             keyboardContext.keyboardCase = .lowercased
         }
 
         return true
+    }
+
+    /// Whether typing `char` spends a one-shot Shift: only a cased letter does.
+    /// Tone digits, the hyphen, TPS Bopomofo and TPS tone marks carry no case,
+    /// so a Shift stays armed across them for the next letter.
+    // CROSS-PLATFORM INVARIANT — mirrors Android TextInputKeyHandler.kt
+    // `consumesSingleShift`. Drift causes silent divergence.
+    static func consumesSingleShift(_ char: String) -> Bool {
+        guard let first = char.unicodeScalars.first else { return false }
+        return first.properties.isUppercase || first.properties.isLowercase
     }
 
     /// Insert a non-composing character (punctuation / symbol), applying the
@@ -157,7 +169,7 @@ extension ActionHandler {
     func handleSpaceAction() -> Bool {
         // English mode: insert space directly
         if settings.inputMode == .english {
-            hostText.insert(" ")
+            insertSpaceOrDoubleSpacePeriod(isFullWidthPunctuation: false)
             return true
         }
 
@@ -187,10 +199,59 @@ extension ActionHandler {
             composingManager.commitComposition()
             hostText.insert(" ")
             nextWordController.clearDisplay()
-        } else {
-            hostText.insert(" ")
+        } else if let period = insertSpaceOrDoubleSpacePeriod(isFullWidthPunctuation: settings.isFullWidthPunctuation) {
+            // The period ends the sentence for next-word learning, as a typed one would (§40).
+            nextWordController.noteCharacterTypedOutsideComposition(period)
         }
         return true
+    }
+
+    /// Writes a space, or — when the previous event was a plain space a moment
+    /// ago and the text before it earns a period — replaces that space with
+    /// `doubleSpacePeriodReplacement`. Always on, no setting. Returns the
+    /// period written, or nil for a plain space.
+    // CROSS-PLATFORM INVARIANT — mirrors Android
+    // TextInputKeyHandler.commitSpaceOrDoubleSpacePeriod. Drift causes silent divergence.
+    @discardableResult
+    private func insertSpaceOrDoubleSpacePeriod(isFullWidthPunctuation: Bool) -> String? {
+        let proxy = keyboardContext.textDocumentProxy
+        let replacement: String? = if followsRecentPlainSpace, (proxy.selectedText ?? "").isEmpty {
+            Self.doubleSpacePeriodReplacement(
+                textBeforeCaret: proxy.documentContextBeforeInput,
+                isFullWidthPunctuation: isFullWidthPunctuation,
+            )
+        } else {
+            nil
+        }
+        guard let replacement else {
+            hostText.insert(" ")
+            notePlainSpace()
+            return nil
+        }
+        hostText.deleteBackward()
+        hostText.insert(replacement)
+        return replacement.trimmingCharacters(in: .whitespaces)
+    }
+
+    /// What a double space writes in place of its first space, or nil when
+    /// `textBeforeCaret` does not earn a period: it must end in one ASCII space
+    /// after a letter, number or combining mark — a code point, so a
+    /// supplementary-plane hanji and POJ's U+0358 both count, and punctuation,
+    /// emoji or a second space do not. Full-width punctuation writes `。` with
+    /// no space; half-width writes `. `.
+    // CROSS-PLATFORM INVARIANT — mirrors Android TextInputKeyHandler.kt
+    // `doubleSpacePeriodReplacement`. Drift causes silent divergence.
+    static func doubleSpacePeriodReplacement(textBeforeCaret: String?, isFullWidthPunctuation: Bool) -> String? {
+        guard let scalars = textBeforeCaret?.unicodeScalars, scalars.last == " " else { return nil }
+        guard let previous = scalars.dropLast().last else { return nil }
+        switch previous.properties.generalCategory {
+        case .uppercaseLetter, .lowercaseLetter, .titlecaseLetter, .modifierLetter, .otherLetter,
+             .decimalNumber, .letterNumber, .otherNumber,
+             .nonspacingMark, .enclosingMark, .spacingMark:
+            return isFullWidthPunctuation ? "。" : ". "
+        default:
+            return nil
+        }
     }
 
     // MARK: - Backspace
@@ -248,6 +309,8 @@ extension ActionHandler {
         if composingManager.isComposing {
             // Captured before the commit clears it.
             let capturedRawInput = composingManager.rawInput
+            // Read before the commit, so a host callback cannot change the field first.
+            let isActionField = Self.isActionReturnKey(keyboardContext.textDocumentProxy.returnKeyType)
 
             // Enter commits raw input (literal keystrokes).
             // This allows English words to pass through without tone conversion
@@ -267,6 +330,14 @@ extension ActionHandler {
             // source (§10.3).
             composingManager.commitComposition()
 
+            // The first Return in an action field (Send / Search / Go …) only
+            // confirms the composition, with no auto space; the next Return
+            // runs the action (CROSS-PLATFORM INVARIANT — mirrors Android
+            // TextInputKeyHandler.handleEnter).
+            if isActionField {
+                return true
+            }
+
             // Auto-space follows what the commit WROTE, not the output mode:
             // a raw commit is romanization in TL/POJ and Bopomofo in TPS. The
             // hyphen check runs on the committed string, so a hyphen the user is
@@ -280,5 +351,20 @@ extension ActionHandler {
             hostText.insert("\n")
         }
         return true
+    }
+
+    /// Whether the host labels Return as an action (Send, Search, Go …) rather
+    /// than a newline. A hint only — the host decides what Return does.
+    // CROSS-PLATFORM INVARIANT — mirrors Android TextInputKeyHandler.kt
+    // `editorActionForEnter`.
+    static func isActionReturnKey(_ returnKeyType: UIReturnKeyType?) -> Bool {
+        switch returnKeyType {
+        case nil, .default:
+            false
+        case .go, .google, .join, .next, .route, .search, .send, .yahoo, .done, .emergencyCall, .continue:
+            true
+        @unknown default:
+            false
+        }
     }
 }

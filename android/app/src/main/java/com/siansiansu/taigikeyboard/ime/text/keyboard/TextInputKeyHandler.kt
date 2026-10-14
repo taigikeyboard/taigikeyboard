@@ -7,7 +7,6 @@
 package com.siansiansu.taigikeyboard.ime.text.keyboard
 
 import android.content.Context
-import android.os.Handler
 import android.text.InputType
 import android.view.KeyEvent
 import android.view.inputmethod.EditorInfo
@@ -48,7 +47,6 @@ internal class TextInputKeyHandler(
     private val prefs: PrefHelper,
     private val capsStateManager: CapsStateManager,
     private val uiCoordinator: KeyboardUiCoordinator,
-    private val osHandler: Handler,
     private val composingManagerProvider: () -> ComposingManager?,
     private val candidateCoordinatorProvider: () -> CandidateUpdateCoordinator,
     private val smartbarManagerProvider: () -> SmartbarManager,
@@ -64,13 +62,15 @@ internal class TextInputKeyHandler(
 
     companion object {
         private const val TAG = "TextInputKeyHandler"
-        private val DOUBLE_SPACE_PERIOD_REGEX = """[.!?‽\s][\s]""".toRegex()
 
         // UTF-16 look-behind window for last-grapheme deletion. A bounded
         // heuristic: 64 units covers any practical grapheme cluster (ZWJ family
         // emoji, flags, skin-tone modifiers) without scanning the whole field on
         // each backspace. Clusters have no hard length cap; this is pragmatic.
         private const val GRAPHEME_LOOKBEHIND = 64
+
+        // UTF-16 look-behind for the double-space check: a surrogate pair plus the space.
+        private const val DOUBLE_SPACE_LOOKBEHIND = 3
     }
 
     // Clears any residual host composing region without committing its
@@ -319,6 +319,7 @@ internal class TextInputKeyHandler(
      */
     private fun handleEnter() {
         val ic = taigikeyboard.currentInputConnection ?: return
+        val editorAction = editorActionForEnter(taigikeyboard.currentInputEditorInfo?.imeOptions ?: 0)
 
         if (composingManager?.isComposing() == true) {
             val committedText = composingManager?.getComposingText() ?: ""
@@ -338,26 +339,12 @@ internal class TextInputKeyHandler(
             smartbarManager.clearCandidates()
             composingManager?.commitComposition(ic)
 
-            val imeOptions = taigikeyboard.currentInputEditorInfo?.imeOptions ?: 0
-            val maskedAction = imeOptions and EditorInfo.IME_MASK_ACTION
-
-            logger.debug(TAG) { "[ENTER] composing mode, imeOptions=$imeOptions, maskedAction=$maskedAction" }
-
-            if (imeOptions and EditorInfo.IME_FLAG_NO_ENTER_ACTION == 0 &&
-                maskedAction in
-                listOf(
-                    EditorInfo.IME_ACTION_DONE,
-                    EditorInfo.IME_ACTION_GO,
-                    EditorInfo.IME_ACTION_NEXT,
-                    EditorInfo.IME_ACTION_PREVIOUS,
-                    EditorInfo.IME_ACTION_SEARCH,
-                    EditorInfo.IME_ACTION_SEND,
-                )
-            ) {
-                logger.debug(TAG) { "[ENTER] performing action: $maskedAction" }
-                ic.performEditorAction(maskedAction)
-                return
-            }
+            // The first Enter in an action field (Send / Search / Go …) only
+            // confirms the composition, with no auto space; the next Enter runs
+            // the action (CROSS-PLATFORM INVARIANT — mirrors iOS
+            // ActionHandler.handleReturnAction).
+            logger.debug(TAG) { "[ENTER] composing mode, editorAction=$editorAction" }
+            if (editorAction != null) return
 
             // Auto-space follows what the commit WROTE, not the output mode:
             // Enter writes the composition as typed, so the layout is the
@@ -381,30 +368,11 @@ internal class TextInputKeyHandler(
         }
 
         resetComposingText()
-        val imeOptions = taigikeyboard.currentInputEditorInfo?.imeOptions ?: 0
-        val maskedAction = imeOptions and EditorInfo.IME_MASK_ACTION
-
-        logger.debug(TAG) { "[ENTER] non-composing mode, imeOptions=$imeOptions, maskedAction=$maskedAction" }
-
-        if (imeOptions and EditorInfo.IME_FLAG_NO_ENTER_ACTION > 0) {
-            ic.commitText("\n", 1)
+        logger.debug(TAG) { "[ENTER] non-composing mode, editorAction=$editorAction" }
+        if (editorAction != null) {
+            ic.performEditorAction(editorAction)
         } else {
-            when (maskedAction) {
-                EditorInfo.IME_ACTION_DONE,
-                EditorInfo.IME_ACTION_GO,
-                EditorInfo.IME_ACTION_NEXT,
-                EditorInfo.IME_ACTION_PREVIOUS,
-                EditorInfo.IME_ACTION_SEARCH,
-                EditorInfo.IME_ACTION_SEND,
-                -> {
-                    logger.debug(TAG) { "[ENTER] performing action: $maskedAction" }
-                    ic.performEditorAction(maskedAction)
-                }
-
-                else -> {
-                    ic.commitText("\n", 1)
-                }
-            }
+            ic.commitText("\n", 1)
         }
     }
 
@@ -423,7 +391,7 @@ internal class TextInputKeyHandler(
 
         // English mode: commit space, clear candidates
         if (prefs.inputMode == "english") {
-            ic.commitText(" ", 1)
+            commitSpaceOrDoubleSpacePeriod(ic, isFullWidthPunctuation = false)
             smartbarManager.clearCandidates()
             return
         }
@@ -457,22 +425,40 @@ internal class TextInputKeyHandler(
             return
         }
 
-        // Double-space → period (always on; the FlorisBoard toggle had no UI here).
-        if (capsStateManager.hasSpaceRecentlyPressed) {
-            osHandler.removeCallbacksAndMessages(null)
-            val text = ic.getTextBeforeCursor(2, 0) ?: ""
-            if (text.length == 2 && !text.matches(DOUBLE_SPACE_PERIOD_REGEX)) {
-                ic.deleteSurroundingText(1, 0)
-                ic.commitText(".", 1)
+        val period = commitSpaceOrDoubleSpacePeriod(ic, prefs.isFullWidthPunctuation)
+        // The period ends the sentence for next-word learning, as a typed one would (§40).
+        if (period != null) smartbarManager.noteCharacterTypedOutsideComposition(period)
+    }
+
+    /**
+     * Writes a space, or — when the previous event was a plain space a moment
+     * ago and the text before it earns a period — replaces that space with
+     * [doubleSpacePeriodReplacement]. Always on, no setting. Returns the
+     * period written, or null for a plain space.
+     *
+     * CROSS-PLATFORM INVARIANT — mirrors iOS `ActionHandler.insertSpaceOrDoubleSpacePeriod`.
+     */
+    private fun commitSpaceOrDoubleSpacePeriod(
+        ic: InputConnection,
+        isFullWidthPunctuation: Boolean,
+    ): String? {
+        val replacement =
+            if (taigikeyboard.followsRecentPlainSpace && ic.getSelectedText(0).isNullOrEmpty()) {
+                doubleSpacePeriodReplacement(
+                    ic.getTextBeforeCursor(DOUBLE_SPACE_LOOKBEHIND, 0),
+                    isFullWidthPunctuation,
+                )
+            } else {
+                null
             }
-            capsStateManager.hasSpaceRecentlyPressed = false
-        } else {
-            capsStateManager.hasSpaceRecentlyPressed = true
-            osHandler.postDelayed({
-                capsStateManager.hasSpaceRecentlyPressed = false
-            }, 300)
+        if (replacement == null) {
+            ic.commitText(" ", 1)
+            taigikeyboard.notePlainSpace()
+            return null
         }
-        ic.commitText(KeyCode.SPACE.toChar().toString(), 1)
+        ic.deleteSurroundingText(1, 0)
+        ic.commitText(replacement, 1)
+        return replacement.trimEnd()
     }
 
     /**
@@ -527,9 +513,10 @@ internal class TextInputKeyHandler(
             adjustment.replaceLast?.let { composingManager?.replaceLastCharacter(it, ic) }
         }
 
-        // English mode: commit directly
+        // English mode: commit directly; punctuation still swaps with an auto space
+        // a suggestion pick wrote (`hello ` + `,` → `hello, `).
         if (prefs.inputMode == "english") {
-            ic.commitText(char, 1)
+            commitNonComposingCharacter(ic, char)
             releaseSingleShift()
             candidateCoordinator.updateEnglishCandidates()
             return
@@ -648,13 +635,65 @@ internal class TextInputKeyHandler(
 internal fun isContextCharacterOutsideComposition(char: String): Boolean = char.isNotEmpty() && char.none { it.isLetter() || it.isWhitespace() }
 
 /**
+ * The editor action Enter runs for [imeOptions], or null when Enter writes a
+ * newline (no action, or the field opts out with `IME_FLAG_NO_ENTER_ACTION`).
+ */
+internal fun editorActionForEnter(imeOptions: Int): Int? {
+    if (imeOptions and EditorInfo.IME_FLAG_NO_ENTER_ACTION != 0) return null
+    return when (val action = imeOptions and EditorInfo.IME_MASK_ACTION) {
+        EditorInfo.IME_ACTION_DONE,
+        EditorInfo.IME_ACTION_GO,
+        EditorInfo.IME_ACTION_NEXT,
+        EditorInfo.IME_ACTION_PREVIOUS,
+        EditorInfo.IME_ACTION_SEARCH,
+        EditorInfo.IME_ACTION_SEND,
+        -> action
+
+        else -> null
+    }
+}
+
+/**
+ * What a double space writes in place of its first space, or null when
+ * [textBeforeCaret] does not earn a period: it must end in one ASCII space
+ * after a letter, number or combining mark — a code point, so a
+ * supplementary-plane hanji and POJ's U+0358 both count, and punctuation,
+ * emoji or a second space do not. Full-width punctuation writes `。` with no
+ * space; half-width writes `. `.
+ *
+ * CROSS-PLATFORM INVARIANT — mirrors iOS `ActionHandler.doubleSpacePeriodReplacement`.
+ * Drift causes silent divergence.
+ */
+internal fun doubleSpacePeriodReplacement(
+    textBeforeCaret: CharSequence?,
+    isFullWidthPunctuation: Boolean,
+): String? {
+    val text = textBeforeCaret ?: return null
+    if (text.length < 2 || text[text.length - 1] != ' ') return null
+    val earnsPeriod =
+        when (Character.getType(Character.codePointBefore(text, text.length - 1)).toByte()) {
+            Character.UPPERCASE_LETTER, Character.LOWERCASE_LETTER, Character.TITLECASE_LETTER,
+            Character.MODIFIER_LETTER, Character.OTHER_LETTER,
+            Character.DECIMAL_DIGIT_NUMBER, Character.LETTER_NUMBER, Character.OTHER_NUMBER,
+            Character.NON_SPACING_MARK, Character.ENCLOSING_MARK, Character.COMBINING_SPACING_MARK,
+            -> true
+
+            else -> false
+        }
+    if (!earnsPeriod) return null
+    return if (isFullWidthPunctuation) "。" else ". "
+}
+
+/**
  * Whether typing [char] spends a one-shot Shift: only a cased letter does.
  * Tone digits, the hyphen, TPS Bopomofo and TPS tone marks carry no case,
  * so a Shift stays armed across them for the next letter.
  */
 internal fun consumesSingleShift(char: String): Boolean {
-    val first = char.firstOrNull() ?: return false
-    return first.isUpperCase() || first.isLowerCase()
+    if (char.isEmpty()) return false
+    // A code point, as iOS reads a Unicode scalar — a supplementary-plane letter counts.
+    val first = char.codePointAt(0)
+    return Character.isUpperCase(first) || Character.isLowerCase(first)
 }
 
 /**

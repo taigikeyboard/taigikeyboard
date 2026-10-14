@@ -112,11 +112,30 @@ class TaigiKeyboard : LifecycleInputMethodService() {
      */
     private var wasAutoSpaceArmedAtEventStart = false
 
-    /** Consumes the auto-space arm for one user event — a key, or a candidate tap. */
+    /**
+     * Uptime of the plain space the previous event wrote, or null. Event-scoped
+     * like the arm: any other key or candidate tap in between clears it, so
+     * `Space → Backspace → Space` never reads as a double space.
+     */
+    private var plainSpaceUptimeMs: Long? = null
+    private var plainSpaceUptimeAtEventStart: Long? = null
+
+    /** Consumes the auto-space arm and the plain-space mark for one user event — a key, or a candidate tap. */
     internal fun beginInputEvent() {
         wasAutoSpaceArmedAtEventStart = isAutoSpaceArmed
         isAutoSpaceArmed = false
+        plainSpaceUptimeAtEventStart = plainSpaceUptimeMs
+        plainSpaceUptimeMs = null
     }
+
+    /** Marks the space this event wrote as a plain space press — the first half of a double space. */
+    internal fun notePlainSpace() {
+        plainSpaceUptimeMs = SystemClock.uptimeMillis()
+    }
+
+    /** Whether the event before this one was a plain space press less than [DOUBLE_SPACE_WINDOW_MS] ago. */
+    internal val followsRecentPlainSpace: Boolean
+        get() = plainSpaceUptimeAtEventStart?.let { SystemClock.uptimeMillis() - it < DOUBLE_SPACE_WINDOW_MS } ?: false
 
     /**
      * Re-arms after this IME has written a space the next attaching
@@ -135,9 +154,10 @@ class TaigiKeyboard : LifecycleInputMethodService() {
     internal val isAutoSpaceSwapArmed: Boolean
         get() = wasAutoSpaceArmedAtEventStart && prefs.isAutoSpaceEnabled
 
-    /** Forgets any armed space — a new editor's document is not ours to rewrite. */
-    internal fun clearAutoSpaceArm() {
+    /** Forgets any armed space and plain-space mark — a new editor's document is not ours to rewrite. */
+    internal fun clearSpaceMarks() {
         isAutoSpaceArmed = false
+        plainSpaceUptimeMs = null
     }
 
     lateinit var textInputManager: TextInputManager
@@ -152,6 +172,9 @@ class TaigiKeyboard : LifecycleInputMethodService() {
     companion object {
         private const val TAG = "TaigiKeyboard"
         private const val IME_ID: String = "com.siansiansu.taigikeyboard/.ime.core.TaigiKeyboard"
+
+        // CROSS-PLATFORM INVARIANT — mirrors iOS ActionHandler.doubleSpaceWindow.
+        private const val DOUBLE_SPACE_WINDOW_MS = 300L
 
         fun checkIfImeIsEnabled(context: Context): Boolean {
             val logger = CompositionRoot.shared(context).logger
@@ -416,7 +439,7 @@ class TaigiKeyboard : LifecycleInputMethodService() {
         if (syncForcedLight()) rebuildInputView()
 
         super.onStartInputView(info, restarting)
-        clearAutoSpaceArm()
+        clearSpaceMarks()
         textInputManager.onStartInputView(info, restarting)
         mediaInputManager.onStartInputView(info, restarting)
     }

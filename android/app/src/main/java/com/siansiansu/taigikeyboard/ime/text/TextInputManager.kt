@@ -1,7 +1,5 @@
 package com.siansiansu.taigikeyboard.ime.text
 
-import android.os.Handler
-import android.os.Looper
 import android.view.View
 import android.view.inputmethod.CursorAnchorInfo
 import android.view.inputmethod.EditorInfo
@@ -40,7 +38,6 @@ class TextInputManager(
     private val prefs: com.siansiansu.taigikeyboard.ime.settings.PrefHelper,
 ) : CoroutineScope by MainScope(),
     TaigiKeyboard.EventListener {
-    private val osHandler = Handler(Looper.getMainLooper())
     var textViewGroup: android.view.ViewGroup? = null
         private set
 
@@ -140,7 +137,6 @@ class TextInputManager(
         prefs = prefs,
         capsStateManager = capsStateManager,
         uiCoordinator = uiCoordinator,
-        osHandler = osHandler,
         composingManagerProvider = { composingManager },
         candidateCoordinatorProvider = { candidateCoordinator },
         smartbarManagerProvider = { smartbarManager },
@@ -271,7 +267,6 @@ class TextInputManager(
         popupHost.dismissAllPopups()
 
         cancel()
-        osHandler.removeCallbacksAndMessages(null)
         smartbarManager.onDestroy()
     }
 

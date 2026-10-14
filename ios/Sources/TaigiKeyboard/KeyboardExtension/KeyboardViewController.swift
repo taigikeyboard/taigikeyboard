@@ -252,6 +252,8 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
         // post-impl P2-2. Android does the equivalent in
         // `NextWordController.resetContext()` invoked from `onStartInputView`.
         actionHandler?.nextWordController.bumpEnvelopeGeneration()
+        // A space written in the old field is no auto space or double-space half here.
+        actionHandler?.clearSpaceMarks()
     }
 
     /// FIXME: Workaround layer 1/2 for KeyboardKit 10 auto-capitalization override.
