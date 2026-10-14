@@ -2,7 +2,6 @@ import SwiftUI
 
 // Standardized short license names — language-invariant, never translated (kept as constants rather
 // than i18n keys per the multi-language plan). Mirrors Android content/CopyrightData.kt.
-// OGDL-Taiwan-1.0 is iOS-only (Android has no STTI copyright section).
 private enum License {
     static let silOpenFont = "SIL Open Font License"
     static let silOpenFont11 = "SIL Open Font License 1.1"

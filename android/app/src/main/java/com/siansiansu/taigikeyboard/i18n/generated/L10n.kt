@@ -264,18 +264,18 @@ object L10n {
         @Composable get() = stringRes(StringKey.HOME_SETUP_GUIDE)
     val homeSetupGuideDescription: String
         @Composable get() = stringRes(StringKey.HOME_SETUP_GUIDE_DESCRIPTION)
-    val homeSetupInfoMessage: String
-        @Composable get() = stringRes(StringKey.HOME_SETUP_INFO_MESSAGE)
+    val homeSetupInfoSystemWarning: String
+        @Composable get() = stringRes(StringKey.HOME_SETUP_INFO_SYSTEM_WARNING)
     val homeSetupBrandWarning: String
         @Composable get() = stringRes(StringKey.HOME_SETUP_BRAND_WARNING)
-    val homeSetupGuideCompletedMessage: String
-        @Composable get() = stringRes(StringKey.HOME_SETUP_GUIDE_COMPLETED_MESSAGE)
+    val homeSetupGuideCompletedSwitch: String
+        @Composable get() = stringRes(StringKey.HOME_SETUP_GUIDE_COMPLETED_SWITCH)
     val homeSetupGuideGoToSettings: String
         @Composable get() = stringRes(StringKey.HOME_SETUP_GUIDE_GO_TO_SETTINGS)
     val homeSetupGuideStep1Settings: String
         @Composable get() = stringRes(StringKey.HOME_SETUP_GUIDE_STEP1_SETTINGS)
-    val homeSetupGuideStep2AddKeyboard: String
-        @Composable get() = stringRes(StringKey.HOME_SETUP_GUIDE_STEP2_ADD_KEYBOARD)
+    val homeSetupGuideStep2TurnOn: String
+        @Composable get() = stringRes(StringKey.HOME_SETUP_GUIDE_STEP2_TURN_ON)
     val homeRateUs: String
         @Composable get() = stringRes(StringKey.HOME_RATE_US)
     val homeAboutKeyboard: String

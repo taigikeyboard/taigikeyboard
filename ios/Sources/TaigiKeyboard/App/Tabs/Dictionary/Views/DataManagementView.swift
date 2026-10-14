@@ -61,8 +61,11 @@ struct DataManagementView: View {
             contentType: .taigiBackup,
             defaultFilename: backupFilename,
         ) { result in
-            if case .success = result {
+            switch result {
+            case .success:
                 showExportSuccessAlert = true
+            case .failure:
+                showBackupError(lang.string(.commonExportFailed))
             }
         }
         .fileImporter(
@@ -99,8 +102,7 @@ struct DataManagementView: View {
                 backupDocument = BackupDocument(payload.data)
                 showBackupExporter = true
             } catch {
-                backupErrorMessage = error.localizedDescription
-                showBackupErrorAlert = true
+                showBackupError(lang.string(.commonExportFailed))
             }
         }
     }
@@ -120,13 +122,18 @@ struct DataManagementView: View {
                     showBackupResultAlert = true
                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 } catch {
-                    backupErrorMessage = error.localizedDescription
-                    showBackupErrorAlert = true
+                    showBackupError(lang.string(.commonImportFailed))
                 }
             }
-        case let .failure(error):
-            backupErrorMessage = error.localizedDescription
-            showBackupErrorAlert = true
+        case .failure:
+            showBackupError(lang.string(.commonImportFailed))
         }
+    }
+
+    // A generic message, as on Android: the engine's refusal detail stays in the error's
+    // `errorDescription` and is not shown.
+    private func showBackupError(_ message: String) {
+        backupErrorMessage = message
+        showBackupErrorAlert = true
     }
 }

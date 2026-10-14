@@ -21,6 +21,7 @@ private const val CC_BY_NC_ND_IMAGES_LICENSE = "CC BY-NC-ND (images only)"
 private const val CC0_LICENSE = "CC0"
 private const val CC_BY_NC_SA_3_TW_LICENSE = "CC BY-NC-SA 3.0 TW"
 private const val CC_BY_SA_4_LICENSE = "CC BY-SA 4.0"
+private const val OGDL_TAIWAN_10_LICENSE = "OGDL-Taiwan-1.0"
 
 data class CopyrightPage(
     val id: Int,
@@ -233,17 +234,35 @@ object CopyrightDataSource {
                         ),
                     ),
             ),
-            // 8. 腔口補充資料
+            // 8. 學科術語 — same rights-holder (教育部) as the MOE dictionary.
             CopyrightPage(
                 id = 11,
+                title = resolver.resolve(StringKey.COMMON_STTI_DICT),
+                description = resolver.resolve(StringKey.HOME_MOE_COPYRIGHT),
+                license = OGDL_TAIWAN_10_LICENSE,
+                buttons =
+                    listOf(
+                        CopyrightButton(
+                            text = resolver.resolve(StringKey.HOME_VIEW_LICENSE),
+                            url = "https://spdx.org/licenses/OGDL-Taiwan-1.0.html",
+                        ),
+                        CopyrightButton(
+                            text = resolver.resolve(StringKey.COMMON_VIEW_WEBSITE),
+                            url = "https://stti.moe.edu.tw/",
+                        ),
+                    ),
+            ),
+            // 9. 腔口補充資料
+            CopyrightPage(
+                id = 12,
                 title = resolver.resolve(StringKey.COMMON_ACCENT_DICT),
                 description = resolver.resolve(StringKey.HOME_ACCENT_DICT_CREDIT),
                 license = "",
                 buttons = emptyList(),
             ),
-            // 9. 詞庫增補檔案
+            // 10. 詞庫增補檔案
             CopyrightPage(
-                id = 12,
+                id = 13,
                 title = resolver.resolve(StringKey.DICTIONARY_DEV_SUPPLEMENT_DICT),
                 description = resolver.resolve(StringKey.HOME_DEV_SUPPLEMENT_CREDIT),
                 license = "",

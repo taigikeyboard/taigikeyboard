@@ -698,6 +698,10 @@ final class SharedSettings {
         fontType = .keyboardDefault
         isAutoSpaceEnabled = false
         keyboardLayoutType = .phahTaigi
+        // After the pair above: its setters run the TPS state machine, which reads these backups.
+        userDefaults.remove(Self.inputModeBeforeTpsKey)
+        userDefaults.remove(Self.layoutBeforeTpsKey)
+        isCustomDictEnabled = true
         // Dictionary toggles (iTaigi, TaiHua default off)
         isMoeDictEnabled = true
         isNewwordDictEnabled = true

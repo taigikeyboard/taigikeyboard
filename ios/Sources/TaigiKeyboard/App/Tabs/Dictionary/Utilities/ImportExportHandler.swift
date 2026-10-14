@@ -14,14 +14,11 @@ final class ImportExportHandler: ObservableObject {
     @Published var showImportResultAlert = false
     @Published var importResultMessage = ""
     @Published var showExportSuccessAlert = false
+    @Published var showExportFailedAlert = false
     @Published var showErrorAlert = false
     @Published var errorMessage = ""
 
     nonisolated init() {}
-
-    // nonisolated: the stored value is referenced as a default-argument from a nonisolated context; the
-    // closure itself stays @MainActor-typed and is only ever invoked on the main actor.
-    private nonisolated static let defaultErrorFormatter: @MainActor (Error) -> String = { $0.localizedDescription }
 
     /// Exports data as CSV and triggers the file exporter sheet.
     func performExport(_ csvGenerator: @escaping () async throws -> String) {
@@ -31,7 +28,7 @@ final class ImportExportHandler: ObservableObject {
                 csvDocument = CSVDocument(csv)
                 showFileExporter = true
             } catch {
-                showError(error)
+                showExportFailedAlert = true
             }
         }
     }
@@ -42,13 +39,12 @@ final class ImportExportHandler: ObservableObject {
     /// `formatResult` turns the imported/skipped counts into the result message — counts are computed
     /// inside this handler, so the caller passes a formatter (backed by the generated typed i18n
     /// accessor) rather than a pre-built string. `formatError` localizes a thrown error at the display
-    /// boundary; the default surfaces `localizedDescription`, and a caller whose service raises a typed
-    /// error (e.g. `CustomDictionaryError`) maps it to a localized string via the App-layer resolver.
+    /// boundary (e.g. `CustomDictionaryError`) via the App-layer resolver.
     func handleFileImport(
         _ result: Result<[URL], Error>,
         importAction: @escaping (URL) async throws -> (imported: Int, skipped: Int),
         formatResult: @MainActor @escaping (_ imported: Int, _ skipped: Int) -> String,
-        formatError: @MainActor @escaping (Error) -> String = ImportExportHandler.defaultErrorFormatter,
+        formatError: @MainActor @escaping (Error) -> String,
         onComplete: (() async -> Void)? = nil,
     ) {
         switch result {
@@ -81,7 +77,7 @@ final class ImportExportHandler: ObservableObject {
         return "\(prefix)_\(formatter.string(from: Date())).csv"
     }
 
-    private func showError(_ error: Error, _ formatError: @MainActor (Error) -> String = ImportExportHandler.defaultErrorFormatter) {
+    private func showError(_ error: Error, _ formatError: @MainActor (Error) -> String) {
         errorMessage = formatError(error)
         showErrorAlert = true
     }
@@ -98,6 +94,7 @@ private struct ImportExportModifiers: ViewModifier {
     let exportFilename: () -> String
     let okText: String
     let exportSuccessText: String
+    let exportFailedText: String
     let onFileImport: (Result<[URL], Error>) -> Void
 
     func body(content: Content) -> some View {
@@ -115,8 +112,11 @@ private struct ImportExportModifiers: ViewModifier {
                 contentType: .commaSeparatedText,
                 defaultFilename: exportFilename(),
             ) { result in
-                if case .success = result {
+                switch result {
+                case .success:
                     handler.showExportSuccessAlert = true
+                case .failure:
+                    handler.showExportFailedAlert = true
                 }
             }
             .alert(importAlertTitle, isPresented: $handler.showImportResultAlert) {
@@ -128,6 +128,11 @@ private struct ImportExportModifiers: ViewModifier {
                 Button(okText) {}
             } message: {
                 Text(exportSuccessText)
+            }
+            .alert(errorTitle, isPresented: $handler.showExportFailedAlert) {
+                Button(okText) {}
+            } message: {
+                Text(exportFailedText)
             }
             .alert(errorTitle, isPresented: $handler.showErrorAlert) {
                 Button(okText) {}
@@ -146,6 +151,7 @@ extension View {
         exportFilename: @escaping () -> String,
         okText: String,
         exportSuccessText: String,
+        exportFailedText: String,
         onFileImport: @escaping (Result<[URL], Error>) -> Void,
     ) -> some View {
         modifier(ImportExportModifiers(
@@ -156,6 +162,7 @@ extension View {
             exportFilename: exportFilename,
             okText: okText,
             exportSuccessText: exportSuccessText,
+            exportFailedText: exportFailedText,
             onFileImport: onFileImport,
         ))
     }

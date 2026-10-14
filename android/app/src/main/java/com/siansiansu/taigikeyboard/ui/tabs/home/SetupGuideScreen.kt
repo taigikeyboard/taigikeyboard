@@ -107,14 +107,14 @@ fun SetupGuideScreen(
 
             StepCard(
                 stepNumber = 2,
-                title = L10n.homeSetupGuideStep2AddKeyboard,
+                title = L10n.homeSetupGuideStep2TurnOn,
                 imageResId = R.drawable.setup_step2,
             )
 
             Spacer(Modifier.height(16.dp))
 
             Text(
-                text = L10n.homeSetupGuideCompletedMessage,
+                text = L10n.homeSetupGuideCompletedSwitch,
                 lineHeight = 22.sp,
                 color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.bodyLarge,
@@ -135,7 +135,7 @@ fun SetupGuideScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            WarningRow(L10n.homeSetupInfoMessage)
+            WarningRow(L10n.homeSetupInfoSystemWarning)
 
             Spacer(Modifier.height(12.dp))
 

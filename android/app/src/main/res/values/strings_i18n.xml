@@ -132,12 +132,12 @@
     <string name="i18n_home_newFeatures">功能設定</string>
     <string name="i18n_home_setupGuide">啟用方法</string>
     <string name="i18n_home_setupGuideDescription">第三方齒盤愛手動啟用，請照下跤 ê 步驟設定。</string>
-    <string name="i18n_home_setupInfoMessage">「允准完整取用」予齒盤會當佮 App 共用設定佮使用資料。台語齒盤袂共你拍 ê 內容送去網路。</string>
+    <string name="i18n_home_setupInfoSystemWarning">啟用 ê 時，系統會出現警告，講齒盤可能會收集你拍 ê 字。台語齒盤袂共你拍 ê 內容送去網路。</string>
     <string name="i18n_home_setupBrandWarning">無仝牌子 ê 手機仔，設定方式可能淡薄仔無仝。</string>
-    <string name="i18n_home_setupGuideCompletedMessage">完成了後，重開你目前使用 ê App。紲落來，佇會當拍字 ê 所在揤牢地球圖示，切去台語齒盤。</string>
+    <string name="i18n_home_setupGuideCompletedSwitch">完成了後，佇會當拍字 ê 所在，共齒盤切換做台語齒盤。</string>
     <string name="i18n_home_setupGuideGoToSettings">去設定頁</string>
     <string name="i18n_home_setupGuideStep1Settings">點揤「齒盤」</string>
-    <string name="i18n_home_setupGuideStep2AddKeyboard">點揤「增加齒盤」、「允准完整取用」</string>
+    <string name="i18n_home_setupGuideStep2TurnOn">拍開台語齒盤</string>
     <string name="i18n_home_rateUs">為阮評分</string>
     <string name="i18n_home_aboutKeyboard">關於齒盤</string>
     <string name="i18n_home_aboutIntroProject">台語齒盤是一个自由、開源 ê 台語拍字家私，永遠免費、無廣告，嘛袂推出付費功能。毋管是一般使用者、先生、學校抑是台語教育團體，攏會當自由使用。希望予逐家用台語、教台語 ê 時，免有額外 ê 負擔。</string>

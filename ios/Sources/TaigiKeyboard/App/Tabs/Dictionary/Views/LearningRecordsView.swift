@@ -191,13 +191,16 @@ struct LearningRecordsView: View {
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text(String(record.count))
+                    Text(verbatim: "\(lang.string(.dictionaryLearningRecordsCount)) \(record.count)")
                         .font(AppStyle.bodyFont)
                         .monospacedDigit()
                         .foregroundColor(.primary)
-                    Text(record.lastUsedLabel)
-                        .font(AppStyle.captionFont)
-                        .foregroundColor(.secondary)
+                    let lastUsed = record.lastUsedLabel
+                    if !lastUsed.isEmpty {
+                        Text(verbatim: "\(lang.string(.dictionaryLearningRecordsLastUsed)) \(lastUsed)")
+                            .font(AppStyle.captionFont)
+                            .foregroundColor(.secondary)
+                    }
                 }
                 Image(latinSystemName: "chevron.right")
                     .font(AppStyle.captionFont)

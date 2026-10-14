@@ -230,6 +230,23 @@ final class SharedSettingsTests: XCTestCase {
         XCTAssertEqual(settings.keyboardLayoutType, .phahTaigi)
     }
 
+    func test_resetToDefaults_removesBothTpsBackups() {
+        settings.setInputMode(.poj)
+        settings.setKeyboardLayoutType(.qwerty)
+        settings.setInputMode(.tps) // saves layoutBeforeTps = .qwerty
+        settings.setInputMode(.poj) // leaves TPS, layout back to .qwerty
+        settings.setKeyboardLayoutType(.tps) // saves inputModeBeforeTps = .poj
+        XCTAssertEqual(defaults.string(forKey: "layoutBeforeTps"), KeyboardLayoutType.qwerty.rawValue)
+        XCTAssertEqual(defaults.string(forKey: "inputModeBeforeTps"), InputMode.poj.rawValue)
+
+        settings.resetToDefaults()
+
+        XCTAssertNil(defaults.object(forKey: "layoutBeforeTps"))
+        XCTAssertNil(defaults.object(forKey: "inputModeBeforeTps"))
+        XCTAssertEqual(settings.inputMode, .tl)
+        XCTAssertEqual(settings.keyboardLayoutType, .phahTaigi)
+    }
+
     // MARK: - snapshot
 
     func test_snapshot_reflectsPostTransitionPair() {

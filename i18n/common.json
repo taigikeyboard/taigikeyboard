@@ -319,6 +319,7 @@
       "scope": {
         "platforms": [
           "android",
+          "ios",
           "macos",
           "windows",
           "linux"

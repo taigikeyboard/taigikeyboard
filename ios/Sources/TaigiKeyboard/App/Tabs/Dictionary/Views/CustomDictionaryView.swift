@@ -184,6 +184,7 @@ struct CustomDictionaryView: View {
             exportFilename: { ImportExportHandler.exportFilename(prefix: "taigi_custom_dictionary") },
             okText: lang.string(.commonOk),
             exportSuccessText: lang.string(.dictionaryExportSuccess),
+            exportFailedText: lang.string(.commonExportFailed),
             onFileImport: { handleImport($0) },
         )
         .alert(lang.string(.dictionaryDeleteAll), isPresented: $showDeleteAllAlert) {
@@ -229,20 +230,16 @@ struct CustomDictionaryView: View {
     // `Lexicon/` service unaware of `StringKey` (presentation layer). Mirrors Android's
     // `CustomDictionaryScreen` error → `StringKey` resolution.
     private func localizedImportMessage(_ error: Error) -> String {
-        guard let key = (error as? CustomDictionaryError)?.messageKey else {
-            return error.localizedDescription
-        }
-        return lang.string(key)
+        lang.string((error as? CustomDictionaryError)?.messageKey ?? .commonImportFailed)
     }
 }
 
 private extension CustomDictionaryError {
-    var messageKey: StringKey? {
+    var messageKey: StringKey {
         switch self {
-        case .invalidCSVFormat: .dictionaryInvalidCSVFormat
+        case .invalidCSVFormat, .invalidCSVData: .dictionaryInvalidCSVFormat
         case .fileTooLarge: .dictionaryFileTooLarge
         case .tooManyEntries: .dictionaryTooManyEntries
-        case .invalidCSVData: nil
         }
     }
 }

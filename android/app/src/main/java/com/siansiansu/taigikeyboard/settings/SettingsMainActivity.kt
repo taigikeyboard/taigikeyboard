@@ -55,8 +55,9 @@ class SettingsMainActivity : AppCompatActivity() {
 
         prefs = PrefHelper(this)
 
-        // If IME is not enabled, launch setup guide (activity continues to render main UI)
-        if (!TaigiKeyboard.checkIfImeIsEnabled(this)) {
+        // If IME is not enabled, launch setup guide (activity continues to render main UI). Only on a
+        // fresh start: a recreated activity (rotation, theme change) already has the guide on top.
+        if (savedInstanceState == null && !TaigiKeyboard.checkIfImeIsEnabled(this)) {
             startActivity(SetupGuideActivity.createIntent(this, isFullScreen = true))
         }
 

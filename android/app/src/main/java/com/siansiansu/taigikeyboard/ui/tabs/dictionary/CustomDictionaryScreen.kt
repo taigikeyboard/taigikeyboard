@@ -91,6 +91,7 @@ fun CustomDictionaryScreen(
     val stringResolver by rememberUpdatedState(LocalStringResolver.current)
 
     val entries by viewModel.entries.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val isImporting by viewModel.isImporting.collectAsStateWithLifecycle()
     val isCustomDictEnabled by viewModel.isCustomDictEnabled.collectAsStateWithLifecycle()
 
@@ -139,7 +140,7 @@ fun CustomDictionaryScreen(
                             CustomDictionaryRefusal.CUSTOM_DICTIONARY_REFUSAL_NO_USABLE_ROWS,
                             CustomDictionaryRefusal.CUSTOM_DICTIONARY_REFUSAL_NOT_UTF8,
                             -> stringResolver.resolve(StringKey.DICTIONARY_INVALID_C_S_V_FORMAT)
-                            else -> e.localizedMessage ?: stringResolver.resolve(StringKey.COMMON_IMPORT_FAILED)
+                            else -> stringResolver.resolve(StringKey.COMMON_IMPORT_FAILED)
                         }
                     showResultDialog = true
                 }
@@ -162,8 +163,8 @@ fun CustomDictionaryScreen(
                     }
                     resultMessage = stringResolver.resolve(StringKey.DICTIONARY_EXPORT_SUCCESS)
                     showResultDialog = true
-                } catch (e: Exception) {
-                    resultMessage = e.localizedMessage ?: stringResolver.resolve(StringKey.COMMON_EXPORT_FAILED)
+                } catch (_: Exception) {
+                    resultMessage = stringResolver.resolve(StringKey.COMMON_EXPORT_FAILED)
                     showResultDialog = true
                 }
             }
@@ -320,7 +321,9 @@ fun CustomDictionaryScreen(
                     }
                 }
 
-                if (entries.isEmpty()) {
+                if (isLoading) {
+                    item { SettingsCard { LoadingRow() } }
+                } else if (entries.isEmpty()) {
                     item { EmptyListCard(L10n.dictionaryCustomDictEmpty) }
                 } else if (filterText.isNotEmpty() && filteredEntries.isEmpty()) {
                     item { NoticeCard(L10n.dictionaryNoResults) }

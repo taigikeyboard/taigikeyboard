@@ -122,7 +122,6 @@
       "comment": "Setup-guide note explaining that 'Allow Full Access' permits app/keyboard data sharing and stating the network privacy policy.",
       "scope": {
         "platforms": [
-          "android",
           "ios"
         ],
         "surfaces": [
@@ -135,6 +134,24 @@
         "poj": "\"Ún-chún oân-chéng chhú-iōng\" hō͘ khí-pôaⁿ ē-tàng kah App kiōng-iōng siat-tēng kah sú-iōng chu-liāu. Tâi-gí khí-pôaⁿ bōe kā lí phah ê lōe-iông sàng khì bāng-lō͘.",
         "en": "\"Allow Full Access\" lets the keyboard share settings and usage data with the app. TaigiKeyboard does not send what you type over the network.",
         "ja": "「フルアクセスを許可」すると、キーボードとアプリで設定や利用データを共有できます。台語キーボードは入力内容をネットワークへ送信しません。"
+      }
+    },
+    "setupInfoSystemWarning": {
+      "comment": "Setup-guide note on Android: the system warns that a keyboard may collect typed text; states the network privacy policy.",
+      "scope": {
+        "platforms": [
+          "android"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "啟用 ê 時，系統會出現警告，講齒盤可能會收集你拍 ê 字。台語齒盤袂共你拍 ê 內容送去網路。",
+        "tailo": "Khé-iōng ê sî, hē-thóng ē tshut-hiān kíng-kò, kóng khí-puânn khó-lîng ē siu-tsi̍p lí phah ê jī. Tâi-gí khí-puânn buē kā lí phah ê luē-iông sàng khì bāng-lōo.",
+        "poj": "Khé-iōng ê sî, hē-thóng ē chhut-hiān kéng-kò, kóng khí-pôaⁿ khó-lêng ē siu-chi̍p lí phah ê jī. Tâi-gí khí-pôaⁿ bōe kā lí phah ê lōe-iông sàng khì bāng-lō͘.",
+        "en": "When you turn it on, the system warns that the keyboard may collect the text you type. TaigiKeyboard does not send what you type over the network.",
+        "ja": "有効にすると、キーボードが入力内容を収集する可能性があるという警告が表示されます。台語キーボードは入力内容をネットワークへ送信しません。"
       }
     },
     "setupBrandWarning": {
@@ -160,7 +177,6 @@
       "comment": "Setup-guide full-screen closing paragraph: restart the app and switch via the globe key.",
       "scope": {
         "platforms": [
-          "android",
           "ios"
         ],
         "surfaces": [
@@ -173,6 +189,24 @@
         "poj": "Oân-sêng liáu-āu, têng-khui lí ba̍k-chêng sú-iōng ê App. Sòa--lo̍h-lâi, tī ē-tàng phah-jī ê só͘-chāi chhi̍h tiâu tōe-kiû tô͘-sī, chhiat khì tâi-gí khí-pôaⁿ.",
         "en": "Once done, restart the app you are using. Then, wherever you can type, press and hold the globe icon to switch to TaigiKeyboard.",
         "ja": "完了したら、使用中のアプリを再起動してください。その後、文字を入力できる場所で地球儀アイコンを長押しして、台湾語キーボードに切り替えます。"
+      }
+    },
+    "setupGuideCompletedSwitch": {
+      "comment": "Setup-guide closing paragraph on Android: switch to the keyboard where you type (the switcher differs by device, so no icon is named).",
+      "scope": {
+        "platforms": [
+          "android"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "完成了後，佇會當拍字 ê 所在，共齒盤切換做台語齒盤。",
+        "tailo": "Uân-sîng liáu-āu, tī ē-tàng phah-jī ê sóo-tsāi, kā khí-puânn tshiat-uānn tsò Tâi-gí Khí-puânn.",
+        "poj": "Oân-sêng liáu-āu, tī ē-tàng phah-jī ê só͘-chāi, kā khí-pôaⁿ chhiat-ōaⁿ chò Tâi-gí Khí-pôaⁿ.",
+        "en": "Once done, wherever you can type, switch the keyboard to TaigiKeyboard.",
+        "ja": "完了したら、文字を入力できる場所でキーボードを台湾語キーボードに切り替えます。"
       }
     },
     "setupGuideGoToSettings": {
@@ -217,7 +251,6 @@
       "comment": "Setup-guide step 2 title: tap 'Add keyboard' and 'Allow Full Access'.",
       "scope": {
         "platforms": [
-          "android",
           "ios"
         ],
         "surfaces": [
@@ -230,6 +263,24 @@
         "poj": "Tiám-chhi̍h \"cheng-ka khí-pôaⁿ\", \"ún-chún oân-chéng chhú-iōng\"",
         "en": "Tap \"Add keyboard\" and \"Allow Full Access\"",
         "ja": "「キーボードを追加」「フルアクセスを許可」をタップ"
+      }
+    },
+    "setupGuideStep2TurnOn": {
+      "comment": "Setup-guide step 2 title on Android: turn on the TaigiKeyboard switch in the on-screen keyboard list.",
+      "scope": {
+        "platforms": [
+          "android"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "拍開台語齒盤",
+        "tailo": "Phah-khui Tâi-gí Khí-puânn",
+        "poj": "Phah-khui Tâi-gí Khí-pôaⁿ",
+        "en": "Turn on TaigiKeyboard",
+        "ja": "台湾語キーボードをオンにする"
       }
     },
     "rateUs": {

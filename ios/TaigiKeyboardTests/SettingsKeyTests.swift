@@ -233,6 +233,7 @@ final class SettingsKeyTests: XCTestCase {
         settings.isLiteralRomanCandidateEnabled = true
         settings.syllableSeparator = .space
         settings.isGlobeKeyEnabled = !DeviceCapabilities.prefersGlobeKeyByDefault
+        settings.isCustomDictEnabled = false
 
         // RawRep enums + font.
         settings.setInputMode(.poj)
@@ -258,6 +259,7 @@ final class SettingsKeyTests: XCTestCase {
         XCTAssertEqual(settings.syllableSeparator, .hyphen)
         XCTAssertTrue(settings.isMoeDictEnabled)
         XCTAssertTrue(settings.isNewwordDictEnabled)
+        XCTAssertTrue(settings.isCustomDictEnabled)
         XCTAssertTrue(settings.isKunggeDictEnabled)
         XCTAssertFalse(settings.isITaigiDictEnabled)
         XCTAssertFalse(settings.isTaiwanJapanDictEnabled)

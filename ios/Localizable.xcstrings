@@ -109,6 +109,24 @@
         }
       }
     },
+    "i18n_common_exportFailed": {
+      "comment": "Error message shown when exporting user dictionary data fails.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export failed"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エクスポートに失敗しました"
+          }
+        }
+      }
+    },
     "i18n_common_fontGenYoGothic": {
       "comment": "Keyboard font option: GenYoGothic (源樣烏體) sans-serif typeface.",
       "extractionState": "manual",
