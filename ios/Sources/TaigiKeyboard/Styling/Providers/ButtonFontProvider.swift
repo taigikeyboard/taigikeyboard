@@ -11,8 +11,8 @@ import KeyboardKit
 /// Also called by: `TaigiKeyboardView.coreKeyboard` (keyboardButtonStyle closure)
 /// Depends on: `SettingsSnapshot`, `KeyboardContext`
 final class ButtonFontProvider {
-    /// MOE2 layout: shrink factor for 3+ char keys (e.g. "tsh", "chh") to fit within key width
-    private static let moe2MultiCharShrinkFactor: CGFloat = 0.75
+    /// Shrink factor for 3+ char keys (e.g. "tsh", "chh") to fit within key width
+    private static let multiCharShrinkFactor: CGFloat = 0.75
 
     private let keyboardContext: KeyboardContext
     private let settings: SettingsSnapshot
@@ -34,7 +34,7 @@ final class ButtonFontProvider {
         return KeyboardFont.system(size: fontSize)
     }
 
-    /// Adjusts font size: applies user scale, and shrinks MOE2 multi-char keys to fit.
+    /// Adjusts font size: applies user scale, and shrinks multi-char keys to fit.
     private func adjustedFontSize(for action: KeyboardAction, baseFontSize: CGFloat) -> CGFloat {
         let userScale = settings.keyFontSizeScale
 
@@ -42,11 +42,10 @@ final class ButtonFontProvider {
             return baseFontSize * userScale
         }
 
-        if settings.keyboardLayoutType == .moe2, settings.inputMode != .english {
-            // Only shrink 3-char keys (tsh/chh) to fit within key width
-            if char.count >= 3 {
-                return baseFontSize * Self.moe2MultiCharShrinkFactor * userScale
-            }
+        // Only shrink 3-char keys (MOE2 tsh/chh, on any layout a custom layout puts them) to fit
+        // within key width. No built-in key outside MOE2 has three characters.
+        if settings.inputMode != .english, char.count >= 3 {
+            return baseFontSize * Self.multiCharShrinkFactor * userScale
         }
 
         return baseFontSize * userScale

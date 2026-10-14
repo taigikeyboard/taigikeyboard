@@ -5,18 +5,23 @@ import UIKit
 // preview on the Layout tab and in the keyboard's layout picker. Not the KeyboardKit view, so
 // a key can be selected and nothing is typed.
 
-/// The character keys below the digit row are the slots of `CustomLayout.keys`; with `onTapSlot`
-/// they are buttons, every other key is drawn inert.
+/// The keys at a `CustomLayout.Place` (character keys below the digit row, the emoji key) are
+/// buttons when `onTap` is set; every other key is drawn inert.
 struct LayoutKeyGrid: View {
     let rows: [[KeyDef]]
-    var selectedSlot: Int?
-    var onTapSlot: ((Int) -> Void)?
+    var selected: CustomLayout.Place?
+    /// Places drawn as a dashed outline: removed keys the editor can put back.
+    var removed: Set<CustomLayout.Place> = []
+    var onTap: ((CustomLayout.Place) -> Void)?
     /// VoiceOver name of a removed key's place (the grid has no strings of its own).
-    var removedSlotLabel = ""
+    var removedPlaceLabel = ""
 
     /// Card preview aspect: the built-in `*_preview` screenshots (720×454,
     /// `PreviewAssetGeneratorTests`), so a drawn card lines up with them.
     static let cardAspectRatio: CGFloat = 720.0 / 454.0
+
+    /// VoiceOver name of the emoji key, the one function key with a place (read as "smiling face").
+    static let emojiLabel = "😊"
 
     /// Key widths in character-key units; a row of ten character keys fills the board.
     private static let rowUnits: CGFloat = 10
@@ -26,13 +31,13 @@ struct LayoutKeyGrid: View {
             let unit = geometry.size.width / Self.rowUnits
             let rowHeight = geometry.size.height / CGFloat(max(rows.count, 1))
             let gap = min(unit, rowHeight) * 0.1
-            let slots = CustomLayout.slotIndices(of: rows)
+            let places = CustomLayout.places(of: rows)
             VStack(spacing: 0) {
                 ForEach(rows.indices, id: \.self) { row in
                     let widths = Self.widths(of: rows[row])
                     HStack(spacing: 0) {
                         ForEach(rows[row].indices, id: \.self) { column in
-                            key(rows[row][column], slot: slots[row][column], fontSize: rowHeight * 0.4, gap: gap)
+                            key(rows[row][column], place: places[row][column], fontSize: rowHeight * 0.4, gap: gap)
                                 .frame(width: unit * widths[column], height: rowHeight)
                         }
                     }
@@ -47,15 +52,16 @@ struct LayoutKeyGrid: View {
     // MARK: - Keys
 
     @ViewBuilder
-    private func key(_ keyDef: KeyDef, slot: Int?, fontSize: CGFloat, gap: CGFloat) -> some View {
-        let isSelected = slot != nil && slot == selectedSlot
+    private func key(_ keyDef: KeyDef, place: CustomLayout.Place?, fontSize: CGFloat, gap: CGFloat) -> some View {
+        let isSelected = place != nil && place == selected
         // A removed key's place: a dashed outline the editor can fill again.
-        let isRemoved = keyDef == CustomLayout.removedSlot
+        let isRemoved = place.map(removed.contains) ?? false
         let shape = RoundedRectangle(cornerRadius: gap * 1.5)
         let fill = isSelected ? Color.accentColor
             : isRemoved ? Color.clear
             : keyDef.isCharacter || keyDef == .space ? Self.characterKeyColor : Self.functionKeyColor
-        let face = label(keyDef, isDigit: keyDef.isCharacter && slot == nil)
+        let face = label(keyDef, isDigit: keyDef.isCharacter && place == nil)
+            .opacity(isRemoved ? 0 : 1)
             .font(.system(size: fontSize))
             .lineLimit(1)
             .minimumScaleFactor(0.5)
@@ -65,13 +71,13 @@ struct LayoutKeyGrid: View {
             .overlay(shape.strokeBorder(Color.secondary, style: StrokeStyle(lineWidth: 1, dash: [3])).opacity(isRemoved && !isSelected ? 1 : 0))
             .padding(gap / 2)
 
-        if let slot, let onTapSlot {
-            Button { onTapSlot(slot) } label: { face.contentShape(Rectangle()) }
+        if let place, let onTap {
+            Button { onTap(place) } label: { face.contentShape(Rectangle()) }
                 .buttonStyle(.plain)
-                .accessibilityLabel(isRemoved ? removedSlotLabel : keyDef.characterLabel ?? "")
+                .accessibilityLabel(isRemoved ? removedPlaceLabel : keyDef.characterLabel ?? Self.emojiLabel)
                 .accessibilityAddTraits(isSelected ? .isSelected : [])
         } else {
-            face.accessibilityHidden(onTapSlot != nil)
+            face.accessibilityHidden(onTap != nil)
         }
     }
 

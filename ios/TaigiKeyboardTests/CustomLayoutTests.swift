@@ -12,6 +12,9 @@ final class CustomLayoutTests: XCTestCase {
         ",", ".", "c", "v", "b", "n", "m",
     ]
 
+    // trace: moe2_TL_iPhone row 1 ph ts tsh oo, row 2 th, row 3 kh ng nn; moe2_POJ_iPhone ch chh.
+    private static let multiLetterKeys = ["ph", "ts", "tsh", "oo", "th", "kh", "ng", "nn", "ch", "chh"]
+
     private var suiteName: String!
     private var defaults: UserDefaults!
 
@@ -44,22 +47,24 @@ final class CustomLayoutTests: XCTestCase {
 
     func testCustomLayout_spareLettersAndSymbolsMissingFromBoard() {
         let phahTaigi = CustomLayout(base: .phahTaigi, script: .tl)
-        // trace: tray letters a–z + o͘ + "-" minus the board; PhahTaigi lacks q w x z and o͘.
-        XCTAssertEqual(phahTaigi.spareLetters, ["q", "w", "x", "z", "o\u{0358}"])
+        // trace: tray letters a–z + o͘ + "-", then the romanization tables' multi-letter keys in
+        // table order (MOE2 TL rows 1–3, then MOE2 POJ `ch` `chh`), minus the board. PhahTaigi
+        // lacks q w x z, o͘ and every multi-letter key.
+        XCTAssertEqual(phahTaigi.spareLetters, ["q", "w", "x", "z", "o\u{0358}"] + Self.multiLetterKeys)
         // trace: symbol page = 37 keys, "-" counts as a letter → 36; PhahTaigi holds . , ? ! → 32.
         XCTAssertEqual(phahTaigi.spareSymbols.count, 32)
         XCTAssertEqual(Array(phahTaigi.spareSymbols.prefix(3)), ["~", "/", "="])
         XCTAssertFalse(phahTaigi.spareSymbols.contains(","))
         // trace: Lohankha POJ carries every letter and o͘ (row 2 end); its bottom row holds ",".
         let lohankha = CustomLayout(base: .qwerty, script: .poj)
-        XCTAssertEqual(lohankha.spareLetters, [])
+        XCTAssertEqual(lohankha.spareLetters, Self.multiLetterKeys)
         XCTAssertEqual(lohankha.spareSymbols.count, 35)
     }
 
     func testCustomLayout_swapMovesWholeKeyIncludingFullWidthForm() {
         var layout = CustomLayout(base: .phahTaigi, script: .tl)
         // Slot 20 is "," (row 3, column 1), slot 22 is "c" (row 3, column 3).
-        layout.swapKeys(20, 22)
+        layout.swap(.key(20), .key(22))
         let rows = layout.rows(withGlobe: false)
         XCTAssertEqual(rows[3][1], .char("c"))
         XCTAssertEqual(rows[3][3], .char(",", fullWidth: "，"))
@@ -68,9 +73,9 @@ final class CustomLayoutTests: XCTestCase {
 
     func testCustomLayout_replaceTradesKeyWithSpare() {
         var layout = CustomLayout(base: .phahTaigi, script: .tl)
-        layout.replaceKey(at: 0, with: "q")
+        layout.replace(.key(0), with: "q")
         XCTAssertEqual(layout.rows(withGlobe: false)[1][0], .char("q"))
-        XCTAssertEqual(layout.spareLetters, ["w", "x", "z", "o\u{0358}"])
+        XCTAssertEqual(layout.spareLetters, ["w", "x", "z", "o\u{0358}"] + Self.multiLetterKeys)
         XCTAssertTrue(layout.spareSymbols.contains("!"))
         XCTAssertTrue(layout.isValid)
     }
@@ -78,19 +83,19 @@ final class CustomLayoutTests: XCTestCase {
     func testCustomLayout_traySymbolKeepsFullWidthForm() {
         var layout = CustomLayout(base: .phahTaigi, script: .tl)
         // Slot 2 is "e" (row 1, column 2); the symbol page's "(" carries "（".
-        layout.replaceKey(at: 2, with: "(")
+        layout.replace(.key(2), with: "(")
         XCTAssertEqual(layout.rows(withGlobe: false)[1][2], .char("(", fullWidth: "（"))
     }
 
     func testCustomLayout_removedKeyLeavesKeyboardRowButStaysInEditor() {
         var layout = CustomLayout(base: .phahTaigi, script: .tl)
-        layout.removeKey(at: 0)
+        layout.remove(.key(0))
         // trace: row 1 without "!" → ? e r t y u i o p.
         XCTAssertEqual(layout.rows(withGlobe: false)[1], Array(TaigiLayouts.Alphabetic.phahTaigi_iPhone[1].dropFirst()))
         XCTAssertEqual(layout.editorRows[1][0], CustomLayout.removedSlot)
         XCTAssertTrue(layout.spareSymbols.contains("!"))
         XCTAssertTrue(layout.isValid)
-        layout.replaceKey(at: 0, with: "q")
+        layout.replace(.key(0), with: "q")
         XCTAssertEqual(layout.rows(withGlobe: false)[1][0], .char("q"))
     }
 
@@ -98,15 +103,15 @@ final class CustomLayoutTests: XCTestCase {
         var layout = CustomLayout(base: .phahTaigi, script: .tl)
         // Slots 0–9 are row 1, which has no function key.
         for slot in 0 ..< 10 {
-            layout.removeKey(at: slot)
+            layout.remove(.key(slot))
         }
         XCTAssertEqual(layout.rows(withGlobe: false).count, TaigiLayouts.Alphabetic.phahTaigi_iPhone.count - 1)
         XCTAssertEqual(layout.editorRows.count, TaigiLayouts.Alphabetic.phahTaigi_iPhone.count)
         // Later slots keep their numbers: slot 10 is still "a" (editor row 2, column 0).
-        XCTAssertEqual(CustomLayout.slotIndices(of: layout.editorRows)[2][0], 10)
+        XCTAssertEqual(CustomLayout.places(of: layout.editorRows)[2][0], .key(10))
         XCTAssertEqual(layout.editorRows[2][0], .char("a"))
         // Swapping a key into an empty place moves it there.
-        layout.swapKeys(0, 10)
+        layout.swap(.key(0), .key(10))
         XCTAssertEqual(layout.rows(withGlobe: false)[1], [.char("a")])
         XCTAssertEqual(layout.editorRows[2][0], CustomLayout.removedSlot)
     }
@@ -114,16 +119,50 @@ final class CustomLayoutTests: XCTestCase {
     func testCustomLayout_inputTypeKeyFollowsRemovedComma() {
         var layout = CustomLayout(base: .qwerty, script: .tl)
         // trace: Lohankha TL slots = row 1 (10) + row 2 (9) + row 3 (7); slot 26 is the bottom-row ",".
-        layout.removeKey(at: 26)
+        layout.remove(.key(26))
         let rows = CustomLayoutService.applyInputTypeKey(layout.rows(withGlobe: false), inputType: .emailAddress)
         // No "," left on the bottom row, so "@" goes right after the emoji key.
         XCTAssertEqual(rows.last, [.numeric, .emoji, .char("@"), .space, .char("-"), .translate, .return])
     }
 
+    func testCustomLayout_inputTypeKeyWithoutEmojiKey() {
+        var layout = CustomLayout(base: .phahTaigi, script: .tl)
+        layout.remove(.emoji)
+        let plain = CustomLayoutService.applyInputTypeKey(layout.rows(withGlobe: false), inputType: .url)
+        XCTAssertEqual(plain.last, [.numeric, .char("/"), .space, .translate, .return])
+        let globe = CustomLayoutService.applyInputTypeKey(layout.rows(withGlobe: true), inputType: .emailAddress)
+        XCTAssertEqual(globe.last, [.numeric, .globe, .char("@"), .space, .translate, .return])
+    }
+
+    func testCustomLayout_emojiKeyRemovesAndComesBackOnlyToItsPlace() {
+        var layout = CustomLayout(base: .phahTaigi, script: .tl)
+        // trace: phahTaigi bottom row = numeric, emoji, space, translate, return.
+        XCTAssertEqual(CustomLayout.places(of: layout.editorRows)[4][1], .emoji)
+        layout.remove(.emoji)
+        XCTAssertEqual(layout.rows(withGlobe: false).last, [.numeric, .space, .translate, .return])
+        XCTAssertEqual(layout.editorRows.last, TaigiLayouts.Alphabetic.phahTaigi_iPhone.last)
+        XCTAssertEqual(layout.removedPlaces, [.emoji])
+        XCTAssertFalse(layout.isUnchanged)
+        // A letter never fills the emoji place, and the emoji key never swaps.
+        layout.replace(.emoji, with: "q")
+        layout.swap(.emoji, .key(0))
+        XCTAssertEqual(layout.rows(withGlobe: false)[1][0], .char("!", fullWidth: "！"))
+        layout.restoreEmojiKey()
+        XCTAssertTrue(layout.isUnchanged)
+    }
+
+    func testCustomLayout_recordWithoutEmojiFieldKeepsEmojiKey() throws {
+        let json = try JSONSerialization.data(withJSONObject: [
+            "id": UUID().uuidString, "name": "x", "base": "phahTaigi", "script": "tl", "keys": Self.phahTaigiKeys,
+        ])
+        XCTAssertTrue(try JSONDecoder().decode(CustomLayout.self, from: json).hasEmojiKey)
+    }
+
     func testCustomLayout_codableRoundTripKeepsRemovedKeys() throws {
         var layout = CustomLayout(name: "x", base: .moe2, script: .poj)
-        layout.removeKey(at: 0)
-        layout.removeKey(at: 5)
+        layout.remove(.key(0))
+        layout.remove(.key(5))
+        layout.remove(.emoji)
         let decoded = try JSONDecoder().decode(CustomLayout.self, from: JSONEncoder().encode(layout))
         XCTAssertEqual(decoded, layout)
         XCTAssertTrue(decoded.isValid)
@@ -131,14 +170,14 @@ final class CustomLayoutTests: XCTestCase {
 
     func testCustomLayout_replaceIgnoresKeyAlreadyOnBoardOrUnknown() {
         var layout = CustomLayout(base: .phahTaigi, script: .tl)
-        layout.replaceKey(at: 0, with: "e")
-        layout.replaceKey(at: 0, with: "😀")
+        layout.replace(.key(0), with: "e")
+        layout.replace(.key(0), with: "😀")
         XCTAssertEqual(layout, CustomLayout(id: layout.id, base: .phahTaigi, script: .tl))
     }
 
     func testCustomLayout_resetKeepsScriptAndTakesNewBase() {
         var layout = CustomLayout(base: .phahTaigi, script: .poj)
-        layout.swapKeys(0, 1)
+        layout.swap(.key(0), .key(1))
         layout.reset(to: .qwerty)
         XCTAssertEqual(layout, CustomLayout(id: layout.id, base: .qwerty, script: .poj))
         XCTAssertEqual(layout.rows(withGlobe: false), TaigiLayouts.Alphabetic.qwerty_POJ_iPhone)

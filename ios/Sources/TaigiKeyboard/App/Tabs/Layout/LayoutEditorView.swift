@@ -1,14 +1,14 @@
 import SwiftUI
 
 /// Custom-layout editor: base chips, the board and the spare tray. Tap two keys to swap them; tap
-/// a key, then a spare, to replace it. Nothing is stored until Save, which names the layout and
-/// applies it; Back discards the draft.
+/// a key, then a spare, to replace it, or the trash to remove it. Nothing is stored until Save,
+/// which names the layout and applies it; Back discards the draft.
 struct LayoutEditorView: View {
     @Environment(DisplayLanguageStore.self) private var lang
     @Environment(\.dismiss) private var dismiss
 
     @State private var draft: CustomLayout
-    @State private var selectedSlot: Int?
+    @State private var selected: CustomLayout.Place?
     @State private var showsNameAlert = false
     @State private var pendingName = ""
     private let isEditing: Bool
@@ -25,9 +25,10 @@ struct LayoutEditorView: View {
 
                 LayoutKeyGrid(
                     rows: draft.editorRows,
-                    selectedSlot: selectedSlot,
-                    onTapSlot: tapKey,
-                    removedSlotLabel: lang.string(.settingsSyllableSeparatorNone),
+                    selected: selected,
+                    removed: draft.removedPlaces,
+                    onTap: tap,
+                    removedPlaceLabel: lang.string(.settingsSyllableSeparatorNone),
                 )
                 .aspectRatio(GalleryCardMetrics.previewAspectRatio, contentMode: .fit)
                 .clipShape(RoundedRectangle(cornerRadius: AppStyle.previewCornerRadius))
@@ -87,20 +88,32 @@ struct LayoutEditorView: View {
     }
 
     /// The tray lights up once a key is selected: the trash removes it, a spare takes its place.
-    /// Letters first (after the trash), then punctuation and symbols.
+    /// The removed emoji key, then letters, lead; punctuation and symbols follow. The emoji key
+    /// only goes back to its own place, and only character places take a letter or symbol.
     private var spareTray: some View {
-        let isKeySelected = selectedSlot != nil
-        let canRemove = selectedSlot.map { draft.keys[$0] != nil } ?? false
+        let isCharacterPlaceSelected = if case .key = selected {
+            true
+        } else {
+            false
+        }
+        let canRemove = selected.map { !draft.removedPlaces.contains($0) } ?? false
         return VStack(spacing: 16) {
             trayGrid {
-                trayButton(enabled: canRemove, action: removeSelectedKey) {
+                trayButton(enabled: canRemove, action: removeSelected) {
                     Image(latinSystemName: "trash")
                         .foregroundStyle(Color.red)
                 }
                 .accessibilityLabel(lang.string(.commonDelete))
 
+                if !draft.hasEmojiKey {
+                    trayButton(enabled: selected == .emoji, action: restoreEmojiKey) {
+                        Image(latinSystemName: "face.smiling")
+                    }
+                    .accessibilityLabel(LayoutKeyGrid.emojiLabel)
+                }
+
                 ForEach(draft.spareLetters, id: \.self) { spare in
-                    trayButton(enabled: isKeySelected, action: { replaceSelectedKey(with: spare) }) {
+                    trayButton(enabled: isCharacterPlaceSelected, action: { replaceSelected(with: spare) }) {
                         Text(verbatim: spare)
                     }
                 }
@@ -108,7 +121,7 @@ struct LayoutEditorView: View {
 
             trayGrid {
                 ForEach(draft.spareSymbols, id: \.self) { spare in
-                    trayButton(enabled: isKeySelected, action: { replaceSelectedKey(with: spare) }) {
+                    trayButton(enabled: isCharacterPlaceSelected, action: { replaceSelected(with: spare) }) {
                         Text(verbatim: spare)
                     }
                 }
@@ -136,37 +149,46 @@ struct LayoutEditorView: View {
 
     // MARK: - Editing
 
-    private func tapKey(_ slot: Int) {
+    /// A second character key swaps with the selected one; tapping the selected key again, or the
+    /// emoji key with another selected, just moves the selection.
+    private func tap(_ place: CustomLayout.Place) {
         withAnimation(.snappy(duration: 0.2)) {
-            if let selected = selectedSlot, selected != slot {
-                draft.swapKeys(selected, slot)
-                selectedSlot = nil
+            if let current = selected, current != place, current != .emoji, place != .emoji {
+                draft.swap(current, place)
+                selected = nil
             } else {
-                selectedSlot = selectedSlot == slot ? nil : slot
+                selected = selected == place ? nil : place
             }
         }
     }
 
-    private func replaceSelectedKey(with spare: String) {
-        guard let selectedSlot else { return }
+    private func replaceSelected(with spare: String) {
+        guard let selected else { return }
         withAnimation(.snappy(duration: 0.2)) {
-            draft.replaceKey(at: selectedSlot, with: spare)
-            self.selectedSlot = nil
+            draft.replace(selected, with: spare)
+            self.selected = nil
         }
     }
 
-    private func removeSelectedKey() {
-        guard let selectedSlot else { return }
+    private func removeSelected() {
+        guard let selected else { return }
         withAnimation(.snappy(duration: 0.2)) {
-            draft.removeKey(at: selectedSlot)
-            self.selectedSlot = nil
+            draft.remove(selected)
+            self.selected = nil
+        }
+    }
+
+    private func restoreEmojiKey() {
+        withAnimation(.snappy(duration: 0.2)) {
+            draft.restoreEmojiKey()
+            selected = nil
         }
     }
 
     private func restart(from base: KeyboardLayoutType) {
         withAnimation(.snappy(duration: 0.2)) {
             draft.reset(to: base)
-            selectedSlot = nil
+            selected = nil
         }
     }
 
