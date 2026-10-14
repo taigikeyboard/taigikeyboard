@@ -13,6 +13,7 @@ The mobile Layout tab's Custom Layouts shelf (a "Coming Soon" create card since 
 Decisions (maintainer, 2026-10-14):
 
 - **Edit model** — swap + spare tray. Tap two keys to swap them. Keys not on the board (`q w x z o͘ …`) wait in a spare tray under it; tap a key, then a spare, to replace — the replaced key goes to the tray. The editor never duplicates a key; a key left in the tray is the user's choice and cannot be typed from that layout.
+- **Remove + symbols** (maintainer, 2026-10-14 update) — a trash button leads the tray: select a key, tap it, and the key goes to the tray. Its place shows as a dashed outline in the editor (tap it, then a spare, to fill it again); on the keyboard the place is gone and the row's other keys keep their width, centred. Only character keys can be removed. The tray adds every key of the common symbol page (the 123 key, `TaigiLayouts.Numeric`) after the letters.
 - **Starting point** — chips at the top of the editor pick the base: PhahTaigi / Lohankha / MOE Layout 1 / MOE Layout 2 (existing names). Switching the base restarts the draft from it.
 - **Where it shows** — the Layout tab shelf and the in-keyboard layout picker.
 - **Platforms** — iOS (phase 1), then Android (phase 2).
@@ -20,15 +21,15 @@ Decisions (maintainer, 2026-10-14):
 ## Model (grounded in code)
 
 ```
-CustomLayout { id: UUID, name, base: KeyboardLayoutType, script: tl|poj, keys: [String] }
+CustomLayout { id: UUID, name, base: KeyboardLayoutType, script: tl|poj, keys: [String?] }   // nil = removed
 ```
 
-- **Base-relative.** `keys` replaces, in reading order, every `.char` key outside the digit row of the base table `base × script` (iPhone variant), taking the whole `KeyDef` of the moved key from a key catalog so full-width forms travel with it (`LayoutConverter.swift:40` reads `fullWidth` per key). The catalog is the deduplicated `.char` keys of the romanization tables — no second punctuation table. Function keys, the digit row, row shapes and key widths stay the base's.
+- **Base-relative.** `keys` replaces, in reading order, every `.char` key outside the digit row of the base table `base × script` (iPhone variant), taking the whole `KeyDef` of the moved key so full-width forms travel with it (`LayoutConverter.swift:40` reads `fullWidth` per key): the base's own key first (MOE1 `(` stays half-width), else the catalog — the deduplicated `.char` keys of the symbol page and the romanization tables, no second punctuation table. Function keys, the digit row and key widths stay the base's. A removed key leaves its row; a row left empty leaves the keyboard.
 - **Seam.** `CustomLayoutService.selectAlphabeticLayout` picks `base × script` for an active custom layout (not the live mode — Lohankha TL and POJ differ in key count, `TaigiLayouts.swift:35-55`), substitutes, then runs `applyInputTypeKey` as for built-ins. Globe insertion (`TaigiLayouts.swift:8-12`) and the 文/A drop (`LayoutConverter.swift:17`) touch no `.char` key. `applyInputTypeKey` swaps the bottom-row `,` for `@` / `/` or inserts after emoji (`CustomLayoutService.swift:124-149`) — on a custom layout it follows wherever `,` ended up, same rule.
 - **Same key positions in TL and POJ.** Only the board is frozen; tone callouts and `nn` display still follow the live mode (`TaigiCallouts+Builder.swift:59`, `ButtonTextProvider.swift:166`). English and TPS keep their own tables (`CustomLayoutService.swift:80-90`).
 - **Label-keyed behaviour follows the key.** MOE callouts (`TaigiCallouts+Builder.swift:35-49`), MOE hints (`ButtonTextProvider.swift:51,90`), MOE2 font (`ButtonFontProvider.swift:45`), 文/A width (`LayoutConverter.swift:102-104`) read the base id + label; shift, `-`, `oo`/`nn` handling read the typed string (`ActionHandler+KeyActions.swift:26,70,134`, `engine/phonetics/src/api.rs:95`).
-- **Spare tray** = (`a`–`z`, `o͘`, `-`, the base table's keys) − keys on the board.
-- **Validation on load** — non-TPS base, `keys.count` = the base table's slot count, every key in the catalog, no duplicates. An invalid record is dropped, never rendered.
+- **Spare tray** = letters (`a`–`z`, `o͘`, `-`, the base table's letter keys) then symbols (the symbol page) − keys on the board. Symbols keep their long-press callouts (`SymbolCallouts`, keyed by label).
+- **Validation on load** — non-TPS base, `keys.count` = the base table's slot count, every placed key in the catalog, no duplicates. An invalid record is dropped, never rendered.
 
 ## Selection contract
 
@@ -80,7 +81,8 @@ Rules: `code-review-rules.md` §2 (reuse theme shelf / card / store pattern), §
 
 **Deliberately not adopted**
 
-- Free per-key text entry, add / remove keys or rows, key widths — needs validation and warning copy; swap + tray keeps the editor free of errors.
+- Free per-key text entry, adding keys or rows, key widths, removing function keys — needs validation and warning copy (a board with no ⌫ or ↵); swap + tray + remove keeps the editor free of errors.
+- The rarer symbol page (`#+=`, `TaigiLayouts.Symbolic`) in the tray — keeps the tray short.
 - An engine-owned layout model — the engine has no notion of layouts (`engine/composing/src/requests.rs:360` is a comment); built-in tables stay per platform (Swift tables / Android JSON).
 - A generic user-item store shared with themes (see Storage).
 - Custom TPS layouts — TPS is bound 1:1 to its input mode.

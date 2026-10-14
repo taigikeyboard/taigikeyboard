@@ -1,3 +1,4 @@
+import KeyboardKit
 @testable import TaigiKeyboard
 import XCTest
 
@@ -36,11 +37,23 @@ final class CustomLayoutTests: XCTestCase {
         XCTAssertTrue(layout.isValid)
     }
 
-    func testCustomLayout_spareKeysAreLettersMissingFromBoard() {
+    func testCustomLayout_baseKeepsItsOwnKeyForms() {
+        // trace: MOE1 `(` `)` have no full-width form; the symbol page's do, and must not leak in.
+        XCTAssertEqual(CustomLayout(base: .moe1, script: .tl).rows(withGlobe: false), TaigiLayouts.Alphabetic.moe1_TL_iPhone)
+    }
+
+    func testCustomLayout_spareLettersAndSymbolsMissingFromBoard() {
+        let phahTaigi = CustomLayout(base: .phahTaigi, script: .tl)
         // trace: tray letters a–z + o͘ + "-" minus the board; PhahTaigi lacks q w x z and o͘.
-        XCTAssertEqual(CustomLayout(base: .phahTaigi, script: .tl).spareKeys, ["q", "w", "x", "z", "o\u{0358}"])
-        // trace: Lohankha POJ carries every letter and o͘ (row 2 end), so nothing is spare.
-        XCTAssertEqual(CustomLayout(base: .qwerty, script: .poj).spareKeys, [])
+        XCTAssertEqual(phahTaigi.spareLetters, ["q", "w", "x", "z", "o\u{0358}"])
+        // trace: symbol page = 37 keys, "-" counts as a letter → 36; PhahTaigi holds . , ? ! → 32.
+        XCTAssertEqual(phahTaigi.spareSymbols.count, 32)
+        XCTAssertEqual(Array(phahTaigi.spareSymbols.prefix(3)), ["~", "/", "="])
+        XCTAssertFalse(phahTaigi.spareSymbols.contains(","))
+        // trace: Lohankha POJ carries every letter and o͘ (row 2 end); its bottom row holds ",".
+        let lohankha = CustomLayout(base: .qwerty, script: .poj)
+        XCTAssertEqual(lohankha.spareLetters, [])
+        XCTAssertEqual(lohankha.spareSymbols.count, 35)
     }
 
     func testCustomLayout_swapMovesWholeKeyIncludingFullWidthForm() {
@@ -57,9 +70,63 @@ final class CustomLayoutTests: XCTestCase {
         var layout = CustomLayout(base: .phahTaigi, script: .tl)
         layout.replaceKey(at: 0, with: "q")
         XCTAssertEqual(layout.rows(withGlobe: false)[1][0], .char("q"))
-        // trace: "!" is a base key now off the board, so it follows the tray letters.
-        XCTAssertEqual(layout.spareKeys, ["w", "x", "z", "o\u{0358}", "!"])
+        XCTAssertEqual(layout.spareLetters, ["w", "x", "z", "o\u{0358}"])
+        XCTAssertTrue(layout.spareSymbols.contains("!"))
         XCTAssertTrue(layout.isValid)
+    }
+
+    func testCustomLayout_traySymbolKeepsFullWidthForm() {
+        var layout = CustomLayout(base: .phahTaigi, script: .tl)
+        // Slot 2 is "e" (row 1, column 2); the symbol page's "(" carries "（".
+        layout.replaceKey(at: 2, with: "(")
+        XCTAssertEqual(layout.rows(withGlobe: false)[1][2], .char("(", fullWidth: "（"))
+    }
+
+    func testCustomLayout_removedKeyLeavesKeyboardRowButStaysInEditor() {
+        var layout = CustomLayout(base: .phahTaigi, script: .tl)
+        layout.removeKey(at: 0)
+        // trace: row 1 without "!" → ? e r t y u i o p.
+        XCTAssertEqual(layout.rows(withGlobe: false)[1], Array(TaigiLayouts.Alphabetic.phahTaigi_iPhone[1].dropFirst()))
+        XCTAssertEqual(layout.editorRows[1][0], CustomLayout.removedSlot)
+        XCTAssertTrue(layout.spareSymbols.contains("!"))
+        XCTAssertTrue(layout.isValid)
+        layout.replaceKey(at: 0, with: "q")
+        XCTAssertEqual(layout.rows(withGlobe: false)[1][0], .char("q"))
+    }
+
+    func testCustomLayout_rowLeftEmptyLeavesKeyboard() {
+        var layout = CustomLayout(base: .phahTaigi, script: .tl)
+        // Slots 0–9 are row 1, which has no function key.
+        for slot in 0 ..< 10 {
+            layout.removeKey(at: slot)
+        }
+        XCTAssertEqual(layout.rows(withGlobe: false).count, TaigiLayouts.Alphabetic.phahTaigi_iPhone.count - 1)
+        XCTAssertEqual(layout.editorRows.count, TaigiLayouts.Alphabetic.phahTaigi_iPhone.count)
+        // Later slots keep their numbers: slot 10 is still "a" (editor row 2, column 0).
+        XCTAssertEqual(CustomLayout.slotIndices(of: layout.editorRows)[2][0], 10)
+        XCTAssertEqual(layout.editorRows[2][0], .char("a"))
+        // Swapping a key into an empty place moves it there.
+        layout.swapKeys(0, 10)
+        XCTAssertEqual(layout.rows(withGlobe: false)[1], [.char("a")])
+        XCTAssertEqual(layout.editorRows[2][0], CustomLayout.removedSlot)
+    }
+
+    func testCustomLayout_inputTypeKeyFollowsRemovedComma() {
+        var layout = CustomLayout(base: .qwerty, script: .tl)
+        // trace: Lohankha TL slots = row 1 (10) + row 2 (9) + row 3 (7); slot 26 is the bottom-row ",".
+        layout.removeKey(at: 26)
+        let rows = CustomLayoutService.applyInputTypeKey(layout.rows(withGlobe: false), inputType: .emailAddress)
+        // No "," left on the bottom row, so "@" goes right after the emoji key.
+        XCTAssertEqual(rows.last, [.numeric, .emoji, .char("@"), .space, .char("-"), .translate, .return])
+    }
+
+    func testCustomLayout_codableRoundTripKeepsRemovedKeys() throws {
+        var layout = CustomLayout(name: "x", base: .moe2, script: .poj)
+        layout.removeKey(at: 0)
+        layout.removeKey(at: 5)
+        let decoded = try JSONDecoder().decode(CustomLayout.self, from: JSONEncoder().encode(layout))
+        XCTAssertEqual(decoded, layout)
+        XCTAssertTrue(decoded.isValid)
     }
 
     func testCustomLayout_replaceIgnoresKeyAlreadyOnBoardOrUnknown() {
@@ -79,13 +146,14 @@ final class CustomLayoutTests: XCTestCase {
 
     func testCustomLayout_decodedRecordValidation() throws {
         let id = UUID().uuidString
-        func decode(base: String, keys: [String]) throws -> CustomLayout {
+        func decode(base: String, keys: [Any]) throws -> CustomLayout {
             let json = try JSONSerialization.data(withJSONObject: [
                 "id": id, "name": "x", "base": base, "script": "tl", "keys": keys,
             ])
             return try JSONDecoder().decode(CustomLayout.self, from: json)
         }
         XCTAssertTrue(try decode(base: "phahTaigi", keys: Self.phahTaigiKeys).isValid)
+        XCTAssertTrue(try decode(base: "phahTaigi", keys: [NSNull()] + Self.phahTaigiKeys.dropFirst().map { $0 as Any }).isValid, "removed key")
         XCTAssertFalse(try decode(base: "phahTaigi", keys: Array(Self.phahTaigiKeys.dropLast())).isValid, "slot count")
         XCTAssertFalse(try decode(base: "phahTaigi", keys: ["e"] + Self.phahTaigiKeys.dropFirst()).isValid, "duplicate")
         XCTAssertFalse(try decode(base: "phahTaigi", keys: ["😀"] + Self.phahTaigiKeys.dropFirst()).isValid, "unknown key")

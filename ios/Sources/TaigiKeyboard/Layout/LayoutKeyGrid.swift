@@ -11,6 +11,8 @@ struct LayoutKeyGrid: View {
     let rows: [[KeyDef]]
     var selectedSlot: Int?
     var onTapSlot: ((Int) -> Void)?
+    /// VoiceOver name of a removed key's place (the grid has no strings of its own).
+    var removedSlotLabel = ""
 
     /// Card preview aspect: the built-in `*_preview` screenshots (720×454,
     /// `PreviewAssetGeneratorTests`), so a drawn card lines up with them.
@@ -47,20 +49,26 @@ struct LayoutKeyGrid: View {
     @ViewBuilder
     private func key(_ keyDef: KeyDef, slot: Int?, fontSize: CGFloat, gap: CGFloat) -> some View {
         let isSelected = slot != nil && slot == selectedSlot
+        // A removed key's place: a dashed outline the editor can fill again.
+        let isRemoved = keyDef == CustomLayout.removedSlot
         let shape = RoundedRectangle(cornerRadius: gap * 1.5)
+        let fill = isSelected ? Color.accentColor
+            : isRemoved ? Color.clear
+            : keyDef.isCharacter || keyDef == .space ? Self.characterKeyColor : Self.functionKeyColor
         let face = label(keyDef, isDigit: keyDef.isCharacter && slot == nil)
             .font(.system(size: fontSize))
             .lineLimit(1)
             .minimumScaleFactor(0.5)
             .foregroundStyle(isSelected ? Color.white : Color.primary)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(isSelected ? Color.accentColor : keyDef.isCharacter || keyDef == .space ? Self.characterKeyColor : Self.functionKeyColor, in: shape)
+            .background(fill, in: shape)
+            .overlay(shape.strokeBorder(Color.secondary, style: StrokeStyle(lineWidth: 1, dash: [3])).opacity(isRemoved && !isSelected ? 1 : 0))
             .padding(gap / 2)
 
         if let slot, let onTapSlot {
             Button { onTapSlot(slot) } label: { face.contentShape(Rectangle()) }
                 .buttonStyle(.plain)
-                .accessibilityLabel(keyDef.characterLabel ?? "")
+                .accessibilityLabel(isRemoved ? removedSlotLabel : keyDef.characterLabel ?? "")
                 .accessibilityAddTraits(isSelected ? .isSelected : [])
         } else {
             face.accessibilityHidden(onTapSlot != nil)

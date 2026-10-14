@@ -23,10 +23,15 @@ struct LayoutEditorView: View {
             VStack(spacing: 24) {
                 baseChips
 
-                LayoutKeyGrid(rows: draft.rows(withGlobe: false), selectedSlot: selectedSlot, onTapSlot: tapKey)
-                    .aspectRatio(GalleryCardMetrics.previewAspectRatio, contentMode: .fit)
-                    .clipShape(RoundedRectangle(cornerRadius: AppStyle.previewCornerRadius))
-                    .padding(.horizontal, AppStyle.horizontalPadding)
+                LayoutKeyGrid(
+                    rows: draft.editorRows,
+                    selectedSlot: selectedSlot,
+                    onTapSlot: tapKey,
+                    removedSlotLabel: lang.string(.settingsSyllableSeparatorNone),
+                )
+                .aspectRatio(GalleryCardMetrics.previewAspectRatio, contentMode: .fit)
+                .clipShape(RoundedRectangle(cornerRadius: AppStyle.previewCornerRadius))
+                .padding(.horizontal, AppStyle.horizontalPadding)
 
                 spareTray
 
@@ -81,29 +86,52 @@ struct LayoutEditorView: View {
         }
     }
 
-    /// Spares light up once a key is selected; tapping one puts it on that key.
-    @ViewBuilder
+    /// The tray lights up once a key is selected: the trash removes it, a spare takes its place.
+    /// Letters first (after the trash), then punctuation and symbols.
     private var spareTray: some View {
-        let spares = draft.spareKeys
-        if !spares.isEmpty {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 44), spacing: 8)], spacing: 8) {
-                ForEach(spares, id: \.self) { spare in
-                    Button {
-                        replaceSelectedKey(with: spare)
-                    } label: {
+        let isKeySelected = selectedSlot != nil
+        let canRemove = selectedSlot.map { draft.keys[$0] != nil } ?? false
+        return VStack(spacing: 16) {
+            trayGrid {
+                trayButton(enabled: canRemove, action: removeSelectedKey) {
+                    Image(latinSystemName: "trash")
+                        .foregroundStyle(Color.red)
+                }
+                .accessibilityLabel(lang.string(.commonDelete))
+
+                ForEach(draft.spareLetters, id: \.self) { spare in
+                    trayButton(enabled: isKeySelected, action: { replaceSelectedKey(with: spare) }) {
                         Text(verbatim: spare)
-                            .font(AppStyle.bodyFont)
-                            .foregroundStyle(Color.primary)
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 8))
                     }
-                    .buttonStyle(.plain)
-                    .disabled(selectedSlot == nil)
-                    .opacity(selectedSlot == nil ? 0.4 : 1)
                 }
             }
-            .padding(.horizontal, AppStyle.horizontalPadding)
+
+            trayGrid {
+                ForEach(draft.spareSymbols, id: \.self) { spare in
+                    trayButton(enabled: isKeySelected, action: { replaceSelectedKey(with: spare) }) {
+                        Text(verbatim: spare)
+                    }
+                }
+            }
         }
+        .padding(.horizontal, AppStyle.horizontalPadding)
+    }
+
+    private func trayGrid(@ViewBuilder content: () -> some View) -> some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 44), spacing: 8)], spacing: 8, content: content)
+    }
+
+    private func trayButton(enabled: Bool, action: @escaping () -> Void, @ViewBuilder label: () -> some View) -> some View {
+        Button(action: action) {
+            label()
+                .font(AppStyle.bodyFont)
+                .foregroundStyle(Color.primary)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 8))
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
+        .opacity(enabled ? 1 : 0.4)
     }
 
     // MARK: - Editing
@@ -123,6 +151,14 @@ struct LayoutEditorView: View {
         guard let selectedSlot else { return }
         withAnimation(.snappy(duration: 0.2)) {
             draft.replaceKey(at: selectedSlot, with: spare)
+            self.selectedSlot = nil
+        }
+    }
+
+    private func removeSelectedKey() {
+        guard let selectedSlot else { return }
+        withAnimation(.snappy(duration: 0.2)) {
+            draft.removeKey(at: selectedSlot)
             self.selectedSlot = nil
         }
     }
