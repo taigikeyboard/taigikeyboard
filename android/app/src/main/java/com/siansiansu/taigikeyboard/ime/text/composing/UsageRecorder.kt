@@ -7,9 +7,10 @@ import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.engine.userDataRecordUsage
 
 /**
- * One NextWord prediction the user took. This side decides WHAT the pick is —
+ * One English suggestion the user took. This side decides WHAT the pick is —
  * the `(displayText, canonicalTl)` identity it counts under — and the engine
- * keeps the count. A Continuous pick is counted by the engine itself.
+ * keeps the count. A Continuous pick and a NextWord prediction are counted by
+ * the engine itself (`CommitContinuous` / `CommitPrediction`).
  */
 data class Usage(
     val displayText: String,
@@ -17,9 +18,9 @@ data class Usage(
 )
 
 /**
- * CROSS-PLATFORM INVARIANT — mirrors iOS `UsageRecorder.swift`; every
- * Continuous pick the engine records itself (R5: `engine/composing/src/transition.rs`
- * `commit_continuous`, `Applied.usage`).
+ * Android-only: iOS records no English pick, and every Taigi pick the engine
+ * records itself (`engine/composing/src/transition.rs` `commit_continuous` /
+ * `commit_prediction`, `Applied.usage`).
  * An interface so the tap handler can be driven from JVM tests, which cannot
  * load the engine.
  */

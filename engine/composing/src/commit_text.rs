@@ -1,14 +1,13 @@
-//! What an R5 `CommitContinuous` writes into the composition — the document
-//! text of one pick and whether it carries romanization — resolved by the
-//! engine from the pick's scripts and the request's output settings.
+//! What an R5 `CommitContinuous` writes into the composition, or a
+//! `CommitPrediction` (D1) into the document — the document text of one pick
+//! and whether it carries romanization — resolved by the engine from the
+//! pick's scripts and the request's output settings.
 //!
-//! One port of the platform resolvers (behavioral-invariants §23 / §42):
-//! iOS `ActionHandler+Suggestions.swift` `formatOutputText` /
-//! `markedCellCommit`, Android `CandidateClickHandler.kt`
-//! `resolveUnmarkedCommit` / `resolveMarkedCellCommit` (both still resolve
-//! the NextWord prediction taps, which the engine also answers through
-//! `CommitPrediction`, D1), and the removed desktop / macOS resolvers (R5
-//! PR-c).
+//! One port of the platform resolvers (behavioral-invariants §23 / §42): the
+//! removed desktop / macOS resolvers (R5 PR-c) and the removed iOS
+//! `formatOutputText` / `markedCellCommit` and Android
+//! `resolveUnmarkedCommit` / `resolveMarkedCellCommit` prediction resolvers
+//! (D2).
 //!
 //! On the TPS layout the romanization a commit writes is Bopomofo
 //! ([`phonetics::api::tl_display_to_tps`]): the bracket half of a Hanji
@@ -233,7 +232,7 @@ mod tests {
         // (script, swapped, brackets, display, roman, hanji) → (text, wrote_romanization)
         #[rustfmt::skip]
         let rows = [
-            // trace: UnmarkedCommitResolverTest (Android) / formatOutputText (iOS)
+            // trace: the removed phone resolvers (D2): Android UnmarkedCommitResolverTest / iOS formatOutputText
             // romanLed_… / hanjiLed_… / brackets_writeThePairEitherWayRound_…
             (Lead, false, false, SideBySide, R, H, roman(R)),
             (Lead, true, false, SideBySide, R, H, hanji("台語")),
@@ -251,7 +250,7 @@ mod tests {
             // removed desktop resolver (R5 PR-c)
             // roman_only_mode_shows_and_writes_the_romanization_alone
             (Lead, true, true, RomanOnly, R, H, roman(R)),
-            // trace: MarkedCellCommitResolverTest / ActionHandlerMarkedCellCommitTests
+            // trace: the removed MarkedCellCommitResolverTest / ActionHandlerMarkedCellCommitTests (D2)
             // hanjiCell_bracketsOff_… / hanjiCell_bracketsOn_… / …_missingRoman_…
             (Hanji, true, false, Combined, R, H, hanji("台語")),
             (Hanji, true, true, Combined, R, H, roman("台語 (tâi-gí)")),
@@ -297,7 +296,7 @@ mod tests {
         // (script, brackets, display, roman, hanji) → (text, wrote_romanization)
         #[rustfmt::skip]
         let rows = [
-            // trace: iOS formatOutputText / Android resolveUnmarkedCommit with
+            // trace: the removed iOS formatOutputText / Android resolveUnmarkedCommit (D2) with
             // effectiveSwapped = isTPSLayout || … and bracketRoman =
             // tlDisplayToTps(roman): the Hanji leads, the bracket half is TPS.
             (Lead, false, SideBySide, R, H, unspaced("台語")),
@@ -313,8 +312,8 @@ mod tests {
             (Lead, true, SideBySide, R, None, unspaced(T)),
             (Lead, true, Combined, R, Some(""), unspaced(T)),
             // A §42 split cell never shows under TPS; were one sent, it commits
-            // as on TL/POJ (iOS markedCellCommit / Android
-            // resolveMarkedCellCommit read no layout).
+            // as on TL/POJ (the removed iOS markedCellCommit /
+            // Android resolveMarkedCellCommit read no layout).
             (Hanji, true, Combined, R, H, roman("台語 (tâi-gí)")),
             (Roman, true, Combined, R, H, roman(R)),
         ];
@@ -356,7 +355,7 @@ mod tests {
     #[test]
     fn resolution_earns_auto_space_only_on_a_romanized_final_commit() {
         // trace: ActionHandler.shouldAppendAutoSpace /
-        // MarkedCellCommitResolverTest.shouldAppendAutoSpace_requiresSettingRomanizationAndNoHyphenTail,
+        // AutoSpaceVerdictTest.shouldAppendAutoSpace_requiresSettingRomanizationAndNoHyphenTail,
         // minus the live setting; the caller's final-commit gate folded in.
         let pick = |text: &str, wrote_romanization| {
             Some(ResolvedCommit {

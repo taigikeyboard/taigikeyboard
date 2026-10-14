@@ -1,17 +1,16 @@
 // Candidate click handler, extracted from SmartbarManager: handles Taigi candidate selection,
-// English suggestion replacement, and overlay candidate selection, and formats the output text.
+// English suggestion replacement, and overlay candidate selection; the engine resolves what a
+// Taigi tap writes.
 
 package com.siansiansu.taigikeyboard.ime.text.candidates
 
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.engine.proto.CommitScript
-import com.siansiansu.taigikeyboard.engine.tlDisplayToTps
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.core.logging.TraceContext
 import com.siansiansu.taigikeyboard.ime.core.logging.TraceId
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
-import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
 import com.siansiansu.taigikeyboard.ime.text.composing.Usage
 import com.siansiansu.taigikeyboard.ime.text.composing.UsageRecorder
 import com.siansiansu.taigikeyboard.ime.text.nextword.NextWordController
@@ -20,15 +19,12 @@ import com.siansiansu.taigikeyboard.ime.text.nextword.NextWordController
  * Handles candidate click events extracted from SmartbarManager.
  *
  * Processes Taigi candidate selection, English suggestion replacement,
- * and overlay suggestion selection with proper text output formatting.
+ * and overlay suggestion selection.
  */
 class CandidateClickHandler(
-    private val prefs: PrefHelper,
     private val taigikeyboard: TaigiKeyboard,
     private val usage: UsageRecorder,
     private val getCurrentSuggestions: () -> List<TaigiWord>,
-    private val getIsHanjiFirst: () -> Boolean,
-    private val getOutputBothScripts: () -> Boolean,
     private val getComposingManager: () -> com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager?,
     private val onClearCandidates: () -> Unit,
     private val onNextWordPrediction: (displayText: String, roman: String) -> Unit,
@@ -103,40 +99,6 @@ class CandidateClickHandler(
     }
 
     /**
-     * Document text + auto-space verdict for one NextWord prediction tap,
-     * strip or expanded overlay (a Continuous tap is resolved by the engine).
-     * A §42 Hanji with Romanization [TaigiWord.MetadataKeys.CELL_SCRIPT]-marked cell commits
-     * the script its marker names ([resolveMarkedCellCommit]); an unmarked
-     * cell follows the mode ([resolveUnmarkedCommit]), with the Annotate in Brackets roman
-     * TPS-rendered under the TPS layout.
-     */
-    private fun resolveTaigiCommit(
-        word: TaigiWord,
-        isTPSLayout: Boolean,
-        effectiveSwapped: Boolean,
-        outputBothScripts: Boolean,
-    ): ResolvedCommit {
-        word.additionalInfo[TaigiWord.MetadataKeys.CELL_SCRIPT]
-            ?.let { cellScript ->
-                resolveMarkedCellCommit(
-                    cellScript = cellScript,
-                    roman = word.roman,
-                    hanji = word.hanji,
-                    outputBothScripts = outputBothScripts,
-                )
-            }?.let { return it }
-        val bracketRoman =
-            if (isTPSLayout) RustEngineBridge.tlDisplayToTps(word.roman, prefs.tpsOrMapsToER) else word.roman
-        return resolveUnmarkedCommit(
-            roman = word.roman,
-            bracketRoman = bracketRoman,
-            hanji = word.hanji,
-            effectiveSwapped = effectiveSwapped,
-            outputBothScripts = outputBothScripts,
-        )
-    }
-
-    /**
      * Handle English candidate click (3-column layout).
      */
     fun handleEnglishCandidateClick(index: Int) {
@@ -195,32 +157,45 @@ class CandidateClickHandler(
     }
 
     /**
-     * One NextWord prediction tap, strip or expanded overlay: the
-     * platform-resolved text is committed, the composition reset, auto-space
-     * judged, usage counted and the pair learned.
+     * One NextWord prediction tap, strip or expanded overlay (D1): the engine
+     * resolves what it writes from the prediction's own scripts under the
+     * live settings and counts the pick; the composition is then reset,
+     * auto-space judged and the pair learned. No composing manager (a stale
+     * strip in a composing-ineligible field) drops the tap, as a Continuous
+     * tap does.
      */
     private fun commitNextWordPrediction(
         word: TaigiWord,
         ic: android.view.inputmethod.InputConnection,
         composingManager: com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager?,
     ) {
-        val isTPSLayout = prefs.isTpsLayout
-        val resolved = resolveTaigiCommit(word, isTPSLayout, isTPSLayout || getIsHanjiFirst(), getOutputBothScripts())
-        val textToCommit = resolved.text
-        logger.debug(TAG) { "[NEXTWORD-CLICK] id=${word.id}, roman='${word.roman}', hanji='${word.hanji}', text='$textToCommit'" }
-        ic.commitText(textToCommit, 1)
-        composingManager?.reset(ic)
-        appendAutoSpaceIfEarned(taigikeyboard, ic, textToCommit, resolved.wroteRomanization)
-        recordCommittedWord(word)
+        val manager = composingManager ?: return
+        val pick = predictionPick(word)
+        val commit = manager.commitPrediction(pick)
+        if (commit == null) {
+            logger.debug(TAG) { "[NEXTWORD-CLICK] ignored by the engine id=${word.id} script=${pick.script}" }
+            return
+        }
+        logger.debug(TAG) { "[NEXTWORD-CLICK] id=${word.id}, roman='${word.roman}', hanji='${word.hanji}', text='${commit.text}'" }
+        ic.commitText(commit.text, 1)
+        manager.reset(ic)
+        appendAutoSpace(taigikeyboard, ic, taigikeyboard.prefs.isAutoSpaceEnabled && commit.earnsAutoSpace)
+        learnCommittedWord(word, pick.canonicalTl)
     }
 
-    /** Usage count + NextWord learning for a committed non-Continuous word. */
+    /** Usage count + NextWord learning for a committed English word. */
     private fun recordCommittedWord(word: TaigiWord) {
         // R5 pair-key (#7): the canonical-TL reading from the metadata sidechannel
-        // keeps multi-reading Hanji in separate buckets; "" only on TPS-OOV /
-        // English rows.
+        // keeps multi-reading Hanji in separate buckets; "" on English rows.
         val canonicalTl = word.additionalInfo[TaigiWord.MetadataKeys.CANONICAL_TL] ?: ""
         usage.record(Usage(word.displayText, canonicalTl))
+        learnCommittedWord(word, canonicalTl)
+    }
+
+    private fun learnCommittedWord(
+        word: TaigiWord,
+        canonicalTl: String,
+    ) {
         // NextWord learns the canonical reading, not the rendered `roman` (the
         // Syllable Separator rewrites its hyphens, §49); iOS learns from the
         // same sidechannel.
@@ -284,62 +259,6 @@ class CandidateClickHandler(
 }
 
 /**
- * Annotate in Brackets / both-scripts commit form when Hanji leads — the romanization
- * rides in trailing brackets. Single spelling for the four hanji-first
- * commit sites; the roman-first inverse (`roman (hanji)`) stays inline.
- */
-private fun bracketedCommit(
-    hanji: String,
-    roman: String,
-): String = "$hanji ($roman)"
-
-// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Actions/ActionHandler+Suggestions.swift
-// `formatOutputText` and engine/composing/src/commit_text.rs `resolve_commit_text`. Drift causes
-// silent divergence (a missing or stray auto-space after a swapped-mode commit).
-
-/**
- * Document text + auto-space verdict for an UNMARKED commit — the three
- * sites that build the string from the candidate's own `(roman, hanji)`
- * pair rather than from a §42 cell marker.
- *
- * The verdict is resolved by the SAME arm that picks the string, never from
- * the output mode afterwards. Auto-space is a property of ROMANIZATION
- * (`guá beh khì` needs the gaps, 我欲去 does not), and a candidate with no
- * Hanji — the literal-romanization candidate (§34), an out-of-vocabulary name, a
- * romanization-only custom entry — falls to the last arm and writes its
- * romanization whatever the mode leads with.
- *
- * `bracketRoman` is the Annotate in Brackets rendering of `roman` (TPS-converted in a
- * TPS layout); the bare `roman` is what a roman-led commit writes.
- */
-internal fun resolveUnmarkedCommit(
-    roman: String,
-    bracketRoman: String,
-    hanji: String?,
-    effectiveSwapped: Boolean,
-    outputBothScripts: Boolean,
-): ResolvedCommit =
-    when {
-        // Annotate in Brackets writes the pair, so the romanization IS in the document
-        // whichever half leads.
-        outputBothScripts && !hanji.isNullOrEmpty() ->
-            ResolvedCommit(
-                text =
-                    if (effectiveSwapped) {
-                        bracketedCommit(hanji, bracketRoman)
-                    } else {
-                        "$bracketRoman ($hanji)"
-                    },
-                wroteRomanization = true,
-            )
-
-        effectiveSwapped && !hanji.isNullOrEmpty() ->
-            ResolvedCommit(text = hanji, wroteRomanization = false)
-
-        else -> ResolvedCommit(text = roman, wroteRomanization = true)
-    }
-
-/**
  * Insert a single trailing space when auto-space is enabled, the commit wrote
  * romanization, and the committed text does not already end in a hyphen
  * continuation — and arm the punctuation swap on it.
@@ -348,8 +267,8 @@ internal fun resolveUnmarkedCommit(
  * they can never come apart: a commit that earns nothing arms nothing, and the
  * event already consumed the previous arm ([TaigiKeyboard.beginInputEvent]).
  * Callers resolve [wroteRomanization] from the arm that picked the document
- * string — [resolveUnmarkedCommit], [resolveMarkedCellCommit], or
- * [rawPreeditWritesRomanization] — never from the output mode.
+ * string (an English word, or [rawPreeditWritesRomanization]) — never from
+ * the output mode.
  */
 internal fun appendAutoSpaceIfEarned(
     taigikeyboard: TaigiKeyboard,
@@ -365,7 +284,7 @@ internal fun appendAutoSpaceIfEarned(
 /**
  * The one insertion site of the auto space: [isEarned] is the whole verdict,
  * the live Auto-Space setting included ([appendAutoSpaceIfEarned], or the
- * engine's `earns_auto_space` ANDed with it on a Continuous commit).
+ * engine's `earns_auto_space` ANDed with it on a Continuous or prediction commit).
  */
 private fun appendAutoSpace(
     taigikeyboard: TaigiKeyboard,
@@ -418,6 +337,22 @@ internal fun commitScript(word: TaigiWord): CommitScript =
         else -> CommitScript.COMMIT_SCRIPT_LEAD
     }
 
+/**
+ * The engine request for a NextWord prediction tap, read off the word's own
+ * `roman` / `hanji` (`NextWordController.kt` `predictionWord`: `roman` is
+ * empty for a Hanji-only prediction) and its canonical-TL sidechannel. A §42
+ * split cell commits the script its marker names ([commitScript]); a split
+ * cell whose own script is missing commits the lead, as a Continuous pick
+ * does. Mirrors iOS `ActionHandler.predictionPick(for:)`.
+ */
+internal fun predictionPick(word: TaigiWord): RustEngineBridge.PredictionPick =
+    RustEngineBridge.PredictionPick(
+        script = commitScript(word),
+        roman = word.roman,
+        hanji = word.hanji.orEmpty(),
+        canonicalTl = word.additionalInfo[TaigiWord.MetadataKeys.CANONICAL_TL] ?: "",
+    )
+
 // CROSS-PLATFORM INVARIANT — one name on all five platforms: ios
 // `ActionHandler.rawPreeditWritesRomanization`, desktop-core (macOS / Windows / Linux)
 // `policies::raw_preedit_writes_romanization`.
@@ -445,50 +380,3 @@ internal fun shouldAppendAutoSpace(
     wroteRomanization: Boolean,
     committedText: String,
 ): Boolean = isAutoSpaceEnabled && wroteRomanization && !committedText.endsWith("-")
-
-// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Actions/ActionHandler+Suggestions.swift marked-cell commit resolve
-// and the desktop `.alternate` commit rule. Drift causes silent divergence (a bracketed roman-cell commit, or a missing auto-space).
-
-/**
- * Document text + auto-space verdict for a Hanji with Romanization
- * [TaigiWord.MetadataKeys.CELL_SCRIPT]-marked cell (§42 second exception).
- * Hanji cell → the Hanji, or `Hanji (romanization)` when Annotate in Brackets is on (only then
- * did the commit write romanization); roman cell → the BARE roman, brackets
- * IGNORED (desktop `.alternate` parity), always romanization. Returns
- * `null` for an unknown marker or a marker whose payload is missing (wire
- * defect) — the caller falls back to the unmarked mode-derived path.
- * Top-level pure function so the contract is unit-testable without
- * collaborators.
- */
-internal fun resolveMarkedCellCommit(
-    cellScript: String,
-    roman: String,
-    hanji: String?,
-    outputBothScripts: Boolean,
-): ResolvedCommit? =
-    when {
-        cellScript == TaigiWord.MetadataKeys.CELL_SCRIPT_ROMAN && roman.isNotEmpty() ->
-            ResolvedCommit(text = roman, wroteRomanization = true)
-
-        cellScript == TaigiWord.MetadataKeys.CELL_SCRIPT_HANJI && !hanji.isNullOrEmpty() ->
-            if (outputBothScripts && roman.isNotEmpty()) {
-                ResolvedCommit(text = bracketedCommit(hanji, roman), wroteRomanization = true)
-            } else {
-                // No roman to bracket → the bare Hanji, never empty brackets.
-                ResolvedCommit(text = hanji, wroteRomanization = false)
-            }
-
-        else -> null
-    }
-
-// CROSS-PLATFORM INVARIANT — mirrors ios `ActionHandler.ResolvedCommit` and the
-// engine's `engine/composing/src/commit_text.rs` `ResolvedCommit` (macOS + desktop, R5).
-
-/**
- * What one commit writes into the document, and whether that string carries
- * romanization — the single input the auto-space gate reads.
- */
-internal data class ResolvedCommit(
-    val text: String,
-    val wroteRomanization: Boolean,
-)

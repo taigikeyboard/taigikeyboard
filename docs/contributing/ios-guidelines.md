@@ -17,7 +17,7 @@ The extension runs under a ~64 MB cap and is re-shown many times per process, so
 
 ## User data and Full Access
 
-The four user-data stores live in `engine/userdata`; the app and the keyboard each open them once through `Engine/UserDataOpening.swift` in the App Group directory. The keyboard opens them only with Full Access (`RequestsOpenAccess`), because without it the App Group container is read-only to the extension; the app never opens them under XCTest. Pages go through `UserDataClient`, picks through `UsageRecorder`.
+The four user-data stores live in `engine/userdata`; the app and the keyboard each open them once through `Engine/UserDataOpening.swift` in the App Group directory. The keyboard opens them only with Full Access (`RequestsOpenAccess`), because without it the App Group container is read-only to the extension; the app never opens them under XCTest. Pages go through `UserDataClient`; the engine counts every pick itself (`CommitContinuous` / `CommitPrediction`).
 
 ## Tests
 

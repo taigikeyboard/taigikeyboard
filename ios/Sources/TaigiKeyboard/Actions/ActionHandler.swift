@@ -357,14 +357,17 @@ extension ActionHandler: AutocompleteContextUpdater {
             "isNextWord": "true",
             "hanzi": prediction.hanji,
             // R5 pair-key (#7): canonical-TL reading for the
-            // user-frequency `(displayText, canonicalTl)` write.
+            // `(hanji, canonicalTl)` usage the engine counts.
             // `prediction.tl` is the engine-side canonical TL (only
             // `text`/`subtitle` are mode-shaped), matching the
             // Continuous read key. Without it the freq write would
             // land in the legacy `tl == ""` bucket and 重/tāng could
             // inherit a count learned from 重/tîng.
             "canonicalTl": prediction.tl,
-            "displayText": prediction.hanji,
+            // D1: the romanization the engine resolves the tap from — the
+            // view swaps `text` / `subtitle` in swapped and TPS modes, so the
+            // tap never reads them back. Empty for a Hanji-only prediction.
+            "roman": prediction.subtitle != nil ? prediction.text : "",
         ]
     }
 

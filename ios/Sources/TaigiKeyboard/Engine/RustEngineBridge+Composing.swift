@@ -190,6 +190,38 @@ public extension RustEngineBridge {
         static let failed = ContinuousCommitResult(transition: .noop, outcome: .ignored)
     }
 
+    /// One NextWord prediction tap (D1): which of its scripts the document
+    /// gets, and the prediction's own fields the engine resolves the text
+    /// from (`engine/composing/src/commit_text.rs`) and counts the usage
+    /// under — never the view-rewritten suggestion.
+    struct PredictionPick: Equatable {
+        public let script: Taigi_Engine_CommitScript
+        /// The prediction's display romanization (`EnginePrediction.text` of a
+        /// prediction with a subtitle); empty for a Hanji-only prediction.
+        public let roman: String
+        public let hanji: String
+        /// The canonical TL the engine counts the usage under.
+        public let canonicalTl: String
+
+        /// The wire request.
+        var request: Taigi_Engine_CommitPrediction {
+            var request = Taigi_Engine_CommitPrediction()
+            request.script = script
+            request.roman = roman
+            request.hanji = hanji
+            request.canonicalTl = canonicalTl
+            return request
+        }
+    }
+
+    /// What a prediction tap writes into the document, as the engine resolved
+    /// it. `earnsAutoSpace` is the engine's §23 verdict; the live Auto-Space
+    /// setting is the caller's.
+    struct PredictionCommit: Equatable {
+        public let text: String
+        public let earnsAutoSpace: Bool
+    }
+
     /// Read-query result for `composingFetchAtPos`. The `candidates` tri-state
     /// is only authoritative when `isBridgeFailure == false`:
     /// - `nil` → engine reached `handle_fetch_at_pos` but `Phase::Continuous`
@@ -402,6 +434,27 @@ public extension RustEngineBridge {
             transition: synthComposing(payload),
             outcome: ContinuousCommitOutcome(payload.commit),
         )
+    }
+
+    /// Resolve a NextWord prediction tap (D1). The engine answers the
+    /// document text under `settings` and counts the usage itself; the
+    /// composition is left as it is, so the response's snapshot carries
+    /// nothing to replay. `nil` when the engine wrote nothing (IGNORED, or a
+    /// failed round-trip). Mirrors android `RustEngineBridge.composingCommitPrediction`.
+    internal static func composingCommitPrediction(
+        _ pick: PredictionPick,
+        settings: EngineSettings,
+        generation: UInt64,
+    ) -> PredictionCommit? {
+        guard let payload = composingProtoRoundtrip(
+            method: .commitPrediction(pick.request),
+            op: "composingCommitPrediction",
+            generation: generation,
+            config: continuousAppConfig(settings),
+        ), case let .finalized(earnsAutoSpace) = ContinuousCommitOutcome(payload.commit) else {
+            return nil
+        }
+        return PredictionCommit(text: payload.commit.documentText, earnsAutoSpace: earnsAutoSpace)
     }
 
     // MARK: - Private dispatch (composing envelope)

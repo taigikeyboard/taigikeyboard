@@ -191,6 +191,18 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         return result.outcome
     }
 
+    /// Resolve one NextWord prediction tap (D1): the engine answers what the
+    /// tap writes into the document and counts the usage itself; the
+    /// composition is left as it is. `nil` → write nothing.
+    public func commitPrediction(_ pick: RustEngineBridge.PredictionPick) -> RustEngineBridge.PredictionCommit? {
+        logger.debug("[COMPOSE] fn=commitPrediction script=\(pick.script) romanLen=\(pick.roman.count)")
+        return RustEngineBridge.composingCommitPrediction(
+            pick,
+            settings: settingsProvider.current,
+            generation: currentGeneration,
+        )
+    }
+
     public func deleteBackward() {
         logger.debug("[COMPOSE] fn=deleteBackward")
         let settings = settingsProvider.current

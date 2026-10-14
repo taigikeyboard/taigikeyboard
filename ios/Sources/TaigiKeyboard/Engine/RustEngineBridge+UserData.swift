@@ -37,16 +37,6 @@ extension RustEngineBridge {
         return true
     }
 
-    /// One NextWord prediction pick, as the engine counts it (a Continuous
-    /// pick the engine counts itself, R5). Best-effort: the engine queues the
-    /// write, and a failed round-trip is logged, never surfaced.
-    static func userDataRecordUsage(displayText: String, canonicalTl: String) {
-        var usage = Taigi_Engine_RecordUsage()
-        usage.displayText = displayText
-        usage.canonicalTl = canonicalTl
-        _ = userDataResult(.recordUsage(usage), op: "userDataRecordUsage")
-    }
-
     /// Empties the selected stores in place; `nil` when the engine could not.
     static func userDataReset(_ reset: Taigi_Engine_ResetUserData) -> Taigi_Engine_UserDataReset? {
         guard case let .reset(removed)? = userDataResult(.reset(reset), op: "userDataReset") else {

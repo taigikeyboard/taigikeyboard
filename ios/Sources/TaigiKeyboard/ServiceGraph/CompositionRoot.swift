@@ -14,9 +14,6 @@ enum CompositionRoot {
     /// The user's data, through the engine's ops.
     static let userData: any UserDataClient = EngineUserDataClient()
 
-    /// Where a pick is counted.
-    static let usageRecorder: any UsageRecorder = EngineUsageRecorder()
-
     static let dictionarySearchService: DictionarySearchService = .init(
         userData: userData,
         settingsProvider: SharedSettings.shared,

@@ -3,6 +3,7 @@ package com.siansiansu.taigikeyboard.engine
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.engine.proto.CommitContinuous
 import com.siansiansu.taigikeyboard.engine.proto.CommitOutcome
+import com.siansiansu.taigikeyboard.engine.proto.CommitPrediction
 import com.siansiansu.taigikeyboard.engine.proto.CommitResolution
 import com.siansiansu.taigikeyboard.engine.proto.CommitScript
 import com.siansiansu.taigikeyboard.engine.proto.ErrorCode
@@ -454,6 +455,44 @@ object RustEngineBridge {
             val FAILED = ContinuousCommitResult(ComposingTransition.NOOP, ContinuousCommitOutcome.Ignored)
         }
     }
+
+    /**
+     * One NextWord prediction tap (D1): which of its scripts the document
+     * gets, and the prediction's own fields the engine resolves the text from
+     * (`engine/composing/src/commit_text.rs`) and counts the usage under.
+     * Mirrors iOS `RustEngineBridge.PredictionPick`.
+     */
+    data class PredictionPick(
+        val script: CommitScript,
+        /**
+         * The prediction's display romanization (`EnginePrediction.text` of a
+         * prediction with a subtitle); empty for a Hanji-only prediction.
+         */
+        val roman: String,
+        val hanji: String,
+        /** The canonical TL the engine counts the usage under. */
+        val canonicalTl: String,
+    ) {
+        /** The wire request. */
+        fun toRequest(): CommitPrediction =
+            CommitPrediction
+                .newBuilder()
+                .setScript(script)
+                .setRoman(roman)
+                .setHanji(hanji)
+                .setCanonicalTl(canonicalTl)
+                .build()
+    }
+
+    /**
+     * What a prediction tap writes into the document, as the engine resolved
+     * it. [earnsAutoSpace] is the engine's §23 verdict; the live Auto-Space
+     * setting is the caller's.
+     */
+    data class PredictionCommit(
+        val text: String,
+        val earnsAutoSpace: Boolean,
+    )
 
     // endregion
     // region NextWord DTOs — ops are extensions in NextWordBridge.kt

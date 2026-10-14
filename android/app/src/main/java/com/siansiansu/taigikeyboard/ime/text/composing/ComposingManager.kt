@@ -13,6 +13,7 @@ import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.engine.composingAppend
 import com.siansiansu.taigikeyboard.engine.composingAppendHyphen
 import com.siansiansu.taigikeyboard.engine.composingCommitContinuous
+import com.siansiansu.taigikeyboard.engine.composingCommitPrediction
 import com.siansiansu.taigikeyboard.engine.composingCommitPreeditThenInsertExternal
 import com.siansiansu.taigikeyboard.engine.composingCommitRaw
 import com.siansiansu.taigikeyboard.engine.composingDeleteBackward
@@ -371,6 +372,20 @@ class ComposingManager(
             selfCommitInProgress = false
         }
         return result.outcome
+    }
+
+    /**
+     * Resolve one NextWord prediction tap (D1): the engine answers what the
+     * tap writes into the document and counts the usage itself; the
+     * composition is left as it is. `null` → write nothing.
+     */
+    fun commitPrediction(pick: RustEngineBridge.PredictionPick): RustEngineBridge.PredictionCommit? {
+        logger.tdebug(TAG) { "[COMPOSE] fn=commitPrediction script=${pick.script} romanLen=${pick.roman.length}" }
+        return RustEngineBridge.composingCommitPrediction(
+            pick = pick,
+            settings = settingsProvider.current,
+            generation = currentGeneration,
+        )
     }
 
     // endregion

@@ -221,6 +221,33 @@ fun RustEngineBridge.composingCommitContinuous(
 }
 
 // endregion
+// region NextWord prediction tap (1 op) — D1
+
+/**
+ * Resolve a NextWord prediction tap. The engine answers the document text
+ * under [settings] and counts the usage itself; the composition is left as
+ * it is, so the response's snapshot carries nothing to replay. `null` when
+ * the engine wrote nothing (IGNORED, or a failed round-trip). Mirrors iOS
+ * `RustEngineBridge.composingCommitPrediction`.
+ */
+fun RustEngineBridge.composingCommitPrediction(
+    pick: RustEngineBridge.PredictionPick,
+    settings: EngineSettings,
+    generation: Long,
+): RustEngineBridge.PredictionCommit? {
+    val request = pick.toRequest()
+    val payload = composingProtoRoundtrip(
+        methodSetter = { it.commitPrediction = request },
+        op = "composingCommitPrediction",
+        generation = generation,
+        config = continuousAppConfig(settings),
+    ) ?: return null
+    val outcome = RustEngineBridge.ContinuousCommitOutcome.from(payload.commit)
+    if (outcome !is RustEngineBridge.ContinuousCommitOutcome.Finalized) return null
+    return RustEngineBridge.PredictionCommit(text = payload.commit.documentText, earnsAutoSpace = outcome.earnsAutoSpace)
+}
+
+// endregion
 // region Private dispatch
 
 /**

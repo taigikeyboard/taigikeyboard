@@ -78,8 +78,37 @@ final class ActionHandlerPredictionSuggestionsTests: XCTestCase {
             XCTAssertEqual(suggestion.additionalInfo["isNextWord"], "true")
             XCTAssertEqual(suggestion.additionalInfo["hanzi"], "重")
             XCTAssertEqual(suggestion.additionalInfo["canonicalTl"], "tāng")
-            XCTAssertEqual(suggestion.additionalInfo["displayText"], "重")
         }
         XCTAssertEqual(suggestions[0].additionalInfo[CandidateCellScript.bracketRomanKey], "tāng")
+    }
+
+    /// The tap request (D1) is read off the metadata, never the cell text the
+    /// view rewrites (the swap puts the Hanji in `text`): the roman the engine
+    /// resolves from (empty for a Hanji-only prediction), the Hanji, the
+    /// canonical TL and a split cell's own script. What each request writes is
+    /// the engine's (`engine/composing/tests/prediction_commit_resolution.rs`).
+    /// Android parity: `PredictionWordsBuilderTest.prediction_pick_reads_the_word_not_the_cell_text`.
+    func testPredictionPick_readsTheMetadataNotTheCellText() {
+        let unsplit = ActionHandler.predictionSuggestions(predictions, splitCombinedCells: false)
+        let swapped = AutocompleteSuggestion(
+            text: "重",
+            title: "重",
+            subtitle: "tāng",
+            additionalInfo: unsplit[3].additionalInfo,
+        )
+        XCTAssertEqual(
+            ActionHandler.predictionPick(for: swapped),
+            RustEngineBridge.PredictionPick(script: .lead, roman: "tāng", hanji: "重", canonicalTl: "tāng"),
+        )
+        XCTAssertEqual(
+            ActionHandler.predictionPick(for: unsplit[4]),
+            RustEngineBridge.PredictionPick(script: .lead, roman: "", hanji: "去", canonicalTl: ""),
+        )
+
+        let split = ActionHandler.predictionSuggestions([predictions[3]], splitCombinedCells: true)
+            .map(ActionHandler.predictionPick(for:))
+        XCTAssertEqual(split.map(\.script), [.hanji, .roman])
+        // The Hanji cell carries the roman its Annotate in Brackets commit appends.
+        XCTAssertEqual(split.map(\.roman), ["tāng", "tāng"])
     }
 }

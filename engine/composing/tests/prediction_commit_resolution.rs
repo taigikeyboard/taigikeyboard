@@ -2,11 +2,11 @@
 //! prediction tap writes (`composing::commit_text`, the Continuous pick's
 //! resolver) under the request's output settings, report it
 //! (`ComposingResponse.commit`) and hand back the usage (`Applied.usage`),
-//! leaving the composition untouched. Expected values are the phones'
-//! `formatOutputText` / `resolveUnmarkedCommit` (unmarked cells) and
-//! `markedCellCommit` / `resolveMarkedCellCommit` (§42 split cells) outputs,
-//! except the empty-bracket row (parity correction toward the engine and the
-//! desktops).
+//! leaving the composition untouched. Expected values are the outputs of the
+//! removed phone resolvers (D2) — `formatOutputText` / `resolveUnmarkedCommit`
+//! (unmarked cells) and `markedCellCommit` / `resolveMarkedCellCommit` (§42
+//! split cells) — except the empty-bracket row (parity correction toward the
+//! engine and the desktops).
 
 use composing::{Applied, EngineHandle, Usage};
 use protos::engine::composing_request::Method;

@@ -1,8 +1,10 @@
 package com.siansiansu.taigikeyboard.ime.text.nextword
 
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.engine.proto.CommitScript
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord.MetadataKeys
+import com.siansiansu.taigikeyboard.ime.text.candidates.predictionPick
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -91,4 +93,33 @@ class PredictionWordsBuilderTest {
     }
 
     private fun TaigiWord.displayCellText(): String = if (additionalInfo[MetadataKeys.CELL_SCRIPT] == MetadataKeys.CELL_SCRIPT_ROMAN) roman else hanji.orEmpty()
+
+    /**
+     * The tap request (D1) is read off the word itself — the roman the engine
+     * resolves from (empty for a Hanji-only prediction), the Hanji, the
+     * canonical TL and a split cell's own script — never the cell text. What
+     * each request writes is the engine's
+     * (`engine/composing/tests/prediction_commit_resolution.rs`); the JVM
+     * cannot load it. Mirrors iOS `testPredictionPick_readsTheMetadataNotTheCellText`.
+     */
+    @Test
+    fun prediction_pick_reads_the_word_not_the_cell_text() {
+        val unsplit = buildPredictionWords(predictions, splitCombinedCells = false)
+        assertEquals(
+            RustEngineBridge.PredictionPick(CommitScript.COMMIT_SCRIPT_LEAD, "tāng", "重", "tāng"),
+            predictionPick(unsplit[3]),
+        )
+        assertEquals(
+            RustEngineBridge.PredictionPick(CommitScript.COMMIT_SCRIPT_LEAD, "", "去", ""),
+            predictionPick(unsplit[4]),
+        )
+
+        val split = buildPredictionWords(listOf(predictions[3]), splitCombinedCells = true).map(::predictionPick)
+        assertEquals(
+            listOf(CommitScript.COMMIT_SCRIPT_HANJI, CommitScript.COMMIT_SCRIPT_ROMAN),
+            split.map { it.script },
+        )
+        // The Hanji cell carries the roman its Annotate in Brackets commit appends.
+        split.forEach { assertEquals("tāng", it.roman) }
+    }
 }

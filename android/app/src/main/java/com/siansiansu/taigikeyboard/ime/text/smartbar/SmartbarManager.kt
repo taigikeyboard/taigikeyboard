@@ -84,11 +84,10 @@ class SmartbarManager(
     private var keyboardHeight: Int = 0
 
     // EFFECTIVE script-flag cache (avoid DataStore async write timing issues). Holds the
-    // derived pair (stored AND mode != ROMAN_ONLY) plus the mode itself; every strip /
-    // overlay / click / layout reader goes through these, never the stored prefs.
+    // derived Hanji-first flag (stored AND mode != ROMAN_ONLY); every strip /
+    // overlay / layout reader goes through these, never the stored prefs.
     private var cachedIsHanjiFirst: Boolean = false
     private var cachedIsFullWidthPunctuation: Boolean = false
-    private var cachedOutputBothScripts: Boolean = false
 
     // Compose-side render state. Subsystems that read `currentSuggestions` /
     // `hasCandidates` continue to do so directly; this flow drives only the
@@ -154,12 +153,9 @@ class SmartbarManager(
 
     private val candidateClickHandler =
         CandidateClickHandler(
-            prefs = prefs,
             taigikeyboard = taigikeyboard,
             usage = EngineUsageRecorder,
             getCurrentSuggestions = { currentSuggestions },
-            getIsHanjiFirst = { cachedIsHanjiFirst },
-            getOutputBothScripts = { cachedOutputBothScripts },
             getComposingManager = { taigikeyboard.textInputManager.getComposingManager() },
             onClearCandidates = { clearCandidates() },
             onNextWordPrediction = { displayText, roman -> handleNextWordPrediction(displayText, roman) },
@@ -552,7 +548,6 @@ class SmartbarManager(
     private fun refreshScriptFlagCache() {
         cachedIsHanjiFirst = prefs.isHanjiFirst
         cachedIsFullWidthPunctuation = prefs.isFullWidthPunctuation
-        cachedOutputBothScripts = prefs.isOutputBothScripts
     }
 
     private fun refreshSurfacesForScriptFlags() {
