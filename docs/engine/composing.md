@@ -26,6 +26,7 @@
 | `Reset` | Abort: drop the composition, nothing written |
 | `FetchAtPos` | Read-only candidate fetch |
 | `CommitContinuous` | Pick a candidate: nail a prefix or finalize the composition |
+| `CommitPrediction` | Mobile: a NextWord prediction tap — the document text it writes and its usage; the composition is untouched |
 | `MoveCaret` | Desktop: step the caret inside the pending tail, or jump to its start / end; with a Hanji conversion, step over a converted word or re-open the last nailed segment |
 | `TelexKey`, `TpsKey` | Desktop Telex key; TPS key at the caret |
 | `CommitAsShown`, `CommitAsTyped` | Desktop, under a Hanji conversion |

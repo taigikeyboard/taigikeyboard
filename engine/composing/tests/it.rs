@@ -29,6 +29,7 @@ mod golden_fetch_at_pos;
 mod intent_coverage;
 mod invariants;
 mod nasal_marker_case;
+mod prediction_commit_resolution;
 mod proptest_sequences;
 mod raw_input_pending_tail;
 mod roman_only_display_dedup;

@@ -7,7 +7,8 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * What a `CommitContinuous` did (R5) — replaces the platforms' effect scans.
+ * What a `CommitContinuous` (R5) or a `CommitPrediction` (D1) did — replaces
+ * the platforms' effect scans.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.CommitResolution}
@@ -68,8 +69,9 @@ public  final class CommitResolution extends
   private java.lang.String documentText_;
   /**
    * <pre>
-   * The text this pick wrote into the composition — the segment, not the
-   * whole finalized composition. Empty when IGNORED.
+   * What the pick wrote: a Continuous pick, into the composition — the
+   * segment, not the whole finalized composition; a prediction, into the
+   * document. Empty when IGNORED.
    * </pre>
    *
    * <code>string document_text = 2;</code>
@@ -81,8 +83,9 @@ public  final class CommitResolution extends
   }
   /**
    * <pre>
-   * The text this pick wrote into the composition — the segment, not the
-   * whole finalized composition. Empty when IGNORED.
+   * What the pick wrote: a Continuous pick, into the composition — the
+   * segment, not the whole finalized composition; a prediction, into the
+   * document. Empty when IGNORED.
    * </pre>
    *
    * <code>string document_text = 2;</code>
@@ -95,8 +98,9 @@ public  final class CommitResolution extends
   }
   /**
    * <pre>
-   * The text this pick wrote into the composition — the segment, not the
-   * whole finalized composition. Empty when IGNORED.
+   * What the pick wrote: a Continuous pick, into the composition — the
+   * segment, not the whole finalized composition; a prediction, into the
+   * document. Empty when IGNORED.
    * </pre>
    *
    * <code>string document_text = 2;</code>
@@ -110,8 +114,9 @@ public  final class CommitResolution extends
   }
   /**
    * <pre>
-   * The text this pick wrote into the composition — the segment, not the
-   * whole finalized composition. Empty when IGNORED.
+   * What the pick wrote: a Continuous pick, into the composition — the
+   * segment, not the whole finalized composition; a prediction, into the
+   * document. Empty when IGNORED.
    * </pre>
    *
    * <code>string document_text = 2;</code>
@@ -122,8 +127,9 @@ public  final class CommitResolution extends
   }
   /**
    * <pre>
-   * The text this pick wrote into the composition — the segment, not the
-   * whole finalized composition. Empty when IGNORED.
+   * What the pick wrote: a Continuous pick, into the composition — the
+   * segment, not the whole finalized composition; a prediction, into the
+   * document. Empty when IGNORED.
    * </pre>
    *
    * <code>string document_text = 2;</code>
@@ -300,7 +306,8 @@ public  final class CommitResolution extends
 
   /**
    * <pre>
-   * What a `CommitContinuous` did (R5) — replaces the platforms' effect scans.
+   * What a `CommitContinuous` (R5) or a `CommitPrediction` (D1) did — replaces
+   * the platforms' effect scans.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.CommitResolution}
@@ -365,8 +372,9 @@ public  final class CommitResolution extends
 
     /**
      * <pre>
-     * The text this pick wrote into the composition — the segment, not the
-     * whole finalized composition. Empty when IGNORED.
+     * What the pick wrote: a Continuous pick, into the composition — the
+     * segment, not the whole finalized composition; a prediction, into the
+     * document. Empty when IGNORED.
      * </pre>
      *
      * <code>string document_text = 2;</code>
@@ -378,8 +386,9 @@ public  final class CommitResolution extends
     }
     /**
      * <pre>
-     * The text this pick wrote into the composition — the segment, not the
-     * whole finalized composition. Empty when IGNORED.
+     * What the pick wrote: a Continuous pick, into the composition — the
+     * segment, not the whole finalized composition; a prediction, into the
+     * document. Empty when IGNORED.
      * </pre>
      *
      * <code>string document_text = 2;</code>
@@ -392,8 +401,9 @@ public  final class CommitResolution extends
     }
     /**
      * <pre>
-     * The text this pick wrote into the composition — the segment, not the
-     * whole finalized composition. Empty when IGNORED.
+     * What the pick wrote: a Continuous pick, into the composition — the
+     * segment, not the whole finalized composition; a prediction, into the
+     * document. Empty when IGNORED.
      * </pre>
      *
      * <code>string document_text = 2;</code>
@@ -408,8 +418,9 @@ public  final class CommitResolution extends
     }
     /**
      * <pre>
-     * The text this pick wrote into the composition — the segment, not the
-     * whole finalized composition. Empty when IGNORED.
+     * What the pick wrote: a Continuous pick, into the composition — the
+     * segment, not the whole finalized composition; a prediction, into the
+     * document. Empty when IGNORED.
      * </pre>
      *
      * <code>string document_text = 2;</code>
@@ -422,8 +433,9 @@ public  final class CommitResolution extends
     }
     /**
      * <pre>
-     * The text this pick wrote into the composition — the segment, not the
-     * whole finalized composition. Empty when IGNORED.
+     * What the pick wrote: a Continuous pick, into the composition — the
+     * segment, not the whole finalized composition; a prediction, into the
+     * document. Empty when IGNORED.
      * </pre>
      *
      * <code>string document_text = 2;</code>

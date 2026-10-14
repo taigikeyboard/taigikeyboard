@@ -953,7 +953,8 @@ public  final class ComposingResponse extends
   private com.siansiansu.taigikeyboard.engine.proto.CommitResolution commit_;
   /**
    * <pre>
-   * R5 — set by every `CommitContinuous`; absent for every other request.
+   * R5 — set by every `CommitContinuous` and `CommitPrediction`; absent for
+   * every other request.
    * </pre>
    *
    * <code>optional .taigi.engine.CommitResolution commit = 6;</code>
@@ -964,7 +965,8 @@ public  final class ComposingResponse extends
   }
   /**
    * <pre>
-   * R5 — set by every `CommitContinuous`; absent for every other request.
+   * R5 — set by every `CommitContinuous` and `CommitPrediction`; absent for
+   * every other request.
    * </pre>
    *
    * <code>optional .taigi.engine.CommitResolution commit = 6;</code>
@@ -975,7 +977,8 @@ public  final class ComposingResponse extends
   }
   /**
    * <pre>
-   * R5 — set by every `CommitContinuous`; absent for every other request.
+   * R5 — set by every `CommitContinuous` and `CommitPrediction`; absent for
+   * every other request.
    * </pre>
    *
    * <code>optional .taigi.engine.CommitResolution commit = 6;</code>
@@ -987,7 +990,8 @@ public  final class ComposingResponse extends
   }
   /**
    * <pre>
-   * R5 — set by every `CommitContinuous`; absent for every other request.
+   * R5 — set by every `CommitContinuous` and `CommitPrediction`; absent for
+   * every other request.
    * </pre>
    *
    * <code>optional .taigi.engine.CommitResolution commit = 6;</code>
@@ -1006,7 +1010,8 @@ public  final class ComposingResponse extends
   }
   /**
    * <pre>
-   * R5 — set by every `CommitContinuous`; absent for every other request.
+   * R5 — set by every `CommitContinuous` and `CommitPrediction`; absent for
+   * every other request.
    * </pre>
    *
    * <code>optional .taigi.engine.CommitResolution commit = 6;</code>
@@ -1459,7 +1464,8 @@ public  final class ComposingResponse extends
 
     /**
      * <pre>
-     * R5 — set by every `CommitContinuous`; absent for every other request.
+     * R5 — set by every `CommitContinuous` and `CommitPrediction`; absent for
+     * every other request.
      * </pre>
      *
      * <code>optional .taigi.engine.CommitResolution commit = 6;</code>
@@ -1470,7 +1476,8 @@ public  final class ComposingResponse extends
     }
     /**
      * <pre>
-     * R5 — set by every `CommitContinuous`; absent for every other request.
+     * R5 — set by every `CommitContinuous` and `CommitPrediction`; absent for
+     * every other request.
      * </pre>
      *
      * <code>optional .taigi.engine.CommitResolution commit = 6;</code>
@@ -1481,7 +1488,8 @@ public  final class ComposingResponse extends
     }
     /**
      * <pre>
-     * R5 — set by every `CommitContinuous`; absent for every other request.
+     * R5 — set by every `CommitContinuous` and `CommitPrediction`; absent for
+     * every other request.
      * </pre>
      *
      * <code>optional .taigi.engine.CommitResolution commit = 6;</code>
@@ -1493,7 +1501,8 @@ public  final class ComposingResponse extends
       }
     /**
      * <pre>
-     * R5 — set by every `CommitContinuous`; absent for every other request.
+     * R5 — set by every `CommitContinuous` and `CommitPrediction`; absent for
+     * every other request.
      * </pre>
      *
      * <code>optional .taigi.engine.CommitResolution commit = 6;</code>
@@ -1506,7 +1515,8 @@ public  final class ComposingResponse extends
     }
     /**
      * <pre>
-     * R5 — set by every `CommitContinuous`; absent for every other request.
+     * R5 — set by every `CommitContinuous` and `CommitPrediction`; absent for
+     * every other request.
      * </pre>
      *
      * <code>optional .taigi.engine.CommitResolution commit = 6;</code>
@@ -1518,7 +1528,8 @@ public  final class ComposingResponse extends
     }
     /**
      * <pre>
-     * R5 — set by every `CommitContinuous`; absent for every other request.
+     * R5 — set by every `CommitContinuous` and `CommitPrediction`; absent for
+     * every other request.
      * </pre>
      *
      * <code>optional .taigi.engine.CommitResolution commit = 6;</code>

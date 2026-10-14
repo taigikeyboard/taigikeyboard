@@ -6,8 +6,9 @@
 //! iOS `ActionHandler+Suggestions.swift` `formatOutputText` /
 //! `markedCellCommit`, Android `CandidateClickHandler.kt`
 //! `resolveUnmarkedCommit` / `resolveMarkedCellCommit` (both still resolve
-//! the NextWord prediction taps), and the removed desktop / macOS resolvers
-//! (R5 PR-c).
+//! the NextWord prediction taps, which the engine also answers through
+//! `CommitPrediction`, D1), and the removed desktop / macOS resolvers (R5
+//! PR-c).
 //!
 //! On the TPS layout the romanization a commit writes is Bopomofo
 //! ([`phonetics::api::tl_display_to_tps`]): the bracket half of a Hanji

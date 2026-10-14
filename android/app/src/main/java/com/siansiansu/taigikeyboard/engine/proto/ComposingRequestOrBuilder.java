@@ -138,6 +138,25 @@ public interface ComposingRequestOrBuilder extends
 
   /**
    * <pre>
+   * A NextWord prediction tap (D1): stateless, beside the Continuous pick.
+   * </pre>
+   *
+   * <code>.taigi.engine.CommitPrediction commit_prediction = 34;</code>
+   * @return Whether the commitPrediction field is set.
+   */
+  boolean hasCommitPrediction();
+  /**
+   * <pre>
+   * A NextWord prediction tap (D1): stateless, beside the Continuous pick.
+   * </pre>
+   *
+   * <code>.taigi.engine.CommitPrediction commit_prediction = 34;</code>
+   * @return The commitPrediction.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.CommitPrediction getCommitPrediction();
+
+  /**
+   * <pre>
    * --- Desktop keys (40s: Telex tone keys, composing caret, TPS keys, the
    * commits of a Hanji conversion) ---
    * </pre>

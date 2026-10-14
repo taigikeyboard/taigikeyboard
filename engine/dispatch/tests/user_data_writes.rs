@@ -13,8 +13,8 @@ use std::time::{Duration, Instant};
 
 use protos::engine::{
     composing_request, next_word_request, next_word_response, request, response, user_data_request,
-    CommitContinuous, CommitOutcome, CommitScript, ComposingRequest, ComposingResponse,
-    DecisionInput, NextWordRequest, RecordUsage, Response, Start, WordSelected,
+    CommitContinuous, CommitOutcome, CommitPrediction, CommitScript, ComposingRequest,
+    ComposingResponse, DecisionInput, NextWordRequest, RecordUsage, Response, Start, WordSelected,
 };
 use userdata::{JournalMode, UserDataPaths, UserDataStores};
 
@@ -256,6 +256,7 @@ fn the_engine_writes_what_the_platforms_wrote() {
     );
 
     engine_resolved_picks_are_counted_by_the_engine(&reader);
+    prediction_taps_are_counted_by_the_engine(&reader);
 }
 
 /// R5: a pick whose document text the engine resolved is counted by the
@@ -313,4 +314,37 @@ fn engine_resolved_picks_are_counted_by_the_engine(reader: &UserDataStores) {
         Some(("khí-lâi".to_owned(), 1))
     );
     assert_eq!(learn_count(reader, "做進出口"), Some(touched_before + 1));
+}
+
+/// D1: a NextWord prediction tap is counted by the engine under the
+/// prediction's `(hanji, canonical TL)` pair, and touches no learned phrase —
+/// as the platforms' `RecordUsage` for it did (no Hanji sent).
+fn prediction_taps_are_counted_by_the_engine(reader: &UserDataStores) {
+    let tap = |hanji: &str, tl: &str| {
+        composing_request::Method::CommitPrediction(CommitPrediction {
+            script: CommitScript::Lead as i32,
+            roman: tl.to_owned(),
+            hanji: hanji.to_owned(),
+            canonical_tl: tl.to_owned(),
+        })
+    };
+    let phrase = "做進出口";
+    let reading = "tsò tsìn-tshut-kháu";
+    let touched_before = learn_count(reader, phrase).expect("seeded phrase");
+    let counted_before = frequency_row(reader, phrase).map_or(0, |(_, count)| count);
+    let written = composing(tap(phrase, reading)).commit;
+    assert_eq!(
+        written.map(|commit| commit.outcome),
+        Some(CommitOutcome::Finalized as i32)
+    );
+    // A later count landing proves the queue drained past the phrase tap.
+    composing(tap("茶", "tê"));
+    assert!(eventually(
+        || frequency_row(reader, "茶") == Some(("tê".to_owned(), 1))
+    ));
+    assert_eq!(
+        frequency_row(reader, phrase).map(|(_, count)| count),
+        Some(counted_before + 1)
+    );
+    assert_eq!(learn_count(reader, phrase), Some(touched_before));
 }

@@ -29,7 +29,7 @@ public enum CommitOutcome
   COMMIT_OUTCOME_NAILED(1),
   /**
    * <pre>
-   * the buffer was consumed; the engine is Idle
+   * the buffer was consumed; the engine is Idle (a prediction: written)
    * </pre>
    *
    * <code>COMMIT_OUTCOME_FINALIZED = 2;</code>
@@ -64,7 +64,7 @@ public enum CommitOutcome
   public static final int COMMIT_OUTCOME_NAILED_VALUE = 1;
   /**
    * <pre>
-   * the buffer was consumed; the engine is Idle
+   * the buffer was consumed; the engine is Idle (a prediction: written)
    * </pre>
    *
    * <code>COMMIT_OUTCOME_FINALIZED = 2;</code>

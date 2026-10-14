@@ -57,6 +57,8 @@ message ComposingRequest {
     // --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
     FetchAtPos                      fetch_at_pos                         = 31;
     CommitContinuous                commit_continuous                    = 32;
+    // A NextWord prediction tap (D1): stateless, beside the Continuous pick.
+    CommitPrediction                commit_prediction                    = 34;
 
     // --- Desktop keys (40s: Telex tone keys, composing caret, TPS keys, the
     // commits of a Hanji conversion) ---
@@ -264,11 +266,40 @@ enum CommitScript {
   COMMIT_SCRIPT_ROMAN       = 4;  // a §42 split romanization cell
 }
 
-// What a `CommitContinuous` did (R5) — replaces the platforms' effect scans.
+// A tap on a NextWord prediction (`nextword.proto` `EnginePrediction`),
+// strip or expanded overlay (D1). The engine resolves the document text
+// from `roman`, `hanji` and the request's `AppConfig` exactly as for a
+// Continuous pick (`composing::commit_text`) and answers
+// `ComposingResponse.commit`: FINALIZED with the text, or IGNORED (no
+// script, `OTHER` where the mode shows one script, no `hanji`, or nothing to
+// write — a Hanji-only prediction once the swap is off) — the platform then
+// writes nothing. A split cell whose own script is missing commits the lead,
+// as a Continuous pick does (the phones' fail-open marker rule). With the
+// user-data stores open the engine counts the pick's usage under `(hanji,
+// canonical_tl)` itself (the platform sends no `RecordUsage` for it) and
+// touches no learned phrase. Stateless: the composition is left as it is
+// (a new generation still resets it, as for every request); NextWord
+// learning stays the platform's `WordSelected`.
+message CommitPrediction {
+  // `COMMIT_SCRIPT_LEAD`, or the §42 split cell's own script.
+  CommitScript script       = 1;
+  // The prediction's display romanization as the engine shaped it — the
+  // `EnginePrediction.text` of a prediction with a `subtitle` (POJ-rendered,
+  // syllable-separated); empty for a Hanji-only prediction.
+  string       roman        = 2;
+  // `EnginePrediction.hanji` — identity and the Hanji half of the commit.
+  string       hanji        = 3;
+  // `EnginePrediction.tl` — the canonical TL the usage is counted under.
+  string       canonical_tl = 4;
+}
+
+// What a `CommitContinuous` (R5) or a `CommitPrediction` (D1) did — replaces
+// the platforms' effect scans.
 message CommitResolution {
   CommitOutcome outcome   = 1;
-  // The text this pick wrote into the composition — the segment, not the
-  // whole finalized composition. Empty when IGNORED.
+  // What the pick wrote: a Continuous pick, into the composition — the
+  // segment, not the whole finalized composition; a prediction, into the
+  // document. Empty when IGNORED.
   string document_text    = 2;
   // `document_text` carries romanization (behavioral-invariants §23).
   bool wrote_romanization = 3;
@@ -280,7 +311,7 @@ message CommitResolution {
 enum CommitOutcome {
   COMMIT_OUTCOME_UNSPECIFIED = 0; // never emitted
   COMMIT_OUTCOME_NAILED      = 1;  // mid-commit: the composition continues
-  COMMIT_OUTCOME_FINALIZED   = 2;  // the buffer was consumed; the engine is Idle
+  COMMIT_OUTCOME_FINALIZED   = 2;  // the buffer was consumed; the engine is Idle (a prediction: written)
   COMMIT_OUTCOME_IGNORED     = 3;  // nothing changed (stale generation, rejected pick)
 }
 
@@ -394,7 +425,8 @@ message ComposingResponse {
   // already in `preedit.display_text` for `Phase::Continuous`.
   optional ContinuousResponse continuous = 5;
 
-  // R5 — set by every `CommitContinuous`; absent for every other request.
+  // R5 — set by every `CommitContinuous` and `CommitPrediction`; absent for
+  // every other request.
   optional CommitResolution commit = 6;
 }
 

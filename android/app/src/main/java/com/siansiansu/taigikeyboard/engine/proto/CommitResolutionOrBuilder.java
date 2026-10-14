@@ -23,8 +23,9 @@ public interface CommitResolutionOrBuilder extends
 
   /**
    * <pre>
-   * The text this pick wrote into the composition — the segment, not the
-   * whole finalized composition. Empty when IGNORED.
+   * What the pick wrote: a Continuous pick, into the composition — the
+   * segment, not the whole finalized composition; a prediction, into the
+   * document. Empty when IGNORED.
    * </pre>
    *
    * <code>string document_text = 2;</code>
@@ -33,8 +34,9 @@ public interface CommitResolutionOrBuilder extends
   java.lang.String getDocumentText();
   /**
    * <pre>
-   * The text this pick wrote into the composition — the segment, not the
-   * whole finalized composition. Empty when IGNORED.
+   * What the pick wrote: a Continuous pick, into the composition — the
+   * segment, not the whole finalized composition; a prediction, into the
+   * document. Empty when IGNORED.
    * </pre>
    *
    * <code>string document_text = 2;</code>

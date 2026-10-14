@@ -654,6 +654,17 @@ pub enum Intent {
         /// The pick's display romanization (`CandidateMessage.roman`).
         roman: String,
     },
+    /// A NextWord prediction tap (D1) — contract on the `CommitPrediction` proto.
+    CommitPrediction {
+        /// `None` (the wire's `UNSPECIFIED`, or a newer script) ignores it.
+        script: Option<CommitScript>,
+        /// The prediction's display romanization; empty for Hanji-only.
+        roman: String,
+        /// Identity and the Hanji half; empty ignores the tap.
+        hanji: String,
+        /// The canonical TL the usage is counted under.
+        canonical_tl: String,
+    },
     /// Desktop Telex scheme — one tone / affricate / hyphen letter applied
     /// to the pending tail (`telex::apply_telex_key`). Unknown keys and
     /// edits that change nothing answer with a no-op.

@@ -7,11 +7,9 @@
 
 use composing::{Applied, EngineHandle, Usage};
 use protos::engine::composing_request::Method;
-use protos::engine::{
-    AppConfig, CommitContinuous, CommitOutcome, CommitResolution, CommitScript, Start,
-};
+use protos::engine::{AppConfig, CommitContinuous, CommitOutcome, CommitScript, Start};
 
-use crate::common::{commit_text, config_tl, req};
+use crate::common::{commit_text, config_tl, ignored, req, resolution};
 
 fn send(handle: &EngineHandle, generation: u64, method: Method, config: &AppConfig) -> Applied {
     handle
@@ -38,22 +36,6 @@ fn pick(script: CommitScript, roman: &str, hanji: Option<&str>, tl: &str, bytes:
         script: script as i32,
         roman: roman.into(),
     })
-}
-
-fn resolution(outcome: CommitOutcome, text: &str, roman: bool, space: bool) -> CommitResolution {
-    CommitResolution {
-        outcome: outcome as i32,
-        document_text: text.into(),
-        wrote_romanization: roman,
-        earns_auto_space: space,
-    }
-}
-
-fn ignored() -> CommitResolution {
-    CommitResolution {
-        outcome: CommitOutcome::Ignored as i32,
-        ..CommitResolution::default()
-    }
 }
 
 fn usage(display_text: &str, canonical_tl: &str, hanji: Option<&str>) -> Option<Usage> {

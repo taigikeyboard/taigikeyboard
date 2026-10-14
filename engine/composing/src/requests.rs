@@ -69,6 +69,12 @@ pub fn decode_intent(req: &ComposingRequest) -> Result<Intent, ComposingError> {
             consumed_bytes: m.consumed_bytes as usize,
             syllable_count: clamp_syllable_count(m.syllable_count),
         },
+        Method::CommitPrediction(m) => Intent::CommitPrediction {
+            script: commit_script(m.script()),
+            roman: m.roman,
+            hanji: m.hanji,
+            canonical_tl: m.canonical_tl,
+        },
         Method::TelexKey(m) => Intent::TelexKey { key: m.key },
         Method::TpsKey(m) => Intent::TpsKey { key: m.key },
         Method::CommitAsShown(_) => Intent::CommitAsShown,

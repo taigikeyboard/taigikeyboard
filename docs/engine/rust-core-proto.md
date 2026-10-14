@@ -95,10 +95,10 @@ Each slice dispatches on its own `oneof method` and answers through `oneof resul
 | Tags | Group | Ops |
 |---|---|---|
 | 10–19 | Text-input mutators | `Start`, `Append`, `AppendHyphen`, `ReplaceLast`, `DeleteBackward`, `CommitRaw`, `CommitPreeditThenInsertExternal`, `Reset` |
-| 31–32 | Continuous input | `FetchAtPos` (read-only), `CommitContinuous` |
+| 31–32, 34 | Continuous input | `FetchAtPos` (read-only), `CommitContinuous`, `CommitPrediction` (a NextWord prediction tap) |
 | 40–44 | Desktop keys | `TelexKey`, `MoveCaret`, `TpsKey`, `CommitAsShown`, `CommitAsTyped` |
 
-`ComposingResponse`: `preedit` (1: `raw_input`, `display_text`, `caret_utf16`), ordered `effect` list (2), `is_composing` (4), `continuous` (5, `FetchAtPos` only), `commit` (6, `CommitResolution` for a `CommitContinuous`: outcome, document text, `wrote_romanization`, `earns_auto_space`).
+`ComposingResponse`: `preedit` (1: `raw_input`, `display_text`, `caret_utf16`), ordered `effect` list (2), `is_composing` (4), `continuous` (5, `FetchAtPos` only), `commit` (6, `CommitResolution` for a `CommitContinuous` or `CommitPrediction`: outcome, document text, `wrote_romanization`, `earns_auto_space`).
 
 `Effect.oneof kind`:
 

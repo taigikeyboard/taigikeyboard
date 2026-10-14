@@ -30,6 +30,7 @@ public  final class ComposingRequest extends
     RESET(19),
     FETCH_AT_POS(31),
     COMMIT_CONTINUOUS(32),
+    COMMIT_PREDICTION(34),
     TELEX_KEY(40),
     MOVE_CARET(41),
     TPS_KEY(42),
@@ -60,6 +61,7 @@ public  final class ComposingRequest extends
         case 19: return RESET;
         case 31: return FETCH_AT_POS;
         case 32: return COMMIT_CONTINUOUS;
+        case 34: return COMMIT_PREDICTION;
         case 40: return TELEX_KEY;
         case 41: return MOVE_CARET;
         case 42: return TPS_KEY;
@@ -621,6 +623,76 @@ public  final class ComposingRequest extends
    */
   private void clearCommitContinuous() {
     if (methodCase_ == 32) {
+      methodCase_ = 0;
+      method_ = null;
+    }
+  }
+
+  public static final int COMMIT_PREDICTION_FIELD_NUMBER = 34;
+  /**
+   * <pre>
+   * A NextWord prediction tap (D1): stateless, beside the Continuous pick.
+   * </pre>
+   *
+   * <code>.taigi.engine.CommitPrediction commit_prediction = 34;</code>
+   */
+  @java.lang.Override
+  public boolean hasCommitPrediction() {
+    return methodCase_ == 34;
+  }
+  /**
+   * <pre>
+   * A NextWord prediction tap (D1): stateless, beside the Continuous pick.
+   * </pre>
+   *
+   * <code>.taigi.engine.CommitPrediction commit_prediction = 34;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.CommitPrediction getCommitPrediction() {
+    if (methodCase_ == 34) {
+       return (com.siansiansu.taigikeyboard.engine.proto.CommitPrediction) method_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.CommitPrediction.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * A NextWord prediction tap (D1): stateless, beside the Continuous pick.
+   * </pre>
+   *
+   * <code>.taigi.engine.CommitPrediction commit_prediction = 34;</code>
+   */
+  private void setCommitPrediction(com.siansiansu.taigikeyboard.engine.proto.CommitPrediction value) {
+    java.util.Objects.requireNonNull(value);
+    method_ = value;
+    methodCase_ = 34;
+  }
+  /**
+   * <pre>
+   * A NextWord prediction tap (D1): stateless, beside the Continuous pick.
+   * </pre>
+   *
+   * <code>.taigi.engine.CommitPrediction commit_prediction = 34;</code>
+   */
+  private void mergeCommitPrediction(com.siansiansu.taigikeyboard.engine.proto.CommitPrediction value) {
+    java.util.Objects.requireNonNull(value);
+    if (methodCase_ == 34 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.CommitPrediction.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.CommitPrediction.newBuilder((com.siansiansu.taigikeyboard.engine.proto.CommitPrediction) method_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      method_ = value;
+    }
+    methodCase_ = 34;
+  }
+  /**
+   * <pre>
+   * A NextWord prediction tap (D1): stateless, beside the Continuous pick.
+   * </pre>
+   *
+   * <code>.taigi.engine.CommitPrediction commit_prediction = 34;</code>
+   */
+  private void clearCommitPrediction() {
+    if (methodCase_ == 34) {
       methodCase_ = 0;
       method_ = null;
     }
@@ -1540,6 +1612,78 @@ public  final class ComposingRequest extends
 
     /**
      * <pre>
+     * A NextWord prediction tap (D1): stateless, beside the Continuous pick.
+     * </pre>
+     *
+     * <code>.taigi.engine.CommitPrediction commit_prediction = 34;</code>
+     */
+    @java.lang.Override
+    public boolean hasCommitPrediction() {
+      return instance.hasCommitPrediction();
+    }
+    /**
+     * <pre>
+     * A NextWord prediction tap (D1): stateless, beside the Continuous pick.
+     * </pre>
+     *
+     * <code>.taigi.engine.CommitPrediction commit_prediction = 34;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.CommitPrediction getCommitPrediction() {
+      return instance.getCommitPrediction();
+    }
+    /**
+     * <pre>
+     * A NextWord prediction tap (D1): stateless, beside the Continuous pick.
+     * </pre>
+     *
+     * <code>.taigi.engine.CommitPrediction commit_prediction = 34;</code>
+     */
+    public Builder setCommitPrediction(com.siansiansu.taigikeyboard.engine.proto.CommitPrediction value) {
+      copyOnWrite();
+      instance.setCommitPrediction(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * A NextWord prediction tap (D1): stateless, beside the Continuous pick.
+     * </pre>
+     *
+     * <code>.taigi.engine.CommitPrediction commit_prediction = 34;</code>
+     */
+    public Builder setCommitPrediction(
+        com.siansiansu.taigikeyboard.engine.proto.CommitPrediction.Builder builderForValue) {
+      copyOnWrite();
+      instance.setCommitPrediction(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * A NextWord prediction tap (D1): stateless, beside the Continuous pick.
+     * </pre>
+     *
+     * <code>.taigi.engine.CommitPrediction commit_prediction = 34;</code>
+     */
+    public Builder mergeCommitPrediction(com.siansiansu.taigikeyboard.engine.proto.CommitPrediction value) {
+      copyOnWrite();
+      instance.mergeCommitPrediction(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * A NextWord prediction tap (D1): stateless, beside the Continuous pick.
+     * </pre>
+     *
+     * <code>.taigi.engine.CommitPrediction commit_prediction = 34;</code>
+     */
+    public Builder clearCommitPrediction() {
+      copyOnWrite();
+      instance.clearCommitPrediction();
+      return this;
+    }
+
+    /**
+     * <pre>
      * --- Desktop keys (40s: Telex tone keys, composing caret, TPS keys, the
      * commits of a Hanji conversion) ---
      * </pre>
@@ -1836,6 +1980,7 @@ public  final class ComposingRequest extends
             com.siansiansu.taigikeyboard.engine.proto.Reset.class,
             com.siansiansu.taigikeyboard.engine.proto.FetchAtPos.class,
             com.siansiansu.taigikeyboard.engine.proto.CommitContinuous.class,
+            com.siansiansu.taigikeyboard.engine.proto.CommitPrediction.class,
             com.siansiansu.taigikeyboard.engine.proto.TelexKey.class,
             com.siansiansu.taigikeyboard.engine.proto.MoveCaret.class,
             com.siansiansu.taigikeyboard.engine.proto.TpsKey.class,
@@ -1843,9 +1988,9 @@ public  final class ComposingRequest extends
             com.siansiansu.taigikeyboard.engine.proto.CommitAsTyped.class,
           };
           java.lang.String info =
-              "\u0000\u000f\u0001\u0000\n,\u000f\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f<\u0000" +
+              "\u0000\u0010\u0001\u0000\n,\u0010\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f<\u0000" +
               "\r<\u0000\u000e<\u0000\u0010<\u0000\u0012<\u0000\u0013<\u0000\u001f<\u0000 <\u0000" +
-              "(<\u0000)<\u0000*<\u0000+<\u0000,<\u0000";
+              "\"<\u0000(<\u0000)<\u0000*<\u0000+<\u0000,<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

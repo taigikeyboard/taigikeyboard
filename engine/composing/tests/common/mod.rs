@@ -27,8 +27,8 @@ use phonetics::{canonicalize_poj_syllable, canonicalize_syllable};
 use protos::engine::composing_request::Method;
 use protos::engine::effect::Kind;
 use protos::engine::{
-    AppConfig, ComposingRequest, ComposingResponse, DictionarySourceToggles, Effect, FetchAtPos,
-    Start,
+    AppConfig, CommitOutcome, CommitResolution, ComposingRequest, ComposingResponse,
+    DictionarySourceToggles, Effect, FetchAtPos, Start,
 };
 use ranking::FrequencyData;
 use test_support::{
@@ -484,6 +484,29 @@ impl Fetch {
 
 pub fn config_tl() -> AppConfig {
     config("tl")
+}
+
+/// The `ComposingResponse.commit` a pick answers with.
+pub fn resolution(
+    outcome: CommitOutcome,
+    text: &str,
+    roman: bool,
+    space: bool,
+) -> CommitResolution {
+    CommitResolution {
+        outcome: outcome as i32,
+        document_text: text.into(),
+        wrote_romanization: roman,
+        earns_auto_space: space,
+    }
+}
+
+/// The `ComposingResponse.commit` of a pick that changed nothing.
+pub fn ignored() -> CommitResolution {
+    CommitResolution {
+        outcome: CommitOutcome::Ignored as i32,
+        ..CommitResolution::default()
+    }
 }
 
 /// The document text a response commits (`CommitTextReplacingPreedit`).

@@ -136,6 +136,12 @@ pub(crate) fn apply(
             };
             return commit_continuous(state, pick, script, &roman, config, frequency);
         }
+        Intent::CommitPrediction {
+            script,
+            roman,
+            hanji,
+            canonical_tl,
+        } => return commit_prediction(state, script, &roman, hanji, canonical_tl, config),
         Intent::TelexKey { key } => telex_key(state, &key, config, frequency),
         Intent::TpsKey { key } => tps_key(state, &key, config, frequency),
         Intent::MoveCaret { direction } => move_caret(state, direction, config, frequency),
@@ -1230,6 +1236,41 @@ fn commit_continuous(
     }
     applied.response.commit = Some(commit_resolution(outcome, Some(resolved)));
     applied
+}
+
+/// `Intent::CommitPrediction` (D1): the document text a NextWord prediction
+/// tap writes, resolved by the Continuous pick's resolver
+/// ([`resolve_commit_text`]), and its usage. The composition is left as it is
+/// (the snapshot answers it unchanged). No Hanji, no script, a script the
+/// prediction lacks, or an empty document text is ignored: no usage. The
+/// usage carries no `hanji`, so counting it touches no learned phrase — as
+/// the platforms' `RecordUsage`.
+fn commit_prediction(
+    state: &EngineState,
+    script: Option<CommitScript>,
+    roman: &str,
+    hanji: String,
+    canonical_tl: String,
+    config: &AppConfig,
+) -> Applied {
+    let resolved = script
+        .filter(|_| !hanji.is_empty())
+        .and_then(|script| resolve_commit_text(script, roman, Some(&hanji), config))
+        // A Hanji-only prediction led by its (absent) romanization — the swap
+        // turned off between the strip and the tap — writes nothing.
+        .filter(|resolved| !resolved.text.is_empty());
+    let usage = resolved.is_some().then_some(Usage {
+        display_text: hanji,
+        canonical_tl,
+        hanji: None,
+    });
+    let mut response = snapshot(state, config);
+    response.commit = Some(commit_resolution(CommitOutcome::Finalized, resolved));
+    Applied {
+        response,
+        learned: None,
+        usage,
+    }
 }
 
 /// `Append { ch }` under `Phase::Continuous`. Appends to the pending tail;
