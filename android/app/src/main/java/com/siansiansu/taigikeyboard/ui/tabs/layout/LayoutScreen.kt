@@ -1,6 +1,7 @@
 package com.siansiansu.taigikeyboard.ui.tabs.layout
 
 import androidx.annotation.DrawableRes
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,22 +19,32 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.i18n.stringRes
+import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
+import com.siansiansu.taigikeyboard.ime.text.layout.CustomLayout
 import com.siansiansu.taigikeyboard.ime.text.layout.KeyboardLayoutOption
 import com.siansiansu.taigikeyboard.ime.text.layout.KeyboardLayoutOptions
+import com.siansiansu.taigikeyboard.ime.text.layout.LayoutKeyGrid
 import com.siansiansu.taigikeyboard.ime.text.layout.LayoutScript
+import com.siansiansu.taigikeyboard.settings.LayoutEditorActivity
 import com.siansiansu.taigikeyboard.ui.components.GalleryCard
+import com.siansiansu.taigikeyboard.ui.components.GalleryCardAction
+import com.siansiansu.taigikeyboard.ui.components.GalleryCardMenu
 import com.siansiansu.taigikeyboard.ui.components.GalleryCreateCard
 import com.siansiansu.taigikeyboard.ui.components.GalleryScreenshot
 import com.siansiansu.taigikeyboard.ui.components.GalleryShelf
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 
 // Layout tab main screen: shelves of layout cards (shared gallery chrome with the Theme tab) —
-// Custom Layouts (a create card, not available yet), Universal (one key table for both scripts),
+// Custom Layouts (a create card that opens LayoutEditorActivity, then the user's layouts with an
+// apply / edit / delete menu), Universal (one key table for both scripts),
 // Tâi-lô and Pe̍h-ōe-jī (the layouts whose POJ keys differ, once per script), Phonetic Symbols.
 // A Tâi-lô / Pe̍h-ōe-jī card applies its layout and switches the input mode to that script.
 // Mirrors iOS LayoutTab.
@@ -82,6 +93,11 @@ fun LayoutScreen(prefs: PrefHelper) {
         .collectAsStateWithLifecycle(initialValue = prefs.inputMode)
     val activeCustomLayout by remember(prefs) { prefs.observeActiveCustomLayout() }
         .collectAsStateWithLifecycle(initialValue = remember(prefs) { prefs.activeCustomLayout })
+    val customLayouts by remember(prefs) { prefs.observeCustomLayouts() }
+        .collectAsStateWithLifecycle(initialValue = remember(prefs) { prefs.loadCustomLayouts() })
+    val context = LocalContext.current
+    val tables = remember(context) { CompositionRoot.shared(context).customLayoutTables }
+    val isDark = isSystemInDarkTheme()
     // A built-in card is selected only while no custom layout is (iOS LayoutTab), so tapping the
     // base of the active custom layout selects the built-in one.
     val isChoiceSelected: (LayoutChoice) -> Boolean = { choice ->
@@ -132,11 +148,41 @@ fun LayoutScreen(prefs: PrefHelper) {
             verticalArrangement = Arrangement.spacedBy(AppStyle.sectionSpacing),
         ) {
             GalleryShelf(L10n.layoutCustomLayoutsSection) {
-                GalleryCreateCard(
-                    title = L10n.layoutCreateNewLayout,
-                    onClick = null,
-                    comingSoonBadge = L10n.layoutComingSoon,
-                )
+                // Create-new card leads the shelf, hidden once the cap is reached (mirrors iOS).
+                if (customLayouts.size < CustomLayout.MAX_CUSTOM_LAYOUTS) {
+                    GalleryCreateCard(
+                        title = L10n.layoutCreateNewLayout,
+                        onClick = { context.startActivity(LayoutEditorActivity.createIntent(context, null)) },
+                    )
+                }
+                customLayouts.forEach { layout ->
+                    GalleryCard(
+                        title = layout.name,
+                        isSelected = activeCustomLayout?.id == layout.id,
+                        onClick = { prefs.applyCustomLayout(layout) },
+                        preview = {
+                            LayoutKeyGrid(
+                                rows = tables.previewRows(layout),
+                                base = layout.base,
+                                isDark = isDark,
+                                modifier = Modifier.fillMaxSize().semantics { contentDescription = layout.name },
+                            )
+                        },
+                        accessory = {
+                            GalleryCardMenu(
+                                contentDescription = layout.name,
+                                actions =
+                                    listOf(
+                                        GalleryCardAction(L10n.themeCardMenuApply) { prefs.applyCustomLayout(layout) },
+                                        GalleryCardAction(L10n.commonEdit) {
+                                            context.startActivity(LayoutEditorActivity.createIntent(context, layout.id))
+                                        },
+                                        GalleryCardAction(L10n.commonDelete, isDestructive = true) { prefs.deleteCustomLayout(layout.id) },
+                                    ),
+                            )
+                        },
+                    )
+                }
             }
 
             layoutShelves.forEach { shelf ->

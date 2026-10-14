@@ -20,6 +20,7 @@ import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
 import com.siansiansu.taigikeyboard.ime.text.smartbar.KeyboardChromeColors
 import com.siansiansu.taigikeyboard.ime.theme.KeyboardMaterialTheme
+import com.siansiansu.taigikeyboard.ime.theme.isKeyboardNightMode
 
 /**
  * Layout selection overlay view.
@@ -87,23 +88,35 @@ class LayoutSelectionOverlayView : FrameLayout {
                 ProvideDisplayLanguage(DisplayLanguage.fromTag(displayLanguageTag)) {
                     LayoutOverlayContent(
                         appearance = rememberKeyboardOverlayAppearance(prefs, trigger),
-                        // No built-in card is checked while a custom layout is active (iOS
-                        // LayoutSelectionOverlay); tapping its base selects the built-in layout.
-                        selectedKey = remember(trigger) { if (prefs.activeCustomLayout != null) "" else prefs.keyboardLayoutType },
+                        selectedKey = remember(trigger) { prefs.keyboardLayoutType },
+                        // Tapping the active custom layout's base selects the built-in layout.
+                        selectedCustomLayoutId = remember(trigger) { prefs.activeCustomLayout?.id },
+                        customLayouts = remember(trigger) { prefs.loadCustomLayouts() },
+                        tables = CompositionRoot.shared(context).customLayoutTables,
+                        isDark = isKeyboardNightMode(context),
                         previewInputMode = remember(trigger) { prefs.romanizationInputMode },
                         resetKey = trigger,
                         onLayoutSelected = { key ->
                             // Persist BEFORE notifying so onKeyboardLayoutTypeChanged sees the new pref.
                             prefs.keyboardLayoutType = key
-                            onLayoutSelected?.invoke(key)
-                            // The registered callback already hides synchronously; this defensive close
-                            // covers a null callback so the overlay still collapses on selection.
-                            hide()
+                            notifySelected(key)
+                        },
+                        onCustomLayoutSelected = { layout ->
+                            // Its own write: the built-in setter would clear the custom selection.
+                            prefs.applyCustomLayout(layout)
+                            notifySelected(layout.base)
                         },
                     )
                 }
             }
         }
+    }
+
+    private fun notifySelected(layoutType: String) {
+        onLayoutSelected?.invoke(layoutType)
+        // The registered callback already hides synchronously; this defensive close covers a null
+        // callback so the overlay still collapses on selection.
+        hide()
     }
 
     override fun onDetachedFromWindow() {

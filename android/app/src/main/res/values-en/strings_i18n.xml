@@ -180,7 +180,8 @@
     <string name="i18n_layout_romanizationKeyboard">Romanization Keyboards</string>
     <string name="i18n_layout_customLayoutsSection">Custom Layouts</string>
     <string name="i18n_layout_createNewLayout">New Layout…</string>
-    <string name="i18n_layout_comingSoon">Coming Soon</string>
+    <string name="i18n_layout_editorTitleNew">New Layout</string>
+    <string name="i18n_layout_nameHeader">Layout Name</string>
     <string name="i18n_layout_commonLayoutsSection">Universal</string>
     <string name="i18n_layout_standardLayout">Lohankha</string>
     <string name="i18n_layout_phahTaigiLayout">PhahTaigi</string>

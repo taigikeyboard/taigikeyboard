@@ -26,10 +26,7 @@ internal object LayoutTestAssets {
         base: String,
         script: LayoutScript,
         id: String = "id-$base-${script.inputMode}",
-    ): CustomLayout {
-        val table = tables.baseTable(base, script)!!
-        return CustomLayout(id, "Name", base, script, table.labels, table.functionKeys, hasEmojiKey = true)
-    }
+    ): CustomLayout = tables.fresh(id, "Name", base, script)!!
 
     fun substituted(
         layout: CustomLayout,

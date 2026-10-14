@@ -7,6 +7,7 @@ package com.siansiansu.taigikeyboard.ime.text.layout
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.Collections
 
 /**
  * The script of a key table: Lohankha and the MOE layouts have different TL and POJ tables. The
@@ -45,12 +46,25 @@ enum class FunctionKey(
     }
 }
 
+/** A key the editor can select: a slot of [CustomLayout.keys], or of [CustomLayout.functionKeys]. Mirrors iOS `CustomLayout.Place`. */
+sealed interface LayoutPlace {
+    data class Key(
+        val index: Int,
+    ) : LayoutPlace
+
+    data class Function(
+        val index: Int,
+    ) : LayoutPlace
+}
+
 /**
  * A custom layout over the [base] × [script] table, below its digit row:
  * - [keys] fills the character keys in reading order; null marks a removed key.
  * - [functionKeys] fills the function keys in reading order; each stays in its own row.
  * - [hasEmojiKey] false hides the emoji key, the one function key that can be removed.
  * The globe key and the email / URL key are not part of it: the keyboard places them.
+ * The editing operations only swap, trade a key for a spare or remove one, so a key never appears
+ * twice; each returns the edited copy.
  */
 data class CustomLayout(
     val id: String,
@@ -61,6 +75,85 @@ data class CustomLayout(
     val functionKeys: List<FunctionKey>,
     val hasEmojiKey: Boolean,
 ) {
+    /** The emoji key's place. */
+    val emojiPlace: LayoutPlace.Function?
+        get() = functionKeys.indexOf(FunctionKey.EMOJI).takeIf { it >= 0 }?.let(LayoutPlace::Function)
+
+    /** Places drawn as a removed key in the editor: removed character keys, and the hidden emoji key. */
+    val removedPlaces: Set<LayoutPlace>
+        get() =
+            buildSet {
+                keys.forEachIndexed { index, key -> if (key == null) add(LayoutPlace.Key(index)) }
+                if (!hasEmojiKey) emojiPlace?.let(::add)
+            }
+
+    /** Character keys swap anywhere; function keys only within their row of [table]. */
+    fun canSwap(
+        first: LayoutPlace,
+        second: LayoutPlace,
+        table: CustomLayoutTables.BaseTable,
+    ): Boolean =
+        when {
+            first is LayoutPlace.Key && second is LayoutPlace.Key -> first.index != second.index
+            first is LayoutPlace.Function && second is LayoutPlace.Function ->
+                first.index != second.index && table.functionRows[first.index] == table.functionRows[second.index]
+            else -> false
+        }
+
+    fun swapped(
+        first: LayoutPlace,
+        second: LayoutPlace,
+        table: CustomLayoutTables.BaseTable,
+    ): CustomLayout {
+        if (!canSwap(first, second, table)) return this
+        // canSwap pairs a place only with one of its own kind.
+        return when (first) {
+            is LayoutPlace.Key -> copy(keys = keys.swappedAt(first.index, (second as LayoutPlace.Key).index))
+            is LayoutPlace.Function -> copy(functionKeys = functionKeys.swappedAt(first.index, (second as LayoutPlace.Function).index))
+        }
+    }
+
+    /** The key at [place] as the editor draws it; a removed character key has an empty label. */
+    fun face(place: LayoutPlace): GridKey.Face =
+        when (place) {
+            is LayoutPlace.Key -> GridKey.Face.Character(keys[place.index].orEmpty())
+            is LayoutPlace.Function -> GridKey.Face.Function(functionKeys[place.index])
+        }
+
+    /** [spare] on a character place (a removed one too); the key it replaces returns to the tray. A key on the board is refused. */
+    fun replaced(
+        place: LayoutPlace,
+        spare: String,
+    ): CustomLayout {
+        if (place !is LayoutPlace.Key || spare in keys) return this
+        return copy(keys = keys.toMutableList().also { it[place.index] = spare })
+    }
+
+    /** Whether the key at [place] can go to the tray: a character key, or the emoji key. */
+    fun canRemove(place: LayoutPlace): Boolean =
+        when (place) {
+            is LayoutPlace.Key -> keys[place.index] != null
+            is LayoutPlace.Function -> place == emojiPlace && hasEmojiKey
+        }
+
+    /** The layout with the key at [place] off the board; it returns to the spare tray. */
+    fun removed(place: LayoutPlace): CustomLayout {
+        if (!canRemove(place)) return this
+        return when (place) {
+            is LayoutPlace.Key -> copy(keys = keys.toMutableList().also { it[place.index] = null })
+            is LayoutPlace.Function -> copy(hasEmojiKey = false)
+        }
+    }
+
+    /** The emoji key back in its place. */
+    fun restoreEmojiKey(): CustomLayout = copy(hasEmojiKey = true)
+
+    /** The labels of [pool] not on the board. */
+    fun spares(pool: List<String>): List<String> {
+        val onBoard = keys.filterNotNullTo(HashSet())
+        return pool.filterNot { it in onBoard }
+    }
+
     fun toJson(): JSONObject =
         JSONObject().apply {
             put("id", id)
@@ -115,6 +208,11 @@ data class CustomLayout(
                 else -> layouts + layout
             }
         }
+
+        private fun <T> List<T>.swappedAt(
+            first: Int,
+            second: Int,
+        ): List<T> = toMutableList().also { Collections.swap(it, first, second) }
 
         private fun fromJson(
             json: JSONObject,

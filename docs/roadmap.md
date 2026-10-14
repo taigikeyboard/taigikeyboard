@@ -16,7 +16,7 @@
 
 ## Active / In-flight items
 
-- **Custom layouts (mobile)** — [`architecture/custom-layouts-roadmap.md`](architecture/custom-layouts-roadmap.md): phase 1 iOS merged (#505), phase 2 Android next.
+- **Custom layouts (mobile)** — [`architecture/custom-layouts-roadmap.md`](architecture/custom-layouts-roadmap.md): phase 1 iOS merged (#505), phase 2 Android: 2a merged (#506), 2b in review.
 - **Maintainability audit follow-up (2026-10)** — [`architecture/maintainability-roadmap-2026-10.md`](architecture/maintainability-roadmap-2026-10.md), rounds H, A–G over [`reports/2026-10-09-audit-all.md`](reports/2026-10-09-audit-all.md). In progress: H, A1a (#473), A1b (#475), A2 (#490) merged; next A3.
 
 ---

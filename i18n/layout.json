@@ -16,19 +16,14 @@
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
       "values": { "hanji": "新佈局…", "tailo": "Sin pòo-kio̍k...", "poj": "Sin pò͘-kio̍k...", "en": "New Layout…", "ja": "新しい配列…" }
     },
-    "comingSoon": {
-      "comment": "Badge over a Layout-tab card whose feature is not available yet (the create-new-layout card). Android only until custom layouts land there.",
-      "scope": { "platforms": ["android"], "surfaces": ["host"] },
-      "values": { "hanji": "準備中", "tailo": "Tsún-pī-tiong", "poj": "Chún-pī-tiong", "en": "Coming Soon", "ja": "近日公開" }
-    },
     "editorTitleNew": {
       "comment": "Layout editor top-bar title in create mode; also the name-field placeholder and the name a layout saved with a blank name gets. Edit mode shows the layout's own name.",
-      "scope": { "platforms": ["ios"], "surfaces": ["host"] },
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
       "values": { "hanji": "新佈局", "tailo": "Sin pòo-kio̍k", "poj": "Sin pò͘-kio̍k", "en": "New Layout", "ja": "新しい配列" }
     },
     "nameHeader": {
       "comment": "Layout name alert header, shown on Save in the layout editor.",
-      "scope": { "platforms": ["ios"], "surfaces": ["host"] },
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
       "values": { "hanji": "佈局名稱", "tailo": "Pòo-kio̍k miâ-tshing", "poj": "Pò͘-kio̍k miâ-chheng", "en": "Layout Name", "ja": "配列名" }
     },
     "commonLayoutsSection": {

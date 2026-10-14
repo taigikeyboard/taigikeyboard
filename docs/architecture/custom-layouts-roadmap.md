@@ -2,7 +2,7 @@
 
 > **Type**: Planning (feature)
 > **Keywords**: `custom layout`, `layout editor`, `romanization keyboard`, `Layout tab`
-> **Status**: Active — phase 1 (iOS) merged; phase 2 (Android) in two PRs, 2a (data, storage, keyboard) merged (#506), 2b (editor + UI) next
+> **Status**: Active — phase 1 (iOS) merged; phase 2 (Android) in two PRs, 2a (data, storage, keyboard) merged (#506), 2b (editor + UI) in review
 
 ---
 
@@ -46,6 +46,7 @@ Same record and JSON; per-platform tables. Android keeps its layout JSON: `Layou
 - **Seam** — `LayoutManager.mergeLayouts` substitutes after the merge and before extended popups (keyed by label, so tone popups follow the key): each place takes the base's own `KeyData` for that label in the current width (MOE1 `(` stays half-width), else the catalog's. Inline popups move with the key. Removed keys and the emoji key (`hasEmojiKey` false) leave their row; an empty row leaves the keyboard. `@` / `/` go right after a bottom-row `,` (which then hides in email / URL fields), else right before space; the existing globe pass puts the globe after 123. The main table follows the record's script, not the live mode.
 - **Storage** — DataStore `keyboard__user_layouts` (JSON list, per-record decode, invalid records dropped) and `keyboard__selected_custom_layout_id`; write plans in `CustomLayoutSelection` (pure, beside `TpsCascade`). Settings reset keeps the list. `allowBackup="false"` already keeps DataStore out of OS backup.
 - **Refresh** — `TaigiKeyboard` collects `PrefHelper.observeLetterLayout()` (stored layout + active record, from one emission, decoded off the main thread) and reloads the letter layout once per change. The Theme-tab preview keys its layout on the active record.
+- **Editor (2b)** — editing ops on `CustomLayout` (pure, return a copy; function-row checks take the `BaseTable`); `CustomLayoutTables` adds `fresh` / `isUnchanged`, the tray pools and the drawn rows (`editorRows` keeps every place, a removed one flagged; `previewRows` is the keyboard's view), numbered from the same pieces `substitute` reads. `LayoutKeyGrid` (Compose, `ime/text/layout/`) draws the board, the cards and the picker cards; widths come from the keyboard's own slot fractions (`KeyboardLayoutSolver.slotFraction`). `LayoutEditorActivity` hosts the editor full screen, as `ThemeEditorActivity`. One drag state covers all three drags (board key after touch slop, tray chip after a long press so the tray still scrolls), hit-tested in window coordinates; only a release commits, a cancelled gesture drops the drag. The card menu and the name dialog are the theme ones, moved to `ui/components/` (`GalleryCardMenu`, `NameDialog`).
 
 ## Selection contract
 

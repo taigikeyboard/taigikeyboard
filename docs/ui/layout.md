@@ -27,7 +27,7 @@ Concept → file map for both platforms: [cross-platform-alignment.md §2](../co
 | MOE1 (教育部輸入法佈局1) | TL and POJ variants |
 | MOE2 (教育部輸入法佈局2) | TL and POJ variants |
 
-## Custom layouts (iOS; Android pending)
+## Custom layouts
 
 A user rearranges a romanization layout in the Layout tab's editor — swaps keys (function keys within their row), trades one for a spare letter (multi-letter keys included) or symbol, removes one (the emoji key too) — and saves it under a name (up to 5). The record is base-relative — `CustomLayout { base, script, keys, functionKeys, hasEmojiKey }`: `keys` and `functionKeys` fill, in reading order, the character and function keys below the digit row of the `base` × `script` table (nil key = removed); the digit row stays the base's, and globe goes right after 123. Selecting one stores `keyboardLayoutType = base` plus `selectedCustomLayoutId`, so every behaviour keyed on the layout id and the key label follows the moved keys. Choosing any built-in layout clears the custom selection; TPS entered from the input mode suspends it. Design, selection contract and phases: [`custom-layouts-roadmap.md`](../architecture/custom-layouts-roadmap.md).
 

@@ -93,6 +93,13 @@
             android:parentActivityName="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
             android:exported="false"/>
 
+        <!-- Layout Editor Activity (custom-layout CRUD) -->
+        <activity
+            android:name="com.siansiansu.taigikeyboard.settings.LayoutEditorActivity"
+            android:theme="@style/SettingsTheme"
+            android:parentActivityName="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
+            android:exported="false"/>
+
         <!-- Manage Dictionaries Activity (dictionary-source toggles) -->
         <activity
             android:name="com.siansiansu.taigikeyboard.settings.DictionarySourcesActivity"

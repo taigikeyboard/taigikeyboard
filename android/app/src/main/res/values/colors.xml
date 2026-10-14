@@ -5,4 +5,11 @@
     <color name="colorPrimaryDark">#388E3C</color>
     <color name="colorAccent">#FF9800</color>
 
+    <!-- Default keyboard theme tones (themes.xml, values-night/themes.xml), also the custom-layout
+         board drawn in the app and the keyboard's layout picker (LayoutKeyGrid). -->
+    <color name="keyboard_default_key_light">#FFFFFF</color>
+    <color name="keyboard_default_key_dark">#6B6B6B</color>
+    <color name="keyboard_default_background_light">#D4D5DD</color>
+    <color name="keyboard_default_background_dark">#2C2C2C</color>
+
 </resources>

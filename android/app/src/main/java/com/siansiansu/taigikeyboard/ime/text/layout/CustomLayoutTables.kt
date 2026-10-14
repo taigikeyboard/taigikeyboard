@@ -10,6 +10,27 @@ import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.key.KeyVariation
 
+/**
+ * One key of a drawn board ([LayoutKeyGrid]): its face, its place (null on the digit row), and whether
+ * it is a removed key's place, which the editor can fill again (a removed character key has an empty
+ * label; the hidden emoji key keeps its face, so its place keeps its width).
+ */
+data class GridKey(
+    val face: Face,
+    val place: LayoutPlace?,
+    val isRemoved: Boolean = false,
+) {
+    sealed interface Face {
+        data class Character(
+            val label: String,
+        ) : Face
+
+        data class Function(
+            val key: FunctionKey,
+        ) : Face
+    }
+}
+
 class CustomLayoutTables(
     assets: LayoutAssets,
 ) {
@@ -20,6 +41,10 @@ class CustomLayoutTables(
         val functionKeys: List<FunctionKey>,
         /** The row of each function place. */
         val functionRows: List<Int>,
+        /** The digit row's labels. */
+        val digits: List<String>,
+        /** The places of each row below the digit row (globe, `@` and `/` are not places). */
+        val placeRows: List<List<LayoutPlace>>,
     )
 
     /** One place of a merged row: what a custom layout fills, or what the keyboard puts back itself. */
@@ -47,6 +72,15 @@ class CustomLayoutTables(
     /** Half-width label → (half-width key, full-width key). Never handed out without a deep copy. */
     private val catalog: Map<String, Pair<KeyData, KeyData>>
 
+    /**
+     * Letters offered in the spare tray: a–z, o͘, `-`, then every multi-letter key of the romanization
+     * tables (MOE2 `ph`, `tsh`, POJ `ch` …), whatever the base. iOS `CustomLayout.trayLetters`.
+     */
+    val trayLetters: List<String>
+
+    /** Punctuation and symbols offered in the spare tray: the common symbol page (the 123 key). */
+    val traySymbols: List<String>
+
     init {
         // Bases share files (PhahTaigi has one table for both scripts, modifiers ignore the script,
         // every base has the same digit row): parse each once. Tables never mutate a parsed key.
@@ -69,27 +103,80 @@ class CustomLayoutTables(
         val symbolPageFull = load(LayoutType.SYMBOLS, "western_fullwidth")?.arrangement.orEmpty()
         symbolPage.zip(symbolPageFull).forEach { (half, full) -> half.zip(full).forEach { (h, f) -> addToCatalog(h, f) } }
 
+        val romanizationLabels = mutableListOf<String>()
         for (base in KeyboardLayoutOptions.romanization.map { it.key }) {
             for (script in LayoutScript.entries) {
+                val halfKeyboard = assets.letterKeyboard(base, script.inputMode, isFullWidthPunctuation = false, load)
                 // Below the digit row; row numbers count it.
-                val halfRows = assets.letterKeyboard(base, script.inputMode, isFullWidthPunctuation = false, load).drop(1).map(::pieces)
+                val halfRows = halfKeyboard.drop(1).map(::pieces)
                 val fullRows = assets.letterKeyboard(base, script.inputMode, isFullWidthPunctuation = true, load).drop(1).map(::pieces)
                 halfRows.flatten().zip(fullRows.flatten()).forEach { (h, f) ->
                     if (h is Piece.Character && f is Piece.Character) addToCatalog(h.key, f.key)
                 }
                 if (halfRows.isEmpty()) continue
+                val labels = halfRows.flatten().filterIsInstance<Piece.Character>().map { it.key.label }
+                romanizationLabels += labels
                 val functions = halfRows.withIndex().flatMap { (index, row) -> row.filterIsInstance<Piece.Function>().map { index + 1 to it.functionKey } }
+                var nextKey = 0
+                var nextFunction = 0
                 tables[base to script] =
                     BaseTable(
-                        labels = halfRows.flatten().filterIsInstance<Piece.Character>().map { it.key.label },
+                        labels = labels,
                         functionKeys = functions.map { it.second },
                         functionRows = functions.map { it.first },
+                        digits = halfKeyboard.first().map { it.label },
+                        placeRows =
+                            halfRows.map { row ->
+                                row.mapNotNull { piece ->
+                                    when (piece) {
+                                        is Piece.Character -> LayoutPlace.Key(nextKey++)
+                                        is Piece.Function -> LayoutPlace.Function(nextFunction++)
+                                        is Piece.InputType, Piece.Globe -> null
+                                    }
+                                }
+                            },
                     )
             }
         }
         this.tables = tables
         this.catalog = catalog
+
+        val symbolLabels = symbolPage.flatten().map { it.label }
+        val single = ('a'..'z').map(Char::toString) + listOf("o\u0358", "-")
+        trayLetters = (single + romanizationLabels.filterNot { it in symbolLabels }).distinct().filter { it in catalog }
+        traySymbols = symbolLabels.filterNot { it in trayLetters }.distinct()
     }
+
+    /** A fresh layout: the [base] × [script] table unchanged; null for TPS and unknown layouts. */
+    fun fresh(
+        id: String,
+        name: String,
+        base: String,
+        script: LayoutScript,
+    ): CustomLayout? =
+        baseTable(base, script)?.let { table ->
+            CustomLayout(id, name, base, script, table.labels, table.functionKeys, hasEmojiKey = true)
+        }
+
+    /** Whether [layout]'s board still matches its base table. */
+    fun isUnchanged(layout: CustomLayout): Boolean = layout == fresh(layout.id, layout.name, layout.base, layout.script)
+
+    /**
+     * The board the editor draws: the digit row (no places), then every place of [layout], a removed
+     * key and the hidden emoji key included ([CustomLayout.removedPlaces]).
+     */
+    fun editorRows(layout: CustomLayout): List<List<GridKey>> {
+        val table = baseTable(layout.base, layout.script) ?: return emptyList()
+        val removed = layout.removedPlaces
+        val placeRows =
+            table.placeRows.map { row ->
+                row.map { place -> GridKey(layout.face(place), place, isRemoved = place in removed) }
+            }
+        return listOf(table.digits.map { GridKey(GridKey.Face.Character(it), place = null) }) + placeRows
+    }
+
+    /** The board as the keyboard shows it (card previews): removed keys leave their row, an empty row goes too. */
+    fun previewRows(layout: CustomLayout): List<List<GridKey>> = editorRows(layout).map { row -> row.filterNot { it.isRemoved } }.filter { it.isNotEmpty() }
 
     /** The table of [base] × [script]; null for TPS and unknown layouts. */
     fun baseTable(

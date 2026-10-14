@@ -28,18 +28,24 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -208,13 +214,11 @@ fun GalleryScreenshot(
     }
 }
 
-// The leading card of a custom shelf: a neutral panel with a centered "+" glyph. With a
-// [comingSoonBadge] (and no [onClick]) the panel is dimmed under that badge and not tappable.
+// The leading card of a custom shelf: a neutral panel with a centered "+" glyph.
 @Composable
 fun GalleryCreateCard(
     title: String,
-    onClick: (() -> Unit)?,
-    comingSoonBadge: String? = null,
+    onClick: () -> Unit,
 ) {
     Column(
         modifier = Modifier.width(GALLERY_CARD_WIDTH_DP.dp),
@@ -222,7 +226,7 @@ fun GalleryCreateCard(
         Surface(
             shape = GALLERY_CARD_SHAPE,
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            modifier = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier,
+            modifier = Modifier.clickable(onClick = onClick),
         ) {
             Box(
                 modifier =
@@ -237,31 +241,59 @@ fun GalleryCreateCard(
                     modifier = Modifier.size(28.dp),
                     tint = MaterialTheme.colorScheme.onSurface,
                 )
-                if (comingSoonBadge != null) {
-                    Box(
-                        modifier =
-                            Modifier
-                                .matchParentSize()
-                                .background(Color.Black.copy(alpha = 0.5f)),
-                    )
-                    Text(
-                        text = comingSoonBadge,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        style = MaterialTheme.typography.labelLarge,
-                        modifier =
-                            Modifier
-                                .clip(CircleShape)
-                                .background(Color.Black.copy(alpha = 0.7f))
-                                .padding(horizontal = 12.dp, vertical = 6.dp),
-                    )
-                }
             }
         }
 
         Spacer(Modifier.height(6.dp))
 
         GalleryCardTitle(title)
+    }
+}
+
+/** One action in a user-made card's trailing menu (apply / edit / delete). */
+data class GalleryCardAction(
+    val title: String,
+    val isDestructive: Boolean = false,
+    val onClick: () -> Unit,
+)
+
+// The trailing overflow menu of a user-made card (custom theme, custom layout). Mirrors iOS
+// GalleryCardMenu.
+@Composable
+fun GalleryCardMenu(
+    contentDescription: String,
+    actions: List<GalleryCardAction>,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { expanded = true }, modifier = Modifier.size(28.dp)) {
+            Icon(
+                imageVector = Icons.Default.MoreVert,
+                contentDescription = contentDescription,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            actions.forEach { action ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = action.title,
+                            color =
+                                if (action.isDestructive) {
+                                    MaterialTheme.colorScheme.error
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                },
+                        )
+                    },
+                    onClick = {
+                        expanded = false
+                        action.onClick()
+                    },
+                )
+            }
+        }
     }
 }
 

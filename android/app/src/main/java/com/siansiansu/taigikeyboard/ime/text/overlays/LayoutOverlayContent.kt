@@ -4,7 +4,6 @@
 
 package com.siansiansu.taigikeyboard.ime.text.overlays
 
-import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -14,7 +13,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -48,9 +49,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.i18n.stringRes
+import com.siansiansu.taigikeyboard.ime.text.layout.CustomLayout
+import com.siansiansu.taigikeyboard.ime.text.layout.CustomLayoutTables
 import com.siansiansu.taigikeyboard.ime.text.layout.KeyboardLayoutOption
 import com.siansiansu.taigikeyboard.ime.text.layout.KeyboardLayoutOptions
+import com.siansiansu.taigikeyboard.ime.text.layout.LayoutKeyGrid
 import com.siansiansu.taigikeyboard.ime.theme.themeBackground
+import com.siansiansu.taigikeyboard.ui.components.GALLERY_PREVIEW_ASPECT
 
 private val CardWidth = 120.dp
 private val CardSpacing = 12.dp
@@ -62,34 +67,46 @@ private val SectionHorizontalPadding = 12.dp
 private const val SelectedScrimAlpha = 0.25f
 
 /**
- * Layout picker: two horizontally-scrolling sections (romanization + phonetic) of preview cards.
- * The selected card shows an accent border + checkmark; tapping a card reports its layout key.
+ * Layout picker: horizontally-scrolling sections of preview cards — the user's custom layouts (when
+ * there are any), romanization, phonetic. The selected card shows an accent border + checkmark;
+ * tapping a card reports its layout key, or the custom layout.
  *
  * @param appearance user keyboard overlay colors — gradient backdrop + role-first foreground +
  *   chrome accent (cards honor these, not the M3 brand palette).
- * @param selectedKey the currently active layout key (re-read from prefs on each overlay show()).
+ * @param selectedKey the currently stored layout key (re-read from prefs on each overlay show()).
+ * @param selectedCustomLayoutId the active custom layout's id, null while a built-in layout shows;
+ *   no built-in card is checked while one is (iOS LayoutSelectionOverlay).
+ * @param customLayouts the saved custom layouts, drawn from [tables] in the keyboard's [isDark] tones.
  * @param previewInputMode the mode the romanization cards render in once picked (a snapshot per
  *   show() — the toolbar's mode switch closes this overlay), so a POJ user sees the POJ keys.
- * @param resetKey bumped on each overlay show() — re-seeds the local selection to [selectedKey].
- * @param onLayoutSelected invoked with the tapped layout key.
+ * @param resetKey bumped on each overlay show() — re-seeds the local selection.
+ * @param onLayoutSelected invoked with the tapped built-in layout key.
+ * @param onCustomLayoutSelected invoked with the tapped custom layout.
  */
 @Composable
 fun LayoutOverlayContent(
     appearance: KeyboardOverlayAppearance,
     selectedKey: String,
+    selectedCustomLayoutId: String?,
+    customLayouts: List<CustomLayout>,
+    tables: CustomLayoutTables,
+    isDark: Boolean,
     previewInputMode: String,
     resetKey: Int,
     onLayoutSelected: (String) -> Unit,
+    onCustomLayoutSelected: (CustomLayout) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // Key on resetKey (monotonic per show()), NOT selectedKey: the composition survives hide/show,
+    // Key on resetKey (monotonic per show()), NOT the selection: the composition survives hide/show,
     // and selectedKey can return to a PRIOR value (e.g. TPS cascade restoring the pre-TPS layout),
     // so value-keying would skip the re-seed and leave a stale checkmark. resetKey forces re-seed
     // on every reopen without a DataStore round-trip. Mirrors SymbolOverlayContent.
     var activeKey by remember(resetKey) { mutableStateOf(selectedKey) }
+    var activeCustomLayoutId by remember(resetKey) { mutableStateOf(selectedCustomLayoutId) }
 
     val onSelect: (String) -> Unit = { key ->
         activeKey = key
+        activeCustomLayoutId = null
         onLayoutSelected(key)
     }
 
@@ -104,12 +121,51 @@ fun LayoutOverlayContent(
                 .verticalScroll(rememberScrollState())
                 .padding(top = 10.dp, bottom = 4.dp),
     ) {
-        SectionHeader(L10n.layoutRomanizationKeyboard, appearance.foreground, topPadding = 0.dp)
-        LayoutCardRow(KeyboardLayoutOptions.romanization, activeKey, previewInputMode, appearance, onSelect)
+        if (customLayouts.isNotEmpty()) {
+            SectionHeader(L10n.layoutCustomLayoutsSection, appearance.foreground, topPadding = 0.dp)
+            CardRow {
+                customLayouts.forEach { layout ->
+                    LayoutCard(
+                        label = layout.name,
+                        isSelected = layout.id == activeCustomLayoutId,
+                        appearance = appearance,
+                        onClick = {
+                            activeCustomLayoutId = layout.id
+                            onCustomLayoutSelected(layout)
+                        },
+                    ) {
+                        LayoutKeyGrid(
+                            rows = tables.previewRows(layout),
+                            base = layout.base,
+                            isDark = isDark,
+                            modifier = Modifier.fillMaxWidth().aspectRatio(GALLERY_PREVIEW_ASPECT),
+                        )
+                    }
+                }
+            }
+        }
+
+        // No built-in card is checked while a custom layout is.
+        val builtInKey = activeKey.takeIf { activeCustomLayoutId == null }
+        SectionHeader(L10n.layoutRomanizationKeyboard, appearance.foreground, topPadding = if (customLayouts.isEmpty()) 0.dp else 12.dp)
+        LayoutCardRow(KeyboardLayoutOptions.romanization, builtInKey, previewInputMode, appearance, onSelect)
 
         SectionHeader(L10n.settingsTpsMode, appearance.foreground, topPadding = 12.dp)
-        LayoutCardRow(KeyboardLayoutOptions.phonetic, activeKey, previewInputMode, appearance, onSelect)
+        LayoutCardRow(KeyboardLayoutOptions.phonetic, builtInKey, previewInputMode, appearance, onSelect)
     }
+}
+
+@Composable
+private fun CardRow(content: @Composable RowScope.() -> Unit) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = SectionHorizontalPadding),
+        horizontalArrangement = Arrangement.spacedBy(CardSpacing),
+        content = content,
+    )
 }
 
 @Composable
@@ -133,40 +189,41 @@ private fun SectionHeader(
 @Composable
 private fun LayoutCardRow(
     options: List<KeyboardLayoutOption>,
-    activeKey: String,
+    activeKey: String?,
     previewInputMode: String,
     appearance: KeyboardOverlayAppearance,
     onSelect: (String) -> Unit,
 ) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = SectionHorizontalPadding),
-        horizontalArrangement = Arrangement.spacedBy(CardSpacing),
-    ) {
+    CardRow {
         options.forEach { option ->
+            val label = stringRes(option.labelKey)
             LayoutCard(
-                option = option,
-                previewRes = option.previewRes(previewInputMode),
+                label = label,
                 isSelected = option.key == activeKey,
                 appearance = appearance,
                 onClick = { onSelect(option.key) },
-            )
+            ) {
+                Image(
+                    painter = painterResource(option.previewRes(previewInputMode)),
+                    contentDescription = label,
+                    // FillWidth mirrors the legacy ImageView FIT_CENTER + adjustViewBounds: pin
+                    // width to the card, let height follow the preview's aspect ratio.
+                    modifier = Modifier.fillMaxWidth(),
+                    contentScale = ContentScale.FillWidth,
+                )
+            }
         }
     }
 }
 
 @Composable
 private fun LayoutCard(
-    option: KeyboardLayoutOption,
-    @DrawableRes previewRes: Int,
+    label: String,
     isSelected: Boolean,
     appearance: KeyboardOverlayAppearance,
     onClick: () -> Unit,
+    preview: @Composable () -> Unit,
 ) {
-    val label = stringRes(option.labelKey)
     Column(
         modifier =
             Modifier
@@ -181,14 +238,7 @@ private fun LayoutCard(
             border = if (isSelected) BorderStroke(SelectedBorderWidth, appearance.accent) else null,
         ) {
             Box {
-                Image(
-                    painter = painterResource(previewRes),
-                    contentDescription = label,
-                    // FillWidth mirrors the legacy ImageView FIT_CENTER + adjustViewBounds: pin
-                    // width to the card, let height follow the preview's aspect ratio.
-                    modifier = Modifier.fillMaxWidth(),
-                    contentScale = ContentScale.FillWidth,
-                )
+                preview()
                 if (isSelected) {
                     Box(
                         modifier =

@@ -72,7 +72,7 @@ object KeyboardLayoutSolver {
      * or null for a letter-sized key. CROSS-PLATFORM INVARIANT — mirrors iOS
      * `Layout/LayoutConstants.swift` + `LayoutConverter.widthFor`.
      */
-    private fun slotFraction(
+    internal fun slotFraction(
         keyCode: Int,
         keyboardLayoutType: String,
         isLandscape: Boolean,

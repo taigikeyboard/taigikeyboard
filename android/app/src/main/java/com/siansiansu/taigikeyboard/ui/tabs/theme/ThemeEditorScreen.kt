@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -38,7 +37,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -62,7 +60,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.i18n.LocalStringResolver
@@ -83,6 +80,7 @@ import com.siansiansu.taigikeyboard.ime.theme.UserThemeSeed
 import com.siansiansu.taigikeyboard.ime.theme.rememberThemePhoto
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
 import com.siansiansu.taigikeyboard.ui.components.ColorRow
+import com.siansiansu.taigikeyboard.ui.components.NameDialog
 import com.siansiansu.taigikeyboard.ui.components.SegmentedChoiceRow
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
@@ -528,7 +526,9 @@ fun ThemeEditorScreen(
         }
 
         if (showNameDialog) {
-            ThemeNameDialog(
+            NameDialog(
+                title = L10n.themeNameHeader,
+                placeholder = L10n.themeNamePlaceholder,
                 initialName = draftName,
                 onConfirm = { entered ->
                     showNameDialog = false
@@ -575,34 +575,6 @@ private fun PreviewToggle(
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
-}
-
-@Composable
-private fun ThemeNameDialog(
-    initialName: String,
-    onConfirm: (String) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    var name by rememberSaveable(initialName) { mutableStateOf(initialName) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(L10n.themeNameHeader) },
-        text = {
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                singleLine = true,
-                placeholder = { Text(L10n.themeNamePlaceholder) },
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-            )
-        },
-        confirmButton = {
-            TextButton(onClick = { onConfirm(name) }) { Text(L10n.commonSave) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(L10n.commonCancel) }
-        },
-    )
 }
 
 // Solid / Gradient segmented choice for the background surface.

@@ -180,7 +180,8 @@
     <string name="i18n_layout_romanizationKeyboard">羅馬字齒盤</string>
     <string name="i18n_layout_customLayoutsSection">自訂佈局</string>
     <string name="i18n_layout_createNewLayout">新佈局…</string>
-    <string name="i18n_layout_comingSoon">準備中</string>
+    <string name="i18n_layout_editorTitleNew">新佈局</string>
+    <string name="i18n_layout_nameHeader">佈局名稱</string>
     <string name="i18n_layout_commonLayoutsSection">通用</string>
     <string name="i18n_layout_standardLayout">Lohankha</string>
     <string name="i18n_layout_phahTaigiLayout">PhahTaigi</string>
