@@ -132,9 +132,9 @@
     <string name="i18n_home_newFeatures">功能設定</string>
     <string name="i18n_home_setupGuide">啟用方法</string>
     <string name="i18n_home_setupGuideDescription">第三方齒盤愛手動啟用，請照下跤 ê 步驟設定。</string>
-    <string name="i18n_home_setupInfoSystemWarning">啟用 ê 時，系統會出現警告，講齒盤可能會收集你拍 ê 字。台語齒盤袂共你拍 ê 內容送去網路。</string>
+    <string name="i18n_home_setupPrivacyNote">台語齒盤袂共你拍 ê 字送去網路。</string>
     <string name="i18n_home_setupBrandWarning">無仝牌子 ê 手機仔，設定方式可能淡薄仔無仝。</string>
-    <string name="i18n_home_setupGuideCompletedSwitch">完成了後，佇會當拍字 ê 所在，共齒盤切換做台語齒盤。</string>
+    <string name="i18n_home_setupGuideCompletedSwitch">拍字 ê 時，共齒盤切換做台語齒盤。</string>
     <string name="i18n_home_setupGuideGoToSettings">去設定頁</string>
     <string name="i18n_home_setupGuideStep1Settings">點揤「齒盤」</string>
     <string name="i18n_home_setupGuideStep2TurnOn">拍開台語齒盤</string>

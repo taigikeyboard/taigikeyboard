@@ -132,9 +132,9 @@
     <string name="i18n_home_newFeatures">機能設定</string>
     <string name="i18n_home_setupGuide">有効化の方法</string>
     <string name="i18n_home_setupGuideDescription">サードパーティ製キーボードは手動で有効にする必要があります。下記の手順に従ってください。</string>
-    <string name="i18n_home_setupInfoSystemWarning">有効にすると、キーボードが入力内容を収集する可能性があるという警告が表示されます。台語キーボードは入力内容をネットワークへ送信しません。</string>
+    <string name="i18n_home_setupPrivacyNote">台湾語キーボードは入力内容をネットワークへ送信しません。</string>
     <string name="i18n_home_setupBrandWarning">スマートフォンのメーカーによって設定方法が少し異なる場合があります。</string>
-    <string name="i18n_home_setupGuideCompletedSwitch">完了したら、文字を入力できる場所でキーボードを台湾語キーボードに切り替えます。</string>
+    <string name="i18n_home_setupGuideCompletedSwitch">入力するときに台湾語キーボードに切り替えます。</string>
     <string name="i18n_home_setupGuideGoToSettings">設定を開く</string>
     <string name="i18n_home_setupGuideStep1Settings">「キーボード」をタップ</string>
     <string name="i18n_home_setupGuideStep2TurnOn">台湾語キーボードをオンにする</string>

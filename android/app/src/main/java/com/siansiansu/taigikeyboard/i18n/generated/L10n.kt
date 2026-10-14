@@ -264,8 +264,8 @@ object L10n {
         @Composable get() = stringRes(StringKey.HOME_SETUP_GUIDE)
     val homeSetupGuideDescription: String
         @Composable get() = stringRes(StringKey.HOME_SETUP_GUIDE_DESCRIPTION)
-    val homeSetupInfoSystemWarning: String
-        @Composable get() = stringRes(StringKey.HOME_SETUP_INFO_SYSTEM_WARNING)
+    val homeSetupPrivacyNote: String
+        @Composable get() = stringRes(StringKey.HOME_SETUP_PRIVACY_NOTE)
     val homeSetupBrandWarning: String
         @Composable get() = stringRes(StringKey.HOME_SETUP_BRAND_WARNING)
     val homeSetupGuideCompletedSwitch: String

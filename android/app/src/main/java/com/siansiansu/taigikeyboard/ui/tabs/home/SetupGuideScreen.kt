@@ -135,7 +135,7 @@ fun SetupGuideScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            WarningRow(L10n.homeSetupInfoSystemWarning)
+            WarningRow(L10n.homeSetupPrivacyNote)
 
             Spacer(Modifier.height(12.dp))
 

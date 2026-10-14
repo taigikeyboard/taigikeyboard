@@ -136,8 +136,8 @@
         "ja": "「フルアクセスを許可」すると、キーボードとアプリで設定や利用データを共有できます。台語キーボードは入力内容をネットワークへ送信しません。"
       }
     },
-    "setupInfoSystemWarning": {
-      "comment": "Setup-guide note on Android: the system warns that a keyboard may collect typed text; states the network privacy policy.",
+    "setupPrivacyNote": {
+      "comment": "Setup-guide privacy note on Android: typed text never leaves the device.",
       "scope": {
         "platforms": [
           "android"
@@ -147,11 +147,11 @@
         ]
       },
       "values": {
-        "hanji": "啟用 ê 時，系統會出現警告，講齒盤可能會收集你拍 ê 字。台語齒盤袂共你拍 ê 內容送去網路。",
-        "tailo": "Khé-iōng ê sî, hē-thóng ē tshut-hiān kíng-kò, kóng khí-puânn khó-lîng ē siu-tsi̍p lí phah ê jī. Tâi-gí khí-puânn buē kā lí phah ê luē-iông sàng khì bāng-lōo.",
-        "poj": "Khé-iōng ê sî, hē-thóng ē chhut-hiān kéng-kò, kóng khí-pôaⁿ khó-lêng ē siu-chi̍p lí phah ê jī. Tâi-gí khí-pôaⁿ bōe kā lí phah ê lōe-iông sàng khì bāng-lō͘.",
-        "en": "When you turn it on, the system warns that the keyboard may collect the text you type. TaigiKeyboard does not send what you type over the network.",
-        "ja": "有効にすると、キーボードが入力内容を収集する可能性があるという警告が表示されます。台語キーボードは入力内容をネットワークへ送信しません。"
+        "hanji": "台語齒盤袂共你拍 ê 字送去網路。",
+        "tailo": "Tâi-gí Khí-puânn buē kā lí phah ê jī sàng khì bāng-lōo.",
+        "poj": "Tâi-gí Khí-pôaⁿ bōe kā lí phah ê jī sàng khì bāng-lō͘.",
+        "en": "TaigiKeyboard does not send what you type over the network.",
+        "ja": "台湾語キーボードは入力内容をネットワークへ送信しません。"
       }
     },
     "setupBrandWarning": {
@@ -192,7 +192,7 @@
       }
     },
     "setupGuideCompletedSwitch": {
-      "comment": "Setup-guide closing paragraph on Android: switch to the keyboard where you type (the switcher differs by device, so no icon is named).",
+      "comment": "Setup-guide closing line on Android: switch to the keyboard when typing (the switcher differs by device, so no icon is named).",
       "scope": {
         "platforms": [
           "android"
@@ -202,11 +202,11 @@
         ]
       },
       "values": {
-        "hanji": "完成了後，佇會當拍字 ê 所在，共齒盤切換做台語齒盤。",
-        "tailo": "Uân-sîng liáu-āu, tī ē-tàng phah-jī ê sóo-tsāi, kā khí-puânn tshiat-uānn tsò Tâi-gí Khí-puânn.",
-        "poj": "Oân-sêng liáu-āu, tī ē-tàng phah-jī ê só͘-chāi, kā khí-pôaⁿ chhiat-ōaⁿ chò Tâi-gí Khí-pôaⁿ.",
-        "en": "Once done, wherever you can type, switch the keyboard to TaigiKeyboard.",
-        "ja": "完了したら、文字を入力できる場所でキーボードを台湾語キーボードに切り替えます。"
+        "hanji": "拍字 ê 時，共齒盤切換做台語齒盤。",
+        "tailo": "Phah-jī ê sî, kā khí-puânn tshiat-uānn tsò Tâi-gí Khí-puânn.",
+        "poj": "Phah-jī ê sî, kā khí-pôaⁿ chhiat-ōaⁿ chò Tâi-gí Khí-pôaⁿ.",
+        "en": "Switch to TaigiKeyboard when you type.",
+        "ja": "入力するときに台湾語キーボードに切り替えます。"
       }
     },
     "setupGuideGoToSettings": {

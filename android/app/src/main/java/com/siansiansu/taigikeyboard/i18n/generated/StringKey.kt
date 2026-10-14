@@ -139,7 +139,7 @@ enum class StringKey(
     HOME_NEW_FEATURES(R.string.i18n_home_newFeatures),
     HOME_SETUP_GUIDE(R.string.i18n_home_setupGuide),
     HOME_SETUP_GUIDE_DESCRIPTION(R.string.i18n_home_setupGuideDescription),
-    HOME_SETUP_INFO_SYSTEM_WARNING(R.string.i18n_home_setupInfoSystemWarning),
+    HOME_SETUP_PRIVACY_NOTE(R.string.i18n_home_setupPrivacyNote),
     HOME_SETUP_BRAND_WARNING(R.string.i18n_home_setupBrandWarning),
     HOME_SETUP_GUIDE_COMPLETED_SWITCH(R.string.i18n_home_setupGuideCompletedSwitch),
     HOME_SETUP_GUIDE_GO_TO_SETTINGS(R.string.i18n_home_setupGuideGoToSettings),

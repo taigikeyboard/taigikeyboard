@@ -132,9 +132,9 @@
     <string name="i18n_home_newFeatures">Feature Settings</string>
     <string name="i18n_home_setupGuide">How to Enable</string>
     <string name="i18n_home_setupGuideDescription">Third-party keyboards must be enabled manually. Follow the steps below.</string>
-    <string name="i18n_home_setupInfoSystemWarning">When you turn it on, the system warns that the keyboard may collect the text you type. TaigiKeyboard does not send what you type over the network.</string>
+    <string name="i18n_home_setupPrivacyNote">TaigiKeyboard does not send what you type over the network.</string>
     <string name="i18n_home_setupBrandWarning">Steps may differ slightly between phone brands.</string>
-    <string name="i18n_home_setupGuideCompletedSwitch">Once done, wherever you can type, switch the keyboard to TaigiKeyboard.</string>
+    <string name="i18n_home_setupGuideCompletedSwitch">Switch to TaigiKeyboard when you type.</string>
     <string name="i18n_home_setupGuideGoToSettings">Open Settings</string>
     <string name="i18n_home_setupGuideStep1Settings">Tap \"Keyboards\"</string>
     <string name="i18n_home_setupGuideStep2TurnOn">Turn on TaigiKeyboard</string>
