@@ -225,11 +225,12 @@ private fun CandidateCell(
     // First candidate (engine ranker top, index 0) gets a filled keycap-color background as a
     // visual hint — matches the iOS strip + the Rime-family highlighted-candidate convention.
     val backgroundColor =
-        when {
-            isPressed -> Color(display.themePressedHighlightColor)
-            index == 0 -> Color(display.themeKeyBgColor)
-            else -> Color.Transparent
-        }
+        candidateCellBackground(
+            isPressed = isPressed,
+            isFirstCandidate = index == 0,
+            firstCandidateColor = Color(display.themeKeyBgColor),
+            pressedColor = Color(display.themePressedHighlightColor),
+        )
 
     val isTPSLayout = display.layoutType == "tps"
     val displayRoman =

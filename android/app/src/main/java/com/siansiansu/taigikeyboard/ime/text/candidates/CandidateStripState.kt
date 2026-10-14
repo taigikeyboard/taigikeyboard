@@ -1,5 +1,6 @@
 package com.siansiansu.taigikeyboard.ime.text.candidates
 
+import androidx.compose.ui.graphics.Color
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import com.siansiansu.taigikeyboard.ime.settings.CandidateDisplayMode
 import com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarManager
@@ -99,4 +100,21 @@ fun candidateCellText(
             }
         isHanjiFirst -> CandidateCellText(hanji, displayRoman)
         else -> CandidateCellText(displayRoman, hanji)
+    }
+
+/**
+ * Background of one strip / overlay candidate cell (INVARIANT_CANDIDATE_FIRST_KEYCAP_HINT,
+ * behavioral-invariants.md §19): pressed > first candidate (engine ranker top, keycap-color
+ * hint) > transparent. Mirrors iOS `CandidateViewStyle.resolvedBackgroundColor`.
+ */
+fun candidateCellBackground(
+    isPressed: Boolean,
+    isFirstCandidate: Boolean,
+    firstCandidateColor: Color,
+    pressedColor: Color,
+): Color =
+    when {
+        isPressed -> pressedColor
+        isFirstCandidate -> firstCandidateColor
+        else -> Color.Transparent
     }

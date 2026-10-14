@@ -2,6 +2,8 @@ package com.siansiansu.taigikeyboard.ime.text.smartbar
 
 import android.view.View
 import androidx.annotation.DrawableRes
+import androidx.core.view.ViewCompat
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat.AccessibilityActionCompat
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.i18n.DisplayLanguage
 import com.siansiansu.taigikeyboard.i18n.StringResolver
@@ -280,8 +282,10 @@ class ToolbarManager(
     }
 
     /**
-     * Icon + a11y label of the keyboard button follow its action. [resolver] defaults to the
-     * persisted display language; a display-language change passes the just-selected one.
+     * Icon + a11y label of the keyboard button follow its action; its long-press is named after
+     * the one-handed callout it opens (iOS `ToolShortcutsToolbar` named action). [resolver]
+     * defaults to the persisted display language; a display-language change passes the
+     * just-selected one.
      */
     fun refreshKeyboardButton(
         resolver: StringResolver? = null,
@@ -291,6 +295,13 @@ class ToolbarManager(
         val labels = resolver ?: buildStringResolver(button.context, DisplayLanguage.fromTag(prefs.displayLanguageTag))
         button.setImageResource(action.iconRes)
         button.contentDescription = labels.resolve(action.labelKey)
+        // null command keeps the long-click listener as the handler; only the spoken name changes
+        ViewCompat.replaceAccessibilityAction(
+            button,
+            AccessibilityActionCompat.ACTION_LONG_CLICK,
+            labels.resolve(StringKey.KEYBOARD_ONE_HANDED_MODE),
+            null,
+        )
     }
 
     val preferredContainer: SmartbarContainer

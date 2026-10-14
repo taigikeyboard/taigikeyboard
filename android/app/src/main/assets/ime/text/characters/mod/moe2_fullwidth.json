@@ -9,6 +9,7 @@
       { "code":   -5, "label": "delete", "type": "enter_editing" }
     ], [
       { "code": -202, "label": "view_symbols", "type": "system_gui" },
+      { "code": -210, "label": "language_switch", "type": "system_gui" },
       { "code":   64, "label": "@", "variation": "email_address" },
       { "code": 65292, "label": "，", "variation": "normal", "popup": [
         { "code": 65292, "label": "，" },
@@ -31,7 +32,6 @@
         { "code": 65289, "label": "）" },
         { "code": 12301, "label": "」" }
       ] },
-      { "code": -210, "label": "language_switch", "type": "system_gui" },
       { "code": -230, "label": "", "type": "function", "variation": "email_address" },
       { "code": -230, "label": "", "type": "function", "variation": "normal" },
       { "code": -230, "label": "", "type": "function", "variation": "uri" },

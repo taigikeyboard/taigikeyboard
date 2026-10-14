@@ -466,9 +466,9 @@ The first candidate (engine ranker top, index 0) in **both** the candidate strip
 
 **Cross-platform sites**:
 - iOS — `CandidateViewStyle.resolvedBackgroundColor(isFirstCandidate:)` ← `CandidateButtonView` (strip) + `ExpandedCandidateGridCell` (overlay).
-- Android — `CandidateStrip.kt` `CandidateCell` (strip) + `CandidateOverlayContent.CandidateCell` (overlay).
+- Android — `candidateCellBackground` (`CandidateStripState.kt`) ← `CandidateStrip.kt` `CandidateCell` (strip) + `CandidateOverlayContent.CandidateCell` (overlay).
 
-**Tests**: iOS `BuiltInThemesTests.testResolvedBackgroundColor_firstCandidateLightBeatsSelection` pins the colour precedence; Android has none (inline in the composables). No render assertion on either platform; dogfood **S6**.
+**Tests**: iOS `BuiltInThemesTests.testResolvedBackgroundColor_firstCandidateLightBeatsSelection` and Android `CandidateCellBackgroundTest` pin the colour precedence. No render assertion on either platform; dogfood **S6**.
 
 ---
 

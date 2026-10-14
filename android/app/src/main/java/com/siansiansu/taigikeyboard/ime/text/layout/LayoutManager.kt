@@ -353,20 +353,19 @@ class LayoutManager(
         // Globe key toggle: skip English and TPS layouts (TPS has more keys, no room for globe)
         if (inputMode != "english" && inputMode != "tps" && keyboardMode == KeyboardMode.CHARACTERS) {
             if (prefs.isGlobeKeyEnabled) {
-                // TPS layouts lack globe key in JSON — inject one after space in bottom row
+                // TL / POJ on the TPS layout use the globe-less tps_halfwidth mod — inject one
+                // right after the symbols key, where every other mod carries it (iOS: bottom-row index 1)
                 val bottomRow = result.arrangement.lastOrNull()
                 if (bottomRow != null && bottomRow.none { it.code == KeyCode.LANGUAGE_SWITCH }) {
-                    val spaceIndex = bottomRow.indexOfFirst { it.code == 32 }
-                    if (spaceIndex >= 0) {
-                        bottomRow.add(
-                            spaceIndex + 1,
-                            KeyData(
-                                code = KeyCode.LANGUAGE_SWITCH,
-                                label = "language_switch",
-                                type = KeyType.SYSTEM_GUI,
-                            ),
-                        )
-                    }
+                    val symbolsIndex = bottomRow.indexOfFirst { it.code == KeyCode.VIEW_SYMBOLS }
+                    bottomRow.add(
+                        symbolsIndex + 1,
+                        KeyData(
+                            code = KeyCode.LANGUAGE_SWITCH,
+                            label = "language_switch",
+                            type = KeyType.SYSTEM_GUI,
+                        ),
+                    )
                 }
             } else {
                 // Remove globe key from all non-English character layouts

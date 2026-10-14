@@ -43,8 +43,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import java.util.concurrent.atomic.AtomicReference
 
 /**
- * Smartbar manager — owns the candidate StateFlow and display state, dynamically
- * generating up to 200 candidate buttons (limit controlled by LexiconService).
+ * Smartbar manager — owns the candidate StateFlow and display state; the strip
+ * renders the whole candidate list.
  */
 class SmartbarManager(
     private val taigikeyboard: TaigiKeyboard,

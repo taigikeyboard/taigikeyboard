@@ -40,8 +40,8 @@ One line each; the linked section holds the design, the measurements and the ope
 
 | Item | Direction | Where |
 |---|---|---|
-| Layout | Android: English mode loads TL callouts, globe left of space; iOS: `…` for ellipsis, `@` / `/` by `keyboardType`, return key by `returnKeyType` | layouts / callouts |
-| Small | iOS: drop strip cap 200; Android: named long-press a11y action, keycap-hint invariant test | per item |
+| Layout (iOS) | English mode drops the TL tone and MOE punctuation callouts (symbol callouts stay; Android has none); `…` for ellipsis; `@` / `/` by `keyboardType`, per layout as Android; return-key icon by `returnKeyType` | layouts / callouts |
+| Small (iOS) | drop strip cap 200 | `CandidateViewModels.swift` |
 | Needs device repro first (UNCONFIRMED) | Android symbols-page `、` / numeric pad wipes the preedit; Android next-word predictions survive a cursor move | `+Cleanup.swift`, `TextInputManager.kt`, `TextInputKeyHandler.kt` |
 
 ## Not to re-propose

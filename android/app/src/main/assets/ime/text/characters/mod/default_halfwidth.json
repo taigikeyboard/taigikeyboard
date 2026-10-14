@@ -9,6 +9,7 @@
       { "code":   -5, "label": "delete", "type": "enter_editing" }
     ], [
       { "code": -202, "label": "view_symbols", "type": "system_gui" },
+      { "code": -210, "label": "language_switch", "type": "system_gui" },
       { "code":   64, "label": "@", "variation": "email_address" },
       { "code":   44, "label": ",", "variation": "normal" },
       { "code":   47, "label": "/", "variation": "uri" },
@@ -17,7 +18,6 @@
       ] },
       { "code":   32, "label": " " },
       { "code":   45, "label": "-", "type": "character", "popup": [{"code": 183, "label": "·"}, {"code": 8211, "label": "–"}, {"code": 8212, "label": "—"}, {"code": 65103, "label": "﹏"}] },
-      { "code": -210, "label": "language_switch", "type": "system_gui" },
       { "code": -230, "label": "", "type": "function", "variation": "email_address" },
       { "code": -230, "label": "", "type": "function", "variation": "normal" },
       { "code": -230, "label": "", "type": "function", "variation": "uri" },
