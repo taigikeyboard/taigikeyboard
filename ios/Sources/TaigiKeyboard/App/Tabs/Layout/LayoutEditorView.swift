@@ -27,6 +27,8 @@ struct LayoutEditorView: View {
     @State private var draft: CustomLayout
     @State private var selected: CustomLayout.Place?
     @State private var boardDrag: BoardDrag?
+    /// Counts drags that changed the board, for the landing haptic.
+    @State private var dropCount = 0
     @State private var keyFrames: [CustomLayout.Place: CGRect] = [:]
     @State private var trayFrame = CGRect.zero
     @State private var showsNameAlert = false
@@ -56,6 +58,7 @@ struct LayoutEditorView: View {
                     onTap: tap,
                     onDrag: drag,
                     onRelease: release,
+                    onGestureEnd: endGesture,
                     onDropSpare: dropSpare,
                 ),
             )
@@ -90,9 +93,10 @@ struct LayoutEditorView: View {
         .coordinateSpace(name: LayoutKeyGrid.editorSpace)
         .onPreferenceChange(LayoutKeyGrid.KeyFrames.self) { keyFrames = $0 }
         .onPreferenceChange(TrayFrame.self) { trayFrame = $0 }
-        .sensoryFeedback(.selection, trigger: boardDrag?.source)
-        .sensoryFeedback(.selection, trigger: dragTarget)
-        .sensoryFeedback(.impact(flexibility: .soft), trigger: draft)
+        // A tick when a key lifts and when it reaches a new target; a soft tap when a drag lands.
+        .sensoryFeedback(.selection, trigger: boardDrag?.source) { _, source in source != nil }
+        .sensoryFeedback(.selection, trigger: dragTarget) { _, target in target != nil }
+        .sensoryFeedback(.impact(flexibility: .soft), trigger: dropCount)
         .background(Color(.systemGroupedBackground))
         .navigationTitle(isEditing ? draft.name : lang.string(.layoutEditorTitleNew))
         .navigationBarTitleDisplayMode(.inline)
@@ -229,33 +233,49 @@ struct LayoutEditorView: View {
         boardDrag = BoardDrag(source: place, location: location)
     }
 
-    /// Ends a drag (swap, remove, or nothing), or treats a press that never moved as a tap.
-    private func release(_ place: CustomLayout.Place, at _: CGPoint) {
-        guard boardDrag != nil else {
+    /// Ends a drag where the finger lifted (swap, remove, or nothing), or treats a press that never
+    /// lifted the key as a tap. A drag of another key, left by a cancelled gesture, never commits.
+    private func release(_ place: CustomLayout.Place, at location: CGPoint) {
+        guard boardDrag?.source == place else {
+            boardDrag = nil
             tap(place)
             return
         }
+        boardDrag?.location = location
         withAnimation(.snappy(duration: 0.2)) {
             if let dragTarget {
                 draft.swap(place, dragTarget)
+                dropCount += 1
             } else if isOverTray {
                 draft.remove(place)
+                dropCount += 1
             }
             boardDrag = nil
         }
     }
 
+    /// The system cancelled a drag (no release): drop it without committing.
+    private func endGesture() {
+        boardDrag = nil
+    }
+
+    /// Takes a spare the tray offers; anything else (text dragged in from another app, a key
+    /// already on the board) is refused.
     private func dropSpare(_ spare: String, on place: CustomLayout.Place) -> Bool {
         if spare == Self.emojiSpare {
-            guard place == draft.emojiPlace else { return false }
+            guard place == draft.emojiPlace, !draft.hasEmojiKey else { return false }
             restoreEmojiKey()
+            dropCount += 1
             return true
         }
-        guard case .key = place else { return false }
+        guard case .key = place, draft.spareLetters.contains(spare) || draft.spareSymbols.contains(spare) else {
+            return false
+        }
         withAnimation(.snappy(duration: 0.2)) {
             draft.replace(place, with: spare)
             selected = nil
         }
+        dropCount += 1
         return true
     }
 
@@ -301,6 +321,7 @@ struct LayoutEditorView: View {
         withAnimation(.snappy(duration: 0.2)) {
             draft.reset(to: base)
             selected = nil
+            boardDrag = nil
         }
     }
 

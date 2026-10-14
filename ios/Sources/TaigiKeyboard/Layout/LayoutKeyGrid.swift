@@ -20,10 +20,14 @@ struct LayoutKeyGrid: View {
         /// VoiceOver name of a removed key's place (the grid has no strings of its own).
         var removedPlaceLabel = ""
         var onTap: (CustomLayout.Place) -> Void
-        /// A key moved past the drag threshold; the point is in `editorSpace`.
+        /// A key moved past the drag threshold, then on every move while lifted; the point is in
+        /// `editorSpace`.
         var onDrag: (CustomLayout.Place, CGPoint) -> Void
         /// The finger lifted off a key, dragged or not; the point is in `editorSpace`.
         var onRelease: (CustomLayout.Place, CGPoint) -> Void
+        /// The key's gesture is over — ended or cancelled by the system. Runs after `onRelease`
+        /// when it ended, alone when it was cancelled.
+        var onGestureEnd: () -> Void
         /// A spare dragged from the tray landed on a place; returns whether it was taken.
         var onDropSpare: (String, CustomLayout.Place) -> Bool
     }
@@ -54,6 +58,8 @@ struct LayoutKeyGrid: View {
 
     /// The place a spare dragged from the tray hovers over.
     @State private var spareTarget: CustomLayout.Place?
+    /// True while a finger is on a key; resets on its own when the gesture ends or is cancelled.
+    @GestureState private var isPressing = false
 
     var body: some View {
         GeometryReader { geometry in
@@ -76,6 +82,11 @@ struct LayoutKeyGrid: View {
         }
         .padding(2)
         .background(Self.boardColor)
+        .onChange(of: isPressing) { _, isPressing in
+            if !isPressing {
+                interaction?.onGestureEnd()
+            }
+        }
     }
 
     // MARK: - Keys
@@ -111,8 +122,12 @@ struct LayoutKeyGrid: View {
                 })
                 .gesture(
                     DragGesture(minimumDistance: 0, coordinateSpace: .named(Self.editorSpace))
+                        .updating($isPressing) { _, isPressing, _ in isPressing = true }
                         .onChanged { value in
-                            if hypot(value.translation.width, value.translation.height) > Self.dragThreshold {
+                            // The threshold only starts a drag; once lifted, every move counts.
+                            if interaction.lifted == place
+                                || hypot(value.translation.width, value.translation.height) > Self.dragThreshold
+                            {
                                 interaction.onDrag(place, value.location)
                             }
                         }
