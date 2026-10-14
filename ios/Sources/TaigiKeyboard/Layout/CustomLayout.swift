@@ -173,6 +173,17 @@ struct CustomLayout: Codable, Identifiable, Hashable {
         filledRows
     }
 
+    /// The key at `place` on the editor board.
+    func keyDef(at place: Place) -> KeyDef? {
+        let rows = editorRows
+        for (row, places) in Self.places(of: rows).enumerated() {
+            if let column = places.firstIndex(of: place) {
+                return rows[row][column]
+            }
+        }
+        return nil
+    }
+
     var removedPlaces: Set<Place> {
         var places = Set(keys.indices.filter { keys[$0] == nil }.map(Place.key))
         if !hasEmojiKey, let emojiPlace {

@@ -3,25 +3,57 @@ import UIKit
 
 // Draws a key table as plain keys: the custom-layout editor board, and the custom-layout card
 // preview on the Layout tab and in the keyboard's layout picker. Not the KeyboardKit view, so
-// a key can be selected and nothing is typed.
+// a key can be selected or dragged and nothing is typed.
 
-/// The keys at a `CustomLayout.Place` (every key below the digit row but globe) are buttons when
-/// `onTap` is set; every other key is drawn inert.
+/// With an `interaction`, the keys at a `CustomLayout.Place` (every key below the digit row but
+/// globe) take taps, drags and dropped spares; without one the grid is an inert preview.
 struct LayoutKeyGrid: View {
+    /// The editor board's state and callbacks.
+    struct Interaction {
+        var selected: CustomLayout.Place?
+        /// Places drawn as a dashed outline: removed keys the editor can put back.
+        var removed: Set<CustomLayout.Place> = []
+        /// The key being dragged, drawn faded at its place.
+        var lifted: CustomLayout.Place?
+        /// The key a drag would land on.
+        var highlighted: CustomLayout.Place?
+        /// VoiceOver name of a removed key's place (the grid has no strings of its own).
+        var removedPlaceLabel = ""
+        var onTap: (CustomLayout.Place) -> Void
+        /// A key moved past the drag threshold; the point is in `editorSpace`.
+        var onDrag: (CustomLayout.Place, CGPoint) -> Void
+        /// The finger lifted off a key, dragged or not; the point is in `editorSpace`.
+        var onRelease: (CustomLayout.Place, CGPoint) -> Void
+        /// A spare dragged from the tray landed on a place; returns whether it was taken.
+        var onDropSpare: (String, CustomLayout.Place) -> Bool
+    }
+
     let rows: [[KeyDef]]
-    var selected: CustomLayout.Place?
-    /// Places drawn as a dashed outline: removed keys the editor can put back.
-    var removed: Set<CustomLayout.Place> = []
-    var onTap: ((CustomLayout.Place) -> Void)?
-    /// VoiceOver name of a removed key's place (the grid has no strings of its own).
-    var removedPlaceLabel = ""
+    var interaction: Interaction?
 
     /// Card preview aspect: the built-in `*_preview` screenshots (720×454,
     /// `PreviewAssetGeneratorTests`), so a drawn card lines up with them.
     static let cardAspectRatio: CGFloat = 720.0 / 454.0
 
+    /// The editor's coordinate space: drag points and `KeyFrames` are in it.
+    static let editorSpace = "layoutEditor"
+
+    /// Each place's frame in `editorSpace`, so the editor can tell which key a drag is over.
+    struct KeyFrames: PreferenceKey {
+        static let defaultValue: [CustomLayout.Place: CGRect] = [:]
+
+        static func reduce(value: inout [CustomLayout.Place: CGRect], nextValue: () -> [CustomLayout.Place: CGRect]) {
+            value.merge(nextValue()) { $1 }
+        }
+    }
+
     /// Key widths in character-key units; a row of ten character keys fills the board.
     private static let rowUnits: CGFloat = 10
+    /// Finger travel that turns a press into a drag.
+    private static let dragThreshold: CGFloat = 8
+
+    /// The place a spare dragged from the tray hovers over.
+    @State private var spareTarget: CustomLayout.Place?
 
     var body: some View {
         GeometryReader { geometry in
@@ -50,14 +82,15 @@ struct LayoutKeyGrid: View {
 
     @ViewBuilder
     private func key(_ keyDef: KeyDef, place: CustomLayout.Place?, fontSize: CGFloat, gap: CGFloat) -> some View {
-        let isSelected = place != nil && place == selected
+        let isSelected = place != nil && place == interaction?.selected
         // A removed key's place: a dashed outline the editor can fill again.
-        let isRemoved = place.map(removed.contains) ?? false
+        let isRemoved = place.map { interaction?.removed.contains($0) ?? false } ?? false
+        let isTarget = place != nil && (place == interaction?.highlighted || place == spareTarget)
         let shape = RoundedRectangle(cornerRadius: gap * 1.5)
         let fill = isSelected ? Color.accentColor
             : isRemoved ? Color.clear
             : keyDef.isCharacter || keyDef == .space ? Self.characterKeyColor : Self.functionKeyColor
-        let face = label(keyDef, isDigit: keyDef.isCharacter && place == nil)
+        let face = Self.label(keyDef, isDigit: keyDef.isCharacter && place == nil)
             .opacity(isRemoved ? 0 : 1)
             .font(.system(size: fontSize))
             .lineLimit(1)
@@ -65,16 +98,42 @@ struct LayoutKeyGrid: View {
             .foregroundStyle(isSelected ? Color.white : Color.primary)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(fill, in: shape)
-            .overlay(shape.strokeBorder(Color.secondary, style: StrokeStyle(lineWidth: 1, dash: [3])).opacity(isRemoved && !isSelected ? 1 : 0))
+            .overlay(shape.strokeBorder(Color.secondary, style: StrokeStyle(lineWidth: 1, dash: [3])).opacity(isRemoved && !isSelected && !isTarget ? 1 : 0))
+            .overlay(shape.strokeBorder(Color.accentColor, lineWidth: 2.5).opacity(isTarget ? 1 : 0))
+            .opacity(place != nil && place == interaction?.lifted ? 0.3 : 1)
             .padding(gap / 2)
 
-        if let place, let onTap {
-            Button { onTap(place) } label: { face.contentShape(Rectangle()) }
-                .buttonStyle(.plain)
-                .accessibilityLabel(isRemoved ? removedPlaceLabel : Self.accessibilityName(of: keyDef))
-                .accessibilityAddTraits(isSelected ? .isSelected : [])
+        if let place, let interaction {
+            face
+                .contentShape(Rectangle())
+                .background(GeometryReader { proxy in
+                    Color.clear.preference(key: KeyFrames.self, value: [place: proxy.frame(in: .named(Self.editorSpace))])
+                })
+                .gesture(
+                    DragGesture(minimumDistance: 0, coordinateSpace: .named(Self.editorSpace))
+                        .onChanged { value in
+                            if hypot(value.translation.width, value.translation.height) > Self.dragThreshold {
+                                interaction.onDrag(place, value.location)
+                            }
+                        }
+                        .onEnded { value in interaction.onRelease(place, value.location) },
+                )
+                .dropDestination(for: String.self) { spares, _ in
+                    spares.first.map { interaction.onDropSpare($0, place) } ?? false
+                } isTargeted: { isTargeted in
+                    if isTargeted {
+                        spareTarget = place
+                    } else if spareTarget == place {
+                        spareTarget = nil
+                    }
+                }
+                // Touch handling is the gesture above; VoiceOver activates through the action.
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(isRemoved ? interaction.removedPlaceLabel : Self.accessibilityName(of: keyDef))
+                .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+                .accessibilityAction { interaction.onTap(place) }
         } else {
-            face.accessibilityHidden(onTap != nil)
+            face.accessibilityHidden(interaction != nil)
         }
     }
 
@@ -96,8 +155,9 @@ struct LayoutKeyGrid: View {
         }
     }
 
+    /// A key's face: its text, or its symbol. Also the key the editor floats under a drag.
     @ViewBuilder
-    private func label(_ keyDef: KeyDef, isDigit: Bool) -> some View {
+    static func label(_ keyDef: KeyDef, isDigit: Bool = false) -> some View {
         switch keyDef {
         case let .char(label, _): Text(verbatim: label).opacity(isDigit ? 0.5 : 1)
         case .shift: Image(latinSystemName: "shift")
@@ -139,6 +199,6 @@ struct LayoutKeyGrid: View {
 
     // System keyboard tones: light keys on a gray board, darker function keys.
     private static let boardColor = Color(UIColor { $0.userInterfaceStyle == .dark ? .systemGray6 : .systemGray4 })
-    private static let characterKeyColor = Color(UIColor { $0.userInterfaceStyle == .dark ? .systemGray2 : .white })
+    static let characterKeyColor = Color(UIColor { $0.userInterfaceStyle == .dark ? .systemGray2 : .white })
     private static let functionKeyColor = Color(UIColor { $0.userInterfaceStyle == .dark ? .systemGray4 : .systemGray2 })
 }
