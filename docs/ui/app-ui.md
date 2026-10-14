@@ -22,7 +22,7 @@ Tab order is fixed by iOS `App/Tabs/TabType.swift` (`home = 0 … settings = 4`)
 |-----|-----|---------|
 | Home | `Home/HomeTab.swift` | `home/HomeScreen.kt` |
 | Theme | `Theme/ThemeTab.swift` (+ `ThemePickerView`, `ThemeEditorView`) | `theme/ThemePickerScreen.kt` + `ThemeEditorScreen.kt` |
-| Layout | `Layout/LayoutTab.swift` | `layout/LayoutScreen.kt` |
+| Layout | `Layout/LayoutTab.swift` (+ `LayoutEditorView`) | `layout/LayoutScreen.kt` |
 | Dictionary | `Dictionary/DictionaryTab.swift`, `Dictionary/Views/DictionarySourcesView.swift` | `dictionary/DictionarySettingsScreen.kt`, `dictionary/DictionarySourcesScreen.kt` |
 | Settings | `Settings/SettingsTab.swift` | `settings/InputSettingsScreen.kt` |
 

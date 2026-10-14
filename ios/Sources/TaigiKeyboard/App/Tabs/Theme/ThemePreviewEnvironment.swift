@@ -52,6 +52,10 @@ final class ThemePreviewEnvironment: KeyboardEnvironment {
         base.keyboardLayoutType
     }
 
+    var activeCustomLayout: CustomLayout? {
+        base.activeCustomLayout
+    }
+
     var settingsUserDefaults: UserDefaults {
         base.settingsUserDefaults
     }

@@ -7,7 +7,7 @@ import SwiftUI
 /// the generated `*_preview` assets (720×454, `PreviewAssetGeneratorTests`).
 enum GalleryCardMetrics {
     static let width: CGFloat = 240
-    static let previewAspectRatio: CGFloat = 720.0 / 454.0
+    static let previewAspectRatio = LayoutKeyGrid.cardAspectRatio
     static let cardSpacing: CGFloat = 12
     static let shelfSpacing: CGFloat = 28
 }
@@ -77,6 +77,10 @@ struct GalleryCard<Preview: View, Accessory: View>: View {
                     )
             }
             .buttonStyle(.plain)
+            // The title sits outside the button; VoiceOver reads it, not the preview's contents.
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(title)
+            .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
 
             HStack(spacing: 4) {
                 Text(title)
@@ -98,6 +102,26 @@ struct GalleryCard<Preview: View, Accessory: View>: View {
 extension GalleryCard where Accessory == EmptyView {
     init(title: String, isSelected: Bool, onTap: @escaping () -> Void, @ViewBuilder preview: () -> Preview) {
         self.init(title: title, isSelected: isSelected, onTap: onTap, preview: preview, accessory: { EmptyView() })
+    }
+}
+
+// MARK: - Card menu
+
+/// The `…` menu after a user-made card's title (apply / edit / delete); VoiceOver names it after
+/// the card.
+struct GalleryCardMenu<Content: View>: View {
+    let title: String
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        Menu {
+            content
+        } label: {
+            Image(latinSystemName: "ellipsis")
+                .foregroundColor(.secondary)
+                .frame(width: 28, height: 28)
+        }
+        .accessibilityLabel(title)
     }
 }
 
@@ -134,19 +158,16 @@ struct GalleryScreenshot: View {
 
 // MARK: - Create New card
 
-/// The leading card of a custom shelf: a gray panel with a centered "+" glyph. With a
-/// `comingSoonBadge` the panel is dimmed under that badge and the card is not tappable.
+/// The leading card of a custom shelf: a gray panel with a centered "+" glyph.
 struct GalleryCreateCard: View {
     let title: String
-    var comingSoonBadge: String?
-    var onTap: () -> Void = {}
+    let onTap: () -> Void
 
     private let plusGlyphSize: CGFloat = 28
 
     var body: some View {
         Button(action: onTap) { content }
             .buttonStyle(.plain)
-            .disabled(comingSoonBadge != nil)
     }
 
     private var content: some View {
@@ -164,18 +185,6 @@ struct GalleryCreateCard: View {
                             .scaledToFit()
                             .frame(width: plusGlyphSize, height: plusGlyphSize)
                             .foregroundColor(.primary)
-
-                        if let comingSoonBadge {
-                            RoundedRectangle(cornerRadius: AppStyle.previewCornerRadius)
-                                .fill(Color.black.opacity(0.5))
-                            Text(comingSoonBadge)
-                                .font(AppStyle.captionFont)
-                                .fontWeight(.bold)
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(Color.black.opacity(0.7), in: Capsule())
-                        }
                     },
                 )
                 .frame(width: GalleryCardMetrics.width)
@@ -183,7 +192,7 @@ struct GalleryCreateCard: View {
             Text(title)
                 .font(AppStyle.captionFont)
                 .fontWeight(.semibold)
-                .foregroundColor(comingSoonBadge == nil ? .primary : .secondary)
+                .foregroundColor(.primary)
                 .lineLimit(1)
         }
         .frame(width: GalleryCardMetrics.width, alignment: .leading)

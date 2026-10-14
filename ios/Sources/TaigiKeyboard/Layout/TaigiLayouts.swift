@@ -155,6 +155,20 @@ enum TaigiLayouts {
 
         /// MOE2 POJ - iPhone SE / iPad (with globe key)
         static let moe2_POJ_withGlobe: [[KeyDef]] = TaigiLayouts.withGlobeKey(moe2_POJ_iPhone)
+
+        /// The key table of `layout` in `script`. PhahTaigi and TPS have one table for both scripts.
+        static func table(_ layout: KeyboardLayoutType, script: LayoutScript, withGlobe: Bool) -> [[KeyDef]] {
+            switch (layout, script) {
+            case (.phahTaigi, _): withGlobe ? phahTaigi_withGlobe : phahTaigi_iPhone
+            case (.qwerty, .tl): withGlobe ? qwerty_TL_withGlobe : qwerty_TL_iPhone
+            case (.qwerty, .poj): withGlobe ? qwerty_POJ_withGlobe : qwerty_POJ_iPhone
+            case (.moe1, .tl): withGlobe ? moe1_TL_withGlobe : moe1_TL_iPhone
+            case (.moe1, .poj): withGlobe ? moe1_POJ_withGlobe : moe1_POJ_iPhone
+            case (.moe2, .tl): withGlobe ? moe2_TL_withGlobe : moe2_TL_iPhone
+            case (.moe2, .poj): withGlobe ? moe2_POJ_withGlobe : moe2_POJ_iPhone
+            case (.tps, _): withGlobe ? tps_withGlobe : tps_iPhone
+            }
+        }
     }
 
     // MARK: - Numeric Keyboard (Common Symbols)

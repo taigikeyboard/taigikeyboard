@@ -111,6 +111,7 @@ extension KeyboardViewController {
         // 5. Initialize tracking vars so syncSettings() doesn't false-trigger on first call
         lastInputMode = keyboardSettings.inputMode
         lastKeyboardLayoutType = keyboardSettings.keyboardLayoutType
+        lastActiveCustomLayout = keyboardSettings.activeCustomLayout
         lastResolvedKeyHeightScale = keyboardSettings
             .resolvedAppearance(for: state.keyboardContext.colorScheme).keyHeightScale
         lastCandidateDisplayMode = state.keyboardContext.candidateDisplayMode
@@ -210,6 +211,15 @@ extension KeyboardViewController {
         if lastCandidateDisplayMode != currentCandidateDisplayMode {
             setupLogger.debug("[SETTINGS] CandidateDisplayMode changed: \(lastCandidateDisplayMode?.rawValue ?? "nil") -> \(currentCandidateDisplayMode.rawValue)")
             lastCandidateDisplayMode = currentCandidateDisplayMode
+            state.keyboardContext.notifyDisplayChange()
+        }
+
+        // A custom layout's keys are baked into the layout too: picking one, editing the active
+        // one, or TPS suspending it re-renders through the same context path (no composition reset).
+        let currentCustomLayout = keyboardSettings.activeCustomLayout
+        if lastActiveCustomLayout != currentCustomLayout {
+            setupLogger.debug("[SETTINGS] Custom layout changed: \(currentCustomLayout?.id.uuidString ?? "nil")")
+            lastActiveCustomLayout = currentCustomLayout
             state.keyboardContext.notifyDisplayChange()
         }
 

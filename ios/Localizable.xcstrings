@@ -3151,24 +3151,6 @@
         }
       }
     },
-    "i18n_layout_comingSoon": {
-      "comment": "Badge over a Layout-tab card whose feature is not available yet (the create-new-layout card).",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Coming Soon"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "近日公開"
-          }
-        }
-      }
-    },
     "i18n_layout_commonLayoutsSection": {
       "comment": "Section header on the Layout tab for layouts whose keys are the same in Tâi-lô and Pe̍h-ōe-jī.",
       "extractionState": "manual",
@@ -3206,7 +3188,7 @@
       }
     },
     "i18n_layout_customLayoutsSection": {
-      "comment": "Section header above the custom-layout shelf on the Layout tab (create card, not available yet).",
+      "comment": "Section header above the custom-layout shelf on the Layout tab and in the in-keyboard layout picker.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -3219,6 +3201,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "カスタム配列"
+          }
+        }
+      }
+    },
+    "i18n_layout_editorTitleNew": {
+      "comment": "Layout editor top-bar title in create mode; also the name-field placeholder and the name a layout saved with a blank name gets. Edit mode shows the layout's own name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New Layout"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新しい配列"
           }
         }
       }
@@ -3255,6 +3255,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "教育部配列 2"
+          }
+        }
+      }
+    },
+    "i18n_layout_nameHeader": {
+      "comment": "Layout name alert header, shown on Save in the layout editor.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Layout Name"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配列名"
           }
         }
       }

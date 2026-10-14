@@ -38,6 +38,9 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
     /// Previous values for change detection in syncSettings()
     var lastInputMode: InputMode?
     var lastKeyboardLayoutType: KeyboardLayoutType?
+    /// Previous active custom layout. Its keys are baked into the layout; a switch or an edit
+    /// re-renders through the keyboard context in `syncSettings()`.
+    var lastActiveCustomLayout: CustomLayout?
 
     /// Previous resolved key-height scale. Row height lives in the layout, which
     /// is built once in `createKeyboardView`; when the active/edited theme changes

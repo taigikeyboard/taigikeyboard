@@ -48,6 +48,7 @@ Status: **Active** = living contract, kept in sync with the code · **Reference*
 | `architecture/incident-log.md` | Incidents behind the rules in `contributing/known-pitfalls.md` | Reference |
 | `architecture/pr-number-migration.md` | Resolving `#NNN` written before 2026-09-07 | Reference |
 | `architecture/maintainability-roadmap-2026-10.md` | 2026-10-09 audit follow-up — H, A1a, A1b, A2 merged; A3 next | Active |
+| `architecture/custom-layouts-roadmap.md` | Mobile custom romanization layouts — iOS (phase 1) in progress, Android next | Active |
 | `architecture/e2e-testing-roadmap.md` | End-to-end test system — Linux automated, other platforms manual | Active |
 | `architecture/macos-roadmap.md` | macOS IME design decisions D1–D11 | Done |
 | `architecture/macos-desktop-core-roadmap.md` | macOS key path on the shared `taigi-desktop-core` — D1–D9, parity decisions | Done |

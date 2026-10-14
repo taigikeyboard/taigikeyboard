@@ -114,6 +114,11 @@ final class SharedSettings {
     private static let selectedThemeIdKey: SettingsKey<String> = .string("selectedThemeId", default: ThemeId.default)
     private static let themeRevisionKey: SettingsKey<Int> = .int("themeRevision", default: 0)
 
+    // Custom layouts (`UserLayoutStore`): the selected one's UUID ("" while a built-in layout is
+    // selected) and a revision bumped on every store write. Internal: the Layout tab observes both.
+    static let selectedCustomLayoutIdKey: SettingsKey<String> = .string("selectedCustomLayoutId", default: "")
+    static let layoutRevisionKey: SettingsKey<Int> = .int("layoutRevision", default: 0)
+
     // App UI display-language tag (orthogonal to keyboard input mode) — see DisplayLanguage. Shared
     // host↔extension through the App Group; the extension picks up changes via didChangeNotification.
     // Defaults to system (Automatic), which follows the device locale on first launch. Key spelling is frozen.
@@ -121,7 +126,8 @@ final class SharedSettings {
 
     static let shared = SharedSettings()
 
-    /// Where `user_themes.json` lives: the App Group container, or a test's own directory.
+    /// Where `user_themes.json` and `user_layouts.json` live: the App Group container, or a test's
+    /// own directory.
     private let themesContainerURL: URL?
 
     private init() {
@@ -261,6 +267,11 @@ final class SharedSettings {
     /// HEAD~1 byte-for-byte; any future symmetrization belongs in a
     /// separate slice.
     func setKeyboardLayoutType(_ newLayout: KeyboardLayoutType) {
+        // Choosing a layout (a built-in card, the keyboard picker, reset) ends a custom selection;
+        // `applyCustomLayout(_:)` re-selects one afterwards. `setInputMode(_:)` leaves it alone.
+        if selectedCustomLayoutId != nil {
+            userDefaults.remove(Self.selectedCustomLayoutIdKey)
+        }
         let oldLayout = keyboardLayoutType
         // Read before the layout write: while the layout is still TPS this is the backup.
         let modeAfterLeavingTps = romanizationInputMode
@@ -658,6 +669,66 @@ final class SharedSettings {
         let referenced = Set(loadUserThemes().compactMap { $0.appearance.colors.background?.image?.file })
         ThemeImageCache.shared.store.sweep(keeping: referenced)
         ThemeImageCache.shared.removeAll()
+    }
+
+    // MARK: - Custom layouts
+
+    private lazy var userLayoutStore = UserLayoutStore(
+        containerURL: themesContainerURL,
+        onMutated: { [weak self] in self?.bumpLayoutRevision() },
+    )
+
+    private var customLayoutsCache: (revision: Int, layouts: [CustomLayout])?
+
+    private func bumpLayoutRevision() {
+        let next = userDefaults.value(for: Self.layoutRevisionKey) &+ 1
+        userDefaults.set(next, for: Self.layoutRevisionKey)
+    }
+
+    /// Saved custom layouts, cached by `layoutRevision` so a render never re-reads the file.
+    func loadCustomLayouts() -> [CustomLayout] {
+        let revision = userDefaults.value(for: Self.layoutRevisionKey)
+        if let cache = customLayoutsCache, cache.revision == revision {
+            return cache.layouts
+        }
+        let layouts = userLayoutStore.load()
+        customLayoutsCache = (revision, layouts)
+        return layouts
+    }
+
+    /// The selected custom layout's id; nil while a built-in layout is selected.
+    var selectedCustomLayoutId: UUID? {
+        UUID(uuidString: userDefaults.value(for: Self.selectedCustomLayoutIdKey))
+    }
+
+    /// The custom layout the keyboard shows (`CustomLayout.active`).
+    var activeCustomLayout: CustomLayout? {
+        CustomLayout.active(in: loadCustomLayouts(), selectedId: selectedCustomLayoutId, layoutType: keyboardLayoutType)
+    }
+
+    /// Selects `layout`: its base through the TPS-aware setter, then its id.
+    func applyCustomLayout(_ layout: CustomLayout) {
+        setKeyboardLayoutType(layout.base)
+        userDefaults.set(layout.id.uuidString, for: Self.selectedCustomLayoutIdKey)
+    }
+
+    /// Saves `layout` and applies it. Returns false, applying nothing, when the write fails or a
+    /// new layout would pass the cap.
+    func saveCustomLayout(_ layout: CustomLayout) -> Bool {
+        guard userLayoutStore.save(layout) else { return false }
+        applyCustomLayout(layout)
+        return true
+    }
+
+    /// Deletes the layout with `id`; deleting the selected one leaves its base selected as a
+    /// built-in layout.
+    @discardableResult
+    func deleteCustomLayout(id: UUID) -> Bool {
+        guard userLayoutStore.delete(id: id) else { return false }
+        if selectedCustomLayoutId == id {
+            userDefaults.remove(Self.selectedCustomLayoutIdKey)
+        }
+        return true
     }
 
     /// Creates an immutable snapshot of render-relevant settings.

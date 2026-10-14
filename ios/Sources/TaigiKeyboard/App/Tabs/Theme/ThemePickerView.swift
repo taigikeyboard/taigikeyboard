@@ -166,14 +166,10 @@ private struct ThemeGalleryCard: View {
             }
         } accessory: {
             if !actions.isEmpty {
-                Menu {
+                GalleryCardMenu(title: title) {
                     ForEach(actions) { action in
                         Button(action.title, role: action.role, action: action.action)
                     }
-                } label: {
-                    Image(latinSystemName: "ellipsis")
-                        .foregroundColor(.secondary)
-                        .frame(width: 28, height: 28)
                 }
             }
         }

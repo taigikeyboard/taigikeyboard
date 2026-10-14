@@ -32,6 +32,8 @@ protocol KeyboardEnvironment: AnyObject {
     // Global setting, not per-theme: read directly by call sites with no per-render snapshot.
     var fontType: FontType { get }
     var keyboardLayoutType: KeyboardLayoutType { get }
+    // The custom layout replacing the keys of `keyboardLayoutType`'s table, if any.
+    var activeCustomLayout: CustomLayout? { get }
     // Live read (not in the snapshot): a toolbar pick re-renders through KeyboardContext.objectWillChange.
     var oneHandedMode: OneHandedMode { get }
 

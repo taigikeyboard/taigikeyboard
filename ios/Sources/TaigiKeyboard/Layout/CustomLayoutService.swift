@@ -84,33 +84,18 @@ class CustomLayoutService {
             return Self.applyInputTypeKey(rows, inputType: inputType)
         }
 
-        // TPS mode — inputMode takes priority over keyboardLayoutType. TPS rows get no
+        // TPS mode or layout — inputMode takes priority over keyboardLayoutType. TPS rows get no
         // input-type key (Android `tps_halfwidth.json` has none).
-        if settings.inputMode == .tps {
-            return resolveLayout(withGlobe: layouts.tps_withGlobe, iPhone: layouts.tps_iPhone, needsGlobe: needsGlobe)
+        let layoutType = settings.keyboardLayoutType
+        if settings.inputMode == .tps || layoutType == .tps {
+            return layouts.table(.tps, script: .tl, withGlobe: needsGlobe)
         }
 
-        switch settings.keyboardLayoutType {
-        case .tps:
-            return resolveLayout(withGlobe: layouts.tps_withGlobe, iPhone: layouts.tps_iPhone, needsGlobe: needsGlobe)
-
-        case .phahTaigi:
-            rows = resolveLayout(withGlobe: layouts.phahTaigi_withGlobe, iPhone: layouts.phahTaigi_iPhone, needsGlobe: needsGlobe)
-
-        case .moe1:
-            rows = settings.inputMode == .poj
-                ? resolveLayout(withGlobe: layouts.moe1_POJ_withGlobe, iPhone: layouts.moe1_POJ_iPhone, needsGlobe: needsGlobe)
-                : resolveLayout(withGlobe: layouts.moe1_TL_withGlobe, iPhone: layouts.moe1_TL_iPhone, needsGlobe: needsGlobe)
-
-        case .moe2:
-            rows = settings.inputMode == .poj
-                ? resolveLayout(withGlobe: layouts.moe2_POJ_withGlobe, iPhone: layouts.moe2_POJ_iPhone, needsGlobe: needsGlobe)
-                : resolveLayout(withGlobe: layouts.moe2_TL_withGlobe, iPhone: layouts.moe2_TL_iPhone, needsGlobe: needsGlobe)
-
-        case .qwerty:
-            rows = settings.inputMode == .poj
-                ? resolveLayout(withGlobe: layouts.qwerty_POJ_withGlobe, iPhone: layouts.qwerty_POJ_iPhone, needsGlobe: needsGlobe)
-                : resolveLayout(withGlobe: layouts.qwerty_TL_withGlobe, iPhone: layouts.qwerty_TL_iPhone, needsGlobe: needsGlobe)
+        // A custom layout keeps the table it was made from (its frozen script) in TL and POJ alike.
+        if let custom = settings.activeCustomLayout {
+            rows = custom.rows(withGlobe: needsGlobe)
+        } else {
+            rows = layouts.table(layoutType, script: LayoutScript(inputMode: settings.inputMode), withGlobe: needsGlobe)
         }
         return Self.applyInputTypeKey(rows, inputType: inputType)
     }
