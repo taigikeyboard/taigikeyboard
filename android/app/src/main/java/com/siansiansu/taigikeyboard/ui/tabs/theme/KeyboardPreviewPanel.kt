@@ -19,6 +19,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -104,8 +106,13 @@ fun KeyboardPreviewPanel(
             ContextThemeWrapper(context, R.style.KeyboardTheme)
         }
 
+        // A custom layout's keys are baked into the layout: a switch or an edit of the active one
+        // recomputes it, as a layout-type change does.
+        val activeCustomLayout by remember(prefs) { prefs.observeActiveCustomLayout() }
+            .collectAsState(initial = remember(prefs) { prefs.activeCustomLayout })
+
         // Candidate Display decides whether the 文/A key is in the bottom row.
-        val layoutData = remember(layoutType, previewInputMode, prefs.candidateDisplayMode, themedContext) {
+        val layoutData = remember(layoutType, activeCustomLayout, previewInputMode, prefs.candidateDisplayMode, themedContext) {
             val layoutManager = LayoutManager(themedContext, prefs)
             KeyboardLayoutData.from(
                 layoutManager.fetchComputedLayoutForPreview(KeyboardMode.CHARACTERS),

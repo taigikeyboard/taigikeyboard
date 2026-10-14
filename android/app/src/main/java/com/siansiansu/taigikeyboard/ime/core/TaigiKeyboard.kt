@@ -252,10 +252,12 @@ class TaigiKeyboard : LifecycleInputMethodService() {
             }
         }
 
-        // Observe keyboardLayoutType changes and reload keyboard layout
+        // Observe the stored layout and the custom layout on it (whose keys are baked into the letter
+        // layout: picking one, editing the active one, a TPS suspend / resume or a delete) and reload
+        // the keyboard layout once per change (no composition reset).
         serviceScope.launch {
-            prefs.observeKeyboardLayoutType().collect { newLayoutType ->
-                compositionRoot.logger.debug(TAG) { "KeyboardLayoutType changed to: $newLayoutType" }
+            prefs.observeLetterLayout().collect { (newLayoutType, customLayout) ->
+                compositionRoot.logger.debug(TAG) { "KeyboardLayoutType changed to: $newLayoutType (custom=${customLayout?.id})" }
                 onKeyboardLayoutTypeChanged(newLayoutType)
             }
         }

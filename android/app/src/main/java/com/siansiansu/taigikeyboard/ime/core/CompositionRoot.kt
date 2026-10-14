@@ -13,6 +13,8 @@ import com.siansiansu.taigikeyboard.ime.dictionary.EngineUserDataClient
 import com.siansiansu.taigikeyboard.ime.dictionary.LexiconService
 import com.siansiansu.taigikeyboard.ime.dictionary.UserDataClient
 import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
+import com.siansiansu.taigikeyboard.ime.text.layout.CustomLayoutTables
+import com.siansiansu.taigikeyboard.ime.text.layout.LayoutAssets
 import com.siansiansu.taigikeyboard.ime.theme.ThemeImageCache
 import com.siansiansu.taigikeyboard.ime.theme.ThemeImageStore
 import com.siansiansu.taigikeyboard.ime.theme.UserThemeStore
@@ -47,6 +49,12 @@ class CompositionRoot private constructor(
 
     /** The user-theme store over [prefs], with the photo sweep wired as its mutation hook. */
     fun userThemeStore(prefs: PrefHelper): UserThemeStore = UserThemeStore(read = { prefs.userThemes }, write = { prefs.userThemes = it }, onMutated = themeImages::sweep)
+
+    /** The bundled keyboard layout JSON; a file that fails to read is logged. */
+    val layoutAssets: LayoutAssets = LayoutAssets.forContext(appContext) { path, e -> logger.e("LayoutAssets", "[LAYOUT] Failed to load layout $path", e) }
+
+    /** The built-in tables custom layouts are made from; parsed from the layout assets on first use. */
+    val customLayoutTables: CustomLayoutTables by lazy { CustomLayoutTables(layoutAssets) }
 
     /**
      * Lexicon engine readiness gate. Completed by

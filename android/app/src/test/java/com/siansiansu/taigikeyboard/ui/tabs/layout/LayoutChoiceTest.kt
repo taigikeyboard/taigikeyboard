@@ -5,6 +5,7 @@ package com.siansiansu.taigikeyboard.ui.tabs.layout
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.ime.text.layout.KeyboardLayoutOptions
+import com.siansiansu.taigikeyboard.ime.text.layout.LayoutScript
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

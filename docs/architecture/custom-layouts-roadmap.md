@@ -2,7 +2,7 @@
 
 > **Type**: Planning (feature)
 > **Keywords**: `custom layout`, `layout editor`, `romanization keyboard`, `Layout tab`
-> **Status**: Active — phase 1 (iOS) merged, phase 2 (Android) next
+> **Status**: Active — phase 1 (iOS) merged; phase 2 (Android) in two PRs, 2a (data, storage, keyboard) in review
 
 ---
 
@@ -36,6 +36,16 @@ CustomLayout { id: UUID, name, base: KeyboardLayoutType, script: tl|poj,
 - **Places** — the editor selects a `Place`: a slot of `keys` or of `functionKeys`. The emoji key is whichever function slot holds it; `hasEmojiKey` false hides it.
 - **Spare tray** = letters (`a`–`z`, `o͘`, `-`, every multi-letter key of the romanization tables) then symbols (the symbol page) − keys on the board. Symbols keep their long-press callouts (`SymbolCallouts`, keyed by label).
 - **Validation on load** — non-TPS base, `keys.count` = the base table's slot count, every placed key in the catalog, no duplicates. An invalid record is dropped, never rendered.
+
+### Android (phase 2, grounded in code)
+
+Same record and JSON; per-platform tables. Android keeps its layout JSON: `LayoutAssets` (parse + layer merge + file names, shared by the keyboard and the tables) and `CustomLayoutTables` (`ime/text/layout/`).
+
+- **Base table** = the half-width merge of `number_row` + `characters/<base × script>` + `characters/mod/<base>` that `LayoutManager` shows, digit row inert. Character places and function places are numbered in reading order as on iOS; the slot counts match (Lohankha TL 28 / POJ 29, PhahTaigi 27, MOE1 27, MOE2 29). The three 文/A variation copies (email / normal / URL fields) are one function place and move together; globe, `@` (email) and `/` (URL) are not places.
+- **Catalog** = half label → (half-width, full-width `KeyData`), zipped from each half / full-width file pair: the symbol page (`symbols/western_*`) first, then every romanization table. Handed out as deep copies (`popup` is mutable).
+- **Seam** — `LayoutManager.mergeLayouts` substitutes after the merge and before extended popups (keyed by label, so tone popups follow the key): each place takes the base's own `KeyData` for that label in the current width (MOE1 `(` stays half-width), else the catalog's. Inline popups move with the key. Removed keys and the emoji key (`hasEmojiKey` false) leave their row; an empty row leaves the keyboard. `@` / `/` go right after a bottom-row `,` (which then hides in email / URL fields), else right before space; the existing globe pass puts the globe after 123. The main table follows the record's script, not the live mode.
+- **Storage** — DataStore `keyboard__user_layouts` (JSON list, per-record decode, invalid records dropped) and `keyboard__selected_custom_layout_id`; write plans in `CustomLayoutSelection` (pure, beside `TpsCascade`). Settings reset keeps the list. `allowBackup="false"` already keeps DataStore out of OS backup.
+- **Refresh** — `TaigiKeyboard` collects `PrefHelper.observeLetterLayout()` (stored layout + active record, from one emission, decoded off the main thread) and reloads the letter layout once per change. The Theme-tab preview keys its layout on the active record.
 
 ## Selection contract
 
@@ -72,7 +82,8 @@ The layout is built once per keyboard view (`KeyboardViewController.swift:167`) 
 | Phase | Scope | Status |
 |---|---|---|
 | 1 | iOS — model + store + keyboard + editor (swap / spare tray / remove / symbols / multi-letter spares / emoji / function keys within row / drag) + Layout tab shelf + in-keyboard picker | Merged #505 `c0fb934c` |
-| 2 | Android — everything in phase 1, over `LayoutManager.mergeLayouts` (substitute whole `KeyData` so inline popups move with the key) + DataStore string + Compose editor + picker; i18n `layout.editorTitleNew` / `layout.nameHeader` gain Android scope; delete `layout.comingSoon` | Pending |
+| 2a | Android — record + tables + DataStore storage + selection + keyboard substitution + refresh; built-in cards / picker uncheck while a custom layout is active; 3-char keys shrink on any layout | In review |
+| 2b | Android — editing ops + Compose editor (swap / tray / remove / emoji / function keys / drag) + Layout tab shelf + in-keyboard picker; i18n `layout.editorTitleNew` / `layout.nameHeader` gain Android scope; delete `layout.comingSoon` | Pending |
 
 Phase 1 checks: same-base custom ↔ built-in switch, custom A → B, active edit with a base change, TPS via mode and via card, delete while suspended, reset, globe, email / URL fields, full-width punctuation, shift, callouts, Theme-tab keyboard preview (`KeyboardPreviewPanel.swift:28` also calls `CustomLayoutService`).
 

@@ -15,6 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -24,6 +25,7 @@ import com.siansiansu.taigikeyboard.i18n.stringRes
 import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
 import com.siansiansu.taigikeyboard.ime.text.layout.KeyboardLayoutOption
 import com.siansiansu.taigikeyboard.ime.text.layout.KeyboardLayoutOptions
+import com.siansiansu.taigikeyboard.ime.text.layout.LayoutScript
 import com.siansiansu.taigikeyboard.ui.components.GalleryCard
 import com.siansiansu.taigikeyboard.ui.components.GalleryCreateCard
 import com.siansiansu.taigikeyboard.ui.components.GalleryScreenshot
@@ -35,14 +37,6 @@ import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 // Tâi-lô and Pe̍h-ōe-jī (the layouts whose POJ keys differ, once per script), Phonetic Symbols.
 // A Tâi-lô / Pe̍h-ōe-jī card applies its layout and switches the input mode to that script.
 // Mirrors iOS LayoutTab.
-
-// The script of a Tâi-lô / Pe̍h-ōe-jī shelf card, as its stored input mode.
-internal enum class LayoutScript(
-    val inputMode: String,
-) {
-    TL("tl"),
-    POJ("poj"),
-}
 
 // One Layout-tab card: a layout plus, on the Tâi-lô / Pe̍h-ōe-jī shelves, the script it applies
 // (null: the card writes the layout only).
@@ -86,9 +80,16 @@ fun LayoutScreen(prefs: PrefHelper) {
     val inputMode by prefs
         .observeInputMode()
         .collectAsStateWithLifecycle(initialValue = prefs.inputMode)
+    val activeCustomLayout by remember(prefs) { prefs.observeActiveCustomLayout() }
+        .collectAsStateWithLifecycle(initialValue = remember(prefs) { prefs.activeCustomLayout })
+    // A built-in card is selected only while no custom layout is (iOS LayoutTab), so tapping the
+    // base of the active custom layout selects the built-in one.
+    val isChoiceSelected: (LayoutChoice) -> Boolean = { choice ->
+        activeCustomLayout == null && choice.isSelected(selectedLayout, inputMode)
+    }
 
     val selectChoice: (LayoutChoice) -> Unit = { choice ->
-        if (!choice.isSelected(selectedLayout, inputMode)) {
+        if (!isChoiceSelected(choice)) {
             val script = choice.script
             if (script == null) {
                 prefs.keyboardLayoutType = choice.option.key
@@ -144,7 +145,7 @@ fun LayoutScreen(prefs: PrefHelper) {
                         val title = stringRes(choice.option.labelKey)
                         GalleryCard(
                             title = title,
-                            isSelected = choice.isSelected(selectedLayout, inputMode),
+                            isSelected = isChoiceSelected(choice),
                             onClick = { selectChoice(choice) },
                             preview = { GalleryScreenshot(previewRes = choice.previewRes, title = title) },
                         )

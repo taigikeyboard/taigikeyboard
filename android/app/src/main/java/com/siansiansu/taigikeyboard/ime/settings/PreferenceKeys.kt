@@ -68,6 +68,11 @@ object PreferenceKeys {
     val KEYBOARD_LAYOUT_TYPE = stringPreferencesKey("keyboard__layout_type")
     val INPUT_MODE_BEFORE_TPS = stringPreferencesKey("keyboard__input_mode_before_tps")
     val LAYOUT_BEFORE_TPS = stringPreferencesKey("keyboard__layout_before_tps")
+
+    // Custom layouts: the JSON list ([com.siansiansu.taigikeyboard.ime.text.layout.CustomLayout]) and
+    // the selected one's id ("" while a built-in layout is selected).
+    val USER_LAYOUTS = stringPreferencesKey("keyboard__user_layouts")
+    val SELECTED_CUSTOM_LAYOUT_ID = stringPreferencesKey("keyboard__selected_custom_layout_id")
     val TOOLBAR_AUTO_COLLAPSE = booleanPreferencesKey("keyboard__toolbar_auto_collapse")
 
     // Raw values = OneHandedMode / KeyboardToolbarAction storageValue (shared with iOS).

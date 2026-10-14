@@ -87,7 +87,9 @@ class LayoutSelectionOverlayView : FrameLayout {
                 ProvideDisplayLanguage(DisplayLanguage.fromTag(displayLanguageTag)) {
                     LayoutOverlayContent(
                         appearance = rememberKeyboardOverlayAppearance(prefs, trigger),
-                        selectedKey = remember(trigger) { prefs.keyboardLayoutType },
+                        // No built-in card is checked while a custom layout is active (iOS
+                        // LayoutSelectionOverlay); tapping its base selects the built-in layout.
+                        selectedKey = remember(trigger) { if (prefs.activeCustomLayout != null) "" else prefs.keyboardLayoutType },
                         previewInputMode = remember(trigger) { prefs.romanizationInputMode },
                         resetKey = trigger,
                         onLayoutSelected = { key ->

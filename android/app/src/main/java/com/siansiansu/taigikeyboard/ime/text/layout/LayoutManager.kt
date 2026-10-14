@@ -1,6 +1,6 @@
-// Keyboard layout manager: reads JSON from assets/ime/text/, merges the main + modifier + extension layers,
-// injects extended popups, and emits ComputedLayoutData for KeyboardImeRoot. Owns the Moshi parse cache and
-// the LayoutType / KeyType / KeyVariation adapters.
+// Keyboard layout manager: picks the layout files for a keyboard mode, merges them (LayoutAssets), puts an
+// active custom layout's keys in (CustomLayoutTables), injects extended popups, and emits
+// ComputedLayoutData for KeyboardImeRoot.
 
 package com.siansiansu.taigikeyboard.ime.text.layout
 
@@ -11,34 +11,23 @@ import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.key.KeyType
-import com.siansiansu.taigikeyboard.ime.text.key.KeyTypeAdapter
 import com.siansiansu.taigikeyboard.ime.text.key.KeyVariation
-import com.siansiansu.taigikeyboard.ime.text.key.KeyVariationAdapter
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardMode
 import com.squareup.moshi.JsonAdapter
-import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 private typealias LTN = Pair<LayoutType, String>
 
 class LayoutManager(
     private val context: Context,
     private val prefs: PrefHelper,
 ) {
-    private val logger = CompositionRoot.shared(context).logger
+    private val compositionRoot = CompositionRoot.shared(context)
+    private val logger = compositionRoot.logger
+
+    private val assets = compositionRoot.layoutAssets
 
     companion object {
         private const val TAG = "LayoutManager"
-
-        /** Cached Moshi instance (thread-safe, reusable) */
-        private val moshi: Moshi =
-            Moshi
-                .Builder()
-                .add(KotlinJsonAdapterFactory())
-                .add(LayoutTypeAdapter())
-                .add(KeyTypeAdapter())
-                .add(KeyVariationAdapter())
-                .build()
     }
 
     /**
@@ -55,19 +44,8 @@ class LayoutManager(
         if (type == null || name == null) {
             return null
         }
-        val rawJsonData: String =
-            try {
-                context.assets
-                    .open("ime/text/$type/$name.json")
-                    .bufferedReader()
-                    .use { it.readText() }
-            } catch (e: Exception) {
-                logger.e(TAG, "[LAYOUT] Failed to load layout $type/$name", e)
-                null
-            } ?: return null
-        val layoutAdapter = moshi.adapter(LayoutData::class.java)
-        val layoutData = layoutAdapter.fromJson(rawJsonData)
-        if (logger.isDebugEnabled && layoutData != null && name?.contains("phah_taigi") == true) {
+        val layoutData = assets.load(type, name)
+        if (logger.isDebugEnabled && layoutData != null && name.contains("phah_taigi")) {
             logger.d(TAG, "[LAYOUT] Loaded phahTaigi layout: ${layoutData.name}, rows=${layoutData.arrangement.size}")
             layoutData.arrangement.forEachIndexed { rowIndex, row ->
                 logger.d(TAG, "[LAYOUT]   Row $rowIndex: ${row.size} keys - ${row.map { it.label }.joinToString(" ")}")
@@ -99,7 +77,7 @@ class LayoutManager(
                 null
             } ?: return null
         val mapAdaptor: JsonAdapter<Map<String, List<KeyData>>> =
-            moshi.adapter(
+            LayoutAssets.moshi.adapter(
                 Types.newParameterizedType(
                     Map::class.java,
                     String::class.java,
@@ -113,18 +91,16 @@ class LayoutManager(
     }
 
     /**
-     * Merges the specified layouts (LTNs) and returns the computed layout.
-     * The computed layout may looks like this:
-     *   e e e e e e e e e e      e = extension
-     *   c c c c c c c c c c      c = main
-     *    c c c c c c c c c       m = mod
-     *   m c c c c c c c c m
-     *   m m m m m m m m m m
+     * Merges the specified layouts (LTNs) ([LayoutAssets.merge]) and returns the computed layout,
+     * with [custom]'s keys in place of the base's before extended popups are added, so the
+     * popups follow each key's label.
      *
      * @param keyboardMode The keyboard mode for the returning [ComputedLayoutData].
      * @param main The main layout type and name.
      * @param modifier The modifier (mod) layout type and name.
      * @param extension The extension layout type and name.
+     * @param custom The active custom layout, for the letter keyboard; [main] is its base table.
+     * @param isFullWidthPunctuation The punctuation width [main] and [modifier] were picked for.
      * @returns a [ComputedLayoutData] object, regardless of the specified LTNs or errors.
      */
     private fun mergeLayouts(
@@ -132,54 +108,13 @@ class LayoutManager(
         main: LTN? = null,
         modifier: LTN? = null,
         extension: LTN? = null,
+        custom: CustomLayout? = null,
+        isFullWidthPunctuation: Boolean = false,
     ): ComputedLayoutData {
-        val computedArrangement: ComputedLayoutDataArrangement = mutableListOf()
-
         val mainLayout = loadLayout(main)
-        val modifierLayout = loadLayout(modifier)
-        val extensionLayout = loadLayout(extension)
-
-        if (extensionLayout != null) {
-            val row = extensionLayout.arrangement.firstOrNull()
-            if (row != null) {
-                computedArrangement.add(row.toMutableList())
-            }
-        }
-
-        if (mainLayout != null && modifierLayout != null) {
-            for (mainRowI in mainLayout.arrangement.indices) {
-                val mainRow = mainLayout.arrangement[mainRowI]
-                if (mainRowI + 1 < mainLayout.arrangement.size) {
-                    computedArrangement.add(mainRow.toMutableList())
-                } else {
-                    // merge main and mod here
-                    val mergedRow = mutableListOf<KeyData>()
-                    val firstModRow = modifierLayout.arrangement.firstOrNull()
-                    val firstModKey = firstModRow?.firstOrNull()
-                    if (firstModKey != null) {
-                        mergedRow.add(firstModKey)
-                    }
-                    mergedRow.addAll(mainRow)
-                    val lastModKey = firstModRow?.lastOrNull()
-                    if (lastModKey != null && firstModKey != lastModKey) {
-                        mergedRow.add(lastModKey)
-                    }
-                    computedArrangement.add(mergedRow)
-                }
-            }
-            for (modRowI in 1 until modifierLayout.arrangement.size) {
-                val modRow = modifierLayout.arrangement[modRowI]
-                computedArrangement.add(modRow.toMutableList())
-            }
-        } else if (mainLayout != null && modifierLayout == null) {
-            for (mainRow in mainLayout.arrangement) {
-                computedArrangement.add(mainRow.toMutableList())
-            }
-        } else if (mainLayout == null && modifierLayout != null) {
-            for (modRow in modifierLayout.arrangement) {
-                computedArrangement.add(modRow.toMutableList())
-            }
-        }
+        val merged = assets.merge(mainLayout, loadLayout(modifier), loadLayout(extension))
+        val computedArrangement =
+            if (custom == null) merged else compositionRoot.customLayoutTables.substitute(merged, custom, isFullWidthPunctuation)
 
         // TODO: consolidate the KeyVariation→popup-suffix mapping
         // (NORMAL/PASSWORD → "~normal", EMAIL_ADDRESS/URI → "~uri") to
@@ -239,70 +174,20 @@ class LayoutManager(
         val isFullWidthPunctuation = overrideIsFullWidthPunctuation ?: prefs.isFullWidthPunctuation
         val inputMode = overrideInputMode ?: prefs.inputMode
         val modSuffix = if (isFullWidthPunctuation) "fullwidth" else "halfwidth"
-        val moeSuffix = if (isFullWidthPunctuation) "_fullwidth" else ""
         val symbolsSuffix = if (isFullWidthPunctuation) "fullwidth" else "default"
+        // English and TPS keep their own tables; a custom layout only replaces a romanization one.
+        val custom = if (keyboardMode == KeyboardMode.CHARACTERS && (inputMode == "tl" || inputMode == "poj")) prefs.activeCustomLayout else null
 
         when (keyboardMode) {
             KeyboardMode.CHARACTERS -> {
-                val layoutName =
-                    when {
-                        inputMode == "english" -> {
-                            "qwerty_english"
-                        }
-
-                        inputMode == "tps" -> {
-                            "tps"
-                        }
-
-                        else -> {
-                            when (prefs.keyboardLayoutType) {
-                                "phahTaigi" -> {
-                                    "qwerty_phah_taigi_$modSuffix"
-                                }
-
-                                "moe1" -> {
-                                    when (inputMode) {
-                                        "poj" -> "qwerty_moe1_poj$moeSuffix"
-                                        else -> "qwerty_moe1$moeSuffix"
-                                    }
-                                }
-
-                                "moe2" -> {
-                                    when (inputMode) {
-                                        "poj" -> "qwerty_moe2_poj$moeSuffix"
-                                        else -> "qwerty_moe2$moeSuffix"
-                                    }
-                                }
-
-                                "tps" -> {
-                                    "tps"
-                                }
-
-                                // "qwerty", and any value a hand edit could leave behind.
-                                else -> {
-                                    when (inputMode) {
-                                        "poj" -> "qwerty_poj"
-                                        else -> "qwerty_tl"
-                                    }
-                                }
-                            }
-                        }
-                    }
+                val layoutType = prefs.keyboardLayoutType
+                // A custom layout keeps the table it was made from (its script) in TL and POJ alike.
+                val layoutName = LayoutAssets.characterLayoutName(layoutType, custom?.script?.inputMode ?: inputMode, isFullWidthPunctuation)
                 logger.debug(TAG) {
-                    "[LAYOUT] Loading layout: $layoutName (inputMode=$inputMode, layoutType=${prefs.keyboardLayoutType}, isFullWidthPunctuation=$isFullWidthPunctuation)"
+                    "[LAYOUT] Loading layout: $layoutName (inputMode=$inputMode, layoutType=$layoutType, custom=${custom?.id}, isFullWidthPunctuation=$isFullWidthPunctuation)"
                 }
                 main = LTN(LayoutType.CHARACTERS, layoutName)
-                val modifierName =
-                    when {
-                        inputMode == "english" -> "english"
-                        inputMode == "tps" -> "tps_halfwidth"
-                        prefs.keyboardLayoutType == "phahTaigi" -> "phah_taigi_$modSuffix"
-                        prefs.keyboardLayoutType == "moe1" -> "moe1_$modSuffix"
-                        prefs.keyboardLayoutType == "moe2" -> "moe2_$modSuffix"
-                        prefs.keyboardLayoutType == "tps" -> "tps_halfwidth"
-                        else -> "default_$modSuffix"
-                    }
-                modifier = LTN(LayoutType.CHARACTERS_MOD, modifierName)
+                modifier = LTN(LayoutType.CHARACTERS_MOD, LayoutAssets.characterModifierName(layoutType, inputMode, isFullWidthPunctuation))
                 // TPS layout already has enough rows — skip number row
                 if (inputMode != "tps" && prefs.keyboardLayoutType != "tps") {
                     extension = LTN(LayoutType.EXTENSION, "number_row")
@@ -341,7 +226,7 @@ class LayoutManager(
             }
         }
 
-        val result = mergeLayouts(keyboardMode, main, modifier, extension)
+        val result = mergeLayouts(keyboardMode, main, modifier, extension, custom, isFullWidthPunctuation)
 
         // 文/A is dropped where it could flip nothing — Romanization Only (always half-width)
         // and TPS (always full-width) — from every mode's rows (characters +

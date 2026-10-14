@@ -324,7 +324,7 @@ private fun flexGrowFor(
  * always visible; NORMAL is visible for NORMAL/PASSWORD variation; otherwise
  * exact match required.
  */
-private fun keyVisible(
+internal fun keyVisible(
     key: KeyData,
     keyVariation: KeyVariation,
 ): Boolean {
