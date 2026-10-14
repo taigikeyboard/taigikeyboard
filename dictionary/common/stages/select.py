@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import pandas as pd
 
+from common.cleanup import HANLO_EXEMPT_META_KEY
 from common.kautian_provenance import (
     PROVENANCE_META_KEY,
     build_accent_mask_map,
@@ -37,6 +38,7 @@ def run(ctx: PipelineContext) -> None:
     main_sheets: list[str] = opts.get("main_sheets") or []
     alt_reading_sheets: list[str] = opts.get("alt_reading_sheets") or []
     name_sheets: list[str] = opts.get("name_sheets") or []
+    hanlo_exempt_sheets: list[str] = opts.get("hanlo_exempt_sheets") or []
     column_rename: dict[str, str] = {**_DEFAULT_COLUMN_RENAME, **(opts.get("column_rename") or {})}
 
     # Provenance map keys must mirror the cleanup stage's `tl` normalization
@@ -44,6 +46,11 @@ def run(ctx: PipelineContext) -> None:
     preserve_spaces = bool(ctx.get_stage_options("cleanup").get("preserve_spaces", False))
 
     sheets = ctx.current_sheets()
+
+    _require_sheets(ctx, "hanlo_exempt_sheets", hanlo_exempt_sheets, sheets)
+    exempt_keys = build_membership_set(sheets, hanlo_exempt_sheets, preserve_spaces)
+    ctx.set_meta(HANLO_EXEMPT_META_KEY, exempt_keys)
+    ctx.logger.info(f"  hanlo exempt keys: {len(exempt_keys)}")
 
     _stash_provenance_maps(
         ctx,
@@ -58,12 +65,8 @@ def run(ctx: PipelineContext) -> None:
     out_sheets: dict[str, pd.DataFrame] = {}
     total_rows = 0
 
+    _require_sheets(ctx, "sheets", list(sheet_specs), sheets)
     for sheet_name, spec in sheet_specs.items():
-        if sheet_name not in sheets:
-            raise ValueError(
-                f"{ctx.source_name}: select.sheets references {sheet_name!r} "
-                f"not in loaded sheets {list(sheets)}"
-            )
         columns = spec["columns"]
         df = sheets[sheet_name][columns].copy()
         rename_map = {c: column_rename[c] for c in columns if c in column_rename}
@@ -75,11 +78,7 @@ def run(ctx: PipelineContext) -> None:
         )
 
     if dialect_sheet:
-        if dialect_sheet not in sheets:
-            raise ValueError(
-                f"{ctx.source_name}: select.dialect_sheet={dialect_sheet!r} not in "
-                f"loaded sheets"
-            )
+        _require_sheets(ctx, "dialect_sheet", [dialect_sheet], sheets)
         df = sheets[dialect_sheet]
         df_long = df.melt(
             id_vars=["漢字"],
@@ -103,6 +102,17 @@ def run(ctx: PipelineContext) -> None:
     out_sheets = {name: csv_roundtrip(df) for name, df in out_sheets.items()}
     ctx.set_sheets(out_sheets)
     ctx.logger.info(f"Total: {len(out_sheets)} files, {total_rows} rows")
+
+
+def _require_sheets(
+    ctx: PipelineContext, option: str, names: list[str], sheets: dict[str, pd.DataFrame]
+) -> None:
+    missing = [name for name in names if name not in sheets]
+    if missing:
+        raise ValueError(
+            f"{ctx.source_name}: select.{option} references {missing} "
+            f"not in loaded sheets {list(sheets)}"
+        )
 
 
 def _stash_provenance_maps(

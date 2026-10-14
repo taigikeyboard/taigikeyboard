@@ -12,6 +12,10 @@ BRACKET_PATTERN = re.compile(r"[（(〈《「『【\[].*?[）)〉》」』】\]]
 PROVERB_PUNCTUATION = "，。！；？、"
 DEFAULT_MAX_SYLLABLES = 4
 
+# ctx side-channel key for the `(hanzi, tl)` keys of `select.hanlo_exempt_sheets`,
+# stashed at `select` (sheet identity is gone after `merge`), read at `cleanup`.
+HANLO_EXEMPT_META_KEY = "hanlo_exempt"
+
 BRACKET_COLUMNS = ["hanzi", "tl", "poj", "tl_num", "poj_num", "tl_notone", "poj_notone", "tl_abbrev", "poj_abbrev"]
 
 
@@ -145,7 +149,8 @@ def contains_roman_in_hanzi(text):
     return False
 
 
-def cleanup_dataframe(df, logger=None, max_syllables=DEFAULT_MAX_SYLLABLES, check_roman_in_hanzi=False, preserve_spaces=False):
+def cleanup_dataframe(df, logger=None, max_syllables=DEFAULT_MAX_SYLLABLES, check_roman_in_hanzi=False, preserve_spaces=False,
+                      hanlo_exempt=frozenset()):
     """Run the full cleaning pipeline.
 
     Args:
@@ -154,6 +159,7 @@ def cleanup_dataframe(df, logger=None, max_syllables=DEFAULT_MAX_SYLLABLES, chec
         max_syllables: entries with more syllables than this are dropped.
         check_roman_in_hanzi: blank out hanzi containing romanization, keeping the row.
         preserve_spaces: keep spaces as word boundaries (official dictionary).
+        hanlo_exempt: `(hanzi, tl)` keys (post-cleanup form) kept despite a hanlo mismatch.
 
     Returns:
         (cleaned_df, dropped_df) — dropped rows carry a `drop_reason` column.
@@ -235,7 +241,11 @@ def cleanup_dataframe(df, logger=None, max_syllables=DEFAULT_MAX_SYLLABLES, chec
     if removed > 0 and logger:
         logger.info(f"  Removed duplicates (hanzi+tl): {removed}")
 
-    hanlo_matched_mask = df.apply(lambda row: is_hanlo_matched(row["hanzi"], row["tl"]), axis=1)
+    hanlo_matched_mask = pd.Series(
+        [is_hanlo_matched(h, t) or (h, t) in hanlo_exempt for h, t in zip(df["hanzi"], df["tl"])],
+        index=df.index,
+        dtype=bool,
+    )
     hanlo_mismatch_count = (~hanlo_matched_mask).sum()
     if hanlo_mismatch_count > 0 and logger:
         logger.info(f"  Removed hanlo mismatch (KeSi TuiBeTse): {hanlo_mismatch_count}")

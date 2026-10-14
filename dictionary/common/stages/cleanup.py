@@ -9,7 +9,7 @@ Two modes:
 from __future__ import annotations
 
 from pipeline.context import PipelineContext
-from common.cleanup import cleanup_dataframe, normalize_roman
+from common.cleanup import HANLO_EXEMPT_META_KEY, cleanup_dataframe, normalize_roman
 
 
 def run(ctx: PipelineContext) -> None:
@@ -32,6 +32,7 @@ def run(ctx: PipelineContext) -> None:
         max_syllables=opts.get("max_syllables", 4),
         check_roman_in_hanzi=opts.get("check_roman_in_hanzi", False),
         preserve_spaces=opts.get("preserve_spaces", False),
+        hanlo_exempt=ctx.get_meta(HANLO_EXEMPT_META_KEY, frozenset()),
     )
 
     drop_path = ctx.dict_dir / "data" / "cleaned" / "drop.csv"
