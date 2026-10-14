@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// Custom-layout editor: base chips, the board and the spare tray. Tap two keys to swap them; tap
-/// a key, then a spare, to replace it, or the trash to remove it. Nothing is stored until Save,
+/// Custom-layout editor: base chips, the board and the spare tray. Tap two keys to swap them
+/// (function keys within their row); tap a key, then a spare, to replace it, or the trash to
+/// remove it. Nothing is stored until Save,
 /// which names the layout and applies it; Back discards the draft.
 struct LayoutEditorView: View {
     @Environment(DisplayLanguageStore.self) private var lang
@@ -96,7 +97,7 @@ struct LayoutEditorView: View {
         } else {
             false
         }
-        let canRemove = selected.map { !draft.removedPlaces.contains($0) } ?? false
+        let canRemove = selected.map(draft.canRemove) ?? false
         return VStack(spacing: 16) {
             trayGrid {
                 trayButton(enabled: canRemove, action: removeSelected) {
@@ -106,10 +107,10 @@ struct LayoutEditorView: View {
                 .accessibilityLabel(lang.string(.commonDelete))
 
                 if !draft.hasEmojiKey {
-                    trayButton(enabled: selected == .emoji, action: restoreEmojiKey) {
+                    trayButton(enabled: selected != nil && selected == draft.emojiPlace, action: restoreEmojiKey) {
                         Image(latinSystemName: "face.smiling")
                     }
-                    .accessibilityLabel(LayoutKeyGrid.emojiLabel)
+                    .accessibilityLabel(LayoutKeyGrid.accessibilityName(of: .emoji))
                 }
 
                 ForEach(draft.spareLetters, id: \.self) { spare in
@@ -149,11 +150,11 @@ struct LayoutEditorView: View {
 
     // MARK: - Editing
 
-    /// A second character key swaps with the selected one; tapping the selected key again, or the
-    /// emoji key with another selected, just moves the selection.
+    /// A second key swaps with the selected one where it can (`CustomLayout.canSwap`: character keys
+    /// anywhere, function keys within their row); otherwise the tap moves or clears the selection.
     private func tap(_ place: CustomLayout.Place) {
         withAnimation(.snappy(duration: 0.2)) {
-            if let current = selected, current != place, current != .emoji, place != .emoji {
+            if let current = selected, draft.canSwap(current, place) {
                 draft.swap(current, place)
                 selected = nil
             } else {

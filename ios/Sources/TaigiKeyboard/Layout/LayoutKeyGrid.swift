@@ -5,8 +5,8 @@ import UIKit
 // preview on the Layout tab and in the keyboard's layout picker. Not the KeyboardKit view, so
 // a key can be selected and nothing is typed.
 
-/// The keys at a `CustomLayout.Place` (character keys below the digit row, the emoji key) are
-/// buttons when `onTap` is set; every other key is drawn inert.
+/// The keys at a `CustomLayout.Place` (every key below the digit row but globe) are buttons when
+/// `onTap` is set; every other key is drawn inert.
 struct LayoutKeyGrid: View {
     let rows: [[KeyDef]]
     var selected: CustomLayout.Place?
@@ -19,9 +19,6 @@ struct LayoutKeyGrid: View {
     /// Card preview aspect: the built-in `*_preview` screenshots (720×454,
     /// `PreviewAssetGeneratorTests`), so a drawn card lines up with them.
     static let cardAspectRatio: CGFloat = 720.0 / 454.0
-
-    /// VoiceOver name of the emoji key, the one function key with a place (read as "smiling face").
-    static let emojiLabel = "😊"
 
     /// Key widths in character-key units; a row of ten character keys fills the board.
     private static let rowUnits: CGFloat = 10
@@ -74,10 +71,28 @@ struct LayoutKeyGrid: View {
         if let place, let onTap {
             Button { onTap(place) } label: { face.contentShape(Rectangle()) }
                 .buttonStyle(.plain)
-                .accessibilityLabel(isRemoved ? removedPlaceLabel : keyDef.characterLabel ?? Self.emojiLabel)
+                .accessibilityLabel(isRemoved ? removedPlaceLabel : Self.accessibilityName(of: keyDef))
                 .accessibilityAddTraits(isSelected ? .isSelected : [])
         } else {
             face.accessibilityHidden(onTap != nil)
+        }
+    }
+
+    /// VoiceOver name of a key: its text, or a symbol VoiceOver reads by its Unicode name
+    /// (`Image(latinSystemName:)` carries no label of its own).
+    static func accessibilityName(of keyDef: KeyDef) -> String {
+        switch keyDef {
+        case let .char(label, _): label
+        case .shift: "⇧"
+        case .backspace: "⌫"
+        case .return: "⏎"
+        case .globe: "🌐"
+        case .emoji: "😊"
+        case .space: "␣"
+        case .translate: "文"
+        case .numeric: "123"
+        case .symbolic: "#+="
+        case .alphabetic: "ABC"
         }
     }
 

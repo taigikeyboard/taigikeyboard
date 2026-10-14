@@ -15,6 +15,9 @@ final class CustomLayoutTests: XCTestCase {
     // trace: moe2_TL_iPhone row 1 ph ts tsh oo, row 2 th, row 3 kh ng nn; moe2_POJ_iPhone ch chh.
     private static let multiLetterKeys = ["ph", "ts", "tsh", "oo", "th", "kh", "ng", "nn", "ch", "chh"]
 
+    // trace: phahTaigi function slots 0 shift, 1 backspace, 2 numeric, 3 emoji, 4 space, …
+    private static let phahTaigiEmoji = CustomLayout.Place.function(3)
+
     private var suiteName: String!
     private var defaults: UserDefaults!
 
@@ -127,7 +130,7 @@ final class CustomLayoutTests: XCTestCase {
 
     func testCustomLayout_inputTypeKeyWithoutEmojiKey() {
         var layout = CustomLayout(base: .phahTaigi, script: .tl)
-        layout.remove(.emoji)
+        layout.remove(Self.phahTaigiEmoji)
         let plain = CustomLayoutService.applyInputTypeKey(layout.rows(withGlobe: false), inputType: .url)
         XCTAssertEqual(plain.last, [.numeric, .char("/"), .space, .translate, .return])
         let globe = CustomLayoutService.applyInputTypeKey(layout.rows(withGlobe: true), inputType: .emailAddress)
@@ -136,33 +139,60 @@ final class CustomLayoutTests: XCTestCase {
 
     func testCustomLayout_emojiKeyRemovesAndComesBackOnlyToItsPlace() {
         var layout = CustomLayout(base: .phahTaigi, script: .tl)
-        // trace: phahTaigi bottom row = numeric, emoji, space, translate, return.
-        XCTAssertEqual(CustomLayout.places(of: layout.editorRows)[4][1], .emoji)
-        layout.remove(.emoji)
+        XCTAssertEqual(CustomLayout.places(of: layout.editorRows)[4][1], Self.phahTaigiEmoji)
+        XCTAssertEqual(layout.emojiPlace, Self.phahTaigiEmoji)
+        layout.remove(Self.phahTaigiEmoji)
         XCTAssertEqual(layout.rows(withGlobe: false).last, [.numeric, .space, .translate, .return])
         XCTAssertEqual(layout.editorRows.last, TaigiLayouts.Alphabetic.phahTaigi_iPhone.last)
-        XCTAssertEqual(layout.removedPlaces, [.emoji])
+        XCTAssertEqual(layout.removedPlaces, [Self.phahTaigiEmoji])
         XCTAssertFalse(layout.isUnchanged)
-        // A letter never fills the emoji place, and the emoji key never swaps.
-        layout.replace(.emoji, with: "q")
-        layout.swap(.emoji, .key(0))
-        XCTAssertEqual(layout.rows(withGlobe: false)[1][0], .char("!", fullWidth: "！"))
+        // A letter never fills the emoji place, and other function keys never leave.
+        layout.replace(Self.phahTaigiEmoji, with: "q")
+        XCTAssertFalse(layout.canRemove(.function(0)))
         layout.restoreEmojiKey()
         XCTAssertTrue(layout.isUnchanged)
     }
 
-    func testCustomLayout_recordWithoutEmojiFieldKeepsEmojiKey() throws {
+    func testCustomLayout_functionKeysSwapOnlyWithinTheirRow() {
+        var layout = CustomLayout(base: .phahTaigi, script: .tl)
+        // trace: function slots 0 shift, 1 backspace (row 3); 2 numeric … 6 return (row 4).
+        XCTAssertFalse(layout.canSwap(.function(0), .function(2)), "shift and 123 sit in different rows")
+        XCTAssertFalse(layout.canSwap(.function(2), .key(0)), "a function key never trades with a letter")
+        layout.swap(.function(2), .function(6))
+        XCTAssertEqual(layout.rows(withGlobe: false).last, [.return, .emoji, .space, .translate, .numeric])
+        // The globe key follows 123 wherever it went.
+        XCTAssertEqual(layout.rows(withGlobe: true).last, [.return, .emoji, .space, .translate, .numeric, .globe])
+        // The email key goes before space whatever the order.
+        let email = CustomLayoutService.applyInputTypeKey(layout.rows(withGlobe: false), inputType: .emailAddress)
+        XCTAssertEqual(email.last, [.return, .emoji, .char("@"), .space, .translate, .numeric])
+        XCTAssertTrue(layout.isValid)
+        XCTAssertFalse(layout.isUnchanged)
+    }
+
+    func testCustomLayout_recordMovingFunctionKeyAcrossRowsIsInvalid() throws {
+        let json = try JSONSerialization.data(withJSONObject: [
+            "id": UUID().uuidString, "name": "x", "base": "phahTaigi", "script": "tl", "keys": Self.phahTaigiKeys,
+            "functionKeys": ["numeric", "backspace", "shift", "emoji", "space", "translate", "return"],
+        ])
+        XCTAssertFalse(try JSONDecoder().decode(CustomLayout.self, from: json).isValid)
+    }
+
+    func testCustomLayout_recordWithoutNewerFieldsKeepsBaseFunctionKeys() throws {
         let json = try JSONSerialization.data(withJSONObject: [
             "id": UUID().uuidString, "name": "x", "base": "phahTaigi", "script": "tl", "keys": Self.phahTaigiKeys,
         ])
-        XCTAssertTrue(try JSONDecoder().decode(CustomLayout.self, from: json).hasEmojiKey)
+        let layout = try JSONDecoder().decode(CustomLayout.self, from: json)
+        XCTAssertTrue(layout.hasEmojiKey)
+        XCTAssertTrue(layout.isUnchanged)
     }
 
     func testCustomLayout_codableRoundTripKeepsRemovedKeys() throws {
         var layout = CustomLayout(name: "x", base: .moe2, script: .poj)
         layout.remove(.key(0))
         layout.remove(.key(5))
-        layout.remove(.emoji)
+        layout.swap(.function(0), .function(1))
+        // trace: moe2 bottom row function keys numeric, emoji, space, translate, return → emoji = 3.
+        layout.remove(.function(3))
         let decoded = try JSONDecoder().decode(CustomLayout.self, from: JSONEncoder().encode(layout))
         XCTAssertEqual(decoded, layout)
         XCTAssertTrue(decoded.isValid)

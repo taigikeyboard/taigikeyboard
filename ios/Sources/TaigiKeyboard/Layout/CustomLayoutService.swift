@@ -101,9 +101,10 @@ class CustomLayoutService {
     }
 
     /// Puts `@` (email field) or `/` (URL field) on the bottom row: it replaces the
-    /// `,` key where the row has one, else sits right after the emoji key (after globe or 123
-    /// on a custom layout without one). Other
-    /// input types return `rows` unchanged. The key is half-width in every mode.
+    /// `,` key where the row has one, else sits right before space (on every built-in
+    /// romanization / English row that is right after the emoji key; a custom layout may move or
+    /// drop emoji). Other input types
+    /// return `rows` unchanged. The key is half-width in every mode.
     // CROSS-PLATFORM INVARIANT — mirrors the Android `mod/*.json` bottom-row
     // `email_address` / `uri` variants: default / english / moe2 swap `,`;
     // moe1 / phah_taigi add the key in those fields only.
@@ -115,20 +116,10 @@ class CustomLayoutService {
         default: return rows
         }
         guard var bottomRow = rows.last else { return rows }
-        var commaIndex: Int?
-        // The last of the leading switch keys (123, globe, emoji); a custom layout may drop emoji.
-        var anchorIndex: Int?
-        for (index, keyDef) in bottomRow.enumerated() {
-            switch keyDef {
-            case .char(",", _): commaIndex = index
-            case .numeric, .globe, .emoji: anchorIndex = index
-            default: break
-            }
-        }
-        if let commaIndex {
+        if let commaIndex = bottomRow.firstIndex(where: { $0.characterLabel == "," }) {
             bottomRow[commaIndex] = .char(key)
-        } else if let anchorIndex {
-            bottomRow.insert(.char(key), at: anchorIndex + 1)
+        } else if let spaceIndex = bottomRow.firstIndex(of: .space) {
+            bottomRow.insert(.char(key), at: spaceIndex)
         } else {
             return rows
         }
