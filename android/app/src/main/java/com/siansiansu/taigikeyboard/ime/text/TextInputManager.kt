@@ -87,11 +87,14 @@ class TextInputManager(
         }
     }
 
+    private val isComposingProvider: () -> Boolean =
+        { synchronized(composingLock) { composingManager?.isComposing() == true } }
+
     private val appearanceResolver = KeyboardAppearanceResolver(
         prefs = prefs,
         taigikeyboard = taigikeyboard,
         capsStateManager = capsStateManager,
-        isComposingProvider = { synchronized(composingLock) { composingManager?.isComposing() == true } },
+        isComposingProvider = isComposingProvider,
         fullWidthPunctuationProvider = fullWidthPunctuationProvider,
     )
 
@@ -123,6 +126,12 @@ class TextInputManager(
                 capsStateManager = capsStateManager,
                 composeHostProvider = { composeHost },
                 keyAreaOffsetXProvider = { coordinator.keyAreaOffsetX },
+                isComposingProvider = isComposingProvider,
+                // The cursor leaves the text these marks and predictions were made for.
+                onCursorSwipeStart = {
+                    taigikeyboard.clearSpaceMarks()
+                    smartbarManager.clearCandidates()
+                },
                 onDispatchKeyPress = { data -> sendKeyPress(data) },
             ),
         )

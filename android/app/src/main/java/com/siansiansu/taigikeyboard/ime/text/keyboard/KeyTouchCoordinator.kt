@@ -25,6 +25,17 @@ interface KeyEventDispatcher {
 
     val longPressDelayMs: Long
 
+    /** Pixels of spacebar travel per cursor step ([SpaceCursorSwipe]). */
+    val cursorSwipeUnitPx: Int
+
+    /** Starts a spacebar swipe and drops state tied to the old cursor position; returns false
+     *  (starting nothing) while composing, where the spacebar keeps its tap / long-press
+     *  behaviour. */
+    fun tryBeginCursorSwipe(): Boolean
+
+    /** Moves the cursor [steps] characters (negative = left). */
+    fun moveCursor(steps: Int)
+
     /** Resolves the [KeyAnchor] for popup show / extend. Done by the caller
      *  (not the coordinator) because anchor construction needs label
      *  formatting + popup-cell resolution that depend on `TaigiKeyboard` state.
@@ -87,6 +98,7 @@ data class Bounds(
  *   second pointer arrives mid-press, the first is force-released).
  * - Long-press scheduling (popup `extend` + special long-press paths for
  *   SPACE / LANGUAGE_SWITCH → IME picker, DELETE → repeat).
+ * - Spacebar swipe: a horizontal drag on SPACE moves the cursor ([SpaceCursorSwipe]).
  * - Popup `show` / `extend` / `hide` / `propagateMotionEvent` hand-off.
  *
  * Mirrors the legacy `KeyboardView.onTouchEvent` + `KeyView.onFlorisTouchEvent`
@@ -115,6 +127,7 @@ class KeyTouchCoordinator(
     private var shouldBlockNextKeyCode: Boolean = false
     private var deleteRepeatRunnable: Runnable? = null
     private var longPressRunnable: Runnable? = null
+    private var spaceSwipe: SpaceCursorSwipe? = null
 
     /** Pressed-key id callback so [KeyContent] composables can flip their
      *  visual pressed state without re-querying the coordinator. */
@@ -155,6 +168,7 @@ class KeyTouchCoordinator(
         }
         popupHost.hide()
         activeKey = null
+        spaceSwipe = null
         activePointerId = -1
         shouldBlockNextKeyCode = false
     }
@@ -258,6 +272,13 @@ class KeyTouchCoordinator(
                 relEvent.recycle()
             }
         } else if (key != null) {
+            val swipe = spaceSwipe
+            if (swipe != null && swipe.isActive) {
+                // A moving cursor may take the finger off the spacebar: no drift cancel.
+                val steps = swipe.stepsTo(activeX)
+                if (steps != 0) dispatcher.moveCursor(steps)
+                return
+            }
             // No extended popup: dismiss when finger drifts too far from the
             // active key. Mirrors KeyView.onFlorisTouchEvent ACTION_MOVE
             // drift check (KeyView.kt:407-425).
@@ -268,6 +289,15 @@ class KeyTouchCoordinator(
             val driftedHoriz = (!key.isFirstInRow && relX < -0.1f * width) ||
                 (!key.isLastInRow && relX > 1.1f * width)
             val driftedVert = relY < -0.35f * height || relY > 1.35f * height
+            // A spacebar swipe starts before the horizontal drift cancel, so one started near the
+            // key's edge still runs. A long-press that already fired (IME picker) owns the press.
+            if (swipe != null && !driftedVert && !shouldBlockNextKeyCode && swipe.shouldActivate(activeX, activeY)) {
+                if (dispatcher.tryBeginCursorSwipe()) {
+                    startCursorSwipe(swipe)
+                    return
+                }
+                spaceSwipe = null
+            }
             if ((driftedHoriz || driftedVert) && !shouldBlockNextKeyCode) {
                 cancelActiveKey()
             }
@@ -305,6 +335,11 @@ class KeyTouchCoordinator(
     private fun startKeyPress(key: KeyBounds?) {
         cancelScheduled()
         activeKey = key
+        spaceSwipe = if (key?.data?.code == KeyCode.SPACE) {
+            SpaceCursorSwipe(activeX, activeY, dispatcher.cursorSwipeUnitPx)
+        } else {
+            null
+        }
         if (key == null) return
         pressedKeyId = key.keyId
         onPressedKeyChanged?.invoke(key.keyId)
@@ -361,6 +396,15 @@ class KeyTouchCoordinator(
         }
         shouldBlockNextKeyCode = false
         activeKey = null
+        spaceSwipe = null
+    }
+
+    // The swipe owns the press from here: no long-press picker, no space on UP.
+    private fun startCursorSwipe(swipe: SpaceCursorSwipe) {
+        cancelScheduled()
+        popupHost.hide()
+        shouldBlockNextKeyCode = true
+        dispatcher.moveCursor(swipe.activate(activeX))
     }
 
     private fun cancelScheduled() {

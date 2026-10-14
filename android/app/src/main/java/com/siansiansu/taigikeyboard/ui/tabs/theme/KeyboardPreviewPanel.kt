@@ -185,6 +185,12 @@ private object NoOpKeyEventDispatcher : KeyEventDispatcher {
 
     override val longPressDelayMs: Long = 0L
 
+    override val cursorSwipeUnitPx: Int = 1
+
+    override fun tryBeginCursorSwipe(): Boolean = false
+
+    override fun moveCursor(steps: Int) = Unit
+
     override fun resolveAnchor(
         bounds: KeyBounds,
         keyboardWidth: Int,

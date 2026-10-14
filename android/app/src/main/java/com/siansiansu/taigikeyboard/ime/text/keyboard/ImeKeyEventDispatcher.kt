@@ -6,6 +6,7 @@
 package com.siansiansu.taigikeyboard.ime.text.keyboard
 
 import android.content.Context
+import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
@@ -15,8 +16,13 @@ import com.siansiansu.taigikeyboard.ime.popup.tpsPopupWithBaseGlyph
 import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
 import com.siansiansu.taigikeyboard.ime.text.CapsStateManager
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 private const val LONG_PRESS_DELAY_MS = 300L
+
+// FlorisBoard's default swipe unit: 32 dp distance threshold / 4 (`AppPrefs.kt:330`, `SwipeGesture.kt:77`).
+private const val CURSOR_SWIPE_UNIT_DP = 8f
 
 internal class ImeKeyEventDispatcher(
     private val taigikeyboard: TaigiKeyboard,
@@ -24,6 +30,8 @@ internal class ImeKeyEventDispatcher(
     private val capsStateManager: CapsStateManager,
     private val composeHostProvider: () -> View?,
     private val keyAreaOffsetXProvider: () -> Int,
+    private val isComposingProvider: () -> Boolean,
+    private val onCursorSwipeStart: () -> Unit,
     private val onDispatchKeyPress: (KeyData) -> Unit,
 ) : KeyEventDispatcher {
     private val locationScratch = IntArray(2)
@@ -41,6 +49,24 @@ internal class ImeKeyEventDispatcher(
 
     // Fixed since the FlorisBoard long-press setting had no UI here.
     override val longPressDelayMs: Long = LONG_PRESS_DELAY_MS
+
+    override val cursorSwipeUnitPx: Int
+        get() = (CURSOR_SWIPE_UNIT_DP * taigikeyboard.resources.displayMetrics.density).roundToInt().coerceAtLeast(1)
+
+    override fun tryBeginCursorSwipe(): Boolean {
+        if (isComposingProvider()) return false
+        onCursorSwipeStart()
+        return true
+    }
+
+    // DPAD key events leave character boundaries (surrogate pairs, combining marks) to the editor —
+    // FlorisBoard `KeyboardManager.handleArrow` does the same.
+    override fun moveCursor(steps: Int) {
+        val keyCode = if (steps < 0) KeyEvent.KEYCODE_DPAD_LEFT else KeyEvent.KEYCODE_DPAD_RIGHT
+        repeat(abs(steps)) { taigikeyboard.sendDownUpKeyEvents(keyCode) }
+        // One haptic tick per MOVE batch, not per step.
+        taigikeyboard.keyPressVibrate()
+    }
 
     override fun resolveAnchor(
         bounds: KeyBounds,
