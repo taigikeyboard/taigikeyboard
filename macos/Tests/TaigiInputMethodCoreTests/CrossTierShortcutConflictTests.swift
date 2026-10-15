@@ -30,12 +30,12 @@ final class CrossTierShortcutConflictTests: XCTestCase {
 
     /// The chord on the row named `name` in `store`.
     private func chord(onRow name: String, in store: SettingsStore) throws -> ComposingKeyChord? {
-        try TestFixtures.row(name, in: shortcuts(in: store)).chord
+        try TestFixtures.row(name, in: shortcuts(in: store)).first.chord
     }
 
     /// Records `chord` on the row named `name` in `store`.
     private func record(_ chord: ComposingKeyChord?, onRow name: String, in store: SettingsStore) throws {
-        try store.setComposingChord(chord, for: TestFixtures.row(name, in: shortcuts(in: store)))
+        try store.setComposingChord(chord, for: TestFixtures.row(name, in: shortcuts(in: store)).first)
     }
 
     /// The scalars of a chord's key, read off its stored form.
@@ -197,16 +197,16 @@ final class CrossTierShortcutConflictTests: XCTestCase {
     // MARK: - The queries, both directions
 
     func testAGlobalShortcut_isSeenByTheComposingRowHoldingItsChord() throws {
-        let holders = try ShortcutConflicts.composingActionsHolding(
+        let holders = try ShortcutConflicts.composingFieldsHolding(
             KeyboardShortcuts.Shortcut(.rightBracket),
             in: shortcuts(in: makeScratchSettingsStore()),
         )
 
-        XCTAssertEqual(holders.map(\.name), ["pageForward"])
+        XCTAssertEqual(holders.map(\.settingsKey), ["composingShortcut.pageForward"])
     }
 
     func testAComposingChordNoGlobalShortcutHolds_findsNothing() throws {
-        let holders = try ShortcutConflicts.composingActionsHolding(
+        let holders = try ShortcutConflicts.composingFieldsHolding(
             KeyboardShortcuts.Shortcut(.f, modifiers: [.control, .command]),
             in: shortcuts(in: makeScratchSettingsStore()),
         )
@@ -318,7 +318,7 @@ final class CrossTierShortcutConflictTests: XCTestCase {
         let rows = try shortcuts(in: store).rows
         XCTAssertEqual(rows.count, 7)
         for row in rows {
-            XCTAssertEqual(row.chord, row.defaultChord, "\(row.name) lost its default")
+            XCTAssertEqual(row.first.chord, row.defaultChord, "\(row.name) lost its default")
         }
     }
 

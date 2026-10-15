@@ -5,13 +5,13 @@
 //! tiers, then adds the global tier's own refusals in Swift
 //! (`GlobalShortcutPolicy`).
 
-use super::action::ComposingAction;
+use super::action::{ChordField, ComposingAction};
 use super::chord::{ChordRejection, ComposingKeyChord};
 use super::shortcut_actions::{global_rejection, ShortcutAction, ShortcutConflicts};
 use super::snapshot::KeyModifiers;
 use crate::platform::DesktopPlatform;
 use crate::settings::SettingsDocument;
-use crate::strings::StringKey;
+use crate::strings::{StringKey, StringResolver};
 
 /// Which registry the row writes to — what it refuses on top of the shared
 /// gate differs. macOS keeps a Swift twin: `ShortcutSettingsView.swift`
@@ -24,25 +24,54 @@ pub enum RecorderTier {
     Global,
 }
 
-/// Which row is recording, and so which registry it writes to.
+/// Which field is recording, and so which registry it writes to. A
+/// composing row has two fields ([`ChordField`]); a global row has one.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RecorderTarget {
     Global(ShortcutAction),
-    Composing(ComposingAction),
+    Composing(ComposingAction, ChordField),
 }
 
 impl RecorderTarget {
     pub fn label_key(self) -> StringKey {
         match self {
             Self::Global(action) => action.label_key(),
-            Self::Composing(action) => action.label_key(),
+            Self::Composing(action, _) => action.label_key(),
         }
+    }
+
+    /// What a screen reader calls this field: the row's label alone on a
+    /// one-field global row, the label and the field's number on a composing
+    /// row, where two fields share it (`ShortcutSettingsView.swift`
+    /// `recorderRow` is the macOS twin).
+    pub fn field_name(self, strings: &StringResolver) -> String {
+        let label = strings.resolve(self.label_key());
+        match self {
+            Self::Global(_) => label.to_owned(),
+            Self::Composing(_, ChordField::First) => format!("{label} 1"),
+            Self::Composing(_, ChordField::Second) => format!("{label} 2"),
+        }
+    }
+
+    /// The field button's accessible name: its name and what it shows
+    /// (`value`), which the name would otherwise hide.
+    pub fn field_accessible_name(self, strings: &StringResolver, value: &str) -> String {
+        format!("{}: {value}", self.field_name(strings))
+    }
+
+    /// The accessible name of the × beside the field.
+    pub fn clear_accessible_name(self, strings: &StringResolver) -> String {
+        format!(
+            "{} {}",
+            strings.resolve(StringKey::CommonDelete),
+            self.field_name(strings)
+        )
     }
 
     pub fn tier(self) -> RecorderTier {
         match self {
             Self::Global(_) => RecorderTier::Global,
-            Self::Composing(_) => RecorderTier::Composing,
+            Self::Composing(..) => RecorderTier::Composing,
         }
     }
 
@@ -59,13 +88,16 @@ impl RecorderTarget {
                 action.store_in(document, chord, platform);
                 ShortcutConflicts::resolve_after_global_recording(document, action, platform);
             }
-            Self::Composing(action) => {
+            Self::Composing(action, field) => {
                 if let Some(chord) = chord {
                     ShortcutConflicts::resolve_after_composing_recording(
-                        document, action, chord, platform,
+                        document,
+                        (action, field),
+                        chord,
+                        platform,
                     );
                 }
-                document.set_composing_chord(action, chord, platform);
+                document.set_composing_chord(action, field, chord, platform);
             }
         }
     }
@@ -200,11 +232,11 @@ mod tests {
             Some(chord.clone())
         );
 
-        let composing = RecorderTarget::Composing(ComposingAction::PageForward);
+        let composing = RecorderTarget::Composing(ComposingAction::PageForward, ChordField::First);
         composing.store(&mut document, Some(&chord), PLATFORM);
         assert_eq!(
             ComposingKeyBindings::from_document(&document, PLATFORM)
-                .chord(ComposingAction::PageForward),
+                .chord(ComposingAction::PageForward, ChordField::First),
             Some(&chord)
         );
         assert_eq!(
@@ -217,7 +249,7 @@ mod tests {
         composing.store(&mut document, None, PLATFORM);
         assert_eq!(
             ComposingKeyBindings::from_document(&document, PLATFORM)
-                .chord(ComposingAction::PageForward),
+                .chord(ComposingAction::PageForward, ChordField::First),
             None
         );
         global.store(&mut document, Some(&chord), PLATFORM);
@@ -229,9 +261,91 @@ mod tests {
     }
 
     #[test]
+    fn a_second_field_recording_takes_the_chord_from_every_other_field() {
+        // trace: Space ships on alternate.first; recorded on confirm.second it
+        // empties alternate.first (`composing_fields_holding`); then recorded
+        // on confirm.first it empties confirm.second — one chord, one field.
+        let space = ComposingKeyChord::make(Some(" "), KeyModifiers::NONE, PLATFORM).unwrap();
+        let confirm = ComposingAction::ConfirmHighlighted;
+        let alternate = ComposingAction::CommitAlternateScript;
+        let mut document = SettingsDocument::default();
+        RecorderTarget::Composing(confirm, ChordField::Second).store(
+            &mut document,
+            Some(&space),
+            PLATFORM,
+        );
+        let bindings = ComposingKeyBindings::from_document(&document, PLATFORM);
+        assert_eq!(bindings.chord(confirm, ChordField::Second), Some(&space));
+        assert_eq!(bindings.chord(alternate, ChordField::First), None);
+        assert_eq!(
+            document.raw_string(&alternate.settings_key_name(ChordField::First)),
+            Some(""),
+            "the loser is cleared, not left on a shadowed default"
+        );
+
+        RecorderTarget::Composing(confirm, ChordField::First).store(
+            &mut document,
+            Some(&space),
+            PLATFORM,
+        );
+        let bindings = ComposingKeyBindings::from_document(&document, PLATFORM);
+        assert_eq!(bindings.chord(confirm, ChordField::First), Some(&space));
+        assert_eq!(bindings.chord(confirm, ChordField::Second), None);
+    }
+
+    #[test]
+    fn a_recording_also_clears_a_copy_the_resolver_hid() {
+        // trace: Ctrl+K stored on next.first and page_forward.second — a file
+        // an older build (blind to the second field) wrote. The resolver
+        // shows only page_forward.second (later in roster order). Recording
+        // Ctrl+K on previous.first must clear BOTH, or next.first would come
+        // back on the next read and win over the fresh recording.
+        let control_k =
+            ComposingKeyChord::make(Some("k"), KeyModifiers::CONTROL, PLATFORM).unwrap();
+        let mut document = SettingsDocument::default();
+        document.set_composing_chord(
+            ComposingAction::NextCandidate,
+            ChordField::First,
+            Some(&control_k),
+            PLATFORM,
+        );
+        document.set_composing_chord(
+            ComposingAction::PageForward,
+            ChordField::Second,
+            Some(&control_k),
+            PLATFORM,
+        );
+        let previous = ComposingAction::PreviousCandidate;
+        RecorderTarget::Composing(previous, ChordField::First).store(
+            &mut document,
+            Some(&control_k),
+            PLATFORM,
+        );
+        let bindings = ComposingKeyBindings::from_document(&document, PLATFORM);
+        assert_eq!(
+            bindings.chord(previous, ChordField::First),
+            Some(&control_k)
+        );
+        for (action, field) in ComposingAction::all_fields() {
+            if (action, field) != (previous, ChordField::First) {
+                assert_ne!(
+                    bindings.chord(action, field),
+                    Some(&control_k),
+                    "{action:?} {field:?}"
+                );
+            }
+        }
+        assert_eq!(
+            document
+                .raw_string(&ComposingAction::NextCandidate.settings_key_name(ChordField::First)),
+            Some("")
+        );
+    }
+
+    #[test]
     fn a_target_names_its_row_and_its_registry() {
         let global = RecorderTarget::Global(ShortcutAction::ToggleRomanization);
-        let composing = RecorderTarget::Composing(ComposingAction::PageForward);
+        let composing = RecorderTarget::Composing(ComposingAction::PageForward, ChordField::First);
         assert_eq!(global.tier(), RecorderTier::Global);
         assert_eq!(composing.tier(), RecorderTier::Composing);
         assert_eq!(
@@ -241,6 +355,25 @@ mod tests {
         assert_eq!(
             composing.label_key(),
             ComposingAction::PageForward.label_key()
+        );
+        // trace: `field_name` — a global row has one field, a composing row
+        // numbers its two; the button names add the value, the × "Delete".
+        let strings = StringResolver::new(crate::strings::DisplayLanguage::English);
+        let next_page = strings.resolve(ComposingAction::PageForward.label_key());
+        let second = RecorderTarget::Composing(ComposingAction::PageForward, ChordField::Second);
+        assert_eq!(
+            global.field_name(&strings),
+            strings.resolve(ShortcutAction::ToggleRomanization.label_key())
+        );
+        assert_eq!(composing.field_name(&strings), format!("{next_page} 1"));
+        assert_eq!(second.field_name(&strings), format!("{next_page} 2"));
+        assert_eq!(
+            composing.field_accessible_name(&strings, "]"),
+            format!("{next_page} 1: ]")
+        );
+        assert_eq!(
+            second.clear_accessible_name(&strings),
+            format!("{} {next_page} 2", strings.resolve(StringKey::CommonDelete))
         );
     }
 

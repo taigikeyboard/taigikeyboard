@@ -9,8 +9,9 @@
 //! request carried, a panic here included.
 
 use taigi_desktop_core::keys::{
-    evaluate_press, shortcut_labels, tps_keyboard_rows, ChordRejection, ComposingAction,
-    ComposingKeyBindings, ComposingKeyChord, RecorderOutcome, RecorderTier, SymbolPickerIntent,
+    evaluate_press, shortcut_labels, tps_keyboard_rows, ChordField, ChordRejection,
+    ComposingAction, ComposingKeyBindings, ComposingKeyChord, RecorderOutcome, RecorderTier,
+    SymbolPickerIntent,
 };
 use taigi_desktop_core::settings::{
     keys, InputMode, InputModeRequest, SettingChoice, SettingsDocument,
@@ -19,10 +20,10 @@ use taigi_desktop_core::settings::{
 use crate::key_translation::{self, ESCAPE_KEY_CODE};
 use crate::proto::{
     chord_reply, desktop_request, desktop_response, press_reply, symbol_picker_reply, Chord,
-    ChordReply, ChordRequest, ComposingShortcut, ComposingShortcutsReply, PressReply, PressRequest,
-    RecorderAction, SettingsSnapshot, SwitchInputModeReply, SwitchInputModeRequest,
-    SymbolPickerAction, SymbolPickerKeyRequest, SymbolPickerReply, TpsKeyCap, TpsKeyboardRow,
-    TpsKeyboardRowsReply,
+    ChordReply, ChordRequest, ComposingShortcut, ComposingShortcutField, ComposingShortcutsReply,
+    PressReply, PressRequest, RecorderAction, SettingsSnapshot, SwitchInputModeReply,
+    SwitchInputModeRequest, SymbolPickerAction, SymbolPickerKeyRequest, SymbolPickerReply,
+    TpsKeyCap, TpsKeyboardRow, TpsKeyboardRowsReply,
 };
 use crate::runtime::{Refusal, DESKTOP_PLATFORM};
 use crate::session::navigation;
@@ -101,17 +102,29 @@ fn chord(request: &ChordRequest) -> ChordReply {
 fn composing_shortcuts(
     snapshot: Option<&SettingsSnapshot>,
 ) -> Result<ComposingShortcutsReply, Refusal> {
-    let bindings = bindings(snapshot)?;
+    let document = document(snapshot)?;
+    let bindings = ComposingKeyBindings::from_document(&document, DESKTOP_PLATFORM);
     let slot_keys = bindings.slot_key_set();
     let actions = ComposingAction::ALL
         .into_iter()
         .map(|action| ComposingShortcut {
             name: action.raw().to_owned(),
-            settings_key: action.settings_key_name(),
             label_key: action.label_key().as_str().to_owned(),
             group: group(action),
-            chord: bindings.chord(action).map(chord_message),
-            default_chord: Some(chord_message(&action.default_chord())),
+            fields: ChordField::ALL
+                .into_iter()
+                .map(|field| {
+                    let stored = document
+                        .stored_composing_chord(action, field, DESKTOP_PLATFORM)
+                        .flatten();
+                    ComposingShortcutField {
+                        chord: bindings.chord(action, field).map(chord_message),
+                        shipped_chord: action.shipped_chord(field).as_ref().map(chord_message),
+                        stored_chord: stored.as_ref().map(chord_message),
+                        settings_key: action.settings_key_name(field),
+                    }
+                })
+                .collect(),
         })
         .collect();
     Ok(ComposingShortcutsReply {
@@ -202,13 +215,16 @@ fn tps_keyboard_rows_reply() -> TpsKeyboardRowsReply {
 /// The bindings the snapshot describes. A snapshot is required: the last
 /// one the key path installed may be a different store's.
 fn bindings(snapshot: Option<&SettingsSnapshot>) -> Result<ComposingKeyBindings, Refusal> {
-    let snapshot = snapshot.ok_or(Refusal::Missing("settings"))?;
-    let document: SettingsDocument =
-        settings::document_from(&snapshot.entries).map_err(Refusal::Settings)?;
     Ok(ComposingKeyBindings::from_document(
-        &document,
+        &document(snapshot)?,
         DESKTOP_PLATFORM,
     ))
+}
+
+/// The settings the snapshot carries, for the same reason it is required.
+fn document(snapshot: Option<&SettingsSnapshot>) -> Result<SettingsDocument, Refusal> {
+    let snapshot = snapshot.ok_or(Refusal::Missing("settings"))?;
+    settings::document_from(&snapshot.entries).map_err(Refusal::Settings)
 }
 
 fn chord_message(chord: &ComposingKeyChord) -> Chord {
@@ -442,11 +458,17 @@ mod tests {
             .actions
             .iter()
             .map(|row| {
+                let first = &row.fields[0];
                 (
                     row.name.as_str(),
                     row.group,
-                    row.chord.as_ref().map(|chord| chord.display.as_str()),
-                    row.default_chord.as_ref().expect("a default").raw.as_str(),
+                    first.chord.as_ref().map(|chord| chord.display.as_str()),
+                    first
+                        .shipped_chord
+                        .as_ref()
+                        .expect("a default")
+                        .raw
+                        .as_str(),
                 )
             })
             .collect();
@@ -463,8 +485,28 @@ mod tests {
             ]
         );
         let first = &reply.actions[0];
-        assert_eq!(first.settings_key, "composingShortcut.nextCandidate");
+        let keys: Vec<&str> = first
+            .fields
+            .iter()
+            .map(|f| f.settings_key.as_str())
+            .collect();
+        assert_eq!(
+            keys,
+            [
+                "composingShortcut.nextCandidate",
+                "composingShortcut.nextCandidate.second"
+            ]
+        );
         assert_eq!(first.label_key, "i18n_desktop_actionNextCandidate");
+        for row in &reply.actions {
+            let second = &row.fields[1];
+            assert_eq!(
+                (&second.chord, &second.shipped_chord),
+                (&None, &None),
+                "{}",
+                row.name
+            );
+        }
         assert_eq!(reply.slot_keys, "qwdfzxvy;");
         assert_eq!(reply.shifted_slot_keys, "⇧QWDFZXVY;");
         assert_eq!(reply.navigation_keys, "←  →  ↑  ↓  ⇞  ⇟");
@@ -481,14 +523,14 @@ mod tests {
             text("composingShortcut.pageForward", "c|005D"),
             text("toneInputScheme", "telex"),
         ]);
-        assert_eq!(reply.actions[0].chord, None);
-        assert_eq!(
-            reply.actions[2].chord,
-            Some(Chord {
-                raw: "c|005D".to_owned(),
-                display: "⌃]".to_owned(),
-            })
-        );
+        assert_eq!(reply.actions[0].fields[0].chord, None);
+        let control_bracket = Some(Chord {
+            raw: "c|005D".to_owned(),
+            display: "⌃]".to_owned(),
+        });
+        assert_eq!(reply.actions[2].fields[0].chord, control_bracket);
+        assert_eq!(reply.actions[2].fields[0].stored_chord, control_bracket);
+        assert_eq!(reply.actions[0].fields[0].stored_chord, None, "cleared");
         assert_eq!(reply.slot_keys, "123456789");
         assert_eq!(reply.shifted_slot_keys, "⇧123456789");
         assert_eq!(composing_shortcuts(None), Err(Refusal::Missing("settings")));

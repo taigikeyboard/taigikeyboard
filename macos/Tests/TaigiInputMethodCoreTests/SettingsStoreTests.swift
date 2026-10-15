@@ -582,23 +582,57 @@ final class SettingsStoreTests: XCTestCase {
         let rows = try shortcuts().rows
         XCTAssertEqual(rows.count, 7)
         for row in rows {
-            XCTAssertEqual(row.chord, row.defaultChord, row.name)
+            XCTAssertEqual(row.first.chord, row.defaultChord, row.name)
+            XCTAssertNil(row.fields[1].chord, "\(row.name) ships its second field empty")
         }
     }
 
-    /// The pane empties the rows a recording takes a chord from — never the
-    /// row being recorded, which is not its own conflict.
-    func testTheRowsHoldingAChord_leaveOutTheRowBeingRecorded() throws {
+    /// The pane empties the fields a recording takes a chord from — never the
+    /// field being recorded, which is not its own conflict.
+    func testTheFieldsHoldingAChord_leaveOutTheFieldBeingRecorded() throws {
         let rows = try shortcuts()
-        let nextCandidate = try row("nextCandidate")
+        let nextCandidate = try row("nextCandidate").first
         let tab = try XCTUnwrap(nextCandidate.chord)
 
-        XCTAssertEqual(rows.rows(holding: tab).map(\.name), ["nextCandidate"])
-        XCTAssertEqual(rows.rows(holding: tab, excluding: nextCandidate).map(\.name), [])
+        XCTAssertEqual(rows.fields(holding: tab).map(\.settingsKey), [nextCandidate.settingsKey])
+        XCTAssertEqual(rows.fields(holding: tab, excluding: nextCandidate), [])
         XCTAssertEqual(
-            try rows.rows(holding: tab, excluding: row("pageForward")).map(\.name),
-            ["nextCandidate"],
+            try rows.fields(holding: tab, excluding: row("pageForward").first).map(\.settingsKey),
+            [nextCandidate.settingsKey],
         )
+    }
+
+    /// The reported setup (Discord #issues): Space on Confirm's second field.
+    /// Space ships on the alternate-script row's first field, which loses it
+    /// — the shipped default gives way to the recording.
+    func testASecondFieldChord_isReadBackAndTakesTheKeyFromADefault() throws {
+        let store = makeStore()
+        let space = try TestFixtures.chord(" ")
+
+        try store.setComposingChord(space, for: row("confirmHighlighted").fields[1])
+
+        XCTAssertEqual(try row("confirmHighlighted").fields[1].chord, space)
+        XCTAssertEqual(try row("confirmHighlighted").first.chord, try TestFixtures.chord("\r"))
+        XCTAssertNil(try row("commitAlternateScript").first.chord)
+        XCTAssertEqual(
+            userDefaults.string(forKey: "composingShortcut.confirmHighlighted.second"),
+            space.rawValue,
+        )
+    }
+
+    /// A chord stored on two fields — by hand, or by a build that never read
+    /// the second field — shows on one; the other is still a holder a
+    /// recording has to clear, or it would come back on the next read.
+    func testTheFieldsHoldingAChord_includeOneTheResolverHid() throws {
+        let chord = try TestFixtures.chordNoDefaultHolds()
+        userDefaults.set(chord.rawValue, forKey: "composingShortcut.nextCandidate")
+        userDefaults.set(chord.rawValue, forKey: "composingShortcut.pageForward.second")
+
+        XCTAssertEqual(
+            try shortcuts().fields(holding: chord).map(\.settingsKey),
+            ["composingShortcut.nextCandidate", "composingShortcut.pageForward.second"],
+        )
+        XCTAssertNil(try row("nextCandidate").first.chord, "hidden behind the later field")
     }
 
     func testComposingChords_roundTripThroughTheSuite() throws {
@@ -607,9 +641,9 @@ final class SettingsStoreTests: XCTestCase {
         // and the round trip is the only thing under test.
         let chord = try TestFixtures.chordNoDefaultHolds()
 
-        try store.setComposingChord(chord, for: row("pageForward"))
+        try store.setComposingChord(chord, for: row("pageForward").first)
 
-        XCTAssertEqual(try row("pageForward").chord, chord)
+        XCTAssertEqual(try row("pageForward").first.chord, chord)
         XCTAssertEqual(
             userDefaults.string(forKey: "composingShortcut.pageForward"),
             chord.rawValue,
@@ -624,9 +658,9 @@ final class SettingsStoreTests: XCTestCase {
         let store = makeStore()
         let bareBacktick = try TestFixtures.chord("`")
 
-        try store.setComposingChord(bareBacktick, for: row("pageBackward"))
+        try store.setComposingChord(bareBacktick, for: row("pageBackward").first)
 
-        XCTAssertEqual(try row("pageBackward").chord, bareBacktick)
+        XCTAssertEqual(try row("pageBackward").first.chord, bareBacktick)
         XCTAssertEqual(
             userDefaults.string(forKey: "composingShortcut.pageBackward"),
             "|0060",
@@ -639,9 +673,9 @@ final class SettingsStoreTests: XCTestCase {
     func testClearedComposingChord_staysClearedAcrossReads() throws {
         let store = makeStore()
 
-        try store.setComposingChord(nil, for: row("pageForward"))
+        try store.setComposingChord(nil, for: row("pageForward").first)
 
-        XCTAssertNil(try row("pageForward").chord)
+        XCTAssertNil(try row("pageForward").first.chord)
         XCTAssertEqual(
             userDefaults.string(forKey: "composingShortcut.pageForward"),
             "",
@@ -654,7 +688,7 @@ final class SettingsStoreTests: XCTestCase {
     func testComposingChords_withAnUnparsableStoredValue_readAsCleared() throws {
         userDefaults.set("nonsense", forKey: "composingShortcut.pageForward")
 
-        XCTAssertNil(try row("pageForward").chord)
+        XCTAssertNil(try row("pageForward").first.chord)
     }
 
     /// The General pane writes the scheme's raw value; the store reads it, and

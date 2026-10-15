@@ -2,7 +2,7 @@
 
 use std::collections::BTreeMap;
 
-use super::action::ComposingAction;
+use super::action::{ChordField, ComposingAction};
 use super::chord::ComposingKeyChord;
 use super::slot_key_set::CandidateSlotKeySet;
 use super::snapshot::KeyEventSnapshot;
@@ -12,13 +12,14 @@ use crate::settings::{keys, InputMode, SettingChoice, SettingsDocument};
 
 /// "Resolved" means three things have already happened, so the classifier
 /// can trust the value: every chord came through [`ComposingKeyChord::make`];
-/// no chord is on two actions (a later recording takes it from the earlier
+/// no chord is on two fields (a later recording takes it from the earlier
 /// one); an empty [`ComposingAction::REFILLED_FROM_DEFAULT`] row takes back
 /// whichever of the pair's defaults no other row holds — never a key off
 /// another row.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ComposingKeyBindings {
-    chords: BTreeMap<ComposingAction, ComposingKeyChord>,
+    /// Up to two chords per action ([`ChordField`]); both fire it alike.
+    chords: BTreeMap<(ComposingAction, ChordField), ComposingKeyChord>,
     /// Which keys type a tone. Carried here because it is the other half of
     /// the same contract the chords are: the classifier reads both off one
     /// value, and the slot keys follow from it.
@@ -42,23 +43,22 @@ impl Default for ComposingKeyBindings {
 }
 
 impl ComposingKeyBindings {
-    /// `stored` maps an action to `Some(chord)` (recorded) or `None` (the
-    /// user cleared the row); an action absent from the map was never
-    /// touched and reads as its default. The double optional is what tells
-    /// the two apart.
+    /// `stored` maps a field to `Some(chord)` (recorded) or `None` (the
+    /// user cleared it); a field absent from the map was never touched and
+    /// reads as what it ships with (`ComposingAction::shipped_chord`). The
+    /// double optional is what tells the two apart.
     pub fn resolve(
-        stored: &BTreeMap<ComposingAction, Option<ComposingKeyChord>>,
+        stored: &BTreeMap<(ComposingAction, ChordField), Option<ComposingKeyChord>>,
         tone_scheme: ToneInputScheme,
     ) -> Self {
-        let mut resolved: BTreeMap<ComposingAction, ComposingKeyChord> = BTreeMap::new();
-        for action in ComposingAction::ALL {
-            let chord = match stored.get(&action) {
-                Some(Some(chord)) => Some(chord.clone()),
-                Some(None) => None,
-                None => Some(action.default_chord()),
-            };
+        let mut resolved = BTreeMap::new();
+        for (action, field) in ComposingAction::all_fields() {
+            let chord = stored
+                .get(&(action, field))
+                .cloned()
+                .unwrap_or_else(|| action.shipped_chord(field));
             if let Some(chord) = chord {
-                resolved.insert(action, chord);
+                resolved.insert((action, field), chord);
             }
         }
         // No pass against the slot tier: every chord came through
@@ -78,18 +78,18 @@ impl ComposingKeyBindings {
         }
     }
 
-    /// The bindings a settings document describes: `composingShortcut.<raw>`
-    /// per action (absent = default, `""` = cleared, unparsable = cleared —
-    /// silently restoring the default would undo a deliberate clearing) plus
-    /// the tone scheme. The
+    /// The bindings a settings document describes: one stored string per
+    /// field (`ComposingAction::settings_key_name`; absent = shipped, `""`
+    /// = cleared, unparsable = cleared — silently restoring the default
+    /// would undo a deliberate clearing) plus the tone scheme. The
     /// stored values are read in `platform`'s chord grammar.
     pub fn from_document(document: &SettingsDocument, platform: DesktopPlatform) -> Self {
-        let mut stored = BTreeMap::new();
-        for action in ComposingAction::ALL {
-            if let Some(raw) = document.raw_string(&action.settings_key_name()) {
-                stored.insert(action, ComposingKeyChord::from_raw(raw, platform));
-            }
-        }
+        let stored = ComposingAction::all_fields()
+            .filter_map(|(action, field)| {
+                let chord = document.stored_composing_chord(action, field, platform)?;
+                Some(((action, field), chord))
+            })
+            .collect();
         Self {
             input_mode: document.choice(&keys::INPUT_MODE),
             is_candidate_window_enabled: document.bool(&keys::IS_CANDIDATE_WINDOW_ENABLED),
@@ -107,88 +107,80 @@ impl ComposingKeyBindings {
         }
     }
 
-    /// The chord on `action`, or `None` when the row is empty.
-    pub fn chord(&self, action: ComposingAction) -> Option<&ComposingKeyChord> {
-        self.chords.get(&action)
+    /// The chord on `action`'s `field`, or `None` when that field is empty.
+    pub fn chord(&self, action: ComposingAction, field: ChordField) -> Option<&ComposingKeyChord> {
+        self.chords.get(&(action, field))
     }
 
-    /// The action `event` is bound to, if any. Linear over the roster: seven
-    /// entries, and a chord-keyed map would need the duplicate handling twice.
+    /// The action `event` is bound to, if any, on either field. Linear over
+    /// the roster: fourteen fields, and a chord-keyed map would need the
+    /// duplicate handling twice.
     pub fn action_for(
         &self,
         event: &KeyEventSnapshot,
         platform: DesktopPlatform,
     ) -> Option<ComposingAction> {
-        ComposingAction::ALL.into_iter().find(|action| {
-            self.chords
-                .get(action)
-                .is_some_and(|chord| chord.matches(event, platform))
-        })
+        ComposingAction::all_fields()
+            .find(|key| {
+                self.chords
+                    .get(key)
+                    .is_some_and(|chord| chord.matches(event, platform))
+            })
+            .map(|(action, _)| action)
     }
 
-    /// Which other actions currently hold `chord` — the pure half of
-    /// recording, so the row that loses a chord empties in front of the user.
-    pub fn actions_holding(
-        &self,
-        chord: &ComposingKeyChord,
-        excluding: Option<ComposingAction>,
-    ) -> Vec<ComposingAction> {
-        ComposingAction::ALL
-            .into_iter()
-            .filter(|action| Some(*action) != excluding && self.chords.get(action) == Some(chord))
-            .collect()
-    }
-
-    /// Drops a chord from every action but the last one holding it, with the
-    /// rows still on their own default going first — so a recorded chord
+    /// Drops a chord from every field but the last one holding it, with the
+    /// fields still on what they ship with going first — so a recorded chord
     /// outranks a default that arrives on top of it in an upgrade. Within
-    /// each half, roster order is the tiebreak.
+    /// each half, roster order then field order is the tiebreak — so the
+    /// same chord stored on both fields of one action stays on the second.
     ///
-    /// "On its default" is judged by VALUE: a row the user explicitly recorded
-    /// back onto its own default reads as untouched here. The store keeps the
+    /// "On its default" is judged by VALUE: a field the user explicitly
+    /// recorded back onto its own shipped chord reads as untouched here. The store keeps the
     /// distinction (absent vs stored), the resolver deliberately does not —
     /// same observable behaviour on all three desktops.
-    fn remove_duplicates(resolved: &mut BTreeMap<ComposingAction, ComposingKeyChord>) {
-        let on_its_default =
-            |action: &ComposingAction| resolved.get(action) == Some(&action.default_chord());
-        let order: Vec<ComposingAction> = ComposingAction::ALL
-            .iter()
-            .copied()
+    fn remove_duplicates(
+        resolved: &mut BTreeMap<(ComposingAction, ChordField), ComposingKeyChord>,
+    ) {
+        let on_its_default = |&(action, field): &(ComposingAction, ChordField)| {
+            resolved.get(&(action, field)) == action.shipped_chord(field).as_ref()
+        };
+        let order: Vec<(ComposingAction, ChordField)> = ComposingAction::all_fields()
             .filter(on_its_default)
-            .chain(
-                ComposingAction::ALL
-                    .iter()
-                    .copied()
-                    .filter(|action| !on_its_default(action)),
-            )
+            .chain(ComposingAction::all_fields().filter(|key| !on_its_default(key)))
             .collect();
-        let mut seen: BTreeMap<ComposingKeyChord, ComposingAction> = BTreeMap::new();
-        for action in order {
-            let Some(chord) = resolved.get(&action).cloned() else {
+        let mut seen: BTreeMap<ComposingKeyChord, (ComposingAction, ChordField)> = BTreeMap::new();
+        for key in order {
+            let Some(chord) = resolved.get(&key).cloned() else {
                 continue;
             };
-            if let Some(earlier) = seen.insert(chord, action) {
+            if let Some(earlier) = seen.insert(chord, key) {
                 resolved.remove(&earlier);
             }
         }
     }
 
-    /// Refills an empty commit row from the pair's shipped defaults: whichever
-    /// pool chord no composing row holds, its own first. A cleared row gets
-    /// its key back; a row holding a pool chord the user recorded there keeps
-    /// it, and the emptied commit
+    /// Refills an empty commit row — both fields empty — from the pair's
+    /// shipped defaults, onto its first field: whichever pool chord no
+    /// composing field holds, its own first. A cleared row gets its key back;
+    /// a row whose second field still holds a chord is not empty and is left
+    /// as the user set it; a row holding a pool chord the user recorded there
+    /// keeps it, and the emptied commit
     /// row stays empty — the last recording wins here as everywhere else on
     /// the pane (USER 2026-09-19: Enter recorded on Output the Other Script used to be handed
     /// straight back to Confirm Key). An unbound Return still ends the composition:
     /// it commits before passing through to the host
     /// (`ComposingKeyIntent::host_key`).
-    fn restore_unbound(resolved: &mut BTreeMap<ComposingAction, ComposingKeyChord>) {
+    fn restore_unbound(resolved: &mut BTreeMap<(ComposingAction, ChordField), ComposingKeyChord>) {
         let pool: Vec<ComposingKeyChord> = ComposingAction::REFILLED_FROM_DEFAULT
             .iter()
             .map(|action| action.default_chord())
             .collect();
         for action in ComposingAction::REFILLED_FROM_DEFAULT {
-            if resolved.contains_key(&action) {
+            if ChordField::ALL
+                .iter()
+                .any(|field| resolved.contains_key(&(action, *field)))
+            {
                 continue;
             }
             let own = action.default_chord();
@@ -197,7 +189,7 @@ impl ComposingKeyBindings {
                 .find(|chord| !resolved.values().any(|held| held == *chord))
                 .cloned()
             {
-                resolved.insert(action, free);
+                resolved.insert((action, ChordField::First), free);
             }
         }
     }
@@ -214,17 +206,33 @@ mod tests {
         ComposingKeyChord::make(Some(key), modifiers, PLATFORM).unwrap()
     }
 
+    /// First fields only — what every row stored before the second field.
     fn stored(
         pairs: &[(ComposingAction, Option<ComposingKeyChord>)],
-    ) -> BTreeMap<ComposingAction, Option<ComposingKeyChord>> {
-        pairs.iter().cloned().collect()
+    ) -> BTreeMap<(ComposingAction, ChordField), Option<ComposingKeyChord>> {
+        pairs
+            .iter()
+            .map(|(action, chord)| ((*action, ChordField::First), chord.clone()))
+            .collect()
+    }
+
+    fn stored_fields(
+        entries: &[(ComposingAction, ChordField, Option<ComposingKeyChord>)],
+    ) -> BTreeMap<(ComposingAction, ChordField), Option<ComposingKeyChord>> {
+        entries
+            .iter()
+            .map(|(action, field, chord)| ((*action, *field), chord.clone()))
+            .collect()
     }
 
     #[test]
     fn defaults_leave_no_action_unbound() {
         let bindings = ComposingKeyBindings::default();
         for action in ComposingAction::ALL {
-            assert!(bindings.chord(action).is_some(), "{action:?} starts blank");
+            assert!(
+                bindings.chord(action, ChordField::First).is_some(),
+                "{action:?} starts blank"
+            );
         }
         assert_eq!(bindings.tone_scheme, ToneInputScheme::Standard);
         assert_eq!(bindings.slot_key_set(), CandidateSlotKeySet::BareKeys);
@@ -239,20 +247,26 @@ mod tests {
             ToneInputScheme::Standard,
         );
         assert_eq!(
-            bindings.chord(ComposingAction::NextCandidate),
+            bindings.chord(ComposingAction::NextCandidate, ChordField::First),
             Some(&bracket)
         );
-        assert_eq!(bindings.chord(ComposingAction::PageForward), None);
+        assert_eq!(
+            bindings.chord(ComposingAction::PageForward, ChordField::First),
+            None
+        );
 
         let bindings = ComposingKeyBindings::resolve(
             &stored(&[(ComposingAction::PageBackward, Some(bracket.clone()))]),
             ToneInputScheme::Standard,
         );
         assert_eq!(
-            bindings.chord(ComposingAction::PageBackward),
+            bindings.chord(ComposingAction::PageBackward, ChordField::First),
             Some(&bracket)
         );
-        assert_eq!(bindings.chord(ComposingAction::PageForward), None);
+        assert_eq!(
+            bindings.chord(ComposingAction::PageForward, ChordField::First),
+            None
+        );
     }
 
     #[test]
@@ -262,8 +276,14 @@ mod tests {
             &stored(&[(ComposingAction::NextCandidate, Some(space.clone()))]),
             ToneInputScheme::Standard,
         );
-        assert_eq!(bindings.chord(ComposingAction::NextCandidate), Some(&space));
-        assert_eq!(bindings.chord(ComposingAction::CommitAlternateScript), None);
+        assert_eq!(
+            bindings.chord(ComposingAction::NextCandidate, ChordField::First),
+            Some(&space)
+        );
+        assert_eq!(
+            bindings.chord(ComposingAction::CommitAlternateScript, ChordField::First),
+            None
+        );
     }
 
     #[test]
@@ -277,10 +297,13 @@ mod tests {
             ToneInputScheme::Standard,
         );
         assert_eq!(
-            bindings.chord(ComposingAction::PageBackward),
+            bindings.chord(ComposingAction::PageBackward, ChordField::First),
             Some(&recorded)
         );
-        assert_eq!(bindings.chord(ComposingAction::PageForward), None);
+        assert_eq!(
+            bindings.chord(ComposingAction::PageForward, ChordField::First),
+            None
+        );
     }
 
     #[test]
@@ -290,7 +313,10 @@ mod tests {
                 &stored(&[(action, None)]),
                 ToneInputScheme::Standard,
             );
-            assert_eq!(bindings.chord(action), Some(&action.default_chord()));
+            assert_eq!(
+                bindings.chord(action, ChordField::First),
+                Some(&action.default_chord())
+            );
         }
     }
 
@@ -313,12 +339,15 @@ mod tests {
             ToneInputScheme::Standard,
         );
         assert_eq!(
-            bindings.chord(ComposingAction::CommitAlternateScript),
+            bindings.chord(ComposingAction::CommitAlternateScript, ChordField::First),
             Some(&chord("\r", KeyModifiers::NONE))
         );
-        assert_eq!(bindings.chord(ComposingAction::ConfirmHighlighted), None);
         assert_eq!(
-            bindings.chord(ComposingAction::CommitLiteral),
+            bindings.chord(ComposingAction::ConfirmHighlighted, ChordField::First),
+            None
+        );
+        assert_eq!(
+            bindings.chord(ComposingAction::CommitLiteral, ChordField::First),
             Some(&chord("\r", KeyModifiers::SHIFT))
         );
         // trace: literal cleared, nextCandidate=⇧Return (recorded),
@@ -338,11 +367,11 @@ mod tests {
             ToneInputScheme::Standard,
         );
         assert_eq!(
-            refilled.chord(ComposingAction::NextCandidate),
+            refilled.chord(ComposingAction::NextCandidate, ChordField::First),
             Some(&chord("\r", KeyModifiers::SHIFT))
         );
         assert_eq!(
-            refilled.chord(ComposingAction::CommitLiteral),
+            refilled.chord(ComposingAction::CommitLiteral, ChordField::First),
             Some(&chord("\r", KeyModifiers::NONE))
         );
         // trace: both defaults recorded on ordinary rows → both commit rows
@@ -362,10 +391,16 @@ mod tests {
             ]),
             ToneInputScheme::Standard,
         );
-        assert_eq!(both_taken.chord(ComposingAction::ConfirmHighlighted), None);
-        assert_eq!(both_taken.chord(ComposingAction::CommitLiteral), None);
         assert_eq!(
-            both_taken.chord(ComposingAction::PageForward),
+            both_taken.chord(ComposingAction::ConfirmHighlighted, ChordField::First),
+            None
+        );
+        assert_eq!(
+            both_taken.chord(ComposingAction::CommitLiteral, ChordField::First),
+            None
+        );
+        assert_eq!(
+            both_taken.chord(ComposingAction::PageForward, ChordField::First),
             Some(&chord("\r", KeyModifiers::NONE))
         );
     }
@@ -410,11 +445,11 @@ mod tests {
                         // `remove_duplicates`', not this pass's.
                         if other_chord.is_some() && other_chord != confirm && other_chord != literal
                         {
-                            assert_eq!(bindings.chord(*other), other_chord.as_ref(), "recorded chord lost: {confirm:?} {literal:?} {other:?}={other_chord:?}");
+                            assert_eq!(bindings.chord(*other, ChordField::First), other_chord.as_ref(), "recorded chord lost: {confirm:?} {literal:?} {other:?}={other_chord:?}");
                         }
                         if ComposingAction::REFILLED_FROM_DEFAULT
                             .iter()
-                            .any(|action| bindings.chord(*action).is_none())
+                            .any(|action| bindings.chord(*action, ChordField::First).is_none())
                         {
                             assert!(pool.iter().all(|c| held.contains(&c)), "a commit row left empty with a default free: {confirm:?} {literal:?} {other:?}={other_chord:?}");
                         }
@@ -436,11 +471,11 @@ mod tests {
             ToneInputScheme::Standard,
         );
         assert_eq!(
-            swapped.chord(ComposingAction::CommitLiteral),
+            swapped.chord(ComposingAction::CommitLiteral, ChordField::First),
             Some(&chord("\r", KeyModifiers::NONE))
         );
         assert_eq!(
-            swapped.chord(ComposingAction::ConfirmHighlighted),
+            swapped.chord(ComposingAction::ConfirmHighlighted, ChordField::First),
             Some(&chord("\r", KeyModifiers::SHIFT))
         );
     }
@@ -456,7 +491,7 @@ mod tests {
                 *scheme,
             );
             assert_eq!(
-                bindings.chord(ComposingAction::PageForward),
+                bindings.chord(ComposingAction::PageForward, ChordField::First),
                 Some(&control_three),
                 "{scheme:?}"
             );
@@ -482,33 +517,36 @@ mod tests {
     #[test]
     fn document_round_trip_reads_absent_cleared_and_recorded_rows() {
         let mut document = SettingsDocument::default();
-        document.set_raw_string(&ComposingAction::PageForward.settings_key_name(), "");
         document.set_raw_string(
-            &ComposingAction::NextCandidate.settings_key_name(),
+            &ComposingAction::PageForward.settings_key_name(ChordField::First),
+            "",
+        );
+        document.set_raw_string(
+            &ComposingAction::NextCandidate.settings_key_name(ChordField::First),
             &chord("]", KeyModifiers::CONTROL).raw_value(PLATFORM),
         );
         document.set_raw_string(
-            &ComposingAction::PageBackward.settings_key_name(),
+            &ComposingAction::PageBackward.settings_key_name(ChordField::First),
             "garbage",
         );
         document.set_choice(&keys::TONE_INPUT_SCHEME, ToneInputScheme::Telex);
         let bindings = ComposingKeyBindings::from_document(&document, PLATFORM);
         assert_eq!(
-            bindings.chord(ComposingAction::PageForward),
+            bindings.chord(ComposingAction::PageForward, ChordField::First),
             None,
             "cleared"
         );
         assert_eq!(
-            bindings.chord(ComposingAction::NextCandidate),
+            bindings.chord(ComposingAction::NextCandidate, ChordField::First),
             Some(&chord("]", KeyModifiers::CONTROL))
         );
         assert_eq!(
-            bindings.chord(ComposingAction::PageBackward),
+            bindings.chord(ComposingAction::PageBackward, ChordField::First),
             None,
             "unparsable reads as cleared"
         );
         assert_eq!(
-            bindings.chord(ComposingAction::ConfirmHighlighted),
+            bindings.chord(ComposingAction::ConfirmHighlighted, ChordField::First),
             Some(&chord("\r", KeyModifiers::NONE)),
             "untouched"
         );
@@ -519,13 +557,6 @@ mod tests {
             bindings.action_for(&event, PLATFORM),
             Some(ComposingAction::NextCandidate)
         );
-        assert_eq!(
-            bindings.actions_holding(
-                &chord("]", KeyModifiers::CONTROL),
-                Some(ComposingAction::PageForward)
-            ),
-            vec![ComposingAction::NextCandidate]
-        );
     }
 
     #[test]
@@ -534,18 +565,24 @@ mod tests {
         // an `a` is not a Mac letter, so that row reads as cleared (inventory K2).
         let mac = DesktopPlatform::MacOS;
         let mut document = SettingsDocument::default();
-        document.set_raw_string(&ComposingAction::PageForward.settings_key_name(), "o|000D");
         document.set_raw_string(
-            &ComposingAction::NextCandidate.settings_key_name(),
+            &ComposingAction::PageForward.settings_key_name(ChordField::First),
+            "o|000D",
+        );
+        document.set_raw_string(
+            &ComposingAction::NextCandidate.settings_key_name(ChordField::First),
             "a|005D",
         );
         let bindings = ComposingKeyBindings::from_document(&document, mac);
         let option_return = ComposingKeyChord::make(Some("\r"), KeyModifiers::ALT, mac).unwrap();
         assert_eq!(
-            bindings.chord(ComposingAction::PageForward),
+            bindings.chord(ComposingAction::PageForward, ChordField::First),
             Some(&option_return)
         );
-        assert_eq!(bindings.chord(ComposingAction::NextCandidate), None);
+        assert_eq!(
+            bindings.chord(ComposingAction::NextCandidate, ChordField::First),
+            None
+        );
         assert_eq!(
             bindings.action_for(&KeyEventSnapshot::text("\r", KeyModifiers::ALT), mac),
             Some(ComposingAction::PageForward)
@@ -563,22 +600,155 @@ mod tests {
         );
     }
 
+    /// The reported setup (Discord #issues): Space and Enter both confirm in
+    /// the current script, Shift+Enter commits the other one.
     #[test]
-    fn actions_holding_names_the_rows_a_recording_would_empty() {
-        // trace: `actions_holding` skips `excluding` — the row being
-        // recorded is not its own conflict.
-        let bracket = chord("]", KeyModifiers::NONE);
+    fn a_second_field_fires_its_action_alongside_the_first() {
+        // trace: confirm.second=Space (recorded) > alternate.first=Space
+        // (default) → alternate.first dropped; alternate.second=⇧Return
+        // (recorded) > literal.first=⇧Return (default) → literal.first
+        // dropped; literal is a commit row with both fields empty → pool
+        // {Return, ⇧Return} both held → literal stays empty.
+        let space = chord(" ", KeyModifiers::NONE);
+        let enter = chord("\r", KeyModifiers::NONE);
+        let shift_enter = chord("\r", KeyModifiers::SHIFT);
         let bindings = ComposingKeyBindings::resolve(
-            &stored(&[(ComposingAction::PageForward, Some(bracket.clone()))]),
+            &stored_fields(&[
+                (
+                    ComposingAction::ConfirmHighlighted,
+                    ChordField::Second,
+                    Some(space.clone()),
+                ),
+                (
+                    ComposingAction::CommitAlternateScript,
+                    ChordField::Second,
+                    Some(shift_enter.clone()),
+                ),
+            ]),
+            ToneInputScheme::Standard,
+        );
+        let confirm = ComposingAction::ConfirmHighlighted;
+        assert_eq!(bindings.chord(confirm, ChordField::First), Some(&enter));
+        assert_eq!(bindings.chord(confirm, ChordField::Second), Some(&space));
+        let alternate = ComposingAction::CommitAlternateScript;
+        assert_eq!(bindings.chord(alternate, ChordField::First), None);
+        assert_eq!(
+            bindings.chord(alternate, ChordField::Second),
+            Some(&shift_enter)
+        );
+        for field in ChordField::ALL {
+            assert_eq!(bindings.chord(ComposingAction::CommitLiteral, field), None);
+        }
+        let press = |key: &str, modifiers| {
+            bindings.action_for(&KeyEventSnapshot::text(key, modifiers), PLATFORM)
+        };
+        assert_eq!(press(" ", KeyModifiers::NONE), Some(confirm));
+        assert_eq!(press("\r", KeyModifiers::NONE), Some(confirm));
+        assert_eq!(press("\r", KeyModifiers::SHIFT), Some(alternate));
+    }
+
+    #[test]
+    fn a_chord_on_both_fields_of_one_action_stays_on_the_second() {
+        let recorded = chord("]", KeyModifiers::CONTROL);
+        let bindings = ComposingKeyBindings::resolve(
+            &stored_fields(&[
+                (
+                    ComposingAction::PageForward,
+                    ChordField::First,
+                    Some(recorded.clone()),
+                ),
+                (
+                    ComposingAction::PageForward,
+                    ChordField::Second,
+                    Some(recorded.clone()),
+                ),
+            ]),
             ToneInputScheme::Standard,
         );
         assert_eq!(
-            bindings.actions_holding(&bracket, Some(ComposingAction::NextCandidate)),
-            vec![ComposingAction::PageForward]
+            bindings.chord(ComposingAction::PageForward, ChordField::First),
+            None
         );
         assert_eq!(
-            bindings.actions_holding(&bracket, Some(ComposingAction::PageForward)),
-            Vec::new()
+            bindings.chord(ComposingAction::PageForward, ChordField::Second),
+            Some(&recorded)
+        );
+    }
+
+    #[test]
+    fn a_commit_row_holding_a_second_chord_is_not_refilled() {
+        // trace: confirm.first cleared, confirm.second=Space → the row is not
+        // empty, so `restore_unbound` skips it and Return stays unbound.
+        let space = chord(" ", KeyModifiers::NONE);
+        let bindings = ComposingKeyBindings::resolve(
+            &stored_fields(&[
+                (ComposingAction::ConfirmHighlighted, ChordField::First, None),
+                (
+                    ComposingAction::ConfirmHighlighted,
+                    ChordField::Second,
+                    Some(space.clone()),
+                ),
+            ]),
+            ToneInputScheme::Standard,
+        );
+        let confirm = ComposingAction::ConfirmHighlighted;
+        assert_eq!(bindings.chord(confirm, ChordField::First), None);
+        assert_eq!(bindings.chord(confirm, ChordField::Second), Some(&space));
+        assert_eq!(
+            bindings.action_for(&KeyEventSnapshot::text("\r", KeyModifiers::NONE), PLATFORM),
+            None
+        );
+    }
+
+    #[test]
+    fn an_emptied_commit_row_is_refilled_onto_its_first_field() {
+        // trace: confirm.first cleared, confirm.second stored "" (cleared) →
+        // both fields empty → Return is free → confirm.first=Return.
+        let bindings = ComposingKeyBindings::resolve(
+            &stored_fields(&[
+                (ComposingAction::ConfirmHighlighted, ChordField::First, None),
+                (
+                    ComposingAction::ConfirmHighlighted,
+                    ChordField::Second,
+                    None,
+                ),
+            ]),
+            ToneInputScheme::Standard,
+        );
+        assert_eq!(
+            bindings.chord(ComposingAction::ConfirmHighlighted, ChordField::First),
+            Some(&chord("\r", KeyModifiers::NONE))
+        );
+        assert_eq!(
+            bindings.chord(ComposingAction::ConfirmHighlighted, ChordField::Second),
+            None
+        );
+    }
+
+    #[test]
+    fn document_reads_the_second_field_and_an_empty_one_as_unset() {
+        let mut document = SettingsDocument::default();
+        document.set_raw_string(
+            &ComposingAction::ConfirmHighlighted.settings_key_name(ChordField::Second),
+            &chord(" ", KeyModifiers::NONE).raw_value(PLATFORM),
+        );
+        document.set_raw_string(
+            &ComposingAction::PageForward.settings_key_name(ChordField::Second),
+            "",
+        );
+        let bindings = ComposingKeyBindings::from_document(&document, PLATFORM);
+        assert_eq!(
+            bindings.chord(ComposingAction::ConfirmHighlighted, ChordField::Second),
+            Some(&chord(" ", KeyModifiers::NONE))
+        );
+        assert_eq!(
+            bindings.chord(ComposingAction::PageForward, ChordField::Second),
+            None
+        );
+        assert_eq!(
+            bindings.chord(ComposingAction::PageForward, ChordField::First),
+            Some(&chord("]", KeyModifiers::NONE)),
+            "an empty second field leaves the first on its default"
         );
     }
 

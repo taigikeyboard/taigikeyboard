@@ -16,7 +16,7 @@ use taigi_desktop_core::keys::shortcut_labels::{
     slot_keys_label,
 };
 use taigi_desktop_core::keys::{
-    rejection_message_key, ComposingAction, ComposingKeyBindings, ComposingKeyChord,
+    rejection_message_key, ChordField, ComposingAction, ComposingKeyBindings, ComposingKeyChord,
     RecorderTarget, ShortcutAction,
 };
 use taigi_desktop_core::strings::{StringKey, StringResolver};
@@ -149,21 +149,25 @@ fn global_rows(
         actions
             .iter()
             .map(|action| {
+                let target = RecorderTarget::Global(*action);
+                let field = recorder_field(
+                    window,
+                    strings,
+                    context,
+                    target,
+                    action.chord_in(document, DESKTOP_PLATFORM),
+                );
                 (
                     action.raw(),
-                    recorder_row(
-                        window,
-                        strings,
-                        context,
-                        RecorderTarget::Global(*action),
-                        action.chord_in(document, DESKTOP_PLATFORM),
-                    ),
+                    recorder_row(strings, action.label_key(), [field]),
                 )
             })
             .collect::<Vec<_>>(),
     )
 }
 
+/// One row per composing action, each with its two fields — both fire the
+/// action.
 fn composing_rows(
     window: &SettingsWindow,
     strings: &StringResolver,
@@ -175,26 +179,40 @@ fn composing_rows(
         actions
             .iter()
             .map(|action| {
-                let target = RecorderTarget::Composing(*action);
-                (
-                    action.raw(),
-                    recorder_row(
+                let fields = ChordField::ALL.map(|field| {
+                    recorder_field(
                         window,
                         strings,
                         context,
-                        target,
-                        bindings.chord(*action).cloned(),
-                    ),
+                        RecorderTarget::Composing(*action, field),
+                        bindings.chord(*action, field).cloned(),
+                    )
+                });
+                (
+                    action.raw(),
+                    recorder_row(strings, action.label_key(), fields),
                 )
             })
             .collect::<Vec<_>>(),
     )
 }
 
-/// One recorder row: the field, and a × beside a bound one. The field
-/// shows the chord, or the prompt — or why the last press was refused —
-/// while this row is the one recording.
-fn recorder_row(
+/// One recorder row: its label, and its fields side by side.
+fn recorder_row(strings: &StringResolver, label: StringKey, fields: impl IntoViews) -> View {
+    cards::row(
+        strings.resolve(label),
+        StackPanel::new()
+            .orientation(Orientation::Horizontal)
+            .spacing(FIELD_GAP)
+            .children(fields),
+    )
+}
+
+/// One field and its × beside it. The field shows the chord, or the prompt
+/// — or why the last press was refused — while this field is the one
+/// recording. The × stays in place, disabled, while there is nothing to
+/// clear, so a row's fields line up with the rows above and below it.
+fn recorder_field(
     window: &SettingsWindow,
     strings: &StringResolver,
     context: &mut ViewContext<SettingsWindow>,
@@ -231,22 +249,19 @@ fn recorder_row(
             ButtonStyle::Default
         })
         .on_click(context.callback(move |()| Message::StartRecording(target)))
+        // Two fields can share a row, so each is named apart for Narrator.
+        .automation_name(target.field_accessible_name(strings, &label))
         .content(label);
-    let clear = if chord.is_some() && !is_recording {
-        Button::new()
-            .on_click(context.callback(move |()| Message::ClearShortcut(target)))
-            .content(FontIcon::new().glyph(CLEAR_GLYPH))
-            .tooltip(strings.resolve(StringKey::CommonDelete))
-    } else {
-        View::empty()
-    };
-    cards::row(
-        strings.resolve(target.label_key()),
-        StackPanel::new()
-            .orientation(Orientation::Horizontal)
-            .spacing(FIELD_GAP)
-            .children((field, clear)),
-    )
+    let clear = Button::new()
+        .is_enabled(chord.is_some() && !is_recording)
+        .automation_name(target.clear_accessible_name(strings))
+        .on_click(context.callback(move |()| Message::ClearShortcut(target)))
+        .content(FontIcon::new().glyph(CLEAR_GLYPH))
+        .tooltip(strings.resolve(StringKey::CommonDelete));
+    StackPanel::new()
+        .orientation(Orientation::Horizontal)
+        .spacing(FIELD_GAP)
+        .children((field, clear))
 }
 
 /// Segoe Fluent Icons' `ChromeClose`, the × the egui field drew.

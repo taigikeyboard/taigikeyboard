@@ -14,7 +14,7 @@ use taigi_desktop_core::keys::shortcut_labels::{
     slot_keys_label,
 };
 use taigi_desktop_core::keys::{
-    rejection_message_key, ComposingAction, ComposingKeyBindings, ComposingKeyChord,
+    rejection_message_key, ChordField, ComposingAction, ComposingKeyBindings, ComposingKeyChord,
     RecorderTarget, ShortcutAction,
 };
 use taigi_desktop_core::settings::SettingsDocument;
@@ -33,7 +33,12 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
         )
         .build();
     for action in ComposingAction::GROUPS[0] {
-        recorder_row(&mut context, &selection, RecorderTarget::Composing(*action));
+        recorder_row(
+            &mut context,
+            &selection,
+            action.label_key(),
+            &composing_fields(*action),
+        );
     }
     // Shown, not recordable: the bare slot keys follow the Tone Keys picker
     // (`ToneInputScheme`), the fixed navigation tier, the caret chord.
@@ -66,7 +71,12 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
         )
         .build();
     for action in ComposingAction::GROUPS[1] {
-        recorder_row(&mut context, &output, RecorderTarget::Composing(*action));
+        recorder_row(
+            &mut context,
+            &output,
+            action.label_key(),
+            &composing_fields(*action),
+        );
     }
     // Not drawn under TPS, where a commit is always the Hanji.
     let shifted_slot_keys = shifted_slot_keys_label(bindings.slot_key_set(), DESKTOP_PLATFORM);
@@ -101,7 +111,12 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
         .title(context.strings.resolve(StringKey::CommonOther))
         .build();
     for action in ShortcutAction::ALL {
-        recorder_row(&mut context, &other, RecorderTarget::Global(action));
+        recorder_row(
+            &mut context,
+            &other,
+            action.label_key(),
+            &[RecorderTarget::Global(action)],
+        );
     }
     page.add(&other);
 
@@ -115,17 +130,42 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
     context
 }
 
-/// One recorder row: the field button, and a × beside a bound one. The
-/// field shows the chord, or the prompt — or why the last press was
-/// refused — while this row is the one recording.
+/// The two fields of `action`'s row; either fires the action.
+fn composing_fields(action: ComposingAction) -> [RecorderTarget; 2] {
+    ChordField::ALL.map(|field| RecorderTarget::Composing(action, field))
+}
+
+/// One recorder row: its label, and its fields side by side. Activating the
+/// row records into the first field.
 fn recorder_row(
     context: &mut PageContext<'_>,
     group: &adw::PreferencesGroup,
-    target: RecorderTarget,
+    label: StringKey,
+    targets: &[RecorderTarget],
 ) {
     let row = adw::ActionRow::builder()
-        .title(context.strings.resolve(target.label_key()))
+        .title(context.strings.resolve(label))
         .build();
+    let controls = gtk::Box::new(gtk::Orientation::Horizontal, 4);
+    let fields: Vec<gtk::Button> = targets
+        .iter()
+        .map(|target| recorder_field(context, &controls, *target))
+        .collect();
+    row.set_activatable_widget(fields.first());
+    row.add_suffix(&controls);
+    group.add(&row);
+}
+
+/// One field button and its × beside it, appended to `controls`. The field
+/// shows the chord, or the prompt — or why the last press was refused —
+/// while this field is the one recording. The × stays in place, dimmed,
+/// while there is nothing to clear, so a row's fields line up with the
+/// rows above and below it.
+fn recorder_field(
+    context: &mut PageContext<'_>,
+    controls: &gtk::Box,
+    target: RecorderTarget,
+) -> gtk::Button {
     let field = gtk::Button::builder()
         .valign(gtk::Align::Center)
         .width_request(130)
@@ -136,16 +176,17 @@ fn recorder_row(
         .tooltip_text(context.strings.resolve(StringKey::CommonDelete))
         .css_classes(["flat"])
         .build();
-    let controls = gtk::Box::new(gtk::Orientation::Horizontal, 4);
+    // Two fields can share a row, so each is named apart for a screen reader.
+    clear.update_property(&[gtk::accessible::Property::Label(
+        &target.clear_accessible_name(context.strings),
+    )]);
     controls.append(&field);
     controls.append(&clear);
-    row.add_suffix(&controls);
-    row.set_activatable_widget(Some(&field));
+    let returned = field.clone();
     let shell = context.shell.clone();
     field.connect_clicked(move |button| shell.start_recording(target, Some(button.upcast_ref())));
     let shell = context.shell.clone();
     clear.connect_clicked(move |_| shell.clear_shortcut(target));
-    group.add(&row);
 
     let shell = context.shell.clone();
     let strings = *context.strings;
@@ -170,24 +211,28 @@ fn recorder_row(
             )
         };
         field.set_label(&label);
+        field.update_property(&[gtk::accessible::Property::Label(
+            &target.field_accessible_name(&strings, &label),
+        )]);
         // The accent is what a control wears while it takes input.
         if is_recording {
             field.add_css_class("suggested-action");
         } else {
             field.remove_css_class("suggested-action");
         }
-        clear.set_visible(chord.is_some() && !is_recording);
+        clear.set_sensitive(chord.is_some() && !is_recording);
     };
     refresh(context.document);
     context.on_refresh(refresh);
+    returned
 }
 
 fn chord_of(target: RecorderTarget, document: &SettingsDocument) -> Option<ComposingKeyChord> {
     match target {
         RecorderTarget::Global(action) => action.chord_in(document, DESKTOP_PLATFORM),
-        RecorderTarget::Composing(action) => {
+        RecorderTarget::Composing(action, field) => {
             ComposingKeyBindings::from_document(document, DESKTOP_PLATFORM)
-                .chord(action)
+                .chord(action, field)
                 .cloned()
         }
     }

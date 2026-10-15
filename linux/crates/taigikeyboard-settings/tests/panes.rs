@@ -16,7 +16,7 @@ use std::process::ExitCode;
 use std::rc::Rc;
 use taigi_desktop_core::engine::user_data;
 use taigi_desktop_core::keys::{
-    ComposingAction, ComposingKeyBindings, KeyModifiers, RecorderTarget, ShortcutAction,
+    ChordField, ComposingAction, ComposingKeyBindings, KeyModifiers, RecorderTarget, ShortcutAction,
 };
 use taigi_desktop_core::settings::{keys, InputMode, SettingChoice, SettingsPane};
 use taigi_desktop_core::strings::{DisplayLanguage, StringKey, StringResolver};
@@ -189,7 +189,7 @@ fn a_reset_keeps_the_display_language(window: &Rc<SettingsWindow>) {
 /// (keysym 0x61, keycode 38, no modifiers) is refused and recording
 /// continues; a pane switch or any other row's write ends it; then
 /// Ctrl+Alt+K (0x6b, keycode 45, CONTROL 1<<2 | MOD1 1<<3) is recorded and
-/// stored as the row's chord; the × clears it; a composing row recorded on
+/// stored as the row's chord; the × clears it; a composing row's second field recorded on
 /// a global default empties that global row (last writer wins).
 fn a_recorded_press_binds_the_row(window: &Rc<SettingsWindow>) {
     let target = RecorderTarget::Global(ShortcutAction::ShowTelexGuide);
@@ -230,7 +230,7 @@ fn a_recorded_press_binds_the_row(window: &Rc<SettingsWindow>) {
     assert!(ShortcutAction::ShowTelexGuide
         .chord_in(window.writer().borrow().document(), DESKTOP_PLATFORM)
         .is_none());
-    let composing = RecorderTarget::Composing(ComposingAction::NextCandidate);
+    let composing = RecorderTarget::Composing(ComposingAction::NextCandidate, ChordField::Second);
     window.start_recording(composing, None);
     window.record_press(0x63, 54, (1 << 2) | (1 << 3));
     {
@@ -239,9 +239,16 @@ fn a_recorded_press_binds_the_row(window: &Rc<SettingsWindow>) {
         let bindings = ComposingKeyBindings::from_document(document.document(), DESKTOP_PLATFORM);
         assert_eq!(
             bindings
-                .chord(ComposingAction::NextCandidate)
+                .chord(ComposingAction::NextCandidate, ChordField::Second)
                 .map(|c| c.key.clone()),
             Some("c".to_owned())
+        );
+        assert_eq!(
+            bindings
+                .chord(ComposingAction::NextCandidate, ChordField::First)
+                .map(|c| c.key.clone()),
+            Some("\t".to_owned()),
+            "the first field keeps its default"
         );
         assert!(
             ShortcutAction::ToggleRomanization

@@ -15,8 +15,8 @@ use crate::keys::ComposingAction;
 pub enum KeyPathSetting {
     Switch(SettingsKey<bool>),
     /// A string: a choice, stored as its persisted spelling, or a composing
-    /// chord, which has no stored default — absent is the action's own
-    /// chord, `""` a cleared row.
+    /// chord field, which has no stored default — absent is what the field
+    /// ships with, `""` a cleared field.
     Text {
         name: String,
         default: Option<&'static str>,
@@ -40,8 +40,8 @@ impl KeyPathSetting {
 }
 
 /// Every key-path setting: the four choices, the switches (the General
-/// pane's, the custom dictionary's, every dictionary source), one chord row
-/// per composing action.
+/// pane's, the custom dictionary's, every dictionary source), one chord
+/// per field of every composing action.
 pub fn key_path_settings() -> Vec<KeyPathSetting> {
     let switches = [
         keys::IS_HANJI_FIRST,
@@ -62,8 +62,8 @@ pub fn key_path_settings() -> Vec<KeyPathSetting> {
             .map(|(key, _)| *key),
     )
     .map(KeyPathSetting::Switch);
-    let chords = ComposingAction::ALL.map(|action| KeyPathSetting::Text {
-        name: action.settings_key_name(),
+    let chords = ComposingAction::all_fields().map(|(action, field)| KeyPathSetting::Text {
+        name: action.settings_key_name(field),
         default: None,
     });
     [
@@ -103,7 +103,10 @@ mod tests {
                 keys::IS_CUSTOM_DICT_ENABLED.name,
             ])
             .map(|name| (*name).to_owned())
-            .chain(ComposingAction::ALL.map(ComposingAction::settings_key_name))
+            .chain(
+                ComposingAction::all_fields()
+                    .map(|(action, field)| action.settings_key_name(field)),
+            )
             .collect();
         let mut names: Vec<String> = key_path_settings()
             .iter()

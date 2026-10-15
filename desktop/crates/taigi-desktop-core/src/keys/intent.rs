@@ -580,6 +580,7 @@ impl ComposingKeyIntent {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::keys::ChordField;
     use crate::keys::{ComposingAction, ComposingKeyChord, KeyModifiers};
     use crate::platform::test_support::{TEST_PLATFORM as PLATFORM, WINDOWS_AND_LINUX};
     use crate::platform::DesktopPlatform;
@@ -983,7 +984,7 @@ mod tests {
         let mac = DesktopPlatform::MacOS;
         let mut stored = BTreeMap::new();
         stored.insert(
-            ComposingAction::PageForward,
+            (ComposingAction::PageForward, ChordField::First),
             Some(ComposingKeyChord::make(Some("'"), KeyModifiers::NONE, mac).unwrap()),
         );
         let bindings = ComposingKeyBindings::resolve(&stored, ToneInputScheme::Standard);
@@ -1555,7 +1556,7 @@ mod tests {
         // under TPS the Commit Literal action commits as typed.
         let mut stored = BTreeMap::new();
         stored.insert(
-            ComposingAction::CommitLiteral,
+            (ComposingAction::CommitLiteral, ChordField::First),
             Some(ComposingKeyChord {
                 key: ",".into(),
                 modifiers: KeyModifiers::CONTROL,
@@ -1805,7 +1806,7 @@ mod tests {
         // key: a recorded Ctrl+' commits as typed, window up or not.
         let mut stored = BTreeMap::new();
         stored.insert(
-            ComposingAction::CommitLiteral,
+            (ComposingAction::CommitLiteral, ChordField::First),
             Some(ComposingKeyChord {
                 key: "'".into(),
                 modifiers: KeyModifiers::CONTROL,
@@ -1857,7 +1858,7 @@ mod tests {
         // A navigation row rebound onto another key follows it.
         let mut stored = BTreeMap::new();
         stored.insert(
-            ComposingAction::NextCandidate,
+            (ComposingAction::NextCandidate, ChordField::First),
             Some(ComposingKeyChord {
                 key: "'".into(),
                 modifiers: KeyModifiers::CONTROL,
@@ -2009,7 +2010,7 @@ mod tests {
         // binding then falls to the host-chord guard (commit, pass on).
         let mut stored = BTreeMap::new();
         stored.insert(
-            ComposingAction::CommitAlternateScript,
+            (ComposingAction::CommitAlternateScript, ChordField::First),
             Some(ComposingKeyChord {
                 key: "\r".into(),
                 modifiers: KeyModifiers::ALT,

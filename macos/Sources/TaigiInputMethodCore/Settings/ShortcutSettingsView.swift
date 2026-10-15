@@ -181,13 +181,23 @@ struct ShortcutSettingsView: View {
         }
     }
 
+    /// One composing row: its two fields side by side, either of which fires
+    /// the action. Each field is named with its number for VoiceOver, since
+    /// the two share the row's label (desktop-core `RecorderTarget::field_name`
+    /// is the Windows / Linux twin); the field's own value is read after it.
     private func recorderRow(_ row: ComposingShortcuts.Row) -> some View {
-        LabeledContent(language.string(row.label)) {
-            ShortcutKeyRecorder(
-                chord: row.chord,
-                language: language,
-            ) { key in
-                record(key?.chord, for: row)
+        let label = language.string(row.label)
+        return LabeledContent(label) {
+            HStack {
+                ForEach(Array(row.fields.enumerated()), id: \.element.settingsKey) { index, field in
+                    ShortcutKeyRecorder(
+                        chord: field.chord,
+                        language: language,
+                    ) { key in
+                        record(key?.chord, for: field)
+                    }
+                    .accessibilityLabel(Text(verbatim: "\(label) \(index + 1)"))
+                }
             }
         }
     }
@@ -207,21 +217,21 @@ struct ShortcutSettingsView: View {
         reload()
     }
 
-    /// Writes `chord` to `row`, taking it off whichever row held it.
+    /// Writes `chord` to `field`, taking it off whichever field held it.
     ///
-    /// Last writer wins, and the loser's row visibly empties — the same rule
+    /// Last writer wins, and the loser's field visibly empties — the same rule
     /// the global recorders use (`ShortcutConflicts`), and the one the System
     /// Settings keyboard pane behaves by.
-    private func record(_ chord: ComposingKeyChord?, for row: ComposingShortcuts.Row) {
+    private func record(_ chord: ComposingKeyChord?, for field: ComposingShortcuts.Row.Field) {
         if let chord {
-            for loser in shortcuts.rows(holding: chord, excluding: row) {
+            for loser in shortcuts.fields(holding: chord, excluding: field) {
                 store.setComposingChord(nil, for: loser)
             }
             // And across the seam, same rule: a global shortcut on this key
-            // would fire instead of the row just recorded.
+            // would fire instead of the field just recorded.
             ShortcutConflicts.resolveGlobalRows(after: chord)
         }
-        store.setComposingChord(chord, for: row)
+        store.setComposingChord(chord, for: field)
         reload()
     }
 

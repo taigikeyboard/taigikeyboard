@@ -274,11 +274,12 @@ impl SettingsDocument {
         }
     }
 
-    /// Records `chord` on `action`, or clears the row when `None`
+    /// Records `chord` on `action`'s `field`, or clears the field when `None`
     /// (`SettingsStore.swift` `setComposingChord` is the macOS twin).
     pub fn set_composing_chord(
         &mut self,
         action: crate::keys::ComposingAction,
+        field: crate::keys::ChordField,
         chord: Option<&crate::keys::ComposingKeyChord>,
         platform: crate::platform::DesktopPlatform,
     ) {
@@ -286,15 +287,28 @@ impl SettingsDocument {
             || keys::CLEARED_COMPOSING_CHORD.to_owned(),
             |chord| chord.raw_value(platform),
         );
-        self.set_raw_string(&action.settings_key_name(), &value);
+        self.set_raw_string(&action.settings_key_name(field), &value);
+    }
+
+    /// What `action`'s `field` stores, read in `platform`'s grammar: `None`
+    /// when never touched, `Some(None)` when cleared or unparsable — the
+    /// reading half of [`Self::set_composing_chord`].
+    pub fn stored_composing_chord(
+        &self,
+        action: crate::keys::ComposingAction,
+        field: crate::keys::ChordField,
+        platform: crate::platform::DesktopPlatform,
+    ) -> Option<Option<crate::keys::ComposingKeyChord>> {
+        self.raw_string(&action.settings_key_name(field))
+            .map(|raw| crate::keys::ComposingKeyChord::from_raw(raw, platform))
     }
 
     /// Puts every key the shortcuts pane owns on the composing side back to
-    /// shipped state — removed, not written (`SettingsStore.swift`
-    /// `resetComposingShortcuts` is the macOS twin).
+    /// shipped state — both fields of every row removed, not written
+    /// (`SettingsStore.swift` `resetComposingShortcuts` is the macOS twin).
     pub fn reset_composing_shortcuts(&mut self) {
-        for action in crate::keys::ComposingAction::ALL {
-            self.remove(&action.settings_key_name());
+        for (action, field) in crate::keys::ComposingAction::all_fields() {
+            self.remove(&action.settings_key_name(field));
         }
     }
 

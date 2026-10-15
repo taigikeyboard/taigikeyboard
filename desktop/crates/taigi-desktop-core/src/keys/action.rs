@@ -6,6 +6,19 @@ use super::intent::{CandidateNavigation, ComposingKeyIntent};
 use super::snapshot::KeyModifiers;
 use crate::strings::StringKey;
 
+/// One of the two chords a composing action can hold — the settings row's two
+/// recorder fields. Both fire the action alike; only `First` has a shipped
+/// default (Discord #issues: Space and Enter both confirming).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum ChordField {
+    First,
+    Second,
+}
+
+impl ChordField {
+    pub const ALL: [ChordField; 2] = [Self::First, Self::Second];
+}
+
 /// One thing the input method does while a composition is running, as the
 /// settings window names it. Only the actions whose key is the user's to
 /// choose are here; the fixed navigation tier and the slot keys are not.
@@ -105,6 +118,23 @@ impl ComposingAction {
         }
     }
 
+    /// What `field` holds on a fresh install: the default on the first field,
+    /// nothing on the second.
+    pub fn shipped_chord(self, field: ChordField) -> Option<ComposingKeyChord> {
+        match field {
+            ChordField::First => Some(self.default_chord()),
+            ChordField::Second => None,
+        }
+    }
+
+    /// Every field of every action, roster order then field order — the
+    /// tiebreak order the bindings resolver reads.
+    pub fn all_fields() -> impl Iterator<Item = (ComposingAction, ChordField)> {
+        Self::ALL
+            .into_iter()
+            .flat_map(|action| ChordField::ALL.map(move |field| (action, field)))
+    }
+
     /// Whether this action needs candidates on screen to mean anything. A
     /// chord whose action does not apply is not consumed: `]` still types a
     /// bracket when there is no page to turn.
@@ -141,10 +171,16 @@ impl ComposingAction {
         }
     }
 
-    /// The settings key this action's chord is stored under. An absent key
-    /// means "never touched"; a stored empty string means "cleared".
-    pub fn settings_key_name(self) -> String {
-        Self::settings_key_name_for_raw(self.raw())
+    /// The settings key `field`'s chord is stored under. The first field's
+    /// key predates the second and keeps its name: absent means "never
+    /// touched" (the default), a stored empty string means "cleared". The
+    /// second field ships empty, so absent and empty read the same there.
+    pub fn settings_key_name(self, field: ChordField) -> String {
+        let first = Self::settings_key_name_for_raw(self.raw());
+        match field {
+            ChordField::First => first,
+            ChordField::Second => format!("{first}.second"),
+        }
     }
 
     /// The same key for a raw value the roster may no longer have — what a
@@ -188,11 +224,14 @@ mod tests {
     fn every_action_has_its_own_settings_key_and_raw_round_trips() {
         let mut names: Vec<_> = ComposingAction::ALL
             .iter()
-            .map(|a| a.settings_key_name())
+            .flat_map(|a| ChordField::ALL.map(|field| a.settings_key_name(field)))
             .collect();
         names.sort();
         names.dedup();
-        assert_eq!(names.len(), ComposingAction::ALL.len());
+        assert_eq!(
+            names.len(),
+            ComposingAction::ALL.len() * ChordField::ALL.len()
+        );
         // trace: `settings_key_name` = `composingShortcut.<raw>` — the raw values ARE the
         // stored keys; renaming one drops every chord recorded under it.
         assert_eq!(
@@ -208,13 +247,17 @@ mod tests {
             ]
         );
         assert_eq!(
-            ComposingAction::NextCandidate.settings_key_name(),
+            ComposingAction::NextCandidate.settings_key_name(ChordField::First),
             "composingShortcut.nextCandidate"
+        );
+        assert_eq!(
+            ComposingAction::NextCandidate.settings_key_name(ChordField::Second),
+            "composingShortcut.nextCandidate.second"
         );
         for action in ComposingAction::ALL {
             assert_eq!(ComposingAction::from_raw(action.raw()), Some(action));
             assert_eq!(
-                action.settings_key_name(),
+                action.settings_key_name(ChordField::First),
                 format!("composingShortcut.{}", action.raw())
             );
         }

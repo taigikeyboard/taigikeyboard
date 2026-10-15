@@ -128,7 +128,9 @@ impl SettingsProvider for SnapshotSettings {
 mod tests {
     use super::*;
     use crate::test_support::{boolean, text};
-    use taigi_desktop_core::keys::{ComposingAction, ComposingKeyBindings, ToneInputScheme};
+    use taigi_desktop_core::keys::{
+        ChordField, ComposingAction, ComposingKeyBindings, ToneInputScheme,
+    };
     use taigi_desktop_core::platform::DesktopPlatform;
     use taigi_desktop_core::settings::{
         CandidateDisplayMode, EngineSettings, InputMode, SettingChoice,
@@ -194,6 +196,7 @@ mod tests {
             boolean("moeDictEnabled", false),
             text("composingShortcut.pageForward", "o|005D"),
             text("composingShortcut.nextCandidate", ""),
+            text("composingShortcut.confirmHighlighted.second", "|0020"),
         ])
         .unwrap();
         let engine = document.engine_settings();
@@ -202,10 +205,17 @@ mod tests {
         assert!(!engine.dictionary_sources.kautian);
         let bindings = ComposingKeyBindings::from_document(&document, DesktopPlatform::MacOS);
         let page_forward = bindings
-            .chord(ComposingAction::PageForward)
+            .chord(ComposingAction::PageForward, ChordField::First)
             .expect("an ⌥] chord");
         assert_eq!(page_forward.raw_value(DesktopPlatform::MacOS), "o|005D");
-        assert_eq!(bindings.chord(ComposingAction::NextCandidate), None);
+        assert_eq!(
+            bindings.chord(ComposingAction::NextCandidate, ChordField::First),
+            None
+        );
+        let second = bindings
+            .chord(ComposingAction::ConfirmHighlighted, ChordField::Second)
+            .expect("a second-field Space");
+        assert_eq!(second.raw_value(DesktopPlatform::MacOS), "|0020");
     }
 
     #[test]

@@ -26,7 +26,7 @@ mod tone_input_scheme;
 mod tps_keyboard_rows;
 mod tps_layout;
 
-pub use action::ComposingAction;
+pub use action::{ChordField, ComposingAction};
 pub use bindings::ComposingKeyBindings;
 pub use chord::{ChordRejection, ComposingKeyChord, SEMICOLON_KEY_CODE};
 pub use input_method_menu::{menu_rows, MenuCommand, MenuRow, MENU};

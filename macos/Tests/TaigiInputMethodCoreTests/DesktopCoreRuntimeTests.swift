@@ -155,13 +155,14 @@ final class DesktopCoreRuntimeTests: XCTestCase {
         for key in booleans {
             expected[key.name] = .boolean(key.defaultValue)
         }
-        // A chord row has no stored default: absent is the action's own chord.
+        // A chord field has no stored default: absent is what it ships with.
         // Spelled out: renaming one would drop every chord stored under it.
         for action in [
             "nextCandidate", "previousCandidate", "pageForward", "pageBackward",
             "confirmHighlighted", "commitLiteral", "commitAlternateScript",
         ] {
             expected["composingShortcut.\(action)"] = .some(nil)
+            expected["composingShortcut.\(action).second"] = .some(nil)
         }
 
         let described = try descriptors()

@@ -6,7 +6,8 @@
 use std::collections::BTreeMap;
 
 use taigi_desktop_core::keys::{
-    ComposingAction, ComposingKeyBindings, ComposingKeyChord, KeyEventSnapshot, KeyModifiers,
+    ChordField, ComposingAction, ComposingKeyBindings, ComposingKeyChord, KeyEventSnapshot,
+    KeyModifiers,
 };
 use taigi_desktop_core::settings::SettingsDocument;
 
@@ -54,14 +55,14 @@ fn bindings(stored: &str) -> String {
     if stored != "-" {
         for assignment in stored.split(';') {
             let (name, value) = assignment.split_once('=').unwrap();
-            document.set_raw_string(&action(name).settings_key_name(), value);
+            document.set_raw_string(&action(name).settings_key_name(ChordField::First), value);
         }
     }
     let bindings = ComposingKeyBindings::from_document(&document, DESKTOP_PLATFORM);
     ComposingAction::ALL
         .map(|action| {
             let chord = bindings
-                .chord(action)
+                .chord(action, ChordField::First)
                 .map_or_else(|| "-".to_owned(), |chord| chord.raw_value(DESKTOP_PLATFORM));
             format!("{}={chord}", action.raw())
         })

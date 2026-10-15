@@ -13,7 +13,7 @@
 //! identity and every conflict rule is a pure function over one settings
 //! document.
 
-use super::action::ComposingAction;
+use super::action::{ChordField, ComposingAction};
 use super::bindings::ComposingKeyBindings;
 use super::chord::{ChordRejection, ComposingKeyChord};
 use super::snapshot::{KeyEventSnapshot, KeyModifiers};
@@ -385,22 +385,26 @@ impl ShortcutConflicts {
             return;
         };
         let bindings = ComposingKeyBindings::from_document(document, platform);
-        for loser in bindings.actions_holding(&chord, None) {
-            document.set_composing_chord(loser, None, platform);
+        for (action, field) in
+            Self::composing_fields_holding(document, &bindings, &chord, None, platform)
+        {
+            document.set_composing_chord(action, field, None, platform);
         }
     }
 
     /// A composing recording just landed on `changed` with `chord`: take the
-    /// chord off every other composing row and every global row that held it.
+    /// chord off every other composing field and every global row that held it.
     pub fn resolve_after_composing_recording(
         document: &mut SettingsDocument,
-        changed: ComposingAction,
+        changed: (ComposingAction, ChordField),
         chord: &ComposingKeyChord,
         platform: DesktopPlatform,
     ) {
         let bindings = ComposingKeyBindings::from_document(document, platform);
-        for loser in bindings.actions_holding(chord, Some(changed)) {
-            document.set_composing_chord(loser, None, platform);
+        for (action, field) in
+            Self::composing_fields_holding(document, &bindings, chord, Some(changed), platform)
+        {
+            document.set_composing_chord(action, field, None, platform);
         }
         for action in ShortcutAction::ALL {
             if action.chord_in(document, platform).as_ref() == Some(chord) {
@@ -436,31 +440,52 @@ impl ShortcutConflicts {
                 action.store_in(document, None, platform);
             }
         }
+        // Every holder is read off the document as it stands before any
+        // clearing, so one row's clearing cannot change who else collides.
         let bindings = ComposingKeyBindings::from_document(document, platform);
-        let held: Vec<(ShortcutAction, ComposingKeyChord)> = ShortcutAction::ALL
+        let held: Vec<_> = ShortcutAction::ALL
             .into_iter()
             .filter_map(|action| {
-                action
-                    .chord_in(document, platform)
-                    .map(|chord| (action, chord))
+                let chord = action.chord_in(document, platform)?;
+                let holders =
+                    Self::composing_fields_holding(document, &bindings, &chord, None, platform);
+                Some((action, chord, holders))
             })
             .collect();
-        for (action, chord) in &held {
-            let holders = bindings.actions_holding(chord, None);
-            if holders.is_empty() {
-                continue;
-            }
-            let global_is_default = *chord == action.default_chord();
-            for holder in holders {
+        for (action, chord, holders) in held {
+            let global_is_default = chord == action.default_chord();
+            for (holder, field) in holders {
                 let composing_recording_outranks =
-                    global_is_default && *chord != holder.default_chord();
+                    global_is_default && Some(&chord) != holder.shipped_chord(field).as_ref();
                 if composing_recording_outranks {
                     action.store_in(document, None, platform);
                 } else {
-                    document.set_composing_chord(holder, None, platform);
+                    document.set_composing_chord(holder, field, None, platform);
                 }
             }
         }
+    }
+
+    /// Every composing field holding `chord`, other than `excluding`: the
+    /// holders the resolver shows, and any recording it hid behind them — a
+    /// chord stored on two fields by hand, or by an older build that never
+    /// read the second field. Clearing only the shown holder would let the
+    /// hidden one resurface on the next read.
+    pub fn composing_fields_holding(
+        document: &SettingsDocument,
+        bindings: &ComposingKeyBindings,
+        chord: &ComposingKeyChord,
+        excluding: Option<(ComposingAction, ChordField)>,
+        platform: DesktopPlatform,
+    ) -> Vec<(ComposingAction, ChordField)> {
+        ComposingAction::all_fields()
+            .filter(|key| Some(*key) != excluding)
+            .filter(|&(action, field)| {
+                let stored = document.stored_composing_chord(action, field, platform);
+                bindings.chord(action, field) == Some(chord)
+                    || stored.flatten().as_ref() == Some(chord)
+            })
+            .collect()
     }
 }
 
@@ -760,7 +785,12 @@ mod tests {
         // A global default shadowed by a composing recording: the recording wins.
         let mut doc = SettingsDocument::default();
         let default = ShortcutAction::ToggleRomanization.default_chord();
-        doc.set_composing_chord(ComposingAction::PageForward, Some(&default), PLATFORM);
+        doc.set_composing_chord(
+            ComposingAction::PageForward,
+            ChordField::First,
+            Some(&default),
+            PLATFORM,
+        );
         ShortcutConflicts::resolve_across_registries(&mut doc, PLATFORM);
         assert_eq!(
             ShortcutAction::ToggleRomanization.chord_in(&doc, PLATFORM),
@@ -768,7 +798,8 @@ mod tests {
             "the default gives way"
         );
         assert_eq!(
-            ComposingKeyBindings::from_document(&doc, PLATFORM).chord(ComposingAction::PageForward),
+            ComposingKeyBindings::from_document(&doc, PLATFORM)
+                .chord(ComposingAction::PageForward, ChordField::First),
             Some(&default)
         );
 
@@ -779,7 +810,7 @@ mod tests {
         ShortcutConflicts::resolve_across_registries(&mut doc, PLATFORM);
         assert_eq!(
             ComposingKeyBindings::from_document(&doc, PLATFORM)
-                .chord(ComposingAction::PreviousCandidate),
+                .chord(ComposingAction::PreviousCandidate, ChordField::First),
             None
         );
         assert_eq!(
@@ -790,7 +821,12 @@ mod tests {
         // Recording vs recording: the global tier wins.
         let mut doc = SettingsDocument::default();
         let recorded = chord("f", KeyModifiers::CONTROL.with(KeyModifiers::ALT));
-        doc.set_composing_chord(ComposingAction::PageForward, Some(&recorded), PLATFORM);
+        doc.set_composing_chord(
+            ComposingAction::PageForward,
+            ChordField::First,
+            Some(&recorded),
+            PLATFORM,
+        );
         ShortcutAction::ToggleRomanization.store_in(&mut doc, Some(&recorded), PLATFORM);
         ShortcutConflicts::resolve_across_registries(&mut doc, PLATFORM);
         assert_eq!(
@@ -798,7 +834,8 @@ mod tests {
             Some(recorded)
         );
         assert_eq!(
-            ComposingKeyBindings::from_document(&doc, PLATFORM).chord(ComposingAction::PageForward),
+            ComposingKeyBindings::from_document(&doc, PLATFORM)
+                .chord(ComposingAction::PageForward, ChordField::First),
             None
         );
         // Idempotent.
@@ -863,15 +900,26 @@ mod tests {
         );
         ShortcutConflicts::resolve_across_registries(&mut doc, PLATFORM);
         let bindings = ComposingKeyBindings::from_document(&doc, PLATFORM);
-        assert_eq!(bindings.chord(ComposingAction::PreviousCandidate), None);
-        assert_eq!(bindings.chord(ComposingAction::PageForward), None);
+        assert_eq!(
+            bindings.chord(ComposingAction::PreviousCandidate, ChordField::First),
+            None
+        );
+        assert_eq!(
+            bindings.chord(ComposingAction::PageForward, ChordField::First),
+            None
+        );
         let mut doc = SettingsDocument::default();
         let ctrl_r = chord("r", KeyModifiers::CONTROL.with(KeyModifiers::SHIFT));
-        doc.set_composing_chord(ComposingAction::CommitLiteral, Some(&ctrl_r), PLATFORM);
+        doc.set_composing_chord(
+            ComposingAction::CommitLiteral,
+            ChordField::First,
+            Some(&ctrl_r),
+            PLATFORM,
+        );
         ShortcutAction::OpenLastSettingsPane.store_in(&mut doc, Some(&ctrl_r), PLATFORM);
         ShortcutConflicts::resolve_across_registries(&mut doc, PLATFORM);
         let restored = ComposingKeyBindings::from_document(&doc, PLATFORM)
-            .chord(ComposingAction::CommitLiteral)
+            .chord(ComposingAction::CommitLiteral, ChordField::First)
             .cloned();
         assert!(
             restored.is_some(),
@@ -881,14 +929,85 @@ mod tests {
     }
 
     #[test]
+    fn launch_reconcile_treats_a_second_field_as_a_recording() {
+        // trace: a second field ships empty, so any chord on it is a
+        // recording. Against a global DEFAULT it outranks (the global row
+        // empties); against a global RECORDING the global tier wins.
+        let confirm = ComposingAction::ConfirmHighlighted;
+        let global_default = ShortcutAction::ToggleRomanization.default_chord();
+        let mut doc = SettingsDocument::default();
+        doc.set_composing_chord(confirm, ChordField::Second, Some(&global_default), PLATFORM);
+        ShortcutConflicts::resolve_across_registries(&mut doc, PLATFORM);
+        assert_eq!(
+            ShortcutAction::ToggleRomanization.chord_in(&doc, PLATFORM),
+            None
+        );
+        assert_eq!(
+            ComposingKeyBindings::from_document(&doc, PLATFORM).chord(confirm, ChordField::Second),
+            Some(&global_default)
+        );
+
+        let recorded = chord("k", KeyModifiers::CONTROL.with(KeyModifiers::ALT));
+        let mut doc = SettingsDocument::default();
+        doc.set_composing_chord(confirm, ChordField::Second, Some(&recorded), PLATFORM);
+        ShortcutAction::ToggleRomanization.store_in(&mut doc, Some(&recorded), PLATFORM);
+        ShortcutConflicts::resolve_across_registries(&mut doc, PLATFORM);
+        assert_eq!(
+            ShortcutAction::ToggleRomanization.chord_in(&doc, PLATFORM),
+            Some(recorded.clone())
+        );
+        assert_eq!(
+            ComposingKeyBindings::from_document(&doc, PLATFORM).chord(confirm, ChordField::Second),
+            None
+        );
+        let before = doc.clone();
+        ShortcutConflicts::resolve_across_registries(&mut doc, PLATFORM);
+        assert_eq!(doc.to_json(), before.to_json(), "idempotent");
+    }
+
+    /// A deliberate change for first-field-only data too: a chord stored on
+    /// two first fields (a hand edit) shows on the later one only, and a
+    /// global recording of it now clears BOTH. Before the second field, only
+    /// the shown one was cleared and the hidden one came back once the global
+    /// row let the chord go.
+    #[test]
+    fn a_global_recording_clears_a_first_field_copy_the_resolver_hid() {
+        let control_k = chord("k", KeyModifiers::CONTROL.with(KeyModifiers::ALT));
+        let mut doc = SettingsDocument::default();
+        for action in [ComposingAction::NextCandidate, ComposingAction::PageForward] {
+            doc.set_composing_chord(action, ChordField::First, Some(&control_k), PLATFORM);
+        }
+        ShortcutAction::ToggleRomanization.store_in(&mut doc, Some(&control_k), PLATFORM);
+        ShortcutConflicts::resolve_after_global_recording(
+            &mut doc,
+            ShortcutAction::ToggleRomanization,
+            PLATFORM,
+        );
+        ShortcutAction::ToggleRomanization.store_in(&mut doc, None, PLATFORM);
+        let bindings = ComposingKeyBindings::from_document(&doc, PLATFORM);
+        for action in [ComposingAction::NextCandidate, ComposingAction::PageForward] {
+            assert_eq!(
+                bindings.chord(action, ChordField::First),
+                None,
+                "{action:?}"
+            );
+        }
+    }
+
+    #[test]
     fn composing_recording_clears_the_global_row_that_held_the_chord() {
         let mut doc = SettingsDocument::default();
         let shared = chord("]", KeyModifiers::CONTROL.with(KeyModifiers::SHIFT));
         ShortcutAction::ToggleRomanization.store_in(&mut doc, Some(&shared), PLATFORM);
-        doc.set_composing_chord(ComposingAction::PageForward, Some(&shared), PLATFORM);
+        doc.set_composing_chord(
+            ComposingAction::PageForward,
+            ChordField::First,
+            Some(&shared),
+            PLATFORM,
+        );
         ShortcutConflicts::resolve_after_composing_recording(
             &mut doc,
-            ComposingAction::PageForward,
+            (ComposingAction::PageForward, ChordField::First),
             &shared,
             PLATFORM,
         );
@@ -897,7 +1016,8 @@ mod tests {
             None
         );
         assert_eq!(
-            ComposingKeyBindings::from_document(&doc, PLATFORM).chord(ComposingAction::PageForward),
+            ComposingKeyBindings::from_document(&doc, PLATFORM)
+                .chord(ComposingAction::PageForward, ChordField::First),
             Some(&shared)
         );
     }

@@ -73,6 +73,7 @@ impl SymbolPickerIntent {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::keys::ChordField;
     use crate::keys::{
         ComposingKeyChord, ComposingKeyIntent, KeyModifiers, NavigationKey, ToneInputScheme,
     };
@@ -274,7 +275,12 @@ mod tests {
             ] {
                 let chord = ComposingKeyChord::make(Some("\r"), modifiers, platform).unwrap();
                 let mut document = crate::settings::SettingsDocument::default();
-                document.set_composing_chord(ComposingAction::PageForward, Some(&chord), platform);
+                document.set_composing_chord(
+                    ComposingAction::PageForward,
+                    ChordField::First,
+                    Some(&chord),
+                    platform,
+                );
                 let bindings = ComposingKeyBindings::from_document(&document, platform);
                 assert_eq!(
                     SymbolPickerIntent::intent(&named("\r", modifiers), &bindings, platform),

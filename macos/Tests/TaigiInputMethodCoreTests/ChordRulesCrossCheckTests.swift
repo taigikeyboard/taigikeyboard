@@ -47,12 +47,12 @@ final class ChordRulesCrossCheckTests: XCTestCase {
             for assignment in stored.split(separator: ";") {
                 let parts = assignment.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
                 try store.userDefaults.set(
-                    String(parts[1]), forKey: TestFixtures.row(String(parts[0]), in: shipped).settingsKey,
+                    String(parts[1]), forKey: TestFixtures.row(String(parts[0]), in: shipped).first.settingsKey,
                 )
             }
         }
         return try TestFixtures.composingShortcuts(in: store).rows
-            .map { "\($0.name)=\($0.chord?.rawValue ?? "-")" }
+            .map { "\($0.name)=\($0.first.chord?.rawValue ?? "-")" }
             .joined(separator: ";")
     }
 }

@@ -370,15 +370,16 @@ final class SettingsStore: @unchecked Sendable {
             defaultValue: true,
         )
 
-        /// The per-action composing chords are keyed by the name desktop-core
-        /// gives each row (`ComposingShortcuts.Row.settingsKey`) rather than
-        /// named here one by one: the core's roster is the source of truth for
-        /// which of them exist, and a second list would be one an action could
-        /// be added to only one of.
+        /// The per-field composing chords are keyed by the name desktop-core
+        /// gives each field (`ComposingShortcuts.Row.Field.settingsKey`) rather
+        /// than named here one by one: the core's roster is the source of truth
+        /// for which of them exist, and a second list would be one an action
+        /// could be added to only one of.
         ///
-        /// An absent key means "never touched" and reads as the action's
-        /// default; a stored empty string means the user cleared the row, which
-        /// is why the two cannot be collapsed.
+        /// On a first field an absent key means "never touched" and reads as
+        /// the action's default; a stored empty string means the user cleared
+        /// it, which is why the two cannot be collapsed. A second field ships
+        /// empty, so both read as empty there.
         static let clearedComposingChord = ""
     }
 
@@ -528,11 +529,11 @@ final class SettingsStore: @unchecked Sendable {
         userDefaults.set(after.symbols, forKey: Keys.recentSymbols.name)
     }
 
-    /// Records `chord` on `row`, or clears the row when it is nil.
-    func setComposingChord(_ chord: ComposingKeyChord?, for row: ComposingShortcuts.Row) {
+    /// Records `chord` on `field`, or clears the field when it is nil.
+    func setComposingChord(_ chord: ComposingKeyChord?, for field: ComposingShortcuts.Row.Field) {
         userDefaults.set(
             chord?.rawValue ?? Keys.clearedComposingChord,
-            forKey: row.settingsKey,
+            forKey: field.settingsKey,
         )
     }
 
@@ -545,8 +546,8 @@ final class SettingsStore: @unchecked Sendable {
     /// move. The global half of the pane is `KeyboardShortcuts`' own registry and
     /// is restored by its `reset`, which writes each name's initial shortcut back.
     func resetComposingShortcuts(_ shortcuts: ComposingShortcuts) {
-        for row in shortcuts.rows {
-            userDefaults.removeObject(forKey: row.settingsKey)
+        for field in shortcuts.rows.flatMap(\.fields) {
+            userDefaults.removeObject(forKey: field.settingsKey)
         }
     }
 

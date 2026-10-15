@@ -459,17 +459,33 @@ message ComposingShortcutsReply {
 message ComposingShortcut {
   // `ComposingAction::raw`: `nextCandidate`.
   string name = 1;
-  // Where its chord is stored: `composingShortcut.<name>`.
-  string settings_key = 2;
+  // The row's one chord, before each row had two fields (2026-10-15).
+  reserved 2, 5, 6;
+  reserved "settings_key", "chord", "default_chord";
   // Its label, as an i18n key (`i18n_desktop_actionNextCandidate`).
   string label_key = 3;
   // Its block on the pane (`ComposingAction::GROUPS`): 0 through the
   // candidates, 1 out of the composition.
   uint32 group = 4;
-  // The resolved chord; unset = the row is empty.
-  Chord chord = 5;
-  // What a fresh install has on it.
-  Chord default_chord = 6;
+  // Its two fields (`ChordField::ALL`), first then second; either fires
+  // the action.
+  repeated ComposingShortcutField fields = 7;
+}
+
+message ComposingShortcutField {
+  // Where its chord is stored: `composingShortcut.<name>`, or
+  // `composingShortcut.<name>.second` for the second field.
+  string settings_key = 1;
+  // The resolved chord; unset = the field is empty.
+  Chord chord = 2;
+  // What a fresh install has on it; unset on the second field, which ships
+  // empty.
+  Chord shipped_chord = 3;
+  // What the store holds, parsed; unset when absent, cleared or unparsable.
+  // A chord stored here that the resolver hid behind another field is still
+  // a holder a recording must clear
+  // (`ShortcutConflicts::composing_fields_holding`).
+  Chord stored_chord = 4;
 }
 
 // The core's one input-mode writer (`SettingsDocument::switch_input_mode`,
