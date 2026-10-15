@@ -378,9 +378,10 @@ fn a_remapped_host_chord_stays_the_hosts() {
 }
 
 #[test]
-fn enter_commits_the_highlighted_cell_and_space_its_other_script() {
-    // trace (read by running): cell 1 is 好 hó; Enter writes 好 (Hanji takes
-    // no space), Space writes hó, which earns the space and its arm.
+fn confirm_commits_the_highlighted_cell_and_the_other_script_row_its_other_script() {
+    // trace (read by running): cell 1 is 好 hó; Confirm Key writes 好 (Hanji
+    // takes no space), Output the Other Script writes hó, which earns the
+    // space and its arm.
     let mut rig = new_rig(true);
     rig.type_word("ho");
     rig.surface.selected = Some(1);

@@ -40,8 +40,6 @@ struct ComposingShortcuts: Sendable {
         let group: Int
         /// The first field, then the second.
         let fields: [Field]
-        /// What a fresh install has on the first field — every row ships one.
-        let defaultChord: ComposingKeyChord
 
         var first: Field {
             fields[0]

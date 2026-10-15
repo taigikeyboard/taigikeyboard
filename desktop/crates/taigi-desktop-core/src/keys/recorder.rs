@@ -262,35 +262,36 @@ mod tests {
 
     #[test]
     fn a_second_field_recording_takes_the_chord_from_every_other_field() {
-        // trace: Space ships on alternate.first; recorded on confirm.second it
-        // empties alternate.first (`composing_fields_holding`); then recorded
-        // on confirm.first it empties confirm.second — one chord, one field.
+        // trace: Space ships on confirm.second; recorded on alternate.first
+        // (Space writing the other script, as before 2026-10-15) it empties
+        // confirm.second (`composing_fields_holding`); then recorded on
+        // alternate.second it empties alternate.first — one chord, one field.
         let space = ComposingKeyChord::make(Some(" "), KeyModifiers::NONE, PLATFORM).unwrap();
         let confirm = ComposingAction::ConfirmHighlighted;
         let alternate = ComposingAction::CommitAlternateScript;
         let mut document = SettingsDocument::default();
-        RecorderTarget::Composing(confirm, ChordField::Second).store(
+        RecorderTarget::Composing(alternate, ChordField::First).store(
             &mut document,
             Some(&space),
             PLATFORM,
         );
         let bindings = ComposingKeyBindings::from_document(&document, PLATFORM);
-        assert_eq!(bindings.chord(confirm, ChordField::Second), Some(&space));
-        assert_eq!(bindings.chord(alternate, ChordField::First), None);
+        assert_eq!(bindings.chord(alternate, ChordField::First), Some(&space));
+        assert_eq!(bindings.chord(confirm, ChordField::Second), None);
         assert_eq!(
-            document.raw_string(&alternate.settings_key_name(ChordField::First)),
+            document.raw_string(&confirm.settings_key_name(ChordField::Second)),
             Some(""),
             "the loser is cleared, not left on a shadowed default"
         );
 
-        RecorderTarget::Composing(confirm, ChordField::First).store(
+        RecorderTarget::Composing(alternate, ChordField::Second).store(
             &mut document,
             Some(&space),
             PLATFORM,
         );
         let bindings = ComposingKeyBindings::from_document(&document, PLATFORM);
-        assert_eq!(bindings.chord(confirm, ChordField::First), Some(&space));
-        assert_eq!(bindings.chord(confirm, ChordField::Second), None);
+        assert_eq!(bindings.chord(alternate, ChordField::Second), Some(&space));
+        assert_eq!(bindings.chord(alternate, ChordField::First), None);
     }
 
     #[test]

@@ -24,6 +24,10 @@ final class AutoSpaceControllerTests: XCTestCase {
         // The literal-commit cases need the §34 literal at cell 0; Show Typed
         // Text First ships OFF since 2026-10-02, so it is pinned ON here.
         UserDefaults.standard.set(true, forKey: SettingsStore.Keys.isLiteralRomanCandidateEnabled.name)
+        // The alternate-commit cases drive Output the Other Script with
+        // Space, its shipped key until 2026-10-15 — recorded here so they
+        // keep pinning that action.
+        UserDefaults.standard.set("|0020", forKey: "composingShortcut.commitAlternateScript")
     }
 
     // MARK: - Trailing space after a commit

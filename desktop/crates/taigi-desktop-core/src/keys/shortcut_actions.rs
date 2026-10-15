@@ -556,9 +556,8 @@ mod tests {
                 "{action:?}'s default must be recordable"
             );
         }
-        let composing_defaults: Vec<_> = ComposingAction::ALL
-            .iter()
-            .map(|a| a.default_chord())
+        let composing_defaults: Vec<_> = ComposingAction::all_fields()
+            .filter_map(|(action, field)| action.shipped_chord(field))
             .collect();
         for action in ShortcutAction::ALL {
             assert!(

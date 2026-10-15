@@ -391,12 +391,14 @@ impl ComposingKeyIntent {
             if let Some(slot) = bindings.slot_key_set().slot_for_event(key) {
                 return Some(Self::SelectCandidateSlot { slot, flip: false });
             }
-            if key.modifiers.is_empty() && key.characters.as_deref() == Some(" ") {
+            if Self::is_bare_space(key) {
                 return Some(Self::CommitHighlightedCandidate);
             }
         }
-        // A key that types a glyph types it; only the rest can move or commit.
-        if !is_composing || tps_glyph_for_event(key).is_some() {
+        // A key that types a glyph types it, and a bare Space is the
+        // separator (`tps_key`) whatever row holds it — Confirm Key ships on
+        // Space; only the rest can move or commit.
+        if !is_composing || Self::is_bare_space(key) || tps_glyph_for_event(key).is_some() {
             return None;
         }
         let action = bindings.action_for(key, platform);
@@ -431,13 +433,18 @@ impl ComposingKeyIntent {
         if let Some(glyph) = tps_glyph_for_event(key) {
             return Some(Self::TpsKey(glyph.to_owned()));
         }
-        if key.modifiers.is_empty() && key.characters.as_deref() == Some(" ") {
+        if Self::is_bare_space(key) {
             return Some(Self::composition_or_host(
                 is_composing,
                 Self::TpsKey(" ".to_owned()),
             ));
         }
         None
+    }
+
+    /// Space with no modifier — TPS's separator and its window's confirm key.
+    fn is_bare_space(key: &KeyEventSnapshot) -> bool {
+        key.modifiers.is_empty() && key.characters.as_deref() == Some(" ")
     }
 
     /// The commit a keyless event runs over a composition before it writes
@@ -1338,10 +1345,12 @@ mod tests {
     }
 
     #[test]
-    fn space_commits_the_other_script_only_while_the_window_is_up() {
+    fn space_confirms_only_while_the_window_is_up() {
+        // trace: Space ships on Confirm Key's second field (USER 2026-10-15);
+        // with no window the row does not apply and Space is document text.
         assert_eq!(
             classify(&text(" "), true, true),
-            ComposingKeyIntent::CommitAlternateScript
+            ComposingKeyIntent::CommitHighlightedCandidate
         );
         assert_eq!(
             classify(&text(" "), true, false),
@@ -1615,8 +1624,9 @@ mod tests {
 
     #[test]
     fn under_tps_space_is_the_separator_mid_composition_and_the_hosts_idle() {
-        // Space's default binding (Output the Other Script) never sees it.
-        // With the window up it confirms (D7).
+        // No binding sees it — Confirm Key ships on Space, yet mid-composition
+        // with no window Space is the separator. With the window up it
+        // confirms (D7).
         assert_eq!(
             classify_tps(&text(" "), true, true),
             ComposingKeyIntent::CommitHighlightedCandidate
@@ -1629,6 +1639,28 @@ mod tests {
             classify_tps(&text(" "), false, false),
             ComposingKeyIntent::PassThrough
         );
+    }
+
+    #[test]
+    fn under_tps_space_stays_the_separator_whatever_row_holds_it() {
+        // trace: `tps_window_key` returns before `action_for` on a bare Space,
+        // so a row the user put Space on — a paging row (would open the
+        // window) or Output What You Are Typing (would commit as typed) —
+        // never takes the separator (D3).
+        for action in [ComposingAction::PageForward, ComposingAction::CommitLiteral] {
+            let mut stored = BTreeMap::new();
+            stored.insert(
+                (action, ChordField::First),
+                Some(ComposingKeyChord::make(Some(" "), KeyModifiers::NONE, PLATFORM).unwrap()),
+            );
+            let mut bindings = ComposingKeyBindings::resolve(&stored, ToneInputScheme::Standard);
+            bindings.input_mode = InputMode::Tps;
+            assert_eq!(
+                ComposingKeyIntent::intent(&text(" "), true, false, &bindings, PLATFORM),
+                ComposingKeyIntent::TpsKey(" ".into()),
+                "{action:?}"
+            );
+        }
     }
 
     #[test]

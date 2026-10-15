@@ -963,13 +963,29 @@ mod tests {
         assert_eq!(effects(&reply), vec![]);
     }
 
-    /// trace: Space = the highlighted cell's other script; cell 0 leads
+    /// trace: Space ships on Confirm Key (USER 2026-10-15) — cell 0 leads
+    /// with Hanji and is written as shown; a Hanji commit earns no auto
+    /// space.
+    #[test]
+    fn space_confirms_the_highlighted_cell_by_default() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, auto_space());
+        let cells = shown_list(&typist.type_text("ka")).cells;
+        let reply = typist.key(typed(" "), list(Some(0)));
+        assert!(reply.handled && !reply.is_composing);
+        assert_eq!(effects(&reply), vec![insert(&cells[0].text), closed()]);
+    }
+
+    /// trace: Space recorded on Output the Other Script (its shipped key
+    /// until 2026-10-15) = the highlighted cell's other script; cell 0 leads
     /// with Hanji, so its annotation (romanization) is written, which earns
     /// the auto space and its arm.
     #[test]
-    fn space_commits_the_other_script_with_its_auto_space() {
+    fn space_on_the_other_script_row_commits_it_with_its_auto_space() {
         let (_engine, shell) = engine_shell();
-        let typist = Typist::activated(shell, auto_space());
+        let mut settings = auto_space();
+        settings.push(text("composingShortcut.commitAlternateScript", "|0020"));
+        let typist = Typist::activated(shell, settings);
         let cells = shown_list(&typist.type_text("ka")).cells;
         let romanization = cells[0].annotation.clone().expect("a Hanji cell");
         let reply = typist.key(typed(" "), list(Some(0)));

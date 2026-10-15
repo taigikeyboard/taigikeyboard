@@ -23,8 +23,20 @@ fn rows() -> impl Iterator<Item = Vec<&'static str>> {
         .map(|line| line.split('\t').collect())
 }
 
-fn action(raw: &str) -> ComposingAction {
-    ComposingAction::from_raw(raw).unwrap_or_else(|| panic!("no action {raw}"))
+/// A field as the table names it: its settings key without the
+/// `composingShortcut.` prefix — `confirmHighlighted`,
+/// `confirmHighlighted.second`.
+fn field_name(action: ComposingAction, field: ChordField) -> String {
+    action
+        .settings_key_name(field)
+        .trim_start_matches("composingShortcut.")
+        .to_owned()
+}
+
+fn field(name: &str) -> (ComposingAction, ChordField) {
+    ComposingAction::all_fields()
+        .find(|(action, field)| field_name(*action, *field) == name)
+        .unwrap_or_else(|| panic!("no field {name}"))
 }
 
 fn chord(raw: &str) -> String {
@@ -55,17 +67,19 @@ fn bindings(stored: &str) -> String {
     if stored != "-" {
         for assignment in stored.split(';') {
             let (name, value) = assignment.split_once('=').unwrap();
-            document.set_raw_string(&action(name).settings_key_name(ChordField::First), value);
+            let (action, field) = field(name);
+            document.set_raw_string(&action.settings_key_name(field), value);
         }
     }
     let bindings = ComposingKeyBindings::from_document(&document, DESKTOP_PLATFORM);
-    ComposingAction::ALL
-        .map(|action| {
+    ComposingAction::all_fields()
+        .map(|(action, field)| {
             let chord = bindings
-                .chord(action, ChordField::First)
+                .chord(action, field)
                 .map_or_else(|| "-".to_owned(), |chord| chord.raw_value(DESKTOP_PLATFORM));
-            format!("{}={chord}", action.raw())
+            format!("{}={chord}", field_name(action, field))
         })
+        .collect::<Vec<_>>()
         .join(";")
 }
 
@@ -75,11 +89,13 @@ fn the_core_answers_every_row_of_the_mac_chord_table() {
     for row in rows() {
         *kinds.entry(row[0]).or_default() += 1;
         match row[0] {
-            "default" => assert_eq!(
-                action(row[1]).default_chord().raw_value(DESKTOP_PLATFORM),
-                row[2],
-                "{row:?}"
-            ),
+            "default" => {
+                let (action, field) = field(row[1]);
+                let shipped = action
+                    .shipped_chord(field)
+                    .map_or_else(|| "-".to_owned(), |chord| chord.raw_value(DESKTOP_PLATFORM));
+                assert_eq!(shipped, row[2], "{row:?}");
+            }
             "parse" => assert_eq!(chord(row[1]), row[2], "{row:?}"),
             "match" => {
                 let stored = ComposingKeyChord::from_raw(row[1], DESKTOP_PLATFORM).unwrap();
@@ -101,7 +117,10 @@ fn the_core_answers_every_row_of_the_mac_chord_table() {
             kind => panic!("unknown row kind {kind}"),
         }
     }
-    // Every action has its default row, and no kind went missing.
-    assert_eq!(kinds.get("default"), Some(&ComposingAction::ALL.len()));
+    // Every field has its default row, and no kind went missing.
+    assert_eq!(
+        kinds.get("default"),
+        Some(&ComposingAction::all_fields().count())
+    );
     assert_eq!(kinds.len(), 4);
 }

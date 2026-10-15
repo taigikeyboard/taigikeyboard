@@ -200,7 +200,7 @@ enum ShortcutAction: CaseIterable, Sendable {
     ///
     /// Named here as well as on the `Name` so `ShortcutAction` stays the one
     /// place that knows everything about an action — and so the composing half
-    /// (`ComposingShortcuts.Row.defaultChord`) has a sibling with the same name.
+    /// (`ComposingShortcuts.Row.Field.shippedChord`) has a sibling with the same name.
     var defaultShortcut: KeyboardShortcuts.Shortcut? {
         name.initialShortcut
     }

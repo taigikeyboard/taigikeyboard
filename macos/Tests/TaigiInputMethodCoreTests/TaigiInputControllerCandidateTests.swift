@@ -30,7 +30,13 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         // cell 0, so Show Typed Text First is pinned ON — it ships OFF since
         // 2026-10-02; the OFF bar is `…_withTheLiteralRowOff_writesTheDictionaryWord`.
         setSettingRestoredAtTeardown(SettingsStore.Keys.isLiteralRomanCandidateEnabled.name, to: true)
+        // The Hanji/romanization key cases drive Output the Other Script with
+        // Space, its shipped key until 2026-10-15 — recorded here so they keep
+        // pinning that action; `testSpace_confirmsByDefault` clears it.
+        setSettingRestoredAtTeardown(Self.otherScriptOnSpace, to: "|0020")
     }
+
+    private static let otherScriptOnSpace = "composingShortcut.commitAlternateScript"
 
     override func tearDown() {
         UserDefaults.standard.removeObject(forKey: SettingsStore.Keys.isAutoSpaceEnabled.name)
@@ -153,9 +159,30 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
 
     // MARK: - The Hanji/romanization key
 
-    /// Space writes the highlighted candidate in the script Return does not —
-    /// what makes `我ê名` cost one key for the romanized word instead of a round
-    /// trip through the output setting.
+    /// Out of the box Space is a second Confirm Key (USER 2026-10-15): it
+    /// writes what Return writes.
+    func testSpace_confirmsByDefault() throws {
+        UserDefaults.standard.removeObject(forKey: Self.otherScriptOnSpace)
+        let viaReturn = try composedSession()
+        try viaReturn.walkToFirstTwoScriptCell()
+        viaReturn.client.clearWrites()
+        _ = try viaReturn.controller.handle(
+            TestFixtures.keyDownEvent(characters: "\r"), client: viaReturn.client,
+        )
+
+        let viaSpace = try composedSession()
+        try viaSpace.walkToFirstTwoScriptCell()
+        viaSpace.client.clearWrites()
+        _ = try viaSpace.controller.handle(
+            TestFixtures.keyDownEvent(characters: " "), client: viaSpace.client,
+        )
+
+        XCTAssertEqual(viaSpace.client.insertedTexts.last, viaReturn.client.insertedTexts.last)
+    }
+
+    /// Space on Output the Other Script writes the highlighted candidate in
+    /// the script Return does not — what makes `我ê名` cost one key for the
+    /// romanized word instead of a round trip through the output setting.
     func testSpace_commitsTheOtherScript() throws {
         let session = try composedSession()
         // Whichever script the output leads with (Hanji by default), the

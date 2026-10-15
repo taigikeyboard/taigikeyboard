@@ -280,7 +280,7 @@ enum TestFixtures {
     /// The modifiers `chordNoDefaultHolds(key:)` puts on `key` — what a case
     /// records the same chord on a global row with.
     static func modifiersNoDefaultHolds(key: String = "\r") throws -> NSEvent.ModifierFlags {
-        let taken = try Set(composingShortcuts().rows.map(\.defaultChord))
+        let taken = try Set(composingShortcuts().rows.flatMap(\.fields).compactMap(\.shippedChord))
         let candidates: [NSEvent.ModifierFlags] = [
             [.control, .option], [.command, .option], [.control, .command],
         ]

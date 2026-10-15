@@ -70,7 +70,9 @@ final class ShortcutSettingsTests: XCTestCase {
         let rows = try TestFixtures.composingShortcuts(in: store).rows
         XCTAssertEqual(rows.count, 7)
         for row in rows {
-            XCTAssertEqual(row.first.chord, row.defaultChord, "\(row.name) did not come back")
+            for field in row.fields {
+                XCTAssertEqual(field.chord, field.shippedChord, "\(field.settingsKey) did not come back")
+            }
         }
     }
 

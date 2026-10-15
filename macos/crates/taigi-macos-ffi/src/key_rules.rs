@@ -448,40 +448,51 @@ mod tests {
         composing_shortcuts(Some(&SettingsSnapshot { entries })).expect("answered")
     }
 
-    /// trace: `ComposingAction::ALL` order and `GROUPS`; defaults
-    /// ⇥ ⇧⇥ ] [ ↩ ⇧↩ Space (`action.rs` `default_chord`, `display(MacOS)`);
+    /// trace: `ComposingAction::ALL` order and `GROUPS`; shipped chords
+    /// ⇥ ⇧⇥ ] [ ↩+Space ⇧↩, the other script none (`action.rs`
+    /// `shipped_chord`, `display(MacOS)`);
     /// the fixed rows are `shortcut_labels`' Mac arms.
     #[test]
     fn the_pane_reads_every_row_in_roster_order() {
         let reply = shortcuts(vec![]);
-        let rows: Vec<(&str, u32, Option<&str>, &str)> = reply
+        // Per field: what it shows, what it ships with.
+        type Field<'a> = (Option<&'a str>, Option<&'a str>);
+        let rows: Vec<(&str, u32, Vec<Field>)> = reply
             .actions
             .iter()
             .map(|row| {
-                let first = &row.fields[0];
-                (
-                    row.name.as_str(),
-                    row.group,
-                    first.chord.as_ref().map(|chord| chord.display.as_str()),
-                    first
-                        .shipped_chord
-                        .as_ref()
-                        .expect("a default")
-                        .raw
-                        .as_str(),
-                )
+                let fields = row
+                    .fields
+                    .iter()
+                    .map(|field| {
+                        (
+                            field.chord.as_ref().map(|chord| chord.display.as_str()),
+                            field.shipped_chord.as_ref().map(|chord| chord.raw.as_str()),
+                        )
+                    })
+                    .collect();
+                (row.name.as_str(), row.group, fields)
             })
             .collect();
+        let none = (None, None);
         assert_eq!(
             rows,
             [
-                ("nextCandidate", 0, Some("⇥"), "|0009"),
-                ("previousCandidate", 0, Some("⇧⇥"), "s|0009"),
-                ("pageForward", 0, Some("]"), "|005D"),
-                ("pageBackward", 0, Some("["), "|005B"),
-                ("confirmHighlighted", 1, Some("↩"), "|000D"),
-                ("commitLiteral", 1, Some("⇧↩"), "s|000D"),
-                ("commitAlternateScript", 1, Some("Space"), "|0020"),
+                ("nextCandidate", 0, vec![(Some("⇥"), Some("|0009")), none]),
+                (
+                    "previousCandidate",
+                    0,
+                    vec![(Some("⇧⇥"), Some("s|0009")), none]
+                ),
+                ("pageForward", 0, vec![(Some("]"), Some("|005D")), none]),
+                ("pageBackward", 0, vec![(Some("["), Some("|005B")), none]),
+                (
+                    "confirmHighlighted",
+                    1,
+                    vec![(Some("↩"), Some("|000D")), (Some("Space"), Some("|0020"))]
+                ),
+                ("commitLiteral", 1, vec![(Some("⇧↩"), Some("s|000D")), none]),
+                ("commitAlternateScript", 1, vec![none, none]),
             ]
         );
         let first = &reply.actions[0];
@@ -498,15 +509,6 @@ mod tests {
             ]
         );
         assert_eq!(first.label_key, "i18n_desktop_actionNextCandidate");
-        for row in &reply.actions {
-            let second = &row.fields[1];
-            assert_eq!(
-                (&second.chord, &second.shipped_chord),
-                (&None, &None),
-                "{}",
-                row.name
-            );
-        }
         assert_eq!(reply.slot_keys, "qwdfzxvy;");
         assert_eq!(reply.shifted_slot_keys, "⇧QWDFZXVY;");
         assert_eq!(reply.navigation_keys, "←  →  ↑  ↓  ⇞  ⇟");

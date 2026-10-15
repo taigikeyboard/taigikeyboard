@@ -207,7 +207,7 @@ pub fn perform_intent(
             commit_candidate(cell, false, settings, manager, list, surface);
             true
         }
-        // Space: the highlighted cell's OTHER script.
+        // Output the Other Script: the highlighted cell's OTHER script.
         ComposingKeyIntent::CommitAlternateScript => {
             let cell = surface.selected_index();
             commit_candidate(cell, true, settings, manager, list, surface);

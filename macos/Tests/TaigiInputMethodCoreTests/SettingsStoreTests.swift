@@ -582,8 +582,9 @@ final class SettingsStoreTests: XCTestCase {
         let rows = try shortcuts().rows
         XCTAssertEqual(rows.count, 7)
         for row in rows {
-            XCTAssertEqual(row.first.chord, row.defaultChord, row.name)
-            XCTAssertNil(row.fields[1].chord, "\(row.name) ships its second field empty")
+            for field in row.fields {
+                XCTAssertEqual(field.chord, field.shippedChord, field.settingsKey)
+            }
         }
     }
 
@@ -602,20 +603,21 @@ final class SettingsStoreTests: XCTestCase {
         )
     }
 
-    /// The reported setup (Discord #issues): Space on Confirm's second field.
-    /// Space ships on the alternate-script row's first field, which loses it
-    /// — the shipped default gives way to the recording.
+    /// Space ships on Confirm Key's second field (USER 2026-10-15); recorded
+    /// on Output the Other Script's second field it moves there — the shipped
+    /// chord gives way to the recording.
     func testASecondFieldChord_isReadBackAndTakesTheKeyFromADefault() throws {
         let store = makeStore()
         let space = try TestFixtures.chord(" ")
+        XCTAssertEqual(try row("confirmHighlighted").fields[1].chord, space, "shipped")
 
-        try store.setComposingChord(space, for: row("confirmHighlighted").fields[1])
+        try store.setComposingChord(space, for: row("commitAlternateScript").fields[1])
 
-        XCTAssertEqual(try row("confirmHighlighted").fields[1].chord, space)
+        XCTAssertEqual(try row("commitAlternateScript").fields[1].chord, space)
+        XCTAssertNil(try row("confirmHighlighted").fields[1].chord)
         XCTAssertEqual(try row("confirmHighlighted").first.chord, try TestFixtures.chord("\r"))
-        XCTAssertNil(try row("commitAlternateScript").first.chord)
         XCTAssertEqual(
-            userDefaults.string(forKey: "composingShortcut.confirmHighlighted.second"),
+            userDefaults.string(forKey: "composingShortcut.commitAlternateScript.second"),
             space.rawValue,
         )
     }

@@ -22,7 +22,8 @@ impl ChordField {
 /// One thing the input method does while a composition is running, as the
 /// settings window names it. Only the actions whose key is the user's to
 /// choose are here; the fixed navigation tier and the slot keys are not.
-/// No action ships unbound (USER 2026-08-21).
+/// Every action ships a key (USER 2026-08-21) but Output the Other Script,
+/// unbound since USER 2026-10-15 (`shipped_chord`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum ComposingAction {
     /// Moves the highlight one candidate along. Tab.
@@ -33,13 +34,15 @@ pub enum ComposingAction {
     PageForward,
     /// Shows the previous page. `[`.
     PageBackward,
-    /// Commits the highlighted candidate as the settings write it. Enter.
+    /// Commits the highlighted candidate as the settings write it. Enter,
+    /// and Space on the second field.
     ConfirmHighlighted,
     /// Commits the romanization exactly as typed. Shift+Enter — the escape
     /// hatch, one of the two actions that may never be left unbound.
     CommitLiteral,
     /// Commits the highlighted candidate in the OTHER script — the Hanji/romanization key.
-    /// Space (rime-phah-taibun binds the same gesture on `\`).
+    /// Unbound (rime-phah-taibun binds the same gesture on `\`); shipped on
+    /// Space from 2026-08-25 until USER 2026-10-15.
     CommitAlternateScript,
 }
 
@@ -97,34 +100,28 @@ impl ComposingAction {
         Self::ALL.into_iter().find(|action| action.raw() == raw)
     }
 
-    /// The chord a fresh install has on this action — the same on every
-    /// desktop. Built as the value the gate
-    /// would produce rather than through it, since the gate is per desktop;
-    /// `defaults_pass_the_gate_on_every_desktop` pins that it lets each one
-    /// through unchanged.
-    pub fn default_chord(self) -> ComposingKeyChord {
-        let (key, modifiers) = match self {
-            Self::NextCandidate => ("\t", KeyModifiers::NONE),
-            Self::PreviousCandidate => ("\t", KeyModifiers::SHIFT),
-            Self::PageForward => ("]", KeyModifiers::NONE),
-            Self::PageBackward => ("[", KeyModifiers::NONE),
-            Self::ConfirmHighlighted => ("\r", KeyModifiers::NONE),
-            Self::CommitLiteral => ("\r", KeyModifiers::SHIFT),
-            Self::CommitAlternateScript => (" ", KeyModifiers::NONE),
+    /// What `field` holds on a fresh install — the same on every desktop.
+    /// Enter and Space both confirm in the current script, and Output the
+    /// Other Script ships unbound for the user to put where they like
+    /// (USER 2026-10-15); ⇧ + a slot key still writes the other script.
+    /// Built as the value the gate would produce rather than through it,
+    /// since the gate is per desktop; `defaults_pass_the_gate_on_every_desktop`
+    /// pins that it lets each one through unchanged.
+    pub fn shipped_chord(self, field: ChordField) -> Option<ComposingKeyChord> {
+        let (key, modifiers) = match (self, field) {
+            (Self::NextCandidate, ChordField::First) => ("\t", KeyModifiers::NONE),
+            (Self::PreviousCandidate, ChordField::First) => ("\t", KeyModifiers::SHIFT),
+            (Self::PageForward, ChordField::First) => ("]", KeyModifiers::NONE),
+            (Self::PageBackward, ChordField::First) => ("[", KeyModifiers::NONE),
+            (Self::ConfirmHighlighted, ChordField::First) => ("\r", KeyModifiers::NONE),
+            (Self::ConfirmHighlighted, ChordField::Second) => (" ", KeyModifiers::NONE),
+            (Self::CommitLiteral, ChordField::First) => ("\r", KeyModifiers::SHIFT),
+            _ => return None,
         };
-        ComposingKeyChord {
+        Some(ComposingKeyChord {
             key: key.to_owned(),
             modifiers,
-        }
-    }
-
-    /// What `field` holds on a fresh install: the default on the first field,
-    /// nothing on the second.
-    pub fn shipped_chord(self, field: ChordField) -> Option<ComposingKeyChord> {
-        match field {
-            ChordField::First => Some(self.default_chord()),
-            ChordField::Second => None,
-        }
+        })
     }
 
     /// Every field of every action, roster order then field order — the
@@ -265,36 +262,32 @@ mod tests {
 
     #[test]
     fn defaults_follow_the_system_zhuyin_keyboard() {
-        // trace: `default_chord` — ⇥ / ⇧⇥ step, Space commits the other script,
-        // ↩ / ⇧↩ commit, `[` / `]` page.
-        let chord = |key: &str, m| ComposingKeyChord::make(Some(key), m, PLATFORM).unwrap();
+        // trace: `shipped_chord` — ⇥ / ⇧⇥ step, `[` / `]` page, ↩ and Space
+        // confirm, ⇧↩ commits as typed, the other script ships unbound.
+        let chord = |key: &str, m| Some(ComposingKeyChord::make(Some(key), m, PLATFORM).unwrap());
+        let shipped: Vec<_> = ComposingAction::all_fields()
+            .map(|(action, field)| ((action, field), action.shipped_chord(field)))
+            .collect();
+        use ChordField::{First, Second};
+        use ComposingAction::*;
         assert_eq!(
-            ComposingAction::NextCandidate.default_chord(),
-            chord("\t", KeyModifiers::NONE)
-        );
-        assert_eq!(
-            ComposingAction::PreviousCandidate.default_chord(),
-            chord("\t", KeyModifiers::SHIFT)
-        );
-        assert_eq!(
-            ComposingAction::CommitAlternateScript.default_chord(),
-            chord(" ", KeyModifiers::NONE)
-        );
-        assert_eq!(
-            ComposingAction::ConfirmHighlighted.default_chord(),
-            chord("\r", KeyModifiers::NONE)
-        );
-        assert_eq!(
-            ComposingAction::CommitLiteral.default_chord(),
-            chord("\r", KeyModifiers::SHIFT)
-        );
-        assert_eq!(
-            ComposingAction::PageBackward.default_chord(),
-            chord("[", KeyModifiers::NONE)
-        );
-        assert_eq!(
-            ComposingAction::PageForward.default_chord(),
-            chord("]", KeyModifiers::NONE)
+            shipped,
+            [
+                ((NextCandidate, First), chord("\t", KeyModifiers::NONE)),
+                ((NextCandidate, Second), None),
+                ((PreviousCandidate, First), chord("\t", KeyModifiers::SHIFT)),
+                ((PreviousCandidate, Second), None),
+                ((PageForward, First), chord("]", KeyModifiers::NONE)),
+                ((PageForward, Second), None),
+                ((PageBackward, First), chord("[", KeyModifiers::NONE)),
+                ((PageBackward, Second), None),
+                ((ConfirmHighlighted, First), chord("\r", KeyModifiers::NONE)),
+                ((ConfirmHighlighted, Second), chord(" ", KeyModifiers::NONE)),
+                ((CommitLiteral, First), chord("\r", KeyModifiers::SHIFT)),
+                ((CommitLiteral, Second), None),
+                ((CommitAlternateScript, First), None),
+                ((CommitAlternateScript, Second), None),
+            ]
         );
         assert!(!ComposingAction::CommitLiteral.requires_candidates());
         assert!(ComposingAction::ConfirmHighlighted.requires_candidates());
@@ -302,11 +295,15 @@ mod tests {
 
     #[test]
     fn defaults_pass_the_gate_on_every_desktop() {
-        // Both rosters' `default_chord` build the value without the gate;
-        // the gate must hand each one back unchanged on all three desktops.
-        let defaults = ComposingAction::ALL
-            .map(|action| (format!("{action:?}"), action.default_chord()))
-            .into_iter()
+        // Both rosters build their shipped chords without the gate; the gate
+        // must hand each one back unchanged on all three desktops.
+        let defaults = ComposingAction::all_fields()
+            .filter_map(|(action, field)| {
+                Some((
+                    format!("{action:?} {field:?}"),
+                    action.shipped_chord(field)?,
+                ))
+            })
             .chain(
                 crate::keys::ShortcutAction::ALL
                     .map(|action| (format!("{action:?}"), action.default_chord())),

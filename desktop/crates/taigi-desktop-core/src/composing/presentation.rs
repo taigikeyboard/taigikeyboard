@@ -391,8 +391,8 @@ mod tests {
     #[test]
     fn source_resolves_cell_indices_to_candidate_and_script_with_the_flip() {
         // trace: Combined → cells [台語, tâi-gí, guá]; Enter on cell 1 = (台語,
-        // Alternate) = roman; Space on cell 0 = flip → Alternate = roman;
-        // Space on cell 1 = flip → Primary = hanji; cell 3 past the list.
+        // Alternate) = roman; the other script on cell 0 = flip → Alternate =
+        // roman; the other script on cell 1 = flip → Primary = hanji; cell 3 past the list.
         let manager = manager(CandidateDisplayMode::Combined);
         let list = vec![
             candidate("tâi-gí", Some("台語"), 5),

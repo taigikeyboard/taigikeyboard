@@ -21,38 +21,47 @@ final class ChordRulesCrossCheckTests: XCTestCase {
             .map { $0.split(separator: "\t", omittingEmptySubsequences: false).map(String.init) }
         var kinds: [String: Int] = [:]
         let shipped = try TestFixtures.composingShortcuts(in: makeScratchSettingsStore())
+        let fields = shipped.rows.flatMap(\.fields)
         for row in rows {
             switch row[0] {
             case "default":
                 kinds[row[0], default: 0] += 1
-                XCTAssertEqual(try TestFixtures.row(row[1], in: shipped).defaultChord.rawValue, row[2], "\(row)")
+                let field = try XCTUnwrap(fields.first { $0.settingsKey == Self.settingsKey(row[1]) }, row[1])
+                XCTAssertEqual(field.shippedChord?.rawValue ?? "-", row[2], "\(row)")
             case "resolve":
                 kinds[row[0], default: 0] += 1
-                XCTAssertEqual(try resolved(row[1], shipped: shipped), row[2], "\(row)")
+                XCTAssertEqual(try resolved(row[1]), row[2], "\(row)")
             case "parse", "match":
                 continue
             default:
                 XCTFail("unknown row kind \(row[0])")
             }
         }
-        XCTAssertEqual(kinds["default"], shipped.rows.count, "every row has its default row")
+        XCTAssertEqual(kinds["default"], fields.count, "every field has its default row")
         XCTAssertGreaterThan(kinds["resolve", default: 0], 0)
     }
 
-    /// The rows as the core resolves them from a defaults suite holding
+    /// A field's settings key from the name the table gives it
+    /// (`confirmHighlighted.second`).
+    private static let prefix = "composingShortcut."
+
+    private static func settingsKey(_ name: String) -> String {
+        prefix + name
+    }
+
+    /// Every field as the core resolves it from a defaults suite holding
     /// `stored`.
-    private func resolved(_ stored: String, shipped: ComposingShortcuts) throws -> String {
+    private func resolved(_ stored: String) throws -> String {
         let store = try makeScratchSettingsStore()
         if stored != "-" {
             for assignment in stored.split(separator: ";") {
                 let parts = assignment.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
-                try store.userDefaults.set(
-                    String(parts[1]), forKey: TestFixtures.row(String(parts[0]), in: shipped).first.settingsKey,
-                )
+                store.userDefaults.set(String(parts[1]), forKey: Self.settingsKey(String(parts[0])))
             }
         }
         return try TestFixtures.composingShortcuts(in: store).rows
-            .map { "\($0.name)=\($0.first.chord?.rawValue ?? "-")" }
+            .flatMap(\.fields)
+            .map { "\($0.settingsKey.dropFirst(Self.prefix.count))=\($0.chord?.rawValue ?? "-")" }
             .joined(separator: ";")
     }
 }

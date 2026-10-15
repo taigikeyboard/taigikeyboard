@@ -8,7 +8,7 @@ use crate::settings::{CandidateDisplayMode, EngineSettings, InputMode};
 
 /// Which of a candidate's two scripts a commit writes. RELATIVE to the
 /// output settings, never absolute: `Primary` is what Enter writes,
-/// `Alternate` the other one (what Space writes). Sent as the engine's
+/// `Alternate` the other one (what Output the Other Script writes). Sent as the engine's
 /// `CommitScript` LEAD / OTHER.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CandidateScript {
@@ -17,7 +17,8 @@ pub enum CandidateScript {
 }
 
 impl CandidateScript {
-    /// The other script — what Space writes relative to a cell's own.
+    /// The other script — what Output the Other Script writes relative to a
+    /// cell's own.
     pub fn flipped(self) -> Self {
         match self {
             Self::Primary => Self::Alternate,

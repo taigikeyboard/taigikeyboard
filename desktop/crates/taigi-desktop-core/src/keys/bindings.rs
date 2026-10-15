@@ -172,9 +172,10 @@ impl ComposingKeyBindings {
     /// it commits before passing through to the host
     /// (`ComposingKeyIntent::host_key`).
     fn restore_unbound(resolved: &mut BTreeMap<(ComposingAction, ChordField), ComposingKeyChord>) {
+        let first_default = |action: &ComposingAction| action.shipped_chord(ChordField::First);
         let pool: Vec<ComposingKeyChord> = ComposingAction::REFILLED_FROM_DEFAULT
             .iter()
-            .map(|action| action.default_chord())
+            .filter_map(first_default)
             .collect();
         for action in ComposingAction::REFILLED_FROM_DEFAULT {
             if ChordField::ALL
@@ -183,8 +184,9 @@ impl ComposingKeyBindings {
             {
                 continue;
             }
-            let own = action.default_chord();
-            if let Some(free) = std::iter::once(&own)
+            let own = first_default(&action);
+            if let Some(free) = own
+                .iter()
                 .chain(pool.iter())
                 .find(|chord| !resolved.values().any(|held| held == *chord))
                 .cloned()
@@ -226,14 +228,21 @@ mod tests {
     }
 
     #[test]
-    fn defaults_leave_no_action_unbound() {
+    fn defaults_resolve_to_exactly_what_ships() {
+        // trace: no stored row, no duplicate among the shipped chords → every
+        // field resolves to `shipped_chord`; Output the Other Script starts
+        // blank (USER 2026-10-15).
         let bindings = ComposingKeyBindings::default();
-        for action in ComposingAction::ALL {
-            assert!(
-                bindings.chord(action, ChordField::First).is_some(),
-                "{action:?} starts blank"
+        for (action, field) in ComposingAction::all_fields() {
+            assert_eq!(
+                bindings.chord(action, field),
+                action.shipped_chord(field).as_ref(),
+                "{action:?} {field:?}"
             );
         }
+        assert!(ChordField::ALL.iter().all(|field| bindings
+            .chord(ComposingAction::CommitAlternateScript, *field)
+            .is_none()));
         assert_eq!(bindings.tone_scheme, ToneInputScheme::Standard);
         assert_eq!(bindings.slot_key_set(), CandidateSlotKeySet::BareKeys);
     }
@@ -241,7 +250,7 @@ mod tests {
     #[test]
     fn a_stored_chord_outranks_a_default_that_arrives_on_top_of_it() {
         // trace: `remove_duplicates` drops the row on its default first — both roster orders.
-        let bracket = ComposingAction::PageForward.default_chord();
+        let bracket = chord("]", KeyModifiers::NONE);
         let bindings = ComposingKeyBindings::resolve(
             &stored(&[(ComposingAction::NextCandidate, Some(bracket.clone()))]),
             ToneInputScheme::Standard,
@@ -271,7 +280,9 @@ mod tests {
 
     #[test]
     fn a_user_who_recorded_space_on_walking_keeps_it() {
-        let space = ComposingAction::CommitAlternateScript.default_chord();
+        // trace: next.first=Space (recorded) > confirm.second=Space (shipped)
+        // → confirm.second dropped; confirm keeps Return on its first field.
+        let space = chord(" ", KeyModifiers::NONE);
         let bindings = ComposingKeyBindings::resolve(
             &stored(&[(ComposingAction::NextCandidate, Some(space.clone()))]),
             ToneInputScheme::Standard,
@@ -281,7 +292,7 @@ mod tests {
             Some(&space)
         );
         assert_eq!(
-            bindings.chord(ComposingAction::CommitAlternateScript, ChordField::First),
+            bindings.chord(ComposingAction::ConfirmHighlighted, ChordField::Second),
             None
         );
     }
@@ -308,14 +319,19 @@ mod tests {
 
     #[test]
     fn commit_rows_get_their_default_back_when_cleared() {
+        // trace: both fields cleared (Confirm ships Space on its second) →
+        // the row is empty → its own first default is free → refilled.
         for action in ComposingAction::REFILLED_FROM_DEFAULT {
             let bindings = ComposingKeyBindings::resolve(
-                &stored(&[(action, None)]),
+                &stored_fields(&[
+                    (action, ChordField::First, None),
+                    (action, ChordField::Second, None),
+                ]),
                 ToneInputScheme::Standard,
             );
             assert_eq!(
                 bindings.chord(action, ChordField::First),
-                Some(&action.default_chord())
+                action.shipped_chord(ChordField::First).as_ref()
             );
         }
     }
@@ -419,7 +435,7 @@ mod tests {
         ];
         let pool: Vec<ComposingKeyChord> = ComposingAction::REFILLED_FROM_DEFAULT
             .iter()
-            .map(|action| action.default_chord())
+            .filter_map(|action| action.shipped_chord(ChordField::First))
             .collect();
         let others: Vec<_> = ComposingAction::ALL
             .into_iter()
@@ -447,10 +463,13 @@ mod tests {
                         {
                             assert_eq!(bindings.chord(*other, ChordField::First), other_chord.as_ref(), "recorded chord lost: {confirm:?} {literal:?} {other:?}={other_chord:?}");
                         }
-                        if ComposingAction::REFILLED_FROM_DEFAULT
-                            .iter()
-                            .any(|action| bindings.chord(*action, ChordField::First).is_none())
-                        {
+                        // A row is empty only with both fields empty (Confirm
+                        // keeps its shipped Space on the second).
+                        if ComposingAction::REFILLED_FROM_DEFAULT.iter().any(|action| {
+                            ChordField::ALL
+                                .iter()
+                                .all(|field| bindings.chord(*action, *field).is_none())
+                        }) {
                             assert!(pool.iter().all(|c| held.contains(&c)), "a commit row left empty with a default free: {confirm:?} {literal:?} {other:?}={other_chord:?}");
                         }
                     }
@@ -604,8 +623,8 @@ mod tests {
     /// the current script, Shift+Enter commits the other one.
     #[test]
     fn a_second_field_fires_its_action_alongside_the_first() {
-        // trace: confirm.second=Space (recorded) > alternate.first=Space
-        // (default) → alternate.first dropped; alternate.second=⇧Return
+        // trace: confirm.second=Space (its shipped chord, stored by value);
+        // alternate.second=⇧Return
         // (recorded) > literal.first=⇧Return (default) → literal.first
         // dropped; literal is a commit row with both fields empty → pool
         // {Return, ⇧Return} both held → literal stays empty.

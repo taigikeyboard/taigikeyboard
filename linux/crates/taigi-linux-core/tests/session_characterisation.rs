@@ -204,13 +204,25 @@ fn escape_abandons_the_composition() {
     assert!(!session.state.armed_auto_space);
 }
 
+/// trace: Space ships on Confirm Key (USER 2026-10-15) — it commits the
+/// highlighted cell, here the literal `tsiah`, like Return. Before, Space
+/// wrote the other script, which the literal cell has none of, so the list
+/// only redrew.
 #[test]
-fn space_inside_a_composition_only_redraws_the_list() {
+fn space_inside_a_composition_confirms_the_highlighted_cell() {
     let _serial = serial();
     let mut session = Session::new(true, true);
-    let typed = session.type_word("tsiah");
-    assert_eq!(session.press(SPACE), [Emit::LookupTable(typed)]);
-    assert!(!session.state.armed_auto_space);
+    session.type_word("tsiah");
+    assert_eq!(
+        session.press(SPACE),
+        [
+            Emit::ClearPreedit,
+            commit("tsiah"),
+            commit(" "),
+            Emit::HideLookupTable
+        ]
+    );
+    assert!(session.state.armed_auto_space, "the space is swappable");
 }
 
 #[test]

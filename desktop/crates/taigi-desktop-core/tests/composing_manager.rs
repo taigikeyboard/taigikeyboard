@@ -737,7 +737,7 @@ fn commit_candidate_roman_output_writes_the_romanization_and_alternate_writes_th
     assert_eq!(
         committed.as_deref(),
         Some("台語"),
-        "Space writes the other script"
+        "Output the Other Script writes the other script"
     );
 }
 

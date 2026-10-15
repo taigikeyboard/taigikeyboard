@@ -48,8 +48,8 @@ final class ShortcutDefaultsTests: XCTestCase {
     /// scheme (`CandidateSlotKeyTests.testEverySlotKey_ofEverySet_isRefusedAsAChord`),
     /// so no default can sit on one.
     func testShippedDefaults_holdNoChordInCommon() throws {
-        let composing = try TestFixtures.composingShortcuts().rows.map(\.defaultChord)
-        XCTAssertEqual(composing.count, 7, "every composing row's default")
+        let composing = try TestFixtures.composingShortcuts().rows.flatMap(\.fields).compactMap(\.shippedChord)
+        XCTAssertEqual(composing.count, 7, "every shipped composing chord: six first fields and Space")
         let global = try ShortcutAction.allCases.map { try chord(of: $0) }
         let all = composing + global
 
