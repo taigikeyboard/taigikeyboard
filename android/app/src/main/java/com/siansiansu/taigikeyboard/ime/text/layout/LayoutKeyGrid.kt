@@ -62,7 +62,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
-import androidx.compose.ui.unit.sp
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardLayoutSolver
 
@@ -173,7 +172,10 @@ fun LayoutKeyFace(
     }
 }
 
-/** One line that shrinks to fit (`tsh` / `chh`), as on the keyboard (KeyContent). */
+/**
+ * One line that shrinks to fit (`tsh` / `chh`), as on the keyboard (KeyContent). The floor is relative,
+ * as iOS `minimumScaleFactor(0.5)`, so a small picker card still fits a 3-letter key.
+ */
 @Composable
 private fun AutoSizeLabel(
     text: String,
@@ -184,7 +186,7 @@ private fun AutoSizeLabel(
         text = text,
         style = TextStyle(color = color),
         maxLines = 1,
-        autoSize = TextAutoSize.StepBased(minFontSize = 6.sp, maxFontSize = maxFontSize),
+        autoSize = TextAutoSize.StepBased(minFontSize = maxFontSize * 0.5f, maxFontSize = maxFontSize),
     )
 }
 
