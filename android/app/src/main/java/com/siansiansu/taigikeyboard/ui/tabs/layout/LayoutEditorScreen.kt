@@ -327,7 +327,7 @@ fun LayoutEditorScreen(
                         // The visible tray, not its scrolled content: a key dropped inside it is removed.
                         .onGloballyPositioned { geometry.trayBounds = it.boundsInWindow() }
                         .padding(horizontal = 10.dp)
-                        .border(BorderStroke(2.dp, MaterialTheme.colorScheme.error.copy(alpha = if (isOverTray) 1f else 0f)), RoundedCornerShape(10.dp))
+                        .border(BorderStroke(2.dp, MaterialTheme.colorScheme.primary.copy(alpha = if (isOverTray) 1f else 0f)), RoundedCornerShape(10.dp))
                         .verticalScroll(rememberScrollState())
                         .padding(horizontal = 10.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),

@@ -72,7 +72,7 @@ struct LayoutEditorView: View {
             }
             .background(
                 RoundedRectangle(cornerRadius: AppStyle.previewCornerRadius)
-                    .strokeBorder(Color.red, lineWidth: 2)
+                    .strokeBorder(Color.accentColor, lineWidth: 2)
                     .opacity(isOverTray ? 1 : 0)
                     .padding(.horizontal, AppStyle.horizontalPadding / 2),
             )
