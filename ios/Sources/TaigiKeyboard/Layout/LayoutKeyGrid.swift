@@ -99,9 +99,8 @@ struct LayoutKeyGrid: View {
         let isTarget = place != nil && (place == interaction?.highlighted || place == spareTarget)
         let shape = RoundedRectangle(cornerRadius: gap * 1.5)
         let fill = isSelected ? Color.accentColor : isRemoved ? Color.clear : Self.keyColor
-        let face = Self.label(keyDef, isDigit: keyDef.isCharacter && place == nil)
+        let face = Self.label(keyDef, size: fontSize, isDigit: keyDef.isCharacter && place == nil)
             .opacity(isRemoved ? 0 : 1)
-            .font(.system(size: fontSize))
             .lineLimit(1)
             .minimumScaleFactor(0.5)
             .foregroundStyle(isSelected ? Color.white : Color.primary)
@@ -168,24 +167,38 @@ struct LayoutKeyGrid: View {
         }
     }
 
-    /// A key's face: its text, or its symbol. Also the key the editor floats under a drag.
+    /// A key's face: its text at `size` points, or its symbol in a `size` square. Also the key the
+    /// editor floats under a drag.
     @ViewBuilder
-    static func label(_ keyDef: KeyDef, isDigit: Bool = false) -> some View {
+    static func label(_ keyDef: KeyDef, size: CGFloat, isDigit: Bool = false) -> some View {
         switch keyDef {
-        case let .char(label, _): Text(verbatim: label).opacity(isDigit ? 0.5 : 1)
-        case .shift: Image(latinSystemName: "shift")
-        case .backspace: Image(latinSystemName: "delete.left")
-        case .return: Image(latinSystemName: ButtonImageProvider.returnKeySymbolName(for: nil))
-        case .globe: Image(latinSystemName: "globe")
-        case .emoji: Image(latinSystemName: "face.smiling")
+        case let .char(label, _): text(label, size: size).opacity(isDigit ? 0.5 : 1)
+        case .shift: symbol("shift", size: size)
+        case .backspace: symbol("delete.left", size: size)
+        case .return: symbol(ButtonImageProvider.returnKeySymbolName(for: nil), size: size)
+        case .globe: symbol("globe", size: size)
+        case .emoji: symbol("face.smiling", size: size)
         // The keyboard's own 文/A icon in its default (outlined) state (`ButtonImageProvider`).
-        case .translate: Image(latinSystemName: "character.square")
-        case .numeric: Text(verbatim: "123")
-        case .symbolic: Text(verbatim: "#+=")
-        case .alphabetic: Text(verbatim: "ABC")
+        case .translate: symbol("character.square", size: size)
+        case .numeric: text("123", size: size)
+        case .symbolic: text("#+=", size: size)
+        case .alphabetic: text("ABC", size: size)
         // Not EmptyView: modifiers on it draw nothing, so the space bar would vanish.
         case .space: Color.clear
         }
+    }
+
+    private static func text(_ label: String, size: CGFloat) -> some View {
+        Text(verbatim: label).font(.system(size: size))
+    }
+
+    /// `Image(latinSystemName:)` is a `UIImage` with its point size baked in, so `.font` cannot
+    /// shrink it; it is scaled into the square instead, or it overflows a small card's keys.
+    private static func symbol(_ name: String, size: CGFloat) -> some View {
+        Image(latinSystemName: name)
+            .resizable()
+            .scaledToFit()
+            .frame(width: size, height: size)
     }
 
     // MARK: - Geometry

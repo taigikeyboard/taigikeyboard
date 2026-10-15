@@ -199,8 +199,7 @@ struct LayoutEditorView: View {
     @ViewBuilder
     private var liftedKey: some View {
         if let boardDrag, let keyDef = draft.keyDef(at: boardDrag.source) {
-            LayoutKeyGrid.label(keyDef)
-                .font(.system(size: 26))
+            LayoutKeyGrid.label(keyDef, size: 26)
                 .foregroundStyle(Color.primary)
                 .frame(width: 56, height: 60)
                 .background(LayoutKeyGrid.keyColor, in: RoundedRectangle(cornerRadius: 10))
