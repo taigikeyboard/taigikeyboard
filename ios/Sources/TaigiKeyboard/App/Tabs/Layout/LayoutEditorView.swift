@@ -15,21 +15,13 @@ struct LayoutEditorView: View {
         var location: CGPoint
     }
 
-    /// The tray's frame in `editorSpace`: a board key dropped inside it is removed.
-    private struct TrayFrame: PreferenceKey {
-        static let defaultValue = CGRect.zero
-
-        static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
-            value = nextValue()
-        }
-    }
-
     @State private var draft: CustomLayout
     @State private var selected: CustomLayout.Place?
     @State private var boardDrag: BoardDrag?
     /// Counts drags that changed the board, for the landing haptic.
     @State private var dropCount = 0
     @State private var keyFrames: [CustomLayout.Place: CGRect] = [:]
+    /// The tray's frame in `editorSpace`: a board key dropped inside it is removed.
     @State private var trayFrame = CGRect.zero
     @State private var showsNameAlert = false
     @State private var pendingName = ""
@@ -84,15 +76,14 @@ struct LayoutEditorView: View {
                     .opacity(isOverTray ? 1 : 0)
                     .padding(.horizontal, AppStyle.horizontalPadding / 2),
             )
-            .background(GeometryReader { proxy in
-                Color.clear.preference(key: TrayFrame.self, value: proxy.frame(in: .named(LayoutKeyGrid.editorSpace)))
-            })
+            .onGeometryChange(for: CGRect.self) { proxy in
+                proxy.frame(in: .named(LayoutKeyGrid.editorSpace))
+            } action: { trayFrame = $0 }
         }
         .padding(.top, 8)
         .overlay(alignment: .topLeading) { liftedKey }
         .coordinateSpace(name: LayoutKeyGrid.editorSpace)
         .onPreferenceChange(LayoutKeyGrid.KeyFrames.self) { keyFrames = $0 }
-        .onPreferenceChange(TrayFrame.self) { trayFrame = $0 }
         // A tick when a key lifts and when it reaches a new target; a soft tap when a drag lands.
         .sensoryFeedback(.selection, trigger: boardDrag?.source) { _, source in source != nil }
         .sensoryFeedback(.selection, trigger: dragTarget) { _, target in target != nil }
