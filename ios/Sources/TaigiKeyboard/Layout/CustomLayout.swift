@@ -93,11 +93,14 @@ struct CustomLayout: Codable, Identifiable, Hashable {
         "an", "ia", "in", "au", "ong", "ian", "un", "ai", "iu", "ann", "ang", "ui", "inn", "iau", "er", "ir",
     ]
 
-    /// Letters offered in the spare tray: a–z, o͘, `-`, then every multi-letter key of the
+    /// `ee` [ɛ], spelled the same in TL and POJ. No built-in table has it; it is a plain key.
+    private static let trayVowels = ["ee"]
+
+    /// Letters offered in the spare tray: a–z, o͘, `ee`, `-`, then every multi-letter key of the
     /// romanization layouts (MOE2 `ph`, `tsh`, `ch` …), whatever the base, then `trayFinals`.
     private static let trayLetters: [String] = {
         let symbols = Set(symbolPageKeys.compactMap(\.characterLabel))
-        let single = "abcdefghijklmnopqrstuvwxyz".map(String.init) + ["o\u{0358}", "-"]
+        let single = "abcdefghijklmnopqrstuvwxyz".map(String.init) + ["o\u{0358}"] + trayVowels + ["-"]
         return unique(single + romanizationKeys.compactMap(\.characterLabel).filter { !symbols.contains($0) } + trayFinals)
     }()
 
@@ -108,7 +111,7 @@ struct CustomLayout: Codable, Identifiable, Hashable {
     /// comes first: its `(` `)` carry full-width forms that MOE1's own keys leave out (a base's
     /// own keys still win, `filledRows`).
     private static let catalog: [String: KeyDef] = Dictionary(
-        (symbolPageKeys + romanizationKeys + trayFinals.map { KeyDef.char($0) })
+        (symbolPageKeys + romanizationKeys + (trayVowels + trayFinals).map { KeyDef.char($0) })
             .compactMap { key in key.characterLabel.map { ($0, key) } },
         uniquingKeysWith: { first, _ in first },
     )

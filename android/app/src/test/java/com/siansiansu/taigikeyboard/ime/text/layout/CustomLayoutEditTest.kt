@@ -163,8 +163,8 @@ class CustomLayoutEditTest {
     fun `tray letters then symbols, each key once`() {
         val letters = tables.trayLetters
         val symbols = tables.traySymbols
-        // a–z, o͘, `-` lead; every multi-letter romanization key follows, whatever the base.
-        assertEquals(('a'..'z').map(Char::toString) + listOf("o͘", "-"), letters.take(28))
+        // a–z, o͘, ee, `-` lead; every multi-letter romanization key follows, whatever the base.
+        assertEquals(('a'..'z').map(Char::toString) + listOf("o͘", "ee", "-"), letters.take(29))
         assertTrue(listOf("ph", "ts", "tsh", "oo", "th", "kh", "ng", "nn", "ch", "chh").all { it in letters })
         // The finals close the letters, most frequent first.
         assertEquals(

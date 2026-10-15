@@ -73,7 +73,7 @@ class CustomLayoutTables(
     private val catalog: Map<String, Pair<KeyData, KeyData>>
 
     /**
-     * Letters offered in the spare tray: a–z, o͘, `-`, then every multi-letter key of the romanization
+     * Letters offered in the spare tray: a–z, o͘, `ee`, `-`, then every multi-letter key of the romanization
      * tables (MOE2 `ph`, `tsh`, POJ `ch` …), whatever the base, then [TRAY_FINALS]. iOS
      * `CustomLayout.trayLetters`.
      */
@@ -140,12 +140,12 @@ class CustomLayoutTables(
             }
         }
         this.tables = tables
-        // No built-in table has the finals: each is a plain key, in both widths.
-        TRAY_FINALS.forEach { addToCatalog(KeyData(0, it), KeyData(0, it)) }
+        // No built-in table has `ee` or the finals: each is a plain key, in both widths.
+        (TRAY_VOWELS + TRAY_FINALS).forEach { addToCatalog(KeyData(0, it), KeyData(0, it)) }
         this.catalog = catalog
 
         val symbolLabels = symbolPage.flatten().map { it.label }
-        val single = ('a'..'z').map(Char::toString) + listOf("o\u0358", "-")
+        val single = ('a'..'z').map(Char::toString) + listOf("o\u0358") + TRAY_VOWELS + listOf("-")
         trayLetters = (single + romanizationLabels.filterNot { it in symbolLabels } + TRAY_FINALS).distinct().filter { it in catalog }
         traySymbols = symbolLabels.filterNot { it in trayLetters }.distinct()
     }
@@ -292,6 +292,9 @@ class CustomLayoutTables(
         }
 
     private companion object {
+        /** `ee` [ɛ], spelled the same in TL and POJ. iOS `CustomLayout.trayVowels`. */
+        val TRAY_VOWELS = listOf("ee")
+
         /**
          * Finals spelled the same in TL and POJ, most frequent first (share of dictionary syllables whose
          * final contains them). iOS `CustomLayout.trayFinals`.
