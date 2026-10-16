@@ -326,7 +326,7 @@
       }
     },
     "i18n_common_other": {
-      "comment": "Generic Other: home section header above the FAQ / other list (mobile), Shortcuts pane last block's header — the symbol picker and the settings window (desktop). Merged 2026-09-20 from home.faq / desktop.shortcutSectionOther.",
+      "comment": "Generic Other: home section header above the FAQ / other list (mobile), Shortcuts pane last block's header — the symbol picker, the Telex guide and the settings window (desktop). Merged 2026-09-20 from home.faq / desktop.shortcutSectionOther.",
       "extractionState": "manual",
       "localizations": {
         "en": {

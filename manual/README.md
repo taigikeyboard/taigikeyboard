@@ -203,7 +203,7 @@ macOS 的符號：`⌃` control、`⌥` option、`⌘` command、`⇧` shift。
 | 功能 | macOS | Windows、Linux |
 |---|---|---|
 | 切換漢字／羅馬字 | `` ` `` | `` ` `` |
-| 切換候選詞顯示 | `⌃` `⌘` `H` | `Ctrl` `Alt` `H` |
+| 切換羅馬字顯示 | `⌃` `⌘` `H` | `Ctrl` `Alt` `H` |
 | 切換台羅／白話字 | `⌃` `⌘` `C` | `Ctrl` `Alt` `C` |
 | 切換方音符號 | `⌃` `⌘` `P` | `Ctrl` `Alt` `P` |
 | 拍開符號選單 | `⌃` `⌘` `,` | `Ctrl` `Alt` `,` |

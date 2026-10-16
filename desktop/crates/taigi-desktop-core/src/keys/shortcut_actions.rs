@@ -62,9 +62,10 @@ impl ShortcutAction {
     ];
 
     /// The roster split into the blocks the settings pane draws under the
-    /// composing rows (USER 2026-10-16): Romanization, the actions about a
-    /// romanization's candidates and keys; Phonetic Symbols, the TPS switch
-    /// and its key panel; Other, the symbol picker and the settings window.
+    /// composing rows (USER 2026-10-16): Romanization, the switches about a
+    /// romanization's candidates; Phonetic Symbols, the TPS switch and its
+    /// key panel; Other, the symbol picker, the Telex guide and the settings
+    /// window.
     /// Each block keeps `ALL`'s order. Written out so adding a case has to
     /// say where it goes. The Mac's Swift twin: `ShortcutAction.groups`.
     pub const GROUPS: [&'static [ShortcutAction]; 3] = [
@@ -72,10 +73,13 @@ impl ShortcutAction {
             Self::ToggleRomanization,
             Self::ToggleTranslateSwapped,
             Self::CycleCandidateDisplayMode,
-            Self::ShowTelexGuide,
         ],
         &[Self::ToggleTps, Self::ShowTpsKeyboard],
-        &[Self::ShowSymbolPicker, Self::OpenLastSettingsPane],
+        &[
+            Self::ShowSymbolPicker,
+            Self::ShowTelexGuide,
+            Self::OpenLastSettingsPane,
+        ],
     ];
 
     /// The pane's title of each block in `GROUPS`.
