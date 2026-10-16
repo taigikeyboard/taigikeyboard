@@ -456,22 +456,9 @@ fn fetch_via_lexicon_partial_inner_impl(
     out
 }
 
-/// A walker edge's time-decayed user-frequency weight for the
-/// `(display_text, canonical_tl)` pair the platform commits to
-/// `user_frequency.db` (Core Principle #7) — for the custom-edge and
-/// synth paths, which have no `RawCandidate` carrying `user_weight`.
-fn edge_user_weight_delta(
-    freq_map: &FrequencyMap,
-    now_ms: i64,
-    display_text: &str,
-    canonical_tl: &str,
-) -> f64 {
-    freq_map.get(display_text, canonical_tl).user_weight(now_ms)
-}
-
 /// v3.5.8 S6 — per-fetch map from a user row's walker edge key to the rows
-/// under it, in `rows` order (the edge pick is first-wins among the
-/// eligible, Codex Q6). `key_of` MUST run the same shadow pipeline the
+/// under it, in `rows` order (the edge pick's dedupe insertion order,
+/// Codex Q6). `key_of` MUST run the same shadow pipeline the
 /// lattice edge keys run for this fetch's `mode` so a hit is
 /// byte-identical to a `tl:` / `poj:` edge key. Registers the nasal-`oo`
 /// alias beside the canonical key: the dictionary build indexes the `o͘ⁿ`
@@ -479,6 +466,21 @@ fn edge_user_weight_delta(
 /// 好玄 as `ho͘nnhian` (edge key `tl:hoonnhian`) must still find a row
 /// stored canonically — safe on a fused body because an alias key is
 /// disjoint from every canonical key (`phonetics::nasal_oo_alias_spelling`).
+/// The rows `map` holds under an edge's `key` that `admits` lets through,
+/// in `map` order.
+fn rows_for_edge<'a, T>(
+    map: &std::collections::HashMap<String, Vec<&'a T>>,
+    key: &str,
+    admits: impl Fn(&T) -> bool,
+) -> Vec<&'a T> {
+    map.get(key)
+        .into_iter()
+        .flatten()
+        .copied()
+        .filter(|row| admits(row))
+        .collect()
+}
+
 fn edge_key_map<'a, T>(
     rows: &'a [T],
     key_of: impl Fn(&T) -> Option<String>,
@@ -651,8 +653,6 @@ pub(crate) fn walk_buffer(
         ..
     } = continuous_keys;
     let ContinuousFetchCtx {
-        freq_map,
-        now_ms,
         custom,
         learned,
         mode,
@@ -664,9 +664,9 @@ pub(crate) fn walk_buffer(
     // the edge keys use, so a hit here is byte-identical to a
     // lattice edge's `tl:{toneless}` (Q2 BLOCK: a plain
     // tone-digit-strip would not fold a POJ/diacritic custom roman
-    // like `tâi-uân`). Entries under one key keep `custom` order, so
-    // the edge provider's pick is **first-wins** among the eligible
-    // (Codex Q6: explicit, not `HashMap` overwrite/iteration).
+    // like `tâi-uân`). Entries under one key keep `custom` order — the
+    // dedupe's insertion order in the edge pick (Codex Q6: explicit, not
+    // `HashMap` overwrite/iteration).
     //
     // S6 byte-identity invariant: the SAME `mode` (`ctx.mode`) feeds the
     // caller's `build_shadow_lattice_with_barriers` and
@@ -676,13 +676,13 @@ pub(crate) fn walk_buffer(
     let custom_map = edge_key_map(custom, |entry| custom_toneless_key(&entry.roman, mode));
     // Learned phrases (§50) — keyed through [`learned_edge_key`] so the
     // canonical-TL row lands on the mode's own key family. Consumed by the
-    // edge pick below as a COMPETITOR of the dictionary rows, never as the
-    // override the custom map is (Codex 2026-09-20 F5).
+    // edge pick below as a COMPETITOR of the dictionary rows, as the custom
+    // map is (Codex 2026-09-20 F5).
     let learned_map = edge_key_map(learned, |entry| learned_edge_key(&entry.canonical_tl, mode));
 
     let path = crate::lattice::walk_best(lattice, shadow.len(), |start, end| {
-        // The tone pin is computed BEFORE the custom override below so
-        // both edge sources answer to the same pin: a custom entry
+        // The tone pin is computed BEFORE the custom rows are gathered so
+        // every edge source answers to the same pin: a custom entry
         // synthesized past the guard would land at slot 0, where no
         // downstream lexicon filter can reach it (Codex post-impl BLOCK,
         // 2026-08-20).
@@ -701,16 +701,16 @@ pub(crate) fn walk_buffer(
         // also feeds the key prefix here, so the lookup family is
         // consistent with the inventory family that produced the edge.
         let key_prefix = phonetics::KeyFamily::for_input_mode(mode).prefix();
-        // Custom override matching stays tone-INSENSITIVE: `custom_map` is
+        // Custom row matching stays tone-INSENSITIVE: `custom_map` is
         // keyed by `custom_toneless_key` (toneless), so it is queried with
         // the toneless key — a custom word is a specific user entry, matched
         // per the legacy toneless rule. What the tone pin adds is not a
         // different match key but an eligibility gate on the ENTRY's own
         // reading: with the edge typed with a digit (§17) or closed by the
         // keyboard's space (§41), an entry whose reading disagrees there is
-        // not the word the user asked for. The FIRST ELIGIBLE entry under
-        // the key wins — filtering after a first-wins pick would hide a
-        // later entry that does carry the typed tone.
+        // not the word the user asked for. Every eligible entry under the
+        // key enters the pick, so an entry that carries the typed tone is
+        // never hidden behind one that does not.
         //
         // **§41 branch unreachable in TPS today, kept for architectural
         // symmetry.** `custom_toneless_key` (`shadow.rs`) rejects a TPS
@@ -726,112 +726,40 @@ pub(crate) fn walk_buffer(
         // not survive verification. The §17 branch DOES fire: TL/POJ custom
         // entries are the common case.
         let custom_key = format!("{key_prefix}{toneless}");
-        // v3.5.8 S6 (Codex pre-impl S6 Q3, 2026-05-17) — a
-        // `custom_dictionary.db` entry whose normalized toneless
-        // roman equals this edge's key OVERRIDES the `dict.bin`
-        // best candidate for the edge (checked BEFORE
-        // `best_candidate_for_key_with_barriers`). Same source-rank-0 precedence
-        // custom has in the span-local `(roman,hanji,consumed_span)`
-        // dedupe — an unconditional edge-content override, NOT a
-        // cost competition (segmentation safety comes from the
-        // `CUSTOM_EDGE_COST` price + existing single-syllable
-        // user-delta damping, not from out-scoring dict here).
-        if let Some(entry) = custom_map.get(custom_key.as_str()).and_then(|entries| {
-            entries
-                .iter()
-                .copied()
-                .find(|entry| edge_tone_pin.admits_custom(&entry.roman, mode))
-        }) {
-            // `display_text` = the exact key the platform writes to
-            // `user_frequency.db` on commit, mirroring
-            // `lexicon::custom_entry_to_candidate` (hanji else
-            // `canonical_tl_form(roman, mode)`) so a user-selected
-            // custom entry's decayed weight folds into the path
-            // objective identically to a dict edge (S3 Q4d seam).
-            // v3.5.9 B-4 — the canonicalization keeps the commit key
-            // mode-invariant when the custom entry stored its roman
-            // in POJ display form (the user's native mode). Single-
-            // syllable custom is damped by
-            // `WALKER_SINGLE_SYLLABLE_USER_DELTA_SCALE` in
-            // `edge_cost`, same as dict.
-            // R5 pair-key (#7): fold the custom roman to canonical TL once,
-            // reuse for both the hanji-absent display_text fallback AND the
-            // `(display_text, canonical_tl)` freq pair key.
-            let canonical_tl = phonetics::api::canonical_tl_form(&entry.roman, mode);
-            let display_text = entry.hanji.clone().unwrap_or_else(|| canonical_tl.clone());
-            let user_weight_delta =
-                edge_user_weight_delta(freq_map, now_ms, &display_text, &canonical_tl);
-            // Syllable count = greedy-longest segment count of the
-            // edge's shadow span (the edge came from the
-            // syllabifier-built lattice so it segments cleanly;
-            // clamp ≥ 1 defends a leaked empty). `CustomEntry`
-            // carries no syllable model — this mirrors what the
-            // dict path reads off `DictionaryRecord.syllable_count`
-            // for the same span and feeds the khiin `n_syls` bias.
-            let syllable_count = greedy_longest_syllabification(
-                &shadow[start..end],
-                inv,
-                mode,
-                &crate::shadow::oov_reading_barriers(barriers, start, end, mode),
-            )
-            .map(|segs| segs.len())
-            .unwrap_or(1)
-            .clamp(1, u8::MAX as usize) as u8;
-            return Some(crate::lattice::EdgeChoice {
-                roman: entry.roman.clone(),
-                hanji: entry.hanji.clone(),
-                canonical_tl,
-                // S6 Q7 (Codex BLOCK guard): a custom entry IS a
-                // lexicon-backed hit (not OOV roman synthesis) —
-                // keeps the all-OOV carve-out from firing on a
-                // custom-only path. NEVER infer no-dict from
-                // hanji/freq/is_custom.
-                dict_hit: true,
-                is_custom: true,
-                // S6 Q1 (Codex BLOCK): priced as a corpus word — custom
-                // still pays a `−ln p` toll, NOT a cost special-case.
-                walker_cost: crate::lattice::CUSTOM_EDGE_COST,
-                syllable_count,
-                toneless_len: toneless.chars().count(),
-                user_weight_delta,
-            });
-        }
-        // PR-9.6 — the walker's per-edge dict lookup applies the SAME
-        // source filter as the span-local path so a whole-sentence parse
-        // cannot re-surface (at slot 0) a word whose only source the user
-        // toggled off. Custom edges above are unconditional (custom is not
-        // a toggleable source); dict edges honour
-        // `ctx.enabled_sources_bitmask`.
-        // Learned phrases (§50) — the rows keyed to this edge, filtered by
-        // the same tone pin a custom row answers to. They enter the
-        // dictionary's own edge pick (`lexicon::pick_edge_word`); when any
-        // is present the edge is priced at most at `CUSTOM_EDGE_COST` so the
-        // span the user once composed as one word keeps winning the
-        // segmentation (the #69 span-vs-word decoupling: "is this span a
-        // word" is the cap, "which word" is the pick).
-        let learned_for_edge: Vec<&LearnedEntry> = learned_map
-            .get(custom_key.as_str())
-            .into_iter()
-            .flatten()
-            .copied()
-            .filter(|entry| edge_tone_pin.admits(None, &entry.canonical_tl))
-            .collect();
+        // Custom rows and learned phrases (§50) under this edge's key join
+        // the dictionary's own edge pick
+        // (`lexicon::best_candidate_for_key_with_barriers`) as competitors,
+        // ordered by the list's own `CandidateSortKey` — no longer a
+        // first-wins custom override (USER 2026-10-16: a never-selected
+        // custom 屢 `lí` took the `li2` edge from 你, and from a custom 李
+        // picked 7×). The dictionary rows honour
+        // `ctx.enabled_sources_bitmask` (PR-9.6); user rows are not a
+        // toggleable source. `EdgeBest::has_user_row` says when the span's
+        // cost is capped.
+        let custom_for_edge = rows_for_edge(&custom_map, &custom_key, |entry: &CustomEntry| {
+            edge_tone_pin.admits_custom(&entry.roman, mode)
+        });
+        let learned_for_edge = rows_for_edge(&learned_map, &custom_key, |entry: &LearnedEntry| {
+            edge_tone_pin.admits(None, &entry.canonical_tl)
+        });
         match best_candidate_for_key_with_barriers(
             &dict_key,
             &edge_final_only,
             &edge_tone_pin,
             raw_span,
+            &custom_for_edge,
             &learned_for_edge,
             ctx,
         ) {
             Some(lexicon::EdgeBest {
                 candidate: c,
                 span_walker_cost,
+                has_user_row,
             }) => {
-                let span_walker_cost = if learned_for_edge.is_empty() {
-                    span_walker_cost
-                } else {
+                let span_walker_cost = if has_user_row {
                     span_walker_cost.min(crate::lattice::CUSTOM_EDGE_COST)
+                } else {
+                    span_walker_cost
                 };
                 // Word = the edge pick (user weight, context, corpus cost). Cost =
                 // `span_walker_cost` (key min) so a rarer preferred
@@ -847,8 +775,7 @@ pub(crate) fn walk_buffer(
                     // key off this, never `hanji.is_none()` /
                     // `frequency == 0`.
                     dict_hit: true,
-                    // S6: a `dict.bin` record is not custom.
-                    is_custom: false,
+                    is_custom: c.is_custom,
                     walker_cost: span_walker_cost,
                     syllable_count: c.syllable_count,
                     // khiin `word_len` for the S5 length
@@ -1075,7 +1002,9 @@ fn fetch_walker_slot0_inner(
     let display_text = hanji.clone().unwrap_or_else(|| canonical_tl.clone());
     // R5 pair-key (#7): walker synth keyed by (display_text,
     // canonical_tl); `get` returns the neutral default on a miss.
-    let user_weight = edge_user_weight_delta(freq_map, now_ms, &display_text, &canonical_tl);
+    let user_weight = freq_map
+        .get(&display_text, &canonical_tl)
+        .user_weight(now_ms);
     Some(WalkerSlot0 {
         consumed_span,
         syllable_count,
@@ -1413,10 +1342,10 @@ pub(crate) fn assemble_candidates(
                         // or same recased roman, as [`retain_absent_from`] —
                         // + `insert(0, …)` so slot 0 stays unique. The
                         // identity half is a defensive mirror here: the
-                        // walker takes a custom edge over the dictionary one
-                        // and the lexicon dedupe already dropped the custom
-                        // row's dictionary twin, so today slot 0 and its
-                        // leftover twin always share the recased roman.
+                        // walker's edge pick and the lexicon list run the
+                        // same dedupe (a dictionary twin replaces a custom
+                        // row in both), so today slot 0 and its leftover
+                        // twin always share the recased roman.
                         let slot0 = match promote_idx {
                             Some(i) => c.remove(i),
                             None => slot0_cand,
@@ -1689,14 +1618,15 @@ pub(crate) fn assemble_candidates(
         if mode == phonetics::InputMode::Tps {
             dedupe_display_hanji_for_tps(&mut candidates);
         }
-        // A word's list: the Step 4d lead (`candidate_lead`), then longer
-        // words first; each length keeps its ranking. The walker's slot 0
-        // stays put.
+        // A word's list: the Step 4d lead (`candidate_lead`) and match kind,
+        // then longer words first whatever the counts or the custom source
+        // (H4); each length keeps its ranking. The walker's slot 0 stays put.
         if shape == ListShape::Word {
             let ranked_from = walker_slot0_len.min(candidates.len());
             candidates[ranked_from..].sort_by_key(|candidate| {
                 (
                     candidate_lead(&candidate.rank_facts(), raw_len),
+                    candidate.coverage_kind,
                     std::cmp::Reverse(candidate.consumed_span.1),
                 )
             });

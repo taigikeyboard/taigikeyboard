@@ -133,7 +133,7 @@ fn fetch_hanji(raw: &str) -> Vec<String> {
 
 /// [`fetch_hanji`] with `custom_dictionary.db` entries attached — the
 /// lexicon whole-buffer merge, which the empty-list helper never exercises.
-/// (The walker's per-edge custom override is NOT reached in TPS mode:
+/// (The walker's per-edge custom rows are NOT reached in TPS mode:
 /// `custom_toneless_key` rejects a non-Bopomofo body, and custom romans are
 /// TL / POJ. Its pin gate is symmetry for the day that changes; see the
 /// comment at that call site.)

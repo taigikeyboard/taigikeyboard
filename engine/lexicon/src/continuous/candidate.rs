@@ -29,11 +29,9 @@ use crate::dictionary_reader::{DictionaryRecord, WALKER_COST_UNPRICED};
 /// syllable was not typed into. `typed_key = None` admits none. The
 /// abbreviation block takes its own ([`merge_custom_abbreviations`]). Each
 /// admitted entry is synthesized as a full-buffer candidate
-/// (`consumed_span = (0, raw_len)`, `is_custom = true` → `source_tier_rank`
-/// rank 0) and appended AFTER the FST hits so a `(canonical_tl, hanji)`
-/// duplicate keeps the earlier-inserted `dict.bin` candidate only when source
-/// ranks tie (they never do — custom rank 0 < every `dict.bin` rank ≥ 1, so
-/// the custom entry always wins its collision). See
+/// (`consumed_span = (0, raw_len)`, `is_custom = true`) and appended AFTER
+/// the FST hits, so a `(canonical_tl, hanji)` duplicate keeps the
+/// `dict.bin` candidate ([`dedupe_by_roman_hanji_span`]). See
 /// `docs/engine/continuous-commit-and-display.md` §10.10.
 ///
 /// A custom entry is synthesized whole-buffer, so the buffer's
@@ -49,11 +47,12 @@ use crate::dictionary_reader::{DictionaryRecord, WALKER_COST_UNPRICED};
 /// **Dedupe** (Item 12): `dict.bin` is already collapsed by
 /// `dictionary/build/merge_csv.py:107`'s `groupby(["hanzi", "_tl_key"])`,
 /// so the only realistic duplicate is custom-vs-`dict.bin` sharing a
-/// hanji and a roman or `canonical_tl` identity. MUST run BEFORE the `CandidateSortKey` sort: the winner is
-/// the lowest `source_tier_rank` survivor (custom rank 0 beats any
-/// `dict.bin` tier), which is NOT what the full sort would pick (it
-/// weighs `walker_cost` / `score` / `freq` ahead of `source_rank`, so a `dict.bin`
-/// duplicate could otherwise mask the user's custom entry). `(reading,
+/// hanji and a roman or `canonical_tl` identity. MUST run BEFORE the
+/// `CandidateSortKey` sort: the winner is the `dict.bin` row (USER
+/// 2026-10-16 — a custom row that repeats a dictionary word ranks as that
+/// word), which is NOT what the full sort would pick (it leads with
+/// `preference_class`, where the never-selected custom copy outranks its
+/// dictionary twin). `(reading,
 /// hanji)` is the dual key (Codex pre-impl D1) so reading variants of
 /// the same hanji are preserved (spellings of one reading collapse); S2 extends it with `consumed_span` (Codex
 /// pre-impl S2 Q1d) — both the custom synth and its `dict.bin` duplicate
@@ -90,11 +89,10 @@ pub(super) fn merge_custom_dedupe_sort(
             },
         );
     }
-    // Learned phrases (§50) — same whole-buffer span as a custom row; the
-    // `(canonical_tl, hanji, span)` dedupe below keeps the `dict.bin` / custom
-    // duplicate over it (lowest `source_tier_rank` wins, a learned row has
-    // the default rank), so a learned pair that the dictionary also carries
-    // is listed once, from the dictionary.
+    // Learned phrases (§50) — same whole-buffer span as a custom row,
+    // appended last: the `(canonical_tl, hanji, span)` dedupe below keeps the
+    // `dict.bin` / custom duplicate over it, so a learned pair that the
+    // dictionary also carries is listed once, from the dictionary.
     for entry in ctx.learned {
         if !ctx.tone_pin.admits(None, &entry.canonical_tl) {
             continue;
@@ -143,7 +141,7 @@ fn push_custom_entries(
         }
         out.push(custom_entry_to_candidate(
             entry,
-            raw_len,
+            (0, raw_len),
             ctx.freq_map,
             ctx.now_ms,
             ctx.context,
@@ -224,23 +222,26 @@ pub(super) fn record_to_candidate(
 ///
 /// Shape decisions (Codex pre-impl 2026-05-15, D3 / D4):
 ///
-/// - `consumed_span = (0, raw_len)` — custom entries are outside the
-///   FST/syllabifier span model, so they commit the whole buffer as
-///   one block (final-commit), mirroring the legacy lexicon path's
-///   treatment of custom dict and Item 10 partial-prefix Q15.4. With
-///   `consumed_span_end == raw_len` the downstream `CandidateSortKey.tier` is
-///   `0` (full-buffer) — NO forced Tier-1 promotion
-///   (`docs/releases/v3.5.8/plan.md` § Phase 9: "無強制 Tier 1 promotion").
+/// - `consumed_span = span` — the list paths pass `(0, raw_len)`: custom
+///   entries are outside the FST/syllabifier span model, so they commit
+///   the whole buffer as one block (final-commit), mirroring the legacy
+///   lexicon path's treatment of custom dict and Item 10 partial-prefix
+///   Q15.4. With `consumed_span_end == raw_len` the downstream
+///   `CandidateSortKey.tier` is `0` (full-buffer) — NO forced Tier-1
+///   promotion (`docs/releases/v3.5.8/plan.md` § Phase 9: "無強制 Tier 1
+///   promotion"). The walker's edge pick passes the edge's own span
+///   ([`best_candidate_for_key_with_barriers`](super::best_candidate_for_key_with_barriers)).
 /// - `frequency = 0` — `custom_dictionary.db` carries no
 ///   `dict.bin`-comparable frequency. `syllable_count` is read off the
 ///   canonical TL's separators, as for a learned phrase (陳建中
 ///   `Tân Kiàn-tiong` → 3, a Latin `iPhone` → 1): a nailed custom pick echoes
 ///   it back, and the commit's compound run (`composing::api::longest_compound_run`)
 ///   must not take a multi-syllable word for a single syllable. `is_custom = true`
-///   gives `source_tier_rank` rank `0`, which is what governs the
-///   `(canonical_tl, hanji)` dedupe winner. Its place in the list is
-///   `CandidateSortKey`'s `custom_lead`: the head of the whole-input tier
-///   (USER 2026-10-12, `docs/engine/continuous-input-ranking.md`).
+///   places a never-selected custom word by `CandidateSortKey`'s
+///   `preference_class`: after the selected words, before the rest of the
+///   whole-input tier (USER 2026-10-12 / 2026-10-16,
+///   `docs/engine/continuous-input-ranking.md`). A `dict.bin` twin of the
+///   same word replaces it in the dedupe ([`dedupe_by_roman_hanji_span`]).
 /// - `display_text = hanji.unwrap_or(canonical_tl_form(roman, mode))` —
 ///   v3.5.9 B-4 closes the bounded asymmetry the pre-B-4
 ///   `unwrap_or(roman)` contract documented at
@@ -254,7 +255,7 @@ pub(super) fn record_to_candidate(
 ///   `dict.bin` candidates (custom entries can also be user-selected).
 pub(super) fn custom_entry_to_candidate(
     entry: &CustomEntry,
-    raw_len: u32,
+    span: ConsumedSpan,
     freq_map: &FrequencyMap,
     now_ms: i64,
     context: &ContextRanks,
@@ -298,7 +299,7 @@ pub(super) fn custom_entry_to_candidate(
     // `user_weight` / `source_rank` / dedupe, not raw freq.
     let score = calculate_continuous_score(0, syllable_count);
     RawCandidate {
-        consumed_span: (0, raw_len),
+        consumed_span: span,
         syllable_count,
         display_text,
         roman,
@@ -307,9 +308,9 @@ pub(super) fn custom_entry_to_candidate(
         score,
         frequency: 0,
         walker_cost: WALKER_COST_UNPRICED,
-        // No `dict.bin` source bits; rank is forced to 0 via
-        // `is_custom = true` in `CandidateSortKey::new` /
-        // `dedupe_by_roman_hanji_span` (`source_tier_rank` short-circuits).
+        // No `dict.bin` source bits: `CandidateSortKey::new` forces rank 0
+        // via `is_custom = true`; `dedupe_by_roman_hanji_span` reads the
+        // default rank, so a `dict.bin` twin replaces this row.
         bitmask: 0,
         user_weight,
         context_rank,
@@ -389,15 +390,17 @@ pub(super) fn learned_entry_to_candidate(
 ///   preserved: both the custom synth and its `dict.bin` duplicate
 ///   are emitted at the **same** full-buffer span `(0, raw_len)`
 ///   (see the `custom_entry_to_candidate` call sites above), so the
-///   span-augmented key still collides and custom still wins by
-///   source rank.
-/// - **Winner** (D2): the survivor with the lowest
-///   `source_tier_rank(bitmask, is_custom)` (custom = rank 0 beats
-///   every `dict.bin` tier ≥ 1). On a rank tie the earlier-inserted
-///   candidate wins (deterministic; `dict.bin` hits are inserted
-///   before custom, so a `dict.bin`-vs-`dict.bin` tie — which
-///   `merge_csv.py` already precludes in production — keeps the first
-///   FST hit).
+///   span-augmented key still collides and the `dict.bin` row wins.
+/// - **Winner** (D2, USER 2026-10-16): the survivor with the lowest
+///   dictionary source rank, `source_tier_rank(bitmask, false)` — a
+///   custom or learned row carries no source bits, so it takes the
+///   default rank and every `dict.bin` twin wins over it. On a rank tie
+///   the earlier-inserted candidate wins, and every caller inserts
+///   `dict.bin` hits, then custom rows, then learned rows: a custom row
+///   survives a learned twin, and a `dict.bin`-vs-`dict.bin` tie — which
+///   `merge_csv.py` already precludes in production — keeps the first FST
+///   hit. A `dict.bin` twin dropped by a disabled source is not in `out`,
+///   so the custom row stays.
 /// - Survivor **insertion order is preserved** so the downstream
 ///   `CandidateSortKey.stable_idx` stays deterministic.
 pub(super) fn dedupe_by_roman_hanji_span(out: &mut Vec<RawCandidate>) {
@@ -411,14 +414,15 @@ pub(super) fn dedupe_by_roman_hanji_span(out: &mut Vec<RawCandidate>) {
 }
 
 /// One pass of [`dedupe_by_roman_hanji_span`]: collapse candidates equal on
-/// `(reading(c), hanji, consumed_span)`, lowest source rank surviving.
+/// `(reading(c), hanji, consumed_span)`, lowest dictionary source rank
+/// surviving, then the earliest inserted.
 fn dedupe_by_reading(out: &mut Vec<RawCandidate>, reading: fn(&RawCandidate) -> &str) {
     use std::collections::{HashMap, HashSet};
     // key (borrowed from `out`) → (winning source rank, index of winner).
     let mut best: HashMap<(&str, Option<&str>, ConsumedSpan), (u8, usize)> =
         HashMap::with_capacity(out.len());
     for (i, c) in out.iter().enumerate() {
-        let rank = source_tier_rank(c.bitmask, c.is_custom);
+        let rank = source_tier_rank(c.bitmask, false);
         let key = (reading(c), c.hanji.as_deref(), c.consumed_span);
         // Strictly lower rank replaces; equal rank keeps the earlier index
         // (no replace) → deterministic tie-break.
@@ -524,10 +528,11 @@ mod record_to_candidate_carrier_tests {
 mod item12_custom_dedupe_tests {
     //! v3.5.8 Phase 9 Item 12 — `custom_dictionary.db` synthesis +
     //! `(canonical_tl, hanji)` dedupe. Pins Codex pre-impl decisions D1
-    //! (dual `(canonical_tl, hanji)` key — the word identity since 2026-10-07), D2 (lowest `source_tier_rank`
-    //! winner, rank-tie → earlier insertion), D3 (full-buffer span),
+    //! (dual `(canonical_tl, hanji)` key — the word identity since 2026-10-07), D2 (lowest dictionary
+    //! source rank wins, rank-tie → earlier insertion; a `dict.bin` twin
+    //! beats a custom row since USER 2026-10-16), D3 (full-buffer span),
     //! D4 (`frequency = 0`, `syllable_count` from the TL, `is_custom` drives
-    //! rank 0). Spec: `docs/engine/continuous-commit-and-display.md`
+    //! sort-key source rank 0). Spec: `docs/engine/continuous-commit-and-display.md`
     //! §10.10.
     use super::*;
     use crate::continuous::{COVERAGE_KIND_FULL, COVERAGE_KIND_PARTIAL_PREFIX};
@@ -566,7 +571,7 @@ mod item12_custom_dedupe_tests {
                 roman: "tâi-gí".to_owned(),
                 hanji: Some("台語".to_owned()),
             },
-            9,
+            (0, 9),
             &FrequencyMap::new(),
             0,
             ContextRanks::empty(),
@@ -599,7 +604,7 @@ mod item12_custom_dedupe_tests {
                 roman: "gu\u{00e1}".to_owned(),
                 hanji: None,
             },
-            3,
+            (0, 3),
             &FrequencyMap::new(),
             0,
             ContextRanks::empty(),
@@ -626,7 +631,7 @@ mod item12_custom_dedupe_tests {
                 roman: "g\u{00f3}a".to_owned(), // POJ display form
                 hanji: None,
             },
-            3,
+            (0, 3),
             &FrequencyMap::new(),
             0,
             ContextRanks::empty(),
@@ -659,7 +664,7 @@ mod item12_custom_dedupe_tests {
                 roman: "g\u{00f3}a".to_owned(), // POJ `góa` (TL would be `guá`)
                 hanji: None,
             },
-            3,
+            (0, 3),
             &FrequencyMap::new(),
             0,
             ContextRanks::empty(),
@@ -675,11 +680,11 @@ mod item12_custom_dedupe_tests {
     }
 
     #[test]
-    fn dedupe_custom_wins_over_dict_collision() {
-        // D2: same `(canonical_tl, hanji)` from a high-freq `dict.bin` entry
-        // (kautian, rank 1) and a custom entry (rank 0). The custom
-        // survivor wins regardless of the dict entry's higher freq /
-        // earlier insertion.
+    fn dedupe_dictionary_twin_wins_over_custom_collision() {
+        // D2 (USER 2026-10-16): same `(canonical_tl, hanji)` from a
+        // `dict.bin` entry and a custom entry — the custom row repeats a
+        // dictionary word, so the dictionary row (its corpus cost and
+        // source bits) survives.
         let mut out = vec![
             dict_cand("tâi-gí", Some("台語"), 1 << 0), // kautian, rank 1
             custom_entry_to_candidate(
@@ -687,7 +692,7 @@ mod item12_custom_dedupe_tests {
                     roman: "tâi-gí".to_owned(),
                     hanji: Some("台語".to_owned()),
                 },
-                6,
+                (0, 6),
                 &FrequencyMap::new(),
                 0,
                 ContextRanks::empty(),
@@ -697,7 +702,41 @@ mod item12_custom_dedupe_tests {
         ];
         dedupe_by_roman_hanji_span(&mut out);
         assert_eq!(out.len(), 1, "collision must collapse to one");
-        assert!(out[0].is_custom, "custom (rank 0) must win the collision");
+        assert!(
+            !out[0].is_custom,
+            "the dictionary twin must win the collision"
+        );
+    }
+
+    #[test]
+    fn dedupe_default_source_dictionary_twin_still_wins_over_custom() {
+        // A `dict.bin` row without a known source bit shares the custom
+        // row's default rank; insertion order (dictionary first) decides.
+        let mut out = vec![dict_cand("lí", Some("屢"), 0), custom_cand("lí", "屢")];
+        dedupe_by_roman_hanji_span(&mut out);
+        assert_eq!(out.len(), 1);
+        assert!(!out[0].is_custom);
+    }
+
+    #[test]
+    fn dedupe_custom_wins_over_learned_twin() {
+        // Custom rows are inserted before learned rows: a manual entry
+        // survives the learned phrase that repeats it.
+        let learned = learned_entry_to_candidate(
+            &LearnedEntry {
+                hanji: "記起來".to_owned(),
+                canonical_tl: "kì-khí-lâi".to_owned(),
+            },
+            (0, 6),
+            &FrequencyMap::new(),
+            0,
+            ContextRanks::empty(),
+            COVERAGE_KIND_FULL,
+        );
+        let mut out = vec![custom_cand("kì-khí-lâi", "記起來"), learned];
+        dedupe_by_roman_hanji_span(&mut out);
+        assert_eq!(out.len(), 1);
+        assert!(out[0].is_custom);
     }
 
     fn custom_cand(roman: &str, hanji: &str) -> RawCandidate {
@@ -706,7 +745,7 @@ mod item12_custom_dedupe_tests {
                 roman: roman.to_owned(),
                 hanji: Some(hanji.to_owned()),
             },
-            6,
+            (0, 6),
             &FrequencyMap::new(),
             0,
             ContextRanks::empty(),
@@ -725,7 +764,7 @@ mod item12_custom_dedupe_tests {
         ];
         dedupe_by_roman_hanji_span(&mut out);
         assert_eq!(out.len(), 1);
-        assert!(out[0].is_custom);
+        assert_eq!(out[0].roman, "l\u{ed}", "the dictionary's NFC row survives");
     }
 
     #[test]
@@ -739,7 +778,7 @@ mod item12_custom_dedupe_tests {
         let mut out = vec![dict_cand("hùi", Some("卉"), 1 << 0), custom];
         dedupe_by_roman_hanji_span(&mut out);
         assert_eq!(out.len(), 1);
-        assert!(out[0].is_custom);
+        assert!(!out[0].is_custom);
     }
 
     #[test]
@@ -812,7 +851,7 @@ mod item12_custom_dedupe_tests {
         // collapse must NOT regress under the span-augmented key. Both
         // are emitted at the SAME full-buffer span `(0, raw_len)` in
         // production (`fetch_candidates_for_keys_with_barriers`), so the triple key
-        // still collides and custom (rank 0) still wins.
+        // still collides and the dictionary row wins.
         let mut dict = dict_cand("tâi-gí", Some("台語"), 1 << 0);
         dict.consumed_span = (0, 6);
         let custom = custom_entry_to_candidate(
@@ -820,7 +859,7 @@ mod item12_custom_dedupe_tests {
                 roman: "tâi-gí".to_owned(),
                 hanji: Some("台語".to_owned()),
             },
-            6,
+            (0, 6),
             &FrequencyMap::new(),
             0,
             ContextRanks::empty(),
@@ -830,7 +869,7 @@ mod item12_custom_dedupe_tests {
         let mut out = vec![dict, custom];
         dedupe_by_roman_hanji_span(&mut out);
         assert_eq!(out.len(), 1, "same-span custom/dict collision collapses");
-        assert!(out[0].is_custom, "custom (rank 0) still wins the collision");
+        assert!(!out[0].is_custom, "the dictionary row wins the collision");
     }
 
     #[test]
@@ -844,7 +883,7 @@ mod item12_custom_dedupe_tests {
                 roman: "x".to_owned(),
                 hanji: Some("某".to_owned()),
             },
-            3,
+            (0, 3),
             &FrequencyMap::new(),
             0,
             ContextRanks::empty(),

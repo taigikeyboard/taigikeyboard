@@ -263,9 +263,9 @@ fn custom_entries_answer_the_same_pin_on_both_paths() {
     install_fixture();
     // Custom matching is toneless, so without the pin a custom entry with
     // the wrong tone would surface — through the lexicon whole-buffer merge
-    // AND the walker's per-edge override (slot 0). Two entries under the
-    // same toneless key, wrong tone FIRST: the walker must pick the first
-    // ELIGIBLE entry, not filter its first-wins pick down to nothing.
+    // AND the walker's per-edge pick (slot 0). Two entries under the same
+    // toneless key, wrong tone FIRST: the walker must pick among the
+    // ELIGIBLE entries, not filter a first-wins pick down to nothing.
     let custom = vec![
         CustomEntry {
             roman: "tíng-sik".into(),
@@ -288,7 +288,7 @@ fn custom_entries_answer_the_same_pin_on_both_paths() {
     assert_eq!(
         hanji.first().map(String::as_str),
         Some("乙"),
-        "slot 0 (walker custom override) must be the first ELIGIBLE entry; got {hanji:?}"
+        "slot 0 (walker edge pick) must be an ELIGIBLE entry; got {hanji:?}"
     );
 
     // Fully toned input pins custom entries too — the verbatim key only

@@ -61,21 +61,21 @@ pub(crate) struct EdgeChoice {
     /// custom edge stays `true`; reverting it to `false` would
     /// re-enable the all-OOV carve-out on a custom-only path.
     pub dict_hit: bool,
-    /// v3.5.8 S6 (Codex pre-impl S6 Q4) — `true` iff this edge resolved
-    /// to a `custom_dictionary.db` entry (the S6 custom-precedence
-    /// branch in `continuous::fetch_walker_slot0_inner`). Provenance only:
-    /// propagated to the synthesized slot-0 `RawCandidate.is_custom`
-    /// when ANY winning edge is custom; the walker cost objective does
-    /// NOT read this (a custom edge competes via [`Self::walker_cost`] =
-    /// `CUSTOM_EDGE_COST`, Codex S6 Q1 — NOT a cost special-case).
+    /// v3.5.8 S6 (Codex pre-impl S6 Q4) — `true` iff the edge pick
+    /// (`lexicon::best_candidate_for_key_with_barriers`) chose a
+    /// `custom_dictionary.db` entry. Provenance only: propagated to the
+    /// synthesized slot-0 `RawCandidate.is_custom` when ANY winning edge is
+    /// custom; the walker cost objective does NOT read this (a custom edge
+    /// competes via [`Self::walker_cost`], Codex S6 Q1 — NOT a cost
+    /// special-case).
     pub is_custom: bool,
     /// Corpus cost (milli-nats) the edge is scored with on the **dict**
     /// branch of [`super::cost::edge_cost`]: the key's lowest
     /// `walker_cost` across its homophones
     /// (`lexicon::EdgeBest::span_walker_cost` — segmentation evidence,
-    /// not the chosen word's own; capped at `CUSTOM_EDGE_COST` when a
-    /// learned phrase sits under the key), or `super::cost::CUSTOM_EDGE_COST`
-    /// for a custom edge. **Unused** for a synthesized OOV edge (RC0: OOV
+    /// not the chosen word's own; capped at `CUSTOM_EDGE_COST` when a user
+    /// row sits under the key, `lexicon::EdgeBest::has_user_row`).
+    /// **Unused** for a synthesized OOV edge (RC0: OOV
     /// cost is char-keyed, never corpus-priced).
     pub walker_cost: u16,
     /// Syllable count of the chosen candidate (`>= 1`). Dict/custom:
@@ -287,7 +287,7 @@ mod tests {
     }
     /// v3.5.8 S6 — a `custom_dictionary.db` edge as the dispatch
     /// provider builds it: `dict_hit:true` (lexicon-backed),
-    /// `is_custom:true`, priced at `CUSTOM_EDGE_COST`.
+    /// `is_custom:true`, priced at most at `CUSTOM_EDGE_COST`.
     fn custom(roman: &str, hanji: &str, walker_cost: u16, syll: u8, len: usize) -> EdgeChoice {
         EdgeChoice {
             roman: roman.to_owned(),

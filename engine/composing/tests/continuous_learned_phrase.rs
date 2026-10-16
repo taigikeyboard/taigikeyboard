@@ -12,8 +12,10 @@
 //!    typed buffer leads the hanji candidates when the dictionary has no
 //!    word under that key, competes (and loses) against a dictionary
 //!    homophone unless `user_frequency` prefers it, dedupes against the
-//!    same pair from the dictionary, and never outranks a manual custom
-//!    row (Codex 2026-09-20 F5: learned = competitor, custom = override).
+//!    same pair from the dictionary, and never outranks a never-selected
+//!    manual custom row (Codex 2026-09-20 F5: learned = competitor; custom
+//!    rows compete too since USER 2026-10-16, ahead of the never-selected
+//!    rest).
 //!
 //! Fixture mirrors the USER report (2026-09-20): 記起來 `kì--khí-lâi` is a
 //! 台日-only dictionary word (default off), so a default user composes it as
@@ -634,11 +636,12 @@ fn learned_pair_the_dictionary_also_carries_is_listed_once_from_the_dictionary()
 }
 
 #[test]
-fn custom_row_whose_reading_has_a_word_space_overrides_the_dictionary_word() {
+fn custom_row_whose_reading_has_a_word_space_leads_the_dictionary_word() {
     // A custom roman committed from a multi-word candidate keeps the space
     // between its words (`kì khí-lâi`). The walker key folds that space like
-    // the learned key always did, so the row still overrides the dictionary
-    // word under the same key (機器來), toneless and toned, listed once.
+    // the learned key always did, so the never-selected row still leads the
+    // never-selected dictionary word under the same key (機器來), toneless
+    // and toned, listed once.
     let _lock = engine_install_lock();
     let mut rows = fixture_rows();
     rows.push(Row {
@@ -660,7 +663,7 @@ fn custom_row_whose_reading_has_a_word_space_overrides_the_dictionary_word() {
         let hanji = fetch_hanji(raw, "tl", custom("kì khí-lâi", "既起來"));
         assert_eq!(
             hanji[0], "既起來",
-            "{raw}: custom override wins; got {hanji:?}"
+            "{raw}: the custom row wins the edge; got {hanji:?}"
         );
         assert_eq!(
             hanji.iter().filter(|h| *h == "既起來").count(),
@@ -695,7 +698,7 @@ fn manual_custom_row_outranks_a_learned_row_under_the_same_key() {
     );
     assert_eq!(
         hanji[0], "既起來",
-        "custom override wins the edge; got {hanji:?}"
+        "the never-selected custom row wins the edge; got {hanji:?}"
     );
     assert!(
         hanji.contains(&"記起來".to_string()),

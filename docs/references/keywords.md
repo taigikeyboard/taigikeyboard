@@ -77,7 +77,7 @@ fst prefix index + dictionary/association mmap readers all live in Rust `engine/
 | **bitmaskFilter** | 16-bit source bitmask replaces SQL WHERE for dictionary filtering | Rust `lexicon::dictionary_reader::Filter` |
 | **InputNormalizer** | Converts any input form to TL numeric tone format | Rust `phonetics::normalization::normalize_input` |
 | **searchKey** | Normalized key format: prefix + lowercase, no hyphens, numeric tones (e.g. `tl:gua2si7`) | Rust `phonetics::KeyFamily::search_key` |
-| **sortKey** | Ranking is the lexicographic `CandidateSortKey`: `tier`, `custom_lead`, `coverage_kind`, `-user_weight`, `context_rank`, `walker_cost`, `-score`, `-frequency`, `-coverage`, `source_rank`, `stable_idx` | Rust `ranking::sort_key::CandidateSortKey` (`engine/ranking/src/sort_key.rs`) |
+| **sortKey** | Ranking is the lexicographic `CandidateSortKey`: `tier`, `abbreviation`, `preference_class`, `coverage_kind`, `-user_weight`, `context_rank`, `walker_cost`, `-score`, `-frequency`, `-coverage`, `source_rank`, `stable_idx` | Rust `ranking::sort_key::CandidateSortKey` (`engine/ranking/src/sort_key.rs`) |
 | **userFrequency** | Per-word usage count, dominates ranking. `user_frequency.db`, engine-owned; read inside `FetchAtPos`, written by `RecordUsage` | Rust `userdata::UserFrequencyStore` |
 | **timeDecay** | Exponential decay of the user weight, `exp(−age / USER_WEIGHT_DECAY_TAU_MS)` (τ = 30 days) | Rust `ranking::score::decayed_user_weight_delta` (`USER_WEIGHT_DECAY_TAU_MS`) |
 

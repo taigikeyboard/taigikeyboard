@@ -10,6 +10,7 @@ mod common;
 
 mod composing_caret;
 mod continuous_abbrev;
+mod continuous_custom_priority;
 mod continuous_custom_reach;
 mod continuous_custom_unicode_form;
 mod continuous_explicit_tone;

@@ -73,8 +73,8 @@ mod candidate;
 mod toneless_match;
 
 use candidate::{
-    dedupe_by_roman_hanji_span, learned_entry_to_candidate, merge_custom_abbreviations,
-    merge_custom_dedupe_sort, record_to_candidate,
+    custom_entry_to_candidate, dedupe_by_roman_hanji_span, learned_entry_to_candidate,
+    merge_custom_abbreviations, merge_custom_dedupe_sort, record_to_candidate,
 };
 use toneless_match::{
     matches_continuous_toneless_key, matches_continuous_toneless_prefix_key, tps_face_starts_with,
@@ -216,20 +216,20 @@ pub struct RawCandidate {
     /// Internal axis only — does NOT enter `CandidateMessage` (same
     /// pattern as [`user_weight`](Self::user_weight); see
     /// `docs/engine/continuous-candidate-display.md` §15.5). Consumed
-    /// solely by [`CandidateSortKey`], below `tier` and `custom_lead`: within
-    /// a tier a partial-prefix candidate follows every full-syllable one,
+    /// solely by [`CandidateSortKey`], below `tier`, `abbreviation` and
+    /// `preference_class`: within a tier and preference class a
+    /// partial-prefix candidate follows every full-syllable one,
     /// irrespective of user weight, score, dict freq, or source rank.
     pub coverage_kind: u8,
     /// v3.5.8 Phase 9 Item 12 — `true` for candidates synthesized from
     /// a `custom_dictionary.db` entry ([`custom_entry_to_candidate`](candidate::custom_entry_to_candidate)),
     /// `false` for `dict.bin` FST hits ([`record_to_candidate`]). Read
-    /// by [`CandidateSortKey::new`] (→ `source_tier_rank(bitmask, is_custom)`
-    /// returns rank `0` when `true`, ahead of every `dict.bin` source
-    /// tier) and by the `(canonical_tl, hanji)` dedupe winner policy
-    /// (`docs/engine/continuous-commit-and-display.md` §10.10): on a
-    /// duplicate `(canonical_tl, hanji)` identity the lowest `source_tier_rank`
-    /// survivor wins, so a custom entry always beats a `dict.bin`
-    /// duplicate. Internal axis only — NOT emitted on
+    /// by [`CandidateSortKey::new`] (`preference_class` places a
+    /// never-selected custom word after the selected words and before the
+    /// rest; `source_tier_rank(bitmask, is_custom)` gives it rank `0`). The
+    /// `(canonical_tl, hanji)` dedupe ignores it: a `dict.bin` twin wins
+    /// (`docs/engine/continuous-commit-and-display.md` §10.10). Internal
+    /// axis only — NOT emitted on
     /// `CandidateMessage` (same pattern as [`coverage_kind`] /
     /// `user_weight`).
     pub is_custom: bool,
@@ -830,7 +830,8 @@ pub fn fetch_candidates_for_keys_with_barriers(
 ///    and `consumed_span = key.0` (caller pins `(0, raw.len())` per
 ///    Q15.4 — partial-prefix candidates always final-commit).
 /// 5. Sort via the same [`CandidateSortKey`] (`coverage_kind` is `1` for
-///    the whole batch; custom rows lead it through `custom_lead`).
+///    the whole batch; never-selected custom rows lead the never-selected
+///    rest through `preference_class`).
 /// 6. Truncate to [`PARTIAL_PREFIX_OUTPUT_CAP`] after the sort, so the
 ///    returned slice is the globally best-scoring subset (not the FST
 ///    byte-sort prefix). Custom entries participate in the sort and
@@ -1057,17 +1058,25 @@ pub fn fetch_partial_prefix_candidates_unbounded(
 /// separator, so it needs the same restriction the span-local fetch
 /// gets — without it a walker edge could re-read a separator-closed
 /// coda as the next syllable's onset. Empty slice = no barriers.
+///
+/// `custom` and `learned` are the user rows the caller matched to this
+/// edge's key and tone pin. They join the dictionary homophones in ONE pick,
+/// after the same `(reading, hanji, span)` dedupe the candidate list runs —
+/// so the edge's word is the list's own order (USER 2026-10-16: a
+/// never-selected custom 屢 `lí` no longer takes the `li2` edge from 你 the
+/// user picks, and a custom row repeating a dictionary word is that word).
 pub fn best_candidate_for_key_with_barriers(
     key: &str,
     tps_final_only: &[usize],
     tone_pin: &TonePin,
     consumed_span: ConsumedSpan,
+    custom: &[&CustomEntry],
     learned: &[&LearnedEntry],
     ctx: &ContinuousFetchCtx<'_>,
 ) -> Option<EdgeBest> {
     let filter = Filter::from_enabled_bitmask(ctx.enabled_sources_bitmask);
-    // `span_walker_cost` is the dictionary's own minimum — learned rows
-    // join the pick below but carry no corpus probability.
+    // `span_walker_cost` is the dictionary's own minimum — custom and
+    // learned rows join the pick below but carry no corpus probability.
     let mut span_walker_cost = WALKER_COST_UNPRICED;
     let mut homophones: Vec<RawCandidate> = Vec::new();
     exact_candidates_for_key(
@@ -1082,13 +1091,24 @@ pub fn best_candidate_for_key_with_barriers(
             homophones.push(cand);
         },
     );
-    // Learned phrases (§50) — the caller matched these rows to this edge's
-    // key; they join the SAME pick with no corpus cost
-    // ([`WALKER_COST_UNPRICED`]) and `frequency = 0`, so a dictionary
-    // homophone wins unless the user's `user_frequency` or the previous
-    // word's context says otherwise, and the learned row is the edge when
-    // the dictionary has nothing under the key. The caller caps the edge's
-    // `span_walker_cost` for segmentation.
+    // Custom rows, then learned phrases (§50) — the insertion order the
+    // dedupe below breaks rank ties by (dictionary, custom, learned). Both
+    // join the SAME pick with no corpus cost ([`WALKER_COST_UNPRICED`]) and
+    // `frequency = 0`: a never-selected custom row leads the never-selected
+    // dictionary homophones (`preference_class`), a learned row wins only
+    // on the user's `user_frequency` or the previous word's context, and
+    // either is the edge when the dictionary has nothing under the key.
+    for entry in custom {
+        homophones.push(custom_entry_to_candidate(
+            entry,
+            consumed_span,
+            ctx.freq_map,
+            ctx.now_ms,
+            ctx.context,
+            COVERAGE_KIND_FULL,
+            ctx.mode,
+        ));
+    }
     for entry in learned {
         homophones.push(learned_entry_to_candidate(
             entry,
@@ -1099,10 +1119,20 @@ pub fn best_candidate_for_key_with_barriers(
             COVERAGE_KIND_FULL,
         ));
     }
+    // Only a custom row can be a twin the pick would otherwise mis-rank: a
+    // learned twin shares its dictionary row's weight and context and is
+    // unpriced, so the dictionary row wins it anyway. Skipping the dedupe
+    // without custom rows keeps the per-edge hot path allocation-free.
+    let custom_survived = !custom.is_empty() && {
+        dedupe_by_roman_hanji_span(&mut homophones);
+        homophones.iter().any(|cand| cand.is_custom)
+    };
+    let has_user_row = !learned.is_empty() || custom_survived;
     let candidate = pick_edge_word(homophones, consumed_span.1, ctx.context.is_empty())?;
     Some(EdgeBest {
         candidate,
         span_walker_cost,
+        has_user_row,
     })
 }
 
@@ -1194,9 +1224,13 @@ pub struct EdgeBest {
     /// its span out of the best path: "is this span a word" is decoupled
     /// from "which word". (`candidate.user_weight` is likewise the span's
     /// max, since user weight is the leading pick dimension.)
-    /// [`WALKER_COST_UNPRICED`] when only learned rows sit under the key.
+    /// [`WALKER_COST_UNPRICED`] when only user rows sit under the key.
     /// Rationale + numbers: `docs/engine/continuous-input-ranking.md` §3.2.
     pub span_walker_cost: u16,
+    /// A learned row, or a custom row its dictionary twin did not replace,
+    /// sits under the key: the caller prices the span at most at the
+    /// user-entry cost so the word the user composed keeps the segmentation.
+    pub has_user_row: bool,
 }
 
 /// Does the exact hanji `hanji` resolve to a dictionary entry of
