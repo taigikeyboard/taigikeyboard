@@ -49,13 +49,11 @@ struct ComposingShortcuts: Sendable {
     /// Every composing action, in the roster's order.
     let rows: [Row]
     /// The fixed rows, as the pane prints them: the live slot keys bare and
-    /// behind ⇧, the navigation keys, the composing caret's chords, the
-    /// cancel key.
+    /// behind ⇧, the navigation keys, the composing caret's chords.
     let slotKeys: String
     let shiftedSlotKeys: String
     let navigationKeys: String
     let caretChords: String
-    let cancelKey: String
 
     /// No rows and no labels — what the pane draws when the core could not
     /// answer (`KeyRules`, logged there).
@@ -65,7 +63,6 @@ struct ComposingShortcuts: Sendable {
         shiftedSlotKeys: "",
         navigationKeys: "",
         caretChords: "",
-        cancelKey: "",
     )
 
     /// The rows of one block, in roster order.

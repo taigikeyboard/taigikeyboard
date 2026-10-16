@@ -20,14 +20,6 @@ pub fn navigation_keys_label(platform: DesktopPlatform) -> &'static str {
     }
 }
 
-/// The cancel key's keycap legend: `Esc`, the Mac's `⎋`.
-pub fn cancel_key_label(platform: DesktopPlatform) -> &'static str {
-    match platform {
-        DesktopPlatform::Windows | DesktopPlatform::Linux => "Esc",
-        DesktopPlatform::MacOS => "⎋",
-    }
-}
-
 /// `Ctrl+←  Ctrl+→  Ctrl+↑  Ctrl+↓  Home  End` (the Mac's
 /// `⌥←  ⌥→  ⌥↑  ⌥↓  ↖  ↘`): the chords named by the same modifier labels the
 /// recorder rows use, from the modifier the classifier reads, then the bare
@@ -114,18 +106,16 @@ mod tests {
                 "Ctrl+←  Ctrl+→  Ctrl+↑  Ctrl+↓  Home  End"
             );
             assert_eq!(navigation_keys_label(platform), "←  →  ↑  ↓  PgUp  PgDn");
-            assert_eq!(cancel_key_label(platform), "Esc");
         }
     }
 
     #[test]
     fn the_mac_fixed_rows_read_in_glyphs() {
-        // trace: caret ⌥ (`caret_chord_modifiers`), the Mac's ⇞ ⇟ ⎋ legends,
+        // trace: caret ⌥ (`caret_chord_modifiers`), the Mac's ⇞ ⇟ legends,
         // no separator.
         let mac = DesktopPlatform::MacOS;
         assert_eq!(caret_chords_label(mac), "⌥←  ⌥→  ⌥↑  ⌥↓  ↖  ↘");
         assert_eq!(navigation_keys_label(mac), "←  →  ↑  ↓  ⇞  ⇟");
-        assert_eq!(cancel_key_label(mac), "⎋");
     }
 
     #[test]

@@ -107,12 +107,6 @@ struct ShortcutSettingsView: View {
                 if !shortcuts.shiftedSlotKeys.isEmpty {
                     fixedRow(.desktopActionCommitAlternateScript, shortcuts.shiftedSlotKeys)
                 }
-
-                // Shown, not recordable: Escape drops the composition without
-                // writing to the document (`keys/intent.rs`). Last
-                // in the block (USER 2026-09-21): every row above it writes
-                // something; this is the one way out that writes nothing.
-                fixedRow(.desktopShortcutCancelComposing, shortcuts.cancelKey)
             } header: {
                 Text(language.string(.desktopShortcutSectionOutput))
             }

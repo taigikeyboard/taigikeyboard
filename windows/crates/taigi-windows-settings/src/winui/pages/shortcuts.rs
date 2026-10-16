@@ -12,8 +12,7 @@ use super::reset_row;
 use crate::winui::cards;
 use crate::winui::window::{Message, ResetScope, SettingsWindow};
 use taigi_desktop_core::keys::shortcut_labels::{
-    cancel_key_label, caret_chords_label, navigation_keys_label, shifted_slot_keys_label,
-    slot_keys_label,
+    caret_chords_label, navigation_keys_label, shifted_slot_keys_label, slot_keys_label,
 };
 use taigi_desktop_core::keys::{
     rejection_message_key, ChordField, ComposingAction, ComposingKeyBindings, ComposingKeyChord,
@@ -98,14 +97,6 @@ pub fn view(
                     keys,
                 )
             },
-        ),
-        // Shown, not recordable: Escape drops the composition without
-        // writing to the document (`ComposingKeyIntent::intent`). Last in
-        // the block (USER 2026-09-21): every row above it writes something;
-        // this is the one way out that writes nothing.
-        fixed_row(
-            strings.resolve(StringKey::DesktopShortcutCancelComposing),
-            cancel_key_label(DESKTOP_PLATFORM).to_owned(),
         ),
         // Block three: the switches, and the windows a key raises. What these
         // have in common is that none of them needs a composition running —

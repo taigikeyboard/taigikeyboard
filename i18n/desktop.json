@@ -261,26 +261,6 @@
         "ja": "候補を移動"
       }
     },
-    "shortcutCancelComposing": {
-      "comment": "Read-only row after the commit rows on the Shortcuts pane: Escape drops the romanization being typed without writing anything to the document — the third way out beside Confirm Key and Output What You Are Typing. Fixed tier, not recordable (USER 2026-09-20: \"Delete What You Are Typing\"). Authored whole, like its siblings.",
-      "scope": {
-        "platforms": [
-          "macos",
-          "windows",
-          "linux"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "刪除當咧拍 ê 字",
-        "tailo": "San-tû tng-teh phah ê jī",
-        "poj": "San-tû tng-teh phah ê jī",
-        "en": "Delete What You Are Typing",
-        "ja": "入力中の文字を削除"
-      }
-    },
     "telexGuideTone": {
       "comment": "Telex guide row meaning for a tone key; {tone} is the tone number (2, 3, 5, 7, 8, 9).",
       "scope": {

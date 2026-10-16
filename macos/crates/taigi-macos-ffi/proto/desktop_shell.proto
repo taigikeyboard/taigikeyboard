@@ -444,8 +444,7 @@ message ComposingShortcutsReply {
   // the order a block of the pane draws them in and conflicts list them in.
   repeated ComposingShortcut actions = 1;
   // The fixed rows, as the pane prints them (`shortcut_labels`): the live
-  // slot keys bare and behind ⇧, the navigation keys, the caret chords,
-  // the cancel key.
+  // slot keys bare and behind ⇧, the navigation keys, the caret chords.
   string slot_keys = 2;
   string shifted_slot_keys = 3;
   string navigation_keys = 4;
@@ -453,7 +452,9 @@ message ComposingShortcutsReply {
   // The width-flip chords row, removed 2026-10-07.
   reserved 6;
   reserved "width_flip_chords";
-  string cancel_key = 7;
+  // The cancel key row, removed 2026-10-16.
+  reserved 7;
+  reserved "cancel_key";
 }
 
 message ComposingShortcut {

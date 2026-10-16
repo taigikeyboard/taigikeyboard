@@ -136,7 +136,6 @@ fn composing_shortcuts(
             .unwrap_or_default(),
         navigation_keys: shortcut_labels::navigation_keys_label(DESKTOP_PLATFORM).to_owned(),
         caret_chords: shortcut_labels::caret_chords_label(DESKTOP_PLATFORM),
-        cancel_key: shortcut_labels::cancel_key_label(DESKTOP_PLATFORM).to_owned(),
     })
 }
 
@@ -513,7 +512,6 @@ mod tests {
         assert_eq!(reply.shifted_slot_keys, "⇧QWDFZXVY;");
         assert_eq!(reply.navigation_keys, "←  →  ↑  ↓  ⇞  ⇟");
         assert_eq!(reply.caret_chords, "⌥←  ⌥→  ⌥↑  ⌥↓  ↖  ↘");
-        assert_eq!(reply.cancel_key, "⎋");
     }
 
     /// A cleared row reads empty, a recorded one as the snapshot holds it,
