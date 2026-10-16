@@ -18,7 +18,7 @@
 //! list says so in words.
 
 use super::{
-    append_pager, busy_indicator, confirm, destructive_row, icon_button, remove_rows, table_line,
+    append_pager, busy_indicator, destructive_row, icon_button, remove_rows, table_line,
     PageContext,
 };
 use crate::jobs;
@@ -30,7 +30,7 @@ use std::rc::Rc;
 use taigi_desktop_core::engine::user_data::CustomDictionaryEntry;
 use taigi_desktop_core::settings::custom_dictionary::{
     delete_all_job, delete_entry_job, export_file_name, export_job, fetch, import_job,
-    save_entry_job, Listing, DELETE_ALL,
+    save_entry_job, Listing,
 };
 use taigi_desktop_core::settings::keys;
 use taigi_desktop_core::settings::listing::{
@@ -325,9 +325,10 @@ impl CustomDictionaryPage {
             }
         });
         let weak = Rc::downgrade(self);
+        // No confirmation (USER 2026-10-16).
         delete_all.connect_clicked(move |_| {
             if let Some(page) = weak.upgrade() {
-                page.ask_delete_all();
+                page.begin_job(delete_all_job);
             }
         });
     }
@@ -494,19 +495,6 @@ impl CustomDictionaryPage {
             page.begin_job(move || save_entry_job(&id, &roman, &hanji));
         });
         dialog.present(self.shell.window().as_ref());
-    }
-
-    /// Delete All asks first (`Confirmation` says why).
-    fn ask_delete_all(self: &Rc<Self>) {
-        if self.job_slot.is_taken() {
-            return;
-        }
-        let weak = Rc::downgrade(self);
-        confirm(&self.shell, self.strings, DELETE_ALL, move || {
-            if let Some(page) = weak.upgrade() {
-                page.begin_job(delete_all_job);
-            }
-        });
     }
 
     fn export(self: &Rc<Self>) {

@@ -9,11 +9,12 @@ struct LearningRecordsMenuView: View {
 
     private let userData: any UserDataClient = CompositionRoot.userData
 
-    @State private var showClearAlert = false
     /// While the clear runs: a list opened now could read the rows it is
     /// emptying, so the kind rows wait with the button.
     @State private var isClearing = false
-    @State private var clearResult: ClearLearningRecordsResult?
+    /// The store's own diagnostic when the clear failed, as on desktop; a
+    /// clear that landed says nothing (USER 2026-10-16).
+    @State private var clearFailureDetail: String?
 
     var body: some View {
         List {
@@ -27,9 +28,10 @@ struct LearningRecordsMenuView: View {
             }
             .disabled(isClearing)
 
+            // Runs on the tap, no confirmation (USER 2026-10-16).
             Section {
                 Button(role: .destructive) {
-                    showClearAlert = true
+                    clearLearningRecords()
                 } label: {
                     Text(lang.string(.dictionaryClearLearningRecords))
                 }
@@ -38,31 +40,21 @@ struct LearningRecordsMenuView: View {
         }
         .navigationTitle(lang.string(.dictionaryLearningRecords))
         .navigationBarTitleDisplayMode(.large)
-        .alert(lang.string(.dictionaryClearLearningRecords), isPresented: $showClearAlert) {
-            Button(lang.string(.commonCancel), role: .cancel) {}
-            Button(lang.string(.commonDelete), role: .destructive) {
-                clearLearningRecords()
-            }
-        } message: {
-            Text(lang.string(.dictionaryClearLearningRecordsMessage))
-        }
         .alert(
-            clearResult.map { lang.string($0.titleKey) } ?? "",
+            lang.string(.dictionaryClearLearningRecordsFailed),
             isPresented: Binding(
-                get: { clearResult != nil },
+                get: { clearFailureDetail != nil },
                 set: {
                     if !$0 {
-                        clearResult = nil
+                        clearFailureDetail = nil
                     }
                 },
             ),
-            presenting: clearResult,
+            presenting: clearFailureDetail,
         ) { _ in
             Button(lang.string(.commonOk), role: .cancel) {}
-        } message: { result in
-            if case let .failed(detail) = result {
-                Text(detail)
-            }
+        } message: { detail in
+            Text(detail)
         }
     }
 
@@ -73,24 +65,9 @@ struct LearningRecordsMenuView: View {
             defer { isClearing = false }
             do {
                 try await userData.clearLearningRecords()
-                clearResult = .done
             } catch {
-                clearResult = .failed(detail: error.localizedDescription)
+                clearFailureDetail = error.localizedDescription
             }
-        }
-    }
-}
-
-/// What Delete Learning Records reports back: the store's own diagnostic
-/// follows a failure, as on desktop.
-private enum ClearLearningRecordsResult {
-    case done
-    case failed(detail: String)
-
-    var titleKey: StringKey {
-        switch self {
-        case .done: .dictionaryClearLearningRecordsDone
-        case .failed: .dictionaryClearLearningRecordsFailed
         }
     }
 }

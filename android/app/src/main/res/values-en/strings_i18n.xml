@@ -33,7 +33,6 @@
     <string name="i18n_common_fontGenYoGothic">GenYoGothic</string>
     <string name="i18n_desktop_telexGuideHyphen">Hyphen</string>
     <string name="i18n_desktop_dictionarySourcesLink">Manage Dictionaries</string>
-    <string name="i18n_dictionary_clear">Clear</string>
     <string name="i18n_dictionary_customDictionary">Custom Dictionary</string>
     <string name="i18n_dictionary_customDictEnabled">Enable Custom Dictionary</string>
     <string name="i18n_dictionary_customDictEnabledInfo">When on, words you add appear among the candidates.</string>
@@ -48,7 +47,6 @@
     <string name="i18n_dictionary_hanziLabel">Hanji</string>
     <string name="i18n_dictionary_hanziPlaceholder">Example: 𠢕早</string>
     <string name="i18n_dictionary_deleteAll">Delete All Custom Words</string>
-    <string name="i18n_dictionary_deleteAllMessage">Delete all custom words?</string>
     <string name="i18n_dictionary_customDictPrivacyWarning">Do not store ID numbers, passwords, credit-card numbers, or other sensitive data in the custom dictionary.</string>
     <string name="i18n_dictionary_importCSV">Import Custom Words</string>
     <string name="i18n_dictionary_exportCSV">Export Custom Words</string>
@@ -108,8 +106,6 @@
     <string name="i18n_dictionary_sttiTag">Academic Terms</string>
     <string name="i18n_dictionary_lkkTag">Han-Roman</string>
     <string name="i18n_dictionary_clearLearningRecords">Delete Learning Records</string>
-    <string name="i18n_dictionary_clearLearningRecordsMessage">Delete all learning records? Custom words are unaffected.</string>
-    <string name="i18n_dictionary_clearLearningRecordsDone">Learning Records Cleared</string>
     <string name="i18n_dictionary_clearLearningRecordsFailed">Could Not Clear Learning Records</string>
     <string name="i18n_dictionary_learningRecords">Learning Records</string>
     <string name="i18n_dictionary_learningRecordsFrequency">Word Frequency</string>
@@ -230,8 +226,6 @@
     <string name="i18n_settings_tpsOrMapsToER">Map or → ㄜ</string>
     <string name="i18n_settings_tpsOrMapsToERInfo">When on, \'or\' appears as ㄜ; when off, as ㄛ. Search results are unaffected.</string>
     <string name="i18n_settings_resetSettings">Reset to Defaults</string>
-    <string name="i18n_settings_resetSettingsMessage">This resets all settings. Learning records and custom words are kept. Continue?</string>
-    <string name="i18n_settings_resetSuccess">Settings reset</string>
     <string name="i18n_settings_resetFailed">Failed to reset settings. Please try again.</string>
     <string name="i18n_settings_noEmailApp">No email app found</string>
     <string name="i18n_settings_diagnosticSectionTitle">Device Info</string>

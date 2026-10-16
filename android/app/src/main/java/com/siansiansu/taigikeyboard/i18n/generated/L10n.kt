@@ -70,8 +70,6 @@ object L10n {
         @Composable get() = stringRes(StringKey.DESKTOP_TELEX_GUIDE_HYPHEN)
     val desktopDictionarySourcesLink: String
         @Composable get() = stringRes(StringKey.DESKTOP_DICTIONARY_SOURCES_LINK)
-    val dictionaryClear: String
-        @Composable get() = stringRes(StringKey.DICTIONARY_CLEAR)
     val dictionaryCustomDictionary: String
         @Composable get() = stringRes(StringKey.DICTIONARY_CUSTOM_DICTIONARY)
     val dictionaryCustomDictEnabled: String
@@ -100,8 +98,6 @@ object L10n {
         @Composable get() = stringRes(StringKey.DICTIONARY_HANZI_PLACEHOLDER)
     val dictionaryDeleteAll: String
         @Composable get() = stringRes(StringKey.DICTIONARY_DELETE_ALL)
-    val dictionaryDeleteAllMessage: String
-        @Composable get() = stringRes(StringKey.DICTIONARY_DELETE_ALL_MESSAGE)
     val dictionaryCustomDictPrivacyWarning: String
         @Composable get() = stringRes(StringKey.DICTIONARY_CUSTOM_DICT_PRIVACY_WARNING)
     val dictionaryImportCSV: String
@@ -216,10 +212,6 @@ object L10n {
         @Composable get() = stringRes(StringKey.DICTIONARY_LKK_TAG)
     val dictionaryClearLearningRecords: String
         @Composable get() = stringRes(StringKey.DICTIONARY_CLEAR_LEARNING_RECORDS)
-    val dictionaryClearLearningRecordsMessage: String
-        @Composable get() = stringRes(StringKey.DICTIONARY_CLEAR_LEARNING_RECORDS_MESSAGE)
-    val dictionaryClearLearningRecordsDone: String
-        @Composable get() = stringRes(StringKey.DICTIONARY_CLEAR_LEARNING_RECORDS_DONE)
     val dictionaryClearLearningRecordsFailed: String
         @Composable get() = stringRes(StringKey.DICTIONARY_CLEAR_LEARNING_RECORDS_FAILED)
     val dictionaryLearningRecords: String
@@ -460,10 +452,6 @@ object L10n {
         @Composable get() = stringRes(StringKey.SETTINGS_TPS_OR_MAPS_TO_E_R_INFO)
     val settingsResetSettings: String
         @Composable get() = stringRes(StringKey.SETTINGS_RESET_SETTINGS)
-    val settingsResetSettingsMessage: String
-        @Composable get() = stringRes(StringKey.SETTINGS_RESET_SETTINGS_MESSAGE)
-    val settingsResetSuccess: String
-        @Composable get() = stringRes(StringKey.SETTINGS_RESET_SUCCESS)
     val settingsResetFailed: String
         @Composable get() = stringRes(StringKey.SETTINGS_RESET_FAILED)
     val settingsNoEmailApp: String

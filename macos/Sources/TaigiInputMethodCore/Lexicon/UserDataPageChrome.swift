@@ -57,9 +57,8 @@ enum UserDataPageMessage: Identifiable, Hashable {
     /// that way: it names a SQLite or file-system condition, not something the
     /// product has wording for.
     case failure(StringKey, diagnostic: String)
-    /// A receipt with nothing to add: a title, and no body at all. For the one
-    /// kind of success whose result the user cannot see — deleting records
-    /// that have no surface of their own.
+    /// A receipt with nothing to add: a title, and no body at all — a word
+    /// filed in the custom dictionary, a row already gone.
     case done(StringKey)
     /// The one refusal a CSV page makes before it has a parser error to report,
     /// its own case so the same wrong file does not get two different
@@ -212,9 +211,6 @@ struct UserDataFilterField: View {
 /// The Custom Dictionary page's CSV pair and its delete-everything row. Its one caller
 /// since the frequency / association pages were removed, kept a separate view because the
 /// page it serves is already long enough without three more rows inline.
-///
-/// `onDelete` asks rather than deletes: the page confirms it first
-/// (`CustomDictionaryPageModel.isConfirmingDeleteAll`).
 struct UserDataActionsSection: View {
     @Environment(DisplayLanguageStore.self) private var language
 

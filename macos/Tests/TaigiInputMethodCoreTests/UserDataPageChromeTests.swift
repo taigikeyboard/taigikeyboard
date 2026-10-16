@@ -66,9 +66,9 @@ final class UserDataPageDoneMessageTests: XCTestCase {
     private let hanji = StringResolver(.hanji)
 
     func testADoneMessage_hasATitleAndNoBody() {
-        let message = UserDataPageMessage.done(.dictionaryClearLearningRecordsDone)
+        let message = UserDataPageMessage.done(.dictionaryLearningRecordGone)
 
-        XCTAssertEqual(message.title(hanji), hanji.resolve(.dictionaryClearLearningRecordsDone))
+        XCTAssertEqual(message.title(hanji), hanji.resolve(.dictionaryLearningRecordGone))
         XCTAssertNil(message.detail(hanji))
     }
 
@@ -139,11 +139,9 @@ final class CustomDictionaryWorkSlotTests: XCTestCase {
     }
 }
 
-/// Delete All asks first, as on Windows and Linux (desktop-core
-/// `Confirmation`): only Delete runs it; Cancel, Escape and a dismissal — all
-/// of which set `isConfirmingDeleteAll` back to false — run nothing.
+/// Delete All runs on the click, no confirmation (USER 2026-10-16).
 @MainActor
-final class CustomDictionaryDeleteAllConfirmationTests: XCTestCase {
+final class CustomDictionaryDeleteAllTests: XCTestCase {
     private func makeModel(rows: Int = 0) async -> CustomDictionaryPageModel {
         let model = CustomDictionaryPageModel(client: FakeUserDataClient())
         for index in 0 ..< rows {
@@ -152,72 +150,23 @@ final class CustomDictionaryDeleteAllConfirmationTests: XCTestCase {
         return model
     }
 
-    func testAsking_runsNothing() async {
+    func testDeleteAll_emptiesTheDictionarySilently() async {
         let model = await makeModel(rows: 2)
 
-        model.askDeleteAll()
+        await model.deleteAll()
 
-        XCTAssertTrue(model.isConfirmingDeleteAll)
-        XCTAssertEqual(model.list.matchCount, 2)
+        XCTAssertEqual(model.list.matchCount, 0)
+        XCTAssertNil(model.message)
         XCTAssertEqual(model.activity, .idle)
     }
 
-    func testConfirming_emptiesTheDictionary() async {
-        let model = await makeModel(rows: 2)
-
-        model.askDeleteAll()
-        await model.confirmDeleteAll()?.value
-
-        XCTAssertFalse(model.isConfirmingDeleteAll)
-        XCTAssertEqual(model.list.matchCount, 0)
-        XCTAssertEqual(model.activity, .idle)
-    }
-
-    /// Cancel is the dialog writing false through its binding; nothing is
-    /// left for Delete to run.
-    func testCancelling_runsNothing() async {
-        let model = await makeModel(rows: 2)
-
-        model.askDeleteAll()
-        model.isConfirmingDeleteAll = false
-        XCTAssertNil(model.confirmDeleteAll(), "nothing pending once cancelled")
-        await model.load()
-
-        XCTAssertEqual(model.list.matchCount, 2)
-    }
-
-    /// The command is taken when Delete is clicked, so the dismissal that
-    /// follows it cannot take it away — and it runs once however often
-    /// Delete is answered.
-    func testConfirming_takesTheCommandBeforeTheDialogDismisses() async {
+    /// Another command holds the slot: Delete All is refused, and leaves the
+    /// slot with its holder.
+    func testDeleteAll_doesNothingWhileAnotherHoldsTheSlot() async {
         let model = await makeModel(rows: 1)
-
-        model.askDeleteAll()
-        let run = model.confirmDeleteAll()
-        model.isConfirmingDeleteAll = false
-        XCTAssertNil(model.confirmDeleteAll(), "already taken")
-        await run?.value
-
-        XCTAssertEqual(model.list.matchCount, 0)
-    }
-
-    func testABusyPage_doesNotAsk() async {
-        let model = await makeModel()
         XCTAssertTrue(model.beginWork(.desktopProgressWorking))
 
-        model.askDeleteAll()
-
-        XCTAssertFalse(model.isConfirmingDeleteAll)
-    }
-
-    /// Something took the slot after the dialog went up: the confirmed
-    /// command is refused, and leaves the slot with its holder.
-    func testAConfirmedCommand_doesNothingWhileAnotherHoldsTheSlot() async {
-        let model = await makeModel(rows: 1)
-
-        model.askDeleteAll()
-        XCTAssertTrue(model.beginWork(.desktopProgressWorking))
-        await model.confirmDeleteAll()?.value
+        await model.deleteAll()
 
         XCTAssertEqual(model.activity, .working(.desktopProgressWorking))
         XCTAssertEqual(model.list.matchCount, 1)

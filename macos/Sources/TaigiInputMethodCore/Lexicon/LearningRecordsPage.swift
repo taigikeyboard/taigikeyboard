@@ -57,11 +57,6 @@ final class LearningRecordsPageModel {
 
     var message: UserDataPageMessage?
 
-    /// Delete Learning Records is waiting on its confirmation; the dialog's
-    /// Cancel, Escape and dismissal set this back to false. Asked first for
-    /// Custom Dictionary's Delete All reason (`isConfirmingDeleteAll`).
-    var isConfirmingClearAll = false
-
     /// The table's selection, held by the list so a load drops it once its
     /// row is off screen (`UserDataPagedList.selectedID`).
     var selectedRowID: Taigi_Engine_LearningRecord.ID? {
@@ -135,34 +130,13 @@ final class LearningRecordsPageModel {
         }
     }
 
-    /// Asks before Delete Learning Records runs. Nothing to ask while the
-    /// page is busy — it could not start anyway.
-    func askClearAll() {
-        guard !activity.isWorking else { return }
-        isConfirmingClearAll = true
-    }
-
-    /// Runs Delete Learning Records once confirmed, at most once. The flag is
-    /// taken synchronously, before the dialog's dismissal writes false through
-    /// its binding (`CustomDictionaryPageModel.confirmDeleteAll`). The
-    /// returned task is what a test awaits.
-    @discardableResult
-    func confirmClearAll() -> Task<Void, Never>? {
-        guard isConfirmingClearAll else { return nil }
-        isConfirmingClearAll = false
-        return Task { await clearAll() }
-    }
-
     /// Empties every learning store — word frequency, learned phrases, and the
-    /// next-word association no page lists — in one request: the engine
-    /// attempts each even when an earlier one fails, and the alert reports the
-    /// failure rather than claiming the records are gone. The list reloads
-    /// either way, as desktop-core's `clear_all_job` asks.
+    /// next-word association no page lists — in one request, on the click (no
+    /// confirmation, USER 2026-10-16): the engine attempts each even when an
+    /// earlier one fails, and only a failure raises the alert. The list
+    /// reloads either way, as desktop-core's `clear_all_job` asks.
     func clearAll() async {
-        await perform(
-            receipt: .done(.dictionaryClearLearningRecordsDone),
-            failure: .dictionaryClearLearningRecordsFailed,
-        ) {
+        await perform(failure: .dictionaryClearLearningRecordsFailed) {
             try $0.clearLearningRecords()
             return true
         }
@@ -259,25 +233,11 @@ struct LearningRecordsPage: View {
 
             Section {
                 WideActionRow(titleKey: .dictionaryClearLearningRecords, role: .destructive) {
-                    model.askClearAll()
+                    Task { await model.clearAll() }
                 }
             }
         }
         .formStyle(.grouped)
-        // A confirmation dialog, not a second `.alert`: the chrome's alert is
-        // the page's one alert (`CustomDictionaryPage`). Delete is the
-        // destructive button; Cancel, Escape and a dismissal leave the stores
-        // alone.
-        .confirmationDialog(
-            language.string(.dictionaryClearLearningRecords),
-            isPresented: $model.isConfirmingClearAll,
-            titleVisibility: .visible,
-        ) {
-            Button(language.string(.commonDelete), role: .destructive) { model.confirmClearAll() }
-            Button(language.string(.commonCancel), role: .cancel) {}
-        } message: {
-            Text(language.string(.dictionaryClearLearningRecordsMessage))
-        }
         .reloadWhenFilterSettles(model.filter) { await model.loadFirstPage() }
         .onChange(of: model.kind) { showFromFirstPage() }
         .onChange(of: model.order) { showFromFirstPage() }

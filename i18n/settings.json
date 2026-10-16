@@ -2,7 +2,7 @@
   "namespace": "settings",
   "keys": {
     "reset": {
-      "comment": "Generic restore-to-default action label / a11y description (恢復 = restore). Used by the reset-settings dialog AND reused for the color-picker / slider reset-icon contentDescription on the theme + layout editors.",
+      "comment": "Generic restore-to-default action label / a11y description (恢復 = restore). Used for the color-picker / slider reset-icon contentDescription on the theme + layout editors.",
       "scope": { "platforms": ["android", "ios", "windows", "linux"], "surfaces": ["host"] },
       "values": { "hanji": "恢復", "tailo": "Hue-ho̍k", "poj": "Hoe-ho̍k", "en": "Reset", "ja": "リセット" }
     },
@@ -237,19 +237,9 @@
       "values": { "hanji": "開啟時 or 顯示做 ㄜ，關閉時顯示做 ㄛ。袂影響揣詞結果。", "tailo": "Phah-khui sî or hián-sī tsò ㄜ, kuainn--khí-lâi sî hián-sī tsò ㄛ. Buē íng-hióng tshuē sû kiat-kó.", "poj": "Phah-khui sî or hián-sī chò ㄜ, koaiⁿ--khí-lâi sî hián-sī chò ㄛ. Bōe éng-hióng chhōe sû kiat-kó.", "en": "When on, 'or' appears as ㄜ; when off, as ㄛ. Search results are unaffected.", "ja": "オンでは「or」を ㄜ、オフでは ㄛ と表示します。検索結果には影響しません。" }
     },
     "resetSettings": {
-      "comment": "Destructive action row + dialog title: reset all settings to their defaults. Settings only — learning records and custom words are untouched. Same wording as theme.editorResetAll, the desktop panes' reset row.",
+      "comment": "Destructive action row: reset all settings to their defaults. Settings only — learning records and custom words are untouched. Same wording as theme.editorResetAll, the desktop panes' reset row.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
       "values": { "hanji": "恢復預設設定", "tailo": "Hue-ho̍k ī-siat siat-tīng", "poj": "Hoe-ho̍k ī-siat siat-tēng", "en": "Reset to Defaults", "ja": "既定値に戻す" }
-    },
-    "resetSettingsMessage": {
-      "comment": "Confirmation-dialog body for resetting settings; explicitly states that learning records and custom words are kept.",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "這會恢復所有設定。學習紀錄佮自訂詞攏會保留。敢欲繼續？", "tailo": "Tse ē hue-ho̍k sóo-iú siat-tīng. Ha̍k-si̍p kì-lio̍k kah tsū-tīng-sû lóng ē pó-liû. Kám beh kè-sio̍k?", "poj": "Che ē hoe-ho̍k só͘-iú siat-tēng. Ha̍k-si̍p kì-lio̍k kah chū-tēng-sû lóng ē pó-liû. Kám beh kè-sio̍k?", "en": "This resets all settings. Learning records and custom words are kept. Continue?", "ja": "すべての設定をリセットします。学習記録とカスタム単語は保持されます。続けますか？" }
-    },
-    "resetSuccess": {
-      "comment": "Toast shown after settings were reset successfully.",
-      "scope": { "platforms": ["android"], "surfaces": ["host"] },
-      "values": { "hanji": "設定已恢復", "tailo": "Siat-tīng í hue-ho̍k", "poj": "Siat-tēng í hoe-ho̍k", "en": "Settings reset", "ja": "設定をリセットしました" }
     },
     "resetFailed": {
       "comment": "Toast shown when resetting settings fails.",

@@ -30,15 +30,6 @@ final class CustomDictionaryPageModel {
         set { list.selectedID = newValue }
     }
 
-    /// Delete All is waiting on its confirmation. The dialog's Cancel, Escape
-    /// and dismissal all just set this back to false.
-    ///
-    /// Confirmed rather than run on the click (USER 2026-10-02), as on Windows
-    /// and Linux (desktop-core `Confirmation`): the row that runs it is one
-    /// among the pane's, so the click is easy to make by accident, and there
-    /// is no undo — `−` acts on one row, this empties the table.
-    var isConfirmingDeleteAll = false
-
     func pageBackward() async {
         guard list.step(by: -1) else { return }
         await load()
@@ -88,27 +79,9 @@ final class CustomDictionaryPageModel {
         await perform(.desktopProgressWorking) { try await UserDataRequests.run(on: self.client) { try $0.delete(id: id) } }
     }
 
+    /// Runs on the click, no confirmation (USER 2026-10-16).
     func deleteAll() async {
         await perform(.desktopProgressWorking) { try await UserDataRequests.run(on: self.client) { try $0.deleteAll() } }
-    }
-
-    /// Asks before Delete All runs. Nothing to ask while the page is busy —
-    /// it could not start anyway.
-    func askDeleteAll() {
-        guard !activity.isWorking else { return }
-        isConfirmingDeleteAll = true
-    }
-
-    /// Runs Delete All once confirmed, at most once.
-    ///
-    /// The flag is taken synchronously, before the dialog's dismissal writes
-    /// false through its binding — a `Task` that read it only once it started
-    /// would find it already gone. The returned task is what a test awaits.
-    @discardableResult
-    func confirmDeleteAll() -> Task<Void, Never>? {
-        guard isConfirmingDeleteAll else { return nil }
-        isConfirmingDeleteAll = false
-        return Task { await deleteAll() }
     }
 
     func exportCSV(in window: NSWindow) async {
@@ -232,24 +205,10 @@ struct CustomDictionaryPage: View {
                 deleteTitle: .dictionaryDeleteAll,
                 onExport: { Task { await UserDataFilePanels.withSettingsWindow(model.exportCSV) } },
                 onImport: { Task { await UserDataFilePanels.withSettingsWindow(model.importCSV) } },
-                onDelete: { model.askDeleteAll() },
+                onDelete: { Task { await model.deleteAll() } },
             )
         }
         .formStyle(.grouped)
-        // A confirmation dialog, not a second `.alert`: the chrome's alert
-        // is the page's one alert, and two on one chain do not stack
-        // (`UserDataPageChrome`). Delete is the destructive button; Cancel,
-        // Escape and a dismissal all leave the store alone.
-        .confirmationDialog(
-            language.string(.dictionaryDeleteAll),
-            isPresented: $model.isConfirmingDeleteAll,
-            titleVisibility: .visible,
-        ) {
-            Button(language.string(.commonDelete), role: .destructive) { model.confirmDeleteAll() }
-            Button(language.string(.commonCancel), role: .cancel) {}
-        } message: {
-            Text(language.string(.dictionaryDeleteAllMessage))
-        }
         .reloadWhenFilterSettles(model.filter) { await model.loadFirstPage() }
         .sheet(item: $editing) { row in
             CustomDictionaryEntrySheet(row: row) { edited in

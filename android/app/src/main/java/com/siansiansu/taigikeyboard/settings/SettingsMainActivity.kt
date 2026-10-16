@@ -150,21 +150,24 @@ class SettingsMainActivity : AppCompatActivity() {
                             }
 
                             TAB_SETTINGS -> {
-                                // Reset toast fires from a ViewModel completion callback — capture the
+                                // Failure toast fires from a ViewModel completion callback — capture the
                                 // live resolver here, same seam as the R2a-2 dictionary screens.
                                 val stringResolver by rememberUpdatedState(LocalStringResolver.current)
                                 InputSettingsScreen(
                                     prefs = prefs,
                                     diagnosticViewModel = diagnosticViewModel,
                                     onResetSettings = {
+                                        // Only a failure is said; a reset that landed shows in the
+                                        // rows themselves (USER 2026-10-16).
                                         resetViewModel.resetAllSettings(prefs) { success ->
-                                            val message =
-                                                stringResolver.resolve(
-                                                    if (success) StringKey.SETTINGS_RESET_SUCCESS else StringKey.SETTINGS_RESET_FAILED,
-                                                )
-                                            Toast
-                                                .makeText(this, message, Toast.LENGTH_SHORT)
-                                                .show()
+                                            if (!success) {
+                                                Toast
+                                                    .makeText(
+                                                        this,
+                                                        stringResolver.resolve(StringKey.SETTINGS_RESET_FAILED),
+                                                        Toast.LENGTH_SHORT,
+                                                    ).show()
+                                            }
                                         }
                                     },
                                     resetCounter = resetCounter,

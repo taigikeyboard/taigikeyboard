@@ -178,12 +178,12 @@ None. A fresh install starts with an empty custom dictionary on every platform.
 ### iOS (`CustomDictionaryView`)
 - List with swipe-to-delete, add/edit modal sheet
 - Import/Export buttons with help icon
-- Delete All with confirmation
+- Delete All, no confirmation (maintainer 2026-10-16)
 
 ### Android (`CustomDictionaryScreen` + `CustomDictionaryActivity`)
 - LazyColumn with inline delete, add/edit AlertDialog
 - Import/Export section with help dialog
-- Delete All with confirmation
+- Delete All, no confirmation (maintainer 2026-10-16)
 
 ### Desktop
 - Windows / Linux: Custom Dictionary settings pane, model shared in `desktop/crates/taigi-desktop-core/src/settings/custom_dictionary.rs`

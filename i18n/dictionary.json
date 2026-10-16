@@ -1,25 +1,6 @@
 {
   "namespace": "dictionary",
   "keys": {
-    "clear": {
-      "comment": "Generic clear button label (e.g. confirm clearing a custom dictionary).",
-      "scope": {
-        "platforms": [
-          "android",
-          "ios"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "清除",
-        "tailo": "Tshing-tî",
-        "poj": "Chheng-tî",
-        "en": "Clear",
-        "ja": "クリア"
-      }
-    },
     "customDictionary": {
       "comment": "Custom dictionary section/page title.",
       "scope": {
@@ -314,28 +295,6 @@
         "poj": "San-tû choân-pō͘ chū-tēng-sû",
         "en": "Delete All Custom Words",
         "ja": "すべてのカスタム単語を削除"
-      }
-    },
-    "deleteAllMessage": {
-      "comment": "Confirmation dialog body for deleting all custom-dictionary entries.",
-      "scope": {
-        "platforms": [
-          "android",
-          "ios",
-          "macos",
-          "windows",
-          "linux"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "確定欲刪除所有自訂詞？",
-        "tailo": "Khak-tīng beh san-tû sóo-iú tsū-tīng-sû?",
-        "poj": "Khak-tēng beh san-tû só͘-iú chū-tēng-sû?",
-        "en": "Delete all custom words?",
-        "ja": "すべてのカスタム単語を削除しますか？"
       }
     },
     "customDictPrivacyWarning": {
@@ -1549,7 +1508,7 @@
       }
     },
     "clearLearningRecords": {
-      "comment": "Destructive row at the bottom of the Learning Records page (desktop) / subpage (mobile): deletes every learning record (word frequency, next-word association, learned phrases) in one go; custom words are kept. Every platform confirms first, with this as the dialog title.",
+      "comment": "Destructive row at the bottom of the Learning Records page (desktop) / subpage (mobile): deletes every learning record (word frequency, next-word association, learned phrases) in one go; custom words are kept. Runs on the press, no confirmation.",
       "scope": {
         "platforms": [
           "android",
@@ -1568,50 +1527,6 @@
         "poj": "San-tû ha̍k-si̍p kì-lio̍k",
         "en": "Delete Learning Records",
         "ja": "学習記録を削除"
-      }
-    },
-    "clearLearningRecordsMessage": {
-      "comment": "Confirmation dialog body for Delete Learning Records: every learning record goes, the custom words stay.",
-      "scope": {
-        "platforms": [
-          "android",
-          "ios",
-          "macos",
-          "windows",
-          "linux"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "確定欲刪除所有學習紀錄？袂影響自訂詞。",
-        "tailo": "Khak-tīng beh san-tû sóo-iú ha̍k-si̍p kì-lio̍k? Buē íng-hióng tsū-tīng-sû.",
-        "poj": "Khak-tēng beh san-tû só͘-iú ha̍k-si̍p kì-lio̍k? Bōe éng-hióng chū-tēng-sû.",
-        "en": "Delete all learning records? Custom words are unaffected.",
-        "ja": "すべての学習記録を削除しますか？カスタム単語には影響しません。"
-      }
-    },
-    "clearLearningRecordsDone": {
-      "comment": "Alert title after the Delete Learning Records row finishes.",
-      "scope": {
-        "platforms": [
-          "android",
-          "ios",
-          "macos",
-          "windows",
-          "linux"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "學習紀錄已經刪掉",
-        "tailo": "Ha̍k-si̍p kì-lio̍k í-king thâi-tiāu",
-        "poj": "Ha̍k-si̍p kì-lio̍k í-keng thâi-tiāu",
-        "en": "Learning Records Cleared",
-        "ja": "学習記録を消去しました"
       }
     },
     "clearLearningRecordsFailed": {

@@ -41,7 +41,6 @@ import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
-import com.siansiansu.taigikeyboard.ui.components.ConfirmationDialog
 import com.siansiansu.taigikeyboard.ui.components.ContentCopy
 import com.siansiansu.taigikeyboard.ui.components.OpenInNew
 import com.siansiansu.taigikeyboard.ui.components.SettingNavigationRow
@@ -66,7 +65,6 @@ fun InputSettingsScreen(
     resetCounter: Int,
 ) {
     val context = LocalContext.current
-    var showResetDialog by remember { mutableStateOf(false) }
     var showDisplayLanguagePicker by remember { mutableStateOf(false) }
     var showInputModePicker by remember { mutableStateOf(false) }
     var showCandidateDisplayModePicker by remember { mutableStateOf(false) }
@@ -374,28 +372,15 @@ fun InputSettingsScreen(
 
                 Spacer(Modifier.height(24.dp))
 
+                // Runs on the tap, no confirmation (USER 2026-10-16).
                 SettingsCard {
                     ActionRow(
                         label = L10n.settingsResetSettings,
-                        onClick = { showResetDialog = true },
+                        onClick = onResetSettings,
                         textColor = MaterialTheme.colorScheme.error,
                     )
                 }
             }
-        }
-
-        if (showResetDialog) {
-            ConfirmationDialog(
-                title = L10n.settingsResetSettings,
-                message = L10n.settingsResetSettingsMessage,
-                confirmLabel = L10n.settingsReset,
-                dismissLabel = L10n.commonCancel,
-                onConfirm = {
-                    showResetDialog = false
-                    onResetSettings()
-                },
-                onDismiss = { showResetDialog = false },
-            )
         }
     }
 }

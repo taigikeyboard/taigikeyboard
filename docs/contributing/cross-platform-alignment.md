@@ -69,7 +69,7 @@ Intentional today:
 - Default keyboard font: iOS `system`, Android `openHuninn` — iOS bundles rare-character fonts Android does not (maintainer 2026-10-12).
 - Spacebar: iOS long-press drags the cursor (KeyboardKit); Android horizontal swipe moves the cursor and long-press opens the IME picker (Gboard / FlorisBoard convention). While composing, the Android spacebar ignores the swipe.
 - Layout conventions: Android English bottom row carries `,` `.` and the number row has fraction / superscript popups; iOS symbols bottom row has the emoji key where Android has the numeric-pad key.
-- Feedback and pickers: Settings reset confirms with a toast on Android, a haptic on iOS; a dictionary search result opens an action sheet on iOS, expands inline on Android.
+- Feedback and pickers: Settings reset gives a haptic on iOS and nothing on Android (a failure toast only); a dictionary search result opens an action sheet on iOS, expands inline on Android.
 
 ### 3a. Invariants: constants, tests and docs move together
 

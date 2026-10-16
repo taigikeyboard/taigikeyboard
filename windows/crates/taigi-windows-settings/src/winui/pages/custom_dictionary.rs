@@ -30,7 +30,7 @@ use std::path::Path;
 use taigi_desktop_core::engine::user_data::{CustomDictionaryEntry, CustomDictionaryPage};
 use taigi_desktop_core::settings::custom_dictionary::{
     delete_all_job, delete_entry_job, export_file_name, export_job, fetch, import_job,
-    save_entry_job, Listing, DELETE_ALL,
+    save_entry_job, Listing,
 };
 use taigi_desktop_core::settings::keys;
 use taigi_desktop_core::settings::listing::{JobOutcome, JobState, LoadLanded, FILTER_SETTLE};
@@ -63,10 +63,8 @@ pub enum Message {
     EntryDialogClosed(ContentDialogResult),
     Export,
     Import,
-    /// Delete All asking for its confirmation (`Confirmation` says why it
-    /// asks).
-    AskDeleteAll,
-    ConfirmClosed(ContentDialogResult),
+    /// Delete All runs on the press, no confirmation (USER 2026-10-16).
+    DeleteAll,
     JobFinished(u64, Box<JobOutcome>),
     /// The job at this generation has run long enough to say so.
     ShowBusy(u64),
@@ -89,8 +87,6 @@ pub struct CustomDictionaryModel {
     /// XAML a render after the rows it counts do (`list_selection`).
     settled: SettledRows,
     editing: Option<EditingRow>,
-    /// Delete All is waiting on its dialog.
-    is_confirming_delete_all: bool,
     /// The page's one work slot: `Some` while a write runs. A file
     /// dialog does not need it — it is modal and runs on the UI thread,
     /// so no second command can arrive while it is up (the egui page had
@@ -233,20 +229,12 @@ pub fn update(
         }
         Message::Export => export(model, context),
         Message::Import => import(model, context),
-        Message::AskDeleteAll => model.is_confirming_delete_all = true,
-        Message::ConfirmClosed(result) => {
-            let was_confirming = std::mem::take(&mut model.is_confirming_delete_all);
-            // The primary button is the destructive one; Escape, the close
-            // button and a dismissal all leave the store alone.
-            if was_confirming && result == ContentDialogResult::Primary {
-                begin_job(
-                    model,
-                    context,
-                    StringKey::DesktopProgressWorking,
-                    delete_all_job,
-                );
-            }
-        }
+        Message::DeleteAll => begin_job(
+            model,
+            context,
+            StringKey::DesktopProgressWorking,
+            delete_all_job,
+        ),
         Message::JobFinished(generation, outcome) => {
             if !model.job.finish(generation) {
                 return;
@@ -389,13 +377,13 @@ pub fn view(
             strings.resolve(StringKey::CommonDelete),
             true,
             is_enabled,
-            context.callback(|()| WindowMessage::CustomDictionary(Message::AskDeleteAll)),
+            context.callback(|()| WindowMessage::CustomDictionary(Message::DeleteAll)),
         ),
         list_pager::busy_overlay(
             model.job_label.filter(|_| model.job.is_busy_shown()),
             strings,
         ),
-        dialog(model, strings, context),
+        entry_dialog(model, strings, context),
     ))
 }
 
@@ -553,27 +541,6 @@ fn csv_row(
                 .on_click(context.callback(|()| WindowMessage::CustomDictionary(Message::Export)))
                 .content(strings.resolve(StringKey::DictionaryExportCSV)),
         ))
-}
-
-/// The one dialog the page can have up. An entry is being edited or Delete
-/// All is being confirmed — never both: the verbs that start either are on
-/// the same page and only one of them can be pressed.
-fn dialog(
-    model: &CustomDictionaryModel,
-    strings: &StringResolver,
-    context: &mut ViewContext<SettingsWindow>,
-) -> View {
-    if model.editing.is_some() {
-        return entry_dialog(model, strings, context);
-    }
-    if !model.is_confirming_delete_all {
-        return View::empty();
-    }
-    list_pager::confirm_dialog(
-        DELETE_ALL,
-        strings,
-        context.callback(|result| WindowMessage::CustomDictionary(Message::ConfirmClosed(result))),
-    )
 }
 
 /// Add or edit one entry (`CustomDictionaryEntrySheet`). Enter and Escape

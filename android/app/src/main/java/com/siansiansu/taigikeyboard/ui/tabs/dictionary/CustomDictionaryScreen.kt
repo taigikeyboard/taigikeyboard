@@ -57,7 +57,6 @@ import com.siansiansu.taigikeyboard.i18n.generated.dictionaryImportResult
 import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryWord
 import com.siansiansu.taigikeyboard.ime.dictionary.UserDataException
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
-import com.siansiansu.taigikeyboard.ui.components.ConfirmationDialog
 import com.siansiansu.taigikeyboard.ui.components.EmptyListCard
 import com.siansiansu.taigikeyboard.ui.components.FileDownload
 import com.siansiansu.taigikeyboard.ui.components.FileUpload
@@ -97,7 +96,6 @@ fun CustomDictionaryScreen(
 
     var showEditDialog by remember { mutableStateOf(false) }
     var editingEntry by remember { mutableStateOf<CustomDictionaryWord?>(null) }
-    var showDeleteAllDialog by remember { mutableStateOf(false) }
     var showResultDialog by remember { mutableStateOf(false) }
     var resultMessage by remember { mutableStateOf("") }
     var filterText by remember { mutableStateOf("") }
@@ -279,13 +277,13 @@ fun CustomDictionaryScreen(
                     }
                 }
 
-                // Delete all
+                // Delete all — runs on the tap, no confirmation (USER 2026-10-16)
                 item {
                     Spacer(Modifier.height(16.dp))
                     SettingsCard {
                         ActionRow(
                             label = L10n.dictionaryDeleteAll,
-                            onClick = { if (!isImporting) showDeleteAllDialog = true },
+                            onClick = { if (!isImporting) viewModel.deleteAll() },
                             textColor = MaterialTheme.colorScheme.error,
                         )
                     }
@@ -393,21 +391,6 @@ fun CustomDictionaryScreen(
                 viewModel.save(entry)
                 showEditDialog = false
             },
-        )
-    }
-
-    // Delete all confirmation
-    if (showDeleteAllDialog) {
-        ConfirmationDialog(
-            title = L10n.dictionaryDeleteAll,
-            message = L10n.dictionaryDeleteAllMessage,
-            confirmLabel = L10n.dictionaryClear,
-            dismissLabel = L10n.commonCancel,
-            onConfirm = {
-                showDeleteAllDialog = false
-                viewModel.deleteAll()
-            },
-            onDismiss = { showDeleteAllDialog = false },
         )
     }
 

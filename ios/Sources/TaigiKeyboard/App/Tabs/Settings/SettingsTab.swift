@@ -23,7 +23,6 @@ struct SettingsTab: View {
     @State private var isTpsOrMappedToER: Bool
     @State private var toolbarAutoCollapse: Bool
     @State private var isGlobeKeyEnabled: Bool
-    @State private var showResetSettingsAlert = false
     @State private var diagnosticCopied = false
     @State private var diagnosticText = ""
     @Environment(\.openURL) private var openURL
@@ -322,10 +321,10 @@ struct SettingsTab: View {
                         .font(AppStyle.sectionHeaderFont)
                 }
 
-                // Reset
+                // Reset — runs on the tap, no confirmation (USER 2026-10-16)
                 Section {
                     Button(role: .destructive) {
-                        showResetSettingsAlert = true
+                        resetAllSettings()
                     } label: {
                         Text(lang.string(.settingsResetSettings))
                     }
@@ -338,14 +337,6 @@ struct SettingsTab: View {
                 selectedFontType = settings.fontType
                 diagnosticText = DiagnosticService.gather().formatted()
             }
-        }
-        .alert(lang.string(.settingsResetSettings), isPresented: $showResetSettingsAlert) {
-            Button(lang.string(.commonCancel), role: .cancel) {}
-            Button(lang.string(.settingsReset), role: .destructive) {
-                resetAllSettings()
-            }
-        } message: {
-            Text(lang.string(.settingsResetSettingsMessage))
         }
     }
 

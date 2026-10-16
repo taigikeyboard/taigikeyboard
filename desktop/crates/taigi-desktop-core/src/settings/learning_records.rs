@@ -8,7 +8,7 @@
 //! Design: `docs/architecture/learning-records-page-roadmap.md`.
 
 use super::listing::{self, JobOutcome, ListedRow, LoadRequest, PAGE_SIZE};
-use super::presentation::{Confirmation, PageMessage};
+use super::presentation::PageMessage;
 use crate::engine::user_data::{
     self, LearningRecord, LearningRecordKind, LearningRecordOrder, LearningRecordPage,
     UserDataError,
@@ -114,22 +114,16 @@ pub fn add_to_custom_dictionary_job(record: LearningRecord) -> JobOutcome {
     )
 }
 
-/// Delete Learning Records asks first (`Confirmation` says why); the line
-/// under the title says the custom words stay.
-pub const CLEAR_ALL: Confirmation = Confirmation {
-    title: StringKey::DictionaryClearLearningRecords,
-    message: StringKey::DictionaryClearLearningRecordsMessage,
-};
-
 /// Empties every learning table — word frequency, learned phrases, and the
 /// next-word association no page lists — whichever kind is on screen. Three
 /// files, no transaction that could span them; the engine attempts each even
-/// when an earlier one fails, and the notice reports rather than claims. The
-/// list reloads either way: what it shows is what the stores still hold.
+/// when an earlier one fails, and only a failure is reported (no receipt:
+/// the emptied list says it, USER 2026-10-16). The list reloads either way:
+/// what it shows is what the stores still hold.
 pub fn clear_all_job() -> JobOutcome {
     applied(
         user_data::clear_learning_records().map(|()| true),
-        Some(StringKey::DictionaryClearLearningRecordsDone),
+        None,
         StringKey::DictionaryClearLearningRecordsFailed,
     )
 }
@@ -273,26 +267,13 @@ mod tests {
     }
 
     #[test]
-    fn delete_learning_records_reloads_whether_or_not_every_store_emptied() {
-        let done = applied(
-            Ok(true),
-            Some(StringKey::DictionaryClearLearningRecordsDone),
-            StringKey::DictionaryClearLearningRecordsFailed,
-        );
-        assert_eq!(
-            done,
-            JobOutcome {
-                message: Some(PageMessage::Done(
-                    StringKey::DictionaryClearLearningRecordsDone
-                )),
-                is_reload_wanted: true,
-            }
-        );
+    fn a_failed_delete_learning_records_is_reported_and_still_reloads() {
         // A store that could not be emptied is reported; the list still
-        // reloads to what the others now hold.
+        // reloads to what the others now hold. (A landed clear is the
+        // receipt-less write below.)
         let failed = applied(
             Err(UserDataError::EngineUnavailable("resetUserData")),
-            Some(StringKey::DictionaryClearLearningRecordsDone),
+            None,
             StringKey::DictionaryClearLearningRecordsFailed,
         );
         assert!(failed.is_reload_wanted);

@@ -33,7 +33,6 @@
     <string name="i18n_common_fontGenYoGothic">GenYoGothic</string>
     <string name="i18n_desktop_telexGuideHyphen">ハイフン</string>
     <string name="i18n_desktop_dictionarySourcesLink">辞書の管理</string>
-    <string name="i18n_dictionary_clear">クリア</string>
     <string name="i18n_dictionary_customDictionary">カスタム辞書</string>
     <string name="i18n_dictionary_customDictEnabled">カスタム辞書を有効にする</string>
     <string name="i18n_dictionary_customDictEnabledInfo">オンにすると、追加した単語が候補に表示されます。</string>
@@ -48,7 +47,6 @@
     <string name="i18n_dictionary_hanziLabel">漢字</string>
     <string name="i18n_dictionary_hanziPlaceholder">例：𠢕早</string>
     <string name="i18n_dictionary_deleteAll">すべてのカスタム単語を削除</string>
-    <string name="i18n_dictionary_deleteAllMessage">すべてのカスタム単語を削除しますか？</string>
     <string name="i18n_dictionary_customDictPrivacyWarning">カスタム辞書には、身分証番号、パスワード、クレジットカード番号などの機密情報を保存しないでください。</string>
     <string name="i18n_dictionary_importCSV">カスタム単語をインポート</string>
     <string name="i18n_dictionary_exportCSV">カスタム単語をエクスポート</string>
@@ -108,8 +106,6 @@
     <string name="i18n_dictionary_sttiTag">学術用語</string>
     <string name="i18n_dictionary_lkkTag">漢羅併用</string>
     <string name="i18n_dictionary_clearLearningRecords">学習記録を削除</string>
-    <string name="i18n_dictionary_clearLearningRecordsMessage">すべての学習記録を削除しますか？カスタム単語には影響しません。</string>
-    <string name="i18n_dictionary_clearLearningRecordsDone">学習記録を消去しました</string>
     <string name="i18n_dictionary_clearLearningRecordsFailed">学習記録を消去できませんでした</string>
     <string name="i18n_dictionary_learningRecords">学習記録</string>
     <string name="i18n_dictionary_learningRecordsFrequency">単語頻度</string>
@@ -230,8 +226,6 @@
     <string name="i18n_settings_tpsOrMapsToER">or を ㄜ に対応</string>
     <string name="i18n_settings_tpsOrMapsToERInfo">オンでは「or」を ㄜ、オフでは ㄛ と表示します。検索結果には影響しません。</string>
     <string name="i18n_settings_resetSettings">既定値に戻す</string>
-    <string name="i18n_settings_resetSettingsMessage">すべての設定をリセットします。学習記録とカスタム単語は保持されます。続けますか？</string>
-    <string name="i18n_settings_resetSuccess">設定をリセットしました</string>
     <string name="i18n_settings_resetFailed">設定のリセットに失敗しました。もう一度お試しください。</string>
     <string name="i18n_settings_noEmailApp">メールアプリが見つかりません</string>
     <string name="i18n_settings_diagnosticSectionTitle">デバイス情報</string>

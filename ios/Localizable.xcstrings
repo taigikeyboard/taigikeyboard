@@ -613,26 +613,8 @@
         }
       }
     },
-    "i18n_dictionary_clear": {
-      "comment": "Generic clear button label (e.g. confirm clearing a custom dictionary).",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Clear"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "クリア"
-          }
-        }
-      }
-    },
     "i18n_dictionary_clearLearningRecords": {
-      "comment": "Destructive row at the bottom of the Learning Records page (desktop) / subpage (mobile): deletes every learning record (word frequency, next-word association, learned phrases) in one go; custom words are kept. Every platform confirms first, with this as the dialog title.",
+      "comment": "Destructive row at the bottom of the Learning Records page (desktop) / subpage (mobile): deletes every learning record (word frequency, next-word association, learned phrases) in one go; custom words are kept. Runs on the press, no confirmation.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -645,24 +627,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "学習記録を削除"
-          }
-        }
-      }
-    },
-    "i18n_dictionary_clearLearningRecordsDone": {
-      "comment": "Alert title after the Delete Learning Records row finishes.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Learning Records Cleared"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "学習記録を消去しました"
           }
         }
       }
@@ -681,24 +645,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "学習記録を消去できませんでした"
-          }
-        }
-      }
-    },
-    "i18n_dictionary_clearLearningRecordsMessage": {
-      "comment": "Confirmation dialog body for Delete Learning Records: every learning record goes, the custom words stay.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Delete all learning records? Custom words are unaffected."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "すべての学習記録を削除しますか？カスタム単語には影響しません。"
           }
         }
       }
@@ -825,24 +771,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "すべてのカスタム単語を削除"
-          }
-        }
-      }
-    },
-    "i18n_dictionary_deleteAllMessage": {
-      "comment": "Confirmation dialog body for deleting all custom-dictionary entries.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Delete all custom words?"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "すべてのカスタム単語を削除しますか？"
           }
         }
       }
@@ -3944,7 +3872,7 @@
       }
     },
     "i18n_settings_reset": {
-      "comment": "Generic restore-to-default action label / a11y description (恢復 = restore). Used by the reset-settings dialog AND reused for the color-picker / slider reset-icon contentDescription on the theme + layout editors.",
+      "comment": "Generic restore-to-default action label / a11y description (恢復 = restore). Used for the color-picker / slider reset-icon contentDescription on the theme + layout editors.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -3962,7 +3890,7 @@
       }
     },
     "i18n_settings_resetSettings": {
-      "comment": "Destructive action row + dialog title: reset all settings to their defaults. Settings only — learning records and custom words are untouched. Same wording as theme.editorResetAll, the desktop panes' reset row.",
+      "comment": "Destructive action row: reset all settings to their defaults. Settings only — learning records and custom words are untouched. Same wording as theme.editorResetAll, the desktop panes' reset row.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -3975,24 +3903,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "既定値に戻す"
-          }
-        }
-      }
-    },
-    "i18n_settings_resetSettingsMessage": {
-      "comment": "Confirmation-dialog body for resetting settings; explicitly states that learning records and custom words are kept.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This resets all settings. Learning records and custom words are kept. Continue?"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "すべての設定をリセットします。学習記録とカスタム単語は保持されます。続けますか？"
           }
         }
       }

@@ -33,7 +33,6 @@
     <string name="i18n_common_fontGenYoGothic">源樣烏體</string>
     <string name="i18n_desktop_telexGuideHyphen">連字符</string>
     <string name="i18n_desktop_dictionarySourcesLink">辭典管理</string>
-    <string name="i18n_dictionary_clear">清除</string>
     <string name="i18n_dictionary_customDictionary">自訂詞庫</string>
     <string name="i18n_dictionary_customDictEnabled">啟用自訂詞庫</string>
     <string name="i18n_dictionary_customDictEnabledInfo">拍開了後，自訂詞會出現佇候選詞內底。</string>
@@ -48,7 +47,6 @@
     <string name="i18n_dictionary_hanziLabel">揣</string>
     <string name="i18n_dictionary_hanziPlaceholder">見本：𠢕早</string>
     <string name="i18n_dictionary_deleteAll">刪除全部自訂詞</string>
-    <string name="i18n_dictionary_deleteAllMessage">確定欲刪除所有自訂詞？</string>
     <string name="i18n_dictionary_customDictPrivacyWarning">自訂詞庫毋通囥身分證字號、密碼、信用卡號碼抑是其他敏感資料。</string>
     <string name="i18n_dictionary_importCSV">匯入自訂詞</string>
     <string name="i18n_dictionary_exportCSV">匯出自訂詞</string>
@@ -108,8 +106,6 @@
     <string name="i18n_dictionary_sttiTag">學科術語</string>
     <string name="i18n_dictionary_lkkTag">漢羅合用</string>
     <string name="i18n_dictionary_clearLearningRecords">刪除學習紀錄</string>
-    <string name="i18n_dictionary_clearLearningRecordsMessage">確定欲刪除所有學習紀錄？袂影響自訂詞。</string>
-    <string name="i18n_dictionary_clearLearningRecordsDone">學習紀錄已經刪掉</string>
     <string name="i18n_dictionary_clearLearningRecordsFailed">學習紀錄刪失敗</string>
     <string name="i18n_dictionary_learningRecords">學習紀錄</string>
     <string name="i18n_dictionary_learningRecordsFrequency">詞頻紀錄</string>
@@ -230,8 +226,6 @@
     <string name="i18n_settings_tpsOrMapsToER">or 對應 ㄜ</string>
     <string name="i18n_settings_tpsOrMapsToERInfo">開啟時 or 顯示做 ㄜ，關閉時顯示做 ㄛ。袂影響揣詞結果。</string>
     <string name="i18n_settings_resetSettings">恢復預設設定</string>
-    <string name="i18n_settings_resetSettingsMessage">這會恢復所有設定。學習紀錄佮自訂詞攏會保留。敢欲繼續？</string>
-    <string name="i18n_settings_resetSuccess">設定已恢復</string>
     <string name="i18n_settings_resetFailed">恢復設定失敗，請重試</string>
     <string name="i18n_settings_noEmailApp">揣無 Email App</string>
     <string name="i18n_settings_diagnosticSectionTitle">裝置資訊</string>

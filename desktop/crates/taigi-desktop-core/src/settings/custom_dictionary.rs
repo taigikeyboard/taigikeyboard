@@ -1,23 +1,17 @@
 //! The Custom Dictionary pane's model, shared by both settings windows: the
-//! list (`listing.rs`, shared with Learning Records), the destructive
-//! command that asks first, and what each job answers. The shells own the widgets, the timers, and the work slot a job
+//! list (`listing.rs`, shared with Learning Records) and what each job
+//! answers. The shells own the widgets, the timers, and the work slot a job
 //! runs in — Windows holds one per page, Linux one per window so an outcome
 //! outlives a page rebuilt under it. macOS keeps a Swift twin:
 //! `CustomDictionaryPageModel` in `CustomDictionaryPage.swift`.
 
 use super::listing::{self, JobOutcome, ListedRow, LoadRequest, PAGE_SIZE};
-use super::presentation::{Confirmation, PageMessage};
+use super::presentation::PageMessage;
 use crate::engine::user_data::{
     self, CustomDictionaryEntry, CustomDictionaryPage, CustomDictionaryRefusal, UserDataError,
 };
 use crate::strings::StringKey;
 use std::path::Path;
-
-/// Delete All asks first (`Confirmation` says why).
-pub const DELETE_ALL: Confirmation = Confirmation {
-    title: StringKey::DictionaryDeleteAll,
-    message: StringKey::DictionaryDeleteAllMessage,
-};
 
 /// A write answers with nothing but its failure, and asks for a reload
 /// either way.

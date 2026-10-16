@@ -33,7 +33,6 @@ import com.siansiansu.taigikeyboard.i18n.LocalStringResolver
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
-import com.siansiansu.taigikeyboard.ui.components.ConfirmationDialog
 import com.siansiansu.taigikeyboard.ui.components.ResultDialog
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
@@ -54,10 +53,26 @@ fun LearningRecordsMenuScreen(
     val scope = rememberCoroutineScope()
     // Read after the clear returns; tracks the live display language.
     val stringResolver by rememberUpdatedState(LocalStringResolver.current)
-    var showClearDialog by remember { mutableStateOf(false) }
     // While the clear runs, a list opened now could read the rows it is emptying: the kind rows wait too.
     var isClearing by remember { mutableStateOf(false) }
-    var clearResult by remember { mutableStateOf<String?>(null) }
+    // Only a failure is said; a clear that landed says nothing (USER 2026-10-16).
+    var clearFailure by remember { mutableStateOf<String?>(null) }
+
+    fun clearAll() {
+        isClearing = true
+        scope.launch {
+            try {
+                onClearAll()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                clearFailure =
+                    resultMessage(stringResolver.resolve(StringKey.DICTIONARY_CLEAR_LEARNING_RECORDS_FAILED), e.message)
+            } finally {
+                isClearing = false
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -104,48 +119,22 @@ fun LearningRecordsMenuScreen(
                 )
             }
             Spacer(Modifier.height(16.dp))
+            // Runs on the tap, no confirmation (USER 2026-10-16).
             SettingsCard {
                 ActionRow(
                     label = L10n.dictionaryClearLearningRecords,
-                    onClick = { if (!isClearing) showClearDialog = true },
+                    onClick = { if (!isClearing) clearAll() },
                     textColor = MaterialTheme.colorScheme.error,
                 )
             }
         }
     }
 
-    if (showClearDialog) {
-        ConfirmationDialog(
-            title = L10n.dictionaryClearLearningRecords,
-            message = L10n.dictionaryClearLearningRecordsMessage,
-            confirmLabel = L10n.commonDelete,
-            dismissLabel = L10n.commonCancel,
-            onConfirm = {
-                showClearDialog = false
-                isClearing = true
-                scope.launch {
-                    clearResult =
-                        try {
-                            onClearAll()
-                            stringResolver.resolve(StringKey.DICTIONARY_CLEAR_LEARNING_RECORDS_DONE)
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            resultMessage(stringResolver.resolve(StringKey.DICTIONARY_CLEAR_LEARNING_RECORDS_FAILED), e.message)
-                        } finally {
-                            isClearing = false
-                        }
-                }
-            },
-            onDismiss = { showClearDialog = false },
-        )
-    }
-
-    clearResult?.let { message ->
+    clearFailure?.let { message ->
         ResultDialog(
             message = message,
             confirmLabel = L10n.commonOk,
-            onDismiss = { clearResult = null },
+            onDismiss = { clearFailure = null },
         )
     }
 }
