@@ -61,19 +61,12 @@ struct ShortcutSettingsView: View {
             // The candidate-slot keys have no RECORDER row on this pane: they
             // follow from the Tone Keys picker on the General pane
             // (`ToneInputScheme`), so the two halves of the key contract
-            // cannot be set apart. They are shown read-only below.
+            // cannot be set apart. Nor a read-only row (USER 2026-10-16): the
+            // candidate window labels each cell with its key.
             Section {
                 ForEach(shortcuts.rows(inGroup: 0), id: \.name) { row in
                     recorderRow(row)
                 }
-
-                // Shown, not recordable (USER 2026-09-20): the bare slot keys
-                // pick a candidate off the visible page, and which keys they
-                // are follows the Tone Keys picker (`ToneInputScheme.slotKeySet`)
-                // — so the row follows it too. First of the fixed rows because
-                // it is the main way through the bar; its ⇧ twin sits with the
-                // commit rows below.
-                fixedRow(.desktopShortcutSelectCandidateSlot, shortcuts.slotKeys)
 
                 // Shown, not recordable (USER 2026-09-09): the caret inside the
                 // composition rides the host's own word-jump chord, and the

@@ -11,9 +11,7 @@
 use super::reset_row;
 use crate::winui::cards;
 use crate::winui::window::{Message, ResetScope, SettingsWindow};
-use taigi_desktop_core::keys::shortcut_labels::{
-    caret_chords_label, fixed_keys_label, slot_keys_label,
-};
+use taigi_desktop_core::keys::shortcut_labels::{caret_chords_label, fixed_keys_label};
 use taigi_desktop_core::keys::{
     rejection_message_key, ChordField, ComposingAction, ComposingKeyBindings, ComposingKeyChord,
     RecorderTarget, ShortcutAction,
@@ -50,19 +48,12 @@ pub fn view(
             &bindings,
             ComposingAction::GROUPS[0],
         ),
-        // Shown, not recordable (USER 2026-09-20): the bare slot keys pick a
-        // candidate off the visible page, and which keys they are follows
-        // the Tone Keys picker (`ToneInputScheme`) — so the row follows it too.
-        // First of the fixed rows because it is the main way through the
-        // bar; its Shift twin sits with the commit rows below.
-        fixed_row(
-            strings.resolve(StringKey::DesktopShortcutSelectCandidateSlot),
-            slot_keys_label(bindings.slot_key_set(), DESKTOP_PLATFORM),
-        ),
         // Shown, not recordable (USER 2026-09-09): the caret inside the
         // composition rides the host's own word-jump chord, and the
         // classifier reads it before any binding (`ComposingKeyIntent`). With
-        // the candidate movers, because moving the caret is what it is.
+        // the candidate movers, because moving the caret is what it is. The
+        // bare slot keys have no row (USER 2026-10-16): the candidate window
+        // labels each cell with its key.
         fixed_row(
             strings.resolve(StringKey::DesktopShortcutMoveComposingCaret),
             caret_chords_label(DESKTOP_PLATFORM),

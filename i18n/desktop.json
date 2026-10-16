@@ -222,7 +222,7 @@
       }
     },
     "shortcutSelectCandidateSlot": {
-      "comment": "Read-only row under the candidate movers on the Shortcuts pane: the bare slot keys that pick a candidate straight off the visible page (QWDFZXVY; under Standard, 123456789 under Telex — follows the Tone Keys picker on the General pane, so nothing to record). The ⇧ twin of the same keys is the shortcutCommitAlternateScript read-only row (USER 2026-09-20). Authored whole, like its siblings.",
+      "comment": "No longer drawn (USER 2026-10-16: the candidate window labels each cell with its key; key kept). Was the read-only row under the candidate movers on the Shortcuts pane: the bare slot keys that pick a candidate straight off the visible page (QWDFZXVY; under Standard, 123456789 under Telex — follows the Tone Keys picker on the General pane, so nothing to record). The ⇧ twin of the same keys is the shortcutCommitAlternateScript read-only row (USER 2026-09-20). Authored whole, like its siblings.",
       "scope": {
         "platforms": [
           "macos",

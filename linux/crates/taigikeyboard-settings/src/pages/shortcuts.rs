@@ -9,9 +9,7 @@
 
 use super::PageContext;
 use adw::prelude::*;
-use taigi_desktop_core::keys::shortcut_labels::{
-    caret_chords_label, fixed_keys_label, slot_keys_label,
-};
+use taigi_desktop_core::keys::shortcut_labels::{caret_chords_label, fixed_keys_label};
 use taigi_desktop_core::keys::{
     rejection_message_key, ComposingAction, ComposingKeyBindings, ComposingKeyChord,
     RecorderTarget, ShortcutAction,
@@ -21,7 +19,6 @@ use taigi_desktop_core::strings::StringKey;
 use taigi_linux_platform::DESKTOP_PLATFORM;
 
 pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> PageContext<'a> {
-    let bindings = ComposingKeyBindings::from_document(context.document, DESKTOP_PLATFORM);
     // Group one: through the candidates. The rows inside each group in
     // their roster's own order.
     let selection = adw::PreferencesGroup::builder()
@@ -39,14 +36,9 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
             &composing_fields(*action),
         );
     }
-    // Shown, not recordable: the bare slot keys follow the Tone Keys picker
-    // (`ToneInputScheme`), and the caret chord.
-    let slot_keys_shown = fixed_row(
-        &mut context,
-        &selection,
-        StringKey::DesktopShortcutSelectCandidateSlot,
-        slot_keys_label(bindings.slot_key_set(), DESKTOP_PLATFORM),
-    );
+    // Shown, not recordable: the caret chord. The bare slot keys have no
+    // row (USER 2026-10-16): the candidate window labels each cell with its
+    // key.
     fixed_row(
         &mut context,
         &selection,
@@ -83,7 +75,6 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
     let refresh_slot_keys = move |document: &SettingsDocument| {
         let slot_keys =
             ComposingKeyBindings::from_document(document, DESKTOP_PLATFORM).slot_key_set();
-        slot_keys_shown.set_label(&slot_keys_label(slot_keys, DESKTOP_PLATFORM));
         for (action, row) in &output_rows {
             let fixed_keys = fixed_keys_label(*action, slot_keys, DESKTOP_PLATFORM);
             row.set_subtitle(fixed_keys.as_deref().unwrap_or_default());
@@ -233,14 +224,13 @@ fn chord_of(target: RecorderTarget, document: &SettingsDocument) -> Option<Compo
 
 /// One read-only row: the label, and the fixed keys dimmed at the right
 /// where a recorder row shows its fields, so every row's keys sit in one
-/// column — the dim text is what tells it from the rows that record. Returns
-/// the keys' label for a row whose keys follow a setting.
+/// column — the dim text is what tells it from the rows that record.
 fn fixed_row(
     context: &mut PageContext<'_>,
     group: &adw::PreferencesGroup,
     title: StringKey,
     keys: String,
-) -> gtk::Label {
+) {
     let row = adw::ActionRow::builder()
         .title(context.strings.resolve(title))
         .build();
@@ -251,5 +241,4 @@ fn fixed_row(
         .build();
     row.add_suffix(&keys);
     group.add(&row);
-    keys
 }
