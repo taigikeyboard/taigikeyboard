@@ -41,7 +41,7 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
     }
     // Shown, not recordable: the bare slot keys follow the Tone Keys picker
     // (`ToneInputScheme`), the fixed navigation tier, the caret chord.
-    let slot_row = fixed_row(
+    let slot_keys_shown = fixed_row(
         &mut context,
         &selection,
         StringKey::DesktopShortcutSelectCandidateSlot,
@@ -89,7 +89,7 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
     let refresh_slot_keys = move |document: &SettingsDocument| {
         let slot_keys =
             ComposingKeyBindings::from_document(document, DESKTOP_PLATFORM).slot_key_set();
-        slot_row.set_subtitle(&slot_keys_label(slot_keys, DESKTOP_PLATFORM));
+        slot_keys_shown.set_label(&slot_keys_label(slot_keys, DESKTOP_PLATFORM));
         for (action, row) in &output_rows {
             let fixed_keys = fixed_keys_label(*action, slot_keys, DESKTOP_PLATFORM);
             row.set_subtitle(fixed_keys.as_deref().unwrap_or_default());
@@ -240,18 +240,25 @@ fn chord_of(target: RecorderTarget, document: &SettingsDocument) -> Option<Compo
     }
 }
 
-/// One read-only row: the label, and the fixed keys as its subtitle — the
-/// dim text is what tells it from the rows that record.
+/// One read-only row: the label, and the fixed keys dimmed at the right
+/// where a recorder row shows its fields, so every row's keys sit in one
+/// column — the dim text is what tells it from the rows that record. Returns
+/// the keys' label for a row whose keys follow a setting.
 fn fixed_row(
     context: &mut PageContext<'_>,
     group: &adw::PreferencesGroup,
     title: StringKey,
     keys: String,
-) -> adw::ActionRow {
+) -> gtk::Label {
     let row = adw::ActionRow::builder()
         .title(context.strings.resolve(title))
-        .subtitle(keys)
         .build();
+    let keys = gtk::Label::builder()
+        .label(keys)
+        .valign(gtk::Align::Center)
+        .css_classes(["dim-label"])
+        .build();
+    row.add_suffix(&keys);
     group.add(&row);
-    row
+    keys
 }
