@@ -9,9 +9,8 @@
 //! request carried, a panic here included.
 
 use taigi_desktop_core::keys::{
-    evaluate_press, shortcut_labels, tps_keyboard_rows, ChordField, ChordRejection,
-    ComposingAction, ComposingKeyBindings, ComposingKeyChord, RecorderOutcome, RecorderTier,
-    SymbolPickerIntent,
+    evaluate_press, shortcut_labels, tps_keyboard_rows, ChordRejection, ComposingAction,
+    ComposingKeyBindings, ComposingKeyChord, RecorderOutcome, RecorderTier, SymbolPickerIntent,
 };
 use taigi_desktop_core::settings::{
     keys, InputMode, InputModeRequest, SettingChoice, SettingsDocument,
@@ -113,9 +112,10 @@ fn composing_shortcuts(
             group: group(action),
             fixed_keys: shortcut_labels::fixed_keys_label(action, slot_keys, DESKTOP_PLATFORM)
                 .unwrap_or_default(),
-            fields: ChordField::ALL
-                .into_iter()
-                .map(|field| {
+            fields: action
+                .fields()
+                .iter()
+                .map(|&field| {
                     let stored = document
                         .stored_composing_chord(action, field, DESKTOP_PLATFORM)
                         .flatten();
@@ -475,34 +475,29 @@ mod tests {
         assert_eq!(
             rows,
             [
-                ("nextCandidate", 0, vec![(Some("⇥"), Some("|0009")), none]),
-                (
-                    "previousCandidate",
-                    0,
-                    vec![(Some("⇧⇥"), Some("s|0009")), none]
-                ),
-                ("pageForward", 0, vec![(Some("]"), Some("|005D")), none]),
-                ("pageBackward", 0, vec![(Some("["), Some("|005B")), none]),
+                ("nextCandidate", 0, vec![(Some("⇥"), Some("|0009"))]),
+                ("previousCandidate", 0, vec![(Some("⇧⇥"), Some("s|0009"))]),
+                ("pageForward", 0, vec![(Some("]"), Some("|005D"))]),
+                ("pageBackward", 0, vec![(Some("["), Some("|005B"))]),
                 (
                     "confirmHighlighted",
                     1,
                     vec![(Some("↩"), Some("|000D")), (Some("Space"), Some("|0020"))]
                 ),
-                ("commitLiteral", 1, vec![(Some("⇧↩"), Some("s|000D")), none]),
-                ("commitAlternateScript", 1, vec![none, none]),
+                ("commitLiteral", 1, vec![(Some("⇧↩"), Some("s|000D"))]),
+                ("commitAlternateScript", 1, vec![none]),
             ]
         );
         let first = &reply.actions[0];
-        let keys: Vec<&str> = first
-            .fields
-            .iter()
-            .map(|f| f.settings_key.as_str())
-            .collect();
+        let keys = |row: &ComposingShortcut| -> Vec<String> {
+            row.fields.iter().map(|f| f.settings_key.clone()).collect()
+        };
+        assert_eq!(keys(first), ["composingShortcut.nextCandidate"]);
         assert_eq!(
-            keys,
+            keys(&reply.actions[4]),
             [
-                "composingShortcut.nextCandidate",
-                "composingShortcut.nextCandidate.second"
+                "composingShortcut.confirmHighlighted",
+                "composingShortcut.confirmHighlighted.second"
             ]
         );
         assert_eq!(first.label_key, "i18n_desktop_actionNextCandidate");

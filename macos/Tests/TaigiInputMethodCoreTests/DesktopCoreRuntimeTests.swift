@@ -162,8 +162,9 @@ final class DesktopCoreRuntimeTests: XCTestCase {
             "confirmHighlighted", "commitLiteral", "commitAlternateScript",
         ] {
             expected["composingShortcut.\(action)"] = .some(nil)
-            expected["composingShortcut.\(action).second"] = .some(nil)
         }
+        // Confirm Key alone has a second field (USER 2026-10-16).
+        expected["composingShortcut.confirmHighlighted.second"] = .some(nil)
 
         let described = try descriptors()
         XCTAssertEqual(Set(described.map(\.name)), Set(expected.keys))

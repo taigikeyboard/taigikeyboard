@@ -8,8 +8,8 @@
 /// gate; no chord is on two fields (the one the user recorded keeps it); an
 /// emptied commit row has taken back a free default of its pair.
 struct ComposingShortcuts: Sendable {
-    /// One composing action's row: two fields, either of which fires it
-    /// (`ChordField`).
+    /// One composing action's row: its fields, either of which fires it —
+    /// a second on Confirm Key only (desktop-core `ComposingAction::fields`).
     struct Row: Sendable, Equatable {
         /// One of the row's two recorder fields.
         struct Field: Sendable, Equatable {

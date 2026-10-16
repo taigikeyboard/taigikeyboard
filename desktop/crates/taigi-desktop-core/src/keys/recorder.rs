@@ -265,7 +265,8 @@ mod tests {
         // trace: Space ships on confirm.second; recorded on alternate.first
         // (Space writing the other script, as before 2026-10-15) it empties
         // confirm.second (`composing_fields_holding`); then recorded on
-        // alternate.second it empties alternate.first — one chord, one field.
+        // confirm.second again it empties alternate.first — one chord, one
+        // field.
         let space = ComposingKeyChord::make(Some(" "), KeyModifiers::NONE, PLATFORM).unwrap();
         let confirm = ComposingAction::ConfirmHighlighted;
         let alternate = ComposingAction::CommitAlternateScript;
@@ -284,21 +285,21 @@ mod tests {
             "the loser is cleared, not left on a shadowed default"
         );
 
-        RecorderTarget::Composing(alternate, ChordField::Second).store(
+        RecorderTarget::Composing(confirm, ChordField::Second).store(
             &mut document,
             Some(&space),
             PLATFORM,
         );
         let bindings = ComposingKeyBindings::from_document(&document, PLATFORM);
-        assert_eq!(bindings.chord(alternate, ChordField::Second), Some(&space));
+        assert_eq!(bindings.chord(confirm, ChordField::Second), Some(&space));
         assert_eq!(bindings.chord(alternate, ChordField::First), None);
     }
 
     #[test]
     fn a_recording_also_clears_a_copy_the_resolver_hid() {
-        // trace: Ctrl+K stored on next.first and page_forward.second — a file
-        // an older build (blind to the second field) wrote. The resolver
-        // shows only page_forward.second (later in roster order). Recording
+        // trace: Ctrl+K stored on next.first and confirm.second — a file an
+        // older build (blind to the second field) wrote. The resolver shows
+        // only confirm.second (later in roster order). Recording
         // Ctrl+K on previous.first must clear BOTH, or next.first would come
         // back on the next read and win over the fresh recording.
         let control_k =
@@ -311,7 +312,7 @@ mod tests {
             PLATFORM,
         );
         document.set_composing_chord(
-            ComposingAction::PageForward,
+            ComposingAction::ConfirmHighlighted,
             ChordField::Second,
             Some(&control_k),
             PLATFORM,

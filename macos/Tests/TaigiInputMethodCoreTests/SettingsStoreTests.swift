@@ -603,22 +603,23 @@ final class SettingsStoreTests: XCTestCase {
         )
     }
 
-    /// Space ships on Confirm Key's second field (USER 2026-10-15); recorded
-    /// on Output the Other Script's second field it moves there — the shipped
-    /// chord gives way to the recording.
+    /// Space ships on Confirm Key's second field (USER 2026-10-15) — the one
+    /// row with two (USER 2026-10-16); a chord recorded there is read back and
+    /// takes the key from the default that held it.
     func testASecondFieldChord_isReadBackAndTakesTheKeyFromADefault() throws {
         let store = makeStore()
         let space = try TestFixtures.chord(" ")
         XCTAssertEqual(try row("confirmHighlighted").fields[1].chord, space, "shipped")
+        XCTAssertEqual(try row("commitAlternateScript").fields.count, 1)
+        let tab = try TestFixtures.chord("\t")
 
-        try store.setComposingChord(space, for: row("commitAlternateScript").fields[1])
+        try store.setComposingChord(tab, for: row("confirmHighlighted").fields[1])
 
-        XCTAssertEqual(try row("commitAlternateScript").fields[1].chord, space)
-        XCTAssertNil(try row("confirmHighlighted").fields[1].chord)
-        XCTAssertEqual(try row("confirmHighlighted").first.chord, try TestFixtures.chord("\r"))
+        XCTAssertEqual(try row("confirmHighlighted").fields[1].chord, tab)
+        XCTAssertNil(try row("nextCandidate").first.chord)
         XCTAssertEqual(
-            userDefaults.string(forKey: "composingShortcut.commitAlternateScript.second"),
-            space.rawValue,
+            userDefaults.string(forKey: "composingShortcut.confirmHighlighted.second"),
+            tab.rawValue,
         )
     }
 
@@ -628,11 +629,11 @@ final class SettingsStoreTests: XCTestCase {
     func testTheFieldsHoldingAChord_includeOneTheResolverHid() throws {
         let chord = try TestFixtures.chordNoDefaultHolds()
         userDefaults.set(chord.rawValue, forKey: "composingShortcut.nextCandidate")
-        userDefaults.set(chord.rawValue, forKey: "composingShortcut.pageForward.second")
+        userDefaults.set(chord.rawValue, forKey: "composingShortcut.confirmHighlighted.second")
 
         XCTAssertEqual(
             try shortcuts().fields(holding: chord).map(\.settingsKey),
-            ["composingShortcut.nextCandidate", "composingShortcut.pageForward.second"],
+            ["composingShortcut.nextCandidate", "composingShortcut.confirmHighlighted.second"],
         )
         XCTAssertNil(try row("nextCandidate").first.chord, "hidden behind the later field")
     }

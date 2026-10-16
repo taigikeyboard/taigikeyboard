@@ -195,7 +195,7 @@ extension ComposingShortcuts {
     init?(_ reply: Taigi_DesktopShell_ComposingShortcutsReply) {
         var rows: [Row] = []
         for action in reply.actions {
-            guard let label = StringKey(rawValue: action.labelKey), action.fields.count == 2 else { return nil }
+            guard let label = StringKey(rawValue: action.labelKey), !action.fields.isEmpty else { return nil }
             let fields = action.fields.map { field in
                 Row.Field(
                     settingsKey: field.settingsKey,

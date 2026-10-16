@@ -124,12 +124,22 @@ impl ComposingAction {
         })
     }
 
+    /// The fields this action's row holds. Only Confirm Key has a second:
+    /// Enter and Space both confirming is the one pair users asked for, and an
+    /// empty spare field on every other row is clutter (USER 2026-10-16).
+    pub fn fields(self) -> &'static [ChordField] {
+        match self {
+            Self::ConfirmHighlighted => &ChordField::ALL,
+            _ => &[ChordField::First],
+        }
+    }
+
     /// Every field of every action, roster order then field order — the
     /// tiebreak order the bindings resolver reads.
     pub fn all_fields() -> impl Iterator<Item = (ComposingAction, ChordField)> {
         Self::ALL
             .into_iter()
-            .flat_map(|action| ChordField::ALL.map(move |field| (action, field)))
+            .flat_map(|action| action.fields().iter().map(move |field| (action, *field)))
     }
 
     /// Whether this action needs candidates on screen to mean anything. A
@@ -219,16 +229,13 @@ mod tests {
 
     #[test]
     fn every_action_has_its_own_settings_key_and_raw_round_trips() {
-        let mut names: Vec<_> = ComposingAction::ALL
-            .iter()
-            .flat_map(|a| ChordField::ALL.map(|field| a.settings_key_name(field)))
+        let mut names: Vec<_> = ComposingAction::all_fields()
+            .map(|(action, field)| action.settings_key_name(field))
             .collect();
         names.sort();
         names.dedup();
-        assert_eq!(
-            names.len(),
-            ComposingAction::ALL.len() * ChordField::ALL.len()
-        );
+        // trace: seven first fields + Confirm Key's second.
+        assert_eq!(names.len(), ComposingAction::ALL.len() + 1);
         // trace: `settings_key_name` = `composingShortcut.<raw>` — the raw values ARE the
         // stored keys; renaming one drops every chord recorded under it.
         assert_eq!(
@@ -248,8 +255,8 @@ mod tests {
             "composingShortcut.nextCandidate"
         );
         assert_eq!(
-            ComposingAction::NextCandidate.settings_key_name(ChordField::Second),
-            "composingShortcut.nextCandidate.second"
+            ComposingAction::ConfirmHighlighted.settings_key_name(ChordField::Second),
+            "composingShortcut.confirmHighlighted.second"
         );
         for action in ComposingAction::ALL {
             assert_eq!(ComposingAction::from_raw(action.raw()), Some(action));
@@ -274,19 +281,13 @@ mod tests {
             shipped,
             [
                 ((NextCandidate, First), chord("\t", KeyModifiers::NONE)),
-                ((NextCandidate, Second), None),
                 ((PreviousCandidate, First), chord("\t", KeyModifiers::SHIFT)),
-                ((PreviousCandidate, Second), None),
                 ((PageForward, First), chord("]", KeyModifiers::NONE)),
-                ((PageForward, Second), None),
                 ((PageBackward, First), chord("[", KeyModifiers::NONE)),
-                ((PageBackward, Second), None),
                 ((ConfirmHighlighted, First), chord("\r", KeyModifiers::NONE)),
                 ((ConfirmHighlighted, Second), chord(" ", KeyModifiers::NONE)),
                 ((CommitLiteral, First), chord("\r", KeyModifiers::SHIFT)),
-                ((CommitLiteral, Second), None),
                 ((CommitAlternateScript, First), None),
-                ((CommitAlternateScript, Second), None),
             ]
         );
         assert!(!ComposingAction::CommitLiteral.requires_candidates());

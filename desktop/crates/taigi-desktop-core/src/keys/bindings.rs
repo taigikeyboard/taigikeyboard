@@ -624,10 +624,10 @@ mod tests {
     #[test]
     fn a_second_field_fires_its_action_alongside_the_first() {
         // trace: confirm.second=Space (its shipped chord, stored by value);
-        // alternate.second=⇧Return
-        // (recorded) > literal.first=⇧Return (default) → literal.first
-        // dropped; literal is a commit row with both fields empty → pool
-        // {Return, ⇧Return} both held → literal stays empty.
+        // alternate.first=⇧Return (recorded) > literal.first=⇧Return
+        // (default) → literal.first dropped; literal is a commit row with no
+        // chord → pool {Return, ⇧Return} both held → literal stays empty.
+        // A `.second` stored on any other action is no field and is not read.
         let space = chord(" ", KeyModifiers::NONE);
         let enter = chord("\r", KeyModifiers::NONE);
         let shift_enter = chord("\r", KeyModifiers::SHIFT);
@@ -640,8 +640,13 @@ mod tests {
                 ),
                 (
                     ComposingAction::CommitAlternateScript,
-                    ChordField::Second,
+                    ChordField::First,
                     Some(shift_enter.clone()),
+                ),
+                (
+                    ComposingAction::PageForward,
+                    ChordField::Second,
+                    Some(chord("k", KeyModifiers::CONTROL)),
                 ),
             ]),
             ToneInputScheme::Standard,
@@ -650,10 +655,13 @@ mod tests {
         assert_eq!(bindings.chord(confirm, ChordField::First), Some(&enter));
         assert_eq!(bindings.chord(confirm, ChordField::Second), Some(&space));
         let alternate = ComposingAction::CommitAlternateScript;
-        assert_eq!(bindings.chord(alternate, ChordField::First), None);
         assert_eq!(
-            bindings.chord(alternate, ChordField::Second),
+            bindings.chord(alternate, ChordField::First),
             Some(&shift_enter)
+        );
+        assert_eq!(
+            bindings.chord(ComposingAction::PageForward, ChordField::Second),
+            None
         );
         for field in ChordField::ALL {
             assert_eq!(bindings.chord(ComposingAction::CommitLiteral, field), None);
@@ -664,6 +672,7 @@ mod tests {
         assert_eq!(press(" ", KeyModifiers::NONE), Some(confirm));
         assert_eq!(press("\r", KeyModifiers::NONE), Some(confirm));
         assert_eq!(press("\r", KeyModifiers::SHIFT), Some(alternate));
+        assert_eq!(press("k", KeyModifiers::CONTROL), None);
     }
 
     #[test]
@@ -672,12 +681,12 @@ mod tests {
         let bindings = ComposingKeyBindings::resolve(
             &stored_fields(&[
                 (
-                    ComposingAction::PageForward,
+                    ComposingAction::ConfirmHighlighted,
                     ChordField::First,
                     Some(recorded.clone()),
                 ),
                 (
-                    ComposingAction::PageForward,
+                    ComposingAction::ConfirmHighlighted,
                     ChordField::Second,
                     Some(recorded.clone()),
                 ),
@@ -685,11 +694,11 @@ mod tests {
             ToneInputScheme::Standard,
         );
         assert_eq!(
-            bindings.chord(ComposingAction::PageForward, ChordField::First),
+            bindings.chord(ComposingAction::ConfirmHighlighted, ChordField::First),
             None
         );
         assert_eq!(
-            bindings.chord(ComposingAction::PageForward, ChordField::Second),
+            bindings.chord(ComposingAction::ConfirmHighlighted, ChordField::Second),
             Some(&recorded)
         );
     }

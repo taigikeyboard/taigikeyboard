@@ -169,8 +169,8 @@ struct ShortcutSettingsView: View {
         }
     }
 
-    /// One composing row: its two fields side by side, either of which fires
-    /// the action. Each field is named with its number for VoiceOver, since
+    /// One composing row: its fields side by side — two on Confirm Key only
+    /// — either of which fires the action. Each field is named with its number for VoiceOver, since
     /// the two share the row's label (desktop-core `RecorderTarget::field_name`
     /// is the Windows / Linux twin); the field's own value is read after it.
     private func recorderRow(_ row: ComposingShortcuts.Row) -> some View {

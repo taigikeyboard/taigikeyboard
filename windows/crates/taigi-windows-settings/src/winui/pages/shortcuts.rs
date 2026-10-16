@@ -145,7 +145,7 @@ fn global_rows(
     )
 }
 
-/// One row per composing action, each with its two fields — both fire the
+/// One row per composing action, each with its fields — either fires the
 /// action.
 fn composing_rows(
     window: &SettingsWindow,
@@ -158,7 +158,12 @@ fn composing_rows(
         actions
             .iter()
             .map(|action| {
+                // Two fields on Confirm Key only (`ComposingAction::fields`);
+                // an absent one is an empty fragment in the panel's collection.
                 let fields = ChordField::ALL.map(|field| {
+                    if !action.fields().contains(&field) {
+                        return View::empty();
+                    }
                     recorder_field(
                         window,
                         strings,

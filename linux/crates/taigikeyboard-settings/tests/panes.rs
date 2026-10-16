@@ -230,7 +230,8 @@ fn a_recorded_press_binds_the_row(window: &Rc<SettingsWindow>) {
     assert!(ShortcutAction::ShowTelexGuide
         .chord_in(window.writer().borrow().document(), DESKTOP_PLATFORM)
         .is_none());
-    let composing = RecorderTarget::Composing(ComposingAction::NextCandidate, ChordField::Second);
+    let composing =
+        RecorderTarget::Composing(ComposingAction::ConfirmHighlighted, ChordField::Second);
     window.start_recording(composing, None);
     window.record_press(0x63, 54, (1 << 2) | (1 << 3));
     {
@@ -239,15 +240,15 @@ fn a_recorded_press_binds_the_row(window: &Rc<SettingsWindow>) {
         let bindings = ComposingKeyBindings::from_document(document.document(), DESKTOP_PLATFORM);
         assert_eq!(
             bindings
-                .chord(ComposingAction::NextCandidate, ChordField::Second)
+                .chord(ComposingAction::ConfirmHighlighted, ChordField::Second)
                 .map(|c| c.key.clone()),
             Some("c".to_owned())
         );
         assert_eq!(
             bindings
-                .chord(ComposingAction::NextCandidate, ChordField::First)
+                .chord(ComposingAction::ConfirmHighlighted, ChordField::First)
                 .map(|c| c.key.clone()),
-            Some("\t".to_owned()),
+            Some("\r".to_owned()),
             "the first field keeps its default"
         );
         assert!(

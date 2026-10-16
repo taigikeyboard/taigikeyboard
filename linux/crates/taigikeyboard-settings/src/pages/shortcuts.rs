@@ -13,7 +13,7 @@ use taigi_desktop_core::keys::shortcut_labels::{
     caret_chords_label, fixed_keys_label, navigation_keys_label, slot_keys_label,
 };
 use taigi_desktop_core::keys::{
-    rejection_message_key, ChordField, ComposingAction, ComposingKeyBindings, ComposingKeyChord,
+    rejection_message_key, ComposingAction, ComposingKeyBindings, ComposingKeyChord,
     RecorderTarget, ShortcutAction,
 };
 use taigi_desktop_core::settings::SettingsDocument;
@@ -123,9 +123,14 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
     context
 }
 
-/// The two fields of `action`'s row; either fires the action.
-fn composing_fields(action: ComposingAction) -> [RecorderTarget; 2] {
-    ChordField::ALL.map(|field| RecorderTarget::Composing(action, field))
+/// The fields of `action`'s row — two on Confirm Key only; either fires the
+/// action.
+fn composing_fields(action: ComposingAction) -> Vec<RecorderTarget> {
+    action
+        .fields()
+        .iter()
+        .map(|&field| RecorderTarget::Composing(action, field))
+        .collect()
 }
 
 /// One recorder row: its label, and its fields side by side. Activating the
