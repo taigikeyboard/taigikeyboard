@@ -12,7 +12,7 @@ use super::reset_row;
 use crate::winui::cards;
 use crate::winui::window::{Message, ResetScope, SettingsWindow};
 use taigi_desktop_core::keys::shortcut_labels::{
-    caret_chords_label, fixed_keys_label, navigation_keys_label, slot_keys_label,
+    caret_chords_label, fixed_keys_label, slot_keys_label,
 };
 use taigi_desktop_core::keys::{
     rejection_message_key, ChordField, ComposingAction, ComposingKeyBindings, ComposingKeyChord,
@@ -58,14 +58,6 @@ pub fn view(
         fixed_row(
             strings.resolve(StringKey::DesktopShortcutSelectCandidateSlot),
             slot_keys_label(bindings.slot_key_set(), DESKTOP_PLATFORM),
-        ),
-        // Shown, not recordable: the fixed navigation tier
-        // (`ComposingKeyIntent::intent`), read before any binding so a user
-        // who has mis-bound everything else still has a way through the
-        // candidates.
-        fixed_row(
-            strings.resolve(StringKey::DesktopShortcutNavigateCandidates),
-            navigation_keys_label(DESKTOP_PLATFORM).to_owned(),
         ),
         // Shown, not recordable (USER 2026-09-09): the caret inside the
         // composition rides the host's own word-jump chord, and the

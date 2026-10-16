@@ -75,12 +75,6 @@ struct ShortcutSettingsView: View {
                 // commit rows below.
                 fixedRow(.desktopShortcutSelectCandidateSlot, shortcuts.slotKeys)
 
-                // Shown, not recordable: the fixed navigation tier
-                // (desktop-core `keys/intent.rs`), read before any binding so a
-                // user who has mis-bound everything else still has a way
-                // through the candidates.
-                fixedRow(.desktopShortcutNavigateCandidates, shortcuts.navigationKeys)
-
                 // Shown, not recordable (USER 2026-09-09): the caret inside the
                 // composition rides the host's own word-jump chord, and the
                 // classifier reads it before any binding (`keys/intent.rs`).

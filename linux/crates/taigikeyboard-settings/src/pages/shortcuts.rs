@@ -10,7 +10,7 @@
 use super::PageContext;
 use adw::prelude::*;
 use taigi_desktop_core::keys::shortcut_labels::{
-    caret_chords_label, fixed_keys_label, navigation_keys_label, slot_keys_label,
+    caret_chords_label, fixed_keys_label, slot_keys_label,
 };
 use taigi_desktop_core::keys::{
     rejection_message_key, ComposingAction, ComposingKeyBindings, ComposingKeyChord,
@@ -40,18 +40,12 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
         );
     }
     // Shown, not recordable: the bare slot keys follow the Tone Keys picker
-    // (`ToneInputScheme`), the fixed navigation tier, the caret chord.
+    // (`ToneInputScheme`), and the caret chord.
     let slot_keys_shown = fixed_row(
         &mut context,
         &selection,
         StringKey::DesktopShortcutSelectCandidateSlot,
         slot_keys_label(bindings.slot_key_set(), DESKTOP_PLATFORM),
-    );
-    fixed_row(
-        &mut context,
-        &selection,
-        StringKey::DesktopShortcutNavigateCandidates,
-        navigation_keys_label(DESKTOP_PLATFORM).to_owned(),
     );
     fixed_row(
         &mut context,
