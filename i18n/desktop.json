@@ -214,9 +214,9 @@
         ]
       },
       "values": {
-        "hanji": "修正當咧拍 ê 字",
-        "tailo": "Siu-tsìng tng-teh phah ê jī",
-        "poj": "Siu-chèng tng-teh phah ê jī",
+        "hanji": "修正這馬拍 ê 字",
+        "tailo": "Siu-tsìng tsit-má phah ê jī",
+        "poj": "Siu-chèng chit-má phah ê jī",
         "en": "Fix What You Are Typing",
         "ja": "入力中の文字を修正"
       }
@@ -990,9 +990,9 @@
         ]
       },
       "values": {
-        "hanji": "輸出當咧拍 ê 字",
-        "tailo": "Su-tshut tng-teh phah ê jī",
-        "poj": "Su-chhut tng-teh phah ê jī",
+        "hanji": "輸出這馬拍 ê 字",
+        "tailo": "Su-tshut tsit-má phah ê jī",
+        "poj": "Su-chhut chit-má phah ê jī",
         "en": "Output What You Are Typing",
         "ja": "入力中の文字を出力"
       }

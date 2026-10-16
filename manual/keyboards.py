@@ -271,8 +271,8 @@ def typing(mac):
     legend = [
         ("blue", "輸出佮選字"),
         ("blue", "1–9：直接選第幾个候選詞"),
-        ("blue", "Esc：刪除當咧拍 ê 字"),
-        ("orange-solid", f"{chord} ＋ ← → ↑ ↓：修正當咧拍 ê 字"),
+        ("blue", "Esc：刪除這馬拍 ê 字"),
+        ("orange-solid", f"{chord} ＋ ← → ↑ ↓：修正這馬拍 ê 字"),
     ]
     if not mac:
         orange.update(marks("orange", {"home": "上頭前", "end": "上尾"}))
