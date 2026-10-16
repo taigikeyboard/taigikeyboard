@@ -117,7 +117,7 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
     context
 }
 
-/// The fields of `action`'s row — two on Confirm Key only; either fires the
+/// The fields of `action`'s row — two on the commit actions; either fires the
 /// action.
 fn composing_fields(action: ComposingAction) -> Vec<RecorderTarget> {
     action

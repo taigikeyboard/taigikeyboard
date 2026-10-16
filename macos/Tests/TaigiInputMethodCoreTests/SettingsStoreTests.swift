@@ -603,14 +603,15 @@ final class SettingsStoreTests: XCTestCase {
         )
     }
 
-    /// Space ships on Confirm Key's second field (USER 2026-10-15) — the one
-    /// row with two (USER 2026-10-16); a chord recorded there is read back and
+    /// Space ships on Confirm Key's second field (USER 2026-10-15); the three
+    /// commit rows have two (USER 2026-10-16). A chord recorded there is read back and
     /// takes the key from the default that held it.
     func testASecondFieldChord_isReadBackAndTakesTheKeyFromADefault() throws {
         let store = makeStore()
         let space = try TestFixtures.chord(" ")
         XCTAssertEqual(try row("confirmHighlighted").fields[1].chord, space, "shipped")
-        XCTAssertEqual(try row("commitAlternateScript").fields.count, 1)
+        XCTAssertEqual(try row("commitAlternateScript").fields.count, 2)
+        XCTAssertEqual(try row("pageForward").fields.count, 1)
         let tab = try TestFixtures.chord("\t")
 
         try store.setComposingChord(tab, for: row("confirmHighlighted").fields[1])

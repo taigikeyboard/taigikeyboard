@@ -25,7 +25,9 @@ default	pageBackward	|005B
 default	confirmHighlighted	|000D
 default	confirmHighlighted.second	|0020
 default	commitLiteral	s|000D
+default	commitLiteral.second	-
 default	commitAlternateScript	-
+default	commitAlternateScript.second	-
 
 # The codec: modifier order, case fold (K6), the two folded keys.
 parse	|0009	|0009
@@ -92,18 +94,20 @@ match	c|0065,0301	00E9	c	no
 # unparsable = cleared; a chord on two fields stays on the one the user
 # recorded (the later one when both are); a commit row with BOTH fields empty
 # takes back a free default of its pair, never a key off another field.
-resolve	-	nextCandidate=|0009;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=|000D;confirmHighlighted.second=|0020;commitLiteral=s|000D;commitAlternateScript=-
-resolve	confirmHighlighted=	nextCandidate=|0009;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=-;confirmHighlighted.second=|0020;commitLiteral=s|000D;commitAlternateScript=-
-resolve	confirmHighlighted=;confirmHighlighted.second=	nextCandidate=|0009;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=|000D;confirmHighlighted.second=-;commitLiteral=s|000D;commitAlternateScript=-
-resolve	confirmHighlighted.second=	nextCandidate=|0009;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=|000D;confirmHighlighted.second=-;commitLiteral=s|000D;commitAlternateScript=-
-resolve	nextCandidate=	nextCandidate=-;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=|000D;confirmHighlighted.second=|0020;commitLiteral=s|000D;commitAlternateScript=-
-resolve	commitAlternateScript=c|0061	nextCandidate=|0009;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=|000D;confirmHighlighted.second=|0020;commitLiteral=s|000D;commitAlternateScript=c|0061
-resolve	commitAlternateScript=|000D	nextCandidate=|0009;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=-;confirmHighlighted.second=|0020;commitLiteral=s|000D;commitAlternateScript=|000D
-resolve	commitAlternateScript=|0020	nextCandidate=|0009;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=|000D;confirmHighlighted.second=-;commitLiteral=s|000D;commitAlternateScript=|0020
-resolve	pageForward=|0009	nextCandidate=-;previousCandidate=s|0009;pageForward=|0009;pageBackward=|005B;confirmHighlighted=|000D;confirmHighlighted.second=|0020;commitLiteral=s|000D;commitAlternateScript=-
-resolve	nextCandidate=|0061	nextCandidate=-;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=|000D;confirmHighlighted.second=|0020;commitLiteral=s|000D;commitAlternateScript=-
-resolve	commitLiteral=;confirmHighlighted=	nextCandidate=|0009;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=-;confirmHighlighted.second=|0020;commitLiteral=s|000D;commitAlternateScript=-
-resolve	nextCandidate=s|0069,0307	nextCandidate=-;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=|000D;confirmHighlighted.second=|0020;commitLiteral=s|000D;commitAlternateScript=-
-resolve	nextCandidate=c|0041,,0042	nextCandidate=-;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=|000D;confirmHighlighted.second=|0020;commitLiteral=s|000D;commitAlternateScript=-
-resolve	pageForward=c|00E9;pageBackward=c|0065,0301	nextCandidate=|0009;previousCandidate=s|0009;pageForward=c|00E9;pageBackward=c|0065,0301;confirmHighlighted=|000D;confirmHighlighted.second=|0020;commitLiteral=s|000D;commitAlternateScript=-
-resolve	confirmHighlighted=c|0061;confirmHighlighted.second=c|0061	nextCandidate=|0009;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=-;confirmHighlighted.second=c|0061;commitLiteral=s|000D;commitAlternateScript=-
+resolve	-	nextCandidate=|0009;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=|000D;confirmHighlighted.second=|0020;commitLiteral=s|000D;commitLiteral.second=-;commitAlternateScript=-;commitAlternateScript.second=-
+resolve	confirmHighlighted=	nextCandidate=|0009;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=-;confirmHighlighted.second=|0020;commitLiteral=s|000D;commitLiteral.second=-;commitAlternateScript=-;commitAlternateScript.second=-
+resolve	confirmHighlighted=;confirmHighlighted.second=	nextCandidate=|0009;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=|000D;confirmHighlighted.second=-;commitLiteral=s|000D;commitLiteral.second=-;commitAlternateScript=-;commitAlternateScript.second=-
+resolve	confirmHighlighted.second=	nextCandidate=|0009;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=|000D;confirmHighlighted.second=-;commitLiteral=s|000D;commitLiteral.second=-;commitAlternateScript=-;commitAlternateScript.second=-
+resolve	nextCandidate=	nextCandidate=-;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=|000D;confirmHighlighted.second=|0020;commitLiteral=s|000D;commitLiteral.second=-;commitAlternateScript=-;commitAlternateScript.second=-
+resolve	commitAlternateScript=c|0061	nextCandidate=|0009;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=|000D;confirmHighlighted.second=|0020;commitLiteral=s|000D;commitLiteral.second=-;commitAlternateScript=c|0061;commitAlternateScript.second=-
+resolve	commitAlternateScript=|000D	nextCandidate=|0009;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=-;confirmHighlighted.second=|0020;commitLiteral=s|000D;commitLiteral.second=-;commitAlternateScript=|000D;commitAlternateScript.second=-
+resolve	commitAlternateScript=|0020	nextCandidate=|0009;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=|000D;confirmHighlighted.second=-;commitLiteral=s|000D;commitLiteral.second=-;commitAlternateScript=|0020;commitAlternateScript.second=-
+resolve	pageForward=|0009	nextCandidate=-;previousCandidate=s|0009;pageForward=|0009;pageBackward=|005B;confirmHighlighted=|000D;confirmHighlighted.second=|0020;commitLiteral=s|000D;commitLiteral.second=-;commitAlternateScript=-;commitAlternateScript.second=-
+resolve	nextCandidate=|0061	nextCandidate=-;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=|000D;confirmHighlighted.second=|0020;commitLiteral=s|000D;commitLiteral.second=-;commitAlternateScript=-;commitAlternateScript.second=-
+resolve	commitLiteral=;confirmHighlighted=	nextCandidate=|0009;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=-;confirmHighlighted.second=|0020;commitLiteral=s|000D;commitLiteral.second=-;commitAlternateScript=-;commitAlternateScript.second=-
+resolve	nextCandidate=s|0069,0307	nextCandidate=-;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=|000D;confirmHighlighted.second=|0020;commitLiteral=s|000D;commitLiteral.second=-;commitAlternateScript=-;commitAlternateScript.second=-
+resolve	nextCandidate=c|0041,,0042	nextCandidate=-;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=|000D;confirmHighlighted.second=|0020;commitLiteral=s|000D;commitLiteral.second=-;commitAlternateScript=-;commitAlternateScript.second=-
+resolve	pageForward=c|00E9;pageBackward=c|0065,0301	nextCandidate=|0009;previousCandidate=s|0009;pageForward=c|00E9;pageBackward=c|0065,0301;confirmHighlighted=|000D;confirmHighlighted.second=|0020;commitLiteral=s|000D;commitLiteral.second=-;commitAlternateScript=-;commitAlternateScript.second=-
+resolve	confirmHighlighted=c|0061;confirmHighlighted.second=c|0061	nextCandidate=|0009;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=-;confirmHighlighted.second=c|0061;commitLiteral=s|000D;commitLiteral.second=-;commitAlternateScript=-;commitAlternateScript.second=-
+resolve	commitAlternateScript.second=|0020	nextCandidate=|0009;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=|000D;confirmHighlighted.second=-;commitLiteral=s|000D;commitLiteral.second=-;commitAlternateScript=-;commitAlternateScript.second=|0020
+resolve	commitLiteral.second=|000D	nextCandidate=|0009;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=-;confirmHighlighted.second=|0020;commitLiteral=s|000D;commitLiteral.second=|000D;commitAlternateScript=-;commitAlternateScript.second=-

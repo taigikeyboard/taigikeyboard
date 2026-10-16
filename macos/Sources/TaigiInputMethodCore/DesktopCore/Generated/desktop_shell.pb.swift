@@ -1610,8 +1610,8 @@ public nonisolated struct Taigi_DesktopShell_ComposingShortcut: Sendable {
   /// candidates, 1 out of the composition.
   public var group: UInt32 = 0
 
-  /// Its fields (`ComposingAction::fields`), first then — Confirm Key
-  /// only — second; either fires the action.
+  /// Its fields (`ComposingAction::fields`), first then — on the
+  /// commit actions — second; either fires the action.
   public var fields: [Taigi_DesktopShell_ComposingShortcutField] = []
 
   /// The fixed keys that also fire it, drawn as the row's subtitle

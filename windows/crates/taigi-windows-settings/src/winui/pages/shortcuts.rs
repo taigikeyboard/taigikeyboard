@@ -150,7 +150,7 @@ fn composing_rows(
         actions
             .iter()
             .map(|action| {
-                // Two fields on Confirm Key only (`ComposingAction::fields`);
+                // Two fields on the commit actions (`ComposingAction::fields`);
                 // an absent one is an empty fragment in the panel's collection.
                 let fields = ChordField::ALL.map(|field| {
                     if !action.fields().contains(&field) {

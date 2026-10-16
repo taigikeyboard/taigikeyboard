@@ -124,13 +124,13 @@ impl ComposingAction {
         })
     }
 
-    /// The fields this action's row holds. Only Confirm Key has a second:
-    /// Enter and Space both confirming is the one pair users asked for, and an
-    /// empty spare field on every other row is clutter (USER 2026-10-16).
+    /// The fields this action's row holds. The three that commit (the pane's
+    /// Output group) take a second key (USER 2026-10-16); the candidate moves
+    /// keep one, as a spare field there is clutter.
     pub fn fields(self) -> &'static [ChordField] {
-        match self {
-            Self::ConfirmHighlighted => &ChordField::ALL,
-            _ => &[ChordField::First],
+        match self.navigation() {
+            None => &ChordField::ALL,
+            Some(_) => &[ChordField::First],
         }
     }
 
@@ -234,8 +234,8 @@ mod tests {
             .collect();
         names.sort();
         names.dedup();
-        // trace: seven first fields + Confirm Key's second.
-        assert_eq!(names.len(), ComposingAction::ALL.len() + 1);
+        // trace: seven first fields + the three commit actions' seconds.
+        assert_eq!(names.len(), ComposingAction::ALL.len() + 3);
         // trace: `settings_key_name` = `composingShortcut.<raw>` — the raw values ARE the
         // stored keys; renaming one drops every chord recorded under it.
         assert_eq!(
@@ -287,7 +287,9 @@ mod tests {
                 ((ConfirmHighlighted, First), chord("\r", KeyModifiers::NONE)),
                 ((ConfirmHighlighted, Second), chord(" ", KeyModifiers::NONE)),
                 ((CommitLiteral, First), chord("\r", KeyModifiers::SHIFT)),
+                ((CommitLiteral, Second), None),
                 ((CommitAlternateScript, First), None),
+                ((CommitAlternateScript, Second), None),
             ]
         );
         assert!(!ComposingAction::CommitLiteral.requires_candidates());

@@ -484,8 +484,8 @@ mod tests {
                     1,
                     vec![(Some("↩"), Some("|000D")), (Some("Space"), Some("|0020"))]
                 ),
-                ("commitLiteral", 1, vec![(Some("⇧↩"), Some("s|000D"))]),
-                ("commitAlternateScript", 1, vec![none]),
+                ("commitLiteral", 1, vec![(Some("⇧↩"), Some("s|000D")), none]),
+                ("commitAlternateScript", 1, vec![none, none]),
             ]
         );
         let first = &reply.actions[0];

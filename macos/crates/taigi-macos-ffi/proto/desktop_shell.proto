@@ -471,8 +471,8 @@ message ComposingShortcut {
   // Its block on the pane (`ComposingAction::GROUPS`): 0 through the
   // candidates, 1 out of the composition.
   uint32 group = 4;
-  // Its fields (`ComposingAction::fields`), first then — Confirm Key
-  // only — second; either fires the action.
+  // Its fields (`ComposingAction::fields`), first then — on the
+  // commit actions — second; either fires the action.
   repeated ComposingShortcutField fields = 7;
   // The fixed keys that also fire it, drawn as the row's subtitle
   // (`shortcut_labels::fixed_keys_label`); empty for most actions.
