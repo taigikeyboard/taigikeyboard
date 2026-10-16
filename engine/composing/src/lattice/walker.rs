@@ -73,8 +73,8 @@ pub(crate) struct EdgeChoice {
     /// branch of [`super::cost::edge_cost`]: the key's lowest
     /// `walker_cost` across its homophones
     /// (`lexicon::EdgeBest::span_walker_cost` — segmentation evidence,
-    /// not the chosen word's own; capped at `CUSTOM_EDGE_COST` when a user
-    /// row sits under the key, `lexicon::EdgeBest::has_user_row`).
+    /// not the chosen word's own; capped at `CUSTOM_EDGE_COST` when a
+    /// custom or learned row sits under the key).
     /// **Unused** for a synthesized OOV edge (RC0: OOV
     /// cost is char-keyed, never corpus-priced).
     pub walker_cost: u16,

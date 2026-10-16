@@ -224,8 +224,8 @@ pub(crate) const USER_ENTRY_EFFECTIVE_COUNT: f64 = 2_000.0;
 /// of a word seen [`USER_ENTRY_EFFECTIVE_COUNT`] times —
 /// `round(−ln((2_000 + α) / (N + α·V)) × 1000)` with the
 /// `dictionary/output/walker_lm_stats.txt` of 2026-10-08 (α 10,
-/// N 3,627,713, V 167,446 → 7,877.7). A custom edge enters [`edge_cost`]
-/// at this cost and a learned edge is capped at it, so both compete
+/// N 3,627,713, V 167,446 → 7,877.7). An edge with a custom or learned
+/// row is capped at this cost in [`edge_cost`], so both compete
 /// inside the same probability-shaped objective as a dictionary word
 /// (Codex S6 Q1 **BLOCK**ed a cost special-case outside it). Re-derive it
 /// when α or the corpus changes (E1 P4).
@@ -253,8 +253,8 @@ fn user_entry_cost_cap(user_weight_delta: f64) -> f64 {
 /// - `walker_cost` — the edge key's lowest `DictionaryRecord::walker_cost`
 ///   (milli-nats) across its homophones
 ///   (`lexicon::EdgeBest::span_walker_cost`, E1 D3), or
-///   [`CUSTOM_EDGE_COST`] for a custom edge and at most that for an edge
-///   with a learned phrase; **unused when `dict_hit == false`**. A corpus
+///   at most [`CUSTOM_EDGE_COST`] for an edge with a custom or learned
+///   row; **unused when `dict_hit == false`**. A corpus
 ///   price, never a ranked `score` (Codex pre-impl S5 Q3: `c.score` must
 ///   not feed the walker cost — that double-counts the record-selection
 ///   signal).

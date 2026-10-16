@@ -30,7 +30,7 @@ use lexicon::prefix_index::PrefixIndex;
 use lexicon::{
     best_candidate_for_key_with_barriers, fetch_candidates_for_keys_with_barriers,
     fetch_partial_prefix_candidates, fetch_partial_prefix_candidates_unbounded, ConsumedSpan,
-    ContinuousFetchCtx, CustomEntry, LearnedEntry, RawCandidate, TonePin, COVERAGE_KIND_FULL,
+    ContinuousFetchCtx, CustomEntry, RawCandidate, TonePin, COVERAGE_KIND_FULL,
     COVERAGE_KIND_PARTIAL_PREFIX, PARTIAL_PREFIX_HYDRATE_CAP, PARTIAL_PREFIX_OUTPUT_CAP,
 };
 use phonetics::InputMode;
@@ -1578,10 +1578,11 @@ fn item12_custom_only_entry_surfaces_full_buffer() {
 }
 
 #[test]
-fn item12_custom_dedupes_onto_the_dictionary_twin() {
+fn item12_custom_dedupes_and_wins_dict_collision() {
     // dict.bin and custom share `(tâi-gí, 台語)`. After the merge the
     // `(roman, hanji)` dedupe collapses them to one survivor — the
-    // dictionary row (USER 2026-10-16: a custom twin is that word).
+    // custom entry (source_tier_rank 0 beats the dict source tier),
+    // even though the dict entry has a much higher raw frequency.
     let (prefix_index, dict) = build_fixture(
         "item12-collision",
         &[Row {
@@ -1616,8 +1617,8 @@ fn item12_custom_dedupes_onto_the_dictionary_twin() {
         "duplicate (roman, hanji) must collapse to one, got {out:#?}"
     );
     assert!(
-        !out[0].is_custom,
-        "the dictionary twin wins the collision (USER 2026-10-16)"
+        out[0].is_custom,
+        "custom (rank 0) must win the collision over the high-freq dict entry"
     );
     assert_eq!(out[0].display_text, "台語");
 }
@@ -1625,8 +1626,8 @@ fn item12_custom_dedupes_onto_the_dictionary_twin() {
 #[test]
 fn item12_custom_numeric_tone_spelling_is_the_same_word() {
     // Same hanji, same reading spelled with digit tones → one word identity
-    // `(canonical_tl, hanji)` (Core Principle #6), so the pair collapses to
-    // the dictionary row. Pre-2026-10-07 the raw-roman key kept both.
+    // `(canonical_tl, hanji)` (Core Principle #6), so the pair collapses and
+    // custom (rank 0) wins. Pre-2026-10-07 the raw-roman key kept both.
     let (prefix_index, dict) = build_fixture(
         "item12-roman-variant",
         &[Row {
@@ -1660,7 +1661,7 @@ fn item12_custom_numeric_tone_spelling_is_the_same_word() {
         1,
         "spellings of one reading collapse, got {out:#?}"
     );
-    assert!(!out[0].is_custom, "the dictionary row wins the collision");
+    assert!(out[0].is_custom, "custom wins the collision");
     assert_eq!(out[0].canonical_tl, "tâi-gí");
 }
 
@@ -1986,24 +1987,6 @@ fn list_custom_word_leads_the_priced_homophones() {
 }
 
 #[test]
-fn list_custom_twin_ranks_as_the_dictionary_word() {
-    // USER 2026-10-16: a custom entry that repeats 臺灣 is that dictionary
-    // word — the dedupe keeps the dictionary row, so the corpus order
-    // (台灣 cheaper) stands instead of the custom copy leading.
-    let (prefix_index, dict) = taiuan_homophones("custom-twin", &[]);
-    let custom = vec![CustomEntry {
-        roman: "tâi-uân".to_owned(),
-        hanji: Some("臺灣".to_owned()),
-    }];
-    let user_frequency = FrequencyMap::new();
-    let ctx = ctx_typed(&custom, "tl:taiuan", &prefix_index, &dict, &user_frequency);
-    assert_eq!(
-        taiuan_list(&ctx),
-        [("台灣".to_owned(), false), ("臺灣".to_owned(), false)]
-    );
-}
-
-#[test]
 fn list_selected_word_leads_a_never_selected_custom_word() {
     // USER 2026-10-16 (`li2` → 你 before a bulk-filed custom 屢): the word
     // the user picks leads the custom word the user never picked, which
@@ -2067,103 +2050,18 @@ fn edge_pick_orders_custom_rows_like_the_list() {
             &ctx(&user_frequency, now_ms, &[], &prefix_index, &dict),
         )
         .expect("key has dict hits");
-        (
-            best.candidate.display_text,
-            best.candidate.is_custom,
-            best.has_user_row,
-        )
+        (best.candidate.display_text, best.candidate.is_custom)
     };
     assert_eq!(
         pick("台員", &[&filed_first, &picked]),
-        ("台員".to_owned(), true, true)
+        ("台員".to_owned(), true)
     );
     assert_eq!(
         pick("臺灣", &[&filed_first, &picked]),
-        ("臺灣".to_owned(), false, true)
+        ("臺灣".to_owned(), false)
     );
     // Never-selected custom leads the never-selected dictionary rows.
-    assert_eq!(pick("無", &[&filed_first]), ("大灣".to_owned(), true, true));
-}
-
-#[test]
-fn edge_pick_custom_twin_is_the_dictionary_word_and_no_user_row() {
-    // USER 2026-10-16: a custom row repeating 臺灣 is replaced by the
-    // dictionary row, so the corpus-cheapest 台灣 keeps the edge and the
-    // span gets no user-entry price cap.
-    let (prefix_index, dict) = taiuan_homophones("edge-custom-twin", &[]);
-    let twin = CustomEntry {
-        roman: "tâi-uân".to_owned(),
-        hanji: Some("臺灣".to_owned()),
-    };
-    let best = best_candidate_for_key_with_barriers(
-        "tl:taiuan",
-        &[],
-        &TonePin::None,
-        (0, 6),
-        &[&twin],
-        &[],
-        &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
-    )
-    .expect("key has dict hits");
-    assert_eq!(best.candidate.display_text, "台灣");
-    assert!(!best.candidate.is_custom);
-    assert!(!best.has_user_row);
-}
-
-#[test]
-fn edge_pick_custom_twin_of_a_disabled_source_stays_custom() {
-    // USER 2026-10-16: a dictionary twin the source filter hides is not in
-    // the pool, so the custom row stays the user's own word — the edge, and
-    // the span's user-entry price cap.
-    let (prefix_index, dict) = taiuan_homophones("edge-custom-twin-off", &[]);
-    let twin = CustomEntry {
-        roman: "tâi-uân".to_owned(),
-        hanji: Some("臺灣".to_owned()),
-    };
-    let user_frequency = FrequencyMap::new();
-    let ctx = ContinuousFetchCtx {
-        enabled_sources_bitmask: 0,
-        ..ctx_neutral(&user_frequency, &prefix_index, &dict)
-    };
-    let best = best_candidate_for_key_with_barriers(
-        "tl:taiuan",
-        &[],
-        &TonePin::None,
-        (0, 6),
-        &[&twin],
-        &[],
-        &ctx,
-    )
-    .expect("custom row is the edge");
-    assert_eq!(best.candidate.display_text, "臺灣");
-    assert!(best.candidate.is_custom);
-    assert!(best.has_user_row);
-}
-
-#[test]
-fn edge_pick_learned_twin_keeps_the_dictionary_word_and_the_cap() {
-    // No custom row: a learned pair the dictionary also carries leaves the
-    // pick as before the edge pool ran the dedupe — the dictionary row, at
-    // the dictionary's own cost — and still asks for the user-entry cap.
-    let (prefix_index, dict) = taiuan_homophones("edge-learned-twin", &[]);
-    let learned = LearnedEntry {
-        hanji: "臺灣".to_owned(),
-        canonical_tl: "tâi-uân".to_owned(),
-    };
-    let best = best_candidate_for_key_with_barriers(
-        "tl:taiuan",
-        &[],
-        &TonePin::None,
-        (0, 6),
-        &[],
-        &[&learned],
-        &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
-    )
-    .expect("key has dict hits");
-    assert_eq!(best.candidate.display_text, "台灣");
-    assert!(!best.candidate.is_custom);
-    assert_eq!(best.span_walker_cost, 6_000);
-    assert!(best.has_user_row);
+    assert_eq!(pick("無", &[&filed_first]), ("大灣".to_owned(), true));
 }
 
 #[test]
@@ -2189,7 +2087,23 @@ fn edge_pick_custom_only_key_returns_the_custom_row_at_the_edge_span() {
     assert_eq!(best.candidate.consumed_span, (3, 11));
     assert_eq!(best.candidate.syllable_count, 2);
     assert_eq!(best.span_walker_cost, ranking::WALKER_COST_UNPRICED);
-    assert!(best.has_user_row);
+}
+
+#[test]
+fn list_custom_twin_of_the_cheapest_word_keeps_the_lead() {
+    // A custom entry that collides with 台灣 replaces the dictionary row
+    // (custom wins the dedupe) and, as the user's own word, leads the list.
+    let (prefix_index, dict) = taiuan_homophones("e1-p5b-custom-twin", &[]);
+    let custom = vec![CustomEntry {
+        roman: "tâi-uân".to_owned(),
+        hanji: Some("台灣".to_owned()),
+    }];
+    let user_frequency = FrequencyMap::new();
+    let ctx = ctx_typed(&custom, "tl:taiuan", &prefix_index, &dict, &user_frequency);
+    assert_eq!(
+        taiuan_list(&ctx),
+        [("台灣".to_owned(), true), ("臺灣".to_owned(), false)]
+    );
 }
 
 #[test]

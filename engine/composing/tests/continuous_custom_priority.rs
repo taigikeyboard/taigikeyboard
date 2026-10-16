@@ -1,7 +1,7 @@
-//! A custom-dictionary word ranks below the words the user picks, and a
-//! custom row repeating a dictionary word is that word — in the list and at
-//! the walker's slot 0 alike (USER 2026-10-16, all platforms through the
-//! shared engine; `continuous-input-ranking.md` `preference_class`).
+//! A custom-dictionary word leads the never-picked words but ranks below the
+//! words the user picks — in the list and at the walker's slot 0 alike (USER
+//! 2026-10-16, all platforms through the shared engine;
+//! `continuous-input-ranking.md` `preference_class`).
 //!
 //! Reported symptom: a bulk import filed 屢 / 李 / 俚 / 荔 under `lí`, and
 //! `li2` listed the never-picked custom 屢 first, ahead of 你 (picked) and of
@@ -59,17 +59,17 @@ fn list(custom: &[&str], frequency: Vec<Selected>) -> Vec<String> {
 }
 
 #[test]
-fn custom_twins_rank_as_the_dictionary_words() {
-    // 屢 and 李 repeat dictionary words: listed once each, in the corpus
-    // order. 荔 is the user's own word: it leads the never-picked rest.
+fn never_picked_custom_words_lead_in_store_order() {
+    // 屢 and 李 repeat dictionary words: the custom copy replaces each, and
+    // every never-picked custom word leads the never-picked rest.
     let hanji = list(&["屢", "荔", "李"], vec![]);
-    assert_eq!(hanji, ["荔", "你", "李", "屢"]);
+    assert_eq!(hanji, ["屢", "荔", "李", "你"]);
 }
 
 #[test]
-fn a_picked_word_leads_a_never_picked_custom_word() {
+fn a_picked_word_leads_the_never_picked_custom_words() {
     let hanji = list(&["屢", "荔", "李"], vec![selected("你", "lí", 2, 60_000)]);
-    assert_eq!(hanji, ["你", "荔", "李", "屢"]);
+    assert_eq!(hanji, ["你", "屢", "荔", "李"]);
 }
 
 #[test]
@@ -79,4 +79,19 @@ fn the_picked_custom_word_takes_slot_0_over_the_one_filed_first() {
     let hanji = list(&["荔", "蒞"], vec![selected("蒞", "lí", 7, 60_000)]);
     assert_eq!(hanji[0], "蒞", "{hanji:?}");
     assert_eq!(hanji[1], "荔", "{hanji:?}");
+}
+
+#[test]
+fn a_picked_custom_twin_leads_once() {
+    // The picked custom 李 and its dictionary twin share one weight; the
+    // custom copy replaces the twin at slot 0 and in the list alike, and the
+    // heavier pick leads the lighter one.
+    let hanji = list(
+        &["屢", "李"],
+        vec![
+            selected("李", "lí", 7, 60_000),
+            selected("你", "lí", 2, 60_000),
+        ],
+    );
+    assert_eq!(hanji, ["李", "你", "屢"]);
 }

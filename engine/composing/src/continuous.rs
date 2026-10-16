@@ -734,8 +734,11 @@ pub(crate) fn walk_buffer(
         // custom 屢 `lí` took the `li2` edge from 你, and from a custom 李
         // picked 7×). The dictionary rows honour
         // `ctx.enabled_sources_bitmask` (PR-9.6); user rows are not a
-        // toggleable source. `EdgeBest::has_user_row` says when the span's
-        // cost is capped.
+        // toggleable source. When any user row matched, the edge is priced
+        // at most at `CUSTOM_EDGE_COST` so the span the user filed or once
+        // composed as one word keeps winning the segmentation (the #69
+        // span-vs-word decoupling: "is this span a word" is the cap, "which
+        // word" is the pick).
         let custom_for_edge = rows_for_edge(&custom_map, &custom_key, |entry: &CustomEntry| {
             edge_tone_pin.admits_custom(&entry.roman, mode)
         });
@@ -754,12 +757,12 @@ pub(crate) fn walk_buffer(
             Some(lexicon::EdgeBest {
                 candidate: c,
                 span_walker_cost,
-                has_user_row,
             }) => {
-                let span_walker_cost = if has_user_row {
-                    span_walker_cost.min(crate::lattice::CUSTOM_EDGE_COST)
-                } else {
+                let span_walker_cost = if custom_for_edge.is_empty() && learned_for_edge.is_empty()
+                {
                     span_walker_cost
+                } else {
+                    span_walker_cost.min(crate::lattice::CUSTOM_EDGE_COST)
                 };
                 // Word = the edge pick (user weight, context, corpus cost). Cost =
                 // `span_walker_cost` (key min) so a rarer preferred
@@ -1343,8 +1346,8 @@ pub(crate) fn assemble_candidates(
                         // + `insert(0, …)` so slot 0 stays unique. The
                         // identity half is a defensive mirror here: the
                         // walker's edge pick and the lexicon list run the
-                        // same dedupe (a dictionary twin replaces a custom
-                        // row in both), so today slot 0 and its leftover
+                        // same dedupe (a custom row replaces its dictionary
+                        // twin in both), so today slot 0 and its leftover
                         // twin always share the recased roman.
                         let slot0 = match promote_idx {
                             Some(i) => c.remove(i),

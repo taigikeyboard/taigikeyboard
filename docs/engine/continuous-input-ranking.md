@@ -44,7 +44,7 @@ The dispatch caller runs the fetch twice: a neutral pass discovers the candidate
 | 8 | `score` | descending | `calculate_continuous_score` = `freq × (1 + 0.1 × (syllables − 1))`, purely dictionary-derived |
 | 9 | `freq` | descending | raw dictionary frequency |
 | 10 | `coverage` | descending | consumed bytes — a weak tiebreak only |
-| 11 | `source_rank` | ascending | `source_tier_rank`: custom 0, kautian 1, taigitv 2, stti 3, kungge 4, other 5 (the dedupe ignores the custom 0: a dictionary twin replaces a custom row, `continuous-commit-and-display.md` §10.10) |
+| 11 | `source_rank` | ascending | `source_tier_rank`: custom 0, kautian 1, taigitv 2, stti 3, kungge 4, other 5 |
 | 12 | `stable_idx` | ascending | insertion order |
 
 There is no recency field: recency enters only through the decay inside `user_weight`. Fields 1–2 are `candidate_lead`; the TPS word list leads with them and `coverage_kind`, then puts longer words first whatever the counts or the custom source (H4), each length keeping this order. `CandidateSortKey::without_context` neutralizes field 6 for the walker's context-free edge pick.
@@ -75,7 +75,7 @@ The slot-0 path is `min Σ edge_cost` over the lattice (`lattice::walker::walk_b
 
 - **Dictionary edge**: `walker_cost / 1000 / toneless_len^0.2 × syllable_count^0.2 − ln(1 + applied_δ)`. `walker_cost` is the key's lowest homophone cost (`EdgeBest::span_walker_cost`), not the picked word's.
 - **User preference**: `applied_δ` is the edge word's `user_weight`, scaled to 0 on single-syllable edges (`WALKER_SINGLE_SYLLABLE_USER_DELTA_SCALE`) so a hot single character cannot sweep the sentence. A selected multi-syllable word's base cost is capped by `user_entry_cost_cap`.
-- **Custom edge**: priced at `CUSTOM_EDGE_COST`.
+- **User rows**: an edge with a custom or learned row under its key is priced at most at `CUSTOM_EDGE_COST` (the key's dictionary cost when cheaper).
 - **OOV edge** (no dictionary hit): `OOV_PER_CHAR_PENALTY (1e10) × toneless_len`, so a dictionary-coverable buffer never collapses to an OOV blob.
 - The edge's word is picked by `CandidateSortKey` among the key's homophones; the walker and its carve-out live in `continuous::fetch_walker_slot0_inner` (`engine/composing/src/continuous.rs`).
 

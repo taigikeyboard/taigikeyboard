@@ -226,10 +226,13 @@ pub struct RawCandidate {
     /// `false` for `dict.bin` FST hits ([`record_to_candidate`]). Read
     /// by [`CandidateSortKey::new`] (`preference_class` places a
     /// never-selected custom word after the selected words and before the
-    /// rest; `source_tier_rank(bitmask, is_custom)` gives it rank `0`). The
-    /// `(canonical_tl, hanji)` dedupe ignores it: a `dict.bin` twin wins
-    /// (`docs/engine/continuous-commit-and-display.md` §10.10). Internal
-    /// axis only — NOT emitted on
+    /// rest; `source_tier_rank(bitmask, is_custom)` returns rank `0` when
+    /// `true`, ahead of every `dict.bin` source tier) and by the
+    /// `(canonical_tl, hanji)` dedupe winner policy
+    /// (`docs/engine/continuous-commit-and-display.md` §10.10): on a
+    /// duplicate `(canonical_tl, hanji)` identity the lowest `source_tier_rank`
+    /// survivor wins, so a custom entry always beats a `dict.bin`
+    /// duplicate. Internal axis only — NOT emitted on
     /// `CandidateMessage` (same pattern as [`coverage_kind`] /
     /// `user_weight`).
     pub is_custom: bool,
@@ -1064,7 +1067,7 @@ pub fn fetch_partial_prefix_candidates_unbounded(
 /// after the same `(reading, hanji, span)` dedupe the candidate list runs —
 /// so the edge's word is the list's own order (USER 2026-10-16: a
 /// never-selected custom 屢 `lí` no longer takes the `li2` edge from 你 the
-/// user picks, and a custom row repeating a dictionary word is that word).
+/// user picks, nor from a custom 李 the user picks).
 pub fn best_candidate_for_key_with_barriers(
     key: &str,
     tps_final_only: &[usize],
@@ -1091,9 +1094,7 @@ pub fn best_candidate_for_key_with_barriers(
             homophones.push(cand);
         },
     );
-    // Custom rows, then learned phrases (§50) — the insertion order the
-    // dedupe below breaks rank ties by (dictionary, custom, learned). Both
-    // join the SAME pick with no corpus cost ([`WALKER_COST_UNPRICED`]) and
+    // Custom rows, then learned phrases (§50). Both join the SAME pick with no corpus cost ([`WALKER_COST_UNPRICED`]) and
     // `frequency = 0`: a never-selected custom row leads the never-selected
     // dictionary homophones (`preference_class`), a learned row wins only
     // on the user's `user_frequency` or the previous word's context, and
@@ -1119,20 +1120,18 @@ pub fn best_candidate_for_key_with_barriers(
             COVERAGE_KIND_FULL,
         ));
     }
-    // Only a custom row can be a twin the pick would otherwise mis-rank: a
-    // learned twin shares its dictionary row's weight and context and is
-    // unpriced, so the dictionary row wins it anyway. Skipping the dedupe
-    // without custom rows keeps the per-edge hot path allocation-free.
-    let custom_survived = !custom.is_empty() && {
+    // A custom row repeating a dictionary word replaces it, as in the list,
+    // so slot 0 and the list show the same copy. A learned twin needs no
+    // dedupe — it shares its dictionary row's weight and context and is
+    // unpriced, so the dictionary row wins the pick anyway — and skipping it
+    // keeps the per-edge hot path allocation-free.
+    if !custom.is_empty() {
         dedupe_by_roman_hanji_span(&mut homophones);
-        homophones.iter().any(|cand| cand.is_custom)
-    };
-    let has_user_row = !learned.is_empty() || custom_survived;
+    }
     let candidate = pick_edge_word(homophones, consumed_span.1, ctx.context.is_empty())?;
     Some(EdgeBest {
         candidate,
         span_walker_cost,
-        has_user_row,
     })
 }
 
@@ -1227,10 +1226,6 @@ pub struct EdgeBest {
     /// [`WALKER_COST_UNPRICED`] when only user rows sit under the key.
     /// Rationale + numbers: `docs/engine/continuous-input-ranking.md` §3.2.
     pub span_walker_cost: u16,
-    /// A learned row, or a custom row its dictionary twin did not replace,
-    /// sits under the key: the caller prices the span at most at the
-    /// user-entry cost so the word the user composed keeps the segmentation.
-    pub has_user_row: bool,
 }
 
 /// Does the exact hanji `hanji` resolve to a dictionary entry of

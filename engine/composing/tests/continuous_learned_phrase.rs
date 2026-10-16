@@ -12,10 +12,10 @@
 //!    typed buffer leads the hanji candidates when the dictionary has no
 //!    word under that key, competes (and loses) against a dictionary
 //!    homophone unless `user_frequency` prefers it, dedupes against the
-//!    same pair from the dictionary, and never outranks a never-selected
-//!    manual custom row (Codex 2026-09-20 F5: learned = competitor; custom
-//!    rows compete too since USER 2026-10-16, ahead of the never-selected
-//!    rest).
+//!    same pair from the dictionary, and never-selected never outranks a
+//!    never-selected manual custom row (Codex 2026-09-20 F5: learned =
+//!    competitor; custom rows compete too since USER 2026-10-16, ahead of
+//!    the never-selected rest).
 //!
 //! Fixture mirrors the USER report (2026-09-20): 記起來 `kì--khí-lâi` is a
 //! 台日-only dictionary word (default off), so a default user composes it as

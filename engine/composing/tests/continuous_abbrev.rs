@@ -273,10 +273,10 @@ fn custom_entry_sharing_the_abbreviated_word_shows_once() {
     let _lock = engine_install_lock();
     install_fixture();
     // A custom 鎖匙 `só-sî` answers `ss` in the abbreviation block, by the
-    // exact-face rule a dictionary row answers to (whole-buffer synth). It
-    // repeats the dictionary's own 鎖匙 — same `(roman, hanji, span)` — so
-    // the dedupe keeps the dictionary row and the block keeps its corpus
-    // order (USER 2026-10-16: a custom twin ranks as the dictionary word).
+    // exact-face rule a dictionary row answers to (whole-buffer synth,
+    // source rank 0). The dictionary's own 鎖匙 collapses onto it — same
+    // `(roman, hanji, span)` — and, as the user's own word, it leads the
+    // block (`custom_lead`, USER 2026-10-12).
     let hanji = fetch_hanji_with_custom(
         "ss",
         "tl",
@@ -287,7 +287,7 @@ fn custom_entry_sharing_the_abbreviated_word_shows_once() {
     );
     assert_eq!(
         hanji,
-        vec!["先生", "鎖匙"],
-        "custom 鎖匙 deduped onto the dictionary row, listed once"
+        vec!["鎖匙", "先生"],
+        "custom first, dictionary 鎖匙 deduped onto it"
     );
 }
