@@ -113,7 +113,6 @@ fn composing_shortcuts(
             group: group(action),
             fixed_keys: shortcut_labels::fixed_keys_label(action, slot_keys, DESKTOP_PLATFORM)
                 .unwrap_or_default(),
-            shows_second_field: bindings.shows_second_field(action),
             fields: ChordField::ALL
                 .into_iter()
                 .map(|field| {
@@ -510,8 +509,6 @@ mod tests {
         assert_eq!(reply.slot_keys, "qwdfzxvy;");
         assert_eq!(reply.actions[6].fixed_keys, "⇧QWDFZXVY;");
         assert_eq!(reply.actions[5].fixed_keys, "");
-        assert!(reply.actions[4].shows_second_field);
-        assert!(!reply.actions[6].shows_second_field);
         assert_eq!(reply.navigation_keys, "←  →  ↑  ↓  ⇞  ⇟");
         assert_eq!(reply.caret_chords, "⌥←  ⌥→  ⌥↑  ⌥↓  ↖  ↘");
     }

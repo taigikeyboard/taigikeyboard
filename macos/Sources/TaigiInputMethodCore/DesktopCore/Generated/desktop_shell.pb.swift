@@ -1618,10 +1618,6 @@ public nonisolated struct Taigi_DesktopShell_ComposingShortcut: Sendable {
   /// (`shortcut_labels::fixed_keys_label`); empty for most actions.
   public var fixedKeys: String = String()
 
-  /// Whether the pane draws its second field
-  /// (`ComposingKeyBindings::shows_second_field`).
-  public var showsSecondField: Bool = false
-
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -4161,7 +4157,7 @@ nonisolated extension Taigi_DesktopShell_ComposingShortcutsReply: SwiftProtobuf.
 
 nonisolated extension Taigi_DesktopShell_ComposingShortcut: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ComposingShortcut"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{4}\u{2}label_key\0\u{1}group\0\u{2}\u{3}fields\0\u{3}fixed_keys\0\u{3}shows_second_field\0\u{b}settings_key\0\u{b}chord\0\u{b}default_chord\0\u{c}\u{2}\u{1}\u{c}\u{5}\u{1}\u{c}\u{6}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{4}\u{2}label_key\0\u{1}group\0\u{2}\u{3}fields\0\u{3}fixed_keys\0\u{b}settings_key\0\u{b}chord\0\u{b}default_chord\0\u{c}\u{2}\u{1}\u{c}\u{5}\u{1}\u{c}\u{6}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -4174,7 +4170,6 @@ nonisolated extension Taigi_DesktopShell_ComposingShortcut: SwiftProtobuf.Messag
       case 4: try { try decoder.decodeSingularUInt32Field(value: &self.group) }()
       case 7: try { try decoder.decodeRepeatedMessageField(value: &self.fields) }()
       case 8: try { try decoder.decodeSingularStringField(value: &self.fixedKeys) }()
-      case 9: try { try decoder.decodeSingularBoolField(value: &self.showsSecondField) }()
       default: break
       }
     }
@@ -4196,9 +4191,6 @@ nonisolated extension Taigi_DesktopShell_ComposingShortcut: SwiftProtobuf.Messag
     if !self.fixedKeys.isEmpty {
       try visitor.visitSingularStringField(value: self.fixedKeys, fieldNumber: 8)
     }
-    if self.showsSecondField != false {
-      try visitor.visitSingularBoolField(value: self.showsSecondField, fieldNumber: 9)
-    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -4208,7 +4200,6 @@ nonisolated extension Taigi_DesktopShell_ComposingShortcut: SwiftProtobuf.Messag
     if lhs.group != rhs.group {return false}
     if lhs.fields != rhs.fields {return false}
     if lhs.fixedKeys != rhs.fixedKeys {return false}
-    if lhs.showsSecondField != rhs.showsSecondField {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

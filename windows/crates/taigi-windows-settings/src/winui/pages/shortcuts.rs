@@ -145,7 +145,7 @@ fn global_rows(
     )
 }
 
-/// One row per composing action, each with its fields — either fires the
+/// One row per composing action, each with its two fields — both fire the
 /// action.
 fn composing_rows(
     window: &SettingsWindow,
@@ -158,12 +158,7 @@ fn composing_rows(
         actions
             .iter()
             .map(|action| {
-                // The second field only once either holds a chord
-                // (`shows_second_field`): an empty spare on every row is clutter.
                 let fields = ChordField::ALL.map(|field| {
-                    if field == ChordField::Second && !bindings.shows_second_field(*action) {
-                        return View::empty();
-                    }
                     recorder_field(
                         window,
                         strings,
