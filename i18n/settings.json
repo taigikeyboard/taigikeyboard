@@ -47,7 +47,7 @@
       "values": { "hanji": "台語", "tailo": "Tâi-gí", "poj": "Tâi-gí", "en": "Taigi", "ja": "台湾語" }
     },
     "tpsMode": {
-      "comment": "Input-mode option: Taiwanese Phonetic Symbols (TPS). Also the iOS smartbar input-mode button a11y label (extension surface). Also the TPS settings section header and the layout page's TPS section header (tpsSettingsSectionTitle / layout.taigiPhonetic merged 2026-09-20).",
+      "comment": "Input-mode option: Taiwanese Phonetic Symbols (TPS). Also the iOS smartbar input-mode button a11y label (extension surface). Also the desktop Shortcuts pane header above the TPS switch and key panel (USER 2026-10-16). Also the TPS settings section header and the layout page's TPS section header (tpsSettingsSectionTitle / layout.taigiPhonetic merged 2026-09-20).",
       "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "方音符號", "tailo": "Hong-im-hû-hō", "poj": "Hong-im-hû-hō", "en": "Phonetic Symbols", "ja": "方音符号" }
     },
@@ -97,7 +97,7 @@
       "values": { "hanji": "漢字", "tailo": "Hàn-jī", "poj": "Hàn-jī", "en": "Hanji", "ja": "漢字" }
     },
     "outputScriptRoman": {
-      "comment": "Picker value: commit writes the romanization; the Hanji is the subtitle.",
+      "comment": "Picker value: commit writes the romanization; the Hanji is the subtitle. Also the desktop Shortcuts pane header above the romanization switches (USER 2026-10-16).",
       "scope": { "platforms": ["macos", "windows", "linux"], "surfaces": ["host"] },
       "values": { "hanji": "羅馬字", "tailo": "Lô-má-jī", "poj": "Lô-má-jī", "en": "Romanization", "ja": "ローマ字" }
     },

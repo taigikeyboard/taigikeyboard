@@ -61,6 +61,30 @@ impl ShortcutAction {
         Self::OpenLastSettingsPane,
     ];
 
+    /// The roster split into the blocks the settings pane draws under the
+    /// composing rows (USER 2026-10-16): Romanization, the actions about a
+    /// romanization's candidates and keys; Phonetic Symbols, the TPS switch
+    /// and its key panel; Other, the symbol picker and the settings window.
+    /// Each block keeps `ALL`'s order. Written out so adding a case has to
+    /// say where it goes. The Mac's Swift twin: `ShortcutAction.groups`.
+    pub const GROUPS: [&'static [ShortcutAction]; 3] = [
+        &[
+            Self::ToggleRomanization,
+            Self::ToggleTranslateSwapped,
+            Self::CycleCandidateDisplayMode,
+            Self::ShowTelexGuide,
+        ],
+        &[Self::ToggleTps, Self::ShowTpsKeyboard],
+        &[Self::ShowSymbolPicker, Self::OpenLastSettingsPane],
+    ];
+
+    /// The pane's title of each block in `GROUPS`.
+    pub const GROUP_TITLES: [StringKey; 3] = [
+        StringKey::SettingsOutputScriptRoman,
+        StringKey::SettingsTpsMode,
+        StringKey::CommonOther,
+    ];
+
     /// Whether the action does nothing under `mode`, writing no setting:
     /// under TPS a cell is the Hanji alone, so the Hanji / romanization swap
     /// and the display modes have nothing to switch, and there are no Telex
@@ -568,10 +592,30 @@ mod tests {
     }
 
     #[test]
+    fn groups_hold_every_action_exactly_once_in_roster_order() {
+        let grouped: Vec<_> = ShortcutAction::GROUPS
+            .iter()
+            .flat_map(|group| group.iter().copied())
+            .collect();
+        let mut unique = grouped.clone();
+        unique.sort();
+        unique.dedup();
+        assert_eq!(unique.len(), ShortcutAction::ALL.len());
+        assert_eq!(grouped.len(), ShortcutAction::ALL.len());
+        for group in ShortcutAction::GROUPS {
+            let in_roster: Vec<_> = ShortcutAction::ALL
+                .into_iter()
+                .filter(|action| group.contains(action))
+                .collect();
+            assert_eq!(in_roster, group);
+        }
+    }
+
+    #[test]
     fn roster_order_is_the_pane_order() {
-        // `ALL` is the global recorder rows top to bottom
-        // (`pages/shortcuts.rs`, under the composing rows) and the Mac's
-        // `allCases`: the switches in the General pane's order of what they
+        // `ALL` is the global recorder rows' order inside each block of
+        // `GROUPS` (`pages/shortcuts.rs`, under the composing rows) and the
+        // Mac's `allCases`: the switches in the General pane's order of what they
         // switch — the input script twice, romanization then TPS — then the
         // windows used while typing, the settings window last (USER
         // 2026-09-21). The Mac's roster gains Switch TPS in desktop TPS P4

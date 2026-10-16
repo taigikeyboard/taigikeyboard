@@ -1,7 +1,8 @@
-//! The Shortcuts pane: every key the user can put an action on, in three titled
+//! The Shortcuts pane: every key the user can put an action on, in five titled
 //! blocks (`ShortcutSettingsView.swift`) — Candidate Selection, the keys that move through
 //! the candidates; Output, the keys that end the composition into the document;
-//! Other, the switches and the windows a key raises — plus the reset card.
+//! then the switches and the windows a key raises, as Romanization, Phonetic
+//! Symbols and Other — plus the reset card.
 //! Which keys pick a candidate is not chosen here: it follows from Tone Keys
 //! on the General pane (`ToneInputScheme`). Every row is the same recorder;
 //! which registry it writes to and what it refuses on top of the shared gate
@@ -78,17 +79,21 @@ pub fn view(
             &bindings,
             ComposingAction::GROUPS[1],
         ),
-        // Block three: the switches, and the windows a key raises. What these
-        // have in common is that none of them needs a composition running —
-        // which is also why they are the roster that holds a chord in the
-        // global registry, though the block is drawn on what they DO. Not on
-        // their modifiers: Hanji/Romanization Swap ships on a bare backtick, so Ctrl+Alt
-        // names no boundary here.
+        // Blocks three to five: the switches, and the windows a key raises.
+        // What these have in common is that none of them needs a composition
+        // running — which is also why they are the roster that holds a chord
+        // in the global registry, though the blocks are drawn on what they DO.
+        // Not on their modifiers: Hanji/Romanization Swap ships on a bare
+        // backtick, so Ctrl+Alt names no boundary here.
         //
-        // One block (2026-08-25, +1 on 2026-09-02, +1 on 2026-09-09): three
-        // switches, the symbol picker, the Telex guide and one doorway.
-        cards::section_title(strings.resolve(StringKey::CommonOther)),
-        global_rows(window, strings, context, &ShortcutAction::ALL),
+        // Three blocks since 2026-10-16 (USER), by what each action is about:
+        // Romanization, Phonetic Symbols, Other (`ShortcutAction::GROUPS`).
+        cards::section_title(strings.resolve(ShortcutAction::GROUP_TITLES[0])),
+        global_rows(window, strings, context, ShortcutAction::GROUPS[0]),
+        cards::section_title(strings.resolve(ShortcutAction::GROUP_TITLES[1])),
+        global_rows(window, strings, context, ShortcutAction::GROUPS[1]),
+        cards::section_title(strings.resolve(ShortcutAction::GROUP_TITLES[2])),
+        global_rows(window, strings, context, ShortcutAction::GROUPS[2]),
         // Both registries at once, and no conflict pass afterwards: the
         // shipped defaults hold no chord in common
         // (`ShortcutSettingsView.swift` `restoreDefaults`).

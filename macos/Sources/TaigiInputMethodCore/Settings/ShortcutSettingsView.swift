@@ -1,4 +1,4 @@
-// The Shortcuts pane: every key the user can put an action on, in three blocks.
+// The Shortcuts pane: every key the user can put an action on, in five blocks.
 
 import AppKit
 import KeyboardShortcuts
@@ -6,11 +6,12 @@ import SwiftUI
 
 /// The Shortcuts pane of the settings window.
 ///
-/// Three blocks, by what a key DOES: Candidate Selection, the keys that move through the
-/// candidates; Output, the keys that end the composition into the document; and
-/// Other, the switches and the windows a key raises. Titled since 2026-09-10 (USER) — the blocks shipped
-/// headerless the same day, and a header is what tells a reader which of the
-/// three a key they are hunting for lives in.
+/// Five blocks, by what a key DOES: Candidate Selection, the keys that move through the
+/// candidates; Output, the keys that end the composition into the document; then
+/// the switches and the windows a key raises, as Romanization, Phonetic Symbols
+/// and Other (USER 2026-10-16). Titled since 2026-09-10 (USER) — the blocks shipped
+/// headerless the same day, and a header is what tells a reader which block a
+/// key they are hunting for lives in.
 ///
 /// Not the split the pane had until 2026-08-21, which was two blocks divided
 /// on which rows register a Carbon hotkey and which the key classifier reads.
@@ -99,30 +100,37 @@ struct ShortcutSettingsView: View {
                 Text(language.string(.desktopShortcutSectionOutput))
             }
 
-            // Block three: the switches, and the windows a key raises. What
-            // these have in common is that none of them needs a composition
-            // running — which is also why they are the roster that holds a
-            // chord in the global registry, though the block is drawn on what
-            // they DO. Not on their modifiers: the Hanji/romanization swap ships on a bare
+            // Blocks three to five: the switches, and the windows a key
+            // raises. What these have in common is that none of them needs a
+            // composition running — which is also why they are the roster that
+            // holds a chord in the global registry, though the blocks are drawn
+            // on what they DO. Not on their modifiers: the Hanji/romanization swap ships on a bare
             // backtick, so ⌃⌘ names no boundary here. Nor on dispatch: the
             // symbol picker is on this list and registers no Carbon hotkey
             // (`ShortcutAction.firesFromTheKeyPath`).
             //
-            // One row per global action, off the same list the hotkey
-            // registration uses, so a new action cannot appear in one and
-            // not the other.
+            // One row per global action: `ShortcutAction.groups` holds every
+            // case of the list the hotkey registration uses
+            // (`ShortcutActionsTests`), so a new action cannot appear in one
+            // and not the other.
             //
             // One block, since 2026-08-25. There were two — the keys that
             // opened a settings pane, then the keys that change what the
             // user is typing — until the five pane chords were retired
             // (USER: five chords for panes visited about once a day, which
             // the menu bar already lists by name).
-            Section {
-                ForEach(ShortcutAction.allCases, id: \.self) { action in
-                    globalRecorderRow(action)
+            //
+            // Three blocks since 2026-10-16 (USER), by what each action is
+            // about: Romanization, Phonetic Symbols, Other
+            // (`ShortcutAction.groups`).
+            ForEach(ShortcutAction.groups, id: \.title) { group in
+                Section {
+                    ForEach(group.actions, id: \.self) { action in
+                        globalRecorderRow(action)
+                    }
+                } header: {
+                    Text(language.string(group.title))
                 }
-            } header: {
-                Text(language.string(.commonOther))
             }
 
             // Its own section, at the end: it acts on every block above it

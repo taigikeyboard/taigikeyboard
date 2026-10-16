@@ -326,7 +326,7 @@
       }
     },
     "i18n_common_other": {
-      "comment": "Generic Other: home section header above the FAQ / other list (mobile), Shortcuts pane third block's header — the switches and the windows a key raises (desktop). Merged 2026-09-20 from home.faq / desktop.shortcutSectionOther.",
+      "comment": "Generic Other: home section header above the FAQ / other list (mobile), Shortcuts pane last block's header — the symbol picker and the settings window (desktop). Merged 2026-09-20 from home.faq / desktop.shortcutSectionOther.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -4052,7 +4052,7 @@
       }
     },
     "i18n_settings_tpsMode": {
-      "comment": "Input-mode option: Taiwanese Phonetic Symbols (TPS). Also the iOS smartbar input-mode button a11y label (extension surface). Also the TPS settings section header and the layout page's TPS section header (tpsSettingsSectionTitle / layout.taigiPhonetic merged 2026-09-20).",
+      "comment": "Input-mode option: Taiwanese Phonetic Symbols (TPS). Also the iOS smartbar input-mode button a11y label (extension surface). Also the desktop Shortcuts pane header above the TPS switch and key panel (USER 2026-10-16). Also the TPS settings section header and the layout page's TPS section header (tpsSettingsSectionTitle / layout.taigiPhonetic merged 2026-09-20).",
       "extractionState": "manual",
       "localizations": {
         "en": {

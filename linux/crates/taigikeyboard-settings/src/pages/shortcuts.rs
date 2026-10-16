@@ -1,8 +1,8 @@
-//! The Shortcuts pane: every key the user can put an action on, in three
+//! The Shortcuts pane: every key the user can put an action on, in five
 //! titled groups (`ShortcutSettingsView.swift`, the Windows `shortcuts.rs`)
 //! — Candidate Selection, the keys that move through the candidates; Output, the keys that
-//! end the composition into the document; Other, the switches and the
-//! lists a key raises — plus the reset row. Every recorder row is the same
+//! end the composition into the document; then the switches and the lists a
+//! key raises, as Romanization, Phonetic Symbols and Other — plus the reset row. Every recorder row is the same
 //! field; which registry it writes to is the tier's. Last writer wins
 //! across both registries (`ShortcutConflicts`), and the loser's row
 //! visibly empties. The fixed rows show keys nothing records.
@@ -92,20 +92,26 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
     refresh_slot_keys(context.document);
     context.on_refresh(refresh_slot_keys);
 
-    // Group three: the switches, and the lists a key raises — the roster
-    // that holds a chord in the global registry.
-    let other = adw::PreferencesGroup::builder()
-        .title(context.strings.resolve(StringKey::CommonOther))
-        .build();
-    for action in ShortcutAction::ALL {
-        recorder_row(
-            &mut context,
-            &other,
-            action.label_key(),
-            &[RecorderTarget::Global(action)],
-        );
+    // Groups three to five: the roster that holds a chord in the global
+    // registry, split by what each action is about (USER 2026-10-16) —
+    // Romanization, Phonetic Symbols, Other (`ShortcutAction::GROUPS`).
+    for (actions, title) in ShortcutAction::GROUPS
+        .iter()
+        .zip(ShortcutAction::GROUP_TITLES)
+    {
+        let group = adw::PreferencesGroup::builder()
+            .title(context.strings.resolve(title))
+            .build();
+        for action in *actions {
+            recorder_row(
+                &mut context,
+                &group,
+                action.label_key(),
+                &[RecorderTarget::Global(*action)],
+            );
+        }
+        page.add(&group);
     }
-    page.add(&other);
 
     // Both registries at once, and no conflict pass afterwards: the shipped
     // defaults hold no chord in common (`ShortcutSettingsView.swift`

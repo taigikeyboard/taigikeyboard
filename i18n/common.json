@@ -213,7 +213,7 @@
       }
     },
     "other": {
-      "comment": "Generic Other: home section header above the FAQ / other list (mobile), Shortcuts pane third block's header — the switches and the windows a key raises (desktop). Merged 2026-09-20 from home.faq / desktop.shortcutSectionOther.",
+      "comment": "Generic Other: home section header above the FAQ / other list (mobile), Shortcuts pane last block's header — the symbol picker and the settings window (desktop). Merged 2026-09-20 from home.faq / desktop.shortcutSectionOther.",
       "scope": {
         "platforms": [
           "android",
