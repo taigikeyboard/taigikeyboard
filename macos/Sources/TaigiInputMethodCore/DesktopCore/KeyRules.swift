@@ -210,6 +210,7 @@ extension ComposingShortcuts {
                 group: Int(action.group),
                 fields: fields,
                 fixedKeys: action.fixedKeys,
+                showsSecondField: action.showsSecondField,
             ))
         }
         self.init(

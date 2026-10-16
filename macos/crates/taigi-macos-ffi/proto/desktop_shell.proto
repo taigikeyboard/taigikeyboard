@@ -477,6 +477,9 @@ message ComposingShortcut {
   // The fixed keys that also fire it, drawn as the row's subtitle
   // (`shortcut_labels::fixed_keys_label`); empty for most actions.
   string fixed_keys = 8;
+  // Whether the pane draws its second field
+  // (`ComposingKeyBindings::shows_second_field`).
+  bool shows_second_field = 9;
 }
 
 message ComposingShortcutField {

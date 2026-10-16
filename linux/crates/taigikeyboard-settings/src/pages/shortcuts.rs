@@ -215,6 +215,14 @@ fn recorder_field(
             field.remove_css_class("suggested-action");
         }
         clear.set_sensitive(chord.is_some() && !is_recording);
+        // The second field only once either holds a chord
+        // (`shows_second_field`): an empty spare on every row is clutter.
+        if let RecorderTarget::Composing(action, ChordField::Second) = target {
+            let shown = ComposingKeyBindings::from_document(document, DESKTOP_PLATFORM)
+                .shows_second_field(action);
+            field.set_visible(shown);
+            clear.set_visible(shown);
+        }
     };
     refresh(context.document);
     context.on_refresh(refresh);

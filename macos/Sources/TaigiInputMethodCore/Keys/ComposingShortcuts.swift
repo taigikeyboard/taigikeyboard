@@ -43,6 +43,14 @@ struct ComposingShortcuts: Sendable {
         /// The fixed keys that also fire it, drawn under its label; empty
         /// for most rows (desktop-core `shortcut_labels::fixed_keys_label`).
         let fixedKeys: String
+        /// Whether the row draws its second field: once either field holds
+        /// a chord (desktop-core `ComposingKeyBindings::shows_second_field`).
+        let showsSecondField: Bool
+
+        /// The fields the row draws, first then second.
+        var shownFields: ArraySlice<Field> {
+            fields.prefix(showsSecondField ? 2 : 1)
+        }
 
         var first: Field {
             fields[0]

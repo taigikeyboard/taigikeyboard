@@ -112,6 +112,15 @@ impl ComposingKeyBindings {
         self.chords.get(&(action, field))
     }
 
+    /// Whether `action`'s row draws its second field: once the first holds a
+    /// chord, or while the second still holds one. Most rows ship one chord,
+    /// so an empty spare field on every row is clutter (USER 2026-10-16).
+    pub fn shows_second_field(&self, action: ComposingAction) -> bool {
+        ChordField::ALL
+            .into_iter()
+            .any(|field| self.chord(action, field).is_some())
+    }
+
     /// The action `event` is bound to, if any, on either field. Linear over
     /// the roster: fourteen fields, and a chord-keyed map would need the
     /// duplicate handling twice.
@@ -225,6 +234,40 @@ mod tests {
             .iter()
             .map(|(action, field, chord)| ((*action, *field), chord.clone()))
             .collect()
+    }
+
+    #[test]
+    fn the_second_field_shows_once_either_field_holds_a_chord() {
+        // trace: shipped — Output the Other Script has no chord on either
+        // field, every other action has its first.
+        let bindings = ComposingKeyBindings::default();
+        for action in ComposingAction::ALL {
+            assert_eq!(
+                bindings.shows_second_field(action),
+                action != ComposingAction::CommitAlternateScript,
+                "{action:?}"
+            );
+        }
+        // trace: first cleared, second recorded → still shown, so the
+        // stored chord stays visible and clearable.
+        let page = ComposingAction::PageForward;
+        let bindings = ComposingKeyBindings::resolve(
+            &stored_fields(&[
+                (page, ChordField::First, None),
+                (
+                    page,
+                    ChordField::Second,
+                    Some(chord("]", KeyModifiers::CONTROL)),
+                ),
+            ]),
+            ToneInputScheme::Standard,
+        );
+        assert!(bindings.shows_second_field(page));
+        let bindings = ComposingKeyBindings::resolve(
+            &stored_fields(&[(page, ChordField::First, None)]),
+            ToneInputScheme::Standard,
+        );
+        assert!(!bindings.shows_second_field(page));
     }
 
     #[test]
