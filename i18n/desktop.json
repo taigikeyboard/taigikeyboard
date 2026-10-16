@@ -214,9 +214,9 @@
         ]
       },
       "values": {
-        "hanji": "修正這馬拍 ê 字",
-        "tailo": "Siu-tsìng tsit-má phah ê jī",
-        "poj": "Siu-chèng chit-má phah ê jī",
+        "hanji": "修正拍的字",
+        "tailo": "Siu-tsìng phah ê jī",
+        "poj": "Siu-chèng phah ê jī",
         "en": "Fix What You Are Typing",
         "ja": "入力中の文字を修正"
       }
@@ -990,9 +990,9 @@
         ]
       },
       "values": {
-        "hanji": "輸出這馬拍 ê 字",
-        "tailo": "Su-tshut tsit-má phah ê jī",
-        "poj": "Su-chhut chit-má phah ê jī",
+        "hanji": "輸出拍的字",
+        "tailo": "Su-tshut phah ê jī",
+        "poj": "Su-chhut phah ê jī",
         "en": "Output What You Are Typing",
         "ja": "入力中の文字を出力"
       }
@@ -1010,7 +1010,7 @@
         ]
       },
       "values": {
-        "hanji": "輸出對換 ê 文字（漢字/羅馬字）",
+        "hanji": "輸出對換的文字（漢字/羅馬字）",
         "tailo": "Su-tshut tuì-uānn ê bûn-jī (Hàn-jī / Lô-má-jī)",
         "poj": "Su-chhut tùi-oāⁿ ê bûn-jī (Hàn-jī / Lô-má-jī)",
         "en": "Output the Other Script (Hanji / Romanization)",
@@ -1314,7 +1314,7 @@
         ]
       },
       "values": {
-        "hanji": "有新版本 ê 時陣通知你？",
+        "hanji": "有新版本的時陣通知你？",
         "tailo": "Ū sin pán-pún ê sî-tsūn thong-ti lí?",
         "poj": "Ū sin pán-pún ê sî-chūn thong-ti lí?",
         "en": "Get notified about new versions?",

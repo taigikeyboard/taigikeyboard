@@ -120,7 +120,7 @@
         ]
       },
       "values": {
-        "hanji": "自訂詞庫使用 CSV 純文字檔案，第 1 欄囥欲拍 ê 羅馬字，第 2 欄囥漢字，毋免囥標題。",
+        "hanji": "自訂詞庫使用 CSV 純文字檔案，第 1 欄囥欲拍的羅馬字，第 2 欄囥漢字，毋免囥標題。",
         "tailo": "Tsū-tīng-sû-khòo sú-iōng CSV sûn bûn-jī tòng-àn, tē 1 lân khǹg beh phah ê lô-má-jī, tē 2 lân khǹg hàn-jī, m̄-bián khǹg piau-tê.",
         "poj": "Chū-tēng-sû-khò͘ sú-iōng CSV sûn bûn-jī tòng-àn, tē 1 lân khǹg beh phah ê lô-má-jī, tē 2 lân khǹg hàn-jī, m̄-bián khǹg piau-tê.",
         "en": "The custom dictionary uses a plain-text CSV file: column 1 holds the romanization to type, column 2 holds the Hanji. No header row.",
@@ -1112,7 +1112,7 @@
         ]
       },
       "values": {
-        "hanji": "對 106 年開始，共語文、數學、社會、自然科學、藝術、綜合活動、科技、健康佮體育這 8 大領域 ê 學科術語編做台語。",
+        "hanji": "對 106 年開始，共語文、數學、社會、自然科學、藝術、綜合活動、科技、健康佮體育這 8 大領域的學科術語編做台語。",
         "tailo": "Tuì 106 nî khai-sí, kā gí-bûn, sòo-ha̍k, siā-huē, tsū-jiân kho-ha̍k, gē-su̍t, tsong-ha̍p ua̍h-tōng, kho-ki, kiān-khong kah thé-io̍k tsit 8 tāi líng-i̍k ê ha̍k-kho su̍t-gí pian-tsò tâi-gí.",
         "poj": "Tuì 106 nî khai-sí, kā gí-bûn, sò͘-ha̍k, siā-hōe, chū-jiân kho-ha̍k, gē-su̍t, chong-ha̍p oa̍h-tōng, kho-ki, kiān-khong kah thé-io̍k chit 8 tāi léng-e̍k ê ha̍k-kho su̍t-gí pian-chò tâi-gí.",
         "en": "Since 2017, the project has translated academic terminology from eight fields into Taigi: language arts, mathematics, social studies, natural science, arts, integrative activities, technology, and health and physical education.",
@@ -1131,7 +1131,7 @@
         ]
       },
       "values": {
-        "hanji": "收規一千兩百組重要 ê 台語工藝詞，包括陶瓷、木藝、金工、竹藤、纖維、玻璃、漆藝、石藝、皮革、紙藝這 11 項工藝類別。",
+        "hanji": "收規一千兩百組重要的台語工藝詞，包括陶瓷、木藝、金工、竹藤、纖維、玻璃、漆藝、石藝、皮革、紙藝這 11 項工藝類別。",
         "tailo": "Siu kui it-tshian nn̄g-pah tsoo tiōng-iàu ê tâi-gí kang-gē sû, pau-kuat tô-tsû, bo̍k-gē, kim-kang, tik-tîn, siam-uî, po-lê, tshat-gē, tsio̍h-gē, phuê-kik, tsuá-gē tsit 11 hāng kang-gē luī-pia̍t.",
         "poj": "Siu kui it-chhian nn̄g-pah cho͘ tiōng-iàu ê tâi-gí kang-gē sû, pau-koat tô-chû, bo̍k-gē, kim-kang, tek-tîn, siam-ûi, po-lê, chhat-gē, chio̍h-gē, phôe-kek, chóa-gē chit 11 hāng kang-gē lūi-pia̍t.",
         "en": "Over 1,200 key Taigi craft terms covering eleven categories such as ceramics, woodcraft, metalwork, bamboo and rattan, fiber, glass, lacquer, stonework, leather, and paper craft.",
@@ -1169,7 +1169,7 @@
         ]
       },
       "values": {
-        "hanji": "補充政府機關、常見人名、行政區、數字、時間、日期佮其他教典較少收錄 ê 詞。",
+        "hanji": "補充政府機關、常見人名、行政區、數字、時間、日期佮其他教典較少收錄的詞。",
         "tailo": "Póo-tshiong tsìng-hú ki-kuan, siông-kiàn jîn-miâ, hîng-tsìng-khu, sòo-jī, sî-kan, ji̍t-kî kah kî-thann kàu-tián khah tsió siu-lio̍k ê sû.",
         "poj": "Pó͘-chhiong chèng-hú ki-koan, siông-kiàn jîn-miâ, hêng-chèng-khu, sò͘-jī, sî-kan, ji̍t-kî kah kî-thaⁿ kàu-tián khah chió siu-lio̍k ê sû.",
         "en": "Adds government agencies, common names, administrative divisions, dates, times, numbers, and other words with limited coverage in the MOE Dictionary.",
@@ -1188,7 +1188,7 @@
         ]
       },
       "values": {
-        "hanji": "一个群眾編輯 ê 開放台語辭典",
+        "hanji": "一个群眾編輯的開放台語辭典",
         "tailo": "Tsi̍t-ê kûn-tsiòng pian-tsi̍p ê khai-hòng tâi-gí sû-tián",
         "poj": "Chi̍t-ê kûn-chiòng pian-chi̍p ê khai-hòng tâi-gí sû-tián",
         "en": "A crowd-edited open Taigi dictionary.",
@@ -1207,7 +1207,7 @@
         ]
       },
       "values": {
-        "hanji": "日本時代小川尚義編纂 ê 台語辭典。",
+        "hanji": "日本時代小川尚義編纂的台語辭典。",
         "tailo": "Ji̍t-pún sî-tāi Siáu-tshuan Siōng-gī pian-tshuàn ê tâi-gí sû-tián.",
         "poj": "Ji̍t-pún sî-tāi Siáu-chhoan Siōng-gī pian-chhoàn ê tâi-gí sû-tián.",
         "en": "A Taigi dictionary compiled by Ogawa Naoyoshi during the Japanese era.",
@@ -1245,7 +1245,7 @@
         ]
       },
       "values": {
-        "hanji": "日本時代佐佐木舜一整理 ê 台灣植物台語名。",
+        "hanji": "日本時代佐佐木舜一整理的台灣植物台語名。",
         "tailo": "Ji̍t-pún sî-tāi Tsò-tsò-bo̍k Sùn-it tsíng-lí ê Tâi-uân si̍t-bu̍t tâi-gí miâ.",
         "poj": "Ji̍t-pún sî-tāi Chò-chò-bo̍k Sùn-it chéng-lí ê Tâi-oân si̍t-bu̍t tâi-gí miâ.",
         "en": "Taigi names for Taiwanese plants, compiled by Sasaki Shun'ichi during the Japanese era.",
@@ -1302,7 +1302,7 @@
         ]
       },
       "values": {
-        "hanji": "補充「水台文」佮「台字田」使用 ê 在來字，拍開了後會加入候選詞。",
+        "hanji": "補充「水台文」佮「台字田」使用的在來字，拍開了後會加入候選詞。",
         "tailo": "Póo-tshiong \"Tsuí-tâi-bûn\" kah \"Tâi-jī-tshân\" sú-iōng ê tsāi-lâi jī, phah-khui liáu-āu ē ka-ji̍p hāu-suán sû.",
         "poj": "Pó͘-chhiong \"Chúi-tâi-bûn\" kah \"Tâi-jī-chhân\" sú-iōng ê chāi-lâi jī, phah-khui liáu-āu ē ka-ji̍p hāu-soán sû.",
         "en": "Adds conventional characters used by Tsuí Tâi-bûn and Tâi-jī-tshân to candidate suggestions.",

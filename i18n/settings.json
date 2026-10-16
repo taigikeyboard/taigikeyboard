@@ -129,12 +129,12 @@
     "literalRomanCandidate": {
       "comment": "Toggle label: show what is being typed as the first candidate in the strip (§34 literal-roman candidate). All five platforms.",
       "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host", "extension"] },
-      "values": { "hanji": "拍 ê 羅馬字囥第一格", "tailo": "Phah ê lô-má-jī khǹg tē-it keh", "poj": "Phah ê lô-má-jī khǹg tē-it keh", "en": "Show Typed Text First", "ja": "入力中の文字を先頭に表示" }
+      "values": { "hanji": "拍的羅馬字囥第一格", "tailo": "Phah ê lô-má-jī khǹg tē-it keh", "poj": "Phah ê lô-má-jī khǹg tē-it keh", "en": "Show Typed Text First", "ja": "入力中の文字を先頭に表示" }
     },
     "literalRomanCandidateInfo": {
       "comment": "Help text for the Show Typed Text First toggle.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "候選詞列第一格顯示你拍 ê 羅馬字，點揤抑是揤 Enter 送出。關閉了後干焦會當用 Enter 送出。", "tailo": "Hāu-suán sû lia̍t tē-it keh hián-sī lí phah ê lô-má-jī, tiám-tshi̍h ah-sī tshi̍h Enter sàng-tshut. Kuainn--khí-lâi liáu-āu kan-ta ē-tàng iōng Enter sàng-tshut.", "poj": "Hāu-soán sû lia̍t tē-it keh hián-sī lí phah ê lô-má-jī, tiám-chhi̍h ah-sī chhi̍h Enter sàng-chhut. Koaiⁿ--khí-lâi liáu-āu kan-ta ē-tàng iōng Enter sàng-chhut.", "en": "Shows what you typed in the first slot of the candidate bar; tap it or press Enter to commit. When off, only Enter commits it.", "ja": "入力したローマ字を候補バーの先頭に表示し、タップか Enter で確定できます。オフの場合は Enter でのみ確定できます。" }
+      "values": { "hanji": "候選詞列第一格顯示你拍的羅馬字，點揤抑是揤 Enter 送出。關閉了後干焦會當用 Enter 送出。", "tailo": "Hāu-suán sû lia̍t tē-it keh hián-sī lí phah ê lô-má-jī, tiám-tshi̍h ah-sī tshi̍h Enter sàng-tshut. Kuainn--khí-lâi liáu-āu kan-ta ē-tàng iōng Enter sàng-tshut.", "poj": "Hāu-soán sû lia̍t tē-it keh hián-sī lí phah ê lô-má-jī, tiám-chhi̍h ah-sī chhi̍h Enter sàng-chhut. Koaiⁿ--khí-lâi liáu-āu kan-ta ē-tàng iōng Enter sàng-chhut.", "en": "Shows what you typed in the first slot of the candidate bar; tap it or press Enter to commit. When off, only Enter commits it.", "ja": "入力したローマ字を候補バーの先頭に表示し、タップか Enter で確定できます。オフの場合は Enter でのみ確定できます。" }
     },
     "autoCapitalization": {
       "comment": "Toggle label: automatic capitalization in English mode.",
