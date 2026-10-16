@@ -30,23 +30,24 @@ The dispatch caller runs the fetch twice: a neutral pass discovers the candidate
 
 ### 3.2 User weight and sort key
 
-**Sort key.** `CandidateSortKey` ([`sort_key.rs`](../../engine/ranking/src/sort_key.rs)) is a lexicographic 11-field key, shared by the span-local list, the partial-prefix and abbreviation blocks, the Step 4d merged re-sort and the walker's per-edge word pick (`lexicon::pick_edge_word`):
+**Sort key.** `CandidateSortKey` ([`sort_key.rs`](../../engine/ranking/src/sort_key.rs)) is a lexicographic 12-field key, shared by the span-local list, the partial-prefix and abbreviation blocks, the Step 4d merged re-sort and the walker's per-edge word pick (`lexicon::pick_edge_word`):
 
 | # | Field | Order | Meaning |
 |---|---|---|---|
 | 1 | `tier` | 0 first | 0 = the candidate consumes the whole input, 1 = only its front (`taiuanl` → 台灣人 before 台灣) |
-| 2 | `custom_lead` | 0 first | 0 = custom-dictionary word; leads tier 0 ("the word I put in shows up"). §43 bounds which custom words reach it |
-| 3 | `coverage_kind` | ascending | full syllable 0 < partial prefix 1 < abbreviation 2 |
-| 4 | `user_weight` | descending | decayed user-selection weight; any selected word precedes every never-selected homophone |
-| 5 | `context_rank` | ascending | continuation of the previous word (behavioral-invariants §56 `INVARIANT_CONTINUOUS_CONTEXT_RERANK`) |
-| 6 | `walker_cost` | ascending | `dictionary.bin` corpus cost (milli-nats); `WALKER_COST_UNPRICED` for custom / learned / synthesized rows, which therefore follow every priced row of their tier unless a field above lifts them |
-| 7 | `score` | descending | `calculate_continuous_score` = `freq × (1 + 0.1 × (syllables − 1))`, purely dictionary-derived |
-| 8 | `freq` | descending | raw dictionary frequency |
-| 9 | `coverage` | descending | consumed bytes — a weak tiebreak only |
-| 10 | `source_rank` | ascending | `source_tier_rank`: custom 0, kautian 1, taigitv 2, stti 3, kungge 4, other 5 |
-| 11 | `stable_idx` | ascending | insertion order |
+| 2 | `abbreviation` | 0 first | 1 = abbreviation hit (`COVERAGE_KIND_ABBREV`); every reading of the tier — full syllable or partial prefix, custom or not — leads every abbreviation (`thng` → 湯 / 糖 before a custom 退伍 `thui-ńg` reached through its initials; USER 2026-10-16, librime's abbreviation credibility penalty) |
+| 3 | `custom_lead` | 0 first | 0 = custom-dictionary word; leads the readings or the abbreviations of tier 0 ("the word I put in shows up"). §43 bounds which custom words reach it |
+| 4 | `coverage_kind` | ascending | full syllable 0 < partial prefix 1 < abbreviation 2 |
+| 5 | `user_weight` | descending | decayed user-selection weight; any selected word precedes every never-selected homophone |
+| 6 | `context_rank` | ascending | continuation of the previous word (behavioral-invariants §56 `INVARIANT_CONTINUOUS_CONTEXT_RERANK`) |
+| 7 | `walker_cost` | ascending | `dictionary.bin` corpus cost (milli-nats); `WALKER_COST_UNPRICED` for custom / learned / synthesized rows, which therefore follow every priced row of their tier unless a field above lifts them |
+| 8 | `score` | descending | `calculate_continuous_score` = `freq × (1 + 0.1 × (syllables − 1))`, purely dictionary-derived |
+| 9 | `freq` | descending | raw dictionary frequency |
+| 10 | `coverage` | descending | consumed bytes — a weak tiebreak only |
+| 11 | `source_rank` | ascending | `source_tier_rank`: custom 0, kautian 1, taigitv 2, stti 3, kungge 4, other 5 |
+| 12 | `stable_idx` | ascending | insertion order |
 
-There is no recency field: recency enters only through the decay inside `user_weight`. Fields 1–3 are `candidate_lead`, which the TPS word list also leads with. `CandidateSortKey::without_context` neutralizes field 5 for the walker's context-free edge pick.
+There is no recency field: recency enters only through the decay inside `user_weight`. Fields 1–4 are `candidate_lead`, which the TPS word list also leads with. `CandidateSortKey::without_context` neutralizes field 6 for the walker's context-free edge pick.
 
 **User weight.** `FrequencyData::user_weight(now_ms)` → `decayed_user_weight_delta(count, now_ms, last_used_ms)` ([`engine/ranking/src/score.rs`](../../engine/ranking/src/score.rs)):
 

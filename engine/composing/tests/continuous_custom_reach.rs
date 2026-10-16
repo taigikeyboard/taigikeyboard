@@ -49,11 +49,14 @@ fn fixture_rows() -> Vec<Row> {
 }
 
 fn install() {
-    let rows = fixture_rows();
-    let dict_path = write_temp("dictionary.bin", &build_tkdb_v4(&rows));
-    let fst_path = build_dictionary_fst(&rows);
+    install_with(&fixture_rows(), &["ta2", "tan5", "kian3", "tiong1"]);
+}
+
+fn install_with(rows: &[Row], syllables: &[&str]) {
+    let dict_path = write_temp("dictionary.bin", &build_tkdb_v4(rows));
+    let fst_path = build_dictionary_fst(rows);
     let association_path = write_temp("association.bin", &empty_association_bin());
-    let syllables_path = build_syllables_fst(&["ta2", "tan5", "kian3", "tiong1"]);
+    let syllables_path = build_syllables_fst(syllables);
     install_lexicon(&fst_path, &dict_path, &association_path, &syllables_path);
 }
 
@@ -173,4 +176,54 @@ fn poj_follows_the_same_reach() {
     assert!(!listed, "poj tankian: not reached; got {all:?}");
     let (listed, all) = lists_custom("poj", "tankiant");
     assert!(listed, "poj tankiant: reached; got {all:?}");
+}
+
+#[test]
+fn a_custom_abbreviation_trails_the_full_syllable_rows() {
+    // USER 2026-10-16: `thng` listed the literal, then custom bisyllables
+    // reached through their initials (退伍 `thui-ńg`, 大人 `thai-ngìn`) ahead
+    // of 湯 / 糖. A reading leads every abbreviation of its tier, custom or
+    // not (`CandidateSortKey::abbreviation`); custom still leads the
+    // abbreviations (`tkt` above).
+    let _lock = engine_install_lock();
+    let rows = [
+        Row {
+            toneless_key: "thng",
+            hanji: "湯",
+            tl: "thng",
+            syll: 1,
+            freq: 3000,
+        },
+        Row {
+            toneless_key: "thng",
+            hanji: "糖",
+            tl: "thn̂g",
+            syll: 1,
+            freq: 2000,
+        },
+    ];
+    install_with(&rows, &["thng1", "thng5", "thui3", "ng2", "thai7", "ngin5"]);
+    let fetch = Fetch {
+        now_ms: NOW_MS,
+        custom: vec![
+            CustomEntry {
+                roman: "thui-ńg".into(),
+                hanji: Some("退伍".into()),
+            },
+            CustomEntry {
+                roman: "thai-ngìn".into(),
+                hanji: Some("大人".into()),
+            },
+        ],
+        ..Default::default()
+    };
+    for input_mode in ["tl", "poj"] {
+        let cells = fetch_cells(&config(input_mode), "thng", fetch.clone());
+        let words: Vec<&str> = cells.iter().filter_map(|c| c.0.as_deref()).collect();
+        assert_eq!(
+            words,
+            ["湯", "糖", "退伍", "大人"],
+            "{input_mode}: readings first, then the custom abbreviations; got {cells:?}"
+        );
+    }
 }

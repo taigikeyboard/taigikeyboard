@@ -1,4 +1,4 @@
-//! Continuous candidate ordering: the ten-dimension [`CandidateSortKey`] the
+//! Continuous candidate ordering: the twelve-field [`CandidateSortKey`] the
 //! candidate list and the walker's edge pick share, the [`CandidateRankFacts`]
 //! it reads, and its NaN-safe score wrapper.
 
@@ -6,12 +6,35 @@ use std::cmp::Reverse;
 
 use crate::{source_tier_rank, CONTEXT_RANK_NONE};
 
+/// [`CandidateRankFacts::coverage_kind`] of a full-syllable hit: the typed
+/// span is the record's whole toneless reading.
+pub const COVERAGE_KIND_FULL: u8 = 0;
+
+/// [`CandidateRankFacts::coverage_kind`] of a partial-prefix hit: the typed
+/// span is a strict prefix of the record's reading. Ranks below
+/// [`COVERAGE_KIND_FULL`] within a tier; a whole-input extension still leads
+/// a front-segment full syllable (`docs/engine/continuous-input-ranking.md`).
+pub const COVERAGE_KIND_PARTIAL_PREFIX: u8 = 1;
+
+/// [`CandidateRankFacts::coverage_kind`] of a whole-buffer abbreviation hit:
+/// the typed buffer (`ss`, `tk`, `thng`, `ㄙㄒ`) equals the record's
+/// per-syllable-initial face. Ranks below every other match kind of its tier,
+/// custom words included ([`candidate_lead`]): an acronym-shaped buffer that
+/// is also a valid syllable or onset (`thng`, `ts`, `kh`) is a reading at
+/// least as often as it is an abbreviation, so the single-syllable hits the
+/// user was reaching for keep their positions and the abbreviated words trail
+/// them — `thng` lists 湯 / 糖 before a custom 退伍 `thui-ńg` reached
+/// through its initials (USER 2026-10-16). librime likewise penalises a user
+/// phrase reached through an abbreviation
+/// (`references/librime/src/rime/dict/user_dictionary.cc:239`).
+pub const COVERAGE_KIND_ABBREV: u8 = 2;
+
 /// The candidate fields the continuous sort reads — everything
 /// [`CandidateSortKey::new`] needs besides the buffer length and the
 /// insertion index. Built by `lexicon::RawCandidate::rank_facts`.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CandidateRankFacts {
-    /// `lexicon::COVERAGE_KIND_*`: full syllable `0` < partial prefix `1`
+    /// `COVERAGE_KIND_*`: full syllable `0` < partial prefix `1`
     /// < abbreviation `2`.
     pub coverage_kind: u8,
     /// Raw-buffer byte span `(start, end)` the candidate consumes.
@@ -62,13 +85,20 @@ pub fn sort_by_candidate_key<T>(
     indexed.into_iter().map(|(_, item)| item).collect()
 }
 
-/// The leading `(tier, custom_lead, coverage_kind)` of [`CandidateSortKey`]:
-/// whole input before front segment, then the user's own words, then the
-/// match kind. Shared with any list that orders on these but not on the
-/// rest of the key (the TPS word list, `composing::continuous`).
-pub fn candidate_lead(facts: &CandidateRankFacts, raw_len: u32) -> (u8, u8, u8) {
+/// The leading `(tier, abbreviation, custom_lead, coverage_kind)` of
+/// [`CandidateSortKey`]: whole input before front segment, then readings
+/// before abbreviations, then the user's own words, then the match kind.
+/// Shared with any list that orders on these but not on the rest of the key
+/// (the TPS word list, `composing::continuous`).
+pub fn candidate_lead(facts: &CandidateRankFacts, raw_len: u32) -> (u8, u8, u8, u8) {
     let tier = u8::from(facts.consumed_span.1 != raw_len);
-    (tier, u8::from(!facts.is_custom), facts.coverage_kind)
+    let abbreviation = u8::from(facts.coverage_kind == COVERAGE_KIND_ABBREV);
+    (
+        tier,
+        abbreviation,
+        u8::from(!facts.is_custom),
+        facts.coverage_kind,
+    )
 }
 
 // v3.5.8 Phase 9.1 — CandidateSortKey
@@ -80,9 +110,10 @@ pub fn candidate_lead(facts: &CandidateRankFacts, raw_len: u32) -> (u8, u8, u8) 
 // is descending. NaN-safe because floats are wrapped in `NonNanF64`
 // which coerces NaN to `f64::MIN` at construction.
 //
-// Order: tier, custom_lead, coverage_kind, -user_weight, context_rank,
-// walker_cost, -score, -freq, -coverage, source_rank, stable_idx — the first
-// three are [`candidate_lead`], shared with the TPS word list. Bigram P5 (§56) added
+// Order: tier, abbreviation, custom_lead, coverage_kind, -user_weight,
+// context_rank, walker_cost, -score, -freq, -coverage, source_rank,
+// stable_idx — the first four are [`candidate_lead`], shared with the TPS
+// word list. Bigram P5 (§56) added
 // `context_rank` between `-user_weight` and `-score`; E1 P5a added
 // `walker_cost` below it for the walker's edge pick, and P5b made the
 // candidate list read it too, so the list and slot 0 share one scale. S8 moved `-coverage` from
@@ -100,13 +131,18 @@ pub struct CandidateSortKey {
     /// covering only a front segment (`taiuanl` → 台灣人 before 台灣;
     /// `docs/engine/continuous-input-ranking.md`).
     tier: u8,
+    /// `1` for an abbreviation hit ([`COVERAGE_KIND_ABBREV`], which says why),
+    /// `0` for a reading: every reading of the tier leads, custom or not.
+    abbreviation: u8,
     /// `0` for a custom-dictionary word, `1` otherwise: the user's own
-    /// words lead their tier, whatever their match kind, selection or
-    /// corpus cost ("the word I put in shows up"). Custom
-    /// words are synthesized whole-input, so this only orders Tier 0.
+    /// words lead their tier's readings or its abbreviations, whatever
+    /// their full/partial match kind, selection or corpus cost ("the word
+    /// I put in shows up"). Custom words are synthesized whole-input, so
+    /// this only orders Tier 0.
     custom_lead: u8,
     /// Within a tier: full syllable `0` < partial prefix `1` < abbreviation
-    /// `2` (`lexicon::COVERAGE_KIND_*`).
+    /// `2` ([`COVERAGE_KIND_FULL`] / [`COVERAGE_KIND_PARTIAL_PREFIX`] /
+    /// [`COVERAGE_KIND_ABBREV`]).
     coverage_kind: u8,
     /// Descending: [`CandidateRankFacts::user_weight`] — a selected word
     /// (`> 0.0`) precedes every never-selected one (`0.0`) whatever
@@ -162,9 +198,10 @@ impl CandidateSortKey {
         // candidate (`record_to_candidate` → false, dict.bin source
         // bits; `custom_entry_to_candidate` → true, forces rank 0).
         let source_rank = source_tier_rank(facts.bitmask, facts.is_custom);
-        let (tier, custom_lead, coverage_kind) = candidate_lead(facts, raw_len);
+        let (tier, abbreviation, custom_lead, coverage_kind) = candidate_lead(facts, raw_len);
         Self {
             tier,
+            abbreviation,
             custom_lead,
             coverage_kind,
             neg_user_weight: Reverse(NonNanF64::new(facts.user_weight)),
@@ -231,10 +268,6 @@ mod tests {
     use super::*;
     use crate::{CONTEXT_RANK_BUNDLED, CONTEXT_RANK_USER};
 
-    /// `lexicon::COVERAGE_KIND_FULL` / `COVERAGE_KIND_PARTIAL_PREFIX`.
-    const COVERAGE_KIND_FULL: u8 = 0;
-    const COVERAGE_KIND_PARTIAL_PREFIX: u8 = 1;
-
     /// Kautian source bit (1 << 0) — source rank 1.
     const KAUTIAN_BIT: u16 = 1 << 0;
 
@@ -290,6 +323,20 @@ mod tests {
     ) -> CandidateRankFacts {
         CandidateRankFacts {
             coverage_kind: COVERAGE_KIND_PARTIAL_PREFIX,
+            ..cand(span_start, span_end, score, frequency, bitmask)
+        }
+    }
+
+    /// Abbreviation variant for the `abbreviation` dim, never selected.
+    fn cand_abbreviation(
+        span_start: u32,
+        span_end: u32,
+        score: f32,
+        frequency: u32,
+        bitmask: u16,
+    ) -> CandidateRankFacts {
+        CandidateRankFacts {
+            coverage_kind: COVERAGE_KIND_ABBREV,
             ..cand(span_start, span_end, score, frequency, bitmask)
         }
     }
@@ -523,6 +570,28 @@ mod tests {
             ..cand(0, 2, 0.0, 0, 0)
         };
         assert!(key(&cand(0, 3, 1.0, 1, 0), raw_len, 1) < key(&custom_front, raw_len, 0));
+    }
+
+    // USER 2026-10-16: a reading leads every abbreviation of its tier, a
+    // custom one included (`thng` → 湯 before a custom 退伍 `thui-ńg`);
+    // among the abbreviations the custom word still leads.
+    #[test]
+    fn custom_abbreviation_trails_readings_but_leads_abbreviations() {
+        let raw_len: u32 = 4;
+        let custom_abbreviation = CandidateRankFacts {
+            is_custom: true,
+            ..cand_abbreviation(0, 4, 0.0, 0, 0)
+        };
+        let dictionary_full_weak = cand(0, 4, 0.001, 1, 0);
+        let dictionary_partial_weak = cand_partial(0, 4, 0.001, 1, 0);
+        let dictionary_abbreviation = CandidateRankFacts {
+            user_weight: 4.0,
+            context_rank: CONTEXT_RANK_USER,
+            ..cand_abbreviation(0, 4, 0.0, 0, 0)
+        };
+        assert!(key(&dictionary_full_weak, raw_len, 1) < key(&custom_abbreviation, raw_len, 0));
+        assert!(key(&dictionary_partial_weak, raw_len, 1) < key(&custom_abbreviation, raw_len, 0));
+        assert!(key(&custom_abbreviation, raw_len, 1) < key(&dictionary_abbreviation, raw_len, 0));
     }
 
     #[test]

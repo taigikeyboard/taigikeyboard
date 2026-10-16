@@ -126,7 +126,7 @@ A `.taigi` file is a single plain-text **JSON** document carrying **three** user
 
 ## Autocomplete Integration
 
-A custom entry is offered by the same rules as a system dictionary word (behavioral-invariants.md §43): only once the typed input reaches into its final syllable (陳建中 `Tân Kiàn-tiong` from `tankiant`, not `t`), or on its whole abbreviation (`tkt`). Once offered it leads every candidate covering the whole input (`custom_lead`, `continuous-input-ranking.md`). It wins a collision with the same system word (source rank 0), and the walker takes its exact-span edge over the dictionary's.
+A custom entry is offered by the same rules as a system dictionary word (behavioral-invariants.md §43): only once the typed input reaches into its final syllable (陳建中 `Tân Kiàn-tiong` from `tankiant`, not `t`), or on its whole abbreviation (`tkt`). Once offered it leads every candidate covering the whole input (`custom_lead`, `continuous-input-ranking.md`), except that an entry reached through its abbreviation follows every reading of that input (`thng` → 湯 / 糖, then a custom 退伍 `thui-ńg`; `abbreviation` field). It wins a collision with the same system word (source rank 0), and the walker takes its exact-span edge over the dictionary's.
 
 **Flow** (every platform, inside one `FetchAtPos`):
 1. `engine/dispatch/src/user_data/with_stores.rs` (`buffer_rows`) derives the query key from the raw (unsegmented) pending buffer (`phonetics::api::derive_custom_query_key`) and reads the matching custom rows (`CustomDictionaryStore::keystroke_rows`: the query's form by prefix, the abbreviation whole, shortest key first, 20 rows) — skipped when `FetchAtPos.custom_dictionary_disabled` — plus the learned phrases
@@ -166,7 +166,7 @@ None. A fresh install starts with an empty custom dictionary on every platform.
 
 | Aspect | Custom | System |
 |--------|--------|--------|
-| Priority | Leads the candidates that cover the whole input (`custom_lead`); wins a collision with the same word (source rank 0); its exact-span walker edge overrides the dictionary's | Corpus cost |
+| Priority | Leads the candidates that cover the whole input (`custom_lead`) — an abbreviation hit only the abbreviations; wins a collision with the same word (source rank 0); its exact-span walker edge overrides the dictionary's | Corpus cost |
 | Frequency tracking | `user_frequency.db`, like any pick — keyed by the `(display_text, canonical_tl)` pair, ranks custom rows among themselves (`lexicon::custom_entry_to_candidate` `user_weight`) | `user_frequency.db` (engine `UserFrequencyStore`) |
 | Search method | Keystroke: roman / notone prefix, abbreviation whole (`keystroke_rows`), then the §43 reach rule; search page: prefix on all three (`rows_matching`) | FST, same rules |
 | Segmentation | Raw input (unsegmented) | Segmented input |

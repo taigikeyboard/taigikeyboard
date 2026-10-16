@@ -23,5 +23,5 @@ pub use score::{
 };
 pub use sort_key::{
     candidate_lead, sort_by_candidate_key, CandidateRankFacts, CandidateSortKey,
-    WALKER_COST_UNPRICED,
+    COVERAGE_KIND_ABBREV, COVERAGE_KIND_FULL, COVERAGE_KIND_PARTIAL_PREFIX, WALKER_COST_UNPRICED,
 };

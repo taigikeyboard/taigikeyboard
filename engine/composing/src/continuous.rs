@@ -523,7 +523,7 @@ pub(crate) enum ListShape {
     /// when it is one word — so a reading the dictionary has no word for
     /// keeps its row — and longer words first, each length in ranking order,
     /// a row covering its reading in full above the prefix extensions and
-    /// abbreviations (`lexicon::COVERAGE_KIND_*` ascend in that order).
+    /// abbreviations (`ranking::COVERAGE_KIND_*` ascend in that order).
     Word,
 }
 

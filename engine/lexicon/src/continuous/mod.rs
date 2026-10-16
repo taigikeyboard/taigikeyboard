@@ -81,30 +81,14 @@ use toneless_match::{
     with_tps_or_variant, KeyFace,
 };
 
-/// v3.5.8 Phase 9 Item 10 — `RawCandidate.coverage_kind` ordinal for
-/// full-syllable hits (the pre-Item-10 path: `valid_span_endings`
-/// returned at least one ending and `fetch_candidates_for_keys_with_barriers`
-/// produced the candidate via `prefix_index.lookup_exact`).
-pub const COVERAGE_KIND_FULL: u8 = 0;
-
-/// v3.5.8 Phase 9 Item 10 — `RawCandidate.coverage_kind` ordinal for
-/// partial-prefix hits (syllabifier returned no ending, engine fell
-/// through to [`fetch_partial_prefix_candidates`] via
-/// `prefix_index.lookup_prefix`). Ranks below [`COVERAGE_KIND_FULL`] within
-/// a tier in [`CandidateSortKey`]; a whole-input extension still leads a
-/// front-segment full syllable (`docs/engine/continuous-input-ranking.md`).
-pub const COVERAGE_KIND_PARTIAL_PREFIX: u8 = 1;
-
-/// `RawCandidate.coverage_kind` ordinal for whole-buffer abbreviation hits
-/// ([`fetch_abbrev_candidates`]): the typed buffer is an acronym-shaped
-/// string (`ss`, `tk`, `ㄙㄒ`) and the record's per-syllable-initial face
-/// (`tl_abbrev` / `poj_abbrev` / `tps_abbrev`) equals it. Ranks
-/// below [`COVERAGE_KIND_PARTIAL_PREFIX`] within a tier in [`CandidateSortKey`]: an acronym-shaped
-/// buffer that is also a valid onset (`ts`, `kh`) is mid-syllable at least
-/// as often as it is an abbreviation, so the single-syllable partial hits
-/// the user was reaching for keep their positions and the abbreviated
-/// words trail them.
-pub const COVERAGE_KIND_ABBREV: u8 = 2;
+/// `RawCandidate.coverage_kind` ordinals, owned by the sort that reads them.
+/// Which fetcher stamps which: `fetch_candidates_for_keys_with_barriers`
+/// (`prefix_index.lookup_exact`) → [`COVERAGE_KIND_FULL`];
+/// [`fetch_partial_prefix_candidates`] (`prefix_index.lookup_prefix`, the
+/// syllabifier found no ending) → [`COVERAGE_KIND_PARTIAL_PREFIX`];
+/// [`fetch_abbrev_candidates`] (the buffer equals a record's
+/// `tl_abbrev` / `poj_abbrev` / `tps_abbrev` face) → [`COVERAGE_KIND_ABBREV`].
+pub use ranking::{COVERAGE_KIND_ABBREV, COVERAGE_KIND_FULL, COVERAGE_KIND_PARTIAL_PREFIX};
 
 /// Worst-case rowid hydration budget per partial-prefix lookup.
 /// Single-char prefixes (`tl:k`, `tl:t`) match hundreds of FST entries;
@@ -739,13 +723,7 @@ fn exact_candidates_for_key(
 /// `raw_len` is the byte length of the original pending buffer
 /// (`Phase::Continuous { raw }.len()`); it is the predicate input
 /// for Tier 1 (`consumed_span_end == raw_len`). Sorting follows
-/// `docs/releases/v3.5.8/plan.md` § Phase 9 sort_key formula:
-///
-/// ```text
-/// (tier, custom_lead, coverage_kind, -user_weight, context_rank,
-///  walker_cost, -adjusted_score, -freq, -coverage_bytes, source_tier_rank,
-///  stable_idx)
-/// ```
+/// [`CandidateSortKey`] (field order and why: `docs/engine/continuous-input-ranking.md` §3.2).
 ///
 /// E1 P5b: `walker_cost` (the record's corpus cost) orders the list on the
 /// walker's scale; `-adjusted_score` / `-freq` break an equal cost.
