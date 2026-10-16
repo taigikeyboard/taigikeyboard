@@ -12,7 +12,7 @@ use super::reset_row;
 use crate::winui::cards;
 use crate::winui::window::{Message, ResetScope, SettingsWindow};
 use taigi_desktop_core::keys::shortcut_labels::{
-    caret_chords_label, navigation_keys_label, shifted_slot_keys_label, slot_keys_label,
+    caret_chords_label, fixed_keys_label, navigation_keys_label, slot_keys_label,
 };
 use taigi_desktop_core::keys::{
     rejection_message_key, ChordField, ComposingAction, ComposingKeyBindings, ComposingKeyChord,
@@ -75,7 +75,9 @@ pub fn view(
             strings.resolve(StringKey::DesktopShortcutMoveComposingCaret),
             caret_chords_label(DESKTOP_PLATFORM),
         ),
-        // Block two: out of the composition and into the document.
+        // Block two: out of the composition and into the document. Shift on
+        // a slot key is no row of its own (USER 2026-10-16): it is the
+        // description of the row it shares a label with (`fixed_keys_label`).
         cards::section_title(strings.resolve(StringKey::DesktopShortcutSectionOutput)),
         composing_rows(
             window,
@@ -83,20 +85,6 @@ pub fn view(
             context,
             &bindings,
             ComposingAction::GROUPS[1],
-        ),
-        // Shown, not recordable (USER 2026-09-10): Shift on a slot key is
-        // the Hanji/romanization commit aimed at that slot, and the slot keys follow the
-        // tone scheme — so the row follows it too, and there is nothing to
-        // record. After the commit rows, because it is one. Not drawn under
-        // TPS, where a commit is always the Hanji.
-        shifted_slot_keys_label(bindings.slot_key_set(), DESKTOP_PLATFORM).map_or_else(
-            View::empty,
-            |keys| {
-                fixed_row(
-                    strings.resolve(StringKey::DesktopActionCommitAlternateScript),
-                    keys,
-                )
-            },
         ),
         // Block three: the switches, and the windows a key raises. What these
         // have in common is that none of them needs a composition running —
@@ -150,7 +138,7 @@ fn global_rows(
                 );
                 (
                     action.raw(),
-                    recorder_row(strings, action.label_key(), [field]),
+                    recorder_row(strings, action.label_key(), None, [field]),
                 )
             })
             .collect::<Vec<_>>(),
@@ -179,24 +167,33 @@ fn composing_rows(
                         bindings.chord(*action, field).cloned(),
                     )
                 });
+                let fixed_keys =
+                    fixed_keys_label(*action, bindings.slot_key_set(), DESKTOP_PLATFORM);
                 (
                     action.raw(),
-                    recorder_row(strings, action.label_key(), fields),
+                    recorder_row(strings, action.label_key(), fixed_keys.as_deref(), fields),
                 )
             })
             .collect::<Vec<_>>(),
     )
 }
 
-/// One recorder row: its label, and its fields side by side.
-fn recorder_row(strings: &StringResolver, label: StringKey, fields: impl IntoViews) -> View {
-    cards::row(
-        strings.resolve(label),
-        StackPanel::new()
-            .orientation(Orientation::Horizontal)
-            .spacing(FIELD_GAP)
-            .children(fields),
-    )
+/// One recorder row: its label, the fixed keys that also fire it under the
+/// label, and its fields side by side.
+fn recorder_row(
+    strings: &StringResolver,
+    label: StringKey,
+    fixed_keys: Option<&str>,
+    fields: impl IntoViews,
+) -> View {
+    let fields = StackPanel::new()
+        .orientation(Orientation::Horizontal)
+        .spacing(FIELD_GAP)
+        .children(fields);
+    match fixed_keys {
+        Some(keys) => cards::described_row(strings.resolve(label), keys, fields),
+        None => cards::row(strings.resolve(label), fields),
+    }
 }
 
 /// One field and its × beside it. The field shows the chord, or the prompt

@@ -40,6 +40,9 @@ struct ComposingShortcuts: Sendable {
         let group: Int
         /// The first field, then the second.
         let fields: [Field]
+        /// The fixed keys that also fire it, drawn under its label; empty
+        /// for most rows (desktop-core `shortcut_labels::fixed_keys_label`).
+        let fixedKeys: String
 
         var first: Field {
             fields[0]
@@ -48,10 +51,9 @@ struct ComposingShortcuts: Sendable {
 
     /// Every composing action, in the roster's order.
     let rows: [Row]
-    /// The fixed rows, as the pane prints them: the live slot keys bare and
-    /// behind ⇧, the navigation keys, the composing caret's chords.
+    /// The fixed rows, as the pane prints them: the live slot keys, the
+    /// navigation keys, the composing caret's chords.
     let slotKeys: String
-    let shiftedSlotKeys: String
     let navigationKeys: String
     let caretChords: String
 
@@ -60,7 +62,6 @@ struct ComposingShortcuts: Sendable {
     static let unavailable = ComposingShortcuts(
         rows: [],
         slotKeys: "",
-        shiftedSlotKeys: "",
         navigationKeys: "",
         caretChords: "",
     )

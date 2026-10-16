@@ -444,9 +444,12 @@ message ComposingShortcutsReply {
   // the order a block of the pane draws them in and conflicts list them in.
   repeated ComposingShortcut actions = 1;
   // The fixed rows, as the pane prints them (`shortcut_labels`): the live
-  // slot keys bare and behind ⇧, the navigation keys, the caret chords.
+  // slot keys, the navigation keys, the caret chords.
   string slot_keys = 2;
-  string shifted_slot_keys = 3;
+  // The shifted slot keys row, folded into its action's `fixed_keys`
+  // 2026-10-16.
+  reserved 3;
+  reserved "shifted_slot_keys";
   string navigation_keys = 4;
   string caret_chords = 5;
   // The width-flip chords row, removed 2026-10-07.
@@ -471,6 +474,9 @@ message ComposingShortcut {
   // Its two fields (`ChordField::ALL`), first then second; either fires
   // the action.
   repeated ComposingShortcutField fields = 7;
+  // The fixed keys that also fire it, drawn as the row's subtitle
+  // (`shortcut_labels::fixed_keys_label`); empty for most actions.
+  string fixed_keys = 8;
 }
 
 message ComposingShortcutField {

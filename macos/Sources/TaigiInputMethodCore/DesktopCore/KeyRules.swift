@@ -209,12 +209,12 @@ extension ComposingShortcuts {
                 label: label,
                 group: Int(action.group),
                 fields: fields,
+                fixedKeys: action.fixedKeys,
             ))
         }
         self.init(
             rows: rows,
             slotKeys: reply.slotKeys,
-            shiftedSlotKeys: reply.shiftedSlotKeys,
             navigationKeys: reply.navigationKeys,
             caretChords: reply.caretChords,
         )

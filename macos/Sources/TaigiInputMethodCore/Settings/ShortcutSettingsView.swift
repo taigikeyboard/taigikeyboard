@@ -94,18 +94,12 @@ struct ShortcutSettingsView: View {
 
             // Block two: out of the composition and into the document.
             Section {
+                // ⇧ on a slot key — the Hanji/romanization commit aimed at
+                // that slot — is not a row of its own (USER 2026-10-16): it
+                // is the subtitle of the row it shares a label with
+                // (`Row.fixedKeys`), and absent under TPS.
                 ForEach(shortcuts.rows(inGroup: 1), id: \.name) { row in
                     recorderRow(row)
-                }
-
-                // Shown, not recordable (USER 2026-09-10): ⇧ on a slot key is
-                // the Hanji/romanization commit aimed at that slot, and the slot keys follow
-                // the tone scheme — so the row follows it too, and there is
-                // nothing to record. After the commit rows, because it is one.
-                // Not under TPS, which has no such flip: the core answers
-                // no keys for it there.
-                if !shortcuts.shiftedSlotKeys.isEmpty {
-                    fixedRow(.desktopActionCommitAlternateScript, shortcuts.shiftedSlotKeys)
                 }
             } header: {
                 Text(language.string(.desktopShortcutSectionOutput))
@@ -181,7 +175,7 @@ struct ShortcutSettingsView: View {
     /// is the Windows / Linux twin); the field's own value is read after it.
     private func recorderRow(_ row: ComposingShortcuts.Row) -> some View {
         let label = language.string(row.label)
-        return LabeledContent(label) {
+        return LabeledContent {
             HStack {
                 ForEach(Array(row.fields.enumerated()), id: \.element.settingsKey) { index, field in
                     ShortcutKeyRecorder(
@@ -192,6 +186,11 @@ struct ShortcutSettingsView: View {
                     }
                     .accessibilityLabel(Text(verbatim: "\(label) \(index + 1)"))
                 }
+            }
+        } label: {
+            Text(label)
+            if !row.fixedKeys.isEmpty {
+                Text(row.fixedKeys)
             }
         }
     }

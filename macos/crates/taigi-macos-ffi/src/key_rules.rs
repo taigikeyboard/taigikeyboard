@@ -111,6 +111,8 @@ fn composing_shortcuts(
             name: action.raw().to_owned(),
             label_key: action.label_key().as_str().to_owned(),
             group: group(action),
+            fixed_keys: shortcut_labels::fixed_keys_label(action, slot_keys, DESKTOP_PLATFORM)
+                .unwrap_or_default(),
             fields: ChordField::ALL
                 .into_iter()
                 .map(|field| {
@@ -130,10 +132,6 @@ fn composing_shortcuts(
     Ok(ComposingShortcutsReply {
         actions,
         slot_keys: shortcut_labels::slot_keys_label(slot_keys, DESKTOP_PLATFORM),
-        // Empty under TPS, which has no Shift + slot flip; the pane hides
-        // the row.
-        shifted_slot_keys: shortcut_labels::shifted_slot_keys_label(slot_keys, DESKTOP_PLATFORM)
-            .unwrap_or_default(),
         navigation_keys: shortcut_labels::navigation_keys_label(DESKTOP_PLATFORM).to_owned(),
         caret_chords: shortcut_labels::caret_chords_label(DESKTOP_PLATFORM),
     })
@@ -509,7 +507,8 @@ mod tests {
         );
         assert_eq!(first.label_key, "i18n_desktop_actionNextCandidate");
         assert_eq!(reply.slot_keys, "qwdfzxvy;");
-        assert_eq!(reply.shifted_slot_keys, "⇧QWDFZXVY;");
+        assert_eq!(reply.actions[6].fixed_keys, "⇧QWDFZXVY;");
+        assert_eq!(reply.actions[5].fixed_keys, "");
         assert_eq!(reply.navigation_keys, "←  →  ↑  ↓  ⇞  ⇟");
         assert_eq!(reply.caret_chords, "⌥←  ⌥→  ⌥↑  ⌥↓  ↖  ↘");
     }
@@ -532,7 +531,7 @@ mod tests {
         assert_eq!(reply.actions[2].fields[0].stored_chord, control_bracket);
         assert_eq!(reply.actions[0].fields[0].stored_chord, None, "cleared");
         assert_eq!(reply.slot_keys, "123456789");
-        assert_eq!(reply.shifted_slot_keys, "⇧123456789");
+        assert_eq!(reply.actions[6].fixed_keys, "⇧123456789");
         assert_eq!(composing_shortcuts(None), Err(Refusal::Missing("settings")));
         assert!(matches!(
             composing_shortcuts(Some(&SettingsSnapshot {

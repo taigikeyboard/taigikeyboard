@@ -23,6 +23,11 @@ const GROUP_INDENT: f64 = 16.0;
 /// `TextFillColorDisabled` is 36% of the theme's text colour, in both the
 /// light and the dark resource dictionary.
 const DISABLED_LABEL_OPACITY: f64 = 0.36;
+/// `CaptionTextBlockStyle`'s size: a card's description.
+const CAPTION_FONT_SIZE: f64 = 12.0;
+/// `PrimaryText` at less than full is WinUI's secondary text, and it
+/// follows the theme.
+const SECONDARY_OPACITY: f64 = 0.65;
 /// `ControlCornerRadius`.
 const CARD_CORNER_RADIUS: f64 = 4.0;
 /// Between the header and the control, when the line is tight.
@@ -58,20 +63,29 @@ pub fn line(header: &str, control: impl Into<View>) -> View {
 /// resources both resolve to, applied to the theme's own text colour, is
 /// the nearest thing that stays theme- and high-contrast-correct.
 fn dimmable_line(header: &str, is_enabled: bool, control: impl Into<View>) -> View {
+    header_and_control(
+        TextBlock::new()
+            .text(header)
+            .text_wrapping(TextWrapping::Wrap)
+            .opacity(if is_enabled {
+                1.0
+            } else {
+                DISABLED_LABEL_OPACITY
+            }),
+        control,
+    )
+}
+
+/// `header` at the left, `control` at the right, both centred.
+fn header_and_control(header: impl Into<View>, control: impl Into<View>) -> View {
     Grid::new()
         .columns([GridLength::STAR, GridLength::Auto])
         .column_spacing(CONTROL_GAP)
         .children((
-            TextBlock::new()
-                .text(header)
-                .text_wrapping(TextWrapping::Wrap)
+            Border::new()
+                .grid_column(0)
                 .vertical_alignment(VerticalAlignment::Center)
-                .opacity(if is_enabled {
-                    1.0
-                } else {
-                    DISABLED_LABEL_OPACITY
-                })
-                .grid_column(0),
+                .content(header),
             // The control is already a `View` (a builder that took its
             // slots), which carries no attached grid property — a
             // `Border` is the thinnest thing that can carry one.
@@ -84,6 +98,28 @@ fn dimmable_line(header: &str, is_enabled: bool, control: impl Into<View>) -> Vi
 
 /// One setting in its own card.
 pub fn row(header: &str, control: impl Into<View>) -> View {
+    card(line(header, control))
+}
+
+/// `row`, with `description` under the header in the secondary caption
+/// (`SettingsCard.Description`).
+pub fn described_row(header: &str, description: &str, control: impl Into<View>) -> View {
+    card(header_and_control(
+        StackPanel::new().children((
+            TextBlock::new()
+                .text(header)
+                .text_wrapping(TextWrapping::Wrap),
+            TextBlock::new()
+                .text(description)
+                .text_wrapping(TextWrapping::Wrap)
+                .font_size(CAPTION_FONT_SIZE)
+                .opacity(SECONDARY_OPACITY),
+        )),
+        control,
+    ))
+}
+
+fn card(content: View) -> View {
     Border::new()
         .background(ThemeBrush::CardBackground)
         .border_brush(ThemeBrush::CardStroke)
@@ -91,7 +127,7 @@ pub fn row(header: &str, control: impl Into<View>) -> View {
         .corner_radius(CornerRadius::uniform(CARD_CORNER_RADIUS))
         .padding(padding())
         .min_height(CARD_MIN_HEIGHT)
-        .content(line(header, control))
+        .content(content)
 }
 
 /// A setting that belongs to the row above it, inside a `group`: the same

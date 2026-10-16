@@ -10,7 +10,7 @@
 use super::PageContext;
 use adw::prelude::*;
 use taigi_desktop_core::keys::shortcut_labels::{
-    caret_chords_label, navigation_keys_label, shifted_slot_keys_label, slot_keys_label,
+    caret_chords_label, fixed_keys_label, navigation_keys_label, slot_keys_label,
 };
 use taigi_desktop_core::keys::{
     rejection_message_key, ChordField, ComposingAction, ComposingKeyBindings, ComposingKeyChord,
@@ -61,7 +61,9 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
     );
     page.add(&selection);
 
-    // Group two: out of the composition and into the document.
+    // Group two: out of the composition and into the document. Shift on a
+    // slot key is no row of its own (USER 2026-10-16): it is the subtitle of
+    // the row it shares a label with (`fixed_keys_label`).
     let output = adw::PreferencesGroup::builder()
         .title(
             context
@@ -69,34 +71,32 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
                 .resolve(StringKey::DesktopShortcutSectionOutput),
         )
         .build();
-    for action in ComposingAction::GROUPS[1] {
-        recorder_row(
-            &mut context,
-            &output,
-            action.label_key(),
-            &composing_fields(*action),
-        );
-    }
-    // Not drawn under TPS, where a commit is always the Hanji.
-    let shifted_slot_keys = shifted_slot_keys_label(bindings.slot_key_set(), DESKTOP_PLATFORM);
-    let shifted_slot_row = fixed_row(
-        &mut context,
-        &output,
-        StringKey::DesktopActionCommitAlternateScript,
-        shifted_slot_keys.clone().unwrap_or_default(),
-    );
-    shifted_slot_row.set_visible(shifted_slot_keys.is_some());
+    let output_rows: Vec<(ComposingAction, adw::ActionRow)> = ComposingAction::GROUPS[1]
+        .iter()
+        .map(|action| {
+            let row = recorder_row(
+                &mut context,
+                &output,
+                action.label_key(),
+                &composing_fields(*action),
+            );
+            (*action, row)
+        })
+        .collect();
     page.add(&output);
-    // The two slot-key rows follow the tone scheme and the input script
-    // picked on General.
-    context.on_refresh(move |document: &SettingsDocument| {
+    // The slot keys follow the tone scheme and the input script picked on
+    // General.
+    let refresh_slot_keys = move |document: &SettingsDocument| {
         let slot_keys =
             ComposingKeyBindings::from_document(document, DESKTOP_PLATFORM).slot_key_set();
         slot_row.set_subtitle(&slot_keys_label(slot_keys, DESKTOP_PLATFORM));
-        let shifted_slot_keys = shifted_slot_keys_label(slot_keys, DESKTOP_PLATFORM);
-        shifted_slot_row.set_visible(shifted_slot_keys.is_some());
-        shifted_slot_row.set_subtitle(&shifted_slot_keys.unwrap_or_default());
-    });
+        for (action, row) in &output_rows {
+            let fixed_keys = fixed_keys_label(*action, slot_keys, DESKTOP_PLATFORM);
+            row.set_subtitle(fixed_keys.as_deref().unwrap_or_default());
+        }
+    };
+    refresh_slot_keys(context.document);
+    context.on_refresh(refresh_slot_keys);
 
     // Group three: the switches, and the lists a key raises — the roster
     // that holds a chord in the global registry.
@@ -135,7 +135,7 @@ fn recorder_row(
     group: &adw::PreferencesGroup,
     label: StringKey,
     targets: &[RecorderTarget],
-) {
+) -> adw::ActionRow {
     let row = adw::ActionRow::builder()
         .title(context.strings.resolve(label))
         .build();
@@ -147,6 +147,7 @@ fn recorder_row(
     row.set_activatable_widget(fields.first());
     row.add_suffix(&controls);
     group.add(&row);
+    row
 }
 
 /// One field button and its × beside it, appended to `controls`. The field
