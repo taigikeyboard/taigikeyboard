@@ -339,8 +339,8 @@ fn seven_syllables_is_a_clause_not_a_word() {
 
 #[test]
 fn syllable_count_comes_from_the_joined_tl_not_the_segment_echo() {
-    // A custom-dictionary pick echoes `syllable_count = 1` whatever its
-    // length; the cap must follow the TL itself.
+    // The echoed `syllable_count` is platform input (here understated as
+    // 1 for a 6-syllable word); the cap must follow the TL itself.
     assert_eq!(
         learn(
             "abcdefg",
@@ -810,4 +810,55 @@ fn learned_row_answers_the_nasal_oo_alias_key() {
         );
         assert_eq!(hanji[0], "好玄", "typed {typed}; got {hanji:?}");
     }
+}
+
+#[test]
+fn a_custom_word_keeps_its_syllables_in_the_compound_run() {
+    // A custom list row's syllable count comes from its TL, not a fixed 1
+    // (which fused 來 + 記 `kì-khí` into the compound 來記, `lâi-kì-khí`).
+    // Reached through its abbreviation `kkh`: the walker's slot 0 counts a
+    // custom edge itself, so only the list's custom rows carried the 1.
+    // trace: segments 來 (1) + custom 記 (tl_syllables("kì-khí") = 2) →
+    // longest_compound_run stops at 來 → space; the commit learns
+    // `lâi kì-khí`.
+    let rows = [
+        ("lai", "來", "lâi", 1, 5000),
+        ("ki", "記", "kì", 1, 4000),
+        ("khi", "起", "khí", 1, 3000),
+        ("laiki", "來記", "lâi-kì", 2, 100),
+    ]
+    .map(|(toneless_key, hanji, tl, syll, freq)| Row {
+        toneless_key,
+        hanji,
+        tl,
+        syll,
+        freq,
+    });
+    let _lock = engine_install_lock();
+    install(&rows, &["lai5", "ki3", "khi2"]);
+    let cfg = config_tl();
+    let mut engine = engine_in_continuous("laikkh");
+    let find = |engine: &mut Engine, hanji: &str, consumed: u32| {
+        let fetch = Fetch {
+            custom: vec![CustomEntry {
+                roman: "kì-khí".into(),
+                hanji: Some("記".into()),
+            }],
+            ..Fetch::default()
+        };
+        let resp = requests::apply(fetch.intent(), engine, &cfg);
+        let cands = resp.continuous.expect("continuous carrier").candidates;
+        cands
+            .iter()
+            .find(|c| c.hanji.as_deref() == Some(hanji) && c.consumed_span_end == consumed)
+            .cloned()
+            .unwrap_or_else(|| panic!("no {hanji} ending at {consumed}; got {cands:?}"))
+    };
+
+    let lai = find(&mut engine, "來", 3);
+    assert!(engine.apply_learning(commit(&lai), &cfg).learned.is_none());
+    let custom = find(&mut engine, "記", 3);
+    assert_eq!(custom.syllable_count, 2, "kì-khí is two syllables");
+    let fin = engine.apply_learning(commit(&custom), &cfg);
+    assert_eq!(fin.learned, phrase("來記", "lâi kì-khí"));
 }

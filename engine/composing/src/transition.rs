@@ -1454,9 +1454,8 @@ fn next_word_word_selected(
 /// separator the user typed wins — by kind only ([`canonical_separators`];
 /// the dictionary cannot cover every phrase and the user manages the
 /// separator, USER 2026-09-22). The cap counts
-/// the joined TL, not the segments' echoed `syllable_count`: a
-/// custom-dictionary pick reports `1` whatever its length
-/// (`lexicon::custom_entry_to_candidate`).
+/// the joined TL, not the segments' echoed `syllable_count` — that is
+/// platform input, and the TL is what the phrase stores.
 fn learned_phrase(nailed: &[NailedSegment]) -> Option<LearnedEntry> {
     if nailed.len() < 2 {
         return None;

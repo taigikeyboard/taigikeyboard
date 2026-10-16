@@ -231,8 +231,12 @@ pub(super) fn record_to_candidate(
 ///   `consumed_span_end == raw_len` the downstream `CandidateSortKey.tier` is
 ///   `0` (full-buffer) — NO forced Tier-1 promotion
 ///   (`docs/releases/v3.5.8/plan.md` § Phase 9: "無強制 Tier 1 promotion").
-/// - `frequency = 0`, `syllable_count = 1` — `custom_dictionary.db`
-///   carries no `dict.bin`-comparable frequency. `is_custom = true`
+/// - `frequency = 0` — `custom_dictionary.db` carries no
+///   `dict.bin`-comparable frequency. `syllable_count` is read off the
+///   canonical TL's separators, as for a learned phrase (陳建中
+///   `Tân Kiàn-tiong` → 3, a Latin `iPhone` → 1): a nailed custom pick echoes
+///   it back, and the commit's compound run (`composing::api::longest_compound_run`)
+///   must not take a multi-syllable word for a single syllable. `is_custom = true`
 ///   gives `source_tier_rank` rank `0`, which is what governs the
 ///   `(canonical_tl, hanji)` dedupe winner. Its place in the list is
 ///   `CandidateSortKey`'s `custom_lead`: the head of the whole-input tier
@@ -289,12 +293,13 @@ pub(super) fn custom_entry_to_candidate(
         .get(&display_text, &canonical_tl)
         .user_weight(now_ms);
     let context_rank = context.rank(&display_text, &canonical_tl);
+    let syllable_count = tl_syllable_count(&canonical_tl);
     // `frequency = 0` (D4) → score 0; the candidate floats on
     // `user_weight` / `source_rank` / dedupe, not raw freq.
-    let score = calculate_continuous_score(0, 1);
+    let score = calculate_continuous_score(0, syllable_count);
     RawCandidate {
         consumed_span: (0, raw_len),
-        syllable_count: 1,
+        syllable_count,
         display_text,
         roman,
         hanji,
@@ -313,6 +318,15 @@ pub(super) fn custom_entry_to_candidate(
     }
 }
 
+/// A user row's syllables, read off its canonical TL's separators (custom and
+/// learned rows carry no `dict.bin` count); at least 1, so a Latin `iPhone`
+/// or an unseparated reading counts as one.
+fn tl_syllable_count(canonical_tl: &str) -> u8 {
+    phonetics::api::tl_syllables(canonical_tl)
+        .count()
+        .clamp(1, u8::MAX as usize) as u8
+}
+
 /// Learned phrases (§50) — one [`LearnedEntry`] as a candidate at `span`:
 /// a `dict.bin` record the dictionary does not carry, with no frequency and
 /// no source bits, so [`CandidateSortKey`](ranking::CandidateSortKey) gives it the default source rank (below
@@ -328,9 +342,7 @@ pub(super) fn learned_entry_to_candidate(
     context: &ContextRanks,
     coverage_kind: u8,
 ) -> RawCandidate {
-    let syllable_count = phonetics::api::tl_syllables(&entry.canonical_tl)
-        .count()
-        .clamp(1, u8::MAX as usize) as u8;
+    let syllable_count = tl_syllable_count(&entry.canonical_tl);
     record_to_candidate(
         DictionaryRecord {
             bitmask: 0,
@@ -514,7 +526,7 @@ mod item12_custom_dedupe_tests {
     //! `(canonical_tl, hanji)` dedupe. Pins Codex pre-impl decisions D1
     //! (dual `(canonical_tl, hanji)` key — the word identity since 2026-10-07), D2 (lowest `source_tier_rank`
     //! winner, rank-tie → earlier insertion), D3 (full-buffer span),
-    //! D4 (`frequency = 0`, `syllable_count = 1`, `is_custom` drives
+    //! D4 (`frequency = 0`, `syllable_count` from the TL, `is_custom` drives
     //! rank 0). Spec: `docs/engine/continuous-commit-and-display.md`
     //! §10.10.
     use super::*;
@@ -545,7 +557,7 @@ mod item12_custom_dedupe_tests {
 
     #[test]
     fn custom_entry_to_candidate_hant_shape() {
-        // D3 + D4: full-buffer span, freq 0, syll 1, is_custom true,
+        // D3 + D4: full-buffer span, freq 0, syll from the TL, is_custom true,
         // coverage_kind passed through, display = hanji.
         // `input_mode = Tl` for hanji-present cases — canonicalize
         // path doesn't execute (hanji is always preferred).
@@ -564,7 +576,7 @@ mod item12_custom_dedupe_tests {
         assert!(c.is_custom);
         assert_eq!(c.consumed_span, (0, 9));
         assert_eq!(c.frequency, 0);
-        assert_eq!(c.syllable_count, 1);
+        assert_eq!(c.syllable_count, 2);
         assert_eq!(c.roman, "tâi-gí");
         assert_eq!(c.hanji.as_deref(), Some("台語"));
         assert_eq!(c.display_text, "台語");
