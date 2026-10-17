@@ -13,7 +13,7 @@ publisher, origin URL, capture date, and pipeline notes per source.
 
 ## Status
 
-Row counts are from `dictionary/output/dictionary.csv` (168,351 rows total).
+Row counts are from `dictionary/output/dictionary.csv` (169,435 rows total).
 "Exclusive" counts rows that no other source also supplies.
 
 | Source | Rows | Exclusive | Licence | Verified |
@@ -29,7 +29,7 @@ Row counts are from `dictionary/output/dictionary.csv` (168,351 rows total).
 | `kungge` 台語工藝詞庫 | 994 | 668 | no data licence published; images-only CC BY-NC-ND | ✅ 2026-09-07, publisher's 圖像授權 page |
 | `khiin` frequency data | 8,086 | 8,086 | **Unverified** | Khiin project (<https://github.com/khiin-pjh/khiin>); the specific file's terms not confirmed |
 | `khpoo` 齒盤補充辭典 | 4,198 | 3,579 | **Unverified** | origin and rights holder not established |
-| `lkk` 漢羅合用建議用字 | 58 | 58 | **Unverified** | origin and rights holder not established |
+| `lkk` 漢羅合用建議用字 | 82 | 82 | **Unverified** | publisher/source verified 2026-10-17 via [the publisher's word-list page](https://tsbp.tgb.org.tw/p/bong_8.html); no explicit redistribution permission identified |
 | `char_freq_merged.txt` | — | — | **Unverified** | corpus provenance not established |
 | `dev` 開發者補充辭典 | 3,449 | 2,563 | Apache-2.0 | written by this project's maintainers |
 
@@ -39,6 +39,29 @@ It was **wrong** about `kungge`, which it labelled CC BY-NC 4.0 with no source;
 that was corrected on 2026-09-07 against the publisher's own page. Neither
 record is authoritative on its own — verify against the publisher.
 `dictionary/LICENSE` is the single place the record lives.
+
+## `lkk` — reference, curation, and unresolved permission
+
+The reference is 李江却台語文教基金會's
+[word-list page](https://tsbp.tgb.org.tw/p/bong_8.html), which embeds its
+2024-05-10 spreadsheet. The source page, spreadsheet, foundation homepage,
+and [publication masthead](https://tsbp.tgb.org.tw/p/bong_15.html) were checked
+on 2026-10-17. No explicit open-data licence or redistribution grant was
+identified; the page titled as a copyright page lists publication credits.
+
+This project maintains a selected mixed-script spelling supplement informed by that
+reference, excluding exact MoE matches and standalone neutral-tone suffix
+notation. That is a description of the maintenance model, not a claim of
+independent authorship or a new licence for the source data. Publisher
+attribution remains in the source inventory.
+The curated CSV is maintained directly; no source TSV snapshot or automatic
+importer is included.
+
+Permission to redistribute the source-derived data remains unresolved.
+See TIPO's guidance on [public websites and permission](https://www.tipo.gov.tw/tw/copyright/692-17330.html)
+and [protection of a compilation's selection and arrangement](https://www.tipo.gov.tw/tw/copyright/692-57503.html).
+Neither a source citation nor the project's filtering establishes a
+redistribution licence.
 
 ## `kautian` — what is taken, and why CC BY-ND permits it
 

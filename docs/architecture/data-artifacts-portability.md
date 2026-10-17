@@ -51,7 +51,7 @@ Custom binary format holding per-rowid dictionary entries.
 Authoritative spec lives in [`docs/engine/binary-format.md`](../engine/binary-format.md). Summary:
 
 - **Producer**: `dictionary/build/create_dictionary_bin.py`.
-- **Header (16 bytes)**: magic `"TKDB"` (4) · `version: u32` (currently `4`) · `count: u32` · `build_ts: u32`.
+- **Header (40 bytes)**: magic `"TKDB"` (4) · `version: u32` (currently `5`) · `count: u32` · `build_ts: u32` · `tokens_N: u64` · `vocabulary_V: u64` · `alpha: f64`. The model metadata supplies the scale for custom and learned-word costs.
 - **Offset table**: `count × u32` absolute byte offsets (LE).
 - **Record**: `bitmask: u16 · frequency: u32 · hanzi_len: u8 · tl_len: u8 · syllable_count: u8 · kautian_subtag: u16 · walker_cost: u16 · hanzi_bytes · tl_bytes` — UTF-8 strings, fixed-layout prefix. `syllable_count` feeds span-local candidate ranking, `kautian_subtag` is the kautian subcollection, `walker_cost` the walker model cost.
 - **Bitmask (13 bits)**: bits 0–7 = eight text sources (`kautian, taigitv, itaigi, sitbut, taihoa, taijit, kungge, stti`); bits 8–11 = four Hoklo-sourced dicts (`khpoo, khiin, dev, lkk`); bit 12 = `is_variant`.

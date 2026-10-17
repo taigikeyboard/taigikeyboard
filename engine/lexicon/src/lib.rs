@@ -23,6 +23,7 @@ pub mod requests;
 pub mod search;
 mod syllable_inventory;
 mod tps_pattern;
+pub mod walker_model;
 
 const _: fn() = || {
     fn assert_send<T: Send>() {}

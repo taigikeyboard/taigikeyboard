@@ -11,7 +11,8 @@ import struct
 
 import pandas as pd
 
-from build.create_dictionary_bin import VERSION, encode_record
+from build.create_dictionary_bin import HEADER_SIZE, VERSION, encode_header, encode_record
+from build.walker_lm import WalkerModel
 from build.dictionary_records import DictionaryRecord, _as_bool, _kautian_subtag
 from common.kautian_provenance import COL_ACCENT_MASK, COL_ALT_READING, COL_MAIN, COL_NAME
 from common.source_bits import (
@@ -130,8 +131,16 @@ def _record(kautian_subtag: int) -> DictionaryRecord:
     )
 
 
-def test_version_is_4():
-    assert VERSION == 4
+def test_version_is_5():
+    assert VERSION == 5
+
+
+def test_header_carries_the_same_model_that_prices_records():
+    # Values exceeding u32 ensure that the corpus fields really are u64.
+    model = WalkerModel(counts={}, tokens=2**33, vocabulary=2**32 + 3, alpha=0.5)
+    header = encode_header(17, 1234, model)
+    assert len(header) == HEADER_SIZE == 40
+    assert struct.unpack("<4sIIIQQd", header) == (b"TKDB", 5, 17, 1234, 2**33, 2**32 + 3, 0.5)
 
 
 def test_encode_record_v4_layout_carries_subtag_and_walker_cost():

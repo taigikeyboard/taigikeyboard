@@ -6,12 +6,15 @@ Build dictionary.bin (binary mmap format) from dictionary.csv
 Input: output/dictionary.csv, shared/data/word_unigrams.tsv (build.walker_lm)
 Output: output/dictionary.bin, output/walker_lm_stats.txt
 
-Binary format (version 4, little-endian):
-  Header (16 bytes):
+Binary format (version 5, little-endian):
+  Header (40 bytes):
     magic:    4 bytes  "TKDB"
-    version:  u32      4
+    version:  u32      5
     count:    u32      record count
     build_ts: u32      build id — CRC-32 of the build inputs (common.build_id)
+    tokens:   u64      walker model corpus token count N
+    vocab:    u64      walker model vocabulary size V
+    alpha:    f64      walker model smoothing α
 
   Offset table (count × 4 bytes):
     offsets[0..N-1]: u32  absolute byte offset from file start to record
@@ -44,6 +47,8 @@ Binary format (version 4, little-endian):
   v3 → v4 (E1 unified word frequency P2): added per-record `walker_cost` u16
   after `kautian_subtag`. Older binaries are NOT readable by the Rust v4
   reader; rebuild + redeploy artifacts in lockstep.
+  v4 → v5: added model metadata to the header; record layout is unchanged.
+  The Rust reader requires v5; rebuild + redeploy artifacts in lockstep.
 
 Usage:
   python3 create_dictionary_bin.py            # build the binary
@@ -55,7 +60,7 @@ import sys
 
 from build.common import LOG_DIR, OUTPUT_DIR, build_id
 from build.dictionary_records import DictionaryRecord, load_dictionary_records
-from build.walker_lm import load_model, record_costs, stats_text
+from build.walker_lm import WalkerModel, load_model, record_costs, stats_text
 from common.logging_utils import log_header, setup_logging
 from common.source_bits import DICT_BIN_COLUMNS, KAUTIAN_SUBTAG_USED_MASK
 
@@ -65,7 +70,9 @@ WALKER_LM_STATS_FILE = OUTPUT_DIR / "walker_lm_stats.txt"
 SCRIPT_NAME = "create_dictionary_bin"
 
 MAGIC = b"TKDB"
-VERSION = 4
+VERSION = 5
+HEADER_FORMAT = "<4sIIIQQd"
+HEADER_SIZE = struct.calcsize(HEADER_FORMAT)
 # bitmask u16, frequency u32, hanzi_len u8, tl_len u8, syllable_count u8,
 # kautian_subtag u16, walker_cost u16 — then the hanzi and tl bytes.
 RECORD_PREFIX = "<HIBBBHH"
@@ -125,6 +132,14 @@ def encode_record(record: DictionaryRecord, walker_cost: int) -> bytes:
     ) + hanzi_bytes + tl_bytes
 
 
+def encode_header(count: int, build_ts: int, model: WalkerModel) -> bytes:
+    """The same model supplies header metadata and every record's cost."""
+    return struct.pack(
+        HEADER_FORMAT, MAGIC, VERSION, count, build_ts,
+        model.tokens, model.vocabulary, model.alpha,
+    )
+
+
 def build(logger):
     if not CSV_FILE.exists():
         logger.error(f"CSV not found: {CSV_FILE}")
@@ -156,7 +171,7 @@ def build(logger):
 
     encoded = [encode_record(r, cost) for r, cost in zip(records, walker_costs, strict=True)]
 
-    header_size = 16  # magic(4) + version(4) + count(4) + build_ts(4)
+    header_size = HEADER_SIZE
     offset_table_size = count * 4
     data_start = header_size + offset_table_size
 
@@ -170,8 +185,7 @@ def build(logger):
         assert offsets[i] > offsets[i - 1], f"Non-monotonic offset at index {i}"
 
     with open(OUTPUT_FILE, "wb") as f:
-        f.write(MAGIC)
-        f.write(struct.pack("<III", VERSION, count, build_ts))
+        f.write(encode_header(count, build_ts, model))
         for offset in offsets:
             f.write(struct.pack("<I", offset))
         for rec in encoded:
@@ -208,7 +222,7 @@ def verify(logger):
     assert build_ts == build_id(), f"Bad build id: {build_ts} != {build_id()}"
     logger.info(f"  Header: version={version}, count={count}, build_ts={build_ts}")
 
-    header_size = 16
+    header_size = HEADER_SIZE
     offsets = []
     for i in range(count):
         offset = struct.unpack_from("<I", data, header_size + i * 4)[0]
@@ -216,7 +230,12 @@ def verify(logger):
 
     records = load_dictionary_records(CSV_FILE)
     assert len(records) == count, f"Row count mismatch: bin={count}, csv={len(records)}"
-    expected_walker_costs = record_costs(records, load_model(records))
+    model = load_model(records)
+    tokens, vocabulary, alpha = struct.unpack_from("<QQd", data, 16)
+    assert (tokens, vocabulary, alpha) == (model.tokens, model.vocabulary, model.alpha), (
+        "Walker model header does not match the model used to price records"
+    )
+    expected_walker_costs = record_costs(records, model)
 
     errors = 0
     for i, rec in enumerate(records):
