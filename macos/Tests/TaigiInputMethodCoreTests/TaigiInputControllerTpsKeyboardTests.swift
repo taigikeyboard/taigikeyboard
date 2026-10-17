@@ -23,7 +23,7 @@ final class TaigiInputControllerTpsKeyboardTests: XCTestCase {
     }
 
     override func tearDown() {
-        TpsKeyboardPanel.shared.flashDuration = .milliseconds(150)
+        TpsKeyboardPanel.shared.flashSleep = { try await Task.sleep(for: $0) }
         TpsKeyboardPanel.shared.hideNow()
         userDefaults.removePersistentDomain(forName: suiteName)
         super.tearDown()
@@ -222,6 +222,11 @@ final class TaigiInputControllerTpsKeyboardTests: XCTestCase {
     /// A click runs the same key, so its cap lights too; the light goes out
     /// on its own.
     func testAPress_flashesItsCap_untilTheFlashEnds() async throws {
+        let sleep = FlashSleep()
+        defer { sleep.resumeAll() }
+        let sleeping = expectation(description: "flash timer started")
+        sleep.onSleep = { sleeping.fulfill() }
+        TpsKeyboardPanel.shared.flashSleep = { await sleep.pause(for: $0) }
         let session = try makeSession(under: .tps)
         session.controller.performShortcutAction(.showTpsKeyboard)
 
@@ -230,25 +235,69 @@ final class TaigiInputControllerTpsKeyboardTests: XCTestCase {
         XCTAssertEqual(TpsKeyboardPanel.shared.flashedCapIndex?.row, 1)
         XCTAssertEqual(TpsKeyboardPanel.shared.flashedCapIndex?.cap, 2)
 
-        try await Task.sleep(for: .milliseconds(400))
+        let flash = try XCTUnwrap(TpsKeyboardPanel.shared.flashTask)
+        await fulfillment(of: [sleeping], timeout: 5)
+        XCTAssertEqual(sleep.durations, [.milliseconds(150)])
+        sleep.resumeFirst()
+        await flash.value
         XCTAssertNil(TpsKeyboardPanel.shared.flashedCapIndex)
     }
 
     /// A key typed mid-flash restarts the light on its own cap: the first
     /// flash's end, when its time comes, does not put out the second.
-    /// trace: 300 ms flashes — `e` at 0, `8` at 200 (lit until 500); at 400
-    /// the `e` flash's end (300) has passed.
+    /// Complete the cancelled `e` sleep after `8` has lit, then complete `8`.
+    /// No elapsed-time window is needed to observe either state.
     func testAFlash_endingLate_leavesTheNewerFlashLit() async throws {
-        TpsKeyboardPanel.shared.flashDuration = .milliseconds(300)
+        let sleep = FlashSleep()
+        defer { sleep.resumeAll() }
+        TpsKeyboardPanel.shared.flashSleep = { await sleep.pause(for: $0) }
         let session = try makeSession(under: .tps)
         session.controller.performShortcutAction(.showTpsKeyboard)
 
+        let firstSleeping = expectation(description: "first flash timer started")
+        sleep.onSleep = { firstSleeping.fulfill() }
         _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "e"), client: session.client)
-        try await Task.sleep(for: .milliseconds(200))
-        _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "8"), client: session.client)
-        try await Task.sleep(for: .milliseconds(200))
+        let first = try XCTUnwrap(TpsKeyboardPanel.shared.flashTask)
+        await fulfillment(of: [firstSleeping], timeout: 5)
 
+        let secondSleeping = expectation(description: "second flash timer started")
+        sleep.onSleep = { secondSleeping.fulfill() }
+        _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "8"), client: session.client)
+        let second = try XCTUnwrap(TpsKeyboardPanel.shared.flashTask)
+        await fulfillment(of: [secondSleeping], timeout: 5)
+
+        sleep.resumeFirst()
+        await first.value
         XCTAssertEqual(TpsKeyboardPanel.shared.flashedCapIndex?.cap, 7, "the `8` cap is still lit")
+
+        sleep.resumeFirst()
+        await second.value
+        XCTAssertNil(TpsKeyboardPanel.shared.flashedCapIndex)
+    }
+
+    @MainActor
+    private final class FlashSleep {
+        var onSleep: (() -> Void)?
+        private(set) var durations: [Duration] = []
+        private var continuations: [CheckedContinuation<Void, Never>] = []
+
+        func pause(for duration: Duration) async {
+            await withCheckedContinuation { continuation in
+                durations.append(duration)
+                continuations.append(continuation)
+                onSleep?()
+            }
+        }
+
+        func resumeFirst() {
+            continuations.removeFirst().resume()
+        }
+
+        func resumeAll() {
+            let pending = continuations
+            continuations.removeAll()
+            pending.forEach { $0.resume() }
+        }
     }
 
     /// A handover puts the leaving session's light out; the leaving
