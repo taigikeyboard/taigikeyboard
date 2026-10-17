@@ -29,6 +29,7 @@ enum FullWidthPunctuation {
     /// syllable separator, letters spell the romanization, and the straight
     /// double quote serves as both opening and closing so a one-to-one map
     /// cannot pick a side (the same reason the engine's auto-space attaching set excludes it).
+    /// Backslash also types the ideographic comma, alongside the MOE apostrophe shortcut.
     private static let map: [Character: String] = [
         ",": "，", ".": "。", "?": "？", "!": "！",
         ";": "；", ":": "：",
@@ -36,7 +37,7 @@ enum FullWidthPunctuation {
         "[": "「", "]": "」",
         "{": "『", "}": "』",
         "<": "《", ">": "》",
-        "'": "、",
+        "'": "、", "\\": "、",
         // The shifted number row (`⇧2`…`⇧8`, `⇧-`, `⇧=`): symbols the MOE table
         // also writes full-width. `!` `(` `)` above complete the row; `~` (⇧ on
         // the backtick key) is its first key (user report 2026-09-28).

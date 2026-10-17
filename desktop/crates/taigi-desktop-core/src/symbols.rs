@@ -266,7 +266,7 @@ mod tests {
             .unwrap()
             .symbols
             .concat();
-        for key in ",.?!;:()[]{}<>'~@#$%^&*_+".chars() {
+        for key in ",.?!;:()[]{}<>'\\~@#$%^&*_+".chars() {
             let Some(mapped) = crate::policies::full_width_mapped(&key.to_string()) else {
                 continue;
             };

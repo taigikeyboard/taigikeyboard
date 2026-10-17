@@ -12,8 +12,9 @@
 /// half-width: digits (tone markers), the hyphen (syllable separator),
 /// letters, and the straight double quote (one glyph serves both sides). Plus
 /// `~` (⇧ on the backtick key): the rest of the shifted number row is here, so
-/// its first key is too (user report 2026-09-28).
-const MAP: [(char, char); 25] = [
+/// its first key is too (user report 2026-09-28), and backslash as an additional
+/// key for the ideographic comma; apostrophe keeps the MOE shortcut.
+const MAP: [(char, char); 26] = [
     (',', '，'),
     ('.', '。'),
     ('?', '？'),
@@ -29,6 +30,7 @@ const MAP: [(char, char); 25] = [
     ('<', '《'),
     ('>', '》'),
     ('\'', '、'),
+    ('\\', '、'),
     ('~', '～'),
     ('@', '＠'),
     ('#', '＃'),
@@ -70,7 +72,7 @@ mod tests {
 
     #[test]
     fn every_mapped_pair_follows_the_moe_table() {
-        // trace: the 25 rows of `MAP`, the MOE symbol shortcut table plus `~`.
+        // trace: the 26 rows of `MAP`, the MOE table plus `~` and backslash.
         for (half, full) in MAP {
             assert_eq!(
                 full_width_mapped(&half.to_string()).as_deref(),
@@ -79,8 +81,9 @@ mod tests {
         }
         assert_eq!(full_width_mapped(","), Some("，".into()));
         assert_eq!(full_width_mapped("'"), Some("、".into()));
+        assert_eq!(full_width_mapped("\\"), Some("、".into()));
         assert_eq!(full_width_mapped("~"), Some("～".into()));
-        assert_eq!(MAP.len(), 25);
+        assert_eq!(MAP.len(), 26);
     }
 
     #[test]

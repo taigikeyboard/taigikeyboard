@@ -14,9 +14,10 @@ use taigi_desktop_core::composing::{
 use taigi_desktop_core::dictionary_artifacts::DictionaryArtifacts;
 use taigi_desktop_core::engine::{self, Effect};
 use taigi_desktop_core::keys::{
-    CandidateNavigation, CaretDirection, ComposingKeyIntent, KeyEventSnapshot, KeyModifiers,
-    TpsKeyCapIndex,
+    CandidateNavigation, CaretDirection, ComposingKeyBindings, ComposingKeyIntent,
+    KeyEventSnapshot, KeyModifiers, TpsKeyCapIndex,
 };
+use taigi_desktop_core::platform::DesktopPlatform;
 use taigi_desktop_core::settings::{keys, InputMode, SettingsDocument, StaticSettingsProvider};
 
 /// One lock, one lexicon install: the engine is one per process.
@@ -276,6 +277,49 @@ fn half_width_punctuation_outside_a_composition_is_the_clients() {
     rig.surface.can_swap = false;
     assert!(!rig.run(ComposingKeyIntent::PassThrough, &comma()));
     assert_eq!(rig.calls(), ["swap \", \""]);
+}
+
+#[test]
+fn ideographic_comma_keys_follow_the_output_mode_idle_and_composing() {
+    for platform in [
+        DesktopPlatform::MacOS,
+        DesktopPlatform::Windows,
+        DesktopPlatform::Linux,
+    ] {
+        for hanji_first in [true, false] {
+            for typed in ["\\", "'"] {
+                let mut rig = new_rig(false);
+                rig.settings.set_bool(&keys::IS_HANJI_FIRST, hanji_first);
+                let bindings = ComposingKeyBindings::from_document(&rig.settings, platform);
+                let key = KeyEventSnapshot::text(typed, KeyModifiers::NONE);
+                let intent = ComposingKeyIntent::intent(&key, false, false, &bindings, platform);
+                assert_eq!(rig.run(intent, &key), hanji_first);
+                let mark = if hanji_first { "、" } else { typed };
+                assert_eq!(
+                    rig.calls(),
+                    if hanji_first {
+                        vec!["insert \"、\""]
+                    } else {
+                        vec![]
+                    }
+                );
+
+                rig.type_word("ho");
+                let intent = ComposingKeyIntent::intent(
+                    &key,
+                    true,
+                    !rig.list.is_empty(),
+                    &bindings,
+                    platform,
+                );
+                assert!(rig.run(intent, &key));
+                assert_eq!(
+                    rig.calls(),
+                    [format!("commit ho{mark}"), "list closed".into()]
+                );
+            }
+        }
+    }
 }
 
 #[test]
@@ -682,14 +726,21 @@ fn tps_a_flipped_slot_commits_the_cells_own_hanji_never_the_tl() {
 }
 
 #[test]
-fn tps_ctrl_comma_writes_the_full_width_mark() {
+fn tps_ctrl_punctuation_writes_the_full_width_mark() {
     // trace: under TPS the derived width is full, so the chord's key maps:
     // `policies::full_width_mapped(",")` → `，`; the swap is tried first and
     // the surface refuses it.
-    let mut rig = new_tps_rig();
-    let ctrl_comma = KeyEventSnapshot::chord(Some(","), ",", KeyModifiers::CONTROL);
-    assert!(rig.run(ComposingKeyIntent::PassThrough, &ctrl_comma));
-    assert_eq!(rig.calls(), ["swap \"， \"", "insert \"，\""]);
+    for (characters, unmodified, mark) in
+        [("\u{1C}", "\\", "、"), ("'", "'", "、"), (",", ",", "，")]
+    {
+        let mut rig = new_tps_rig();
+        let key = KeyEventSnapshot::chord(Some(characters), unmodified, KeyModifiers::CONTROL);
+        assert!(rig.run(ComposingKeyIntent::PassThrough, &key));
+        assert_eq!(
+            rig.calls(),
+            [format!("swap \"{mark} \""), format!("insert \"{mark}\"")]
+        );
+    }
 }
 
 #[test]
