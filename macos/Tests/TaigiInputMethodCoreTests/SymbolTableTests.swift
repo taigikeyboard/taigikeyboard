@@ -55,7 +55,7 @@ final class SymbolTableTests: XCTestCase {
         // The keys `FullWidthPunctuation` maps; a key the policy does not map
         // answers nil and is skipped, so this reads the policy rather than
         // restating it.
-        for mapped in ",.?!;:()[]{}<>'~@#$%^&*_+".compactMap({ FullWidthPunctuation.mapped(String($0)) }) {
+        for mapped in ",.?!;:()[]{}<>'\\~@#$%^&*_+".compactMap({ FullWidthPunctuation.mapped(String($0)) }) {
             XCTAssertTrue(
                 punctuation.contains(mapped) || brackets.contains(mapped),
                 "\(mapped) is typed by the full-width map but not offered by the picker",
