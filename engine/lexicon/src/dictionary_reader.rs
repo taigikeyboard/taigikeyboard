@@ -1,7 +1,8 @@
 //! `DictionaryReader` — TKDB mmap reader.
 //!
 //! Binary format (little-endian; canonical spec: `docs/engine/binary-format.md`):
-//!     Header: "TKDB" (4) || version u32 || count u32 || build_ts u32   (16 bytes)
+//!     Header: "TKDB" (4) || version u32 || count u32 || build_ts u32
+//!             || tokens u64 || vocabulary u64 || alpha f64 (40 bytes, v5)
 //!     Offset table: count × u32 (absolute byte offset to each record)
 //!     Records: bitmask u16 || frequency u32 || hanzi_len u8 || tl_len u8
 //!              || syllable_count u8 || kautian_subtag u16 || walker_cost u16
@@ -21,10 +22,11 @@
 use mmap_host::MmapHandle;
 
 use crate::error::LexiconError;
+use crate::walker_model::WalkerModel;
 
 const MAGIC: &[u8; 4] = b"TKDB";
-const HEADER_SIZE: usize = 16;
-const SUPPORTED_VERSION: u32 = 4;
+const HEADER_SIZE: usize = 40;
+const SUPPORTED_VERSION: u32 = 5;
 /// bitmask(2) + frequency(4) + hanzi_len(1) + tl_len(1) + syllable_count(1)
 /// + kautian_subtag(2) + walker_cost(2).
 const RECORD_FIXED_PREFIX: usize = 13;
@@ -91,6 +93,7 @@ pub struct DictionaryReader {
     handle: MmapHandle,
     record_count: u32,
     build_timestamp: u32,
+    walker_model: WalkerModel,
 }
 
 impl std::fmt::Debug for DictionaryReader {
@@ -150,11 +153,11 @@ impl DictionaryReader {
             source,
         })?;
         let bytes = handle.as_slice();
-        if bytes.len() < HEADER_SIZE {
+        if bytes.len() < 16 {
             return Err(LexiconError::InvalidBinary(format!(
                 "dictionary.bin: file too small ({} < {})",
                 bytes.len(),
-                HEADER_SIZE
+                16
             )));
         }
         if &bytes[..4] != MAGIC {
@@ -167,7 +170,7 @@ impl DictionaryReader {
             let detail = if (1..SUPPORTED_VERSION).contains(&version) {
                 format!(
                     "dictionary.bin: unsupported version {version} (expected {SUPPORTED_VERSION}; \
-                     v1/v2/v3→v4 binary layouts are not compatible — rebuild dictionary.bin via \
+                     v1/v2/v3/v4→v5 binary layouts are not compatible — rebuild dictionary.bin via \
                      `make dict` then redeploy artifacts in lockstep)"
                 )
             } else {
@@ -177,10 +180,25 @@ impl DictionaryReader {
             };
             return Err(LexiconError::InvalidBinary(detail));
         }
+        if bytes.len() < HEADER_SIZE {
+            return Err(LexiconError::InvalidBinary(
+                "dictionary.bin: model metadata header truncated".into(),
+            ));
+        }
         let count = u32::from_le_bytes(bytes[8..12].try_into().expect("4 bytes"));
         let build_timestamp = u32::from_le_bytes(bytes[12..16].try_into().expect("4 bytes"));
+        let walker_model = WalkerModel::new(
+            u64::from_le_bytes(bytes[16..24].try_into().expect("8 bytes")),
+            u64::from_le_bytes(bytes[24..32].try_into().expect("8 bytes")),
+            f64::from_le_bytes(bytes[32..40].try_into().expect("8 bytes")),
+        )?;
 
-        let min_size = HEADER_SIZE + (count as usize) * 4;
+        let min_size = (count as usize)
+            .checked_mul(4)
+            .and_then(|size| size.checked_add(HEADER_SIZE))
+            .ok_or_else(|| {
+                LexiconError::InvalidBinary("dictionary.bin: offset table too large".into())
+            })?;
         if bytes.len() < min_size {
             return Err(LexiconError::InvalidBinary(format!(
                 "dictionary.bin: offset table truncated ({} < {})",
@@ -192,6 +210,7 @@ impl DictionaryReader {
             handle,
             record_count: count,
             build_timestamp,
+            walker_model,
         })
     }
 
@@ -201,6 +220,10 @@ impl DictionaryReader {
 
     pub fn build_timestamp(&self) -> u32 {
         self.build_timestamp
+    }
+
+    pub fn walker_model(&self) -> &WalkerModel {
+        &self.walker_model
     }
 
     /// Read a record by 1-based rowid. Returns `None` if rowid is out of
@@ -220,7 +243,8 @@ impl DictionaryReader {
         } else {
             bytes.len()
         };
-        if record_end <= record_offset
+        if record_offset < HEADER_SIZE + self.record_count as usize * 4
+            || record_end <= record_offset
             || record_end > bytes.len()
             || record_offset + RECORD_FIXED_PREFIX > record_end
         {
