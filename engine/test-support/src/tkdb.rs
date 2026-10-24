@@ -1,7 +1,6 @@
 //! Byte serializers for the `dictionary.bin` (TKDB) and `association.bin`
 //! (TKWA) fixtures the lexicon readers open.
 
-const TKDB_HEADER_SIZE: usize = 16;
 const TKWA_HEADER_SIZE: usize = 20;
 
 /// The corpus total the walker priced `DictionaryRecord.frequency` against
@@ -41,17 +40,51 @@ pub struct TkdbRow<'a> {
 /// Build a TKDB byte sequence with the given `magic`, header `version` and
 /// rows (offset table, then the record payload).
 pub fn build_tkdb(magic: &[u8; 4], version: u32, rows: &[TkdbRow<'_>]) -> Vec<u8> {
+    build_tkdb_with_model(magic, version, rows, TkdbModel::default())
+}
+
+/// Hermetic model metadata; independent of the production dictionary build.
+#[derive(Clone, Copy)]
+pub struct TkdbModel {
+    pub tokens: u64,
+    pub vocabulary: u64,
+    pub alpha: f64,
+}
+
+impl Default for TkdbModel {
+    fn default() -> Self {
+        Self {
+            tokens: 3_627_713,
+            vocabulary: 167_922,
+            alpha: 10.0,
+        }
+    }
+}
+
+/// The v5 fixture header may carry a different model for each loaded dictionary.
+pub fn build_tkdb_with_model(
+    magic: &[u8; 4],
+    version: u32,
+    rows: &[TkdbRow<'_>],
+    model: TkdbModel,
+) -> Vec<u8> {
     let mut out = Vec::new();
     out.extend_from_slice(magic);
     out.extend_from_slice(&version.to_le_bytes());
     out.extend_from_slice(&(rows.len() as u32).to_le_bytes());
     out.extend_from_slice(&0u32.to_le_bytes()); // build_ts
 
+    if version >= 5 {
+        out.extend_from_slice(&model.tokens.to_le_bytes());
+        out.extend_from_slice(&model.vocabulary.to_le_bytes());
+        out.extend_from_slice(&model.alpha.to_le_bytes());
+    }
+    let header_size = out.len();
     let offset_table_size = rows.len() * 4;
     let mut offsets = Vec::<u32>::with_capacity(rows.len());
     let mut payload = Vec::<u8>::new();
     for row in rows {
-        offsets.push((TKDB_HEADER_SIZE + offset_table_size + payload.len()) as u32);
+        offsets.push((header_size + offset_table_size + payload.len()) as u32);
         payload.extend_from_slice(&row.bitmask.to_le_bytes());
         payload.extend_from_slice(&row.frequency.to_le_bytes());
         payload.push(row.hanji.len() as u8);

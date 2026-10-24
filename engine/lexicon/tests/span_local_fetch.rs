@@ -169,7 +169,7 @@ fn build_fixture_costed_in_family(
             tl: r.tl,
         })
         .collect();
-    let dict_bytes = build_tkdb(b"TKDB", 4, &dict_rows);
+    let dict_bytes = build_tkdb(b"TKDB", 5, &dict_rows);
     let dict_path = write_temp(&format!("phase5-{name}.dict.bin"), &dict_bytes);
     let dict = DictionaryReader::open(&dict_path).expect("dict.bin opens");
 

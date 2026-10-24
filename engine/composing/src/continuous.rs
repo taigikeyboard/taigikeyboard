@@ -680,7 +680,11 @@ pub(crate) fn walk_buffer(
     // map is (Codex 2026-09-20 F5).
     let learned_map = edge_key_map(learned, |entry| learned_edge_key(&entry.canonical_tl, mode));
 
-    let path = crate::lattice::walk_best(lattice, shadow.len(), |start, end| {
+    let custom_word_cost = ctx
+        .dict
+        .walker_model()
+        .cost_of_count(crate::lattice::USER_ENTRY_EFFECTIVE_COUNT);
+    let path = crate::lattice::walk_best(lattice, shadow.len(), custom_word_cost, |start, end| {
         // The tone pin is computed BEFORE the custom rows are gathered so
         // every edge source answers to the same pin: a custom entry
         // synthesized past the guard would land at slot 0, where no
@@ -735,8 +739,8 @@ pub(crate) fn walk_buffer(
         // picked 7×). The dictionary rows honour
         // `ctx.enabled_sources_bitmask` (PR-9.6); user rows are not a
         // toggleable source. When any user row matched, the edge is priced
-        // at most at `CUSTOM_EDGE_COST` so the span the user filed or once
-        // composed as one word keeps winning the segmentation (the #69
+        // at most at the loaded model's custom-word cost so the span the user
+        // filed or once composed as one word keeps winning the segmentation (the #69
         // span-vs-word decoupling: "is this span a word" is the cap, "which
         // word" is the pick).
         let custom_for_edge = rows_for_edge(&custom_map, &custom_key, |entry: &CustomEntry| {
@@ -762,7 +766,7 @@ pub(crate) fn walk_buffer(
                 {
                     span_walker_cost
                 } else {
-                    span_walker_cost.min(crate::lattice::CUSTOM_EDGE_COST)
+                    span_walker_cost.min(custom_word_cost)
                 };
                 // Word = the edge pick (user weight, context, corpus cost). Cost =
                 // `span_walker_cost` (key min) so a rarer preferred

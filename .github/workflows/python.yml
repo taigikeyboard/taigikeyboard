@@ -9,6 +9,9 @@ on:
     paths:
       - 'dictionary/**/*.py'
       - 'dictionary/requirements.txt'
+      # Curated LKK invariants also depend on these data-only edits.
+      - 'dictionary/supplementary/lkk/data/lkk.csv'
+      - 'dictionary/sources/official/kautian/data/kautian.csv'
       - 'taigi-converter'
       - 'tools/*.py'
       - 'tools/windows/**'
@@ -19,6 +22,8 @@ on:
     paths:
       - 'dictionary/**/*.py'
       - 'dictionary/requirements.txt'
+      - 'dictionary/supplementary/lkk/data/lkk.csv'
+      - 'dictionary/sources/official/kautian/data/kautian.csv'
       - 'taigi-converter'
       - 'tools/*.py'
       - 'tools/windows/**'

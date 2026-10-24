@@ -31,11 +31,14 @@ All formats use **little-endian** integers and **strict UTF-8** strings. The Rus
 
 ```
 +---------------------------------------------------+
-| Header (16 bytes)                                 |
+| Header (40 bytes)                                 |
 |   "TKDB"                4 bytes                   |
-|   version (u32 LE)      4 bytes  (currently 4)    |
+|   version (u32 LE)      4 bytes  (currently 5)    |
 |   record_count (u32 LE) 4 bytes                   |
 |   build_ts (u32 LE)     4 bytes  (build id)       |
+|   tokens_N (u64 LE)     8 bytes                  |
+|   vocabulary_V (u64 LE) 8 bytes                  |
+|   alpha (f64 LE)        8 bytes                  |
 +---------------------------------------------------+
 | Offset table                                      |
 |   record_count × u32 LE                           |
@@ -63,6 +66,20 @@ All formats use **little-endian** integers and **strict UTF-8** strings. The Rus
 Each reader supports exactly ONE version; it will NOT parse older binaries
 — rebuild + redeploy artifacts in lockstep (see `dictionary/build/deploy.sh`).
 
+Version 5 adds the model metadata at byte offsets 16 (`N`), 24 (`V`), and
+32 (`α`); the v4 record layout is unchanged. The writer takes the metadata
+and every record cost from the same `WalkerModel` instance. The Rust reader
+validates the metadata on open and keeps it with that reader, so replacing a
+dictionary also replaces its model without an engine rebuild.
+
+The engine retains the deliberate effective user count `2_000` as a policy
+parameter, and derives its custom/learned-word cost from the loaded model
+once per walk: `round_half_even(−ln((2_000 + α)/(N + αV)) × 1000)`.
+The same value caps user-row spans and selected multi-syllable words. An
+effective count exceeding the model's normalizer is assigned probability 1
+(cost 0); no negative probability cost is produced for a small dictionary.
+No compiled model price or compatibility default is used.
+
 ### 1.2 Record access
 
 `record(rowId)` is **1-based**. `rowId == 0` returns `null`/`nil`.
@@ -80,11 +97,12 @@ The end of a record is determined by the *next* record's offset (or `data.count`
 
 | Check | Reader behaviour on failure |
 |---|---|
-| File ≥ 16 bytes | `open` returns `Err(LexiconError::InvalidBinary)` |
+| File ≥ 16 bytes for common header; ≥ 40 bytes for v5 metadata | `open` returns `Err(LexiconError::InvalidBinary)` |
 | Magic == `TKDB` | `open` returns `Err(LexiconError::InvalidBinary)` |
-| Version == 4 (v1–v3 surface explicit `v1/v2/v3→v4` rebuild guidance) | `open` returns `Err(LexiconError::InvalidBinary)` |
+| Version == 5 (v1–v4 surface explicit `v1/v2/v3/v4→v5` rebuild guidance) | `open` returns `Err(LexiconError::InvalidBinary)` |
+| V > 0; α finite and positive; N + αV finite; unseen cost finite and representable as u16 | `open` returns `Err(LexiconError::InvalidBinary)` |
 | File ≥ `header + record_count × 4` | `open` returns `Err(LexiconError::InvalidBinary)` |
-| Per-record bounds (`recordEnd ≤ data.len()`) | `record()` returns `None` |
+| Per-record bounds (starts after header + offset table, `recordEnd ≤ data.len()`) | `record()` returns `None` |
 | Per-record min size 13 bytes (v4 fixed prefix) | `record()` returns `None` |
 | `pos + hanzi_len + tl_len ≤ record_end` | `record()` returns `None` |
 | TL UTF-8 valid | `record()` returns `None` |

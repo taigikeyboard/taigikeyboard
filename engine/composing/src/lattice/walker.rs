@@ -73,7 +73,7 @@ pub(crate) struct EdgeChoice {
     /// branch of [`super::cost::edge_cost`]: the key's lowest
     /// `walker_cost` across its homophones
     /// (`lexicon::EdgeBest::span_walker_cost` — segmentation evidence,
-    /// not the chosen word's own; capped at `CUSTOM_EDGE_COST` when a
+    /// not the chosen word's own; capped at the model-derived custom-word cost when a
     /// custom or learned row sits under the key).
     /// **Unused** for a synthesized OOV edge (RC0: OOV
     /// cost is char-keyed, never corpus-priced).
@@ -117,6 +117,8 @@ pub(crate) struct BestPath {
 /// whole buffer (e.g. a sub-syllable partial-prefix buffer) — the
 /// caller then leaves the existing span-local list untouched (no
 /// slot-0 synthesis), preserving pre-S2 behavior.
+/// `custom_word_cost` is priced by the caller's loaded dictionary model;
+/// the walker uses that same value for every selected-word cap.
 ///
 /// `edge_choice(start, end)` returns the resolved content for that
 /// shadow edge, or `None` to drop the edge from consideration (e.g.
@@ -135,6 +137,7 @@ pub(crate) struct BestPath {
 pub(crate) fn walk_best(
     lattice: &Lattice,
     shadow_len: usize,
+    custom_word_cost: u16,
     mut edge_choice: impl FnMut(usize, usize) -> Option<EdgeChoice>,
 ) -> Option<BestPath> {
     if shadow_len == 0 {
@@ -188,6 +191,7 @@ pub(crate) fn walk_best(
                 // OOV pricing is selected from the explicit dict-hit
                 // flag, never `frequency == 0` (Codex pre-impl Q2).
                 choice.dict_hit,
+                custom_word_cost,
             );
         // Replace only on a strictly lower cost. On an exact tie the
         // first-reached (lower `(start, end)`) path is kept — no
@@ -235,6 +239,8 @@ pub(crate) fn walk_best(
 
 #[cfg(test)]
 mod tests {
+    const FIXTURE_CUSTOM_WORD_COST: u16 = 7_879;
+
     use super::*;
 
     /// A dictionary edge priced at `walker_cost` milli-nats. Test values
@@ -287,7 +293,7 @@ mod tests {
     }
     /// v3.5.8 S6 — a `custom_dictionary.db` edge as the dispatch
     /// provider builds it: `dict_hit:true` (lexicon-backed),
-    /// `is_custom:true`, priced at most at `CUSTOM_EDGE_COST`.
+    /// `is_custom:true`, priced at most at the model-derived custom-word cost.
     fn custom(roman: &str, hanji: &str, walker_cost: u16, syll: u8, len: usize) -> EdgeChoice {
         EdgeChoice {
             roman: roman.to_owned(),
@@ -317,7 +323,7 @@ mod tests {
         // all-atomic single-char path 乾 伊 有 俺 — the path the broken
         // S2/S3 max-Σ objective produced. Min-cost must pick the phrase.
         let lat = lattice(vec![(0, 2), (0, 6), (2, 3), (3, 4), (4, 6)]);
-        let path = walk_best(&lat, 6, |s, e| match (s, e) {
+        let path = walk_best(&lat, 6, FIXTURE_CUSTOM_WORD_COST, |s, e| match (s, e) {
             (0, 6) => Some(dict("tâi-uân", "台灣", 7_166, 2, 6)),
             (0, 2) => Some(dict("ta", "乾", 10_647, 1, 2)),
             (2, 3) => Some(dict("i", "伊", 4_400, 1, 1)),
@@ -344,7 +350,7 @@ mod tests {
             (9, 11),
             (0, 11),
         ]);
-        let path = walk_best(&lat, 11, |s, e| match (s, e) {
+        let path = walk_best(&lat, 11, FIXTURE_CUSTOM_WORD_COST, |s, e| match (s, e) {
             (0, 6) => Some(dict("tâi-uân", "台灣", 7_166, 2, 6)),
             (6, 11) => Some(dict("tâi-gí", "台語", 8_800, 2, 5)),
             (0, 3) => Some(dict("tâi", "台", 8_561, 1, 3)),
@@ -380,7 +386,7 @@ mod tests {
         // fewest-edge blob (which the carve-out then renders
         // per-syllable) under the RC0 BIG-per-char model.
         let lat = lattice(vec![(0, 3), (0, 6), (0, 9), (3, 6), (3, 9), (6, 9)]);
-        let path = walk_best(&lat, 9, |s, e| match (s, e) {
+        let path = walk_best(&lat, 9, FIXTURE_CUSTOM_WORD_COST, |s, e| match (s, e) {
             (0, 3) => Some(roman("tai")),
             (3, 6) => Some(roman("uan")),
             (6, 9) => Some(roman("tai")),
@@ -405,7 +411,7 @@ mod tests {
         // true → `continuous::fetch_walker_slot0_inner` renders hanji, never
         // bare `"tai uan ta"`.
         let lat = lattice(vec![(0, 6), (0, 8), (6, 8)]);
-        let path = walk_best(&lat, 8, |s, e| match (s, e) {
+        let path = walk_best(&lat, 8, FIXTURE_CUSTOM_WORD_COST, |s, e| match (s, e) {
             (0, 6) => Some(dict("tâi-uân", "台灣", 7_166, 2, 6)),
             (6, 8) => Some(dict("ta", "焦", 10_453, 1, 2)),
             (0, 8) => Some(roman_n("taiuanta", 3)),
@@ -445,7 +451,7 @@ mod tests {
             (18, 21),
             (0, 21),
         ]);
-        let path = walk_best(&lat, 21, |s, e| match (s, e) {
+        let path = walk_best(&lat, 21, FIXTURE_CUSTOM_WORD_COST, |s, e| match (s, e) {
             (0, 3) => Some(dict("gín", "囡", 12_306, 1, 3)),
             (3, 6) => Some(dict("á", "仔", 7_643, 1, 3)),
             (6, 9) => Some(dict("lâng", "人", 4_557, 1, 3)),
@@ -494,12 +500,14 @@ mod tests {
         };
 
         // Cold start (no user history on the phrase) → hot singles win.
-        let cold = walk_best(&lat, 6, |s, e| edges(s, e, 0.0)).expect("full path");
+        let cold = walk_best(&lat, 6, FIXTURE_CUSTOM_WORD_COST, |s, e| edges(s, e, 0.0))
+            .expect("full path");
         assert_eq!(cold.edges, vec![(0, 3), (3, 6)]);
 
         // After repeated user selection (fresh, fully saturated decayed
         // delta = 4.0 on the phrase edge) → the phrase path wins.
-        let warm = walk_best(&lat, 6, |s, e| edges(s, e, 4.0)).expect("full path");
+        let warm = walk_best(&lat, 6, FIXTURE_CUSTOM_WORD_COST, |s, e| edges(s, e, 4.0))
+            .expect("full path");
         assert_eq!(warm.edges, vec![(0, 6)]);
         let hanji: String = warm
             .choices
@@ -512,13 +520,13 @@ mod tests {
     #[test]
     fn custom_edge_wins_path_and_carries_is_custom() {
         // v3.5.8 S6 — `taigi` (shadow len 5). A custom_dictionary.db
-        // entry covering (0,5) priced at CUSTOM_EDGE_COST (2-syll)
+        // entry covering (0,5) priced at the fixture custom-word cost (2-syll)
         // must beat the single-char split 台 + 語 — same arithmetic as
         // `cost::tests::custom_two_syllable_beats_the_cheapest_single_char_split`.
         // The winning slot-0 path's choice must carry `is_custom`.
-        let custom_cost = super::super::cost::CUSTOM_EDGE_COST;
+        let custom_cost = FIXTURE_CUSTOM_WORD_COST;
         let lat = lattice(vec![(0, 3), (0, 5), (3, 5)]);
-        let path = walk_best(&lat, 5, |s, e| match (s, e) {
+        let path = walk_best(&lat, 5, FIXTURE_CUSTOM_WORD_COST, |s, e| match (s, e) {
             (0, 5) => Some(custom("tâi-gí", "台語", custom_cost, 2, 5)),
             (0, 3) => Some(dict("tâi", "台", 8_561, 1, 3)),
             (3, 5) => Some(dict("gí", "語", 10_571, 1, 2)),
@@ -539,13 +547,13 @@ mod tests {
         // Edges leave a gap (3..6 unreachable) so offset 9 is never
         // relaxed from 0 → no full-buffer path.
         let lat = lattice(vec![(0, 3), (6, 9)]);
-        assert!(walk_best(&lat, 9, |_, _| Some(roman("x"))).is_none());
+        assert!(walk_best(&lat, 9, FIXTURE_CUSTOM_WORD_COST, |_, _| Some(roman("x"))).is_none());
     }
 
     #[test]
     fn empty_shadow_returns_none() {
         let lat = lattice(vec![]);
-        assert!(walk_best(&lat, 0, |_, _| Some(roman("x"))).is_none());
+        assert!(walk_best(&lat, 0, FIXTURE_CUSTOM_WORD_COST, |_, _| Some(roman("x"))).is_none());
     }
 
     #[test]
@@ -553,7 +561,7 @@ mod tests {
         // Provider drops the phrase edge (0,6); the walker must still
         // span the buffer via the atomic edges.
         let lat = lattice(vec![(0, 3), (0, 6), (3, 6)]);
-        let path = walk_best(&lat, 6, |s, e| match (s, e) {
+        let path = walk_best(&lat, 6, FIXTURE_CUSTOM_WORD_COST, |s, e| match (s, e) {
             (0, 6) => None, // dropped (e.g. empty toneless key)
             (0, 3) => Some(roman("tai")),
             (3, 6) => Some(roman("bak")),

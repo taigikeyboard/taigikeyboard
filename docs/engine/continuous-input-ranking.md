@@ -73,9 +73,15 @@ The cap is applied **before** the decay, so a huge stale count is not pinned hig
 
 The slot-0 path is `min Σ edge_cost` over the lattice (`lattice::walker::walk_best`), a port of khiin's segmenter ([`cost.rs`](../../engine/composing/src/lattice/cost.rs) `edge_cost`):
 
+The v5 dictionary header carries the same `N`, `V`, and `α` used to price its
+records. Once per walk, the engine derives the custom-word cost as
+`round_half_even(−ln((2_000 + α)/(N + αV)) × 1000)`. The effective count
+`2_000` is an engine policy parameter; the derived price is never compiled
+into the engine. The edge provider and selected-word cap use that same price.
+
 - **Dictionary edge**: `walker_cost / 1000 / toneless_len^0.2 × syllable_count^0.2 − ln(1 + applied_δ)`. `walker_cost` is the key's lowest homophone cost (`EdgeBest::span_walker_cost`), not the picked word's.
 - **User preference**: `applied_δ` is the edge word's `user_weight`, scaled to 0 on single-syllable edges (`WALKER_SINGLE_SYLLABLE_USER_DELTA_SCALE`) so a hot single character cannot sweep the sentence. A selected multi-syllable word's base cost is capped by `user_entry_cost_cap`.
-- **User rows**: an edge with a custom or learned row under its key is priced at most at `CUSTOM_EDGE_COST` (the key's dictionary cost when cheaper).
+- **User rows**: an edge with a custom or learned row under its key is priced at most at the loaded dictionary model's custom-word cost (the key's dictionary cost when cheaper).
 - **OOV edge** (no dictionary hit): `OOV_PER_CHAR_PENALTY (1e10) × toneless_len`, so a dictionary-coverable buffer never collapses to an OOV blob.
 - The edge's word is picked by `CandidateSortKey` among the key's homophones; the walker and its carve-out live in `continuous::fetch_walker_slot0_inner` (`engine/composing/src/continuous.rs`).
 

@@ -166,7 +166,7 @@ None. A fresh install starts with an empty custom dictionary on every platform.
 
 | Aspect | Custom | System |
 |--------|--------|--------|
-| Priority | Never selected: after the selected words, ahead of the rest of the candidates that cover the whole input (`preference_class`) — an abbreviation hit only among the abbreviations; selected: by selection weight; wins a collision with the same word (source rank 0); the walker's edge pick weighs it with the dictionary's homophones and caps the span at `CUSTOM_EDGE_COST` | Corpus cost |
+| Priority | Never selected: after the selected words, ahead of the rest of the candidates that cover the whole input (`preference_class`) — an abbreviation hit only among the abbreviations; selected: by selection weight; wins a collision with the same word (source rank 0); the walker's edge pick weighs it with the dictionary's homophones and caps the span at the loaded dictionary model's custom-word cost | Corpus cost |
 | Frequency tracking | `user_frequency.db`, like any pick — keyed by the `(display_text, canonical_tl)` pair, ranks custom rows among themselves (`lexicon::custom_entry_to_candidate` `user_weight`) | `user_frequency.db` (engine `UserFrequencyStore`) |
 | Search method | Keystroke: roman / notone prefix, abbreviation whole (`keystroke_rows`), then the §43 reach rule; search page: prefix on all three (`rows_matching`) | FST, same rules |
 | Segmentation | Raw input (unsegmented) | Segmented input |

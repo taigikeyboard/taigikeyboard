@@ -216,7 +216,7 @@ fn kap_search(rows: &[(u16, u16, u32, u16, &str)], enabled: u32, limit: u32) -> 
             },
         )
         .collect();
-    let bytes = test_support::build_tkdb(b"TKDB", 4, &dict_rows);
+    let bytes = test_support::build_tkdb(b"TKDB", 5, &dict_rows);
     let dict = DictionaryReader::open(&write_temp("kap-search.bin", &bytes)).expect("dict");
     let params = SearchParams {
         input: "kap".to_string(),
