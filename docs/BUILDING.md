@@ -135,6 +135,41 @@ Details and timings: [`architecture/build-artifacts.md`](architecture/build-arti
 
 ## 6. Troubleshooting
 
+### macOS input-method switching
+
+Debug builds retain session handovers and key-delivery transitions in the
+macOS unified log. These use Notice (and Error for rejected delivery), which
+macOS [stores on disk within its retention limit](https://developer.apple.com/documentation/os/generating-log-messages-from-your-code).
+Release builds still emit no application logs.
+
+After a failure, read the recent history without needing a stream running
+beforehand:
+
+```sh
+/usr/bin/log show --last 30m --style compact --predicate 'process == "TaigiInputMethod" AND (category == "InputController" OR category == "SessionCoordinator" OR category == "ComposingBackend")'
+```
+
+`session` is a process-local numeric identity; `tenure` changes on activation
+and teardown. Follow `activate begin/end`, `claim`, `end begin/complete` and
+`release` to reconstruct ownership. Activation makes a controller eligible
+for input; it does not prove exclusive focus. `activation waiting` means an
+additional controller left the current composition alone; `key selects`
+records a handover confirmed by a key delivered to another active controller.
+After the owner ends, a sole waiting controller resumes before the first key;
+several waiting controllers require key delivery to select one.
+`end superseded` records a teardown that yielded to a reactivation;
+`replay discarded` records a stale reply.
+The first delivered key after a lifecycle change records `key delivery ready`
+or a rejection reason (`inactiveSession` / `missingClient`), and only a change
+in that delivery state produces another record. No key contents, composition
+text, document data or client queries are added by these diagnostics.
+
+For verbose live output, use `make -C macos log`. Record the approximate
+failure time and whether another switch restored input; retention is bounded
+by macOS, so inspect the history soon after an incident.
+
+### Build setup
+
 | Message | Cause | Fix |
 | --- | --- | --- |
 | `protoc version drift — SKIPPING platform proto regeneration` | protoc is not 36.2 | `mise install`, or install protoc 36.2; harmless unless you changed a `.proto` |

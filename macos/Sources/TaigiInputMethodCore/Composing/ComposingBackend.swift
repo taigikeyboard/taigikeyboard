@@ -70,7 +70,7 @@ final class ComposingBackend {
         owns(session) && isOwnerComposing
     }
 
-    /// `session` takes the engine (`activateServer`); a session that already
+    /// `session` takes the engine (`takeInputOwnership`); a session that already
     /// holds it keeps its composition. Any list held for a session is dropped:
     /// the window went down with the handover.
     ///
@@ -276,6 +276,7 @@ final class ComposingBackend {
                 return .failedInternally
             }
             if reply.ignored {
+                Self.logger.notice("[\(op)] core ignored session request")
                 return .nothing
             }
             let effects = reply.effects.compactMap(Self.effect)

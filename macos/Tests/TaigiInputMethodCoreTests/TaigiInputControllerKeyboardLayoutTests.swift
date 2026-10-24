@@ -133,9 +133,10 @@ final class TaigiInputControllerKeyboardLayoutTests: XCTestCase {
         session.client.afterKeyboardLayoutOverride = nil
     }
 
-    func testHandover_aLayoutChangeReachesOnlyTheCurrentOwner() async throws {
+    func testHandover_aLayoutChangeReachesOnlyTheActiveSession() async throws {
         let leaving = try makeSession()
         let arriving = try makeSession()
+        leaving.controller.deactivateServer(leaving.client)
         let changed = expectation(description: "current owner applies Dvorak")
         arriving.client.afterKeyboardLayoutOverride = { identifier in
             if identifier == "com.apple.keylayout.Dvorak" {
@@ -145,7 +146,7 @@ final class TaigiInputControllerKeyboardLayoutTests: XCTestCase {
 
         userDefaults.set("dvorak", forKey: SettingsStore.Keys.keyboardLayout.name)
         await fulfillment(of: [changed], timeout: 2)
-        // Let the outgoing owner's queued KVO hop run too.
+        // A retired client's layout must not be changed by a queued observer.
         for _ in 0 ..< 10 {
             await Task.yield()
         }
@@ -153,6 +154,25 @@ final class TaigiInputControllerKeyboardLayoutTests: XCTestCase {
         XCTAssertEqual(leaving.client.keyboardLayoutOverrides, ["com.apple.keylayout.US"])
         XCTAssertEqual(arriving.client.keyboardLayoutOverrides, ["com.apple.keylayout.US", "com.apple.keylayout.Dvorak"])
         arriving.client.afterKeyboardLayoutOverride = nil
+    }
+
+    func testAWaitingSession_receivesLayoutChangesBeforeItsFirstKey() async throws {
+        _ = try makeSession()
+        let waiting = try makeSession()
+        let changed = expectation(description: "waiting client applies Colemak before macOS translates its first key")
+        waiting.client.afterKeyboardLayoutOverride = { identifier in
+            if identifier == "com.apple.keylayout.Colemak" {
+                changed.fulfill()
+            }
+        }
+
+        userDefaults.set("colemak", forKey: SettingsStore.Keys.keyboardLayout.name)
+        await fulfillment(of: [changed], timeout: 2)
+
+        XCTAssertEqual(waiting.client.keyboardLayoutOverrides, ["com.apple.keylayout.US", "com.apple.keylayout.Colemak"])
+        XCTAssertEqual(waiting.client.readCallCount, 0)
+        XCTAssertEqual(waiting.client.writes, [])
+        waiting.client.afterKeyboardLayoutOverride = nil
     }
 
     private func makeSession() throws -> (controller: TaigiInputController, client: RecordingTextInputClient) {

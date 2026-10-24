@@ -40,6 +40,12 @@ protocol ShortcutActionTarget: AnyObject {
     func performShortcutAction(_ action: ShortcutAction)
 }
 
+/// A controller that IMK has activated and may still send keys to.
+@MainActor
+protocol InputSessionTarget: ShortcutActionTarget {
+    func takeInputOwnership()
+}
+
 /// Which input session is focused — the one that drives the process's one
 /// composing engine, and the one the shortcut hotkeys act through.
 ///
@@ -61,6 +67,38 @@ final class ComposingSessionCoordinator {
 
     private var currentOwner: ComposingSessionToken?
     private static let logger = DebugLogger(category: "SessionCoordinator")
+
+    private struct ActiveSession {
+        let token: ComposingSessionToken
+        weak var target: (any InputSessionTarget)?
+    }
+
+    /// Activation is eligibility, not exclusive focus: a system client can
+    /// activate after the text field that continues receiving key events.
+    private var activeSessions: [ActiveSession] = []
+
+    var hasActiveOwner: Bool {
+        activeSessions.contains { $0.token == currentOwner && $0.target != nil }
+    }
+
+    func registerActiveSession(_ target: any InputSessionTarget, for token: ComposingSessionToken) {
+        activeSessions.removeAll { $0.token == token || $0.target == nil }
+        activeSessions.append(ActiveSession(token: token, target: target))
+    }
+
+    func unregisterActiveSession(_ token: ComposingSessionToken) {
+        activeSessions.removeAll { $0.token == token || $0.target == nil }
+    }
+
+    /// Called after the outgoing owner has released the Rust session too.
+    /// A sole waiting controller can resume its panels and shortcuts before
+    /// the first key; with several, key delivery must resolve the ambiguity.
+    func resumeWaitingSession() {
+        guard !hasActiveOwner else { return }
+        activeSessions.removeAll { $0.target == nil }
+        guard activeSessions.count == 1 else { return }
+        activeSessions[0].target?.takeInputOwnership()
+    }
 
     /// The controller the shortcut hotkeys act through, valid only while its
     /// session owns the engine. Weak: IMK owns controller lifetime, and a
@@ -90,8 +128,11 @@ final class ComposingSessionCoordinator {
     /// taking focus) with the composition intact.
     @discardableResult
     func claim(_ owner: ComposingSessionToken) -> Bool {
-        guard currentOwner != owner else { return false }
-        Self.logger.debug("session ownership changed")
+        guard currentOwner != owner else {
+            Self.logger.notice("claim retained session=\(owner.value)")
+            return false
+        }
+        Self.logger.notice("claim session=\(owner.value) previous=\(currentOwner?.value.description ?? "none")")
         currentOwner = owner
         // The outgoing session's endpoint must not receive shortcuts meant for
         // the incoming one. Cleared here rather than left to the new session's
@@ -158,8 +199,11 @@ final class ComposingSessionCoordinator {
     /// place.
     @discardableResult
     func release(_ owner: ComposingSessionToken) -> Bool {
-        guard currentOwner == owner else { return false }
-        Self.logger.debug("session ownership released")
+        guard currentOwner == owner else {
+            Self.logger.notice("release ignored session=\(owner.value) owner=\(currentOwner?.value.description ?? "none")")
+            return false
+        }
+        Self.logger.notice("release session=\(owner.value)")
         currentOwner = nil
         clearShortcutTarget()
         return true

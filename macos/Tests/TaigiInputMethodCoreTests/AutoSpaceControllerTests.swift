@@ -66,6 +66,12 @@ final class AutoSpaceControllerTests: XCTestCase {
     /// back, or to a session another controller now drives. Both back ends,
     /// since the replay is the controller's.
     func testAFocusChangeDuringTheReplay_dropsTheRestOfTheReply() throws {
+        var arriving: Session?
+        defer {
+            if let arriving {
+                arriving.controller.deactivateServer(arriving.client)
+            }
+        }
         let interruptions: [(String, (TaigiInputController, RecordingTextInputClient) -> Void)] = [
             ("deactivated", { controller, client in controller.deactivateServer(client) }),
             ("deactivated and back", { controller, client in
@@ -73,7 +79,12 @@ final class AutoSpaceControllerTests: XCTestCase {
                 controller.activateServer(client)
             }),
             ("taken over", { _, _ in
-                try? TestFixtures.makeInputController().activateServer(RecordingTextInputClient())
+                arriving = try? self.makeSession()
+                if let arriving {
+                    _ = try? arriving.controller.handle(
+                        TestFixtures.keyDownEvent(characters: "a", modifiers: .command), client: arriving.client,
+                    )
+                }
             }),
         ]
         for (name, interrupt) in interruptions {

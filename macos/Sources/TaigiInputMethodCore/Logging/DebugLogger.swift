@@ -37,6 +37,13 @@
             logger.info("\(text, privacy: .public)")
         }
 
+        /// Retained by unified logging, within the system's storage limit.
+        /// Use for infrequent lifecycle metadata needed after an incident.
+        func notice(_ message: @autoclosure () -> String) {
+            let text = message()
+            logger.notice("\(text, privacy: .public)")
+        }
+
         func warning(_ message: @autoclosure () -> String) {
             let text = message()
             logger.warning("\(text, privacy: .public)")
@@ -52,6 +59,7 @@
         init(category _: String) {}
         @inline(__always) func debug(_: @autoclosure () -> String) {}
         @inline(__always) func info(_: @autoclosure () -> String) {}
+        @inline(__always) func notice(_: @autoclosure () -> String) {}
         @inline(__always) func warning(_: @autoclosure () -> String) {}
         @inline(__always) func error(_: @autoclosure () -> String) {}
     }

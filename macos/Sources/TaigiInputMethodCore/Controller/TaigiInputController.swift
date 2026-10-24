@@ -51,6 +51,23 @@ public final class TaigiInputController: IMKInputController {
     @MainActor
     private var tenure = 0
 
+    /// An activated controller remains eligible for keys even if a system
+    /// client activates afterward. Teardown revokes that eligibility.
+    @MainActor
+    private var isSessionActive = false
+
+    /// Log delivery transitions, never individual keys or their contents.
+    /// Reset on lifecycle changes so the first key establishes whether the
+    /// host resumed delivery to this tenure at all.
+    private enum KeyDelivery: String {
+        case ready
+        case inactiveSession
+        case missingClient
+    }
+
+    @MainActor
+    private var lastKeyDelivery: KeyDelivery?
+
     /// Where the candidate bar is shown. Backed by an optional so a test can
     /// substitute a double before the first key event: the shipped bar is an
     /// `NSPanel`, and the default cannot be written as a stored property's
@@ -262,19 +279,19 @@ public final class TaigiInputController: IMKInputController {
     /// (Chromium issue 503787240, hit by azooKey-Desktop). Pinned by
     /// `ActivateServerClientQueryTests`.
     override public func activateServer(_ sender: Any!) {
-        Self.logger.debug("activateServer")
         onMainActor(sender) { controller, client in
             controller.tenure += 1
+            let activatingTenure = controller.tenure
+            controller.lastKeyDelivery = nil
+            Self.logger.notice(
+                "activate begin session=\(controller.sessionToken.value) tenure=\(activatingTenure) client=\(client != nil)",
+            )
             controller.lastClient = client
-            controller.backend.activate(controller.sessionToken, settings: controller.settings)
+            controller.isSessionActive = true
+            let coordinator = ComposingSessionCoordinator.shared
+            coordinator.registerActiveSession(controller, for: controller.sessionToken)
             controller.appliedKeyboardLayout = nil
             controller.applyKeyboardLayout()
-            // After the claim, which just cleared the previous session's
-            // endpoint: this session is the one the shortcut hotkeys should
-            // now act through, and registering is what turns them on.
-            ComposingSessionCoordinator.shared.registerShortcutTarget(
-                controller, for: controller.sessionToken,
-            )
             // Key-scoped KVO through the store rather than a notification, so
             // a `defaults write` from outside the process reaches the bar too.
             controller.displayModeObservation = controller.settings.observeChanges(
@@ -309,31 +326,39 @@ public final class TaigiInputController: IMKInputController {
                     controller?.syncTpsKeyboard()
                 },
             )
-            // Fresh focus types Taigi — and no Shift half-tapped elsewhere may
-            // decide here.
-            // Takes the bar down before this session starts typing, and takes
-            // it away from the session that was showing it. IMK activates the
-            // incoming session before it deactivates the outgoing one, so
-            // without this the outgoing session's teardown is what would decide
-            // whether this session's bar survives. Hiding our own window is not
-            // a client query, so the activation rule above still holds.
-            controller.candidatePresenter.hideForHandover()
-            controller.isCandidateListOnScreen = false
-            // The picker goes the same way, for the same reason: a list left
-            // up by the outgoing session would be picked from by this one.
-            controller.symbolPickerPresenter.hideForHandover()
-            controller.symbolPickerCells = []
-            // Dropped, not cleared: activation makes no document call, and the
-            // deactivation IMK sends first already cleared it (`endSession`).
-            controller.isSymbolPickerPlaceholderMarked = false
             controller.symbolPickerShortcut = KeyboardShortcuts.getShortcut(for: .showSymbolPicker)
             // Whatever space a previous focus left armed was measured against
             // a document this activation may no longer be looking at.
             controller.armedAutoSpaceCaret = nil
-            // The TPS key panel follows the session being typed in: handed
-            // to this one, or taken down if it is not wanted.
-            controller.syncTpsKeyboard()
+            // Extra activations must not reset another live session's engine
+            // or hide its candidates. A delivered key selects a different
+            // active controller; a sole waiting one resumes after teardown.
+            if !coordinator.hasActiveOwner || controller.backend.owns(controller.sessionToken) {
+                controller.takeInputOwnership()
+            } else {
+                Self.logger.notice("activation waiting session=\(controller.sessionToken.value) tenure=\(activatingTenure)")
+            }
+            Self.logger.notice(
+                "activate end session=\(controller.sessionToken.value) tenure=\(activatingTenure) currentTenure=\(controller.tenure) owns=\(controller.backend.owns(controller.sessionToken))",
+            )
         }
+    }
+
+    /// Claims the engine and the shared UI for an eligible controller. Called
+    /// for an unowned activation, actual key delivery, or the sole session
+    /// left after an owner ends. No client query occurs here.
+    @MainActor
+    func takeInputOwnership() {
+        guard isSessionActive else { return }
+        backend.activate(sessionToken, settings: settings)
+        ComposingSessionCoordinator.shared.registerShortcutTarget(self, for: sessionToken)
+        candidatePresenter.hideForHandover()
+        isCandidateListOnScreen = false
+        symbolPickerPresenter.hideForHandover()
+        symbolPickerCells = []
+        isSymbolPickerPlaceholderMarked = false
+        armedAutoSpaceCaret = nil
+        syncTpsKeyboard()
     }
 
     /// The session is losing focus. The composition is finished into the
@@ -342,8 +367,7 @@ public final class TaigiInputController: IMKInputController {
     /// to a deactivated session, so holding the engine after this point would
     /// only let a stray callback write into the session that takes over.
     override public func deactivateServer(_ sender: Any!) {
-        Self.logger.debug("deactivateServer")
-        onMainActor(sender) { controller, client in controller.endSession(client) }
+        onMainActor(sender) { controller, client in controller.endSession(client, reason: "deactivate") }
     }
 
     /// Deliberately does not call `super`. `IMKInputController`'s implementation
@@ -354,8 +378,10 @@ public final class TaigiInputController: IMKInputController {
     /// Ownership is kept: the session is still focused, and the user carries on
     /// typing into it after the click.
     override public func commitComposition(_ sender: Any!) {
-        Self.logger.debug("commitComposition")
-        onMainActor(sender) { controller, client in controller.finishComposition(into: client) }
+        onMainActor(sender) { controller, client in
+            Self.logger.notice("commitComposition session=\(controller.sessionToken.value) tenure=\(controller.tenure)")
+            controller.finishComposition(into: client)
+        }
     }
 
     /// The only teardown hook every controller is guaranteed to receive, and
@@ -367,8 +393,7 @@ public final class TaigiInputController: IMKInputController {
     /// This hook gets no sender, so it finishes into the client the session last
     /// wrote to — the one whose marked region is at stake.
     override public func inputControllerWillClose() {
-        Self.logger.debug("inputControllerWillClose")
-        onMainActor(nil) { controller, _ in controller.endSession(controller.lastClient) }
+        onMainActor(nil) { controller, _ in controller.endSession(controller.lastClient, reason: "close") }
     }
 
     /// Take down every window this input method is showing, and nothing else.
@@ -700,7 +725,7 @@ public final class TaigiInputController: IMKInputController {
     /// including printable keys our composing classifier passes through.
     @MainActor
     private func applyKeyboardLayout() {
-        guard backend.owns(sessionToken), let client = lastClient else { return }
+        guard isSessionActive, let client = lastClient else { return }
         let layout: KeyboardLayout = settings.inputMode == .tps ? .qwerty : settings.keyboardLayout
         guard appliedKeyboardLayout != layout else { return }
         client.overrideKeyboard(withKeyboardNamed: layout.inputSourceID)
@@ -858,7 +883,26 @@ public final class TaigiInputController: IMKInputController {
         let armedSwap = armedAutoSpaceCaret
         armedAutoSpaceCaret = nil
 
-        guard backend.owns(sessionToken), let client else { return false }
+        // The event itself identifies the session being typed in. Activation
+        // alone cannot: another active IMK client may have activated later.
+        // A retired controller is never allowed to reclaim through a late key.
+        if isSessionActive, client != nil, !backend.owns(sessionToken) {
+            Self.logger.notice("key selects session=\(sessionToken.value) tenure=\(tenure)")
+            takeInputOwnership()
+        }
+        let ownsSession = isSessionActive && backend.owns(sessionToken)
+        let delivery: KeyDelivery = ownsSession ? (client == nil ? .missingClient : .ready) : .inactiveSession
+        if lastKeyDelivery != delivery {
+            lastKeyDelivery = delivery
+            if delivery == .ready {
+                Self.logger.notice("key delivery ready session=\(sessionToken.value) tenure=\(tenure)")
+            } else {
+                Self.logger.error(
+                    "key delivery rejected session=\(sessionToken.value) tenure=\(tenure) reason=\(delivery.rawValue)",
+                )
+            }
+        }
+        guard ownsSession, let client else { return false }
 
         // The guide goes down on the first key after it came up, before that
         // key is read: it is a card to glance at, not a mode. A plain Escape
@@ -976,7 +1020,12 @@ public final class TaigiInputController: IMKInputController {
             // reply still holds was meant for a tenure that is over — its
             // teardown already finished the composition — or for a session
             // another controller now drives (roadmap D3, stale replies).
-            guard tenure == replayTenure, backend.owns(sessionToken) else { return }
+            guard tenure == replayTenure, backend.owns(sessionToken) else {
+                Self.logger.notice(
+                    "replay discarded session=\(sessionToken.value) tenure=\(replayTenure) currentTenure=\(tenure) owns=\(backend.owns(sessionToken))",
+                )
+                return
+            }
             switch effect {
             case let .setMarkedText(text, caretUTF16):
                 writer.setMarkedText(text, caretUTF16: caretUTF16)
@@ -1372,14 +1421,30 @@ public final class TaigiInputController: IMKInputController {
     /// Finishes the composition into `client` and gives up the engine, for a
     /// session that is going away.
     @MainActor
-    private func endSession(_ client: IMKTextInput?) {
+    private func endSession(_ client: IMKTextInput?, reason: String) {
         tenure += 1
+        let endingTenure = tenure
+        isSessionActive = false
+        ComposingSessionCoordinator.shared.unregisterActiveSession(sessionToken)
+        lastKeyDelivery = nil
+        Self.logger.notice(
+            "end begin reason=\(reason) session=\(sessionToken.value) tenure=\(endingTenure) owns=\(backend.owns(sessionToken)) marked=\(isMarkedTextVisible) client=\(client != nil)",
+        )
         // Owner-guarded, beside the bar's own dismissal in
         // `finishComposition`: a guide belongs to the session that raised it,
         // and goes when that session's focus does.
         TelexGuidePanel.shared.hide(ownedBy: sessionToken)
         TpsKeyboardPanel.shared.hide(ownedBy: sessionToken)
         finishComposition(into: client)
+        // Committing into an IMK client can re-enter activation before the
+        // write returns. The same controller then owns a new tenure; this
+        // teardown must not release it or remove its settings observations.
+        guard tenure == endingTenure else {
+            Self.logger.notice(
+                "end superseded session=\(sessionToken.value) tenure=\(endingTenure) currentTenure=\(tenure) owns=\(backend.owns(sessionToken))",
+            )
+            return
+        }
         backend.release(sessionToken, settings: settings)
         displayModeObservation = nil
         candidateWindowObservation = nil
@@ -1387,6 +1452,8 @@ public final class TaigiInputController: IMKInputController {
         keyboardLayoutObservation = nil
         appliedKeyboardLayout = nil
         tpsKeyboardObservation = nil
+        Self.logger.notice("end complete session=\(sessionToken.value) tenure=\(endingTenure)")
+        ComposingSessionCoordinator.shared.resumeWaitingSession()
     }
 
     /// Writes whatever is composing into `client` and leaves it with no marked
@@ -1414,10 +1481,14 @@ public final class TaigiInputController: IMKInputController {
         // either: lifecycle commits are not a finished word.)
         armedAutoSpaceCaret = nil
         guard let client else { return }
-        defer { isMarkedTextVisible = false }
+        // Clear the outgoing mark before calling the client. A callback can
+        // reactivate this controller and type a new composition; clearing in
+        // a defer would erase that new tenure's marked-text bookkeeping.
+        let wasMarkedTextVisible = isMarkedTextVisible
+        isMarkedTextVisible = false
 
         guard !send(client: client, armedSwap: nil, { backend.commitComposition(in: $0) }),
-              isMarkedTextVisible
+              wasMarkedTextVisible
         else { return }
         ClientWriter(client: client).clearMarkedText()
     }
@@ -1461,6 +1532,6 @@ public final class TaigiInputController: IMKInputController {
 
 /// The method lives in the class body (it needs the private candidate state);
 /// the conformance is stated here where it reads as the contract it is.
-extension TaigiInputController: ShortcutActionTarget {}
+extension TaigiInputController: InputSessionTarget {}
 
 extension TaigiInputController: TpsKeyboardTarget {}

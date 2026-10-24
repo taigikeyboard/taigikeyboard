@@ -260,6 +260,9 @@ final class TaigiInputControllerTpsKeyboardTests: XCTestCase {
         XCTAssertNotNil(TpsKeyboardPanel.shared.flashedCapIndex)
 
         let arriving = try makeSession(under: .tps)
+        _ = try arriving.controller.handle(
+            TestFixtures.keyDownEvent(characters: "a", modifiers: .command), client: arriving.client,
+        )
         XCTAssertNil(TpsKeyboardPanel.shared.flashedCapIndex, "the handover ended the flash")
 
         _ = try arriving.controller.handle(TestFixtures.keyDownEvent(characters: "8"), client: arriving.client)

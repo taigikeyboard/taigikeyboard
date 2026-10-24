@@ -71,9 +71,12 @@ final class TaigiInputControllerTests: XCTestCase {
         let leavingClient = RecordingTextInputClient()
         let leaving = try makeActivatedController(client: leavingClient)
         _ = try leaving.handle(TestFixtures.keyDownEvent(characters: "t"), client: leavingClient)
-        // The arriving session takes the engine before the leaving one is told
-        // it lost focus; IMK does not order these callbacks across sessions.
-        _ = try makeActivatedController(client: RecordingTextInputClient())
+        // A key identifies the arriving session as the one being typed in,
+        // before the leaving session receives its deactivation callback.
+        let arrivingClient = RecordingTextInputClient()
+        let arriving = try makeActivatedController(client: arrivingClient)
+        defer { arriving.deactivateServer(arrivingClient) }
+        _ = try arriving.handle(TestFixtures.keyDownEvent(characters: "a", modifiers: .command), client: arrivingClient)
         leavingClient.clearWrites()
 
         leaving.deactivateServer(leavingClient)
@@ -102,6 +105,60 @@ final class TaigiInputControllerTests: XCTestCase {
             region; dropping it would delete characters the user typed
             """,
         )
+    }
+
+    /// The client's commit callback can reactivate the same controller before
+    /// the old deactivation returns. Its teardown must leave that new tenure
+    /// owning the engine, or every subsequent letter passes through as ABC.
+    func testReactivationDuringDeactivationCommit_keepsAcceptingInput() throws {
+        let client = RecordingTextInputClient()
+        let controller = try makeActivatedController(client: client)
+        controller.candidatePresenter = RecordingCandidatePresenter()
+        _ = try controller.handle(TestFixtures.keyDownEvent(characters: "t"), client: client)
+        var didReactivate = false
+        client.afterInsertText = { _ in
+            client.afterInsertText = nil
+            didReactivate = true
+            controller.activateServer(client)
+        }
+        defer {
+            client.afterInsertText = nil
+            controller.deactivateServer(client)
+        }
+
+        controller.deactivateServer(client)
+
+        XCTAssertTrue(didReactivate)
+        client.clearWrites()
+        XCTAssertTrue(try controller.handle(TestFixtures.keyDownEvent(characters: "a"), client: client))
+        XCTAssertEqual(client.writes, [.setMarkedText("a", selectionLocation: 1)])
+    }
+
+    /// The new tenure may already have typed before the old commit returns.
+    /// Its marked region still needs clearing if another session supersedes it.
+    func testTypingDuringReactivation_preservesTheNewMarkedRegionUntilHandover() throws {
+        let client = RecordingTextInputClient()
+        let controller = try makeActivatedController(client: client)
+        controller.candidatePresenter = RecordingCandidatePresenter()
+        _ = try controller.handle(TestFixtures.keyDownEvent(characters: "t"), client: client)
+        let nextKey = try TestFixtures.keyDownEvent(characters: "a")
+        client.afterInsertText = { _ in
+            client.afterInsertText = nil
+            controller.activateServer(client)
+            XCTAssertTrue(controller.handle(nextKey, client: client))
+        }
+        defer { client.afterInsertText = nil }
+
+        controller.deactivateServer(client)
+        let arrivingClient = RecordingTextInputClient()
+        let arriving = try makeActivatedController(client: arrivingClient)
+        defer { arriving.deactivateServer(arrivingClient) }
+        _ = try arriving.handle(TestFixtures.keyDownEvent(characters: "a", modifiers: .command), client: arrivingClient)
+        client.clearWrites()
+
+        controller.deactivateServer(client)
+
+        XCTAssertEqual(client.writes, [.setMarkedText("", selectionLocation: 0)])
     }
 
     func testAClosedSessionStopsDrivingTheEngine() throws {
