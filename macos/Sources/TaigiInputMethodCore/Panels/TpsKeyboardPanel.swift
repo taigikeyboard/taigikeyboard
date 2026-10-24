@@ -35,12 +35,15 @@ final class TpsKeyboardPanel {
     /// Where the cap flashing now sits, row then cap, and the task that
     /// ends its flash.
     private(set) var flashedCapIndex: (row: Int, cap: Int)?
-    private var flashTask: Task<Void, Never>?
+    private(set) var flashTask: Task<Void, Never>?
 
     /// How long a typed key's cap stays lit. Mirrors the Windows panel's
-    /// `FLASH_MILLISECONDS` (`ui/tps_keyboard.rs`); a test stretches it to
-    /// time two flashes apart.
-    var flashDuration: Duration = .milliseconds(150)
+    /// `FLASH_MILLISECONDS` (`ui/tps_keyboard.rs`).
+    private let flashDuration: Duration = .milliseconds(150)
+
+    /// Tests control completion of each sleep independently of runner speed.
+    /// The task still owns cancellation and checks it before ending a flash.
+    var flashSleep: (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
 
     /// The session the panel is showing for, or nil when nothing is showing.
     private(set) var owner: ComposingSessionToken?
@@ -148,8 +151,9 @@ final class TpsKeyboardPanel {
         capViews[row][cap].isFlashed = true
         flashedCapIndex = (row, cap)
         let duration = flashDuration
+        let sleep = flashSleep
         flashTask = Task { [weak self] in
-            try? await Task.sleep(for: duration)
+            try? await sleep(duration)
             guard !Task.isCancelled else { return }
             self?.endFlash()
         }
