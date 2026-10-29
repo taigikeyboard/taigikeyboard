@@ -30,9 +30,9 @@ pub fn write_synthetic_fst(name: &str, pairs: &[(&str, u32)]) -> PathBuf {
     )
 }
 
-/// `(bitmask, frequency, syllable_count, hanji, tl)` rows in a pre-v4 layout:
-/// VERSION 2 (no subtag) or 3 (subtag 0), never a walker cost — used only by
-/// the loud-reject tests now that the reader requires v4.
+/// `(bitmask, frequency, syllable_count, hanji, tl)` rows in a legacy layout:
+/// version 2 (no subtag), 3 (subtag 0), or 4 (with a walker cost), all without
+/// model metadata. Used only by rejection tests; the reader requires v5.
 pub fn build_tkdb_legacy(
     magic: &[u8; 4],
     version: u32,
@@ -45,7 +45,7 @@ pub fn build_tkdb_legacy(
             frequency: *freq,
             syllable_count: Some(*syll),
             kautian_subtag: (version >= 3).then_some(0),
-            walker_cost: None,
+            walker_cost: (version >= 4).then(|| walker_cost_from_fixture_frequency(*freq)),
             hanji,
             tl,
         })
@@ -53,7 +53,7 @@ pub fn build_tkdb_legacy(
     build_tkdb(magic, version, &dict_rows)
 }
 
-/// 5-tuple convenience for v4 fixtures: `(bitmask, frequency, syllable_count,
+/// 5-tuple convenience for v4 record fixtures (v5 header): `(bitmask, frequency, syllable_count,
 /// hanji, tl)` with `kautian_subtag = 0` and the walker cost derived from the
 /// frequency ([`walker_cost_from_fixture_frequency`]) on every row.
 /// The default for tests that don't exercise subcollection provenance.
@@ -82,7 +82,7 @@ pub fn build_tkdb_v4_subtag(magic: &[u8; 4], rows: &[(u16, u32, u8, u16, &str, &
             tl,
         })
         .collect();
-    build_tkdb(magic, 4, &dict_rows)
+    build_tkdb(magic, 5, &dict_rows)
 }
 
 /// Test-only span-local fetch: every dictionary candidate whose toneless

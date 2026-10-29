@@ -58,6 +58,13 @@ Model word (P2, Codex pre-impl): the counter's token `(hanzi, tl_num.lower())`, 
 
 **D2 — cost formula.** `edge_cost` reads `walker_cost / 1000` in place of `ln(N / (1 + freq))`; the khiin length terms (`÷ toneless_len^0.2 × syllable_count^0.2`) and the OOV per-char `BIG` stay as they are in P3. With the length terms kept, the objective is a heuristic cost, not a pure `Σ −ln p`; changing them is P4 with a dev win.
 
+The subsequent v5 binary format stores `N`, `V`, and `α` in its header.
+The runtime derives the user-entry price from that loaded model and the
+effective count `2_000`; dictionary or corpus updates no longer require a
+manual `CUSTOM_EDGE_COST` update. The deliberate effective-count policy and
+the cap's selection fade remain engine-owned. Current layout and validation:
+[`binary-format.md`](../engine/binary-format.md).
+
 The custom entry, the learned-phrase floor and the user-selected floor become one **cost cap** applied before the length terms: `base = min(walker_cost, cap)`.
 
 - Exact translation of today's floor (`cost.rs:347-353`, `F = CUSTOM_EFFECTIVE_FREQ`, `s = clamp(δ / BOOST_ALPHA, 0, 1)`): `cap(s) = CUSTOM_EDGE_COST + ln((1 + F) / (1 + F·s))`, with `CUSTOM_EDGE_COST = ln(N / (1 + F))`. At `s = 0` the cap is `ln N` — no lift, finite.

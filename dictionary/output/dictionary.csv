@@ -12127,6 +12127,7 @@ hanzi,tl,kautian_main,kautian_alt_reading,kautian_accent_mask,kautian_name,frequ
 昦,hǒ,False,False,0,False,50,hǒ,ho6,ho6,ㄏㄛˇ,,ho,ho,ㄏㄛ,,,,,,False,False,False,False,False,False,False,False,False,True,False,False,False
 昧,māi,True,False,0,False,50,māi,mai7,mai7,ㄇㄞ˫,,mai,mai,ㄇㄞ,,,,,,True,False,False,False,False,False,False,False,False,False,False,False,False
 昨,tsā,False,False,0,False,50,chā,tsa7,cha7,ㄗㄚ˫,,tsa,cha,ㄗㄚ,,,,,,False,False,False,False,False,False,True,False,False,False,False,False,False
+昨hng,tsa̋ng,False,False,0,False,50,chăng,tsang9,chang9,ㄗㄤˆ,,tsang,chang,ㄗㄤ,,,,,,False,False,False,False,False,False,False,False,False,False,False,True,False
 昫,hú,False,False,0,True,50,hú,hu2,hu2,ㄏㄨˋ,,hu,hu,ㄏㄨ,,,,,,True,False,False,False,False,False,False,False,False,False,False,False,False
 昬,hun,False,False,0,True,50,hun,hun1,hun1,ㄏㄨㄣ,,hun,hun,ㄏㄨㄣ,,,,,,True,False,False,False,False,False,False,False,False,False,False,False,False
 昭,tsiau,True,False,0,True,50,chiau,tsiau1,chiau1,ㄐㄧㄠ,,tsiau,chiau,ㄐㄧㄠ,,,,,,True,False,False,False,False,False,True,False,False,False,False,False,False
@@ -23036,18 +23037,28 @@ hanzi,tl,kautian_main,kautian_alt_reading,kautian_accent_mask,kautian_name,frequ
 豈會,thài,False,False,0,False,26,thài,thai3,thai3,ㄊㄞ˪,,thai,thai,ㄊㄞ,,,,,,False,False,False,False,False,False,False,False,False,False,False,False,True
 豈能,thài,False,False,0,False,26,thài,thai3,thai3,ㄊㄞ˪,,thai,thai,ㄊㄞ,,,,,,False,False,False,False,False,False,False,False,False,False,False,False,True
 hip相,hip-siòng,False,False,0,False,25,hip-siòng,hip4siong3,hip4siong3,ㄏㄧㆴㄒㄧㆲ˪,,hipsiong,hipsiong,ㄏㄧㆴㄒㄧㆲ,,hs,hs,ㄏㄒ,,False,False,False,False,False,False,False,False,False,False,False,True,False
+hip相,hip-siōng,False,False,0,False,25,hip-siōng,hip4siong7,hip4siong7,ㄏㄧㆴㄒㄧㆲ˫,,hipsiong,hipsiong,ㄏㄧㆴㄒㄧㆲ,,hs,hs,ㄏㄒ,,False,False,False,False,False,False,False,False,False,False,False,True,False
 hiánn頭,hiánn-thâu,False,False,0,False,25,hiáⁿ-thâu,hiann2thau5,hiann2thau5,ㄏㄧㆩˋㄊㄠˊ,,hiannthau,hiannthau,ㄏㄧㆩㄊㄠ,,hth,hth,ㄏㄊ,,False,False,False,False,False,False,False,False,False,False,False,True,False
+iah是,ah-sī,False,False,0,False,25,ah-sī,ah4si7,ah4si7,ㄚㆷㄒㄧ˫,,ahsi,ahsi,ㄚㆷㄒㄧ,,as,as,ㄚㄒ,,False,False,False,False,False,False,False,False,False,False,False,True,False
+iah是,a̍h-sī,False,False,0,False,25,a̍h-sī,ah8si7,ah8si7,ㄚㆷ̇ㄒㄧ˫,,ahsi,ahsi,ㄚㆷㄒㄧ,,as,as,ㄚㄒ,,False,False,False,False,False,False,False,False,False,False,False,True,False
 iah是,iah-sī,False,False,0,False,25,iah-sī,iah4si7,iah4si7,ㄧㄚㆷㄒㄧ˫,,iahsi,iahsi,ㄧㄚㆷㄒㄧ,,is,is,ㄧㄒ,,False,False,False,False,False,False,False,False,False,False,False,True,False
+iah是,ia̍h-sī,False,False,0,False,25,ia̍h-sī,iah8si7,iah8si7,ㄧㄚㆷ̇ㄒㄧ˫,,iahsi,iahsi,ㄧㄚㆷㄒㄧ,,is,is,ㄧㄒ,,False,False,False,False,False,False,False,False,False,False,False,True,False
 ing暗,ing-àm,False,False,0,False,25,eng-àm,ing1am3,eng1am3,ㄧㄥㆰ˪,,ingam,engam,ㄧㄥㆰ,,ia,ea,ㄧㆰ,,False,False,False,False,False,False,False,False,False,False,False,True,False
 iáu未,iáu-buē,False,False,0,False,25,iáu-bōe,iau2bue7,iau2boe7,ㄧㄠˋㆠㄨㆤ˫,,iaubue,iauboe,ㄧㄠㆠㄨㆤ,,ib,ib,ㄧㆠ,,False,False,False,False,False,False,False,False,False,False,False,True,False
+iáu未,iáu-bē,False,False,0,False,25,iáu-bē,iau2be7,iau2be7,ㄧㄠˋㆠㆤ˫,,iaube,iaube,ㄧㄠㆠㆤ,,ib,ib,ㄧㆠ,,False,False,False,False,False,False,False,False,False,False,False,True,False
 kah意,kah-ì,False,False,0,False,25,kah-ì,kah4i3,kah4i3,ㄍㄚㆷㄧ˪,,kahi,kahi,ㄍㄚㆷㄧ,,ki,ki,ㄍㄧ,,False,False,False,False,False,False,False,False,False,False,False,True,False
+khîng分,khing-hun,False,False,0,False,25,kheng-hun,khing1hun1,kheng1hun1,ㄎㄧㄥㄏㄨㄣ,,khinghun,khenghun,ㄎㄧㄥㄏㄨㄣ,,khh,khh,ㄎㄏ,,False,False,False,False,False,False,False,False,False,False,False,True,False
 khîng分,khîng-hun,False,False,0,False,25,khêng-hun,khing5hun1,kheng5hun1,ㄎㄧㄥˊㄏㄨㄣ,,khinghun,khenghun,ㄎㄧㄥㄏㄨㄣ,,khh,khh,ㄎㄏ,,False,False,False,False,False,False,False,False,False,False,False,True,False
 khîng實,khîng-si̍t,False,False,0,False,25,khêng-si̍t,khing5sit8,kheng5sit8,ㄎㄧㄥˊㄒㄧㆵ̇,,khingsit,khengsit,ㄎㄧㄥㄒㄧㆵ,,khs,khs,ㄎㄒ,,False,False,False,False,False,False,False,False,False,False,False,True,False
 king體,king-thé,False,False,0,False,25,keng-thé,king1the2,keng1the2,ㄍㄧㄥㄊㆤˋ,,kingthe,kengthe,ㄍㄧㄥㄊㆤ,,kth,kth,ㄍㄊ,,False,False,False,False,False,False,False,False,False,False,False,True,False
 kuân低,kuân-kē,False,False,0,False,25,koân-kē,kuan5ke7,koan5ke7,ㄍㄨㄢˊㄍㆤ˫,,kuanke,koanke,ㄍㄨㄢㄍㆤ,,kk,kk,ㄍㄍ,,False,False,False,False,False,False,False,False,False,False,False,True,False
+làu勾,làu-kau,False,False,0,False,25,làu-kau,lau3kau1,lau3kau1,ㄌㄠ˪ㄍㄠ,,laukau,laukau,ㄌㄠㄍㄠ,,lk,lk,ㄌㄍ,,False,False,False,False,False,False,False,False,False,False,False,True,False
+lóo力,lóo-la̍t,False,False,0,False,25,ló͘-la̍t,loo2lat8,loo2lat8,ㄌㆦˋㄌㄚㆵ̇,,loolat,loolat,ㄌㆦㄌㄚㆵ,,ll,ll,ㄌㄌ,,False,False,False,False,False,False,False,False,False,False,False,True,False
 niáu鼠,niáu-tshí,False,False,0,False,25,niáu-chhí,niau2tshi2,niau2chhi2,ㄋㄧㄠˋㄑㄧˋ,,niautshi,niauchhi,ㄋㄧㄠㄑㄧ,,ntsh,nchh,ㄋㄑ,,False,False,False,False,False,False,False,False,False,False,False,True,False
+niáu鼠,niáu-tshú,False,False,0,False,25,niáu-chhú,niau2tshu2,niau2chhu2,ㄋㄧㄠˋㄘㄨˋ,,niautshu,niauchhu,ㄋㄧㄠㄘㄨ,,ntsh,nchh,ㄋㄘ,,False,False,False,False,False,False,False,False,False,False,False,True,False
 pû仔,pû-á,False,False,0,False,25,pû-á,pu5a2,pu5a2,ㄅㄨˊㄚˋ,,pua,pua,ㄅㄨㄚ,,pa,pa,ㄅㄚ,,False,False,False,False,False,False,False,False,False,False,False,True,False
 pān勢,pān-sè,False,False,0,False,25,pān-sè,pan7se3,pan7se3,ㄅㄢ˫ㄙㆤ˪,,panse,panse,ㄅㄢㄙㆤ,,ps,ps,ㄅㄙ,,False,False,False,False,False,False,False,False,False,False,False,True,False
+sau聲,sau-siann,False,False,0,False,25,sau-siaⁿ,sau1siann1,sau1siann1,ㄙㄠㄒㄧㆩ,,sausiann,sausiann,ㄙㄠㄒㄧㆩ,,ss,ss,ㄙㄒ,,False,False,False,False,False,False,False,False,False,False,False,True,False
 siàu念,siàu-liām,False,False,0,False,25,siàu-liām,siau3liam7,siau3liam7,ㄒㄧㄠ˪ㄌㄧㆰ˫,,siauliam,siauliam,ㄒㄧㄠㄌㄧㆰ,,sl,sl,ㄒㄌ,,False,False,False,False,False,False,False,False,False,False,False,True,False
 siàu想,siàu-siūnn,False,False,0,False,25,siàu-siūⁿ,siau3siunn7,siau3siunn7,ㄒㄧㄠ˪ㄒㄧㆫ˫,,siausiunn,siausiunn,ㄒㄧㄠㄒㄧㆫ,,ss,ss,ㄒㄒ,,False,False,False,False,False,False,False,False,False,False,False,True,False
 sù常,sù-siông,False,False,0,False,25,sù-siông,su3siong5,su3siong5,ㄙㄨ˪ㄒㄧㆲˊ,,susiong,susiong,ㄙㄨㄒㄧㆲ,,ss,ss,ㄙㄒ,,False,False,False,False,False,False,False,False,False,False,False,True,False
@@ -23059,6 +23070,8 @@ tshiàng聲,tshiàng-siann,False,False,0,False,25,chhiàng-siaⁿ,tshiang3siann1
 tshiàu談,tshiàu-tâm,False,False,0,False,25,chhiàu-tâm,tshiau3tam5,chhiau3tam5,ㄑㄧㄠ˪ㄉㆰˊ,,tshiautam,chhiautam,ㄑㄧㄠㄉㆰ,,tsht,chht,ㄑㄉ,,False,False,False,False,False,False,False,False,False,False,False,True,False
 tshím頭,tshím-thâu,False,False,0,False,25,chhím-thâu,tshim2thau5,chhim2thau5,ㄑㄧㆬˋㄊㄠˊ,,tshimthau,chhimthau,ㄑㄧㆬㄊㄠ,,tshth,chhth,ㄑㄊ,,False,False,False,False,False,False,False,False,False,False,False,True,False
 tsih接,tsih-tsiap,False,False,0,False,25,chih-chiap,tsih4tsiap4,chih4chiap4,ㄐㄧㆷㄐㄧㄚㆴ,,tsihtsiap,chihchiap,ㄐㄧㆷㄐㄧㄚㆴ,,tsts,chch,ㄐㄐ,,False,False,False,False,False,False,False,False,False,False,False,True,False
+tsiunn蜍,tsiunn-tsî,False,False,0,False,25,chiuⁿ-chî,tsiunn1tsi5,chiunn1chi5,ㄐㄧㆫㄐㄧˊ,,tsiunntsi,chiunnchi,ㄐㄧㆫㄐㄧ,,tsts,chch,ㄐㄐ,,False,False,False,False,False,False,False,False,False,False,False,True,False
+tsiânn做,tsiânn-tsuè,False,False,0,False,25,chiâⁿ-chòe,tsiann5tsue3,chiann5choe3,ㄐㄧㆩˊㄗㄨㆤ˪,,tsianntsue,chiannchoe,ㄐㄧㆩㄗㄨㆤ,,tsts,chch,ㄐㄗ,,False,False,False,False,False,False,False,False,False,False,False,True,False
 tsiânn做,tsiânn-tsò,False,False,0,False,25,chiâⁿ-chò,tsiann5tso3,chiann5cho3,ㄐㄧㆩˊㄗㄛ˪,,tsianntso,chianncho,ㄐㄧㆩㄗㄛ,,tsts,chch,ㄐㄗ,,False,False,False,False,False,False,False,False,False,False,False,True,False
 tsíng著,tsíng-tio̍h,False,False,0,False,25,chéng-tio̍h,tsing2tioh8,cheng2tioh8,ㄐㄧㄥˋㄉㄧㄛㆷ̇,,tsingtioh,chengtioh,ㄐㄧㄥㄉㄧㄛㆷ,,tst,cht,ㄐㄉ,,False,False,False,False,False,False,False,False,False,False,False,True,False
 tín動,tín-tāng,False,False,0,False,25,tín-tāng,tin2tang7,tin2tang7,ㄉㄧㄣˋㄉㄤ˫,,tintang,tintang,ㄉㄧㄣㄉㄤ,,tt,tt,ㄉㄉ,,False,False,False,False,False,False,False,False,False,False,False,True,False
@@ -35395,6 +35408,7 @@ tín動,tín-tāng,False,False,0,False,25,tín-tāng,tin2tang7,tin2tang7,ㄉㄧ�
 啤酒,bih-luh,False,False,0,False,25,bih-luh,bih4luh4,bih4luh4,ㆠㄧㆷㄌㄨㆷ,,bihluh,bihluh,ㆠㄧㆷㄌㄨㆷ,,bl,bl,ㆠㄌ,,False,False,False,False,False,True,False,False,False,False,False,False,False
 啤酒,pî-tsiú,True,False,0,False,25,pî-chiú,pi5tsiu2,pi5chiu2,ㄅㄧˊㄐㄧㄨˋ,,pitsiu,pichiu,ㄅㄧㄐㄧㄨ,,pts,pch,ㄅㄐ,,True,False,False,False,False,False,False,False,False,False,False,False,False
 啥mih,siánn-mih,False,False,0,False,25,siáⁿ-mih,siann2mih4,siann2mih4,ㄒㄧㆩˋㄇㄧㆷ,,siannmih,siannmih,ㄒㄧㆩㄇㄧㆷ,,sm,sm,ㄒㄇ,,False,False,False,False,False,False,False,False,False,False,False,True,False
+啥mi̍h,siánn-mi̍h,False,False,0,False,25,siáⁿ-mi̍h,siann2mih8,siann2mih8,ㄒㄧㆩˋㄇㄧㆷ̇,,siannmih,siannmih,ㄒㄧㆩㄇㄧㆷ,,sm,sm,ㄒㄇ,,False,False,False,False,False,False,False,False,False,False,False,True,False
 啥乜,siánn-mih,True,False,0,False,25,siáⁿ-mih,siann2mih4,siann2mih4,ㄒㄧㆩˋㄇㄧㆷ,,siannmih,siannmih,ㄒㄧㆩㄇㄧㆷ,,sm,sm,ㄒㄇ,,True,True,False,False,False,True,False,False,False,False,False,False,False
 啥事,siánn-sū,False,False,0,False,25,siáⁿ-sū,siann2su7,siann2su7,ㄒㄧㆩˋㄙㄨ˫,,siannsu,siannsu,ㄒㄧㆩㄙㄨ,,ss,ss,ㄒㄙ,,False,False,False,False,False,True,True,False,False,False,False,False,False
 啥事,siánn-tāi,False,False,0,False,25,siáⁿ-tāi,siann2tai7,siann2tai7,ㄒㄧㆩˋㄉㄞ˫,,sianntai,sianntai,ㄒㄧㆩㄉㄞ,,st,st,ㄒㄉ,,False,True,False,False,False,False,True,False,False,False,False,False,False
@@ -54555,6 +54569,7 @@ tín動,tín-tāng,False,False,0,False,25,tín-tāng,tin2tang7,tin2tang7,ㄉㄧ�
 春餅,tshun-piánn,True,False,0,False,25,chhun-piáⁿ,tshun1piann2,chhun1piann2,ㄘㄨㄣㄅㄧㆩˋ,,tshunpiann,chhunpiann,ㄘㄨㄣㄅㄧㆩ,,tshp,chhp,ㄘㄅ,,True,False,False,False,False,True,True,False,False,False,False,False,False
 春𣛮,tshun-siānn,True,False,0,False,25,chhun-siāⁿ,tshun1siann7,chhun1siann7,ㄘㄨㄣㄒㄧㆩ˫,,tshunsiann,chhunsiann,ㄘㄨㄣㄒㄧㆩ,,tshs,chhs,ㄘㄒ,,True,False,False,False,False,False,False,False,False,False,False,False,False
 昨hng,tsa-hng,False,False,0,False,25,cha-hng,tsa1hng1,cha1hng1,ㄗㄚㄏㆭ,,tsahng,chahng,ㄗㄚㄏㆭ,,tsh,chh,ㄗㄏ,,False,False,False,False,False,False,False,False,False,False,False,True,False
+昨hng,tsa̍h-hng,False,False,0,False,25,cha̍h-hng,tsah8hng1,chah8hng1,ㄗㄚㆷ̇ㄏㆭ,,tsahhng,chahhng,ㄗㄚㆷㄏㆭ,,tsh,chh,ㄗㄏ,,False,False,False,False,False,False,False,False,False,False,False,True,False
 昨和,tsā-hô,False,False,0,False,25,chā-hô,tsa7ho5,cha7ho5,ㄗㄚ˫ㄏㄛˊ,,tsaho,chaho,ㄗㄚㄏㄛ,,tsh,chh,ㄗㄏ,,False,False,False,False,False,False,True,False,False,False,False,False,False
 昨夜,tsa-iā,False,False,0,False,25,cha-iā,tsa1ia7,cha1ia7,ㄗㄚㄧㄚ˫,,tsaia,chaia,ㄗㄚㄧㄚ,,tsi,chi,ㄗㄧ,,False,False,False,False,False,True,False,False,False,False,False,False,False
 昨日,tsa-ji̍t,False,False,0,False,25,cha-ji̍t,tsa1jit8,cha1jit8,ㄗㄚㆢㄧㆵ̇,,tsajit,chajit,ㄗㄚㆢㄧㆵ,,tsj,chj,ㄗㆢ,,False,False,False,False,False,True,False,False,False,False,False,False,False
@@ -57355,6 +57370,7 @@ tín動,tín-tāng,False,False,0,False,25,tín-tāng,tin2tang7,tin2tang7,ㄉㄧ�
 棺窟,kuan-khut,False,False,0,False,25,koan-khut,kuan1khut4,koan1khut4,ㄍㄨㄢㄎㄨㆵ,,kuankhut,koankhut,ㄍㄨㄢㄎㄨㆵ,,kkh,kkh,ㄍㄎ,,False,False,False,False,False,True,True,False,False,False,False,False,False
 棺罩,kuan-tà,False,False,0,False,25,koan-tà,kuan1ta3,koan1ta3,ㄍㄨㄢㄉㄚ˪,,kuanta,koanta,ㄍㄨㄢㄉㄚ,,kt,kt,ㄍㄉ,,False,False,False,False,False,False,True,False,False,False,False,False,False
 椅liâu,í-liâu,False,False,0,False,25,í-liâu,i2liau5,i2liau5,ㄧˋㄌㄧㄠˊ,,iliau,iliau,ㄧㄌㄧㄠ,,il,il,ㄧㄌ,,False,False,False,False,False,False,False,False,False,False,False,True,False
+椅liâu,í-tiâu,False,False,0,False,25,í-tiâu,i2tiau5,i2tiau5,ㄧˋㄉㄧㄠˊ,,itiau,itiau,ㄧㄉㄧㄠ,,it,it,ㄧㄉ,,False,False,False,False,False,False,False,False,False,False,False,True,False
 椅並,í-phīng,False,False,0,False,25,í-phēng,i2phing7,i2pheng7,ㄧˋㄆㄧㄥ˫,,iphing,ipheng,ㄧㄆㄧㄥ,,iph,iph,ㄧㄆ,,False,False,False,True,False,False,False,False,False,False,False,False,False
 椅位,í-uī,False,False,0,False,25,í-ūi,i2ui7,i2ui7,ㄧˋㄨㄧ˫,,iui,iui,ㄧㄨㄧ,,iu,iu,ㄧㄨ,,False,False,False,False,False,False,True,False,False,False,False,False,False
 椅墊,í-tiām,False,False,0,False,25,í-tiām,i2tiam7,i2tiam7,ㄧˋㄉㄧㆰ˫,,itiam,itiam,ㄧㄉㄧㆰ,,it,it,ㄧㄉ,,False,False,False,False,False,True,True,False,False,False,False,False,False
@@ -83994,6 +84010,8 @@ tín動,tín-tāng,False,False,0,False,25,tín-tāng,tin2tang7,tin2tang7,ㄉㄧ�
 讀錯,tha̍k-tshò,False,False,0,False,25,tha̍k-chhò,thak8tsho3,thak8chho3,ㄊㄚㆻ̇ㄘㄛ˪,,thaktsho,thakchho,ㄊㄚㆻㄘㄛ,,thtsh,thchh,ㄊㄘ,,False,False,False,False,False,False,True,False,False,False,False,False,False
 讀音,tha̍k-im,False,False,0,False,25,tha̍k-im,thak8im1,thak8im1,ㄊㄚㆻ̇ㄧㆬ,,thakim,thakim,ㄊㄚㆻㄧㆬ,,thi,thi,ㄊㄧ,,False,False,False,False,False,False,False,False,True,False,False,False,False
 讀音,tho̍k-im,True,False,0,False,25,tho̍k-im,thok8im1,thok8im1,ㄊㆦㆻ̇ㄧㆬ,,thokim,thokim,ㄊㆦㆻㄧㆬ,,thi,thi,ㄊㄧ,,True,False,False,True,False,False,False,False,True,False,False,False,False
+變tsiânn,piàn-tsiânn,False,False,0,False,25,piàn-chiâⁿ,pian3tsiann5,pian3chiann5,ㄅㄧㄢ˪ㄐㄧㆩˊ,,piantsiann,pianchiann,ㄅㄧㄢㄐㄧㆩ,,pts,pch,ㄅㄐ,,False,False,False,False,False,False,False,False,False,False,False,True,False
+變tsiânn,pìnn-tsiânn,False,False,0,False,25,pìⁿ-chiâⁿ,pinn3tsiann5,pinn3chiann5,ㄅㆪ˪ㄐㄧㆩˊ,,pinntsiann,pinnchiann,ㄅㆪㄐㄧㆩ,,pts,pch,ㄅㄐ,,False,False,False,False,False,False,False,False,False,False,False,True,False
 變亂,piàn-luān,False,False,0,False,25,piàn-loān,pian3luan7,pian3loan7,ㄅㄧㄢ˪ㄌㄨㄢ˫,,pianluan,pianloan,ㄅㄧㄢㄌㄨㄢ,,pl,pl,ㄅㄌ,,False,False,False,False,False,False,True,False,False,False,False,False,False
 變動,piàn-tōng,True,False,0,False,25,piàn-tōng,pian3tong7,pian3tong7,ㄅㄧㄢ˪ㄉㆲ˫,,piantong,piantong,ㄅㄧㄢㄉㆲ,,pt,pt,ㄅㄉ,,True,False,False,False,False,True,False,False,False,False,False,False,False
 變味,piàn-bī,False,False,0,False,25,piàn-bī,pian3bi7,pian3bi7,ㄅㄧㄢ˪ㆠㄧ˫,,pianbi,pianbi,ㄅㄧㄢㆠㄧ,,pb,pb,ㄅㆠ,,False,False,False,False,False,True,False,False,False,False,False,False,False
@@ -85438,6 +85456,7 @@ tín動,tín-tāng,False,False,0,False,25,tín-tāng,tin2tang7,tin2tang7,ㄉㄧ�
 赫爾,hiah-nī,True,False,0,False,25,hiah-nī,hiah4ni7,hiah4ni7,ㄏㄧㄚㆷㄋㄧ˫,,hiahni,hiahni,ㄏㄧㄚㆷㄋㄧ,,hn,hn,ㄏㄋ,,True,True,False,False,False,False,False,False,False,False,False,False,False
 赫赫,hik-hik,False,False,0,False,25,hek-hek,hik4hik4,hek4hek4,ㄏㄧㆻㄏㄧㆻ,,hikhik,hekhek,ㄏㄧㆻㄏㄧㆻ,,hh,hh,ㄏㄏ,,False,False,False,False,False,True,False,False,False,False,False,False,False
 赫連,hik-liân,False,False,0,False,25,hek-liân,hik4lian5,hek4lian5,ㄏㄧㆻㄌㄧㄢˊ,,hiklian,heklian,ㄏㄧㆻㄌㄧㄢ,,hl,hl,ㄏㄌ,,False,False,False,False,False,False,True,False,False,False,False,False,False
+走tsing,tsáu-tsing,False,False,0,False,25,cháu-cheng,tsau2tsing1,chau2cheng1,ㄗㄠˋㄐㄧㄥ,,tsautsing,chaucheng,ㄗㄠㄐㄧㄥ,,tsts,chch,ㄗㄐ,,False,False,False,False,False,False,False,False,False,False,False,True,False
 走上,tsáu-tsiūnn,False,False,0,False,25,cháu-chiūⁿ,tsau2tsiunn7,chau2chiunn7,ㄗㄠˋㄐㄧㆫ˫,,tsautsiunn,chauchiunn,ㄗㄠㄐㄧㆫ,,tsts,chch,ㄗㄐ,,False,False,False,False,False,True,False,False,False,False,False,False,False
 走亂,tsáu-luān,False,False,0,False,25,cháu-loān,tsau2luan7,chau2loan7,ㄗㄠˋㄌㄨㄢ˫,,tsauluan,chauloan,ㄗㄠㄌㄨㄢ,,tsl,chl,ㄗㄌ,,False,False,False,False,False,True,True,False,False,False,False,False,False
 走仁,tsáu-jîn,False,False,0,False,25,cháu-jîn,tsau2jin5,chau2jin5,ㄗㄠˋㆢㄧㄣˊ,,tsaujin,chaujin,ㄗㄠㆢㄧㄣ,,tsj,chj,ㄗㆢ,,False,False,False,False,False,False,True,False,False,False,False,False,False
@@ -95017,6 +95036,7 @@ tín動,tín-tāng,False,False,0,False,25,tín-tāng,tin2tang7,tin2tang7,ㄉㄧ�
 飛鼠,per-tshír,False,False,67,False,25,per-chhír,per1tshir2,per1chhir2,ㄅㄜㄘㆨˋ,ㄅㄛㄘㆨˋ,pertshir,perchhir,ㄅㄜㄘㆨ,ㄅㄛㄘㆨ,ptsh,pchh,ㄅㄘ,,True,False,False,False,False,False,False,False,False,False,False,False,False
 飛鼠,pue-tshí,True,False,552,False,25,poe-chhí,pue1tshi2,poe1chhi2,ㄅㄨㆤㄑㄧˋ,,puetshi,poechhi,ㄅㄨㆤㄑㄧ,,ptsh,pchh,ㄅㄑ,,True,False,False,False,False,True,False,False,False,False,False,False,False
 飛鼠,pue-tshú,True,False,16,False,25,poe-chhú,pue1tshu2,poe1chhu2,ㄅㄨㆤㄘㄨˋ,,puetshu,poechhu,ㄅㄨㆤㄘㄨ,,ptsh,pchh,ㄅㄘ,,True,False,False,False,False,False,False,False,False,False,False,False,False
+食si̍t,tsia̍h-si̍t,False,False,0,False,25,chia̍h-si̍t,tsiah8sit8,chiah8sit8,ㄐㄧㄚㆷ̇ㄒㄧㆵ̇,,tsiahsit,chiahsit,ㄐㄧㄚㆷㄒㄧㆵ,,tss,chs,ㄐㄒ,,False,False,False,False,False,False,False,False,False,False,False,True,False
 食パン,sio̍k-pháng,False,False,0,False,25,sio̍k-pháng,siok8phang2,siok8phang2,ㄒㄧㆦㆻ̇ㄆㄤˋ,,siokphang,siokphang,ㄒㄧㆦㆻㄆㄤ,,sph,sph,ㄒㄆ,,False,False,False,False,False,False,False,False,False,True,False,False,False
 食乖,tsia̍h-kuai,False,False,0,False,25,chia̍h-koai,tsiah8kuai1,chiah8koai1,ㄐㄧㄚㆷ̇ㄍㄨㄞ,,tsiahkuai,chiahkoai,ㄐㄧㄚㆷㄍㄨㄞ,,tsk,chk,ㄐㄍ,,False,False,False,False,False,False,True,False,False,False,False,False,False
 食乳,tsia̍h-ni,False,False,0,False,25,chia̍h-ni,tsiah8ni1,chiah8ni1,ㄐㄧㄚㆷ̇ㄋㄧ,,tsiahni,chiahni,ㄐㄧㄚㆷㄋㄧ,,tsn,chn,ㄐㄋ,,False,True,False,False,False,False,True,False,False,False,False,False,False
@@ -98282,7 +98302,9 @@ hit當時,hit-tong-sî,False,False,0,False,16,hit-tong-sî,hit4tong1si5,hit4tong
 kám仔店,kám-á-tiàm,False,False,0,False,16,kám-á-tiàm,kam2a2tiam3,kam2a2tiam3,ㄍㆰˋㄚˋㄉㄧㆰ˪,,kamatiam,kamatiam,ㄍㆰㄚㄉㄧㆰ,,kat,kat,ㄍㄚㄉ,,False,False,False,False,False,False,False,False,False,False,False,True,False
 sio借問,sio-tsioh-mn̄g,False,False,0,False,16,sio-chioh-mn̄g,sio1tsioh4mng7,sio1chioh4mng7,ㄒㄧㄛㄐㄧㄛㆷㄇㆭ˫,,siotsiohmng,siochiohmng,ㄒㄧㄛㄐㄧㄛㆷㄇㆭ,,stsm,schm,ㄒㄐㄇ,,False,False,False,False,False,False,False,False,False,False,False,True,False
 tso̍h--日,tso̍h--ji̍t,False,False,0,False,16,cho̍h--ji̍t,tsoh8jit8,choh8jit8,ㄗㄛㆷ̇ㆢㄧㆵ̇,,tsohjit,chohjit,ㄗㄛㆷㆢㄧㆵ,,tsj,chj,ㄗㆢ,,False,False,False,False,False,False,False,False,False,False,False,True,False
+tso̍h--日,tso̍h--li̍t,False,False,0,False,16,cho̍h--li̍t,tsoh8lit8,choh8lit8,ㄗㄛㆷ̇ㄌㄧㆵ̇,,tsohlit,chohlit,ㄗㄛㆷㄌㄧㆵ,,tsl,chl,ㄗㄌ,,False,False,False,False,False,False,False,False,False,False,False,True,False
 tsíng頭仔,tsíng-thâu-á,False,False,0,False,16,chéng-thâu-á,tsing2thau5a2,cheng2thau5a2,ㄐㄧㄥˋㄊㄠˊㄚˋ,,tsingthaua,chengthaua,ㄐㄧㄥㄊㄠㄚ,,tstha,chtha,ㄐㄊㄚ,,False,False,False,False,False,False,False,False,False,False,False,True,False
+tsíng頭仔,tsńg-thâu-á,False,False,0,False,16,chńg-thâu-á,tsng2thau5a2,chng2thau5a2,ㄗㆭˋㄊㄠˊㄚˋ,,tsngthaua,chngthaua,ㄗㆭㄊㄠㄚ,,tstha,chtha,ㄗㄊㄚ,,False,False,False,False,False,False,False,False,False,False,False,True,False
 tàu跤手,tàu-kha-tshiú,False,False,0,False,16,tàu-kha-chhiú,tau3kha1tshiu2,tau3kha1chhiu2,ㄉㄠ˪ㄎㄚㄑㄧㄨˋ,,taukhatshiu,taukhachhiu,ㄉㄠㄎㄚㄑㄧㄨ,,tkhtsh,tkhchh,ㄉㄎㄑ,,False,False,False,False,False,False,False,False,False,False,False,True,False
 ê昏時,ê-hng-sî,False,False,0,False,16,ê-hng-sî,e5hng1si5,e5hng1si5,ㆤˊㄏㆭㄒㄧˊ,,ehngsi,ehngsi,ㆤㄏㆭㄒㄧ,,ehs,ehs,ㆤㄏㄒ,,False,False,False,False,False,True,False,False,False,False,False,False,False
 ê昏頓,ê-hng-tǹg,False,False,0,False,16,ê-hng-tǹg,e5hng1tng3,e5hng1tng3,ㆤˊㄏㆭㄉㆭ˪,,ehngtng,ehngtng,ㆤㄏㆭㄉㆭ,,eht,eht,ㆤㄏㄉ,,False,False,False,False,False,True,False,False,False,False,False,False,False
@@ -109740,6 +109762,8 @@ tàu跤手,tàu-kha-tshiú,False,False,0,False,16,tàu-kha-chhiú,tau3kha1tshiu2
 尼姑庵,nî-koo-am,True,False,0,False,16,nî-ko͘-am,ni5koo1am1,ni5koo1am1,ㄋㄧˊㄍㆦㆰ,,nikooam,nikooam,ㄋㄧㄍㆦㆰ,,nka,nka,ㄋㄍㆰ,,True,False,False,False,False,True,True,False,False,False,False,False,False
 尼姑院,lî-koo-īnn,False,False,0,False,16,lî-ko͘-īⁿ,li5koo1inn7,li5koo1inn7,ㄌㄧˊㄍㆦㆪ˫,,likooinn,likooinn,ㄌㄧㄍㆦㆪ,,lki,lki,ㄌㄍㆪ,,False,False,False,False,False,False,True,False,False,False,False,False,False
 尼泊爾,nî-po̍h-ní,False,False,0,False,16,nî-po̍h-ní,ni5poh8ni2,ni5poh8ni2,ㄋㄧˊㄅㄛㆷ̇ㄋㄧˋ,,nipohni,nipohni,ㄋㄧㄅㄛㆷㄋㄧ,,npn,npn,ㄋㄅㄋ,,False,False,False,False,False,True,False,False,False,False,False,False,False
+尾--à,bué--à,False,False,0,False,16,bóe--à,bue2a3,boe2a3,ㆠㄨㆤˋㄚ˪,,buea,boea,ㆠㄨㆤㄚ,,ba,ba,ㆠㄚ,,False,False,False,False,False,False,False,False,False,False,False,True,False
+尾--à,bé--à,False,False,0,False,16,bé--à,be2a3,be2a3,ㆠㆤˋㄚ˪,,bea,bea,ㆠㆤㄚ,,ba,ba,ㆠㄚ,,False,False,False,False,False,False,False,False,False,False,False,True,False
 尾--來,bé--lâi,False,False,0,False,16,bé--lâi,be2lai5,be2lai5,ㆠㆤˋㄌㄞˊ,,belai,belai,ㆠㆤㄌㄞ,,bl,bl,ㆠㄌ,,False,False,False,False,False,False,True,False,False,False,False,False,False
 尾二名,bué-jī-miâ,False,False,0,False,16,bóe-jī-miâ,bue2ji7mia5,boe2ji7mia5,ㆠㄨㆤˋㆢㄧ˫ㄇㄧㄚˊ,,buejimia,boejimia,ㆠㄨㆤㆢㄧㄇㄧㄚ,,bjm,bjm,ㆠㆢㄇ,,False,False,False,False,False,True,False,False,False,False,False,False,False
 尾二指,bué-lī-tsáinn,False,False,568,False,16,bóe-lī-cháiⁿ,bue2li7tsainn2,boe2li7chainn2,ㆠㄨㆤˋㄌㄧ˫ㄗㆮˋ,,buelitsainn,boelichainn,ㆠㄨㆤㄌㄧㄗㆮ,,blts,blch,ㆠㄌㄗ,,True,False,False,False,False,True,False,False,False,False,False,False,False
