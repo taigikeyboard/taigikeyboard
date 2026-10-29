@@ -25,7 +25,11 @@ use crate::error::LexiconError;
 use crate::walker_model::WalkerModel;
 
 const MAGIC: &[u8; 4] = b"TKDB";
-const HEADER_SIZE: usize = 40;
+/// magic(4) + version(4) + count(4) + build_timestamp(4) — every version's
+/// layout, read before the version check.
+const COMMON_HEADER_SIZE: usize = 16;
+/// [`COMMON_HEADER_SIZE`] + v5 model metadata: tokens(8) + vocabulary(8) + alpha(8).
+const HEADER_SIZE: usize = COMMON_HEADER_SIZE + 3 * 8;
 const SUPPORTED_VERSION: u32 = 5;
 /// bitmask(2) + frequency(4) + hanzi_len(1) + tl_len(1) + syllable_count(1)
 /// + kautian_subtag(2) + walker_cost(2).
@@ -153,11 +157,10 @@ impl DictionaryReader {
             source,
         })?;
         let bytes = handle.as_slice();
-        if bytes.len() < 16 {
+        if bytes.len() < COMMON_HEADER_SIZE {
             return Err(LexiconError::InvalidBinary(format!(
-                "dictionary.bin: file too small ({} < {})",
+                "dictionary.bin: file too small ({} < {COMMON_HEADER_SIZE})",
                 bytes.len(),
-                16
             )));
         }
         if &bytes[..4] != MAGIC {

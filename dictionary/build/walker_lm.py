@@ -56,7 +56,9 @@ class WalkerModel:
         return self.cost_of_count(self.counts.get(word, 0))
 
     def cost_of_count(self, count: int) -> int:
-        probability = (count + self.alpha) / (self.tokens + self.alpha * self.vocabulary)
+        # Capped at 1 (cost 0) like the engine's `WalkerModel::cost_of_count`:
+        # an effective user count may exceed a tiny fixture corpus.
+        probability = min((count + self.alpha) / (self.tokens + self.alpha * self.vocabulary), 1.0)
         milli_nats = round(-math.log(probability) * MILLI_NATS)  # round() is half-to-even
         if milli_nats > MAX_WALKER_COST:
             raise ValueError(f"walker cost {milli_nats} (count {count}) exceeds u16")

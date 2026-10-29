@@ -182,17 +182,9 @@ pub(crate) fn walk_best(
         let Some(choice) = edge_choice(start, end) else {
             continue; // caller dropped this edge.
         };
-        let cand_cost = start_cost
-            + edge_cost(
-                choice.walker_cost,
-                choice.syllable_count,
-                choice.toneless_len,
-                choice.user_weight_delta,
-                // OOV pricing is selected from the explicit dict-hit
-                // flag, never `frequency == 0` (Codex pre-impl Q2).
-                choice.dict_hit,
-                custom_word_cost,
-            );
+        // OOV pricing is selected from the explicit `dict_hit` flag, never
+        // `frequency == 0` (Codex pre-impl Q2).
+        let cand_cost = start_cost + edge_cost(&choice, custom_word_cost);
         // Replace only on a strictly lower cost. On an exact tie the
         // first-reached (lower `(start, end)`) path is kept — no
         // edge-count semantics (Codex pre-impl S5 Q5).
