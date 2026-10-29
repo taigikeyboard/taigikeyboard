@@ -34,9 +34,8 @@ fn each_reader_uses_its_own_model_and_record_offsets() {
     };
     let a = DictionaryReader::open(&write_temp("model-small.bin", &dictionary(small))).unwrap();
     let b = DictionaryReader::open(&write_temp("model-large.bin", &dictionary(large))).unwrap();
-    assert_eq!(a.walker_model().tokens(), 15);
-    assert_eq!(a.walker_model().vocabulary(), 4);
-    assert_eq!(a.walker_model().alpha(), 1.0);
+    // trace: −ln((0 + 1) / (15 + 1 × 4)) × 1000 = 2,944; (10 + 1) / 19 → 547
+    assert_eq!(a.walker_model().cost_of_count(0), 2_944);
     assert_eq!(a.walker_model().cost_of_count(10), 547);
     assert_eq!(b.walker_model().cost_of_count(2_000), 7_879);
     assert_eq!(

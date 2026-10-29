@@ -93,6 +93,8 @@
 //! (Codex pre-impl S5 Q2) — the OOV pricing here only governs *path
 //! selection* (dict path vs OOV blob), never the rendered string.
 
+use super::EdgeChoice;
+
 // Walker model parameters — engine-only, no platform mirror.
 //
 // The `pub(crate) const` below (`LETTER_COUNT_BIAS`, `SYLLABLE_COUNT_BIAS`,
@@ -216,7 +218,9 @@ pub(crate) const WALKER_SINGLE_SYLLABLE_USER_DELTA_SCALE: f64 = 0.0;
 /// E1 P3): `2_000` made a custom entry a strong **multi-syllable phrase**
 /// competitor — it beats a split into the two cheapest single characters
 /// — without elevating it to a top single character. The rule tests in
-/// [`tests`] pin both sides on today's costs. **Dogfood-tunable**; E1 P4
+/// [`tests`] pin both sides on a fixture price, and
+/// `shipped_model_custom_price_keeps_the_s6_tier` on the shipped
+/// dictionary's price. **Dogfood-tunable**; E1 P4
 /// kept it — the gold set has no user entries to calibrate it on.
 pub(crate) const USER_ENTRY_EFFECTIVE_COUNT: u32 = 2_000;
 
@@ -240,8 +244,9 @@ fn user_entry_cost_cap(custom_word_cost: u16, user_weight_delta: f64) -> f64 {
 
 /// Min-cost for one lattice edge (**lower = better**).
 ///
-/// - `custom_word_cost` — the effective user count priced by the loaded
-///   dictionary model, supplied once per walk for every user-entry cap.
+/// `custom_word_cost` is the effective user count priced by the loaded
+/// dictionary model, supplied once per walk for every user-entry cap. The
+/// edge's own inputs are read from `choice`:
 /// - `walker_cost` — the edge key's lowest `DictionaryRecord::walker_cost`
 ///   (milli-nats) across its homophones
 ///   (`lexicon::EdgeBest::span_walker_cost`, E1 D3), or
@@ -295,14 +300,15 @@ fn user_entry_cost_cap(custom_word_cost: u16, user_weight_delta: f64) -> f64 {
 ///   `dict_hit` rule (Codex pre-impl S7 Q1 / RC0 Q2).
 ///
 /// Always finite.
-pub(crate) fn edge_cost(
-    walker_cost: u16,
-    syllable_count: u8,
-    toneless_len: usize,
-    user_weight_delta: f64,
-    dict_hit: bool,
-    custom_word_cost: u16,
-) -> f64 {
+pub(crate) fn edge_cost(choice: &EdgeChoice, custom_word_cost: u16) -> f64 {
+    let EdgeChoice {
+        walker_cost,
+        syllable_count,
+        toneless_len,
+        user_weight_delta,
+        dict_hit,
+        ..
+    } = *choice;
     if !dict_hit {
         // khiin `segment_min_cost:198-206`: a span with no dictionary
         // word is not priced by any probability — the DP pays `BIG`
@@ -343,18 +349,33 @@ pub(crate) fn edge_cost(
 
 #[cfg(test)]
 mod tests {
-    use super::{OOV_PER_CHAR_PENALTY, WALKER_SINGLE_SYLLABLE_USER_DELTA_SCALE};
+    use super::{
+        EdgeChoice, OOV_PER_CHAR_PENALTY, USER_ENTRY_EFFECTIVE_COUNT,
+        WALKER_SINGLE_SYLLABLE_USER_DELTA_SCALE,
+    };
 
-    // A fixed input for these pure cost-rule tests, not a production model price.
+    // A fixed input for these pure cost-rule tests, not a production model price;
+    // `shipped_model_custom_price_keeps_the_s6_tier` pins the shipped one.
     const FIXTURE_CUSTOM_WORD_COST: u16 = 7_879;
+
+    /// An edge carrying only the fields `edge_cost` reads.
+    fn choice(walker_cost: u16, syll: u8, len: usize, delta: f64, dict_hit: bool) -> EdgeChoice {
+        EdgeChoice {
+            roman: String::new(),
+            hanji: None,
+            canonical_tl: String::new(),
+            dict_hit,
+            is_custom: false,
+            walker_cost,
+            syllable_count: syll,
+            toneless_len: len,
+            user_weight_delta: delta,
+        }
+    }
 
     fn edge_cost(walker_cost: u16, syll: u8, len: usize, delta: f64, dict_hit: bool) -> f64 {
         super::edge_cost(
-            walker_cost,
-            syll,
-            len,
-            delta,
-            dict_hit,
+            &choice(walker_cost, syll, len, delta, dict_hit),
             FIXTURE_CUSTOM_WORD_COST,
         )
     }
@@ -462,11 +483,7 @@ mod tests {
         // No length scaling; a fresh selection reaches the model's custom tier.
         for custom_cost in [6_000, 9_000] {
             let cost = super::edge_cost(
-                13_000,
-                2,
-                2,
-                f64::from(ranking::BOOST_ALPHA),
-                true,
+                &choice(13_000, 2, 2, f64::from(ranking::BOOST_ALPHA), true),
                 custom_cost,
             );
             let expected =
@@ -491,6 +508,30 @@ mod tests {
         // trace: 7.879 / 5^0.2 × 2^0.2 = 6.560 < 8.561 / 3^0.2 + 10.571 / 2^0.2 = 6.872 + 9.203
         let taigi = ec(FIXTURE_CUSTOM_WORD_COST, 2, 5);
         assert!(taigi < ec(TAI, 1, 3) + ec(GI_LANGUAGE, 1, 2));
+    }
+
+    /// The custom-word price of the shipped `assets/dictionaries/dictionary.bin` model.
+    fn shipped_custom_word_cost() -> u16 {
+        let path = test_support::production_artifact("dictionary.bin");
+        lexicon::dictionary_reader::DictionaryReader::open(&path)
+            .unwrap_or_else(|e| panic!("open {}: {e}", path.display()))
+            .walker_model()
+            .cost_of_count(USER_ENTRY_EFFECTIVE_COUNT)
+    }
+
+    #[test]
+    fn shipped_model_custom_price_keeps_the_s6_tier() {
+        // The S6 guards below run on the fixture price; this one fails when an
+        // α or corpus change moves the shipped price out of the tier (E1 P4:
+        // α 50 → 8,675 loses to 的 + 伊 = 8,573) — recalibrate
+        // `USER_ENTRY_EFFECTIVE_COUNT` then.
+        // trace (2026-10-29): ln((3,627,712 + 10 × 167,525) / 2,010) × 1000 = 7,878
+        let custom = shipped_custom_word_cost();
+        assert!(
+            ec(custom, 2, 2) < ec(E_THE, 1, 1) + ec(I_HE, 1, 1),
+            "custom={custom}"
+        );
+        assert!(ec(custom, 1, 1) > ec(E_THE, 1, 1), "custom={custom}");
     }
 
     #[test]

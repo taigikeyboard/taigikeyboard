@@ -95,6 +95,13 @@ def test_certain_word_costs_zero() -> None:
     assert model.cost_of_count(0) == 0  # p = 1
 
 
+def test_count_beyond_the_corpus_is_capped_at_certainty() -> None:
+    # Engine parity (`walker_model.rs` `unseen_and_certain_words_use_the_same_scale`):
+    # p = (2000 + 1) / (15 + 4) > 1 → capped to 1, cost 0, never negative.
+    model = WalkerModel(counts={}, tokens=15, vocabulary=4, alpha=1.0)
+    assert model.cost_of_count(2_000) == 0
+
+
 def test_cost_beyond_u16_fails_the_build() -> None:
     model = WalkerModel(counts={}, tokens=10**40, vocabulary=1, alpha=1.0)
     # −ln(1 / 1e40) ≈ 92.1 nats = 92,103 milli-nats > 65,535.

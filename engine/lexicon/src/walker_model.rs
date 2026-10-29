@@ -7,8 +7,6 @@ use crate::LexiconError;
 
 #[derive(Debug, Clone, Copy)]
 pub struct WalkerModel {
-    tokens: u64,
-    vocabulary: u64,
     alpha: f64,
     denominator: f64,
 }
@@ -28,22 +26,7 @@ impl WalkerModel {
                 "dictionary.bin: invalid walker model metadata".into(),
             ));
         }
-        Ok(Self {
-            tokens,
-            vocabulary,
-            alpha,
-            denominator,
-        })
-    }
-
-    pub fn tokens(&self) -> u64 {
-        self.tokens
-    }
-    pub fn vocabulary(&self) -> u64 {
-        self.vocabulary
-    }
-    pub fn alpha(&self) -> f64 {
-        self.alpha
+        Ok(Self { alpha, denominator })
     }
 
     /// Quantized −ln p in milli-nats, matching `WalkerModel.cost_of_count`

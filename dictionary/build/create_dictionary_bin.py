@@ -215,9 +215,8 @@ def verify(logger):
 
     data = OUTPUT_FILE.read_bytes()
 
-    magic = data[:4]
+    magic, version, count, build_ts, tokens, vocabulary, alpha = struct.unpack_from(HEADER_FORMAT, data, 0)
     assert magic == MAGIC, f"Bad magic: {magic}"
-    version, count, build_ts = struct.unpack_from("<III", data, 4)
     assert version == VERSION, f"Bad version: {version}"
     assert build_ts == build_id(), f"Bad build id: {build_ts} != {build_id()}"
     logger.info(f"  Header: version={version}, count={count}, build_ts={build_ts}")
@@ -231,7 +230,6 @@ def verify(logger):
     records = load_dictionary_records(CSV_FILE)
     assert len(records) == count, f"Row count mismatch: bin={count}, csv={len(records)}"
     model = load_model(records)
-    tokens, vocabulary, alpha = struct.unpack_from("<QQd", data, 16)
     assert (tokens, vocabulary, alpha) == (model.tokens, model.vocabulary, model.alpha), (
         "Walker model header does not match the model used to price records"
     )
