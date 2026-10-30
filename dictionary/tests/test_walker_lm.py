@@ -16,6 +16,7 @@ from build.dictionary_records import DictionaryRecord
 from build.walker_lm import (
     HELD_OUT_SOURCE,
     WalkerModel,
+    load_bigrams,
     load_model,
     model_from_counts,
     record_costs,
@@ -57,17 +58,16 @@ NO_HANZI = record(5, None, "a", "a1")
 RECORDS = [TSHUT_LAI, TSHUT_NEUTRAL_LAI, KAU_SIU, KAU, NO_HANZI]
 
 
+def write_tsv(path: Path, header: list[str], rows: list[list[object]]) -> Path:
+    lines = ["\t".join(header), *("\t".join(str(cell) for cell in row) for row in rows)]
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path
+
+
 @pytest.fixture
 def unigrams(tmp_path: Path):
     """Writes a `word_unigrams.tsv` with the given rows (and header) and returns its path."""
-
-    def write(rows: list[list[object]], header: list[str] = HEADER) -> Path:
-        path = tmp_path / "word_unigrams.tsv"
-        lines = ["\t".join(header), *("\t".join(str(cell) for cell in row) for row in rows)]
-        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-        return path
-
-    return write
+    return lambda rows, header=HEADER: write_tsv(tmp_path / "word_unigrams.tsv", header, rows)
 
 
 def test_counts_hold_out_typing_and_share_one_word_across_neutral_spellings(unigrams) -> None:
@@ -140,3 +140,73 @@ def test_model_word_lowercases_tl_num(unigrams) -> None:
     model = load_model([KAU, upper], unigrams([["到", "kàu", 3, 3, 0]]), alpha=1.0)
     assert model.vocabulary == 1
     assert record_costs([KAU, upper], model)[0] == record_costs([KAU, upper], model)[1]
+
+
+BIGRAM_HEADER = ["prev_hanji", "prev_tl", "next_hanji", "next_tl", "count", "moe_kautian", HELD_OUT_SOURCE]
+KAU_WORD = ("到", "kau3")
+KAU_SIU_WORD = ("教授", "kau3siu7")
+TSHUT_LAI_WORD = ("出來", "tshut4lai5")
+
+
+@pytest.fixture
+def bigrams(tmp_path: Path):
+    """Writes a `word_bigrams.tsv` with the given rows (and header) and returns its path."""
+    return lambda rows, header=BIGRAM_HEADER: write_tsv(tmp_path / "word_bigrams.tsv", header, rows)
+
+
+@pytest.fixture
+def kau_bigrams(bigrams):
+    # trace: 到→教授 5 − 1 held out = 4; 到→出來 2 + 1 (`tshut--lâi`, same model word) = 3;
+    # 教授→到 is held out only → dropped. C(到) = 7, N(到) = 2.
+    return load_bigrams(
+        RECORDS,
+        bigrams(
+            [
+                ["到", "kàu", "教授", "kàu-siū", 5, 4, 1],
+                ["到", "kàu", "出來", "tshut-lâi", 2, 2, 0],
+                ["到", "kàu", "出來", "tshut--lâi", 1, 1, 0],
+                ["教授", "kàu-siū", "到", "kàu", 1, 0, 1],
+            ]
+        ),
+    )
+
+
+def test_bigrams_hold_out_typing_and_share_one_word_across_neutral_spellings(kau_bigrams) -> None:
+    assert kau_bigrams.followers == {KAU_WORD: {KAU_SIU_WORD: 4, TSHUT_LAI_WORD: 3}}
+    assert kau_bigrams.totals == {KAU_WORD: 7}
+
+
+def test_conditional_cost_interpolates_absolute_discounting(kau_bigrams) -> None:
+    unigram_cost = math.log(10)  # p_uni = 0.1
+    # trace: seen = (4 − 0.75) / 7; backoff = 0.75 · 2 / 7 · 0.1 = 0.15 / 7 → p = 3.4 / 7
+    assert kau_bigrams.conditional_cost(KAU_WORD, KAU_SIU_WORD, unigram_cost) == pytest.approx(math.log(7 / 3.4))
+    # trace: unseen continuation → backoff only, p = 0.15 / 7
+    assert kau_bigrams.conditional_cost(KAU_WORD, ("教室", "kau3sik4"), unigram_cost) == pytest.approx(
+        math.log(7 / 0.15)
+    )
+    # trace: 教授 has no continuation left after the hold-out → the unigram cost itself
+    assert kau_bigrams.conditional_cost(KAU_SIU_WORD, KAU_WORD, unigram_cost) == unigram_cost
+
+
+def test_penalty_only_ever_raises_the_unigram_cost(kau_bigrams) -> None:
+    unigram_cost = math.log(10)
+    # trace: seen pair −ln(3.4 / 7) ≈ 0.72 < ln 10 ≈ 2.30 → no bonus, penalty 0
+    assert kau_bigrams.penalty(KAU_WORD, KAU_SIU_WORD, unigram_cost) == 0.0
+    # trace: unseen pair ln(7 / 0.15) − ln 10 = ln(0.7 / 0.15) ≈ 1.54
+    assert kau_bigrams.penalty(KAU_WORD, ("教室", "kau3sik4"), unigram_cost) == pytest.approx(math.log(0.7 / 0.15))
+    assert kau_bigrams.penalty(KAU_SIU_WORD, KAU_WORD, unigram_cost) == 0.0
+
+
+@pytest.mark.parametrize(
+    ("rows", "header", "error"),
+    [
+        pytest.param([["到", "kàu", "教授", "kàu-siū", 6, 4, 1]], BIGRAM_HEADER, "Σ sources", id="count-not-sum"),
+        pytest.param(
+            [["到", "kàu", "教室", "kàu-sik", 1, 1, 0]], BIGRAM_HEADER, "not a dictionary record", id="unknown-word"
+        ),
+        pytest.param([], BIGRAM_HEADER[:-1], HELD_OUT_SOURCE, id="no-held-out-column"),
+    ],
+)
+def test_malformed_bigrams_are_rejected(bigrams, rows, header, error: str) -> None:
+    with pytest.raises(ValueError, match=error):
+        load_bigrams(RECORDS, bigrams(rows, header))

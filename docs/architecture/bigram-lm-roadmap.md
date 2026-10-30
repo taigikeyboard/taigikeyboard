@@ -71,7 +71,7 @@ p(w₂|w₁)  = max(c(w₁,w₂) − D, 0) / C(w₁) + D·N(w₁)/C(w₁) · p_u
 base(e)   = max(−ln p_uni(e), −ln p(pick(e) | pick(prev edge)))           # penalty-only
 ```
 
-`p_uni(e)` is today's edge price (`span_walker_cost`, the key's homophone minimum); the length / syllable biases and the user discount apply to `base` exactly as today. A `w₁` with no recorded continuation (`C = 0`) and the first edge take no penalty — no D5 context in the walker (YAGNI until a case needs it).
+`p_uni(e)` is today's edge price (`span_walker_cost`, the key's homophone minimum), and it is also the `p_uni(w₂)` in the backoff term — the pair counts are looked up on the edge's pick, the unigram stays the edge's, so an empty table is exactly today's walk (simulator: 43 912 keys, 0 differences). The length / syllable biases and the user discount apply to `base` exactly as today. A `w₁` with no recorded continuation (`C = 0`) and the first edge take no penalty — no D5 context in the walker (YAGNI until a case needs it).
 
 **Why penalty-only, not the full conditional** (offline spike over the E1 walker gold set, `dictionary/tools/walker_gold.py` simulator, same edge picks as the engine):
 
@@ -85,7 +85,7 @@ The full conditional makes frequent collocations (`攏→是`) cheaper than thei
 
 **Identity is a proof obligation.** The walker state becomes `(offset, incoming edge)`; each edge keeps today's single `EdgeBest` pick (no top-N alternatives, so custom / learned / `user_weight_delta` pricing is untouched). The P3 PR proves (a) with an empty bigram table every walk returns the same edges, choices and cost as `HEAD~1` (named `cost.rs` / `walker.rs` cases + golden dumps); (b) with data, a single-edge path's cost never changes. `/code-review` mandatory.
 
-**Data.** `association.bin` v2 keeps the top 30 continuations with count ≥ 2 per key (`associations.py` `WORD_TOP_K` / `WORD_MIN_COUNT`), so its counts cannot give `C(w₁)`, `N(w₁)` or an unseen-vs-pruned answer. The walker needs every seen pair (283 234 pairs over 18 283 previous words today) as raw counts, so `p_uni` stays the runtime edge price under the user's source toggles. Artifact shape is P2's decision; D3's "no new file" reasoning is the default.
+**Data.** `association.bin` v2 keeps the top 30 continuations with count ≥ 2 per key (`associations.py` `WORD_TOP_K` / `WORD_MIN_COUNT`), so its counts cannot give `C(w₁)`, `N(w₁)` or an unseen-vs-pruned answer. The walker needs every seen pair (283 234 pairs over 22 046 previous words today) as raw counts, so `p_uni` stays the runtime edge price under the user's source toggles. Artifact shape is P2's decision; D3's "no new file" reasoning is the default.
 
 ### D7 — Two-word context (technique 4) — cut
 

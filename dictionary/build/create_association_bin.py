@@ -28,13 +28,12 @@ from build.associations import (
     compute_associations,
     compute_word_associations,
 )
-from build.common import BASE_DIR, LOG_DIR, OUTPUT_DIR, build_id
+from build.common import BIGRAMS_TSV, LOG_DIR, OUTPUT_DIR, build_id
 from common.cjk import is_cjk
 from common.logging_utils import log_header, setup_logging
 from common.source_bits import ASSOC_SOURCE_COLUMNS
 
 CSV_FILE = OUTPUT_DIR / "dictionary.csv"
-BIGRAMS_TSV = BASE_DIR / "shared" / "data" / "word_bigrams.tsv"
 OUTPUT_FILE = OUTPUT_DIR / "association.bin"
 SCRIPT_NAME = "create_association_bin"
 
