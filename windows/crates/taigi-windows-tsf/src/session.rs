@@ -41,8 +41,9 @@ use taigi_desktop_core::keys::{
     telex_guide_rows, CandidateNavigation, ComposingKeyBindings, ComposingKeyIntent,
     KeyEventSnapshot, ShortcutAction, SymbolPickerIntent, TpsKeyCapIndex,
 };
+use taigi_desktop_core::settings::presentation::output_script_label;
 use taigi_desktop_core::settings::{
-    keys, AppearanceMode, InputMode, InputModeRequest, SettingsDocument,
+    keys, AppearanceMode, CandidateDisplayMode, InputMode, InputModeRequest, SettingsDocument,
 };
 use taigi_desktop_core::strings::{StringKey, StringResolver};
 use taigi_desktop_core::symbols::SymbolTable;
@@ -372,10 +373,13 @@ impl TextService_Impl {
                     .map(ComposingManager::is_composing)
             })
             .unwrap_or(false);
-        let is_showing = self
-            .presenter()
-            .is_some_and(|presenter| presenter.borrow().is_showing(token));
-        (is_composing, is_showing)
+        (is_composing, self.is_list_showing(token))
+    }
+
+    /// Whether `token` owns the candidate list up right now, whoever draws it.
+    fn is_list_showing(&self, token: ContextToken) -> bool {
+        self.presenter()
+            .is_some_and(|presenter| presenter.borrow().is_showing(token))
     }
 
     /// The pass-through keys this input method consumes: attaching
@@ -1020,6 +1024,14 @@ impl TextService_Impl {
                 if !display_mode.allows_swap_toggle() {
                     return;
                 }
+                // With no list up, only the tray icon would say what a commit
+                // now writes (Discord request 2026-10-19). Side by side only:
+                // under combined a commit still writes the Hanji, so a flash
+                // would announce a change that did not happen
+                // (`TaigiInputController.performShortcutAction`). Read before
+                // the write: re-presenting may take the list down.
+                let should_flash = display_mode == CandidateDisplayMode::SideBySide
+                    && !token.is_some_and(|token| self.is_list_showing(token));
                 if !runtime.update_settings("toggle_translate_swapped", |document| {
                     let swapped = document.bool(&keys::IS_HANJI_FIRST);
                     document.set_bool(&keys::IS_HANJI_FIRST, !swapped);
@@ -1030,6 +1042,11 @@ impl TextService_Impl {
                 // never which exist — re-presented in place, selection kept
                 // (dismissing read as the window vanishing, 2026-08-21).
                 self.represent_open_list(identity, runtime, false);
+                if should_flash {
+                    let settings = runtime.settings.current();
+                    let is_hanji = settings.bool(&keys::IS_HANJI_FIRST);
+                    self.flash_mode_label(runtime, &settings, output_script_label(is_hanji));
+                }
             }
             ShortcutAction::CycleCandidateDisplayMode => {
                 if !runtime.update_settings("cycle_candidate_display_mode", |document| {
