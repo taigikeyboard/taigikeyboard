@@ -10,13 +10,32 @@
 
 - **Forward-looking work only.** Shipped versions: [`CHANGELOG.md`](../CHANGELOG.md) (release notes per train); the v3.5.8 plan archive is [`releases/v3.5.8/plan.md`](releases/v3.5.8/plan.md). Shipped designs live in the `architecture/*-roadmap.md` docs and in `architecture/behavioral-invariants.md`.
 - Device dogfood items: [`architecture/dogfood-checklist.md`](architecture/dogfood-checklist.md) (none pending as of 2026-10-18).
-- Release scope, timing and tags are the maintainer's call; nothing below is assigned to a release.
+- Release scope, timing and tags are the maintainer's call; only the v3.9.0 fix list below is assigned to a release (maintainer, 2026-10-30).
 
 ---
 
 ## Active / In-flight items
 
 - **Maintainability audit follow-up (2026-10)** — [`architecture/maintainability-roadmap-2026-10.md`](architecture/maintainability-roadmap-2026-10.md), rounds over [`reports/2026-10-09-audit-all.md`](reports/2026-10-09-audit-all.md). **Paused** by the maintainer 2026-10-14; resume point is the maintainer's call.
+
+### v3.9.0 fix list (Discord #issues, maintainer 2026-10-30)
+
+Work order = row order. One round per row; a bug row starts with a repro (`AGENTS.md` Core Principle #4). Rows 8–10 need a maintainer design decision first; rows 11–12 need reporter input or a maintainer call.
+
+| # | Item | Kind | Platforms | Next step |
+|---|---|---|---|---|
+| 1 | Candidates sometimes missing from the candidate bar again; tapping + twice restores them | bug (regression) | Android | Find the earlier fix, reproduce on device |
+| 2 | Continuous input: a shorter-syllable split ranks above the single word (`uê` → ū ê before 鞋; `khikhi`; `guhi`) — TL and TPS, POJ `ôe` fine | bug | engine | `candidate_dump` for `ue5` / `khikhi`: ranking or segmentation |
+| 3 | Google Docs in Chrome loses candidates on `ko͘` + `c`; same input fine elsewhere | bug | Windows | Reproduce on the Windows box; #538 covered macOS only |
+| 4 | Show a notice when toggling Hanji / Romanization | feature | Windows | Check macOS / Linux behaviour for parity |
+| 5 | Custom layouts: allow ⁿ on the main keyboard | feature | iOS, Android | — |
+| 6 | Vertical expandable candidate window layout | feature | Windows (+ macOS asked) | Linux vertical window as reference |
+| 7 | Custom layouts: user-editable long-press callouts (half-width symbols on half-width `,` `.`; `{ }` on `( )`) | feature | iOS, Android | — |
+| 8 | Custom layouts are not separated by TL / POJ, so picking one when switching romanization is hard | feature | iOS, Android | Design decision (idea 2026-10-29: per-layout TL / POJ setting) |
+| 9 | `c` types `ch` / `ts` (toggle); desktop Hanji → romanization reverse lookup | feature | desktop | Decision: toggle vs. losing a selection key; reverse lookup scope |
+| 10 | TPS requests: confirm key commits TPS symbols; desktop TPS layout (awaiting reporter: where ㄝ goes); mobile TPS layout; ↓ selection side; custom-dictionary ↓ pick; tone-8 `˙` placement vs. converter | feature (6 parts) | desktop, mobile | Split into separate items, then decide |
+| 11 | Neutral-tone candidates for 起來 / 起去 / 一下 / ah | feature | engine | Needs input → expected-output examples |
+| 12 | Dialectal D spellings for L / J readings | feature | engine | Maintainer call; phonetics rules need an authoritative source (`docs/contributing/phonetics.md`) |
 
 ---
 
