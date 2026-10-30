@@ -18,6 +18,8 @@ extension KeyboardViewController {
         KeyboardSettings.setupStore(for: .taigiKeyboard)
 
         state.keyboardContext.settings.spacebarLongPressBehavior = .moveInputCursor
+        // KeyboardKit 11 turned its undo manager on by default; keep the KK 10 behavior.
+        state.keyboardContext.settings.isUndoManagerEnabled = false
 
         setupLiquidGlass()
         setupCoreServices()
@@ -87,6 +89,7 @@ extension KeyboardViewController {
         // 3. Core ActionHandler — receives the correct autocompleteService
         let handler = ActionHandler(
             controller: self,
+            controllerContext: state.controllerContext,
             keyboardContext: state.keyboardContext,
             keyboardBehavior: services.keyboardBehavior,
             autocompleteContext: state.autocompleteContext,
@@ -223,24 +226,14 @@ extension KeyboardViewController {
             state.keyboardContext.notifyDisplayChange()
         }
 
-        // Sync auto-capitalization override from KeyboardKit settings
+        // Auto-cap off → drop a pending uppercase. The case KeyboardKit sets itself is guarded
+        // by the FIXME: layers in KeyboardViewController and ActionHandler.tryChangeKeyboardCase.
         let isAutoCap = state.keyboardContext.settings.isAutocapitalizationEnabled
 
         setupLogger.debug("[AUTOCAP][SYNC] isAutoCap=\(isAutoCap) keyboardCase=\(String(describing: state.keyboardContext.keyboardCase))")
 
-        if isAutoCap {
-            if state.keyboardContext.autocapitalizationTypeOverride != nil {
-                state.keyboardContext.autocapitalizationTypeOverride = nil
-            }
-        } else {
-            if state.keyboardContext.autocapitalizationTypeOverride != Keyboard.AutocapitalizationType.none {
-                state.keyboardContext.autocapitalizationTypeOverride = Keyboard.AutocapitalizationType.none
-            }
-            if state.keyboardContext.keyboardCase != .capsLocked,
-               state.keyboardContext.keyboardCase != .lowercased
-            {
-                state.keyboardContext.keyboardCase = .lowercased
-            }
+        if !isAutoCap {
+            setPreferredKeyboardCase()
         }
     }
 }

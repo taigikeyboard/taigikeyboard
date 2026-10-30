@@ -88,6 +88,7 @@ final class ActionHandlerPredictionSuggestionsTests: XCTestCase {
     /// canonical TL and a split cell's own script. What each request writes is
     /// the engine's (`engine/composing/tests/prediction_commit_resolution.rs`).
     /// Android parity: `PredictionWordsBuilderTest.prediction_pick_reads_the_word_not_the_cell_text`.
+    @MainActor
     func testPredictionPick_readsTheMetadataNotTheCellText() {
         let unsplit = ActionHandler.predictionSuggestions(predictions, splitCombinedCells: false)
         let swapped = AutocompleteSuggestion(

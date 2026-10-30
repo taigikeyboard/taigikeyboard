@@ -60,15 +60,15 @@ struct SettingsSelectionOverlay: View {
         _isOutputBothScripts = State(initialValue: s.storedIsOutputBothScripts)
         _literalRomanCandidateEnabled = State(initialValue: s.isLiteralRomanCandidateEnabled)
         _autoCapitalizationEnabled = State(
-            initialValue: KeyboardSettings.store.bool(forKey: Self.autoCapKey),
+            initialValue: UserDefaults.keyboardSettings.bool(forKey: Self.autoCapKey),
         )
         _autoSpaceEnabled = State(initialValue: s.isAutoSpaceEnabled)
         _toolbarAutoCollapse = State(initialValue: s.isToolbarAutoCollapse)
         _isAudioFeedbackEnabled = State(
-            initialValue: KeyboardSettings.store.object(forKey: Self.audioFeedbackKey) as? Bool ?? true,
+            initialValue: UserDefaults.keyboardSettings.object(forKey: Self.audioFeedbackKey) as? Bool ?? true,
         )
         _isHapticFeedbackEnabled = State(
-            initialValue: KeyboardSettings.store.object(forKey: Self.hapticFeedbackKey) as? Bool ?? true,
+            initialValue: UserDefaults.keyboardSettings.object(forKey: Self.hapticFeedbackKey) as? Bool ?? true,
         )
         _isDoubleTapOOEnabled = State(initialValue: s.isDoubleTapOOEnabled)
         _isDoubleTapNNEnabled = State(initialValue: s.isDoubleTapNNEnabled)
@@ -109,7 +109,7 @@ struct SettingsSelectionOverlay: View {
                         options: SyllableSeparator.allCases.map { ($0, lang.string($0.displayNameKey)) },
                     ) { SharedSettings.shared.syllableSeparator = $0 }
                     settingsToggle(lang.string(.settingsAutoCapitalization), isOn: $autoCapitalizationEnabled) {
-                        KeyboardSettings.store.set($0, forKey: Self.autoCapKey)
+                        UserDefaults.keyboardSettings.set($0, forKey: Self.autoCapKey)
                     }
                     settingsToggle(lang.string(.settingsAutoSpace), isOn: $autoSpaceEnabled) {
                         SharedSettings.shared.isAutoSpaceEnabled = $0
@@ -146,10 +146,10 @@ struct SettingsSelectionOverlay: View {
 
                     sectionHeader(lang.string(.settingsFeedbackSectionTitle))
                     settingsToggle(lang.string(.settingsSoundFeedback), isOn: $isAudioFeedbackEnabled) {
-                        KeyboardSettings.store.set($0, forKey: Self.audioFeedbackKey)
+                        UserDefaults.keyboardSettings.set($0, forKey: Self.audioFeedbackKey)
                     }
                     settingsToggle(lang.string(.settingsVibrationFeedback), isOn: $isHapticFeedbackEnabled) {
-                        KeyboardSettings.store.set($0, forKey: Self.hapticFeedbackKey)
+                        UserDefaults.keyboardSettings.set($0, forKey: Self.hapticFeedbackKey)
                     }
 
                     openAppButton
@@ -167,11 +167,11 @@ struct SettingsSelectionOverlay: View {
             candidateDisplayMode = s.candidateDisplayMode
             isOutputBothScripts = s.storedIsOutputBothScripts
             literalRomanCandidateEnabled = s.isLiteralRomanCandidateEnabled
-            autoCapitalizationEnabled = KeyboardSettings.store.bool(forKey: Self.autoCapKey)
+            autoCapitalizationEnabled = UserDefaults.keyboardSettings.bool(forKey: Self.autoCapKey)
             autoSpaceEnabled = s.isAutoSpaceEnabled
             toolbarAutoCollapse = s.isToolbarAutoCollapse
-            isAudioFeedbackEnabled = KeyboardSettings.store.object(forKey: Self.audioFeedbackKey) as? Bool ?? true
-            isHapticFeedbackEnabled = KeyboardSettings.store.object(forKey: Self.hapticFeedbackKey) as? Bool ?? true
+            isAudioFeedbackEnabled = UserDefaults.keyboardSettings.object(forKey: Self.audioFeedbackKey) as? Bool ?? true
+            isHapticFeedbackEnabled = UserDefaults.keyboardSettings.object(forKey: Self.hapticFeedbackKey) as? Bool ?? true
             isDoubleTapOOEnabled = s.isDoubleTapOOEnabled
             isDoubleTapNNEnabled = s.isDoubleTapNNEnabled
             isNasalMarkerUppercaseEnabled = s.isNasalMarkerUppercaseEnabled

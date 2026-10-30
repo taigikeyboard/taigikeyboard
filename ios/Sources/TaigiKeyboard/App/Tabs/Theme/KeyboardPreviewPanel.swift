@@ -40,6 +40,7 @@ struct KeyboardPreviewPanel: View {
             calloutStyle: .taigi(for: settings.fontType),
             autocompleteContext: previewState.autocompleteContext,
             keyboardContext: previewState.keyboardContext,
+            controllerContext: previewState.controllerContext,
             composingManager: composingManager,
             onSuggestionTap: { _ in },
             onTranslateToggle: {},

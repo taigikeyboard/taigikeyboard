@@ -22,7 +22,7 @@ A file marked `// MARK: - Shared-Core Candidate` (Swift) or `// region Shared-Co
 |---|---|---|
 | Framework imports | Foundation only | Kotlin stdlib only (+ the project's `engine/*Bridge.kt`) |
 | Engine calls | `RustEngineBridge` allowed | `engine/*Bridge.kt` allowed |
-| Singletons | no `*.shared`, no `KeyboardSettings.store`; settings arrive as `EngineSettingsProvider` | no `object` / companion mutable state, no `Application` / `BuildConfig` reach-in; settings arrive as `EngineSettingsProvider` |
+| Singletons | no `*.shared`, no KeyboardKit settings store; settings arrive as `EngineSettingsProvider` | no `object` / companion mutable state, no `Application` / `BuildConfig` reach-in; settings arrive as `EngineSettingsProvider` |
 | I/O | no `FileManager`, App Group, `Bundle`, DB | no `File`, DB, SharedPreferences, DataStore |
 | Clock | caller passes the time | caller passes `nowMs` |
 | Concurrency / side effects | no `NotificationCenter`, `Timer`, `DispatchQueue.main`, `@MainActor` / `@Published` / `ObservableObject` | no coroutines / `Dispatchers`, no `java.util.concurrent` |

@@ -5,26 +5,11 @@ import KeyboardKit
 import UIKit
 
 /// Provides English completions and spelling suggestions through Apple's `UITextChecker`.
-class EnglishAutocompleteService: KeyboardKit.AutocompleteService {
+class EnglishAutocompleteService: EngineFreeAutocompleteService {
     // MARK: - Properties
 
     private let checker = UITextChecker()
     private let language: String
-
-    // MARK: - KeyboardKit Protocol Properties
-
-    var locale: Locale = .current
-
-    var canIgnoreWords: Bool {
-        false
-    }
-
-    var canLearnWords: Bool {
-        false
-    }
-
-    var ignoredWords: [String] = []
-    var learnedWords: [String] = []
 
     // MARK: - Initialization
 
@@ -34,26 +19,13 @@ class EnglishAutocompleteService: KeyboardKit.AutocompleteService {
 
     // MARK: - KeyboardKit Protocol Methods
 
-    func autocomplete(_ text: String) async throws -> AutocompleteResult {
+    func autocomplete(text: String, in _: Locale) async throws -> AutocompleteResult {
         let suggestions = getSuggestions(for: text)
         return AutocompleteResult(
             inputText: text,
             suggestions: suggestions,
         )
     }
-
-    func hasIgnoredWord(_ word: String) -> Bool {
-        ignoredWords.contains(word)
-    }
-
-    func hasLearnedWord(_ word: String) -> Bool {
-        learnedWords.contains(word)
-    }
-
-    func ignoreWord(_: String) {}
-    func learnWord(_: String) {}
-    func removeIgnoredWord(_: String) {}
-    func unlearnWord(_: String) {}
 
     // MARK: - Private Helpers
 

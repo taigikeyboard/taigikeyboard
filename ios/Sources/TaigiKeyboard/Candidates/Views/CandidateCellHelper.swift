@@ -264,13 +264,11 @@ enum CandidateCellHelper {
         with newText: String,
         keepOriginalSubtitle: Bool = false,
     ) -> AutocompleteSuggestion {
-        let additionalDeleteCount = max(0, suggestion.text.count - newText.count)
         let subtitle = keepOriginalSubtitle ? suggestion.subtitle : suggestion.text
         return AutocompleteSuggestion(
             text: newText,
             title: newText,
             subtitle: subtitle,
-            additionalDeleteCount: additionalDeleteCount,
             additionalInfo: suggestion.additionalInfo,
         )
     }

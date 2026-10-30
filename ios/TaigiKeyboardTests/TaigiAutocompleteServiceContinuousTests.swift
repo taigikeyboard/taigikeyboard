@@ -527,7 +527,7 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
     // MARK: - v3.5.8 Phase 9 Item 13 — fallback retire (§15.6)
 
     /// Minimal stub that supplies both the composing state and the
-    /// Continuous fetch surface, so `autocomplete(_:)` can be exercised
+    /// Continuous fetch surface, so `autocomplete(text:in:)` can be exercised
     /// end-to-end without a real `ComposingManager`.
     private final class StubComposing: ComposingStateProvider, ContinuousCandidateFetcher {
         var isComposing = true
@@ -542,12 +542,13 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
     /// `platform_autocomplete_no_lexicon_branch` (§15.6): after the
     /// fallback retire, an engine that returns no candidates yields an
     /// empty strip — there is NO platform lexicon path and NO slot-0
-    /// composing-text cell. Pins that `autocomplete(_:)` is engine-only.
+    /// composing-text cell. Pins that `autocomplete(text:in:)` is engine-only.
+    @MainActor
     func testAutocomplete_EmptyEngine_NoLexiconBranch_EmptyResult() async throws {
         let stub = StubComposing()
         stub.fetchResult = []
         service.setComposingManager(stub)
-        let result = try await service.autocomplete("gua")
+        let result = try await service.autocomplete(text: "gua", in: .current)
         XCTAssertTrue(
             result.suggestions.isEmpty,
             "empty engine → empty strip (no lexicon fallback, no slot-0 cell)",
@@ -556,11 +557,12 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
 
     /// Positive control: a non-empty engine result flows straight through
     /// `buildContinuousSuggestions` with no slot-0 cell injected.
+    @MainActor
     func testAutocomplete_EngineCandidates_SingleSourcePassthrough() async throws {
         let stub = StubComposing()
         stub.fetchResult = [makeCandidate(consumedSpanEnd: 3, displayText: "guá")]
         service.setComposingManager(stub)
-        let result = try await service.autocomplete("gua")
+        let result = try await service.autocomplete(text: "gua", in: .current)
         XCTAssertEqual(result.suggestions.count, 1, "engine candidates pass through 1:1")
         XCTAssertEqual(result.suggestions[0].additionalInfo["isContinuous"], "true")
         XCTAssertNil(

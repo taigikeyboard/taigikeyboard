@@ -36,7 +36,7 @@ iOS calls `RustEngineBridge.transformInputCase` from `ActionHandler+KeyActions.s
 | on | Uppercase at sentence start | Uppercase | Uppercase | Uppercase |
 | off | Always lowercase | Lowercase | Uppercase | Uppercase |
 
-iOS stores the setting in KeyboardKit's own `KeyboardSettings` (`isAutocapitalizationEnabled`). When it is off, `KeyboardViewController+Setup.swift` sets `autocapitalizationTypeOverride = .none` and forces `keyboardCase` back to `.lowercased` unless caps lock is on. Android applies it in `CapsStateManager.updateCapsState()`.
+iOS stores the setting in KeyboardKit's own `KeyboardSettings` (`isAutocapitalizationEnabled`). When it is off, `KeyboardViewController.setPreferredKeyboardCase()` resolves the preferred case to `.lowercased`, and `KeyboardViewController+Setup.swift` forces `keyboardCase` back to `.lowercased` on a settings sync; caps lock is kept in both. Android applies it in `CapsStateManager.updateCapsState()`.
 
 ---
 
