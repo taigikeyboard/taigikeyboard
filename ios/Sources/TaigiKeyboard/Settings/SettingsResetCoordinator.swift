@@ -13,9 +13,9 @@ enum SettingsResetCoordinator {
     /// Reset the three KeyboardKit-owned user defaults that SharedSettings
     /// does not own. Keep these in sync with `SettingsTab` "reset all" UX.
     static func resetKeyboardKitDefaults() {
-        KeyboardSettings.store.set(true, forKey: "com.keyboardkit.settings.keyboard.isAutocapitalizationEnabled")
-        KeyboardSettings.store.set(true, forKey: "com.keyboardkit.settings.feedback.isAudioFeedbackEnabled")
-        KeyboardSettings.store.set(true, forKey: "com.keyboardkit.settings.feedback.isHapticFeedbackEnabled")
+        UserDefaults.keyboardSettings.set(true, forKey: "com.keyboardkit.settings.keyboard.isAutocapitalizationEnabled")
+        UserDefaults.keyboardSettings.set(true, forKey: "com.keyboardkit.settings.feedback.isAudioFeedbackEnabled")
+        UserDefaults.keyboardSettings.set(true, forKey: "com.keyboardkit.settings.feedback.isHapticFeedbackEnabled")
     }
 
     /// Reset every setting to its default — SharedSettings + KeyboardKit.

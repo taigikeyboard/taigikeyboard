@@ -14,6 +14,7 @@ struct TaigiKeyboardView: View {
 
     @ObservedObject var autocompleteContext: AutocompleteContext
     @ObservedObject var keyboardContext: KeyboardContext
+    let controllerContext: KeyboardControllerContext
     let composingManager: ComposingManager
 
     let onSuggestionTap: (AutocompleteSuggestion) -> Void
@@ -40,6 +41,7 @@ struct TaigiKeyboardView: View {
         calloutStyle: KeyboardCalloutStyle,
         autocompleteContext: AutocompleteContext,
         keyboardContext: KeyboardContext,
+        controllerContext: KeyboardControllerContext,
         composingManager: ComposingManager,
         onSuggestionTap: @escaping (AutocompleteSuggestion) -> Void,
         onTranslateToggle: @escaping () -> Void,
@@ -53,6 +55,7 @@ struct TaigiKeyboardView: View {
         self.calloutStyle = calloutStyle
         self.autocompleteContext = autocompleteContext
         self.keyboardContext = keyboardContext
+        self.controllerContext = controllerContext
         self.composingManager = composingManager
         self.onSuggestionTap = onSuggestionTap
         self.onTranslateToggle = onTranslateToggle
@@ -70,12 +73,16 @@ struct TaigiKeyboardView: View {
         let text: ButtonTextProvider
         let image: ButtonImageProvider
 
-        init(keyboardContext: KeyboardContext, settings: SettingsSnapshot) {
+        init(
+            keyboardContext: KeyboardContext,
+            controllerContext: KeyboardControllerContext,
+            settings: SettingsSnapshot,
+        ) {
             self.settings = settings
             keyTextColor = settings.colorSettings.keyTextColor?.color ?? Color(.label)
             font = ButtonFontProvider(keyboardContext: keyboardContext, settings: settings)
             text = ButtonTextProvider(keyboardContext: keyboardContext, settings: settings)
-            image = ButtonImageProvider(keyboardContext: keyboardContext)
+            image = ButtonImageProvider(keyboardContext: keyboardContext, controllerContext: controllerContext)
         }
     }
 
@@ -88,6 +95,7 @@ struct TaigiKeyboardView: View {
         // `p.settings.colorSettings` so there is no duplicate resolution or split source.
         let p = RenderProviders(
             keyboardContext: keyboardContext,
+            controllerContext: controllerContext,
             settings: settings.snapshot(for: keyboardContext.colorScheme),
         )
         let colors = p.settings.colorSettings
@@ -229,13 +237,13 @@ struct TaigiKeyboardView: View {
             candidateTheme: candidateTheme,
             isTPSLayout: isTPSLayout,
             orMapsToER: orMapsToER,
-            onSymbolInsert: { [keyboardContext, unowned services] symbol in
+            onSymbolInsert: { [controllerContext, unowned services] symbol in
                 // Same route as an emoji: the toolbar stays reachable while
                 // composing, so an active preedit commits with the symbol.
                 if let handler = services.actionHandler as? ActionHandler {
                     handler.insertExternalText(symbol)
                 } else {
-                    keyboardContext.textDocumentProxy.insertText(symbol)
+                    controllerContext.textDocumentProxy.insertText(symbol)
                 }
             },
             onOpenSettingsApp: { [unowned services] in

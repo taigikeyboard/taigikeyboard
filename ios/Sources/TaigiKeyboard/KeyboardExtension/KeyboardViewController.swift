@@ -23,11 +23,12 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
 
     private var cancellables = Set<AnyCancellable>()
 
-    /// FIXME: Workaround for KeyboardKit 10 auto-capitalization override.
+    /// FIXME: Workaround for KeyboardKit 10–11 auto-capitalization override.
     /// These two properties are part of a 2-layer workaround:
     /// - Layer 1: textDidChangeAsync override (this file) — skips super when auto-cap off
     /// - Layer 2: setupKeyboardCaseProtection (this file) — Combine guard for internal path
-    /// Also: tryChangeKeyboardCase override (ActionHandler.swift) — blocks non-shift case changes
+    /// Also: tryChangeKeyboardCase override (ActionHandler.swift) — blocks non-shift case changes;
+    /// setPreferredKeyboardCase override (this file) — replaces KK 10's removed autocap override
     /// 2026-08-28: the standard `setupKeyboardKit(for:)` path (KK 10.9.0) did NOT
     /// fix the symptom on device in this app (benchmark result not reproduced) —
     /// workaround restored. Do NOT remove again without a passing on-device
@@ -183,6 +184,7 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
             calloutStyle: .taigi(for: keyboardSettings.fontType),
             autocompleteContext: state.autocompleteContext,
             keyboardContext: state.keyboardContext,
+            controllerContext: state.controllerContext,
             composingManager: composingManager,
             onSuggestionTap: { [unowned self] suggestion in
                 services.actionHandler.handle(suggestion)
@@ -281,6 +283,20 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
             super.textDidChangeAsync(textInput)
         } else {
             performAutocomplete()
+        }
+    }
+
+    /// FIXME: Stands in for KeyboardKit 10's `autocapitalizationTypeOverride = .none`, removed in
+    /// KeyboardKit 11. Auto-cap off → the preferred case is lowercase; caps lock is kept.
+    override func setPreferredKeyboardCase() {
+        guard !state.keyboardContext.settings.isAutocapitalizationEnabled else {
+            super.setPreferredKeyboardCase()
+            return
+        }
+        if state.keyboardContext.keyboardCase != .capsLocked,
+           state.keyboardContext.keyboardCase != .lowercased
+        {
+            state.keyboardContext.keyboardCase = .lowercased
         }
     }
 

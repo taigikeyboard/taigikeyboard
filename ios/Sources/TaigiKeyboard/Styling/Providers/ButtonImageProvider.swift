@@ -8,12 +8,15 @@ import SwiftUI
 ///
 /// Created by: `TaigiKeyboardView.RenderProviders`
 /// Queried by: `TaigiButtonContent.body` (first priority check)
-/// Depends on: `KeyboardContext` (composing state, translate toggle state)
+/// Depends on: `KeyboardContext` (composing state, translate toggle state),
+/// `KeyboardControllerContext` (host return-key type)
 final class ButtonImageProvider {
     private let keyboardContext: KeyboardContext
+    private let controllerContext: KeyboardControllerContext
 
-    init(keyboardContext: KeyboardContext) {
+    init(keyboardContext: KeyboardContext, controllerContext: KeyboardControllerContext) {
         self.keyboardContext = keyboardContext
+        self.controllerContext = controllerContext
     }
 
     /// Returns an SF Symbol image, or nil to defer to text rendering.
@@ -24,7 +27,7 @@ final class ButtonImageProvider {
         case .primary(.return):
             // Composing: nil lets ButtonTextProvider show the confirmation text
             guard !keyboardContext.isComposingText else { return nil }
-            let returnKeyType = keyboardContext.textDocumentProxy.returnKeyType
+            let returnKeyType = controllerContext.textDocumentProxy.returnKeyType
             return Image(latinSystemName: Self.returnKeySymbolName(for: returnKeyType))
         case .settings:
             return Image(latinSystemName: "gearshape.fill")

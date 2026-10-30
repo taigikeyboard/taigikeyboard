@@ -24,7 +24,7 @@ public class ActionHandler: StandardKeyboardActionHandler {
 
     /// The keyboard's own writes to the host document (issue #352).
     lazy var hostText = HostTextWriter(proxy: { [unowned self] in
-        keyboardContext.textDocumentProxy
+        controllerContext.textDocumentProxy
     })
 
     /// Set when this handler has just written an auto space, so the space now
@@ -243,13 +243,13 @@ public class ActionHandler: StandardKeyboardActionHandler {
         // that writes no auto space leaves none for the next punctuation key.
         // English mode: KeyboardKit replaces the current word; the trailing space is
         // ours, so it obeys Auto-Space and arms the punctuation swap. KK's own
-        // auto-learn has nothing to do here (`EnglishAutocompleteService.learnWord`
-        // is a no-op); the strip refreshes as after a key release.
+        // auto-learn has nothing to do here (`EnglishAutocompleteService` exposes an
+        // empty engine collection); the strip refreshes as after a key release.
         // CROSS-PLATFORM INVARIANT — mirrors Android
         // CandidateClickHandler.handleEnglishCandidateClick.
         if settings.inputMode == .english {
             performInputEvent {
-                keyboardContext.textDocumentProxy.insertAutocompleteSuggestion(suggestion, tryInsertSpace: false)
+                controllerContext.textDocumentProxy.insertAutocompleteSuggestion(suggestion, tryInsertSpace: false)
                 appendAutoSpaceIfEarned(documentText: suggestion.text, wroteRomanization: true)
             }
             keyboardController?.performAutocomplete()

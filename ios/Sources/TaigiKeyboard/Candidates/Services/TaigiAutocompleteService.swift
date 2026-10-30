@@ -94,40 +94,7 @@ func splitIntoSingleScriptCells<T>(
 /// Turns `ComposingManager`'s span-local engine candidates into KeyboardKit suggestions.
 /// An empty engine result means an empty candidate row — the inline pre-edit still holds
 /// the composing buffer, and Enter commits the pending tail.
-class TaigiAutocompleteService: KeyboardKit.AutocompleteService {
-    // MARK: - KeyboardKit Protocol Properties
-
-    var locale: Locale = .current
-
-    // MARK: - KeyboardKit Learning Stubs (protocol requirement, unused by Taigi)
-
-    // KeyboardKit's AutocompleteService protocol mandates these members without defaults.
-    // TaigiKeyboard does not surface ignore/learn UX, so all implementations are no-ops.
-
-    var canIgnoreWords: Bool {
-        false
-    }
-
-    var canLearnWords: Bool {
-        false
-    }
-
-    var ignoredWords: [String] = []
-    var learnedWords: [String] = []
-
-    func hasIgnoredWord(_: String) -> Bool {
-        false
-    }
-
-    func hasLearnedWord(_: String) -> Bool {
-        false
-    }
-
-    func ignoreWord(_: String) {}
-    func learnWord(_: String) {}
-    func removeIgnoredWord(_: String) {}
-    func unlearnWord(_: String) {}
-
+class TaigiAutocompleteService: EngineFreeAutocompleteService {
     // MARK: - Core Properties
 
     /// Composing state provider (decoupled from ComposingManager)
@@ -153,7 +120,7 @@ class TaigiAutocompleteService: KeyboardKit.AutocompleteService {
     /// matches the current `rawInput` and no stale-result guard is needed. An empty engine
     /// result means an empty candidate row (see
     /// `docs/engine/continuous-candidate-display.md` §15.4/§15.6).
-    func autocomplete(_ text: String) async throws -> AutocompleteResult {
+    func autocomplete(text: String, in _: Locale) async throws -> AutocompleteResult {
         guard !text.isEmpty, activeComposingContext() != nil else {
             return AutocompleteResult(inputText: text, suggestions: [])
         }

@@ -144,7 +144,7 @@ extension ActionHandler {
     // CROSS-PLATFORM INVARIANT — mirrors Android
     // TextInputKeyHandler.commitNonComposingCharacter. Drift causes silent divergence.
     private func insertNonComposingCharacter(_ char: String) {
-        let proxy = keyboardContext.textDocumentProxy
+        let proxy = controllerContext.textDocumentProxy
         // No-selection guard: with an active selection the preceding space is
         // text before the selection, not an auto-space; the punctuation must
         // replace the selection normally (Codex P2).
@@ -214,7 +214,7 @@ extension ActionHandler {
     // TextInputKeyHandler.commitSpaceOrDoubleSpacePeriod. Drift causes silent divergence.
     @discardableResult
     private func insertSpaceOrDoubleSpacePeriod(isFullWidthPunctuation: Bool) -> String? {
-        let proxy = keyboardContext.textDocumentProxy
+        let proxy = controllerContext.textDocumentProxy
         let replacement: String? = if followsRecentPlainSpace, (proxy.selectedText ?? "").isEmpty {
             Self.doubleSpacePeriodReplacement(
                 textBeforeCaret: proxy.documentContextBeforeInput,
@@ -284,7 +284,7 @@ extension ActionHandler {
     /// Re-predict NextWord after backspace based on last remaining character.
     /// Extracts context from text proxy, then delegates to NextWordController.
     private func handleBackspaceForNextWord() {
-        let textBeforeCursor = keyboardContext.textDocumentProxy.documentContextBeforeInput ?? ""
+        let textBeforeCursor = controllerContext.textDocumentProxy.documentContextBeforeInput ?? ""
         let trimmedText = textBeforeCursor.trimmingCharacters(in: .whitespacesAndNewlines)
 
         if trimmedText.isEmpty {
@@ -310,7 +310,7 @@ extension ActionHandler {
             // Captured before the commit clears it.
             let capturedRawInput = composingManager.rawInput
             // Read before the commit, so a host callback cannot change the field first.
-            let isActionField = Self.isActionReturnKey(keyboardContext.textDocumentProxy.returnKeyType)
+            let isActionField = Self.isActionReturnKey(controllerContext.textDocumentProxy.returnKeyType)
 
             // Enter commits raw input (literal keystrokes).
             // This allows English words to pass through without tone conversion
