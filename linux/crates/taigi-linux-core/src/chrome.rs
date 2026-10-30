@@ -20,7 +20,10 @@ use taigi_desktop_core::keys::{
     MENU,
 };
 use taigi_desktop_core::mode_indicator::ModeIndicator;
-use taigi_desktop_core::settings::{keys, InputMode, InputModeRequest, SettingsDocument};
+use taigi_desktop_core::settings::presentation::output_script_label;
+use taigi_desktop_core::settings::{
+    keys, CandidateDisplayMode, InputMode, InputModeRequest, SettingsDocument,
+};
 use taigi_desktop_core::strings::StringKey;
 use taigi_desktop_core::symbols::SymbolTable;
 use taigi_linux_platform::{open_settings, toggle_tps_keyboard, DESKTOP_PLATFORM};
@@ -78,9 +81,9 @@ fn menu_id(command: MenuCommand) -> Option<&'static str> {
 /// The full mode text — the Fcitx5 notice and the IBus menu root's label:
 /// the romanization and the candidate display mode, the two states the
 /// global chords switch and the mode flash names on the other desktops
-/// (`台羅 · 漢羅對應`). TPS alone under TPS, where the display mode switches
-/// nothing. Not the whole indicator state: under side by side, what a commit
-/// writes is the swap's, which [`mode_indicator`] carries.
+/// (`台羅 · 漢羅對應`), plus what a commit writes under side by side, the
+/// one display mode where the swap picks it (`台羅 · 漢羅對應 · 漢字`). TPS
+/// alone under TPS, where the display mode switches nothing.
 pub fn mode_label(runtime: &Runtime, settings: &SettingsDocument) -> String {
     let strings = runtime.strings();
     let input_mode: InputMode = settings.choice(&keys::INPUT_MODE);
@@ -88,12 +91,18 @@ pub fn mode_label(runtime: &Runtime, settings: &SettingsDocument) -> String {
         return strings.resolve(input_mode.label_key()).to_owned();
     }
     let romanization = input_mode.label_key();
-    let display_mode = settings.engine_settings().candidate_display_mode;
-    format!(
+    let engine_settings = settings.engine_settings();
+    let display_mode = engine_settings.candidate_display_mode;
+    let label = format!(
         "{} · {}",
         strings.resolve(romanization),
         strings.resolve(display_mode.label_key())
-    )
+    );
+    if display_mode != CandidateDisplayMode::SideBySide {
+        return label;
+    }
+    let output_script = output_script_label(engine_settings.is_hanji_first);
+    format!("{label} · {}", strings.resolve(output_script))
 }
 
 /// The tray / panel indicator: its symbol is the IBus `InputMode` text and
@@ -199,9 +208,14 @@ pub fn perform_global(
             let settings = runtime.settings.current();
             represent_open_list(runtime, token, state, &settings, false);
             session::present_table(state, &settings, &bindings, &mut emits);
-            // What a commit writes is on the indicator (`mode_indicator`).
-            // Not announced: the list, when open, already shows the change.
             emits.push(Emit::ModeChanged);
+            // Announced even over an open list, as on the other desktops
+            // (USER 2026-10-31). Side by side only: under combined a commit
+            // still writes the Hanji (`TaigiInputController.performShortcutAction`).
+            if settings.engine_settings().candidate_display_mode == CandidateDisplayMode::SideBySide
+            {
+                emits.push(Emit::AnnounceMode);
+            }
         }
         ShortcutAction::CycleCandidateDisplayMode => {
             if !runtime.update_settings("cycle_candidate_display_mode", |document| {
@@ -615,10 +629,13 @@ mod tests {
     }
 
     #[test]
-    fn the_swap_redraws_the_indicator_and_is_inert_under_roman_only() {
+    fn the_swap_redraws_the_indicator_and_announces_only_under_side_by_side() {
         // trace: default TL, side by side, hanji first = 台; the swap writes
-        // the stored flag → Ts, no announce. Romanization Only: the swap
-        // writes nothing (`allows_swap_toggle`) and the indicator stays Ts.
+        // the stored flag → Ts, announced with the output script as the
+        // label's third part. Combined: the swap writes the stored flag
+        // (punctuation width only), a commit still writes the Hanji → no
+        // announce, two-part label. Romanization Only: the swap writes
+        // nothing (`allows_swap_toggle`) and the indicator stays Ts.
         let (_directory, runtime) = runtime();
         let mut engine = EngineState::default();
         let indicator = || mode_indicator(&runtime.settings.current());
@@ -629,9 +646,33 @@ mod tests {
             &mut engine,
             ShortcutAction::ToggleTranslateSwapped,
         );
+        assert_eq!(
+            emits[emits.len() - 2..],
+            [Emit::ModeChanged, Emit::AnnounceMode]
+        );
+        assert_eq!(indicator(), ModeIndicator::TlRomanization);
+        let label = || mode_label(&runtime, &runtime.settings.current());
+        let roman = runtime
+            .strings()
+            .resolve(StringKey::SettingsOutputScriptRoman)
+            .to_owned();
+        assert!(label().ends_with(&format!(" · {roman}")));
+
+        assert!(runtime.update_settings("test", |document| {
+            document.set_choice(
+                &keys::CANDIDATE_DISPLAY_MODE,
+                CandidateDisplayMode::Combined,
+            );
+        }));
+        let emits = perform_global(
+            &runtime,
+            ContextToken(1),
+            &mut engine,
+            ShortcutAction::ToggleTranslateSwapped,
+        );
         assert_eq!(emits.last(), Some(&Emit::ModeChanged));
         assert!(!emits.contains(&Emit::AnnounceMode));
-        assert_eq!(indicator(), ModeIndicator::TlRomanization);
+        assert_eq!(label().matches(" · ").count(), 1);
 
         assert!(runtime.update_settings("test", |document| {
             document.set_choice(

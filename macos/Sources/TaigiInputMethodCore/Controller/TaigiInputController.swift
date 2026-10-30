@@ -784,17 +784,15 @@ public final class TaigiInputController: IMKInputController {
             // here read as the window vanishing (real device, 2026-08-21).
             // (The Candidate Display picker is the setting that DOES change which
             // candidates exist — see `representCandidates(refetch:)`.)
-            let wasListOnScreen = isCandidateListOnScreen
             settings.storedIsHanjiFirst.toggle()
             representCandidates(refetch: false)
-            // With no list on screen, nothing would say what a commit now
-            // writes — the menu-bar icon is one static mark (D5), where the
-            // other desktops' tray icons change (desktop-core
-            // `ModeIndicator`). Side by side only: under Hanji with
-            // Romanization the chord flips the punctuation width and a
-            // commit still writes the Hanji, so a flash would announce a
-            // change that did not happen.
-            if settings.candidateDisplayMode == .sideBySide, !wasListOnScreen {
+            // Flashed even over an open list, as the display-mode cycle is
+            // (USER 2026-10-31): the menu-bar icon is one static mark (D5),
+            // and a re-rendered list does not name what a commit now writes.
+            // Side by side only: under Hanji with Romanization the chord
+            // flips the punctuation width and a commit still writes the
+            // Hanji, so a flash would announce a change that did not happen.
+            if settings.candidateDisplayMode == .sideBySide {
                 flash(settings.storedIsHanjiFirst ? .settingsOutputScriptHanji : .settingsOutputScriptRoman)
             }
         case .cycleCandidateDisplayMode:
@@ -805,7 +803,7 @@ public final class TaigiInputController: IMKInputController {
             // That observation hops to the main actor, so the flash below
             // lands one turn BEFORE the bar changes shape; a second, in-line
             // re-fetch would run the same fetch twice.
-            // Flashed even over an open list, unlike the swap: the strip
+            // Flashed even over an open list, as the swap is: the strip
             // changes shape, and a strip that did so with no notice reads as
             // breakage — the same rule as the romanization switch.
             let next = settings.candidateDisplayMode.next
