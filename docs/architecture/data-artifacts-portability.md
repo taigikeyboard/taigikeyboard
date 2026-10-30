@@ -51,8 +51,9 @@ Custom binary format holding per-rowid dictionary entries.
 Authoritative spec lives in [`docs/engine/binary-format.md`](../engine/binary-format.md). Summary:
 
 - **Producer**: `dictionary/build/create_dictionary_bin.py`.
-- **Header (40 bytes)**: magic `"TKDB"` (4) · `version: u32` (currently `5`) · `count: u32` · `build_ts: u32` · `tokens_N: u64` · `vocabulary_V: u64` · `alpha: f64`. The model metadata supplies the scale for custom and learned-word costs.
+- **Header (56 bytes)**: magic `"TKDB"` (4) · `version: u32` (currently `6`) · `count: u32` · `build_ts: u32` · `tokens_N: u64` · `vocabulary_V: u64` · `alpha: f64` · `discount_D: f64` · `bigram_words: u32` · `bigram_pairs: u32`. The model metadata supplies the scale for custom and learned-word costs; `D` and the counts belong to the walker bigram.
 - **Offset table**: `count × u32` absolute byte offsets (LE).
+- **Bigram section** (v6): per-rowid model-word id, per-word continuation totals, sorted pair counts — the walker bigram; records start after it (`binary-format.md` §1.5).
 - **Record**: `bitmask: u16 · frequency: u32 · hanzi_len: u8 · tl_len: u8 · syllable_count: u8 · kautian_subtag: u16 · walker_cost: u16 · hanzi_bytes · tl_bytes` — UTF-8 strings, fixed-layout prefix. `syllable_count` feeds span-local candidate ranking, `kautian_subtag` is the kautian subcollection, `walker_cost` the walker model cost.
 - **Bitmask (13 bits)**: bits 0–7 = eight text sources (`kautian, taigitv, itaigi, sitbut, taihoa, taijit, kungge, stti`); bits 8–11 = four Hoklo-sourced dicts (`khpoo, khiin, dev, lkk`); bit 12 = `is_variant`.
 

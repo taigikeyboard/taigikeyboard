@@ -33,6 +33,7 @@ use protos::engine::{
 use ranking::FrequencyData;
 use test_support::{
     build_tkdb, build_tkwa, fst_entry, walker_cost_from_fixture_frequency, write_fst_set, TkdbRow,
+    TKDB_VERSION,
 };
 
 const RANK_NEUTRAL_BITMASK: u16 = 1u16 << 11;
@@ -50,7 +51,7 @@ pub struct Row {
     pub freq: u32,
 }
 
-/// TKDB v4 record layout in the current v5 header: every row rank-neutral with no kautian
+/// TKDB v4 record layout in the current header (`TKDB_VERSION`): every row rank-neutral with no kautian
 /// provenance (subtag 0) and the walker cost its frequency had before E1
 /// ([`walker_cost_from_fixture_frequency`]).
 pub fn build_tkdb_v4(rows: &[Row]) -> Vec<u8> {
@@ -72,7 +73,7 @@ pub fn build_tkdb_v4_costed(rows: &[Row], walker_cost: impl Fn(&Row) -> u16) -> 
             tl: row.tl,
         })
         .collect();
-    build_tkdb(b"TKDB", 5, &tkdb_rows)
+    build_tkdb(b"TKDB", TKDB_VERSION, &tkdb_rows)
 }
 
 /// `dictionary.fst` with the toneless `tl:` family, the `poj:` family

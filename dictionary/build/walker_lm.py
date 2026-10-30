@@ -30,7 +30,7 @@ from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
 
-from build.common import BIGRAMS_TSV, UNIGRAMS_TSV, WALKER_ALPHA
+from build.common import BIGRAMS_TSV, UNIGRAMS_TSV, WALKER_ALPHA, WALKER_BIGRAM_DISCOUNT
 from build.dictionary_records import DictionaryRecord
 
 ALPHA = WALKER_ALPHA  # `build.common`: build_id hashes it
@@ -38,9 +38,7 @@ ALPHA = WALKER_ALPHA  # `build.common`: build_id hashes it
 HELD_OUT_SOURCE = "taigi_typing"
 MILLI_NATS = 1000
 MAX_WALKER_COST = 0xFFFF
-# Absolute discount D of the walker bigram. 0.75 = the usual single-discount KN value; the
-# 2026-10-30 gold-set spike moved by ≤ 1 item across {0.5, 0.75, 0.9} (bigram-lm-roadmap.md D6).
-BIGRAM_DISCOUNT = 0.75
+BIGRAM_DISCOUNT = WALKER_BIGRAM_DISCOUNT  # `build.common`: build_id hashes it
 
 ModelWord = tuple[str, str]
 

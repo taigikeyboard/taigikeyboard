@@ -1,13 +1,13 @@
-//! `dictionary.bin` v4 record layout (in a v5 header) — round-trip and bounds:
+//! `dictionary.bin` v4 record layout (in a v6 header) — round-trip and bounds:
 //! `syllable_count` u8 (v2) + `kautian_subtag` u16 (v3) + `walker_cost` u16
 //! (v4) between `tl_len` and the `hanji` payload.
 
 use lexicon::dictionary_reader::DictionaryReader;
 
 use crate::common::{build_tkdb_v4, build_tkdb_v4_subtag};
-use test_support::{build_tkdb, write_temp, TkdbRow};
+use test_support::{build_tkdb, write_temp, TkdbRow, TKDB_VERSION};
 
-const HEADER_SIZE: usize = 40;
+const HEADER_SIZE: usize = 56;
 
 #[test]
 fn invariant_lex_v4_round_trip_walker_cost() {
@@ -25,9 +25,9 @@ fn invariant_lex_v4_round_trip_walker_cost() {
         row(u16::MAX, "", "tai-gi"),
         row(0, "台語", "tâi-gí"),
     ];
-    let bytes = build_tkdb(b"TKDB", 5, &rows);
+    let bytes = build_tkdb(b"TKDB", TKDB_VERSION, &rows);
     let path = write_temp("dictionary-reader-v4-walker-cost.bin", &bytes);
-    let reader = DictionaryReader::open(&path).expect("v5 header with v4 records opens");
+    let reader = DictionaryReader::open(&path).expect("v6 header with v4 records opens");
 
     let r1 = reader.record(1).expect("rowid 1");
     assert_eq!(r1.walker_cost, 7_703);
@@ -53,7 +53,7 @@ fn invariant_lex_v4_round_trip_syllable_count() {
     ];
     let bytes = build_tkdb_v4(b"TKDB", rows);
     let path = write_temp("dictionary-reader-v4-roundtrip.bin", &bytes);
-    let reader = DictionaryReader::open(&path).expect("v5 header with v4 records opens");
+    let reader = DictionaryReader::open(&path).expect("v6 header with v4 records opens");
     assert_eq!(reader.record_count(), 3, "header record_count");
 
     let r1 = reader.record(1).expect("rowid 1");
@@ -86,7 +86,7 @@ fn invariant_lex_v4_round_trip_kautian_subtag() {
     ];
     let bytes = build_tkdb_v4_subtag(b"TKDB", rows);
     let path = write_temp("dictionary-reader-v4-subtag.bin", &bytes);
-    let reader = DictionaryReader::open(&path).expect("v5 header with v4 records opens");
+    let reader = DictionaryReader::open(&path).expect("v6 header with v4 records opens");
 
     assert_eq!(reader.record(1).unwrap().kautian_subtag, 0b0000_0000_0001);
     assert_eq!(reader.record(2).unwrap().kautian_subtag, 0b1000_0000_0000);
@@ -102,7 +102,7 @@ fn invariant_lex_v4_masks_reserved_subtag_bits_on_read() {
     let rows: &[(u16, u32, u8, u16, &str, &str)] = &[(0x0001, 100, 1, 0xE001, "詞", "su")]; // reserved bits + main
     let bytes = build_tkdb_v4_subtag(b"TKDB", rows);
     let path = write_temp("dictionary-reader-v4-reserved.bin", &bytes);
-    let reader = DictionaryReader::open(&path).expect("v5 header with v4 records opens");
+    let reader = DictionaryReader::open(&path).expect("v6 header with v4 records opens");
     assert_eq!(
         reader.record(1).unwrap().kautian_subtag,
         0x0001,
@@ -122,19 +122,23 @@ fn invariant_lex_v4_truncated_record_returns_none() {
 
 #[test]
 fn invariant_lex_v4_min_record_size_guard() {
-    // Forge a v5 header + single-entry offset table whose offset points to the
-    // first byte after the offset table itself, with no payload bytes
-    // (record_end == record_offset, below the 13-byte fixed prefix).
-    // `record(1)` must return `None` rather than panic.
+    // Forge a v6 header + single-entry offset table + empty bigram section
+    // whose offset points to the first byte after the section, with no
+    // payload bytes (record_end == record_offset, below the 13-byte fixed
+    // prefix). `record(1)` must return `None` rather than panic.
     let mut bytes = Vec::new();
     bytes.extend_from_slice(b"TKDB");
-    bytes.extend_from_slice(&5u32.to_le_bytes()); // version
+    bytes.extend_from_slice(&TKDB_VERSION.to_le_bytes()); // version
     bytes.extend_from_slice(&1u32.to_le_bytes()); // count
     bytes.extend_from_slice(&0u32.to_le_bytes()); // build_ts
     bytes.extend_from_slice(&3_627_713u64.to_le_bytes()); // tokens N
     bytes.extend_from_slice(&167_922u64.to_le_bytes()); // vocabulary V
     bytes.extend_from_slice(&10.0f64.to_le_bytes()); // alpha
-    bytes.extend_from_slice(&((HEADER_SIZE + 4) as u32).to_le_bytes()); // offset[0]
+    bytes.extend_from_slice(&0.75f64.to_le_bytes()); // bigram discount D
+    bytes.extend_from_slice(&0u32.to_le_bytes()); // bigram words
+    bytes.extend_from_slice(&0u32.to_le_bytes()); // bigram pairs
+    bytes.extend_from_slice(&((HEADER_SIZE + 8) as u32).to_le_bytes()); // offset[0]
+    bytes.extend_from_slice(&u32::MAX.to_le_bytes()); // word_of_record[0]
 
     let path = write_temp("dictionary-reader-v4-min-guard.bin", &bytes);
     let reader = DictionaryReader::open(&path).expect("header + offset table only");

@@ -26,6 +26,10 @@ BIGRAMS_TSV = SHARED_DATA_DIR / "word_bigrams.tsv"
 # and calib across all eight input variants (50 gains ~1 full-tone item, loses every
 # toneless one) — docs/reports/2026-10-08-e1-p4-calibration.md.
 WALKER_ALPHA = 10.0
+# Walker bigram absolute discount D (`build.walker_lm`); here because `build_id` hashes it.
+# 0.75 = the usual single-discount KN value; the 2026-10-30 gold-set spike moved by ≤ 1 item
+# across {0.5, 0.75, 0.9} (docs/architecture/bigram-lm-roadmap.md D6).
+WALKER_BIGRAM_DISCOUNT = 0.75
 
 # Build scripts live under dictionary/build/; importing common.* requires
 # dictionary/ on sys.path. Each build script calls this once at import time.
@@ -38,13 +42,15 @@ def build_id() -> int:
 
     CRC-32 of the merged `output/dictionary.csv` — the input both
     `dictionary.bin` and `association.bin` are built from — chained over the
-    walker model's inputs (`word_unigrams.tsv` and α, which only
-    `dictionary.bin` reads). So the same inputs always produce byte-identical
-    binaries, a model change changes the id, and the two binaries of one
-    build always carry the same value. It was `time.time()`, which made every
-    rebuild differ from the committed artifact even when nothing else had
-    changed. The engine stores the slot but never reads it.
+    walker model's inputs: `word_bigrams.tsv` (both binaries read it) and
+    `word_unigrams.tsv`, α and D (only `dictionary.bin` reads them). So the
+    same inputs always produce byte-identical binaries, a model change changes
+    the id, and the two binaries of one build always carry the same value. It
+    was `time.time()`, which made every rebuild differ from the committed
+    artifact even when nothing else had changed. The engine stores the slot
+    but never reads it.
     """
     checksum = zlib.crc32(MERGED_CSV.read_bytes())
     checksum = zlib.crc32(UNIGRAMS_TSV.read_bytes(), checksum)
-    return zlib.crc32(f"alpha={WALKER_ALPHA!r}".encode(), checksum)
+    checksum = zlib.crc32(BIGRAMS_TSV.read_bytes(), checksum)
+    return zlib.crc32(f"alpha={WALKER_ALPHA!r} discount={WALKER_BIGRAM_DISCOUNT!r}".encode(), checksum)

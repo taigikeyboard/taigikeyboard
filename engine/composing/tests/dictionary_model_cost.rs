@@ -5,7 +5,9 @@ use crate::common::{
     install_lexicon, selected, Fetch, Row, NOW_MS,
 };
 use lexicon::{CustomEntry, LearnedEntry};
-use test_support::{build_tkdb_with_model, engine_install_lock, write_temp, TkdbModel, TkdbRow};
+use test_support::{
+    build_tkdb_with_model, engine_install_lock, write_temp, TkdbModel, TkdbRow, TKDB_VERSION,
+};
 
 #[test]
 fn loaded_model_prices_selected_custom_and_learned_words() {
@@ -85,7 +87,7 @@ fn loaded_model_prices_selected_custom_and_learned_words() {
             };
             let dictionary = write_temp(
                 "model-cost-dictionary.bin",
-                &build_tkdb_with_model(b"TKDB", 5, &records, model),
+                &build_tkdb_with_model(b"TKDB", TKDB_VERSION, &records, model),
             );
             install_lexicon(&fst, &dictionary, &associations, &syllables);
             let mut fetch = Fetch {

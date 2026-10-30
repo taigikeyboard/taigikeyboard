@@ -2,8 +2,12 @@
 //!
 //! Binary format (little-endian; canonical spec: `docs/engine/binary-format.md`):
 //!     Header: "TKDB" (4) || version u32 || count u32 || build_ts u32
-//!             || tokens u64 || vocabulary u64 || alpha f64 (40 bytes, v5)
+//!             || tokens u64 || vocabulary u64 || alpha f64
+//!             || discount f64 || bigram_words u32 || bigram_pairs u32 (56 bytes, v6)
 //!     Offset table: count × u32 (absolute byte offset to each record)
+//!     Bigram section (v6): word_of_record count × u32
+//!                          || words W × (pair_start u32 || pair_len u32 || total u32)
+//!                          || pairs P × (next_word u32 || count u32)
 //!     Records: bitmask u16 || frequency u32 || hanzi_len u8 || tl_len u8
 //!              || syllable_count u8 || kautian_subtag u16 || walker_cost u16
 //!              || hanji || tl
@@ -12,7 +16,9 @@
 //! (capped by `MAX_SYLLABLES` at builder side). `kautian_subtag` (v3) is the
 //! per-row kautian subcollection provenance (0 for non-kautian rows).
 //! `walker_cost` (v4) is the walker model's −ln p in milli-nats
-//! (`dictionary/build/walker_lm.py`).
+//! (`dictionary/build/walker_lm.py`). The bigram section (v6) holds the
+//! walker's cross-word pair counts per model word `(hanji, tl_num)`
+//! (`docs/architecture/bigram-lm-roadmap.md` D6).
 //!
 //! `lookup` accesses by 1-based rowid. `passes_filter` is the 4-layer
 //! (variant excl → khiin excl → kautian-subcollection gate → source-OR)
@@ -28,9 +34,17 @@ const MAGIC: &[u8; 4] = b"TKDB";
 /// magic(4) + version(4) + count(4) + build_timestamp(4) — every version's
 /// layout, read before the version check.
 const COMMON_HEADER_SIZE: usize = 16;
-/// [`COMMON_HEADER_SIZE`] + v5 model metadata: tokens(8) + vocabulary(8) + alpha(8).
-const HEADER_SIZE: usize = COMMON_HEADER_SIZE + 3 * 8;
-const SUPPORTED_VERSION: u32 = 5;
+/// [`COMMON_HEADER_SIZE`] + model metadata: tokens(8) + vocabulary(8) + alpha(8)
+/// + bigram discount(8) + bigram word count(4) + bigram pair count(4).
+const HEADER_SIZE: usize = COMMON_HEADER_SIZE + 4 * 8 + 2 * 4;
+const SUPPORTED_VERSION: u32 = 6;
+/// `word_of_record` value of a record whose model word is in no pair.
+/// Mirrors `dictionary/build/create_dictionary_bin.py` (`NO_BIGRAM_WORD`).
+const NO_BIGRAM_WORD: u32 = u32::MAX;
+/// pair_start(4) + pair_len(4) + total(4).
+const BIGRAM_WORD_SIZE: usize = 12;
+/// next_word(4) + count(4).
+const BIGRAM_PAIR_SIZE: usize = 8;
 /// bitmask(2) + frequency(4) + hanzi_len(1) + tl_len(1) + syllable_count(1)
 /// + kautian_subtag(2) + walker_cost(2).
 const RECORD_FIXED_PREFIX: usize = 13;
@@ -93,11 +107,32 @@ pub struct DictionaryRecord {
     pub walker_cost: u16,
 }
 
+/// One previous word's continuations, behind the walker's conditional
+/// `p(next | previous)` (`docs/architecture/bigram-lm-roadmap.md` D6),
+/// `taigi_typing` held out. Resolved once per previous edge; each next
+/// candidate is then one [`DictionaryReader::bigram_pair_count`] probe.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BigramContinuations {
+    /// `C(previous)` = Σ of the previous word's continuation counts (> 0).
+    pub total: u32,
+    /// `N(previous)` = number of distinct continuations (> 0).
+    pub distinct: u32,
+    // Index of the word's first pair; `pair_start + distinct ≤ P` (checked).
+    pair_start: u32,
+}
+
 pub struct DictionaryReader {
     handle: MmapHandle,
     record_count: u32,
     build_timestamp: u32,
     walker_model: WalkerModel,
+    bigram_word_count: u32,
+    bigram_pair_count: u32,
+    // Section offsets, from the header counts once `open` bounds-checked them.
+    word_of_record_start: usize,
+    bigram_words_start: usize,
+    bigram_pairs_start: usize,
+    records_start: usize,
 }
 
 impl std::fmt::Debug for DictionaryReader {
@@ -173,7 +208,7 @@ impl DictionaryReader {
             let detail = if (1..SUPPORTED_VERSION).contains(&version) {
                 format!(
                     "dictionary.bin: unsupported version {version} (expected {SUPPORTED_VERSION}; \
-                     v1/v2/v3/v4→v5 binary layouts are not compatible — rebuild dictionary.bin via \
+                     v1/v2/v3/v4/v5→v6 binary layouts are not compatible — rebuild dictionary.bin via \
                      `make dict` then redeploy artifacts in lockstep)"
                 )
             } else {
@@ -194,19 +229,42 @@ impl DictionaryReader {
             u64::from_le_bytes(bytes[16..24].try_into().expect("8 bytes")),
             u64::from_le_bytes(bytes[24..32].try_into().expect("8 bytes")),
             f64::from_le_bytes(bytes[32..40].try_into().expect("8 bytes")),
+            f64::from_le_bytes(bytes[40..48].try_into().expect("8 bytes")),
         )?;
+        let bigram_word_count = u32::from_le_bytes(bytes[48..52].try_into().expect("4 bytes"));
+        let bigram_pair_count = u32::from_le_bytes(bytes[52..56].try_into().expect("4 bytes"));
 
-        let min_size = (count as usize)
-            .checked_mul(4)
-            .and_then(|size| size.checked_add(HEADER_SIZE))
-            .ok_or_else(|| {
-                LexiconError::InvalidBinary("dictionary.bin: offset table too large".into())
-            })?;
-        if bytes.len() < min_size {
+        // One checked chain over the layout, so the stored offsets cannot overflow.
+        let section_end = |start: usize, items: u32, size: usize| {
+            (items as usize)
+                .checked_mul(size)
+                .and_then(|len| len.checked_add(start))
+        };
+        let word_of_record_start = section_end(HEADER_SIZE, count, 4).ok_or_else(|| {
+            LexiconError::InvalidBinary("dictionary.bin: offset table too large".into())
+        })?;
+        if bytes.len() < word_of_record_start {
             return Err(LexiconError::InvalidBinary(format!(
-                "dictionary.bin: offset table truncated ({} < {})",
+                "dictionary.bin: offset table truncated ({} < {word_of_record_start})",
                 bytes.len(),
-                min_size
+            )));
+        }
+        let bigram_words_start = section_end(word_of_record_start, count, 4);
+        let bigram_pairs_start = bigram_words_start
+            .and_then(|start| section_end(start, bigram_word_count, BIGRAM_WORD_SIZE));
+        let records_start = bigram_pairs_start
+            .and_then(|start| section_end(start, bigram_pair_count, BIGRAM_PAIR_SIZE));
+        let (Some(bigram_words_start), Some(bigram_pairs_start), Some(records_start)) =
+            (bigram_words_start, bigram_pairs_start, records_start)
+        else {
+            return Err(LexiconError::InvalidBinary(
+                "dictionary.bin: bigram section too large".into(),
+            ));
+        };
+        if bytes.len() < records_start {
+            return Err(LexiconError::InvalidBinary(format!(
+                "dictionary.bin: bigram section truncated ({} < {records_start})",
+                bytes.len(),
             )));
         }
         Ok(Self {
@@ -214,7 +272,72 @@ impl DictionaryReader {
             record_count: count,
             build_timestamp,
             walker_model,
+            bigram_word_count,
+            bigram_pair_count,
+            word_of_record_start,
+            bigram_words_start,
+            bigram_pairs_start,
+            records_start,
         })
+    }
+
+    /// The continuations of `previous_rowid`'s model word, so spellings of one
+    /// word (`tshut--lâi` / `tshut-lâi`) share them. `None` when the record has
+    /// no recorded continuation (`C = 0`): the walker adds no penalty there.
+    /// Malformed section bytes also yield `None`.
+    pub fn bigram_continuations(&self, previous_rowid: u32) -> Option<BigramContinuations> {
+        let bytes = self.handle.as_slice();
+        let word_pos =
+            self.bigram_words_start + self.bigram_word(previous_rowid)? as usize * BIGRAM_WORD_SIZE;
+        let pair_start = read_u32(bytes, word_pos)?;
+        let distinct = read_u32(bytes, word_pos + 4)?;
+        let total = read_u32(bytes, word_pos + 8)?;
+        let in_table = pair_start
+            .checked_add(distinct)
+            .is_some_and(|end| end <= self.bigram_pair_count);
+        (distinct > 0 && total > 0 && in_table).then_some(BigramContinuations {
+            total,
+            distinct,
+            pair_start,
+        })
+    }
+
+    /// `c(previous, next)` for `next_rowid`'s model word; 0 for a pair the
+    /// corpus never saw, a next record in no pair, or malformed bytes.
+    pub fn bigram_pair_count(&self, continuations: &BigramContinuations, next_rowid: u32) -> u32 {
+        let Some(next) = self.bigram_word(next_rowid) else {
+            return 0;
+        };
+        let bytes = self.handle.as_slice();
+        // Binary search: a word's pairs are sorted by next word.
+        let (mut lo, mut hi) = (
+            continuations.pair_start,
+            continuations.pair_start + continuations.distinct,
+        );
+        while lo < hi {
+            let mid = lo + (hi - lo) / 2;
+            let pos = self.bigram_pairs_start + mid as usize * BIGRAM_PAIR_SIZE;
+            let Some(word) = read_u32(bytes, pos) else {
+                return 0;
+            };
+            match word.cmp(&next) {
+                std::cmp::Ordering::Equal => return read_u32(bytes, pos + 4).unwrap_or(0),
+                std::cmp::Ordering::Less => lo = mid + 1,
+                std::cmp::Ordering::Greater => hi = mid,
+            }
+        }
+        0
+    }
+
+    /// The record's bigram word id; `None` for an out-of-range rowid, a
+    /// record in no pair, or an id beyond the word table.
+    fn bigram_word(&self, rowid: u32) -> Option<u32> {
+        if rowid == 0 || rowid > self.record_count {
+            return None;
+        }
+        let pos = self.word_of_record_start + (rowid - 1) as usize * 4;
+        let word = read_u32(self.handle.as_slice(), pos)?;
+        (word != NO_BIGRAM_WORD && word < self.bigram_word_count).then_some(word)
     }
 
     pub fn record_count(&self) -> u32 {
@@ -238,15 +361,13 @@ impl DictionaryReader {
         let bytes = self.handle.as_slice();
         let idx = (rowid - 1) as usize;
         let offset_pos = HEADER_SIZE + idx * 4;
-        let record_offset =
-            u32::from_le_bytes(bytes[offset_pos..offset_pos + 4].try_into().ok()?) as usize;
+        let record_offset = read_u32(bytes, offset_pos)? as usize;
         let record_end = if (idx + 1) < (self.record_count as usize) {
-            let next_pos = HEADER_SIZE + (idx + 1) * 4;
-            u32::from_le_bytes(bytes[next_pos..next_pos + 4].try_into().ok()?) as usize
+            read_u32(bytes, offset_pos + 4)? as usize
         } else {
             bytes.len()
         };
-        if record_offset < HEADER_SIZE + self.record_count as usize * 4
+        if record_offset < self.records_start
             || record_end <= record_offset
             || record_end > bytes.len()
             || record_offset + RECORD_FIXED_PREFIX > record_end
@@ -347,6 +468,12 @@ impl DictionaryReader {
         // — no longer an unconditional floor (dictionary-supplement-file toggle, default on).
         (effective & filter.enabled_mask) != 0
     }
+}
+
+fn read_u32(bytes: &[u8], pos: usize) -> Option<u32> {
+    Some(u32::from_le_bytes(
+        bytes.get(pos..pos.checked_add(4)?)?.try_into().ok()?,
+    ))
 }
 
 #[cfg(test)]

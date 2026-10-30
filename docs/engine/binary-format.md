@@ -13,7 +13,7 @@ Four read-only binary assets live in the dictionary bundle (`assets/dictionaries
 
 | File | Magic | Purpose | Size |
 |---|---|---|---|
-| `dictionary.bin` | `TKDB` | rowid → {bitmask, frequency, hanzi, tl, walker_cost} | ~5.8 MB |
+| `dictionary.bin` | `TKDB` | rowid → {bitmask, frequency, hanzi, tl, walker_cost} + walker bigram pair counts | ~8.6 MB |
 | `association.bin` | `TKWA` | prev_word → list of next-word predictions | ~3.1 MB |
 | `dictionary.fst` | (fst) | prefix key → rowid (for prefix + exact lookup) | ~9.2 MB |
 | `syllables.fst` | (fst) | valid-syllable inventory per romanization family (§3.5) | small |
@@ -31,18 +31,29 @@ All formats use **little-endian** integers and **strict UTF-8** strings. The Rus
 
 ```
 +---------------------------------------------------+
-| Header (40 bytes)                                 |
+| Header (56 bytes)                                 |
 |   "TKDB"                4 bytes                   |
-|   version (u32 LE)      4 bytes  (currently 5)    |
+|   version (u32 LE)      4 bytes  (currently 6)    |
 |   record_count (u32 LE) 4 bytes                   |
 |   build_ts (u32 LE)     4 bytes  (build id)       |
-|   tokens_N (u64 LE)     8 bytes                  |
-|   vocabulary_V (u64 LE) 8 bytes                  |
-|   alpha (f64 LE)        8 bytes                  |
+|   tokens_N (u64 LE)     8 bytes                   |
+|   vocabulary_V (u64 LE) 8 bytes                   |
+|   alpha (f64 LE)        8 bytes                   |
+|   discount_D (f64 LE)   8 bytes  (v6)             |
+|   bigram_words (u32 LE) 4 bytes  (v6; W)          |
+|   bigram_pairs (u32 LE) 4 bytes  (v6; P)          |
 +---------------------------------------------------+
 | Offset table                                      |
 |   record_count × u32 LE                           |
 |   absolute byte offset to each record             |
++---------------------------------------------------+
+| Bigram section (v6, §1.5)                         |
+|   word_of_record  record_count × u32 LE           |
+|   words           W × (pair_start u32 LE,         |
+|                        pair_len u32 LE,           |
+|                        total u32 LE)              |
+|   pairs           P × (next_word u32 LE,          |
+|                        count u32 LE)              |
 +---------------------------------------------------+
 | Record section (variable-length records)          |
 |   bitmask        u16 LE  (2 bytes)                |
@@ -72,6 +83,10 @@ and every record cost from the same `WalkerModel` instance. The Rust reader
 validates the metadata on open and keeps it with that reader, so replacing a
 dictionary also replaces its model without an engine rebuild.
 
+Version 6 adds the walker bigram (§1.5): `D` at offset 40, `W` at 48, `P` at
+52, and the bigram section between the offset table and the records. The
+record layout is unchanged; records start right after the section.
+
 The engine retains the deliberate effective user count `2_000` as a policy
 parameter, and derives its custom/learned-word cost from the loaded model
 once per walk: `round_half_even(−ln((2_000 + α)/(N + αV)) × 1000)`.
@@ -97,15 +112,27 @@ The end of a record is determined by the *next* record's offset (or `data.count`
 
 | Check | Reader behaviour on failure |
 |---|---|
-| File ≥ 16 bytes for common header; ≥ 40 bytes for v5 metadata | `open` returns `Err(LexiconError::InvalidBinary)` |
+| File ≥ 16 bytes for common header; ≥ 56 bytes for v6 metadata | `open` returns `Err(LexiconError::InvalidBinary)` |
 | Magic == `TKDB` | `open` returns `Err(LexiconError::InvalidBinary)` |
-| Version == 5 (v1–v4 surface explicit `v1/v2/v3/v4→v5` rebuild guidance) | `open` returns `Err(LexiconError::InvalidBinary)` |
-| V > 0; α finite and positive; N + αV finite; unseen cost finite and representable as u16 | `open` returns `Err(LexiconError::InvalidBinary)` |
+| Version == 6 (v1–v5 surface explicit `v1/v2/v3/v4/v5→v6` rebuild guidance) | `open` returns `Err(LexiconError::InvalidBinary)` |
+| V > 0; α finite and positive; N + αV finite; unseen cost finite and representable as u16; 0 < D ≤ 1 | `open` returns `Err(LexiconError::InvalidBinary)` |
 | File ≥ `header + record_count × 4` | `open` returns `Err(LexiconError::InvalidBinary)` |
-| Per-record bounds (starts after header + offset table, `recordEnd ≤ data.len()`) | `record()` returns `None` |
+| File ≥ `header + record_count × 8 + W × 12 + P × 8` | `open` returns `Err(LexiconError::InvalidBinary)` |
+| Per-record bounds (starts after the bigram section, `recordEnd ≤ data.len()`) | `record()` returns `None` |
 | Per-record min size 13 bytes (v4 fixed prefix) | `record()` returns `None` |
 | `pos + hanzi_len + tl_len ≤ record_end` | `record()` returns `None` |
 | TL UTF-8 valid | `record()` returns `None` |
+| Bigram word id < W, `pair_start + pair_len ≤ P`, every read in bounds | `bigram_continuations()` returns `None`, `bigram_pair_count()` 0 |
+
+### 1.5 Bigram section (v6)
+
+The cross-word pair counts behind the walker's penalty-only conditional bigram ([`bigram-lm-roadmap.md` D6](../architecture/bigram-lm-roadmap.md)). Built by `dictionary/build/create_dictionary_bin.py` from `walker_lm.load_bigrams`: `dictionary/shared/data/word_bigrams.tsv`, the `taigi_typing` column held out, raw counts (no source weights, no variant folds — unlike the next-word word keys in §2.1a).
+
+- **Bigram word** = the walker model word `(hanzi, tl_num.lower())`. Ids `0..W` number every model word on either side of a pair, in model-word order. Records sharing a model word share an id (`出來` `tshut--lâi` / `tshut-lâi`), so their counts are one. A record in no pair, or without hanji, has `0xFFFF_FFFF`.
+- **words[w]** = `(pair_start, pair_len, total)`: `pair_len` = `N(w)` distinct continuations, `total` = `C(w)` = Σ their counts; both 0 for a word that only ever follows.
+- **pairs[pair_start .. pair_start + pair_len]** = `(next_word, count)`, ascending by `next_word`, so the reader binary-searches the next word.
+- `DictionaryReader::bigram_continuations(previous_rowid)` returns `{total, distinct}` (`C`, `N`), or `None` when the record has no continuation (`C = 0`; the walker adds no penalty); `bigram_pair_count(&continuations, next_rowid)` then gives `c`, 0 for an unseen pair. `D` is `WalkerModel::bigram_discount`.
+- Counts are raw so the walker's unigram term stays its runtime edge price under the user's source toggles; `D` (header) is the absolute discount.
 
 ---
 

@@ -13,7 +13,7 @@ use lexicon::{
 };
 use phonetics::InputMode;
 use test_support::{
-    build_tkdb, fst_entry, walker_cost_from_fixture_frequency, write_fst_set, TkdbRow,
+    build_tkdb, fst_entry, walker_cost_from_fixture_frequency, write_fst_set, TkdbRow, TKDB_VERSION,
 };
 
 /// `(key, rowid)` → FST `key || 0xFF || rowid_le_4` (`key` carries its
@@ -53,7 +53,7 @@ pub fn build_tkdb_legacy(
     build_tkdb(magic, version, &dict_rows)
 }
 
-/// 5-tuple convenience for v4 record fixtures (v5 header): `(bitmask, frequency, syllable_count,
+/// 5-tuple convenience for v4 record fixtures (current header, `TKDB_VERSION`): `(bitmask, frequency, syllable_count,
 /// hanji, tl)` with `kautian_subtag = 0` and the walker cost derived from the
 /// frequency ([`walker_cost_from_fixture_frequency`]) on every row.
 /// The default for tests that don't exercise subcollection provenance.
@@ -82,7 +82,7 @@ pub fn build_tkdb_v4_subtag(magic: &[u8; 4], rows: &[(u16, u32, u8, u16, &str, &
             tl,
         })
         .collect();
-    build_tkdb(magic, 5, &dict_rows)
+    build_tkdb(magic, TKDB_VERSION, &dict_rows)
 }
 
 /// Test-only span-local fetch: every dictionary candidate whose toneless

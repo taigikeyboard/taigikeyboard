@@ -37,6 +37,7 @@ use phonetics::InputMode;
 use ranking::FrequencyMap;
 use test_support::{
     build_tkdb, fst_entry, walker_cost_from_fixture_frequency, write_fst_set, write_temp, TkdbRow,
+    TKDB_VERSION,
 };
 
 /// v3.5.9 D7 — build the shared `ContinuousFetchCtx` at a test site
@@ -169,7 +170,7 @@ fn build_fixture_costed_in_family(
             tl: r.tl,
         })
         .collect();
-    let dict_bytes = build_tkdb(b"TKDB", 5, &dict_rows);
+    let dict_bytes = build_tkdb(b"TKDB", TKDB_VERSION, &dict_rows);
     let dict_path = write_temp(&format!("phase5-{name}.dict.bin"), &dict_bytes);
     let dict = DictionaryReader::open(&dict_path).expect("dict.bin opens");
 

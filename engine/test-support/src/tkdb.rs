@@ -3,6 +3,10 @@
 
 const TKWA_HEADER_SIZE: usize = 20;
 
+/// The `dictionary.bin` version `DictionaryReader` opens; fixtures that are not
+/// rejection tests use it.
+pub const TKDB_VERSION: u32 = 6;
+
 /// The corpus total the walker priced `DictionaryRecord.frequency` against
 /// before E1 P3 (`Σ frequency` of the 2026-09-26 `dictionary.csv`); the
 /// offline simulator freezes the same value (`dictionary/tools/walker_gold.py`
@@ -61,12 +65,78 @@ impl Default for TkdbModel {
     }
 }
 
-/// The v5 fixture header may carry a different model for each loaded dictionary.
+/// The fixture header may carry a different model for each loaded dictionary.
 pub fn build_tkdb_with_model(
     magic: &[u8; 4],
     version: u32,
     rows: &[TkdbRow<'_>],
     model: TkdbModel,
+) -> Vec<u8> {
+    build_tkdb_with_bigrams(magic, version, rows, model, &TkdbBigrams::default())
+}
+
+/// The v6 bigram section of a fixture. Word ids are the fixture's own; the
+/// builder sorts each word's pairs and derives the totals.
+pub struct TkdbBigrams {
+    pub discount: f64,
+    /// Bigram word per row, in rowid order; a missing tail entry = no word.
+    pub word_of_row: Vec<Option<u32>>,
+    /// `(previous word, next word, count)`.
+    pub pairs: Vec<(u32, u32, u32)>,
+}
+
+impl Default for TkdbBigrams {
+    fn default() -> Self {
+        Self {
+            discount: 0.75,
+            word_of_row: Vec::new(),
+            pairs: Vec::new(),
+        }
+    }
+}
+
+impl TkdbBigrams {
+    /// `(word_count, pair_count, section bytes)` for `record_count` rows.
+    fn encode(&self, record_count: usize) -> (u32, u32, Vec<u8>) {
+        let word_count = self
+            .word_of_row
+            .iter()
+            .flatten()
+            .copied()
+            .chain(self.pairs.iter().flat_map(|&(prev, next, _)| [prev, next]))
+            .max()
+            .map_or(0, |max| max + 1);
+        let mut section = Vec::new();
+        for row in 0..record_count {
+            let word = self.word_of_row.get(row).copied().flatten();
+            section.extend_from_slice(&word.unwrap_or(u32::MAX).to_le_bytes());
+        }
+        let mut pairs = self.pairs.clone();
+        pairs.sort_unstable();
+        let mut pair_start = 0u32;
+        for word in 0..word_count {
+            let followers: Vec<_> = pairs.iter().filter(|(prev, ..)| *prev == word).collect();
+            let total: u32 = followers.iter().map(|(.., count)| count).sum();
+            section.extend_from_slice(&pair_start.to_le_bytes());
+            section.extend_from_slice(&(followers.len() as u32).to_le_bytes());
+            section.extend_from_slice(&total.to_le_bytes());
+            pair_start += followers.len() as u32;
+        }
+        for (_, next, count) in &pairs {
+            section.extend_from_slice(&next.to_le_bytes());
+            section.extend_from_slice(&count.to_le_bytes());
+        }
+        (word_count, pairs.len() as u32, section)
+    }
+}
+
+/// [`build_tkdb_with_model`] plus a v6 bigram section.
+pub fn build_tkdb_with_bigrams(
+    magic: &[u8; 4],
+    version: u32,
+    rows: &[TkdbRow<'_>],
+    model: TkdbModel,
+    bigrams: &TkdbBigrams,
 ) -> Vec<u8> {
     let mut out = Vec::new();
     out.extend_from_slice(magic);
@@ -79,12 +149,20 @@ pub fn build_tkdb_with_model(
         out.extend_from_slice(&model.vocabulary.to_le_bytes());
         out.extend_from_slice(&model.alpha.to_le_bytes());
     }
+    let mut bigram_section = Vec::new();
+    if version >= 6 {
+        let (word_count, pair_count, section) = bigrams.encode(rows.len());
+        out.extend_from_slice(&bigrams.discount.to_le_bytes());
+        out.extend_from_slice(&word_count.to_le_bytes());
+        out.extend_from_slice(&pair_count.to_le_bytes());
+        bigram_section = section;
+    }
     let header_size = out.len();
-    let offset_table_size = rows.len() * 4;
+    let records_start = header_size + rows.len() * 4 + bigram_section.len();
     let mut offsets = Vec::<u32>::with_capacity(rows.len());
     let mut payload = Vec::<u8>::new();
     for row in rows {
-        offsets.push((header_size + offset_table_size + payload.len()) as u32);
+        offsets.push((records_start + payload.len()) as u32);
         payload.extend_from_slice(&row.bitmask.to_le_bytes());
         payload.extend_from_slice(&row.frequency.to_le_bytes());
         payload.push(row.hanji.len() as u8);
@@ -104,6 +182,7 @@ pub fn build_tkdb_with_model(
     for off in &offsets {
         out.extend_from_slice(&off.to_le_bytes());
     }
+    out.extend_from_slice(&bigram_section);
     out.extend_from_slice(&payload);
     out
 }

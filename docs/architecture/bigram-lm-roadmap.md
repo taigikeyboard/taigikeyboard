@@ -85,7 +85,17 @@ The full conditional makes frequent collocations (`攏→是`) cheaper than thei
 
 **Identity is a proof obligation.** The walker state becomes `(offset, incoming edge)`; each edge keeps today's single `EdgeBest` pick (no top-N alternatives, so custom / learned / `user_weight_delta` pricing is untouched). The P3 PR proves (a) with an empty bigram table every walk returns the same edges, choices and cost as `HEAD~1` (named `cost.rs` / `walker.rs` cases + golden dumps); (b) with data, a single-edge path's cost never changes. `/code-review` mandatory.
 
-**Data.** `association.bin` v2 keeps the top 30 continuations with count ≥ 2 per key (`associations.py` `WORD_TOP_K` / `WORD_MIN_COUNT`), so its counts cannot give `C(w₁)`, `N(w₁)` or an unseen-vs-pruned answer. The walker needs every seen pair (283 234 pairs over 22 046 previous words today) as raw counts, so `p_uni` stays the runtime edge price under the user's source toggles. Artifact shape is P2's decision; D3's "no new file" reasoning is the default.
+**Data.** `association.bin` v2 keeps the top 30 continuations with count ≥ 2 per key (`associations.py` `WORD_TOP_K` / `WORD_MIN_COUNT`), so its counts cannot give `C(w₁)`, `N(w₁)` or an unseen-vs-pruned answer. The walker needs every seen pair (283 234 pairs over 22 046 previous words today) as raw counts, so `p_uni` stays the runtime edge price under the user's source toggles.
+
+**Artifact (P6.2): `dictionary.bin` v6 bigram section** (`binary-format.md` §1.5), keyed by rowid → model-word id. Measured on the 2026-10-30 build: 28 889 model words in a pair, 3.28 MB section, `dictionary.bin` 5.5 → 8.6 MB (mmapped, outside the iOS extension's 64 MB).
+
+| Option | Size | Why not / why |
+|---|---|---|
+| **`dictionary.bin` v6 section, rowid → word id** | 3.28 MB | chosen: a rowid-keyed table must ship in the file that defines the rowids; the walker model (N, V, α) already lives in this header, so `D` joins it |
+| `association.bin` v3 namespace, string keys | 5.42 MB | mixes next-word semantics (top-K, Bible ×0.5, variant folds) with raw walker counts; the pick carries display TL, and 460 model words have two display spellings (`tshut--lâi` / `tshut-lâi`), so `(hanji, tl)` keys would split their counts |
+| new `walker_bigram.bin` | ≈ 3.3 MB | D3: five install sites for no gain, and rowid keys could drift from `dictionary.bin` |
+
+The engine pick needs a rowid to look up; `RawCandidate` gains it in P6.3 with the walker change.
 
 ### D7 — Two-word context (technique 4) — cut
 

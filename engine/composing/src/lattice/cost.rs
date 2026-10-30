@@ -27,7 +27,7 @@
 //! ## The model (khiin `segmenter.rs:82-92`, E1 unified word frequency)
 //!
 //! ```text
-//! base       = walker_cost / 1000                      // −ln p of the word, dictionary.bin v5
+//! base       = walker_cost / 1000                      // −ln p of the word, dictionary.bin v6
 //! base       = min(base, user_entry_cost_cap(s))       // multi-syllable selected word only
 //! cost       = base / toneless_len^LETTER_COUNT_BIAS   // longer spelling → cheaper
 //!                   × syllable_count^SYLLABLE_COUNT_BIAS
@@ -111,7 +111,7 @@ use super::EdgeChoice;
 // `pub(crate)`, engine-only (no platform sees them), and stay with the cost
 // model they parameterize (v3.5.9 A3 reframe).
 
-/// `DictionaryRecord::walker_cost` unit: milli-nats (`dictionary.bin` v5,
+/// `DictionaryRecord::walker_cost` unit: milli-nats (`dictionary.bin` v6,
 /// `docs/engine/binary-format.md`).
 const MILLI_NATS_PER_NAT: f64 = 1000.0;
 

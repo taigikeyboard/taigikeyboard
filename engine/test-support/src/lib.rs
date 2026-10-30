@@ -23,8 +23,8 @@ pub use production::{
 };
 pub use registration::assert_every_test_file_is_declared;
 pub use tkdb::{
-    build_tkdb, build_tkdb_with_model, build_tkwa, walker_cost_from_fixture_frequency, TkdbModel,
-    TkdbRow, TkwaEntry,
+    build_tkdb, build_tkdb_with_bigrams, build_tkdb_with_model, build_tkwa,
+    walker_cost_from_fixture_frequency, TkdbBigrams, TkdbModel, TkdbRow, TkwaEntry, TKDB_VERSION,
 };
 
 /// Serializes `lexicon::EngineHandle::install` vs. assertion within ONE test
