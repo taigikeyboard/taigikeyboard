@@ -54,6 +54,11 @@ const RECORD_FIXED_PREFIX: usize = 13;
 /// cap prices it (E1 plan D2). Defined by the sort that orders on it.
 pub use ranking::WALKER_COST_UNPRICED;
 
+/// `rowid` of a record or candidate that is not a `dictionary.bin` row
+/// (custom, learned, the walker's slot-0 synth, the literal roman row):
+/// rowids are 1-based, so it never names a record or a bigram word.
+pub const NO_ROWID: u32 = 0;
+
 /// Bit positions for the 12-source bitmask. Mirrors
 /// `dictionary/common/source_bits.py::SOURCE_BITS` (positions 0-11) +
 /// `IS_VARIANT_BIT` at bit 12. Drift causes silent filter divergence.
@@ -92,6 +97,9 @@ pub const WIRE_KAUTIAN_SUBCOLL_MASK: u32 = KAUTIAN_SUBTAG_USED_MASK as u32;
 
 #[derive(Debug, Clone)]
 pub struct DictionaryRecord {
+    // 1-based rowid this record was read at; 0 for a record built outside
+    // `dictionary.bin` (a learned phrase), which has no bigram word.
+    pub rowid: u32,
     // Source-attribution bitmask (13 bits: 12 source bits + the variant-marker bit).
     pub bitmask: u16,
     // Selection frequency, used for candidate ranking (DESC).
@@ -332,7 +340,7 @@ impl DictionaryReader {
     /// The record's bigram word id; `None` for an out-of-range rowid, a
     /// record in no pair, or an id beyond the word table.
     fn bigram_word(&self, rowid: u32) -> Option<u32> {
-        if rowid == 0 || rowid > self.record_count {
+        if rowid == NO_ROWID || rowid > self.record_count {
             return None;
         }
         let pos = self.word_of_record_start + (rowid - 1) as usize * 4;
@@ -355,7 +363,7 @@ impl DictionaryReader {
     /// Read a record by 1-based rowid. Returns `None` if rowid is out of
     /// range or the record bytes are malformed.
     pub fn record(&self, rowid: u32) -> Option<DictionaryRecord> {
-        if rowid == 0 || rowid > self.record_count {
+        if rowid == NO_ROWID || rowid > self.record_count {
             return None;
         }
         let bytes = self.handle.as_slice();
@@ -413,6 +421,7 @@ impl DictionaryReader {
             .to_string();
 
         Some(DictionaryRecord {
+            rowid,
             bitmask,
             frequency,
             hanji,

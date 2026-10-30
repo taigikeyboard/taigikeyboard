@@ -56,6 +56,34 @@ fn fixed_inputs_put_the_intended_word_at_slot_0() {
 }
 
 #[test]
+fn walker_bigram_keeps_the_reported_words_whole() {
+    if !production_lexicon_ready() {
+        eprintln!("production artifacts absent — run `make dict`; skipping.");
+        return;
+    }
+    // v3.9.0 fix list row 2 (`bigram-lm-roadmap.md` D6): the unigram walk
+    // split both into two frequent single syllables. trace (walker_cost,
+    // word_bigrams minus taigi_typing, D 0.75):
+    // ue5: 有 4.496 + 的 after 有 4.687 = 9.183 > 鞋 (key min 10.024) / 2^0.2 = 8.726;
+    // khikhi: (去 5.461 + 去 after 去 6.135) / 3^0.2 = 9.309 > 起去 11.552 × (2/6)^0.2 = 9.273.
+    // POJ `oe5` (ôe, one syllable, no split edge) is the negative control.
+    let cases = [
+        ("tl", "ue5", "鞋"),
+        ("tl", "khikhi", "起去"),
+        ("poj", "khikhi", "起去"),
+        ("poj", "oe5", "鞋"),
+    ];
+    for (mode, raw, hanji) in cases {
+        let cells = fetch_cells(&config(mode), raw, fresh_install_fetch());
+        assert_eq!(
+            cells.first().and_then(|(h, ..)| h.as_deref()),
+            Some(hanji),
+            "{mode} {raw}: {cells:?}"
+        );
+    }
+}
+
+#[test]
 fn list_orders_the_words_after_slot_0_by_corpus_count() {
     if !production_lexicon_ready() {
         eprintln!("production artifacts absent — run `make dict`; skipping.");

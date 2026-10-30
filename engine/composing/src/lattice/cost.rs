@@ -28,6 +28,7 @@
 //!
 //! ```text
 //! base       = walker_cost / 1000                      // −ln p of the word, dictionary.bin v6
+//! base       = max(base, −ln p(pick | previous pick))  // D6 walker bigram, penalty-only
 //! base       = min(base, user_entry_cost_cap(s))       // multi-syllable selected word only
 //! cost       = base / toneless_len^LETTER_COUNT_BIAS   // longer spelling → cheaper
 //!                   × syllable_count^SYLLABLE_COUNT_BIAS
@@ -224,6 +225,41 @@ pub(crate) const WALKER_SINGLE_SYLLABLE_USER_DELTA_SCALE: f64 = 0.0;
 /// kept it — the gold set has no user entries to calibrate it on.
 pub(crate) const USER_ENTRY_EFFECTIVE_COUNT: u32 = 2_000;
 
+/// What the walker bigram (`docs/architecture/bigram-lm-roadmap.md` D6) knows
+/// about an edge's pick after the previous edge's pick: the previous word's
+/// `C` (`total`) and `N` (`distinct`), the pair's count, and the discount `D`.
+/// Absent for the first edge, a previous pick with no recorded continuation,
+/// or a side outside the bigram (OOV, or a custom / learned winner) — the
+/// edge then takes no penalty. A dictionary word in no corpus pair
+/// is present with `pair_count` 0 and pays the full backoff, as in
+/// `walker_lm.py`.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) struct BigramEvidence {
+    pub total: u32,
+    pub distinct: u32,
+    pub pair_count: u32,
+    pub discount: f64,
+}
+
+/// Nats the walker bigram adds to an edge priced at `base` (−ln p_uni):
+/// `max(−ln p(w₂|w₁) − base, 0)`, interpolated absolute discounting
+/// `p(w₂|w₁) = max(c − D, 0)/C + D·N/C · p_uni`. Penalty-only — a seen
+/// collocation never makes a word cheaper than its unigram, so it cannot
+/// split a word the unigram walk keeps whole (the full conditional did:
+/// D6 table). Mirrors `dictionary/build/walker_lm.py::BigramCounts.penalty`.
+pub(crate) fn bigram_penalty(evidence: &BigramEvidence, base: f64) -> f64 {
+    let BigramEvidence {
+        total,
+        distinct,
+        pair_count,
+        discount,
+    } = *evidence;
+    let total = f64::from(total);
+    let seen = (f64::from(pair_count) - discount).max(0.0) / total;
+    let backoff = discount * f64::from(distinct) / total * (-base).exp();
+    (-(seen + backoff).ln() - base).max(0.0)
+}
+
 /// The cost cap (nats, before the length terms) a multi-syllable edge
 /// whose word the user selected is priced at:
 /// `custom_word_cost + ln((1 + F) / (1 + F·s))`, `F` =
@@ -249,12 +285,13 @@ fn user_entry_cost_cap(custom_word_cost: u16, user_weight_delta: f64) -> f64 {
 /// edge's own inputs are read from `choice`:
 /// - `walker_cost` — the edge key's lowest `DictionaryRecord::walker_cost`
 ///   (milli-nats) across its homophones
-///   (`lexicon::EdgeBest::span_walker_cost`, E1 D3), or
-///   at most `custom_word_cost` for an edge with a custom or learned
-///   row; **unused when `dict_hit == false`**. A corpus
+///   (`lexicon::EdgeBest::span_walker_cost`, E1 D3);
+///   **unused when `dict_hit == false`**. A corpus
 ///   price, never a ranked `score` (Codex pre-impl S5 Q3: `c.score` must
 ///   not feed the walker cost — that double-counts the record-selection
 ///   signal).
+/// - `user_row` — a custom or learned row sits under the key: the base,
+///   bigram penalty included, is capped at `custom_word_cost`.
 /// - `syllable_count` — the dict candidate's syllable count (`>= 1`;
 ///   clamped, defends against a leaked `0`); drives the khiin
 ///   `n_syls^0.2` bias. For an OOV edge it is **metadata only** (the
@@ -299,10 +336,20 @@ fn user_entry_cost_cap(custom_word_cost: u16, user_weight_delta: f64) -> f64 {
 ///   length (RC0) — a **cost property**, not a lexicographic
 ///   `dict_hit` rule (Codex pre-impl S7 Q1 / RC0 Q2).
 ///
+/// `bigram` raises the dict branch's corpus base by [`bigram_penalty`]
+/// before the user-entry cap, the length terms and the user discount, which
+/// apply exactly as without it (D6); `None` leaves the edge's cost as it was
+/// before the walker bigram.
+///
 /// Always finite.
-pub(crate) fn edge_cost(choice: &EdgeChoice, custom_word_cost: u16) -> f64 {
+pub(crate) fn edge_cost(
+    choice: &EdgeChoice,
+    custom_word_cost: u16,
+    bigram: Option<&BigramEvidence>,
+) -> f64 {
     let EdgeChoice {
         walker_cost,
+        user_row,
         syllable_count,
         toneless_len,
         user_weight_delta,
@@ -321,6 +368,15 @@ pub(crate) fn edge_cost(choice: &EdgeChoice, custom_word_cost: u16) -> f64 {
         return OOV_PER_CHAR_PENALTY * toneless_len.max(1) as f64;
     }
     let mut base = f64::from(walker_cost) / MILLI_NATS_PER_NAT;
+    if let Some(evidence) = bigram {
+        base += bigram_penalty(evidence, base);
+    }
+    // A custom or learned row under the key: the span the user filed or once
+    // composed as one word is priced at most at the custom-word tier, penalty
+    // included, so it keeps winning the segmentation (#69).
+    if user_row {
+        base = base.min(f64::from(custom_word_cost) / MILLI_NATS_PER_NAT);
+    }
     // A user-selected multi-syllable word is user-dict evidence: price it
     // at most at the user-entry tier so its span is not split into
     // cheaper singles. Single-syllable edges keep the S3 damping policy
@@ -350,8 +406,8 @@ pub(crate) fn edge_cost(choice: &EdgeChoice, custom_word_cost: u16) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::{
-        EdgeChoice, OOV_PER_CHAR_PENALTY, USER_ENTRY_EFFECTIVE_COUNT,
-        WALKER_SINGLE_SYLLABLE_USER_DELTA_SCALE,
+        bigram_penalty, BigramEvidence, EdgeChoice, OOV_PER_CHAR_PENALTY,
+        USER_ENTRY_EFFECTIVE_COUNT, WALKER_SINGLE_SYLLABLE_USER_DELTA_SCALE,
     };
 
     // A fixed input for these pure cost-rule tests, not a production model price;
@@ -361,12 +417,14 @@ mod tests {
     /// An edge carrying only the fields `edge_cost` reads.
     fn choice(walker_cost: u16, syll: u8, len: usize, delta: f64, dict_hit: bool) -> EdgeChoice {
         EdgeChoice {
+            rowid: lexicon::dictionary_reader::NO_ROWID,
             roman: String::new(),
             hanji: None,
             canonical_tl: String::new(),
             dict_hit,
             is_custom: false,
             walker_cost,
+            user_row: false,
             syllable_count: syll,
             toneless_len: len,
             user_weight_delta: delta,
@@ -377,6 +435,7 @@ mod tests {
         super::edge_cost(
             &choice(walker_cost, syll, len, delta, dict_hit),
             FIXTURE_CUSTOM_WORD_COST,
+            None,
         )
     }
 
@@ -485,6 +544,7 @@ mod tests {
             let cost = super::edge_cost(
                 &choice(13_000, 2, 2, f64::from(ranking::BOOST_ALPHA), true),
                 custom_cost,
+                None,
             );
             let expected =
                 f64::from(custom_cost) / 1000.0 - f64::from(ranking::BOOST_ALPHA).ln_1p();
@@ -734,5 +794,74 @@ mod tests {
                 assert!(c.is_finite(), "w={w} s={s} l={l} dict_hit={dict_hit} → {c}");
             }
         }
+    }
+
+    /// Evidence with the shipped discount.
+    fn evidence(total: u32, distinct: u32, pair_count: u32) -> BigramEvidence {
+        BigramEvidence {
+            total,
+            distinct,
+            pair_count,
+            discount: 0.75,
+        }
+    }
+
+    #[test]
+    fn bigram_penalty_matches_the_reference_formula() {
+        // trace (walker_lm.py `BigramCounts.penalty`, D = 0.75):
+        // unseen pair: −ln(0.75·10/100 · e^−5) − 5 = ln(100 / 7.5) = 2.5903;
+        // 有→的 (production C 48 740, N 3 370, c 411; 的 base 4.173):
+        // −ln(410.25/48 740 + 0.75·3 370/48 740 · e^−4.173) = 4.6868 → 0.5138;
+        // 去→去 (C 14 233, N 1 432, c 27; 去 base 5.461) → 6.1354 → 0.6744.
+        for (evidence, base, expected) in [
+            (evidence(100, 10, 0), 5.0, 2.590_267),
+            (evidence(48_740, 3_370, 411), 4.173, 0.513_812),
+            (evidence(14_233, 1_432, 27), 5.461, 0.674_357),
+        ] {
+            let penalty = bigram_penalty(&evidence, base);
+            assert!(
+                (penalty - expected).abs() < 1e-5,
+                "{evidence:?} → {penalty}"
+            );
+        }
+    }
+
+    #[test]
+    fn bigram_penalty_never_lowers_a_cost() {
+        // trace: c 50 of C 100 → −ln(0.4925 + ε) = 0.707 < base 5 → 0 (penalty-only).
+        assert_eq!(bigram_penalty(&evidence(100, 10, 50), 5.0), 0.0);
+        for base in [0.0, 1.0, 13.181, 65.535] {
+            for (total, distinct, pair) in [(1, 1, 1), (1, 1, 0), (u32::MAX, u32::MAX, 0)] {
+                let penalty = bigram_penalty(&evidence(total, distinct, pair), base);
+                assert!(
+                    penalty >= 0.0 && penalty.is_finite(),
+                    "base {base} → {penalty}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn bigram_raises_the_dict_base_before_the_length_terms_and_cap() {
+        let unseen = evidence(100, 10, 0);
+        let priced = |c: &EdgeChoice, bigram| super::edge_cost(c, FIXTURE_CUSTOM_WORD_COST, bigram);
+        // trace: (5.0 + 2.5903) / 3^0.2 × 1^0.2 = 7.5903 / 1.24573 = 6.0931.
+        let single = choice(5_000, 1, 3, 0.0, true);
+        assert!((priced(&single, Some(&unseen)) - 7.590_267 / 3f64.powf(0.2)).abs() < 1e-5);
+        assert_eq!(priced(&single, None), ec(5_000, 1, 3));
+        // A fresh selection's cap still bounds a penalised multi-syllable word.
+        let selected = choice(13_000, 2, 2, f64::from(ranking::BOOST_ALPHA), true);
+        assert_eq!(priced(&selected, Some(&unseen)), priced(&selected, None));
+        // A user row under the key caps the penalised base at the custom tier.
+        // trace: 7.0 + 2.5903 = 9.590 → 7.879; 5.0 + 2.5903 = 7.590 stays.
+        let user_row = |walker_cost| EdgeChoice {
+            user_row: true,
+            ..choice(walker_cost, 1, 1, 0.0, true)
+        };
+        assert_eq!(priced(&user_row(7_000), Some(&unseen)), 7.879);
+        assert!((priced(&user_row(5_000), Some(&unseen)) - 7.590_267).abs() < 1e-5);
+        // The OOV branch takes no corpus price, so no bigram either.
+        let oov = choice(0, 1, 3, 0.0, false);
+        assert_eq!(priced(&oov, Some(&unseen)), priced(&oov, None));
     }
 }

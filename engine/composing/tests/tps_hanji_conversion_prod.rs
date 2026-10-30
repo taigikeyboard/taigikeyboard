@@ -149,3 +149,30 @@ fn a_toneless_first_syllable_a_longer_one_straddles_is_listed() {
     );
     assert_eq!(type_keys(&mut engine, " ", &config).display_text, "你熇");
 }
+
+// The conversion walks the same lattice as slot 0, so it takes the walker
+// bigram too (`bigram-lm-roadmap.md` D6). trace: `ㄨㆤˊ` = uê5; the unigram
+// walk split it 有 4.496 + 的 4.173 = 8.669 < 鞋 8.726; 的 after 有 costs
+// 4.687 → 9.183, and the one word wins.
+#[test]
+fn a_split_of_two_frequent_syllables_converts_as_the_one_word() {
+    if !production_lexicon_ready() {
+        eprintln!("production artifacts absent — run `make dict`; skipping.");
+        return;
+    }
+    let config = config_converting("tps");
+    let mut engine = Engine::new();
+    engine.apply(
+        Intent::Start {
+            text: "ㄨㆤˊ".into(),
+        },
+        &config,
+    );
+    assert_eq!(
+        converted_words(&engine).len(),
+        1,
+        "{:?}",
+        converted_words(&engine)
+    );
+    assert_eq!(converted_words(&engine)[0].1, "鞋");
+}

@@ -1769,6 +1769,13 @@ fn best_candidate_for_key_returns_highest_score_on_collision() {
     // trace: freq 5000 → round(ln(13,056,588 / 5,001) × 1000) = 7,867;
     // freq 100 → 11,770. The key's cheapest row prices the edge.
     assert_eq!(best.span_walker_cost, 7_867, "key's min walker cost");
+    // The pick names its dictionary row, which the walker bigram prices.
+    assert_eq!(best.bigram_rowid, best.candidate.rowid);
+    let row = dict.record(best.bigram_rowid).expect("the pick's row");
+    assert_eq!(
+        (row.hanji.as_deref(), row.rowid),
+        (Some("臺灣"), best.bigram_rowid)
+    );
     let best = best.candidate;
     assert_eq!(best.display_text, "臺灣", "highest-score row must win");
     assert_eq!(best.hanji.as_deref(), Some("臺灣"));
