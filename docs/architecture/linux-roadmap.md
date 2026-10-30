@@ -320,8 +320,9 @@ introspection XML and the `serialize` functions were read, not remembered).
   (`chrome::menu_items`; one list, both shells — the rows themselves
   are `taigi_desktop_core::keys::MENU`, shared with Windows and held equal to the Mac's by test). **Mode label**
   (`chrome::mode_label`) = `<romanization> · <candidate display mode>` (`台羅 · 漢羅對應`),
-  the two states the chords switch; a switch emits `Emit::ModeChanged` (the shell re-reads the
-  label and the indicator; the swap emits it too, for the indicator, unannounced)
+  plus ` · <output script>` under side by side (`台羅 · 漢羅對應 · 漢字`); a switch emits
+  `Emit::ModeChanged` (the shell re-reads the label and the indicator; the swap emits it
+  too, announced only under side by side)
   and `Emit::AnnounceMode` — Fcitx5 `Instance::showInputMethodInformation`, the
   framework's own timed "input method + sub-mode" notice, stands in for the HUD flash;
   IBus has no equivalent and only the symbol changes (named divergence). GNOME Shell reads

@@ -41,8 +41,9 @@ use taigi_desktop_core::keys::{
     telex_guide_rows, CandidateNavigation, ComposingKeyBindings, ComposingKeyIntent,
     KeyEventSnapshot, ShortcutAction, SymbolPickerIntent, TpsKeyCapIndex,
 };
+use taigi_desktop_core::settings::presentation::output_script_label;
 use taigi_desktop_core::settings::{
-    keys, AppearanceMode, InputMode, InputModeRequest, SettingsDocument,
+    keys, AppearanceMode, CandidateDisplayMode, InputMode, InputModeRequest, SettingsDocument,
 };
 use taigi_desktop_core::strings::{StringKey, StringResolver};
 use taigi_desktop_core::symbols::SymbolTable;
@@ -1030,6 +1031,17 @@ impl TextService_Impl {
                 // never which exist — re-presented in place, selection kept
                 // (dismissing read as the window vanishing, 2026-08-21).
                 self.represent_open_list(identity, runtime, false);
+                // Flashed even over an open list, as the display-mode cycle
+                // is: the tray icon alone was easy to miss (Discord request
+                // 2026-10-19, USER 2026-10-31). Side by side only: under
+                // combined a commit still writes the Hanji, so a flash would
+                // announce a change that did not happen
+                // (`TaigiInputController.performShortcutAction`).
+                if display_mode == CandidateDisplayMode::SideBySide {
+                    let settings = runtime.settings.current();
+                    let is_hanji = settings.bool(&keys::IS_HANJI_FIRST);
+                    self.flash_mode_label(runtime, &settings, output_script_label(is_hanji));
+                }
             }
             ShortcutAction::CycleCandidateDisplayMode => {
                 if !runtime.update_settings("cycle_candidate_display_mode", |document| {
