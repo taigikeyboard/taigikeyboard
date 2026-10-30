@@ -47,7 +47,7 @@ from collections.abc import Callable, Iterable, Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from build.common import BASE_DIR, MERGED_CSV, SHARED_DATA_DIR, UNIGRAMS_TSV
+from build.common import BASE_DIR, BIGRAMS_TSV, MERGED_CSV, SHARED_DATA_DIR, UNIGRAMS_TSV
 from build.dictionary_records import load_dictionary_records
 from build.walker_lm import WalkerModel, model_from_counts, model_word
 from common.abbrev import remove_diacritics
@@ -59,7 +59,6 @@ REPO_DIR = BASE_DIR.parent
 CORPUS_DIR = REPO_DIR / "corpus" / "taigi-corpus" / "data" / "normalized"
 TAIGI_TYPING_ARTICLES = REPO_DIR / "corpus" / "taigi-typing" / "articles.js"
 ROMANIZED_READINGS_TSV = SHARED_DATA_DIR / "romanized_readings.tsv"
-BIGRAMS_TSV = SHARED_DATA_DIR / "word_bigrams.tsv"
 
 Word = tuple[str, str]  # (hanji, tl_num)
 # A pair must be seen this often to be written; P3 applies the per-key top-K.

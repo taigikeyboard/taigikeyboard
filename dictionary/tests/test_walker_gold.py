@@ -16,7 +16,7 @@ from unittest import mock
 BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE_DIR))
 
-from build.walker_lm import WalkerModel
+from build.walker_lm import BigramCounts, WalkerModel
 from tools import walker_gold
 from tools.walker_gold import Item, Resolved, Row, Simulator, windows
 
@@ -70,6 +70,37 @@ class SimulatorTests(unittest.TestCase):
         # 教授 −ln(246.5/D) / 6^0.2 × 2^0.2 = 7.72; 到 4.24 + 受 5.22 = 9.46 > 7.72
         simulator = self.simulator({"教授": 246, "到": 18_902, "受": 5_574})
         path = simulator.best_path(["kau3", "siu7"], "a2", 0.5)
+        self.assertEqual([r.hanzi for r in path], ["教授"])
+
+    def test_context_walk_without_bigrams_is_the_a2_walk(self) -> None:
+        no_bigrams = BigramCounts({})
+
+        def penalty(previous: Row, pick: Row, base: float) -> float:
+            return base + no_bigrams.penalty(previous.model_word, pick.model_word, base)
+
+        for counts in ({}, {"教授": 246, "到": 18_902, "受": 5_574}):
+            simulator = self.simulator(counts)
+            for syllables in (["kau3", "siu7"], ["kau3", "kau3siu7"], ["siu7", "kau3", "siu7"]):
+                with self.subTest(counts=counts, syllables=syllables):
+                    self.assertEqual(
+                        simulator.best_path(syllables, "a2", 1.0, penalty),
+                        simulator.best_path(syllables, "a2", 1.0),
+                    )
+
+    def test_penalty_after_the_previous_pick_keeps_the_word(self) -> None:
+        # trace: α 1, D = 3,627,713 + 167,907 = 3,795,620. 教授 unseen −ln(1/D) = 15.149 / 6^0.2 × 2^0.2
+        # = 12.161; 到 ln(D/18,903) = 5.302 / 3^0.2 = 4.256; 受 ln(D/5,575) = 6.523 / 3^0.2 = 5.237
+        # → unigram split 9.493 < 12.161. 到 has one other continuation (C 1,000, N 1): 受 after 到 pays
+        # −ln(0.75 / 1,000) = 7.195 → (6.523 + 7.195) / 3^0.2 = 11.013 → split 15.269 > 12.161.
+        simulator = self.simulator({"到": 18_902, "受": 5_574})
+        self.assertEqual([r.hanzi for r in simulator.best_path(["kau3", "siu7"], "a2", 1.0)], ["到", "受"])
+        bigrams = BigramCounts({("到", "kau3"): {("教", "kau3"): 1_000}})
+        path = simulator.best_path(
+            ["kau3", "siu7"],
+            "a2",
+            1.0,
+            lambda previous, pick, base: base + bigrams.penalty(previous.model_word, pick.model_word, base),
+        )
         self.assertEqual([r.hanzi for r in path], ["教授"])
 
 

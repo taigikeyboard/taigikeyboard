@@ -15,6 +15,7 @@ Usage (from dictionary/):
   PYTHONPATH=. python3 -m tools.walker_gold d3         # runtime edge pick vs corpus winner (plan D3)
   PYTHONPATH=. python3 -m tools.walker_gold simulate   # pre-P3 vs A2 cost over the resolved items
   PYTHONPATH=. python3 -m tools.walker_gold exposure   # pre-P3 vs A2 over every 2–3 syllable dictionary key
+  PYTHONPATH=. python3 -m tools.walker_gold bigram     # unigram vs the D6 walker bigram (bigram-lm-roadmap.md)
 """
 
 from __future__ import annotations
@@ -26,6 +27,7 @@ import random
 import re
 import sys
 from collections import defaultdict
+from collections.abc import Callable
 from dataclasses import dataclass, replace
 from functools import cache
 from pathlib import Path
@@ -43,7 +45,13 @@ from build.corpus_bigrams import (
     typing_article_lines,
 )
 from build.dictionary_records import load_dictionary_records
-from build.walker_lm import HELD_OUT_SOURCE, MILLI_NATS, load_model
+from build.walker_lm import (
+    BIGRAM_DISCOUNT,
+    HELD_OUT_SOURCE,
+    MILLI_NATS,
+    load_bigrams,
+    load_model,
+)
 from common.notone import remove_tone
 
 REPO_DIR = BASE_DIR.parent
@@ -112,6 +120,11 @@ class Row:
     is_visible_by_default: bool
 
     @property
+    def model_word(self) -> tuple[str, str]:
+        # tl_num is already lowercased, so (hanzi, tl_num) is `build.walker_lm.model_word`.
+        return (self.hanzi, self.tl_num)
+
+    @property
     def plain_hanji(self) -> str:
         return self.hanzi.replace("-", "")
 
@@ -126,6 +139,7 @@ class Dictionary:
 
     def __init__(self) -> None:
         records = load_dictionary_records(MERGED_CSV)
+        self.records = records
         self.walker_model = load_model(records)
         self.rows: list[Row] = []
         for record in records:
@@ -162,8 +176,7 @@ class Dictionary:
                 self.by_tl_num[row.tl_num].append(row)
 
     def count(self, row: Row) -> int:
-        # Row.tl_num is already lowercased, so (hanzi, tl_num) is the model word.
-        return self.walker_model.counts.get((row.hanzi, row.tl_num), 0)
+        return self.walker_model.counts.get(row.model_word, 0)
 
     def category(self, row: Row) -> str:
         """One gold category per single word; a multi-word excerpt is a `phrase`."""
@@ -476,6 +489,12 @@ def read_edge_picks(bitmask: str = "default") -> dict[str, str]:
 PRE_P3_CORPUS_TOTAL_FREQ = 13_056_588.0
 
 
+# Prices an edge after the previous pick: (previous pick, pick, edge base in nats) → base in nats.
+ContextCost = Callable[["Row", "Row", float], float]
+# One walk over fully toned syllables → the slot-0 path.
+Walk = Callable[[list[str]], "list[Row] | None"]
+
+
 class Simulator:
     """The walker over a fully toned syllable sequence: dictionary edges only (no OOV, no user data).
 
@@ -493,35 +512,47 @@ class Simulator:
         hanji = self.picks.get(key)
         return next((r for r in rows if r.plain_hanji == hanji), rows[0])
 
-    def edge_cost(self, rows: list[Row], pick: Row, model: str, alpha: float) -> float:
+    def edge_base(self, rows: list[Row], model: str, alpha: float) -> float:
+        """The edge's price in nats before the length terms."""
         if model == "pre-p3":
-            base = math.log(PRE_P3_CORPUS_TOTAL_FREQ / (1 + max(r.frequency for r in rows)))
-        else:
-            # The quantised `walker_cost` dictionary.bin v4 stores, at this α.
-            walker_model = replace(self.dictionary.walker_model, alpha=alpha)
-            base = min(walker_model.cost((r.hanzi, r.tl_num)) for r in rows) / MILLI_NATS
-        return base / len(pick.tl_notone) ** 0.2 * pick.syllable_count**0.2
+            return math.log(PRE_P3_CORPUS_TOTAL_FREQ / (1 + max(r.frequency for r in rows)))
+        # The quantised `walker_cost` dictionary.bin v4 stores, at this α.
+        walker_model = replace(self.dictionary.walker_model, alpha=alpha)
+        return min(walker_model.cost((r.hanzi, r.tl_num)) for r in rows) / MILLI_NATS
 
-    def best_path(self, syllables: list[str], model: str, alpha: float) -> list[Row] | None:
+    def best_path(
+        self, syllables: list[str], model: str, alpha: float, context: ContextCost | None = None
+    ) -> list[Row] | None:
+        """Min-cost path. With `context`, an edge's base is `context(previous pick, pick, base)` (the walker
+        bigram, bigram-lm-roadmap.md D6), so the DP state is (offset, pick arriving there); without it,
+        one state per offset."""
         n = len(syllables)
-        best: list[tuple[float, int, Row | None] | None] = [None] * (n + 1)
-        best[0] = (0.0, -1, None)
+        # end → state → (cost, start, previous state, pick); the state is the pick, or None without context.
+        best: dict[int, dict[Row | None, tuple[float, int, Row | None, Row | None]]] = defaultdict(dict)
+        best[0][None] = (0.0, -1, None, None)
         for end in range(1, n + 1):
             for start in range(max(0, end - MAX_EDGE_SYLLABLES), end):
                 key = "".join(syllables[start:end])
                 rows = self.dictionary.by_tl_num.get(key)
-                if best[start] is None or not rows:
+                if not best[start] or not rows:
                     continue
                 pick = self.pick(key, rows)
-                cost = best[start][0] + self.edge_cost(rows, pick, model, alpha)
-                if best[end] is None or cost < best[end][0]:
-                    best[end] = (cost, start, pick)
-        if best[n] is None:
+                base = self.edge_base(rows, model, alpha)
+                state = pick if context else None
+                for previous, (previous_cost, _, _, previous_pick) in best[start].items():
+                    edge = base if context is None or previous_pick is None else context(previous_pick, pick, base)
+                    cost = previous_cost + edge / len(pick.tl_notone) ** 0.2 * pick.syllable_count**0.2
+                    current = best[end].get(state)
+                    if current is None or cost < current[0]:
+                        best[end][state] = (cost, start, previous, pick)
+        if not best[n]:
             return None
+        state = min(best[n], key=lambda s: best[n][s][0])
         path, end = [], n
         while end > 0:
-            path.append(best[end][2])
-            end = best[end][1]
+            _, start, previous, pick = best[end][state]
+            path.append(pick)
+            end, state = start, previous
         return path[::-1]
 
 
@@ -534,51 +565,70 @@ def path_shape(path: list[Row] | None) -> tuple[str, list[int]]:
     return ("".join(r.plain_hanji for r in path), [r.display_syllables for r in path]) if path else ("", [])
 
 
-def simulate(args: argparse.Namespace) -> int:
-    dictionary = Dictionary()
-    simulator = Simulator(dictionary, read_edge_picks())
-    resolved = [r for r in resolve_all(dictionary)[0] if r.item.split in args.splits]
-    models = [("pre-p3", 0.0), *((f"a2@{a}", a) for a in args.alphas)]
-    compared = models[1][0]
-    # stratum → model → [exact, segmented]; `n` per stratum alongside.
+def walk_gold(resolved: list[Resolved], walks: dict[str, Walk]) -> list[tuple[Resolved, dict[str, list[Row] | None]]]:
+    return [(r, {name: walk(r.syllables()) for name, walk in walks.items()}) for r in resolved]
+
+
+def print_strata(walked: list[tuple[Resolved, dict[str, list[Row] | None]]], names: list[str]) -> None:
+    """Exact % / segmented % per stratum and walk."""
+    # stratum → walk → [exact, segmented]; `n` per stratum alongside.
     totals: dict[str, dict[str, list[int]]] = defaultdict(lambda: defaultdict(lambda: [0, 0]))
     sizes: dict[str, int] = defaultdict(int)
-    changes = []
-    for r in resolved:
-        gold = [row.plain_hanji for row in r.rows]
+    for r, paths in walked:
+        gold = "".join(row.plain_hanji for row in r.rows)
         strata = (f"{r.item.split}/all", f"{r.item.split}/{r.item.category}")
         for stratum in strata:
             sizes[stratum] += 1
-        results = {name: simulator.best_path(r.syllables(), name.split("@")[0], alpha) for name, alpha in models}
-        for name, path in results.items():
-            is_exact = path is not None and "".join(p.plain_hanji for p in path) == "".join(gold)
+        for name, path in paths.items():
+            is_exact = path is not None and "".join(p.plain_hanji for p in path) == gold
             # Same words (fully toned keys) in the same order, whatever the orthography.
             is_segmented = path is not None and [p.tl_num for p in path] == [g.tl_num for g in r.rows]
             for stratum in strata:
                 totals[stratum][name][0] += is_exact
                 totals[stratum][name][1] += is_segmented
-        if r.item.split != "final" and path_text(results["pre-p3"]) != path_text(results[compared]):
-            changes.append(
-                (
-                    r.item.id,
-                    r.item.category,
-                    " ".join(gold),
-                    path_text(results["pre-p3"]),
-                    path_text(results[compared]),
-                )
-            )
-    print("stratum\tn\t" + "\t".join(f"{name} exact/seg" for name, _ in models))
+    print("stratum\tn\t" + "\t".join(f"{name} exact/seg" for name in names))
     for stratum in sorted(totals):
         n = sizes[stratum]
         print(
             f"{stratum}\t{n}\t"
-            + "\t".join(f"{totals[stratum][m][0] / n:.0%}/{totals[stratum][m][1] / n:.0%}" for m, _ in models)
+            + "\t".join(f"{totals[stratum][m][0] / n:.0%}/{totals[stratum][m][1] / n:.0%}" for m in names)
         )
+
+
+def slot0_changes(walked: list[tuple[Resolved, dict[str, list[Row] | None]]], before: str, after: str) -> list[str]:
+    """Items whose slot 0 (the whole walked path) differs between two walks; the final split never listed."""
+    return [
+        "\t".join(
+            (
+                r.item.id,
+                r.item.category,
+                " ".join(g.plain_hanji for g in r.rows),
+                path_text(paths[before]),
+                path_text(paths[after]),
+            )
+        )
+        for r, paths in walked
+        if r.item.split != "final" and path_text(paths[before]) != path_text(paths[after])
+    ]
+
+
+def simulate(args: argparse.Namespace) -> int:
+    dictionary = Dictionary()
+    simulator = Simulator(dictionary, read_edge_picks())
+    resolved = [r for r in resolve_all(dictionary)[0] if r.item.split in args.splits]
+    models = [("pre-p3", "pre-p3", 0.0), *((f"a2@{a}", "a2", a) for a in args.alphas)]
+    walks: dict[str, Walk] = {
+        name: lambda s, model=model, alpha=alpha: simulator.best_path(s, model, alpha) for name, model, alpha in models
+    }
+    walked = walk_gold(resolved, walks)
+    print_strata(walked, list(walks))
     if args.engine_slot0:
         report_engine_agreement(args.engine_slot0, resolved, simulator)
+    compared = models[1][0]
+    changes = slot0_changes(walked, "pre-p3", compared)
     print(f"\n{len(changes)} items whose slot 0 changes (pre-p3 → {compared}; final split never listed):")
     for change in changes:
-        print("\t".join(change))
+        print(change)
     return 0
 
 
@@ -607,16 +657,21 @@ def report_engine_agreement(path: Path, resolved: list[Resolved], simulator: Sim
     print("\n".join(disagreements[:20]))
 
 
+def exposure_keys(dictionary: Dictionary) -> list[tuple[str, list[str]]]:
+    """Every fully toned 2–3 syllable key with its syllables."""
+    keyed = ((k, NUMERIC_SYLLABLE.findall(k)) for k in sorted(dictionary.by_tl_num))
+    return [(k, syllables) for k, syllables in keyed if 2 <= len(syllables) <= 3]
+
+
 def exposure(args: argparse.Namespace) -> int:
     """Every fully toned 2–3 syllable key: does slot 0 keep one of the key's own words as one edge?"""
     dictionary = Dictionary()
     simulator = Simulator(dictionary, read_edge_picks())
-    keys = sorted(k for k in dictionary.by_tl_num if 2 <= len(NUMERIC_SYLLABLE.findall(k)) <= 3)
+    keys = exposure_keys(dictionary)
     losers = {"pre-p3": 0, "a2": 0}
     seen_losers = {"pre-p3": 0, "a2": 0}
     flips = defaultdict(list)
-    for key in keys:
-        syllables = NUMERIC_SYLLABLE.findall(key)
+    for key, syllables in keys:
         is_seen = any(dictionary.count(r) for r in dictionary.by_tl_num[key])
         paths = {model: simulator.best_path(syllables, model, args.alpha) for model in losers}
         keeps_word = {model: path is not None and len(path) == 1 for model, path in paths.items()}
@@ -632,6 +687,53 @@ def exposure(args: argparse.Namespace) -> int:
         print(f"{model}: whole-key word loses slot 0 on {lost} keys ({seen_losers[model]} with a corpus count)")
     for direction, rows in flips.items():
         print(f"\n{direction}: {len(rows)}")
+        random.Random(SEED).shuffle(rows)
+        print("\n".join(rows[: args.sample]))
+    return 0
+
+
+def bigram(args: argparse.Namespace) -> int:
+    """Unigram walker vs the D6 walker bigram (penalty-only, and the rejected full conditional):
+    gold accuracy and whole-key exposure. Fully toned input only: the reported toneless splits
+    (`ue5`, `khikhi`) are engine regressions (P6.3), not simulator cases."""
+    dictionary = Dictionary()
+    simulator = Simulator(dictionary, read_edge_picks())
+    bigrams = load_bigrams(dictionary.records, discount=args.discount)
+
+    def penalty(previous: Row, pick: Row, base: float) -> float:
+        return base + bigrams.penalty(previous.model_word, pick.model_word, base)
+
+    def full(previous: Row, pick: Row, base: float) -> float:
+        return bigrams.conditional_cost(previous.model_word, pick.model_word, base)
+
+    walks: dict[str, Walk] = {
+        name: lambda s, context=context: simulator.best_path(s, "a2", WALKER_ALPHA, context)
+        for name, context in (("unigram", None), ("penalty", penalty), ("full", full))
+    }
+    walked = walk_gold([r for r in resolve_all(dictionary)[0] if r.item.split in args.splits], walks)
+    print(f"D={args.discount}")
+    print_strata(walked, list(walks))
+    changes = slot0_changes(walked, "unigram", "penalty")
+    print(f"\n{len(changes)} items whose slot 0 changes (unigram → penalty; final split never listed):")
+    print("\n".join(changes))
+
+    keys = exposure_keys(dictionary)
+    losers = dict.fromkeys(walks, 0)
+    flips: dict[str, list[str]] = defaultdict(list)
+    for key, syllables in keys:
+        paths = {name: walk(syllables) for name, walk in walks.items()}
+        keeps_word = {name: path is not None and len(path) == 1 for name, path in paths.items()}
+        for name, kept in keeps_word.items():
+            losers[name] += not kept
+        if keeps_word["unigram"] != keeps_word["penalty"]:
+            direction = "split→word" if keeps_word["penalty"] else "word→split"
+            flips[direction].append(f"{key}\t{path_text(paths['unigram'])}\t{path_text(paths['penalty'])}")
+    print(f"\nkeys: {len(keys)}")
+    for name, lost in losers.items():
+        print(f"{name}: whole-key word loses slot 0 on {lost} keys")
+    for direction in ("word→split", "split→word"):
+        rows = flips[direction]
+        print(f"\n{direction} (unigram → penalty): {len(rows)}")
         random.Random(SEED).shuffle(rows)
         print("\n".join(rows[: args.sample]))
     return 0
@@ -703,6 +805,16 @@ def main(argv: list[str] | None = None) -> int:
     exposure_parser.add_argument("--alpha", type=float, default=0.5)
     exposure_parser.add_argument("--sample", type=int, default=30)
     exposure_parser.set_defaults(run=exposure)
+    bigram_parser = sub.add_parser("bigram")
+    bigram_parser.add_argument(
+        "--splits",
+        nargs="+",
+        default=["dev", "calib"],
+        choices=["dev", "calib", "final"],
+    )
+    bigram_parser.add_argument("--discount", type=float, default=BIGRAM_DISCOUNT)
+    bigram_parser.add_argument("--sample", type=int, default=30)
+    bigram_parser.set_defaults(run=bigram)
     d3_parser = sub.add_parser("d3")
     d3_parser.add_argument("--sample", type=int, default=15)
     d3_parser.set_defaults(run=d3)
