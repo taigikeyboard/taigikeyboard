@@ -2,14 +2,14 @@
 
 > **Type**: Design record
 > **Keywords**: `bigram`, `language model`, `next-word`, `association.bin`, `taigi-corpus`, `lattice`, `walker`, `prediction`
-> **Status**: Closed. P3–P5 shipped; P6 not opened (no segmentation error observed); P7 not adopted; D7 cut. Unscheduled leftovers are in § Techniques not in this roadmap.
+> **Status**: Reopened 2026-10-30 for P6. P3–P5 shipped; P6 in progress (a segmentation error was reported: `ue5` → `有的` over `鞋`; D6 rewritten as a penalty-only conditional term); P7 not adopted; D7 cut. Unscheduled leftovers are in § Techniques not in this roadmap.
 
 ---
 
 ## Summary
 
 - **Goal**: a **cross-word bigram model** built from running Taiwanese text replaces the old dictionary-word-completion next-word table (intra-word character pairs, `台→灣`), and the same data re-ranks composing candidates by the previous word.
-- **Shape**: offline pair-count build (checked-in TSV) → `association.bin` v2 (word-keyed entries, char-keyed entries kept for backspace) → engine next-word looks up the word key → composing re-rank by previous word → (gated, not opened) bigram term in the lattice walker.
+- **Shape**: offline pair-count build (checked-in TSV) → `association.bin` v2 (word-keyed entries, char-keyed entries kept for backspace) → engine next-word looks up the word key → composing re-rank by previous word → penalty-only conditional bigram term in the lattice walker (D6, P6).
 - **Two tracks, different risk**: the next-word track stays inside `engine/nextword` + `engine/dispatch/src/predict.rs`; the composing track touches whole-sentence ranking and needs `/code-review` + golden re-checks.
 - Mainstream IME comparison (who puts a bigram in the walker, smoothing, caps): [`docs/references/mainstream-ime-comparison.md`](../references/mainstream-ime-comparison.md).
 
@@ -23,7 +23,7 @@
 - Sentence punctuation `。！？.!?`, line end and clause punctuation `，、；：` break the chain; the next-word context rule breaks on the same marks (`behavioral-invariants.md` §40). There is no sentence-start key.
 - A token that is **not** a dictionary `(hanji, tl)` row breaks the chain: a next-word suggestion must be a word the engine can commit with its reading (librime-predict likewise keeps only lexicon words).
 - **Scoring — next-word track**: within one key, order by `count`, top-K per key, min count 2 (librime-predict `make_predict_data` pruning). No smoothing: the list is per-key. **Source priority**: bundled score is capped at `DICT_SCORE_CAP` = 250, below `LEARNING_BONUS` (300), so every user row outranks every bundled row (`behavioral-invariants.md` §8 "always", not "at equal count").
-- **Scoring — composing track**: a **bonus-only** transition term so absent data changes nothing: `t(w₁, w₂) = −λ · ln(1 + c(w₁,w₂) / c(w₁))` for a seen pair (≤ 0, one named constant λ), **exactly 0** for an unseen pair — this is what makes the D6 identity provable.
+- **Scoring — composing track**: ordering only (D5); the walker's segmentation term is D6's penalty-only conditional cost, not a bonus.
 
 ### D2 — Build location: this repository, checked-in intermediate
 
@@ -59,11 +59,33 @@
 - `CandidateSortKey.context_rank` (user hit 0 < bundled hit 1 < none 2) sits below `coverage_kind` / `tier` / `user_weight` and above `score`, so the bonus is bounded by construction. Slot 0 is the walker's word, so the walker's per-edge pick (`lexicon::pick_edge_word`) uses the same key, restricted to homophones with the context-free winner's `syllable_count`.
 - Segmentation is untouched, **proven by cost identity**: `edge_cost` reads only `span_walker_cost` (pick-independent), the pick's `syllable_count` (held equal) and `user_weight` (equal, since `context_rank` sits below it) — `behavioral-invariants.md` §56 `INVARIANT_CONTINUOUS_CONTEXT_RERANK`.
 
-### D6 — Bigram term in the lattice walker (gated, not opened)
+### D6 — Penalty-only conditional bigram in the lattice walker (reopened 2026-10-30)
 
-- Opens only if dogfood shows **segmentation** errors that ordering cannot fix.
-- Outline: node state `(offset, chosen word)`; the closure returns top-N candidates per span (N = 3) with today's `EdgeBest` **always at index 0 in today's tie order**; D1's bonus-only term added to `edge_cost`; first edge uses the D5 snapshot.
-- **Identity is a proof obligation**: the closure prices custom entries, learned rows and per-candidate `user_weight_delta` inside the single `EdgeBest`, so exposing alternatives changes what the DP can pick. The PR must prove (a) with an empty bigram table every walk returns the same edges, choices and cost as `HEAD~1` over the full candidate-dump corpus, incl. custom / learned / user-delta cases; (b) with data, only spans whose previous word has a seen pair change. `refactor-reviewer` on (a); every named case in `cost.rs` and the golden dumps re-run; `/code-review` mandatory.
+**Trigger** (v3.9.0 fix list row 2, `docs/roadmap.md`): the unigram walker lets two hyper-frequent single-syllable words undercut one mid-frequency word. TL `ue5` → slot 0 `有的` (`ū`+`ê`) over `鞋`; `khikhi` → `去去` over `起去` (TL and POJ). Costs (`cost.rs::edge_cost`, `word_unigrams.tsv`): `有` 4.496 + `的` 4.173 = 8.669 < `鞋` 10.024 / 2^0.2 = 8.726; `去`+`去` 8.768 < `起去` 9.273. Negative control: POJ `oe5` (`ôe` is one syllable, no split edge) and `taiuan` → `台灣`.
+
+**Model.** Interpolated absolute discounting (the lower-order mix KenLM's modified Kneser-Ney generalises), counts from `word_bigrams.tsv` / `word_unigrams.tsv` minus the held-out `taigi_typing` column:
+
+```text
+C(w₁)     = Σ_w c(w₁, w)          N(w₁) = |{w : c(w₁, w) > 0}|
+p(w₂|w₁)  = max(c(w₁,w₂) − D, 0) / C(w₁) + D·N(w₁)/C(w₁) · p_uni(w₂)        D = 0.75
+base(e)   = max(−ln p_uni(e), −ln p(pick(e) | pick(prev edge)))           # penalty-only
+```
+
+`p_uni(e)` is today's edge price (`span_walker_cost`, the key's homophone minimum); the length / syllable biases and the user discount apply to `base` exactly as today. A `w₁` with no recorded continuation (`C = 0`) and the first edge take no penalty — no D5 context in the walker (YAGNI until a case needs it).
+
+**Why penalty-only, not the full conditional** (offline spike over the E1 walker gold set, `dictionary/tools/walker_gold.py` simulator, same edge picks as the engine):
+
+| Model | calib exact / seg | dev phrase exact | whole-key word loses slot 0 (of 39 527 2–3 syllable keys) | `ue5` | `khikhi` |
+|---|---|---|---|---|---|
+| unigram (today) | 91 % / 96 % | 90 % | 223 | split | split |
+| full conditional `−ln p(w₂\|w₁)` | 91 % / 93 % | 90 % | 666 | word | word |
+| **penalty-only** `max(uni, cond)` | 91 % / 96 % | 92 % | 127 | word (9.18 > 8.73) | word (9.31 > 9.27) |
+
+The full conditional makes frequent collocations (`攏→是`) cheaper than their unigrams, so it splits words the gold set keeps whole. Penalty-only can only raise a multi-edge path's cost: word→split flips = 0 by construction, split→word = 96 (台視, 唬人, 受教, 有價, 彼个, 來路); 2 gold items change, both toward gold.
+
+**Identity is a proof obligation.** The walker state becomes `(offset, incoming edge)`; each edge keeps today's single `EdgeBest` pick (no top-N alternatives, so custom / learned / `user_weight_delta` pricing is untouched). The P3 PR proves (a) with an empty bigram table every walk returns the same edges, choices and cost as `HEAD~1` (named `cost.rs` / `walker.rs` cases + golden dumps); (b) with data, a single-edge path's cost never changes. `/code-review` mandatory.
+
+**Data.** `association.bin` v2 keeps the top 30 continuations with count ≥ 2 per key (`associations.py` `WORD_TOP_K` / `WORD_MIN_COUNT`), so its counts cannot give `C(w₁)`, `N(w₁)` or an unseen-vs-pruned answer. The walker needs every seen pair (283 234 pairs over 18 283 previous words today) as raw counts, so `p_uni` stays the runtime edge price under the user's source toggles. Artifact shape is P2's decision; D3's "no new file" reasoning is the default.
 
 ### D7 — Two-word context (technique 4) — cut
 
@@ -79,7 +101,7 @@ Not planned (YAGNI). If one-word context proves limiting, it returns as its own 
 | P4a | Next-word word-key lookup + character backoff + `DICT_SCORE_CAP` (D4) |
 | P4b | Lost continuous pairs: final commit carries `preceding` (D4) |
 | P5 | Composing re-rank by previous word (D5) |
-| P6 | Walker bigram term (D6) — not opened |
+| P6 | Walker penalty-only bigram (D6), four PRs: P6.0 this rewrite · P6.1 `walker_gold.py bigram` simulator + report · P6.2 pair-count artifact + lexicon reader · P6.3 walker state + penalty + identity proof + prod regressions (`ue5`, `khikhi`) |
 | P7 | Hanji-only sources via dictionary max-match — not adopted; the paired sources are the corpus |
 
 ## USER decisions
@@ -104,8 +126,9 @@ The smart-suggestion techniques are numbered 1–11: (1) associated phrases keye
 | Mandarin corpora, LLM-generated Taiwanese text (`tw-hokkien-seed-text`) | different grammar / synthetic model bias |
 | New `bigram.bin` artifact | five install sites for zero gain (D3) |
 | SQLite bundled LM (khiin, ChiaKey) | bundled read path is mmap everywhere; SQLite is user-data only (user-data-engine roadmap U2) |
-| Kneser-Ney / Katz smoothing | next-word is per-key top-K; composing uses a single bonus constant; revisit only if D6 opens |
-| ChiaKey's `max(topBigram, topUnigram + bow(prev))` node rule | needs true conditional probabilities and backoff weights; the D1 bonus-only term keeps the D6 identity provable |
+| Full modified Kneser-Ney (continuation counts, three discounts) | next-word is per-key top-K; the walker uses only the interpolated absolute-discount form (D6) — one constant, enough to price a split |
+| ChiaKey's `max(topBigram, topUnigram + bow(prev))` node rule as the walker cost (`references/ChiaKey/ChiaKey-Source/Frameworks/Manjusri/Headers/Node.h:419-445`) | the full conditional regressed the gold set (D6 table: seg 96 → 93 %, whole-key losers 223 → 666); D6 keeps only its penalty side |
+| Bonus-only walker term (the pre-2026-10-30 D6) | a seen pair (`有→的`, 411) would make the reported split cheaper still |
 | mozc POS connection matrix | needs POS tags no Taigi source carries |
 | Bundled trigrams | sparse corpus, table size (D7) |
 | Tokenization inside `taigi-corpus` | that repo's principle; alignment stays in `dictionary/build` |
