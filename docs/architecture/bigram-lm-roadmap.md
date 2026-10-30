@@ -2,7 +2,7 @@
 
 > **Type**: Design record
 > **Keywords**: `bigram`, `language model`, `next-word`, `association.bin`, `taigi-corpus`, `lattice`, `walker`, `prediction`
-> **Status**: Reopened 2026-10-30 for P6. P3–P5 shipped; P6 in progress (a segmentation error was reported: `ue5` → `有的` over `鞋`; D6 rewritten as a penalty-only conditional term); P7 not adopted; D7 cut. Unscheduled leftovers are in § Techniques not in this roadmap.
+> **Status**: P3–P6 shipped (P6 reopened and merged 2026-10-30, #563–#565: a segmentation error was reported, `ue5` → `有的` over `鞋`; D6 is a penalty-only conditional term in the walker); P7 not adopted; D7 cut. Unscheduled leftovers are in § Techniques not in this roadmap.
 
 ---
 

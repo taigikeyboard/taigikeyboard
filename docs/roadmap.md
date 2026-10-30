@@ -25,7 +25,7 @@ Work order = row order. One round per row; a bug row starts with a repro (`AGENT
 | # | Item | Kind | Platforms | Next step |
 |---|---|---|---|---|
 | 1 | Candidates sometimes missing from the candidate bar again; tapping + twice restores them | bug (regression) | Android | Closed 2026-10-30: not reproduced on mobile v3.8.0 (120 device runs, 8 scenarios); no matching earlier fix in git |
-| 2 | Continuous input: a shorter-syllable split ranks above the single word (`uê` → ū ê before 鞋; `khikhi`; `guhi`) — TL and TPS, POJ `ôe` fine | bug | engine | Root cause: unigram walker cost (`有`+`的` 8.669 < `鞋` 8.726). Fix = penalty-only conditional bigram, [`architecture/bigram-lm-roadmap.md`](architecture/bigram-lm-roadmap.md) D6 / P6.1–P6.3. `guhi` not reproduced |
+| 2 | Continuous input: a shorter-syllable split ranks above the single word (`uê` → ū ê before 鞋; `khikhi`; `guhi`) — TL and TPS, POJ `ôe` fine | bug | engine | Root cause: unigram walker cost (`有`+`的` 8.669 < `鞋` 8.726). Fixed: penalty-only walker bigram, [`architecture/bigram-lm-roadmap.md`](architecture/bigram-lm-roadmap.md) D6, P6.1–P6.3 merged (#563, #564, #565); device dogfood `ue5` / `khikhi` (TL, POJ) / TPS `ㄨㆤˊ` pending. `guhi` not reproduced |
 | 3 | Google Docs in Chrome loses candidates on `ko͘` + `c`; same input fine elsewhere | bug | Windows | Reproduce on the Windows box; #538 covered macOS only |
 | 4 | Show a notice when toggling Hanji / Romanization | feature | Windows | Check macOS / Linux behaviour for parity |
 | 5 | Custom layouts: allow ⁿ on the main keyboard | feature | iOS, Android | — |
@@ -69,7 +69,7 @@ Closed by the maintainer; one line each.
 - Converted-romanization commit on Enter (`suann2ting3` → `suán-tìng`).
 - TL mode (臺羅模式) tone key commits the syllable without a candidate window (MOE Mac IME parity).
 - Mobile predictions after Space.
-- Bigram P6 walker term, P7 hanji-only sources, D7 two-word context.
+- Bigram P7 hanji-only sources, D7 two-word context (P6 walker term shipped 2026-10-30).
 - e2e drivers for macOS, Windows, Android, iOS.
 - Invariant-label PR2; naming batch C (persisted names stay frozen).
 - Shared Swift package for macOS + iOS — see [`architecture/maintainability-roadmap-2026-10.md`](architecture/maintainability-roadmap-2026-10.md) § Best practices alignment (deliberately not adopted).
