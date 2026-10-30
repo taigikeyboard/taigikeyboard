@@ -45,11 +45,12 @@ Run independent ecosystems in parallel. Network is required.
 
 Each tracked `Cargo.lock` is its own workspace: `git ls-files '*Cargo.lock'` (engine, desktop, windows, linux, macos).
 
-1. Compatible bumps: `cargo update --manifest-path <ws>/Cargo.toml --dry-run` → every `Updating a vX -> vY` line is SAFE (group per workspace; list only direct deps by name, count transitive).
+1. Compatible bumps: `cargo update --manifest-path <ws>/Cargo.toml --dry-run` → every `Updating a vX -> vY` line is SAFE (group per workspace; list only direct deps by name, count transitive) — after the MSRV gate (step 3).
 2. Majors / out-of-range for **direct** deps: `cargo metadata --manifest-path <ws>/Cargo.toml --format-version 1 --no-deps` → each `dependencies[].req` from crates.io; latest via `curl -s -H 'User-Agent: taigikeyboard-deps' https://crates.io/api/v1/crates/<name> | jq -r .crate.max_stable_version`. Latest outside `req` → REVIEW (0.x minor = breaking in Cargo → MAJOR) / MAJOR.
-3. Same crate in several workspaces → report once with every workspace it lives in; a bump should land in all of them together.
-4. Git deps (`git =` / `rev =`): `git ls-remote <url> HEAD` vs pinned rev; REVIEW.
-5. Toolchains: every `rust-toolchain.toml` is `channel = "stable"` → nothing to evaluate unless a file pins a number.
+3. **MSRV gate** for every candidate version from steps 1–2, transitive included: `curl -s -H 'User-Agent: taigikeyboard-deps' https://crates.io/api/v1/crates/<name>/<ver> | jq -r .version.rust_version` vs the workspace's `rust-version` (`<ws>/Cargo.toml`). Above it → BLOCKED (MSRV). Ceiling: desktop / linux / macos sit at the rustc the latest Ubuntu ships (`docs/architecture/build-artifacts.md` § Five Cargo workspaces), and Linux and macOS link the engine, so no bump — and no engine `rust-version` raise — may need more than that; only windows (box-built) is exempt. A `null` `rust_version` is unverified: the PR's `msrv` CI job decides. An engine lock refresh that would take a BLOCKED crate runs as `CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS=fallback cargo update …`.
+4. Same crate in several workspaces → report once with every workspace it lives in; a bump should land in all of them together.
+5. Git deps (`git =` / `rev =`): `git ls-remote <url> HEAD` vs pinned rev; REVIEW.
+6. Toolchains: every `rust-toolchain.toml` is `channel = "stable"` → nothing to evaluate unless a file pins a number.
 
 ### android
 
