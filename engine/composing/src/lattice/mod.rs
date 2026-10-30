@@ -46,8 +46,8 @@ mod cost;
 mod walker;
 
 pub(crate) use builder::build_lattice_with_barriers;
-pub(crate) use cost::USER_ENTRY_EFFECTIVE_COUNT;
-pub(crate) use walker::{walk_best, BestPath, EdgeChoice};
+pub(crate) use cost::{BigramEvidence, USER_ENTRY_EFFECTIVE_COUNT};
+pub(crate) use walker::{walk_best, BestPath, EdgeChoice, WalkerBigram};
 
 /// A segmentation lattice over shadow byte offsets. Nodes are byte
 /// offsets in `0..=shadow.len()`; an edge `(start, end)` means

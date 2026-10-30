@@ -10,7 +10,7 @@ use super::{
     ContinuousFetchCtx, CustomEntry, CustomReach, LearnedEntry, RawCandidate, COVERAGE_KIND_ABBREV,
     COVERAGE_KIND_PARTIAL_PREFIX,
 };
-use crate::dictionary_reader::{DictionaryRecord, WALKER_COST_UNPRICED};
+use crate::dictionary_reader::{DictionaryRecord, NO_ROWID, WALKER_COST_UNPRICED};
 
 /// Shared tail of every phonetic continuous fetch: merge `custom_dictionary.db`
 /// hits into the dictionary candidates `out`, collapse duplicates equal on
@@ -163,6 +163,7 @@ pub(super) fn record_to_candidate(
     coverage_kind: u8,
 ) -> RawCandidate {
     let DictionaryRecord {
+        rowid,
         bitmask: _,
         frequency,
         syllable_count,
@@ -199,6 +200,7 @@ pub(super) fn record_to_candidate(
     let context_rank = context.rank(&display_text, &canonical_tl);
     let score = calculate_continuous_score(frequency, syllable_count);
     RawCandidate {
+        rowid,
         consumed_span,
         syllable_count,
         display_text,
@@ -301,6 +303,7 @@ pub(super) fn custom_entry_to_candidate(
     // `user_weight` / `source_rank` / dedupe, not raw freq.
     let score = calculate_continuous_score(0, syllable_count);
     RawCandidate {
+        rowid: NO_ROWID,
         consumed_span: span,
         syllable_count,
         display_text,
@@ -348,6 +351,7 @@ pub(super) fn learned_entry_to_candidate(
     let syllable_count = tl_syllable_count(&entry.canonical_tl);
     record_to_candidate(
         DictionaryRecord {
+            rowid: NO_ROWID,
             bitmask: 0,
             frequency: 0,
             hanji: Some(entry.hanji.clone()),
@@ -454,6 +458,7 @@ mod record_to_candidate_carrier_tests {
 
     fn record(tl: &str, hanji: Option<&str>) -> DictionaryRecord {
         DictionaryRecord {
+            rowid: 1,
             bitmask: 0,
             frequency: 0,
             syllable_count: 1,
@@ -541,6 +546,7 @@ mod item12_custom_dedupe_tests {
     /// isolates the dedupe / source-rank axis.
     fn dict_cand(roman: &str, hanji: Option<&str>, bitmask: u16) -> RawCandidate {
         RawCandidate {
+            rowid: NO_ROWID,
             consumed_span: (0, 6),
             syllable_count: 1,
             display_text: hanji.unwrap_or(roman).to_owned(),

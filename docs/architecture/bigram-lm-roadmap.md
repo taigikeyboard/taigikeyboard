@@ -83,7 +83,7 @@ base(e)   = max(−ln p_uni(e), −ln p(pick(e) | pick(prev edge)))           # 
 
 The full conditional makes frequent collocations (`攏→是`) cheaper than their unigrams, so it splits words the gold set keeps whole. Penalty-only can only raise a multi-edge path's cost: word→split flips = 0 by construction, split→word = 96 (台視, 唬人, 受教, 有價, 彼个, 來路); 2 gold items change, both toward gold.
 
-**Identity is a proof obligation.** The walker state becomes `(offset, incoming edge)`; each edge keeps today's single `EdgeBest` pick (no top-N alternatives, so custom / learned / `user_weight_delta` pricing is untouched). The P3 PR proves (a) with an empty bigram table every walk returns the same edges, choices and cost as `HEAD~1` (named `cost.rs` / `walker.rs` cases + golden dumps); (b) with data, a single-edge path's cost never changes. `/code-review` mandatory.
+**Identity is a proof obligation.** The walker state becomes `(offset, incoming edge)`; each edge keeps today's single `EdgeBest` pick (no top-N alternatives, so custom / learned / `user_weight_delta` pricing is untouched). The P6.3 PR proves (a) with an empty bigram table every walk returns the same edges, choices and cost as `HEAD~1` (named `cost.rs` / `walker.rs` cases + golden dumps); (b) with data, a single-edge path's cost never changes. `/code-review` mandatory.
 
 **Data.** `association.bin` v2 keeps the top 30 continuations with count ≥ 2 per key (`associations.py` `WORD_TOP_K` / `WORD_MIN_COUNT`), so its counts cannot give `C(w₁)`, `N(w₁)` or an unseen-vs-pruned answer. The walker needs every seen pair (283 234 pairs over 22 046 previous words today) as raw counts, so `p_uni` stays the runtime edge price under the user's source toggles.
 
@@ -95,7 +95,9 @@ The full conditional makes frequent collocations (`攏→是`) cheaper than thei
 | `association.bin` v3 namespace, string keys | 5.42 MB | mixes next-word semantics (top-K, Bible ×0.5, variant folds) with raw walker counts; the pick carries display TL, and 460 model words have two display spellings (`tshut--lâi` / `tshut-lâi`), so `(hanji, tl)` keys would split their counts |
 | new `walker_bigram.bin` | ≈ 3.3 MB | D3: five install sites for no gain, and rowid keys could drift from `dictionary.bin` |
 
-The engine pick needs a rowid to look up; `RawCandidate` gains it in P6.3 with the walker change.
+**Engine (P6.3).** `DictionaryRecord` / `RawCandidate` carry their rowid (`NO_ROWID` = 0 for custom, learned, synthesized and OOV rows, which take and give no penalty). `walk_best` keeps one state per incoming edge and takes the bigram as a `WalkerBigram` lookup (`DictionaryReader` in production); `cost::bigram_penalty` mirrors `walker_lm.py::BigramCounts.penalty`, added to the corpus base before the user-row and user-entry caps (a custom or learned row under the key still prices the span at most at the custom-word tier). The bigram prices each edge's context-free winner (`EdgeBest::bigram_rowid`), so a previous-word context (D5, §56) still never moves the segmentation. Proofs: a proptest walks random lattices against the `HEAD~1` per-offset walker under an empty table (same edges, choices, cost — both tie rules mutation-checked) and, with random tables, checks the best cost never drops and a single-edge path's cost never changes; `walker_fixed_inputs_prod.rs` pins `ue5` / `khikhi` (TL, POJ) and POJ `oe5`.
+
+Engine gold set (`walker_gold_metrics`, unigram → penalty-only): dev all-variant exact 84.7 → 85.6 %, dev phrase `tl_full` 90.0 → 91.7 %, calib all 83.1 → 84.0 %; no aggregate row drops. Eleven items change slot 0 in some variant: six toward gold (是按怎, 對角是, 無伊法, 哪會, 彼个, 人士), four with a worse word split that were already wrong or are toneless / TPS (calib-0201, dev-0083 TPS `有時陣` → `有 時陣`, dev-0136, dev-0140) and one wrong either way (dev-0120 TPS).
 
 ### D7 — Two-word context (technique 4) — cut
 

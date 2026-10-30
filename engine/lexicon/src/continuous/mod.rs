@@ -120,6 +120,13 @@ pub const PARTIAL_PREFIX_OUTPUT_CAP: usize = 30;
 /// `docs/releases/v3.5.8/plan.md` § Phase 5 — Each Candidate carries (5-field shape).
 #[derive(Debug, Clone, PartialEq)]
 pub struct RawCandidate {
+    /// The `dictionary.bin` rowid this candidate was read from
+    /// ([`DictionaryRecord::rowid`](crate::dictionary_reader::DictionaryRecord::rowid));
+    /// [`NO_ROWID`](crate::dictionary_reader::NO_ROWID) for a candidate that
+    /// is no dictionary row. The walker looks its pick's bigram word up by it
+    /// (`docs/architecture/bigram-lm-roadmap.md` D6). Internal — NOT emitted
+    /// on `CandidateMessage`.
+    pub rowid: u32,
     /// Byte span `(start, end)` in the original input that this candidate
     /// consumes on commit. `start` always equals the `pos` plumbed
     /// through [`fetch_candidates_for_keys_with_barriers`] (the production
@@ -1128,10 +1135,12 @@ pub fn best_candidate_for_key_with_barriers(
     if !custom.is_empty() {
         dedupe_by_roman_hanji_span(&mut homophones);
     }
-    let candidate = pick_edge_word(homophones, consumed_span.1, ctx.context.is_empty())?;
+    let (candidate, bigram_rowid) =
+        pick_edge_word(homophones, consumed_span.1, ctx.context.is_empty())?;
     Some(EdgeBest {
         candidate,
         span_walker_cost,
+        bigram_rowid,
     })
 }
 
@@ -1148,12 +1157,14 @@ pub fn best_candidate_for_key_with_barriers(
 /// with its `syllable_count`. `context_rank` sits below `user_weight` in the
 /// key, so the winner keeps the context-free `user_weight` (the span max) —
 /// and `EdgeBest::span_walker_cost` is the key min regardless of the pick —
-/// which are the pick's only inputs to `lattice::edge_cost`.
+/// which are the pick's only inputs to `lattice::edge_cost`. The walker
+/// bigram prices the context-free winner too: it comes back beside the pick
+/// as its rowid ([`EdgeBest::bigram_rowid`]).
 fn pick_edge_word(
     homophones: Vec<RawCandidate>,
     raw_len: u32,
     context_free: bool,
-) -> Option<RawCandidate> {
+) -> Option<(RawCandidate, u32)> {
     let edge_key = |i: usize, cand: &RawCandidate, with_context: bool| {
         let facts = cand.rank_facts();
         if with_context {
@@ -1178,7 +1189,8 @@ fn pick_edge_word(
             .map(|(i, _)| i)
             .unwrap_or(baseline_index)
     };
-    homophones.into_iter().nth(index)
+    let bigram_rowid = homophones[baseline_index].rowid;
+    Some((homophones.into_iter().nth(index)?, bigram_rowid))
 }
 
 /// The words [`best_candidate_for_key_with_barriers`] picks the edge's word
@@ -1226,6 +1238,12 @@ pub struct EdgeBest {
     /// [`WALKER_COST_UNPRICED`] when only user rows sit under the key.
     /// Rationale + numbers: `docs/engine/continuous-input-ranking.md` §3.2.
     pub span_walker_cost: u16,
+    /// Rowid of the context-free winner — the word the walker bigram prices
+    /// for this edge (`docs/architecture/bigram-lm-roadmap.md` D6). Equal to
+    /// `candidate.rowid` without a previous-word context; with one (§56) the
+    /// shown word may differ, but the bigram still prices the context-free
+    /// word, so the context never moves the segmentation.
+    pub bigram_rowid: u32,
 }
 
 /// Does the exact hanji `hanji` resolve to a dictionary entry of
@@ -1972,6 +1990,7 @@ mod edge_word_pick_tests {
         context_rank: u8,
     ) -> RawCandidate {
         RawCandidate {
+            rowid: crate::dictionary_reader::NO_ROWID,
             consumed_span: (0, 3),
             syllable_count,
             display_text: hanji.to_owned(),
@@ -2001,7 +2020,7 @@ mod edge_word_pick_tests {
     }
 
     fn picked(homophones: Vec<RawCandidate>, context_free: bool) -> Option<String> {
-        pick_edge_word(homophones, 3, context_free).map(|c| c.display_text)
+        pick_edge_word(homophones, 3, context_free).map(|(c, _)| c.display_text)
     }
 
     // E1 P5a: the word the corpus writes most fills the edge, whatever the
@@ -2115,19 +2134,25 @@ mod edge_word_pick_tests {
     #[test]
     fn context_hit_keeps_the_corpus_winners_cost_inputs() {
         let key = || {
-            vec![
+            [
                 costed(homophone("這", 1000, 1, 0.0, CONTEXT_RANK_NONE), 7_000),
                 costed(homophone("這兜", 10, 2, 0.0, CONTEXT_RANK_NONE), 5_000),
                 costed(homophone("濟", 100, 1, 0.0, CONTEXT_RANK_USER), 9_000),
                 costed(homophone("姊妹", 1, 2, 0.0, CONTEXT_RANK_BUNDLED), 12_000),
             ]
+            .into_iter()
+            .zip(1..)
+            .map(|(homophone, rowid)| RawCandidate { rowid, ..homophone })
+            .collect::<Vec<_>>()
         };
-        let context_free = pick_edge_word(key(), 3, true).expect("a word");
-        let contextual = pick_edge_word(key(), 3, false).expect("a word");
+        let (context_free, free_rowid) = pick_edge_word(key(), 3, true).expect("a word");
+        let (contextual, bigram_rowid) = pick_edge_word(key(), 3, false).expect("a word");
         assert_eq!(context_free.display_text, "這兜");
         assert_eq!(contextual.display_text, "姊妹");
         assert_eq!(contextual.syllable_count, context_free.syllable_count);
         assert_eq!(contextual.user_weight, context_free.user_weight);
+        // The walker bigram prices 這兜 (rowid 2) under either pick.
+        assert_eq!((free_rowid, bigram_rowid), (2, 2));
     }
 
     #[test]

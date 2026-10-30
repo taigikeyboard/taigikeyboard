@@ -28,7 +28,24 @@
 //! composing↔lexicon boundary clean and reuses the lexicon candidate
 //! construction instead of duplicating it (Codex pre-impl S2 Q1b).
 
-use super::{cost::edge_cost, Lattice};
+use super::{
+    cost::{edge_cost, BigramEvidence},
+    Lattice,
+};
+use lexicon::dictionary_reader::NO_ROWID;
+
+/// The walker bigram's pair counts (`docs/architecture/bigram-lm-roadmap.md`
+/// D6), looked up by the edges' `dictionary.bin` rowids. The production
+/// source is the loaded `DictionaryReader`; under an empty table every walk is
+/// the unigram walk.
+pub(crate) trait WalkerBigram {
+    /// One previous word's continuation summary, resolved once per state.
+    type Continuations;
+    /// `None` when `previous_rowid`'s word has no recorded continuation.
+    fn continuations(&self, previous_rowid: u32) -> Option<Self::Continuations>;
+    /// The evidence pricing `next_rowid`'s word after that previous word.
+    fn evidence(&self, continuations: &Self::Continuations, next_rowid: u32) -> BigramEvidence;
+}
 
 /// Content the caller resolved for one lattice edge `(start, end)`.
 /// Built by the dispatch-injected provider from the best dictionary
@@ -38,6 +55,11 @@ use super::{cost::edge_cost, Lattice};
 /// subsumed, not a fallback).
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct EdgeChoice {
+    /// The `dictionary.bin` rowid the walker bigram prices this edge's word
+    /// by (`EdgeBest::bigram_rowid`, the context-free winner). [`NO_ROWID`]
+    /// for an OOV edge or a custom / learned winner: those take and give no
+    /// bigram penalty.
+    pub rowid: u32,
     /// Romanization for this edge. The synthesized candidate's roman
     /// line joins these with a single ASCII space (§10.2 segmented
     /// rule: roman line gets word-boundary spaces).
@@ -73,11 +95,16 @@ pub(crate) struct EdgeChoice {
     /// branch of [`super::cost::edge_cost`]: the key's lowest
     /// `walker_cost` across its homophones
     /// (`lexicon::EdgeBest::span_walker_cost` — segmentation evidence,
-    /// not the chosen word's own; capped at the model-derived custom-word cost when a
-    /// custom or learned row sits under the key).
+    /// not the chosen word's own). [`edge_cost`] caps it at the model-derived
+    /// custom-word cost when [`Self::user_row`] is set.
     /// **Unused** for a synthesized OOV edge (RC0: OOV
     /// cost is char-keyed, never corpus-priced).
     pub walker_cost: u16,
+    /// A custom or learned row sits under the edge's key: the edge is priced
+    /// at most at the custom-word cost — after the walker bigram's penalty —
+    /// so the span the user filed or once composed as one word keeps winning
+    /// the segmentation (the #69 span-vs-word decoupling).
+    pub user_row: bool,
     /// Syllable count of the chosen candidate (`>= 1`). Dict/custom:
     /// the record's / greedy-longest span syllable count, drives the
     /// khiin `n_syls^0.2` bias. OOV: the real min-syllable-hop count of
@@ -99,6 +126,14 @@ pub(crate) struct EdgeChoice {
     /// [`edge_cost`] (Codex pre-impl S5 Q3). Closes Continuous-input
     /// Gap B → goal G2.
     pub user_weight_delta: f64,
+}
+
+impl EdgeChoice {
+    /// The rowid this edge takes part in the walker bigram with, on either
+    /// side of a pair; `None` for an edge outside it.
+    fn bigram_word(&self) -> Option<u32> {
+        (self.dict_hit && self.rowid != NO_ROWID).then_some(self.rowid)
+    }
 }
 
 /// The walker's best full-buffer path. `choices[i]` is the resolved
@@ -125,99 +160,125 @@ pub(crate) struct BestPath {
 /// an empty toneless key). An edge dropped here simply does not relax;
 /// the buffer can still be spanned via other edges.
 ///
+/// **State = `(offset, incoming edge)`** (D6): an edge's cost depends on
+/// the previous edge's pick through `bigram`, so each edge into an offset
+/// keeps its own best prefix instead of one node per offset. Each edge
+/// still has the one pick `edge_choice` resolves (no top-N alternatives).
+/// Under an empty table an edge's cost no longer depends on the prefix, so
+/// the best state at every offset is the old per-offset node and the walk
+/// returns the same path, choices and cost as the unigram walker.
+///
 /// Tie handling: among paths of equal accumulated cost the first one
-/// reached in the ascending-`(start, end)` edge order wins
-/// (`replace` only on a *strictly* lower cost). `lattice.edges()` is
+/// reached in the ascending-`(start, end)` edge order wins — a state's
+/// prefix is the first minimum among the states at its start, and the
+/// sink is the first minimum among the states at `shadow_len`. `lattice.edges()` is
 /// sorted, so this is deterministic. No edge-count tiebreak: the S2
 /// "more edges wins" lever existed only to force the no-dict
 /// per-syllable split, which S5 moves to the explicit
 /// `continuous::fetch_walker_slot0_inner` carve-out — keeping it here would
 /// re-introduce the over-segmentation pressure min-cost exists to
 /// remove (Codex pre-impl S5 Q5, 2026-05-17).
-pub(crate) fn walk_best(
+pub(crate) fn walk_best<B: WalkerBigram>(
     lattice: &Lattice,
     shadow_len: usize,
     custom_word_cost: u16,
+    bigram: &B,
     mut edge_choice: impl FnMut(usize, usize) -> Option<EdgeChoice>,
 ) -> Option<BestPath> {
     if shadow_len == 0 {
         return None;
     }
 
-    // best[offset] = (accumulated cost, prev offset, chosen content of
-    // the edge that arrived here). `0` is seeded at cost 0.0; an absent
-    // entry means "unreached", which is `+∞` for the relaxation
-    // comparison (Codex pre-impl S5 Q5: no need to physically seed
-    // every offset for a BTreeMap DP).
-    use std::collections::BTreeMap;
-    struct Node {
+    // One state per edge that reached its end offset. `states[0]` is the
+    // root (offset 0, no edge); `by_offset[offset]` lists the states at
+    // `offset` in edge order, which is the tie order. An empty offset is
+    // "unreached", `+∞` for the relaxation.
+    struct State<C> {
         cost: f64,
-        prev: usize,
+        start: usize,
+        // Index of the prefix's last state; `None` for the root.
+        prev: Option<usize>,
         choice: Option<EdgeChoice>,
+        // The pick's continuations, resolved once for every edge leaving it.
+        continuations: Option<C>,
     }
-    let mut best: BTreeMap<usize, Node> = BTreeMap::new();
-    best.insert(
-        0,
-        Node {
-            cost: 0.0,
-            prev: 0,
-            choice: None,
-        },
-    );
+    let mut states: Vec<State<B::Continuations>> = vec![State {
+        cost: 0.0,
+        start: 0,
+        prev: None,
+        choice: None,
+        continuations: None,
+    }];
+    let mut by_offset: Vec<Vec<usize>> = vec![Vec::new(); shadow_len + 1];
+    by_offset[0].push(0);
 
     // `lattice.edges()` is sorted ascending by `(start, end)`. Because
     // edges are forward-only (`start < end`), every edge feeding
     // offset `S` has `end == S` with `start < S` and therefore sorts
-    // before any edge whose `start == S` — so a single forward pass is
-    // a valid relaxation without a separate topological sort. This
-    // holds for min-cost just as for the prior max objective: the
-    // graph is unchanged, only the comparison flips.
+    // before any edge whose `start == S` — so every state at `S` exists
+    // before the first edge leaving `S` relaxes, without a separate
+    // topological sort.
     for &(start, end) in lattice.edges() {
-        let Some(&Node {
-            cost: start_cost, ..
-        }) = best.get(&start)
-        else {
+        let Some(incoming) = by_offset.get(start).filter(|states| !states.is_empty()) else {
             continue; // `start` not yet reachable from 0.
         };
         let Some(choice) = edge_choice(start, end) else {
             continue; // caller dropped this edge.
         };
-        // OOV pricing is selected from the explicit `dict_hit` flag, never
-        // `frequency == 0` (Codex pre-impl Q2).
-        let cand_cost = start_cost + edge_cost(&choice, custom_word_cost);
-        // Replace only on a strictly lower cost. On an exact tie the
-        // first-reached (lower `(start, end)`) path is kept — no
-        // edge-count semantics (Codex pre-impl S5 Q5).
-        let replace = match best.get(&end) {
-            None => true,
-            Some(cur) => cand_cost < cur.cost,
-        };
-        if replace {
-            best.insert(
-                end,
-                Node {
-                    cost: cand_cost,
-                    prev: start,
-                    choice: Some(choice),
-                },
-            );
+        // Replace only on a strictly lower cost, so on an exact tie the
+        // first state at `start` (first-reached prefix) is kept.
+        let mut best: Option<(f64, usize)> = None;
+        for &index in incoming {
+            let state = &states[index];
+            let evidence = state
+                .continuations
+                .as_ref()
+                .zip(choice.bigram_word())
+                .map(|(continuations, rowid)| bigram.evidence(continuations, rowid));
+            // OOV pricing is selected from the explicit `dict_hit` flag, never
+            // `frequency == 0` (Codex pre-impl Q2).
+            let cost = state.cost + edge_cost(&choice, custom_word_cost, evidence.as_ref());
+            if best.is_none_or(|(best_cost, _)| cost < best_cost) {
+                best = Some((cost, index));
+            }
         }
+        let Some((cost, prev)) = best else {
+            continue;
+        };
+        let Some(arrivals) = by_offset.get_mut(end) else {
+            continue; // an edge past the buffer reaches no path.
+        };
+        arrivals.push(states.len());
+        let continuations = choice
+            .bigram_word()
+            .and_then(|rowid| bigram.continuations(rowid));
+        states.push(State {
+            cost,
+            start,
+            prev: Some(prev),
+            choice: Some(choice),
+            continuations,
+        });
     }
 
     // No edge chain reached the buffer end → no full-buffer path.
-    let sink = best.get(&shadow_len)?;
-    let total = sink.cost;
+    // `min_by` keeps the first of equal minimums: the first-reached path.
+    let mut cur = by_offset[shadow_len]
+        .iter()
+        .copied()
+        .min_by(|&a, &b| states[a].cost.total_cmp(&states[b].cost))?;
+    let total = states[cur].cost;
 
-    // Reconstruct back to 0 via `prev` pointers.
+    // Reconstruct back to the root via `prev` links.
     let mut edges_rev: Vec<(usize, usize)> = Vec::new();
     let mut choices_rev: Vec<EdgeChoice> = Vec::new();
-    let mut cur = shadow_len;
-    while cur != 0 {
-        let node = best.get(&cur)?;
-        let choice = node.choice.clone()?;
-        edges_rev.push((node.prev, cur));
-        choices_rev.push(choice);
-        cur = node.prev;
+    let mut end = shadow_len;
+    while let Some(prev) = states[cur].prev {
+        let state = &mut states[cur];
+        edges_rev.push((state.start, end));
+        choices_rev.push(state.choice.take()?);
+        end = state.start;
+        cur = prev;
     }
     edges_rev.reverse();
     choices_rev.reverse();
@@ -235,6 +296,21 @@ mod tests {
 
     use super::*;
 
+    /// The unigram walk: `walk_best` under an empty bigram table.
+    fn walk(
+        lat: &Lattice,
+        shadow_len: usize,
+        edge_choice: impl FnMut(usize, usize) -> Option<EdgeChoice>,
+    ) -> Option<BestPath> {
+        walk_best(
+            lat,
+            shadow_len,
+            FIXTURE_CUSTOM_WORD_COST,
+            &FakeBigram::default(),
+            edge_choice,
+        )
+    }
+
     /// A dictionary edge priced at `walker_cost` milli-nats. Test values
     /// are production `dictionary.bin` costs (E1 P2b, 2026-10-08).
     fn dict(roman: &str, hanji: &str, walker_cost: u16, syll: u8, len: usize) -> EdgeChoice {
@@ -250,12 +326,14 @@ mod tests {
         delta: f64,
     ) -> EdgeChoice {
         EdgeChoice {
+            rowid: NO_ROWID,
             roman: roman.to_owned(),
             hanji: Some(hanji.to_owned()),
             canonical_tl: roman.to_owned(),
             dict_hit: true,
             is_custom: false,
             walker_cost,
+            user_row: false,
             syllable_count: syll,
             toneless_len: len,
             user_weight_delta: delta,
@@ -272,12 +350,14 @@ mod tests {
     /// cost. `toneless_len` (= `r.chars().count()`) is the cost driver.
     fn roman_n(r: &str, syll: u8) -> EdgeChoice {
         EdgeChoice {
+            rowid: NO_ROWID,
             roman: r.to_owned(),
             hanji: None,
             canonical_tl: String::new(),
             dict_hit: false,
             is_custom: false,
             walker_cost: 0,
+            user_row: false,
             syllable_count: syll,
             toneless_len: r.chars().count(),
             user_weight_delta: 0.0,
@@ -288,12 +368,14 @@ mod tests {
     /// `is_custom:true`, priced at most at the model-derived custom-word cost.
     fn custom(roman: &str, hanji: &str, walker_cost: u16, syll: u8, len: usize) -> EdgeChoice {
         EdgeChoice {
+            rowid: NO_ROWID,
             roman: roman.to_owned(),
             hanji: Some(hanji.to_owned()),
             canonical_tl: roman.to_owned(),
             dict_hit: true,
             is_custom: true,
             walker_cost,
+            user_row: true,
             syllable_count: syll,
             toneless_len: len,
             user_weight_delta: 0.0,
@@ -315,7 +397,7 @@ mod tests {
         // all-atomic single-char path 乾 伊 有 俺 — the path the broken
         // S2/S3 max-Σ objective produced. Min-cost must pick the phrase.
         let lat = lattice(vec![(0, 2), (0, 6), (2, 3), (3, 4), (4, 6)]);
-        let path = walk_best(&lat, 6, FIXTURE_CUSTOM_WORD_COST, |s, e| match (s, e) {
+        let path = walk(&lat, 6, |s, e| match (s, e) {
             (0, 6) => Some(dict("tâi-uân", "台灣", 7_166, 2, 6)),
             (0, 2) => Some(dict("ta", "乾", 10_647, 1, 2)),
             (2, 3) => Some(dict("i", "伊", 4_400, 1, 1)),
@@ -342,7 +424,7 @@ mod tests {
             (9, 11),
             (0, 11),
         ]);
-        let path = walk_best(&lat, 11, FIXTURE_CUSTOM_WORD_COST, |s, e| match (s, e) {
+        let path = walk(&lat, 11, |s, e| match (s, e) {
             (0, 6) => Some(dict("tâi-uân", "台灣", 7_166, 2, 6)),
             (6, 11) => Some(dict("tâi-gí", "台語", 8_800, 2, 5)),
             (0, 3) => Some(dict("tâi", "台", 8_561, 1, 3)),
@@ -378,7 +460,7 @@ mod tests {
         // fewest-edge blob (which the carve-out then renders
         // per-syllable) under the RC0 BIG-per-char model.
         let lat = lattice(vec![(0, 3), (0, 6), (0, 9), (3, 6), (3, 9), (6, 9)]);
-        let path = walk_best(&lat, 9, FIXTURE_CUSTOM_WORD_COST, |s, e| match (s, e) {
+        let path = walk(&lat, 9, |s, e| match (s, e) {
             (0, 3) => Some(roman("tai")),
             (3, 6) => Some(roman("uan")),
             (6, 9) => Some(roman("tai")),
@@ -403,7 +485,7 @@ mod tests {
         // true → `continuous::fetch_walker_slot0_inner` renders hanji, never
         // bare `"tai uan ta"`.
         let lat = lattice(vec![(0, 6), (0, 8), (6, 8)]);
-        let path = walk_best(&lat, 8, FIXTURE_CUSTOM_WORD_COST, |s, e| match (s, e) {
+        let path = walk(&lat, 8, |s, e| match (s, e) {
             (0, 6) => Some(dict("tâi-uân", "台灣", 7_166, 2, 6)),
             (6, 8) => Some(dict("ta", "焦", 10_453, 1, 2)),
             (0, 8) => Some(roman_n("taiuanta", 3)),
@@ -443,7 +525,7 @@ mod tests {
             (18, 21),
             (0, 21),
         ]);
-        let path = walk_best(&lat, 21, FIXTURE_CUSTOM_WORD_COST, |s, e| match (s, e) {
+        let path = walk(&lat, 21, |s, e| match (s, e) {
             (0, 3) => Some(dict("gín", "囡", 12_306, 1, 3)),
             (3, 6) => Some(dict("á", "仔", 7_643, 1, 3)),
             (6, 9) => Some(dict("lâng", "人", 4_557, 1, 3)),
@@ -492,14 +574,12 @@ mod tests {
         };
 
         // Cold start (no user history on the phrase) → hot singles win.
-        let cold = walk_best(&lat, 6, FIXTURE_CUSTOM_WORD_COST, |s, e| edges(s, e, 0.0))
-            .expect("full path");
+        let cold = walk(&lat, 6, |s, e| edges(s, e, 0.0)).expect("full path");
         assert_eq!(cold.edges, vec![(0, 3), (3, 6)]);
 
         // After repeated user selection (fresh, fully saturated decayed
         // delta = 4.0 on the phrase edge) → the phrase path wins.
-        let warm = walk_best(&lat, 6, FIXTURE_CUSTOM_WORD_COST, |s, e| edges(s, e, 4.0))
-            .expect("full path");
+        let warm = walk(&lat, 6, |s, e| edges(s, e, 4.0)).expect("full path");
         assert_eq!(warm.edges, vec![(0, 6)]);
         let hanji: String = warm
             .choices
@@ -518,7 +598,7 @@ mod tests {
         // The winning slot-0 path's choice must carry `is_custom`.
         let custom_cost = FIXTURE_CUSTOM_WORD_COST;
         let lat = lattice(vec![(0, 3), (0, 5), (3, 5)]);
-        let path = walk_best(&lat, 5, FIXTURE_CUSTOM_WORD_COST, |s, e| match (s, e) {
+        let path = walk(&lat, 5, |s, e| match (s, e) {
             (0, 5) => Some(custom("tâi-gí", "台語", custom_cost, 2, 5)),
             (0, 3) => Some(dict("tâi", "台", 8_561, 1, 3)),
             (3, 5) => Some(dict("gí", "語", 10_571, 1, 2)),
@@ -539,13 +619,13 @@ mod tests {
         // Edges leave a gap (3..6 unreachable) so offset 9 is never
         // relaxed from 0 → no full-buffer path.
         let lat = lattice(vec![(0, 3), (6, 9)]);
-        assert!(walk_best(&lat, 9, FIXTURE_CUSTOM_WORD_COST, |_, _| Some(roman("x"))).is_none());
+        assert!(walk(&lat, 9, |_, _| Some(roman("x"))).is_none());
     }
 
     #[test]
     fn empty_shadow_returns_none() {
         let lat = lattice(vec![]);
-        assert!(walk_best(&lat, 0, FIXTURE_CUSTOM_WORD_COST, |_, _| Some(roman("x"))).is_none());
+        assert!(walk(&lat, 0, |_, _| Some(roman("x"))).is_none());
     }
 
     #[test]
@@ -553,7 +633,7 @@ mod tests {
         // Provider drops the phrase edge (0,6); the walker must still
         // span the buffer via the atomic edges.
         let lat = lattice(vec![(0, 3), (0, 6), (3, 6)]);
-        let path = walk_best(&lat, 6, FIXTURE_CUSTOM_WORD_COST, |s, e| match (s, e) {
+        let path = walk(&lat, 6, |s, e| match (s, e) {
             (0, 6) => None, // dropped (e.g. empty toneless key)
             (0, 3) => Some(roman("tai")),
             (3, 6) => Some(roman("bak")),
@@ -561,5 +641,312 @@ mod tests {
         })
         .expect("full path via atomic edges");
         assert_eq!(path.edges, vec![(0, 3), (3, 6)]);
+    }
+
+    /// A dictionary edge whose pick is the word at `rowid`.
+    fn word(rowid: u32, hanji: &str, walker_cost: u16, syll: u8, len: usize) -> EdgeChoice {
+        EdgeChoice {
+            rowid,
+            ..dict(hanji, hanji, walker_cost, syll, len)
+        }
+    }
+
+    /// A bigram table: previous rowid → (C, N), and the pair counts.
+    #[derive(Debug, Clone, Default)]
+    struct FakeBigram {
+        continuations: std::collections::HashMap<u32, (u32, u32)>,
+        pairs: std::collections::HashMap<(u32, u32), u32>,
+    }
+
+    impl FakeBigram {
+        fn previous(mut self, rowid: u32, total: u32, distinct: u32) -> Self {
+            self.continuations.insert(rowid, (total, distinct));
+            self
+        }
+        fn pair(mut self, previous: u32, next: u32, count: u32) -> Self {
+            self.pairs.insert((previous, next), count);
+            self
+        }
+    }
+
+    impl WalkerBigram for FakeBigram {
+        type Continuations = (u32, u32, u32);
+
+        fn continuations(&self, previous_rowid: u32) -> Option<Self::Continuations> {
+            let &(total, distinct) = self.continuations.get(&previous_rowid)?;
+            Some((previous_rowid, total, distinct))
+        }
+
+        fn evidence(&self, continuations: &Self::Continuations, next_rowid: u32) -> BigramEvidence {
+            let &(previous, total, distinct) = continuations;
+            BigramEvidence {
+                total,
+                distinct,
+                pair_count: self
+                    .pairs
+                    .get(&(previous, next_rowid))
+                    .copied()
+                    .unwrap_or(0),
+                discount: 0.75,
+            }
+        }
+    }
+
+    // Production rowid-free stand-ins for the reported words.
+    const U_HAVE: u32 = 1;
+    const E_THE: u32 = 2;
+    const E_SHOE: u32 = 3;
+    const KHI_GO: u32 = 4;
+    const KHI_KHI_RISE: u32 = 5;
+
+    /// The production pair counts behind the two reports (`word_bigrams.tsv`
+    /// minus `taigi_typing`): 有 C 48 740 N 3 370, 有→的 411; 去 C 14 233
+    /// N 1 432, 去→去 27.
+    fn reported_pairs() -> FakeBigram {
+        FakeBigram::default()
+            .previous(U_HAVE, 48_740, 3_370)
+            .pair(U_HAVE, E_THE, 411)
+            .previous(KHI_GO, 14_233, 1_432)
+            .pair(KHI_GO, KHI_GO, 27)
+    }
+
+    #[test]
+    fn bigram_penalty_keeps_ue5_whole() {
+        // trace: unigram 有 4.496 + 的 4.173 = 8.669 < 鞋 (key min 10.024) / 2^0.2 = 8.726;
+        // bigram 的 after 有: −ln(410.25/48 740 + 0.75·3 370/48 740 · e^−4.173) = 4.687,
+        // split 4.496 + 4.687 = 9.183 > 8.726.
+        let lat = lattice(vec![(0, 1), (0, 2), (1, 2)]);
+        let edges = |s, e| match (s, e) {
+            (0, 1) => Some(word(U_HAVE, "有", 4_496, 1, 1)),
+            (1, 2) => Some(word(E_THE, "的", 4_173, 1, 1)),
+            (0, 2) => Some(word(E_SHOE, "鞋", 10_024, 1, 2)),
+            _ => None,
+        };
+        let unigram = walk(&lat, 2, edges).unwrap();
+        assert_eq!(unigram.edges, vec![(0, 1), (1, 2)]);
+        let path = walk_best(&lat, 2, FIXTURE_CUSTOM_WORD_COST, &reported_pairs(), edges).unwrap();
+        assert_eq!(path.edges, vec![(0, 2)]);
+        assert!((path.cost - 10.024 / 2f64.powf(0.2)).abs() < 1e-9);
+    }
+
+    #[test]
+    fn bigram_penalty_keeps_khikhi_whole() {
+        // trace: 去 5.461 / 3^0.2 = 4.384, unigram split 8.768 < 起去 11.552 × (2/6)^0.2 = 9.273;
+        // 去 after 去: −ln(26.25/14 233 + 0.75·1 432/14 233 · e^−5.461) = 6.135 → 4.925,
+        // split 9.309 > 9.273 (the thin margin D6 records).
+        let lat = lattice(vec![(0, 3), (0, 6), (3, 6)]);
+        let edges = |s, e| match (s, e) {
+            (0, 3) | (3, 6) => Some(word(KHI_GO, "去", 5_461, 1, 3)),
+            (0, 6) => Some(word(KHI_KHI_RISE, "起去", 11_552, 2, 6)),
+            _ => None,
+        };
+        let unigram = walk(&lat, 6, edges).unwrap();
+        assert_eq!(unigram.edges, vec![(0, 3), (3, 6)]);
+        let path = walk_best(&lat, 6, FIXTURE_CUSTOM_WORD_COST, &reported_pairs(), edges).unwrap();
+        assert_eq!(path.edges, vec![(0, 6)]);
+    }
+
+    #[test]
+    fn rowid_free_picks_take_no_penalty() {
+        // A custom / learned / OOV pick has no bigram word: 有 then a
+        // rowid-free 的 is the unigram walk.
+        let lat = lattice(vec![(0, 1), (0, 2), (1, 2)]);
+        let path = walk_best(
+            &lat,
+            2,
+            FIXTURE_CUSTOM_WORD_COST,
+            &reported_pairs(),
+            |s, e| match (s, e) {
+                (0, 1) => Some(word(U_HAVE, "有", 4_496, 1, 1)),
+                (1, 2) => Some(word(NO_ROWID, "的", 4_173, 1, 1)),
+                (0, 2) => Some(word(E_SHOE, "鞋", 10_024, 1, 2)),
+                _ => None,
+            },
+        )
+        .unwrap();
+        assert_eq!(path.edges, vec![(0, 1), (1, 2)]);
+    }
+
+    #[test]
+    fn each_incoming_edge_keeps_its_own_prefix() {
+        // Two edges reach offset 3: 甲 path (1 + 4 = 5.0) beats 乙 (5.5)
+        // alone, but only 乙 is a recorded predecessor of 丙. A per-offset
+        // walker would keep 甲 and pay 甲→丙's penalty (ln(100/7.5) = 2.590);
+        // the (offset, incoming edge) state prices 乙→丙 at its unigram.
+        // trace: 甲 path 5.0 + 4.0 + 2.590 = 11.590 > 乙 path 5.5 + 4.0 = 9.5.
+        let lat = lattice(vec![(0, 1), (0, 3), (1, 3), (3, 4)]);
+        let bigram = FakeBigram::default()
+            .previous(10, 100, 10)
+            .previous(11, 100, 10)
+            .pair(11, 12, 90);
+        let path = walk_best(&lat, 4, FIXTURE_CUSTOM_WORD_COST, &bigram, |s, e| {
+            match (s, e) {
+                (0, 1) => Some(word(20, "丁", 1_000, 1, 1)),
+                (1, 3) => Some(word(10, "甲", 4_000, 1, 1)),
+                (0, 3) => Some(word(11, "乙", 5_500, 1, 1)),
+                (3, 4) => Some(word(12, "丙", 4_000, 1, 1)),
+                _ => None,
+            }
+        })
+        .unwrap();
+        assert_eq!(path.edges, vec![(0, 3), (3, 4)]);
+        assert!((path.cost - 9.5).abs() < 1e-9);
+    }
+
+    #[test]
+    fn equal_cost_paths_keep_the_first_reached() {
+        // trace: 甲 (0,2) 8.0 and 乙 4.0 + 丙 4.0 = 8.0 tie at the sink; (0,2)
+        // sorts before (1,2), so the one-edge path is kept, as before the bigram.
+        let lat = lattice(vec![(0, 1), (0, 2), (1, 2)]);
+        let path = walk(&lat, 2, |s, e| match (s, e) {
+            (0, 2) => Some(word(1, "甲", 8_000, 1, 1)),
+            (0, 1) => Some(word(2, "乙", 4_000, 1, 1)),
+            (1, 2) => Some(word(3, "丙", 4_000, 1, 1)),
+            _ => None,
+        })
+        .unwrap();
+        assert_eq!(path.edges, vec![(0, 2)]);
+    }
+
+    /// The unigram walker as of HEAD~1 (one node per offset), kept as the
+    /// oracle for the empty-table identity (`bigram-lm-roadmap.md` D6).
+    fn unigram_walk(
+        lattice: &Lattice,
+        shadow_len: usize,
+        mut edge_choice: impl FnMut(usize, usize) -> Option<EdgeChoice>,
+    ) -> Option<BestPath> {
+        use std::collections::BTreeMap;
+        if shadow_len == 0 {
+            return None;
+        }
+        let mut best: BTreeMap<usize, (f64, usize, Option<EdgeChoice>)> =
+            BTreeMap::from([(0, (0.0, 0, None))]);
+        for &(start, end) in lattice.edges() {
+            let Some(&(start_cost, _, _)) = best.get(&start) else {
+                continue;
+            };
+            let Some(choice) = edge_choice(start, end) else {
+                continue;
+            };
+            let cost =
+                start_cost + super::super::cost::edge_cost(&choice, FIXTURE_CUSTOM_WORD_COST, None);
+            if best.get(&end).is_none_or(|current| cost < current.0) {
+                best.insert(end, (cost, start, Some(choice)));
+            }
+        }
+        let total = best.get(&shadow_len)?.0;
+        let (mut edges, mut choices, mut cur) = (Vec::new(), Vec::new(), shadow_len);
+        while cur != 0 {
+            let (_, prev, choice) = best.get(&cur)?;
+            edges.push((*prev, cur));
+            choices.push(choice.clone()?);
+            cur = *prev;
+        }
+        edges.reverse();
+        choices.reverse();
+        Some(BestPath {
+            edges,
+            choices,
+            cost: total,
+        })
+    }
+
+    /// A random edge's content: dictionary (rowid 0..4, so picks repeat) or OOV.
+    /// Prices and lengths come from short lists so equal-cost paths, and the tie
+    /// order, occur.
+    fn arbitrary_choice() -> impl proptest::strategy::Strategy<Value = Option<EdgeChoice>> {
+        use proptest::prelude::*;
+        proptest::option::weighted(
+            0.9,
+            (
+                0u32..4,
+                proptest::sample::select(vec![0u16, 4_000, 8_000, 13_181]),
+                proptest::sample::select(vec![1u8, 1, 1, 2]),
+                proptest::sample::select(vec![1usize, 1, 1, 4]),
+                prop_oneof![3 => Just(0.0), 1 => 0.0..4.0],
+                proptest::bool::weighted(0.9),
+            ),
+        )
+        .prop_map(|choice| {
+            choice.map(|(rowid, walker_cost, syll, len, delta, dict_hit)| {
+                if dict_hit {
+                    EdgeChoice {
+                        user_weight_delta: delta,
+                        ..word(rowid, "字", walker_cost, syll, len)
+                    }
+                } else {
+                    roman_n(&"a".repeat(len), syll)
+                }
+            })
+        })
+    }
+
+    /// A buffer length, its edges with their content, and a bigram table.
+    type ArbitraryWalk = (usize, Vec<((usize, usize), Option<EdgeChoice>)>, FakeBigram);
+
+    /// A random lattice over offsets `0..=len` (edges up to 4 wide), each
+    /// edge with its content, plus a bigram table over the four rowids.
+    fn arbitrary_walk() -> impl proptest::strategy::Strategy<Value = ArbitraryWalk> {
+        use proptest::prelude::*;
+        (1usize..9).prop_flat_map(|len| {
+            let spans: Vec<(usize, usize)> = (0..len)
+                .flat_map(|s| (s + 1..=(s + 4).min(len)).map(move |e| (s, e)))
+                .collect();
+            let edges = spans
+                .into_iter()
+                .map(|span| {
+                    (proptest::bool::weighted(0.7), arbitrary_choice())
+                        .prop_map(move |(kept, c)| (span, kept.then_some(c).flatten()))
+                })
+                .collect::<Vec<_>>();
+            let table = proptest::collection::vec(
+                (1u32..500, 1u32..50, proptest::collection::vec(0u32..400, 4)),
+                4,
+            )
+            .prop_map(|rows| {
+                rows.into_iter().enumerate().fold(
+                    FakeBigram::default(),
+                    |table, (previous, (total, distinct, pairs))| {
+                        let previous = previous as u32;
+                        pairs.into_iter().enumerate().fold(
+                            table.previous(previous, total, distinct),
+                            |t, (next, count)| t.pair(previous, next as u32, count),
+                        )
+                    },
+                )
+            });
+            (Just(len), edges, table)
+        })
+    }
+
+    proptest::proptest! {
+        #![proptest_config(proptest::prelude::ProptestConfig::with_cases(2_048))]
+
+        // (a) Empty table: the same edges, choices and cost as the HEAD~1 walker.
+        #[test]
+        fn empty_bigram_walk_is_the_unigram_walk((len, edges, _) in arbitrary_walk()) {
+            let lat = lattice(edges.iter().map(|(span, _)| *span).collect());
+            let content = |s, e| edges.iter().find(|(span, _)| *span == (s, e)).and_then(|(_, c)| c.clone());
+            let walked = walk(&lat, len, content);
+            proptest::prop_assert_eq!(walked, unigram_walk(&lat, len, content));
+        }
+
+        // (b) With data: penalty-only never lowers the best cost, and a
+        // single-edge path is priced exactly as without the table.
+        #[test]
+        fn bigram_walk_never_undercuts_the_unigram_walk((len, edges, table) in arbitrary_walk()) {
+            let lat = lattice(edges.iter().map(|(span, _)| *span).collect());
+            let content = |s, e| edges.iter().find(|(span, _)| *span == (s, e)).and_then(|(_, c)| c.clone());
+            let unigram = unigram_walk(&lat, len, content);
+            let walked = walk_best(&lat, len, FIXTURE_CUSTOM_WORD_COST, &table, content);
+            proptest::prop_assert_eq!(walked.is_some(), unigram.is_some());
+            if let (Some(walked), Some(unigram)) = (walked, unigram) {
+                proptest::prop_assert!(walked.cost >= unigram.cost);
+                if let [choice] = walked.choices.as_slice() {
+                    let alone = super::super::cost::edge_cost(choice, FIXTURE_CUSTOM_WORD_COST, None);
+                    proptest::prop_assert_eq!(walked.cost, alone);
+                }
+            }
+        }
     }
 }

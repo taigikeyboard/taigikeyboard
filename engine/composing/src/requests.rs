@@ -27,6 +27,7 @@ use crate::api::{
 };
 use crate::continuous::{assemble_candidates, retain_first_by_key, roman_reading_eq, ListShape};
 use crate::derived::buffer_input_mode;
+use lexicon::dictionary_reader::NO_ROWID;
 use lexicon::{
     classification::is_hanji, ConsumedSpan, LearnedEntry, RawCandidate, SyllableInventory,
     COVERAGE_KIND_FULL,
@@ -406,6 +407,7 @@ fn literal_roman_candidate(
     let learning_text = crate::derived::learning_text(raw, config);
     let canonical_tl = phonetics::api::canonical_tl_form(&learning_text, mode);
     Some(RawCandidate {
+        rowid: NO_ROWID,
         consumed_span: (0, raw.len() as u32),
         syllable_count: literal.split('-').count().min(u8::MAX as usize) as u8,
         display_text: learning_text,
@@ -551,6 +553,7 @@ mod tests {
     #[test]
     fn raw_to_proto_candidate_propagates_roman_and_some_hanji() {
         let raw = RawCandidate {
+            rowid: NO_ROWID,
             consumed_span: (0, 7),
             syllable_count: 2,
             display_text: "臺灣".to_owned(),
@@ -577,6 +580,7 @@ mod tests {
     #[test]
     fn raw_to_proto_candidate_emits_none_hanji_for_tailo() {
         let raw = RawCandidate {
+            rowid: NO_ROWID,
             consumed_span: (0, 3),
             syllable_count: 1,
             display_text: "tāi".to_owned(),
@@ -607,6 +611,7 @@ mod tests {
     fn dedupe_display_roman_collapses_same_roman_across_spans() {
         fn row(roman: &str, hanji: Option<&str>, span: (u32, u32)) -> RawCandidate {
             RawCandidate {
+                rowid: NO_ROWID,
                 consumed_span: span,
                 syllable_count: 1,
                 display_text: hanji.unwrap_or(roman).to_owned(),

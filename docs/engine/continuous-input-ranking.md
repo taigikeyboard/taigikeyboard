@@ -79,9 +79,10 @@ records. Once per walk, the engine derives the custom-word cost as
 `2_000` is an engine policy parameter; the derived price is never compiled
 into the engine. The edge provider and selected-word cap use that same price.
 
-- **Dictionary edge**: `walker_cost / 1000 / toneless_len^0.2 × syllable_count^0.2 − ln(1 + applied_δ)`. `walker_cost` is the key's lowest homophone cost (`EdgeBest::span_walker_cost`), not the picked word's.
+- **Dictionary edge**: `base / toneless_len^0.2 × syllable_count^0.2 − ln(1 + applied_δ)`, `base = walker_cost / 1000`. `walker_cost` is the key's lowest homophone cost (`EdgeBest::span_walker_cost`), not the picked word's.
+- **Walker bigram** (penalty-only, [`bigram-lm-roadmap.md`](../architecture/bigram-lm-roadmap.md) D6): after a previous edge, `base = max(base, −ln p(w₂|w₁))` with interpolated absolute discounting over the `dictionary.bin` v6 pair counts (`cost::bigram_penalty`). `w₁` / `w₂` are the edges' context-free winners (`EdgeBest::bigram_rowid`), so the previous committed word's context still never moves the segmentation. No penalty on the first edge, after a word with no recorded continuation, or when either side has no dictionary row (custom, learned, OOV). The walker state is `(offset, incoming edge)`; with an empty table the walk is the unigram walk.
 - **User preference**: `applied_δ` is the edge word's `user_weight`, scaled to 0 on single-syllable edges (`WALKER_SINGLE_SYLLABLE_USER_DELTA_SCALE`) so a hot single character cannot sweep the sentence. A selected multi-syllable word's base cost is capped by `user_entry_cost_cap`.
-- **User rows**: an edge with a custom or learned row under its key is priced at most at the loaded dictionary model's custom-word cost (the key's dictionary cost when cheaper).
+- **User rows**: an edge with a custom or learned row under its key is priced at most at the loaded dictionary model's custom-word cost (the key's dictionary cost, walker-bigram penalty included, when cheaper).
 - **OOV edge** (no dictionary hit): `OOV_PER_CHAR_PENALTY (1e10) × toneless_len`, so a dictionary-coverable buffer never collapses to an OOV blob.
 - The edge's word is picked by `CandidateSortKey` among the key's homophones; the walker and its carve-out live in `continuous::fetch_walker_slot0_inner` (`engine/composing/src/continuous.rs`).
 
