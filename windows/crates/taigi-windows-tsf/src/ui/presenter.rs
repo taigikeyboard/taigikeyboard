@@ -232,6 +232,12 @@ impl CandidatePresenter {
         self.owner == Some(owner) && !self.content.borrow().is_empty()
     }
 
+    /// The caret `owner`'s list on screen was anchored to.
+    pub fn anchored_caret(&self, owner: ContextToken) -> Option<RECT> {
+        self.is_showing(owner)
+            .then(|| self.content.borrow().caret())
+    }
+
     pub fn selected_index(&self, owner: ContextToken) -> Option<usize> {
         if self.owner != Some(owner) {
             return None;

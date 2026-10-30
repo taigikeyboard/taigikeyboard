@@ -24,6 +24,7 @@ use crate::runtime::Runtime;
 use crate::settings_launcher;
 use crate::text_service::TextService_Impl;
 use crate::ui::candidate_window::CandidateWindowContent;
+use crate::ui::caret::Caret;
 use crate::ui::presenter::CandidatePresenter;
 use crate::ui::telex_guide::TelexGuideContent;
 use std::cell::{Cell, RefCell};
@@ -1257,7 +1258,7 @@ impl TextService_Impl {
             (state.client_id, state.focus_generation)
         };
         let caret = edit_session::run_sync(context, client_id, TF_ES_READ, |ec| {
-            Ok(crate::ui::caret::caret_rect(context, ec, None))
+            Ok(crate::ui::caret::caret(context, ec, None).rect())
         });
         // The session can re-enter the focus callbacks, and a window that
         // has not been created yet has no HWND for their posted hide to
@@ -1427,7 +1428,10 @@ struct Surface {
 impl Surface {
     /// Queues the list for the screen anchored to the caret; a host that
     /// cannot say where its caret is gets no window and no list (as on the
-    /// Mac). The caret is read HERE, under the session's cookie.
+    /// Mac) — unless it has only not laid this edit out yet and a window is
+    /// already up, which then shows the new list where it stands (mozc keeps
+    /// its window on `TF_E_NOLAYOUT` too, `tip_ui_handler_conventional.cc:388`).
+    /// The caret is read HERE, under the session's cookie.
     fn present(&self, source: &mut CandidateSource, editor: &CompositionEditor<'_>) {
         if self.presenter.is_none() {
             source.clear();
@@ -1437,7 +1441,12 @@ impl Surface {
             self.hide();
             return;
         }
-        let Some(caret) = editor.caret_rect() else {
+        let caret = match editor.caret() {
+            Caret::At(caret) => Some(caret),
+            Caret::NotLaidOut => self.anchored_caret(),
+            Caret::Unknown => None,
+        };
+        let Some(caret) = caret else {
             log::debug!("candidates.no_caret_rect — list dropped");
             source.clear();
             self.hide();
@@ -1454,6 +1463,19 @@ impl Surface {
 
     fn hide(&self) {
         self.actions.borrow_mut().push(SurfaceAction::Hide);
+    }
+
+    /// Where this context's window will stand once the queue is applied:
+    /// the latest queued show or hide decides, else the window as it is.
+    fn anchored_caret(&self) -> Option<RECT> {
+        for action in self.actions.borrow().iter().rev() {
+            match action {
+                SurfaceAction::Show { caret, .. } => return Some(*caret),
+                SurfaceAction::Hide => return None,
+                SurfaceAction::Navigate(_) => {}
+            }
+        }
+        self.presenter.as_ref()?.borrow().anchored_caret(self.token)
     }
 
     fn navigate(&self, direction: CandidateNavigation) {

@@ -220,6 +220,11 @@ impl CandidateWindow {
         self.cells.is_empty()
     }
 
+    /// The caret the last shown list was anchored to.
+    pub fn caret(&self) -> RECT {
+        self.caret
+    }
+
     pub fn cell_count(&self) -> usize {
         self.cells.len()
     }
