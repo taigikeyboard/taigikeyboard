@@ -1,4 +1,5 @@
-//! Parameters of the probability model stored in `dictionary.bin` v5.
+//! Parameters of the probability model stored in the `dictionary.bin` header:
+//! the unigram's N, V, α (v5) and the bigram's absolute discount D (v6).
 //!
 //! Policy counts belong to the caller. This type prices any effective count
 //! on the loaded dictionary's scale, using the writer's half-even rounding.
@@ -9,10 +10,16 @@ use crate::LexiconError;
 pub struct WalkerModel {
     alpha: f64,
     denominator: f64,
+    bigram_discount: f64,
 }
 
 impl WalkerModel {
-    pub fn new(tokens: u64, vocabulary: u64, alpha: f64) -> Result<Self, LexiconError> {
+    pub fn new(
+        tokens: u64,
+        vocabulary: u64,
+        alpha: f64,
+        bigram_discount: f64,
+    ) -> Result<Self, LexiconError> {
         let denominator = tokens as f64 + alpha * vocabulary as f64;
         let unseen_cost = -(alpha / denominator).ln() * 1000.0;
         if vocabulary == 0
@@ -21,12 +28,24 @@ impl WalkerModel {
             || !denominator.is_finite()
             || !unseen_cost.is_finite()
             || !(0.0..=f64::from(u16::MAX)).contains(&unseen_cost.round_ties_even())
+            // Absolute discounting needs 0 < D ≤ 1 so every seen pair keeps a share.
+            || !(bigram_discount > 0.0 && bigram_discount <= 1.0)
         {
             return Err(LexiconError::InvalidBinary(
                 "dictionary.bin: invalid walker model metadata".into(),
             ));
         }
-        Ok(Self { alpha, denominator })
+        Ok(Self {
+            alpha,
+            denominator,
+            bigram_discount,
+        })
+    }
+
+    /// The walker bigram's absolute discount `D`
+    /// (`docs/architecture/bigram-lm-roadmap.md` D6).
+    pub fn bigram_discount(&self) -> f64 {
+        self.bigram_discount
     }
 
     /// Quantized −ln p in milli-nats, matching `WalkerModel.cost_of_count`
@@ -52,7 +71,9 @@ mod tests {
             (3_627_713, 167_922, 20.0, 8_149),
         ] {
             assert_eq!(
-                WalkerModel::new(n, v, alpha).unwrap().cost_of_count(2_000),
+                WalkerModel::new(n, v, alpha, 0.75)
+                    .unwrap()
+                    .cost_of_count(2_000),
                 expected
             );
         }
@@ -60,11 +81,14 @@ mod tests {
 
     #[test]
     fn unseen_and_certain_words_use_the_same_scale() {
-        let model = WalkerModel::new(15, 4, 1.0).unwrap();
+        let model = WalkerModel::new(15, 4, 1.0, 0.75).unwrap();
         assert_eq!(model.cost_of_count(10), 547);
         assert_eq!(model.cost_of_count(5), 1_153);
         assert_eq!(model.cost_of_count(0), 2_944);
-        assert_eq!(WalkerModel::new(0, 1, 1.0).unwrap().cost_of_count(0), 0);
+        assert_eq!(
+            WalkerModel::new(0, 1, 1.0, 0.75).unwrap().cost_of_count(0),
+            0
+        );
         assert_eq!(model.cost_of_count(2_000), 0);
     }
 
@@ -79,7 +103,15 @@ mod tests {
             (1, 2, f64::MAX),
             (u64::MAX, 1, f64::MIN_POSITIVE),
         ] {
-            assert!(WalkerModel::new(n, v, alpha).is_err());
+            assert!(WalkerModel::new(n, v, alpha, 0.75).is_err());
         }
+        for discount in [0.0, -0.5, 1.5, f64::NAN, f64::INFINITY] {
+            assert!(
+                WalkerModel::new(15, 4, 1.0, discount).is_err(),
+                "D = {discount}"
+            );
+        }
+        let model = WalkerModel::new(15, 4, 1.0, 1.0).unwrap();
+        assert_eq!(model.bigram_discount(), 1.0);
     }
 }

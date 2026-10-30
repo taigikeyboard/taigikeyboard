@@ -1,4 +1,4 @@
-"""Tests for the dictionary.bin record: kautian_subtag (v3) and walker_cost (v4).
+"""Tests for dictionary.bin: kautian_subtag (v3), walker_cost (v4), the bigram section (v6).
 
 Covers the bit-packing (`source_bits.encode_kautian_subtag`), the loader
 coercion from CSV cells (`dictionary_records._kautian_subtag` /
@@ -8,11 +8,20 @@ coercion from CSV cells (`dictionary_records._kautian_subtag` /
 from __future__ import annotations
 
 import struct
+from dataclasses import replace
 
 import pandas as pd
 
-from build.create_dictionary_bin import HEADER_SIZE, VERSION, encode_header, encode_record
-from build.walker_lm import WalkerModel
+from build.create_dictionary_bin import (
+    HEADER_SIZE,
+    NO_BIGRAM_WORD,
+    VERSION,
+    decode_bigram_section,
+    encode_bigram_section,
+    encode_header,
+    encode_record,
+)
+from build.walker_lm import BigramCounts, WalkerModel
 from build.dictionary_records import DictionaryRecord, _as_bool, _kautian_subtag
 from common.kautian_provenance import COL_ACCENT_MASK, COL_ALT_READING, COL_MAIN, COL_NAME
 from common.source_bits import (
@@ -131,16 +140,45 @@ def _record(kautian_subtag: int) -> DictionaryRecord:
     )
 
 
-def test_version_is_5():
-    assert VERSION == 5
+def test_version_is_6():
+    assert VERSION == 6
 
 
 def test_header_carries_the_same_model_that_prices_records():
     # Values exceeding u32 ensure that the corpus fields really are u64.
     model = WalkerModel(counts={}, tokens=2**33, vocabulary=2**32 + 3, alpha=0.5)
-    header = encode_header(17, 1234, model)
-    assert len(header) == HEADER_SIZE == 40
-    assert struct.unpack("<4sIIIQQd", header) == (b"TKDB", 5, 17, 1234, 2**33, 2**32 + 3, 0.5)
+    header = encode_header(17, 1234, model, 0.6, 5, 9)
+    assert len(header) == HEADER_SIZE == 56
+    assert struct.unpack("<4sIIIQQddII", header) == (
+        b"TKDB", 6, 17, 1234, 2**33, 2**32 + 3, 0.5, 0.6, 5, 9,
+    )
+
+
+def _word_record(rowid: int, hanzi: str | None, tl: str, tl_num: str) -> DictionaryRecord:
+    return replace(_record(0), rowid=rowid, hanzi=hanzi, tl=tl, tl_num=tl_num)
+
+
+def test_bigram_section_shares_one_word_per_model_word_and_sorts_pairs():
+    records = [
+        _word_record(1, "出來", "tshut--lâi", "tshut4--lai5"),
+        _word_record(2, "出來", "tshut-lâi", "tshut4--lai5"),  # same model word as rowid 1
+        _word_record(3, "我", "guá", "gua2"),
+        _word_record(4, "八", "pueh", "pueh4"),  # in no pair
+        _word_record(5, None, "guá", "gua2"),  # no hanji → never a model word
+    ]
+    out = ("出來", "tshut4--lai5")
+    me = ("我", "gua2")
+    bigrams = BigramCounts({me: {out: 3, me: 1}, out: {me: 2}})
+    word_count, pair_count, section = encode_bigram_section(records, bigrams)
+    # trace: ids sorted by model word → 出來=0, 我=1 (U+51FA < U+6211)
+    assert (word_count, pair_count) == (2, 3)
+    word_of_record, followers = decode_bigram_section(section, 0, len(records), word_count, pair_count)
+    assert word_of_record == [0, 0, 1, NO_BIGRAM_WORD, NO_BIGRAM_WORD]
+    assert followers == {0: {1: 2}, 1: {0: 3, 1: 1}}
+    # words: (pair_start, pair_len, total) — 我's pairs follow 出來's, next ids ascending
+    words = [struct.unpack_from("<III", section, len(records) * 4 + i * 12) for i in range(2)]
+    assert words == [(0, 1, 2), (1, 2, 4)]
+    assert struct.unpack_from("<IIII", section, len(records) * 4 + 24 + 8) == (0, 3, 1, 1)
 
 
 def test_encode_record_v4_layout_carries_subtag_and_walker_cost():

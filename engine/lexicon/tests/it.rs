@@ -7,6 +7,7 @@ mod common;
 
 mod association_v2;
 mod compound_hanji;
+mod dictionary_bigram;
 mod dictionary_reader_v4;
 mod fused_toneless_key;
 mod parity;
