@@ -21,12 +21,17 @@ pub trait SettingChoice: Copy + PartialEq + std::fmt::Debug + 'static {
 }
 
 /// The candidate window's layout. Order = the Appearance pane's pop-up:
-/// expandable, horizontal, vertical. macOS keeps a Swift twin:
+/// expandable, vertical expandable, horizontal, vertical. macOS keeps a Swift twin:
 /// `SettingsStore.swift` `Keys.candidateLayout` and the layout picker in
-/// `AppearanceSettingsView.swift`.
+/// `AppearanceSettingsView.swift` (vertical expandable reaches it in the
+/// macOS follow-up PR; until then a stored `verticalExpandable` reads as the
+/// default there). Linux draws both expandables vertical.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum CandidateLayout {
     Expandable,
+    /// The vertical list's first page that unfolds into the expandable
+    /// grid with `→` (USER 2026-10-31).
+    VerticalExpandable,
     Horizontal,
     Vertical,
 }
@@ -37,6 +42,7 @@ impl CandidateLayout {
         use crate::strings::StringKey;
         match self {
             Self::Expandable => StringKey::DesktopCandidateLayoutExpandable,
+            Self::VerticalExpandable => StringKey::DesktopCandidateLayoutVerticalExpandable,
             Self::Horizontal => StringKey::DesktopCandidateLayoutHorizontal,
             Self::Vertical => StringKey::DesktopCandidateLayoutVertical,
         }
@@ -44,12 +50,18 @@ impl CandidateLayout {
 }
 
 impl SettingChoice for CandidateLayout {
-    const ALL: &'static [Self] = &[Self::Expandable, Self::Horizontal, Self::Vertical];
+    const ALL: &'static [Self] = &[
+        Self::Expandable,
+        Self::VerticalExpandable,
+        Self::Horizontal,
+        Self::Vertical,
+    ];
     /// Vertical on every desktop (USER 2026-10-04).
     const DEFAULT: Self = Self::Vertical;
     fn raw(self) -> &'static str {
         match self {
             Self::Expandable => "expandable",
+            Self::VerticalExpandable => "verticalExpandable",
             Self::Horizontal => "horizontal",
             Self::Vertical => "vertical",
         }

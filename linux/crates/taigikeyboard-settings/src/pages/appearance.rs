@@ -11,16 +11,18 @@ use taigi_desktop_core::settings::{
 };
 use taigi_desktop_core::strings::StringKey;
 
-/// The layouts a panel can take: the expandable grid has none, and the
-/// panel draws it vertical (`taigi-linux-core` `session.rs`).
+/// The layouts a panel can take: neither expandable grid exists there, and
+/// the panel draws both vertical (`taigi-linux-core` `session.rs`).
 const PANEL_LAYOUTS: &[CandidateLayout] = &[CandidateLayout::Horizontal, CandidateLayout::Vertical];
 
-/// The stored layout as the panel draws it: expandable (the shared
-/// default) reads as vertical. The key itself is never rewritten.
+/// The stored layout as the panel draws it: either expandable reads as
+/// vertical. The key itself is never rewritten.
 fn panel_layout(document: &SettingsDocument) -> CandidateLayout {
     match document.choice(&keys::CANDIDATE_LAYOUT) {
         CandidateLayout::Horizontal => CandidateLayout::Horizontal,
-        CandidateLayout::Vertical | CandidateLayout::Expandable => CandidateLayout::Vertical,
+        CandidateLayout::Vertical
+        | CandidateLayout::Expandable
+        | CandidateLayout::VerticalExpandable => CandidateLayout::Vertical,
     }
 }
 

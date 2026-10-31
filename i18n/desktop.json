@@ -717,6 +717,26 @@
         "ja": "展開式"
       }
     },
+    "candidateLayoutVerticalExpandable": {
+      "comment": "Picker value: the vertical expandable candidate window — a column of the first page that unfolds into a grid via its chevron or the right arrow.",
+      "scope": {
+        "platforms": [
+          "macos",
+          "windows",
+          "linux"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "徛直展開",
+        "tailo": "Khiā-ti̍t thián-khui",
+        "poj": "Khiā-ti̍t thián-khui",
+        "en": "Vertical Expandable",
+        "ja": "垂直展開式"
+      }
+    },
     "appearanceTab": {
       "comment": "Settings sidebar row + pane title: the candidate-window appearance pane (light/dark mode, layout, size, font).",
       "scope": {

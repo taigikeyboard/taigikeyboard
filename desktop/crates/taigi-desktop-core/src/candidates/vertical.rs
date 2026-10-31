@@ -93,6 +93,18 @@ pub struct VerticalGeometry {
     pub natural_content_height: f32,
 }
 
+/// The widest candidate column and the widest annotation over `rows` —
+/// what an aligned column is sized from (they need not be one row's). Also
+/// the collapsed vertical expandable column's rule (`expandable.rs`).
+pub(super) fn widest_columns(
+    primary_widths: &[f32],
+    annotation_widths: &[Option<f32>],
+) -> (f32, Option<f32>) {
+    let widest_primary = primary_widths.iter().copied().fold(0.0, f32::max);
+    let widest_annotation = annotation_widths.iter().flatten().copied().reduce(f32::max);
+    (widest_primary, widest_annotation)
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct VerticalListModel {
     count: usize,
@@ -197,15 +209,10 @@ impl VerticalListModel {
             self.scroller,
             metrics.horizontal_padding(),
         );
-        let widest_primary = self.primary_widths[..self.revealed_rows]
-            .iter()
-            .copied()
-            .fold(0.0, f32::max);
-        let widest_annotation = self.annotation_widths[..self.revealed_rows]
-            .iter()
-            .flatten()
-            .copied()
-            .reduce(f32::max);
+        let (widest_primary, widest_annotation) = widest_columns(
+            &self.primary_widths[..self.revealed_rows],
+            &self.annotation_widths[..self.revealed_rows],
+        );
         let widest = metrics.cell_width(widest_primary, widest_annotation);
         let content_width = widest.max(metrics.base_width()).min(
             metrics

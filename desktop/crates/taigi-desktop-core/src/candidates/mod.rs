@@ -1,6 +1,6 @@
 //! The candidate window's geometry and navigation, with no window in it.
 //!
-//! Metrics, the horizontal page packer, the expanded grid, the three
+//! Metrics, the horizontal page packer, the expanded grid, the four
 //! layouts' navigation state machines, index labels and caret positioning —
 //! the reference for every desktop, pinned by this module's tests. macOS
 //! keeps a Swift twin in `macos/Sources/TaigiInputMethodCore/Candidates/`
@@ -23,8 +23,9 @@ mod positioning;
 mod vertical;
 
 pub use expandable::{
-    CellMove, ExpandableDisplayMode, ExpandableGeometryInput, ExpandableListModel,
-    ExpandableModeChange, ExpandedGeometry, UnfoldPlan,
+    CellMove, CollapsedCell, CollapsedLayout, ExpandableAxis, ExpandableDisplayMode,
+    ExpandableGeometryInput, ExpandableListModel, ExpandableModeChange, ExpandedGeometry,
+    UnfoldPlan,
 };
 pub use grid::{ExpandedGridLayout, GridCell};
 pub use horizontal::{HorizontalListModel, HorizontalPageLayout, PageSlot};
@@ -38,12 +39,12 @@ use crate::settings::CandidateLayout;
 impl CandidateLayout {
     /// How this layout's cells hold their two scripts: the row-shaped
     /// layouts stack (a cell as wide as both scripts side by side fits far
-    /// fewer of them), the column-shaped one keeps them inline
+    /// fewer of them), the column-shaped ones keep them inline
     /// (as macOS's `CandidateLayout.cellArrangement`).
     pub fn cell_arrangement(self) -> CandidateCellArrangement {
         match self {
             Self::Horizontal | Self::Expandable => CandidateCellArrangement::Stacked,
-            Self::Vertical => CandidateCellArrangement::Inline,
+            Self::Vertical | Self::VerticalExpandable => CandidateCellArrangement::Inline,
         }
     }
 }

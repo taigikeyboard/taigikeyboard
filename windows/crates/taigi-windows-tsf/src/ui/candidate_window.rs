@@ -8,7 +8,8 @@
 //! and centred; the selected cell is painted with the accent and white
 //! text; vertical rows are separated by a hairline and align their
 //! annotation column; the horizontal window's paging edge is a separator
-//! and two chevrons; the collapsed expandable row ends in a chevron.
+//! and two chevrons; a collapsed expandable row ends in a down chevron, a
+//! collapsed vertical expandable column in a right one.
 //! NAMED SIMPLIFICATION: the unfold is a window-size ease over the same
 //! 183 ms rather than per-cell slides.
 
@@ -20,10 +21,10 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::Instant;
 use taigi_desktop_core::candidates::{
-    panel_frame, CandidateCellArrangement, CandidateIndexLabel, CandidateMetrics,
-    ExpandableDisplayMode, ExpandableGeometryInput, ExpandableListModel, ExpandableModeChange,
-    HorizontalListModel, HorizontalPageLayout, Point, Rect, ScrollerStyle, Size,
-    VerticalLayoutInput, VerticalListModel, MAX_DISPLAY_CANDIDATES,
+    panel_frame, CandidateCellArrangement, CandidateIndexLabel, CandidateMetrics, CollapsedLayout,
+    ExpandableAxis, ExpandableDisplayMode, ExpandableGeometryInput, ExpandableListModel,
+    ExpandableModeChange, HorizontalListModel, HorizontalPageLayout, Point, Rect, ScrollerStyle,
+    Size, VerticalLayoutInput, VerticalListModel, MAX_DISPLAY_CANDIDATES,
 };
 use taigi_desktop_core::composing::CandidateCellContent;
 use taigi_desktop_core::keys::{CandidateNavigation, CandidateSlotKeySet};
@@ -78,6 +79,15 @@ const ARROW_UP_OFFSET_Y: f32 = -3.0;
 const ARROW_DOWN_OFFSET_Y: f32 = 4.0;
 /// The two strokes a chevron is drawn from.
 const CHEVRON_STROKE_WIDTH: f32 = 1.5;
+
+/// Where a chevron's tip points: the page arrows up / down, the expand
+/// chevron the way its list unfolds (down under a row, right of a column).
+#[derive(Clone, Copy)]
+enum ChevronPointing {
+    Up,
+    Down,
+    Right,
+}
 /// The scroller thumb: how far it is inset from each side of its lane, and
 /// the radius its ends are rounded to.
 const SCROLLER_THUMB_INSET: f32 = 3.0;
@@ -490,16 +500,27 @@ impl CandidateWindow {
                     },
                 }))
             }
-            CandidateLayout::Expandable => LayoutModel::Expandable(ExpandableListModel::new(
-                &cell_widths(),
-                ExpandableGeometryInput {
-                    base_width: metrics.base_width(),
-                    maximum_window_width: maximum,
-                    chrome_width: Self::chevron_width(metrics),
-                    scroller_width: SCROLLER_WIDTH,
-                    item_height: metrics.item_height(),
-                },
-            )),
+            CandidateLayout::Expandable | CandidateLayout::VerticalExpandable => {
+                LayoutModel::Expandable(ExpandableListModel::new(
+                    &cell_widths(),
+                    ExpandableGeometryInput {
+                        collapsed: if layout == CandidateLayout::VerticalExpandable {
+                            CollapsedLayout::Column {
+                                metrics,
+                                primary_widths: &self.primary_widths,
+                                annotation_widths: &self.annotation_widths,
+                            }
+                        } else {
+                            CollapsedLayout::Row
+                        },
+                        base_width: metrics.base_width(),
+                        maximum_window_width: maximum,
+                        chrome_width: Self::chevron_width(metrics),
+                        scroller_width: SCROLLER_WIDTH,
+                        item_height: metrics.item_height(),
+                    },
+                ))
+            }
         }
     }
 
@@ -521,7 +542,7 @@ impl CandidateWindow {
             Some(LayoutModel::Expandable(model)) => match model.mode() {
                 ExpandableDisplayMode::Collapsed => Size {
                     width: model.collapsed_window_width(),
-                    height: metrics.item_height(),
+                    height: model.collapsed_window_height(),
                 },
                 ExpandableDisplayMode::Expanded => {
                     let geometry = model.expanded_geometry();
@@ -897,24 +918,45 @@ impl CandidateWindow {
     ) {
         match model.mode() {
             ExpandableDisplayMode::Collapsed => {
-                for slot in 0..model.collapsed_row().len() {
-                    let Some(rect) = model.collapsed_cell_rect(slot) else {
-                        continue;
-                    };
-                    let index = model.collapsed_row()[slot].candidate_index;
+                // A column aligns its annotations and draws the vertical
+                // list's hairlines; a row does neither.
+                let is_column = model.axis() == ExpandableAxis::Column;
+                let column = model
+                    .collapsed_primary_column_width()
+                    .map(|primary| (primary, metrics.horizontal_padding()));
+                let cells = model.collapsed_cells();
+                for (slot, cell) in cells.iter().enumerate() {
                     self.draw_cell(
                         target,
                         brush,
                         metrics,
-                        index,
-                        rect,
-                        None,
-                        model.selected_index() == index,
+                        cell.candidate_index,
+                        cell.rect,
+                        column,
+                        model.selected_index() == cell.candidate_index,
                     );
+                    if is_column && slot + 1 < cells.len() {
+                        self.fill(
+                            target,
+                            brush,
+                            Rect::new(
+                                0.0,
+                                cell.rect.bottom(),
+                                cell.rect.width,
+                                ExpandableListModel::SEPARATOR_HEIGHT,
+                            ),
+                            self.theme.separator,
+                        );
+                    }
                 }
                 if model.has_overflow() {
-                    let chevron = model.unfold_plan().chevron_collapsed;
-                    self.draw_chevron(target, brush, metrics, chevron);
+                    self.draw_chevron(
+                        target,
+                        brush,
+                        metrics,
+                        model.chevron_rect(),
+                        model.axis().unfold_direction(),
+                    );
                 }
             }
             ExpandableDisplayMode::Expanded => {
@@ -1186,43 +1228,39 @@ impl CandidateWindow {
         }
     }
 
-    /// A chevron drawn as two strokes, centred in `rect`; `up` flips it.
+    /// A chevron drawn as two strokes, centred on `centre`, its tip toward
+    /// `pointing`.
     unsafe fn stroke_chevron(
         &self,
         target: &ID2D1HwndRenderTarget,
         brush: &ID2D1SolidColorBrush,
         centre: (f32, f32),
         half: f32,
-        up: bool,
+        pointing: ChevronPointing,
         color: D2D1_COLOR_F,
     ) {
         brush.SetColor(&color);
         let (cx, cy) = centre;
-        let (tip_y, base_y) = if up {
-            (cy - half / 2.0, cy + half / 2.0)
-        } else {
-            (cy + half / 2.0, cy - half / 2.0)
+        let point = |x: f32, y: f32| Vector2 { X: x, Y: y };
+        let (start, tip, end) = match pointing {
+            ChevronPointing::Up => (
+                point(cx - half, cy + half / 2.0),
+                point(cx, cy - half / 2.0),
+                point(cx + half, cy + half / 2.0),
+            ),
+            ChevronPointing::Down => (
+                point(cx - half, cy - half / 2.0),
+                point(cx, cy + half / 2.0),
+                point(cx + half, cy - half / 2.0),
+            ),
+            ChevronPointing::Right => (
+                point(cx - half / 2.0, cy - half),
+                point(cx + half / 2.0, cy),
+                point(cx - half / 2.0, cy + half),
+            ),
         };
-        target.DrawLine(
-            Vector2 {
-                X: cx - half,
-                Y: base_y,
-            },
-            Vector2 { X: cx, Y: tip_y },
-            brush,
-            CHEVRON_STROKE_WIDTH,
-            None,
-        );
-        target.DrawLine(
-            Vector2 { X: cx, Y: tip_y },
-            Vector2 {
-                X: cx + half,
-                Y: base_y,
-            },
-            brush,
-            CHEVRON_STROKE_WIDTH,
-            None,
-        );
+        target.DrawLine(start, tip, brush, CHEVRON_STROKE_WIDTH, None);
+        target.DrawLine(tip, end, brush, CHEVRON_STROKE_WIDTH, None);
     }
 
     unsafe fn draw_page_arrows(
@@ -1255,7 +1293,7 @@ impl CandidateWindow {
             brush,
             (cx, cy + metrics.scaled_symbol_metric(ARROW_UP_OFFSET_Y)),
             half,
-            true,
+            ChevronPointing::Up,
             color(can_up),
         );
         self.stroke_chevron(
@@ -1263,7 +1301,7 @@ impl CandidateWindow {
             brush,
             (cx, cy + metrics.scaled_symbol_metric(ARROW_DOWN_OFFSET_Y)),
             half,
-            false,
+            ChevronPointing::Down,
             color(can_down),
         );
     }
@@ -1274,6 +1312,7 @@ impl CandidateWindow {
         brush: &ID2D1SolidColorBrush,
         metrics: &CandidateMetrics,
         rect: Rect,
+        unfold: CandidateNavigation,
     ) {
         self.fill(
             target,
@@ -1283,12 +1322,19 @@ impl CandidateWindow {
         );
         let half = metrics.scaled_symbol_metric(CHEVRON_HALF_SIZE);
         let cx = Self::symbol_centre_x(metrics, rect.x, CHEVRON_SPACING);
+        // A list unfolds only across itself: down under a row, right of a
+        // column (`ExpandableAxis::unfold_direction`).
+        let pointing = if unfold == CandidateNavigation::Right {
+            ChevronPointing::Right
+        } else {
+            ChevronPointing::Down
+        };
         self.stroke_chevron(
             target,
             brush,
             (cx, rect.y + rect.height / 2.0),
             half,
-            false,
+            pointing,
             self.theme.tertiary_text,
         );
     }
@@ -1332,7 +1378,7 @@ impl CandidateWindow {
             y: point.1,
         };
         let before = self.size;
-        let metrics = self.metrics.clone()?;
+        self.metrics.as_ref()?;
         let mut change = None;
         match self.layout.as_mut()? {
             LayoutModel::Horizontal(model) => {
@@ -1357,12 +1403,12 @@ impl CandidateWindow {
                 }
             }
             LayoutModel::Expandable(model) => {
-                if model.mode() == ExpandableDisplayMode::Collapsed && model.has_overflow() {
-                    let chevron = model.unfold_plan().chevron_collapsed;
-                    if p.x >= chevron.x && p.x < chevron.right() && p.y < metrics.item_height() {
-                        change = model.expand();
-                        return self.after_change(before, change);
-                    }
+                if model.mode() == ExpandableDisplayMode::Collapsed
+                    && model.has_overflow()
+                    && model.chevron_rect().contains(p)
+                {
+                    change = model.expand();
+                    return self.after_change(before, change);
                 }
                 if let Some(index) = model.hit_test(p) {
                     change = model.select(index);
