@@ -60,7 +60,7 @@ internal object CustomLayoutSelection {
         name: String,
     ): Map<Preferences.Key<*>, Any>? {
         val saved = CustomLayout.upserted(layouts, layout.duplicated(name), anchorId = layout.id) ?: return null
-        return mapOf(PreferenceKeys.USER_LAYOUTS to CustomLayout.encodeList(saved))
+        return buildMap { put(PreferenceKeys.USER_LAYOUTS, CustomLayout.encodeList(saved)) }
     }
 
     /** Deletes the layout with [id]; deleting the selected one leaves its base selected as a built-in layout. */
