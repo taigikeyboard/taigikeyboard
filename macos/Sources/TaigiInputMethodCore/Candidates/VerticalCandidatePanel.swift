@@ -304,14 +304,11 @@ final class VerticalCandidatePanel: CandidateBasePanel {
     /// 舅仔 / kǔ-á had widened the column.
     private func resolveWidth() -> (windowWidth: CGFloat, itemWidth: CGFloat, itemTrailing: CGFloat, primaryColumnWidth: CGFloat) {
         let widestPrimary = primaryWidths.prefix(revealedRows).max() ?? 0
-        let widest = metrics.inlineRowWidth(
-            primaryColumnWidth: widestPrimary,
-            annotationWidth: annotationWidths.prefix(revealedRows).max() ?? 0,
-        )
         let scroller = scrollerLayout(hasOverflow: cells.count > Self.visibleRows)
-        let contentWidth = min(
-            max(widest, metrics.baseWidth),
-            max(metrics.baseWidth, maximumWindowWidth - scroller.allowance),
+        let contentWidth = metrics.inlineColumnWidth(
+            widestPrimary: widestPrimary,
+            widestAnnotation: annotationWidths.prefix(revealedRows).max() ?? 0,
+            budget: maximumWindowWidth - scroller.allowance,
         )
         let geometry = scroller.geometry(contentWidth: contentWidth, naturalPadding: metrics.horizontalPadding)
 

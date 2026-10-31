@@ -23,9 +23,7 @@ pub trait SettingChoice: Copy + PartialEq + std::fmt::Debug + 'static {
 /// The candidate window's layout. Order = the Appearance pane's pop-up:
 /// expandable, vertical expandable, horizontal, vertical. macOS keeps a Swift twin:
 /// `SettingsStore.swift` `Keys.candidateLayout` and the layout picker in
-/// `AppearanceSettingsView.swift` (vertical expandable reaches it in the
-/// macOS follow-up PR; until then a stored `verticalExpandable` reads as the
-/// default there). Linux draws both expandables vertical.
+/// `AppearanceSettingsView.swift`. Linux draws both expandables vertical.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum CandidateLayout {
     Expandable,

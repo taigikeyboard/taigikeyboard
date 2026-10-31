@@ -1,4 +1,4 @@
-// The expandable layout: one row that unfolds into a column-aligned grid.
+// The expandable layouts: a row or a column that unfolds into a column-aligned grid.
 
 import AppKit
 
@@ -6,15 +6,18 @@ import AppKit
 /// (`references/MacishType/macos/MacishType/MacishCandidateWindow/
 /// MacishHorizontalExpandablePanel.swift`; MIT, © 2026 Luke Chang): a single
 /// packed row with a chevron, which unfolds in place into a column-quantized
-/// grid when the user asks for more.
+/// grid when the user asks for more. The vertical expandable layout
+/// (USER 2026-10-31) is the same window collapsed into the vertical list's
+/// first page instead (`Axis.column`).
 ///
 /// Ported with upstream's defaults baked in — wider expanded columns
 /// (`pageSize - pageSize/3` = six), five visible grid rows, no move-on-expand
 /// — and with the suspended-selection paths dropped like the other layouts.
 /// The grid geometry lives in `ExpandedGridLayout`; the collapsed row is the
-/// first page of the same packing the horizontal layout uses. The animated
-/// unfold is kept: it is what tells the user the grid IS the row they were
-/// looking at, grown — not a different window.
+/// first page of the same packing the horizontal layout uses. The row's
+/// animated unfold is kept: it is what tells the user the grid IS the row
+/// they were looking at, grown — not a different window. The column snaps
+/// (USER 2026-10-31: an animation slows typing down).
 final class ExpandableCandidatePanel: CandidateBasePanel {
     /// How many grid rows show before the expanded window scrolls.
     private static let maxVisibleRows = 5
@@ -27,14 +30,58 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
         case expanded
     }
 
+    /// Which way the collapsed list runs — twin of `taigi-desktop-core`
+    /// `ExpandableAxis`. Both unfold into the same grid; the axis decides the
+    /// collapsed shape and which arrow unfolds it.
+    enum Axis {
+        /// One packed row, the chevron at its right (Expandable).
+        case row
+        /// The first page stacked as a column, the chevron column at its right
+        /// (Vertical Expandable).
+        case column
+
+        /// The arrows along the collapsed list, which walk it, and the one
+        /// across it — `↓` under a row, `→` beside a column — which unfolds it.
+        var arrows: (forward: CandidateNavigation, backward: CandidateNavigation, unfold: CandidateNavigation) {
+            switch self {
+            case .row: (.right, .left, .down)
+            case .column: (.down, .up, .right)
+            }
+        }
+
+        /// Points the chevron the way the list unfolds.
+        var chevronSymbolName: String {
+            switch self {
+            case .row: "chevron.down"
+            case .column: "chevron.right"
+            }
+        }
+
+        /// Whether the grid's first row reuses the collapsed cells. A row's
+        /// cells glide into it; a column's are aligned to its own candidate
+        /// column, which the grid does not share, so the grid builds every row.
+        var reusesCollapsedCellsInGrid: Bool {
+            self == .row
+        }
+
+        /// Only the row plays the unfold; the column snaps to its new frame
+        /// (USER 2026-10-31: an animation slows typing down).
+        var animatesModeChange: Bool {
+            self == .row
+        }
+    }
+
+    let axis: Axis
+
     private var cells: [CandidateCellContent] = []
     private var measuredWidths: [CGFloat] = []
     /// Readable from outside because it is the observable half of what a
     /// navigation key did: one keystroke can both move the selection and open
     /// the grid.
     private(set) var displayMode: DisplayMode = .collapsed
-    /// The collapsed row: first page of the horizontal packing.
-    private var collapsedRow: [HorizontalPageLayout.Slot] = []
+    /// The collapsed cells: the row's first page of the horizontal packing,
+    /// or the column's first page, every slot the column's one width.
+    private var collapsedSlots: [HorizontalPageLayout.Slot] = []
     private var grid = ExpandedGridLayout(rows: [], columnCount: 1)
     private var isGridBuilt = false
     private var expandedColumnWidth: CGFloat = 0
@@ -44,12 +91,13 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
 
     private let scrollView = NSScrollView()
     private let rowsContainer = FlippedContainerView()
-    /// Cells of the collapsed row. In the expanded mode the ones that also
-    /// live on the grid's first row stay (animated into their column frames);
-    /// the rest — the "overflow" — fade out, and duplicates of them exist in
-    /// `expandedItemViews` on later rows.
+    /// Cells of the collapsed list. Under a row, in the expanded mode the ones
+    /// that also live on the grid's first row stay (animated into their
+    /// column frames); the rest — the "overflow" — fade out, and duplicates of
+    /// them exist in `expandedItemViews` on later rows. A column's all hide.
     private var row0ItemViews: [CandidateItemView] = []
-    /// Cells of the grid's rows 1+, built on the first expand of each list.
+    /// Cells of the grid's rows from `gridRowsBuiltFrom` on, built on the
+    /// first expand of each list.
     private var expandedItemViews: [CandidateItemView] = []
 
     /// Both lists: expanded, the grid's later rows are numbered too.
@@ -70,7 +118,8 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
         cells.isEmpty
     }
 
-    override init(style: CandidateWindowStyle, metrics: CandidateMetrics) {
+    init(style: CandidateWindowStyle, metrics: CandidateMetrics, axis: Axis = .row) {
+        self.axis = axis
         super.init(style: style, metrics: metrics)
 
         scrollView.translatesAutoresizingMaskIntoConstraints = false
@@ -94,7 +143,11 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
             rowHighlightView = highlight
         }
 
-        chevronView = CandidateChevronView(style: style, metrics: metrics)
+        chevronView = CandidateChevronView(
+            style: style,
+            metrics: metrics,
+            symbolName: axis.chevronSymbolName,
+        )
         chevronView.onClick = { [weak self] in
             guard let self, !isAnimating, displayMode == .collapsed, hasOverflow else { return }
             expand(animated: true)
@@ -143,10 +196,10 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
         itemHeight + Self.separatorHeight
     }
 
-    /// Whether the list holds more than the collapsed row shows — what the
+    /// Whether the list holds more than the collapsed list shows — what the
     /// chevron, the paging-edge corner and the expand paths all key on.
     private var hasOverflow: Bool {
-        cells.count > collapsedRow.count
+        cells.count > collapsedSlots.count
     }
 
     private var gridWidth: CGFloat {
@@ -159,8 +212,8 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
         gridWidth
     }
 
-    /// The chevron's reserved width — what the collapsed row packs around and
-    /// lays the chevron out at.
+    /// The chevron's reserved width — what the collapsed list is sized around
+    /// and lays the chevron out at.
     private var chevronWidth: CGFloat {
         chevronView.intrinsicContentSize.width
     }
@@ -201,7 +254,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
     /// relayout runs through `rebuildCollapsed`, which resets the mode as a
     /// side effect of tearing the cells down, so the answer is taken before it
     /// and restored after — with `animated: false`, so the swap commits
-    /// exactly one frame. A selection the re-packed row can no longer show
+    /// exactly one frame. A selection the rebuilt collapsed list cannot show
     /// opens the grid the same way, and the genuine `↓` / chevron expansion
     /// keeps its animation.
     override func rerenderCandidates(_ newCells: [CandidateCellContent]) {
@@ -213,7 +266,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
         let collapsedSize = rebuildCollapsed()
         selectedIndex = min(kept, cells.count - 1)
 
-        guard wasExpanded || selectedIndex >= collapsedRow.count else {
+        guard wasExpanded || selectedIndex >= collapsedSlots.count else {
             replace(panelSize: collapsedSize)
             updateHighlights()
             return
@@ -229,13 +282,13 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
         measuredWidths = []
         selectedIndex = 0
         displayMode = .collapsed
-        collapsedRow = []
+        collapsedSlots = []
         isGridBuilt = false
         removeAllItemViews()
         hide()
     }
 
-    /// Tears everything down and lays the collapsed row out fresh — the shape
+    /// Tears everything down and lays the collapsed list out fresh — the shape
     /// every new list starts in, whatever mode the previous list ended in.
     private func rebuildCollapsed() -> CGSize {
         stopFrameAnimation()
@@ -249,38 +302,67 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
         rowHighlightView?.alphaValue = 0
         guard !cells.isEmpty else { return .zero }
 
-        // The chevron only shows when the row cannot hold the whole list, so
-        // the packing reserves its width only when it will really be there.
-        collapsedRow = HorizontalPageLayout.pack(
+        // The column's rows share one candidate column, which every
+        // annotation starts after — the vertical list's alignment.
+        let primaryColumnWidth: CGFloat?
+        switch axis {
+        case .row:
+            collapsedSlots = packedCollapsedRow()
+            primaryColumnWidth = nil
+        case .column:
+            (collapsedSlots, primaryColumnWidth) = stackedCollapsedColumn()
+        }
+        for slot in collapsedSlots {
+            let item = makeItem(candidateIndex: slot.candidateIndex)
+            if let primaryColumnWidth {
+                item.setPrimaryColumnWidth(primaryColumnWidth)
+            }
+            row0ItemViews.append(item)
+        }
+        chevronView.setContentAlpha(1)
+        chevronView.alphaValue = 1
+        let windowSize = rebuildCollapsedFrames()
+        updateHighlights()
+
+        scrollView.hasVerticalScroller = false
+        scrollView.contentView.scroll(to: .zero)
+        scrollView.reflectScrolledClipView(scrollView.contentView)
+        return windowSize
+    }
+
+    /// The collapsed row: the first page of the horizontal packing. The
+    /// chevron only shows when the row cannot hold the whole list, so the
+    /// packing reserves its width only when it will really be there.
+    private func packedCollapsedRow() -> [HorizontalPageLayout.Slot] {
+        HorizontalPageLayout.pack(
             widths: measuredWidths,
             slotWidth: metrics.baseWidth,
             windowBudget: maximumWindowWidth,
             chromeWidth: chevronWidth,
         ).pages.first ?? []
+    }
 
-        var x: CGFloat = 0
-        for slot in collapsedRow {
-            let item = makeItem(candidateIndex: slot.candidateIndex)
-            item.frame = NSRect(x: x, y: 0, width: slot.width, height: itemHeight)
-            row0ItemViews.append(item)
-            x += slot.width
-        }
-        updateHighlights()
-
-        chevronView.isHidden = !hasOverflow
-        var windowWidth = x
-        if hasOverflow {
-            chevronView.setContentAlpha(1)
-            chevronView.alphaValue = 1
-            chevronView.frame = NSRect(x: x, y: 0, width: chevronWidth, height: itemHeight)
-            windowWidth += chevronWidth
-        }
-
-        scrollView.hasVerticalScroller = false
-        scrollView.contentView.scroll(to: .zero)
-        scrollView.reflectScrolledClipView(scrollView.contentView)
-        rowsContainer.frame.size = NSSize(width: windowWidth, height: itemHeight)
-        return CGSize(width: windowWidth, height: itemHeight)
+    /// The collapsed column: the first page stacked, sized as the vertical
+    /// list sizes itself (`CandidateMetrics.inlineColumnWidth`), its budget
+    /// less the chevron column when there is one, with the candidate column
+    /// its rows align on. Twin of `ExpandableListModel::collapsed_column`.
+    private func stackedCollapsedColumn() -> (slots: [HorizontalPageLayout.Slot], primaryColumnWidth: CGFloat) {
+        let page = cells.prefix(HorizontalPageLayout.pageSize)
+        let widestPrimary = page.map { metrics.measurePrimaryWidth($0.text) }.max() ?? 0
+        let chrome = cells.count > page.count ? chevronWidth : 0
+        let width = metrics.inlineColumnWidth(
+            widestPrimary: widestPrimary,
+            widestAnnotation: page.map { metrics.annotationWidth($0.annotation) }.max() ?? 0,
+            budget: maximumWindowWidth - chrome,
+        )
+        // Clamped to what the capped cell can hold, as the vertical list
+        // clamps it: a column wider than the cell pushes text past its edge.
+        let primaryColumnWidth = min(
+            widestPrimary,
+            metrics.maximumPrimaryColumnWidth(inCellWidth: width, trailingInset: metrics.horizontalPadding),
+        )
+        let slots = page.indices.map { HorizontalPageLayout.Slot(candidateIndex: $0, width: width) }
+        return (slots, primaryColumnWidth)
     }
 
     private func makeItem(candidateIndex: Int) -> CandidateItemView {
@@ -304,8 +386,8 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
     override func candidateIndex(forSlot slot: Int) -> Int? {
         switch displayMode {
         case .collapsed:
-            guard collapsedRow.indices.contains(slot) else { return nil }
-            return collapsedRow[slot].candidateIndex
+            guard collapsedSlots.indices.contains(slot) else { return nil }
+            return collapsedSlots[slot].candidateIndex
         case .expanded:
             guard let (rowIndex, _) = grid.position(of: selectedIndex),
                   grid.rows[rowIndex].indices.contains(slot) else { return nil }
@@ -324,22 +406,23 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
     }
 
     private func navigateCollapsed(_ direction: CandidateNavigation) {
+        let arrows = axis.arrows
         switch direction {
-        case .right, .nextCandidate:
+        case .nextCandidate, arrows.forward:
             let target = selectedIndex + 1
             guard target < cells.count else { return }
-            // Walking off the row's end both expands AND lands on the next
+            // Walking off the list's end both expands AND lands on the next
             // candidate — upstream's `shouldMoveOnExpand` is always true for
             // `→` (`MacishHorizontalExpandablePanel.swift:627-692`); an expand
             // that kept the old selection would eat one keypress.
             select(target)
-        case .left, .previousCandidate:
+        case .previousCandidate, arrows.backward:
             select(max(selectedIndex - 1, 0))
-        case .down, .pageDown:
+        case .pageDown, arrows.unfold:
             if hasOverflow {
                 expand(animated: true)
             }
-        case .up, .pageUp:
+        default:
             break
         }
     }
@@ -408,8 +491,8 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
     private func select(_ index: Int) {
         guard cells.indices.contains(index) else { return }
         selectedIndex = index
-        if displayMode == .collapsed, index >= collapsedRow.count {
-            // A click or walk reached a candidate the row does not show.
+        if displayMode == .collapsed, index >= collapsedSlots.count {
+            // A click or walk reached a candidate the collapsed list does not show.
             expand(animated: true)
             return
         }
@@ -422,13 +505,18 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
     // MARK: - Expand / collapse
 
     /// Throws the grid's cells away and computes it again — for a column width
-    /// that changed under a grid already on screen. Row 0's views are the
-    /// collapsed row's and are laid out from the grid rather than built by it,
-    /// so they stay.
+    /// that changed under a grid already on screen. A row's grid row 0 views
+    /// are the collapsed row's and are laid out from the grid rather than
+    /// built by it, so they stay.
     private func rebuildGrid() {
         removeExpandedItemViews()
         isGridBuilt = false
         buildGridIfNeeded()
+    }
+
+    /// The first grid row `buildGridIfNeeded` builds views for.
+    private var gridRowsBuiltFrom: Int {
+        axis.reusesCollapsedCellsInGrid ? 1 : 0
     }
 
     private func buildGridIfNeeded() {
@@ -441,10 +529,11 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
             columnWidth: expandedColumnWidth,
             columnCount: expandedColumnCount,
         )
-        // Rows 1+ get their own cells (that includes duplicates of collapsed
-        // cells that do not fit the grid's first row: the original slides out
-        // right while its duplicate slides in from the left).
-        for row in grid.rows.dropFirst() {
+        // Rows past the reused one get their own cells (under a row that
+        // includes duplicates of collapsed cells that do not fit the grid's
+        // first row: the original slides out right while its duplicate
+        // slides in from the left).
+        for row in grid.rows.dropFirst(gridRowsBuiltFrom) {
             for cell in row {
                 let item = makeItem(candidateIndex: cell.candidateIndex)
                 item.isHidden = true
@@ -469,27 +558,39 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
     }
 
     private func rebuildCollapsedFrames() -> CGSize {
-        var x: CGFloat = 0
-        for (position, slot) in collapsedRow.enumerated() {
+        // A row runs its cells end to end; a column stacks them at the grid's
+        // row pitch, with the vertical list's hairlines between them.
+        var rowX: CGFloat = 0
+        for (position, slot) in collapsedSlots.enumerated() {
             let item = row0ItemViews[position]
             item.isHidden = false
             item.alphaValue = 1
-            item.frame = NSRect(x: x, y: 0, width: slot.width, height: itemHeight)
-            x += slot.width
+            item.frame = switch axis {
+            case .row: NSRect(x: rowX, y: 0, width: slot.width, height: itemHeight)
+            case .column: NSRect(x: 0, y: yForRow(position), width: slot.width, height: itemHeight)
+            }
+            rowX += slot.width
         }
         for item in expandedItemViews {
             item.isHidden = true
         }
-        for separator in separatorViews {
-            separator.isHidden = true
-        }
+        let rowCount = axis == .row ? 1 : collapsedSlots.count
+        // Every column slot is the column's one width.
+        let contentWidth = axis == .row ? rowX : collapsedSlots.first?.width ?? 0
+        let height = rowsHeight(rowCount)
+        layoutSeparators(count: rowCount - 1, width: contentWidth)
         chevronView.isHidden = !hasOverflow
         if hasOverflow {
-            chevronView.frame = NSRect(x: x, y: 0, width: chevronWidth, height: itemHeight)
+            chevronView.frame = NSRect(x: contentWidth, y: 0, width: chevronWidth, height: height)
         }
-        let windowWidth = x + (hasOverflow ? chevronWidth : 0)
-        rowsContainer.frame.size = NSSize(width: windowWidth, height: itemHeight)
-        return CGSize(width: windowWidth, height: itemHeight)
+        let windowWidth = contentWidth + (hasOverflow ? chevronWidth : 0)
+        rowsContainer.frame.size = NSSize(width: windowWidth, height: height)
+        return CGSize(width: windowWidth, height: height)
+    }
+
+    /// `count` items with a separator between each two.
+    private func rowsHeight(_ count: Int) -> CGFloat {
+        CGFloat(count) * itemHeight + CGFloat(max(count - 1, 0)) * Self.separatorHeight
     }
 
     private func layoutExpanded() -> CGSize {
@@ -501,9 +602,10 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
 
         // Row 0: collapsed cells that survive take their column frames; the
         // overflow beyond the grid's first row hides (its duplicates on later
-        // rows stand in for it).
+        // rows stand in for it). A column's collapsed cells all hide — the
+        // grid built its own for every row.
         for item in row0ItemViews {
-            guard gridRow0Indices.contains(item.absoluteIndex),
+            guard axis.reusesCollapsedCellsInGrid, gridRow0Indices.contains(item.absoluteIndex),
                   let cell = gridRow0Cells.first(where: { $0.candidateIndex == item.absoluteIndex })
             else {
                 item.isHidden = true
@@ -518,7 +620,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
                 height: itemHeight,
             )
         }
-        for (rowIndex, row) in grid.rows.enumerated().dropFirst() {
+        for (rowIndex, row) in grid.rows.enumerated().dropFirst(gridRowsBuiltFrom) {
             for cell in row {
                 guard let item = viewByIndex[cell.candidateIndex] else { continue }
                 item.isHidden = false
@@ -532,10 +634,9 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
             }
         }
         chevronView.isHidden = true
-        layoutSeparators(width: gridWidth)
+        layoutSeparators(count: grid.rows.count - 1, width: gridWidth)
 
-        let rowCount = grid.rows.count
-        let contentHeight = CGFloat(rowCount) * itemHeight + CGFloat(max(rowCount - 1, 0)) * Self.separatorHeight
+        let contentHeight = rowsHeight(grid.rows.count)
         let maxVisibleHeight = (CGFloat(Self.maxVisibleRows) + 0.5) * itemHeight
             + CGFloat(Self.maxVisibleRows - 1) * Self.separatorHeight
         let needsScrolling = contentHeight > maxVisibleHeight
@@ -553,11 +654,12 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
         return CGSize(width: windowWidth, height: windowHeight)
     }
 
-    /// `width` is passed in rather than read off `rowsContainer`, whose frame
-    /// is only widened to the grid AFTER layout — reading it here would size
-    /// the first expand's hairlines to the collapsed row.
-    private func layoutSeparators(width: CGFloat) {
-        let needed = max(grid.rows.count - 1, 0)
+    /// Shows `count` hairlines, one under each row from the top, and hides the
+    /// rest. `width` is passed in rather than read off `rowsContainer`, whose
+    /// frame is only widened to the grid AFTER layout — reading it here would
+    /// size the first expand's hairlines to the collapsed row.
+    private func layoutSeparators(count: Int, width: CGFloat) {
+        let needed = max(count, 0)
         while separatorViews.count < needed {
             let separator = CandidateSeparatorView()
             separator.horizontalInset = style == .tahoe ? metrics.tahoeSeparatorInset : 0
@@ -596,7 +698,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
             return
         }
 
-        guard animated, isVisible else {
+        guard animated, axis.animatesModeChange, isVisible else {
             rowHighlightView?.alphaValue = 1
             setFrame(targetFrame, display: true)
             finishModeChange()
@@ -607,7 +709,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
         // slides out right, its duplicates slide in from the left, and the
         // chevron fades as it is pushed to the grid's edge. ---
         let gridRow0Indices = Set(grid.rows.first?.map(\.candidateIndex) ?? [])
-        let overflow = Set(collapsedRow.map(\.candidateIndex)).subtracting(gridRow0Indices)
+        let overflow = Set(collapsedSlots.map(\.candidateIndex)).subtracting(gridRow0Indices)
 
         var animations: [ItemAnimation] = []
         for (item, oldFrame) in collapsedFrames {
@@ -671,11 +773,11 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
             .filter { !$0.isHidden }
             .map { ($0, $0.frame) }
         let gridRow0Indices = Set(grid.rows.first?.map(\.candidateIndex) ?? [])
-        let overflow = Set(collapsedRow.map(\.candidateIndex)).subtracting(gridRow0Indices)
+        let overflow = Set(collapsedSlots.map(\.candidateIndex)).subtracting(gridRow0Indices)
 
         displayMode = .collapsed
-        if selectedIndex >= collapsedRow.count {
-            selectedIndex = max(collapsedRow.count - 1, 0)
+        if selectedIndex >= collapsedSlots.count {
+            selectedIndex = max(collapsedSlots.count - 1, 0)
         }
 
         scrollView.hasVerticalScroller = false
@@ -690,7 +792,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
             return
         }
 
-        guard animated, isVisible else {
+        guard animated, axis.animatesModeChange, isVisible else {
             rowHighlightView?.alphaValue = 0
             setFrame(targetFrame, display: true)
             finishModeChange()
@@ -731,7 +833,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
         }
 
         let chevronWidth = chevronView.intrinsicContentSize.width
-        let rowEnd = collapsedRow.reduce(CGFloat(0)) { $0 + $1.width }
+        let rowEnd = collapsedSlots.reduce(CGFloat(0)) { $0 + $1.width }
         let chevronSize = NSSize(width: chevronWidth, height: itemHeight)
         let chevronFrom = NSRect(
             origin: NSPoint(x: max(rowEnd, gridWidth - chevronWidth), y: 0), size: chevronSize,
@@ -824,8 +926,10 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
 
     // MARK: - Chrome
 
+    /// A collapsed row with more to show ends in a pill; a column is far too
+    /// tall for one and keeps the plain corners.
     override var wantsPillCorners: Bool {
-        displayMode == .collapsed && hasOverflow
+        axis == .row && displayMode == .collapsed && hasOverflow
     }
 
     private func removeExpandedItemViews() {
