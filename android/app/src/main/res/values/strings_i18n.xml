@@ -286,6 +286,7 @@
     <string name="i18n_theme_namePlaceholder">輸入主題名稱</string>
     <string name="i18n_theme_editorResetAll">恢復預設設定</string>
     <string name="i18n_theme_cardMenuApply">套用</string>
+    <string name="i18n_theme_cardMenuCustomize">自訂</string>
     <string name="i18n_theme_capReachedTitle">已達主題數量上限</string>
     <string name="i18n_theme_capReachedMessage">自訂主題上限是 5 个，請先刪除一个才會使閣新增。</string>
     <string name="i18n_theme_cardMenu">主題選項</string>

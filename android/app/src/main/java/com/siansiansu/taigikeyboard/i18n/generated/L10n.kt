@@ -572,6 +572,8 @@ object L10n {
         @Composable get() = stringRes(StringKey.THEME_EDITOR_RESET_ALL)
     val themeCardMenuApply: String
         @Composable get() = stringRes(StringKey.THEME_CARD_MENU_APPLY)
+    val themeCardMenuCustomize: String
+        @Composable get() = stringRes(StringKey.THEME_CARD_MENU_CUSTOMIZE)
     val themeCapReachedTitle: String
         @Composable get() = stringRes(StringKey.THEME_CAP_REACHED_TITLE)
     val themeCapReachedMessage: String

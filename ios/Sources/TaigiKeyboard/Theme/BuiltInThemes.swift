@@ -34,6 +34,24 @@ enum BuiltInThemes {
         all.first { $0.id == id }
     }
 
+    /// What the editor resets a user theme to: its built-in base when it was customized from one
+    /// (`UserTheme.baseThemeId`), else the plain seed. An id no longer in the catalog reads as no base.
+    // CROSS-PLATFORM INVARIANT — mirrors android BuiltInThemes.userThemeBaseline.
+    static func userThemeBaseline(baseThemeId: String?) -> ThemeAppearance {
+        baseThemeId.flatMap { theme(id: $0)?.userThemeBase } ?? .userThemeSeed
+    }
+
+    /// `userThemeBaseline` with Filled keys: the editor's key-color reset target and its first
+    /// Filled draft. An Outlined / Borderless base takes its Filled twin's keys
+    /// (`BuiltInTheme.filledThemeId`), so Catppuccin keeps its dark keys under its light text.
+    // CROSS-PLATFORM INVARIANT — mirrors android BuiltInThemes.userThemeFilledBaseline.
+    static func userThemeFilledBaseline(baseThemeId: String?) -> ThemeAppearance {
+        let baseline = userThemeBaseline(baseThemeId: baseThemeId)
+        guard baseline.keyStyle != .classic else { return baseline }
+        let filledKeys = baseThemeId.flatMap { theme(id: $0)?.filledThemeId }.flatMap { theme(id: $0)?.userThemeBase }
+        return baseline.withKeyStyle(.classic, filledKeys: filledKeys ?? .userThemeSeed)
+    }
+
     // MARK: - Shared colors
 
     /// One of the 7 shared color identities. `gradient == nil` is the adaptive
@@ -82,9 +100,7 @@ enum BuiltInThemes {
         baseColors.map { base in
             let isDefault = base.gradient == nil
             let suffix = base.key.prefix(1).uppercased() + base.key.dropFirst()
-            let id = isDefault
-                ? (style == .classic ? ThemeId.default : "\(style.idPrefix)Default")
-                : "\(style.idPrefix)\(suffix)"
+            let id = themeId(isDefault: isDefault, suffix: suffix, style: style)
             let previewName = isDefault
                 ? "theme_\(style.idPrefix)_preview"
                 : "theme_\(style.idPrefix)\(suffix)_preview"
@@ -96,8 +112,17 @@ enum BuiltInThemes {
                 dark: base.isDarkPalette ? scheme : nil,
                 previewImageName: previewName,
                 keyBorderWidth: style.isBordered ? ThemeKeyStyle.outlinedBorderWidth : nil,
+                filledThemeId: themeId(isDefault: isDefault, suffix: suffix, style: .classic),
             )
         }
+    }
+
+    /// One theme's id: the Filled Default keeps the `ThemeId.default` sentinel; every other theme is
+    /// the family prefix + the color suffix (`Default` for framed / clean Default).
+    private static func themeId(isDefault: Bool, suffix: String, style: ThemeKeyStyle) -> String {
+        isDefault
+            ? (style == .classic ? ThemeId.default : "\(style.idPrefix)Default")
+            : "\(style.idPrefix)\(suffix)"
     }
 
     /// Resolves the color palette for one (color, key-style) pair. Filled Default stays

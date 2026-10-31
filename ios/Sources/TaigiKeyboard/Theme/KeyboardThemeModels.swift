@@ -50,6 +50,10 @@ struct BuiltInTheme: Equatable {
     /// the factory `keyBorderWidth` (0 = no border).
     var keyBorderWidth: Double?
 
+    /// The Filled-family theme of the same color (itself for a Filled theme): where an Outlined /
+    /// Borderless theme's Filled keys come from. `nil` only for a hand-built test entry.
+    var filledThemeId: String?
+
     /// Picks the variant for `scheme`, falling back to the other variant when
     /// one is absent. `.default` (all-nil → KeyboardKit adaptive) is the final
     /// fallback only for a malformed entry with neither variant.
@@ -59,6 +63,25 @@ struct BuiltInTheme: Equatable {
         case .light: light ?? dark ?? .default
         @unknown default: light ?? dark ?? .default
         }
+    }
+
+    /// Whether this theme can seed a user theme: every theme but the adaptive Default heads — they
+    /// own no background, so a light copy of them is the plain seed (USER 2026-10-31: Default is
+    /// not a customize base).
+    var isCustomizeBase: Bool {
+        (light ?? dark)?.background != nil
+    }
+
+    /// The draft a user theme customized from this built-in starts from and resets to: its one
+    /// concrete variant (light, or dark for Catppuccin) seeded for a user theme, plus its outline.
+    /// `nil` for the adaptive Default heads (`isCustomizeBase`).
+    // CROSS-PLATFORM INVARIANT — mirrors android BuiltInTheme.userThemeBase.
+    var userThemeBase: ThemeAppearance? {
+        guard isCustomizeBase, let colors = light ?? dark else { return nil }
+        var appearance = ThemeAppearance.default
+        appearance.colors = colors.seededForUserTheme()
+        appearance.keyBorderWidth = keyBorderWidth ?? ThemeAppearance.default.keyBorderWidth
+        return appearance
     }
 }
 
@@ -199,4 +222,7 @@ struct UserTheme: Codable, Equatable, Identifiable {
     var appearance: ThemeAppearance
     var createdAt: Date
     var updatedAt: Date
+    /// The built-in theme this one was customized from (its reset target), or `nil` for a theme
+    /// started blank. Optional, so themes saved before this field decode with `nil`.
+    var baseThemeId: String? = nil
 }

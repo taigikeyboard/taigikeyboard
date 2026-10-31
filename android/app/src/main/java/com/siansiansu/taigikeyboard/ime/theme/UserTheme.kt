@@ -24,6 +24,9 @@ data class UserTheme(
     val appearance: ThemeAppearance,
     val createdAt: Long,
     val updatedAt: Long,
+    // The built-in theme this one was customized from (its reset target), or null for a theme
+    // started blank. Absent in themes saved before the field existed -> null.
+    val baseThemeId: String? = null,
 ) {
     fun toJson(): JSONObject =
         JSONObject().apply {
@@ -32,6 +35,7 @@ data class UserTheme(
             put("appearance", appearance.toJson())
             put("createdAt", createdAt)
             put("updatedAt", updatedAt)
+            baseThemeId?.let { put("baseThemeId", it) }
         }
 
     companion object {
@@ -52,6 +56,8 @@ data class UserTheme(
                 appearance = appearance.copy(colors = appearance.colors.seededForUserTheme()),
                 createdAt = obj.optLong("createdAt"),
                 updatedAt = obj.optLong("updatedAt"),
+                // isNull first: optString turns a JSON null into the string "null".
+                baseThemeId = if (obj.isNull("baseThemeId")) null else obj.optString("baseThemeId").takeIf { it.isNotBlank() },
             )
         }
 

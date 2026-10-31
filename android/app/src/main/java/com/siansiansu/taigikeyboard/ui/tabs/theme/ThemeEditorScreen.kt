@@ -68,6 +68,8 @@ import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.i18n.stringRes
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
+import com.siansiansu.taigikeyboard.ime.theme.BuiltInTheme
+import com.siansiansu.taigikeyboard.ime.theme.BuiltInThemes
 import com.siansiansu.taigikeyboard.ime.theme.KeyboardColorSettings
 import com.siansiansu.taigikeyboard.ime.theme.ThemeAppearance
 import com.siansiansu.taigikeyboard.ime.theme.ThemeBackground
@@ -92,9 +94,10 @@ import org.json.JSONObject
 
 // User-theme editor: edits a single draft ThemeAppearance with a live keyboard
 // preview pinned at the bottom — three sections, one per visual surface (USER
-// 2026-09-19). The draft always carries concrete colors (a new theme starts from
-// USER_THEME_SEED, an edited one was seeded at decode), so a user theme never follows
-// light / dark and every color row has a value to reset to. The draft is local —
+// 2026-09-19). The draft always carries concrete colors (a new theme starts from its
+// baseline — a built-in's userThemeBase when customized from one, else USER_THEME_SEED — and
+// an edited one was seeded at decode), so a user theme never follows light / dark and every
+// color row has a value to reset to (the baseline's). The draft is local —
 // nothing persists until Save, and Back discards. The name is entered in a Save-time
 // dialog (no inline field), so the soft keyboard never squeezes the preview. A gradient's
 // direction and a photo's position are set by dragging on the preview
@@ -130,16 +133,29 @@ private val appearanceSaver: Saver<ThemeAppearance, String> =
 fun ThemeEditorScreen(
     prefs: PrefHelper,
     editing: UserTheme?,
+    // Create only: the built-in a new theme is customized from (null = blank).
+    base: BuiltInTheme?,
     canSaveNew: () -> Boolean,
     // Persists + auto-applies; returns false only when adding a NEW theme loses a
     // cap race (caller then surfaces the cap dialog). Editing always returns true.
-    onSave: (name: String, appearance: ThemeAppearance) -> Boolean,
+    onSave: (name: String, appearance: ThemeAppearance, baseThemeId: String?) -> Boolean,
     onNavigateBack: () -> Unit,
 ) {
+    // Persisted on the theme so later edits reset to the same base. Mirrors iOS
+    // ThemeEditorViewModel.baseline / filledBaseline.
+    val baseThemeId = editing?.baseThemeId ?: base?.id
+    // What every reset restores: the built-in base, else the user-theme seed.
+    val baseline = remember(baseThemeId) { BuiltInThemes.userThemeBaseline(baseThemeId) }
+    // baseline with Filled keys (BuiltInThemes.userThemeFilledBaseline): the role-color reset
+    // target and the first filledKeys.
+    val filledBaseline = remember(baseThemeId) { BuiltInThemes.userThemeFilledBaseline(baseThemeId) }
+    // The baseline's color as a solid background (ThemeBackground.leadColor).
+    val baselineSolidColor = baseline.colors.background?.leadColor ?: UserThemeSeed.SOLID_COLOR
     var draft by rememberSaveable(stateSaver = appearanceSaver) {
-        mutableStateOf(editing?.appearance ?: ThemeAppearance.USER_THEME_SEED)
+        mutableStateOf(editing?.appearance ?: baseline)
     }
-    var draftName by rememberSaveable { mutableStateOf(editing?.name ?: "") }
+    val baseName = base?.let { stringRes(it.displayNameKey) }.orEmpty()
+    var draftName by rememberSaveable { mutableStateOf(editing?.name ?: baseName) }
     var showNameDialog by rememberSaveable { mutableStateOf(false) }
     var showCapDialog by rememberSaveable { mutableStateOf(false) }
     var colorPickerTarget by remember { mutableStateOf<ColorPickerTarget?>(null) }
@@ -164,8 +180,8 @@ fun ThemeEditorScreen(
     var selectedKind by rememberSaveable { mutableStateOf(background.kind) }
     // The last Filled draft, so leaving Filled for Outlined / Borderless and coming back restores
     // its key fill, shadow and border. Recorded on leaving Filled; a theme opened see-through comes
-    // back to the seed's. Mirrors iOS ThemeEditorViewModel.filledKeys.
-    var filledKeys by rememberSaveable(stateSaver = appearanceSaver) { mutableStateOf(ThemeAppearance.USER_THEME_SEED) }
+    // back to filledBaseline's. Mirrors iOS ThemeEditorViewModel.filledKeys.
+    var filledKeys by rememberSaveable(stateSaver = appearanceSaver) { mutableStateOf(filledBaseline) }
     val keyStyle = draft.keyStyle
 
     val context = LocalContext.current
@@ -249,11 +265,11 @@ fun ThemeEditorScreen(
                             onKindChange = { kind ->
                                 // Switching keeps the current hue: solid -> gradient runs the solid
                                 // color into a lighter tint of it; gradient -> solid keeps the first
-                                // stop; leaving a photo lands on the seed colour. Choosing Photo
+                                // stop; leaving a photo lands on the baseline colour. Choosing Photo
                                 // changes nothing until a photo is picked.
                                 selectedKind = kind
                                 if (kind == background.kind) return@BackgroundKindRow
-                                val solidColor = (background as? ThemeBackground.Solid)?.color ?: background.asGradient?.stops?.get(0) ?: UserThemeSeed.SOLID_COLOR
+                                val solidColor = background.leadColor ?: baselineSolidColor
                                 when (kind) {
                                     ThemeBackground.Kind.SOLID -> setBackground(ThemeBackground.Solid(solidColor))
                                     ThemeBackground.Kind.GRADIENT -> setBackground(ThemeBackground.Gradient(ThemeGradient.seeded(solidColor)))
@@ -287,7 +303,8 @@ fun ThemeEditorScreen(
                                 RoleColorRow(
                                     labelKey = StringKey.THEME_COLOR_KEYBOARD_BACKGROUND,
                                     currentColor = background.color,
-                                    seedColor = UserThemeSeed.SOLID_COLOR,
+                                    // Solid reset stays Solid even when the baseline is a gradient.
+                                    seedColor = baselineSolidColor,
                                     onColorChange = { setBackground(ThemeBackground.Solid(it)) },
                                     onPickerOpen = { colorPickerTarget = it },
                                 )
@@ -335,7 +352,7 @@ fun ThemeEditorScreen(
                             RoleColorRow(
                                 labelKey = StringKey.THEME_COLOR_KEY_FILL,
                                 currentColor = draft.colors.normalKeyFillColor,
-                                seedColor = UserThemeSeed.KEY_FILL,
+                                seedColor = filledBaseline.colors.normalKeyFillColor ?: UserThemeSeed.KEY_FILL,
                                 onColorChange = { v -> updateColors { it.withKeyFill(v) } },
                                 onPickerOpen = { colorPickerTarget = it },
                             )
@@ -344,7 +361,7 @@ fun ThemeEditorScreen(
                         RoleColorRow(
                             labelKey = StringKey.THEME_COLOR_KEY_TEXT,
                             currentColor = draft.colors.keyTextColor,
-                            seedColor = UserThemeSeed.KEY_TEXT,
+                            seedColor = filledBaseline.colors.keyTextColor ?: UserThemeSeed.KEY_TEXT,
                             onColorChange = { v -> updateColors { it.copy(keyTextColor = v) } },
                             onPickerOpen = { colorPickerTarget = it },
                         )
@@ -414,7 +431,7 @@ fun ThemeEditorScreen(
                         RoleColorRow(
                             labelKey = StringKey.THEME_COLOR_CANDIDATE_TEXT,
                             currentColor = draft.colors.candidateTextColor,
-                            seedColor = UserThemeSeed.CANDIDATE_TEXT,
+                            seedColor = filledBaseline.colors.candidateTextColor ?: UserThemeSeed.CANDIDATE_TEXT,
                             onColorChange = { v -> updateColors { it.copy(candidateTextColor = v) } },
                             onPickerOpen = { colorPickerTarget = it },
                         )
@@ -449,11 +466,11 @@ fun ThemeEditorScreen(
                 SettingsCard {
                     ActionRow(
                         label = L10n.themeEditorResetAll,
-                        // Draft-only: resets the appearance to the seed, keeps the name, persists
+                        // Draft-only: resets the appearance to the baseline, keeps the name, persists
                         // nothing and never touches the applied theme until Save.
                         onClick = {
-                            draft = ThemeAppearance.USER_THEME_SEED
-                            selectedKind = UserThemeSeed.BACKGROUND.kind
+                            draft = baseline
+                            selectedKind = (baseline.colors.background ?: UserThemeSeed.BACKGROUND).kind
                         },
                         textColor = MaterialTheme.colorScheme.error,
                     )
@@ -534,7 +551,7 @@ fun ThemeEditorScreen(
                     showNameDialog = false
                     draftName = entered
                     val finalName = entered.trim().ifEmpty { stringResolver.resolve(StringKey.THEME_EDITOR_TITLE_NEW) }
-                    if (!onSave(finalName, draft)) showCapDialog = true
+                    if (!onSave(finalName, draft, baseThemeId)) showCapDialog = true
                 },
                 onDismiss = { showNameDialog = false },
             )

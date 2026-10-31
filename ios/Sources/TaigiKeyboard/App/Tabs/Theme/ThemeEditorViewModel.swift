@@ -7,10 +7,10 @@ import SwiftUI
 /// the optional identity of the theme being edited (`nil` = creating a new one).
 /// Nothing is persisted until `save()`. New themes auto-apply on save.
 ///
-/// A draft always carries concrete colors: a new theme starts from
-/// `ThemeAppearance.userThemeSeed`, an edited theme was seeded on load
-/// (`UserThemeStore.load`). So a user theme never follows light / dark mode and
-/// every color row has a concrete value to show and to reset to.
+/// A draft always carries concrete colors: a new theme starts from its `baseline` — a built-in's
+/// `userThemeBase` when customized from one, else `ThemeAppearance.userThemeSeed` — and an edited
+/// theme was seeded on load (`UserThemeStore.load`). So a user theme never follows light / dark
+/// mode and every color row has a concrete value to show and to reset to (the baseline's).
 ///
 /// Bindings into `appearance` always publish via copy-back
 /// (`var next = appearance; next.x = v; appearance = next`) so SwiftUI re-renders
@@ -28,16 +28,29 @@ final class ThemeEditorViewModel: ObservableObject {
     /// `nil` when creating a new theme; the existing id when editing.
     private let editingId: UUID?
     private let createdAt: Date
+    /// The built-in this theme was customized from; persisted so later edits reset to it too.
+    private let baseThemeId: String?
+    /// What every reset restores: the built-in base, else the user-theme seed.
+    private let baseline: ThemeAppearance
+    /// `baseline` with Filled keys (`BuiltInThemes.userThemeFilledBaseline`): the role-color
+    /// reset target and the first `filledKeys`.
+    private let filledBaseline: ThemeAppearance
     private let settings = SharedSettings.shared
 
-    /// Creates a fresh draft (new theme) or a prefilled draft (editing `existing`).
-    init(editing existing: UserTheme? = nil) {
-        let initial = existing?.appearance ?? .userThemeSeed
+    /// Creates a draft: editing `existing`, or a new theme customized from the built-in `base`
+    /// (named `name`), or a blank new theme when both are nil.
+    init(editing existing: UserTheme? = nil, base: BuiltInTheme? = nil, name baseName: String = "") {
+        baseThemeId = existing?.baseThemeId ?? base?.id
+        let baseline = BuiltInThemes.userThemeBaseline(baseThemeId: baseThemeId)
+        let initial = existing?.appearance ?? baseline
+        self.baseline = baseline
+        filledBaseline = BuiltInThemes.userThemeFilledBaseline(baseThemeId: baseThemeId)
         editingId = existing?.id
-        name = existing?.name ?? ""
+        name = existing?.name ?? baseName
         appearance = initial
         createdAt = existing?.createdAt ?? Date()
         backgroundKind = (initial.colors.background ?? UserThemeSeed.background).kind
+        filledKeys = filledBaseline
     }
 
     /// Whether the title is for an edit (vs. a new theme).
@@ -64,6 +77,7 @@ final class ThemeEditorViewModel: ObservableObject {
             appearance: appearance,
             createdAt: createdAt,
             updatedAt: now,
+            baseThemeId: baseThemeId,
         )
         if editingId == nil {
             guard settings.addUserTheme(theme) else { return false }
@@ -88,9 +102,14 @@ final class ThemeEditorViewModel: ObservableObject {
         appearance = next
     }
 
+    /// The baseline's color as a solid background (`ThemeBackground.leadColor`).
+    private var baselineSolidColor: CodableColor {
+        baseline.colors.background?.leadColor ?? UserThemeSeed.solidColor
+    }
+
     /// Segmented Solid / Gradient / Photo choice. Switching keeps the current hue: solid → gradient
     /// runs the solid color into a lighter tint of it; gradient → solid keeps the first
-    /// stop; leaving a photo lands on the seed colour. Choosing Photo changes nothing until
+    /// stop; leaving a photo lands on the baseline colour. Choosing Photo changes nothing until
     /// a photo is picked (`setPhoto`).
     var backgroundKindBinding: Binding<ThemeBackground.Kind> {
         Binding(
@@ -98,7 +117,7 @@ final class ThemeEditorViewModel: ObservableObject {
             set: { kind in
                 self.backgroundKind = kind
                 guard kind != self.background.kind else { return }
-                let solidColor = self.background.solidColor ?? self.background.gradient?.stops[0] ?? UserThemeSeed.solidColor
+                let solidColor = self.background.leadColor ?? self.baselineSolidColor
                 switch kind {
                 case .solid: self.setBackground(.solid(solidColor))
                 case .gradient: self.setBackground(.gradient(.seeded(from: solidColor)))
@@ -141,22 +160,24 @@ final class ThemeEditorViewModel: ObservableObject {
     /// The solid background color (row shown only while the kind is Solid).
     var solidBackgroundBinding: Binding<Color> {
         Binding(
-            get: { (self.background.solidColor ?? UserThemeSeed.solidColor).color },
+            get: { (self.background.solidColor ?? self.baselineSolidColor).color },
             set: { self.setBackground(.solid(CodableColor($0))) },
         )
     }
 
+    /// Compared as a solid color: the row only shows while the kind is Solid, so its reset stays
+    /// Solid even when the baseline is a gradient.
     var isSolidBackgroundCustomized: Bool {
-        background != UserThemeSeed.background
+        background != .solid(baselineSolidColor)
     }
 
     func resetSolidBackground() {
-        setBackground(UserThemeSeed.background)
+        setBackground(.solid(baselineSolidColor))
     }
 
     /// The current gradient (rows shown only while the kind is Gradient).
     private var gradient: ThemeGradient {
-        background.gradient ?? .seeded(from: UserThemeSeed.solidColor)
+        background.gradient ?? .seeded(from: baselineSolidColor)
     }
 
     /// Binding for one of the two gradient stops (`0` = start, `1` = end).
@@ -187,9 +208,13 @@ final class ThemeEditorViewModel: ObservableObject {
 
     // MARK: - Role colors (seeded, never nil)
 
+    private func baselineColor(_ keyPath: WritableKeyPath<KeyboardColorSettings, CodableColor?>) -> CodableColor {
+        filledBaseline.colors[keyPath: keyPath] ?? UserThemeSeed.color(keyPath)
+    }
+
     func colorBinding(_ keyPath: WritableKeyPath<KeyboardColorSettings, CodableColor?>) -> Binding<Color> {
         Binding(
-            get: { (self.appearance.colors[keyPath: keyPath] ?? UserThemeSeed.color(keyPath)).color },
+            get: { (self.appearance.colors[keyPath: keyPath] ?? self.baselineColor(keyPath)).color },
             set: { newColor in
                 var next = self.appearance
                 next.colors[keyPath: keyPath] = CodableColor(newColor)
@@ -199,12 +224,12 @@ final class ThemeEditorViewModel: ObservableObject {
     }
 
     func isColorCustomized(_ keyPath: WritableKeyPath<KeyboardColorSettings, CodableColor?>) -> Bool {
-        appearance.colors[keyPath: keyPath] != UserThemeSeed.color(keyPath)
+        appearance.colors[keyPath: keyPath] != baselineColor(keyPath)
     }
 
     func resetColor(_ keyPath: WritableKeyPath<KeyboardColorSettings, CodableColor?>) {
         var next = appearance
-        next.colors[keyPath: keyPath] = UserThemeSeed.color(keyPath)
+        next.colors[keyPath: keyPath] = baselineColor(keyPath)
         appearance = next
     }
 
@@ -238,8 +263,8 @@ final class ThemeEditorViewModel: ObservableObject {
 
     /// The last Filled draft, so leaving Filled for Outlined / Borderless and coming back restores
     /// its key fill, shadow and border. Recorded on leaving Filled; a theme opened see-through
-    /// comes back to the seed's.
-    private var filledKeys: ThemeAppearance = .userThemeSeed
+    /// comes back to `filledBaseline`'s.
+    private var filledKeys: ThemeAppearance
 
     /// Segmented Filled / Outlined / Borderless choice, derived from the draft (`keyStyle`).
     var keyStyleBinding: Binding<ThemeKeyStyle> {
@@ -255,11 +280,11 @@ final class ThemeEditorViewModel: ObservableObject {
         )
     }
 
-    /// Resets the whole draft appearance to the user-theme seed. Draft-only: the name
+    /// Resets the whole draft appearance to the baseline. Draft-only: the name
     /// is kept, nothing is persisted, and the applied theme stays untouched until
     /// `save()`. `ThemeAppearance` is a value type, so this cannot leak to the live theme.
     func resetToDefaults() {
-        appearance = .userThemeSeed
+        appearance = baseline
         backgroundKind = background.kind
     }
 

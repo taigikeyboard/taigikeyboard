@@ -285,6 +285,7 @@ enum GeneratedTaigiStrings {
         .themeNamePlaceholder: "輸入主題名稱",
         .themeEditorResetAll: "恢復預設設定",
         .themeCardMenuApply: "套用",
+        .themeCardMenuCustomize: "自訂",
         .themeCapReachedTitle: "已達主題數量上限",
         .themeCapReachedMessage: "自訂主題上限是 5 个，請先刪除一个才會使閣新增。",
     ]
@@ -571,6 +572,7 @@ enum GeneratedTaigiStrings {
         .themeNamePlaceholder: "Su-ji̍p tsú-tê miâ-tshing",
         .themeEditorResetAll: "Hue-ho̍k ī-siat siat-tīng",
         .themeCardMenuApply: "Thò-iōng",
+        .themeCardMenuCustomize: "Tsū-tīng",
         .themeCapReachedTitle: "Í ta̍t tsú-tê sòo-liōng siōng hān",
         .themeCapReachedMessage: "Tsū-tīng tsú-tê siōng hān sī 5 ê, tshiánn sian san-tî tsi̍t-ê tsiah ē-sái koh sin-tsing.",
     ]
@@ -857,6 +859,7 @@ enum GeneratedTaigiStrings {
         .themeNamePlaceholder: "Su-ji̍p chú-tê miâ-chheng",
         .themeEditorResetAll: "Hoe-ho̍k ī-siat siat-tēng",
         .themeCardMenuApply: "Thò-iōng",
+        .themeCardMenuCustomize: "Chū-tēng",
         .themeCapReachedTitle: "Í ta̍t chú-tê sò͘-liōng siōng hān",
         .themeCapReachedMessage: "Chū-tēng chú-tê siōng hān sī 5 ê, chhiáⁿ sian san-tî chi̍t-ê chiah ē-sái koh sin-cheng.",
     ]

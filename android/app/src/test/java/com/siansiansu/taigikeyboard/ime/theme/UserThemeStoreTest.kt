@@ -28,6 +28,29 @@ class UserThemeStoreTest {
         return UserTheme(UUID.randomUUID().toString(), name, appearance, createdAt = 0L, updatedAt = 0L)
     }
 
+    @Test
+    fun addAndLoad_keepsBaseThemeId() {
+        val memory = MemoryStore()
+        assertTrue(memory.store().add(theme("Pink").copy(baseThemeId = "standardPink")))
+        assertEquals(
+            "standardPink",
+            memory
+                .store()
+                .load()
+                .first()
+                .baseThemeId,
+        )
+    }
+
+    // A theme saved before baseThemeId existed has no such key -> decodes as null.
+    @Test
+    fun decode_withoutBaseThemeId_isNull() {
+        val json = theme().toJson()
+        assertFalse(json.has("baseThemeId"))
+        assertEquals(null, UserTheme.fromJson(json)?.baseThemeId)
+        assertEquals("JSON null is no base", null, UserTheme.fromJson(json.put("baseThemeId", org.json.JSONObject.NULL))?.baseThemeId)
+    }
+
     // Every persisted mutation hands the new list to the hook (the photo sweep); a rejected add does not.
     @Test
     fun mutations_runHookWithNewList() {

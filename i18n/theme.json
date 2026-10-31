@@ -236,6 +236,11 @@
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
       "values": { "hanji": "套用", "tailo": "Thò-iōng", "poj": "Thò-iōng", "en": "Apply", "ja": "適用" }
     },
+    "cardMenuCustomize": {
+      "comment": "Built-in theme card action-menu item: open the theme editor on a new custom theme prefilled from this built-in theme. DRAFT TL/POJ (same reading as customThemesSection's 自訂) + en/ja pending USER proofread.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "自訂", "tailo": "Tsū-tīng", "poj": "Chū-tēng", "en": "Customize", "ja": "カスタマイズ" }
+    },
     "capReachedTitle": {
       "comment": "Title of the alert shown when the custom-theme count cap (5) is reached.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },

@@ -6,6 +6,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
+import com.siansiansu.taigikeyboard.ime.theme.BuiltInThemes
 import com.siansiansu.taigikeyboard.ime.theme.ThemeAppearance
 import com.siansiansu.taigikeyboard.ime.theme.UserTheme
 import com.siansiansu.taigikeyboard.ime.theme.UserThemeStore
@@ -20,14 +21,20 @@ import java.util.UUID
 class ThemeEditorActivity : ComponentActivity() {
     companion object {
         private const val EXTRA_THEME_ID = "theme_id"
+        private const val EXTRA_BASE_THEME_ID = "base_theme_id"
 
-        /** [themeId] null = create a new theme; a UUID string = edit that theme. */
+        /**
+         * [themeId] null = create a new theme; a UUID string = edit that theme. [baseThemeId] (create
+         * only) = customize a new theme from that built-in.
+         */
         fun createIntent(
             context: Context,
             themeId: String?,
+            baseThemeId: String? = null,
         ): Intent =
             Intent(context, ThemeEditorActivity::class.java).apply {
                 themeId?.let { putExtra(EXTRA_THEME_ID, it) }
+                baseThemeId?.let { putExtra(EXTRA_BASE_THEME_ID, it) }
             }
     }
 
@@ -55,8 +62,9 @@ class ThemeEditorActivity : ComponentActivity() {
             ThemeEditorScreen(
                 prefs = prefs,
                 editing = editing,
+                base = intent.getStringExtra(EXTRA_BASE_THEME_ID)?.let { BuiltInThemes.theme(it) },
                 canSaveNew = { store.load().size < UserThemeStore.MAX_USER_THEMES },
-                onSave = { name, appearance -> saveTheme(prefs, store, editing, name, appearance) },
+                onSave = { name, appearance, baseThemeId -> saveTheme(prefs, store, editing, name, appearance, baseThemeId) },
                 onNavigateBack = { onBackPressedDispatcher.onBackPressed() },
             )
         }
@@ -81,10 +89,11 @@ class ThemeEditorActivity : ComponentActivity() {
         editing: UserTheme?,
         name: String,
         appearance: ThemeAppearance,
+        baseThemeId: String?,
     ): Boolean {
         val now = System.currentTimeMillis()
         if (editing == null) {
-            val theme = UserTheme(UUID.randomUUID().toString(), name, appearance, createdAt = now, updatedAt = now)
+            val theme = UserTheme(UUID.randomUUID().toString(), name, appearance, createdAt = now, updatedAt = now, baseThemeId = baseThemeId)
             if (!store.add(theme)) return false
             prefs.selectedThemeId = theme.id
         } else {

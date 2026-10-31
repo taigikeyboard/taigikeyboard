@@ -224,6 +224,79 @@ class BuiltInThemesTest {
         assertNotNull(colors.backgroundGradient)
     }
 
+    // trace: standardPink = Filled, light slot: gradient (0xE6C2D0, 0xEADCE2), LIGHT_KEY_TEXT 0x1C1C1E,
+    // LIGHT_KEY_FILL 0xFFFFFF; seededForUserTheme keeps every set role; border null -> factory 0 -> Filled
+    @Test
+    fun userThemeBase_filledPink_copiesGradientAndWhiteKeys() {
+        val base = BuiltInThemes.theme("standardPink")!!.userThemeBase!!
+        assertEquals(listOf(0xFFE6C2D0.toInt(), 0xFFEADCE2.toInt()), base.colors.backgroundGradient?.stops)
+        assertEquals(0xFF1C1C1E.toInt(), base.colors.keyTextColor)
+        assertEquals(0xFF1C1C1E.toInt(), base.colors.candidateTextColor)
+        assertEquals(0xFFFFFFFF.toInt(), base.colors.normalKeyFillColor)
+        assertEquals(0xFFFFFFFF.toInt(), base.colors.specialKeyFillColor)
+        assertEquals(0f, base.keyBorderWidth)
+        assertEquals(ThemeKeyStyle.CLASSIC, base.keyStyle)
+        assertEquals(ThemeAppearance.DEFAULT_KEY_HEIGHT_SCALE, base.keyHeightScale)
+    }
+
+    // trace: framed* = clear key fill + OUTLINED_BORDER_WIDTH 1.0 -> Outlined; clean* = clear fill, no border -> Borderless
+    @Test
+    fun userThemeBase_keepsKeyStyleOfTheFamily() {
+        val framed = BuiltInThemes.theme("framedPink")!!.userThemeBase!!
+        assertEquals(ThemeKeyStyle.FRAMED, framed.keyStyle)
+        assertEquals(ThemeKeyStyle.OUTLINED_BORDER_WIDTH, framed.keyBorderWidth)
+        val clean = BuiltInThemes.theme("cleanPink")!!.userThemeBase!!
+        assertEquals(ThemeKeyStyle.CLEAN, clean.keyStyle)
+        assertEquals(0f, clean.keyBorderWidth)
+    }
+
+    // trace: Catppuccin builds into the dark slot (light null) -> light ?: dark picks it: Mocha
+    // Base->Mantle (0x1E1E2E, 0x181825), text 0xCDD6F4, Surface0 keys 0x313244
+    @Test
+    fun userThemeBase_catppuccinTakesTheDarkVariant() {
+        val base = BuiltInThemes.theme("standardCatppuccin")!!.userThemeBase!!
+        assertEquals(listOf(0xFF1E1E2E.toInt(), 0xFF181825.toInt()), base.colors.backgroundGradient?.stops)
+        assertEquals(0xFFCDD6F4.toInt(), base.colors.keyTextColor)
+        assertEquals(0xFF313244.toInt(), base.colors.normalKeyFillColor)
+    }
+
+    // trace: Filled Default has no variant; framed / clean Default carry only clear key fills (no background)
+    @Test
+    fun userThemeBase_nullForTheAdaptiveDefaults() {
+        listOf(ThemeId.DEFAULT, "framedDefault", "cleanDefault").forEach {
+            assertNull(it, BuiltInThemes.theme(it)!!.userThemeBase)
+        }
+    }
+
+    // trace: framedCatppuccin -> Filled twin standardCatppuccin -> Surface0 0x313244 keys, text kept 0xCDD6F4;
+    // cleanPink -> standardPink -> LIGHT_KEY_FILL 0xFFFFFF; border 0 (Filled twin), gradient unchanged
+    @Test
+    fun userThemeFilledBaseline_takesTheFilledTwinsKeys() {
+        val catppuccin = BuiltInThemes.userThemeFilledBaseline("framedCatppuccin")
+        assertEquals(ThemeKeyStyle.CLASSIC, catppuccin.keyStyle)
+        assertEquals(0xFF313244.toInt(), catppuccin.colors.normalKeyFillColor)
+        assertEquals(0xFFCDD6F4.toInt(), catppuccin.colors.keyTextColor)
+        assertEquals(0f, catppuccin.keyBorderWidth)
+        val pink = BuiltInThemes.userThemeFilledBaseline("cleanPink")
+        assertEquals(0xFFFFFFFF.toInt(), pink.colors.normalKeyFillColor)
+        assertEquals(
+            BuiltInThemes
+                .theme("cleanPink")!!
+                .userThemeBase!!
+                .colors.background,
+            pink.colors.background,
+        )
+        assertEquals(BuiltInThemes.userThemeBaseline("standardGold"), BuiltInThemes.userThemeFilledBaseline("standardGold"))
+        assertEquals(ThemeAppearance.USER_THEME_SEED, BuiltInThemes.userThemeFilledBaseline(null))
+    }
+
+    @Test
+    fun userThemeBaseline_builtInBaseElseSeed() {
+        assertEquals(BuiltInThemes.theme("framedGold")!!.userThemeBase, BuiltInThemes.userThemeBaseline("framedGold"))
+        assertEquals(ThemeAppearance.USER_THEME_SEED, BuiltInThemes.userThemeBaseline(null))
+        assertEquals(ThemeAppearance.USER_THEME_SEED, BuiltInThemes.userThemeBaseline("noLongerShipped"))
+    }
+
     @Test
     fun standardBlue_gradientStopsAreExpectedArgb_light() {
         val gradient = BuiltInThemes.theme("standardBlue")!!.colors(isDark = false).backgroundGradient

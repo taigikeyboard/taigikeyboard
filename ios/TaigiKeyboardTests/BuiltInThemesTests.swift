@@ -343,6 +343,68 @@ final class BuiltInThemesTests: XCTestCase {
         XCTAssertEqual(CodableColor(hex: 0xFF1E_1E2E), CodableColor(hex: 0x1E1E2E))
     }
 
+    // MARK: - Customize base (userThemeBase / userThemeBaseline)
+
+    // trace: standardPink = Filled, light slot: gradient (0xE6C2D0, 0xEADCE2), lightKeyText 0x1C1C1E,
+    // lightKeyFill 0xFFFFFF; seededForUserTheme keeps every set role; border nil → factory 0 → Filled
+    func testUserThemeBase_filledPink_copiesGradientAndWhiteKeys() throws {
+        let base = try XCTUnwrap(BuiltInThemes.theme(id: "standardPink")?.userThemeBase)
+        XCTAssertEqual(base.colors.background, .gradient(ThemeGradient(stops: [CodableColor(hex: 0xE6C2D0), CodableColor(hex: 0xEADCE2)])))
+        XCTAssertEqual(base.colors.keyTextColor, CodableColor(hex: 0x1C1C1E))
+        XCTAssertEqual(base.colors.candidateTextColor, CodableColor(hex: 0x1C1C1E))
+        XCTAssertEqual(base.colors.keyFillColor, CodableColor(hex: 0xFFFFFF))
+        XCTAssertEqual(base.keyBorderWidth, 0)
+        XCTAssertEqual(base.keyStyle, .classic)
+        XCTAssertEqual(base.keyHeightScale, ThemeAppearance.default.keyHeightScale)
+    }
+
+    // trace: framed* = clear key fill + outlinedBorderWidth 1.0 → Outlined; clean* = clear fill, no border → Borderless
+    func testUserThemeBase_keepsKeyStyleOfTheFamily() throws {
+        let framed = try XCTUnwrap(BuiltInThemes.theme(id: "framedPink")?.userThemeBase)
+        XCTAssertEqual(framed.keyStyle, .framed)
+        XCTAssertEqual(framed.keyBorderWidth, ThemeKeyStyle.outlinedBorderWidth)
+        let clean = try XCTUnwrap(BuiltInThemes.theme(id: "cleanPink")?.userThemeBase)
+        XCTAssertEqual(clean.keyStyle, .clean)
+        XCTAssertEqual(clean.keyBorderWidth, 0)
+    }
+
+    // trace: Catppuccin builds into the dark slot (light nil) → light ?? dark picks it: Mocha
+    // Base→Mantle (0x1E1E2E, 0x181825), text 0xCDD6F4, Surface0 keys 0x313244
+    func testUserThemeBase_catppuccinTakesTheDarkVariant() throws {
+        let base = try XCTUnwrap(BuiltInThemes.theme(id: "standardCatppuccin")?.userThemeBase)
+        XCTAssertEqual(base.colors.background, .gradient(ThemeGradient(stops: [CodableColor(hex: 0x1E1E2E), CodableColor(hex: 0x181825)])))
+        XCTAssertEqual(base.colors.keyTextColor, CodableColor(hex: 0xCDD6F4))
+        XCTAssertEqual(base.colors.keyFillColor, CodableColor(hex: 0x313244))
+    }
+
+    // trace: Filled Default has no variant; framed / clean Default carry only clear key fills (no background)
+    func testUserThemeBase_nilForTheAdaptiveDefaults() {
+        for id in [ThemeId.default, "framedDefault", "cleanDefault"] {
+            XCTAssertNil(BuiltInThemes.theme(id: id)?.userThemeBase, id)
+        }
+    }
+
+    // trace: framedCatppuccin → Filled twin standardCatppuccin → Surface0 0x313244 keys, text kept 0xCDD6F4;
+    // framedPink → standardPink → lightKeyFill 0xFFFFFF; border 0 (Filled twin), gradient unchanged
+    func testUserThemeFilledBaseline_takesTheFilledTwinsKeys() throws {
+        let catppuccin = BuiltInThemes.userThemeFilledBaseline(baseThemeId: "framedCatppuccin")
+        XCTAssertEqual(catppuccin.keyStyle, .classic)
+        XCTAssertEqual(catppuccin.colors.keyFillColor, CodableColor(hex: 0x313244))
+        XCTAssertEqual(catppuccin.colors.keyTextColor, CodableColor(hex: 0xCDD6F4))
+        XCTAssertEqual(catppuccin.keyBorderWidth, 0)
+        let pink = BuiltInThemes.userThemeFilledBaseline(baseThemeId: "cleanPink")
+        XCTAssertEqual(pink.colors.keyFillColor, CodableColor(hex: 0xFFFFFF))
+        XCTAssertEqual(pink.colors.background, BuiltInThemes.theme(id: "cleanPink")?.userThemeBase?.colors.background)
+        XCTAssertEqual(BuiltInThemes.userThemeFilledBaseline(baseThemeId: "standardGold"), BuiltInThemes.userThemeBaseline(baseThemeId: "standardGold"))
+        XCTAssertEqual(BuiltInThemes.userThemeFilledBaseline(baseThemeId: nil), .userThemeSeed)
+    }
+
+    func testUserThemeBaseline_builtInBaseElseSeed() {
+        XCTAssertEqual(BuiltInThemes.userThemeBaseline(baseThemeId: "framedGold"), BuiltInThemes.theme(id: "framedGold")?.userThemeBase)
+        XCTAssertEqual(BuiltInThemes.userThemeBaseline(baseThemeId: nil), .userThemeSeed)
+        XCTAssertEqual(BuiltInThemes.userThemeBaseline(baseThemeId: "noLongerShipped"), .userThemeSeed)
+    }
+
     // MARK: - Helpers
 
     private func makeColors(hex: UInt32) -> KeyboardColorSettings {
