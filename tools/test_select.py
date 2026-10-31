@@ -71,9 +71,11 @@ WIRE_SURFACE_CRATES = {"protos", "dispatch", "swift-ffi", "android-jni"}
 DESKTOP_LINKED_CRATE = "dispatch"
 LEAF_ONLY_SUBDIRS = ("tests/", "benches/")
 
+# Destination by device name, not a simulator UUID: a UUID is per-machine and changes whenever the
+# simulator is recreated (OS update), which turned the gate red with "Unable to find a device".
 IOS_TEST = (
     "xcodebuild -project ios/TaigiKeyboard.xcodeproj -scheme TaigiKeyboardTests "
-    "-destination 'platform=iOS Simulator,id=F2E02B3E-520A-465D-8696-C7440AA321CA' test"
+    "-destination 'platform=iOS Simulator,name=iPhone 17' test"
 )
 MAKE_BUILD_PREREQUISITE = "run `make build` first (stale-artifact gate) — ios / android / macos link the engine binary"
 # The macOS Cargo workspace: the `taigi-macos-ffi` archive the Swift app links.
