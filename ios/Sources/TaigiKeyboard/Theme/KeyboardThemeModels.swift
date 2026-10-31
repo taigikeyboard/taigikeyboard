@@ -225,4 +225,11 @@ struct UserTheme: Codable, Equatable, Identifiable {
     /// The built-in theme this one was customized from (its reset target), or `nil` for a theme
     /// started blank. Optional, so themes saved before this field decode with `nil`.
     var baseThemeId: String? = nil
+
+    /// This theme under a new id and `name`, stamped `now` — what the Duplicate card action saves.
+    /// A photo background shares the original's file: the photo sweep keeps every file a saved
+    /// theme still references, so deleting either theme leaves the other's photo in place.
+    func duplicated(named name: String, now: Date = Date()) -> UserTheme {
+        UserTheme(id: UUID(), name: name, appearance: appearance, createdAt: now, updatedAt: now, baseThemeId: baseThemeId)
+    }
 }

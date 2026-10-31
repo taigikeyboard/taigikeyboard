@@ -81,6 +81,12 @@ struct LayoutTab: View {
             GalleryCardMenu(title: layout.name) {
                 Button(lang.string(.themeCardMenuApply)) { apply(layout) }
                 Button(lang.string(.commonEdit)) { editorRoute = .edit(layout) }
+                // A new layout, so hidden at the cap like the create card.
+                if customLayouts.count < UserLayoutStore.maxLayouts {
+                    Button(lang.string(.commonDuplicate)) {
+                        SharedSettings.shared.duplicateCustomLayout(layout, named: lang.resolver.commonDuplicateName(name: layout.name))
+                    }
+                }
                 Button(lang.string(.commonDelete), role: .destructive) {
                     SharedSettings.shared.deleteCustomLayout(id: layout.id)
                 }

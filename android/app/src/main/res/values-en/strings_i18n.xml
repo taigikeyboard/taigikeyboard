@@ -12,6 +12,8 @@
     <string name="i18n_common_close">Close</string>
     <string name="i18n_common_other">Other</string>
     <string name="i18n_common_edit">Edit</string>
+    <string name="i18n_common_duplicate">Duplicate</string>
+    <string name="i18n_common_duplicateName">%1$s Copy</string>
     <string name="i18n_common_toggleTranslateSwapped">Switch Hanji or Romanization</string>
     <string name="i18n_common_back">Back</string>
     <string name="i18n_common_viewWebsite">Official Website</string>

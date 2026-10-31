@@ -23,15 +23,17 @@ final class UserLayoutStore {
         read() ?? []
     }
 
-    /// Replaces the layout with the same id, or appends it below the cap. Returns whether it was
-    /// written; a file that cannot be read is never overwritten.
-    func save(_ layout: CustomLayout) -> Bool {
+    /// Replaces the layout with the same id, or — below the cap — adds it right after the layout
+    /// with id `anchor` (appended when `anchor` is nil or absent). Returns whether it was written;
+    /// a file that cannot be read is never overwritten.
+    func save(_ layout: CustomLayout, after anchor: UUID? = nil) -> Bool {
         guard var layouts = read() else { return false }
         if let index = layouts.firstIndex(where: { $0.id == layout.id }) {
             layouts[index] = layout
         } else {
             guard layouts.count < Self.maxLayouts else { return false }
-            layouts.append(layout)
+            let index = layouts.firstIndex { $0.id == anchor }.map { $0 + 1 } ?? layouts.endIndex
+            layouts.insert(layout, at: index)
         }
         return write(layouts)
     }

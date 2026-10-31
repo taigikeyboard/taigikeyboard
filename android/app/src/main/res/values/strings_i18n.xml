@@ -12,6 +12,8 @@
     <string name="i18n_common_close">關閉</string>
     <string name="i18n_common_other">其他</string>
     <string name="i18n_common_edit">編輯</string>
+    <string name="i18n_common_duplicate">複製</string>
+    <string name="i18n_common_duplicateName">%1$s 副本</string>
     <string name="i18n_common_toggleTranslateSwapped">切換漢字/羅馬字</string>
     <string name="i18n_common_back">倒轉去</string>
     <string name="i18n_common_viewWebsite">官方網站</string>

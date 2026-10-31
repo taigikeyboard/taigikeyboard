@@ -13,6 +13,8 @@ enum StringKey: String {
     case commonClose = "i18n_common_close"
     case commonOther = "i18n_common_other"
     case commonEdit = "i18n_common_edit"
+    case commonDuplicate = "i18n_common_duplicate"
+    case commonDuplicateName = "i18n_common_duplicateName"
     case commonToggleTranslateSwapped = "i18n_common_toggleTranslateSwapped"
     case commonViewWebsite = "i18n_common_viewWebsite"
     case commonExportFailed = "i18n_common_exportFailed"

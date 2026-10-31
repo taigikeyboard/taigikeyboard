@@ -50,6 +50,19 @@ internal object CustomLayoutSelection {
         }
     }
 
+    /**
+     * Saves a copy of [layout] under a new id and [name] right after it, leaving the selection
+     * alone; null when it would pass [CustomLayout.MAX_CUSTOM_LAYOUTS].
+     */
+    fun forDuplicate(
+        layouts: List<CustomLayout>,
+        layout: CustomLayout,
+        name: String,
+    ): Map<Preferences.Key<*>, Any>? {
+        val saved = CustomLayout.upserted(layouts, layout.duplicated(name), anchorId = layout.id) ?: return null
+        return mapOf(PreferenceKeys.USER_LAYOUTS to CustomLayout.encodeList(saved))
+    }
+
     /** Deletes the layout with [id]; deleting the selected one leaves its base selected as a built-in layout. */
     fun forDelete(
         layouts: List<CustomLayout>,

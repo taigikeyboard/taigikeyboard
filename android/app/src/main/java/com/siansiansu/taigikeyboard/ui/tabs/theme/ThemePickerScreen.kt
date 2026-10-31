@@ -23,7 +23,9 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.siansiansu.taigikeyboard.R
+import com.siansiansu.taigikeyboard.i18n.LocalStringResolver
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
+import com.siansiansu.taigikeyboard.i18n.generated.commonDuplicateName
 import com.siansiansu.taigikeyboard.i18n.stringRes
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
@@ -46,7 +48,7 @@ import com.siansiansu.taigikeyboard.ui.components.GalleryShelf
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 
 // Theme tab main screen: a custom-theme shelf (Create New + saved themes with an
-// apply/edit/delete menu) above one built-in shelf per key-style family (Filled /
+// apply/edit/duplicate/delete menu) above one built-in shelf per key-style family (Filled /
 // Outlined / Borderless — same 7 colors, different key style). Selecting any card writes
 // selectedThemeId, which wakes the P2 render seam (gradient background + key shadow
 // + key border). The editor lives in ThemeEditorActivity; add/edit/delete refresh
@@ -66,6 +68,7 @@ internal fun selectionAfterDelete(
 @Composable
 fun ThemePickerScreen(prefs: PrefHelper) {
     val context = LocalContext.current
+    val stringResolver = LocalStringResolver.current
     val selectedThemeId by prefs
         .observeSelectedThemeId()
         .collectAsStateWithLifecycle(initialValue = prefs.selectedThemeId)
@@ -133,6 +136,9 @@ fun ThemePickerScreen(prefs: PrefHelper) {
                 onEdit = { theme ->
                     context.startActivity(ThemeEditorActivity.createIntent(context, theme.id))
                 },
+                onDuplicate = { theme ->
+                    userThemeStore.add(theme.duplicated(stringResolver.commonDuplicateName(theme.name)), anchorId = theme.id)
+                },
                 onDelete = deleteTheme,
             )
 
@@ -162,6 +168,7 @@ private fun CustomThemeShelf(
     onCreateNew: () -> Unit,
     onApply: (String) -> Unit,
     onEdit: (UserTheme) -> Unit,
+    onDuplicate: (UserTheme) -> Unit,
     onDelete: (UserTheme) -> Unit,
 ) {
     GalleryShelf(L10n.themeCustomThemesSection) {
@@ -179,11 +186,13 @@ private fun CustomThemeShelf(
                     GalleryCardMenu(
                         contentDescription = L10n.themeCardMenu,
                         actions =
-                            listOf(
-                                GalleryCardAction(L10n.themeCardMenuApply) { onApply(theme.id) },
-                                GalleryCardAction(L10n.commonEdit) { onEdit(theme) },
-                                GalleryCardAction(L10n.commonDelete, isDestructive = true) { onDelete(theme) },
-                            ),
+                            buildList {
+                                add(GalleryCardAction(L10n.themeCardMenuApply) { onApply(theme.id) })
+                                add(GalleryCardAction(L10n.commonEdit) { onEdit(theme) })
+                                // A new theme, so hidden at the cap like Create New (mirrors iOS).
+                                if (canCreateTheme) add(GalleryCardAction(L10n.commonDuplicate) { onDuplicate(theme) })
+                                add(GalleryCardAction(L10n.commonDelete, isDestructive = true) { onDelete(theme) })
+                            },
                     )
                 },
             )

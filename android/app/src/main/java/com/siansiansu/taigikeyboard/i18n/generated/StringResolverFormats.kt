@@ -8,6 +8,9 @@ import com.siansiansu.taigikeyboard.i18n.formatTemplate
 
 // Typed format accessors for placeholder-bearing keys (the raw "%1\$d" template never reaches a call site).
 
+fun StringResolver.commonDuplicateName(name: String): String =
+    formatString(StringKey.COMMON_DUPLICATE_NAME, name)
+
 fun StringResolver.dictionaryImportResult(imported: Int, skipped: Int): String =
     formatString(StringKey.DICTIONARY_IMPORT_RESULT, imported, skipped)
 

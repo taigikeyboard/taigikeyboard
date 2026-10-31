@@ -654,6 +654,13 @@ final class SharedSettings {
         userThemeStore.add(theme)
     }
 
+    /// Saves a copy of `theme` named `name` right after it, leaving the selection alone. Returns
+    /// `false` at the cap or on write failure.
+    @discardableResult
+    func duplicateUserTheme(_ theme: UserTheme, named name: String) -> Bool {
+        userThemeStore.add(theme.duplicated(named: name), after: theme.id)
+    }
+
     func updateUserTheme(_ theme: UserTheme) {
         userThemeStore.update(theme)
     }
@@ -718,6 +725,13 @@ final class SharedSettings {
         guard userLayoutStore.save(layout) else { return false }
         applyCustomLayout(layout)
         return true
+    }
+
+    /// Saves a copy of `layout` named `name` right after it, leaving the selection alone. Returns
+    /// false at the cap or on write failure.
+    @discardableResult
+    func duplicateCustomLayout(_ layout: CustomLayout, named name: String) -> Bool {
+        userLayoutStore.save(layout.duplicated(named: name), after: layout.id)
     }
 
     /// Deletes the layout with `id`; deleting the selected one leaves its base selected as a

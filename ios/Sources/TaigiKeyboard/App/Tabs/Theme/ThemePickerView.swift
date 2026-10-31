@@ -3,7 +3,7 @@ import SwiftUI
 /// The theme tab root: a gallery of horizontal shelves (`GalleryShelf`, shared with the Layout
 /// tab — 240pt cards with screenshot previews, horizontal scroll).
 ///
-/// - **Custom Themes** — the user's saved themes (apply / edit / delete via a
+/// - **Custom Themes** — the user's saved themes (apply / edit / duplicate / delete via a
 ///   per-card menu) plus a `Create New…` card (hidden at the cap). These show a
 ///   live background preview (the theme surface, no sample key).
 /// - **Filled / Outlined / Borderless** — one shelf per built-in key-style family
@@ -45,11 +45,7 @@ struct ThemePickerView: View {
                             previewImageName: nil,
                             isSelected: selectedThemeId == theme.id.uuidString,
                             onTap: { apply(theme.id.uuidString) },
-                            actions: [
-                                ThemeCardAction(title: lang.string(.themeCardMenuApply)) { apply(theme.id.uuidString) },
-                                ThemeCardAction(title: lang.string(.commonEdit)) { editorRoute = .edit(theme) },
-                                ThemeCardAction(title: lang.string(.commonDelete), role: .destructive) { delete(theme) },
-                            ],
+                            actions: userThemeActions(theme),
                         )
                     }
                 }
@@ -94,6 +90,22 @@ struct ThemePickerView: View {
 
     private var canCreateTheme: Bool {
         userThemes.count < UserThemeStore.maxUserThemes
+    }
+
+    /// Apply / Edit / Duplicate / Delete for a custom-theme card; Duplicate makes a new theme, so
+    /// it hides at the cap like Create New.
+    private func userThemeActions(_ theme: UserTheme) -> [ThemeCardAction] {
+        var actions = [
+            ThemeCardAction(title: lang.string(.themeCardMenuApply)) { apply(theme.id.uuidString) },
+            ThemeCardAction(title: lang.string(.commonEdit)) { editorRoute = .edit(theme) },
+        ]
+        if canCreateTheme {
+            actions.append(ThemeCardAction(title: lang.string(.commonDuplicate)) {
+                SharedSettings.shared.duplicateUserTheme(theme, named: lang.resolver.commonDuplicateName(name: theme.name))
+            })
+        }
+        actions.append(ThemeCardAction(title: lang.string(.commonDelete), role: .destructive) { delete(theme) })
+        return actions
     }
 
     /// Apply / Customize for a built-in card; no menu for the adaptive Default heads (no customize
