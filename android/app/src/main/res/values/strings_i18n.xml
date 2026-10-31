@@ -178,6 +178,7 @@
     <string name="i18n_layout_createNewLayout">新佈局…</string>
     <string name="i18n_layout_editorTitleNew">新佈局</string>
     <string name="i18n_layout_nameHeader">佈局名稱</string>
+    <string name="i18n_layout_calloutsTitle">長揤字</string>
     <string name="i18n_layout_commonLayoutsSection">通用</string>
     <string name="i18n_layout_standardLayout">Lohankha</string>
     <string name="i18n_layout_phahTaigiLayout">PhahTaigi</string>

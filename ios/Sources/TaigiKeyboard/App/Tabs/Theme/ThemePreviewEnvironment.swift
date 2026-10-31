@@ -65,6 +65,7 @@ final class ThemePreviewEnvironment: KeyboardEnvironment {
             inputMode: inputMode,
             fontType: base.fontType,
             keyboardLayoutType: base.keyboardLayoutType,
+            activeCustomLayout: base.activeCustomLayout,
             isHanjiFirst: base.isHanjiFirst,
             isTpsOrMappedToER: base.isTpsOrMappedToER,
             isNasalMarkerUppercaseEnabled: base.isNasalMarkerUppercaseEnabled,

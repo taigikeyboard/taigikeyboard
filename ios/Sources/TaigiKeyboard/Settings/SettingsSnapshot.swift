@@ -7,6 +7,8 @@ struct SettingsSnapshot {
     let inputMode: InputMode
     let fontType: FontType
     let keyboardLayoutType: KeyboardLayoutType
+    /// The custom layout on the letter page, for its long-press lists (`TaigiCallouts.customCalloutChars`).
+    let activeCustomLayout: CustomLayout?
     let isHanjiFirst: Bool
     let isTpsOrMappedToER: Bool
     /// Nasal mark in POJ capitals (§53): the `nn` key label and the suggestion case transform read it.

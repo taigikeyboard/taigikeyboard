@@ -26,6 +26,11 @@
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
       "values": { "hanji": "佈局名稱", "tailo": "Pòo-kio̍k miâ-tshing", "poj": "Pò͘-kio̍k miâ-chheng", "en": "Layout Name", "ja": "配列名" }
     },
+    "calloutsTitle": {
+      "comment": "Layout editor: button shown while a character key is selected, and title of the sheet that edits that key's long-press list. TL/POJ DRAFT — pending USER proofread.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "長揤字", "tailo": "Tn̂g tshi̍h jī", "poj": "Tn̂g chhi̍h jī", "en": "Long-Press Characters", "ja": "長押しの文字" }
+    },
     "commonLayoutsSection": {
       "comment": "Section header on the Layout tab for layouts whose keys are the same in Tâi-lô and Pe̍h-ōe-jī.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },

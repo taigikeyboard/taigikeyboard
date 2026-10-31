@@ -178,6 +178,7 @@ enum StringKey: String {
     case layoutCreateNewLayout = "i18n_layout_createNewLayout"
     case layoutEditorTitleNew = "i18n_layout_editorTitleNew"
     case layoutNameHeader = "i18n_layout_nameHeader"
+    case layoutCalloutsTitle = "i18n_layout_calloutsTitle"
     case layoutCommonLayoutsSection = "i18n_layout_commonLayoutsSection"
     case layoutStandardLayout = "i18n_layout_standardLayout"
     case layoutPhahTaigiLayout = "i18n_layout_phahTaigiLayout"

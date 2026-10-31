@@ -25,6 +25,8 @@ enum LayoutScript: String, Codable {
 /// - `keys` fills the character keys in reading order; nil marks a removed key.
 /// - `functionKeys` fills the function keys in reading order; each stays in its own row.
 /// - `hasEmojiKey` false hides the emoji key, the one function key that can be removed.
+/// - `callouts` holds the long-press lists the user set, by half-width key label; a key without one
+///   keeps the built-in list (`TaigiCallouts.calloutChars`).
 /// The globe key is not part of it: the keyboard puts it right after 123 when the device needs it.
 /// The editor only swaps, trades a key for a spare or removes one, so a key never appears twice.
 struct CustomLayout: Codable, Identifiable, Hashable {
@@ -76,6 +78,10 @@ struct CustomLayout: Codable, Identifiable, Hashable {
     private(set) var keys: [String?]
     private(set) var functionKeys: [FunctionKey]
     private(set) var hasEmojiKey: Bool
+    private(set) var callouts: [String: [String]]
+
+    /// The most entries one key's long-press list holds.
+    static let maxCallouts = 8
 
     /// A removed key's place in `editorRows`; never on the keyboard.
     static let removedSlot = KeyDef.char("")
@@ -129,6 +135,7 @@ struct CustomLayout: Codable, Identifiable, Hashable {
         keys = Self.labels(of: Self.baseTable(base, script))
         functionKeys = Self.functionKeys(of: Self.baseTable(base, script))
         hasEmojiKey = true
+        callouts = [:]
     }
 
     /// A record saved before function keys could move or the emoji key could go keeps the base's.
@@ -142,6 +149,7 @@ struct CustomLayout: Codable, Identifiable, Hashable {
         functionKeys = try container.decodeIfPresent([FunctionKey].self, forKey: .functionKeys)
             ?? Self.functionKeys(of: Self.baseTable(base, script))
         hasEmojiKey = try container.decodeIfPresent(Bool.self, forKey: .hasEmojiKey) ?? true
+        callouts = try container.decodeIfPresent([String: [String]].self, forKey: .callouts) ?? [:]
     }
 
     /// Whether a decoded record can be shown: an editable base, one entry per slot, every key
@@ -165,7 +173,7 @@ struct CustomLayout: Codable, Identifiable, Hashable {
 
     /// Whether the board still matches the base table.
     var isUnchanged: Bool {
-        hasEmojiKey && keys == baseLabels.map(Optional.some) && functionKeys == baseFunctionKeys
+        hasEmojiKey && keys == baseLabels.map(Optional.some) && functionKeys == baseFunctionKeys && callouts.isEmpty
     }
 
     /// The key table the keyboard shows: removed keys leave their row (the rest keep their width),
@@ -262,9 +270,11 @@ struct CustomLayout: Codable, Identifiable, Hashable {
         }
     }
 
-    /// Puts `spare` on a character place (a removed one too); the key it replaces returns to the tray.
+    /// Puts `spare` on a character place (a removed one too); the key it replaces returns to the tray,
+    /// without its long-press list.
     mutating func replace(_ place: Place, with spare: String) {
         guard case let .key(index) = place, Self.catalog[spare] != nil, !keys.contains(spare) else { return }
+        dropCallouts(at: index)
         keys[index] = spare
     }
 
@@ -276,11 +286,13 @@ struct CustomLayout: Codable, Identifiable, Hashable {
         }
     }
 
-    /// Takes the key at `place` off the board; it returns to the spare tray.
+    /// Takes the key at `place` off the board; it returns to the spare tray, without its long-press list.
     mutating func remove(_ place: Place) {
         guard canRemove(place) else { return }
         switch place {
-        case let .key(index): keys[index] = nil
+        case let .key(index):
+            dropCallouts(at: index)
+            keys[index] = nil
         case .function: hasEmojiKey = false
         }
     }
@@ -296,9 +308,104 @@ struct CustomLayout: Codable, Identifiable, Hashable {
         keys = baseLabels
         functionKeys = baseFunctionKeys
         hasEmojiKey = true
+        callouts = [:]
+    }
+
+    // MARK: - Long-press lists
+
+    /// Tone-marked letters for the long-press tray, one row per lowercase base (Shift uppercases them
+    /// on the keyboard): a e i o oo o͘ u m n ng first (TL `oo` = POJ `o͘`), then any other base; each
+    /// row TL's marks, then
+    /// the marks only POJ has.
+    static let toneRows: [[String]] = {
+        let toneMaps = [TaigiCallouts.TaigiToneMaps.tl, TaigiCallouts.TaigiToneMaps.poj]
+        let bases = Set(toneMaps.flatMap(\.keys)).filter { $0 == $0.lowercased() }
+        let leading = ["a", "e", "i", "o", "oo", "o\u{0358}", "u", "m", "n", "ng"].filter(bases.contains)
+        return (leading + bases.subtracting(leading).sorted()).map { base in
+            composedUnique(toneMaps.flatMap { $0[base] ?? [] })
+        }
+    }()
+
+    /// Symbols for the long-press tray: both symbol pages, then every entry of the built-in long-press
+    /// lists; half-width forms first, then full-width ones.
+    static let calloutSymbols: [String] = {
+        let symbolPages = (TaigiLayouts.Numeric.iPhone + TaigiLayouts.Symbolic.iPhone).joined().flatMap { key -> [String] in
+            guard case let .char(label, fullWidth) = key else { return [] }
+            return [label] + (fullWidth.map { [$0] } ?? [])
+        }
+        let builtInLists = [TaigiCallouts.SymbolCallouts.actions, TaigiCallouts.MOE1Callouts.actions, TaigiCallouts.MOE2Callouts.actions]
+            .flatMap { map in map.keys.sorted().flatMap { map[$0] ?? [] } }
+        // ▶ ◀ (emoji-capable, U+2190 and up) draw as colour emoji in the tray; © ® ™ stay text.
+        func drawsAsEmoji(_ char: String) -> Bool {
+            guard let scalar = char.unicodeScalars.first else { return false }
+            return scalar.properties.isEmoji && scalar.value >= 0x2190
+        }
+        return halfWidthFirst(composedUnique(symbolPages + builtInLists).filter { !drawsAsEmoji($0) })
+    }()
+
+    /// The tray's symbol group: spare symbols for the board, then the long-press symbols, each once,
+    /// half-width forms first.
+    var traySymbols: [String] {
+        Self.halfWidthFirst(Self.unique(spareSymbols + Self.calloutSymbols))
+    }
+
+    /// Whether the key labelled `label` already holds `char` in its long-press list.
+    func holdsCallout(_ char: String, for label: String) -> Bool {
+        callouts(for: label).contains { $0.precomposedStringWithCanonicalMapping == char }
+    }
+
+    /// The built-in long-press list of the key labelled `label` on this base and script.
+    func defaultCallouts(for label: String) -> [String] {
+        TaigiCallouts.calloutChars(for: label, inputMode: script.inputMode, layoutType: base) ?? []
+    }
+
+    /// The long-press list the key labelled `label` shows: the user's, else the built-in one.
+    func callouts(for label: String) -> [String] {
+        callouts[label] ?? defaultCallouts(for: label)
+    }
+
+    /// Sets the long-press list of the key labelled `label`: entries are trimmed, blanks and repeats
+    /// dropped, the rest capped at `maxCallouts`. A list equal to the built-in one is not stored, so
+    /// the key follows the built-in list again. An empty list leaves the key without a long-press.
+    mutating func setCallouts(_ entries: [String], for label: String) {
+        let trimmed = entries.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+        let list = Array(Self.unique(trimmed).prefix(Self.maxCallouts))
+        callouts[label] = list == defaultCallouts(for: label) ? nil : list
+    }
+
+    /// Gives the key labelled `label` the built-in long-press list again.
+    mutating func resetCallouts(for label: String) {
+        callouts[label] = nil
+    }
+
+    /// The user's long-press list for a board key the keyboard sends as `char`, or nil when that key
+    /// keeps the built-in list. `char` may be a key's full-width form, or a letter Shift turned
+    /// uppercase (the list is then uppercased too, as Android's popup cells are).
+    func calloutOverride(for char: String) -> [String]? {
+        guard !callouts.isEmpty else { return nil }
+        if let label = keys.contains(char) ? char : halfWidthLabel(ofFullWidth: char), let entries = callouts[label] {
+            return entries
+        }
+        let lowered = char.lowercased()
+        guard lowered != char, keys.contains(lowered), let entries = callouts[lowered] else { return nil }
+        return entries.map { $0.uppercased() }
     }
 
     // MARK: - Private
+
+    private mutating func dropCallouts(at index: Int) {
+        if let label = keys[index] {
+            callouts[label] = nil
+        }
+    }
+
+    /// The half-width label of the board key whose full-width form is `char`.
+    private func halfWidthLabel(ofFullWidth char: String) -> String? {
+        for case let .char(label, fullWidth?) in filledRows.joined() where fullWidth == char {
+            return label
+        }
+        return nil
+    }
 
     private var baseLabels: [String] {
         Self.labels(of: Self.baseTable(base, script))
@@ -369,6 +476,21 @@ struct CustomLayout: Codable, Identifiable, Hashable {
     /// The function keys `places` numbers, in slot order.
     private static func functionKeys(of rows: [[KeyDef]]) -> [FunctionKey] {
         rows.dropFirst().flatMap { $0.compactMap(FunctionKey.init) }
+    }
+
+    /// TL and POJ tables spell some marked letters in different Unicode forms (ň precomposed or
+    /// n + U+030C); one composed form each keeps a letter from showing twice.
+    private static func composedUnique(_ chars: [String]) -> [String] {
+        unique(chars.map(\.precomposedStringWithCanonicalMapping))
+    }
+
+    /// `chars` with CJK punctuation and full-width forms (U+2E80 and up, as the full-width punctuation
+    /// mode types) moved after the rest, order otherwise kept.
+    private static func halfWidthFirst(_ chars: [String]) -> [String] {
+        func isFullWidth(_ char: String) -> Bool {
+            char.unicodeScalars.contains { $0.value >= 0x2E80 }
+        }
+        return chars.filter { !isFullWidth($0) } + chars.filter(isFullWidth)
     }
 
     private static func unique(_ labels: [String]) -> [String] {
