@@ -37,7 +37,7 @@
 
 | File | Responsibility |
 |------|----------------|
-| `ime/text/layout/LayoutManager.kt` | `loadExtendedPopups` loads `taigi_{poj,tl}.json` by input mode; merges into `keyData.popup` |
+| `ime/text/layout/LayoutManager.kt` | `LayoutAssets.extendedPopups` loads `taigi_{poj,tl}.json` by input mode; merges into `keyData.popup`; then `CustomLayoutTables.applyCallouts` puts a custom layout's own lists in |
 | `assets/ime/text/characters/extended_popups/taigi_{poj,tl}.json` | Static tone-variation popup tables (18 keys each) |
 | `ime/popup/KeyPopupManager.kt` | `PopupHost` impl: preview + extended `PopupWindow`, motion hit-test, `activeKeyData()` |
 | `ime/popup/PopupCells.kt` | `buildPopupCells` maps `KeyData.popup` → visual cells |
@@ -68,7 +68,7 @@ On iOS there is no platform-side tone-map builder: `TaigiToneMaps.poj` / `.tl` p
 
 So `layout → symbol → POJ/TL tone`. TPS/MOE punctuation overrides symbols; symbol-only chars always get callouts regardless of layout.
 
-**Android** — no runtime chain. Popups are pre-resolved into `KeyData.popup` at layout-build time: `loadExtendedPopups` selects JSON by input mode (`poj`/`tl` → the tone tables; `english`/`tps` → empty), merged by label match during `mergeLayouts`. At long-press, `KeyPopupManager` renders `anchor.popupCells` and `activeKeyData()` returns the selected variant or falls back to `anchor.data`. No engine call, no symbol/MOE branching in the popup layer — whatever the layout JSON baked in is what shows.
+**Android** — no runtime chain. Popups are pre-resolved into `KeyData.popup` at layout-build time: `LayoutAssets.extendedPopups` selects JSON by input mode (`poj`/`tl` → the tone tables; `english`/`tps` → empty), merged by label match during `mergeLayouts`. At long-press, `KeyPopupManager` renders `anchor.popupCells` and `activeKeyData()` returns the selected variant or falls back to `anchor.data`. No engine call, no symbol/MOE branching in the popup layer — whatever the layout JSON baked in is what shows, except that an active custom layout's own list (TL / POJ letter page) replaces a key's whole list (`CustomLayoutTables.applyCallouts`, after the extended popups).
 
 ---
 

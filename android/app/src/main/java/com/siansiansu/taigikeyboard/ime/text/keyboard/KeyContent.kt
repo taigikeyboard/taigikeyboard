@@ -83,6 +83,8 @@ internal fun KeyContent(
     isPreview: Boolean,
     pressed: Boolean,
     themeColors: ThemePalette,
+    /** The active custom layout gives this key its own long-press list, so no built-in hint advertises one. */
+    hasCustomCallouts: Boolean = false,
 ) {
     val isFunctionKey = isFunctionKey(data)
     val isSpecial = isFunctionKey || data.code == KeyCode.ENTER
@@ -179,6 +181,7 @@ internal fun KeyContent(
                 typeface = typeface,
                 fontSizeScale = fontSizeScale,
                 themeColors = themeColors,
+                hasCustomCallouts = hasCustomCallouts,
             )
             KeyVisual.Empty -> Unit
         }
@@ -230,6 +233,7 @@ private fun LabelContent(
     typeface: Typeface,
     fontSizeScale: Float,
     themeColors: ThemePalette,
+    hasCustomCallouts: Boolean,
 ) {
     // keyTextColor role wins for all labels (incl. the enter confirm-text); null
     // (adaptive default theme) falls back to the night-aware enter/normal attr.
@@ -320,7 +324,7 @@ private fun LabelContent(
             // Tone diacritics + MOE1/MOE2 punctuation hints. Skipped for TPS.
             if (data.type == KeyType.CHARACTER && keyboardLayoutType != "tps") {
                 val toneHint = toneHintForCode(data.code, inputMode)
-                val moeHint = if (keyboardLayoutType == "moe1" || keyboardLayoutType == "moe2") {
+                val moeHint = if ((keyboardLayoutType == "moe1" || keyboardLayoutType == "moe2") && !hasCustomCallouts) {
                     moe1HintForCode(data.code)
                 } else {
                     null
