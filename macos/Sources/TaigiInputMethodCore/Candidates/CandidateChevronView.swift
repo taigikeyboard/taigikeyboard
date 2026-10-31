@@ -1,4 +1,4 @@
-// The expand affordance at the collapsed row's edge: separator plus chevron.
+// The expand affordance at the collapsed list's edge: separator plus chevron.
 
 import AppKit
 
@@ -23,7 +23,9 @@ final class CandidateChevronView: NSView {
     private let imageWidth: CGFloat
     private let padding: CGFloat
 
-    init(style: CandidateWindowStyle, metrics: CandidateMetrics) {
+    /// `symbolName` points the chevron the way its list unfolds: down under a
+    /// row, right of a column.
+    init(style: CandidateWindowStyle, metrics: CandidateMetrics, symbolName: String) {
         spacing = metrics.scaledSymbolMetric(Self.baseSpacing)
         imageWidth = metrics.scaledSymbolMetric(Self.baseImageWidth)
         padding = metrics.scaledSymbolMetric(Self.basePadding)
@@ -31,7 +33,7 @@ final class CandidateChevronView: NSView {
             pointSize: metrics.scaledSymbolMetric(Self.baseSymbolPointSize), weight: .medium,
         )
         imageView = NSImageView(
-            image: NSImage(systemSymbolName: "chevron.down", accessibilityDescription: nil)!
+            image: NSImage(systemSymbolName: symbolName, accessibilityDescription: nil)!
                 .withSymbolConfiguration(configuration)!,
         )
         super.init(frame: .zero)

@@ -216,6 +216,7 @@ final class CandidatePanel: CandidatePresenter {
         case .horizontal: HorizontalCandidatePanel(style: style, metrics: metrics)
         case .vertical: VerticalCandidatePanel(style: style, metrics: metrics)
         case .expandable: ExpandableCandidatePanel(style: style, metrics: metrics)
+        case .verticalExpandable: ExpandableCandidatePanel(style: style, metrics: metrics, axis: .column)
         }
     }
 }

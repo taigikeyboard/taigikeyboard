@@ -47,6 +47,8 @@ struct AppearanceSettingsView: View {
                 }
                 Picker(language.string(.desktopCandidateWindowLayout), selection: $candidateLayout) {
                     Text(language.string(.desktopCandidateLayoutExpandable)).tag(CandidateLayout.expandable)
+                    Text(language.string(.desktopCandidateLayoutVerticalExpandable))
+                        .tag(CandidateLayout.verticalExpandable)
                     Text(language.string(.desktopCandidateLayoutHorizontal)).tag(CandidateLayout.horizontal)
                     Text(language.string(.desktopCandidateLayoutVertical)).tag(CandidateLayout.vertical)
                 }

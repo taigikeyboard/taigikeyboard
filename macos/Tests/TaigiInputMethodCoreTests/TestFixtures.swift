@@ -31,6 +31,7 @@ enum TestFixtures {
             HorizontalCandidatePanel(style: style, metrics: defaultCandidateMetrics),
             VerticalCandidatePanel(style: style, metrics: defaultCandidateMetrics),
             ExpandableCandidatePanel(style: style, metrics: defaultCandidateMetrics),
+            ExpandableCandidatePanel(style: style, metrics: defaultCandidateMetrics, axis: .column),
         ]
     }
 

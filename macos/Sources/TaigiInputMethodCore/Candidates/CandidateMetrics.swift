@@ -422,6 +422,16 @@ extension CandidateMetrics {
             + annotationWidth + horizontalPadding
     }
 
+    /// The width a column of inline rows sharing one candidate column takes:
+    /// the widest column plus the widest annotation (`inlineRowWidth`),
+    /// floored at one slot and capped at `budget` — itself never below one
+    /// slot. What the vertical list and the collapsed vertical expandable
+    /// column both size to.
+    func inlineColumnWidth(widestPrimary: CGFloat, widestAnnotation: CGFloat, budget: CGFloat) -> CGFloat {
+        let widest = inlineRowWidth(primaryColumnWidth: widestPrimary, annotationWidth: widestAnnotation)
+        return min(max(widest, baseWidth), max(baseWidth, budget))
+    }
+
     /// The candidate column's width for `text` alone — what the vertical layout
     /// aligns its rows on, so every annotation in the column starts at the same
     /// x. Measured at the candidate font, never the annotation's.

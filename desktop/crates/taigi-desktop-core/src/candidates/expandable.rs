@@ -391,11 +391,33 @@ impl ExpandableListModel {
         )
     }
 
+    /// How many grid rows the expanded viewport shows: `MAX_VISIBLE_ROWS`
+    /// under a row; beside a column, the column's own rows — the window
+    /// keeps its height as it unfolds to the right (USER 2026-10-31).
+    pub fn visible_rows(&self) -> usize {
+        match self.axis {
+            ExpandableAxis::Row => Self::MAX_VISIBLE_ROWS,
+            ExpandableAxis::Column => self.collapsed_cells.len(),
+        }
+    }
+
+    /// The half row a scrolling viewport shows under its last full one, as a
+    /// hint there is more. Under a row only: a column keeps its exact height.
+    fn peek(&self) -> f32 {
+        match self.axis {
+            ExpandableAxis::Row => self.item_height / 2.0,
+            ExpandableAxis::Column => 0.0,
+        }
+    }
+
+    /// Under a row the window grows with the grid up to `visible_rows` plus a
+    /// half-row peek; beside a column it stays exactly the collapsed height,
+    /// scrolling past it and padding below a shorter grid.
     pub fn expanded_geometry(&self) -> ExpandedGeometry {
         let content_height = Self::rows_height(self.grid.rows.len(), self.item_height);
-        let max_visible_height =
-            Self::rows_height(Self::MAX_VISIBLE_ROWS, self.item_height) + self.item_height / 2.0;
-        let needs_scrolling = content_height > max_visible_height;
+        let peek = self.peek();
+        let viewport_height = Self::rows_height(self.visible_rows(), self.item_height) + peek;
+        let needs_scrolling = content_height > viewport_height;
         ExpandedGeometry {
             window_width: self.grid_width()
                 + if needs_scrolling {
@@ -403,13 +425,13 @@ impl ExpandableListModel {
                 } else {
                     0.0
                 },
-            window_height: if needs_scrolling {
-                max_visible_height
+            window_height: if needs_scrolling || self.axis == ExpandableAxis::Column {
+                viewport_height
             } else {
                 content_height
             },
             container_height: if needs_scrolling {
-                content_height + self.item_height / 2.0
+                content_height + peek
             } else {
                 content_height
             },
@@ -589,8 +611,11 @@ impl ExpandableListModel {
                     None
                 }
             }
+            // A column unfolded rightward with `→`, so `←` folds it from
+            // anywhere in the grid (USER 2026-10-31). A row keeps `←` for
+            // walking and folds only at the first cell.
             Left => {
-                if self.selected_index > 0 {
+                if self.axis == ExpandableAxis::Row && self.selected_index > 0 {
                     self.select(self.selected_index - 1)
                 } else {
                     self.collapse()
@@ -619,7 +644,7 @@ impl ExpandableListModel {
         }
     }
 
-    /// Pages the expanded viewport a whole `MAX_VISIBLE_ROWS`, keeping the
+    /// Pages the expanded viewport a whole `visible_rows`, keeping the
     /// highlight at its visual row — read off the ACTUAL scroll offset, so a
     /// wheel scroll before the key counts. Paging up from the very top folds
     /// the window back into the row it came from.
@@ -631,7 +656,7 @@ impl ExpandableListModel {
         }
         let offset = highlight_row.saturating_sub(top_row);
         let last_row = self.grid.rows.len().checked_sub(1)?;
-        let step = Self::MAX_VISIBLE_ROWS as i32 * if forward { 1 } else { -1 };
+        let step = self.visible_rows() as i32 * if forward { 1 } else { -1 };
         let new_row = (highlight_row as i32 + step).clamp(0, last_row as i32) as usize;
         let target = self
             .grid
@@ -713,7 +738,7 @@ impl ExpandableListModel {
         if row_top < self.scroll_y {
             self.scroll_y = row_top;
         } else if row_bottom > self.scroll_y + viewport {
-            let target = (row_bottom + self.item_height / 2.0 - viewport).min(self.max_scroll_y());
+            let target = (row_bottom + self.peek() - viewport).min(self.max_scroll_y());
             self.scroll_y = target.max(0.0);
         }
     }
@@ -1038,10 +1063,49 @@ mod tests {
         assert_eq!(m.selected_index(), 8, "clamped to the column's foot");
         assert_eq!(m.navigate(PageDown), Some(ExpandableModeChange::Expand));
 
+        // `←` folds a column from anywhere in the grid, not just index 0.
+        m.select(13);
+        assert_eq!(m.navigate(Left), Some(ExpandableModeChange::Collapse));
+        assert_eq!(m.selected_index(), 8, "clamped to the column's foot");
+        m.expand();
+        m.select(3);
+        assert_eq!(m.navigate(Left), Some(ExpandableModeChange::Collapse));
+        assert_eq!(m.selected_index(), 3, "a selection the column shows stays");
+        let mut row = model(&[5.0; 40]);
+        row.expand();
+        row.select(13);
+        assert_eq!(row.navigate(Left), None, "a row's ← still walks");
+        assert_eq!(row.selected_index(), 12);
+
         let mut no_overflow = column_model(&metrics, 5.0, 3);
         assert_eq!(no_overflow.navigate(Right), None);
         assert_eq!(no_overflow.navigate(PageDown), None);
         assert_eq!(model(&[5.0; 3]).axis().unfold_direction(), Down);
+    }
+
+    #[test]
+    fn expanded_column_keeps_the_collapsed_height() {
+        let metrics = inline_metrics();
+        // trace: 9 rows × 30 + 8 hairlines = 278.
+        let short = column_model(&metrics, 5.0, 20);
+        assert_eq!(short.visible_rows(), 9);
+        let geometry = short.expanded_geometry();
+        assert!(!geometry.needs_scrolling, "4 grid rows fit 9");
+        assert_eq!(geometry.window_height, 278.0, "padded, not shrunk");
+        assert_eq!(geometry.container_height, 4.0 * 30.0 + 3.0);
+
+        // trace: 200 one-column cells → 34 rows × 30 + 33 = 1053, no peek.
+        let mut long = column_model(&metrics, 5.0, 200);
+        let geometry = long.expanded_geometry();
+        assert!(geometry.needs_scrolling);
+        assert_eq!(geometry.window_height, 278.0);
+        assert_eq!(geometry.container_height, 1053.0);
+        long.expand();
+        assert_eq!(long.navigate(PageDown), None);
+        assert_eq!(long.selected_row(), Some(9), "pages a whole column height");
+
+        let row = model(&[5.0; 200]);
+        assert_eq!(row.visible_rows(), ExpandableListModel::MAX_VISIBLE_ROWS);
     }
 
     #[test]
