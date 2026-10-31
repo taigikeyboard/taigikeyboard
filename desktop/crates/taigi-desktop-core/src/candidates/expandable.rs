@@ -1,12 +1,14 @@
-//! The expandable window's two modes — a packed row that unfolds into a
-//! grid — and its navigation; macOS keeps a Swift twin in
+//! The expandable window's two modes — a packed row (or a column) that
+//! unfolds into a grid — and its navigation; macOS keeps a Swift twin in
 //! `ExpandableCandidatePanel.swift`. The unfold's timing and drawing are
 //! the renderer's, its
 //! geometry (which cell moves where) is computed here.
 
 use super::grid::ExpandedGridLayout;
-use super::horizontal::{HorizontalPageLayout, PageSlot};
+use super::horizontal::HorizontalPageLayout;
+use super::metrics::CandidateMetrics;
 use super::positioning::{Point, Rect};
+use super::vertical::widest_columns;
 use super::MAX_DISPLAY_CANDIDATES;
 use crate::keys::CandidateNavigation;
 
@@ -14,6 +16,57 @@ use crate::keys::CandidateNavigation;
 pub enum ExpandableDisplayMode {
     Collapsed,
     Expanded,
+}
+
+/// Which way the collapsed list runs. Both unfold into the same grid; the
+/// axis decides the collapsed shape and which arrow unfolds it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ExpandableAxis {
+    /// One packed row, the chevron column at its right (Expandable).
+    Row,
+    /// The first page stacked as a column, the chevron column at its right
+    /// (Vertical Expandable).
+    Column,
+}
+
+impl ExpandableAxis {
+    /// The arrow across the list, the one that unfolds it: `↓` under a row,
+    /// `→` beside a column. The renderer points the chevron this way.
+    pub fn unfold_direction(self) -> CandidateNavigation {
+        match self {
+            Self::Row => CandidateNavigation::Down,
+            Self::Column => CandidateNavigation::Right,
+        }
+    }
+}
+
+/// How the collapsed cells are laid out, with what each shape measures from.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum CollapsedLayout<'a> {
+    /// Packed from the summed cell widths `new` takes.
+    Row,
+    /// Aligned like the vertical list — every row's annotation at one x —
+    /// so it measures the two columns apart (`VerticalLayoutInput`'s inputs).
+    Column {
+        metrics: &'a CandidateMetrics,
+        primary_widths: &'a [f32],
+        annotation_widths: &'a [Option<f32>],
+    },
+}
+
+/// One collapsed cell and its frame.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct CollapsedCell {
+    pub candidate_index: usize,
+    pub rect: Rect,
+}
+
+/// What `new` frames the collapsed mode into, per shape.
+struct CollapsedFrames {
+    cells: Vec<CollapsedCell>,
+    content_width: f32,
+    content_height: f32,
+    primary_column_width: Option<f32>,
 }
 
 /// What a navigation or click asked the renderer to animate.
@@ -25,7 +78,8 @@ pub enum ExpandableModeChange {
 
 /// What the window needs to lay a list out.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct ExpandableGeometryInput {
+pub struct ExpandableGeometryInput<'a> {
+    pub collapsed: CollapsedLayout<'a>,
     /// `CandidateMetrics::base_width` — the packing slot.
     pub base_width: f32,
     pub maximum_window_width: f32,
@@ -64,18 +118,25 @@ pub struct UnfoldPlan {
     /// Grid cells with no collapsed counterpart (their frames are
     /// `grid_cell_rect`), in display order.
     pub appearing: Vec<usize>,
-    /// The chevron's collapsed frame — the chrome column right of the row.
-    pub chevron_collapsed: Rect,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ExpandableListModel {
+    axis: ExpandableAxis,
     count: usize,
     item_height: f32,
     chrome_width: f32,
     scroller_width: f32,
-    /// The collapsed row: the first page of the horizontal packer.
-    collapsed_row: Vec<PageSlot>,
+    /// The collapsed cells in reading order, framed once per list: the
+    /// first page of the horizontal packer end to end (row), or the first
+    /// page stacked at one aligned width (column).
+    collapsed_cells: Vec<CollapsedCell>,
+    /// The collapsed cells' extent, left of the chevron column.
+    collapsed_content_width: f32,
+    collapsed_content_height: f32,
+    /// The column's candidate column width, which every row's annotation
+    /// starts after; `None` for a row.
+    collapsed_primary_column_width: Option<f32>,
     grid: ExpandedGridLayout,
     column_width: f32,
     mode: ExpandableDisplayMode,
@@ -95,24 +156,41 @@ impl ExpandableListModel {
 
     /// Lays out `measured_widths` (one per candidate; capped at
     /// [`MAX_DISPLAY_CANDIDATES`] here) under `geometry`.
-    pub fn new(measured_widths: &[f32], geometry: ExpandableGeometryInput) -> Self {
+    pub fn new(measured_widths: &[f32], geometry: ExpandableGeometryInput<'_>) -> Self {
         let measured_widths = &measured_widths[..measured_widths.len().min(MAX_DISPLAY_CANDIDATES)];
-        let collapsed = HorizontalPageLayout::pack_with_chrome(
-            measured_widths,
-            geometry.base_width,
-            geometry.maximum_window_width,
-            geometry.chrome_width,
-        );
-        let collapsed_row = collapsed.pages.first().cloned().unwrap_or_default();
-        let column_width = Self::resolved_column_width(measured_widths, geometry);
+        let (axis, collapsed) = match geometry.collapsed {
+            CollapsedLayout::Row => (
+                ExpandableAxis::Row,
+                Self::collapsed_row(measured_widths, &geometry),
+            ),
+            CollapsedLayout::Column {
+                metrics,
+                primary_widths,
+                annotation_widths,
+            } => (
+                ExpandableAxis::Column,
+                Self::collapsed_column(
+                    measured_widths.len(),
+                    metrics,
+                    primary_widths,
+                    annotation_widths,
+                    &geometry,
+                ),
+            ),
+        };
+        let column_width = Self::resolved_column_width(measured_widths, &geometry);
         let grid =
             ExpandedGridLayout::compute(measured_widths, column_width, Self::EXPANDED_COLUMN_COUNT);
         Self {
+            axis,
             count: measured_widths.len(),
             item_height: geometry.item_height,
             chrome_width: geometry.chrome_width,
             scroller_width: geometry.scroller_width,
-            collapsed_row,
+            collapsed_cells: collapsed.cells,
+            collapsed_content_width: collapsed.content_width,
+            collapsed_content_height: collapsed.content_height,
+            collapsed_primary_column_width: collapsed.primary_column_width,
             grid,
             column_width,
             mode: ExpandableDisplayMode::Collapsed,
@@ -121,12 +199,104 @@ impl ExpandableListModel {
         }
     }
 
+    /// The collapsed row: the first page of the horizontal packer, its cells
+    /// end to end.
+    fn collapsed_row(widths: &[f32], geometry: &ExpandableGeometryInput<'_>) -> CollapsedFrames {
+        let page = HorizontalPageLayout::pack_with_chrome(
+            widths,
+            geometry.base_width,
+            geometry.maximum_window_width,
+            geometry.chrome_width,
+        )
+        .pages
+        .into_iter()
+        .next()
+        .unwrap_or_default();
+        let mut x = 0.0;
+        let cells = page
+            .iter()
+            .map(|slot| {
+                let rect = Rect::new(x, 0.0, slot.width, geometry.item_height);
+                x += slot.width;
+                CollapsedCell {
+                    candidate_index: slot.candidate_index,
+                    rect,
+                }
+            })
+            .collect();
+        CollapsedFrames {
+            cells,
+            content_width: x,
+            content_height: geometry.item_height,
+            primary_column_width: None,
+        }
+    }
+
+    /// The collapsed column: the first page stacked at the grid's row pitch,
+    /// sized as the vertical list sizes itself (`VerticalListModel`
+    /// `resolve_width`) — the widest candidate column plus the widest
+    /// annotation, floored at one slot and capped by the screen, less the
+    /// chevron column when there is one.
+    fn collapsed_column(
+        count: usize,
+        metrics: &CandidateMetrics,
+        primary_widths: &[f32],
+        annotation_widths: &[Option<f32>],
+        geometry: &ExpandableGeometryInput<'_>,
+    ) -> CollapsedFrames {
+        let rows = count
+            .min(HorizontalPageLayout::PAGE_SIZE)
+            .min(primary_widths.len())
+            .min(annotation_widths.len());
+        let (widest_primary, widest_annotation) =
+            widest_columns(&primary_widths[..rows], &annotation_widths[..rows]);
+        let chrome = if count > rows {
+            geometry.chrome_width
+        } else {
+            0.0
+        };
+        let width = metrics
+            .cell_width(widest_primary, widest_annotation)
+            .max(geometry.base_width)
+            .min(
+                geometry
+                    .base_width
+                    .max(geometry.maximum_window_width - chrome),
+            );
+        let pitch = geometry.item_height + Self::SEPARATOR_HEIGHT;
+        let cells = (0..rows)
+            .map(|candidate_index| CollapsedCell {
+                candidate_index,
+                rect: Rect::new(
+                    0.0,
+                    candidate_index as f32 * pitch,
+                    width,
+                    geometry.item_height,
+                ),
+            })
+            .collect();
+        CollapsedFrames {
+            cells,
+            content_width: width,
+            content_height: Self::rows_height(rows, geometry.item_height),
+            primary_column_width: Some(
+                widest_primary
+                    .min(metrics.maximum_primary_column_width(width, metrics.horizontal_padding())),
+            ),
+        }
+    }
+
+    /// `rows` items with a separator between each two.
+    fn rows_height(rows: usize, item_height: f32) -> f32 {
+        rows as f32 * item_height + rows.saturating_sub(1) as f32 * Self::SEPARATOR_HEIGHT
+    }
+
     /// The nine-slot row the collapsed mode packs to, widened until the
     /// longest candidate fits a full row of columns, and capped by what the
     /// screen leaves once the scroller has its share. Widening the columns
     /// rather than letting a cell span more of them keeps the grid a grid
     /// (columns widen, spans stay whole).
-    fn resolved_column_width(widths: &[f32], geometry: ExpandableGeometryInput) -> f32 {
+    fn resolved_column_width(widths: &[f32], geometry: &ExpandableGeometryInput<'_>) -> f32 {
         let baseline = HorizontalPageLayout::row_budget(geometry.base_width);
         let budget = geometry.maximum_window_width - geometry.scroller_width;
         let widest = widths.iter().copied().fold(0.0, f32::max);
@@ -137,6 +307,10 @@ impl ExpandableListModel {
 
     pub fn count(&self) -> usize {
         self.count
+    }
+
+    pub fn axis(&self) -> ExpandableAxis {
+        self.axis
     }
 
     pub fn mode(&self) -> ExpandableDisplayMode {
@@ -151,8 +325,14 @@ impl ExpandableListModel {
         self.scroll_y
     }
 
-    pub fn collapsed_row(&self) -> &[PageSlot] {
-        &self.collapsed_row
+    pub fn collapsed_cells(&self) -> &[CollapsedCell] {
+        &self.collapsed_cells
+    }
+
+    /// The column's candidate column width (`None` for a row): the renderer
+    /// starts every row's annotation after it.
+    pub fn collapsed_primary_column_width(&self) -> Option<f32> {
+        self.collapsed_primary_column_width
     }
 
     pub fn grid(&self) -> &ExpandedGridLayout {
@@ -163,10 +343,10 @@ impl ExpandableListModel {
         self.column_width
     }
 
-    /// Whether the list holds more than the collapsed row shows — what the
+    /// Whether the list holds more than the collapsed cells show — what the
     /// chevron, the paging-edge corner and the expand paths all key on.
     pub fn has_overflow(&self) -> bool {
-        self.count > self.collapsed_row.len()
+        self.count > self.collapsed_cells.len()
     }
 
     pub fn grid_width(&self) -> f32 {
@@ -177,15 +357,16 @@ impl ExpandableListModel {
         self.item_height + Self::SEPARATOR_HEIGHT
     }
 
-    /// The collapsed row's cells laid end to end.
-    pub fn collapsed_row_width(&self) -> f32 {
-        self.collapsed_row.iter().map(|slot| slot.width).sum()
+    /// The collapsed cells' extent left of the chevron: a row's cells laid
+    /// end to end, or the column's one shared width.
+    pub fn collapsed_content_width(&self) -> f32 {
+        self.collapsed_content_width
     }
 
-    /// The collapsed window: the row plus the chevron column when there is
+    /// The collapsed window: the cells plus the chevron column when there is
     /// more to show.
     pub fn collapsed_window_width(&self) -> f32 {
-        self.collapsed_row_width()
+        self.collapsed_content_width()
             + if self.has_overflow() {
                 self.chrome_width
             } else {
@@ -193,15 +374,27 @@ impl ExpandableListModel {
             }
     }
 
+    /// One item tall for a row; for a column, its rows with a separator
+    /// between each two — the grid's row pitch, so the unfold keeps it.
+    pub fn collapsed_window_height(&self) -> f32 {
+        self.collapsed_content_height
+    }
+
+    /// The chevron's collapsed frame: the chrome column right of the cells,
+    /// the collapsed window's full height.
+    pub fn chevron_rect(&self) -> Rect {
+        Rect::new(
+            self.collapsed_content_width(),
+            0.0,
+            self.chrome_width,
+            self.collapsed_window_height(),
+        )
+    }
+
     pub fn expanded_geometry(&self) -> ExpandedGeometry {
-        let rows = self.grid.rows.len();
-        let content_height = if rows == 0 {
-            0.0
-        } else {
-            rows as f32 * self.item_height + (rows - 1) as f32 * Self::SEPARATOR_HEIGHT
-        };
-        let max_visible_height = (Self::MAX_VISIBLE_ROWS as f32 + 0.5) * self.item_height
-            + (Self::MAX_VISIBLE_ROWS - 1) as f32 * Self::SEPARATOR_HEIGHT;
+        let content_height = Self::rows_height(self.grid.rows.len(), self.item_height);
+        let max_visible_height =
+            Self::rows_height(Self::MAX_VISIBLE_ROWS, self.item_height) + self.item_height / 2.0;
         let needs_scrolling = content_height > max_visible_height;
         ExpandedGeometry {
             window_width: self.grid_width()
@@ -224,16 +417,10 @@ impl ExpandableListModel {
         }
     }
 
-    /// The collapsed row's cell frames, end to end.
+    /// The collapsed cell frames: end to end along a row, stacked down a
+    /// column.
     pub fn collapsed_cell_rect(&self, slot: usize) -> Option<Rect> {
-        let x: f32 = self
-            .collapsed_row
-            .get(..slot)?
-            .iter()
-            .map(|s| s.width)
-            .sum();
-        let cell = self.collapsed_row.get(slot)?;
-        Some(Rect::new(x, 0.0, cell.width, self.item_height))
+        self.collapsed_cells.get(slot).map(|cell| cell.rect)
     }
 
     /// A grid cell's frame in CONTENT coordinates (before the scroll offset).
@@ -262,28 +449,18 @@ impl ExpandableListModel {
     /// The unfold's geometry from the current collapsed row.
     pub fn unfold_plan(&self) -> UnfoldPlan {
         let moves: Vec<CellMove> = self
-            .collapsed_row
+            .collapsed_cells
             .iter()
-            .enumerate()
-            .filter_map(|(slot, cell)| {
+            .filter_map(|cell| {
                 Some(CellMove {
                     candidate_index: cell.candidate_index,
-                    collapsed: self.collapsed_cell_rect(slot)?,
+                    collapsed: cell.rect,
                     expanded: self.grid_cell_rect(cell.candidate_index)?,
                 })
             })
             .collect();
-        let appearing = (self.collapsed_row.len()..self.count).collect();
-        UnfoldPlan {
-            moves,
-            appearing,
-            chevron_collapsed: Rect::new(
-                self.collapsed_row_width(),
-                0.0,
-                self.chrome_width,
-                self.item_height,
-            ),
-        }
+        let appearing = (self.collapsed_cells.len()..self.count).collect();
+        UnfoldPlan { moves, appearing }
     }
 
     /// The candidate under `point` in WINDOW coordinates, for the current
@@ -293,17 +470,11 @@ impl ExpandableListModel {
             return None;
         }
         match self.mode {
-            ExpandableDisplayMode::Collapsed => {
-                if point.y >= self.item_height {
-                    return None;
-                }
-                let mut x = 0.0;
-                self.collapsed_row.iter().find_map(|cell| {
-                    let hit = point.x >= x && point.x < x + cell.width;
-                    x += cell.width;
-                    hit.then_some(cell.candidate_index)
-                })
-            }
+            ExpandableDisplayMode::Collapsed => self
+                .collapsed_cells
+                .iter()
+                .find(|cell| cell.rect.contains(point))
+                .map(|cell| cell.candidate_index),
             ExpandableDisplayMode::Expanded => {
                 let content_y = point.y + self.scroll_y;
                 let row = (content_y / self.row_height()).floor() as usize;
@@ -327,9 +498,10 @@ impl ExpandableListModel {
     /// one row at a time, so a chord always names exactly one candidate.
     pub fn candidate_index_for_slot(&self, slot: usize) -> Option<usize> {
         match self.mode {
-            ExpandableDisplayMode::Collapsed => {
-                self.collapsed_row.get(slot).map(|s| s.candidate_index)
-            }
+            ExpandableDisplayMode::Collapsed => self
+                .collapsed_cells
+                .get(slot)
+                .map(|cell| cell.candidate_index),
             ExpandableDisplayMode::Expanded => {
                 let (row_index, _) = self.grid.position_of(self.selected_index)?;
                 self.grid.rows[row_index]
@@ -367,26 +539,40 @@ impl ExpandableListModel {
         direction: CandidateNavigation,
     ) -> Option<ExpandableModeChange> {
         use CandidateNavigation::*;
+        // The arrows along the list walk it; the one across it unfolds.
+        let (forward, backward) = match self.axis {
+            ExpandableAxis::Row => (Right, Left),
+            ExpandableAxis::Column => (Down, Up),
+        };
+        let across = self.axis.unfold_direction();
         match direction {
-            Right | NextCandidate => {
-                let target = self.selected_index + 1;
-                if target >= self.count {
-                    return None;
-                }
-                // Walking off the row's end both expands AND lands on the
-                // next candidate — an expand that kept the old selection
-                // would eat one keypress.
-                self.select(target)
-            }
-            Left | PreviousCandidate => self.select(self.selected_index.saturating_sub(1)),
-            Down | PageDown => {
-                if self.has_overflow() {
-                    self.expand()
-                } else {
-                    None
-                }
-            }
-            Up | PageUp => None,
+            NextCandidate => self.select_next_collapsed(),
+            PreviousCandidate => self.select(self.selected_index.saturating_sub(1)),
+            PageDown => self.expand_if_overflowing(),
+            PageUp => None,
+            _ if direction == forward => self.select_next_collapsed(),
+            _ if direction == backward => self.select(self.selected_index.saturating_sub(1)),
+            _ if direction == across => self.expand_if_overflowing(),
+            _ => None,
+        }
+    }
+
+    fn select_next_collapsed(&mut self) -> Option<ExpandableModeChange> {
+        let target = self.selected_index + 1;
+        if target >= self.count {
+            return None;
+        }
+        // Walking off the collapsed list's end both expands AND lands on the
+        // next candidate — an expand that kept the old selection would eat
+        // one keypress.
+        self.select(target)
+    }
+
+    fn expand_if_overflowing(&mut self) -> Option<ExpandableModeChange> {
+        if self.has_overflow() {
+            self.expand()
+        } else {
+            None
         }
     }
 
@@ -469,7 +655,7 @@ impl ExpandableListModel {
             return None;
         }
         self.selected_index = index;
-        if self.mode == ExpandableDisplayMode::Collapsed && index >= self.collapsed_row.len() {
+        if self.mode == ExpandableDisplayMode::Collapsed && index >= self.collapsed_cells.len() {
             return self.expand();
         }
         if self.mode == ExpandableDisplayMode::Expanded {
@@ -495,8 +681,8 @@ impl ExpandableListModel {
         self.mode = ExpandableDisplayMode::Collapsed;
         self.scroll_y = 0.0;
         // A selection beyond the collapsed row clamps to its last cell.
-        if self.selected_index >= self.collapsed_row.len() {
-            self.selected_index = self.collapsed_row.len().saturating_sub(1);
+        if self.selected_index >= self.collapsed_cells.len() {
+            self.selected_index = self.collapsed_cells.len().saturating_sub(1);
         }
         Some(ExpandableModeChange::Collapse)
     }
@@ -536,10 +722,14 @@ impl ExpandableListModel {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::candidates::metrics::test_support;
+    use crate::candidates::CandidateCellArrangement;
+    use crate::settings::CandidateSizeChoice;
     use CandidateNavigation::*;
 
-    fn geometry() -> ExpandableGeometryInput {
+    fn geometry() -> ExpandableGeometryInput<'static> {
         ExpandableGeometryInput {
+            collapsed: CollapsedLayout::Row,
             base_width: 10.0,
             maximum_window_width: 640.0,
             chrome_width: 20.0,
@@ -552,18 +742,54 @@ mod tests {
         ExpandableListModel::new(widths, geometry())
     }
 
+    fn inline_metrics() -> CandidateMetrics {
+        test_support::metrics(CandidateSizeChoice::Large, CandidateCellArrangement::Inline)
+    }
+
+    /// A column whose cells measure `primary` / `annotation` apart — the
+    /// summed widths for the grid come from the same metrics.
+    fn column_model_with(
+        metrics: &CandidateMetrics,
+        primary: &[f32],
+        annotation: &[Option<f32>],
+    ) -> ExpandableListModel {
+        let widths: Vec<f32> = primary
+            .iter()
+            .zip(annotation)
+            .map(|(&p, &a)| metrics.cell_width(p, a))
+            .collect();
+        ExpandableListModel::new(
+            &widths,
+            ExpandableGeometryInput {
+                collapsed: CollapsedLayout::Column {
+                    metrics,
+                    primary_widths: primary,
+                    annotation_widths: annotation,
+                },
+                base_width: metrics.base_width(),
+                ..geometry()
+            },
+        )
+    }
+
+    /// `count` annotation-less candidates whose candidate text is `primary` wide.
+    fn column_model(metrics: &CandidateMetrics, primary: f32, count: usize) -> ExpandableListModel {
+        column_model_with(metrics, &vec![primary; count], &vec![None; count])
+    }
+
     #[test]
     fn collapsed_row_is_the_first_packed_page_and_overflow_gates_the_chevron() {
         // trace: 20 × 5 → the first page holds 9 (row budget 90 - 20 chrome).
         let m = model(&[5.0; 20]);
-        assert_eq!(m.collapsed_row().len(), 9);
+        assert_eq!(m.collapsed_cells().len(), 9);
         assert!(m.has_overflow());
         assert_eq!(m.candidate_index_for_slot(8), Some(8));
         assert_eq!(m.candidate_index_for_slot(9), None);
         assert_eq!(m.collapsed_window_width(), 9.0 * 10.0 + 20.0);
         let short = model(&[5.0; 3]);
         assert!(!short.has_overflow());
-        assert_eq!(short.collapsed_row_width(), 30.0);
+        assert_eq!(short.collapsed_content_width(), 30.0);
+        assert_eq!(short.collapsed_window_height(), 30.0);
         assert_eq!(
             short.collapsed_window_width(),
             30.0,
@@ -724,7 +950,7 @@ mod tests {
             "wraps to row 1"
         );
         assert_eq!(plan.appearing, (9..20).collect::<Vec<_>>());
-        assert_eq!(plan.chevron_collapsed, Rect::new(90.0, 0.0, 20.0, 30.0));
+        assert_eq!(m.chevron_rect(), Rect::new(90.0, 0.0, 20.0, 30.0));
         assert_eq!(m.grid_cell_rect(20), None);
         let mut m = m;
         m.select(7);
@@ -733,5 +959,112 @@ mod tests {
             m.selected_row_rect(),
             Some(Rect::new(0.0, 31.0, 90.0, 30.0))
         );
+    }
+
+    #[test]
+    fn collapsed_column_stacks_the_first_page_at_one_aligned_width() {
+        let metrics = inline_metrics();
+        // trace: 20 × primary 5, no annotation → width = cell_width(5, None)
+        // floored at one slot; rows at the grid's pitch 30 + 1.
+        let width = metrics.cell_width(5.0, None).max(metrics.base_width());
+        let m = column_model(&metrics, 5.0, 20);
+        assert_eq!(m.collapsed_cells().len(), 9);
+        assert!(m.has_overflow());
+        assert_eq!(m.candidate_index_for_slot(8), Some(8));
+        assert_eq!(m.candidate_index_for_slot(9), None);
+        assert_eq!(m.collapsed_content_width(), width);
+        assert_eq!(m.collapsed_window_width(), width + 20.0);
+        assert_eq!(m.collapsed_window_height(), 9.0 * 30.0 + 8.0);
+        assert_eq!(
+            m.collapsed_cell_rect(2),
+            Some(Rect::new(0.0, 62.0, width, 30.0))
+        );
+        assert_eq!(m.collapsed_cell_rect(9), None);
+        assert_eq!(m.collapsed_primary_column_width(), Some(5.0));
+        assert_eq!(model(&[5.0; 3]).collapsed_primary_column_width(), None);
+    }
+
+    #[test]
+    fn collapsed_column_sizes_like_the_vertical_list() {
+        let metrics = inline_metrics();
+        // The widest primary (row 1) and the widest annotation (row 0) are
+        // different rows: the column fits both, wider than either row alone.
+        let primary = [10.0, 40.0, 10.0];
+        let annotation = [Some(50.0), None, Some(20.0)];
+        let m = column_model_with(&metrics, &primary, &annotation);
+        let aligned = metrics
+            .cell_width(40.0, Some(50.0))
+            .max(metrics.base_width());
+        assert!(!m.has_overflow());
+        assert_eq!(m.collapsed_window_width(), aligned, "no chevron column");
+        assert!(aligned > metrics.cell_width(40.0, None));
+        assert!(aligned > metrics.cell_width(10.0, Some(50.0)));
+        assert_eq!(m.collapsed_primary_column_width(), Some(40.0));
+        assert_eq!(m.collapsed_window_height(), 3.0 * 30.0 + 2.0);
+        assert_eq!(
+            column_model(&metrics, 5_000.0, 1).collapsed_content_width(),
+            640.0,
+            "no chevron to leave room for"
+        );
+        assert_eq!(
+            column_model(&metrics, 5_000.0, 10).collapsed_content_width(),
+            640.0 - 20.0,
+            "capped where the chevron still fits"
+        );
+    }
+
+    #[test]
+    fn collapsed_column_walks_down_and_unfolds_to_the_right() {
+        let metrics = inline_metrics();
+        let mut m = column_model(&metrics, 5.0, 20);
+        assert_eq!(m.axis().unfold_direction(), Right);
+        assert_eq!(m.navigate(Left), None, "nothing left of a column");
+        assert_eq!(m.navigate(Down), None);
+        assert_eq!(m.selected_index(), 1);
+        assert_eq!(m.navigate(Up), None);
+        assert_eq!(m.selected_index(), 0);
+        assert_eq!(m.navigate(Right), Some(ExpandableModeChange::Expand));
+        assert_eq!(
+            m.navigate(Up),
+            Some(ExpandableModeChange::Collapse),
+            "expanded keys are the row's: up on grid row 0 folds"
+        );
+
+        // Walking off the column's foot expands AND advances.
+        m.select(8);
+        assert_eq!(m.navigate(Down), Some(ExpandableModeChange::Expand));
+        assert_eq!(m.selected_index(), 9);
+        assert_eq!(m.collapse(), Some(ExpandableModeChange::Collapse));
+        assert_eq!(m.selected_index(), 8, "clamped to the column's foot");
+        assert_eq!(m.navigate(PageDown), Some(ExpandableModeChange::Expand));
+
+        let mut no_overflow = column_model(&metrics, 5.0, 3);
+        assert_eq!(no_overflow.navigate(Right), None);
+        assert_eq!(no_overflow.navigate(PageDown), None);
+        assert_eq!(model(&[5.0; 3]).axis().unfold_direction(), Down);
+    }
+
+    #[test]
+    fn collapsed_column_hit_test_and_unfold_plan() {
+        let metrics = inline_metrics();
+        let m = column_model(&metrics, 5.0, 20);
+        let width = m.collapsed_content_width();
+        assert_eq!(m.hit_test(Point { x: 5.0, y: 65.0 }), Some(2));
+        assert_eq!(m.hit_test(Point { x: 5.0, y: 61.5 }), None, "a separator");
+        assert_eq!(m.hit_test(Point { x: 5.0, y: 280.0 }), None, "below row 9");
+        assert_eq!(
+            m.hit_test(Point {
+                x: width + 1.0,
+                y: 5.0
+            }),
+            None,
+            "the chevron"
+        );
+        assert_eq!(m.chevron_rect(), Rect::new(width, 0.0, 20.0, 278.0));
+        let plan = m.unfold_plan();
+        assert_eq!(plan.moves.len(), 9);
+        assert_eq!(plan.moves[1].collapsed, Rect::new(0.0, 31.0, width, 30.0));
+        assert_eq!(Some(plan.moves[1].expanded), m.grid_cell_rect(1));
+        assert_eq!(plan.appearing, (9..20).collect::<Vec<_>>());
     }
 }

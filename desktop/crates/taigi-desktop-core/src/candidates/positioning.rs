@@ -40,6 +40,10 @@ impl Rect {
     pub fn bottom(&self) -> f32 {
         self.y + self.height
     }
+    /// Half-open: the right and bottom edges belong to the next frame.
+    pub fn contains(&self, point: Point) -> bool {
+        point.x >= self.x && point.x < self.right() && point.y >= self.y && point.y < self.bottom()
+    }
 }
 
 /// The gap between the window and the line of text it belongs to.

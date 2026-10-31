@@ -63,6 +63,7 @@ enum StringKey: String {
     case desktopCandidateLayoutHorizontal = "i18n_desktop_candidateLayoutHorizontal"
     case desktopCandidateLayoutVertical = "i18n_desktop_candidateLayoutVertical"
     case desktopCandidateLayoutExpandable = "i18n_desktop_candidateLayoutExpandable"
+    case desktopCandidateLayoutVerticalExpandable = "i18n_desktop_candidateLayoutVerticalExpandable"
     case desktopAppearanceTab = "i18n_desktop_appearanceTab"
     case desktopCandidateAppearanceLight = "i18n_desktop_candidateAppearanceLight"
     case desktopCandidateAppearanceDark = "i18n_desktop_candidateAppearanceDark"
