@@ -28,6 +28,8 @@ import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.key.KeyType
 import com.siansiansu.taigikeyboard.ime.text.key.KeyVariation
+import com.siansiansu.taigikeyboard.ime.text.layout.CustomLayout
+import com.siansiansu.taigikeyboard.ime.text.layout.LayoutScript
 import com.siansiansu.taigikeyboard.ime.theme.KeyboardColorSettings
 import com.siansiansu.taigikeyboard.ime.theme.getColorFromAttr
 
@@ -123,6 +125,7 @@ fun KeyboardLayout(
                         isPreview = isPreview,
                         pressed = pressedKeyId == idFor(rowIndex, indexInRow),
                         themeColors = themeColors,
+                        hasCustomCallouts = layoutData.mode == KeyboardMode.CHARACTERS && key.label in appearance.customCalloutLabels,
                     )
                 }
             }
@@ -378,8 +381,19 @@ data class KeyboardAppearance(
      *  dimensions only need to change when the theme's height flips — not on
      *  per-keystroke recomposition. */
     val keyHeightScale: Float,
+    /**
+     * Half-width labels of the letter keys the active custom layout gives their own long-press list
+     * ([CustomLayout.callouts]); their MOE hint hides.
+     */
+    val customCalloutLabels: Set<String> = emptySet(),
 ) {
     companion object {
+        /** [customCalloutLabels] for [layout] in [inputMode]: as LayoutManager, a custom layout only replaces the TL / POJ letter keyboard. */
+        fun customCalloutLabels(
+            inputMode: String,
+            layout: CustomLayout?,
+        ): Set<String> = if (LayoutScript.fromStorage(inputMode) != null) layout?.callouts?.keys.orEmpty() else emptySet()
+
         /** Confirm-key label per input mode (used by KeyView). Keycap content, not app chrome — not i18n. */
         fun confirmKeyLabel(
             inputMode: String,

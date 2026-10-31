@@ -141,6 +141,7 @@ fun KeyboardPreviewPanel(
             keyBorderWidth = keyBorderWidth,
             keyShadowIntensity = keyShadowIntensity,
             keyHeightScale = keyHeightScale,
+            customCalloutLabels = KeyboardAppearance.customCalloutLabels(previewInputMode, activeCustomLayout),
         )
 
         // Solve dimensions inline so `KeyboardLayout` can be invoked with

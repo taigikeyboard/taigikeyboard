@@ -38,6 +38,8 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
@@ -66,6 +68,8 @@ class LayoutKeyGridInteraction(
     /** TalkBack name of a removed key's place (the grid has no strings of its own). */
     val removedPlaceLabel: String,
     val onTap: (LayoutPlace) -> Unit,
+    /** The selected key's horizontal centre in window coordinates, reported as it is laid out. */
+    val onSelectedKeyCenterX: (Float) -> Unit = {},
 )
 
 /**
@@ -119,6 +123,22 @@ fun LayoutKeyGrid(
         }
     }
 }
+
+/** The dashed outline of an empty place: a removed key, an empty long-press slot. */
+fun Modifier.dashedOutline(
+    color: Color,
+    corner: Dp,
+    isVisible: Boolean = true,
+): Modifier =
+    drawBehind {
+        if (isVisible) {
+            drawRoundRect(
+                color,
+                cornerRadius = CornerRadius(corner.toPx()),
+                style = Stroke(width = 1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 3.dp.toPx()))),
+            )
+        }
+    }
 
 /** A key's face: its text, or its keyboard icon. */
 @Composable
@@ -221,7 +241,9 @@ private fun GridKeyView(
 
     val keyModifier =
         if (place != null && interaction != null) {
-            Modifier.interactive(place, key, isSelected, interaction)
+            Modifier
+                .interactive(place, key, isSelected, interaction)
+                .onGloballyPositioned { if (isSelected) interaction.onSelectedKeyCenterX(it.boundsInWindow().center.x) }
         } else {
             Modifier
         }
@@ -235,15 +257,7 @@ private fun GridKeyView(
                 Modifier
                     .fillMaxSize()
                     .background(fill, shape)
-                    .drawBehind {
-                        if (key.isRemoved && !isSelected) {
-                            drawRoundRect(
-                                dashColor,
-                                cornerRadius = CornerRadius(corner.toPx()),
-                                style = Stroke(width = 1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 3.dp.toPx()))),
-                            )
-                        }
-                    }
+                    .dashedOutline(dashColor, corner, isVisible = key.isRemoved && !isSelected)
                     // The digit row is the base's and inert; a removed place shows no face.
                     .alpha(
                         when {

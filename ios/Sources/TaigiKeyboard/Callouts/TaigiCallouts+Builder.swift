@@ -44,7 +44,7 @@ public extension TaigiCallouts {
 
     /// Callout characters for `char`, or nil for none.
     // CROSS-PLATFORM INVARIANT — English mode offers symbol callouts only, as
-    // Android `LayoutManager.loadExtendedPopups` loads no Taigi popups there.
+    // Android `LayoutAssets.extendedPopups` loads no Taigi popups there.
     internal static func calloutChars(
         for char: String,
         inputMode: InputMode,

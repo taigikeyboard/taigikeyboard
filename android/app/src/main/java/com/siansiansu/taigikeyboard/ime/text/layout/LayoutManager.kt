@@ -1,5 +1,6 @@
 // Keyboard layout manager: picks the layout files for a keyboard mode, merges them (LayoutAssets), puts an
-// active custom layout's keys in (CustomLayoutTables), injects extended popups, and emits
+// active custom layout's keys in (CustomLayoutTables), injects extended popups, puts the custom
+// layout's long-press lists in, and emits
 // ComputedLayoutData for KeyboardImeRoot.
 
 package com.siansiansu.taigikeyboard.ime.text.layout
@@ -13,8 +14,6 @@ import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.key.KeyType
 import com.siansiansu.taigikeyboard.ime.text.key.KeyVariation
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardMode
-import com.squareup.moshi.JsonAdapter
-import com.squareup.moshi.Types
 private typealias LTN = Pair<LayoutType, String>
 
 class LayoutManager(
@@ -54,46 +53,10 @@ class LayoutManager(
         return layoutData
     }
 
-    private fun loadExtendedPopups(): Map<String, List<KeyData>> {
-        val taigiMap =
-            when (prefs.inputMode) {
-                "poj" -> loadExtendedPopupsInternal("ime/text/characters/extended_popups/taigi_poj.json")
-                "tl" -> loadExtendedPopupsInternal("ime/text/characters/extended_popups/taigi_tl.json")
-                else -> null
-            }
-
-        // If Taigi popup loaded successfully, return it; otherwise return empty map
-        return taigiMap ?: mapOf()
-    }
-
-    private fun loadExtendedPopupsInternal(path: String): Map<String, List<KeyData>>? {
-        val rawJsonData: String =
-            try {
-                context.assets
-                    .open(path)
-                    .bufferedReader()
-                    .use { it.readText() }
-            } catch (e: Exception) {
-                null
-            } ?: return null
-        val mapAdaptor: JsonAdapter<Map<String, List<KeyData>>> =
-            LayoutAssets.moshi.adapter(
-                Types.newParameterizedType(
-                    Map::class.java,
-                    String::class.java,
-                    Types.newParameterizedType(
-                        List::class.java,
-                        KeyData::class.java,
-                    ),
-                ),
-            )
-        return mapAdaptor.fromJson(rawJsonData)
-    }
-
     /**
      * Merges the specified layouts (LTNs) ([LayoutAssets.merge]) and returns the computed layout,
      * with [custom]'s keys in place of the base's before extended popups are added, so the
-     * popups follow each key's label.
+     * popups follow each key's label; [custom]'s own long-press lists go in last.
      *
      * @param keyboardMode The keyboard mode for the returning [ComputedLayoutData].
      * @param main The main layout type and name.
@@ -120,7 +83,7 @@ class LayoutManager(
         // (NORMAL/PASSWORD → "~normal", EMAIL_ADDRESS/URI → "~uri") to
         // remove the nested if/else duplication below.
         if (keyboardMode == KeyboardMode.CHARACTERS) {
-            val extendedPopups = loadExtendedPopups()
+            val extendedPopups = assets.extendedPopups(prefs.inputMode)
             for (computedRow in computedArrangement) {
                 for (keyData in computedRow) {
                     if (keyData.variation != KeyVariation.ALL) {
@@ -144,6 +107,8 @@ class LayoutManager(
                     }
                 }
             }
+            // After the extended popups: a user's list replaces the key's whole built-in list.
+            if (custom != null) compositionRoot.customLayoutTables.applyCallouts(computedArrangement, custom)
         }
 
         return ComputedLayoutData(

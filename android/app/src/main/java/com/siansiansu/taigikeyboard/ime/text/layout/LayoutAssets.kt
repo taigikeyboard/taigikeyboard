@@ -1,7 +1,8 @@
 // Reads keyboard layout JSON from assets/ime/text/ and merges the extension + main + modifier layers
 // into one arrangement. Shared by LayoutManager (the keyboard) and CustomLayoutTables (the tables a
 // custom layout is made from), so both see the same rows. Owns the Moshi instance with the
-// LayoutType / KeyType / KeyVariation adapters and the letter-keyboard file names.
+// LayoutType / KeyType / KeyVariation adapters, the letter-keyboard file names and the tone-mark
+// long-press tables (extended popups).
 
 package com.siansiansu.taigikeyboard.ime.text.layout
 
@@ -9,7 +10,9 @@ import android.content.Context
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.key.KeyTypeAdapter
 import com.siansiansu.taigikeyboard.ime.text.key.KeyVariationAdapter
+import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
+import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 
 /** Layout JSON over [readText], which returns a file's text or null when it cannot be read. */
@@ -71,6 +74,16 @@ class LayoutAssets(
         return arrangement
     }
 
+    /**
+     * The tone-mark long-press entries [inputMode] adds to letter keys, by key label (`a`, `oo` …,
+     * capitals too); empty outside TL / POJ. Every call returns fresh, mutable [KeyData].
+     */
+    fun extendedPopups(inputMode: String): Map<String, List<KeyData>> {
+        val script = LayoutScript.fromStorage(inputMode) ?: return emptyMap()
+        val json = readText("ime/text/characters/extended_popups/taigi_${script.inputMode}.json") ?: return emptyMap()
+        return extendedPopupsAdapter.fromJson(json).orEmpty()
+    }
+
     /** The letter keyboard of [layoutType] in [inputMode] (TL / POJ): digit row, letter rows, modifier rows. */
     fun letterKeyboard(
         layoutType: String,
@@ -96,6 +109,15 @@ class LayoutAssets(
                 .build()
 
         private val layoutAdapter = moshi.adapter(LayoutData::class.java)
+
+        private val extendedPopupsAdapter: JsonAdapter<Map<String, List<KeyData>>> =
+            moshi.adapter(
+                Types.newParameterizedType(
+                    Map::class.java,
+                    String::class.java,
+                    Types.newParameterizedType(List::class.java, KeyData::class.java),
+                ),
+            )
 
         /** Reads the app's bundled assets; an unreadable file is null, reported to [onError]. */
         fun forContext(

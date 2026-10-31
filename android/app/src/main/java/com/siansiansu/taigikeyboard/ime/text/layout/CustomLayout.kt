@@ -62,6 +62,8 @@ sealed interface LayoutPlace {
  * - [keys] fills the character keys in reading order; null marks a removed key.
  * - [functionKeys] fills the function keys in reading order; each stays in its own row.
  * - [hasEmojiKey] false hides the emoji key, the one function key that can be removed.
+ * - [callouts] holds the long-press lists the user set, by half-width key label; a key without one
+ *   keeps the built-in list ([CustomLayoutTables.defaultCallouts]).
  * The globe key and the email / URL key are not part of it: the keyboard places them.
  * The editing operations only swap, trade a key for a spare or remove one, so a key never appears
  * twice; each returns the edited copy.
@@ -74,6 +76,7 @@ data class CustomLayout(
     val keys: List<String?>,
     val functionKeys: List<FunctionKey>,
     val hasEmojiKey: Boolean,
+    val callouts: Map<String, List<String>> = emptyMap(),
 ) {
     /** The emoji key's place. */
     val emojiPlace: LayoutPlace.Function?
@@ -120,13 +123,16 @@ data class CustomLayout(
             is LayoutPlace.Function -> GridKey.Face.Function(functionKeys[place.index])
         }
 
-    /** [spare] on a character place (a removed one too); the key it replaces returns to the tray. A key on the board is refused. */
+    /**
+     * [spare] on a character place (a removed one too); the key it replaces returns to the tray, without
+     * its long-press list. A key on the board is refused.
+     */
     fun replaced(
         place: LayoutPlace,
         spare: String,
     ): CustomLayout {
         if (place !is LayoutPlace.Key || spare in keys) return this
-        return copy(keys = keys.toMutableList().also { it[place.index] = spare })
+        return copy(keys = keys.toMutableList().also { it[place.index] = spare }, callouts = calloutsWithout(place.index))
     }
 
     /** Whether the key at [place] can go to the tray: a character key, or the emoji key. */
@@ -136,17 +142,42 @@ data class CustomLayout(
             is LayoutPlace.Function -> place == emojiPlace && hasEmojiKey
         }
 
-    /** The layout with the key at [place] off the board; it returns to the spare tray. */
+    /** The layout with the key at [place] off the board; it returns to the spare tray, without its long-press list. */
     fun removed(place: LayoutPlace): CustomLayout {
         if (!canRemove(place)) return this
         return when (place) {
-            is LayoutPlace.Key -> copy(keys = keys.toMutableList().also { it[place.index] = null })
+            is LayoutPlace.Key -> copy(keys = keys.toMutableList().also { it[place.index] = null }, callouts = calloutsWithout(place.index))
             is LayoutPlace.Function -> copy(hasEmojiKey = false)
         }
     }
 
     /** The emoji key back in its place. */
     fun restoreEmojiKey(): CustomLayout = copy(hasEmojiKey = true)
+
+    /**
+     * The key labelled [label] with [entries] as its long-press list: entries are trimmed, blanks and
+     * repeats dropped, the rest capped at [MAX_CALLOUTS]. A list equal to [defaults] (the built-in one)
+     * is not stored, so the key follows the built-in list again. An empty list leaves the key without
+     * a long-press.
+     */
+    fun withCallouts(
+        label: String,
+        entries: List<String>,
+        defaults: List<String>,
+    ): CustomLayout {
+        val list =
+            entries
+                .map(String::trim)
+                .filter(String::isNotEmpty)
+                .distinct()
+                .take(MAX_CALLOUTS)
+        return copy(callouts = if (list == defaults) callouts - label else callouts + (label to list))
+    }
+
+    /** The key labelled [label] back on the built-in long-press list. */
+    fun withDefaultCallouts(label: String): CustomLayout = copy(callouts = callouts - label)
+
+    private fun calloutsWithout(index: Int): Map<String, List<String>> = keys[index]?.let { callouts - it } ?: callouts
 
     /** The labels of [pool] not on the board. */
     fun spares(pool: List<String>): List<String> {
@@ -163,16 +194,21 @@ data class CustomLayout(
             put("keys", JSONArray().apply { keys.forEach { put(it ?: JSONObject.NULL) } })
             put("functionKeys", JSONArray().apply { functionKeys.forEach { put(it.storageValue) } })
             put("hasEmojiKey", hasEmojiKey)
+            put("callouts", JSONObject().apply { callouts.forEach { (label, entries) -> put(label, JSONArray(entries)) } })
         }
 
     companion object {
         /** The most custom layouts a user can keep, as for user themes. */
         const val MAX_CUSTOM_LAYOUTS = 5
 
+        /** The most entries one key's long-press list holds. iOS `CustomLayout.maxCallouts`. */
+        const val MAX_CALLOUTS = 8
+
         /**
          * Decodes the stored list, dropping each record that fails to decode or that [tables] cannot
          * show ([CustomLayoutTables.isValid]); the others stay. A record saved before function keys
-         * could move takes the base's order; one saved before the emoji key could go keeps it.
+         * could move takes the base's order; one saved before the emoji key could go keeps it; one
+         * saved before long-press lists could change has none of its own.
          */
         fun decodeList(
             json: String,
@@ -222,6 +258,7 @@ data class CustomLayout(
             val script = LayoutScript.fromStorage(json.getString("script")) ?: return null
             val keys = json.getJSONArray("keys")
             val functionKeys = json.optJSONArray("functionKeys")
+            val callouts = json.optJSONObject("callouts")
             return CustomLayout(
                 id = json.getString("id"),
                 name = json.getString("name"),
@@ -235,6 +272,11 @@ data class CustomLayout(
                         (0 until functionKeys.length()).map { FunctionKey.fromStorage(functionKeys.getString(it)) ?: return null }
                     },
                 hasEmojiKey = json.optBoolean("hasEmojiKey", true),
+                callouts =
+                    callouts?.keys()?.asSequence()?.associateWith { label ->
+                        val entries = callouts.getJSONArray(label)
+                        (0 until entries.length()).map(entries::getString)
+                    } ?: emptyMap(),
             )
         }
     }
