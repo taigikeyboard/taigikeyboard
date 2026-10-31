@@ -110,6 +110,32 @@ final class VerticalExpandableCandidatePanelTests: XCTestCase {
         XCTAssertEqual(panel.displayMode, .collapsed, "PageUp at the top folds")
     }
 
+    /// `←` folds the column from anywhere in the grid — the arrow opposite
+    /// the `→` that unfolded it. The row's `←` still walks (negative control).
+    func testExpanded_leftFoldsFromAnywhere() {
+        let panel = makePanel()
+        panel.navigate(.right)
+        for _ in 0 ..< 12 {
+            panel.navigate(.right)
+        }
+        // trace: `→` unfolds keeping index 0, then 12 steps → 12.
+        XCTAssertEqual(panel.selectedIndex, 12)
+
+        panel.navigate(.left)
+
+        XCTAssertEqual(panel.displayMode, .collapsed)
+        XCTAssertEqual(panel.selectedIndex, 8, "clamped to the column's foot")
+
+        let row = ExpandableCandidatePanel(style: .sequoia, metrics: TestFixtures.defaultCandidateMetrics)
+        _ = row.updateCandidates(Self.cells)
+        row.navigate(.down)
+        row.navigate(.right)
+        row.navigate(.right)
+        row.navigate(.left)
+        XCTAssertEqual(row.displayMode, .expanded, "a row's `←` walks")
+        XCTAssertEqual(row.selectedIndex, 1)
+    }
+
     func testExpanded_showsTheGridNotTheColumn() {
         let panel = makePanel()
 

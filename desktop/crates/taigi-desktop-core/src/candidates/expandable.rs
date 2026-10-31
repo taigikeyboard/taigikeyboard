@@ -589,8 +589,11 @@ impl ExpandableListModel {
                     None
                 }
             }
+            // A column unfolded rightward with `→`, so `←` folds it from
+            // anywhere in the grid (USER 2026-10-31). A row keeps `←` for
+            // walking and folds only at the first cell.
             Left => {
-                if self.selected_index > 0 {
+                if self.axis == ExpandableAxis::Row && self.selected_index > 0 {
                     self.select(self.selected_index - 1)
                 } else {
                     self.collapse()
@@ -1037,6 +1040,20 @@ mod tests {
         assert_eq!(m.collapse(), Some(ExpandableModeChange::Collapse));
         assert_eq!(m.selected_index(), 8, "clamped to the column's foot");
         assert_eq!(m.navigate(PageDown), Some(ExpandableModeChange::Expand));
+
+        // `←` folds a column from anywhere in the grid, not just index 0.
+        m.select(13);
+        assert_eq!(m.navigate(Left), Some(ExpandableModeChange::Collapse));
+        assert_eq!(m.selected_index(), 8, "clamped to the column's foot");
+        m.expand();
+        m.select(3);
+        assert_eq!(m.navigate(Left), Some(ExpandableModeChange::Collapse));
+        assert_eq!(m.selected_index(), 3, "a selection the column shows stays");
+        let mut row = model(&[5.0; 40]);
+        row.expand();
+        row.select(13);
+        assert_eq!(row.navigate(Left), None, "a row's ← still walks");
+        assert_eq!(row.selected_index(), 12);
 
         let mut no_overflow = column_model(&metrics, 5.0, 3);
         assert_eq!(no_overflow.navigate(Right), None);

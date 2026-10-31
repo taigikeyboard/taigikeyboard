@@ -433,8 +433,11 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
             if selectedIndex + 1 < cells.count {
                 select(selectedIndex + 1)
             }
+        // A column unfolded rightward with `→`, so `←` folds it from anywhere
+        // in the grid (USER 2026-10-31). A row keeps `←` for walking and
+        // folds only at the first cell.
         case .left:
-            if selectedIndex > 0 {
+            if axis == .row, selectedIndex > 0 {
                 select(selectedIndex - 1)
             } else {
                 collapse(animated: true)
