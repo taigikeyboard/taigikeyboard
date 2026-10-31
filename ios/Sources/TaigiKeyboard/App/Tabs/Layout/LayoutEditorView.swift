@@ -1,38 +1,23 @@
 import SwiftUI
 
-/// Custom-layout editor: base chips, the board (fixed) and the spare tray (scrolling). Drag a key
-/// onto another to swap them (function keys within their row), a spare onto a key to replace it,
-/// a key onto the tray to remove it. Taps do the same: tap two keys, or a key then a spare or the
-/// trash. The selected character key's long-press list sits in `LayoutCalloutStrip` below the board
-/// and edits by taps alone: tap two slots to swap or move, a slot then a tray character to fill it,
-/// a slot then the trash to empty it. Nothing is stored until Save, which names the layout and applies it; Back discards the
-/// draft.
+/// Custom-layout editor: base chips, the board (fixed) and the spare tray (scrolling), all by taps.
+/// Tap two keys to swap them (function keys within their row), a key then a spare to replace it,
+/// a key then the trash to remove it. The selected character key's long-press list sits in
+/// `LayoutCalloutStrip` below the board: tap two slots to swap or move, a slot then a tray
+/// character to fill it, a slot then the trash to empty it. Nothing is stored until Save, which
+/// names the layout and applies it; Back discards the draft.
 struct LayoutEditorView: View {
     @Environment(DisplayLanguageStore.self) private var lang
     @Environment(\.dismiss) private var dismiss
-
-    /// A board key under the finger: where it came from and where the finger is (`editorSpace`).
-    private struct BoardDrag: Equatable {
-        let source: CustomLayout.Place
-        var location: CGPoint
-    }
 
     @State private var draft: CustomLayout
     @State private var selected: CustomLayout.Place?
     /// The selected slot of the selected key's long-press list (past its end = an empty slot).
     @State private var selectedCallout: Int?
-    @State private var boardDrag: BoardDrag?
-    /// Counts drags that changed the board, for the landing haptic.
-    @State private var dropCount = 0
     @State private var keyFrames: [CustomLayout.Place: CGRect] = [:]
-    /// The tray's frame in `editorSpace`: a board key dropped inside it is removed.
-    @State private var trayFrame = CGRect.zero
     @State private var showsNameAlert = false
     @State private var pendingName = ""
     private let isEditing: Bool
-
-    /// The drag payload of the tray's emoji chip: it only goes back to the emoji key's place.
-    private static let emojiSpare = LayoutKeyGrid.accessibilityName(of: .emoji)
 
     init(editing layout: CustomLayout? = nil) {
         _draft = State(initialValue: layout ?? Self.newDraft())
@@ -48,14 +33,8 @@ struct LayoutEditorView: View {
                 interaction: LayoutKeyGrid.Interaction(
                     selected: selected,
                     removed: draft.removedPlaces,
-                    lifted: boardDrag?.source,
-                    highlighted: dragTarget,
                     removedPlaceLabel: lang.string(.settingsSyllableSeparatorNone),
                     onTap: tap,
-                    onDrag: drag,
-                    onRelease: release,
-                    onGestureEnd: endGesture,
-                    onDropSpare: dropSpare,
                 ),
             )
             .aspectRatio(GalleryCardMetrics.previewAspectRatio, contentMode: .fit)
@@ -76,24 +55,10 @@ struct LayoutEditorView: View {
                 }
                 .padding(.vertical, 8)
             }
-            .background(
-                RoundedRectangle(cornerRadius: AppStyle.previewCornerRadius)
-                    .strokeBorder(Color.accentColor, lineWidth: 2)
-                    .opacity(isOverTray ? 1 : 0)
-                    .padding(.horizontal, AppStyle.horizontalPadding / 2),
-            )
-            .onGeometryChange(for: CGRect.self) { proxy in
-                proxy.frame(in: .named(LayoutKeyGrid.editorSpace))
-            } action: { trayFrame = $0 }
         }
         .padding(.top, 8)
-        .overlay(alignment: .topLeading) { liftedKey }
         .coordinateSpace(name: LayoutKeyGrid.editorSpace)
         .onPreferenceChange(LayoutKeyGrid.KeyFrames.self) { keyFrames = $0 }
-        // A tick when a key lifts and when it reaches a new target; a soft tap when a drag lands.
-        .sensoryFeedback(.selection, trigger: boardDrag?.source) { _, source in source != nil }
-        .sensoryFeedback(.selection, trigger: dragTarget) { _, target in target != nil }
-        .sensoryFeedback(.impact(flexibility: .soft), trigger: dropCount)
         .background(Color(.systemGroupedBackground))
         .navigationTitle(isEditing ? draft.name : lang.string(.layoutEditorTitleNew))
         .navigationBarTitleDisplayMode(.inline)
@@ -183,8 +148,7 @@ struct LayoutEditorView: View {
                     trayButton(action: restoreEmojiKey) {
                         Image(latinSystemName: "face.smiling")
                     }
-                    .draggable(Self.emojiSpare)
-                    .accessibilityLabel(Self.emojiSpare)
+                    .accessibilityLabel(LayoutKeyGrid.accessibilityName(of: .emoji))
                 }
 
                 ForEach(draft.spareLetters, id: \.self, content: spareButton)
@@ -226,12 +190,11 @@ struct LayoutEditorView: View {
             .opacity(isHeld ? 0.3 : 1)
     }
 
-    /// Always draggable; a tap only does something once a character key is selected.
+    /// A tap only does something once a character key or a long-press slot is selected.
     private func spareButton(_ spare: String) -> some View {
         trayButton(action: { replaceSelected(with: spare) }) {
             Text(verbatim: spare)
         }
-        .draggable(spare)
     }
 
     private func trayGrid(@ViewBuilder content: () -> some View) -> some View {
@@ -247,89 +210,6 @@ struct LayoutEditorView: View {
                 .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 8))
         }
         .buttonStyle(.plain)
-    }
-
-    /// The dragged key, lifted under the finger.
-    @ViewBuilder
-    private var liftedKey: some View {
-        if let boardDrag, let keyDef = draft.keyDef(at: boardDrag.source) {
-            LayoutKeyGrid.label(keyDef, size: 26)
-                .foregroundStyle(Color.primary)
-                .frame(width: 56, height: 60)
-                .background(LayoutKeyGrid.keyColor, in: RoundedRectangle(cornerRadius: 10))
-                .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
-                .position(x: boardDrag.location.x, y: boardDrag.location.y - 36)
-                .allowsHitTesting(false)
-        }
-    }
-
-    // MARK: - Dragging
-
-    /// The key a board drag would swap with, if it can.
-    private var dragTarget: CustomLayout.Place? {
-        guard let boardDrag else { return nil }
-        return keyFrames.first { place, frame in
-            frame.contains(boardDrag.location) && draft.canSwap(boardDrag.source, place)
-        }?.key
-    }
-
-    /// Whether a board drag is over the tray with a key that can go there.
-    private var isOverTray: Bool {
-        guard let boardDrag else { return false }
-        return trayFrame.contains(boardDrag.location) && draft.canRemove(boardDrag.source)
-    }
-
-    private func drag(_ place: CustomLayout.Place, to location: CGPoint) {
-        if boardDrag == nil {
-            selected = nil
-        }
-        boardDrag = BoardDrag(source: place, location: location)
-    }
-
-    /// Ends a drag where the finger lifted (swap, remove, or nothing), or treats a press that never
-    /// lifted the key as a tap. A drag of another key, left by a cancelled gesture, never commits.
-    private func release(_ place: CustomLayout.Place, at location: CGPoint) {
-        guard boardDrag?.source == place else {
-            boardDrag = nil
-            tap(place)
-            return
-        }
-        boardDrag?.location = location
-        withAnimation(.snappy(duration: 0.2)) {
-            if let dragTarget {
-                draft.swap(place, dragTarget)
-                dropCount += 1
-            } else if isOverTray {
-                draft.remove(place)
-                dropCount += 1
-            }
-            boardDrag = nil
-        }
-    }
-
-    /// The system cancelled a drag (no release): drop it without committing.
-    private func endGesture() {
-        boardDrag = nil
-    }
-
-    /// Takes a spare the tray offers; anything else (text dragged in from another app, a key
-    /// already on the board) is refused.
-    private func dropSpare(_ spare: String, on place: CustomLayout.Place) -> Bool {
-        if spare == Self.emojiSpare {
-            guard place == draft.emojiPlace, !draft.hasEmojiKey else { return false }
-            restoreEmojiKey()
-            dropCount += 1
-            return true
-        }
-        guard case .key = place, draft.spareLetters.contains(spare) || draft.spareSymbols.contains(spare) else {
-            return false
-        }
-        withAnimation(.snappy(duration: 0.2)) {
-            draft.replace(place, with: spare)
-            selected = nil
-        }
-        dropCount += 1
-        return true
     }
 
     // MARK: - Editing
@@ -438,7 +318,6 @@ struct LayoutEditorView: View {
         withAnimation(.snappy(duration: 0.2)) {
             draft.reset(to: base)
             selected = nil
-            boardDrag = nil
         }
     }
 

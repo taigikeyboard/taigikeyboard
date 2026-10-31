@@ -2,8 +2,7 @@ package com.siansiansu.taigikeyboard.ime.text.layout
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -22,18 +21,14 @@ import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -42,11 +37,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.LayoutCoordinates
-import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
@@ -67,36 +58,20 @@ import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardLayoutSolver
 
 // Draws a key table as plain keys: the custom-layout editor board, and the custom-layout card preview
 // on the Layout tab and in the keyboard's layout picker. Not the keyboard view, so a key can be
-// selected or dragged and nothing is typed. Mirrors iOS Layout/LayoutKeyGrid.swift.
+// selected and nothing is typed. Mirrors iOS Layout/LayoutKeyGrid.swift.
 
-/**
- * The editor board's state and callbacks. Points are in window coordinates
- * ([LayoutCoordinates.localToWindow]), as are the bounds [onKeyBounds] reports.
- */
+/** The editor board's state and callbacks. */
 class LayoutKeyGridInteraction(
     val selected: LayoutPlace?,
-    /** The key being dragged, drawn faded at its place. */
-    val lifted: LayoutPlace?,
-    /** The key a drag would land on. */
-    val highlighted: LayoutPlace?,
     /** TalkBack name of a removed key's place (the grid has no strings of its own). */
     val removedPlaceLabel: String,
     val onTap: (LayoutPlace) -> Unit,
-    /** A key moved past the touch slop. Move / end / cancel name the key, so a second finger never takes the drag over. */
-    val onDragStart: (LayoutPlace, Offset) -> Unit,
-    val onDragMove: (LayoutPlace, Offset) -> Unit,
-    /** The finger lifted after a drag, at this point. */
-    val onDragEnd: (LayoutPlace, Offset) -> Unit,
-    /** The drag ended without a release (the system took the gesture, or the key left the board). */
-    val onDragCancel: (LayoutPlace) -> Unit,
-    /** A key reports its bounds after each layout, and null when it leaves the board. */
-    val onKeyBounds: (LayoutPlace, Rect?) -> Unit,
 )
 
 /**
  * [rows] drawn on a board; [base] sets the 文/A key's width. [isDark] is the caller's effective
  * light / dark state (the app theme, or the keyboard's [com.siansiansu.taigikeyboard.ime.theme.isKeyboardNightMode]).
- * With an [interaction] every key with a place takes taps and drags; without one the grid is an inert
+ * With an [interaction] every key with a place takes taps; without one the grid is an inert
  * preview with no TalkBack content of its own (the caller names it).
  */
 @Composable
@@ -127,7 +102,7 @@ fun LayoutKeyGrid(
                 ) {
                     row.forEachIndexed { column, gridKey ->
                         // One node per place: a key that takes another place (a base switch) is a
-                        // new node, so it reports its bounds again and the old place's leave.
+                        // new node, so its tap gesture (keyed on the place) starts fresh.
                         key(gridKey.place ?: column) {
                             GridKeyView(
                                 key = gridKey,
@@ -145,9 +120,9 @@ fun LayoutKeyGrid(
     }
 }
 
-/** A key's face: its text, or its keyboard icon. Also the key the editor floats under a drag. */
+/** A key's face: its text, or its keyboard icon. */
 @Composable
-fun LayoutKeyFace(
+private fun LayoutKeyFace(
     face: GridKey.Face,
     color: Color,
     fontSize: TextUnit,
@@ -212,25 +187,15 @@ fun accessibilityName(face: GridKey.Face): String =
 // The default keyboard theme's tones (res/values/colors.xml `keyboard_default_*`, which themes.xml
 // uses): every key, function keys included, white on a gray board.
 @Composable
-fun layoutKeyColor(isDark: Boolean): Color = colorResource(if (isDark) R.color.keyboard_default_key_dark else R.color.keyboard_default_key_light)
+private fun layoutKeyColor(isDark: Boolean): Color = colorResource(if (isDark) R.color.keyboard_default_key_dark else R.color.keyboard_default_key_light)
 
-fun layoutKeyTextColor(isDark: Boolean): Color = if (isDark) Color.White else Color.Black
+private fun layoutKeyTextColor(isDark: Boolean): Color = if (isDark) Color.White else Color.Black
 
 @Composable
 private fun boardColor(isDark: Boolean): Color = colorResource(if (isDark) R.color.keyboard_default_background_dark else R.color.keyboard_default_background_light)
 
 /** Key widths in letter-key units; a row of ten letter keys fills the board. */
 private const val ROW_UNITS = 10f
-
-/**
- * Where a gesture reads its node's position from, kept out of composition state: pointer positions
- * are node-local, drags and drops work in window coordinates.
- */
-internal class WindowAnchor {
-    var coordinates: LayoutCoordinates? = null
-
-    fun toWindow(position: Offset): Offset = coordinates?.localToWindow(position) ?: position
-}
 
 @Composable
 private fun GridKeyView(
@@ -243,15 +208,13 @@ private fun GridKeyView(
 ) {
     val place = key.place
     val isSelected = place != null && place == interaction?.selected
-    val isTarget = place != null && place == interaction?.highlighted
     val corner = gap * 1.5f
     val shape = RoundedCornerShape(corner)
-    val accent = MaterialTheme.colorScheme.primary
     val dashColor = layoutKeyTextColor(isDark).copy(alpha = 0.5f)
     val keyColor = layoutKeyColor(isDark)
     val fill =
         when {
-            isSelected -> accent
+            isSelected -> MaterialTheme.colorScheme.primary
             key.isRemoved -> Color.Transparent
             else -> keyColor
         }
@@ -271,18 +234,14 @@ private fun GridKeyView(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .alpha(if (place != null && place == interaction?.lifted) 0.3f else 1f)
                     .background(fill, shape)
                     .drawBehind {
-                        val cornerRadius = CornerRadius(corner.toPx())
-                        when {
-                            isTarget -> drawRoundRect(accent, cornerRadius = cornerRadius, style = Stroke(width = 2.5.dp.toPx()))
-                            key.isRemoved && !isSelected ->
-                                drawRoundRect(
-                                    dashColor,
-                                    cornerRadius = cornerRadius,
-                                    style = Stroke(width = 1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 3.dp.toPx()))),
-                                )
+                        if (key.isRemoved && !isSelected) {
+                            drawRoundRect(
+                                dashColor,
+                                cornerRadius = CornerRadius(corner.toPx()),
+                                style = Stroke(width = 1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 3.dp.toPx()))),
+                            )
                         }
                     }
                     // The digit row is the base's and inert; a removed place shows no face.
@@ -298,11 +257,9 @@ private fun GridKeyView(
 }
 
 /**
- * One gesture per key: a press that lifts within the touch slop is a tap; past it the key drags until
- * the finger lifts ([LayoutKeyGridInteraction.onDragEnd]) or the gesture is cancelled
- * ([LayoutKeyGridInteraction.onDragCancel]), never a tap. Keyed on the place only: the latest
- * callbacks are read through [rememberUpdatedState], so the redraws a drag causes never restart it.
- * TalkBack and hardware keys (Enter / Space) tap through semantics and key events.
+ * A tap reports the key to the editor. Keyed on the place only: the latest callbacks are read through
+ * [rememberUpdatedState], so a redraw never restarts the gesture. TalkBack and hardware keys
+ * (Enter / Space) tap through semantics and key events.
  */
 @Composable
 private fun Modifier.interactive(
@@ -312,46 +269,9 @@ private fun Modifier.interactive(
     interaction: LayoutKeyGridInteraction,
 ): Modifier {
     val current by rememberUpdatedState(interaction)
-    val anchor = remember { WindowAnchor() }
-    DisposableEffect(place) {
-        onDispose { current.onKeyBounds(place, null) }
-    }
     return this
-        .onGloballyPositioned {
-            anchor.coordinates = it
-            current.onKeyBounds(place, it.boundsInWindow())
-        }.pointerInput(place) {
-            awaitEachGesture {
-                val down = awaitFirstDown()
-                var isDragging = false
-                var isFinished = false
-                val toWindow = anchor::toWindow
-                try {
-                    while (true) {
-                        val change = awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: break
-                        if (!change.pressed) {
-                            // A system cancel arrives as an up already consumed: it ends the gesture
-                            // without a tap or a drop.
-                            if (change.changedToUp()) {
-                                isFinished = true
-                                change.consume()
-                                if (isDragging) current.onDragEnd(place, toWindow(change.position)) else current.onTap(place)
-                            }
-                            break
-                        }
-                        if (!isDragging && (change.position - down.position).getDistance() > viewConfiguration.touchSlop) {
-                            isDragging = true
-                            current.onDragStart(place, toWindow(change.position))
-                        }
-                        if (isDragging) {
-                            change.consume()
-                            current.onDragMove(place, toWindow(change.position))
-                        }
-                    }
-                } finally {
-                    if (isDragging && !isFinished) current.onDragCancel(place)
-                }
-            }
+        .pointerInput(place) {
+            detectTapGestures(onTap = { current.onTap(place) })
         }.onKeyEvent { event ->
             val isActivation = event.key == Key.Enter || event.key == Key.NumPadEnter || event.key == Key.Spacebar
             if (isActivation && event.type == KeyEventType.KeyUp) current.onTap(place)

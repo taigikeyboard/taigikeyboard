@@ -1,11 +1,7 @@
 package com.siansiansu.taigikeyboard.ui.tabs.layout
 
 import android.view.HapticFeedbackConstants
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -18,9 +14,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
@@ -44,7 +38,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,21 +49,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.LayoutCoordinates
-import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
-import androidx.compose.ui.unit.sp
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.i18n.LocalStringResolver
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
@@ -81,53 +65,17 @@ import com.siansiansu.taigikeyboard.ime.text.layout.CustomLayoutTables
 import com.siansiansu.taigikeyboard.ime.text.layout.FunctionKey
 import com.siansiansu.taigikeyboard.ime.text.layout.GridKey
 import com.siansiansu.taigikeyboard.ime.text.layout.KeyboardLayoutOptions
-import com.siansiansu.taigikeyboard.ime.text.layout.LayoutKeyFace
 import com.siansiansu.taigikeyboard.ime.text.layout.LayoutKeyGrid
 import com.siansiansu.taigikeyboard.ime.text.layout.LayoutKeyGridInteraction
 import com.siansiansu.taigikeyboard.ime.text.layout.LayoutPlace
-import com.siansiansu.taigikeyboard.ime.text.layout.WindowAnchor
 import com.siansiansu.taigikeyboard.ime.text.layout.accessibilityName
-import com.siansiansu.taigikeyboard.ime.text.layout.layoutKeyColor
-import com.siansiansu.taigikeyboard.ime.text.layout.layoutKeyTextColor
 import com.siansiansu.taigikeyboard.ui.components.GALLERY_PREVIEW_ASPECT
 import com.siansiansu.taigikeyboard.ui.components.NameDialog
-import kotlin.math.roundToInt
 
-// Custom-layout editor: base chips, the board (fixed) and the spare tray (scrolling). Drag a key onto
-// another to swap them (function keys within their row), a spare onto a key to replace it (press and
-// hold the spare first, so the tray still scrolls), a key onto the tray to remove it. Taps do the
-// same: tap two keys, or a key then a spare or the trash. Nothing is stored until Save, which names
-// the layout and applies it; Back discards the draft. Mirrors iOS LayoutEditorView.
-
-/** What a drag carries: a board key, a spare from the tray, or the tray's emoji chip. */
-private sealed interface DragSource {
-    data class Board(
-        val place: LayoutPlace,
-    ) : DragSource
-
-    data class Spare(
-        val label: String,
-    ) : DragSource
-
-    data object Emoji : DragSource
-}
-
-/**
- * A drag and what releasing it now would do. The finger's position is kept apart (read only where the
- * lifted key is placed), so moving the finger redraws the screen only when the target changes.
- */
-private data class EditorDrag(
-    val source: DragSource,
-    val target: LayoutPlace? = null,
-    val isOverTray: Boolean = false,
-)
-
-/** The editor's measured geometry, read by drag handlers only (kept out of composition state). */
-private class EditorGeometry {
-    val keyBounds = HashMap<LayoutPlace, Rect>()
-    var trayBounds = Rect.Zero
-    var root: LayoutCoordinates? = null
-}
+// Custom-layout editor: base chips, the board (fixed) and the spare tray (scrolling), all by taps.
+// Tap two keys to swap them (function keys within their row), a key then a spare to replace it, a key
+// then the trash to remove it. Nothing is stored until Save, which names the layout and applies it;
+// Back discards the draft. Mirrors iOS LayoutEditorView.
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -148,20 +96,13 @@ fun LayoutEditorScreen(
         }
     var draft by rememberSaveable(saver = draftSaver) { mutableStateOf(initial) }
     var selected by remember { mutableStateOf<LayoutPlace?>(null) }
-    var drag by remember { mutableStateOf<EditorDrag?>(null) }
-    // The finger under a drag, in window coordinates.
-    val pointer = remember { mutableStateOf(Offset.Zero) }
     var showNameDialog by rememberSaveable { mutableStateOf(false) }
-    val geometry = remember { EditorGeometry() }
     val table = checkNotNull(tables.baseTable(draft.base, draft.script)) { "no ${draft.base} table" }
     val isDark = isSystemInDarkTheme()
     val view = LocalView.current
     // Resolver captured for the name-dialog callback (runs outside composition), so the blank-name
     // fallback resolves under the live display language at save time.
     val stringResolver by rememberUpdatedState(LocalStringResolver.current)
-
-    // A tick when a key lifts and when it reaches a new target; a click when a drop changed the board.
-    fun tick() = view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
 
     fun edit(next: CustomLayout) {
         if (next != draft) {
@@ -193,75 +134,6 @@ fun LayoutEditorScreen(
     fun restart(base: String) {
         tables.fresh(draft.id, draft.name, base, draft.script)?.let { draft = it }
         selected = null
-        drag = null
-    }
-
-    fun dragged(
-        source: DragSource,
-        point: Offset,
-    ): EditorDrag {
-        val place = geometry.keyBounds.entries
-            .firstOrNull { it.value.contains(point) }
-            ?.key
-        return when (source) {
-            is DragSource.Board ->
-                if (place != null && draft.canSwap(source.place, place, table)) {
-                    EditorDrag(source, target = place)
-                } else {
-                    EditorDrag(source, isOverTray = geometry.trayBounds.contains(point) && draft.canRemove(source.place))
-                }
-            is DragSource.Spare -> EditorDrag(source, target = place as? LayoutPlace.Key)
-            DragSource.Emoji -> EditorDrag(source, target = place?.takeIf { it == draft.emojiPlace })
-        }
-    }
-
-    // One drag at a time: a second finger's drag is ignored, and only the drag's own gesture moves,
-    // drops or cancels it.
-    fun startDrag(
-        source: DragSource,
-        point: Offset,
-    ) {
-        if (drag != null) return
-        selected = null
-        pointer.value = point
-        drag = dragged(source, point)
-        tick()
-    }
-
-    fun moveDrag(
-        source: DragSource,
-        point: Offset,
-    ) {
-        val current = drag?.takeIf { it.source == source } ?: return
-        pointer.value = point
-        val next = dragged(source, point)
-        if (next != current) {
-            if (next.target != null) tick()
-            drag = next
-        }
-    }
-
-    fun cancelDrag(source: DragSource) {
-        if (drag?.source == source) drag = null
-    }
-
-    // Ends a drag where the finger lifted: swap, remove, replace, or nothing (back on its own place).
-    fun endDrag(
-        source: DragSource,
-        point: Offset,
-    ) {
-        val current = drag?.takeIf { it.source == source }?.let { dragged(source, point) } ?: return
-        drag = null
-        val target = current.target
-        when (val source = current.source) {
-            is DragSource.Board ->
-                when {
-                    target != null -> edit(draft.swapped(source.place, target, table))
-                    current.isOverTray -> edit(draft.removed(source.place))
-                }
-            is DragSource.Spare -> if (target != null) edit(draft.replaced(target, source.label))
-            DragSource.Emoji -> if (target != null) edit(draft.restoreEmojiKey())
-        }
     }
 
     Scaffold(
@@ -284,8 +156,7 @@ fun LayoutEditorScreen(
         BoxWithConstraints(
             Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
-                .onGloballyPositioned { geometry.root = it },
+                .padding(innerPadding),
         ) {
             // At most half the height, so the tray keeps room in landscape.
             val boardWidth = min(maxWidth - 40.dp, maxHeight * 0.5f * GALLERY_PREVIEW_ASPECT)
@@ -299,17 +170,8 @@ fun LayoutEditorScreen(
                     interaction =
                         LayoutKeyGridInteraction(
                             selected = selected,
-                            lifted = (drag?.source as? DragSource.Board)?.place,
-                            highlighted = drag?.target,
                             removedPlaceLabel = L10n.settingsSyllableSeparatorNone,
-                            onTap = { place -> if (drag == null) tap(place) },
-                            onDragStart = { place, point -> startDrag(DragSource.Board(place), point) },
-                            onDragMove = { place, point -> moveDrag(DragSource.Board(place), point) },
-                            onDragEnd = { place, point -> endDrag(DragSource.Board(place), point) },
-                            onDragCancel = { place -> cancelDrag(DragSource.Board(place)) },
-                            onKeyBounds = { place, bounds ->
-                                if (bounds == null) geometry.keyBounds.remove(place) else geometry.keyBounds[place] = bounds
-                            },
+                            onTap = ::tap,
                         ),
                     modifier =
                         Modifier
@@ -319,46 +181,31 @@ fun LayoutEditorScreen(
                             .clip(RoundedCornerShape(10.dp)),
                 )
 
-                val isOverTray = drag?.isOverTray == true
                 Column(
                     Modifier
                         .weight(1f)
                         .fillMaxWidth()
-                        // The visible tray, not its scrolled content: a key dropped inside it is removed.
-                        .onGloballyPositioned { geometry.trayBounds = it.boundsInWindow() }
                         .padding(horizontal = 10.dp)
-                        .border(BorderStroke(2.dp, MaterialTheme.colorScheme.primary.copy(alpha = if (isOverTray) 1f else 0f)), RoundedCornerShape(10.dp))
                         .verticalScroll(rememberScrollState())
                         .padding(horizontal = 10.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     val canRemove = selected?.let(draft::canRemove) == true
-                    // Remembered per base table (which the drag handlers read), so the chips skip redraws.
-                    val spareDrag =
-                        remember(table) {
-                            SpareDragCallbacks(
-                                onStart = ::startDrag,
-                                onMove = ::moveDrag,
-                                onEnd = { source -> endDrag(source, pointer.value) },
-                                onCancel = ::cancelDrag,
-                            )
-                        }
-                    SpareFlow(remember(draft) { draft.spares(tables.trayLetters) }, spareDrag, onTap = ::replaceSelected) {
+                    SpareFlow(remember(draft) { draft.spares(tables.trayLetters) }, onTap = ::replaceSelected) {
                         TrayChip(onClick = ::removeSelected, enabled = canRemove, description = L10n.commonDelete) {
                             Icon(Icons.Outlined.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                         }
                         if (!draft.hasEmojiKey) {
-                            // Tap restores the emoji key at once; dragged, it only lands on its own place.
+                            // Tap restores the emoji key at once.
                             TrayChip(
                                 onClick = { edit(draft.restoreEmojiKey()) },
                                 description = accessibilityName(GridKey.Face.Function(FunctionKey.EMOJI)),
-                                modifier = Modifier.spareDrag(DragSource.Emoji, spareDrag),
                             ) {
                                 Icon(painterResource(R.drawable.ic_sentiment_satisfied), contentDescription = null)
                             }
                         }
                     }
-                    SpareFlow(remember(draft) { draft.spares(tables.traySymbols) }, spareDrag, onTap = ::replaceSelected)
+                    SpareFlow(remember(draft) { draft.spares(tables.traySymbols) }, onTap = ::replaceSelected)
                     TextButton(
                         onClick = { restart(draft.base) },
                         enabled = !remember(draft) { tables.isUnchanged(draft) },
@@ -369,8 +216,6 @@ fun LayoutEditorScreen(
                     }
                 }
             }
-
-            drag?.let { current -> LiftedKey(current, draft, geometry, pointer, isDark) }
         }
 
         if (showNameDialog) {
@@ -424,14 +269,13 @@ private fun BaseChips(
 @Composable
 private fun SpareFlow(
     spares: List<String>,
-    spareDrag: SpareDragCallbacks,
     onTap: (String) -> Unit,
     leading: @Composable () -> Unit = {},
 ) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         leading()
         spares.forEach { spare ->
-            TrayChip(onClick = { onTap(spare) }, description = spare, modifier = Modifier.spareDrag(DragSource.Spare(spare), spareDrag)) {
+            TrayChip(onClick = { onTap(spare) }, description = spare) {
                 Text(spare, style = MaterialTheme.typography.bodyLarge)
             }
         }
@@ -442,7 +286,6 @@ private fun SpareFlow(
 private fun TrayChip(
     onClick: () -> Unit,
     description: String,
-    modifier: Modifier = Modifier,
     enabled: Boolean = true,
     content: @Composable () -> Unit,
 ) {
@@ -450,7 +293,7 @@ private fun TrayChip(
         shape = RoundedCornerShape(8.dp),
         color = MaterialTheme.colorScheme.surface,
         modifier =
-            modifier
+            Modifier
                 .widthIn(min = 48.dp)
                 .height(44.dp)
                 .alpha(if (enabled) 1f else 0.4f)
@@ -459,71 +302,4 @@ private fun TrayChip(
     ) {
         Box(Modifier.padding(horizontal = 10.dp), contentAlignment = Alignment.Center) { content() }
     }
-}
-
-/** The drag callbacks a tray chip reports to. */
-private class SpareDragCallbacks(
-    val onStart: (DragSource, Offset) -> Unit,
-    val onMove: (DragSource, Offset) -> Unit,
-    /** The finger lifted; the drop lands where the last move left the drag. */
-    val onEnd: (DragSource) -> Unit,
-    val onCancel: (DragSource) -> Unit,
-)
-
-/**
- * Press and hold a tray chip to lift it (so a swipe still scrolls the tray); the chip stays in the
- * tray until the drop changes the draft. A tap goes to the chip's click. Keyed on the source only:
- * the latest callbacks are read through [rememberUpdatedState], so the redraws a drag causes never
- * restart it.
- */
-@Composable
-private fun Modifier.spareDrag(
-    source: DragSource,
-    callbacks: SpareDragCallbacks,
-): Modifier {
-    val current by rememberUpdatedState(callbacks)
-    val anchor = remember { WindowAnchor() }
-    return onGloballyPositioned { anchor.coordinates = it }
-        .pointerInput(source) {
-            detectDragGesturesAfterLongPress(
-                onDragStart = { current.onStart(source, anchor.toWindow(it)) },
-                onDrag = { change, _ ->
-                    change.consume()
-                    current.onMove(source, anchor.toWindow(change.position))
-                },
-                onDragEnd = { current.onEnd(source) },
-                onDragCancel = { current.onCancel(source) },
-            )
-        }
-}
-
-/** The dragged key, lifted above the finger. */
-@Composable
-private fun LiftedKey(
-    drag: EditorDrag,
-    draft: CustomLayout,
-    geometry: EditorGeometry,
-    pointer: State<Offset>,
-    isDark: Boolean,
-) {
-    val face =
-        when (val source = drag.source) {
-            is DragSource.Board -> draft.face(source.place)
-            is DragSource.Spare -> GridKey.Face.Character(source.label)
-            DragSource.Emoji -> GridKey.Face.Function(FunctionKey.EMOJI)
-        }
-    LayoutKeyFace(
-        face = face,
-        color = layoutKeyTextColor(isDark),
-        fontSize = 26.sp,
-        modifier =
-            Modifier
-                // Read at placement, so following the finger never recomposes.
-                .offset {
-                    val local = geometry.root?.windowToLocal(pointer.value) ?: Offset.Zero
-                    IntOffset((local.x - 28.dp.toPx()).roundToInt(), (local.y - 66.dp.toPx()).roundToInt())
-                }.size(width = 56.dp, height = 60.dp)
-                .shadow(8.dp, RoundedCornerShape(10.dp))
-                .background(layoutKeyColor(isDark), RoundedCornerShape(10.dp)),
-    )
 }
