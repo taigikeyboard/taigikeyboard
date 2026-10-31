@@ -55,17 +55,17 @@ final class CustomLayoutTests: XCTestCase {
 
     func testCustomLayout_spareLettersAndSymbolsMissingFromBoard() {
         let phahTaigi = CustomLayout(base: .phahTaigi, script: .tl)
-        // trace: tray letters a–z + o͘ + ee + "-", then the romanization tables' multi-letter keys in
+        // trace: tray letters a–z + o͘ + ⁿ + ee + "-", then the romanization tables' multi-letter keys in
         // table order (MOE2 TL rows 1–3, then MOE2 POJ `ch` `chh`), then the finals, minus the board. PhahTaigi
-        // lacks q w x z, o͘, ee and every multi-letter key.
-        XCTAssertEqual(phahTaigi.spareLetters, ["q", "w", "x", "z", "o\u{0358}", "ee"] + Self.multiLetterKeys + Self.finals)
+        // lacks q w x z, o͘, ⁿ, ee and every multi-letter key.
+        XCTAssertEqual(phahTaigi.spareLetters, ["q", "w", "x", "z", "o\u{0358}", "\u{207F}", "ee"] + Self.multiLetterKeys + Self.finals)
         // trace: symbol page = 37 keys, "-" counts as a letter → 36; PhahTaigi holds . , ? ! → 32.
         XCTAssertEqual(phahTaigi.spareSymbols.count, 32)
         XCTAssertEqual(Array(phahTaigi.spareSymbols.prefix(3)), ["~", "/", "="])
         XCTAssertFalse(phahTaigi.spareSymbols.contains(","))
         // trace: Lohankha POJ carries every letter and o͘ (row 2 end); its bottom row holds ",".
         let lohankha = CustomLayout(base: .qwerty, script: .poj)
-        XCTAssertEqual(lohankha.spareLetters, ["ee"] + Self.multiLetterKeys + Self.finals)
+        XCTAssertEqual(lohankha.spareLetters, ["\u{207F}", "ee"] + Self.multiLetterKeys + Self.finals)
         XCTAssertEqual(lohankha.spareSymbols.count, 35)
     }
 
@@ -83,7 +83,7 @@ final class CustomLayoutTests: XCTestCase {
         var layout = CustomLayout(base: .phahTaigi, script: .tl)
         layout.replace(.key(0), with: "q")
         XCTAssertEqual(layout.rows(withGlobe: false)[1][0], .char("q"))
-        XCTAssertEqual(layout.spareLetters, ["w", "x", "z", "o\u{0358}", "ee"] + Self.multiLetterKeys + Self.finals)
+        XCTAssertEqual(layout.spareLetters, ["w", "x", "z", "o\u{0358}", "\u{207F}", "ee"] + Self.multiLetterKeys + Self.finals)
         XCTAssertTrue(layout.spareSymbols.contains("!"))
         XCTAssertTrue(layout.isValid)
     }
@@ -94,6 +94,15 @@ final class CustomLayoutTests: XCTestCase {
         layout.replace(.key(2), with: "ang")
         XCTAssertEqual(layout.rows(withGlobe: false)[1][2], .char("ang"))
         XCTAssertFalse(layout.spareLetters.contains("ang"))
+        XCTAssertTrue(layout.isValid)
+    }
+
+    func testCustomLayout_trayNasalMarkerIsPlainKey() {
+        var layout = CustomLayout(base: .qwerty, script: .poj)
+        // Slot 0 is "q" (row 1, column 0); no built-in table has ⁿ on the board.
+        layout.replace(.key(0), with: "\u{207F}")
+        XCTAssertEqual(layout.rows(withGlobe: false)[1][0], .char("\u{207F}"))
+        XCTAssertFalse(layout.spareLetters.contains("\u{207F}"))
         XCTAssertTrue(layout.isValid)
     }
 
