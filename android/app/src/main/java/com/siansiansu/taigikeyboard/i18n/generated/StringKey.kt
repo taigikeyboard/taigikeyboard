@@ -186,7 +186,6 @@ enum class StringKey(
     LAYOUT_EDITOR_TITLE_NEW(R.string.i18n_layout_editorTitleNew),
     LAYOUT_NAME_HEADER(R.string.i18n_layout_nameHeader),
     LAYOUT_CALLOUTS_TITLE(R.string.i18n_layout_calloutsTitle),
-    LAYOUT_CALLOUTS_ADD_PLACEHOLDER(R.string.i18n_layout_calloutsAddPlaceholder),
     LAYOUT_COMMON_LAYOUTS_SECTION(R.string.i18n_layout_commonLayoutsSection),
     LAYOUT_STANDARD_LAYOUT(R.string.i18n_layout_standardLayout),
     LAYOUT_PHAH_TAIGI_LAYOUT(R.string.i18n_layout_phahTaigiLayout),

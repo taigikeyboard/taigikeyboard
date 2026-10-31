@@ -4,8 +4,8 @@ import SwiftUI
 /// onto another to swap them (function keys within their row), a spare onto a key to replace it,
 /// a key onto the tray to remove it. Taps do the same: tap two keys, or a key then a spare or the
 /// trash. The selected character key's long-press list sits in `LayoutCalloutStrip` below the board
-/// and edits the same way: tap or drag entries to swap, a spare to replace, the trash or a drag to
-/// the tray to remove, `+` to add. Nothing is stored until Save, which names the layout and applies it; Back discards the
+/// and edits by taps alone: tap two slots to swap or move, a slot then a tray character to fill it,
+/// a slot then the trash to empty it. Nothing is stored until Save, which names the layout and applies it; Back discards the
 /// draft.
 struct LayoutEditorView: View {
     @Environment(DisplayLanguageStore.self) private var lang
@@ -19,10 +19,8 @@ struct LayoutEditorView: View {
 
     @State private var draft: CustomLayout
     @State private var selected: CustomLayout.Place?
-    /// The selected entry of the selected key's long-press list.
+    /// The selected slot of the selected key's long-press list (past its end = an empty slot).
     @State private var selectedCallout: Int?
-    @State private var showsCalloutAlert = false
-    @State private var pendingCallout = ""
     @State private var boardDrag: BoardDrag?
     /// Counts drags that changed the board, for the landing haptic.
     @State private var dropCount = 0
@@ -87,14 +85,6 @@ struct LayoutEditorView: View {
             .onGeometryChange(for: CGRect.self) { proxy in
                 proxy.frame(in: .named(LayoutKeyGrid.editorSpace))
             } action: { trayFrame = $0 }
-            // A long-press entry dragged here leaves the list, as a board key dragged here leaves the board.
-            .dropDestination(for: String.self) { items, _ in
-                guard let index = items.first.flatMap(LayoutCalloutStrip.entryIndex(ofPayload:)),
-                      selectedCallouts.indices.contains(index) else { return false }
-                editCallouts { $0.remove(at: index) }
-                dropCount += 1
-                return true
-            }
         }
         .padding(.top, 8)
         .overlay(alignment: .topLeading) { liftedKey }
@@ -116,18 +106,6 @@ struct LayoutEditorView: View {
             }
         }
         .onChange(of: selected) { selectedCallout = nil }
-        .alert(lang.string(.layoutCalloutsAddPlaceholder), isPresented: $showsCalloutAlert) {
-            TextField(lang.string(.layoutCalloutsAddPlaceholder), text: $pendingCallout)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-            Button(lang.string(.commonSave)) {
-                let entry = pendingCallout.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !entry.isEmpty {
-                    editCallouts { $0.append(entry) }
-                }
-            }
-            Button(lang.string(.commonCancel), role: .cancel) {}
-        }
         .alert(lang.string(.layoutNameHeader), isPresented: $showsNameAlert) {
             TextField(lang.string(.layoutEditorTitleNew), text: $pendingName)
             Button(lang.string(.commonSave)) { commit() }
@@ -144,30 +122,21 @@ struct LayoutEditorView: View {
 
     // MARK: - Sections
 
-    /// Always in place, so the tray never moves: empty cells until a character key is selected.
+    /// Always in place, so the tray never moves: empty slots until a character key is selected.
     private var calloutStrip: some View {
-        let entries = selectedLabel == nil ? nil : selectedCallouts
-        return LayoutCalloutStrip(
-            entries: entries,
-            selectedIndex: selectedCallout,
-            canAdd: (entries?.count ?? CustomLayout.maxCallouts) < CustomLayout.maxCallouts,
+        LayoutCalloutStrip(
+            entries: selectedLabel == nil ? nil : selectedCallouts,
+            selectedSlot: selectedCallout,
             canReset: selectedLabel.map { draft.callouts[$0] != nil } ?? false,
             tailX: selected.flatMap { keyFrames[$0]?.midX },
-            interaction: LayoutCalloutStrip.Interaction(
-                onTapEntry: tapCallout,
-                onTapAdd: {
-                    pendingCallout = ""
-                    showsCalloutAlert = true
-                },
-                onDrop: dropOnCallout,
-                onReset: {
-                    guard let selectedLabel else { return }
-                    withAnimation(.snappy(duration: 0.2)) {
-                        draft.resetCallouts(for: selectedLabel)
-                        selectedCallout = nil
-                    }
-                },
-            ),
+            onTapSlot: tapCallout,
+            onReset: {
+                guard let selectedLabel else { return }
+                withAnimation(.snappy(duration: 0.2)) {
+                    draft.resetCallouts(for: selectedLabel)
+                    selectedCallout = nil
+                }
+            },
         )
         .padding(.horizontal, AppStyle.horizontalPadding)
     }
@@ -198,7 +167,7 @@ struct LayoutEditorView: View {
     /// Trash, the removed emoji key, letters, then punctuation and symbols. A spare is dragged
     /// onto a key, or tapped once a key is selected; the emoji chip goes straight back to its place.
     private var spareTray: some View {
-        let canRemove = selectedCallout != nil || (selected.map(draft.canRemove) ?? false)
+        let canRemove = selectedCallout.map(selectedCallouts.indices.contains) ?? (selected.map(draft.canRemove) ?? false)
         return VStack(spacing: 16) {
             trayGrid {
                 trayButton(action: removeSelected) {
@@ -222,6 +191,11 @@ struct LayoutEditorView: View {
 
             trayGrid {
                 ForEach(draft.spareSymbols, id: \.self, content: spareButton)
+            }
+
+            // Long-press characters: a tap fills the selected slot of the bubble.
+            trayGrid {
+                ForEach(selectedLabel.map(draft.spareCallouts(for:)) ?? CustomLayout.calloutCatalog, id: \.self, content: spareButton)
             }
         }
         .padding(.horizontal, AppStyle.horizontalPadding)
@@ -350,7 +324,7 @@ struct LayoutEditorView: View {
 
     private func replaceSelected(with spare: String) {
         if let index = selectedCallout {
-            editCallouts { $0[index] = spare }
+            fillCallout(at: index, with: spare)
             return
         }
         guard let selected else { return }
@@ -362,6 +336,7 @@ struct LayoutEditorView: View {
 
     private func removeSelected() {
         if let index = selectedCallout {
+            guard selectedCallouts.indices.contains(index) else { return }
             editCallouts { $0.remove(at: index) }
             return
         }
@@ -381,38 +356,41 @@ struct LayoutEditorView: View {
 
     // MARK: - Long-press list
 
-    /// A second entry swaps with the selected one; tapping the selected one clears it.
+    /// A second slot swaps with the selected one when both hold entries; an entry tapped with an
+    /// empty slot moves to the list's end (entries stay packed at the front). Tapping the selected
+    /// slot clears it.
     private func tapCallout(_ index: Int) {
-        guard let current = selectedCallout else {
-            selectedCallout = index
+        guard let current = selectedCallout, current != index else {
+            selectedCallout = selectedCallout == index ? nil : index
             return
         }
-        if current == index {
-            selectedCallout = nil
-        } else {
+        let filled = selectedCallouts.indices
+        switch (filled.contains(current), filled.contains(index)) {
+        case (true, true):
             editCallouts { $0.swapAt(current, index) }
+        case (true, false):
+            editCallouts { $0.append($0.remove(at: current)) }
+        case (false, true):
+            editCallouts { $0.append($0.remove(at: index)) }
+        case (false, false):
+            selectedCallout = index
         }
     }
 
-    /// Another entry swaps with the one it lands on; a tray spare replaces it, or joins the list on
-    /// `+` (`index` nil). Anything else (text from another app) is refused.
-    private func dropOnCallout(_ payload: String, at index: Int?) -> Bool {
-        if let source = LayoutCalloutStrip.entryIndex(ofPayload: payload) {
-            guard let index, index != source, selectedCallouts.indices.contains(source) else { return false }
-            editCallouts { $0.swapAt(source, index) }
-        } else if draft.spareLetters.contains(payload) || draft.spareSymbols.contains(payload) {
-            editCallouts { list in
-                if let index {
-                    list[index] = payload
-                } else {
-                    list.append(payload)
-                }
+    /// Puts `spare` in slot `index`: replaces an entry, or adds one in an empty slot and moves the
+    /// selection to the next empty slot, so several characters go in one tap each.
+    private func fillCallout(at index: Int, with spare: String) {
+        let isAdding = !selectedCallouts.indices.contains(index)
+        editCallouts { list in
+            if isAdding {
+                list.append(spare)
+            } else {
+                list[index] = spare
             }
-        } else {
-            return false
         }
-        dropCount += 1
-        return true
+        if isAdding, selectedCallouts.count < CustomLayout.maxCallouts {
+            selectedCallout = selectedCallouts.count
+        }
     }
 
     /// The selected key's long-press list as shown; empty while no character key is selected.

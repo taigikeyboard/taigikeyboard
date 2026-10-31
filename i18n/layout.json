@@ -31,11 +31,6 @@
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
       "values": { "hanji": "長揤字", "tailo": "Tn̂g tshi̍h jī", "poj": "Tn̂g chhi̍h jī", "en": "Long-Press Characters", "ja": "長押しの文字" }
     },
-    "calloutsAddPlaceholder": {
-      "comment": "Layout editor long-press sheet: placeholder of the text field that adds an entry to the key's list. TL/POJ DRAFT — pending USER proofread.",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "加入字", "tailo": "Ka-ji̍p jī", "poj": "Ka-ji̍p jī", "en": "Add a Character", "ja": "文字を追加" }
-    },
     "commonLayoutsSection": {
       "comment": "Section header on the Layout tab for layouts whose keys are the same in Tâi-lô and Pe̍h-ōe-jī.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },

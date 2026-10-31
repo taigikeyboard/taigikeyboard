@@ -314,6 +314,20 @@ final class CustomLayoutTests: XCTestCase {
         XCTAssertNil(chars(.tl, .symbolic))
     }
 
+    func testCallouts_trayOffersToneLettersSymbolPagesAndBuiltInLists() {
+        let catalog = CustomLayout.calloutCatalog
+        // trace: TL tone map "a" (á … a̋), POJ adds o͘; Symbolic page row 1 "{" "}"; MOE2Callouts[","] "，" "、".
+        for char in ["á", "a\u{030D}", "a\u{030B}", "{", "}", "，", "、", ";", ":"] {
+            XCTAssertTrue(catalog.contains(char), char)
+        }
+        XCTAssertFalse(catalog.contains("Á"), "Shift uppercases on the keyboard")
+        XCTAssertEqual(Set(catalog).count, catalog.count)
+        var layout = CustomLayout(base: .phahTaigi, script: .tl)
+        layout.setCallouts(["{", "}"], for: "(")
+        XCTAssertFalse(layout.spareCallouts(for: "(").contains("{"))
+        XCTAssertTrue(layout.spareCallouts(for: ",").contains("{"))
+    }
+
     func testCustomLayout_decodedRecordValidation() throws {
         let id = UUID().uuidString
         func decode(base: String, keys: [Any]) throws -> CustomLayout {

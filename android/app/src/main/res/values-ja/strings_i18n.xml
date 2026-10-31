@@ -179,7 +179,6 @@
     <string name="i18n_layout_editorTitleNew">新しい配列</string>
     <string name="i18n_layout_nameHeader">配列名</string>
     <string name="i18n_layout_calloutsTitle">長押しの文字</string>
-    <string name="i18n_layout_calloutsAddPlaceholder">文字を追加</string>
     <string name="i18n_layout_commonLayoutsSection">共通</string>
     <string name="i18n_layout_standardLayout">Lohankha</string>
     <string name="i18n_layout_phahTaigiLayout">PhahTaigi</string>

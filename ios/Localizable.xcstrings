@@ -3079,24 +3079,6 @@
         }
       }
     },
-    "i18n_layout_calloutsAddPlaceholder": {
-      "comment": "Layout editor long-press sheet: placeholder of the text field that adds an entry to the key's list. TL/POJ DRAFT — pending USER proofread.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add a Character"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "文字を追加"
-          }
-        }
-      }
-    },
     "i18n_layout_calloutsTitle": {
       "comment": "Layout editor: button shown while a character key is selected, and title of the sheet that edits that key's long-press list. TL/POJ DRAFT — pending USER proofread.",
       "extractionState": "manual",

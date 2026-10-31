@@ -313,6 +313,29 @@ struct CustomLayout: Codable, Identifiable, Hashable {
 
     // MARK: - Long-press lists
 
+    /// Characters the long-press tray offers: every lowercase tone-marked letter (Shift uppercases
+    /// them on the keyboard), both symbol pages, then every entry of the built-in long-press lists.
+    static let calloutCatalog: [String] = {
+        let toneMaps = [TaigiCallouts.TaigiToneMaps.tl, TaigiCallouts.TaigiToneMaps.poj]
+        let toneBases = Set(toneMaps.flatMap(\.keys)).filter { $0 == $0.lowercased() }.sorted()
+        let tones = toneBases.flatMap { base in toneMaps.flatMap { $0[base] ?? [] } }
+        let symbolPages = (TaigiLayouts.Numeric.iPhone + TaigiLayouts.Symbolic.iPhone).joined().flatMap { key -> [String] in
+            guard case let .char(label, fullWidth) = key else { return [] }
+            return [label] + (fullWidth.map { [$0] } ?? [])
+        }
+        let builtInLists = [TaigiCallouts.SymbolCallouts.actions, TaigiCallouts.MOE1Callouts.actions, TaigiCallouts.MOE2Callouts.actions]
+            .flatMap { map in map.keys.sorted().flatMap { map[$0] ?? [] } }
+        // TL and POJ tables spell some marked letters in different Unicode forms (ň precomposed or
+        // n + U+030C); one composed form each keeps a letter from showing twice.
+        return unique((tones + symbolPages + builtInLists).map(\.precomposedStringWithCanonicalMapping))
+    }()
+
+    /// The tray characters the key labelled `label` does not hold yet.
+    func spareCallouts(for label: String) -> [String] {
+        let held = Set(callouts(for: label).map(\.precomposedStringWithCanonicalMapping))
+        return Self.calloutCatalog.filter { !held.contains($0) }
+    }
+
     /// The built-in long-press list of the key labelled `label` on this base and script.
     func defaultCallouts(for label: String) -> [String] {
         TaigiCallouts.calloutChars(for: label, inputMode: script.inputMode, layoutType: base) ?? []
