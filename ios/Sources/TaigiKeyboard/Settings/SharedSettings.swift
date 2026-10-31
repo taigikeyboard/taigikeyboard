@@ -742,6 +742,7 @@ final class SharedSettings {
             inputMode: inputMode,
             fontType: fontType,
             keyboardLayoutType: keyboardLayoutType,
+            activeCustomLayout: activeCustomLayout,
             isHanjiFirst: isHanjiFirst,
             isTpsOrMappedToER: isTpsOrMappedToER,
             isNasalMarkerUppercaseEnabled: isNasalMarkerUppercaseEnabled,

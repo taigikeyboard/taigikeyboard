@@ -178,6 +178,8 @@
     <string name="i18n_layout_createNewLayout">New Layout…</string>
     <string name="i18n_layout_editorTitleNew">New Layout</string>
     <string name="i18n_layout_nameHeader">Layout Name</string>
+    <string name="i18n_layout_calloutsTitle">Long-Press Characters</string>
+    <string name="i18n_layout_calloutsAddPlaceholder">Add a Character</string>
     <string name="i18n_layout_commonLayoutsSection">Universal</string>
     <string name="i18n_layout_standardLayout">Lohankha</string>
     <string name="i18n_layout_phahTaigiLayout">PhahTaigi</string>

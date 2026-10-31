@@ -3,7 +3,8 @@ import SwiftUI
 /// Custom-layout editor: base chips, the board (fixed) and the spare tray (scrolling). Drag a key
 /// onto another to swap them (function keys within their row), a spare onto a key to replace it,
 /// a key onto the tray to remove it. Taps do the same: tap two keys, or a key then a spare or the
-/// trash. Nothing is stored until Save, which names the layout and applies it; Back discards the
+/// trash. A selected character key's long-press list opens in `LayoutCalloutsSheet`. Nothing is
+/// stored until Save, which names the layout and applies it; Back discards the
 /// draft.
 struct LayoutEditorView: View {
     @Environment(DisplayLanguageStore.self) private var lang
@@ -24,6 +25,7 @@ struct LayoutEditorView: View {
     /// The tray's frame in `editorSpace`: a board key dropped inside it is removed.
     @State private var trayFrame = CGRect.zero
     @State private var showsNameAlert = false
+    @State private var showsCallouts = false
     @State private var pendingName = ""
     private let isEditing: Bool
 
@@ -60,6 +62,18 @@ struct LayoutEditorView: View {
 
             ScrollView {
                 VStack(spacing: 24) {
+                    Button {
+                        showsCallouts = true
+                    } label: {
+                        Label {
+                            Text(lang.string(.layoutCalloutsTitle))
+                        } icon: {
+                            Image(latinSystemName: "hand.tap")
+                        }
+                    }
+                    .font(AppStyle.bodyFont)
+                    .disabled(selectedLabel == nil)
+
                     spareTray
 
                     Button(lang.string(.themeEditorResetAll), role: .destructive) {
@@ -99,11 +113,24 @@ struct LayoutEditorView: View {
                 }
             }
         }
+        .sheet(isPresented: $showsCallouts) {
+            if let selectedLabel {
+                LayoutCalloutsSheet(draft: $draft, label: selectedLabel)
+                    .environment(lang)
+            }
+        }
         .alert(lang.string(.layoutNameHeader), isPresented: $showsNameAlert) {
             TextField(lang.string(.layoutEditorTitleNew), text: $pendingName)
             Button(lang.string(.commonSave)) { commit() }
             Button(lang.string(.commonCancel), role: .cancel) {}
         }
+    }
+
+    /// The label of the selected character key; nil for a function key, a removed key or none.
+    private var selectedLabel: String? {
+        guard let selected, case .key = selected, let label = draft.keyDef(at: selected)?.characterLabel,
+              !label.isEmpty else { return nil }
+        return label
     }
 
     // MARK: - Sections

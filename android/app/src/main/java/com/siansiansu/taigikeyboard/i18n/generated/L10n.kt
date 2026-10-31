@@ -356,6 +356,10 @@ object L10n {
         @Composable get() = stringRes(StringKey.LAYOUT_EDITOR_TITLE_NEW)
     val layoutNameHeader: String
         @Composable get() = stringRes(StringKey.LAYOUT_NAME_HEADER)
+    val layoutCalloutsTitle: String
+        @Composable get() = stringRes(StringKey.LAYOUT_CALLOUTS_TITLE)
+    val layoutCalloutsAddPlaceholder: String
+        @Composable get() = stringRes(StringKey.LAYOUT_CALLOUTS_ADD_PLACEHOLDER)
     val layoutCommonLayoutsSection: String
         @Composable get() = stringRes(StringKey.LAYOUT_COMMON_LAYOUTS_SECTION)
     val layoutStandardLayout: String

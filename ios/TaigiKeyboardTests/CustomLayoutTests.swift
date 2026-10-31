@@ -236,6 +236,84 @@ final class CustomLayoutTests: XCTestCase {
         XCTAssertEqual(layout.rows(withGlobe: false), TaigiLayouts.Alphabetic.qwerty_POJ_iPhone)
     }
 
+    // MARK: - Long-press lists
+
+    func testCallouts_defaultIsBuiltInList() {
+        let layout = CustomLayout(base: .phahTaigi, script: .tl)
+        // trace: PhahTaigi has no layout-specific map → SymbolCallouts[","] = ，、
+        XCTAssertEqual(layout.callouts(for: ","), ["，", "、"])
+        XCTAssertEqual(layout.callouts(for: "a"), TaigiCallouts.calloutChars(for: "a", inputMode: .tl, layoutType: .phahTaigi))
+        XCTAssertNil(layout.calloutOverride(for: ","))
+    }
+
+    func testCallouts_setNormalisesAndReplacesBuiltInList() {
+        var layout = CustomLayout(base: .phahTaigi, script: .tl)
+        layout.setCallouts([" ; ", "", ":", ";", "1", "2", "3", "4", "5", "6", "7"], for: ",")
+        // trace: trimmed, blank and repeated ";" dropped, capped at 8.
+        XCTAssertEqual(layout.callouts(for: ","), [";", ":", "1", "2", "3", "4", "5", "6"])
+        XCTAssertFalse(layout.isUnchanged)
+        layout.setCallouts([], for: ".")
+        XCTAssertEqual(layout.calloutOverride(for: "."), [], "an empty list leaves the key without a long-press")
+    }
+
+    func testCallouts_listEqualToBuiltInIsNotStored() {
+        var layout = CustomLayout(base: .phahTaigi, script: .tl)
+        layout.setCallouts([";"], for: ",")
+        layout.setCallouts(["，", "、"], for: ",")
+        XCTAssertNil(layout.callouts[","])
+        XCTAssertTrue(layout.isUnchanged)
+    }
+
+    func testCallouts_overrideFollowsFullWidthFormAndShift() {
+        var layout = CustomLayout(base: .phahTaigi, script: .tl)
+        layout.setCallouts([";", ":"], for: ",")
+        layout.setCallouts(["á", "à"], for: "a")
+        // trace: PhahTaigi "," is .char(",", fullWidth: "，"); full-width mode sends "，".
+        XCTAssertEqual(layout.calloutOverride(for: "，"), [";", ":"])
+        XCTAssertEqual(layout.calloutOverride(for: "A"), ["Á", "À"])
+        XCTAssertNil(layout.calloutOverride(for: "e"))
+    }
+
+    func testCallouts_followKeyThroughSwapAndClearOnReset() throws {
+        var layout = CustomLayout(base: .phahTaigi, script: .tl)
+        layout.setCallouts(["{"], for: ",")
+        // Slot 20 is ",", slot 22 is "c".
+        layout.swap(.key(20), .key(22))
+        XCTAssertEqual(layout.rows(withGlobe: false)[3][3], .char(",", fullWidth: "，"))
+        XCTAssertEqual(layout.calloutOverride(for: ","), ["{"])
+        XCTAssertEqual(layout.calloutOverride(for: "，"), ["{"])
+        let decoded = try JSONDecoder().decode(CustomLayout.self, from: JSONEncoder().encode(layout))
+        XCTAssertEqual(decoded, layout)
+        layout.reset(to: .phahTaigi)
+        XCTAssertTrue(layout.callouts.isEmpty)
+    }
+
+    func testCallouts_keyLeavingBoardDropsItsList() {
+        var layout = CustomLayout(base: .phahTaigi, script: .tl)
+        layout.setCallouts(["{"], for: ",")
+        layout.setCallouts(["1"], for: "e")
+        // Slot 20 is ",", slot 2 is "e"; "q" is a spare letter.
+        layout.remove(.key(20))
+        layout.replace(.key(2), with: "q")
+        XCTAssertTrue(layout.callouts.isEmpty)
+        XCTAssertNil(layout.calloutOverride(for: ","))
+        layout.replace(.key(20), with: ",")
+        XCTAssertNil(layout.calloutOverride(for: ","), "a key back from the tray has the built-in list")
+    }
+
+    func testCallouts_customListOnlyOnLetterPageOfTaigiMode() {
+        var layout = CustomLayout(base: .phahTaigi, script: .tl)
+        layout.setCallouts([";"], for: ",")
+        func chars(_ inputMode: InputMode, _ keyboardType: Keyboard.KeyboardType) -> [String]? {
+            TaigiCallouts.customCalloutChars(for: ",", inputMode: inputMode, keyboardType: keyboardType, customLayout: layout)
+        }
+        XCTAssertEqual(chars(.tl, .alphabetic), [";"])
+        XCTAssertEqual(chars(.poj, .alphabetic), [";"])
+        XCTAssertNil(chars(.english, .alphabetic))
+        XCTAssertNil(chars(.tl, .numeric))
+        XCTAssertNil(chars(.tl, .symbolic))
+    }
+
     func testCustomLayout_decodedRecordValidation() throws {
         let id = UUID().uuidString
         func decode(base: String, keys: [Any]) throws -> CustomLayout {

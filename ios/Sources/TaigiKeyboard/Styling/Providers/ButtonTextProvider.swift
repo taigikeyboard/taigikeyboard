@@ -86,6 +86,17 @@ final class ButtonTextProvider {
             return tone
         }
 
+        // A custom layout's own long-press list replaces the built-in one, so no built-in hint
+        // may advertise it.
+        if TaigiCallouts.customCalloutChars(
+            for: char,
+            inputMode: settings.inputMode,
+            keyboardType: keyboardContext.keyboardType,
+            customLayout: settings.activeCustomLayout,
+        ) != nil {
+            return nil
+        }
+
         // MOE1/MOE2 punctuation hints
         if layoutType == .moe1 || layoutType == .moe2 {
             return Self.moePunctuationHints[char]
