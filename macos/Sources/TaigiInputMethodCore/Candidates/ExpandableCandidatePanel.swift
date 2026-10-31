@@ -14,10 +14,10 @@ import AppKit
 /// (`pageSize - pageSize/3` = six), five visible grid rows, no move-on-expand
 /// — and with the suspended-selection paths dropped like the other layouts.
 /// The grid geometry lives in `ExpandedGridLayout`; the collapsed row is the
-/// first page of the same packing the horizontal layout uses. The row's
-/// animated unfold is kept: it is what tells the user the grid IS the row
-/// they were looking at, grown — not a different window. The column snaps
-/// (USER 2026-10-31: an animation slows typing down).
+/// first page of the same packing the horizontal layout uses. The animated
+/// unfold is kept: it is what tells the user the grid IS the list they were
+/// looking at, grown — not a different window. The column unfolds to the
+/// right at its own height (USER 2026-10-31).
 final class ExpandableCandidatePanel: CandidateBasePanel {
     /// How many grid rows show before the expanded window scrolls.
     private static let maxVisibleRows = 5
@@ -61,12 +61,6 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
         /// cells glide into it; a column's are aligned to its own candidate
         /// column, which the grid does not share, so the grid builds every row.
         var reusesCollapsedCellsInGrid: Bool {
-            self == .row
-        }
-
-        /// Only the row plays the unfold; the column snaps to its new frame
-        /// (USER 2026-10-31: an animation slows typing down).
-        var animatesModeChange: Bool {
             self == .row
         }
     }
@@ -466,7 +460,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
         }
     }
 
-    /// Pages the expanded viewport a whole `maxVisibleRows`, keeping the
+    /// Pages the expanded viewport a whole `visibleRows`, keeping the
     /// highlight at its visual row (`MacishHorizontalExpandablePanel.swift:
     /// 748-780`). Paging up from the very top folds the window back into the
     /// row it came from.
@@ -478,7 +472,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
             return
         }
         let offset = max(highlightRow - topRow, 0)
-        let step = forward ? Self.maxVisibleRows : -Self.maxVisibleRows
+        let step = forward ? visibleRows : -visibleRows
         let newHighlightRow = min(max(highlightRow + step, 0), grid.rows.count - 1)
         let target = grid.overlappingCandidate(
             inRow: newHighlightRow,
@@ -549,8 +543,8 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
     }
 
     /// Lays every cell out for the current mode and answers the content size.
-    /// The expanded window scrolls past `maxVisibleRows`, with the same
-    /// half-row peek the vertical layout uses.
+    /// The expanded window scrolls past `visibleRows` (under a row, with the
+    /// same half-row peek the vertical layout uses).
     private func layoutForMode() -> CGSize {
         switch displayMode {
         case .collapsed:
@@ -639,11 +633,14 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
         chevronView.isHidden = true
         layoutSeparators(count: grid.rows.count - 1, width: gridWidth)
 
+        // Under a row the window grows with the grid up to `visibleRows` plus
+        // a half-row peek; beside a column it keeps exactly the collapsed
+        // height, scrolling past it and padding below a shorter grid. Twin of
+        // `ExpandableListModel::expanded_geometry`.
         let contentHeight = rowsHeight(grid.rows.count)
-        let maxVisibleHeight = (CGFloat(Self.maxVisibleRows) + 0.5) * itemHeight
-            + CGFloat(Self.maxVisibleRows - 1) * Self.separatorHeight
-        let needsScrolling = contentHeight > maxVisibleHeight
-        let windowHeight = needsScrolling ? maxVisibleHeight : contentHeight
+        let viewportHeight = rowsHeight(visibleRows) + peek
+        let needsScrolling = contentHeight > viewportHeight
+        let windowHeight = needsScrolling || axis == .column ? viewportHeight : contentHeight
         var windowWidth = gridWidth
         if needsScrolling {
             windowWidth += NSScroller.scrollerWidth(
@@ -652,9 +649,24 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
         }
         rowsContainer.frame.size = NSSize(
             width: gridWidth,
-            height: needsScrolling ? contentHeight + itemHeight / 2 : contentHeight,
+            // A short grid beside a column fills the padded window, so the
+            // clip view never has a document shorter than itself to place.
+            height: needsScrolling ? contentHeight + peek : max(contentHeight, windowHeight),
         )
         return CGSize(width: windowWidth, height: windowHeight)
+    }
+
+    /// The half row a scrolling viewport shows under its last full one, as a
+    /// hint there is more. Under a row only: a column keeps its exact height.
+    private var peek: CGFloat {
+        axis == .row ? itemHeight / 2 : 0
+    }
+
+    /// How many grid rows the expanded viewport shows: `maxVisibleRows` under
+    /// a row; beside a column, the column's own rows — the window keeps its
+    /// height as it unfolds to the right (USER 2026-10-31).
+    private var visibleRows: Int {
+        axis == .row ? Self.maxVisibleRows : collapsedSlots.count
     }
 
     /// Shows `count` hairlines, one under each row from the top, and hides the
@@ -683,6 +695,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
         let collapsedFrames = row0ItemViews.map { ($0, $0.frame) }
         let chevronFrame = chevronView.frame
         let collapsedWindowWidth = frame.size.width
+        let collapsedCornerRadius = wantsPillCorners ? frame.size.height / 2 : Self.sequoiaCornerRadius
 
         buildGridIfNeeded()
         displayMode = .expanded
@@ -701,16 +714,54 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
             return
         }
 
-        guard animated, axis.animatesModeChange, isVisible else {
+        guard animated, isVisible, targetFrame != frame else {
             rowHighlightView?.alphaValue = 1
             setFrame(targetFrame, display: true)
             finishModeChange()
             return
         }
 
-        // --- The unfold: survivors glide to their columns, the overflow
-        // slides out right, its duplicates slide in from the left, and the
-        // chevron fades as it is pushed to the grid's edge. ---
+        // --- The unfold: the cells move to the grid (`rowUnfoldAnimations` /
+        // `columnUnfoldAnimations`) while the chevron fades as it is pushed
+        // to the grid's edge. ---
+        let animations = switch axis {
+        case .row:
+            rowUnfoldAnimations(from: collapsedFrames, collapsedWindowWidth: collapsedWindowWidth)
+        case .column:
+            columnUnfoldAnimations(from: collapsedFrames)
+        }
+
+        chevronView.isHidden = false
+        chevronView.frame = chevronFrame
+        let chevronTarget = NSRect(
+            x: max(gridWidth - chevronFrame.width, chevronFrame.origin.x),
+            y: chevronFrame.origin.y,
+            width: chevronFrame.width,
+            height: chevronFrame.height,
+        )
+        transition = Transition(
+            items: animations,
+            chevronFrom: chevronFrame,
+            chevronTo: chevronTarget,
+            chevronAlphaFrom: 1,
+            chevronAlphaTo: 0,
+            highlightAlphaFrom: 0,
+            highlightAlphaTo: 1,
+            cornerFrom: collapsedCornerRadius,
+            cornerTo: Self.sequoiaCornerRadius,
+            isExpanding: true,
+        )
+        rowHighlightView?.alphaValue = 0
+        isAnimating = true
+        animateFrame(to: targetFrame)
+    }
+
+    /// The row's unfold: survivors glide to their columns, the overflow
+    /// slides out right, and its duplicates slide in from the left.
+    private func rowUnfoldAnimations(
+        from collapsedFrames: [(CandidateItemView, NSRect)],
+        collapsedWindowWidth: CGFloat,
+    ) -> [ItemAnimation] {
         let gridRow0Indices = Set(grid.rows.first?.map(\.candidateIndex) ?? [])
         let overflow = Set(collapsedSlots.map(\.candidateIndex)).subtracting(gridRow0Indices)
 
@@ -745,38 +796,46 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
                 ))
             }
         }
+        return animations
+    }
 
-        chevronView.isHidden = false
-        chevronView.frame = chevronFrame
-        let chevronTarget = NSRect(
-            x: max(gridWidth - chevronFrame.width, chevronFrame.origin.x),
-            y: chevronFrame.origin.y,
-            width: chevronFrame.width,
-            height: chevronFrame.height,
+    /// The column's unfold, as the window widens to the right at its height:
+    /// each column cell glides to its grid frame, cross-fading into the grid's
+    /// own cell for it (the two align their annotations differently), and the
+    /// candidates past the column fade in where they land.
+    private func columnUnfoldAnimations(from collapsedFrames: [(CandidateItemView, NSRect)]) -> [ItemAnimation] {
+        let columnFrames = Dictionary(
+            uniqueKeysWithValues: collapsedFrames.map { ($0.0.absoluteIndex, $0.1) },
         )
-        transition = Transition(
-            items: animations,
-            chevronFrom: chevronFrame,
-            chevronTo: chevronTarget,
-            chevronAlphaFrom: 1,
-            chevronAlphaTo: 0,
-            highlightAlphaFrom: 0,
-            highlightAlphaTo: 1,
-            cornerFrom: frame.size.height / 2,
-            cornerTo: Self.sequoiaCornerRadius,
-            isExpanding: true,
+        let gridFrames = Dictionary(
+            uniqueKeysWithValues: expandedItemViews.map { ($0.absoluteIndex, $0.frame) },
         )
-        rowHighlightView?.alphaValue = 0
-        isAnimating = true
-        animateFrame(to: targetFrame)
+        var animations: [ItemAnimation] = []
+        for (item, columnFrame) in collapsedFrames {
+            let target = gridFrames[item.absoluteIndex] ?? columnFrame
+            item.isHidden = false
+            item.alphaValue = 1
+            item.frame = columnFrame
+            animations.append(ItemAnimation(
+                item: item, from: columnFrame, to: target, fromAlpha: 1, toAlpha: 0,
+            ))
+        }
+        for item in expandedItemViews where !item.isHidden {
+            let target = item.frame
+            let start = columnFrames[item.absoluteIndex] ?? target
+            item.alphaValue = 0
+            item.frame = start
+            animations.append(ItemAnimation(
+                item: item, from: start, to: target, fromAlpha: 0, toAlpha: 1,
+            ))
+        }
+        return animations
     }
 
     private func collapse(animated: Bool) {
         let expandedFrames = (row0ItemViews + expandedItemViews)
             .filter { !$0.isHidden }
             .map { ($0, $0.frame) }
-        let gridRow0Indices = Set(grid.rows.first?.map(\.candidateIndex) ?? [])
-        let overflow = Set(collapsedSlots.map(\.candidateIndex)).subtracting(gridRow0Indices)
 
         displayMode = .collapsed
         if selectedIndex >= collapsedSlots.count {
@@ -795,7 +854,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
             return
         }
 
-        guard animated, axis.animatesModeChange, isVisible else {
+        guard animated, isVisible, targetFrame != frame else {
             rowHighlightView?.alphaValue = 0
             setFrame(targetFrame, display: true)
             finishModeChange()
@@ -803,12 +862,56 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
         }
 
         // --- The fold: the inverse choreography of the unfold. ---
+        let animations = switch axis {
+        case .row: rowFoldAnimations(from: expandedFrames, collapsedWindowWidth: contentSize.width)
+        case .column: columnFoldAnimations(from: expandedFrames)
+        }
+
+        // The chevron returns to the collapsed list's edge, its full height.
+        let chevronWidth = chevronView.intrinsicContentSize.width
+        let contentEnd = contentSize.width - (hasOverflow ? chevronWidth : 0)
+        let chevronSize = NSSize(width: chevronWidth, height: contentSize.height)
+        let chevronFrom = NSRect(
+            origin: NSPoint(x: max(contentEnd, gridWidth - chevronWidth), y: 0), size: chevronSize,
+        )
+        let chevronTo = NSRect(origin: NSPoint(x: contentEnd, y: 0), size: chevronSize)
+        if hasOverflow {
+            chevronView.isHidden = false
+            chevronView.alphaValue = 1
+            chevronView.setContentAlpha(0)
+            chevronView.frame = chevronFrom
+        }
+
+        transition = Transition(
+            items: animations,
+            chevronFrom: chevronFrom,
+            chevronTo: chevronTo,
+            chevronAlphaFrom: 0,
+            chevronAlphaTo: hasOverflow ? 1 : 0,
+            highlightAlphaFrom: 1,
+            highlightAlphaTo: 0,
+            cornerFrom: Self.sequoiaCornerRadius,
+            cornerTo: wantsPillCorners ? contentSize.height / 2 : Self.sequoiaCornerRadius,
+            isExpanding: false,
+        )
+        isAnimating = true
+        animateFrame(to: targetFrame)
+    }
+
+    /// The row's fold: survivors glide back into the row, the overflow slides
+    /// in from the right as its grid duplicates slide out left.
+    private func rowFoldAnimations(
+        from expandedFrames: [(CandidateItemView, NSRect)],
+        collapsedWindowWidth: CGFloat,
+    ) -> [ItemAnimation] {
+        let gridRow0Indices = Set(grid.rows.first?.map(\.candidateIndex) ?? [])
+        let overflow = Set(collapsedSlots.map(\.candidateIndex)).subtracting(gridRow0Indices)
         var animations: [ItemAnimation] = []
         for item in row0ItemViews {
             let target = item.frame
             if overflow.contains(item.absoluteIndex) {
                 var enterFrame = target
-                enterFrame.origin.x = contentSize.width
+                enterFrame.origin.x = collapsedWindowWidth
                 item.isHidden = false
                 item.alphaValue = 0
                 item.frame = enterFrame
@@ -834,35 +937,44 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
                 ))
             }
         }
+        return animations
+    }
 
-        let chevronWidth = chevronView.intrinsicContentSize.width
-        let rowEnd = collapsedSlots.reduce(CGFloat(0)) { $0 + $1.width }
-        let chevronSize = NSSize(width: chevronWidth, height: itemHeight)
-        let chevronFrom = NSRect(
-            origin: NSPoint(x: max(rowEnd, gridWidth - chevronWidth), y: 0), size: chevronSize,
+    /// The column's fold, the unfold reversed: each grid cell the column
+    /// shows glides back to its row there, cross-fading into the column's own
+    /// cell, and the rest fade out where they are.
+    private func columnFoldAnimations(from expandedFrames: [(CandidateItemView, NSRect)]) -> [ItemAnimation] {
+        let gridFrames = Dictionary(
+            uniqueKeysWithValues: expandedFrames
+                .filter { expandedItemViews.contains($0.0) }
+                .map { ($0.0.absoluteIndex, $0.1) },
         )
-        let chevronTo = NSRect(origin: NSPoint(x: rowEnd, y: 0), size: chevronSize)
-        if hasOverflow {
-            chevronView.isHidden = false
-            chevronView.alphaValue = 1
-            chevronView.setContentAlpha(0)
-            chevronView.frame = chevronFrom
+        let columnFrames = Dictionary(
+            uniqueKeysWithValues: row0ItemViews.map { ($0.absoluteIndex, $0.frame) },
+        )
+        var animations: [ItemAnimation] = []
+        for item in row0ItemViews {
+            let target = item.frame
+            let start = gridFrames[item.absoluteIndex] ?? target
+            item.alphaValue = 0
+            item.frame = start
+            animations.append(ItemAnimation(
+                item: item, from: start, to: target, fromAlpha: 0, toAlpha: 1,
+            ))
         }
-
-        transition = Transition(
-            items: animations,
-            chevronFrom: chevronFrom,
-            chevronTo: chevronTo,
-            chevronAlphaFrom: 0,
-            chevronAlphaTo: hasOverflow ? 1 : 0,
-            highlightAlphaFrom: 1,
-            highlightAlphaTo: 0,
-            cornerFrom: Self.sequoiaCornerRadius,
-            cornerTo: hasOverflow ? contentSize.height / 2 : Self.sequoiaCornerRadius,
-            isExpanding: false,
-        )
-        isAnimating = true
-        animateFrame(to: targetFrame)
+        for (item, gridFrame) in expandedFrames where expandedItemViews.contains(item) {
+            item.isHidden = false
+            item.alphaValue = 1
+            item.frame = gridFrame
+            animations.append(ItemAnimation(
+                item: item,
+                from: gridFrame,
+                to: columnFrames[item.absoluteIndex] ?? gridFrame,
+                fromAlpha: 1,
+                toAlpha: 0,
+            ))
+        }
+        return animations
     }
 
     /// What both mode changes do once their frames are final.
@@ -901,7 +1013,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
             scrollView.reflectScrolledClipView(scrollView.contentView)
         } else if rowBottom > viewport.maxY {
             let maxScrollY = rowsContainer.frame.height - viewport.height
-            let targetY = min(rowBottom + itemHeight / 2 - viewport.height, maxScrollY)
+            let targetY = min(rowBottom + peek - viewport.height, maxScrollY)
             scrollView.contentView.scroll(to: NSPoint(x: 0, y: max(targetY, 0)))
             scrollView.reflectScrolledClipView(scrollView.contentView)
         }
@@ -1072,11 +1184,10 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
                 }
                 chevronView.isHidden = true
             } else {
+                // The hairlines were already laid out for the collapsed list
+                // (none under a row, the column's own beside one).
                 for item in expandedItemViews {
                     item.isHidden = true
-                }
-                for separator in separatorViews {
-                    separator.isHidden = true
                 }
             }
         }

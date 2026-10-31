@@ -136,6 +136,37 @@ final class VerticalExpandableCandidatePanelTests: XCTestCase {
         XCTAssertEqual(row.selectedIndex, 1)
     }
 
+    /// The column unfolds to the right at its own height: a short grid pads
+    /// down to it, a long one scrolls inside it (USER 2026-10-31).
+    func testExpanded_keepsTheCollapsedHeight() {
+        for count in [20, 200] {
+            let panel = makeEmptyPanel()
+            let cells = (0 ..< count).map {
+                CandidateCellContent(text: "候\($0)", annotation: "hau\($0)")
+            }
+            let collapsed = panel.updateCandidates(cells)
+
+            panel.navigate(.right)
+
+            XCTAssertEqual(panel.displayMode, .expanded)
+            XCTAssertEqual(panel.frame.height, collapsed.height, "\(count) candidates")
+            XCTAssertGreaterThan(panel.frame.width, collapsed.width, "it grows to the right")
+        }
+    }
+
+    func testExpanded_pageDownStepsAWholeColumnHeight() {
+        let panel = makeEmptyPanel()
+        let cells = (0 ..< 200).map { CandidateCellContent(text: "候\($0)", annotation: "hau\($0)") }
+        _ = panel.updateCandidates(cells)
+        panel.navigate(.right)
+
+        panel.navigate(.pageDown)
+
+        // trace: an inline "候N hauN" cell spans two of the six grid columns →
+        // three per row; index 0 on row 0 pages 9 rows to row 9 → 27.
+        XCTAssertEqual(panel.selectedIndex, 27)
+    }
+
     func testExpanded_showsTheGridNotTheColumn() {
         let panel = makePanel()
 
