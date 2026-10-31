@@ -3,33 +3,19 @@ import UIKit
 
 // Draws a key table as plain keys: the custom-layout editor board, and the custom-layout card
 // preview on the Layout tab and in the keyboard's layout picker. Not the KeyboardKit view, so
-// a key can be selected or dragged and nothing is typed.
+// a key can be selected and nothing is typed.
 
 /// With an `interaction`, the keys at a `CustomLayout.Place` (every key below the digit row but
-/// globe) take taps, drags and dropped spares; without one the grid is an inert preview.
+/// globe) take taps; without one the grid is an inert preview.
 struct LayoutKeyGrid: View {
     /// The editor board's state and callbacks.
     struct Interaction {
         var selected: CustomLayout.Place?
         /// Places drawn as a dashed outline: removed keys the editor can put back.
         var removed: Set<CustomLayout.Place> = []
-        /// The key being dragged, drawn faded at its place.
-        var lifted: CustomLayout.Place?
-        /// The key a drag would land on.
-        var highlighted: CustomLayout.Place?
         /// VoiceOver name of a removed key's place (the grid has no strings of its own).
         var removedPlaceLabel = ""
         var onTap: (CustomLayout.Place) -> Void
-        /// A key moved past the drag threshold, then on every move while lifted; the point is in
-        /// `editorSpace`.
-        var onDrag: (CustomLayout.Place, CGPoint) -> Void
-        /// The finger lifted off a key, dragged or not; the point is in `editorSpace`.
-        var onRelease: (CustomLayout.Place, CGPoint) -> Void
-        /// The key's gesture is over — ended or cancelled by the system. Runs after `onRelease`
-        /// when it ended, alone when it was cancelled.
-        var onGestureEnd: () -> Void
-        /// A spare dragged from the tray landed on a place; returns whether it was taken.
-        var onDropSpare: (String, CustomLayout.Place) -> Bool
     }
 
     let rows: [[KeyDef]]
@@ -39,10 +25,11 @@ struct LayoutKeyGrid: View {
     /// `PreviewAssetGeneratorTests`), so a drawn card lines up with them.
     static let cardAspectRatio: CGFloat = 720.0 / 454.0
 
-    /// The editor's coordinate space: drag points and `KeyFrames` are in it.
+    /// The editor's coordinate space: `KeyFrames` are in it.
     static let editorSpace = "layoutEditor"
 
-    /// Each place's frame in `editorSpace`, so the editor can tell which key a drag is over.
+    /// Each place's frame in `editorSpace`, so the long-press bubble's tail can point at the
+    /// selected key.
     struct KeyFrames: PreferenceKey {
         static let defaultValue: [CustomLayout.Place: CGRect] = [:]
 
@@ -53,13 +40,6 @@ struct LayoutKeyGrid: View {
 
     /// Key widths in character-key units; a row of ten character keys fills the board.
     private static let rowUnits: CGFloat = 10
-    /// Finger travel that turns a press into a drag.
-    private static let dragThreshold: CGFloat = 8
-
-    /// The place a spare dragged from the tray hovers over.
-    @State private var spareTarget: CustomLayout.Place?
-    /// True while a finger is on a key; resets on its own when the gesture ends or is cancelled.
-    @GestureState private var isPressing = false
 
     var body: some View {
         GeometryReader { geometry in
@@ -82,11 +62,6 @@ struct LayoutKeyGrid: View {
         }
         .padding(2)
         .background(Self.boardColor)
-        .onChange(of: isPressing) { _, isPressing in
-            if !isPressing {
-                interaction?.onGestureEnd()
-            }
-        }
     }
 
     // MARK: - Keys
@@ -96,7 +71,6 @@ struct LayoutKeyGrid: View {
         let isSelected = place != nil && place == interaction?.selected
         // A removed key's place: a dashed outline the editor can fill again.
         let isRemoved = place.map { interaction?.removed.contains($0) ?? false } ?? false
-        let isTarget = place != nil && (place == interaction?.highlighted || place == spareTarget)
         let shape = RoundedRectangle(cornerRadius: gap * 1.5)
         let fill = isSelected ? Color.accentColor : isRemoved ? Color.clear : Self.keyColor
         let face = Self.label(keyDef, size: fontSize, isDigit: keyDef.isCharacter && place == nil)
@@ -106,9 +80,7 @@ struct LayoutKeyGrid: View {
             .foregroundStyle(isSelected ? Color.white : Color.primary)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(fill, in: shape)
-            .overlay(shape.strokeBorder(Color.secondary, style: StrokeStyle(lineWidth: 1, dash: [3])).opacity(isRemoved && !isSelected && !isTarget ? 1 : 0))
-            .overlay(shape.strokeBorder(Color.accentColor, lineWidth: 2.5).opacity(isTarget ? 1 : 0))
-            .opacity(place != nil && place == interaction?.lifted ? 0.3 : 1)
+            .overlay(shape.strokeBorder(Color.secondary, style: StrokeStyle(lineWidth: 1, dash: [3])).opacity(isRemoved && !isSelected ? 1 : 0))
             .padding(gap / 2)
 
         if let place, let interaction {
@@ -117,29 +89,8 @@ struct LayoutKeyGrid: View {
                 .background(GeometryReader { proxy in
                     Color.clear.preference(key: KeyFrames.self, value: [place: proxy.frame(in: .named(Self.editorSpace))])
                 })
-                .gesture(
-                    DragGesture(minimumDistance: 0, coordinateSpace: .named(Self.editorSpace))
-                        .updating($isPressing) { _, isPressing, _ in isPressing = true }
-                        .onChanged { value in
-                            // The threshold only starts a drag; once lifted, every move counts.
-                            if interaction.lifted == place
-                                || hypot(value.translation.width, value.translation.height) > Self.dragThreshold
-                            {
-                                interaction.onDrag(place, value.location)
-                            }
-                        }
-                        .onEnded { value in interaction.onRelease(place, value.location) },
-                )
-                .dropDestination(for: String.self) { spares, _ in
-                    spares.first.map { interaction.onDropSpare($0, place) } ?? false
-                } isTargeted: { isTargeted in
-                    if isTargeted {
-                        spareTarget = place
-                    } else if spareTarget == place {
-                        spareTarget = nil
-                    }
-                }
-                // Touch handling is the gesture above; VoiceOver activates through the action.
+                .onTapGesture { interaction.onTap(place) }
+                // VoiceOver activates through the action, not the tap gesture.
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(isRemoved ? interaction.removedPlaceLabel : Self.accessibilityName(of: keyDef))
                 .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
@@ -167,10 +118,9 @@ struct LayoutKeyGrid: View {
         }
     }
 
-    /// A key's face: its text at `size` points, or its symbol in a `size` square. Also the key the
-    /// editor floats under a drag.
+    /// A key's face: its text at `size` points, or its symbol in a `size` square.
     @ViewBuilder
-    static func label(_ keyDef: KeyDef, size: CGFloat, isDigit: Bool = false) -> some View {
+    private static func label(_ keyDef: KeyDef, size: CGFloat, isDigit: Bool = false) -> some View {
         switch keyDef {
         case let .char(label, _): text(label, size: size).opacity(isDigit ? 0.5 : 1)
         case .shift: symbol("shift", size: size)
