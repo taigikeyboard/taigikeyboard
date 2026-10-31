@@ -135,6 +135,17 @@ class CustomLayoutTablesTest {
     }
 
     @Test
+    fun `the nasal marker from the tray is a plain key in both widths`() {
+        // trace: q (Lohankha place 0) → ⁿ U+207F, a catalog-only key: code 0, no popup, same label full-width.
+        val layout = unchanged("qwerty", LayoutScript.POJ).let { it.copy(keys = listOf("ⁿ") + it.keys.drop(1)) }
+        assertTrue(tables.isValid(layout))
+        for (isFullWidthPunctuation in listOf(false, true)) {
+            val key = substituted(layout, isFullWidthPunctuation)[1][0]
+            assertEquals(Triple("ⁿ", 0, 0), Triple(key.label, key.code, key.popup.size))
+        }
+    }
+
+    @Test
     fun `removed keys leave their row and an empty row leaves the keyboard`() {
         val base = unchanged("qwerty", LayoutScript.TL)
         val withoutA = substituted(base.copy(keys = base.keys.toMutableList().also { it[10] = null }))
