@@ -149,11 +149,17 @@ fun LayoutEditorScreen(
         }
     }
 
-    // Applies [change] to the selected key's list and clears the slot selection; the key stays selected.
-    fun editCallouts(change: (MutableList<String>) -> Unit) {
+    // Applies [change] to the selected key's list, then selects slot [nextSlot] (clamped to the first
+    // empty slot, or the last one once the list is full), or no slot when null. Filling and removing
+    // keep a slot selected: with none, the next tray tap would replace the key itself and drop its list.
+    fun editCallouts(
+        nextSlot: Int?,
+        change: (MutableList<String>) -> Unit,
+    ) {
         val label = selectedLabel() ?: return
         changeDraft(tables.withCallouts(draft, label, selectedCallouts().toMutableList().also(change)))
-        selectedCallout = null
+        // Read from the edited draft: a dropped repeat can leave the list unchanged or shorter.
+        selectedCallout = nextSlot?.let { minOf(it, selectedCallouts().size, CustomLayout.MAX_CALLOUTS - 1) }
     }
 
     fun resetCallouts() {
@@ -171,23 +177,20 @@ fun LayoutEditorScreen(
         }
         val filled = selectedCallouts().indices
         when {
-            current in filled && index in filled -> editCallouts { Collections.swap(it, current, index) }
-            current in filled || index in filled -> editCallouts { it.add(it.removeAt(if (current in filled) current else index)) }
+            current in filled && index in filled -> editCallouts(null) { Collections.swap(it, current, index) }
+            current in filled || index in filled -> editCallouts(null) { it.add(it.removeAt(if (current in filled) current else index)) }
             else -> selectedCallout = index
         }
     }
 
-    // Puts [spare] in slot [index]: replaces an entry, or adds one in an empty slot and moves the
-    // selection to the next empty slot, so several characters go in one tap each.
+    // Puts [spare] in slot [index]: replaces an entry (which stays selected), or adds one in an empty
+    // slot and moves the selection to the next empty slot, so several characters go in one tap each.
     fun fillCallout(
         index: Int,
         spare: String,
     ) {
         val isAdding = index !in selectedCallouts().indices
-        editCallouts { if (isAdding) it.add(spare) else it[index] = spare }
-        // Read from the edited draft: a repeat is dropped, so the list may not have grown.
-        val count = selectedCallouts().size
-        if (isAdding && count < CustomLayout.MAX_CALLOUTS) selectedCallout = count
+        editCallouts(if (isAdding) CustomLayout.MAX_CALLOUTS else index) { if (isAdding) it.add(spare) else it[index] = spare }
     }
 
     // A spare fills the selected long-press slot, else replaces the selected key (long-press-only
@@ -203,7 +206,7 @@ fun LayoutEditorScreen(
     fun removeSelected() {
         val slot = selectedCallout
         if (slot != null) {
-            if (slot in selectedCallouts().indices) editCallouts { it.removeAt(slot) }
+            if (slot in selectedCallouts().indices) editCallouts(slot) { it.removeAt(slot) }
             return
         }
         selected?.let { edit(draft.removed(it)) }
@@ -236,11 +239,20 @@ fun LayoutEditorScreen(
                 .fillMaxSize()
                 .padding(innerPadding),
         ) {
-            // At most half the height, so the tray keeps room in landscape.
+            // At most half the height, so a short (landscape) screen still shows a usable board.
             val boardWidth = min(maxWidth - 40.dp, maxHeight * 0.5f * GALLERY_PREVIEW_ASPECT)
+            // Below Material 3's compact-height breakpoint (480dp, a phone in landscape) the board and
+            // bubble leave the tray no height, so the whole editor scrolls instead of the tray alone.
+            val scrollsWhole = maxHeight < 480.dp
+            val scrollState = rememberScrollState()
             val label = selectedLabel()
             val callouts = selectedCallouts()
-            Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .then(if (scrollsWhole) Modifier.verticalScroll(scrollState) else Modifier),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
                 BaseChips(selectedBase = draft.base, onSelect = ::restart)
 
                 LayoutKeyGrid(
@@ -274,11 +286,10 @@ fun LayoutEditorScreen(
                 )
 
                 Column(
-                    Modifier
-                        .weight(1f)
+                    (if (scrollsWhole) Modifier else Modifier.weight(1f))
                         .fillMaxWidth()
                         .padding(horizontal = 10.dp)
-                        .verticalScroll(rememberScrollState())
+                        .then(if (scrollsWhole) Modifier else Modifier.verticalScroll(scrollState))
                         .padding(horizontal = 10.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
