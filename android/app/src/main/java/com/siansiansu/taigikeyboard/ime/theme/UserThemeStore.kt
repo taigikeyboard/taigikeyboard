@@ -20,15 +20,19 @@ class UserThemeStore(
     fun load(): List<UserTheme> = UserTheme.decodeList(read())
 
     /**
-     * Appends a theme and persists. Returns false when already at [MAX_USER_THEMES];
-     * true means accepted into the write path (the DataStore-backed [write] updates the
-     * in-memory cache synchronously, persists asynchronously — unlike iOS where false
-     * also signals a failed durable write).
+     * Adds a theme right after the theme with id [anchorId] (appended when null or absent) and
+     * persists. Returns false when already at [MAX_USER_THEMES]; true means accepted into the
+     * write path (the DataStore-backed [write] updates the in-memory cache synchronously,
+     * persists asynchronously — unlike iOS where false also signals a failed durable write).
      */
-    fun add(theme: UserTheme): Boolean {
+    fun add(
+        theme: UserTheme,
+        anchorId: String? = null,
+    ): Boolean {
         val themes = load()
         if (themes.size >= MAX_USER_THEMES) return false
-        persist(themes + theme)
+        val anchor = themes.indexOfFirst { it.id == anchorId }
+        persist(themes.toMutableList().also { it.add(if (anchor >= 0) anchor + 1 else it.size, theme) })
         return true
     }
 

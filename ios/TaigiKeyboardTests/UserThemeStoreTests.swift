@@ -42,6 +42,26 @@ final class UserThemeStoreTests: XCTestCase {
         )
     }
 
+    func testAddAfterAnchor_insertsDuplicateNextToOriginal() {
+        let store = UserThemeStore(containerURL: tempDir, onMutated: {})
+        var original = makeUserTheme(name: "A")
+        original.baseThemeId = "standardPink"
+        let other = makeUserTheme(name: "B")
+        XCTAssertTrue(store.add(original))
+        XCTAssertTrue(store.add(other))
+
+        let now = Date(timeIntervalSince1970: 42)
+        let copy = original.duplicated(named: "A copy", now: now)
+        XCTAssertTrue(store.add(copy, after: original.id))
+        let loaded = store.load()
+        XCTAssertEqual(loaded.map(\.id), [original.id, copy.id, other.id])
+        XCTAssertNotEqual(copy.id, original.id)
+        XCTAssertEqual(loaded[1].name, "A copy")
+        XCTAssertEqual(loaded[1].appearance, original.appearance)
+        XCTAssertEqual(loaded[1].baseThemeId, "standardPink")
+        XCTAssertEqual(loaded[1].createdAt, now)
+    }
+
     func testAddAndLoad_keepsBaseThemeId() {
         let store = UserThemeStore(containerURL: tempDir, onMutated: {})
         var theme = makeUserTheme(name: "Pink")

@@ -385,6 +385,27 @@ final class CustomLayoutTests: XCTestCase {
         XCTAssertEqual(UserLayoutStore(containerURL: directory, onMutated: {}).load(), [valid])
     }
 
+    func testSharedSettings_duplicateAddsRenamedCopyAfterOriginalWithoutApplying() throws {
+        let settings = try makeSettings()
+        var original = CustomLayout(base: .moe2, script: .poj)
+        original.name = "Mine"
+        original.swap(.key(0), .key(1))
+        let other = CustomLayout(base: .moe1, script: .tl)
+        XCTAssertTrue(settings.saveCustomLayout(original))
+        XCTAssertTrue(settings.saveCustomLayout(other))
+
+        XCTAssertTrue(settings.duplicateCustomLayout(original, named: "Mine copy"))
+        let saved = settings.loadCustomLayouts()
+        XCTAssertEqual(saved.count, 3)
+        XCTAssertEqual(saved[0].id, original.id)
+        XCTAssertEqual(saved[2].id, other.id)
+        let copy = saved[1]
+        XCTAssertNotEqual(copy.id, original.id)
+        XCTAssertEqual(copy.name, "Mine copy")
+        XCTAssertEqual(copy.keys, original.keys)
+        XCTAssertEqual(settings.selectedCustomLayoutId, other.id, "duplicate leaves the selection alone")
+    }
+
     func testUserLayoutStore_neverOverwritesUnreadableFile() throws {
         let directory = try makeDirectory()
         let fileURL = directory.appendingPathComponent(UserLayoutStore.fileName)

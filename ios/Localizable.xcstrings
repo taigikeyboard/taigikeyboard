@@ -73,6 +73,42 @@
         }
       }
     },
+    "i18n_common_duplicate": {
+      "comment": "Custom theme / custom layout card action-menu item (mobile): save a copy of this card as a new custom theme / layout. Hanji + TL from USER 2026-10-31.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Duplicate"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "複製"
+          }
+        }
+      }
+    },
+    "i18n_common_duplicateName": {
+      "comment": "Name given to the copy that the Duplicate card action saves; {name} = the original card's name. 副本 hù-pún per USER 2026-10-31.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ Copy"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ のコピー"
+          }
+        }
+      }
+    },
     "i18n_common_edit": {
       "comment": "Generic Edit: custom-theme card action-menu item (mobile), menu-bar Edit menu title (macOS). Merged 2026-09-20 from theme.cardMenuEdit / desktop.menuEdit.",
       "extractionState": "manual",

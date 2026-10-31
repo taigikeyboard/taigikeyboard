@@ -3,6 +3,10 @@
 import Foundation
 
 extension StringResolver {
+    func commonDuplicateName(name: String) -> String {
+        format(.commonDuplicateName, name)
+    }
+
     func dictionaryImportResult(imported: Int, skipped: Int) -> String {
         format(.dictionaryImportResult, Int64(imported), Int64(skipped))
     }

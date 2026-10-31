@@ -8,6 +8,7 @@ import com.siansiansu.taigikeyboard.ime.text.layout.LayoutScript
 import com.siansiansu.taigikeyboard.ime.text.layout.LayoutTestAssets
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
@@ -62,5 +63,18 @@ class CustomLayoutSelectionTest {
         assertFalse(writes.containsKey(PreferenceKeys.KEYBOARD_LAYOUT_TYPE))
 
         assertFalse(CustomLayoutSelection.forDelete(listOf(layoutA, layoutB), id = "b", selectedId = "a").containsKey(PreferenceKeys.SELECTED_CUSTOM_LAYOUT_ID))
+    }
+
+    @Test
+    fun `duplicating adds a renamed copy right after the original and leaves the selection alone`() {
+        val writes = CustomLayoutSelection.forDuplicate(listOf(layoutA, layoutB), layoutA, name = "Copy")!!
+        val saved = CustomLayout.decodeList(writes[PreferenceKeys.USER_LAYOUTS] as String, LayoutTestAssets.tables)
+        assertEquals(listOf("a", saved[1].id, "b"), saved.map { it.id })
+        assertNotEquals("a", saved[1].id)
+        assertEquals(layoutA.copy(id = saved[1].id, name = "Copy"), saved[1])
+        assertEquals(setOf(PreferenceKeys.USER_LAYOUTS), writes.keys)
+
+        val full = (1..CustomLayout.MAX_CUSTOM_LAYOUTS).map { layoutA.copy(id = "$it") }
+        assertNull(CustomLayoutSelection.forDuplicate(full, full.first(), name = "Copy"))
     }
 }

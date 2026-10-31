@@ -528,6 +528,14 @@ class PrefHelper(
         return true
     }
 
+    /** Saves a copy of [layout] named [name] ([CustomLayoutSelection.forDuplicate]); no-op at the cap. */
+    fun duplicateCustomLayout(
+        layout: CustomLayout,
+        name: String,
+    ) {
+        CustomLayoutSelection.forDuplicate(loadCustomLayouts(), layout, name)?.let(::updateCacheBatchAndPersist)
+    }
+
     /** Deletes the layout with [id] ([CustomLayoutSelection.forDelete]). */
     fun deleteCustomLayout(id: String) {
         updateCacheBatchAndPersist(CustomLayoutSelection.forDelete(loadCustomLayouts(), id, selectedCustomLayoutId))

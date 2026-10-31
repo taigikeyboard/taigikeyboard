@@ -254,6 +254,47 @@
         "ja": "編集"
       }
     },
+    "duplicate": {
+      "comment": "Custom theme / custom layout card action-menu item (mobile): save a copy of this card as a new custom theme / layout. Hanji + TL from USER 2026-10-31.",
+      "scope": {
+        "platforms": [
+          "android",
+          "ios"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "複製",
+        "tailo": "Ho̍k-tsè",
+        "poj": "Ho̍k-chè",
+        "en": "Duplicate",
+        "ja": "複製"
+      }
+    },
+    "duplicateName": {
+      "comment": "Name given to the copy that the Duplicate card action saves; {name} = the original card's name. 副本 hù-pún per USER 2026-10-31.",
+      "scope": {
+        "platforms": [
+          "android",
+          "ios"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "placeholders": {
+        "name": "string"
+      },
+      "values": {
+        "hanji": "{name} 副本",
+        "tailo": "{name} hù-pún",
+        "poj": "{name} hù-pún",
+        "en": "{name} Copy",
+        "ja": "{name} のコピー"
+      }
+    },
     "toggleTranslateSwapped": {
       "comment": "Flip which script is committed / shown first: desktop shortcut-recorder row (切換 rather than 輸出, USER 2026-09-10), mobile candidate-overlay display-swap button a11y label. Merged 2026-09-20 from desktop.shortcutToggleTranslateSwapped / keyboard.translateToggle.",
       "scope": {
