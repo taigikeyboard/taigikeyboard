@@ -8,6 +8,7 @@ import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Collections
+import java.util.UUID
 
 /**
  * The script of a key table: Lohankha and the MOE layouts have different TL and POJ tables. The
@@ -81,6 +82,9 @@ data class CustomLayout(
     /** The emoji key's place. */
     val emojiPlace: LayoutPlace.Function?
         get() = functionKeys.indexOf(FunctionKey.EMOJI).takeIf { it >= 0 }?.let(LayoutPlace::Function)
+
+    /** This layout under a new id and [name] — what the Duplicate card action saves. Mirrors iOS `CustomLayout.duplicated(named:)`. */
+    fun duplicated(name: String): CustomLayout = copy(id = UUID.randomUUID().toString(), name = name)
 
     /** Places drawn as a removed key in the editor: removed character keys, and the hidden emoji key. */
     val removedPlaces: Set<LayoutPlace>
@@ -232,16 +236,23 @@ data class CustomLayout(
             layoutType: String,
         ): CustomLayout? = layouts.firstOrNull { it.id == selectedId && it.base == layoutType }
 
-        /** [layouts] with [layout] in place of its saved version, or added; null when adding passes the cap. */
+        /**
+         * [layouts] with [layout] in place of its saved version, or added right after the layout
+         * with id [anchorId] (appended when null or absent); null when adding passes the cap.
+         */
         fun upserted(
             layouts: List<CustomLayout>,
             layout: CustomLayout,
+            anchorId: String? = null,
         ): List<CustomLayout>? {
             val index = layouts.indexOfFirst { it.id == layout.id }
             return when {
                 index >= 0 -> layouts.toMutableList().also { it[index] = layout }
                 layouts.size >= MAX_CUSTOM_LAYOUTS -> null
-                else -> layouts + layout
+                else -> {
+                    val anchor = layouts.indexOfFirst { it.id == anchorId }
+                    layouts.toMutableList().also { it.add(if (anchor >= 0) anchor + 1 else it.size, layout) }
+                }
             }
         }
 

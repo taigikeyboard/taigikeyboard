@@ -2,6 +2,7 @@ package com.siansiansu.taigikeyboard.ime.theme
 
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.UUID
 
 /** The theme-photo file names the saved themes still reference — what a sweep keeps. */
 fun List<UserTheme>.referencedPhotoFiles(): Set<String> =
@@ -37,6 +38,17 @@ data class UserTheme(
             put("updatedAt", updatedAt)
             baseThemeId?.let { put("baseThemeId", it) }
         }
+
+    /**
+     * This theme under a new id and [name], stamped [now] — what the Duplicate card action saves.
+     * A photo background shares the original's file: the photo sweep keeps every file a saved theme
+     * still references, so deleting either theme leaves the other's photo in place. Mirrors iOS
+     * `UserTheme.duplicated(named:now:)`.
+     */
+    fun duplicated(
+        name: String,
+        now: Long = System.currentTimeMillis(),
+    ): UserTheme = copy(id = UUID.randomUUID().toString(), name = name, createdAt = now, updatedAt = now)
 
     companion object {
         /**

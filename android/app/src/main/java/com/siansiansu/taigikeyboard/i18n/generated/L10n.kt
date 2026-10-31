@@ -28,6 +28,8 @@ object L10n {
         @Composable get() = stringRes(StringKey.COMMON_OTHER)
     val commonEdit: String
         @Composable get() = stringRes(StringKey.COMMON_EDIT)
+    val commonDuplicate: String
+        @Composable get() = stringRes(StringKey.COMMON_DUPLICATE)
     val commonToggleTranslateSwapped: String
         @Composable get() = stringRes(StringKey.COMMON_TOGGLE_TRANSLATE_SWAPPED)
     val commonBack: String

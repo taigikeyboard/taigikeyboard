@@ -23,8 +23,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.siansiansu.taigikeyboard.i18n.LocalStringResolver
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.i18n.generated.StringKey
+import com.siansiansu.taigikeyboard.i18n.generated.commonDuplicateName
 import com.siansiansu.taigikeyboard.i18n.stringRes
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
@@ -44,7 +46,7 @@ import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 
 // Layout tab main screen: shelves of layout cards (shared gallery chrome with the Theme tab) —
 // Custom Layouts (a create card that opens LayoutEditorActivity, then the user's layouts with an
-// apply / edit / delete menu), Universal (one key table for both scripts),
+// apply / edit / duplicate / delete menu), Universal (one key table for both scripts),
 // Tâi-lô and Pe̍h-ōe-jī (the layouts whose POJ keys differ, once per script), Phonetic Symbols.
 // A Tâi-lô / Pe̍h-ōe-jī card applies its layout and switches the input mode to that script.
 // Mirrors iOS LayoutTab.
@@ -96,6 +98,7 @@ fun LayoutScreen(prefs: PrefHelper) {
     val customLayouts by remember(prefs) { prefs.observeCustomLayouts() }
         .collectAsStateWithLifecycle(initialValue = remember(prefs) { prefs.loadCustomLayouts() })
     val context = LocalContext.current
+    val stringResolver = LocalStringResolver.current
     val tables = remember(context) { CompositionRoot.shared(context).customLayoutTables }
     val isDark = isSystemInDarkTheme()
     // A built-in card is selected only while no custom layout is (iOS LayoutTab), so tapping the
@@ -147,9 +150,10 @@ fun LayoutScreen(prefs: PrefHelper) {
                     .padding(bottom = AppStyle.scrollContentBottomPadding),
             verticalArrangement = Arrangement.spacedBy(AppStyle.sectionSpacing),
         ) {
+            val canCreateLayout = customLayouts.size < CustomLayout.MAX_CUSTOM_LAYOUTS
             GalleryShelf(L10n.layoutCustomLayoutsSection) {
                 // Create-new card leads the shelf, hidden once the cap is reached (mirrors iOS).
-                if (customLayouts.size < CustomLayout.MAX_CUSTOM_LAYOUTS) {
+                if (canCreateLayout) {
                     GalleryCreateCard(
                         title = L10n.layoutCreateNewLayout,
                         onClick = { context.startActivity(LayoutEditorActivity.createIntent(context, null)) },
@@ -172,13 +176,19 @@ fun LayoutScreen(prefs: PrefHelper) {
                             GalleryCardMenu(
                                 contentDescription = layout.name,
                                 actions =
-                                    listOf(
-                                        GalleryCardAction(L10n.themeCardMenuApply) { prefs.applyCustomLayout(layout) },
-                                        GalleryCardAction(L10n.commonEdit) {
-                                            context.startActivity(LayoutEditorActivity.createIntent(context, layout.id))
-                                        },
-                                        GalleryCardAction(L10n.commonDelete, isDestructive = true) { prefs.deleteCustomLayout(layout.id) },
-                                    ),
+                                    buildList {
+                                        add(GalleryCardAction(L10n.themeCardMenuApply) { prefs.applyCustomLayout(layout) })
+                                        add(
+                                            GalleryCardAction(L10n.commonEdit) {
+                                                context.startActivity(LayoutEditorActivity.createIntent(context, layout.id))
+                                            },
+                                        )
+                                        // A new layout, so hidden at the cap like the create card (mirrors iOS).
+                                        if (canCreateLayout) {
+                                            add(GalleryCardAction(L10n.commonDuplicate) { prefs.duplicateCustomLayout(layout, stringResolver.commonDuplicateName(layout.name)) })
+                                        }
+                                        add(GalleryCardAction(L10n.commonDelete, isDestructive = true) { prefs.deleteCustomLayout(layout.id) })
+                                    },
                             )
                         },
                     )

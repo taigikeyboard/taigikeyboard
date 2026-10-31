@@ -19,6 +19,8 @@ enum class StringKey(
     COMMON_CLOSE(R.string.i18n_common_close),
     COMMON_OTHER(R.string.i18n_common_other),
     COMMON_EDIT(R.string.i18n_common_edit),
+    COMMON_DUPLICATE(R.string.i18n_common_duplicate),
+    COMMON_DUPLICATE_NAME(R.string.i18n_common_duplicateName),
     COMMON_TOGGLE_TRANSLATE_SWAPPED(R.string.i18n_common_toggleTranslateSwapped),
     COMMON_BACK(R.string.i18n_common_back),
     COMMON_VIEW_WEBSITE(R.string.i18n_common_viewWebsite),

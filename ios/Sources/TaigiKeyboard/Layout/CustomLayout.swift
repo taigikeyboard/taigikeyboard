@@ -71,7 +71,7 @@ struct CustomLayout: Codable, Identifiable, Hashable {
         }
     }
 
-    let id: UUID
+    private(set) var id: UUID
     var name: String
     private(set) var base: KeyboardLayoutType
     private(set) var script: LayoutScript
@@ -169,6 +169,14 @@ struct CustomLayout: Codable, Identifiable, Hashable {
     static func active(in layouts: [CustomLayout], selectedId: UUID?, layoutType: KeyboardLayoutType) -> CustomLayout? {
         guard let selectedId else { return nil }
         return layouts.first { $0.id == selectedId && $0.base == layoutType }
+    }
+
+    /// This layout under a new id and `name` — what the Duplicate card action saves.
+    func duplicated(named name: String) -> CustomLayout {
+        var copy = self
+        copy.id = UUID()
+        copy.name = name
+        return copy
     }
 
     /// Whether the board still matches the base table.

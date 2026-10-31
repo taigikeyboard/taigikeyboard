@@ -12,6 +12,8 @@
     <string name="i18n_common_close">閉じる</string>
     <string name="i18n_common_other">その他</string>
     <string name="i18n_common_edit">編集</string>
+    <string name="i18n_common_duplicate">複製</string>
+    <string name="i18n_common_duplicateName">%1$s のコピー</string>
     <string name="i18n_common_toggleTranslateSwapped">漢字／ローマ字を切り替える</string>
     <string name="i18n_common_back">戻る</string>
     <string name="i18n_common_viewWebsite">公式サイト</string>

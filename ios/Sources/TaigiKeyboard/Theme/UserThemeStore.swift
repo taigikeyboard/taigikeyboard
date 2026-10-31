@@ -45,14 +45,15 @@ final class UserThemeStore {
         }
     }
 
-    /// Appends a theme and persists. Returns `false` when already at
-    /// ``maxUserThemes`` OR when the write fails (nil container / encode /
-    /// I/O error) — so callers never report a save that did not happen.
+    /// Adds a theme right after the theme with id `anchor` (appended when `anchor` is nil or
+    /// absent) and persists. Returns `false` when already at ``maxUserThemes`` OR when the write
+    /// fails (nil container / encode / I/O error) — so callers never report a save that did not happen.
     @discardableResult
-    func add(_ theme: UserTheme) -> Bool {
+    func add(_ theme: UserTheme, after anchor: UUID? = nil) -> Bool {
         var themes = load()
         guard themes.count < Self.maxUserThemes else { return false }
-        themes.append(theme)
+        let index = themes.firstIndex { $0.id == anchor }.map { $0 + 1 } ?? themes.endIndex
+        themes.insert(theme, at: index)
         return save(themes)
     }
 
