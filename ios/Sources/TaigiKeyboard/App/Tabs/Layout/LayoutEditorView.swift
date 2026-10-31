@@ -242,7 +242,7 @@ struct LayoutEditorView: View {
     private func removeSelected() {
         if let index = selectedCallout {
             guard selectedCallouts.indices.contains(index) else { return }
-            editCallouts { $0.remove(at: index) }
+            editCallouts(nextSlot: index) { $0.remove(at: index) }
             return
         }
         guard let selected else { return }
@@ -272,29 +272,26 @@ struct LayoutEditorView: View {
         let filled = selectedCallouts.indices
         switch (filled.contains(current), filled.contains(index)) {
         case (true, true):
-            editCallouts { $0.swapAt(current, index) }
+            editCallouts(nextSlot: nil) { $0.swapAt(current, index) }
         case (true, false):
-            editCallouts { $0.append($0.remove(at: current)) }
+            editCallouts(nextSlot: nil) { $0.append($0.remove(at: current)) }
         case (false, true):
-            editCallouts { $0.append($0.remove(at: index)) }
+            editCallouts(nextSlot: nil) { $0.append($0.remove(at: index)) }
         case (false, false):
             selectedCallout = index
         }
     }
 
-    /// Puts `spare` in slot `index`: replaces an entry, or adds one in an empty slot and moves the
-    /// selection to the next empty slot, so several characters go in one tap each.
+    /// Puts `spare` in slot `index`: replaces an entry (which stays selected), or adds one in an empty
+    /// slot and moves the selection to the next empty slot, so several characters go in one tap each.
     private func fillCallout(at index: Int, with spare: String) {
         let isAdding = !selectedCallouts.indices.contains(index)
-        editCallouts { list in
+        editCallouts(nextSlot: isAdding ? CustomLayout.maxCallouts : index) { list in
             if isAdding {
                 list.append(spare)
             } else {
                 list[index] = spare
             }
-        }
-        if isAdding, selectedCallouts.count < CustomLayout.maxCallouts {
-            selectedCallout = selectedCallouts.count
         }
     }
 
@@ -303,14 +300,17 @@ struct LayoutEditorView: View {
         selectedLabel.map(draft.callouts(for:)) ?? []
     }
 
-    /// Applies `change` to the selected key's list and clears the entry selection.
-    private func editCallouts(_ change: (inout [String]) -> Void) {
+    /// Applies `change` to the selected key's list, then selects slot `nextSlot` (clamped to the first
+    /// empty slot, or the last one once the list is full), or no slot when nil. Filling and removing
+    /// keep a slot selected: with none, the next tray tap would replace the key itself and drop its list.
+    private func editCallouts(nextSlot: Int?, _ change: (inout [String]) -> Void) {
         guard let selectedLabel else { return }
         var list = selectedCallouts
         withAnimation(.snappy(duration: 0.2)) {
             change(&list)
             draft.setCallouts(list, for: selectedLabel)
-            selectedCallout = nil
+            // Read from the edited draft: a dropped repeat can leave the list unchanged or shorter.
+            selectedCallout = nextSlot.map { min($0, selectedCallouts.count, CustomLayout.maxCallouts - 1) }
         }
     }
 
