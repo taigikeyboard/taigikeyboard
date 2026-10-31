@@ -328,6 +328,9 @@ final class CustomLayoutTests: XCTestCase {
             XCTAssertTrue(symbols.contains(char), char)
         }
         XCTAssertLessThan(symbols.firstIndex(of: "{")!, symbols.firstIndex(of: "，")!)
+        // trace: SymbolCallouts lists ▶ ◀ (emoji-capable); © ® ™ draw as text.
+        XCTAssertFalse(symbols.contains("▶") || symbols.contains("◀"))
+        XCTAssertTrue(symbols.contains("©") && symbols.contains("™"))
         XCTAssertEqual(Set(symbols).count, symbols.count)
         var layout = CustomLayout(base: .phahTaigi, script: .tl)
         layout.setCallouts(["{", "}"], for: "(")

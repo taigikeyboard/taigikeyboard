@@ -335,7 +335,12 @@ struct CustomLayout: Codable, Identifiable, Hashable {
         }
         let builtInLists = [TaigiCallouts.SymbolCallouts.actions, TaigiCallouts.MOE1Callouts.actions, TaigiCallouts.MOE2Callouts.actions]
             .flatMap { map in map.keys.sorted().flatMap { map[$0] ?? [] } }
-        return halfWidthFirst(composedUnique(symbolPages + builtInLists))
+        // ▶ ◀ (emoji-capable, U+2190 and up) draw as colour emoji in the tray; © ® ™ stay text.
+        func drawsAsEmoji(_ char: String) -> Bool {
+            guard let scalar = char.unicodeScalars.first else { return false }
+            return scalar.properties.isEmoji && scalar.value >= 0x2190
+        }
+        return halfWidthFirst(composedUnique(symbolPages + builtInLists).filter { !drawsAsEmoji($0) })
     }()
 
     /// The tray's symbol group: spare symbols for the board, then the long-press symbols, each once,
