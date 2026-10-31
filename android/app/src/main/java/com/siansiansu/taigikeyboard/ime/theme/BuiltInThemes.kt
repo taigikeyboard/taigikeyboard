@@ -19,6 +19,9 @@ data class BuiltInTheme(
     val dark: KeyboardColorSettings?,
     val previewImageName: String? = null,
     val keyBorderWidth: Float? = null,
+    // The Filled-family theme of the same color (itself for a Filled theme): where an Outlined /
+    // Borderless theme's Filled keys come from. Null only for a hand-built test entry.
+    val filledThemeId: String? = null,
 ) {
     /** Picks the variant for [isDark], falling back to the other when absent. */
     fun colors(isDark: Boolean): KeyboardColorSettings =
@@ -26,6 +29,30 @@ data class BuiltInTheme(
             dark ?: light ?: KeyboardColorSettings()
         } else {
             light ?: dark ?: KeyboardColorSettings()
+        }
+
+    /**
+     * Whether this theme can seed a user theme: every theme but the adaptive Default heads — they
+     * own no background, so a light copy of them is the plain seed (USER 2026-10-31: Default is
+     * not a customize base). Mirrors iOS BuiltInTheme.isCustomizeBase.
+     */
+    val isCustomizeBase: Boolean
+        get() = (light ?: dark)?.background != null
+
+    /**
+     * The draft a user theme customized from this built-in starts from and resets to: its one
+     * concrete variant (light, or dark for Catppuccin) seeded for a user theme, plus its outline.
+     * Null for the adaptive Default heads ([isCustomizeBase]).
+     * CROSS-PLATFORM INVARIANT — mirrors iOS BuiltInTheme.userThemeBase.
+     */
+    val userThemeBase: ThemeAppearance?
+        get() {
+            if (!isCustomizeBase) return null
+            val colors = light ?: dark ?: return null
+            return ThemeAppearance.DEFAULT.copy(
+                colors = colors.seededForUserTheme(),
+                keyBorderWidth = keyBorderWidth ?: ThemeAppearance.DEFAULT_KEY_BORDER_WIDTH,
+            )
         }
 }
 
@@ -63,6 +90,26 @@ object BuiltInThemes {
 
     /** Looks up a built-in by id; null when [id] is not a built-in. */
     fun theme(id: String): BuiltInTheme? = all.firstOrNull { it.id == id }
+
+    /**
+     * What the editor resets a user theme to: its built-in base when it was customized from one
+     * ([UserTheme.baseThemeId]), else the plain seed. An id no longer in the catalog reads as no
+     * base. CROSS-PLATFORM INVARIANT — mirrors iOS BuiltInThemes.userThemeBaseline.
+     */
+    fun userThemeBaseline(baseThemeId: String?): ThemeAppearance = baseThemeId?.let { theme(it)?.userThemeBase } ?: ThemeAppearance.USER_THEME_SEED
+
+    /**
+     * [userThemeBaseline] with Filled keys: the editor's key-color reset target and its first
+     * Filled draft. An Outlined / Borderless base takes its Filled twin's keys
+     * ([BuiltInTheme.filledThemeId]), so Catppuccin keeps its dark keys under its light text.
+     * CROSS-PLATFORM INVARIANT — mirrors iOS BuiltInThemes.userThemeFilledBaseline.
+     */
+    fun userThemeFilledBaseline(baseThemeId: String?): ThemeAppearance {
+        val baseline = userThemeBaseline(baseThemeId)
+        if (baseline.keyStyle == ThemeKeyStyle.CLASSIC) return baseline
+        val filledKeys = baseThemeId?.let { theme(it)?.filledThemeId }?.let { theme(it)?.userThemeBase }
+        return baseline.withKeyStyle(ThemeKeyStyle.CLASSIC, filledKeys ?: ThemeAppearance.USER_THEME_SEED)
+    }
 
     /** id prefix per key-style family — Filled keeps the legacy `standard*` ids. */
     private val ThemeKeyStyle.idPrefix: String
@@ -118,12 +165,7 @@ object BuiltInThemes {
         baseColors.map { base ->
             val isDefault = base.gradient == null
             val suffix = base.key.replaceFirstChar { it.uppercase() }
-            val id =
-                when {
-                    !isDefault -> "${style.idPrefix}$suffix"
-                    style == ThemeKeyStyle.CLASSIC -> ThemeId.DEFAULT
-                    else -> "${style.idPrefix}Default"
-                }
+            val id = themeId(isDefault, suffix, style)
             val previewName =
                 if (isDefault) "theme_${style.idPrefix}_preview" else "theme_${style.idPrefix}${suffix}_preview"
             val scheme = colorsFor(base, style)
@@ -134,7 +176,23 @@ object BuiltInThemes {
                 dark = if (base.isDarkPalette) scheme else null,
                 previewImageName = previewName,
                 keyBorderWidth = if (style.isBordered) ThemeKeyStyle.OUTLINED_BORDER_WIDTH else null,
+                filledThemeId = themeId(isDefault, suffix, ThemeKeyStyle.CLASSIC),
             )
+        }
+
+    /**
+     * One theme's id: the Filled Default keeps the [ThemeId.DEFAULT] sentinel; every other theme is
+     * the family prefix + the color suffix (`Default` for framed / clean Default).
+     */
+    private fun themeId(
+        isDefault: Boolean,
+        suffix: String,
+        style: ThemeKeyStyle,
+    ): String =
+        when {
+            !isDefault -> "${style.idPrefix}$suffix"
+            style == ThemeKeyStyle.CLASSIC -> ThemeId.DEFAULT
+            else -> "${style.idPrefix}Default"
         }
 
     /**

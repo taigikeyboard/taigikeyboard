@@ -284,6 +284,7 @@ enum StringKey: String {
     case themeNamePlaceholder = "i18n_theme_namePlaceholder"
     case themeEditorResetAll = "i18n_theme_editorResetAll"
     case themeCardMenuApply = "i18n_theme_cardMenuApply"
+    case themeCardMenuCustomize = "i18n_theme_cardMenuCustomize"
     case themeCapReachedTitle = "i18n_theme_capReachedTitle"
     case themeCapReachedMessage = "i18n_theme_capReachedMessage"
 }

@@ -286,6 +286,7 @@
     <string name="i18n_theme_namePlaceholder">テーマ名を入力</string>
     <string name="i18n_theme_editorResetAll">既定値に戻す</string>
     <string name="i18n_theme_cardMenuApply">適用</string>
+    <string name="i18n_theme_cardMenuCustomize">カスタマイズ</string>
     <string name="i18n_theme_capReachedTitle">テーマ数の上限に達しました</string>
     <string name="i18n_theme_capReachedMessage">カスタムテーマは 5 個まで保存できます。追加する前に 1 個削除してください。</string>
     <string name="i18n_theme_cardMenu">テーマのオプション</string>

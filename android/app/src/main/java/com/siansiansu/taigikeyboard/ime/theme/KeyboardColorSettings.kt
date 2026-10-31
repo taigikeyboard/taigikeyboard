@@ -256,6 +256,14 @@ sealed class ThemeBackground {
     val asImage: ThemeImageBackground?
         get() = (this as? Image)?.image
 
+    /**
+     * The color a Solid background keeps when switched from this one: the solid color, else the
+     * gradient's first stop; null for a photo. CROSS-PLATFORM INVARIANT — mirrors iOS
+     * ThemeBackground.leadColor.
+     */
+    val leadColor: Int?
+        get() = (this as? Solid)?.color ?: asGradient?.stops?.firstOrNull()
+
     fun toJson(): JSONObject =
         JSONObject().put("type", kind.jsonValue).apply {
             when (this@ThemeBackground) {

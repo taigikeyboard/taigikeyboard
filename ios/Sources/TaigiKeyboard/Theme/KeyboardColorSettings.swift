@@ -312,6 +312,13 @@ enum ThemeBackground: Codable, Equatable {
         return nil
     }
 
+    /// The color a Solid background keeps when switched from this one: the solid color, else the
+    /// gradient's first stop; nil for a photo.
+    // CROSS-PLATFORM INVARIANT — mirrors android ThemeBackground.leadColor.
+    var leadColor: CodableColor? {
+        solidColor ?? gradient?.stops.first
+    }
+
     private enum CodingKeys: String, CodingKey {
         case type, color
     }

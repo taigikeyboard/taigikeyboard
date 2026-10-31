@@ -4393,6 +4393,24 @@
         }
       }
     },
+    "i18n_theme_cardMenuCustomize": {
+      "comment": "Built-in theme card action-menu item: open the theme editor on a new custom theme prefilled from this built-in theme. DRAFT TL/POJ (same reading as customThemesSection's 自訂) + en/ja pending USER proofread.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Customize"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カスタマイズ"
+          }
+        }
+      }
+    },
     "i18n_theme_colorCandidateHighlight": {
       "comment": "Theme editor color-row label: the background of the highlighted (first / selected) candidate box. Untouched = follows the key fill or gradient.",
       "extractionState": "manual",

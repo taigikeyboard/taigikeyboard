@@ -30,8 +30,9 @@ struct ThemeEditorView: View {
     /// (USER 2026-09-28: the short list above the preview was hard to scroll).
     @State private var isPreviewCollapsed = false
 
-    init(editing: UserTheme? = nil) {
-        _viewModel = StateObject(wrappedValue: ThemeEditorViewModel(editing: editing))
+    /// `editing` = edit that theme; else a new theme, customized from `base` (named `name`) when set.
+    init(editing: UserTheme? = nil, base: BuiltInTheme? = nil, name: String = "") {
+        _viewModel = StateObject(wrappedValue: ThemeEditorViewModel(editing: editing, base: base, name: name))
     }
 
     var body: some View {

@@ -42,6 +42,22 @@ final class UserThemeStoreTests: XCTestCase {
         )
     }
 
+    func testAddAndLoad_keepsBaseThemeId() {
+        let store = UserThemeStore(containerURL: tempDir, onMutated: {})
+        var theme = makeUserTheme(name: "Pink")
+        theme.baseThemeId = "standardPink"
+        XCTAssertTrue(store.add(theme))
+        XCTAssertEqual(store.load().first?.baseThemeId, "standardPink")
+    }
+
+    // A theme saved before baseThemeId existed has no such key → decodes as nil.
+    func testDecode_withoutBaseThemeId_isNil() throws {
+        let theme = makeUserTheme()
+        let json = try JSONEncoder().encode(theme)
+        XCTAssertFalse(String(decoding: json, as: UTF8.self).contains("baseThemeId"))
+        XCTAssertNil(try JSONDecoder().decode(UserTheme.self, from: json).baseThemeId)
+    }
+
     func testLoad_emptyStore_returnsEmpty() {
         let store = UserThemeStore(containerURL: tempDir, onMutated: {})
         XCTAssertEqual(store.load(), [])
