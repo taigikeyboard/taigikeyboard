@@ -713,8 +713,8 @@
         "hanji": "水平展開",
         "tailo": "Tsuí-pîng thián-khui",
         "poj": "Chúi-pêng thián-khui",
-        "en": "Expandable",
-        "ja": "展開式"
+        "en": "Horizontal Expandable",
+        "ja": "水平展開式"
       }
     },
     "candidateLayoutVerticalExpandable": {
