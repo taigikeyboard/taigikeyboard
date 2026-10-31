@@ -313,27 +313,40 @@ struct CustomLayout: Codable, Identifiable, Hashable {
 
     // MARK: - Long-press lists
 
-    /// Characters the long-press tray offers: every lowercase tone-marked letter (Shift uppercases
-    /// them on the keyboard), both symbol pages, then every entry of the built-in long-press lists.
-    static let calloutCatalog: [String] = {
+    /// Tone-marked letters for the long-press tray, one row per lowercase base (Shift uppercases them
+    /// on the keyboard): a e i o oo o͘ u m n ng first (TL `oo` = POJ `o͘`), then any other base; each
+    /// row TL's marks, then
+    /// the marks only POJ has.
+    static let toneRows: [[String]] = {
         let toneMaps = [TaigiCallouts.TaigiToneMaps.tl, TaigiCallouts.TaigiToneMaps.poj]
-        let toneBases = Set(toneMaps.flatMap(\.keys)).filter { $0 == $0.lowercased() }.sorted()
-        let tones = toneBases.flatMap { base in toneMaps.flatMap { $0[base] ?? [] } }
+        let bases = Set(toneMaps.flatMap(\.keys)).filter { $0 == $0.lowercased() }
+        let leading = ["a", "e", "i", "o", "oo", "o\u{0358}", "u", "m", "n", "ng"].filter(bases.contains)
+        return (leading + bases.subtracting(leading).sorted()).map { base in
+            composedUnique(toneMaps.flatMap { $0[base] ?? [] })
+        }
+    }()
+
+    /// Symbols for the long-press tray: both symbol pages, then every entry of the built-in long-press
+    /// lists; half-width forms first, then full-width ones.
+    static let calloutSymbols: [String] = {
         let symbolPages = (TaigiLayouts.Numeric.iPhone + TaigiLayouts.Symbolic.iPhone).joined().flatMap { key -> [String] in
             guard case let .char(label, fullWidth) = key else { return [] }
             return [label] + (fullWidth.map { [$0] } ?? [])
         }
         let builtInLists = [TaigiCallouts.SymbolCallouts.actions, TaigiCallouts.MOE1Callouts.actions, TaigiCallouts.MOE2Callouts.actions]
             .flatMap { map in map.keys.sorted().flatMap { map[$0] ?? [] } }
-        // TL and POJ tables spell some marked letters in different Unicode forms (ň precomposed or
-        // n + U+030C); one composed form each keeps a letter from showing twice.
-        return unique((tones + symbolPages + builtInLists).map(\.precomposedStringWithCanonicalMapping))
+        return halfWidthFirst(composedUnique(symbolPages + builtInLists))
     }()
 
-    /// The tray characters the key labelled `label` does not hold yet.
-    func spareCallouts(for label: String) -> [String] {
-        let held = Set(callouts(for: label).map(\.precomposedStringWithCanonicalMapping))
-        return Self.calloutCatalog.filter { !held.contains($0) }
+    /// The tray's symbol group: spare symbols for the board, then the long-press symbols, each once,
+    /// half-width forms first.
+    var traySymbols: [String] {
+        Self.halfWidthFirst(Self.unique(spareSymbols + Self.calloutSymbols))
+    }
+
+    /// Whether the key labelled `label` already holds `char` in its long-press list.
+    func holdsCallout(_ char: String, for label: String) -> Bool {
+        callouts(for: label).contains { $0.precomposedStringWithCanonicalMapping == char }
     }
 
     /// The built-in long-press list of the key labelled `label` on this base and script.
@@ -458,6 +471,21 @@ struct CustomLayout: Codable, Identifiable, Hashable {
     /// The function keys `places` numbers, in slot order.
     private static func functionKeys(of rows: [[KeyDef]]) -> [FunctionKey] {
         rows.dropFirst().flatMap { $0.compactMap(FunctionKey.init) }
+    }
+
+    /// TL and POJ tables spell some marked letters in different Unicode forms (ň precomposed or
+    /// n + U+030C); one composed form each keeps a letter from showing twice.
+    private static func composedUnique(_ chars: [String]) -> [String] {
+        unique(chars.map(\.precomposedStringWithCanonicalMapping))
+    }
+
+    /// `chars` with CJK punctuation and full-width forms (U+2E80 and up, as the full-width punctuation
+    /// mode types) moved after the rest, order otherwise kept.
+    private static func halfWidthFirst(_ chars: [String]) -> [String] {
+        func isFullWidth(_ char: String) -> Bool {
+            char.unicodeScalars.contains { $0.value >= 0x2E80 }
+        }
+        return chars.filter { !isFullWidth($0) } + chars.filter(isFullWidth)
     }
 
     private static func unique(_ labels: [String]) -> [String] {

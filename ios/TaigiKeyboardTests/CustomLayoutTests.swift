@@ -315,17 +315,25 @@ final class CustomLayoutTests: XCTestCase {
     }
 
     func testCallouts_trayOffersToneLettersSymbolPagesAndBuiltInLists() {
-        let catalog = CustomLayout.calloutCatalog
-        // trace: TL tone map "a" (á … a̋), POJ adds o͘; Symbolic page row 1 "{" "}"; MOE2Callouts[","] "，" "、".
-        for char in ["á", "a\u{030D}", "a\u{030B}", "{", "}", "，", "、", ";", ":"] {
-            XCTAssertTrue(catalog.contains(char), char)
+        // trace: TL tone map "a" (á … a̋) leads; POJ adds ă (tone 9 breve) to the same row.
+        let aRow = CustomLayout.toneRows[0]
+        XCTAssertEqual(Array(aRow.prefix(3)), ["á", "à", "â"])
+        XCTAssertTrue(aRow.contains("a\u{030D}") && aRow.contains("a\u{030B}".precomposedStringWithCanonicalMapping) && aRow.contains("ă"))
+        XCTAssertFalse(CustomLayout.toneRows.joined().contains("Á"), "Shift uppercases on the keyboard")
+        let tones = Array(CustomLayout.toneRows.joined())
+        XCTAssertEqual(Set(tones).count, tones.count)
+        // trace: Symbolic page row 1 "{" "}"; MOE2Callouts[","] "，" "、"; full-width after half-width.
+        let symbols = CustomLayout.calloutSymbols
+        for char in ["{", "}", "，", "、", ";", ":"] {
+            XCTAssertTrue(symbols.contains(char), char)
         }
-        XCTAssertFalse(catalog.contains("Á"), "Shift uppercases on the keyboard")
-        XCTAssertEqual(Set(catalog).count, catalog.count)
+        XCTAssertLessThan(symbols.firstIndex(of: "{")!, symbols.firstIndex(of: "，")!)
+        XCTAssertEqual(Set(symbols).count, symbols.count)
         var layout = CustomLayout(base: .phahTaigi, script: .tl)
         layout.setCallouts(["{", "}"], for: "(")
-        XCTAssertFalse(layout.spareCallouts(for: "(").contains("{"))
-        XCTAssertTrue(layout.spareCallouts(for: ",").contains("{"))
+        XCTAssertTrue(layout.holdsCallout("{", for: "("))
+        XCTAssertFalse(layout.holdsCallout("{", for: ","))
+        XCTAssertEqual(Set(layout.traySymbols).count, layout.traySymbols.count)
     }
 
     func testCustomLayout_decodedRecordValidation() throws {

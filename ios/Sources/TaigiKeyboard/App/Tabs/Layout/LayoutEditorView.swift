@@ -164,11 +164,12 @@ struct LayoutEditorView: View {
         }
     }
 
-    /// Trash, the removed emoji key, letters, then punctuation and symbols. A spare is dragged
-    /// onto a key, or tapped once a key is selected; the emoji chip goes straight back to its place.
+    /// Three groups, gaps between them: trash, the removed emoji key and spare letters; tone-marked
+    /// letters, one row per base; symbols, half-width then full-width. A tap puts a character on the
+    /// selected key or long-press slot (where it fits); the emoji chip goes straight back to its place.
     private var spareTray: some View {
         let canRemove = selectedCallout.map(selectedCallouts.indices.contains) ?? (selected.map(draft.canRemove) ?? false)
-        return VStack(spacing: 16) {
+        return VStack(spacing: 28) {
             trayGrid {
                 trayButton(action: removeSelected) {
                     Image(latinSystemName: "trash")
@@ -189,16 +190,40 @@ struct LayoutEditorView: View {
                 ForEach(draft.spareLetters, id: \.self, content: spareButton)
             }
 
-            trayGrid {
-                ForEach(draft.spareSymbols, id: \.self, content: spareButton)
-            }
+            toneGrid
 
-            // Long-press characters: a tap fills the selected slot of the bubble.
             trayGrid {
-                ForEach(selectedLabel.map(draft.spareCallouts(for:)) ?? CustomLayout.calloutCatalog, id: \.self, content: spareButton)
+                ForEach(draft.traySymbols, id: \.self, content: calloutSpareButton)
             }
         }
         .padding(.horizontal, AppStyle.horizontalPadding)
+    }
+
+    /// One row per base, columns aligned.
+    private var toneGrid: some View {
+        let columns = CustomLayout.toneRows.map(\.count).max() ?? 1
+        return Grid(horizontalSpacing: 8, verticalSpacing: 8) {
+            ForEach(CustomLayout.toneRows, id: \.self) { row in
+                GridRow {
+                    ForEach(0 ..< columns, id: \.self) { column in
+                        if row.indices.contains(column) {
+                            calloutSpareButton(row[column])
+                        } else {
+                            Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// A spare that can also fill a long-press slot: one the selected key's list already holds stays
+    /// in place, dimmed, so the rows keep their columns.
+    private func calloutSpareButton(_ char: String) -> some View {
+        let isHeld = selectedLabel.map { draft.holdsCallout(char, for: $0) } ?? false
+        return spareButton(char)
+            .disabled(isHeld)
+            .opacity(isHeld ? 0.3 : 1)
     }
 
     /// Always draggable; a tap only does something once a character key is selected.
