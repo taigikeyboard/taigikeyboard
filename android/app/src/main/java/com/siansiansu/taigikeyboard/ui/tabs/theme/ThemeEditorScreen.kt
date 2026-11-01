@@ -113,7 +113,7 @@ private const val CORNER_RADIUS_STEP = 0.5f
 private const val BORDER_WIDTH_MAX = 3f
 private const val BORDER_WIDTH_STEP = 0.5f
 private const val SHADOW_MAX = 4f
-private const val SHADOW_STEP = 1f
+private const val SHADOW_STEP = 0.5f
 
 private val PHOTO_THUMBNAIL_SIZE = 44.dp
 private val PREVIEW_TOGGLE_MIN_HEIGHT = 32.dp

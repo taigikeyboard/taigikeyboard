@@ -46,6 +46,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -70,6 +71,8 @@ private const val SPECTRUM_BITMAP_HEIGHT = 360
 private const val TAB_GRID = 0
 private const val TAB_SPECTRUM = 1
 private const val TAB_SLIDERS = 2
+private const val RGB_MASK = 0xFFFFFF
+private val GRID_SELECTION_STROKE = 3.dp
 
 private val SELECTOR_OUTER_RADIUS = 10.dp
 private val SELECTOR_OUTER_STROKE = 1.5.dp
@@ -101,9 +104,9 @@ fun ColorPickerDialog(
     var saturation by remember { mutableFloatStateOf(initialHsv[1]) }
     var brightness by remember { mutableFloatStateOf(initialHsv[2]) }
     var hexInput by remember {
-        mutableStateOf(String.format("#%06X", 0xFFFFFF and currentColor))
+        mutableStateOf(String.format("#%06X", RGB_MASK and currentColor))
     }
-    var selectedTab by remember { mutableIntStateOf(TAB_SPECTRUM) }
+    var selectedTab by remember { mutableIntStateOf(TAB_GRID) }
 
     fun currentColorInt(): Int = AndroidColor.HSVToColor(floatArrayOf(hue, saturation, brightness))
 
@@ -113,11 +116,11 @@ fun ColorPickerDialog(
         hue = hsv[0]
         saturation = hsv[1]
         brightness = hsv[2]
-        hexInput = String.format("#%06X", 0xFFFFFF and color)
+        hexInput = String.format("#%06X", RGB_MASK and color)
     }
 
     fun updateHex() {
-        hexInput = String.format("#%06X", 0xFFFFFF and currentColorInt())
+        hexInput = String.format("#%06X", RGB_MASK and currentColorInt())
     }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -171,6 +174,7 @@ fun ColorPickerDialog(
                 when (selectedTab) {
                     TAB_GRID -> {
                         ColorGridContent(
+                            selectedColor = currentColorInt(),
                             onColorSelected = {
                                 updateFromColor(it)
                                 onColorSelected(currentColorInt())
@@ -273,18 +277,29 @@ private val presetColors: List<Int> =
     }
 
 @Composable
-private fun ColorGridContent(onColorSelected: (Int) -> Unit) {
+private fun ColorGridContent(
+    selectedColor: Int,
+    onColorSelected: (Int) -> Unit,
+) {
     Column(modifier = Modifier.fillMaxSize()) {
         presetColors.chunked(SWATCHES_PER_ROW).forEach { row ->
             Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
                 row.forEach { color ->
+                    // The current colour's swatch carries a contrasting ring, like the iOS picker's grid.
+                    val isSelected = (color and RGB_MASK) == (selectedColor and RGB_MASK)
                     Box(
                         modifier =
                             Modifier
                                 .weight(1f)
                                 .fillMaxSize()
                                 .background(Color(color))
-                                .clickable { onColorSelected(color) },
+                                .then(
+                                    if (isSelected) {
+                                        Modifier.border(GRID_SELECTION_STROKE, if (Color(color).luminance() > 0.5f) Color.Black else Color.White)
+                                    } else {
+                                        Modifier
+                                    },
+                                ).clickable { onColorSelected(color) },
                     )
                 }
             }

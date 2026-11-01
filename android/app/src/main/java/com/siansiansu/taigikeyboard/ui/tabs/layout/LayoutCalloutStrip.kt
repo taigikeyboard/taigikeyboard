@@ -30,6 +30,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -134,6 +135,8 @@ private fun Slot(
                 contentDescription = entry ?: emptyLabel
                 role = Role.Button
                 selected = isSelected
+                // The clickable alone leaves the node reported enabled; iOS greys these out for VoiceOver.
+                if (!enabled) disabled()
             },
         contentAlignment = Alignment.Center,
     ) {
