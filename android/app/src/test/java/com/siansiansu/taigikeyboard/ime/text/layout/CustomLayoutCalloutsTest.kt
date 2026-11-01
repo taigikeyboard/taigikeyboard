@@ -64,6 +64,18 @@ class CustomLayoutCalloutsTest {
     }
 
     @Test
+    fun `letter-page punctuation carries the symbol page's list`() {
+        // trace: western_default `,` = ， 、 / `.` = 。 ‧ · / `!` = ！ ¡ ‽ / `?` = ？ ¿ (iOS SymbolCallouts),
+        // copied onto qwerty_phah_taigi_halfwidth and default_halfwidth `,`.
+        val phahTaigi = unchanged("phahTaigi", LayoutScript.TL)
+        assertEquals(listOf("，", "、"), tables.defaultCallouts(phahTaigi, ","))
+        assertEquals(listOf("。", "‧", "·"), tables.defaultCallouts(phahTaigi, "."))
+        assertEquals(listOf("！", "¡", "‽"), tables.defaultCallouts(phahTaigi, "!"))
+        assertEquals(listOf("？", "¿"), tables.defaultCallouts(phahTaigi, "?"))
+        assertEquals(listOf("，", "、"), tables.defaultCallouts(qwerty, ","))
+    }
+
+    @Test
     fun `a key leaving the board drops its list`() {
         val edited = qwerty.withList("a", listOf("x"))
         val index = qwerty.keys.indexOf("a")
