@@ -68,7 +68,7 @@ Intentional today:
 - Committed-text deletion: Android sends a raw key only to `TYPE_NULL` editors (`android-guidelines.md` §5); iOS always uses `deleteBackward()`.
 - Default keyboard font: iOS `system`, Android `openHuninn` — iOS bundles rare-character fonts Android does not (maintainer 2026-10-12).
 - Spacebar: iOS long-press drags the cursor (KeyboardKit); Android horizontal swipe moves the cursor and long-press opens the IME picker (Gboard / FlorisBoard convention). While composing, the Android spacebar ignores the swipe.
-- Layout conventions: Android English bottom row carries `,` `.` and the number row has fraction / superscript popups; iOS symbols bottom row has the emoji key where Android has the numeric-pad key.
+- Layout conventions: Android English bottom row carries `,` `.` and the number row has fraction / superscript popups; iOS symbols bottom row has the emoji key where Android has the numeric-pad key. Letter-page bottom rows with a `,` key put it after the emoji key on iOS (`123 😊 ,`, the iOS keyboard's emoji-next-to-123 slot) and before it on Android (`?123 , 😊`, Gboard's order); custom layouts keep the same stored order and each platform renders its own.
 - Feedback and pickers: Settings reset gives a haptic on iOS and nothing on Android (a failure toast only); a dictionary search result opens an action sheet on iOS, expands inline on Android.
 
 ### 3a. Invariants: constants, tests and docs move together

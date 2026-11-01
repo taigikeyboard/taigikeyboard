@@ -582,8 +582,6 @@ object L10n {
         @Composable get() = stringRes(StringKey.THEME_CAP_REACHED_TITLE)
     val themeCapReachedMessage: String
         @Composable get() = stringRes(StringKey.THEME_CAP_REACHED_MESSAGE)
-    val themeCardMenu: String
-        @Composable get() = stringRes(StringKey.THEME_CARD_MENU)
     val themeColorPickerGrid: String
         @Composable get() = stringRes(StringKey.THEME_COLOR_PICKER_GRID)
     val themeColorPickerSpectrum: String

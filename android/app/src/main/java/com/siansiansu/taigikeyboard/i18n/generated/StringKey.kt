@@ -299,7 +299,6 @@ enum class StringKey(
     THEME_CARD_MENU_CUSTOMIZE(R.string.i18n_theme_cardMenuCustomize),
     THEME_CAP_REACHED_TITLE(R.string.i18n_theme_capReachedTitle),
     THEME_CAP_REACHED_MESSAGE(R.string.i18n_theme_capReachedMessage),
-    THEME_CARD_MENU(R.string.i18n_theme_cardMenu),
     THEME_COLOR_PICKER_GRID(R.string.i18n_theme_colorPickerGrid),
     THEME_COLOR_PICKER_SPECTRUM(R.string.i18n_theme_colorPickerSpectrum),
     THEME_COLOR_PICKER_SLIDERS(R.string.i18n_theme_colorPickerSliders),

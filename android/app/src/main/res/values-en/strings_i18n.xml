@@ -292,7 +292,6 @@
     <string name="i18n_theme_cardMenuCustomize">Customize</string>
     <string name="i18n_theme_capReachedTitle">Theme Limit Reached</string>
     <string name="i18n_theme_capReachedMessage">You can save up to 5 custom themes. Delete one before adding another.</string>
-    <string name="i18n_theme_cardMenu">Theme options</string>
     <string name="i18n_theme_colorPickerGrid">Grid</string>
     <string name="i18n_theme_colorPickerSpectrum">Spectrum</string>
     <string name="i18n_theme_colorPickerSliders">Sliders</string>

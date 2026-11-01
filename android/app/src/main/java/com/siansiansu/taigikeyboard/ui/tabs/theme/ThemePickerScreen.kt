@@ -184,7 +184,7 @@ private fun CustomThemeShelf(
                 preview = { CustomThemeBackgroundPreview(theme.appearance) },
                 accessory = {
                     GalleryCardMenu(
-                        contentDescription = L10n.themeCardMenu,
+                        contentDescription = theme.name,
                         actions =
                             buildList {
                                 add(GalleryCardAction(L10n.themeCardMenuApply) { onApply(theme.id) })
@@ -212,9 +212,9 @@ private fun BuiltInThemeShelf(
     GalleryShelf(title) {
         themes.forEach { theme ->
             // Resolve once for both the card title and the preview's contentDescription.
-            val title = stringRes(theme.displayNameKey)
+            val themeTitle = stringRes(theme.displayNameKey)
             GalleryCard(
-                title = title,
+                title = themeTitle,
                 isSelected = selectedThemeId == theme.id,
                 onClick = { onThemeSelected(theme.id) },
                 preview = {
@@ -224,7 +224,7 @@ private fun BuiltInThemeShelf(
                     // iOS UIImage(named:).
                     GalleryScreenshot(
                         previewRes = builtInThemePreviewRes(theme.previewImageName),
-                        title = title,
+                        title = themeTitle,
                     )
                 },
                 // Apply / Customize; no menu for the adaptive Default heads (no customize base) or
@@ -233,7 +233,7 @@ private fun BuiltInThemeShelf(
                 accessory = {
                     if (theme.isCustomizeBase && onCustomize != null) {
                         GalleryCardMenu(
-                            contentDescription = L10n.themeCardMenu,
+                            contentDescription = themeTitle,
                             actions =
                                 listOf(
                                     GalleryCardAction(L10n.themeCardMenuApply) { onThemeSelected(theme.id) },

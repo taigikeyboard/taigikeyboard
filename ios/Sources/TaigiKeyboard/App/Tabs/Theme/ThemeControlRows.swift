@@ -25,6 +25,8 @@ struct ThemeColorRow: View {
     @Binding var color: Color
     let onReset: (() -> Void)?
 
+    @Environment(DisplayLanguageStore.self) private var lang
+
     var body: some View {
         HStack {
             ColorPicker(label, selection: $color, supportsOpacity: false)
@@ -35,6 +37,8 @@ struct ThemeColorRow: View {
                         .foregroundColor(.secondary)
                 }
                 .buttonStyle(.plain)
+                // Mirrors Android ColorRow; without it VoiceOver reads the SF Symbol name.
+                .accessibilityLabel(lang.string(.settingsReset))
             }
         }
     }
@@ -49,6 +53,8 @@ struct ThemeSliderRow: View {
     let step: Double
     let defaultValue: Double
     let onChanged: (Double) -> Void
+
+    @Environment(DisplayLanguageStore.self) private var lang
 
     /// Extra row padding above and below the slider: a swipe that starts on the slider can
     /// fail to scroll the editor, so each row keeps a slider-free strip to start one from
@@ -69,6 +75,7 @@ struct ThemeSliderRow: View {
                             .foregroundColor(.secondary)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(lang.string(.settingsReset))
                 }
             }
             Slider(value: $value, in: range, step: step)

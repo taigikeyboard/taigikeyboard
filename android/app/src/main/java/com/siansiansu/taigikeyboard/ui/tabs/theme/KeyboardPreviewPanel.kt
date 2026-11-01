@@ -89,6 +89,7 @@ fun KeyboardPreviewPanel(
             colorSettings = colorSettings,
             candidateTextSizeScale = candidateTextSizeScale,
             fontType = fontType,
+            isHanjiFirst = prefs.isHanjiFirst,
         )
 
         val resources = LocalResources.current
@@ -264,6 +265,9 @@ private fun CandidatePreviewRow(
     colorSettings: KeyboardColorSettings,
     candidateTextSizeScale: Float,
     fontType: String,
+    // The keyboard's stored script order (文/A swap), as the live strip leads with it; iOS's preview
+    // runs the real toolbar, so it follows the same setting.
+    isHanjiFirst: Boolean,
 ) {
     val context = LocalContext.current
     val typeface =
@@ -332,7 +336,7 @@ private fun CandidatePreviewRow(
                             .padding(horizontal = 6.dp, vertical = 3.dp),
                 ) {
                     Text(
-                        text = candidate.roman,
+                        text = if (isHanjiFirst) candidate.hanji else candidate.roman,
                         fontSize = titleSizeSp,
                         color = textColor,
                         fontFamily = fontFamily,
@@ -340,7 +344,7 @@ private fun CandidatePreviewRow(
                         textAlign = TextAlign.Center,
                     )
                     Text(
-                        text = candidate.hanji,
+                        text = if (isHanjiFirst) candidate.roman else candidate.hanji,
                         fontSize = subtitleSizeSp,
                         color = effectiveSubtitleColor,
                         fontFamily = fontFamily,
