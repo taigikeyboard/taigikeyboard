@@ -24,40 +24,34 @@ struct LayoutEditorView: View {
         isEditing = layout != nil
     }
 
+    /// Below this content height (a phone in landscape) the board and long-press strip leave the
+    /// tray no room, so the whole editor scrolls instead of the tray alone. Content height, not
+    /// `verticalSizeClass`, so a short iPad window counts too; 480 = Material's compact-height
+    /// breakpoint the Android editor uses.
+    private static let wholeScrollMaxHeight: CGFloat = 480
+
     var body: some View {
-        VStack(spacing: 16) {
-            baseChips
-
-            LayoutKeyGrid(
-                rows: draft.editorRows,
-                interaction: LayoutKeyGrid.Interaction(
-                    selected: selected,
-                    removed: draft.removedPlaces,
-                    removedPlaceLabel: lang.string(.settingsSyllableSeparatorNone),
-                    onTap: tap,
-                ),
+        GeometryReader { proxy in
+            // At most half the height, so a short (landscape) screen still shows a usable board.
+            let boardWidth = min(
+                proxy.size.width - 2 * AppStyle.horizontalPadding,
+                proxy.size.height * 0.5 * GalleryCardMetrics.previewAspectRatio,
             )
-            .aspectRatio(GalleryCardMetrics.previewAspectRatio, contentMode: .fit)
-            .clipShape(RoundedRectangle(cornerRadius: AppStyle.previewCornerRadius))
-            .padding(.horizontal, AppStyle.horizontalPadding)
-
-            calloutStrip
-
-            ScrollView {
-                VStack(spacing: 24) {
-                    spareTray
-
-                    Button(lang.string(.themeEditorResetAll), role: .destructive) {
-                        restart(from: draft.base)
+            if proxy.size.height < Self.wholeScrollMaxHeight {
+                ScrollView {
+                    VStack(spacing: 16) {
+                        editorHeader(boardWidth: boardWidth)
+                        trayAndReset
                     }
-                    .font(AppStyle.bodyFont)
-                    .disabled(draft.isUnchanged)
                 }
-                .padding(.vertical, 8)
+            } else {
+                VStack(spacing: 16) {
+                    editorHeader(boardWidth: boardWidth)
+                    ScrollView { trayAndReset }
+                }
             }
         }
         .padding(.top, 8)
-        .coordinateSpace(name: LayoutKeyGrid.editorSpace)
         .onPreferenceChange(LayoutKeyGrid.KeyFrames.self) { keyFrames = $0 }
         .background(Color(.systemGroupedBackground))
         .navigationTitle(isEditing ? draft.name : lang.string(.layoutEditorTitleNew))
@@ -86,6 +80,42 @@ struct LayoutEditorView: View {
     }
 
     // MARK: - Sections
+
+    /// Base chips, the board and the long-press strip: fixed above the tray, or scrolling with it.
+    private func editorHeader(boardWidth: CGFloat) -> some View {
+        VStack(spacing: 16) {
+            baseChips
+
+            LayoutKeyGrid(
+                rows: draft.editorRows,
+                interaction: LayoutKeyGrid.Interaction(
+                    selected: selected,
+                    removed: draft.removedPlaces,
+                    removedPlaceLabel: lang.string(.settingsSyllableSeparatorNone),
+                    onTap: tap,
+                ),
+            )
+            .frame(width: boardWidth, height: boardWidth / GalleryCardMetrics.previewAspectRatio)
+            .clipShape(RoundedRectangle(cornerRadius: AppStyle.previewCornerRadius))
+
+            calloutStrip
+        }
+        // Inside the scroll content, so key frames stay put (no preference churn) while the editor scrolls.
+        .coordinateSpace(name: LayoutKeyGrid.editorSpace)
+    }
+
+    private var trayAndReset: some View {
+        VStack(spacing: 24) {
+            spareTray
+
+            Button(lang.string(.themeEditorResetAll), role: .destructive) {
+                restart(from: draft.base)
+            }
+            .font(AppStyle.bodyFont)
+            .disabled(draft.isUnchanged)
+        }
+        .padding(.vertical, 8)
+    }
 
     /// Always in place, so the tray never moves: empty slots until a character key is selected.
     private var calloutStrip: some View {
