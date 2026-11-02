@@ -36,6 +36,11 @@ jobs:
   announce:
     name: website + appcasts
     runs-on: ubuntu-latest
+    # The R2 keys and SITE_CONTENTS_TOKEN live in the `release` environment,
+    # not at repository level: only `main` and `*-*.*.*` tags may deploy to it,
+    # and each run waits for the maintainer's approval, so a pushed branch with
+    # an edited workflow cannot read them.
+    environment: release
     # Desktop releases only. A mobile release published here — the mobile train
     # ships through the stores, so there should never be one — carries no
     # desktop installer, and the site data is the desktop train's.
