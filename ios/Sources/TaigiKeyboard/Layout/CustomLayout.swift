@@ -21,12 +21,26 @@ enum LayoutScript: String, Codable {
     }
 }
 
+/// Where a custom layout shows: in both Tâi-lô and Pe̍h-ōe-jī, or in one of them. Chosen on save.
+enum LayoutUse: CaseIterable, Hashable {
+    case universal, tl, poj
+
+    var nameKey: StringKey {
+        switch self {
+        case .universal: .layoutCommonLayoutsSection
+        case .tl: .settingsTlMode
+        case .poj: .settingsPojMode
+        }
+    }
+}
+
 /// A custom layout over the `base` × `script` table, below its digit row:
 /// - `keys` fills the character keys in reading order; nil marks a removed key.
 /// - `functionKeys` fills the function keys in reading order; each stays in its own row.
 /// - `hasEmojiKey` false hides the emoji key, the one function key that can be removed.
 /// - `callouts` holds the long-press lists the user set, by half-width key label; a key without one
 ///   keeps the built-in list (`TaigiCallouts.calloutChars`).
+/// - `isUniversal` shows it in both scripts; otherwise only in `script`.
 /// The globe key is not part of it: the keyboard puts it right after 123 when the device needs it.
 /// The editor only swaps, trades a key for a spare or removes one, so a key never appears twice.
 struct CustomLayout: Codable, Identifiable, Hashable {
@@ -79,6 +93,7 @@ struct CustomLayout: Codable, Identifiable, Hashable {
     private(set) var functionKeys: [FunctionKey]
     private(set) var hasEmojiKey: Bool
     private(set) var callouts: [String: [String]]
+    private(set) var isUniversal: Bool
 
     /// The most entries one key's long-press list holds.
     static let maxCallouts = 8
@@ -136,9 +151,11 @@ struct CustomLayout: Codable, Identifiable, Hashable {
         functionKeys = Self.functionKeys(of: Self.baseTable(base, script))
         hasEmojiKey = true
         callouts = [:]
+        isUniversal = base.sharesTableAcrossScripts
     }
 
-    /// A record saved before function keys could move or the emoji key could go keeps the base's.
+    /// A record saved before function keys could move or the emoji key could go keeps the base's. One
+    /// saved before its use could be chosen shows where its base's table does.
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(UUID.self, forKey: .id)
@@ -150,6 +167,8 @@ struct CustomLayout: Codable, Identifiable, Hashable {
             ?? Self.functionKeys(of: Self.baseTable(base, script))
         hasEmojiKey = try container.decodeIfPresent(Bool.self, forKey: .hasEmojiKey) ?? true
         callouts = try container.decodeIfPresent([String: [String]].self, forKey: .callouts) ?? [:]
+        // Lenient like Android's optBoolean: a malformed flag reads as the default, not a lost record.
+        isUniversal = (try? container.decodeIfPresent(Bool.self, forKey: .isUniversal)) ?? base.sharesTableAcrossScripts
     }
 
     /// Whether a decoded record can be shown: an editable base, one entry per slot, every key
@@ -171,18 +190,51 @@ struct CustomLayout: Codable, Identifiable, Hashable {
         return layouts.first { $0.id == selectedId && $0.base == layoutType }
     }
 
+    /// Where the layout shows. Picking one script lays the keys as arranged on that script's table
+    /// (`moveKeys(to:)`).
+    var use: LayoutUse {
+        get {
+            guard !isUniversal else { return .universal }
+            switch script {
+            case .tl: return .tl
+            case .poj: return .poj
+            }
+        }
+        set {
+            isUniversal = newValue == .universal
+            switch newValue {
+            case .universal: break
+            case .tl: moveKeys(to: .tl)
+            case .poj: moveKeys(to: .poj)
+            }
+        }
+    }
+
+    /// Lays `keys` on `newScript`'s table row by row. Most bases have the same places in both
+    /// scripts; where a row has more (QWERTY's Pe̍h-ōe-jī `o͘`), removed keys fill its end, and
+    /// where it has fewer, its last keys go back to the tray with their long-press lists.
+    private mutating func moveKeys(to newScript: LayoutScript) {
+        let oldCounts = Self.characterCountsPerRow(of: Self.baseTable(base, script))
+        let newCounts = Self.characterCountsPerRow(of: Self.baseTable(base, newScript))
+        var remaining = keys[...]
+        var moved: [String?] = []
+        for (oldCount, newCount) in zip(oldCounts, newCounts) {
+            moved += remaining.prefix(min(oldCount, newCount))
+            moved += Array(repeating: nil, count: max(0, newCount - oldCount))
+            remaining = remaining.dropFirst(oldCount)
+        }
+        let kept = Set(moved.compactMap(\.self))
+        callouts = callouts.filter { kept.contains($0.key) }
+        keys = moved
+        script = newScript
+    }
+
     /// This layout under a new id and `name` — what the Duplicate card action saves.
     func duplicated(named name: String) -> CustomLayout {
         var copy = self
         copy.id = UUID()
         copy.name = name
         return copy
-    }
-
-    /// The script the layout is for, as the Layout tab and editor name it: Universal when its base
-    /// has one table for both scripts.
-    var scriptNameKey: StringKey {
-        base.sharesTableAcrossScripts ? .layoutCommonLayoutsSection : script.inputMode.displayNameKey
     }
 
     /// Whether the board still matches the base table.
@@ -316,14 +368,14 @@ struct CustomLayout: Codable, Identifiable, Hashable {
         hasEmojiKey = true
     }
 
-    /// Restarts from the `base` × `script` table.
-    mutating func reset(to base: KeyboardLayoutType, script: LayoutScript) {
+    /// Restarts from `base`, keeping the script; the use goes back to the base's default.
+    mutating func reset(to base: KeyboardLayoutType) {
         self.base = base
-        self.script = script
         keys = baseLabels
         functionKeys = baseFunctionKeys
         hasEmojiKey = true
         callouts = [:]
+        isUniversal = base.sharesTableAcrossScripts
     }
 
     // MARK: - Long-press lists
@@ -482,6 +534,10 @@ struct CustomLayout: Codable, Identifiable, Hashable {
     /// The character keys `places` numbers, in slot order.
     private static func characterKeys(of rows: [[KeyDef]]) -> [KeyDef] {
         rows.dropFirst().flatMap { $0.filter(\.isCharacter) }
+    }
+
+    private static func characterCountsPerRow(of rows: [[KeyDef]]) -> [Int] {
+        rows.dropFirst().map { $0.count(where: \.isCharacter) }
     }
 
     private static func labels(of rows: [[KeyDef]]) -> [String] {

@@ -28,7 +28,7 @@ extension LayoutSelection {
 enum LayoutScriptMemory {
     /// The selection to show after entering `script`: the one `remembered` for it, else `live` —
     /// either one's custom layout only while it is still live over that base (`CustomLayout.active`)
-    /// and shows `script`'s table (made from it, or a base shared by both), else its base.
+    /// and shows in `script` (`CustomLayout.isUniversal`, or made for it), else its base.
     static func selection(
         entering script: LayoutScript,
         remembered: LayoutSelection?,
@@ -37,7 +37,7 @@ enum LayoutScriptMemory {
     ) -> LayoutSelection {
         let selection = remembered ?? live
         let layout = CustomLayout.active(in: layouts, selectedId: selection.customId, layoutType: selection.base)
-        let fits = layout.map { $0.script == script || $0.base.sharesTableAcrossScripts } ?? false
+        let fits = layout.map { $0.isUniversal || $0.script == script } ?? false
         return fits ? selection : LayoutSelection(base: selection.base, customId: nil)
     }
 }

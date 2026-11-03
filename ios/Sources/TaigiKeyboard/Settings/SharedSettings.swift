@@ -756,11 +756,10 @@ final class SharedSettings {
         CustomLayout.active(in: loadCustomLayouts(), selectedId: selectedCustomLayoutId, layoutType: keyboardLayoutType)
     }
 
-    /// Selects `layout`: its script's input mode first, like a Tâi-lô / Pe̍h-ōe-jī card (a base
-    /// with one table for both scripts keeps the mode), then its base through the TPS-aware
-    /// setter, then its id.
+    /// Selects `layout`: its script's input mode first, like a Tâi-lô / Pe̍h-ōe-jī card (a universal
+    /// layout keeps the mode), then its base through the TPS-aware setter, then its id.
     func applyCustomLayout(_ layout: CustomLayout) {
-        if !layout.base.sharesTableAcrossScripts {
+        if !layout.isUniversal {
             setInputMode(layout.script.inputMode)
         }
         setKeyboardLayoutType(layout.base)

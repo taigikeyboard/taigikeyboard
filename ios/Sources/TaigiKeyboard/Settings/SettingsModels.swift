@@ -203,7 +203,7 @@ enum KeyboardLayoutType: String, CaseIterable {
     }
 
     /// Whether one key table serves TL and POJ (`TaigiLayouts.Alphabetic.table`), so a custom
-    /// layout over it fits both scripts.
+    /// layout over it starts universal (`CustomLayout.isUniversal`).
     var sharesTableAcrossScripts: Bool {
         switch self {
         case .phahTaigi, .tps: true

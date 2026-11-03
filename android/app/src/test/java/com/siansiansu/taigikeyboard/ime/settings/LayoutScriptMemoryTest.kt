@@ -13,7 +13,9 @@ class LayoutScriptMemoryTest {
     private val tlLayout = LayoutTestAssets.unchanged("moe1", LayoutScript.TL, id = "tl")
     private val pojLayout = LayoutTestAssets.unchanged("moe2", LayoutScript.POJ, id = "poj")
     private val sharedLayout = LayoutTestAssets.unchanged("phahTaigi", LayoutScript.TL, id = "shared")
-    private val layouts = listOf(tlLayout, pojLayout, sharedLayout)
+    private val universalLayout = LayoutTestAssets.unchanged("moe1", LayoutScript.TL, id = "universal").copy(isUniversal = true)
+    private val tlOnSharedBase = LayoutTestAssets.unchanged("phahTaigi", LayoutScript.TL, id = "tlShared").copy(isUniversal = false)
+    private val layouts = listOf(tlLayout, pojLayout, sharedLayout, universalLayout, tlOnSharedBase)
 
     private fun enter(
         newMode: String,
@@ -80,6 +82,20 @@ class LayoutScriptMemoryTest {
         val writes = enter("poj", "tl", owner = "tl", liveLayout = "phahTaigi", liveCustomId = "shared")
         assertEquals("phahTaigi", writes[PreferenceKeys.KEYBOARD_LAYOUT_TYPE])
         assertEquals("shared", writes[PreferenceKeys.SELECTED_CUSTOM_LAYOUT_ID])
+    }
+
+    @Test
+    fun `a universal layout follows into a script without memory`() {
+        val writes = enter("poj", "tl", owner = "tl", liveLayout = "moe1", liveCustomId = "universal")
+        assertEquals("moe1", writes[PreferenceKeys.KEYBOARD_LAYOUT_TYPE])
+        assertEquals("universal", writes[PreferenceKeys.SELECTED_CUSTOM_LAYOUT_ID])
+    }
+
+    @Test
+    fun `a one-script layout on a shared base stays out of the other script`() {
+        val writes = enter("poj", "tl", owner = "tl", liveLayout = "phahTaigi", liveCustomId = "tlShared")
+        assertEquals("phahTaigi", writes[PreferenceKeys.KEYBOARD_LAYOUT_TYPE])
+        assertEquals("", writes[PreferenceKeys.SELECTED_CUSTOM_LAYOUT_ID])
     }
 
     @Test

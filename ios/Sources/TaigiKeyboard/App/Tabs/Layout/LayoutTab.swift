@@ -75,9 +75,7 @@ struct LayoutTab: View {
     }
 
     private func customLayoutCard(_ layout: CustomLayout, isSelected: Bool) -> some View {
-        GalleryCard(
-            title: layout.name, subtitle: lang.string(layout.scriptNameKey), isSelected: isSelected, onTap: { apply(layout) },
-        ) {
+        GalleryCard(title: layout.name, isSelected: isSelected, onTap: { apply(layout) }) {
             LayoutKeyGrid(rows: layout.rows(withGlobe: false))
         } accessory: {
             GalleryCardMenu(title: layout.name) {

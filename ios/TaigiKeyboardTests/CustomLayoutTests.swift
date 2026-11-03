@@ -228,26 +228,12 @@ final class CustomLayoutTests: XCTestCase {
         XCTAssertEqual(layout, CustomLayout(id: layout.id, base: .phahTaigi, script: .tl))
     }
 
-    func testCustomLayout_resetTakesNewBase() {
+    func testCustomLayout_resetKeepsScriptAndTakesNewBase() {
         var layout = CustomLayout(base: .phahTaigi, script: .poj)
         layout.swap(.key(0), .key(1))
-        layout.reset(to: .qwerty, script: .poj)
+        layout.reset(to: .qwerty)
         XCTAssertEqual(layout, CustomLayout(id: layout.id, base: .qwerty, script: .poj))
         XCTAssertEqual(layout.rows(withGlobe: false), TaigiLayouts.Alphabetic.qwerty_POJ_iPhone)
-    }
-
-    func testCustomLayout_resetToOtherScriptTakesThatTable() {
-        var layout = CustomLayout(base: .moe1, script: .tl)
-        layout.swap(.key(0), .key(1))
-        layout.reset(to: .moe1, script: .poj)
-        XCTAssertEqual(layout, CustomLayout(id: layout.id, base: .moe1, script: .poj))
-        XCTAssertEqual(layout.rows(withGlobe: false), TaigiLayouts.Alphabetic.moe1_POJ_iPhone)
-    }
-
-    func testCustomLayout_scriptNameKey() {
-        XCTAssertEqual(CustomLayout(base: .moe1, script: .tl).scriptNameKey, .settingsTlMode)
-        XCTAssertEqual(CustomLayout(base: .moe2, script: .poj).scriptNameKey, .settingsPojMode)
-        XCTAssertEqual(CustomLayout(base: .phahTaigi, script: .poj).scriptNameKey, .layoutCommonLayoutsSection)
     }
 
     // MARK: - Long-press lists
@@ -298,7 +284,7 @@ final class CustomLayoutTests: XCTestCase {
         XCTAssertEqual(layout.calloutOverride(for: "，"), ["{"])
         let decoded = try JSONDecoder().decode(CustomLayout.self, from: JSONEncoder().encode(layout))
         XCTAssertEqual(decoded, layout)
-        layout.reset(to: .phahTaigi, script: .tl)
+        layout.reset(to: .phahTaigi)
         XCTAssertTrue(layout.callouts.isEmpty)
     }
 
@@ -598,6 +584,87 @@ final class CustomLayoutTests: XCTestCase {
         XCTAssertEqual(LayoutSelection(base: .qwerty, customId: id).storage, "qwerty|\(id.uuidString)")
         XCTAssertNil(LayoutSelection(storage: ""))
         XCTAssertNil(LayoutSelection(storage: "nope"))
+    }
+
+    // MARK: - Use
+
+    func testUse_pickingOtherScriptKeepsKeysAndStaysValid() {
+        var layout = CustomLayout(base: .moe2, script: .tl)
+        // trace: MOE2 TL row 1 starts p, ph; the swap puts ph first.
+        layout.swap(.key(0), .key(1))
+        let keys = layout.keys
+        layout.use = .poj
+        XCTAssertEqual(layout.script, .poj)
+        XCTAssertFalse(layout.isUniversal)
+        XCTAssertEqual(layout.keys, keys)
+        XCTAssertTrue(layout.isValid)
+    }
+
+    func testUse_everyBaseStaysValidBothWays() {
+        for base in KeyboardLayoutType.romanizationLayouts {
+            var layout = CustomLayout(base: base, script: .tl)
+            layout.use = .poj
+            XCTAssertTrue(layout.isValid, "\(base) TL → POJ")
+            layout.use = .tl
+            XCTAssertTrue(layout.isValid, "\(base) POJ → TL")
+        }
+    }
+
+    func testUse_qwertyRowWithExtraPlaceGetsRemovedKey() {
+        // trace: QWERTY TL rows below digits hold 10 / 9 / 7 / 2 character keys, POJ 10 / 10 / 7 / 2
+        // (o͘ ends row 2, slot 19).
+        var layout = CustomLayout(base: .qwerty, script: .tl)
+        let tlKeys = layout.keys
+        layout.use = .poj
+        XCTAssertEqual(layout.keys, Array(tlKeys[0 ..< 19]) + [nil] + Array(tlKeys[19...]))
+        XCTAssertEqual(layout.rows(withGlobe: false), CustomLayout(base: .qwerty, script: .tl).rows(withGlobe: false))
+    }
+
+    func testUse_qwertyRowWithFewerPlacesDropsLastKeyAndItsList() {
+        var layout = CustomLayout(base: .qwerty, script: .poj)
+        let pojKeys = layout.keys
+        XCTAssertEqual(pojKeys[19], "o\u{0358}")
+        layout.setCallouts(["1"], for: "o\u{0358}")
+        layout.setCallouts(["2"], for: "a")
+        layout.use = .tl
+        XCTAssertEqual(layout.keys, Array(pojKeys[0 ..< 19]) + Array(pojKeys[20...]))
+        XCTAssertNil(layout.callouts["o\u{0358}"])
+        XCTAssertEqual(layout.callouts["a"], ["2"])
+        XCTAssertTrue(layout.isValid)
+    }
+
+    func testUse_defaultsToBaseTableAndOldRecordsDecodeTheSame() throws {
+        XCTAssertEqual(CustomLayout(base: .phahTaigi, script: .poj).use, .universal)
+        XCTAssertEqual(CustomLayout(base: .moe1, script: .poj).use, .poj)
+        for layout in [CustomLayout(base: .phahTaigi, script: .tl), CustomLayout(base: .moe1, script: .tl)] {
+            var record = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(layout)) as? [String: Any])
+            XCTAssertNotNil(record.removeValue(forKey: "isUniversal"))
+            let decoded = try JSONDecoder().decode(CustomLayout.self, from: JSONSerialization.data(withJSONObject: record))
+            XCTAssertEqual(decoded, layout)
+        }
+    }
+
+    func testUse_universalLayoutKeepsModeAndShowsInBothScripts() throws {
+        let settings = try makeSettings()
+        settings.inputMode = .tl
+        var layout = CustomLayout(base: .moe1, script: .tl)
+        layout.use = .universal
+        XCTAssertTrue(settings.saveCustomLayout(layout))
+        XCTAssertEqual(settings.inputMode, .tl)
+        settings.inputMode = .poj
+        XCTAssertEqual(settings.activeCustomLayout, layout)
+    }
+
+    func testUse_oneScriptLayoutOnSharedBaseStaysInItsScript() throws {
+        let settings = try makeSettings()
+        settings.inputMode = .poj
+        var layout = CustomLayout(base: .phahTaigi, script: .poj)
+        layout.use = .tl
+        XCTAssertTrue(settings.saveCustomLayout(layout))
+        XCTAssertEqual(settings.inputMode, .tl)
+        settings.inputMode = .poj
+        XCTAssertEqual(settings.keyboardLayoutType, .phahTaigi)
+        XCTAssertNil(settings.activeCustomLayout)
     }
 
     // MARK: - Helpers

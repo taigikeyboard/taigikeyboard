@@ -17,7 +17,7 @@ data class KeyboardLayoutOption(
     // Mirrors iOS KeyboardLayoutType.pojPreviewImageName.
     @param:DrawableRes val pojPreviewRes: Int? = null,
     // Whether one key table serves TL and POJ (LayoutAssets picks no `*_poj` table), so a custom
-    // layout over it fits both scripts. Mirrors iOS KeyboardLayoutType.sharesTableAcrossScripts.
+    // layout over it starts universal (CustomLayout.isUniversal). Mirrors iOS KeyboardLayoutType.sharesTableAcrossScripts.
     val sharesTableAcrossScripts: Boolean = false,
 ) {
     // The screenshot of the key table this layout shows in [inputMode]: the POJ table in "poj"

@@ -270,8 +270,41 @@ class CustomLayoutTables(
             CustomLayout(id, name, base, script, table.labels, table.functionKeys, hasEmojiKey = true)
         }
 
-    /** Whether [layout]'s board still matches its base table. */
-    fun isUnchanged(layout: CustomLayout): Boolean = layout == fresh(layout.id, layout.name, layout.base, layout.script)
+    /** Whether [layout]'s board still matches its base table (its use aside). */
+    fun isUnchanged(layout: CustomLayout): Boolean = fresh(layout.id, layout.name, layout.base, layout.script)?.copy(isUniversal = layout.isUniversal) == layout
+
+    /**
+     * [layout] shown where [use] says. Picking one script lays the keys as arranged on that script's
+     * table row by row. Most bases have the same places in both scripts; where a row has more (QWERTY's
+     * Pe̍h-ōe-jī `o͘`), removed keys fill its end, and where it has fewer, its last keys go back to the
+     * tray with their long-press lists. Mirrors iOS `CustomLayout.use`.
+     */
+    fun withUse(
+        layout: CustomLayout,
+        use: LayoutUse,
+    ): CustomLayout {
+        val script =
+            when (use) {
+                LayoutUse.UNIVERSAL -> return layout.copy(isUniversal = true)
+                LayoutUse.TL -> LayoutScript.TL
+                LayoutUse.POJ -> LayoutScript.POJ
+            }
+        val oldCounts = characterCountsPerRow(baseTable(layout.base, layout.script) ?: return layout)
+        val newCounts = characterCountsPerRow(baseTable(layout.base, script) ?: return layout)
+        var start = 0
+        val keys =
+            buildList {
+                oldCounts.zip(newCounts).forEach { (oldCount, newCount) ->
+                    addAll(layout.keys.subList(start, start + minOf(oldCount, newCount)))
+                    repeat(newCount - oldCount) { add(null) }
+                    start += oldCount
+                }
+            }
+        val kept = keys.filterNotNull().toSet()
+        return layout.copy(script = script, isUniversal = false, keys = keys, callouts = layout.callouts.filterKeys { it in kept })
+    }
+
+    private fun characterCountsPerRow(table: BaseTable): List<Int> = table.placeRows.map { row -> row.count { it is LayoutPlace.Key } }
 
     /**
      * The board the editor draws: the digit row (no places), then every place of [layout], a removed

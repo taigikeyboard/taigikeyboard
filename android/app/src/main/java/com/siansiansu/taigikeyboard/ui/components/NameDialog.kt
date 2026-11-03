@@ -1,5 +1,7 @@
 package com.siansiansu.taigikeyboard.ui.components
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
@@ -18,10 +20,11 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.unit.dp
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
 
-// The name dialog a user-made item (theme, layout) asks for on Save: one text field, Save / Cancel.
-// The caller handles a blank name.
+// The name dialog a user-made item (theme, layout) asks for on Save: one text field, then any [options]
+// the item adds (a layout's use), Save / Cancel. The caller handles a blank name.
 @Composable
 fun NameDialog(
     title: String,
@@ -29,6 +32,7 @@ fun NameDialog(
     initialName: String,
     onConfirm: (String) -> Unit,
     onDismiss: () -> Unit,
+    options: @Composable () -> Unit = {},
 ) {
     var name by rememberSaveable(initialName, stateSaver = TextFieldValue.Saver) {
         mutableStateOf(TextFieldValue(initialName, selection = TextRange(initialName.length)))
@@ -41,14 +45,17 @@ fun NameDialog(
             // Focused with the soft keyboard up and the caret at the end, like the iOS alert's field.
             // Inside the dialog's composition, so the requester is attached before it runs.
             LaunchedEffect(Unit) { focusRequester.requestFocus() }
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                singleLine = true,
-                placeholder = { Text(placeholder) },
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                modifier = Modifier.focusRequester(focusRequester),
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    singleLine = true,
+                    placeholder = { Text(placeholder) },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    modifier = Modifier.focusRequester(focusRequester),
+                )
+                options()
+            }
         },
         confirmButton = {
             TextButton(onClick = { onConfirm(name.text) }) { Text(L10n.commonSave) }

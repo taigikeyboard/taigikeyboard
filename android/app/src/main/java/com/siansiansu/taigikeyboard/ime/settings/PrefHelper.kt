@@ -18,7 +18,6 @@ import com.siansiansu.taigikeyboard.ime.core.AppVersionTracker
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.text.layout.CustomLayout
-import com.siansiansu.taigikeyboard.ime.text.layout.KeyboardLayoutOptions
 import com.siansiansu.taigikeyboard.ime.theme.LegacyAppearance
 import com.siansiansu.taigikeyboard.ime.theme.ThemeAppearance
 import com.siansiansu.taigikeyboard.ime.theme.ThemeId
@@ -552,10 +551,10 @@ class PrefHelper(
         return true
     }
 
-    // Applying a custom layout enters its script first, like a Tâi-lô / Pe̍h-ōe-jī card; a base with
-    // one table for both scripts keeps the mode.
+    // Applying a custom layout enters its script first, like a Tâi-lô / Pe̍h-ōe-jī card; a universal
+    // layout keeps the mode.
     private fun scriptModeWrites(layout: CustomLayout): Map<Preferences.Key<*>, Any> {
-        if (KeyboardLayoutOptions.sharesTableAcrossScripts(layout.base)) return emptyMap()
+        if (layout.isUniversal) return emptyMap()
         return inputModeWrites(layout.script.inputMode)
     }
 

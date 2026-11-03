@@ -58,7 +58,7 @@ internal object LayoutScriptMemory {
     /**
      * The selection to show after entering [script]: the one [remembered] for it, else [live] —
      * either one's custom layout only while it is still live over that base ([CustomLayout.active])
-     * and shows [script]'s table (made from it, or a base shared by both), else its base.
+     * and shows in [script] ([CustomLayout.isUniversal], or made for it), else its base.
      */
     fun selection(
         script: LayoutScript,
@@ -68,7 +68,7 @@ internal object LayoutScriptMemory {
     ): LayoutSelection {
         val selection = remembered ?: live
         val layout = CustomLayout.active(layouts, selection.customId, selection.base)
-        val fits = layout != null && (layout.script == script || KeyboardLayoutOptions.sharesTableAcrossScripts(layout.base))
+        val fits = layout != null && (layout.isUniversal || layout.script == script)
         return if (fits) selection else selection.copy(customId = "")
     }
 
