@@ -118,6 +118,11 @@ final class SharedSettings {
     // selected) and a revision bumped on every store write. Internal: the Layout tab observes both.
     static let selectedCustomLayoutIdKey: SettingsKey<String> = .string("selectedCustomLayoutId", default: "")
     static let layoutRevisionKey: SettingsKey<Int> = .int("layoutRevision", default: 0)
+    // Per-script layout memory (`LayoutScriptMemory`): the script the live selection belongs to
+    // ("" = the input mode's), and each script's selection while the other one is live ("" = none).
+    private static let layoutScriptOwnerKey: SettingsKey<String> = .string("layoutScriptOwner", default: "")
+    private static let tlLayoutSelectionKey: SettingsKey<String> = .string("tlLayoutSelection", default: "")
+    private static let pojLayoutSelectionKey: SettingsKey<String> = .string("pojLayoutSelection", default: "")
 
     // App UI display-language tag (orthogonal to keyboard input mode) — see DisplayLanguage. Shared
     // host↔extension through the App Group; the extension picks up changes via didChangeNotification.
@@ -239,6 +244,8 @@ final class SharedSettings {
     /// - Leaving `.tps`: restores the layout from `layoutBeforeTps`, but only
     ///   when the live layout is still `.tps` — a manual layout change
     ///   earlier in the same flow is preserved.
+    /// - Entering Tâi-lô or Pe̍h-ōe-jī from the other script swaps in that script's remembered
+    ///   layout (`enterLayoutScript`), after the TPS restore.
     /// - All cascading writes go through `userDefaults.set(_, for:)`, which
     ///   bypasses the property setter (no re-entry into the state machine).
     func setInputMode(_ newMode: InputMode) {
@@ -256,6 +263,41 @@ final class SharedSettings {
                 userDefaults.set(layoutBeforeTps, for: Self.keyboardLayoutTypeKey)
             }
         }
+
+        // Raw values match: "tl" / "poj"; English and TPS have no script.
+        if let script = LayoutScript(rawValue: newMode.rawValue) {
+            enterLayoutScript(script, from: oldMode)
+        }
+    }
+
+    /// Entering `script` from the other one swaps the live selection with `script`'s remembered
+    /// one (`LayoutScriptMemory.selection`); English and TPS keep none, so TL → English → POJ
+    /// swaps too. No owner stored yet (first switch after an upgrade) → `oldMode`'s script.
+    private func enterLayoutScript(_ script: LayoutScript, from oldMode: InputMode) {
+        let stored = LayoutScript(rawValue: userDefaults.value(for: Self.layoutScriptOwnerKey))
+        let owner = stored ?? LayoutScript(inputMode: oldMode)
+        // Every App Group write wakes the extension's `syncSettings()`; skip an unchanged one.
+        if stored != script {
+            userDefaults.set(script.rawValue, for: Self.layoutScriptOwnerKey)
+        }
+        guard script != owner else { return }
+        let live = LayoutSelection(base: keyboardLayoutType, customId: selectedCustomLayoutId)
+        let next = LayoutScriptMemory.selection(
+            entering: script,
+            remembered: LayoutSelection(storage: userDefaults.value(for: Self.layoutSelectionKey(script))),
+            live: live,
+            layouts: loadCustomLayouts(),
+        )
+        userDefaults.set(live.storage, for: Self.layoutSelectionKey(owner))
+        userDefaults.set(next.base, for: Self.keyboardLayoutTypeKey)
+        userDefaults.set(next.customId?.uuidString ?? "", for: Self.selectedCustomLayoutIdKey)
+    }
+
+    private static func layoutSelectionKey(_ script: LayoutScript) -> SettingsKey<String> {
+        switch script {
+        case .tl: tlLayoutSelectionKey
+        case .poj: pojLayoutSelectionKey
+        }
     }
 
     /// Writes `newLayout` to `keyboardLayoutType` and applies the TPS ↔
@@ -268,7 +310,8 @@ final class SharedSettings {
     /// separate slice.
     func setKeyboardLayoutType(_ newLayout: KeyboardLayoutType) {
         // Choosing a layout (a built-in card, the keyboard picker, reset) ends a custom selection;
-        // `applyCustomLayout(_:)` re-selects one afterwards. `setInputMode(_:)` leaves it alone.
+        // `applyCustomLayout(_:)` re-selects one afterwards. `setInputMode(_:)` changes it only
+        // when entering the other romanization script (`enterLayoutScript`).
         if selectedCustomLayoutId != nil {
             userDefaults.remove(Self.selectedCustomLayoutIdKey)
         }
@@ -713,8 +756,13 @@ final class SharedSettings {
         CustomLayout.active(in: loadCustomLayouts(), selectedId: selectedCustomLayoutId, layoutType: keyboardLayoutType)
     }
 
-    /// Selects `layout`: its base through the TPS-aware setter, then its id.
+    /// Selects `layout`: its script's input mode first, like a Tâi-lô / Pe̍h-ōe-jī card (a base
+    /// with one table for both scripts keeps the mode), then its base through the TPS-aware
+    /// setter, then its id.
     func applyCustomLayout(_ layout: CustomLayout) {
+        if !layout.base.sharesTableAcrossScripts {
+            setInputMode(layout.script.inputMode)
+        }
         setKeyboardLayoutType(layout.base)
         userDefaults.set(layout.id.uuidString, for: Self.selectedCustomLayoutIdKey)
     }
@@ -787,6 +835,9 @@ final class SharedSettings {
         // After the pair above: its setters run the TPS state machine, which reads these backups.
         userDefaults.remove(Self.inputModeBeforeTpsKey)
         userDefaults.remove(Self.layoutBeforeTpsKey)
+        userDefaults.remove(Self.layoutScriptOwnerKey)
+        userDefaults.remove(Self.tlLayoutSelectionKey)
+        userDefaults.remove(Self.pojLayoutSelectionKey)
         isCustomDictEnabled = true
         // Dictionary toggles (iTaigi, TaiHua default off)
         isMoeDictEnabled = true

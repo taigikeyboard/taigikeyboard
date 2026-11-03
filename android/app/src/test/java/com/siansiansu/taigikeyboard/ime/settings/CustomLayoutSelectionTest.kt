@@ -25,7 +25,7 @@ class CustomLayoutSelectionTest {
 
     @Test
     fun `applying selects the base through the TPS cascade, then the id`() {
-        val writes = CustomLayoutSelection.forApply(layoutA, currentLayout = "tps", currentInputMode = "tps", inputModeBeforeTps = "poj")
+        val writes = CustomLayoutSelection.forApply(layoutA, emptyMap(), currentLayout = "tps", currentInputMode = "tps", inputModeBeforeTps = "poj")
         assertEquals("moe1", writes[PreferenceKeys.KEYBOARD_LAYOUT_TYPE])
         assertEquals("poj", writes[PreferenceKeys.INPUT_MODE])
         assertEquals("a", writes[PreferenceKeys.SELECTED_CUSTOM_LAYOUT_ID])
@@ -33,7 +33,7 @@ class CustomLayoutSelectionTest {
 
     @Test
     fun `switching between custom layouts on one base changes only the id`() {
-        val writes = CustomLayoutSelection.forApply(layoutB, currentLayout = "moe1", currentInputMode = "tl", inputModeBeforeTps = "tl")
+        val writes = CustomLayoutSelection.forApply(layoutB, emptyMap(), currentLayout = "moe1", currentInputMode = "tl", inputModeBeforeTps = "tl")
         assertEquals("b", writes[PreferenceKeys.SELECTED_CUSTOM_LAYOUT_ID])
         assertFalse(writes.containsKey(PreferenceKeys.INPUT_MODE))
     }
@@ -47,12 +47,12 @@ class CustomLayoutSelectionTest {
     @Test
     fun `saving writes the list and applies the layout, refusing past the cap`() {
         val edited = layoutA.copy(name = "Edited")
-        val writes = CustomLayoutSelection.forSave(listOf(layoutA, layoutB), edited, "moe1", "tl", "tl")!!
+        val writes = CustomLayoutSelection.forSave(listOf(layoutA, layoutB), edited, emptyMap(), "moe1", "tl", "tl")!!
         assertEquals(CustomLayout.encodeList(listOf(edited, layoutB)), writes[PreferenceKeys.USER_LAYOUTS])
         assertEquals("a", writes[PreferenceKeys.SELECTED_CUSTOM_LAYOUT_ID])
 
         val full = (1..CustomLayout.MAX_CUSTOM_LAYOUTS).map { layoutA.copy(id = "$it") }
-        assertNull(CustomLayoutSelection.forSave(full, layoutB, "moe1", "tl", "tl"))
+        assertNull(CustomLayoutSelection.forSave(full, layoutB, emptyMap(), "moe1", "tl", "tl"))
     }
 
     @Test
@@ -76,5 +76,47 @@ class CustomLayoutSelectionTest {
 
         val full = (1..CustomLayout.MAX_CUSTOM_LAYOUTS).map { layoutA.copy(id = "$it") }
         assertNull(CustomLayoutSelection.forDuplicate(full, full.first(), name = "Copy"))
+    }
+
+    // forLayoutAfterMode — Layout-tab script card, mode first, one transaction
+
+    @Test
+    fun `a POJ card leaving TPS restores the pre-TPS layout, then the card's wins`() {
+        // trace: forInputMode(poj, old=tps, layout tps) → layout phahTaigi, mode poj; then qwerty.
+        val modeWrites = TpsCascade.forInputMode("poj", "tps", "tps", "phahTaigi")
+        val writes = CustomLayoutSelection.forLayoutAfterMode("qwerty", modeWrites, "tps", "tps", "tl")
+        assertEquals("qwerty", writes[PreferenceKeys.KEYBOARD_LAYOUT_TYPE])
+        assertEquals("poj", writes[PreferenceKeys.INPUT_MODE])
+    }
+
+    @Test
+    fun `a TL card from English switches the mode without TPS backups`() {
+        val modeWrites = TpsCascade.forInputMode("tl", "english", "phahTaigi", "phahTaigi")
+        val writes = CustomLayoutSelection.forLayoutAfterMode("moe1", modeWrites, "phahTaigi", "english", "tl")
+        assertEquals("moe1", writes[PreferenceKeys.KEYBOARD_LAYOUT_TYPE])
+        assertEquals("tl", writes[PreferenceKeys.INPUT_MODE])
+        assertNull(writes[PreferenceKeys.INPUT_MODE_BEFORE_TPS])
+        assertNull(writes[PreferenceKeys.LAYOUT_BEFORE_TPS])
+    }
+
+    @Test
+    fun `the TPS card with the TPS mode enters TPS`() {
+        // The preview generator's TPS job. trace: forInputMode(tps, old=poj, layout qwerty) saves
+        // LAYOUT_BEFORE_TPS=qwerty, layout tps; the layout write is then idempotent.
+        val modeWrites = TpsCascade.forInputMode("tps", "poj", "qwerty", "phahTaigi")
+        val writes = CustomLayoutSelection.forLayoutAfterMode("tps", modeWrites, "qwerty", "poj", "tl")
+        assertEquals("tps", writes[PreferenceKeys.KEYBOARD_LAYOUT_TYPE])
+        assertEquals("tps", writes[PreferenceKeys.INPUT_MODE])
+        assertEquals("qwerty", writes[PreferenceKeys.LAYOUT_BEFORE_TPS])
+    }
+
+    @Test
+    fun `applying after mode writes runs the base cascade against the entered state`() {
+        // Entering POJ from TPS restores phahTaigi; the base cascade then sees a non-TPS layout.
+        val modeWrites = TpsCascade.forInputMode("poj", "tps", "tps", "phahTaigi")
+        val writes = CustomLayoutSelection.forApply(layoutB, modeWrites, "tps", "tps", "tl")
+        assertEquals("moe1", writes[PreferenceKeys.KEYBOARD_LAYOUT_TYPE])
+        assertEquals("poj", writes[PreferenceKeys.INPUT_MODE])
+        assertEquals("b", writes[PreferenceKeys.SELECTED_CUSTOM_LAYOUT_ID])
     }
 }

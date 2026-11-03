@@ -54,6 +54,8 @@ Same record and JSON; per-platform tables. Android keeps its layout JSON: `Layou
 
 Selection = `keyboardLayoutType = base` + `selectedCustomLayoutId` (App Group defaults). One `SharedSettings` operation applies a custom layout; built-in selection clears it.
 
+Per-script memory (#650): Tâi-lô and Pe̍h-ōe-jī each keep a selection (`tlLayoutSelection` / `pojLayoutSelection`, `"<base>"` or `"<base>|<id>"`; Android `keyboard__tl_layout_selection` / `keyboard__poj_layout_selection`) and `layoutScriptOwner` names the script the live pair belongs to. Entering the other script through the input mode saves the live pair to the owner's slot and loads the new script's (`LayoutScriptMemory`); a custom id survives only while the layout exists over that base and fits the script (its own script, or Phah Taigi's shared table). English and TPS keep no selection. Applying a custom layout enters its script first; a Tâi-lô / Pe̍h-ōe-jī card writes the mode, then the layout.
+
 | Path | Custom id |
 |---|---|
 | Built-in card / overlay / TPS card (`setKeyboardLayoutType`) | cleared, even for the same base |

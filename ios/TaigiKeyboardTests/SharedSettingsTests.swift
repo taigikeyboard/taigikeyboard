@@ -68,9 +68,11 @@ final class SharedSettingsTests: XCTestCase {
         settings.setKeyboardLayoutType(.qwerty)
         settings.setInputMode(.tps) // saves layoutBeforeTps = .qwerty, sets layout = .tps
 
-        settings.setInputMode(.tl)
+        // Back to the same script: Tâi-lô would bring back its own layout (phahTaigi, remembered
+        // by the first switch to Pe̍h-ōe-jī) instead of the TPS backup.
+        settings.setInputMode(.poj)
 
-        XCTAssertEqual(settings.inputMode, .tl)
+        XCTAssertEqual(settings.inputMode, .poj)
         XCTAssertEqual(settings.keyboardLayoutType, .qwerty, "Layout should restore from layoutBeforeTps backup")
     }
 
@@ -111,9 +113,9 @@ final class SharedSettingsTests: XCTestCase {
         settings.setInputMode(.tps) // layoutBeforeTps = .qwerty
         defaults.set(KeyboardLayoutType.moe2.rawValue, forKey: "keyboardLayoutType") // raw layout swap
 
-        settings.setInputMode(.tl)
+        settings.setInputMode(.poj)
 
-        XCTAssertEqual(settings.inputMode, .tl)
+        XCTAssertEqual(settings.inputMode, .poj)
         XCTAssertEqual(settings.keyboardLayoutType, .moe2, "Manual layout choice must survive non-TPS input switch")
     }
 
