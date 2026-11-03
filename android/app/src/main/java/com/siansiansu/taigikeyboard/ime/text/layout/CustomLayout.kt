@@ -4,6 +4,7 @@
 
 package com.siansiansu.taigikeyboard.ime.text.layout
 
+import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import org.json.JSONArray
 import org.json.JSONObject
@@ -24,6 +25,15 @@ enum class LayoutScript(
     companion object {
         fun fromStorage(value: String): LayoutScript? = entries.firstOrNull { it.inputMode == value }
     }
+}
+
+/** Where a custom layout shows: in both Tâi-lô and Pe̍h-ōe-jī, or in one of them. Chosen on save. Mirrors iOS `LayoutUse`. */
+enum class LayoutUse(
+    val labelKey: StringKey,
+) {
+    UNIVERSAL(StringKey.LAYOUT_COMMON_LAYOUTS_SECTION),
+    TL(StringKey.SETTINGS_TL_MODE),
+    POJ(StringKey.SETTINGS_POJ_MODE),
 }
 
 /** A function key as stored in a record (iOS `CustomLayout.FunctionKey` raw values), and the key code it stands for. */
@@ -65,6 +75,8 @@ sealed interface LayoutPlace {
  * - [hasEmojiKey] false hides the emoji key, the one function key that can be removed.
  * - [callouts] holds the long-press lists the user set, by half-width key label; a key without one
  *   keeps the built-in list ([CustomLayoutTables.defaultCallouts]).
+ * - [isUniversal] shows it in both scripts; otherwise only in [script]. A record saved before it could
+ *   be chosen shows where its base's table does.
  * The globe key and the email / URL key are not part of it: the keyboard places them.
  * The editing operations only swap, trade a key for a spare or remove one, so a key never appears
  * twice; each returns the edited copy.
@@ -78,10 +90,23 @@ data class CustomLayout(
     val functionKeys: List<FunctionKey>,
     val hasEmojiKey: Boolean,
     val callouts: Map<String, List<String>> = emptyMap(),
+    val isUniversal: Boolean = KeyboardLayoutOptions.sharesTableAcrossScripts(base),
 ) {
     /** The emoji key's place. */
     val emojiPlace: LayoutPlace.Function?
         get() = functionKeys.indexOf(FunctionKey.EMOJI).takeIf { it >= 0 }?.let(LayoutPlace::Function)
+
+    /** Where the layout shows; [CustomLayoutTables.withUse] changes it. */
+    val use: LayoutUse
+        get() =
+            if (isUniversal) {
+                LayoutUse.UNIVERSAL
+            } else {
+                when (script) {
+                    LayoutScript.TL -> LayoutUse.TL
+                    LayoutScript.POJ -> LayoutUse.POJ
+                }
+            }
 
     /** This layout under a new id and [name] — what the Duplicate card action saves. Mirrors iOS `CustomLayout.duplicated(named:)`. */
     fun duplicated(name: String): CustomLayout = copy(id = UUID.randomUUID().toString(), name = name)
@@ -199,6 +224,7 @@ data class CustomLayout(
             put("functionKeys", JSONArray().apply { functionKeys.forEach { put(it.storageValue) } })
             put("hasEmojiKey", hasEmojiKey)
             put("callouts", JSONObject().apply { callouts.forEach { (label, entries) -> put(label, JSONArray(entries)) } })
+            put("isUniversal", isUniversal)
         }
 
     companion object {
@@ -288,6 +314,7 @@ data class CustomLayout(
                         val entries = callouts.getJSONArray(label)
                         (0 until entries.length()).map(entries::getString)
                     } ?: emptyMap(),
+                isUniversal = json.optBoolean("isUniversal", KeyboardLayoutOptions.sharesTableAcrossScripts(base)),
             )
         }
     }

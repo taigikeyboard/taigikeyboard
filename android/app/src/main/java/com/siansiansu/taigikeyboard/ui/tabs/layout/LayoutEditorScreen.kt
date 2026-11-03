@@ -25,12 +25,17 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -69,6 +74,7 @@ import com.siansiansu.taigikeyboard.ime.text.layout.KeyboardLayoutOptions
 import com.siansiansu.taigikeyboard.ime.text.layout.LayoutKeyGrid
 import com.siansiansu.taigikeyboard.ime.text.layout.LayoutKeyGridInteraction
 import com.siansiansu.taigikeyboard.ime.text.layout.LayoutPlace
+import com.siansiansu.taigikeyboard.ime.text.layout.LayoutUse
 import com.siansiansu.taigikeyboard.ime.text.layout.accessibilityName
 import com.siansiansu.taigikeyboard.ui.components.GALLERY_PREVIEW_ASPECT
 import com.siansiansu.taigikeyboard.ui.components.NameDialog
@@ -78,8 +84,8 @@ import java.util.Collections
 // Tap two keys to swap them (function keys within their row), a key then a spare to replace it, a key
 // then the trash to remove it. The selected character key's long-press list sits in LayoutCalloutStrip
 // below the board: tap two slots to swap or move, a slot then a tray character to fill it, a slot then
-// the trash to empty it. Nothing is stored until Save, which names the layout and applies it; Back
-// discards the draft. Mirrors iOS LayoutEditorView.
+// the trash to empty it. Nothing is stored until Save, whose dialog names the layout and picks where it
+// shows (LayoutUse), then applies it; Back discards the draft. Mirrors iOS LayoutEditorView.
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -104,6 +110,8 @@ fun LayoutEditorScreen(
     var selectedCallout by remember { mutableStateOf<Int?>(null) }
     var selectedKeyCenterX by remember { mutableStateOf<Float?>(null) }
     var showNameDialog by rememberSaveable { mutableStateOf(false) }
+    // Where the layout shows, picked in the name dialog; starts from the draft's each time it opens.
+    var pendingUse by rememberSaveable { mutableStateOf(LayoutUse.UNIVERSAL) }
     val table = checkNotNull(tables.baseTable(draft.base, draft.script)) { "no ${draft.base} table" }
     val isDark = isSystemInDarkTheme()
     val view = LocalView.current
@@ -228,7 +236,10 @@ fun LayoutEditorScreen(
                     }
                 },
                 actions = {
-                    TextButton(onClick = { showNameDialog = true }) { Text(L10n.commonSave) }
+                    TextButton(onClick = {
+                        pendingUse = draft.use
+                        showNameDialog = true
+                    }) { Text(L10n.commonSave) }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
             )
@@ -333,11 +344,13 @@ fun LayoutEditorScreen(
                 onConfirm = { entered ->
                     showNameDialog = false
                     val name = entered.trim().ifEmpty { stringResolver.resolve(StringKey.LAYOUT_EDITOR_TITLE_NEW) }
-                    draft = draft.copy(name = name)
-                    onSave(draft)
+                    // A copy, so a failed save leaves the draft as it was.
+                    onSave(tables.withUse(draft.copy(name = name), pendingUse))
                 },
                 onDismiss = { showNameDialog = false },
-            )
+            ) {
+                UseMenu(selected = pendingUse, onSelect = { pendingUse = it })
+            }
         }
     }
 }
@@ -368,6 +381,38 @@ private fun BaseChips(
                         selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
                     ),
             )
+        }
+    }
+}
+
+/** Where the layout shows (Universal / Tâi-lô / Pe̍h-ōe-jī): a dropdown under the name field. Mirrors the iOS save sheet's menu picker. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun UseMenu(
+    selected: LayoutUse,
+    onSelect: (LayoutUse) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+        OutlinedTextField(
+            value = stringRes(selected.labelKey),
+            onValueChange = {},
+            readOnly = true,
+            singleLine = true,
+            label = { Text(L10n.settingsInputMode) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            LayoutUse.entries.forEach { use ->
+                DropdownMenuItem(
+                    text = { Text(stringRes(use.labelKey)) },
+                    onClick = {
+                        onSelect(use)
+                        expanded = false
+                    },
+                )
+            }
         }
     }
 }

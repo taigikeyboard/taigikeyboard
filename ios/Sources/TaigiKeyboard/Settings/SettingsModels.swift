@@ -202,6 +202,15 @@ enum KeyboardLayoutType: String, CaseIterable {
         }
     }
 
+    /// Whether one key table serves TL and POJ (`TaigiLayouts.Alphabetic.table`), so a custom
+    /// layout over it starts universal (`CustomLayout.isUniversal`).
+    var sharesTableAcrossScripts: Bool {
+        switch self {
+        case .phahTaigi, .tps: true
+        case .qwerty, .moe1, .moe2: false
+        }
+    }
+
     /// The card screenshot of the key table this layout shows in `inputMode`: the POJ table in
     /// `.poj` when it differs, else the TL one (English and TPS fall back to it).
     func previewImageName(for inputMode: InputMode) -> String {

@@ -472,6 +472,201 @@ final class CustomLayoutTests: XCTestCase {
         XCTAssertEqual(settings.loadCustomLayouts().count, 1)
     }
 
+    // MARK: - Per-script memory
+
+    func testSharedSettings_applyPerScriptLayoutSwitchesToItsScript() throws {
+        let settings = try makeSettings()
+        XCTAssertTrue(settings.saveCustomLayout(CustomLayout(base: .moe1, script: .poj)))
+        XCTAssertEqual(settings.inputMode, .poj)
+    }
+
+    func testSharedSettings_applySharedTableLayoutKeepsMode() throws {
+        let settings = try makeSettings()
+        settings.inputMode = .poj
+        let layout = CustomLayout(base: .phahTaigi, script: .tl)
+        XCTAssertTrue(settings.saveCustomLayout(layout))
+        XCTAssertEqual(settings.inputMode, .poj)
+        XCTAssertEqual(settings.activeCustomLayout, layout)
+    }
+
+    func testSharedSettings_scriptWithoutMemoryShowsBuiltInOfSameBase() throws {
+        let settings = try makeSettings()
+        XCTAssertTrue(settings.saveCustomLayout(CustomLayout(base: .moe1, script: .tl)))
+        settings.inputMode = .poj
+        XCTAssertEqual(settings.keyboardLayoutType, .moe1)
+        XCTAssertNil(settings.activeCustomLayout)
+    }
+
+    func testSharedSettings_eachScriptRestoresItsOwnLayout() throws {
+        let settings = try makeSettings()
+        let tlLayout = CustomLayout(base: .moe1, script: .tl)
+        let pojLayout = CustomLayout(base: .moe2, script: .poj)
+        XCTAssertTrue(settings.saveCustomLayout(tlLayout))
+        XCTAssertTrue(settings.saveCustomLayout(pojLayout))
+        XCTAssertEqual(settings.inputMode, .poj)
+
+        settings.inputMode = .tl
+        XCTAssertEqual(settings.activeCustomLayout, tlLayout)
+        settings.inputMode = .poj
+        XCTAssertEqual(settings.activeCustomLayout, pojLayout)
+
+        // A built-in pick in POJ changes POJ's memory only.
+        settings.keyboardLayoutType = .qwerty
+        settings.inputMode = .tl
+        XCTAssertEqual(settings.activeCustomLayout, tlLayout)
+        settings.inputMode = .poj
+        XCTAssertEqual(settings.keyboardLayoutType, .qwerty)
+        XCTAssertNil(settings.activeCustomLayout)
+    }
+
+    func testSharedSettings_englishAndTpsKeepTheScriptMemory() throws {
+        let settings = try makeSettings()
+        let tlLayout = CustomLayout(base: .moe1, script: .tl)
+        let pojLayout = CustomLayout(base: .moe2, script: .poj)
+        XCTAssertTrue(settings.saveCustomLayout(tlLayout))
+        XCTAssertTrue(settings.saveCustomLayout(pojLayout))
+
+        settings.inputMode = .english
+        settings.inputMode = .tl
+        XCTAssertEqual(settings.activeCustomLayout, tlLayout)
+        settings.inputMode = .tps
+        settings.inputMode = .poj
+        XCTAssertEqual(settings.activeCustomLayout, pojLayout)
+        settings.inputMode = .tps
+        settings.inputMode = .poj
+        XCTAssertEqual(settings.activeCustomLayout, pojLayout)
+    }
+
+    func testSharedSettings_deletedRememberedLayoutLeavesItsBase() throws {
+        let settings = try makeSettings()
+        let tlLayout = CustomLayout(base: .moe1, script: .tl)
+        XCTAssertTrue(settings.saveCustomLayout(tlLayout))
+        XCTAssertTrue(settings.saveCustomLayout(CustomLayout(base: .moe2, script: .poj)))
+        XCTAssertTrue(settings.deleteCustomLayout(id: tlLayout.id))
+        settings.inputMode = .tl
+        XCTAssertEqual(settings.keyboardLayoutType, .moe1)
+        XCTAssertNil(settings.activeCustomLayout)
+    }
+
+    func testSharedSettings_sharedTableLayoutFollowsIntoScriptWithoutMemory() throws {
+        let settings = try makeSettings()
+        let layout = CustomLayout(base: .phahTaigi, script: .tl)
+        XCTAssertTrue(settings.saveCustomLayout(layout))
+        settings.inputMode = .poj
+        XCTAssertEqual(settings.activeCustomLayout, layout)
+    }
+
+    func testLayoutChoice_scriptCardChangesOnlyItsScript() throws {
+        let settings = try makeSettings()
+        let tlLayout = CustomLayout(base: .moe1, script: .tl)
+        XCTAssertTrue(settings.saveCustomLayout(tlLayout))
+        LayoutChoice(layout: .qwerty, script: .poj).apply(to: settings)
+        XCTAssertEqual(settings.inputMode, .poj)
+        XCTAssertEqual(settings.keyboardLayoutType, .qwerty)
+        settings.inputMode = .tl
+        XCTAssertEqual(settings.activeCustomLayout, tlLayout)
+        settings.inputMode = .poj
+        XCTAssertEqual(settings.keyboardLayoutType, .qwerty)
+    }
+
+    func testLayoutChoice_scriptCardLeavingTpsWins() throws {
+        let settings = try makeSettings()
+        settings.inputMode = .tps
+        LayoutChoice(layout: .moe2, script: .poj).apply(to: settings)
+        XCTAssertEqual(settings.inputMode, .poj)
+        XCTAssertEqual(settings.keyboardLayoutType, .moe2)
+    }
+
+    func testLayoutSelection_storageRoundTrip() throws {
+        let id = UUID()
+        XCTAssertEqual(LayoutSelection(storage: "moe2"), LayoutSelection(base: .moe2, customId: nil))
+        XCTAssertEqual(LayoutSelection(storage: "moe2|\(id.uuidString)"), LayoutSelection(base: .moe2, customId: id))
+        XCTAssertEqual(LayoutSelection(base: .qwerty, customId: id).storage, "qwerty|\(id.uuidString)")
+        XCTAssertNil(LayoutSelection(storage: ""))
+        XCTAssertNil(LayoutSelection(storage: "nope"))
+    }
+
+    // MARK: - Use
+
+    func testUse_pickingOtherScriptKeepsKeysAndStaysValid() {
+        var layout = CustomLayout(base: .moe2, script: .tl)
+        // trace: MOE2 TL row 1 starts p, ph; the swap puts ph first.
+        layout.swap(.key(0), .key(1))
+        let keys = layout.keys
+        layout.use = .poj
+        XCTAssertEqual(layout.script, .poj)
+        XCTAssertFalse(layout.isUniversal)
+        XCTAssertEqual(layout.keys, keys)
+        XCTAssertTrue(layout.isValid)
+    }
+
+    func testUse_everyBaseStaysValidBothWays() {
+        for base in KeyboardLayoutType.romanizationLayouts {
+            var layout = CustomLayout(base: base, script: .tl)
+            layout.use = .poj
+            XCTAssertTrue(layout.isValid, "\(base) TL → POJ")
+            layout.use = .tl
+            XCTAssertTrue(layout.isValid, "\(base) POJ → TL")
+        }
+    }
+
+    func testUse_qwertyRowWithExtraPlaceGetsRemovedKey() {
+        // trace: QWERTY TL rows below digits hold 10 / 9 / 7 / 2 character keys, POJ 10 / 10 / 7 / 2
+        // (o͘ ends row 2, slot 19).
+        var layout = CustomLayout(base: .qwerty, script: .tl)
+        let tlKeys = layout.keys
+        layout.use = .poj
+        XCTAssertEqual(layout.keys, Array(tlKeys[0 ..< 19]) + [nil] + Array(tlKeys[19...]))
+        XCTAssertEqual(layout.rows(withGlobe: false), CustomLayout(base: .qwerty, script: .tl).rows(withGlobe: false))
+    }
+
+    func testUse_qwertyRowWithFewerPlacesDropsLastKeyAndItsList() {
+        var layout = CustomLayout(base: .qwerty, script: .poj)
+        let pojKeys = layout.keys
+        XCTAssertEqual(pojKeys[19], "o\u{0358}")
+        layout.setCallouts(["1"], for: "o\u{0358}")
+        layout.setCallouts(["2"], for: "a")
+        layout.use = .tl
+        XCTAssertEqual(layout.keys, Array(pojKeys[0 ..< 19]) + Array(pojKeys[20...]))
+        XCTAssertNil(layout.callouts["o\u{0358}"])
+        XCTAssertEqual(layout.callouts["a"], ["2"])
+        XCTAssertTrue(layout.isValid)
+    }
+
+    func testUse_defaultsToBaseTableAndOldRecordsDecodeTheSame() throws {
+        XCTAssertEqual(CustomLayout(base: .phahTaigi, script: .poj).use, .universal)
+        XCTAssertEqual(CustomLayout(base: .moe1, script: .poj).use, .poj)
+        for layout in [CustomLayout(base: .phahTaigi, script: .tl), CustomLayout(base: .moe1, script: .tl)] {
+            var record = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(layout)) as? [String: Any])
+            XCTAssertNotNil(record.removeValue(forKey: "isUniversal"))
+            let decoded = try JSONDecoder().decode(CustomLayout.self, from: JSONSerialization.data(withJSONObject: record))
+            XCTAssertEqual(decoded, layout)
+        }
+    }
+
+    func testUse_universalLayoutKeepsModeAndShowsInBothScripts() throws {
+        let settings = try makeSettings()
+        settings.inputMode = .tl
+        var layout = CustomLayout(base: .moe1, script: .tl)
+        layout.use = .universal
+        XCTAssertTrue(settings.saveCustomLayout(layout))
+        XCTAssertEqual(settings.inputMode, .tl)
+        settings.inputMode = .poj
+        XCTAssertEqual(settings.activeCustomLayout, layout)
+    }
+
+    func testUse_oneScriptLayoutOnSharedBaseStaysInItsScript() throws {
+        let settings = try makeSettings()
+        settings.inputMode = .poj
+        var layout = CustomLayout(base: .phahTaigi, script: .poj)
+        layout.use = .tl
+        XCTAssertTrue(settings.saveCustomLayout(layout))
+        XCTAssertEqual(settings.inputMode, .tl)
+        settings.inputMode = .poj
+        XCTAssertEqual(settings.keyboardLayoutType, .phahTaigi)
+        XCTAssertNil(settings.activeCustomLayout)
+    }
+
     // MARK: - Helpers
 
     private func makeDirectory() throws -> URL {

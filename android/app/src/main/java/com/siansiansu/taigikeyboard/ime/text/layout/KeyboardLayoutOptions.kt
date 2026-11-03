@@ -16,6 +16,9 @@ data class KeyboardLayoutOption(
     // (LayoutManager picks `*_poj` in POJ mode); null when one table serves both scripts.
     // Mirrors iOS KeyboardLayoutType.pojPreviewImageName.
     @param:DrawableRes val pojPreviewRes: Int? = null,
+    // Whether one key table serves TL and POJ (LayoutAssets picks no `*_poj` table), so a custom
+    // layout over it starts universal (CustomLayout.isUniversal). Mirrors iOS KeyboardLayoutType.sharesTableAcrossScripts.
+    val sharesTableAcrossScripts: Boolean = false,
 ) {
     // The screenshot of the key table this layout shows in [inputMode]: the POJ table in "poj"
     // when it differs, else the TL one. Mirrors iOS KeyboardLayoutType.previewImageName(for:).
@@ -27,7 +30,12 @@ object KeyboardLayoutOptions {
     // Section 1 — romanization keyboards (matches iOS LayoutTab / LayoutSelectionOverlay).
     val romanization =
         listOf(
-            KeyboardLayoutOption("phahTaigi", StringKey.LAYOUT_PHAH_TAIGI_LAYOUT, R.drawable.layout_phahtaigi_preview),
+            KeyboardLayoutOption(
+                "phahTaigi",
+                StringKey.LAYOUT_PHAH_TAIGI_LAYOUT,
+                R.drawable.layout_phahtaigi_preview,
+                sharesTableAcrossScripts = true,
+            ),
             KeyboardLayoutOption(
                 "qwerty",
                 StringKey.LAYOUT_STANDARD_LAYOUT,
@@ -43,4 +51,7 @@ object KeyboardLayoutOptions {
         listOf(
             KeyboardLayoutOption("tps", StringKey.LAYOUT_TPS_LAYOUT, R.drawable.layout_tps_preview),
         )
+
+    /** [KeyboardLayoutOption.sharesTableAcrossScripts] of the romanization layout [key]. */
+    fun sharesTableAcrossScripts(key: String): Boolean = romanization.any { it.key == key && it.sharesTableAcrossScripts }
 }

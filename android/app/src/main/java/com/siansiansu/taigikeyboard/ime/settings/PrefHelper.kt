@@ -420,18 +420,35 @@ class PrefHelper(
      * - Leaving `.tps`: restores the layout from `LAYOUT_BEFORE_TPS`, but only
      *   when the live layout is still `.tps` — a manual layout change
      *   earlier in the same flow is preserved (GUARDED restore).
+     * - Entering Tâi-lô or Pe̍h-ōe-jī from the other script swaps in that script's remembered
+     *   layout ([LayoutScriptMemory]), after the TPS restore.
      *
      * Mirrors iOS `SharedSettings.setInputMode(_:)` (PR #319 / 1cd6cbfd).
      */
     private fun applyInputMode(value: String) {
-        val writes =
+        updateCacheBatchAndPersist(inputModeWrites(value))
+    }
+
+    // [applyInputMode]'s write plan: the TPS cascade, then the per-script layout memory against the
+    // layout the cascade leaves showing.
+    private fun inputModeWrites(value: String): Map<Preferences.Key<*>, Any> {
+        val cascade =
             TpsCascade.forInputMode(
                 newValue = value,
                 oldValue = inputMode,
                 currentLayout = keyboardLayoutType,
                 layoutBeforeTps = layoutBeforeTps,
             )
-        updateCacheBatchAndPersist(writes)
+        return cascade +
+            LayoutScriptMemory.forInputMode(
+                newMode = value,
+                oldMode = inputMode,
+                owner = cached(PreferenceKeys.LAYOUT_SCRIPT_OWNER, ""),
+                liveLayout = cascade[PreferenceKeys.KEYBOARD_LAYOUT_TYPE] as? String ?: keyboardLayoutType,
+                liveCustomId = selectedCustomLayoutId,
+                remembered = { cached(LayoutScriptMemory.selectionKey(it), "") },
+                layouts = ::loadCustomLayouts,
+            )
     }
 
     /**
@@ -468,25 +485,23 @@ class PrefHelper(
     }
 
     /**
-     * Writes [layout] and then [inputMode] (cascades included) in a single DataStore transaction
-     * — see [TpsCascade.forLayoutAndInputMode] for why two setters are not enough.
+     * Writes [inputMode] and then [layout] (cascades included) in a single DataStore transaction
+     * ([CustomLayoutSelection.forLayoutAfterMode]) — two setters would launch two commits in no
+     * fixed order.
      */
     fun setKeyboardLayoutAndInputMode(
         layout: String,
         inputMode: String,
     ) {
         val writes =
-            CustomLayoutSelection.forBuiltIn(
-                TpsCascade.forLayoutAndInputMode(
-                    newLayout = layout,
-                    newInputMode = inputMode,
-                    oldLayout = keyboardLayoutType,
-                    oldInputMode = this.inputMode,
-                    inputModeBeforeTps = inputModeBeforeTps,
-                    layoutBeforeTps = layoutBeforeTps,
-                ),
+            CustomLayoutSelection.forLayoutAfterMode(
+                layout,
+                inputModeWrites(inputMode),
+                keyboardLayoutType,
+                this.inputMode,
+                inputModeBeforeTps,
             )
-        updateCacheBatchAndPersist(writes)
+        updateCacheBatchAndPersist(CustomLayoutSelection.forBuiltIn(writes))
     }
 
     // Custom layouts: a JSON list (iOS `user_layouts.json`) and the selected one's id ("" while a
@@ -513,7 +528,9 @@ class PrefHelper(
 
     /** Selects [layout] ([CustomLayoutSelection.forApply]). */
     fun applyCustomLayout(layout: CustomLayout) {
-        updateCacheBatchAndPersist(CustomLayoutSelection.forApply(layout, keyboardLayoutType, inputMode, inputModeBeforeTps))
+        updateCacheBatchAndPersist(
+            CustomLayoutSelection.forApply(layout, scriptModeWrites(layout), keyboardLayoutType, inputMode, inputModeBeforeTps),
+        )
     }
 
     /**
@@ -522,10 +539,23 @@ class PrefHelper(
      */
     fun saveCustomLayout(layout: CustomLayout): Boolean {
         val writes =
-            CustomLayoutSelection.forSave(loadCustomLayouts(), layout, keyboardLayoutType, inputMode, inputModeBeforeTps)
-                ?: return false
+            CustomLayoutSelection.forSave(
+                loadCustomLayouts(),
+                layout,
+                scriptModeWrites(layout),
+                keyboardLayoutType,
+                inputMode,
+                inputModeBeforeTps,
+            ) ?: return false
         updateCacheBatchAndPersist(writes)
         return true
+    }
+
+    // Applying a custom layout enters its script first, like a Tâi-lô / Pe̍h-ōe-jī card; a universal
+    // layout keeps the mode.
+    private fun scriptModeWrites(layout: CustomLayout): Map<Preferences.Key<*>, Any> {
+        if (layout.isUniversal) return emptyMap()
+        return inputModeWrites(layout.script.inputMode)
     }
 
     /** Saves a copy of [layout] named [name] ([CustomLayoutSelection.forDuplicate]); no-op at the cap. */

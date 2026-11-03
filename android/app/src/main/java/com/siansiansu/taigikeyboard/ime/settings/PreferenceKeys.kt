@@ -73,6 +73,12 @@ object PreferenceKeys {
     // the selected one's id ("" while a built-in layout is selected).
     val USER_LAYOUTS = stringPreferencesKey("keyboard__user_layouts")
     val SELECTED_CUSTOM_LAYOUT_ID = stringPreferencesKey("keyboard__selected_custom_layout_id")
+
+    // Per-script layout memory ([LayoutScriptMemory]): the script the live selection belongs to
+    // ("tl" / "poj"), and each script's selection while the other one is live.
+    val LAYOUT_SCRIPT_OWNER = stringPreferencesKey("keyboard__layout_script_owner")
+    val TL_LAYOUT_SELECTION = stringPreferencesKey("keyboard__tl_layout_selection")
+    val POJ_LAYOUT_SELECTION = stringPreferencesKey("keyboard__poj_layout_selection")
     val TOOLBAR_AUTO_COLLAPSE = booleanPreferencesKey("keyboard__toolbar_auto_collapse")
 
     // Raw values = OneHandedMode / KeyboardToolbarAction storageValue (shared with iOS).

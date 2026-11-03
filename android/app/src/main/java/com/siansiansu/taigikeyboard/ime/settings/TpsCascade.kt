@@ -91,24 +91,4 @@ internal object TpsCascade {
         currentInputMode: String,
         inputModeBeforeTps: String,
     ): String = if (oldLayout == "tps") inputModeBeforeTps else currentInputMode
-
-    /**
-     * Computes ONE write plan for a layout write followed by an input-mode write (a Layout-tab
-     * Tâi-lô / Pe̍h-ōe-jī card). Two setters would launch two DataStore commits in no fixed
-     * order, so leaving TPS the layout cascade's restored mode could land after the card's mode.
-     * Runs [forKeyboardLayoutType], then [forInputMode] against the post-layout state; later
-     * writes win — the same end state as iOS `keyboardLayoutType = …; inputMode = …`.
-     */
-    fun forLayoutAndInputMode(
-        newLayout: String,
-        newInputMode: String,
-        oldLayout: String,
-        oldInputMode: String,
-        inputModeBeforeTps: String,
-        layoutBeforeTps: String,
-    ): Map<Preferences.Key<*>, Any> {
-        val layoutWrites = forKeyboardLayoutType(newLayout, oldLayout, oldInputMode, inputModeBeforeTps)
-        val modeAfterLayout = layoutWrites[PreferenceKeys.INPUT_MODE] as? String ?: oldInputMode
-        return layoutWrites + forInputMode(newInputMode, modeAfterLayout, newLayout, layoutBeforeTps)
-    }
 }

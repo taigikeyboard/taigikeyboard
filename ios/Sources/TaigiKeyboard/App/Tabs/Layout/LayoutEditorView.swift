@@ -4,8 +4,9 @@ import SwiftUI
 /// Tap two keys to swap them (function keys within their row), a key then a spare to replace it,
 /// a key then the trash to remove it. The selected character key's long-press list sits in
 /// `LayoutCalloutStrip` below the board: tap two slots to swap or move, a slot then a tray
-/// character to fill it, a slot then the trash to empty it. Nothing is stored until Save, which
-/// names the layout and applies it; Back discards the draft.
+/// character to fill it, a slot then the trash to empty it. Nothing is stored until Save, whose
+/// sheet names the layout and picks where it shows (`LayoutUse`), then applies it; Back discards
+/// the draft.
 struct LayoutEditorView: View {
     @Environment(DisplayLanguageStore.self) private var lang
     @Environment(\.dismiss) private var dismiss
@@ -15,8 +16,11 @@ struct LayoutEditorView: View {
     /// The selected slot of the selected key's long-press list (past its end = an empty slot).
     @State private var selectedCallout: Int?
     @State private var keyFrames: [CustomLayout.Place: CGRect] = [:]
-    @State private var showsNameAlert = false
+    @State private var showsSaveSheet = false
     @State private var pendingName = ""
+    @State private var pendingUse = LayoutUse.universal
+    /// Set once the save sheet stored the draft, so closing the sheet also closes the editor.
+    @State private var didSave = false
     private let isEditing: Bool
 
     init(editing layout: CustomLayout? = nil) {
@@ -60,15 +64,15 @@ struct LayoutEditorView: View {
             ToolbarItem(placement: .confirmationAction) {
                 Button(lang.string(.commonSave)) {
                     pendingName = draft.name
-                    showsNameAlert = true
+                    pendingUse = draft.use
+                    showsSaveSheet = true
                 }
             }
         }
         .onChange(of: selected) { selectedCallout = nil }
-        .alert(lang.string(.layoutNameHeader), isPresented: $showsNameAlert) {
-            TextField(lang.string(.layoutEditorTitleNew), text: $pendingName)
-            Button(lang.string(.commonSave)) { commit() }
-            Button(lang.string(.commonCancel), role: .cancel) {}
+        .sheet(isPresented: $showsSaveSheet, onDismiss: closeAfterSave) {
+            LayoutSaveSheet(name: $pendingName, use: $pendingUse, onSave: commit)
+                .environment(lang)
         }
     }
 
@@ -351,12 +355,22 @@ struct LayoutEditorView: View {
         }
     }
 
-    /// Names the draft from the alert (blank → "New Layout"), saves and applies it, then closes.
-    /// A failed write keeps the editor open with the draft intact.
+    /// Names the draft from the sheet (blank → "New Layout") and sets its use, saves and applies it,
+    /// then closes the sheet and the editor. A failed write keeps the sheet open with the draft intact.
     private func commit() {
         let trimmed = pendingName.trimmingCharacters(in: .whitespacesAndNewlines)
-        draft.name = trimmed.isEmpty ? lang.string(.layoutEditorTitleNew) : trimmed
-        if SharedSettings.shared.saveCustomLayout(draft) {
+        // A copy, so a failed save leaves the draft as it was.
+        var layout = draft
+        layout.name = trimmed.isEmpty ? lang.string(.layoutEditorTitleNew) : trimmed
+        layout.use = pendingUse
+        if SharedSettings.shared.saveCustomLayout(layout) {
+            didSave = true
+            showsSaveSheet = false
+        }
+    }
+
+    private func closeAfterSave() {
+        if didSave {
             dismiss()
         }
     }
@@ -373,5 +387,41 @@ struct LayoutEditorView: View {
             base: layout == .tps ? .phahTaigi : layout,
             script: LayoutScript(inputMode: settings.romanizationInputMode),
         )
+    }
+}
+
+// MARK: - Save sheet
+
+/// The name field and where the layout shows (Universal / Tâi-lô / Pe̍h-ōe-jī), with Cancel and Save.
+private struct LayoutSaveSheet: View {
+    @Environment(DisplayLanguageStore.self) private var lang
+    @Environment(\.dismiss) private var dismiss
+    @Binding var name: String
+    @Binding var use: LayoutUse
+    let onSave: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                TextField(lang.string(.layoutEditorTitleNew), text: $name)
+                Picker(lang.string(.settingsInputMode), selection: $use) {
+                    ForEach(LayoutUse.allCases, id: \.self) { use in
+                        Text(lang.string(use.nameKey)).tag(use)
+                    }
+                }
+                .pickerStyle(.menu)
+            }
+            .navigationTitle(lang.string(.layoutNameHeader))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(lang.string(.commonCancel)) { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(lang.string(.commonSave), action: onSave)
+                }
+            }
+        }
+        .presentationDetents([.medium])
     }
 }

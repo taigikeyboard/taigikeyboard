@@ -20,15 +20,33 @@ internal object CustomLayoutSelection {
             put(PreferenceKeys.SELECTED_CUSTOM_LAYOUT_ID, "")
         }
 
-    /** Selects [layout]: its base through the TPS-aware layout cascade, then its id. */
+    /**
+     * [modeWrites] (an input-mode write plan, or empty), then [layout] through the TPS-aware layout
+     * cascade against the state they leave, in one plan; later writes win. Mode first, so [layout]
+     * lands in the entered script's memory ([LayoutScriptMemory]). Mirrors iOS `LayoutChoice.apply(to:)`.
+     */
+    fun forLayoutAfterMode(
+        layout: String,
+        modeWrites: Map<Preferences.Key<*>, Any>,
+        currentLayout: String,
+        currentInputMode: String,
+        inputModeBeforeTps: String,
+    ): Map<Preferences.Key<*>, Any> {
+        val layoutNow = modeWrites[PreferenceKeys.KEYBOARD_LAYOUT_TYPE] as? String ?: currentLayout
+        val modeNow = modeWrites[PreferenceKeys.INPUT_MODE] as? String ?: currentInputMode
+        return modeWrites + TpsCascade.forKeyboardLayoutType(layout, layoutNow, modeNow, inputModeBeforeTps)
+    }
+
+    /** Selects [layout]: [modeWrites] (entering its script, or empty) and its base ([forLayoutAfterMode]), then its id. */
     fun forApply(
         layout: CustomLayout,
+        modeWrites: Map<Preferences.Key<*>, Any>,
         currentLayout: String,
         currentInputMode: String,
         inputModeBeforeTps: String,
     ): Map<Preferences.Key<*>, Any> =
         buildMap {
-            putAll(TpsCascade.forKeyboardLayoutType(layout.base, currentLayout, currentInputMode, inputModeBeforeTps))
+            putAll(forLayoutAfterMode(layout.base, modeWrites, currentLayout, currentInputMode, inputModeBeforeTps))
             put(PreferenceKeys.SELECTED_CUSTOM_LAYOUT_ID, layout.id)
         }
 
@@ -39,13 +57,14 @@ internal object CustomLayoutSelection {
     fun forSave(
         layouts: List<CustomLayout>,
         layout: CustomLayout,
+        modeWrites: Map<Preferences.Key<*>, Any>,
         currentLayout: String,
         currentInputMode: String,
         inputModeBeforeTps: String,
     ): Map<Preferences.Key<*>, Any>? {
         val saved = CustomLayout.upserted(layouts, layout) ?: return null
         return buildMap {
-            putAll(forApply(layout, currentLayout, currentInputMode, inputModeBeforeTps))
+            putAll(forApply(layout, modeWrites, currentLayout, currentInputMode, inputModeBeforeTps))
             put(PreferenceKeys.USER_LAYOUTS, CustomLayout.encodeList(saved))
         }
     }

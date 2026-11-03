@@ -75,7 +75,7 @@ internal data class LayoutShelf(
 )
 
 internal val layoutShelves: List<LayoutShelf> =
-    KeyboardLayoutOptions.romanization.partition { it.pojPreviewRes == null }.let { (universal, perScript) ->
+    KeyboardLayoutOptions.romanization.partition { it.sharesTableAcrossScripts }.let { (universal, perScript) ->
         listOf(
             LayoutShelf(StringKey.LAYOUT_COMMON_LAYOUTS_SECTION, universal.map { LayoutChoice(it, null) }),
             LayoutShelf(StringKey.SETTINGS_TL_MODE, perScript.map { LayoutChoice(it, LayoutScript.TL) }),

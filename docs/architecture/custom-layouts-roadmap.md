@@ -54,6 +54,8 @@ Same record and JSON; per-platform tables. Android keeps its layout JSON: `Layou
 
 Selection = `keyboardLayoutType = base` + `selectedCustomLayoutId` (App Group defaults). One `SharedSettings` operation applies a custom layout; built-in selection clears it.
 
+Per-script memory (#650): Tâi-lô and Pe̍h-ōe-jī each keep a selection (`tlLayoutSelection` / `pojLayoutSelection`, `"<base>"` or `"<base>|<id>"`; Android `keyboard__tl_layout_selection` / `keyboard__poj_layout_selection`) and `layoutScriptOwner` names the script the live pair belongs to. Entering the other script through the input mode saves the live pair to the owner's slot and loads the new script's (`LayoutScriptMemory`); a custom id survives only while the layout exists over that base and fits the script (its own script, or it is universal). English and TPS keep no selection. Applying a custom layout enters its script first; a Tâi-lô / Pe̍h-ōe-jī card writes the mode, then the layout. Where a custom layout shows is its use (`LayoutUse`: Universal, Tâi-lô, Pe̍h-ōe-jī), picked in the save dialog and stored as `isUniversal` plus `script` (records without `isUniversal` read as their base's default: Phah Taigi universal). A universal layout fits both scripts and applying it keeps the mode. Picking one script lays the keys as arranged on that script's table row by row (`moveKeys` iOS, `CustomLayoutTables.withUse` Android): QWERTY's Pe̍h-ōe-jī row 2 has one more place (o͘), filled as a removed key; going back drops that place's key and its long-press list.
+
 | Path | Custom id |
 |---|---|
 | Built-in card / overlay / TPS card (`setKeyboardLayoutType`) | cleared, even for the same base |

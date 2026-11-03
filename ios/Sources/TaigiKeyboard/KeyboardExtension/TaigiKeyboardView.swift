@@ -275,6 +275,13 @@ struct TaigiKeyboardView: View {
                 panels.isSettingsExpanded = false
             }
         }
+        // Picking a Tâi-lô / Pe̍h-ōe-jī custom layout in the layout panel switches the mode
+        // (`SharedSettings.applyCustomLayout`); the toolbar follows it once the panel closes.
+        .onChange(of: panels.isLayoutExpanded) { _, isExpanded in
+            if !isExpanded, currentInputMode != settings.inputMode {
+                currentInputMode = settings.inputMode
+            }
+        }
     }
 
     // MARK: - Core Keyboard View
