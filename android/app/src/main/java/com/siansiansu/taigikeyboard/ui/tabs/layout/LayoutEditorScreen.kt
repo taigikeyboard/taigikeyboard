@@ -25,12 +25,17 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -344,13 +349,14 @@ fun LayoutEditorScreen(
                 },
                 onDismiss = { showNameDialog = false },
             ) {
-                UseChips(selected = pendingUse, onSelect = { pendingUse = it })
+                UseMenu(selected = pendingUse, onSelect = { pendingUse = it })
             }
         }
     }
 }
 
 /** The four romanization bases; picking one restarts the draft from it. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun BaseChips(
     selectedBase: String,
@@ -364,42 +370,51 @@ private fun BaseChips(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         KeyboardLayoutOptions.romanization.forEach { option ->
-            AccentChip(stringRes(option.labelKey), selected = option.key == selectedBase) { onSelect(option.key) }
+            FilterChip(
+                selected = option.key == selectedBase,
+                onClick = { onSelect(option.key) },
+                label = { Text(stringRes(option.labelKey)) },
+                // The accent fill of the iOS base chips.
+                colors =
+                    FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                    ),
+            )
         }
     }
 }
 
-/** Where the layout shows (Universal / Tâi-lô / Pe̍h-ōe-jī), in the name dialog. Mirrors the iOS save sheet's picker. */
+/** Where the layout shows (Universal / Tâi-lô / Pe̍h-ōe-jī): a dropdown under the name field. Mirrors the iOS save sheet's menu picker. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun UseChips(
+private fun UseMenu(
     selected: LayoutUse,
     onSelect: (LayoutUse) -> Unit,
 ) {
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        LayoutUse.entries.forEach { use ->
-            AccentChip(stringRes(use.labelKey), selected = use == selected) { onSelect(use) }
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+        OutlinedTextField(
+            value = stringRes(selected.labelKey),
+            onValueChange = {},
+            readOnly = true,
+            singleLine = true,
+            label = { Text(L10n.settingsInputMode) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            LayoutUse.entries.forEach { use ->
+                DropdownMenuItem(
+                    text = { Text(stringRes(use.labelKey)) },
+                    onClick = {
+                        onSelect(use)
+                        expanded = false
+                    },
+                )
+            }
         }
     }
-}
-
-// A filter chip with the accent fill of the iOS base chips.
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun AccentChip(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    FilterChip(
-        selected = selected,
-        onClick = onClick,
-        label = { Text(label) },
-        colors =
-            FilterChipDefaults.filterChipColors(
-                selectedContainerColor = MaterialTheme.colorScheme.primary,
-                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-            ),
-    )
 }
 
 /**

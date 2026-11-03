@@ -404,13 +404,12 @@ private struct LayoutSaveSheet: View {
         NavigationStack {
             Form {
                 TextField(lang.string(.layoutEditorTitleNew), text: $name)
-                Picker("", selection: $use) {
+                Picker(lang.string(.settingsInputMode), selection: $use) {
                     ForEach(LayoutUse.allCases, id: \.self) { use in
                         Text(lang.string(use.nameKey)).tag(use)
                     }
                 }
-                .pickerStyle(.segmented)
-                .labelsHidden()
+                .pickerStyle(.menu)
             }
             .navigationTitle(lang.string(.layoutNameHeader))
             .navigationBarTitleDisplayMode(.inline)
