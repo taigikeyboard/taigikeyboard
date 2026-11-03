@@ -34,4 +34,4 @@ Rust stable channel (`rust-toolchain.toml`). `prost-build` compiles `.proto` fil
 
 ## MSRV
 
-Rust 1.86, set in `Cargo.toml` `[workspace.package].rust-version`. Bumping MSRV is a PR-level decision per `../docs/contributing/rust-best-practices.md` §6 (Rust version policy).
+Rust 1.89, set in `Cargo.toml` `[workspace.package].rust-version`. Bumping MSRV is a PR-level decision per `../docs/contributing/rust-best-practices.md` §6 (Rust version policy).

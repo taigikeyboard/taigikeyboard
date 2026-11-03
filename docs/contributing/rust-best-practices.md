@@ -78,7 +78,7 @@ Type-shape preferences that cross FFI:
 ## 6. Rust version policy `[A]`
 
 - **Stable channel only.** No nightly features, no `#![feature(...)]`.
-- **MSRV per workspace** — engine 1.86, desktop + linux + macos 1.93, windows 1.95 (`rust-version` in each workspace `Cargo.toml`; why and which CI job checks each: `docs/architecture/build-artifacts.md` § Five Cargo workspaces). Bumping is a PR-level decision with CI verification.
+- **MSRV per workspace** — engine 1.89, desktop + linux + macos 1.93, windows 1.95 (`rust-version` in each workspace `Cargo.toml`; why and which CI job checks each: `docs/architecture/build-artifacts.md` § Five Cargo workspaces). Bumping is a PR-level decision with CI verification.
 - **`rustfmt` default config**, no deviations. Apply with `make fmt`; check without writing via `cd engine && cargo fmt --all -- --check` (CI gates it per §7).
 - **`clippy` with `-D warnings`** — CI gates it (`engine.yml` engine workspace, `desktop.yml` desktop workspace); run locally with `make lint` (rustfmt check on all five workspaces, clippy on engine / desktop / macOS, SwiftFormat lint, Kotlin spotlessCheck). Project-wide allow list lives in workspace `Cargo.toml` `[workspace.lints]`.
 
