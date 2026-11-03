@@ -50,6 +50,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
@@ -86,14 +87,15 @@ fun GalleryShelf(
 }
 
 // A selectable card: a tappable preview with the selection marker (scrim + checkmark + border)
-// above a title row. Only the preview is the tap target, so a trailing [accessory] (the custom
-// theme overflow menu) never selects the card.
+// above a title row and an optional [subtitle] line. Only the preview is the tap target, so a
+// trailing [accessory] (the custom theme overflow menu) never selects the card.
 @Composable
 fun GalleryCard(
     title: String,
     isSelected: Boolean,
     onClick: () -> Unit,
     preview: @Composable () -> Unit,
+    subtitle: String? = null,
     accessory: @Composable () -> Unit = {},
 ) {
     val checkmarkScale by animateFloatAsState(
@@ -169,6 +171,18 @@ fun GalleryCard(
         Row(verticalAlignment = Alignment.CenterVertically) {
             GalleryCardTitle(title, Modifier.weight(1f))
             accessory()
+        }
+
+        if (subtitle != null) {
+            Text(
+                text = subtitle,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.labelMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }

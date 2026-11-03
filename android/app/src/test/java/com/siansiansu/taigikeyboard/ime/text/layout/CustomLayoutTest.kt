@@ -2,6 +2,7 @@
 
 package com.siansiansu.taigikeyboard.ime.text.layout
 
+import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.ime.text.layout.LayoutTestAssets.tables
 import com.siansiansu.taigikeyboard.ime.text.layout.LayoutTestAssets.unchanged
 import org.json.JSONArray
@@ -10,6 +11,13 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class CustomLayoutTest {
+    @Test
+    fun `the script name is the layout's script, Universal on a base shared by both`() {
+        assertEquals(StringKey.SETTINGS_TL_MODE, unchanged("moe1", LayoutScript.TL).scriptNameKey)
+        assertEquals(StringKey.SETTINGS_POJ_MODE, unchanged("moe2", LayoutScript.POJ).scriptNameKey)
+        assertEquals(StringKey.LAYOUT_COMMON_LAYOUTS_SECTION, unchanged("phahTaigi", LayoutScript.POJ).scriptNameKey)
+    }
+
     @Test
     fun `a list round-trips through JSON`() {
         val edited =

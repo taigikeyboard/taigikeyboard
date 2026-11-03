@@ -4,6 +4,7 @@
 
 package com.siansiansu.taigikeyboard.ime.text.layout
 
+import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import org.json.JSONArray
 import org.json.JSONObject
@@ -12,13 +13,15 @@ import java.util.UUID
 
 /**
  * The script of a key table: Lohankha and the MOE layouts have different TL and POJ tables. The
- * stored value is its input mode. Mirrors iOS `LayoutScript`.
+ * stored value is its input mode; [labelKey] names it like the input-mode setting. Mirrors iOS
+ * `LayoutScript`.
  */
 enum class LayoutScript(
     val inputMode: String,
+    val labelKey: StringKey,
 ) {
-    TL("tl"),
-    POJ("poj"),
+    TL("tl", StringKey.SETTINGS_TL_MODE),
+    POJ("poj", StringKey.SETTINGS_POJ_MODE),
     ;
 
     companion object {
@@ -82,6 +85,14 @@ data class CustomLayout(
     /** The emoji key's place. */
     val emojiPlace: LayoutPlace.Function?
         get() = functionKeys.indexOf(FunctionKey.EMOJI).takeIf { it >= 0 }?.let(LayoutPlace::Function)
+
+    /**
+     * The script the layout is for, as the Layout tab and editor name it: Universal when its base
+     * has one table for both scripts. Mirrors iOS `CustomLayout.scriptNameKey`.
+     */
+    val scriptNameKey: StringKey
+        get() =
+            if (KeyboardLayoutOptions.sharesTableAcrossScripts(base)) StringKey.LAYOUT_COMMON_LAYOUTS_SECTION else script.labelKey
 
     /** This layout under a new id and [name] — what the Duplicate card action saves. Mirrors iOS `CustomLayout.duplicated(named:)`. */
     fun duplicated(name: String): CustomLayout = copy(id = UUID.randomUUID().toString(), name = name)

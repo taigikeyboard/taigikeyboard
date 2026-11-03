@@ -69,12 +69,14 @@ import com.siansiansu.taigikeyboard.ime.text.layout.KeyboardLayoutOptions
 import com.siansiansu.taigikeyboard.ime.text.layout.LayoutKeyGrid
 import com.siansiansu.taigikeyboard.ime.text.layout.LayoutKeyGridInteraction
 import com.siansiansu.taigikeyboard.ime.text.layout.LayoutPlace
+import com.siansiansu.taigikeyboard.ime.text.layout.LayoutScript
 import com.siansiansu.taigikeyboard.ime.text.layout.accessibilityName
 import com.siansiansu.taigikeyboard.ui.components.GALLERY_PREVIEW_ASPECT
 import com.siansiansu.taigikeyboard.ui.components.NameDialog
 import java.util.Collections
 
-// Custom-layout editor: base chips, the board (fixed) and the spare tray (scrolling), all by taps.
+// Custom-layout editor: base and script chips, the board (fixed) and the spare tray (scrolling), all by
+// taps.
 // Tap two keys to swap them (function keys within their row), a key then a spare to replace it, a key
 // then the trash to remove it. The selected character key's long-press list sits in LayoutCalloutStrip
 // below the board: tap two slots to swap or move, a slot then a tray character to fill it, a slot then
@@ -212,8 +214,11 @@ fun LayoutEditorScreen(
         selected?.let { edit(draft.removed(it)) }
     }
 
-    fun restart(base: String) {
-        tables.fresh(draft.id, draft.name, base, draft.script)?.let { draft = it }
+    fun restart(
+        base: String,
+        script: LayoutScript,
+    ) {
+        tables.fresh(draft.id, draft.name, base, script)?.let { draft = it }
         select(null)
     }
 
@@ -253,7 +258,10 @@ fun LayoutEditorScreen(
                     .then(if (scrollsWhole) Modifier.verticalScroll(scrollState) else Modifier),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                BaseChips(selectedBase = draft.base, onSelect = ::restart)
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    BaseChips(selectedBase = draft.base, onSelect = { restart(it, draft.script) })
+                    ScriptChips(draft, onSelect = { restart(draft.base, it) })
+                }
 
                 LayoutKeyGrid(
                     rows = remember(draft) { tables.editorRows(draft) },
@@ -314,7 +322,7 @@ fun LayoutEditorScreen(
                     ToneGrid(tables.toneRows, held = held, onTap = ::replaceSelected)
                     SpareFlow(remember(draft) { tables.traySymbols(draft) }, onTap = ::replaceSelected, held = held)
                     TextButton(
-                        onClick = { restart(draft.base) },
+                        onClick = { restart(draft.base, draft.script) },
                         enabled = !remember(draft) { tables.isUnchanged(draft) },
                         colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
                         modifier = Modifier.align(Alignment.CenterHorizontally),
@@ -343,7 +351,6 @@ fun LayoutEditorScreen(
 }
 
 /** The four romanization bases; picking one restarts the draft from it. */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun BaseChips(
     selectedBase: String,
@@ -357,19 +364,57 @@ private fun BaseChips(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         KeyboardLayoutOptions.romanization.forEach { option ->
-            FilterChip(
-                selected = option.key == selectedBase,
-                onClick = { onSelect(option.key) },
-                label = { Text(stringRes(option.labelKey)) },
-                // The accent fill of the iOS base chips.
-                colors =
-                    FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = MaterialTheme.colorScheme.primary,
-                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                    ),
-            )
+            EditorChip(stringRes(option.labelKey), selected = option.key == selectedBase) { onSelect(option.key) }
         }
     }
+}
+
+/**
+ * Tâi-lô / Pe̍h-ōe-jī, each restarting the draft from that script's table; one fixed Universal chip
+ * when the base has a single table for both scripts.
+ */
+@Composable
+private fun ScriptChips(
+    draft: CustomLayout,
+    onSelect: (LayoutScript) -> Unit,
+) {
+    Row(
+        modifier = Modifier.padding(horizontal = 20.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (KeyboardLayoutOptions.sharesTableAcrossScripts(draft.base)) {
+            EditorChip(stringRes(draft.scriptNameKey), selected = true, enabled = false) {}
+        } else {
+            LayoutScript.entries.forEach { script ->
+                EditorChip(stringRes(script.labelKey), selected = script == draft.script) { onSelect(script) }
+            }
+        }
+    }
+}
+
+// A base / script chip; disabled keeps the selected look (the fixed Universal chip, not tappable).
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun EditorChip(
+    label: String,
+    selected: Boolean,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = { Text(label) },
+        enabled = enabled,
+        // The accent fill of the iOS base chips.
+        colors =
+            FilterChipDefaults.filterChipColors(
+                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                disabledSelectedContainerColor = MaterialTheme.colorScheme.primary,
+                disabledLabelColor = MaterialTheme.colorScheme.onPrimary,
+            ),
+    )
 }
 
 /**

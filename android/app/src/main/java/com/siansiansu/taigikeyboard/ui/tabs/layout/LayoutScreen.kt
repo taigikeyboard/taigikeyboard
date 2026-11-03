@@ -160,8 +160,10 @@ fun LayoutScreen(prefs: PrefHelper) {
                     )
                 }
                 customLayouts.forEach { layout ->
+                    val scriptName = stringRes(layout.scriptNameKey)
                     GalleryCard(
                         title = layout.name,
+                        subtitle = scriptName,
                         isSelected = activeCustomLayout?.id == layout.id,
                         onClick = { prefs.applyCustomLayout(layout) },
                         preview = {
@@ -169,7 +171,7 @@ fun LayoutScreen(prefs: PrefHelper) {
                                 rows = tables.previewRows(layout),
                                 base = layout.base,
                                 isDark = isDark,
-                                modifier = Modifier.fillMaxSize().semantics { contentDescription = layout.name },
+                                modifier = Modifier.fillMaxSize().semantics { contentDescription = "${layout.name}, $scriptName" },
                             )
                         },
                         accessory = {

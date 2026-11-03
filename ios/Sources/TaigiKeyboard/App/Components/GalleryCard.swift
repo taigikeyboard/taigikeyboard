@@ -39,10 +39,12 @@ struct GalleryShelf<Content: View>: View {
 // MARK: - Card
 
 /// A selectable card: a tappable preview with the selection marker (a dimming mask, a blue
-/// circle checkmark and a blue stroke) above a title row. Only the preview is the tap target,
-/// so a trailing `accessory` (the custom-theme `…` menu) never selects the card.
+/// circle checkmark and a blue stroke) above a title row and an optional `subtitle` line. Only
+/// the preview is the tap target, so a trailing `accessory` (the custom-theme `…` menu) never
+/// selects the card.
 struct GalleryCard<Preview: View, Accessory: View>: View {
     let title: String
+    var subtitle: String?
     let isSelected: Bool
     let onTap: () -> Void
     @ViewBuilder let preview: Preview
@@ -79,7 +81,7 @@ struct GalleryCard<Preview: View, Accessory: View>: View {
             .buttonStyle(.plain)
             // The title sits outside the button; VoiceOver reads it, not the preview's contents.
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(title)
+            .accessibilityLabel(subtitle.map { "\(title), \($0)" } ?? title)
             .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
 
             HStack(spacing: 4) {
@@ -94,6 +96,13 @@ struct GalleryCard<Preview: View, Accessory: View>: View {
                 accessory
             }
             .frame(width: GalleryCardMetrics.width)
+
+            if let subtitle {
+                Text(subtitle)
+                    .font(AppStyle.captionFont)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+            }
         }
         .frame(width: GalleryCardMetrics.width, alignment: .leading)
     }

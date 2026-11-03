@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// Custom-layout editor: base chips, the board (fixed) and the spare tray (scrolling), all by taps.
+/// Custom-layout editor: base and script chips, the board (fixed) and the spare tray (scrolling),
+/// all by taps.
 /// Tap two keys to swap them (function keys within their row), a key then a spare to replace it,
 /// a key then the trash to remove it. The selected character key's long-press list sits in
 /// `LayoutCalloutStrip` below the board: tap two slots to swap or move, a slot then a tray
@@ -84,7 +85,10 @@ struct LayoutEditorView: View {
     /// Base chips, the board and the long-press strip: fixed above the tray, or scrolling with it.
     private func editorHeader(boardWidth: CGFloat) -> some View {
         VStack(spacing: 16) {
-            baseChips
+            VStack(spacing: 8) {
+                baseChips
+                scriptChips
+            }
 
             LayoutKeyGrid(
                 rows: draft.editorRows,
@@ -109,7 +113,7 @@ struct LayoutEditorView: View {
             spareTray
 
             Button(lang.string(.themeEditorResetAll), role: .destructive) {
-                restart(from: draft.base)
+                restart(from: draft.base, script: draft.script)
             }
             .font(AppStyle.bodyFont)
             .disabled(draft.isUnchanged)
@@ -140,23 +144,46 @@ struct LayoutEditorView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 ForEach(KeyboardLayoutType.romanizationLayouts, id: \.self) { base in
-                    let isSelected = base == draft.base
-                    Button {
-                        restart(from: base)
-                    } label: {
-                        Text(lang.string(base.displayNameKey))
-                            .font(AppStyle.captionFont)
-                            .foregroundStyle(isSelected ? Color.white : Color.primary)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 8)
-                            .background(isSelected ? AppStyle.accentBlue : Color(.secondarySystemGroupedBackground), in: Capsule())
+                    chip(lang.string(base.displayNameKey), isSelected: base == draft.base) {
+                        restart(from: base, script: draft.script)
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityAddTraits(isSelected ? .isSelected : [])
                 }
             }
             .padding(.horizontal, AppStyle.horizontalPadding)
         }
+    }
+
+    /// Tâi-lô / Pe̍h-ōe-jī, each restarting the draft from that script's table; one fixed Universal
+    /// chip when the base has a single table for both scripts.
+    private var scriptChips: some View {
+        HStack(spacing: 8) {
+            if draft.base.sharesTableAcrossScripts {
+                chip(lang.string(draft.scriptNameKey), isSelected: true) {}
+                    .allowsHitTesting(false)
+                    .accessibilityRemoveTraits(.isButton)
+            } else {
+                ForEach([LayoutScript.tl, .poj], id: \.self) { script in
+                    chip(lang.string(script.inputMode.displayNameKey), isSelected: script == draft.script) {
+                        restart(from: draft.base, script: script)
+                    }
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, AppStyle.horizontalPadding)
+    }
+
+    private func chip(_ title: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(AppStyle.captionFont)
+                .foregroundStyle(isSelected ? Color.white : Color.primary)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(isSelected ? AppStyle.accentBlue : Color(.secondarySystemGroupedBackground), in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
     /// Three groups, gaps between them: trash, the removed emoji key and spare letters; tone-marked
@@ -344,9 +371,9 @@ struct LayoutEditorView: View {
         }
     }
 
-    private func restart(from base: KeyboardLayoutType) {
+    private func restart(from base: KeyboardLayoutType, script: LayoutScript) {
         withAnimation(.snappy(duration: 0.2)) {
-            draft.reset(to: base)
+            draft.reset(to: base, script: script)
             selected = nil
         }
     }

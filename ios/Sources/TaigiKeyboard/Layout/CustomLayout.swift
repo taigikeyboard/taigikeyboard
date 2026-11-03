@@ -179,6 +179,12 @@ struct CustomLayout: Codable, Identifiable, Hashable {
         return copy
     }
 
+    /// The script the layout is for, as the Layout tab and editor name it: Universal when its base
+    /// has one table for both scripts.
+    var scriptNameKey: StringKey {
+        base.sharesTableAcrossScripts ? .layoutCommonLayoutsSection : script.inputMode.displayNameKey
+    }
+
     /// Whether the board still matches the base table.
     var isUnchanged: Bool {
         hasEmojiKey && keys == baseLabels.map(Optional.some) && functionKeys == baseFunctionKeys && callouts.isEmpty
@@ -310,9 +316,10 @@ struct CustomLayout: Codable, Identifiable, Hashable {
         hasEmojiKey = true
     }
 
-    /// Restarts from `base`, keeping the script.
-    mutating func reset(to base: KeyboardLayoutType) {
+    /// Restarts from the `base` × `script` table.
+    mutating func reset(to base: KeyboardLayoutType, script: LayoutScript) {
         self.base = base
+        self.script = script
         keys = baseLabels
         functionKeys = baseFunctionKeys
         hasEmojiKey = true
