@@ -23,24 +23,34 @@ and requests a release, the **Reviewer** who reviews what goes into the source
 tree and the artifact built from it, and the **Approver** who approves the
 release itself.
 
-TaigiKeyboard is maintained by one person, who therefore holds all three:
+TaigiKeyboard has two maintainers, who share the first two roles. The Approver
+role stays with one of them:
 
 | Role | Who |
 | --- | --- |
-| Author — commits source and build scripts, requests a release | Soo Bîn-hiân 蘇民弦 — <https://github.com/siansiansu> |
-| Reviewer — reviews changes into `main` and the release artifact's provenance | Soo Bîn-hiân 蘇民弦 |
+| Author — commits source and build scripts, requests a release | Soo Bîn-hiân 蘇民弦 — <https://github.com/siansiansu>; madmaxieee — <https://github.com/madmaxieee> |
+| Reviewer — reviews changes into `main` and the release artifact's provenance | Soo Bîn-hiân 蘇民弦; madmaxieee |
 | Approver — approves each release | Soo Bîn-hiân 蘇民弦 |
 
 Every maintainer of a source file or a build script in this repository is
 listed above. There are no other committers, and no contributor's change
-reaches a signed binary without passing through the review below.
+reaches a signed binary unless a maintainer merges it.
 
-One person cannot separate these roles, and this policy does not claim
-otherwise. What stands in for that separation is that every step is recorded
-where a third party can read it:
+These roles are not strictly separated, and this policy does not claim
+otherwise: review is not mandatory, either maintainer may merge their own pull
+request, and the Approver also authors changes. What stands in for that
+separation is that every step is recorded where a third party can read it, and
+that release tags and release secrets stay behind the Approver:
 
-- Every change lands on `main` through a pull request from a branch, so the
-  diff that entered a release is public and dated.
+- Changes land on `main` through a pull request from a branch. GitHub enforces
+  this for everyone except the repository admin, who may commit directly; that
+  exception is used for docs, version bumps, release prep, and small data or
+  string changes. Either way, the diff that entered a release is public and
+  dated.
+- Only the repository admin can create, move or delete a release tag, and the
+  release secrets open only after the Approver approves the run.
+- Releases published from 2026-11-04 on are immutable on GitHub: their tag and
+  assets cannot be changed afterwards.
 - The release scripts refuse a dirty working tree. The dictionary artifacts are
   committed to the repository; the engine binaries are not (they are generated
   and gitignored), so every release rebuilds them from the released commit.
@@ -54,8 +64,7 @@ from the public source repository on a GitHub-hosted runner
 `docs/architecture/windows-release.md` § Building on a GitHub-hosted runner
 owns that procedure.
 
-If a second maintainer joins, this table is updated in the same commit that
-grants them access.
+This table changes whenever a maintainer joins or leaves.
 
 ## Approval
 
@@ -98,8 +107,9 @@ Taiwanese text, entirely on-device.
   HTTPS requests, so the server necessarily sees the client's IP address and
   user agent, as it would for any web page; nothing in the application adds to
   that or correlates it across requests.
-- Learned data — word frequency, word association, custom dictionary — stays
-  in app-private storage and is excluded from OS automatic backup.
+- Learned data — word frequency, word association, learned phrases, custom
+  dictionary — stays in app-private storage and is excluded from OS automatic
+  backup.
 
 It contains no vulnerability scanning, no exploitation capability, and no
 remote administration feature.
