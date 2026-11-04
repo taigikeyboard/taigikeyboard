@@ -52,7 +52,7 @@ final class TaigiInputControllerTelexGuideTests: XCTestCase {
         XCTAssertFalse(session.controller.settings.isTelexGuideShown)
     }
 
-    /// The card is spelled for the romanization in use: `z` spells `ts`
+    /// The card is spelled for the romanization in use: `c` spells `ts`
     /// under TL and `ch` under POJ, which the meaning column names now that
     /// the example column is gone (USER 2026-09-09). A switch respells the
     /// guide in place.
