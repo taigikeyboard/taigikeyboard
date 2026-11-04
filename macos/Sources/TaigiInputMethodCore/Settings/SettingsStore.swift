@@ -64,6 +64,13 @@ final class SettingsStore: @unchecked Sendable {
             name: "tpsKeyboardShown",
             defaultValue: false,
         )
+        /// Whether the Telex guide is up while a romanization is typed: flipped
+        /// by its shortcut, kept across mode switches so the guide comes back
+        /// when TPS is left (desktop-core `keys::TELEX_GUIDE_SHOWN`).
+        static let isTelexGuideShown = SettingsKey(
+            name: "telexGuideShown",
+            defaultValue: false,
+        )
         static let isHanjiFirst = SettingsKey(
             name: "isTranslateSwapped",
             defaultValue: EngineSettings.defaults.isHanjiFirst,
@@ -515,6 +522,20 @@ final class SettingsStore: @unchecked Sendable {
         inputMode == .tps && isTpsKeyboardShown
     }
 
+    /// The user's wish for the Telex guide, whatever the mode.
+    var isTelexGuideShown: Bool {
+        get { bool(Keys.isTelexGuideShown) }
+        set { userDefaults.set(newValue, forKey: Keys.isTelexGuideShown.name) }
+    }
+
+    /// Whether the Telex guide should be up: asked for, and TPS, which types
+    /// no Telex keys, is not being typed.
+    /// CROSS-PLATFORM INVARIANT — mirrors desktop-core
+    /// `SettingsDocument::is_telex_guide_wanted`.
+    var isTelexGuideWanted: Bool {
+        inputMode != .tps && isTelexGuideShown
+    }
+
     /// The symbol picker's recent picks.
     var recentSymbols: RecentSymbols {
         RecentSymbols(stringArray(Keys.recentSymbols))
@@ -579,6 +600,7 @@ final class SettingsStore: @unchecked Sendable {
             Keys.keyboardLayout.name,
             Keys.lastRomanizationMode.name,
             Keys.isTpsKeyboardShown.name,
+            Keys.isTelexGuideShown.name,
             Keys.toneInputScheme.name,
             Keys.isHanjiFirst.name,
             Keys.isAutoSpaceEnabled.name,

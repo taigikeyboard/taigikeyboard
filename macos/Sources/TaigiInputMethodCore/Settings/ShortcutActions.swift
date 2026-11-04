@@ -97,8 +97,8 @@ extension KeyboardShortcuts.Name {
 
     /// The Telex key table, on demand (USER 2026-09-09): the legend under the
     /// Tone Keys picker was a wall of text in a pane the user is not in while
-    /// typing, so it became a floating card any key dismisses
-    /// (`TelexGuidePanel`). `/` is the key help lives on — `?` is ⇧/, and
+    /// typing, so it became a floating card that stays up
+    /// until this chord hides it (`TelexGuidePanel`, #684). `/` is the key help lives on — `?` is ⇧/, and
     /// every app that answers "which keys do what" answers it there — and
     /// ⌃⌘ is the family the rest of this roster is on. Not ⌃⌘T, the mnemonic
     /// first reached for: JetBrains binds it to Surround With, and a user in
@@ -330,10 +330,6 @@ enum ShortcutHotkeys {
         in settings: SettingsStore,
         show: (@MainActor () -> Void)? = nil,
     ) {
-        // The guide comes down first, whoever raised it: this path never
-        // reaches the session, and the settings window taking focus is not
-        // guaranteed to end the session that owns the card.
-        TelexGuidePanel.shared.hideNow()
         if let pane {
             settings.selectedSettingsPane = pane
         }

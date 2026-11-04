@@ -1,4 +1,4 @@
-// The floating Telex key table a global chord toggles up and any key takes down.
+// The floating Telex key table a global chord keeps up while the user types.
 
 import AppKit
 
@@ -32,17 +32,19 @@ private struct TelexGuideRow {
     }
 }
 
-/// The Telex key table as a card the user can glance at while typing
-/// (USER 2026-09-09): the same legend used to sit under the Tone Keys picker,
-/// in a settings pane the user is not looking at when they forget which
-/// letter is tone 7. Raised by the `showTelexGuide` chord, which fires from
-/// anywhere, and dismissed by the very next key — Escape is swallowed, every
-/// other key goes on to do its job (`TaigiInputController.handle`).
+/// The Telex key table as a card the user can read while typing (USER
+/// 2026-09-09): the same legend used to sit under the Tone Keys picker, in a
+/// settings pane the user is not looking at when they forget which letter is
+/// tone 7. Up while a romanization is typed and the user wants it
+/// (`SettingsStore.isTelexGuideWanted`), following whichever session is
+/// typing, as the TPS key panel does (#684): the `showTelexGuide` chord is the
+/// only thing that turns it on or off, and every key goes on to do its job.
 ///
 /// The same HUD chrome as `ModeFlashPanel`, with no timer: a table is read at
-/// the user's pace, not the flash's. Owned by the session that raised it, the
-/// way the candidate window is (`CandidatePanel`), so a session on its way
-/// out cannot take down a guide the incoming one just put up.
+/// the user's pace, not the flash's. Display-only: it takes no clicks. Owned
+/// by the session that raised it, the way the candidate window is
+/// (`CandidatePanel`), so a session on its way out cannot take down a guide
+/// the incoming one just put up.
 ///
 /// Always available, not gated on the Telex scheme: a user deciding whether
 /// to switch schemes is exactly the user who wants to see the table.
@@ -63,13 +65,26 @@ final class TelexGuidePanel {
         panel?.isVisible == true
     }
 
-    /// Larger than the mode flash: a table the user reads across the room from
-    /// the text they are typing, not a one-word notice (USER 2026-09-20).
-    private static let titleFontSize: CGFloat = NSFont.systemFontSize + 7
-    private static let rowFontSize: CGFloat = NSFont.systemFontSize + 4
+    /// The display language the card on screen is written in, or nil when
+    /// nothing is showing.
+    private var shownLanguage: DisplayLanguage?
+
+    /// Small: the card stays up beside the text being typed, about the
+    /// height of the TPS key panel that takes its place under TPS (#684).
+    private static let titleFontSize: CGFloat = NSFont.systemFontSize + 1
+    private static let rowFontSize: CGFloat = NSFont.systemFontSize
 
     /// The widest the card may grow; past this the meaning column wraps.
-    private static let maxWidth: CGFloat = 680
+    private static let maxWidth: CGFloat = 360
+
+    /// Between the outline and the text. Held around the stack, not in its
+    /// `edgeInsets`: with the title and the table both arranged, the stack's
+    /// fitting size leaves out the left and right insets, and the table
+    /// runs into the outline.
+    private static let padding = NSEdgeInsets(top: 12, left: 16, bottom: 12, right: 16)
+
+    /// The gap under the card, the TPS key panel's.
+    private static let bottomMargin: CGFloat = 24
 
     /// Row order is reading order: the tones by number, then the two
     /// consonant keys, then the hyphen. `x` and `v` each carry a pair split
@@ -94,17 +109,11 @@ final class TelexGuidePanel {
         rows.map { $0.meaningText(inputMode, language) }
     }
 
-    func toggle(inputMode: InputMode, language: DisplayLanguageStore, ownedBy owner: ComposingSessionToken) {
-        if isShowing {
-            hideNow()
-        } else {
-            show(inputMode: inputMode, language: language, ownedBy: owner)
-        }
-    }
-
-    /// Shows the table for `inputMode`, replacing any guide still up. Rebuilt
-    /// each time: the content follows the mode and the display language, and
-    /// a card shown a few times a day is not worth keeping warm.
+    /// Up for `owner`, or kept up and handed to it — placed again each time,
+    /// so a session in an app on another screen takes it there (IMK activates
+    /// the incoming session before the outgoing one goes, so the guide is
+    /// still up at every handover). Rebuilt only when the mode or the display
+    /// language it is spelled for changed, so a handover does not flicker.
     func show(inputMode: InputMode, language: DisplayLanguageStore, ownedBy owner: ComposingSessionToken) {
         // TPS types no Telex keys; its chord is inert there too. A guide
         // still up goes all the same.
@@ -112,12 +121,24 @@ final class TelexGuidePanel {
             hideNow()
             return
         }
-        panel?.orderOut(nil)
-        let panel = Self.makePanel(inputMode: inputMode, language: language)
-        self.panel = panel
-        panel.orderFrontRegardless()
+        if !isShowing || shownInputMode != inputMode || shownLanguage != language.language {
+            panel?.orderOut(nil)
+            panel = Self.makePanel(inputMode: inputMode, language: language)
+        }
+        guard let panel else { return }
+        if let frame = HUDPanel.typingScreenFrame {
+            let size = panel.frame.size
+            panel.setFrameOrigin(NSPoint(
+                x: frame.midX - size.width / 2,
+                y: frame.minY + Self.bottomMargin,
+            ))
+        }
+        if !isShowing {
+            panel.orderFrontRegardless()
+        }
         self.owner = owner
         shownInputMode = inputMode
+        shownLanguage = language.language
     }
 
     /// Takes the guide down only if `owner` raised it. IMK activates the
@@ -129,18 +150,19 @@ final class TelexGuidePanel {
         hideNow()
     }
 
-    /// Takes the guide down whatever session raised it — what the key path and
-    /// the toggle want, both of which run on the session the user is in.
+    /// Takes the guide down whatever session raised it — what the chord wants,
+    /// which runs on the session the user is in.
     func hideNow() {
         owner = nil
         shownInputMode = nil
+        shownLanguage = nil
         panel?.orderOut(nil)
         panel = nil
     }
 
     /// The card: the scheme's name and the two-column table, on the same HUD
     /// chrome as the mode flash.
-    private static func makePanel(inputMode: InputMode, language: DisplayLanguageStore) -> NSPanel {
+    static func makePanel(inputMode: InputMode, language: DisplayLanguageStore) -> NSPanel {
         let title = NSTextField(labelWithString: language.string(.settingsToneSchemeTelex))
         title.font = .systemFont(ofSize: titleFontSize, weight: .semibold)
 
@@ -151,31 +173,28 @@ final class TelexGuidePanel {
         // Title and table each centred, so the margins read symmetric on
         // every edge (USER 2026-09-20).
         stack.alignment = .centerX
-        stack.spacing = 22
-        stack.edgeInsets = NSEdgeInsets(top: 40, left: 56, bottom: 40, right: 56)
+        stack.spacing = 8
         stack.translatesAutoresizingMaskIntoConstraints = false
-        stack.widthAnchor.constraint(lessThanOrEqualToConstant: maxWidth).isActive = true
+        stack.widthAnchor.constraint(
+            lessThanOrEqualToConstant: maxWidth - padding.left - padding.right,
+        ).isActive = true
         stack.layoutSubtreeIfNeeded()
-        let contentSize = stack.fittingSize
+        let stackSize = stack.fittingSize
+        let contentSize = NSSize(
+            width: stackSize.width + padding.left + padding.right,
+            height: stackSize.height + padding.top + padding.bottom,
+        )
 
         let background = HUDPanel.makeBackground(size: contentSize)
         background.addSubview(stack)
         NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: background.leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: background.trailingAnchor),
-            stack.topAnchor.constraint(equalTo: background.topAnchor),
-            stack.bottomAnchor.constraint(equalTo: background.bottomAnchor),
+            stack.leadingAnchor.constraint(equalTo: background.leadingAnchor, constant: padding.left),
+            stack.trailingAnchor.constraint(equalTo: background.trailingAnchor, constant: -padding.right),
+            stack.topAnchor.constraint(equalTo: background.topAnchor, constant: padding.top),
+            stack.bottomAnchor.constraint(equalTo: background.bottomAnchor, constant: -padding.bottom),
         ])
 
-        let panel = HUDPanel.makePanel(background: background)
-
-        if let frame = HUDPanel.noticeFrame {
-            panel.setFrameOrigin(NSPoint(
-                x: frame.midX - contentSize.width / 2,
-                y: frame.midY - contentSize.height / 2,
-            ))
-        }
-        return panel
+        return HUDPanel.makePanel(background: background)
     }
 
     /// Key | meaning. The key is monospaced semibold because it is a thing
@@ -191,8 +210,8 @@ final class TelexGuidePanel {
             return [key, meaning]
         }
         let grid = NSGridView(views: cells)
-        grid.rowSpacing = 6
-        grid.columnSpacing = 24
+        grid.rowSpacing = 3
+        grid.columnSpacing = 16
         grid.translatesAutoresizingMaskIntoConstraints = false
         return grid
     }

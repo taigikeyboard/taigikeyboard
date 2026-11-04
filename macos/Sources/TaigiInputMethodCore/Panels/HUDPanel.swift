@@ -44,6 +44,18 @@ enum HUDPanel {
         return panel
     }
 
+    /// The visible frame of the screen the mouse is on, else the main one —
+    /// best effort for "the screen being typed on", for the panels that stay
+    /// up while the user types (`TpsKeyboardPanel`, `TelexGuidePanel`).
+    /// Activation may not ask the client for a caret, and `NSScreen.main` in
+    /// an input-method agent can be the primary display whatever the user is
+    /// looking at (`noticeFrame`).
+    static var typingScreenFrame: NSRect? {
+        let mouse = NSEvent.mouseLocation
+        let screen = NSScreen.screens.first { $0.frame.contains(mouse) } ?? NSScreen.main
+        return screen?.visibleFrame
+    }
+
     /// Where a notice may be placed. `NSScreen.main` is a best effort: an
     /// input-method agent holds no key window, and these paths have no client
     /// to ask for a caret, so on a multi-display setup a notice can land on

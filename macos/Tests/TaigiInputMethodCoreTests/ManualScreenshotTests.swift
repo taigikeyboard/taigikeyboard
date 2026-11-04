@@ -41,6 +41,7 @@ final class ManualScreenshotTests: XCTestCase {
         SettingsStore.Keys.selectedSettingsPane.name,
         SettingsStore.Keys.displayLanguage.name,
         SettingsStore.Keys.isTpsKeyboardShown.name,
+        SettingsStore.Keys.isTelexGuideShown.name,
     ]
 
     private var outputDirectory = URL(fileURLWithPath: NSTemporaryDirectory())
