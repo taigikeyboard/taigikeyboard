@@ -1,16 +1,17 @@
 name: Security
 
-# cargo audit over all five Cargo workspaces, cargo deny over the engine and
-# macOS. Neither tool builds anything (both read Cargo.lock / `cargo
+# cargo audit over all five Cargo workspaces, cargo deny over the engine, macOS
+# and Windows. Neither tool builds anything (both read Cargo.lock / `cargo
 # metadata`), so the job needs no protoc, no target cache, and no toolchain
 # install — the runner image's stable cargo is enough. Tools come as prebuilt
 # binaries: `cargo install` used to compile both from source on every run,
 # 6–13 min of an 8.6 min average (measured 2026-09-06). Prebuilt: 37 s.
 #
-# `cargo deny` runs on the engine and macOS — `engine/deny.toml` carries the
-# licence allowlist and the wildcard-path exemption; macOS borrows it, as its
-# archive is the engine plus one shell crate. The Windows, desktop and
-# Linux workspaces have no deny.toml, so they get the advisory check alone;
+# `cargo deny` runs on the engine, macOS and Windows — `engine/deny.toml` carries
+# the licence allowlist and the wildcard-path exemption; macOS borrows it, as its
+# archive is the engine plus one shell crate, and `windows/deny.toml` is its own
+# because that workspace has a git source. The desktop and Linux workspaces have
+# no deny.toml, so they get the advisory check alone;
 # their engine crates are path dependencies and are already covered by the
 # engine's run, but each lockfile pins its own third-party versions.
 on:
@@ -23,6 +24,7 @@ on:
       - 'engine/**/Cargo.toml'
       - 'engine/deny.toml'
       - 'windows/Cargo.lock'
+      - 'windows/deny.toml'
       - 'windows/**/Cargo.toml'
       - 'desktop/Cargo.lock'
       - 'desktop/**/Cargo.toml'
@@ -38,6 +40,7 @@ on:
       - 'engine/**/Cargo.toml'
       - 'engine/deny.toml'
       - 'windows/Cargo.lock'
+      - 'windows/deny.toml'
       - 'windows/**/Cargo.toml'
       - 'desktop/Cargo.lock'
       - 'desktop/**/Cargo.toml'
@@ -106,3 +109,7 @@ jobs:
       - name: cargo deny check (macos)
         working-directory: macos
         run: cargo deny --config ../engine/deny.toml check
+
+      - name: cargo deny check (windows)
+        working-directory: windows
+        run: cargo deny check

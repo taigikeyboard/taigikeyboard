@@ -140,14 +140,14 @@ sign_file() {
 echo "==> Building the release binaries ($RELEASE_TARGET)"
 # TAIGI_REQUIRE_RESOURCES: a resource-compile failure FAILS the build instead
 # of warning (build-support/resource.rs) — the updater reads VERSIONINFO.
-(cd "$WINDOWS_DIR" && TAIGI_REQUIRE_RESOURCES=1 cargo build --release --target "$RELEASE_TARGET" -p taigi-windows-tsf -p taigi-windows-settings)
+(cd "$WINDOWS_DIR" && TAIGI_REQUIRE_RESOURCES=1 cargo build --release --locked --target "$RELEASE_TARGET" -p taigi-windows-tsf -p taigi-windows-settings)
 [[ -f "$TARGET_DIR/$SERVICE_DLL" ]] || fail "no $SERVICE_DLL in $TARGET_DIR"
 [[ -f "$TARGET_DIR/$SETTINGS_EXE" ]] || fail "no $SETTINGS_EXE in $TARGET_DIR"
 
 echo "==> Building the 32-bit text service ($RELEASE_TARGET_32)"
 # The DLL only: a 32-bit host loads the text service, never the settings
 # window, which the 64-bit exe beside it serves for both.
-(cd "$WINDOWS_DIR" && TAIGI_REQUIRE_RESOURCES=1 cargo build --release --target "$RELEASE_TARGET_32" -p taigi-windows-tsf)
+(cd "$WINDOWS_DIR" && TAIGI_REQUIRE_RESOURCES=1 cargo build --release --locked --target "$RELEASE_TARGET_32" -p taigi-windows-tsf)
 [[ -f "$TARGET_DIR_32/$SERVICE_DLL" ]] || fail "no $SERVICE_DLL in $TARGET_DIR_32"
 
 echo "==> Reading back what the binaries declare"

@@ -150,8 +150,10 @@ Arm64/Arm64EC build tools, which the release machine does not have
 
 `.github/workflows/windows-build.yml` builds the release installer on a
 GitHub-hosted `windows-2025` runner — `bash windows/scripts/release-app.sh
---skip-sign`, the same entry point, with Inno Setup and `protoc` installed from
-version- and digest-pinned downloads and the MSVC developer environment applied.
+--skip-sign`, the same entry point, with Inno Setup, `protoc` and the Windows App
+Runtime packages taken from version- and digest-pinned downloads, the compiler
+from the version `windows/rust-toolchain.toml` names, and the MSVC developer
+environment applied.
 `make desktop-release` dispatches it, and the dispatched run attaches its
 installer to the draft; a run fired by `release: published` rebuilds for
 provenance and publishes nothing.

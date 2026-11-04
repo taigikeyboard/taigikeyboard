@@ -1,0 +1,38 @@
+# The engine's policy (`engine/deny.toml`) plus the two things only this workspace
+# has: the pinned windows-rs git source and the updater's root-certificate data.
+[graph]
+all-features = false
+
+[advisories]
+version = 2
+yanked = "deny"
+
+[licenses]
+version = 2
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-DFS-2016",
+    "Unicode-3.0",
+    "Zlib",
+]
+confidence-threshold = 0.92
+# Data, not code: the Mozilla root certificates ureq trusts. Not OSI-approved,
+# so it is an exception for this crate rather than an entry in the allowlist.
+exceptions = [{ allow = ["CDLA-Permissive-2.0"], crate = "webpki-root-certs" }]
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+allow-wildcard-paths = true
+deny = []
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = ["https://github.com/microsoft/windows-rs"]

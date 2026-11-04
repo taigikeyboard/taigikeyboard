@@ -6,8 +6,11 @@ and everything shipped inside a released application package — that is **not**
 covered by that licence.
 
 Dictionary data is inventoried separately, in `dictionary/LICENSE` and
-`dictionary/docs/SOURCES.md`, because its terms differ per source and it is
-the one component in this repository that is not open source.
+`dictionary/docs/SOURCES.md`, because its terms differ per source.
+
+Not open source, in the shipped packages: that dictionary data, the Windows App
+Runtime in the Windows installer (§ Windows runtime), and KeyboardKit and
+LicenseKit on iOS (§ Apple platform dependencies).
 
 ## Fonts (shipped inside every application package)
 
@@ -73,10 +76,12 @@ terms as above.
 
 ## Rust dependencies
 
-The engine and macOS workspaces admit only OSI-approved licences, enforced in CI
-(`.github/workflows/security.yml`) by `cargo deny` against the allowlist in
-`engine/deny.toml`; the Windows, desktop and Linux workspaces have no `deny.toml`
-and get `cargo audit` (advisories) only:
+The engine, macOS and Windows workspaces admit only OSI-approved licences,
+enforced in CI (`.github/workflows/security.yml`) by `cargo deny` against the
+allowlist in `engine/deny.toml` and `windows/deny.toml`; the desktop and Linux
+workspaces have no `deny.toml` and get `cargo audit` (advisories) only. The one
+exception is `webpki-root-certs`, the Mozilla root certificates the updater's
+HTTPS client trusts, which is data under CDLA-Permissive-2.0. The allowlist:
 
     MIT, Apache-2.0, Apache-2.0 WITH LLVM-exception, BSD-2-Clause,
     BSD-3-Clause, ISC, Unicode-DFS-2016, Unicode-3.0, Zlib
@@ -105,6 +110,21 @@ are not yet inventoried here):
 | `serde`, `serde_json`, `thiserror`, `log`, `uuid`, `tempfile`, `sha2`, `regex`, `once_cell`, `indexmap`, `unicode-normalization`, `unicode-properties` | MIT / Apache-2.0 | |
 | `rfd` | MIT | Native file dialogs (Windows settings app) |
 | `raw-window-handle` | MIT / Apache-2.0 / Zlib | |
+
+## Windows runtime (shipped in the Windows installer)
+
+The settings window is WinUI 3, deployed self-contained: these files are installed
+beside `TaigiKeyboardSettings.exe`, and listed one by one in
+`windows/build-support/windows-app-runtime-files.txt`. The text service loads none
+of them.
+
+| Package | Version | Licence |
+| --- | --- | --- |
+| **Windows App Runtime** (`Microsoft.WindowsAppSDK.Runtime`) | 2.4.0 | **Closed source**, Microsoft Software License Terms, Windows App SDK |
+| WebView2 projection (`Microsoft.Web.WebView2`, `Microsoft.Web.WebView2.Core.dll`) | 1.0.4078.44 | BSD-3-Clause © Microsoft Corporation |
+
+Both are fetched from NuGet at build time, by version and digest
+(`.github/workflows/windows-build.yml`), and are not vendored here.
 
 ## Apple platform dependencies (iOS and macOS)
 
