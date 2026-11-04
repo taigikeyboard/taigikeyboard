@@ -79,6 +79,7 @@ import com.siansiansu.taigikeyboard.ime.text.layout.LayoutKeyGridInteraction
 import com.siansiansu.taigikeyboard.ime.text.layout.LayoutPlace
 import com.siansiansu.taigikeyboard.ime.text.layout.LayoutUse
 import com.siansiansu.taigikeyboard.ime.text.layout.accessibilityName
+import com.siansiansu.taigikeyboard.ime.text.layout.isFullWidthSymbol
 import com.siansiansu.taigikeyboard.ui.components.GALLERY_PREVIEW_ASPECT
 import com.siansiansu.taigikeyboard.ui.components.NameDialog
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
@@ -383,7 +384,7 @@ fun LayoutEditorScreen(
                     // rows keep their columns.
                     val held = remember(callouts) { tables.trayForms(callouts) }
                     val letters = remember(draft) { draft.spares(tables.trayLetters) }
-                    val (halfWidth, fullWidth) = remember(draft) { tables.traySymbols(draft).partition { !CustomLayoutTables.isFullWidth(it) } }
+                    val (halfWidth, fullWidth) = remember(draft) { tables.traySymbols(draft).partition { !isFullWidthSymbol(it) } }
                     if (!draft.hasEmojiKey || letters.isNotEmpty()) {
                         TraySection(L10n.layoutTrayLetters) {
                             SpareFlow(letters, onTap = ::replaceSelected) {
