@@ -118,6 +118,13 @@ impl Engine {
         self.replay(emitter, emits).await;
     }
 
+    async fn begin_session(&mut self, what: &str, emitter: &SignalEmitter<'_>) {
+        let emits = self.guarded(what, Vec::new(), |engine| {
+            session::begin_session(&engine.runtime, &mut engine.state)
+        });
+        self.replay(emitter, emits).await;
+    }
+
     /// `RegisterProperties` with the menu as it stands — on `Enable`, and
     /// again on every `FocusIn` so an Input Script, a display language or a
     /// chord changed in the settings window shows on the next focus.
@@ -334,9 +341,10 @@ impl Engine {
         self.replay(&emitter, emits).await;
     }
 
-    async fn focus_in(&self, #[zbus(signal_emitter)] emitter: SignalEmitter<'_>) {
+    async fn focus_in(&mut self, #[zbus(signal_emitter)] emitter: SignalEmitter<'_>) {
         log::debug!("engine.focus_in token={:?}", self.token);
         self.register_menu(&emitter).await;
+        self.begin_session("FocusIn", &emitter).await;
     }
 
     async fn focus_in_id(&self, _object_path: String, _client: String) {}
@@ -356,6 +364,7 @@ impl Engine {
 
     async fn reset(&mut self, #[zbus(signal_emitter)] emitter: SignalEmitter<'_>) {
         self.end_session("Reset", &emitter).await;
+        self.begin_session("Reset", &emitter).await;
     }
 
     async fn enable(&self, #[zbus(signal_emitter)] emitter: SignalEmitter<'_>) {

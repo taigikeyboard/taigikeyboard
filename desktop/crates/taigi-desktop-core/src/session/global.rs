@@ -10,15 +10,14 @@
 
 use super::key::{commit_for_picker, is_composing};
 use super::{
-    is_vertical_layout, present_table, Emit, EngineState, KeySurface, LookupSelection,
-    LookupTableContent, Recorder, SymbolPicker, PAGE_SIZE,
+    is_vertical_layout, present_table, Emit, EngineState, KeySurface, LookupSelection, Recorder,
+    SymbolPicker, PAGE_SIZE,
 };
 use crate::composing::{insert_symbol, represent_list, ContextToken};
-use crate::keys::{telex_guide_rows, ComposingKeyBindings, ShortcutAction};
+use crate::keys::{ComposingKeyBindings, ShortcutAction};
 use crate::runtime::DesktopRuntime;
 use crate::settings::presentation::output_script_label;
 use crate::settings::{keys, CandidateDisplayMode, InputMode, InputModeRequest, SettingsDocument};
-use crate::strings::StringKey;
 use crate::symbols::SymbolTable;
 
 /// A global shortcut fired — from its chord in the key path or from the
@@ -37,17 +36,11 @@ pub fn perform_global(
         return emits;
     }
     let bindings = ComposingKeyBindings::from_document(&settings, runtime.platform());
-    // The guide comes down BEFORE any other action runs: a switch under an
-    // open card would leave a table spelled for the romanization the user
-    // just left (`TaigiInputController.performShortcutAction`). The picker
-    // likewise, unless the action IS the picker's toggle.
-    if action != ShortcutAction::ShowTelexGuide && state.telex_guide_shown {
-        state.telex_guide_shown = false;
-        present_table(state, &settings, &bindings, &mut emits);
-    }
+    // The picker comes down BEFORE any other action runs, unless the action
+    // IS its toggle.
     if action != ShortcutAction::ShowSymbolPicker && state.symbol_picker.is_some() {
         state.symbol_picker = None;
-        present_table(state, &settings, &bindings, &mut emits);
+        present_table(runtime, state, &settings, &bindings, &mut emits);
     }
     match action {
         ShortcutAction::OpenLastSettingsPane => {
@@ -90,7 +83,7 @@ pub fn perform_global(
             // never which exist — re-presented in place, selection kept.
             let settings = runtime.settings.current();
             represent_open_list(runtime, token, state, &settings, false);
-            present_table(state, &settings, &bindings, &mut emits);
+            present_table(runtime, state, &settings, &bindings, &mut emits);
             emits.push(Emit::ModeChanged);
             // Announced even over an open list, as on the other desktops
             // (USER 2026-10-31). Side by side only: under combined a commit
@@ -111,18 +104,19 @@ pub fn perform_global(
             // only how they draw — re-fetched under the new mode.
             let settings = runtime.settings.current();
             represent_open_list(runtime, token, state, &settings, true);
-            present_table(state, &settings, &bindings, &mut emits);
+            present_table(runtime, state, &settings, &bindings, &mut emits);
             emits.push(Emit::ModeChanged);
             emits.push(Emit::AnnounceMode);
         }
         ShortcutAction::ShowTelexGuide => {
-            state.telex_guide_shown = !state.telex_guide_shown;
-            if state.telex_guide_shown {
-                emits.push(Emit::LookupTable(telex_guide_table(runtime, &settings)));
-                state.is_table_shown = true;
-            } else {
-                present_table(state, &settings, &bindings, &mut emits);
+            if !runtime.update_settings("toggle_telex_guide", |document| {
+                let is_shown = document.bool(&keys::TELEX_GUIDE_SHOWN);
+                document.set_bool(&keys::TELEX_GUIDE_SHOWN, !is_shown);
+            }) {
+                return emits;
             }
+            let settings = runtime.settings.current();
+            present_table(runtime, state, &settings, &bindings, &mut emits);
         }
         ShortcutAction::ShowSymbolPicker => {
             toggle_symbol_picker(runtime, token, state, &settings, &bindings, &mut emits);
@@ -131,8 +125,8 @@ pub fn perform_global(
             // A window of the settings app, not of this engine (desktop
             // TPS roadmap D6, U6): the app's one instance opens it or closes it. The
             // composition is not touched — the panel is looked at, and its
-            // window taking focus is what would end the session; the guide
-            // and the picker came down above, as for every global action.
+            // window taking focus is what would end the session; the picker
+            // came down above, as for every global action.
             emits.push(Emit::ToggleTpsKeyboard);
         }
     }
@@ -187,7 +181,7 @@ fn switch_input_mode(
     }
     let settings = runtime.settings.current();
     state.clear_list();
-    present_table(state, &settings, bindings, emits);
+    present_table(runtime, state, &settings, bindings, emits);
     emits.push(Emit::ModeChanged);
     emits.push(Emit::AnnounceMode);
 }
@@ -227,30 +221,6 @@ fn represent_open_list(
         .set_unkeyed_lead(state.candidates.leads_with_literal_roman());
 }
 
-/// The Telex key table as a lookup table: the title row, then `key  meaning`
-/// per row, no labels, no highlight, one vertical page (Linux roadmap L4 —
-/// platform-adapted presentation of `keys::telex_guide_rows`).
-fn telex_guide_table(runtime: &DesktopRuntime, settings: &SettingsDocument) -> LookupTableContent {
-    let strings = runtime.strings();
-    let mut rows = vec![strings
-        .resolve(StringKey::SettingsToneSchemeTelex)
-        .to_owned()];
-    rows.extend(
-        telex_guide_rows(settings.choice(&keys::INPUT_MODE), &strings)
-            .into_iter()
-            .map(|row| format!("{}  {}", row.key, row.meaning)),
-    );
-    let page_size = rows.len() as u32;
-    LookupTableContent {
-        candidates: rows,
-        labels: Vec::new(),
-        cursor: 0,
-        cursor_visible: false,
-        page_size,
-        vertical: true,
-    }
-}
-
 /// The picker chord: down if up; otherwise the composition is ended first
 /// — commit first, as vChewing does (`InputHandler_HandleStates.swift:1110`):
 /// the picker writes into the document, and a composition still marked
@@ -267,7 +237,7 @@ fn toggle_symbol_picker(
 ) {
     if state.symbol_picker.is_some() {
         state.symbol_picker = None;
-        present_table(state, settings, bindings, emits);
+        present_table(runtime, state, settings, bindings, emits);
         return;
     }
     // The picker writes into the document and learns the pick — neither
@@ -293,7 +263,7 @@ fn toggle_symbol_picker(
         symbols,
         selection: LookupSelection::new(count, PAGE_SIZE),
     });
-    present_table(state, settings, bindings, emits);
+    present_table(runtime, state, settings, bindings, emits);
 }
 
 /// Writes the symbol at `index`, closes the picker and moves the symbol to
@@ -338,7 +308,7 @@ pub(super) fn pick_symbol(
     let recorder = surface.recorder;
     state.armed_auto_space = recorder.armed_swap;
     let mut emits = recorder.emits;
-    present_table(state, settings, bindings, &mut emits);
+    present_table(runtime, state, settings, bindings, &mut emits);
     // The recents write is on the key path (the shell replays the commit
     // after this returns); a store that cannot be written still got its
     // symbol, the failure is only logged.
@@ -364,7 +334,9 @@ mod tests {
     }
 
     #[test]
-    fn opening_settings_is_asked_of_the_shell_after_the_guide_comes_down() {
+    fn opening_settings_is_asked_of_the_shell_and_leaves_the_guide_up() {
+        // trace: only the chord takes the guide down (#684), so a wanted
+        // guide on screen gets no HideLookupTable here.
         assert_eq!(
             fire(
                 SettingsDocument::default(),
@@ -372,19 +344,20 @@ mod tests {
             ),
             vec![Emit::OpenSettings]
         );
+        let mut guide_wanted = SettingsDocument::default();
+        guide_wanted.set_bool(&keys::TELEX_GUIDE_SHOWN, true);
         let mut state = EngineState {
-            telex_guide_shown: true,
             is_table_shown: true,
             ..EngineState::default()
         };
         assert_eq!(
             perform_global(
-                &runtime(SettingsDocument::default()),
+                &runtime(guide_wanted),
                 ContextToken(1),
                 &mut state,
                 ShortcutAction::OpenLastSettingsPane,
             ),
-            vec![Emit::HideLookupTable, Emit::OpenSettings]
+            vec![Emit::OpenSettings]
         );
     }
 

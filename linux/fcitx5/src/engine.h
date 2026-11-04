@@ -40,6 +40,7 @@ public:
     ~State() override;
 
     void keyEvent(KeyEvent &event);
+    void beginSession();
     void endSession();
     void navigate(uint32_t direction);
     void click(uint32_t position);

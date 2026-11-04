@@ -13,7 +13,7 @@ use std::sync::{Mutex, MutexGuard};
 use taigi_desktop_core::composing::ContextToken;
 use taigi_desktop_core::settings::keys;
 use taigi_desktop_storage::SettingsFileStore;
-use taigi_linux_core::session::{end_session, process_raw_key, EngineState};
+use taigi_linux_core::session::{begin_session, end_session, process_raw_key, EngineState};
 use taigi_linux_core::{Emit, LookupTableContent, Runtime};
 use taigi_linux_platform::key_translation::state;
 use taigi_linux_platform::{RawKeyEvent, UserDirectories};
@@ -145,6 +145,56 @@ fn typing_shows_the_preedit_and_a_labelled_list_led_by_the_literal() {
     assert_eq!(table.labels, ["", "q", "w", "d", "f", "z", "x", "v", "y"]);
     assert_eq!((table.cursor, table.cursor_visible), (0, true));
     assert_eq!((table.page_size, table.vertical), (9, true));
+}
+
+/// The framework has one table to draw (#684): a wanted Telex guide gives way
+/// to the candidates and comes back when they go, by commit or by cancel.
+#[test]
+fn the_telex_guide_gives_way_to_the_candidates_and_returns() {
+    let _serial = serial();
+    let mut session = Session::new(false, true);
+    let (handled, emits) = session.press_with(u32::from(b'/'), state::CONTROL | state::MOD1);
+    assert!(handled);
+    let [Emit::LookupTable(guide)] = emits.as_slice() else {
+        panic!("the chord raises the guide: {emits:?}");
+    };
+    let guide = guide.clone();
+    assert!(!guide.cursor_visible);
+
+    let list = session.type_word("ho");
+    assert!(list.cursor_visible, "the candidates hold the table");
+
+    assert_eq!(
+        session.press(ESCAPE),
+        [Emit::ClearPreedit, Emit::LookupTable(guide.clone())]
+    );
+
+    session.type_word("ho");
+    assert_eq!(
+        session.press(RETURN),
+        [
+            Emit::ClearPreedit,
+            commit("ho"),
+            Emit::LookupTable(guide.clone())
+        ]
+    );
+
+    assert_eq!(
+        end_session(&session.runtime, session.token, &mut session.state),
+        [Emit::HideLookupTable]
+    );
+    assert_eq!(
+        begin_session(&session.runtime, &mut session.state),
+        [Emit::LookupTable(guide)],
+        "the next focus brings it back from the stored setting"
+    );
+}
+
+#[test]
+fn begin_session_shows_nothing_unless_the_guide_is_wanted() {
+    let _serial = serial();
+    let mut session = Session::new(false, true);
+    assert!(begin_session(&session.runtime, &mut session.state).is_empty());
 }
 
 #[test]

@@ -16,7 +16,7 @@ use super::global::{perform_global, pick_symbol};
 use super::{is_vertical_layout, present_table, Emit, EngineState, KeyReply, KeySurface, Recorder};
 use crate::composing::{
     pass_through_may_consume, perform_intent, ComposingEffectExecutor, ComposingManager,
-    ComposingSessionCoordinator, ContextToken,
+    ContextToken,
 };
 use crate::engine::Effect;
 use crate::keys::{
@@ -53,21 +53,6 @@ pub fn process_key(
         }
         state.latched_chord = None;
     }
-    // The Telex guide goes down on the first key after it came up, before
-    // that key is read: it is a card to glance at, not a mode
-    // (`TaigiInputController.handle`). Not on the global chords, so the
-    // toggle chord is not "any key". A plain Escape is swallowed — the user
-    // mid-word who checked the table keeps the composition and its list.
-    if global_action.is_none() && state.telex_guide_shown {
-        state.telex_guide_shown = false;
-        present_table(state, &settings, &bindings, &mut emits);
-        if snapshot.is_bare_escape() {
-            return KeyReply {
-                handled: true,
-                emits,
-            };
-        }
-    }
     // The global chords, before the classifier — the Carbon hotkey's
     // position on the Mac, and like it independent of whether a
     // composition is running.
@@ -89,7 +74,7 @@ pub fn process_key(
     if state.is_password_field {
         state.armed_auto_space = false;
         if state.symbol_picker.take().is_some() {
-            present_table(state, &settings, &bindings, &mut emits);
+            present_table(runtime, state, &settings, &bindings, &mut emits);
         }
         return KeyReply {
             handled: false,
@@ -104,7 +89,7 @@ pub fn process_key(
         match SymbolPickerIntent::intent(snapshot, &bindings, runtime.platform()) {
             SymbolPickerIntent::Close => {
                 state.symbol_picker = None;
-                present_table(state, &settings, &bindings, &mut emits);
+                present_table(runtime, state, &settings, &bindings, &mut emits);
                 return KeyReply {
                     handled: true,
                     emits,
@@ -116,7 +101,7 @@ pub fn process_key(
                         .selection
                         .navigate(direction, is_vertical_layout(&settings));
                 }
-                present_table(state, &settings, &bindings, &mut emits);
+                present_table(runtime, state, &settings, &bindings, &mut emits);
                 return KeyReply {
                     handled: true,
                     emits,
@@ -152,7 +137,7 @@ pub fn process_key(
             }
             SymbolPickerIntent::CloseAndPassThrough => {
                 state.symbol_picker = None;
-                present_table(state, &settings, &bindings, &mut emits);
+                present_table(runtime, state, &settings, &bindings, &mut emits);
             }
         }
     }
@@ -220,17 +205,9 @@ pub fn process_key(
     if setup.lexicon.is_none() {
         log::warn!("key.no_lexicon");
     }
-    let mut coordinator = runtime.lock_coordinator();
     let mut reply = run_key(
-        &mut coordinator,
-        token,
-        state,
-        snapshot,
-        intent,
-        &settings,
-        &bindings,
+        runtime, token, state, snapshot, intent, &settings, &bindings,
     );
-    drop(coordinator);
     emits.append(&mut reply.emits);
     KeyReply {
         handled: reply.handled,
@@ -266,9 +243,18 @@ pub fn end_session(
     }
     state.clear_list();
     state.armed_auto_space = false;
-    state.telex_guide_shown = false;
     state.symbol_picker = None;
     state.latched_chord = None;
+    emits
+}
+
+/// A session gaining focus, or going on after a client's reset: the table as
+/// things stand, which is what puts a wanted Telex guide back up.
+pub fn begin_session(runtime: &DesktopRuntime, state: &mut EngineState) -> Vec<Emit> {
+    let settings = runtime.settings.current();
+    let bindings = ComposingKeyBindings::from_document(&settings, runtime.platform());
+    let mut emits = Vec::new();
+    present_table(runtime, state, &settings, &bindings, &mut emits);
     emits
 }
 
@@ -291,13 +277,15 @@ pub fn commit_composition(
     let mut emits = recorder.emits;
     let settings = runtime.settings.current();
     let bindings = ComposingKeyBindings::from_document(&settings, runtime.platform());
-    clear_surface(state, &settings, &bindings, &mut emits);
+    clear_surface(runtime, state, &settings, &bindings, &mut emits);
     emits
 }
 
 /// What was on screen for the text just left, and the arm that promised it a
-/// swap, go down together.
+/// swap, go down together. A wanted Telex guide is a setting, not part of
+/// that text, so the table it leaves is the guide (#684).
 fn clear_surface(
+    runtime: &DesktopRuntime,
     state: &mut EngineState,
     settings: &SettingsDocument,
     bindings: &ComposingKeyBindings,
@@ -305,9 +293,8 @@ fn clear_surface(
 ) {
     state.clear_list();
     state.armed_auto_space = false;
-    state.telex_guide_shown = false;
     state.symbol_picker = None;
-    present_table(state, settings, bindings, emits);
+    present_table(runtime, state, settings, bindings, emits);
 }
 
 /// The Shift tap's switch between Taigi and English — the Windows
@@ -315,8 +302,9 @@ fn clear_surface(
 /// `Commit`, where [`commit_composition`] writes it as typed: this switch is
 /// the user's own, like Enter. A commit that left it standing skips the switch
 /// whole, because the
-/// reset below would drop text still on screen. The arm, the list, the picker
-/// and the guide belong to the mode being left.
+/// reset below would drop text still on screen. The arm, the list and the
+/// picker belong to the mode being left; a wanted guide stays, as the Windows
+/// card does across the switch.
 pub fn toggle_language_mode(
     runtime: &DesktopRuntime,
     token: ContextToken,
@@ -326,9 +314,8 @@ pub fn toggle_language_mode(
     let bindings = ComposingKeyBindings::from_document(&settings, runtime.platform());
     let mut emits = Vec::new();
     if is_composing(runtime, token) {
-        let mut coordinator = runtime.lock_coordinator();
         let mut reply = run_key(
-            &mut coordinator,
+            runtime,
             token,
             state,
             &KeyEventSnapshot::default(),
@@ -337,13 +324,12 @@ pub fn toggle_language_mode(
             &bindings,
         );
         emits.append(&mut reply.emits);
-        drop(coordinator);
         if is_composing(runtime, token) {
             log::warn!("language_mode.commit_refused — switch skipped");
             return emits;
         }
     }
-    clear_surface(state, &settings, &bindings, &mut emits);
+    clear_surface(runtime, state, &settings, &bindings, &mut emits);
     if let Some(coordinator) = runtime.coordinator_if_built() {
         let mut coordinator = coordinator
             .lock()
@@ -387,9 +373,8 @@ pub(super) fn commit_for_picker(
         settings.choice(&keys::INPUT_MODE),
     );
     runtime.prepare_for_first_key();
-    let mut coordinator = runtime.lock_coordinator();
     run_key(
-        &mut coordinator,
+        runtime,
         token,
         state,
         &KeyEventSnapshot::default(),
@@ -415,7 +400,7 @@ fn commit_left_by_mode_change(
     let Some(coordinator) = runtime.coordinator_if_built() else {
         return;
     };
-    let mut coordinator = coordinator
+    let coordinator = coordinator
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner());
     let is_left_by_mode_change = coordinator
@@ -424,8 +409,9 @@ fn commit_left_by_mode_change(
     if !is_left_by_mode_change {
         return;
     }
+    drop(coordinator);
     let mut reply = run_key(
-        &mut coordinator,
+        runtime,
         token,
         state,
         &KeyEventSnapshot::default(),
@@ -446,25 +432,19 @@ pub fn navigate_from_panel(
 ) -> Vec<Emit> {
     let settings = runtime.settings.current();
     let bindings = ComposingKeyBindings::from_document(&settings, runtime.platform());
-    // The guide is one page with no highlight; a panel scroll over it must
-    // not move the list it covers.
-    if state.telex_guide_shown {
-        return Vec::new();
-    }
     if let Some(picker) = &mut state.symbol_picker {
         picker
             .selection
             .navigate(direction, is_vertical_layout(&settings));
         let mut emits = Vec::new();
-        present_table(state, &settings, &bindings, &mut emits);
+        present_table(runtime, state, &settings, &bindings, &mut emits);
         return emits;
     }
     if state.candidates.is_empty() {
         return Vec::new();
     }
-    let mut coordinator = runtime.lock_coordinator();
     run_key(
-        &mut coordinator,
+        runtime,
         token,
         state,
         &KeyEventSnapshot::default(),
@@ -484,9 +464,6 @@ pub fn click_from_panel(
 ) -> Vec<Emit> {
     let settings = runtime.settings.current();
     let bindings = ComposingKeyBindings::from_document(&settings, runtime.platform());
-    if state.telex_guide_shown {
-        return Vec::new();
-    }
     if let Some(picker) = &mut state.symbol_picker {
         let Some(index) = picker.selection.candidate_index_on_page(position) else {
             return Vec::new();
@@ -499,7 +476,7 @@ pub fn click_from_panel(
         state.selection.select(index);
     }
     let mut emits = Vec::new();
-    present_table(state, &settings, &bindings, &mut emits);
+    present_table(runtime, state, &settings, &bindings, &mut emits);
     emits
 }
 
@@ -507,8 +484,9 @@ pub fn click_from_panel(
 /// the engine's `TpsKey`, whatever the list or the slot keys would make of
 /// that key (`ComposingKeyIntent::tps_keyboard_press`). Nothing outside TPS,
 /// off the layout or in English mode, where a panel can still be clicked. A
-/// picker or a guide goes down first: the glyph is the document's, and those
-/// answer keys the click did not press (`typeTpsKeyboardGlyph` in macOS).
+/// picker goes down first: the glyph is the document's, and it answers keys
+/// the click did not press (`typeTpsKeyboardGlyph` in macOS). A wanted Telex
+/// guide stays, as it does for a key.
 pub fn tps_keyboard_press(
     runtime: &DesktopRuntime,
     token: ContextToken,
@@ -526,17 +504,14 @@ pub fn tps_keyboard_press(
     }
     let bindings = ComposingKeyBindings::from_document(&settings, runtime.platform());
     let mut emits = Vec::new();
-    let had_picker = state.symbol_picker.take().is_some();
-    let had_guide = std::mem::take(&mut state.telex_guide_shown);
-    if had_picker || had_guide {
-        present_table(state, &settings, &bindings, &mut emits);
+    if state.symbol_picker.take().is_some() {
+        present_table(runtime, state, &settings, &bindings, &mut emits);
     }
     runtime.prepare_for_first_key();
-    let mut coordinator = runtime.lock_coordinator();
     // No key: `perform_intent` commits a composition a switch across TPS left
     // behind before it types.
     let mut reply = run_key(
-        &mut coordinator,
+        runtime,
         token,
         state,
         &KeyEventSnapshot::default(),
@@ -550,7 +525,7 @@ pub fn tps_keyboard_press(
 
 /// The Windows `run_key` + `perform_work`, against the recorder.
 fn run_key(
-    coordinator: &mut ComposingSessionCoordinator,
+    runtime: &DesktopRuntime,
     token: ContextToken,
     state: &mut EngineState,
     snapshot: &KeyEventSnapshot,
@@ -561,6 +536,7 @@ fn run_key(
     // Every key gets exactly one chance at the swap: the arm is consumed
     // here, and only the auto-space paths re-arm it.
     let is_swap_armed = std::mem::take(&mut state.armed_auto_space);
+    let mut coordinator = runtime.lock_coordinator();
     // Ownership: a key from this context while another owns the engine
     // takes it over. The other context's composition was already finished
     // by the framework's focus-out (`end_session`), so `claim` finds nothing
@@ -590,8 +566,9 @@ fn run_key(
     );
     let recorder = surface.recorder;
     state.armed_auto_space = recorder.armed_swap;
+    drop(coordinator);
     let mut emits = recorder.emits;
-    present_table(state, settings, bindings, &mut emits);
+    present_table(runtime, state, settings, bindings, &mut emits);
     KeyReply { handled, emits }
 }
 
