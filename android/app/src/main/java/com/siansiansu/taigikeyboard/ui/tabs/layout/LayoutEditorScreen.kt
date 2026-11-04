@@ -387,7 +387,7 @@ fun LayoutEditorScreen(
                     val (halfWidth, fullWidth) = remember(draft) { tables.traySymbols(draft).partition { !isFullWidthSymbol(it) } }
                     if (!draft.hasEmojiKey || letters.isNotEmpty()) {
                         TraySection(L10n.layoutTrayLetters) {
-                            SpareFlow(letters, onTap = ::replaceSelected) {
+                            SpareFlow(letters, onTap = ::replaceSelected, held = held) {
                                 if (!draft.hasEmojiKey) {
                                     // Tap restores the emoji key at once.
                                     TrayChip(
@@ -488,10 +488,6 @@ private fun UseMenu(
     }
 }
 
-/**
- * A run of tray chips, [leading] first, then one chip per spare (tap = put it on the selected key or
- * long-press slot); [held] chips are dimmed and inert.
- */
 @Composable
 private fun TraySection(
     title: String,
@@ -508,11 +504,15 @@ private fun TraySection(
     }
 }
 
+/**
+ * A run of tray chips, [leading] first, then one chip per spare (tap = put it on the selected key or
+ * long-press slot); [held] chips are dimmed and inert.
+ */
 @Composable
 private fun SpareFlow(
     spares: List<String>,
     onTap: (String) -> Unit,
-    held: Set<String> = emptySet(),
+    held: Set<String>,
     leading: @Composable () -> Unit = {},
 ) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

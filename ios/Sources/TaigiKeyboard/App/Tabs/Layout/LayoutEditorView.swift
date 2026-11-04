@@ -254,7 +254,7 @@ struct LayoutEditorView: View {
 
     private func symbolGrid(_ symbols: [String]) -> some View {
         trayGrid {
-            ForEach(symbols, id: \.self, content: calloutSpareButton)
+            ForEach(symbols, id: \.self, content: spareButton)
         }
     }
 
@@ -266,7 +266,7 @@ struct LayoutEditorView: View {
                 GridRow {
                     ForEach(0 ..< columns, id: \.self) { column in
                         if row.indices.contains(column) {
-                            calloutSpareButton(row[column])
+                            spareButton(row[column])
                         } else {
                             Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
                         }
@@ -276,20 +276,15 @@ struct LayoutEditorView: View {
         }
     }
 
-    /// A spare that can also fill a long-press slot: one the selected key's list already holds stays
-    /// in place, dimmed, so the rows keep their columns.
-    private func calloutSpareButton(_ char: String) -> some View {
-        let isHeld = selectedLabel.map { draft.holdsCallout(char, for: $0) } ?? false
-        return spareButton(char)
-            .disabled(isHeld)
-            .opacity(isHeld ? 0.3 : 1)
-    }
-
-    /// A tap only does something once a character key or a long-press slot is selected.
+    /// A tap only does something once a character key or a long-press slot is selected. One the
+    /// selected key's list already holds stays in place, dimmed, so the rows keep their columns.
     private func spareButton(_ spare: String) -> some View {
-        trayButton(action: { replaceSelected(with: spare) }) {
+        let isHeld = selectedLabel.map { draft.holdsCallout(spare, for: $0) } ?? false
+        return trayButton(action: { replaceSelected(with: spare) }) {
             Text(verbatim: spare)
         }
+        .disabled(isHeld)
+        .opacity(isHeld ? 0.3 : 1)
     }
 
     private func trayGrid(@ViewBuilder content: () -> some View) -> some View {
