@@ -1,10 +1,10 @@
 import SwiftUI
 
 /// Custom-layout editor: base chips, the board (fixed) and the spare tray (scrolling), all by taps.
-/// Tap a key to select it, then a spare to replace it or the trash to remove it. Tap a second key to
+/// Tap a key to select it, then a spare and the swap button to replace it, or the trash to remove it. Tap a second key to
 /// mark both, then the swap button below the board to swap them (function keys within their row). The selected character key's
 /// long-press list sits in `LayoutCalloutStrip` below the board: tap two slots and the swap button to
-/// swap or move, a slot then a tray character to fill it, a slot then the trash to empty it. The undo
+/// swap or move, a slot, a tray character and the swap button to fill it, a slot then the trash to empty it. The undo
 /// button steps back one edit at a time. Nothing is stored until Save,
 /// whose sheet names the layout and picks where it shows (`LayoutUse`), then applies it; Back discards
 /// the draft.
@@ -20,6 +20,8 @@ struct LayoutEditorView: View {
     @State private var swapPartner: CustomLayout.Place?
     /// The slot tapped before `selectedCallout`, marked with it for the swap button.
     @State private var calloutPartner: Int?
+    /// The tray character marked with the selected slot or key for the swap button.
+    @State private var markedSpare: String?
     /// The draft before each edit, oldest first.
     @State private var history: [CustomLayout] = []
     /// Set while undo writes the draft, so that write adds no history.
@@ -86,6 +88,7 @@ struct LayoutEditorView: View {
         .onChange(of: selected) {
             selectedCallout = nil
             calloutPartner = nil
+            markedSpare = nil
             if selected == nil {
                 swapPartner = nil
             }
@@ -93,6 +96,7 @@ struct LayoutEditorView: View {
         .onChange(of: draft) { previous, _ in
             swapPartner = nil
             calloutPartner = nil
+            markedSpare = nil
             if !isUndoing {
                 history.append(previous)
             }
@@ -142,7 +146,7 @@ struct LayoutEditorView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(swapPartner == nil && calloutPartner == nil)
+                .disabled(swapPartner == nil && calloutPartner == nil && markedSpare == nil)
                 .accessibilityLabel(lang.string(.themePhotoHintMove))
 
                 Button(action: undo) {
@@ -276,14 +280,15 @@ struct LayoutEditorView: View {
         }
     }
 
-    /// A tap only does something once a character key or a long-press slot is selected. One the
-    /// selected key's list already holds stays in place, lit in the board's colour, and takes no tap.
+    /// A tap marks the spare for the swap button once it can go on the selected key or slot. One the
+    /// selected key's list already holds stays in place, dimmed, so the rows keep their columns.
     private func spareButton(_ spare: String) -> some View {
         let isHeld = selectedLabel.map { draft.holdsCallout(spare, for: $0) } ?? false
-        return trayButton(isSelected: isHeld, action: { replaceSelected(with: spare) }) {
+        return trayButton(isSelected: spare == markedSpare, action: { markSpare(spare) }) {
             Text(verbatim: spare)
         }
         .disabled(isHeld)
+        .opacity(isHeld ? 0.3 : 1)
     }
 
     private func trayGrid(@ViewBuilder content: () -> some View) -> some View {
@@ -316,8 +321,34 @@ struct LayoutEditorView: View {
         }
     }
 
-    /// Swaps the marked long-press slots, else the marked keys.
+    /// Marks `spare` for the swap button, clearing any pair; tapping the marked spare clears it.
+    private func markSpare(_ spare: String) {
+        guard canPlace(spare) else { return }
+        withAnimation(.snappy(duration: 0.2)) {
+            swapPartner = nil
+            calloutPartner = nil
+            markedSpare = spare == markedSpare ? nil : spare
+        }
+    }
+
+    /// Whether `spare` can go on the selected slot, else the selected key.
+    private func canPlace(_ spare: String) -> Bool {
+        if selectedCallout != nil {
+            return true
+        }
+        guard let selected else { return false }
+        var replaced = draft
+        replaced.replace(selected, with: spare)
+        return replaced != draft
+    }
+
+    /// Places the marked spare, else swaps the marked long-press slots, else the marked keys.
     private func swapMarked() {
+        if let markedSpare {
+            self.markedSpare = nil
+            replaceSelected(with: markedSpare)
+            return
+        }
         if let calloutPartner, let selectedCallout {
             swapCallouts(calloutPartner, selectedCallout)
             return
@@ -375,13 +406,16 @@ struct LayoutEditorView: View {
     /// A second slot marks the pair for the swap button when either holds an entry, and a tap after a
     /// pair starts over. Tapping the selected slot clears it.
     private func tapCallout(_ index: Int) {
-        swapPartner = nil
         let filled = selectedCallouts.indices
         let isPairing = calloutPartner == nil
             && selectedCallout.map { $0 != index && (filled.contains($0) || filled.contains(index)) } == true
         let isDeselecting = calloutPartner == nil && selectedCallout == index
-        calloutPartner = isPairing ? selectedCallout : nil
-        selectedCallout = isDeselecting ? nil : index
+        withAnimation(.snappy(duration: 0.2)) {
+            swapPartner = nil
+            markedSpare = nil
+            calloutPartner = isPairing ? selectedCallout : nil
+            selectedCallout = isDeselecting ? nil : index
+        }
     }
 
     /// Two entries swap; an entry paired with an empty slot moves to the list's end (entries stay
@@ -400,7 +434,7 @@ struct LayoutEditorView: View {
     }
 
     /// Puts `spare` in slot `index`: replaces an entry (which stays selected), or adds one in an empty
-    /// slot and moves the selection to the next empty slot, so several characters go in one tap each.
+    /// slot and moves the selection to the next empty slot, so several characters go in without picking each slot.
     private func fillCallout(at index: Int, with spare: String) {
         let isAdding = !selectedCallouts.indices.contains(index)
         editCallouts(nextSlot: isAdding ? CustomLayout.maxCallouts : index) { list in

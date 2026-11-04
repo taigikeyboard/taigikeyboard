@@ -56,6 +56,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
@@ -86,10 +87,10 @@ import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 import java.util.Collections
 
 // Custom-layout editor: base chips, the board (fixed) and the spare tray (scrolling), all by taps.
-// Tap a key to select it, then a spare to replace it or the trash to remove it. Tap a second key to
+// Tap a key to select it, then a spare and the swap button to replace it, or the trash to remove it. Tap a second key to
 // mark both, then the swap button below the board to swap them (function keys within their row). The selected character key's
 // long-press list sits in LayoutCalloutStrip below the board: tap two slots and the swap button to
-// swap or move, a slot then a tray character to fill it, a slot then the trash to empty it. The undo
+// swap or move, a slot, a tray character and the swap button to fill it, a slot then the trash to empty it. The undo
 // button steps back one edit at a time. Nothing is stored until Save,
 // whose dialog names the layout and picks where it shows (LayoutUse), then applies it; Back discards
 // the draft. Mirrors iOS LayoutEditorView.
@@ -119,6 +120,8 @@ fun LayoutEditorScreen(
     var swapPartner by remember { mutableStateOf<LayoutPlace?>(null) }
     // The slot tapped before [selectedCallout], marked with it for the swap button.
     var calloutPartner by remember { mutableStateOf<Int?>(null) }
+    // The tray character marked with the selected slot or key for the swap button.
+    var markedSpare by remember { mutableStateOf<String?>(null) }
     // The draft before each edit, oldest first.
     val history = remember { mutableStateListOf<CustomLayout>() }
     var selectedKeyCenterX by remember { mutableStateOf<Float?>(null) }
@@ -146,6 +149,7 @@ fun LayoutEditorScreen(
             draft = next
             swapPartner = null
             calloutPartner = null
+            markedSpare = null
             view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
         }
     }
@@ -155,6 +159,7 @@ fun LayoutEditorScreen(
         selectedCallout = null
         swapPartner = null
         calloutPartner = null
+        markedSpare = null
         // The new key reports its centre once laid out; until then the bubble shows no tail.
         selectedKeyCenterX = null
     }
@@ -196,6 +201,7 @@ fun LayoutEditorScreen(
     // pair starts over. Tapping the selected slot clears it.
     fun tapCallout(index: Int) {
         swapPartner = null
+        markedSpare = null
         val current = selectedCallout
         val filled = selectedCallouts().indices
         val isPairing = calloutPartner == null && current != null && current != index && (current in filled || index in filled)
@@ -221,21 +227,19 @@ fun LayoutEditorScreen(
         }
     }
 
-    // Swaps the marked long-press slots, else the marked keys.
-    fun swapMarked() {
-        val firstSlot = calloutPartner
-        val secondSlot = selectedCallout
-        if (firstSlot != null && secondSlot != null) {
-            swapCallouts(firstSlot, secondSlot)
-            return
-        }
-        val first = swapPartner ?: return
-        val second = selected ?: return
-        edit(draft.swapped(first, second, table))
+    // Whether [spare] can go on the selected slot, else the selected key.
+    fun canPlace(spare: String): Boolean = selectedCallout != null || (tables.isPlaceable(spare) && selected?.let { draft.replaced(it, spare) != draft } == true)
+
+    // Marks [spare] for the swap button, clearing any pair; tapping the marked spare clears it.
+    fun markSpare(spare: String) {
+        if (!canPlace(spare)) return
+        swapPartner = null
+        calloutPartner = null
+        markedSpare = spare.takeIf { it != markedSpare }
     }
 
     // Puts [spare] in slot [index]: replaces an entry (which stays selected), or adds one in an empty
-    // slot and moves the selection to the next empty slot, so several characters go in one tap each.
+    // slot and moves the selection to the next empty slot, so several characters go in without picking each slot.
     fun fillCallout(
         index: Int,
         spare: String,
@@ -252,6 +256,25 @@ fun LayoutEditorScreen(
             slot != null -> fillCallout(slot, spare)
             tables.isPlaceable(spare) -> selected?.let { edit(draft.replaced(it, spare)) }
         }
+    }
+
+    // Places the marked spare, else swaps the marked long-press slots, else the marked keys.
+    fun swapMarked() {
+        val spare = markedSpare
+        if (spare != null) {
+            markedSpare = null
+            replaceSelected(spare)
+            return
+        }
+        val firstSlot = calloutPartner
+        val secondSlot = selectedCallout
+        if (firstSlot != null && secondSlot != null) {
+            swapCallouts(firstSlot, secondSlot)
+            return
+        }
+        val first = swapPartner ?: return
+        val second = selected ?: return
+        edit(draft.swapped(first, second, table))
     }
 
     fun removeSelected() {
@@ -350,7 +373,7 @@ fun LayoutEditorScreen(
                 ) {
                     Button(
                         onClick = ::swapMarked,
-                        enabled = swapPartner != null || calloutPartner != null,
+                        enabled = swapPartner != null || calloutPartner != null || markedSpare != null,
                         modifier = Modifier.weight(1f),
                     ) {
                         Icon(painterResource(R.drawable.ic_swap), contentDescription = L10n.themePhotoHintMove)
@@ -380,14 +403,14 @@ fun LayoutEditorScreen(
                         .padding(horizontal = 10.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    // A character the selected key's list already holds stays in place, lit in the
-                    // board's colour, and takes no tap.
+                    // A character the selected key's list already holds stays in place, dimmed, so the
+                    // rows keep their columns.
                     val held = remember(callouts) { tables.trayForms(callouts) }
                     val letters = remember(draft) { draft.spares(tables.trayLetters) }
                     val (halfWidth, fullWidth) = remember(draft) { tables.traySymbols(draft).partition { !isFullWidthSymbol(it) } }
                     if (!draft.hasEmojiKey || letters.isNotEmpty()) {
                         TraySection(L10n.layoutTrayLetters) {
-                            SpareFlow(letters, onTap = ::replaceSelected, held = held) {
+                            SpareFlow(letters, onTap = ::markSpare, held = held, marked = markedSpare) {
                                 if (!draft.hasEmojiKey) {
                                     // Tap restores the emoji key at once.
                                     TrayChip(
@@ -400,9 +423,9 @@ fun LayoutEditorScreen(
                             }
                         }
                     }
-                    TraySection(L10n.layoutTrayTones) { ToneGrid(tables.toneRows, held = held, onTap = ::replaceSelected) }
-                    TraySection(L10n.symbolHalfWidth) { SpareFlow(halfWidth, onTap = ::replaceSelected, held = held) }
-                    TraySection(L10n.symbolFullWidth) { SpareFlow(fullWidth, onTap = ::replaceSelected, held = held) }
+                    TraySection(L10n.layoutTrayTones) { ToneGrid(tables.toneRows, held = held, marked = markedSpare, onTap = ::markSpare) }
+                    TraySection(L10n.symbolHalfWidth) { SpareFlow(halfWidth, onTap = ::markSpare, held = held, marked = markedSpare) }
+                    TraySection(L10n.symbolFullWidth) { SpareFlow(fullWidth, onTap = ::markSpare, held = held, marked = markedSpare) }
                 }
             }
         }
@@ -505,19 +528,20 @@ private fun TraySection(
 }
 
 /**
- * A run of tray chips, [leading] first, then one chip per spare (tap = put it on the selected key or
- * long-press slot); [held] chips are lit in the board's colour and take no tap.
+ * A run of tray chips, [leading] first, then one chip per spare (tap = mark it for the selected key or
+ * long-press slot); [held] chips are dimmed and inert, the [marked] one lit.
  */
 @Composable
 private fun SpareFlow(
     spares: List<String>,
     onTap: (String) -> Unit,
     held: Set<String>,
+    marked: String?,
     leading: @Composable () -> Unit = {},
 ) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         leading()
-        spares.forEach { spare -> SpareChip(spare, onTap, spare in held) }
+        spares.forEach { spare -> SpareChip(spare, onTap, spare in held, spare == marked) }
     }
 }
 
@@ -526,6 +550,7 @@ private fun SpareFlow(
 private fun ToneGrid(
     rows: List<List<String>>,
     held: Set<String>,
+    marked: String?,
     onTap: (String) -> Unit,
 ) {
     val columns = rows.maxOfOrNull { it.size } ?: 0
@@ -537,7 +562,7 @@ private fun ToneGrid(
                     if (char == null) {
                         Spacer(Modifier.weight(1f))
                     } else {
-                        SpareChip(char, onTap, char in held, Modifier.weight(1f))
+                        SpareChip(char, onTap, char in held, char == marked, Modifier.weight(1f))
                     }
                 }
             }
@@ -550,9 +575,16 @@ private fun SpareChip(
     spare: String,
     onTap: (String) -> Unit,
     isHeld: Boolean,
+    isMarked: Boolean,
     modifier: Modifier = TRAY_CHIP_WIDTH,
 ) {
-    TrayChip(onClick = { onTap(spare) }, description = spare, isSelected = isHeld, modifier = modifier) {
+    TrayChip(
+        onClick = { onTap(spare) },
+        description = spare,
+        enabled = !isHeld,
+        isSelected = isMarked,
+        modifier = modifier,
+    ) {
         Text(spare, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
     }
 }
@@ -561,6 +593,7 @@ private fun SpareChip(
 private fun TrayChip(
     onClick: () -> Unit,
     description: String,
+    enabled: Boolean = true,
     isSelected: Boolean = false,
     modifier: Modifier = TRAY_CHIP_WIDTH,
     content: @Composable () -> Unit,
@@ -571,7 +604,8 @@ private fun TrayChip(
         modifier =
             modifier
                 .height(44.dp)
-                .clickable(enabled = !isSelected, onClick = onClick)
+                .alpha(if (enabled) 1f else 0.3f)
+                .clickable(enabled = enabled, onClick = onClick)
                 .semantics {
                     contentDescription = description
                     selected = isSelected
