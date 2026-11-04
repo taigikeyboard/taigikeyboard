@@ -1,0 +1,3 @@
+# Every change to `main` needs the release Approver's review
+# (docs/CODE_SIGNING_POLICY.md § Roles); the `main` ruleset enforces it.
+* @siansiansu
