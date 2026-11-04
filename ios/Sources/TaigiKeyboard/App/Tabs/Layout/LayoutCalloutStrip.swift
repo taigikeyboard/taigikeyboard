@@ -9,29 +9,15 @@ struct LayoutCalloutStrip: View {
     /// The selected key's list; nil while no character key is selected.
     let entries: [String]?
     let selectedSlot: Int?
-    let canReset: Bool
     /// The selected key's horizontal centre in `LayoutKeyGrid.editorSpace`, where the tail points.
     let tailX: CGFloat?
     let onTapSlot: (Int) -> Void
-    let onReset: () -> Void
 
     // Eight slots fit the bubble on the narrowest iPhone.
     private static let cellSize = CGSize(width: 34, height: 44)
     private static let tailSize = CGSize(width: 16, height: 8)
 
     var body: some View {
-        HStack(spacing: 12) {
-            bubble
-            Button(action: onReset) {
-                Image(latinSystemName: "arrow.counterclockwise")
-                    .font(AppStyle.bodyFont)
-            }
-            .disabled(!canReset)
-            .accessibilityLabel(lang.string(.themeEditorResetAll))
-        }
-    }
-
-    private var bubble: some View {
         HStack(spacing: 2) {
             ForEach(0 ..< CustomLayout.maxCallouts, id: \.self, content: slot)
         }

@@ -112,18 +112,28 @@ struct LayoutEditorView: View {
             calloutStrip
 
             // Fixed between the bubble and the tray, in thumb reach and always in view.
-            Toggle(isOn: $isSwapping) {
-                Image(latinSystemName: "arrow.left.arrow.right")
-                    .font(AppStyle.bodyFont)
-                    .frame(maxWidth: .infinity)
+            HStack(spacing: 12) {
+                Toggle(isOn: $isSwapping) {
+                    Image(latinSystemName: "arrow.left.arrow.right")
+                        .font(AppStyle.bodyFont)
+                        .frame(maxWidth: .infinity)
+                }
+                .toggleStyle(.button)
+                .disabled(selected == nil || selectedCallout != nil)
+                .accessibilityLabel(lang.string(.themePhotoHintMove))
+
+                Button(action: resetSelectedCallouts) {
+                    Image(latinSystemName: "arrow.counterclockwise")
+                        .font(AppStyle.bodyFont)
+                        .frame(maxWidth: .infinity)
+                }
+                .disabled(!(selectedLabel.map { draft.callouts[$0] != nil } ?? false))
+                .accessibilityLabel(lang.string(.themeEditorResetAll))
             }
-            .toggleStyle(.button)
             .buttonStyle(.bordered)
             .buttonBorderShape(.capsule)
             .controlSize(.large)
             .frame(width: boardWidth)
-            .disabled(selected == nil || selectedCallout != nil)
-            .accessibilityLabel(lang.string(.themePhotoHintMove))
         }
         // Inside the scroll content, so key frames stay put (no preference churn) while the editor scrolls.
         .coordinateSpace(name: LayoutKeyGrid.editorSpace)
@@ -147,16 +157,8 @@ struct LayoutEditorView: View {
         LayoutCalloutStrip(
             entries: selectedLabel == nil ? nil : selectedCallouts,
             selectedSlot: selectedCallout,
-            canReset: selectedLabel.map { draft.callouts[$0] != nil } ?? false,
             tailX: selected.flatMap { keyFrames[$0]?.midX },
             onTapSlot: tapCallout,
-            onReset: {
-                guard let selectedLabel else { return }
-                withAnimation(.snappy(duration: 0.2)) {
-                    draft.resetCallouts(for: selectedLabel)
-                    selectedCallout = nil
-                }
-            },
         )
         .padding(.horizontal, AppStyle.horizontalPadding)
     }
@@ -316,6 +318,14 @@ struct LayoutEditorView: View {
     }
 
     // MARK: - Long-press list
+
+    private func resetSelectedCallouts() {
+        guard let selectedLabel else { return }
+        withAnimation(.snappy(duration: 0.2)) {
+            draft.resetCallouts(for: selectedLabel)
+            selectedCallout = nil
+        }
+    }
 
     /// A second slot swaps with the selected one when both hold entries; an entry tapped with an
     /// empty slot moves to the list's end (entries stay packed at the front). Tapping the selected

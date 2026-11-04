@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenuItem
@@ -299,25 +300,36 @@ fun LayoutEditorScreen(
                 LayoutCalloutStrip(
                     entries = if (label == null) null else callouts,
                     selectedSlot = selectedCallout,
-                    canReset = label != null && label in draft.callouts,
                     tailX = selectedKeyCenterX.takeIf { selected != null },
                     onTapSlot = ::tapCallout,
-                    onReset = ::resetCallouts,
-                    modifier = Modifier.padding(start = 20.dp, end = 8.dp),
+                    modifier = Modifier.padding(horizontal = 20.dp).fillMaxWidth(),
                 )
 
                 // Fixed between the bubble and the tray, in thumb reach and always in view.
-                FilledTonalButton(
-                    onClick = { isSwapping = !isSwapping },
-                    enabled = selected != null && selectedCallout == null,
-                    colors = if (isSwapping) ButtonDefaults.buttonColors() else ButtonDefaults.filledTonalButtonColors(),
-                    modifier =
-                        Modifier
-                            .align(Alignment.CenterHorizontally)
-                            .width(boardWidth)
-                            .semantics { this.selected = isSwapping },
+                Row(
+                    Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .width(boardWidth),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    Icon(painterResource(R.drawable.ic_swap), contentDescription = L10n.themePhotoHintMove)
+                    FilledTonalButton(
+                        onClick = { isSwapping = !isSwapping },
+                        enabled = selected != null && selectedCallout == null,
+                        colors = if (isSwapping) ButtonDefaults.buttonColors() else ButtonDefaults.filledTonalButtonColors(),
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .semantics { this.selected = isSwapping },
+                    ) {
+                        Icon(painterResource(R.drawable.ic_swap), contentDescription = L10n.themePhotoHintMove)
+                    }
+                    FilledTonalButton(
+                        onClick = ::resetCallouts,
+                        enabled = label != null && label in draft.callouts,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(Icons.Filled.Refresh, contentDescription = L10n.themeEditorResetAll)
+                    }
                 }
 
                 Column(
