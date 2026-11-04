@@ -66,7 +66,7 @@ fn arb_intent() -> impl Strategy<Value = Intent> {
             direction: Some(CaretDirection::End)
         }),
         any::<u8>().prop_map(|b| Intent::TelexKey {
-            key: ["v", "y", "d", "z", "f"][usize::from(b % 5)].to_string(),
+            key: ["v", "y", "d", "z", "f", "c", "h"][usize::from(b % 7)].to_string(),
         }),
         any::<u8>().prop_map(|b| Intent::TpsKey {
             key: ["ㄍ", "ㄚ", "ㄉ", "ㄧ", "ㄗ", "ˋ", " "][usize::from(b % 7)].to_string(),
