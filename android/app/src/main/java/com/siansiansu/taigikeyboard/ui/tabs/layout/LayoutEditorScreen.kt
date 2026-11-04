@@ -34,6 +34,8 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -81,11 +83,12 @@ import com.siansiansu.taigikeyboard.ui.components.NameDialog
 import java.util.Collections
 
 // Custom-layout editor: base chips, the board (fixed) and the spare tray (scrolling), all by taps.
-// Tap two keys to swap them (function keys within their row), a key then a spare to replace it, a key
-// then the trash to remove it. The selected character key's long-press list sits in LayoutCalloutStrip
-// below the board: tap two slots to swap or move, a slot then a tray character to fill it, a slot then
-// the trash to empty it. Nothing is stored until Save, whose dialog names the layout and picks where it
-// shows (LayoutUse), then applies it; Back discards the draft. Mirrors iOS LayoutEditorView.
+// Tap a key to select it, then a spare to replace it, the trash to remove it, or the swap button below
+// the board and a second key to swap them (function keys within their row). The selected character key's
+// long-press list sits in LayoutCalloutStrip below the board: tap two slots to swap or move, a slot
+// then a tray character to fill it, a slot then the trash to empty it. Nothing is stored until Save,
+// whose dialog names the layout and picks where it shows (LayoutUse), then applies it; Back discards
+// the draft. Mirrors iOS LayoutEditorView.
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -108,6 +111,8 @@ fun LayoutEditorScreen(
     var selected by remember { mutableStateOf<LayoutPlace?>(null) }
     // The selected slot of the selected key's long-press list (past its end = an empty slot).
     var selectedCallout by remember { mutableStateOf<Int?>(null) }
+    // Armed by the swap button: the next key tap swaps with [selected].
+    var isSwapping by remember { mutableStateOf(false) }
     var selectedKeyCenterX by remember { mutableStateOf<Float?>(null) }
     var showNameDialog by rememberSaveable { mutableStateOf(false) }
     // Where the layout shows, picked in the name dialog; starts from the draft's each time it opens.
@@ -130,6 +135,7 @@ fun LayoutEditorScreen(
     fun changeDraft(next: CustomLayout) {
         if (next != draft) {
             draft = next
+            isSwapping = false
             view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
         }
     }
@@ -137,6 +143,7 @@ fun LayoutEditorScreen(
     fun select(place: LayoutPlace?) {
         selected = place
         selectedCallout = null
+        isSwapping = false
         // The new key reports its centre once laid out; until then the bubble shows no tail.
         selectedKeyCenterX = null
     }
@@ -146,11 +153,12 @@ fun LayoutEditorScreen(
         select(null)
     }
 
-    // A second key swaps with the selected one where it can (CustomLayout.canSwap: character keys
-    // anywhere, function keys within their row); otherwise the tap moves or clears the selection.
+    // A tap moves or clears the selection, so looking at another key's long-press list changes nothing.
+    // With swap armed, a second key swaps with the selected one where it can (CustomLayout.canSwap:
+    // character keys anywhere, function keys within their row).
     fun tap(place: LayoutPlace) {
         val current = selected
-        if (current != null && draft.canSwap(current, place, table)) {
+        if (isSwapping && current != null && draft.canSwap(current, place, table)) {
             edit(draft.swapped(current, place, table))
         } else {
             select(if (current == place) null else place)
@@ -178,6 +186,7 @@ fun LayoutEditorScreen(
     // A second slot swaps with the selected one when both hold entries; an entry tapped with an empty
     // slot moves to the list's end (entries stay packed at the front). Tapping the selected slot clears it.
     fun tapCallout(index: Int) {
+        isSwapping = false
         val current = selectedCallout
         if (current == null || current == index) {
             selectedCallout = if (current == index) null else index
@@ -208,6 +217,7 @@ fun LayoutEditorScreen(
         when {
             slot != null -> fillCallout(slot, spare)
             tables.isPlaceable(spare) -> selected?.let { edit(draft.replaced(it, spare)) }
+            else -> isSwapping = false
         }
     }
 
@@ -295,6 +305,21 @@ fun LayoutEditorScreen(
                     onReset = ::resetCallouts,
                     modifier = Modifier.padding(start = 20.dp, end = 8.dp),
                 )
+
+                // Fixed between the bubble and the tray, in thumb reach and always in view.
+                IconToggleButton(
+                    checked = isSwapping,
+                    onCheckedChange = { isSwapping = it },
+                    enabled = selected != null && selectedCallout == null,
+                    colors =
+                        IconButtonDefaults.iconToggleButtonColors(
+                            checkedContainerColor = MaterialTheme.colorScheme.primary,
+                            checkedContentColor = MaterialTheme.colorScheme.onPrimary,
+                        ),
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                ) {
+                    Icon(painterResource(R.drawable.ic_swap), contentDescription = L10n.themePhotoHintMove)
+                }
 
                 Column(
                     (if (scrollsWhole) Modifier else Modifier.weight(1f))
