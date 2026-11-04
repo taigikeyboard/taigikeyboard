@@ -9,20 +9,21 @@ use crate::strings::StringKey;
 /// Which keys type a tone — the half of the key contract that decides, in
 /// turn, which keys pick a candidate.
 ///
-/// Standard and Telex are the same eight letters and the same nine digits,
-/// swapped (USER 2026-09-08). Under `Standard` a digit is the TL/POJ tone
-/// marker (`tai5`), so the letters no syllable spells are free to pick
-/// candidates; under `Telex` those letters carry the tones, so the digits
-/// are free to pick. Neither half is chosen on its own: the slot key set is
-/// derived here (`slot_key_set`) rather than stored, so the two can never
-/// disagree about who owns `v` or `3`.
+/// Standard and Telex swap eight letters and the nine digits (USER
+/// 2026-09-08). Under `Standard` a digit is the TL/POJ tone marker (`tai5`),
+/// so the letters no syllable spells are free to pick candidates; under
+/// `Telex` those letters carry the tones, so the digits are free to pick.
+/// Neither half is chosen on its own: the slot key set is derived here
+/// (`slot_key_set`) rather than stored, so the two can never disagree about
+/// who owns `v` or `3`. Telex also claims `c` and `h`, which pick nothing
+/// under Standard and stay plain letters there.
 ///
-/// The letter table is the kahiok scheme (madmaxieee/taigi-telex) minus its
-/// `c` → `tsh` key, because POJ spells `ch` / `chh` with `c`. Tone 6 has no
-/// free letter and is not offered. The semantics — which tone each key
-/// writes, how `z` resolves by input mode, what a repeated key does — live in
-/// the engine (`engine/composing/src/telex.rs`); this side only decides which
-/// keys reach it.
+/// The letter table is the kahiok scheme (madmaxieee/taigi-telex) with `c` as
+/// the unaspirated affricate rather than its `c` → `tsh`, which leaves `z` to
+/// write tone 6 (USER 2026-11-05). The semantics — which tone each key writes,
+/// how `c` resolves by input mode, what a repeated key does — live in the
+/// engine (`engine/composing/src/telex.rs`); this side only decides which keys
+/// reach it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ToneInputScheme {
     /// Digits type tones; `q w d f z x v y ;` pick candidates. The shipped
@@ -33,14 +34,15 @@ pub enum ToneInputScheme {
 }
 
 impl ToneInputScheme {
-    /// Lower-case Telex keys: `x v y d w q` for tones 1/4 2/8 3 5 7 9 (`x` and `v` split
-    /// their pair by the coda, engine-side), `z` for
-    /// the affricate initial (`ts` / `ch`; `zh` then spells `tsh` / `chh`),
-    /// `f` for the hyphen. Mirrors the engine's `composing::telex::TELEX_KEYS`
+    /// Lower-case Telex keys: `x v y d z w q` for tones 1/4 2/8 3 5 6 7 9 (`x` and `v`
+    /// split their pair by the coda, engine-side), `c` for the affricate initial
+    /// (`ts` / `ch`; `ch` then spells `tsh` / `chh`), `h` because only the engine
+    /// can tell a slip after `tsh` / `chh`, `f` for the hyphen. Mirrors the engine's
+    /// `composing::telex::TELEX_KEYS`
     /// — the two lists must name the same keys, or a key classified as Telex
     /// here would be ignored there. CROSS-PLATFORM INVARIANT — the one list for
     /// macOS, Windows and Linux.
-    pub const TELEX_KEYS: &'static str = "vydwxqzf";
+    pub const TELEX_KEYS: &'static str = "vydwxqzfch";
 
     /// The keys that pick a candidate under this scheme.
     pub fn slot_key_set(self) -> CandidateSlotKeySet {
@@ -66,12 +68,12 @@ impl ToneInputScheme {
         character.is_ascii() && Self::TELEX_KEYS.contains(character.to_ascii_lowercase())
     }
 
-    /// Whether `character` may start a composition on its own. Only `z` /
-    /// `Z`: it types an initial, so it begins a syllable the way any letter
-    /// does. A tone letter or `f` has nothing to attach to when idle, and
-    /// passes to the host like an idle digit.
+    /// Whether `character` may start a composition on its own. Only `c` and
+    /// `h`, in either case: each types an initial, so it begins a syllable the
+    /// way any letter does. A tone letter or `f` has nothing to attach to when
+    /// idle, and passes to the host like an idle digit.
     pub fn starts_composition(character: char) -> bool {
-        matches!(character, 'z' | 'Z')
+        matches!(character, 'c' | 'C' | 'h' | 'H')
     }
 }
 
@@ -106,20 +108,20 @@ mod tests {
     }
 
     #[test]
-    fn the_telex_keys_are_the_eight_letters_in_either_case() {
-        for letter in "vydwxqzf".chars() {
+    fn the_telex_keys_are_the_ten_letters_in_either_case() {
+        for letter in "vydwxqzfch".chars() {
             assert!(ToneInputScheme::is_telex_key(letter), "{letter}");
             assert!(
                 ToneInputScheme::is_telex_key(letter.to_ascii_uppercase()),
                 "{letter}"
             );
         }
-        for other in ['a', 't', 'c', '3', '-', ';', ' ', 'ｖ', 'ｚ'] {
+        for other in ['a', 't', 'g', '3', '-', ';', ' ', 'ｖ', 'ｚ'] {
             assert!(!ToneInputScheme::is_telex_key(other), "{other}");
         }
-        // trace: `TELEX_KEYS` vs `BARE_KEY_ROW` — the eight Telex keys are
-        // the eight letters of the Standard slot row: what one scheme types
-        // tones with, the other picks with.
+        // trace: `TELEX_KEYS` vs `BARE_KEY_ROW` — the eight Telex keys other
+        // than `c` and `h` are the eight letters of the Standard slot row: what
+        // one scheme types tones with, the other picks with.
         let slot_letters: std::collections::BTreeSet<char> = CandidateSlotKeySet::BARE_KEY_ROW
             .iter()
             .filter_map(|key| key.chars().next())
@@ -128,11 +130,14 @@ mod tests {
         assert_eq!(
             ToneInputScheme::TELEX_KEYS
                 .chars()
+                .filter(|letter| !matches!(letter, 'c' | 'h'))
                 .collect::<std::collections::BTreeSet<_>>(),
             slot_letters
         );
-        assert!(ToneInputScheme::starts_composition('z'));
-        assert!(ToneInputScheme::starts_composition('Z'));
+        for letter in ['c', 'C', 'h', 'H'] {
+            assert!(ToneInputScheme::starts_composition(letter), "{letter}");
+        }
+        assert!(!ToneInputScheme::starts_composition('z'));
         assert!(!ToneInputScheme::starts_composition('v'));
         assert!(!ToneInputScheme::starts_composition('f'));
     }
