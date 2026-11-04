@@ -6,7 +6,7 @@ import AppKit
 ///
 /// Two columns, no examples and no dismiss hint (USER 2026-09-09: "no extra
 /// explanatory text… no examples, no explaining how to exit"). What the affricate keys spell
-/// still has to follow the romanization in use, so `z` carries its spelling —
+/// still has to follow the romanization in use, so `c` carries its spelling —
 /// `ts` under TL, `ch` under POJ — inside the meaning itself.
 private struct TelexGuideRow {
     let key: String
@@ -14,7 +14,7 @@ private struct TelexGuideRow {
 
     enum Meaning {
         case tone(String)
-        /// `z` / `zh`, with the initial each spells under TL and under POJ.
+        /// `c` / `ch`, with the initial each spells under TL and under POJ.
         case initial(tl: String, poj: String)
         case hyphen
     }
@@ -95,10 +95,11 @@ final class TelexGuidePanel {
         TelexGuideRow(key: "v", meaning: .tone("2 / 8")),
         TelexGuideRow(key: "y", meaning: .tone("3")),
         TelexGuideRow(key: "d", meaning: .tone("5")),
+        TelexGuideRow(key: "z", meaning: .tone("6")),
         TelexGuideRow(key: "w", meaning: .tone("7")),
         TelexGuideRow(key: "q", meaning: .tone("9")),
-        TelexGuideRow(key: "z", meaning: .initial(tl: "ts", poj: "ch")),
-        TelexGuideRow(key: "zh", meaning: .initial(tl: "tsh", poj: "chh")),
+        TelexGuideRow(key: "c", meaning: .initial(tl: "ts", poj: "ch")),
+        TelexGuideRow(key: "ch", meaning: .initial(tl: "tsh", poj: "chh")),
         TelexGuideRow(key: "f", meaning: .hyphen),
     ]
 
