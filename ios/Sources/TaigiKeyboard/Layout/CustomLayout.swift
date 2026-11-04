@@ -548,10 +548,11 @@ struct CustomLayout: Codable, Identifiable, Hashable {
     /// `chars` with CJK punctuation and full-width forms (U+2E80 and up, as the full-width punctuation
     /// mode types) moved after the rest, order otherwise kept.
     private static func halfWidthFirst(_ chars: [String]) -> [String] {
-        func isFullWidth(_ char: String) -> Bool {
-            char.unicodeScalars.contains { $0.value >= 0x2E80 }
-        }
-        return chars.filter { !isFullWidth($0) } + chars.filter(isFullWidth)
+        chars.filter { !isFullWidth($0) } + chars.filter(isFullWidth)
+    }
+
+    static func isFullWidth(_ char: String) -> Bool {
+        char.unicodeScalars.contains { $0.value >= 0x2E80 }
     }
 
     private static func unique(_ labels: [String]) -> [String] {

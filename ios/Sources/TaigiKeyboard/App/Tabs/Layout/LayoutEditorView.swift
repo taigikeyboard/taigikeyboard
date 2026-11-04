@@ -211,29 +211,51 @@ struct LayoutEditorView: View {
         selectedCallout.map(selectedCallouts.indices.contains) ?? (selected.map(draft.canRemove) ?? false)
     }
 
-    /// Three groups, gaps between them: the removed emoji key and spare letters; tone-marked letters,
-    /// one row per base; symbols, half-width then full-width. A tap puts a character on the selected
-    /// key or long-press slot (where it fits); the emoji chip goes straight back to its place.
+    /// Titled groups: the removed emoji key and spare letters, shown when any; tone-marked letters, one
+    /// row per base; half-width symbols; full-width symbols. A tap puts a character on the selected key
+    /// or long-press slot (where it fits); the emoji chip goes straight back to its place.
     private var spareTray: some View {
         VStack(spacing: 28) {
-            trayGrid {
-                if !draft.hasEmojiKey {
-                    trayButton(action: restoreEmojiKey) {
-                        Image(latinSystemName: "face.smiling")
-                    }
-                    .accessibilityLabel(LayoutKeyGrid.accessibilityName(of: .emoji))
-                }
-
-                ForEach(draft.spareLetters, id: \.self, content: spareButton)
+            if !draft.hasEmojiKey || !draft.spareLetters.isEmpty {
+                traySection(lang.string(.layoutTrayLetters)) { letterGrid }
             }
-
-            toneGrid
-
-            trayGrid {
-                ForEach(draft.traySymbols, id: \.self, content: calloutSpareButton)
+            traySection(lang.string(.layoutTrayTones)) { toneGrid }
+            traySection(lang.string(.symbolHalfWidth)) {
+                symbolGrid(draft.traySymbols.filter { !CustomLayout.isFullWidth($0) })
+            }
+            traySection(lang.string(.symbolFullWidth)) {
+                symbolGrid(draft.traySymbols.filter(CustomLayout.isFullWidth))
             }
         }
         .padding(.horizontal, AppStyle.horizontalPadding)
+    }
+
+    private func traySection(_ title: String, @ViewBuilder content: () -> some View) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(AppStyle.sectionHeaderFont)
+                .foregroundStyle(.secondary)
+            content()
+        }
+    }
+
+    private var letterGrid: some View {
+        trayGrid {
+            if !draft.hasEmojiKey {
+                trayButton(action: restoreEmojiKey) {
+                    Image(latinSystemName: "face.smiling")
+                }
+                .accessibilityLabel(LayoutKeyGrid.accessibilityName(of: .emoji))
+            }
+
+            ForEach(draft.spareLetters, id: \.self, content: spareButton)
+        }
+    }
+
+    private func symbolGrid(_ symbols: [String]) -> some View {
+        trayGrid {
+            ForEach(symbols, id: \.self, content: calloutSpareButton)
+        }
     }
 
     /// One row per base, columns aligned.

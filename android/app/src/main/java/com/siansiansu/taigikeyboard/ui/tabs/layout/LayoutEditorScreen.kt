@@ -81,6 +81,7 @@ import com.siansiansu.taigikeyboard.ime.text.layout.LayoutUse
 import com.siansiansu.taigikeyboard.ime.text.layout.accessibilityName
 import com.siansiansu.taigikeyboard.ui.components.GALLERY_PREVIEW_ASPECT
 import com.siansiansu.taigikeyboard.ui.components.NameDialog
+import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 import java.util.Collections
 
 // Custom-layout editor: base chips, the board (fixed) and the spare tray (scrolling), all by taps.
@@ -381,19 +382,26 @@ fun LayoutEditorScreen(
                     // A character the selected key's list already holds stays in place, dimmed, so the
                     // rows keep their columns.
                     val held = remember(callouts) { tables.trayForms(callouts) }
-                    SpareFlow(remember(draft) { draft.spares(tables.trayLetters) }, onTap = ::replaceSelected) {
-                        if (!draft.hasEmojiKey) {
-                            // Tap restores the emoji key at once.
-                            TrayChip(
-                                onClick = { edit(draft.restoreEmojiKey()) },
-                                description = accessibilityName(GridKey.Face.Function(FunctionKey.EMOJI)),
-                            ) {
-                                Icon(painterResource(R.drawable.ic_sentiment_satisfied), contentDescription = null)
+                    val letters = remember(draft) { draft.spares(tables.trayLetters) }
+                    val (halfWidth, fullWidth) = remember(draft) { tables.traySymbols(draft).partition { !CustomLayoutTables.isFullWidth(it) } }
+                    if (!draft.hasEmojiKey || letters.isNotEmpty()) {
+                        TraySection(L10n.layoutTrayLetters) {
+                            SpareFlow(letters, onTap = ::replaceSelected) {
+                                if (!draft.hasEmojiKey) {
+                                    // Tap restores the emoji key at once.
+                                    TrayChip(
+                                        onClick = { edit(draft.restoreEmojiKey()) },
+                                        description = accessibilityName(GridKey.Face.Function(FunctionKey.EMOJI)),
+                                    ) {
+                                        Icon(painterResource(R.drawable.ic_sentiment_satisfied), contentDescription = null)
+                                    }
+                                }
                             }
                         }
                     }
-                    ToneGrid(tables.toneRows, held = held, onTap = ::replaceSelected)
-                    SpareFlow(remember(draft) { tables.traySymbols(draft) }, onTap = ::replaceSelected, held = held)
+                    TraySection(L10n.layoutTrayTones) { ToneGrid(tables.toneRows, held = held, onTap = ::replaceSelected) }
+                    TraySection(L10n.symbolHalfWidth) { SpareFlow(halfWidth, onTap = ::replaceSelected, held = held) }
+                    TraySection(L10n.symbolFullWidth) { SpareFlow(fullWidth, onTap = ::replaceSelected, held = held) }
                 }
             }
         }
@@ -483,6 +491,22 @@ private fun UseMenu(
  * A run of tray chips, [leading] first, then one chip per spare (tap = put it on the selected key or
  * long-press slot); [held] chips are dimmed and inert.
  */
+@Composable
+private fun TraySection(
+    title: String,
+    content: @Composable () -> Unit,
+) {
+    Column {
+        Text(
+            title,
+            modifier = Modifier.padding(bottom = AppStyle.sectionHeaderBottomPadding),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.titleMedium,
+        )
+        content()
+    }
+}
+
 @Composable
 private fun SpareFlow(
     spares: List<String>,

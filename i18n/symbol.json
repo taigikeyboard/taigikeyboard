@@ -2,13 +2,13 @@
   "namespace": "symbol",
   "keys": {
     "fullWidth": {
-      "comment": "Symbol overlay category tab: full-width punctuation (extension-only). Taiwanese says 全角／半角, not 全形／半形 (USER 2026-09-20).",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["extension"] },
+      "comment": "Symbol overlay category tab and layout editor tray header: full-width punctuation. Taiwanese says 全角／半角, not 全形／半形 (USER 2026-09-20).",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["extension", "host"] },
       "values": { "hanji": "全角", "tailo": "Tsuân-kak", "poj": "Choân-kak", "en": "Full-width", "ja": "全角" }
     },
     "halfWidth": {
-      "comment": "Symbol overlay category tab: half-width punctuation (extension-only).",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["extension"] },
+      "comment": "Symbol overlay category tab and layout editor tray header: half-width punctuation.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["extension", "host"] },
       "values": { "hanji": "半角", "tailo": "Puànn-kak", "poj": "Pòaⁿ-kak", "en": "Half-width", "ja": "半角" }
     },
     "hiragana": {

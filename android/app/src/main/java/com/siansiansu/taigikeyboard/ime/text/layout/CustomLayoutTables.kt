@@ -491,6 +491,8 @@ class CustomLayoutTables(
          * [chars] with CJK punctuation and full-width forms (U+2E80 and up, as the full-width punctuation
          * mode types) moved after the rest, order otherwise kept.
          */
-        fun halfWidthFirst(chars: List<String>): List<String> = chars.partition { text -> text.codePoints().noneMatch { it >= 0x2E80 } }.let { it.first + it.second }
+        fun isFullWidth(text: String): Boolean = text.codePoints().anyMatch { it >= 0x2E80 }
+
+        fun halfWidthFirst(chars: List<String>): List<String> = chars.partition { !isFullWidth(it) }.let { it.first + it.second }
     }
 }
