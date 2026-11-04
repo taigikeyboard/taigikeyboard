@@ -6,13 +6,12 @@ name: Windows build
 # valid, automated build resulting from the source code at the noted source code
 # repository", and for open-source projects it requires that every job leading up
 # to the signing request ran on a GitHub-hosted agent, with the artifact handed to
-# its action from inside the workflow that produced it. Releases are cut today by
-# `make windows-release` on the maintainer's own machine, which can never satisfy
-# that. This workflow is the prerequisite; the signing step is a later, small
-# addition once a certificate exists.
+# its action from inside the workflow that produced it. A build cut by hand with
+# `make windows-release` can never satisfy that, so releases are built here. The
+# signing step is a later, small addition once a certificate exists.
 #
-# It does NOT publish. `windows/scripts/publish-release.sh` stages the installer
-# a release actually ships on, and `tools/release/announce-release.sh` announces it.
+# It does NOT publish. A dispatched run attaches the installer to the draft, a
+# person publishes that draft, and `tools/release/announce-release.sh` announces it.
 on:
   # How a release stages the Windows installer: `tools/release/stage-desktop.sh`
   # dispatches this after staging the macOS package, and the run attaches its
@@ -29,11 +28,10 @@ on:
   # Windows: `make windows-check` stays the host-side gate the maintainer runs
   # by hand.
   #
-  # The run rebuilds the installer on a GitHub-hosted agent for provenance; it
-  # does not publish, and it does NOT vouch for the installer that was staged
-  # from the maintainer's box. When SignPath signing lands, the order has to
-  # change: hosted build and sign FIRST, then stage the signed installer on the
-  # draft (docs/architecture/windows-release.md § Building on a GitHub-hosted
+  # The run rebuilds the installer on a GitHub-hosted agent for provenance and
+  # publishes nothing; the installer users download is the dispatched run's. When
+  # SignPath signing lands it goes into that dispatched run, before the attach
+  # step (docs/architecture/windows-release.md § Building on a GitHub-hosted
   # runner).
   release:
     types: [published]
@@ -59,6 +57,13 @@ env:
   # on the runner image, and without it the very first engine crate fails to build.
   PROTOC_VERSION: 36.1
   PROTOC_SHA256: 390e515cb456e6a978553bdb57baf087b054885077fd6da7f7ff0160279c07d6
+  # The packages windows-reactor-setup stages beside the settings exe. Versions
+  # equal RUNTIME_VER / WEBVIEW2_VER at the windows-rs rev windows/Cargo.toml pins;
+  # move them together with that pin.
+  WINDOWS_APP_RUNTIME_VERSION: 2.4.0
+  WINDOWS_APP_RUNTIME_SHA256: 93f48b096416ab7b908ea30690bba47de8264cd2f22dd7b0ad97187a86d00120
+  WEBVIEW2_VERSION: 1.0.4078.44
+  WEBVIEW2_SHA256: dc4d1d9168df26b830398303e50210b6e1729f6ce5a7ac69d2c766852f489962
 
 jobs:
   build:
@@ -177,6 +182,28 @@ jobs:
           command -v rc.exe rc dumpbin || true
           echo "linker: $CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER"
 
+      # windows-reactor-setup's build script fetches these from NuGet with no
+      # digest check, and skips the fetch when the package is already in its cache
+      # directory. Seeding that directory is what puts the check in front of it.
+      - name: Seed the Windows App Runtime packages
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $cache = "$env:LOCALAPPDATA\windows-reactor-setup\temp"
+          New-Item -ItemType Directory -Force -Path $cache | Out-Null
+          $packages = @(
+            @('Microsoft.WindowsAppSDK.Runtime', $env:WINDOWS_APP_RUNTIME_VERSION, $env:WINDOWS_APP_RUNTIME_SHA256),
+            @('Microsoft.Web.WebView2', $env:WEBVIEW2_VERSION, $env:WEBVIEW2_SHA256)
+          )
+          foreach ($package in $packages) {
+            $name, $version, $expected = $package
+            $file = "$cache\$name.$version.nupkg"
+            Invoke-WebRequest -UseBasicParsing -OutFile $file -Uri `
+              "https://www.nuget.org/api/v2/package/$name/$version"
+            $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $file).Hash.ToLower()
+            if ($actual -ne $expected) { throw "$name digest $actual, expected $expected" }
+          }
+
       # The same entry point a release uses. --skip-sign is the current release
       # channel (docs/architecture/windows-release.md § Signing status); omitting
       # --publish is what makes this a build rather than a release.
@@ -184,10 +211,22 @@ jobs:
         shell: bash
         run: bash windows/scripts/release-app.sh --skip-sign
 
-      # release-app.sh only re-checks the tree when it is publishing, and its
-      # cargo invocation has no --locked, so a dependency resolution that rewrote
-      # windows/Cargo.lock would otherwise pass unnoticed — and the artifact would
-      # no longer correspond to the commit it claims.
+      # A windows-rs bump that moved a package version would miss the seeded file
+      # and fetch the new one unchecked, leaving a second .nupkg in the cache.
+      - name: Verify the build used only the seeded packages
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $found = (Get-ChildItem -Path "$env:LOCALAPPDATA\windows-reactor-setup\temp" -Filter *.nupkg).Name | Sort-Object
+          $seeded = @(
+            "Microsoft.Web.WebView2.$env:WEBVIEW2_VERSION.nupkg",
+            "Microsoft.WindowsAppSDK.Runtime.$env:WINDOWS_APP_RUNTIME_VERSION.nupkg"
+          ) | Sort-Object
+          if (($found -join ',') -ne ($seeded -join ',')) { throw "cache holds $($found -join ', ')" }
+
+      # release-app.sh only re-checks the tree when it is publishing, so a build
+      # step that rewrote a tracked file would otherwise pass unnoticed — and the
+      # artifact would no longer correspond to the commit it claims.
       - name: Verify the build changed nothing tracked
         shell: bash
         run: |

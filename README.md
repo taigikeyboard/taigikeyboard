@@ -64,4 +64,4 @@ Source code: [Apache License 2.0](LICENSE).
 
 **Dictionary data is not Apache-licensed.** Each source keeps its own terms, and one carries a NonCommercial clause, so the compiled dictionary shipped in every app is non-commercial. See [dictionary licenses](dictionary/LICENSE) for terms and attribution, and [third-party licenses](THIRD_PARTY_LICENSES.md) for fonts and vendored code.
 
-Released binaries follow the [code-signing policy](docs/CODE_SIGNING_POLICY.md).
+Released binaries follow the [Code signing policy](docs/CODE_SIGNING_POLICY.md).

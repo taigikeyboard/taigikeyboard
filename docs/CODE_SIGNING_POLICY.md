@@ -7,7 +7,7 @@ user can verify for themselves.
 
 | Platform | Artifact | Status |
 | --- | --- | --- |
-| Windows | `TaigiKeyboard-<version>.exe` (Inno Setup installer), `taigi_windows_tsf.dll`, `TaigiKeyboardSettings.exe` | **Unsigned.** Integrity rests on the SHA-256 digest published in the update manifest. |
+| Windows | `TaigiKeyboard-<version>.exe` (Inno Setup installer), `TaigiKeyboard.dll`, `TaigiKeyboard32.dll`, `TaigiKeyboardSettings.exe` | **Unsigned.** Integrity rests on the SHA-256 digest published in the update manifest. |
 | Linux | `taigikeyboard_<version>_amd64.deb`, `taigikeyboard-<version>-1.x86_64.rpm`, `taigikeyboard-<version>-1-x86_64.pkg.tar.zst` | **Unsigned.** Integrity rests on the `.sha256` attached beside each package on the release (`docs/architecture/linux-release.md`). |
 | macOS | `TaigiKeyboard-<version>.pkg` | Signed and notarized with an Apple Developer ID. |
 | iOS / Android | App Store / Google Play builds | Signed by the respective store pipeline. |
@@ -86,9 +86,12 @@ Only first-party binaries produced by this project's own release scripts:
 - `windows/scripts/publish-release.sh` — publishes the installer and records
   its digest
 
-Third-party dependencies are statically linked into those binaries and are not
-separately signed. Bundled data files — fonts, the compiled dictionary — are
-not executable and are not signed.
+Third-party Rust dependencies are statically linked into those binaries and are
+not separately signed. The installer also carries Microsoft's Windows App Runtime
+and WebView2 projection beside the settings executable; they are Microsoft's own
+binaries, and this project does not sign them (`THIRD_PARTY_LICENSES.md`).
+Bundled data files — fonts, the compiled dictionary — are not executable and are
+not signed.
 
 Nothing built from another project's source is ever signed with this project's
 certificate.
@@ -120,7 +123,7 @@ input method to work or to be updated, and all of it reversed on uninstall:
 
 | Change | Why |
 | --- | --- |
-| Registers `taigi_windows_tsf.dll` as a TSF text service (`regsvr32`, x64 and x86) | This is what makes the keyboard selectable at all. |
+| Registers `TaigiKeyboard.dll` and `TaigiKeyboard32.dll` as a TSF text service (`regsvr32`, x64 and x86) | This is what makes the keyboard selectable at all. |
 | Creates the scheduled task `TaigiKeyboard Update Check` | Fetches the update manifest so the user is told a new version exists. Deleted by the uninstaller. |
 | Writes a Start-menu shortcut and the usual uninstall registry entry | Standard for an installed application. |
 

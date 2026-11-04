@@ -1,5 +1,7 @@
 [toolchain]
-channel = "stable"
+# A version, not `stable`: the release build must not change compiler underneath
+# a commit. `.github/workflows/windows-build.yml` builds from this file.
+channel = "1.99.1"
 components = ["rustfmt", "clippy"]
 profile = "minimal"
 # JUSTIFICATION: shipped ABIs + the host check target.

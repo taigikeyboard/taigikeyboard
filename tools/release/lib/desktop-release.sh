@@ -124,6 +124,9 @@ _read_release_notes() {
         fail "commit ${DESKTOP_SOURCE_COMMIT:0:7} has no changelog/desktop-v$SHORT_VERSION.md — prepare and commit the release notes before publishing"
     [[ -s "$DESKTOP_NOTES_FILE" ]] ||
         fail "changelog/desktop-v$SHORT_VERSION.md is empty in ${DESKTOP_SOURCE_COMMIT:0:7}"
+    # The release page is the download page the update manifest links to, and
+    # SignPath asks for the term "Code signing policy" on it.
+    printf '\n[Code signing policy](https://taigikeyboard.tw/codesigning.html)\n' >> "$DESKTOP_NOTES_FILE"
 }
 
 # Put one platform's installer on this version's DRAFT release, creating the
