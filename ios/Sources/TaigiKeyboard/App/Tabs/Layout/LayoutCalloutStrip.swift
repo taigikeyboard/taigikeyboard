@@ -13,8 +13,8 @@ struct LayoutCalloutStrip: View {
     let tailX: CGFloat?
     let onTapSlot: (Int) -> Void
 
-    // Eight slots fit the bubble on the narrowest iPhone.
-    private static let cellSize = CGSize(width: 34, height: 44)
+    // Eight equal slots fill the bubble, so it reads centred under the board.
+    private static let cellHeight: CGFloat = 44
     private static let tailSize = CGSize(width: 16, height: 8)
 
     var body: some View {
@@ -22,7 +22,6 @@ struct LayoutCalloutStrip: View {
             ForEach(0 ..< CustomLayout.maxCallouts, id: \.self, content: slot)
         }
         .padding(6)
-        .frame(maxWidth: .infinity, alignment: .leading)
         .background {
             // The shadow on the shape alone, so the entries stay crisp.
             RoundedRectangle(cornerRadius: 12)
@@ -60,7 +59,7 @@ struct LayoutCalloutStrip: View {
         return Text(verbatim: entry ?? "")
             .font(.system(size: 22))
             .foregroundStyle(isSelected ? Color.white : Color.primary)
-            .frame(width: Self.cellSize.width, height: Self.cellSize.height)
+            .frame(maxWidth: .infinity, minHeight: Self.cellHeight, maxHeight: Self.cellHeight)
             .background(isSelected ? Color.accentColor : Color.clear, in: shape)
             .overlay(shape.strokeBorder(Color.secondary, style: StrokeStyle(lineWidth: 1, dash: [3])).opacity(entry == nil && !isSelected ? 1 : 0))
             .contentShape(shape)
