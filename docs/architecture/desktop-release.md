@@ -85,7 +85,8 @@ own artifact; everything above it is shared (see *Where it all lives* below).
    `gh release create` ignores `--target` once a tag exists. A release that is
    already **published** is refused rather than moved: its installers are
    downloadable, so moving its tag would rewrite what a version people already
-   have means. Put it back in draft, or cut a new version.
+   have means. Immutable releases (repository setting, on since 2026-11-04) lock
+   its tag and assets too, so the only way forward is a new version.
 4. `gh release create --draft --target <commit>` with the whole
    `changelog/desktop-v<version>.md` as the notes (every platform shares the
    page, so every section belongs on it), or an upload into the existing draft.
