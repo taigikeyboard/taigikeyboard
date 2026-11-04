@@ -277,29 +277,29 @@ struct LayoutEditorView: View {
     }
 
     /// A tap only does something once a character key or a long-press slot is selected. One the
-    /// selected key's list already holds stays in place, dimmed, so the rows keep their columns.
+    /// selected key's list already holds stays in place, lit in the board's colour, and takes no tap.
     private func spareButton(_ spare: String) -> some View {
         let isHeld = selectedLabel.map { draft.holdsCallout(spare, for: $0) } ?? false
-        return trayButton(action: { replaceSelected(with: spare) }) {
+        return trayButton(isSelected: isHeld, action: { replaceSelected(with: spare) }) {
             Text(verbatim: spare)
         }
         .disabled(isHeld)
-        .opacity(isHeld ? 0.3 : 1)
     }
 
     private func trayGrid(@ViewBuilder content: () -> some View) -> some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 44), spacing: 8)], spacing: 8, content: content)
     }
 
-    private func trayButton(action: @escaping () -> Void, @ViewBuilder label: () -> some View) -> some View {
+    private func trayButton(isSelected: Bool = false, action: @escaping () -> Void, @ViewBuilder label: () -> some View) -> some View {
         Button(action: action) {
             label()
                 .font(AppStyle.bodyFont)
-                .foregroundStyle(Color.primary)
+                .foregroundStyle(isSelected ? Color.white : Color.primary)
                 .frame(maxWidth: .infinity, minHeight: 44)
-                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 8))
+                .background(isSelected ? AppStyle.accentBlue : Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 8))
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
     // MARK: - Editing

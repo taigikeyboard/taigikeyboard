@@ -56,11 +56,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
@@ -380,8 +380,8 @@ fun LayoutEditorScreen(
                         .padding(horizontal = 10.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    // A character the selected key's list already holds stays in place, dimmed, so the
-                    // rows keep their columns.
+                    // A character the selected key's list already holds stays in place, lit in the
+                    // board's colour, and takes no tap.
                     val held = remember(callouts) { tables.trayForms(callouts) }
                     val letters = remember(draft) { draft.spares(tables.trayLetters) }
                     val (halfWidth, fullWidth) = remember(draft) { tables.traySymbols(draft).partition { !isFullWidthSymbol(it) } }
@@ -506,7 +506,7 @@ private fun TraySection(
 
 /**
  * A run of tray chips, [leading] first, then one chip per spare (tap = put it on the selected key or
- * long-press slot); [held] chips are dimmed and inert.
+ * long-press slot); [held] chips are lit in the board's colour and take no tap.
  */
 @Composable
 private fun SpareFlow(
@@ -552,7 +552,7 @@ private fun SpareChip(
     isHeld: Boolean,
     modifier: Modifier = TRAY_CHIP_WIDTH,
 ) {
-    TrayChip(onClick = { onTap(spare) }, description = spare, enabled = !isHeld, disabledAlpha = 0.3f, modifier = modifier) {
+    TrayChip(onClick = { onTap(spare) }, description = spare, isSelected = isHeld, modifier = modifier) {
         Text(spare, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
     }
 }
@@ -561,20 +561,21 @@ private fun SpareChip(
 private fun TrayChip(
     onClick: () -> Unit,
     description: String,
-    enabled: Boolean = true,
-    disabledAlpha: Float = 0.4f,
+    isSelected: Boolean = false,
     modifier: Modifier = TRAY_CHIP_WIDTH,
     content: @Composable () -> Unit,
 ) {
     Surface(
         shape = RoundedCornerShape(8.dp),
-        color = MaterialTheme.colorScheme.surface,
+        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
         modifier =
             modifier
                 .height(44.dp)
-                .alpha(if (enabled) 1f else disabledAlpha)
-                .clickable(enabled = enabled, onClick = onClick)
-                .semantics { contentDescription = description },
+                .clickable(enabled = !isSelected, onClick = onClick)
+                .semantics {
+                    contentDescription = description
+                    selected = isSelected
+                },
     ) {
         Box(Modifier.padding(horizontal = 10.dp), contentAlignment = Alignment.Center) { content() }
     }
