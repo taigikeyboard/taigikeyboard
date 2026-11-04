@@ -11,7 +11,7 @@ You are reviewing refactored code in a cross-platform Taiwanese keyboard project
 
 - Locate counterparts: iOS ↔ Android by name (Glob `ios/**/<Name>.swift` ↔ `android/**/<Name>.kt`; the two trees mirror each other); the user-data stores of every platform are the engine's (`engine/userdata/`), reviewed there once; macOS (through `macos/crates/taigi-macos-ffi`), Windows and Linux share the `desktop/` crates
 - Read `docs/references/keywords.md` for domain terminology
-- The project uses KeyboardKit (iOS) and FlorisBoard (Android)
+- iOS builds on KeyboardKit; Android's keyboard views and layout JSON loaders are derived from FlorisBoard (not a dependency)
 
 ## Your job
 

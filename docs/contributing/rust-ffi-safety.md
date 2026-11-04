@@ -17,7 +17,7 @@ Mandatory rules for the Rust ↔ platform boundary: the seam as built, panic / t
 
 Every exported function (`#[no_mangle]` / `extern "system"` / `#[swift_bridge::bridge]` method / C ABI entry / COM method) wraps its body in `std::panic::catch_unwind`. Unwinding across a language boundary is undefined behavior on JNI, the C ABI and COM.
 
-- Engine adapters: a caught panic → `dispatch::encode_error(…, ErrorCode::FailInternal, …)` → protobuf `Response.error`. There is no `EngineError` type.
+- Engine adapters: a caught panic → `dispatch::encode_error(ErrorCode::FailInternal)` → protobuf `Response.error`. There is no `EngineError` type.
 - Linux C ABI: a panic answers the null / false / zero the header documents and is logged. Windows COM: `E_FAIL` and a log line.
 - `?` is fine inside the closure; the outer `extern fn` never returns a Rust `Result` or `Option`.
 - Unwinding stays on in every crate that hosts a boundary (`panic = "unwind"` in `linux/Cargo.toml`; `windows/Cargo.toml` explains why `abort` would take the host process down).
