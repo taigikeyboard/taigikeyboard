@@ -12,7 +12,7 @@ Defined in `AGENTS.md` Core Principle #6; every key / dedup / group / lookup / v
 
 1. **`docs/phonetics/taigi-phonetics-reference.md`** — full file. Especially:
    - §2 Initials table
-   - §3 Finals table (esp. §3.2.6 Special/Dialectal Finals: `irinn`, `irk`, `irp`, `irt`, `irm`, `irn`, `irng`, `er`, `erh`, `erm`, `ee`, `ere`, etc.)
+   - §3 Finals table (esp. §3.2.6 Special/Dialectal Finals: `irinn`, `irk`, `irp`, `irt`, `irm`, `irn`, `irng`, `er`, `erh`, `ee`, `ere`, etc.)
    - §4 Cross-Reference
    - §5 Tones table — TPS uses diacritic characters (full list under "Key TPS facts" below). Do NOT assume ASCII digit-tone encoding.
 2. **`engine/phonetics/src/<system>.rs`** — source-of-truth lookup table for each system. e.g. `tps.rs` defines `ZHUYIN_INITIALS / ZHUYIN_VOWELS / ZHUYIN_TONES / ZHUYIN_TONES_ENCODE_SAFE`.

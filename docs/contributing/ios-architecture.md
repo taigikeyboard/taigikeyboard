@@ -20,7 +20,7 @@ Dependencies flow down only: **App → Platform → Adapter → Engine**. A lowe
 
 Engine-layer files import Foundation, plus SwiftProtobuf in `Engine/` and Observation for the `@Observable` `ComposingManager`. No KeyboardKit, UIKit, SwiftUI or Combine. Named exceptions, each the one place for its concern:
 
-- `Candidates/Services/{Taigi,English}AutocompleteService.swift` subclass `KeyboardKit.AutocompleteService` — the KeyboardKit boundary sits there.
+- `Candidates/Services/EngineFreeAutocompleteService.swift` and the `{Taigi,English}AutocompleteService.swift` that adopt it conform to `KeyboardKit.AutocompleteService` — the KeyboardKit boundary sits there.
 - `Logging/DebugLogger.swift` — the OSLog sink (`#if DEBUG`).
 - `Engine/UserDataOpening.swift` — the one App Group / filesystem site; it opens the engine's user-data stores (`engine/userdata`). No Swift code opens those files with SQLite.
 
