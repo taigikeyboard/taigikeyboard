@@ -11,6 +11,8 @@ struct LayoutKeyGrid: View {
     /// The editor board's state and callbacks.
     struct Interaction {
         var selected: CustomLayout.Place?
+        /// A second key drawn selected, marked to swap with `selected`.
+        var swapPartner: CustomLayout.Place?
         /// Places drawn as a dashed outline: removed keys the editor can put back.
         var removed: Set<CustomLayout.Place> = []
         /// VoiceOver name of a removed key's place (the grid has no strings of its own).
@@ -68,7 +70,7 @@ struct LayoutKeyGrid: View {
 
     @ViewBuilder
     private func key(_ keyDef: KeyDef, place: CustomLayout.Place?, fontSize: CGFloat, gap: CGFloat) -> some View {
-        let isSelected = place != nil && place == interaction?.selected
+        let isSelected = place != nil && (place == interaction?.selected || place == interaction?.swapPartner)
         // A removed key's place: a dashed outline the editor can fill again.
         let isRemoved = place.map { interaction?.removed.contains($0) ?? false } ?? false
         let shape = RoundedRectangle(cornerRadius: gap * 1.5)

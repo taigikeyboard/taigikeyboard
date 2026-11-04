@@ -65,6 +65,8 @@ import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardLayoutSolver
 /** The editor board's state and callbacks. */
 class LayoutKeyGridInteraction(
     val selected: LayoutPlace?,
+    /** A second key drawn selected, marked to swap with [selected]. */
+    val swapPartner: LayoutPlace? = null,
     /** TalkBack name of a removed key's place (the grid has no strings of its own). */
     val removedPlaceLabel: String,
     val onTap: (LayoutPlace) -> Unit,
@@ -227,7 +229,8 @@ private fun GridKeyView(
     modifier: Modifier,
 ) {
     val place = key.place
-    val isSelected = place != null && place == interaction?.selected
+    val isPrimary = place != null && place == interaction?.selected
+    val isSelected = isPrimary || (place != null && place == interaction?.swapPartner)
     val corner = gap * 1.5f
     val shape = RoundedCornerShape(corner)
     val dashColor = layoutKeyTextColor(isDark).copy(alpha = 0.5f)
@@ -243,7 +246,7 @@ private fun GridKeyView(
         if (place != null && interaction != null) {
             Modifier
                 .interactive(place, key, isSelected, interaction)
-                .onGloballyPositioned { if (isSelected) interaction.onSelectedKeyCenterX(it.boundsInWindow().center.x) }
+                .onGloballyPositioned { if (isPrimary) interaction.onSelectedKeyCenterX(it.boundsInWindow().center.x) }
         } else {
             Modifier
         }

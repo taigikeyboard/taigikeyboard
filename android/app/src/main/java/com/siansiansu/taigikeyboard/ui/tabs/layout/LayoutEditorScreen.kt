@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -60,7 +61,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
@@ -84,8 +84,8 @@ import com.siansiansu.taigikeyboard.ui.components.NameDialog
 import java.util.Collections
 
 // Custom-layout editor: base chips, the board (fixed) and the spare tray (scrolling), all by taps.
-// Tap a key to select it, then a spare to replace it, the trash to remove it, or the swap button below
-// the board and a second key to swap them (function keys within their row). The selected character key's
+// Tap a key to select it, then a spare to replace it or the trash to remove it. Tap a second key to
+// mark both, then the swap button below the board to swap them (function keys within their row). The selected character key's
 // long-press list sits in LayoutCalloutStrip below the board: tap two slots to swap or move, a slot
 // then a tray character to fill it, a slot then the trash to empty it. Nothing is stored until Save,
 // whose dialog names the layout and picks where it shows (LayoutUse), then applies it; Back discards
@@ -112,8 +112,8 @@ fun LayoutEditorScreen(
     var selected by remember { mutableStateOf<LayoutPlace?>(null) }
     // The selected slot of the selected key's long-press list (past its end = an empty slot).
     var selectedCallout by remember { mutableStateOf<Int?>(null) }
-    // Armed by the swap button: the next key tap swaps with [selected].
-    var isSwapping by remember { mutableStateOf(false) }
+    // The key tapped before [selected], marked with it for the swap button; null unless the two can swap.
+    var swapPartner by remember { mutableStateOf<LayoutPlace?>(null) }
     var selectedKeyCenterX by remember { mutableStateOf<Float?>(null) }
     var showNameDialog by rememberSaveable { mutableStateOf(false) }
     // Where the layout shows, picked in the name dialog; starts from the draft's each time it opens.
@@ -136,7 +136,7 @@ fun LayoutEditorScreen(
     fun changeDraft(next: CustomLayout) {
         if (next != draft) {
             draft = next
-            isSwapping = false
+            swapPartner = null
             view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
         }
     }
@@ -144,7 +144,7 @@ fun LayoutEditorScreen(
     fun select(place: LayoutPlace?) {
         selected = place
         selectedCallout = null
-        isSwapping = false
+        swapPartner = null
         // The new key reports its centre once laid out; until then the bubble shows no tail.
         selectedKeyCenterX = null
     }
@@ -154,16 +154,20 @@ fun LayoutEditorScreen(
         select(null)
     }
 
-    // A tap moves or clears the selection, so looking at another key's long-press list changes nothing.
-    // With swap armed, a second key swaps with the selected one where it can (CustomLayout.canSwap:
-    // character keys anywhere, function keys within their row).
+    // A tap never edits, so looking at another key's long-press list changes nothing. A second key that
+    // can swap with the selected one (CustomLayout.canSwap: character keys anywhere, function keys within
+    // their row) marks the pair for the swap button; a tap after a pair starts over.
     fun tap(place: LayoutPlace) {
         val current = selected
-        if (isSwapping && current != null && draft.canSwap(current, place, table)) {
-            edit(draft.swapped(current, place, table))
-        } else {
-            select(if (current == place) null else place)
-        }
+        val isPairing = swapPartner == null && current != null && draft.canSwap(current, place, table)
+        select(if (swapPartner == null && current == place) null else place)
+        if (isPairing) swapPartner = current
+    }
+
+    fun swapMarkedKeys() {
+        val first = swapPartner ?: return
+        val second = selected ?: return
+        edit(draft.swapped(first, second, table))
     }
 
     // Applies [change] to the selected key's list, then selects slot [nextSlot] (clamped to the first
@@ -187,7 +191,7 @@ fun LayoutEditorScreen(
     // A second slot swaps with the selected one when both hold entries; an entry tapped with an empty
     // slot moves to the list's end (entries stay packed at the front). Tapping the selected slot clears it.
     fun tapCallout(index: Int) {
-        isSwapping = false
+        swapPartner = null
         val current = selectedCallout
         if (current == null || current == index) {
             selectedCallout = if (current == index) null else index
@@ -218,7 +222,6 @@ fun LayoutEditorScreen(
         when {
             slot != null -> fillCallout(slot, spare)
             tables.isPlaceable(spare) -> selected?.let { edit(draft.replaced(it, spare)) }
-            else -> isSwapping = false
         }
     }
 
@@ -284,6 +287,7 @@ fun LayoutEditorScreen(
                     interaction =
                         LayoutKeyGridInteraction(
                             selected = selected,
+                            swapPartner = swapPartner,
                             removedPlaceLabel = L10n.settingsSyllableSeparatorNone,
                             onTap = ::tap,
                             onSelectedKeyCenterX = { selectedKeyCenterX = it },
@@ -312,14 +316,10 @@ fun LayoutEditorScreen(
                         .width(boardWidth),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    FilledTonalButton(
-                        onClick = { isSwapping = !isSwapping },
-                        enabled = selected != null && selectedCallout == null,
-                        colors = if (isSwapping) ButtonDefaults.buttonColors() else ButtonDefaults.filledTonalButtonColors(),
-                        modifier =
-                            Modifier
-                                .weight(1f)
-                                .semantics { this.selected = isSwapping },
+                    Button(
+                        onClick = ::swapMarkedKeys,
+                        enabled = swapPartner != null,
+                        modifier = Modifier.weight(1f),
                     ) {
                         Icon(painterResource(R.drawable.ic_swap), contentDescription = L10n.themePhotoHintMove)
                     }

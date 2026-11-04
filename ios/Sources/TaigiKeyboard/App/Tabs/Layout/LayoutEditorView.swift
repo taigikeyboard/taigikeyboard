@@ -1,8 +1,8 @@
 import SwiftUI
 
 /// Custom-layout editor: base chips, the board (fixed) and the spare tray (scrolling), all by taps.
-/// Tap a key to select it, then a spare to replace it, the trash to remove it, or the swap button
-/// below the board and a second key to swap them (function keys within their row). The selected character key's
+/// Tap a key to select it, then a spare to replace it or the trash to remove it. Tap a second key to
+/// mark both, then the swap button below the board to swap them (function keys within their row). The selected character key's
 /// long-press list sits in `LayoutCalloutStrip` below the board: tap two slots to swap or move, a slot
 /// then a tray character to fill it, a slot then the trash to empty it. Nothing is stored until Save,
 /// whose sheet names the layout and picks where it shows (`LayoutUse`), then applies it; Back discards
@@ -15,8 +15,8 @@ struct LayoutEditorView: View {
     @State private var selected: CustomLayout.Place?
     /// The selected slot of the selected key's long-press list (past its end = an empty slot).
     @State private var selectedCallout: Int?
-    /// Armed by the swap button: the next key tap swaps with `selected`.
-    @State private var isSwapping = false
+    /// The key tapped before `selected`, marked with it for the swap button; nil unless the two can swap.
+    @State private var swapPartner: CustomLayout.Place?
     @State private var keyFrames: [CustomLayout.Place: CGRect] = [:]
     @State private var showsSaveSheet = false
     @State private var pendingName = ""
@@ -74,9 +74,11 @@ struct LayoutEditorView: View {
         }
         .onChange(of: selected) {
             selectedCallout = nil
-            isSwapping = false
+            if selected == nil {
+                swapPartner = nil
+            }
         }
-        .onChange(of: draft) { isSwapping = false }
+        .onChange(of: draft) { swapPartner = nil }
         .sheet(isPresented: $showsSaveSheet, onDismiss: closeAfterSave) {
             LayoutSaveSheet(name: $pendingName, use: $pendingUse, onSave: commit)
                 .environment(lang)
@@ -101,6 +103,7 @@ struct LayoutEditorView: View {
                 rows: draft.editorRows,
                 interaction: LayoutKeyGrid.Interaction(
                     selected: selected,
+                    swapPartner: swapPartner,
                     removed: draft.removedPlaces,
                     removedPlaceLabel: lang.string(.settingsSyllableSeparatorNone),
                     onTap: tap,
@@ -113,13 +116,13 @@ struct LayoutEditorView: View {
 
             // Fixed between the bubble and the tray, in thumb reach and always in view.
             HStack(spacing: 12) {
-                Toggle(isOn: $isSwapping) {
+                Button(action: swapMarkedKeys) {
                     Image(latinSystemName: "arrow.left.arrow.right")
                         .font(AppStyle.bodyFont)
                         .frame(maxWidth: .infinity)
                 }
-                .toggleStyle(.button)
-                .disabled(selected == nil || selectedCallout != nil)
+                .buttonStyle(.borderedProminent)
+                .disabled(swapPartner == nil)
                 .accessibilityLabel(lang.string(.themePhotoHintMove))
 
                 Button(action: resetSelectedCallouts) {
@@ -127,10 +130,10 @@ struct LayoutEditorView: View {
                         .font(AppStyle.bodyFont)
                         .frame(maxWidth: .infinity)
                 }
+                .buttonStyle(.bordered)
                 .disabled(!(selectedLabel.map { draft.callouts[$0] != nil } ?? false))
                 .accessibilityLabel(lang.string(.themeEditorResetAll))
             }
-            .buttonStyle(.bordered)
             .buttonBorderShape(.capsule)
             .controlSize(.large)
             .frame(width: boardWidth)
@@ -271,17 +274,23 @@ struct LayoutEditorView: View {
 
     // MARK: - Editing
 
-    /// A tap moves or clears the selection, so looking at another key's long-press list changes nothing.
-    /// With swap armed, a second key swaps with the selected one where it can (`CustomLayout.canSwap`:
-    /// character keys anywhere, function keys within their row).
+    /// A tap never edits, so looking at another key's long-press list changes nothing. A second key
+    /// that can swap with the selected one (`CustomLayout.canSwap`: character keys anywhere, function
+    /// keys within their row) marks the pair for the swap button; a tap after a pair starts over.
     private func tap(_ place: CustomLayout.Place) {
         withAnimation(.snappy(duration: 0.2)) {
-            if isSwapping, let current = selected, draft.canSwap(current, place) {
-                draft.swap(current, place)
-                selected = nil
-            } else {
-                selected = selected == place ? nil : place
-            }
+            let isPairing = swapPartner == nil && selected.map { draft.canSwap($0, place) } == true
+            let isDeselecting = swapPartner == nil && selected == place
+            swapPartner = isPairing ? selected : nil
+            selected = isDeselecting ? nil : place
+        }
+    }
+
+    private func swapMarkedKeys() {
+        guard let selected, let swapPartner else { return }
+        withAnimation(.snappy(duration: 0.2)) {
+            draft.swap(swapPartner, selected)
+            self.selected = nil
         }
     }
 
@@ -331,7 +340,7 @@ struct LayoutEditorView: View {
     /// empty slot moves to the list's end (entries stay packed at the front). Tapping the selected
     /// slot clears it.
     private func tapCallout(_ index: Int) {
-        isSwapping = false
+        swapPartner = nil
         guard let current = selectedCallout, current != index else {
             selectedCallout = selectedCallout == index ? nil : index
             return
