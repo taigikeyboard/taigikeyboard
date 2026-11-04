@@ -103,10 +103,11 @@ macOS 的符號：`⌃` control、`⌥` option、`⌘` command、`⇧` shift。
 | `v` | 第 2 ／ 8 調 |
 | `y` | 第 3 調 |
 | `d` | 第 5 調 |
+| `z` | 第 6 調 |
 | `w` | 第 7 調 |
 | `q` | 第 9 調 |
-| `z` | ts（白話字 ch） |
-| `z` `h` | tsh（白話字 chh） |
+| `c` | ts（白話字 ch） |
+| `c` `h` | tsh（白話字 chh） |
 | `f` | 連字符 - |
 
 袂記得的時，揤 `⌃` `⌘` `/`（Windows、Linux：`Ctrl` `Alt` `/`），Telex 說明會浮佇螢幕頂；閣揤一擺就收起來。
