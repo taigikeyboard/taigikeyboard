@@ -320,8 +320,8 @@ def tones_numeric():
 
 def tones_telex():
     result = marks("blue", {
-        "x": "1／4 調", "v": "2／8 調", "y": "3 調", "d": "5 調", "w": "7 調", "q": "9 調",
-        "z": "ts", "f": "連字符 -",
+        "x": "1／4 調", "v": "2／8 調", "y": "3 調", "d": "5 調", "z": "6 調", "w": "7 調", "q": "9 調",
+        "c": "ts", "f": "連字符 -",
     })
     result.update(marks("orange", {str(n): None for n in range(1, 10)}))
     return result, [("blue", "聲調、ts、連字符"), ("orange", "直接選第幾个候選詞")]
