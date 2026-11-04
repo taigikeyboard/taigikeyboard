@@ -50,10 +50,10 @@ pub fn append(
     )
 }
 
-/// Applies one Telex key to the pending syllable's tone — or, for `z`,
+/// Applies one Telex key to the pending syllable's tone — or, for `c`,
 /// types the affricate initial the input mode spells (`composing.proto`
 /// `TelexKey`, `engine/composing/src/telex.rs`). Carries the same config
-/// as `append` (`z` resolves by `input_mode`, the prefix by the spacing
+/// as `append` (`c` resolves by `input_mode`, the prefix by the spacing
 /// flags).
 pub fn telex_key(
     key: &str,

@@ -1061,7 +1061,7 @@ impl TextService_Impl {
                 self.flash_mode_label(runtime, &settings, mode.label_key());
             }
             ShortcutAction::ShowTelexGuide => {
-                // Spelled for the romanization in use — `z` is `ts` under TL
+                // Spelled for the romanization in use — `c` is `ts` under TL
                 // and `ch` under POJ — and owned by this context, so the key
                 // path above and this context's focus loss are what take it
                 // down. Candidates and the composition are not touched: a
