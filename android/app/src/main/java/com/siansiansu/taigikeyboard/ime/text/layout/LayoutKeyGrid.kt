@@ -65,6 +65,8 @@ import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardLayoutSolver
 /** The editor board's state and callbacks. */
 class LayoutKeyGridInteraction(
     val selected: LayoutPlace?,
+    /** [selected] draws plain, still reporting its centre: a long-press slot is what is lit. */
+    val isSelectionMuted: Boolean = false,
     /** A second key drawn selected, marked to swap with [selected]. */
     val swapPartner: LayoutPlace? = null,
     /** TalkBack name of a removed key's place (the grid has no strings of its own). */
@@ -230,7 +232,7 @@ private fun GridKeyView(
 ) {
     val place = key.place
     val isPrimary = place != null && place == interaction?.selected
-    val isSelected = isPrimary || (place != null && place == interaction?.swapPartner)
+    val isSelected = interaction?.isSelectionMuted != true && (isPrimary || (place != null && place == interaction?.swapPartner))
     val corner = gap * 1.5f
     val shape = RoundedCornerShape(corner)
     val dashColor = layoutKeyTextColor(isDark).copy(alpha = 0.5f)

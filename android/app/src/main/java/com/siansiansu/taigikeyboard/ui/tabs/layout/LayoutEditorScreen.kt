@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
@@ -313,6 +314,8 @@ fun LayoutEditorScreen(
                     interaction =
                         LayoutKeyGridInteraction(
                             selected = selected,
+                            // Only what the next action works on is lit: the bubble's tail still names the key.
+                            isSelectionMuted = selectedCallout != null,
                             swapPartner = swapPartner,
                             removedPlaceLabel = L10n.settingsSyllableSeparatorNone,
                             onTap = ::tap,
@@ -357,6 +360,14 @@ fun LayoutEditorScreen(
                     ) {
                         Icon(painterResource(R.drawable.ic_undo), contentDescription = L10n.desktopMenuUndo)
                     }
+                    FilledTonalButton(
+                        onClick = ::removeSelected,
+                        enabled = selectedCallout?.let { it in callouts.indices } ?: (selected?.let(draft::canRemove) == true),
+                        colors = ButtonDefaults.filledTonalButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(Icons.Outlined.Delete, contentDescription = L10n.commonDelete)
+                    }
                 }
 
                 Column(
@@ -367,14 +378,10 @@ fun LayoutEditorScreen(
                         .padding(horizontal = 10.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    val canRemove = selectedCallout?.let { it in callouts.indices } ?: (selected?.let(draft::canRemove) == true)
                     // A character the selected key's list already holds stays in place, dimmed, so the
                     // rows keep their columns.
                     val held = remember(callouts) { tables.trayForms(callouts) }
                     SpareFlow(remember(draft) { draft.spares(tables.trayLetters) }, onTap = ::replaceSelected) {
-                        TrayChip(onClick = ::removeSelected, enabled = canRemove, description = L10n.commonDelete) {
-                            Icon(Icons.Outlined.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
-                        }
                         if (!draft.hasEmojiKey) {
                             // Tap restores the emoji key at once.
                             TrayChip(

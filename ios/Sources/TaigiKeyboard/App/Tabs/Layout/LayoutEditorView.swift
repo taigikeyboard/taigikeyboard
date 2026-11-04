@@ -121,7 +121,8 @@ struct LayoutEditorView: View {
             LayoutKeyGrid(
                 rows: draft.editorRows,
                 interaction: LayoutKeyGrid.Interaction(
-                    selected: selected,
+                    // Only what the next action works on is lit: the bubble's tail still names the key.
+                    selected: selectedCallout == nil ? selected : nil,
                     swapPartner: swapPartner,
                     removed: draft.removedPlaces,
                     removedPlaceLabel: lang.string(.settingsSyllableSeparatorNone),
@@ -152,6 +153,16 @@ struct LayoutEditorView: View {
                 .buttonStyle(.bordered)
                 .disabled(history.isEmpty)
                 .accessibilityLabel(lang.string(.desktopMenuUndo))
+
+                Button(action: removeSelected) {
+                    Image(latinSystemName: "trash")
+                        .font(AppStyle.bodyFont)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .tint(.red)
+                .disabled(!canRemove)
+                .accessibilityLabel(lang.string(.commonDelete))
             }
             .buttonBorderShape(.capsule)
             .controlSize(.large)
@@ -196,21 +207,16 @@ struct LayoutEditorView: View {
         }
     }
 
-    /// Three groups, gaps between them: trash, the removed emoji key and spare letters; tone-marked
-    /// letters, one row per base; symbols, half-width then full-width. A tap puts a character on the
-    /// selected key or long-press slot (where it fits); the emoji chip goes straight back to its place.
-    private var spareTray: some View {
-        let canRemove = selectedCallout.map(selectedCallouts.indices.contains) ?? (selected.map(draft.canRemove) ?? false)
-        return VStack(spacing: 28) {
-            trayGrid {
-                trayButton(action: removeSelected) {
-                    Image(latinSystemName: "trash")
-                        .foregroundStyle(Color.red)
-                }
-                .disabled(!canRemove)
-                .opacity(canRemove ? 1 : 0.4)
-                .accessibilityLabel(lang.string(.commonDelete))
+    private var canRemove: Bool {
+        selectedCallout.map(selectedCallouts.indices.contains) ?? (selected.map(draft.canRemove) ?? false)
+    }
 
+    /// Three groups, gaps between them: the removed emoji key and spare letters; tone-marked letters,
+    /// one row per base; symbols, half-width then full-width. A tap puts a character on the selected
+    /// key or long-press slot (where it fits); the emoji chip goes straight back to its place.
+    private var spareTray: some View {
+        VStack(spacing: 28) {
+            trayGrid {
                 if !draft.hasEmojiKey {
                     trayButton(action: restoreEmojiKey) {
                         Image(latinSystemName: "face.smiling")
