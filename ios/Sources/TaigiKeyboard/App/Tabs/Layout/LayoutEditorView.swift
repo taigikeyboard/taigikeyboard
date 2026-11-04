@@ -1,11 +1,11 @@
 import SwiftUI
 
 /// Custom-layout editor: base chips, the board (fixed) and the spare tray (scrolling), all by taps.
-/// Tap two keys to swap them (function keys within their row), a key then a spare to replace it,
-/// a key then the trash to remove it. The selected character key's long-press list sits in
-/// `LayoutCalloutStrip` below the board: tap two slots to swap or move, a slot then a tray
-/// character to fill it, a slot then the trash to empty it. Nothing is stored until Save, whose
-/// sheet names the layout and picks where it shows (`LayoutUse`), then applies it; Back discards
+/// Tap a key to select it, then a spare to replace it, the trash to remove it, or the toolbar's swap
+/// button and a second key to swap them (function keys within their row). The selected character key's
+/// long-press list sits in `LayoutCalloutStrip` below the board: tap two slots to swap or move, a slot
+/// then a tray character to fill it, a slot then the trash to empty it. Nothing is stored until Save,
+/// whose sheet names the layout and picks where it shows (`LayoutUse`), then applies it; Back discards
 /// the draft.
 struct LayoutEditorView: View {
     @Environment(DisplayLanguageStore.self) private var lang
@@ -15,6 +15,8 @@ struct LayoutEditorView: View {
     @State private var selected: CustomLayout.Place?
     /// The selected slot of the selected key's long-press list (past its end = an empty slot).
     @State private var selectedCallout: Int?
+    /// Armed by the swap button: the next key tap swaps with `selected`.
+    @State private var isSwapping = false
     @State private var keyFrames: [CustomLayout.Place: CGRect] = [:]
     @State private var showsSaveSheet = false
     @State private var pendingName = ""
@@ -61,6 +63,14 @@ struct LayoutEditorView: View {
         .navigationTitle(isEditing ? draft.name : lang.string(.layoutEditorTitleNew))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Toggle(isOn: $isSwapping) {
+                    Image(latinSystemName: "arrow.left.arrow.right")
+                }
+                .toggleStyle(.button)
+                .disabled(selected == nil || selectedCallout != nil)
+                .accessibilityLabel(lang.string(.themePhotoHintMove))
+            }
             ToolbarItem(placement: .confirmationAction) {
                 Button(lang.string(.commonSave)) {
                     pendingName = draft.name
@@ -69,7 +79,11 @@ struct LayoutEditorView: View {
                 }
             }
         }
-        .onChange(of: selected) { selectedCallout = nil }
+        .onChange(of: selected) {
+            selectedCallout = nil
+            isSwapping = false
+        }
+        .onChange(of: draft) { isSwapping = false }
         .sheet(isPresented: $showsSaveSheet, onDismiss: closeAfterSave) {
             LayoutSaveSheet(name: $pendingName, use: $pendingUse, onSave: commit)
                 .environment(lang)
@@ -248,11 +262,12 @@ struct LayoutEditorView: View {
 
     // MARK: - Editing
 
-    /// A second key swaps with the selected one where it can (`CustomLayout.canSwap`: character keys
-    /// anywhere, function keys within their row); otherwise the tap moves or clears the selection.
+    /// A tap moves or clears the selection, so looking at another key's long-press list changes nothing.
+    /// With swap armed, a second key swaps with the selected one where it can (`CustomLayout.canSwap`:
+    /// character keys anywhere, function keys within their row).
     private func tap(_ place: CustomLayout.Place) {
         withAnimation(.snappy(duration: 0.2)) {
-            if let current = selected, draft.canSwap(current, place) {
+            if isSwapping, let current = selected, draft.canSwap(current, place) {
                 draft.swap(current, place)
                 selected = nil
             } else {
@@ -299,6 +314,7 @@ struct LayoutEditorView: View {
     /// empty slot moves to the list's end (entries stay packed at the front). Tapping the selected
     /// slot clears it.
     private func tapCallout(_ index: Int) {
+        isSwapping = false
         guard let current = selectedCallout, current != index else {
             selectedCallout = selectedCallout == index ? nil : index
             return
