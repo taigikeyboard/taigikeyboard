@@ -11,8 +11,8 @@ Include what you have: affected platform and version, what an attacker can do,
 and the smallest reproduction you can manage. A report without a working
 reproduction is still worth sending.
 
-This is a single-maintainer project. Expect an acknowledgement within a week,
-and a fix timeline with it. Please give a reasonable window before disclosing
+This project has two maintainers. Expect an acknowledgement within a week, and
+a fix timeline with it. Please give a reasonable window before disclosing
 publicly.
 
 ## Supported versions
