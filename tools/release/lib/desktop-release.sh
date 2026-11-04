@@ -282,7 +282,7 @@ _align_draft_with_commit() {
     read -r is_draft target <<< "$state"
 
     [[ "$is_draft" == true ]] ||
-        fail "$DESKTOP_TAG is already published — an asset added now would be public immediately. Put it back in draft (gh release edit $DESKTOP_TAG --repo $RELEASE_REPOSITORY --draft=true) to keep testing, or cut a new version"
+        fail "$DESKTOP_TAG is already published — published releases are immutable. Cut a new version"
     [[ "$target" != "$DESKTOP_SOURCE_COMMIT" ]] || return 0
 
     echo "  the draft targets '$target'; pointing it at ${DESKTOP_SOURCE_COMMIT:0:7}"
