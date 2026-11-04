@@ -112,15 +112,20 @@ struct LayoutEditorView: View {
 
             // Fixed between the bubble and the tray, in thumb reach and always in view.
             Toggle(isOn: $isSwapping) {
-                Image(latinSystemName: "arrow.left.arrow.right")
-                    .font(AppStyle.bodyFont)
-                    .frame(width: 72, height: 32)
+                Label {
+                    Text(lang.string(.themePhotoHintMove))
+                } icon: {
+                    Image(latinSystemName: "arrow.left.arrow.right")
+                }
+                .font(AppStyle.bodyFont)
+                .frame(maxWidth: .infinity)
             }
             .toggleStyle(.button)
             .buttonStyle(.bordered)
             .buttonBorderShape(.capsule)
+            .controlSize(.large)
+            .frame(width: boardWidth)
             .disabled(selected == nil || selectedCallout != nil)
-            .accessibilityLabel(lang.string(.themePhotoHintMove))
         }
         // Inside the scroll content, so key frames stay put (no preference churn) while the editor scrolls.
         .coordinateSpace(name: LayoutKeyGrid.editorSpace)

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
@@ -30,12 +31,11 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -60,6 +60,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
@@ -307,18 +308,23 @@ fun LayoutEditorScreen(
                 )
 
                 // Fixed between the bubble and the tray, in thumb reach and always in view.
-                IconToggleButton(
-                    checked = isSwapping,
-                    onCheckedChange = { isSwapping = it },
+                FilledTonalButton(
+                    onClick = { isSwapping = !isSwapping },
                     enabled = selected != null && selectedCallout == null,
-                    colors =
-                        IconButtonDefaults.iconToggleButtonColors(
-                            checkedContainerColor = MaterialTheme.colorScheme.primary,
-                            checkedContentColor = MaterialTheme.colorScheme.onPrimary,
-                        ),
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                    colors = if (isSwapping) ButtonDefaults.buttonColors() else ButtonDefaults.filledTonalButtonColors(),
+                    modifier =
+                        Modifier
+                            .align(Alignment.CenterHorizontally)
+                            .width(boardWidth)
+                            .semantics { this.selected = isSwapping },
                 ) {
-                    Icon(painterResource(R.drawable.ic_swap), contentDescription = L10n.themePhotoHintMove)
+                    Icon(
+                        painterResource(R.drawable.ic_swap),
+                        contentDescription = null,
+                        modifier = Modifier.size(ButtonDefaults.IconSize),
+                    )
+                    Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                    Text(L10n.themePhotoHintMove)
                 }
 
                 Column(
