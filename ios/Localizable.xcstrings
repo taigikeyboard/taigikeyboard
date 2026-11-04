@@ -3349,24 +3349,6 @@
         }
       }
     },
-    "i18n_layout_trayLetters": {
-      "comment": "Layout editor tray header above spare letters. TL/POJ DRAFT: kautian main reading of 字母 — pending USER proofread.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Letters"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "文字"
-          }
-        }
-      }
-    },
     "i18n_layout_trayTones": {
       "comment": "Layout editor tray header above tone-marked letters.",
       "extractionState": "manual",

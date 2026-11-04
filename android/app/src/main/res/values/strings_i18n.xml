@@ -182,7 +182,6 @@
     <string name="i18n_layout_editorTitleNew">新佈局</string>
     <string name="i18n_layout_nameHeader">佈局名稱</string>
     <string name="i18n_layout_calloutsTitle">長揤字</string>
-    <string name="i18n_layout_trayLetters">字母</string>
     <string name="i18n_layout_trayTones">聲調</string>
     <string name="i18n_layout_commonLayoutsSection">通用</string>
     <string name="i18n_layout_standardLayout">Lohankha</string>

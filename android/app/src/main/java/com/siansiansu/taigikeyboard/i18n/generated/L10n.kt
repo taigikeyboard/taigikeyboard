@@ -362,8 +362,6 @@ object L10n {
         @Composable get() = stringRes(StringKey.LAYOUT_NAME_HEADER)
     val layoutCalloutsTitle: String
         @Composable get() = stringRes(StringKey.LAYOUT_CALLOUTS_TITLE)
-    val layoutTrayLetters: String
-        @Composable get() = stringRes(StringKey.LAYOUT_TRAY_LETTERS)
     val layoutTrayTones: String
         @Composable get() = stringRes(StringKey.LAYOUT_TRAY_TONES)
     val layoutCommonLayoutsSection: String

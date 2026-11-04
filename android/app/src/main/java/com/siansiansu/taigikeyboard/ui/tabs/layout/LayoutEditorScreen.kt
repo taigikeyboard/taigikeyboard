@@ -409,16 +409,14 @@ fun LayoutEditorScreen(
                     val letters = remember(draft) { draft.spares(tables.trayLetters) }
                     val (halfWidth, fullWidth) = remember(draft) { tables.traySymbols(draft).partition { !isFullWidthSymbol(it) } }
                     if (!draft.hasEmojiKey || letters.isNotEmpty()) {
-                        TraySection(L10n.layoutTrayLetters) {
-                            SpareFlow(letters, onTap = ::markSpare, held = held, marked = markedSpare) {
-                                if (!draft.hasEmojiKey) {
-                                    // Tap restores the emoji key at once.
-                                    TrayChip(
-                                        onClick = { edit(draft.restoreEmojiKey()) },
-                                        description = accessibilityName(GridKey.Face.Function(FunctionKey.EMOJI)),
-                                    ) {
-                                        Icon(painterResource(R.drawable.ic_sentiment_satisfied), contentDescription = null)
-                                    }
+                        SpareFlow(letters, onTap = ::markSpare, held = held, marked = markedSpare) {
+                            if (!draft.hasEmojiKey) {
+                                // Tap restores the emoji key at once.
+                                TrayChip(
+                                    onClick = { edit(draft.restoreEmojiKey()) },
+                                    description = accessibilityName(GridKey.Face.Function(FunctionKey.EMOJI)),
+                                ) {
+                                    Icon(painterResource(R.drawable.ic_sentiment_satisfied), contentDescription = null)
                                 }
                             }
                         }

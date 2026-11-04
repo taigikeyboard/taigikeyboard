@@ -31,11 +31,6 @@
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
       "values": { "hanji": "長揤字", "tailo": "Tn̂g tshi̍h jī", "poj": "Tn̂g chhi̍h jī", "en": "Long-Press Characters", "ja": "長押しの文字" }
     },
-    "trayLetters": {
-      "comment": "Layout editor tray header above spare letters. TL/POJ DRAFT: kautian main reading of 字母 — pending USER proofread.",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "字母", "tailo": "Lī-bú", "poj": "Lī-bú", "en": "Letters", "ja": "文字" }
-    },
     "trayTones": {
       "comment": "Layout editor tray header above tone-marked letters.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
