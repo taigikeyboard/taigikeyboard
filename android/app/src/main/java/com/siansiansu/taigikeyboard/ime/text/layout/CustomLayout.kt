@@ -203,9 +203,6 @@ data class CustomLayout(
         return copy(callouts = if (list == defaults) callouts - label else callouts + (label to list))
     }
 
-    /** The key labelled [label] back on the built-in long-press list. */
-    fun withDefaultCallouts(label: String): CustomLayout = copy(callouts = callouts - label)
-
     private fun calloutsWithout(index: Int): Map<String, List<String>> = keys[index]?.let { callouts - it } ?: callouts
 
     /** The labels of [pool] not on the board. */

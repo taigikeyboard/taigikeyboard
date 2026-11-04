@@ -237,11 +237,6 @@ struct CustomLayout: Codable, Identifiable, Hashable {
         return copy
     }
 
-    /// Whether the board still matches the base table.
-    var isUnchanged: Bool {
-        hasEmojiKey && keys == baseLabels.map(Optional.some) && functionKeys == baseFunctionKeys && callouts.isEmpty
-    }
-
     /// The key table the keyboard shows: removed keys leave their row (the rest keep their width),
     /// and a row left empty goes too.
     func rows(withGlobe: Bool) -> [[KeyDef]] {
@@ -438,11 +433,6 @@ struct CustomLayout: Codable, Identifiable, Hashable {
         let trimmed = entries.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
         let list = Array(Self.unique(trimmed).prefix(Self.maxCallouts))
         callouts[label] = list == defaultCallouts(for: label) ? nil : list
-    }
-
-    /// Gives the key labelled `label` the built-in long-press list again.
-    mutating func resetCallouts(for label: String) {
-        callouts[label] = nil
     }
 
     /// The user's long-press list for a board key the keyboard sends as `char`, or nil when that key

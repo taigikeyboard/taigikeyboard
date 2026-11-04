@@ -47,6 +47,7 @@ import com.siansiansu.taigikeyboard.ime.text.layout.dashedOutline
 fun LayoutCalloutStrip(
     entries: List<String>?,
     selectedSlot: Int?,
+    partnerSlot: Int?,
     tailX: Float?,
     onTapSlot: (Int) -> Unit,
     modifier: Modifier = Modifier,
@@ -80,7 +81,7 @@ fun LayoutCalloutStrip(
         repeat(CustomLayout.MAX_CALLOUTS) { index ->
             Slot(
                 entry = entries?.getOrNull(index),
-                isSelected = index == selectedSlot,
+                isSelected = index == selectedSlot || index == partnerSlot,
                 enabled = entries != null,
                 onTap = { onTapSlot(index) },
                 modifier = Modifier.weight(1f),

@@ -9,6 +9,8 @@ struct LayoutCalloutStrip: View {
     /// The selected key's list; nil while no character key is selected.
     let entries: [String]?
     let selectedSlot: Int?
+    /// A second slot drawn selected, marked to swap with `selectedSlot`.
+    let partnerSlot: Int?
     /// The selected key's horizontal centre in `LayoutKeyGrid.editorSpace`, where the tail points.
     let tailX: CGFloat?
     let onTapSlot: (Int) -> Void
@@ -54,7 +56,7 @@ struct LayoutCalloutStrip: View {
     /// An entry, or an empty dashed slot past the list's end; drawn selected in the board's colour.
     private func slot(_ index: Int) -> some View {
         let entry = entries.flatMap { $0.indices.contains(index) ? $0[index] : nil }
-        let isSelected = index == selectedSlot
+        let isSelected = index == selectedSlot || index == partnerSlot
         let shape = RoundedRectangle(cornerRadius: 8)
         return Text(verbatim: entry ?? "")
             .font(.system(size: 22))

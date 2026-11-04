@@ -270,9 +270,6 @@ class CustomLayoutTables(
             CustomLayout(id, name, base, script, table.labels, table.functionKeys, hasEmojiKey = true)
         }
 
-    /** Whether [layout]'s board still matches its base table (its use aside). */
-    fun isUnchanged(layout: CustomLayout): Boolean = fresh(layout.id, layout.name, layout.base, layout.script)?.copy(isUniversal = layout.isUniversal) == layout
-
     /**
      * [layout] shown where [use] says. Picking one script lays the keys as arranged on that script's
      * table row by row. Most bases have the same places in both scripts; where a row has more (QWERTY's

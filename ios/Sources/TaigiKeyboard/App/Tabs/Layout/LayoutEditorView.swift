@@ -3,8 +3,9 @@ import SwiftUI
 /// Custom-layout editor: base chips, the board (fixed) and the spare tray (scrolling), all by taps.
 /// Tap a key to select it, then a spare to replace it or the trash to remove it. Tap a second key to
 /// mark both, then the swap button below the board to swap them (function keys within their row). The selected character key's
-/// long-press list sits in `LayoutCalloutStrip` below the board: tap two slots to swap or move, a slot
-/// then a tray character to fill it, a slot then the trash to empty it. Nothing is stored until Save,
+/// long-press list sits in `LayoutCalloutStrip` below the board: tap two slots and the swap button to
+/// swap or move, a slot then a tray character to fill it, a slot then the trash to empty it. The undo
+/// button steps back one edit at a time. Nothing is stored until Save,
 /// whose sheet names the layout and picks where it shows (`LayoutUse`), then applies it; Back discards
 /// the draft.
 struct LayoutEditorView: View {
@@ -17,6 +18,12 @@ struct LayoutEditorView: View {
     @State private var selectedCallout: Int?
     /// The key tapped before `selected`, marked with it for the swap button; nil unless the two can swap.
     @State private var swapPartner: CustomLayout.Place?
+    /// The slot tapped before `selectedCallout`, marked with it for the swap button.
+    @State private var calloutPartner: Int?
+    /// The draft before each edit, oldest first.
+    @State private var history: [CustomLayout] = []
+    /// Set while undo writes the draft, so that write adds no history.
+    @State private var isUndoing = false
     @State private var keyFrames: [CustomLayout.Place: CGRect] = [:]
     @State private var showsSaveSheet = false
     @State private var pendingName = ""
@@ -48,13 +55,17 @@ struct LayoutEditorView: View {
                 ScrollView {
                     VStack(spacing: 16) {
                         editorHeader(boardWidth: boardWidth)
-                        trayAndReset
+                        spareTray
+                            .padding(.vertical, 8)
                     }
                 }
             } else {
                 VStack(spacing: 16) {
                     editorHeader(boardWidth: boardWidth)
-                    ScrollView { trayAndReset }
+                    ScrollView {
+                        spareTray
+                            .padding(.vertical, 8)
+                    }
                 }
             }
         }
@@ -74,11 +85,19 @@ struct LayoutEditorView: View {
         }
         .onChange(of: selected) {
             selectedCallout = nil
+            calloutPartner = nil
             if selected == nil {
                 swapPartner = nil
             }
         }
-        .onChange(of: draft) { swapPartner = nil }
+        .onChange(of: draft) { previous, _ in
+            swapPartner = nil
+            calloutPartner = nil
+            if !isUndoing {
+                history.append(previous)
+            }
+            isUndoing = false
+        }
         .sheet(isPresented: $showsSaveSheet, onDismiss: closeAfterSave) {
             LayoutSaveSheet(name: $pendingName, use: $pendingUse, onSave: commit)
                 .environment(lang)
@@ -116,23 +135,23 @@ struct LayoutEditorView: View {
 
             // Fixed between the bubble and the tray, in thumb reach and always in view.
             HStack(spacing: 12) {
-                Button(action: swapMarkedKeys) {
+                Button(action: swapMarked) {
                     Image(latinSystemName: "arrow.left.arrow.right")
                         .font(AppStyle.bodyFont)
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(swapPartner == nil)
+                .disabled(swapPartner == nil && calloutPartner == nil)
                 .accessibilityLabel(lang.string(.themePhotoHintMove))
 
-                Button(action: resetSelectedCallouts) {
-                    Image(latinSystemName: "arrow.counterclockwise")
+                Button(action: undo) {
+                    Image(latinSystemName: "arrow.uturn.backward")
                         .font(AppStyle.bodyFont)
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
-                .disabled(!(selectedLabel.map { draft.callouts[$0] != nil } ?? false))
-                .accessibilityLabel(lang.string(.themeEditorResetAll))
+                .disabled(history.isEmpty)
+                .accessibilityLabel(lang.string(.desktopMenuUndo))
             }
             .buttonBorderShape(.capsule)
             .controlSize(.large)
@@ -142,24 +161,12 @@ struct LayoutEditorView: View {
         .coordinateSpace(name: LayoutKeyGrid.editorSpace)
     }
 
-    private var trayAndReset: some View {
-        VStack(spacing: 24) {
-            spareTray
-
-            Button(lang.string(.themeEditorResetAll), role: .destructive) {
-                restart(from: draft.base)
-            }
-            .font(AppStyle.bodyFont)
-            .disabled(draft.isUnchanged)
-        }
-        .padding(.vertical, 8)
-    }
-
     /// Always in place, so the tray never moves: empty slots until a character key is selected.
     private var calloutStrip: some View {
         LayoutCalloutStrip(
             entries: selectedLabel == nil ? nil : selectedCallouts,
             selectedSlot: selectedCallout,
+            partnerSlot: calloutPartner,
             tailX: selected.flatMap { keyFrames[$0]?.midX },
             onTapSlot: tapCallout,
         )
@@ -286,11 +293,25 @@ struct LayoutEditorView: View {
         }
     }
 
-    private func swapMarkedKeys() {
+    /// Swaps the marked long-press slots, else the marked keys.
+    private func swapMarked() {
+        if let calloutPartner, let selectedCallout {
+            swapCallouts(calloutPartner, selectedCallout)
+            return
+        }
         guard let selected, let swapPartner else { return }
         withAnimation(.snappy(duration: 0.2)) {
             draft.swap(swapPartner, selected)
             self.selected = nil
+        }
+    }
+
+    private func undo() {
+        guard let previous = history.popLast() else { return }
+        withAnimation(.snappy(duration: 0.2)) {
+            isUndoing = true
+            draft = previous
+            selected = nil
         }
     }
 
@@ -328,33 +349,28 @@ struct LayoutEditorView: View {
 
     // MARK: - Long-press list
 
-    private func resetSelectedCallouts() {
-        guard let selectedLabel else { return }
-        withAnimation(.snappy(duration: 0.2)) {
-            draft.resetCallouts(for: selectedLabel)
-            selectedCallout = nil
-        }
-    }
-
-    /// A second slot swaps with the selected one when both hold entries; an entry tapped with an
-    /// empty slot moves to the list's end (entries stay packed at the front). Tapping the selected
-    /// slot clears it.
+    /// A second slot marks the pair for the swap button when either holds an entry, and a tap after a
+    /// pair starts over. Tapping the selected slot clears it.
     private func tapCallout(_ index: Int) {
         swapPartner = nil
-        guard let current = selectedCallout, current != index else {
-            selectedCallout = selectedCallout == index ? nil : index
-            return
-        }
         let filled = selectedCallouts.indices
-        switch (filled.contains(current), filled.contains(index)) {
-        case (true, true):
-            editCallouts(nextSlot: nil) { $0.swapAt(current, index) }
-        case (true, false):
-            editCallouts(nextSlot: nil) { $0.append($0.remove(at: current)) }
-        case (false, true):
-            editCallouts(nextSlot: nil) { $0.append($0.remove(at: index)) }
-        case (false, false):
-            selectedCallout = index
+        let isPairing = calloutPartner == nil
+            && selectedCallout.map { $0 != index && (filled.contains($0) || filled.contains(index)) } == true
+        let isDeselecting = calloutPartner == nil && selectedCallout == index
+        calloutPartner = isPairing ? selectedCallout : nil
+        selectedCallout = isDeselecting ? nil : index
+    }
+
+    /// Two entries swap; an entry paired with an empty slot moves to the list's end (entries stay
+    /// packed at the front).
+    private func swapCallouts(_ first: Int, _ second: Int) {
+        let filled = selectedCallouts.indices
+        editCallouts(nextSlot: nil) { list in
+            if filled.contains(first), filled.contains(second) {
+                list.swapAt(first, second)
+            } else {
+                list.append(list.remove(at: filled.contains(first) ? first : second))
+            }
         }
     }
 

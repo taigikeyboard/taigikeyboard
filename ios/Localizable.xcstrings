@@ -577,6 +577,24 @@
         }
       }
     },
+    "i18n_desktop_menuUndo": {
+      "comment": "Edit menu item (⌘Z); also the accessibility label of the mobile layout editor's undo button.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取り消す"
+          }
+        }
+      }
+    },
     "i18n_desktop_telexGuideHyphen": {
       "comment": "The syllable hyphen: the Telex guide row meaning for f, and the Syllable Separator picker's Hyphen value (settings.syllableSeparator).",
       "extractionState": "manual",

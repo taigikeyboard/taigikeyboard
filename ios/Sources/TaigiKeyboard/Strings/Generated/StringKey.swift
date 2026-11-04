@@ -34,6 +34,7 @@ enum StringKey: String {
     case commonFontGenYoMin = "i18n_common_fontGenYoMin"
     case commonFontGenYoGothic = "i18n_common_fontGenYoGothic"
     case desktopTelexGuideHyphen = "i18n_desktop_telexGuideHyphen"
+    case desktopMenuUndo = "i18n_desktop_menuUndo"
     case desktopDictionarySourcesLink = "i18n_desktop_dictionarySourcesLink"
     case dictionaryCustomDictionary = "i18n_dictionary_customDictionary"
     case dictionaryCustomDictEnabled = "i18n_dictionary_customDictEnabled"

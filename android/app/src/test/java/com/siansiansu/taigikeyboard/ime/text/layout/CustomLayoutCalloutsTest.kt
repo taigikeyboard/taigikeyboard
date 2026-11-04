@@ -46,14 +46,6 @@ class CustomLayoutCalloutsTest {
         assertEquals(listOf("á", "à", "â", "ǎ", "ā", "a̍", "a̋"), builtIn)
         assertTrue(qwerty.withList("a", builtIn).callouts.isEmpty())
         assertEquals(emptyList<String>(), qwerty.withList("a", emptyList()).callouts["a"])
-        assertTrue(
-            qwerty
-                .withList("a", emptyList())
-                .withDefaultCallouts("a")
-                .callouts
-                .isEmpty(),
-        )
-        assertFalse(tables.isUnchanged(qwerty.withList("a", emptyList())))
     }
 
     @Test
