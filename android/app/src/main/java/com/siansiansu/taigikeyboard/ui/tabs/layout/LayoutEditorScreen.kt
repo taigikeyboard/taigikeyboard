@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
@@ -318,13 +317,7 @@ fun LayoutEditorScreen(
                             .width(boardWidth)
                             .semantics { this.selected = isSwapping },
                 ) {
-                    Icon(
-                        painterResource(R.drawable.ic_swap),
-                        contentDescription = null,
-                        modifier = Modifier.size(ButtonDefaults.IconSize),
-                    )
-                    Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                    Text(L10n.themePhotoHintMove)
+                    Icon(painterResource(R.drawable.ic_swap), contentDescription = L10n.themePhotoHintMove)
                 }
 
                 Column(
