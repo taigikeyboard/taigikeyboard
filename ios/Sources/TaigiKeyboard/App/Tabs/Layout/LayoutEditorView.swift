@@ -9,9 +9,6 @@ import SwiftUI
 /// whose sheet names the layout and picks where it shows (`LayoutUse`), then applies it; Back discards
 /// the draft.
 struct LayoutEditorView: View {
-    /// Faster than an edit's, so a tap reads as immediate.
-    private static let selectionAnimation = Animation.snappy(duration: 0.1)
-
     @Environment(DisplayLanguageStore.self) private var lang
     @Environment(\.dismiss) private var dismiss
 
@@ -305,6 +302,7 @@ struct LayoutEditorView: View {
                 .foregroundStyle(isSelected ? Color.white : Color.primary)
                 .frame(maxWidth: .infinity, minHeight: 44)
                 .background(isSelected ? AppStyle.accentBlue : Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 8))
+                .animation(nil, value: isSelected)
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
@@ -316,22 +314,18 @@ struct LayoutEditorView: View {
     /// that can swap with the selected one (`CustomLayout.canSwap`: character keys anywhere, function
     /// keys within their row) marks the pair for the swap button; a tap after a pair starts over.
     private func tap(_ place: CustomLayout.Place) {
-        withAnimation(Self.selectionAnimation) {
-            let isPairing = swapPartner == nil && selected.map { draft.canSwap($0, place) } == true
-            let isDeselecting = swapPartner == nil && selected == place
-            swapPartner = isPairing ? selected : nil
-            selected = isDeselecting ? nil : place
-        }
+        let isPairing = swapPartner == nil && selected.map { draft.canSwap($0, place) } == true
+        let isDeselecting = swapPartner == nil && selected == place
+        swapPartner = isPairing ? selected : nil
+        selected = isDeselecting ? nil : place
     }
 
     /// Marks `spare` for the swap button, clearing any pair; tapping the marked spare clears it.
     private func markSpare(_ spare: String) {
         guard canPlace(spare) else { return }
-        withAnimation(Self.selectionAnimation) {
-            swapPartner = nil
-            calloutPartner = nil
-            markedSpare = spare == markedSpare ? nil : spare
-        }
+        swapPartner = nil
+        calloutPartner = nil
+        markedSpare = spare == markedSpare ? nil : spare
     }
 
     /// Whether `spare` can go on the selected slot, else the selected key.
@@ -413,12 +407,10 @@ struct LayoutEditorView: View {
         let isPairing = calloutPartner == nil
             && selectedCallout.map { $0 != index && (filled.contains($0) || filled.contains(index)) } == true
         let isDeselecting = calloutPartner == nil && selectedCallout == index
-        withAnimation(Self.selectionAnimation) {
-            swapPartner = nil
-            markedSpare = nil
-            calloutPartner = isPairing ? selectedCallout : nil
-            selectedCallout = isDeselecting ? nil : index
-        }
+        swapPartner = nil
+        markedSpare = nil
+        calloutPartner = isPairing ? selectedCallout : nil
+        selectedCallout = isDeselecting ? nil : index
     }
 
     /// Two entries swap; an entry paired with an empty slot moves to the list's end (entries stay

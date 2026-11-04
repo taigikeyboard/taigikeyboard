@@ -83,6 +83,8 @@ struct LayoutKeyGrid: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(fill, in: shape)
             .overlay(shape.strokeBorder(Color.secondary, style: StrokeStyle(lineWidth: 1, dash: [3])).opacity(isRemoved && !isSelected ? 1 : 0))
+            // Selection lights and clears at once, even as part of an animated edit.
+            .animation(nil, value: isSelected)
             .padding(gap / 2)
 
         if let place, let interaction {

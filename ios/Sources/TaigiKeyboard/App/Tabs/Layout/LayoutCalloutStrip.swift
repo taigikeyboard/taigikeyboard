@@ -64,6 +64,7 @@ struct LayoutCalloutStrip: View {
             .frame(maxWidth: .infinity, minHeight: Self.cellHeight, maxHeight: Self.cellHeight)
             .background(isSelected ? Color.accentColor : Color.clear, in: shape)
             .overlay(shape.strokeBorder(Color.secondary, style: StrokeStyle(lineWidth: 1, dash: [3])).opacity(entry == nil && !isSelected ? 1 : 0))
+            .animation(nil, value: isSelected)
             .contentShape(shape)
             .onTapGesture { onTapSlot(index) }
             .disabled(entries == nil)
