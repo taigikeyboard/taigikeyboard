@@ -7,7 +7,7 @@ covered by that licence.
 
 Dictionary data is inventoried separately, in `dictionary/LICENSE` and
 `dictionary/docs/SOURCES.md`, because its terms differ per source and it is
-the one component that is not open source.
+the one component in this repository that is not open source.
 
 ## Fonts (shipped inside every application package)
 
@@ -110,13 +110,18 @@ are not yet inventoried here):
 
 | Package | Version | Licence |
 | --- | --- | --- |
-| KeyboardKit | 10.9.0 | MIT © 2016-2025 Daniel Saidi |
-| swift-protobuf | 1.38.1 | Apache-2.0 |
-| KeyboardShortcuts (macOS only) | 3.0.1 | MIT © Sindre Sorhus |
-| **LicenseKit** | 2.1.3 | **Closed source, commercial** — see below |
+| **KeyboardKit** (iOS only) | 11.1.4 | **Closed source**, © 2016-2026 Kankoda Sweden AB — see below |
+| swift-protobuf | 1.38.1 (iOS), 1.39.0 (macOS) | Apache-2.0 |
+| KeyboardShortcuts (macOS only) | 3.1.0 | MIT © Sindre Sorhus |
+| **LicenseKit** | 2.4.1 | **Closed source, commercial** — see below |
 
+> **KeyboardKit is not open source.** Since 10.x it ships as a binary target
+> under its own closed-source licence, free to use without its commercial Pro
+> features. This project sets no Pro licence key. SwiftPM downloads the binary
+> for **iOS** builds; it is not vendored here.
+>
 > **LicenseKit is not open source.** It reaches this project only as a
-> transitive dependency of KeyboardKit 10.x on **iOS**, resolved by SwiftPM.
+> transitive dependency of KeyboardKit on **iOS**, resolved by SwiftPM.
 > It is not vendored here, is not used by any first-party code, and is absent
 > from the macOS, Android, Windows and Linux builds — in particular it is absent
 > from the Windows installer and from every artifact this project submits for
