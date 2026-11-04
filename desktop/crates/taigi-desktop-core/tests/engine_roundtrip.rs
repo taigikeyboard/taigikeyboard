@@ -70,12 +70,12 @@ fn append_renders_tone_digit_as_diacritic_and_updates_preedit() {
 }
 
 #[test]
-fn telex_key_writes_the_tone_and_z_spells_the_mode_affricate() {
+fn telex_key_writes_the_tone_and_c_spells_the_mode_affricate() {
     // trace: engine/composing/src/telex.rs — `v` is tone 2, so `te` + `v`
     // stores `te2` and renders `té`; a second tone letter replaces it
-    // (`y` = tone 3 → `tè`); `z` idle starts a composition as `ts` under TL
-    // and `ch` under POJ. Round-tripped with the app config, since `z`
-    // resolves by `input_mode`.
+    // (`y` = tone 3 → `tè`, `z` = tone 6 → `tě`); `c` idle starts a
+    // composition as `ts` under TL and `ch` under POJ. Round-tripped with the
+    // app config, since `c` resolves by `input_mode`.
     let _engine = engine();
     let settings = EngineSettings::default();
     let generation = fresh_generation();
@@ -86,11 +86,14 @@ fn telex_key_writes_the_tone_and_z_spells_the_mode_affricate() {
     let retoned = engine::telex_key("y", &settings, generation).expect("telex round trip");
     assert_eq!(retoned.raw_input, "te3");
     assert_eq!(retoned.display_text, "tè");
+    let sixth = engine::telex_key("z", &settings, generation).expect("telex round trip");
+    assert_eq!(sixth.raw_input, "te6");
+    assert_eq!(sixth.display_text, "tě");
     engine::reset(generation);
 
     let generation = fresh_generation();
-    let started = engine::telex_key("z", &settings, generation).expect("telex round trip");
-    assert!(started.is_composing, "an idle z starts a composition");
+    let started = engine::telex_key("c", &settings, generation).expect("telex round trip");
+    assert!(started.is_composing, "an idle c starts a composition");
     assert_eq!(started.raw_input, "ts");
     engine::reset(generation);
 
@@ -99,7 +102,7 @@ fn telex_key_writes_the_tone_and_z_spells_the_mode_affricate() {
         input_mode: InputMode::Poj,
         ..EngineSettings::default()
     };
-    let started = engine::telex_key("z", &poj, generation).expect("telex round trip");
+    let started = engine::telex_key("c", &poj, generation).expect("telex round trip");
     assert_eq!(started.raw_input, "ch");
     engine::reset(generation);
 }
