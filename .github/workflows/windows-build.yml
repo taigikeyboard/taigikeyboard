@@ -75,12 +75,13 @@ jobs:
     # Only this repository builds, and only for the desktop train. A Windows
     # runner is the most expensive gate this project has: a fork has nothing to
     # sign with, and a mobile release — should one ever be published here — has
-    # no Windows installer in it. `workflow_dispatch` carries no release, so it
-    # is admitted on the repository check alone.
+    # no Windows installer in it. A dispatched run attaches its installer to the
+    # draft, so only `main`, the branch a release is cut from, may dispatch one.
     if: >-
       github.repository == 'taigikeyboard/taigikeyboard' &&
       (github.event_name != 'release' ||
-       startsWith(github.event.release.tag_name, 'desktop-'))
+       startsWith(github.event.release.tag_name, 'desktop-')) &&
+      (github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/main')
     timeout-minutes: 60
     steps:
       # core.autocrlf must be off BEFORE the checkout. Everything here is
