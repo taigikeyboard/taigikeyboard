@@ -24,7 +24,7 @@
           {
             "type": "command",
             "if": "Bash(gh pr create *)",
-            "command": "make -C \"${CLAUDE_PROJECT_DIR}\" lint 1>&2 || { echo 'BLOCK: make lint failed — fix lint before opening the PR (CI gates the same checks).' >&2; exit 2; }",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/lint-before-pr.sh\"",
             "timeout": 900,
             "onFailure": "block"
           }
