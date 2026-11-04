@@ -364,6 +364,8 @@ struct LayoutEditorView: View {
     /// Two entries swap; an entry paired with an empty slot moves to the list's end (entries stay
     /// packed at the front).
     private func swapCallouts(_ first: Int, _ second: Int) {
+        // Cleared here too: an entry already last leaves the draft unchanged.
+        calloutPartner = nil
         let filled = selectedCallouts.indices
         editCallouts(nextSlot: nil) { list in
             if filled.contains(first), filled.contains(second) {

@@ -172,7 +172,7 @@ fun LayoutEditorScreen(
     }
 
     fun undo() {
-        draft = history.removeAt(history.lastIndex)
+        draft = history.removeLastOrNull() ?: return
         select(null)
     }
 
@@ -206,6 +206,8 @@ fun LayoutEditorScreen(
         first: Int,
         second: Int,
     ) {
+        // Cleared here too: an entry already last leaves the draft unchanged.
+        calloutPartner = null
         val filled = selectedCallouts().indices
         editCallouts(null) {
             if (first in filled && second in filled) {
