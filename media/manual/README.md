@@ -109,9 +109,9 @@ macOS 的符號：`⌃` control、`⌥` option、`⌘` command、`⇧` shift。
 | `z` `h` | tsh（白話字 chh） |
 | `f` | 連字符 - |
 
-袂記得的時，揤 `⌃` `⌘` `/`（Windows、Linux：`Ctrl` `Alt` `/`），Telex 說明會浮佇螢幕頂；閣揤一擺就收起來。
+袂記得的時，揤 `⌃` `⌘` `/`（Windows、Linux：`Ctrl` `Alt` `/`），Telex 說明會留佇畫面，予你通那看那拍；閣揤一擺就收起來。
 
-![Telex 的選字窗](shots/tone-telex.png) ![浮佇螢幕頂的 Telex 說明](shots/panel-telex-guide.png)
+![Telex 的選字窗](shots/tone-telex.png) ![Telex 說明](shots/panel-telex-guide.png)
 
 ## 標點符號
 
