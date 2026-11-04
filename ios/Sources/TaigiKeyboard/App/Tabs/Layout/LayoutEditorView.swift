@@ -38,11 +38,12 @@ struct LayoutEditorView: View {
 
     var body: some View {
         GeometryReader { proxy in
-            // At most half the height, so a short (landscape) screen still shows a usable board.
-            let boardWidth = min(
+            // At most half the height, so a short (landscape) screen still shows a usable board. Never
+            // negative: the first layout pass can report a zero width.
+            let boardWidth = max(0, min(
                 proxy.size.width - 2 * AppStyle.horizontalPadding,
                 proxy.size.height * 0.5 * GalleryCardMetrics.previewAspectRatio,
-            )
+            ))
             if proxy.size.height < Self.wholeScrollMaxHeight {
                 ScrollView {
                     VStack(spacing: 16) {
