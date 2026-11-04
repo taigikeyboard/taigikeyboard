@@ -751,7 +751,7 @@ public final class TaigiInputController: IMKInputController {
 
     /// The Telex guide as the settings now say, for this session — only while
     /// it holds the engine, as `syncTpsKeyboard`. Spelled for the romanization
-    /// in use: `z` is `ts` under TL and `ch` under POJ.
+    /// in use: `c` is `ts` under TL and `ch` under POJ.
     @MainActor
     private func syncTelexGuide() {
         guard backend.owns(sessionToken) else { return }
