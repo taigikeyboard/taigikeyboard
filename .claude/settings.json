@@ -1,5 +1,9 @@
 {
+  "env": {
+    "CLAUDE_CODE_SUBAGENT_EFFORT": "medium"
+  },
   "permissions": {
+    "blockWritesOutsideWorkingDirectories": true,
     "deny": [
       "Edit(**/*.pbxproj)",
       "Edit(**/*.xcodeproj/**)",
