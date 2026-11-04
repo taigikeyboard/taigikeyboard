@@ -25,17 +25,18 @@ use crate::settings_launcher;
 use crate::ui::mode_flash::ModeFlash;
 use crate::ui::presenter::CandidatePresenter;
 use crate::ui::render::RenderFactory;
-use crate::ui::telex_guide::TelexGuide;
+use crate::ui::telex_guide::{TelexGuide, TelexGuideContent, TelexGuideSource};
 use crate::ui::tps_keyboard::{TpsKeyboard, TpsKeyboardSource};
 use std::cell::{Cell, RefCell};
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::rc::Rc;
 use taigi_desktop_core::composing::ContextToken;
 use taigi_desktop_core::keys::{
-    LanguageMode, MenuCommand, ShiftTapTracker, ShortcutAction, VK_SHIFT_CODE,
+    telex_guide_rows, LanguageMode, MenuCommand, ShiftTapTracker, ShortcutAction, VK_SHIFT_CODE,
 };
 use taigi_desktop_core::mode_indicator::ModeIndicator;
 use taigi_desktop_core::settings::keys;
+use taigi_desktop_core::strings::{StringKey, StringResolver};
 use windows::core::{Error, IUnknown, Interface, Ref, Result, BOOL, BSTR, GUID};
 use windows::Win32::Foundation::{E_FAIL, E_INVALIDARG, LPARAM, POINT, RECT, WPARAM};
 use windows::Win32::System::Ole::{CONNECT_E_ADVISELIMIT, CONNECT_E_NOCONNECTION};
@@ -133,8 +134,9 @@ pub(crate) struct ServiceState {
     /// (macOS `symbolPickerCells`).
     pub(crate) symbol_picker_cells: Vec<String>,
     pub(crate) mode_flash: Option<Rc<RefCell<ModeFlash>>>,
-    /// The Telex key table the `showTelexGuide` chord toggles; owned by the
-    /// context that raised it, like the candidate window.
+    /// The Telex key table the `showTelexGuide` chord keeps up while a
+    /// romanization is typed, up while this activation has keyboard focus
+    /// (`ui/telex_guide.rs`).
     pub(crate) telex_guide: Option<Rc<RefCell<TelexGuide>>>,
     /// The on-screen TPS key panel, up while this activation has keyboard
     /// focus, TPS is typed and the user asked for it (`ui/tps_keyboard.rs`).
@@ -143,7 +145,7 @@ pub(crate) struct ServiceState {
     /// event said — shared with the panel's source, so a posted sync reads
     /// the newest answer, not the one current when it was posted (a quick
     /// lose-and-regain cannot leave the panel down, nor the reverse).
-    pub(crate) tps_keyboard_focus: Rc<Cell<bool>>,
+    pub(crate) panel_focus: Rc<Cell<bool>>,
     /// Whether keys compose Taigi or go to the document as English. Per
     /// activation — one text service instance is one thread manager, which is
     /// one application, so switching to English in a terminal leaves the
@@ -282,12 +284,13 @@ impl TextService_Impl {
                     .borrow_mut()
                     .attach_popup_only(Rc::downgrade(&symbol_picker));
                 let flash = ModeFlash::new(Rc::clone(&factory));
-                let guide = TelexGuide::new(Rc::clone(&factory));
                 let mut state = self.state.borrow_mut();
-                let tps_keyboard = TpsKeyboard::new(
-                    factory,
-                    tps_keyboard_source(Rc::clone(&state.tps_keyboard_focus)),
+                let guide = TelexGuide::new(
+                    Rc::clone(&factory),
+                    telex_guide_source(Rc::clone(&state.panel_focus)),
                 );
+                let tps_keyboard =
+                    TpsKeyboard::new(factory, tps_keyboard_source(Rc::clone(&state.panel_focus)));
                 state.presenter = Some(presenter);
                 state.symbol_picker = Some(symbol_picker);
                 state.mode_flash = Some(Rc::new(RefCell::new(flash)));
@@ -304,8 +307,8 @@ impl TextService_Impl {
         // above came before the panel existed, so its sync went nowhere (P5
         // spike on the box: no panel until the first key otherwise).
         let has_document = self.has_focused_document();
-        self.state.borrow().tps_keyboard_focus.set(has_document);
-        self.request_tps_keyboard_sync();
+        self.state.borrow().panel_focus.set(has_document);
+        self.request_panels_sync();
 
         // Cosmetic: a tray button that fails to add is logged, not fatal.
         match thread_mgr.cast::<ITfLangBarItemMgr>() {
@@ -350,7 +353,7 @@ impl TextService_Impl {
             // The windows are destroyed below; a hide still owed is moot.
             state.is_ui_hide_pending = false;
             state.symbol_picker_cells.clear();
-            state.tps_keyboard_focus.set(false);
+            state.panel_focus.set(false);
             (
                 state.presenter.take(),
                 state.symbol_picker.take(),
@@ -542,30 +545,34 @@ impl TextService_Impl {
         self.state.borrow().tps_keyboard.clone()
     }
 
-    /// Brings the TPS key panel in line with the settings — after the chord
-    /// or a mode switch. Both come from a key or a click in this activation,
+    /// Brings the TPS key panel and the Telex guide in line with the settings
+    /// — after a chord or a mode switch. Both come from a key or a click in this activation,
     /// so it is where the user types.
-    pub(crate) fn sync_tps_keyboard(&self) {
-        self.state.borrow().tps_keyboard_focus.set(true);
-        self.request_tps_keyboard_sync();
+    pub(crate) fn sync_panels(&self) {
+        self.state.borrow().panel_focus.set(true);
+        self.request_panels_sync();
     }
 
     /// A focus event said whether this activation is where the user types:
-    /// recorded, then a sync posted. The panel follows keyboard focus between
-    /// applications, and only those events move it: going from one document
-    /// to another of the same application keeps it up.
-    pub(crate) fn note_tps_keyboard_focus(&self, is_focused: bool) {
-        let was_focused = self.state.borrow().tps_keyboard_focus.replace(is_focused);
+    /// recorded, then a sync posted. The panels follow keyboard focus between
+    /// applications, and only those events move them: going from one document
+    /// to another of the same application keeps them up.
+    pub(crate) fn note_panel_focus(&self, is_focused: bool) {
+        let was_focused = self.state.borrow().panel_focus.replace(is_focused);
         if was_focused != is_focused {
-            self.request_tps_keyboard_sync();
+            self.request_panels_sync();
         }
     }
 
-    /// Posts the panel a sync (`TpsKeyboard::request_sync`); it reads the
-    /// focus flag and the settings when it runs.
-    fn request_tps_keyboard_sync(&self) {
+    /// Posts each panel a sync (`TpsKeyboard::request_sync`,
+    /// `TelexGuide::request_sync`); it reads the focus flag and the settings
+    /// when it runs.
+    fn request_panels_sync(&self) {
         if let Some(tps_keyboard) = self.tps_keyboard() {
             tps_keyboard.borrow().request_sync();
+        }
+        if let Some(guide) = self.telex_guide() {
+            guide.borrow().request_sync();
         }
     }
 
@@ -595,21 +602,6 @@ impl TextService_Impl {
         picker.borrow_mut().hide(token);
     }
 
-    /// Takes the Telex guide down whoever raised it, without touching the
-    /// composition — the settings doorways and the key path.
-    pub(crate) fn hide_telex_guide_now(&self) {
-        if let Some(guide) = self.telex_guide() {
-            guide.borrow_mut().hide_now();
-        }
-    }
-
-    /// Takes the Telex guide down only if `token`'s context raised it.
-    pub(crate) fn hide_telex_guide_of(&self, token: ContextToken) {
-        if let Some(guide) = self.telex_guide() {
-            guide.borrow_mut().hide(token);
-        }
-    }
-
     /// The hide a focus / context callback could not post (a window was
     /// busy inside a session), applied now, outside any session: every key
     /// entry and `run_key` call this before anything new is shown.
@@ -622,7 +614,6 @@ impl TextService_Impl {
             presenter.borrow_mut().hide_for_handover();
         }
         self.hide_symbol_picker_now();
-        self.hide_telex_guide_now();
     }
 
     /// The virtual key the held toggle chord is registered on, when one is.
@@ -682,12 +673,6 @@ impl TextService_Impl {
         if let Some(picker) = self.symbol_picker() {
             match picker.try_borrow() {
                 Ok(picker) => picker.request_hide(owner),
-                Err(_) => posted = false,
-            }
-        }
-        if let Some(guide) = self.telex_guide() {
-            match guide.try_borrow() {
-                Ok(guide) => guide.request_hide(owner),
                 Err(_) => posted = false,
             }
         }
@@ -901,7 +886,7 @@ impl ITfThreadMgrEventSink_Impl for TextService_Impl {
                 self.request_ui_hide(None);
                 // No document focused = nowhere to type; any other move
                 // between documents keeps the TPS key panel up.
-                self.note_tps_keyboard_focus(focused != 0);
+                self.note_panel_focus(focused != 0);
             }
             Ok(())
         })
@@ -966,7 +951,7 @@ impl ITfThreadFocusSink_Impl for TextService_Impl {
     fn OnSetThreadFocus(&self) -> Result<()> {
         guarded("ITfThreadFocusSink::OnSetThreadFocus", || {
             self.request_settings_refresh();
-            self.note_tps_keyboard_focus(self.has_focused_document());
+            self.note_panel_focus(self.has_focused_document());
             self.notify_lang_bar();
             Ok(())
         })
@@ -985,7 +970,7 @@ impl ITfThreadFocusSink_Impl for TextService_Impl {
             state.held_toggle_chord = None;
             drop(state);
             self.request_ui_hide(None);
-            self.note_tps_keyboard_focus(false);
+            self.note_panel_focus(false);
             Ok(())
         })
     }
@@ -1005,7 +990,7 @@ impl ITfKeyEventSink_Impl for TextService_Impl {
             if fforeground.as_bool() {
                 self.request_settings_refresh();
             }
-            self.note_tps_keyboard_focus(fforeground.as_bool());
+            self.note_panel_focus(fforeground.as_bool());
             Ok(())
         })
     }
@@ -1168,25 +1153,21 @@ impl ITfLangBarItemButton_Impl for TextService_Impl {
                 match lang_bar::menu_command(id) {
                     None => log::warn!("tsf.menu_unknown_id id={id}"),
                     Some(MenuCommand::OpenSettings) => {
-                        // The guide and the picker come down first, whoever
-                        // raised them: this path never reaches the session,
-                        // and the settings window taking focus is not
-                        // guaranteed to end the context that owns the card
-                        // (`ShortcutHotkeys.openSettings`).
-                        self.hide_telex_guide_now();
+                        // The picker comes down first, whoever raised it: this
+                        // path never reaches the session, and the settings
+                        // window taking focus is not guaranteed to end the
+                        // context that owns the list.
                         self.hide_symbol_picker_now();
                         settings_launcher::open_settings();
                     }
                     Some(MenuCommand::CheckForUpdates) => {
                         // Also the settings window (on General): same doorway.
-                        self.hide_telex_guide_now();
                         self.hide_symbol_picker_now();
                         settings_launcher::check_for_updates();
                     }
                     Some(MenuCommand::About) => {
                         // The settings window on About, the pane the sidebar
                         // does not list: same doorway.
-                        self.hide_telex_guide_now();
                         self.hide_symbol_picker_now();
                         settings_launcher::open_about();
                     }
@@ -1297,6 +1278,29 @@ impl Drop for TextService {
 /// this activation has the keyboard (`focus`), TPS is typed and the user
 /// asked for the panel — and the appearance to draw it in. Holds the focus
 /// flag, not the service, so the panel keeps no service alive.
+fn telex_guide_source(focus: Rc<Cell<bool>>) -> TelexGuideSource {
+    Box::new(move || {
+        if !focus.get() {
+            return None;
+        }
+        let runtime = Runtime::shared();
+        let settings = runtime.settings.current();
+        if !settings.is_telex_guide_wanted() {
+            return None;
+        }
+        let strings = StringResolver::new(runtime.display_language());
+        // Spelled for the romanization in use: `c` is `ts` under TL and `ch`
+        // under POJ.
+        let content = TelexGuideContent {
+            title: strings
+                .resolve(StringKey::SettingsToneSchemeTelex)
+                .to_owned(),
+            rows: telex_guide_rows(settings.choice(&keys::INPUT_MODE), &strings),
+        };
+        Some((content, settings.choice(&keys::APPEARANCE_MODE)))
+    })
+}
+
 fn tps_keyboard_source(focus: Rc<Cell<bool>>) -> TpsKeyboardSource {
     Box::new(move || {
         if !focus.get() {
