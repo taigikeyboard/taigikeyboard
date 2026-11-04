@@ -168,12 +168,10 @@ final class CustomLayoutTests: XCTestCase {
         XCTAssertEqual(layout.rows(withGlobe: false).last, [.numeric, .space, .translate, .return])
         XCTAssertEqual(layout.editorRows.last, TaigiLayouts.Alphabetic.phahTaigi_iPhone.last)
         XCTAssertEqual(layout.removedPlaces, [Self.phahTaigiEmoji])
-        XCTAssertFalse(layout.isUnchanged)
         // A letter never fills the emoji place, and other function keys never leave.
         layout.replace(Self.phahTaigiEmoji, with: "q")
         XCTAssertFalse(layout.canRemove(.function(0)))
         layout.restoreEmojiKey()
-        XCTAssertTrue(layout.isUnchanged)
     }
 
     func testCustomLayout_functionKeysSwapOnlyWithinTheirRow() {
@@ -189,7 +187,6 @@ final class CustomLayoutTests: XCTestCase {
         let email = CustomLayoutService.applyInputTypeKey(layout.rows(withGlobe: false), inputType: .emailAddress)
         XCTAssertEqual(email.last, [.return, .emoji, .char("@"), .space, .translate, .numeric])
         XCTAssertTrue(layout.isValid)
-        XCTAssertFalse(layout.isUnchanged)
     }
 
     func testCustomLayout_recordMovingFunctionKeyAcrossRowsIsInvalid() throws {
@@ -206,7 +203,6 @@ final class CustomLayoutTests: XCTestCase {
         ])
         let layout = try JSONDecoder().decode(CustomLayout.self, from: json)
         XCTAssertTrue(layout.hasEmojiKey)
-        XCTAssertTrue(layout.isUnchanged)
     }
 
     func testCustomLayout_codableRoundTripKeepsRemovedKeys() throws {
@@ -251,7 +247,6 @@ final class CustomLayoutTests: XCTestCase {
         layout.setCallouts([" ; ", "", ":", ";", "1", "2", "3", "4", "5", "6", "7"], for: ",")
         // trace: trimmed, blank and repeated ";" dropped, capped at 8.
         XCTAssertEqual(layout.callouts(for: ","), [";", ":", "1", "2", "3", "4", "5", "6"])
-        XCTAssertFalse(layout.isUnchanged)
         layout.setCallouts([], for: ".")
         XCTAssertEqual(layout.calloutOverride(for: "."), [], "an empty list leaves the key without a long-press")
     }
@@ -261,7 +256,6 @@ final class CustomLayoutTests: XCTestCase {
         layout.setCallouts([";"], for: ",")
         layout.setCallouts(["，", "、"], for: ",")
         XCTAssertNil(layout.callouts[","])
-        XCTAssertTrue(layout.isUnchanged)
     }
 
     func testCallouts_overrideFollowsFullWidthFormAndShift() {
@@ -321,6 +315,7 @@ final class CustomLayoutTests: XCTestCase {
         XCTAssertTrue(aRow.contains("a\u{030D}") && aRow.contains("a\u{030B}".precomposedStringWithCanonicalMapping) && aRow.contains("ă"))
         XCTAssertFalse(CustomLayout.toneRows.joined().contains("Á"), "Shift uppercases on the keyboard")
         let tones = Array(CustomLayout.toneRows.joined())
+        XCTAssertFalse(tones.contains("\u{207F}"), "ⁿ sits with the letters")
         XCTAssertEqual(Set(tones).count, tones.count)
         // trace: Symbolic page row 1 "{" "}"; MOE2Callouts[","] "，" "、"; full-width after half-width.
         let symbols = CustomLayout.calloutSymbols

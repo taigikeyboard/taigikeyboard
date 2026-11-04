@@ -34,6 +34,7 @@
     <string name="i18n_common_fontGenYoMin">源樣明體</string>
     <string name="i18n_common_fontGenYoGothic">源樣烏體</string>
     <string name="i18n_desktop_telexGuideHyphen">連字符</string>
+    <string name="i18n_desktop_menuUndo">還原</string>
     <string name="i18n_desktop_dictionarySourcesLink">辭典管理</string>
     <string name="i18n_dictionary_customDictionary">自訂詞庫</string>
     <string name="i18n_dictionary_customDictEnabled">啟用自訂詞庫</string>
@@ -181,6 +182,7 @@
     <string name="i18n_layout_editorTitleNew">新佈局</string>
     <string name="i18n_layout_nameHeader">佈局名稱</string>
     <string name="i18n_layout_calloutsTitle">長揤字</string>
+    <string name="i18n_layout_trayTones">聲調</string>
     <string name="i18n_layout_commonLayoutsSection">通用</string>
     <string name="i18n_layout_standardLayout">Lohankha</string>
     <string name="i18n_layout_phahTaigiLayout">PhahTaigi</string>

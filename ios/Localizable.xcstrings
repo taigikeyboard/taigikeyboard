@@ -577,6 +577,24 @@
         }
       }
     },
+    "i18n_desktop_menuUndo": {
+      "comment": "Edit menu item (⌘Z); also the accessibility label of the mobile layout editor's undo button.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取り消す"
+          }
+        }
+      }
+    },
     "i18n_desktop_telexGuideHyphen": {
       "comment": "The syllable hyphen: the Telex guide row meaning for f, and the Syllable Separator picker's Hyphen value (settings.syllableSeparator).",
       "extractionState": "manual",
@@ -3331,6 +3349,24 @@
         }
       }
     },
+    "i18n_layout_trayTones": {
+      "comment": "Layout editor tray header above tone-marked letters.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tones"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "声調"
+          }
+        }
+      }
+    },
     "i18n_nav_tabDictionary": {
       "comment": "Main app bottom-nav tab title + the tab's top-level page title (Dictionary management). Follows the in-app display-language picker.",
       "extractionState": "manual",
@@ -4196,7 +4232,7 @@
       }
     },
     "i18n_symbol_fullWidth": {
-      "comment": "Symbol overlay category tab: full-width punctuation (extension-only). Taiwanese says 全角／半角, not 全形／半形 (USER 2026-09-20).",
+      "comment": "Symbol overlay category tab and layout editor tray header: full-width punctuation. Taiwanese says 全角／半角, not 全形／半形 (USER 2026-09-20).",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -4214,7 +4250,7 @@
       }
     },
     "i18n_symbol_halfWidth": {
-      "comment": "Symbol overlay category tab: half-width punctuation (extension-only).",
+      "comment": "Symbol overlay category tab and layout editor tray header: half-width punctuation.",
       "extractionState": "manual",
       "localizations": {
         "en": {

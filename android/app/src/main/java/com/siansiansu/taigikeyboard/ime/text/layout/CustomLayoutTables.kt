@@ -270,9 +270,6 @@ class CustomLayoutTables(
             CustomLayout(id, name, base, script, table.labels, table.functionKeys, hasEmojiKey = true)
         }
 
-    /** Whether [layout]'s board still matches its base table (its use aside). */
-    fun isUnchanged(layout: CustomLayout): Boolean = fresh(layout.id, layout.name, layout.base, layout.script)?.copy(isUniversal = layout.isUniversal) == layout
-
     /**
      * [layout] shown where [use] says. Picking one script lays the keys as arranged on that script's
      * table row by row. Most bases have the same places in both scripts; where a row has more (QWERTY's
@@ -494,6 +491,9 @@ class CustomLayoutTables(
          * [chars] with CJK punctuation and full-width forms (U+2E80 and up, as the full-width punctuation
          * mode types) moved after the rest, order otherwise kept.
          */
-        fun halfWidthFirst(chars: List<String>): List<String> = chars.partition { text -> text.codePoints().noneMatch { it >= 0x2E80 } }.let { it.first + it.second }
+        fun halfWidthFirst(chars: List<String>): List<String> = chars.partition { !isFullWidthSymbol(it) }.let { it.first + it.second }
     }
 }
+
+/** Whether [text] is CJK punctuation or a full-width form (U+2E80 and up). */
+fun isFullWidthSymbol(text: String): Boolean = text.codePoints().anyMatch { it >= 0x2E80 }

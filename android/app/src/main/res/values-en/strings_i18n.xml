@@ -34,6 +34,7 @@
     <string name="i18n_common_fontGenYoMin">GenYoMin</string>
     <string name="i18n_common_fontGenYoGothic">GenYoGothic</string>
     <string name="i18n_desktop_telexGuideHyphen">Hyphen</string>
+    <string name="i18n_desktop_menuUndo">Undo</string>
     <string name="i18n_desktop_dictionarySourcesLink">Manage Dictionaries</string>
     <string name="i18n_dictionary_customDictionary">Custom Dictionary</string>
     <string name="i18n_dictionary_customDictEnabled">Enable Custom Dictionary</string>
@@ -181,6 +182,7 @@
     <string name="i18n_layout_editorTitleNew">New Layout</string>
     <string name="i18n_layout_nameHeader">Layout Name</string>
     <string name="i18n_layout_calloutsTitle">Long-Press Characters</string>
+    <string name="i18n_layout_trayTones">Tones</string>
     <string name="i18n_layout_commonLayoutsSection">Universal</string>
     <string name="i18n_layout_standardLayout">Lohankha</string>
     <string name="i18n_layout_phahTaigiLayout">PhahTaigi</string>

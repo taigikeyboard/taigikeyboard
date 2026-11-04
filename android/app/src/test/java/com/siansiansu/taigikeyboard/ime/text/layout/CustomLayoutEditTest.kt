@@ -147,13 +147,11 @@ class CustomLayoutEditTest {
     }
 
     @Test
-    fun `fresh layouts are valid and unchanged on every base and script`() {
+    fun `fresh layouts are valid on every base and script`() {
         for (base in bases) {
             for (script in LayoutScript.entries) {
                 val fresh = tables.fresh("id", "Name", base, script)!!
                 assertTrue("$base $script", tables.isValid(fresh))
-                assertTrue("$base $script", tables.isUnchanged(fresh))
-                assertFalse("$base $script", tables.isUnchanged(fresh.removed(key(0))))
             }
         }
         assertNull(tables.fresh("id", "Name", "tps", LayoutScript.TL))

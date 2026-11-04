@@ -7,12 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -39,7 +34,6 @@ import androidx.compose.ui.unit.sp
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.ime.text.layout.CustomLayout
 import com.siansiansu.taigikeyboard.ime.text.layout.dashedOutline
-import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 
 // The selected key's long-press list, drawn as the keyboard's callout bubble in a fixed slot below the
 // board, its tail under the key. Mirrors iOS App/Tabs/Layout/LayoutCalloutStrip.swift.
@@ -53,27 +47,10 @@ import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 fun LayoutCalloutStrip(
     entries: List<String>?,
     selectedSlot: Int?,
-    canReset: Boolean,
+    partnerSlot: Int?,
     tailX: Float?,
     onTapSlot: (Int) -> Unit,
-    onReset: () -> Unit,
     modifier: Modifier = Modifier,
-) {
-    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        Bubble(entries, selectedSlot, tailX, onTapSlot, Modifier.weight(1f))
-        IconButton(onClick = onReset, enabled = canReset) {
-            Icon(Icons.Filled.Refresh, contentDescription = L10n.themeEditorResetAll, modifier = Modifier.size(AppStyle.selectionIconSize))
-        }
-    }
-}
-
-@Composable
-private fun Bubble(
-    entries: List<String>?,
-    selectedSlot: Int?,
-    tailX: Float?,
-    onTapSlot: (Int) -> Unit,
-    modifier: Modifier,
 ) {
     val color = MaterialTheme.colorScheme.surface
     var bubbleX by remember { mutableFloatStateOf(0f) }
@@ -104,7 +81,7 @@ private fun Bubble(
         repeat(CustomLayout.MAX_CALLOUTS) { index ->
             Slot(
                 entry = entries?.getOrNull(index),
-                isSelected = index == selectedSlot,
+                isSelected = index == selectedSlot || index == partnerSlot,
                 enabled = entries != null,
                 onTap = { onTapSlot(index) },
                 modifier = Modifier.weight(1f),

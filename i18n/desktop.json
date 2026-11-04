@@ -349,9 +349,11 @@
       }
     },
     "menuUndo": {
-      "comment": "Edit menu item (⌘Z).",
+      "comment": "Edit menu item (⌘Z); also the accessibility label of the mobile layout editor's undo button.",
       "scope": {
         "platforms": [
+          "android",
+          "ios",
           "macos"
         ],
         "surfaces": [
