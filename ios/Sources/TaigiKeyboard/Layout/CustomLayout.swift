@@ -384,7 +384,8 @@ struct CustomLayout: Codable, Identifiable, Hashable {
         let bases = Set(toneMaps.flatMap(\.keys)).filter { $0 == $0.lowercased() }
         let leading = ["a", "e", "i", "o", "oo", "o\u{0358}", "u", "m", "n", "ng"].filter(bases.contains)
         return (leading + bases.subtracting(leading).sorted()).map { base in
-            composedUnique(toneMaps.flatMap { $0[base] ?? [] })
+            // ⁿ rides the `n` list but is no tone mark: it sits with the letters.
+            composedUnique(toneMaps.flatMap { $0[base] ?? [] }).filter { $0 != trayNasalMarker }
         }
     }()
 

@@ -315,6 +315,7 @@ final class CustomLayoutTests: XCTestCase {
         XCTAssertTrue(aRow.contains("a\u{030D}") && aRow.contains("a\u{030B}".precomposedStringWithCanonicalMapping) && aRow.contains("ă"))
         XCTAssertFalse(CustomLayout.toneRows.joined().contains("Á"), "Shift uppercases on the keyboard")
         let tones = Array(CustomLayout.toneRows.joined())
+        XCTAssertFalse(tones.contains("\u{207F}"), "ⁿ sits with the letters")
         XCTAssertEqual(Set(tones).count, tones.count)
         // trace: Symbolic page row 1 "{" "}"; MOE2Callouts[","] "，" "、"; full-width after half-width.
         let symbols = CustomLayout.calloutSymbols
