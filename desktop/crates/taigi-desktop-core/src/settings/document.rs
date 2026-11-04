@@ -260,6 +260,13 @@ impl SettingsDocument {
         self.is_typing_tps() && self.bool(&keys::TPS_KEYBOARD_SHOWN)
     }
 
+    /// Whether the Telex guide should be up: the user asked for it and TPS,
+    /// which types no Telex keys, is not being typed (#684). macOS twin:
+    /// `SettingsStore.isTelexGuideWanted`.
+    pub fn is_telex_guide_wanted(&self) -> bool {
+        !self.is_typing_tps() && self.bool(&keys::TELEX_GUIDE_SHOWN)
+    }
+
     /// Puts every setting the General pane owns back to shipped state.
     pub fn reset_general(&mut self) {
         for name in keys::GENERAL_KEYS {
@@ -609,6 +616,26 @@ mod tests {
         doc.reset_general();
         assert!(!doc.contains(keys::TPS_KEYBOARD_SHOWN.name));
         assert!(!doc.is_tps_keyboard_wanted());
+    }
+
+    #[test]
+    fn the_telex_guide_is_wanted_outside_tps_with_its_key_on_and_reset_clears_it() {
+        // trace: is_telex_guide_wanted = mode != Tps && telexGuideShown; the
+        // key survives a switch to TPS and back; GENERAL_KEYS removes it.
+        let mut doc = SettingsDocument::default();
+        assert!(!doc.is_telex_guide_wanted(), "off until asked for");
+        doc.set_bool(&keys::TELEX_GUIDE_SHOWN, true);
+        assert!(doc.is_telex_guide_wanted());
+        doc.switch_input_mode(InputModeRequest::ToggleRomanization);
+        assert!(doc.is_telex_guide_wanted(), "POJ: still a Telex table");
+        doc.switch_input_mode(InputModeRequest::ToggleTps);
+        assert!(!doc.is_telex_guide_wanted(), "TPS types no Telex keys");
+        assert!(doc.bool(&keys::TELEX_GUIDE_SHOWN), "kept for the way back");
+        doc.switch_input_mode(InputModeRequest::ToggleTps);
+        assert!(doc.is_telex_guide_wanted());
+        doc.reset_general();
+        assert!(!doc.contains(keys::TELEX_GUIDE_SHOWN.name));
+        assert!(!doc.is_telex_guide_wanted());
     }
 
     #[test]

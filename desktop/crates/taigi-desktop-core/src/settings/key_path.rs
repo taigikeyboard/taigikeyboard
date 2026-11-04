@@ -85,9 +85,10 @@ mod tests {
     /// The General pane's keys, the dictionary sources, the display mode,
     /// the custom dictionary switch, one row per composing action — each
     /// once. Not the romanization TPS returns to: only a mode switch reads
-    /// it, never a key. Nor the TPS key panel, which no key reads. Nor the
-    /// keyboard layout: the Windows key translation reads it before a key
-    /// reaches the shared path, and macOS sets it on IMK, not in a snapshot.
+    /// it, never a key. Nor the TPS key panel or the Telex guide, which no key
+    /// reads. Nor the keyboard layout: the Windows key translation reads it
+    /// before a key reaches the shared path, and macOS sets it on IMK, not in
+    /// a snapshot.
     #[test]
     fn the_key_path_settings_are_the_ones_the_key_path_reads() {
         let mut expected: Vec<String> = keys::GENERAL_KEYS
@@ -95,6 +96,7 @@ mod tests {
             .filter(|name| {
                 **name != keys::LAST_ROMANIZATION_MODE.name
                     && **name != keys::TPS_KEYBOARD_SHOWN.name
+                    && **name != keys::TELEX_GUIDE_SHOWN.name
                     && **name != keys::KEYBOARD_LAYOUT.name
             })
             .chain(&keys::DICTIONARY_SOURCE_KEYS)
