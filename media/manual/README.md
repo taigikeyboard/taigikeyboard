@@ -112,9 +112,9 @@ macOS 的符號：`⌃` control、`⌥` option、`⌘` command、`⇧` shift。
 
 猶未開始拍字的時，`f` 嘛是連字符，拍輕聲免揤 `-`：`ffah` → `--ah`。所以 Telex 拍袂出英文字母 f，愛拍英文就切換英文輸入法。
 
-袂記得的時，揤 `⌃` `⌘` `/`（Windows、Linux：`Ctrl` `Alt` `/`），Telex 說明會浮佇螢幕頂；閣揤一擺就收起來。
+袂記得的時，揤 `⌃` `⌘` `/`（Windows、Linux：`Ctrl` `Alt` `/`），Telex 說明會留佇畫面，予你通那看那拍；閣揤一擺就收起來。
 
-![Telex 的選字窗](shots/tone-telex.png) ![浮佇螢幕頂的 Telex 說明](shots/panel-telex-guide.png)
+![Telex 的選字窗](shots/tone-telex.png) ![Telex 說明](shots/panel-telex-guide.png)
 
 ## 標點符號
 
