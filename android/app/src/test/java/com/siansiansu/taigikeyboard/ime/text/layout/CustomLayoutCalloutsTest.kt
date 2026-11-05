@@ -103,6 +103,19 @@ class CustomLayoutCalloutsTest {
     }
 
     @Test
+    fun `a second-page key keeps its built-in list and shows its own list at full width`() {
+        // trace: symbols2/western_default `{` popup = `｛` `﹛`, as iOS SymbolCallouts["{"].
+        val brace = qwerty.copy(keys = listOf("{") + qwerty.keys.drop(1))
+        assertEquals(listOf("｛", "﹛"), tables.defaultCallouts(brace, "{"))
+
+        // trace: `•` and the first page's `‧` share the full-width form `·`; only `•` is placed.
+        val bullet = qwerty.copy(keys = listOf("•") + qwerty.keys.drop(1)).withList("•", listOf("x"))
+        val rows = substituted(bullet, isFullWidthPunctuation = true)
+        tables.applyCallouts(rows, bullet)
+        assertEquals(listOf("x"), rows.key("·").popup.map { it.label })
+    }
+
+    @Test
     fun `tone rows and symbols for the tray`() {
         // trace: row a = TL á à â ǎ ā a̍ a̋, then POJ-only ă; ⁿ leaves the n row.
         assertEquals(listOf("á", "à", "â", "ǎ", "ā", "a̍", "a̋", "ă"), tables.toneRows.first())
@@ -114,6 +127,6 @@ class CustomLayoutCalloutsTest {
         assertTrue(symbols.indexOf("{") < symbols.indexOf("「"))
         assertFalse(symbols.contains("▶"))
         assertFalse(symbols.any { it in tables.trayLetters })
-        assertFalse(tables.isPlaceable("『"))
+        assertFalse(tables.canReplace(qwerty, LayoutPlace.Key(0), "『"))
     }
 }

@@ -141,6 +141,9 @@ fun LayoutEditorScreen(
     // The selected key's long-press list as shown; empty while no character key is selected.
     fun selectedCallouts(): List<String> = selectedLabel()?.let { tables.callouts(draft, it) }.orEmpty()
 
+    // The selected key's list spelled as the tray's chips are.
+    val heldChips = remember(draft, selected) { tables.trayForms(selectedCallouts()) }
+
     fun changeDraft(next: CustomLayout) {
         if (next != draft) {
             history.add(draft)
@@ -225,8 +228,11 @@ fun LayoutEditorScreen(
         }
     }
 
-    // Whether [spare] can go on the selected slot, else the selected key.
-    fun canPlace(spare: String): Boolean = selectedCallout != null || (tables.isPlaceable(spare) && selected?.let { draft.replaced(it, spare) != draft } == true)
+    // Whether [spare] can go on the selected slot (the key's list does not hold it yet), else the selected key.
+    fun canPlace(spare: String): Boolean = if (selectedCallout != null) spare !in heldChips else selected?.let { tables.canReplace(draft, it, spare) } == true
+
+    // A spare that cannot go on the selected key or slot stays in place, dimmed, so the rows keep their columns.
+    fun isDimmed(spare: String): Boolean = selected != null && !canPlace(spare)
 
     // Marks [spare] for the swap button, clearing any pair; tapping the marked spare clears it.
     fun markSpare(spare: String) {
@@ -246,13 +252,12 @@ fun LayoutEditorScreen(
         editCallouts(if (isAdding) CustomLayout.MAX_CALLOUTS else index) { if (isAdding) it.add(spare) else it[index] = spare }
     }
 
-    // A spare fills the selected long-press slot, else replaces the selected key (long-press-only
-    // symbols cannot go on the board).
+    // A spare fills the selected long-press slot, else replaces the selected key.
     fun replaceSelected(spare: String) {
         val slot = selectedCallout
         when {
             slot != null -> fillCallout(slot, spare)
-            tables.isPlaceable(spare) -> selected?.let { edit(draft.replaced(it, spare)) }
+            canPlace(spare) -> selected?.let { edit(draft.replaced(it, spare)) }
         }
     }
 
@@ -407,9 +412,6 @@ fun LayoutEditorScreen(
                         .padding(horizontal = EDITOR_PADDING, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(28.dp),
                 ) {
-                    // A character the selected key's list already holds stays in place, dimmed, so the
-                    // rows keep their columns.
-                    val held = remember(callouts) { tables.trayForms(callouts) }
                     val letters = remember(draft) { draft.spares(tables.trayLetters) }
                     val (halfWidth, fullWidth) = remember(draft) { tables.traySymbols(draft).partition { !isFullWidthSymbol(it) } }
                     if (!draft.hasEmojiKey || letters.isNotEmpty()) {
@@ -428,11 +430,11 @@ fun LayoutEditorScreen(
                                     }
                                 }
                             }
-                        SpareGrid(letters, onTap = ::markSpare, held = held, marked = markedSpare, leading = emojiChip)
+                        SpareGrid(letters, onTap = ::markSpare, isDimmed = ::isDimmed, marked = markedSpare, leading = emojiChip)
                     }
-                    TraySection(L10n.layoutTrayTones) { ToneGrid(tables.toneRows, held = held, marked = markedSpare, onTap = ::markSpare) }
-                    TraySection(L10n.symbolHalfWidth) { SpareGrid(halfWidth, onTap = ::markSpare, held = held, marked = markedSpare) }
-                    TraySection(L10n.symbolFullWidth) { SpareGrid(fullWidth, onTap = ::markSpare, held = held, marked = markedSpare) }
+                    TraySection(L10n.layoutTrayTones) { ToneGrid(tables.toneRows, isDimmed = ::isDimmed, marked = markedSpare, onTap = ::markSpare) }
+                    TraySection(L10n.symbolHalfWidth) { SpareGrid(halfWidth, onTap = ::markSpare, isDimmed = ::isDimmed, marked = markedSpare) }
+                    TraySection(L10n.symbolFullWidth) { SpareGrid(fullWidth, onTap = ::markSpare, isDimmed = ::isDimmed, marked = markedSpare) }
                 }
             }
         }
@@ -566,20 +568,20 @@ private fun TraySection(
 
 /**
  * Equal-width tray chips, [leading] first, then one chip per spare (tap = mark it for the selected key
- * or long-press slot), as many columns as fit (the iOS adaptive grid); [held] chips are dimmed and
- * inert, the [marked] one lit.
+ * or long-press slot), as many columns as fit (the iOS adaptive grid); [isDimmed] chips are inert,
+ * the [marked] one lit.
  */
 @Composable
 private fun SpareGrid(
     spares: List<String>,
     onTap: (String) -> Unit,
-    held: Set<String>,
+    isDimmed: (String) -> Boolean,
     marked: String?,
     leading: (@Composable (Modifier) -> Unit)? = null,
 ) {
     val cells: List<@Composable (Modifier) -> Unit> =
         listOfNotNull(leading) +
-            spares.map { spare -> { modifier -> SpareChip(spare, onTap, spare in held, spare == marked, modifier) } }
+            spares.map { spare -> { modifier -> SpareChip(spare, onTap, isDimmed(spare), spare == marked, modifier) } }
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val columns = ((maxWidth + TRAY_SPACING) / (TRAY_CHIP_MIN_WIDTH + TRAY_SPACING)).toInt().coerceAtLeast(1)
         Column(verticalArrangement = Arrangement.spacedBy(TRAY_SPACING)) {
@@ -597,7 +599,7 @@ private fun SpareGrid(
 @Composable
 private fun ToneGrid(
     rows: List<List<String>>,
-    held: Set<String>,
+    isDimmed: (String) -> Boolean,
     marked: String?,
     onTap: (String) -> Unit,
 ) {
@@ -610,7 +612,7 @@ private fun ToneGrid(
                     if (char == null) {
                         Spacer(Modifier.weight(1f))
                     } else {
-                        SpareChip(char, onTap, char in held, char == marked, Modifier.weight(1f))
+                        SpareChip(char, onTap, isDimmed(char), char == marked, Modifier.weight(1f))
                     }
                 }
             }
@@ -622,14 +624,14 @@ private fun ToneGrid(
 private fun SpareChip(
     spare: String,
     onTap: (String) -> Unit,
-    isHeld: Boolean,
+    isDimmed: Boolean,
     isMarked: Boolean,
     modifier: Modifier,
 ) {
     TrayChip(
         onClick = { onTap(spare) },
         description = spare,
-        enabled = !isHeld,
+        enabled = !isDimmed,
         isSelected = isMarked,
         modifier = modifier,
     ) {

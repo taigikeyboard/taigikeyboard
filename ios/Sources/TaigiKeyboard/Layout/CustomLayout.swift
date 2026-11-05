@@ -108,6 +108,8 @@ struct CustomLayout: Codable, Identifiable, Hashable {
 
     private static let symbolPageKeys = Array(TaigiLayouts.Numeric.iPhone.joined()).filter(\.isCharacter)
 
+    private static let secondSymbolPageKeys = Array(TaigiLayouts.Symbolic.iPhone.joined()).filter(\.isCharacter)
+
     /// Finals spelled the same in TL and POJ, most frequent first (share of dictionary syllables
     /// whose final contains them). No built-in table has them; each is a plain key.
     private static let trayFinals = [
@@ -134,9 +136,10 @@ struct CustomLayout: Codable, Identifiable, Hashable {
 
     /// Every key the tray can offer, so a moved key keeps its full-width form. The symbol page
     /// comes first: its `(` `)` carry full-width forms that MOE1's own keys leave out (a base's
-    /// own keys still win, `filledRows`).
+    /// own keys still win, `filledRows`). The second symbol page comes after the tables, so a key
+    /// they share keeps its form.
     private static let catalog: [String: KeyDef] = Dictionary(
-        (symbolPageKeys + romanizationKeys + ([trayNasalMarker] + trayVowels + trayFinals).map { KeyDef.char($0) })
+        (symbolPageKeys + romanizationKeys + secondSymbolPageKeys + ([trayNasalMarker] + trayVowels + trayFinals).map { KeyDef.char($0) })
             .compactMap { key in key.characterLabel.map { ($0, key) } },
         uniquingKeysWith: { first, _ in first },
     )
@@ -331,10 +334,17 @@ struct CustomLayout: Codable, Identifiable, Hashable {
         }
     }
 
+    /// Whether `spare` can go on `place`: a character place and a catalog key not on the board. A
+    /// full-width form and a long-press-only symbol are not catalog keys.
+    func canReplace(_ place: Place, with spare: String) -> Bool {
+        guard case .key = place else { return false }
+        return Self.catalog[spare] != nil && !keys.contains(spare)
+    }
+
     /// Puts `spare` on a character place (a removed one too); the key it replaces returns to the tray,
     /// without its long-press list.
     mutating func replace(_ place: Place, with spare: String) {
-        guard case let .key(index) = place, Self.catalog[spare] != nil, !keys.contains(spare) else { return }
+        guard canReplace(place, with: spare), case let .key(index) = place else { return }
         dropCallouts(at: index)
         keys[index] = spare
     }

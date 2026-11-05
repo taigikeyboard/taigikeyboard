@@ -280,15 +280,15 @@ struct LayoutEditorView: View {
         }
     }
 
-    /// A tap marks the spare for the swap button once it can go on the selected key or slot. One the
-    /// selected key's list already holds stays in place, dimmed, so the rows keep their columns.
+    /// A tap marks the spare for the swap button once it can go on the selected key or slot. One that
+    /// cannot stays in place, dimmed, so the rows keep their columns.
     private func spareButton(_ spare: String) -> some View {
-        let isHeld = selectedLabel.map { draft.holdsCallout(spare, for: $0) } ?? false
+        let isDimmed = selected != nil && !canPlace(spare)
         return trayButton(isSelected: spare == markedSpare, action: { markSpare(spare) }) {
             Text(verbatim: spare)
         }
-        .disabled(isHeld)
-        .opacity(isHeld ? 0.3 : 1)
+        .disabled(isDimmed)
+        .opacity(isDimmed ? 0.3 : 1)
     }
 
     private func trayGrid(@ViewBuilder content: () -> some View) -> some View {
@@ -328,15 +328,14 @@ struct LayoutEditorView: View {
         markedSpare = spare == markedSpare ? nil : spare
     }
 
-    /// Whether `spare` can go on the selected slot, else the selected key.
+    /// Whether `spare` can go on the selected slot (the key's list does not hold it yet), else the
+    /// selected key.
     private func canPlace(_ spare: String) -> Bool {
         if selectedCallout != nil {
-            return true
+            return selectedLabel.map { draft.holdsCallout(spare, for: $0) } != true
         }
         guard let selected else { return false }
-        var replaced = draft
-        replaced.replace(selected, with: spare)
-        return replaced != draft
+        return draft.canReplace(selected, with: spare)
     }
 
     /// Places the marked spare, else swaps the marked long-press slots, else the marked keys.

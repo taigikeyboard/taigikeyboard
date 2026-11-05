@@ -123,9 +123,6 @@ class CustomLayoutTables(
         halfWidthFirst(composedUnique(symbolPages.mapNotNull(::entry) + builtInPopups).filterNot { it in trayLetters || it in DRAWN_AS_EMOJI })
     }
 
-    /** Full-width key label → its half-width label, from [catalog]. */
-    private val halfWidthLabels: Map<String, String>
-
     // The long-press tables above and below serve the editor only, so the keyboard never parses them.
 
     /** Tone-mark long-press entries by script, then by key label. */
@@ -151,11 +148,16 @@ class CustomLayoutTables(
             catalog.putIfAbsent(half.label, half to full)
         }
 
+        fun addSymbolPage(type: LayoutType): List<List<KeyData>> {
+            val halfPage = load(type, "western_default")?.arrangement.orEmpty()
+            val fullPage = load(type, "western_fullwidth")?.arrangement.orEmpty()
+            halfPage.zip(fullPage).forEach { (half, full) -> half.zip(full).forEach { (h, f) -> addToCatalog(h, f) } }
+            return halfPage
+        }
+
         // The symbol page first: its `(` `)` carry full-width forms that MOE1's own keys leave out (a
         // base's own keys still win, see substitute).
-        val symbolPage = load(LayoutType.SYMBOLS, "western_default")?.arrangement.orEmpty()
-        val symbolPageFull = load(LayoutType.SYMBOLS, "western_fullwidth")?.arrangement.orEmpty()
-        symbolPage.zip(symbolPageFull).forEach { (half, full) -> half.zip(full).forEach { (h, f) -> addToCatalog(h, f) } }
+        val symbolPage = addSymbolPage(LayoutType.SYMBOLS)
 
         val romanizationLabels = mutableListOf<String>()
         for (base in KeyboardLayoutOptions.romanization.map { it.key }) {
@@ -195,10 +197,11 @@ class CustomLayoutTables(
             }
         }
         this.tables = tables
+        // After the tables, so a key they share keeps its form.
+        addSymbolPage(LayoutType.SYMBOLS2)
         // No built-in table has \u207f, `ee` or the finals: each is a plain key, in both widths.
         (listOf(TRAY_NASAL_MARKER) + TRAY_VOWELS + TRAY_FINALS).forEach { addToCatalog(KeyData(0, it), KeyData(0, it)) }
         this.catalog = catalog
-        halfWidthLabels = HashMap<String, String>().apply { catalog.forEach { (half, keys) -> putIfAbsent(keys.second.label, half) } }
 
         val symbolLabels = symbolPage.flatten().map { it.label }
         val single = ('a'..'z').map(Char::toString) + listOf("o\u0358", TRAY_NASAL_MARKER) + TRAY_VOWELS + listOf("-")
@@ -209,8 +212,16 @@ class CustomLayoutTables(
     /** [entries] spelled as the tray's chips are (NFC), to tell which chips a list already holds. */
     fun trayForms(entries: List<String>): Set<String> = composedUnique(entries).toSet()
 
-    /** Whether [label] can go on a board key: the long-press-only symbols cannot. */
-    fun isPlaceable(label: String): Boolean = label in catalog
+    /**
+     * Whether [spare] can go on [place] of [layout]: a character place and a catalog key not on the
+     * board. A full-width form and a long-press-only symbol are not catalog keys. iOS
+     * `CustomLayout.canReplace`.
+     */
+    fun canReplace(
+        layout: CustomLayout,
+        place: LayoutPlace,
+        spare: String,
+    ): Boolean = place is LayoutPlace.Key && spare in catalog && spare !in layout.keys
 
     /**
      * The built-in long-press list of the key labelled [label] on [layout]'s base and script: the base's
@@ -250,11 +261,14 @@ class CustomLayoutTables(
         layout: CustomLayout,
     ) {
         if (layout.callouts.isEmpty()) return
-        val placed = layout.keys.filterNotNullTo(HashSet())
+        val placed = layout.keys.filterNotNullTo(LinkedHashSet())
+        // A full-width key goes by its half-width label, as the list is stored. Placed keys only, the
+        // first in reading order winning (iOS `halfWidthLabel`): `‧` and `•` share the full-width form `·`.
+        val halfWidthLabels = HashMap<String, String>()
+        placed.forEach { label -> catalog[label]?.let { (_, full) -> halfWidthLabels.putIfAbsent(full.label, label) } }
         for (piece in arrangement.drop(1).flatMap(::pieces)) {
             val key = (piece as? Piece.Character)?.key ?: continue
-            // A full-width key goes by its half-width label, as the list is stored.
-            val label = key.label.takeIf { it in placed } ?: halfWidthLabels[key.label]?.takeIf { it in placed } ?: continue
+            val label = key.label.takeIf { it in placed } ?: halfWidthLabels[key.label] ?: continue
             layout.callouts[label]?.let { entries -> key.popup = entries.mapTo(mutableListOf(), ::calloutKey) }
         }
     }
