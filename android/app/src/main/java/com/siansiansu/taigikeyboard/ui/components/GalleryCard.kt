@@ -45,11 +45,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
@@ -115,7 +117,7 @@ fun GalleryCard(
     ) {
         Surface(
             shape = GALLERY_CARD_SHAPE,
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            color = AppStyle.createCardFill(),
             border =
                 if (isSelected) {
                     BorderStroke(2.5.dp, MaterialTheme.colorScheme.primary)
@@ -157,7 +159,7 @@ fun GalleryCard(
                             imageVector = Icons.Default.Check,
                             contentDescription = null,
                             modifier = Modifier.size(AppStyle.smallIconSize),
-                            tint = MaterialTheme.colorScheme.onPrimary,
+                            tint = Color.White,
                         )
                     }
                 }
@@ -225,7 +227,7 @@ fun GalleryCreateCard(
     ) {
         Surface(
             shape = GALLERY_CARD_SHAPE,
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            color = AppStyle.createCardFill(),
             modifier = Modifier.clickable(onClick = onClick),
         ) {
             Box(
@@ -270,6 +272,8 @@ fun GalleryCardMenu(
             Icon(
                 imageVector = Icons.Default.MoreVert,
                 contentDescription = contentDescription,
+                // Horizontal like the iOS `ellipsis` glyph.
+                modifier = Modifier.rotate(90f),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -306,8 +310,9 @@ private fun GalleryCardTitle(
         text = title,
         fontWeight = FontWeight.SemiBold,
         color = MaterialTheme.colorScheme.onSurface,
-        textAlign = TextAlign.Center,
         style = MaterialTheme.typography.labelLarge,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
         modifier = modifier,
     )
 }

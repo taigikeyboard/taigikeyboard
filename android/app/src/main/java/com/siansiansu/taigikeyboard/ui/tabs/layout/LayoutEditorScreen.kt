@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -18,8 +17,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -31,8 +31,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -314,10 +312,11 @@ fun LayoutEditorScreen(
         BoxWithConstraints(
             Modifier
                 .fillMaxSize()
-                .padding(innerPadding),
+                .padding(innerPadding)
+                .padding(top = 8.dp),
         ) {
             // At most half the height, so a short (landscape) screen still shows a usable board.
-            val boardWidth = min(maxWidth - 40.dp, maxHeight * 0.5f * GALLERY_PREVIEW_ASPECT)
+            val boardWidth = min(maxWidth - EDITOR_PADDING * 2, maxHeight * 0.5f * GALLERY_PREVIEW_ASPECT)
             // Below Material 3's compact-height breakpoint (480dp, a phone in landscape) the board and
             // bubble leave the tray no height, so the whole editor scrolls instead of the tray alone.
             val scrollsWhole = maxHeight < 480.dp
@@ -360,8 +359,9 @@ fun LayoutEditorScreen(
                     selectedSlot = selectedCallout,
                     partnerSlot = calloutPartner,
                     tailX = selectedKeyCenterX.takeIf { selected != null },
+                    isDark = isDark,
                     onTapSlot = ::tapCallout,
-                    modifier = Modifier.padding(horizontal = 20.dp).fillMaxWidth(),
+                    modifier = Modifier.padding(horizontal = EDITOR_PADDING).fillMaxWidth(),
                 )
 
                 // Fixed between the bubble and the tray, in thumb reach and always in view.
@@ -403,10 +403,9 @@ fun LayoutEditorScreen(
                 Column(
                     (if (scrollsWhole) Modifier else Modifier.weight(1f))
                         .fillMaxWidth()
-                        .padding(horizontal = 10.dp)
                         .then(if (scrollsWhole) Modifier else Modifier.verticalScroll(scrollState))
-                        .padding(horizontal = 10.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                        .padding(horizontal = EDITOR_PADDING, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(28.dp),
                 ) {
                     // A character the selected key's list already holds stays in place, dimmed, so the
                     // rows keep their columns.
@@ -414,21 +413,26 @@ fun LayoutEditorScreen(
                     val letters = remember(draft) { draft.spares(tables.trayLetters) }
                     val (halfWidth, fullWidth) = remember(draft) { tables.traySymbols(draft).partition { !isFullWidthSymbol(it) } }
                     if (!draft.hasEmojiKey || letters.isNotEmpty()) {
-                        SpareFlow(letters, onTap = ::markSpare, held = held, marked = markedSpare) {
-                            if (!draft.hasEmojiKey) {
-                                // Tap restores the emoji key at once.
-                                TrayChip(
-                                    onClick = { edit(draft.restoreEmojiKey()) },
-                                    description = accessibilityName(GridKey.Face.Function(FunctionKey.EMOJI)),
-                                ) {
-                                    Icon(painterResource(R.drawable.ic_sentiment_satisfied), contentDescription = null)
+                        // Tap restores the emoji key at once.
+                        val emojiChip: (@Composable (Modifier) -> Unit)? =
+                            if (draft.hasEmojiKey) {
+                                null
+                            } else {
+                                { modifier ->
+                                    TrayChip(
+                                        onClick = { edit(draft.restoreEmojiKey()) },
+                                        description = accessibilityName(GridKey.Face.Function(FunctionKey.EMOJI)),
+                                        modifier = modifier,
+                                    ) {
+                                        Icon(painterResource(R.drawable.ic_sentiment_satisfied), contentDescription = null)
+                                    }
                                 }
                             }
-                        }
+                        SpareGrid(letters, onTap = ::markSpare, held = held, marked = markedSpare, leading = emojiChip)
                     }
                     TraySection(L10n.layoutTrayTones) { ToneGrid(tables.toneRows, held = held, marked = markedSpare, onTap = ::markSpare) }
-                    TraySection(L10n.symbolHalfWidth) { SpareFlow(halfWidth, onTap = ::markSpare, held = held, marked = markedSpare) }
-                    TraySection(L10n.symbolFullWidth) { SpareFlow(fullWidth, onTap = ::markSpare, held = held, marked = markedSpare) }
+                    TraySection(L10n.symbolHalfWidth) { SpareGrid(halfWidth, onTap = ::markSpare, held = held, marked = markedSpare) }
+                    TraySection(L10n.symbolFullWidth) { SpareGrid(fullWidth, onTap = ::markSpare, held = held, marked = markedSpare) }
                 }
             }
         }
@@ -490,21 +494,24 @@ private fun BaseChips(
         modifier =
             Modifier
                 .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp),
+                .padding(horizontal = EDITOR_PADDING),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         KeyboardLayoutOptions.romanization.forEach { option ->
-            FilterChip(
-                selected = option.key == selectedBase,
-                onClick = { onSelect(option.key) },
-                label = { Text(stringRes(option.labelKey)) },
-                // The accent fill of the iOS base chips.
-                colors =
-                    FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = MaterialTheme.colorScheme.primary,
-                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                    ),
-            )
+            val isSelected = option.key == selectedBase
+            // Same capsule as the iOS base chips.
+            Surface(
+                shape = CircleShape,
+                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                contentColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.clip(CircleShape).selectable(selected = isSelected, onClick = { onSelect(option.key) }),
+            ) {
+                Text(
+                    stringRes(option.labelKey),
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                )
+            }
         }
     }
 }
@@ -558,20 +565,31 @@ private fun TraySection(
 }
 
 /**
- * A run of tray chips, [leading] first, then one chip per spare (tap = mark it for the selected key or
- * long-press slot); [held] chips are dimmed and inert, the [marked] one lit.
+ * Equal-width tray chips, [leading] first, then one chip per spare (tap = mark it for the selected key
+ * or long-press slot), as many columns as fit (the iOS adaptive grid); [held] chips are dimmed and
+ * inert, the [marked] one lit.
  */
 @Composable
-private fun SpareFlow(
+private fun SpareGrid(
     spares: List<String>,
     onTap: (String) -> Unit,
     held: Set<String>,
     marked: String?,
-    leading: @Composable () -> Unit = {},
+    leading: (@Composable (Modifier) -> Unit)? = null,
 ) {
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        leading()
-        spares.forEach { spare -> SpareChip(spare, onTap, spare in held, spare == marked) }
+    val cells: List<@Composable (Modifier) -> Unit> =
+        listOfNotNull(leading) +
+            spares.map { spare -> { modifier -> SpareChip(spare, onTap, spare in held, spare == marked, modifier) } }
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val columns = ((maxWidth + TRAY_SPACING) / (TRAY_CHIP_MIN_WIDTH + TRAY_SPACING)).toInt().coerceAtLeast(1)
+        Column(verticalArrangement = Arrangement.spacedBy(TRAY_SPACING)) {
+            cells.chunked(columns).forEach { row ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(TRAY_SPACING)) {
+                    row.forEach { cell -> cell(Modifier.weight(1f)) }
+                    repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
+                }
+            }
+        }
     }
 }
 
@@ -606,7 +624,7 @@ private fun SpareChip(
     onTap: (String) -> Unit,
     isHeld: Boolean,
     isMarked: Boolean,
-    modifier: Modifier = TRAY_CHIP_WIDTH,
+    modifier: Modifier,
 ) {
     TrayChip(
         onClick = { onTap(spare) },
@@ -625,12 +643,13 @@ private fun TrayChip(
     description: String,
     enabled: Boolean = true,
     isSelected: Boolean = false,
-    modifier: Modifier = TRAY_CHIP_WIDTH,
+    modifier: Modifier,
     content: @Composable () -> Unit,
 ) {
     Surface(
         shape = RoundedCornerShape(8.dp),
         color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+        contentColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
         modifier =
             modifier
                 .height(44.dp)
@@ -641,8 +660,10 @@ private fun TrayChip(
                     selected = isSelected
                 },
     ) {
-        Box(Modifier.padding(horizontal = 10.dp), contentAlignment = Alignment.Center) { content() }
+        Box(contentAlignment = Alignment.Center) { content() }
     }
 }
 
-private val TRAY_CHIP_WIDTH = Modifier.widthIn(min = 48.dp)
+private val EDITOR_PADDING = 16.dp
+private val TRAY_SPACING = 8.dp
+private val TRAY_CHIP_MIN_WIDTH = 44.dp

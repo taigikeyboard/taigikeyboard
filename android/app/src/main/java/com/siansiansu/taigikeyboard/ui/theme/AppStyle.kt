@@ -39,6 +39,14 @@ object AppStyle {
     @Composable
     fun warningOrange(): Color = if (isSystemInDarkTheme()) Color(0xFFFF9F0A) else Color(0xFFFF9500)
 
+    /** Dashed outlines. iOS equivalent: secondaryLabel */
+    @Composable
+    fun secondaryLabel(isDark: Boolean = isSystemInDarkTheme()): Color = (if (isDark) Color(0xFFEBEBF5) else Color(0xFF3C3C43)).copy(alpha = 0.6f)
+
+    /** Gallery create-card panel. iOS equivalent: systemGray4 */
+    @Composable
+    fun createCardFill(): Color = if (isSystemInDarkTheme()) Color(0xFF3A3A3C) else Color(0xFFD1D1D6)
+
     /** Neutral bordered-button background, also its disabled state. iOS equivalent: secondarySystemFill */
     @Composable
     fun neutralFill(): Color = Color(0xFF787880).copy(alpha = if (isSystemInDarkTheme()) 0.32f else 0.16f)

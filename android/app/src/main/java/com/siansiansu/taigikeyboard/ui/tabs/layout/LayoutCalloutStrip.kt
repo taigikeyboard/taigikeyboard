@@ -29,11 +29,14 @@ import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.ime.text.layout.CustomLayout
 import com.siansiansu.taigikeyboard.ime.text.layout.dashedOutline
+import com.siansiansu.taigikeyboard.ime.text.layout.layoutKeyColor
+import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 
 // The selected key's long-press list, drawn as the keyboard's callout bubble in a fixed slot below the
 // board, its tail under the key. Mirrors iOS App/Tabs/Layout/LayoutCalloutStrip.swift.
@@ -49,10 +52,11 @@ fun LayoutCalloutStrip(
     selectedSlot: Int?,
     partnerSlot: Int?,
     tailX: Float?,
+    isDark: Boolean,
     onTapSlot: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val color = MaterialTheme.colorScheme.surface
+    val color = layoutKeyColor(isDark)
     var bubbleX by remember { mutableFloatStateOf(0f) }
     val title = L10n.layoutCalloutsTitle
     Row(
@@ -83,6 +87,7 @@ fun LayoutCalloutStrip(
                 entry = entries?.getOrNull(index),
                 isSelected = index == selectedSlot || index == partnerSlot,
                 enabled = entries != null,
+                dashColor = AppStyle.secondaryLabel(isDark),
                 onTap = { onTapSlot(index) },
                 modifier = Modifier.weight(1f),
             )
@@ -96,11 +101,11 @@ private fun Slot(
     entry: String?,
     isSelected: Boolean,
     enabled: Boolean,
+    dashColor: Color,
     onTap: () -> Unit,
     modifier: Modifier,
 ) {
     val shape = RoundedCornerShape(8.dp)
-    val dashColor = MaterialTheme.colorScheme.outline
     val emptyLabel = L10n.settingsSyllableSeparatorNone
     Box(
         modifier
@@ -119,9 +124,10 @@ private fun Slot(
     ) {
         Text(
             entry.orEmpty(),
-            fontSize = 20.sp,
+            fontSize = 22.sp,
+            fontFamily = FontFamily.Default,
             maxLines = 1,
-            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+            color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
         )
     }
 }
