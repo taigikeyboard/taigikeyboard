@@ -20,6 +20,8 @@ on:
       - 'dictionary/sources/official/kautian/data/kautian.csv'
       - 'taigi-converter'
       - 'tools/*.py'
+      - 'tools/mise-path-prefix.sh'
+      - 'mise.toml'
       - 'tools/windows/**'
       - '.github/workflows/kautian-watch.yml'
       - '.github/workflows/python.yml'
@@ -32,6 +34,8 @@ on:
       - 'dictionary/sources/official/kautian/data/kautian.csv'
       - 'taigi-converter'
       - 'tools/*.py'
+      - 'tools/mise-path-prefix.sh'
+      - 'mise.toml'
       - 'tools/windows/**'
       - '.github/workflows/kautian-watch.yml'
       - '.github/workflows/python.yml'
@@ -86,6 +90,9 @@ jobs:
 
       - name: Platform test selection tests
         run: PYTHONPATH=tools python -m unittest test_select_test.PlatformSelectionTests
+
+      - name: Pinned-tool PATH tests
+        run: python tools/mise_path_prefix_test.py
 
       - name: Windows icon tool tests
         run: python -m pytest tools/windows/tests -q

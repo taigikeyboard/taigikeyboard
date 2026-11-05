@@ -1,5 +1,9 @@
-# Tools the build needs, pinned where the build or CI checks the exact version —
-# `mise install` from the root.
+# Tools the build needs, pinned where the build or CI checks the exact version or
+# a hand install would drift — `mise install` from the root (first run: a few
+# minutes, it compiles protoc-gen-swift and cargo-ndk; needs Rust, and Xcode on
+# macOS). The root Makefile, tools/test_select.py --run, the commit hook and
+# tools/secret-scan/gitleaks-scan.sh put exactly these tools first on PATH, in
+# this order, through tools/mise-path-prefix.sh; no activated shell is needed.
 # See docs/BUILDING.md. Rust is not here: each workspace's rust-toolchain.toml
 # pins its own channel and targets.
 
@@ -9,12 +13,22 @@
 # skips binding regeneration on any other version. CI installs 36.1 for the Rust
 # (prost) builds only, which accept either.
 protoc = "36.2"
+# Must equal swift-protobuf in macos/Package.resolved: its output is committed and
+# CI only checks the Swift bindings structurally. macOS only, it builds with Swift.
+# Keep it below protoc: this package installs a protoc of its own, and the earlier
+# entry wins on PATH.
+"spm:apple/swift-protobuf" = { version = "1.39.0", os = ["macos"] }
 # Recorded in .gitleaks-scanned; an incremental scan refuses any other version.
 gitleaks = "8.30.1"
 # The version .github/workflows/checks.yml lints with.
 swiftformat = "0.63.0"
+# make linux-check's cross build of the engine (linux/Makefile).
+zig = "0.16.0"
+"github:rust-cross/cargo-zigbuild" = "0.24.1"
+# make android-libs (engine/scripts/build-android-libs.sh). Compiles from source.
+"cargo:cargo-ndk" = "4.1.2"
 # emoji/ is a uv project.
-uv = "latest"
+uv = "0.11.32"
 
 # Deliberately not pinned: python (>= 3.13) and node (>= 22). Nothing checks an
 # exact version, and a pin here would shadow the interpreter a contributor

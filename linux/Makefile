@@ -12,14 +12,16 @@
 #
 # The repo-root `make linux-check` forwards here.
 
-export PATH := $(HOME)/.cargo/bin:$(PATH)
+# The root Makefile's PATH, for a `make` run from this directory.
+export PATH := $(shell sh ../tools/mise-path-prefix.sh)$(HOME)/.cargo/bin:$(PATH)
 # bash, not sh: the `deb` recipe uses `set -o pipefail` (dash has none).
 SHELL := /bin/bash
 
 LINUX_TARGET := x86_64-unknown-linux-gnu
 # `cargo zigbuild` cross-links the engine from macOS; on a Linux host plain
-# cargo does the same thing natively.
-CROSS_CARGO := $(shell command -v cargo-zigbuild >/dev/null 2>&1 && echo "cargo zigbuild" || echo "cargo build")
+# cargo does the same thing natively. PATH is restated because make 3.81 (macOS)
+# does not pass its exports to $(shell).
+CROSS_CARGO := $(shell PATH="$(PATH)"; command -v cargo-zigbuild >/dev/null 2>&1 && echo "cargo zigbuild" || echo "cargo build")
 # Where `make install` puts things; a package build passes DESTDIR.
 PREFIX ?= /usr
 DESTDIR ?=

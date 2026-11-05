@@ -12,9 +12,11 @@ set -uo pipefail
 REPOSITORY_DIR="$(git rev-parse --show-toplevel)"
 status=0
 
+PATH="$(sh "$REPOSITORY_DIR/tools/mise-path-prefix.sh")$PATH"
+
 if ! command -v gitleaks >/dev/null 2>&1; then
   echo "pre-commit: gitleaks not installed — staged changes were NOT scanned for credentials." >&2
-  echo "  brew install gitleaks" >&2
+  echo "  mise install   (or: brew install gitleaks)" >&2
 elif ! "$REPOSITORY_DIR/tools/secret-scan/gitleaks-scan.sh" --staged; then
   cat >&2 <<'MSG'
 

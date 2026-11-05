@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from collections.abc import Iterable
@@ -464,7 +465,19 @@ def print_selection(selection: Selection, changed: list[str]) -> None:
             print(f"  {command.display()}")
 
 
+def pinned_tools_env() -> dict[str, str]:
+    """This process's environment with the mise.toml pins first on PATH."""
+    prefix = subprocess.run(
+        ["sh", str(ROOT / "tools/mise-path-prefix.sh")],
+        check=False,
+        capture_output=True,
+        text=True,
+    ).stdout
+    return {**os.environ, "PATH": prefix + os.environ.get("PATH", "")}
+
+
 def run_selection(selection: Selection) -> int:
+    env = pinned_tools_env()
     for prerequisite in selection.prerequisites:
         print(f"⚠ not run by --run: {prerequisite}")
     results: dict[str, str] = {}
@@ -473,7 +486,7 @@ def run_selection(selection: Selection) -> int:
         for command in commands:
             print(f"==> [{platform}] {command.display()}", flush=True)
             finished = subprocess.run(
-                command.run, shell=True, cwd=ROOT / command.cwd, check=False
+                command.run, shell=True, cwd=ROOT / command.cwd, env=env, check=False
             )
             if finished.returncode:
                 results[platform] = f"FAIL: {command.display()}"

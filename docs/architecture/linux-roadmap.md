@@ -393,7 +393,7 @@ introspection XML and the `serialize` functions were read, not remembered).
   (`zbus` and gtk4-rs both build on macOS; libadwaita from Homebrew), a REAL cross build
   of the engine binary for `x86_64-unknown-linux-gnu` through `cargo zigbuild` (zig ships
   the C toolchain the bundled SQLite's build script needs — plain `cargo check` stops
-  there; `brew install zig cargo-zigbuild`), `cargo fmt -- --check`, and the i18n check. CI (`linux-build.yml`, nightly
+  there; `mise install`), `cargo fmt -- --check`, and the i18n check. CI (`linux-build.yml`, nightly
   and on dispatch) adds what the Mac cannot: a real
   `x86_64-unknown-linux-gnu` build of both binaries with the distro's GTK, the **Fcitx5 addon
   built with CMake against `fcitx5-modules-dev`** (the only place it compiles before the VM),

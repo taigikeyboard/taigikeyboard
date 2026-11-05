@@ -4,7 +4,15 @@ DICT := dictionary
 # Ensure rustup-installed cargo is on PATH. `make` runs commands in /bin/sh,
 # which does not source the user's interactive shell config. Without this,
 # `cargo: command not found` if zsh doesn't `source ~/.cargo/env`.
-export PATH := $(HOME)/.cargo/bin:$(PATH)
+# The same shell has no mise activation, so the tools mise.toml pins go in front
+# (tools/mise-path-prefix.sh; nothing when mise is not installed). Sub-makes and
+# the scripts below inherit this PATH.
+export PATH := $(shell sh tools/mise-path-prefix.sh)$(HOME)/.cargo/bin:$(PATH)
+# make 3.81, the one macOS ships, runs a recipe line with no shell syntax itself and
+# looks the command up on the PATH it started with, so `swiftformat --lint macos`
+# would ignore the line above. Any SHELL other than plain /bin/sh makes every line
+# go through the shell, which reads the exported PATH; this one is still sh.
+SHELL := /usr/bin/env sh
 
 # A bare `make` prints the target list; it used to run `build`, which needs macOS
 # with every toolchain installed (docs/BUILDING.md).
@@ -286,7 +294,7 @@ lint:
 hooks:
 	git config core.hooksPath .githooks
 	@echo "✓ core.hooksPath = .githooks — staged changes are now scanned before every commit"
-	@command -v gitleaks >/dev/null 2>&1 || echo "⚠ gitleaks not installed; the hook will pass through until you run: brew install gitleaks"
+	@command -v gitleaks >/dev/null 2>&1 || echo "⚠ gitleaks not installed; the hook will pass through until you run: mise install (or: brew install gitleaks)"
 
 # Scan for credentials. Both targets are tools/secret-scan/gitleaks-scan.sh, which is also
 # what CI runs — the coverage rules, the baseline checks and the exit-code

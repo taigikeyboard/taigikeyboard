@@ -13,7 +13,7 @@
 #   build-android-libs.sh --dev    # dev (--features panic-injector; symbol must be present)
 #
 # Prerequisites (install once, locally):
-#   cargo install cargo-ndk --locked
+#   mise install
 #   rustup target add aarch64-linux-android armv7-linux-androideabi
 #   Android NDK r25+ on PATH (rustup-bundled or sdkmanager)
 #
@@ -45,7 +45,7 @@ if grep -E 'abiFilters.*"(x86|x86_64)"' "$GRADLE_ABI" >/dev/null 2>&1; then
 fi
 
 if ! command -v cargo-ndk >/dev/null 2>&1; then
-    echo "error: cargo-ndk not found. Install via: cargo install cargo-ndk --locked" >&2
+    echo "error: cargo-ndk not found. Install via: mise install" >&2
     exit 1
 fi
 
