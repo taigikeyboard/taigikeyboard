@@ -7,6 +7,7 @@ package com.siansiansu.taigikeyboard.ime.text.layout
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.key.KeyVariation
+import com.siansiansu.taigikeyboard.ime.text.layout.LayoutTestAssets.assets
 import com.siansiansu.taigikeyboard.ime.text.layout.LayoutTestAssets.substituted
 import com.siansiansu.taigikeyboard.ime.text.layout.LayoutTestAssets.tables
 import com.siansiansu.taigikeyboard.ime.text.layout.LayoutTestAssets.unchanged
@@ -107,6 +108,24 @@ class CustomLayoutEditTest {
         // A key on the board is never placed twice; function places take no spare.
         assertEquals(lohankha, lohankha.replaced(key(0), "a"))
         assertEquals(lohankha, lohankha.replaced(function(0), "ph"))
+    }
+
+    @Test
+    fun `only what fits the board can replace a key`() {
+        // trace: `｛` is the full-width form of `{`, `﹛` only a `{` popup, `ā` a tone letter: no catalog label.
+        assertTrue(tables.canReplace(lohankha, key(0), "{"))
+        listOf("｛", "﹛", "ā").forEach { assertFalse(it, tables.canReplace(lohankha, key(0), it)) }
+        assertFalse("on the board", tables.canReplace(lohankha, key(0), "a"))
+        assertFalse("function place", tables.canReplace(lohankha, function(0), "{"))
+        assertTrue("removed place", tables.canReplace(lohankha.removed(key(0)), key(0), "{"))
+    }
+
+    @Test
+    fun `every second-page symbol is in the tray`() {
+        val tray = tables.traySymbols(lohankha)
+        assets.load(LayoutType.SYMBOLS2, "western_default")!!.arrangement.flatten().forEach {
+            assertTrue(it.label, it.label in tray)
+        }
     }
 
     @Test

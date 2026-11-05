@@ -113,6 +113,43 @@ final class CustomLayoutTests: XCTestCase {
         XCTAssertEqual(layout.rows(withGlobe: false)[1][2], .char("(", fullWidth: "（"))
     }
 
+    func testCustomLayout_secondPageSymbolKeepsFullWidthFormAndSurvivesSaving() throws {
+        var layout = CustomLayout(base: .phahTaigi, script: .tl)
+        // trace: Symbolic row 1 .char("{", fullWidth: "｛"); LayoutConverter types the full-width
+        // form while full-width punctuation is on. Slot 2 is "e" (row 1, column 2).
+        layout.replace(.key(2), with: "{")
+        XCTAssertEqual(layout.rows(withGlobe: false)[1][2], .char("{", fullWidth: "｛"))
+        XCTAssertTrue(layout.spareLetters.contains("e"))
+
+        let decoded = try JSONDecoder().decode(CustomLayout.self, from: JSONEncoder().encode(layout))
+        XCTAssertEqual(decoded, layout)
+        XCTAssertTrue(decoded.isValid)
+    }
+
+    func testCustomLayout_everySecondPageSymbolIsInTheTrayAndGoesOnTheBoard() {
+        let layout = CustomLayout(base: .phahTaigi, script: .tl)
+        // trace: Symbolic rows 1–3 hold 10 keys each, row 4 holds 7.
+        let labels = TaigiLayouts.Symbolic.iPhone.joined().compactMap(\.characterLabel)
+        XCTAssertEqual(labels.count, 37)
+        for label in labels {
+            XCTAssertTrue(layout.traySymbols.contains(label), label)
+            XCTAssertTrue(layout.canReplace(.key(0), with: label), label)
+        }
+    }
+
+    func testCustomLayout_canReplaceRefusesWhatCannotGoOnTheBoard() {
+        var layout = CustomLayout(base: .phahTaigi, script: .tl)
+        // trace: "｛" is the full-width form of "{", "﹛" a SymbolCallouts["{"] entry, "ā" a tone
+        // letter: none is a catalog label. "e" is on the board.
+        for spare in ["｛", "﹛", "ā", "e"] {
+            XCTAssertFalse(layout.canReplace(.key(0), with: spare), spare)
+        }
+        XCTAssertFalse(layout.canReplace(Self.phahTaigiEmoji, with: "{"), "function place")
+
+        layout.remove(.key(0))
+        XCTAssertTrue(layout.canReplace(.key(0), with: "{"), "removed place")
+    }
+
     func testCustomLayout_removedKeyLeavesKeyboardRowButStaysInEditor() {
         var layout = CustomLayout(base: .phahTaigi, script: .tl)
         layout.remove(.key(0))
