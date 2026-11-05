@@ -34,20 +34,20 @@ role stays with one of them:
 
 Every maintainer of a source file or a build script in this repository is
 listed above. There are no other committers, and no other contributor's change
-reaches a signed binary without the Approver's review.
+reaches a signed binary without a maintainer's review.
 
 These roles are not strictly separated, and this policy does not claim
 otherwise: the Approver also authors changes, and as repository admin can merge
 them without a second review. What stands in for that separation is that every
-step is recorded where a third party can read it, and that review, release tags
-and release secrets stay behind the Approver:
+step is recorded where a third party can read it, that review stays with the
+maintainers, and that release tags and release secrets stay behind the Approver:
 
-- Changes land on `main` through a pull request from a branch, and the Approver
-  must approve it as code owner (`.github/CODEOWNERS`). GitHub enforces both for
-  everyone except the repository admin, who may also commit directly; that
-  exception is used for docs, version bumps, release prep, and small data or
-  string changes. Either way, the diff that entered a release is public and
-  dated.
+- Changes land on `main` through a pull request from a branch, and a maintainer
+  who is not its author must approve it as code owner (`.github/CODEOWNERS`).
+  GitHub enforces both for everyone except the repository admin, who may also
+  commit directly; that exception is used for docs, version bumps, release prep,
+  and small data or string changes. Either way, the diff that entered a release
+  is public and dated.
 - Only the repository admin can create, move or delete a release tag, and the
   release secrets open only after the Approver approves the run.
 - Releases published from 2026-11-04 on are immutable on GitHub: their tag and
