@@ -26,6 +26,11 @@ Font family: JF Open Huninn 2.1 (`HuninnFontFamily`; `KeyboardFonts.openHuninnFo
 | Error / destructive | `error` #FF3B30 / #FF453A | `.red` / `.destructive` |
 | Trailing chevron | `onSurfaceVariant` | `.secondary` |
 | Card / page background | `surface` / `surfaceContainer` | system grouped background |
+| Dashed outline | `AppStyle.secondaryLabel()` #3C3C43 / #EBEBF5 α 0.6 | `.secondary` |
+| Gallery create card | `AppStyle.createCardFill()` #D1D1D6 / #3A3A3C | `systemGray4` |
+| Bordered button fill, also disabled | `AppStyle.neutralFill()` #787880 α 0.16 / 0.32 | `.bordered` (secondarySystemFill) |
+| Destructive bordered button fill | `AppStyle.destructiveFill()` `error` α 0.18 / 0.20 | `.bordered` + `.tint(.red)` |
+| Disabled button content | `AppStyle.disabledContent()` #3C3C43 / #EBEBF5 α 0.3 | `.bordered` disabled (tertiaryLabel) |
 
 ## Sizes
 

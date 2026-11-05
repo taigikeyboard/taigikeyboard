@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardLayoutSolver
+import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 
 // Draws a key table as plain keys: the custom-layout editor board, and the custom-layout card preview
 // on the Layout tab and in the keyboard's layout picker. Not the keyboard view, so a key can be
@@ -211,7 +212,7 @@ fun accessibilityName(face: GridKey.Face): String =
 // The default keyboard theme's tones (res/values/colors.xml `keyboard_default_*`, which themes.xml
 // uses): every key, function keys included, white on a gray board.
 @Composable
-private fun layoutKeyColor(isDark: Boolean): Color = colorResource(if (isDark) R.color.keyboard_default_key_dark else R.color.keyboard_default_key_light)
+fun layoutKeyColor(isDark: Boolean): Color = colorResource(if (isDark) R.color.keyboard_default_key_dark else R.color.keyboard_default_key_light)
 
 private fun layoutKeyTextColor(isDark: Boolean): Color = if (isDark) Color.White else Color.Black
 
@@ -235,7 +236,7 @@ private fun GridKeyView(
     val isSelected = interaction?.isSelectionMuted != true && (isPrimary || (place != null && place == interaction?.swapPartner))
     val corner = gap * 1.5f
     val shape = RoundedCornerShape(corner)
-    val dashColor = layoutKeyTextColor(isDark).copy(alpha = 0.5f)
+    val dashColor = AppStyle.secondaryLabel(isDark)
     val keyColor = layoutKeyColor(isDark)
     val fill =
         when {
