@@ -102,7 +102,7 @@
 
         </LinearLayout>
 
-        <!-- Toolbar container: 9 equal-width buttons evenly distributed -->
+        <!-- Toolbar container: 4 mode buttons (weight 1) and 5 icon buttons (weight 0.8) -->
         <LinearLayout
             android:id="@+id/toolbar_container"
             android:layout_width="match_parent"
@@ -115,33 +115,24 @@
             android:visibility="gone"
             tools:ignore="HardcodedText">
 
-            <!-- The shared text size is chosen from the widest mode label and available button width. -->
             <Button
                 android:id="@+id/toolbar_mode_poj"
                 style="@style/SmartbarToolbarMode"
-                android:maxLines="1"
-                android:ellipsize="none"
                 android:text="POJ" />
 
             <Button
                 android:id="@+id/toolbar_mode_tl"
                 style="@style/SmartbarToolbarMode"
-                android:maxLines="1"
-                android:ellipsize="none"
                 android:text="TL" />
 
             <Button
                 android:id="@+id/toolbar_mode_en"
                 style="@style/SmartbarToolbarMode"
-                android:maxLines="1"
-                android:ellipsize="none"
                 android:text="EN" />
 
             <Button
                 android:id="@+id/toolbar_mode_tps"
                 style="@style/SmartbarToolbarMode"
-                android:maxLines="1"
-                android:ellipsize="none"
                 android:text="TPS" />
 
             <!-- Symbol panel -->

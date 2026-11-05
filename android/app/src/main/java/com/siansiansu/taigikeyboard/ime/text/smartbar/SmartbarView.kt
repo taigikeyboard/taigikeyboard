@@ -5,7 +5,6 @@ package com.siansiansu.taigikeyboard.ime.text.smartbar
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
-import android.graphics.Paint
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.StateListDrawable
 import android.util.AttributeSet
@@ -93,9 +92,6 @@ class SmartbarView : LinearLayout {
         toolbarContainer = findViewById(R.id.toolbar_container)
         toolbarToggleButton = findViewById(R.id.toolbar_toggle_button)
         toolbarGlobeButton = findViewById(R.id.toolbar_globe_button)
-        toolbarContainer?.addOnLayoutChangeListener { view, _, _, _, _, _, _, _, _ ->
-            view.post { applyToolbarModeTextSize() }
-        }
 
         installCandidateComposeContent()
 
@@ -226,29 +222,6 @@ class SmartbarView : LinearLayout {
             intArrayOf(Color.WHITE, defaultColor),
         )
 
-    private fun applyToolbarModeTextSize() {
-        val buttons = TOOLBAR_MODE_BUTTON_IDS.toList().mapNotNull { findViewById<Button>(it) }
-        if (buttons.size != TOOLBAR_MODE_BUTTON_IDS.size || buttons.any { it.width == 0 }) return
-
-        val baseTextSizePx = TypedValue.applyDimension(
-            TypedValue.COMPLEX_UNIT_SP,
-            TOOLBAR_MODE_TEXT_SIZE_SP,
-            resources.displayMetrics,
-        )
-        val widestLabelWidthPx = buttons.maxOf { button ->
-            Paint(button.paint).apply { textSize = baseTextSizePx }.measureText(button.text.toString())
-        }
-        val availableWidthPx = buttons.minOf { it.width - it.paddingLeft - it.paddingRight }
-        if (widestLabelWidthPx <= 0f || availableWidthPx <= 0) return
-
-        val sharedTextSizePx = baseTextSizePx * minOf(1f, availableWidthPx / widestLabelWidthPx)
-        buttons.forEach { button ->
-            if (button.textSize != sharedTextSizePx) {
-                button.setTextSize(TypedValue.COMPLEX_UNIT_PX, sharedTextSizePx)
-            }
-        }
-    }
-
     /** Shows or hides the expand toggle and its divider — visible only while candidates exist. */
     fun setExpandButtonVisible(visible: Boolean) {
         expandToggleButton?.visibility = if (visible) View.VISIBLE else View.GONE
@@ -304,8 +277,6 @@ class SmartbarView : LinearLayout {
     private fun resolvedChromeIconTint(): Int = chromeForegroundTint ?: getColorFromAttr(context, R.attr.smartbar_fgColor)
 
     companion object {
-        private const val TOOLBAR_MODE_TEXT_SIZE_SP = 14f
-
         // Matches the 8dp corners of smartbar_button_background.xml.
         private const val TOOLBAR_BUTTON_CORNER_DP = 8f
 
