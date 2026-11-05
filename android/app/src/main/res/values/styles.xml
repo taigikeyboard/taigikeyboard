@@ -53,7 +53,8 @@
         <item name="android:padding">4dp</item>
     </style>
 
-    <!-- Toolbar mode button: wider weight for text labels -->
+    <!-- Toolbar mode button: wider weight for text labels; SmartbarView applies one shared text size
+         so all mode labels remain consistent while fitting the narrowest button. -->
     <style name="SmartbarToolbarMode" parent="SmartbarActionButton.Text">
         <item name="android:layout_width">0dp</item>
         <item name="android:layout_weight">1</item>

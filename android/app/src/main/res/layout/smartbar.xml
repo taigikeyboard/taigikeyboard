@@ -107,6 +107,7 @@
             android:id="@+id/toolbar_container"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:baselineAligned="false"
             android:gravity="center_vertical"
             android:orientation="horizontal"
             android:paddingStart="1dp"
@@ -114,31 +115,32 @@
             android:visibility="gone"
             tools:ignore="HardcodedText">
 
+            <!-- The shared text size is chosen from the widest mode label and available button width. -->
             <Button
                 android:id="@+id/toolbar_mode_poj"
                 style="@style/SmartbarToolbarMode"
-                android:singleLine="true"
+                android:maxLines="1"
                 android:ellipsize="none"
                 android:text="POJ" />
 
             <Button
                 android:id="@+id/toolbar_mode_tl"
                 style="@style/SmartbarToolbarMode"
-                android:singleLine="true"
+                android:maxLines="1"
                 android:ellipsize="none"
                 android:text="TL" />
 
             <Button
                 android:id="@+id/toolbar_mode_en"
                 style="@style/SmartbarToolbarMode"
-                android:singleLine="true"
+                android:maxLines="1"
                 android:ellipsize="none"
                 android:text="EN" />
 
             <Button
                 android:id="@+id/toolbar_mode_tps"
                 style="@style/SmartbarToolbarMode"
-                android:singleLine="true"
+                android:maxLines="1"
                 android:ellipsize="none"
                 android:text="TPS" />
 
