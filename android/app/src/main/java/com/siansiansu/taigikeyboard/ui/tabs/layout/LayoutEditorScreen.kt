@@ -1,6 +1,7 @@
 package com.siansiansu.taigikeyboard.ui.tabs.layout
 
 import android.view.HapticFeedbackConstants
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -23,7 +24,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenuItem
@@ -31,7 +31,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -58,6 +57,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
@@ -371,28 +371,33 @@ fun LayoutEditorScreen(
                         .width(boardWidth),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    Button(
+                    ActionPill(
+                        icon = R.drawable.ic_swap,
+                        description = L10n.themePhotoHintMove,
                         onClick = ::swapMarked,
                         enabled = swapPartner != null || calloutPartner != null || markedSpare != null,
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = Color.White,
                         modifier = Modifier.weight(1f),
-                    ) {
-                        Icon(painterResource(R.drawable.ic_swap), contentDescription = L10n.themePhotoHintMove)
-                    }
-                    FilledTonalButton(
+                    )
+                    ActionPill(
+                        icon = R.drawable.ic_undo,
+                        description = L10n.desktopMenuUndo,
                         onClick = ::undo,
                         enabled = history.isNotEmpty(),
+                        containerColor = AppStyle.neutralFill(),
+                        contentColor = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.weight(1f),
-                    ) {
-                        Icon(painterResource(R.drawable.ic_undo), contentDescription = L10n.desktopMenuUndo)
-                    }
-                    FilledTonalButton(
+                    )
+                    ActionPill(
+                        icon = R.drawable.ic_trash,
+                        description = L10n.commonDelete,
                         onClick = ::removeSelected,
                         enabled = selectedCallout?.let { it in callouts.indices } ?: (selected?.let(draft::canRemove) == true),
-                        colors = ButtonDefaults.filledTonalButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                        containerColor = AppStyle.destructiveFill(),
+                        contentColor = MaterialTheme.colorScheme.error,
                         modifier = Modifier.weight(1f),
-                    ) {
-                        Icon(Icons.Outlined.Delete, contentDescription = L10n.commonDelete)
-                    }
+                    )
                 }
 
                 Column(
@@ -449,6 +454,33 @@ fun LayoutEditorScreen(
 
 /** The four romanization bases; picking one restarts the draft from it. */
 @OptIn(ExperimentalMaterial3Api::class)
+// Icon-only pill matching the iOS `.bordered` / `.borderedProminent` capsule, gray when disabled.
+@Composable
+private fun ActionPill(
+    @DrawableRes icon: Int,
+    description: String,
+    onClick: () -> Unit,
+    enabled: Boolean,
+    containerColor: Color,
+    contentColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        colors =
+            ButtonDefaults.buttonColors(
+                containerColor = containerColor,
+                contentColor = contentColor,
+                disabledContainerColor = AppStyle.neutralFill(),
+                disabledContentColor = AppStyle.disabledContent(),
+            ),
+        modifier = modifier.height(50.dp),
+    ) {
+        Icon(painterResource(icon), contentDescription = description)
+    }
+}
+
 @Composable
 private fun BaseChips(
     selectedBase: String,
