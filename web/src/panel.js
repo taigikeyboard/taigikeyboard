@@ -61,7 +61,12 @@ export class Panel {
           String(cursorVisible && start + position === cursor),
         );
         const label = labels[position];
-        cell.textContent = label ? `${label} ${text}` : text;
+        if (label) {
+          const mark = document.createElement("span");
+          mark.textContent = label;
+          cell.append(mark, " ");
+        }
+        cell.append(text);
         return cell;
       });
     this.#candidates.replaceChildren(...cells);
@@ -80,18 +85,23 @@ export class Panel {
   }
 
   /// Under the caret's line, kept inside the editor; above the line when the
-  /// window has no room below it. A caret scrolled out of view leaves the panel
-  /// at the textarea's edge.
+  /// editor or the window has no room below it, so Copy and Clear stay clear,
+  /// but never past the editor's top, where it could not be scrolled to.
+  /// A caret scrolled out of view leaves the panel at the textarea's edge.
   place({ left, top, lineHeight }) {
     const root = this.#root;
-    const room = root.offsetParent.clientWidth - root.offsetWidth;
-    root.style.left = `${Math.max(0, Math.min(left, room))}px`;
-    const inView = Math.max(0, Math.min(top, root.offsetParent.clientHeight));
+    const editor = root.offsetParent;
+    const roomRight = editor.clientWidth - root.offsetWidth;
+    const inView = Math.max(0, Math.min(top, editor.clientHeight));
     const below = inView + lineHeight;
-    const editorTop = root.offsetParent.getBoundingClientRect().top;
-    const isRoomBelow =
-      editorTop + below + root.offsetHeight <= window.innerHeight;
-    root.style.top = `${isRoomBelow ? below : inView - root.offsetHeight}px`;
+    const room = Math.min(
+      editor.clientHeight,
+      window.innerHeight - editor.getBoundingClientRect().top,
+    );
+    const isRoomBelow = below + root.offsetHeight <= room;
+    root.style.left = `${Math.max(0, Math.min(left, roomRight))}px`;
+    const above = Math.max(0, inView - root.offsetHeight);
+    root.style.top = `${isRoomBelow ? below : above}px`;
   }
 
   #syncVisibility() {

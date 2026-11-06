@@ -23,6 +23,10 @@ Rules for the web version (`web/`: the `taigi-web` crate compiled to `wasm32-unk
 - One write path into the textarea: `surface.js`, through `execCommand`. Assigning `.value` wipes the undo history.
 - Every engine call after startup goes through `call` in `ime.js`, which turns a trap into a new instance; `start` handles its own, because a trap there would only repeat. A new instance needs a new copy of the glue module (`loader.js`): the glue keeps the instance it has.
 - A caret or text change the page did not make is found by comparing at the next key (`Surface.takeForeignChange`), not by `selectionchange`, which is asynchronous and fires on a different target per engine.
+- One settings document, `taigi.settings`, in desktop's shape and key spellings (`settings.js`). A form control is named after its key and its markup default is that key's default; the session is the judge of a stored document. A chord's write comes back in the reply and goes through `Settings.adopt`, so the form and storage follow it.
+- `prepaint.js` restores the theme and the sidebar before first paint. It is the first child of `<body>`: as an external script in `<head>`, on either side of the stylesheet, WebKit left `body` on stale or missing rules in up to 4 of 10 reloads, which a first load does not show and parallel load brings out. Found by bisecting in Playwright's WebKit (`--repeat-each`); the mechanism is not known.
+- Every state has a slot in the layout (`#message`, `#notice` with `visibility`), so nothing that appears shifts the page. The panel flips above the caret's line rather than pass the editor's bottom, so it never covers Copy or Clear.
+- The card is `#editor`, not the textarea: `border-radius` would take the textarea's corners out of its click area.
 - Hit by a real browser, not by Node: WebKit folds consecutive edits into one undo step, typed ones included, so undo can take back more than the last word.
 
 ## Tests

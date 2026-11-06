@@ -4,9 +4,10 @@
 
 import { createSession, fetchDictionaries } from "./loader.js";
 import { Panel } from "./panel.js";
+import { Settings } from "./settings.js";
+import { Sidebar } from "./sidebar.js";
 import { Surface } from "./surface.js";
 
-const SETTINGS_KEY = "taigi.settings";
 /// A call with no instance to answer it: the key is spent.
 const NOTHING = { handled: true, emits: [] };
 
@@ -19,28 +20,29 @@ const surface = new Surface(textarea);
 const panel = new Panel(document.getElementById("panel"), (position) => {
   apply(call((session) => session.clickCandidate(position)));
 });
+const sidebar = new Sidebar(
+  document.getElementById("sidebar-toggle"),
+  document.getElementById("sidebar"),
+);
+const settings = new Settings(
+  document.getElementById("settings"),
+  changeSettings,
+);
 
 /// `null` between instances.
 let session = null;
 
-/// What a past visit stored. The session is the judge of the document: one it
-/// refuses, or storage the browser blocks, leaves the defaults.
+/// The session is the judge of the stored document: one it refuses leaves the
+/// defaults.
 function restoreSettings(target) {
   try {
-    const stored = localStorage.getItem(SETTINGS_KEY);
-    if (stored !== null) {
-      target.setSettings(stored);
-    }
+    target.setSettings(settings.json);
   } catch (error) {
+    if (error instanceof WebAssembly.RuntimeError) {
+      throw error;
+    }
     console.error(error);
-  }
-}
-
-function writeSettings(settings) {
-  try {
-    localStorage.setItem(SETTINGS_KEY, settings);
-  } catch {
-    // Private windows may refuse. The session keeps the setting for this tab.
+    settings.reset();
   }
 }
 
@@ -145,10 +147,23 @@ function applyEmit(emit) {
     case "announceMode":
       say(emit.label, "mode");
       break;
+    case "openSettings":
+      sidebar.open();
+      break;
     default:
-      // `openSettings`, `toggleTpsKeyboard`: their panels are Phase 5.
+      // `toggleTpsKeyboard`: its panel is a later Phase 5 slice.
       break;
   }
+}
+
+/// The form's change. A running composition ends under the settings it began
+/// with: TPS has another alphabet, so its raw buffer cannot carry over.
+function changeSettings(json) {
+  apply(call((current) => current.commitComposition()));
+  call((current) => {
+    current.setSettings(json);
+    modeSlot.textContent = current.modeSymbol();
+  });
 }
 
 function placePanel() {
@@ -159,7 +174,7 @@ function placePanel() {
 
 function apply(reply) {
   if (reply.settings) {
-    writeSettings(reply.settings);
+    settings.adopt(reply.settings);
   }
   if (reply.emits.length > 0) {
     reply.emits.forEach(applyEmit);
@@ -215,6 +230,9 @@ textarea.addEventListener("compositionend", () => {
 });
 
 textarea.addEventListener("scroll", placePanel);
+// The docked sidebar and the textarea's own grip resize it; the window can
+// change the room below it and leave it as it is.
+new ResizeObserver(placePanel).observe(textarea);
 window.addEventListener("resize", placePanel);
 
 // Capture: this runs before the click moves the caret or `blur` takes the
@@ -238,6 +256,10 @@ window.addEventListener("blur", () => {
 for (const button of document.querySelectorAll("button")) {
   button.addEventListener("mousedown", (event) => event.preventDefault());
 }
+
+document.getElementById("mode-button").addEventListener("click", () => {
+  sidebar.open();
+});
 
 document.getElementById("copy").addEventListener("click", async () => {
   try {

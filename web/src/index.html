@@ -3,24 +3,79 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
     <title>TaigiKeyboard</title>
     <link rel="stylesheet" href="style.css">
     <script type="module" src="ime.js"></script>
   </head>
   <body>
+    <script src="prepaint.js"></script>
+    <button id="sidebar-toggle" class="corner-button" type="button" aria-controls="sidebar" aria-label="Sidebar" title="Sidebar">
+      <svg viewBox="0 0 20 20" aria-hidden="true">
+        <rect x="2.75" y="4" width="14.5" height="12" rx="2.25" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M7.75 4v12" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      </svg>
+    </button>
+    <aside id="sidebar" popover aria-label="Sidebar">
+      <div class="sidebar-close">
+        <button class="corner-button" type="button" popovertarget="sidebar" popovertargetaction="hide" aria-label="Close" title="Close">
+          <svg viewBox="0 0 20 20" aria-hidden="true">
+            <path d="M5 5l10 10M15 5L5 15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+      <form id="settings" aria-label="Settings">
+        <label class="setting">Appearance
+          <select name="candidateAppearanceMode">
+            <option value="auto" selected>Automatic</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </label>
+        <label class="setting">Input Mode
+          <select name="inputMode">
+            <option value="tl" selected>Tâi-lô</option>
+            <option value="poj">Pe̍h-ōe-jī</option>
+            <option value="tps">Phonetic Symbols</option>
+          </select>
+        </label>
+        <label class="setting">Candidate Display
+          <select name="candidateDisplayMode">
+            <option value="sideBySide" selected>Hanji–Romanization Pairing</option>
+            <option value="combined">Hanji with Romanization</option>
+            <option value="romanOnly">Romanization Only</option>
+          </select>
+        </label>
+      </form>
+      <nav class="sidebar-links" aria-label="Links">
+        <a href="https://taigikeyboard.tw/" target="_blank" rel="noopener">Apps</a>
+        <a href="https://taigikeyboard.tw/taigi-converter/" target="_blank" rel="noopener">Converter</a>
+        <a href="https://taigikeyboard.tw/kautian-mirror/" target="_blank" rel="noopener">Kautian Mirror</a>
+      </nav>
+    </aside>
     <main>
       <h1>TaigiKeyboard</h1>
-      <p role="status"><span id="mode"></span> <span id="message">Loading</span></p>
-      <p id="notice">Another input method is active. Turn it off to type here.</p>
+      <div class="status">
+        <p id="message" role="status" data-state="loading">Loading</p>
+        <button id="mode-button" type="button" title="Input Mode">
+          <span id="mode"></span>
+          <svg viewBox="0 0 10 10" aria-hidden="true">
+            <path d="M2.5 4l2.5 2.5L7.5 4" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
       <div id="editor">
-        <textarea id="text" aria-label="Text" rows="20" spellcheck="false" autocapitalize="off" autocomplete="off" disabled></textarea>
+        <textarea id="text" aria-label="Text" placeholder="Type here" spellcheck="false" autocapitalize="off" autocomplete="off" disabled></textarea>
         <div id="panel" hidden>
           <div id="preedit"></div>
           <ol id="candidates"></ol>
         </div>
       </div>
-      <button id="copy" type="button">Copy</button>
-      <button id="clear" type="button">Clear</button>
+      <div class="actions">
+        <p id="notice">Another input method is active. Turn it off to type here.</p>
+        <button id="copy" class="action" type="button">Copy</button>
+        <button id="clear" class="action" type="button">Clear</button>
+      </div>
     </main>
   </body>
 </html>
