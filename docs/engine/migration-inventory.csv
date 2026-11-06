@@ -74,7 +74,7 @@ function,infra,rust_shipped,v3.5.1-D9.4-Phonetics,android,android/.../engine/Rus
 function,infra,rust_shipped,v3.5.1-D9.4-Phonetics,android,android/.../engine/RustEngineBridge.kt,setLogLevel,android-jni,engine/android-jni/src/lib.rs,function,Java_..._setLogLevel,「執行期切換 Rust log::max_level；BuildConfig.DEBUG=true 時 Kotlin 端呼 setLogLevel(4)。」,
 function,infra,rust_shipped,v3.5.1-D9.4-Phonetics,android,,,android-jni,engine/android-jni/src/lib.rs,function,Java_..._panicForTest,「T1 panic injector（feature=panic-injector，僅 dev .so）；release build 由 build-android-libs.sh 用 nm 驗證符號不存在。」,
 module,infra,rust_shipped,v3.5.6-lexicon-read-path,rust_only,,,mmap-host,engine/mmap-host/src/lib.rs,crate,mmap-host,「集中 mmap unsafe 載入碼的 host crate；其他 crate 全部 forbid unsafe_code。」,
-struct,infra,rust_shipped,v3.5.6-lexicon-read-path,rust_only,,,mmap-host,engine/mmap-host/src/lib.rs,struct,MmapHandle,「memmap2 開檔 + 安全包覆 &[u8] slice 給 lexicon 讀路徑用。」,
+struct,infra,rust_shipped,v3.5.6-lexicon-read-path,rust_only,,,mmap-host,engine/mmap-host/src/native.rs,struct,MmapHandle,「memmap2 開檔 + 安全包覆 &[u8] slice 給 lexicon 讀路徑用。」,
 enum,infra,rust_shipped,v3.5.6-lexicon-read-path,rust_only,,,mmap-host,engine/mmap-host/src/lib.rs,enum,MmapError,「mmap 開檔/版本驗證錯誤。」,
 module,infra,rust_shipped,v3.5.4-Composing-D9.3,rust_only,,,protos,engine/protos/src/lib.rs,crate,protos,「prost-build 產出的 engine 訊息結構共用 crate。proto 來源於 engine/protos/proto/*.proto。」,平台 .pb.swift / .java 為 checked-in（engine/scripts/gen-platform-protos.sh + engine/protos/build.rs 維護）。
 file,infra,rust_shipped,v3.5.6-lexicon-read-path,rust_only,,,build-helpers/fst-builder,engine/build-helpers/fst-builder/src/main.rs,binary,fst-builder,「離線工具：把 dictionary 來源編成 fst prefix index 與 dictionary.bin / association.bin。」,

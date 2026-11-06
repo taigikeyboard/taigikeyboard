@@ -68,7 +68,7 @@ pub struct ComposingManager {
     settings: Arc<dyn SettingsProvider>,
     /// Where the next-word handshakes go, stamped with `clock`.
     next_word: Box<dyn NextWordPort>,
-    clock: Box<dyn Clock>,
+    clock: Arc<dyn Clock>,
     /// Unique across everything that talks to the engine in this process:
     /// the engine keeps one composition per process and drops it whenever the
     /// generation it is handed changes.
@@ -81,7 +81,7 @@ impl ComposingManager {
     pub fn new(
         settings: Arc<dyn SettingsProvider>,
         next_word: Box<dyn NextWordPort>,
-        clock: Box<dyn Clock>,
+        clock: Arc<dyn Clock>,
         starting_generation: u64,
     ) -> Self {
         Self {

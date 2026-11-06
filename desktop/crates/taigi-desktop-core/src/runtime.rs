@@ -12,7 +12,7 @@
 //! is merely activated. macOS, whose stores have always opened at launch,
 //! asks for it from `applicationDidFinishLaunching` (inventory C6).
 
-use crate::composing::ComposingSessionCoordinator;
+use crate::composing::{Clock, ComposingSessionCoordinator};
 use crate::dictionary_artifacts::DictionaryArtifacts;
 use crate::engine::{lexicon_install, user_data, LexiconInstallStats};
 use crate::keys::ShortcutConflicts;
@@ -43,6 +43,9 @@ pub struct RuntimeParts {
     pub system_locale: Box<dyn Fn() -> String + Send + Sync>,
     /// Which desktop this is — the shell's own constant.
     pub platform: DesktopPlatform,
+    /// What the composing path stamps learning with: `SystemClock`, except
+    /// where the target has none.
+    pub clock: Arc<dyn Clock>,
 }
 
 /// One per process: what every engine object of the input method reads,
@@ -55,6 +58,7 @@ pub struct DesktopRuntime {
     dictionary_version: u32,
     system_locale: Box<dyn Fn() -> String + Send + Sync>,
     platform: DesktopPlatform,
+    clock: Arc<dyn Clock>,
     first_key: OnceLock<FirstKeySetup>,
     /// The one composing engine driver per process, keyed by context token.
     /// Held for the length of one key, never across a call back into the
@@ -78,9 +82,15 @@ impl DesktopRuntime {
             dictionary_version: parts.dictionary_version,
             system_locale: parts.system_locale,
             platform: parts.platform,
+            clock: parts.clock,
             first_key: OnceLock::new(),
             coordinator: OnceLock::new(),
         }
+    }
+
+    /// Which desktop this is.
+    pub fn platform(&self) -> DesktopPlatform {
+        self.platform
     }
 
     /// Whether the engine keeps the user's data in this process.
@@ -140,7 +150,8 @@ impl DesktopRuntime {
     pub fn coordinator(&self) -> &Mutex<ComposingSessionCoordinator> {
         self.coordinator.get_or_init(|| {
             let settings: Arc<dyn SettingsProvider> = Arc::clone(&self.settings) as _;
-            Mutex::new(ComposingSessionCoordinator::for_desktop(settings))
+            let clock = Arc::clone(&self.clock);
+            Mutex::new(ComposingSessionCoordinator::for_desktop(settings, clock))
         })
     }
 
@@ -222,6 +233,7 @@ impl DesktopRuntime {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::composing::SystemClock;
     use crate::platform::test_support::TEST_PLATFORM;
     use crate::settings::{keys, StaticSettingsProvider};
     use std::sync::atomic::{AtomicUsize, Ordering};
@@ -255,6 +267,7 @@ mod tests {
             dictionary_version: 1,
             system_locale: Box::new(|| "ja-JP".to_owned()),
             platform: TEST_PLATFORM,
+            clock: Arc::new(SystemClock),
         })
     }
 

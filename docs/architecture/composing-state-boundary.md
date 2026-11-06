@@ -8,7 +8,7 @@ The composing state machine is Rust `engine/composing`; every `ComposingResponse
 |---|---|
 | iOS | `Input/Composing/ComposingManager.swift` → `KeyboardViewController+TextInput.swift` `execute` → `Actions/HostTextWriter.swift` (`UITextDocumentProxy`) |
 | Android | `ime/text/composing/ComposingManager.kt` → `ComposingDelegate.kt` (`InputConnection`, §11) |
-| macOS / Windows / Linux | `taigi-desktop-core::composing`, bound by `TaigiInputController.replay` + `ClientWriter.swift` / `tsf/src/composition.rs` / `taigi-linux-core::executor` |
+| macOS / Windows / Linux | `taigi-desktop-core::composing`, bound by `TaigiInputController.replay` + `ClientWriter.swift` / `tsf/src/composition.rs` / `taigi-desktop-core::session` recorder |
 
 The wrappers are `wont_migrate` glue (`../engine/migration-inventory.csv`, `area=composing`). Behaviour a platform needs goes into the engine's effect list, not into wrapper logic.
 

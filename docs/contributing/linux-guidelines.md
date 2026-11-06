@@ -52,7 +52,7 @@ record: `docs/architecture/linux-roadmap.md`.
   built only in the VM and on the Ubuntu CI job; it composes nothing — every effect comes back
   from the FFI as the same `Emit` list the IBus shell replays.
 - Two shells, one contract: a behaviour that differs between the Fcitx5 and IBus shells is a shell
-  bug. Fix it in `taigi-linux-core`, never in one shell.
+  bug. Fix it in `taigi-desktop-core::session` or `taigi-linux-core`, never in one shell.
 
 ## Settings window (GTK 4 + libadwaita)
 

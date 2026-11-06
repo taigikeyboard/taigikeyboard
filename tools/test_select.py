@@ -12,8 +12,8 @@ plus crates with a dev-dependency on any of those (one hop: a dev-dependency
 reaches the dependent's tests, not the dependent's own dependents). A change
 only under a crate's `tests/` or `benches/` selects that crate alone. protos,
 the workspace manifest, lockfile or toolchain select every crate. Shipped
-dispatch code reaching the selection also selects desktop + windows + linux,
-which link dispatch; a direct change to the FFI wire surface (protos, dispatch,
+dispatch code reaching the selection also selects desktop + windows + linux +
+web, which link dispatch; a direct change to the FFI wire surface (protos, dispatch,
 swift-ffi, android-jni, engine/scripts) also selects ios + android + macos
 behind the stale-artifact prerequisite `make build`.
 
@@ -49,6 +49,7 @@ PLATFORMS = (
     "desktop",
     "windows",
     "linux",
+    "web",
     "macos-rust",
     "macos",
     "ios",
@@ -68,7 +69,8 @@ ENGINE_WHOLE_WORKSPACE_FILES = {
 # Crates whose change is a wire-surface change for the platforms that link the
 # engine binary (the committed bindings / xcframework / jniLibs).
 WIRE_SURFACE_CRATES = {"protos", "dispatch", "swift-ffi", "android-jni"}
-# Crates a desktop shell links directly (desktop/, windows/, linux/ Cargo.toml).
+# Crates a desktop shell links directly (desktop/, windows/, linux/ Cargo.toml);
+# web/ links them through taigi-desktop-core.
 DESKTOP_LINKED_CRATE = "dispatch"
 LEAF_ONLY_SUBDIRS = ("tests/", "benches/")
 
@@ -268,9 +270,10 @@ def add_tools_path(path: str, effects: Effects) -> None:
 def add_assets_path(path: str, effects: Effects) -> None:
     if path.startswith("assets/dictionaries/"):
         effects.engine_leaf_crates |= {"composing", "lexicon", "dispatch"}
-        effects.platforms.add("desktop")
+        # web: the smoke test asserts top candidates over this data.
+        effects.platforms |= {"desktop", "web"}
     elif path.startswith("assets/symbols/"):
-        effects.platforms |= {"desktop", "windows", "linux", "macos"}
+        effects.platforms |= {"desktop", "windows", "linux", "web", "macos"}
     elif path.startswith("assets/fonts/"):
         # Typefaces ship as-is: no build or test gate.
         pass
@@ -291,6 +294,9 @@ def effects_of(paths: Iterable[str], graph: EngineGraph) -> Effects:
         if "/" not in path:
             if path == ".swiftformat":
                 effects.swift_dirs |= {"ios", "macos"}
+            elif path == "mise.toml":
+                # The wasm-bindgen pin `make web-check` compares against the crate.
+                effects.platforms.add("web")
             elif path == "taigi-converter":
                 effects.platforms.add("converter")
                 effects.python.add("dictionary")
@@ -308,13 +314,20 @@ def effects_of(paths: Iterable[str], graph: EngineGraph) -> Effects:
         elif top == "i18n":
             effects.platforms |= {"i18n", "ios", "android", "macos"}
         elif top == "desktop":
-            effects.platforms |= {"desktop", "windows", "linux", "macos-rust", "macos"}
+            effects.platforms |= {
+                "desktop",
+                "windows",
+                "linux",
+                "web",
+                "macos-rust",
+                "macos",
+            }
             effects.macos_archive = True
         elif top == "e2e":
             effects.python.add("e2e")
         elif top == "emoji":
             effects.python.add("emoji")
-        elif top in ("ios", "macos", "android", "windows", "linux"):
+        elif top in ("ios", "macos", "android", "windows", "linux", "web"):
             effects.platforms.add(top)
             if path.startswith(MACOS_RUST_PATHS):
                 effects.platforms.add("macos-rust")
@@ -354,6 +367,7 @@ PLATFORM_COMMANDS = {
     "desktop": [Command("make desktop-check")],
     "windows": [Command("make windows-check")],
     "linux": [Command("make linux-check")],
+    "web": [Command("make web-check")],
     "macos-rust": [Command("make macos-rust-check")],
     "macos": [Command("make -C macos test")],
     "ios": [Command(IOS_TEST)],
@@ -380,7 +394,7 @@ def select(paths: Iterable[str], graph: EngineGraph) -> Selection:
     )
     selected = shipped | effects.engine_leaf_crates
     if DESKTOP_LINKED_CRATE in shipped:
-        platforms |= {"desktop", "windows", "linux"}
+        platforms |= {"desktop", "windows", "linux", "web"}
     if MACOS_LINKED_CRATE in shipped:
         platforms.add("macos-rust")
     if effects.wire_surface:

@@ -58,6 +58,7 @@
 | 28 | `KeyKey41-Eten-Tribute/` | C++ (CMake) | **Windows (TSF)** | Full IME (Mandarin, KeyKey-style on McBopomofo) | McBopomofo **Gramambular 2** (vendored, `src/Server/Engine/gramambular2/`) | McBopomofoLM unigram + UserOverrideModel | `UserPhrasesLM` + user-phrase files watched and hot-reloaded by the server | Bopomofo (Eten 41-key + standard layouts) | MIT | **Modern TSF client ↔ server split**: thin `McBopomofoTIP_v2.dll` per host ↔ one `McBopomofoServer.exe` over Named Pipe; server owns engine + settings + candidate / tooltip HWNDs; client routes between TSF UIElement and server popup. x64 + real x86/WOW64 TIPs in one WiX MSI. Closest living peer of our Windows TSF DLL. `82a721e` (2026-08-28) |
 | 29 | `fcitx5/` | C++ | Linux (Fcitx5 framework) | IME framework | n/a (engine-defined) | n/a | n/a | n/a | LGPL-2.1-or-later | **Headers our Fcitx5 addon compiles against** (`linux/fcitx5/`): `InputMethodEngineV2/V3`, `CommonCandidateList`, `InputPanel`, `SurroundingText`, `FCITX_ADDON_FACTORY`. Shallow clone pinned at **5.1.7** = Ubuntu 24.04 package; `make -C linux check-cpp` syntax-checks against it. `8274ece` (2024-01-16) |
 | 30 | `hazkey/` | C++ + Swift | Linux (Fcitx5 addon) | Full IME (Japanese, azooKey engine) | azooKey `KanaKanjiConverterModule` (#1) | azooKey + optional Zenzai neural LM (llama.cpp) | azooKey learning data, `SaveLearningData` over IPC | Kana (azooKey `ComposingText`) | MIT | **Fcitx5 addon ↔ out-of-process Swift engine server** over a Unix socket with **protobuf** envelopes (`protocol/*.proto`), `flock` + PID lock file single-instance server, Qt settings app talking to the same server. Only open Fcitx5 IME in our set; contrast with our in-process `taigi-linux-ffi` staticlib. `23c78b1` (2026-02-28) |
+| 31 | `McBopomofoWeb/` | TypeScript | Browser, Chrome OS, PIME, CLI | Full IME (Mandarin) | **Gramambular 2** ported to TypeScript (`src/Gramambular2/`) | McBopomofo language model (#11) + user override | localStorage + IndexedDB in the example page | Bopomofo (`src/Mandarin/`) | MIT | **The browser IME reference**: synchronous `keydown` → `InputController` → `InputUI`, caret-anchored panel through a mirror element, Playwright by real keystrokes. Basis of `docs/architecture/web-roadmap.md`. `60ad99ef0` (2026-10-27) |
 
 ---
 
@@ -609,6 +610,21 @@ For cross-platform alignment, read:
 2. **`florisboard/app/src/main/kotlin/dev/patrickgold/florisboard/`** — Android IME service skeleton + Compose IME UI (engine *not* wired in).
 3. **`trime/app/src/main/java/com/osfans/trime/core/` + `daemon/`** — Android IME *with* a native engine wired in via an async daemon; the FFI-threading model for our Android↔Rust boundary.
 4. **`docs/contributing/cross-platform-alignment.md`** — refactor-freeze, parity-correction tier, invariant labels.
+
+### 31. McBopomofoWeb — `references/McBopomofoWeb/`
+
+- **What**: McBopomofo's engine rewritten in TypeScript, behind several hosts: a web page (`output/example/`), a Chrome OS input method (`src/chromeos_ime.ts`), a PIME backend (`src/pime.ts`), a CLI and an MCP server. `60ad99ef0` (2026-10-27), active.
+- **Why we care**: the working reference for an input method in a page. It is why our page calls the engine synchronously from `keydown`, on the main thread.
+- **Where to look**:
+  - `README.COMPONENTS.md`, `src/McBopomofo/InputUI.ts` — key event → `InputController` → `KeyHandler` → `InputUI`, the interface a host implements
+  - `output/example/index.js:1245-1303` — key rules: `isComposing`, `keyCode` 229, Shift tap on `keyup`, the synchronous call and `preventDefault`
+  - `output/example/index.js:369-412` — caret position by a mirror element
+  - `output/example/index.js:235-245` — commit by assigning `textArea.value`, which wipes the undo history
+  - `e2e/feature_input.spec.js:13-16` — Playwright by real keystrokes
+- **Inspiration takeaways**: (1) `InputUI` as a host interface, our `Emit` list; (2) mirror-element caret anchoring; (3) keystroke tests in real browsers.
+- **Deliberately not adopted**: a TypeScript port of the engine, because ours compiles to WASM (`web-roadmap.md` § Best practices alignment); `textArea.value` commits; Google Analytics and CDN scripts; `simple-keyboard`, outside the first scope (D2).
+- **License**: MIT.
+- **Deep-dive**: none — `docs/architecture/web-roadmap.md` records the integration facts.
 
 ---
 

@@ -16,7 +16,7 @@
 ## Active / In-flight items
 
 - **Maintainability audit follow-up (2026-10)** — [`architecture/maintainability-roadmap-2026-10.md`](architecture/maintainability-roadmap-2026-10.md), rounds over [`reports/2026-10-09-audit-all.md`](reports/2026-10-09-audit-all.md). **Paused** by the maintainer 2026-10-14; resume point is the maintainer's call.
-- **Web version** — [`architecture/web-roadmap.md`](architecture/web-roadmap.md): the Rust engine in WASM behind a browser shell. Accepted 2026-11-06 (decisions D1–D6 settled), no code yet; next is Phase 1.
+- **Web version** — [`architecture/web-roadmap.md`](architecture/web-roadmap.md): the Rust engine in WASM behind a browser shell. Accepted 2026-11-06 (decisions D1–D6 settled). Phase 1 done: the engine runs on wasm32 behind `make web-check`; next is Phase 2.
 
 ### v3.9.0 fix list (Discord #issues, maintainer 2026-10-30)
 

@@ -32,7 +32,7 @@
 
 use std::sync::Arc;
 
-use super::clock::SystemClock;
+use super::clock::Clock;
 use super::manager::ComposingManager;
 use super::next_word::EngineNextWord;
 use crate::settings::SettingsProvider;
@@ -59,11 +59,11 @@ impl ComposingSessionCoordinator {
     /// user's data (user-data-engine-roadmap P5) — it counts the picks and
     /// records the associations it decides on itself, wherever the process
     /// opened a data directory for it (R5).
-    pub fn for_desktop(settings: Arc<dyn SettingsProvider>) -> Self {
+    pub fn for_desktop(settings: Arc<dyn SettingsProvider>, clock: Arc<dyn Clock>) -> Self {
         Self::new(ComposingManager::new(
             settings,
             Box::new(EngineNextWord),
-            Box::new(SystemClock),
+            clock,
             1,
         ))
     }

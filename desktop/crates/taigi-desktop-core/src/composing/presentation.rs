@@ -314,7 +314,7 @@ mod tests {
         ComposingManager::new(
             Arc::new(StaticSettingsProvider::new(document)),
             Box::new(EngineNextWord),
-            Box::new(SystemClock),
+            Arc::new(SystemClock),
             1,
         )
     }
@@ -326,7 +326,7 @@ mod tests {
         ComposingManager::new(
             Arc::new(StaticSettingsProvider::new(document)),
             Box::new(EngineNextWord),
-            Box::new(SystemClock),
+            Arc::new(SystemClock),
             1,
         )
     }

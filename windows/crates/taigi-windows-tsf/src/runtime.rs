@@ -20,6 +20,7 @@ use crate::module::install_directory;
 use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::{Arc, OnceLock};
+use taigi_desktop_core::composing::SystemClock;
 use taigi_desktop_core::dictionary_artifacts::DictionaryArtifacts;
 use taigi_desktop_core::runtime::{DesktopRuntime, RuntimeParts};
 use taigi_desktop_core::settings::{SettingsDocument, SettingsProvider, StaticSettingsProvider};
@@ -74,6 +75,7 @@ impl Runtime {
             dictionary_version: dictionary_version(),
             system_locale: Box::new(taigi_windows_platform::system_locale),
             platform: taigi_windows_platform::DESKTOP_PLATFORM,
+            clock: Arc::new(SystemClock),
         }))
     }
 

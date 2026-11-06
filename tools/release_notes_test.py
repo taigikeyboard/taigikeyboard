@@ -366,6 +366,29 @@ PROJECT_FILES = (
 )
 
 
+class DesktopLockfileRefreshTests(unittest.TestCase):
+    def test_refreshes_every_lockfile_that_pins_the_desktop_crates(self) -> None:
+        repo_root = Path("/repo")
+        with unittest.mock.patch.object(release_notes.subprocess, "run") as run:
+            run.return_value.returncode = 0
+            release_notes.refresh_desktop_lockfiles(repo_root)
+
+        refreshed = [call.args[0][-1] for call in run.call_args_list]
+        self.assertEqual(
+            refreshed,
+            [
+                f"/repo/{cargo_file}"
+                for cargo_file in (
+                    "windows/Cargo.toml",
+                    "desktop/Cargo.toml",
+                    "linux/Cargo.toml",
+                    "macos/Cargo.toml",
+                    "web/Cargo.toml",
+                )
+            ],
+        )
+
+
 class ProjectVersionWriterTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temp_dir = tempfile.TemporaryDirectory()

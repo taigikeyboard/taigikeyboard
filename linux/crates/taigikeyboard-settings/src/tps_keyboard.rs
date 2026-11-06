@@ -1,6 +1,6 @@
 //! The on-screen TPS key panel on Linux (desktop TPS roadmap D6, U6): an
 //! ordinary window of this app, show-only. The input method owns no window
-//! (`taigi-linux-core/src/chrome.rs`), so Show TPS Keyboard launches this app
+//! (`taigi-linux-core/src/session.rs` `run_launches`), so Show TPS Keyboard launches this app
 //! with `--tps-keyboard`, and the one instance opens the panel or closes the
 //! one that is up. Taking focus ends the IME session, so it opens only on that
 //! explicit request: it closes when the input mode leaves TPS and stays closed

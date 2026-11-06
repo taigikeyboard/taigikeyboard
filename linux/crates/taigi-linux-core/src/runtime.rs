@@ -12,7 +12,7 @@ use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
-use taigi_desktop_core::composing::ContextToken;
+use taigi_desktop_core::composing::{ContextToken, SystemClock};
 use taigi_desktop_core::runtime::{DesktopRuntime, RuntimeParts};
 use taigi_desktop_core::settings::{SettingsDocument, SettingsProvider, StaticSettingsProvider};
 use taigi_desktop_storage::{created, LiveSettings, SettingsFileStore};
@@ -120,6 +120,7 @@ impl Runtime {
             dictionary_version: dictionary_version(),
             system_locale: Box::new(system_locale),
             platform: taigi_linux_platform::DESKTOP_PLATFORM,
+            clock: Arc::new(SystemClock),
         });
         Self {
             shared,

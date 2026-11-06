@@ -5,7 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 publish = false
-description = "Platform-independent core shared by the desktop input methods (Windows, Linux): settings model, engine bridge, composing orchestration, key classifier, candidate geometry, strings"
+description = "Platform-independent core shared by the desktop input methods (Windows, Linux): settings model, engine bridge, composing orchestration, shared input session, key classifier, candidate geometry, strings"
 
 # Pure crate on purpose: no `windows`, no D-Bus, no GTK, no rusqlite, no
 # networking. That is what lets it run its tests natively on the macOS host and

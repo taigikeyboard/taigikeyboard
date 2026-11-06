@@ -60,6 +60,7 @@ REPOS=(
   "KeyKey41-Eten-Tribute|git@github.com:whyren0324/KeyKey41-Eten-Tribute.git|"
   "ChiaKey|git@github.com:chiakich/ChiaKey.git|"
   "hazkey|git@github.com:7ka-Hiira/hazkey.git|"
+  "McBopomofoWeb|git@github.com:openvanilla/McBopomofoWeb.git|"
   # Pinned to the fcitx5 Ubuntu 24.04 ships; `make -C linux check-cpp`
   # syntax-checks the addon against these headers.
   "fcitx5|git@github.com:fcitx/fcitx5.git|pin:5.1.7:git@github.com:fcitx/fcitx5.git"

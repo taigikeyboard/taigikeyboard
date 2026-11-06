@@ -98,6 +98,12 @@ impl Engine {
                 // NAMED DIVERGENCE (roadmap L4): the daemon has no HUD; the
                 // indicator's symbol is the only notice.
                 Emit::AnnounceMode => Ok(()),
+                // `taigi_linux_core` starts these before any reply is handed
+                // back; one arriving here is a bug there.
+                Emit::OpenSettings | Emit::ToggleTpsKeyboard => {
+                    log::error!("engine.launch_reached_shell token={:?}", self.token);
+                    Ok(())
+                }
             };
             if let Err(error) = sent {
                 log::error!("engine.signal_failed token={:?} error={error}", self.token);
@@ -292,7 +298,7 @@ impl Engine {
 
     async fn set_capabilities(&mut self, caps: u32) {
         log::debug!("engine.capabilities token={:?} caps={caps:#x}", self.token);
-        self.state.capabilities = caps;
+        session::set_capabilities(&mut self.state, caps);
     }
 
     async fn property_activate(

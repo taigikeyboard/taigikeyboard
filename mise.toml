@@ -11,7 +11,8 @@
 # Must equal the libprotoc that emits the pinned protobuf-javalite runtime
 # (android/app/build.gradle.kts: 4.36.2 <-> 36.2). engine/scripts/gen-platform-protos.sh
 # skips binding regeneration on any other version. CI installs 36.1 for the Rust
-# (prost) builds only, which accept either.
+# (prost) builds of the engine and desktops, which accept either; web.yml takes
+# this pin.
 protoc = "36.2"
 # Must equal swift-protobuf in macos/Package.resolved: its output is committed and
 # CI only checks the Swift bindings structurally. macOS only, it builds with Swift.
@@ -29,6 +30,12 @@ zig = "0.16.0"
 "cargo:cargo-ndk" = "4.1.2"
 # emoji/ is a uv project.
 uv = "0.11.32"
+# The web workspace's build (web/Makefile). `wasm-bindgen` must equal the crate
+# pinned in web/Cargo.toml; `make -C web check` compares them.
+"github:wasm-bindgen/wasm-bindgen" = "0.2.130"
+"github:WebAssembly/binaryen" = { version = "133", version_prefix = "version_" }
+# JavaScript format + lint for web/.
+biome = "2.6.5"
 
 # Deliberately not pinned: python (>= 3.13) and node (>= 22). Nothing checks an
 # exact version, and a pin here would shadow the interpreter a contributor

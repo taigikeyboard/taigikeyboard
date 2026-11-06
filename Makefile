@@ -22,7 +22,7 @@ SHELL := /usr/bin/env sh
         fmt lint hooks scan-secrets scan-secrets-full scan-private \
         i18n i18n-test \
         macos-release desktop-release desktop-patch desktop-announce version-mobile version-desktop \
-        windows-check windows-release desktop-check linux-check macos-rust-check \
+        windows-check windows-release desktop-check linux-check macos-rust-check web-check \
         update-submodules
 
 # Every generated artefact at once — platform bindings, then the iOS xcframework,
@@ -189,6 +189,11 @@ macos-rust-check:
 linux-check:
 	$(MAKE) -C linux check
 
+# The web version's gate: the wasm build, a Node smoke test over the real
+# dictionaries, clippy, biome, fmt. Any host; tools from `mise install`.
+web-check:
+	$(MAKE) -C web check
+
 # Stage the THREE desktop installers on this version's draft release: the
 # package here, the Windows installer and the Linux .deb on GitHub-hosted
 # runners (tools/release/stage-desktop.sh). The builds cannot share a machine, so
@@ -263,19 +268,21 @@ version-mobile version-desktop:
 # ---------------------------------------------------------------------------
 # Formatting & lint — apply across all stacks (`fmt`) or check (`lint`).
 # ---------------------------------------------------------------------------
-#   Rust    rustfmt over all five workspaces (fmt); clippy -D warnings over the
-#           engine, desktop-shared and macOS crates (lint). The Windows and
+#   Rust    rustfmt over all six workspaces (fmt); clippy -D warnings over the
+#           engine, desktop-shared, macOS and web crates (lint). The Windows and
 #           Linux workspaces are linted by `make windows-check` /
 #           `make linux-check`, which need their cross targets.
 #   Swift   SwiftFormat (Nick Lockwood) — config: .swiftformat (version: mise.toml)
 #   Kotlin  Spotless Gradle plugin — wired in android/app/build.gradle.kts
 #           (spotlessCheck doubles as ktlint).
-# CI runs the same checks: engine.yml, desktop.yml, macos.yml, checks.yml,
+#   JS      Biome — config: web/biome.json (version: mise.toml)
+# CI runs the same checks: engine.yml, desktop.yml, macos.yml, web.yml, checks.yml,
 # android.yml on pull requests; linux-build.yml nightly.
 RUST_WORKSPACES := engine desktop windows linux macos
 
 fmt:
 	for ws in $(RUST_WORKSPACES); do cargo fmt --all --manifest-path $$ws/Cargo.toml || exit 1; done
+	$(MAKE) -C web fmt
 	swiftformat ios macos
 	cd android && ./gradlew spotlessApply
 
@@ -284,6 +291,7 @@ lint:
 	cargo clippy --manifest-path $(ENGINE)/Cargo.toml --workspace --all-targets --locked -- -D warnings
 	cargo clippy --manifest-path desktop/Cargo.toml --workspace --all-targets --locked -- -D warnings
 	cargo clippy --manifest-path macos/Cargo.toml --workspace --all-targets --locked -- -D warnings
+	$(MAKE) -C web lint
 	swiftformat --lint ios   # one directory per call: `--lint ios macos` reads macos as --lint's value
 	swiftformat --lint macos
 	cd android && ./gradlew spotlessCheck
@@ -343,6 +351,7 @@ help:
 	@echo "  make macos-rust-check   Native gate for the macOS Cargo workspace (macos/)"
 	@echo "  make linux-check        Host-side compile + test gate for the Linux input method"
 	@echo "  make windows-check      Host-side compile + test gate for the Windows input method"
+	@echo "  make web-check          Wasm build + Node smoke test + lint for the web version"
 	@echo ""
 	@echo "Data and content"
 	@echo "  make dict               Full dictionary regeneration into assets/dictionaries/ (needs taigi-converter)"

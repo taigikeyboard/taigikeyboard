@@ -1,0 +1,7 @@
+[toolchain]
+channel = "stable"
+components = ["rustfmt", "clippy"]
+profile = "minimal"
+# wasm32-unknown-unknown — the one target this workspace ships. `cargo` must run
+# from this directory for rustup to read this file (`make -C web`).
+targets = ["wasm32-unknown-unknown"]
