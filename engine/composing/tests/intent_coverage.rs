@@ -301,6 +301,58 @@ fn intent_telex_f_appends_a_hyphen() {
     assert_eq!(resp.preedit.unwrap().raw_input, "tai5-");
 }
 
+// §21 INVARIANT_KHINSIANN_LEADING_MARKER_LITERAL — an idle `f` is the `-` key:
+// it types the neutral-tone marker as a document literal and stays Idle.
+#[test]
+fn intent_telex_idle_f_inserts_a_literal_hyphen_and_stays_idle() {
+    for key in ["f", "F"] {
+        let mut engine = Engine::new();
+        let resp = telex(&mut engine, key, &config_tl());
+        assert!(!resp.is_composing, "{key}");
+        assert_eq!(commit_text(&resp), Some("-".to_string()), "{key}");
+        assert_eq!(resp.preedit.unwrap_or_default().display_text, "", "{key}");
+    }
+}
+
+#[test]
+fn intent_telex_idle_ff_then_syllable_is_the_khinsiann_marker() {
+    // trace: each idle `f` commits one `-` and stays Idle, so `f f` commits
+    // `--`; `a` then starts a composition and `h` appends to it.
+    for mode in ["tl", "poj"] {
+        let config = common::config(mode);
+        let mut engine = Engine::new();
+        for _ in 0..2 {
+            let resp = telex(&mut engine, "f", &config);
+            assert!(!resp.is_composing, "{mode}");
+            assert_eq!(commit_text(&resp), Some("-".to_string()), "{mode}");
+        }
+        append(&mut engine, "a", &config);
+        let resp = telex(&mut engine, "h", &config);
+        assert!(resp.is_composing, "{mode}");
+        assert_eq!(resp.preedit.unwrap().raw_input, "ah", "{mode}");
+    }
+}
+
+#[test]
+fn intent_telex_f_on_an_empty_tail_while_composing_is_noop() {
+    // trace: the caret at the tail's start leaves nothing before it, so
+    // `apply_telex_key("", "f")` is `None` — composing, not idle, so no `-`.
+    let mut engine = Engine::new();
+    append(&mut engine, "tai", &config_tl());
+    requests::handle(
+        &req(Method::MoveCaret(protos::engine::MoveCaret {
+            direction: protos::engine::CaretDirection::Start as i32,
+        })),
+        &mut engine,
+        &config_tl(),
+    )
+    .unwrap();
+    let resp = telex(&mut engine, "f", &config_tl());
+    assert!(resp.is_composing);
+    assert!(resp.effect.is_empty());
+    assert_eq!(resp.preedit.unwrap().raw_input, "tai");
+}
+
 #[test]
 fn intent_telex_under_continuous_edits_only_the_pending_tail() {
     let mut engine = Engine::new();
