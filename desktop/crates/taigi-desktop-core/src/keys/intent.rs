@@ -326,17 +326,17 @@ impl ComposingKeyIntent {
             );
         }
         // Under Telex the tone letters, `c`, `h` and `f` are the
-        // engine's, not the composition's text. A tone letter or `f` typed
-        // outside a composition is document text (like an idle digit): there
-        // is no syllable for it to mark. `c` and `h` type an initial, so they
-        // start one. One scalar only, for the same grapheme reason as the
-        // romanization rule below; macOS asks the same since P11c (roadmap
-        // E2).
+        // engine's, not the composition's text. A tone letter typed outside a
+        // composition is document text (like an idle digit): there is no
+        // syllable for it to mark. `c` and `h` type an initial, so they start
+        // one; an idle `f` is the engine's `-` key (the khinsiann marker).
+        // One scalar only, for the same grapheme reason as the romanization
+        // rule below; macOS asks the same since P11c (roadmap E2).
         if bindings.tone_scheme == ToneInputScheme::Telex {
             let mut scalars = characters.chars();
             if let (Some(first), None) = (scalars.next(), scalars.next()) {
                 if ToneInputScheme::is_telex_key(first) {
-                    if is_composing || ToneInputScheme::starts_composition(first) {
+                    if is_composing || ToneInputScheme::reaches_engine_when_idle(first) {
                         return Self::TelexKey(characters.to_owned());
                     }
                     return Self::PassThrough;
@@ -1177,7 +1177,7 @@ mod tests {
     fn under_telex_the_tone_letters_are_the_engines_while_composing() {
         // trace: tier 7 under Telex (`is_telex_key`) — `v` composing →
         // `TelexKey`, capital too; idle `v` and `z` pass through; idle `c`
-        // and `h` start.
+        // and `h` start; idle `f` reaches the engine, which types `-`.
         let telex = telex_bindings();
         assert_eq!(
             ComposingKeyIntent::intent(&text("v"), true, false, &telex, PLATFORM),
@@ -1196,10 +1196,13 @@ mod tests {
             ComposingKeyIntent::PassThrough,
             "a tone letter has nothing to mark when idle"
         );
-        assert_eq!(
-            ComposingKeyIntent::intent(&text("f"), false, false, &telex, PLATFORM),
-            ComposingKeyIntent::PassThrough
-        );
+        for key in ["f", "F"] {
+            assert_eq!(
+                ComposingKeyIntent::intent(&text(key), false, false, &telex, PLATFORM),
+                ComposingKeyIntent::TelexKey(key.into()),
+                "an idle `{key}` is the engine's khinsiann hyphen"
+            );
+        }
         assert_eq!(
             ComposingKeyIntent::intent(&text("z"), false, false, &telex, PLATFORM),
             ComposingKeyIntent::PassThrough,
