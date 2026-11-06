@@ -14,7 +14,7 @@ FONT_SOURCES := ../assets/fonts/font
 FONTS := target/fonts
 ICONS := ../ios/Sources/TaigiKeyboard/App/Assets/Assets.xcassets/AppIcon.appiconset
 
-.PHONY: help bindgen-version i18n-check build site serve test smoke e2e lint fmt check clean
+.PHONY: help bindgen-version i18n-check build site serve test smoke e2e check-live lint fmt check clean
 
 help:
 	@echo "Web version — dev loop"
@@ -24,6 +24,7 @@ help:
 	@echo "  make build   - Release wasm, bindings and wasm-opt into $(PKG)/"
 	@echo "  make smoke   - Build, then install the real dictionaries and assert top candidates"
 	@echo "  make site    - Stage the page, bindings, dictionaries, fonts and manifest into $(SITE)/"
+	@echo "  make check-live - Hash the live files against their manifest"
 	@echo "  make lint    - clippy -D warnings, biome, fmt --check"
 	@echo "  make fmt     - cargo fmt, biome format"
 
@@ -77,6 +78,12 @@ e2e: site
 	npm ci
 	npx playwright install $(if $(CI),--with-deps) chromium firefox webkit
 	npx playwright test
+
+# After a deploy (docs/architecture/web-release.md). Run it from Taiwan: it also
+# times the download.
+LIVE_URL := https://taigikeyboard.tw/web/
+check-live:
+	node scripts/check-live.mjs $(LIVE_URL)
 
 # `mmap-host` by name: its wasm backend compiles only for this target, so the
 # engine workspace's clippy never reads it.
