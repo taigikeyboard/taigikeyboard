@@ -38,6 +38,7 @@ ALPHA = WALKER_ALPHA  # `build.common`: build_id hashes it
 HELD_OUT_SOURCE = "taigi_typing"
 MILLI_NATS = 1000
 MAX_WALKER_COST = 0xFFFF
+HANZI_LESS_UNSEEN_MULTIPLE = 4
 BIGRAM_DISCOUNT = WALKER_BIGRAM_DISCOUNT  # `build.common`: build_id hashes it
 
 ModelWord = tuple[str, str]
@@ -70,6 +71,13 @@ class WalkerModel:
     @property
     def unseen_cost(self) -> int:
         return self.cost_of_count(0)
+
+    @property
+    def hanzi_less_cost(self) -> int:
+        """A word with no hanzi spelling is never counted (the corpus keys on hanzi), and the
+        walker discounts long spellings, so an unseen price would let one edge outbid common
+        words. Spelling-penalty style: it takes a path only when no reading covers the span."""
+        return HANZI_LESS_UNSEEN_MULTIPLE * self.unseen_cost
 
 
 def model_from_counts(
@@ -173,7 +181,7 @@ def load_bigrams(
 
 def record_costs(records: list[DictionaryRecord], model: WalkerModel) -> list[int]:
     """`walker_cost` per record, in rowid order."""
-    return [model.cost(model_word(r)) for r in records]
+    return [model.cost(model_word(r)) if r.hanzi else model.hanzi_less_cost for r in records]
 
 
 def stats_text(records: list[DictionaryRecord], model: WalkerModel, costs: list[int]) -> str:

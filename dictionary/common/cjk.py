@@ -1,4 +1,4 @@
-"""One CJK-ideograph test for the dictionary pipeline.
+"""Script tests for the dictionary pipeline: one CJK-ideograph test, one kana test.
 
 Unified Ideographs + Extensions A–G (through U+3134F) + Compatibility
 Ideographs; `dictionary.csv` carries 44 rows beyond Extension E (max
@@ -23,3 +23,8 @@ CJK_RANGES: tuple[tuple[int, int], ...] = (
 def is_cjk(char: str) -> bool:
     code = ord(char)
     return any(low <= code <= high for low, high in CJK_RANGES)
+
+
+def is_kana(char: str) -> bool:
+    """Hiragana or Katakana block, the prolonged sound mark included."""
+    return 0x3040 <= ord(char) <= 0x30FF

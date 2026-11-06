@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from common.cleanup import normalize_roman
+from common.cleanup import blank_roman_only_hanzi, normalize_roman
 from common.cjk import is_cjk
 from common.taigi_bridge import (
     convert_poj_to_tl_strict,
@@ -27,7 +27,8 @@ def read_pairs(path):
 
 
 def key(row):
-    return unicodedata.normalize("NFC", row["hanzi"].strip()), normalize_roman(row["tl"])
+    spelling = unicodedata.normalize("NFC", row["hanzi"].strip())
+    return blank_roman_only_hanzi(spelling), normalize_roman(row["tl"])
 
 
 @pytest.fixture(scope="module")
@@ -50,9 +51,11 @@ def test_curated_pairs_are_unique_by_spelling_and_reading(curated_rows):
     assert len(pairs) == len(set(pairs)), "Duplicate LKK spelling/reading pair"
 
 
-def test_curated_spellings_mix_hanji_and_romanization(curated_rows):
+def test_curated_spellings_mix_scripts_or_equal_their_reading(curated_rows):
     for row in curated_rows:
         spelling = row["hanzi"]
+        if spelling == row["tl"]:
+            continue
         assert any(is_cjk(char) for char in spelling), row
         assert any(
             char.isalpha() and "LATIN" in unicodedata.name(char, "")

@@ -3,7 +3,9 @@
 No-hanzi policy (configurable per-source in `stage_options.source.no_hanzi`):
 
 - ``clear`` (default; official dicts + khpoo): rows where hanzi equals tl or
-  poj are romanization-only; clear hanzi in place and keep the row.
+  poj are romanization-only; clear hanzi in place and keep the row. The
+  official dicts reach this with roman-only hanzi already blanked by
+  `cleanup.keep_non_hanzi_words`, so the rule is live for khpoo.
 - ``drop`` (ChhoeTaigi community dicts): also drop rows where hanzi is NaN or
   empty, plus the equality cases — the row is removed entirely.
 """

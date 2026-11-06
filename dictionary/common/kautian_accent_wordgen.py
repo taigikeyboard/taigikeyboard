@@ -227,6 +227,9 @@ def apply_word_accent_generation(
     base_mask = df[[COL_MAIN, COL_ALT_READING]].fillna(False).astype(bool).any(axis=1)
     for base_row in df.loc[base_mask].to_dict("records"):
         hanzi = str(base_row["hanzi"])
+        # A roman-only word has no characters to take per-character accent readings from.
+        if not hanzi:
+            continue
         base_tl = str(base_row["tl"])
         report.main_rows_scanned += 1
 
