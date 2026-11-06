@@ -10,12 +10,13 @@ TARGET := wasm32-unknown-unknown
 PKG := target/pkg
 WASM := target/$(TARGET)/release/taigi_web.wasm
 
-.PHONY: help bindgen-version build smoke lint fmt check clean
+.PHONY: help bindgen-version build test smoke lint fmt check clean
 
 help:
 	@echo "Web version — dev loop"
 	@echo ""
-	@echo "  make check   - The gate: build + Node smoke test + clippy + biome + fmt --check"
+	@echo "  make check   - The gate: native tests + build + Node smoke test + clippy + biome + fmt --check"
+	@echo "  make test    - Native tests of the session and the key translation"
 	@echo "  make build   - Release wasm, bindings and wasm-opt into $(PKG)/"
 	@echo "  make smoke   - Build, then install the real dictionaries and assert top candidates"
 	@echo "  make lint    - clippy -D warnings, biome, fmt --check"
@@ -36,6 +37,9 @@ build: bindgen-version
 	wasm-bindgen --target web --out-dir $(PKG) $(WASM)
 	wasm-opt -O3 --strip-debug --strip-producers $(PKG)/taigi_web_bg.wasm -o $(PKG)/taigi_web_bg.wasm
 
+test:
+	cargo test --locked
+
 smoke: build
 	node --test 'tests/*.test.mjs'
 
@@ -53,7 +57,7 @@ fmt:
 	cargo fmt
 	biome format --write .
 
-check: smoke lint
+check: test smoke lint
 
 clean:
 	cargo clean

@@ -9,9 +9,9 @@ use crate::session::{self, EngineState};
 use taigi_desktop_core::composing::ContextToken;
 use taigi_desktop_core::keys::{menu_rows, LanguageMode, MenuCommand, ShortcutAction, MENU};
 use taigi_desktop_core::mode_indicator::ModeIndicator;
+pub use taigi_desktop_core::session::mode_label;
 use taigi_desktop_core::session::{perform_global, Emit};
-use taigi_desktop_core::settings::presentation::output_script_label;
-use taigi_desktop_core::settings::{keys, CandidateDisplayMode, InputMode, SettingsDocument};
+use taigi_desktop_core::settings::SettingsDocument;
 use taigi_linux_platform::{open_settings, DESKTOP_PLATFORM};
 
 /// The menu row that opens the settings window on the last pane.
@@ -64,33 +64,6 @@ fn menu_id(command: MenuCommand) -> Option<&'static str> {
     }
 }
 
-/// The full mode text — the Fcitx5 notice and the IBus menu root's label:
-/// the romanization and the candidate display mode, the two states the
-/// global chords switch and the mode flash names on the other desktops
-/// (`台羅 · 漢羅對應`), plus what a commit writes under side by side, the
-/// one display mode where the swap picks it (`台羅 · 漢羅對應 · 漢字`). TPS
-/// alone under TPS, where the display mode switches nothing.
-pub fn mode_label(runtime: &Runtime, settings: &SettingsDocument) -> String {
-    let strings = runtime.strings();
-    let input_mode: InputMode = settings.choice(&keys::INPUT_MODE);
-    if input_mode == InputMode::Tps {
-        return strings.resolve(input_mode.label_key()).to_owned();
-    }
-    let romanization = input_mode.label_key();
-    let engine_settings = settings.engine_settings();
-    let display_mode = engine_settings.candidate_display_mode;
-    let label = format!(
-        "{} · {}",
-        strings.resolve(romanization),
-        strings.resolve(display_mode.label_key())
-    );
-    if display_mode != CandidateDisplayMode::SideBySide {
-        return label;
-    }
-    let output_script = output_script_label(engine_settings.is_hanji_first);
-    format!("{label} · {}", strings.resolve(output_script))
-}
-
 /// The tray / panel indicator: its symbol is the IBus `InputMode` text and
 /// the Fcitx5 label, its icon name the Fcitx5 sub-mode icon and the IBus
 /// property icon. Linux has no English mode — switching engines is the
@@ -132,7 +105,7 @@ mod tests {
     use super::*;
     use crate::session::process_raw_key;
     use taigi_desktop_core::session::{is_composing, PAGE_SIZE};
-    use taigi_desktop_core::settings::SettingChoice;
+    use taigi_desktop_core::settings::{keys, CandidateDisplayMode, InputMode, SettingChoice};
     use taigi_desktop_core::strings::StringKey;
     use taigi_linux_platform::key_translation::state;
     use taigi_linux_platform::RawKeyEvent;

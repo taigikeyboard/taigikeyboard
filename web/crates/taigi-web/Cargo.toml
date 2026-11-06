@@ -17,3 +17,5 @@ workspace = true
 taigi-desktop-core = { workspace = true }
 mmap-host = { workspace = true }
 wasm-bindgen = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }

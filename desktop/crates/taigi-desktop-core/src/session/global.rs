@@ -16,7 +16,8 @@ use super::{
 use crate::composing::{insert_symbol, represent_list, ContextToken};
 use crate::keys::{telex_guide_rows, ComposingKeyBindings, ShortcutAction};
 use crate::runtime::DesktopRuntime;
-use crate::settings::{keys, CandidateDisplayMode, InputModeRequest, SettingsDocument};
+use crate::settings::presentation::output_script_label;
+use crate::settings::{keys, CandidateDisplayMode, InputMode, InputModeRequest, SettingsDocument};
 use crate::strings::StringKey;
 use crate::symbols::SymbolTable;
 
@@ -136,6 +137,33 @@ pub fn perform_global(
         }
     }
     emits
+}
+
+/// The full mode text a switch announces: the romanization and the candidate
+/// display mode, the two states the global chords switch and the mode flash
+/// names on the other desktops (`台羅 · 漢羅對應`), plus what a commit writes
+/// under side by side, the one display mode where the swap picks it
+/// (`台羅 · 漢羅對應 · 漢字`). TPS alone under TPS, where the display mode
+/// switches nothing.
+pub fn mode_label(runtime: &DesktopRuntime, settings: &SettingsDocument) -> String {
+    let strings = runtime.strings();
+    let input_mode: InputMode = settings.choice(&keys::INPUT_MODE);
+    if input_mode == InputMode::Tps {
+        return strings.resolve(input_mode.label_key()).to_owned();
+    }
+    let romanization = input_mode.label_key();
+    let engine_settings = settings.engine_settings();
+    let display_mode = engine_settings.candidate_display_mode;
+    let label = format!(
+        "{} · {}",
+        strings.resolve(romanization),
+        strings.resolve(display_mode.label_key())
+    );
+    if display_mode != CandidateDisplayMode::SideBySide {
+        return label;
+    }
+    let output_script = output_script_label(engine_settings.is_hanji_first);
+    format!("{label} · {}", strings.resolve(output_script))
 }
 
 /// One of the two input-script switches. The candidates on screen were

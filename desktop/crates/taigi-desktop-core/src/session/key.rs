@@ -38,7 +38,10 @@ pub fn process_key(
     let settings = runtime.settings.current();
     let mut emits = Vec::new();
     let bindings = ComposingKeyBindings::from_document(&settings, runtime.platform());
-    let global_action = ShortcutAction::matching(snapshot, &settings, runtime.platform());
+    // A chord with no host modifier is a character in English mode: the bare
+    // Hanji/romanization key types a backtick there.
+    let global_action = ShortcutAction::matching(snapshot, &settings, runtime.platform())
+        .filter(|_| !state.language_mode.is_english() || snapshot.modifiers.has_host_chord());
     // A held toggle chord repeats on the wire as presses with no release
     // between them; the repeats are consumed without firing again.
     if let Some(latched) = state.latched_chord {
@@ -153,6 +156,15 @@ pub fn process_key(
             }
         }
     }
+    // English mode: below the global chords and the picker, above everything
+    // that composes (the Windows `key_down` order). Every key is the
+    // document's; entering the mode already ended the composition.
+    if state.language_mode.is_english() {
+        return KeyReply {
+            handled: false,
+            emits,
+        };
+    }
     // A list the user switched off since the last key comes down HERE,
     // before the key is read (`TaigiInputController.handle`): a Return
     // classified against a list still up would pick a candidate the user
@@ -257,6 +269,92 @@ pub fn end_session(
     state.telex_guide_shown = false;
     state.symbol_picker = None;
     state.latched_chord = None;
+    emits
+}
+
+/// The composition written to the document before the caret leaves it: as
+/// typed, no auto space, because the user did not finish a word there (macOS
+/// `Session::commit_composition`). What was on screen for it goes too. Linux
+/// has no twin: the framework commits its own preedit ([`end_session`]).
+pub fn commit_composition(
+    runtime: &DesktopRuntime,
+    token: ContextToken,
+    state: &mut EngineState,
+) -> Vec<Emit> {
+    let mut recorder = Recorder::new(state.can_delete_surrounding);
+    if is_composing(runtime, token) {
+        let mut coordinator = runtime.lock_coordinator();
+        if let Some(manager) = coordinator.manager(token) {
+            manager.commit_composition(&mut recorder);
+        }
+    }
+    let mut emits = recorder.emits;
+    let settings = runtime.settings.current();
+    let bindings = ComposingKeyBindings::from_document(&settings, runtime.platform());
+    clear_surface(state, &settings, &bindings, &mut emits);
+    emits
+}
+
+/// What was on screen for the text just left, and the arm that promised it a
+/// swap, go down together.
+fn clear_surface(
+    state: &mut EngineState,
+    settings: &SettingsDocument,
+    bindings: &ComposingKeyBindings,
+    emits: &mut Vec<Emit>,
+) {
+    state.clear_list();
+    state.armed_auto_space = false;
+    state.telex_guide_shown = false;
+    state.symbol_picker = None;
+    present_table(state, settings, bindings, emits);
+}
+
+/// The Shift tap's switch between Taigi and English — the Windows
+/// `toggle_language_mode`: the composition is committed as rendered, a keyless
+/// `Commit`, where [`commit_composition`] writes it as typed: this switch is
+/// the user's own, like Enter. A commit that left it standing skips the switch
+/// whole, because the
+/// reset below would drop text still on screen. The arm, the list, the picker
+/// and the guide belong to the mode being left.
+pub fn toggle_language_mode(
+    runtime: &DesktopRuntime,
+    token: ContextToken,
+    state: &mut EngineState,
+) -> Vec<Emit> {
+    let settings = runtime.settings.current();
+    let bindings = ComposingKeyBindings::from_document(&settings, runtime.platform());
+    let mut emits = Vec::new();
+    if is_composing(runtime, token) {
+        let mut coordinator = runtime.lock_coordinator();
+        let mut reply = run_key(
+            &mut coordinator,
+            token,
+            state,
+            &KeyEventSnapshot::default(),
+            ComposingKeyIntent::Commit,
+            &settings,
+            &bindings,
+        );
+        emits.append(&mut reply.emits);
+        drop(coordinator);
+        if is_composing(runtime, token) {
+            log::warn!("language_mode.commit_refused — switch skipped");
+            return emits;
+        }
+    }
+    clear_surface(state, &settings, &bindings, &mut emits);
+    if let Some(coordinator) = runtime.coordinator_if_built() {
+        let mut coordinator = coordinator
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        if let Some(manager) = coordinator.manager(token) {
+            manager.start_new_session();
+        }
+    }
+    state.language_mode = state.language_mode.toggled();
+    emits.push(Emit::ModeChanged);
+    emits.push(Emit::AnnounceMode);
     emits
 }
 

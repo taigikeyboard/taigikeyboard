@@ -16,8 +16,11 @@ mod table;
 
 pub use executor::{Emit, LookupTableContent};
 pub(crate) use executor::{KeySurface, Recorder};
-pub use global::perform_global;
-pub use key::{click_from_panel, end_session, is_composing, navigate_from_panel, process_key};
+pub use global::{mode_label, perform_global};
+pub use key::{
+    click_from_panel, commit_composition, end_session, is_composing, navigate_from_panel,
+    process_key, toggle_language_mode,
+};
 pub use selection::LookupSelection;
 pub use state::{EngineState, KeyReply, SymbolPicker};
 pub(crate) use table::{is_vertical_layout, present_table};

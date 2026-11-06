@@ -21,6 +21,8 @@ mmap-host = { path = "../engine/mmap-host" }
 # Exact, and equal to `wasm-bindgen` in ../mise.toml: the CLI refuses a crate of
 # any other version. `make -C web check` compares the two.
 wasm-bindgen = "=0.2.130"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
