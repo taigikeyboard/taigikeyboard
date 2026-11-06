@@ -8,6 +8,7 @@ import { Panel } from "./panel.js";
 import { Settings } from "./settings.js";
 import { Sidebar } from "./sidebar.js";
 import { Surface } from "./surface.js";
+import { TpsKeyboard } from "./tps_keyboard.js";
 
 /// A call with no instance to answer it: the key is spent.
 const NOTHING = { handled: true, emits: [] };
@@ -18,9 +19,21 @@ const modeSlot = document.getElementById("mode");
 const messageSlot = document.getElementById("message");
 
 const surface = new Surface(textarea);
-const panel = new Panel(document.getElementById("panel"), (position) => {
-  apply(call((session) => session.clickCandidate(position)));
-});
+const panel = new Panel(
+  document.getElementById("panel"),
+  document.getElementById("spoken"),
+  (position) => {
+    apply(call((session) => session.clickCandidate(position)));
+  },
+);
+const tpsKeyboard = new TpsKeyboard(
+  document.getElementById("tps-keyboard"),
+  (glyph) => {
+    // The next physical key belongs here too, not to a sidebar control.
+    textarea.focus();
+    apply(call((session) => session.tpsKeyPress(glyph)));
+  },
+);
 const sidebar = new Sidebar(
   document.getElementById("sidebar-toggle"),
   document.getElementById("sidebar"),
@@ -86,6 +99,7 @@ async function start() {
     restoreSettings(starting);
     session = starting;
     modeSlot.textContent = starting.modeSymbol();
+    tpsKeyboard.draw(JSON.parse(starting.tpsKeyboardRows()));
     textarea.disabled = false;
     textarea.focus();
     const files = await fetchDictionaries(starting.dictionaryFiles());
@@ -166,8 +180,12 @@ function applyEmit(emit) {
     case "openSettings":
       sidebar.open();
       break;
-    default:
-      // `toggleTpsKeyboard`: its panel is a later Phase 5 slice.
+    case "toggleTpsKeyboard":
+      settings.toggleTpsKeyboard();
+      call((current) => current.setSettings(settings.json));
+      break;
+    case "tpsKeyboardCapTyped":
+      tpsKeyboard.flash(emit.row, emit.cap);
       break;
   }
 }
@@ -253,12 +271,13 @@ new ResizeObserver(placePanel).observe(textarea);
 window.addEventListener("resize", placePanel);
 
 // Capture: this runs before the click moves the caret or `blur` takes the
-// focus `execCommand` needs. A click on a candidate belongs to the composition.
+// focus `execCommand` needs. A click on a candidate or a key cap belongs to the
+// composition.
 document.addEventListener(
   "pointerdown",
   (event) => {
     call((current) => current.caretMoved());
-    if (!panel.contains(event.target)) {
+    if (!panel.contains(event.target) && !tpsKeyboard.contains(event.target)) {
       apply(call((current) => current.commitComposition()));
     }
   },
@@ -274,8 +293,13 @@ for (const button of document.querySelectorAll("button")) {
   button.addEventListener("mousedown", (event) => event.preventDefault());
 }
 
-document.getElementById("mode-button").addEventListener("click", () => {
+document.getElementById("mode-button").addEventListener("click", (event) => {
   sidebar.open();
+  // From the keyboard, Tab would go on into the page. A pointer leaves the
+  // focus in the textarea: typing there must not type into the select.
+  if (event.detail === 0) {
+    document.getElementById("settings").elements.inputMode.focus();
+  }
 });
 
 document.getElementById("copy").addEventListener("click", async () => {

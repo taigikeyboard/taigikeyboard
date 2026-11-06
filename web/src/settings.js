@@ -33,16 +33,21 @@ export class Settings {
     this.#form = form;
     this.#show();
     form.addEventListener("change", ({ target }) => {
-      this.#document.values[target.name] = target.value;
-      this.#document.revision += 1;
-      this.#show();
-      this.#persist();
+      const isCheckbox = target.type === "checkbox";
+      this.#write(target.name, isCheckbox ? target.checked : target.value);
       onChange(this.json);
     });
   }
 
   get json() {
     return JSON.stringify(this.#document);
+  }
+
+  /// The key panel's chord. Not a form change: the panel is looked at, so the
+  /// composition stays.
+  toggleTpsKeyboard() {
+    const { tpsKeyboardShown } = this.#form.elements;
+    this.#write("tpsKeyboardShown", !tpsKeyboardShown.checked);
   }
 
   /// The document as the session wrote it.
@@ -63,18 +68,37 @@ export class Settings {
   #show() {
     const { values } = this.#document;
     for (const control of this.#form.elements) {
+      if (control.type === "checkbox") {
+        control.checked = values[control.name] === true;
+        continue;
+      }
       const options = Array.from(control.options);
       const shown =
         options.find((option) => option.value === values[control.name]) ??
         options.find((option) => option.defaultSelected);
       shown.selected = true;
     }
-    const { candidateAppearanceMode, fontType } = this.#form.elements;
+    const { candidateAppearanceMode, fontType, inputMode, tpsKeyboardShown } =
+      this.#form.elements;
+    // The row stays in its place outside TPS: the choice waits for the way back.
+    const isTyping = inputMode.value === "tps";
+    tpsKeyboardShown.disabled = !isTyping;
     const root = document.documentElement;
     root.dataset.theme = candidateAppearanceMode.value;
     root.dataset.font = fontType.value;
+    root.toggleAttribute(
+      "data-tps-keyboard",
+      isTyping && tpsKeyboardShown.checked,
+    );
     // The stored tag, not the control's: the session reads an unknown one too.
     setDisplayLanguage(values.displayLanguage ?? "system");
+  }
+
+  #write(name, value) {
+    this.#document.values[name] = value;
+    this.#document.revision += 1;
+    this.#show();
+    this.#persist();
   }
 
   #persist() {

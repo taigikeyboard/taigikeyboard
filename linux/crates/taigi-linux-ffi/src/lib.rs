@@ -129,7 +129,7 @@ fn reply_emit(emit: Emit) -> Option<ReplyEmit> {
         Emit::AnnounceMode => reply.kind = EMIT_ANNOUNCE_MODE,
         // `taigi_linux_core` starts these before any reply is handed back;
         // one arriving here is a bug there, and the header has no kind for it.
-        Emit::OpenSettings | Emit::ToggleTpsKeyboard => {
+        Emit::OpenSettings | Emit::ToggleTpsKeyboard | Emit::TpsKeyboardCapTyped(_) => {
             log::error!("ffi.launch_reached_shell");
             return None;
         }

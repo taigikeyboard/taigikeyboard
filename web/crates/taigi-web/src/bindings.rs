@@ -11,6 +11,7 @@ use taigi_desktop_core::platform::DesktopPlatform;
 use wasm_bindgen::prelude::*;
 
 use crate::key::BrowserKey;
+use crate::reply::tps_rows_json;
 use crate::session::{WebSession, DICTIONARY_VERSION};
 
 /// Where the dictionary bytes are registered. No file exists there; the
@@ -96,6 +97,18 @@ impl Session {
     #[wasm_bindgen(js_name = clickCandidate)]
     pub fn click_candidate(&mut self, position: usize) -> String {
         self.inner.click_candidate(position)
+    }
+
+    /// The TPS key panel's rows, JSON. They never change, so once is enough.
+    #[wasm_bindgen(js_name = tpsKeyboardRows)]
+    pub fn tps_keyboard_rows(&self) -> String {
+        tps_rows_json()
+    }
+
+    /// A click on a TPS key cap: `glyph` is what the cap types.
+    #[wasm_bindgen(js_name = tpsKeyPress)]
+    pub fn tps_key_press(&mut self, glyph: &str) -> String {
+        self.inner.tps_key_press(glyph)
     }
 
     #[wasm_bindgen(js_name = commitComposition)]

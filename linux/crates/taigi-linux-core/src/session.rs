@@ -96,6 +96,8 @@ fn start_launches(emits: &mut Vec<Emit>, mut open: impl FnMut(), mut toggle: imp
             toggle();
             false
         }
+        // The key panel is a window of the settings app, with no channel here.
+        Emit::TpsKeyboardCapTyped(_) => false,
         _ => true,
     });
 }

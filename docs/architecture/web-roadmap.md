@@ -125,6 +125,7 @@ The Linux shell already answers a key with a list of signals: `KeyReply { handle
 | `LookupTable` / `HideLookupTable` | Render or hide the candidate list |
 | `ModeChanged` / `AnnounceMode` | Update the status control |
 | New in Phase 2: `OpenSettings`, `ToggleTpsKeyboard` | Open the sidebar, show the TPS key panel |
+| New in Phase 5: `TpsKeyboardCapTyped` | Light the cap. Linux drops it in `run_launches`: its panel is another process |
 
 `serde_json` is already a dependency of `taigi-desktop-core`. Proto bytes would pull a protobuf runtime into the page for no gain.
 
@@ -231,7 +232,7 @@ Each phase is one PR of 200–500 LOC unless noted. No phase is assigned to a re
 | 2 | Shared session module | behaviour freeze, `make linux-check` | Done |
 | 3 | `taigi-web` crate | native + Node tests | Done |
 | 4 | Plain page, end to end | Playwright in 3 browser engines | Done; iPad and AltGr device checks open |
-| 5 | Look, then i18n + fonts, then panels + a11y (3 PRs) | Playwright, i18n gates | Look, i18n + fonts done; panels + a11y pending |
+| 5 | Look, then i18n + fonts, then panels + a11y (3 PRs) | Playwright, i18n gates | Done |
 | 6 | Loading and offline | Playwright offline run | Pending |
 | 7 | Deploy | manual run on the real URL | Pending |
 | 8 | User data | spike first, then its own plan | Pending |
@@ -279,6 +280,8 @@ session.keyDown(keyJson) -> reply            // reply: JSON { handled, emits, se
 session.keyUp(keyJson)   -> reply
 session.clickCandidate(position) -> reply    // click_from_panel
 session.commitComposition() -> reply         // § Text surface
+session.tpsKeyboardRows()                    // JSON, from `keys/tps_keyboard_rows.rs`
+session.tpsKeyPress(glyph) -> reply          // a click on a cap
 session.caretMoved()                         // disarms the auto-space swap, spends a Shift press
 session.focusLost()
 session.setSettings(settingsJson)
@@ -313,7 +316,7 @@ Three PRs, one round each:
 
 1. **Look**: § UI colours, sidebar, settings form with English labels. Copy and Clear. Empty, loading and error states in fixed slots, nothing that pops in and shifts the page. kautian-mirror's inline pre-paint script (`src/index.html:22-36`) moves to an external blocking file, so Phase 6's CSP allows it. The Font and Display Language rows arrive with slice 2, which brings what they select. The status control shows the mode symbol and opens the sidebar, so Input Mode has one control.
 2. **i18n + fonts**: `tools/i18n/i18n_lib.py:35`: add `web` to `VALID_PLATFORMS`, emit `web/src/generated/strings.js`, add `web` to the scope of reused keys. A module rather than the JSON file first planned: it loads in the page's module graph, so the page has no fetch to wait on or fail before it can say anything. A round touching `i18n/**` runs the gates of every platform in the touched keys' scope. `web/scripts/subset-fonts.sh` from kautian-mirror's, run at build time because the output is 19 MB; fonts stay off the first load until selected.
-3. **Panels + a11y**: TPS key panel and symbol picker through the same panel. Keyboard focus order, `aria-live` for the candidate list, `prefers-reduced-motion`.
+3. **Panels + a11y**: The TPS key panel is `tps_keyboard.js` below Copy and Clear, shown by the existing `tpsKeyboardShown` setting under TPS: Ctrl+Alt+J or a sidebar row that stays in place, disabled, outside TPS. Its room comes out of the textarea. A click types through the shared `tps_keyboard_press`, as on macOS; a key or a click lights its cap for 150 ms, as on macOS and Windows. The symbol picker needed no code: it is a `LookupTable`, so it already draws in the candidate panel. No mouse doorway for it, as the desktop menu has none. Candidate cells are a list with `aria-current`, because focus stays in the textarea and a listbox would never hold it; `#spoken` is the live region and says the one cell Enter would take. `#mode-button` from the keyboard moves focus to Input Mode. `prefers-reduced-motion` stops the transitions.
 
 ### Phase 6 — Loading and offline
 

@@ -25,6 +25,8 @@
   --font: var(--system-font);
   --measure: 760px;
   --sidebar-width: 18.75rem;
+  --tps-cap-height: 2.75rem;
+  --tps-keyboard-height: calc(4 * var(--tps-cap-height) + 1.25rem);
 }
 
 :root[data-theme="light"] {
@@ -54,7 +56,7 @@
 }
 
 /* The markup's English holds the slots, unseen, until i18n.js has run. */
-:root:not([data-translated]) :is([data-i18n], .setting select) {
+:root:not([data-translated]) :is([data-i18n], .setting select, .setting input) {
   visibility: hidden;
 }
 
@@ -122,7 +124,8 @@ button:hover {
 }
 
 button:focus-visible,
-select:focus-visible {
+select:focus-visible,
+input:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px var(--ring);
 }
@@ -212,9 +215,13 @@ select:focus-visible {
     transition: padding-left 0.25s ease;
   }
 
+  /* Visible at once, so the mode button can move the focus into it. */
   :root[data-sidebar="open"] #sidebar {
     transform: none;
     visibility: visible;
+    transition:
+      transform 0.25s ease,
+      visibility 0s;
   }
 
   :root[data-sidebar="open"] body {
@@ -255,6 +262,17 @@ select:focus-visible {
 
 .setting select:hover {
   color: var(--text);
+}
+
+.setting input {
+  flex: none;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+/* In place outside TPS, as the desktop menu keeps its row. */
+.setting:has(input:disabled) {
+  color: var(--secondary);
 }
 
 .sidebar-links {
@@ -335,6 +353,13 @@ select:focus-visible {
   resize: vertical;
 }
 
+/* The key panel asked for takes its room from the textarea, so Copy and Clear
+   stay on screen. A height the user dragged stays theirs. */
+:root[data-tps-keyboard] #text {
+  height: max(14rem, 100dvh - 16rem - var(--tps-keyboard-height));
+  min-height: 14rem;
+}
+
 #text::placeholder {
   color: var(--secondary);
 }
@@ -393,12 +418,12 @@ select:focus-visible {
   color: var(--secondary);
 }
 
-#candidates li[aria-selected="true"] {
+#candidates li[aria-current="true"] {
   background: var(--accent);
   color: #ffffff;
 }
 
-#candidates li[aria-selected="true"] span {
+#candidates li[aria-current="true"] span {
   color: inherit;
 }
 
@@ -421,4 +446,99 @@ select:focus-visible {
   padding: 0 0.75rem;
   border-radius: 8px;
   font-size: 0.9375rem;
+}
+
+/* Asked for, so it may move what is below the textarea. `height` is set before
+   the wasm arrives: the caps fill the room `prepaint.js` kept. */
+#tps-keyboard {
+  display: none;
+  flex-direction: column;
+  height: var(--tps-keyboard-height);
+  margin-top: 0.5rem;
+  gap: 0.25rem;
+  container-type: inline-size;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+:root[data-tps-keyboard] #tps-keyboard {
+  display: flex;
+}
+
+/* Twelve keys wide, the number row. `--indent` is the row's stagger. */
+.tps-row {
+  --tps-cap: min(3.25rem, 100cqw / 12);
+  display: flex;
+  flex: none;
+  width: calc(12 * var(--tps-cap));
+  margin-inline: auto;
+  padding-left: calc(var(--indent) * var(--tps-cap));
+}
+
+/* Shift glyph top right, bare glyph below, as the desktop panels draw a cap; the
+   top half is the Shift layer. */
+.tps-cap {
+  display: grid;
+  grid-template: auto 1fr / 1fr 1fr;
+  flex: none;
+  width: var(--tps-cap);
+  height: var(--tps-cap-height);
+  padding: 0.125rem 0.1875rem;
+  border-radius: 6px;
+  background: var(--card);
+  box-shadow: inset 0 0 0 1px var(--hairline);
+  color: var(--text);
+  font-size: 0.6875rem;
+  line-height: 1.2;
+  transition: none;
+}
+
+.tps-cap:hover {
+  background: var(--hover);
+}
+
+.tps-cap span:not(:last-child) {
+  color: var(--secondary);
+}
+
+.tps-cap span:nth-child(2) {
+  text-align: right;
+}
+
+.tps-cap span:last-child {
+  grid-column: 1 / -1;
+  align-self: center;
+  font-size: 1rem;
+  text-align: center;
+}
+
+.tps-cap:active,
+.tps-cap[data-lit] {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.tps-cap:active span,
+.tps-cap[data-lit] span {
+  color: inherit;
+}
+
+/* Read aloud, never drawn. Not `hidden`, which silences a live region. */
+#spoken {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Last, to outrank the docked `@media` block. */
+@media (prefers-reduced-motion: reduce) {
+  body,
+  button,
+  #sidebar,
+  :root[data-sidebar="open"] #sidebar {
+    transition: none;
+  }
 }

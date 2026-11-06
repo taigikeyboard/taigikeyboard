@@ -6,10 +6,13 @@ export class Panel {
   #root;
   #preedit;
   #candidates;
+  #spoken;
 
   /// `onPick(position)`: a click on the `position`-th cell of the shown page.
-  constructor(root, onPick) {
+  /// `spoken`: a live region outside `root`, which `hidden` would silence.
+  constructor(root, spoken, onPick) {
     this.#root = root;
+    this.#spoken = spoken;
     this.#preedit = root.querySelector("#preedit");
     this.#candidates = root.querySelector("#candidates");
     // Focus stays in the textarea, which a commit needs.
@@ -57,7 +60,7 @@ export class Panel {
         const cell = document.createElement("li");
         cell.dataset.position = position;
         cell.setAttribute(
-          "aria-selected",
+          "aria-current",
           String(cursorVisible && start + position === cursor),
         );
         const label = labels[position];
@@ -70,12 +73,17 @@ export class Panel {
         return cell;
       });
     this.#candidates.replaceChildren(...cells);
+    // Focus stays in the textarea, so a screen reader hears the list only here:
+    // the one cell Enter would take, not the page on every key.
+    const taken = cells[cursorVisible ? cursor - start : 0];
+    this.#spoken.textContent = taken?.textContent ?? "";
     this.#candidates.toggleAttribute("data-vertical", vertical);
     this.#syncVisibility();
   }
 
   hideTable() {
     this.#candidates.replaceChildren();
+    this.#spoken.textContent = "";
     this.#syncVisibility();
   }
 

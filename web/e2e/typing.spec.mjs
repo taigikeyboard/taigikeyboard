@@ -40,7 +40,7 @@ test("a click selects, Enter commits", async ({ page }) => {
   const [, word] = (await cell.textContent()).split(" ");
   await cell.click();
   await expect(editor).toBeFocused();
-  await expect(cell).toHaveAttribute("aria-selected", "true");
+  await expect(cell).toHaveAttribute("aria-current", "true");
   await expect(editor).toHaveValue("");
   await editor.press("Enter");
   await expect(editor).toHaveValue(word);
@@ -58,7 +58,7 @@ test("the second page's cells select by position", async ({ page }) => {
   // is the assertion.
   const cell = candidates(page).nth(1);
   await cell.click();
-  await expect(cell).toHaveAttribute("aria-selected", "true");
+  await expect(cell).toHaveAttribute("aria-current", "true");
   await expect(editor).toHaveValue("");
 });
 
