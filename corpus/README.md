@@ -3,7 +3,7 @@
 Real Taiwanese text. Nothing here feeds a build, a dictionary artifact, or an
 automated test yet.
 
-- `taigi-typing/` — where dogfood sentences come from, so an `Sn` item can
+- `taigi-typing/` — where dogfood sentences come from, so a dogfood check can
   cite a sentence a person actually wrote instead of one made up for the test.
 - `taigi-corpus/` — the normalized multi-source corpus kept for future
   language-model work (next-word bigram tables and similar).

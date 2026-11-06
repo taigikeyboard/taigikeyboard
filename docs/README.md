@@ -33,7 +33,6 @@ Status: **Active** = living contract, kept in sync with the code · **Reference*
 |------|-------------|--------|
 | `architecture/system-overview.md` | Five-platform architecture: system context, crate graph, build pipeline, keystroke flow | Active |
 | `architecture/behavioral-invariants.md` | Cross-platform behaviour contract (`§N`, `INVARIANT_*` labels) | Active |
-| `architecture/dogfood-checklist.md` | Real-device acceptance items `Sn` — read before a dogfood pass | Active |
 | `architecture/composing-state-boundary.md` | Composing engine ↔ platform binding (§2.2 effects, §11 Android `InputConnection`) | Active |
 | `architecture/nextword-engine-boundary.md` | Next-word engine ↔ platform binding (§13 Android) | Active |
 | `architecture/keyboard-body-invariants-android.md` | Android keyboard-body geometry and touch-target invariants | Active |

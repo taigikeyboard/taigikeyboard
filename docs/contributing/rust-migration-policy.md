@@ -18,7 +18,7 @@ Examples already aligned: `engine/nextword/{lib,api,requests,handle,decide,filte
 Each slice ships as a **direct swap** with no fallback code path. Old Swift/Kotlin impl is DELETED in the same PR. No `useXxxRust: Bool` toggle, no parallel implementations.
 
 - Solo maintainer with direct release control; revert-PR + cut hotfix is the rollback mechanism.
-- Dogfood gate is the production gate (S1/S2/S3 + no dismiss + leak-free; concrete Taigi acceptance sequences in `docs/architecture/dogfood-checklist.md`).
+- Dogfood gate is the production gate (S1/S2/S3 + no dismiss + leak-free, defined in `docs/contributing/known-pitfalls.md`).
 - Toggle adds permanent cost: dual-path maintenance, doubled test matrix, binary growth, rotting dead code.
 - Reference IMEs (McBopomofo, khiin-rs) don't toggle engine implementations.
 - If a slice "feels like it needs a toggle", that signals the slice is too large — split it.

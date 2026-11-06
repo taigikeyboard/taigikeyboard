@@ -9,7 +9,6 @@
 ## Summary
 
 - **Forward-looking work only.** Shipped versions: [`CHANGELOG.md`](../CHANGELOG.md) (release notes per train); the v3.5.8 plan archive is [`releases/v3.5.8/plan.md`](releases/v3.5.8/plan.md). Shipped designs live in the `architecture/*-roadmap.md` docs and in `architecture/behavioral-invariants.md`.
-- Device dogfood items: [`architecture/dogfood-checklist.md`](architecture/dogfood-checklist.md) (none pending as of 2026-10-18).
 - Release scope, timing and tags are the maintainer's call; only the v3.9.0 fix list below is assigned to a release (maintainer, 2026-10-30).
 
 ---

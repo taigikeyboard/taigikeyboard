@@ -1,6 +1,6 @@
 {
   "id": "s66-tai-gi-si-kai",
-  "source": "dogfood-checklist.md S66 (USER 2026-09-21): `tai-gi-si-kai` → `tâi-gí-sī-kái`; the candidate picked under 羅馬字 output commits the typed form. S66 names the reading only, so no hanji is asserted.",
+  "source": "Dogfood S66 (USER 2026-09-21): `tai-gi-si-kai` → `tâi-gí-sī-kái`; the candidate picked under 羅馬字 output commits the typed form. S66 names the reading only, so no hanji is asserted.",
   "settings": { "romanization": "tl", "continuous_input": true, "output": "roman" },
   "steps": [
     { "type": "text", "value": "tai-gi-si-kai" },

@@ -46,7 +46,7 @@ emoji/             # Emoji data generator (own instructions file)
 | changing files on a platform | that platform's guide in `docs/contributing/` (index: `docs/contributing/README.md`) |
 | adding / renaming / deleting an `i18n/*.json` key from platform code | `docs/contributing/i18n.md` |
 | adding or changing a framework / OS API call (KeyboardKit, `UITextDocumentProxy`, `InputMethodService`, Compose, DataStore) | `docs/contributing/doc-lookup.md` — verify against current docs, never from memory |
-| a real-device dogfood pass, or citing an `Sn` item | `docs/architecture/dogfood-checklist.md`; draw test sentences from `corpus/README.md` |
+| a real-device dogfood pass | `corpus/README.md` for test sentences |
 | a best-practices section, or any segmentation / lattice / ranking / next-word / continuous-input design | `docs/references/mainstream-ime-comparison.md` — never re-explore `references/` from scratch |
 
 ## Build & Test

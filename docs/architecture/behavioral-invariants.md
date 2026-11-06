@@ -8,7 +8,7 @@ The cross-platform behavior contract every Rust slice and platform change must p
 
 **Implementation pointer**: most "Scope" lines below name the Rust crate that owns the behavior plus the cross-platform bridge call. Where a behavior is partly platform-side (UI / OS backup policy / KeyboardKit / IME glue), both halves are listed. The user-data SQLite stores are engine-owned (`engine/userdata`, `docs/architecture/user-data-engine-roadmap.md`).
 
-**Test references**: each invariant ends with one or more `INVARIANT_*` test-case labels. Rust slices wire labels into `engine/<crate>/tests/`; platform tests cover bridge + integration paths. Device acceptance items (`Sn`) live in [`dogfood-checklist.md`](dogfood-checklist.md).
+**Test references**: each invariant ends with one or more `INVARIANT_*` test-case labels. Rust slices wire labels into `engine/<crate>/tests/`; platform tests cover bridge + integration paths. `Sn` labels below name device acceptance items from the retired dogfood checklist (last version: `git show 257b2c4da:docs/architecture/dogfood-checklist.md`).
 
 **Drift policy**: if any two of the five platforms diverge on an invariant, treat the divergence as a regression — open an issue, do not adjust this doc to match the code. UI-only invariants name the platforms they bind.
 
