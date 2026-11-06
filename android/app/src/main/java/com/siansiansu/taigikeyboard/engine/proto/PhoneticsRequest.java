@@ -27,6 +27,7 @@ public  final class PhoneticsRequest extends
     TPS_INPUT_ADJUST(35),
     IS_ATTACHING_PUNCTUATION(40),
     EXTERNAL_LOOKUP_DIGIT_FORM(41),
+    IS_JOINER_PUNCTUATION(42),
     METHOD_NOT_SET(0);
     private final int value;
     private MethodCase(int value) {
@@ -49,6 +50,7 @@ public  final class PhoneticsRequest extends
         case 35: return TPS_INPUT_ADJUST;
         case 40: return IS_ATTACHING_PUNCTUATION;
         case 41: return EXTERNAL_LOOKUP_DIGIT_FORM;
+        case 42: return IS_JOINER_PUNCTUATION;
         case 0: return METHOD_NOT_SET;
         default: return null;
       }
@@ -475,6 +477,56 @@ public  final class PhoneticsRequest extends
    */
   private void clearExternalLookupDigitForm() {
     if (methodCase_ == 41) {
+      methodCase_ = 0;
+      method_ = null;
+    }
+  }
+
+  public static final int IS_JOINER_PUNCTUATION_FIELD_NUMBER = 42;
+  /**
+   * <code>.taigi.engine.IsJoinerPunctuation is_joiner_punctuation = 42;</code>
+   */
+  @java.lang.Override
+  public boolean hasIsJoinerPunctuation() {
+    return methodCase_ == 42;
+  }
+  /**
+   * <code>.taigi.engine.IsJoinerPunctuation is_joiner_punctuation = 42;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.IsJoinerPunctuation getIsJoinerPunctuation() {
+    if (methodCase_ == 42) {
+       return (com.siansiansu.taigikeyboard.engine.proto.IsJoinerPunctuation) method_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.IsJoinerPunctuation.getDefaultInstance();
+  }
+  /**
+   * <code>.taigi.engine.IsJoinerPunctuation is_joiner_punctuation = 42;</code>
+   */
+  private void setIsJoinerPunctuation(com.siansiansu.taigikeyboard.engine.proto.IsJoinerPunctuation value) {
+    java.util.Objects.requireNonNull(value);
+    method_ = value;
+    methodCase_ = 42;
+  }
+  /**
+   * <code>.taigi.engine.IsJoinerPunctuation is_joiner_punctuation = 42;</code>
+   */
+  private void mergeIsJoinerPunctuation(com.siansiansu.taigikeyboard.engine.proto.IsJoinerPunctuation value) {
+    java.util.Objects.requireNonNull(value);
+    if (methodCase_ == 42 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.IsJoinerPunctuation.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.IsJoinerPunctuation.newBuilder((com.siansiansu.taigikeyboard.engine.proto.IsJoinerPunctuation) method_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      method_ = value;
+    }
+    methodCase_ = 42;
+  }
+  /**
+   * <code>.taigi.engine.IsJoinerPunctuation is_joiner_punctuation = 42;</code>
+   */
+  private void clearIsJoinerPunctuation() {
+    if (methodCase_ == 42) {
       methodCase_ = 0;
       method_ = null;
     }
@@ -997,6 +1049,54 @@ public  final class PhoneticsRequest extends
       return this;
     }
 
+    /**
+     * <code>.taigi.engine.IsJoinerPunctuation is_joiner_punctuation = 42;</code>
+     */
+    @java.lang.Override
+    public boolean hasIsJoinerPunctuation() {
+      return instance.hasIsJoinerPunctuation();
+    }
+    /**
+     * <code>.taigi.engine.IsJoinerPunctuation is_joiner_punctuation = 42;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.IsJoinerPunctuation getIsJoinerPunctuation() {
+      return instance.getIsJoinerPunctuation();
+    }
+    /**
+     * <code>.taigi.engine.IsJoinerPunctuation is_joiner_punctuation = 42;</code>
+     */
+    public Builder setIsJoinerPunctuation(com.siansiansu.taigikeyboard.engine.proto.IsJoinerPunctuation value) {
+      copyOnWrite();
+      instance.setIsJoinerPunctuation(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.IsJoinerPunctuation is_joiner_punctuation = 42;</code>
+     */
+    public Builder setIsJoinerPunctuation(
+        com.siansiansu.taigikeyboard.engine.proto.IsJoinerPunctuation.Builder builderForValue) {
+      copyOnWrite();
+      instance.setIsJoinerPunctuation(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.IsJoinerPunctuation is_joiner_punctuation = 42;</code>
+     */
+    public Builder mergeIsJoinerPunctuation(com.siansiansu.taigikeyboard.engine.proto.IsJoinerPunctuation value) {
+      copyOnWrite();
+      instance.mergeIsJoinerPunctuation(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.IsJoinerPunctuation is_joiner_punctuation = 42;</code>
+     */
+    public Builder clearIsJoinerPunctuation() {
+      copyOnWrite();
+      instance.clearIsJoinerPunctuation();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.PhoneticsRequest)
   }
   @java.lang.Override
@@ -1022,10 +1122,11 @@ public  final class PhoneticsRequest extends
             com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust.class,
             com.siansiansu.taigikeyboard.engine.proto.IsAttachingPunctuation.class,
             com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm.class,
+            com.siansiansu.taigikeyboard.engine.proto.IsJoinerPunctuation.class,
           };
           java.lang.String info =
-              "\u0000\u0007\u0001\u0000\r)\u0007\u0000\u0000\u0000\r<\u0000\u0012<\u0000!<\u0000" +
-              "\"<\u0000#<\u0000(<\u0000)<\u0000";
+              "\u0000\b\u0001\u0000\r*\b\u0000\u0000\u0000\r<\u0000\u0012<\u0000!<\u0000\"<\u0000" +
+              "#<\u0000(<\u0000)<\u0000*<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

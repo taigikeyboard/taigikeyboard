@@ -73,6 +73,9 @@ pub fn handle(req: &PhoneticsRequest) -> Result<PhoneticsResponse, PhoneticsErro
         Method::IsAttachingPunctuation(payload) => PhonResult::BoolResult(BoolResult {
             value: crate::api::is_attaching_punctuation(&payload.text),
         }),
+        Method::IsJoinerPunctuation(payload) => PhonResult::BoolResult(BoolResult {
+            value: crate::api::is_joiner_punctuation(&payload.text),
+        }),
         Method::ExternalLookupDigitForm(payload) => PhonResult::StringResult(StringResult {
             output: crate::external_lookup::digit_tone_form(&payload.reading),
         }),

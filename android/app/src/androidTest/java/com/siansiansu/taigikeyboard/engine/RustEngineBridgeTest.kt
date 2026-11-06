@@ -61,6 +61,12 @@ class RustEngineBridgeTest {
         assertFalse(RustEngineBridge.isAttachingPunctuation("?!"))
     }
 
+    @Test fun op_isJoinerPunctuation_onlyTheKhinsiannDot() {
+        assertTrue(RustEngineBridge.isJoinerPunctuation("\u00B7"))
+        assertFalse(RustEngineBridge.isJoinerPunctuation("?"))
+        assertFalse(RustEngineBridge.isJoinerPunctuation("-"))
+    }
+
     // The engine's digit-tone fold (`phonetics::external_lookup`, full table
     // pinned there) through the bridge `ExternalLookupURLBuilder` reads; the
     // `o͘` row is the parity-correction (the Kotlin copy left `ho͘2`).

@@ -49,6 +49,11 @@ pub fn is_attaching_punctuation(text: &str) -> bool {
     crate::punctuation::is_attaching_punctuation(text)
 }
 
+/// Whether text is a joiner, which takes the place of an auto space (§23).
+pub fn is_joiner_punctuation(text: &str) -> bool {
+    crate::punctuation::is_joiner_punctuation(text)
+}
+
 pub(crate) fn capitalize_first(text: &str) -> String {
     let mut chars = text.chars();
     match chars.next() {

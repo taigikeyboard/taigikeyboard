@@ -48,6 +48,7 @@ message PhoneticsRequest {
     // --- Platform text helpers (40s) ---
     IsAttachingPunctuation is_attaching_punctuation = 40;
     ExternalLookupDigitForm external_lookup_digit_form = 41;
+    IsJoinerPunctuation is_joiner_punctuation = 42;
   }
 }
 
@@ -107,6 +108,12 @@ message TpsInputAdjust {
 // trailing auto space (`guá ` + `?` → `guá? `; behavioral-invariants §23).
 // Answers `BoolResult`; false for empty or multi-character text.
 message IsAttachingPunctuation { string text = 1; }
+
+// `IsJoinerPunctuation` — whether `text` is the khinsiann dot, which binds the
+// next syllable to the word, so it takes the place of the trailing auto space
+// (`hōo ` + `·` → `hōo·`; behavioral-invariants §23). Answers `BoolResult`;
+// false for empty or multi-character text.
+message IsJoinerPunctuation { string text = 1; }
 
 // `ExternalLookupDigitForm` — the digit-tone spelling of a TL reading that
 // the MOE dictionary and ChhoeTaigi search by: lowercased, split on `-`

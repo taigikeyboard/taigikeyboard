@@ -1,5 +1,6 @@
 package com.siansiansu.taigikeyboard.ime.text.candidates
 
+import com.siansiansu.taigikeyboard.ime.settings.SyllableSeparator
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -37,5 +38,15 @@ class AutoSpaceVerdictTest {
     fun rawCommit_writesRomanizationUnlessTheLayoutComposesBopomofo() {
         assertTrue(rawPreeditWritesRomanization(isTPSLayout = false))
         assertFalse(rawPreeditWritesRomanization(isTPSLayout = true))
+    }
+
+    /** A joiner takes the auto space's place outside English, unless the Space separator wants that space (`hōo ·guá`). */
+    @Test
+    fun joinerReplacesAutoSpace_exceptInEnglishAndUnderTheSpaceSeparator() {
+        for (separator in listOf(SyllableSeparator.HYPHEN, SyllableSeparator.NONE)) {
+            assertTrue(joinerReplacesAutoSpace(isEnglishMode = false, syllableSeparator = separator))
+            assertFalse(joinerReplacesAutoSpace(isEnglishMode = true, syllableSeparator = separator))
+        }
+        assertFalse(joinerReplacesAutoSpace(isEnglishMode = false, syllableSeparator = SyllableSeparator.SPACE))
     }
 }
