@@ -231,7 +231,7 @@ Each phase is one PR of 200–500 LOC unless noted. No phase is assigned to a re
 | 2 | Shared session module | behaviour freeze, `make linux-check` | Done |
 | 3 | `taigi-web` crate | native + Node tests | Done |
 | 4 | Plain page, end to end | Playwright in 3 browser engines | Done; iPad and AltGr device checks open |
-| 5 | Look, then i18n + fonts, then panels + a11y (3 PRs) | Playwright, i18n gates | Look in review; i18n + fonts, panels + a11y pending |
+| 5 | Look, then i18n + fonts, then panels + a11y (3 PRs) | Playwright, i18n gates | Look done; i18n + fonts, panels + a11y pending |
 | 6 | Loading and offline | Playwright offline run | Pending |
 | 7 | Deploy | manual run on the real URL | Pending |
 | 8 | User data | spike first, then its own plan | Pending |
@@ -327,7 +327,7 @@ Three PRs, one round each:
 ### Phase 7 — Deploy
 
 - `docs/architecture/web-release.md`, build and deploy flow per D1.
-- A long edge-cache rule for hashed assets, like the one on `dl.taigikeyboard.tw`. Today `taigikeyboard.tw` is Cloudflare in front of GitHub Pages with `max-age=600`. HiNet to GitHub has been slow, so measure from Taiwan before trusting Pages alone.
+- A long edge-cache rule for hashed assets, like the one on `dl.taigikeyboard.tw`. Today `taigikeyboard.tw` is Cloudflare in front of GitHub Pages with `max-age=600`. HiNet to GitHub has been slow, so measure from Taiwan before trusting Pages alone. Maintainer 2026-11-06: start on GitHub Pages as D1 says and observe. If that proves slow, the option looked at is Cloudflare Pages on `web.taigikeyboard.tw`: every file is under its 25 MiB limit, `_headers` gives a real CSP and cache rules, and a custom domain there takes a subdomain rather than `/web/`.
 - Licences page: `NOTICE`, `THIRD_PARTY_LICENSES.md`, OFL, dictionary source credits.
 - Privacy statement: text and settings stay in the browser. No analytics.
 - Deploy runs by hand, like every other release.
