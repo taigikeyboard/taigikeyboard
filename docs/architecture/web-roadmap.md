@@ -329,9 +329,9 @@ Three PRs, one round each:
 
 ### Phase 7 — Deploy
 
-Flow: `web-release.md`. Maintainer 2026-11-07: the first public page is settings and typing only, so the planned licences page and privacy statement are dropped, and no new page text or i18n.
+Flow: `web-release.md`. Maintainer 2026-11-07: the first public page is settings and typing only, so the planned licences page and privacy statement are dropped, and no new page text or i18n. The web version is a beta with no version number: every push to `main` deploys, unlike every other release, and CI runs Playwright in Chromium only.
 
-- `taigikeyboard/web` holds the Pages workflow, run by hand, like every other release.
+- `taigikeyboard/web` holds the Pages workflow; `web.yml` starts it after its checks pass.
 - A long edge-cache rule for the hashed dictionaries, like the one on `dl.taigikeyboard.tw`. HiNet to GitHub has been slow, so `make -C web check-live` times the download from Taiwan. Maintainer 2026-11-06: start on GitHub Pages as D1 says and observe. If that proves slow, the option looked at is Cloudflare Pages on `web.taigikeyboard.tw`: every file is under its 25 MiB limit, `_headers` gives a real CSP and cache rules, and a custom domain there takes a subdomain rather than `/web/`.
 - `make -C web check-live` hashes the live files against `assets-manifest.json`. The worker's install fails quietly on one mismatch, and Cloudflare can cause it: Email Obfuscation rewrites HTML, and `Content-Encoding: gzip` on a `.gz` would change what the page reads.
 
@@ -353,7 +353,7 @@ Settled by the maintainer 2026-11-06 ("follow your recommendation"). Ranked by i
 
 | # | Question | Decision | Rejected alternative | Applies to |
 |---|---|---|---|---|
-| D1 | Source location and URL | Source in this repository under `web/`, live at `taigikeyboard.tw/web/`. A thin repo named `web` holds only a Pages workflow that checks out a pinned commit here, builds and deploys. No token needed, and no 30 MB binaries in git | Pages on this repository, but the URL becomes `/taigikeyboard/`. Or a separate source repo like kautian-mirror, where every engine change has to be pulled across | Phase 7 |
+| D1 | Source location and URL | Source in this repository under `web/`, live at `taigikeyboard.tw/web/`. A thin repo named `web` holds only a Pages workflow that checks out a commit here, builds and deploys, so no 30 MB binaries in git. Maintainer 2026-11-07: each push to `main` starts it, which needs one token here, in place of "no token" and a pinned commit by hand | Pages on this repository, but the URL becomes `/taigikeyboard/`. Or a separate source repo like kautian-mirror, where every engine change has to be pulled across | Phase 7 |
 | D2 | First public scope | Physical keyboard only: desktop browsers, Chromebook, iPad with a keyboard | Add a touch keyboard for phones first. Much larger, and phones have the app | Phase 4 |
 | D3 | Session logic | A `session` module in `taigi-desktop-core`, shared by Linux and web (Phase 2). Follows Core Principle #5, and costs a Linux refactor round | A fourth session copy in `taigi-web`, about 1,000 lines to keep aligned by hand | Phase 2 |
 | D4 | Candidate placement | At the caret, like the desktop apps and McBopomofoWeb. Costs the mirror element and scroll handling | A fixed slot under the editor. Removes both costs and matches the fixed-slot preference for other UI, but the eye leaves the caret | Phase 4 |
