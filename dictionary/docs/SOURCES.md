@@ -168,9 +168,9 @@ current-at-release values when cutting a dictionary refresh.
   curation are not evidence of a redistribution licence.
 - **Notes**: A project-maintained supplement informed by LKK recommendations,
   not a complete or official LKK dataset. Each row stores an explicit
-  `(hanzi, canonical-TL)` pair whose spelling contains both Hanji and Latin
-  letters. Fully romanized and all-Hanji spellings are excluded. Current total:
-  82 unique pairs. Tests enforce mixed-script spellings, pair uniqueness and
+  `(hanzi, canonical-TL)` pair whose spelling mixes Hanji and Latin letters or,
+  fully romanized, equals its reading. All-Hanji spellings are excluded. Current
+  total: 468 unique pairs. Tests enforce spelling shape, pair uniqueness and
   exact MoE-pair and leading-`--` exclusions. The source pipeline does not
   regenerate this CSV. The aggregate build adds source bit 11 to matching
   entries in other dictionaries or inserts new pairs.

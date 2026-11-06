@@ -28,6 +28,7 @@ import pandas as pd
 
 from build.common import BASE_DIR, LOG_DIR
 from common.abbrev import extract_abbrev, extract_tps_abbrev
+from common.cleanup import blank_roman_only_hanzi
 from common.frequency import load_frequency_map, get_frequency
 from common.logging_utils import setup_logging, log_header
 from common.notone import apply_or_dialect_variant, remove_tone, remove_tps_tone
@@ -256,7 +257,8 @@ def _build_existing_key_index(existing_df: pd.DataFrame) -> dict[tuple[str, str]
     index: dict[tuple[str, str], int] = {}
     for idx, row in existing_df.iterrows():
         tl_key = str(row["tl"]).lower().replace(" ", "-")
-        index[(str(row["hanzi"]), tl_key)] = idx
+        hanzi = "" if pd.isna(row["hanzi"]) else str(row["hanzi"])
+        index[(hanzi, tl_key)] = idx
     return index
 
 
@@ -526,6 +528,7 @@ def _load_lkk_entries(
     Load LKK Han-Lo Recommended Characters dictionary entries.
 
     Reads a minimal CSV (hanzi, tl) and auto-generates all romanization columns.
+    A fully romanized spelling is a word with no hanzi, the shape the sources store.
     If a (hanzi, tl) pair already exists, marks it lkk=True.
     New pairs are added with lkk=True and all other source columns set to False.
     """
@@ -552,6 +555,7 @@ def _load_lkk_entries(
         if not hanzi or not tl_raw:
             continue
 
+        hanzi = blank_roman_only_hanzi(hanzi)
         tl_key = tl_raw.replace(" ", "-")
         if (hanzi, tl_key) in existing_key_index:
             idx = existing_key_index[(hanzi, tl_key)]
