@@ -197,11 +197,13 @@ test("a trap loses the composition, not the text", async ({ page }) => {
   await expect(editor).toHaveValue("台灣");
   await editor.pressSequentially("tai");
 
-  // Wrecks the running instance's memory, so that the next call traps.
+  // What a panic reaches the page as. Wrecking the instance's memory for a real
+  // trap also crashed Chromium's renderer on Linux, through the allocator.
   await page.evaluate(async () => {
-    const glue = await import("./pkg/taigi_web.js?instance=1");
-    const { memory } = await glue.default();
-    new Uint8Array(memory.buffer).fill(0xff);
+    const { Session } = await import("./pkg/taigi_web.js?instance=1");
+    Session.prototype.keyDown = () => {
+      throw new WebAssembly.RuntimeError("unreachable");
+    };
   });
   await editor.press("a");
 
