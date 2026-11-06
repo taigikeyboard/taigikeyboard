@@ -23,6 +23,7 @@ const loadSlot = document.getElementById("load-slot");
 const surface = new Surface(textarea);
 const panel = new Panel(
   document.getElementById("panel"),
+  document.getElementById("ruler"),
   document.getElementById("spoken"),
   (position) => {
     apply(call((session) => session.clickCandidate(position)));
@@ -30,7 +31,12 @@ const panel = new Panel(
   (isForward) => {
     apply(call((session) => session.turnPage(isForward)));
   },
+  (offset) => {
+    call((session) => session.viewportScrolled(offset));
+  },
 );
+// The session measures during a key: it needs the widths for that key's labels.
+globalThis.taigiMeasureCells = (runs) => panel.measure(runs);
 const tpsKeyboard = new TpsKeyboard(
   document.getElementById("tps-keyboard"),
   (glyph) => {

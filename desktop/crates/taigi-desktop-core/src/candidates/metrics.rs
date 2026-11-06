@@ -108,9 +108,27 @@ impl CandidateMetrics {
         cell_arrangement: CandidateCellArrangement,
         measurer: &dyn TextMeasurer,
     ) -> Self {
+        Self::resolve_with_chrome_ratio(
+            size,
+            font_selection,
+            cell_arrangement,
+            CHROME_RATIO,
+            measurer,
+        )
+    }
+
+    /// `resolve` for a window that keeps another share of the reference air:
+    /// the web page draws macOS's ratio.
+    pub fn resolve_with_chrome_ratio(
+        size: CandidateSizeChoice,
+        font_selection: CandidateFontSelection,
+        cell_arrangement: CandidateCellArrangement,
+        chrome_ratio: f32,
+        measurer: &dyn TextMeasurer,
+    ) -> Self {
         let candidate_font_size = size.font_size();
         let text_scale = candidate_font_size / BASE_CANDIDATE_FONT_SIZE;
-        let chrome_scale = CHROME_RATIO * text_scale;
+        let chrome_scale = chrome_ratio * text_scale;
         let annotation_font_size = (BASE_ANNOTATION_FONT_SIZE * text_scale).round();
         let index_font_size = (BASE_INDEX_FONT_SIZE * text_scale).round();
         let stacked_line_gap = (BASE_STACKED_LINE_GAP * text_scale).round();

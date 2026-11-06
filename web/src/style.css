@@ -470,9 +470,26 @@ summary:focus-visible {
 }
 
 /* One-line cells draw a capsule, two-line cells a fixed radius. */
-#panel:has(#candidates[data-vertical]) {
+#panel:has(#candidates[data-inline]) {
   --candidate-radius: calc(var(--candidate-row) / 2);
   --candidate-highlight-inset: 2px;
+}
+
+/* Hidden, but laid out: `#panel[hidden]` measures nothing, and the first key of
+   a word measures before the panel is shown. */
+#ruler {
+  position: absolute;
+  top: 0;
+  left: 0;
+  visibility: hidden;
+  width: max-content;
+  contain: layout style;
+}
+
+#ruler span {
+  display: block;
+  width: max-content;
+  white-space: nowrap;
 }
 
 #preedit {
@@ -568,8 +585,67 @@ summary:focus-visible {
   padding-block: 0;
 }
 
+/* The packed row: `ExpandableListModel`'s widths and height, which is what the
+   keys go by. */
+#candidates[data-row] {
+  flex-wrap: nowrap;
+}
+
+#candidates:is([data-row], [data-grid]) li {
+  box-sizing: border-box;
+  height: var(--candidate-item);
+  min-width: 0;
+  padding-block: 0;
+  justify-content: center;
+}
+
+/* The unfolded grid. No scrollbar: a classic one takes a width the model has
+   no number for, and the half row under the last full one says there is more.
+   The hairlines scroll with the rows. */
+#candidates[data-grid] {
+  position: relative;
+  display: grid;
+  flex: none;
+  box-sizing: border-box;
+  grid-template-columns: repeat(6, var(--candidate-column));
+  grid-auto-rows: var(--candidate-item);
+  row-gap: 1px;
+  align-content: start;
+  height: var(--candidate-window);
+  padding-bottom: var(--candidate-peek);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  background:
+    repeating-linear-gradient(
+      transparent 0 var(--candidate-item),
+      var(--hairline) 0 calc(var(--candidate-item) + 1px)
+    )
+    0 0 / 100% var(--candidate-grid) no-repeat local;
+}
+
+#candidates[data-grid]::-webkit-scrollbar {
+  display: none;
+}
+
+/* The row the keys number. */
+#candidates[data-grid]::before {
+  content: "";
+  position: absolute;
+  top: var(--candidate-keyed-row);
+  right: 0;
+  left: 0;
+  height: var(--candidate-item);
+  background: var(--hairline);
+}
+
 #candidates[data-vertical] li + li {
   margin-top: 1px;
+}
+
+#candidates[data-grid][data-inline] li {
+  grid-template: auto / auto auto auto;
+  justify-content: start;
 }
 
 #candidates[data-vertical] li + li::after {
@@ -582,22 +658,22 @@ summary:focus-visible {
   background: var(--hairline);
 }
 
-#candidates[data-vertical] li .index {
+#candidates[data-inline] li .index {
   grid-area: auto / 1;
 }
 
-#candidates[data-vertical] li .text {
+#candidates[data-inline] li .text {
   grid-area: auto / 2;
   justify-self: start;
 }
 
-#candidates[data-vertical] li .annotation {
+#candidates[data-inline] li .annotation {
   grid-area: auto / 3;
   justify-self: start;
   margin-left: var(--candidate-annotation-gap);
 }
 
-#candidates[data-vertical] li[data-literal] .text {
+#candidates[data-inline] li[data-literal] .text {
   grid-column: 1 / -1;
   justify-self: center;
 }
@@ -656,9 +732,17 @@ summary:focus-visible {
   opacity: 0.4;
 }
 
+#page-arrows button[hidden] {
+  display: none;
+}
+
 #page-arrows svg {
   width: calc(var(--candidate-size) * 0.625);
   height: calc(var(--candidate-size) * 0.625);
+}
+
+#unfold[data-column] svg {
+  rotate: -90deg;
 }
 
 #notice {

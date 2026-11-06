@@ -205,6 +205,20 @@ Around the textarea the page draws Copy and Clear only: no mode control, no stat
 
 Copy follows the project's plain-prose rules, and stays neutral between romanization systems.
 
+### Candidate window width source
+
+`ExpandableListModel` packs from widths, and everything a key reads comes out of that packing: which cell a slot key names, whether there is more to unfold, where an arrow lands. The labels of the same key read it too (`session/table.rs`), so the model must exist before the reply, and the page measures during the key. The session calls a `ListLayout` from `present_table`, which calls the page through one synchronous import.
+
+Measured 2026-11-07 on an Apple M4, 200 real cells:
+
+| Ruler | Chromium | Chromium, CPU throttled 6× | Firefox | WebKit |
+|---|---|---|---|---|
+| Canvas `measureText`, p50 / max | 0.1 / 6.7 ms | 0.6 / 2.5 ms | <1 / 7 ms | <1 / 8 ms |
+| Hidden DOM ruler, p50 / p95 / max | 1.2 / 2.1 / 4.6 ms | 6.9 / 12.8 / 25.4 ms | 2 / 3 / 20 ms | 2 / 4 / 61 ms |
+| Canvas against what is drawn | ≤0.01 px | same | 0 | up to 2.76 px short under Iansui, 384 of 1,474 strings after `ceil` |
+
+So the hidden DOM ruler: what it reads is what is drawn, and only the two expandable layouts pay for it. Loading a font moves no width (Hanji is 1 em in every face, Latin falls to the system font by `unicode-range`), so nothing listens for it; the exception is WebKit under Iansui, where the next key measures again. The window's width is read at each list, so a resize with a list open takes effect at the next key.
+
 ## Behaviour against the desktops
 
 Same as desktop, because it is the same code: the key table, continuous input, candidates and paging, full-width punctuation, auto-space, dictionary toggles, Hanji and romanization output.
@@ -220,7 +234,7 @@ Named divergences (`cross-platform-alignment.md` §3), all intentional unless ma
 | Bare Hanji/romanization key in English mode | Types a backtick. Windows still fires it, because its global match runs above the English gate (`session.rs:168-183`, `:204`) | English mode means the key is the document's, which is what the Windows comment says too |
 | Candidate click | Selects, never commits, as on Linux and macOS (`session/key.rs` `click_from_panel`) | Same code |
 | Keyboard Layout setting | No row | `event.key` already follows the OS layout |
-| Candidate window | macOS Tahoe's look from `CandidateMetrics.swift`, unrounded lengths. The composition sits in the panel's first row; a column pages by nine rather than scrolling with a half-row peek, so the key labels stay the session's; a row wraps rather than paging by width; the highlight is `--accent`, not the system accent | A textarea has no inline marked text; `LookupSelection` owns paging. Horizontal Expandable and Vertical Expandable are pending |
+| Candidate window | macOS Tahoe's look from `CandidateMetrics.swift`, unrounded lengths. The composition sits in the panel's first row; a column pages by nine rather than scrolling with a half-row peek, so the key labels stay the session's; a row wraps rather than paging by width; the highlight is `--accent`, not the system accent; the expandable grid has no scrollbar | A textarea has no inline marked text; `LookupSelection` owns paging of the two paged layouts, `ExpandableListModel` the two expandable ones, as on Windows |
 | Panic | Trap, then a new instance | No unwinding on this target |
 | Learning, Custom Dictionary | **Pending** until Phase 8 | § Decisions D5 |
 

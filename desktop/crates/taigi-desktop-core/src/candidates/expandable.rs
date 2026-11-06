@@ -353,6 +353,10 @@ impl ExpandableListModel {
         self.column_width * Self::EXPANDED_COLUMN_COUNT as f32
     }
 
+    pub fn item_height(&self) -> f32 {
+        self.item_height
+    }
+
     pub fn row_height(&self) -> f32 {
         self.item_height + Self::SEPARATOR_HEIGHT
     }

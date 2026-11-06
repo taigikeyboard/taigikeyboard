@@ -11,12 +11,13 @@ use taigi_desktop_core::platform::DesktopPlatform;
 use taigi_desktop_core::runtime::{DesktopRuntime, RuntimeParts};
 use taigi_desktop_core::session::{
     click_from_panel, commit_composition, mode_label, navigate_from_panel, process_key,
-    toggle_language_mode, tps_keyboard_press, Emit, EngineState,
+    toggle_language_mode, tps_keyboard_press, Emit, EngineState, ListSelection,
 };
 
 use crate::key::{shift_index, BrowserKey, SHIFT_SCAN_CODES};
+use crate::layout::{PageListLayout, TextRuler};
 use crate::page_settings::PageSettings;
-use crate::reply::{wire_emit, ModeText, Reply};
+use crate::reply::{wire_emit, wire_layout, ModeText, Reply};
 
 const CONTEXT: ContextToken = ContextToken(1);
 /// A stamp for the log only, until a page ships dictionaries of a version.
@@ -39,6 +40,7 @@ impl WebSession {
         platform: DesktopPlatform,
         locale: String,
         clock: Arc<dyn Clock>,
+        ruler: Arc<dyn TextRuler>,
     ) -> Result<Self, serde_json::Error> {
         let settings = PageSettings::from_json(settings_json)?;
         let runtime = DesktopRuntime::new(RuntimeParts {
@@ -60,6 +62,7 @@ impl WebSession {
             state: EngineState {
                 // The page can reach the character before the caret.
                 can_delete_surrounding: true,
+                list_layout: Some(Arc::new(PageListLayout::new(ruler))),
                 ..EngineState::default()
             },
             shift_tap: ShiftTapTracker::default(),
@@ -124,6 +127,12 @@ impl WebSession {
         self.reply(true, &emits, None)
     }
 
+    pub(crate) fn viewport_scrolled(&mut self, offset: f32) {
+        if let Some(model) = self.selection_mut().expandable_mut() {
+            model.on_viewport_scrolled(offset);
+        }
+    }
+
     pub(crate) fn commit_composition(&mut self) -> String {
         let emits = commit_composition(&self.runtime, CONTEXT, &mut self.state);
         self.reply(true, &emits, None)
@@ -154,6 +163,21 @@ impl WebSession {
 
     pub(crate) fn set_settings(&self, json: &str) -> Result<(), serde_json::Error> {
         self.settings.replace_from_json(json)
+    }
+
+    /// The selection over the list in view.
+    fn selection(&self) -> &ListSelection {
+        match &self.state.symbol_picker {
+            Some(picker) => &picker.selection,
+            None => &self.state.selection,
+        }
+    }
+
+    fn selection_mut(&mut self) -> &mut ListSelection {
+        match &mut self.state.symbol_picker {
+            Some(picker) => &mut picker.selection,
+            None => &mut self.state.selection,
+        }
     }
 
     /// The indicator as things stand.
@@ -202,9 +226,26 @@ impl WebSession {
             symbol: self.mode_symbol(),
             label,
         };
+        // One reply can carry two tables (a picker going down, then the list),
+        // and the model belongs to the one left on screen. The Telex guide
+        // has no highlight and no model.
+        let laid_out = emits
+            .iter()
+            .rposition(|emit| matches!(emit, Emit::LookupTable(table) if table.cursor_visible));
         let reply = Reply {
             handled,
-            emits: emits.iter().map(|emit| wire_emit(emit, &mode)).collect(),
+            emits: emits
+                .iter()
+                .enumerate()
+                .map(|(index, emit)| {
+                    let layout = if laid_out == Some(index) {
+                        wire_layout(self.selection())
+                    } else {
+                        None
+                    };
+                    wire_emit(emit, &mode, layout)
+                })
+                .collect(),
             settings: self.settings.take_unsent(),
         };
         // Strings and numbers only: this cannot fail.
@@ -223,6 +264,8 @@ mod tests {
     use taigi_desktop_core::settings::keys;
     use taigi_desktop_core::settings::{InputMode, SettingsProvider};
 
+    use crate::layout::Measured;
+
     /// A clock the test moves: the tap window is what is under test.
     #[derive(Default)]
     struct TestClock(AtomicI64);
@@ -230,6 +273,16 @@ mod tests {
     impl Clock for TestClock {
         fn now_ms(&self) -> i64 {
             self.0.load(Ordering::Relaxed)
+        }
+    }
+
+    /// The default layout never measures.
+    #[derive(Debug)]
+    struct NoRuler;
+
+    impl TextRuler for NoRuler {
+        fn measure(&self, _runs: &[(&str, f32)]) -> Option<Measured> {
+            None
         }
     }
 
@@ -267,8 +320,14 @@ mod tests {
         let turn = ENGINE
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
-        let session =
-            WebSession::new("{}", DesktopPlatform::Linux, "en".to_owned(), clock).unwrap();
+        let session = WebSession::new(
+            "{}",
+            DesktopPlatform::Linux,
+            "en".to_owned(),
+            clock,
+            Arc::new(NoRuler),
+        )
+        .unwrap();
         Fixture {
             session,
             _turn: turn,
@@ -578,6 +637,9 @@ mod tests {
     #[test]
     fn a_malformed_document_is_refused_at_the_start() {
         let clock: Arc<TestClock> = Arc::default();
-        assert!(WebSession::new("{", DesktopPlatform::Linux, "en".to_owned(), clock).is_err());
+        let ruler = Arc::new(NoRuler);
+        assert!(
+            WebSession::new("{", DesktopPlatform::Linux, "en".to_owned(), clock, ruler).is_err()
+        );
     }
 }

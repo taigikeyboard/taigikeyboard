@@ -12,6 +12,7 @@
 #[cfg(target_family = "wasm")]
 mod bindings;
 mod key;
+mod layout;
 mod page_settings;
 mod reply;
 mod session;

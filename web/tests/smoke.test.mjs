@@ -142,3 +142,40 @@ test("a switch that writes hands the settings back", () => {
   assert.match(press("c", "KeyC", chord).settings, /poj/);
   press("c", "KeyC", chord);
 });
+
+// The list `body` typed "ti" gets, under Horizontal Expandable.
+function underExpandable(body) {
+  session.setSettings(
+    JSON.stringify({ values: { candidateLayout: "expandable" } }),
+  );
+  try {
+    body(lastOf({ emits: type("ti").flatMap((r) => r.emits) }, "lookupTable"));
+    cancel();
+  } finally {
+    session.setSettings("{}");
+  }
+}
+
+test("an expandable layout measures through the page and keys go by it", () => {
+  // trace: 1 em for a character, the page's width is 600: the model's row
+  // holds fewer cells than the list, so there is more to unfold.
+  globalThis.taigiMeasureCells = (runs) =>
+    Float32Array.of(
+      600,
+      ...JSON.parse(runs).map(([text, size]) => [...text].length * size),
+    );
+  underExpandable((table) => {
+    assert.equal(table.layout.isExpanded, false);
+    assert.equal(table.layout.hasOverflow, true);
+    assert.ok(table.layout.collapsed.length < table.cells.length);
+    const down = press("ArrowDown", "ArrowDown");
+    assert.equal(lastOf(down, "lookupTable").layout.isExpanded, true);
+  });
+});
+
+test("a measure that throws leaves the list paged, the session alive", () => {
+  globalThis.taigiMeasureCells = () => {
+    throw new Error("no ruler");
+  };
+  underExpandable((table) => assert.equal(table.layout, undefined));
+});
