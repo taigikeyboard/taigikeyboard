@@ -11,13 +11,15 @@ Rules for the web version (`web/`: the `taigi-web` crate compiled to `wasm32-unk
 
 ## Rust
 
-- No `#[cfg(target_family = "wasm")]` outside `engine/mmap-host` and `engine/lexicon/src/paths.rs`. A difference the browser needs is a value the shell passes in (`RuntimeParts`), as the clock is.
+- No `#[cfg(target_family = "wasm")]` outside `engine/mmap-host`, `engine/lexicon/src/paths.rs` and the `mod bindings` line of `taigi-web`'s `lib.rs`. A difference the browser needs is a value the shell passes in (`RuntimeParts`), as the clock is.
+- `bindings.rs` is the only module that names the browser: `wasm-bindgen` imports and `JsError` panic off this target, and `mmap_host::register` exists only on it. Everything else in `taigi-web` is plain Rust with native tests (`make -C web test`).
 - No hand-written `unsafe`. `unsafe_code = "forbid"` holds with `#[wasm_bindgen]`.
 - Anything on the key path that calls `SystemTime::now`, `Instant::now`, `std::fs` or `std::thread` compiles here and fails at run time. `cargo check` for this target proves nothing about those; the smoke test does.
 - This target has no unwinding: a panic traps the instance (`rust-ffi-safety.md` §1.2).
 
 ## Tests
 
-- The smoke test (`web/tests/`) drives the real engine and real dictionaries through the bindings the page loads, with `wasm-bindgen --target web` + `initSync`.
+- Native tests cover the session and the key translation, with no lexicon. The engine is one per process, so a test that asserts what it composed takes the `ENGINE` turn and leaves it idle (`taigi-web` `session.rs`, `desktop/crates/taigi-desktop-core/tests/session_language_mode.rs`).
+- The smoke test (`web/tests/`) drives the real engine and real dictionaries through the bindings the page loads, one key at a time, with `wasm-bindgen --target web` + `initSync`.
 - Expected values come from `engine/composing/tests/` fixtures, whose traces are recorded there. Never from `corpus/`, which feeds no test (`corpus/README.md`).
 - Passing in Node says nothing about a browser, a low-end machine or DOM cost.

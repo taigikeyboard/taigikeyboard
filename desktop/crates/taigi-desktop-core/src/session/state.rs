@@ -2,7 +2,7 @@
 
 use super::{Emit, LookupSelection, PAGE_SIZE};
 use crate::composing::CandidateSource;
-use crate::keys::ShortcutAction;
+use crate::keys::{LanguageMode, ShortcutAction};
 
 /// The symbol picker while it is up: the symbols in pick order (recents
 /// first) and the highlight over them (Linux roadmap L4: a lookup table, not
@@ -40,6 +40,10 @@ pub struct EngineState {
     pub telex_guide_shown: bool,
     /// The symbol picker is up; every key is its first.
     pub symbol_picker: Option<SymbolPicker>,
+    /// Taigi or English. A shell opts in by calling
+    /// [`super::toggle_language_mode`]; Linux never does, its desktop switches
+    /// engines itself (`taigi_linux_core::chrome::mode_indicator`).
+    pub language_mode: LanguageMode,
 }
 
 impl Default for EngineState {
@@ -54,6 +58,7 @@ impl Default for EngineState {
             latched_chord: None,
             telex_guide_shown: false,
             symbol_picker: None,
+            language_mode: LanguageMode::default(),
         }
     }
 }

@@ -133,7 +133,9 @@ Commit uses `document.execCommand("insertText")`, which MDN marks deprecated and
 | `pointerdown` elsewhere on the page | Same commit. `pointerdown` runs before `blur` |
 | `mousedown` on the candidate panel, Copy, Clear | `preventDefault`, so focus stays. Copy and Clear commit first |
 | `blur` with no pointer involved (another window or tab) | Nothing is written. The composition stays on screen and continues on return |
-| Caret moved or text changed by anything but this page (arrows, mouse, paste, undo) | `session.caretMoved()` |
+| Caret moved or text changed by anything but this page (arrows, mouse, paste, undo) | `session.caretMoved()`. The page's own `execCommand` also fires `selectionchange`, so compare against the caret that write left, or every swap is disarmed |
+| Window loses the keyboard | `session.focusLost()`: a key held across that is released elsewhere |
+| Any `pointerdown` on the page | Also `session.caretMoved()`, so a Shift-click on a control with no caret is not a tap |
 | Textarea `scroll` | Re-anchor the panel at the caret |
 
 The `caretMoved` row prevents real text loss. The auto-space swap deletes the character before the caret without looking at it (`Emit::DeleteSurrounding { offset: -1, count: 1 }`, `session/executor.rs:97-100`). Its armed state clears only on the next key or at session end, so click elsewhere, type `.`, and a real character goes.
@@ -151,9 +153,11 @@ Different from McBopomofoWeb, which resets on `Alt` (`index.js:1278-1281`): **on
 
 `KeyEventSnapshot` (`keys/snapshot.rs:88`) is filled in `taigi-web` from `event.key`, `event.code` and the modifiers:
 
-- `characters_ignoring_modifiers` has no browser equivalent, and chord matching reads it. Derive it from `event.code`.
-- `key_code` is read by `chord.rs:72,179` and `tps_layout.rs:100` for the keypad and shifted digits. Map `event.code` into the code space those read.
-- Phase 3 tests each mapped entry, and lists which default chords survive the browser. Ctrl+T, Ctrl+W and Ctrl+N never reach a page.
+- `characters_ignoring_modifiers` is `event.key`, so a Dvorak key reads as what it types. Only where Alt rewrote the key (non-ASCII or `Dead`) does `event.code` decide, and that differs per platform. On a Mac the position gives the character back, because Option reports `ß` for `s`. Elsewhere the rewrite is AltGr text and Control and Alt are dropped, so Polish AltGr+C types `ć` rather than firing Ctrl+Alt+C. Two costs: under a non-Latin layout the Ctrl+Alt chords do not fire off the Mac, and on a Mac the Control+Option chords read by US position, so they miss on Dvorak.
+- `key_code` is read by `chord.rs:72,179` and `tps_layout.rs:100` for the keypad and shifted digits. `event.code` maps into the code space those read. `Semicolon` carries a code only when the key types `;` or `:`, because Dvorak's `s` sits there.
+- `Meta` is the core's `win`, so the classifier hands the chord to the browser and commits a running composition first, as desktop does.
+- A bare `Dead` key is a named key, so it ends a composition before the browser starts its own.
+- `web/crates/taigi-web/src/key.rs` tests each mapped entry. Every default chord is Ctrl+Alt or the bare backtick, none of them in the set a page never receives (Ctrl+T, Ctrl+W, Ctrl+N). Phase 4 proves that in real browsers.
 
 ## UI (from kautian-mirror)
 
@@ -201,6 +205,7 @@ Named divergences (`cross-platform-alignment.md` §3), all intentional unless ma
 | Target of typing | The page's textarea only | A tab cannot reach other apps |
 | Global shortcuts | The Ctrl+Alt set of Windows and Linux on every OS, minus what the browser keeps. On a Mac this is not the app's ⌃⌘ set, whose rows live in Swift (`keys/shortcut_actions.rs:219`) | Browser-reserved chords; one set of defaults in Rust |
 | English mode by Shift tap | Yes, as on Windows and macOS. **Linux has none** (`linux/crates/taigi-linux-core/src/chrome.rs` `mode_indicator`), so the gate is opt-in per shell | A page has no OS input-method switcher |
+| Bare Hanji/romanization key in English mode | Types a backtick. Windows still fires it, because its global match runs above the English gate (`session.rs:168-183`, `:204`) | English mode means the key is the document's, which is what the Windows comment says too |
 | Candidate click | Selects, never commits, as on Linux and macOS (`session/key.rs` `click_from_panel`) | Same code |
 | Keyboard Layout setting | No row | `event.key` already follows the OS layout |
 | Panic | Trap, then a new instance | No unwinding on this target |
@@ -258,22 +263,27 @@ Windows and macOS are untouched. Two PRs of about 650 and 800 moved lines (`Emit
 The browser-facing API, no hand-written `unsafe`:
 
 ```text
-new Session(settingsJson, platform)      // "macos" | "windows" | "linux"
-session.addDictionary(name, bytes)       // one call per file
-session.install() -> { records }
-session.keyDown(keyJson) -> { handled, emits }
-session.keyUp(keyJson)   -> { handled, emits }
-session.clickCandidate(position) -> { emits }   // click_from_panel
-session.commitComposition() -> { emits }        // § Text surface
-session.caretMoved()                            // disarms the auto-space swap
+new Session(settingsJson, platform, locale)  // "macos" | "windows" | "linux", navigator.language
+session.addDictionary(name, bytes)           // one call per file
+session.install() -> records
+session.keyDown(keyJson) -> reply            // reply: JSON { handled, emits, settings? }
+session.keyUp(keyJson)   -> reply
+session.clickCandidate(position) -> reply    // click_from_panel
+session.commitComposition() -> reply         // § Text surface
+session.caretMoved()                         // disarms the auto-space swap, spends a Shift press
+session.focusLost()
 session.setSettings(settingsJson)
+session.modeSymbol()                         // the status control at load and after setSettings
 ```
 
-- Two shared additions to the `session` module. `commit_composition`: Linux has no twin, because the daemon commits its own preedit and `end_session` cancels (`session/key.rs`); macOS's seam has one (`macos/crates/taigi-macos-ffi/src/session.rs:3`). A `LanguageMode` gate for English mode, off for Linux.
-- `key.no_lexicon` warns on every key (`session/key.rs` `process_key`). On the web that is normal during download, so log it once.
-- `SettingsProvider` from a JSON snapshot, the `macos/crates/taigi-macos-ffi/src/settings.rs:121` precedent, so settings keep desktop's key spellings.
-- `SettingsStore` over the same snapshot; chords that change settings return the new document in the reply so the page persists it.
-- Tests run natively, as `taigi-desktop-core`'s do. Key translation has a table test per `event.code`.
+`keyJson` is `{ key, code, shift, ctrl, alt, meta, repeat }`. `locale` is there because the Telex guide and the mode labels read the system language. `Preedit.caret` counts Unicode scalars, as `Emit` does, so the page uses `Array.from(text)`. `ModeChanged` carries the indicator symbol and `AnnounceMode` its label: `reply.rs` is a wire type, not `Serialize` on `Emit`.
+
+- Three shared additions to the `session` module. `commit_composition`: Linux has no twin, because the daemon commits its own preedit and `end_session` cancels (`session/key.rs`); macOS's seam has one (`macos/crates/taigi-macos-ffi/src/session.rs:3`). `toggle_language_mode` plus the English gate in `process_key`: `EngineState.language_mode` stays Taigi on Linux, which never calls it. `mode_label`, moved from Linux's `chrome.rs`.
+- A commit that leaves the composition standing skips the switch whole, the Windows `commit_refused` guard, because the session reset would drop text still on screen.
+- `key.no_lexicon` needs no change: no logger is installed on the web, so the line goes nowhere.
+- `SettingsProvider` and `SettingsStore` over one JSON document the page holds (`page_settings.rs`), so settings keep desktop's key spellings. A chord that writes returns the document in `settings`, once, for the page to persist. Unlike macOS's whitelisted snapshot, the whole document passes: Windows and Linux read it that way, and the page owns it.
+- Tests run natively, as `taigi-desktop-core`'s do. Key translation has a table test per `event.code`. `make -C web test` joins the gate.
+- `topCandidate` is gone. The smoke test types through `keyDown`.
 
 ### Phase 4 — Plain page, end to end
 
