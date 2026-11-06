@@ -26,3 +26,26 @@ use crate::candidates::HorizontalPageLayout;
 
 /// The slot keys a page holds, the same on every desktop.
 pub const PAGE_SIZE: usize = HorizontalPageLayout::PAGE_SIZE;
+
+#[cfg(test)]
+pub(crate) mod test_support {
+    use crate::composing::SystemClock;
+    use crate::platform::test_support::TEST_PLATFORM;
+    use crate::runtime::{DesktopRuntime, RuntimeParts};
+    use crate::settings::{SettingsDocument, StaticSettingsProvider};
+    use std::sync::Arc;
+
+    /// A runtime over `document` with no store, no lexicon and no learning.
+    pub(crate) fn runtime(document: SettingsDocument) -> DesktopRuntime {
+        DesktopRuntime::new(RuntimeParts {
+            settings: Arc::new(StaticSettingsProvider::new(document)),
+            settings_store: None,
+            data_directory: None,
+            dictionaries: Box::new(|| None),
+            dictionary_version: 1,
+            system_locale: Box::new(|| "en-US".to_owned()),
+            platform: TEST_PLATFORM,
+            clock: Arc::new(SystemClock),
+        })
+    }
+}

@@ -323,24 +323,8 @@ pub(super) fn pick_symbol(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::composing::SystemClock;
-    use crate::platform::test_support::TEST_PLATFORM;
-    use crate::runtime::RuntimeParts;
-    use crate::settings::{InputMode, StaticSettingsProvider};
-    use std::sync::Arc;
-
-    fn runtime(document: SettingsDocument) -> DesktopRuntime {
-        DesktopRuntime::new(RuntimeParts {
-            settings: Arc::new(StaticSettingsProvider::new(document)),
-            settings_store: None,
-            data_directory: None,
-            dictionaries: Box::new(|| None),
-            dictionary_version: 1,
-            system_locale: Box::new(|| "en-US".to_owned()),
-            platform: TEST_PLATFORM,
-            clock: Arc::new(SystemClock),
-        })
-    }
+    use crate::session::test_support::runtime;
+    use crate::settings::InputMode;
 
     fn fire(document: SettingsDocument, action: ShortcutAction) -> Vec<Emit> {
         perform_global(

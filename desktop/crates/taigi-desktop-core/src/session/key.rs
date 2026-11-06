@@ -463,25 +463,12 @@ impl ComposingEffectExecutor for NullRecorder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::composing::SystemClock;
     use crate::keys::KeyModifiers;
-    use crate::platform::test_support::TEST_PLATFORM;
-    use crate::runtime::RuntimeParts;
+    use crate::session::test_support;
     use crate::session::PAGE_SIZE;
-    use crate::settings::StaticSettingsProvider;
-    use std::sync::Arc;
 
     fn runtime() -> DesktopRuntime {
-        DesktopRuntime::new(RuntimeParts {
-            settings: Arc::new(StaticSettingsProvider::new(SettingsDocument::default())),
-            settings_store: None,
-            data_directory: None,
-            dictionaries: Box::new(|| None),
-            dictionary_version: 1,
-            system_locale: Box::new(|| "en-US".to_owned()),
-            platform: TEST_PLATFORM,
-            clock: Arc::new(SystemClock),
-        })
+        test_support::runtime(SettingsDocument::default())
     }
 
     fn letter(character: &str) -> KeyEventSnapshot {

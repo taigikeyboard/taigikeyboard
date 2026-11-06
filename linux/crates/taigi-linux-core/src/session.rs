@@ -86,18 +86,14 @@ pub(crate) fn run_launches(emits: &mut Vec<Emit>) {
     );
 }
 
-fn start_launches(
-    emits: &mut Vec<Emit>,
-    mut open_settings: impl FnMut(),
-    mut toggle_tps_keyboard: impl FnMut(),
-) {
+fn start_launches(emits: &mut Vec<Emit>, mut open: impl FnMut(), mut toggle: impl FnMut()) {
     emits.retain(|emit| match emit {
         Emit::OpenSettings => {
-            open_settings();
+            open();
             false
         }
         Emit::ToggleTpsKeyboard => {
-            toggle_tps_keyboard();
+            toggle();
             false
         }
         _ => true,
