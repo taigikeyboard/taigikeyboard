@@ -1,0 +1,14 @@
+{
+  "name": "台語齒盤",
+  "short_name": "台語齒盤",
+  "lang": "nan-Hant",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f5f7",
+  "theme_color": "#f5f5f7",
+  "icons": [
+    { "src": "icons/196.png", "sizes": "196x196", "type": "image/png" },
+    { "src": "icons/512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

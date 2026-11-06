@@ -182,7 +182,7 @@ test("a stored document the session refuses leaves the defaults", async ({
 });
 
 test("a failed download leaves romanization working", async ({ page }) => {
-  await page.route("**/dictionaries/dictionary.bin", (route) =>
+  await page.route("**/dictionaries/dictionary.bin.*", (route) =>
     route.fulfill({ status: 404 }),
   );
   const editor = await open(page, { ready: false });

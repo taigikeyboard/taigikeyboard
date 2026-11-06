@@ -194,24 +194,29 @@ test("a document with no revision takes a form change", async ({ page }) => {
   await expect(mode(page)).toHaveText("方");
 });
 
-test("a refused document is not painted from again", async ({ page }) => {
-  await page.addInitScript(() => {
-    if (!sessionStorage.getItem("seeded")) {
-      sessionStorage.setItem("seeded", "1");
-      localStorage.setItem(
-        "taigi.settings",
-        JSON.stringify({
-          revision: "x",
-          values: { candidateAppearanceMode: "dark" },
-        }),
-      );
-    }
+test.describe(() => {
+  // The reload aborts `ime.js`, and a page under a worker bypasses `page.route`.
+  test.use({ serviceWorkers: "block" });
+
+  test("a refused document is not painted from again", async ({ page }) => {
+    await page.addInitScript(() => {
+      if (!sessionStorage.getItem("seeded")) {
+        sessionStorage.setItem("seeded", "1");
+        localStorage.setItem(
+          "taigi.settings",
+          JSON.stringify({
+            revision: "x",
+            values: { candidateAppearanceMode: "dark" },
+          }),
+        );
+      }
+    });
+    await open(page);
+    await expect.poll(() => theme(page)).toBe("auto");
+    await page.route("**/ime.js", (route) => route.abort());
+    await page.reload();
+    expect(await theme(page)).toBeUndefined();
   });
-  await open(page);
-  await expect.poll(() => theme(page)).toBe("auto");
-  await page.route("**/ime.js", (route) => route.abort());
-  await page.reload();
-  expect(await theme(page)).toBeUndefined();
 });
 
 test("a state that appears shifts nothing", async ({ page }) => {

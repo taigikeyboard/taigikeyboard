@@ -1468,12 +1468,13 @@
       }
     },
     "updateRetryAction": {
-      "comment": "Settings General pane: tries a failed update download again.",
+      "comment": "Settings General pane: tries a failed update download again. Web: tries the dictionary download again.",
       "scope": {
         "platforms": [
           "macos",
           "windows",
-          "linux"
+          "linux",
+          "web"
         ],
         "surfaces": [
           "host"
