@@ -214,7 +214,7 @@ Each phase is one PR of 200–500 LOC unless noted. No phase is assigned to a re
 |---|---|---|---|
 | 0 | This roadmap + project memory | admin lane | Done |
 | 1 | Engine runs on wasm32 | `make web-check`, native suites unchanged | Done |
-| 2 | Shared session module | behaviour freeze, `make linux-check` | Pending |
+| 2 | Shared session module | behaviour freeze, `make linux-check` | Done |
 | 3 | `taigi-web` crate | native + Node tests | Pending |
 | 4 | Plain page, end to end | Playwright in 3 browser engines | Pending |
 | 5 | Look, then i18n + fonts, then panels + a11y (3 PRs) | Playwright, i18n gates | Pending |
