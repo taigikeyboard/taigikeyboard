@@ -1,10 +1,13 @@
 //! Punctuation classification for the auto-space "smart punctuation" swap —
-//! the one copy every platform asks (`IsAttachingPunctuation`, behavioural
-//! invariant §23 `INVARIANT_AUTO_SPACE_PUNCTUATION_SWAP`).
+//! the one copy every platform asks (`IsAttachingPunctuation`), plus the
+//! joiner check iOS and Android ask (`IsJoinerPunctuation`). Behavioural
+//! invariant §23 `INVARIANT_AUTO_SPACE_PUNCTUATION_SWAP`.
 //!
 //! When auto-space is active, every committed word is followed by a trailing
 //! space. Typing *attaching* punctuation next must move that space to AFTER
 //! the punctuation (`guá ` + `?` → `guá? `), not leave it before (`guá ?`).
+//! A *joiner* binds the next syllable to the word, so it takes the space's
+//! place and leaves none (`hōo ` + `·` → `hōo·`).
 
 /// Sentence-end + clause separators + CLOSING brackets/quotes. OPENING
 /// brackets/quotes (`(（[「『`) are deliberately excluded — they need a
@@ -23,6 +26,12 @@ pub(crate) fn is_attaching_punctuation(text: &str) -> bool {
         (Some(c), None) => ATTACHING.contains(&c),
         _ => false,
     }
+}
+
+/// True when `text` is the khinsiann dot, the one joiner: it stands between
+/// two syllables of a phrase, so it never takes a space on either side.
+pub(crate) fn is_joiner_punctuation(text: &str) -> bool {
+    text == crate::tps::KHINSIANN_DOT
 }
 
 #[cfg(test)]
@@ -54,6 +63,18 @@ mod tests {
         // every old platform copy answered false too.
         for text in ["", "a", "台", " ", "?!", "? ", "guá?", "?\u{0301}"] {
             assert!(!is_attaching_punctuation(text), "{text:?}");
+        }
+    }
+
+    #[test]
+    fn the_khinsiann_dot_is_the_only_joiner() {
+        // trace: `tps::KHINSIANN_DOT` = U+00B7. U+02D9 `˙` is the TPS tone 8
+        // mark and `-` composes, neither is a joiner; the dot is not in
+        // `ATTACHING`, so a character is never both.
+        assert!(is_joiner_punctuation("\u{00b7}"));
+        assert!(!is_attaching_punctuation("\u{00b7}"));
+        for text in ["", "-", "\u{02d9}", "?", "\u{00b7}\u{00b7}", " \u{00b7}"] {
+            assert!(!is_joiner_punctuation(text), "{text:?}");
         }
     }
 }

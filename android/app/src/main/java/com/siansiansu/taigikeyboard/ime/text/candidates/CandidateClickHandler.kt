@@ -11,6 +11,7 @@ import com.siansiansu.taigikeyboard.ime.core.logging.TraceContext
 import com.siansiansu.taigikeyboard.ime.core.logging.TraceId
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
+import com.siansiansu.taigikeyboard.ime.settings.SyllableSeparator
 import com.siansiansu.taigikeyboard.ime.text.composing.Usage
 import com.siansiansu.taigikeyboard.ime.text.composing.UsageRecorder
 import com.siansiansu.taigikeyboard.ime.text.nextword.NextWordController
@@ -381,3 +382,17 @@ internal fun shouldAppendAutoSpace(
     wroteRomanization: Boolean,
     committedText: String,
 ): Boolean = isAutoSpaceEnabled && wroteRomanization && !committedText.endsWith("-")
+
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Actions/ActionHandler+Suggestions.swift
+// `joinerReplacesAutoSpace`. Drift causes silent divergence.
+
+/**
+ * Whether a typed joiner takes the place of the auto space before it. Not in
+ * English, where the dot is plain punctuation, and not under the Space
+ * separator, where candidates render `hōo ·guá` with that very space
+ * (`AppConfig::rendered_syllable_joiner`).
+ */
+internal fun joinerReplacesAutoSpace(
+    isEnglishMode: Boolean,
+    syllableSeparator: SyllableSeparator,
+): Boolean = !isEnglishMode && syllableSeparator != SyllableSeparator.SPACE

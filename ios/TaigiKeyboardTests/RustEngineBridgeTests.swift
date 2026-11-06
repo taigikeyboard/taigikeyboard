@@ -66,6 +66,12 @@ final class RustEngineBridgeTests: XCTestCase {
         XCTAssertFalse(RustEngineBridge.isAttachingPunctuation("?!"))
     }
 
+    func test_op_isJoinerPunctuation_onlyTheKhinsiannDot() {
+        XCTAssertTrue(RustEngineBridge.isJoinerPunctuation("\u{00B7}"))
+        XCTAssertFalse(RustEngineBridge.isJoinerPunctuation("?"))
+        XCTAssertFalse(RustEngineBridge.isJoinerPunctuation("-"))
+    }
+
     // MARK: - T1: panic at FFI
 
     /// The FFI seam must NEVER unwind across the boundary: a valid `Response`

@@ -132,6 +132,19 @@ extension ActionHandler {
         isAutoSpaceEnabled && wroteRomanization && !documentText.hasSuffix("-")
     }
 
+    /// Whether a typed joiner takes the place of the auto space before it. Not
+    /// in English, where the dot is plain punctuation, and not under the Space
+    /// separator, where candidates render `hōo ·guá` with that very space
+    /// (`AppConfig::rendered_syllable_joiner`).
+    // CROSS-PLATFORM INVARIANT — mirrors android/.../candidates/CandidateClickHandler.kt
+    // `joinerReplacesAutoSpace`. Drift causes silent divergence.
+    static func joinerReplacesAutoSpace(
+        isEnglishMode: Bool,
+        syllableSeparator: SyllableSeparator,
+    ) -> Bool {
+        !isEnglishMode && syllableSeparator != .space
+    }
+
     /// Inserts the trailing auto space when this commit earned it, and arms
     /// the punctuation swap on it — the ONE insertion site, so the space and
     /// the knowledge that it is ours can never come apart.

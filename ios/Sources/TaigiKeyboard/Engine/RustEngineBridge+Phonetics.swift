@@ -84,6 +84,15 @@ public extension RustEngineBridge {
         return boolDispatch(method: .isAttachingPunctuation(payload), op: "isAttachingPunctuation")
     }
 
+    /// Whether `text` is the khinsiann dot, which takes the place of an auto
+    /// space (`hōo ` + `·` → `hōo·`) — the engine's answer. False when the
+    /// engine fails: the space stays where it is.
+    static func isJoinerPunctuation(_ text: String) -> Bool {
+        var payload = Taigi_Engine_IsJoinerPunctuation()
+        payload.text = text
+        return boolDispatch(method: .isJoinerPunctuation(payload), op: "isJoinerPunctuation")
+    }
+
     /// The digit-tone spelling of a TL reading that the web dictionaries
     /// search by (`tāi-tsì` → `tai7-tsi3`) — the engine's fold, the one every
     /// platform asks. The reading as written when the engine fails.

@@ -69,6 +69,16 @@ final class ActionHandlerCommitRulesTests: XCTestCase {
         )
     }
 
+    /// A joiner takes the auto space's place outside English, unless the Space
+    /// separator wants that space (`hōo ·guá`).
+    func test_joinerReplacesAutoSpace_exceptInEnglishAndUnderTheSpaceSeparator() {
+        for separator in [SyllableSeparator.hyphen, .noSeparator] {
+            XCTAssertTrue(ActionHandler.joinerReplacesAutoSpace(isEnglishMode: false, syllableSeparator: separator))
+            XCTAssertFalse(ActionHandler.joinerReplacesAutoSpace(isEnglishMode: true, syllableSeparator: separator))
+        }
+        XCTAssertFalse(ActionHandler.joinerReplacesAutoSpace(isEnglishMode: false, syllableSeparator: .space))
+    }
+
     // MARK: - Helpers
 
     private func markedCell(_ marker: String, text: String) -> AutocompleteSuggestion {

@@ -111,5 +111,16 @@ public interface PhoneticsRequestOrBuilder extends
    */
   com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm getExternalLookupDigitForm();
 
+  /**
+   * <code>.taigi.engine.IsJoinerPunctuation is_joiner_punctuation = 42;</code>
+   * @return Whether the isJoinerPunctuation field is set.
+   */
+  boolean hasIsJoinerPunctuation();
+  /**
+   * <code>.taigi.engine.IsJoinerPunctuation is_joiner_punctuation = 42;</code>
+   * @return The isJoinerPunctuation.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.IsJoinerPunctuation getIsJoinerPunctuation();
+
   public com.siansiansu.taigikeyboard.engine.proto.PhoneticsRequest.MethodCase getMethodCase();
 }

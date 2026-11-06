@@ -140,24 +140,34 @@ extension ActionHandler {
     /// auto-space "smart punctuation" swap: when auto-space is active and the
     /// character just before the cursor is the auto-inserted trailing space,
     /// attaching punctuation deletes that space and re-inserts it AFTER the
-    /// punctuation (`guá ` + `?` → `guá? `, never `guá ?`).
+    /// punctuation (`guá ` + `?` → `guá? `, never `guá ?`); a joiner takes the
+    /// space's place (`hōo ` + `·` → `hōo·`).
     // CROSS-PLATFORM INVARIANT — mirrors Android
     // TextInputKeyHandler.commitNonComposingCharacter. Drift causes silent divergence.
     private func insertNonComposingCharacter(_ char: String) {
+        let isArmed = isAutoSpaceSwapArmed
+        let attaches = isArmed && RustEngineBridge.isAttachingPunctuation(char)
+        let joins = isArmed
+            && Self.joinerReplacesAutoSpace(
+                isEnglishMode: settings.inputMode == .english,
+                syllableSeparator: settings.syllableSeparator,
+            )
+            && RustEngineBridge.isJoinerPunctuation(char)
         let proxy = controllerContext.textDocumentProxy
         // No-selection guard: with an active selection the preceding space is
         // text before the selection, not an auto-space; the punctuation must
         // replace the selection normally (Codex P2).
-        if isAutoSpaceSwapArmed,
-           RustEngineBridge.isAttachingPunctuation(char),
+        if attaches || joins,
            (proxy.selectedText ?? "").isEmpty,
            proxy.documentContextBeforeInput?.last == " "
         {
             hostText.deleteBackward()
-            hostText.insert(char + " ")
+            hostText.insert(attaches ? char + " " : char)
             // Re-armed on the space the swap just wrote, so `?!` chains keep
-            // swapping (`guá? ` + `!` → `guá?! `).
-            armAutoSpaceSwap()
+            // swapping (`guá? ` + `!` → `guá?! `). A joiner wrote no space.
+            if attaches {
+                armAutoSpaceSwap()
+            }
             return
         }
         hostText.insert(char)

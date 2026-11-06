@@ -15,6 +15,7 @@ import android.view.inputmethod.InputMethodManager
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.engine.isAttachingPunctuation
+import com.siansiansu.taigikeyboard.engine.isJoinerPunctuation
 import com.siansiansu.taigikeyboard.engine.isTpsToneMark
 import com.siansiansu.taigikeyboard.engine.transformInputCase
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
@@ -26,6 +27,7 @@ import com.siansiansu.taigikeyboard.ime.text.CandidateUpdateCoordinator
 import com.siansiansu.taigikeyboard.ime.text.CapsStateManager
 import com.siansiansu.taigikeyboard.ime.text.CharacterInputPipeline
 import com.siansiansu.taigikeyboard.ime.text.candidates.appendAutoSpaceIfEarned
+import com.siansiansu.taigikeyboard.ime.text.candidates.joinerReplacesAutoSpace
 import com.siansiansu.taigikeyboard.ime.text.candidates.rawPreeditWritesRomanization
 import com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager
 import com.siansiansu.taigikeyboard.ime.text.composing.clearHostComposingRegion
@@ -595,25 +597,31 @@ internal class TextInputKeyHandler(
      * auto-space "smart punctuation" swap: when auto-space is active and the
      * char before the cursor is the auto-inserted trailing space, attaching
      * punctuation deletes that space and re-inserts it AFTER the punctuation
-     * (`guá ` + `?` → `guá? `, never `guá ?`).
+     * (`guá ` + `?` → `guá? `, never `guá ?`); a joiner takes the space's
+     * place (`hōo ` + `·` → `hōo·`).
      */
     private fun commitNonComposingCharacter(
         ic: InputConnection,
         char: String,
     ) {
+        val isArmed = taigikeyboard.isAutoSpaceSwapArmed
+        val attaches = isArmed && RustEngineBridge.isAttachingPunctuation(char)
+        val joins =
+            isArmed &&
+                joinerReplacesAutoSpace(prefs.inputMode == "english", prefs.syllableSeparator) &&
+                RustEngineBridge.isJoinerPunctuation(char)
         // No-selection guard: with an active selection the preceding space is
         // text before the selection, not an auto-space; the punctuation must
         // replace the selection normally (Codex P2).
-        if (taigikeyboard.isAutoSpaceSwapArmed &&
-            RustEngineBridge.isAttachingPunctuation(char) &&
+        if ((attaches || joins) &&
             ic.getSelectedText(0).isNullOrEmpty() &&
             ic.getTextBeforeCursor(1, 0)?.toString() == " "
         ) {
             ic.deleteSurroundingText(1, 0)
-            ic.commitText("$char ", 1)
+            ic.commitText(if (attaches) "$char " else char, 1)
             // Re-armed on the space the swap just wrote, so `?!` chains keep
-            // swapping (`guá? ` + `!` → `guá?! `).
-            taigikeyboard.armAutoSpaceSwap()
+            // swapping (`guá? ` + `!` → `guá?! `). A joiner wrote no space.
+            if (attaches) taigikeyboard.armAutoSpaceSwap()
             return
         }
         ic.commitText(char, 1)

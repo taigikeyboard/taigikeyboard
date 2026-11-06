@@ -7,6 +7,7 @@ package com.siansiansu.taigikeyboard.engine
 import com.siansiansu.taigikeyboard.engine.proto.BoolResult
 import com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm
 import com.siansiansu.taigikeyboard.engine.proto.IsAttachingPunctuation
+import com.siansiansu.taigikeyboard.engine.proto.IsJoinerPunctuation
 import com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark
 import com.siansiansu.taigikeyboard.engine.proto.PhoneticsRequest
 import com.siansiansu.taigikeyboard.engine.proto.PhoneticsResponse
@@ -76,6 +77,16 @@ fun RustEngineBridge.tpsInputAdjust(
 fun RustEngineBridge.isAttachingPunctuation(text: String): Boolean {
     val payload = IsAttachingPunctuation.newBuilder().setText(text).build()
     return boolDispatch({ it.isAttachingPunctuation = payload }, "isAttachingPunctuation")
+}
+
+/**
+ * Whether [text] is the khinsiann dot, which takes the place of an auto space
+ * (`hōo ` + `·` → `hōo·`) — the engine's answer. False when the engine fails:
+ * the space stays where it is.
+ */
+fun RustEngineBridge.isJoinerPunctuation(text: String): Boolean {
+    val payload = IsJoinerPunctuation.newBuilder().setText(text).build()
+    return boolDispatch({ it.isJoinerPunctuation = payload }, "isJoinerPunctuation")
 }
 
 /**
