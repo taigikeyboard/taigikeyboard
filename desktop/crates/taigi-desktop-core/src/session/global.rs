@@ -10,8 +10,8 @@
 
 use super::key::{commit_for_picker, is_composing};
 use super::{
-    is_vertical_layout, present_table, Emit, EngineState, KeySurface, LookupSelection, Recorder,
-    SymbolPicker, PAGE_SIZE,
+    is_vertical_layout, present_table, Emit, EngineState, KeySurface, ListSelection, Recorder,
+    SymbolPicker,
 };
 use crate::composing::{insert_symbol, represent_list, ContextToken};
 use crate::keys::{ComposingKeyBindings, ShortcutAction};
@@ -212,7 +212,10 @@ fn represent_open_list(
     represent_list(settings, manager, &mut state.candidates, refetch);
     if refetch {
         // A refetched list starts over at its first cell.
-        state.selection = LookupSelection::new(state.candidates.len(), PAGE_SIZE);
+        state.selection = ListSelection::new(state.candidates.len());
+    } else {
+        // The same cells in other scripts: other widths.
+        state.selection.mark_stale();
     }
     // Presented again under new settings, the list may begin with the §34
     // literal where it did not, or the other way round.
@@ -261,7 +264,7 @@ fn toggle_symbol_picker(
     let count = symbols.len();
     state.symbol_picker = Some(SymbolPicker {
         symbols,
-        selection: LookupSelection::new(count, PAGE_SIZE),
+        selection: ListSelection::new(count),
     });
     present_table(runtime, state, settings, bindings, emits);
 }

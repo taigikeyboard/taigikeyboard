@@ -10,6 +10,7 @@
 mod executor;
 mod global;
 mod key;
+mod list_selection;
 mod selection;
 mod state;
 mod table;
@@ -21,6 +22,7 @@ pub use key::{
     begin_session, click_from_panel, commit_composition, end_session, is_composing,
     navigate_from_panel, process_key, toggle_language_mode, tps_keyboard_press,
 };
+pub use list_selection::{ListLayout, ListSelection};
 pub use selection::LookupSelection;
 pub use state::{EngineState, KeyReply, SymbolPicker};
 pub(crate) use table::{is_vertical_layout, present_table};
@@ -32,11 +34,28 @@ pub const PAGE_SIZE: usize = HorizontalPageLayout::PAGE_SIZE;
 
 #[cfg(test)]
 pub(crate) mod test_support {
+    use crate::candidates::{CollapsedLayout, ExpandableGeometryInput, ExpandableListModel};
     use crate::composing::SystemClock;
     use crate::platform::test_support::TEST_PLATFORM;
     use crate::runtime::{DesktopRuntime, RuntimeParts};
     use crate::settings::{SettingsDocument, StaticSettingsProvider};
     use std::sync::Arc;
+
+    /// `count` cells 20 wide. trace: `row_budget(10)` = 90 packs four (80),
+    /// the fifth would pass it: a collapsed row of four.
+    pub(crate) fn row_model(count: usize) -> ExpandableListModel {
+        ExpandableListModel::new(
+            &vec![20.0; count],
+            ExpandableGeometryInput {
+                collapsed: CollapsedLayout::Row,
+                base_width: 10.0,
+                maximum_window_width: 640.0,
+                chrome_width: 20.0,
+                scroller_width: 0.0,
+                item_height: 30.0,
+            },
+        )
+    }
 
     /// A runtime over `document` with no store, no lexicon and no learning.
     pub(crate) fn runtime(document: SettingsDocument) -> DesktopRuntime {

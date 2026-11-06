@@ -1,7 +1,8 @@
 //! The lookup table as the shell draws it: the candidate list, the symbol
 //! picker or the Telex guide, with labels, highlight and orientation.
 
-use super::{Emit, EngineState, LookupTableContent, SymbolPicker, PAGE_SIZE};
+use super::{Emit, EngineState, ListSelection, LookupTableContent, SymbolPicker, PAGE_SIZE};
+use crate::candidates::MAX_DISPLAY_CANDIDATES;
 use crate::composing::CandidateCellContent;
 use crate::keys::{telex_guide_rows, CandidateSlotKeySet, ComposingKeyBindings};
 use crate::runtime::DesktopRuntime;
@@ -20,6 +21,7 @@ pub(crate) fn present_table(
     bindings: &ComposingKeyBindings,
     emits: &mut Vec<Emit>,
 ) {
+    lay_out_table(state, settings);
     if let Some(picker) = &state.symbol_picker {
         emits.push(Emit::LookupTable(symbol_picker_table(
             picker, settings, bindings,
@@ -44,6 +46,30 @@ pub(crate) fn present_table(
         slot_key_set,
     )));
     state.is_table_shown = true;
+}
+
+/// Gives the list in view its model, when the shell measures its own window
+/// (`EngineState::list_layout`). Here rather than in `list_changed`: this is
+/// the one step every list passes on its way to the screen, it runs before the
+/// labels are read, and the keys that read a model come after it, on the next
+/// event.
+fn lay_out_table(state: &mut EngineState, settings: &SettingsDocument) {
+    let Some(layout) = &state.list_layout else {
+        return;
+    };
+    let (selection, mut cells): (&mut ListSelection, _) = match &mut state.symbol_picker {
+        Some(picker) if picker.selection.needs_layout() => (
+            &mut picker.selection,
+            plain_cells(picker.symbols.iter().cloned()),
+        ),
+        None if state.selection.needs_layout() && !state.candidates.is_empty() => {
+            (&mut state.selection, state.candidates.cells())
+        }
+        _ => return,
+    };
+    let count = cells.len();
+    cells.truncate(MAX_DISPLAY_CANDIDATES);
+    selection.adopt(layout.layout(&cells, settings), count);
 }
 
 /// The cells as the panel draws them; labels = the slot keys, one per position of the
@@ -133,11 +159,14 @@ pub(crate) fn is_vertical_layout(settings: &SettingsDocument) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::{Arc, Mutex};
+
     use super::*;
+    use crate::candidates::ExpandableListModel;
     use crate::keys::ComposingKeyBindings;
     use crate::platform::test_support::TEST_PLATFORM;
-    use crate::session::test_support::runtime;
-    use crate::session::LookupSelection;
+    use crate::session::test_support::{row_model, runtime};
+    use crate::session::ListLayout;
 
     fn present_under(state: &mut EngineState, settings: SettingsDocument) -> Vec<Emit> {
         let bindings = ComposingKeyBindings::from_document(&settings, TEST_PLATFORM);
@@ -157,6 +186,102 @@ mod tests {
         settings
     }
 
+    /// Lays out every list as a row of cells 20 wide, and says what it saw.
+    #[derive(Debug, Default)]
+    struct RowLayout {
+        cell_counts: Mutex<Vec<usize>>,
+    }
+
+    impl ListLayout for RowLayout {
+        fn layout(
+            &self,
+            cells: &[CandidateCellContent],
+            _settings: &SettingsDocument,
+        ) -> Option<ExpandableListModel> {
+            self.cell_counts.lock().unwrap().push(cells.len());
+            Some(row_model(cells.len()))
+        }
+    }
+
+    /// Declines every list, and counts them.
+    #[derive(Debug, Default)]
+    struct PagedLayout {
+        asked: Mutex<usize>,
+    }
+
+    impl ListLayout for PagedLayout {
+        fn layout(
+            &self,
+            _cells: &[CandidateCellContent],
+            _settings: &SettingsDocument,
+        ) -> Option<ExpandableListModel> {
+            *self.asked.lock().unwrap() += 1;
+            None
+        }
+    }
+
+    fn picker_of(count: usize) -> SymbolPicker {
+        SymbolPicker {
+            symbols: vec!["，".to_owned(); count],
+            selection: ListSelection::new(count),
+        }
+    }
+
+    #[test]
+    fn a_shell_with_a_layout_gets_a_model_before_the_labels_are_read() {
+        let layout = Arc::new(RowLayout::default());
+        let mut state = EngineState {
+            list_layout: Some(layout.clone()),
+            symbol_picker: Some(picker_of(40)),
+            ..EngineState::default()
+        };
+        present(&mut state);
+        let picker = state.symbol_picker.as_ref().expect("the picker");
+        assert!(picker.selection.expandable().is_some());
+        // Once per list: the next present finds the model already there.
+        present(&mut state);
+        assert_eq!(*layout.cell_counts.lock().unwrap(), [40]);
+    }
+
+    #[test]
+    fn a_layout_that_declines_is_asked_once_per_list() {
+        let layout = Arc::new(PagedLayout::default());
+        let mut state = EngineState {
+            list_layout: Some(layout.clone()),
+            symbol_picker: Some(picker_of(40)),
+            ..EngineState::default()
+        };
+        present(&mut state);
+        present(&mut state);
+        assert_eq!(*layout.asked.lock().unwrap(), 1);
+    }
+
+    #[test]
+    fn a_layout_is_shown_at_most_what_a_model_can_hold() {
+        let layout = Arc::new(RowLayout::default());
+        let mut state = EngineState {
+            list_layout: Some(layout.clone()),
+            symbol_picker: Some(picker_of(MAX_DISPLAY_CANDIDATES + 5)),
+            ..EngineState::default()
+        };
+        present(&mut state);
+        assert_eq!(
+            *layout.cell_counts.lock().unwrap(),
+            [MAX_DISPLAY_CANDIDATES]
+        );
+    }
+
+    #[test]
+    fn with_no_layout_a_list_stays_paged() {
+        let mut state = EngineState {
+            symbol_picker: Some(picker_of(40)),
+            ..EngineState::default()
+        };
+        present(&mut state);
+        let picker = state.symbol_picker.as_ref().expect("the picker");
+        assert!(picker.selection.expandable().is_none());
+    }
+
     #[test]
     fn a_wanted_guide_fills_an_empty_table_and_the_picker_covers_it() {
         // trace: no picker, no candidates, telexGuideShown → the guide (no
@@ -171,7 +296,7 @@ mod tests {
 
         state.symbol_picker = Some(SymbolPicker {
             symbols: vec!["，".to_owned()],
-            selection: LookupSelection::new(1, PAGE_SIZE),
+            selection: ListSelection::new(1),
         });
         let emits = present_under(&mut state, guide_wanted());
         assert!(matches!(emits.as_slice(), [Emit::LookupTable(table)] if table.cursor_visible));
@@ -193,7 +318,7 @@ mod tests {
         let mut state = EngineState {
             symbol_picker: Some(SymbolPicker {
                 symbols: vec!["，".to_owned(), "。".to_owned()],
-                selection: LookupSelection::new(2, PAGE_SIZE),
+                selection: ListSelection::new(2),
             }),
             ..EngineState::default()
         };

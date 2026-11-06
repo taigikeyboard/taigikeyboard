@@ -455,8 +455,8 @@ pub fn navigate_from_panel(
     .emits
 }
 
-/// A click on the `position`-th cell of the current page: selects, never
-/// commits (macOS `CandidateItemView.onClick`, identical semantics).
+/// A click on the cell at `position` (`ListSelection::candidate_index_at`):
+/// selects, never commits (macOS `CandidateItemView.onClick`, identical semantics).
 pub fn click_from_panel(
     runtime: &DesktopRuntime,
     state: &mut EngineState,
@@ -465,12 +465,12 @@ pub fn click_from_panel(
     let settings = runtime.settings.current();
     let bindings = ComposingKeyBindings::from_document(&settings, runtime.platform());
     if let Some(picker) = &mut state.symbol_picker {
-        let Some(index) = picker.selection.candidate_index_on_page(position) else {
+        let Some(index) = picker.selection.candidate_index_at(position) else {
             return Vec::new();
         };
         picker.selection.select(index);
     } else {
-        let Some(index) = state.selection.candidate_index_on_page(position) else {
+        let Some(index) = state.selection.candidate_index_at(position) else {
             return Vec::new();
         };
         state.selection.select(index);
