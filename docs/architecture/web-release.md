@@ -10,17 +10,15 @@ The site lives at `https://taigikeyboard.tw/web/`, a project page of the `taigik
 
 Every push to `main` that `.github/workflows/web.yml` runs on and passes starts a deploy of that commit, so a change to the docs alone deploys nothing. CI runs Playwright in Chromium only; `make web-e2e` on a Mac runs all three engines.
 
-The deploy waits for Pages, purges `/web/` from the edge, which otherwise holds each old file for up to 600 seconds so that a new `pkg/taigi_web.js` can meet an old wasm, then runs `check-live` against the build it staged, three times at most. A failed check leaves the run red in `taigikeyboard/web`, not here, and the next push replaces the site.
+The edge keeps each old file for up to 600 seconds, so for those minutes a first visit can pair a new `pkg/taigi_web.js` with an old wasm and fail until a reload. Maintainer 2026-11-07: accepted for the beta, with no purge and no Cloudflare token; revisit if it hurts. So the deploy waits 11 minutes, then runs `check-live` against the build it staged. A failed check leaves the run red in `taigikeyboard/web`, not here, and the next push replaces the site.
 
 To deploy by hand, or to go back to a commit: `taigikeyboard/web` → Actions → Deploy → Run workflow, with the full commit.
 
-Secrets:
+Secret:
 
 | Where | Name | What |
 |---|---|---|
 | this repository | `WEB_DEPLOY_TOKEN` | Fine-grained token, `taigikeyboard/web` only, Actions: write. It expires: a deploy job that fails on `gh workflow run` usually means this |
-| `taigikeyboard/web` | `CLOUDFLARE_PURGE_TOKEN` | API token, this zone, Cache Purge only |
-| `taigikeyboard/web` | variable `CLOUDFLARE_ZONE_ID` | The zone |
 
 Create `taigikeyboard/web` and the token before this workflow reaches `main`, or every deploy job fails.
 
@@ -115,7 +113,7 @@ jobs:
   check:
     needs: [build, deploy]
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -128,23 +126,12 @@ jobs:
         with:
           node-version: '22'
 
-      # A purge before Pages' own CDN has the new files caches the old ones again, and
-      # the origin cannot be asked directly: github.io redirects to this domain.
-      - name: Purge the edge and check the live files
-        run: |
-          for attempt in 1 2 3; do
-            sleep 60
-            curl --fail-with-body --silent --show-error -X POST \
-              "https://api.cloudflare.com/client/v4/zones/$ZONE/purge_cache" \
-              -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
-              --data '{"prefixes":["taigikeyboard.tw/web/"]}'
-            if node web/scripts/check-live.mjs https://taigikeyboard.tw/web/ "$BUILD"; then
-              exit 0
-            fi
-          done
-          exit 1
+      # Longer than the edge's max-age=600.
+      - name: Wait for the edge
+        run: sleep 660
+
+      - name: Check the live files
+        run: node web/scripts/check-live.mjs https://taigikeyboard.tw/web/ "$BUILD"
         env:
-          ZONE: ${{ vars.CLOUDFLARE_ZONE_ID }}
-          TOKEN: ${{ secrets.CLOUDFLARE_PURGE_TOKEN }}
           BUILD: ${{ needs.build.outputs.build }}
 ```
