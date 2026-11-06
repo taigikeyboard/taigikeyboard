@@ -59,7 +59,14 @@ fn validate(raw: &str) -> Result<PathBuf, LexiconError> {
         return Err(LexiconError::InvalidPath(raw.to_string()));
     }
     let path = Path::new(raw);
-    if !path.is_absolute() {
+    // On wasm `is_absolute` is false for every path; the host registers its
+    // bytes under rooted paths (`mmap_host::register`).
+    let is_absolute = if cfg!(target_family = "wasm") {
+        path.has_root()
+    } else {
+        path.is_absolute()
+    };
+    if !is_absolute {
         return Err(LexiconError::PathNotAbsolute(raw.to_string()));
     }
     Ok(path.to_path_buf())

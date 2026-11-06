@@ -7,7 +7,8 @@ pub trait Clock: Send + Sync {
     fn now_ms(&self) -> i64;
 }
 
-/// The wall clock.
+/// The wall clock. `SystemTime::now` panics on `wasm32-unknown-unknown`, so a
+/// browser shell passes its own [`Clock`].
 #[derive(Clone, Copy, Debug, Default)]
 pub struct SystemClock;
 

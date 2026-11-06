@@ -1,5 +1,5 @@
 ---
-paths: ["ios/**", "android/**", "macos/**", "windows/**", "linux/**", "desktop/**", "engine/**"]
+paths: ["ios/**", "android/**", "macos/**", "windows/**", "linux/**", "desktop/**", "engine/**", "web/**"]
 ---
 
 # Security Rules (Cross-Platform)

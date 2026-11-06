@@ -2,7 +2,7 @@
 
 > **Type**: Planning (forward-looking)
 > **Keywords**: `web`, `browser`, `wasm`, `wasm-bindgen`, `PWA`, `desktop-core reuse`, `McBopomofoWeb`, `kautian-mirror`
-> **Status**: Accepted 2026-11-06. Phase 0 done; no code exists yet. Decisions D1–D6 settled by the maintainer as recommended (§ Decisions). Reviewed once by a fresh-context same-model agent, findings applied; Codex skipped (no subscription, maintainer 2026-11-04).
+> **Status**: Accepted 2026-11-06. Phases 0 and 1 done. Decisions D1–D6 settled by the maintainer as recommended (§ Decisions). Reviewed once by a fresh-context same-model agent, findings applied; Codex skipped (no subscription, maintainer 2026-11-04).
 > **Siblings**: `linux-roadmap.md` (the closest shell), `system-overview.md`, `data-artifacts-portability.md`.
 
 ---
@@ -44,13 +44,13 @@ Download size of the dictionaries:
 
 ## What must change in shared code (grounded in code)
 
-`cargo check --target wasm32-unknown-unknown -p taigi-desktop-core` passes today. It compiles, and these four things fail at run time. The spike hit 1 and 2, and replaced 3 and skipped 4 before running.
+`cargo check --target wasm32-unknown-unknown -p taigi-desktop-core` passed before Phase 1. It compiled, and these four things failed at run time. The spike hit 1 and 2, and replaced 3 and skipped 4 before running.
 
 | # | Where | What happens on WASM | Fix |
 |---|---|---|---|
-| 1 | `engine/mmap-host/src/lib.rs:45,56` | `File::open` and `Mmap::map` have no file system to read | A `cfg(target_family = "wasm")` backend: `MmapHandle::open_readonly` looks the path up in a registry of leaked `&'static [u8]`. The `lexicon` readers and `InstallRequest` stay as they are. `memmap2` becomes a non-wasm dependency |
+| 1 | `engine/mmap-host/src/lib.rs:45,56` before the split, now `native.rs` | `File::open` and `Mmap::map` have no file system to read | A `cfg(target_family = "wasm")` backend: `MmapHandle::open_readonly` looks the path up in a registry of `Arc<Vec<u8>>`. Nothing needs `'static`: each reader owns its handle. The `lexicon` readers and `InstallRequest` stay as they are. `memmap2` becomes a non-wasm dependency |
 | 2 | `engine/lexicon/src/paths.rs:62` | `Path::is_absolute()` is `false` for every path here, so install failed with 0 records. Passing the check with `has_root()` fixed it | Accept `has_root()` on wasm only; Windows keeps `is_absolute` |
-| 3 | `desktop/crates/taigi-desktop-core/src/composing/clock.rs:16`, read on every fetch (`composing/manager.rs:383`) | `SystemTime::now()` is not implemented on this target. The spike replaced the clock rather than letting it panic | `RuntimeParts` takes a `Box<dyn Clock>` (`runtime.rs:26`), passed through `coordinator()` (`runtime.rs:140-143`) and `for_desktop` (`composing/coordinator.rs:62-66`) to `ComposingManager::new`. Native shells pass `SystemClock` |
+| 3 | `desktop/crates/taigi-desktop-core/src/composing/clock.rs:16`, read on every fetch (`composing/manager.rs:383`) | `SystemTime::now()` is not implemented on this target. The spike replaced the clock rather than letting it panic | `RuntimeParts` takes an `Arc<dyn Clock>` (`runtime.rs:26`, an `Arc` because `coordinator()` builds lazily from `&self`), passed through `coordinator()` (`runtime.rs:140-143`) and `for_desktop` (`composing/coordinator.rs:62-66`) to `ComposingManager::new`. Native shells pass `SystemClock` |
 | 4 | `desktop/crates/taigi-desktop-core/src/dictionary_artifacts.rs:41` | `std::fs::metadata` always fails, so `locate` refuses | No change. The shell passes `dictionaries: || None` (`runtime.rs:36`) and calls `engine::lexicon_install` itself once the bytes are in |
 
 Already fine:
@@ -61,13 +61,15 @@ Already fine:
 
 One thing does not hold and is a named divergence: `process_request` relies on `catch_unwind` (`dispatch/src/lib.rs:61`, `rust-ffi-safety.md` §1.2), and this target aborts on panic. A panic traps the instance. The page catches the trap, starts a new instance and loses the composition, never the text already in the editor.
 
-Three written rules change with this plan, in Phase 1, in the same PR as the code:
+Written rules changed in Phase 1, in the same PR as the code:
 
 | Rule | Today | Change |
 |---|---|---|
 | `rust-best-practices.md:101` | "No web-target builds (`wasm32-*`). Future consideration" | Removed; web joins the shell list |
 | `rust-best-practices.md:99` | Process-wide state only in a domain crate's `handle.rs` | Names the `mmap-host` wasm registry as an install-time exception |
-| `rust-ffi-safety.md:95` | Lists the crates that may contain `unsafe` | Adds `taigi-web` if `#[wasm_bindgen]` expansions fail `unsafe_code = "forbid"`, with a `# JUSTIFICATION:` comment. No hand-written `unsafe` either way |
+| `rust-ffi-safety.md` §1.2 | Every boundary unwinds | Names `taigi-web` as the divergence below |
+
+`rust-ffi-safety.md:95` needed no change: `#[wasm_bindgen]` compiles under `unsafe_code = "forbid"`.
 
 ## Architecture
 
@@ -211,7 +213,7 @@ Each phase is one PR of 200–500 LOC unless noted. No phase is assigned to a re
 | # | Phase | Gate | Status |
 |---|---|---|---|
 | 0 | This roadmap + project memory | admin lane | Done |
-| 1 | Engine runs on wasm32 | `make web-check`, native suites unchanged | Pending |
+| 1 | Engine runs on wasm32 | `make web-check`, native suites unchanged | Done |
 | 2 | Shared session module | behaviour freeze, `make linux-check` | Pending |
 | 3 | `taigi-web` crate | native + Node tests | Pending |
 | 4 | Plain page, end to end | Playwright in 3 browser engines | Pending |
@@ -229,7 +231,7 @@ Table rows 1–3 above, plus the plumbing a new platform needs. Row 3 adds one f
 - Pin `wasm-bindgen` and `wasm-bindgen-cli` to one exact version (`mise.toml`), plus `binaryen` for `wasm-opt`. The smoke test needs bindings, and hand-written alloc exports would need `unsafe`. Verify the current release when this phase starts.
 - `make web-check`: the wasm build plus a Node smoke test that installs the dictionaries and asserts top candidates for a fixed input list.
 - `tools/test_select.py`: a `web` platform, selected in the `DESKTOP_LINKED_CRATE` branch (line 381). `WIRE_SURFACE_CRATES` is the wrong hook: it leaves out `lexicon` and `composing`, which web links.
-- The sixth Cargo workspace everywhere the five are named: `.github/workflows/security.yml`, `build-artifacts.md` § Five Cargo workspaces, `rust-best-practices.md:81,87`.
+- The sixth Cargo workspace everywhere the five are named: `.github/workflows/security.yml`, `build-artifacts.md` § Six Cargo workspaces, `rust-best-practices.md:81,87`.
 - `.github/workflows/web.yml`. `AGENTS.md` Build & Test row and project structure. `docs/contributing/web-guidelines.md` with its `.claude/rules/` pointer. JS lint in `make lint`. `REVIEW.md` if it needs a tier.
 - A McBopomofoWeb card in `docs/references/mainstream-ime-comparison.md`, which has none today.
 
@@ -313,7 +315,7 @@ Three PRs, one round each:
 
 Not required for a useful first page. Gate it with a spike, because this is the one part with no working proof.
 
-What the 2026-11-06 check found: `rusqlite` selects `sqlite-wasm-rs` by itself on this target. The build stops at `uuid`, which needs a random source feature. `engine/userdata/src/handle.rs:99` and `database.rs:290` start threads this target does not have.
+What the 2026-11-06 check found: `rusqlite` selects `sqlite-wasm-rs` by itself on this target. The build stops at `uuid`, which needs a random source feature. `engine/userdata/src/handle.rs:99` and `database.rs:290` start threads this target does not have. `engine/dispatch/src/user_data/with_stores.rs:131` and `engine/userdata/src/timestamp.rs:15` still call `SystemTime::now`, past the Phase 1 `Clock` seam, so the stores need the clock too.
 
 The storage choice is constrained by the main-thread decision. `sqlite-wasm-rs`'s OPFS `sahpool` VFS needs a Dedicated Worker, and the engine lives on the main thread. That leaves its IndexedDB-backed `relaxed-idb` VFS or an in-memory database saved to OPFS, to be proven by the spike. Stores stay in `engine/userdata` either way (`rust-migration-policy.md` §6). `.taigi` backup import and export lets a user carry data between the web and the apps.
 

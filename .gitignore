@@ -148,6 +148,7 @@ windows/target/
 desktop/target/
 linux/target/
 macos/target/
+web/target/
 # `.build/` holds the staged install layout and the installer that
 # windows/scripts/release-app.sh produces — the macOS side's `macos/.build/`,
 # and it must be ignored for the same reason: the script refuses a dirty tree,
