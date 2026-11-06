@@ -292,7 +292,7 @@ impl Engine {
 
     async fn set_capabilities(&mut self, caps: u32) {
         log::debug!("engine.capabilities token={:?} caps={caps:#x}", self.token);
-        self.state.capabilities = caps;
+        session::set_capabilities(&mut self.state, caps);
     }
 
     async fn property_activate(

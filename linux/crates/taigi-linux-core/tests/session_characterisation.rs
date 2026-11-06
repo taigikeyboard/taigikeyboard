@@ -13,7 +13,7 @@ use std::sync::{Mutex, MutexGuard};
 use taigi_desktop_core::composing::ContextToken;
 use taigi_desktop_core::settings::keys;
 use taigi_desktop_storage::SettingsFileStore;
-use taigi_linux_core::session::{end_session, process_raw_key, EngineState, CAP_SURROUNDING_TEXT};
+use taigi_linux_core::session::{end_session, process_raw_key, EngineState};
 use taigi_linux_core::{Emit, LookupTableContent, Runtime};
 use taigi_linux_platform::key_translation::state;
 use taigi_linux_platform::{RawKeyEvent, UserDirectories};
@@ -76,11 +76,7 @@ impl Session {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../assets/dictionaries"),
         );
         let state = EngineState {
-            capabilities: if can_delete_surrounding {
-                CAP_SURROUNDING_TEXT
-            } else {
-                0
-            },
+            can_delete_surrounding,
             ..EngineState::default()
         };
         let token = runtime.allocate_token();

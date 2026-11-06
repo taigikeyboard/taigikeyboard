@@ -13,98 +13,30 @@
 //! lock is dropped.
 
 use crate::chrome;
-use crate::executor::{Emit, KeySurface, LookupTableContent, Recorder};
 use crate::runtime::Runtime;
-use crate::selection::LookupSelection;
 use taigi_desktop_core::composing::{
-    pass_through_may_consume, perform_intent, CandidateSource, ComposingManager,
-    ComposingSessionCoordinator, ContextToken,
+    pass_through_may_consume, perform_intent, ComposingManager, ComposingSessionCoordinator,
+    ContextToken,
 };
 use taigi_desktop_core::keys::{
-    CandidateNavigation, CandidateSlotKeySet, ComposingKeyBindings, ComposingKeyIntent,
-    KeyEventSnapshot, ShortcutAction, SymbolPickerIntent,
+    CandidateNavigation, ComposingKeyBindings, ComposingKeyIntent, KeyEventSnapshot,
+    ShortcutAction, SymbolPickerIntent,
 };
-use taigi_desktop_core::settings::{keys, CandidateLayout, SettingsDocument};
+use taigi_desktop_core::session::{KeySurface, Recorder};
+use taigi_desktop_core::settings::{keys, SettingsDocument};
 use taigi_linux_platform::key_translation::state::RELEASE;
 use taigi_linux_platform::{snapshot, RawKeyEvent, DESKTOP_PLATFORM};
+
+pub(crate) use taigi_desktop_core::session::{is_vertical_layout, present_table};
+pub use taigi_desktop_core::session::{Emit, EngineState, KeyReply, SymbolPicker, PAGE_SIZE};
 
 /// `IBUS_CAP_SURROUNDING_TEXT` (ibus `src/ibustypes.h:124`).
 pub const CAP_SURROUNDING_TEXT: u32 = 1 << 5;
 
-/// The slot keys a page holds — nine on both sets (`BARE_KEY_ROW`, `1`–`9`).
-pub(crate) const PAGE_SIZE: usize = CandidateSlotKeySet::BARE_KEY_ROW.len();
-
-/// The symbol picker while it is up: the symbols in pick order (recents
-/// first) and the highlight over them (roadmap L4: a lookup table, not a
-/// window of its own).
-#[derive(Debug)]
-pub struct SymbolPicker {
-    pub symbols: Vec<String>,
-    pub selection: LookupSelection,
-}
-
-/// What one engine object remembers between keys.
-#[derive(Debug)]
-pub struct EngineState {
-    /// The fetched list and its presentation (cells, scripts).
-    pub candidates: CandidateSource,
-    /// The highlight and page over `candidates`' cells.
-    pub selection: LookupSelection,
-    /// The auto-space swap promised to the next key.
-    pub armed_auto_space: bool,
-    /// The client's `SetCapabilities` mask.
-    pub capabilities: u32,
-    /// The focused field hides what is typed (IBus content purpose
-    /// `PASSWORD` / `PIN`, Fcitx5 `CapabilityFlag::Password`): nothing
-    /// composes and nothing is learned there — the Windows
-    /// `is_password_field` gate.
-    pub is_password_field: bool,
-    /// Whether the daemon currently shows a lookup table of ours.
-    pub is_table_shown: bool,
-    /// A toggle chord held down: auto-repeat is invisible on the wire, so
-    /// the chord is latched until any other key or a release arrives
-    /// (Windows `release_toggle_chord_on_other_key`).
-    pub latched_chord: Option<ShortcutAction>,
-    /// The Telex guide is up (as a lookup table) — the first key takes it
-    /// down (`chrome::perform_global`).
-    pub telex_guide_shown: bool,
-    /// The symbol picker is up; every key is its first.
-    pub symbol_picker: Option<SymbolPicker>,
-}
-
-impl Default for EngineState {
-    fn default() -> Self {
-        Self {
-            candidates: CandidateSource::default(),
-            selection: LookupSelection::new(0, PAGE_SIZE),
-            armed_auto_space: false,
-            capabilities: 0,
-            is_password_field: false,
-            is_table_shown: false,
-            latched_chord: None,
-            telex_guide_shown: false,
-            symbol_picker: None,
-        }
-    }
-}
-
-impl EngineState {
-    pub fn can_delete_surrounding(&self) -> bool {
-        self.capabilities & CAP_SURROUNDING_TEXT != 0
-    }
-
-    pub(crate) fn clear_list(&mut self) {
-        self.candidates.clear();
-        self.selection = LookupSelection::new(0, PAGE_SIZE);
-    }
-}
-
-/// What a key did.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct KeyReply {
-    /// `true` = consumed; `false` = the client processes the key itself.
-    pub handled: bool,
-    pub emits: Vec<Emit>,
+/// The client's `SetCapabilities` mask, read for the one bit the session
+/// cares about.
+pub fn set_capabilities(state: &mut EngineState, capabilities: u32) {
+    state.can_delete_surrounding = capabilities & CAP_SURROUNDING_TEXT != 0;
 }
 
 /// A key as the framework hands it — keysym, keycode, modifier mask with
@@ -295,7 +227,7 @@ pub fn process_key(
         ComposingKeyIntent::PassThrough => pass_through_may_consume(
             snapshot,
             &settings,
-            state.armed_auto_space && state.can_delete_surrounding(),
+            state.armed_auto_space && state.can_delete_surrounding,
         ),
         ComposingKeyIntent::CommitThenPassThrough => is_composing,
         _ => true,
@@ -542,7 +474,7 @@ fn run_key(
     }
     let manager = coordinator.claim(token);
     let mut surface = KeySurface {
-        recorder: Recorder::new(state.can_delete_surrounding()),
+        recorder: Recorder::new(state.can_delete_surrounding),
         is_swap_armed,
         selection: &mut state.selection,
         is_vertical: is_vertical_layout(settings),
@@ -562,86 +494,24 @@ fn run_key(
     KeyReply { handled, emits }
 }
 
-/// The lookup table as things now stand — the symbol picker while it is
-/// up, else the candidate list: shown, updated in place, or taken down.
-/// Appended after the composing signals so the preedit the list describes
-/// is already on screen. The Telex guide is emitted by its toggle alone.
-pub(crate) fn present_table(
-    state: &mut EngineState,
-    settings: &SettingsDocument,
-    bindings: &ComposingKeyBindings,
-    emits: &mut Vec<Emit>,
-) {
-    if let Some(picker) = &state.symbol_picker {
-        emits.push(Emit::LookupTable(chrome::symbol_picker_table(
-            picker, settings, bindings,
-        )));
-        state.is_table_shown = true;
-        return;
-    }
-    let slot_key_set = bindings.slot_key_set();
-    if state.candidates.is_empty() {
-        if state.is_table_shown {
-            emits.push(Emit::HideLookupTable);
-            state.is_table_shown = false;
-        }
-        return;
-    }
-    emits.push(Emit::LookupTable(table_content(
-        state,
-        settings,
-        slot_key_set,
-    )));
-    state.is_table_shown = true;
-}
-
-/// The cells as the panel draws them: the leading script, the other script
-/// (Combined) after a space; labels = the slot keys, one per position of the
-/// CURRENT page. The §34 literal takes no key, as on macOS and Windows: on
-/// the page it begins, its label is blank and the keys start at the next
-/// cell. The panel can show that because both pages its table through the
-/// core, and the table — labels included — is sent again with every reply.
-fn table_content(
-    state: &EngineState,
-    settings: &SettingsDocument,
-    slot_key_set: CandidateSlotKeySet,
-) -> LookupTableContent {
-    let candidates = state
-        .candidates
-        .cells()
-        .into_iter()
-        .map(|cell| match cell.annotation {
-            Some(annotation) => format!("{} {annotation}", cell.text),
-            None => cell.text,
-        })
-        .collect();
-    let shift = state.selection.key_slot_shift();
-    let labels = (0..PAGE_SIZE)
-        .map(|position| match position.checked_sub(shift) {
-            Some(slot) => slot_key_set.label_for_slot(slot),
-            None => String::new(),
-        })
-        .collect();
-    LookupTableContent {
-        candidates,
-        labels,
-        cursor: state.selection.selected_index().unwrap_or(0) as u32,
-        cursor_visible: true,
-        page_size: PAGE_SIZE as u32,
-        vertical: is_vertical_layout(settings),
-    }
-}
-
-/// Whether the panel draws the list as a column — what it is told to draw
-/// and how the arrows read, from the one setting.
-pub(crate) fn is_vertical_layout(settings: &SettingsDocument) -> bool {
-    settings.choice(&keys::CANDIDATE_LAYOUT) != CandidateLayout::Horizontal
-}
-
 /// An executor that records nothing: for a composition the DAEMON already
 /// ended — only the engine is reset.
 struct NullRecorder;
 
 impl taigi_desktop_core::composing::ComposingEffectExecutor for NullRecorder {
     fn execute(&mut self, _effect: &taigi_desktop_core::engine::Effect) {}
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn only_the_surrounding_text_bit_of_the_mask_counts() {
+        let mut state = EngineState::default();
+        set_capabilities(&mut state, CAP_SURROUNDING_TEXT | 1);
+        assert!(state.can_delete_surrounding);
+        set_capabilities(&mut state, !CAP_SURROUNDING_TEXT);
+        assert!(!state.can_delete_surrounding);
+    }
 }

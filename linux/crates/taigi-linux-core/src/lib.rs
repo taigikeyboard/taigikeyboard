@@ -10,9 +10,7 @@
 //! COM.
 
 pub mod chrome;
-pub mod executor;
 pub mod runtime;
-pub mod selection;
 pub mod session;
 #[cfg(feature = "e2e-trace")]
 mod trace;
@@ -20,10 +18,9 @@ mod trace;
 pub use chrome::{
     activate_menu, menu_items, mode_indicator, mode_label, MenuItem, MENU_ABOUT, MENU_SETTINGS,
 };
-pub use executor::{Emit, LookupTableContent};
 pub use runtime::{dictionary_version, FirstKeySetup, Runtime};
-pub use selection::LookupSelection;
 pub use session::{
     click_from_panel, end_session, navigate_from_panel, process_key, process_raw_key, EngineState,
     KeyReply, CAP_SURROUNDING_TEXT,
 };
+pub use taigi_desktop_core::session::{Emit, LookupSelection, LookupTableContent};

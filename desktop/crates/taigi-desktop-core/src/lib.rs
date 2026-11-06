@@ -24,6 +24,7 @@ pub mod mode_indicator;
 pub mod platform;
 pub mod policies;
 pub mod runtime;
+pub mod session;
 pub mod settings;
 pub mod strings;
 pub mod symbols;
