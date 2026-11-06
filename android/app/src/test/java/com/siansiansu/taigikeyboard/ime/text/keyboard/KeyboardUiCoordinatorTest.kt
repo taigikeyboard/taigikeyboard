@@ -15,7 +15,7 @@ import org.junit.Test
  * collapse. The orchestration paths (cancel/launch/IO/main-hop) plus
  * `publishAppearance` (its [KeyboardAppearance] argument requires
  * `android.graphics.Typeface`, which throws on pure JVM) are covered by the
- * device dogfood matrix (`docs/architecture/dogfood-checklist.md`).
+ * device dogfood.
  *
  * `layoutManagerFactory` is intentionally a throwing stub — none of these
  * tests touch `ensureLayoutLoaded` / `reload*` paths, so the lazy delegate

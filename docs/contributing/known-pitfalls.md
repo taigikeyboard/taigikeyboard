@@ -15,7 +15,7 @@ Technical rules distilled from past incidents. The dated narratives that produce
 ## Review and device gates
 
 - A diff carrying numeric / geometry fidelity risk (wide caller surface, unit conversion) gets a dedicated line-by-line review — a double `toInt()` truncation once passed a design-level review.
-- Qualitative perf gate: **S1 POJ diacritics**, **S2 TPS composition**, **S3 Hanji candidate scroll**, plus the iOS keyboard-extension 64 MB hard cap, leak-free, no keyboard dismiss. Per-feature `Sn` items live in `docs/architecture/dogfood-checklist.md`; root-cause receipts in `docs/architecture/behavioral-invariants.md`.
+- Qualitative perf gate: **S1 POJ diacritics**, **S2 TPS composition**, **S3 Hanji candidate scroll**, plus the iOS keyboard-extension 64 MB hard cap, leak-free, no keyboard dismiss. Root-cause receipts live in `docs/architecture/behavioral-invariants.md`.
 
 ## Design
 

@@ -222,4 +222,4 @@ General settings exposes **Keyboard Layout** (`keyboardLayout`: QWERTY default, 
 
 - Cross-platform contract: `behavioral-invariants.md` · glue shape (layers, DI, live-read settings): `../contributing/ios-architecture.md`, `../contributing/android-guidelines.md`, `../contributing/cross-platform-alignment.md` §2–§3 · composing / next-word bindings: `composing-state-boundary.md`, `nextword-engine-boundary.md`.
 - Engine wire: `../engine/rust-core-proto.md`, `../contributing/rust-ffi-safety.md` · desktop design records: `macos-roadmap.md`, `macos-desktop-core-roadmap.md`, `windows-roadmap.md`.
-- Releasing: `desktop-release.md` (entry), `macos-release.md`, `windows-release.md`, `manual-release-notes.md` · device acceptance: `dogfood-checklist.md`.
+- Releasing: `desktop-release.md` (entry), `macos-release.md`, `windows-release.md`, `manual-release-notes.md`.

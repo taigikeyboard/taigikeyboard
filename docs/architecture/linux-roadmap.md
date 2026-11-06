@@ -2,7 +2,7 @@
 
 > **Type**: Reference (design record)
 > **Keywords**: `linux`, `IBus`, `Fcitx5`, `D-Bus`, `zbus`, `GTK4`, `libadwaita`, `desktop`, `engine reuse`, `macOS parity`, `Windows parity`
-> **Status**: implemented; first-machine dogfood S74 passed (`dogfood-checklist.md`). Fcitx5 is the primary frontend, the IBus engine the second (§ L1).
+> **Status**: implemented; first-machine dogfood passed. Fcitx5 is the primary frontend, the IBus engine the second (§ L1).
 > **Siblings**: `macos-roadmap.md`, `windows-roadmap.md` (the crates this platform reuses). Release flow: `linux-release.md`.
 > **Behaviour oracle**: desktop-core and its tests, for all three desktops (`macos-desktop-core-roadmap.md` D8). "macOS is the oracle" wording and macOS `file:line` cites below predate that.
 
@@ -406,7 +406,7 @@ introspection XML and the `serialize` functions were read, not remembered).
   `gtk::Window` in a test (`GDK_BACKEND=broadway` / `xvfb-run` on CI), the equivalent of
   Windows' `pane_planning` net. What no check catches — actual preedit rendering in a
   GTK / Qt / Chromium client, Wayland text-input v3 behaviour, the panel's label
-  handling — is left to device dogfood (`dogfood-checklist.md`).
+  handling — is left to device dogfood.
 - **L13 Threading + ownership.** `zbus` runs the object server on its own executor; every
   `ProcessKeyEvent` arrives serially per connection, so engine state lives in one
   `Mutex<Runtime>` (settings provider, `ComposingSessionCoordinator`, per-engine state)

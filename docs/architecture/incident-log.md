@@ -2,7 +2,7 @@
 
 > **Type**: Reference (append-only)
 > **Keywords**: `incident`, `rules`, `why`, `receipt`
-> **Related**: ../contributing/known-pitfalls.md, dogfood-checklist.md, behavioral-invariants.md
+> **Related**: ../contributing/known-pitfalls.md, behavioral-invariants.md
 
 ---
 
