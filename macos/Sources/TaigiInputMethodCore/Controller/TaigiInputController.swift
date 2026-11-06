@@ -250,6 +250,17 @@ public final class TaigiInputController: IMKInputController {
     @MainActor
     private var tpsKeyboardObservation: AnyObject?
 
+    /// KVO on the Telex guide's stored wish, armed and released with
+    /// `displayModeObservation`: the chord in another session, or a reset of
+    /// General, takes this session's guide up or down at once.
+    @MainActor
+    private var telexGuideObservation: AnyObject?
+
+    /// KVO on the display language, armed and released with
+    /// `displayModeObservation`: an open guide is respelled in the new one.
+    @MainActor
+    private var displayLanguageObservation: AnyObject?
+
     // MARK: - IMK entry points
 
     /// Keydown only — the default, restated rather than left implicit so a
@@ -312,6 +323,7 @@ public final class TaigiInputController: IMKInputController {
                     controller?.dismissPalettes()
                     controller?.applyKeyboardLayout()
                     controller?.syncTpsKeyboard()
+                    controller?.syncTelexGuide()
                 },
             )
             controller.keyboardLayoutObservation = controller.settings.observeChanges(
@@ -324,6 +336,21 @@ public final class TaigiInputController: IMKInputController {
                 of: SettingsStore.Keys.isTpsKeyboardShown,
                 onMainActor: { [weak controller] in
                     controller?.syncTpsKeyboard()
+                },
+            )
+            controller.telexGuideObservation = controller.settings.observeChanges(
+                of: SettingsStore.Keys.isTelexGuideShown,
+                onMainActor: { [weak controller] in
+                    controller?.syncTelexGuide()
+                },
+            )
+            controller.displayLanguageObservation = controller.settings.observeChanges(
+                of: SettingsStore.Keys.displayLanguage,
+                onMainActor: { [weak controller] in
+                    // The store may not have heard yet; its own observation
+                    // has no order against this one.
+                    controller?.displayLanguage.syncFromSettings()
+                    controller?.syncTelexGuide()
                 },
             )
             controller.symbolPickerShortcut = KeyboardShortcuts.getShortcut(for: .showSymbolPicker)
@@ -359,6 +386,7 @@ public final class TaigiInputController: IMKInputController {
         isSymbolPickerPlaceholderMarked = false
         armedAutoSpaceCaret = nil
         syncTpsKeyboard()
+        syncTelexGuide()
     }
 
     /// The session is losing focus. The composition is finished into the
@@ -412,6 +440,7 @@ public final class TaigiInputController: IMKInputController {
         onMainActor(nil) { controller, _ in
             controller.dismissPalettes()
             TpsKeyboardPanel.shared.hide(ownedBy: controller.sessionToken)
+            TelexGuidePanel.shared.hide(ownedBy: controller.sessionToken)
         }
         super.hidePalettes()
     }
@@ -677,14 +706,16 @@ public final class TaigiInputController: IMKInputController {
         onMainActor(nil) { controller, _ in
             // The candidates on screen were fetched under the old mode, and
             // the key contract lets Space commit whichever one is
-            // highlighted; the guide and the picker were raised under it too.
-            // They go with the mode that produced them — here, not left to
+            // highlighted; the picker was raised under it too. They go with
+            // the mode that produced them — here, not left to
             // `inputModeObservation`, whose hop lands after a key already
             // queued.
             controller.dismissPalettes()
             controller.applyKeyboardLayout()
             // The TPS key panel comes and goes with TPS; its stored wish stays.
             controller.syncTpsKeyboard()
+            // The guide goes under TPS, and is respelled for a romanization.
+            controller.syncTelexGuide()
             // Then the HUD, because the chord fires from anywhere and a
             // mode that changed with
             // no notice reads as the keyboard breaking — the next syllable
@@ -694,15 +725,14 @@ public final class TaigiInputController: IMKInputController {
         }
     }
 
-    /// Every window this session shows — the list, the guide, the picker —
-    /// taken down without touching the composition: what `hidePalettes` is
-    /// asked for, and what `inputModeObservation` does for a mode written
-    /// outside this session, each window having been raised under the old one.
-    /// The TPS key panel follows the mode on its own (`syncTpsKeyboard`).
+    /// The list and the picker taken down without touching the composition:
+    /// what `hidePalettes` is asked for, and what `inputModeObservation` does
+    /// for a mode written outside this session, each window having been raised
+    /// under the old one. The TPS key panel and the Telex guide follow the mode
+    /// on their own (`syncTpsKeyboard`, `syncTelexGuide`).
     @MainActor
     private func dismissPalettes() {
         dismissCandidates()
-        TelexGuidePanel.shared.hide(ownedBy: sessionToken)
         dismissSymbolPicker()
     }
 
@@ -716,6 +746,23 @@ public final class TaigiInputController: IMKInputController {
             TpsKeyboardPanel.shared.show(ownedBy: sessionToken, target: self, generation: tenure)
         } else {
             TpsKeyboardPanel.shared.hideNow()
+        }
+    }
+
+    /// The Telex guide as the settings now say, for this session — only while
+    /// it holds the engine, as `syncTpsKeyboard`. Spelled for the romanization
+    /// in use: `z` is `ts` under TL and `ch` under POJ.
+    @MainActor
+    private func syncTelexGuide() {
+        guard backend.owns(sessionToken) else { return }
+        if settings.isTelexGuideWanted {
+            TelexGuidePanel.shared.show(
+                inputMode: settings.inputMode,
+                language: displayLanguage,
+                ownedBy: sessionToken,
+            )
+        } else {
+            TelexGuidePanel.shared.hideNow()
         }
     }
 
@@ -751,14 +798,8 @@ public final class TaigiInputController: IMKInputController {
         // The two mode switches tear down in `switchInputMode(_:)`, once the
         // write has landed: a switch the core did not answer changes nothing.
         if action != .toggleRomanization, action != .toggleTps {
-            // An open guide would otherwise stay spelled for the settings it
-            // was raised under. Owner-guarded, so a chord reaching a session
-            // that did not raise the guide leaves it alone.
-            if action != .showTelexGuide {
-                TelexGuidePanel.shared.hide(ownedBy: sessionToken)
-            }
-            // And the picker: a Carbon chord bypasses the key path that
-            // would otherwise take it down.
+            // The picker: a Carbon chord bypasses the key path that would
+            // otherwise take it down.
             dismissSymbolPicker()
         }
         switch action {
@@ -810,14 +851,11 @@ public final class TaigiInputController: IMKInputController {
             settings.candidateDisplayMode = next
             flash(next.displayNameKey)
         case .showTelexGuide:
-            // Spelled for the romanization in use — `z` is `ts` under TL
-            // and `ch` under POJ — and owned by this session, so the key
-            // path below and this session's teardown are what take it down.
-            TelexGuidePanel.shared.toggle(
-                inputMode: settings.inputMode,
-                language: displayLanguage,
-                ownedBy: sessionToken,
-            )
+            // The wish is stored for every session to read; this one's guide
+            // follows now rather than on the observation's later hop. The
+            // composition and its list are not touched.
+            settings.isTelexGuideShown.toggle()
+            syncTelexGuide()
         case .showSymbolPicker:
             // Matched in `handle`, never fired from here (`firesFromTheKeyPath`).
             break
@@ -901,21 +939,6 @@ public final class TaigiInputController: IMKInputController {
             }
         }
         guard ownsSession, let client else { return false }
-
-        // The guide goes down on the first key after it came up, before that
-        // key is read: it is a card to glance at, not a mode. A plain Escape
-        // ends the guide and nothing else, so a user mid-word who checked the
-        // table keeps the composition and its bar; every other key, an Escape
-        // under a host chord included (`⌃3` arrives as Escape,
-        // `KeyEventSnapshot.isPlainEscape`), goes on to do its job. Bare modifier presses
-        // cannot close it — only `.keyDown` reaches here, and a modifier on
-        // its own is a `.flagsChanged`.
-        if TelexGuidePanel.shared.isShowing {
-            TelexGuidePanel.shared.hideNow()
-            if key.isPlainEscape {
-                return true
-            }
-        }
 
         defer { isMarkedTextVisible = backend.isComposing(sessionToken) }
 
@@ -1313,7 +1336,6 @@ public final class TaigiInputController: IMKInputController {
         }
         guard settings.inputMode == .tps, liveClient() != nil else { return }
         armedAutoSpaceCaret = nil
-        TelexGuidePanel.shared.hide(ownedBy: sessionToken)
         dismissSymbolPicker()
         guard let client = liveClient() else { return }
         defer { isMarkedTextVisible = backend.isComposing(sessionToken) }
@@ -1450,6 +1472,8 @@ public final class TaigiInputController: IMKInputController {
         keyboardLayoutObservation = nil
         appliedKeyboardLayout = nil
         tpsKeyboardObservation = nil
+        telexGuideObservation = nil
+        displayLanguageObservation = nil
         Self.logger.notice("end complete session=\(sessionToken.value) tenure=\(endingTenure)")
         ComposingSessionCoordinator.shared.resumeWaitingSession()
     }

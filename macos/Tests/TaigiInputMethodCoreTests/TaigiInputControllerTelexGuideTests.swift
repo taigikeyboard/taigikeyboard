@@ -1,5 +1,5 @@
-// The Telex guide end to end: the chord that raises it, the key that takes it
-// down, and who is allowed to.
+// The Telex guide end to end: the chord that raises and hides it, the keys that
+// leave it up, and who is allowed to take it down.
 
 import InputMethodKit
 @testable import TaigiInputMethodCore
@@ -7,7 +7,7 @@ import XCTest
 
 /// Drives the real controller and the real engine against the shared guide
 /// panel. What is pinned is the routing — when the card goes up and comes
-/// down, which key is swallowed, whose teardown may close it — not how the
+/// down, that no key is swallowed for it, whose teardown may close it — not how the
 /// card is drawn.
 @MainActor
 final class TaigiInputControllerTelexGuideTests: XCTestCase {
@@ -49,11 +49,13 @@ final class TaigiInputControllerTelexGuideTests: XCTestCase {
 
         XCTAssertFalse(TelexGuidePanel.shared.isShowing)
         XCTAssertNil(TelexGuidePanel.shared.owner)
+        XCTAssertFalse(session.controller.settings.isTelexGuideShown)
     }
 
     /// The card is spelled for the romanization in use: `z` spells `ts`
     /// under TL and `ch` under POJ, which the meaning column names now that
-    /// the example column is gone (USER 2026-09-09).
+    /// the example column is gone (USER 2026-09-09). A switch respells the
+    /// guide in place.
     func testTheGuide_isSpelledForTheRomanizationInUse() throws {
         let session = try makeSession()
         let language = TestFixtures.makeDisplayLanguageStore(.hanji, userDefaults: userDefaults)
@@ -64,45 +66,57 @@ final class TaigiInputControllerTelexGuideTests: XCTestCase {
         XCTAssertTrue(tl.contains { $0.contains("ts") && !$0.contains("tsh") }, "\(tl)")
         XCTAssertTrue(tl.contains { $0.contains("tsh") }, "\(tl)")
 
-        session.controller.performShortcutAction(.showTelexGuide)
-        session.controller.settings.switchInputMode(.pick(.poj))
-        session.controller.performShortcutAction(.showTelexGuide)
+        session.controller.performShortcutAction(.toggleRomanization)
 
         let poj = TelexGuidePanel.meanings(under: .poj, language: language)
+        XCTAssertTrue(TelexGuidePanel.shared.isShowing, "the switch does not close it")
         XCTAssertEqual(TelexGuidePanel.shared.shownInputMode, .poj)
         XCTAssertTrue(poj.contains { $0.contains("ch") && !$0.contains("chh") }, "\(poj)")
         XCTAssertTrue(poj.contains { $0.contains("chh") }, "\(poj)")
         XCTAssertFalse(poj.contains { $0.contains("ts") }, "\(poj)")
     }
 
-    /// A switch that ran under an open guide would leave a table spelled for
-    /// the romanization the user just left, so every other global action
-    /// takes the guide down before it runs.
-    func testAnotherGlobalAction_hidesTheGuideFirst() throws {
+    /// Under TPS, which types no Telex keys, the guide goes; the wish stays,
+    /// so it returns with the romanization.
+    func testTheGuide_leavesWithTps_andComesBack() throws {
         let session = try makeSession()
         session.controller.performShortcutAction(.showTelexGuide)
 
-        session.controller.performShortcutAction(.toggleRomanization)
+        session.controller.performShortcutAction(.toggleTps)
 
         XCTAssertFalse(TelexGuidePanel.shared.isShowing)
-        XCTAssertEqual(session.controller.settings.inputMode, .poj, "the switch itself still ran")
+        XCTAssertTrue(session.controller.settings.isTelexGuideShown, "kept for the way back")
+
+        session.controller.performShortcutAction(.toggleTps)
+
+        XCTAssertTrue(TelexGuidePanel.shared.isShowing)
     }
 
-    /// The settings doorway never reaches the session, so it takes the card
-    /// down itself before the window comes up.
-    func testOpeningSettings_hidesTheGuide() throws {
+    /// The next session to take focus puts the guide up from the stored wish.
+    func testActivation_withTheWishStored_showsTheGuide() throws {
+        userDefaults.set(true, forKey: SettingsStore.Keys.isTelexGuideShown.name)
+
+        _ = try makeSession()
+
+        XCTAssertTrue(TelexGuidePanel.shared.isShowing)
+    }
+
+    /// The chord is the only way the wish changes: the settings doorway
+    /// leaves the guide up, and another global action does too.
+    func testOtherGlobalActions_leaveTheGuideUp() throws {
         let session = try makeSession()
         session.controller.performShortcutAction(.showTelexGuide)
         let store = try makeScratchSettingsStore()
 
         ShortcutHotkeys.openSettings(on: nil, in: store, show: {})
+        session.controller.performShortcutAction(.cycleCandidateDisplayMode)
 
-        XCTAssertFalse(TelexGuidePanel.shared.isShowing)
+        XCTAssertTrue(TelexGuidePanel.shared.isShowing)
     }
 
-    /// The system asking for the palettes takes the guide too — and only the
-    /// guide: the composition stays where it was.
-    func testHidePalettes_hidesTheGuide_andKeepsTheComposition() throws {
+    /// The system asking for the palettes hides the guide for the moment: the
+    /// composition stays where it was, and so does the wish.
+    func testHidePalettes_hidesTheGuide_andKeepsTheCompositionAndTheWish() throws {
         let session = try makeSession()
         _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "t"), client: session.client)
         session.controller.performShortcutAction(.showTelexGuide)
@@ -110,14 +124,25 @@ final class TaigiInputControllerTelexGuideTests: XCTestCase {
         session.controller.hidePalettes()
 
         XCTAssertFalse(TelexGuidePanel.shared.isShowing)
+        XCTAssertTrue(session.controller.settings.isTelexGuideShown, "the system's hide is not the user's")
         XCTAssertEqual(session.client.writes.last, .setMarkedText("t", selectionLocation: 1))
     }
 
-    // MARK: - The next key
+    func testResetGeneral_takesTheWishAway() throws {
+        let session = try makeSession()
+        session.controller.performShortcutAction(.showTelexGuide)
 
-    /// A letter takes the card down AND still types: the guide is something
-    /// to glance at mid-word, not a mode the user has to leave first.
-    func testAPlainLetter_hidesTheGuide_andStillTypes() throws {
+        session.controller.settings.resetGeneralSettings()
+
+        XCTAssertNil(userDefaults.object(forKey: SettingsStore.Keys.isTelexGuideShown.name))
+        XCTAssertFalse(session.controller.settings.isTelexGuideWanted)
+    }
+
+    // MARK: - Keys
+
+    /// A letter types with the guide up, and the guide stays: reading it while
+    /// typing is what it is for (#684).
+    func testAPlainLetter_types_andLeavesTheGuideUp() throws {
         let session = try makeSession()
         try session.type("ta")
         session.controller.performShortcutAction(.showTelexGuide)
@@ -128,86 +153,40 @@ final class TaigiInputControllerTelexGuideTests: XCTestCase {
         )
 
         XCTAssertTrue(handled)
-        XCTAssertFalse(TelexGuidePanel.shared.isShowing)
+        XCTAssertTrue(TelexGuidePanel.shared.isShowing)
         guard case let .setMarkedText(marked, _) = try XCTUnwrap(session.client.writes.last) else {
             return XCTFail("the letter should have re-rendered the composition — got \(session.client.writes)")
         }
         XCTAssertEqual(marked, "tai")
     }
 
-    /// Escape ends the guide and nothing else: the composition and its bar
-    /// stay as they were, so a user who checked the table can go on typing
-    /// the word they were in.
-    func testEscape_hidesTheGuide_andIsSwallowed() throws {
+    /// Escape does what it does with no guide up: it cancels the composition.
+    func testEscape_cancelsTheComposition_andLeavesTheGuideUp() throws {
         let session = try composedSession()
         XCTAssertTrue(session.presenter.isShowing, "a bar is up before the guide")
         session.controller.performShortcutAction(.showTelexGuide)
-        session.client.clearWrites()
 
         let handled = try session.controller.handle(
             TestFixtures.keyDownEvent(characters: "\u{1B}"), client: session.client,
-        )
-
-        XCTAssertTrue(handled, "the Escape that closed the guide must not reach the host")
-        XCTAssertFalse(TelexGuidePanel.shared.isShowing)
-        XCTAssertTrue(session.presenter.isShowing, "the bar stays up")
-        XCTAssertEqual(session.client.writes, [], "the composition is untouched")
-        XCTAssertEqual(session.client.insertedTexts, [])
-
-        // The negative control: with no guide up the same Escape cancels the
-        // composition, as it always has.
-        _ = try session.controller.handle(
-            TestFixtures.keyDownEvent(characters: "\u{1B}"), client: session.client,
-        )
-        XCTAssertFalse(session.presenter.isShowing)
-    }
-
-    /// E2b: an Escape with more behind it in one event is not the plain
-    /// Escape the guide swallows (the desktop core's `is_bare_escape`). The
-    /// guide goes down and the event goes on to the classifier, whose Escape
-    /// tier reads the first character: the composition is cancelled. Until
-    /// P11c the guide swallowed it and the composition stayed.
-    func testAnEscapeInsideALongerEvent_hidesTheGuide_andCancels() throws {
-        let session = try composedSession()
-        session.controller.performShortcutAction(.showTelexGuide)
-
-        let handled = try session.controller.handle(
-            TestFixtures.keyDownEvent(characters: "\u{1B}x"), client: session.client,
         )
 
         XCTAssertTrue(handled, "the cancel consumes the event")
-        XCTAssertFalse(TelexGuidePanel.shared.isShowing)
         XCTAssertFalse(session.presenter.isShowing, "the composition and its bar are gone")
-        XCTAssertEqual(session.client.insertedTexts, [], "a cancel writes nothing")
+        XCTAssertTrue(TelexGuidePanel.shared.isShowing)
     }
 
-    /// E2b idle: with nothing composing the same event hides the guide and
-    /// reaches the host.
-    func testAnEscapeInsideALongerEvent_whenIdle_hidesTheGuide_andFallsThrough() throws {
+    /// With nothing composing, Escape reaches the host: the guide no longer
+    /// claims it.
+    func testEscape_whenIdle_fallsThrough_andLeavesTheGuideUp() throws {
         let session = try makeSession()
         session.controller.performShortcutAction(.showTelexGuide)
 
         let handled = try session.controller.handle(
-            TestFixtures.keyDownEvent(characters: "\u{1B}x"), client: session.client,
+            TestFixtures.keyDownEvent(characters: "\u{1B}"), client: session.client,
         )
 
         XCTAssertFalse(handled)
-        XCTAssertFalse(TelexGuidePanel.shared.isShowing)
-    }
-
-    /// `⌃3` arrives as Escape (`KeyEventSnapshot.isPlainEscape`): a chord the host owns
-    /// takes the guide down like any key but is not swallowed for it.
-    func testEscapeUnderAHostChord_hidesTheGuide_andFallsThrough() throws {
-        let session = try makeSession()
-        session.controller.performShortcutAction(.showTelexGuide)
-
-        let handled = try session.controller.handle(
-            TestFixtures.keyDownEvent(characters: "\u{1B}", modifiers: .control, charactersIgnoringModifiers: "3"),
-            client: session.client,
-        )
-
-        XCTAssertFalse(TelexGuidePanel.shared.isShowing)
-        XCTAssertFalse(handled, "nothing is composing, so the host keeps its chord")
+        XCTAssertTrue(TelexGuidePanel.shared.isShowing)
     }
 
     // MARK: - Ownership

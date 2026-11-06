@@ -84,8 +84,7 @@ extension KeyEventSnapshot {
     private static let appKitFunctionKeyRange: ClosedRange<UInt32> = 0xF700 ... 0xF8FF
 
     /// The chords the host owns. Named once because several rules are written
-    /// against it — `documentText(inputMode:)` and the Escape that closes the
-    /// Telex guide or the symbol picker (`isPlainEscape`) — and a list spelled
+    /// against it — `documentText(inputMode:)` among them — and a list spelled
     /// out at each of them is a list that can drift apart.
     static let hostChords: NSEvent.ModifierFlags = [.command, .control, .option]
 
@@ -132,15 +131,6 @@ extension KeyEventSnapshot {
               FullWidthPunctuation.isPunctuationChordKey(unmodified)
         else { return nil }
         return unmodified.first
-    }
-
-    /// True for an Escape with no host chord held — the key that closes
-    /// whatever card or list this input method has up (the Telex guide, the
-    /// symbol picker). `⌃3` arrives as Escape too, and is the host's. The
-    /// whole event, not its first character: an Escape with more behind it
-    /// is not this key (the desktop core's `is_bare_escape`).
-    var isPlainEscape: Bool {
-        characters == "\u{1B}" && modifiers.isDisjoint(with: Self.hostChords)
     }
 
     /// Not a control character (Cc) and not one of AppKit's function-key

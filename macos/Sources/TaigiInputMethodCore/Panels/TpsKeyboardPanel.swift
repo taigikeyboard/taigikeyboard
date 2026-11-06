@@ -19,10 +19,7 @@ import AppKit
 /// panel the incoming one just put up.
 ///
 /// Placed at the bottom centre of the visible frame of the screen the mouse
-/// is on — best effort for "the screen being typed on": activation may not
-/// ask the client for a caret (`TaigiInputController.activateServer`), and
-/// `NSScreen.main` in an input-method agent can be the primary display
-/// whatever the user is looking at (`HUDPanel.noticeFrame`).
+/// is on (`HUDPanel.typingScreenFrame`).
 @MainActor
 final class TpsKeyboardPanel {
     static let shared = TpsKeyboardPanel()
@@ -112,7 +109,7 @@ final class TpsKeyboardPanel {
         self.generation = generation
         guard !rows.isEmpty else { return }
         let panel = panel ?? makePanel()
-        if let frame = Self.typingScreenFrame {
+        if let frame = HUDPanel.typingScreenFrame {
             let size = panel.frame.size
             panel.setFrameOrigin(NSPoint(
                 x: frame.midX - size.width / 2,
@@ -181,13 +178,6 @@ final class TpsKeyboardPanel {
     /// written. Nothing showing, nothing typed.
     func press(_ glyph: String) {
         target?.typeTpsKeyboardGlyph(glyph, generation: generation)
-    }
-
-    /// The visible frame of the screen the mouse is on, else the main one.
-    private static var typingScreenFrame: NSRect? {
-        let mouse = NSEvent.mouseLocation
-        let screen = NSScreen.screens.first { $0.frame.contains(mouse) } ?? NSScreen.main
-        return screen?.visibleFrame
     }
 
     /// Builds the panel once, keeping its caps for `flash`.

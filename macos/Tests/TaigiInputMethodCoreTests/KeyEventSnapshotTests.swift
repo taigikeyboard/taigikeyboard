@@ -9,18 +9,6 @@ import XCTest
 /// composition, the symbol picker and the Shortcuts pane is desktop-core's
 /// (`keys/`).
 final class KeyEventSnapshotTests: XCTestCase {
-    func testAPlainEscape_isTheEscapeAlone() {
-        XCTAssertTrue(textSnapshot("\u{1B}").isPlainEscape)
-        XCTAssertFalse(textSnapshot("\u{1B}", modifiers: .control).isPlainEscape, "⌃3 is the host's")
-    }
-
-    /// E2b: an Escape with more behind it is not the plain Escape that
-    /// closes the picker or the Telex guide (the core's `is_bare_escape`).
-    func testAnEscapeInsideALongerEvent_isNotAPlainEscape() {
-        let key = KeyEventSnapshot(characters: "\u{1B}x", modifiers: [], isNamedSpecialKey: false)
-        XCTAssertFalse(key.isPlainEscape)
-    }
-
     // MARK: - Document text
 
     /// The pass-through path reports document text to the engine so a full stop
@@ -125,7 +113,6 @@ final class KeyEventSnapshotTests: XCTestCase {
                 XCTAssertNil(key.documentText(inputMode: mode), "\(mode): the host's chord")
             }
         }
-        XCTAssertFalse(bracket.isPlainEscape, "⌃[ is the chord, not a cancel")
     }
 
     /// Exactly ⌃ on a mapped key: another chording modifier beside it, a key
