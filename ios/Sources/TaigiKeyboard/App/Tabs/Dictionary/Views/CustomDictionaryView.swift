@@ -14,18 +14,6 @@ struct CustomDictionaryView: View {
     @State private var romanInput = ""
     @State private var hanjiInput = ""
 
-    // Case-insensitive substring match on roman/hanji; with no query, cap at 100 rows so the list stays smooth.
-    private var filteredEntries: [CustomDictionaryEntry] {
-        if filterText.isEmpty {
-            return Array(viewModel.entries.prefix(100))
-        }
-        let query = filterText.lowercased()
-        return viewModel.entries.filter {
-            $0.roman.lowercased().contains(query) ||
-                $0.hanji.lowercased().contains(query)
-        }
-    }
-
     var body: some View {
         List {
             if viewModel.isLoading {
@@ -102,13 +90,15 @@ struct CustomDictionaryView: View {
 
                 // Entry list
                 Section {
-                    if viewModel.entries.isEmpty {
+                    if viewModel.hasReadFailed, viewModel.entries.isEmpty {
+                        retryRow
+                    } else if viewModel.total == 0 {
                         DictionaryEmptyState(message: lang.string(.dictionaryCustomDictEmpty))
-                    } else if !filterText.isEmpty, filteredEntries.isEmpty {
+                    } else if viewModel.entries.isEmpty {
                         Text(lang.string(.dictionaryNoResults))
                             .foregroundColor(.secondary)
                     } else {
-                        ForEach(filteredEntries) { entry in
+                        ForEach(viewModel.entries) { entry in
                             Button {
                                 editingEntry = entry
                                 romanInput = entry.roman
@@ -133,6 +123,11 @@ struct CustomDictionaryView: View {
                                 }
                             }
                         }
+                        if viewModel.hasReadFailed {
+                            retryRow
+                        } else if viewModel.hasMoreRows {
+                            nextPageRow
+                        }
                     }
                 } header: {
                     HStack {
@@ -145,6 +140,9 @@ struct CustomDictionaryView: View {
         }
         .safeAreaInset(edge: .bottom) {
             SearchBar(text: $filterText, placeholder: lang.string(.dictionarySearchPlaceholder))
+        }
+        .onChange(of: filterText) { _, text in
+            viewModel.filterChanged(text)
         }
         .navigationTitle(lang.string(.dictionaryCustomDictionary))
         .navigationBarTitleDisplayMode(.large)
@@ -188,6 +186,29 @@ struct CustomDictionaryView: View {
         )
         .task {
             await viewModel.load()
+        }
+    }
+
+    /// The list end: shown, it asks for the next page — again after every
+    /// load that lands (`pagingKey`).
+    private var nextPageRow: some View {
+        ProgressView()
+            .frame(maxWidth: .infinity)
+            .task(id: viewModel.pagingKey) {
+                await viewModel.loadNextPage()
+            }
+    }
+
+    /// A read failed: nothing is asked again until this is tapped.
+    private var retryRow: some View {
+        Button {
+            Task { await viewModel.load() }
+        } label: {
+            HStack {
+                Image(latinSystemName: "arrow.clockwise")
+                Text(lang.string(.desktopCustomDictReadFailed))
+            }
+            .foregroundColor(.secondary)
         }
     }
 

@@ -43,6 +43,7 @@ enum class StringKey(
     DESKTOP_TELEX_GUIDE_HYPHEN(R.string.i18n_desktop_telexGuideHyphen),
     DESKTOP_MENU_UNDO(R.string.i18n_desktop_menuUndo),
     DESKTOP_DICTIONARY_SOURCES_LINK(R.string.i18n_desktop_dictionarySourcesLink),
+    DESKTOP_CUSTOM_DICT_READ_FAILED(R.string.i18n_desktop_customDictReadFailed),
     DICTIONARY_CUSTOM_DICTIONARY(R.string.i18n_dictionary_customDictionary),
     DICTIONARY_CUSTOM_DICT_ENABLED(R.string.i18n_dictionary_customDictEnabled),
     DICTIONARY_CUSTOM_DICT_ENABLED_INFO(R.string.i18n_dictionary_customDictEnabledInfo),

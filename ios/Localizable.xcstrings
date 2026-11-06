@@ -559,6 +559,24 @@
         }
       }
     },
+    "i18n_desktop_customDictReadFailed": {
+      "comment": "Alert title when the custom-dictionary store could not be read.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could Not Read the Custom Dictionary"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カスタム辞書を読み込めませんでした"
+          }
+        }
+      }
+    },
     "i18n_desktop_dictionarySourcesLink": {
       "comment": "Manage Dictionaries — the dictionary-source toggles page. Desktop: settings sidebar row + pane title. Mobile: Dictionary tab entry row + subpage title.",
       "extractionState": "manual",

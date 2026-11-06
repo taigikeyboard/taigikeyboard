@@ -74,6 +74,8 @@ object L10n {
         @Composable get() = stringRes(StringKey.DESKTOP_MENU_UNDO)
     val desktopDictionarySourcesLink: String
         @Composable get() = stringRes(StringKey.DESKTOP_DICTIONARY_SOURCES_LINK)
+    val desktopCustomDictReadFailed: String
+        @Composable get() = stringRes(StringKey.DESKTOP_CUSTOM_DICT_READ_FAILED)
     val dictionaryCustomDictionary: String
         @Composable get() = stringRes(StringKey.DICTIONARY_CUSTOM_DICTIONARY)
     val dictionaryCustomDictEnabled: String

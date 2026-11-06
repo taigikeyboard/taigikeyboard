@@ -1275,3 +1275,25 @@ fn a_repaired_poj_roman_with_reordered_marks_stays_findable() {
     let query = derive_custom_query_key("soo", "tl").expect("a query key");
     assert_eq!(hanji_of(&store.rows_matching(&query, 20)), ["嗽"]);
 }
+
+#[test]
+fn custom_rows_tied_on_their_edit_time_page_in_id_order() {
+    let directory = scratch();
+    let store = custom_store(
+        &directory,
+        stub_deriver(""),
+        CustomDictionaryStore::MAX_ENTRIES,
+    );
+    // An import stamps every row with one second.
+    for (id, roman) in [("c", "gua"), ("a", "li"), ("b", "i")] {
+        let mut row = CustomDictionaryRow::with_id(id, roman, "字");
+        row.updated_at = "2026-11-06T00:00:00Z".to_owned();
+        store.upsert(&row).unwrap();
+    }
+
+    // trace: ties break on `id`, so offset pages cut a -> b | c.
+    let ids =
+        |rows: Vec<CustomDictionaryRow>| rows.into_iter().map(|row| row.id).collect::<Vec<_>>();
+    assert_eq!(ids(store.rows("", 2, 0).unwrap()), ["a", "b"]);
+    assert_eq!(ids(store.rows("", 2, 2).unwrap()), ["c"]);
+}

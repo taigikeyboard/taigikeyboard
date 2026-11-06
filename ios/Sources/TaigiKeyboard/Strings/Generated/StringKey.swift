@@ -36,6 +36,7 @@ enum StringKey: String {
     case desktopTelexGuideHyphen = "i18n_desktop_telexGuideHyphen"
     case desktopMenuUndo = "i18n_desktop_menuUndo"
     case desktopDictionarySourcesLink = "i18n_desktop_dictionarySourcesLink"
+    case desktopCustomDictReadFailed = "i18n_desktop_customDictReadFailed"
     case dictionaryCustomDictionary = "i18n_dictionary_customDictionary"
     case dictionaryCustomDictEnabled = "i18n_dictionary_customDictEnabled"
     case dictionaryCustomDictEnabledInfo = "i18n_dictionary_customDictEnabledInfo"

@@ -38,6 +38,17 @@ data class CustomDictionaryWord(
     val hanji: String,
 )
 
+/** One page of the custom dictionary list, as the engine cut it. */
+data class CustomDictionaryPage(
+    val words: List<CustomDictionaryWord>,
+    /** Every stored word. */
+    val total: Int,
+    /** The words the filter matches: what paging runs up to. */
+    val matchingTotal: Int,
+    /** The offset the page really starts at: the engine pulls the request back to a multiple of the limit when it falls in the last page, or the matches shrank under it (`engine/userdata/src/paging.rs`). */
+    val offset: Int,
+)
+
 data class CustomDictionaryImportResult(
     val imported: Int,
     val skipped: Int,
@@ -84,8 +95,12 @@ sealed class UserDataException(
  * tests, which cannot load the engine.
  */
 interface UserDataClient {
-    /** Every word, newest edit first. */
-    suspend fun listAll(): List<CustomDictionaryWord>
+    /** One page of the words [filter] matches, newest edit first; the engine trims [filter] and cuts the page. [limit] is at least 1. */
+    suspend fun listCustomEntries(
+        filter: String,
+        limit: Int,
+        offset: Int,
+    ): CustomDictionaryPage
 
     suspend fun save(word: CustomDictionaryWord)
 
@@ -164,10 +179,19 @@ interface UserDataClient {
 
 /** The shipped client: the engine's user-data ops, each on `Dispatchers.IO`. */
 object EngineUserDataClient : UserDataClient {
-    override suspend fun listAll(): List<CustomDictionaryWord> =
-        engine("customDictionaryList") { RustEngineBridge.customDictionaryList(filter = "", limit = 0, offset = 0) }
-            .entriesList
-            .map(::word)
+    override suspend fun listCustomEntries(
+        filter: String,
+        limit: Int,
+        offset: Int,
+    ): CustomDictionaryPage {
+        val page = engine("customDictionaryList") { RustEngineBridge.customDictionaryList(filter, limit, offset) }
+        return CustomDictionaryPage(
+            words = page.entriesList.map(::word),
+            total = page.total,
+            matchingTotal = page.matchingTotal,
+            offset = page.offset,
+        )
+    }
 
     override suspend fun save(word: CustomDictionaryWord) {
         val saved = engine("customDictionarySave") { RustEngineBridge.customDictionarySave(word.id, word.roman, word.hanji) }
