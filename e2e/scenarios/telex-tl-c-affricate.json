@@ -1,0 +1,10 @@
+{
+  "id": "telex-tl-c-affricate",
+  "source": "INVARIANT_TELEX_KEY_TABLE (USER 2026-11-05, docs/architecture/behavioral-invariants.md): `c` writes the affricate `ts` under TL, then `z` tone 6.",
+  "settings": { "romanization": "tl", "continuous_input": true, "output": "roman", "show_typed_text_first": true, "tone_input": "telex" },
+  "steps": [
+    { "type": "text", "value": "caz" },
+    { "type": "key", "value": "enter" }
+  ],
+  "expect": { "committed": "tsǎ" }
+}
