@@ -66,6 +66,13 @@ fn resolve(key: &str) -> Option<TelexKey> {
     })
 }
 
+/// Whether `key` is the hyphen key `f` / `F`. With no tail to append to, the
+/// transition types it from Idle as the `-` key: the neutral-tone marker, a
+/// document literal (§21).
+pub fn is_hyphen_key(key: &str) -> bool {
+    resolve(key) == Some(TelexKey::Hyphen)
+}
+
 const fn tone(open: char, checked: char) -> TelexKey {
     TelexKey::Tone { open, checked }
 }
@@ -88,8 +95,10 @@ fn ends_in_aspirated_affricate(letters: &str) -> bool {
 /// Apply one Telex key to the pending tail `raw`. `None` means the key
 /// changes nothing (unknown key, a tone on an empty or hyphen-ended tail, the
 /// same tone twice, a hyphen on an empty tail, an `h` after `tsh` / `chh`) —
-/// the transition answers with a no-op. While composing the platform swallows
-/// such a key; only from Idle does a tone letter or `f` reach the host as text.
+/// the transition answers with a no-op, except for an idle `f`, which it
+/// types as the `-` key ([`is_hyphen_key`]). While composing the platform
+/// swallows such a key; only from Idle does a tone letter reach the host as
+/// text.
 ///
 /// A tone on a tail that already ends in a different digit replaces it;
 /// the same digit is left alone so a held key cannot flip-flop (Backspace
