@@ -72,15 +72,17 @@ test: i18n-check
 smoke: build
 	node --test 'tests/*.test.mjs'
 
-# Separate from `check`: it needs three browsers downloaded. `install` is a no-op
-# for browsers already in place; on CI it also brings their system libraries.
+# Separate from `check`: it needs browsers downloaded. `install` is a no-op for
+# browsers already in place; on CI it also brings their system libraries, and
+# stays on Chromium, because Firefox's and WebKit's are what apt spends its time on.
+E2E_BROWSERS := $(if $(CI),chromium,chromium firefox webkit)
 e2e: site
 	npm ci
-	npx playwright install $(if $(CI),--with-deps) chromium firefox webkit
-	npx playwright test
+	npx playwright install $(if $(CI),--with-deps) $(E2E_BROWSERS)
+	npx playwright test $(addprefix --project=,$(E2E_BROWSERS))
 
-# After a deploy (docs/architecture/web-release.md). Run it from Taiwan: it also
-# times the download.
+# The deploy runs the same script with its build (docs/architecture/web-release.md).
+# By hand, from Taiwan, this times the download from there.
 LIVE_URL := https://taigikeyboard.tw/web/
 check-live:
 	node scripts/check-live.mjs $(LIVE_URL)

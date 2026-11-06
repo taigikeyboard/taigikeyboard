@@ -2,10 +2,11 @@ name: Web
 
 # The web version's gates: `make web-check` (the wasm build, the Node smoke test
 # over the real dictionaries, clippy, biome, fmt) and `make web-e2e` (Playwright
-# in Chromium, Firefox and WebKit over the same dictionaries). An engine, desktop-shared or
+# in Chromium over the same dictionaries). An engine, desktop-shared or
 # dictionary change triggers it too, because `taigi-web` links those crates and
 # asserts top candidates against that data; a font or string change, because the
-# page ships them.
+# page ships them; the iOS app icon too. A push to main that passes deploys the site, so this path list
+# is also what decides a deploy (docs/architecture/web-release.md).
 on:
   pull_request:
     paths:
@@ -15,6 +16,7 @@ on:
       - 'assets/dictionaries/**'
       - 'assets/fonts/**'
       - 'assets/symbols/**'
+      - 'ios/Sources/TaigiKeyboard/App/Assets/Assets.xcassets/AppIcon.appiconset/**'
       - 'i18n/**'
       - 'mise.toml'
       - '.github/workflows/web.yml'
@@ -27,6 +29,7 @@ on:
       - 'assets/dictionaries/**'
       - 'assets/fonts/**'
       - 'assets/symbols/**'
+      - 'ios/Sources/TaigiKeyboard/App/Assets/Assets.xcassets/AppIcon.appiconset/**'
       - 'i18n/**'
       - 'mise.toml'
       - '.github/workflows/web.yml'
@@ -71,3 +74,15 @@ jobs:
 
       - name: make web-e2e
         run: make web-e2e
+
+  deploy:
+    name: Deploy
+    needs: check
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Start the deploy in taigikeyboard/web
+        run: gh workflow run deploy.yml --repo taigikeyboard/web --field "commit=$GITHUB_SHA"
+        env:
+          GH_TOKEN: ${{ secrets.WEB_DEPLOY_TOKEN }}

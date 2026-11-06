@@ -2,11 +2,12 @@
 // worker's install fails quietly on one mismatch, and a host can cause one: a CDN
 // rewriting HTML, or `Content-Encoding: gzip` on a `.gz`, which `fetch` undoes
 // before the page reads it. Also prints how long the download took from here.
-//   node scripts/check-live.mjs <site URL>
+//   node scripts/check-live.mjs <site URL> [expected build]
 
 import { createHash } from "node:crypto";
 
-const base = new URL(process.argv[2].replace(/\/?$/, "/"));
+const [site, expectedBuild] = process.argv.slice(2);
+const base = new URL(site.replace(/\/?$/, "/"));
 const problems = [];
 
 const sha256 = (bytes) => createHash("sha256").update(bytes).digest("base64");
@@ -38,6 +39,10 @@ if (!response.ok) {
   process.exit(1);
 }
 const { build, shell, dictionaries } = await response.json();
+
+if (expectedBuild !== undefined && build !== expectedBuild) {
+  problems.push(`assets-manifest.json: build ${build}, not ${expectedBuild}`);
+}
 
 const worker = await (await fetch(new URL("sw.js", base))).text();
 if (!worker.includes(`const BUILD = "${build}";`)) {
