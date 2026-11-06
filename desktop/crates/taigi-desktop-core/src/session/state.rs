@@ -1,6 +1,8 @@
 //! What one input context remembers between keys, and what a key answers.
 
-use super::{Emit, LookupSelection, PAGE_SIZE};
+use std::sync::Arc;
+
+use super::{Emit, ListLayout, ListSelection};
 use crate::composing::CandidateSource;
 use crate::keys::{LanguageMode, ShortcutAction};
 
@@ -10,7 +12,7 @@ use crate::keys::{LanguageMode, ShortcutAction};
 #[derive(Debug)]
 pub struct SymbolPicker {
     pub symbols: Vec<String>,
-    pub selection: LookupSelection,
+    pub selection: ListSelection,
 }
 
 /// What one engine object remembers between keys.
@@ -18,8 +20,11 @@ pub struct SymbolPicker {
 pub struct EngineState {
     /// The fetched list and its presentation (cells, scripts).
     pub candidates: CandidateSource,
-    /// The highlight and page over `candidates`' cells.
-    pub selection: LookupSelection,
+    /// The highlight over `candidates`' cells.
+    pub selection: ListSelection,
+    /// What lays a list out, for a shell that draws its own window. `None`:
+    /// the shell's framework pages it.
+    pub list_layout: Option<Arc<dyn ListLayout>>,
     /// The auto-space swap promised to the next key.
     pub armed_auto_space: bool,
     /// The client can take an [`Emit::DeleteSurrounding`].
@@ -47,7 +52,8 @@ impl Default for EngineState {
     fn default() -> Self {
         Self {
             candidates: CandidateSource::default(),
-            selection: LookupSelection::new(0, PAGE_SIZE),
+            selection: ListSelection::new(0),
+            list_layout: None,
             armed_auto_space: false,
             can_delete_surrounding: false,
             is_password_field: false,
@@ -62,7 +68,7 @@ impl Default for EngineState {
 impl EngineState {
     pub(crate) fn clear_list(&mut self) {
         self.candidates.clear();
-        self.selection = LookupSelection::new(0, PAGE_SIZE);
+        self.selection = ListSelection::new(0);
     }
 }
 

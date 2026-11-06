@@ -8,8 +8,7 @@
 //! the document: the preedit is the shell's, a commit is the one write, and
 //! a preedit character never lives in the document.
 
-use super::selection::LookupSelection;
-use super::PAGE_SIZE;
+use super::ListSelection;
 use crate::composing::{
     CandidateCellContent, CandidateSource, ComposingEffectExecutor, IntentSurface,
 };
@@ -164,7 +163,7 @@ pub(crate) struct KeySurface<'a> {
     /// The arm this key took over (every key gets exactly one chance at the
     /// swap); the recorder's own `armed_swap` is the arm it leaves.
     pub is_swap_armed: bool,
-    pub selection: &'a mut LookupSelection,
+    pub selection: &'a mut ListSelection,
     pub is_vertical: bool,
 }
 
@@ -193,13 +192,13 @@ impl IntentSurface for KeySurface<'_> {
     }
 
     fn list_changed(&mut self, list: &mut CandidateSource) {
-        *self.selection = LookupSelection::new(list.len(), PAGE_SIZE);
+        *self.selection = ListSelection::new(list.len());
         self.selection
             .set_unkeyed_lead(list.leads_with_literal_roman());
     }
 
     fn list_closed(&mut self) {
-        *self.selection = LookupSelection::new(0, PAGE_SIZE);
+        *self.selection = ListSelection::new(0);
     }
 
     fn selected_index(&self) -> Option<usize> {
