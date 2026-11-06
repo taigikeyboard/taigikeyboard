@@ -1,0 +1,10 @@
+{
+  "id": "standard-poj-cha",
+  "source": "INVARIANT_TELEX_KEY_TABLE (USER 2026-11-05, docs/architecture/behavioral-invariants.md): Standard does not change; `c` and `h` stay plain letters.",
+  "settings": { "romanization": "poj", "continuous_input": true, "output": "roman", "show_typed_text_first": true, "tone_input": "standard" },
+  "steps": [
+    { "type": "text", "value": "cha" },
+    { "type": "key", "value": "enter" }
+  ],
+  "expect": { "committed": "cha" }
+}

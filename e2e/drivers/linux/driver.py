@@ -72,6 +72,11 @@ def settings_document(settings: dict) -> dict:
     show_typed_text_first = settings.get("show_typed_text_first")
     if show_typed_text_first is not None:
         values["literalRomanCandidateEnabled"] = show_typed_text_first
+    tone_input = settings.get("tone_input")
+    if tone_input is not None:
+        if tone_input not in ("standard", "telex"):
+            raise UnsupportedScenario(f"tone input {tone_input!r} has no desktop scheme")
+        values["toneInputScheme"] = tone_input
     return {"revision": 1, "values": values}
 
 
