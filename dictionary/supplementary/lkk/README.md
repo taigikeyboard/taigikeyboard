@@ -7,7 +7,7 @@ is not a complete or official release of the foundation's word list.
 
 Reference: <https://tsbp.tgb.org.tw/p/bong_8.html>. The page embeds the LKK
 spreadsheet titled as updated on 2024-05-10; the reference was checked on
-2026-10-17. No copy of the source TSV or automatic importer is included.
+2026-10-17. No copy of the source sheet or automatic importer is included.
 
 ## Maintaining the list
 
@@ -46,10 +46,7 @@ After changing the curated list, rebuild the dictionary artifacts with
 
 ## Attribution and reuse status
 
-See [the source inventory](../../docs/SOURCES.md) and
-[data licences](../../LICENSE) for LKK attribution and unresolved reuse terms.
-The source page, embedded spreadsheet, foundation homepage, and publication
-masthead were checked on 2026-10-17; no explicit open-data licence or grant
-to redistribute the table was identified. Project curation does not claim
-independent authorship or establish a redistribution licence for
-source-derived data.
+The data is licensed CC BY, per the maintainer on 2026-11-06; attribute
+李江却台語文教基金會. See [the source inventory](../../docs/SOURCES.md) and
+[data licences](../../LICENSE). Project curation does not claim independent
+authorship of source-derived data.
