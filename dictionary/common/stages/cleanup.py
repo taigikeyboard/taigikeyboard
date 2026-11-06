@@ -1,7 +1,7 @@
 """Cleanup stage — brackets, punctuation, hanlo-mismatch, syllable cap.
 
 Two modes:
-- full (default): runs `cleanup_dataframe` — all 11 validation + dedup steps.
+- full (default): runs `cleanup_dataframe` — every validation + dedup step.
 - minimal (`cleanup.minimal: true`, currently only khpoo): source is already
   curated upstream, so run `normalize_roman` on `tl` and skip the rest.
 """
@@ -33,6 +33,7 @@ def run(ctx: PipelineContext) -> None:
         check_roman_in_hanzi=opts.get("check_roman_in_hanzi", False),
         preserve_spaces=opts.get("preserve_spaces", False),
         hanlo_exempt=ctx.get_meta(HANLO_EXEMPT_META_KEY, frozenset()),
+        keep_non_hanzi_words=opts.get("keep_non_hanzi_words", False),
     )
 
     drop_path = ctx.dict_dir / "data" / "cleaned" / "drop.csv"

@@ -19,6 +19,8 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tps_num,tps_num_var,tl_notone,poj_notone,t
 鶴,ho̍h,100,ho̍h,hoh8,hoh8,ㄏㄛㆷ̇,,hoh,hoh,ㄏㄛㆷ,,,,,,True,False
 捏,liap,50,liap,liap4,liap4,ㄌㄧㄚㆴ,,liap,liap,ㄌㄧㄚㆴ,,,,,,True,False
 繞,liáu,50,liáu,liau2,liau2,ㄌㄧㄠˋ,,liau,liau,ㄌㄧㄠ,,,,,,True,False
+,khò-té,25,khò-té,kho3te2,kho3te2,ㄎㄛ˪ㄉㆤˋ,,khote,khote,ㄎㄛㄉㆤ,,kht,kht,ㄎㄉ,,True,False
+iōng碗,iōng-uánn,25,iōng-óaⁿ,iong7uann2,iong7oann2,ㄧㆲ˫ㄨㆩˋ,,ionguann,iongoann,ㄧㆲㄨㆩ,,iu,io,ㄧㄨ,,True,False
 一吞,tsi̍t-thun,25,chi̍t-thun,tsit8thun1,chit8thun1,ㄐㄧㆵ̇ㄊㄨㄣ,,tsitthun,chitthun,ㄐㄧㆵㄊㄨㄣ,,tsth,chth,ㄐㄊ,,True,False
 三花,sam-hue,25,sam-hoe,sam1hue1,sam1hoe1,ㄙㆰㄏㄨㆤ,,samhue,samhoe,ㄙㆰㄏㄨㆤ,,sh,sh,ㄙㄏ,,True,False
 九層,káu-tsan,25,káu-chan,kau2tsan1,kau2chan1,ㄍㄠˋㄗㄢ,,kautsan,kauchan,ㄍㄠㄗㄢ,,kts,kch,ㄍㄗ,,True,False
@@ -90,6 +92,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tps_num,tps_num_var,tl_notone,poj_notone,t
 夾仔,ngeh-á,25,ngeh-á,ngeh4a2,ngeh4a2,ㄫㆤㆷㄚˋ,,ngeha,ngeha,ㄫㆤㆷㄚ,,nga,nga,ㄫㄚ,,True,False
 夾枋,kiap-pang,25,kiap-pang,kiap4pang1,kiap4pang1,ㄍㄧㄚㆴㄅㄤ,,kiappang,kiappang,ㄍㄧㄚㆴㄅㄤ,,kp,kp,ㄍㄅ,,True,False
 如意,jû-ì,25,jû-ì,ju5i3,ju5i3,ㆡㄨˊㄧ˪,,jui,jui,ㆡㄨㄧ,,ji,ji,ㆡㄧ,,True,False
+定kô,tīng-kô,25,tēng-kô,ting7ko5,teng7ko5,ㄉㄧㄥ˫ㄍㄛˊ,,tingko,tengko,ㄉㄧㄥㄍㄛ,,tk,tk,ㄉㄍ,,True,False
 定闊,tīng-khuah,25,tēng-khoah,ting7khuah4,teng7khoah4,ㄉㄧㄥ˫ㄎㄨㄚㆷ,,tingkhuah,tengkhoah,ㄉㄧㄥㄎㄨㄚㆷ,,tkh,tkh,ㄉㄎ,,True,False
 寄線,kià-suànn,25,kià-sòaⁿ,kia3suann3,kia3soann3,ㄍㄧㄚ˪ㄙㄨㆩ˪,,kiasuann,kiasoann,ㄍㄧㄚㄙㄨㆩ,,ks,ks,ㄍㄙ,,True,False
 寶扇,pó-sìnn,25,pó-sìⁿ,po2sinn3,po2sinn3,ㄅㄛˋㄒㆪ˪,,posinn,posinn,ㄅㄛㄒㆪ,,ps,ps,ㄅㄒ,,True,False
@@ -454,6 +457,11 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tps_num,tps_num_var,tl_notone,poj_notone,t
 龜骿,ku-phiann,25,ku-phiaⁿ,ku1phiann1,ku1phiann1,ㄍㄨㄆㄧㆩ,,kuphiann,kuphiann,ㄍㄨㄆㄧㆩ,,kph,kph,ㄍㄆ,,True,False
 𣛮籃,siā-nâ,25,siā-nâ,sia7na5,sia7na5,ㄒㄧㄚ˫ㄋㄚˊ,,siana,siana,ㄒㄧㄚㄋㄚ,,sn,sn,ㄒㄋ,,True,False
 𥰔仔,phín-á,25,phín-á,phin2a2,phin2a2,ㄆㄧㄣˋㄚˋ,,phina,phina,ㄆㄧㄣㄚ,,pha,pha,ㄆㄚ,,True,False
+,mi-ni-khih,16,mi-ni-khih,mi1ni1khih4,mi1ni1khih4,ㄇㄧㄋㄧㄎㄧㆷ,,minikhih,minikhih,ㄇㄧㄋㄧㄎㄧㆷ,,mnkh,mnkh,ㄇㄋㄎ,,True,False
+,the̍h-hó-sì,16,the̍h-hó-sì,theh8ho2si3,theh8ho2si3,ㄊㆤㆷ̇ㄏㄛˋㄒㄧ˪,,thehhosi,thehhosi,ㄊㆤㆷㄏㄛㄒㄧ,,thhs,thhs,ㄊㄏㄒ,,True,False
+buân白胚,buân-pe̍h-phue,16,boân-pe̍h-phoe,buan5peh8phue1,boan5peh8phoe1,ㆠㄨㄢˊㄅㆤㆷ̇ㄆㄨㆤ,,buanpehphue,boanpehphoe,ㆠㄨㄢㄅㆤㆷㄆㄨㆤ,,bpph,bpph,ㆠㄅㄆ,,True,False
+gá-suh窯,gá-suh-iô,16,gá-suh-iô,ga2suh4io5,ga2suh4io5,ㆣㄚˋㄙㄨㆷㄧㄛˊ,,gasuhio,gasuhio,ㆣㄚㄙㄨㆷㄧㄛ,,gsi,gsi,ㆣㄙㄧ,,True,False
+hì-tah線,hì-tah-suànn,16,hì-tah-sòaⁿ,hi3tah4suann3,hi3tah4soann3,ㄏㄧ˪ㄉㄚㆷㄙㄨㆩ˪,,hitahsuann,hitahsoann,ㄏㄧㄉㄚㆷㄙㄨㆩ,,hts,hts,ㄏㄉㄙ,,True,False
 七里香,tshit-lí-hiong,16,chhit-lí-hiong,tshit4li2hiong1,chhit4li2hiong1,ㄑㄧㆵㄌㄧˋㄏㄧㆲ,,tshitlihiong,chhitlihiong,ㄑㄧㆵㄌㄧㄏㄧㆲ,,tshlh,chhlh,ㄑㄌㄏ,,True,False
 三分目,sann-hun-ba̍k,16,saⁿ-hun-ba̍k,sann1hun1bak8,sann1hun1bak8,ㄙㆩㄏㄨㄣㆠㄚㆻ̇,,sannhunbak,sannhunbak,ㄙㆩㄏㄨㄣㆠㄚㆻ,,shb,shb,ㄙㄏㆠ,,True,False
 三分眼,sann-hun-gán,16,saⁿ-hun-gán,sann1hun1gan2,sann1hun1gan2,ㄙㆩㄏㄨㄣㆣㄢˋ,,sannhungan,sannhungan,ㄙㆩㄏㄨㄣㆣㄢ,,shg,shg,ㄙㄏㆣ,,True,False
@@ -812,6 +820,9 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tps_num,tps_num_var,tl_notone,poj_notone,t
 龍眼葉,lîng-gíng-hio̍h,16,lêng-géng-hio̍h,ling5ging2hioh8,leng5geng2hioh8,ㄌㄧㄥˊㆣㄧㄥˋㄏㄧㄛㆷ̇,,lingginghioh,lenggenghioh,ㄌㄧㄥㆣㄧㄥㄏㄧㄛㆷ,,lgh,lgh,ㄌㆣㄏ,,True,False
 龜甲紋,ku-kah-bûn,16,ku-kah-bûn,ku1kah4bun5,ku1kah4bun5,ㄍㄨㄍㄚㆷㆠㄨㄣˊ,,kukahbun,kukahbun,ㄍㄨㄍㄚㆷㆠㄨㄣ,,kkb,kkb,ㄍㄍㆠ,,True,True
 布袋,pòo-tē,15,pò͘-tē,poo3te7,poo3te7,ㄅㆦ˪ㄉㆤ˫,,poote,poote,ㄅㆦㄉㆤ,,pt,pt,ㄅㄉ,,True,True
+hì-tah開關,hì-tah khai-kuan,12,hì-tah khai-koan,hi3tah4khai1kuan1,hi3tah4khai1koan1,ㄏㄧ˪ㄉㄚㆷㄎㄞㄍㄨㄢ,,hitahkhaikuan,hitahkhaikoan,ㄏㄧㄉㄚㆷㄎㄞㄍㄨㄢ,,htkhk,htkhk,ㄏㄉㄎㄍ,,True,False
+khe金倒槽,khe-kim-tò-tsô,12,khe-kim-tò-chô,khe1kim1to3tso5,khe1kim1to3cho5,ㄎㆤㄍㄧㆬㄉㄛ˪ㄗㄛˊ,,khekimtotso,khekimtocho,ㄎㆤㄍㄧㆬㄉㄛㄗㄛ,,khktts,khktch,ㄎㄍㄉㄗ,,True,False
+phue體kue枋,phue-thé kue-pang,12,phoe-thé koe-pang,phue1the2kue1pang1,phoe1the2koe1pang1,ㄆㄨㆤㄊㆤˋㄍㄨㆤㄅㄤ,,phuethekuepang,phoethekoepang,ㄆㄨㆤㄊㆤㄍㄨㆤㄅㄤ,,phthkp,phthkp,ㄆㄊㄍㄅ,,True,False
 一分丁線,tsi̍t-hun-ting-suànn,12,chi̍t-hun-teng-sòaⁿ,tsit8hun1ting1suann3,chit8hun1teng1soann3,ㄐㄧㆵ̇ㄏㄨㄣㄉㄧㄥㄙㄨㆩ˪,,tsithuntingsuann,chithuntengsoann,ㄐㄧㆵㄏㄨㄣㄉㄧㄥㄙㄨㆩ,,tshts,chhts,ㄐㄏㄉㄙ,,True,False
 七分鑿仔,tshit-hun-tsha̍k-á,12,chhit-hun-chha̍k-á,tshit4hun1tshak8a2,chhit4hun1chhak8a2,ㄑㄧㆵㄏㄨㄣㄘㄚㆻ̇ㄚˋ,,tshithuntshaka,chhithunchhaka,ㄑㄧㆵㄏㄨㄣㄘㄚㆻㄚ,,tshhtsha,chhhchha,ㄑㄏㄘㄚ,,True,False
 三分鑿仔,sann-hun-tsha̍k-á,12,saⁿ-hun-chha̍k-á,sann1hun1tshak8a2,sann1hun1chhak8a2,ㄙㆩㄏㄨㄣㄘㄚㆻ̇ㄚˋ,,sannhuntshaka,sannhunchhaka,ㄙㆩㄏㄨㄣㄘㄚㆻㄚ,,shtsha,shchha,ㄙㄏㄘㄚ,,True,False

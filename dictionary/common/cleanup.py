@@ -6,6 +6,7 @@ import unicodedata
 
 import pandas as pd
 
+from .cjk import is_cjk, is_kana
 from .taigi_bridge import is_valid_romanization, normalize_taibun
 
 BRACKET_PATTERN = re.compile(r"[（(〈《「『【\[].*?[）)〉》」』】\]]")
@@ -149,8 +150,47 @@ def contains_roman_in_hanzi(text):
     return False
 
 
+def is_roman_only_hanzi(text):
+    """True for a word written only in romanization: a Latin letter, no ideograph, no kana."""
+    return contains_roman_in_hanzi(text) and not any(is_cjk(c) or is_kana(c) for c in str(text))
+
+
+def blank_roman_only_hanzi(text):
+    """A roman-only word has no hanzi: its spelling lives in `tl`, so POJ / TPS can render it."""
+    return "" if is_roman_only_hanzi(text) else text
+
+
+def is_kana_only_hanzi(text):
+    """True for a word written only in kana, whose length counts morae, not syllables."""
+    chars = hanzi_chars(text)
+    return bool(chars) and all(is_kana(c) for c in chars)
+
+
+def spelled_syllable_count(text):
+    """Syllables a Han-Lo spelling writes: one per ideograph or kana, one per run of other
+    letters between separators (`白phau-phau` = 3)."""
+    count = 0
+    in_run = False
+    for char in str(text).strip():
+        if char in HANZI_SEPARATORS:
+            in_run = False
+        elif is_cjk(char) or is_kana(char):
+            count += 1
+            in_run = False
+        elif not in_run:
+            count += 1
+            in_run = True
+    return count
+
+
+def is_written_word_matched(hanzi, tl):
+    """Hanlo check for sources keeping non-hanzi words: kana-only passes, a Han-Lo spelling
+    counts syllables instead of characters."""
+    return is_kana_only_hanzi(hanzi) or spelled_syllable_count(hanzi) == count_syllables(tl)
+
+
 def cleanup_dataframe(df, logger=None, max_syllables=DEFAULT_MAX_SYLLABLES, check_roman_in_hanzi=False, preserve_spaces=False,
-                      hanlo_exempt=frozenset()):
+                      hanlo_exempt=frozenset(), keep_non_hanzi_words=False):
     """Run the full cleaning pipeline.
 
     Args:
@@ -160,6 +200,9 @@ def cleanup_dataframe(df, logger=None, max_syllables=DEFAULT_MAX_SYLLABLES, chec
         check_roman_in_hanzi: blank out hanzi containing romanization, keeping the row.
         preserve_spaces: keep spaces as word boundaries (official dictionary).
         hanlo_exempt: `(hanzi, tl)` keys (post-cleanup form) kept despite a hanlo mismatch.
+        keep_non_hanzi_words: keep words not spelled in hanzi alone — roman-only ones lose
+            the hanzi, kana-only ones skip the hanlo check, Han-Lo ones are checked by
+            syllable and keep their spelling.
 
     Returns:
         (cleaned_df, dropped_df) — dropped rows carry a `drop_reason` column.
@@ -217,6 +260,12 @@ def cleanup_dataframe(df, logger=None, max_syllables=DEFAULT_MAX_SYLLABLES, chec
             if logger:
                 logger.info(f"  Cleared hanzi containing roman letters: {roman_in_hanzi_count}")
 
+    if keep_non_hanzi_words:
+        blanked = df["hanzi"].apply(blank_roman_only_hanzi)
+        if logger:
+            logger.info(f"  Cleared roman-only hanzi: {(blanked != df['hanzi']).sum()}")
+        df = df.assign(hanzi=blanked)
+
     # Only `tl` must be non-empty; hanzi-less entries are legitimate roman-only words.
     empty_tl_mask = df["tl"].str.strip() == ""
     collect_dropped(empty_tl_mask, "empty_tl")
@@ -246,6 +295,12 @@ def cleanup_dataframe(df, logger=None, max_syllables=DEFAULT_MAX_SYLLABLES, chec
         index=df.index,
         dtype=bool,
     )
+    if keep_non_hanzi_words:
+        hanlo_matched_mask |= pd.Series(
+            [is_written_word_matched(h, t) for h, t in zip(df["hanzi"], df["tl"])],
+            index=df.index,
+            dtype=bool,
+        )
     hanlo_mismatch_count = (~hanlo_matched_mask).sum()
     if hanlo_mismatch_count > 0 and logger:
         logger.info(f"  Removed hanlo mismatch (KeSi TuiBeTse): {hanlo_mismatch_count}")

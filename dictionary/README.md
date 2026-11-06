@@ -77,7 +77,7 @@ stages (`_df`, or `_sheets` for kautian's multi-sheet ODS until `merge`).
 | `extract` | Load `input_path` (.ods / .json / .csv / .csv_noheader) |
 | `select` | Kautian: rename columns, melt dialect tables, stash provenance maps |
 | `expand` | Split rows whose fields carry several readings / variants |
-| `cleanup` | Drop proverbs, roman-char hanzi, long entries, hanlo mismatches (`minimal: true` for khpoo) |
+| `cleanup` | Drop proverbs, long entries, hanlo mismatches; `check_roman_in_hanzi: true` (community) blanks any hanzi carrying romanization; `keep_non_hanzi_words: true` (official) blanks roman-only hanzi, keeps kana-only words past the hanlo check and checks Han-Lo spellings by syllable (`minimal: true` for khpoo) |
 | `merge` | Kautian: concat sheets in sorted order, dedupe on `(hanzi, tl)` |
 | `kautian_provenance` | Kautian: add `kautian_main` / `kautian_alt_reading` / `kautian_accent_mask` / `kautian_name` |
 | `frequency` | Join `shared/data/char_freq_merged.txt` + Khiin frequencies |

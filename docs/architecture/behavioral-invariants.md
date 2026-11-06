@@ -773,6 +773,8 @@ Sibling of §32 for dual-form NASALS. In **TPS** input, `ㄇ`/`ㄋ`/`ㄫ` typed 
 
 ## §34 — Continuous literal-roman candidate (Hanji-with-romanization fast input)
 
+**Han-Lo slot 0** — a whole-buffer path through a roman-only dictionary word keeps the Hanji of its other words: `guá` + `má-tsiah` → `我má-tsiah`, the word in TL / POJ, or as typed on the TPS layout (`continuous.rs::fetch_walker_slot0_inner`). An OOV edge still leaves the whole path to romanization. Roman-only words carry `walker_lm.py::hanzi_less_cost`, so they enter a path only when no attested reading competes.
+
 ### `INVARIANT_CONTINUOUS_LITERAL_ROMAN_CANDIDATE`
 
 In **TL / POJ** continuous input, when Show Typed Text First is on, the candidate list surfaces at **index 0, whenever composing (tone or no tone)** a **roman-only** candidate equal to the **current composing result** (the preedit literal): `tai` → `tai`, `tai5` → `tâi`, `nng7` → `nn̄g`, `goa2` → `goá` TL / `góa` POJ, `tai5-gi2` → `tâi-gí`. It has **no hanji**, so a tap commits the romanization — Hanji-with-romanization input commits a romanized word in one tap without toggling the 文/A switch, even in Hanji-first mode (PhahTaigi parity, `references/PhahTaigi_iOS`). It is always present while composing, so the list does not jump as the user types toward or past a tone.

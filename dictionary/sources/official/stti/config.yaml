@@ -25,7 +25,8 @@ stage_options:
     tl_col: 臺羅
     dedup: true
 
-  cleanup: {}
+  cleanup:
+    keep_non_hanzi_words: true
 
   variants:
     mode: mark

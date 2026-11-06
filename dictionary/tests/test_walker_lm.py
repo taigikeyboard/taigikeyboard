@@ -80,8 +80,9 @@ def test_counts_hold_out_typing_and_share_one_word_across_neutral_spellings(unig
     costs = record_costs(RECORDS, model)
     assert costs[0] == costs[1] == round(-math.log((10 + 1) / (15 + 4)) * 1000) == 547
     assert costs[2] == round(-math.log(6 / 19) * 1000) == 1153
-    # Unseen words (到, the hanzi-less row) take the smoothed value, not a fallback.
-    assert costs[3] == costs[4] == model.unseen_cost == round(-math.log(1 / 19) * 1000) == 2944
+    # An unseen word (到) takes the smoothed value, not a fallback; a hanzi-less row pays a penalty.
+    assert costs[3] == model.unseen_cost == round(-math.log(1 / 19) * 1000) == 2944
+    assert costs[4] == model.hanzi_less_cost == 4 * 2944
 
 
 def test_model_from_counts_without_the_held_out_column() -> None:

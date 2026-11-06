@@ -1015,17 +1015,29 @@ fn fetch_walker_slot0_inner(
     // onto it by Step 5 (§55) like on every other row, so `canonical_tl`
     // (folded from this join) never forks on a typed separator.
     let roman = parts.join(" ");
-    let all_hanji = path.choices.iter().all(|c| c.hanji.is_some());
-    let hanji: Option<String> = if all_hanji {
-        Some(
-            path.choices
-                .iter()
-                .filter_map(|c| c.hanji.as_deref())
-                .collect::<String>(),
-        )
-    } else {
-        None
-    };
+    // A roman-only dictionary word in the path keeps the sentence's Hanji: the
+    // word stands in romanization (Han-Lo mixed, MOE `VT_MIXED`). An OOV edge
+    // still leaves the whole path to the romanization.
+    let hanji_spelled = any_dict
+        && path.choices.iter().any(|c| c.hanji.is_some())
+        && path.choices.iter().all(|c| c.hanji.is_some() || c.dict_hit);
+    let hanji: Option<String> = hanji_spelled.then(|| {
+        path.edges
+            .iter()
+            .zip(&path.choices)
+            .zip(&parts)
+            .map(|((&(s, e), choice), part)| match (&choice.hanji, mode) {
+                (Some(hanji), _) => hanji.clone(),
+                // The typed Bopomofo, what the layout's roman-only cell shows.
+                (None, phonetics::InputMode::Tps) => raw
+                    .get(shadow_to_raw_end[s]..shadow_to_raw_end[e])
+                    .unwrap_or(part)
+                    .to_owned(),
+                (None, phonetics::InputMode::Poj) => recase_tl_as_poj_display(part),
+                (None, _) => part.clone(),
+            })
+            .collect()
+    });
     // v3.5.9 B-4 (Codex pre-impl BLOCK #2 close): the walker
     // greedy-longest OOV synth builds `roman` from the
     // mode-aware shadow — POJ mode preserves POJ ASCII per B-2,

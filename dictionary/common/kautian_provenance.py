@@ -25,6 +25,7 @@ from __future__ import annotations
 import pandas as pd
 
 from common.cleanup import (
+    blank_roman_only_hanzi,
     clean_brackets,
     normalize_roman,
     remove_ellipsis,
@@ -50,14 +51,16 @@ ProvenanceKey = tuple[str, str]
 
 
 # CROSS-REF: these mirror common/cleanup.py::cleanup_dataframe's per-column key
-# transforms (steps 1-3 brackets/prefix/ellipsis + step 9 normalize_roman). The
+# transforms (brackets/prefix/ellipsis, the roman-only hanzi blanking of
+# `keep_non_hanzi_words`, which kautian's config sets, + normalize_roman). The
 # sequence is duplicated, not shared, because cleanup_dataframe applies it
 # column-wise inline rather than via a composable. If cleanup's tl/hanzi
 # transform changes, update here too or the maps silently fail to join.
 def _clean_hanzi(hanzi: object) -> str:
     """Mirror cleanup_dataframe's hanzi key transform (clean_brackets +
-    remove_ellipsis) so map keys match the post-cleanup `hanzi`."""
-    return remove_ellipsis(clean_brackets(hanzi))
+    remove_ellipsis + kautian's `keep_non_hanzi_words` blanking) so map keys
+    match the post-cleanup `hanzi`."""
+    return blank_roman_only_hanzi(remove_ellipsis(clean_brackets(hanzi)))
 
 
 def _clean_reading(reading: object, preserve_spaces: bool) -> str:

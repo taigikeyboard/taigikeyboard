@@ -24,6 +24,7 @@ stage_options:
 
   cleanup:
     preserve_spaces: true
+    keep_non_hanzi_words: true
 
   variants:
     mode: mark
