@@ -10,8 +10,8 @@ use taigi_desktop_core::mode_indicator::ModeIndicator;
 use taigi_desktop_core::platform::DesktopPlatform;
 use taigi_desktop_core::runtime::{DesktopRuntime, RuntimeParts};
 use taigi_desktop_core::session::{
-    click_from_panel, commit_composition, mode_label, process_key, toggle_language_mode, Emit,
-    EngineState,
+    click_from_panel, commit_composition, mode_label, process_key, toggle_language_mode,
+    tps_keyboard_press, Emit, EngineState,
 };
 
 use crate::key::{shift_index, BrowserKey, SHIFT_SCAN_CODES};
@@ -118,6 +118,12 @@ impl WebSession {
         self.reply(true, &emits, None)
     }
 
+    /// A click on a cap of the TPS key panel, naming the glyph it types.
+    pub(crate) fn tps_key_press(&mut self, glyph: &str) -> String {
+        let emits = tps_keyboard_press(&self.runtime, CONTEXT, &mut self.state, glyph);
+        self.reply(true, &emits, None)
+    }
+
     /// The caret or the text moved by anything but this page's own write, or
     /// a pointer went down. The auto-space swap deletes the character before
     /// the caret unseen, so the arm cannot outlive the caret it was set at. A
@@ -199,7 +205,7 @@ impl WebSession {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::Value;
+    use serde_json::{json, Value};
     use std::ops::{Deref, DerefMut};
     use std::sync::atomic::{AtomicI64, Ordering};
     use std::sync::{Mutex, MutexGuard};
@@ -349,10 +355,7 @@ mod tests {
     #[test]
     fn the_symbol_follows_the_settings_and_the_language() {
         // trace: `ModeIndicator::symbol`: Tps 方, English 英.
-        let mut session = session();
-        session
-            .set_settings(r#"{"values":{"inputMode":"tps"}}"#)
-            .unwrap();
+        let mut session = typing_tps();
         assert_eq!(session.mode_symbol(), "方");
         shift_tap(&mut session);
         assert_eq!(session.mode_symbol(), "英");
@@ -453,6 +456,70 @@ mod tests {
     fn the_settings_chord_opens_the_pages_panel() {
         let reply = parsed(session().key_down(&chord("s", "KeyS")));
         assert_eq!(emit_types(&reply), ["openSettings"]);
+    }
+
+    fn typing_tps() -> Fixture {
+        let session = session();
+        session
+            .set_settings(r#"{"values":{"inputMode":"tps"}}"#)
+            .unwrap();
+        session
+    }
+
+    #[test]
+    fn a_key_cap_click_types_its_glyph_and_lights_its_cap() {
+        // trace: tps_keyboard_rows ROWS[0] "1234567890-=", '8' → ㄚ at cap 7.
+        let mut session = typing_tps();
+        let reply = parsed(session.tps_key_press("ㄚ"));
+        let emits = reply["emits"].as_array().unwrap();
+        let lit = emits
+            .iter()
+            .find(|emit| emit["type"] == "tpsKeyboardCapTyped")
+            .expect("the cap lights");
+        assert_eq!((&lit["row"], &lit["cap"]), (&json!(0), &json!(7)));
+        assert!(emit_types(&reply).contains(&"preedit"), "{reply}");
+    }
+
+    #[test]
+    fn a_typed_key_lights_the_same_cap_a_click_does() {
+        let mut session = typing_tps();
+        let reply = parsed(session.key_down(&press("8", "Digit8")));
+        assert!(
+            emit_types(&reply).contains(&"tpsKeyboardCapTyped"),
+            "{reply}"
+        );
+    }
+
+    #[test]
+    fn a_key_cap_click_outside_tps_does_nothing() {
+        let reply = parsed(session().tps_key_press("ㄚ"));
+        assert_eq!(emit_types(&reply), Vec::<&str>::new());
+    }
+
+    #[test]
+    fn a_key_cap_click_off_the_layout_does_nothing() {
+        let reply = parsed(typing_tps().tps_key_press("a"));
+        assert_eq!(emit_types(&reply), Vec::<&str>::new());
+    }
+
+    #[test]
+    fn a_key_cap_click_in_english_mode_does_nothing() {
+        let mut session = typing_tps();
+        let typist = &mut *session;
+        toggle_language_mode(&typist.runtime, CONTEXT, &mut typist.state);
+        let reply = parsed(session.tps_key_press("ㄚ"));
+        assert_eq!(emit_types(&reply), Vec::<&str>::new());
+    }
+
+    #[test]
+    fn a_key_cap_click_takes_the_picker_down_first() {
+        let mut session = typing_tps();
+        session.key_down(&chord(",", "Comma"));
+        assert!(session.state.symbol_picker.is_some());
+        let reply = parsed(session.tps_key_press("ㄚ"));
+        assert!(session.state.symbol_picker.is_none());
+        assert_eq!(emit_types(&reply).first(), Some(&"hideLookupTable"));
+        assert!(emit_types(&reply).contains(&"preedit"), "{reply}");
     }
 
     #[test]

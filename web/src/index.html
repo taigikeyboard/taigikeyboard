@@ -49,6 +49,9 @@
             <option value="tps" data-i18n="settings.tpsMode">Phonetic Symbols</option>
           </select>
         </label>
+        <label class="setting"><span data-i18n="desktop.shortcutShowTpsKeyboard">Show Phonetic Symbols Mini Keyboard</span>
+          <input type="checkbox" name="tpsKeyboardShown">
+        </label>
         <label class="setting"><span data-i18n="settings.candidateDisplayMode">Candidate Display</span>
           <select name="candidateDisplayMode">
             <option value="sideBySide" selected data-i18n="settings.candidateDisplayModeSideBySide">Hanji–Romanization Pairing</option>
@@ -92,10 +95,12 @@
         </div>
       </div>
       <div class="actions">
-        <p id="notice" data-i18n="web.otherInputMethod">Another input method is active. Turn it off to type here.</p>
+        <p id="notice" role="status" data-i18n="web.otherInputMethod">Another input method is active. Turn it off to type here.</p>
         <button id="copy" class="action" type="button" data-i18n="desktop.menuCopy">Copy</button>
         <button id="clear" class="action" type="button" data-i18n="web.clear">Clear</button>
       </div>
+      <section id="tps-keyboard" data-i18n-aria-label="desktop.shortcutShowTpsKeyboard"></section>
+      <div id="spoken" aria-live="polite"></div>
     </main>
   </body>
 </html>

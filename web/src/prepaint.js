@@ -1,4 +1,4 @@
-// Restores the theme, the font and the sidebar before first paint, so a reload does not
+// Restores the theme, the font, the TPS key panel's room and the sidebar before first paint, so a reload does not
 // flash. Classic and blocking, so it runs before the page's content is parsed.
 // A file rather than an inline script, which the page's CSP will not allow. The
 // first child of `<body>`: from `<head>`, WebKit left `body` on stale or missing
@@ -17,6 +17,12 @@ try {
   const font = stored?.values?.fontType;
   if (typeof font === "string") {
     root.dataset.font = font;
+  }
+  if (
+    stored?.values?.inputMode === "tps" &&
+    stored?.values?.tpsKeyboardShown === true
+  ) {
+    root.dataset.tpsKeyboard = "";
   }
 } catch {
   // Blocked storage or a damaged document: the defaults paint.

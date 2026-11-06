@@ -503,6 +503,51 @@ pub fn click_from_panel(
     emits
 }
 
+/// A click on a cap of the on-screen TPS key panel: its glyph typed through
+/// the engine's `TpsKey`, whatever the list or the slot keys would make of
+/// that key (`ComposingKeyIntent::tps_keyboard_press`). Nothing outside TPS,
+/// off the layout or in English mode, where a panel can still be clicked. A
+/// picker or a guide goes down first: the glyph is the document's, and those
+/// answer keys the click did not press (`typeTpsKeyboardGlyph` in macOS).
+pub fn tps_keyboard_press(
+    runtime: &DesktopRuntime,
+    token: ContextToken,
+    state: &mut EngineState,
+    glyph: &str,
+) -> Vec<Emit> {
+    let settings = runtime.settings.current();
+    let Some(intent) =
+        ComposingKeyIntent::tps_keyboard_press(glyph, settings.choice(&keys::INPUT_MODE))
+    else {
+        return Vec::new();
+    };
+    if state.language_mode.is_english() {
+        return Vec::new();
+    }
+    let bindings = ComposingKeyBindings::from_document(&settings, runtime.platform());
+    let mut emits = Vec::new();
+    let had_picker = state.symbol_picker.take().is_some();
+    let had_guide = std::mem::take(&mut state.telex_guide_shown);
+    if had_picker || had_guide {
+        present_table(state, &settings, &bindings, &mut emits);
+    }
+    runtime.prepare_for_first_key();
+    let mut coordinator = runtime.lock_coordinator();
+    // No key: `perform_intent` commits a composition a switch across TPS left
+    // behind before it types.
+    let mut reply = run_key(
+        &mut coordinator,
+        token,
+        state,
+        &KeyEventSnapshot::default(),
+        intent,
+        &settings,
+        &bindings,
+    );
+    emits.append(&mut reply.emits);
+    emits
+}
+
 /// The Windows `run_key` + `perform_work`, against the recorder.
 fn run_key(
     coordinator: &mut ComposingSessionCoordinator,

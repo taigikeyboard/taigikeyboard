@@ -100,7 +100,7 @@ impl Engine {
                 Emit::AnnounceMode => Ok(()),
                 // `taigi_linux_core` starts these before any reply is handed
                 // back; one arriving here is a bug there.
-                Emit::OpenSettings | Emit::ToggleTpsKeyboard => {
+                Emit::OpenSettings | Emit::ToggleTpsKeyboard | Emit::TpsKeyboardCapTyped(_) => {
                     log::error!("engine.launch_reached_shell token={:?}", self.token);
                     Ok(())
                 }

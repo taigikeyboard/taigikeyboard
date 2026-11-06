@@ -3,6 +3,7 @@
 //! asks the runtime for, and this is the one place that JSON's shape is named.
 
 use serde::Serialize;
+use taigi_desktop_core::keys::tps_keyboard_rows;
 use taigi_desktop_core::session::{Emit, LookupTableContent};
 
 /// One call's answer.
@@ -54,6 +55,47 @@ pub(crate) enum WireEmit<'a> {
     },
     OpenSettings,
     ToggleTpsKeyboard,
+    TpsKeyboardCapTyped {
+        row: usize,
+        cap: usize,
+    },
+}
+
+/// One row of the TPS key panel for the page: `indent` in key widths.
+#[derive(Debug, Serialize)]
+pub(crate) struct WireTpsRow {
+    indent: f32,
+    caps: Vec<WireTpsCap>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct WireTpsCap {
+    label: char,
+    glyph: &'static str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    shift_glyph: Option<&'static str>,
+}
+
+/// The panel's rows, as JSON.
+pub(crate) fn tps_rows_json() -> String {
+    let rows: Vec<WireTpsRow> = tps_keyboard_rows()
+        .into_iter()
+        .map(|row| WireTpsRow {
+            indent: row.indent,
+            caps: row
+                .caps
+                .into_iter()
+                .map(|cap| WireTpsCap {
+                    label: cap.label,
+                    glyph: cap.glyph,
+                    shift_glyph: cap.shift_glyph,
+                })
+                .collect(),
+        })
+        .collect();
+    // Strings and numbers only: this cannot fail.
+    serde_json::to_string(&rows).unwrap_or_else(|_| String::from("[]"))
 }
 
 /// What the two mode emits carry.
@@ -96,12 +138,17 @@ pub(crate) fn wire_emit<'a>(emit: &'a Emit, mode: &'a ModeText) -> WireEmit<'a> 
         Emit::AnnounceMode => WireEmit::AnnounceMode { label: &mode.label },
         Emit::OpenSettings => WireEmit::OpenSettings,
         Emit::ToggleTpsKeyboard => WireEmit::ToggleTpsKeyboard,
+        Emit::TpsKeyboardCapTyped(index) => WireEmit::TpsKeyboardCapTyped {
+            row: index.row,
+            cap: index.cap,
+        },
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use taigi_desktop_core::keys::TpsKeyCapIndex;
 
     fn json(emit: Emit) -> String {
         let mode = ModeText {
@@ -151,5 +198,20 @@ mod tests {
             json(Emit::AnnounceMode),
             r#"{"type":"announceMode","label":"label"}"#
         );
+        assert_eq!(
+            json(Emit::TpsKeyboardCapTyped(TpsKeyCapIndex { row: 1, cap: 2 })),
+            r#"{"type":"tpsKeyboardCapTyped","row":1,"cap":2}"#
+        );
+    }
+
+    #[test]
+    fn the_key_panel_rows_are_the_cores() {
+        let rows: serde_json::Value = serde_json::from_str(&tps_rows_json()).unwrap();
+        let shared = tps_keyboard_rows();
+        assert_eq!(rows.as_array().unwrap().len(), shared.len());
+        let first = &shared[0].caps[0];
+        assert_eq!(rows[0]["caps"][0]["label"], first.label.to_string());
+        assert_eq!(rows[0]["caps"][0]["glyph"], first.glyph);
+        assert_eq!(rows[1]["indent"], 0.5);
     }
 }

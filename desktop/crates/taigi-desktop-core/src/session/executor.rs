@@ -47,6 +47,12 @@ pub enum Emit {
     /// Show the on-screen TPS key panel, or close it when it is up. Started
     /// like [`Emit::OpenSettings`].
     ToggleTpsKeyboard,
+    /// A key the engine took under TPS: the on-screen key panel lights its
+    /// cap. The web page draws that panel. On Linux it is a window of the
+    /// settings app, another process this side has no channel to (desktop
+    /// TPS roadmap D6), so `taigi_linux_core::session::run_launches` drops
+    /// this before any replay.
+    TpsKeyboardCapTyped(TpsKeyCapIndex),
 }
 
 /// What the panel draws: the cells as strings, the per-position labels, the
@@ -192,10 +198,9 @@ impl IntentSurface for KeySurface<'_> {
         self.selection.navigate(direction, self.is_vertical);
     }
 
-    /// Nothing flashes: on Linux the key panel is a window of the settings
-    /// app (`taigikeyboard-settings/src/tps_keyboard.rs`), another process
-    /// this side has no channel to (desktop TPS roadmap D6).
-    fn tps_keyboard_cap_typed(&mut self, _cap: TpsKeyCapIndex) {}
+    fn tps_keyboard_cap_typed(&mut self, cap: TpsKeyCapIndex) {
+        self.recorder.emits.push(Emit::TpsKeyboardCapTyped(cap));
+    }
 }
 
 /// The engine measures the caret in UTF-16 units (the iOS / macOS / Windows
