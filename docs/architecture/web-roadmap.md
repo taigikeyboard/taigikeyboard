@@ -40,7 +40,7 @@ Download size of the dictionaries:
 | `syllables.fst` | 17 KB | 8 KB | — |
 | **Total** | **29.6 MB** | **15.2 MB** | **11.7 MB** |
 
-**Not measured**: a real browser, a low-end Chromebook, DOM cost, or the full `process_key` path with its JSON reply, which carries the whole candidate list on every key (`linux/crates/taigi-linux-core/src/session.rs:603`). All numbers come from Node on an Apple Silicon Mac. Phase 4 measures through `keyDown` in a browser on the slowest machine at hand.
+**Not measured**: a real browser, a low-end Chromebook, DOM cost, or the full `process_key` path with its JSON reply, which carries the whole candidate list on every key (`desktop/crates/taigi-desktop-core/src/session/table.rs` `table_content`). All numbers come from Node on an Apple Silicon Mac. Phase 4 measures through `keyDown` in a browser on the slowest machine at hand.
 
 ## What must change in shared code (grounded in code)
 
@@ -200,8 +200,8 @@ Named divergences (`cross-platform-alignment.md` §3), all intentional unless ma
 | Next-word prediction | None, same as desktop | Physical keyboard; maintainer 2026-10-03 |
 | Target of typing | The page's textarea only | A tab cannot reach other apps |
 | Global shortcuts | The Ctrl+Alt set of Windows and Linux on every OS, minus what the browser keeps. On a Mac this is not the app's ⌃⌘ set, whose rows live in Swift (`keys/shortcut_actions.rs:219`) | Browser-reserved chords; one set of defaults in Rust |
-| English mode by Shift tap | Yes, as on Windows and macOS. **Linux has none** (`chrome.rs:110-113`), so the gate is opt-in per shell | A page has no OS input-method switcher |
-| Candidate click | Selects, never commits, as on Linux and macOS (`session.rs:494-496`) | Same code |
+| English mode by Shift tap | Yes, as on Windows and macOS. **Linux has none** (`linux/crates/taigi-linux-core/src/chrome.rs` `mode_indicator`), so the gate is opt-in per shell | A page has no OS input-method switcher |
+| Candidate click | Selects, never commits, as on Linux and macOS (`session/key.rs` `click_from_panel`) | Same code |
 | Keyboard Layout setting | No row | `event.key` already follows the OS layout |
 | Panic | Trap, then a new instance | No unwinding on this target |
 | Learning, Custom Dictionary | **Pending** until Phase 8 | § Decisions D5 |
@@ -241,16 +241,17 @@ Check: `make test`, `make desktop-check`, `make linux-check` unchanged. Native b
 
 ### Phase 2 — Shared session module
 
-`taigi-linux-core` has the session logic the web needs, about 1,460 non-test lines across `session.rs`, `chrome.rs`, `executor.rs` and `selection.rs`. It cannot be linked as it stands: it depends on `taigi-desktop-storage`, `taigi-linux-platform` and `dispatch/user-data`. The coupling is thin, though. `Runtime` only derefs to `DesktopRuntime`, and the platform ties are a few imports.
+`taigi-linux-core` had the session logic the web needs, about 1,460 non-test lines across `session.rs`, `chrome.rs`, `executor.rs` and `selection.rs`. It could not be linked as it stood: it depends on `taigi-desktop-storage`, `taigi-linux-platform` and `dispatch/user-data`. The coupling was thin, though. `Runtime` only derefs to `DesktopRuntime`, and the platform ties are a few imports.
 
 Move the framework-free part into `taigi-desktop-core` as a `session` module. No new crate: its dependencies already fit, and a crate would add a seam with one owner.
 
-- `Emit`, `Recorder`, `LookupSelection`, `process_key`, `perform_global`, `click_from_panel`, over `&DesktopRuntime`.
-- `DESKTOP_PLATFORM` (`session.rs:29`) gives way to a `platform()` getter on `DesktopRuntime` (`runtime.rs:57`).
-- `open_settings` (`chrome.rs:133,171`) and `toggle_tps_keyboard` (`chrome.rs:253`) become `Emit`s.
+- `Emit`, `Recorder`, `LookupSelection`, `EngineState`, table presentation, `process_key`, `perform_global`, `end_session`, the panel entry points, over `&DesktopRuntime`.
+- `DESKTOP_PLATFORM` gives way to a `platform()` getter on `DesktopRuntime`.
+- `perform_global`'s `open_settings` and `toggle_tps_keyboard` calls become `Emit`s. Linux starts them itself before any replay (`session::run_launches`), so both shells stay as they were and the C ABI does not change. About stays a direct call, because the menu stays in Linux.
+- `EngineState` carries `can_delete_surrounding`, not the IBus mask, which stays in Linux.
 - Linux keeps `RawKeyEvent`, `Runtime`, menus and the D-Bus and C ABI layers.
 
-Windows and macOS are untouched. Two PRs of about 730 moved lines each (`Emit` + `Recorder` + `LookupSelection`, then `process_key` + `perform_global`), a named exception to the LOC guide because a pure move is reviewed differently. Refactor round: behaviour freeze, every caller listed, `refactor-reviewer` agent, `/code-review`, Linux e2e.
+Windows and macOS are untouched. Two PRs of about 650 and 800 moved lines (`Emit` + `Recorder` + `LookupSelection` + state + table, then `process_key` + `perform_global`), a named exception to the LOC guide because a pure move is reviewed differently. Refactor round: behaviour freeze, every caller listed, `refactor-reviewer` agent, `/code-review`, Linux e2e.
 
 ### Phase 3 — `taigi-web` crate
 
@@ -268,8 +269,8 @@ session.caretMoved()                            // disarms the auto-space swap
 session.setSettings(settingsJson)
 ```
 
-- Two shared additions to the `session` module. `commit_composition`: Linux has no twin, because the daemon commits its own preedit and `end_session` cancels (`session.rs:350,360`); macOS's seam has one (`macos/crates/taigi-macos-ffi/src/session.rs:3`). A `LanguageMode` gate for English mode, off for Linux.
-- `key.no_lexicon` warns on every key (`session.rs:324`). On the web that is normal during download, so log it once.
+- Two shared additions to the `session` module. `commit_composition`: Linux has no twin, because the daemon commits its own preedit and `end_session` cancels (`session/key.rs`); macOS's seam has one (`macos/crates/taigi-macos-ffi/src/session.rs:3`). A `LanguageMode` gate for English mode, off for Linux.
+- `key.no_lexicon` warns on every key (`session/key.rs` `process_key`). On the web that is normal during download, so log it once.
 - `SettingsProvider` from a JSON snapshot, the `macos/crates/taigi-macos-ffi/src/settings.rs:121` precedent, so settings keep desktop's key spellings.
 - `SettingsStore` over the same snapshot; chords that change settings return the new document in the reply so the page persists it.
 - Tests run natively, as `taigi-desktop-core`'s do. Key translation has a table test per `event.code`.

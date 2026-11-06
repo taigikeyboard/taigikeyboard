@@ -10,7 +10,7 @@ table: `docs/architecture/linux-roadmap.md`.
 | Crate | Kind | Role |
 |---|---|---|
 | `crates/taigi-linux-platform` | lib, pure, host-testable | XDG paths + install prefix, IBus key event → `KeyEventSnapshot`, settings launcher, session locale. |
-| `crates/taigi-linux-core` | lib, pure | The framework-independent half: runtime (settings, stores, lexicon, coordinator), the key path over the shared `ComposingManager`, the shell-facing half of the session in `taigi-desktop-core::session` (the `Emit` list both shells replay, the candidate page model). |
+| `crates/taigi-linux-core` | lib, pure | The framework-independent half: runtime (settings, stores, lexicon, coordinator), raw key entry, launches and the menu over `taigi-desktop-core::session` (the key path, the `Emit` list both shells replay, the candidate page model). |
 | `crates/taigi-linux-ffi` | staticlib (the one crate overriding the workspace's `unsafe_code = "forbid"`) | The C ABI (`include/taigikeyboard.h`) the Fcitx5 addon calls: opaque runtime / engine handles, a key in, a reply of effects out. |
 | `fcitx5/` | C++ addon `libtaigikeyboard.so` (CMake) | The Fcitx5 shell: `InputMethodEngineV3` over the C ABI — client preedit, commit, candidate list, status area. Built only on Linux (`make build-fcitx5`) and in CI. |
 | `crates/taigikeyboard-ibus` | bin `ibus-engine-taigikeyboard` | The IBus shell: bus discovery, `org.freedesktop.IBus.Factory` + `Engine` objects (zbus), hand-serialised IBus wire types, replaying `taigi-linux-core`. |

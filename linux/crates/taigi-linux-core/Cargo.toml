@@ -1,6 +1,6 @@
 [package]
 name = "taigi-linux-core"
-description = "The framework-independent half of the Linux input method: runtime (settings, stores, lexicon, coordinator), the key path over the shared session"
+description = "The framework-independent half of the Linux input method: runtime (settings, stores, lexicon, coordinator), the raw key entry and menu over the shared session"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

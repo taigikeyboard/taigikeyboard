@@ -9,7 +9,7 @@ use crate::settings::{keys, CandidateLayout, SettingsDocument};
 /// up, else the candidate list: shown, updated in place, or taken down.
 /// Appended after the composing signals so the preedit the list describes
 /// is already on screen. The Telex guide is emitted by its toggle alone.
-pub fn present_table(
+pub(crate) fn present_table(
     state: &mut EngineState,
     settings: &SettingsDocument,
     bindings: &ComposingKeyBindings,
@@ -97,6 +97,52 @@ fn symbol_picker_table(
 
 /// Whether the panel draws the list as a column — what it is told to draw
 /// and how the arrows read, from the one setting.
-pub fn is_vertical_layout(settings: &SettingsDocument) -> bool {
+pub(crate) fn is_vertical_layout(settings: &SettingsDocument) -> bool {
     settings.choice(&keys::CANDIDATE_LAYOUT) != CandidateLayout::Horizontal
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::keys::ComposingKeyBindings;
+    use crate::platform::test_support::TEST_PLATFORM;
+    use crate::session::LookupSelection;
+
+    fn present(state: &mut EngineState) -> Vec<Emit> {
+        let settings = SettingsDocument::default();
+        let bindings = ComposingKeyBindings::from_document(&settings, TEST_PLATFORM);
+        let mut emits = Vec::new();
+        present_table(state, &settings, &bindings, &mut emits);
+        emits
+    }
+
+    #[test]
+    fn an_empty_list_is_taken_down_once() {
+        let mut state = EngineState {
+            is_table_shown: true,
+            ..EngineState::default()
+        };
+        assert_eq!(present(&mut state), vec![Emit::HideLookupTable]);
+        assert!(!state.is_table_shown);
+        assert!(present(&mut state).is_empty());
+    }
+
+    #[test]
+    fn the_picker_wins_over_the_list_and_labels_every_slot() {
+        let mut state = EngineState {
+            symbol_picker: Some(SymbolPicker {
+                symbols: vec!["，".to_owned(), "。".to_owned()],
+                selection: LookupSelection::new(2, PAGE_SIZE),
+            }),
+            ..EngineState::default()
+        };
+        let emits = present(&mut state);
+        let [Emit::LookupTable(table)] = emits.as_slice() else {
+            panic!("one lookup table, got {emits:?}");
+        };
+        assert_eq!(table.candidates, ["，", "。"]);
+        assert_eq!(table.labels.len(), PAGE_SIZE);
+        assert!(table.labels.iter().all(|label| !label.is_empty()));
+        assert!(state.is_table_shown);
+    }
 }

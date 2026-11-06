@@ -127,6 +127,9 @@ fn reply_emit(emit: Emit) -> ReplyEmit {
         Emit::HideLookupTable => reply.kind = EMIT_HIDE_LOOKUP_TABLE,
         Emit::ModeChanged => reply.kind = EMIT_MODE_CHANGED,
         Emit::AnnounceMode => reply.kind = EMIT_ANNOUNCE_MODE,
+        // `taigi_linux_core` starts these before any reply is handed back;
+        // one arriving here is a bug there.
+        Emit::OpenSettings | Emit::ToggleTpsKeyboard => log::error!("ffi.launch_reached_shell"),
     }
     reply
 }

@@ -92,7 +92,7 @@ introspection XML and the `serialize` functions were read, not remembered).
   + `fcitx5-rime`, `ibus-mozc` + `fcitx5-mozc`, `ibus-chewing` + `fcitx5-chewing`), which
   is the shape adopted:
   - **`taigi-linux-core`** (Rust lib, pure): the framework-independent half of the original IBus crate — `Runtime` (settings, stores, lexicon, coordinator), the key path
-    (`session.rs`: snapshot → intent → manager → `Emit`s), the `Emit` effect model
+    (`session.rs`, in `taigi-desktop-core::session` since web roadmap Phase 2: snapshot → intent → manager → `Emit`s), the `Emit` effect model
     (preedit / commit / delete-surrounding / lookup table) and `LookupSelection`, both in `taigi-desktop-core::session` since web roadmap Phase 2. Both shells
     replay the same `Emit` list; nothing composes in a shell.
   - **`taigi-linux-ffi`** (Rust `staticlib`, the ONE Linux crate allowed `unsafe`, `// SAFETY:`

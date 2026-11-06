@@ -19,7 +19,7 @@ use crate::keys::{CandidateNavigation, TpsKeyCapIndex};
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Emit {
     /// `UpdatePreeditText(text, cursor, visible = true, mode = COMMIT)`;
-    /// `caret` in characters.
+    /// `caret` in Unicode scalar values, not UTF-16 units.
     Preedit { text: String, caret: u32 },
     /// `UpdatePreeditText("", 0, visible = false, mode = COMMIT)`.
     ClearPreedit,
@@ -38,8 +38,15 @@ pub enum Emit {
     ModeChanged,
     /// Show the mode briefly — the macOS / Windows HUD flash after a
     /// switch. Fcitx5 `showInputMethodInformation`; IBus has no equivalent
-    /// and only the label changes (NAMED DIVERGENCE, roadmap L4).
+    /// and only the label changes (NAMED DIVERGENCE, Linux roadmap L4).
     AnnounceMode,
+    /// Open the settings window where the user left it. On Linux the core
+    /// starts this itself, before the replay
+    /// (`taigi_linux_core::session::run_launches`).
+    OpenSettings,
+    /// Show the on-screen TPS key panel, or close it when it is up. Started
+    /// like [`Emit::OpenSettings`].
+    ToggleTpsKeyboard,
 }
 
 /// What the panel draws: the cells as strings, the per-position labels, the
@@ -130,7 +137,7 @@ impl ComposingEffectExecutor for Recorder {
 /// One key's surface for the shared executor
 /// (`crate::composing::perform_intent`): the recorder, whether
 /// this key may swap the auto space, and the selection over the list.
-pub struct KeySurface<'a> {
+pub(crate) struct KeySurface<'a> {
     pub recorder: Recorder,
     /// The arm this key took over (every key gets exactly one chance at the
     /// swap); the recorder's own `armed_swap` is the arm it leaves.
